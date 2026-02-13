@@ -2,7 +2,8 @@
 你正在为 `codeProxy` 仓库工作。本文件是 **Codex 的项目入口规范（渐进式）**：
 
 - 本文件只包含“必须遵守的强制规则 + 快速索引”
-- 详细规范按需读取 `.claude/guides/*`，不要一次性加载全部
+- 详细规范按需读取 `.agent/guides/*`（单一来源），不要一次性加载全部
+- `.claude/guides/*` 为兼容目录（Claude Code 习惯路径），内容仅做跳转指引
 
 所有沟通与输出 **只允许使用中文**（包括解释、注释、文档、UI 文案与报错文案）。
 
@@ -31,27 +32,27 @@ bun run check      # lint + build（建议提交前）
 
 ## 2. 渐进式规范索引（按需读取）
 
-先读索引：`.claude/guides/README.md`
+先读索引：`.agent/guides/README.md`
 
 常见场景 → 读取文件：
 
 | 场景 | 读取文件 |
 |------|----------|
-| 初始化开发环境 / 工具链 | `.claude/guides/engineering.md` |
-| 开发新功能 / 准备 PR（如需要） | `.claude/guides/feature-pr-workflow.md` |
-| 开始开发一个任务 | `.claude/guides/workflow.md` |
-| 设计/新增模块与分层 | `.claude/guides/architecture.md` |
-| 新增/调整管理 API 封装 | `.claude/guides/http-api.md` |
-| 实现复杂交互/列表/表单 | `.claude/guides/patterns.md` |
-| 命名、文件组织、导出风格 | `.claude/guides/naming.md` |
-| 错误处理、toast、401 失效 | `.claude/guides/error-handling.md` |
-| Tailwind v4 / Dark / 动效 | `.claude/guides/tailwind.md` |
-| UI 视觉一致性与组件复用 | `.claude/guides/ui-design.md` |
-| 安全与敏感信息（管理密钥等） | `.claude/guides/security.md` |
-| 日志与可观测性（前端） | `.claude/guides/logging.md` |
-| 测试与验证策略 | `.claude/guides/testing.md` |
-| 提交规范与 Git 安全规则 | `.claude/guides/git.md` |
-| 规范需要变更/演进 | `.claude/guides/evolution.md` |
+| 初始化开发环境 / 工具链 | `.agent/guides/engineering.md` |
+| 开发新功能 / 准备 PR（如需要） | `.agent/guides/feature-pr-workflow.md` |
+| 开始开发一个任务 | `.agent/guides/workflow.md` |
+| 设计/新增模块与分层 | `.agent/guides/architecture.md` |
+| 新增/调整管理 API 封装 | `.agent/guides/http-api.md` |
+| 实现复杂交互/列表/表单 | `.agent/guides/patterns.md` |
+| 命名、文件组织、导出风格 | `.agent/guides/naming.md` |
+| 错误处理、toast、401 失效 | `.agent/guides/error-handling.md` |
+| Tailwind v4 / Dark / 动效 | `.agent/guides/tailwind.md` |
+| UI 视觉一致性与组件复用 | `.agent/guides/ui-design.md` |
+| 安全与敏感信息（管理密钥等） | `.agent/guides/security.md` |
+| 日志与可观测性（前端） | `.agent/guides/logging.md` |
+| 测试与验证策略 | `.agent/guides/testing.md` |
+| 提交规范与 Git 安全规则 | `.agent/guides/git.md` |
+| 规范需要变更/演进 | `.agent/guides/evolution.md` |
 
 ## 3. 强制规则速查（必须遵守）
 
