@@ -14,7 +14,8 @@ export const ANTIGRAVITY_REQUEST_HEADERS = {
   "User-Agent": "antigravity/1.11.5 windows/amd64",
 };
 
-export const GEMINI_CLI_QUOTA_URL = "https://cloudcode-pa.googleapis.com/v1internal:retrieveUserQuota";
+export const GEMINI_CLI_QUOTA_URL =
+  "https://cloudcode-pa.googleapis.com/v1internal:retrieveUserQuota";
 export const GEMINI_CLI_REQUEST_HEADERS = {
   Authorization: "Bearer $TOKEN$",
   "Content-Type": "application/json",
@@ -175,18 +176,45 @@ type AntigravityQuotaInfo = {
 
 export type AntigravityModelsPayload = Record<string, AntigravityQuotaInfo>;
 
-const ANTIGRAVITY_QUOTA_GROUPS: { id: string; label: string; identifiers: string[]; labelFromModel?: boolean }[] = [
+const ANTIGRAVITY_QUOTA_GROUPS: {
+  id: string;
+  label: string;
+  identifiers: string[];
+  labelFromModel?: boolean;
+}[] = [
   {
     id: "claude-gpt",
     label: "Claude/GPT",
-    identifiers: ["claude-sonnet-4-5-thinking", "claude-opus-4-5-thinking", "claude-sonnet-4-5", "gpt-oss-120b-medium"],
+    identifiers: [
+      "claude-sonnet-4-5-thinking",
+      "claude-opus-4-5-thinking",
+      "claude-sonnet-4-5",
+      "gpt-oss-120b-medium",
+    ],
   },
-  { id: "gemini-3-pro", label: "Gemini 3 Pro", identifiers: ["gemini-3-pro-high", "gemini-3-pro-low"] },
-  { id: "gemini-2-5-flash", label: "Gemini 2.5 Flash", identifiers: ["gemini-2.5-flash", "gemini-2.5-flash-thinking"] },
-  { id: "gemini-2-5-flash-lite", label: "Gemini 2.5 Flash Lite", identifiers: ["gemini-2.5-flash-lite"] },
+  {
+    id: "gemini-3-pro",
+    label: "Gemini 3 Pro",
+    identifiers: ["gemini-3-pro-high", "gemini-3-pro-low"],
+  },
+  {
+    id: "gemini-2-5-flash",
+    label: "Gemini 2.5 Flash",
+    identifiers: ["gemini-2.5-flash", "gemini-2.5-flash-thinking"],
+  },
+  {
+    id: "gemini-2-5-flash-lite",
+    label: "Gemini 2.5 Flash Lite",
+    identifiers: ["gemini-2.5-flash-lite"],
+  },
   { id: "gemini-2-5-cu", label: "Gemini 2.5 CU", identifiers: ["rev19-uic3-1p"] },
   { id: "gemini-3-flash", label: "Gemini 3 Flash", identifiers: ["gemini-3-flash"] },
-  { id: "gemini-image", label: "gemini-3-pro-image", identifiers: ["gemini-3-pro-image"], labelFromModel: true },
+  {
+    id: "gemini-image",
+    label: "gemini-3-pro-image",
+    identifiers: ["gemini-3-pro-image"],
+    labelFromModel: true,
+  },
 ];
 
 const findAntigravityModel = (models: AntigravityModelsPayload, identifier: string) => {
@@ -202,7 +230,8 @@ const findAntigravityModel = (models: AntigravityModelsPayload, identifier: stri
 const getAntigravityQuotaInfo = (entry?: AntigravityQuotaInfo) => {
   if (!entry) return { remainingFraction: null as number | null };
   const quotaInfo = (entry.quotaInfo ?? entry.quota_info ?? {}) as Record<string, unknown>;
-  const remainingValue = quotaInfo.remainingFraction ?? quotaInfo.remaining_fraction ?? quotaInfo.remaining;
+  const remainingValue =
+    quotaInfo.remainingFraction ?? quotaInfo.remaining_fraction ?? quotaInfo.remaining;
   const remainingFraction = normalizeQuotaFraction(remainingValue);
   const resetValue = quotaInfo.resetTime ?? quotaInfo.reset_time;
   const resetTime = typeof resetValue === "string" ? resetValue : undefined;
@@ -214,7 +243,10 @@ export const buildAntigravityGroups = (models: AntigravityModelsPayload) => {
   const groups: { id: string; label: string; remainingFraction: number; resetTime?: string }[] = [];
   let geminiProResetTime: string | undefined;
 
-  const buildGroup = (def: (typeof ANTIGRAVITY_QUOTA_GROUPS)[number], overrideResetTime?: string) => {
+  const buildGroup = (
+    def: (typeof ANTIGRAVITY_QUOTA_GROUPS)[number],
+    overrideResetTime?: string,
+  ) => {
     const matches = def.identifiers
       .map((identifier) => findAntigravityModel(models, identifier))
       .filter(Boolean) as { id: string; entry: AntigravityQuotaInfo }[];
@@ -222,14 +254,15 @@ export const buildAntigravityGroups = (models: AntigravityModelsPayload) => {
     const quotaEntries = matches
       .map(({ id, entry }) => {
         const info = getAntigravityQuotaInfo(entry);
-        const label = def.labelFromModel ? info.displayName ?? id : def.label;
+        const label = def.labelFromModel ? (info.displayName ?? id) : def.label;
         const resetTime = overrideResetTime ?? info.resetTime;
         return { label, remainingFraction: info.remainingFraction, resetTime };
       })
       .filter((item) => item.remainingFraction !== null);
 
     const avg = quotaEntries.length
-      ? quotaEntries.reduce((acc, item) => acc + (item.remainingFraction ?? 0), 0) / quotaEntries.length
+      ? quotaEntries.reduce((acc, item) => acc + (item.remainingFraction ?? 0), 0) /
+        quotaEntries.length
       : 0;
 
     const reset = quotaEntries.find((item) => item.resetTime)?.resetTime;
@@ -237,7 +270,12 @@ export const buildAntigravityGroups = (models: AntigravityModelsPayload) => {
       geminiProResetTime = reset;
     }
 
-    groups.push({ id: def.id, label: def.label, remainingFraction: avg, ...(reset ? { resetTime: reset } : {}) });
+    groups.push({
+      id: def.id,
+      label: def.label,
+      remainingFraction: avg,
+      ...(reset ? { resetTime: reset } : {}),
+    });
   };
 
   ANTIGRAVITY_QUOTA_GROUPS.forEach((group) => buildGroup(group));
@@ -276,13 +314,48 @@ export const normalizeGeminiCliModelId = (value: unknown): string | null => {
 
 const GEMINI_CLI_IGNORED_MODEL_PREFIXES = ["gemini-2.0-flash"];
 
-const GEMINI_CLI_GROUPS: { id: string; label: string; preferredModelId?: string; modelIds: string[] }[] = [
-  { id: "gemini-2.5-pro", label: "Gemini 2.5 Pro", preferredModelId: "gemini-2.5-pro", modelIds: ["gemini-2.5-pro", "gemini-2.5-pro-preview"] },
-  { id: "gemini-2.5-flash", label: "Gemini 2.5 Flash", preferredModelId: "gemini-2.5-flash", modelIds: ["gemini-2.5-flash", "gemini-2.5-flash-preview"] },
-  { id: "gemini-2.5-flash-lite", label: "Gemini 2.5 Flash Lite", preferredModelId: "gemini-2.5-flash-lite", modelIds: ["gemini-2.5-flash-lite"] },
-  { id: "gemini-2.0-flash", label: "Gemini 2.0 Flash", preferredModelId: "gemini-2.0-flash", modelIds: ["gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-2.0-flash-exp"] },
-  { id: "gemini-1.5-pro", label: "Gemini 1.5 Pro", preferredModelId: "gemini-1.5-pro", modelIds: ["gemini-1.5-pro", "gemini-1.5-pro-latest"] },
-  { id: "gemini-1.5-flash", label: "Gemini 1.5 Flash", preferredModelId: "gemini-1.5-flash", modelIds: ["gemini-1.5-flash", "gemini-1.5-flash-latest"] },
+const GEMINI_CLI_GROUPS: {
+  id: string;
+  label: string;
+  preferredModelId?: string;
+  modelIds: string[];
+}[] = [
+  {
+    id: "gemini-2.5-pro",
+    label: "Gemini 2.5 Pro",
+    preferredModelId: "gemini-2.5-pro",
+    modelIds: ["gemini-2.5-pro", "gemini-2.5-pro-preview"],
+  },
+  {
+    id: "gemini-2.5-flash",
+    label: "Gemini 2.5 Flash",
+    preferredModelId: "gemini-2.5-flash",
+    modelIds: ["gemini-2.5-flash", "gemini-2.5-flash-preview"],
+  },
+  {
+    id: "gemini-2.5-flash-lite",
+    label: "Gemini 2.5 Flash Lite",
+    preferredModelId: "gemini-2.5-flash-lite",
+    modelIds: ["gemini-2.5-flash-lite"],
+  },
+  {
+    id: "gemini-2.0-flash",
+    label: "Gemini 2.0 Flash",
+    preferredModelId: "gemini-2.0-flash",
+    modelIds: ["gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-2.0-flash-exp"],
+  },
+  {
+    id: "gemini-1.5-pro",
+    label: "Gemini 1.5 Pro",
+    preferredModelId: "gemini-1.5-pro",
+    modelIds: ["gemini-1.5-pro", "gemini-1.5-pro-latest"],
+  },
+  {
+    id: "gemini-1.5-flash",
+    label: "Gemini 1.5 Flash",
+    preferredModelId: "gemini-1.5-flash",
+    modelIds: ["gemini-1.5-flash", "gemini-1.5-flash-latest"],
+  },
 ];
 
 const GEMINI_GROUP_ORDER = new Map(GEMINI_CLI_GROUPS.map((group, idx) => [group.id, idx] as const));
@@ -324,7 +397,10 @@ export const buildGeminiCliBuckets = (
   >();
 
   for (const bucket of buckets) {
-    if (bucket.modelId && GEMINI_CLI_IGNORED_MODEL_PREFIXES.some((prefix) => bucket.modelId.startsWith(prefix))) {
+    if (
+      bucket.modelId &&
+      GEMINI_CLI_IGNORED_MODEL_PREFIXES.some((prefix) => bucket.modelId.startsWith(prefix))
+    ) {
       continue;
     }
 
@@ -391,7 +467,9 @@ export const buildGeminiCliBuckets = (
     .map((group) => {
       const uniqueModelIds = Array.from(new Set(group.modelIds));
       const preferred = group.preferredBucket;
-      const remainingFraction = preferred ? preferred.remainingFraction : group.fallbackRemainingFraction;
+      const remainingFraction = preferred
+        ? preferred.remainingFraction
+        : group.fallbackRemainingFraction;
       const remainingAmount = preferred ? preferred.remainingAmount : group.fallbackRemainingAmount;
       const resetTime = preferred ? preferred.resetTime : group.fallbackResetTime;
       return {
@@ -416,8 +494,15 @@ const extractGeminiCliProjectId = (value: unknown): string | null => {
 
 export const resolveGeminiCliProjectId = (file: AuthFileItem): string | null => {
   const metadata = isRecord(file.metadata) ? (file.metadata as Record<string, unknown>) : null;
-  const attributes = isRecord(file.attributes) ? (file.attributes as Record<string, unknown>) : null;
-  const candidates = [file.account, (file as any)["account"], metadata?.account, attributes?.account];
+  const attributes = isRecord(file.attributes)
+    ? (file.attributes as Record<string, unknown>)
+    : null;
+  const candidates = [
+    file.account,
+    (file as any)["account"],
+    metadata?.account,
+    attributes?.account,
+  ];
   for (const candidate of candidates) {
     const projectId = extractGeminiCliProjectId(candidate);
     if (projectId) return projectId;
@@ -433,7 +518,9 @@ const extractCodexChatgptAccountId = (value: unknown): string | null => {
 
 export const resolveCodexChatgptAccountId = (file: AuthFileItem): string | null => {
   const metadata = isRecord(file.metadata) ? (file.metadata as Record<string, unknown>) : null;
-  const attributes = isRecord(file.attributes) ? (file.attributes as Record<string, unknown>) : null;
+  const attributes = isRecord(file.attributes)
+    ? (file.attributes as Record<string, unknown>)
+    : null;
   const candidates = [file.id_token, metadata?.id_token, attributes?.id_token];
   for (const candidate of candidates) {
     const id = extractCodexChatgptAccountId(candidate);
@@ -558,12 +645,17 @@ export const buildCodexItems = (payload: CodexUsagePayload): QuotaItem[] => {
   const rate = payload.rate_limit ?? payload.rateLimit ?? null;
   const codeReview = payload.code_review_rate_limit ?? payload.codeReviewRateLimit ?? null;
 
-  const addWindow = (label: string, window?: CodexUsageWindow | null, limitInfo?: CodexRateLimitInfo | null) => {
+  const addWindow = (
+    label: string,
+    window?: CodexUsageWindow | null,
+    limitInfo?: CodexRateLimitInfo | null,
+  ) => {
     if (!window) return;
     const usedRaw = normalizeNumberValue(window.used_percent ?? window.usedPercent);
     const allowed = limitInfo?.allowed;
     const limitReached = limitInfo?.limit_reached ?? limitInfo?.limitReached;
-    const used = usedRaw !== null ? clampPercent(usedRaw) : allowed === false || limitReached ? 100 : null;
+    const used =
+      usedRaw !== null ? clampPercent(usedRaw) : allowed === false || limitReached ? 100 : null;
     const remaining = used === null ? null : clampPercent(100 - used);
     items.push({
       label,

@@ -1,5 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
-import { ChevronDown, ChevronUp, Code2, Eye, RefreshCw, Save, Search, Settings } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronUp,
+  Code2,
+  Eye,
+  RefreshCw,
+  Save,
+  Search,
+  Settings,
+} from "lucide-react";
 import { parse as parseYaml } from "yaml";
 import { configApi, configFileApi } from "@/lib/http/apis";
 import { VisualConfigEditor } from "@/modules/config/visual/VisualConfigEditor";
@@ -136,12 +145,16 @@ function RuntimeConfigPanel() {
       setRawConfig(record);
 
       setDebugEnabled(readBool(record, "debug", "debug-enabled", "debugEnabled"));
-      setUsageStatisticsEnabled(readBool(record, "usage-statistics-enabled", "usageStatisticsEnabled"));
+      setUsageStatisticsEnabled(
+        readBool(record, "usage-statistics-enabled", "usageStatisticsEnabled"),
+      );
       setRequestLogEnabled(readBool(record, "request-log", "requestLog"));
       setLoggingToFileEnabled(readBool(record, "logging-to-file", "loggingToFile"));
       setWsAuthEnabled(readBool(record, "ws-auth", "wsAuth"));
       setSwitchProjectEnabled(readBool(record, "quota-exceeded.switch-project", "switchProject"));
-      setSwitchPreviewModelEnabled(readBool(record, "quota-exceeded.switch-preview-model", "switchPreviewModel"));
+      setSwitchPreviewModelEnabled(
+        readBool(record, "quota-exceeded.switch-preview-model", "switchPreviewModel"),
+      );
 
       setProxyUrl(readString(record, "proxy-url", "proxyUrl"));
       const retry = readNumber(record, "request-retry", "requestRetry");
@@ -261,7 +274,12 @@ function RuntimeConfigPanel() {
         description="这些配置将通过管理 API 写入服务端（与 config.yaml 互补）。"
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <Button variant="secondary" size="sm" onClick={() => void loadRuntimeConfig()} disabled={loading || isPending}>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => void loadRuntimeConfig()}
+              disabled={loading || isPending}
+            >
               <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
               刷新
             </Button>
@@ -295,7 +313,9 @@ function RuntimeConfigPanel() {
               checked={usageStatisticsEnabled}
               onCheckedChange={(next) => {
                 setUsageStatisticsEnabled(next);
-                void updateToggle("usage", next).catch(() => setUsageStatisticsEnabled((prev) => !prev));
+                void updateToggle("usage", next).catch(() =>
+                  setUsageStatisticsEnabled((prev) => !prev),
+                );
               }}
             />
             <ToggleSwitch
@@ -304,7 +324,9 @@ function RuntimeConfigPanel() {
               checked={requestLogEnabled}
               onCheckedChange={(next) => {
                 setRequestLogEnabled(next);
-                void updateToggle("requestLog", next).catch(() => setRequestLogEnabled((prev) => !prev));
+                void updateToggle("requestLog", next).catch(() =>
+                  setRequestLogEnabled((prev) => !prev),
+                );
               }}
             />
             <ToggleSwitch
@@ -313,7 +335,9 @@ function RuntimeConfigPanel() {
               checked={loggingToFileEnabled}
               onCheckedChange={(next) => {
                 setLoggingToFileEnabled(next);
-                void updateToggle("loggingToFile", next).catch(() => setLoggingToFileEnabled((prev) => !prev));
+                void updateToggle("loggingToFile", next).catch(() =>
+                  setLoggingToFileEnabled((prev) => !prev),
+                );
               }}
             />
           </div>
@@ -334,7 +358,9 @@ function RuntimeConfigPanel() {
               checked={switchProjectEnabled}
               onCheckedChange={(next) => {
                 setSwitchProjectEnabled(next);
-                void updateToggle("switchProject", next).catch(() => setSwitchProjectEnabled((prev) => !prev));
+                void updateToggle("switchProject", next).catch(() =>
+                  setSwitchProjectEnabled((prev) => !prev),
+                );
               }}
             />
             <ToggleSwitch
@@ -343,7 +369,9 @@ function RuntimeConfigPanel() {
               checked={switchPreviewModelEnabled}
               onCheckedChange={(next) => {
                 setSwitchPreviewModelEnabled(next);
-                void updateToggle("switchPreviewModel", next).catch(() => setSwitchPreviewModelEnabled((prev) => !prev));
+                void updateToggle("switchPreviewModel", next).catch(() =>
+                  setSwitchPreviewModelEnabled((prev) => !prev),
+                );
               }}
             />
             <ToggleSwitch
@@ -352,15 +380,14 @@ function RuntimeConfigPanel() {
               checked={forceModelPrefixEnabled}
               onCheckedChange={(next) => {
                 setForceModelPrefixEnabled(next);
-                void updateToggle("forceModelPrefix", next).catch(() => setForceModelPrefixEnabled((prev) => !prev));
+                void updateToggle("forceModelPrefix", next).catch(() =>
+                  setForceModelPrefixEnabled((prev) => !prev),
+                );
               }}
             />
           </div>
 
-          <Card
-            title="代理与重试"
-            description="用于请求代理与失败重试策略。"
-          >
+          <Card title="代理与重试" description="用于请求代理与失败重试策略。">
             <div className="space-y-3">
               <TextInput
                 value={proxyUrl}
@@ -375,14 +402,13 @@ function RuntimeConfigPanel() {
                   inputMode="numeric"
                 />
               </div>
-              <p className="text-xs text-slate-600 dark:text-white/65">修改后点击上方“保存更改”。</p>
+              <p className="text-xs text-slate-600 dark:text-white/65">
+                修改后点击上方“保存更改”。
+              </p>
             </div>
           </Card>
 
-          <Card
-            title="日志与路由"
-            description="控制日志总大小上限与路由策略。"
-          >
+          <Card title="日志与路由" description="控制日志总大小上限与路由策略。">
             <div className="space-y-3">
               <div className="flex flex-wrap items-center gap-2">
                 <TextInput
@@ -399,7 +425,9 @@ function RuntimeConfigPanel() {
                   placeholder="routing-strategy（如 round-robin）"
                 />
               </div>
-              <p className="text-xs text-slate-600 dark:text-white/65">当前 config 预览：{rawConfig ? "已加载" : "未加载"}</p>
+              <p className="text-xs text-slate-600 dark:text-white/65">
+                当前 config 预览：{rawConfig ? "已加载" : "未加载"}
+              </p>
             </div>
           </Card>
         </div>
@@ -412,8 +440,13 @@ export function ConfigPage() {
   const { notify } = useToast();
   const [tab, setTab] = useStickyTab();
 
-  const { visualValues, visualDirty, loadVisualValuesFromYaml, applyVisualChangesToYaml, setVisualValues } =
-    useVisualConfig();
+  const {
+    visualValues,
+    visualDirty,
+    loadVisualValuesFromYaml,
+    applyVisualChangesToYaml,
+    setVisualValues,
+  } = useVisualConfig();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -492,23 +525,26 @@ export function ConfigPage() {
     }
   }, [applyVisualChangesToYaml, loadVisualValuesFromYaml, notify, tab, yamlText]);
 
-  const buildSearchPositions = useCallback((query: string) => {
-    const text = yamlText;
-    const q = query.trim();
-    if (!q) return [];
-    const lowerText = text.toLowerCase();
-    const lowerQ = q.toLowerCase();
-    const positions: number[] = [];
-    let pos = 0;
-    while (pos < lowerText.length) {
-      const idx = lowerText.indexOf(lowerQ, pos);
-      if (idx === -1) break;
-      positions.push(idx);
-      pos = idx + 1;
-      if (positions.length >= 2000) break;
-    }
-    return positions;
-  }, [yamlText]);
+  const buildSearchPositions = useCallback(
+    (query: string) => {
+      const text = yamlText;
+      const q = query.trim();
+      if (!q) return [];
+      const lowerText = text.toLowerCase();
+      const lowerQ = q.toLowerCase();
+      const positions: number[] = [];
+      let pos = 0;
+      while (pos < lowerText.length) {
+        const idx = lowerText.indexOf(lowerQ, pos);
+        if (idx === -1) break;
+        positions.push(idx);
+        pos = idx + 1;
+        if (positions.length >= 2000) break;
+      }
+      return positions;
+    },
+    [yamlText],
+  );
 
   const jumpToMatch = useCallback(
     (index: number, query: string) => {
@@ -595,9 +631,12 @@ export function ConfigPage() {
   };
 
   const statusTone = () => {
-    if (!online) return "border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-400/25 dark:bg-amber-500/15 dark:text-white";
-    if (error) return "border-rose-200 bg-rose-50 text-rose-900 dark:border-rose-400/25 dark:bg-rose-500/15 dark:text-white";
-    if (isDirty) return "border-slate-200 bg-white text-slate-900 dark:border-neutral-800 dark:bg-neutral-950/70 dark:text-white";
+    if (!online)
+      return "border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-400/25 dark:bg-amber-500/15 dark:text-white";
+    if (error)
+      return "border-rose-200 bg-rose-50 text-rose-900 dark:border-rose-400/25 dark:bg-rose-500/15 dark:text-white";
+    if (isDirty)
+      return "border-slate-200 bg-white text-slate-900 dark:border-neutral-800 dark:bg-neutral-950/70 dark:text-white";
     return "border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-400/25 dark:bg-emerald-500/15 dark:text-white";
   };
 
@@ -640,21 +679,32 @@ export function ConfigPage() {
   const saveBar = (
     <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-slate-200 bg-white/80 px-3 py-2 shadow-sm backdrop-blur dark:border-neutral-800 dark:bg-neutral-950/60">
       <div
-        className={["inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold", statusTone()].join(
-          " ",
-        )}
+        className={[
+          "inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold",
+          statusTone(),
+        ].join(" ")}
         aria-label="保存状态"
         title="保存状态"
       >
         <span className="tabular-nums">{getStatusText()}</span>
-        {isDirty ? <span className="h-2 w-2 rounded-full bg-slate-900/70 dark:bg-white/70" aria-hidden="true" /> : null}
+        {isDirty ? (
+          <span
+            className="h-2 w-2 rounded-full bg-slate-900/70 dark:bg-white/70"
+            aria-hidden="true"
+          />
+        ) : null}
       </div>
       <div className="flex items-center gap-2">
         <Button variant="secondary" size="sm" onClick={requestReload} disabled={reloadDisabled}>
           <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
           重载
         </Button>
-        <Button variant="primary" size="sm" onClick={() => void handleSave()} disabled={saveDisabled}>
+        <Button
+          variant="primary"
+          size="sm"
+          onClick={() => void handleSave()}
+          disabled={saveDisabled}
+        >
           <Save size={14} />
           保存
         </Button>
@@ -665,9 +715,7 @@ export function ConfigPage() {
   return (
     <div
       className={
-        visualLayoutEnabled
-          ? "flex h-[calc(100dvh-112px)] min-h-0 flex-col gap-6"
-          : "space-y-6"
+        visualLayoutEnabled ? "flex h-[calc(100dvh-112px)] min-h-0 flex-col gap-6" : "space-y-6"
       }
     >
       <div className={visualLayoutEnabled ? "flex min-h-0 flex-1 flex-col gap-4" : undefined}>
@@ -731,7 +779,10 @@ export function ConfigPage() {
                   ) : null}
 
                   {!loading && !yamlText ? (
-                    <EmptyState title="空内容" description="服务端可能未配置 config.yaml 或接口返回为空。" />
+                    <EmptyState
+                      title="空内容"
+                      description="服务端可能未配置 config.yaml 或接口返回为空。"
+                    />
                   ) : (
                     <div className="space-y-3">
                       <div className="grid gap-3 lg:grid-cols-3">
@@ -773,7 +824,11 @@ export function ConfigPage() {
                           </p>
                         </div>
                         <div className="flex h-11 items-center justify-end gap-3">
-                          <HoverTooltip content="上一个匹配（Shift+回车）" placement="top" disabled={!searchStats.total}>
+                          <HoverTooltip
+                            content="上一个匹配（Shift+回车）"
+                            placement="top"
+                            disabled={!searchStats.total}
+                          >
                             <button
                               type="button"
                               onClick={() => executeSearch("prev")}
@@ -784,7 +839,11 @@ export function ConfigPage() {
                               <ChevronUp size={18} aria-hidden="true" />
                             </button>
                           </HoverTooltip>
-                          <HoverTooltip content="下一个匹配（回车）" placement="bottom" disabled={!searchStats.total}>
+                          <HoverTooltip
+                            content="下一个匹配（回车）"
+                            placement="bottom"
+                            disabled={!searchStats.total}
+                          >
                             <button
                               type="button"
                               onClick={() => executeSearch("next")}

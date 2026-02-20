@@ -26,7 +26,11 @@ import { ChartLegend } from "@/modules/ui/charts/ChartLegend";
 import { useTheme } from "@/modules/ui/ThemeProvider";
 import type { HourWindow, TimeRange } from "@/modules/monitor/monitor-constants";
 import { CHART_COLOR_CLASSES, HOURLY_MODEL_COLORS } from "@/modules/monitor/monitor-constants";
-import { formatCompact, formatLocalDateKey, formatMonthDay } from "@/modules/monitor/monitor-format";
+import {
+  formatCompact,
+  formatLocalDateKey,
+  formatMonthDay,
+} from "@/modules/monitor/monitor-format";
 import {
   HourWindowSelector,
   KpiCard,
@@ -276,7 +280,13 @@ export function MonitorPage() {
   }, [records, topModelKeys]);
 
   const hourlyModelPalette = useMemo(() => {
-    const palette = ["bg-emerald-400", "bg-violet-400", "bg-amber-400", "bg-pink-300", "bg-teal-400"];
+    const palette = [
+      "bg-emerald-400",
+      "bg-violet-400",
+      "bg-amber-400",
+      "bg-pink-300",
+      "bg-teal-400",
+    ];
     const colorByKey: Record<string, string> = {};
     const classByKey: Record<string, string> = {};
 
@@ -578,10 +588,7 @@ export function MonitorPage() {
                 loading={isRefreshing}
               >
                 <div className="grid h-72 grid-cols-[minmax(0,1fr)_220px] gap-4">
-                  <EChart
-                    option={modelDistributionOption}
-                    className="h-72 min-w-0"
-                  />
+                  <EChart option={modelDistributionOption} className="h-72 min-w-0" />
                   <div className="flex h-72 flex-col justify-center gap-2 overflow-y-auto pr-1">
                     {modelDistributionLegend.map((item) => (
                       <div

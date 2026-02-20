@@ -6,7 +6,8 @@ export const configApi = {
   updateDebug: (enabled: boolean) => apiClient.put("/debug", { value: enabled }),
   updateProxyUrl: (proxyUrl: string) => apiClient.put("/proxy-url", { value: proxyUrl }),
   clearProxyUrl: () => apiClient.delete("/proxy-url"),
-  updateRequestRetry: (retryCount: number) => apiClient.put("/request-retry", { value: retryCount }),
+  updateRequestRetry: (retryCount: number) =>
+    apiClient.put("/request-retry", { value: retryCount }),
   updateSwitchProject: (enabled: boolean) =>
     apiClient.put("/quota-exceeded/switch-project", { value: enabled }),
   updateSwitchPreviewModel: (enabled: boolean) =>
@@ -37,4 +38,3 @@ export const configApi = {
   updateRoutingStrategy: (strategy: string) =>
     apiClient.put("/routing/strategy", { value: strategy }),
 };
-

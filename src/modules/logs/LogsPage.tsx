@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { ChevronDown, Download, RefreshCw, ScrollText, Trash2 } from "lucide-react";
 import { logsApi } from "@/lib/http/apis";
 import { TextInput } from "@/modules/ui/Input";
@@ -347,7 +355,7 @@ export function LogsPage() {
         const shouldAutoScroll = options.mode === "full" ? true : stickToBottomRef.current;
 
         const after =
-          options.mode === "incremental" ? latestTimestampRef.current ?? undefined : undefined;
+          options.mode === "incremental" ? (latestTimestampRef.current ?? undefined) : undefined;
 
         const result = await logsApi.fetchLogs(after ? { after } : {});
         const lines = Array.isArray(result?.lines) ? result.lines : [];
@@ -652,7 +660,8 @@ export function LogsPage() {
                     className="block truncate whitespace-nowrap tabular-nums"
                     title={`显示 ${visibleLines.length.toLocaleString()} / ${filteredLines.length.toLocaleString()} 行${canLoadMore ? "（滚动到顶部自动加载更多）" : ""}`}
                   >
-                    显示 {visibleLines.length.toLocaleString()} / {filteredLines.length.toLocaleString()} 行
+                    显示 {visibleLines.length.toLocaleString()} /{" "}
+                    {filteredLines.length.toLocaleString()} 行
                     {canLoadMore ? "（滚动到顶部自动加载更多）" : ""}
                   </span>
                 </div>
@@ -662,7 +671,9 @@ export function LogsPage() {
                     size="sm"
                     onClick={scrollToBottom}
                     disabled={visibleLines.length === 0 || isAtBottom}
-                    className={visibleLines.length === 0 || isAtBottom ? "pointer-events-none opacity-0" : ""}
+                    className={
+                      visibleLines.length === 0 || isAtBottom ? "pointer-events-none opacity-0" : ""
+                    }
                   >
                     跳到最新
                   </Button>
@@ -700,7 +711,10 @@ export function LogsPage() {
                         .join(" ");
 
                       return (
-                        <div key={`${filteredLines.length - visibleLines.length + index}`} className={rowClassName}>
+                        <div
+                          key={`${filteredLines.length - visibleLines.length + index}`}
+                          className={rowClassName}
+                        >
                           <div className="flex items-start gap-3">
                             <div className="w-36 shrink-0 tabular-nums text-[11px] text-slate-500 dark:text-white/55">
                               {line.timestamp ?? ""}
@@ -824,7 +838,10 @@ export function LogsPage() {
                   {errorLogsLoading ? (
                     <div className="text-sm text-slate-600 dark:text-white/65">加载中…</div>
                   ) : errorLogs.length === 0 ? (
-                    <EmptyState title="暂无错误日志" description="当前服务器没有可下载的错误日志文件。" />
+                    <EmptyState
+                      title="暂无错误日志"
+                      description="当前服务器没有可下载的错误日志文件。"
+                    />
                   ) : (
                     <div className="space-y-2">
                       {errorLogs.map((file) => (

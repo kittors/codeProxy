@@ -1,5 +1,10 @@
 import type { ComponentType, ReactNode } from "react";
-import { HOUR_WINDOWS, TIME_RANGES, type HourWindow, type TimeRange } from "@/modules/monitor/monitor-constants";
+import {
+  HOUR_WINDOWS,
+  TIME_RANGES,
+  type HourWindow,
+  type TimeRange,
+} from "@/modules/monitor/monitor-constants";
 
 export const KpiCard = ({
   title,
@@ -135,4 +140,3 @@ export const MonitorCard = ({
     </section>
   );
 };
-

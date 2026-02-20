@@ -19,11 +19,7 @@ import {
   providersApi,
   usageApi,
 } from "@/lib/http/apis";
-import type {
-  ApiCallResult,
-  OpenAIProvider,
-  ProviderSimpleConfig,
-} from "@/lib/http/types";
+import type { ApiCallResult, OpenAIProvider, ProviderSimpleConfig } from "@/lib/http/types";
 import { iterateUsageRecords } from "@/modules/monitor/monitor-utils";
 import { Button } from "@/modules/ui/Button";
 import { Card } from "@/modules/ui/Card";
@@ -69,7 +65,9 @@ export function ProvidersPage() {
   const { notify } = useToast();
   const [isPending, startTransition] = useTransition();
 
-  const [tab, setTab] = useState<"gemini" | "claude" | "codex" | "vertex" | "openai" | "ampcode">("gemini");
+  const [tab, setTab] = useState<"gemini" | "claude" | "codex" | "vertex" | "openai" | "ampcode">(
+    "gemini",
+  );
   const [loading, setLoading] = useState(true);
 
   const [geminiKeys, setGeminiKeys] = useState<ProviderSimpleConfig[]>([]);
@@ -78,7 +76,9 @@ export function ProvidersPage() {
   const [vertexKeys, setVertexKeys] = useState<ProviderSimpleConfig[]>([]);
   const [openaiProviders, setOpenaiProviders] = useState<OpenAIProvider[]>([]);
 
-  const [usageEntries, setUsageEntries] = useState<Array<{ timestamp: string; failed: boolean; source: string }>>([]);
+  const [usageEntries, setUsageEntries] = useState<
+    Array<{ timestamp: string; failed: boolean; source: string }>
+  >([]);
   const [usageStatsBySource, setUsageStatsBySource] = useState<Record<string, KeyStatBucket>>({});
 
   const [ampcode, setAmpcode] = useState<Record<string, unknown> | null>(null);
@@ -88,7 +88,9 @@ export function ProvidersPage() {
   const [ampMappings, setAmpMappings] = useState<AmpMappingEntry[]>([]);
 
   const [editKeyOpen, setEditKeyOpen] = useState(false);
-  const [editKeyType, setEditKeyType] = useState<"gemini" | "claude" | "codex" | "vertex">("gemini");
+  const [editKeyType, setEditKeyType] = useState<"gemini" | "claude" | "codex" | "vertex">(
+    "gemini",
+  );
   const [editKeyIndex, setEditKeyIndex] = useState<number | null>(null);
   const [keyDraft, setKeyDraft] = useState<ProviderKeyDraft>(() => buildProviderKeyDraft(null));
   const [keyDraftError, setKeyDraftError] = useState<string | null>(null);
@@ -138,7 +140,10 @@ export function ProvidersPage() {
       setVertexKeys(vertex);
       setOpenaiProviders(openai);
 
-      const ampObj = amp && typeof amp === "object" && !Array.isArray(amp) ? (amp as Record<string, unknown>) : {};
+      const ampObj =
+        amp && typeof amp === "object" && !Array.isArray(amp)
+          ? (amp as Record<string, unknown>)
+          : {};
       setAmpcode(ampObj);
       setAmpUpstreamUrl(readString(ampObj, "upstreamUrl", "upstream-url"));
       setAmpForceMappings(readBool(ampObj, "forceModelMappings", "force-model-mappings"));
@@ -193,8 +198,14 @@ export function ProvidersPage() {
   const openKeyEditor = useCallback(
     (type: "gemini" | "claude" | "codex" | "vertex", index: number | null) => {
       const list =
-        type === "gemini" ? geminiKeys : type === "claude" ? claudeKeys : type === "codex" ? codexKeys : vertexKeys;
-      const current = index === null ? null : list[index] ?? null;
+        type === "gemini"
+          ? geminiKeys
+          : type === "claude"
+            ? claudeKeys
+            : type === "codex"
+              ? codexKeys
+              : vertexKeys;
+      const current = index === null ? null : (list[index] ?? null);
       setEditKeyType(type);
       setEditKeyIndex(index);
       setKeyDraft(buildProviderKeyDraft(current));
@@ -273,12 +284,29 @@ export function ProvidersPage() {
     } catch (err: unknown) {
       notify({ type: "error", message: err instanceof Error ? err.message : "保存失败" });
     }
-  }, [claudeKeys, codexKeys, commitKeyDraft, editKeyIndex, editKeyType, geminiKeys, notify, refreshAll, startTransition, vertexKeys]);
+  }, [
+    claudeKeys,
+    codexKeys,
+    commitKeyDraft,
+    editKeyIndex,
+    editKeyType,
+    geminiKeys,
+    notify,
+    refreshAll,
+    startTransition,
+    vertexKeys,
+  ]);
 
   const deleteKey = useCallback(
     async (type: "gemini" | "claude" | "codex" | "vertex", index: number) => {
       const list =
-        type === "gemini" ? geminiKeys : type === "claude" ? claudeKeys : type === "codex" ? codexKeys : vertexKeys;
+        type === "gemini"
+          ? geminiKeys
+          : type === "claude"
+            ? claudeKeys
+            : type === "codex"
+              ? codexKeys
+              : vertexKeys;
       const entry = list[index];
       if (!entry) return;
 
@@ -343,7 +371,7 @@ export function ProvidersPage() {
 
   const openOpenAIEditor = useCallback(
     (index: number | null) => {
-      const current = index === null ? null : openaiProviders[index] ?? null;
+      const current = index === null ? null : (openaiProviders[index] ?? null);
       setEditOpenAIIndex(index);
       setOpenaiDraft(buildOpenAIDraft(current));
       setOpenaiDraftError(null);
@@ -465,7 +493,9 @@ export function ProvidersPage() {
 
       const providerHeaders = keyValueEntriesToRecord(openaiDraft.headersEntries) ?? {};
       const firstEntry = openaiDraft.apiKeyEntries.find((entry) => entry.apiKey.trim());
-      const keyHeaders = firstEntry ? keyValueEntriesToRecord(firstEntry.headersEntries) ?? {} : {};
+      const keyHeaders = firstEntry
+        ? (keyValueEntriesToRecord(firstEntry.headersEntries) ?? {})
+        : {};
 
       const headers: Record<string, string> = { ...providerHeaders, ...keyHeaders };
 
@@ -543,7 +573,15 @@ export function ProvidersPage() {
     } catch (err: unknown) {
       notify({ type: "error", message: err instanceof Error ? err.message : "保存失败" });
     }
-  }, [ampForceMappings, ampMappings, ampUpstreamApiKey, ampUpstreamUrl, notify, refreshAll, startTransition]);
+  }, [
+    ampForceMappings,
+    ampMappings,
+    ampUpstreamApiKey,
+    ampUpstreamUrl,
+    notify,
+    refreshAll,
+    startTransition,
+  ]);
 
   const copyText = useCallback(
     async (value: string) => {
@@ -559,7 +597,11 @@ export function ProvidersPage() {
 
   const getSimpleStats = useCallback(
     (config: ProviderSimpleConfig): KeyStatBucket => {
-      const candidates = buildCandidateUsageSourceIds({ apiKey: config.apiKey, prefix: config.prefix, masker: maskApiKey });
+      const candidates = buildCandidateUsageSourceIds({
+        apiKey: config.apiKey,
+        prefix: config.prefix,
+        masker: maskApiKey,
+      });
       return sumStatsByCandidates(candidates, usageStatsBySource);
     },
     [usageStatsBySource],
@@ -568,7 +610,11 @@ export function ProvidersPage() {
   const getSimpleStatusBar = useCallback(
     (config: ProviderSimpleConfig): StatusBarData => {
       const candidates = new Set(
-        buildCandidateUsageSourceIds({ apiKey: config.apiKey, prefix: config.prefix, masker: maskApiKey }),
+        buildCandidateUsageSourceIds({
+          apiKey: config.apiKey,
+          prefix: config.prefix,
+          masker: maskApiKey,
+        }),
       );
       const details = candidates.size ? usageEntries.filter((d) => candidates.has(d.source)) : [];
       return calculateStatusBarData(details);
@@ -579,9 +625,13 @@ export function ProvidersPage() {
   const getOpenAIProviderStats = useCallback(
     (provider: OpenAIProvider): KeyStatBucket => {
       const candidates = new Set<string>();
-      buildCandidateUsageSourceIds({ prefix: provider.prefix, masker: maskApiKey }).forEach((id) => candidates.add(id));
+      buildCandidateUsageSourceIds({ prefix: provider.prefix, masker: maskApiKey }).forEach((id) =>
+        candidates.add(id),
+      );
       (provider.apiKeyEntries || []).forEach((entry) => {
-        buildCandidateUsageSourceIds({ apiKey: entry.apiKey, masker: maskApiKey }).forEach((id) => candidates.add(id));
+        buildCandidateUsageSourceIds({ apiKey: entry.apiKey, masker: maskApiKey }).forEach((id) =>
+          candidates.add(id),
+        );
       });
       return sumStatsByCandidates(Array.from(candidates), usageStatsBySource);
     },
@@ -591,9 +641,13 @@ export function ProvidersPage() {
   const getOpenAIProviderStatusBar = useCallback(
     (provider: OpenAIProvider): StatusBarData => {
       const candidates = new Set<string>();
-      buildCandidateUsageSourceIds({ prefix: provider.prefix, masker: maskApiKey }).forEach((id) => candidates.add(id));
+      buildCandidateUsageSourceIds({ prefix: provider.prefix, masker: maskApiKey }).forEach((id) =>
+        candidates.add(id),
+      );
       (provider.apiKeyEntries || []).forEach((entry) => {
-        buildCandidateUsageSourceIds({ apiKey: entry.apiKey, masker: maskApiKey }).forEach((id) => candidates.add(id));
+        buildCandidateUsageSourceIds({ apiKey: entry.apiKey, masker: maskApiKey }).forEach((id) =>
+          candidates.add(id),
+        );
       });
       const details = candidates.size ? usageEntries.filter((d) => candidates.has(d.source)) : [];
       return calculateStatusBarData(details);
@@ -609,7 +663,9 @@ export function ProvidersPage() {
   const editKeyEnabledToggle = useCallback(
     (enabled: boolean) => {
       const current = excludedModelsFromText(keyDraft.excludedModelsText);
-      const next = enabled ? withoutDisableAllModelsRule(current) : withDisableAllModelsRule(current);
+      const next = enabled
+        ? withoutDisableAllModelsRule(current)
+        : withDisableAllModelsRule(current);
       setKeyDraft((prev) => ({ ...prev, excludedModelsText: next.join("\n") }));
     },
     [keyDraft.excludedModelsText],
@@ -635,7 +691,12 @@ export function ProvidersPage() {
         description="在各标签页管理 API Key / OpenAI 提供商 / Ampcode 映射。已自动关联使用统计用于展示成功/失败与近况。"
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <Button variant="secondary" size="sm" onClick={() => void refreshAll()} disabled={loading}>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => void refreshAll()}
+              disabled={loading}
+            >
               <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
               刷新
             </Button>
@@ -779,7 +840,10 @@ export function ProvidersPage() {
                                       apiKey: entry.apiKey,
                                       masker: maskApiKey,
                                     });
-                                    const entryStats = sumStatsByCandidates(entryCandidates, usageStatsBySource);
+                                    const entryStats = sumStatsByCandidates(
+                                      entryCandidates,
+                                      usageStatsBySource,
+                                    );
                                     return (
                                       <div
                                         key={`${entry.apiKey}:${entryIndex}`}
@@ -830,9 +894,15 @@ export function ProvidersPage() {
                                   <span
                                     key={model.name}
                                     className="rounded-full bg-slate-900 px-2 py-0.5 text-[11px] text-white dark:bg-white dark:text-neutral-950"
-                                    title={model.alias && model.alias !== model.name ? `${model.name} => ${model.alias}` : model.name}
+                                    title={
+                                      model.alias && model.alias !== model.name
+                                        ? `${model.name} => ${model.alias}`
+                                        : model.name
+                                    }
                                   >
-                                    {model.alias && model.alias !== model.name ? `${model.name} → ${model.alias}` : model.name}
+                                    {model.alias && model.alias !== model.name
+                                      ? `${model.name} → ${model.alias}`
+                                      : model.name}
                                   </span>
                                 ))}
                               </div>
@@ -841,7 +911,11 @@ export function ProvidersPage() {
                             <ProviderStatusBar data={statusData} />
                           </div>
                           <div className="flex items-center gap-2">
-                            <Button variant="secondary" size="sm" onClick={() => openOpenAIEditor(idx)}>
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => openOpenAIEditor(idx)}
+                            >
                               <Settings2 size={14} />
                               编辑
                             </Button>
@@ -915,7 +989,9 @@ export function ProvidersPage() {
                           value={entry.from}
                           onChange={(e) => {
                             const value = e.currentTarget.value;
-                            setAmpMappings((prev) => prev.map((it, i) => (i === idx ? { ...it, from: value } : it)));
+                            setAmpMappings((prev) =>
+                              prev.map((it, i) => (i === idx ? { ...it, from: value } : it)),
+                            );
                           }}
                           placeholder="from"
                         />
@@ -925,7 +1001,9 @@ export function ProvidersPage() {
                           value={entry.to}
                           onChange={(e) => {
                             const value = e.currentTarget.value;
-                            setAmpMappings((prev) => prev.map((it, i) => (i === idx ? { ...it, to: value } : it)));
+                            setAmpMappings((prev) =>
+                              prev.map((it, i) => (i === idx ? { ...it, to: value } : it)),
+                            );
                           }}
                           placeholder="to"
                         />
@@ -948,7 +1026,12 @@ export function ProvidersPage() {
                     <Button
                       variant="secondary"
                       size="sm"
-                      onClick={() => setAmpMappings((prev) => [...prev, { id: `map-${Date.now()}`, from: "", to: "" }])}
+                      onClick={() =>
+                        setAmpMappings((prev) => [
+                          ...prev,
+                          { id: `map-${Date.now()}`, from: "", to: "" },
+                        ])
+                      }
                     >
                       <Plus size={14} />
                       新增
@@ -956,7 +1039,9 @@ export function ProvidersPage() {
                     <Button
                       variant="secondary"
                       size="sm"
-                      onClick={() => setAmpMappings([{ id: `map-${Date.now()}`, from: "", to: "" }])}
+                      onClick={() =>
+                        setAmpMappings([{ id: `map-${Date.now()}`, from: "", to: "" }])
+                      }
                     >
                       清空
                     </Button>
@@ -980,7 +1065,9 @@ export function ProvidersPage() {
         footer={
           <div className="flex flex-wrap items-center gap-2">
             {keyDraftError ? (
-              <span className="text-sm font-semibold text-rose-700 dark:text-rose-200">{keyDraftError}</span>
+              <span className="text-sm font-semibold text-rose-700 dark:text-rose-200">
+                {keyDraftError}
+              </span>
             ) : null}
             <Button variant="secondary" onClick={() => setEditKeyOpen(false)}>
               取消
@@ -1027,19 +1114,24 @@ export function ProvidersPage() {
               onCheckedChange={editKeyEnabledToggle}
             />
             <p className="mt-2 text-xs text-slate-500 dark:text-white/55">
-              禁用本质是向 Excluded Models 写入 <span className="font-mono">*</span>；你也可以在下方手动编辑。
+              禁用本质是向 Excluded Models 写入 <span className="font-mono">*</span>
+              ；你也可以在下方手动编辑。
             </p>
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-sm font-semibold text-slate-900 dark:text-white">API Key</p>
-              <span className="text-xs text-slate-500 dark:text-white/55">展示：{maskApiKey(keyDraft.apiKey)}</span>
+              <span className="text-xs text-slate-500 dark:text-white/55">
+                展示：{maskApiKey(keyDraft.apiKey)}
+              </span>
             </div>
             <div className="mt-2">
               <TextInput
                 value={keyDraft.apiKey}
-                onChange={(e) => setKeyDraft((prev) => ({ ...prev, apiKey: e.currentTarget.value }))}
+                onChange={(e) =>
+                  setKeyDraft((prev) => ({ ...prev, apiKey: e.currentTarget.value }))
+                }
                 placeholder="粘贴 API Key"
                 endAdornment={
                   <button
@@ -1061,11 +1153,15 @@ export function ProvidersPage() {
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
-            <p className="text-sm font-semibold text-slate-900 dark:text-white">路由标识（Prefix，可选）</p>
+            <p className="text-sm font-semibold text-slate-900 dark:text-white">
+              路由标识（Prefix，可选）
+            </p>
             <div className="mt-2">
               <TextInput
                 value={keyDraft.prefix}
-                onChange={(e) => setKeyDraft((prev) => ({ ...prev, prefix: e.currentTarget.value }))}
+                onChange={(e) =>
+                  setKeyDraft((prev) => ({ ...prev, prefix: e.currentTarget.value }))
+                }
                 placeholder="例如：team-a"
               />
             </div>
@@ -1075,21 +1171,29 @@ export function ProvidersPage() {
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
-            <p className="text-sm font-semibold text-slate-900 dark:text-white">连接与代理（可选）</p>
+            <p className="text-sm font-semibold text-slate-900 dark:text-white">
+              连接与代理（可选）
+            </p>
             <div className="mt-3 grid gap-3">
               <div className="space-y-2">
                 <p className="text-xs font-semibold text-slate-700 dark:text-white/75">Base URL</p>
                 <TextInput
                   value={keyDraft.baseUrl}
-                  onChange={(e) => setKeyDraft((prev) => ({ ...prev, baseUrl: e.currentTarget.value }))}
-                  placeholder={editKeyType === "claude" ? "例如：https://api.anthropic.com" : "baseUrl"}
+                  onChange={(e) =>
+                    setKeyDraft((prev) => ({ ...prev, baseUrl: e.currentTarget.value }))
+                  }
+                  placeholder={
+                    editKeyType === "claude" ? "例如：https://api.anthropic.com" : "baseUrl"
+                  }
                 />
               </div>
               <div className="space-y-2">
                 <p className="text-xs font-semibold text-slate-700 dark:text-white/75">Proxy URL</p>
                 <TextInput
                   value={keyDraft.proxyUrl}
-                  onChange={(e) => setKeyDraft((prev) => ({ ...prev, proxyUrl: e.currentTarget.value }))}
+                  onChange={(e) =>
+                    setKeyDraft((prev) => ({ ...prev, proxyUrl: e.currentTarget.value }))
+                  }
                   placeholder="proxyUrl"
                 />
               </div>
@@ -1108,13 +1212,18 @@ export function ProvidersPage() {
               valuePlaceholder="Header 值"
             />
             <p className="mt-2 text-xs text-slate-500 dark:text-white/55">
-              常见：<span className="font-mono">x-api-key</span>、<span className="font-mono">anthropic-version</span>、自定义鉴权头等。
+              常见：<span className="font-mono">x-api-key</span>、
+              <span className="font-mono">anthropic-version</span>、自定义鉴权头等。
             </p>
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
             <ModelInputList
-              title={editKeyType === "vertex" ? "Models（必须填写 alias：name => alias）" : "Models（可选）"}
+              title={
+                editKeyType === "vertex"
+                  ? "Models（必须填写 alias：name => alias）"
+                  : "Models（可选）"
+              }
               entries={keyDraft.modelEntries}
               onChange={(next) => setKeyDraft((prev) => ({ ...prev, modelEntries: next }))}
               showPriority
@@ -1133,7 +1242,9 @@ export function ProvidersPage() {
 
           <div className="rounded-2xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-sm font-semibold text-slate-900 dark:text-white">Excluded Models（可选）</p>
+              <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                Excluded Models（可选）
+              </p>
               <div className="flex items-center gap-2">
                 <Button variant="secondary" size="sm" onClick={() => editKeyEnabledToggle(false)}>
                   写入 * 禁用
@@ -1153,14 +1264,17 @@ export function ProvidersPage() {
 
             <textarea
               value={keyDraft.excludedModelsText}
-              onChange={(e) => setKeyDraft((prev) => ({ ...prev, excludedModelsText: e.currentTarget.value }))}
+              onChange={(e) =>
+                setKeyDraft((prev) => ({ ...prev, excludedModelsText: e.currentTarget.value }))
+              }
               placeholder="每行一个模型；写 * 表示禁用全部模型"
               aria-label="excludedModels"
               className="mt-3 min-h-[140px] w-full resize-y rounded-2xl border border-slate-200 bg-white px-3 py-2 font-mono text-xs text-slate-900 outline-none transition placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-slate-400/35 dark:border-neutral-800 dark:bg-neutral-950 dark:text-slate-100 dark:placeholder:text-neutral-500 dark:focus-visible:ring-white/15"
             />
 
             <p className="mt-2 text-xs text-slate-500 dark:text-white/55">
-              当前排除：<span className="font-semibold tabular-nums">{editKeyExcludedCount}</span> 条（不含 *）。
+              当前排除：<span className="font-semibold tabular-nums">{editKeyExcludedCount}</span>{" "}
+              条（不含 *）。
             </p>
           </div>
         </div>
@@ -1174,7 +1288,9 @@ export function ProvidersPage() {
         footer={
           <div className="flex flex-wrap items-center gap-2">
             {openaiDraftError ? (
-              <span className="text-sm font-semibold text-rose-700 dark:text-rose-200">{openaiDraftError}</span>
+              <span className="text-sm font-semibold text-rose-700 dark:text-rose-200">
+                {openaiDraftError}
+              </span>
             ) : null}
             <Button variant="secondary" onClick={() => setEditOpenAIOpen(false)}>
               取消
@@ -1192,7 +1308,9 @@ export function ProvidersPage() {
               <p className="text-sm font-semibold text-slate-900 dark:text-white">Name</p>
               <TextInput
                 value={openaiDraft.name}
-                onChange={(e) => setOpenaiDraft((prev) => ({ ...prev, name: e.currentTarget.value }))}
+                onChange={(e) =>
+                  setOpenaiDraft((prev) => ({ ...prev, name: e.currentTarget.value }))
+                }
                 placeholder="name"
               />
             </div>
@@ -1209,7 +1327,8 @@ export function ProvidersPage() {
                 placeholder="baseUrl"
               />
               <p className="text-xs text-slate-500 dark:text-white/55">
-                /models 拉取地址：{openaiDraft.baseUrl.trim() ? buildModelsEndpoint(openaiDraft.baseUrl) : "--"}
+                /models 拉取地址：
+                {openaiDraft.baseUrl.trim() ? buildModelsEndpoint(openaiDraft.baseUrl) : "--"}
               </p>
             </div>
           </div>
@@ -1219,24 +1338,34 @@ export function ProvidersPage() {
               <p className="text-sm font-semibold text-slate-900 dark:text-white">Prefix（可选）</p>
               <TextInput
                 value={openaiDraft.prefix}
-                onChange={(e) => setOpenaiDraft((prev) => ({ ...prev, prefix: e.currentTarget.value }))}
+                onChange={(e) =>
+                  setOpenaiDraft((prev) => ({ ...prev, prefix: e.currentTarget.value }))
+                }
                 placeholder="prefix"
               />
             </div>
             <div className="space-y-2">
-              <p className="text-sm font-semibold text-slate-900 dark:text-white">Priority（可选）</p>
+              <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                Priority（可选）
+              </p>
               <TextInput
                 value={openaiDraft.priorityText}
-                onChange={(e) => setOpenaiDraft((prev) => ({ ...prev, priorityText: e.currentTarget.value }))}
+                onChange={(e) =>
+                  setOpenaiDraft((prev) => ({ ...prev, priorityText: e.currentTarget.value }))
+                }
                 placeholder="数字"
                 inputMode="numeric"
               />
             </div>
             <div className="space-y-2">
-              <p className="text-sm font-semibold text-slate-900 dark:text-white">Test Model（可选）</p>
+              <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                Test Model（可选）
+              </p>
               <TextInput
                 value={openaiDraft.testModel}
-                onChange={(e) => setOpenaiDraft((prev) => ({ ...prev, testModel: e.currentTarget.value }))}
+                onChange={(e) =>
+                  setOpenaiDraft((prev) => ({ ...prev, testModel: e.currentTarget.value }))
+                }
                 placeholder="testModel"
               />
             </div>
@@ -1250,7 +1379,9 @@ export function ProvidersPage() {
 
           <section className="space-y-2">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-sm font-semibold text-slate-900 dark:text-white">API Key Entries</p>
+              <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                API Key Entries
+              </p>
               <Button
                 variant="secondary"
                 size="sm"
@@ -1276,7 +1407,9 @@ export function ProvidersPage() {
                   className="rounded-2xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-sm font-semibold text-slate-900 dark:text-white">Key #{idx + 1}</p>
+                    <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                      Key #{idx + 1}
+                    </p>
                     <Button
                       variant="danger"
                       size="sm"
@@ -1295,14 +1428,18 @@ export function ProvidersPage() {
 
                   <div className="mt-3 grid gap-3 md:grid-cols-2">
                     <div className="space-y-2">
-                      <p className="text-sm font-semibold text-slate-900 dark:text-white">API Key</p>
+                      <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                        API Key
+                      </p>
                       <TextInput
                         value={entry.apiKey}
                         onChange={(e) => {
                           const value = e.currentTarget.value;
                           setOpenaiDraft((prev) => ({
                             ...prev,
-                            apiKeyEntries: prev.apiKeyEntries.map((it, i) => (i === idx ? { ...it, apiKey: value } : it)),
+                            apiKeyEntries: prev.apiKeyEntries.map((it, i) =>
+                              i === idx ? { ...it, apiKey: value } : it,
+                            ),
                           }));
                         }}
                         placeholder="apiKey"
@@ -1321,14 +1458,18 @@ export function ProvidersPage() {
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <p className="text-sm font-semibold text-slate-900 dark:text-white">Proxy URL（可选）</p>
+                      <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                        Proxy URL（可选）
+                      </p>
                       <TextInput
                         value={entry.proxyUrl}
                         onChange={(e) => {
                           const value = e.currentTarget.value;
                           setOpenaiDraft((prev) => ({
                             ...prev,
-                            apiKeyEntries: prev.apiKeyEntries.map((it, i) => (i === idx ? { ...it, proxyUrl: value } : it)),
+                            apiKeyEntries: prev.apiKeyEntries.map((it, i) =>
+                              i === idx ? { ...it, proxyUrl: value } : it,
+                            ),
                           }));
                         }}
                         placeholder="proxyUrl"
@@ -1343,7 +1484,9 @@ export function ProvidersPage() {
                       onChange={(next) => {
                         setOpenaiDraft((prev) => ({
                           ...prev,
-                          apiKeyEntries: prev.apiKeyEntries.map((it, i) => (i === idx ? { ...it, headersEntries: next } : it)),
+                          apiKeyEntries: prev.apiKeyEntries.map((it, i) =>
+                            i === idx ? { ...it, headersEntries: next } : it,
+                          ),
                         }));
                       }}
                     />
@@ -1357,7 +1500,12 @@ export function ProvidersPage() {
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-sm font-semibold text-slate-900 dark:text-white">Models</p>
               <div className="flex items-center gap-2">
-                <Button variant="secondary" size="sm" onClick={() => void discoverModels()} disabled={discovering}>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => void discoverModels()}
+                  disabled={discovering}
+                >
                   <RefreshCw size={14} className={discovering ? "animate-spin" : ""} />
                   拉取 /models
                 </Button>

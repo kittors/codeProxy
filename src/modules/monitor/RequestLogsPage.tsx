@@ -168,13 +168,7 @@ const Card = ({
   );
 };
 
-function VirtualRequestLogTable({
-  rows,
-  loading,
-}: {
-  rows: readonly LogRow[];
-  loading: boolean;
-}) {
+function VirtualRequestLogTable({ rows, loading }: { rows: readonly LogRow[]; loading: boolean }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [scrollTop, setScrollTop] = useState(0);
   const [viewportHeight, setViewportHeight] = useState(480);
@@ -271,7 +265,10 @@ function VirtualRequestLogTable({
           <tbody className="text-slate-900 dark:text-white">
             {!loading && rows.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-4 py-12 text-center text-sm text-slate-600 dark:text-white/70">
+                <td
+                  colSpan={8}
+                  className="px-4 py-12 text-center text-sm text-slate-600 dark:text-white/70"
+                >
                   暂无数据
                 </td>
               </tr>
@@ -286,8 +283,13 @@ function VirtualRequestLogTable({
                     className="h-10 text-sm transition hover:bg-slate-50/70 dark:hover:bg-white/5"
                   >
                     <td className="border-b border-slate-100 px-4 align-middle font-mono text-xs tabular-nums text-slate-700 dark:border-neutral-900 dark:text-slate-200">
-                      <OverflowTooltip content={formatTimestamp(row.timestamp)} className="block min-w-0">
-                        <span className="block min-w-0 truncate">{formatTimestamp(row.timestamp)}</span>
+                      <OverflowTooltip
+                        content={formatTimestamp(row.timestamp)}
+                        className="block min-w-0"
+                      >
+                        <span className="block min-w-0 truncate">
+                          {formatTimestamp(row.timestamp)}
+                        </span>
                       </OverflowTooltip>
                     </td>
                     <td className="border-b border-slate-100 px-4 align-middle dark:border-neutral-900">
@@ -312,8 +314,13 @@ function VirtualRequestLogTable({
                       </OverflowTooltip>
                     </td>
                     <td className="border-b border-slate-100 px-4 text-right align-middle font-mono text-xs tabular-nums text-slate-700 dark:border-neutral-900 dark:text-slate-200">
-                      <OverflowTooltip content={row.inputTokens.toLocaleString()} className="block min-w-0">
-                        <span className="block min-w-0 truncate">{row.inputTokens.toLocaleString()}</span>
+                      <OverflowTooltip
+                        content={row.inputTokens.toLocaleString()}
+                        className="block min-w-0"
+                      >
+                        <span className="block min-w-0 truncate">
+                          {row.inputTokens.toLocaleString()}
+                        </span>
                       </OverflowTooltip>
                     </td>
                     <td className="border-b border-slate-100 px-4 text-right align-middle font-mono text-xs tabular-nums text-slate-700 dark:border-neutral-900 dark:text-slate-200">
@@ -321,16 +328,26 @@ function VirtualRequestLogTable({
                         content={row.outputTokens.toLocaleString()}
                         className="block min-w-0"
                       >
-                        <span className="block min-w-0 truncate">{row.outputTokens.toLocaleString()}</span>
+                        <span className="block min-w-0 truncate">
+                          {row.outputTokens.toLocaleString()}
+                        </span>
                       </OverflowTooltip>
                     </td>
                     <td className="border-b border-slate-100 px-4 text-right align-middle font-mono text-xs tabular-nums text-slate-900 dark:border-neutral-900 dark:text-white">
-                      <OverflowTooltip content={row.totalTokens.toLocaleString()} className="block min-w-0">
-                        <span className="block min-w-0 truncate">{row.totalTokens.toLocaleString()}</span>
+                      <OverflowTooltip
+                        content={row.totalTokens.toLocaleString()}
+                        className="block min-w-0"
+                      >
+                        <span className="block min-w-0 truncate">
+                          {row.totalTokens.toLocaleString()}
+                        </span>
                       </OverflowTooltip>
                     </td>
                     <td className="border-b border-slate-100 px-4 align-middle dark:border-neutral-900">
-                      <OverflowTooltip content={row.maskedApiKey} className="block min-w-0 font-mono text-xs tabular-nums">
+                      <OverflowTooltip
+                        content={row.maskedApiKey}
+                        className="block min-w-0 font-mono text-xs tabular-nums"
+                      >
                         <span className="block min-w-0 truncate">{row.maskedApiKey}</span>
                       </OverflowTooltip>
                     </td>
@@ -554,7 +571,8 @@ export function RequestLogsPage() {
               ·
             </span>
             <span>
-              Token <span className="font-mono tabular-nums">{summary.totalTokens.toLocaleString()}</span>
+              Token{" "}
+              <span className="font-mono tabular-nums">{summary.totalTokens.toLocaleString()}</span>
             </span>
           </span>
           <span className="text-xs text-slate-500 dark:text-white/55">{lastUpdatedText}</span>

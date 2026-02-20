@@ -11,8 +11,7 @@ export const createHourlyModelOption = (input: {
 }): Record<string, unknown> => {
   const points = input.hourlySeries.modelPoints.slice(-input.modelHourWindow);
   const x = points.map((point) => point.label);
-  const barMaxWidth =
-    input.modelHourWindow <= 6 ? 44 : input.modelHourWindow <= 12 ? 32 : 24;
+  const barMaxWidth = input.modelHourWindow <= 6 ? 44 : input.modelHourWindow <= 12 ? 32 : 24;
 
   const selectedKeys = input.hourlySeries.modelKeys.filter(
     (key) => input.hourlyModelSelected[key] ?? true,
@@ -137,4 +136,3 @@ export const createHourlyModelOption = (input: {
     animationDurationUpdate: 360,
   };
 };
-

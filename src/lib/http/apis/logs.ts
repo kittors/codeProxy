@@ -12,4 +12,3 @@ export const logsApi = {
   downloadRequestLogById: (id: string): Promise<Blob> =>
     apiClient.getBlob(`/request-log-by-id/${encodeURIComponent(id)}`, { timeoutMs: 60000 }),
 };
-

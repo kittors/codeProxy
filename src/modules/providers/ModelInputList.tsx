@@ -91,7 +91,9 @@ export function ModelInputList({
                     inputMode="numeric"
                     onChange={(e) => {
                       const value = e.currentTarget.value;
-                      onChange(entries.map((it, i) => (i === idx ? { ...it, priorityText: value } : it)));
+                      onChange(
+                        entries.map((it, i) => (i === idx ? { ...it, priorityText: value } : it)),
+                      );
                     }}
                   />
                 </div>
@@ -104,7 +106,9 @@ export function ModelInputList({
                     disabled={disabled}
                     onChange={(e) => {
                       const value = e.currentTarget.value;
-                      onChange(entries.map((it, i) => (i === idx ? { ...it, testModel: value } : it)));
+                      onChange(
+                        entries.map((it, i) => (i === idx ? { ...it, testModel: value } : it)),
+                      );
                     }}
                   />
                 </div>

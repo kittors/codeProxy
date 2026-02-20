@@ -18,7 +18,9 @@ export const recordToKeyValueEntries = (record?: Record<string, string>): KeyVal
   return entries;
 };
 
-export const keyValueEntriesToRecord = (entries: KeyValueEntry[]): Record<string, string> | undefined => {
+export const keyValueEntriesToRecord = (
+  entries: KeyValueEntry[],
+): Record<string, string> | undefined => {
   const result: Record<string, string> = {};
   entries.forEach((entry) => {
     const key = entry.key.trim();

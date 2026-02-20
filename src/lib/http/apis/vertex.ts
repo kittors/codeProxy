@@ -16,4 +16,3 @@ export const vertexApi = {
     }>("/vertex/import", formData);
   },
 };
-

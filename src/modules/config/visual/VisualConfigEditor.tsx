@@ -84,7 +84,10 @@ function SelectInput({
           </option>
         ))}
       </select>
-      <ChevronDown size={16} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 dark:text-white/50" />
+      <ChevronDown
+        size={16}
+        className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 dark:text-white/50"
+      />
     </div>
   );
 }
@@ -237,21 +240,38 @@ function ApiKeysEditor({
                   <span className="inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-700 dark:bg-white/10 dark:text-white/80">
                     #{index + 1}
                   </span>
-                  <span className="text-sm font-semibold text-slate-900 dark:text-white">API Key</span>
+                  <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                    API Key
+                  </span>
                 </div>
                 <div className="mt-1 truncate font-mono text-xs text-slate-600 dark:text-white/65">
                   {maskApiKey(key)}
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Button variant="secondary" size="sm" onClick={() => void handleCopy(key)} disabled={disabled}>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => void handleCopy(key)}
+                  disabled={disabled}
+                >
                   <Copy size={14} />
                   复制
                 </Button>
-                <Button variant="secondary" size="sm" onClick={() => openEditModal(index)} disabled={disabled}>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => openEditModal(index)}
+                  disabled={disabled}
+                >
                   编辑
                 </Button>
-                <Button variant="danger" size="sm" onClick={() => setDeleteIndex(index)} disabled={disabled}>
+                <Button
+                  variant="danger"
+                  size="sm"
+                  onClick={() => setDeleteIndex(index)}
+                  disabled={disabled}
+                >
                   <Trash2 size={14} />
                   删除
                 </Button>
@@ -261,7 +281,9 @@ function ApiKeysEditor({
         </div>
       )}
 
-      <p className="text-xs text-slate-600 dark:text-white/65">对应 `config.yaml` 中 `api-keys` 配置（每行一个）。</p>
+      <p className="text-xs text-slate-600 dark:text-white/65">
+        对应 `config.yaml` 中 `api-keys` 配置（每行一个）。
+      </p>
 
       <Modal
         open={modalOpen}
@@ -286,7 +308,9 @@ function ApiKeysEditor({
             placeholder="sk-..."
             disabled={disabled}
           />
-          {formError ? <p className="mt-2 text-sm text-rose-600 dark:text-rose-300">{formError}</p> : null}
+          {formError ? (
+            <p className="mt-2 text-sm text-rose-600 dark:text-rose-300">{formError}</p>
+          ) : null}
         </Field>
       </Modal>
 
@@ -311,7 +335,9 @@ function updateRuleModels(
   ruleIndex: number,
   updater: (models: PayloadModelEntry[]) => PayloadModelEntry[],
 ): PayloadRule[] {
-  return rules.map((rule, idx) => (idx === ruleIndex ? { ...rule, models: updater(rule.models) } : rule));
+  return rules.map((rule, idx) =>
+    idx === ruleIndex ? { ...rule, models: updater(rule.models) } : rule,
+  );
 }
 
 function updateRuleParams(
@@ -319,7 +345,9 @@ function updateRuleParams(
   ruleIndex: number,
   updater: (params: PayloadParamEntry[]) => PayloadParamEntry[],
 ): PayloadRule[] {
-  return rules.map((rule, idx) => (idx === ruleIndex ? { ...rule, params: updater(rule.params) } : rule));
+  return rules.map((rule, idx) =>
+    idx === ruleIndex ? { ...rule, params: updater(rule.params) } : rule,
+  );
 }
 
 function PayloadRulesEditor({
@@ -336,7 +364,11 @@ function PayloadRulesEditor({
   onChange: (rules: PayloadRule[]) => void;
 }) {
   const addRule = () => {
-    const next: PayloadRule = { id: makeClientId(), models: [{ id: makeClientId(), name: "", protocol: undefined }], params: [] };
+    const next: PayloadRule = {
+      id: makeClientId(),
+      models: [{ id: makeClientId(), name: "", protocol: undefined }],
+      params: [],
+    };
     onChange([...(rules || []), next]);
   };
 
@@ -345,14 +377,25 @@ function PayloadRulesEditor({
   };
 
   const addModel = (ruleIndex: number) => {
-    onChange(updateRuleModels(rules, ruleIndex, (models) => [...models, { id: makeClientId(), name: "", protocol: undefined }]));
+    onChange(
+      updateRuleModels(rules, ruleIndex, (models) => [
+        ...models,
+        { id: makeClientId(), name: "", protocol: undefined },
+      ]),
+    );
   };
 
   const removeModel = (ruleIndex: number, modelIndex: number) => {
-    onChange(updateRuleModels(rules, ruleIndex, (models) => models.filter((_, i) => i !== modelIndex)));
+    onChange(
+      updateRuleModels(rules, ruleIndex, (models) => models.filter((_, i) => i !== modelIndex)),
+    );
   };
 
-  const updateModel = (ruleIndex: number, modelIndex: number, patch: Partial<PayloadModelEntry>) => {
+  const updateModel = (
+    ruleIndex: number,
+    modelIndex: number,
+    patch: Partial<PayloadModelEntry>,
+  ) => {
     onChange(
       updateRuleModels(rules, ruleIndex, (models) =>
         models.map((m, i) => (i === modelIndex ? { ...m, ...patch } : m)),
@@ -361,15 +404,26 @@ function PayloadRulesEditor({
   };
 
   const addParam = (ruleIndex: number) => {
-    const next: PayloadParamEntry = { id: makeClientId(), path: "", valueType: "string", value: "" };
+    const next: PayloadParamEntry = {
+      id: makeClientId(),
+      path: "",
+      valueType: "string",
+      value: "",
+    };
     onChange(updateRuleParams(rules, ruleIndex, (params) => [...params, next]));
   };
 
   const removeParam = (ruleIndex: number, paramIndex: number) => {
-    onChange(updateRuleParams(rules, ruleIndex, (params) => params.filter((_, i) => i !== paramIndex)));
+    onChange(
+      updateRuleParams(rules, ruleIndex, (params) => params.filter((_, i) => i !== paramIndex)),
+    );
   };
 
-  const updateParam = (ruleIndex: number, paramIndex: number, patch: Partial<PayloadParamEntry>) => {
+  const updateParam = (
+    ruleIndex: number,
+    paramIndex: number,
+    patch: Partial<PayloadParamEntry>,
+  ) => {
     onChange(
       updateRuleParams(rules, ruleIndex, (params) =>
         params.map((p, i) => (i === paramIndex ? { ...p, ...patch } : p)),
@@ -380,7 +434,7 @@ function PayloadRulesEditor({
   const getValuePlaceholder = (valueType: PayloadParamValueType) => {
     if (valueType === "number") return "例如：1";
     if (valueType === "boolean") return "true / false";
-    if (valueType === "json") return "例如：{\"a\":1}";
+    if (valueType === "json") return '例如：{"a":1}';
     return "例如：hello";
   };
 
@@ -407,8 +461,15 @@ function PayloadRulesEditor({
               className="space-y-3 rounded-2xl border border-slate-200 bg-white/60 p-4 dark:border-neutral-800 dark:bg-neutral-950/40"
             >
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="text-sm font-semibold text-slate-900 dark:text-white">规则 {ruleIndex + 1}</div>
-                <Button variant="ghost" size="sm" onClick={() => removeRule(ruleIndex)} disabled={disabled}>
+                <div className="text-sm font-semibold text-slate-900 dark:text-white">
+                  规则 {ruleIndex + 1}
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => removeRule(ruleIndex)}
+                  disabled={disabled}
+                >
                   <Trash2 size={14} />
                   删除规则
                 </Button>
@@ -416,8 +477,15 @@ function PayloadRulesEditor({
 
               <div className="space-y-2">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="text-xs font-semibold text-slate-600 dark:text-white/65">匹配模型</div>
-                  <Button variant="secondary" size="sm" onClick={() => addModel(ruleIndex)} disabled={disabled}>
+                  <div className="text-xs font-semibold text-slate-600 dark:text-white/65">
+                    匹配模型
+                  </div>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => addModel(ruleIndex)}
+                    disabled={disabled}
+                  >
                     <Plus size={14} />
                     新增模型
                   </Button>
@@ -428,7 +496,9 @@ function PayloadRulesEditor({
                     <div key={model.id} className="grid gap-2 lg:grid-cols-[1fr_180px_auto]">
                       <TextInput
                         value={model.name}
-                        onChange={(e) => updateModel(ruleIndex, modelIndex, { name: e.currentTarget.value })}
+                        onChange={(e) =>
+                          updateModel(ruleIndex, modelIndex, { name: e.currentTarget.value })
+                        }
                         placeholder="model 名称"
                         disabled={disabled}
                       />
@@ -459,8 +529,15 @@ function PayloadRulesEditor({
 
               <div className="space-y-2">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="text-xs font-semibold text-slate-600 dark:text-white/65">覆盖参数</div>
-                  <Button variant="secondary" size="sm" onClick={() => addParam(ruleIndex)} disabled={disabled}>
+                  <div className="text-xs font-semibold text-slate-600 dark:text-white/65">
+                    覆盖参数
+                  </div>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => addParam(ruleIndex)}
+                    disabled={disabled}
+                  >
                     <Plus size={14} />
                     新增参数
                   </Button>
@@ -473,22 +550,36 @@ function PayloadRulesEditor({
                 ) : (
                   <div className="space-y-2">
                     {(rule.params || []).map((param, paramIndex) => (
-                      <div key={param.id} className="space-y-2 rounded-2xl border border-slate-200 bg-white/60 p-3 dark:border-neutral-800 dark:bg-neutral-950/40">
+                      <div
+                        key={param.id}
+                        className="space-y-2 rounded-2xl border border-slate-200 bg-white/60 p-3 dark:border-neutral-800 dark:bg-neutral-950/40"
+                      >
                         <div className="grid gap-2 lg:grid-cols-[1fr_180px_auto]">
                           <TextInput
                             value={param.path}
-                            onChange={(e) => updateParam(ruleIndex, paramIndex, { path: e.currentTarget.value })}
+                            onChange={(e) =>
+                              updateParam(ruleIndex, paramIndex, { path: e.currentTarget.value })
+                            }
                             placeholder="参数路径，例如：headers.Authorization"
                             disabled={disabled}
                           />
                           <SelectInput
                             value={param.valueType}
-                            onChange={(value) => updateParam(ruleIndex, paramIndex, { valueType: value as PayloadParamValueType })}
+                            onChange={(value) =>
+                              updateParam(ruleIndex, paramIndex, {
+                                valueType: value as PayloadParamValueType,
+                              })
+                            }
                             options={VISUAL_CONFIG_PAYLOAD_VALUE_TYPE_OPTIONS}
                             disabled={disabled}
                             ariaLabel="值类型"
                           />
-                          <Button variant="danger" size="sm" onClick={() => removeParam(ruleIndex, paramIndex)} disabled={disabled}>
+                          <Button
+                            variant="danger"
+                            size="sm"
+                            onClick={() => removeParam(ruleIndex, paramIndex)}
+                            disabled={disabled}
+                          >
                             <Trash2 size={14} />
                             删除
                           </Button>
@@ -506,7 +597,9 @@ function PayloadRulesEditor({
                         ) : (
                           <TextInput
                             value={param.value}
-                            onChange={(e) => updateParam(ruleIndex, paramIndex, { value: e.currentTarget.value })}
+                            onChange={(e) =>
+                              updateParam(ruleIndex, paramIndex, { value: e.currentTarget.value })
+                            }
                             placeholder={getValuePlaceholder(param.valueType)}
                             disabled={disabled}
                           />
@@ -534,7 +627,11 @@ function PayloadFilterRulesEditor({
   onChange: (rules: PayloadFilterRule[]) => void;
 }) {
   const addRule = () => {
-    const next: PayloadFilterRule = { id: makeClientId(), models: [{ id: makeClientId(), name: "", protocol: undefined }], params: [] };
+    const next: PayloadFilterRule = {
+      id: makeClientId(),
+      models: [{ id: makeClientId(), name: "", protocol: undefined }],
+      params: [],
+    };
     onChange([...(rules || []), next]);
   };
 
@@ -548,7 +645,9 @@ function PayloadFilterRulesEditor({
 
   const addModel = (ruleIndex: number) => {
     const rule = rules[ruleIndex];
-    updateRule(ruleIndex, { models: [...rule.models, { id: makeClientId(), name: "", protocol: undefined }] });
+    updateRule(ruleIndex, {
+      models: [...rule.models, { id: makeClientId(), name: "", protocol: undefined }],
+    });
   };
 
   const removeModel = (ruleIndex: number, modelIndex: number) => {
@@ -556,9 +655,15 @@ function PayloadFilterRulesEditor({
     updateRule(ruleIndex, { models: rule.models.filter((_, i) => i !== modelIndex) });
   };
 
-  const updateModel = (ruleIndex: number, modelIndex: number, patch: Partial<PayloadModelEntry>) => {
+  const updateModel = (
+    ruleIndex: number,
+    modelIndex: number,
+    patch: Partial<PayloadModelEntry>,
+  ) => {
     const rule = rules[ruleIndex];
-    updateRule(ruleIndex, { models: rule.models.map((m, i) => (i === modelIndex ? { ...m, ...patch } : m)) });
+    updateRule(ruleIndex, {
+      models: rule.models.map((m, i) => (i === modelIndex ? { ...m, ...patch } : m)),
+    });
   };
 
   const addParam = (ruleIndex: number) => {
@@ -573,7 +678,9 @@ function PayloadFilterRulesEditor({
 
   const updateParam = (ruleIndex: number, paramIndex: number, nextValue: string) => {
     const rule = rules[ruleIndex];
-    updateRule(ruleIndex, { params: (rule.params || []).map((p, i) => (i === paramIndex ? nextValue : p)) });
+    updateRule(ruleIndex, {
+      params: (rule.params || []).map((p, i) => (i === paramIndex ? nextValue : p)),
+    });
   };
 
   return (
@@ -599,8 +706,15 @@ function PayloadFilterRulesEditor({
               className="space-y-3 rounded-2xl border border-slate-200 bg-white/60 p-4 dark:border-neutral-800 dark:bg-neutral-950/40"
             >
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="text-sm font-semibold text-slate-900 dark:text-white">规则 {ruleIndex + 1}</div>
-                <Button variant="ghost" size="sm" onClick={() => removeRule(ruleIndex)} disabled={disabled}>
+                <div className="text-sm font-semibold text-slate-900 dark:text-white">
+                  规则 {ruleIndex + 1}
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => removeRule(ruleIndex)}
+                  disabled={disabled}
+                >
                   <Trash2 size={14} />
                   删除规则
                 </Button>
@@ -608,8 +722,15 @@ function PayloadFilterRulesEditor({
 
               <div className="space-y-2">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="text-xs font-semibold text-slate-600 dark:text-white/65">匹配模型</div>
-                  <Button variant="secondary" size="sm" onClick={() => addModel(ruleIndex)} disabled={disabled}>
+                  <div className="text-xs font-semibold text-slate-600 dark:text-white/65">
+                    匹配模型
+                  </div>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => addModel(ruleIndex)}
+                    disabled={disabled}
+                  >
                     <Plus size={14} />
                     新增模型
                   </Button>
@@ -620,7 +741,9 @@ function PayloadFilterRulesEditor({
                     <div key={model.id} className="grid gap-2 lg:grid-cols-[1fr_180px_auto]">
                       <TextInput
                         value={model.name}
-                        onChange={(e) => updateModel(ruleIndex, modelIndex, { name: e.currentTarget.value })}
+                        onChange={(e) =>
+                          updateModel(ruleIndex, modelIndex, { name: e.currentTarget.value })
+                        }
                         placeholder="model 名称"
                         disabled={disabled}
                       />
@@ -651,8 +774,15 @@ function PayloadFilterRulesEditor({
 
               <div className="space-y-2">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="text-xs font-semibold text-slate-600 dark:text-white/65">移除参数路径</div>
-                  <Button variant="secondary" size="sm" onClick={() => addParam(ruleIndex)} disabled={disabled}>
+                  <div className="text-xs font-semibold text-slate-600 dark:text-white/65">
+                    移除参数路径
+                  </div>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => addParam(ruleIndex)}
+                    disabled={disabled}
+                  >
                     <Plus size={14} />
                     新增路径
                   </Button>
@@ -665,14 +795,24 @@ function PayloadFilterRulesEditor({
                 ) : (
                   <div className="space-y-2">
                     {(rule.params || []).map((param, paramIndex) => (
-                      <div key={`${rule.id}-p-${paramIndex}`} className="grid gap-2 lg:grid-cols-[1fr_auto]">
+                      <div
+                        key={`${rule.id}-p-${paramIndex}`}
+                        className="grid gap-2 lg:grid-cols-[1fr_auto]"
+                      >
                         <TextInput
                           value={param}
-                          onChange={(e) => updateParam(ruleIndex, paramIndex, e.currentTarget.value)}
+                          onChange={(e) =>
+                            updateParam(ruleIndex, paramIndex, e.currentTarget.value)
+                          }
                           placeholder="例如：messages.0.content"
                           disabled={disabled}
                         />
-                        <Button variant="danger" size="sm" onClick={() => removeParam(ruleIndex, paramIndex)} disabled={disabled}>
+                        <Button
+                          variant="danger"
+                          size="sm"
+                          onClick={() => removeParam(ruleIndex, paramIndex)}
+                          disabled={disabled}
+                        >
                           <Trash2 size={14} />
                           删除
                         </Button>
@@ -923,7 +1063,10 @@ export function VisualConfigEditor({
           </div>
         </Card>
 
-        <Card title="配额超限策略" description="quota-exceeded.switch-project / switch-preview-model。">
+        <Card
+          title="配额超限策略"
+          description="quota-exceeded.switch-project / switch-preview-model。"
+        >
           <div className="space-y-4">
             <ToggleSwitch
               label="切换 Project"
@@ -958,13 +1101,20 @@ export function VisualConfigEditor({
           </div>
         </Card>
 
-        <Card title="Streaming" description="streaming.keepalive-seconds / bootstrap-retries / nonstream-keepalive-interval。">
+        <Card
+          title="Streaming"
+          description="streaming.keepalive-seconds / bootstrap-retries / nonstream-keepalive-interval。"
+        >
           <div className="space-y-4">
             <div className="grid gap-3 lg:grid-cols-2">
               <Field label="streaming.keepalive-seconds" hint="非负整数（秒）。">
                 <TextInput
                   value={values.streaming.keepaliveSeconds}
-                  onChange={(e) => update({ streaming: { ...values.streaming, keepaliveSeconds: e.currentTarget.value } })}
+                  onChange={(e) =>
+                    update({
+                      streaming: { ...values.streaming, keepaliveSeconds: e.currentTarget.value },
+                    })
+                  }
                   placeholder="0"
                   inputMode="numeric"
                   disabled={disabled}
@@ -973,7 +1123,11 @@ export function VisualConfigEditor({
               <Field label="streaming.bootstrap-retries" hint="非负整数。">
                 <TextInput
                   value={values.streaming.bootstrapRetries}
-                  onChange={(e) => update({ streaming: { ...values.streaming, bootstrapRetries: e.currentTarget.value } })}
+                  onChange={(e) =>
+                    update({
+                      streaming: { ...values.streaming, bootstrapRetries: e.currentTarget.value },
+                    })
+                  }
                   placeholder="0"
                   inputMode="numeric"
                   disabled={disabled}
@@ -983,7 +1137,14 @@ export function VisualConfigEditor({
             <Field label="nonstream-keepalive-interval" hint="非负整数（秒）。">
               <TextInput
                 value={values.streaming.nonstreamKeepaliveInterval}
-                onChange={(e) => update({ streaming: { ...values.streaming, nonstreamKeepaliveInterval: e.currentTarget.value } })}
+                onChange={(e) =>
+                  update({
+                    streaming: {
+                      ...values.streaming,
+                      nonstreamKeepaliveInterval: e.currentTarget.value,
+                    },
+                  })
+                }
                 placeholder="0"
                 inputMode="numeric"
                 disabled={disabled}

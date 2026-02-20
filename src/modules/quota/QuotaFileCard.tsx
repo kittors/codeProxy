@@ -3,7 +3,11 @@ import type { AuthFileItem } from "@/lib/http/types";
 import { Button } from "@/modules/ui/Button";
 import { EmptyState } from "@/modules/ui/EmptyState";
 import type { QuotaState } from "@/modules/quota/quota-helpers";
-import { clampPercent, isDisabledAuthFile, resolveAuthProvider } from "@/modules/quota/quota-helpers";
+import {
+  clampPercent,
+  isDisabledAuthFile,
+  resolveAuthProvider,
+} from "@/modules/quota/quota-helpers";
 
 function QuotaBar({ percent }: { percent: number | null }) {
   const segments = 20;
@@ -55,7 +59,12 @@ export function QuotaFileCard({
             {state.updatedAt ? ` · 更新于 ${new Date(state.updatedAt).toLocaleTimeString()}` : ""}
           </p>
         </div>
-        <Button variant="secondary" size="sm" onClick={onRefresh} disabled={state.status === "loading"}>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={onRefresh}
+          disabled={state.status === "loading"}
+        >
           <RefreshCw size={14} className={state.status === "loading" ? "animate-spin" : ""} />
           刷新
         </Button>
@@ -70,7 +79,10 @@ export function QuotaFileCard({
             </div>
           </div>
         ) : state.items.length === 0 ? (
-          <EmptyState title="暂无额度数据" description="该文件可能不支持额度查询，或接口返回为空。" />
+          <EmptyState
+            title="暂无额度数据"
+            description="该文件可能不支持额度查询，或接口返回为空。"
+          />
         ) : (
           state.items.map((item) => (
             <div
@@ -89,7 +101,9 @@ export function QuotaFileCard({
               <div className="mt-2">
                 <QuotaBar percent={item.percent} />
               </div>
-              {item.meta ? <p className="mt-2 text-xs text-slate-600 dark:text-white/65">{item.meta}</p> : null}
+              {item.meta ? (
+                <p className="mt-2 text-xs text-slate-600 dark:text-white/65">{item.meta}</p>
+              ) : null}
             </div>
           ))
         )}
@@ -97,4 +111,3 @@ export function QuotaFileCard({
     </div>
   );
 }
-

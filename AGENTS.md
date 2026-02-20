@@ -36,30 +36,31 @@ bun run check      # lint + build（建议提交前）
 
 常见场景 → 读取文件：
 
-| 场景 | 读取文件 |
-|------|----------|
-| 初始化开发环境 / 工具链 | `.agent/guides/engineering.md` |
+| 场景                           | 读取文件                               |
+| ------------------------------ | -------------------------------------- |
+| 初始化开发环境 / 工具链        | `.agent/guides/engineering.md`         |
 | 开发新功能 / 准备 PR（如需要） | `.agent/guides/feature-pr-workflow.md` |
-| 开始开发一个任务 | `.agent/guides/workflow.md` |
-| 设计/新增模块与分层 | `.agent/guides/architecture.md` |
-| 新增/调整管理 API 封装 | `.agent/guides/http-api.md` |
-| 实现复杂交互/列表/表单 | `.agent/guides/patterns.md` |
-| 命名、文件组织、导出风格 | `.agent/guides/naming.md` |
-| 错误处理、toast、401 失效 | `.agent/guides/error-handling.md` |
-| Tailwind v4 / Dark / 动效 | `.agent/guides/tailwind.md` |
-| UI 视觉一致性与组件复用 | `.agent/guides/ui-design.md` |
-| 安全与敏感信息（管理密钥等） | `.agent/guides/security.md` |
-| 日志与可观测性（前端） | `.agent/guides/logging.md` |
-| 测试与验证策略 | `.agent/guides/testing.md` |
-| 提交规范与 Git 安全规则 | `.agent/guides/git.md` |
-| 规范需要变更/演进 | `.agent/guides/evolution.md` |
+| 开始开发一个任务               | `.agent/guides/workflow.md`            |
+| 设计/新增模块与分层            | `.agent/guides/architecture.md`        |
+| 新增/调整管理 API 封装         | `.agent/guides/http-api.md`            |
+| 实现复杂交互/列表/表单         | `.agent/guides/patterns.md`            |
+| 命名、文件组织、导出风格       | `.agent/guides/naming.md`              |
+| 错误处理、toast、401 失效      | `.agent/guides/error-handling.md`      |
+| Tailwind v4 / Dark / 动效      | `.agent/guides/tailwind.md`            |
+| UI 视觉一致性与组件复用        | `.agent/guides/ui-design.md`           |
+| 安全与敏感信息（管理密钥等）   | `.agent/guides/security.md`            |
+| 日志与可观测性（前端）         | `.agent/guides/logging.md`             |
+| 测试与验证策略                 | `.agent/guides/testing.md`             |
+| 提交规范与 Git 安全规则        | `.agent/guides/git.md`                 |
+| 规范需要变更/演进              | `.agent/guides/evolution.md`           |
 
 ## 3. 强制规则速查（必须遵守）
 
 ### 3.1 Git 操作安全规范（必须遵守）
-   - 严禁执行任何会访问或修改远程仓库的 Git 操作（包括但不限于 `git fetch/pull/push`、配置/变更 remote 等），除非用户明确同意并指定目标与期望结果。
-   - 严禁执行任何可能覆盖/丢弃本地未提交改动的“回滚/重置/清理”操作（包括但不限于 `git checkout -- <path>`、`git restore`、`git reset`、`git clean`、`git rebase`、`git merge --abort`、`git stash` 等），除非用户明确同意。
-   - 如确需执行上述 Git 操作，必须先用中文说明：将要执行的命令、影响的文件范围、是否会丢失未提交内容、以及替代方案；得到用户确认后方可执行。
+
+- 严禁执行任何会访问或修改远程仓库的 Git 操作（包括但不限于 `git fetch/pull/push`、配置/变更 remote 等），除非用户明确同意并指定目标与期望结果。
+- 严禁执行任何可能覆盖/丢弃本地未提交改动的“回滚/重置/清理”操作（包括但不限于 `git checkout -- <path>`、`git restore`、`git reset`、`git clean`、`git rebase`、`git merge --abort`、`git stash` 等），除非用户明确同意。
+- 如确需执行上述 Git 操作，必须先用中文说明：将要执行的命令、影响的文件范围、是否会丢失未提交内容、以及替代方案；得到用户确认后方可执行。
 
 ### 3.2 禁止泄露敏感信息（必须遵守）
 
@@ -102,4 +103,4 @@ bun run check      # lint + build（建议提交前）
 - 运行 `bun run format`（避免格式噪声与冲突）。
 - 运行 `bun run check`（至少确保 `bun run build` 通过）。
 - 手动自测：登录/登出、鉴权守卫、主题切换、主要页面加载与错误提示。
-</INSTRUCTIONS>
+  </INSTRUCTIONS>

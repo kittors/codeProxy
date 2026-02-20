@@ -42,7 +42,10 @@ export const providersApi = {
   },
 
   saveGeminiKeys: (configs: ProviderSimpleConfig[]) =>
-    apiClient.put("/gemini-api-key", configs.map((item) => serializeGeminiKey(item))),
+    apiClient.put(
+      "/gemini-api-key",
+      configs.map((item) => serializeGeminiKey(item)),
+    ),
 
   deleteGeminiKey: (apiKey: string) =>
     apiClient.delete("/gemini-api-key", undefined, { params: { "api-key": apiKey } }),
@@ -77,7 +80,10 @@ export const providersApi = {
   },
 
   saveCodexConfigs: (configs: ProviderSimpleConfig[]) =>
-    apiClient.put("/codex-api-key", configs.map((item) => serializeProviderKey(item))),
+    apiClient.put(
+      "/codex-api-key",
+      configs.map((item) => serializeProviderKey(item)),
+    ),
 
   deleteCodexConfig: (apiKey: string) =>
     apiClient.delete("/codex-api-key", undefined, { params: { "api-key": apiKey } }),
@@ -112,7 +118,10 @@ export const providersApi = {
   },
 
   saveClaudeConfigs: (configs: ProviderSimpleConfig[]) =>
-    apiClient.put("/claude-api-key", configs.map((item) => serializeProviderKey(item))),
+    apiClient.put(
+      "/claude-api-key",
+      configs.map((item) => serializeProviderKey(item)),
+    ),
 
   deleteClaudeConfig: (apiKey: string) =>
     apiClient.delete("/claude-api-key", undefined, { params: { "api-key": apiKey } }),
@@ -143,7 +152,10 @@ export const providersApi = {
   },
 
   saveVertexConfigs: (configs: ProviderSimpleConfig[]) =>
-    apiClient.put("/vertex-api-key", configs.map((item) => serializeProviderKey(item))),
+    apiClient.put(
+      "/vertex-api-key",
+      configs.map((item) => serializeProviderKey(item)),
+    ),
 
   deleteVertexConfig: (apiKey: string) =>
     apiClient.delete("/vertex-api-key", undefined, { params: { "api-key": apiKey } }),
@@ -163,9 +175,7 @@ export const providersApi = {
         const apiKeyEntries = normalizeApiKeyEntries(item["api-key-entries"] ?? item.apiKeyEntries);
         const priorityRaw = item.priority;
         const priority =
-          typeof priorityRaw === "number" && Number.isFinite(priorityRaw)
-            ? priorityRaw
-            : undefined;
+          typeof priorityRaw === "number" && Number.isFinite(priorityRaw) ? priorityRaw : undefined;
         const testModel = normalizeString(item["test-model"] ?? item.testModel) ?? undefined;
         return {
           name,
@@ -190,4 +200,3 @@ export const providersApi = {
   deleteOpenAIProvider: (name: string) =>
     apiClient.delete("/openai-compatibility", undefined, { params: { name } }),
 };
-

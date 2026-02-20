@@ -12,7 +12,8 @@ export const ampcodeApi = {
     const list = data?.["model-mappings"] ?? data?.modelMappings ?? data?.items ?? data;
     return Array.isArray(list) ? list : [];
   },
-  saveModelMappings: (mappings: unknown[]) => apiClient.put("/ampcode/model-mappings", { value: mappings }),
+  saveModelMappings: (mappings: unknown[]) =>
+    apiClient.put("/ampcode/model-mappings", { value: mappings }),
   patchModelMappings: (mappings: unknown[]) =>
     apiClient.patch("/ampcode/model-mappings", { value: mappings }),
   clearModelMappings: () => apiClient.delete("/ampcode/model-mappings"),
@@ -21,4 +22,3 @@ export const ampcodeApi = {
   updateForceModelMappings: (enabled: boolean) =>
     apiClient.put("/ampcode/force-model-mappings", { value: enabled }),
 };
-

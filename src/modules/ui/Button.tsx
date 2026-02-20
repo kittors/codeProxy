@@ -18,8 +18,7 @@ export function Button({
   const base =
     "inline-flex items-center justify-center gap-2 rounded-xl font-semibold transition focus-visible:outline-none focus-visible:ring-2";
 
-  const sizeClass =
-    size === "sm" ? "h-9 px-3 text-sm" : "h-10 px-4 text-sm";
+  const sizeClass = size === "sm" ? "h-9 px-3 text-sm" : "h-10 px-4 text-sm";
 
   const variantClass: Record<ButtonVariant, string> = {
     primary:
@@ -42,4 +41,3 @@ export function Button({
     </button>
   );
 }
-

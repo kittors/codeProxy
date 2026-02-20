@@ -17,7 +17,10 @@ export function Tabs({
   value: TabsValue;
   onValueChange: (next: TabsValue) => void;
 }>) {
-  const valueObj = useMemo<TabsContextState>(() => ({ value, onValueChange }), [onValueChange, value]);
+  const valueObj = useMemo<TabsContextState>(
+    () => ({ value, onValueChange }),
+    [onValueChange, value],
+  );
   return <TabsContext value={valueObj}>{children}</TabsContext>;
 }
 

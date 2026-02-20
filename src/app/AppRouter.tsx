@@ -28,6 +28,14 @@ export function AppRouter() {
                   <Route path="/monitor/request-logs" element={<RequestLogsPage />} />
                   <Route path="/ai-providers" element={<ProvidersPage />} />
                   <Route path="/auth-files" element={<AuthFilesPage />} />
+                  <Route
+                    path="/auth-files/oauth-excluded"
+                    element={<Navigate to="/auth-files?tab=excluded" replace />}
+                  />
+                  <Route
+                    path="/auth-files/oauth-model-alias"
+                    element={<Navigate to="/auth-files?tab=alias" replace />}
+                  />
                   <Route path="/oauth" element={<OAuthPage />} />
                   <Route path="/quota" element={<QuotaPage />} />
                   <Route path="/config" element={<ConfigPage />} />

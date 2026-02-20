@@ -38,4 +38,3 @@ export const CHART_COLOR_CLASSES: readonly string[] = [
   "bg-lime-400",
   "bg-pink-400",
 ] as const;
-

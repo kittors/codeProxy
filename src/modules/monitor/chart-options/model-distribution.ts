@@ -46,4 +46,3 @@ export const createModelDistributionOption = (input: {
     animationDurationUpdate: 360,
   };
 };
-

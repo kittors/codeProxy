@@ -15,10 +15,7 @@ export function ChartLegend({
 }) {
   return (
     <div
-      className={[
-        "flex flex-wrap items-center justify-center gap-2",
-        className,
-      ]
+      className={["flex flex-wrap items-center justify-center gap-2", className]
         .filter(Boolean)
         .join(" ")}
     >
@@ -47,4 +44,3 @@ export function ChartLegend({
     </div>
   );
 }
-

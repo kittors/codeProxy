@@ -18,4 +18,3 @@ export type HourlySeries = {
   tokenKeys: string[];
   tokenPoints: HourlyStackPoint[];
 };
-

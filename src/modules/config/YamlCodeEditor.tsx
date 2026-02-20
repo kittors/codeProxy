@@ -47,15 +47,20 @@ const classifyValue = (value: string): string => {
   const trimmed = value.trim();
   if (!trimmed) return "text-slate-700 dark:text-white/80";
   if (trimmed.startsWith("#")) return "text-slate-400 dark:text-white/45";
-  if (trimmed.startsWith('"') || trimmed.startsWith("'")) return "text-emerald-700 dark:text-emerald-300";
+  if (trimmed.startsWith('"') || trimmed.startsWith("'"))
+    return "text-emerald-700 dark:text-emerald-300";
   if (/^(true|false|null|~)\b/i.test(trimmed)) return "text-violet-700 dark:text-violet-300";
   if (/^[+-]?\d+(\.\d+)?\b/.test(trimmed)) return "text-amber-700 dark:text-amber-300";
-  if (/^\[.*\]$/.test(trimmed) || /^\{.*\}$/.test(trimmed)) return "text-slate-700 dark:text-white/80";
+  if (/^\[.*\]$/.test(trimmed) || /^\{.*\}$/.test(trimmed))
+    return "text-slate-700 dark:text-white/80";
   return "text-slate-700 dark:text-white/80";
 };
 
 const tokenizeYamlLine = (line: string, lineGlobalStart: number): Token[] => {
-  if (!line) return [{ text: "", className: "text-slate-700 dark:text-white/80", globalStart: lineGlobalStart }];
+  if (!line)
+    return [
+      { text: "", className: "text-slate-700 dark:text-white/80", globalStart: lineGlobalStart },
+    ];
 
   const commentIndex = findCommentIndex(line);
   const body = commentIndex >= 0 ? line.slice(0, commentIndex) : line;
@@ -82,7 +87,9 @@ const tokenizeYamlLine = (line: string, lineGlobalStart: number): Token[] => {
   const colonIndex = rest.indexOf(":");
   const hasKey =
     colonIndex > 0 &&
-    (rest[colonIndex + 1] === " " || rest[colonIndex + 1] === "\t" || rest[colonIndex + 1] === undefined) &&
+    (rest[colonIndex + 1] === " " ||
+      rest[colonIndex + 1] === "\t" ||
+      rest[colonIndex + 1] === undefined) &&
     rest.slice(0, colonIndex).trim().length > 0;
 
   if (hasKey) {
@@ -122,7 +129,9 @@ const buildLineStarts = (lines: string[]): number[] => {
   return starts;
 };
 
-const buildMatchRanges = (highlight: HighlightConfig | null): { activeStart: number; len: number } => {
+const buildMatchRanges = (
+  highlight: HighlightConfig | null,
+): { activeStart: number; len: number } => {
   if (!highlight?.query.trim()) return { activeStart: -1, len: 0 };
   const len = highlight.query.length;
   const total = highlight.positions.length;
@@ -225,7 +234,15 @@ export const YamlCodeEditor = forwardRef<
     indentText?: string;
   }
 >(function YamlCodeEditor(
-  { value, onChange, disabled = false, highlight = null, ariaLabel, heightClassName, indentText = "  " },
+  {
+    value,
+    onChange,
+    disabled = false,
+    highlight = null,
+    ariaLabel,
+    heightClassName,
+    indentText = "  ",
+  },
   ref,
 ) {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -256,7 +273,8 @@ export const YamlCodeEditor = forwardRef<
     while (low <= high) {
       const mid = (low + high) >> 1;
       const start = lineStarts[mid] ?? 0;
-      const nextStart = mid + 1 < lineStarts.length ? (lineStarts[mid + 1] ?? value.length + 1) : value.length + 1;
+      const nextStart =
+        mid + 1 < lineStarts.length ? (lineStarts[mid + 1] ?? value.length + 1) : value.length + 1;
       if (target >= start && target < nextStart) return mid;
       if (target < start) high = mid - 1;
       else low = mid + 1;
@@ -281,7 +299,14 @@ export const YamlCodeEditor = forwardRef<
         >
           {tokens.map((token, tokenIdx) => (
             <span key={`t-${idx}-${tokenIdx}`} className={token.className}>
-              {clipRangesToSegment(token.globalStart, token.text, highlight, matchLen, activeStart, matchPtrRef)}
+              {clipRangesToSegment(
+                token.globalStart,
+                token.text,
+                highlight,
+                matchLen,
+                activeStart,
+                matchPtrRef,
+              )}
             </span>
           ))}
         </div>
@@ -294,10 +319,7 @@ export const YamlCodeEditor = forwardRef<
     return Array.from({ length: count }, (_, i) => (
       <div
         key={`n-${i}`}
-        className={[
-          "h-6",
-          i === activeLineIndex ? "text-slate-600 dark:text-white/60" : null,
-        ]
+        className={["h-6", i === activeLineIndex ? "text-slate-600 dark:text-white/60" : null]
           .filter(Boolean)
           .join(" ")}
       >
@@ -364,7 +386,10 @@ export const YamlCodeEditor = forwardRef<
         if (start === end) {
           if (isOutdent) {
             const lineStart = text.lastIndexOf("\n", Math.max(0, start - 1)) + 1;
-            const slice = text.slice(lineStart, Math.min(text.length, lineStart + indentText.length));
+            const slice = text.slice(
+              lineStart,
+              Math.min(text.length, lineStart + indentText.length),
+            );
             if (slice === indentText) {
               const next = text.slice(0, lineStart) + text.slice(lineStart + indentText.length);
               applyValueAndSelection(next, start - indentText.length, start - indentText.length);
@@ -395,9 +420,20 @@ export const YamlCodeEditor = forwardRef<
             return line;
           });
           const nextText = text.slice(0, beforeLineStart) + outdented.join("\n") + after;
-          const nextStart = selectionStart - Math.min(indentText.length, text.slice(beforeLineStart, selectionStart).startsWith(indentText) ? indentText.length : 0);
+          const nextStart =
+            selectionStart -
+            Math.min(
+              indentText.length,
+              text.slice(beforeLineStart, selectionStart).startsWith(indentText)
+                ? indentText.length
+                : 0,
+            );
           const nextEnd = selectionEnd - removedTotal;
-          applyValueAndSelection(nextText, Math.max(beforeLineStart, nextStart), Math.max(beforeLineStart, nextEnd));
+          applyValueAndSelection(
+            nextText,
+            Math.max(beforeLineStart, nextStart),
+            Math.max(beforeLineStart, nextEnd),
+          );
           return;
         }
 

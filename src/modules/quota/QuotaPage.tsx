@@ -51,8 +51,12 @@ const resolveAntigravityProjectId = async (file: AuthFileItem): Promise<string> 
     const top = normalizeStringValue(parsed.project_id ?? parsed.projectId);
     if (top) return top;
 
-    const installed = isRecord(parsed.installed) ? (parsed.installed as Record<string, unknown>) : null;
-    const installedId = installed ? normalizeStringValue(installed.project_id ?? installed.projectId) : null;
+    const installed = isRecord(parsed.installed)
+      ? (parsed.installed as Record<string, unknown>)
+      : null;
+    const installedId = installed
+      ? normalizeStringValue(installed.project_id ?? installed.projectId)
+      : null;
     if (installedId) return installedId;
 
     const web = isRecord(parsed.web) ? (parsed.web as Record<string, unknown>) : null;
@@ -151,8 +155,12 @@ const fetchQuota = async (
         const modelId = normalizeGeminiCliModelId(bucket.modelId ?? bucket.model_id);
         if (!modelId) return null;
         const tokenType = normalizeStringValue(bucket.tokenType ?? bucket.token_type);
-        const remainingFractionRaw = normalizeQuotaFraction(bucket.remainingFraction ?? bucket.remaining_fraction);
-        const remainingAmount = normalizeNumberValue(bucket.remainingAmount ?? bucket.remaining_amount);
+        const remainingFractionRaw = normalizeQuotaFraction(
+          bucket.remainingFraction ?? bucket.remaining_fraction,
+        );
+        const remainingAmount = normalizeNumberValue(
+          bucket.remainingAmount ?? bucket.remaining_amount,
+        );
         const resetTime = normalizeStringValue(bucket.resetTime ?? bucket.reset_time) ?? undefined;
         let fallbackFraction: number | null = null;
         if (remainingAmount !== null) {
@@ -161,7 +169,13 @@ const fetchQuota = async (
           fallbackFraction = 0;
         }
         const remainingFraction = remainingFractionRaw ?? fallbackFraction;
-        return { modelId, tokenType: tokenType ?? null, remainingFraction, remainingAmount, resetTime };
+        return {
+          modelId,
+          tokenType: tokenType ?? null,
+          remainingFraction,
+          remainingAmount,
+          resetTime,
+        };
       })
       .filter(Boolean) as {
       modelId: string;
@@ -173,8 +187,14 @@ const fetchQuota = async (
 
     const grouped = buildGeminiCliBuckets(parsed);
     return grouped.map((bucket) => {
-      const percent = bucket.remainingFraction === null ? null : Math.round(clampPercent(bucket.remainingFraction * 100));
-      const amount = bucket.remainingAmount !== null ? `${Math.round(bucket.remainingAmount).toLocaleString()} tokens` : null;
+      const percent =
+        bucket.remainingFraction === null
+          ? null
+          : Math.round(clampPercent(bucket.remainingFraction * 100));
+      const amount =
+        bucket.remainingAmount !== null
+          ? `${Math.round(bucket.remainingAmount).toLocaleString()} tokens`
+          : null;
       const tokenType = bucket.tokenType ? `tokenType=${bucket.tokenType}` : null;
       const meta = [tokenType, amount].filter(Boolean).join(" · ");
       return {
@@ -310,7 +330,11 @@ export function QuotaPage() {
       title={title}
       description={description}
       actions={
-        <Button variant="secondary" size="sm" onClick={() => void Promise.all(list.map((f) => refreshOne(type, f)))}>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => void Promise.all(list.map((f) => refreshOne(type, f)))}
+        >
           <RefreshCw size={14} />
           刷新本组
         </Button>
@@ -318,7 +342,10 @@ export function QuotaPage() {
       loading={loadingFiles}
     >
       {list.length === 0 ? (
-        <EmptyState title="暂无对应认证文件" description="请先在“认证文件”页面上传/生成对应 provider 的认证文件。" />
+        <EmptyState
+          title="暂无对应认证文件"
+          description="请先在“认证文件”页面上传/生成对应 provider 的认证文件。"
+        />
       ) : (
         <div className="space-y-3">
           {list.map((file) => (
@@ -337,7 +364,11 @@ export function QuotaPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center gap-2">
-        <Button variant="primary" onClick={() => void refreshAll()} disabled={isPending || loadingFiles}>
+        <Button
+          variant="primary"
+          onClick={() => void refreshAll()}
+          disabled={isPending || loadingFiles}
+        >
           <RefreshCw size={14} className={isPending ? "animate-spin" : ""} />
           一键刷新所有额度
         </Button>
@@ -347,10 +378,28 @@ export function QuotaPage() {
         </Button>
       </div>
 
-      {renderSection("Antigravity", "支持多个 API 端点回退。", grouped.ag, antigravity, "antigravity")}
+      {renderSection(
+        "Antigravity",
+        "支持多个 API 端点回退。",
+        grouped.ag,
+        antigravity,
+        "antigravity",
+      )}
       {renderSection("Codex", "展示 5 小时 / 周限额与代码审查窗口。", grouped.cx, codex, "codex")}
-      {renderSection("Gemini CLI", "按模型组聚合 bucket 并展示剩余额度。", grouped.gm, geminiCli, "gemini-cli")}
-      {renderSection("Kiro", "查询 AWS CodeWhisperer / Kiro 使用额度与重置时间。", grouped.kr, kiro, "kiro")}
+      {renderSection(
+        "Gemini CLI",
+        "按模型组聚合 bucket 并展示剩余额度。",
+        grouped.gm,
+        geminiCli,
+        "gemini-cli",
+      )}
+      {renderSection(
+        "Kiro",
+        "查询 AWS CodeWhisperer / Kiro 使用额度与重置时间。",
+        grouped.kr,
+        kiro,
+        "kiro",
+      )}
     </div>
   );
 }

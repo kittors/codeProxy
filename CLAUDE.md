@@ -58,14 +58,13 @@ bun run check
 
 常见场景 → 读取文件：
 
-| 场景 | 读取文件 |
-|------|----------|
-| 初始化开发环境 / 工具链 | `.agent/guides/engineering.md` |
-| 开始开发一个任务 | `.agent/guides/workflow.md` |
-| 设计/新增模块与分层 | `.agent/guides/architecture.md` |
-| 新增/调整管理 API 封装 | `.agent/guides/http-api.md` |
+| 场景                      | 读取文件                          |
+| ------------------------- | --------------------------------- |
+| 初始化开发环境 / 工具链   | `.agent/guides/engineering.md`    |
+| 开始开发一个任务          | `.agent/guides/workflow.md`       |
+| 设计/新增模块与分层       | `.agent/guides/architecture.md`   |
+| 新增/调整管理 API 封装    | `.agent/guides/http-api.md`       |
 | 错误处理、toast、401 失效 | `.agent/guides/error-handling.md` |
-| Tailwind v4 / Dark / 动效 | `.agent/guides/tailwind.md` |
-| 安全与脱敏 | `.agent/guides/security.md` |
-| 提交规范与 Git 安全规则 | `.agent/guides/git.md` |
-
+| Tailwind v4 / Dark / 动效 | `.agent/guides/tailwind.md`       |
+| 安全与脱敏                | `.agent/guides/security.md`       |
+| 提交规范与 Git 安全规则   | `.agent/guides/git.md`            |

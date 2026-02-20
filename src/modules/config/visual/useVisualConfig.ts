@@ -132,7 +132,9 @@ const PAYLOAD_PROTOCOL_VALUES = [
 
 function parsePayloadProtocol(raw: unknown): PayloadProtocol | undefined {
   if (typeof raw !== "string") return undefined;
-  return PAYLOAD_PROTOCOL_VALUES.includes(raw as PayloadProtocol) ? (raw as PayloadProtocol) : undefined;
+  return PAYLOAD_PROTOCOL_VALUES.includes(raw as PayloadProtocol)
+    ? (raw as PayloadProtocol)
+    : undefined;
 }
 
 function parsePayloadRules(rules: unknown): PayloadRule[] {
@@ -145,7 +147,8 @@ function parsePayloadRules(rules: unknown): PayloadRule[] {
     const models = Array.isArray(modelsRaw)
       ? modelsRaw.map((model, modelIndex) => {
           const modelRecord = asRecord(model);
-          const nameRaw = typeof model === "string" ? model : (modelRecord?.name ?? modelRecord?.id ?? "");
+          const nameRaw =
+            typeof model === "string" ? model : (modelRecord?.name ?? modelRecord?.id ?? "");
           const name = typeof nameRaw === "string" ? nameRaw : String(nameRaw ?? "");
           return {
             id: `model-${index}-${modelIndex}`,
@@ -182,7 +185,8 @@ function parsePayloadFilterRules(rules: unknown): PayloadFilterRule[] {
     const models = Array.isArray(modelsRaw)
       ? modelsRaw.map((model, modelIndex) => {
           const modelRecord = asRecord(model);
-          const nameRaw = typeof model === "string" ? model : (modelRecord?.name ?? modelRecord?.id ?? "");
+          const nameRaw =
+            typeof model === "string" ? model : (modelRecord?.name ?? modelRecord?.id ?? "");
           const name = typeof nameRaw === "string" ? nameRaw : String(nameRaw ?? "");
           return {
             id: `filter-model-${index}-${modelIndex}`,
@@ -234,7 +238,9 @@ function serializePayloadRulesForYaml(rules: PayloadRule[]): Array<Record<string
     .filter((rule) => rule.models.length > 0);
 }
 
-function serializePayloadFilterRulesForYaml(rules: PayloadFilterRule[]): Array<Record<string, unknown>> {
+function serializePayloadFilterRulesForYaml(
+  rules: PayloadFilterRule[],
+): Array<Record<string, unknown>> {
   return rules
     .map((rule) => {
       const models = (rule.models || [])
@@ -255,8 +261,12 @@ function serializePayloadFilterRulesForYaml(rules: PayloadFilterRule[]): Array<R
 }
 
 export function useVisualConfig() {
-  const [visualValues, setVisualValuesState] = useState<VisualConfigValues>({ ...DEFAULT_VISUAL_VALUES });
-  const [baselineValues, setBaselineValues] = useState<VisualConfigValues>({ ...DEFAULT_VISUAL_VALUES });
+  const [visualValues, setVisualValuesState] = useState<VisualConfigValues>({
+    ...DEFAULT_VISUAL_VALUES,
+  });
+  const [baselineValues, setBaselineValues] = useState<VisualConfigValues>({
+    ...DEFAULT_VISUAL_VALUES,
+  });
 
   const visualDirty = useMemo(() => {
     return JSON.stringify(visualValues) !== JSON.stringify(baselineValues);
@@ -282,7 +292,10 @@ export function useVisualConfig() {
         tlsKey: typeof tls?.key === "string" ? tls.key : "",
 
         rmAllowRemote: Boolean(remoteManagement?.["allow-remote"]),
-        rmSecretKey: typeof remoteManagement?.["secret-key"] === "string" ? remoteManagement["secret-key"] : "",
+        rmSecretKey:
+          typeof remoteManagement?.["secret-key"] === "string"
+            ? remoteManagement["secret-key"]
+            : "",
         rmDisableControlPanel: Boolean(remoteManagement?.["disable-control-panel"]),
         rmPanelRepo:
           typeof remoteManagement?.["panel-github-repository"] === "string"
@@ -339,7 +352,12 @@ export function useVisualConfig() {
         setString(parsed, "host", values.host);
         setIntFromString(parsed, "port", values.port);
 
-        if (hasOwn(parsed, "tls") || values.tlsEnable || values.tlsCert.trim() || values.tlsKey.trim()) {
+        if (
+          hasOwn(parsed, "tls") ||
+          values.tlsEnable ||
+          values.tlsCert.trim() ||
+          values.tlsKey.trim()
+        ) {
           const tls = ensureRecord(parsed, "tls");
           setBoolean(tls, "enable", values.tlsEnable);
           setString(tls, "cert", values.tlsCert);
@@ -389,7 +407,11 @@ export function useVisualConfig() {
         setIntFromString(parsed, "max-retry-interval", values.maxRetryInterval);
         setBoolean(parsed, "ws-auth", values.wsAuth);
 
-        if (hasOwn(parsed, "quota-exceeded") || !values.quotaSwitchProject || !values.quotaSwitchPreviewModel) {
+        if (
+          hasOwn(parsed, "quota-exceeded") ||
+          !values.quotaSwitchProject ||
+          !values.quotaSwitchPreviewModel
+        ) {
           const quota = ensureRecord(parsed, "quota-exceeded");
           quota["switch-project"] = values.quotaSwitchProject;
           quota["switch-preview-model"] = values.quotaSwitchPreviewModel;
@@ -402,12 +424,21 @@ export function useVisualConfig() {
           deleteIfEmpty(parsed, "routing");
         }
 
-        const keepaliveSeconds = typeof values.streaming?.keepaliveSeconds === "string" ? values.streaming.keepaliveSeconds : "";
-        const bootstrapRetries = typeof values.streaming?.bootstrapRetries === "string" ? values.streaming.bootstrapRetries : "";
+        const keepaliveSeconds =
+          typeof values.streaming?.keepaliveSeconds === "string"
+            ? values.streaming.keepaliveSeconds
+            : "";
+        const bootstrapRetries =
+          typeof values.streaming?.bootstrapRetries === "string"
+            ? values.streaming.bootstrapRetries
+            : "";
         const nonstreamKeepaliveInterval =
-          typeof values.streaming?.nonstreamKeepaliveInterval === "string" ? values.streaming.nonstreamKeepaliveInterval : "";
+          typeof values.streaming?.nonstreamKeepaliveInterval === "string"
+            ? values.streaming.nonstreamKeepaliveInterval
+            : "";
 
-        const streamingDefined = hasOwn(parsed, "streaming") || keepaliveSeconds.trim() || bootstrapRetries.trim();
+        const streamingDefined =
+          hasOwn(parsed, "streaming") || keepaliveSeconds.trim() || bootstrapRetries.trim();
         if (streamingDefined) {
           const streaming = ensureRecord(parsed, "streaming");
           setIntFromString(streaming, "keepalive-seconds", keepaliveSeconds);
@@ -461,11 +492,19 @@ export function useVisualConfig() {
   }, []);
 
   const createEmptyPayloadRule = useCallback((): PayloadRule => {
-    return { id: makeClientId(), models: [{ id: makeClientId(), name: "", protocol: undefined }], params: [] };
+    return {
+      id: makeClientId(),
+      models: [{ id: makeClientId(), name: "", protocol: undefined }],
+      params: [],
+    };
   }, []);
 
   const createEmptyPayloadFilterRule = useCallback((): PayloadFilterRule => {
-    return { id: makeClientId(), models: [{ id: makeClientId(), name: "", protocol: undefined }], params: [] };
+    return {
+      id: makeClientId(),
+      models: [{ id: makeClientId(), name: "", protocol: undefined }],
+      params: [],
+    };
   }, []);
 
   return {
@@ -479,7 +518,10 @@ export function useVisualConfig() {
   };
 }
 
-export const VISUAL_CONFIG_PROTOCOL_OPTIONS: ReadonlyArray<{ value: "" | PayloadProtocol; label: string }> = [
+export const VISUAL_CONFIG_PROTOCOL_OPTIONS: ReadonlyArray<{
+  value: "" | PayloadProtocol;
+  label: string;
+}> = [
   { value: "", label: "默认" },
   { value: "openai", label: "OpenAI" },
   { value: "openai-response", label: "OpenAI Response" },
@@ -498,4 +540,3 @@ export const VISUAL_CONFIG_PAYLOAD_VALUE_TYPE_OPTIONS: ReadonlyArray<{
   { value: "boolean", label: "布尔" },
   { value: "json", label: "JSON" },
 ];
-

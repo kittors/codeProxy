@@ -101,13 +101,7 @@ export interface ProviderSimpleConfig {
   excludedModels?: string[];
 }
 
-export type OAuthProvider =
-  | "codex"
-  | "anthropic"
-  | "antigravity"
-  | "gemini-cli"
-  | "kimi"
-  | "qwen";
+export type OAuthProvider = "codex" | "anthropic" | "antigravity" | "gemini-cli" | "kimi" | "qwen";
 
 export interface OAuthStartResponse {
   url: string;

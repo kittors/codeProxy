@@ -35,7 +35,11 @@ export function ConfirmModal({
           <Button variant="secondary" onClick={onClose} disabled={busy}>
             {cancelText}
           </Button>
-          <Button variant={variant === "danger" ? "danger" : "primary"} onClick={onConfirm} disabled={busy}>
+          <Button
+            variant={variant === "danger" ? "danger" : "primary"}
+            onClick={onConfirm}
+            disabled={busy}
+          >
             {confirmText}
           </Button>
         </>
@@ -45,4 +49,3 @@ export function ConfirmModal({
     </Modal>
   );
 }
-

@@ -54,7 +54,9 @@ export const buildModelsEndpoint = (baseUrl: string): string => {
   return `${normalized}/models`;
 };
 
-export const normalizeDiscoveredModels = (payload: unknown): { id: string; owned_by?: string }[] => {
+export const normalizeDiscoveredModels = (
+  payload: unknown,
+): { id: string; owned_by?: string }[] => {
   if (!payload) return [];
   const isRecord = (v: unknown): v is Record<string, unknown> =>
     v !== null && typeof v === "object" && !Array.isArray(v);
@@ -148,7 +150,12 @@ export type OpenAIDraft = {
   headersEntries: KeyValueEntry[];
   priorityText: string;
   testModel: string;
-  apiKeyEntries: { apiKey: string; proxyUrl: string; headersEntries: KeyValueEntry[]; id: string }[];
+  apiKeyEntries: {
+    apiKey: string;
+    proxyUrl: string;
+    headersEntries: KeyValueEntry[];
+    id: string;
+  }[];
   modelEntries: ModelEntryDraft[];
 };
 

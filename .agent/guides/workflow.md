@@ -34,16 +34,19 @@
 ## 2. 功能开发 Checklist（推荐顺序）
 
 ### Phase 1：边界与设计
+
 - [ ] 明确要改的页面与入口路由（`src/app/AppRouter.tsx`）
 - [ ] 明确是否需要新增/调整 API（如需要，先读 `http-api.md`）
 - [ ] 明确复用组件是否已有（先看 `src/modules/ui/*`）
 
 ### Phase 2：实现
+
 - [ ] UI：只使用 Tailwind class，不写原生 CSS、不写内联 style
 - [ ] 异步：loading 与真实生命周期绑定，失败有中文提示
 - [ ] 性能：避免用 `key` 触发整块 remount；必要时用 `useTransition`
 
 ### Phase 3：自测与质量门禁
+
 - [ ] 运行 `bun run format`
 - [ ] 运行 `bun run check`
 - [ ] 手动自测关键路径（见第 4 节）
@@ -79,20 +82,24 @@
 ## 5. 代码审查自查清单（提交前）
 
 ### 工程与安全
+
 - [ ] 没有新增依赖（如有，已得到用户确认）
 - [ ] 没有修改 `dist/`、`node_modules/`
 - [ ] 没有把密钥/Token 写进代码、日志、错误提示
 
 ### 架构与一致性
+
 - [ ] API 调用只通过 `src/lib/http/apis.ts`
 - [ ] 401 处理没有在页面里重复实现
 - [ ] 新增组件复用现有 `src/modules/ui/*`（或给出原因）
 
 ### UI/体验
+
 - [ ] 没有原生 CSS / 内联 style
 - [ ] loading 与真实异步生命周期绑定
 - [ ] 数值 `tabular-nums`，必要时使用 `min-w-*` 降低布局抖动
 
 ### 可观测性与验证
+
 - [ ] 如新增/修改日志输出，已读 `logging.md` 并确保脱敏
 - [ ] 如改动影响范围较大，已按 `testing.md` 扩展手动验证清单

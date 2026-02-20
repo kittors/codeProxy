@@ -70,7 +70,9 @@ const extractRawSecretFromText = (text: string): string | null => {
   const keyLikeMatch = text.match(KEY_LIKE_TOKEN_REGEX);
   if (keyLikeMatch?.[0]) return keyLikeMatch[0];
 
-  const queryMatch = text.match(/(?:[?&])(api[-_]?key|key|token|access_token|authorization)=([^&#\s]+)/i);
+  const queryMatch = text.match(
+    /(?:[?&])(api[-_]?key|key|token|access_token|authorization)=([^&#\s]+)/i,
+  );
   const queryValue = queryMatch?.[2];
   if (queryValue && looksLikeRawSecret(queryValue)) {
     return queryValue;

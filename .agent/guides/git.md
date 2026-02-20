@@ -2,9 +2,9 @@
 
 ## 1. 安全红线（强制）
 
-1) **禁止** 任何会访问或修改远程仓库的操作（`fetch/pull/push`、改 remote 等），除非用户明确同意并说明目标。
+1. **禁止** 任何会访问或修改远程仓库的操作（`fetch/pull/push`、改 remote 等），除非用户明确同意并说明目标。
 
-2) **禁止** 会丢失未提交改动的操作（`reset`、`clean`、`restore`、`checkout --`、`stash`、`rebase` 等），除非用户明确同意并了解影响。
+2. **禁止** 会丢失未提交改动的操作（`reset`、`clean`、`restore`、`checkout --`、`stash`、`rebase` 等），除非用户明确同意并了解影响。
 
 如果确需执行，必须先用中文说明：
 

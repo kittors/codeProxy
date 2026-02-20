@@ -8,4 +8,3 @@ export { authFilesApi } from "./apis/auth-files";
 export { apiCallApi, getApiCallErrorMessage } from "./apis/api-call";
 export { ampcodeApi } from "./apis/ampcode";
 export { vertexApi } from "./apis/vertex";
-

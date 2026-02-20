@@ -1,5 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Copy, ExternalLink, KeyRound, RefreshCw, Send, ShieldCheck, Sparkles, Upload } from "lucide-react";
+import {
+  Copy,
+  ExternalLink,
+  KeyRound,
+  RefreshCw,
+  Send,
+  ShieldCheck,
+  Sparkles,
+  Upload,
+} from "lucide-react";
 import { oauthApi, vertexApi } from "@/lib/http/apis";
 import type { IFlowCookieAuthResponse, OAuthProvider } from "@/lib/http/types";
 import { Card } from "@/modules/ui/Card";
@@ -24,9 +33,21 @@ type ProviderState = {
 
 const PROVIDERS: { id: OAuthProvider; title: string; hint: string }[] = [
   { id: "codex", title: "Codex OAuth", hint: "一键启动授权流程，服务端会自动保存认证文件。" },
-  { id: "anthropic", title: "Anthropic OAuth", hint: "用于 Claude / Anthropic 服务的 OAuth 登录。" },
-  { id: "antigravity", title: "Antigravity OAuth", hint: "用于 Antigravity 配额/能力相关的 OAuth 登录。" },
-  { id: "gemini-cli", title: "Gemini CLI OAuth", hint: "支持可选 Project ID；不填则由服务端自动选择。" },
+  {
+    id: "anthropic",
+    title: "Anthropic OAuth",
+    hint: "用于 Claude / Anthropic 服务的 OAuth 登录。",
+  },
+  {
+    id: "antigravity",
+    title: "Antigravity OAuth",
+    hint: "用于 Antigravity 配额/能力相关的 OAuth 登录。",
+  },
+  {
+    id: "gemini-cli",
+    title: "Gemini CLI OAuth",
+    hint: "支持可选 Project ID；不填则由服务端自动选择。",
+  },
   { id: "kimi", title: "Kimi OAuth", hint: "如果服务端支持，将自动保存认证文件。" },
   { id: "qwen", title: "Qwen OAuth", hint: "如果服务端支持，将自动保存认证文件。" },
 ];
@@ -34,7 +55,12 @@ const PROVIDERS: { id: OAuthProvider; title: string; hint: string }[] = [
 const getErrorMessage = (err: unknown): string => {
   if (err instanceof Error) return err.message;
   if (typeof err === "string") return err;
-  if (err && typeof err === "object" && "message" in err && typeof (err as any).message === "string") {
+  if (
+    err &&
+    typeof err === "object" &&
+    "message" in err &&
+    typeof (err as any).message === "string"
+  ) {
     return String((err as any).message);
   }
   return "";
@@ -44,10 +70,9 @@ export function OAuthPage() {
   const { notify } = useToast();
   const timers = useRef<Record<string, number>>({});
 
-  const [states, setStates] = useState<Record<OAuthProvider, ProviderState>>({} as Record<
-    OAuthProvider,
-    ProviderState
-  >);
+  const [states, setStates] = useState<Record<OAuthProvider, ProviderState>>(
+    {} as Record<OAuthProvider, ProviderState>,
+  );
   const [iflowCookie, setIflowCookie] = useState("");
   const [iflowLoading, setIflowLoading] = useState(false);
   const [iflowResult, setIflowResult] = useState<IFlowCookieAuthResponse | null>(null);
@@ -55,7 +80,12 @@ export function OAuthPage() {
   const [vertexFileName, setVertexFileName] = useState("");
   const [vertexLocation, setVertexLocation] = useState("");
   const [vertexLoading, setVertexLoading] = useState(false);
-  const [vertexResult, setVertexResult] = useState<{ projectId?: string; email?: string; location?: string; authFile?: string } | null>(null);
+  const [vertexResult, setVertexResult] = useState<{
+    projectId?: string;
+    email?: string;
+    location?: string;
+    authFile?: string;
+  } | null>(null);
 
   const clearTimers = useCallback(() => {
     Object.values(timers.current).forEach((timer) => window.clearInterval(timer));
@@ -68,12 +98,15 @@ export function OAuthPage() {
     };
   }, [clearTimers]);
 
-  const updateProviderState = useCallback((provider: OAuthProvider, next: Partial<ProviderState>) => {
-    setStates((prev) => ({
-      ...prev,
-      [provider]: { ...prev[provider], ...next },
-    }));
-  }, []);
+  const updateProviderState = useCallback(
+    (provider: OAuthProvider, next: Partial<ProviderState>) => {
+      setStates((prev) => ({
+        ...prev,
+        [provider]: { ...prev[provider], ...next },
+      }));
+    },
+    [],
+  );
 
   const startPolling = useCallback(
     (provider: OAuthProvider, state: string) => {
@@ -95,7 +128,11 @@ export function OAuthPage() {
             delete timers.current[provider];
           }
         } catch (err: unknown) {
-          updateProviderState(provider, { status: "error", error: getErrorMessage(err), polling: false });
+          updateProviderState(provider, {
+            status: "error",
+            error: getErrorMessage(err),
+            polling: false,
+          });
           window.clearInterval(timer);
           delete timers.current[provider];
         }
@@ -107,7 +144,8 @@ export function OAuthPage() {
 
   const startAuth = useCallback(
     async (provider: OAuthProvider) => {
-      const projectId = provider === "gemini-cli" ? (states[provider]?.projectId || "").trim() : undefined;
+      const projectId =
+        provider === "gemini-cli" ? (states[provider]?.projectId || "").trim() : undefined;
       updateProviderState(provider, {
         status: "waiting",
         polling: true,
@@ -122,7 +160,12 @@ export function OAuthPage() {
           provider,
           provider === "gemini-cli" ? { projectId: projectId || undefined } : undefined,
         );
-        updateProviderState(provider, { url: res.url, state: res.state, status: "waiting", polling: true });
+        updateProviderState(provider, {
+          url: res.url,
+          state: res.state,
+          status: "waiting",
+          polling: true,
+        });
         if (res.state) {
           startPolling(provider, res.state);
         }
@@ -162,14 +205,22 @@ export function OAuthPage() {
         notify({ type: "info", message: "请输入回调 URL" });
         return;
       }
-      updateProviderState(provider, { callbackSubmitting: true, callbackStatus: undefined, callbackError: undefined });
+      updateProviderState(provider, {
+        callbackSubmitting: true,
+        callbackStatus: undefined,
+        callbackError: undefined,
+      });
       try {
         await oauthApi.submitCallback(provider, redirectUrl);
         updateProviderState(provider, { callbackSubmitting: false, callbackStatus: "success" });
         notify({ type: "success", message: "回调提交成功" });
       } catch (err: unknown) {
         const message = getErrorMessage(err) || "回调提交失败";
-        updateProviderState(provider, { callbackSubmitting: false, callbackStatus: "error", callbackError: message });
+        updateProviderState(provider, {
+          callbackSubmitting: false,
+          callbackStatus: "error",
+          callbackError: message,
+        });
         notify({ type: "error", message });
       }
     },
@@ -193,7 +244,10 @@ export function OAuthPage() {
     try {
       const res = await oauthApi.iflowCookieAuth(cookie);
       setIflowResult(res);
-      notify({ type: res.status === "ok" ? "success" : "error", message: res.status === "ok" ? "导入成功" : res.error || "导入失败" });
+      notify({
+        type: res.status === "ok" ? "success" : "error",
+        message: res.status === "ok" ? "导入成功" : res.error || "导入失败",
+      });
     } catch (err: unknown) {
       notify({ type: "error", message: getErrorMessage(err) || "导入失败" });
     } finally {
@@ -248,7 +302,11 @@ export function OAuthPage() {
                   onClick={() => void startAuth(provider.id)}
                   disabled={disabled}
                 >
-                  {disabled ? <RefreshCw size={14} className="animate-spin" /> : <Sparkles size={14} />}
+                  {disabled ? (
+                    <RefreshCw size={14} className="animate-spin" />
+                  ) : (
+                    <Sparkles size={14} />
+                  )}
                   开始授权
                 </Button>
               }
@@ -257,7 +315,9 @@ export function OAuthPage() {
                 <div className="mb-3">
                   <TextInput
                     value={state.projectId ?? ""}
-                    onChange={(e) => updateProviderState(provider.id, { projectId: e.currentTarget.value })}
+                    onChange={(e) =>
+                      updateProviderState(provider.id, { projectId: e.currentTarget.value })
+                    }
                     placeholder="Project ID（可选）"
                   />
                 </div>
@@ -270,11 +330,21 @@ export function OAuthPage() {
                       授权链接
                     </p>
                     <div className="flex items-center gap-2">
-                      <Button variant="ghost" size="sm" onClick={() => void copyLink(url)} disabled={!url}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => void copyLink(url)}
+                        disabled={!url}
+                      >
                         <Copy size={14} />
                         复制
                       </Button>
-                      <Button variant="ghost" size="sm" onClick={() => openLink(url)} disabled={!url}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openLink(url)}
+                        disabled={!url}
+                      >
                         <ExternalLink size={14} />
                         打开
                       </Button>
@@ -284,7 +354,14 @@ export function OAuthPage() {
                     {url ? url : "--"}
                   </div>
                   <div className="text-xs text-slate-600 dark:text-white/65">
-                    状态：{polling ? "轮询中…" : status === "success" ? "成功" : status === "error" ? "失败" : "待开始"}
+                    状态：
+                    {polling
+                      ? "轮询中…"
+                      : status === "success"
+                        ? "成功"
+                        : status === "error"
+                          ? "失败"
+                          : "待开始"}
                     {state.error ? ` · ${state.error}` : ""}
                   </div>
                 </div>
@@ -295,7 +372,9 @@ export function OAuthPage() {
                   </p>
                   <TextInput
                     value={state.callbackUrl ?? ""}
-                    onChange={(e) => updateProviderState(provider.id, { callbackUrl: e.currentTarget.value })}
+                    onChange={(e) =>
+                      updateProviderState(provider.id, { callbackUrl: e.currentTarget.value })
+                    }
                     placeholder="粘贴浏览器回调后的完整 URL"
                   />
                   <div className="flex flex-wrap items-center gap-2">
@@ -316,7 +395,9 @@ export function OAuthPage() {
                             : "text-xs font-semibold text-rose-700 dark:text-rose-200"
                         }
                       >
-                        {state.callbackStatus === "success" ? "已提交" : state.callbackError || "提交失败"}
+                        {state.callbackStatus === "success"
+                          ? "已提交"
+                          : state.callbackError || "提交失败"}
                       </span>
                     ) : null}
                   </div>
@@ -332,7 +413,12 @@ export function OAuthPage() {
           title="iFlow Cookie 认证"
           description={iflowHint}
           actions={
-            <Button variant="secondary" size="sm" onClick={() => void submitIflow()} disabled={iflowLoading}>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => void submitIflow()}
+              disabled={iflowLoading}
+            >
               <ShieldCheck size={14} />
               {iflowLoading ? "导入中…" : "导入"}
             </Button>

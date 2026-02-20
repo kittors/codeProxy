@@ -152,7 +152,12 @@ export function ProviderKeyListCard({
                         />
                       </div>
                     ) : null}
-                    <Button variant="secondary" size="sm" onClick={() => onCopy(idx)} title="复制 API Key">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => onCopy(idx)}
+                      title="复制 API Key"
+                    >
                       <Copy size={14} />
                       复制
                     </Button>
@@ -174,4 +179,3 @@ export function ProviderKeyListCard({
     </Card>
   );
 }
-

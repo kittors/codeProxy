@@ -220,4 +220,3 @@ export const createDailyTrendOption = (input: {
     animationDurationUpdate: 360,
   };
 };
-

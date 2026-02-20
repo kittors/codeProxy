@@ -120,4 +120,3 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
     nonstreamKeepaliveInterval: "",
   },
 };
-

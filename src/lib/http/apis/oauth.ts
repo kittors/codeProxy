@@ -36,4 +36,3 @@ export const oauthApi = {
   iflowCookieAuth: (cookie: string) =>
     apiClient.post<IFlowCookieAuthResponse>("/iflow-auth-url", { cookie }),
 };
-

@@ -35,7 +35,9 @@ export const authFilesApi = {
     return normalizeOauthModelAlias(data);
   },
   saveOauthModelAlias: async (channel: string, aliases: OAuthModelAliasEntry[]) => {
-    const normalizedChannel = String(channel ?? "").trim().toLowerCase();
+    const normalizedChannel = String(channel ?? "")
+      .trim()
+      .toLowerCase();
     const normalizedAliases =
       normalizeOauthModelAlias({ [normalizedChannel]: aliases })[normalizedChannel] ?? [];
     await apiClient.patch("/oauth-model-alias", {
@@ -44,7 +46,9 @@ export const authFilesApi = {
     });
   },
   deleteOauthModelAlias: async (channel: string) => {
-    const normalizedChannel = String(channel ?? "").trim().toLowerCase();
+    const normalizedChannel = String(channel ?? "")
+      .trim()
+      .toLowerCase();
     try {
       await apiClient.patch("/oauth-model-alias", { channel: normalizedChannel, aliases: [] });
     } catch {
@@ -68,7 +72,9 @@ export const authFilesApi = {
   getModelDefinitions: async (
     channel: string,
   ): Promise<{ id: string; display_name?: string; type?: string; owned_by?: string }[]> => {
-    const normalizedChannel = String(channel ?? "").trim().toLowerCase();
+    const normalizedChannel = String(channel ?? "")
+      .trim()
+      .toLowerCase();
     if (!normalizedChannel) return [];
     const data = await apiClient.get<Record<string, unknown>>(
       `/model-definitions/${encodeURIComponent(normalizedChannel)}`,
@@ -79,4 +85,3 @@ export const authFilesApi = {
       : [];
   },
 };
-

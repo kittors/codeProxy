@@ -36,4 +36,3 @@
 - 版本信息事件：`server-version-update`
 
 页面与 Provider 应优先基于这些事件更新 UI，而不是靠控制台调试输出。
-

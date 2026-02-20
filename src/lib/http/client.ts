@@ -31,7 +31,9 @@ export class ApiClient {
     const baseUrl = `${this.apiBase}${path}`;
     if (!params) return baseUrl;
 
-    const pairs = Object.entries(params).filter(([, value]) => value !== undefined && value !== null);
+    const pairs = Object.entries(params).filter(
+      ([, value]) => value !== undefined && value !== null,
+    );
     if (pairs.length === 0) return baseUrl;
 
     const url = new URL(baseUrl, window.location.origin);
@@ -71,7 +73,8 @@ export class ApiClient {
       const url = this.buildUrl(path, options?.params);
       const headersFromOptions = new Headers(options?.headers);
       const headersFromInit = new Headers(init?.headers);
-      const hasContentType = headersFromOptions.has("Content-Type") || headersFromInit.has("Content-Type");
+      const hasContentType =
+        headersFromOptions.has("Content-Type") || headersFromInit.has("Content-Type");
       const headers = new Headers();
 
       if (typeof init?.body === "string" && !hasContentType) {

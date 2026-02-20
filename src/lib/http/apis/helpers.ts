@@ -182,7 +182,9 @@ export const normalizeOauthExcludedModels = (payload: unknown): Record<string, s
   const result: Record<string, string[]> = {};
 
   Object.entries(source).forEach(([provider, models]) => {
-    const key = String(provider ?? "").trim().toLowerCase();
+    const key = String(provider ?? "")
+      .trim()
+      .toLowerCase();
     if (!key) return;
     const normalized = normalizeExcludedModels(models);
     if (!normalized) return;
@@ -202,7 +204,9 @@ export const normalizeOauthModelAlias = (
   const result: Record<string, OAuthModelAliasEntry[]> = {};
 
   Object.entries(source).forEach(([channel, mappings]) => {
-    const key = String(channel ?? "").trim().toLowerCase();
+    const key = String(channel ?? "")
+      .trim()
+      .toLowerCase();
     if (!key) return;
     if (!Array.isArray(mappings)) return;
     const seen = new Set<string>();
@@ -249,4 +253,3 @@ export const normalizeApiKeyEntries = (raw: unknown): ProviderApiKeyEntry[] | un
     .filter(Boolean) as ProviderApiKeyEntry[];
   return entries.length ? entries : undefined;
 };
-

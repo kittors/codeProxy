@@ -10,8 +10,7 @@ export const createHourlyTokenOption = (input: {
 }): Record<string, unknown> => {
   const points = input.hourlySeries.tokenPoints.slice(-input.tokenHourWindow);
   const x = points.map((point) => point.label);
-  const barMaxWidth =
-    input.tokenHourWindow <= 6 ? 44 : input.tokenHourWindow <= 12 ? 32 : 24;
+  const barMaxWidth = input.tokenHourWindow <= 6 ? 44 : input.tokenHourWindow <= 12 ? 32 : 24;
 
   const selectedKeys = input.hourlySeries.tokenKeys.filter(
     (key) => input.hourlyTokenSelected[key] ?? true,
@@ -142,4 +141,3 @@ export const createHourlyTokenOption = (input: {
     animationDurationUpdate: 360,
   };
 };
-

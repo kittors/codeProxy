@@ -15,4 +15,3 @@ export const configFileApi = {
       timeoutMs: 60000,
     }),
 };
-

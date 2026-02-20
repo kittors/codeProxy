@@ -25,16 +25,14 @@ export function ProviderStatusBar({ data }: { data: StatusBarData }) {
         {data.blocks.map((state, idx) => (
           <div
             key={idx}
-            className={
-              "h-2 w-full rounded-sm " +
-              blockClass(state) +
-              " opacity-90 dark:opacity-95"
-            }
+            className={"h-2 w-full rounded-sm " + blockClass(state) + " opacity-90 dark:opacity-95"}
             aria-hidden="true"
           />
         ))}
       </div>
-      <span className={`w-14 shrink-0 text-right text-xs font-semibold tabular-nums ${rateClass}`}>{rateText}</span>
+      <span className={`w-14 shrink-0 text-right text-xs font-semibold tabular-nums ${rateClass}`}>
+        {rateText}
+      </span>
     </div>
   );
 }
