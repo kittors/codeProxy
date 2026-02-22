@@ -7,3 +7,6 @@ dist
 coverage
 bun.lockb
 .omx/
+test-results/
+playwright-report/
+.sisyphus/

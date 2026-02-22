@@ -362,12 +362,14 @@ export function AuthFilesPage() {
   const [excludedDraft, setExcludedDraft] = useState<Record<string, string>>({});
   const [excludedNewProvider, setExcludedNewProvider] = useState("");
   const [excludedUnsupported, setExcludedUnsupported] = useState(false);
+  const [excludedLoadAttempted, setExcludedLoadAttempted] = useState(false);
 
   const [aliasLoading, setAliasLoading] = useState(false);
   const [aliasMap, setAliasMap] = useState<Record<string, OAuthModelAliasEntry[]>>({});
   const [aliasEditing, setAliasEditing] = useState<Record<string, AliasRow[]>>({});
   const [aliasNewChannel, setAliasNewChannel] = useState("");
   const [aliasUnsupported, setAliasUnsupported] = useState(false);
+  const [aliasLoadAttempted, setAliasLoadAttempted] = useState(false);
 
   const [importOpen, setImportOpen] = useState(false);
   const [importChannel, setImportChannel] = useState("");
@@ -820,6 +822,7 @@ export function AuthFilesPage() {
   ]);
 
   const refreshExcluded = useCallback(async () => {
+    setExcludedLoadAttempted(true);
     setExcludedLoading(true);
     try {
       const map = await authFilesApi.getOauthExcludedModels();
@@ -848,6 +851,7 @@ export function AuthFilesPage() {
   }, [notify]);
 
   const refreshAlias = useCallback(async () => {
+    setAliasLoadAttempted(true);
     setAliasLoading(true);
     try {
       const map = await authFilesApi.getOauthModelAlias();
@@ -873,6 +877,7 @@ export function AuthFilesPage() {
   useEffect(() => {
     if (
       tab === "excluded" &&
+      !excludedLoadAttempted &&
       !excludedLoading &&
       !excludedUnsupported &&
       Object.keys(excluded).length === 0
@@ -881,6 +886,7 @@ export function AuthFilesPage() {
     }
     if (
       tab === "alias" &&
+      !aliasLoadAttempted &&
       !aliasLoading &&
       !aliasUnsupported &&
       Object.keys(aliasMap).length === 0
@@ -891,9 +897,11 @@ export function AuthFilesPage() {
     aliasLoading,
     aliasMap,
     aliasUnsupported,
+    aliasLoadAttempted,
     excluded,
     excludedLoading,
     excludedUnsupported,
+    excludedLoadAttempted,
     refreshAlias,
     refreshExcluded,
     tab,

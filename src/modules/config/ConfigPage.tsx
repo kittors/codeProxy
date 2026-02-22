@@ -715,7 +715,9 @@ export function ConfigPage() {
   return (
     <div
       className={
-        visualLayoutEnabled ? "flex h-[calc(100dvh-112px)] min-h-0 flex-col gap-6" : "space-y-6"
+        visualLayoutEnabled
+          ? "flex h-[calc(100dvh-112px)] min-h-0 flex-col gap-6 overflow-x-hidden"
+          : "space-y-6 overflow-x-hidden"
       }
     >
       <div className={visualLayoutEnabled ? "flex min-h-0 flex-1 flex-col gap-4" : undefined}>

@@ -1,13 +1,23 @@
-import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import {
+  type ChangeEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import {
   Activity,
   ChartSpline,
   Coins,
+  Download,
   Filter,
   RefreshCw,
   Search,
   ShieldCheck,
   Sigma,
+  Upload,
 } from "lucide-react";
 import { usageApi } from "@/lib/http/apis";
 import type { UsageData } from "@/lib/http/types";
@@ -43,14 +53,22 @@ import {
   createHourlyTokenOption,
   createModelDistributionOption,
 } from "@/modules/monitor/monitor-chart-options";
+import { Button } from "@/modules/ui/Button";
+import { useToast } from "@/modules/ui/ToastProvider";
 
 const createEmptyUsage = (): UsageData => ({ apis: {} });
+const MAX_SNAPSHOT_SIZE = 15 * 1024 * 1024;
 
 export function MonitorPage() {
+  const { notify } = useToast();
   const {
     state: { mode },
   } = useTheme();
   const isDark = mode === "dark";
+
+  const importInputRef = useRef<HTMLInputElement | null>(null);
+  const [snapshotBusy, setSnapshotBusy] = useState(false);
+  const [snapshotMessage, setSnapshotMessage] = useState<string | null>(null);
 
   const [dailyLegendSelected, setDailyLegendSelected] = useState<Record<string, boolean>>({
     "输入 Token": true,
@@ -124,6 +142,81 @@ export function MonitorPage() {
 
   const hasData = metrics.requestCount > 0;
   const isLoading = isRefreshing || isPending;
+
+  const downloadJson = (content: unknown, filename: string) => {
+    const text = JSON.stringify(content, null, 2);
+    const blob = new Blob([text], { type: "application/json;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    link.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 800);
+  };
+
+  const handleExportSnapshot = useCallback(async () => {
+    setSnapshotBusy(true);
+    setSnapshotMessage(null);
+    try {
+      const payload = await usageApi.exportUsage();
+      const fileStamp = new Date().toISOString().replace(/[:.]/g, "-");
+      downloadJson(payload, `usage-export-${fileStamp}.json`);
+      notify({ type: "success", message: "已导出 usage 快照" });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "导出失败";
+      setSnapshotMessage(message);
+      notify({ type: "error", message });
+    } finally {
+      setSnapshotBusy(false);
+    }
+  }, [notify]);
+
+  const handleImportSnapshotFile = useCallback(
+    async (file: File) => {
+      setSnapshotBusy(true);
+      setSnapshotMessage(null);
+      try {
+        if (file.size > MAX_SNAPSHOT_SIZE) {
+          throw new Error("导入文件过大，请确认选择的是 usage 导出快照");
+        }
+        const text = await file.text();
+        const payload = JSON.parse(text) as unknown;
+        const result = await usageApi.importUsage(payload);
+
+        const summary = [
+          typeof result.added === "number" ? `新增 ${result.added}` : null,
+          typeof result.skipped === "number" ? `跳过 ${result.skipped}` : null,
+          typeof result.total_requests === "number" ? `总请求 ${result.total_requests}` : null,
+          typeof result.failed_requests === "number" ? `失败 ${result.failed_requests}` : null,
+        ]
+          .filter(Boolean)
+          .join(" · ");
+
+        notify({ type: "success", message: summary ? `导入成功：${summary}` : "导入成功" });
+        setSnapshotMessage(summary ? `导入成功：${summary}` : "导入成功");
+        await refreshData();
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : "导入失败";
+        setSnapshotMessage(message);
+        notify({ type: "error", message });
+      } finally {
+        setSnapshotBusy(false);
+        if (importInputRef.current) {
+          importInputRef.current.value = "";
+        }
+      }
+    },
+    [notify, refreshData],
+  );
+
+  const handleImportSnapshotChange = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0] ?? null;
+      if (!file) return;
+      void handleImportSnapshotFile(file);
+    },
+    [handleImportSnapshotFile],
+  );
 
   useEffect(() => {
     void refreshData();
@@ -525,6 +618,51 @@ export function MonitorPage() {
           </div>
         ) : null}
       </section>
+
+      <Card
+        title="使用统计快照"
+        description="导入/导出 usage 快照（用于迁移、备份或对齐参考项目的数据操作能力）。"
+        loading={snapshotBusy}
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              ref={importInputRef}
+              type="file"
+              accept="application/json"
+              className="hidden"
+              onChange={handleImportSnapshotChange}
+            />
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => importInputRef.current?.click()}
+              disabled={snapshotBusy}
+            >
+              <Upload size={14} />
+              导入
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => void handleExportSnapshot()}
+              disabled={snapshotBusy}
+            >
+              <Download size={14} />
+              导出
+            </Button>
+          </div>
+        }
+      >
+        {snapshotMessage ? (
+          <div className="rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-sm text-slate-700 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-white/80">
+            {snapshotMessage}
+          </div>
+        ) : (
+          <div className="text-sm text-slate-600 dark:text-white/65">
+            导入后会自动刷新当前页面数据。
+          </div>
+        )}
+      </Card>
 
       <Reveal>
         <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

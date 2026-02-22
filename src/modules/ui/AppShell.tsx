@@ -12,10 +12,11 @@ import {
   Activity,
   Bot,
   Coins,
+  LayoutDashboard,
   FileKey,
   FileText,
+  Info,
   KeyRound,
-  LayoutDashboard,
   LogOut,
   PanelLeftClose,
   PanelLeftOpen,
@@ -37,8 +38,10 @@ interface ShellContextState {
 }
 
 const ShellContext = createContext<ShellContextState | null>(null);
+const STORAGE_KEY_SIDEBAR_COLLAPSED = "cli-proxy-sidebar-collapsed";
 
 const NAV_ITEMS = [
+  { to: "/dashboard", label: "仪表盘", icon: LayoutDashboard },
   { to: "/monitor", label: "监控中心", icon: Activity },
   { to: "/monitor/request-logs", label: "请求日志", icon: ScrollText },
   { to: "/ai-providers", label: "AI供应商", icon: Bot },
@@ -46,10 +49,14 @@ const NAV_ITEMS = [
   { to: "/oauth", label: "OAuth登录", icon: KeyRound },
   { to: "/quota", label: "配额管理", icon: Coins },
   { to: "/config", label: "配置面板", icon: Settings },
+  { to: "/system", label: "系统信息", icon: Info },
   { to: "/logs", label: "日志查询", icon: FileText },
 ] as const;
 
 const getPageTitle = (pathname: string): string => {
+  if (pathname.startsWith("/dashboard")) {
+    return "仪表盘";
+  }
   if (pathname.startsWith("/monitor/request-logs")) {
     return "请求日志";
   }
@@ -70,6 +77,9 @@ const getPageTitle = (pathname: string): string => {
   }
   if (pathname.startsWith("/config")) {
     return "配置面板";
+  }
+  if (pathname.startsWith("/system")) {
+    return "系统信息";
   }
   if (pathname.startsWith("/logs")) {
     return "日志查询";
@@ -102,12 +112,12 @@ function ShellSidebar({ collapsed }: { collapsed: boolean }) {
     >
       <div
         className={[
-          "flex h-full flex-col",
+          "flex h-full w-64 flex-col",
           "motion-reduce:transition-none motion-safe:transition-all motion-safe:duration-300 motion-safe:ease-out",
-          collapsed ? "pointer-events-none opacity-0 -translate-x-2" : "opacity-100 translate-x-0",
+          collapsed ? "pointer-events-none opacity-0 -translate-x-6" : "opacity-100 translate-x-0",
         ].join(" ")}
       >
-        <div className="flex h-16 items-center gap-2 px-6 text-lg font-semibold tracking-tight text-slate-900 dark:text-white">
+        <div className="flex h-16 items-center gap-2 px-6 text-lg font-semibold tracking-tight text-slate-900 dark:text-white whitespace-nowrap">
           <LayoutDashboard size={18} className="text-slate-900 dark:text-white" />
           <span>控制台</span>
         </div>
@@ -122,12 +132,12 @@ function ShellSidebar({ collapsed }: { collapsed: boolean }) {
                 viewTransition
                 className={
                   active
-                    ? "flex items-center gap-2 rounded-xl bg-slate-900 px-3 py-2 text-sm font-semibold text-white dark:bg-white dark:text-neutral-950"
-                    : "flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white"
+                    ? "flex min-w-0 items-center gap-2 rounded-xl bg-slate-900 px-3 py-2 text-sm font-semibold text-white dark:bg-white dark:text-neutral-950 whitespace-nowrap"
+                    : "flex min-w-0 items-center gap-2 rounded-xl px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white whitespace-nowrap"
                 }
               >
-                <Icon size={16} className="opacity-90" />
-                {item.label}
+                <Icon size={16} className="shrink-0 opacity-90" />
+                <span className="min-w-0 truncate">{item.label}</span>
               </Link>
             );
           })}
@@ -206,7 +216,7 @@ export function AppShell({ children }: PropsWithChildren) {
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
     try {
-      return localStorage.getItem("shell.sidebarCollapsed") === "1";
+      return localStorage.getItem(STORAGE_KEY_SIDEBAR_COLLAPSED) === "1";
     } catch {
       return false;
     }
@@ -214,7 +224,7 @@ export function AppShell({ children }: PropsWithChildren) {
 
   useEffect(() => {
     try {
-      localStorage.setItem("shell.sidebarCollapsed", sidebarCollapsed ? "1" : "0");
+      localStorage.setItem(STORAGE_KEY_SIDEBAR_COLLAPSED, sidebarCollapsed ? "1" : "0");
     } catch {
       // 忽略持久化失败
     }

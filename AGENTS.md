@@ -1,4 +1,5 @@
 <!-- AI-KIT:START -->
+
 # AGENTS.md（入口索引）
 
 本文件是 **code-proxy-admin** 仓库的 AI 规范入口索引（根目录必须保留）。  
@@ -11,11 +12,16 @@
 - `src/app/`：路由与守卫
 - `src/lib/`：常量、连接处理、HTTP 客户端与 API
 - `src/modules/auth/`：鉴权 Provider
+- `src/modules/dashboard/`：仪表盘
 - `src/modules/layout/`：后台布局
 - `src/modules/login/`：登录页
 - `src/modules/monitor/`：监控中心
+- `src/modules/system/`：系统信息
 - `src/modules/ui/`：复合 UI 容器
+- `src/modules/usage/`：用量统计（当前复用监控视图）
 - `src/styles/`：全局样式与主题变量
+- `management.html` + `src/management.tsx`：历史多入口文件（默认不再构建产物；优先以 `index.html` 为准）
+- `src/pages/`、`src/components/`、`src/services/`、`src/stores/`、`src/i18n/`：参考项目业务功能实现（从上游移植，用于页面/路由/交互对齐）
 
 ## 0. 必读与优先级（冲突时从高到低）
 
@@ -77,8 +83,10 @@
 ## 6. 关键路径速查（按需补全）
 
 - 应用入口：`src/main.tsx`
+- 历史多入口脚本：`src/management.tsx`（默认不再构建产物）
 - 主要模块目录：`src/`
 - 关键配置文件：`package.json`, `tsconfig.json`, `vite.config.ts`
+- 入口文件：`index.html`（默认构建）
 
 ## 7. 项目内 Skills（可选）
 
@@ -90,5 +98,7 @@
 <!-- AI-KIT:END -->
 
 <!-- PROJECT-OVERRIDES:START -->
+
 （可选）在此处追加本项目特有的关键路径、命令、约束与注意事项。该区块不会被生成脚本覆盖。
+
 <!-- PROJECT-OVERRIDES:END -->

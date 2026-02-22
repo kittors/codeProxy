@@ -1,0 +1,176 @@
+@use "../../styles/variables" as *;
+@use "../../styles/mixins" as *;
+
+.diffModal {
+  :global(.modal-body) {
+    padding: $spacing-md $spacing-lg;
+    max-height: none;
+    overflow: hidden;
+  }
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  height: 70vh;
+  min-height: 420px;
+}
+
+.emptyState {
+  flex: 1;
+  border: 1px dashed var(--border-color);
+  border-radius: $radius-md;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  font-size: 14px;
+  display: grid;
+  place-items: center;
+}
+
+.diffList {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.diffCard {
+  border: 1px solid var(--border-color);
+  border-radius: $radius-md;
+  background: var(--bg-secondary);
+  overflow: hidden;
+}
+
+.diffCardHeader {
+  padding: 8px 10px;
+  border-bottom: 1px dashed var(--border-color);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: color-mix(in srgb, var(--bg-primary) 92%, transparent);
+}
+
+.diffColumns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: $spacing-sm;
+  padding: $spacing-sm;
+}
+
+.diffColumn {
+  min-width: 0;
+  border: 1px solid var(--border-color);
+  border-radius: $radius-sm;
+  overflow: hidden;
+  background: var(--bg-primary);
+}
+
+.diffColumnHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: $spacing-sm;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+}
+
+.lineMeta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lineRange {
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-family: "Consolas", "Monaco", "Menlo", monospace;
+}
+
+.contextRange {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  font-family: "Consolas", "Monaco", "Menlo", monospace;
+}
+
+.codeList {
+  overflow: auto;
+  max-height: 280px;
+  font-family: "Consolas", "Monaco", "Menlo", monospace;
+}
+
+.codeLine {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  align-items: start;
+  border-top: 1px solid color-mix(in srgb, var(--border-color) 55%, transparent);
+}
+
+.codeLine:first-child {
+  border-top: none;
+}
+
+.codeLineChanged {
+  background: color-mix(in srgb, var(--primary-color) 8%, transparent);
+}
+
+.codeLineNumber {
+  padding: 7px 10px 7px 8px;
+  text-align: right;
+  font-size: 11px;
+  color: var(--text-tertiary);
+  border-right: 1px solid color-mix(in srgb, var(--border-color) 55%, transparent);
+  background: color-mix(in srgb, var(--bg-secondary) 90%, transparent);
+  font-variant-numeric: tabular-nums;
+  user-select: none;
+  box-sizing: border-box;
+}
+
+.codeLineText {
+  padding: 7px 10px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-primary);
+  white-space: pre-wrap;
+  word-break: break-word;
+  display: block;
+  box-sizing: border-box;
+}
+
+@include mobile {
+  .content {
+    height: 65vh;
+    min-height: 360px;
+  }
+
+  .diffColumns {
+    grid-template-columns: 1fr;
+  }
+
+  .lineMeta {
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 1px;
+  }
+
+  .codeLine {
+    grid-template-columns: 44px minmax(0, 1fr);
+  }
+
+  .codeLineNumber {
+    padding: 6px 6px 6px 4px;
+    font-size: 10px;
+  }
+
+  .codeLineText {
+    padding: 6px 8px;
+    font-size: 11px;
+    line-height: 1.4;
+  }
+}

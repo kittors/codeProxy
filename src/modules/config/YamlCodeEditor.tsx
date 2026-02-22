@@ -476,7 +476,7 @@ export const YamlCodeEditor = forwardRef<
           ref={gutterRef}
           aria-hidden="true"
           className={[
-            "w-14 shrink-0 overflow-auto border-r border-slate-200 bg-slate-50/70 px-3 py-3 text-right font-mono text-[11px] leading-6 text-slate-400 dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-white/35",
+            "scrollbar-hidden w-14 shrink-0 overflow-y-scroll overflow-x-hidden border-r border-slate-200 bg-slate-50/70 px-3 py-3 text-right font-mono text-[11px] leading-6 text-slate-400 dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-white/35",
             "pointer-events-none",
           ].join(" ")}
         >
@@ -488,7 +488,7 @@ export const YamlCodeEditor = forwardRef<
             ref={preRef}
             aria-hidden="true"
             className={[
-              "absolute inset-0 overflow-auto px-4 py-3 font-mono text-xs leading-6",
+              "scrollbar-hidden absolute inset-0 overflow-auto px-4 py-3 font-mono text-xs leading-6",
               "text-slate-900 dark:text-white",
               "pointer-events-none",
             ].join(" ")}
@@ -502,6 +502,7 @@ export const YamlCodeEditor = forwardRef<
             onChange={onTextChange}
             onScroll={onScroll}
             onKeyDown={onKeyDown}
+            wrap="off"
             onKeyUp={() => {
               syncCursor();
               syncScroll();

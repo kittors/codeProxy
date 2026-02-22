@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   Bot,
   Check,
@@ -64,6 +65,8 @@ import {
 export function ProvidersPage() {
   const { notify } = useToast();
   const [isPending, startTransition] = useTransition();
+  const location = useLocation();
+  const navigate = useNavigate();
 
   const [tab, setTab] = useState<"gemini" | "claude" | "codex" | "vertex" | "openai" | "ampcode">(
     "gemini",
@@ -195,6 +198,20 @@ export function ProvidersPage() {
     void refreshAll();
   }, [refreshAll]);
 
+  const closeKeyEditor = useCallback(() => {
+    setEditKeyOpen(false);
+    if (location.pathname !== "/ai-providers") {
+      navigate("/ai-providers", { replace: true, viewTransition: true });
+    }
+  }, [location.pathname, navigate]);
+
+  const closeOpenAIEditor = useCallback(() => {
+    setEditOpenAIOpen(false);
+    if (location.pathname !== "/ai-providers") {
+      navigate("/ai-providers", { replace: true, viewTransition: true });
+    }
+  }, [location.pathname, navigate]);
+
   const openKeyEditor = useCallback(
     (type: "gemini" | "claude" | "codex" | "vertex", index: number | null) => {
       const list =
@@ -279,13 +296,14 @@ export function ProvidersPage() {
         await providersApi.saveVertexConfigs(next);
       }
       notify({ type: "success", message: "已保存" });
-      setEditKeyOpen(false);
+      closeKeyEditor();
       startTransition(() => void refreshAll());
     } catch (err: unknown) {
       notify({ type: "error", message: err instanceof Error ? err.message : "保存失败" });
     }
   }, [
     claudeKeys,
+    closeKeyEditor,
     codexKeys,
     commitKeyDraft,
     editKeyIndex,
@@ -382,6 +400,51 @@ export function ProvidersPage() {
     [openaiProviders],
   );
 
+  useEffect(() => {
+    if (loading) return;
+    const pathname = location.pathname;
+    if (!pathname.startsWith("/ai-providers/")) return;
+
+    const parts = pathname.split("/").filter(Boolean);
+    const provider = parts[1] ?? "";
+    const action = parts[2] ?? "";
+
+    if (
+      provider === "gemini" ||
+      provider === "claude" ||
+      provider === "codex" ||
+      provider === "vertex"
+    ) {
+      setTab(provider);
+      if (action === "new") {
+        openKeyEditor(provider, null);
+        return;
+      }
+      const index = Number(action);
+      if (Number.isFinite(index) && index >= 0) {
+        openKeyEditor(provider, index);
+      }
+      return;
+    }
+
+    if (provider === "openai") {
+      setTab("openai");
+      if (action === "new") {
+        openOpenAIEditor(null);
+        return;
+      }
+      const index = Number(action);
+      if (Number.isFinite(index) && index >= 0) {
+        openOpenAIEditor(index);
+      }
+      return;
+    }
+
+    if (provider === "ampcode") {
+      setTab("ampcode");
+    }
+  }, [loading, location.pathname, openKeyEditor, openOpenAIEditor]);
+
   const commitOpenAIDraft = useCallback((): OpenAIProvider | null => {
     const name = openaiDraft.name.trim();
     const baseUrl = openaiDraft.baseUrl.trim();
@@ -456,12 +519,20 @@ export function ProvidersPage() {
       setOpenaiProviders(next);
       await providersApi.saveOpenAIProviders(next);
       notify({ type: "success", message: "已保存" });
-      setEditOpenAIOpen(false);
+      closeOpenAIEditor();
       startTransition(() => void refreshAll());
     } catch (err: unknown) {
       notify({ type: "error", message: err instanceof Error ? err.message : "保存失败" });
     }
-  }, [commitOpenAIDraft, editOpenAIIndex, notify, openaiProviders, refreshAll, startTransition]);
+  }, [
+    closeOpenAIEditor,
+    commitOpenAIDraft,
+    editOpenAIIndex,
+    notify,
+    openaiProviders,
+    refreshAll,
+    startTransition,
+  ]);
 
   const deleteOpenAIProvider = useCallback(
     async (index: number) => {
@@ -1061,7 +1132,7 @@ export function ProvidersPage() {
             ? "Vertex 的 models 必须填写 alias（name => alias）。Excluded Models 中使用 * 可一键禁用该配置。"
             : "支持 Excluded Models（每行一个；用 * 一键禁用）、自定义 headers 与 models。"
         }
-        onClose={() => setEditKeyOpen(false)}
+        onClose={closeKeyEditor}
         footer={
           <div className="flex flex-wrap items-center gap-2">
             {keyDraftError ? (
@@ -1069,7 +1140,7 @@ export function ProvidersPage() {
                 {keyDraftError}
               </span>
             ) : null}
-            <Button variant="secondary" onClick={() => setEditKeyOpen(false)}>
+            <Button variant="secondary" onClick={closeKeyEditor}>
               取消
             </Button>
             <Button variant="primary" onClick={() => void saveKeyDraft()}>
@@ -1284,7 +1355,7 @@ export function ProvidersPage() {
         open={editOpenAIOpen}
         title={`${editOpenAIIndex === null ? "新增" : "编辑"} OpenAI 提供商`}
         description="配置 name/baseUrl、多个 apiKeyEntries、headers 与模型别名；支持通过 /models 自动拉取并合并。"
-        onClose={() => setEditOpenAIOpen(false)}
+        onClose={closeOpenAIEditor}
         footer={
           <div className="flex flex-wrap items-center gap-2">
             {openaiDraftError ? (
@@ -1292,7 +1363,7 @@ export function ProvidersPage() {
                 {openaiDraftError}
               </span>
             ) : null}
-            <Button variant="secondary" onClick={() => setEditOpenAIOpen(false)}>
+            <Button variant="secondary" onClick={closeOpenAIEditor}>
               取消
             </Button>
             <Button variant="primary" onClick={() => void saveOpenAIDraft()}>

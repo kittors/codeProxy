@@ -3,6 +3,7 @@ import { AuthProvider } from "@/modules/auth/AuthProvider";
 import { ProtectedRoute } from "@/app/guards/ProtectedRoute";
 import { DashboardLayout } from "@/modules/layout/DashboardLayout";
 import { LoginPage } from "@/modules/login/LoginPage";
+import { DashboardPage } from "@/modules/dashboard/DashboardPage";
 import { MonitorPage } from "@/modules/monitor/MonitorPage";
 import { RequestLogsPage } from "@/modules/monitor/RequestLogsPage";
 import { ProvidersPage } from "@/modules/providers/ProvidersPage";
@@ -11,6 +12,7 @@ import { OAuthPage } from "@/modules/oauth/OAuthPage";
 import { QuotaPage } from "@/modules/quota/QuotaPage";
 import { ConfigPage } from "@/modules/config/ConfigPage";
 import { LogsPage } from "@/modules/logs/LogsPage";
+import { SystemPage } from "@/modules/system/SystemPage";
 import { ThemeProvider } from "@/modules/ui/ThemeProvider";
 import { ToastProvider } from "@/modules/ui/ToastProvider";
 
@@ -24,9 +26,11 @@ export function AppRouter() {
               <Route path="/login" element={<LoginPage />} />
               <Route element={<ProtectedRoute />}>
                 <Route element={<DashboardLayout />}>
+                  <Route path="/dashboard" element={<DashboardPage />} />
                   <Route path="/monitor" element={<MonitorPage />} />
                   <Route path="/monitor/request-logs" element={<RequestLogsPage />} />
                   <Route path="/ai-providers" element={<ProvidersPage />} />
+                  <Route path="/ai-providers/*" element={<ProvidersPage />} />
                   <Route path="/auth-files" element={<AuthFilesPage />} />
                   <Route
                     path="/auth-files/oauth-excluded"
@@ -38,12 +42,16 @@ export function AppRouter() {
                   />
                   <Route path="/oauth" element={<OAuthPage />} />
                   <Route path="/quota" element={<QuotaPage />} />
+                  <Route path="/usage" element={<Navigate to="/monitor" replace />} />
                   <Route path="/config" element={<ConfigPage />} />
                   <Route path="/logs" element={<LogsPage />} />
-                  <Route path="/" element={<Navigate to="/monitor" replace />} />
+                  <Route path="/system" element={<SystemPage />} />
+                  <Route path="/settings" element={<Navigate to="/config" replace />} />
+                  <Route path="/api-keys" element={<Navigate to="/config" replace />} />
+                  <Route path="/" element={<Navigate to="/dashboard" replace />} />
                 </Route>
               </Route>
-              <Route path="*" element={<Navigate to="/monitor" replace />} />
+              <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Routes>
           </div>
         </ToastProvider>
