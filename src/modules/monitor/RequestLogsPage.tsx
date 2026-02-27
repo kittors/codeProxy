@@ -392,11 +392,25 @@ export function RequestLogsPage() {
     try {
       const [next, entries] = await Promise.all([
         usageApi.getUsage(),
-        apiKeyEntriesApi.list().catch(() => [] as ApiKeyEntry[]),
+        apiKeyEntriesApi.list().catch((err) => {
+          console.warn("[RequestLogs] Failed to load API key entries for name resolution:", err);
+          return [] as ApiKeyEntry[];
+        }),
       ]);
       setUsage(next);
       setKeyEntries(entries);
       setLastUpdatedAt(Date.now());
+
+      // Debug: log key name resolution info
+      if (entries.length > 0) {
+        console.info(`[RequestLogs] Loaded ${entries.length} API key entries for name resolution`);
+      }
+      const apiKeys = Object.keys(next.apis ?? {});
+      if (apiKeys.length > 0 && entries.length > 0) {
+        const entryKeys = new Set(entries.map((e) => e.key));
+        const matched = apiKeys.filter((k) => entryKeys.has(k));
+        console.info(`[RequestLogs] Usage has ${apiKeys.length} API keys, ${matched.length} match entries`);
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : "请求日志刷新失败";
       notify({ type: "error", message });
