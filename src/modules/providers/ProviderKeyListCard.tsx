@@ -70,16 +70,20 @@ export function ProviderKeyListCard({
                   <div className="min-w-0">
                     <p className="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-white">
                       <Icon size={16} className="text-slate-900 dark:text-white" />
-                      <span className="truncate">{maskApiKey(item.apiKey)}</span>
+                      <span className="truncate">{item.name || maskApiKey(item.apiKey)}</span>
                       {disabled ? (
                         <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-semibold text-amber-700 dark:text-amber-200">
                           已禁用
                         </span>
-                      ) : null}
+                      ) : (
+                        <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:text-emerald-200">
+                          已启用
+                        </span>
+                      )}
                     </p>
 
                     <div className="mt-1 space-y-1 text-xs text-slate-600 dark:text-white/65">
-                      <p className="truncate font-mono">prefix：{item.prefix || "--"}</p>
+                      <p className="truncate font-mono">apiKey：{maskApiKey(item.apiKey)}</p>
                       <p className="truncate font-mono">baseUrl：{item.baseUrl || "--"}</p>
                       {item.proxyUrl ? (
                         <p className="truncate font-mono">proxyUrl：{item.proxyUrl}</p>

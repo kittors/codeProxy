@@ -44,6 +44,7 @@ export type ClaudeEditOutletContext = {
 
 const buildEmptyForm = (): ProviderFormState => ({
   apiKey: "",
+  name: "",
   prefix: "",
   baseUrl: "",
   proxyUrl: "",
@@ -287,6 +288,7 @@ export function AiProvidersClaudeEditLayout() {
     try {
       const payload: ProviderKeyConfig = {
         apiKey: form.apiKey.trim(),
+        name: form.name?.trim() || undefined,
         prefix: form.prefix?.trim() || undefined,
         baseUrl: (form.baseUrl ?? "").trim() || undefined,
         proxyUrl: form.proxyUrl?.trim() || undefined,

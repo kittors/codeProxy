@@ -262,6 +262,13 @@ export function AiProvidersClaudeEditPage() {
         ) : (
           <div className={styles.openaiEditForm}>
             <Input
+              label="渠道名称"
+              placeholder="例如：Claude 主力渠道（必填）"
+              value={form.name ?? ""}
+              onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
+              disabled={saving || disableControls || isTesting}
+            />
+            <Input
               label={t("ai_providers.claude_add_modal_key_label")}
               value={form.apiKey}
               onChange={(e) => setForm((prev) => ({ ...prev, apiKey: e.target.value }))}
@@ -397,13 +404,12 @@ export function AiProvidersClaudeEditPage() {
 
               {testMessage && (
                 <div
-                  className={`status-badge ${
-                    testStatus === "error"
+                  className={`status-badge ${testStatus === "error"
                       ? "error"
                       : testStatus === "success"
                         ? "success"
                         : "muted"
-                  }`}
+                    }`}
                 >
                   {testMessage}
                 </div>

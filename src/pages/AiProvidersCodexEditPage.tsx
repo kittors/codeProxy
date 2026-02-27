@@ -20,6 +20,7 @@ type LocationState = { fromAiProviders?: boolean } | null;
 
 const buildEmptyForm = (): ProviderFormState => ({
   apiKey: "",
+  name: "",
   prefix: "",
   baseUrl: "",
   proxyUrl: "",
@@ -153,6 +154,7 @@ export function AiProvidersCodexEditPage() {
     try {
       const payload: ProviderKeyConfig = {
         apiKey: form.apiKey.trim(),
+        name: form.name?.trim() || undefined,
         prefix: form.prefix?.trim() || undefined,
         baseUrl,
         proxyUrl: form.proxyUrl?.trim() || undefined,
@@ -217,6 +219,13 @@ export function AiProvidersCodexEditPage() {
           <div className="hint">{t("common.invalid_provider_index")}</div>
         ) : (
           <>
+            <Input
+              label="渠道名称"
+              placeholder="例如：Codex 主力渠道（必填）"
+              value={form.name ?? ""}
+              onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
+              disabled={disableControls || saving}
+            />
             <Input
               label={t("ai_providers.codex_add_modal_key_label")}
               value={form.apiKey}

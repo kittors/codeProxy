@@ -93,6 +93,7 @@ export interface OpenAIProvider {
 
 export interface ProviderSimpleConfig {
   apiKey: string;
+  name?: string;
   prefix?: string;
   baseUrl?: string;
   proxyUrl?: string;
