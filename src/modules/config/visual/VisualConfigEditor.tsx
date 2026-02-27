@@ -888,11 +888,17 @@ export function VisualConfigEditor({
               />
             </Field>
 
-            <ApiKeysEditor
-              value={values.apiKeysText}
-              onChange={(apiKeysText) => update({ apiKeysText })}
-              disabled={disabled}
-            />
+            <div className="rounded-xl border border-indigo-200 bg-indigo-50/50 px-4 py-3 dark:border-indigo-800 dark:bg-indigo-950/30">
+              <p className="text-sm text-indigo-800 dark:text-indigo-300">
+                API Keys 已迁移至专属管理页面。
+                <a
+                  href="#/api-keys"
+                  className="ml-1 font-semibold underline underline-offset-2 hover:text-indigo-600 dark:hover:text-indigo-200"
+                >
+                  前往 API Keys 管理 →
+                </a>
+              </p>
+            </div>
           </div>
         </Card>
 

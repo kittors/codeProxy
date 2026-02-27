@@ -1,5 +1,14 @@
 import { apiClient } from "@/lib/http/client";
 
+export interface ApiKeyEntry {
+  key: string;
+  name?: string;
+  "daily-limit"?: number;
+  "total-quota"?: number;
+  "allowed-models"?: string[];
+  "created-at"?: string;
+}
+
 export const apiKeysApi = {
   async list(): Promise<string[]> {
     const data = await apiClient.get<Record<string, unknown>>("/api-keys");
@@ -14,3 +23,20 @@ export const apiKeysApi = {
   delete: (index: number) => apiClient.delete(`/api-keys?index=${index}`),
 };
 
+export const apiKeyEntriesApi = {
+  async list(): Promise<ApiKeyEntry[]> {
+    const data = await apiClient.get<Record<string, unknown>>("/api-key-entries");
+    const entries = data?.["api-key-entries"] as unknown;
+    return Array.isArray(entries) ? entries : [];
+  },
+
+  replace: (entries: ApiKeyEntry[]) => apiClient.put("/api-key-entries", entries),
+
+  update: (payload: { index?: number; match?: string; value: Partial<ApiKeyEntry> }) =>
+    apiClient.patch("/api-key-entries", payload),
+
+  delete: (params: { index?: number; key?: string }) => {
+    const query = params.key ? `key=${encodeURIComponent(params.key)}` : `index=${params.index}`;
+    return apiClient.delete(`/api-key-entries?${query}`);
+  },
+};

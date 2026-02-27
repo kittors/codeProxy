@@ -47,6 +47,7 @@ const NAV_ITEMS = [
   { to: "/ai-providers", label: "AI供应商", icon: Bot },
   { to: "/auth-files", label: "认证文件", icon: FileKey },
   { to: "/oauth", label: "OAuth登录", icon: KeyRound },
+  { to: "/api-keys", label: "API Keys", icon: Sparkles },
   { to: "/quota", label: "配额管理", icon: Coins },
   { to: "/config", label: "配置面板", icon: Settings },
   { to: "/system", label: "系统信息", icon: Info },
@@ -74,6 +75,9 @@ const getPageTitle = (pathname: string): string => {
   }
   if (pathname.startsWith("/quota")) {
     return "配额管理";
+  }
+  if (pathname.startsWith("/api-keys")) {
+    return "API Keys 管理";
   }
   if (pathname.startsWith("/config")) {
     return "配置面板";

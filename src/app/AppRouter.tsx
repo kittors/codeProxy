@@ -13,6 +13,7 @@ import { QuotaPage } from "@/modules/quota/QuotaPage";
 import { ConfigPage } from "@/modules/config/ConfigPage";
 import { LogsPage } from "@/modules/logs/LogsPage";
 import { SystemPage } from "@/modules/system/SystemPage";
+import { ApiKeysPage } from "@/modules/api-keys/ApiKeysPage";
 import { ThemeProvider } from "@/modules/ui/ThemeProvider";
 import { ToastProvider } from "@/modules/ui/ToastProvider";
 
@@ -47,7 +48,7 @@ export function AppRouter() {
                   <Route path="/logs" element={<LogsPage />} />
                   <Route path="/system" element={<SystemPage />} />
                   <Route path="/settings" element={<Navigate to="/config" replace />} />
-                  <Route path="/api-keys" element={<Navigate to="/config" replace />} />
+                  <Route path="/api-keys" element={<ApiKeysPage />} />
                   <Route path="/" element={<Navigate to="/dashboard" replace />} />
                 </Route>
               </Route>

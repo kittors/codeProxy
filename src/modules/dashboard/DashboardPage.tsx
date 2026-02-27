@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { Link } from "react-router-dom";
-import { Activity, Bot, FileKey, RefreshCw, Settings, Sigma, TriangleAlert } from "lucide-react";
+import { Activity, Bot, FileKey, RefreshCw, Settings, Sigma, Sparkles, TriangleAlert } from "lucide-react";
 import { usageApi } from "@/lib/http/apis";
 import type { UsageData } from "@/lib/http/types";
 import {
@@ -13,7 +13,6 @@ import { KpiCard, MonitorCard } from "@/modules/monitor/MonitorPagePieces";
 import { Button } from "@/modules/ui/Button";
 import { EmptyState } from "@/modules/ui/EmptyState";
 import { useToast } from "@/modules/ui/ToastProvider";
-import { OpenAILogo, GeminiLogo, ClaudeLogo, VertexLogo } from "@/modules/dashboard/ProviderLogos";
 
 const createEmptyUsage = (): UsageData => ({ apis: {} });
 
@@ -147,36 +146,13 @@ export function DashboardPage() {
         />
       </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
-        <h3 className="mb-4 text-sm font-semibold text-slate-900 dark:text-white">
-          支持的 AI 供应商
-        </h3>
-        <div className="flex flex-wrap items-center gap-6">
-          {[
-            { Logo: OpenAILogo, name: "OpenAI", color: "text-slate-900 dark:text-white" },
-            { Logo: GeminiLogo, name: "Gemini", color: "" },
-            { Logo: ClaudeLogo, name: "Claude", color: "text-[#D97757]" },
-            { Logo: VertexLogo, name: "Vertex AI", color: "" },
-          ].map(({ Logo, name, color }) => (
-            <div
-              key={name}
-              className="flex items-center gap-2.5 rounded-xl px-3 py-2 transition-all hover:scale-105 hover:bg-slate-50 dark:hover:bg-white/5"
-            >
-              <Logo size={28} className={color} />
-              <span className="text-sm font-medium text-slate-700 dark:text-white/80">
-                {name}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
 
       <MonitorCard
         title="快捷入口"
         description={isEmpty ? "当前时间范围内暂无 usage 数据。" : "进入对应页面继续操作。"}
         loading={loading || isPending}
       >
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
           <Link
             to="/monitor"
             viewTransition
@@ -201,6 +177,19 @@ export function DashboardPage() {
             </div>
             <div className="mt-1 text-xs text-slate-600 dark:text-white/65">
               配置/测试/禁用模型、查看 key 状态
+            </div>
+          </Link>
+          <Link
+            to="/api-keys"
+            viewTransition
+            className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm transition hover:bg-slate-50 dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-white dark:hover:bg-neutral-900"
+          >
+            <div className="flex items-center gap-2 font-semibold">
+              <Sparkles size={16} />
+              API Keys 管理
+            </div>
+            <div className="mt-1 text-xs text-slate-600 dark:text-white/65">
+              创建/编辑 API Key，设置配额与模型权限
             </div>
           </Link>
           <Link
