@@ -12,6 +12,7 @@ import {
   Activity,
   Bot,
   Coins,
+  Cpu,
   LayoutDashboard,
   FileKey,
   FileText,
@@ -48,6 +49,7 @@ const NAV_ITEMS = [
   { to: "/auth-files", label: "认证文件", icon: FileKey },
   { to: "/oauth", label: "OAuth登录", icon: KeyRound },
   { to: "/api-keys", label: "API Keys", icon: Sparkles },
+  { to: "/models", label: "模型管理", icon: Cpu },
   { to: "/quota", label: "配额管理", icon: Coins },
   { to: "/config", label: "配置面板", icon: Settings },
   { to: "/system", label: "系统信息", icon: Info },
@@ -78,6 +80,9 @@ const getPageTitle = (pathname: string): string => {
   }
   if (pathname.startsWith("/api-keys")) {
     return "API Keys 管理";
+  }
+  if (pathname.startsWith("/models")) {
+    return "模型管理";
   }
   if (pathname.startsWith("/config")) {
     return "配置面板";

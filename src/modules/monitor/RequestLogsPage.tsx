@@ -9,6 +9,7 @@ import {
 } from "react";
 import { Filter, RefreshCw, ScrollText, Search } from "lucide-react";
 import { usageApi } from "@/lib/http/apis";
+import { apiKeyEntriesApi, type ApiKeyEntry } from "@/lib/http/apis/api-keys";
 import type { UsageData } from "@/lib/http/types";
 import { TextInput } from "@/modules/ui/Input";
 import { useToast } from "@/modules/ui/ToastProvider";
@@ -22,6 +23,7 @@ interface LogRow {
   timestamp: string;
   timestampMs: number;
   apiKey: string;
+  apiKeyName: string;
   maskedApiKey: string;
   model: string;
   failed: boolean;
@@ -245,7 +247,8 @@ function VirtualRequestLogTable({ rows, loading }: { rows: readonly LogRow[]; lo
           <thead className="sticky top-0 z-10 bg-white/95 backdrop-blur dark:bg-neutral-950/75">
             <tr className="h-11 text-left text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-white/55">
               <th className="w-56 border-b border-slate-200 px-4 dark:border-neutral-800">时间</th>
-              <th className="w-80 border-b border-slate-200 px-4 dark:border-neutral-800">模型</th>
+              <th className="w-36 border-b border-slate-200 px-4 dark:border-neutral-800">Key</th>
+              <th className="w-64 border-b border-slate-200 px-4 dark:border-neutral-800">模型</th>
               <th className="w-20 border-b border-slate-200 px-4 dark:border-neutral-800">状态</th>
               <th className="w-24 border-b border-slate-200 px-4 text-right dark:border-neutral-800">
                 用时
@@ -259,7 +262,6 @@ function VirtualRequestLogTable({ rows, loading }: { rows: readonly LogRow[]; lo
               <th className="w-28 border-b border-slate-200 px-4 text-right dark:border-neutral-800">
                 总 Token
               </th>
-              <th className="w-64 border-b border-slate-200 px-4 dark:border-neutral-800">API</th>
             </tr>
           </thead>
           <tbody className="text-slate-900 dark:text-white">
@@ -289,6 +291,13 @@ function VirtualRequestLogTable({ rows, loading }: { rows: readonly LogRow[]; lo
                       >
                         <span className="block min-w-0 truncate">
                           {formatTimestamp(row.timestamp)}
+                        </span>
+                      </OverflowTooltip>
+                    </td>
+                    <td className="border-b border-slate-100 px-4 align-middle dark:border-neutral-900">
+                      <OverflowTooltip content={row.apiKeyName || row.maskedApiKey} className="block min-w-0">
+                        <span className="block min-w-0 truncate text-xs font-medium text-slate-700 dark:text-white/70">
+                          {row.apiKeyName || row.maskedApiKey}
                         </span>
                       </OverflowTooltip>
                     </td>
@@ -343,14 +352,6 @@ function VirtualRequestLogTable({ rows, loading }: { rows: readonly LogRow[]; lo
                         </span>
                       </OverflowTooltip>
                     </td>
-                    <td className="border-b border-slate-100 px-4 align-middle dark:border-neutral-900">
-                      <OverflowTooltip
-                        content={row.maskedApiKey}
-                        className="block min-w-0 font-mono text-xs tabular-nums"
-                      >
-                        <span className="block min-w-0 truncate">{row.maskedApiKey}</span>
-                      </OverflowTooltip>
-                    </td>
                   </tr>
                 ))}
                 <tr aria-hidden="true">
@@ -371,6 +372,7 @@ export function RequestLogsPage() {
   const [usage, setUsage] = useState<UsageData>(() => createEmptyUsage());
   const [loading, setLoading] = useState(false);
   const [lastUpdatedAt, setLastUpdatedAt] = useState<number | null>(null);
+  const [keyEntries, setKeyEntries] = useState<ApiKeyEntry[]>([]);
 
   const [timeRange, setTimeRange] = useState<TimeRange>(7);
 
@@ -388,8 +390,12 @@ export function RequestLogsPage() {
     fetchInFlightRef.current = true;
     setLoading(true);
     try {
-      const next = await usageApi.getUsage();
+      const [next, entries] = await Promise.all([
+        usageApi.getUsage(),
+        apiKeyEntriesApi.list().catch(() => [] as ApiKeyEntry[]),
+      ]);
       setUsage(next);
+      setKeyEntries(entries);
       setLastUpdatedAt(Date.now());
     } catch (err) {
       const message = err instanceof Error ? err.message : "请求日志刷新失败";
@@ -403,6 +409,14 @@ export function RequestLogsPage() {
   useEffect(() => {
     fetchUsage();
   }, [fetchUsage]);
+
+  const keyNameMap = useMemo(() => {
+    const map = new Map<string, string>();
+    keyEntries.forEach((e) => {
+      if (e.name) map.set(e.key, e.name);
+    });
+    return map;
+  }, [keyEntries]);
 
   const rows = useMemo<LogRow[]>(() => {
     const now = new Date();
@@ -433,6 +447,7 @@ export function RequestLogsPage() {
             timestamp: detail.timestamp,
             timestampMs,
             apiKey,
+            apiKeyName: keyNameMap.get(apiKey) || "",
             maskedApiKey: maskApiKey(apiKey),
             model,
             failed: Boolean(detail.failed),
@@ -446,7 +461,7 @@ export function RequestLogsPage() {
     });
 
     return entries.sort((a, b) => b.timestampMs - a.timestampMs);
-  }, [timeRange, usage.apis]);
+  }, [timeRange, usage.apis, keyNameMap]);
 
   const filteredRows = useMemo(() => {
     const apiNeedle = deferredApiQuery.toLowerCase();

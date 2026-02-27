@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import {
     Plus,
     Copy,
@@ -8,13 +9,17 @@ import {
     ShieldCheck,
     RefreshCw,
     Infinity,
+    BarChart3,
 } from "lucide-react";
 import { apiKeyEntriesApi, type ApiKeyEntry } from "@/lib/http/apis/api-keys";
+import { usageApi } from "@/lib/http/apis";
+import type { UsageData } from "@/lib/http/types";
 import { Card } from "@/modules/ui/Card";
 import { Button } from "@/modules/ui/Button";
 import { EmptyState } from "@/modules/ui/EmptyState";
 import { useToast } from "@/modules/ui/ToastProvider";
 import { Modal } from "@/modules/ui/Modal";
+import { OverflowTooltip } from "@/modules/ui/Tooltip";
 
 /* ─── helpers ─── */
 
@@ -52,6 +57,52 @@ const formatLimit = (limit: number | undefined) => {
     return limit.toLocaleString();
 };
 
+/* ─── usage stats per key ─── */
+
+interface KeyUsageStats {
+    requestCount: number;
+    successCount: number;
+    failedCount: number;
+    inputTokens: number;
+    outputTokens: number;
+    totalTokens: number;
+    models: string[];
+}
+
+const computeKeyUsage = (usage: UsageData, apiKey: string): KeyUsageStats => {
+    const apiData = (usage.apis ?? {})[apiKey];
+    if (!apiData) {
+        return { requestCount: 0, successCount: 0, failedCount: 0, inputTokens: 0, outputTokens: 0, totalTokens: 0, models: [] };
+    }
+    let requestCount = 0;
+    let successCount = 0;
+    let failedCount = 0;
+    let inputTokens = 0;
+    let outputTokens = 0;
+    let totalTokens = 0;
+    const models: string[] = [];
+
+    Object.entries(apiData.models ?? {}).forEach(([model, modelData]) => {
+        models.push(model);
+        (modelData.details ?? []).forEach((detail: any) => {
+            requestCount++;
+            if (detail.failed) {
+                failedCount++;
+            } else {
+                successCount++;
+            }
+            const tokens = detail.tokens;
+            if (tokens) {
+                inputTokens += tokens.input_tokens ?? 0;
+                outputTokens += tokens.output_tokens ?? 0;
+                totalTokens += tokens.total_tokens ?? (tokens.input_tokens ?? 0) + (tokens.output_tokens ?? 0);
+            }
+        });
+    });
+
+    return { requestCount, successCount, failedCount, inputTokens, outputTokens, totalTokens, models };
+};
+
 /* ─── types ─── */
 
 interface FormValues {
@@ -72,7 +123,11 @@ export function ApiKeysPage() {
     const [showCreate, setShowCreate] = useState(false);
     const [editIndex, setEditIndex] = useState<number | null>(null);
     const [deleteIndex, setDeleteIndex] = useState<number | null>(null);
+    const [usageViewKey, setUsageViewKey] = useState<string | null>(null);
+    const [usageViewName, setUsageViewName] = useState<string>("");
     const [saving, setSaving] = useState(false);
+    const [usage, setUsage] = useState<UsageData>({ apis: {} });
+    const [usageLoading, setUsageLoading] = useState(false);
     const [form, setForm] = useState<FormValues>({
         name: "",
         key: "",
@@ -95,9 +150,22 @@ export function ApiKeysPage() {
         }
     }, [notify]);
 
+    const loadUsage = useCallback(async () => {
+        setUsageLoading(true);
+        try {
+            const data = await usageApi.getUsage();
+            setUsage(data);
+        } catch {
+            // silent — usage is supplementary
+        } finally {
+            setUsageLoading(false);
+        }
+    }, []);
+
     useEffect(() => {
         void loadEntries();
-    }, [loadEntries]);
+        void loadUsage();
+    }, [loadEntries, loadUsage]);
 
     /* ─── create ─── */
 
@@ -113,6 +181,10 @@ export function ApiKeysPage() {
     };
 
     const handleCreate = async () => {
+        if (!form.name.trim()) {
+            notify({ type: "error", message: "请填写 API Key 名称" });
+            return;
+        }
         if (!form.key.trim()) {
             notify({ type: "error", message: "Key 不能为空" });
             return;
@@ -121,7 +193,7 @@ export function ApiKeysPage() {
         try {
             const newEntry: ApiKeyEntry = {
                 key: form.key.trim(),
-                name: form.name.trim() || undefined,
+                name: form.name.trim(),
                 "daily-limit": form.dailyLimit ? parseInt(form.dailyLimit, 10) || 0 : undefined,
                 "total-quota": form.totalQuota ? parseInt(form.totalQuota, 10) || 0 : undefined,
                 "allowed-models": form.allowedModels
@@ -159,12 +231,16 @@ export function ApiKeysPage() {
 
     const handleEdit = async () => {
         if (editIndex === null) return;
+        if (!form.name.trim()) {
+            notify({ type: "error", message: "请填写 API Key 名称" });
+            return;
+        }
         setSaving(true);
         try {
             await apiKeyEntriesApi.update({
                 index: editIndex,
                 value: {
-                    name: form.name.trim() || undefined,
+                    name: form.name.trim(),
                     "daily-limit": form.dailyLimit ? parseInt(form.dailyLimit, 10) || 0 : 0,
                     "total-quota": form.totalQuota ? parseInt(form.totalQuota, 10) || 0 : 0,
                     "allowed-models": form.allowedModels
@@ -213,19 +289,32 @@ export function ApiKeysPage() {
         }
     };
 
+    /* ─── usage view ─── */
+
+    const handleViewUsage = (entry: ApiKeyEntry) => {
+        setUsageViewKey(entry.key);
+        setUsageViewName(entry.name || "未命名");
+        void loadUsage();
+    };
+
+    const viewingStats = useMemo<KeyUsageStats | null>(() => {
+        if (!usageViewKey) return null;
+        return computeKeyUsage(usage, usageViewKey);
+    }, [usageViewKey, usage]);
+
     /* ─── render form ─── */
 
     const renderForm = () => (
         <div className="space-y-4">
             <div>
                 <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
-                    名称
+                    名称 <span className="text-rose-500">*</span>
                 </label>
                 <input
                     type="text"
                     value={form.name}
                     onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-                    placeholder="例如：团队A"
+                    placeholder="例如：团队A（必填）"
                     className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition-all focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white dark:focus:border-indigo-500"
                 />
             </div>
@@ -328,34 +417,38 @@ export function ApiKeysPage() {
                         icon={<KeyRound size={32} className="text-slate-400" />}
                     />
                 ) : (
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left text-sm">
-                            <thead>
-                                <tr className="border-b border-slate-200 dark:border-neutral-700">
-                                    <th className="whitespace-nowrap px-3 py-2 font-semibold text-slate-600 dark:text-white/65">名称</th>
-                                    <th className="whitespace-nowrap px-3 py-2 font-semibold text-slate-600 dark:text-white/65">Key</th>
-                                    <th className="whitespace-nowrap px-3 py-2 font-semibold text-slate-600 dark:text-white/65">每日限制</th>
-                                    <th className="whitespace-nowrap px-3 py-2 font-semibold text-slate-600 dark:text-white/65">总配额</th>
-                                    <th className="whitespace-nowrap px-3 py-2 font-semibold text-slate-600 dark:text-white/65">可用模型</th>
-                                    <th className="whitespace-nowrap px-3 py-2 font-semibold text-slate-600 dark:text-white/65">创建时间</th>
-                                    <th className="whitespace-nowrap px-3 py-2 font-semibold text-slate-600 dark:text-white/65">操作</th>
+                    <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-neutral-800">
+                        <table className="w-full min-w-[900px] table-fixed border-separate border-spacing-0 text-sm">
+                            <thead className="bg-white/95 backdrop-blur dark:bg-neutral-950/75">
+                                <tr className="h-11 text-left text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-white/55">
+                                    <th className="w-36 border-b border-slate-200 px-4 dark:border-neutral-800">名称</th>
+                                    <th className="w-56 border-b border-slate-200 px-4 dark:border-neutral-800">Key</th>
+                                    <th className="w-24 border-b border-slate-200 px-4 dark:border-neutral-800">每日限制</th>
+                                    <th className="w-24 border-b border-slate-200 px-4 dark:border-neutral-800">总配额</th>
+                                    <th className="w-44 border-b border-slate-200 px-4 dark:border-neutral-800">可用模型</th>
+                                    <th className="w-40 border-b border-slate-200 px-4 dark:border-neutral-800">创建时间</th>
+                                    <th className="w-36 border-b border-slate-200 px-4 dark:border-neutral-800">操作</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody className="text-slate-900 dark:text-white">
                                 {entries.map((entry, i) => (
                                     <tr
                                         key={entry.key}
-                                        className="border-b border-slate-100 transition-colors hover:bg-slate-50/60 dark:border-neutral-800 dark:hover:bg-neutral-800/40"
+                                        className="h-10 transition hover:bg-slate-50/70 dark:hover:bg-white/5"
                                     >
-                                        <td className="px-3 py-2.5 font-medium text-slate-900 dark:text-white">
-                                            {entry.name || <span className="text-slate-400 dark:text-white/40">未命名</span>}
+                                        <td className="border-b border-slate-100 px-4 align-middle font-medium dark:border-neutral-900">
+                                            <OverflowTooltip content={entry.name || "未命名"} className="block min-w-0">
+                                                <span className="block min-w-0 truncate">
+                                                    {entry.name || <span className="text-slate-400 dark:text-white/40">未命名</span>}
+                                                </span>
+                                            </OverflowTooltip>
                                         </td>
-                                        <td className="px-3 py-2.5">
+                                        <td className="border-b border-slate-100 px-4 align-middle dark:border-neutral-900">
                                             <code className="rounded-md bg-slate-100 px-2 py-0.5 font-mono text-xs text-slate-700 dark:bg-neutral-800 dark:text-white/70">
                                                 {maskKey(entry.key)}
                                             </code>
                                         </td>
-                                        <td className="px-3 py-2.5 text-slate-700 dark:text-white/70">
+                                        <td className="border-b border-slate-100 px-4 align-middle text-slate-700 dark:border-neutral-900 dark:text-white/70">
                                             <span className="inline-flex items-center gap-1">
                                                 {!entry["daily-limit"] ? (
                                                     <>
@@ -366,7 +459,7 @@ export function ApiKeysPage() {
                                                 )}
                                             </span>
                                         </td>
-                                        <td className="px-3 py-2.5 text-slate-700 dark:text-white/70">
+                                        <td className="border-b border-slate-100 px-4 align-middle text-slate-700 dark:border-neutral-900 dark:text-white/70">
                                             <span className="inline-flex items-center gap-1">
                                                 {!entry["total-quota"] ? (
                                                     <>
@@ -377,7 +470,7 @@ export function ApiKeysPage() {
                                                 )}
                                             </span>
                                         </td>
-                                        <td className="max-w-[200px] truncate px-3 py-2.5 text-slate-700 dark:text-white/70">
+                                        <td className="border-b border-slate-100 px-4 align-middle text-slate-700 dark:border-neutral-900 dark:text-white/70">
                                             {entry["allowed-models"]?.length ? (
                                                 <div className="flex flex-wrap gap-1">
                                                     {entry["allowed-models"].slice(0, 3).map((m) => (
@@ -398,11 +491,18 @@ export function ApiKeysPage() {
                                                 </span>
                                             )}
                                         </td>
-                                        <td className="whitespace-nowrap px-3 py-2.5 text-slate-500 dark:text-white/50">
+                                        <td className="whitespace-nowrap border-b border-slate-100 px-4 align-middle text-slate-500 dark:border-neutral-900 dark:text-white/50">
                                             {formatDate(entry["created-at"])}
                                         </td>
-                                        <td className="px-3 py-2.5">
+                                        <td className="border-b border-slate-100 px-4 align-middle dark:border-neutral-900">
                                             <div className="flex gap-1">
+                                                <button
+                                                    onClick={() => handleViewUsage(entry)}
+                                                    className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-blue-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-blue-400"
+                                                    title="查看调用情况"
+                                                >
+                                                    <BarChart3 size={15} />
+                                                </button>
                                                 <button
                                                     onClick={() => void handleCopy(entry.key)}
                                                     className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-indigo-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-indigo-400"
@@ -439,7 +539,7 @@ export function ApiKeysPage() {
                 open={showCreate}
                 onClose={() => setShowCreate(false)}
                 title="创建 API Key"
-                description="填写信息并生成新的 API Key"
+                description="填写信息并生成新的 API Key（名称为必填项）"
                 footer={
                     <>
                         <Button variant="secondary" onClick={() => setShowCreate(false)}>
@@ -499,6 +599,78 @@ export function ApiKeysPage() {
                         <code className="text-xs text-red-600 dark:text-red-400">
                             {maskKey(entries[deleteIndex].key)}
                         </code>
+                    </div>
+                )}
+            </Modal>
+
+            {/* Usage View Modal */}
+            <Modal
+                open={usageViewKey !== null}
+                onClose={() => setUsageViewKey(null)}
+                title={`调用情况 — ${usageViewName}`}
+                description={usageViewKey ? `Key: ${maskKey(usageViewKey)}` : ""}
+                footer={
+                    <>
+                        <Button variant="secondary" onClick={() => setUsageViewKey(null)}>
+                            关闭
+                        </Button>
+                        <Link to={`/monitor/request-logs`}>
+                            <Button variant="primary" size="sm">
+                                查看完整日志
+                            </Button>
+                        </Link>
+                    </>
+                }
+            >
+                {viewingStats && (
+                    <div className="space-y-4">
+                        <div className="grid gap-3 sm:grid-cols-3">
+                            <div className="rounded-xl border border-slate-200 bg-white p-3 dark:border-neutral-800 dark:bg-neutral-950/60">
+                                <div className="text-xs text-slate-500 dark:text-white/55">总请求数</div>
+                                <div className="mt-1 text-xl font-bold tabular-nums text-slate-900 dark:text-white">
+                                    {viewingStats.requestCount.toLocaleString()}
+                                </div>
+                            </div>
+                            <div className="rounded-xl border border-slate-200 bg-white p-3 dark:border-neutral-800 dark:bg-neutral-950/60">
+                                <div className="text-xs text-slate-500 dark:text-white/55">成功 / 失败</div>
+                                <div className="mt-1 text-xl font-bold tabular-nums">
+                                    <span className="text-emerald-600 dark:text-emerald-400">{viewingStats.successCount.toLocaleString()}</span>
+                                    <span className="mx-1 text-slate-300 dark:text-white/20">/</span>
+                                    <span className="text-rose-600 dark:text-rose-400">{viewingStats.failedCount.toLocaleString()}</span>
+                                </div>
+                            </div>
+                            <div className="rounded-xl border border-slate-200 bg-white p-3 dark:border-neutral-800 dark:bg-neutral-950/60">
+                                <div className="text-xs text-slate-500 dark:text-white/55">总 Token</div>
+                                <div className="mt-1 text-xl font-bold tabular-nums text-slate-900 dark:text-white">
+                                    {viewingStats.totalTokens.toLocaleString()}
+                                </div>
+                                <div className="mt-0.5 text-xs text-slate-500 dark:text-white/50">
+                                    输入 {viewingStats.inputTokens.toLocaleString()} · 输出 {viewingStats.outputTokens.toLocaleString()}
+                                </div>
+                            </div>
+                        </div>
+
+                        {viewingStats.models.length > 0 && (
+                            <div>
+                                <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-white/55">
+                                    使用过的模型
+                                </div>
+                                <div className="flex flex-wrap gap-1.5">
+                                    {viewingStats.models.map((m) => (
+                                        <span
+                                            key={m}
+                                            className="inline-block rounded-lg bg-indigo-50 px-2 py-1 text-xs font-medium text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300"
+                                        >
+                                            {m}
+                                        </span>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {usageLoading && (
+                            <div className="text-center text-xs text-slate-500 dark:text-white/50">加载中...</div>
+                        )}
                     </div>
                 )}
             </Modal>
