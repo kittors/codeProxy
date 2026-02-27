@@ -3,7 +3,6 @@ import {
     RefreshCw,
     Cpu,
     DollarSign,
-    Save,
     Activity,
 } from "lucide-react";
 import { usageApi } from "@/lib/http/apis";
@@ -13,12 +12,14 @@ import { Button } from "@/modules/ui/Button";
 import { EmptyState } from "@/modules/ui/EmptyState";
 import { useToast } from "@/modules/ui/ToastProvider";
 import { OverflowTooltip } from "@/modules/ui/Tooltip";
+import { Modal } from "@/modules/ui/Modal";
 
 /* ─── types ─── */
 
 interface ModelPricing {
     inputPricePerMillion: number;
     outputPricePerMillion: number;
+    cachedPricePerMillion: number;
 }
 
 interface ModelStats {
@@ -28,6 +29,7 @@ interface ModelStats {
     failedCount: number;
     inputTokens: number;
     outputTokens: number;
+    cachedTokens: number;
     totalTokens: number;
     lastUsed: string;
     pricing: ModelPricing;
@@ -58,6 +60,8 @@ const formatCurrency = (n: number) => (n === 0 ? "—" : `$${n.toFixed(4)}`);
 
 const createEmptyUsage = (): UsageData => ({ apis: {} });
 
+const emptyPricing: ModelPricing = { inputPricePerMillion: 0, outputPricePerMillion: 0, cachedPricePerMillion: 0 };
+
 /* ─── component ─── */
 
 export function ModelsPage() {
@@ -66,9 +70,12 @@ export function ModelsPage() {
     const [usage, setUsage] = useState<UsageData>(createEmptyUsage);
     const [loading, setLoading] = useState(true);
     const [pricingMap, setPricingMap] = useState<Record<string, ModelPricing>>(loadPricing);
-    const [editingModel, setEditingModel] = useState<string | null>(null);
+
+    // Pricing modal state
+    const [pricingModel, setPricingModel] = useState<string | null>(null);
     const [editInputPrice, setEditInputPrice] = useState("");
     const [editOutputPrice, setEditOutputPrice] = useState("");
+    const [editCachedPrice, setEditCachedPrice] = useState("");
 
     const loadUsage = useCallback(async () => {
         setLoading(true);
@@ -89,7 +96,7 @@ export function ModelsPage() {
     const models = useMemo<ModelStats[]>(() => {
         const modelMap = new Map<
             string,
-            { requestCount: number; successCount: number; failedCount: number; inputTokens: number; outputTokens: number; totalTokens: number; lastUsed: string }
+            { requestCount: number; successCount: number; failedCount: number; inputTokens: number; outputTokens: number; cachedTokens: number; totalTokens: number; lastUsed: string }
         >();
 
         Object.values(usage.apis ?? {}).forEach((apiData) => {
@@ -100,6 +107,7 @@ export function ModelsPage() {
                     failedCount: 0,
                     inputTokens: 0,
                     outputTokens: 0,
+                    cachedTokens: 0,
                     totalTokens: 0,
                     lastUsed: "",
                 };
@@ -115,6 +123,7 @@ export function ModelsPage() {
                     if (tokens) {
                         existing.inputTokens += tokens.input_tokens ?? 0;
                         existing.outputTokens += tokens.output_tokens ?? 0;
+                        existing.cachedTokens += tokens.cached_tokens ?? 0;
                         existing.totalTokens += tokens.total_tokens ?? (tokens.input_tokens ?? 0) + (tokens.output_tokens ?? 0);
                     }
                     if (detail.timestamp && detail.timestamp > existing.lastUsed) {
@@ -128,16 +137,12 @@ export function ModelsPage() {
 
         return Array.from(modelMap.entries())
             .map(([id, stats]) => {
-                const pricing = pricingMap[id] || { inputPricePerMillion: 0, outputPricePerMillion: 0 };
+                const pricing = pricingMap[id] || emptyPricing;
                 const estimatedCost =
                     (stats.inputTokens / 1_000_000) * pricing.inputPricePerMillion +
-                    (stats.outputTokens / 1_000_000) * pricing.outputPricePerMillion;
-                return {
-                    id,
-                    ...stats,
-                    pricing,
-                    estimatedCost,
-                };
+                    (stats.outputTokens / 1_000_000) * pricing.outputPricePerMillion +
+                    (stats.cachedTokens / 1_000_000) * pricing.cachedPricePerMillion;
+                return { id, ...stats, pricing, estimatedCost };
             })
             .sort((a, b) => b.requestCount - a.requestCount);
     }, [usage, pricingMap]);
@@ -154,25 +159,29 @@ export function ModelsPage() {
         return { requests, tokens, cost, modelCount: models.length };
     }, [models]);
 
-    const handleEditPricing = (modelId: string) => {
-        const existing = pricingMap[modelId] || { inputPricePerMillion: 0, outputPricePerMillion: 0 };
+    /* ─── pricing modal ─── */
+
+    const handleOpenPricing = (modelId: string) => {
+        const existing = pricingMap[modelId] || emptyPricing;
         setEditInputPrice(existing.inputPricePerMillion ? existing.inputPricePerMillion.toString() : "");
         setEditOutputPrice(existing.outputPricePerMillion ? existing.outputPricePerMillion.toString() : "");
-        setEditingModel(modelId);
+        setEditCachedPrice(existing.cachedPricePerMillion ? existing.cachedPricePerMillion.toString() : "");
+        setPricingModel(modelId);
     };
 
     const handleSavePricing = () => {
-        if (!editingModel) return;
+        if (!pricingModel) return;
         const updated = {
             ...pricingMap,
-            [editingModel]: {
+            [pricingModel]: {
                 inputPricePerMillion: parseFloat(editInputPrice) || 0,
                 outputPricePerMillion: parseFloat(editOutputPrice) || 0,
+                cachedPricePerMillion: parseFloat(editCachedPrice) || 0,
             },
         };
         setPricingMap(updated);
         savePricing(updated);
-        setEditingModel(null);
+        setPricingModel(null);
         notify({ type: "success", message: "定价已保存" });
     };
 
@@ -189,6 +198,8 @@ export function ModelsPage() {
             return iso;
         }
     };
+
+    const pricingModelStats = pricingModel ? models.find((m) => m.id === pricingModel) : null;
 
     return (
         <div className="space-y-6">
@@ -231,7 +242,7 @@ export function ModelsPage() {
 
             <Card
                 title="模型列表"
-                description="所有使用过的模型及其聚合统计。可为每个模型设置价格以计算预估费用。"
+                description="所有使用过的模型及其聚合统计。点击定价按钮可为每个模型设置 输入/输出/缓存 Token 价格。"
                 actions={
                     <Button variant="secondary" size="sm" onClick={() => void loadUsage()} disabled={loading}>
                         <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
@@ -255,8 +266,9 @@ export function ModelsPage() {
                                     <th className="w-20 border-b border-slate-200 px-4 text-right dark:border-neutral-800">请求数</th>
                                     <th className="w-20 border-b border-slate-200 px-4 text-right dark:border-neutral-800">成功</th>
                                     <th className="w-20 border-b border-slate-200 px-4 text-right dark:border-neutral-800">失败</th>
-                                    <th className="w-28 border-b border-slate-200 px-4 text-right dark:border-neutral-800">输入 Token</th>
-                                    <th className="w-28 border-b border-slate-200 px-4 text-right dark:border-neutral-800">输出 Token</th>
+                                    <th className="w-28 border-b border-slate-200 px-4 text-right dark:border-neutral-800">输入</th>
+                                    <th className="w-28 border-b border-slate-200 px-4 text-right dark:border-neutral-800">输出</th>
+                                    <th className="w-24 border-b border-slate-200 px-4 text-right dark:border-neutral-800">缓存</th>
                                     <th className="w-28 border-b border-slate-200 px-4 text-right dark:border-neutral-800">预估费用</th>
                                     <th className="w-32 border-b border-slate-200 px-4 dark:border-neutral-800">最后使用</th>
                                     <th className="w-20 border-b border-slate-200 px-4 dark:border-neutral-800">定价</th>
@@ -286,47 +298,22 @@ export function ModelsPage() {
                                             {formatNumber(model.outputTokens)}
                                         </td>
                                         <td className="border-b border-slate-100 px-4 text-right align-middle font-mono text-xs tabular-nums dark:border-neutral-900">
+                                            {model.cachedTokens > 0 ? formatNumber(model.cachedTokens) : "—"}
+                                        </td>
+                                        <td className="border-b border-slate-100 px-4 text-right align-middle font-mono text-xs tabular-nums dark:border-neutral-900">
                                             {formatCurrency(model.estimatedCost)}
                                         </td>
                                         <td className="border-b border-slate-100 px-4 align-middle text-xs text-slate-500 dark:border-neutral-900 dark:text-white/50">
                                             {formatLastUsed(model.lastUsed)}
                                         </td>
                                         <td className="border-b border-slate-100 px-4 align-middle dark:border-neutral-900">
-                                            {editingModel === model.id ? (
-                                                <div className="flex items-center gap-1">
-                                                    <input
-                                                        type="number"
-                                                        value={editInputPrice}
-                                                        onChange={(e) => setEditInputPrice(e.target.value)}
-                                                        placeholder="输入"
-                                                        step="0.01"
-                                                        className="w-16 rounded-lg border border-slate-200 bg-white px-1.5 py-1 text-xs outline-none focus:border-indigo-400 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white"
-                                                    />
-                                                    <input
-                                                        type="number"
-                                                        value={editOutputPrice}
-                                                        onChange={(e) => setEditOutputPrice(e.target.value)}
-                                                        placeholder="输出"
-                                                        step="0.01"
-                                                        className="w-16 rounded-lg border border-slate-200 bg-white px-1.5 py-1 text-xs outline-none focus:border-indigo-400 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white"
-                                                    />
-                                                    <button
-                                                        onClick={handleSavePricing}
-                                                        className="rounded-lg p-1 text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-900/20"
-                                                        title="保存"
-                                                    >
-                                                        <Save size={14} />
-                                                    </button>
-                                                </div>
-                                            ) : (
-                                                <button
-                                                    onClick={() => handleEditPricing(model.id)}
-                                                    className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-indigo-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-indigo-400"
-                                                    title="设置定价"
-                                                >
-                                                    <DollarSign size={15} />
-                                                </button>
-                                            )}
+                                            <button
+                                                onClick={() => handleOpenPricing(model.id)}
+                                                className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-indigo-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-indigo-400"
+                                                title="设置定价"
+                                            >
+                                                <DollarSign size={15} />
+                                            </button>
                                         </td>
                                     </tr>
                                 ))}
@@ -335,6 +322,95 @@ export function ModelsPage() {
                     </div>
                 )}
             </Card>
+
+            {/* Pricing Modal */}
+            <Modal
+                open={pricingModel !== null}
+                onClose={() => setPricingModel(null)}
+                title={`设置模型定价`}
+                description={pricingModel ? `为 ${pricingModel} 设置每百万 Token 价格（美元）` : ""}
+                footer={
+                    <>
+                        <Button variant="secondary" onClick={() => setPricingModel(null)}>
+                            取消
+                        </Button>
+                        <Button variant="primary" onClick={handleSavePricing}>
+                            保存
+                        </Button>
+                    </>
+                }
+            >
+                <div className="space-y-4">
+                    {pricingModel && (
+                        <div className="rounded-xl border border-indigo-200 bg-indigo-50/50 px-4 py-3 dark:border-indigo-800 dark:bg-indigo-950/30">
+                            <div className="text-sm font-semibold text-indigo-800 dark:text-indigo-300">{pricingModel}</div>
+                            {pricingModelStats && (
+                                <div className="mt-1 text-xs text-indigo-700/70 dark:text-indigo-400/60">
+                                    输入 {formatNumber(pricingModelStats.inputTokens)} · 输出 {formatNumber(pricingModelStats.outputTokens)} · 缓存 {formatNumber(pricingModelStats.cachedTokens)} Token
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    <div>
+                        <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
+                            输入 Token 价格（$/百万 Token）
+                        </label>
+                        <input
+                            type="number"
+                            value={editInputPrice}
+                            onChange={(e) => setEditInputPrice(e.target.value)}
+                            placeholder="例如：3.00"
+                            step="0.01"
+                            min={0}
+                            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition-all focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white dark:focus:border-indigo-500"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
+                            输出 Token 价格（$/百万 Token）
+                        </label>
+                        <input
+                            type="number"
+                            value={editOutputPrice}
+                            onChange={(e) => setEditOutputPrice(e.target.value)}
+                            placeholder="例如：15.00"
+                            step="0.01"
+                            min={0}
+                            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition-all focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white dark:focus:border-indigo-500"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
+                            缓存 Token 价格（$/百万 Token）
+                        </label>
+                        <input
+                            type="number"
+                            value={editCachedPrice}
+                            onChange={(e) => setEditCachedPrice(e.target.value)}
+                            placeholder="例如：1.50（通常比输入便宜）"
+                            step="0.01"
+                            min={0}
+                            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition-all focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white dark:focus:border-indigo-500"
+                        />
+                    </div>
+
+                    {pricingModelStats && (editInputPrice || editOutputPrice || editCachedPrice) && (
+                        <div className="rounded-xl bg-emerald-50 p-3 dark:bg-emerald-900/20">
+                            <div className="text-xs font-semibold text-emerald-800 dark:text-emerald-300">预估费用</div>
+                            <div className="mt-1 text-lg font-bold tabular-nums text-emerald-700 dark:text-emerald-400">
+                                {formatCurrency(
+                                    (pricingModelStats.inputTokens / 1_000_000) * (parseFloat(editInputPrice) || 0) +
+                                    (pricingModelStats.outputTokens / 1_000_000) * (parseFloat(editOutputPrice) || 0) +
+                                    (pricingModelStats.cachedTokens / 1_000_000) * (parseFloat(editCachedPrice) || 0)
+                                )}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </Modal>
         </div>
     );
 }
