@@ -8,6 +8,7 @@ import { PageBackground } from "@/modules/ui/PageBackground";
 import { Reveal } from "@/modules/ui/Reveal";
 import { ThemeToggleButton } from "@/modules/ui/ThemeProvider";
 import { useToast } from "@/modules/ui/ToastProvider";
+import { OpenAILogo, GeminiLogo, ClaudeLogo, VertexLogo } from "@/modules/dashboard/ProviderLogos";
 
 interface RedirectState {
   from?: {
@@ -117,16 +118,20 @@ export function LoginPage() {
                   TRUSTED BY
                 </div>
                 <div className="flex flex-wrap gap-3 text-sm text-slate-700 dark:text-white/80">
-                  <span className="rounded-full bg-white/70 px-4 py-2 ring-1 ring-slate-200 backdrop-blur dark:bg-neutral-950/50 dark:ring-white/10">
+                  <span className="inline-flex items-center gap-2 rounded-full bg-white/70 px-4 py-2 ring-1 ring-slate-200 backdrop-blur dark:bg-neutral-950/50 dark:ring-white/10">
+                    <OpenAILogo size={16} />
                     OpenAI
                   </span>
-                  <span className="rounded-full bg-white/70 px-4 py-2 ring-1 ring-slate-200 backdrop-blur dark:bg-neutral-950/50 dark:ring-white/10">
+                  <span className="inline-flex items-center gap-2 rounded-full bg-white/70 px-4 py-2 ring-1 ring-slate-200 backdrop-blur dark:bg-neutral-950/50 dark:ring-white/10">
+                    <GeminiLogo size={16} className="text-blue-500" />
                     Gemini
                   </span>
-                  <span className="rounded-full bg-white/70 px-4 py-2 ring-1 ring-slate-200 backdrop-blur dark:bg-neutral-950/50 dark:ring-white/10">
+                  <span className="inline-flex items-center gap-2 rounded-full bg-white/70 px-4 py-2 ring-1 ring-slate-200 backdrop-blur dark:bg-neutral-950/50 dark:ring-white/10">
+                    <ClaudeLogo size={16} className="text-[#D97757]" />
                     Claude
                   </span>
-                  <span className="rounded-full bg-white/70 px-4 py-2 ring-1 ring-slate-200 backdrop-blur dark:bg-neutral-950/50 dark:ring-white/10">
+                  <span className="inline-flex items-center gap-2 rounded-full bg-white/70 px-4 py-2 ring-1 ring-slate-200 backdrop-blur dark:bg-neutral-950/50 dark:ring-white/10">
+                    <VertexLogo size={16} className="text-[#4285F4]" />
                     Vertex
                   </span>
                 </div>
