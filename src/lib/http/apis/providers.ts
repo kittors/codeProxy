@@ -22,6 +22,7 @@ export const providersApi = {
         if (!isRecord(item)) return null;
         const apiKey = normalizeString(item["api-key"] ?? item.apiKey) ?? "";
         if (!apiKey) return null;
+        const name = normalizeString(item.name) ?? undefined;
         const prefix = normalizeString(item.prefix) ?? undefined;
         const baseUrl = normalizeString(item["base-url"] ?? item.baseUrl) ?? undefined;
         const headers = normalizeHeaders(item.headers);
@@ -31,6 +32,7 @@ export const providersApi = {
         );
         return {
           apiKey,
+          ...(name ? { name } : {}),
           ...(prefix ? { prefix } : {}),
           ...(baseUrl ? { baseUrl } : {}),
           ...(headers ? { headers } : {}),
@@ -58,6 +60,7 @@ export const providersApi = {
         if (!isRecord(item)) return null;
         const apiKey = normalizeString(item["api-key"] ?? item.apiKey) ?? "";
         if (!apiKey) return null;
+        const name = normalizeString(item.name) ?? undefined;
         const prefix = normalizeString(item.prefix) ?? undefined;
         const baseUrl = normalizeString(item["base-url"] ?? item.baseUrl) ?? undefined;
         const proxyUrl = normalizeString(item["proxy-url"] ?? item.proxyUrl) ?? undefined;
@@ -68,6 +71,7 @@ export const providersApi = {
         );
         return {
           apiKey,
+          ...(name ? { name } : {}),
           ...(prefix ? { prefix } : {}),
           ...(baseUrl ? { baseUrl } : {}),
           ...(proxyUrl ? { proxyUrl } : {}),
@@ -96,6 +100,7 @@ export const providersApi = {
         if (!isRecord(item)) return null;
         const apiKey = normalizeString(item["api-key"] ?? item.apiKey) ?? "";
         if (!apiKey) return null;
+        const name = normalizeString(item.name) ?? undefined;
         const prefix = normalizeString(item.prefix) ?? undefined;
         const baseUrl = normalizeString(item["base-url"] ?? item.baseUrl) ?? undefined;
         const proxyUrl = normalizeString(item["proxy-url"] ?? item.proxyUrl) ?? undefined;
@@ -106,6 +111,7 @@ export const providersApi = {
         );
         return {
           apiKey,
+          ...(name ? { name } : {}),
           ...(prefix ? { prefix } : {}),
           ...(baseUrl ? { baseUrl } : {}),
           ...(proxyUrl ? { proxyUrl } : {}),
@@ -134,6 +140,7 @@ export const providersApi = {
         if (!isRecord(item)) return null;
         const apiKey = normalizeString(item["api-key"] ?? item.apiKey) ?? "";
         if (!apiKey) return null;
+        const name = normalizeString(item.name) ?? undefined;
         const prefix = normalizeString(item.prefix) ?? undefined;
         const baseUrl = normalizeString(item["base-url"] ?? item.baseUrl) ?? undefined;
         const proxyUrl = normalizeString(item["proxy-url"] ?? item.proxyUrl) ?? undefined;
@@ -141,6 +148,7 @@ export const providersApi = {
         const models = normalizeModels(item.models);
         return {
           apiKey,
+          ...(name ? { name } : {}),
           ...(prefix ? { prefix } : {}),
           ...(baseUrl ? { baseUrl } : {}),
           ...(proxyUrl ? { proxyUrl } : {}),

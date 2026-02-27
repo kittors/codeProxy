@@ -87,24 +87,26 @@ export const serializeHeaders = (headers?: Record<string, string>) =>
 export const serializeModels = (models?: ProviderModel[]) =>
   Array.isArray(models)
     ? models
-        .map((model) => {
-          const name = normalizeString(model?.name) ?? "";
-          if (!name) return null;
-          const payload: Record<string, unknown> = { name };
-          const alias = normalizeString(model?.alias);
-          if (alias && alias !== name) payload.alias = alias;
-          if (typeof model?.priority === "number" && Number.isFinite(model.priority)) {
-            payload.priority = model.priority;
-          }
-          const testModel = normalizeString(model?.testModel);
-          if (testModel) payload["test-model"] = testModel;
-          return payload;
-        })
-        .filter(Boolean)
+      .map((model) => {
+        const name = normalizeString(model?.name) ?? "";
+        if (!name) return null;
+        const payload: Record<string, unknown> = { name };
+        const alias = normalizeString(model?.alias);
+        if (alias && alias !== name) payload.alias = alias;
+        if (typeof model?.priority === "number" && Number.isFinite(model.priority)) {
+          payload.priority = model.priority;
+        }
+        const testModel = normalizeString(model?.testModel);
+        if (testModel) payload["test-model"] = testModel;
+        return payload;
+      })
+      .filter(Boolean)
     : undefined;
 
 export const serializeProviderKey = (config: ProviderSimpleConfig) => {
   const payload: Record<string, unknown> = { "api-key": config.apiKey };
+  const name = normalizeString(config.name);
+  if (name) payload.name = name;
   const prefix = normalizeString(config.prefix);
   if (prefix) payload.prefix = prefix;
   const baseUrl = normalizeString(config.baseUrl);
@@ -123,6 +125,8 @@ export const serializeProviderKey = (config: ProviderSimpleConfig) => {
 
 export const serializeGeminiKey = (config: ProviderSimpleConfig) => {
   const payload: Record<string, unknown> = { "api-key": config.apiKey };
+  const name = normalizeString(config.name);
+  if (name) payload.name = name;
   const prefix = normalizeString(config.prefix);
   if (prefix) payload.prefix = prefix;
   const baseUrl = normalizeString(config.baseUrl);
