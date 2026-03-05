@@ -146,7 +146,19 @@ export function ApiKeyLookupPage() {
     const handleSubmit = useCallback(
         (event?: React.FormEvent) => {
             event?.preventDefault();
-            void fetchData(apiKeyInput);
+            const val = apiKeyInput.trim();
+            try {
+                const url = new URL(window.location.href);
+                if (val) {
+                    url.searchParams.set("api_key", val);
+                } else {
+                    url.searchParams.delete("api_key");
+                }
+                window.history.replaceState({}, "", url.toString());
+            } catch (err) {
+                // ignore
+            }
+            void fetchData(val);
         },
         [apiKeyInput, fetchData],
     );
