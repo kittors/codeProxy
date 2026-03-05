@@ -16,7 +16,7 @@ export function Button({
   }
 >) {
   const base =
-    "inline-flex items-center justify-center gap-2 rounded-xl font-semibold transition focus-visible:outline-none focus-visible:ring-2";
+    "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl font-semibold transition focus-visible:outline-none focus-visible:ring-2";
 
   const sizeClass = size === "sm" ? "h-9 px-3 text-sm" : "h-10 px-4 text-sm";
 

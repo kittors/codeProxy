@@ -314,8 +314,8 @@ export function ApiKeyLookupPage() {
             <header className="sticky top-0 z-30 border-b border-slate-200/60 bg-white/70 backdrop-blur-xl dark:border-neutral-800/60 dark:bg-neutral-950/70">
                 <div className="mx-auto flex h-14 max-w-screen-xl items-center justify-between px-4 sm:px-6">
                     <div className="flex items-center gap-2.5">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 shadow-sm">
-                            <Key size={16} className="text-white" />
+                        <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-900 shadow-sm dark:bg-white">
+                            <Key size={16} className="text-white dark:text-neutral-950" />
                         </div>
                         <span className="text-base font-bold tracking-tight text-slate-900 dark:text-white">
                             API Key 使用查询
@@ -350,7 +350,7 @@ export function ApiKeyLookupPage() {
                         <button
                             type="submit"
                             disabled={busy || !apiKeyInput.trim()}
-                            className="inline-flex min-w-[120px] items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:from-indigo-600 hover:to-violet-700 disabled:cursor-not-allowed disabled:opacity-60"
+                            className="inline-flex min-w-[120px] items-center justify-center gap-2 rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-slate-400/35 disabled:cursor-not-allowed disabled:bg-slate-400/70 dark:bg-white dark:text-neutral-950 dark:hover:bg-slate-200 dark:disabled:bg-white/50"
                         >
                             <Search size={16} />
                             {busy ? "查询中…" : "查询"}
@@ -376,8 +376,8 @@ export function ApiKeyLookupPage() {
                         <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/70">
                             <div className="flex flex-wrap items-center justify-between gap-4">
                                 <div className="flex items-center gap-3">
-                                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-green-400 to-emerald-500 shadow-sm">
-                                        <Key size={18} className="text-white" />
+                                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-900 shadow-sm dark:bg-white">
+                                        <Key size={18} className="text-white dark:text-neutral-950" />
                                     </div>
                                     <div>
                                         <p className="text-sm font-medium text-slate-500 dark:text-white/55">
@@ -692,8 +692,8 @@ export function ApiKeyLookupPage() {
                 {!queriedKey && !error && (
                     <section className="rounded-2xl border border-dashed border-slate-200 bg-white p-16 text-center shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
                         <div className="mx-auto flex max-w-sm flex-col items-center gap-4">
-                            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-100 to-violet-100 dark:from-indigo-950/60 dark:to-violet-950/60">
-                                <Search size={28} className="text-indigo-500 dark:text-indigo-400" />
+                            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100 dark:bg-white/10">
+                                <Search size={28} className="text-slate-600 dark:text-white/70" />
                             </div>
                             <h3 className="text-base font-semibold text-slate-900 dark:text-white">
                                 查询您的 API Key 使用情况

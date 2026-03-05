@@ -183,6 +183,17 @@ export function SystemPage() {
               </span>
             </div>
           ))}
+          <div className="flex items-center justify-between gap-4 px-5 py-2.5 text-sm">
+            <span className="text-slate-500 dark:text-white/55">API Key 查询</span>
+            <a
+              href={`${window.location.origin}/manage/apikey-lookup`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="truncate font-mono text-xs text-indigo-600 underline decoration-indigo-600/30 hover:text-indigo-500 hover:decoration-indigo-500/50 dark:text-indigo-400 dark:decoration-indigo-400/30 dark:hover:text-indigo-300"
+            >
+              {`${window.location.origin}/manage/apikey-lookup`}
+            </a>
+          </div>
         </div>
       </div>
 
