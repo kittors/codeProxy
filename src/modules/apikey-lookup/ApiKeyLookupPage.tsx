@@ -272,9 +272,10 @@ export function ApiKeyLookupPage() {
             : "****"
         : "";
 
-    // 读取 URL 中的 api_key 参数进行自动查询
+    // 读取 URL 中的 api_key 参数进行自动查询（兼容 BrowserRouter 和 HashRouter）
     useEffect(() => {
-        const params = new URLSearchParams(window.location.hash.split("?")[1] ?? "");
+        const searchStr = window.location.search || window.location.hash.split("?")[1] || "";
+        const params = new URLSearchParams(searchStr.startsWith("?") ? searchStr : `?${searchStr}`);
         const key = params.get("api_key") ?? params.get("key") ?? "";
         if (key) {
             setApiKeyInput(key);
