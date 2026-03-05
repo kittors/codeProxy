@@ -31,7 +31,7 @@ export function DashboardPage() {
   const [range, setRange] = useState<DashboardRange>(7);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [lastUpdatedAt, setLastUpdatedAt] = useState<number | null>(null);
+
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -40,7 +40,7 @@ export function DashboardPage() {
       const usage = await usageApi.getUsage();
       startTransition(() => {
         setRawUsage(usage);
-        setLastUpdatedAt(Date.now());
+
       });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "数据获取失败";
@@ -62,14 +62,10 @@ export function DashboardPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="space-y-1">
+        <div>
           <h2 className="text-lg font-semibold tracking-tight text-slate-900 dark:text-white">
             仪表盘
           </h2>
-          <p className="text-sm text-slate-600 dark:text-white/65">
-            业务状态概览（不改变你的 UI 结构，仅补齐业务能力）
-            {lastUpdatedAt ? ` · 更新于 ${new Date(lastUpdatedAt).toLocaleString()}` : ""}
-          </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
