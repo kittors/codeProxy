@@ -603,7 +603,7 @@ export function ApiKeyLookupPage() {
                                                         来源
                                                     </th>
                                                     <th className="whitespace-nowrap px-4 py-2.5 text-right font-medium text-slate-600 dark:text-white/65">
-                                                        延迟
+                                                        请求时间 (S)
                                                     </th>
                                                     <th className="whitespace-nowrap px-4 py-2.5 text-right font-medium text-slate-600 dark:text-white/65">
                                                         输入 Token
@@ -664,7 +664,7 @@ export function ApiKeyLookupPage() {
                                                                     {row.source || "-"}
                                                                 </td>
                                                                 <td className="whitespace-nowrap px-4 py-2 text-right tabular-nums text-slate-700 dark:text-white/75">
-                                                                    {row.latencyMs != null ? `${row.latencyMs}ms` : "-"}
+                                                                    {row.latencyMs != null ? (row.latencyMs / 1000).toFixed(3).replace(/\.?0+$/, "") : "-"}
                                                                 </td>
                                                                 <td className="whitespace-nowrap px-4 py-2 text-right tabular-nums text-slate-700 dark:text-white/75">
                                                                     {formatNumber(row.tokens?.input_tokens ?? 0)}
