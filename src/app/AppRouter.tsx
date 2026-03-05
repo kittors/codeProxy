@@ -15,6 +15,7 @@ import { LogsPage } from "@/modules/logs/LogsPage";
 import { SystemPage } from "@/modules/system/SystemPage";
 import { ApiKeysPage } from "@/modules/api-keys/ApiKeysPage";
 import { ModelsPage } from "@/modules/models/ModelsPage";
+import { ApiKeyLookupPage } from "@/modules/apikey-lookup/ApiKeyLookupPage";
 import { ThemeProvider } from "@/modules/ui/ThemeProvider";
 import { ToastProvider } from "@/modules/ui/ToastProvider";
 
@@ -26,6 +27,7 @@ export function AppRouter() {
           <div className="font-sans antialiased">
             <Routes>
               <Route path="/login" element={<LoginPage />} />
+              <Route path="/apikey-lookup" element={<ApiKeyLookupPage />} />
               <Route element={<ProtectedRoute />}>
                 <Route element={<DashboardLayout />}>
                   <Route path="/dashboard" element={<DashboardPage />} />
@@ -62,3 +64,4 @@ export function AppRouter() {
     </ThemeProvider>
   );
 }
+
