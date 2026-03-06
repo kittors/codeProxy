@@ -49,6 +49,17 @@ This dashboard lets you:
 | **Dark Mode** | Built-in dark theme with smooth transitions |
 | **i18n Ready** | Internationalization support via i18next |
 
+## 📸 Screenshots
+
+<p align="center">
+  <img src="docs/images/iShot_2026-03-06_10.51.59.png" width="48%" />
+  <img src="docs/images/iShot_2026-03-06_10.52.09.png" width="48%" />
+</p>
+<p align="center">
+  <img src="docs/images/iShot_2026-03-06_10.52.33.png" width="48%" />
+  <img src="docs/images/iShot_2026-03-06_10.54.03.png" width="48%" />
+</p>
+
 ## 🛠️ Tech Stack
 
 | Category | Technology |
