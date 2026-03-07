@@ -542,16 +542,17 @@ export function RequestLogsPage() {
   }, [lastUpdatedAt, loading]);
 
   return (
-    <div className="space-y-4">
+    <section className="space-y-4">
       <h1 className="sr-only">请求日志</h1>
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/70">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h2 className="flex items-center gap-2 text-lg font-semibold text-slate-900 dark:text-white">
-              <ScrollText size={18} className="text-slate-900 dark:text-white" aria-hidden="true" />
-              <span>请求日志</span>
-            </h2>
-          </div>
+
+      {/* 单层卡片：标题 + 筛选 + 统计 + 表格 */}
+      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-950/70">
+        {/* 标题栏 */}
+        <div className="flex flex-wrap items-center justify-between gap-3 px-5 pt-5 pb-3">
+          <h2 className="flex items-center gap-2 text-base font-semibold text-slate-900 dark:text-white">
+            <ScrollText size={18} className="text-slate-900 dark:text-white" aria-hidden="true" />
+            请求日志
+          </h2>
           <div className="flex flex-wrap items-center gap-2">
             <TimeRangeSelector value={timeRange} onChange={setTimeRange} />
             <button
@@ -571,103 +572,81 @@ export function RequestLogsPage() {
             </button>
           </div>
         </div>
-      </section>
 
-      <Card
-        title="筛选"
-        description="筛选会即时生效。"
-        loading={false}
-        actions={
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="inline-flex items-center gap-1.5 rounded-2xl border border-slate-200 bg-white px-2.5 py-1.5 shadow-sm transition focus-within:ring-2 focus-within:ring-slate-400/35 dark:border-neutral-800 dark:bg-neutral-950/60 dark:focus-within:ring-white/15">
-              <Search size={14} className="text-slate-500 dark:text-white/55" aria-hidden="true" />
-              <TextInput
-                value={apiQuery}
-                onChange={(event) => setApiQuery(event.target.value)}
-                variant="ghost"
-                className="w-40"
-                placeholder="API key…"
-                aria-label="按 API key 过滤"
-                name="apiKeyFilter"
-                autoComplete="off"
-                spellCheck={false}
-              />
-            </div>
-            <div className="inline-flex items-center gap-1.5 rounded-2xl border border-slate-200 bg-white px-2.5 py-1.5 shadow-sm transition focus-within:ring-2 focus-within:ring-slate-400/35 dark:border-neutral-800 dark:bg-neutral-950/60 dark:focus-within:ring-white/15">
-              <Search size={14} className="text-slate-500 dark:text-white/55" aria-hidden="true" />
-              <TextInput
-                value={modelQuery}
-                onChange={(event) => setModelQuery(event.target.value)}
-                variant="ghost"
-                className="w-40"
-                placeholder="模型…"
-                aria-label="按模型过滤"
-                name="modelFilter"
-                autoComplete="off"
-                spellCheck={false}
-              />
-            </div>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
-              className="h-[34px] rounded-2xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 shadow-sm outline-none transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/35 dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-white/80 dark:hover:bg-white/10 dark:focus-visible:ring-white/15"
-              aria-label="按状态过滤"
-              name="statusFilter"
-            >
-              <option value="">全部状态</option>
-              <option value="success">成功</option>
-              <option value="failed">失败</option>
-            </select>
-          </div>
-        }
-      >
-        <div className="flex flex-wrap items-center gap-2 text-sm text-slate-700 dark:text-slate-200">
-          <span className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-1.5 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
-            <Filter size={14} className="text-slate-500 dark:text-white/55" aria-hidden="true" />
-            <span>
-              条数 <span className="font-mono tabular-nums">{summary.total.toLocaleString()}</span>
-            </span>
-            <span className="text-slate-300 dark:text-white/10" aria-hidden="true">
-              ·
-            </span>
-            <span>
-              成功率 <span className="font-mono tabular-nums">{summary.successRate}%</span>
-            </span>
-            <span className="text-slate-300 dark:text-white/10" aria-hidden="true">
-              ·
-            </span>
-            <span>
-              Token{" "}
-              <span className="font-mono tabular-nums">{summary.totalTokens.toLocaleString()}</span>
-            </span>
-          </span>
-          <span className="text-xs text-slate-500 dark:text-white/55">{lastUpdatedText}</span>
-        </div>
-      </Card>
-
-      <Card
-        title="请求日志"
-        loading={loading}
-        actions={
-          <button
-            type="button"
-            onClick={fetchUsage}
-            disabled={loading}
-            aria-busy={loading}
-            aria-label="刷新"
-            title="刷新"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/35 disabled:cursor-not-allowed disabled:opacity-70 dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-white/80 dark:hover:bg-white/10 dark:focus-visible:ring-white/15"
-          >
-            <RefreshCw
-              size={14}
-              className={loading ? "motion-reduce:animate-none motion-safe:animate-spin" : ""}
-              aria-hidden="true"
+        {/* 筛选 + 统计（内联一行） */}
+        <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 px-5 py-3 dark:border-neutral-800/60">
+          <div className="inline-flex items-center gap-1.5 rounded-2xl border border-slate-200 bg-white px-2.5 py-1.5 shadow-sm transition focus-within:ring-2 focus-within:ring-slate-400/35 dark:border-neutral-800 dark:bg-neutral-950/60 dark:focus-within:ring-white/15">
+            <Search size={14} className="text-slate-500 dark:text-white/55" aria-hidden="true" />
+            <TextInput
+              value={apiQuery}
+              onChange={(event) => setApiQuery(event.target.value)}
+              variant="ghost"
+              className="w-32"
+              placeholder="API key…"
+              aria-label="按 API key 过滤"
+              name="apiKeyFilter"
+              autoComplete="off"
+              spellCheck={false}
             />
-          </button>
-        }
-      >
-        <VirtualRequestLogTable rows={filteredRows} loading={loading} />
-      </Card>
-    </div>
+          </div>
+          <div className="inline-flex items-center gap-1.5 rounded-2xl border border-slate-200 bg-white px-2.5 py-1.5 shadow-sm transition focus-within:ring-2 focus-within:ring-slate-400/35 dark:border-neutral-800 dark:bg-neutral-950/60 dark:focus-within:ring-white/15">
+            <Search size={14} className="text-slate-500 dark:text-white/55" aria-hidden="true" />
+            <TextInput
+              value={modelQuery}
+              onChange={(event) => setModelQuery(event.target.value)}
+              variant="ghost"
+              className="w-32"
+              placeholder="模型…"
+              aria-label="按模型过滤"
+              name="modelFilter"
+              autoComplete="off"
+              spellCheck={false}
+            />
+          </div>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
+            className="h-[34px] rounded-2xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 shadow-sm outline-none transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/35 dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-white/80 dark:hover:bg-white/10 dark:focus-visible:ring-white/15"
+            aria-label="按状态过滤"
+            name="statusFilter"
+          >
+            <option value="">全部状态</option>
+            <option value="success">成功</option>
+            <option value="failed">失败</option>
+          </select>
+
+          {/* 分隔弹性空间 */}
+          <div className="flex-1" />
+
+          {/* 统计摘要 */}
+          <span className="inline-flex items-center gap-1.5 text-xs text-slate-600 dark:text-white/55">
+            <Filter size={12} aria-hidden="true" />
+            <span className="font-mono tabular-nums">{summary.total.toLocaleString()}</span> 条
+            <span className="text-slate-300 dark:text-white/10" aria-hidden="true">·</span>
+            成功率 <span className="font-mono tabular-nums">{summary.successRate}%</span>
+            <span className="text-slate-300 dark:text-white/10" aria-hidden="true">·</span>
+            Token <span className="font-mono tabular-nums">{summary.totalTokens.toLocaleString()}</span>
+            <span className="text-slate-300 dark:text-white/10" aria-hidden="true">·</span>
+            <span className="text-slate-400 dark:text-white/40">{lastUpdatedText}</span>
+          </span>
+        </div>
+
+        {/* 表格 */}
+        <div className="relative">
+          <VirtualRequestLogTable rows={filteredRows} loading={loading} />
+          {loading ? (
+            <div className="absolute inset-0 z-10 flex items-center justify-center rounded-b-2xl bg-white/70 backdrop-blur-sm dark:bg-neutral-950/55">
+              <div className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white/85 px-3 py-2 text-sm font-medium text-slate-700 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/70 dark:text-white/75">
+                <span
+                  className="h-4 w-4 rounded-full border-2 border-slate-300 border-t-slate-900 motion-reduce:animate-none motion-safe:animate-spin dark:border-white/20 dark:border-t-white/80"
+                  aria-hidden="true"
+                />
+                <span role="status">加载中…</span>
+              </div>
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </section>
   );
 }
