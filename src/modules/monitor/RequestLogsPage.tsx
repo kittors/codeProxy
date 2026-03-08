@@ -490,7 +490,7 @@ export function RequestLogsPage() {
             timestampMs,
             apiKey,
             apiKeyName: keyNameMap.get(apiKey) || "",
-            channelName: providerNameMap.get(String((detail as any).source ?? "")) || "",
+            channelName: String((detail as any).channel_name ?? "") || providerNameMap.get(String((detail as any).source ?? "")) || "",
             maskedApiKey: maskApiKey(apiKey),
             model,
             failed: Boolean(detail.failed),
