@@ -27,53 +27,119 @@
 
 ## ✨ Overview
 
-**Code Proxy** is the official web-based admin panel for [**CliRelay**](https://github.com/kittors/CliRelay) — a proxy server that wraps Gemini CLI, Antigravity, ChatGPT Codex, Claude Code, Qwen Code, and iFlow as OpenAI/Gemini/Claude compatible API services.
+**Code Proxy** is the official web-based admin panel for [**CliRelay**](https://github.com/kittors/CliRelay) — a proxy server that wraps Gemini CLI, Antigravity, ChatGPT Codex, Claude Code, Qwen Code, Kiro, and iFlow as OpenAI/Gemini/Claude compatible API services.
 
-This dashboard lets you:
+This dashboard provides a complete management interface for your AI proxy infrastructure:
 
-- 🔐 **Login** with your API address and management key
-- 📊 **Monitor** real-time KPI metrics, channel statistics, and model usage
-- 🔗 **Manage** proxy channels (OpenAI, Gemini, Claude, Codex, Vertex, etc.)
-- 📦 **Import/Export** usage snapshots for backup and migration
-- ℹ️ **Inspect** system info, connection status, and available models
-
-## 🧩 Features
-
-| Feature | Description |
-|---------|-------------|
-| **Dashboard** | Overview cards with quick-access shortcuts to all management modules |
-| **Monitor Center** | KPI metrics, channel distribution charts, model usage analytics |
-| **System Info** | Connection status, version info, `/v1/models` model listing |
-| **Auth Guard** | Session persistence with automatic token restoration |
-| **Usage Snapshots** | Import & export usage data in JSON format |
-| **Dark Mode** | Built-in dark theme with smooth transitions |
-| **i18n Ready** | Internationalization support via i18next |
+- 📊 **Real-time Dashboard** — KPI cards, health score, system monitoring, channel latency
+- 📈 **Advanced Monitoring Center** — Model usage distribution, daily trends, hourly heatmaps with API Key filtering
+- 📋 **Request Logs** — Full request history with token counts, latency, status, and clickable error details
+- 💬 **Message Viewer** — Beautiful Markdown-rendered input/output content with XML tag collapsible sections
+- 🔗 **AI Provider Management** — Multi-tab provider config (Gemini, Claude, Codex, Vertex, OpenAI, Ampcode) with enable/disable toggles
+- 🔑 **API Key Management** — Create, edit, delete keys with quota & rate limit controls
+- 🔐 **OAuth Login Management** — Manage OAuth authentication credentials
+- 📦 **Config Panel** — Visual YAML configuration editor with import/export
+- 🎯 **Model Management** — Model alias mapping and routing rules
+- 📊 **Quota Management** — Per-key usage quota tracking and limits
+- 🔍 **API Key Lookup** — Public self-service page for users to check their own usage statistics and request logs
+- ℹ️ **System Info** — Connection info grid, model listing with colorful vendor icons and click-to-copy
+- 🌙 **Dark Mode** — Full dark theme with smooth transitions
+- 🌐 **i18n Ready** — Internationalization support (Chinese, English)
 
 ## 📸 Screenshots
 
 <p align="center">
-  <img src="docs/images/iShot_2026-03-06_10.51.59.png" width="48%" />
-  <img src="docs/images/iShot_2026-03-06_10.52.09.png" width="48%" />
+  <img src="docs/images/dashboard.png" width="100%" />
 </p>
+<p align="center"><em>Dashboard — KPI cards, health score, system monitoring, channel latency, resource usage</em></p>
+
 <p align="center">
-  <img src="docs/images/iShot_2026-03-06_10.52.33.png" width="48%" />
-  <img src="docs/images/iShot_2026-03-06_10.54.03.png" width="48%" />
+  <img src="docs/images/monitor-light.png" width="48%" />
+  <img src="docs/images/monitor-dark.png" width="48%" />
 </p>
+<p align="center"><em>Monitor Center — Model distribution, daily trends, hourly heatmaps (Light / Dark mode)</em></p>
+
+<p align="center">
+  <img src="docs/images/request-logs.png" width="48%" />
+  <img src="docs/images/log-content-modal.png" width="48%" />
+</p>
+<p align="center"><em>Request Logs with multi-filter & Message Content Viewer (Markdown rendered)</em></p>
+
+<p align="center">
+  <img src="docs/images/providers.png" width="48%" />
+  <img src="docs/images/system-info.png" width="48%" />
+</p>
+<p align="center"><em>AI Provider Management & System Info with vendor-colored model tags</em></p>
+
+<p align="center">
+  <img src="docs/images/apikey-lookup-stats.png" width="48%" />
+  <img src="docs/images/apikey-lookup-logs.png" width="48%" />
+</p>
+<p align="center"><em>API Key Lookup — Self-service usage statistics & request logs for end users</em></p>
+
+## 🧩 Feature Details
+
+### 📊 Dashboard
+
+| Module | Description |
+|:-------|:------------|
+| **KPI Cards** | Total requests, success rate, token consumption, failed request count (7-day / 30-day) |
+| **Health Score** | Real-time circular gauge (0–100) evaluating overall system health |
+| **System Monitor** | WebSocket-powered live stats: uptime, goroutines, CPU, memory, network I/O, DB size |
+| **Channel Latency** | Top 5 channel average latency with visual bar indicators |
+| **Resource Bars** | System CPU, memory, service CPU, memory, database size — color-coded status |
+
+### 📈 Monitor Center
+
+| Module | Description |
+|:-------|:------------|
+| **KPI Summary** | Total requests, success rate, total/output tokens with time range selection |
+| **Model Distribution** | Interactive donut chart showing Top 10 model usage by request count or token |
+| **Daily Trends** | Dual-axis chart with input/output tokens (bar) and request count (line) over time |
+| **Hourly Heatmap** | Stacked bar chart showing per-model hourly request distribution (6h / 12h / 24h) |
+| **API Key Filter** | Filter all metrics by specific API Key prefix |
+
+### 📋 Request Logs
+
+| Module | Description |
+|:-------|:------------|
+| **Virtual Table** | High-performance virtual scrolling for 10,000+ log entries |
+| **Multi-Filter** | Filter by Key, model, status (success/fail), with time range selection |
+| **Token Details** | Click on input/output tokens to view full message content |
+| **Error Modal** | Click on "失败" (Failed) status to view error details in a red-themed modal |
+| **Message Viewer** | Markdown rendering with syntax highlighting, XML tag detection, and role-based collapsible blocks |
+
+### 🔗 AI Providers
+
+| Module | Description |
+|:-------|:------------|
+| **Multi-Tab** | Gemini, Claude, Codex, Vertex, OpenAI Compatible, Ampcode tabs |
+| **Channel Cards** | Name, masked API key, base URL, model count, success/fail stats, latency bar |
+| **CRUD** | Add, edit, delete channels with full configuration (proxyUrl, headers, model aliases, excluded models) |
+| **Toggle** | Enable/disable individual channels with instant visual feedback |
+
+### 🔍 API Key Lookup
+
+| Module | Description |
+|:-------|:------------|
+| **Self-Service** | Public page (no login required) for end users to check their API Key usage |
+| **Usage Stats** | Per-key KPI cards, model distribution chart, daily trend chart |
+| **Request Logs** | Per-key request history with detailed virtual table and source channel info |
 
 ## 🛠️ Tech Stack
 
 | Category | Technology |
-|----------|------------|
+|:---------|:-----------|
 | **Framework** | React 19.2 + TypeScript 5.9 |
 | **Build Tool** | Vite 7.3 |
 | **Package Manager** | Bun 1.2 |
 | **Styling** | Tailwind CSS v4 |
 | **State Management** | Zustand |
-| **Charts** | ECharts + Chart.js |
-| **Animations** | Framer Motion + GSAP |
+| **Charts** | Apache ECharts |
 | **Routing** | React Router v7 |
+| **HTTP** | Axios + WebSocket (real-time monitoring) |
+| **Icons** | Lucide React + Custom vendor SVGs (14 vendors) |
 | **Linting** | oxlint + oxfmt |
-| **Testing** | Vitest + Playwright (E2E) |
 
 ## 🚀 Getting Started
 
@@ -101,10 +167,6 @@ The dashboard will be available at **http://localhost:5173/**
 ### Build for Production
 
 ```bash
-# Lint & format
-bun run lint
-bun run format
-
 # Type-check & build
 bun run build
 
@@ -112,31 +174,29 @@ bun run build
 bun run preview
 ```
 
-### Run Tests
-
-```bash
-# Unit tests
-bun run test
-
-# E2E tests
-bun run e2e
-```
-
 ## 📁 Project Structure
 
 ```
 src/
 ├── app/                 # Routing & auth guards
-├── lib/                 # Constants, HTTP client, API layer
+├── assets/icons/        # Vendor SVG icons (Claude, OpenAI, Gemini, etc.)
+├── components/ui/       # Inline SVG icon components
+├── i18n/                # i18next locales (en, zh-CN)
+├── lib/
+│   ├── constants/       # App-wide constants
+│   └── http/            # Axios client, API layer, WebSocket
 ├── modules/
-│   ├── auth/            # Authentication provider
-│   ├── dashboard/       # Dashboard overview
-│   ├── layout/          # App shell (sidebar + topbar)
+│   ├── auth/            # Authentication provider & session
+│   ├── apikey-lookup/   # Public API Key usage lookup
+│   ├── config/          # Visual config editor (YAML)
+│   ├── dashboard/       # Dashboard overview + system monitor
 │   ├── login/           # Login page
-│   ├── monitor/         # Monitoring center
-│   ├── system/          # System information
-│   ├── ui/              # Shared UI containers
-│   └── usage/           # Usage statistics
+│   ├── monitor/         # Monitoring center (charts, logs, modals)
+│   ├── oauth/           # OAuth management
+│   ├── providers/       # AI provider channel management
+│   ├── system/          # System info + model listing
+│   ├── ui/              # Shared UI (AppShell, Button, Table, Tabs, etc.)
+│   └── usage/           # Usage statistics & snapshot import/export
 └── styles/              # Global styles & theme tokens
 ```
 
@@ -145,14 +205,21 @@ src/
 This dashboard communicates with the CliRelay backend via the Management API:
 
 | Endpoint | Method | Description |
-|----------|--------|-------------|
+|:---------|:-------|:------------|
 | `/v0/management/config` | `GET` | Verify login & fetch configuration |
 | `/v0/management/usage` | `GET` | Retrieve usage statistics |
-| `/v0/management/openai-compatibility` | `GET` | OpenAI channel mapping |
-| `/v0/management/gemini-api-key` | `GET` | Gemini channel mapping |
-| `/v0/management/claude-api-key` | `GET` | Claude channel mapping |
-| `/v0/management/codex-api-key` | `GET` | Codex channel mapping |
-| `/v0/management/vertex-api-key` | `GET` | Vertex channel mapping |
+| `/v0/management/usage/logs` | `GET` | Paginated request log history |
+| `/v0/management/usage/log-content` | `GET` | Full message content (input/output) |
+| `/v0/management/usage/dashboard-summary` | `GET` | Dashboard KPI data |
+| `/v0/management/usage/model-distribution` | `GET` | Model usage distribution |
+| `/v0/management/usage/daily-trends` | `GET` | Daily token/request trends |
+| `/v0/management/usage/hourly-model` | `GET` | Hourly per-model request data |
+| `/v0/management/openai-compatibility` | `GET/POST/DELETE` | OpenAI channel CRUD |
+| `/v0/management/gemini-api-key` | `GET/POST/DELETE` | Gemini channel CRUD |
+| `/v0/management/claude-api-key` | `GET/POST/DELETE` | Claude channel CRUD |
+| `/v0/management/codex-api-key` | `GET/POST/DELETE` | Codex channel CRUD |
+| `/v0/management/vertex-api-key` | `GET/POST/DELETE` | Vertex channel CRUD |
+| `/v0/management/system-stats` | `WebSocket` | Real-time system monitoring |
 
 > **Note:** The API base is automatically normalized to `{apiBase}/v0/management`
 
