@@ -180,21 +180,42 @@ function TagSection({ name, content, defaultExpanded = false }: { name: string; 
 
 type Segment = { type: "text"; content: string } | { type: "tag"; name: string; content: string };
 
+// Sentinel placeholders for angle brackets inside backtick code spans
+const LT_PLACEHOLDER = "\x00LT\x00";
+const GT_PLACEHOLDER = "\x00GT\x00";
+
+/** Mask angle brackets inside backtick code spans so they aren't parsed as tags */
+function maskBacktickRegions(raw: string): string {
+    // Mask fenced code blocks (```)
+    let result = raw.replace(/```[\s\S]*?```/g, (m) =>
+        m.replace(/</g, LT_PLACEHOLDER).replace(/>/g, GT_PLACEHOLDER),
+    );
+    // Mask inline code spans (`)
+    result = result.replace(/`[^`]+`/g, (m) =>
+        m.replace(/</g, LT_PLACEHOLDER).replace(/>/g, GT_PLACEHOLDER),
+    );
+    return result;
+}
+
+/** Restore masked angle brackets back to real characters */
+function unmask(s: string): string {
+    return s.replaceAll(LT_PLACEHOLDER, "<").replaceAll(GT_PLACEHOLDER, ">");
+}
+
 /**
- * Find matching XML-like tags using greedy matching to handle
- * inner references to the same tag name (e.g. `<tag>...</tag>` inside backticks).
- * Searches for the LAST occurrence of the closing tag to avoid early cutoff.
+ * Find matching XML-like tags. Skips tags inside backtick code spans.
+ * Uses greedy (lastIndexOf) closing-tag search to handle inner references.
  */
 function parseContentSegments(raw: string): Segment[] {
+    const masked = maskBacktickRegions(raw);
     const segments: Segment[] = [];
-    let remaining = raw;
+    let remaining = masked;
 
     while (remaining.length > 0) {
         // Find the next opening tag
         const openMatch = remaining.match(/<([\w][\w\s]*?)>\s*\n?/);
         if (!openMatch || openMatch.index === undefined) {
-            // No more tags — rest is text
-            const text = remaining.trim();
+            const text = unmask(remaining).trim();
             if (text) segments.push({ type: "text", content: text });
             break;
         }
@@ -204,7 +225,7 @@ function parseContentSegments(raw: string): Segment[] {
 
         // Text before this tag
         if (openMatch.index > 0) {
-            const text = remaining.slice(0, openMatch.index).trim();
+            const text = unmask(remaining.slice(0, openMatch.index)).trim();
             if (text) segments.push({ type: "text", content: text });
         }
 
@@ -217,12 +238,12 @@ function parseContentSegments(raw: string): Segment[] {
         );
 
         if (lastCloseIdx > openEnd) {
-            const innerContent = remaining.slice(openEnd, lastCloseIdx).trim();
+            const innerContent = unmask(remaining.slice(openEnd, lastCloseIdx)).trim();
             segments.push({ type: "tag", name: tagName, content: innerContent });
             remaining = remaining.slice(lastCloseIdx + closePattern.length);
         } else {
             // No valid closing tag — treat the opening tag as plain text
-            const text = remaining.slice(0, openEnd).trim();
+            const text = unmask(remaining.slice(0, openEnd)).trim();
             if (text) segments.push({ type: "text", content: text });
             remaining = remaining.slice(openEnd);
         }
