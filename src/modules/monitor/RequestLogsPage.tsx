@@ -231,7 +231,7 @@ function VirtualRequestLogTable({ rows, loading }: { rows: readonly LogRow[]; lo
   const visibleRows = useMemo(() => rows.slice(startIndex, endIndex), [rows, startIndex, endIndex]);
 
   return (
-    <div className="min-w-0 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
+    <div className="min-w-0 overflow-hidden">
       <div
         ref={containerRef}
         onScroll={onScroll}
@@ -239,26 +239,26 @@ function VirtualRequestLogTable({ rows, loading }: { rows: readonly LogRow[]; lo
       >
         <table className="w-full min-w-[1320px] table-fixed border-separate border-spacing-0 text-sm">
           <caption className="sr-only">请求日志表格</caption>
-          <thead className="sticky top-0 z-10 bg-white/95 backdrop-blur dark:bg-neutral-950/75">
-            <tr className="h-11 text-left text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-white/55">
-              <th className="w-52 border-b border-slate-200 px-4 dark:border-neutral-800">时间</th>
-              <th className="w-32 border-b border-slate-200 px-4 dark:border-neutral-800">Key 名称</th>
-              <th className="w-56 border-b border-slate-200 px-4 dark:border-neutral-800">模型</th>
-              <th className="w-32 border-b border-slate-200 px-4 dark:border-neutral-800">渠道名</th>
-              <th className="w-20 border-b border-slate-200 px-4 dark:border-neutral-800">状态</th>
-              <th className="w-24 border-b border-slate-200 px-4 text-right dark:border-neutral-800">
+          <thead className="sticky top-0 z-10">
+            <tr className="text-left text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-white/55">
+              <th className="w-52 bg-slate-100/80 px-4 py-3 first:rounded-l-xl dark:bg-neutral-800/50">时间</th>
+              <th className="w-32 bg-slate-100/80 px-4 py-3 dark:bg-neutral-800/50">Key 名称</th>
+              <th className="w-56 bg-slate-100/80 px-4 py-3 dark:bg-neutral-800/50">模型</th>
+              <th className="w-32 bg-slate-100/80 px-4 py-3 dark:bg-neutral-800/50">渠道名</th>
+              <th className="w-20 bg-slate-100/80 px-4 py-3 dark:bg-neutral-800/50">状态</th>
+              <th className="w-24 bg-slate-100/80 px-4 py-3 text-right dark:bg-neutral-800/50">
                 用时
               </th>
-              <th className="w-24 border-b border-slate-200 px-4 text-right dark:border-neutral-800">
+              <th className="w-24 bg-slate-100/80 px-4 py-3 text-right dark:bg-neutral-800/50">
                 输入
               </th>
-              <th className="w-24 border-b border-slate-200 px-4 text-right dark:border-neutral-800">
+              <th className="w-24 bg-slate-100/80 px-4 py-3 text-right dark:bg-neutral-800/50">
                 缓存读取
               </th>
-              <th className="w-24 border-b border-slate-200 px-4 text-right dark:border-neutral-800">
+              <th className="w-24 bg-slate-100/80 px-4 py-3 text-right dark:bg-neutral-800/50">
                 输出
               </th>
-              <th className="w-28 border-b border-slate-200 px-4 text-right dark:border-neutral-800">
+              <th className="w-28 bg-slate-100/80 px-4 py-3 text-right last:rounded-r-xl dark:bg-neutral-800/50">
                 总 Token
               </th>
             </tr>
@@ -281,9 +281,9 @@ function VirtualRequestLogTable({ rows, loading }: { rows: readonly LogRow[]; lo
                 {visibleRows.map((row) => (
                   <tr
                     key={row.id}
-                    className="h-10 text-sm transition hover:bg-slate-50/70 dark:hover:bg-white/5"
+                    className="h-11 text-sm transition-colors hover:bg-slate-50 dark:hover:bg-white/[0.04]"
                   >
-                    <td className="border-b border-slate-100 px-4 align-middle font-mono text-xs tabular-nums text-slate-700 dark:border-neutral-900 dark:text-slate-200">
+                    <td className="px-4 py-2.5 align-middle font-mono text-xs tabular-nums text-slate-700 first:rounded-l-lg dark:text-slate-200">
                       <OverflowTooltip
                         content={formatTimestamp(row.timestamp)}
                         className="block min-w-0"
@@ -293,42 +293,42 @@ function VirtualRequestLogTable({ rows, loading }: { rows: readonly LogRow[]; lo
                         </span>
                       </OverflowTooltip>
                     </td>
-                    <td className="border-b border-slate-100 px-4 align-middle dark:border-neutral-900">
+                    <td className="px-4 py-2.5 align-middle">
                       <OverflowTooltip content={row.apiKeyName || "--"} className="block min-w-0">
                         <span className={`block min-w-0 truncate text-xs font-medium ${row.apiKeyName ? "text-indigo-600 dark:text-indigo-400" : "text-slate-400 dark:text-white/30"}`}>
                           {row.apiKeyName || "--"}
                         </span>
                       </OverflowTooltip>
                     </td>
-                    <td className="border-b border-slate-100 px-4 align-middle dark:border-neutral-900">
+                    <td className="px-4 py-2.5 align-middle">
                       <OverflowTooltip content={row.model} className="block min-w-0">
                         <span className="block min-w-0 truncate">{row.model}</span>
                       </OverflowTooltip>
                     </td>
-                    <td className="border-b border-slate-100 px-4 align-middle dark:border-neutral-900">
+                    <td className="px-4 py-2.5 align-middle">
                       <OverflowTooltip content={row.channelName || "--"} className="block min-w-0">
                         <span className={`block min-w-0 truncate text-xs font-medium ${row.channelName ? "text-violet-600 dark:text-violet-400" : "text-slate-400 dark:text-white/30"}`}>
                           {row.channelName || "--"}
                         </span>
                       </OverflowTooltip>
                     </td>
-                    <td className="border-b border-slate-100 px-4 align-middle dark:border-neutral-900">
+                    <td className="px-4 py-2.5 align-middle">
                       {row.failed ? (
-                        <span className="inline-flex min-w-[52px] justify-center rounded-lg bg-rose-50 px-2 py-1 text-xs font-semibold text-rose-700 dark:bg-rose-500/15 dark:text-rose-200">
+                        <span className="inline-flex min-w-[52px] justify-center rounded-full bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-600 dark:bg-rose-500/15 dark:text-rose-300">
                           失败
                         </span>
                       ) : (
-                        <span className="inline-flex min-w-[52px] justify-center rounded-lg bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200">
+                        <span className="inline-flex min-w-[52px] justify-center rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-300">
                           成功
                         </span>
                       )}
                     </td>
-                    <td className="border-b border-slate-100 px-4 text-right align-middle font-mono text-xs tabular-nums text-slate-700 dark:border-neutral-900 dark:text-slate-200">
+                    <td className="px-4 py-2.5 text-right align-middle font-mono text-xs tabular-nums text-slate-700 dark:text-slate-200">
                       <OverflowTooltip content={row.latencyText} className="block min-w-0">
                         <span className="block min-w-0 truncate">{row.latencyText}</span>
                       </OverflowTooltip>
                     </td>
-                    <td className="border-b border-slate-100 px-4 text-right align-middle font-mono text-xs tabular-nums text-slate-700 dark:border-neutral-900 dark:text-slate-200">
+                    <td className="px-4 py-2.5 text-right align-middle font-mono text-xs tabular-nums text-slate-700 dark:text-slate-200">
                       <OverflowTooltip
                         content={row.inputTokens.toLocaleString()}
                         className="block min-w-0"
@@ -338,7 +338,7 @@ function VirtualRequestLogTable({ rows, loading }: { rows: readonly LogRow[]; lo
                         </span>
                       </OverflowTooltip>
                     </td>
-                    <td className="border-b border-slate-100 px-4 text-right align-middle font-mono text-xs tabular-nums dark:border-neutral-900">
+                    <td className="px-4 py-2.5 text-right align-middle font-mono text-xs tabular-nums">
                       <OverflowTooltip
                         content={row.cachedTokens.toLocaleString()}
                         className="block min-w-0"
@@ -348,7 +348,7 @@ function VirtualRequestLogTable({ rows, loading }: { rows: readonly LogRow[]; lo
                         </span>
                       </OverflowTooltip>
                     </td>
-                    <td className="border-b border-slate-100 px-4 text-right align-middle font-mono text-xs tabular-nums text-slate-700 dark:border-neutral-900 dark:text-slate-200">
+                    <td className="px-4 py-2.5 text-right align-middle font-mono text-xs tabular-nums text-slate-700 dark:text-slate-200">
                       <OverflowTooltip
                         content={row.outputTokens.toLocaleString()}
                         className="block min-w-0"
@@ -358,7 +358,7 @@ function VirtualRequestLogTable({ rows, loading }: { rows: readonly LogRow[]; lo
                         </span>
                       </OverflowTooltip>
                     </td>
-                    <td className="border-b border-slate-100 px-4 text-right align-middle font-mono text-xs tabular-nums text-slate-900 dark:border-neutral-900 dark:text-white">
+                    <td className="px-4 py-2.5 text-right align-middle font-mono text-xs tabular-nums text-slate-900 last:rounded-r-lg dark:text-white">
                       <OverflowTooltip
                         content={row.totalTokens.toLocaleString()}
                         className="block min-w-0"
