@@ -1,99 +1,161 @@
 import { useCallback, useEffect, useState } from "react";
-import { Modal } from "@/modules/ui/Modal";
 import { usageApi } from "@/lib/http/apis";
-import { Loader2, FileInput, FileOutput } from "lucide-react";
+import { createPortal } from "react-dom";
+import {
+    Loader2,
+    FileInput,
+    FileOutput,
+    ChevronDown,
+    X,
+} from "lucide-react";
+import Markdown from "react-markdown";
+
+/* ========================================================================== */
+/*  Types                                                                     */
+/* ========================================================================== */
 
 interface LogContentModalProps {
     open: boolean;
     logId: number | null;
-    /** Which tab to show initially: "input" or "output" */
     initialTab?: "input" | "output";
     onClose: () => void;
 }
 
-/* -------------------------------------------------------------------------- */
-/*  MessageBlock                                                              */
-/* -------------------------------------------------------------------------- */
+type Msg = { role: string; content: string };
 
-function MessageBlock({ role, content }: { role: string; content: string }) {
-    const roleConfig: Record<string, { label: string; icon: string; color: string; bg: string }> = {
-        system: {
-            label: "系统提示词",
-            icon: "⚙️",
-            color: "text-purple-700 dark:text-purple-300",
-            bg: "bg-purple-50 dark:bg-purple-950/30 border-purple-200 dark:border-purple-800/50",
-        },
-        developer: {
-            label: "开发者指令",
-            icon: "⚙️",
-            color: "text-purple-700 dark:text-purple-300",
-            bg: "bg-purple-50 dark:bg-purple-950/30 border-purple-200 dark:border-purple-800/50",
-        },
-        user: {
-            label: "用户消息",
-            icon: "👤",
-            color: "text-sky-700 dark:text-sky-300",
-            bg: "bg-sky-50 dark:bg-sky-950/30 border-sky-200 dark:border-sky-800/50",
-        },
-        assistant: {
-            label: "模型回复",
-            icon: "🤖",
-            color: "text-emerald-700 dark:text-emerald-300",
-            bg: "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800/50",
-        },
-        tool: {
-            label: "工具结果",
-            icon: "🔧",
-            color: "text-amber-700 dark:text-amber-300",
-            bg: "bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800/50",
-        },
-        instructions: {
-            label: "指令 (Instructions)",
-            icon: "📋",
-            color: "text-indigo-700 dark:text-indigo-300",
-            bg: "bg-indigo-50 dark:bg-indigo-950/30 border-indigo-200 dark:border-indigo-800/50",
-        },
-        function_call: {
-            label: "函数调用",
-            icon: "⚡",
-            color: "text-orange-700 dark:text-orange-300",
-            bg: "bg-orange-50 dark:bg-orange-950/30 border-orange-200 dark:border-orange-800/50",
-        },
-        function_call_output: {
-            label: "函数返回",
-            icon: "📤",
-            color: "text-teal-700 dark:text-teal-300",
-            bg: "bg-teal-50 dark:bg-teal-950/30 border-teal-200 dark:border-teal-800/50",
-        },
-    };
+/* ========================================================================== */
+/*  Role config                                                               */
+/* ========================================================================== */
 
-    const config = roleConfig[role] || {
-        label: role,
-        icon: "💬",
-        color: "text-slate-700 dark:text-slate-300",
-        bg: "bg-slate-50 dark:bg-slate-950/30 border-slate-200 dark:border-slate-800/50",
-    };
+const ROLE_STYLES: Record<
+    string,
+    { label: string; icon: string; border: string; headerBg: string; headerText: string }
+> = {
+    system: {
+        label: "系统提示词",
+        icon: "⚙️",
+        border: "border-violet-500/25 dark:border-violet-400/20",
+        headerBg: "bg-violet-50 dark:bg-violet-500/10",
+        headerText: "text-violet-700 dark:text-violet-300",
+    },
+    developer: {
+        label: "开发者指令",
+        icon: "⚙️",
+        border: "border-violet-500/25 dark:border-violet-400/20",
+        headerBg: "bg-violet-50 dark:bg-violet-500/10",
+        headerText: "text-violet-700 dark:text-violet-300",
+    },
+    instructions: {
+        label: "指令 (Instructions)",
+        icon: "📋",
+        border: "border-indigo-500/25 dark:border-indigo-400/20",
+        headerBg: "bg-indigo-50 dark:bg-indigo-500/10",
+        headerText: "text-indigo-700 dark:text-indigo-300",
+    },
+    user: {
+        label: "用户消息",
+        icon: "👤",
+        border: "border-sky-500/25 dark:border-sky-400/20",
+        headerBg: "bg-sky-50 dark:bg-sky-500/10",
+        headerText: "text-sky-700 dark:text-sky-300",
+    },
+    assistant: {
+        label: "模型回复",
+        icon: "🤖",
+        border: "border-emerald-500/25 dark:border-emerald-400/20",
+        headerBg: "bg-emerald-50 dark:bg-emerald-500/10",
+        headerText: "text-emerald-700 dark:text-emerald-300",
+    },
+    tool: {
+        label: "工具结果",
+        icon: "🔧",
+        border: "border-amber-500/25 dark:border-amber-400/20",
+        headerBg: "bg-amber-50 dark:bg-amber-500/10",
+        headerText: "text-amber-700 dark:text-amber-300",
+    },
+    function_call: {
+        label: "函数调用",
+        icon: "⚡",
+        border: "border-orange-500/25 dark:border-orange-400/20",
+        headerBg: "bg-orange-50 dark:bg-orange-500/10",
+        headerText: "text-orange-700 dark:text-orange-300",
+    },
+    function_call_output: {
+        label: "函数返回",
+        icon: "📤",
+        border: "border-teal-500/25 dark:border-teal-400/20",
+        headerBg: "bg-teal-50 dark:bg-teal-500/10",
+        headerText: "text-teal-700 dark:text-teal-300",
+    },
+};
 
+const DEFAULT_STYLE = {
+    label: "消息",
+    icon: "💬",
+    border: "border-slate-300/50 dark:border-neutral-700",
+    headerBg: "bg-slate-50 dark:bg-neutral-800/60",
+    headerText: "text-slate-700 dark:text-slate-300",
+};
+
+/* ========================================================================== */
+/*  MarkdownContent                                                           */
+/* ========================================================================== */
+
+function MarkdownContent({ content }: { content: string }) {
     return (
-        <div className={`rounded-xl border p-4 ${config.bg}`}>
-            <div className={`mb-2 flex items-center gap-2 text-sm font-semibold ${config.color}`}>
-                <span>{config.icon}</span>
-                <span>{config.label}</span>
-            </div>
-            <div className="whitespace-pre-wrap break-words text-sm leading-relaxed text-slate-800 dark:text-slate-200">
-                {content}
-            </div>
+        <div className="prose prose-sm dark:prose-invert max-w-none break-words leading-relaxed
+      prose-headings:mt-4 prose-headings:mb-2 prose-headings:font-semibold
+      prose-h1:text-lg prose-h2:text-base prose-h3:text-sm
+      prose-p:my-2 prose-p:leading-relaxed
+      prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5
+      prose-code:rounded prose-code:bg-slate-100 prose-code:px-1.5 prose-code:py-0.5 prose-code:text-xs prose-code:font-mono prose-code:text-pink-600
+      dark:prose-code:bg-neutral-800 dark:prose-code:text-pink-400
+      prose-pre:rounded-lg prose-pre:bg-slate-900 prose-pre:text-xs dark:prose-pre:bg-neutral-900
+      prose-strong:font-semibold
+      prose-blockquote:border-l-2 prose-blockquote:border-slate-300 dark:prose-blockquote:border-neutral-600
+    ">
+            <Markdown>{content}</Markdown>
         </div>
     );
 }
 
-/* -------------------------------------------------------------------------- */
+/* ========================================================================== */
+/*  MessageBlock: collapsible, with Markdown rendering                        */
+/* ========================================================================== */
+
+function MessageBlock({ role, content, defaultExpanded = true }: { role: string; content: string; defaultExpanded?: boolean }) {
+    const [expanded, setExpanded] = useState(defaultExpanded);
+    const style = ROLE_STYLES[role] || DEFAULT_STYLE;
+
+    return (
+        <div className={`overflow-hidden rounded-xl border ${style.border} transition-colors`}>
+            {/* Header — always visible, acts as toggle */}
+            <button
+                type="button"
+                onClick={() => setExpanded((prev) => !prev)}
+                className={`flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-semibold transition-colors ${style.headerBg} ${style.headerText} hover:brightness-95 dark:hover:brightness-110`}
+            >
+                <span className="shrink-0">{style.icon}</span>
+                <span className="flex-1 truncate">{style.label}</span>
+                <ChevronDown
+                    size={16}
+                    className={`shrink-0 transition-transform duration-200 ${expanded ? "rotate-180" : ""}`}
+                />
+            </button>
+            {/* Body — collapsible */}
+            {expanded && (
+                <div className="border-t border-inherit px-4 py-3 text-sm text-slate-800 dark:text-slate-200">
+                    <MarkdownContent content={content} />
+                </div>
+            )}
+        </div>
+    );
+}
+
+/* ========================================================================== */
 /*  Content extraction helpers                                                */
-/* -------------------------------------------------------------------------- */
+/* ========================================================================== */
 
-type Msg = { role: string; content: string };
-
-/** Extract text from content field: string | array<{type,text}> | object */
 function extractText(content: unknown): string {
     if (typeof content === "string") return content;
     if (Array.isArray(content)) {
@@ -110,13 +172,10 @@ function extractText(content: unknown): string {
     return String(content ?? "");
 }
 
-/* -------------------------------------------------------------------------- */
+/* ========================================================================== */
 /*  Input parsers                                                             */
-/* -------------------------------------------------------------------------- */
+/* ========================================================================== */
 
-/**
- * Parse OpenAI Chat Completions format: { messages: [{role, content}] }
- */
 function parseOpenAIMessages(data: Record<string, unknown>): Msg[] | null {
     const msgs = data.messages;
     if (!Array.isArray(msgs)) return null;
@@ -129,24 +188,18 @@ function parseOpenAIMessages(data: Record<string, unknown>): Msg[] | null {
     return result.length > 0 ? result : null;
 }
 
-/**
- * Parse Codex / OpenAI Responses API format:
- * { instructions?: string, input: [{ type:"message", role, content:[{text}] }, ...] }
- */
 function parseCodexInput(data: Record<string, unknown>): Msg[] | null {
     const input = data.input;
     if (!Array.isArray(input)) return null;
 
     const result: Msg[] = [];
-
-    // Instructions first
     if (typeof data.instructions === "string" && data.instructions.trim()) {
         result.push({ role: "instructions", content: data.instructions.trim() });
     }
 
     for (const item of input as Record<string, unknown>[]) {
         const itemType = String(item.type || "");
-        if (itemType === "message") {
+        if (itemType === "message" || (!itemType && item.role && item.content !== undefined)) {
             const role = String(item.role || "user");
             const text = extractText(item.content);
             if (text) result.push({ role, content: text });
@@ -158,7 +211,6 @@ function parseCodexInput(data: Record<string, unknown>): Msg[] | null {
             const output = typeof item.output === "string" ? item.output : JSON.stringify(item.output ?? "");
             result.push({ role: "function_call_output", content: output });
         } else {
-            // Generic item — try to get content/text
             const text = extractText(item.content ?? item.text ?? "");
             if (text) result.push({ role: String(item.role || itemType || "unknown"), content: text });
         }
@@ -167,9 +219,16 @@ function parseCodexInput(data: Record<string, unknown>): Msg[] | null {
     return result.length > 0 ? result : null;
 }
 
-/** Parse input content into structured messages */
+function decodeEscaped(s: string): string {
+    return s
+        .replace(/\\n/g, "\n")
+        .replace(/\\t/g, "\t")
+        .replace(/\\"/g, '"')
+        .replace(/\\\\/g, "\\");
+}
+
 function parseInputMessages(raw: string): Msg[] | null {
-    // First try: valid JSON
+    // 1. Try valid JSON
     try {
         const data = JSON.parse(raw);
         const codex = parseCodexInput(data);
@@ -178,85 +237,51 @@ function parseInputMessages(raw: string): Msg[] | null {
         if (openai) return openai;
         return null;
     } catch {
-        // JSON is likely truncated (100KB limit). Try recovery.
+        // JSON truncated — recovery below
     }
 
-    // Recovery for truncated Codex/Responses format:
-    // Extract "instructions" field value via regex
+    // 2. Recovery for truncated JSON
     const result: Msg[] = [];
 
     const instrMatch = raw.match(/"instructions"\s*:\s*"((?:[^"\\]|\\.)*)"/s);
     if (instrMatch) {
-        const decoded = instrMatch[1]
-            .replace(/\\n/g, "\n")
-            .replace(/\\t/g, "\t")
-            .replace(/\\"/g, '"')
-            .replace(/\\\\/g, "\\");
-        result.push({ role: "instructions", content: decoded });
+        result.push({ role: "instructions", content: decodeEscaped(instrMatch[1]) });
     }
 
-    // Try to extract messages from "input" array - look for {type,role,content} patterns
     const inputMatch = raw.match(/"input"\s*:\s*\[(.+)/s);
     if (inputMatch) {
-        const inputStr = inputMatch[1];
-        // Extract individual input_text items
         const textRegex = /"type"\s*:\s*"input_text"\s*,\s*"text"\s*:\s*"((?:[^"\\]|\\.)*)"/gs;
         let match;
         const texts: string[] = [];
-        while ((match = textRegex.exec(inputStr)) !== null) {
-            const decoded = match[1]
-                .replace(/\\n/g, "\n")
-                .replace(/\\t/g, "\t")
-                .replace(/\\"/g, '"')
-                .replace(/\\\\/g, "\\");
-            texts.push(decoded);
+        while ((match = textRegex.exec(inputMatch[1])) !== null) {
+            texts.push(decodeEscaped(match[1]));
         }
-        if (texts.length > 0) {
-            result.push({ role: "user", content: texts.join("\n\n") });
-        }
+        if (texts.length > 0) result.push({ role: "user", content: texts.join("\n\n") });
     }
 
-    // Recovery for truncated OpenAI Chat Completions format:
     if (result.length === 0) {
         const messagesMatch = raw.match(/"messages"\s*:\s*\[(.+)/s);
         if (messagesMatch) {
-            // Try to extract role+content pairs
-            const roleContentRegex = /"role"\s*:\s*"(\w+)"\s*,\s*"content"\s*:\s*"((?:[^"\\]|\\.)*)"/gs;
+            const rcRegex = /"role"\s*:\s*"(\w+)"\s*,\s*"content"\s*:\s*"((?:[^"\\]|\\.)*)"/gs;
             let match;
-            while ((match = roleContentRegex.exec(messagesMatch[1])) !== null) {
-                const decoded = match[2]
-                    .replace(/\\n/g, "\n")
-                    .replace(/\\t/g, "\t")
-                    .replace(/\\"/g, '"')
-                    .replace(/\\\\/g, "\\");
-                result.push({ role: match[1], content: decoded });
+            while ((match = rcRegex.exec(messagesMatch[1])) !== null) {
+                result.push({ role: match[1], content: decodeEscaped(match[2]) });
             }
         }
     }
 
     if (result.length > 0) {
-        result.push({
-            role: "system",
-            content: "⚠️ 注意：原始内容因超过大小限制被截断，部分消息可能不完整。",
-        });
+        result.push({ role: "system", content: "⚠️ 注意：原始内容因超过大小限制被截断，部分消息可能不完整。" });
         return result;
     }
 
     return null;
 }
 
-/* -------------------------------------------------------------------------- */
+/* ========================================================================== */
 /*  Output parsers                                                            */
-/* -------------------------------------------------------------------------- */
+/* ========================================================================== */
 
-/**
- * Parse SSE stream lines to extract text deltas.
- * Supports:
- *  - OpenAI streaming: data: {"choices":[{"delta":{"content":"..."}}]}
- *  - Codex/Responses: data: {"type":"response.output_text.delta","delta":"..."}
- *                     or data: {"type":"content_block_delta","delta":{"text":"..."}}
- *  - Claude streaming: data: {"type":"content_block_delta","delta":{"text":"..."}}
- */
 function parseSSEOutput(raw: string): string | null {
     const lines = raw.split("\n");
     const textParts: string[] = [];
@@ -264,119 +289,160 @@ function parseSSEOutput(raw: string): string | null {
     for (const line of lines) {
         const trimmed = line.trim();
         if (!trimmed.startsWith("data:")) continue;
-
         const jsonStr = trimmed.slice(5).trim();
         if (jsonStr === "[DONE]") continue;
 
         try {
             const data = JSON.parse(jsonStr);
-
-            // OpenAI Chat Completions streaming: choices[0].delta.content
-            if (data.choices?.[0]?.delta?.content) {
-                textParts.push(data.choices[0].delta.content);
-                continue;
-            }
-
-            // Codex / Responses API text delta
-            if (data.type === "response.output_text.delta" && typeof data.delta === "string") {
-                textParts.push(data.delta);
-                continue;
-            }
-
-            // Claude content_block_delta
-            if (data.type === "content_block_delta" && data.delta?.text) {
-                textParts.push(data.delta.text);
-                continue;
-            }
-
-            // Codex response.completed — extract output text
+            if (data.choices?.[0]?.delta?.content) { textParts.push(data.choices[0].delta.content); continue; }
+            if (data.type === "response.output_text.delta" && typeof data.delta === "string") { textParts.push(data.delta); continue; }
+            if (data.type === "content_block_delta" && data.delta?.text) { textParts.push(data.delta.text); continue; }
             if (data.type === "response.completed" && data.response?.output) {
-                const output = data.response.output;
-                if (Array.isArray(output)) {
-                    for (const item of output) {
-                        if (item.type === "message" && Array.isArray(item.content)) {
-                            for (const part of item.content) {
-                                if (part.type === "output_text" && typeof part.text === "string") {
-                                    // Only use this if we haven't accumulated deltas
-                                    if (textParts.length === 0) {
-                                        textParts.push(part.text);
-                                    }
-                                }
+                const outs = data.response.output;
+                if (Array.isArray(outs) && textParts.length === 0) {
+                    for (const o of outs) {
+                        if (o.type === "message" && Array.isArray(o.content)) {
+                            for (const p of o.content) {
+                                if (typeof p.text === "string") textParts.push(p.text);
                             }
                         }
                     }
                 }
             }
-        } catch {
-            // Skip non-JSON lines
-        }
+        } catch { /* skip */ }
     }
-
     return textParts.length > 0 ? textParts.join("") : null;
 }
 
-/** Parse non-stream output: single JSON response body */
 function parseNonStreamOutput(raw: string): string | null {
     try {
         const data = JSON.parse(raw);
-        // OpenAI format
-        if (data.choices?.[0]?.message?.content) {
-            return extractText(data.choices[0].message.content);
-        }
-        // Claude format
-        if (Array.isArray(data.content)) {
-            return extractText(data.content);
-        }
-        // Codex/Responses format: response.output[].content[].text
-        if (data.response?.output || data.output) {
-            const output = data.response?.output || data.output;
-            if (Array.isArray(output)) {
-                const texts: string[] = [];
-                for (const item of output) {
-                    if (item.type === "message" && Array.isArray(item.content)) {
-                        for (const part of item.content) {
-                            if (typeof part.text === "string") texts.push(part.text);
-                        }
-                    }
+        if (data.choices?.[0]?.message?.content) return extractText(data.choices[0].message.content);
+        if (Array.isArray(data.content)) return extractText(data.content);
+        const output = data.response?.output || data.output;
+        if (Array.isArray(output)) {
+            const texts: string[] = [];
+            for (const item of output) {
+                if (item.type === "message" && Array.isArray(item.content)) {
+                    for (const p of item.content) { if (typeof p.text === "string") texts.push(p.text); }
                 }
-                if (texts.length > 0) return texts.join("\n");
             }
-        }
-        // Gemini format
-        const candidates = data.candidates || data.response?.candidates;
-        if (Array.isArray(candidates) && candidates.length > 0) {
-            const parts = candidates[0]?.content?.parts;
-            if (Array.isArray(parts)) {
-                return parts.map((p: Record<string, unknown>) => p.text || "").join("\n");
-            }
+            if (texts.length > 0) return texts.join("\n");
         }
         return null;
-    } catch {
-        return null;
-    }
+    } catch { return null; }
 }
 
-/** Parse output content: try SSE stream first, then single JSON */
 function parseOutputMessages(raw: string): string | null {
-    // If it contains "data:" lines, treat as SSE
-    if (raw.includes("data:")) {
-        const sse = parseSSEOutput(raw);
-        if (sse) return sse;
-    }
-    // Try single JSON response
+    if (raw.includes("data:")) { const sse = parseSSEOutput(raw); if (sse) return sse; }
     return parseNonStreamOutput(raw);
 }
 
-/* -------------------------------------------------------------------------- */
-/*  Component                                                                 */
-/* -------------------------------------------------------------------------- */
+/* ========================================================================== */
+/*  Modal (self-contained for layout control)                                 */
+/* ========================================================================== */
 
-export function LogContentModal({
+const ANIMATION_MS = 180;
+
+function ContentModal({
     open,
-    logId,
-    initialTab = "input",
+    model,
     onClose,
-}: LogContentModalProps) {
+    children,
+    tabs,
+}: {
+    open: boolean;
+    model: string;
+    onClose: () => void;
+    children: React.ReactNode;
+    tabs: React.ReactNode;
+}) {
+    const [mounted, setMounted] = useState(open);
+    const [visible, setVisible] = useState(open);
+
+    useEffect(() => {
+        if (open) {
+            setMounted(true);
+            const raf = requestAnimationFrame(() => setVisible(true));
+            return () => cancelAnimationFrame(raf);
+        }
+        setVisible(false);
+        const t = setTimeout(() => setMounted(false), ANIMATION_MS);
+        return () => clearTimeout(t);
+    }, [open]);
+
+    useEffect(() => {
+        if (!open) return;
+        const h = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+        window.addEventListener("keydown", h);
+        return () => window.removeEventListener("keydown", h);
+    }, [onClose, open]);
+
+    if (!mounted) return null;
+
+    return createPortal(
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <button
+                type="button"
+                onClick={() => open && onClose()}
+                aria-label="关闭弹窗"
+                className={[
+                    "absolute inset-0 cursor-default bg-slate-900/40 backdrop-blur-sm dark:bg-black/50",
+                    "transition-opacity duration-200",
+                    visible ? "opacity-100" : "opacity-0",
+                ].join(" ")}
+            />
+
+            {/* Dialog */}
+            <div
+                role="dialog"
+                aria-modal="true"
+                className={[
+                    "relative z-10 flex w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-neutral-800 dark:bg-neutral-950",
+                    "max-h-[85vh] transition-all duration-200",
+                    visible ? "opacity-100 translate-y-0 scale-100" : "opacity-0 translate-y-2 scale-95",
+                ].join(" ")}
+            >
+                {/* Header */}
+                <div className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-200 px-5 py-4 dark:border-neutral-800">
+                    <div className="min-w-0">
+                        <h2 className="truncate text-base font-semibold tracking-tight text-slate-900 dark:text-white">
+                            消息内容{model ? ` · ${model}` : ""}
+                        </h2>
+                        <p className="mt-1 text-sm text-slate-500 dark:text-white/50">请求/响应的消息详情</p>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        disabled={!open}
+                        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white/70 text-slate-700 shadow-sm transition hover:bg-white dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-slate-200 dark:hover:bg-neutral-950/80"
+                        aria-label="关闭"
+                    >
+                        <X size={16} />
+                    </button>
+                </div>
+
+                {/* Sticky tabs */}
+                <div className="shrink-0 border-b border-slate-100 bg-white px-5 py-2 dark:border-neutral-800/60 dark:bg-neutral-950">
+                    {tabs}
+                </div>
+
+                {/* Scrollable content */}
+                <div className="flex-1 overflow-y-auto overscroll-contain px-5 py-4">
+                    {children}
+                </div>
+            </div>
+        </div>,
+        document.body,
+    );
+}
+
+/* ========================================================================== */
+/*  LogContentModal                                                           */
+/* ========================================================================== */
+
+export function LogContentModal({ open, logId, initialTab = "input", onClose }: LogContentModalProps) {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [inputContent, setInputContent] = useState("");
@@ -384,9 +450,7 @@ export function LogContentModal({
     const [model, setModel] = useState("");
     const [activeTab, setActiveTab] = useState<"input" | "output">(initialTab);
 
-    useEffect(() => {
-        setActiveTab(initialTab);
-    }, [initialTab, logId]);
+    useEffect(() => { setActiveTab(initialTab); }, [initialTab, logId]);
 
     const fetchContent = useCallback(async (id: number) => {
         setLoading(true);
@@ -403,22 +467,45 @@ export function LogContentModal({
         }
     }, []);
 
-    useEffect(() => {
-        if (open && logId) {
-            fetchContent(logId);
-        }
-    }, [open, logId, fetchContent]);
+    useEffect(() => { if (open && logId) fetchContent(logId); }, [open, logId, fetchContent]);
 
+    /* ---- Tab bar ---- */
+    const tabBar = (
+        <div className="flex gap-1 rounded-xl bg-slate-100 p-1 dark:bg-neutral-900">
+            {(
+                [
+                    { key: "input" as const, label: "输入消息", Icon: FileInput },
+                    { key: "output" as const, label: "输出内容", Icon: FileOutput },
+                ] as const
+            ).map(({ key, label, Icon }) => (
+                <button
+                    key={key}
+                    type="button"
+                    onClick={() => setActiveTab(key)}
+                    className={[
+                        "flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all",
+                        activeTab === key
+                            ? "bg-white text-slate-900 shadow-sm dark:bg-neutral-800 dark:text-white"
+                            : "text-slate-500 hover:text-slate-700 dark:text-white/40 dark:hover:text-white/60",
+                    ].join(" ")}
+                >
+                    <Icon size={15} />
+                    {label}
+                </button>
+            ))}
+        </div>
+    );
+
+    /* ---- Render input ---- */
     const renderInput = () => {
         if (!inputContent) {
             return (
-                <div className="flex flex-col items-center justify-center py-12 text-slate-400 dark:text-white/30">
+                <div className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-white/25">
                     <FileInput size={40} className="mb-3 opacity-40" />
                     <p className="text-sm">暂无输入内容记录</p>
                 </div>
             );
         }
-
         const messages = parseInputMessages(inputContent);
         if (messages && messages.length > 0) {
             return (
@@ -429,105 +516,50 @@ export function LogContentModal({
                 </div>
             );
         }
-
-        // Fallback: try formatted JSON, then plain text
+        // Fallback
         try {
-            const formatted = JSON.stringify(JSON.parse(inputContent), null, 2);
-            return (
-                <pre className="whitespace-pre-wrap break-words rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs leading-relaxed text-slate-800 dark:border-neutral-800 dark:bg-neutral-900 dark:text-slate-200">
-                    {formatted}
-                </pre>
-            );
+            const fmt = JSON.stringify(JSON.parse(inputContent), null, 2);
+            return <pre className="whitespace-pre-wrap break-words rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs leading-relaxed dark:border-neutral-800 dark:bg-neutral-900 dark:text-slate-200">{fmt}</pre>;
         } catch {
-            return (
-                <pre className="whitespace-pre-wrap break-words rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm leading-relaxed text-slate-800 dark:border-neutral-800 dark:bg-neutral-900 dark:text-slate-200">
-                    {inputContent}
-                </pre>
-            );
+            return <pre className="whitespace-pre-wrap break-words rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm leading-relaxed dark:border-neutral-800 dark:bg-neutral-900 dark:text-slate-200">{inputContent}</pre>;
         }
     };
 
+    /* ---- Render output ---- */
     const renderOutput = () => {
         if (!outputContent) {
             return (
-                <div className="flex flex-col items-center justify-center py-12 text-slate-400 dark:text-white/30">
+                <div className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-white/25">
                     <FileOutput size={40} className="mb-3 opacity-40" />
                     <p className="text-sm">暂无输出内容记录</p>
                 </div>
             );
         }
-
-        const assistantText = parseOutputMessages(outputContent);
-        if (assistantText) {
+        const text = parseOutputMessages(outputContent);
+        if (text) {
             return (
                 <div className="space-y-3">
-                    <MessageBlock role="assistant" content={assistantText} />
+                    <MessageBlock role="assistant" content={text} />
                 </div>
             );
         }
-
-        // Fallback
         try {
-            const formatted = JSON.stringify(JSON.parse(outputContent), null, 2);
-            return (
-                <pre className="whitespace-pre-wrap break-words rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs leading-relaxed text-slate-800 dark:border-neutral-800 dark:bg-neutral-900 dark:text-slate-200">
-                    {formatted}
-                </pre>
-            );
+            const fmt = JSON.stringify(JSON.parse(outputContent), null, 2);
+            return <pre className="whitespace-pre-wrap break-words rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs leading-relaxed dark:border-neutral-800 dark:bg-neutral-900 dark:text-slate-200">{fmt}</pre>;
         } catch {
-            return (
-                <pre className="whitespace-pre-wrap break-words rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm leading-relaxed text-slate-800 dark:border-neutral-800 dark:bg-neutral-900 dark:text-slate-200">
-                    {outputContent}
-                </pre>
-            );
+            return <pre className="whitespace-pre-wrap break-words rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm leading-relaxed dark:border-neutral-800 dark:bg-neutral-900 dark:text-slate-200">{outputContent}</pre>;
         }
     };
 
     return (
-        <Modal
-            open={open}
-            title={`消息内容${model ? ` · ${model}` : ""}`}
-            description="请求/响应的消息详情"
-            onClose={onClose}
-        >
-            {/* Tab switcher */}
-            <div className="mb-4 flex gap-1 rounded-xl bg-slate-100 p-1 dark:bg-neutral-900">
-                <button
-                    type="button"
-                    onClick={() => setActiveTab("input")}
-                    className={[
-                        "flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all",
-                        activeTab === "input"
-                            ? "bg-white text-slate-900 shadow-sm dark:bg-neutral-800 dark:text-white"
-                            : "text-slate-500 hover:text-slate-700 dark:text-white/50 dark:hover:text-white/70",
-                    ].join(" ")}
-                >
-                    <FileInput size={15} />
-                    输入消息
-                </button>
-                <button
-                    type="button"
-                    onClick={() => setActiveTab("output")}
-                    className={[
-                        "flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all",
-                        activeTab === "output"
-                            ? "bg-white text-slate-900 shadow-sm dark:bg-neutral-800 dark:text-white"
-                            : "text-slate-500 hover:text-slate-700 dark:text-white/50 dark:hover:text-white/70",
-                    ].join(" ")}
-                >
-                    <FileOutput size={15} />
-                    输出内容
-                </button>
-            </div>
-
-            {/* Content area */}
+        <ContentModal open={open} model={model} onClose={onClose} tabs={tabBar}>
             {loading ? (
-                <div className="flex items-center justify-center py-16">
+                <div className="flex items-center justify-center py-20">
                     <Loader2 size={24} className="animate-spin text-slate-400 dark:text-white/40" />
                     <span className="ml-3 text-sm text-slate-500 dark:text-white/50">加载中…</span>
                 </div>
             ) : error ? (
-                <div className="flex flex-col items-center justify-center py-12">
+                <div className="flex flex-col items-center justify-center py-16">
                     <p className="text-sm text-red-500 dark:text-red-400">{error}</p>
                 </div>
             ) : (
@@ -535,6 +567,6 @@ export function LogContentModal({
                     {activeTab === "input" ? renderInput() : renderOutput()}
                 </div>
             )}
-        </Modal>
+        </ContentModal>
     );
 }
