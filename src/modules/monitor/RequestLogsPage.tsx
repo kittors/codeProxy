@@ -231,11 +231,11 @@ function VirtualRequestLogTable({ rows, loading }: { rows: readonly LogRow[]; lo
   const visibleRows = useMemo(() => rows.slice(startIndex, endIndex), [rows, startIndex, endIndex]);
 
   return (
-    <div className="min-w-0 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
+    <div className="flex flex-col flex-1 h-full min-h-0 min-w-0 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
       <div
         ref={containerRef}
         onScroll={onScroll}
-        className="h-[calc(100vh-520px)] min-h-[360px] overflow-auto"
+        className="flex-1 overflow-auto"
       >
         <table className="w-full min-w-[1320px] table-fixed border-separate border-spacing-0 text-sm">
           <caption className="sr-only">请求日志表格</caption>
@@ -535,11 +535,11 @@ export function RequestLogsPage() {
   }, [lastUpdatedAt, loading]);
 
   return (
-    <section className="space-y-4">
+    <section className="h-full flex flex-col min-h-0">
       <h1 className="sr-only">请求日志</h1>
 
       {/* 单层卡片：标题 + 筛选 + 统计 + 表格 */}
-      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-950/70">
+      <div className="flex flex-col flex-1 min-h-0 rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-950/70">
         {/* 标题栏 */}
         <div className="flex flex-wrap items-center justify-between gap-3 px-5 pt-5 pb-3">
           <h2 className="flex items-center gap-2 text-base font-semibold text-slate-900 dark:text-white">
@@ -625,19 +625,21 @@ export function RequestLogsPage() {
         </div>
 
         {/* 表格 */}
-        <div className="relative">
-          <VirtualRequestLogTable rows={filteredRows} loading={loading} />
-          {loading ? (
-            <div className="absolute inset-0 z-10 flex items-center justify-center rounded-b-2xl bg-white/70 backdrop-blur-sm dark:bg-neutral-950/55">
-              <div className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white/85 px-3 py-2 text-sm font-medium text-slate-700 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/70 dark:text-white/75">
-                <span
-                  className="h-4 w-4 rounded-full border-2 border-slate-300 border-t-slate-900 motion-reduce:animate-none motion-safe:animate-spin dark:border-white/20 dark:border-t-white/80"
-                  aria-hidden="true"
-                />
-                <span role="status">加载中…</span>
+        <div className="flex-1 flex flex-col min-h-0 p-5 pt-2">
+          <div className="relative flex-1 flex flex-col min-h-0">
+            <VirtualRequestLogTable rows={filteredRows} loading={loading} />
+            {loading ? (
+              <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-white/70 backdrop-blur-sm dark:bg-neutral-950/55">
+                <div className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white/85 px-3 py-2 text-sm font-medium text-slate-700 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/70 dark:text-white/75">
+                  <span
+                    className="h-4 w-4 rounded-full border-2 border-slate-300 border-t-slate-900 motion-reduce:animate-none motion-safe:animate-spin dark:border-white/20 dark:border-t-white/80"
+                    aria-hidden="true"
+                  />
+                  <span role="status">加载中…</span>
+                </div>
               </div>
-            </div>
-          ) : null}
+            ) : null}
+          </div>
         </div>
       </div>
     </section>
