@@ -21,6 +21,7 @@ import { useToast } from "@/modules/ui/ToastProvider";
 import { Modal } from "@/modules/ui/Modal";
 import { HoverTooltip, OverflowTooltip } from "@/modules/ui/Tooltip";
 import { MultiSelect, type MultiSelectOption } from "@/modules/ui/MultiSelect";
+import { VirtualTable, type VirtualTableColumn } from "@/modules/ui/VirtualTable";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { normalizeApiBase } from "@/lib/connection";
 
@@ -395,6 +396,218 @@ export function ApiKeysPage() {
         return buildUsageRows(usage, usageViewKey);
     }, [usageViewKey, usage]);
 
+    /* ─── column definitions ─── */
+
+    const apiKeyColumns = useMemo<VirtualTableColumn<ApiKeyEntry>[]>(() => [
+        {
+            key: "status",
+            label: "状态",
+            width: "w-[52px]",
+            headerClassName: "text-center",
+            cellClassName: "text-center",
+            render: (row, idx) => (
+                <button
+                    onClick={() => void handleToggleDisable(idx)}
+                    title={row.disabled ? "点击启用" : "点击禁用"}
+                    className={`inline-flex h-7 w-7 items-center justify-center rounded-lg transition-colors ${row.disabled
+                            ? "text-slate-400 hover:bg-red-50 hover:text-red-500 dark:text-white/30 dark:hover:bg-red-900/20 dark:hover:text-red-400"
+                            : "text-emerald-500 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-900/20"
+                        }`}
+                >
+                    <Power size={15} />
+                </button>
+            ),
+        },
+        {
+            key: "name",
+            label: "名称",
+            width: "w-[100px]",
+            cellClassName: "font-medium",
+            render: (row) => (
+                <OverflowTooltip content={row.name || "未命名"} className="block min-w-0">
+                    <span className="block min-w-0 truncate">
+                        {row.name || <span className="text-slate-400 dark:text-white/40">未命名</span>}
+                    </span>
+                </OverflowTooltip>
+            ),
+        },
+        {
+            key: "key",
+            label: "Key",
+            cellClassName: "whitespace-nowrap",
+            render: (row) => (
+                <code className="rounded-md bg-slate-100 px-2 py-0.5 font-mono text-xs text-slate-700 dark:bg-neutral-800 dark:text-white/70">
+                    {maskKey(row.key)}
+                </code>
+            ),
+        },
+        {
+            key: "dailyLimit",
+            label: "每日限制",
+            width: "w-[90px]",
+            cellClassName: "whitespace-nowrap text-slate-700 dark:text-white/70",
+            render: (row) => (
+                <span className="inline-flex items-center gap-1">
+                    {!row["daily-limit"] ? (
+                        <><Infinity size={14} className="text-green-500" /> 无限制</>
+                    ) : (
+                        formatLimit(row["daily-limit"])
+                    )}
+                </span>
+            ),
+        },
+        {
+            key: "totalQuota",
+            label: "总配额",
+            width: "w-[90px]",
+            cellClassName: "whitespace-nowrap text-slate-700 dark:text-white/70",
+            render: (row) => (
+                <span className="inline-flex items-center gap-1">
+                    {!row["total-quota"] ? (
+                        <><Infinity size={14} className="text-green-500" /> 无限制</>
+                    ) : (
+                        formatLimit(row["total-quota"])
+                    )}
+                </span>
+            ),
+        },
+        {
+            key: "allowedModels",
+            label: "可用模型",
+            width: "w-[160px]",
+            cellClassName: "text-slate-700 dark:text-white/70",
+            render: (row) =>
+                row["allowed-models"]?.length ? (
+                    <HoverTooltip content={row["allowed-models"].join(", ")} className="block min-w-0">
+                        <span className="inline-flex items-center gap-1.5 text-xs">
+                            <span className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-md bg-indigo-50 px-1.5 font-semibold tabular-nums text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-300">
+                                {row["allowed-models"].length}
+                            </span>
+                            <span className="max-w-[100px] truncate text-slate-500 dark:text-white/50">
+                                {row["allowed-models"][0]}
+                                {row["allowed-models"].length > 1 ? " 等" : ""}
+                            </span>
+                        </span>
+                    </HoverTooltip>
+                ) : (
+                    <span className="inline-flex items-center gap-1 whitespace-nowrap text-green-600 dark:text-green-400">
+                        <ShieldCheck size={14} /> 全部
+                    </span>
+                ),
+        },
+        {
+            key: "createdAt",
+            label: "创建时间",
+            width: "w-[140px]",
+            cellClassName: "whitespace-nowrap text-slate-500 dark:text-white/50",
+            render: (row) => <>{formatDate(row["created-at"])}</>,
+        },
+        {
+            key: "actions",
+            label: "操作",
+            width: "w-[130px]",
+            render: (row, idx) => (
+                <div className="flex gap-1">
+                    <button
+                        onClick={() => handleViewUsage(row)}
+                        className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-blue-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-blue-400"
+                        title="查看调用情况"
+                    >
+                        <BarChart3 size={15} />
+                    </button>
+                    <button
+                        onClick={() => void handleCopy(row.key)}
+                        className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-indigo-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-indigo-400"
+                        title="复制 Key"
+                    >
+                        <Copy size={15} />
+                    </button>
+                    <button
+                        onClick={() => handleOpenEdit(idx)}
+                        className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-amber-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-amber-400"
+                        title="编辑"
+                    >
+                        <Pencil size={15} />
+                    </button>
+                    <button
+                        onClick={() => setDeleteIndex(idx)}
+                        className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-red-50 hover:text-red-600 dark:text-white/50 dark:hover:bg-red-900/20 dark:hover:text-red-400"
+                        title="删除"
+                    >
+                        <Trash2 size={15} />
+                    </button>
+                </div>
+            ),
+        },
+    ], [handleToggleDisable, handleViewUsage, handleCopy, handleOpenEdit]);
+
+    const usageLogColumns = useMemo<VirtualTableColumn<UsageLogRow>[]>(() => [
+        {
+            key: "timestamp",
+            label: "时间",
+            width: "w-48",
+            cellClassName: "font-mono text-xs tabular-nums text-slate-700 dark:text-slate-200",
+            render: (row) => <span className="block min-w-0 truncate">{formatTimestamp(row.timestamp)}</span>,
+        },
+        {
+            key: "model",
+            label: "模型",
+            width: "w-48",
+            render: (row) => (
+                <OverflowTooltip content={row.model} className="block min-w-0">
+                    <span className="block min-w-0 truncate">{row.model}</span>
+                </OverflowTooltip>
+            ),
+        },
+        {
+            key: "status",
+            label: "状态",
+            width: "w-16",
+            render: (row) =>
+                row.failed ? (
+                    <span className="inline-flex min-w-[44px] justify-center rounded-lg bg-rose-50 px-2 py-1 text-xs font-semibold text-rose-700 dark:bg-rose-500/15 dark:text-rose-200">
+                        失败
+                    </span>
+                ) : (
+                    <span className="inline-flex min-w-[44px] justify-center rounded-lg bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200">
+                        成功
+                    </span>
+                ),
+        },
+        {
+            key: "latency",
+            label: "用时",
+            width: "w-20",
+            headerClassName: "text-right",
+            cellClassName: "text-right font-mono text-xs tabular-nums text-slate-700 dark:text-slate-200",
+            render: (row) => <>{row.latencyText}</>,
+        },
+        {
+            key: "inputTokens",
+            label: "输入",
+            width: "w-20",
+            headerClassName: "text-right",
+            cellClassName: "text-right font-mono text-xs tabular-nums text-slate-700 dark:text-slate-200",
+            render: (row) => <>{row.inputTokens.toLocaleString()}</>,
+        },
+        {
+            key: "outputTokens",
+            label: "输出",
+            width: "w-20",
+            headerClassName: "text-right",
+            cellClassName: "text-right font-mono text-xs tabular-nums text-slate-700 dark:text-slate-200",
+            render: (row) => <>{row.outputTokens.toLocaleString()}</>,
+        },
+        {
+            key: "totalTokens",
+            label: "总 Token",
+            width: "w-24",
+            headerClassName: "text-right",
+            cellClassName: "text-right font-mono text-xs tabular-nums text-slate-900 dark:text-white",
+            render: (row) => <>{row.totalTokens.toLocaleString()}</>,
+        },
+    ], []);
+
     /* ─── render form ─── */
 
     const renderForm = () => (
@@ -510,134 +723,17 @@ export function ApiKeysPage() {
                         icon={<KeyRound size={32} className="text-slate-400" />}
                     />
                 ) : (
-                    <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-neutral-800">
-                        <table className="w-full border-separate border-spacing-0 text-sm">
-                            <thead className="bg-white/95 backdrop-blur dark:bg-neutral-950/75">
-                                <tr className="h-11 text-left text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-white/55">
-                                    <th className="whitespace-nowrap border-b border-slate-200 px-4 text-center dark:border-neutral-800" style={{ width: 52 }}>状态</th>
-                                    <th className="whitespace-nowrap border-b border-slate-200 px-4 dark:border-neutral-800" style={{ width: 100 }}>名称</th>
-                                    <th className="whitespace-nowrap border-b border-slate-200 px-4 dark:border-neutral-800">Key</th>
-                                    <th className="whitespace-nowrap border-b border-slate-200 px-4 dark:border-neutral-800" style={{ width: 90 }}>每日限制</th>
-                                    <th className="whitespace-nowrap border-b border-slate-200 px-4 dark:border-neutral-800" style={{ width: 90 }}>总配额</th>
-                                    <th className="whitespace-nowrap border-b border-slate-200 px-4 dark:border-neutral-800" style={{ width: 160 }}>可用模型</th>
-                                    <th className="whitespace-nowrap border-b border-slate-200 px-4 dark:border-neutral-800" style={{ width: 140 }}>创建时间</th>
-                                    <th className="whitespace-nowrap border-b border-slate-200 px-4 dark:border-neutral-800" style={{ width: 130 }}>操作</th>
-                                </tr>
-                            </thead>
-                            <tbody className="text-slate-900 dark:text-white">
-                                {entries.map((entry, i) => (
-                                    <tr
-                                        key={entry.key}
-                                        className={`h-10 transition ${entry.disabled ? "opacity-50" : ""} hover:bg-slate-50/70 dark:hover:bg-white/5`}
-                                    >
-                                        <td className="border-b border-slate-100 px-4 text-center align-middle dark:border-neutral-900">
-                                            <button
-                                                onClick={() => void handleToggleDisable(i)}
-                                                title={entry.disabled ? "点击启用" : "点击禁用"}
-                                                className={`inline-flex h-7 w-7 items-center justify-center rounded-lg transition-colors ${entry.disabled
-                                                    ? "text-slate-400 hover:bg-red-50 hover:text-red-500 dark:text-white/30 dark:hover:bg-red-900/20 dark:hover:text-red-400"
-                                                    : "text-emerald-500 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-900/20"
-                                                    }`}
-                                            >
-                                                <Power size={15} />
-                                            </button>
-                                        </td>
-                                        <td className="border-b border-slate-100 px-4 align-middle font-medium dark:border-neutral-900">
-                                            <OverflowTooltip content={entry.name || "未命名"} className="block min-w-0">
-                                                <span className="block min-w-0 truncate">
-                                                    {entry.name || <span className="text-slate-400 dark:text-white/40">未命名</span>}
-                                                </span>
-                                            </OverflowTooltip>
-                                        </td>
-                                        <td className="whitespace-nowrap border-b border-slate-100 px-4 align-middle dark:border-neutral-900">
-                                            <code className="rounded-md bg-slate-100 px-2 py-0.5 font-mono text-xs text-slate-700 dark:bg-neutral-800 dark:text-white/70">
-                                                {maskKey(entry.key)}
-                                            </code>
-                                        </td>
-                                        <td className="whitespace-nowrap border-b border-slate-100 px-4 align-middle text-slate-700 dark:border-neutral-900 dark:text-white/70">
-                                            <span className="inline-flex items-center gap-1">
-                                                {!entry["daily-limit"] ? (
-                                                    <>
-                                                        <Infinity size={14} className="text-green-500" /> 无限制
-                                                    </>
-                                                ) : (
-                                                    formatLimit(entry["daily-limit"])
-                                                )}
-                                            </span>
-                                        </td>
-                                        <td className="whitespace-nowrap border-b border-slate-100 px-4 align-middle text-slate-700 dark:border-neutral-900 dark:text-white/70">
-                                            <span className="inline-flex items-center gap-1">
-                                                {!entry["total-quota"] ? (
-                                                    <>
-                                                        <Infinity size={14} className="text-green-500" /> 无限制
-                                                    </>
-                                                ) : (
-                                                    formatLimit(entry["total-quota"])
-                                                )}
-                                            </span>
-                                        </td>
-                                        <td className="border-b border-slate-100 px-4 align-middle text-slate-700 dark:border-neutral-900 dark:text-white/70">
-                                            {entry["allowed-models"]?.length ? (
-                                                <HoverTooltip
-                                                    content={entry["allowed-models"].join(", ")}
-                                                    className="block min-w-0"
-                                                >
-                                                    <span className="inline-flex items-center gap-1.5 text-xs">
-                                                        <span className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-md bg-indigo-50 px-1.5 font-semibold tabular-nums text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-300">
-                                                            {entry["allowed-models"].length}
-                                                        </span>
-                                                        <span className="max-w-[100px] truncate text-slate-500 dark:text-white/50">
-                                                            {entry["allowed-models"][0]}
-                                                            {entry["allowed-models"].length > 1 ? ` 等` : ""}
-                                                        </span>
-                                                    </span>
-                                                </HoverTooltip>
-                                            ) : (
-                                                <span className="inline-flex items-center gap-1 whitespace-nowrap text-green-600 dark:text-green-400">
-                                                    <ShieldCheck size={14} /> 全部
-                                                </span>
-                                            )}
-                                        </td>
-                                        <td className="whitespace-nowrap border-b border-slate-100 px-4 align-middle text-slate-500 dark:border-neutral-900 dark:text-white/50">
-                                            {formatDate(entry["created-at"])}
-                                        </td>
-                                        <td className="border-b border-slate-100 px-4 align-middle dark:border-neutral-900">
-                                            <div className="flex gap-1">
-                                                <button
-                                                    onClick={() => handleViewUsage(entry)}
-                                                    className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-blue-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-blue-400"
-                                                    title="查看调用情况"
-                                                >
-                                                    <BarChart3 size={15} />
-                                                </button>
-                                                <button
-                                                    onClick={() => void handleCopy(entry.key)}
-                                                    className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-indigo-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-indigo-400"
-                                                    title="复制 Key"
-                                                >
-                                                    <Copy size={15} />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleOpenEdit(i)}
-                                                    className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-amber-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-amber-400"
-                                                    title="编辑"
-                                                >
-                                                    <Pencil size={15} />
-                                                </button>
-                                                <button
-                                                    onClick={() => setDeleteIndex(i)}
-                                                    className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-red-50 hover:text-red-600 dark:text-white/50 dark:hover:bg-red-900/20 dark:hover:text-red-400"
-                                                    title="删除"
-                                                >
-                                                    <Trash2 size={15} />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
+                    <VirtualTable<ApiKeyEntry>
+                        rows={entries}
+                        columns={apiKeyColumns}
+                        rowKey={(row) => row.key}
+                        rowHeight={44}
+                        height="h-auto max-h-[70vh]"
+                        minWidth="min-w-[900px]"
+                        caption="API Keys 列表"
+                        emptyText="暂无 API Key"
+                        rowClassName={(row) => row.disabled ? "opacity-50" : ""}
+                    />
                 )}
             </Card>
 
@@ -722,58 +818,16 @@ export function ApiKeysPage() {
                 ) : usageRows.length === 0 ? (
                     <div className="py-8 text-center text-sm text-slate-500 dark:text-white/50">暂无调用记录</div>
                 ) : (
-                    <div className="max-h-[60vh] overflow-auto rounded-xl border border-slate-200 dark:border-neutral-800">
-                        <table className="w-full min-w-[700px] table-fixed border-separate border-spacing-0 text-sm">
-                            <thead className="sticky top-0 z-10 bg-white/95 backdrop-blur dark:bg-neutral-950/75">
-                                <tr className="h-11 text-left text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-white/55">
-                                    <th className="w-48 border-b border-slate-200 px-4 dark:border-neutral-800">时间</th>
-                                    <th className="w-48 border-b border-slate-200 px-4 dark:border-neutral-800">模型</th>
-                                    <th className="w-16 border-b border-slate-200 px-4 dark:border-neutral-800">状态</th>
-                                    <th className="w-20 border-b border-slate-200 px-4 text-right dark:border-neutral-800">用时</th>
-                                    <th className="w-20 border-b border-slate-200 px-4 text-right dark:border-neutral-800">输入</th>
-                                    <th className="w-20 border-b border-slate-200 px-4 text-right dark:border-neutral-800">输出</th>
-                                    <th className="w-24 border-b border-slate-200 px-4 text-right dark:border-neutral-800">总 Token</th>
-                                </tr>
-                            </thead>
-                            <tbody className="text-slate-900 dark:text-white">
-                                {usageRows.map((row) => (
-                                    <tr key={row.id} className="h-10 text-sm transition hover:bg-slate-50/70 dark:hover:bg-white/5">
-                                        <td className="border-b border-slate-100 px-4 align-middle font-mono text-xs tabular-nums text-slate-700 dark:border-neutral-900 dark:text-slate-200">
-                                            <span className="block min-w-0 truncate">{formatTimestamp(row.timestamp)}</span>
-                                        </td>
-                                        <td className="border-b border-slate-100 px-4 align-middle dark:border-neutral-900">
-                                            <OverflowTooltip content={row.model} className="block min-w-0">
-                                                <span className="block min-w-0 truncate">{row.model}</span>
-                                            </OverflowTooltip>
-                                        </td>
-                                        <td className="border-b border-slate-100 px-4 align-middle dark:border-neutral-900">
-                                            {row.failed ? (
-                                                <span className="inline-flex min-w-[44px] justify-center rounded-lg bg-rose-50 px-2 py-1 text-xs font-semibold text-rose-700 dark:bg-rose-500/15 dark:text-rose-200">
-                                                    失败
-                                                </span>
-                                            ) : (
-                                                <span className="inline-flex min-w-[44px] justify-center rounded-lg bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200">
-                                                    成功
-                                                </span>
-                                            )}
-                                        </td>
-                                        <td className="border-b border-slate-100 px-4 text-right align-middle font-mono text-xs tabular-nums text-slate-700 dark:border-neutral-900 dark:text-slate-200">
-                                            {row.latencyText}
-                                        </td>
-                                        <td className="border-b border-slate-100 px-4 text-right align-middle font-mono text-xs tabular-nums text-slate-700 dark:border-neutral-900 dark:text-slate-200">
-                                            {row.inputTokens.toLocaleString()}
-                                        </td>
-                                        <td className="border-b border-slate-100 px-4 text-right align-middle font-mono text-xs tabular-nums text-slate-700 dark:border-neutral-900 dark:text-slate-200">
-                                            {row.outputTokens.toLocaleString()}
-                                        </td>
-                                        <td className="border-b border-slate-100 px-4 text-right align-middle font-mono text-xs tabular-nums text-slate-900 dark:border-neutral-900 dark:text-white">
-                                            {row.totalTokens.toLocaleString()}
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
+                    <VirtualTable<UsageLogRow>
+                        rows={usageRows}
+                        columns={usageLogColumns}
+                        rowKey={(row) => row.id}
+                        rowHeight={40}
+                        height="h-auto max-h-[60vh]"
+                        minWidth="min-w-[700px]"
+                        caption="调用记录"
+                        emptyText="暂无调用记录"
+                    />
                 )}
             </Modal>
         </div>
