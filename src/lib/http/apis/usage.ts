@@ -98,6 +98,7 @@ export interface UsageLogItem {
   id: number;
   timestamp: string;
   api_key: string;
+  api_key_name: string;
   model: string;
   source: string;
   channel_name: string;
@@ -118,6 +119,7 @@ export interface UsageLogsResponse {
   size: number;
   filters: {
     api_keys: string[];
+    api_key_names: Record<string, string>;
     models: string[];
   };
   stats: {

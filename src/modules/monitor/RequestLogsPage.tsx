@@ -7,9 +7,8 @@ import {
   type ReactNode,
 } from "react";
 import { Filter, RefreshCw, ScrollText } from "lucide-react";
-import { providersApi, usageApi } from "@/lib/http/apis";
+import { usageApi } from "@/lib/http/apis";
 import type { UsageLogItem, UsageLogsResponse } from "@/lib/http/apis/usage";
-import { apiKeyEntriesApi, apiKeysApi, type ApiKeyEntry } from "@/lib/http/apis/api-keys";
 import { Tabs, TabsList, TabsTrigger } from "@/modules/ui/Tabs";
 import { useToast } from "@/modules/ui/ToastProvider";
 import { OverflowTooltip } from "@/modules/ui/Tooltip";
@@ -346,18 +345,14 @@ function VirtualRequestLogTable({
 }
 
 /** Convert a backend log item to a UI-friendly LogRow */
-function toLogRow(
-  item: UsageLogItem,
-  keyNameMap: Map<string, string>,
-  providerNameMap: Map<string, string>,
-): LogRow {
+function toLogRow(item: UsageLogItem): LogRow {
   return {
     id: String(item.id),
     timestamp: item.timestamp,
     timestampMs: new Date(item.timestamp).getTime(),
     apiKey: item.api_key,
-    apiKeyName: keyNameMap.get(item.api_key) || "",
-    channelName: item.channel_name || providerNameMap.get(item.source) || "",
+    apiKeyName: item.api_key_name || "",
+    channelName: item.channel_name || "",
     maskedApiKey: maskApiKey(item.api_key),
     model: item.model,
     failed: item.failed,
@@ -372,7 +367,7 @@ function toLogRow(
 export function RequestLogsPage() {
   const { notify } = useToast();
 
-  // Accumulated raw items from all loaded pages (name resolution happens in useMemo)
+  // Accumulated raw items from all loaded pages (name resolution done by backend)
   const [rawItems, setRawItems] = useState<UsageLogItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -381,17 +376,18 @@ export function RequestLogsPage() {
   // Backend-provided metadata
   const [totalCount, setTotalCount] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
-  const [filterOptions, setFilterOptions] = useState<{ api_keys: string[]; models: string[] }>({
+  const [filterOptions, setFilterOptions] = useState<{
+    api_keys: string[];
+    api_key_names: Record<string, string>;
+    models: string[];
+  }>({
     api_keys: [],
+    api_key_names: {},
     models: [],
   });
   const [stats, setStats] = useState<{ total: number; success_rate: number; total_tokens: number }>(
     { total: 0, success_rate: 0, total_tokens: 0 },
   );
-
-  // Name maps for display
-  const [keyEntries, setKeyEntries] = useState<ApiKeyEntry[]>([]);
-  const [providerNameMap, setProviderNameMap] = useState<Map<string, string>>(new Map());
 
   // Filters
   const [timeRange, setTimeRange] = useState<TimeRange>(7);
@@ -400,48 +396,6 @@ export function RequestLogsPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("");
 
   const fetchInFlightRef = useRef(false);
-
-  const keyNameMap = useMemo(() => {
-    const map = new Map<string, string>();
-    keyEntries.forEach((e) => {
-      if (e.name) map.set(e.key, e.name);
-    });
-    return map;
-  }, [keyEntries]);
-
-  // Fetch name maps (key entries + provider names) – only once
-  const fetchNameMaps = useCallback(async () => {
-    try {
-      const [rawEntries, legacyKeys, gemini, claude, codex, vertex] = await Promise.all([
-        apiKeyEntriesApi.list().catch(() => [] as ApiKeyEntry[]),
-        apiKeysApi.list().catch(() => [] as string[]),
-        providersApi.getGeminiKeys().catch(() => []),
-        providersApi.getClaudeConfigs().catch(() => []),
-        providersApi.getCodexConfigs().catch(() => []),
-        providersApi.getVertexConfigs().catch(() => []),
-      ]);
-
-      const channelMap = new Map<string, string>();
-      for (const cfg of [...gemini, ...claude, ...codex, ...vertex]) {
-        if (cfg.apiKey && cfg.name) channelMap.set(cfg.apiKey, cfg.name);
-      }
-      setProviderNameMap(channelMap);
-
-      // Auto-migrate: old api-keys not in api-key-entries get merged
-      let entries = rawEntries;
-      const entryKeySet = new Set(rawEntries.map((e) => e.key));
-      const newEntries = legacyKeys
-        .filter((k) => k && !entryKeySet.has(k))
-        .map((k): ApiKeyEntry => ({ key: k, "created-at": new Date().toISOString() }));
-      if (newEntries.length > 0) {
-        entries = [...rawEntries, ...newEntries];
-        apiKeyEntriesApi.replace(entries).catch(() => { });
-      }
-      setKeyEntries(entries);
-    } catch {
-      // non-fatal
-    }
-  }, []);
 
   // Fetch logs from backend (page 1 = reset, page > 1 = append)
   const fetchLogs = useCallback(
@@ -475,7 +429,7 @@ export function RequestLogsPage() {
 
         setTotalCount(resp.total ?? 0);
         setCurrentPage(page);
-        setFilterOptions(resp.filters ?? { api_keys: [], models: [] });
+        setFilterOptions(resp.filters ?? { api_keys: [], api_key_names: {}, models: [] });
         setStats(resp.stats ?? { total: 0, success_rate: 0, total_tokens: 0 });
         setLastUpdatedAt(Date.now());
       } catch (err) {
@@ -490,10 +444,10 @@ export function RequestLogsPage() {
     [timeRange, apiQuery, modelQuery, statusFilter, notify],
   );
 
-  // Derive display rows reactively from raw items + name maps
+  // Derive display rows from raw items (names already resolved by backend)
   const rows = useMemo<LogRow[]>(
-    () => rawItems.map((item) => toLogRow(item, keyNameMap, providerNameMap)),
-    [rawItems, keyNameMap, providerNameMap],
+    () => rawItems.map((item) => toLogRow(item)),
+    [rawItems],
   );
 
   const hasMore = rawItems.length < totalCount;
@@ -504,27 +458,23 @@ export function RequestLogsPage() {
     }
   }, [hasMore, loadingMore, loading, fetchLogs, currentPage]);
 
-  // Initial load
-  useEffect(() => {
-    fetchNameMaps();
-  }, [fetchNameMaps]);
-
-  // Fetch page 1 when filters change
+  // Fetch page 1 when filters change (single API call, no other fetches needed)
   useEffect(() => {
     fetchLogs(1);
   }, [timeRange, apiQuery, modelQuery, statusFilter]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Build options from backend filter data
+  // Build options from backend filter data (names provided by backend)
   const keyOptions = useMemo(() => {
+    const names = filterOptions.api_key_names ?? {};
     return [
       { value: "", label: "全部 Key" },
       ...filterOptions.api_keys.map((key) => ({
         value: key,
-        label: keyNameMap.get(key) || maskApiKey(key),
-        searchText: `${keyNameMap.get(key) || ""} ${key}`,
+        label: names[key] || maskApiKey(key),
+        searchText: `${names[key] || ""} ${key}`,
       })),
     ];
-  }, [filterOptions.api_keys, keyNameMap]);
+  }, [filterOptions.api_keys, filterOptions.api_key_names]);
 
   const modelOptions = useMemo(() => {
     return [
