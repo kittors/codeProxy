@@ -148,9 +148,20 @@ function buildLogColumns(
       width: "w-20",
       render: (row) =>
         row.failed ? (
-          <span className="inline-flex min-w-[52px] justify-center rounded-full bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-600 dark:bg-rose-500/15 dark:text-rose-300">
-            失败
-          </span>
+          onContentClick ? (
+            <button
+              type="button"
+              onClick={() => onContentClick(Number(row.id), "output")}
+              className="inline-flex min-w-[52px] cursor-pointer justify-center rounded-full bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-600 transition hover:bg-rose-100 hover:shadow-sm dark:bg-rose-500/15 dark:text-rose-300 dark:hover:bg-rose-500/25"
+              title="点击查看错误详情"
+            >
+              失败
+            </button>
+          ) : (
+            <span className="inline-flex min-w-[52px] justify-center rounded-full bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-600 dark:bg-rose-500/15 dark:text-rose-300">
+              失败
+            </span>
+          )
         ) : (
           <span className="inline-flex min-w-[52px] justify-center rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-300">
             成功
