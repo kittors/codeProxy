@@ -152,6 +152,37 @@ function ChannelLatencyTable({ data }: { data: SystemStats["channel_latency"] })
     );
 }
 
+/* ─── Skeleton placeholder ─── */
+
+function SkeletonGauge() {
+    return (
+        <div className="flex flex-col items-center gap-2">
+            <div className="relative h-24 w-24">
+                <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90">
+                    <circle cx="50" cy="50" r={38} fill="none" strokeWidth="7" className="stroke-slate-200 dark:stroke-neutral-800" />
+                </svg>
+                <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="h-5 w-10 animate-pulse rounded bg-slate-200 dark:bg-neutral-700" />
+                </div>
+            </div>
+            <div className="h-3 w-12 animate-pulse rounded bg-slate-200 dark:bg-neutral-700" />
+        </div>
+    );
+}
+
+function SkeletonCard() {
+    return (
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/70">
+            <div className="flex items-center gap-2">
+                <div className="h-8 w-8 animate-pulse rounded-lg bg-slate-200 dark:bg-neutral-700" />
+                <div className="h-3 w-16 animate-pulse rounded bg-slate-200 dark:bg-neutral-700" />
+            </div>
+            <div className="mt-3 h-6 w-24 animate-pulse rounded bg-slate-200 dark:bg-neutral-700" />
+            <div className="mt-2 h-3 w-20 animate-pulse rounded bg-slate-200 dark:bg-neutral-700" />
+        </div>
+    );
+}
+
 /* ─── Main Section ─── */
 
 export function SystemMonitorSection() {
@@ -160,16 +191,25 @@ export function SystemMonitorSection() {
     return (
         <MonitorCard
             title="系统监控"
-            description="服务资源使用状态（实时 WebSocket 推送）"
+            description="服务资源使用状态（实时推送）"
             actions={
                 <div className="flex items-center gap-2 text-xs">
-                    <span className={`inline-block h-2 w-2 rounded-full ${connected ? "bg-emerald-500 animate-pulse" : "bg-red-500"}`} />
-                    <span className="text-slate-500 dark:text-white/55">{connected ? "已连接" : "未连接"}</span>
+                    <span className={`inline-block h-2 w-2 rounded-full ${connected ? "bg-emerald-500 animate-pulse" : "bg-slate-300 dark:bg-neutral-600"}`} />
+                    <span className="text-slate-500 dark:text-white/55">{connected ? "实时" : "轮询"}</span>
                 </div>
             }
-            loading={!stats}
+            loading={false}
         >
-            {stats && (
+            {!stats ? (
+                <div className="space-y-6">
+                    <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+                        <SkeletonGauge /><SkeletonGauge /><SkeletonGauge /><SkeletonGauge />
+                    </div>
+                    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                        <SkeletonCard /><SkeletonCard /><SkeletonCard /><SkeletonCard />
+                    </div>
+                </div>
+            ) : (
                 <div className="space-y-6">
                     {/* ── Row 1: Gauges ── */}
                     <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
