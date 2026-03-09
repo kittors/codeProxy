@@ -242,24 +242,24 @@ function VirtualRequestLogTable({ rows, loading }: { rows: readonly LogRow[]; lo
           <caption className="sr-only">请求日志表格</caption>
           <thead className="sticky top-0 z-10">
             <tr className="text-left text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-white/55">
-              <th className="w-52 bg-slate-100 px-4 py-3 first:rounded-l-xl dark:bg-neutral-800/50">时间</th>
-              <th className="w-32 bg-slate-100 px-4 py-3 dark:bg-neutral-800/50">Key 名称</th>
-              <th className="w-56 bg-slate-100 px-4 py-3 dark:bg-neutral-800/50">模型</th>
-              <th className="w-32 bg-slate-100 px-4 py-3 dark:bg-neutral-800/50">渠道名</th>
-              <th className="w-20 bg-slate-100 px-4 py-3 dark:bg-neutral-800/50">状态</th>
-              <th className="w-24 bg-slate-100 px-4 py-3 text-right dark:bg-neutral-800/50">
+              <th className="w-52 bg-slate-100 px-4 py-3 first:rounded-l-xl dark:bg-neutral-800">时间</th>
+              <th className="w-32 bg-slate-100 px-4 py-3 dark:bg-neutral-800">Key 名称</th>
+              <th className="w-56 bg-slate-100 px-4 py-3 dark:bg-neutral-800">模型</th>
+              <th className="w-32 bg-slate-100 px-4 py-3 dark:bg-neutral-800">渠道名</th>
+              <th className="w-20 bg-slate-100 px-4 py-3 dark:bg-neutral-800">状态</th>
+              <th className="w-24 bg-slate-100 px-4 py-3 text-right dark:bg-neutral-800">
                 用时
               </th>
-              <th className="w-24 bg-slate-100 px-4 py-3 text-right dark:bg-neutral-800/50">
+              <th className="w-24 bg-slate-100 px-4 py-3 text-right dark:bg-neutral-800">
                 输入
               </th>
-              <th className="w-24 bg-slate-100 px-4 py-3 text-right dark:bg-neutral-800/50">
+              <th className="w-24 bg-slate-100 px-4 py-3 text-right dark:bg-neutral-800">
                 缓存读取
               </th>
-              <th className="w-24 bg-slate-100 px-4 py-3 text-right dark:bg-neutral-800/50">
+              <th className="w-24 bg-slate-100 px-4 py-3 text-right dark:bg-neutral-800">
                 输出
               </th>
-              <th className="w-28 bg-slate-100 px-4 py-3 text-right last:rounded-r-xl dark:bg-neutral-800/50">
+              <th className="w-28 bg-slate-100 px-4 py-3 text-right last:rounded-r-xl dark:bg-neutral-800">
                 总 Token
               </th>
             </tr>
