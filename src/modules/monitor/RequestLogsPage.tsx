@@ -4,7 +4,6 @@ import {
   useMemo,
   useRef,
   useState,
-  type ReactNode,
 } from "react";
 import { Filter, RefreshCw, ScrollText } from "lucide-react";
 import { usageApi } from "@/lib/http/apis";
@@ -36,9 +35,6 @@ interface LogRow {
 }
 
 const PAGE_SIZE = 50;
-const ROW_HEIGHT_PX = 40;
-const OVERSCAN_ROWS = 12;
-const SCROLL_BOTTOM_THRESHOLD = 100;
 
 const TIME_RANGES: readonly TimeRange[] = [1, 7, 14, 30] as const;
 
@@ -88,261 +84,144 @@ const TimeRangeSelector = ({
   );
 };
 
-function VirtualRequestLogTable({
-  rows,
-  loading,
-  hasMore,
-  loadingMore,
-  onScrollBottom,
-}: {
-  rows: readonly LogRow[];
-  loading: boolean;
-  hasMore: boolean;
-  loadingMore: boolean;
-  onScrollBottom: () => void;
-}) {
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const [scrollTop, setScrollTop] = useState(0);
-  const [viewportHeight, setViewportHeight] = useState(480);
-  const rafRef = useRef<number | null>(null);
+import { VirtualTable, type VirtualTableColumn } from "@/modules/ui/VirtualTable";
 
-  const onScroll = useCallback(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const next = el.scrollTop;
+const logColumns: VirtualTableColumn<LogRow>[] = [
+  {
+    key: "timestamp",
+    label: "时间",
+    width: "w-52",
+    cellClassName:
+      "font-mono text-xs tabular-nums text-slate-700 dark:text-slate-200",
+    render: (row) => (
+      <OverflowTooltip content={formatTimestamp(row.timestamp)} className="block min-w-0">
+        <span className="block min-w-0 truncate">{formatTimestamp(row.timestamp)}</span>
+      </OverflowTooltip>
+    ),
+  },
+  {
+    key: "apiKeyName",
+    label: "Key 名称",
+    width: "w-32",
+    render: (row) => (
+      <OverflowTooltip content={row.apiKeyName || "--"} className="block min-w-0">
+        <span
+          className={`block min-w-0 truncate text-xs font-medium ${row.apiKeyName ? "text-indigo-600 dark:text-indigo-400" : "text-slate-400 dark:text-white/30"}`}
+        >
+          {row.apiKeyName || "--"}
+        </span>
+      </OverflowTooltip>
+    ),
+  },
+  {
+    key: "model",
+    label: "模型",
+    width: "w-56",
+    render: (row) => (
+      <OverflowTooltip content={row.model} className="block min-w-0">
+        <span className="block min-w-0 truncate">{row.model}</span>
+      </OverflowTooltip>
+    ),
+  },
+  {
+    key: "channelName",
+    label: "渠道名",
+    width: "w-32",
+    render: (row) => (
+      <OverflowTooltip content={row.channelName || "--"} className="block min-w-0">
+        <span
+          className={`block min-w-0 truncate text-xs font-medium ${row.channelName ? "text-violet-600 dark:text-violet-400" : "text-slate-400 dark:text-white/30"}`}
+        >
+          {row.channelName || "--"}
+        </span>
+      </OverflowTooltip>
+    ),
+  },
+  {
+    key: "status",
+    label: "状态",
+    width: "w-20",
+    render: (row) =>
+      row.failed ? (
+        <span className="inline-flex min-w-[52px] justify-center rounded-full bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-600 dark:bg-rose-500/15 dark:text-rose-300">
+          失败
+        </span>
+      ) : (
+        <span className="inline-flex min-w-[52px] justify-center rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-300">
+          成功
+        </span>
+      ),
+  },
+  {
+    key: "latency",
+    label: "用时",
+    width: "w-24",
+    headerClassName: "text-right",
+    cellClassName:
+      "text-right font-mono text-xs tabular-nums text-slate-700 dark:text-slate-200",
+    render: (row) => (
+      <OverflowTooltip content={row.latencyText} className="block min-w-0">
+        <span className="block min-w-0 truncate">{row.latencyText}</span>
+      </OverflowTooltip>
+    ),
+  },
+  {
+    key: "inputTokens",
+    label: "输入",
+    width: "w-24",
+    headerClassName: "text-right",
+    cellClassName:
+      "text-right font-mono text-xs tabular-nums text-slate-700 dark:text-slate-200",
+    render: (row) => (
+      <OverflowTooltip content={row.inputTokens.toLocaleString()} className="block min-w-0">
+        <span className="block min-w-0 truncate">{row.inputTokens.toLocaleString()}</span>
+      </OverflowTooltip>
+    ),
+  },
+  {
+    key: "cachedTokens",
+    label: "缓存读取",
+    width: "w-24",
+    headerClassName: "text-right",
+    cellClassName: "text-right font-mono text-xs tabular-nums",
+    render: (row) => (
+      <OverflowTooltip content={row.cachedTokens.toLocaleString()} className="block min-w-0">
+        <span
+          className={`block min-w-0 truncate ${row.cachedTokens > 0 ? "font-semibold text-amber-600 dark:text-amber-400" : "text-slate-400 dark:text-white/30"}`}
+        >
+          {row.cachedTokens > 0 ? row.cachedTokens.toLocaleString() : "0"}
+        </span>
+      </OverflowTooltip>
+    ),
+  },
+  {
+    key: "outputTokens",
+    label: "输出",
+    width: "w-24",
+    headerClassName: "text-right",
+    cellClassName:
+      "text-right font-mono text-xs tabular-nums text-slate-700 dark:text-slate-200",
+    render: (row) => (
+      <OverflowTooltip content={row.outputTokens.toLocaleString()} className="block min-w-0">
+        <span className="block min-w-0 truncate">{row.outputTokens.toLocaleString()}</span>
+      </OverflowTooltip>
+    ),
+  },
+  {
+    key: "totalTokens",
+    label: "总 Token",
+    width: "w-28",
+    headerClassName: "text-right",
+    cellClassName:
+      "text-right font-mono text-xs tabular-nums text-slate-900 dark:text-white",
+    render: (row) => (
+      <OverflowTooltip content={row.totalTokens.toLocaleString()} className="block min-w-0">
+        <span className="block min-w-0 truncate">{row.totalTokens.toLocaleString()}</span>
+      </OverflowTooltip>
+    ),
+  },
+];
 
-    // Check if scrolled near bottom for infinite scroll
-    const scrollBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
-    if (scrollBottom < SCROLL_BOTTOM_THRESHOLD && hasMore && !loadingMore) {
-      onScrollBottom();
-    }
-
-    if (rafRef.current) return;
-    rafRef.current = window.requestAnimationFrame(() => {
-      rafRef.current = null;
-      setScrollTop(next);
-    });
-  }, [hasMore, loadingMore, onScrollBottom]);
-
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-
-    const updateViewportHeight = () => {
-      setViewportHeight(el.clientHeight || 480);
-    };
-
-    updateViewportHeight();
-
-    window.addEventListener("resize", updateViewportHeight);
-    return () => {
-      window.removeEventListener("resize", updateViewportHeight);
-    };
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      if (rafRef.current) {
-        window.cancelAnimationFrame(rafRef.current);
-        rafRef.current = null;
-      }
-    };
-  }, []);
-
-  const { startIndex, endIndex, topSpacerHeight, bottomSpacerHeight } = useMemo(() => {
-    const total = rows.length;
-    if (!total) {
-      return { startIndex: 0, endIndex: 0, topSpacerHeight: 0, bottomSpacerHeight: 0 };
-    }
-
-    const visibleStart = Math.floor(scrollTop / ROW_HEIGHT_PX);
-    const visibleCount = Math.max(1, Math.ceil(viewportHeight / ROW_HEIGHT_PX));
-    const visibleEnd = visibleStart + visibleCount;
-
-    const start = Math.max(0, visibleStart - OVERSCAN_ROWS);
-    const end = Math.min(total, visibleEnd + OVERSCAN_ROWS);
-
-    return {
-      startIndex: start,
-      endIndex: end,
-      topSpacerHeight: start * ROW_HEIGHT_PX,
-      bottomSpacerHeight: (total - end) * ROW_HEIGHT_PX,
-    };
-  }, [rows.length, scrollTop, viewportHeight]);
-
-  const visibleRows = useMemo(() => rows.slice(startIndex, endIndex), [rows, startIndex, endIndex]);
-
-  return (
-    <div className="min-w-0 overflow-hidden">
-      <div
-        ref={containerRef}
-        onScroll={onScroll}
-        className="h-[calc(100vh-260px)] min-h-[360px] overflow-auto"
-      >
-        <table className="w-full min-w-[1320px] table-fixed border-separate border-spacing-0 text-sm">
-          <caption className="sr-only">请求日志表格</caption>
-          <thead className="sticky top-0 z-10">
-            <tr className="text-left text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-white/55">
-              <th className="w-52 bg-slate-100 px-4 py-3 first:rounded-l-xl dark:bg-neutral-800">时间</th>
-              <th className="w-32 bg-slate-100 px-4 py-3 dark:bg-neutral-800">Key 名称</th>
-              <th className="w-56 bg-slate-100 px-4 py-3 dark:bg-neutral-800">模型</th>
-              <th className="w-32 bg-slate-100 px-4 py-3 dark:bg-neutral-800">渠道名</th>
-              <th className="w-20 bg-slate-100 px-4 py-3 dark:bg-neutral-800">状态</th>
-              <th className="w-24 bg-slate-100 px-4 py-3 text-right dark:bg-neutral-800">
-                用时
-              </th>
-              <th className="w-24 bg-slate-100 px-4 py-3 text-right dark:bg-neutral-800">
-                输入
-              </th>
-              <th className="w-24 bg-slate-100 px-4 py-3 text-right dark:bg-neutral-800">
-                缓存读取
-              </th>
-              <th className="w-24 bg-slate-100 px-4 py-3 text-right dark:bg-neutral-800">
-                输出
-              </th>
-              <th className="w-28 bg-slate-100 px-4 py-3 text-right last:rounded-r-xl dark:bg-neutral-800">
-                总 Token
-              </th>
-            </tr>
-          </thead>
-          <tbody className="text-slate-900 dark:text-white">
-            {!loading && rows.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={10}
-                  className="px-4 py-12 text-center text-sm text-slate-600 dark:text-white/70"
-                >
-                  暂无数据
-                </td>
-              </tr>
-            ) : (
-              <>
-                <tr aria-hidden="true">
-                  <td colSpan={10} height={topSpacerHeight} className="p-0" />
-                </tr>
-                {visibleRows.map((row) => (
-                  <tr
-                    key={row.id}
-                    className="h-11 text-sm transition-colors hover:bg-slate-50 dark:hover:bg-white/[0.04]"
-                  >
-                    <td className="px-4 py-2.5 align-middle font-mono text-xs tabular-nums text-slate-700 first:rounded-l-lg dark:text-slate-200">
-                      <OverflowTooltip
-                        content={formatTimestamp(row.timestamp)}
-                        className="block min-w-0"
-                      >
-                        <span className="block min-w-0 truncate">
-                          {formatTimestamp(row.timestamp)}
-                        </span>
-                      </OverflowTooltip>
-                    </td>
-                    <td className="px-4 py-2.5 align-middle">
-                      <OverflowTooltip content={row.apiKeyName || "--"} className="block min-w-0">
-                        <span className={`block min-w-0 truncate text-xs font-medium ${row.apiKeyName ? "text-indigo-600 dark:text-indigo-400" : "text-slate-400 dark:text-white/30"}`}>
-                          {row.apiKeyName || "--"}
-                        </span>
-                      </OverflowTooltip>
-                    </td>
-                    <td className="px-4 py-2.5 align-middle">
-                      <OverflowTooltip content={row.model} className="block min-w-0">
-                        <span className="block min-w-0 truncate">{row.model}</span>
-                      </OverflowTooltip>
-                    </td>
-                    <td className="px-4 py-2.5 align-middle">
-                      <OverflowTooltip content={row.channelName || "--"} className="block min-w-0">
-                        <span className={`block min-w-0 truncate text-xs font-medium ${row.channelName ? "text-violet-600 dark:text-violet-400" : "text-slate-400 dark:text-white/30"}`}>
-                          {row.channelName || "--"}
-                        </span>
-                      </OverflowTooltip>
-                    </td>
-                    <td className="px-4 py-2.5 align-middle">
-                      {row.failed ? (
-                        <span className="inline-flex min-w-[52px] justify-center rounded-full bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-600 dark:bg-rose-500/15 dark:text-rose-300">
-                          失败
-                        </span>
-                      ) : (
-                        <span className="inline-flex min-w-[52px] justify-center rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-300">
-                          成功
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-2.5 text-right align-middle font-mono text-xs tabular-nums text-slate-700 dark:text-slate-200">
-                      <OverflowTooltip content={row.latencyText} className="block min-w-0">
-                        <span className="block min-w-0 truncate">{row.latencyText}</span>
-                      </OverflowTooltip>
-                    </td>
-                    <td className="px-4 py-2.5 text-right align-middle font-mono text-xs tabular-nums text-slate-700 dark:text-slate-200">
-                      <OverflowTooltip
-                        content={row.inputTokens.toLocaleString()}
-                        className="block min-w-0"
-                      >
-                        <span className="block min-w-0 truncate">
-                          {row.inputTokens.toLocaleString()}
-                        </span>
-                      </OverflowTooltip>
-                    </td>
-                    <td className="px-4 py-2.5 text-right align-middle font-mono text-xs tabular-nums">
-                      <OverflowTooltip
-                        content={row.cachedTokens.toLocaleString()}
-                        className="block min-w-0"
-                      >
-                        <span className={`block min-w-0 truncate ${row.cachedTokens > 0 ? "font-semibold text-amber-600 dark:text-amber-400" : "text-slate-400 dark:text-white/30"}`}>
-                          {row.cachedTokens > 0 ? row.cachedTokens.toLocaleString() : "0"}
-                        </span>
-                      </OverflowTooltip>
-                    </td>
-                    <td className="px-4 py-2.5 text-right align-middle font-mono text-xs tabular-nums text-slate-700 dark:text-slate-200">
-                      <OverflowTooltip
-                        content={row.outputTokens.toLocaleString()}
-                        className="block min-w-0"
-                      >
-                        <span className="block min-w-0 truncate">
-                          {row.outputTokens.toLocaleString()}
-                        </span>
-                      </OverflowTooltip>
-                    </td>
-                    <td className="px-4 py-2.5 text-right align-middle font-mono text-xs tabular-nums text-slate-900 last:rounded-r-lg dark:text-white">
-                      <OverflowTooltip
-                        content={row.totalTokens.toLocaleString()}
-                        className="block min-w-0"
-                      >
-                        <span className="block min-w-0 truncate">
-                          {row.totalTokens.toLocaleString()}
-                        </span>
-                      </OverflowTooltip>
-                    </td>
-                  </tr>
-                ))}
-                <tr aria-hidden="true">
-                  <td colSpan={10} height={bottomSpacerHeight} className="p-0" />
-                </tr>
-              </>
-            )}
-          </tbody>
-        </table>
-
-        {/* Infinite scroll loading indicator */}
-        {loadingMore && (
-          <div className="flex items-center justify-center py-4">
-            <div className="inline-flex items-center gap-2 text-sm text-slate-500 dark:text-white/55">
-              <span
-                className="h-4 w-4 rounded-full border-2 border-slate-300 border-t-slate-900 motion-reduce:animate-none motion-safe:animate-spin dark:border-white/20 dark:border-t-white/80"
-                aria-hidden="true"
-              />
-              加载更多…
-            </div>
-          </div>
-        )}
-
-        {/* No more data indicator */}
-        {!hasMore && rows.length > 0 && !loading && (
-          <div className="py-3 text-center text-xs text-slate-400 dark:text-white/30">
-            已加载全部 {rows.length.toLocaleString()} 条数据
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
 
 /** Convert a backend log item to a UI-friendly LogRow */
 function toLogRow(item: UsageLogItem): LogRow {
@@ -569,12 +448,17 @@ export function RequestLogsPage() {
 
         {/* 表格 */}
         <div className="relative px-5 pb-5">
-          <VirtualRequestLogTable
+          <VirtualTable<LogRow>
             rows={rows}
+            columns={logColumns}
+            rowKey={(row) => row.id}
             loading={loading}
             hasMore={hasMore}
             loadingMore={loadingMore}
             onScrollBottom={loadNextPage}
+            rowHeight={44}
+            caption="请求日志表格"
+            emptyText="暂无数据"
           />
           {loading ? (
             <div className="absolute inset-0 z-10 flex items-center justify-center rounded-b-2xl bg-white/70 backdrop-blur-sm dark:bg-neutral-950/55">
