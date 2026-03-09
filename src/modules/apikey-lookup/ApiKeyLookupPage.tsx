@@ -705,7 +705,7 @@ export function ApiKeyLookupPage() {
                                         columns={lookupLogColumns}
                                         rowKey={(row, idx) => `${row.timestamp}-${row.model}-${idx}`}
                                         rowHeight={44}
-                                        height="h-[calc(100vh-320px)]"
+                                        height="h-[calc(100vh-400px)]"
                                         minWidth="min-w-[900px]"
                                         caption="请求日志表格"
                                         emptyText="该时间范围内暂无请求日志"
