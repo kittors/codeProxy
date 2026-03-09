@@ -15,6 +15,7 @@ import { TextInput } from "@/modules/ui/Input";
 import { Tabs, TabsList, TabsTrigger } from "@/modules/ui/Tabs";
 import { useToast } from "@/modules/ui/ToastProvider";
 import { OverflowTooltip } from "@/modules/ui/Tooltip";
+import { Select } from "@/modules/ui/Select";
 
 type TimeRange = 1 | 7 | 14 | 30;
 type StatusFilter = "" | "success" | "failed";
@@ -596,17 +597,17 @@ export function RequestLogsPage() {
               spellCheck={false}
             />
           </div>
-          <select
+          <Select
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
-            className="h-[34px] rounded-2xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 shadow-sm outline-none transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/35 dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-white/80 dark:hover:bg-white/10 dark:focus-visible:ring-white/15"
+            onChange={(v) => setStatusFilter(v as StatusFilter)}
+            options={[
+              { value: "", label: "全部状态" },
+              { value: "success", label: "成功" },
+              { value: "failed", label: "失败" },
+            ]}
             aria-label="按状态过滤"
             name="statusFilter"
-          >
-            <option value="">全部状态</option>
-            <option value="success">成功</option>
-            <option value="failed">失败</option>
-          </select>
+          />
 
           {/* 分隔弹性空间 */}
           <div className="flex-1" />
