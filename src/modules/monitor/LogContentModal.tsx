@@ -300,7 +300,7 @@ function parseContentSegments(raw: string): Segment[] {
 
     while (remaining.length > 0) {
         // Find the next opening tag
-        const openMatch = remaining.match(/<([\w][\w\s]*?)>\s*\n?/);
+        const openMatch = remaining.match(/<([\w][\w\s-]*?)>\s*\n?/);
         if (!openMatch || openMatch.index === undefined) {
             const text = unmask(remaining).trim();
             if (text) segments.push({ type: "text", content: text });
