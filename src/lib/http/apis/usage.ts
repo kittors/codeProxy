@@ -37,6 +37,25 @@ export const usageApi = {
     };
   },
 
+  async getUsageLogs(params: {
+    page?: number;
+    size?: number;
+    days?: number;
+    api_key?: string;
+    model?: string;
+    status?: string;
+  }): Promise<UsageLogsResponse> {
+    const qs = new URLSearchParams();
+    if (params.page) qs.set("page", String(params.page));
+    if (params.size) qs.set("size", String(params.size));
+    if (params.days) qs.set("days", String(params.days));
+    if (params.api_key) qs.set("api_key", params.api_key);
+    if (params.model) qs.set("model", params.model);
+    if (params.status) qs.set("status", params.status);
+    const query = qs.toString();
+    return apiClient.get<UsageLogsResponse>(`/usage/logs${query ? `?${query}` : ""}`);
+  },
+
   exportUsage(): Promise<UsageExportPayload> {
     return apiClient.get<UsageExportPayload>("/usage/export");
   },
@@ -73,4 +92,37 @@ export interface DashboardSummary {
     auth_files: number;
   };
   days: number;
+}
+
+export interface UsageLogItem {
+  id: number;
+  timestamp: string;
+  api_key: string;
+  model: string;
+  source: string;
+  channel_name: string;
+  auth_index: string;
+  failed: boolean;
+  latency_ms: number;
+  input_tokens: number;
+  output_tokens: number;
+  reasoning_tokens: number;
+  cached_tokens: number;
+  total_tokens: number;
+}
+
+export interface UsageLogsResponse {
+  items: UsageLogItem[];
+  total: number;
+  page: number;
+  size: number;
+  filters: {
+    api_keys: string[];
+    models: string[];
+  };
+  stats: {
+    total: number;
+    success_rate: number;
+    total_tokens: number;
+  };
 }
