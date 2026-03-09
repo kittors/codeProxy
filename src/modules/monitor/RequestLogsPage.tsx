@@ -14,6 +14,7 @@ import { OverflowTooltip } from "@/modules/ui/Tooltip";
 import { Select } from "@/modules/ui/Select";
 import { SearchableSelect } from "@/modules/ui/SearchableSelect";
 import { LogContentModal } from "@/modules/monitor/LogContentModal";
+import { ErrorDetailModal } from "@/modules/monitor/ErrorDetailModal";
 
 type TimeRange = 1 | 7 | 14 | 30;
 type StatusFilter = "" | "success" | "failed";
@@ -90,6 +91,7 @@ import { VirtualTable, type VirtualTableColumn } from "@/modules/ui/VirtualTable
 
 function buildLogColumns(
   onContentClick?: (logId: number, tab: "input" | "output") => void,
+  onErrorClick?: (logId: number, model: string) => void,
 ): VirtualTableColumn<LogRow>[] {
   return [
     {
@@ -148,20 +150,14 @@ function buildLogColumns(
       width: "w-20",
       render: (row) =>
         row.failed ? (
-          onContentClick ? (
-            <button
-              type="button"
-              onClick={() => onContentClick(Number(row.id), "output")}
-              className="inline-flex min-w-[52px] cursor-pointer justify-center rounded-full bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-600 transition hover:bg-rose-100 hover:shadow-sm dark:bg-rose-500/15 dark:text-rose-300 dark:hover:bg-rose-500/25"
-              title="点击查看错误详情"
-            >
-              失败
-            </button>
-          ) : (
-            <span className="inline-flex min-w-[52px] justify-center rounded-full bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-600 dark:bg-rose-500/15 dark:text-rose-300">
-              失败
-            </span>
-          )
+          <button
+            type="button"
+            onClick={() => onErrorClick?.(Number(row.id), row.model)}
+            className="inline-flex min-w-[52px] cursor-pointer justify-center rounded-full bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-600 transition hover:bg-rose-100 hover:shadow-sm dark:bg-rose-500/15 dark:text-rose-300 dark:hover:bg-rose-500/25"
+            title="点击查看错误详情"
+          >
+            失败
+          </button>
         ) : (
           <span className="inline-flex min-w-[52px] justify-center rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-300">
             成功
@@ -299,8 +295,19 @@ export function RequestLogsPage() {
     setContentModalOpen(true);
   }, []);
 
+  // Error modal state
+  const [errorModalOpen, setErrorModalOpen] = useState(false);
+  const [errorModalLogId, setErrorModalLogId] = useState<number | null>(null);
+  const [errorModalModel, setErrorModalModel] = useState("");
+
+  const handleErrorClick = useCallback((logId: number, model: string) => {
+    setErrorModalLogId(logId);
+    setErrorModalModel(model);
+    setErrorModalOpen(true);
+  }, []);
+
   // Build columns with content click handler
-  const logColumns = useMemo(() => buildLogColumns(handleContentClick), [handleContentClick]);
+  const logColumns = useMemo(() => buildLogColumns(handleContentClick, handleErrorClick), [handleContentClick, handleErrorClick]);
 
   // Accumulated raw items from all loaded pages (name resolution done by backend)
   const [rawItems, setRawItems] = useState<UsageLogItem[]>([]);
@@ -535,6 +542,12 @@ export function RequestLogsPage() {
         logId={contentModalLogId}
         initialTab={contentModalTab}
         onClose={() => setContentModalOpen(false)}
+      />
+      <ErrorDetailModal
+        open={errorModalOpen}
+        logId={errorModalLogId}
+        model={errorModalModel}
+        onClose={() => setErrorModalOpen(false)}
       />
     </section>
   );
