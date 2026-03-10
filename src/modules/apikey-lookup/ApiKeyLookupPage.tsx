@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
     Activity,
     ChartSpline,
     Coins,
+    Filter,
     Key,
     RefreshCw,
     Search,
@@ -13,89 +14,94 @@ import { useTheme } from "@/modules/ui/ThemeProvider";
 import { ThemeToggleButton } from "@/modules/ui/ThemeProvider";
 import { AnimatedNumber } from "@/modules/ui/AnimatedNumber";
 import { Reveal } from "@/modules/ui/Reveal";
-import { EChart } from "@/modules/ui/charts/EChart";
-import { ChartLegend } from "@/modules/ui/charts/ChartLegend";
 import { OverflowTooltip } from "@/modules/ui/Tooltip";
 import { VirtualTable, type VirtualTableColumn } from "@/modules/ui/VirtualTable";
-import type { UsageData, UsageDetail } from "@/lib/http/types";
+import { SearchableSelect } from "@/modules/ui/SearchableSelect";
 import type { TimeRange } from "@/modules/monitor/monitor-constants";
-import { CHART_COLOR_CLASSES, HOURLY_MODEL_COLORS } from "@/modules/monitor/monitor-constants";
 import {
-    computeKpiMetrics,
-    filterUsageByDays,
     formatNumber,
     formatRate,
-    iterateUsageRecords,
 } from "@/modules/monitor/monitor-utils";
 import {
-    formatCompact,
-    formatLocalDateKey,
-    formatMonthDay,
-} from "@/modules/monitor/monitor-format";
-import {
     KpiCard,
-    MonitorCard as Card,
     TimeRangeSelector,
 } from "@/modules/monitor/MonitorPagePieces";
-import {
-    createDailyTrendOption,
-    createModelDistributionOption,
-} from "@/modules/monitor/monitor-chart-options";
 import { MANAGEMENT_API_PREFIX } from "@/lib/constants";
 import { detectApiBaseFromLocation } from "@/lib/connection";
 
-interface PublicUsageResponse {
-    usage: UsageData;
-    api_key: string;
-    found: boolean;
-}
+// ── Types ───────────────────────────────────────────────────────────────────
 
-/**
- * 公开的 API Key 查询函数 — 不需要管理员认证
- */
-async function fetchPublicUsage(apiKey: string): Promise<PublicUsageResponse> {
-    const base = detectApiBaseFromLocation();
-    const url = `${base}${MANAGEMENT_API_PREFIX}/public/usage?api_key=${encodeURIComponent(apiKey)}`;
-    const response = await fetch(url);
-    if (!response.ok) {
-        const text = await response.text().catch(() => "");
-        throw new Error(text || `请求失败 (${response.status})`);
-    }
-    return response.json() as Promise<PublicUsageResponse>;
-}
-
-type ActiveTab = "usage" | "logs";
-
-interface FlatRecord {
-    apiKey: string;
-    model: string;
+interface PublicLogItem {
+    id: number;
     timestamp: string;
+    model: string;
     failed: boolean;
-    latencyMs?: number;
-    tokens: UsageDetail["tokens"];
+    latency_ms: number;
+    input_tokens: number;
+    output_tokens: number;
+    cached_tokens: number;
+    total_tokens: number;
+    has_content: boolean;
 }
 
-function flattenUsageToLogs(data: UsageData): FlatRecord[] {
-    const rows: FlatRecord[] = [];
-    for (const [apiKey, apiData] of Object.entries(data.apis ?? {})) {
-        for (const [model, modelData] of Object.entries(apiData.models ?? {})) {
-            for (const detail of modelData.details ?? []) {
-                rows.push({
-                    apiKey,
-                    model,
-                    timestamp: detail.timestamp,
-                    failed: detail.failed,
-                    latencyMs: detail.latency_ms,
-                    tokens: detail.tokens,
-                });
-            }
-        }
+interface PublicLogsResponse {
+    items: PublicLogItem[];
+    total: number;
+    page: number;
+    size: number;
+    stats: {
+        total: number;
+        success_rate: number;
+        total_tokens: number;
+    };
+    filters: {
+        models: string[];
+    };
+}
+
+interface LogRow {
+    id: string;
+    timestamp: string;
+    timestampMs: number;
+    model: string;
+    failed: boolean;
+    latencyText: string;
+    inputTokens: number;
+    cachedTokens: number;
+    outputTokens: number;
+    totalTokens: number;
+}
+
+// ── API ─────────────────────────────────────────────────────────────────────
+
+const PAGE_SIZE = 50;
+
+async function fetchPublicLogs(params: {
+    apiKey: string;
+    page?: number;
+    size?: number;
+    days?: number;
+    model?: string;
+    status?: string;
+}): Promise<PublicLogsResponse> {
+    const base = detectApiBaseFromLocation();
+    const qs = new URLSearchParams();
+    qs.set("api_key", params.apiKey);
+    if (params.page) qs.set("page", String(params.page));
+    if (params.size) qs.set("size", String(params.size));
+    if (params.days) qs.set("days", String(params.days));
+    if (params.model) qs.set("model", params.model);
+    if (params.status) qs.set("status", params.status);
+    const url = `${base}${MANAGEMENT_API_PREFIX}/public/usage/logs?${qs}`;
+    const resp = await fetch(url);
+    if (!resp.ok) {
+        const text = await resp.text().catch(() => "");
+        throw new Error(text || `请求失败 (${resp.status})`);
     }
-    rows.sort((a, b) => (b.timestamp > a.timestamp ? 1 : -1));
-    return rows;
+    return resp.json() as Promise<PublicLogsResponse>;
 }
 
-const createEmptyUsage = (): UsageData => ({ apis: {} });
+// ── Helpers ─────────────────────────────────────────────────────────────────
 
 const formatTimestamp = (value: string): string => {
     const date = new Date(value);
@@ -103,8 +109,8 @@ const formatTimestamp = (value: string): string => {
     return date.toLocaleString();
 };
 
-const formatLatencyMs = (value: number | undefined): string => {
-    if (value == null || !Number.isFinite(value) || value < 0) return "--";
+const formatLatencyMs = (value: number): string => {
+    if (!Number.isFinite(value) || value < 0) return "--";
     if (value < 1) return "<1ms";
     if (value < 1000) return `${Math.round(value)}ms`;
     const seconds = value / 1000;
@@ -113,7 +119,24 @@ const formatLatencyMs = (value: number | undefined): string => {
     return `${trimmed}s`;
 };
 
-const lookupLogColumns: VirtualTableColumn<FlatRecord>[] = [
+function toLogRow(item: PublicLogItem): LogRow {
+    return {
+        id: String(item.id),
+        timestamp: item.timestamp,
+        timestampMs: new Date(item.timestamp).getTime(),
+        model: item.model,
+        failed: item.failed,
+        latencyText: formatLatencyMs(item.latency_ms),
+        inputTokens: item.input_tokens,
+        cachedTokens: item.cached_tokens,
+        outputTokens: item.output_tokens,
+        totalTokens: item.total_tokens,
+    };
+}
+
+// ── Columns ─────────────────────────────────────────────────────────────────
+
+const logColumns: VirtualTableColumn<LogRow>[] = [
     {
         key: "timestamp",
         label: "时间",
@@ -150,7 +173,6 @@ const lookupLogColumns: VirtualTableColumn<FlatRecord>[] = [
                 </span>
             ),
     },
-
     {
         key: "latency",
         label: "用时",
@@ -158,8 +180,8 @@ const lookupLogColumns: VirtualTableColumn<FlatRecord>[] = [
         headerClassName: "text-right",
         cellClassName: "text-right font-mono text-xs tabular-nums text-slate-700 dark:text-slate-200",
         render: (row) => (
-            <OverflowTooltip content={formatLatencyMs(row.latencyMs)} className="block min-w-0">
-                <span className="block min-w-0 truncate">{formatLatencyMs(row.latencyMs)}</span>
+            <OverflowTooltip content={row.latencyText} className="block min-w-0">
+                <span className="block min-w-0 truncate">{row.latencyText}</span>
             </OverflowTooltip>
         ),
     },
@@ -169,7 +191,21 @@ const lookupLogColumns: VirtualTableColumn<FlatRecord>[] = [
         width: "w-24",
         headerClassName: "text-right",
         cellClassName: "text-right font-mono text-xs tabular-nums text-slate-700 dark:text-slate-200",
-        render: (row) => <span>{(row.tokens?.input_tokens ?? 0).toLocaleString()}</span>,
+        render: (row) => <span>{row.inputTokens.toLocaleString()}</span>,
+    },
+    {
+        key: "cachedTokens",
+        label: "缓存读取",
+        width: "w-24",
+        headerClassName: "text-right",
+        cellClassName: "text-right font-mono text-xs tabular-nums",
+        render: (row) => (
+            <span
+                className={`block min-w-0 truncate ${row.cachedTokens > 0 ? "font-semibold text-amber-600 dark:text-amber-400" : "text-slate-400 dark:text-white/30"}`}
+            >
+                {row.cachedTokens > 0 ? row.cachedTokens.toLocaleString() : "0"}
+            </span>
+        ),
     },
     {
         key: "outputTokens",
@@ -177,7 +213,7 @@ const lookupLogColumns: VirtualTableColumn<FlatRecord>[] = [
         width: "w-24",
         headerClassName: "text-right",
         cellClassName: "text-right font-mono text-xs tabular-nums text-slate-700 dark:text-slate-200",
-        render: (row) => <span>{(row.tokens?.output_tokens ?? 0).toLocaleString()}</span>,
+        render: (row) => <span>{row.outputTokens.toLocaleString()}</span>,
     },
     {
         key: "totalTokens",
@@ -185,53 +221,115 @@ const lookupLogColumns: VirtualTableColumn<FlatRecord>[] = [
         width: "w-28",
         headerClassName: "text-right",
         cellClassName: "text-right font-mono text-xs tabular-nums text-slate-900 dark:text-white",
-        render: (row) => <span>{(row.tokens?.total_tokens ?? 0).toLocaleString()}</span>,
+        render: (row) => <span>{row.totalTokens.toLocaleString()}</span>,
     },
 ];
+
+// ── Page Component ──────────────────────────────────────────────────────────
 
 export function ApiKeyLookupPage() {
     const {
         state: { mode },
     } = useTheme();
-    const isDark = mode === "dark";
 
     const [apiKeyInput, setApiKeyInput] = useState("");
     const [queriedKey, setQueriedKey] = useState("");
-    const [rawUsage, setRawUsage] = useState<UsageData>(createEmptyUsage);
-    const [found, setFound] = useState<boolean | null>(null);
+
+    // Pagination state
+    const [rawItems, setRawItems] = useState<PublicLogItem[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [loadingMore, setLoadingMore] = useState(false);
+    const [totalCount, setTotalCount] = useState(0);
+    const [currentPage, setCurrentPage] = useState(1);
     const [error, setError] = useState<string | null>(null);
-    const [isLoading, setIsLoading] = useState(false);
-    const [isPending, startTransition] = useTransition();
+    const [lastUpdatedAt, setLastUpdatedAt] = useState<number | null>(null);
+
+    // Filters
     const [timeRange, setTimeRange] = useState<TimeRange>(7);
-    const [activeTab, setActiveTab] = useState<ActiveTab>("usage");
-    const [modelMetric, setModelMetric] = useState<"requests" | "tokens">("requests");
+    const [modelQuery, setModelQuery] = useState("");
+    const [statusFilter, setStatusFilter] = useState("");
 
-    const [dailyLegendSelected, setDailyLegendSelected] = useState<Record<string, boolean>>({
-        "输入 Token": true,
-        "输出 Token": true,
-        请求数: true,
-    });
+    // Backend stats + filter options
+    const [stats, setStats] = useState<{ total: number; success_rate: number; total_tokens: number }>(
+        { total: 0, success_rate: 0, total_tokens: 0 },
+    );
+    const [modelOptions, setModelOptions] = useState<string[]>([]);
 
-    const fetchData = useCallback(async (key: string, isRefresh = false) => {
-        if (!key.trim()) return;
-        setIsLoading(true);
-        setError(null);
-        // Don't reset found — try/catch will set the correct value, avoids flicker
-        try {
-            const result = await fetchPublicUsage(key.trim());
-            startTransition(() => {
-                setRawUsage(result.usage ?? createEmptyUsage());
-                setFound(result.found);
+    const fetchInFlightRef = useRef(false);
+
+    const fetchLogs = useCallback(
+        async (key: string, page: number) => {
+            if (!key.trim() || fetchInFlightRef.current) return;
+            fetchInFlightRef.current = true;
+
+            if (page === 1) {
+                setLoading(true);
+            } else {
+                setLoadingMore(true);
+            }
+            setError(null);
+
+            try {
+                const resp = await fetchPublicLogs({
+                    apiKey: key.trim(),
+                    page,
+                    size: PAGE_SIZE,
+                    days: timeRange,
+                    model: modelQuery || undefined,
+                    status: statusFilter || undefined,
+                });
+
+                const newItems = resp.items ?? [];
+
+                if (page === 1) {
+                    setRawItems(newItems);
+                } else {
+                    setRawItems((prev) => [...prev, ...newItems]);
+                }
+
+                setTotalCount(resp.total ?? 0);
+                setCurrentPage(page);
+                setStats(resp.stats ?? { total: 0, success_rate: 0, total_tokens: 0 });
+                setModelOptions(resp.filters?.models ?? []);
+                setLastUpdatedAt(Date.now());
                 setQueriedKey(key.trim());
-            });
-        } catch (err) {
-            setError(err instanceof Error ? err.message : "查询失败");
-            setRawUsage(createEmptyUsage());
-            setFound(false);
-        } finally {
-            setIsLoading(false);
+            } catch (err) {
+                const message = err instanceof Error ? err.message : "查询失败";
+                setError(message);
+                if (page === 1) {
+                    setRawItems([]);
+                    setTotalCount(0);
+                    setStats({ total: 0, success_rate: 0, total_tokens: 0 });
+                }
+            } finally {
+                fetchInFlightRef.current = false;
+                setLoading(false);
+                setLoadingMore(false);
+            }
+        },
+        [timeRange, modelQuery, statusFilter],
+    );
+
+    // Derive display rows
+    const rows = useMemo<LogRow[]>(
+        () => rawItems.map((item) => toLogRow(item)),
+        [rawItems],
+    );
+
+    const hasMore = rawItems.length < totalCount;
+
+    const loadNextPage = useCallback(() => {
+        if (hasMore && !loadingMore && !loading && queriedKey) {
+            fetchLogs(queriedKey, currentPage + 1);
         }
-    }, []);
+    }, [hasMore, loadingMore, loading, fetchLogs, currentPage, queriedKey]);
+
+    // Refetch page 1 when filters change (only if we have a queried key)
+    useEffect(() => {
+        if (queriedKey) {
+            fetchLogs(queriedKey, 1);
+        }
+    }, [timeRange, modelQuery, statusFilter]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const handleSubmit = useCallback(
         (event?: React.FormEvent) => {
@@ -245,128 +343,32 @@ export function ApiKeyLookupPage() {
                     url.searchParams.delete("api_key");
                 }
                 window.history.replaceState({}, "", url.toString());
-            } catch (err) {
+            } catch {
                 // ignore
             }
-            void fetchData(val);
+            if (val) {
+                setModelQuery("");
+                setStatusFilter("");
+                fetchLogs(val, 1);
+            }
         },
-        [apiKeyInput, fetchData],
+        [apiKeyInput, fetchLogs],
     );
 
     const handleRefresh = useCallback(() => {
-        if (queriedKey) void fetchData(queriedKey, true);
-    }, [queriedKey, fetchData]);
+        if (queriedKey) fetchLogs(queriedKey, 1);
+    }, [queriedKey, fetchLogs]);
 
-    const filteredUsage = useMemo(
-        () => filterUsageByDays(rawUsage, timeRange, ""),
-        [rawUsage, timeRange],
-    );
-    const metrics = useMemo(() => computeKpiMetrics(filteredUsage), [filteredUsage]);
-    const records = useMemo(() => iterateUsageRecords(filteredUsage), [filteredUsage]);
-    const logRecords = useMemo(() => flattenUsageToLogs(filteredUsage), [filteredUsage]);
-
-    const hasData = metrics.requestCount > 0;
-    const busy = isLoading || isPending;
-
-    // ---- chart data (simplified from MonitorPage) ----
-    const modelTotals = useMemo(() => {
-        const byModel = new Map<string, { requests: number; tokens: number }>();
-        records.forEach((r) => {
-            const cur = byModel.get(r.model) ?? { requests: 0, tokens: 0 };
-            byModel.set(r.model, {
-                requests: cur.requests + 1,
-                tokens: cur.tokens + (r.tokens?.total_tokens ?? 0),
-            });
-        });
-        return [...byModel.entries()]
-            .map(([model, v]) => ({ model, ...v }))
-            .sort((a, b) => b.requests - a.requests || a.model.localeCompare(b.model));
-    }, [records]);
-
-    const sortedModels = useMemo(() => {
-        const list = [...modelTotals];
-        list.sort((a, b) => {
-            const av = modelMetric === "requests" ? a.requests : a.tokens;
-            const bv = modelMetric === "requests" ? b.requests : b.tokens;
-            return bv - av || a.model.localeCompare(b.model);
-        });
-        return list;
-    }, [modelMetric, modelTotals]);
-
-    const modelDistributionData = useMemo(() => {
-        const top = sortedModels.slice(0, 10);
-        const otherValue = sortedModels.slice(10).reduce((acc, item) => {
-            return acc + (modelMetric === "requests" ? item.requests : item.tokens);
-        }, 0);
-        const data = top.map((item) => ({
-            name: item.model,
-            value: modelMetric === "requests" ? item.requests : item.tokens,
-        }));
-        if (otherValue > 0) data.push({ name: "其他", value: otherValue });
-        return data;
-    }, [modelMetric, sortedModels]);
-
-    const modelDistributionOption = useMemo(
-        () => createModelDistributionOption({ isDark, data: modelDistributionData }),
-        [isDark, modelDistributionData],
-    );
-
-    const modelDistributionLegend = useMemo(() => {
-        const total = modelDistributionData.reduce(
-            (acc, item) => acc + (Number.isFinite(item.value) ? item.value : 0),
-            0,
-        );
-        return modelDistributionData.map((item, index) => {
-            const colorClass = index < CHART_COLOR_CLASSES.length ? CHART_COLOR_CLASSES[index] : "bg-slate-400";
-            const value = Number(item.value ?? 0);
-            const percent = total > 0 ? (value / total) * 100 : 0;
-            return { name: item.name, valueLabel: formatCompact(value), percentLabel: `${percent.toFixed(1)}%`, colorClass };
-        });
-    }, [modelDistributionData]);
-
-    const dailySeries = useMemo(() => {
-        const byDay = new Map<string, { requests: number; inputTokens: number; outputTokens: number }>();
-        records.forEach((r) => {
-            const date = new Date(r.timestamp);
-            if (!Number.isFinite(date.getTime())) return;
-            const key = formatLocalDateKey(date);
-            const cur = byDay.get(key) ?? { requests: 0, inputTokens: 0, outputTokens: 0 };
-            byDay.set(key, {
-                requests: cur.requests + 1,
-                inputTokens: cur.inputTokens + (r.tokens?.input_tokens ?? 0),
-                outputTokens: cur.outputTokens + (r.tokens?.output_tokens ?? 0),
-            });
-        });
-        const today = new Date();
-        return Array.from({ length: timeRange }).map((_, i) => {
-            const date = new Date(today);
-            date.setDate(today.getDate() - (timeRange - 1 - i));
-            const key = formatLocalDateKey(date);
-            const label = formatMonthDay(date);
-            const v = byDay.get(key) ?? { requests: 0, inputTokens: 0, outputTokens: 0 };
-            return { label, ...v, totalTokens: v.inputTokens + v.outputTokens };
-        });
-    }, [records, timeRange]);
-
-    const dailyLegendAvailability = useMemo(() => {
-        const pts = dailySeries.filter((i) => i.requests > 0 || i.inputTokens > 0 || i.outputTokens > 0);
-        const vis = pts.length > 0 ? pts : dailySeries;
-        return {
-            hasInput: vis.some((i) => i.inputTokens > 0),
-            hasOutput: vis.some((i) => i.outputTokens > 0),
-            hasRequests: vis.some((i) => i.requests > 0),
-        };
-    }, [dailySeries]);
-
-    const dailyTrendOption = useMemo(
-        () => createDailyTrendOption({ dailySeries, dailyLegendSelected, isDark }),
-        [dailyLegendSelected, dailySeries, isDark],
-    );
-
-    const toggleDailyLegend = useCallback((key: string) => {
-        if (key !== "输入 Token" && key !== "输出 Token" && key !== "请求数") return;
-        setDailyLegendSelected((prev) => ({ ...prev, [key]: !(prev[key] ?? true) }));
-    }, []);
+    // Read api_key from URL on mount
+    useEffect(() => {
+        const searchStr = window.location.search || window.location.hash.split("?")[1] || "";
+        const params = new URLSearchParams(searchStr.startsWith("?") ? searchStr : `?${searchStr}`);
+        const key = params.get("api_key") ?? params.get("key") ?? "";
+        if (key) {
+            setApiKeyInput(key);
+            fetchLogs(key, 1);
+        }
+    }, [fetchLogs]);
 
     const maskedKey = queriedKey
         ? queriedKey.length > 12
@@ -374,41 +376,22 @@ export function ApiKeyLookupPage() {
             : "****"
         : "";
 
-    // 读取 URL 中的 api_key 参数进行自动查询（兼容 BrowserRouter 和 HashRouter）
-    useEffect(() => {
-        const searchStr = window.location.search || window.location.hash.split("?")[1] || "";
-        const params = new URLSearchParams(searchStr.startsWith("?") ? searchStr : `?${searchStr}`);
-        const key = params.get("api_key") ?? params.get("key") ?? "";
-        if (key) {
-            setApiKeyInput(key);
-            void fetchData(key);
-        }
-    }, [fetchData]);
+    const busy = loading;
 
-    const modelActions = (
-        <div className="inline-flex gap-1 rounded-2xl border border-slate-200 bg-white p-1 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
-            {[
-                { key: "requests", label: "请求" },
-                { key: "tokens", label: "Token" },
-            ].map((item) => {
-                const active = modelMetric === item.key;
-                return (
-                    <button
-                        key={item.key}
-                        type="button"
-                        onClick={() => setModelMetric(item.key as "requests" | "tokens")}
-                        className={
-                            active
-                                ? "rounded-xl bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white dark:bg-white dark:text-neutral-950"
-                                : "rounded-xl px-3 py-1.5 text-xs text-slate-700 transition hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white"
-                        }
-                    >
-                        {item.label}
-                    </button>
-                );
-            })}
-        </div>
-    );
+    const modelSelectOptions = useMemo(() => {
+        return [
+            { value: "", label: "全部模型" },
+            ...modelOptions.map((m) => ({ value: m, label: m })),
+        ];
+    }, [modelOptions]);
+
+    const lastUpdatedText = useMemo(() => {
+        if (loading) return "刷新中…";
+        if (!lastUpdatedAt) return "尚未刷新";
+        return `更新于 ${new Date(lastUpdatedAt).toLocaleTimeString()}`;
+    }, [lastUpdatedAt, loading]);
+
+    const hasData = queriedKey && stats.total > 0;
 
     return (
         <div className="relative min-h-dvh bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-neutral-950 dark:via-neutral-900 dark:to-neutral-950">
@@ -465,16 +448,17 @@ export function ApiKeyLookupPage() {
                         </div>
                     )}
 
-                    {found === false && !error && queriedKey && (
+                    {queriedKey && !error && stats.total === 0 && !loading && (
                         <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-400">
-                            未找到此 API Key 的使用记录，请检查输入是否正确。
+                            该时间范围内未找到此 API Key 的使用记录。
                         </div>
                     )}
                 </section>
 
-                {/* 已查询的 Key & Tab 切换 */}
-                {found && queriedKey && (
+                {/* 查询结果区域 */}
+                {queriedKey && (
                     <>
+                        {/* 顶栏：Key信息 + 时间选择 + 刷新 */}
                         <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/70">
                             <div className="flex flex-wrap items-center justify-between gap-4">
                                 <div className="flex items-center gap-3">
@@ -484,11 +468,9 @@ export function ApiKeyLookupPage() {
                                     <div>
                                         <p className="text-sm font-medium text-slate-500 dark:text-white/55">
                                             当前查询 Key
-                                            {activeTab === "logs" && (
-                                                <span className="ml-2 text-xs font-normal text-slate-400 dark:text-white/40">
-                                                    · 请求日志 共 {logRecords.length} 条
-                                                </span>
-                                            )}
+                                            <span className="ml-2 text-xs font-normal text-slate-400 dark:text-white/40">
+                                                · 请求日志 共 {stats.total.toLocaleString()} 条
+                                            </span>
                                         </p>
                                         <p className="font-mono text-sm font-semibold text-slate-900 dark:text-white">
                                             {maskedKey}
@@ -497,35 +479,7 @@ export function ApiKeyLookupPage() {
                                 </div>
 
                                 <div className="flex items-center gap-2">
-                                    {/* Tab 切换 */}
-                                    <div className="inline-flex gap-1 rounded-2xl border border-slate-200 bg-white p-1 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
-                                        {(
-                                            [
-                                                { key: "usage", label: "使用统计", icon: ChartSpline },
-                                                { key: "logs", label: "请求日志", icon: Activity },
-                                            ] as const
-                                        ).map((tab) => {
-                                            const active = activeTab === tab.key;
-                                            return (
-                                                <button
-                                                    key={tab.key}
-                                                    type="button"
-                                                    onClick={() => setActiveTab(tab.key as ActiveTab)}
-                                                    className={
-                                                        active
-                                                            ? "inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-4 py-2 text-xs font-semibold text-white dark:bg-white dark:text-neutral-950"
-                                                            : "inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs text-slate-700 transition hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white"
-                                                    }
-                                                >
-                                                    <tab.icon size={14} />
-                                                    {tab.label}
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-
                                     <TimeRangeSelector value={timeRange} onChange={setTimeRange} />
-
                                     <button
                                         type="button"
                                         onClick={handleRefresh}
@@ -539,164 +493,91 @@ export function ApiKeyLookupPage() {
                             </div>
                         </section>
 
-                        {/* 使用统计 Tab */}
-                        {activeTab === "usage" && (
-                            <div className="space-y-4">
-                                <Reveal>
-                                    <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                                        <KpiCard
-                                            title="总请求"
-                                            value={<AnimatedNumber value={metrics.requestCount} format={formatNumber} />}
-                                            hint="已按时间范围过滤"
-                                            icon={Activity}
-                                        />
-                                        <KpiCard
-                                            title="成功率"
-                                            value={<AnimatedNumber value={metrics.successRate} format={formatRate} />}
-                                            hint={`成功 ${formatNumber(metrics.successCount)} / 失败 ${formatNumber(metrics.failedCount)}`}
-                                            icon={ShieldCheck}
-                                        />
-                                        <KpiCard
-                                            title="总 Token"
-                                            value={<AnimatedNumber value={metrics.totalTokens} format={formatNumber} />}
-                                            hint="输入 + 输出 + 推理 + 缓存"
-                                            icon={Sigma}
-                                        />
-                                        <KpiCard
-                                            title="输出 Token"
-                                            value={<AnimatedNumber value={metrics.outputTokens} format={formatNumber} />}
-                                            hint={`输入 Token：${formatNumber(metrics.inputTokens)}`}
-                                            icon={Coins}
-                                        />
-                                    </section>
-                                </Reveal>
+                        {/* KPI 卡片 */}
+                        <Reveal>
+                            <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                                <KpiCard
+                                    title="总请求"
+                                    value={<AnimatedNumber value={stats.total} format={formatNumber} />}
+                                    hint="已按时间范围过滤"
+                                    icon={Activity}
+                                />
+                                <KpiCard
+                                    title="成功率"
+                                    value={<AnimatedNumber value={stats.success_rate} format={formatRate} />}
+                                    hint={`成功率 ${stats.success_rate.toFixed(1)}%`}
+                                    icon={ShieldCheck}
+                                />
+                                <KpiCard
+                                    title="总 Token"
+                                    value={<AnimatedNumber value={stats.total_tokens} format={formatNumber} />}
+                                    hint="所有请求的总 Token 用量"
+                                    icon={Sigma}
+                                />
+                                <KpiCard
+                                    title="请求日志"
+                                    value={<AnimatedNumber value={rawItems.length} format={formatNumber} />}
+                                    hint={`已加载 ${rawItems.length} / ${totalCount} 条`}
+                                    icon={Coins}
+                                />
+                            </section>
+                        </Reveal>
 
-                                {!hasData && !busy ? (
-                                    <Reveal>
-                                        <section className="rounded-2xl border border-dashed border-slate-200 bg-white p-10 text-center shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
-                                            <div className="mx-auto flex max-w-md flex-col items-center gap-3">
-                                                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-900/5 text-slate-700 dark:bg-white/10 dark:text-white/70">
-                                                    <ChartSpline size={20} />
-                                                </div>
-                                                <p className="text-sm font-semibold text-slate-900 dark:text-white">
-                                                    该时间范围内暂无数据
-                                                </p>
-                                                <p className="text-sm text-slate-600 dark:text-white/65">
-                                                    尝试更换更长的时间范围查看。
-                                                </p>
-                                            </div>
-                                        </section>
-                                    </Reveal>
-                                ) : (
-                                    <Reveal>
-                                        <section className="grid gap-4 lg:grid-cols-[minmax(0,560px)_minmax(0,1fr)]">
-                                            <Card
-                                                title="模型用量分布"
-                                                description={`最近 ${timeRange} 天 · 按${modelMetric === "requests" ? "请求数" : "Token"} · Top10`}
-                                                actions={modelActions}
-                                                loading={busy}
-                                            >
-                                                <div className="grid h-72 grid-cols-[minmax(0,1fr)_200px] gap-4">
-                                                    <EChart option={modelDistributionOption} className="h-72 min-w-0" />
-                                                    <div className="flex h-72 flex-col justify-center gap-2 overflow-y-auto pr-1">
-                                                        {modelDistributionLegend.map((item) => (
-                                                            <div
-                                                                key={item.name}
-                                                                className="grid grid-cols-[minmax(0,100px)_40px_52px] items-center gap-x-1 text-sm"
-                                                            >
-                                                                <div className="flex min-w-0 items-center gap-2">
-                                                                    <span
-                                                                        className={`h-3.5 w-3.5 shrink-0 rounded-full ${item.colorClass} opacity-80 ring-1 ring-black/5 dark:ring-white/10`}
-                                                                    />
-                                                                    <span className="min-w-0 truncate text-slate-700 dark:text-white/80">
-                                                                        {item.name}
-                                                                    </span>
-                                                                </div>
-                                                                <span className="text-right font-semibold tabular-nums text-slate-900 dark:text-white">
-                                                                    {item.valueLabel}
-                                                                </span>
-                                                                <span className="text-right tabular-nums text-slate-500 dark:text-white/55">
-                                                                    {item.percentLabel}
-                                                                </span>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            </Card>
+                        {/* 请求日志表格 */}
+                        <section className="flex flex-1 flex-col rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-950/70">
+                            {/* 筛选 + 统计 */}
+                            <div className="flex flex-wrap items-center gap-2 border-b border-slate-100 px-5 py-3 dark:border-neutral-800/60">
+                                <SearchableSelect
+                                    value={modelQuery}
+                                    onChange={setModelQuery}
+                                    options={modelSelectOptions}
+                                    placeholder="全部模型"
+                                    searchPlaceholder="搜索模型…"
+                                    aria-label="按模型过滤"
+                                />
+                                <select
+                                    value={statusFilter}
+                                    onChange={(e) => setStatusFilter(e.target.value)}
+                                    className="h-9 rounded-xl border border-slate-200 bg-white px-3 text-xs text-slate-700 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-400/20 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white/80"
+                                    aria-label="按状态过滤"
+                                >
+                                    <option value="">全部状态</option>
+                                    <option value="success">成功</option>
+                                    <option value="failed">失败</option>
+                                </select>
 
-                                            <Card
-                                                title="每日用量趋势"
-                                                description={`最近 ${timeRange} 天 · 请求数与 Token 用量趋势`}
-                                                loading={busy}
-                                            >
-                                                <div className="flex h-72 min-w-0 flex-col overflow-hidden">
-                                                    <EChart
-                                                        option={dailyTrendOption}
-                                                        className="min-h-0 flex-1 min-w-0"
-                                                        replaceMerge="series"
-                                                    />
-                                                    <ChartLegend
-                                                        className="shrink-0 pt-4"
-                                                        items={[
-                                                            ...(dailyLegendAvailability.hasInput
-                                                                ? [
-                                                                    {
-                                                                        key: "输入 Token",
-                                                                        label: "输入 Token",
-                                                                        colorClass: "bg-violet-400",
-                                                                        enabled: dailyLegendSelected["输入 Token"] ?? true,
-                                                                        onToggle: toggleDailyLegend,
-                                                                    },
-                                                                ]
-                                                                : []),
-                                                            ...(dailyLegendAvailability.hasOutput
-                                                                ? [
-                                                                    {
-                                                                        key: "输出 Token",
-                                                                        label: "输出 Token",
-                                                                        colorClass: "bg-emerald-400",
-                                                                        enabled: dailyLegendSelected["输出 Token"] ?? true,
-                                                                        onToggle: toggleDailyLegend,
-                                                                    },
-                                                                ]
-                                                                : []),
-                                                            ...(dailyLegendAvailability.hasRequests
-                                                                ? [
-                                                                    {
-                                                                        key: "请求数",
-                                                                        label: "请求数",
-                                                                        colorClass: "bg-blue-500",
-                                                                        enabled: dailyLegendSelected["请求数"] ?? true,
-                                                                        onToggle: toggleDailyLegend,
-                                                                    },
-                                                                ]
-                                                                : []),
-                                                        ]}
-                                                    />
-                                                </div>
-                                            </Card>
-                                        </section>
-                                    </Reveal>
-                                )}
+                                <div className="flex-1" />
+
+                                <span className="inline-flex items-center gap-1.5 text-xs text-slate-600 dark:text-white/55">
+                                    <Filter size={12} aria-hidden="true" />
+                                    <span className="font-mono tabular-nums">{stats.total.toLocaleString()}</span> 条
+                                    <span className="text-slate-300 dark:text-white/10" aria-hidden="true">·</span>
+                                    成功率 <span className="font-mono tabular-nums">{stats.success_rate.toFixed(1)}%</span>
+                                    <span className="text-slate-300 dark:text-white/10" aria-hidden="true">·</span>
+                                    Token <span className="font-mono tabular-nums">{stats.total_tokens.toLocaleString()}</span>
+                                    <span className="text-slate-300 dark:text-white/10" aria-hidden="true">·</span>
+                                    <span className="text-slate-400 dark:text-white/40">{lastUpdatedText}</span>
+                                </span>
                             </div>
-                        )}
 
-                        {activeTab === "logs" && (
-                            <section className="relative rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-950/70">
-                                <div className="relative px-5 pb-5 pt-4">
-                                    <VirtualTable<FlatRecord>
-                                        rows={logRecords}
-                                        columns={lookupLogColumns}
-                                        rowKey={(row, idx) => `${row.timestamp}-${row.model}-${idx}`}
-                                        rowHeight={44}
-                                        height="h-[calc(100vh-400px)]"
-                                        minWidth="min-w-[900px]"
-                                        caption="请求日志表格"
-                                        emptyText="该时间范围内暂无请求日志"
-                                    />
-                                </div>
-                                {busy && (
-                                    <div className="absolute inset-0 z-10 flex items-center justify-center rounded-2xl bg-white/70 backdrop-blur-sm dark:bg-neutral-950/55">
+                            {/* 表格 */}
+                            <div className="relative px-5 pb-5">
+                                <VirtualTable<LogRow>
+                                    rows={rows}
+                                    columns={logColumns}
+                                    rowKey={(row) => row.id}
+                                    loading={loading}
+                                    hasMore={hasMore}
+                                    loadingMore={loadingMore}
+                                    onScrollBottom={loadNextPage}
+                                    rowHeight={44}
+                                    height="h-[calc(100vh-500px)]"
+                                    minWidth="min-w-[900px]"
+                                    caption="请求日志表格"
+                                    emptyText="该时间范围内暂无请求日志"
+                                />
+                                {loading ? (
+                                    <div className="absolute inset-0 z-10 flex items-center justify-center rounded-b-2xl bg-white/70 backdrop-blur-sm dark:bg-neutral-950/55">
                                         <div className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white/85 px-3 py-2 text-sm font-medium text-slate-700 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/70 dark:text-white/75">
                                             <span
                                                 className="h-4 w-4 rounded-full border-2 border-slate-300 border-t-slate-900 motion-reduce:animate-none motion-safe:animate-spin dark:border-white/20 dark:border-t-white/80"
@@ -705,9 +586,9 @@ export function ApiKeyLookupPage() {
                                             <span role="status">加载中…</span>
                                         </div>
                                     </div>
-                                )}
-                            </section>
-                        )}
+                                ) : null}
+                            </div>
+                        </section>
                     </>
                 )}
 
