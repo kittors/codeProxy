@@ -71,8 +71,6 @@ interface FlatRecord {
     model: string;
     timestamp: string;
     failed: boolean;
-    source: string;
-    authIndex: string;
     latencyMs?: number;
     tokens: UsageDetail["tokens"];
 }
@@ -87,8 +85,6 @@ function flattenUsageToLogs(data: UsageData): FlatRecord[] {
                     model,
                     timestamp: detail.timestamp,
                     failed: detail.failed,
-                    source: detail.source,
-                    authIndex: detail.auth_index,
                     latencyMs: detail.latency_ms,
                     tokens: detail.tokens,
                 });
@@ -154,18 +150,7 @@ const lookupLogColumns: VirtualTableColumn<FlatRecord>[] = [
                 </span>
             ),
     },
-    {
-        key: "source",
-        label: "来源",
-        width: "w-32",
-        render: (row) => (
-            <OverflowTooltip content={row.source || "--"} className="block min-w-0">
-                <span className={`block min-w-0 truncate text-xs font-medium ${row.source ? "text-violet-600 dark:text-violet-400" : "text-slate-400 dark:text-white/30"}`}>
-                    {row.source || "--"}
-                </span>
-            </OverflowTooltip>
-        ),
-    },
+
     {
         key: "latency",
         label: "用时",
