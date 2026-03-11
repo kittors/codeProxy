@@ -44,8 +44,6 @@ export function ConfirmModal({
           </Button>
         </>
       }
-    >
-      <p className="text-sm text-slate-700 dark:text-white/70">{description}</p>
-    </Modal>
+    />
   );
 }
