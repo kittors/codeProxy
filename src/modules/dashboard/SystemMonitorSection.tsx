@@ -242,6 +242,11 @@ function ConcurrencyCard({ stats }: { stats: SystemStats }) {
     const total = stats.total_in_flight ?? 0;
     const items = stats.active_concurrency ?? [];
 
+    const maskKey = (k: string) => {
+        if (k.length <= 10) return "****";
+        return k.slice(0, 6) + "…" + k.slice(-4);
+    };
+
     return (
         <div className="rounded-xl border border-slate-200/80 bg-white p-3.5 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
             <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-white/40 mb-2.5">
@@ -256,21 +261,50 @@ function ConcurrencyCard({ stats }: { stats: SystemStats }) {
                 </span>
             </div>
             {items.length > 0 ? (
-                <div className="space-y-1.5">
+                <div className="space-y-2">
                     {items.map((item) => (
-                        <div key={item.key} className="flex items-center gap-2">
-                            <span className="w-24 shrink-0 truncate text-[11px] font-mono text-slate-500 dark:text-slate-400">
-                                {item.key}
+                        <div key={item.api_key} className="rounded-lg bg-slate-50 px-2.5 py-2 dark:bg-neutral-800/50">
+                            <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400">
+                                {maskKey(item.api_key)}
                             </span>
-                            <div className="flex-1 h-4 overflow-hidden rounded bg-slate-100 dark:bg-neutral-800">
-                                <div
-                                    className="h-full rounded bg-gradient-to-r from-blue-500 to-cyan-500 transition-all duration-500"
-                                    style={{ width: `${Math.max(Math.min((item.current / Math.max(total, 1)) * 100, 100), 8)}%` }}
-                                />
+                            <div className="mt-1.5 grid grid-cols-2 gap-2">
+                                {/* RPM */}
+                                <div>
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-[9px] font-semibold uppercase text-slate-400 dark:text-white/35">RPM</span>
+                                        <span className="text-[10px] font-bold tabular-nums text-slate-600 dark:text-slate-300">
+                                            {item.rpm}{item.rpm_limit > 0 ? ` / ${item.rpm_limit}` : ""}
+                                        </span>
+                                    </div>
+                                    <div className="mt-0.5 h-1.5 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-neutral-700">
+                                        <div
+                                            className={`h-full rounded-full transition-all duration-500 ${item.rpm_limit > 0 && item.rpm >= item.rpm_limit
+                                                    ? "bg-red-500"
+                                                    : "bg-gradient-to-r from-blue-500 to-cyan-500"
+                                                }`}
+                                            style={{ width: `${item.rpm_limit > 0 ? Math.min((item.rpm / item.rpm_limit) * 100, 100) : Math.min(item.rpm * 5, 100)}%` }}
+                                        />
+                                    </div>
+                                </div>
+                                {/* TPM */}
+                                <div>
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-[9px] font-semibold uppercase text-slate-400 dark:text-white/35">TPM</span>
+                                        <span className="text-[10px] font-bold tabular-nums text-slate-600 dark:text-slate-300">
+                                            {item.tpm.toLocaleString()}{item.tpm_limit > 0 ? ` / ${item.tpm_limit.toLocaleString()}` : ""}
+                                        </span>
+                                    </div>
+                                    <div className="mt-0.5 h-1.5 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-neutral-700">
+                                        <div
+                                            className={`h-full rounded-full transition-all duration-500 ${item.tpm_limit > 0 && item.tpm >= item.tpm_limit
+                                                    ? "bg-red-500"
+                                                    : "bg-gradient-to-r from-violet-500 to-purple-500"
+                                                }`}
+                                            style={{ width: `${item.tpm_limit > 0 ? Math.min((item.tpm / item.tpm_limit) * 100, 100) : Math.min(item.tpm / 100, 100)}%` }}
+                                        />
+                                    </div>
+                                </div>
                             </div>
-                            <span className="w-8 shrink-0 text-right text-[11px] font-bold tabular-nums text-slate-600 dark:text-slate-300">
-                                {item.current}
-                            </span>
                         </div>
                     ))}
                 </div>
@@ -282,6 +316,7 @@ function ConcurrencyCard({ stats }: { stats: SystemStats }) {
         </div>
     );
 }
+
 
 /* ═══════════════════════════════════════════════════════════
    Skeleton

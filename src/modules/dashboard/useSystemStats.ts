@@ -37,8 +37,11 @@ export interface ChannelLatency {
 }
 
 export interface ConcurrencySnapshot {
-    key: string;
-    current: number;
+    api_key: string;
+    rpm: number;
+    tpm: number;
+    rpm_limit: number;
+    tpm_limit: number;
 }
 
 /** Build WebSocket URL from auth context */
