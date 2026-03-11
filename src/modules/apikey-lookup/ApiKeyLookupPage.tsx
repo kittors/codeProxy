@@ -104,6 +104,7 @@ async function fetchPublicLogs(params: {
     days?: number;
     model?: string;
     status?: string;
+    signal?: AbortSignal;
 }): Promise<PublicLogsResponse> {
     const base = detectApiBaseFromLocation();
     const qs = new URLSearchParams();
@@ -114,7 +115,7 @@ async function fetchPublicLogs(params: {
     if (params.model) qs.set("model", params.model);
     if (params.status) qs.set("status", params.status);
     const url = `${base}${MANAGEMENT_API_PREFIX}/public/usage/logs?${qs}`;
-    const resp = await fetch(url);
+    const resp = await fetch(url, { signal: params.signal });
     if (!resp.ok) {
         const text = await resp.text().catch(() => "");
         throw new Error(text || `请求失败 (${resp.status})`);
@@ -324,7 +325,8 @@ export function ApiKeyLookupPage() {
         "请求数": true,
     });
 
-    const fetchInFlightRef = useRef(false);
+    const abortControllerRef = useRef<AbortController | null>(null);
+    const fetchIdRef = useRef(0);
 
     // ================================================================
     //  Logs fetching (with infinite scroll support)
@@ -332,8 +334,13 @@ export function ApiKeyLookupPage() {
 
     const fetchLogs = useCallback(
         async (key: string, page: number) => {
-            if (!key.trim() || fetchInFlightRef.current) return;
-            fetchInFlightRef.current = true;
+            if (!key.trim()) return;
+
+            // Abort any in-flight request to prevent stale data
+            abortControllerRef.current?.abort();
+            const controller = new AbortController();
+            abortControllerRef.current = controller;
+            const myFetchId = ++fetchIdRef.current;
 
             if (page === 1) {
                 setLoading(true);
@@ -350,7 +357,11 @@ export function ApiKeyLookupPage() {
                     days: timeRange,
                     model: modelQuery || undefined,
                     status: statusFilter || undefined,
+                    signal: controller.signal,
                 });
+
+                // Discard response if a newer request has been issued
+                if (myFetchId !== fetchIdRef.current) return;
 
                 const newItems = resp.items ?? [];
 
@@ -367,6 +378,11 @@ export function ApiKeyLookupPage() {
                 setLastUpdatedAt(Date.now());
                 setQueriedKey(key.trim());
             } catch (err) {
+                // Ignore aborted requests
+                if (err instanceof DOMException && err.name === "AbortError") return;
+                // Ignore stale responses
+                if (myFetchId !== fetchIdRef.current) return;
+
                 const message = err instanceof Error ? err.message : "查询失败";
                 setError(message);
                 if (page === 1) {
@@ -375,9 +391,10 @@ export function ApiKeyLookupPage() {
                     setStats({ total: 0, success_rate: 0, total_tokens: 0 });
                 }
             } finally {
-                fetchInFlightRef.current = false;
-                setLoading(false);
-                setLoadingMore(false);
+                if (myFetchId === fetchIdRef.current) {
+                    setLoading(false);
+                    setLoadingMore(false);
+                }
             }
         },
         [timeRange, modelQuery, statusFilter],
@@ -444,10 +461,9 @@ export function ApiKeyLookupPage() {
         if (activeTab === "usage") {
             void fetchChartDataFn(queriedKey, timeRange);
         } else {
-            // Only fetch logs if we don't have data yet
-            if (rawItems.length === 0 && !loading) {
-                fetchLogs(queriedKey, 1);
-            }
+            // Always refetch when switching to logs tab to ensure
+            // data matches the current timeRange & filters
+            fetchLogs(queriedKey, 1);
         }
     }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
 
