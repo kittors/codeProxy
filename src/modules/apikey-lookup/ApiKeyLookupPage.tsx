@@ -29,7 +29,7 @@ import { CHART_COLOR_CLASSES } from "@/modules/monitor/monitor-constants";
 import type { TimeRange } from "@/modules/monitor/monitor-constants";
 import { formatCompact } from "@/modules/monitor/monitor-format";
 import { formatNumber, formatRate } from "@/modules/monitor/monitor-utils";
-import { KpiCard, TimeRangeSelector } from "@/modules/monitor/MonitorPagePieces";
+import { KpiCard, MonitorCard as Card, TimeRangeSelector } from "@/modules/monitor/MonitorPagePieces";
 import { LogContentModal } from "@/modules/monitor/LogContentModal";
 import { MANAGEMENT_API_PREFIX } from "@/lib/constants";
 import { detectApiBaseFromLocation } from "@/lib/connection";
@@ -1111,151 +1111,112 @@ export function ApiKeyLookupPage() {
                                     </div>
 
                                     {/* Charts */}
-                                    <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-                                        {/* Model distribution */}
-                                        <section className="min-w-0 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/70">
-                                            <div className="flex flex-wrap items-start justify-between gap-3">
-                                                <div>
-                                                    <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
-                                                        模型分布
-                                                    </h3>
-                                                    <p className="text-xs text-slate-600 dark:text-white/65">
-                                                        各模型{modelMetric === "requests" ? "请求" : "Token"}占比
-                                                    </p>
-                                                </div>
-                                                <div className="inline-flex gap-1 rounded-2xl border border-slate-200 bg-white p-1 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
-                                                    {(
-                                                        [
-                                                            { key: "requests", label: "请求" },
-                                                            { key: "tokens", label: "Token" },
-                                                        ] as const
-                                                    ).map((item) => {
-                                                        const active = modelMetric === item.key;
-                                                        return (
-                                                            <button
-                                                                key={item.key}
-                                                                type="button"
-                                                                onClick={() => setModelMetric(item.key)}
-                                                                className={
-                                                                    active
-                                                                        ? "rounded-xl bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white dark:bg-white dark:text-neutral-950"
-                                                                        : "rounded-xl px-3 py-1.5 text-xs text-slate-700 transition hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white"
-                                                                }
+                                    <section className="grid gap-4 lg:grid-cols-[minmax(0,560px)_minmax(0,1fr)]">
+                                        <Card
+                                            title="模型用量分布"
+                                            description={`各模型${modelMetric === "requests" ? "请求" : "Token"}占比`}
+                                            actions={
+                                                <Tabs value={modelMetric} onValueChange={(next) => setModelMetric(next as "requests" | "tokens")}>
+                                                    <TabsList>
+                                                        <TabsTrigger value="requests">请求</TabsTrigger>
+                                                        <TabsTrigger value="tokens">Token</TabsTrigger>
+                                                    </TabsList>
+                                                </Tabs>
+                                            }
+                                            loading={chartLoading}
+                                        >
+                                            {modelDistributionData.length > 0 ? (
+                                                <div className="grid h-72 grid-cols-[minmax(0,1fr)_220px] gap-4">
+                                                    <EChart option={modelDistributionOption} className="h-72 min-w-0" />
+                                                    <div className="flex h-72 flex-col justify-center gap-2 overflow-y-auto pr-1">
+                                                        {modelDistributionLegend.map((item) => (
+                                                            <div
+                                                                key={item.name}
+                                                                className="grid grid-cols-[minmax(0,120px)_40px_52px] items-center gap-x-1 text-sm"
                                                             >
-                                                                {item.label}
-                                                            </button>
-                                                        );
-                                                    })}
-                                                </div>
-                                            </div>
-                                            <div className="relative mt-4 min-w-0">
-                                                {chartLoading && (
-                                                    <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-white/65 backdrop-blur-sm dark:bg-neutral-950/45">
-                                                        <span className="h-5 w-5 rounded-full border-2 border-slate-300/80 border-t-slate-900 animate-spin dark:border-white/20 dark:border-t-white/85" />
-                                                    </div>
-                                                )}
-                                                {modelDistributionData.length > 0 ? (
-                                                    <div className="flex flex-col items-center gap-4 sm:flex-row">
-                                                        <EChart
-                                                            option={modelDistributionOption}
-                                                            className="h-52 w-52 shrink-0 sm:h-48 sm:w-48"
-                                                        />
-                                                        <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs">
-                                                            {modelDistributionLegend.map((item) => (
-                                                                <div key={item.name} className="flex items-center gap-1.5">
+                                                                <div className="flex min-w-0 items-center gap-2">
                                                                     <span
-                                                                        className={`h-2.5 w-2.5 rounded-full ${item.colorClass}`}
+                                                                        className={`h-3.5 w-3.5 shrink-0 rounded-full ${item.colorClass} opacity-80 ring-1 ring-black/5 dark:ring-white/10`}
                                                                     />
-                                                                    <span className="text-slate-700 dark:text-white/80">
+                                                                    <span className="min-w-0 truncate text-slate-700 dark:text-white/80">
                                                                         {item.name}
                                                                     </span>
-                                                                    <span className="font-medium text-slate-900 dark:text-white">
-                                                                        {item.valueLabel}
-                                                                    </span>
-                                                                    <span className="text-slate-400 dark:text-white/40">
-                                                                        {item.percentLabel}
-                                                                    </span>
                                                                 </div>
-                                                            ))}
-                                                        </div>
+                                                                <span className="text-right font-semibold tabular-nums text-slate-900 dark:text-white">
+                                                                    {item.valueLabel}
+                                                                </span>
+                                                                <span className="text-right tabular-nums text-slate-500 dark:text-white/55">
+                                                                    {item.percentLabel}
+                                                                </span>
+                                                            </div>
+                                                        ))}
                                                     </div>
-                                                ) : !chartLoading ? (
-                                                    <p className="py-8 text-center text-sm text-slate-400 dark:text-white/30">
-                                                        暂无数据
-                                                    </p>
-                                                ) : null}
-                                            </div>
-                                        </section>
-
-                                        {/* Daily trend */}
-                                        <section className="min-w-0 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/70">
-                                            <div className="space-y-1">
-                                                <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
-                                                    每日用量趋势
-                                                </h3>
-                                                <p className="text-xs text-slate-600 dark:text-white/65">
-                                                    每日请求数与 Token 消耗
+                                                </div>
+                                            ) : (
+                                                <p className="py-8 text-center text-sm text-slate-400 dark:text-white/30">
+                                                    暂无数据
                                                 </p>
-                                            </div>
-                                            <div className="relative mt-4 min-w-0">
-                                                {chartLoading && (
-                                                    <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-white/65 backdrop-blur-sm dark:bg-neutral-950/45">
-                                                        <span className="h-5 w-5 rounded-full border-2 border-slate-300/80 border-t-slate-900 animate-spin dark:border-white/20 dark:border-t-white/85" />
-                                                    </div>
-                                                )}
-                                                {dailySeries.length > 0 ? (
-                                                    <>
-                                                        <EChart
-                                                            option={dailyTrendOption}
-                                                            className="h-56"
-                                                        />
-                                                        <ChartLegend
-                                                            className="mt-2"
-                                                            items={[
-                                                                ...(dailyLegendAvailability.hasInput
-                                                                    ? [
-                                                                        {
-                                                                            key: "输入 Token",
-                                                                            label: "输入 Token",
-                                                                            colorClass: "bg-violet-300",
-                                                                            enabled: dailyLegendSelected["输入 Token"] ?? true,
-                                                                            onToggle: toggleDailyLegend,
-                                                                        },
-                                                                    ]
-                                                                    : []),
-                                                                ...(dailyLegendAvailability.hasOutput
-                                                                    ? [
-                                                                        {
-                                                                            key: "输出 Token",
-                                                                            label: "输出 Token",
-                                                                            colorClass: "bg-emerald-300",
-                                                                            enabled: dailyLegendSelected["输出 Token"] ?? true,
-                                                                            onToggle: toggleDailyLegend,
-                                                                        },
-                                                                    ]
-                                                                    : []),
-                                                                ...(dailyLegendAvailability.hasRequests
-                                                                    ? [
-                                                                        {
-                                                                            key: "请求数",
-                                                                            label: "请求数",
-                                                                            colorClass: "bg-blue-500",
-                                                                            enabled: dailyLegendSelected["请求数"] ?? true,
-                                                                            onToggle: toggleDailyLegend,
-                                                                        },
-                                                                    ]
-                                                                    : []),
-                                                            ]}
-                                                        />
-                                                    </>
-                                                ) : !chartLoading ? (
-                                                    <p className="py-8 text-center text-sm text-slate-400 dark:text-white/30">
-                                                        暂无数据
-                                                    </p>
-                                                ) : null}
-                                            </div>
-                                        </section>
-                                    </div>
+                                            )}
+                                        </Card>
+
+                                        <Card
+                                            title="每日用量趋势"
+                                            description={`最近 ${timeRange} 天 · 请求数与 Token 用量趋势`}
+                                            loading={chartLoading}
+                                        >
+                                            {dailySeries.length > 0 ? (
+                                                <div className="flex h-72 min-w-0 flex-col overflow-hidden">
+                                                    <EChart
+                                                        option={dailyTrendOption}
+                                                        className="min-h-0 flex-1 min-w-0"
+                                                        replaceMerge="series"
+                                                    />
+                                                    <ChartLegend
+                                                        className="shrink-0 pt-4"
+                                                        items={[
+                                                            ...(dailyLegendAvailability.hasInput
+                                                                ? [
+                                                                    {
+                                                                        key: "输入 Token",
+                                                                        label: "输入 Token",
+                                                                        colorClass: "bg-violet-400",
+                                                                        enabled: dailyLegendSelected["输入 Token"] ?? true,
+                                                                        onToggle: toggleDailyLegend,
+                                                                    },
+                                                                ]
+                                                                : []),
+                                                            ...(dailyLegendAvailability.hasOutput
+                                                                ? [
+                                                                    {
+                                                                        key: "输出 Token",
+                                                                        label: "输出 Token",
+                                                                        colorClass: "bg-emerald-400",
+                                                                        enabled: dailyLegendSelected["输出 Token"] ?? true,
+                                                                        onToggle: toggleDailyLegend,
+                                                                    },
+                                                                ]
+                                                                : []),
+                                                            ...(dailyLegendAvailability.hasRequests
+                                                                ? [
+                                                                    {
+                                                                        key: "请求数",
+                                                                        label: "请求数",
+                                                                        colorClass: "bg-blue-500",
+                                                                        enabled: dailyLegendSelected["请求数"] ?? true,
+                                                                        onToggle: toggleDailyLegend,
+                                                                    },
+                                                                ]
+                                                                : []),
+                                                        ]}
+                                                    />
+                                                </div>
+                                            ) : (
+                                                <p className="py-8 text-center text-sm text-slate-400 dark:text-white/30">
+                                                    暂无数据
+                                                </p>
+                                            )}
+                                        </Card>
+                                    </section>
                                 </div>
                             </Reveal>
                         )}
