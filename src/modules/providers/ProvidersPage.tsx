@@ -13,6 +13,16 @@ import {
   Settings2,
   Trash2,
 } from "lucide-react";
+
+// Vendor SVG icons
+import iconGemini from "@/assets/icons/gemini.svg";
+import iconClaude from "@/assets/icons/claude.svg";
+import iconCodexLight from "@/assets/icons/codex_light.svg";
+import iconCodexDark from "@/assets/icons/codex_drak.svg";
+import iconVertex from "@/assets/icons/vertex.svg";
+import iconAmp from "@/assets/icons/amp.svg";
+import iconOpenaiLight from "@/assets/icons/openai-light.svg";
+import iconOpenaiDark from "@/assets/icons/openai-dark.svg";
 import {
   ampcodeApi,
   apiCallApi,
@@ -813,12 +823,32 @@ export function ProvidersPage() {
         void refreshTab(nextTab);
       }}>
         <TabsList>
-          <TabsTrigger value="gemini">Gemini</TabsTrigger>
-          <TabsTrigger value="claude">Claude</TabsTrigger>
-          <TabsTrigger value="codex">Codex</TabsTrigger>
-          <TabsTrigger value="vertex">Vertex</TabsTrigger>
-          <TabsTrigger value="openai">OpenAI 兼容</TabsTrigger>
-          <TabsTrigger value="ampcode">Ampcode</TabsTrigger>
+          <TabsTrigger value="gemini">
+            <img src={iconGemini} alt="" className="size-4" />
+            Gemini
+          </TabsTrigger>
+          <TabsTrigger value="claude">
+            <img src={iconClaude} alt="" className="size-4" />
+            Claude
+          </TabsTrigger>
+          <TabsTrigger value="codex">
+            <img src={iconCodexLight} alt="" className="size-4 dark:hidden" />
+            <img src={iconCodexDark} alt="" className="hidden size-4 dark:block" />
+            Codex
+          </TabsTrigger>
+          <TabsTrigger value="vertex">
+            <img src={iconVertex} alt="" className="size-4" />
+            Vertex
+          </TabsTrigger>
+          <TabsTrigger value="openai">
+            <img src={iconOpenaiLight} alt="" className="size-4 dark:hidden" />
+            <img src={iconOpenaiDark} alt="" className="hidden size-4 dark:block" />
+            OpenAI 兼容
+          </TabsTrigger>
+          <TabsTrigger value="ampcode">
+            <img src={iconAmp} alt="" className="size-4" />
+            Ampcode
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="gemini" className="mt-6">
