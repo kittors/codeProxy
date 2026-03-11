@@ -81,6 +81,7 @@ interface PublicLogsResponse {
         total: number;
         success_rate: number;
         total_tokens: number;
+        total_cost: number;
     };
     filters: {
         models: string[];
@@ -114,7 +115,7 @@ interface ChartDataResponse {
         requests: number;
         tokens: number;
     }>;
-    stats: { total: number; success_rate: number; total_tokens: number };
+    stats: { total: number; success_rate: number; total_tokens: number; total_cost: number };
 }
 
 // ── Model Vendor Helpers ────────────────────────────────────────────────────
@@ -636,8 +637,8 @@ export function ApiKeyLookupPage() {
     const [statusFilter, setStatusFilter] = useState("");
 
     // ── Backend stats + filter options ──
-    const [stats, setStats] = useState<{ total: number; success_rate: number; total_tokens: number }>(
-        { total: 0, success_rate: 0, total_tokens: 0 },
+    const [stats, setStats] = useState<{ total: number; success_rate: number; total_tokens: number; total_cost: number }>(
+        { total: 0, success_rate: 0, total_tokens: 0, total_cost: 0 },
     );
     const [modelOptions, setModelOptions] = useState<string[]>([]);
 
@@ -697,7 +698,7 @@ export function ApiKeyLookupPage() {
 
                 setTotalCount(resp.total ?? 0);
                 setCurrentPage(page);
-                setStats(resp.stats ?? { total: 0, success_rate: 0, total_tokens: 0 });
+                setStats(resp.stats ?? { total: 0, success_rate: 0, total_tokens: 0, total_cost: 0 });
                 setModelOptions(resp.filters?.models ?? []);
                 setLastUpdatedAt(Date.now());
                 setQueriedKey(key.trim());
@@ -712,7 +713,7 @@ export function ApiKeyLookupPage() {
                 if (page === 1) {
                     setRawItems([]);
                     setTotalCount(0);
-                    setStats({ total: 0, success_rate: 0, total_tokens: 0 });
+                    setStats({ total: 0, success_rate: 0, total_tokens: 0, total_cost: 0 });
                 }
             } finally {
                 if (myFetchId === fetchIdRef.current) {
@@ -1082,7 +1083,7 @@ export function ApiKeyLookupPage() {
                             <Reveal>
                                 <div className="space-y-5">
                                     {/* KPI cards */}
-                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                                         <KpiCard
                                             title="总请求数"
                                             icon={Activity}
@@ -1100,6 +1101,12 @@ export function ApiKeyLookupPage() {
                                             icon={Sigma}
                                             hint={`最近 ${timeRange} 天`}
                                             value={<AnimatedNumber value={chartStats?.total_tokens ?? 0} format={formatNumber} />}
+                                        />
+                                        <KpiCard
+                                            title="总费用"
+                                            icon={Coins}
+                                            hint={`最近 ${timeRange} 天`}
+                                            value={<AnimatedNumber value={chartStats?.total_cost ?? 0} format={(v) => `$${v.toFixed(4)}`} />}
                                         />
                                     </div>
 
