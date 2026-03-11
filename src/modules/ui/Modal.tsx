@@ -9,6 +9,7 @@ export function Modal({
   title,
   description,
   footer,
+  maxWidth = "max-w-3xl",
   onClose,
   children,
 }: PropsWithChildren<{
@@ -16,6 +17,7 @@ export function Modal({
   title: string;
   description?: string;
   footer?: ReactNode;
+  maxWidth?: string;
   onClose: () => void;
 }>) {
   const [mounted, setMounted] = useState(open);
@@ -83,7 +85,7 @@ export function Modal({
         role="dialog"
         aria-modal="true"
         className={[
-          "relative z-10 w-full max-w-3xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-neutral-800 dark:bg-neutral-950",
+          `relative z-10 w-full ${maxWidth} overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-neutral-800 dark:bg-neutral-950`,
           "transition-all duration-200 ease-out motion-reduce:transition-none",
           visible ? "opacity-100 translate-y-0 scale-100" : "opacity-0 translate-y-2 scale-95",
         ].join(" ")}
