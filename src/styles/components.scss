@@ -559,58 +559,6 @@ textarea {
   background: var(--bg-primary);
 }
 
-/* ── Confirmation Modal ── */
-
-.confirmation-content {
-  display: flex;
-  align-items: flex-start;
-  gap: $spacing-md;
-  padding: $spacing-sm 0;
-}
-
-.confirmation-icon {
-  flex-shrink: 0;
-  width: 44px;
-  height: 44px;
-  border-radius: $radius-lg;
-  display: grid;
-  place-items: center;
-
-  &.confirmation-icon-danger {
-    background: rgba($error-color, 0.1);
-    color: $error-color;
-    border: 1px solid rgba($error-color, 0.2);
-  }
-
-  &.confirmation-icon-primary {
-    background: rgba($primary-color, 0.1);
-    color: $primary-color;
-    border: 1px solid rgba($primary-color, 0.2);
-  }
-}
-
-.confirmation-message {
-  flex: 1;
-  min-width: 0;
-
-  p {
-    margin: 0;
-    color: var(--text-secondary);
-    font-size: 14px;
-    line-height: 1.6;
-    word-break: break-word;
-  }
-}
-
-.confirmation-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: $spacing-sm;
-  padding-top: $spacing-md;
-  margin-top: $spacing-sm;
-  border-top: 1px solid var(--border-color);
-}
-
 .request-log-modal {
   display: flex;
   flex-direction: column;
