@@ -28,6 +28,8 @@ export interface SystemStats {
     channel_latency: ChannelLatency[];
     active_concurrency: ConcurrencySnapshot[] | null;
     total_in_flight: number;
+    total_rpm: number;
+    total_tpm: number;
 }
 
 export interface ChannelLatency {

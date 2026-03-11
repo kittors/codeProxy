@@ -239,83 +239,48 @@ function ChannelLatencyCard({ data }: { data: ChannelLatency[] }) {
    ═══════════════════════════════════════════════════════════ */
 
 function ConcurrencyCard({ stats }: { stats: SystemStats }) {
-    const total = stats.total_in_flight ?? 0;
-    const items = stats.active_concurrency ?? [];
-
-    const maskKey = (k: string) => {
-        if (k.length <= 10) return "****";
-        return k.slice(0, 6) + "…" + k.slice(-4);
-    };
+    const rpm = stats.total_rpm ?? 0;
+    const tpm = stats.total_tpm ?? 0;
 
     return (
         <div className="rounded-xl border border-slate-200/80 bg-white p-3.5 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
-            <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-white/40 mb-2.5">
+            <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-white/40 mb-3">
                 <Layers size={12} />
-                并发请求
-                <span className={`ml-auto inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold tabular-nums ${total > 0
-                    ? "bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400"
+                实时吞吐
+                <span className={`ml-auto inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold tabular-nums ${rpm > 0
+                    ? "bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400"
                     : "bg-slate-100 text-slate-400 dark:bg-neutral-800 dark:text-white/35"
                     }`}>
-                    <span className={`inline-block h-1.5 w-1.5 rounded-full ${total > 0 ? "bg-blue-500 animate-pulse" : "bg-slate-300 dark:bg-neutral-600"}`} />
-                    {total} 进行中
+                    <span className={`inline-block h-1.5 w-1.5 rounded-full ${rpm > 0 ? "bg-emerald-500 animate-pulse" : "bg-slate-300 dark:bg-neutral-600"}`} />
+                    {rpm > 0 ? "活跃" : "空闲"}
                 </span>
             </div>
-            {items.length > 0 ? (
-                <div className="space-y-2">
-                    {items.map((item) => (
-                        <div key={item.api_key} className="rounded-lg bg-slate-50 px-2.5 py-2 dark:bg-neutral-800/50">
-                            <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400">
-                                {maskKey(item.api_key)}
-                            </span>
-                            <div className="mt-1.5 grid grid-cols-2 gap-2">
-                                {/* RPM */}
-                                <div>
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-[9px] font-semibold uppercase text-slate-400 dark:text-white/35">RPM</span>
-                                        <span className="text-[10px] font-bold tabular-nums text-slate-600 dark:text-slate-300">
-                                            {item.rpm}{item.rpm_limit > 0 ? ` / ${item.rpm_limit}` : ""}
-                                        </span>
-                                    </div>
-                                    <div className="mt-0.5 h-1.5 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-neutral-700">
-                                        <div
-                                            className={`h-full rounded-full transition-all duration-500 ${item.rpm_limit > 0 && item.rpm >= item.rpm_limit
-                                                    ? "bg-red-500"
-                                                    : "bg-gradient-to-r from-blue-500 to-cyan-500"
-                                                }`}
-                                            style={{ width: `${item.rpm_limit > 0 ? Math.min((item.rpm / item.rpm_limit) * 100, 100) : Math.min(item.rpm * 5, 100)}%` }}
-                                        />
-                                    </div>
-                                </div>
-                                {/* TPM */}
-                                <div>
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-[9px] font-semibold uppercase text-slate-400 dark:text-white/35">TPM</span>
-                                        <span className="text-[10px] font-bold tabular-nums text-slate-600 dark:text-slate-300">
-                                            {item.tpm.toLocaleString()}{item.tpm_limit > 0 ? ` / ${item.tpm_limit.toLocaleString()}` : ""}
-                                        </span>
-                                    </div>
-                                    <div className="mt-0.5 h-1.5 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-neutral-700">
-                                        <div
-                                            className={`h-full rounded-full transition-all duration-500 ${item.tpm_limit > 0 && item.tpm >= item.tpm_limit
-                                                    ? "bg-red-500"
-                                                    : "bg-gradient-to-r from-violet-500 to-purple-500"
-                                                }`}
-                                            style={{ width: `${item.tpm_limit > 0 ? Math.min((item.tpm / item.tpm_limit) * 100, 100) : Math.min(item.tpm / 100, 100)}%` }}
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    ))}
+            <div className="grid grid-cols-2 gap-4">
+                <div className="rounded-lg bg-slate-50 px-3 py-2.5 dark:bg-neutral-800/50">
+                    <div className="flex items-center gap-1 text-[9px] font-semibold uppercase tracking-wider text-slate-400 dark:text-white/35">
+                        <Zap size={10} />
+                        RPM
+                    </div>
+                    <p className="mt-1 text-2xl font-bold tabular-nums text-slate-900 dark:text-white">
+                        {rpm.toLocaleString()}
+                    </p>
+                    <p className="mt-0.5 text-[10px] text-slate-400 dark:text-white/35">每分钟请求数</p>
                 </div>
-            ) : (
-                <div className="flex items-center justify-center rounded-lg bg-slate-50 px-2.5 py-3 dark:bg-neutral-800/50">
-                    <span className="text-[11px] text-slate-400 dark:text-white/35">当前无活跃并发请求</span>
+                <div className="rounded-lg bg-slate-50 px-3 py-2.5 dark:bg-neutral-800/50">
+                    <div className="flex items-center gap-1 text-[9px] font-semibold uppercase tracking-wider text-slate-400 dark:text-white/35">
+                        <Activity size={10} />
+                        TPM
+                    </div>
+                    <p className="mt-1 text-2xl font-bold tabular-nums text-slate-900 dark:text-white">
+                        {tpm.toLocaleString()}
+                    </p>
+                    <p className="mt-0.5 text-[10px] text-slate-400 dark:text-white/35">每分钟 Token 数</p>
                 </div>
-            )}
+            </div>
         </div>
     );
 }
+
 
 
 /* ═══════════════════════════════════════════════════════════
