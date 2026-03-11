@@ -499,7 +499,7 @@ export function ApiKeysPage() {
         {
             key: "key",
             label: "Key",
-            width: "w-[180px]",
+            width: "w-[220px]",
             cellClassName: "whitespace-nowrap",
             render: (row) => (
                 <code className="rounded-md bg-slate-100 px-2 py-0.5 font-mono text-xs text-slate-700 dark:bg-neutral-800 dark:text-white/70">
@@ -583,7 +583,7 @@ export function ApiKeysPage() {
             key: "allowedModels",
             label: "可用模型",
             width: "w-[110px]",
-            cellClassName: "text-slate-700 dark:text-white/70 overflow-hidden",
+            cellClassName: "text-slate-700 dark:text-white/70 overflow-hidden min-w-0",
             render: (row) =>
                 row["allowed-models"]?.length ? (
                     <HoverTooltip
@@ -599,11 +599,11 @@ export function ApiKeysPage() {
                         }
                         className="block min-w-0"
                     >
-                        <span className="inline-flex items-center gap-1.5 text-xs min-w-0 max-w-full">
+                        <span className="inline-flex items-center gap-1.5 text-xs min-w-0 w-full">
                             <span className="inline-flex h-5 min-w-[20px] flex-shrink-0 items-center justify-center rounded-md bg-indigo-50 px-1.5 font-semibold tabular-nums text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-300">
                                 {row["allowed-models"].length}
                             </span>
-                            <span className="truncate text-slate-500 dark:text-white/50">
+                            <span className="block min-w-0 flex-1 truncate text-slate-500 dark:text-white/50">
                                 {row["allowed-models"][0]}
                                 {row["allowed-models"].length > 1 ? " 等" : ""}
                             </span>
