@@ -164,6 +164,7 @@ export function ModelsPage() {
     const [models, setModels] = useState<ModelItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchFilter, setSearchFilter] = useState("");
+    const [totalCost, setTotalCost] = useState(0);
 
     // Pricing modal state
     const [pricingModel, setPricingModel] = useState<string | null>(null);
@@ -177,6 +178,13 @@ export function ModelsPage() {
         try {
             const data = await fetchModels();
             setModels(data);
+            // Fetch total cost from usage stats
+            try {
+                const usageData = await apiClient.get<{ stats?: { total_cost?: number } }>("/usage/logs?days=9999&size=1");
+                setTotalCost(usageData?.stats?.total_cost ?? 0);
+            } catch {
+                // ignore cost fetch failure
+            }
         } catch (err: unknown) {
             notify({ type: "error", message: err instanceof Error ? err.message : "加载模型数据失败" });
         } finally {
@@ -202,15 +210,7 @@ export function ModelsPage() {
         return { modelCount: models.length, pricedCount };
     }, [models]);
 
-    // Vendor distribution
-    const vendorStats = useMemo(() => {
-        const map = new Map<string, number>();
-        for (const m of models) {
-            const prefix = getVendorPrefix(m.id) || "其他";
-            map.set(prefix, (map.get(prefix) ?? 0) + 1);
-        }
-        return Array.from(map.entries()).sort((a, b) => b[1] - a[1]);
-    }, [models]);
+
 
     /* ─── pricing modal ─── */
 
@@ -285,19 +285,12 @@ export function ModelsPage() {
                 </div>
                 <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
                     <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 dark:text-white/55">
-                        <Activity size={14} /> 供应商分布
+                        <Activity size={14} /> 额度消耗
                     </div>
-                    <div className="mt-2 flex flex-wrap gap-1.5">
-                        {vendorStats.slice(0, 6).map(([vendor, count]) => {
-                            const vc = VENDOR_COLORS[vendor] ?? DEFAULT_VENDOR_COLOR;
-                            return (
-                                <span key={vendor} className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[10px] font-semibold ${vc.bg} ${vc.text} ${vc.border}`}>
-                                    <VendorIcon modelId={vendor + "-x"} size={10} />
-                                    {vendor} {count}
-                                </span>
-                            );
-                        })}
+                    <div className="mt-2 text-2xl font-bold tabular-nums text-slate-900 dark:text-white">
+                        ${totalCost.toFixed(4)}
                     </div>
+                    <div className="mt-0.5 text-xs text-slate-500 dark:text-white/45">累计总费用 (USD)</div>
                 </div>
             </div>
 
