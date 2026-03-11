@@ -36,6 +36,8 @@ interface LogContentModalProps {
     logId: number | null;
     initialTab?: "input" | "output";
     onClose: () => void;
+    /** Optional custom fetch function. When provided, it replaces the default usageApi.getLogContent call. */
+    fetchFn?: (id: number) => Promise<{ input_content: string; output_content: string; model: string }>;
 }
 
 type Msg = { role: string; content: string };
@@ -854,7 +856,7 @@ function ContentModal({
 /*  LogContentModal                                                           */
 /* ========================================================================== */
 
-export function LogContentModal({ open, logId, initialTab = "input", onClose }: LogContentModalProps) {
+export function LogContentModal({ open, logId, initialTab = "input", onClose, fetchFn }: LogContentModalProps) {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [inputContent, setInputContent] = useState("");
@@ -869,7 +871,7 @@ export function LogContentModal({ open, logId, initialTab = "input", onClose }: 
         setLoading(true);
         setError(null);
         try {
-            const result = await usageApi.getLogContent(id);
+            const result = fetchFn ? await fetchFn(id) : await usageApi.getLogContent(id);
             setInputContent(result.input_content || "");
             setOutputContent(result.output_content || "");
             setModel(result.model || "");
@@ -878,7 +880,7 @@ export function LogContentModal({ open, logId, initialTab = "input", onClose }: 
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [fetchFn]);
 
     useEffect(() => { if (open && logId) fetchContent(logId); }, [open, logId, fetchContent]);
 
