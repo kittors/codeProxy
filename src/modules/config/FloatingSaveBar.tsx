@@ -101,7 +101,7 @@ export function FloatingSaveBar({
 
     return (
         <div
-            className="pointer-events-none sticky bottom-0 z-30 flex justify-center px-2 pb-4 pt-2"
+            className="pointer-events-none fixed inset-x-0 bottom-6 z-50 flex justify-center px-4"
             aria-live="polite"
         >
             <div
@@ -114,7 +114,7 @@ export function FloatingSaveBar({
                     "transition-all duration-[400ms]",
                     visible
                         ? "translate-y-0 opacity-100 scale-100"
-                        : "translate-y-4 opacity-0 scale-[0.97]",
+                        : "translate-y-8 opacity-0 scale-[0.96]",
                 ].join(" ")}
                 style={{
                     transitionTimingFunction: visible
