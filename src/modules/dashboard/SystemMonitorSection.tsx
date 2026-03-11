@@ -1,8 +1,7 @@
-import { useState } from "react";
 import {
-    Cpu, Database, FileText, Clock, MemoryStick,
+    Cpu, Database, FileText, Clock, MemoryStick, HardDrive,
     Network, ArrowUpRight, ArrowDownRight, Wifi,
-    Activity, AlertTriangle, Zap, RefreshCw,
+    Activity, AlertTriangle, Zap, RefreshCw, Layers,
 } from "lucide-react";
 import { useSystemStats, type SystemStats, type ChannelLatency } from "./useSystemStats";
 
@@ -236,6 +235,55 @@ function ChannelLatencyCard({ data }: { data: ChannelLatency[] }) {
 }
 
 /* ═══════════════════════════════════════════════════════════
+   Concurrency Card (real-time in-flight requests)
+   ═══════════════════════════════════════════════════════════ */
+
+function ConcurrencyCard({ stats }: { stats: SystemStats }) {
+    const total = stats.total_in_flight ?? 0;
+    const items = stats.active_concurrency ?? [];
+
+    return (
+        <div className="rounded-xl border border-slate-200/80 bg-white p-3.5 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
+            <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-white/40 mb-2.5">
+                <Layers size={12} />
+                并发请求
+                <span className={`ml-auto inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold tabular-nums ${total > 0
+                    ? "bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400"
+                    : "bg-slate-100 text-slate-400 dark:bg-neutral-800 dark:text-white/35"
+                    }`}>
+                    <span className={`inline-block h-1.5 w-1.5 rounded-full ${total > 0 ? "bg-blue-500 animate-pulse" : "bg-slate-300 dark:bg-neutral-600"}`} />
+                    {total} 进行中
+                </span>
+            </div>
+            {items.length > 0 ? (
+                <div className="space-y-1.5">
+                    {items.map((item) => (
+                        <div key={item.key} className="flex items-center gap-2">
+                            <span className="w-24 shrink-0 truncate text-[11px] font-mono text-slate-500 dark:text-slate-400">
+                                {item.key}
+                            </span>
+                            <div className="flex-1 h-4 overflow-hidden rounded bg-slate-100 dark:bg-neutral-800">
+                                <div
+                                    className="h-full rounded bg-gradient-to-r from-blue-500 to-cyan-500 transition-all duration-500"
+                                    style={{ width: `${Math.max(Math.min((item.current / Math.max(total, 1)) * 100, 100), 8)}%` }}
+                                />
+                            </div>
+                            <span className="w-8 shrink-0 text-right text-[11px] font-bold tabular-nums text-slate-600 dark:text-slate-300">
+                                {item.current}
+                            </span>
+                        </div>
+                    ))}
+                </div>
+            ) : (
+                <div className="flex items-center justify-center rounded-lg bg-slate-50 px-2.5 py-3 dark:bg-neutral-800/50">
+                    <span className="text-[11px] text-slate-400 dark:text-white/35">当前无活跃并发请求</span>
+                </div>
+            )}
+        </div>
+    );
+}
+
+/* ═══════════════════════════════════════════════════════════
    Skeleton
    ═══════════════════════════════════════════════════════════ */
 
@@ -351,8 +399,20 @@ export function SystemMonitorSection() {
                     <ResourceBar icon={Cpu} label="服务 CPU" value={`${stats.process_cpu_pct.toFixed(1)}%`} pct={Math.min(stats.process_cpu_pct, 100)} />
                     <ResourceBar icon={MemoryStick} label="服务内存" value={`${stats.process_mem_pct.toFixed(1)}%`} pct={stats.process_mem_pct}
                         detail={formatBytes(stats.process_mem_bytes)} />
-                    <ResourceBar icon={Database} label="数据库" value={formatBytes(stats.db_size_bytes)} pct={0}
-                        detail="SQLite + WAL + SHM" />
+                    <ResourceBar icon={HardDrive} label="磁盘" value={`${stats.disk_pct.toFixed(1)}%`} pct={stats.disk_pct}
+                        detail={`${formatBytes(stats.disk_used)} / ${formatBytes(stats.disk_total)}`} />
+                </div>
+
+                {/* ── Row 3: Concurrency ── */}
+                <div className="grid gap-3 grid-cols-1 lg:grid-cols-2">
+                    <ConcurrencyCard stats={stats} />
+                    <div className="grid gap-3 grid-cols-2">
+                        <MiniKpi label="数据库" value={formatBytes(stats.db_size_bytes)} icon={Database}
+                            sublabel="SQLite + WAL + SHM" />
+                        <MiniKpi label="磁盘可用" value={formatBytes(stats.disk_free)} icon={HardDrive}
+                            color={stats.disk_pct >= 90 ? "text-red-500" : stats.disk_pct >= 75 ? "text-amber-500" : "text-emerald-500"}
+                            sublabel={`共 ${formatBytes(stats.disk_total)}`} />
+                    </div>
                 </div>
             </div>
         </section>

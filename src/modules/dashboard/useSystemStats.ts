@@ -19,15 +19,26 @@ export interface SystemStats {
     net_bytes_recv: number;
     net_send_rate: number;
     net_recv_rate: number;
+    disk_total: number;
+    disk_used: number;
+    disk_free: number;
+    disk_pct: number;
     uptime_seconds: number;
     start_time: string;
     channel_latency: ChannelLatency[];
+    active_concurrency: ConcurrencySnapshot[] | null;
+    total_in_flight: number;
 }
 
 export interface ChannelLatency {
     source: string;
     count: number;
     avg_ms: number;
+}
+
+export interface ConcurrencySnapshot {
+    key: string;
+    current: number;
 }
 
 /** Build WebSocket URL from auth context */
