@@ -17,6 +17,10 @@ import {
     MessageSquare,
     Copy,
     Check,
+    Brain,
+    Download,
+    Code2,
+    Eye,
 } from "lucide-react";
 import Markdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -99,6 +103,20 @@ const ROLE_STYLES: Record<
         border: "border-teal-500/25 dark:border-teal-400/20",
         headerBg: "bg-teal-50 dark:bg-teal-500/10",
         headerText: "text-teal-700 dark:text-teal-300",
+    },
+    thinking: {
+        label: "思考过程",
+        icon: <Brain size={15} />,
+        border: "border-purple-500/25 dark:border-purple-400/20",
+        headerBg: "bg-purple-50 dark:bg-purple-500/10",
+        headerText: "text-purple-700 dark:text-purple-300",
+    },
+    tool_use: {
+        label: "工具调用",
+        icon: <Wrench size={15} />,
+        border: "border-amber-500/25 dark:border-amber-400/20",
+        headerBg: "bg-amber-50 dark:bg-amber-500/10",
+        headerText: "text-amber-700 dark:text-amber-300",
     },
 };
 
@@ -560,7 +578,116 @@ function parseInputMessages(raw: string): Msg[] | null {
 /*  Output parsers                                                            */
 /* ========================================================================== */
 
-function parseSSEOutput(raw: string): string | null {
+type ParsedOutput = { text: string } | { messages: Msg[] };
+
+/**
+ * Parse Claude-style SSE stream into structured messages.
+ * Handles text, thinking, and tool_use content blocks.
+ */
+function parseSSEToMessages(raw: string): Msg[] | null {
+    const lines = raw.split("\n");
+    const messages: Msg[] = [];
+
+    // Track active content blocks by index
+    const blocks: Map<number, { type: string; name?: string; id?: string; parts: string[] }> = new Map();
+
+    for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed.startsWith("data:")) continue;
+        const jsonStr = trimmed.slice(5).trim();
+        if (jsonStr === "[DONE]") continue;
+
+        try {
+            const data = JSON.parse(jsonStr);
+
+            // Claude: content_block_start — register a new block
+            if (data.type === "content_block_start" && data.content_block) {
+                const idx = data.index ?? 0;
+                const cb = data.content_block;
+                blocks.set(idx, {
+                    type: cb.type || "text",
+                    name: cb.name,
+                    id: cb.id,
+                    parts: [],
+                });
+                continue;
+            }
+
+            // Claude: content_block_delta — accumulate parts
+            if (data.type === "content_block_delta") {
+                const idx = data.index ?? 0;
+                const block = blocks.get(idx);
+                if (block) {
+                    if (data.delta?.text) {
+                        block.parts.push(data.delta.text);
+                    } else if (data.delta?.thinking) {
+                        block.parts.push(data.delta.thinking);
+                    } else if (data.delta?.partial_json) {
+                        block.parts.push(data.delta.partial_json);
+                    }
+                }
+                continue;
+            }
+
+            // Claude: content_block_stop — finalize the block
+            if (data.type === "content_block_stop") {
+                const idx = data.index ?? 0;
+                const block = blocks.get(idx);
+                if (block) {
+                    const joined = block.parts.join("");
+                    if (joined.trim()) {
+                        if (block.type === "thinking") {
+                            messages.push({ role: "thinking", content: joined });
+                        } else if (block.type === "tool_use") {
+                            let formatted = `**${block.name || "tool"}**`;
+                            if (block.id) formatted += `  \`${block.id}\``;
+                            try {
+                                const parsed = JSON.parse(joined);
+                                formatted += "\n```json\n" + JSON.stringify(parsed, null, 2) + "\n```";
+                            } catch {
+                                formatted += "\n```\n" + joined + "\n```";
+                            }
+                            messages.push({ role: "tool_use", content: formatted });
+                        } else {
+                            messages.push({ role: "assistant", content: joined });
+                        }
+                    }
+                    blocks.delete(idx);
+                }
+                continue;
+            }
+        } catch { /* skip unparseable lines */ }
+    }
+
+    // Flush any remaining blocks that weren't properly closed
+    for (const [, block] of blocks) {
+        const joined = block.parts.join("");
+        if (joined.trim()) {
+            if (block.type === "thinking") {
+                messages.push({ role: "thinking", content: joined });
+            } else if (block.type === "tool_use") {
+                let formatted = `**${block.name || "tool"}**`;
+                if (block.id) formatted += `  \`${block.id}\``;
+                try {
+                    const parsed = JSON.parse(joined);
+                    formatted += "\n```json\n" + JSON.stringify(parsed, null, 2) + "\n```";
+                } catch {
+                    formatted += "\n```\n" + joined + "\n```";
+                }
+                messages.push({ role: "tool_use", content: formatted });
+            } else {
+                messages.push({ role: "assistant", content: joined });
+            }
+        }
+    }
+
+    return messages.length > 0 ? messages : null;
+}
+
+/**
+ * Legacy SSE text extraction — handles OpenAI delta, Codex, and simple Claude text streams.
+ */
+function parseSSETextOnly(raw: string): string | null {
     const lines = raw.split("\n");
     const textParts: string[] = [];
 
@@ -592,11 +719,11 @@ function parseSSEOutput(raw: string): string | null {
     return textParts.length > 0 ? textParts.join("") : null;
 }
 
-function parseNonStreamOutput(raw: string): string | null {
+function parseNonStreamOutput(raw: string): ParsedOutput | null {
     try {
         const data = JSON.parse(raw);
-        if (data.choices?.[0]?.message?.content) return extractText(data.choices[0].message.content);
-        if (Array.isArray(data.content)) return extractText(data.content);
+        if (data.choices?.[0]?.message?.content) return { text: extractText(data.choices[0].message.content) };
+        if (Array.isArray(data.content)) return { text: extractText(data.content) };
         const output = data.response?.output || data.output;
         if (Array.isArray(output)) {
             const texts: string[] = [];
@@ -605,14 +732,21 @@ function parseNonStreamOutput(raw: string): string | null {
                     for (const p of item.content) { if (typeof p.text === "string") texts.push(p.text); }
                 }
             }
-            if (texts.length > 0) return texts.join("\n");
+            if (texts.length > 0) return { text: texts.join("\n") };
         }
         return null;
     } catch { return null; }
 }
 
-function parseOutputMessages(raw: string): string | null {
-    if (raw.includes("data:")) { const sse = parseSSEOutput(raw); if (sse) return sse; }
+function parseOutputMessages(raw: string): ParsedOutput | null {
+    if (raw.includes("data:")) {
+        // Try structured Claude SSE parsing first (handles tool_use, thinking, etc.)
+        const structured = parseSSEToMessages(raw);
+        if (structured) return { messages: structured };
+        // Fall back to simple text extraction
+        const text = parseSSETextOnly(raw);
+        if (text) return { text };
+    }
     return parseNonStreamOutput(raw);
 }
 
@@ -727,6 +861,7 @@ export function LogContentModal({ open, logId, initialTab = "input", onClose }: 
     const [outputContent, setOutputContent] = useState("");
     const [model, setModel] = useState("");
     const [activeTab, setActiveTab] = useState<"input" | "output">(initialTab);
+    const [viewMode, setViewMode] = useState<"rendered" | "raw">("rendered");
 
     useEffect(() => { setActiveTab(initialTab); }, [initialTab, logId]);
 
@@ -747,30 +882,123 @@ export function LogContentModal({ open, logId, initialTab = "input", onClose }: 
 
     useEffect(() => { if (open && logId) fetchContent(logId); }, [open, logId, fetchContent]);
 
-    /* ---- Tab bar ---- */
+    /* ---- Download handler ---- */
+    const handleDownload = () => {
+        const content = activeTab === "input" ? inputContent : outputContent;
+        if (!content) return;
+        // Detect format: JSON → .json, SSE stream → .log
+        let ext = ".log";
+        let mimeType = "text/plain;charset=utf-8";
+        try {
+            JSON.parse(content);
+            ext = ".json";
+            mimeType = "application/json;charset=utf-8";
+        } catch { /* not JSON, use .log */ }
+        const blob = new Blob([content], { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `log_${logId ?? "unknown"}_${activeTab}${ext}`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    };
+
+    /* ---- Render raw content ---- */
+    const renderRaw = (content: string) => {
+        if (!content) {
+            const Icon = activeTab === "input" ? FileInput : FileOutput;
+            return (
+                <div className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-white/25">
+                    <Icon size={40} className="mb-3 opacity-40" />
+                    <p className="text-sm">暂无{activeTab === "input" ? "输入" : "输出"}内容记录</p>
+                </div>
+            );
+        }
+        let formatted = content;
+        try {
+            formatted = JSON.stringify(JSON.parse(content), null, 2);
+        } catch { /* not JSON, show as-is */ }
+        return (
+            <pre className="whitespace-pre-wrap break-words rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs leading-relaxed font-mono dark:border-neutral-800 dark:bg-neutral-900 dark:text-slate-200">
+                {formatted}
+            </pre>
+        );
+    };
+
+    /* ---- Tab bar with controls ---- */
+    const currentContent = activeTab === "input" ? inputContent : outputContent;
     const tabBar = (
-        <div className="flex gap-1 rounded-xl bg-slate-100 p-1 dark:bg-neutral-900">
-            {(
-                [
-                    { key: "input" as const, label: "输入消息", Icon: FileInput },
-                    { key: "output" as const, label: "输出内容", Icon: FileOutput },
-                ] as const
-            ).map(({ key, label, Icon }) => (
+        <div className="flex items-center gap-3">
+            {/* Input / Output tabs */}
+            <div className="flex flex-1 gap-1 rounded-xl bg-slate-100 p-1 dark:bg-neutral-900">
+                {(
+                    [
+                        { key: "input" as const, label: "输入消息", Icon: FileInput },
+                        { key: "output" as const, label: "输出内容", Icon: FileOutput },
+                    ] as const
+                ).map(({ key, label, Icon }) => (
+                    <button
+                        key={key}
+                        type="button"
+                        onClick={() => setActiveTab(key)}
+                        className={[
+                            "flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all",
+                            activeTab === key
+                                ? "bg-white text-slate-900 shadow-sm dark:bg-neutral-800 dark:text-white"
+                                : "text-slate-500 hover:text-slate-700 dark:text-white/40 dark:hover:text-white/60",
+                        ].join(" ")}
+                    >
+                        <Icon size={15} />
+                        {label}
+                    </button>
+                ))}
+            </div>
+
+            {/* View mode toggle + Download */}
+            <div className="flex items-center gap-1">
+                {/* Rendered / Raw toggle */}
+                <div className="flex gap-0.5 rounded-lg bg-slate-100 p-0.5 dark:bg-neutral-900">
+                    <button
+                        type="button"
+                        onClick={() => setViewMode("rendered")}
+                        title="渲染视图"
+                        className={[
+                            "flex items-center justify-center rounded-md p-1.5 transition-all",
+                            viewMode === "rendered"
+                                ? "bg-white text-slate-900 shadow-sm dark:bg-neutral-800 dark:text-white"
+                                : "text-slate-400 hover:text-slate-600 dark:text-white/30 dark:hover:text-white/60",
+                        ].join(" ")}
+                    >
+                        <Eye size={14} />
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setViewMode("raw")}
+                        title="原始数据"
+                        className={[
+                            "flex items-center justify-center rounded-md p-1.5 transition-all",
+                            viewMode === "raw"
+                                ? "bg-white text-slate-900 shadow-sm dark:bg-neutral-800 dark:text-white"
+                                : "text-slate-400 hover:text-slate-600 dark:text-white/30 dark:hover:text-white/60",
+                        ].join(" ")}
+                    >
+                        <Code2 size={14} />
+                    </button>
+                </div>
+
+                {/* Download button */}
                 <button
-                    key={key}
                     type="button"
-                    onClick={() => setActiveTab(key)}
-                    className={[
-                        "flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all",
-                        activeTab === key
-                            ? "bg-white text-slate-900 shadow-sm dark:bg-neutral-800 dark:text-white"
-                            : "text-slate-500 hover:text-slate-700 dark:text-white/40 dark:hover:text-white/60",
-                    ].join(" ")}
+                    onClick={handleDownload}
+                    disabled={!currentContent}
+                    title="下载内容"
+                    className="flex items-center justify-center rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 disabled:opacity-30 disabled:cursor-not-allowed dark:text-white/30 dark:hover:bg-neutral-900 dark:hover:text-white/60"
                 >
-                    <Icon size={15} />
-                    {label}
+                    <Download size={14} />
                 </button>
-            ))}
+            </div>
         </div>
     );
 
@@ -784,6 +1012,7 @@ export function LogContentModal({ open, logId, initialTab = "input", onClose }: 
                 </div>
             );
         }
+        if (viewMode === "raw") return renderRaw(inputContent);
         const messages = parseInputMessages(inputContent);
         if (messages && messages.length > 0) {
             return (
@@ -813,11 +1042,21 @@ export function LogContentModal({ open, logId, initialTab = "input", onClose }: 
                 </div>
             );
         }
-        const text = parseOutputMessages(outputContent);
-        if (text) {
+        if (viewMode === "raw") return renderRaw(outputContent);
+        const parsed = parseOutputMessages(outputContent);
+        if (parsed) {
+            if ("messages" in parsed) {
+                return (
+                    <div className="space-y-3">
+                        {parsed.messages.map((msg, idx) => (
+                            <MessageBlock key={idx} role={msg.role} content={msg.content} />
+                        ))}
+                    </div>
+                );
+            }
             return (
                 <div className="space-y-3">
-                    <MessageBlock role="assistant" content={text} />
+                    <MessageBlock role="assistant" content={parsed.text} />
                 </div>
             );
         }
