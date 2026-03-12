@@ -134,7 +134,7 @@ export function useSystemStats(interval = 3): {
 
             ws.onerror = () => {
                 if (!mountedRef.current) return;
-                setError("WebSocket 连接错误");
+                setError("WebSocket connection error");
             };
 
             ws.onclose = () => {

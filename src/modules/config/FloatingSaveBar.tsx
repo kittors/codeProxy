@@ -17,29 +17,29 @@ const STATUS_CONFIG: Record<
     { label: string; icon?: ReactNode; tone: string; dot?: boolean }
 > = {
     saved: {
-        label: "已保存",
+        label: "Saved",
         icon: <Check size={12} strokeWidth={3} />,
         tone: "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-400/20 dark:bg-emerald-500/15 dark:text-emerald-300",
     },
     dirty: {
-        label: "未保存",
+        label: "Unsaved",
         dot: true,
         tone: "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-400/20 dark:bg-amber-500/15 dark:text-amber-200",
     },
     saving: {
-        label: "保存中…",
+        label: "Saving…",
         tone: "border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-400/20 dark:bg-sky-500/15 dark:text-sky-200",
     },
     loading: {
-        label: "加载中…",
+        label: "Loading…",
         tone: "border-slate-200 bg-slate-50 text-slate-600 dark:border-neutral-700 dark:bg-neutral-800/60 dark:text-slate-300",
     },
     error: {
-        label: "加载失败",
+        label: "Load failed",
         tone: "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-400/20 dark:bg-rose-500/15 dark:text-rose-300",
     },
     offline: {
-        label: "离线",
+        label: "Offline",
         tone: "border-slate-200 bg-slate-100 text-slate-500 dark:border-neutral-700 dark:bg-neutral-800/60 dark:text-slate-400",
     },
 };
@@ -153,7 +153,7 @@ export function FloatingSaveBar({
                         className="h-8 gap-1.5 px-2.5 text-xs"
                     >
                         <RefreshCw size={13} className={status === "loading" ? "animate-spin" : ""} />
-                        重载
+                        Reload
                     </Button>
                     <Button
                         variant="primary"
@@ -163,7 +163,7 @@ export function FloatingSaveBar({
                         className="h-8 gap-1.5 px-3 text-xs"
                     >
                         {justSaved ? <Check size={13} /> : <Save size={13} />}
-                        {justSaved ? "已保存" : "保存"}
+                        {justSaved ? "Saved" : "Save"}
                     </Button>
                 </div>
             </div>

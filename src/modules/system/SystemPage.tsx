@@ -322,7 +322,7 @@ export function SystemPage() {
             </div>
             <Button variant="secondary" size="sm" onClick={() => void loadModels()} disabled={modelsLoading}>
               <RefreshCw size={13} className={modelsLoading ? "animate-spin" : ""} />
-              刷新
+              Refresh
             </Button>
           </div>
         </div>

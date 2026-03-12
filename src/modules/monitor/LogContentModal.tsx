@@ -51,70 +51,70 @@ const ROLE_STYLES: Record<
     { label: string; icon: ReactNode; border: string; headerBg: string; headerText: string }
 > = {
     system: {
-        label: "系统提示词",
+        label: "System Prompt",
         icon: <Settings size={15} />,
         border: "border-violet-500/25 dark:border-violet-400/20",
         headerBg: "bg-violet-50 dark:bg-violet-500/10",
         headerText: "text-violet-700 dark:text-violet-300",
     },
     developer: {
-        label: "开发者指令",
+        label: "Developer Instructions",
         icon: <Settings size={15} />,
         border: "border-violet-500/25 dark:border-violet-400/20",
         headerBg: "bg-violet-50 dark:bg-violet-500/10",
         headerText: "text-violet-700 dark:text-violet-300",
     },
     instructions: {
-        label: "指令 (Instructions)",
+        label: "Instructions",
         icon: <ClipboardList size={15} />,
         border: "border-indigo-500/25 dark:border-indigo-400/20",
         headerBg: "bg-indigo-50 dark:bg-indigo-500/10",
         headerText: "text-indigo-700 dark:text-indigo-300",
     },
     user: {
-        label: "用户消息",
+        label: "User Message",
         icon: <User size={15} />,
         border: "border-sky-500/25 dark:border-sky-400/20",
         headerBg: "bg-sky-50 dark:bg-sky-500/10",
         headerText: "text-sky-700 dark:text-sky-300",
     },
     assistant: {
-        label: "模型回复",
+        label: "Model Response",
         icon: <Bot size={15} />,
         border: "border-emerald-500/25 dark:border-emerald-400/20",
         headerBg: "bg-emerald-50 dark:bg-emerald-500/10",
         headerText: "text-emerald-700 dark:text-emerald-300",
     },
     tool: {
-        label: "工具结果",
+        label: "Tool Result",
         icon: <Wrench size={15} />,
         border: "border-amber-500/25 dark:border-amber-400/20",
         headerBg: "bg-amber-50 dark:bg-amber-500/10",
         headerText: "text-amber-700 dark:text-amber-300",
     },
     function_call: {
-        label: "函数调用",
+        label: "Function Call",
         icon: <Zap size={15} />,
         border: "border-orange-500/25 dark:border-orange-400/20",
         headerBg: "bg-orange-50 dark:bg-orange-500/10",
         headerText: "text-orange-700 dark:text-orange-300",
     },
     function_call_output: {
-        label: "函数返回",
+        label: "Function Return",
         icon: <Upload size={15} />,
         border: "border-teal-500/25 dark:border-teal-400/20",
         headerBg: "bg-teal-50 dark:bg-teal-500/10",
         headerText: "text-teal-700 dark:text-teal-300",
     },
     thinking: {
-        label: "思考过程",
+        label: "Thinking",
         icon: <Brain size={15} />,
         border: "border-purple-500/25 dark:border-purple-400/20",
         headerBg: "bg-purple-50 dark:bg-purple-500/10",
         headerText: "text-purple-700 dark:text-purple-300",
     },
     tool_use: {
-        label: "工具调用",
+        label: "Tool Use",
         icon: <Wrench size={15} />,
         border: "border-amber-500/25 dark:border-amber-400/20",
         headerBg: "bg-amber-50 dark:bg-amber-500/10",
@@ -123,7 +123,7 @@ const ROLE_STYLES: Record<
 };
 
 const DEFAULT_STYLE = {
-    label: "消息",
+    label: "Message",
     icon: <MessageSquare size={15} />,
     border: "border-slate-300/50 dark:border-neutral-700",
     headerBg: "bg-slate-50 dark:bg-neutral-800/60",
@@ -569,7 +569,7 @@ function parseInputMessages(raw: string): Msg[] | null {
     }
 
     if (result.length > 0) {
-        result.push({ role: "system", content: "⚠️ 注意：Raw Content因超过大小限制被截断，部分消息可能不完整。" });
+        result.push({ role: "system", content: "⚠️ ⚠️ Note: Raw content was truncated due to size limits; some messages may be incomplete." });
         return result;
     }
 
@@ -800,7 +800,7 @@ function ContentModal({
             <button
                 type="button"
                 onClick={() => open && onClose()}
-                aria-label="关闭弹窗"
+                aria-label="Close"
                 className={[
                     "absolute inset-0 cursor-default bg-slate-900/40 backdrop-blur-sm dark:bg-black/50",
                     "transition-opacity duration-200",
@@ -824,14 +824,14 @@ function ContentModal({
                         <h2 className="truncate text-base font-semibold tracking-tight text-slate-900 dark:text-white">
                             Message Content{model ? ` · ${model}` : ""}
                         </h2>
-                        <p className="mt-1 text-sm text-slate-500 dark:text-white/50">请求/响应的消息详情</p>
+                        <p className="mt-1 text-sm text-slate-500 dark:text-white/50">Request/Response message details</p>
                     </div>
                     <button
                         type="button"
                         onClick={onClose}
                         disabled={!open}
                         className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white/70 text-slate-700 shadow-sm transition hover:bg-white dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-slate-200 dark:hover:bg-neutral-950/80"
-                        aria-label="关闭"
+                        aria-label="Close"
                     >
                         <X size={16} />
                     </button>
@@ -876,7 +876,7 @@ export function LogContentModal({ open, logId, initialTab = "input", onClose, fe
             setOutputContent(result.output_content || "");
             setModel(result.model || "");
         } catch (err) {
-            setError(err instanceof Error ? err.message : "加载失败");
+            setError(err instanceof Error ? err.message : "Load failed");
         } finally {
             setLoading(false);
         }
@@ -914,7 +914,7 @@ export function LogContentModal({ open, logId, initialTab = "input", onClose, fe
             return (
                 <div className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-white/25">
                     <Icon size={40} className="mb-3 opacity-40" />
-                    <p className="text-sm">暂无{activeTab === "input" ? "输入" : "输出"}内容记录</p>
+                    <p className="text-sm">No {activeTab === "input" ? "input" : "output"}content recorded</p>
                 </div>
             );
         }
@@ -937,7 +937,7 @@ export function LogContentModal({ open, logId, initialTab = "input", onClose, fe
             <div className="flex flex-1 gap-1 rounded-xl bg-slate-100 p-1 dark:bg-neutral-900">
                 {(
                     [
-                        { key: "input" as const, label: "输入消息", Icon: FileInput },
+                        { key: "input" as const, label: "Input Messages", Icon: FileInput },
                         { key: "output" as const, label: "Output", Icon: FileOutput },
                     ] as const
                 ).map(({ key, label, Icon }) => (
@@ -965,7 +965,7 @@ export function LogContentModal({ open, logId, initialTab = "input", onClose, fe
                     <button
                         type="button"
                         onClick={() => setViewMode("rendered")}
-                        title="渲染视图"
+                        title="Rendered View"
                         className={[
                             "flex items-center justify-center rounded-md p-1.5 transition-all",
                             viewMode === "rendered"
@@ -978,7 +978,7 @@ export function LogContentModal({ open, logId, initialTab = "input", onClose, fe
                     <button
                         type="button"
                         onClick={() => setViewMode("raw")}
-                        title="原始数据"
+                        title="Raw Data"
                         className={[
                             "flex items-center justify-center rounded-md p-1.5 transition-all",
                             viewMode === "raw"
@@ -995,7 +995,7 @@ export function LogContentModal({ open, logId, initialTab = "input", onClose, fe
                     type="button"
                     onClick={handleDownload}
                     disabled={!currentContent}
-                    title="下载内容"
+                    title="Download"
                     className="flex items-center justify-center rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 disabled:opacity-30 disabled:cursor-not-allowed dark:text-white/30 dark:hover:bg-neutral-900 dark:hover:text-white/60"
                 >
                     <Download size={14} />
@@ -1010,7 +1010,7 @@ export function LogContentModal({ open, logId, initialTab = "input", onClose, fe
             return (
                 <div className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-white/25">
                     <FileInput size={40} className="mb-3 opacity-40" />
-                    <p className="text-sm">暂无Input记录</p>
+                    <p className="text-sm">No Input记录</p>
                 </div>
             );
         }
@@ -1040,7 +1040,7 @@ export function LogContentModal({ open, logId, initialTab = "input", onClose, fe
             return (
                 <div className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-white/25">
                     <FileOutput size={40} className="mb-3 opacity-40" />
-                    <p className="text-sm">暂无Output记录</p>
+                    <p className="text-sm">No Output记录</p>
                 </div>
             );
         }
@@ -1075,7 +1075,7 @@ export function LogContentModal({ open, logId, initialTab = "input", onClose, fe
             {loading ? (
                 <div className="flex items-center justify-center py-20">
                     <Loader2 size={24} className="animate-spin text-slate-400 dark:text-white/40" />
-                    <span className="ml-3 text-sm text-slate-500 dark:text-white/50">加载中…</span>
+                    <span className="ml-3 text-sm text-slate-500 dark:text-white/50">Loading…</span>
                 </div>
             ) : error ? (
                 <div className="flex flex-col items-center justify-center py-16">

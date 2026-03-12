@@ -182,7 +182,7 @@ export function ModelsPage() {
                 // ignore cost fetch failure
             }
         } catch (err: unknown) {
-            notify({ type: "error", message: err instanceof Error ? err.message : "加载模型数据失败" });
+            notify({ type: "error", message: err instanceof Error ? err.message : "Failed to load model data" });
         } finally {
             setLoading(false);
         }
@@ -243,9 +243,9 @@ export function ModelsPage() {
                 ),
             );
             setPricingModel(null);
-            notify({ type: "success", message: "定价已保存到数据库" });
+            notify({ type: "success", message: "Pricing saved to database" });
         } catch (err: unknown) {
-            notify({ type: "error", message: err instanceof Error ? err.message : "保存失败" });
+            notify({ type: "error", message: err instanceof Error ? err.message : "Save failed" });
         } finally {
             setSavingPricing(false);
         }
@@ -253,7 +253,7 @@ export function ModelsPage() {
 
     const formatPricingBadge = (p: ModelPricing) => {
         if (p.inputPricePerMillion === 0 && p.outputPricePerMillion === 0 && p.cachedPricePerMillion === 0) {
-            return "未定价";
+            return "Not priced";
         }
         return `$${p.inputPricePerMillion} / $${p.outputPricePerMillion}`;
     };
@@ -261,7 +261,7 @@ export function ModelsPage() {
     const modelColumns = useMemo<VirtualTableColumn<ModelItem>[]>(() => [
         {
             key: "model",
-            label: "模型",
+            label: "Model",
             width: "w-80",
             render: (row) => (
                 <div className="flex items-center gap-2 min-w-0">
@@ -274,7 +274,7 @@ export function ModelsPage() {
         },
         {
             key: "inputPrice",
-            label: "输入价格",
+            label: "Input Price",
             width: "w-36",
             headerClassName: "text-right",
             cellClassName: "text-right font-mono text-xs tabular-nums text-slate-700 dark:text-slate-200",
@@ -282,7 +282,7 @@ export function ModelsPage() {
         },
         {
             key: "outputPrice",
-            label: "输出价格",
+            label: "Output Price",
             width: "w-36",
             headerClassName: "text-right",
             cellClassName: "text-right font-mono text-xs tabular-nums text-slate-700 dark:text-slate-200",
@@ -290,7 +290,7 @@ export function ModelsPage() {
         },
         {
             key: "cachedPrice",
-            label: "缓存价格",
+            label: "Cache Price",
             width: "w-36",
             headerClassName: "text-right",
             cellClassName: "text-right font-mono text-xs tabular-nums text-slate-700 dark:text-slate-200",
@@ -298,7 +298,7 @@ export function ModelsPage() {
         },
         {
             key: "status",
-            label: "状态",
+            label: "Status",
             width: "w-32",
             headerClassName: "text-center",
             cellClassName: "text-center",
@@ -306,24 +306,24 @@ export function ModelsPage() {
                 const hasPricing = row.pricing.inputPricePerMillion > 0 || row.pricing.outputPricePerMillion > 0;
                 return hasPricing ? (
                     <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-300">
-                        <Check size={10} /> 已定价
+                        <Check size={10} /> Priced
                     </span>
                 ) : (
                     <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-semibold text-slate-500 dark:bg-neutral-800 dark:text-white/40">
-                        未定价
+                        Not priced
                     </span>
                 );
             },
         },
         {
             key: "actions",
-            label: "操作",
+            label: "Actions",
             width: "w-20",
             render: (row) => (
                 <button
                     onClick={() => handleOpenPricing(row.id)}
                     className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-indigo-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-indigo-400"
-                    title="设置定价"
+                    title="Set pricing"
                 >
                     <DollarSign size={15} />
                 </button>
@@ -337,7 +337,7 @@ export function ModelsPage() {
             <div className="grid gap-4 md:grid-cols-3">
                 <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
                     <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 dark:text-white/55">
-                        <Cpu size={14} /> 可用模型
+                        <Cpu size={14} /> Available Models
                     </div>
                     <div className="mt-2 text-2xl font-bold tabular-nums text-slate-900 dark:text-white">
                         {totalStats.modelCount}
@@ -345,7 +345,7 @@ export function ModelsPage() {
                 </div>
                 <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
                     <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 dark:text-white/55">
-                        <DollarSign size={14} /> 已定价模型
+                        <DollarSign size={14} /> Priced模型
                     </div>
                     <div className="mt-2 text-2xl font-bold tabular-nums text-slate-900 dark:text-white">
                         {totalStats.pricedCount}
@@ -354,7 +354,7 @@ export function ModelsPage() {
                 </div>
                 <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
                     <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 dark:text-white/55">
-                        <Activity size={14} /> 额度消耗
+                        <Activity size={14} /> Quota Cost
                     </div>
                     <div className="mt-2 text-2xl font-bold tabular-nums text-slate-900 dark:text-white">
                         ${totalCost.toFixed(4)}
@@ -370,10 +370,10 @@ export function ModelsPage() {
                     <div>
                         <h2 className="flex items-center gap-2 text-base font-semibold text-slate-900 dark:text-white">
                             <Cpu size={18} className="text-slate-900 dark:text-white" />
-                            Model Pricing管理
+                            Model Pricing
                         </h2>
                         <p className="mt-1 text-xs text-slate-500 dark:text-white/45">
-                            管理所有可用模型的定价配置。定价数据持久化存储在数据库中，用于计算请求费用和执行消费限额。
+                            管理所有Available Models的定价配置。定价数据持久化存储在数据库中，用于计算请求费用和执行消费限额。
                         </p>
                     </div>
                     <div className="flex items-center gap-2">
@@ -382,7 +382,7 @@ export function ModelsPage() {
                             <input
                                 value={searchFilter}
                                 onChange={(e) => setSearchFilter(e.target.value)}
-                                placeholder="搜索模型…"
+                                placeholder="Search models…"
                                 className="w-48 rounded-lg border border-slate-200 bg-white py-1.5 pl-8 pr-3 text-xs text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-indigo-300 dark:border-neutral-700 dark:bg-neutral-900/60 dark:text-white dark:placeholder:text-white/30 dark:focus:border-indigo-600"
                             />
                         </div>
@@ -391,7 +391,7 @@ export function ModelsPage() {
                             onClick={() => void loadModels()}
                             disabled={loading}
                             className="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-slate-900 text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70 dark:bg-white dark:text-neutral-950 dark:hover:bg-slate-200"
-                            title="刷新"
+                            title="Refresh"
                         >
                             <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
                         </button>
@@ -406,8 +406,8 @@ export function ModelsPage() {
                         rowKey={(row) => row.id}
                         loading={loading}
                         rowHeight={44}
-                        caption="Model Pricing管理表格"
-                        emptyText={searchFilter ? "无匹配结果" : "No model data"}
+                        caption="Model Pricing表格"
+                        emptyText={searchFilter ? "No results" : "No model data"}
                         minWidth="min-w-[800px]"
                         height="h-[calc(100vh-390px)]"
                     />
@@ -415,7 +415,7 @@ export function ModelsPage() {
                         <div className="absolute inset-0 z-10 flex items-center justify-center rounded-b-2xl bg-white/70 backdrop-blur-sm dark:bg-neutral-950/55">
                             <div className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white/85 px-3 py-2 text-sm font-medium text-slate-700 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/70 dark:text-white/75">
                                 <span className="h-4 w-4 rounded-full border-2 border-slate-300 border-t-slate-900 animate-spin dark:border-white/20 dark:border-t-white/80" />
-                                加载中…
+                                Loading…
                             </div>
                         </div>
                     ) : null}
@@ -426,15 +426,15 @@ export function ModelsPage() {
             <Modal
                 open={pricingModel !== null}
                 onClose={() => setPricingModel(null)}
-                title="设置Model Pricing"
-                description={pricingModel ? `为 ${pricingModel} 设置每百万 Token 价格（美元）` : ""}
+                title="Set Model Pricing"
+                description={pricingModel ? `Set price per million tokens (USD) for ${pricingModel}` : ""}
                 footer={
                     <>
                         <Button variant="secondary" onClick={() => setPricingModel(null)}>
-                            取消
+                            Cancel
                         </Button>
                         <Button variant="primary" onClick={() => void handleSavePricing()} disabled={savingPricing}>
-                            {savingPricing ? "保存中…" : "保存"}
+                            {savingPricing ? "Saving…" : "Save"}
                         </Button>
                     </>
                 }
@@ -451,13 +451,13 @@ export function ModelsPage() {
 
                     <div>
                         <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
-                            输入 Token 价格（$/百万 Token）
+                            Input Token Price ($/M tokens)
                         </label>
                         <input
                             type="number"
                             value={editInputPrice}
                             onChange={(e) => setEditInputPrice(e.target.value)}
-                            placeholder="例如：3.00"
+                            placeholder="e.g. 3.00"
                             step="0.01"
                             min={0}
                             className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition-all focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white dark:focus:border-indigo-500"
@@ -466,13 +466,13 @@ export function ModelsPage() {
 
                     <div>
                         <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
-                            输出 Token 价格（$/百万 Token）
+                            Output Token Price ($/M tokens)
                         </label>
                         <input
                             type="number"
                             value={editOutputPrice}
                             onChange={(e) => setEditOutputPrice(e.target.value)}
-                            placeholder="例如：15.00"
+                            placeholder="e.g. 15.00"
                             step="0.01"
                             min={0}
                             className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition-all focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white dark:focus:border-indigo-500"
@@ -481,13 +481,13 @@ export function ModelsPage() {
 
                     <div>
                         <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
-                            缓存 Token 价格（$/百万 Token）
+                            Cache Token Price ($/M tokens)
                         </label>
                         <input
                             type="number"
                             value={editCachedPrice}
                             onChange={(e) => setEditCachedPrice(e.target.value)}
-                            placeholder="例如：1.50（通常比输入便宜）"
+                            placeholder="e.g. 1.50 (usually cheaper than input)"
                             step="0.01"
                             min={0}
                             className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition-all focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white dark:focus:border-indigo-500"

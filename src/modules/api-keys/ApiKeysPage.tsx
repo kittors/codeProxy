@@ -111,7 +111,7 @@ const formatDate = (iso: string | undefined) => {
 };
 
 const formatLimit = (limit: number | undefined) => {
-    if (!limit || limit <= 0) return "无限制";
+    if (!limit || limit <= 0) return "Unlimited";
     return limit.toLocaleString();
 };
 
@@ -269,7 +269,7 @@ export function ApiKeysPage() {
                 const merged = [...entriesData, ...newEntries];
                 try {
                     await apiKeyEntriesApi.replace(merged);
-                    notify({ type: "success", message: `已自动导入 ${newEntries.length} 个旧 API Key` });
+                    notify({ type: "success", message: `Auto-imported ${newEntries.length} legacy API Keys` });
                 } catch {
                     // silent
                 }
@@ -281,7 +281,7 @@ export function ApiKeysPage() {
             // Load models after entries are available (needs a valid API key)
             void loadModels();
         } catch (err: unknown) {
-            notify({ type: "error", message: err instanceof Error ? err.message : "加载 API Keys 失败" });
+            notify({ type: "error", message: err instanceof Error ? err.message : "Failed to load API Keys" });
         } finally {
             setLoading(false);
         }
@@ -317,10 +317,10 @@ export function ApiKeysPage() {
             setEntries(newEntries);
             notify({
                 type: "success",
-                message: updated.disabled ? `已禁用「${entry.name || "未命名"}」` : `已启用「${entry.name || "未命名"}」`,
+                message: updated.disabled ? `已禁用「${entry.name || "Unnamed"}」` : `已启用「${entry.name || "Unnamed"}」`,
             });
         } catch (err: unknown) {
-            notify({ type: "error", message: err instanceof Error ? err.message : "操作失败" });
+            notify({ type: "error", message: err instanceof Error ? err.message : "Operation failed" });
         }
     };
 
@@ -343,11 +343,11 @@ export function ApiKeysPage() {
 
     const handleCreate = async () => {
         if (!form.name.trim()) {
-            notify({ type: "error", message: "请填写 API Key 名称" });
+            notify({ type: "error", message: "Please enter API Key name" });
             return;
         }
         if (!form.key.trim()) {
-            notify({ type: "error", message: "Key 不能为空" });
+            notify({ type: "error", message: "Key cannot be empty" });
             return;
         }
         setSaving(true);
@@ -365,11 +365,11 @@ export function ApiKeysPage() {
                 "created-at": new Date().toISOString(),
             };
             await apiKeyEntriesApi.replace([...entries, newEntry]);
-            notify({ type: "success", message: "创建成功" });
+            notify({ type: "success", message: "Created successfully" });
             setShowCreate(false);
             await loadEntries();
         } catch (err: unknown) {
-            notify({ type: "error", message: err instanceof Error ? err.message : "创建失败" });
+            notify({ type: "error", message: err instanceof Error ? err.message : "Create failed" });
         } finally {
             setSaving(false);
         }
@@ -396,7 +396,7 @@ export function ApiKeysPage() {
     const handleEdit = async () => {
         if (editIndex === null) return;
         if (!form.name.trim()) {
-            notify({ type: "error", message: "请填写 API Key 名称" });
+            notify({ type: "error", message: "Please enter API Key name" });
             return;
         }
         setSaving(true);
@@ -414,11 +414,11 @@ export function ApiKeysPage() {
                     "system-prompt": form.systemPrompt.trim(),
                 },
             });
-            notify({ type: "success", message: "更新成功" });
+            notify({ type: "success", message: "Updated successfully" });
             setEditIndex(null);
             await loadEntries();
         } catch (err: unknown) {
-            notify({ type: "error", message: err instanceof Error ? err.message : "更新失败" });
+            notify({ type: "error", message: err instanceof Error ? err.message : "Update failed" });
         } finally {
             setSaving(false);
         }
@@ -431,11 +431,11 @@ export function ApiKeysPage() {
         setSaving(true);
         try {
             await apiKeyEntriesApi.delete({ index: deleteIndex });
-            notify({ type: "success", message: "Delete成功" });
+            notify({ type: "success", message: "Deleted successfully" });
             setDeleteIndex(null);
             await loadEntries();
         } catch (err: unknown) {
-            notify({ type: "error", message: err instanceof Error ? err.message : "Delete失败" });
+            notify({ type: "error", message: err instanceof Error ? err.message : "Delete failed" });
         } finally {
             setSaving(false);
         }
@@ -446,9 +446,9 @@ export function ApiKeysPage() {
     const handleCopy = async (key: string) => {
         try {
             await navigator.clipboard.writeText(key);
-            notify({ type: "success", message: "Copied到剪贴板" });
+            notify({ type: "success", message: "Copied to clipboard" });
         } catch {
-            notify({ type: "error", message: "Copy失败" });
+            notify({ type: "error", message: "Copy failed" });
         }
     };
 
@@ -456,7 +456,7 @@ export function ApiKeysPage() {
 
     const handleViewUsage = (entry: ApiKeyEntry) => {
         setUsageViewKey(entry.key);
-        setUsageViewName(entry.name || "未命名");
+        setUsageViewName(entry.name || "Unnamed");
         void loadUsage();
     };
 
@@ -470,14 +470,14 @@ export function ApiKeysPage() {
     const apiKeyColumns = useMemo<VirtualTableColumn<ApiKeyEntry>[]>(() => [
         {
             key: "status",
-            label: "状态",
+            label: "Status",
             width: "w-[52px]",
             headerClassName: "text-center",
             cellClassName: "text-center",
             render: (row, idx) => (
                 <button
                     onClick={() => void handleToggleDisable(idx)}
-                    title={row.disabled ? "点击启用" : "点击禁用"}
+                    title={row.disabled ? "Click to enable" : "Click to disable"}
                     className={`inline-flex h-7 w-7 items-center justify-center rounded-lg transition-colors ${row.disabled
                         ? "text-slate-400 hover:bg-red-50 hover:text-red-500 dark:text-white/30 dark:hover:bg-red-900/20 dark:hover:text-red-400"
                         : "text-emerald-500 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-900/20"
@@ -489,11 +489,11 @@ export function ApiKeysPage() {
         },
         {
             key: "name",
-            label: "名称",
+            label: "Name",
             width: "w-[80px]",
             cellClassName: "font-medium",
             render: (row) => (
-                <OverflowTooltip content={row.name || "未命名"} className="block min-w-0">
+                <OverflowTooltip content={row.name || "Unnamed"} className="block min-w-0">
                     <span className="block min-w-0 truncate">
                         {row.name || <span className="text-slate-400 dark:text-white/40">未命名</span>}
                     </span>
@@ -513,13 +513,13 @@ export function ApiKeysPage() {
         },
         {
             key: "dailyLimit",
-            label: "每日限制",
+            label: "Daily Limit",
             width: "w-[80px]",
             cellClassName: "whitespace-nowrap text-slate-700 dark:text-white/70",
             render: (row) => (
                 <span className="inline-flex items-center gap-1">
                     {!row["daily-limit"] ? (
-                        <><Infinity size={14} className="text-green-500" /> 无限制</>
+                        <><Infinity size={14} className="text-green-500" /> Unlimited</>
                     ) : (
                         formatLimit(row["daily-limit"])
                     )}
@@ -528,13 +528,13 @@ export function ApiKeysPage() {
         },
         {
             key: "totalQuota",
-            label: "总配额",
+            label: "Total Quota",
             width: "w-[80px]",
             cellClassName: "whitespace-nowrap text-slate-700 dark:text-white/70",
             render: (row) => (
                 <span className="inline-flex items-center gap-1">
                     {!row["total-quota"] ? (
-                        <><Infinity size={14} className="text-green-500" /> 无限制</>
+                        <><Infinity size={14} className="text-green-500" /> Unlimited</>
                     ) : (
                         formatLimit(row["total-quota"])
                     )}
@@ -547,7 +547,7 @@ export function ApiKeysPage() {
             width: "w-[70px]",
             cellClassName: "whitespace-nowrap text-slate-700 dark:text-white/70",
             headerRender: () => (
-                <HoverTooltip content="Requests Per Minute，每分钟请求数" className="inline-flex items-center gap-1">
+                <HoverTooltip content="Requests Per Minute，Requests Per Minute" className="inline-flex items-center gap-1">
                     <span>RPM</span>
                     <Info size={12} className="text-slate-400 dark:text-white/40" />
                 </HoverTooltip>
@@ -555,7 +555,7 @@ export function ApiKeysPage() {
             render: (row) => (
                 <span className="inline-flex items-center gap-1">
                     {!row["rpm-limit"] ? (
-                        <><Infinity size={14} className="text-green-500" /> 无限制</>
+                        <><Infinity size={14} className="text-green-500" /> Unlimited</>
                     ) : (
                         formatLimit(row["rpm-limit"])
                     )}
@@ -568,7 +568,7 @@ export function ApiKeysPage() {
             width: "w-[70px]",
             cellClassName: "whitespace-nowrap text-slate-700 dark:text-white/70",
             headerRender: () => (
-                <HoverTooltip content="Tokens Per Minute，每分钟 Token 数" className="inline-flex items-center gap-1">
+                <HoverTooltip content="Tokens Per Minute，Tokens Per Minute" className="inline-flex items-center gap-1">
                     <span>TPM</span>
                     <Info size={12} className="text-slate-400 dark:text-white/40" />
                 </HoverTooltip>
@@ -576,7 +576,7 @@ export function ApiKeysPage() {
             render: (row) => (
                 <span className="inline-flex items-center gap-1">
                     {!row["tpm-limit"] ? (
-                        <><Infinity size={14} className="text-green-500" /> 无限制</>
+                        <><Infinity size={14} className="text-green-500" /> Unlimited</>
                     ) : (
                         formatLimit(row["tpm-limit"])
                     )}
@@ -585,7 +585,7 @@ export function ApiKeysPage() {
         },
         {
             key: "allowedModels",
-            label: "可用模型",
+            label: "Models",
             width: "w-[110px]",
             cellClassName: "text-slate-700 dark:text-white/70 overflow-hidden min-w-0",
             render: (row) =>
@@ -609,33 +609,33 @@ export function ApiKeysPage() {
                             </span>
                             <span className="block min-w-0 flex-1 truncate text-slate-500 dark:text-white/50">
                                 {row["allowed-models"][0]}
-                                {row["allowed-models"].length > 1 ? " 等" : ""}
+                                {row["allowed-models"].length > 1 ? " more" : ""}
                             </span>
                         </span>
                     </HoverTooltip>
                 ) : (
                     <span className="inline-flex items-center gap-1 whitespace-nowrap text-green-600 dark:text-green-400">
-                        <ShieldCheck size={14} /> 全部
+                        <ShieldCheck size={14} /> All
                     </span>
                 ),
         },
         {
             key: "createdAt",
-            label: "创建时间",
+            label: "Created",
             width: "w-[140px]",
             cellClassName: "whitespace-nowrap text-slate-500 dark:text-white/50",
             render: (row) => <>{formatDate(row["created-at"])}</>,
         },
         {
             key: "actions",
-            label: "操作",
+            label: "Actions",
             width: "w-[130px]",
             render: (row, idx) => (
                 <div className="flex gap-1">
                     <button
                         onClick={() => handleViewUsage(row)}
                         className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-blue-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-blue-400"
-                        title="查看调用情况"
+                        title="View usage"
                     >
                         <BarChart3 size={15} />
                     </button>
@@ -668,14 +668,14 @@ export function ApiKeysPage() {
     const usageLogColumns = useMemo<VirtualTableColumn<UsageLogRow>[]>(() => [
         {
             key: "timestamp",
-            label: "时间",
+            label: "Time",
             width: "w-48",
             cellClassName: "font-mono text-xs tabular-nums text-slate-700 dark:text-slate-200",
             render: (row) => <span className="block min-w-0 truncate">{formatTimestamp(row.timestamp)}</span>,
         },
         {
             key: "model",
-            label: "模型",
+            label: "Model",
             width: "w-48",
             render: (row) => (
                 <OverflowTooltip content={row.model} className="block min-w-0">
@@ -685,22 +685,22 @@ export function ApiKeysPage() {
         },
         {
             key: "status",
-            label: "状态",
+            label: "Status",
             width: "w-16",
             render: (row) =>
                 row.failed ? (
                     <span className="inline-flex min-w-[44px] justify-center rounded-lg bg-rose-50 px-2 py-1 text-xs font-semibold text-rose-700 dark:bg-rose-500/15 dark:text-rose-200">
-                        失败
+                        Failed
                     </span>
                 ) : (
                     <span className="inline-flex min-w-[44px] justify-center rounded-lg bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200">
-                        成功
+                        Success
                     </span>
                 ),
         },
         {
             key: "latency",
-            label: "用时",
+            label: "Duration",
             width: "w-20",
             headerClassName: "text-right",
             cellClassName: "text-right font-mono text-xs tabular-nums text-slate-700 dark:text-slate-200",
@@ -708,7 +708,7 @@ export function ApiKeysPage() {
         },
         {
             key: "inputTokens",
-            label: "输入",
+            label: "Input",
             width: "w-20",
             headerClassName: "text-right",
             cellClassName: "text-right font-mono text-xs tabular-nums text-slate-700 dark:text-slate-200",
@@ -716,7 +716,7 @@ export function ApiKeysPage() {
         },
         {
             key: "outputTokens",
-            label: "输出",
+            label: "Output",
             width: "w-20",
             headerClassName: "text-right",
             cellClassName: "text-right font-mono text-xs tabular-nums text-slate-700 dark:text-slate-200",
@@ -724,7 +724,7 @@ export function ApiKeysPage() {
         },
         {
             key: "totalTokens",
-            label: "总 Token",
+            label: "Total Token",
             width: "w-24",
             headerClassName: "text-right",
             cellClassName: "text-right font-mono text-xs tabular-nums text-slate-900 dark:text-white",
@@ -738,13 +738,13 @@ export function ApiKeysPage() {
         <div className="space-y-4">
             <div>
                 <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
-                    名称 <span className="text-rose-500">*</span>
+                    Name <span className="text-rose-500">*</span>
                 </label>
                 <input
                     type="text"
                     value={form.name}
                     onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-                    placeholder="例如：团队A（必填）"
+                    placeholder="e.g. Team-A (required)"
                     className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition-all focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white dark:focus:border-indigo-500"
                 />
             </div>
@@ -769,7 +769,7 @@ export function ApiKeysPage() {
                             onClick={() => setForm((p) => ({ ...p, key: generateKey() }))}
                         >
                             <RefreshCw size={14} />
-                            重新生成
+                            Regenerate
                         </Button>
                     )}
                 </div>
@@ -778,39 +778,39 @@ export function ApiKeysPage() {
             <div className="grid gap-4 lg:grid-cols-3">
                 <div>
                     <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
-                        每日请求限制
+                        Daily Request Limit
                     </label>
                     <input
                         type="number"
                         value={form.dailyLimit}
                         onChange={(e) => setForm((p) => ({ ...p, dailyLimit: e.target.value }))}
-                        placeholder="0 = 无限制"
+                        placeholder="0 = Unlimited"
                         min={0}
                         className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition-all focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white dark:focus:border-indigo-500"
                     />
                 </div>
                 <div>
                     <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
-                        总请求额度
+                        Total Request Quota
                     </label>
                     <input
                         type="number"
                         value={form.totalQuota}
                         onChange={(e) => setForm((p) => ({ ...p, totalQuota: e.target.value }))}
-                        placeholder="0 = 无限制"
+                        placeholder="0 = Unlimited"
                         min={0}
                         className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition-all focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white dark:focus:border-indigo-500"
                     />
                 </div>
                 <div>
                     <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
-                        并发请求限制
+                        Concurrent Request Limit
                     </label>
                     <input
                         type="number"
                         value={form.concurrencyLimit}
                         onChange={(e) => setForm((p) => ({ ...p, concurrencyLimit: e.target.value }))}
-                        placeholder="0 = 无限制"
+                        placeholder="0 = Unlimited"
                         min={0}
                         className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition-all focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white dark:focus:border-indigo-500"
                     />
@@ -819,9 +819,9 @@ export function ApiKeysPage() {
 
             <div className="grid gap-4 lg:grid-cols-2">
                 <div>
-                    <HoverTooltip content="Requests Per Minute，每分钟最大请求数。类似 OpenAI 的 RPM 限制。" className="mb-1 inline-flex items-center gap-1">
+                    <HoverTooltip content="Requests Per Minute，每分钟最大请求数。类似 OpenAI 的 RPM Limit。" className="mb-1 inline-flex items-center gap-1">
                         <label className="text-sm font-medium text-slate-700 dark:text-white/80">
-                            RPM 限制
+                            RPM Limit
                         </label>
                         <Info size={14} className="text-slate-400 dark:text-white/40" />
                     </HoverTooltip>
@@ -829,15 +829,15 @@ export function ApiKeysPage() {
                         type="number"
                         value={form.rpmLimit}
                         onChange={(e) => setForm((p) => ({ ...p, rpmLimit: e.target.value }))}
-                        placeholder="0 = 无限制"
+                        placeholder="0 = Unlimited"
                         min={0}
                         className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition-all focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white dark:focus:border-indigo-500"
                     />
                 </div>
                 <div>
-                    <HoverTooltip content="Tokens Per Minute，每分钟最大 Token 消耗数。类似 OpenAI 的 TPM 限制。" className="mb-1 inline-flex items-center gap-1">
+                    <HoverTooltip content="Tokens Per Minute，每分钟最大 Token 消耗数。类似 OpenAI 的 TPM Limit。" className="mb-1 inline-flex items-center gap-1">
                         <label className="text-sm font-medium text-slate-700 dark:text-white/80">
-                            TPM 限制
+                            TPM Limit
                         </label>
                         <Info size={14} className="text-slate-400 dark:text-white/40" />
                     </HoverTooltip>
@@ -845,7 +845,7 @@ export function ApiKeysPage() {
                         type="number"
                         value={form.tpmLimit}
                         onChange={(e) => setForm((p) => ({ ...p, tpmLimit: e.target.value }))}
-                        placeholder="0 = 无限制"
+                        placeholder="0 = Unlimited"
                         min={0}
                         className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition-all focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white dark:focus:border-indigo-500"
                     />
@@ -854,30 +854,30 @@ export function ApiKeysPage() {
 
             <div>
                 <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
-                    允许的模型（不选 = 全部可用）
+                    允许的模型（不选 = All可用）
                 </label>
                 <MultiSelect
                     options={availableModels}
                     value={form.allowedModels}
                     onChange={(selected) => setForm((p) => ({ ...p, allowedModels: selected }))}
-                    placeholder="选择模型..."
+                    placeholder="Select models..."
                     emptyLabel="All Models"
                 />
             </div>
 
             <div>
                 <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
-                    系统提示词
+                    System Prompt
                 </label>
                 <textarea
                     value={form.systemPrompt}
                     onChange={(e) => setForm((p) => ({ ...p, systemPrompt: e.target.value }))}
-                    placeholder="可选。设置后，使用此 API Key 的所有请求将自动在 messages 首位注入此系统提示词。"
+                    placeholder="可选。设置后，使用此 API Key 的所有请求将自动在 messages 首位注入此System Prompt。"
                     rows={3}
                     className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition-all focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white dark:focus:border-indigo-500 resize-y"
                 />
                 <p className="mt-1 text-xs text-slate-400 dark:text-white/40">
-                    设置后，该 Key 的每次请求都会自动注入此系统提示词作为第一条 system 消息。
+                    设置后，该 Key 的每次请求都会自动注入此System Prompt作为第一条 system 消息。
                 </p>
             </div>
         </div>
@@ -889,16 +889,16 @@ export function ApiKeysPage() {
         <div className="space-y-6">
             <Card
                 title="API Keys Management"
-                description="创建和管理 API Keys，设置请求限制和模型权限。数据持久化在服务端，重启不丢失。"
+                description="Create and manage API Keys, set request limits and model permissions. Data persists on server."
                 actions={
                     <div className="flex gap-2">
                         <Button variant="secondary" size="sm" onClick={() => void loadEntries()} disabled={loading}>
                             <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
-                            刷新
+                            Refresh
                         </Button>
                         <Button variant="primary" size="sm" onClick={handleOpenCreate}>
                             <Plus size={14} />
-                            创建 Key
+                            Create Key
                         </Button>
                     </div>
                 }
@@ -907,7 +907,7 @@ export function ApiKeysPage() {
                 {entries.length === 0 ? (
                     <EmptyState
                         title="No API Keys"
-                        description="点击「创建 Key」按钮来添加第一个 API Key。"
+                        description="点击「Create Key」按钮来添加第一个 API Key。"
                         icon={<KeyRound size={32} className="text-slate-400" />}
                     />
                 ) : (
@@ -918,7 +918,7 @@ export function ApiKeysPage() {
                         rowHeight={44}
                         height="h-auto max-h-[70vh]"
                         minWidth="min-w-[1200px]"
-                        caption="API Keys 列表"
+                        caption="API Keys List"
                         emptyText="No API Keys"
                         rowClassName={(row) => row.disabled ? "opacity-50" : ""}
                     />
@@ -929,15 +929,15 @@ export function ApiKeysPage() {
             <Modal
                 open={showCreate}
                 onClose={() => setShowCreate(false)}
-                title="创建 API Key"
-                description="填写信息并生成新的 API Key（名称为必填项）"
+                title="Create API Key"
+                description="Fill in details and generate a new API Key (name required)"
                 footer={
                     <>
                         <Button variant="secondary" onClick={() => setShowCreate(false)}>
-                            取消
+                            Cancel
                         </Button>
                         <Button variant="primary" onClick={() => void handleCreate()} disabled={saving}>
-                            {saving ? "创建中..." : "创建"}
+                            {saving ? "Creating..." : "Create"}
                         </Button>
                     </>
                 }
@@ -950,14 +950,14 @@ export function ApiKeysPage() {
                 open={editIndex !== null}
                 onClose={() => setEditIndex(null)}
                 title="Edit API Key"
-                description="修改名称、限制和模型权限"
+                description="Modify name, limits and model permissions"
                 footer={
                     <>
                         <Button variant="secondary" onClick={() => setEditIndex(null)}>
-                            取消
+                            Cancel
                         </Button>
                         <Button variant="primary" onClick={() => void handleEdit()} disabled={saving}>
-                            {saving ? "保存中..." : "保存"}
+                            {saving ? "Saving..." : "Save"}
                         </Button>
                     </>
                 }
@@ -969,15 +969,15 @@ export function ApiKeysPage() {
             <Modal
                 open={deleteIndex !== null}
                 onClose={() => setDeleteIndex(null)}
-                title="确认Delete"
-                description="Delete后将无法恢复，使用此 Key 的所有客户端将无法访问。"
+                title="Confirm Delete"
+                description="This cannot be undone. All clients using this Key will lose access."
                 footer={
                     <>
                         <Button variant="secondary" onClick={() => setDeleteIndex(null)}>
-                            取消
+                            Cancel
                         </Button>
                         <Button variant="danger" onClick={() => void handleDelete()} disabled={saving}>
-                            {saving ? "Delete中..." : "确认Delete"}
+                            {saving ? "Deleting..." : "Confirm Delete"}
                         </Button>
                     </>
                 }
@@ -985,7 +985,7 @@ export function ApiKeysPage() {
                 {deleteIndex !== null && entries[deleteIndex] && (
                     <div className="rounded-xl bg-red-50 p-3 dark:bg-red-900/20">
                         <div className="text-sm font-medium text-red-800 dark:text-red-300">
-                            {entries[deleteIndex].name || "未命名"}
+                            {entries[deleteIndex].name || "Unnamed"}
                         </div>
                         <code className="text-xs text-red-600 dark:text-red-400">
                             {maskKey(entries[deleteIndex].key)}
@@ -998,13 +998,13 @@ export function ApiKeysPage() {
             <Modal
                 open={usageViewKey !== null}
                 onClose={() => setUsageViewKey(null)}
-                title={`调用情况 — ${usageViewName}`}
-                description={usageViewKey ? `Key: ${maskKey(usageViewKey)}  ·  共 ${usageRows.length} 条记录` : ""}
+                title={`Usage — ${usageViewName}`}
+                description={usageViewKey ? `Key: ${maskKey(usageViewKey)}  ·  ${usageRows.length} records` : ""}
             >
                 {usageLoading ? (
-                    <div className="py-8 text-center text-sm text-slate-500 dark:text-white/50">加载中...</div>
+                    <div className="py-8 text-center text-sm text-slate-500 dark:text-white/50">Loading...</div>
                 ) : usageRows.length === 0 ? (
-                    <div className="py-8 text-center text-sm text-slate-500 dark:text-white/50">暂无调用记录</div>
+                    <div className="py-8 text-center text-sm text-slate-500 dark:text-white/50">No usage records</div>
                 ) : (
                     <VirtualTable<UsageLogRow>
                         rows={usageRows}
@@ -1013,8 +1013,8 @@ export function ApiKeysPage() {
                         rowHeight={40}
                         height="h-auto max-h-[60vh]"
                         minWidth="min-w-[700px]"
-                        caption="调用记录"
-                        emptyText="暂无调用记录"
+                        caption="Usage Records"
+                        emptyText="No usage records"
                     />
                 )}
             </Modal>

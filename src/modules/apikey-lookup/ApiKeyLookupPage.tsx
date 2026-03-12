@@ -198,13 +198,13 @@ function ModelTag({ id }: { id: string }) {
         <button
             type="button"
             onClick={handleClick}
-            title="点击复制模型名称"
+            title="Click to copy model name"
             className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 font-mono text-xs transition hover:shadow-sm active:scale-95 ${vc.bg} ${vc.text} ${vc.border}`}
         >
             {copied ? (
                 <>
                     <Check size={11} className="text-emerald-500" />
-                    已复制
+                    Copied
                 </>
             ) : (
                 <>
@@ -260,7 +260,7 @@ async function fetchPublicLogs(params: {
     const resp = await fetch(url, { signal: params.signal });
     if (!resp.ok) {
         const text = await resp.text().catch(() => "");
-        throw new Error(text || `请求失败 (${resp.status})`);
+        throw new Error(text || `Request failed (${resp.status})`);
     }
     return resp.json() as Promise<PublicLogsResponse>;
 }
@@ -277,7 +277,7 @@ async function fetchPublicChartData(params: {
     const resp = await fetch(url);
     if (!resp.ok) {
         const text = await resp.text().catch(() => "");
-        throw new Error(text || `请求失败 (${resp.status})`);
+        throw new Error(text || `Request failed (${resp.status})`);
     }
     return resp.json() as Promise<ChartDataResponse>;
 }
@@ -289,7 +289,7 @@ async function fetchAvailableModels(apiKey: string): Promise<string[]> {
     });
     if (!resp.ok) {
         const text = await resp.text().catch(() => "");
-        throw new Error(text || `请求失败 (${resp.status})`);
+        throw new Error(text || `Request failed (${resp.status})`);
     }
     const payload = (await resp.json()) as V1ModelsResponse;
     return extractModelIds(payload);
@@ -344,7 +344,7 @@ function buildLogColumns(
     return [
         {
             key: "timestamp",
-            label: "时间",
+            label: "Time",
             width: "w-52",
             cellClassName: "font-mono text-xs tabular-nums text-slate-700 dark:text-slate-200",
             render: (row) => (
@@ -355,7 +355,7 @@ function buildLogColumns(
         },
         {
             key: "model",
-            label: "模型",
+            label: "Model",
             width: "w-56",
             render: (row) => (
                 <OverflowTooltip content={row.model} className="block min-w-0">
@@ -365,22 +365,22 @@ function buildLogColumns(
         },
         {
             key: "status",
-            label: "状态",
+            label: "Status",
             width: "w-20",
             render: (row) =>
                 row.failed ? (
                     <span className="inline-flex min-w-[52px] justify-center rounded-full bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-600 dark:bg-rose-500/15 dark:text-rose-300">
-                        失败
+                        Failed
                     </span>
                 ) : (
                     <span className="inline-flex min-w-[52px] justify-center rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-300">
-                        成功
+                        Success
                     </span>
                 ),
         },
         {
             key: "latency",
-            label: "用时",
+            label: "Duration",
             width: "w-24",
             headerClassName: "text-right",
             cellClassName: "text-right font-mono text-xs tabular-nums text-slate-700 dark:text-slate-200",
@@ -392,7 +392,7 @@ function buildLogColumns(
         },
         {
             key: "inputTokens",
-            label: "输入",
+            label: "Input",
             width: "w-24",
             headerClassName: "text-right",
             cellClassName: "text-right font-mono text-xs tabular-nums text-slate-700 dark:text-slate-200",
@@ -402,7 +402,7 @@ function buildLogColumns(
                         type="button"
                         onClick={() => onContentClick(Number(row.id), "input")}
                         className="inline-block ml-auto cursor-pointer rounded px-1.5 py-0.5 transition hover:bg-sky-50 dark:hover:bg-sky-950/30"
-                        title="点击查看输入内容"
+                        title="Click to view input"
                     >
                         <span className="truncate text-sky-600 dark:text-sky-400 underline decoration-sky-300/50 dark:decoration-sky-500/40 underline-offset-2">
                             {row.inputTokens.toLocaleString()}
@@ -414,7 +414,7 @@ function buildLogColumns(
         },
         {
             key: "cachedTokens",
-            label: "缓存读取",
+            label: "Cache Read",
             width: "w-24",
             headerClassName: "text-right",
             cellClassName: "text-right font-mono text-xs tabular-nums",
@@ -428,7 +428,7 @@ function buildLogColumns(
         },
         {
             key: "outputTokens",
-            label: "输出",
+            label: "Output",
             width: "w-24",
             headerClassName: "text-right",
             cellClassName: "text-right font-mono text-xs tabular-nums text-slate-700 dark:text-slate-200",
@@ -438,7 +438,7 @@ function buildLogColumns(
                         type="button"
                         onClick={() => onContentClick(Number(row.id), "output")}
                         className="inline-block ml-auto cursor-pointer rounded px-1.5 py-0.5 transition hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
-                        title="点击查看输出内容"
+                        title="Click to view output"
                     >
                         <span className="truncate text-emerald-600 dark:text-emerald-400 underline decoration-emerald-300/50 dark:decoration-emerald-500/40 underline-offset-2">
                             {row.outputTokens.toLocaleString()}
@@ -450,7 +450,7 @@ function buildLogColumns(
         },
         {
             key: "totalTokens",
-            label: "总 Token",
+            label: "Total Token",
             width: "w-28",
             headerClassName: "text-right",
             cellClassName: "text-right font-mono text-xs tabular-nums text-slate-900 dark:text-white",
@@ -458,7 +458,7 @@ function buildLogColumns(
         },
         {
             key: "cost",
-            label: "费用",
+            label: "Cost",
             width: "w-24",
             headerClassName: "text-right",
             cellClassName: "text-right font-mono text-xs tabular-nums text-emerald-700 dark:text-emerald-400",
@@ -470,9 +470,9 @@ function buildLogColumns(
 // ── Status filter options ───────────────────────────────────────────────────
 
 const STATUS_OPTIONS = [
-    { value: "", label: "全部状态", searchText: "全部状态 all" },
-    { value: "success", label: "成功", searchText: "成功 success" },
-    { value: "failed", label: "失败", searchText: "失败 failed" },
+    { value: "", label: "All Status", searchText: "all status" },
+    { value: "success", label: "Success", searchText: "Success success" },
+    { value: "failed", label: "Failed", searchText: "Failed failed" },
 ];
 
 // ── Models Tab Content ──────────────────────────────────────────────────────
@@ -500,7 +500,7 @@ function ModelsTabContent({
         const map = new Map<string, number>();
         for (const id of models) {
             const lower = id.toLowerCase();
-            let vendor = "其他";
+            let vendor = "Other";
             for (const prefix of Object.keys(VENDOR_COLORS)) {
                 if (lower.startsWith(prefix)) { vendor = prefix; break; }
             }
@@ -515,7 +515,7 @@ function ModelsTabContent({
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-3.5 dark:border-neutral-800">
                 <div className="flex items-center gap-2.5">
                     <Layers size={15} className="text-slate-500 dark:text-white/40" />
-                    <h3 className="text-sm font-semibold text-slate-900 dark:text-white">可用模型</h3>
+                    <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Available Models</h3>
                     <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[11px] font-bold tabular-nums text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-300">
                         {filteredModels.length}
                     </span>
@@ -528,7 +528,7 @@ function ModelsTabContent({
                     <input
                         value={searchFilter}
                         onChange={(e) => onSearchChange(e.target.value)}
-                        placeholder="搜索模型…"
+                        placeholder="Search models…"
                         className="w-48 rounded-lg border border-slate-200 bg-white py-1.5 pl-8 pr-3 text-xs text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-indigo-300 dark:border-neutral-700 dark:bg-neutral-900/60 dark:text-white dark:placeholder:text-white/30 dark:focus:border-indigo-600"
                     />
                 </div>
@@ -563,7 +563,7 @@ function ModelsTabContent({
                 {loading && models.length === 0 ? (
                     <div className="flex items-center justify-center py-12 text-sm text-slate-500 dark:text-white/50">
                         <RefreshCw size={14} className="animate-spin mr-2" />
-                        加载模型列表…
+                        Loading models…
                     </div>
                 ) : filteredModels.length > 0 ? (
                     <div className="flex flex-wrap gap-2">
@@ -574,7 +574,7 @@ function ModelsTabContent({
                 ) : (
                     <div className="flex flex-col items-center justify-center py-12 text-slate-400 dark:text-white/30">
                         <Layers size={28} className="mb-2 opacity-40" />
-                        <p className="text-sm">{models.length === 0 ? "暂无模型数据" : "无匹配结果"}</p>
+                        <p className="text-sm">{models.length === 0 ? "No model data" : "No results"}</p>
                     </div>
                 )}
             </div>
@@ -643,9 +643,9 @@ export function ApiKeyLookupPage() {
     // ── Chart controls ──
     const [modelMetric, setModelMetric] = useState<"requests" | "tokens">("requests");
     const [dailyLegendSelected, setDailyLegendSelected] = useState<Record<string, boolean>>({
-        "输入 Token": true,
-        "输出 Token": true,
-        "请求数": true,
+        "Input Token": true,
+        "Output Token": true,
+        "Requests": true,
     });
 
     const abortControllerRef = useRef<AbortController | null>(null);
@@ -706,7 +706,7 @@ export function ApiKeyLookupPage() {
                 // Ignore stale responses
                 if (myFetchId !== fetchIdRef.current) return;
 
-                const message = err instanceof Error ? err.message : "Query失败";
+                const message = err instanceof Error ? err.message : "QueryFailed";
                 setError(message);
                 if (page === 1) {
                     setRawItems([]);
@@ -786,7 +786,7 @@ export function ApiKeyLookupPage() {
             const ids = await fetchAvailableModels(key);
             setAvailableModels(ids);
         } catch (err: unknown) {
-            setModelsError(err instanceof Error ? err.message : "加载模型列表失败");
+            setModelsError(err instanceof Error ? err.message : "加载模型列表Failed");
         } finally {
             setModelsLoading(false);
         }
@@ -898,7 +898,7 @@ export function ApiKeyLookupPage() {
     );
 
     const toggleDailyLegend = useCallback((key: string) => {
-        if (key !== "输入 Token" && key !== "输出 Token" && key !== "请求数") return;
+        if (key !== "Input Token" && key !== "Output Token" && key !== "Requests") return;
         setDailyLegendSelected((prev) => ({ ...prev, [key]: !(prev[key] ?? true) }));
     }, []);
 
@@ -930,7 +930,7 @@ export function ApiKeyLookupPage() {
             name: item.model,
             value: modelMetric === "requests" ? item.requests : item.tokens,
         }));
-        if (otherValue > 0) data.push({ name: "其他", value: otherValue });
+        if (otherValue > 0) data.push({ name: "Other", value: otherValue });
         return data;
     }, [chartData, modelMetric]);
 
@@ -961,7 +961,7 @@ export function ApiKeyLookupPage() {
     // ── Model filter options for SearchableSelect ──
     const modelFilterOptions = useMemo(
         () => [
-            { value: "", label: "全部模型", searchText: "全部模型 all" },
+            { value: "", label: "All Models", searchText: "all models" },
             ...modelOptions.map((m) => ({ value: m, label: m, searchText: m })),
         ],
         [modelOptions],
@@ -990,7 +990,7 @@ export function ApiKeyLookupPage() {
                             <Key size={16} className="text-white dark:text-neutral-950" />
                         </div>
                         <span className="text-base font-bold tracking-tight text-slate-900 dark:text-white">
-                            API Key 使用Query
+                            API Key Usage
                         </span>
                     </div>
                     <ThemeToggleButton className="rounded-xl p-2 text-slate-600 transition hover:bg-slate-100 dark:text-white/70 dark:hover:bg-white/10" />
@@ -1015,7 +1015,7 @@ export function ApiKeyLookupPage() {
                                     id="apikey-input"
                                     value={apiKeyInput}
                                     onChange={(e) => setApiKeyInput(e.target.value)}
-                                    placeholder="输入 API Key Lookup使用记录"
+                                    placeholder="Enter API Key to lookup usage"
                                     autoComplete="off"
                                     spellCheck={false}
                                     className="h-10 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-white dark:placeholder:text-white/30"
@@ -1054,9 +1054,9 @@ export function ApiKeyLookupPage() {
                             <div className="flex flex-wrap items-center gap-3">
                                 <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "usage" | "logs" | "models")}>
                                     <TabsList>
-                                        <TabsTrigger value="usage">使用统计</TabsTrigger>
-                                        <TabsTrigger value="logs">请求日志</TabsTrigger>
-                                        <TabsTrigger value="models">可用模型</TabsTrigger>
+                                        <TabsTrigger value="usage">Usage Stats</TabsTrigger>
+                                        <TabsTrigger value="logs">Request Logs</TabsTrigger>
+                                        <TabsTrigger value="models">Available Models</TabsTrigger>
                                     </TabsList>
                                 </Tabs>
                                 {activeTab !== "models" && (
@@ -1071,7 +1071,7 @@ export function ApiKeyLookupPage() {
                                     className="inline-flex h-[34px] items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 text-xs font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:opacity-50 dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-white/80 dark:hover:bg-white/10"
                                 >
                                     <RefreshCw size={13} className={(loading || chartLoading || modelsLoading) ? "animate-spin" : ""} />
-                                    刷新
+                                    Refresh
                                 </button>
                             </div>
                         </div>
@@ -1083,27 +1083,27 @@ export function ApiKeyLookupPage() {
                                     {/* KPI cards */}
                                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                                         <KpiCard
-                                            title="总请求数"
+                                            title="Total Requests"
                                             icon={Activity}
-                                            hint={`最近 ${timeRange} 天`}
+                                            hint={`Last ${timeRange} days`}
                                             value={<AnimatedNumber value={chartStats?.total ?? 0} format={formatNumber} />}
                                         />
                                         <KpiCard
-                                            title="成功率"
+                                            title="Success率"
                                             icon={ShieldCheck}
-                                            hint={`最近 ${timeRange} 天`}
+                                            hint={`Last ${timeRange} days`}
                                             value={<AnimatedNumber value={chartStats?.success_rate ?? 0} format={formatRate} />}
                                         />
                                         <KpiCard
-                                            title="Token 总量"
+                                            title="Total Tokens"
                                             icon={Sigma}
-                                            hint={`最近 ${timeRange} 天`}
+                                            hint={`Last ${timeRange} days`}
                                             value={<AnimatedNumber value={chartStats?.total_tokens ?? 0} format={formatNumber} />}
                                         />
                                         <KpiCard
-                                            title="总费用"
+                                            title="Total Cost"
                                             icon={Coins}
-                                            hint={`最近 ${timeRange} 天`}
+                                            hint={`Last ${timeRange} days`}
                                             value={<AnimatedNumber value={chartStats?.total_cost ?? 0} format={(v) => `$${v.toFixed(4)}`} />}
                                         />
                                     </div>
@@ -1111,12 +1111,12 @@ export function ApiKeyLookupPage() {
                                     {/* Charts */}
                                     <section className="grid gap-4 lg:grid-cols-[minmax(0,560px)_minmax(0,1fr)]">
                                         <Card
-                                            title="模型用量分布"
-                                            description={`各模型${modelMetric === "requests" ? "请求" : "Token"}占比`}
+                                            title="Model Distribution"
+                                            description={`Model ${modelMetric === "requests" ? "request" : "token"} share`}
                                             actions={
                                                 <Tabs value={modelMetric} onValueChange={(next) => setModelMetric(next as "requests" | "tokens")}>
                                                     <TabsList>
-                                                        <TabsTrigger value="requests">请求</TabsTrigger>
+                                                        <TabsTrigger value="requests">Requests</TabsTrigger>
                                                         <TabsTrigger value="tokens">Token</TabsTrigger>
                                                     </TabsList>
                                                 </Tabs>
@@ -1152,14 +1152,14 @@ export function ApiKeyLookupPage() {
                                                 </div>
                                             ) : (
                                                 <p className="py-8 text-center text-sm text-slate-400 dark:text-white/30">
-                                                    暂无数据
+                                                    No data
                                                 </p>
                                             )}
                                         </Card>
 
                                         <Card
-                                            title="每日用量趋势"
-                                            description={`最近 ${timeRange} 天 · 请求数与 Token 用量趋势`}
+                                            title="Daily Usage Trend"
+                                            description={`Last ${timeRange} days · Requests & Token usage trend`}
                                             loading={chartLoading}
                                         >
                                             {dailySeries.length > 0 ? (
@@ -1175,10 +1175,10 @@ export function ApiKeyLookupPage() {
                                                             ...(dailyLegendAvailability.hasInput
                                                                 ? [
                                                                     {
-                                                                        key: "输入 Token",
-                                                                        label: "输入 Token",
+                                                                        key: "Input Token",
+                                                                        label: "Input Token",
                                                                         colorClass: "bg-violet-400",
-                                                                        enabled: dailyLegendSelected["输入 Token"] ?? true,
+                                                                        enabled: dailyLegendSelected["Input Token"] ?? true,
                                                                         onToggle: toggleDailyLegend,
                                                                     },
                                                                 ]
@@ -1186,10 +1186,10 @@ export function ApiKeyLookupPage() {
                                                             ...(dailyLegendAvailability.hasOutput
                                                                 ? [
                                                                     {
-                                                                        key: "输出 Token",
-                                                                        label: "输出 Token",
+                                                                        key: "Output Token",
+                                                                        label: "Output Token",
                                                                         colorClass: "bg-emerald-400",
-                                                                        enabled: dailyLegendSelected["输出 Token"] ?? true,
+                                                                        enabled: dailyLegendSelected["Output Token"] ?? true,
                                                                         onToggle: toggleDailyLegend,
                                                                     },
                                                                 ]
@@ -1197,10 +1197,10 @@ export function ApiKeyLookupPage() {
                                                             ...(dailyLegendAvailability.hasRequests
                                                                 ? [
                                                                     {
-                                                                        key: "请求数",
-                                                                        label: "请求数",
+                                                                        key: "Requests",
+                                                                        label: "Requests",
                                                                         colorClass: "bg-blue-500",
-                                                                        enabled: dailyLegendSelected["请求数"] ?? true,
+                                                                        enabled: dailyLegendSelected["Requests"] ?? true,
                                                                         onToggle: toggleDailyLegend,
                                                                     },
                                                                 ]
@@ -1210,7 +1210,7 @@ export function ApiKeyLookupPage() {
                                                 </div>
                                             ) : (
                                                 <p className="py-8 text-center text-sm text-slate-400 dark:text-white/30">
-                                                    暂无数据
+                                                    No data
                                                 </p>
                                             )}
                                         </Card>
@@ -1230,24 +1230,24 @@ export function ApiKeyLookupPage() {
                                                 value={statusFilter}
                                                 onChange={setStatusFilter}
                                                 options={STATUS_OPTIONS}
-                                                placeholder="全部状态"
-                                                aria-label="状态筛选"
+                                                placeholder="All Status"
+                                                aria-label="Status filter"
                                             />
                                             {modelOptions.length > 0 && (
                                                 <SearchableSelect
                                                     value={modelQuery}
                                                     onChange={setModelQuery}
                                                     options={modelFilterOptions}
-                                                    placeholder="全部模型"
-                                                    aria-label="模型筛选"
+                                                    placeholder="All Models"
+                                                    aria-label="Model filter"
                                                 />
                                             )}
                                         </div>
                                         <span className="inline-flex items-center gap-1.5 text-xs text-slate-600 dark:text-white/55">
                                             <Filter size={12} aria-hidden="true" />
-                                            <span className="font-mono tabular-nums">{stats.total.toLocaleString()}</span> 条
+                                            <span className="font-mono tabular-nums">{stats.total.toLocaleString()}</span>  records
                                             <span className="text-slate-300 dark:text-white/10" aria-hidden="true">·</span>
-                                            成功率 <span className="font-mono tabular-nums">{stats.success_rate.toFixed(1)}%</span>
+                                            Success率 <span className="font-mono tabular-nums">{stats.success_rate.toFixed(1)}%</span>
                                             <span className="text-slate-300 dark:text-white/10" aria-hidden="true">·</span>
                                             Token <span className="font-mono tabular-nums">{stats.total_tokens.toLocaleString()}</span>
                                             {lastUpdatedText && (
@@ -1272,8 +1272,8 @@ export function ApiKeyLookupPage() {
                                             rowHeight={44}
                                             height="h-[calc(100vh-500px)]"
                                             minWidth="min-w-[900px]"
-                                            caption="请求日志表格"
-                                            emptyText="该时间范围内暂无请求日志"
+                                            caption="Request Logs Table"
+                                            emptyText="No request logs in this time range"
                                         />
                                         {loading ? (
                                             <div className="absolute inset-0 z-10 flex items-center justify-center rounded-b-2xl bg-white/70 backdrop-blur-sm dark:bg-neutral-950/55">
@@ -1282,7 +1282,7 @@ export function ApiKeyLookupPage() {
                                                         className="h-4 w-4 rounded-full border-2 border-slate-300 border-t-slate-900 motion-reduce:animate-none motion-safe:animate-spin dark:border-white/20 dark:border-t-white/80"
                                                         aria-hidden="true"
                                                     />
-                                                    <span role="status">加载中…</span>
+                                                    <span role="status">Loading…</span>
                                                 </div>
                                             </div>
                                         ) : null}
@@ -1318,7 +1318,7 @@ export function ApiKeyLookupPage() {
                         const resp = await fetch(url);
                         if (!resp.ok) {
                             const text = await resp.text().catch(() => "");
-                            throw new Error(text || `请求失败 (${resp.status})`);
+                            throw new Error(text || `Request failed (${resp.status})`);
                         }
                         return resp.json();
                     } : undefined}
@@ -1332,10 +1332,10 @@ export function ApiKeyLookupPage() {
                                 <Search size={28} className="text-slate-600 dark:text-white/70" />
                             </div>
                             <h3 className="text-base font-semibold text-slate-900 dark:text-white">
-                                Query您的 API Key 使用情况
+                                Query Your API Key Usage
                             </h3>
                             <p className="text-sm text-slate-600 dark:text-white/65">
-                                在上方输入框中输入您的 API Key，即可查看详细的使用统计和请求日志。
+                                Enter your API Key above to view detailed usage statistics and request logs.
                             </p>
                         </div>
                     </section>

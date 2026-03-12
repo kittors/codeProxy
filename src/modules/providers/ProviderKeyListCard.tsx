@@ -76,7 +76,7 @@ export function ProviderKeyListCard({
                         </span>
                       ) : (
                         <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:text-emerald-200">
-                          已启用
+                          已Enable
                         </span>
                       )}
                     </p>
@@ -88,8 +88,8 @@ export function ProviderKeyListCard({
                         <p className="truncate font-mono">proxyUrl：{item.proxyUrl}</p>
                       ) : null}
                       <p className="tabular-nums">
-                        models：{models.length} · excluded：{excludedModels.length} · headers：
-                        {headerEntries.length} · 成功：{stats.success} · 失败：{stats.failure}
+                        models: {models.length} · excluded：{excludedModels.length} · headers: 
+                        {headerEntries.length} · Success: {stats.success} · Failed: {stats.failure}
                       </p>
                     </div>
 
@@ -146,22 +146,22 @@ export function ProviderKeyListCard({
                     {onToggleEnabled ? (
                       <div className="inline-flex items-center gap-2">
                         <span className="text-sm font-semibold leading-none text-slate-900 dark:text-white">
-                          启用
+                          Enable
                         </span>
                         <ToggleSwitch
                           checked={!disabled}
-                          ariaLabel="启用"
+                          ariaLabel="Enable"
                           onCheckedChange={(enabled) => onToggleEnabled(idx, enabled)}
                         />
                       </div>
                     ) : null}
                     <Button variant="secondary" size="sm" onClick={() => onEdit(idx)}>
                       <Settings2 size={14} />
-                      编辑
+                      Edit
                     </Button>
                     <Button variant="danger" size="sm" onClick={() => onDelete(idx)}>
                       <Trash2 size={14} />
-                      删除
+                      Delete
                     </Button>
                   </div>
                 </div>

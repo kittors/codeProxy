@@ -76,7 +76,7 @@ const TimeRangeSelector = ({
     <Tabs value={String(value)} onValueChange={(next) => onChange(Number(next) as TimeRange)}>
       <TabsList>
         {TIME_RANGES.map((range) => {
-          const label = range === 1 ? "今天" : `${range} 天`;
+          const label = range === 1 ? "Today" : `${range} days`;
           return (
             <TabsTrigger key={range} value={String(range)}>
               {label}
@@ -97,7 +97,7 @@ function buildLogColumns(
   return [
     {
       key: "timestamp",
-      label: "时间",
+      label: "Time",
       width: "w-52",
       cellClassName:
         "font-mono text-xs tabular-nums text-slate-700 dark:text-slate-200",
@@ -109,7 +109,7 @@ function buildLogColumns(
     },
     {
       key: "apiKeyName",
-      label: "Key 名称",
+      label: "Key Name",
       width: "w-32",
       render: (row) => (
         <OverflowTooltip content={row.apiKeyName || "--"} className="block min-w-0">
@@ -123,7 +123,7 @@ function buildLogColumns(
     },
     {
       key: "model",
-      label: "模型",
+      label: "Model",
       width: "w-56",
       render: (row) => (
         <OverflowTooltip content={row.model} className="block min-w-0">
@@ -133,7 +133,7 @@ function buildLogColumns(
     },
     {
       key: "channelName",
-      label: "渠道名",
+      label: "Channel",
       width: "w-32",
       render: (row) => (
         <OverflowTooltip content={row.channelName || "--"} className="block min-w-0">
@@ -147,7 +147,7 @@ function buildLogColumns(
     },
     {
       key: "status",
-      label: "状态",
+      label: "Status",
       width: "w-20",
       render: (row) =>
         row.failed ? (
@@ -155,19 +155,19 @@ function buildLogColumns(
             type="button"
             onClick={() => onErrorClick?.(Number(row.id), row.model)}
             className="inline-flex min-w-[52px] cursor-pointer justify-center rounded-full bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-600 transition hover:bg-rose-100 hover:shadow-sm dark:bg-rose-500/15 dark:text-rose-300 dark:hover:bg-rose-500/25"
-            title="点击查看错误详情"
+            title="Click to view error details"
           >
-            失败
+            Failed
           </button>
         ) : (
           <span className="inline-flex min-w-[52px] justify-center rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-300">
-            成功
+            Success
           </span>
         ),
     },
     {
       key: "latency",
-      label: "用时",
+      label: "Duration",
       width: "w-24",
       headerClassName: "text-right",
       cellClassName:
@@ -180,7 +180,7 @@ function buildLogColumns(
     },
     {
       key: "inputTokens",
-      label: "输入",
+      label: "Input",
       width: "w-24",
       headerClassName: "text-right",
       cellClassName:
@@ -191,7 +191,7 @@ function buildLogColumns(
             type="button"
             onClick={() => onContentClick(Number(row.id), "input")}
             className="inline-block ml-auto cursor-pointer rounded px-1.5 py-0.5 transition hover:bg-sky-50 dark:hover:bg-sky-950/30"
-            title="点击查看输入内容"
+            title="Click to view input"
           >
             <span className="truncate text-sky-600 dark:text-sky-400 underline decoration-sky-300/50 dark:decoration-sky-500/40 underline-offset-2">
               {row.inputTokens.toLocaleString()}
@@ -205,7 +205,7 @@ function buildLogColumns(
     },
     {
       key: "cachedTokens",
-      label: "缓存读取",
+      label: "Cache Read",
       width: "w-24",
       headerClassName: "text-right",
       cellClassName: "text-right font-mono text-xs tabular-nums",
@@ -221,7 +221,7 @@ function buildLogColumns(
     },
     {
       key: "outputTokens",
-      label: "输出",
+      label: "Output",
       width: "w-24",
       headerClassName: "text-right",
       cellClassName:
@@ -232,7 +232,7 @@ function buildLogColumns(
             type="button"
             onClick={() => onContentClick(Number(row.id), "output")}
             className="inline-block ml-auto cursor-pointer rounded px-1.5 py-0.5 transition hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
-            title="点击查看输出内容"
+            title="Click to view output"
           >
             <span className="truncate text-emerald-600 dark:text-emerald-400 underline decoration-emerald-300/50 dark:decoration-emerald-500/40 underline-offset-2">
               {row.outputTokens.toLocaleString()}
@@ -246,7 +246,7 @@ function buildLogColumns(
     },
     {
       key: "totalTokens",
-      label: "总 Token",
+      label: "Total Token",
       width: "w-28",
       headerClassName: "text-right",
       cellClassName:
@@ -259,7 +259,7 @@ function buildLogColumns(
     },
     {
       key: "cost",
-      label: "费用",
+      label: "Cost",
       width: "w-24",
       headerClassName: "text-right",
       cellClassName:
@@ -390,7 +390,7 @@ export function RequestLogsPage() {
         setStats(resp.stats ?? { total: 0, success_rate: 0, total_tokens: 0 });
         setLastUpdatedAt(Date.now());
       } catch (err) {
-        const message = err instanceof Error ? err.message : "Request Logs刷新失败";
+        const message = err instanceof Error ? err.message : "Request Logs刷新Failed";
         notify({ type: "error", message });
       } finally {
         fetchInFlightRef.current = false;
@@ -424,7 +424,7 @@ export function RequestLogsPage() {
   const keyOptions = useMemo(() => {
     const names = filterOptions.api_key_names ?? {};
     return [
-      { value: "", label: "全部 Key" },
+      { value: "", label: "All Keys" },
       ...filterOptions.api_keys.map((key) => ({
         value: key,
         label: names[key] || maskApiKey(key),
@@ -435,15 +435,15 @@ export function RequestLogsPage() {
 
   const modelOptions = useMemo(() => {
     return [
-      { value: "", label: "全部模型" },
+      { value: "", label: "All Models" },
       ...filterOptions.models.map((m) => ({ value: m, label: m })),
     ];
   }, [filterOptions.models]);
 
   const lastUpdatedText = useMemo(() => {
     if (loading) return "Refreshing…";
-    if (!lastUpdatedAt) return "尚未刷新";
-    return `更新于 ${new Date(lastUpdatedAt).toLocaleTimeString()}`;
+    if (!lastUpdatedAt) return "Not yet refreshed";
+    return `Updated at ${new Date(lastUpdatedAt).toLocaleTimeString()}`;
   }, [lastUpdatedAt, loading]);
 
   return (
@@ -465,8 +465,8 @@ export function RequestLogsPage() {
               onClick={() => fetchLogs(1)}
               disabled={loading}
               aria-busy={loading}
-              aria-label="刷新"
-              title="刷新"
+              aria-label="Refresh"
+              title="Refresh"
               className="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-slate-900 text-white transition hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/35 disabled:cursor-not-allowed disabled:opacity-70 dark:bg-white dark:text-neutral-950 dark:hover:bg-slate-200 dark:focus-visible:ring-white/15"
             >
               <RefreshCw
@@ -484,27 +484,27 @@ export function RequestLogsPage() {
             value={apiQuery}
             onChange={setApiQuery}
             options={keyOptions}
-            placeholder="全部 Key"
-            searchPlaceholder="搜索 Key…"
-            aria-label="按 Key 名称过滤"
+            placeholder="All Keys"
+            searchPlaceholder="Search Keys…"
+            aria-label="Filter by Key name"
           />
           <SearchableSelect
             value={modelQuery}
             onChange={setModelQuery}
             options={modelOptions}
-            placeholder="全部模型"
-            searchPlaceholder="搜索模型…"
-            aria-label="按模型过滤"
+            placeholder="All Models"
+            searchPlaceholder="Search models…"
+            aria-label="Filter by model"
           />
           <Select
             value={statusFilter}
             onChange={(v) => setStatusFilter(v as StatusFilter)}
             options={[
-              { value: "", label: "全部状态" },
-              { value: "success", label: "成功" },
-              { value: "failed", label: "失败" },
+              { value: "", label: "All Status" },
+              { value: "success", label: "Success" },
+              { value: "failed", label: "Failed" },
             ]}
-            aria-label="按状态过滤"
+            aria-label="Filter by status"
             name="statusFilter"
           />
 
@@ -514,9 +514,9 @@ export function RequestLogsPage() {
           {/* 统计摘要 */}
           <span className="inline-flex items-center gap-1.5 text-xs text-slate-600 dark:text-white/55">
             <Filter size={12} aria-hidden="true" />
-            <span className="font-mono tabular-nums">{stats.total.toLocaleString()}</span> 条
+            <span className="font-mono tabular-nums">{stats.total.toLocaleString()}</span>  records
             <span className="text-slate-300 dark:text-white/10" aria-hidden="true">·</span>
-            成功率 <span className="font-mono tabular-nums">{stats.success_rate.toFixed(1)}%</span>
+            Success率 <span className="font-mono tabular-nums">{stats.success_rate.toFixed(1)}%</span>
             <span className="text-slate-300 dark:text-white/10" aria-hidden="true">·</span>
             Token <span className="font-mono tabular-nums">{stats.total_tokens.toLocaleString()}</span>
             <span className="text-slate-300 dark:text-white/10" aria-hidden="true">·</span>
@@ -535,7 +535,7 @@ export function RequestLogsPage() {
             loadingMore={loadingMore}
             onScrollBottom={loadNextPage}
             rowHeight={44}
-            caption="Request Logs表格"
+            caption="Request Logs Table"
             emptyText="暂无数据"
           />
           {loading ? (

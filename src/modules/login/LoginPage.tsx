@@ -60,12 +60,12 @@ export function LoginPage() {
           managementKey,
           rememberPassword,
         });
-        notify({ type: "success", message: "登录成功" });
+        notify({ type: "success", message: "Login successful" });
         const redirect = (location.state as RedirectState | null)?.from?.pathname ?? "/monitor";
         navigate(redirect, { replace: true, viewTransition: true });
       } catch (submitError) {
         const message =
-          submitError instanceof Error ? submitError.message : "登录失败，请检查地址和密钥";
+          submitError instanceof Error ? submitError.message : "Login failed, check address and key";
         notify({ type: "error", message });
       } finally {
         setLoading(false);
@@ -104,12 +104,12 @@ export function LoginPage() {
 
               <div className="space-y-6">
                 <h1 className="text-5xl font-semibold leading-[1.05] tracking-tight text-slate-900 sm:text-6xl dark:text-white">
-                  面向 Agent 工程的
+                  Agent-oriented
                   <br />
-                  统一代理平台
+                  Unified Proxy Platform
                 </h1>
                 <p className="max-w-xl text-sm leading-7 text-slate-600 dark:text-white/70">
-                  登录管理控制台，继续查看网关状态与调用监控数据。
+                  Sign in to the management console to view gateway status and call monitoring data.
                 </p>
               </div>
 
@@ -141,12 +141,12 @@ export function LoginPage() {
             <section className="relative">
               <div className="rounded-[34px] border border-slate-200 bg-white/90 p-8 text-slate-900 shadow-[0_30px_80px_-60px_rgba(15,23,42,0.6)] backdrop-blur dark:border-neutral-800 dark:bg-neutral-950/70 dark:text-slate-50 dark:shadow-[0_30px_80px_-60px_rgba(0,0,0,0.8)]">
                 <div className="space-y-6">
-                  <h2 className="text-center text-3xl font-semibold tracking-tight">登录</h2>
+                  <h2 className="text-center text-3xl font-semibold tracking-tight">Sign In</h2>
 
                   <div className="flex items-center gap-4">
                     <div className="h-px flex-1 bg-slate-200 dark:bg-white/10" />
                     <div className="text-xs text-slate-500 dark:text-white/50">
-                      使用管理密钥继续
+                      Continue with management key
                     </div>
                     <div className="h-px flex-1 bg-slate-200 dark:bg-white/10" />
                   </div>
@@ -154,29 +154,29 @@ export function LoginPage() {
                   <form onSubmit={handleSubmit} className="space-y-5">
                     <label className="block space-y-2">
                       <span className="text-xs font-medium text-slate-600 dark:text-white/60">
-                        API 地址
+                        API Address
                       </span>
                       <TextInput
                         value={apiBase}
                         onChange={(event) => setApiBase(event.target.value)}
-                        placeholder="例如：http://localhost:8317"
+                        placeholder="e.g. http://localhost:8317"
                         autoComplete="url"
                         className="rounded-full px-5 py-3"
                       />
                       <p className="text-[11px] leading-5 text-slate-500 dark:text-white/50">
-                        Connect地址：{managementEndpoint}
+                        Endpoint: {managementEndpoint}
                       </p>
                     </label>
 
                     <label className="block space-y-2">
                       <span className="text-xs font-medium text-slate-600 dark:text-white/60">
-                        管理密钥
+                        Management Key
                       </span>
                       <TextInput
                         value={managementKey}
                         onChange={(event) => setManagementKey(event.target.value)}
                         type={showKey ? "text" : "password"}
-                        placeholder="请输入 MANAGEMENT_KEY"
+                        placeholder="Enter MANAGEMENT_KEY"
                         autoComplete="current-password"
                         className="rounded-full px-5 py-3"
                         endAdornment={
@@ -184,7 +184,7 @@ export function LoginPage() {
                             type="button"
                             onClick={() => setShowKey((value) => !value)}
                             className="rounded-full p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700 dark:text-white/70 dark:hover:bg-white/10 dark:hover:text-white"
-                            aria-label={showKey ? "隐藏管理密钥" : "显示管理密钥"}
+                            aria-label={showKey ? "隐藏Management Key" : "显示Management Key"}
                           >
                             {showKey ? <EyeOff size={16} /> : <Eye size={16} />}
                           </button>
@@ -199,7 +199,7 @@ export function LoginPage() {
                         onChange={(event) => setRememberPassword(event.target.checked)}
                         className="h-4 w-4 rounded border-slate-300 dark:border-white/20 dark:bg-neutral-900"
                       />
-                      记住本次登录
+                      Remember this login
                     </label>
 
                     <button
@@ -207,7 +207,7 @@ export function LoginPage() {
                       disabled={loading}
                       className="w-full rounded-full bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70 dark:bg-white/10 dark:hover:bg-white/15"
                     >
-                      {loading ? "登录中..." : "进入管理后台"}
+                      {loading ? "Signing in..." : "Sign In"}
                     </button>
                   </form>
                 </div>

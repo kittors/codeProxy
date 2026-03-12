@@ -169,11 +169,11 @@ function ApiKeysEditor({
   const handleSave = () => {
     const trimmed = inputValue.trim();
     if (!trimmed) {
-      setFormError("API Key 不能为空");
+      setFormError("API Key cannot be empty");
       return;
     }
     if (!isValidApiKeyCharset(trimmed)) {
-      setFormError("API Key 仅允许可见 ASCII 字符（不含空格/中文）");
+      setFormError("API Key only allows visible ASCII characters");
       return;
     }
 
@@ -188,13 +188,13 @@ function ApiKeysEditor({
   const handleCopy = async (apiKey: string) => {
     try {
       if (!navigator.clipboard?.writeText) {
-        notify({ type: "error", message: "当前浏览器不支持一键复制" });
+        notify({ type: "error", message: "Browser does not support clipboard" });
         return;
       }
       await navigator.clipboard.writeText(apiKey);
-      notify({ type: "success", message: "已复制" });
+      notify({ type: "success", message: "Copied" });
     } catch {
-      notify({ type: "error", message: "复制失败" });
+      notify({ type: "error", message: "Copy failed" });
     }
   };
 
@@ -204,13 +204,13 @@ function ApiKeysEditor({
         <div className="text-sm font-semibold text-slate-900 dark:text-white">API Keys</div>
         <Button size="sm" onClick={openAddModal} disabled={disabled}>
           <Plus size={14} />
-          新增
+          Add
         </Button>
       </div>
 
       {apiKeys.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-slate-200 bg-white/60 p-4 text-center text-sm text-slate-600 dark:border-neutral-800 dark:bg-neutral-950/40 dark:text-white/65">
-          暂无 API Key
+          No API Keys
         </div>
       ) : (
         <div className="space-y-2">
@@ -240,7 +240,7 @@ function ApiKeysEditor({
                   disabled={disabled}
                 >
                   <Copy size={14} />
-                  复制
+                  Copy
                 </Button>
                 <Button
                   variant="secondary"
@@ -248,7 +248,7 @@ function ApiKeysEditor({
                   onClick={() => openEditModal(index)}
                   disabled={disabled}
                 >
-                  编辑
+                  Edit
                 </Button>
                 <Button
                   variant="danger"
@@ -257,7 +257,7 @@ function ApiKeysEditor({
                   disabled={disabled}
                 >
                   <Trash2 size={14} />
-                  删除
+                  Delete
                 </Button>
               </div>
             </div>
@@ -266,26 +266,26 @@ function ApiKeysEditor({
       )}
 
       <p className="text-xs text-slate-600 dark:text-white/65">
-        对应 `config.yaml` 中 `api-keys` 配置（每行一个）。
+        Corresponds to `api-keys` in `config.yaml` (one per line).
       </p>
 
       <Modal
         open={modalOpen}
         onClose={closeModal}
-        title={editingIndex !== null ? "编辑 API Key" : "新增 API Key"}
+        title={editingIndex !== null ? "Edit API Key" : "Add API Key"}
         footer={
           <>
             <Button variant="secondary" onClick={closeModal} disabled={disabled}>
-              取消
+              Cancel
             </Button>
             <Button onClick={handleSave} disabled={disabled}>
               <Check size={14} />
-              {editingIndex !== null ? "更新" : "添加"}
+              {editingIndex !== null ? "Update" : "Add"}
             </Button>
           </>
         }
       >
-        <Field label="API Key" hint="仅允许可见 ASCII 字符（不含空格）。">
+        <Field label="API Key" hint="Only visible ASCII characters (no spaces).">
           <TextInput
             value={inputValue}
             onChange={(e) => setInputValue(e.currentTarget.value)}
@@ -300,9 +300,9 @@ function ApiKeysEditor({
 
       <ConfirmModal
         open={deleteIndex !== null}
-        title="删除 API Key"
-        description="确定要删除该 API Key 吗？此操作不可恢复。"
-        confirmText="删除"
+        title="Delete API Key"
+        description="确定要Delete该 API Key 吗？此操作不可恢复。"
+        confirmText="Delete"
         variant="danger"
         onClose={() => setDeleteIndex(null)}
         onConfirm={() => {
@@ -416,10 +416,10 @@ function PayloadRulesEditor({
   };
 
   const getValuePlaceholder = (valueType: PayloadParamValueType) => {
-    if (valueType === "number") return "例如：1";
+    if (valueType === "number") return "e.g. 1";
     if (valueType === "boolean") return "true / false";
-    if (valueType === "json") return '例如：{"a":1}';
-    return "例如：hello";
+    if (valueType === "json") return 'e.g. {"a":1}';
+    return "e.g. hello";
   };
 
   return (
@@ -429,13 +429,13 @@ function PayloadRulesEditor({
       actions={
         <Button size="sm" onClick={addRule} disabled={disabled}>
           <Plus size={14} />
-          新增规则
+          AddRule
         </Button>
       }
     >
       {rules.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-slate-200 bg-white/60 p-4 text-center text-sm text-slate-600 dark:border-neutral-800 dark:bg-neutral-950/40 dark:text-white/65">
-          暂无规则
+          No Rules
         </div>
       ) : (
         <div className="space-y-4">
@@ -446,7 +446,7 @@ function PayloadRulesEditor({
             >
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="text-sm font-semibold text-slate-900 dark:text-white">
-                  规则 {ruleIndex + 1}
+                  Rule {ruleIndex + 1}
                 </div>
                 <Button
                   variant="ghost"
@@ -455,14 +455,14 @@ function PayloadRulesEditor({
                   disabled={disabled}
                 >
                   <Trash2 size={14} />
-                  删除规则
+                  DeleteRule
                 </Button>
               </div>
 
               <div className="space-y-2">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="text-xs font-semibold text-slate-600 dark:text-white/65">
-                    匹配模型
+                    Match Models
                   </div>
                   <Button
                     variant="secondary"
@@ -471,7 +471,7 @@ function PayloadRulesEditor({
                     disabled={disabled}
                   >
                     <Plus size={14} />
-                    新增模型
+                    Add模型
                   </Button>
                 </div>
 
@@ -483,7 +483,7 @@ function PayloadRulesEditor({
                         onChange={(e) =>
                           updateModel(ruleIndex, modelIndex, { name: e.currentTarget.value })
                         }
-                        placeholder="model 名称"
+                        placeholder="model name"
                         disabled={disabled}
                       />
                       <SelectInput
@@ -495,7 +495,7 @@ function PayloadRulesEditor({
                         }
                         options={VISUAL_CONFIG_PROTOCOL_OPTIONS}
                         disabled={disabled}
-                        ariaLabel="协议"
+                        ariaLabel="Protocol"
                       />
                       <Button
                         variant="danger"
@@ -504,7 +504,7 @@ function PayloadRulesEditor({
                         disabled={disabled || (rule.models || []).length <= 1}
                       >
                         <Trash2 size={14} />
-                        删除
+                        Delete
                       </Button>
                     </div>
                   ))}
@@ -514,7 +514,7 @@ function PayloadRulesEditor({
               <div className="space-y-2">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="text-xs font-semibold text-slate-600 dark:text-white/65">
-                    覆盖参数
+                    Override Params
                   </div>
                   <Button
                     variant="secondary"
@@ -523,13 +523,13 @@ function PayloadRulesEditor({
                     disabled={disabled}
                   >
                     <Plus size={14} />
-                    新增参数
+                    Add参数
                   </Button>
                 </div>
 
                 {(rule.params || []).length === 0 ? (
                   <div className="rounded-2xl border border-dashed border-slate-200 bg-white/60 p-3 text-center text-xs text-slate-600 dark:border-neutral-800 dark:bg-neutral-950/40 dark:text-white/65">
-                    暂无参数（仅按模型匹配）
+                    No params (model match only)
                   </div>
                 ) : (
                   <div className="space-y-2">
@@ -544,7 +544,7 @@ function PayloadRulesEditor({
                             onChange={(e) =>
                               updateParam(ruleIndex, paramIndex, { path: e.currentTarget.value })
                             }
-                            placeholder="参数路径，例如：headers.Authorization"
+                            placeholder="param path, e.g. headers.Authorization"
                             disabled={disabled}
                           />
                           <SelectInput
@@ -556,7 +556,7 @@ function PayloadRulesEditor({
                             }
                             options={VISUAL_CONFIG_PAYLOAD_VALUE_TYPE_OPTIONS}
                             disabled={disabled}
-                            ariaLabel="值类型"
+                            ariaLabel="Value type"
                           />
                           <Button
                             variant="danger"
@@ -565,7 +565,7 @@ function PayloadRulesEditor({
                             disabled={disabled}
                           >
                             <Trash2 size={14} />
-                            删除
+                            Delete
                           </Button>
                         </div>
 
@@ -575,7 +575,7 @@ function PayloadRulesEditor({
                             onChange={(value) => updateParam(ruleIndex, paramIndex, { value })}
                             placeholder={getValuePlaceholder(param.valueType)}
                             disabled={disabled}
-                            ariaLabel="JSON 值"
+                            ariaLabel="JSON value"
                             rows={6}
                           />
                         ) : (
@@ -669,18 +669,18 @@ function PayloadFilterRulesEditor({
 
   return (
     <Card
-      title="Payload 过滤规则"
-      description="匹配模型后，从请求 payload 中移除指定参数路径列表（对应 `payload.filter`）。"
+      title="Payload 过滤Rule"
+      description="Match Models后，从请求 payload 中移除指定参数路径列表（对应 `payload.filter`）。"
       actions={
         <Button size="sm" onClick={addRule} disabled={disabled}>
           <Plus size={14} />
-          新增规则
+          AddRule
         </Button>
       }
     >
       {rules.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-slate-200 bg-white/60 p-4 text-center text-sm text-slate-600 dark:border-neutral-800 dark:bg-neutral-950/40 dark:text-white/65">
-          暂无规则
+          No Rules
         </div>
       ) : (
         <div className="space-y-4">
@@ -691,7 +691,7 @@ function PayloadFilterRulesEditor({
             >
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="text-sm font-semibold text-slate-900 dark:text-white">
-                  规则 {ruleIndex + 1}
+                  Rule {ruleIndex + 1}
                 </div>
                 <Button
                   variant="ghost"
@@ -700,14 +700,14 @@ function PayloadFilterRulesEditor({
                   disabled={disabled}
                 >
                   <Trash2 size={14} />
-                  删除规则
+                  DeleteRule
                 </Button>
               </div>
 
               <div className="space-y-2">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="text-xs font-semibold text-slate-600 dark:text-white/65">
-                    匹配模型
+                    Match Models
                   </div>
                   <Button
                     variant="secondary"
@@ -716,7 +716,7 @@ function PayloadFilterRulesEditor({
                     disabled={disabled}
                   >
                     <Plus size={14} />
-                    新增模型
+                    Add模型
                   </Button>
                 </div>
 
@@ -728,7 +728,7 @@ function PayloadFilterRulesEditor({
                         onChange={(e) =>
                           updateModel(ruleIndex, modelIndex, { name: e.currentTarget.value })
                         }
-                        placeholder="model 名称"
+                        placeholder="model name"
                         disabled={disabled}
                       />
                       <SelectInput
@@ -740,7 +740,7 @@ function PayloadFilterRulesEditor({
                         }
                         options={VISUAL_CONFIG_PROTOCOL_OPTIONS}
                         disabled={disabled}
-                        ariaLabel="协议"
+                        ariaLabel="Protocol"
                       />
                       <Button
                         variant="danger"
@@ -749,7 +749,7 @@ function PayloadFilterRulesEditor({
                         disabled={disabled || (rule.models || []).length <= 1}
                       >
                         <Trash2 size={14} />
-                        删除
+                        Delete
                       </Button>
                     </div>
                   ))}
@@ -759,7 +759,7 @@ function PayloadFilterRulesEditor({
               <div className="space-y-2">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="text-xs font-semibold text-slate-600 dark:text-white/65">
-                    移除参数路径
+                    Remove Param Paths
                   </div>
                   <Button
                     variant="secondary"
@@ -768,13 +768,13 @@ function PayloadFilterRulesEditor({
                     disabled={disabled}
                   >
                     <Plus size={14} />
-                    新增路径
+                    Add路径
                   </Button>
                 </div>
 
                 {(rule.params || []).length === 0 ? (
                   <div className="rounded-2xl border border-dashed border-slate-200 bg-white/60 p-3 text-center text-xs text-slate-600 dark:border-neutral-800 dark:bg-neutral-950/40 dark:text-white/65">
-                    暂无路径
+                    No Paths
                   </div>
                 ) : (
                   <div className="space-y-2">
@@ -788,7 +788,7 @@ function PayloadFilterRulesEditor({
                           onChange={(e) =>
                             updateParam(ruleIndex, paramIndex, e.currentTarget.value)
                           }
-                          placeholder="例如：messages.0.content"
+                          placeholder="e.g. messages.0.content"
                           disabled={disabled}
                         />
                         <Button
@@ -798,7 +798,7 @@ function PayloadFilterRulesEditor({
                           disabled={disabled}
                         >
                           <Trash2 size={14} />
-                          删除
+                          Delete
                         </Button>
                       </div>
                     ))}
@@ -832,8 +832,8 @@ export function VisualConfigEditor({
   const routingOptions = useMemo(
     () =>
       [
-        { value: "round-robin", label: "round-robin（轮询）" },
-        { value: "fill-first", label: "fill-first（优先填满）" },
+        { value: "round-robin", label: "round-robin" },
+        { value: "fill-first", label: "fill-first" },
       ] satisfies ReadonlyArray<{ value: RoutingStrategy; label: string }>,
     [],
   );
@@ -841,10 +841,10 @@ export function VisualConfigEditor({
   return (
     <div className="space-y-6">
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card title="基础" description="主机/端口、认证目录与 API Keys。">
+        <Card title="Basics" description="Host/port, auth directory & API Keys.">
           <div className="space-y-4">
             <div className="grid gap-3 lg:grid-cols-2">
-              <Field label="host" hint="为空表示使用服务端默认。">
+              <Field label="host" hint="Empty uses server default.">
                 <TextInput
                   value={values.host}
                   onChange={(e) => update({ host: e.currentTarget.value })}
@@ -852,7 +852,7 @@ export function VisualConfigEditor({
                   disabled={disabled}
                 />
               </Field>
-              <Field label="port" hint="非负整数。">
+              <Field label="port" hint="Non-negative integer.">
                 <TextInput
                   value={values.port}
                   onChange={(e) => update({ port: e.currentTarget.value })}
@@ -863,7 +863,7 @@ export function VisualConfigEditor({
               </Field>
             </div>
 
-            <Field label="auth-dir" hint="认证文件目录路径。">
+            <Field label="auth-dir" hint="Auth file directory path.">
               <TextInput
                 value={values.authDir}
                 onChange={(e) => update({ authDir: e.currentTarget.value })}
@@ -874,29 +874,29 @@ export function VisualConfigEditor({
 
             <div className="rounded-xl border border-indigo-200 bg-indigo-50/50 px-4 py-3 dark:border-indigo-800 dark:bg-indigo-950/30">
               <p className="text-sm text-indigo-800 dark:text-indigo-300">
-                API Keys 已迁移至专属管理页面。
+                API Keys have been migrated to the dedicated management page.
                 <a
                   href="#/api-keys"
                   className="ml-1 font-semibold underline underline-offset-2 hover:text-indigo-600 dark:hover:text-indigo-200"
                 >
-                  前往 API Keys 管理 →
+                  Go to API Keys →
                 </a>
               </p>
             </div>
           </div>
         </Card>
 
-        <Card title="TLS" description="启用 TLS 并配置证书路径。">
+        <Card title="TLS" description="Enable TLS and configure certificate paths.">
           <div className="space-y-4">
             <ToggleSwitch
-              label="启用 TLS"
-              description="开启后使用 tls.cert / tls.key。"
+              label="Enable TLS"
+              description="Uses tls.cert / tls.key when enabled."
               checked={values.tlsEnable}
               onCheckedChange={(next) => update({ tlsEnable: next })}
               disabled={disabled}
             />
             <div className="grid gap-3">
-              <Field label="tls.cert" hint="证书文件路径。">
+              <Field label="tls.cert" hint="Certificate file path.">
                 <TextInput
                   value={values.tlsCert}
                   onChange={(e) => update({ tlsCert: e.currentTarget.value })}
@@ -904,7 +904,7 @@ export function VisualConfigEditor({
                   disabled={disabled}
                 />
               </Field>
-              <Field label="tls.key" hint="私钥文件路径。">
+              <Field label="tls.key" hint="Private key file path.">
                 <TextInput
                   value={values.tlsKey}
                   onChange={(e) => update({ tlsKey: e.currentTarget.value })}
@@ -917,18 +917,18 @@ export function VisualConfigEditor({
         </Card>
       </div>
 
-      <Card title="远程管理" description="对应 `remote-management` 配置段。">
+      <Card title="Remote Management" description="Corresponds to `remote-management` config section.">
         <div className="grid gap-5 lg:grid-cols-2">
           <div className="space-y-4">
             <ToggleSwitch
-              label="允许远程访问"
+              label="Allow Remote Access"
               description="remote-management.allow-remote"
               checked={values.rmAllowRemote}
               onCheckedChange={(next) => update({ rmAllowRemote: next })}
               disabled={disabled}
             />
             <ToggleSwitch
-              label="禁用控制面板"
+              label="Disable Control Panel"
               description="remote-management.disable-control-panel"
               checked={values.rmDisableControlPanel}
               onCheckedChange={(next) => update({ rmDisableControlPanel: next })}
@@ -936,7 +936,7 @@ export function VisualConfigEditor({
             />
           </div>
           <div className="space-y-4">
-            <Field label="secret-key" hint="远程管理密钥（请妥善保管）。">
+            <Field label="secret-key" hint="Remote management key (keep secure).">
               <TextInput
                 value={values.rmSecretKey}
                 onChange={(e) => update({ rmSecretKey: e.currentTarget.value })}
@@ -944,7 +944,7 @@ export function VisualConfigEditor({
                 disabled={disabled}
               />
             </Field>
-            <Field label="panel-github-repository" hint="面板仓库地址（如需）。">
+            <Field label="panel-github-repository" hint="Panel repository URL (if needed).">
               <TextInput
                 value={values.rmPanelRepo}
                 onChange={(e) => update({ rmPanelRepo: e.currentTarget.value })}
@@ -957,7 +957,7 @@ export function VisualConfigEditor({
       </Card>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card title="开关" description="常用运行开关（写入 config.yaml）。">
+        <Card title="Switches" description="Common runtime switches (written to config.yaml).">
           <div className="space-y-4">
             <ToggleSwitch
               label="Debug"
@@ -967,21 +967,21 @@ export function VisualConfigEditor({
               disabled={disabled}
             />
             <ToggleSwitch
-              label="商业模式"
-              description="commercial-mode（切换后通常需要重启服务）"
+              label="Commercial Mode"
+              description="commercial-mode (restart usually required)"
               checked={values.commercialMode}
               onCheckedChange={(next) => update({ commercialMode: next })}
               disabled={disabled}
             />
             <ToggleSwitch
-              label="写入日志文件"
+              label="Log to File"
               description="logging-to-file"
               checked={values.loggingToFile}
               onCheckedChange={(next) => update({ loggingToFile: next })}
               disabled={disabled}
             />
             <ToggleSwitch
-              label="使用统计"
+              label="Usage Statistics"
               description="usage-statistics-enabled"
               checked={values.usageStatisticsEnabled}
               onCheckedChange={(next) => update({ usageStatisticsEnabled: next })}
@@ -990,9 +990,9 @@ export function VisualConfigEditor({
           </div>
         </Card>
 
-        <Card title="代理与重试" description="proxy-url、request-retry、max-retry-interval。">
+        <Card title="Proxy & Retry" description="proxy-url, request-retry, max-retry-interval.">
           <div className="space-y-4">
-            <Field label="proxy-url" hint="为空表示不使用代理。">
+            <Field label="proxy-url" hint="Empty means no proxy.">
               <TextInput
                 value={values.proxyUrl}
                 onChange={(e) => update({ proxyUrl: e.currentTarget.value })}
@@ -1001,7 +1001,7 @@ export function VisualConfigEditor({
               />
             </Field>
             <div className="grid gap-3 lg:grid-cols-2">
-              <Field label="request-retry" hint="非负整数。">
+              <Field label="request-retry" hint="Non-negative integer.">
                 <TextInput
                   value={values.requestRetry}
                   onChange={(e) => update({ requestRetry: e.currentTarget.value })}
@@ -1010,7 +1010,7 @@ export function VisualConfigEditor({
                   disabled={disabled}
                 />
               </Field>
-              <Field label="max-retry-interval" hint="非负整数（秒）。">
+              <Field label="max-retry-interval" hint="Non-negative integer (seconds).">
                 <TextInput
                   value={values.maxRetryInterval}
                   onChange={(e) => update({ maxRetryInterval: e.currentTarget.value })}
@@ -1021,14 +1021,14 @@ export function VisualConfigEditor({
               </Field>
             </div>
             <ToggleSwitch
-              label="强制模型前缀"
+              label="Force Model Prefix"
               description="force-model-prefix"
               checked={values.forceModelPrefix}
               onCheckedChange={(next) => update({ forceModelPrefix: next })}
               disabled={disabled}
             />
             <ToggleSwitch
-              label="WebSocket 鉴权"
+              label="WebSocket Auth"
               description="ws-auth"
               checked={values.wsAuth}
               onCheckedChange={(next) => update({ wsAuth: next })}
@@ -1039,9 +1039,9 @@ export function VisualConfigEditor({
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card title="日志限制" description="logs-max-total-size-mb。">
+        <Card title="Log Limits" description="logs-max-total-size-mb。">
           <div className="space-y-4">
-            <Field label="logs-max-total-size-mb" hint="日志总大小上限（MB）。">
+            <Field label="logs-max-total-size-mb" hint="Max total log size (MB).">
               <TextInput
                 value={values.logsMaxTotalSizeMb}
                 onChange={(e) => update({ logsMaxTotalSizeMb: e.currentTarget.value })}
@@ -1054,19 +1054,19 @@ export function VisualConfigEditor({
         </Card>
 
         <Card
-          title="配额超限策略"
+          title="Quota Exceeded Strategy"
           description="quota-exceeded.switch-project / switch-preview-model。"
         >
           <div className="space-y-4">
             <ToggleSwitch
-              label="切换 Project"
+              label="Switch Project"
               description="quota-exceeded.switch-project"
               checked={values.quotaSwitchProject}
               onCheckedChange={(next) => update({ quotaSwitchProject: next })}
               disabled={disabled}
             />
             <ToggleSwitch
-              label="切换 Preview Model"
+              label="Switch Preview Model"
               description="quota-exceeded.switch-preview-model"
               checked={values.quotaSwitchPreviewModel}
               onCheckedChange={(next) => update({ quotaSwitchPreviewModel: next })}
@@ -1077,9 +1077,9 @@ export function VisualConfigEditor({
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card title="路由" description="routing.strategy。">
+        <Card title="Routing" description="routing.strategy。">
           <div className="space-y-4">
-            <Field label="routing.strategy" hint="选择路由策略。">
+            <Field label="routing.strategy" hint="Select routing strategy.">
               <SelectInput
                 value={values.routingStrategy}
                 onChange={(value) => update({ routingStrategy: value as RoutingStrategy })}
@@ -1097,7 +1097,7 @@ export function VisualConfigEditor({
         >
           <div className="space-y-4">
             <div className="grid gap-3 lg:grid-cols-2">
-              <Field label="streaming.keepalive-seconds" hint="非负整数（秒）。">
+              <Field label="streaming.keepalive-seconds" hint="Non-negative integer (seconds).">
                 <TextInput
                   value={values.streaming.keepaliveSeconds}
                   onChange={(e) =>
@@ -1110,7 +1110,7 @@ export function VisualConfigEditor({
                   disabled={disabled}
                 />
               </Field>
-              <Field label="streaming.bootstrap-retries" hint="非负整数。">
+              <Field label="streaming.bootstrap-retries" hint="Non-negative integer.">
                 <TextInput
                   value={values.streaming.bootstrapRetries}
                   onChange={(e) =>
@@ -1124,7 +1124,7 @@ export function VisualConfigEditor({
                 />
               </Field>
             </div>
-            <Field label="nonstream-keepalive-interval" hint="非负整数（秒）。">
+            <Field label="nonstream-keepalive-interval" hint="Non-negative integer (seconds).">
               <TextInput
                 value={values.streaming.nonstreamKeepaliveInterval}
                 onChange={(e) =>
@@ -1146,15 +1146,15 @@ export function VisualConfigEditor({
 
       <div className="space-y-6">
         <PayloadRulesEditor
-          title="Payload 默认规则"
-          description="匹配模型后，对请求 payload 追加/覆盖参数（对应 `payload.default`）。"
+          title="Payload 默认Rule"
+          description="Match Models后，对请求 payload 追加/Override Params（对应 `payload.default`）。"
           rules={values.payloadDefaultRules}
           disabled={disabled}
           onChange={(payloadDefaultRules) => update({ payloadDefaultRules })}
         />
         <PayloadRulesEditor
-          title="Payload 覆盖规则"
-          description="匹配模型后，覆盖请求 payload 参数（对应 `payload.override`）。"
+          title="Payload 覆盖Rule"
+          description="Match Models后，覆盖请求 payload 参数（对应 `payload.override`）。"
           rules={values.payloadOverrideRules}
           disabled={disabled}
           onChange={(payloadOverrideRules) => update({ payloadOverrideRules })}

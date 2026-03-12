@@ -376,7 +376,7 @@ export function LogsPage() {
           setBuffer((prev) => trimAndAppend(prev, lines));
         }
       } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : "日志拉取失败";
+        const message = err instanceof Error ? err.message : "Failed to fetch logs";
         notifyRef.current({ type: "error", message });
       } finally {
         if (shouldBlockUi) setLoading(false);
@@ -468,9 +468,9 @@ export function LogsPage() {
       stickToBottomRef.current = true;
       setIsAtBottom(true);
       setDisplayCount(INITIAL_DISPLAY_LINES);
-      notify({ type: "success", message: "已清空服务器日志" });
+      notify({ type: "success", message: "Server logs cleared" });
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "清空日志失败";
+      const message = err instanceof Error ? err.message : "Failed to clear logs";
       notify({ type: "error", message });
     }
   }, [notify]);
@@ -482,7 +482,7 @@ export function LogsPage() {
       const files = Array.isArray(result?.files) ? (result.files as ErrorLogItem[]) : [];
       setErrorLogs(files);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "获取错误日志列表失败";
+      const message = err instanceof Error ? err.message : "Failed to fetch error log list";
       notify({ type: "error", message });
     } finally {
       setErrorLogsLoading(false);
@@ -502,7 +502,7 @@ export function LogsPage() {
         const blob = await logsApi.downloadErrorLog(file.name);
         downloadBlob(blob, file.name);
       } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : "下载错误日志失败";
+        const message = err instanceof Error ? err.message : "Failed to download error log";
         notify({ type: "error", message });
       }
     },
@@ -511,7 +511,7 @@ export function LogsPage() {
 
   const handleDownloadLogs = useCallback(() => {
     if (filteredLines.length === 0) {
-      notify({ type: "info", message: "暂无可下载的日志内容" });
+      notify({ type: "info", message: "No downloadable log content" });
       return;
     }
     const text = filteredLines.join("\n");
@@ -521,20 +521,20 @@ export function LogsPage() {
       ? "unknown"
       : date.toISOString().replace(/[:.]/g, "-");
     downloadBlob(blob, `logs-${stamp}.txt`);
-    notify({ type: "success", message: "已开始下载日志文件" });
+    notify({ type: "success", message: "Log file download started" });
   }, [filteredLines, notify]);
 
   const handleDownloadRequestLog = useCallback(async () => {
     const id = requestLogId.trim();
     if (!id) {
-      notify({ type: "info", message: "请输入请求 ID" });
+      notify({ type: "info", message: "Please enter request ID" });
       return;
     }
     try {
       const blob = await logsApi.downloadRequestLogById(id);
       downloadBlob(blob, `request-log-${id}.log`);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "下载请求日志失败";
+      const message = err instanceof Error ? err.message : "Failed to download request log";
       notify({ type: "error", message });
     }
   }, [notify, requestLogId]);
@@ -549,14 +549,14 @@ export function LogsPage() {
     <div className="space-y-6">
       <Tabs value={tab} onValueChange={(next) => setTab(next as typeof tab)}>
         <TabsList>
-          <TabsTrigger value="content">日志内容</TabsTrigger>
-          <TabsTrigger value="errors">错误日志</TabsTrigger>
+          <TabsTrigger value="content">Log Content</TabsTrigger>
+          <TabsTrigger value="errors">Error Logs</TabsTrigger>
         </TabsList>
 
         <TabsContent value="content">
           <Card
-            title="实时日志"
-            description={`最新时间：${latestLabel}（仅保留前端缓冲最近 ${MAX_BUFFER_LINES} 行）`}
+            title="Live Logs"
+            description={`Latest: ${latestLabel} (buffer: last ${MAX_BUFFER_LINES} lines)`}
             actions={
               <div className="flex flex-wrap items-center gap-2">
                 <Button
@@ -566,7 +566,7 @@ export function LogsPage() {
                   disabled={loading || refreshing}
                 >
                   <RefreshCw size={14} className={refreshing ? "animate-spin" : ""} />
-                  刷新
+                  Refresh
                 </Button>
                 <Button
                   variant="secondary"
@@ -575,7 +575,7 @@ export function LogsPage() {
                   disabled={loading || filteredLines.length === 0}
                 >
                   <Download size={14} />
-                  下载
+                  Download
                 </Button>
                 <Button
                   variant="danger"
@@ -584,7 +584,7 @@ export function LogsPage() {
                   disabled={loading || refreshing}
                 >
                   <Trash2 size={14} />
-                  清空
+                  Clear
                 </Button>
               </div>
             }
@@ -594,7 +594,7 @@ export function LogsPage() {
               <TextInput
                 value={search}
                 onChange={(e) => setSearch(e.currentTarget.value)}
-                placeholder="搜索关键字（大小写不敏感）…"
+                placeholder="Search keywords (case insensitive)…"
                 type="search"
                 name="log_search"
                 autoComplete="off"
@@ -605,8 +605,8 @@ export function LogsPage() {
               <div className="rounded-2xl border border-slate-200 bg-white/60 px-4 py-3 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/40">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="text-xs text-slate-600 dark:text-white/65">
-                    自动刷新：{autoRefresh ? "开启" : "关闭"} · 屏蔽管理端流量：
-                    {hideManagement ? "开启" : "关闭"} · 原始日志：{showRawLogs ? "开启" : "关闭"}
+                    自动Refresh：{autoRefresh ? "On" : "Off"} · Hide management traffic: 
+                    {hideManagement ? "On" : "Off"} · Raw logs: {showRawLogs ? "On" : "Off"}
                   </div>
                   <Button
                     variant="ghost"
@@ -621,29 +621,29 @@ export function LogsPage() {
                         optionsOpen ? "rotate-180" : "rotate-0",
                       ].join(" ")}
                     />
-                    {optionsOpen ? "收起选项" : "展开选项"}
+                    {optionsOpen ? "Collapse options" : "Expand options"}
                   </Button>
                 </div>
 
                 {optionsOpen ? (
                   <div className="mt-3 grid gap-4 border-t border-slate-200 pt-4 dark:border-neutral-800 sm:grid-cols-2">
                     <ToggleSwitch
-                      label="自动刷新"
-                      description="每 3 秒拉取增量日志"
+                      label="自动Refresh"
+                      description="Fetch incremental logs every 3s"
                       checked={autoRefresh}
                       onCheckedChange={setAutoRefresh}
                       disabled={loading}
                     />
                     <ToggleSwitch
-                      label="屏蔽管理端流量"
-                      description="过滤 /v0/management 相关日志"
+                      label="Hide Management Traffic"
+                      description="Filter /v0/management logs"
                       checked={hideManagement}
                       onCheckedChange={setHideManagement}
                       disabled={loading}
                     />
                     <ToggleSwitch
-                      label="显示原始日志"
-                      description="以纯文本方式展示，便于整段复制。"
+                      label="Show Raw Logs"
+                      description="Plain text for easy copy."
                       checked={showRawLogs}
                       onCheckedChange={setShowRawLogs}
                       disabled={loading}
@@ -658,11 +658,11 @@ export function LogsPage() {
                 <div className="min-w-0">
                   <span
                     className="block truncate whitespace-nowrap tabular-nums"
-                    title={`显示 ${visibleLines.length.toLocaleString()} / ${filteredLines.length.toLocaleString()} 行${canLoadMore ? "（滚动到顶部自动加载更多）" : ""}`}
+                    title={`Showing ${visibleLines.length.toLocaleString()} / ${filteredLines.length.toLocaleString()} lines${canLoadMore ? " (scroll up to load more)" : ""}`}
                   >
-                    显示 {visibleLines.length.toLocaleString()} /{" "}
-                    {filteredLines.length.toLocaleString()} 行
-                    {canLoadMore ? "（滚动到顶部自动加载更多）" : ""}
+                    Showing {visibleLines.length.toLocaleString()} /{" "}
+                    {filteredLines.length.toLocaleString()}  lines
+                    {canLoadMore ? " (scroll up to load more)" : ""}
                   </span>
                 </div>
                 <div className="shrink-0">
@@ -675,7 +675,7 @@ export function LogsPage() {
                       visibleLines.length === 0 || isAtBottom ? "pointer-events-none opacity-0" : ""
                     }
                   >
-                    跳到最新
+                    Jump to latest
                   </Button>
                 </div>
               </div>
@@ -687,8 +687,8 @@ export function LogsPage() {
                 {visibleLines.length === 0 ? (
                   <div className="px-1 py-4">
                     <EmptyState
-                      title="暂无日志"
-                      description="你可以点击“刷新”或开启“自动刷新”来拉取最新日志。"
+                      title="No logs"
+                      description="你可以点击“Refresh”或开启“自动Refresh”来拉取最新日志。"
                     />
                   </div>
                 ) : showRawLogs ? (
@@ -779,8 +779,8 @@ export function LogsPage() {
 
         <TabsContent value="errors">
           <Card
-            title="错误日志"
-            description="从服务器拉取错误日志文件列表，并支持按请求 ID 下载日志。"
+            title="Error Logs"
+            description="从服务器拉取Error Log Files列表，并支持按请求 ID Download日志。"
             actions={
               <div className="flex flex-wrap items-center gap-2">
                 <Button
@@ -790,7 +790,7 @@ export function LogsPage() {
                   disabled={errorLogsLoading}
                 >
                   <RefreshCw size={14} className={errorLogsLoading ? "animate-spin" : ""} />
-                  刷新列表
+                  Refresh列表
                 </Button>
               </div>
             }
@@ -800,17 +800,17 @@ export function LogsPage() {
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="min-w-0">
                     <p className="text-sm font-semibold text-slate-900 dark:text-white">
-                      按请求 ID 下载
+                      按请求 ID Download
                     </p>
                     <p className="mt-1 text-sm text-slate-600 dark:text-white/65">
-                      输入请求 ID（8位），下载该请求对应日志文件。
+                      输入请求 ID（8位），Download该请求对应日志文件。
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
                     <TextInput
                       value={requestLogId}
                       onChange={(e) => setRequestLogId(e.currentTarget.value)}
-                      placeholder="请求 ID（8位）…"
+                      placeholder="Request ID (8 digits)…"
                       name="request_log_id"
                       autoComplete="off"
                       spellCheck={false}
@@ -822,25 +822,25 @@ export function LogsPage() {
                       onClick={handleDownloadRequestLog}
                       disabled={requestLogId.trim().length === 0}
                     >
-                      下载
+                      Download
                     </Button>
                   </div>
                 </div>
               </div>
 
               <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
-                <p className="text-sm font-semibold text-slate-900 dark:text-white">错误日志文件</p>
+                <p className="text-sm font-semibold text-slate-900 dark:text-white">Error Log Files</p>
                 <p className="mt-1 text-sm text-slate-600 dark:text-white/65">
-                  列表按文件名展示，点击“下载”获取对应文件。
+                  列表按文件名展示，点击“Download”获取对应文件。
                 </p>
 
                 <div className="mt-4">
                   {errorLogsLoading ? (
-                    <div className="text-sm text-slate-600 dark:text-white/65">加载中…</div>
+                    <div className="text-sm text-slate-600 dark:text-white/65">Loading…</div>
                   ) : errorLogs.length === 0 ? (
                     <EmptyState
-                      title="暂无错误日志"
-                      description="当前服务器没有可下载的错误日志文件。"
+                      title="No error logs"
+                      description="当前服务器没有可Download的Error Log Files。"
                     />
                   ) : (
                     <div className="space-y-2">
@@ -871,7 +871,7 @@ export function LogsPage() {
                             onClick={() => void downloadErrorLog(file)}
                           >
                             <Download size={14} />
-                            下载
+                            Download
                           </Button>
                         </div>
                       ))}
@@ -886,9 +886,9 @@ export function LogsPage() {
 
       <ConfirmModal
         open={confirmClearOpen}
-        title="清空服务器日志"
-        description="确定要清空服务器日志吗？此操作不可恢复。"
-        confirmText="清空"
+        title="Clear服务器日志"
+        description="确定要Clear服务器日志吗？此操作不可恢复。"
+        confirmText="Clear"
         onClose={() => setConfirmClearOpen(false)}
         onConfirm={() => {
           setConfirmClearOpen(false);

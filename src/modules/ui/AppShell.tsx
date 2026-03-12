@@ -261,7 +261,7 @@ export function AppShell({ children }: PropsWithChildren) {
 const useShell = (): ShellContextState => {
   const context = use(ShellContext);
   if (!context) {
-    throw new Error("useShell 必须在 AppShell 内使用");
+    throw new Error("useShell must be used within AppShell");
   }
   return context;
 };

@@ -26,9 +26,9 @@ function formatUptime(s: number): string {
     const d = Math.floor(s / 86400);
     const h = Math.floor((s % 86400) / 3600);
     const m = Math.floor((s % 3600) / 60);
-    if (d > 0) return `${d}d ${h}时 ${m}分`;
-    if (h > 0) return `${h}时 ${m}分`;
-    return `${m}分`;
+    if (d > 0) return `${d}d ${h}h ${m}m`;
+    if (h > 0) return `${h}h ${m}m`;
+    return `${m}m`;
 }
 
 function formatMs(ms: number): string {
@@ -37,9 +37,9 @@ function formatMs(ms: number): string {
 }
 
 function statusColor(pct: number) {
-    if (pct >= 95) return { text: "text-red-500", bg: "bg-red-500", ring: "stroke-red-500", bar: "bg-red-500", label: "严重", labelBg: "bg-red-500/10 text-red-500" };
+    if (pct >= 95) return { text: "text-red-500", bg: "bg-red-500", ring: "stroke-red-500", bar: "bg-red-500", label: "Critical", labelBg: "bg-red-500/10 text-red-500" };
     if (pct >= 80) return { text: "text-amber-500", bg: "bg-amber-500", ring: "stroke-amber-500", bar: "bg-amber-500", label: "警告", labelBg: "bg-amber-500/10 text-amber-500" };
-    return { text: "text-emerald-500", bg: "bg-emerald-500", ring: "stroke-emerald-500", bar: "bg-emerald-500", label: "正常", labelBg: "bg-emerald-500/10 text-emerald-500" };
+    return { text: "text-emerald-500", bg: "bg-emerald-500", ring: "stroke-emerald-500", bar: "bg-emerald-500", label: "Normal", labelBg: "bg-emerald-500/10 text-emerald-500" };
 }
 
 /** Compute an overall health score (0-100) from system stats */
@@ -53,10 +53,10 @@ function computeHealthScore(s: SystemStats): number {
 }
 
 function healthLabel(score: number) {
-    if (score >= 90) return { text: "健康", color: "text-emerald-500" };
-    if (score >= 70) return { text: "良好", color: "text-blue-500" };
-    if (score >= 50) return { text: "警告", color: "text-amber-500" };
-    return { text: "风险", color: "text-red-500" };
+    if (score >= 90) return { text: "Healthy", color: "text-emerald-500" };
+    if (score >= 70) return { text: "Good", color: "text-blue-500" };
+    if (score >= 50) return { text: "Warning", color: "text-amber-500" };
+    return { text: "Risk", color: "text-red-500" };
 }
 
 function healthRingColor(score: number) {
@@ -94,7 +94,7 @@ function HealthGauge({ score }: { score: number }) {
                     <span className={`mt-0.5 text-xs font-semibold ${hl.color}`}>{hl.text}</span>
                 </div>
             </div>
-            <p className="mt-2 text-[11px] text-slate-400 dark:text-white/40">健康状况评分</p>
+            <p className="mt-2 text-[11px] text-slate-400 dark:text-white/40">Health Score</p>
         </div>
     );
 }
@@ -166,7 +166,7 @@ function NetworkCard({ stats }: { stats: SystemStats }) {
         <div className="rounded-xl border border-slate-200/80 bg-white p-3.5 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
             <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-white/40 mb-2.5">
                 <Wifi size={12} />
-                网络流量
+                Network Traffic
             </div>
             <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -174,18 +174,18 @@ function NetworkCard({ stats }: { stats: SystemStats }) {
                         <ArrowUpRight size={14} />
                         <span className="text-sm font-bold tabular-nums">{formatRate(stats.net_send_rate)}</span>
                     </div>
-                    <p className="mt-0.5 text-[10px] text-slate-400">↑ 累计 {formatBytes(stats.net_bytes_sent)}</p>
+                    <p className="mt-0.5 text-[10px] text-slate-400">↑ Total {formatBytes(stats.net_bytes_sent)}</p>
                 </div>
                 <div>
                     <div className="flex items-center gap-1 text-blue-500">
                         <ArrowDownRight size={14} />
                         <span className="text-sm font-bold tabular-nums">{formatRate(stats.net_recv_rate)}</span>
                     </div>
-                    <p className="mt-0.5 text-[10px] text-slate-400">↓ 累计 {formatBytes(stats.net_bytes_recv)}</p>
+                    <p className="mt-0.5 text-[10px] text-slate-400">↓ Total {formatBytes(stats.net_bytes_recv)}</p>
                 </div>
             </div>
             <div className="mt-2 flex items-center justify-between rounded-lg bg-slate-50 px-2.5 py-1.5 dark:bg-neutral-800/50">
-                <span className="text-[10px] text-slate-500 dark:text-white/45">总流量</span>
+                <span className="text-[10px] text-slate-500 dark:text-white/45">Total Traffic</span>
                 <span className="text-xs font-bold tabular-nums text-slate-700 dark:text-white">{formatBytes(stats.net_bytes_sent + stats.net_bytes_recv)}</span>
             </div>
         </div>
@@ -205,8 +205,8 @@ function ChannelLatencyCard({ data }: { data: ChannelLatency[] }) {
         <div className="rounded-xl border border-slate-200/80 bg-white p-3.5 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
             <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-white/40 mb-2.5">
                 <Network size={12} />
-                渠道平均延迟
-                <span className="ml-auto text-[9px] font-normal normal-case tracking-normal">Top 5 · 近 7 d</span>
+                Channel Avg Latency
+                <span className="ml-auto text-[9px] font-normal normal-case tracking-normal">Top 5 · Last 7d</span>
             </div>
             <div className="space-y-1.5">
                 {top5.map((ch) => {
@@ -224,7 +224,7 @@ function ChannelLatencyCard({ data }: { data: ChannelLatency[] }) {
                                 {formatMs(ch.avg_ms)}
                             </span>
                             <span className="w-10 shrink-0 text-right text-[9px] text-slate-400 tabular-nums">
-                                {ch.count}次
+                                {ch.count} reqs
                             </span>
                         </div>
                     );
@@ -246,13 +246,13 @@ function ConcurrencyCard({ stats }: { stats: SystemStats }) {
         <div className="rounded-xl border border-slate-200/80 bg-white p-3.5 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
             <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-white/40 mb-3">
                 <Layers size={12} />
-                实时吞吐
+                Real-time Throughput
                 <span className={`ml-auto inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold tabular-nums ${rpm > 0
                     ? "bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400"
                     : "bg-slate-100 text-slate-400 dark:bg-neutral-800 dark:text-white/35"
                     }`}>
                     <span className={`inline-block h-1.5 w-1.5 rounded-full ${rpm > 0 ? "bg-emerald-500 animate-pulse" : "bg-slate-300 dark:bg-neutral-600"}`} />
-                    {rpm > 0 ? "活跃" : "空闲"}
+                    {rpm > 0 ? "Active" : "Idle"}
                 </span>
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -264,7 +264,7 @@ function ConcurrencyCard({ stats }: { stats: SystemStats }) {
                     <p className="mt-1 text-2xl font-bold tabular-nums text-slate-900 dark:text-white">
                         {rpm.toLocaleString()}
                     </p>
-                    <p className="mt-0.5 text-[10px] text-slate-400 dark:text-white/35">每m请求数</p>
+                    <p className="mt-0.5 text-[10px] text-slate-400 dark:text-white/35">RPM</p>
                 </div>
                 <div className="rounded-lg bg-slate-50 px-3 py-2.5 dark:bg-neutral-800/50">
                     <div className="flex items-center gap-1 text-[9px] font-semibold uppercase tracking-wider text-slate-400 dark:text-white/35">
@@ -274,7 +274,7 @@ function ConcurrencyCard({ stats }: { stats: SystemStats }) {
                     <p className="mt-1 text-2xl font-bold tabular-nums text-slate-900 dark:text-white">
                         {tpm.toLocaleString()}
                     </p>
-                    <p className="mt-0.5 text-[10px] text-slate-400 dark:text-white/35">每m Token 数</p>
+                    <p className="mt-0.5 text-[10px] text-slate-400 dark:text-white/35">TPM</p>
                 </div>
             </div>
         </div>
@@ -333,11 +333,11 @@ export function SystemMonitorSection() {
                 <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2">
                         <Activity size={16} className="text-slate-600 dark:text-white" />
-                        <span className="text-sm font-semibold text-slate-900 dark:text-white">运维监控</span>
+                        <span className="text-sm font-semibold text-slate-900 dark:text-white">System Monitor</span>
                     </div>
                     <div className="flex items-center gap-1.5 text-xs text-slate-400">
                         <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-slate-300 dark:bg-neutral-600" />
-                        连接中…
+                        Connecting…
                     </div>
                 </div>
                 <SkeletonLayout />
@@ -353,14 +353,14 @@ export function SystemMonitorSection() {
             <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                     <Activity size={16} className="text-slate-600 dark:text-white" />
-                    <span className="text-sm font-semibold text-slate-900 dark:text-white">运维监控</span>
+                    <span className="text-sm font-semibold text-slate-900 dark:text-white">System Monitor</span>
                     <span className="text-[10px] text-slate-400 dark:text-white/35">
-                        更新于 {new Date().toLocaleTimeString()}
+                        Updated at {new Date().toLocaleTimeString()}
                     </span>
                 </div>
                 <div className="flex items-center gap-1.5 text-xs text-slate-400">
                     <span className={`inline-block h-2 w-2 rounded-full ${connected ? "bg-emerald-500 animate-pulse" : "bg-slate-300 dark:bg-neutral-600"}`} />
-                    {connected ? "实时" : "轮询"}
+                    {connected ? "Live" : "Polling"}
                 </div>
             </div>
 
@@ -374,32 +374,32 @@ export function SystemMonitorSection() {
 
                     {/* Right: core KPIs in 2x3 grid */}
                     <div className="grid gap-3 grid-cols-2 lg:grid-cols-3">
-                        <MiniKpi label="运行时长" value={formatUptime(stats.uptime_seconds)} icon={Clock}
-                            sublabel={`启动于 ${new Date(stats.start_time).toLocaleString()}`} />
+                        <MiniKpi label="Uptime" value={formatUptime(stats.uptime_seconds)} icon={Clock}
+                            sublabel={`Started ${new Date(stats.start_time).toLocaleString()}`} />
                         <MiniKpi label="Goroutines" value={String(stats.go_routines)} icon={Zap}
                             color="text-violet-500" sublabel={`堆 ${formatBytes(stats.go_heap_bytes)}`} />
-                        <MiniKpi label="数据库" value={formatBytes(stats.db_size_bytes)} icon={Database}
+                        <MiniKpi label="Database" value={formatBytes(stats.db_size_bytes)} icon={Database}
                             sublabel="SQLite + WAL" />
-                        <MiniKpi label="日志存储" value={formatBytes(stats.log_size_bytes)} icon={FileText}
-                            sublabel="日志目录" />
+                        <MiniKpi label="Log Storage" value={formatBytes(stats.log_size_bytes)} icon={FileText}
+                            sublabel="Log dir" />
                         <NetworkCard stats={stats} />
                         {stats.channel_latency?.length > 0 ? (
                             <ChannelLatencyCard data={stats.channel_latency} />
                         ) : (
-                            <MiniKpi label="渠道延迟" value="--" icon={Network} sublabel="暂无数据" />
+                            <MiniKpi label="Latency" value="--" icon={Network} sublabel="No data" />
                         )}
                     </div>
                 </div>
 
                 {/* ── Row 2: System Resources — compact horizontal bars ── */}
                 <div className="grid gap-3 grid-cols-2 md:grid-cols-3 xl:grid-cols-5">
-                    <ResourceBar icon={Cpu} label="系统 CPU" value={`${stats.system_cpu_pct.toFixed(1)}%`} pct={stats.system_cpu_pct} />
-                    <ResourceBar icon={MemoryStick} label="系统内存" value={`${stats.system_mem_pct.toFixed(1)}%`} pct={stats.system_mem_pct}
+                    <ResourceBar icon={Cpu} label="System CPU" value={`${stats.system_cpu_pct.toFixed(1)}%`} pct={stats.system_cpu_pct} />
+                    <ResourceBar icon={MemoryStick} label="System Memory" value={`${stats.system_mem_pct.toFixed(1)}%`} pct={stats.system_mem_pct}
                         detail={`${formatBytes(stats.system_mem_used)} / ${formatBytes(stats.system_mem_total)}`} />
-                    <ResourceBar icon={Cpu} label="服务 CPU" value={`${stats.process_cpu_pct.toFixed(1)}%`} pct={Math.min(stats.process_cpu_pct, 100)} />
-                    <ResourceBar icon={MemoryStick} label="服务内存" value={`${stats.process_mem_pct.toFixed(1)}%`} pct={stats.process_mem_pct}
+                    <ResourceBar icon={Cpu} label="Service CPU" value={`${stats.process_cpu_pct.toFixed(1)}%`} pct={Math.min(stats.process_cpu_pct, 100)} />
+                    <ResourceBar icon={MemoryStick} label="Service Memory" value={`${stats.process_mem_pct.toFixed(1)}%`} pct={stats.process_mem_pct}
                         detail={formatBytes(stats.process_mem_bytes)} />
-                    <ResourceBar icon={HardDrive} label="磁盘" value={`${stats.disk_pct.toFixed(1)}%`} pct={stats.disk_pct}
+                    <ResourceBar icon={HardDrive} label="Disk" value={`${stats.disk_pct.toFixed(1)}%`} pct={stats.disk_pct}
                         detail={`${formatBytes(stats.disk_used)} / ${formatBytes(stats.disk_total)}`} />
                 </div>
 
@@ -407,11 +407,11 @@ export function SystemMonitorSection() {
                 <div className="grid gap-3 grid-cols-1 lg:grid-cols-2">
                     <ConcurrencyCard stats={stats} />
                     <div className="grid gap-3 grid-cols-2">
-                        <MiniKpi label="数据库" value={formatBytes(stats.db_size_bytes)} icon={Database}
+                        <MiniKpi label="Database" value={formatBytes(stats.db_size_bytes)} icon={Database}
                             sublabel="SQLite + WAL + SHM" />
-                        <MiniKpi label="磁盘可用" value={formatBytes(stats.disk_free)} icon={HardDrive}
+                        <MiniKpi label="Disk Free" value={formatBytes(stats.disk_free)} icon={HardDrive}
                             color={stats.disk_pct >= 90 ? "text-red-500" : stats.disk_pct >= 75 ? "text-amber-500" : "text-emerald-500"}
-                            sublabel={`共 ${formatBytes(stats.disk_total)}`} />
+                            sublabel={`Total ${formatBytes(stats.disk_total)}`} />
                     </div>
                 </div>
             </div>

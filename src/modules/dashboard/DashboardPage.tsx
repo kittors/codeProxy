@@ -11,9 +11,9 @@ import { useToast } from "@/modules/ui/ToastProvider";
 type DashboardRange = 1 | 7 | 30;
 
 const RANGE_OPTIONS: ReadonlyArray<{ value: DashboardRange; label: string }> = [
-  { value: 1, label: "今天" },
-  { value: 7, label: "近 7 天" },
-  { value: 30, label: "近 30 天" },
+  { value: 1, label: "Today" },
+  { value: 7, label: "Last 7 days" },
+  { value: 30, label: "Last 30 days" },
 ];
 
 const formatNumber = (n: number) =>
@@ -36,7 +36,7 @@ export function DashboardPage() {
       const data = await usageApi.getDashboardSummary(days);
       setSummary(data);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "数据获取失败";
+      const message = err instanceof Error ? err.message : "Failed to fetch data";
       setError(message);
       notify({ type: "error", message });
     } finally {
@@ -69,7 +69,7 @@ export function DashboardPage() {
           </Tabs>
           <Button variant="secondary" size="sm" onClick={() => void refresh(range)} disabled={loading}>
             <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
-            刷新
+            Refresh
           </Button>
         </div>
       </div>
@@ -77,13 +77,13 @@ export function DashboardPage() {
       {/* ── Error State ── */}
       {error ? (
         <EmptyState
-          title="加载失败"
+          title="Load failed"
           description={error}
           icon={<TriangleAlert size={18} />}
           action={
             <Button variant="secondary" onClick={() => void refresh(range)}>
               <RefreshCw size={14} />
-              重试
+              Retry
             </Button>
           }
         />
@@ -92,27 +92,27 @@ export function DashboardPage() {
       {/* ── KPI Row ── */}
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <KpiCard
-          title="请求数"
+          title="Total Requests"
           value={<span className="tabular-nums">{formatNumber(kpi?.total_requests ?? 0)}</span>}
-          hint={`${range === 1 ? "今天" : `最近 ${range} 天`}的总请求数`}
+          hint={`Total requests for ${range === 1 ? "today" : `last ${range} days`}`}
           icon={Activity}
         />
         <KpiCard
-          title="成功率"
+          title="Success Rate"
           value={<span className="tabular-nums">{formatRate(kpi?.success_rate ?? 0)}</span>}
-          hint={`成功 ${formatNumber(kpi?.success_requests ?? 0)} · 失败 ${formatNumber(kpi?.failed_requests ?? 0)}`}
+          hint={`Success ${formatNumber(kpi?.success_requests ?? 0)} · Failed ${formatNumber(kpi?.failed_requests ?? 0)}`}
           icon={Sigma}
         />
         <KpiCard
-          title="Token 总量"
+          title="Total Tokens"
           value={<span className="tabular-nums">{formatNumber(kpi?.total_tokens ?? 0)}</span>}
-          hint={`输入 ${formatNumber(kpi?.input_tokens ?? 0)} · 输出 ${formatNumber(kpi?.output_tokens ?? 0)}`}
+          hint={`Input ${formatNumber(kpi?.input_tokens ?? 0)} · Output ${formatNumber(kpi?.output_tokens ?? 0)}`}
           icon={Sigma}
         />
         <KpiCard
-          title="失败请求"
+          title="Failed Requests"
           value={<span className="tabular-nums">{formatNumber(kpi?.failed_requests ?? 0)}</span>}
-          hint="失败请求数（用于定位 provider/key 质量问题）"
+          hint="Failed requests (for provider/key quality analysis)"
           icon={TriangleAlert}
         />
       </div>

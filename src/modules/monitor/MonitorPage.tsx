@@ -66,18 +66,18 @@ export function MonitorPage() {
   const [dailyLegendSelected, setDailyLegendSelected] = useState<Record<string, boolean>>({
     "Input Token": true,
     "Output Token": true,
-    请求数: true,
+    Requests: true,
   });
 
   const [hourlyModelSelected, setHourlyModelSelected] = useState<Record<string, boolean>>({
-    总请求: true,
+    "Total Requests": true,
   });
 
   const [hourlyTokenSelected, setHourlyTokenSelected] = useState<Record<string, boolean>>({
-    输入: true,
-    输出: true,
-    推理: true,
-    缓存: true,
+    Input: true,
+    Output: true,
+    Reasoning: true,
+    Cached: true,
     "Total Token": true,
   });
 
@@ -333,17 +333,17 @@ export function MonitorPage() {
   const hourlyTokenPalette = useMemo(() => {
     return {
       colorByKey: {
-        输入: "rgba(110,231,183,0.88)",
-        输出: "rgba(196,181,253,0.88)",
-        推理: "rgba(252,211,77,0.88)",
-        缓存: "rgba(94,234,212,0.88)",
+        Input: "rgba(110,231,183,0.88)",
+        Output: "rgba(196,181,253,0.88)",
+        Reasoning: "rgba(252,211,77,0.88)",
+        Cached: "rgba(94,234,212,0.88)",
         "Total Token": "#3b82f6",
       } as Record<string, string>,
       classByKey: {
-        输入: "bg-emerald-400",
-        输出: "bg-violet-400",
-        推理: "bg-amber-400",
-        缓存: "bg-teal-400",
+        Input: "bg-emerald-400",
+        Output: "bg-violet-400",
+        Reasoning: "bg-amber-400",
+        Cached: "bg-teal-400",
         "Total Token": "bg-blue-500",
       } as Record<string, string>,
     };
@@ -511,7 +511,7 @@ export function MonitorPage() {
                       : "col-start-1 row-start-1 opacity-100"
                   }
                 >
-                  刷新
+                  Refresh
                 </span>
                 <span
                   className={
@@ -546,7 +546,7 @@ export function MonitorPage() {
           <KpiCard
             title="Success Rate"
             value={<AnimatedNumber value={metrics.successRate} format={formatRate} />}
-            hint={`成功 ${formatNumber(metrics.successCount)} / 失败 ${formatNumber(metrics.failedCount)}`}
+            hint={`Success ${formatNumber(metrics.successCount)} / Failed ${formatNumber(metrics.failedCount)}`}
             icon={ShieldCheck}
           />
           <KpiCard
@@ -558,7 +558,7 @@ export function MonitorPage() {
           <KpiCard
             title="Output Token"
             value={<AnimatedNumber value={metrics.outputTokens} format={formatNumber} />}
-            hint={`输入 Token：${formatNumber(metrics.inputTokens)}`}
+            hint={`Input Tokens: ${formatNumber(metrics.inputTokens)}`}
             icon={Coins}
           />
         </section>
@@ -571,9 +571,9 @@ export function MonitorPage() {
               <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-900/5 text-slate-700 dark:bg-white/10 dark:text-white/70">
                 <ChartSpline size={20} />
               </div>
-              <p className="text-sm font-semibold text-slate-900 dark:text-white">暂无监控数据</p>
+              <p className="text-sm font-semibold text-slate-900 dark:text-white">No monitoring data</p>
               <p className="text-sm text-slate-600 dark:text-white/65">
-                可以点击上方“刷新”重新拉取数据。
+                可以点击上方“Refresh”重新拉取数据。
               </p>
               <button
                 type="button"
@@ -581,7 +581,7 @@ export function MonitorPage() {
                 className="inline-flex min-w-[96px] items-center justify-center gap-1.5 rounded-2xl bg-slate-900 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-slate-800 dark:bg-white dark:text-neutral-950 dark:hover:bg-slate-200"
               >
                 <RefreshCw size={14} />
-                刷新
+                Refresh
               </button>
             </div>
           </section>
@@ -591,8 +591,8 @@ export function MonitorPage() {
           <Reveal>
             <section className="grid gap-4 lg:grid-cols-[minmax(0,560px)_minmax(0,1fr)]">
               <Card
-                title="模型用量分布"
-                description={`最近 ${timeRange} 天 · 按${modelMetric === "requests" ? "Requests" : "Token"} · Top10`}
+                title="Model Distribution"
+                description={`Last ${timeRange} days · by ${modelMetric === "requests" ? "Requests" : "Token"} · Top10`}
                 actions={modelActions}
                 loading={isRefreshing}
               >
@@ -625,8 +625,8 @@ export function MonitorPage() {
               </Card>
 
               <Card
-                title="每日用量趋势"
-                description={`最近 ${timeRange} 天 · 请求数与 Token 用量趋势`}
+                title="Daily Usage Trend"
+                description={`Last ${timeRange} days · Requests & Token usage trend`}
                 loading={isRefreshing}
               >
                 <div className="flex h-72 min-w-0 flex-col overflow-hidden">
@@ -680,8 +680,8 @@ export function MonitorPage() {
 
           <Reveal>
             <Card
-              title="每小时模型请求分布"
-              description="按小时聚合（Top5 模型 + 其他）"
+              title="Hourly Model Requests"
+              description="Hourly aggregated (Top5 models + Other)"
               actions={<HourWindowSelector value={modelHourWindow} onChange={setModelHourWindow} />}
               loading={isRefreshing}
             >
@@ -716,8 +716,8 @@ export function MonitorPage() {
 
           <Reveal>
             <Card
-              title="每小时 Token 用量"
-              description="按小时聚合（输入 / 输出 / 推理 / 缓存）"
+              title="Hourly Token Usage"
+              description="Hourly aggregated (Input / Output / Reasoning / Cached)"
               actions={<HourWindowSelector value={tokenHourWindow} onChange={setTokenHourWindow} />}
               loading={isRefreshing}
             >

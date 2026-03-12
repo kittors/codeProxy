@@ -118,7 +118,7 @@ export const commitModelEntries = (
     const priorityText = draft.priorityText.trim();
     const priority = priorityText !== "" ? Number(priorityText) : undefined;
     if (priority !== undefined && !Number.isFinite(priority)) {
-      return { error: `模型 ${name} 的 priority 必须是数字` };
+      return { error: `Model ${name} priority must be a number` };
     }
 
     const testModel = draft.testModel.trim();

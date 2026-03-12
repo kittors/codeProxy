@@ -172,7 +172,7 @@ function RuntimeConfigPanel() {
         routingStrategy: typeof strategy === "string" ? strategy : "round-robin",
       });
     } catch (err: unknown) {
-      notify({ type: "error", message: err instanceof Error ? err.message : "加载配置失败" });
+      notify({ type: "error", message: err instanceof Error ? err.message : "Failed to load config" });
     } finally {
       setLoading(false);
     }
@@ -193,9 +193,9 @@ function RuntimeConfigPanel() {
         if (key === "switchProject") await configApi.updateSwitchProject(next);
         if (key === "switchPreviewModel") await configApi.updateSwitchPreviewModel(next);
         if (key === "forceModelPrefix") await configApi.updateForceModelPrefix(next);
-        notify({ type: "success", message: "已更新" });
+        notify({ type: "success", message: "Updated" });
       } catch (err: unknown) {
-        notify({ type: "error", message: err instanceof Error ? err.message : "更新失败" });
+        notify({ type: "error", message: err instanceof Error ? err.message : "Update failed" });
         throw err;
       }
     },
@@ -215,15 +215,15 @@ function RuntimeConfigPanel() {
     const trimmedStrategy = routingStrategy.trim();
 
     if (!Number.isFinite(retryParsed) || retryParsed < 0) {
-      notify({ type: "error", message: "重试次数必须是非负数字" });
+      notify({ type: "error", message: "Retry count must be a non-negative number" });
       return;
     }
     if (!Number.isFinite(logsParsed) || logsParsed < 0) {
-      notify({ type: "error", message: "日志大小上限必须是非负数字" });
+      notify({ type: "error", message: "Log size limit must be a non-negative number" });
       return;
     }
     if (!trimmedStrategy) {
-      notify({ type: "error", message: "路由策略不能为空" });
+      notify({ type: "error", message: "Routing strategy is required" });
       return;
     }
 
@@ -248,10 +248,10 @@ function RuntimeConfigPanel() {
         await configApi.updateRoutingStrategy(trimmedStrategy);
       }
 
-      notify({ type: "success", message: "已保存" });
+      notify({ type: "success", message: "Saved" });
       startTransition(() => void loadRuntimeConfig());
     } catch (err: unknown) {
-      notify({ type: "error", message: err instanceof Error ? err.message : "保存失败" });
+      notify({ type: "error", message: err instanceof Error ? err.message : "Save failed" });
       startTransition(() => void loadRuntimeConfig());
     }
   }, [
@@ -271,8 +271,8 @@ function RuntimeConfigPanel() {
   return (
     <div className="space-y-6">
       <Card
-        title="运行开关"
-        description="这些配置将通过管理 API 写入服务端（与 config.yaml 互补）。"
+        title="Runtime Switches"
+        description="These configs are written to server via management API (complements config.yaml)."
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <Button
@@ -282,7 +282,7 @@ function RuntimeConfigPanel() {
               disabled={loading || isPending}
             >
               <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
-              刷新
+              Refresh
             </Button>
             <Button
               variant="primary"
@@ -291,7 +291,7 @@ function RuntimeConfigPanel() {
               disabled={loading || isPending || !runtimeTextDirty}
             >
               <Save size={14} />
-              保存更改
+              Save Changes
             </Button>
           </div>
         }
@@ -300,8 +300,8 @@ function RuntimeConfigPanel() {
         <div className="grid gap-4 lg:grid-cols-2">
           <div className="space-y-3 rounded-2xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
             <ToggleSwitch
-              label="Debug 模式"
-              description="开启后会输出更多调试日志（建议临时开启）。"
+              label="Debug Mode"
+              description="Enable verbose debug logs (recommended for temporary use)."
               checked={debugEnabled}
               onCheckedChange={(next) => {
                 setDebugEnabled(next);
@@ -309,8 +309,8 @@ function RuntimeConfigPanel() {
               }}
             />
             <ToggleSwitch
-              label="使用统计"
-              description="开启后统计请求与 Token 使用情况。"
+              label="Usage Statistics"
+              description="Track request and token usage."
               checked={usageStatisticsEnabled}
               onCheckedChange={(next) => {
                 setUsageStatisticsEnabled(next);
@@ -320,8 +320,8 @@ function RuntimeConfigPanel() {
               }}
             />
             <ToggleSwitch
-              label="请求日志"
-              description="开启后记录请求日志（用于日志查询与问题排查）。"
+              label="Request Logs"
+              description="Record request logs for querying and troubleshooting."
               checked={requestLogEnabled}
               onCheckedChange={(next) => {
                 setRequestLogEnabled(next);
@@ -331,8 +331,8 @@ function RuntimeConfigPanel() {
               }}
             />
             <ToggleSwitch
-              label="写入日志文件"
-              description="开启后将日志输出到文件（便于下载错误日志）。"
+              label="Log to File"
+              description="Write logs to file (for downloading error logs)."
               checked={loggingToFileEnabled}
               onCheckedChange={(next) => {
                 setLoggingToFileEnabled(next);
@@ -345,8 +345,8 @@ function RuntimeConfigPanel() {
 
           <div className="space-y-3 rounded-2xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
             <ToggleSwitch
-              label="WebSocket 鉴权"
-              description="开启后 WebSocket 连接将进行鉴权校验。"
+              label="WebSocket Auth"
+              description="Authenticate WebSocket connections."
               checked={wsAuthEnabled}
               onCheckedChange={(next) => {
                 setWsAuthEnabled(next);
@@ -354,7 +354,7 @@ function RuntimeConfigPanel() {
               }}
             />
             <ToggleSwitch
-              label="配额超限：切换 Project"
+              label="Quota Exceeded: Switch Project"
               description="quota-exceeded.switch-project"
               checked={switchProjectEnabled}
               onCheckedChange={(next) => {
@@ -365,7 +365,7 @@ function RuntimeConfigPanel() {
               }}
             />
             <ToggleSwitch
-              label="配额超限：切换 Preview Model"
+              label="Quota Exceeded: Switch Preview Model"
               description="quota-exceeded.switch-preview-model"
               checked={switchPreviewModelEnabled}
               onCheckedChange={(next) => {
@@ -376,7 +376,7 @@ function RuntimeConfigPanel() {
               }}
             />
             <ToggleSwitch
-              label="强制模型前缀"
+              label="Force Model Prefix"
               description="force-model-prefix"
               checked={forceModelPrefixEnabled}
               onCheckedChange={(next) => {
@@ -388,28 +388,28 @@ function RuntimeConfigPanel() {
             />
           </div>
 
-          <Card title="代理与重试" description="用于请求代理与失败重试策略。">
+          <Card title="Proxy & Retry" description="Request proxy and retry strategy.">
             <div className="space-y-3">
               <TextInput
                 value={proxyUrl}
                 onChange={(e) => setProxyUrl(e.currentTarget.value)}
-                placeholder="proxy-url（为空则清除）"
+                placeholder="proxy-url (empty to clear)"
               />
               <div className="flex flex-wrap items-center gap-2">
                 <TextInput
                   value={requestRetry}
                   onChange={(e) => setRequestRetry(e.currentTarget.value)}
-                  placeholder="request-retry（非负整数）"
+                  placeholder="request-retry (non-negative integer)"
                   inputMode="numeric"
                 />
               </div>
               <p className="text-xs text-slate-600 dark:text-white/65">
-                修改后点击上方“保存更改”。
+                修改后点击上方“Save Changes”。
               </p>
             </div>
           </Card>
 
-          <Card title="日志与路由" description="控制日志总大小上限与路由策略。">
+          <Card title="Logs & Routing" description="Log size limit and routing strategy.">
             <div className="space-y-3">
               <div className="flex flex-wrap items-center gap-2">
                 <TextInput
@@ -423,11 +423,11 @@ function RuntimeConfigPanel() {
                 <TextInput
                   value={routingStrategy}
                   onChange={(e) => setRoutingStrategy(e.currentTarget.value)}
-                  placeholder="routing-strategy（如 round-robin）"
+                  placeholder="routing-strategy (e.g. round-robin)"
                 />
               </div>
               <p className="text-xs text-slate-600 dark:text-white/65">
-                当前 config 预览：{rawConfig ? "已加载" : "未加载"}
+                Current config preview: {rawConfig ? "Loaded" : "Not loaded"}
               </p>
             </div>
           </Card>
@@ -480,7 +480,7 @@ export function ConfigPage() {
       setLastSearchedQuery("");
       loadVisualValuesFromYaml(text);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "加载 config.yaml 失败";
+      const message = err instanceof Error ? err.message : "Failed to load config.yaml";
       setError(message);
       notify({ type: "error", message });
     } finally {
@@ -515,12 +515,12 @@ export function ConfigPage() {
       setYamlText(latest);
       setYamlDirty(false);
       loadVisualValuesFromYaml(latest);
-      notify({ type: "success", message: "已保存 config.yaml" });
+      notify({ type: "success", message: "config.yaml saved" });
       if (commercialModeChanged) {
-        notify({ type: "info", message: "commercial-mode 已变更：通常需要重启服务以生效" });
+        notify({ type: "info", message: "commercial-mode changed: restart required" });
       }
     } catch (err: unknown) {
-      notify({ type: "error", message: err instanceof Error ? err.message : "保存失败" });
+      notify({ type: "error", message: err instanceof Error ? err.message : "Save failed" });
     } finally {
       setSaving(false);
     }
@@ -575,7 +575,7 @@ export function ConfigPage() {
         setSearchIndex(0);
         setLastSearchedQuery(q);
         if (!positions.length) {
-          notify({ type: "info", message: "未找到匹配项" });
+          notify({ type: "info", message: "No match found" });
           return;
         }
         jumpToMatch(0, q);
@@ -587,7 +587,7 @@ export function ConfigPage() {
         setSearchPositions(positions);
         setSearchIndex(0);
         if (!positions.length) {
-          notify({ type: "info", message: "未找到匹配项" });
+          notify({ type: "info", message: "No match found" });
           return;
         }
         jumpToMatch(0, q);
@@ -682,15 +682,15 @@ export function ConfigPage() {
             <TabsList>
               <TabsTrigger value="visual">
                 <Eye size={14} />
-                可视化编辑
+                Visual Editor
               </TabsTrigger>
               <TabsTrigger value="source">
                 <Code2 size={14} />
-                源代码编辑
+                Source Editor
               </TabsTrigger>
               <TabsTrigger value="runtime">
                 <Settings size={14} />
-                运行配置
+                Runtime Config
               </TabsTrigger>
             </TabsList>
           </div>
@@ -700,8 +700,8 @@ export function ConfigPage() {
               <div className="flex min-h-0 h-full flex-col gap-4">
 
                 <Card
-                  title="config.yaml（可视化）"
-                  description="在容器内滚动编辑；保存时写入服务端。"
+                  title="config.yaml (Visual)"
+                  description="Scroll to edit; saves to server."
                   loading={loading}
                   className="flex min-h-0 flex-1 flex-col"
                   bodyClassName="min-h-0 flex-1 overflow-y-auto"
@@ -726,8 +726,8 @@ export function ConfigPage() {
             <TabsContent value="source">
               <div className="space-y-4">
                 <Card
-                  title="config.yaml（源代码）"
-                  description="支持搜索、上一个/下一个匹配与键盘快捷键。"
+                  title="config.yaml (Source)"
+                  description="Supports search, prev/next match & keyboard shortcuts."
                   loading={loading}
                 >
                   {error ? (
@@ -738,8 +738,8 @@ export function ConfigPage() {
 
                   {!loading && !yamlText ? (
                     <EmptyState
-                      title="空内容"
-                      description="服务端可能未配置 config.yaml 或接口返回为空。"
+                      title="Empty"
+                      description="Server may not have config.yaml or API returned empty."
                     />
                   ) : (
                     <div className="space-y-3">
@@ -755,7 +755,7 @@ export function ConfigPage() {
                                 setSearchIndex(0);
                               }
                             }}
-                            placeholder="搜索配置内容"
+                            placeholder="Search config content"
                             onKeyDown={(e) => {
                               if (e.key !== "Enter") return;
                               e.preventDefault();
@@ -763,7 +763,7 @@ export function ConfigPage() {
                             }}
                             disabled={disableControls || loading}
                             endAdornment={
-                              <HoverTooltip content="搜索（回车）" placement="bottom">
+                              <HoverTooltip content="Search (Enter)" placement="bottom">
                                 <span className="inline-flex h-6 w-6 items-center justify-center text-slate-400 dark:text-white/45">
                                   <Search size={16} aria-hidden="true" />
                                 </span>
@@ -771,19 +771,19 @@ export function ConfigPage() {
                             }
                           />
                           <p className="text-[11px] text-slate-500 dark:text-white/55">
-                            回车：下一个 · Shift+回车：上一个 · 结果：
+                            Enter: next · Shift+Enter: prev · Results: 
                             <span className="ml-1 font-mono tabular-nums">
                               {!lastSearchedQuery.trim()
-                                ? "未搜索"
+                                ? "Not searched"
                                 : searchStats.total
                                   ? `${searchStats.current}/${searchStats.total}`
-                                  : "无匹配"}
+                                  : "No match"}
                             </span>
                           </p>
                         </div>
                         <div className="flex h-11 items-center justify-end gap-3">
                           <HoverTooltip
-                            content="上一个匹配（Shift+回车）"
+                            content="Previous match (Shift+Enter)"
                             placement="top"
                             disabled={!searchStats.total}
                           >
@@ -791,14 +791,14 @@ export function ConfigPage() {
                               type="button"
                               onClick={() => executeSearch("prev")}
                               disabled={!searchStats.total}
-                              aria-label="上一个匹配"
+                              aria-label="Previous match"
                               className="inline-flex h-8 w-8 items-center justify-center text-slate-400 transition hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/35 disabled:cursor-not-allowed disabled:opacity-50 dark:text-white/45 dark:hover:text-white/80 dark:focus-visible:ring-white/15"
                             >
                               <ChevronUp size={18} aria-hidden="true" />
                             </button>
                           </HoverTooltip>
                           <HoverTooltip
-                            content="下一个匹配（回车）"
+                            content="Next match (Enter)"
                             placement="bottom"
                             disabled={!searchStats.total}
                           >
@@ -806,7 +806,7 @@ export function ConfigPage() {
                               type="button"
                               onClick={() => executeSearch("next")}
                               disabled={!searchStats.total}
-                              aria-label="下一个匹配"
+                              aria-label="Next match"
                               className="inline-flex h-8 w-8 items-center justify-center text-slate-400 transition hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/35 disabled:cursor-not-allowed disabled:opacity-50 dark:text-white/45 dark:hover:text-white/80 dark:focus-visible:ring-white/15"
                             >
                               <ChevronDown size={18} aria-hidden="true" />
@@ -854,10 +854,10 @@ export function ConfigPage() {
 
       <ConfirmModal
         open={confirmReloadOpen}
-        title="放弃未保存修改"
-        description="当前有未保存修改。重载会丢弃本地更改，是否继续？"
-        confirmText="继续重载"
-        cancelText="取消"
+        title="Discard Unsaved Changes"
+        description="You have unsaved changes. Reloading will discard them. Continue?"
+        confirmText="Continue Reload"
+        cancelText="Cancel"
         variant="danger"
         onClose={() => setConfirmReloadOpen(false)}
         onConfirm={() => {
