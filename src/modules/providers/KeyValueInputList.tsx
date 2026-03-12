@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/modules/ui/Button";
 import { TextInput } from "@/modules/ui/Input";
@@ -36,8 +37,8 @@ export function KeyValueInputList({
   title,
   entries,
   onChange,
-  keyPlaceholder = "Header 名称",
-  valuePlaceholder = "Header 值",
+  keyPlaceholder = "Header Name",
+  valuePlaceholder = "Header Value",
   disabled = false,
 }: {
   title: string;
@@ -47,6 +48,7 @@ export function KeyValueInputList({
   valuePlaceholder?: string;
   disabled?: boolean;
 }) {
+  const { t } = useTranslation();
   return (
     <section className="space-y-2">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -58,12 +60,12 @@ export function KeyValueInputList({
           disabled={disabled}
         >
           <Plus size={14} />
-          新增
+          {t("common.add")}
         </Button>
       </div>
 
       {entries.length === 0 ? (
-        <p className="text-xs text-slate-500 dark:text-white/55">未设置（可选）</p>
+        <p className="text-xs text-slate-500 dark:text-white/55">{t("common.not_set")}</p>
       ) : (
         <div className="space-y-2">
           {entries.map((entry, idx) => (
@@ -96,8 +98,8 @@ export function KeyValueInputList({
                   size="sm"
                   onClick={() => onChange(entries.filter((_, i) => i !== idx))}
                   disabled={disabled}
-                  aria-label="删除 Header"
-                  title="删除"
+                  aria-label={t("common.delete_header")}
+                  title={t("common.delete")}
                 >
                   <Trash2 size={14} />
                 </Button>

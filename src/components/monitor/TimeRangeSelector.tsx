@@ -149,9 +149,9 @@ export function formatTimeRangeCaption(
     return `${startStr} - ${endStr}`;
   }
   if (range === 1) {
-    return t ? t("monitor.time.today") : "今天";
+    return t ? t("monitor.time.today") : "Today";
   }
-  return t ? t("monitor.time.last_n_days", { n: range }) : `最近 ${range} 天`;
+  return t ? t("monitor.time.last_n_days", { n: range }) : `Last ${range} days`;
 }
 
 function formatDateForDisplay(date: Date): string {

@@ -115,7 +115,7 @@ export const modelsApi = {
     });
     if (!response.ok) {
       const text = await response.text().catch(() => "");
-      throw new Error(text.trim() || `请求失败（${response.status}）`);
+      throw new Error(text.trim() || `Request failed (${response.status})`);
     }
     const payload = (await response.json().catch(() => null)) as unknown;
     return normalizeModelList(payload);

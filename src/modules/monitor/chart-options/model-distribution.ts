@@ -25,7 +25,7 @@ export const createModelDistributionOption = (input: {
     },
     series: [
       {
-        name: "模型",
+        name: "Model",
         type: "pie",
         radius: ["52%", "72%"],
         center: ["50%", "50%"],

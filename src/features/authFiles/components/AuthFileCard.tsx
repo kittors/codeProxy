@@ -172,7 +172,7 @@ export function AuthFileCard(props: AuthFileCardProps) {
                 size="sm"
                 onClick={() => onShowModels(file)}
                 className={styles.iconButton}
-                title={t("auth_files.models_button", { defaultValue: "模型" })}
+                title={t("auth_files.models_button", { defaultValue: "Models" })}
                 disabled={disableControls}
               >
                 <IconBot className={styles.actionIcon} size={16} />
@@ -185,7 +185,7 @@ export function AuthFileCard(props: AuthFileCardProps) {
                   size="sm"
                   onClick={() => onShowDetails(file)}
                   className={styles.iconButton}
-                  title={t("common.info", { defaultValue: "关于" })}
+                  title={t("common.info", { defaultValue: "About" })}
                   disabled={disableControls}
                 >
                   <IconInfo className={styles.actionIcon} size={16} />
@@ -238,7 +238,7 @@ export function AuthFileCard(props: AuthFileCardProps) {
             )}
             {isRuntimeOnly && (
               <div className={styles.virtualBadge}>
-                {t("auth_files.type_virtual") || "虚拟认证文件"}
+                {t("auth_files.type_virtual") || "Virtual Auth File"}
               </div>
             )}
           </div>

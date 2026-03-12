@@ -487,8 +487,8 @@ export function MainLayout() {
             onClick={() => setSidebarCollapsed((prev) => !prev)}
             title={
               sidebarCollapsed
-                ? t("sidebar.expand", { defaultValue: "展开" })
-                : t("sidebar.collapse", { defaultValue: "收起" })
+                ? t("sidebar.expand", { defaultValue: "Expand" })
+                : t("sidebar.collapse", { defaultValue: "Collapse" })
             }
           >
             {sidebarCollapsed ? headerIcons.chevronRight : headerIcons.chevronLeft}

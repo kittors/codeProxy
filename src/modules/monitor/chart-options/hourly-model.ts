@@ -7,6 +7,8 @@ export const createHourlyModelOption = (input: {
   modelHourWindow: number;
   hourlyModelSelected: Record<string, boolean>;
   paletteColorByKey: Record<string, string>;
+  totalLineKey: string;
+  getSeriesLabel: (key: string) => string;
   isDark: boolean;
 }): Record<string, unknown> => {
   const points = input.hourlySeries.modelPoints.slice(-input.modelHourWindow);
@@ -16,7 +18,7 @@ export const createHourlyModelOption = (input: {
   const selectedKeys = input.hourlySeries.modelKeys.filter(
     (key) => input.hourlyModelSelected[key] ?? true,
   );
-  const showTotalLine = input.hourlyModelSelected["总请求"] ?? true;
+  const showTotalLine = input.hourlyModelSelected[input.totalLineKey] ?? true;
 
   const series = selectedKeys.map((key) => {
     const data = points.map((point) => {
@@ -24,7 +26,7 @@ export const createHourlyModelOption = (input: {
       return item?.value ?? 0;
     });
     return {
-      name: key,
+      name: input.getSeriesLabel(key),
       type: "bar",
       stack: "requests",
       emphasis: { focus: "series" },
@@ -106,7 +108,7 @@ export const createHourlyModelOption = (input: {
       ...(showTotalLine
         ? [
             {
-              name: "总请求",
+              name: input.getSeriesLabel(input.totalLineKey),
               type: "line",
               smooth: true,
               symbol: "circle",

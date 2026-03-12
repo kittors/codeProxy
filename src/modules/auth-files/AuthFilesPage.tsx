@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   CircleHelp,
@@ -304,6 +305,7 @@ const buildAliasRows = (entries: OAuthModelAliasEntry[] | undefined): AliasRow[]
 };
 
 export function AuthFilesPage() {
+  const { t } = useTranslation();
   const { notify } = useToast();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -390,12 +392,15 @@ export function AuthFilesPage() {
       setFiles(list);
       setUsageData(usageRes);
     } catch (err: unknown) {
-      notify({ type: "error", message: err instanceof Error ? err.message : "加载认证文件失败" });
+      notify({
+        type: "error",
+        message: err instanceof Error ? err.message : t("auth_files.load_failed"),
+      });
     } finally {
       setLoading(false);
       setUsageLoading(false);
     }
-  }, [notify]);
+  }, [notify, t]);
 
   useEffect(() => {
     void loadAll();
@@ -483,12 +488,15 @@ export function AuthFilesPage() {
         const text = await authFilesApi.downloadText(file.name);
         setDetailText(text);
       } catch (err: unknown) {
-        notify({ type: "error", message: err instanceof Error ? err.message : "读取文件失败" });
+        notify({
+          type: "error",
+          message: err instanceof Error ? err.message : t("auth_files.read_failed"),
+        });
       } finally {
         setDetailLoading(false);
       }
     },
-    [notify],
+    [notify, t],
   );
 
   const openModels = useCallback(
@@ -517,12 +525,12 @@ export function AuthFilesPage() {
           setModelsError("unsupported");
           return;
         }
-        notify({ type: "error", message: message || "获取模型列表失败" });
+        notify({ type: "error", message: message || t("auth_files.failed_get_models") });
       } finally {
         setModelsLoading(false);
       }
     },
-    [notify],
+    [notify, t],
   );
 
   const handleUpload = useCallback(
@@ -546,7 +554,11 @@ export function AuthFilesPage() {
         const first = tooLarge[0];
         notify({
           type: "error",
-          message: `文件过大（${formatFileSize(first.size)}）：${first.name}（建议不超过 ${formatFileSize(MAX_AUTH_FILE_SIZE)}）`,
+          message: t("auth_files.file_too_large_detail", {
+            size: formatFileSize(first.size),
+            name: first.name,
+            maxSize: formatFileSize(MAX_AUTH_FILE_SIZE),
+          }),
         });
         return;
       }
@@ -566,17 +578,20 @@ export function AuthFilesPage() {
         }
 
         if (failed === 0 && tooLarge.length === 0) {
-          notify({ type: "success", message: `上传成功（${success} 个文件）` });
+          notify({ type: "success", message: t("auth_files.upload_success", { count: success }) });
         } else {
           notify({
             type: failed > 0 ? "error" : "info",
-            message: `上传完成：成功 ${success}，失败 ${failed}，跳过 ${tooLarge.length}`,
+            message: t("auth_files.upload_partial", { success, failed, skipped: tooLarge.length }),
           });
         }
 
         await loadAll();
       } catch (err: unknown) {
-        notify({ type: "error", message: err instanceof Error ? err.message : "上传失败" });
+        notify({
+          type: "error",
+          message: err instanceof Error ? err.message : t("auth_files.upload_failed"),
+        });
       } finally {
         setUploading(false);
         if (fileInputRef.current) {
@@ -584,7 +599,7 @@ export function AuthFilesPage() {
         }
       }
     },
-    [loadAll, notify],
+    [loadAll, notify, t],
   );
 
   const handleDelete = useCallback(
@@ -592,12 +607,15 @@ export function AuthFilesPage() {
       try {
         await authFilesApi.deleteFile(name);
         setFiles((prev) => prev.filter((file) => file.name !== name));
-        notify({ type: "success", message: "已删除" });
+        notify({ type: "success", message: t("auth_files.deleted") });
       } catch (err: unknown) {
-        notify({ type: "error", message: err instanceof Error ? err.message : "删除失败" });
+        notify({
+          type: "error",
+          message: err instanceof Error ? err.message : t("auth_files.delete_failed"),
+        });
       }
     },
-    [notify],
+    [notify, t],
   );
 
   const handleDeleteAll = useCallback(async () => {
@@ -607,7 +625,7 @@ export function AuthFilesPage() {
       if (!normalizedFilter || normalizedFilter === "all") {
         await authFilesApi.deleteAll();
         setFiles([]);
-        notify({ type: "success", message: "已删除全部认证文件" });
+        notify({ type: "success", message: t("auth_files.delete_all_success") });
         return;
       }
 
@@ -627,7 +645,7 @@ export function AuthFilesPage() {
         (file) => matchesSearch(file) && matchesFilter(file) && !isRuntimeOnlyAuthFile(file),
       );
       if (deletable.length === 0) {
-        notify({ type: "info", message: `当前筛选（${filter}）下没有可删除的认证文件` });
+        notify({ type: "info", message: t("auth_files.delete_filtered_none", { type: filter }) });
         return;
       }
 
@@ -650,18 +668,27 @@ export function AuthFilesPage() {
       }
 
       if (failed === 0) {
-        notify({ type: "success", message: `已删除 ${success} 个 ${filter} 认证文件` });
+        notify({
+          type: "success",
+          message: t("auth_files.batch_deleted", { count: success, filter }),
+        });
       } else {
-        notify({ type: "error", message: `${filter} 删除完成：成功 ${success}，失败 ${failed}` });
+        notify({
+          type: "error",
+          message: t("auth_files.delete_filtered_partial", { type: filter, success, failed }),
+        });
       }
       setFilter("all");
       setPage(1);
     } catch (err: unknown) {
-      notify({ type: "error", message: err instanceof Error ? err.message : "删除失败" });
+      notify({
+        type: "error",
+        message: err instanceof Error ? err.message : t("auth_files.delete_failed"),
+      });
     } finally {
       setDeletingAll(false);
     }
-  }, [filter, files, notify, search]);
+  }, [filter, files, notify, search, t]);
 
   const setFileEnabled = useCallback(
     async (file: AuthFileItem, enabled: boolean) => {
@@ -679,12 +706,18 @@ export function AuthFilesPage() {
         setFiles((prev) =>
           prev.map((it) => (it.name === name ? { ...it, disabled: res.disabled } : it)),
         );
-        notify({ type: "success", message: enabled ? "已启用" : "已禁用" });
+        notify({
+          type: "success",
+          message: enabled ? t("auth_files.enabled") : t("auth_files.disabled"),
+        });
       } catch (err: unknown) {
         setFiles((prev) =>
           prev.map((it) => (it.name === name ? { ...it, disabled: prevDisabled } : it)),
         );
-        notify({ type: "error", message: err instanceof Error ? err.message : "更新状态失败" });
+        notify({
+          type: "error",
+          message: err instanceof Error ? err.message : t("auth_files.status_update_failed"),
+        });
       } finally {
         setStatusUpdating((prev) => {
           const next = { ...prev };
@@ -693,7 +726,7 @@ export function AuthFilesPage() {
         });
       }
     },
-    [notify],
+    [notify, t],
   );
 
   const openPrefixProxyEditor = useCallback(
@@ -720,7 +753,7 @@ export function AuthFilesPage() {
           setPrefixProxyEditor((prev) => ({
             ...prev,
             loading: false,
-            error: "文件不是合法 JSON，无法编辑。",
+            error: t("auth_files.not_valid_json"),
           }));
           return;
         }
@@ -729,7 +762,7 @@ export function AuthFilesPage() {
           setPrefixProxyEditor((prev) => ({
             ...prev,
             loading: false,
-            error: "文件不是 JSON 对象，无法编辑。",
+            error: t("auth_files.not_json_object"),
           }));
           return;
         }
@@ -747,11 +780,18 @@ export function AuthFilesPage() {
           error: null,
         }));
       } catch (err: unknown) {
-        notify({ type: "error", message: err instanceof Error ? err.message : "读取文件失败" });
-        setPrefixProxyEditor((prev) => ({ ...prev, loading: false, error: "读取失败" }));
+        notify({
+          type: "error",
+          message: err instanceof Error ? err.message : t("auth_files.read_failed"),
+        });
+        setPrefixProxyEditor((prev) => ({
+          ...prev,
+          loading: false,
+          error: t("auth_files.read_failed"),
+        }));
       }
     },
-    [notify],
+    [notify, t],
   );
 
   const prefixProxyDirty = useMemo(() => {
@@ -787,7 +827,10 @@ export function AuthFilesPage() {
     const payload = prefixProxyUpdatedText;
     const fileSize = new Blob([payload]).size;
     if (fileSize > MAX_AUTH_FILE_SIZE) {
-      notify({ type: "error", message: `保存失败：文件过大（${formatFileSize(fileSize)}）` });
+      notify({
+        type: "error",
+        message: t("auth_files.save_too_large", { size: formatFileSize(fileSize) }),
+      });
       return;
     }
 
@@ -796,7 +839,7 @@ export function AuthFilesPage() {
     try {
       const file = new File([payload], name, { type: "application/json" });
       await authFilesApi.upload(file);
-      notify({ type: "success", message: "已保存" });
+      notify({ type: "success", message: t("auth_files.saved") });
       await loadAll();
       setPrefixProxyEditor({
         open: false,
@@ -809,7 +852,10 @@ export function AuthFilesPage() {
         proxyUrl: "",
       });
     } catch (err: unknown) {
-      notify({ type: "error", message: err instanceof Error ? err.message : "保存失败" });
+      notify({
+        type: "error",
+        message: err instanceof Error ? err.message : t("auth_files.save_failed"),
+      });
       setPrefixProxyEditor((prev) => ({ ...prev, saving: false }));
     }
   }, [
@@ -819,6 +865,7 @@ export function AuthFilesPage() {
     prefixProxyEditor.fileName,
     prefixProxyEditor.json,
     prefixProxyUpdatedText,
+    t,
   ]);
 
   const refreshExcluded = useCallback(async () => {
@@ -844,11 +891,11 @@ export function AuthFilesPage() {
         setExcludedDraft({});
         return;
       }
-      notify({ type: "error", message: message || "加载 OAuth 排除模型失败" });
+      notify({ type: "error", message: message || t("auth_files.load_excluded_failed") });
     } finally {
       setExcludedLoading(false);
     }
-  }, [notify]);
+  }, [notify, t]);
 
   const refreshAlias = useCallback(async () => {
     setAliasLoadAttempted(true);
@@ -868,11 +915,11 @@ export function AuthFilesPage() {
         setAliasEditing({});
         return;
       }
-      notify({ type: "error", message: message || "加载 OAuth 模型别名失败" });
+      notify({ type: "error", message: message || t("auth_files.load_alias_failed") });
     } finally {
       setAliasLoading(false);
     }
-  }, [notify]);
+  }, [notify, t]);
 
   useEffect(() => {
     if (
@@ -912,8 +959,7 @@ export function AuthFilesPage() {
       if (excludedUnsupported) {
         notify({
           type: "error",
-          message:
-            "当前服务端不支持 OAuth 排除模型接口（/oauth-excluded-models），请升级服务端版本。",
+          message: t("auth_files.server_no_excluded_api"),
         });
         return;
       }
@@ -924,10 +970,13 @@ export function AuthFilesPage() {
         .filter(Boolean);
       try {
         await authFilesApi.saveOauthExcludedModels(key, models);
-        notify({ type: "success", message: "已保存" });
+        notify({ type: "success", message: t("auth_files.saved") });
         startTransition(() => void refreshExcluded());
       } catch (err: unknown) {
-        notify({ type: "error", message: err instanceof Error ? err.message : "保存失败" });
+        notify({
+          type: "error",
+          message: err instanceof Error ? err.message : t("auth_files.save_failed"),
+        });
       }
     },
     [excludedUnsupported, notify, refreshExcluded, startTransition],
@@ -939,17 +988,20 @@ export function AuthFilesPage() {
         notify({
           type: "error",
           message:
-            "当前服务端不支持 OAuth 排除模型接口（/oauth-excluded-models），请升级服务端版本。",
+            "Server does not support OAuth excluded models API (/oauth-excluded-models). Please upgrade.",
         });
         return;
       }
       const key = normalizeProviderKey(provider);
       try {
         await authFilesApi.deleteOauthExcludedEntry(key);
-        notify({ type: "success", message: "已删除" });
+        notify({ type: "success", message: t("auth_files.deleted") });
         startTransition(() => void refreshExcluded());
       } catch (err: unknown) {
-        notify({ type: "error", message: err instanceof Error ? err.message : "删除失败" });
+        notify({
+          type: "error",
+          message: err instanceof Error ? err.message : t("auth_files.delete_failed"),
+        });
       }
     },
     [excludedUnsupported, notify, refreshExcluded, startTransition],
@@ -958,7 +1010,7 @@ export function AuthFilesPage() {
   const addExcludedProvider = useCallback(() => {
     const key = normalizeProviderKey(excludedNewProvider);
     if (!key) {
-      notify({ type: "info", message: "请输入 provider" });
+      notify({ type: "info", message: t("auth_files.please_enter_provider") });
       return;
     }
     setExcluded((prev) => (prev[key] ? prev : { ...prev, [key]: [] }));
@@ -969,7 +1021,7 @@ export function AuthFilesPage() {
   const addAliasChannel = useCallback(() => {
     const key = normalizeProviderKey(aliasNewChannel);
     if (!key) {
-      notify({ type: "info", message: "请输入 channel" });
+      notify({ type: "info", message: t("auth_files.please_enter_channel") });
       return;
     }
     setAliasMap((prev) => (prev[key] ? prev : { ...prev, [key]: [] }));
@@ -982,7 +1034,7 @@ export function AuthFilesPage() {
       if (aliasUnsupported) {
         notify({
           type: "error",
-          message: "当前服务端不支持 OAuth 模型别名接口（/oauth-model-alias），请升级服务端版本。",
+          message: t("auth_files.server_no_alias_api"),
         });
         return;
       }
@@ -998,10 +1050,13 @@ export function AuthFilesPage() {
 
       try {
         await authFilesApi.saveOauthModelAlias(key, next);
-        notify({ type: "success", message: "已保存" });
+        notify({ type: "success", message: t("auth_files.saved") });
         startTransition(() => void refreshAlias());
       } catch (err: unknown) {
-        notify({ type: "error", message: err instanceof Error ? err.message : "保存失败" });
+        notify({
+          type: "error",
+          message: err instanceof Error ? err.message : t("auth_files.save_failed"),
+        });
       }
     },
     [aliasEditing, aliasUnsupported, notify, refreshAlias, startTransition],
@@ -1012,17 +1067,20 @@ export function AuthFilesPage() {
       if (aliasUnsupported) {
         notify({
           type: "error",
-          message: "当前服务端不支持 OAuth 模型别名接口（/oauth-model-alias），请升级服务端版本。",
+          message: t("auth_files.server_no_alias_api"),
         });
         return;
       }
       const key = normalizeProviderKey(channel);
       try {
         await authFilesApi.deleteOauthModelAlias(key);
-        notify({ type: "success", message: "已删除" });
+        notify({ type: "success", message: t("auth_files.deleted") });
         startTransition(() => void refreshAlias());
       } catch (err: unknown) {
-        notify({ type: "error", message: err instanceof Error ? err.message : "删除失败" });
+        notify({
+          type: "error",
+          message: err instanceof Error ? err.message : t("auth_files.delete_failed"),
+        });
       }
     },
     [aliasUnsupported, notify, refreshAlias, startTransition],
@@ -1047,7 +1105,10 @@ export function AuthFilesPage() {
         setImportModels(list);
         setImportSelected(new Set(list.map((m) => m.id)));
       } catch (err: unknown) {
-        notify({ type: "error", message: err instanceof Error ? err.message : "获取模型定义失败" });
+        notify({
+          type: "error",
+          message: err instanceof Error ? err.message : t("auth_files.failed_get_models"),
+        });
         setImportOpen(false);
       } finally {
         setImportLoading(false);
@@ -1063,7 +1124,7 @@ export function AuthFilesPage() {
     const selected = new Set(importSelected);
     const picked = importModels.filter((m) => selected.has(m.id));
     if (picked.length === 0) {
-      notify({ type: "info", message: "未选择任何模型" });
+      notify({ type: "info", message: t("auth_files.no_models_selected") });
       return;
     }
 
@@ -1089,7 +1150,7 @@ export function AuthFilesPage() {
     });
 
     setImportOpen(false);
-    notify({ type: "success", message: "已导入（默认 alias=同名）" });
+    notify({ type: "success", message: t("auth_files.imported_default") });
   }, [importChannel, importModels, importSelected, notify]);
 
   const filterChips = useMemo(() => ["all", ...providerOptions], [providerOptions]);
@@ -1109,13 +1170,13 @@ export function AuthFilesPage() {
   return (
     <div className="space-y-6">
       <Card
-        title="认证文件"
-        description="管理认证文件上传/启用/下载，并维护 OAuth 排除模型与模型别名映射。"
+        title={t("auth_files_page.title")}
+        description={t("auth_files_page.description")}
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <Button variant="secondary" size="sm" onClick={() => navigate("/quota")}>
               <ShieldCheck size={14} />
-              配额
+              {t("auth_files.quota")}
             </Button>
             {tab === "files" ? (
               <>
@@ -1134,7 +1195,7 @@ export function AuthFilesPage() {
                   disabled={loading || usageLoading}
                 >
                   <RefreshCw size={14} className={loading || usageLoading ? "animate-spin" : ""} />
-                  刷新
+                  {t("auth_files.refresh")}
                 </Button>
                 <Button
                   variant="primary"
@@ -1143,7 +1204,7 @@ export function AuthFilesPage() {
                   disabled={uploading}
                 >
                   <Upload size={14} />
-                  上传
+                  {t("auth_files.upload")}
                 </Button>
                 <Button
                   variant="danger"
@@ -1152,7 +1213,9 @@ export function AuthFilesPage() {
                   disabled={deletingAll || loading || uploading}
                 >
                   <Trash2 size={14} />
-                  {filter === "all" ? "删除全部" : `删除 ${filter}`}
+                  {filter === "all"
+                    ? t("auth_files.delete_all")
+                    : t("auth_files.delete_type", { type: filter })}
                 </Button>
               </>
             ) : null}
@@ -1162,9 +1225,9 @@ export function AuthFilesPage() {
       >
         <Tabs value={tab} onValueChange={(next) => setTab(next as typeof tab)}>
           <TabsList>
-            <TabsTrigger value="files">文件</TabsTrigger>
-            <TabsTrigger value="excluded">OAuth 排除模型</TabsTrigger>
-            <TabsTrigger value="alias">OAuth 模型别名</TabsTrigger>
+            <TabsTrigger value="files">{t("auth_files_page.files_tab")}</TabsTrigger>
+            <TabsTrigger value="excluded">{t("auth_files_page.excluded_tab")}</TabsTrigger>
+            <TabsTrigger value="alias">{t("auth_files_page.alias_tab")}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="files" className="mt-4">
@@ -1173,12 +1236,12 @@ export function AuthFilesPage() {
                 <div className="flex flex-col gap-1">
                   <div className="flex items-center gap-2">
                     <p className="text-[11px] font-semibold text-slate-600 dark:text-white/65">
-                      类型筛选
+                      {t("auth_files.type_filter")}
                     </p>
-                    <HoverTooltip content="数量按当前搜索结果统计" placement="top">
+                    <HoverTooltip content={t("auth_files.count_hint")} placement="top">
                       <span
                         className="inline-flex h-5 w-5 items-center justify-center rounded-full text-slate-400 dark:text-white/45"
-                        aria-label="数量说明"
+                        aria-label={t("auth_files.count_info")}
                       >
                         <CircleHelp size={14} />
                       </span>
@@ -1192,7 +1255,7 @@ export function AuthFilesPage() {
                         key === "all"
                           ? filterCounts.total
                           : (filterCounts.counts[normalizedKey] ?? 0);
-                      const label = key === "all" ? "全部" : key;
+                      const label = key === "all" ? t("auth_files.all") : key;
                       const countClass = active
                         ? "bg-white/20 text-white dark:bg-neutral-950/10 dark:text-neutral-950"
                         : "bg-slate-100 text-slate-700 dark:bg-white/10 dark:text-white/70";
@@ -1224,19 +1287,19 @@ export function AuthFilesPage() {
 
                 <div className="flex min-w-[240px] flex-1 flex-col gap-1">
                   <p className="text-[11px] font-semibold text-slate-600 dark:text-white/65">
-                    搜索
+                    {t("auth_files.search")}
                   </p>
                   <TextInput
                     value={search}
                     onChange={(e) => setSearch(e.currentTarget.value)}
-                    placeholder="文件名 / 提供商 / 类型"
+                    placeholder={t("auth_files_page.filename_hint")}
                     endAdornment={<Search size={16} className="text-slate-400" />}
                   />
                 </div>
 
                 <div className="flex shrink-0 flex-col gap-1">
                   <p className="text-[11px] font-semibold text-slate-600 dark:text-white/65">
-                    每页显示
+                    {t("auth_files.per_page")}
                   </p>
                   <div className="flex items-center gap-2">
                     <TextInput
@@ -1247,8 +1310,8 @@ export function AuthFilesPage() {
                         if (Number.isFinite(parsed)) setPageSize(clampPageSize(parsed));
                         else setPageSizeInput(String(pageSize));
                       }}
-                      aria-label="每页显示"
-                      placeholder="数量"
+                      aria-label={t("auth_files_page.per_page")}
+                      placeholder={t("auth_files.count_placeholder")}
                       inputMode="numeric"
                       className="w-24"
                     />
@@ -1262,7 +1325,7 @@ export function AuthFilesPage() {
                         else setPageSizeInput(String(pageSize));
                       }}
                     >
-                      应用
+                      {t("auth_files.apply")}
                     </Button>
                   </div>
                 </div>
@@ -1272,8 +1335,8 @@ export function AuthFilesPage() {
                 {pageItems.length === 0 ? (
                   <div className="md:col-span-2 xl:col-span-3">
                     <EmptyState
-                      title="暂无认证文件"
-                      description="可以通过“上传”按钮导入 JSON 认证文件。"
+                      title={t("auth_files_page.no_files")}
+                      description={t("auth_files_page.no_files_desc")}
                     />
                   </div>
                 ) : (
@@ -1314,7 +1377,7 @@ export function AuthFilesPage() {
                               </span>
                               {runtimeOnly ? (
                                 <span className="inline-flex rounded-lg bg-slate-900 px-2 py-1 text-xs font-semibold text-white dark:bg-white dark:text-neutral-950">
-                                  虚拟认证文件
+                                  {t("auth_files.virtual_auth_file")}
                                 </span>
                               ) : null}
                               {authIndexKey ? (
@@ -1324,11 +1387,11 @@ export function AuthFilesPage() {
                               ) : null}
                               {runtimeOnly ? null : disabled ? (
                                 <span className="inline-flex rounded-lg bg-rose-50 px-2 py-1 text-xs font-semibold text-rose-700 dark:bg-rose-500/15 dark:text-rose-200">
-                                  已禁用
+                                  {t("auth_files.disabled")}
                                 </span>
                               ) : (
                                 <span className="inline-flex rounded-lg bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200">
-                                  已启用
+                                  {t("auth_files.enabled")}
                                 </span>
                               )}
                             </div>
@@ -1337,10 +1400,10 @@ export function AuthFilesPage() {
                             </p>
                             <div className="mt-2 flex flex-wrap items-center gap-2 text-xs tabular-nums">
                               <span className="rounded-full bg-emerald-600/10 px-2 py-0.5 font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200">
-                                成功 {stats.success}
+                                {t("auth_files.success_count", { count: stats.success })}
                               </span>
                               <span className="rounded-full bg-rose-600/10 px-2 py-0.5 font-semibold text-rose-700 dark:bg-rose-500/15 dark:text-rose-200">
-                                失败 {stats.failure}
+                                {t("auth_files.failed_count", { count: stats.failure })}
                               </span>
                             </div>
                           </div>
@@ -1349,10 +1412,10 @@ export function AuthFilesPage() {
                             {runtimeOnly ? null : (
                               <div className="inline-flex items-center gap-2">
                                 <span className="text-sm font-semibold leading-none text-slate-900 dark:text-white">
-                                  启用
+                                  {t("auth_files.enable")}
                                 </span>
                                 <ToggleSwitch
-                                  ariaLabel="启用/禁用"
+                                  ariaLabel={t("auth_files.enable_disable")}
                                   checked={!disabled}
                                   onCheckedChange={(enabled) => void setFileEnabled(file, enabled)}
                                   disabled={switching}
@@ -1372,13 +1435,13 @@ export function AuthFilesPage() {
                               onClick={() => void openModels(file)}
                             >
                               <ShieldCheck size={14} />
-                              模型
+                              {t("auth_files.models")}
                             </Button>
                           ) : null}
 
                           {runtimeOnly ? (
                             <p className="text-xs text-slate-600 dark:text-white/55">
-                              虚拟认证文件仅用于运行时注入：不可查看/下载/编辑/删除。
+                              {t("auth_files.virtual_hint")}
                             </p>
                           ) : (
                             <>
@@ -1388,7 +1451,7 @@ export function AuthFilesPage() {
                                 onClick={() => void openDetail(file)}
                               >
                                 <Eye size={14} />
-                                查看
+                                {t("auth_files.view")}
                               </Button>
                               <Button
                                 variant="secondary"
@@ -1396,7 +1459,7 @@ export function AuthFilesPage() {
                                 onClick={() => void openPrefixProxyEditor(file)}
                               >
                                 <Settings2 size={14} />
-                                前缀/代理
+                                {t("auth_files.prefix_proxy")}
                               </Button>
                               <Button
                                 variant="secondary"
@@ -1408,13 +1471,16 @@ export function AuthFilesPage() {
                                   } catch (err: unknown) {
                                     notify({
                                       type: "error",
-                                      message: err instanceof Error ? err.message : "下载失败",
+                                      message:
+                                        err instanceof Error
+                                          ? err.message
+                                          : t("auth_files.download_failed"),
                                     });
                                   }
                                 }}
                               >
                                 <Download size={14} />
-                                下载
+                                {t("auth_files.download")}
                               </Button>
                               <Button
                                 variant="danger"
@@ -1422,7 +1488,7 @@ export function AuthFilesPage() {
                                 onClick={() => setConfirm({ type: "deleteFile", name: file.name })}
                               >
                                 <Trash2 size={14} />
-                                删除
+                                {t("common.delete")}
                               </Button>
                             </>
                           )}
@@ -1435,7 +1501,11 @@ export function AuthFilesPage() {
 
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <p className="text-xs text-slate-600 dark:text-white/65 tabular-nums">
-                  共 {filteredFiles.length} 条 · 第 {safePage} / {totalPages} 页
+                  {t("auth_files.total_page", {
+                    total: filteredFiles.length,
+                    page: safePage,
+                    pages: totalPages,
+                  })}
                 </p>
                 <div className="flex items-center gap-2">
                   <Button
@@ -1444,7 +1514,7 @@ export function AuthFilesPage() {
                     onClick={() => setPage((prev) => Math.max(1, prev - 1))}
                     disabled={safePage <= 1}
                   >
-                    上一页
+                    {t("auth_files.prev")}
                   </Button>
                   <Button
                     variant="secondary"
@@ -1452,14 +1522,14 @@ export function AuthFilesPage() {
                     onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
                     disabled={safePage >= totalPages}
                   >
-                    下一页
+                    {t("auth_files.next")}
                   </Button>
                 </div>
               </div>
 
               {usageData ? null : (
                 <p className="text-xs text-slate-500 dark:text-white/55">
-                  使用统计加载失败：不会影响文件管理，但成功/失败与状态条将显示为 0。
+                  {t("auth_files.usage_stats_warning")}
                 </p>
               )}
             </div>
@@ -1467,8 +1537,8 @@ export function AuthFilesPage() {
 
           <TabsContent value="excluded" className="mt-4">
             <Card
-              title="OAuth 排除模型"
-              description="按 provider 维护禁用模型列表（每行一个模型）。"
+              title={t("auth_files_page.excluded_title")}
+              description={t("auth_files_page.excluded_desc")}
               actions={
                 <div className="flex flex-wrap items-center gap-2">
                   <Button
@@ -1478,7 +1548,7 @@ export function AuthFilesPage() {
                     disabled={excludedLoading || isPending}
                   >
                     <RefreshCw size={14} className={excludedLoading ? "animate-spin" : ""} />
-                    刷新
+                    {t("auth_files.refresh")}
                   </Button>
                 </div>
               }
@@ -1487,8 +1557,8 @@ export function AuthFilesPage() {
               {excludedUnsupported ? (
                 <div className="mb-4">
                   <EmptyState
-                    title="该接口不支持"
-                    description="服务端未实现 /oauth-excluded-models（或版本过旧）。请升级服务端后再配置 OAuth 排除模型。"
+                    title={t("auth_files_page.api_not_supported")}
+                    description={t("auth_files.no_excluded_api")}
                   />
                 </div>
               ) : null}
@@ -1496,7 +1566,7 @@ export function AuthFilesPage() {
                 <TextInput
                   value={excludedNewProvider}
                   onChange={(e) => setExcludedNewProvider(e.currentTarget.value)}
-                  placeholder="新增 provider（如 codex / gemini-cli）"
+                  placeholder={t("auth_files.add_provider_placeholder")}
                   endAdornment={<FileJson size={16} className="text-slate-400" />}
                   disabled={excludedUnsupported}
                 />
@@ -1507,15 +1577,15 @@ export function AuthFilesPage() {
                   disabled={isPending || excludedUnsupported}
                 >
                   <Plus size={14} />
-                  新增
+                  {t("auth_files.add")}
                 </Button>
               </div>
 
               <div className="mt-4 space-y-3">
                 {Object.keys(excluded).length === 0 ? (
                   <EmptyState
-                    title="暂无配置"
-                    description="你可以新增一个 provider 并保存排除模型列表。"
+                    title={t("auth_files_page.no_config")}
+                    description={t("auth_files_page.no_excluded_desc")}
                   />
                 ) : (
                   Object.entries(excluded)
@@ -1539,7 +1609,7 @@ export function AuthFilesPage() {
                                 {provider}
                               </p>
                               <p className="mt-1 text-xs text-slate-500 dark:text-white/55">
-                                共 {count} 条
+                                {t("auth_files.count_items", { count })}
                               </p>
                             </div>
                             <div className="flex items-center gap-2">
@@ -1554,7 +1624,7 @@ export function AuthFilesPage() {
                                 }
                                 disabled={isPending || excludedUnsupported}
                               >
-                                保存
+                                {t("auth_files.save")}
                               </Button>
                               <Button
                                 variant="danger"
@@ -1562,7 +1632,7 @@ export function AuthFilesPage() {
                                 onClick={() => void deleteExcludedProvider(provider)}
                                 disabled={isPending || excludedUnsupported}
                               >
-                                删除
+                                {t("common.delete")}
                               </Button>
                             </div>
                           </div>
@@ -1572,8 +1642,8 @@ export function AuthFilesPage() {
                               const nextText = e.currentTarget.value;
                               setExcludedDraft((prev) => ({ ...prev, [provider]: nextText }));
                             }}
-                            placeholder="每行一个模型；使用 * 可禁用全部模型"
-                            aria-label={`${provider} 排除模型`}
+                            placeholder={t("auth_files.one_model_per_line")}
+                            aria-label={`${provider} ${t("auth_files_page.excluded_tab")}`}
                             disabled={excludedUnsupported}
                             className="mt-3 min-h-[120px] w-full resize-y rounded-2xl border border-slate-200 bg-white px-3 py-2 font-mono text-xs text-slate-900 outline-none transition placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-slate-400/35 dark:border-neutral-800 dark:bg-neutral-950 dark:text-slate-100 dark:placeholder:text-neutral-500 dark:focus-visible:ring-white/15"
                           />
@@ -1587,8 +1657,8 @@ export function AuthFilesPage() {
 
           <TabsContent value="alias" className="mt-4">
             <Card
-              title="OAuth 模型别名"
-              description="按 channel 维护模型 name -> alias 映射（用于 OAuth 场景）。"
+              title={t("auth_files_page.alias_title")}
+              description={t("auth_files.model_alias_desc")}
               actions={
                 <div className="flex flex-wrap items-center gap-2">
                   <Button
@@ -1598,7 +1668,7 @@ export function AuthFilesPage() {
                     disabled={aliasLoading || isPending}
                   >
                     <RefreshCw size={14} className={aliasLoading ? "animate-spin" : ""} />
-                    刷新
+                    {t("auth_files.refresh")}
                   </Button>
                 </div>
               }
@@ -1607,8 +1677,8 @@ export function AuthFilesPage() {
               {aliasUnsupported ? (
                 <div className="mb-4">
                   <EmptyState
-                    title="该接口不支持"
-                    description="服务端未实现 /oauth-model-alias（或版本过旧）。请升级服务端后再配置 OAuth 模型别名。"
+                    title={t("auth_files.api_not_supported")}
+                    description={t("auth_files.no_alias_api")}
                   />
                 </div>
               ) : null}
@@ -1616,7 +1686,7 @@ export function AuthFilesPage() {
                 <TextInput
                   value={aliasNewChannel}
                   onChange={(e) => setAliasNewChannel(e.currentTarget.value)}
-                  placeholder="新增 channel（如 codex / gemini / anthropic）"
+                  placeholder={t("auth_files.add_channel_placeholder")}
                   disabled={aliasUnsupported}
                 />
                 <Button
@@ -1626,13 +1696,16 @@ export function AuthFilesPage() {
                   disabled={isPending || aliasUnsupported}
                 >
                   <Plus size={14} />
-                  新增
+                  {t("auth_files.add")}
                 </Button>
               </div>
 
               <div className="mt-4 space-y-3">
                 {Object.keys(aliasEditing).length === 0 ? (
-                  <EmptyState title="暂无配置" description="你可以新增一个 channel 并维护映射。" />
+                  <EmptyState
+                    title={t("auth_files.no_config")}
+                    description={t("auth_files_page.alias_no_config")}
+                  />
                 ) : (
                   Object.keys(aliasEditing)
                     .sort((a, b) => a.localeCompare(b))
@@ -1653,7 +1726,7 @@ export function AuthFilesPage() {
                                 {channel}
                               </p>
                               <p className="mt-1 text-xs text-slate-500 dark:text-white/55">
-                                有效映射 {mappingCount} 条
+                                {t("auth_files.valid_mappings", { count: mappingCount })}
                               </p>
                             </div>
                             <div className="flex items-center gap-2">
@@ -1664,7 +1737,7 @@ export function AuthFilesPage() {
                                 disabled={aliasUnsupported}
                               >
                                 <ShieldCheck size={14} />
-                                导入模型
+                                {t("auth_files.import_models")}
                               </Button>
                               <Button
                                 variant="secondary"
@@ -1672,7 +1745,7 @@ export function AuthFilesPage() {
                                 onClick={() => void saveAliasChannel(channel)}
                                 disabled={isPending || aliasUnsupported}
                               >
-                                保存
+                                {t("auth_files.save")}
                               </Button>
                               <Button
                                 variant="danger"
@@ -1680,7 +1753,7 @@ export function AuthFilesPage() {
                                 onClick={() => void deleteAliasChannel(channel)}
                                 disabled={isPending || aliasUnsupported}
                               >
-                                删除
+                                {t("common.delete")}
                               </Button>
                             </div>
                           </div>
@@ -1700,7 +1773,7 @@ export function AuthFilesPage() {
                                         ),
                                       }));
                                     }}
-                                    placeholder="name"
+                                    placeholder={t("auth_files.name_placeholder", "name")}
                                   />
                                 </div>
                                 <div className="lg:col-span-5">
@@ -1715,12 +1788,12 @@ export function AuthFilesPage() {
                                         ),
                                       }));
                                     }}
-                                    placeholder="alias"
+                                    placeholder={t("auth_files.alias_placeholder", "alias")}
                                   />
                                 </div>
                                 <div className="lg:col-span-1 flex items-center justify-between gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
                                   <span className="text-xs text-slate-600 dark:text-white/65">
-                                    fork
+                                    {t("auth_files.fork")}
                                   </span>
                                   <input
                                     type="checkbox"
@@ -1749,8 +1822,8 @@ export function AuthFilesPage() {
                                         ),
                                       }));
                                     }}
-                                    aria-label="删除这一行"
-                                    title="删除"
+                                    aria-label={t("common.delete_row", "Delete Row")}
+                                    title={t("common.delete")}
                                   >
                                     <X size={14} />
                                   </Button>
@@ -1773,7 +1846,7 @@ export function AuthFilesPage() {
                                 }}
                               >
                                 <Plus size={14} />
-                                新增一行
+                                {t("auth_files.add_row")}
                               </Button>
                             </div>
                           </div>
@@ -1789,7 +1862,11 @@ export function AuthFilesPage() {
 
       <Modal
         open={detailOpen}
-        title={detailFile ? `查看：${detailFile.name}` : "查看认证文件"}
+        title={
+          detailFile
+            ? t("auth_files.view_file_title", { name: detailFile.name })
+            : t("auth_files.view_auth_file")
+        }
         onClose={() => setDetailOpen(false)}
         footer={
           <div className="flex items-center gap-2">
@@ -1803,16 +1880,18 @@ export function AuthFilesPage() {
               disabled={!detailFile || detailLoading}
             >
               <Download size={14} />
-              下载
+              {t("auth_files.download")}
             </Button>
             <Button variant="secondary" onClick={() => setDetailOpen(false)}>
-              关闭
+              {t("auth_files.close")}
             </Button>
           </div>
         }
       >
         {detailLoading ? (
-          <div className="text-sm text-slate-600 dark:text-white/65">加载中…</div>
+          <div className="text-sm text-slate-600 dark:text-white/65">
+            {t("common.loading_ellipsis")}
+          </div>
         ) : (
           <pre className="whitespace-pre-wrap break-words rounded-2xl border border-slate-200 bg-white p-4 font-mono text-xs text-slate-900 dark:border-neutral-800 dark:bg-neutral-950 dark:text-slate-100">
             {detailText || "--"}
@@ -1822,25 +1901,30 @@ export function AuthFilesPage() {
 
       <Modal
         open={modelsOpen}
-        title={`模型列表：${modelsFileName || "--"}${modelsFileType ? ` (${modelsFileType})` : ""}`}
+        title={t("auth_files.models_list_title", {
+          name: modelsFileName || "--",
+          type: modelsFileType || "",
+        })}
         onClose={() => setModelsOpen(false)}
         footer={
           <Button variant="secondary" onClick={() => setModelsOpen(false)}>
-            关闭
+            {t("auth_files.close")}
           </Button>
         }
       >
         {modelsLoading ? (
-          <div className="text-sm text-slate-600 dark:text-white/65">加载中…</div>
+          <div className="text-sm text-slate-600 dark:text-white/65">
+            {t("common.loading_ellipsis")}
+          </div>
         ) : modelsError === "unsupported" ? (
           <EmptyState
-            title="该接口不支持"
-            description="服务端未实现 /auth-files/models 或当前认证文件不支持查询模型。"
+            title={t("auth_files.api_not_supported")}
+            description={t("auth_files.no_models_api")}
           />
         ) : modelsList.length === 0 ? (
           <EmptyState
-            title="暂无模型数据"
-            description="该认证文件可能不支持查询模型列表，或服务端未返回数据。"
+            title={t("common.no_model_data")}
+            description={t("auth_files_page.models_hint")}
           />
         ) : (
           <div className="space-y-2">
@@ -1860,14 +1944,14 @@ export function AuthFilesPage() {
                     if (!hit) return null;
                     return (
                       <span className="inline-flex rounded-lg bg-rose-600/10 px-2 py-0.5 text-[11px] font-semibold text-rose-700 dark:bg-rose-500/15 dark:text-rose-200">
-                        OAuth 排除
+                        {t("auth_files.oauth_excluded")}
                       </span>
                     );
                   })()}
                 </div>
                 <p className="mt-1 text-xs text-slate-600 dark:text-white/65">
-                  {model.display_name ? `display_name：${model.display_name}` : ""}
-                  {model.owned_by ? ` · owned_by：${model.owned_by}` : ""}
+                  {model.display_name ? `display_name: ${model.display_name}` : ""}
+                  {model.owned_by ? ` · owned_by: ${model.owned_by}` : ""}
                 </p>
               </div>
             ))}
@@ -1877,8 +1961,8 @@ export function AuthFilesPage() {
 
       <Modal
         open={prefixProxyEditor.open}
-        title={`编辑：${prefixProxyEditor.fileName || "--"}`}
-        description="仅修改 prefix / proxy_url 字段，其余内容保持不变（通过重新上传同名文件覆盖）。"
+        title={t("auth_files.edit_title", { name: prefixProxyEditor.fileName || "--" })}
+        description={t("auth_files.prefix_proxy_desc")}
         onClose={() =>
           setPrefixProxyEditor({
             open: false,
@@ -1913,7 +1997,7 @@ export function AuthFilesPage() {
                 })
               }
             >
-              取消
+              {t("auth_files.cancel")}
             </Button>
             <Button
               variant="primary"
@@ -1926,34 +2010,38 @@ export function AuthFilesPage() {
               }
             >
               <ShieldCheck size={14} />
-              保存
+              {t("auth_files.save")}
             </Button>
           </div>
         }
       >
         {prefixProxyEditor.loading ? (
-          <div className="text-sm text-slate-600 dark:text-white/65">加载中…</div>
+          <div className="text-sm text-slate-600 dark:text-white/65">
+            {t("common.loading_ellipsis")}
+          </div>
         ) : prefixProxyEditor.json ? (
           <div className="space-y-4">
             <div className="rounded-2xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
-              <p className="text-sm font-semibold text-slate-900 dark:text-white">prefix（可选）</p>
+              <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                {t("auth_files.prefix_label")}
+              </p>
               <div className="mt-2">
                 <TextInput
                   value={prefixProxyEditor.prefix}
                   onChange={(e) =>
                     setPrefixProxyEditor((prev) => ({ ...prev, prefix: e.currentTarget.value }))
                   }
-                  placeholder="例如：team-a"
+                  placeholder={t("auth_files.prefix_placeholder")}
                 />
               </div>
               <p className="mt-2 text-xs text-slate-500 dark:text-white/55">
-                留空将移除 prefix 字段。
+                {t("auth_files.leave_empty_prefix")}
               </p>
             </div>
 
             <div className="rounded-2xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
               <p className="text-sm font-semibold text-slate-900 dark:text-white">
-                proxy_url（可选）
+                {t("auth_files.proxy_url_label")}
               </p>
               <div className="mt-2">
                 <TextInput
@@ -1961,41 +2049,43 @@ export function AuthFilesPage() {
                   onChange={(e) =>
                     setPrefixProxyEditor((prev) => ({ ...prev, proxyUrl: e.currentTarget.value }))
                   }
-                  placeholder="例如：http://127.0.0.1:7890"
+                  placeholder={t("auth_files.proxy_url_placeholder")}
                 />
               </div>
               <p className="mt-2 text-xs text-slate-500 dark:text-white/55">
-                留空将移除 proxy_url 字段。
+                {t("auth_files.leave_empty_proxy")}
               </p>
             </div>
 
             <div className="rounded-2xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
               <p className="text-sm font-semibold text-slate-900 dark:text-white">
-                预览（保存后内容）
+                {t("auth_files.preview_after_save")}
               </p>
               <pre className="mt-3 max-h-64 overflow-y-auto whitespace-pre-wrap break-words rounded-2xl border border-slate-200 bg-white p-3 font-mono text-xs text-slate-900 dark:border-neutral-800 dark:bg-neutral-950 dark:text-slate-100">
                 {prefixProxyUpdatedText}
               </pre>
               <p className="mt-2 text-xs text-slate-500 dark:text-white/55">
-                注意：保存会重新上传同名文件；建议保持总大小不超过{" "}
-                {formatFileSize(MAX_AUTH_FILE_SIZE)}。
+                {t("auth_files.save_note", { size: formatFileSize(MAX_AUTH_FILE_SIZE) })}
               </p>
             </div>
           </div>
         ) : (
-          <EmptyState title="无法编辑" description={prefixProxyEditor.error || "未知错误"} />
+          <EmptyState
+            title={t("auth_files_page.cannot_edit")}
+            description={prefixProxyEditor.error || t("auth_files.unknown_error")}
+          />
         )}
       </Modal>
 
       <Modal
         open={importOpen}
-        title={`导入模型：${importChannel || "--"}`}
-        description="从 /model-definitions 拉取模型列表，并批量生成别名映射（默认 alias=同名）。"
+        title={t("auth_files.import_title", { name: importChannel || "--" })}
+        description={t("auth_files.fetch_models_desc")}
         onClose={() => setImportOpen(false)}
         footer={
           <div className="flex items-center gap-2">
             <Button variant="secondary" onClick={() => setImportOpen(false)}>
-              取消
+              {t("auth_files.cancel")}
             </Button>
             <Button
               variant="primary"
@@ -2003,30 +2093,35 @@ export function AuthFilesPage() {
               disabled={importLoading || !importModels.length}
             >
               <ShieldCheck size={14} />
-              导入所选
+              {t("auth_files.import_selected")}
             </Button>
           </div>
         }
       >
         {importLoading ? (
-          <div className="text-sm text-slate-600 dark:text-white/65">加载中…</div>
+          <div className="text-sm text-slate-600 dark:text-white/65">
+            {t("common.loading_ellipsis")}
+          </div>
         ) : importModels.length === 0 ? (
           <EmptyState
-            title="暂无模型定义"
-            description="服务端未返回模型列表或该 channel 不支持。"
+            title={t("common.no_model_def")}
+            description={t("auth_files_page.cannot_edit_desc")}
           />
         ) : (
           <div className="space-y-3">
             <TextInput
               value={importSearch}
               onChange={(e) => setImportSearch(e.currentTarget.value)}
-              placeholder="搜索模型 id / display_name"
+              placeholder={t("auth_files.search_models_placeholder")}
               endAdornment={<Search size={16} className="text-slate-400" />}
             />
 
             <div className="rounded-2xl border border-slate-200 bg-white/70 p-3 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
               <p className="text-xs text-slate-600 dark:text-white/65 tabular-nums">
-                共 {importFilteredModels.length} 个模型 · 已选择 {importSelected.size} 个
+                {t("auth_files.models_selected", {
+                  models: importFilteredModels.length,
+                  selected: importSelected.size,
+                })}
               </p>
               <div className="mt-2 max-h-72 overflow-y-auto space-y-1">
                 {importFilteredModels.map((model) => {
@@ -2068,18 +2163,20 @@ export function AuthFilesPage() {
         title={
           confirm?.type === "deleteAll"
             ? filter === "all"
-              ? "删除全部认证文件"
-              : `删除 ${filter} 认证文件`
-            : "删除认证文件"
+              ? t("auth_files.delete_all_auth_files")
+              : t("auth_files.delete_filter_title", { filter })
+            : t("auth_files.delete_auth_file")
         }
         description={
           confirm?.type === "deleteAll"
             ? filter === "all"
-              ? "确定要删除全部认证文件吗？此操作不可恢复。"
-              : `确定要删除当前筛选（${filter}）下的认证文件吗？此操作不可恢复。`
-            : `确定要删除 ${confirm?.type === "deleteFile" ? confirm.name : ""} 吗？此操作不可恢复。`
+              ? t("auth_files.confirm_delete_all")
+              : t("auth_files.confirm_delete_filter", { filter })
+            : t("auth_files.confirm_delete_file", {
+                name: confirm?.type === "deleteFile" ? confirm.name : "",
+              })
         }
-        confirmText="删除"
+        confirmText={t("common.delete")}
         busy={deletingAll}
         onClose={() => setConfirm(null)}
         onConfirm={() => {

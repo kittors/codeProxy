@@ -113,7 +113,7 @@ export class ApiClient {
       }
 
       if (!response.ok) {
-        let message = `请求失败（${response.status}）`;
+        let message = `Request failed (${response.status})`;
         try {
           const text = await response.text();
           const trimmed = text.trim();

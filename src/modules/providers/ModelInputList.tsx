@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/modules/ui/Button";
 import { TextInput } from "@/modules/ui/Input";
@@ -24,8 +25,8 @@ export function ModelInputList({
   title,
   entries,
   onChange,
-  namePlaceholder = "模型名称",
-  aliasPlaceholder = "模型别名（可选）",
+  namePlaceholder = "Model Name",
+  aliasPlaceholder = "Model Alias (Optional)",
   disabled = false,
   showPriority = true,
   showTestModel = false,
@@ -39,6 +40,7 @@ export function ModelInputList({
   showPriority?: boolean;
   showTestModel?: boolean;
 }) {
+  const { t } = useTranslation();
   return (
     <section className="space-y-2">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -50,12 +52,12 @@ export function ModelInputList({
           disabled={disabled}
         >
           <Plus size={14} />
-          新增
+          {t("common.add")}
         </Button>
       </div>
 
       {entries.length === 0 ? (
-        <p className="text-xs text-slate-500 dark:text-white/55">未设置（可选）</p>
+        <p className="text-xs text-slate-500 dark:text-white/55">{t("common.not_set")}</p>
       ) : (
         <div className="space-y-2">
           {entries.map((entry, idx) => (
@@ -86,7 +88,7 @@ export function ModelInputList({
                 <div className={showTestModel ? "md:col-span-2" : "md:col-span-3"}>
                   <TextInput
                     value={entry.priorityText}
-                    placeholder="优先级（可选）"
+                    placeholder={t("common.priority_optional")}
                     disabled={disabled}
                     inputMode="numeric"
                     onChange={(e) => {
@@ -102,7 +104,7 @@ export function ModelInputList({
                 <div className="md:col-span-2">
                   <TextInput
                     value={entry.testModel}
-                    placeholder="testModel（可选）"
+                    placeholder="testModel(Optional)"
                     disabled={disabled}
                     onChange={(e) => {
                       const value = e.currentTarget.value;
@@ -119,8 +121,8 @@ export function ModelInputList({
                   size="sm"
                   onClick={() => onChange(entries.filter((_, i) => i !== idx))}
                   disabled={disabled}
-                  aria-label="删除模型"
-                  title="删除"
+                  aria-label={t("common.delete_model")}
+                  title={t("common.delete")}
                 >
                   <Trash2 size={14} />
                 </Button>
@@ -131,7 +133,8 @@ export function ModelInputList({
       )}
 
       <p className="text-xs text-slate-500 dark:text-white/55">
-        提示：每个模型一行；别名用于重写下游的模型名。优先级数字越大越优先。
+        Hint: One model per line; alias is used to rewrite downstream model name. Higher priority
+        number takes precedence.
       </p>
     </section>
   );

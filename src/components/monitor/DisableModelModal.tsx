@@ -35,9 +35,9 @@ export function DisableModelModal({
     if (disableState.step === 1) {
       return (
         <p style={{ marginBottom: 16, lineHeight: 1.6 }}>
-          {isZh ? "确定要禁用 " : "Are you sure you want to disable "}
+          {t("common.confirm_disable", "Are you sure you want to disable ")}
           <strong>{disableState.displayName}</strong>
-          {isZh ? " 吗？" : "?"}
+          {isZh ? "?" : "?"}
         </p>
       );
     }
@@ -46,7 +46,7 @@ export function DisableModelModal({
       return (
         <p style={{ marginBottom: 16, lineHeight: 1.6, color: "var(--warning-color, #f59e0b)" }}>
           {isZh
-            ? "⚠️ 警告：此操作将从配置中移除该模型映射！"
+            ? "⚠️ Warning: This action will remove the model mapping from configuration!"
             : "⚠️ Warning: this removes the model mapping from config!"}
         </p>
       );
@@ -55,7 +55,7 @@ export function DisableModelModal({
     return (
       <p style={{ marginBottom: 16, lineHeight: 1.6, color: "var(--danger-color, #ef4444)" }}>
         {isZh
-          ? "🚨 最后确认：禁用后需要手动重新添加才能恢复！"
+          ? "🚨 Final Confirmation: Must be manually re-added to recover after disabled!"
           : "🚨 Final confirmation: you'll need to add it back manually later!"}
       </p>
     );
@@ -65,7 +65,7 @@ export function DisableModelModal({
   const getConfirmButtonText = () => {
     if (!disableState) return "";
     const btnTexts = isZh
-      ? ["确认禁用 (3)", "我确定 (2)", "立即禁用 (1)"]
+      ? ["Confirm Disable (3)", "I am sure (2)", "Disable Now (1)"]
       : ["Confirm (3)", "I'm sure (2)", "Disable now (1)"];
     return btnTexts[disableState.step - 1] || btnTexts[0];
   };

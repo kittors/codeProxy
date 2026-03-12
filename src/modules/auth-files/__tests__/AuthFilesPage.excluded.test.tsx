@@ -36,7 +36,7 @@ describe("AuthFilesPage OAuth excluded models", () => {
       expect(mocks.getOauthExcludedModels).toHaveBeenCalledTimes(1);
     });
 
-    expect(await screen.findByText("暂无配置")).toBeInTheDocument();
+    expect(await screen.findByText("No configuration")).toBeInTheDocument();
 
     await new Promise((r) => setTimeout(r, 30));
     expect(mocks.getOauthExcludedModels).toHaveBeenCalledTimes(1);

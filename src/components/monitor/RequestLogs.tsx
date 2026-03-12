@@ -225,7 +225,7 @@ export function RequestLogs({
         setLogData(filtered);
       }
     } catch (err) {
-      console.error("日志刷新失败：", err);
+      console.error("Log refresh failed: ", err);
     } finally {
       setLogLoading(false);
     }

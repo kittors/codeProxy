@@ -1,4 +1,5 @@
 import type { ComponentType, ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import {
   HOUR_WINDOWS,
   TIME_RANGES,
@@ -39,11 +40,12 @@ export const TimeRangeSelector = ({
   value: TimeRange;
   onChange: (next: TimeRange) => void;
 }) => {
+  const { t } = useTranslation();
   return (
     <Tabs value={String(value)} onValueChange={(next) => onChange(Number(next) as TimeRange)}>
       <TabsList>
         {TIME_RANGES.map((range) => {
-          const label = range === 1 ? "今天" : `${range} 天`;
+          const label = range === 1 ? t("monitor.today") : t("monitor.n_days", { count: range });
           return (
             <TabsTrigger key={range} value={String(range)}>
               {label}
@@ -62,12 +64,13 @@ export const HourWindowSelector = ({
   value: HourWindow;
   onChange: (next: HourWindow) => void;
 }) => {
+  const { t } = useTranslation();
   return (
     <Tabs value={String(value)} onValueChange={(next) => onChange(Number(next) as HourWindow)}>
       <TabsList>
         {HOUR_WINDOWS.map((range) => (
           <TabsTrigger key={range} value={String(range)}>
-            最近{range}小时
+            {t("monitor.last_nh", { count: range })}
           </TabsTrigger>
         ))}
       </TabsList>
@@ -88,6 +91,7 @@ export const MonitorCard = ({
   loading?: boolean;
   children: ReactNode;
 }) => {
+  const { t } = useTranslation();
   return (
     <section
       className="min-w-0 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/70"
@@ -115,7 +119,7 @@ export const MonitorCard = ({
                 className="h-4 w-4 rounded-full border-2 border-slate-300/80 border-t-slate-900 motion-reduce:animate-none motion-safe:animate-spin dark:border-white/20 dark:border-t-white/85"
                 aria-hidden="true"
               />
-              <span className="tabular-nums">加载中…</span>
+              <span className="tabular-nums">{t("common.loading")}</span>
             </div>
           </div>
         ) : null}

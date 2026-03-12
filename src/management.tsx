@@ -20,7 +20,7 @@ if (faviconEl) {
 
 const rootElement = document.getElementById("root");
 if (!rootElement) {
-  throw new Error("根节点 #root 不存在");
+  throw new Error("Root element #root not found");
 }
 
 createRoot(rootElement).render(

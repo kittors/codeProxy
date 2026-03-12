@@ -4,6 +4,18 @@ import type { DailySeriesPoint } from "@/modules/monitor/chart-options/types";
 export const createDailyTrendOption = (input: {
   dailySeries: DailySeriesPoint[];
   dailyLegendSelected: Record<string, boolean>;
+  legendKeys: {
+    input: string;
+    output: string;
+    requests: string;
+  };
+  labels: {
+    input: string;
+    output: string;
+    requests: string;
+    tokenAxis: string;
+    requestAxis: string;
+  };
   isDark: boolean;
 }): Record<string, unknown> => {
   const points = input.dailySeries.filter(
@@ -40,9 +52,10 @@ export const createDailyTrendOption = (input: {
   const hasOutput = outputY.some((value) => value > 0);
   const hasRequests = requestY.some((value) => value > 0);
 
-  const showInput = hasInput && (input.dailyLegendSelected["输入 Token"] ?? true);
-  const showOutput = hasOutput && (input.dailyLegendSelected["输出 Token"] ?? true);
-  const showRequests = hasRequests && (input.dailyLegendSelected["请求数"] ?? true);
+  const showInput = hasInput && (input.dailyLegendSelected[input.legendKeys.input] ?? true);
+  const showOutput = hasOutput && (input.dailyLegendSelected[input.legendKeys.output] ?? true);
+  const showRequests =
+    hasRequests && (input.dailyLegendSelected[input.legendKeys.requests] ?? true);
 
   const tokenAxisAnchor =
     showInput || showOutput
@@ -64,7 +77,7 @@ export const createDailyTrendOption = (input: {
   const series: Array<Record<string, unknown>> = [];
   const inputSeries = showInput
     ? {
-        name: "输入 Token",
+        name: input.labels.input,
         type: "bar",
         yAxisIndex: 0,
         barMaxWidth,
@@ -76,7 +89,7 @@ export const createDailyTrendOption = (input: {
 
   const outputSeries = showOutput
     ? {
-        name: "输出 Token",
+        name: input.labels.output,
         type: "bar",
         yAxisIndex: 0,
         barMaxWidth,
@@ -104,7 +117,7 @@ export const createDailyTrendOption = (input: {
 
   if (showRequests) {
     series.push({
-      name: "请求数",
+      name: input.labels.requests,
       type: "line",
       yAxisIndex: 1,
       smooth: true,
@@ -175,7 +188,7 @@ export const createDailyTrendOption = (input: {
     yAxis: [
       {
         type: "value",
-        name: "Token",
+        name: input.labels.tokenAxis,
         min: 0,
         max: tokenAxisMax,
         nameLocation: "middle",
@@ -197,7 +210,7 @@ export const createDailyTrendOption = (input: {
       },
       {
         type: "value",
-        name: "请求数",
+        name: input.labels.requestAxis,
         min: 0,
         max: requestAxisMax,
         nameLocation: "middle",

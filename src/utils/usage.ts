@@ -719,7 +719,7 @@ export function saveModelPrices(prices: Record<string, ModelPrice>): void {
     }
     localStorage.setItem(MODEL_PRICE_STORAGE_KEY, JSON.stringify(prices));
   } catch {
-    console.warn("保存模型价格失败");
+    console.warn("Failed to save model pricing");
   }
 }
 

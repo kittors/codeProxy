@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   Bot,
@@ -71,6 +72,7 @@ import {
 } from "@/modules/providers/providers-helpers";
 
 export function ProvidersPage() {
+  const { t } = useTranslation();
   const { notify } = useToast();
   const [isPending, startTransition] = useTransition();
   const location = useLocation();
@@ -181,7 +183,10 @@ export function ProvidersPage() {
           }
         }
       } catch (err: unknown) {
-        notify({ type: "error", message: err instanceof Error ? err.message : "加载配置失败" });
+        notify({
+          type: "error",
+          message: err instanceof Error ? err.message : t("providers.load_failed"),
+        });
       } finally {
         setLoading(false);
       }
@@ -214,11 +219,11 @@ export function ProvidersPage() {
         setUsageStatsBySource(stats);
       }
     } catch {
-      // usage加载失败不影响主要功能
+      // usage加载Failed不影响主要功能
     }
   }, []);
 
-  // refreshAll 保留作为兼容入口（保存后刷新当前 Tab）
+  // refreshAll 保留作为兼容入口（Save后刷新当前 Tab）
   const refreshAll = useCallback(async () => {
     await refreshTab(tab);
   }, [refreshTab, tab]);
@@ -266,13 +271,13 @@ export function ProvidersPage() {
   const commitKeyDraft = useCallback((): ProviderSimpleConfig | null => {
     const name = keyDraft.name.trim();
     if (!name) {
-      setKeyDraftError("渠道名称不能为空");
+      setKeyDraftError(t("providers.channel_name_error"));
       return null;
     }
 
     const apiKey = keyDraft.apiKey.trim();
     if (!apiKey) {
-      setKeyDraftError("API Key 不能为空");
+      setKeyDraftError(t("providers.api_key_error"));
       return null;
     }
 
@@ -285,7 +290,7 @@ export function ProvidersPage() {
     const requireAlias = editKeyType === "vertex";
     const modelCommit = commitModelEntries(keyDraft.modelEntries, { requireAlias });
     if (modelCommit.error) {
-      setKeyDraftError(requireAlias ? `Vertex：${modelCommit.error}` : modelCommit.error);
+      setKeyDraftError(requireAlias ? `Vertex: ${modelCommit.error}` : modelCommit.error);
       return null;
     }
 
@@ -333,11 +338,14 @@ export function ProvidersPage() {
         setVertexKeys(next);
         await providersApi.saveVertexConfigs(next);
       }
-      notify({ type: "success", message: "已保存" });
+      notify({ type: "success", message: t("providers.saved") });
       closeKeyEditor();
       startTransition(() => void refreshAll());
     } catch (err: unknown) {
-      notify({ type: "error", message: err instanceof Error ? err.message : "保存失败" });
+      notify({
+        type: "error",
+        message: err instanceof Error ? err.message : t("providers.save_failed"),
+      });
     }
   }, [
     claudeKeys,
@@ -380,9 +388,12 @@ export function ProvidersPage() {
           await providersApi.deleteVertexConfig(entry.apiKey);
           setVertexKeys((prev) => prev.filter((_, i) => i !== index));
         }
-        notify({ type: "success", message: "已删除" });
+        notify({ type: "success", message: t("providers.deleted") });
       } catch (err: unknown) {
-        notify({ type: "error", message: err instanceof Error ? err.message : "删除失败" });
+        notify({
+          type: "error",
+          message: err instanceof Error ? err.message : t("providers.delete_failed"),
+        });
       }
     },
     [claudeKeys, codexKeys, geminiKeys, notify, vertexKeys],
@@ -413,13 +424,19 @@ export function ProvidersPage() {
           setCodexKeys(nextList);
           await providersApi.saveCodexConfigs(nextList);
         }
-        notify({ type: "success", message: enabled ? "已启用" : "已禁用" });
+        notify({
+          type: "success",
+          message: enabled ? t("providers.toggle_enabled") : t("providers.toggle_disabled"),
+        });
         startTransition(() => void refreshAll());
       } catch (err: unknown) {
         if (type === "gemini") setGeminiKeys(prev);
         else if (type === "claude") setClaudeKeys(prev);
         else setCodexKeys(prev);
-        notify({ type: "error", message: err instanceof Error ? err.message : "更新失败" });
+        notify({
+          type: "error",
+          message: err instanceof Error ? err.message : t("providers.update_failed"),
+        });
       }
     },
     [claudeKeys, codexKeys, geminiKeys, notify, refreshAll, startTransition],
@@ -487,11 +504,11 @@ export function ProvidersPage() {
     const name = openaiDraft.name.trim();
     const baseUrl = openaiDraft.baseUrl.trim();
     if (!name) {
-      setOpenaiDraftError("name 不能为空");
+      setOpenaiDraftError(t("providers.name_error"));
       return null;
     }
     if (!baseUrl) {
-      setOpenaiDraftError("baseUrl 不能为空");
+      setOpenaiDraftError(t("providers.base_url_error"));
       return null;
     }
 
@@ -500,7 +517,7 @@ export function ProvidersPage() {
     const priorityText = openaiDraft.priorityText.trim();
     const priority = priorityText !== "" ? Number(priorityText) : undefined;
     if (priority !== undefined && !Number.isFinite(priority)) {
-      setOpenaiDraftError("priority 必须是数字");
+      setOpenaiDraftError(t("providers.priority_error"));
       return null;
     }
 
@@ -519,7 +536,7 @@ export function ProvidersPage() {
       .filter(Boolean) as OpenAIProvider["apiKeyEntries"];
 
     if (!apiKeyEntries || apiKeyEntries.length === 0) {
-      setOpenaiDraftError("至少需要一个 apiKeyEntry");
+      setOpenaiDraftError(t("providers.key_entry_error"));
       return null;
     }
 
@@ -556,11 +573,14 @@ export function ProvidersPage() {
 
       setOpenaiProviders(next);
       await providersApi.saveOpenAIProviders(next);
-      notify({ type: "success", message: "已保存" });
+      notify({ type: "success", message: t("providers.saved") });
       closeOpenAIEditor();
       startTransition(() => void refreshAll());
     } catch (err: unknown) {
-      notify({ type: "error", message: err instanceof Error ? err.message : "保存失败" });
+      notify({
+        type: "error",
+        message: err instanceof Error ? err.message : t("providers.save_failed"),
+      });
     }
   }, [
     closeOpenAIEditor,
@@ -579,9 +599,12 @@ export function ProvidersPage() {
       try {
         await providersApi.deleteOpenAIProvider(entry.name);
         setOpenaiProviders((prev) => prev.filter((_, i) => i !== index));
-        notify({ type: "success", message: "已删除" });
+        notify({ type: "success", message: t("providers.deleted") });
       } catch (err: unknown) {
-        notify({ type: "error", message: err instanceof Error ? err.message : "删除失败" });
+        notify({
+          type: "error",
+          message: err instanceof Error ? err.message : t("providers.delete_failed"),
+        });
       }
     },
     [notify, openaiProviders],
@@ -590,7 +613,7 @@ export function ProvidersPage() {
   const discoverModels = useCallback(async () => {
     const baseUrl = openaiDraft.baseUrl.trim();
     if (!baseUrl) {
-      notify({ type: "info", message: "请先填写 baseUrl" });
+      notify({ type: "info", message: t("providers.fill_base_url_first") });
       return;
     }
 
@@ -626,7 +649,10 @@ export function ProvidersPage() {
       setDiscoveredModels(list);
       setDiscoverSelected(new Set(list.map((m) => m.id)));
     } catch (err: unknown) {
-      notify({ type: "error", message: err instanceof Error ? err.message : "拉取模型失败" });
+      notify({
+        type: "error",
+        message: err instanceof Error ? err.message : t("providers.fetch_models_failed"),
+      });
     } finally {
       setDiscovering(false);
     }
@@ -636,7 +662,7 @@ export function ProvidersPage() {
     const selected = new Set(discoverSelected);
     const picked = discoveredModels.filter((m) => selected.has(m.id));
     if (picked.length === 0) {
-      notify({ type: "info", message: "未选择任何模型" });
+      notify({ type: "info", message: t("providers.no_models_selected") });
       return;
     }
 
@@ -652,7 +678,7 @@ export function ProvidersPage() {
     }
 
     setOpenaiDraft((prev) => ({ ...prev, modelEntries: merged }));
-    notify({ type: "success", message: "已合并模型列表" });
+    notify({ type: "success", message: t("providers.models_merged") });
   }, [discoverSelected, discoveredModels, notify, openaiDraft.modelEntries]);
 
   const saveAmpcode = useCallback(async () => {
@@ -676,11 +702,14 @@ export function ProvidersPage() {
         .filter((m) => m.from && m.to);
       await ampcodeApi.patchModelMappings(mappings);
 
-      notify({ type: "success", message: "Ampcode 配置已保存" });
+      notify({ type: "success", message: t("providers.ampcode_saved") });
       startTransition(() => void refreshAll());
       setAmpUpstreamApiKey("");
     } catch (err: unknown) {
-      notify({ type: "error", message: err instanceof Error ? err.message : "保存失败" });
+      notify({
+        type: "error",
+        message: err instanceof Error ? err.message : t("providers.save_failed"),
+      });
     }
   }, [
     ampForceMappings,
@@ -696,9 +725,9 @@ export function ProvidersPage() {
     async (value: string) => {
       try {
         await navigator.clipboard.writeText(value);
-        notify({ type: "success", message: "已复制" });
+        notify({ type: "success", message: t("providers.copied") });
       } catch {
-        notify({ type: "error", message: "复制失败" });
+        notify({ type: "error", message: t("providers.copy_failed") });
       }
     },
     [notify],
@@ -798,9 +827,11 @@ export function ProvidersPage() {
       {/* 标题头：描述 + 刷新 */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="space-y-0.5">
-          <h2 className="text-base font-semibold text-slate-900 dark:text-white">配置总览</h2>
+          <h2 className="text-base font-semibold text-slate-900 dark:text-white">
+            {t("providers.config_overview")}
+          </h2>
           <p className="text-xs text-slate-500 dark:text-white/55">
-            在各标签页管理 API Key / OpenAI 提供商 / Ampcode 映射。
+            {t("providers.config_overview_desc")}
           </p>
         </div>
         <Button
@@ -810,16 +841,19 @@ export function ProvidersPage() {
           disabled={loading}
         >
           <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
-          刷新
+          {t("providers.refresh")}
         </Button>
       </div>
 
       {/* Tabs 导航 */}
-      <Tabs value={tab} onValueChange={(next) => {
-        const nextTab = next as typeof tab;
-        setTab(nextTab);
-        void refreshTab(nextTab);
-      }}>
+      <Tabs
+        value={tab}
+        onValueChange={(next) => {
+          const nextTab = next as typeof tab;
+          setTab(nextTab);
+          void refreshTab(nextTab);
+        }}
+      >
         <TabsList>
           <TabsTrigger value="gemini">
             <img src={iconGemini} alt="" className="size-4" />
@@ -841,7 +875,7 @@ export function ProvidersPage() {
           <TabsTrigger value="openai">
             <img src={iconOpenai} alt="" className="size-4 dark:hidden" />
             <img src={iconOpenai} alt="" className="hidden size-4 dark:block" />
-            OpenAI 兼容
+            {t("providers.openai_compatible")}
           </TabsTrigger>
           <TabsTrigger value="ampcode">
             <img src={iconAmp} alt="" className="size-4" />
@@ -852,8 +886,8 @@ export function ProvidersPage() {
         <TabsContent value="gemini" className="mt-6">
           <ProviderKeyListCard
             icon={Globe}
-            title="Gemini Keys"
-            description="API Key / Prefix / Base URL / Excluded Models / Headers / Models"
+            title={t("providers.gemini_keys")}
+            description={t("providers.openai_desc")}
             items={geminiKeys}
             onAdd={() => openKeyEditor("gemini", null)}
             onEdit={(idx) => openKeyEditor("gemini", idx)}
@@ -867,8 +901,8 @@ export function ProvidersPage() {
         <TabsContent value="claude" className="mt-6">
           <ProviderKeyListCard
             icon={Bot}
-            title="Claude Keys"
-            description="支持 proxyUrl / 自定义 headers / 模型别名 / Excluded Models（用 * 一键禁用）。"
+            title={t("providers.claude_keys")}
+            description={t("providers.codex_desc")}
             items={claudeKeys}
             onAdd={() => openKeyEditor("claude", null)}
             onEdit={(idx) => openKeyEditor("claude", idx)}
@@ -882,8 +916,8 @@ export function ProvidersPage() {
         <TabsContent value="codex" className="mt-6">
           <ProviderKeyListCard
             icon={FileKey}
-            title="Codex Keys"
-            description="支持 baseUrl / proxyUrl / headers / models 等配置。"
+            title={t("providers.codex_keys")}
+            description={t("providers.gemini_desc")}
             items={codexKeys}
             onAdd={() => openKeyEditor("codex", null)}
             onEdit={(idx) => openKeyEditor("codex", idx)}
@@ -897,8 +931,8 @@ export function ProvidersPage() {
         <TabsContent value="vertex" className="mt-6">
           <ProviderKeyListCard
             icon={Database}
-            title="Vertex Keys"
-            description="models 必须维护 name=>alias，用于将下游模型名映射到 Vertex。"
+            title={t("providers.vertex_keys")}
+            description={t("providers.vertex_desc")}
             items={vertexKeys}
             onAdd={() => openKeyEditor("vertex", null)}
             onEdit={(idx) => openKeyEditor("vertex", idx)}
@@ -910,17 +944,20 @@ export function ProvidersPage() {
 
         <TabsContent value="openai" className="mt-6">
           <Card
-            title="OpenAI 兼容提供商"
-            description="多密钥、headers、模型别名与 /models 发现。"
+            title={t("providers.openai_compatible")}
+            description={t("providers.claude_desc")}
             actions={
               <Button variant="primary" size="sm" onClick={() => openOpenAIEditor(null)}>
                 <Plus size={14} />
-                新增提供商
+                {t("providers.add_provider")}
               </Button>
             }
           >
             {openaiProviders.length === 0 ? (
-              <EmptyState title="暂无 OpenAI 提供商" description="点击“新增提供商”开始配置。" />
+              <EmptyState
+                title={t("providers.no_openai_providers")}
+                description={t("providers.no_openai_desc")}
+              />
             ) : (
               <div className="space-y-3">
                 {openaiProviders.map((provider, idx) => {
@@ -940,11 +977,11 @@ export function ProvidersPage() {
                           </p>
                           {provider.prefix ? (
                             <p className="mt-1 truncate font-mono text-xs text-slate-700 dark:text-slate-200">
-                              prefix：{provider.prefix}
+                              prefix: {provider.prefix}
                             </p>
                           ) : null}
                           <p className="mt-1 truncate font-mono text-xs text-slate-700 dark:text-slate-200">
-                            baseUrl：{provider.baseUrl || "--"}
+                            baseUrl: {provider.baseUrl || "--"}
                           </p>
 
                           {headerEntries.length ? (
@@ -963,7 +1000,7 @@ export function ProvidersPage() {
                           {provider.apiKeyEntries?.length ? (
                             <div className="mt-2 space-y-1">
                               <p className="text-xs font-semibold text-slate-700 dark:text-white/75">
-                                Keys：{provider.apiKeyEntries.length}
+                                Keys: {provider.apiKeyEntries.length}
                               </p>
                               <div className="space-y-1">
                                 {provider.apiKeyEntries.map((entry, entryIndex) => {
@@ -986,16 +1023,20 @@ export function ProvidersPage() {
                                         </p>
                                         {entry.proxyUrl ? (
                                           <p className="mt-0.5 truncate font-mono text-slate-600 dark:text-white/55">
-                                            proxy：{entry.proxyUrl}
+                                            proxy: {entry.proxyUrl}
                                           </p>
                                         ) : null}
                                       </div>
                                       <div className="flex items-center gap-2 tabular-nums">
                                         <span className="rounded-full bg-emerald-600/10 px-2 py-0.5 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200">
-                                          成功 {entryStats.success}
+                                          {t("providers.success_stats", {
+                                            count: entryStats.success,
+                                          })}
                                         </span>
                                         <span className="rounded-full bg-rose-600/10 px-2 py-0.5 text-rose-700 dark:bg-rose-500/15 dark:text-rose-200">
-                                          失败 {entryStats.failure}
+                                          {t("providers.failed_stats", {
+                                            count: entryStats.failure,
+                                          })}
                                         </span>
                                       </div>
                                     </div>
@@ -1006,15 +1047,17 @@ export function ProvidersPage() {
                           ) : null}
 
                           <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-600 dark:text-white/65 tabular-nums">
-                            <span>models：{provider.models?.length ?? 0}</span>
+                            <span>
+                              {t("providers.models_label")}: {provider.models?.length ?? 0}
+                            </span>
                             <span>·</span>
-                            <span>成功：{stats.success}</span>
+                            <span>{t("providers.success_stats", { count: stats.success })}</span>
                             <span>·</span>
-                            <span>失败：{stats.failure}</span>
+                            <span>{t("providers.failed_stats", { count: stats.failure })}</span>
                             {provider.testModel ? (
                               <>
                                 <span>·</span>
-                                <span className="truncate">testModel：{provider.testModel}</span>
+                                <span className="truncate">testModel: {provider.testModel}</span>
                               </>
                             ) : null}
                           </div>
@@ -1048,7 +1091,7 @@ export function ProvidersPage() {
                             onClick={() => openOpenAIEditor(idx)}
                           >
                             <Settings2 size={14} />
-                            编辑
+                            {t("providers.edit")}
                           </Button>
                           <Button
                             variant="danger"
@@ -1056,7 +1099,7 @@ export function ProvidersPage() {
                             onClick={() => setConfirm({ type: "deleteOpenAI", index: idx })}
                           >
                             <Trash2 size={14} />
-                            删除
+                            {t("providers.delete")}
                           </Button>
                         </div>
                       </div>
@@ -1070,8 +1113,8 @@ export function ProvidersPage() {
 
         <TabsContent value="ampcode" className="mt-6">
           <Card
-            title="Ampcode 集成"
-            description="配置上游 URL / API Key、模型映射与强制映射开关。"
+            title={t("providers.ampcode_title")}
+            description={t("providers.ampcode_desc")}
             actions={
               <Button
                 variant="primary"
@@ -1080,7 +1123,7 @@ export function ProvidersPage() {
                 disabled={loading || isPending}
               >
                 <Save size={14} />
-                保存
+                {t("providers.save")}
               </Button>
             }
           >
@@ -1089,30 +1132,37 @@ export function ProvidersPage() {
                 <TextInput
                   value={ampUpstreamUrl}
                   onChange={(e) => setAmpUpstreamUrl(e.currentTarget.value)}
-                  placeholder="upstream-url（为空则清除）"
+                  placeholder={t("providers.upstream_url_hint")}
                 />
                 <TextInput
                   value={ampUpstreamApiKey}
                   onChange={(e) => setAmpUpstreamApiKey(e.currentTarget.value)}
-                  placeholder="upstream-api-key（仅用于更新；为空不改）"
+                  placeholder={t("providers.upstream_key_hint")}
                 />
                 <div className="rounded-2xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
                   <ToggleSwitch
-                    label="强制模型映射"
-                    description="开启后仅允许映射列表中的模型。"
+                    label={t("providers.force_mapping")}
+                    description={t("providers.force_mapping_desc")}
                     checked={ampForceMappings}
                     onCheckedChange={setAmpForceMappings}
                   />
                 </div>
                 <div className="rounded-2xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
                   <p className="text-xs text-slate-600 dark:text-white/65">
-                    当前：{ampcode ? "已加载" : "未加载"} · 映射 {ampMappings.length} 条
+                    {t("providers.current_status", {
+                      status: ampcode
+                        ? t("providers.status_loaded")
+                        : t("providers.status_not_loaded"),
+                      count: ampMappings.length,
+                    })}
                   </p>
                 </div>
               </div>
 
               <div className="space-y-2">
-                <p className="text-sm font-semibold text-slate-900 dark:text-white">模型映射</p>
+                <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                  {t("providers.model_mappings")}
+                </p>
                 {ampMappings.map((entry, idx) => (
                   <div key={entry.id} className="grid gap-2 md:grid-cols-12">
                     <div className="md:col-span-5">
@@ -1124,7 +1174,7 @@ export function ProvidersPage() {
                             prev.map((it, i) => (i === idx ? { ...it, from: value } : it)),
                           );
                         }}
-                        placeholder="from"
+                        placeholder={t("providers.mapping_from_placeholder")}
                       />
                     </div>
                     <div className="md:col-span-5">
@@ -1136,7 +1186,7 @@ export function ProvidersPage() {
                             prev.map((it, i) => (i === idx ? { ...it, to: value } : it)),
                           );
                         }}
-                        placeholder="to"
+                        placeholder={t("providers.mapping_to_placeholder")}
                       />
                     </div>
                     <div className="md:col-span-2 flex items-center justify-end">
@@ -1145,8 +1195,8 @@ export function ProvidersPage() {
                         size="sm"
                         onClick={() => setAmpMappings((prev) => prev.filter((_, i) => i !== idx))}
                         disabled={ampMappings.length <= 1}
-                        aria-label="删除映射"
-                        title="删除映射"
+                        aria-label={t("providers.delete_mapping")}
+                        title={t("providers.delete_mapping")}
                       >
                         <Trash2 size={14} />
                       </Button>
@@ -1165,16 +1215,14 @@ export function ProvidersPage() {
                     }
                   >
                     <Plus size={14} />
-                    新增
+                    {t("providers.add")}
                   </Button>
                   <Button
                     variant="secondary"
                     size="sm"
-                    onClick={() =>
-                      setAmpMappings([{ id: `map-${Date.now()}`, from: "", to: "" }])
-                    }
+                    onClick={() => setAmpMappings([{ id: `map-${Date.now()}`, from: "", to: "" }])}
                   >
-                    清空
+                    {t("providers.clear")}
                   </Button>
                 </div>
               </div>
@@ -1185,11 +1233,15 @@ export function ProvidersPage() {
 
       <Modal
         open={editKeyOpen}
-        title={`${editKeyIndex === null ? "新增" : "编辑"} ${editKeyTitle} 配置`}
+        title={
+          editKeyIndex === null
+            ? t("providers.add_config", { type: editKeyTitle })
+            : t("providers.edit_config", { type: editKeyTitle })
+        }
         description={
           editKeyType === "vertex"
-            ? "Vertex 的 models 必须填写 alias（name => alias）。Excluded Models 中使用 * 可一键禁用该配置。"
-            : "支持 Excluded Models（每行一个；用 * 一键禁用）、自定义 headers 与 models。"
+            ? t("providers.vertex_config_desc")
+            : t("providers.generic_config_desc")
         }
         onClose={closeKeyEditor}
         footer={
@@ -1200,11 +1252,11 @@ export function ProvidersPage() {
               </span>
             ) : null}
             <Button variant="secondary" onClick={closeKeyEditor}>
-              取消
+              {t("providers.cancel")}
             </Button>
             <Button variant="primary" onClick={() => void saveKeyDraft()}>
               <Check size={14} />
-              保存
+              {t("providers.save")}
             </Button>
           </div>
         }
@@ -1218,27 +1270,30 @@ export function ProvidersPage() {
                   : "rounded-full bg-amber-500/15 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:text-amber-200"
               }
             >
-              {editKeyEnabled ? "已启用" : "已禁用"}
+              {editKeyEnabled ? t("providers.enabled") : t("providers.disabled")}
             </span>
             <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-700 dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-white/75">
-              headers：<span className="font-semibold tabular-nums">{editKeyHeaderCount}</span>
+              {t("providers.headers_optional")}:{" "}
+              <span className="font-semibold tabular-nums">{editKeyHeaderCount}</span>
             </span>
             <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-700 dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-white/75">
-              models：<span className="font-semibold tabular-nums">{editKeyModelCount}</span>
+              {t("providers.models_label")}:{" "}
+              <span className="font-semibold tabular-nums">{editKeyModelCount}</span>
             </span>
             <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-700 dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-white/75">
-              excluded：<span className="font-semibold tabular-nums">{editKeyExcludedCount}</span>
+              {t("providers.excluded_models_label")}:{" "}
+              <span className="font-semibold tabular-nums">{editKeyExcludedCount}</span>
             </span>
             {editKeyType === "vertex" ? (
               <span className="rounded-full bg-slate-900 px-2.5 py-1 text-xs font-semibold text-white dark:bg-white dark:text-neutral-950">
-                Vertex：需要 alias
+                {t("providers.vertex_alias_required")}
               </span>
             ) : null}
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
             <p className="text-sm font-semibold text-slate-900 dark:text-white">
-              渠道名称（必填）
+              {t("providers.channel_name_label")}
             </p>
             <div className="mt-2">
               <TextInput
@@ -1247,32 +1302,37 @@ export function ProvidersPage() {
                   const val = e.currentTarget.value;
                   setKeyDraft((prev) => ({ ...prev, name: val }));
                 }}
-                placeholder="例如：Gemini 主力渠道"
+                placeholder={t("providers.channel_placeholder")}
               />
             </div>
             <p className="mt-2 text-xs text-slate-500 dark:text-white/55">
-              用于在列表中区分不同渠道，建议填写易于辨认的名称。
+              {t("providers.channel_name_hint")}
             </p>
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
             <ToggleSwitch
-              label="启用"
-              description={editKeyEnabled ? "当前：启用" : "当前：禁用（已写入 * 规则）"}
+              label={t("providers.enable")}
+              description={
+                editKeyEnabled
+                  ? t("providers.enable_toggle_desc_on")
+                  : t("providers.enable_toggle_desc_off")
+              }
               checked={editKeyEnabled}
               onCheckedChange={editKeyEnabledToggle}
             />
             <p className="mt-2 text-xs text-slate-500 dark:text-white/55">
-              禁用本质是向 Excluded Models 写入 <span className="font-mono">*</span>
-              ；你也可以在下方手动编辑。
+              {t("providers.disable_hint")}
             </p>
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-sm font-semibold text-slate-900 dark:text-white">API Key</p>
+              <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                {t("providers.api_key")}
+              </p>
               <span className="text-xs text-slate-500 dark:text-white/55">
-                展示：{maskApiKey(keyDraft.apiKey)}
+                {t("providers.show_masked_key", { key: maskApiKey(keyDraft.apiKey) })}
               </span>
             </div>
             <div className="mt-2">
@@ -1282,15 +1342,15 @@ export function ProvidersPage() {
                   const val = e.currentTarget.value;
                   setKeyDraft((prev) => ({ ...prev, apiKey: val }));
                 }}
-                placeholder="粘贴 API Key"
+                placeholder={t("providers.paste_key")}
                 endAdornment={
                   <button
                     type="button"
                     onClick={() => void copyText(keyDraft.apiKey.trim())}
                     disabled={!keyDraft.apiKey.trim()}
                     className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 bg-white/80 text-slate-700 shadow-sm transition hover:bg-white disabled:opacity-50 dark:border-neutral-800 dark:bg-neutral-950/70 dark:text-slate-200 dark:hover:bg-neutral-950"
-                    aria-label="复制 API Key"
-                    title="复制"
+                    aria-label={t("providers.copy_api_key")}
+                    title={t("providers.copy")}
                   >
                     <Copy size={14} />
                   </button>
@@ -1298,13 +1358,13 @@ export function ProvidersPage() {
               />
             </div>
             <p className="mt-2 text-xs text-slate-500 dark:text-white/55">
-              建议只粘贴纯 Key；如果粘贴包含其他文本，统计来源可能不一致。
+              {t("providers.api_key_hint")}
             </p>
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
             <p className="text-sm font-semibold text-slate-900 dark:text-white">
-              路由标识（Prefix，可选）
+              {t("providers.prefix_label")}
             </p>
             <div className="mt-2">
               <TextInput
@@ -1313,21 +1373,23 @@ export function ProvidersPage() {
                   const val = e.currentTarget.value;
                   setKeyDraft((prev) => ({ ...prev, prefix: val }));
                 }}
-                placeholder="例如：team-a"
+                placeholder={t("providers.prefix_placeholder")}
               />
             </div>
             <p className="mt-2 text-xs text-slate-500 dark:text-white/55">
-              Prefix 既用于路由，也用于使用统计来源匹配；设置后更容易区分多条 Key。
+              {t("providers.prefix_hint")}
             </p>
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
             <p className="text-sm font-semibold text-slate-900 dark:text-white">
-              连接与代理（可选）
+              {t("providers.connection_proxy_label")}
             </p>
             <div className="mt-3 grid gap-3">
               <div className="space-y-2">
-                <p className="text-xs font-semibold text-slate-700 dark:text-white/75">Base URL</p>
+                <p className="text-xs font-semibold text-slate-700 dark:text-white/75">
+                  {t("providers.base_url")}
+                </p>
                 <TextInput
                   value={keyDraft.baseUrl}
                   onChange={(e) => {
@@ -1335,38 +1397,41 @@ export function ProvidersPage() {
                     setKeyDraft((prev) => ({ ...prev, baseUrl: val }));
                   }}
                   placeholder={
-                    editKeyType === "claude" ? "例如：https://api.anthropic.com" : "baseUrl"
+                    editKeyType === "claude"
+                      ? t("providers.claude_base_url_placeholder")
+                      : t("providers.base_url_placeholder")
                   }
                 />
               </div>
               <div className="space-y-2">
-                <p className="text-xs font-semibold text-slate-700 dark:text-white/75">Proxy URL</p>
+                <p className="text-xs font-semibold text-slate-700 dark:text-white/75">
+                  {t("providers.proxy_url")}
+                </p>
                 <TextInput
                   value={keyDraft.proxyUrl}
                   onChange={(e) => {
                     const val = e.currentTarget.value;
                     setKeyDraft((prev) => ({ ...prev, proxyUrl: val }));
                   }}
-                  placeholder="proxyUrl"
+                  placeholder={t("providers.proxy_url_placeholder")}
                 />
               </div>
             </div>
             <p className="mt-2 text-xs text-slate-500 dark:text-white/55">
-              Base URL 用于切换上游地址；Proxy URL 用于单 Key 走独立代理（如内网/隧道）。
+              {t("providers.connection_proxy_hint")}
             </p>
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
             <KeyValueInputList
-              title="Headers（可选）"
+              title={t("providers.headers_optional")}
               entries={keyDraft.headersEntries}
               onChange={(next) => setKeyDraft((prev) => ({ ...prev, headersEntries: next }))}
-              keyPlaceholder="Header 名称"
-              valuePlaceholder="Header 值"
+              keyPlaceholder={t("providers.header_name_placeholder")}
+              valuePlaceholder={t("providers.header_value_placeholder")}
             />
             <p className="mt-2 text-xs text-slate-500 dark:text-white/55">
-              常见：<span className="font-mono">x-api-key</span>、
-              <span className="font-mono">anthropic-version</span>、自定义鉴权头等。
+              {t("providers.headers_common_hint")}
             </p>
           </div>
 
@@ -1374,8 +1439,8 @@ export function ProvidersPage() {
             <ModelInputList
               title={
                 editKeyType === "vertex"
-                  ? "Models（必须填写 alias：name => alias）"
-                  : "Models（可选）"
+                  ? t("providers.models_vertex_title")
+                  : t("providers.models_optional_title")
               }
               entries={keyDraft.modelEntries}
               onChange={(next) => setKeyDraft((prev) => ({ ...prev, modelEntries: next }))}
@@ -1384,11 +1449,11 @@ export function ProvidersPage() {
             />
             {editKeyType === "vertex" ? (
               <p className="mt-2 text-xs text-slate-500 dark:text-white/55">
-                Vertex 需要把“下游模型名”映射成 Vertex 可识别的名称，所以每条都必须填 alias。
+                {t("providers.vertex_alias_hint")}
               </p>
             ) : (
               <p className="mt-2 text-xs text-slate-500 dark:text-white/55">
-                不填写则使用默认路由；填写后可实现模型别名、优先级等高级路由。
+                {t("providers.models_default_hint")}
               </p>
             )}
           </div>
@@ -1396,21 +1461,21 @@ export function ProvidersPage() {
           <div className="rounded-2xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-sm font-semibold text-slate-900 dark:text-white">
-                Excluded Models（可选）
+                {t("providers.excluded_models_label")}
               </p>
               <div className="flex items-center gap-2">
                 <Button variant="secondary" size="sm" onClick={() => editKeyEnabledToggle(false)}>
-                  写入 * 禁用
+                  {t("providers.add_disable_all")}
                 </Button>
                 <Button variant="secondary" size="sm" onClick={() => editKeyEnabledToggle(true)}>
-                  移除 *
+                  {t("providers.remove_disable_all")}
                 </Button>
                 <Button
                   variant="secondary"
                   size="sm"
                   onClick={() => setKeyDraft((prev) => ({ ...prev, excludedModelsText: "" }))}
                 >
-                  清空
+                  {t("providers.clear")}
                 </Button>
               </div>
             </div>
@@ -1421,14 +1486,13 @@ export function ProvidersPage() {
                 const val = e.currentTarget.value;
                 setKeyDraft((prev) => ({ ...prev, excludedModelsText: val }));
               }}
-              placeholder="每行一个模型；写 * 表示禁用全部模型"
+              placeholder={t("providers.excluded_placeholder")}
               aria-label="excludedModels"
               className="mt-3 min-h-[140px] w-full resize-y rounded-2xl border border-slate-200 bg-white px-3 py-2 font-mono text-xs text-slate-900 outline-none transition placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-slate-400/35 dark:border-neutral-800 dark:bg-neutral-950 dark:text-slate-100 dark:placeholder:text-neutral-500 dark:focus-visible:ring-white/15"
             />
 
             <p className="mt-2 text-xs text-slate-500 dark:text-white/55">
-              当前排除：<span className="font-semibold tabular-nums">{editKeyExcludedCount}</span>{" "}
-              条（不含 *）。
+              {t("providers.excluded_count_hint", { count: editKeyExcludedCount })}
             </p>
           </div>
         </div>
@@ -1436,8 +1500,12 @@ export function ProvidersPage() {
 
       <Modal
         open={editOpenAIOpen}
-        title={`${editOpenAIIndex === null ? "新增" : "编辑"} OpenAI 提供商`}
-        description="配置 name/baseUrl、多个 apiKeyEntries、headers 与模型别名；支持通过 /models 自动拉取并合并。"
+        title={
+          editOpenAIIndex === null
+            ? t("providers.add_openai_provider")
+            : t("providers.edit_openai_provider")
+        }
+        description={t("providers.openai_config_desc")}
         onClose={closeOpenAIEditor}
         footer={
           <div className="flex flex-wrap items-center gap-2">
@@ -1447,11 +1515,11 @@ export function ProvidersPage() {
               </span>
             ) : null}
             <Button variant="secondary" onClick={closeOpenAIEditor}>
-              取消
+              {t("providers.cancel")}
             </Button>
             <Button variant="primary" onClick={() => void saveOpenAIDraft()}>
               <Check size={14} />
-              保存
+              {t("providers.save")}
             </Button>
           </div>
         }
@@ -1459,17 +1527,21 @@ export function ProvidersPage() {
         <div className="space-y-4">
           <div className="grid gap-3 md:grid-cols-2">
             <div className="space-y-2">
-              <p className="text-sm font-semibold text-slate-900 dark:text-white">Name</p>
+              <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                {t("providers.name")}
+              </p>
               <TextInput
                 value={openaiDraft.name}
                 onChange={(e) =>
                   setOpenaiDraft((prev) => ({ ...prev, name: e.currentTarget.value }))
                 }
-                placeholder="name"
+                placeholder={t("providers.name_placeholder")}
               />
             </div>
             <div className="space-y-2">
-              <p className="text-sm font-semibold text-slate-900 dark:text-white">Base URL</p>
+              <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                {t("providers.base_url")}
+              </p>
               <TextInput
                 value={openaiDraft.baseUrl}
                 onChange={(e) =>
@@ -1478,10 +1550,10 @@ export function ProvidersPage() {
                     baseUrl: e.currentTarget.value,
                   }))
                 }
-                placeholder="baseUrl"
+                placeholder={t("providers.base_url_placeholder")}
               />
               <p className="text-xs text-slate-500 dark:text-white/55">
-                /models 拉取地址：
+                {t("providers.models_fetch_url")}
                 {openaiDraft.baseUrl.trim() ? buildModelsEndpoint(openaiDraft.baseUrl) : "--"}
               </p>
             </div>
@@ -1489,44 +1561,46 @@ export function ProvidersPage() {
 
           <div className="grid gap-3 md:grid-cols-3">
             <div className="space-y-2">
-              <p className="text-sm font-semibold text-slate-900 dark:text-white">Prefix（可选）</p>
+              <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                {t("providers.prefix_optional")}
+              </p>
               <TextInput
                 value={openaiDraft.prefix}
                 onChange={(e) =>
                   setOpenaiDraft((prev) => ({ ...prev, prefix: e.currentTarget.value }))
                 }
-                placeholder="prefix"
+                placeholder={t("providers.prefix_placeholder")}
               />
             </div>
             <div className="space-y-2">
               <p className="text-sm font-semibold text-slate-900 dark:text-white">
-                Priority（可选）
+                {t("providers.priority_label")}
               </p>
               <TextInput
                 value={openaiDraft.priorityText}
                 onChange={(e) =>
                   setOpenaiDraft((prev) => ({ ...prev, priorityText: e.currentTarget.value }))
                 }
-                placeholder="数字"
+                placeholder={t("providers.priority_placeholder")}
                 inputMode="numeric"
               />
             </div>
             <div className="space-y-2">
               <p className="text-sm font-semibold text-slate-900 dark:text-white">
-                Test Model（可选）
+                {t("providers.test_model_label")}
               </p>
               <TextInput
                 value={openaiDraft.testModel}
                 onChange={(e) =>
                   setOpenaiDraft((prev) => ({ ...prev, testModel: e.currentTarget.value }))
                 }
-                placeholder="testModel"
+                placeholder={t("providers.test_model_placeholder")}
               />
             </div>
           </div>
 
           <KeyValueInputList
-            title="Provider Headers（可选）"
+            title={t("providers.provider_headers")}
             entries={openaiDraft.headersEntries}
             onChange={(next) => setOpenaiDraft((prev) => ({ ...prev, headersEntries: next }))}
           />
@@ -1534,7 +1608,7 @@ export function ProvidersPage() {
           <section className="space-y-2">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-sm font-semibold text-slate-900 dark:text-white">
-                API Key Entries
+                {t("providers.api_key_entries")}
               </p>
               <Button
                 variant="secondary"
@@ -1550,7 +1624,7 @@ export function ProvidersPage() {
                 }
               >
                 <Plus size={14} />
-                新增
+                {t("providers.add")}
               </Button>
             </div>
 
@@ -1562,7 +1636,7 @@ export function ProvidersPage() {
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <p className="text-sm font-semibold text-slate-900 dark:text-white">
-                      Key #{idx + 1}
+                      {t("providers.key_number", { num: idx + 1 })}
                     </p>
                     <Button
                       variant="danger"
@@ -1576,14 +1650,14 @@ export function ProvidersPage() {
                       disabled={openaiDraft.apiKeyEntries.length <= 1}
                     >
                       <Trash2 size={14} />
-                      删除
+                      {t("providers.delete")}
                     </Button>
                   </div>
 
                   <div className="mt-3 grid gap-3 md:grid-cols-2">
                     <div className="space-y-2">
                       <p className="text-sm font-semibold text-slate-900 dark:text-white">
-                        API Key
+                        {t("providers.api_key")}
                       </p>
                       <TextInput
                         value={entry.apiKey}
@@ -1596,10 +1670,12 @@ export function ProvidersPage() {
                             ),
                           }));
                         }}
-                        placeholder="apiKey"
+                        placeholder={t("providers.api_key_placeholder")}
                       />
                       <div className="flex items-center justify-between text-xs text-slate-500 dark:text-white/55">
-                        <span>展示：{maskApiKey(entry.apiKey)}</span>
+                        <span>
+                          {t("providers.show_masked_key", { key: maskApiKey(entry.apiKey) })}
+                        </span>
                         <Button
                           variant="ghost"
                           size="sm"
@@ -1607,13 +1683,13 @@ export function ProvidersPage() {
                           disabled={!entry.apiKey.trim()}
                         >
                           <Copy size={14} />
-                          复制
+                          {t("providers.copy")}
                         </Button>
                       </div>
                     </div>
                     <div className="space-y-2">
                       <p className="text-sm font-semibold text-slate-900 dark:text-white">
-                        Proxy URL（可选）
+                        {t("providers.proxy_url_optional")}
                       </p>
                       <TextInput
                         value={entry.proxyUrl}
@@ -1626,14 +1702,14 @@ export function ProvidersPage() {
                             ),
                           }));
                         }}
-                        placeholder="proxyUrl"
+                        placeholder={t("providers.proxy_url_placeholder")}
                       />
                     </div>
                   </div>
 
                   <div className="mt-3">
                     <KeyValueInputList
-                      title="Key Headers（可选）"
+                      title={t("providers.key_headers")}
                       entries={entry.headersEntries}
                       onChange={(next) => {
                         setOpenaiDraft((prev) => ({
@@ -1652,7 +1728,9 @@ export function ProvidersPage() {
 
           <section className="space-y-2">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-sm font-semibold text-slate-900 dark:text-white">Models</p>
+              <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                {t("providers.models_label")}
+              </p>
               <div className="flex items-center gap-2">
                 <Button
                   variant="secondary"
@@ -1661,7 +1739,7 @@ export function ProvidersPage() {
                   disabled={discovering}
                 >
                   <RefreshCw size={14} className={discovering ? "animate-spin" : ""} />
-                  拉取 /models
+                  {t("providers.fetch_models")}
                 </Button>
                 <Button
                   variant="secondary"
@@ -1670,13 +1748,13 @@ export function ProvidersPage() {
                   disabled={discoveredModels.length === 0}
                 >
                   <Check size={14} />
-                  合并所选
+                  {t("providers.merge_selected")}
                 </Button>
               </div>
             </div>
 
             <ModelInputList
-              title="模型列表（可选）"
+              title={t("providers.models_optional")}
               entries={openaiDraft.modelEntries}
               onChange={(next) => setOpenaiDraft((prev) => ({ ...prev, modelEntries: next }))}
               showPriority
@@ -1686,7 +1764,7 @@ export function ProvidersPage() {
             {discoveredModels.length ? (
               <div className="rounded-2xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
                 <p className="text-xs text-slate-600 dark:text-white/65">
-                  发现 {discoveredModels.length} 个模型（默认全选）
+                  {t("providers.found_models", { count: discoveredModels.length })}
                 </p>
                 <div className="mt-2 max-h-48 overflow-y-auto space-y-1">
                   {discoveredModels.map((model) => {
@@ -1727,15 +1805,17 @@ export function ProvidersPage() {
 
       <ConfirmModal
         open={confirm !== null}
-        title="确认删除"
+        title={t("providers.confirm_delete")}
         description={
           confirm?.type === "deleteOpenAI"
-            ? `确定要删除 OpenAI 提供商 “${openaiProviders[confirm.index]?.name ?? ""}” 吗？此操作不可恢复。`
+            ? t("providers.confirm_delete_openai", {
+                name: openaiProviders[confirm.index]?.name ?? "",
+              })
             : confirm?.type === "deleteKey"
-              ? "确定要删除该配置吗？此操作不可恢复。"
-              : "确定要删除吗？"
+              ? t("providers.confirm_delete_config")
+              : t("providers.confirm_delete_generic")
         }
-        confirmText="删除"
+        confirmText={t("providers.delete")}
         onClose={() => setConfirm(null)}
         onConfirm={() => {
           const action = confirm;
@@ -1748,6 +1828,6 @@ export function ProvidersPage() {
           void deleteKey(action.keyType, action.index);
         }}
       />
-    </div >
+    </div>
   );
 }

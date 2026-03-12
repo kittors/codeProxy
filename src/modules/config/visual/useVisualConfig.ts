@@ -522,7 +522,7 @@ export const VISUAL_CONFIG_PROTOCOL_OPTIONS: ReadonlyArray<{
   value: "" | PayloadProtocol;
   label: string;
 }> = [
-  { value: "", label: "默认" },
+  { value: "", label: "Default" },
   { value: "openai", label: "OpenAI" },
   { value: "openai-response", label: "OpenAI Response" },
   { value: "gemini", label: "Gemini" },
@@ -535,8 +535,8 @@ export const VISUAL_CONFIG_PAYLOAD_VALUE_TYPE_OPTIONS: ReadonlyArray<{
   value: PayloadParamValueType;
   label: string;
 }> = [
-  { value: "string", label: "字符串" },
-  { value: "number", label: "数字" },
-  { value: "boolean", label: "布尔" },
+  { value: "string", label: "String" },
+  { value: "number", label: "Number" },
+  { value: "boolean", label: "Boolean" },
   { value: "json", label: "JSON" },
 ];

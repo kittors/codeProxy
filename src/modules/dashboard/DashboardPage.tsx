@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Activity, RefreshCw, Sigma, TriangleAlert } from "lucide-react";
 import { usageApi, type DashboardSummary } from "@/lib/http/apis/usage";
 import { KpiCard } from "@/modules/monitor/MonitorPagePieces";
@@ -10,39 +11,42 @@ import { useToast } from "@/modules/ui/ToastProvider";
 
 type DashboardRange = 1 | 7 | 30;
 
-const RANGE_OPTIONS: ReadonlyArray<{ value: DashboardRange; label: string }> = [
-  { value: 1, label: "今天" },
-  { value: 7, label: "近 7 天" },
-  { value: 30, label: "近 30 天" },
-];
+const RANGE_KEYS: Record<DashboardRange, string> = {
+  1: "dashboard.today",
+  7: "dashboard.last_7_days",
+  30: "dashboard.last_30_days",
+};
 
 const formatNumber = (n: number) =>
   n >= 10_000 ? `${(n / 1000).toFixed(1)}k` : n.toLocaleString();
 
-const formatRate = (rate: number) =>
-  `${rate.toFixed(2)}%`;
+const formatRate = (rate: number) => `${rate.toFixed(2)}%`;
 
 export function DashboardPage() {
+  const { t } = useTranslation();
   const { notify } = useToast();
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [range, setRange] = useState<DashboardRange>(7);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const refresh = useCallback(async (days: DashboardRange) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await usageApi.getDashboardSummary(days);
-      setSummary(data);
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "数据获取失败";
-      setError(message);
-      notify({ type: "error", message });
-    } finally {
-      setLoading(false);
-    }
-  }, [notify]);
+  const refresh = useCallback(
+    async (days: DashboardRange) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await usageApi.getDashboardSummary(days);
+        setSummary(data);
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : t("dashboard.load_failed");
+        setError(message);
+        notify({ type: "error", message });
+      } finally {
+        setLoading(false);
+      }
+    },
+    [notify, t],
+  );
 
   useEffect(() => {
     void refresh(range);
@@ -55,21 +59,29 @@ export function DashboardPage() {
       {/* ── Header ── */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-lg font-semibold tracking-tight text-slate-900 dark:text-white">
-          仪表盘
+          {t("dashboard.heading")}
         </h2>
         <div className="flex flex-wrap items-center gap-2">
-          <Tabs value={String(range)} onValueChange={(next) => setRange(Number(next) as DashboardRange)}>
+          <Tabs
+            value={String(range)}
+            onValueChange={(next) => setRange(Number(next) as DashboardRange)}
+          >
             <TabsList>
-              {RANGE_OPTIONS.map((opt) => (
-                <TabsTrigger key={opt.value} value={String(opt.value)}>
-                  {opt.label}
+              {([1, 7, 30] as DashboardRange[]).map((val) => (
+                <TabsTrigger key={val} value={String(val)}>
+                  {t(RANGE_KEYS[val])}
                 </TabsTrigger>
               ))}
             </TabsList>
           </Tabs>
-          <Button variant="secondary" size="sm" onClick={() => void refresh(range)} disabled={loading}>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => void refresh(range)}
+            disabled={loading}
+          >
             <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
-            刷新
+            {t("dashboard.refresh")}
           </Button>
         </div>
       </div>
@@ -77,13 +89,13 @@ export function DashboardPage() {
       {/* ── Error State ── */}
       {error ? (
         <EmptyState
-          title="加载失败"
+          title={t("dashboard.load_failed")}
           description={error}
           icon={<TriangleAlert size={18} />}
           action={
             <Button variant="secondary" onClick={() => void refresh(range)}>
               <RefreshCw size={14} />
-              重试
+              {t("dashboard.retry")}
             </Button>
           }
         />
@@ -92,27 +104,37 @@ export function DashboardPage() {
       {/* ── KPI Row ── */}
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <KpiCard
-          title="请求数"
+          title={t("dashboard.total_requests")}
           value={<span className="tabular-nums">{formatNumber(kpi?.total_requests ?? 0)}</span>}
-          hint={`${range === 1 ? "今天" : `最近 ${range} 天`}的总请求数`}
+          hint={
+            range === 1
+              ? t("dashboard.total_hint_today")
+              : t("dashboard.total_hint_days", { count: range })
+          }
           icon={Activity}
         />
         <KpiCard
-          title="成功率"
+          title={t("dashboard.success_rate")}
           value={<span className="tabular-nums">{formatRate(kpi?.success_rate ?? 0)}</span>}
-          hint={`成功 ${formatNumber(kpi?.success_requests ?? 0)} · 失败 ${formatNumber(kpi?.failed_requests ?? 0)}`}
+          hint={t("dashboard.success_hint", {
+            success: formatNumber(kpi?.success_requests ?? 0),
+            failed: formatNumber(kpi?.failed_requests ?? 0),
+          })}
           icon={Sigma}
         />
         <KpiCard
-          title="Token 总量"
+          title={t("dashboard.total_tokens")}
           value={<span className="tabular-nums">{formatNumber(kpi?.total_tokens ?? 0)}</span>}
-          hint={`输入 ${formatNumber(kpi?.input_tokens ?? 0)} · 输出 ${formatNumber(kpi?.output_tokens ?? 0)}`}
+          hint={t("dashboard.token_hint", {
+            input: formatNumber(kpi?.input_tokens ?? 0),
+            output: formatNumber(kpi?.output_tokens ?? 0),
+          })}
           icon={Sigma}
         />
         <KpiCard
-          title="失败请求"
+          title={t("dashboard.failed_requests")}
           value={<span className="tabular-nums">{formatNumber(kpi?.failed_requests ?? 0)}</span>}
-          hint="失败请求数（用于定位 provider/key 质量问题）"
+          hint={t("dashboard.failed_hint")}
           icon={TriangleAlert}
         />
       </div>

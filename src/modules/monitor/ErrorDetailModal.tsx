@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { createPortal } from "react-dom";
 import { AlertTriangle, X, Loader2, Copy, Check } from "lucide-react";
 import { usageApi } from "@/lib/http/apis";
@@ -11,6 +12,7 @@ interface ErrorDetailModalProps {
 }
 
 export function ErrorDetailModal({ open, logId, model, onClose }: ErrorDetailModalProps) {
+    const { t } = useTranslation();
     const [visible, setVisible] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -35,9 +37,9 @@ export function ErrorDetailModal({ open, logId, model, onClose }: ErrorDetailMod
         usageApi.getLogContent(logId).then((res) => {
             setErrorContent(res.output_content || "");
         }).catch((err) => {
-            setError(err instanceof Error ? err.message : "加载失败");
+            setError(err instanceof Error ? err.message : t("error_detail.load_failed"));
         }).finally(() => setLoading(false));
-    }, [open, logId]);
+    }, [logId, open, t]);
 
     // Escape key
     useEffect(() => {
@@ -76,7 +78,7 @@ export function ErrorDetailModal({ open, logId, model, onClose }: ErrorDetailMod
             <button
                 type="button"
                 onClick={onClose}
-                aria-label="关闭"
+                aria-label={t("common.close")}
                 className={[
                     "absolute inset-0 cursor-default bg-slate-900/40 backdrop-blur-sm dark:bg-black/50",
                     "transition-opacity duration-200",
@@ -102,27 +104,27 @@ export function ErrorDetailModal({ open, logId, model, onClose }: ErrorDetailMod
                         </div>
                         <div className="min-w-0">
                             <h2 className="truncate text-base font-semibold tracking-tight text-red-900 dark:text-red-200">
-                                请求失败{model ? ` · ${model}` : ""}
+                                {t("error_detail.request_failed")}{model ? ` · ${model}` : ""}
                             </h2>
-                            <p className="mt-0.5 text-xs text-red-600/70 dark:text-red-400/60">上游 API 返回的错误响应</p>
+                            <p className="mt-0.5 text-xs text-red-600/70 dark:text-red-400/60">{t("error_detail.upstream_error")}</p>
                         </div>
                     </div>
                     <button
                         type="button"
                         onClick={onClose}
                         className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-red-200 bg-white/80 text-red-700 transition hover:bg-white dark:border-red-900/40 dark:bg-neutral-950/60 dark:text-red-300 dark:hover:bg-neutral-900"
-                        aria-label="关闭"
+                        aria-label={t("common.close")}
                     >
                         <X size={14} />
                     </button>
                 </div>
 
                 {/* Content */}
-                <div className="flex-1 overflow-y-auto overscroll-contain px-5 py-4">
+                <div className="min-w-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain px-5 py-4">
                     {loading ? (
                         <div className="flex items-center justify-center py-12">
                             <Loader2 size={22} className="animate-spin text-slate-400" />
-                            <span className="ml-2 text-sm text-slate-500">加载中…</span>
+                            <span className="ml-2 text-sm text-slate-500">{t("common.loading_ellipsis")}</span>
                         </div>
                     ) : error ? (
                         <div className="flex flex-col items-center justify-center py-12">
@@ -131,31 +133,31 @@ export function ErrorDetailModal({ open, logId, model, onClose }: ErrorDetailMod
                     ) : !errorContent ? (
                         <div className="flex flex-col items-center justify-center py-12 text-slate-400 dark:text-white/30">
                             <AlertTriangle size={32} className="mb-2 opacity-40" />
-                            <p className="text-sm">无错误内容记录</p>
+                            <p className="text-sm">{t("error_detail.no_content")}</p>
                         </div>
                     ) : (
                         <div className="space-y-3">
                             {/* Error summary */}
                             {errorMessage && (
-                                <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 dark:border-red-900/30 dark:bg-red-950/20">
-                                    <p className="text-sm font-medium text-red-700 dark:text-red-300">{errorMessage}</p>
+                                <div className="min-w-0 overflow-hidden rounded-xl border border-red-200 bg-red-50 px-4 py-3 dark:border-red-900/30 dark:bg-red-950/20">
+                                    <p className="text-sm font-medium text-red-700 dark:text-red-300" style={{ overflowWrap: 'anywhere', wordBreak: 'break-all' }}>{errorMessage}</p>
                                 </div>
                             )}
 
                             {/* Full response */}
                             <div className="relative">
                                 <div className="flex items-center justify-between mb-1.5">
-                                    <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-white/35">完整响应</span>
+                                    <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-white/35">{t("error_detail.full_response")}</span>
                                     <button
                                         type="button"
                                         onClick={handleCopy}
                                         className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium text-slate-500 transition hover:bg-slate-100 dark:text-white/40 dark:hover:bg-neutral-800"
                                     >
                                         {copied ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} />}
-                                        {copied ? "已复制" : "复制"}
+                                        {copied ? t("common.copied") : t("log_content.copy")}
                                     </button>
                                 </div>
-                                <pre className="max-h-[40vh] overflow-auto whitespace-pre-wrap break-words rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs leading-relaxed text-slate-800 dark:border-neutral-800 dark:bg-neutral-900 dark:text-slate-200">
+                                <pre className="max-h-[40vh] overflow-auto rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs leading-relaxed text-slate-800 dark:border-neutral-800 dark:bg-neutral-900 dark:text-slate-200" style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all', overflowWrap: 'anywhere' }}>
                                     {formattedContent}
                                 </pre>
                             </div>

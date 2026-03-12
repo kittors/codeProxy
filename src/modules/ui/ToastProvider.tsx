@@ -21,10 +21,10 @@ export function ToastProvider({ children }: PropsWithChildren) {
       const type = input.type ?? "info";
 
       const defaultTitles: Record<ToastType, string> = {
-        success: "成功",
-        error: "错误",
-        warning: "警告",
-        info: "提示",
+        success: "Success",
+        error: "Error",
+        warning: "Warning",
+        info: "Info",
       };
       const title = input.title ?? defaultTitles[type];
       const options: Record<string, unknown> = { description: input.message };
@@ -69,7 +69,7 @@ export function ToastProvider({ children }: PropsWithChildren) {
 export const useToast = (): ToastContextState => {
   const context = use(ToastContext);
   if (!context) {
-    throw new Error("useToast 必须在 ToastProvider 内使用");
+    throw new Error("useToast must be used within ToastProvider");
   }
   return context;
 };

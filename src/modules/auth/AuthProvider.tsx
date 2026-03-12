@@ -223,7 +223,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 export const useAuth = (): AuthContextState => {
   const context = use(AuthContext);
   if (!context) {
-    throw new Error("useAuth 必须在 AuthProvider 内使用");
+    throw new Error("useAuth must be used within AuthProvider");
   }
   return context;
 };

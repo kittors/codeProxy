@@ -178,7 +178,7 @@ export function TabsContent({
 const useTabs = (): TabsContextState => {
   const context = use(TabsContext);
   if (!context) {
-    throw new Error("Tabs 组件必须在 <Tabs> 内使用");
+    throw new Error("Tabs components must be used within <Tabs>");
   }
   return context;
 };

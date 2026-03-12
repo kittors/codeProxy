@@ -142,7 +142,7 @@ export function useDisableModel(options: UseDisableModelOptions): UseDisableMode
       addDisabledModel(disableState.source, disableState.model);
       setDisableState(null);
     } catch (err) {
-      console.error("禁用模型失败：", err);
+      console.error("Disable model failed: ", err);
       alert(err instanceof Error ? err.message : t("monitor.logs.disable_error"));
     } finally {
       setDisabling(false);

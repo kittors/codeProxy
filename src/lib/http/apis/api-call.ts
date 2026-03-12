@@ -49,7 +49,7 @@ export const getApiCallErrorMessage = (result: ApiCallResult): string => {
 
   if (status && message) return `${status} ${message}`.trim();
   if (status) return `HTTP ${status}`;
-  return message || "请求失败";
+  return message || "Request failed";
 };
 
 export const apiCallApi = {

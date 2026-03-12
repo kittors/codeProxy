@@ -13,6 +13,8 @@ import {
   stripDisableAllModelsRule,
 } from "@/modules/providers/providers-helpers";
 
+import { useTranslation } from "react-i18next";
+
 export function ProviderKeyListCard({
   icon: Icon,
   title,
@@ -22,7 +24,7 @@ export function ProviderKeyListCard({
   onEdit,
   onDelete,
   onToggleEnabled,
-  onCopy,
+
   getStats,
   getStatusBar,
 }: {
@@ -37,6 +39,7 @@ export function ProviderKeyListCard({
   getStats: (item: ProviderSimpleConfig) => KeyStatBucket;
   getStatusBar: (item: ProviderSimpleConfig) => StatusBarData;
 }) {
+  const { t } = useTranslation();
   return (
     <Card
       title={title}
@@ -44,12 +47,12 @@ export function ProviderKeyListCard({
       actions={
         <Button variant="primary" size="sm" onClick={onAdd}>
           <Plus size={14} />
-          新增
+          {t("providers.add_new")}
         </Button>
       }
     >
       {items.length === 0 ? (
-        <EmptyState title="暂无配置" description="点击“新增”创建第一条配置。" />
+        <EmptyState title={t("providers.no_config")} description={t("providers.no_config_desc")} />
       ) : (
         <div className="space-y-3">
           {items.map((item, idx) => {
@@ -71,13 +74,9 @@ export function ProviderKeyListCard({
                       <Icon size={16} className="text-slate-900 dark:text-white" />
                       <span className="truncate">{item.name || maskApiKey(item.apiKey)}</span>
                       {disabled ? (
-                        <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-semibold text-amber-700 dark:text-amber-200">
-                          已禁用
-                        </span>
+                        <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-semibold text-amber-700 dark:text-amber-200">{t("providers.disabled")}</span>
                       ) : (
-                        <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:text-emerald-200">
-                          已启用
-                        </span>
+                        <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:text-emerald-200">{t("providers.enabled")}</span>
                       )}
                     </p>
 
@@ -88,8 +87,7 @@ export function ProviderKeyListCard({
                         <p className="truncate font-mono">proxyUrl：{item.proxyUrl}</p>
                       ) : null}
                       <p className="tabular-nums">
-                        models：{models.length} · excluded：{excludedModels.length} · headers：
-                        {headerEntries.length} · 成功：{stats.success} · 失败：{stats.failure}
+                        {t("providers.models_label")}: {models.length} · {t("providers.excluded_models_label")}: {excludedModels.length} · {t("providers.headers_optional")}: {headerEntries.length} · {t("providers.success_stats", { count: stats.success })} · {t("providers.failed_stats", { count: stats.failure })}
                       </p>
                     </div>
 
@@ -145,24 +143,18 @@ export function ProviderKeyListCard({
                   <div className="flex flex-wrap items-center gap-2">
                     {onToggleEnabled ? (
                       <div className="inline-flex items-center gap-2">
-                        <span className="text-sm font-semibold leading-none text-slate-900 dark:text-white">
-                          启用
-                        </span>
+                        <span className="text-sm font-semibold leading-none text-slate-900 dark:text-white">{t("providers.enable")}</span>
                         <ToggleSwitch
                           checked={!disabled}
-                          ariaLabel="启用"
+                          ariaLabel={t("providers.enable")}
                           onCheckedChange={(enabled) => onToggleEnabled(idx, enabled)}
                         />
                       </div>
                     ) : null}
                     <Button variant="secondary" size="sm" onClick={() => onEdit(idx)}>
-                      <Settings2 size={14} />
-                      编辑
-                    </Button>
+                      <Settings2 size={14} />{t("providers.edit")}</Button>
                     <Button variant="danger" size="sm" onClick={() => onDelete(idx)}>
-                      <Trash2 size={14} />
-                      删除
-                    </Button>
+                      <Trash2 size={14} />{t("providers.delete")}</Button>
                   </div>
                 </div>
               </div>

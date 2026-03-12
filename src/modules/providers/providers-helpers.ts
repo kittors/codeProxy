@@ -112,13 +112,13 @@ export const commitModelEntries = (
 
     const alias = draft.alias.trim();
     if (options?.requireAlias && !alias) {
-      return { error: "models 必须填写 alias（使用 name => alias）" };
+      return { error: "Models must have alias (name => alias)" };
     }
 
     const priorityText = draft.priorityText.trim();
     const priority = priorityText !== "" ? Number(priorityText) : undefined;
     if (priority !== undefined && !Number.isFinite(priority)) {
-      return { error: `模型 ${name} 的 priority 必须是数字` };
+      return { error: `Model ${name} priority must be a number` };
     }
 
     const testModel = draft.testModel.trim();

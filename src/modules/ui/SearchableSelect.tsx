@@ -47,8 +47,8 @@ export function SearchableSelect({
     value,
     onChange,
     options,
-    placeholder = "请选择",
-    searchPlaceholder = "搜索…",
+    placeholder = "",
+    searchPlaceholder = "",
     "aria-label": ariaLabel,
     name,
     className,
@@ -197,7 +197,7 @@ export function SearchableSelect({
                         <div className="flex-1 overflow-y-auto p-1">
                             {filtered.length === 0 ? (
                                 <div className="px-2.5 py-3 text-center text-xs text-slate-400 dark:text-white/30">
-                                    无匹配结果
+                                    No results
                                 </div>
                             ) : (
                                 filtered.map((opt) => {

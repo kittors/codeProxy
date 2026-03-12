@@ -73,7 +73,7 @@ export function Modal({
           if (!open) return;
           onClose();
         }}
-        aria-label="关闭弹窗"
+        aria-label="close"
         className={[
           "absolute inset-0 cursor-default bg-slate-900/40 backdrop-blur-sm dark:bg-black/50",
           "transition-opacity duration-200 ease-out motion-reduce:transition-none",
@@ -104,7 +104,7 @@ export function Modal({
             onClick={onClose}
             disabled={!open}
             className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white/70 text-slate-700 shadow-sm transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/35 disabled:opacity-60 dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-slate-200 dark:hover:bg-neutral-950/80 dark:focus-visible:ring-white/15"
-            aria-label="关闭"
+            aria-label="close"
           >
             <X size={16} />
           </button>

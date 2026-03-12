@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState, type FormEvent } from "react";
+import { useTranslation } from "react-i18next";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { Eye, EyeOff, Lock } from "lucide-react";
 import { detectApiBaseFromLocation, normalizeApiBase } from "@/lib/connection";
@@ -17,6 +18,7 @@ interface RedirectState {
 }
 
 export function LoginPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const {
@@ -49,7 +51,7 @@ export function LoginPage() {
       event.preventDefault();
 
       if (!managementKey.trim()) {
-        notify({ type: "error", message: "请输入管理密钥" });
+        notify({ type: "error", message: t("login.error_management_key_required") });
         return;
       }
 
@@ -60,18 +62,18 @@ export function LoginPage() {
           managementKey,
           rememberPassword,
         });
-        notify({ type: "success", message: "登录成功" });
+        notify({ type: "success", message: t("login.login_success") });
         const redirect = (location.state as RedirectState | null)?.from?.pathname ?? "/monitor";
         navigate(redirect, { replace: true, viewTransition: true });
       } catch (submitError) {
         const message =
-          submitError instanceof Error ? submitError.message : "登录失败，请检查地址和密钥";
+          submitError instanceof Error ? submitError.message : t("login.error_invalid");
         notify({ type: "error", message });
       } finally {
         setLoading(false);
       }
     },
-    [apiBase, login, location.state, managementKey, navigate, notify, rememberPassword],
+    [apiBase, login, location.state, managementKey, navigate, notify, rememberPassword, t],
   );
 
   if (isRestoring) {
@@ -104,18 +106,18 @@ export function LoginPage() {
 
               <div className="space-y-6">
                 <h1 className="text-5xl font-semibold leading-[1.05] tracking-tight text-slate-900 sm:text-6xl dark:text-white">
-                  面向 Agent 工程的
+                  {t("login.hero_title_line1")}
                   <br />
-                  统一代理平台
+                  {t("login.hero_title_line2")}
                 </h1>
                 <p className="max-w-xl text-sm leading-7 text-slate-600 dark:text-white/70">
-                  登录管理控制台，继续查看网关状态与调用监控数据。
+                  {t("login.hero_description")}
                 </p>
               </div>
 
               <div className="space-y-4">
                 <div className="text-xs font-semibold tracking-[0.26em] text-slate-500 dark:text-white/50">
-                  TRUSTED BY
+                  {t("login.trusted_by")}
                 </div>
                 <div className="flex flex-wrap gap-3 text-sm text-slate-700 dark:text-white/80">
                   <span className="inline-flex items-center gap-2 rounded-full bg-white/70 px-4 py-2 ring-1 ring-slate-200 backdrop-blur dark:bg-neutral-950/50 dark:ring-white/10">
@@ -141,12 +143,12 @@ export function LoginPage() {
             <section className="relative">
               <div className="rounded-[34px] border border-slate-200 bg-white/90 p-8 text-slate-900 shadow-[0_30px_80px_-60px_rgba(15,23,42,0.6)] backdrop-blur dark:border-neutral-800 dark:bg-neutral-950/70 dark:text-slate-50 dark:shadow-[0_30px_80px_-60px_rgba(0,0,0,0.8)]">
                 <div className="space-y-6">
-                  <h2 className="text-center text-3xl font-semibold tracking-tight">登录</h2>
+                  <h2 className="text-center text-3xl font-semibold tracking-tight">{t("login.sign_in")}</h2>
 
                   <div className="flex items-center gap-4">
                     <div className="h-px flex-1 bg-slate-200 dark:bg-white/10" />
                     <div className="text-xs text-slate-500 dark:text-white/50">
-                      使用管理密钥继续
+                      {t("login.continue_with_key")}
                     </div>
                     <div className="h-px flex-1 bg-slate-200 dark:bg-white/10" />
                   </div>
@@ -154,29 +156,29 @@ export function LoginPage() {
                   <form onSubmit={handleSubmit} className="space-y-5">
                     <label className="block space-y-2">
                       <span className="text-xs font-medium text-slate-600 dark:text-white/60">
-                        API 地址
+                        {t("login.connection_title")}
                       </span>
                       <TextInput
                         value={apiBase}
                         onChange={(event) => setApiBase(event.target.value)}
-                        placeholder="例如：http://localhost:8317"
+                        placeholder={t("login.custom_connection_placeholder")}
                         autoComplete="url"
                         className="rounded-full px-5 py-3"
                       />
                       <p className="text-[11px] leading-5 text-slate-500 dark:text-white/50">
-                        连接地址：{managementEndpoint}
+                        {t("login.endpoint_label")}: {managementEndpoint}
                       </p>
                     </label>
 
                     <label className="block space-y-2">
                       <span className="text-xs font-medium text-slate-600 dark:text-white/60">
-                        管理密钥
+                        {t("login.management_key_label")}
                       </span>
                       <TextInput
                         value={managementKey}
                         onChange={(event) => setManagementKey(event.target.value)}
                         type={showKey ? "text" : "password"}
-                        placeholder="请输入 MANAGEMENT_KEY"
+                        placeholder={t("login.placeholder")}
                         autoComplete="current-password"
                         className="rounded-full px-5 py-3"
                         endAdornment={
@@ -184,7 +186,7 @@ export function LoginPage() {
                             type="button"
                             onClick={() => setShowKey((value) => !value)}
                             className="rounded-full p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700 dark:text-white/70 dark:hover:bg-white/10 dark:hover:text-white"
-                            aria-label={showKey ? "隐藏管理密钥" : "显示管理密钥"}
+                            aria-label={showKey ? t("login.hide_key") : t("login.show_key")}
                           >
                             {showKey ? <EyeOff size={16} /> : <Eye size={16} />}
                           </button>
@@ -199,7 +201,7 @@ export function LoginPage() {
                         onChange={(event) => setRememberPassword(event.target.checked)}
                         className="h-4 w-4 rounded border-slate-300 dark:border-white/20 dark:bg-neutral-900"
                       />
-                      记住本次登录
+                      {t("login.remember_password_label")}
                     </label>
 
                     <button
@@ -207,7 +209,7 @@ export function LoginPage() {
                       disabled={loading}
                       className="w-full rounded-full bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70 dark:bg-white/10 dark:hover:bg-white/15"
                     >
-                      {loading ? "登录中..." : "进入管理后台"}
+                      {loading ? t("login.signing_in") : t("login.submit_button")}
                     </button>
                   </form>
                 </div>

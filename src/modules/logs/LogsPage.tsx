@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import {
   useCallback,
   useEffect,
@@ -281,6 +282,7 @@ const getStatusStyles = (statusCode: number): string => {
 };
 
 export function LogsPage() {
+  const { t } = useTranslation();
   const { notify } = useToast();
 
   const [tab, setTab] = useState<"content" | "errors">("content");
@@ -376,7 +378,7 @@ export function LogsPage() {
           setBuffer((prev) => trimAndAppend(prev, lines));
         }
       } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : "日志拉取失败";
+        const message = err instanceof Error ? err.message : t("logs_page.failed_fetch");
         notifyRef.current({ type: "error", message });
       } finally {
         if (shouldBlockUi) setLoading(false);
@@ -468,9 +470,9 @@ export function LogsPage() {
       stickToBottomRef.current = true;
       setIsAtBottom(true);
       setDisplayCount(INITIAL_DISPLAY_LINES);
-      notify({ type: "success", message: "已清空服务器日志" });
+      notify({ type: "success", message: t("logs_page.logs_cleared") });
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "清空日志失败";
+      const message = err instanceof Error ? err.message : t("logs_page.failed_clear");
       notify({ type: "error", message });
     }
   }, [notify]);
@@ -482,7 +484,7 @@ export function LogsPage() {
       const files = Array.isArray(result?.files) ? (result.files as ErrorLogItem[]) : [];
       setErrorLogs(files);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "获取错误日志列表失败";
+      const message = err instanceof Error ? err.message : t("logs_page.failed_fetch_error_list");
       notify({ type: "error", message });
     } finally {
       setErrorLogsLoading(false);
@@ -502,7 +504,7 @@ export function LogsPage() {
         const blob = await logsApi.downloadErrorLog(file.name);
         downloadBlob(blob, file.name);
       } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : "下载错误日志失败";
+        const message = err instanceof Error ? err.message : t("logs_page.failed_download_error_log");
         notify({ type: "error", message });
       }
     },
@@ -511,7 +513,7 @@ export function LogsPage() {
 
   const handleDownloadLogs = useCallback(() => {
     if (filteredLines.length === 0) {
-      notify({ type: "info", message: "暂无可下载的日志内容" });
+      notify({ type: "info", message: t("logs_page.no_download_content") });
       return;
     }
     const text = filteredLines.join("\n");
@@ -521,20 +523,20 @@ export function LogsPage() {
       ? "unknown"
       : date.toISOString().replace(/[:.]/g, "-");
     downloadBlob(blob, `logs-${stamp}.txt`);
-    notify({ type: "success", message: "已开始下载日志文件" });
+    notify({ type: "success", message: t("logs_page.download_started") });
   }, [filteredLines, notify]);
 
   const handleDownloadRequestLog = useCallback(async () => {
     const id = requestLogId.trim();
     if (!id) {
-      notify({ type: "info", message: "请输入请求 ID" });
+      notify({ type: "info", message: t("logs_page.enter_request_id") });
       return;
     }
     try {
       const blob = await logsApi.downloadRequestLogById(id);
       downloadBlob(blob, `request-log-${id}.log`);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "下载请求日志失败";
+      const message = err instanceof Error ? err.message : t("logs_page.failed_download_request_log");
       notify({ type: "error", message });
     }
   }, [notify, requestLogId]);
@@ -549,14 +551,14 @@ export function LogsPage() {
     <div className="space-y-6">
       <Tabs value={tab} onValueChange={(next) => setTab(next as typeof tab)}>
         <TabsList>
-          <TabsTrigger value="content">日志内容</TabsTrigger>
-          <TabsTrigger value="errors">错误日志</TabsTrigger>
+          <TabsTrigger value="content">{t("logs_page.log_content")}</TabsTrigger>
+          <TabsTrigger value="errors">{t("logs_page.error_logs")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="content">
           <Card
-            title="实时日志"
-            description={`最新时间：${latestLabel}（仅保留前端缓冲最近 ${MAX_BUFFER_LINES} 行）`}
+            title={t("logs_page.live_logs")}
+            description={t("logs_page.latest_label", { time: latestLabel, max: MAX_BUFFER_LINES.toLocaleString() })}
             actions={
               <div className="flex flex-wrap items-center gap-2">
                 <Button
@@ -566,7 +568,7 @@ export function LogsPage() {
                   disabled={loading || refreshing}
                 >
                   <RefreshCw size={14} className={refreshing ? "animate-spin" : ""} />
-                  刷新
+                  {t("logs_page.refresh")}
                 </Button>
                 <Button
                   variant="secondary"
@@ -575,7 +577,7 @@ export function LogsPage() {
                   disabled={loading || filteredLines.length === 0}
                 >
                   <Download size={14} />
-                  下载
+                  {t("logs_page.download")}
                 </Button>
                 <Button
                   variant="danger"
@@ -584,7 +586,7 @@ export function LogsPage() {
                   disabled={loading || refreshing}
                 >
                   <Trash2 size={14} />
-                  清空
+                  {t("logs_page.clear")}
                 </Button>
               </div>
             }
@@ -594,7 +596,7 @@ export function LogsPage() {
               <TextInput
                 value={search}
                 onChange={(e) => setSearch(e.currentTarget.value)}
-                placeholder="搜索关键字（大小写不敏感）…"
+                placeholder={t("logs_page.search_placeholder")}
                 type="search"
                 name="log_search"
                 autoComplete="off"
@@ -605,8 +607,11 @@ export function LogsPage() {
               <div className="rounded-2xl border border-slate-200 bg-white/60 px-4 py-3 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/40">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="text-xs text-slate-600 dark:text-white/65">
-                    自动刷新：{autoRefresh ? "开启" : "关闭"} · 屏蔽管理端流量：
-                    {hideManagement ? "开启" : "关闭"} · 原始日志：{showRawLogs ? "开启" : "关闭"}
+                    {t("logs_page.status_summary", {
+                      autoRefresh: autoRefresh ? t("logs_page.auto_refresh_on") : t("logs_page.auto_refresh_off"),
+                      hideManagement: hideManagement ? t("logs_page.auto_refresh_on") : t("logs_page.auto_refresh_off"),
+                      rawLogs: showRawLogs ? t("logs_page.auto_refresh_on") : t("logs_page.auto_refresh_off"),
+                    })}
                   </div>
                   <Button
                     variant="ghost"
@@ -621,29 +626,29 @@ export function LogsPage() {
                         optionsOpen ? "rotate-180" : "rotate-0",
                       ].join(" ")}
                     />
-                    {optionsOpen ? "收起选项" : "展开选项"}
+                    {optionsOpen ? t("logs_page.collapse_options") : t("logs_page.expand_options")}
                   </Button>
                 </div>
 
                 {optionsOpen ? (
                   <div className="mt-3 grid gap-4 border-t border-slate-200 pt-4 dark:border-neutral-800 sm:grid-cols-2">
                     <ToggleSwitch
-                      label="自动刷新"
-                      description="每 3 秒拉取增量日志"
+                      label={t("logs_page.auto_refresh")}
+                      description={t("logs_page.auto_refresh_desc")}
                       checked={autoRefresh}
                       onCheckedChange={setAutoRefresh}
                       disabled={loading}
                     />
                     <ToggleSwitch
-                      label="屏蔽管理端流量"
-                      description="过滤 /v0/management 相关日志"
+                      label={t("logs_page.hide_mgmt")}
+                      description={t("logs_page.hide_mgmt_desc")}
                       checked={hideManagement}
                       onCheckedChange={setHideManagement}
                       disabled={loading}
                     />
                     <ToggleSwitch
-                      label="显示原始日志"
-                      description="以纯文本方式展示，便于整段复制。"
+                      label={t("logs_page.show_raw")}
+                      description={t("logs_page.raw_desc")}
                       checked={showRawLogs}
                       onCheckedChange={setShowRawLogs}
                       disabled={loading}
@@ -658,11 +663,10 @@ export function LogsPage() {
                 <div className="min-w-0">
                   <span
                     className="block truncate whitespace-nowrap tabular-nums"
-                    title={`显示 ${visibleLines.length.toLocaleString()} / ${filteredLines.length.toLocaleString()} 行${canLoadMore ? "（滚动到顶部自动加载更多）" : ""}`}
+                    title={t("logs_page.showing_lines", { visible: visibleLines.length.toLocaleString(), total: filteredLines.length.toLocaleString() }) + (canLoadMore ? " " + t("logs_page.scroll_up_hint") : "")}
                   >
-                    显示 {visibleLines.length.toLocaleString()} /{" "}
-                    {filteredLines.length.toLocaleString()} 行
-                    {canLoadMore ? "（滚动到顶部自动加载更多）" : ""}
+                    {t("logs_page.showing_lines", { visible: visibleLines.length.toLocaleString(), total: filteredLines.length.toLocaleString() })}
+                    {canLoadMore ? " " + t("logs_page.scroll_up_hint") : ""}
                   </span>
                 </div>
                 <div className="shrink-0">
@@ -675,7 +679,7 @@ export function LogsPage() {
                       visibleLines.length === 0 || isAtBottom ? "pointer-events-none opacity-0" : ""
                     }
                   >
-                    跳到最新
+                    {t("logs_page.jump_to_latest")}
                   </Button>
                 </div>
               </div>
@@ -687,8 +691,8 @@ export function LogsPage() {
                 {visibleLines.length === 0 ? (
                   <div className="px-1 py-4">
                     <EmptyState
-                      title="暂无日志"
-                      description="你可以点击“刷新”或开启“自动刷新”来拉取最新日志。"
+                      title={t("logs_page.no_logs")}
+                      description={t("logs_page.no_logs_desc")}
                     />
                   </div>
                 ) : showRawLogs ? (
@@ -779,8 +783,8 @@ export function LogsPage() {
 
         <TabsContent value="errors">
           <Card
-            title="错误日志"
-            description="从服务器拉取错误日志文件列表，并支持按请求 ID 下载日志。"
+            title={t("logs_page.error_logs_title")}
+            description={t("logs_page.error_fetch_desc")}
             actions={
               <div className="flex flex-wrap items-center gap-2">
                 <Button
@@ -790,7 +794,7 @@ export function LogsPage() {
                   disabled={errorLogsLoading}
                 >
                   <RefreshCw size={14} className={errorLogsLoading ? "animate-spin" : ""} />
-                  刷新列表
+                  {t("logs_page.refresh_list")}
                 </Button>
               </div>
             }
@@ -800,17 +804,17 @@ export function LogsPage() {
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="min-w-0">
                     <p className="text-sm font-semibold text-slate-900 dark:text-white">
-                      按请求 ID 下载
+                      {t("logs_page.request_id_download_title")}
                     </p>
                     <p className="mt-1 text-sm text-slate-600 dark:text-white/65">
-                      输入请求 ID（8位），下载该请求对应日志文件。
+                      {t("logs_page.request_id_download_desc")}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
                     <TextInput
                       value={requestLogId}
                       onChange={(e) => setRequestLogId(e.currentTarget.value)}
-                      placeholder="请求 ID（8位）…"
+                      placeholder={t("logs_page.request_id_placeholder")}
                       name="request_log_id"
                       autoComplete="off"
                       spellCheck={false}
@@ -822,25 +826,25 @@ export function LogsPage() {
                       onClick={handleDownloadRequestLog}
                       disabled={requestLogId.trim().length === 0}
                     >
-                      下载
+                      {t("logs_page.download")}
                     </Button>
                   </div>
                 </div>
               </div>
 
               <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
-                <p className="text-sm font-semibold text-slate-900 dark:text-white">错误日志文件</p>
+                <p className="text-sm font-semibold text-slate-900 dark:text-white">{t("logs_page.error_log_files")}</p>
                 <p className="mt-1 text-sm text-slate-600 dark:text-white/65">
-                  列表按文件名展示，点击“下载”获取对应文件。
+                  {t("logs_page.error_log_list_desc")}
                 </p>
 
                 <div className="mt-4">
                   {errorLogsLoading ? (
-                    <div className="text-sm text-slate-600 dark:text-white/65">加载中…</div>
+                    <div className="text-sm text-slate-600 dark:text-white/65">{t("logs_page.loading")}</div>
                   ) : errorLogs.length === 0 ? (
                     <EmptyState
-                      title="暂无错误日志"
-                      description="当前服务器没有可下载的错误日志文件。"
+                      title={t("logs_page.no_error_logs")}
+                      description={t("logs_page.no_error_desc")}
                     />
                   ) : (
                     <div className="space-y-2">
@@ -855,13 +859,13 @@ export function LogsPage() {
                             </p>
                             <p className="mt-1 text-xs text-slate-600 dark:text-white/65">
                               {typeof file.size === "number"
-                                ? `${file.size.toLocaleString()} bytes`
+                                ? t("logs_page.bytes", { size: file.size.toLocaleString() })
                                 : "--"}{" "}
                               ·{" "}
                               {typeof file.modified === "number"
                                 ? new Date(
-                                    file.modified < 1e12 ? file.modified * 1000 : file.modified,
-                                  ).toLocaleString()
+                                  file.modified < 1e12 ? file.modified * 1000 : file.modified,
+                                ).toLocaleString()
                                 : "--"}
                             </p>
                           </div>
@@ -871,7 +875,7 @@ export function LogsPage() {
                             onClick={() => void downloadErrorLog(file)}
                           >
                             <Download size={14} />
-                            下载
+                            {t("logs_page.download")}
                           </Button>
                         </div>
                       ))}
@@ -886,9 +890,9 @@ export function LogsPage() {
 
       <ConfirmModal
         open={confirmClearOpen}
-        title="清空服务器日志"
-        description="确定要清空服务器日志吗？此操作不可恢复。"
-        confirmText="清空"
+        title={t("logs_page.clear_server_logs")}
+        description={t("logs_page.confirm_clear_logs")}
+        confirmText={t("logs_page.confirm_clear_btn")}
         onClose={() => setConfirmClearOpen(false)}
         onConfirm={() => {
           setConfirmClearOpen(false);

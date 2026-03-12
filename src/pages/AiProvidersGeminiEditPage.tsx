@@ -205,8 +205,8 @@ export function AiProvidersGeminiEditPage() {
         ) : (
           <>
             <Input
-              label="渠道名称"
-              placeholder="例如：Gemini 主力渠道（必填）"
+              label={t("providers.channel_name")}
+              placeholder={t("providers.gemini_channel_hint")}
               value={form.name ?? ""}
               onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
               disabled={disableControls || saving}

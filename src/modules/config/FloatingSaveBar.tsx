@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { Check, RefreshCw, Save } from "lucide-react";
 import { Button } from "@/modules/ui/Button";
 
@@ -12,36 +13,36 @@ interface FloatingSaveBarProps {
     reloadDisabled?: boolean;
 }
 
-const STATUS_CONFIG: Record<
-    SaveBarStatus,
-    { label: string; icon?: ReactNode; tone: string; dot?: boolean }
-> = {
+const STATUS_TONE: Record<SaveBarStatus, { icon?: ReactNode; tone: string; dot?: boolean }> = {
     saved: {
-        label: "已保存",
         icon: <Check size={12} strokeWidth={3} />,
         tone: "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-400/20 dark:bg-emerald-500/15 dark:text-emerald-300",
     },
     dirty: {
-        label: "未保存",
         dot: true,
         tone: "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-400/20 dark:bg-amber-500/15 dark:text-amber-200",
     },
     saving: {
-        label: "保存中…",
         tone: "border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-400/20 dark:bg-sky-500/15 dark:text-sky-200",
     },
     loading: {
-        label: "加载中…",
         tone: "border-slate-200 bg-slate-50 text-slate-600 dark:border-neutral-700 dark:bg-neutral-800/60 dark:text-slate-300",
     },
     error: {
-        label: "加载失败",
         tone: "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-400/20 dark:bg-rose-500/15 dark:text-rose-300",
     },
     offline: {
-        label: "离线",
         tone: "border-slate-200 bg-slate-100 text-slate-500 dark:border-neutral-700 dark:bg-neutral-800/60 dark:text-slate-400",
     },
+};
+
+const STATUS_LABEL_KEYS: Record<SaveBarStatus, string> = {
+    saved: "floating_save_bar.saved",
+    dirty: "floating_save_bar.unsaved",
+    saving: "floating_save_bar.saving",
+    loading: "floating_save_bar.loading",
+    error: "floating_save_bar.load_failed",
+    offline: "floating_save_bar.offline",
 };
 
 export function FloatingSaveBar({
@@ -51,7 +52,8 @@ export function FloatingSaveBar({
     saveDisabled,
     reloadDisabled,
 }: FloatingSaveBarProps) {
-    const config = STATUS_CONFIG[status];
+    const { t } = useTranslation();
+    const toneConfig = STATUS_TONE[status];
 
     // Track visibility with delayed exit for smooth transition
     const shouldShow = status === "dirty" || status === "saving";
@@ -97,7 +99,8 @@ export function FloatingSaveBar({
 
     if (!rendered) return null;
 
-    const displayConfig = justSaved ? STATUS_CONFIG.saved : config;
+    const displayTone = justSaved ? STATUS_TONE.saved : toneConfig;
+    const displayLabel = t(justSaved ? STATUS_LABEL_KEYS.saved : STATUS_LABEL_KEYS[status]);
 
     return (
         <div
@@ -127,12 +130,12 @@ export function FloatingSaveBar({
                     className={[
                         "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-semibold",
                         "transition-all duration-300",
-                        displayConfig.tone,
+                        displayTone.tone,
                     ].join(" ")}
                 >
-                    {displayConfig.icon}
-                    <span className="tabular-nums">{displayConfig.label}</span>
-                    {displayConfig.dot && (
+                    {displayTone.icon}
+                    <span className="tabular-nums">{displayLabel}</span>
+                    {displayTone.dot && (
                         <span className="relative flex h-1.5 w-1.5">
                             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-500/60 dark:bg-amber-400/40" />
                             <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-amber-500 dark:bg-amber-400" />
@@ -153,7 +156,7 @@ export function FloatingSaveBar({
                         className="h-8 gap-1.5 px-2.5 text-xs"
                     >
                         <RefreshCw size={13} className={status === "loading" ? "animate-spin" : ""} />
-                        重载
+                        {t("floating_save_bar.reload")}
                     </Button>
                     <Button
                         variant="primary"
@@ -163,7 +166,7 @@ export function FloatingSaveBar({
                         className="h-8 gap-1.5 px-3 text-xs"
                     >
                         {justSaved ? <Check size={13} /> : <Save size={13} />}
-                        {justSaved ? "已保存" : "保存"}
+                        {justSaved ? t("floating_save_bar.saved") : t("floating_save_bar.save")}
                     </Button>
                 </div>
             </div>

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { usageApi } from "@/lib/http/apis";
 import { createPortal } from "react-dom";
 import {
@@ -48,73 +49,73 @@ type Msg = { role: string; content: string };
 
 const ROLE_STYLES: Record<
     string,
-    { label: string; icon: ReactNode; border: string; headerBg: string; headerText: string }
+    { labelKey: string; icon: ReactNode; border: string; headerBg: string; headerText: string }
 > = {
     system: {
-        label: "系统提示词",
+        labelKey: "log_content.role_system",
         icon: <Settings size={15} />,
         border: "border-violet-500/25 dark:border-violet-400/20",
         headerBg: "bg-violet-50 dark:bg-violet-500/10",
         headerText: "text-violet-700 dark:text-violet-300",
     },
     developer: {
-        label: "开发者指令",
+        labelKey: "log_content.role_developer",
         icon: <Settings size={15} />,
         border: "border-violet-500/25 dark:border-violet-400/20",
         headerBg: "bg-violet-50 dark:bg-violet-500/10",
         headerText: "text-violet-700 dark:text-violet-300",
     },
     instructions: {
-        label: "指令 (Instructions)",
+        labelKey: "log_content.role_instructions",
         icon: <ClipboardList size={15} />,
         border: "border-indigo-500/25 dark:border-indigo-400/20",
         headerBg: "bg-indigo-50 dark:bg-indigo-500/10",
         headerText: "text-indigo-700 dark:text-indigo-300",
     },
     user: {
-        label: "用户消息",
+        labelKey: "log_content.role_user",
         icon: <User size={15} />,
         border: "border-sky-500/25 dark:border-sky-400/20",
         headerBg: "bg-sky-50 dark:bg-sky-500/10",
         headerText: "text-sky-700 dark:text-sky-300",
     },
     assistant: {
-        label: "模型回复",
+        labelKey: "log_content.role_assistant",
         icon: <Bot size={15} />,
         border: "border-emerald-500/25 dark:border-emerald-400/20",
         headerBg: "bg-emerald-50 dark:bg-emerald-500/10",
         headerText: "text-emerald-700 dark:text-emerald-300",
     },
     tool: {
-        label: "工具结果",
+        labelKey: "log_content.role_tool",
         icon: <Wrench size={15} />,
         border: "border-amber-500/25 dark:border-amber-400/20",
         headerBg: "bg-amber-50 dark:bg-amber-500/10",
         headerText: "text-amber-700 dark:text-amber-300",
     },
     function_call: {
-        label: "函数调用",
+        labelKey: "log_content.role_function_call",
         icon: <Zap size={15} />,
         border: "border-orange-500/25 dark:border-orange-400/20",
         headerBg: "bg-orange-50 dark:bg-orange-500/10",
         headerText: "text-orange-700 dark:text-orange-300",
     },
     function_call_output: {
-        label: "函数返回",
+        labelKey: "log_content.role_function_return",
         icon: <Upload size={15} />,
         border: "border-teal-500/25 dark:border-teal-400/20",
         headerBg: "bg-teal-50 dark:bg-teal-500/10",
         headerText: "text-teal-700 dark:text-teal-300",
     },
     thinking: {
-        label: "思考过程",
+        labelKey: "log_content.role_thinking",
         icon: <Brain size={15} />,
         border: "border-purple-500/25 dark:border-purple-400/20",
         headerBg: "bg-purple-50 dark:bg-purple-500/10",
         headerText: "text-purple-700 dark:text-purple-300",
     },
     tool_use: {
-        label: "工具调用",
+        labelKey: "log_content.role_tool_use",
         icon: <Wrench size={15} />,
         border: "border-amber-500/25 dark:border-amber-400/20",
         headerBg: "bg-amber-50 dark:bg-amber-500/10",
@@ -123,7 +124,7 @@ const ROLE_STYLES: Record<
 };
 
 const DEFAULT_STYLE = {
-    label: "消息",
+    labelKey: "log_content.role_message",
     icon: <MessageSquare size={15} />,
     border: "border-slate-300/50 dark:border-neutral-700",
     headerBg: "bg-slate-50 dark:bg-neutral-800/60",
@@ -159,6 +160,7 @@ const PROSE_CLASSES = `prose prose-sm dark:prose-invert max-w-none break-words l
 /* ---- macOS-style code block with syntax highlighting & copy ---- */
 
 function CodeBlock({ language, children }: { language: string; children: string }) {
+    const { t } = useTranslation();
     const [copied, setCopied] = useState(false);
     const handleCopy = () => {
         navigator.clipboard.writeText(children).then(() => {
@@ -189,9 +191,9 @@ function CodeBlock({ language, children }: { language: string; children: string 
                     className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-slate-400 transition-colors hover:bg-white/10 hover:text-slate-200"
                 >
                     {copied ? (
-                        <><Check size={13} className="text-emerald-400" /><span className="text-emerald-400">已复制</span></>
+                        <><Check size={13} className="text-emerald-400" /><span className="text-emerald-400">{t("common.copied")}</span></>
                     ) : (
-                        <><Copy size={13} /><span>复制</span></>
+                        <><Copy size={13} /><span>{t("log_content.copy")}</span></>
                     )}
                 </button>
             </div>
@@ -397,6 +399,7 @@ function MarkdownContent({ content }: { content: string }) {
 /* ========================================================================== */
 
 function MessageBlock({ role, content, defaultExpanded = true }: { role: string; content: string; defaultExpanded?: boolean }) {
+    const { t } = useTranslation();
     const [expanded, setExpanded] = useState(defaultExpanded);
     const style = ROLE_STYLES[role] || DEFAULT_STYLE;
 
@@ -409,7 +412,7 @@ function MessageBlock({ role, content, defaultExpanded = true }: { role: string;
                 className={`flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-semibold transition-colors ${style.headerBg} ${style.headerText} hover:brightness-95 dark:hover:brightness-110`}
             >
                 <span className="shrink-0 flex items-center">{style.icon}</span>
-                <span className="flex-1 truncate">{style.label}</span>
+                <span className="flex-1 truncate">{t(style.labelKey)}</span>
                 <ChevronDown
                     size={16}
                     className={`shrink-0 transition-transform duration-200 ${expanded ? "rotate-180" : ""}`}
@@ -569,7 +572,7 @@ function parseInputMessages(raw: string): Msg[] | null {
     }
 
     if (result.length > 0) {
-        result.push({ role: "system", content: "⚠️ 注意：原始内容因超过大小限制被截断，部分消息可能不完整。" });
+        result.push({ role: "system", content: "⚠️ ⚠️ Note: Raw content was truncated due to size limits; some messages may be incomplete." });
         return result;
     }
 
@@ -771,6 +774,7 @@ function ContentModal({
     children: React.ReactNode;
     tabs: React.ReactNode;
 }) {
+  const { t } = useTranslation();
     const [mounted, setMounted] = useState(open);
     const [visible, setVisible] = useState(open);
 
@@ -800,7 +804,7 @@ function ContentModal({
             <button
                 type="button"
                 onClick={() => open && onClose()}
-                aria-label="关闭弹窗"
+                aria-label={t("common.close")}
                 className={[
                     "absolute inset-0 cursor-default bg-slate-900/40 backdrop-blur-sm dark:bg-black/50",
                     "transition-opacity duration-200",
@@ -822,16 +826,16 @@ function ContentModal({
                 <div className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-200 px-5 py-4 dark:border-neutral-800">
                     <div className="min-w-0">
                         <h2 className="truncate text-base font-semibold tracking-tight text-slate-900 dark:text-white">
-                            消息内容{model ? ` · ${model}` : ""}
+                            {t("log_content.message_content")}{model ? ` · ${model}` : ""}
                         </h2>
-                        <p className="mt-1 text-sm text-slate-500 dark:text-white/50">请求/响应的消息详情</p>
+                        <p className="mt-1 text-sm text-slate-500 dark:text-white/50">{t("log_content.title")}</p>
                     </div>
                     <button
                         type="button"
                         onClick={onClose}
                         disabled={!open}
                         className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white/70 text-slate-700 shadow-sm transition hover:bg-white dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-slate-200 dark:hover:bg-neutral-950/80"
-                        aria-label="关闭"
+                        aria-label={t("common.close")}
                     >
                         <X size={16} />
                     </button>
@@ -857,6 +861,7 @@ function ContentModal({
 /* ========================================================================== */
 
 export function LogContentModal({ open, logId, initialTab = "input", onClose, fetchFn }: LogContentModalProps) {
+    const { t } = useTranslation();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [inputContent, setInputContent] = useState("");
@@ -876,11 +881,11 @@ export function LogContentModal({ open, logId, initialTab = "input", onClose, fe
             setOutputContent(result.output_content || "");
             setModel(result.model || "");
         } catch (err) {
-            setError(err instanceof Error ? err.message : "加载失败");
+            setError(err instanceof Error ? err.message : t("error_detail.load_failed"));
         } finally {
             setLoading(false);
         }
-    }, [fetchFn]);
+    }, [fetchFn, t]);
 
     useEffect(() => { if (open && logId) fetchContent(logId); }, [open, logId, fetchContent]);
 
@@ -914,7 +919,9 @@ export function LogContentModal({ open, logId, initialTab = "input", onClose, fe
             return (
                 <div className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-white/25">
                     <Icon size={40} className="mb-3 opacity-40" />
-                    <p className="text-sm">暂无{activeTab === "input" ? "输入" : "输出"}内容记录</p>
+                    <p className="text-sm">
+                        {activeTab === "input" ? t("log_content.no_input") : t("log_content.no_output")}
+                    </p>
                 </div>
             );
         }
@@ -937,8 +944,8 @@ export function LogContentModal({ open, logId, initialTab = "input", onClose, fe
             <div className="flex flex-1 gap-1 rounded-xl bg-slate-100 p-1 dark:bg-neutral-900">
                 {(
                     [
-                        { key: "input" as const, label: "输入消息", Icon: FileInput },
-                        { key: "output" as const, label: "输出内容", Icon: FileOutput },
+                        { key: "input" as const, label: t("log_content.input_messages"), Icon: FileInput },
+                        { key: "output" as const, label: t("log_content.output"), Icon: FileOutput },
                     ] as const
                 ).map(({ key, label, Icon }) => (
                     <button
@@ -965,7 +972,7 @@ export function LogContentModal({ open, logId, initialTab = "input", onClose, fe
                     <button
                         type="button"
                         onClick={() => setViewMode("rendered")}
-                        title="渲染视图"
+                        title={t("log_content.rendered")}
                         className={[
                             "flex items-center justify-center rounded-md p-1.5 transition-all",
                             viewMode === "rendered"
@@ -978,7 +985,7 @@ export function LogContentModal({ open, logId, initialTab = "input", onClose, fe
                     <button
                         type="button"
                         onClick={() => setViewMode("raw")}
-                        title="原始数据"
+                        title={t("log_content.raw_data")}
                         className={[
                             "flex items-center justify-center rounded-md p-1.5 transition-all",
                             viewMode === "raw"
@@ -995,7 +1002,7 @@ export function LogContentModal({ open, logId, initialTab = "input", onClose, fe
                     type="button"
                     onClick={handleDownload}
                     disabled={!currentContent}
-                    title="下载内容"
+                    title={t("log_content.download")}
                     className="flex items-center justify-center rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 disabled:opacity-30 disabled:cursor-not-allowed dark:text-white/30 dark:hover:bg-neutral-900 dark:hover:text-white/60"
                 >
                     <Download size={14} />
@@ -1010,7 +1017,7 @@ export function LogContentModal({ open, logId, initialTab = "input", onClose, fe
             return (
                 <div className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-white/25">
                     <FileInput size={40} className="mb-3 opacity-40" />
-                    <p className="text-sm">暂无输入内容记录</p>
+                    <p className="text-sm">{t("log_content.no_input")}</p>
                 </div>
             );
         }
@@ -1040,7 +1047,7 @@ export function LogContentModal({ open, logId, initialTab = "input", onClose, fe
             return (
                 <div className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-white/25">
                     <FileOutput size={40} className="mb-3 opacity-40" />
-                    <p className="text-sm">暂无输出内容记录</p>
+                    <p className="text-sm">{t("log_content.no_output")}</p>
                 </div>
             );
         }
@@ -1075,7 +1082,7 @@ export function LogContentModal({ open, logId, initialTab = "input", onClose, fe
             {loading ? (
                 <div className="flex items-center justify-center py-20">
                     <Loader2 size={24} className="animate-spin text-slate-400 dark:text-white/40" />
-                    <span className="ml-3 text-sm text-slate-500 dark:text-white/50">加载中…</span>
+                    <span className="ml-3 text-sm text-slate-500 dark:text-white/50">{t("common.loading_ellipsis")}</span>
                 </div>
             ) : error ? (
                 <div className="flex flex-col items-center justify-center py-16">

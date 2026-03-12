@@ -287,7 +287,7 @@ export function AiProvidersClaudeEditLayout() {
     // 校验渠道名称
     const trimmedName = (form.name ?? "").trim();
     if (!trimmedName) {
-      showNotification(t("ai_providers.channel_name_required", { defaultValue: "渠道名称不能为空" }), "error");
+      showNotification(t("ai_providers.channel_name_required", { defaultValue: "Channel Name cannot be empty" }), "error");
       return;
     }
 

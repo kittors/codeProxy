@@ -150,7 +150,7 @@ const inferLogLevel = (line: string): LogLevel | undefined => {
   const lowered = line.toLowerCase();
   if (/\bfatal\b/.test(lowered)) return "fatal";
   if (/\berror\b/.test(lowered)) return "error";
-  if (/\bwarn(?:ing)?\b/.test(lowered) || line.includes("警告")) return "warn";
+  if (/\bwarn(?:ing)?\b/.test(lowered) || line.includes("Warn")) return "warn";
   if (/\binfo\b/.test(lowered)) return "info";
   if (/\bdebug\b/.test(lowered)) return "debug";
   if (/\btrace\b/.test(lowered)) return "trace";
@@ -864,8 +864,8 @@ export function LogsPage() {
                         type="button"
                         className={styles.searchClear}
                         onClick={() => setSearchQuery("")}
-                        title="Clear"
-                        aria-label="Clear"
+                        title={t("common.clear_action")}
+                        aria-label={t("common.clear_action")}
                       >
                         <IconX size={16} />
                       </button>

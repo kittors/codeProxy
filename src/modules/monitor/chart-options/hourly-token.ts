@@ -6,6 +6,8 @@ export const createHourlyTokenOption = (input: {
   tokenHourWindow: number;
   hourlyTokenSelected: Record<string, boolean>;
   paletteColorByKey: Record<string, string>;
+  labelsByKey: Record<string, string>;
+  totalLineKey: string;
   isDark: boolean;
 }): Record<string, unknown> => {
   const points = input.hourlySeries.tokenPoints.slice(-input.tokenHourWindow);
@@ -15,7 +17,7 @@ export const createHourlyTokenOption = (input: {
   const selectedKeys = input.hourlySeries.tokenKeys.filter(
     (key) => input.hourlyTokenSelected[key] ?? true,
   );
-  const showTotalLine = input.hourlyTokenSelected["总 Token"] ?? true;
+  const showTotalLine = input.hourlyTokenSelected[input.totalLineKey] ?? true;
 
   const series = selectedKeys.map((key) => {
     const data = points.map((point) => {
@@ -23,7 +25,7 @@ export const createHourlyTokenOption = (input: {
       return item?.value ?? 0;
     });
     return {
-      name: key,
+      name: input.labelsByKey[key] ?? key,
       type: "bar",
       stack: "tokens",
       emphasis: { focus: "series" },
@@ -57,12 +59,7 @@ export const createHourlyTokenOption = (input: {
 
   return {
     backgroundColor: "transparent",
-    color: [
-      input.paletteColorByKey["输入"],
-      input.paletteColorByKey["输出"],
-      input.paletteColorByKey["推理"],
-      input.paletteColorByKey["缓存"],
-    ],
+    color: input.hourlySeries.tokenKeys.map((key) => input.paletteColorByKey[key]),
     tooltip: {
       trigger: "axis",
       axisPointer: { type: "shadow" },
@@ -111,7 +108,7 @@ export const createHourlyTokenOption = (input: {
       ...(showTotalLine
         ? [
             {
-              name: "总 Token",
+              name: input.labelsByKey[input.totalLineKey] ?? input.totalLineKey,
               type: "line",
               smooth: true,
               symbol: "circle",

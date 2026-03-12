@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { RefreshCw, ShieldAlert } from "lucide-react";
 import type { AuthFileItem } from "@/lib/http/types";
 import { Button } from "@/modules/ui/Button";
@@ -80,9 +81,30 @@ export function QuotaFileCard({
   state: QuotaState;
   onRefresh: () => void;
 }) {
+  const { t } = useTranslation();
   const provider = resolveAuthProvider(file);
   const disabled = isDisabledAuthFile(file);
   const providerIcon = PROVIDER_ICON[provider];
+
+  /* Translate i18n-key labels returned by quota-helpers */
+  const tl = (text: string) =>
+    text.startsWith("m_quota.") ? t(text) : text;
+
+  /* Translate resetLabel with embedded params (e.g. 'm_quota.minutes_later::5') */
+  const trl = (text: string) => {
+    if (!text.startsWith("m_quota.")) return text;
+    const parts = text.split("::");
+    const key = parts[0];
+    if (key === "m_quota.minutes_later") return t(key, { minutes: parts[1] });
+    if (key === "m_quota.hours_later") return t(key, { hours: parts[1] });
+    if (key === "m_quota.hours_minutes_later") return t(key, { hours: parts[1], minutes: parts[2] });
+    return t(key);
+  };
+
+  /* Translate error messages that may be i18n keys */
+  const te = (text: string) =>
+    text.startsWith("m_quota.") || text === "missing_auth_index" || text === "no_model_quota" || text === "request_failed" || text === "missing_account_id" || text === "parse_codex_failed" || text === "missing_project_id" || text === "parse_kiro_failed"
+      ? t(`m_quota.${text.replace("m_quota.", "")}`) : text;
 
   return (
     <div className="rounded-xl border border-slate-200/80 bg-white px-3.5 py-3 shadow-sm transition hover:shadow-md dark:border-neutral-800 dark:bg-neutral-950/60">
@@ -99,7 +121,7 @@ export function QuotaFileCard({
             {file.name}
           </p>
           <p className="text-[10px] text-slate-400 dark:text-white/40">
-            {disabled ? "已禁用" : "已启用"}
+            {disabled ? t("m_quota.disabled") : t("m_quota.enabled")}
             {state.updatedAt
               ? ` · ${new Date(state.updatedAt).toLocaleTimeString()}`
               : ""}
@@ -123,11 +145,11 @@ export function QuotaFileCard({
         {state.status === "error" ? (
           <div className="flex items-start gap-1.5 rounded-lg bg-rose-50 px-2.5 py-1.5 text-[11px] text-rose-700 dark:bg-rose-500/10 dark:text-rose-200">
             <ShieldAlert size={12} className="mt-0.5 shrink-0" />
-            <span className="line-clamp-2">{state.error || "加载失败"}</span>
+            <span className="line-clamp-2">{te(state.error || "m_quota.load_failed")}</span>
           </div>
         ) : state.items.length === 0 ? (
           <p className="py-1 text-center text-[11px] text-slate-400 dark:text-white/35">
-            {state.status === "loading" ? "加载中…" : "点击刷新查询额度"}
+            {state.status === "loading" ? t("m_quota.loading_quota") : t("m_quota.click_to_refresh")}
           </p>
         ) : (
           <div className="space-y-2">
@@ -135,9 +157,9 @@ export function QuotaFileCard({
               <div key={item.label}>
                 <div className="flex items-center justify-between gap-1.5">
                   <div className="flex items-center gap-1.5 min-w-0">
-                    <ModelIcon label={item.label} size={12} />
+                    <ModelIcon label={tl(item.label)} size={12} />
                     <span className="truncate text-[11px] font-medium text-slate-700 dark:text-white/80">
-                      {item.label}
+                      {tl(item.label)}
                     </span>
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0 text-[10px] tabular-nums">
@@ -148,7 +170,7 @@ export function QuotaFileCard({
                     </span>
                     {item.resetLabel && item.resetLabel !== "--" && (
                       <span className="hidden text-slate-400 dark:text-white/30 sm:inline">
-                        {item.resetLabel}
+                        {trl(item.resetLabel)}
                       </span>
                     )}
                   </div>
