@@ -29,6 +29,7 @@ import {
 import { useAuth } from "@/modules/auth/AuthProvider";
 import { PageBackground } from "@/modules/ui/PageBackground";
 import { ThemeToggleButton } from "@/modules/ui/ThemeProvider";
+import { LanguageSelector } from "@/modules/ui/LanguageSelector";
 
 interface ShellContextState {
   state: {
@@ -170,6 +171,7 @@ function ShellHeader({
           </h1>
         </div>
         <div className="flex items-center gap-2">
+          <LanguageSelector className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white/70 text-slate-700 shadow-sm backdrop-blur transition hover:bg-white dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-slate-200 dark:hover:bg-neutral-950/80" />
           <ThemeToggleButton className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white/70 text-slate-700 shadow-sm backdrop-blur transition hover:bg-white dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-slate-200 dark:hover:bg-neutral-950/80" />
           <button
             type="button"
