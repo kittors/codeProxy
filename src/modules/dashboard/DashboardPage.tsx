@@ -11,11 +11,11 @@ import { useToast } from "@/modules/ui/ToastProvider";
 
 type DashboardRange = 1 | 7 | 30;
 
-const RANGE_OPTIONS: ReadonlyArray<{ value: DashboardRange; label: string }> = [
-  { value: 1, label: "Today" },
-  { value: 7, label: "Last 7 days" },
-  { value: 30, label: "Last 30 days" },
-];
+const RANGE_KEYS: Record<DashboardRange, string> = {
+  1: "dashboard.today",
+  7: "dashboard.last_7_days",
+  30: "dashboard.last_30_days",
+};
 
 const formatNumber = (n: number) =>
   n >= 10_000 ? `${(n / 1000).toFixed(1)}k` : n.toLocaleString();
@@ -57,21 +57,21 @@ export function DashboardPage() {
       {/* ── Header ── */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-lg font-semibold tracking-tight text-slate-900 dark:text-white">
-          Dashboard
+          {t("dashboard.heading")}
         </h2>
         <div className="flex flex-wrap items-center gap-2">
           <Tabs value={String(range)} onValueChange={(next) => setRange(Number(next) as DashboardRange)}>
             <TabsList>
-              {RANGE_OPTIONS.map((opt) => (
-                <TabsTrigger key={opt.value} value={String(opt.value)}>
-                  {opt.label}
+              {([1, 7, 30] as DashboardRange[]).map((val) => (
+                <TabsTrigger key={val} value={String(val)}>
+                  {t(RANGE_KEYS[val])}
                 </TabsTrigger>
               ))}
             </TabsList>
           </Tabs>
           <Button variant="secondary" size="sm" onClick={() => void refresh(range)} disabled={loading}>
             <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
-            Refresh
+            {t("dashboard.refresh")}
           </Button>
         </div>
       </div>
@@ -85,7 +85,7 @@ export function DashboardPage() {
           action={
             <Button variant="secondary" onClick={() => void refresh(range)}>
               <RefreshCw size={14} />
-              Retry
+              {t("dashboard.retry")}
             </Button>
           }
         />
@@ -96,19 +96,19 @@ export function DashboardPage() {
         <KpiCard
           title={t("dashboard.total_requests")}
           value={<span className="tabular-nums">{formatNumber(kpi?.total_requests ?? 0)}</span>}
-          hint={`Total requests for ${range === 1 ? "today" : `last ${range} days`}`}
+          hint={range === 1 ? t("dashboard.total_hint_today") : t("dashboard.total_hint_days", { count: range })}
           icon={Activity}
         />
         <KpiCard
           title={t("dashboard.success_rate")}
           value={<span className="tabular-nums">{formatRate(kpi?.success_rate ?? 0)}</span>}
-          hint={`Success ${formatNumber(kpi?.success_requests ?? 0)} · Failed ${formatNumber(kpi?.failed_requests ?? 0)}`}
+          hint={t("dashboard.success_hint", { success: formatNumber(kpi?.success_requests ?? 0), failed: formatNumber(kpi?.failed_requests ?? 0) })}
           icon={Sigma}
         />
         <KpiCard
           title={t("dashboard.total_tokens")}
           value={<span className="tabular-nums">{formatNumber(kpi?.total_tokens ?? 0)}</span>}
-          hint={`Input ${formatNumber(kpi?.input_tokens ?? 0)} · Output ${formatNumber(kpi?.output_tokens ?? 0)}`}
+          hint={t("dashboard.token_hint", { input: formatNumber(kpi?.input_tokens ?? 0), output: formatNumber(kpi?.output_tokens ?? 0) })}
           icon={Sigma}
         />
         <KpiCard
