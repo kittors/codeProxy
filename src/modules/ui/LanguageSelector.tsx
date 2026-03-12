@@ -5,6 +5,12 @@ import { Check, Languages } from "lucide-react";
 import { SUPPORTED_LANGUAGES, LANGUAGE_LABEL_KEYS, STORAGE_KEY_LANGUAGE } from "@/utils/constants";
 import type { Language } from "@/types";
 
+/** Short labels for each language, shown next to the icon */
+const SHORT_LABELS: Record<string, string> = {
+    en: "EN",
+    "zh-CN": "中",
+};
+
 export function LanguageSelector({ className }: { className?: string }) {
     const { i18n, t } = useTranslation();
     const [open, setOpen] = useState(false);
@@ -27,12 +33,11 @@ export function LanguageSelector({ className }: { className?: string }) {
         setOpen(false);
     }, [i18n]);
 
-    /* Position the dropdown below the icon */
     const reposition = useCallback(() => {
         const el = triggerRef.current;
         if (!el) return;
         const rect = el.getBoundingClientRect();
-        setPos({ top: rect.bottom + 6, left: rect.right - 120 });
+        setPos({ top: rect.bottom + 6, left: rect.right - 130 });
     }, []);
 
     useLayoutEffect(() => {
@@ -46,7 +51,6 @@ export function LanguageSelector({ className }: { className?: string }) {
         };
     }, [open, reposition]);
 
-    /* Close on outside click */
     useEffect(() => {
         if (!open) return;
         const handleClick = (e: MouseEvent) => {
@@ -58,7 +62,6 @@ export function LanguageSelector({ className }: { className?: string }) {
         return () => document.removeEventListener("pointerdown", handleClick);
     }, [open]);
 
-    /* Close on Escape */
     useEffect(() => {
         if (!open) return;
         const handleKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
@@ -67,10 +70,10 @@ export function LanguageSelector({ className }: { className?: string }) {
     }, [open]);
 
     const label = t("language.switch");
+    const shortLabel = SHORT_LABELS[currentValue] ?? currentValue;
 
     return (
         <>
-            {/* Icon trigger */}
             <button
                 ref={triggerRef}
                 type="button"
@@ -82,16 +85,16 @@ export function LanguageSelector({ className }: { className?: string }) {
                 aria-haspopup="listbox"
             >
                 <Languages size={16} />
+                <span className="ml-1 text-[11px] font-bold leading-none">{shortLabel}</span>
             </button>
 
-            {/* Dropdown (portal) */}
             {open
                 ? createPortal(
                     <div
                         ref={listRef}
                         role="listbox"
                         aria-label={label}
-                        className="fixed z-[9999] w-[120px] overflow-hidden rounded-xl border border-slate-200 bg-white p-1 shadow-lg dark:border-neutral-700 dark:bg-neutral-900"
+                        className="fixed z-[9999] w-[130px] overflow-hidden rounded-xl border border-slate-200 bg-white p-1 shadow-lg dark:border-neutral-700 dark:bg-neutral-900"
                         style={{ top: pos.top, left: pos.left }}
                     >
                         {SUPPORTED_LANGUAGES.map((lng) => {

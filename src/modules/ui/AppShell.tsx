@@ -171,7 +171,7 @@ function ShellHeader({
           </h1>
         </div>
         <div className="flex items-center gap-2">
-          <LanguageSelector className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 transition hover:text-slate-900 dark:text-slate-400 dark:hover:text-white" />
+          <LanguageSelector className="inline-flex h-9 items-center justify-center gap-0.5 rounded-xl px-1.5 text-slate-500 transition hover:text-slate-900 dark:text-slate-400 dark:hover:text-white" />
           <ThemeToggleButton className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 transition hover:text-slate-900 dark:text-slate-400 dark:hover:text-white" />
           <button
             type="button"
@@ -179,7 +179,7 @@ function ShellHeader({
               navigate("/login", { replace: true, viewTransition: true });
               logout();
             }}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-slate-800 dark:bg-white dark:text-neutral-950 dark:hover:bg-slate-200"
+            className="inline-flex min-w-[72px] items-center justify-center gap-1.5 rounded-xl bg-slate-900 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-slate-800 dark:bg-white dark:text-neutral-950 dark:hover:bg-slate-200"
           >
             <LogOut size={14} />
             {t("shell.logout_button")}

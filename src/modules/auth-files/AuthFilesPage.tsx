@@ -1177,10 +1177,10 @@ export function AuthFilesPage() {
                     <p className="text-[11px] font-semibold text-slate-600 dark:text-white/65">
                       Type Filter
                     </p>
-                    <HoverTooltip content="Count based on search results" placement="top">
+                    <HoverTooltip content={t("auth_files.count_hint")} placement="top">
                       <span
                         className="inline-flex h-5 w-5 items-center justify-center rounded-full text-slate-400 dark:text-white/45"
-                        aria-label="Count info"
+                        aria-label={t("auth_files.count_info")}
                       >
                         <CircleHelp size={14} />
                       </span>
@@ -1250,7 +1250,7 @@ export function AuthFilesPage() {
                         else setPageSizeInput(String(pageSize));
                       }}
                       aria-label={t("auth_files_page.per_page")}
-                      placeholder="Count"
+                      placeholder={t("auth_files.count_placeholder")}
                       inputMode="numeric"
                       className="w-24"
                     />
@@ -1490,7 +1490,7 @@ export function AuthFilesPage() {
                 <div className="mb-4">
                   <EmptyState
                     title={t("auth_files_page.api_not_supported")}
-                    description="Server does not implement /oauth-excluded-models (or version is too old). Please update the server."
+                    description={t("auth_files.no_excluded_api")}
                   />
                 </div>
               ) : null}
@@ -1498,7 +1498,7 @@ export function AuthFilesPage() {
                 <TextInput
                   value={excludedNewProvider}
                   onChange={(e) => setExcludedNewProvider(e.currentTarget.value)}
-                  placeholder="Add provider (e.g. codex / gemini-cli)"
+                  placeholder={t("auth_files.add_provider_placeholder")}
                   endAdornment={<FileJson size={16} className="text-slate-400" />}
                   disabled={excludedUnsupported}
                 />
@@ -1574,7 +1574,7 @@ export function AuthFilesPage() {
                               const nextText = e.currentTarget.value;
                               setExcludedDraft((prev) => ({ ...prev, [provider]: nextText }));
                             }}
-                            placeholder="One model per line; use * to disable all models"
+                            placeholder={t("auth_files.one_model_per_line")}
                             aria-label={`${provider} Excluded Models`}
                             disabled={excludedUnsupported}
                             className="mt-3 min-h-[120px] w-full resize-y rounded-2xl border border-slate-200 bg-white px-3 py-2 font-mono text-xs text-slate-900 outline-none transition placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-slate-400/35 dark:border-neutral-800 dark:bg-neutral-950 dark:text-slate-100 dark:placeholder:text-neutral-500 dark:focus-visible:ring-white/15"
@@ -1590,7 +1590,7 @@ export function AuthFilesPage() {
           <TabsContent value="alias" className="mt-4">
             <Card
               title={t("auth_files_page.alias_title")}
-              description="Maintain Models name -> alias mapping by channel (for OAuth)."
+              description={t("auth_files.model_alias_desc")}
               actions={
                 <div className="flex flex-wrap items-center gap-2">
                   <Button
@@ -1609,8 +1609,8 @@ export function AuthFilesPage() {
               {aliasUnsupported ? (
                 <div className="mb-4">
                   <EmptyState
-                    title="API Not Supported"
-                    description="Server does not implement /oauth-model-alias. Please upgrade the server."
+                    title={t("auth_files.api_not_supported")}
+                    description={t("auth_files.no_alias_api")}
                   />
                 </div>
               ) : null}
@@ -1618,7 +1618,7 @@ export function AuthFilesPage() {
                 <TextInput
                   value={aliasNewChannel}
                   onChange={(e) => setAliasNewChannel(e.currentTarget.value)}
-                  placeholder="Add channel (e.g. codex/gemini/anthropic)"
+                  placeholder={t("auth_files.add_channel_placeholder")}
                   disabled={aliasUnsupported}
                 />
                 <Button
@@ -1634,7 +1634,7 @@ export function AuthFilesPage() {
 
               <div className="mt-4 space-y-3">
                 {Object.keys(aliasEditing).length === 0 ? (
-                  <EmptyState title="No config" description={t("auth_files_page.alias_no_config")} />
+                  <EmptyState title={t("auth_files.no_config")} description={t("auth_files_page.alias_no_config")} />
                 ) : (
                   Object.keys(aliasEditing)
                     .sort((a, b) => a.localeCompare(b))
@@ -1752,7 +1752,7 @@ export function AuthFilesPage() {
                                       }));
                                     }}
                                     aria-label={t("common.delete_row", "Delete Row")}
-                                    title="Delete"
+                                    title={t("common.delete")}
                                   >
                                     <X size={14} />
                                   </Button>
@@ -1837,7 +1837,7 @@ export function AuthFilesPage() {
         ) : modelsError === "unsupported" ? (
           <EmptyState
             title="API Not Supported"
-            description="Server does not implement /auth-files/models or auth file does not support querying models."
+            description={t("auth_files.no_models_api")}
           />
         ) : modelsList.length === 0 ? (
           <EmptyState
@@ -1880,7 +1880,7 @@ export function AuthFilesPage() {
       <Modal
         open={prefixProxyEditor.open}
         title={`Edit: ${prefixProxyEditor.fileName || "--"}`}
-        description="Only modifies prefix/proxy_url, everything else remains unchanged (by re-uploading file with same name)."
+        description={t("auth_files.prefix_proxy_desc")}
         onClose={() =>
           setPrefixProxyEditor({
             open: false,
@@ -1992,7 +1992,7 @@ export function AuthFilesPage() {
       <Modal
         open={importOpen}
         title={`Import Models: ${importChannel || "--"}`}
-        description="Fetch models from /model-definitions and batch generate aliases (default alias=same)."
+        description={t("auth_files.fetch_models_desc")}
         onClose={() => setImportOpen(false)}
         footer={
           <div className="flex items-center gap-2">
@@ -2022,7 +2022,7 @@ export function AuthFilesPage() {
             <TextInput
               value={importSearch}
               onChange={(e) => setImportSearch(e.currentTarget.value)}
-              placeholder="SearchModels id / display_name"
+              placeholder={t("auth_files.search_models_placeholder")}
               endAdornment={<Search size={16} className="text-slate-400" />}
             />
 

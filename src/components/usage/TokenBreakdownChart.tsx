@@ -110,7 +110,7 @@ export function TokenBreakdownChart({
         <div className={styles.hint}>{t("common.loading")}</div>
       ) : chartData.labels.length > 0 ? (
         <div className={styles.chartWrapper}>
-          <div className={styles.chartLegend} aria-label="Chart legend">
+          <div className={styles.chartLegend} aria-label={t("common.chart_legend")}>
             {chartData.datasets.map((dataset, index) => (
               <div
                 key={`${dataset.label}-${index}`}

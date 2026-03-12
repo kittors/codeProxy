@@ -674,7 +674,7 @@ function PayloadFilterRulesEditor({
   return (
     <Card
       title={t("visual_config.payload_filter")}
-      description="After matching models, remove specified parameter paths from the request payload (corresponds to `payload.filter`)."
+      description={t("visual_config.payload_filter_desc")}
       actions={
         <Button size="sm" onClick={addRule} disabled={disabled}>
           <Plus size={14} />
@@ -962,7 +962,7 @@ export function VisualConfigEditor({
       </Card>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card title="Switches" description="Common runtime switches (written to config.yaml).">
+        <Card title="Switches" description={t("visual_config.runtime_desc")}>
           <div className="space-y-4">
             <ToggleSwitch
               label="Debug"
@@ -1152,14 +1152,14 @@ export function VisualConfigEditor({
       <div className="space-y-6">
         <PayloadRulesEditor
           title={t("visual_config.payload_default")}
-          description="After matching models, append/override parameters in the request payload (corresponds to `payload.default`)."
+          description={t("visual_config.payload_default_desc")}
           rules={values.payloadDefaultRules}
           disabled={disabled}
           onChange={(payloadDefaultRules) => update({ payloadDefaultRules })}
         />
         <PayloadRulesEditor
           title={t("visual_config.payload_override")}
-          description="After matching models, override parameters in the request payload (corresponds to `payload.override`)."
+          description={t("visual_config.payload_override_desc")}
           rules={values.payloadOverrideRules}
           disabled={disabled}
           onChange={(payloadOverrideRules) => update({ payloadOverrideRules })}

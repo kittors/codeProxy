@@ -532,7 +532,7 @@ function ModelsTabContent({
                     <input
                         value={searchFilter}
                         onChange={(e) => onSearchChange(e.target.value)}
-                        placeholder="Search models…"
+                        placeholder={t("models_page.search")}
                         className="w-48 rounded-lg border border-slate-200 bg-white py-1.5 pl-8 pr-3 text-xs text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-indigo-300 dark:border-neutral-700 dark:bg-neutral-900/60 dark:text-white dark:placeholder:text-white/30 dark:focus:border-indigo-600"
                     />
                 </div>
@@ -1061,7 +1061,7 @@ export function ApiKeyLookupPage() {
                                     <TabsList>
                                         <TabsTrigger value="usage">{t("apikey_lookup.usage_stats")}</TabsTrigger>
                                         <TabsTrigger value="logs">{t("apikey_lookup.request_logs")}</TabsTrigger>
-                                        <TabsTrigger value="models">Available Models</TabsTrigger>
+                                        <TabsTrigger value="models">{t("apikey_lookup.available_models")}</TabsTrigger>
                                     </TabsList>
                                 </Tabs>
                                 {activeTab !== "models" && (
@@ -1235,16 +1235,16 @@ export function ApiKeyLookupPage() {
                                                 value={statusFilter}
                                                 onChange={setStatusFilter}
                                                 options={STATUS_OPTIONS}
-                                                placeholder="All Status"
-                                                aria-label="Status filter"
+                                                placeholder={t("apikey_lookup.all_status")}
+                                                aria-label={t("apikey_lookup.status_filter")}
                                             />
                                             {modelOptions.length > 0 && (
                                                 <SearchableSelect
                                                     value={modelQuery}
                                                     onChange={setModelQuery}
                                                     options={modelFilterOptions}
-                                                    placeholder="All Models"
-                                                    aria-label="Model filter"
+                                                    placeholder={t("request_logs.all_models_placeholder")}
+                                                    aria-label={t("apikey_lookup.model_filter")}
                                                 />
                                             )}
                                         </div>

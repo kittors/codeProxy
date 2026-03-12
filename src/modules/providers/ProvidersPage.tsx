@@ -1471,7 +1471,7 @@ export function ProvidersPage() {
               />
             </div>
             <div className="space-y-2">
-              <p className="text-sm font-semibold text-slate-900 dark:text-white">Base URL</p>
+              <p className="text-sm font-semibold text-slate-900 dark:text-white">{t("providers.base_url")}</p>
               <TextInput
                 value={openaiDraft.baseUrl}
                 onChange={(e) =>

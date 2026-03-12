@@ -395,13 +395,13 @@ function RuntimeConfigPanel() {
               <TextInput
                 value={proxyUrl}
                 onChange={(e) => setProxyUrl(e.currentTarget.value)}
-                placeholder="proxy-url (empty to clear)"
+                placeholder={t("config_page.proxy_url_placeholder")}
               />
               <div className="flex flex-wrap items-center gap-2">
                 <TextInput
                   value={requestRetry}
                   onChange={(e) => setRequestRetry(e.currentTarget.value)}
-                  placeholder="request-retry (non-negative integer)"
+                  placeholder={t("config_page.retry_placeholder")}
                   inputMode="numeric"
                 />
               </div>
@@ -766,7 +766,7 @@ export function ConfigPage() {
                             }}
                             disabled={disableControls || loading}
                             endAdornment={
-                              <HoverTooltip content="Search (Enter)" placement="bottom">
+                              <HoverTooltip content={t("config_page.search_hint")} placement="bottom">
                                 <span className="inline-flex h-6 w-6 items-center justify-center text-slate-400 dark:text-white/45">
                                   <Search size={16} aria-hidden="true" />
                                 </span>
@@ -786,7 +786,7 @@ export function ConfigPage() {
                         </div>
                         <div className="flex h-11 items-center justify-end gap-3">
                           <HoverTooltip
-                            content="Previous match (Shift+Enter)"
+                            content={t("config_page.prev_match_hint")}
                             placement="top"
                             disabled={!searchStats.total}
                           >
@@ -794,14 +794,14 @@ export function ConfigPage() {
                               type="button"
                               onClick={() => executeSearch("prev")}
                               disabled={!searchStats.total}
-                              aria-label="Previous match"
+                              aria-label={t("config_page.prev_match")}
                               className="inline-flex h-8 w-8 items-center justify-center text-slate-400 transition hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/35 disabled:cursor-not-allowed disabled:opacity-50 dark:text-white/45 dark:hover:text-white/80 dark:focus-visible:ring-white/15"
                             >
                               <ChevronUp size={18} aria-hidden="true" />
                             </button>
                           </HoverTooltip>
                           <HoverTooltip
-                            content="Next match (Enter)"
+                            content={t("config_page.next_match_hint")}
                             placement="bottom"
                             disabled={!searchStats.total}
                           >
@@ -809,7 +809,7 @@ export function ConfigPage() {
                               type="button"
                               onClick={() => executeSearch("next")}
                               disabled={!searchStats.total}
-                              aria-label="Next match"
+                              aria-label={t("config_page.next_match")}
                               className="inline-flex h-8 w-8 items-center justify-center text-slate-400 transition hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/35 disabled:cursor-not-allowed disabled:opacity-50 dark:text-white/45 dark:hover:text-white/80 dark:focus-visible:ring-white/15"
                             >
                               <ChevronDown size={18} aria-hidden="true" />

@@ -78,7 +78,7 @@ export function ErrorDetailModal({ open, logId, model, onClose }: ErrorDetailMod
             <button
                 type="button"
                 onClick={onClose}
-                aria-label="Close"
+                aria-label={t("common.close")}
                 className={[
                     "absolute inset-0 cursor-default bg-slate-900/40 backdrop-blur-sm dark:bg-black/50",
                     "transition-opacity duration-200",

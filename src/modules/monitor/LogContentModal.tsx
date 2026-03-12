@@ -803,7 +803,7 @@ function ContentModal({
             <button
                 type="button"
                 onClick={() => open && onClose()}
-                aria-label="Close"
+                aria-label={t("common.close")}
                 className={[
                     "absolute inset-0 cursor-default bg-slate-900/40 backdrop-blur-sm dark:bg-black/50",
                     "transition-opacity duration-200",

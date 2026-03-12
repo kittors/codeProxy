@@ -52,7 +52,7 @@ export function ProviderKeyListCard({
       }
     >
       {items.length === 0 ? (
-        <EmptyState title="No configuration" description="Click Add New to create the first config." />
+        <EmptyState title={t("providers.no_config")} description={t("providers.no_config_desc")} />
       ) : (
         <div className="space-y-3">
           {items.map((item, idx) => {

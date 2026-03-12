@@ -53,7 +53,8 @@
     "delete_model": "Delete Model",
     "priority_optional": "Priority (Optional)",
     "all_models": "All Models",
-    "clear_action": "Clear"
+    "clear_action": "Clear",
+    "chart_legend": "Chart legend"
   },
   "title": {
     "main": "CLI Proxy API Management Center",
@@ -195,7 +196,9 @@
     "add_modal_key_placeholder": "Please enter API key",
     "edit_modal_title": "Edit API Key",
     "edit_modal_key_label": "API Key:",
-    "delete_confirm": "Are you sure you want to delete this API key?"
+    "delete_confirm": "Are you sure you want to delete this API key?",
+    "rpm_full": "Requests Per Minute, maximum requests per minute.",
+    "tpm_full": "Tokens Per Minute, maximum tokens per minute."
   },
   "ai_providers": {
     "title": "AI Providers Configuration",
@@ -497,7 +500,22 @@
     "prefix_proxy_invalid_json": "This auth file is not a JSON object, so fields cannot be edited.",
     "prefix_proxy_saved_success": "Updated auth file \"{{name}}\" successfully",
     "quota_refresh_success": "Quota refreshed for \"{{name}}\"",
-    "quota_refresh_failed": "Failed to refresh quota for \"{{name}}\": {{message}}"
+    "quota_refresh_failed": "Failed to refresh quota for \"{{name}}\": {{message}}",
+    "count_info": "Count info",
+    "count_hint": "Count based on search results",
+    "fetch_models_desc": "Fetch models from /model-definitions and batch generate aliases (default alias=same).",
+    "model_alias_desc": "Maintain Models name -> alias mapping by channel (for OAuth).",
+    "prefix_proxy_desc": "Only modifies prefix/proxy_url, everything else remains unchanged (by re-uploading file with same name).",
+    "no_models_api": "Server does not implement /auth-files/models or auth file does not support querying models.",
+    "no_excluded_api": "Server does not implement /oauth-excluded-models (or version is too old). Please update the server.",
+    "no_alias_api": "Server does not implement /oauth-model-alias. Please upgrade the server.",
+    "add_channel_placeholder": "Add channel (e.g. codex/gemini/anthropic)",
+    "add_provider_placeholder": "Add provider (e.g. codex / gemini-cli)",
+    "count_placeholder": "Count",
+    "one_model_per_line": "One model per line; use * to disable all models",
+    "search_models_placeholder": "SearchModels id / display_name",
+    "api_not_supported": "API Not Supported",
+    "no_config": "No config"
   },
   "antigravity_quota": {
     "title": "Antigravity Quota",
@@ -1825,7 +1843,9 @@
     "all_status": "All Status",
     "all_models": "All Models",
     "requests": "Requests",
-    "token": "Token"
+    "token": "Token",
+    "model_filter": "Model filter",
+    "status_filter": "Status filter"
   },
   "config_page": {
     "runtime_switches": "Runtime Switches",
@@ -1863,7 +1883,11 @@
     "source_title": "config.yaml (Source)",
     "save_changes": "Save Changes",
     "not_searched": "Not searched",
-    "no_match": "No match"
+    "no_match": "No match",
+    "next_match_hint": "Next match (Enter)",
+    "prev_match_hint": "Previous match (Shift+Enter)",
+    "proxy_url_placeholder": "proxy-url (empty to clear)",
+    "retry_placeholder": "request-retry (non-negative integer)"
   },
   "auth_files_page": {
     "files_tab": "Files",
@@ -1944,7 +1968,8 @@
     "channel_name": "Channel Name",
     "claude_channel_hint": "e.g. Main Claude Channel (Required)",
     "codex_channel_hint": "e.g. Main Codex Channel (Required)",
-    "gemini_channel_hint": "e.g. Main Gemini Channel (Required)"
+    "gemini_channel_hint": "e.g. Main Gemini Channel (Required)",
+    "test_model": "Test Model:"
   },
   "logs_page": {
     "error_log_files": "Error Log Files",
@@ -2056,7 +2081,11 @@
     "remote_mgmt": "Remote Management",
     "remote_desc": "Corresponds to `remote-management` config section.",
     "switch_preview": "Switch Preview Model",
-    "switch_project": "Switch Project"
+    "switch_project": "Switch Project",
+    "payload_default_desc": "After matching models, append/override parameters in the request payload (corresponds to `payload.default`).",
+    "payload_override_desc": "After matching models, override parameters in the request payload (corresponds to `payload.override`).",
+    "payload_filter_desc": "After matching models, remove specified parameter paths from the request payload (corresponds to `payload.filter`).",
+    "runtime_desc": "Common runtime switches (written to config.yaml)."
   },
   "quota": {
     "no_matching": "No matching auth files"

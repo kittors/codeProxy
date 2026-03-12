@@ -549,7 +549,7 @@ export function ApiKeysPage() {
             width: "w-[70px]",
             cellClassName: "whitespace-nowrap text-slate-700 dark:text-white/70",
             headerRender: () => (
-                <HoverTooltip content="Requests Per Minute，Requests Per Minute" className="inline-flex items-center gap-1">
+                <HoverTooltip content={t("api_keys.rpm_full")} className="inline-flex items-center gap-1">
                     <span>{t("api_keys_page.rpm")}</span>
                     <Info size={12} className="text-slate-400 dark:text-white/40" />
                 </HoverTooltip>
@@ -570,7 +570,7 @@ export function ApiKeysPage() {
             width: "w-[70px]",
             cellClassName: "whitespace-nowrap text-slate-700 dark:text-white/70",
             headerRender: () => (
-                <HoverTooltip content="Tokens Per Minute，Tokens Per Minute" className="inline-flex items-center gap-1">
+                <HoverTooltip content={t("api_keys.tpm_full")} className="inline-flex items-center gap-1">
                     <span>{t("api_keys_page.tpm")}</span>
                     <Info size={12} className="text-slate-400 dark:text-white/40" />
                 </HoverTooltip>
@@ -651,14 +651,14 @@ export function ApiKeysPage() {
                     <button
                         onClick={() => handleOpenEdit(idx)}
                         className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-amber-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-amber-400"
-                        title="Edit"
+                        title={t("common.edit")}
                     >
                         <Pencil size={15} />
                     </button>
                     <button
                         onClick={() => setDeleteIndex(idx)}
                         className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-red-50 hover:text-red-600 dark:text-white/50 dark:hover:bg-red-900/20 dark:hover:text-red-400"
-                        title="Delete"
+                        title={t("common.delete")}
                     >
                         <Trash2 size={15} />
                     </button>
@@ -821,7 +821,7 @@ export function ApiKeysPage() {
 
             <div className="grid gap-4 lg:grid-cols-2">
                 <div>
-                    <HoverTooltip content="Requests Per Minute, maximum requests per minute. Similar to OpenAI's RPM Limit." className="mb-1 inline-flex items-center gap-1">
+                    <HoverTooltip content={t("api_keys.rpm_full")} className="mb-1 inline-flex items-center gap-1">
                         <label className="text-sm font-medium text-slate-700 dark:text-white/80">
                             RPM Limit
                         </label>
@@ -837,7 +837,7 @@ export function ApiKeysPage() {
                     />
                 </div>
                 <div>
-                    <HoverTooltip content="Tokens Per Minute, maximum tokens per minute. Similar to OpenAI's TPM Limit." className="mb-1 inline-flex items-center gap-1">
+                    <HoverTooltip content={t("api_keys.tpm_full")} className="mb-1 inline-flex items-center gap-1">
                         <label className="text-sm font-medium text-slate-700 dark:text-white/80">
                             TPM Limit
                         </label>

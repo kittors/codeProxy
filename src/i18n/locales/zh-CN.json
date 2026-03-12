@@ -61,7 +61,8 @@
     "delete_model": "删除模型",
     "priority_optional": "优先级（可选）",
     "all_models": "全部模型",
-    "clear_action": "清空"
+    "clear_action": "清空",
+    "chart_legend": "图表图例"
   },
   "title": {
     "main": "CLI Proxy API Management Center",
@@ -205,7 +206,9 @@
     "add_modal_key_placeholder": "请输入API密钥",
     "edit_modal_title": "编辑API密钥",
     "edit_modal_key_label": "API密钥:",
-    "delete_confirm": "确定要删除这个API密钥吗？"
+    "delete_confirm": "确定要删除这个API密钥吗？",
+    "rpm_full": "每分钟请求数，最大每分钟请求数。",
+    "tpm_full": "每分钟 Token 数，最大每分钟 Token 数。"
   },
   "ai_providers": {
     "title": "AI 提供商配置",
@@ -519,7 +522,22 @@
     "delete_auth_file": "删除认证文件",
     "confirm_delete_all": "确定要删除所有认证文件吗？此操作不可恢复。",
     "delete_all_title": "删除全部认证文件",
-    "delete_title": "删除认证文件"
+    "delete_title": "删除认证文件",
+    "count_info": "数量信息",
+    "count_hint": "基于搜索结果的数量",
+    "fetch_models_desc": "从 /model-definitions 获取模型并批量生成别名（默认别名=相同）。",
+    "model_alias_desc": "按渠道维护模型名称 -> 别名映射（用于 OAuth）。",
+    "prefix_proxy_desc": "仅修改 prefix/proxy_url，其他保持不变（通过重新上传同名文件）。",
+    "no_models_api": "服务器未实现 /auth-files/models 或认证文件不支持查询模型。",
+    "no_excluded_api": "服务器未实现 /oauth-excluded-models（或版本太旧）。请更新服务器。",
+    "no_alias_api": "服务器未实现 /oauth-model-alias。请升级服务器。",
+    "add_channel_placeholder": "添加渠道（例如 codex/gemini/anthropic）",
+    "add_provider_placeholder": "添加提供商（例如 codex / gemini-cli）",
+    "count_placeholder": "数量",
+    "one_model_per_line": "每行一个模型；使用 * 禁用所有模型",
+    "search_models_placeholder": "搜索模型 id / display_name",
+    "api_not_supported": "API 不支持",
+    "no_config": "暂无配置"
   },
   "antigravity_quota": {
     "title": "Antigravity 额度",
@@ -1851,7 +1869,8 @@
     "channel_name": "渠道名称",
     "claude_channel_hint": "例如 Claude 主渠道（必填）",
     "codex_channel_hint": "例如 Codex 主渠道（必填）",
-    "gemini_channel_hint": "例如 Gemini 主渠道（必填）"
+    "gemini_channel_hint": "例如 Gemini 主渠道（必填）",
+    "test_model": "测试模型："
   },
   "request_logs": {
     "title": "请求日志",
@@ -1904,7 +1923,9 @@
     "all_status": "全部状态",
     "all_models": "全部模型",
     "requests": "请求数",
-    "token": "Token"
+    "token": "Token",
+    "model_filter": "模型过滤",
+    "status_filter": "状态过滤"
   },
   "config_page": {
     "runtime_switches": "运行时开关",
@@ -1942,7 +1963,11 @@
     "source_title": "config.yaml（源码）",
     "save_changes": "保存更改",
     "not_searched": "未搜索",
-    "no_match": "无匹配"
+    "no_match": "无匹配",
+    "next_match_hint": "下一个匹配 (Enter)",
+    "prev_match_hint": "上一个匹配 (Shift+Enter)",
+    "proxy_url_placeholder": "proxy-url（留空清除）",
+    "retry_placeholder": "request-retry（非负整数）"
   },
   "auth_files_page": {
     "files_tab": "文件",
@@ -2092,7 +2117,11 @@
     "remote_mgmt": "远程管理",
     "remote_desc": "对应 `remote-management` 配置部分。",
     "switch_preview": "切换预览模型",
-    "switch_project": "切换项目"
+    "switch_project": "切换项目",
+    "payload_default_desc": "匹配模型后，在请求体中追加/覆盖参数（对应 `payload.default`）。",
+    "payload_override_desc": "匹配模型后，覆盖请求体中的参数（对应 `payload.override`）。",
+    "payload_filter_desc": "匹配模型后，从请求体中移除指定参数路径（对应 `payload.filter`）。",
+    "runtime_desc": "常用运行时开关（写入 config.yaml）。"
   },
   "quota": {
     "no_matching": "暂无匹配的认证文件"
