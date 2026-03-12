@@ -112,7 +112,7 @@ const formatDate = (iso: string | undefined) => {
 };
 
 const formatLimit = (limit: number | undefined) => {
-    if (!limit || limit <= 0) return "Unlimited";
+    if (!limit || limit <= 0) return null;
     return limit.toLocaleString();
 };
 
@@ -271,7 +271,7 @@ export function ApiKeysPage() {
                 const merged = [...entriesData, ...newEntries];
                 try {
                     await apiKeyEntriesApi.replace(merged);
-                    notify({ type: "success", message: `Auto-imported ${newEntries.length} legacy API Keys` });
+                    notify({ type: "success", message: t("api_keys_page.auto_import", { count: newEntries.length }) });
                 } catch {
                     // silent
                 }
@@ -283,7 +283,7 @@ export function ApiKeysPage() {
             // Load models after entries are available (needs a valid API key)
             void loadModels();
         } catch (err: unknown) {
-            notify({ type: "error", message: err instanceof Error ? err.message : "Failed to load API Keys" });
+            notify({ type: "error", message: err instanceof Error ? err.message : t("api_keys_page.load_failed") });
         } finally {
             setLoading(false);
         }
@@ -319,10 +319,10 @@ export function ApiKeysPage() {
             setEntries(newEntries);
             notify({
                 type: "success",
-                message: updated.disabled ? `Disabled "${entry.name || "Unnamed"}"` : `Enabled "${entry.name || "Unnamed"}"`,
+                message: updated.disabled ? t("api_keys_page.disabled_toast", { name: entry.name || t("api_keys_page.unnamed") }) : t("api_keys_page.enabled_toast", { name: entry.name || t("api_keys_page.unnamed") }),
             });
         } catch (err: unknown) {
-            notify({ type: "error", message: err instanceof Error ? err.message : "Operation failed" });
+            notify({ type: "error", message: err instanceof Error ? err.message : t("api_keys_page.operation_failed") });
         }
     };
 
@@ -345,11 +345,11 @@ export function ApiKeysPage() {
 
     const handleCreate = async () => {
         if (!form.name.trim()) {
-            notify({ type: "error", message: "Please enter API Key name" });
+            notify({ type: "error", message: t("api_keys_page.name_required") });
             return;
         }
         if (!form.key.trim()) {
-            notify({ type: "error", message: "Key cannot be empty" });
+            notify({ type: "error", message: t("api_keys_page.key_empty") });
             return;
         }
         setSaving(true);
@@ -367,11 +367,11 @@ export function ApiKeysPage() {
                 "created-at": new Date().toISOString(),
             };
             await apiKeyEntriesApi.replace([...entries, newEntry]);
-            notify({ type: "success", message: "Created successfully" });
+            notify({ type: "success", message: t("api_keys_page.created_success") });
             setShowCreate(false);
             await loadEntries();
         } catch (err: unknown) {
-            notify({ type: "error", message: err instanceof Error ? err.message : "Create failed" });
+            notify({ type: "error", message: err instanceof Error ? err.message : t("api_keys_page.create_failed") });
         } finally {
             setSaving(false);
         }
@@ -398,7 +398,7 @@ export function ApiKeysPage() {
     const handleEdit = async () => {
         if (editIndex === null) return;
         if (!form.name.trim()) {
-            notify({ type: "error", message: "Please enter API Key name" });
+            notify({ type: "error", message: t("api_keys_page.name_required") });
             return;
         }
         setSaving(true);
@@ -416,11 +416,11 @@ export function ApiKeysPage() {
                     "system-prompt": form.systemPrompt.trim(),
                 },
             });
-            notify({ type: "success", message: "Updated successfully" });
+            notify({ type: "success", message: t("api_keys_page.updated_success") });
             setEditIndex(null);
             await loadEntries();
         } catch (err: unknown) {
-            notify({ type: "error", message: err instanceof Error ? err.message : "Update failed" });
+            notify({ type: "error", message: err instanceof Error ? err.message : t("api_keys_page.update_failed") });
         } finally {
             setSaving(false);
         }
@@ -433,11 +433,11 @@ export function ApiKeysPage() {
         setSaving(true);
         try {
             await apiKeyEntriesApi.delete({ index: deleteIndex });
-            notify({ type: "success", message: "Deleted successfully" });
+            notify({ type: "success", message: t("api_keys_page.deleted_success") });
             setDeleteIndex(null);
             await loadEntries();
         } catch (err: unknown) {
-            notify({ type: "error", message: err instanceof Error ? err.message : "Delete failed" });
+            notify({ type: "error", message: err instanceof Error ? err.message : t("api_keys_page.delete_failed") });
         } finally {
             setSaving(false);
         }
@@ -448,9 +448,9 @@ export function ApiKeysPage() {
     const handleCopy = async (key: string) => {
         try {
             await navigator.clipboard.writeText(key);
-            notify({ type: "success", message: "Copied to clipboard" });
+            notify({ type: "success", message: t("api_keys_page.copied_toast") });
         } catch {
-            notify({ type: "error", message: "Copy failed" });
+            notify({ type: "error", message: t("api_keys_page.copy_failed") });
         }
     };
 
@@ -458,7 +458,7 @@ export function ApiKeysPage() {
 
     const handleViewUsage = (entry: ApiKeyEntry) => {
         setUsageViewKey(entry.key);
-        setUsageViewName(entry.name || "Unnamed");
+        setUsageViewName(entry.name || t("api_keys_page.unnamed"));
         void loadUsage();
     };
 
@@ -472,14 +472,14 @@ export function ApiKeysPage() {
     const apiKeyColumns = useMemo<VirtualTableColumn<ApiKeyEntry>[]>(() => [
         {
             key: "status",
-            label: "Status",
+            label: t("api_keys_page.col_status"),
             width: "w-[52px]",
             headerClassName: "text-center",
             cellClassName: "text-center",
             render: (row, idx) => (
                 <button
                     onClick={() => void handleToggleDisable(idx)}
-                    title={row.disabled ? "Click to enable" : "Click to disable"}
+                    title={row.disabled ? t("api_keys_page.click_enable") : t("api_keys_page.click_disable")}
                     className={`inline-flex h-7 w-7 items-center justify-center rounded-lg transition-colors ${row.disabled
                         ? "text-slate-400 hover:bg-red-50 hover:text-red-500 dark:text-white/30 dark:hover:bg-red-900/20 dark:hover:text-red-400"
                         : "text-emerald-500 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-900/20"
@@ -491,11 +491,11 @@ export function ApiKeysPage() {
         },
         {
             key: "name",
-            label: "Name",
+            label: t("api_keys_page.col_name"),
             width: "w-[80px]",
             cellClassName: "font-medium",
             render: (row) => (
-                <OverflowTooltip content={row.name || "Unnamed"} className="block min-w-0">
+                <OverflowTooltip content={row.name || t("api_keys_page.unnamed")} className="block min-w-0">
                     <span className="block min-w-0 truncate">
                         {row.name || <span className="text-slate-400 dark:text-white/40">{t("common.unnamed", "Unnamed")}</span>}
                     </span>
@@ -504,7 +504,7 @@ export function ApiKeysPage() {
         },
         {
             key: "key",
-            label: "Key",
+            label: t("api_keys_page.col_key"),
             width: "w-[220px]",
             cellClassName: "whitespace-nowrap",
             render: (row) => (
@@ -515,13 +515,13 @@ export function ApiKeysPage() {
         },
         {
             key: "dailyLimit",
-            label: "Daily Limit",
+            label: t("api_keys_page.col_daily_limit"),
             width: "w-[80px]",
             cellClassName: "whitespace-nowrap text-slate-700 dark:text-white/70",
             render: (row) => (
                 <span className="inline-flex items-center gap-1">
                     {!row["daily-limit"] ? (
-                        <><Infinity size={14} className="text-green-500" /> Unlimited</>
+                        <><Infinity size={14} className="text-green-500" /> {t("api_keys_page.unlimited")}</>
                     ) : (
                         formatLimit(row["daily-limit"])
                     )}
@@ -530,13 +530,13 @@ export function ApiKeysPage() {
         },
         {
             key: "totalQuota",
-            label: "Total Quota",
+            label: t("api_keys_page.col_total_quota"),
             width: "w-[80px]",
             cellClassName: "whitespace-nowrap text-slate-700 dark:text-white/70",
             render: (row) => (
                 <span className="inline-flex items-center gap-1">
                     {!row["total-quota"] ? (
-                        <><Infinity size={14} className="text-green-500" /> Unlimited</>
+                        <><Infinity size={14} className="text-green-500" /> {t("api_keys_page.unlimited")}</>
                     ) : (
                         formatLimit(row["total-quota"])
                     )}
@@ -557,7 +557,7 @@ export function ApiKeysPage() {
             render: (row) => (
                 <span className="inline-flex items-center gap-1">
                     {!row["rpm-limit"] ? (
-                        <><Infinity size={14} className="text-green-500" /> Unlimited</>
+                        <><Infinity size={14} className="text-green-500" /> {t("api_keys_page.unlimited")}</>
                     ) : (
                         formatLimit(row["rpm-limit"])
                     )}
@@ -578,7 +578,7 @@ export function ApiKeysPage() {
             render: (row) => (
                 <span className="inline-flex items-center gap-1">
                     {!row["tpm-limit"] ? (
-                        <><Infinity size={14} className="text-green-500" /> Unlimited</>
+                        <><Infinity size={14} className="text-green-500" /> {t("api_keys_page.unlimited")}</>
                     ) : (
                         formatLimit(row["tpm-limit"])
                     )}
@@ -587,7 +587,7 @@ export function ApiKeysPage() {
         },
         {
             key: "allowedModels",
-            label: "Models",
+            label: t("api_keys_page.col_models"),
             width: "w-[110px]",
             cellClassName: "text-slate-700 dark:text-white/70 overflow-hidden min-w-0",
             render: (row) =>
@@ -617,20 +617,20 @@ export function ApiKeysPage() {
                     </HoverTooltip>
                 ) : (
                     <span className="inline-flex items-center gap-1 whitespace-nowrap text-green-600 dark:text-green-400">
-                        <ShieldCheck size={14} /> All
+                        <ShieldCheck size={14} /> {t("api_keys_page.all_models")}
                     </span>
                 ),
         },
         {
             key: "createdAt",
-            label: "Created",
+            label: t("api_keys_page.col_created"),
             width: "w-[140px]",
             cellClassName: "whitespace-nowrap text-slate-500 dark:text-white/50",
             render: (row) => <>{formatDate(row["created-at"])}</>,
         },
         {
             key: "actions",
-            label: "Actions",
+            label: t("api_keys_page.col_actions"),
             width: "w-[130px]",
             render: (row, idx) => (
                 <div className="flex gap-1">
@@ -670,14 +670,14 @@ export function ApiKeysPage() {
     const usageLogColumns = useMemo<VirtualTableColumn<UsageLogRow>[]>(() => [
         {
             key: "timestamp",
-            label: "Time",
+            label: t("api_keys_page.col_time"),
             width: "w-48",
             cellClassName: "font-mono text-xs tabular-nums text-slate-700 dark:text-slate-200",
             render: (row) => <span className="block min-w-0 truncate">{formatTimestamp(row.timestamp)}</span>,
         },
         {
             key: "model",
-            label: "Model",
+            label: t("api_keys_page.col_model"),
             width: "w-48",
             render: (row) => (
                 <OverflowTooltip content={row.model} className="block min-w-0">
@@ -687,22 +687,22 @@ export function ApiKeysPage() {
         },
         {
             key: "status",
-            label: "Status",
+            label: t("api_keys_page.col_status"),
             width: "w-16",
             render: (row) =>
                 row.failed ? (
                     <span className="inline-flex min-w-[44px] justify-center rounded-lg bg-rose-50 px-2 py-1 text-xs font-semibold text-rose-700 dark:bg-rose-500/15 dark:text-rose-200">
-                        Failed
+                        {t("api_keys_page.status_failed")}
                     </span>
                 ) : (
                     <span className="inline-flex min-w-[44px] justify-center rounded-lg bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200">
-                        Success
+                        {t("api_keys_page.status_success")}
                     </span>
                 ),
         },
         {
             key: "latency",
-            label: "Duration",
+            label: t("api_keys_page.col_duration"),
             width: "w-20",
             headerClassName: "text-right",
             cellClassName: "text-right font-mono text-xs tabular-nums text-slate-700 dark:text-slate-200",
@@ -710,7 +710,7 @@ export function ApiKeysPage() {
         },
         {
             key: "inputTokens",
-            label: "Input",
+            label: t("api_keys_page.col_input"),
             width: "w-20",
             headerClassName: "text-right",
             cellClassName: "text-right font-mono text-xs tabular-nums text-slate-700 dark:text-slate-200",
@@ -718,7 +718,7 @@ export function ApiKeysPage() {
         },
         {
             key: "outputTokens",
-            label: "Output",
+            label: t("api_keys_page.col_output"),
             width: "w-20",
             headerClassName: "text-right",
             cellClassName: "text-right font-mono text-xs tabular-nums text-slate-700 dark:text-slate-200",
@@ -726,7 +726,7 @@ export function ApiKeysPage() {
         },
         {
             key: "totalTokens",
-            label: "Total Token",
+            label: t("api_keys_page.col_total_token"),
             width: "w-24",
             headerClassName: "text-right",
             cellClassName: "text-right font-mono text-xs tabular-nums text-slate-900 dark:text-white",
@@ -740,20 +740,20 @@ export function ApiKeysPage() {
         <div className="space-y-4">
             <div>
                 <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
-                    Name <span className="text-rose-500">*</span>
+                    {t("api_keys_page.form_name_label")} <span className="text-rose-500">*</span>
                 </label>
                 <input
                     type="text"
                     value={form.name}
                     onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-                    placeholder="e.g. Team-A (required)"
+                    placeholder={t("api_keys_page.form_name_placeholder")}
                     className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition-all focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white dark:focus:border-indigo-500"
                 />
             </div>
 
             <div>
                 <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
-                    API Key
+                    {t("api_keys_page.form_key_label")}
                 </label>
                 <div className="flex gap-2">
                     <input
@@ -771,7 +771,7 @@ export function ApiKeysPage() {
                             onClick={() => setForm((p) => ({ ...p, key: generateKey() }))}
                         >
                             <RefreshCw size={14} />
-                            Regenerate
+                            {t("api_keys_page.form_regenerate")}
                         </Button>
                     )}
                 </div>
@@ -780,20 +780,20 @@ export function ApiKeysPage() {
             <div className="grid gap-4 lg:grid-cols-3">
                 <div>
                     <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
-                        Daily Request Limit
+                        {t("api_keys_page.form_daily_limit")}
                     </label>
                     <input
                         type="number"
                         value={form.dailyLimit}
                         onChange={(e) => setForm((p) => ({ ...p, dailyLimit: e.target.value }))}
-                        placeholder="0 = Unlimited"
+                        placeholder={t("api_keys_page.form_unlimited_hint")}
                         min={0}
                         className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition-all focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white dark:focus:border-indigo-500"
                     />
                 </div>
                 <div>
                     <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
-                        Total Request Quota
+                        {t("api_keys_page.form_total_quota")}
                     </label>
                     <input
                         type="number"
@@ -806,7 +806,7 @@ export function ApiKeysPage() {
                 </div>
                 <div>
                     <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
-                        Concurrent Request Limit
+                        {t("api_keys_page.form_concurrency_limit")}
                     </label>
                     <input
                         type="number"
@@ -823,7 +823,7 @@ export function ApiKeysPage() {
                 <div>
                     <HoverTooltip content={t("api_keys.rpm_full")} className="mb-1 inline-flex items-center gap-1">
                         <label className="text-sm font-medium text-slate-700 dark:text-white/80">
-                            RPM Limit
+                            {t("api_keys_page.form_rpm_limit")}
                         </label>
                         <Info size={14} className="text-slate-400 dark:text-white/40" />
                     </HoverTooltip>
@@ -839,7 +839,7 @@ export function ApiKeysPage() {
                 <div>
                     <HoverTooltip content={t("api_keys.tpm_full")} className="mb-1 inline-flex items-center gap-1">
                         <label className="text-sm font-medium text-slate-700 dark:text-white/80">
-                            TPM Limit
+                            {t("api_keys_page.form_tpm_limit")}
                         </label>
                         <Info size={14} className="text-slate-400 dark:text-white/40" />
                     </HoverTooltip>
@@ -856,20 +856,20 @@ export function ApiKeysPage() {
 
             <div>
                 <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
-                    Allowed Models (Empty = All)
+                    {t("api_keys_page.form_allowed_models")}
                 </label>
                 <MultiSelect
                     options={availableModels}
                     value={form.allowedModels}
                     onChange={(selected) => setForm((p) => ({ ...p, allowedModels: selected }))}
                     placeholder={t("api_keys_page.select_models")}
-                    emptyLabel="All Models"
+                    emptyLabel={t("api_keys_page.form_all_models")}
                 />
             </div>
 
             <div>
                 <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
-                    System Prompt
+                    {t("api_keys_page.form_system_prompt")}
                 </label>
                 <textarea
                     value={form.systemPrompt}
@@ -879,7 +879,7 @@ export function ApiKeysPage() {
                     className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition-all focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white dark:focus:border-indigo-500 resize-y"
                 />
                 <p className="mt-1 text-xs text-slate-400 dark:text-white/40">
-                    Requests using this API Key will automatically inject this System Prompt.
+                    {t("api_keys_page.form_system_prompt_desc")}
                 </p>
             </div>
         </div>
@@ -896,12 +896,10 @@ export function ApiKeysPage() {
                     <div className="flex gap-2">
                         <Button variant="secondary" size="sm" onClick={() => void loadEntries()} disabled={loading}>
                             <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
-                            Refresh
-                        </Button>
+                            {t("api_keys_page.refresh")}</Button>
                         <Button variant="primary" size="sm" onClick={handleOpenCreate}>
                             <Plus size={14} />
-                            Create Key
-                        </Button>
+                            {t("api_keys_page.create_key")}</Button>
                     </div>
                 }
                 loading={loading}
@@ -909,7 +907,7 @@ export function ApiKeysPage() {
                 {entries.length === 0 ? (
                     <EmptyState
                         title={t("api_keys_page.no_keys")}
-                        description="Click 'Create Key' to add the first API Key."
+                        description={t("api_keys_page.no_keys_desc")}
                         icon={<KeyRound size={32} className="text-slate-400" />}
                     />
                 ) : (
@@ -920,8 +918,8 @@ export function ApiKeysPage() {
                         rowHeight={44}
                         height="h-auto max-h-[70vh]"
                         minWidth="min-w-[1200px]"
-                        caption="API Keys List"
-                        emptyText="No API Keys"
+                        caption={t("api_keys_page.table_caption")}
+                        emptyText={t("api_keys_page.no_api_keys")}
                         rowClassName={(row) => row.disabled ? "opacity-50" : ""}
                     />
                 )}
@@ -936,10 +934,9 @@ export function ApiKeysPage() {
                 footer={
                     <>
                         <Button variant="secondary" onClick={() => setShowCreate(false)}>
-                            Cancel
-                        </Button>
+                            {t("api_keys_page.cancel")}</Button>
                         <Button variant="primary" onClick={() => void handleCreate()} disabled={saving}>
-                            {saving ? "Creating..." : "Create"}
+                            {saving ? t("api_keys_page.creating") : t("api_keys_page.create_btn")}
                         </Button>
                     </>
                 }
@@ -956,10 +953,9 @@ export function ApiKeysPage() {
                 footer={
                     <>
                         <Button variant="secondary" onClick={() => setEditIndex(null)}>
-                            Cancel
-                        </Button>
+                            {t("api_keys_page.cancel")}</Button>
                         <Button variant="primary" onClick={() => void handleEdit()} disabled={saving}>
-                            {saving ? "Saving..." : "Save"}
+                            {saving ? t("api_keys_page.saving") : t("api_keys_page.save_btn")}
                         </Button>
                     </>
                 }
@@ -976,10 +972,9 @@ export function ApiKeysPage() {
                 footer={
                     <>
                         <Button variant="secondary" onClick={() => setDeleteIndex(null)}>
-                            Cancel
-                        </Button>
+                            {t("api_keys_page.cancel")}</Button>
                         <Button variant="danger" onClick={() => void handleDelete()} disabled={saving}>
-                            {saving ? "Deleting..." : "Confirm Delete"}
+                            {saving ? t("api_keys_page.deleting") : t("api_keys_page.confirm_delete_btn")}
                         </Button>
                     </>
                 }
@@ -987,7 +982,7 @@ export function ApiKeysPage() {
                 {deleteIndex !== null && entries[deleteIndex] && (
                     <div className="rounded-xl bg-red-50 p-3 dark:bg-red-900/20">
                         <div className="text-sm font-medium text-red-800 dark:text-red-300">
-                            {entries[deleteIndex].name || "Unnamed"}
+                            {entries[deleteIndex].name || t("api_keys_page.unnamed")}
                         </div>
                         <code className="text-xs text-red-600 dark:text-red-400">
                             {maskKey(entries[deleteIndex].key)}
@@ -1000,11 +995,11 @@ export function ApiKeysPage() {
             <Modal
                 open={usageViewKey !== null}
                 onClose={() => setUsageViewKey(null)}
-                title={`Usage — ${usageViewName}`}
-                description={usageViewKey ? `Key: ${maskKey(usageViewKey)}  ·  ${usageRows.length} records` : ""}
+                title={t("api_keys_page.usage_title", { name: usageViewName })}
+                description={usageViewKey ? t("api_keys_page.usage_desc", { key: maskKey(usageViewKey), count: usageRows.length }) : ""}
             >
                 {usageLoading ? (
-                    <div className="py-8 text-center text-sm text-slate-500 dark:text-white/50">Loading...</div>
+                    <div className="py-8 text-center text-sm text-slate-500 dark:text-white/50">{t("api_keys_page.loading")}</div>
                 ) : usageRows.length === 0 ? (
                     <div className="py-8 text-center text-sm text-slate-500 dark:text-white/50">{t("api_keys_page.no_usage")}</div>
                 ) : (
@@ -1015,8 +1010,8 @@ export function ApiKeysPage() {
                         rowHeight={40}
                         height="h-auto max-h-[60vh]"
                         minWidth="min-w-[700px]"
-                        caption="Usage Records"
-                        emptyText="No usage records"
+                        caption={t("api_keys_page.usage_table_caption")}
+                        emptyText={t("api_keys_page.no_usage_records")}
                     />
                 )}
             </Modal>

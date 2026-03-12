@@ -182,40 +182,40 @@ const ANTIGRAVITY_QUOTA_GROUPS: {
   identifiers: string[];
   labelFromModel?: boolean;
 }[] = [
-  {
-    id: "claude-gpt",
-    label: "Claude/GPT",
-    identifiers: [
-      "claude-sonnet-4-5-thinking",
-      "claude-opus-4-5-thinking",
-      "claude-sonnet-4-5",
-      "gpt-oss-120b-medium",
-    ],
-  },
-  {
-    id: "gemini-3-pro",
-    label: "Gemini 3 Pro",
-    identifiers: ["gemini-3-pro-high", "gemini-3-pro-low"],
-  },
-  {
-    id: "gemini-2-5-flash",
-    label: "Gemini 2.5 Flash",
-    identifiers: ["gemini-2.5-flash", "gemini-2.5-flash-thinking"],
-  },
-  {
-    id: "gemini-2-5-flash-lite",
-    label: "Gemini 2.5 Flash Lite",
-    identifiers: ["gemini-2.5-flash-lite"],
-  },
-  { id: "gemini-2-5-cu", label: "Gemini 2.5 CU", identifiers: ["rev19-uic3-1p"] },
-  { id: "gemini-3-flash", label: "Gemini 3 Flash", identifiers: ["gemini-3-flash"] },
-  {
-    id: "gemini-image",
-    label: "gemini-3-pro-image",
-    identifiers: ["gemini-3-pro-image"],
-    labelFromModel: true,
-  },
-];
+    {
+      id: "claude-gpt",
+      label: "Claude/GPT",
+      identifiers: [
+        "claude-sonnet-4-5-thinking",
+        "claude-opus-4-5-thinking",
+        "claude-sonnet-4-5",
+        "gpt-oss-120b-medium",
+      ],
+    },
+    {
+      id: "gemini-3-pro",
+      label: "Gemini 3 Pro",
+      identifiers: ["gemini-3-pro-high", "gemini-3-pro-low"],
+    },
+    {
+      id: "gemini-2-5-flash",
+      label: "Gemini 2.5 Flash",
+      identifiers: ["gemini-2.5-flash", "gemini-2.5-flash-thinking"],
+    },
+    {
+      id: "gemini-2-5-flash-lite",
+      label: "Gemini 2.5 Flash Lite",
+      identifiers: ["gemini-2.5-flash-lite"],
+    },
+    { id: "gemini-2-5-cu", label: "Gemini 2.5 CU", identifiers: ["rev19-uic3-1p"] },
+    { id: "gemini-3-flash", label: "Gemini 3 Flash", identifiers: ["gemini-3-flash"] },
+    {
+      id: "gemini-image",
+      label: "gemini-3-pro-image",
+      identifiers: ["gemini-3-pro-image"],
+      labelFromModel: true,
+    },
+  ];
 
 const findAntigravityModel = (models: AntigravityModelsPayload, identifier: string) => {
   const direct = models[identifier];
@@ -262,7 +262,7 @@ export const buildAntigravityGroups = (models: AntigravityModelsPayload) => {
 
     const avg = quotaEntries.length
       ? quotaEntries.reduce((acc, item) => acc + (item.remainingFraction ?? 0), 0) /
-        quotaEntries.length
+      quotaEntries.length
       : 0;
 
     const reset = quotaEntries.find((item) => item.resetTime)?.resetTime;
@@ -320,43 +320,43 @@ const GEMINI_CLI_GROUPS: {
   preferredModelId?: string;
   modelIds: string[];
 }[] = [
-  {
-    id: "gemini-2.5-pro",
-    label: "Gemini 2.5 Pro",
-    preferredModelId: "gemini-2.5-pro",
-    modelIds: ["gemini-2.5-pro", "gemini-2.5-pro-preview"],
-  },
-  {
-    id: "gemini-2.5-flash",
-    label: "Gemini 2.5 Flash",
-    preferredModelId: "gemini-2.5-flash",
-    modelIds: ["gemini-2.5-flash", "gemini-2.5-flash-preview"],
-  },
-  {
-    id: "gemini-2.5-flash-lite",
-    label: "Gemini 2.5 Flash Lite",
-    preferredModelId: "gemini-2.5-flash-lite",
-    modelIds: ["gemini-2.5-flash-lite"],
-  },
-  {
-    id: "gemini-2.0-flash",
-    label: "Gemini 2.0 Flash",
-    preferredModelId: "gemini-2.0-flash",
-    modelIds: ["gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-2.0-flash-exp"],
-  },
-  {
-    id: "gemini-1.5-pro",
-    label: "Gemini 1.5 Pro",
-    preferredModelId: "gemini-1.5-pro",
-    modelIds: ["gemini-1.5-pro", "gemini-1.5-pro-latest"],
-  },
-  {
-    id: "gemini-1.5-flash",
-    label: "Gemini 1.5 Flash",
-    preferredModelId: "gemini-1.5-flash",
-    modelIds: ["gemini-1.5-flash", "gemini-1.5-flash-latest"],
-  },
-];
+    {
+      id: "gemini-2.5-pro",
+      label: "Gemini 2.5 Pro",
+      preferredModelId: "gemini-2.5-pro",
+      modelIds: ["gemini-2.5-pro", "gemini-2.5-pro-preview"],
+    },
+    {
+      id: "gemini-2.5-flash",
+      label: "Gemini 2.5 Flash",
+      preferredModelId: "gemini-2.5-flash",
+      modelIds: ["gemini-2.5-flash", "gemini-2.5-flash-preview"],
+    },
+    {
+      id: "gemini-2.5-flash-lite",
+      label: "Gemini 2.5 Flash Lite",
+      preferredModelId: "gemini-2.5-flash-lite",
+      modelIds: ["gemini-2.5-flash-lite"],
+    },
+    {
+      id: "gemini-2.0-flash",
+      label: "Gemini 2.0 Flash",
+      preferredModelId: "gemini-2.0-flash",
+      modelIds: ["gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-2.0-flash-exp"],
+    },
+    {
+      id: "gemini-1.5-pro",
+      label: "Gemini 1.5 Pro",
+      preferredModelId: "gemini-1.5-pro",
+      modelIds: ["gemini-1.5-pro", "gemini-1.5-pro-latest"],
+    },
+    {
+      id: "gemini-1.5-flash",
+      label: "Gemini 1.5 Flash",
+      preferredModelId: "gemini-1.5-flash",
+      modelIds: ["gemini-1.5-flash", "gemini-1.5-flash-latest"],
+    },
+  ];
 
 const GEMINI_GROUP_ORDER = new Map(GEMINI_CLI_GROUPS.map((group, idx) => [group.id, idx] as const));
 const GEMINI_GROUP_LOOKUP = new Map(
@@ -611,10 +611,10 @@ const formatCodexResetLabel = (window?: CodexUsageWindow | null): string => {
   const after = normalizeNumberValue(window.reset_after_seconds ?? window.resetAfterSeconds);
   if (after === null) return "--";
   const minutes = Math.max(0, Math.round(after / 60));
-  if (minutes < 60) return `in ${minutes} min`;
+  if (minutes < 60) return `m_quota.minutes_later::${minutes}`;
   const hours = Math.floor(minutes / 60);
   const rest = minutes % 60;
-  return rest ? `in ${hours}h ${rest}m` : `in ${hours}h`;
+  return rest ? `m_quota.hours_minutes_later::${hours}::${rest}` : `m_quota.hours_later::${hours}`;
 };
 
 export const buildCodexItems = (payload: CodexUsagePayload): QuotaItem[] => {
@@ -665,12 +665,12 @@ export const buildCodexItems = (payload: CodexUsagePayload): QuotaItem[] => {
   };
 
   const rateWindows = pickWindows(rate);
-  addWindow("Code: 5h", rateWindows.fiveHour, rate);
-  addWindow("Code: Weekly", rateWindows.weekly, rate);
+  addWindow("m_quota.code_5h", rateWindows.fiveHour, rate);
+  addWindow("m_quota.code_weekly", rateWindows.weekly, rate);
 
   const reviewWindows = pickWindows(codeReview);
-  addWindow("Review: 5h", reviewWindows.fiveHour, codeReview);
-  addWindow("Review: Weekly", reviewWindows.weekly, codeReview);
+  addWindow("m_quota.review_5h", reviewWindows.fiveHour, codeReview);
+  addWindow("m_quota.review_weekly", reviewWindows.weekly, codeReview);
 
   return items;
 };
@@ -717,7 +717,7 @@ export const buildKiroItems = (payload: KiroQuotaPayload): QuotaItem[] => {
       const remaining = Math.max(0, limit - used);
       const percent = limit > 0 ? Math.round((remaining / limit) * 100) : 0;
       items.push({
-        label: "Base Quota",
+        label: "m_quota.base_quota",
         percent,
         resetLabel: resetTime !== null ? formatUnixSeconds(resetTime) : "--",
         meta: `used ${Math.round(used).toLocaleString()} / limit ${Math.round(limit).toLocaleString()}`,
@@ -733,7 +733,7 @@ export const buildKiroItems = (payload: KiroQuotaPayload): QuotaItem[] => {
         const remaining = Math.max(0, trialLimit - trialUsed);
         const percent = trialLimit > 0 ? Math.round((remaining / trialLimit) * 100) : 0;
         items.push({
-          label: "Trial Quota",
+          label: "m_quota.trial_quota",
           percent,
           resetLabel: trialExpiry !== null ? formatUnixSeconds(trialExpiry) : "--",
           meta: `${status ?? "trial"} · used ${Math.round(trialUsed).toLocaleString()} / limit ${Math.round(trialLimit).toLocaleString()}`,
@@ -743,7 +743,7 @@ export const buildKiroItems = (payload: KiroQuotaPayload): QuotaItem[] => {
   }
   const subscriptionTitle = normalizeStringValue(payload.subscriptionInfo?.subscriptionTitle);
   if (subscriptionTitle) {
-    items.unshift({ label: "Subscription", percent: null, meta: subscriptionTitle });
+    items.unshift({ label: "m_quota.subscription", percent: null, meta: subscriptionTitle });
   }
   return items;
 };

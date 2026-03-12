@@ -183,7 +183,7 @@ export function ProvidersPage() {
           }
         }
       } catch (err: unknown) {
-        notify({ type: "error", message: err instanceof Error ? err.message : "Failed to load config" });
+        notify({ type: "error", message: err instanceof Error ? err.message : t("providers.load_failed") });
       } finally {
         setLoading(false);
       }
@@ -268,13 +268,13 @@ export function ProvidersPage() {
   const commitKeyDraft = useCallback((): ProviderSimpleConfig | null => {
     const name = keyDraft.name.trim();
     if (!name) {
-      setKeyDraftError("Channel name is required");
+      setKeyDraftError(t("providers.channel_name_error"));
       return null;
     }
 
     const apiKey = keyDraft.apiKey.trim();
     if (!apiKey) {
-      setKeyDraftError("API Key is required");
+      setKeyDraftError(t("providers.api_key_error"));
       return null;
     }
 
@@ -335,11 +335,11 @@ export function ProvidersPage() {
         setVertexKeys(next);
         await providersApi.saveVertexConfigs(next);
       }
-      notify({ type: "success", message: "Saved" });
+      notify({ type: "success", message: t("providers.saved") });
       closeKeyEditor();
       startTransition(() => void refreshAll());
     } catch (err: unknown) {
-      notify({ type: "error", message: err instanceof Error ? err.message : "Save failed" });
+      notify({ type: "error", message: err instanceof Error ? err.message : t("providers.save_failed") });
     }
   }, [
     claudeKeys,
@@ -382,9 +382,9 @@ export function ProvidersPage() {
           await providersApi.deleteVertexConfig(entry.apiKey);
           setVertexKeys((prev) => prev.filter((_, i) => i !== index));
         }
-        notify({ type: "success", message: "Deleted" });
+        notify({ type: "success", message: t("providers.deleted") });
       } catch (err: unknown) {
-        notify({ type: "error", message: err instanceof Error ? err.message : "Delete failed" });
+        notify({ type: "error", message: err instanceof Error ? err.message : t("providers.delete_failed") });
       }
     },
     [claudeKeys, codexKeys, geminiKeys, notify, vertexKeys],
@@ -415,13 +415,13 @@ export function ProvidersPage() {
           setCodexKeys(nextList);
           await providersApi.saveCodexConfigs(nextList);
         }
-        notify({ type: "success", message: enabled ? "Enabled" : "Disabled" });
+        notify({ type: "success", message: enabled ? t("providers.toggle_enabled") : t("providers.toggle_disabled") });
         startTransition(() => void refreshAll());
       } catch (err: unknown) {
         if (type === "gemini") setGeminiKeys(prev);
         else if (type === "claude") setClaudeKeys(prev);
         else setCodexKeys(prev);
-        notify({ type: "error", message: err instanceof Error ? err.message : "Update failed" });
+        notify({ type: "error", message: err instanceof Error ? err.message : t("providers.update_failed") });
       }
     },
     [claudeKeys, codexKeys, geminiKeys, notify, refreshAll, startTransition],
@@ -489,11 +489,11 @@ export function ProvidersPage() {
     const name = openaiDraft.name.trim();
     const baseUrl = openaiDraft.baseUrl.trim();
     if (!name) {
-      setOpenaiDraftError("Name is required");
+      setOpenaiDraftError(t("providers.name_error"));
       return null;
     }
     if (!baseUrl) {
-      setOpenaiDraftError("baseUrl is required");
+      setOpenaiDraftError(t("providers.base_url_error"));
       return null;
     }
 
@@ -502,7 +502,7 @@ export function ProvidersPage() {
     const priorityText = openaiDraft.priorityText.trim();
     const priority = priorityText !== "" ? Number(priorityText) : undefined;
     if (priority !== undefined && !Number.isFinite(priority)) {
-      setOpenaiDraftError("Priority must be a number");
+      setOpenaiDraftError(t("providers.priority_error"));
       return null;
     }
 
@@ -521,7 +521,7 @@ export function ProvidersPage() {
       .filter(Boolean) as OpenAIProvider["apiKeyEntries"];
 
     if (!apiKeyEntries || apiKeyEntries.length === 0) {
-      setOpenaiDraftError("At least one apiKeyEntry is required");
+      setOpenaiDraftError(t("providers.key_entry_error"));
       return null;
     }
 
@@ -558,11 +558,11 @@ export function ProvidersPage() {
 
       setOpenaiProviders(next);
       await providersApi.saveOpenAIProviders(next);
-      notify({ type: "success", message: "Saved" });
+      notify({ type: "success", message: t("providers.saved") });
       closeOpenAIEditor();
       startTransition(() => void refreshAll());
     } catch (err: unknown) {
-      notify({ type: "error", message: err instanceof Error ? err.message : "Save failed" });
+      notify({ type: "error", message: err instanceof Error ? err.message : t("providers.save_failed") });
     }
   }, [
     closeOpenAIEditor,
@@ -581,9 +581,9 @@ export function ProvidersPage() {
       try {
         await providersApi.deleteOpenAIProvider(entry.name);
         setOpenaiProviders((prev) => prev.filter((_, i) => i !== index));
-        notify({ type: "success", message: "Deleted" });
+        notify({ type: "success", message: t("providers.deleted") });
       } catch (err: unknown) {
-        notify({ type: "error", message: err instanceof Error ? err.message : "Delete failed" });
+        notify({ type: "error", message: err instanceof Error ? err.message : t("providers.delete_failed") });
       }
     },
     [notify, openaiProviders],
@@ -592,7 +592,7 @@ export function ProvidersPage() {
   const discoverModels = useCallback(async () => {
     const baseUrl = openaiDraft.baseUrl.trim();
     if (!baseUrl) {
-      notify({ type: "info", message: "Please fill in baseUrl first" });
+      notify({ type: "info", message: t("providers.fill_base_url_first") });
       return;
     }
 
@@ -628,7 +628,7 @@ export function ProvidersPage() {
       setDiscoveredModels(list);
       setDiscoverSelected(new Set(list.map((m) => m.id)));
     } catch (err: unknown) {
-      notify({ type: "error", message: err instanceof Error ? err.message : "Failed to fetch models" });
+      notify({ type: "error", message: err instanceof Error ? err.message : t("providers.fetch_models_failed") });
     } finally {
       setDiscovering(false);
     }
@@ -638,7 +638,7 @@ export function ProvidersPage() {
     const selected = new Set(discoverSelected);
     const picked = discoveredModels.filter((m) => selected.has(m.id));
     if (picked.length === 0) {
-      notify({ type: "info", message: "No models selected" });
+      notify({ type: "info", message: t("providers.no_models_selected") });
       return;
     }
 
@@ -654,7 +654,7 @@ export function ProvidersPage() {
     }
 
     setOpenaiDraft((prev) => ({ ...prev, modelEntries: merged }));
-    notify({ type: "success", message: "Model list merged" });
+    notify({ type: "success", message: t("providers.models_merged") });
   }, [discoverSelected, discoveredModels, notify, openaiDraft.modelEntries]);
 
   const saveAmpcode = useCallback(async () => {
@@ -678,11 +678,11 @@ export function ProvidersPage() {
         .filter((m) => m.from && m.to);
       await ampcodeApi.patchModelMappings(mappings);
 
-      notify({ type: "success", message: "Ampcode config saved" });
+      notify({ type: "success", message: t("providers.ampcode_saved") });
       startTransition(() => void refreshAll());
       setAmpUpstreamApiKey("");
     } catch (err: unknown) {
-      notify({ type: "error", message: err instanceof Error ? err.message : "Save failed" });
+      notify({ type: "error", message: err instanceof Error ? err.message : t("providers.save_failed") });
     }
   }, [
     ampForceMappings,
@@ -698,9 +698,9 @@ export function ProvidersPage() {
     async (value: string) => {
       try {
         await navigator.clipboard.writeText(value);
-        notify({ type: "success", message: "Copied" });
+        notify({ type: "success", message: t("providers.copied") });
       } catch {
-        notify({ type: "error", message: "Copy failed" });
+        notify({ type: "error", message: t("providers.copy_failed") });
       }
     },
     [notify],
@@ -802,7 +802,7 @@ export function ProvidersPage() {
         <div className="space-y-0.5">
           <h2 className="text-base font-semibold text-slate-900 dark:text-white">{t("providers.config_overview")}</h2>
           <p className="text-xs text-slate-500 dark:text-white/55">
-            Manage API Keys / OpenAI providers / Ampcode mappings in tabs.
+            {t("providers.config_overview_desc")}
           </p>
         </div>
         <Button
@@ -843,7 +843,7 @@ export function ProvidersPage() {
           <TabsTrigger value="openai">
             <img src={iconOpenai} alt="" className="size-4 dark:hidden" />
             <img src={iconOpenai} alt="" className="hidden size-4 dark:block" />
-            OpenAI Compatible
+            {t("providers.openai_compatible")}
           </TabsTrigger>
           <TabsTrigger value="ampcode">
             <img src={iconAmp} alt="" className="size-4" />
@@ -916,13 +916,11 @@ export function ProvidersPage() {
             description={t("providers.claude_desc")}
             actions={
               <Button variant="primary" size="sm" onClick={() => openOpenAIEditor(null)}>
-                <Plus size={14} />
-                Add Provider
-              </Button>
+                <Plus size={14} />{t("providers.add_provider")}</Button>
             }
           >
             {openaiProviders.length === 0 ? (
-              <EmptyState title={t("providers.no_openai_providers", "No OpenAI Providers")} description="Click Add Provider to start configuring." />
+              <EmptyState title={t("providers.no_openai_providers", "No OpenAI Providers")} description={t("providers.no_openai_desc")} />
             ) : (
               <div className="space-y-3">
                 {openaiProviders.map((provider, idx) => {
@@ -994,10 +992,10 @@ export function ProvidersPage() {
                                       </div>
                                       <div className="flex items-center gap-2 tabular-nums">
                                         <span className="rounded-full bg-emerald-600/10 px-2 py-0.5 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200">
-                                          Success {entryStats.success}
+                                          {t("providers.success_stats", { count: entryStats.success })}
                                         </span>
                                         <span className="rounded-full bg-rose-600/10 px-2 py-0.5 text-rose-700 dark:bg-rose-500/15 dark:text-rose-200">
-                                          Failed {entryStats.failure}
+                                          {t("providers.failed_stats", { count: entryStats.failure })}
                                         </span>
                                       </div>
                                     </div>
@@ -1008,11 +1006,11 @@ export function ProvidersPage() {
                           ) : null}
 
                           <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-600 dark:text-white/65 tabular-nums">
-                            <span>models: {provider.models?.length ?? 0}</span>
+                            <span>{t("providers.models_label")}: {provider.models?.length ?? 0}</span>
                             <span>·</span>
-                            <span>Success：{stats.success}</span>
+                            <span>{t("providers.success_stats", { count: stats.success })}</span>
                             <span>·</span>
-                            <span>Failed：{stats.failure}</span>
+                            <span>{t("providers.failed_stats", { count: stats.failure })}</span>
                             {provider.testModel ? (
                               <>
                                 <span>·</span>
@@ -1050,7 +1048,7 @@ export function ProvidersPage() {
                             onClick={() => openOpenAIEditor(idx)}
                           >
                             <Settings2 size={14} />
-                            Edit
+                            {t("providers.edit")}
                           </Button>
                           <Button
                             variant="danger"
@@ -1058,7 +1056,7 @@ export function ProvidersPage() {
                             onClick={() => setConfirm({ type: "deleteOpenAI", index: idx })}
                           >
                             <Trash2 size={14} />
-                            Delete
+                            {t("providers.delete")}
                           </Button>
                         </div>
                       </div>
@@ -1082,7 +1080,7 @@ export function ProvidersPage() {
                 disabled={loading || isPending}
               >
                 <Save size={14} />
-                Save
+                {t("providers.save")}
               </Button>
             }
           >
@@ -1108,7 +1106,7 @@ export function ProvidersPage() {
                 </div>
                 <div className="rounded-2xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
                   <p className="text-xs text-slate-600 dark:text-white/65">
-                    Current: {ampcode ? "Loaded" : "Not loaded"} · Mappings {ampMappings.length}  entries
+                    {t("providers.current_status", { status: ampcode ? t("providers.status_loaded") : t("providers.status_not_loaded"), count: ampMappings.length })}
                   </p>
                 </div>
               </div>
@@ -1147,8 +1145,8 @@ export function ProvidersPage() {
                         size="sm"
                         onClick={() => setAmpMappings((prev) => prev.filter((_, i) => i !== idx))}
                         disabled={ampMappings.length <= 1}
-                        aria-label="DeleteMappings"
-                        title="DeleteMappings"
+                        aria-label={t("providers.delete_mapping")}
+                        title={t("providers.delete_mapping")}
                       >
                         <Trash2 size={14} />
                       </Button>
@@ -1167,7 +1165,7 @@ export function ProvidersPage() {
                     }
                   >
                     <Plus size={14} />
-                    Add
+                    {t("providers.add")}
                   </Button>
                   <Button
                     variant="secondary"
@@ -1176,7 +1174,7 @@ export function ProvidersPage() {
                       setAmpMappings([{ id: `map-${Date.now()}`, from: "", to: "" }])
                     }
                   >
-                    Clear
+                    {t("providers.clear")}
                   </Button>
                 </div>
               </div>
@@ -1187,11 +1185,11 @@ export function ProvidersPage() {
 
       <Modal
         open={editKeyOpen}
-        title={`${editKeyIndex === null ? "Add" : "Edit"} ${editKeyTitle} Config`}
+        title={editKeyIndex === null ? t("providers.add_config", { type: editKeyTitle }) : t("providers.edit_config", { type: editKeyTitle })}
         description={
           editKeyType === "vertex"
-            ? "Vertex models must have alias (name => alias). Use * in Excluded Models to disable all."
-            : "Supports Excluded Models (one per line; * to disable all), custom headers & models."
+            ? t("providers.vertex_config_desc")
+            : t("providers.generic_config_desc")
         }
         onClose={closeKeyEditor}
         footer={
@@ -1201,9 +1199,7 @@ export function ProvidersPage() {
                 {keyDraftError}
               </span>
             ) : null}
-            <Button variant="secondary" onClick={closeKeyEditor}>
-              Cancel
-            </Button>
+            <Button variant="secondary" onClick={closeKeyEditor}>{t("providers.cancel")}</Button>
             <Button variant="primary" onClick={() => void saveKeyDraft()}>
               <Check size={14} />
               Save
@@ -1220,27 +1216,27 @@ export function ProvidersPage() {
                   : "rounded-full bg-amber-500/15 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:text-amber-200"
               }
             >
-              {editKeyEnabled ? "Enabled" : "Disabled"}
+              {editKeyEnabled ? t("providers.enabled") : t("providers.disabled")}
             </span>
             <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-700 dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-white/75">
-              headers: <span className="font-semibold tabular-nums">{editKeyHeaderCount}</span>
+              {t("providers.headers_optional")}: <span className="font-semibold tabular-nums">{editKeyHeaderCount}</span>
             </span>
             <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-700 dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-white/75">
-              models: <span className="font-semibold tabular-nums">{editKeyModelCount}</span>
+              {t("providers.models_label")}: <span className="font-semibold tabular-nums">{editKeyModelCount}</span>
             </span>
             <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-700 dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-white/75">
-              excluded: <span className="font-semibold tabular-nums">{editKeyExcludedCount}</span>
+              {t("providers.excluded_models_label")}: <span className="font-semibold tabular-nums">{editKeyExcludedCount}</span>
             </span>
             {editKeyType === "vertex" ? (
               <span className="rounded-full bg-slate-900 px-2.5 py-1 text-xs font-semibold text-white dark:bg-white dark:text-neutral-950">
-                Vertex: alias required
+                {t("providers.vertex_alias_required")}
               </span>
             ) : null}
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
             <p className="text-sm font-semibold text-slate-900 dark:text-white">
-              Channel Name (required)
+              {t("providers.channel_name_label")}
             </p>
             <div className="mt-2">
               <TextInput
@@ -1253,20 +1249,19 @@ export function ProvidersPage() {
               />
             </div>
             <p className="mt-2 text-xs text-slate-500 dark:text-white/55">
-              Used to distinguish channels; use a recognizable name.
+              {t("providers.channel_name_hint")}
             </p>
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
             <ToggleSwitch
               label={t("providers.enable")}
-              description={editKeyEnabled ? "Current: Enable" : "Current: Disabled (wrote * rules)"}
+              description={editKeyEnabled ? t("providers.enable_toggle_desc_on") : t("providers.enable_toggle_desc_off")}
               checked={editKeyEnabled}
               onCheckedChange={editKeyEnabledToggle}
             />
             <p className="mt-2 text-xs text-slate-500 dark:text-white/55">
-              Disabling writes <span className="font-mono">*</span> to Excluded Models
-              ; you can also edit manually below.
+              {t("providers.disable_hint")}
             </p>
           </div>
 
@@ -1274,7 +1269,7 @@ export function ProvidersPage() {
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-sm font-semibold text-slate-900 dark:text-white">{t("providers.api_key")}</p>
               <span className="text-xs text-slate-500 dark:text-white/55">
-                Show: {maskApiKey(keyDraft.apiKey)}
+                {t("providers.show_masked_key", { key: maskApiKey(keyDraft.apiKey) })}
               </span>
             </div>
             <div className="mt-2">
@@ -1300,13 +1295,13 @@ export function ProvidersPage() {
               />
             </div>
             <p className="mt-2 text-xs text-slate-500 dark:text-white/55">
-              Paste only the key; other text may cause inconsistent source tracking.
+              {t("providers.api_key_hint")}
             </p>
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
             <p className="text-sm font-semibold text-slate-900 dark:text-white">
-              Routing Prefix (optional)
+              {t("providers.prefix_label")}
             </p>
             <div className="mt-2">
               <TextInput
@@ -1319,13 +1314,13 @@ export function ProvidersPage() {
               />
             </div>
             <p className="mt-2 text-xs text-slate-500 dark:text-white/55">
-              Prefix is used for routing and matching stats; makes it easier to distinguish multiple entries key.
+              {t("providers.prefix_hint")}
             </p>
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
             <p className="text-sm font-semibold text-slate-900 dark:text-white">
-              Connection & Proxy (optional)
+              {t("providers.connection_proxy_label")}
             </p>
             <div className="mt-3 grid gap-3">
               <div className="space-y-2">
@@ -1354,7 +1349,7 @@ export function ProvidersPage() {
               </div>
             </div>
             <p className="mt-2 text-xs text-slate-500 dark:text-white/55">
-              Base URL switches upstream; Proxy URL routes individual key through a proxy.
+              {t("providers.connection_proxy_hint")}
             </p>
           </div>
 
@@ -1363,12 +1358,11 @@ export function ProvidersPage() {
               title={t("providers.headers_optional")}
               entries={keyDraft.headersEntries}
               onChange={(next) => setKeyDraft((prev) => ({ ...prev, headersEntries: next }))}
-              keyPlaceholder="Header name"
-              valuePlaceholder="Header value"
+              keyPlaceholder={t("providers.header_name_placeholder")}
+              valuePlaceholder={t("providers.header_value_placeholder")}
             />
             <p className="mt-2 text-xs text-slate-500 dark:text-white/55">
-              Common: <span className="font-mono">x-api-key</span>、
-              <span className="font-mono">anthropic-version</span>, custom auth headers.
+              {t("providers.headers_common_hint")}
             </p>
           </div>
 
@@ -1376,8 +1370,8 @@ export function ProvidersPage() {
             <ModelInputList
               title={
                 editKeyType === "vertex"
-                  ? "Models (alias required: name => alias)"
-                  : "Models (optional)"
+                  ? t("providers.models_vertex_title")
+                  : t("providers.models_optional_title")
               }
               entries={keyDraft.modelEntries}
               onChange={(next) => setKeyDraft((prev) => ({ ...prev, modelEntries: next }))}
@@ -1386,11 +1380,11 @@ export function ProvidersPage() {
             />
             {editKeyType === "vertex" ? (
               <p className="mt-2 text-xs text-slate-500 dark:text-white/55">
-                Vertex needs downward model names mapped to Vertex-recognized names, so alias is required.
+                {t("providers.vertex_alias_hint")}
               </p>
             ) : (
               <p className="mt-2 text-xs text-slate-500 dark:text-white/55">
-                Leave empty for default routing; fill to enable model aliases, priority, etc.
+                {t("providers.models_default_hint")}
               </p>
             )}
           </div>
@@ -1398,21 +1392,19 @@ export function ProvidersPage() {
           <div className="rounded-2xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-sm font-semibold text-slate-900 dark:text-white">
-                Excluded Models (optional)
+                {t("providers.excluded_models_label")}
               </p>
               <div className="flex items-center gap-2">
                 <Button variant="secondary" size="sm" onClick={() => editKeyEnabledToggle(false)}>
-                  Add * to disable
+                  {t("providers.add_disable_all")}
                 </Button>
-                <Button variant="secondary" size="sm" onClick={() => editKeyEnabledToggle(true)}>
-                  Remove *
-                </Button>
+                <Button variant="secondary" size="sm" onClick={() => editKeyEnabledToggle(true)}>{t("providers.remove_disable_all")}</Button>
                 <Button
                   variant="secondary"
                   size="sm"
                   onClick={() => setKeyDraft((prev) => ({ ...prev, excludedModelsText: "" }))}
                 >
-                  Clear
+                  {t("providers.clear")}
                 </Button>
               </div>
             </div>
@@ -1429,8 +1421,7 @@ export function ProvidersPage() {
             />
 
             <p className="mt-2 text-xs text-slate-500 dark:text-white/55">
-              Excluded: <span className="font-semibold tabular-nums">{editKeyExcludedCount}</span>{" "}
-              entries (excluding *).
+              {t("providers.excluded_count_hint", { count: editKeyExcludedCount })}
             </p>
           </div>
         </div>
@@ -1438,7 +1429,7 @@ export function ProvidersPage() {
 
       <Modal
         open={editOpenAIOpen}
-        title={`${editOpenAIIndex === null ? "Add" : "Edit"} OpenAI Provider`}
+        title={editOpenAIIndex === null ? t("providers.add_openai_provider") : t("providers.edit_openai_provider")}
         description={t("providers.openai_config_desc")}
         onClose={closeOpenAIEditor}
         footer={
@@ -1448,9 +1439,7 @@ export function ProvidersPage() {
                 {openaiDraftError}
               </span>
             ) : null}
-            <Button variant="secondary" onClick={closeOpenAIEditor}>
-              Cancel
-            </Button>
+            <Button variant="secondary" onClick={closeOpenAIEditor}>{t("providers.cancel")}</Button>
             <Button variant="primary" onClick={() => void saveOpenAIDraft()}>
               <Check size={14} />
               Save
@@ -1483,7 +1472,7 @@ export function ProvidersPage() {
                 placeholder="baseUrl"
               />
               <p className="text-xs text-slate-500 dark:text-white/55">
-                /models fetch URL:
+                {t("providers.models_fetch_url")}
                 {openaiDraft.baseUrl.trim() ? buildModelsEndpoint(openaiDraft.baseUrl) : "--"}
               </p>
             </div>
@@ -1502,7 +1491,7 @@ export function ProvidersPage() {
             </div>
             <div className="space-y-2">
               <p className="text-sm font-semibold text-slate-900 dark:text-white">
-                Priority (optional)
+                {t("providers.priority_label")}
               </p>
               <TextInput
                 value={openaiDraft.priorityText}
@@ -1515,7 +1504,7 @@ export function ProvidersPage() {
             </div>
             <div className="space-y-2">
               <p className="text-sm font-semibold text-slate-900 dark:text-white">
-                Test Model (optional)
+                {t("providers.test_model_label")}
               </p>
               <TextInput
                 value={openaiDraft.testModel}
@@ -1536,7 +1525,7 @@ export function ProvidersPage() {
           <section className="space-y-2">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-sm font-semibold text-slate-900 dark:text-white">
-                API Key Entries
+                {t("providers.api_key_entries")}
               </p>
               <Button
                 variant="secondary"
@@ -1552,7 +1541,7 @@ export function ProvidersPage() {
                 }
               >
                 <Plus size={14} />
-                Add
+                {t("providers.add")}
               </Button>
             </div>
 
@@ -1564,7 +1553,7 @@ export function ProvidersPage() {
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <p className="text-sm font-semibold text-slate-900 dark:text-white">
-                      Key #{idx + 1}
+                      {t("providers.key_number", { num: idx + 1 })}
                     </p>
                     <Button
                       variant="danger"
@@ -1578,14 +1567,14 @@ export function ProvidersPage() {
                       disabled={openaiDraft.apiKeyEntries.length <= 1}
                     >
                       <Trash2 size={14} />
-                      Delete
+                      {t("providers.delete")}
                     </Button>
                   </div>
 
                   <div className="mt-3 grid gap-3 md:grid-cols-2">
                     <div className="space-y-2">
                       <p className="text-sm font-semibold text-slate-900 dark:text-white">
-                        API Key
+                        {t("providers.api_key")}
                       </p>
                       <TextInput
                         value={entry.apiKey}
@@ -1601,7 +1590,7 @@ export function ProvidersPage() {
                         placeholder="apiKey"
                       />
                       <div className="flex items-center justify-between text-xs text-slate-500 dark:text-white/55">
-                        <span>Show: {maskApiKey(entry.apiKey)}</span>
+                        <span>{t("providers.show_masked_key", { key: maskApiKey(entry.apiKey) })}</span>
                         <Button
                           variant="ghost"
                           size="sm"
@@ -1609,13 +1598,13 @@ export function ProvidersPage() {
                           disabled={!entry.apiKey.trim()}
                         >
                           <Copy size={14} />
-                          Copy
+                          {t("providers.copy")}
                         </Button>
                       </div>
                     </div>
                     <div className="space-y-2">
                       <p className="text-sm font-semibold text-slate-900 dark:text-white">
-                        Proxy URL (optional)
+                        {t("providers.proxy_url_optional")}
                       </p>
                       <TextInput
                         value={entry.proxyUrl}
@@ -1654,7 +1643,7 @@ export function ProvidersPage() {
 
           <section className="space-y-2">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-sm font-semibold text-slate-900 dark:text-white">Models</p>
+              <p className="text-sm font-semibold text-slate-900 dark:text-white">{t("providers.models_label")}</p>
               <div className="flex items-center gap-2">
                 <Button
                   variant="secondary"
@@ -1663,7 +1652,7 @@ export function ProvidersPage() {
                   disabled={discovering}
                 >
                   <RefreshCw size={14} className={discovering ? "animate-spin" : ""} />
-                  Fetch /models
+                  {t("providers.fetch_models")}
                 </Button>
                 <Button
                   variant="secondary"
@@ -1672,7 +1661,7 @@ export function ProvidersPage() {
                   disabled={discoveredModels.length === 0}
                 >
                   <Check size={14} />
-                  Merge Selected
+                  {t("providers.merge_selected")}
                 </Button>
               </div>
             </div>
@@ -1688,7 +1677,7 @@ export function ProvidersPage() {
             {discoveredModels.length ? (
               <div className="rounded-2xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
                 <p className="text-xs text-slate-600 dark:text-white/65">
-                  Found {discoveredModels.length} models (all selected by default)
+                  {t("providers.found_models", { count: discoveredModels.length })}
                 </p>
                 <div className="mt-2 max-h-48 overflow-y-auto space-y-1">
                   {discoveredModels.map((model) => {
@@ -1732,12 +1721,12 @@ export function ProvidersPage() {
         title={t("providers.confirm_delete")}
         description={
           confirm?.type === "deleteOpenAI"
-            ? `Are you sure you want to delete OpenAI provider "${openaiProviders[confirm.index]?.name ?? ""}"? This operation is irreversible.`
+            ? t("providers.confirm_delete_openai", { name: openaiProviders[confirm.index]?.name ?? "" })
             : confirm?.type === "deleteKey"
-              ? "Delete this config? This cannot be undone."
-              : "Are you sure?"
+              ? t("providers.confirm_delete_config")
+              : t("providers.confirm_delete_generic")
         }
-        confirmText="Delete"
+        confirmText={t("providers.delete")}
         onClose={() => setConfirm(null)}
         onConfirm={() => {
           const action = confirm;

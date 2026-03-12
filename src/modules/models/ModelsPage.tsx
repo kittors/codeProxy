@@ -184,7 +184,7 @@ export function ModelsPage() {
                 // ignore cost fetch failure
             }
         } catch (err: unknown) {
-            notify({ type: "error", message: err instanceof Error ? err.message : "Failed to load model data" });
+            notify({ type: "error", message: err instanceof Error ? err.message : t("models_page.load_failed") });
         } finally {
             setLoading(false);
         }
@@ -245,9 +245,9 @@ export function ModelsPage() {
                 ),
             );
             setPricingModel(null);
-            notify({ type: "success", message: "Pricing saved to database" });
+            notify({ type: "success", message: t("models_page.pricing_saved") });
         } catch (err: unknown) {
-            notify({ type: "error", message: err instanceof Error ? err.message : "Save failed" });
+            notify({ type: "error", message: err instanceof Error ? err.message : t("models_page.save_failed") });
         } finally {
             setSavingPricing(false);
         }
@@ -255,7 +255,7 @@ export function ModelsPage() {
 
     const formatPricingBadge = (p: ModelPricing) => {
         if (p.inputPricePerMillion === 0 && p.outputPricePerMillion === 0 && p.cachedPricePerMillion === 0) {
-            return "Not priced";
+            return t("models_page.not_priced");
         }
         return `$${p.inputPricePerMillion} / $${p.outputPricePerMillion}`;
     };
@@ -263,7 +263,7 @@ export function ModelsPage() {
     const modelColumns = useMemo<VirtualTableColumn<ModelItem>[]>(() => [
         {
             key: "model",
-            label: "Model",
+            label: t("models_page.col_model"),
             width: "w-80",
             render: (row) => (
                 <div className="flex items-center gap-2 min-w-0">
@@ -276,7 +276,7 @@ export function ModelsPage() {
         },
         {
             key: "inputPrice",
-            label: "Input Price",
+            label: t("models_page.col_input_price"),
             width: "w-36",
             headerClassName: "text-right",
             cellClassName: "text-right font-mono text-xs tabular-nums text-slate-700 dark:text-slate-200",
@@ -284,7 +284,7 @@ export function ModelsPage() {
         },
         {
             key: "outputPrice",
-            label: "Output Price",
+            label: t("models_page.col_output_price"),
             width: "w-36",
             headerClassName: "text-right",
             cellClassName: "text-right font-mono text-xs tabular-nums text-slate-700 dark:text-slate-200",
@@ -292,7 +292,7 @@ export function ModelsPage() {
         },
         {
             key: "cachedPrice",
-            label: "Cache Price",
+            label: t("models_page.col_cache_price"),
             width: "w-36",
             headerClassName: "text-right",
             cellClassName: "text-right font-mono text-xs tabular-nums text-slate-700 dark:text-slate-200",
@@ -300,7 +300,7 @@ export function ModelsPage() {
         },
         {
             key: "status",
-            label: "Status",
+            label: t("models_page.col_status"),
             width: "w-32",
             headerClassName: "text-center",
             cellClassName: "text-center",
@@ -308,18 +308,18 @@ export function ModelsPage() {
                 const hasPricing = row.pricing.inputPricePerMillion > 0 || row.pricing.outputPricePerMillion > 0;
                 return hasPricing ? (
                     <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-300">
-                        <Check size={10} /> Priced
+                        <Check size={10} /> {t("models_page.priced")}
                     </span>
                 ) : (
                     <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-semibold text-slate-500 dark:bg-neutral-800 dark:text-white/40">
-                        Not priced
+                        {t("models_page.not_priced")}
                     </span>
                 );
             },
         },
         {
             key: "actions",
-            label: "Actions",
+            label: t("models_page.col_actions"),
             width: "w-20",
             render: (row) => (
                 <button
@@ -339,7 +339,7 @@ export function ModelsPage() {
             <div className="grid gap-4 md:grid-cols-3">
                 <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
                     <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 dark:text-white/55">
-                        <Cpu size={14} /> Available Models
+                        <Cpu size={14} /> {t("models_page.available_models")}
                     </div>
                     <div className="mt-2 text-2xl font-bold tabular-nums text-slate-900 dark:text-white">
                         {totalStats.modelCount}
@@ -347,7 +347,7 @@ export function ModelsPage() {
                 </div>
                 <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
                     <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 dark:text-white/55">
-                        <DollarSign size={14} /> Priced Models
+                        <DollarSign size={14} /> {t("models_page.priced_models")}
                     </div>
                     <div className="mt-2 text-2xl font-bold tabular-nums text-slate-900 dark:text-white">
                         {totalStats.pricedCount}
@@ -356,7 +356,7 @@ export function ModelsPage() {
                 </div>
                 <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
                     <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 dark:text-white/55">
-                        <Activity size={14} /> Quota Cost
+                        <Activity size={14} /> {t("models_page.quota_cost")}
                     </div>
                     <div className="mt-2 text-2xl font-bold tabular-nums text-slate-900 dark:text-white">
                         ${totalCost.toFixed(4)}
@@ -372,10 +372,10 @@ export function ModelsPage() {
                     <div>
                         <h2 className="flex items-center gap-2 text-base font-semibold text-slate-900 dark:text-white">
                             <Cpu size={18} className="text-slate-900 dark:text-white" />
-                            Model Pricing
+                            {t("models_page.model_pricing")}
                         </h2>
                         <p className="mt-1 text-xs text-slate-500 dark:text-white/45">
-                            Manage pricing config for all Available Models. Persisted in database and used for limits.
+                            {t("models_page.model_pricing_desc")}
                         </p>
                     </div>
                     <div className="flex items-center gap-2">
@@ -408,8 +408,8 @@ export function ModelsPage() {
                         rowKey={(row) => row.id}
                         loading={loading}
                         rowHeight={44}
-                        caption="Model Pricing Table"
-                        emptyText={searchFilter ? "No results" : "No model data"}
+                        caption={t("models_page.table_caption")}
+                        emptyText={searchFilter ? t("models_page.no_results") : t("models_page.no_model_data")}
                         minWidth="min-w-[800px]"
                         height="h-[calc(100vh-390px)]"
                     />
@@ -417,7 +417,7 @@ export function ModelsPage() {
                         <div className="absolute inset-0 z-10 flex items-center justify-center rounded-b-2xl bg-white/70 backdrop-blur-sm dark:bg-neutral-950/55">
                             <div className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white/85 px-3 py-2 text-sm font-medium text-slate-700 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/70 dark:text-white/75">
                                 <span className="h-4 w-4 rounded-full border-2 border-slate-300 border-t-slate-900 animate-spin dark:border-white/20 dark:border-t-white/80" />
-                                Loading…
+                                {t("models_page.loading")}
                             </div>
                         </div>
                     ) : null}
@@ -429,14 +429,13 @@ export function ModelsPage() {
                 open={pricingModel !== null}
                 onClose={() => setPricingModel(null)}
                 title={t("models_page.set_pricing")}
-                description={pricingModel ? `Set price per million tokens (USD) for ${pricingModel}` : ""}
+                description={pricingModel ? t("models_page.pricing_desc", { model: pricingModel }) : ""}
                 footer={
                     <>
                         <Button variant="secondary" onClick={() => setPricingModel(null)}>
-                            Cancel
-                        </Button>
+                            {t("models_page.cancel")}</Button>
                         <Button variant="primary" onClick={() => void handleSavePricing()} disabled={savingPricing}>
-                            {savingPricing ? "Saving…" : "Save"}
+                            {savingPricing ? t("models_page.saving") : t("models_page.save")}
                         </Button>
                     </>
                 }
@@ -453,7 +452,7 @@ export function ModelsPage() {
 
                     <div>
                         <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
-                            Input Token Price ($/M tokens)
+                            {t("models_page.input_token_price")}
                         </label>
                         <input
                             type="number"
@@ -468,7 +467,7 @@ export function ModelsPage() {
 
                     <div>
                         <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
-                            Output Token Price ($/M tokens)
+                            {t("models_page.output_token_price")}
                         </label>
                         <input
                             type="number"
@@ -483,7 +482,7 @@ export function ModelsPage() {
 
                     <div>
                         <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
-                            Cache Token Price ($/M tokens)
+                            {t("models_page.cache_token_price")}
                         </label>
                         <input
                             type="number"

@@ -50,27 +50,27 @@ import iconKiro from "@/assets/icons/kiro.svg";
 /* ─── Provider metadata ─── */
 const PROVIDER_META: Record<
   string,
-  { label: string; icon: { light: string; dark: string }; description: string }
+  { label: string; icon: { light: string; dark: string }; descKey: string }
 > = {
   antigravity: {
     label: "Antigravity",
     icon: { light: iconAntigravity, dark: iconAntigravity },
-    description: "Multiple API endpoint fallback",
+    descKey: "m_quota.antigravity_desc",
   },
   codex: {
     label: "Codex",
     icon: { light: iconCodex, dark: iconCodex },
-    description: "5h / weekly limits & code review",
+    descKey: "m_quota.codex_desc",
   },
   "gemini-cli": {
     label: "Gemini CLI",
     icon: { light: iconGemini, dark: iconGemini },
-    description: "Remaining by model group",
+    descKey: "m_quota.gemini_cli_desc",
   },
   kiro: {
     label: "Kiro",
     icon: { light: iconKiro, dark: iconKiro },
-    description: "AWS CodeWhisperer quota",
+    descKey: "m_quota.kiro_desc",
   },
 };
 
@@ -102,7 +102,7 @@ const fetchQuota = async (
 ): Promise<QuotaItem[]> => {
   const rawAuthIndex = (file as any)["auth_index"] ?? file.authIndex;
   const authIndex = normalizeAuthIndexValue(rawAuthIndex);
-  if (!authIndex) throw new Error("Missing auth_index");
+  if (!authIndex) throw new Error("missing_auth_index");
 
   if (type === "antigravity") {
     const projectId = await resolveAntigravityProjectId(file);
@@ -117,7 +117,7 @@ const fetchQuota = async (
       if (result.statusCode >= 200 && result.statusCode < 300) {
         const parsed = parseAntigravityPayload(result.body ?? result.bodyText);
         const models = parsed?.models;
-        if (!models || !isRecord(models)) throw new Error("No model quota data");
+        if (!models || !isRecord(models)) throw new Error("no_model_quota");
         const groups = buildAntigravityGroups(models as AntigravityModelsPayload);
         return groups.map((g) => ({
           label: g.label,
@@ -127,25 +127,25 @@ const fetchQuota = async (
       }
     }
     if (last) throw new Error(getApiCallErrorMessage(last));
-    throw new Error("Request failed");
+    throw new Error("request_failed");
   }
 
   if (type === "codex") {
     const accountId = resolveCodexChatgptAccountId(file);
-    if (!accountId) throw new Error("Missing Chatgpt-Account-Id");
+    if (!accountId) throw new Error("missing_account_id");
     const result = await apiCallApi.request({
       authIndex, method: "GET", url: CODEX_USAGE_URL,
       header: { ...CODEX_REQUEST_HEADERS, "Chatgpt-Account-Id": accountId },
     });
     if (result.statusCode < 200 || result.statusCode >= 300) throw new Error(getApiCallErrorMessage(result));
     const payload = parseCodexUsagePayload(result.body ?? result.bodyText);
-    if (!payload) throw new Error("Failed to parse Codex quota");
+    if (!payload) throw new Error("parse_codex_failed");
     return buildCodexItems(payload);
   }
 
   if (type === "gemini-cli") {
     const projectId = resolveGeminiCliProjectId(file);
-    if (!projectId) throw new Error("Missing Gemini CLI Project ID");
+    if (!projectId) throw new Error("missing_project_id");
     const result = await apiCallApi.request({
       authIndex, method: "POST", url: GEMINI_CLI_QUOTA_URL,
       header: { ...GEMINI_CLI_REQUEST_HEADERS },
@@ -185,7 +185,7 @@ const fetchQuota = async (
   });
   if (result.statusCode < 200 || result.statusCode >= 300) throw new Error(getApiCallErrorMessage(result));
   const payload = parseKiroQuotaPayload(result.body ?? result.bodyText);
-  if (!payload) throw new Error("Failed to parse Kiro quota");
+  if (!payload) throw new Error("parse_kiro_failed");
   return buildKiroItems(payload);
 };
 
@@ -209,7 +209,7 @@ export function QuotaPage() {
       const data = await authFilesApi.list();
       setFiles(Array.isArray(data?.files) ? data.files : []);
     } catch (err: unknown) {
-      notify({ type: "error", message: err instanceof Error ? err.message : "Failed to load auth files" });
+      notify({ type: "error", message: err instanceof Error ? err.message : t("m_quota.load_auth_failed") });
     } finally {
       setLoadingFiles(false);
     }
@@ -238,7 +238,7 @@ export function QuotaPage() {
         const items = await fetchQuota(type, file);
         setMap((prev) => ({ ...prev, [name]: { status: "success", items, updatedAt: Date.now() } }));
       } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : "Quota query failed";
+        const message = err instanceof Error ? err.message : t("m_quota.quota_query_failed");
         setMap((prev) => ({ ...prev, [name]: { status: "error", items: [], error: message, updatedAt: Date.now() } }));
       }
     }, [],
@@ -250,7 +250,7 @@ export function QuotaPage() {
     grouped.cx.forEach((f) => tasks.push(refreshOne("codex", f)));
     grouped.gm.forEach((f) => tasks.push(refreshOne("gemini-cli", f)));
     grouped.kr.forEach((f) => tasks.push(refreshOne("kiro", f)));
-    if (!tasks.length) { notify({ type: "info", message: "No queryable auth files found" }); return; }
+    if (!tasks.length) { notify({ type: "info", message: t("m_quota.no_queryable_files") }); return; }
     startTransition(() => { void Promise.allSettled(tasks); });
   }, [grouped, notify, refreshOne, startTransition]);
 
@@ -284,7 +284,7 @@ export function QuotaPage() {
                 {list.length}
               </span>
             )}
-            <span className="text-[11px] text-slate-400 dark:text-white/35">{meta.description}</span>
+            <span className="text-[11px] text-slate-400 dark:text-white/35">{t(meta.descKey)}</span>
           </div>
           {list.length > 0 && (
             <button
@@ -322,16 +322,16 @@ export function QuotaPage() {
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-lg font-semibold tracking-tight text-slate-900 dark:text-white">
-          Quota Management
+          {t("m_quota.title")}
         </h2>
         <div className="flex items-center gap-2">
           <Button variant="primary" size="sm" onClick={() => void refreshAll()} disabled={isPending || loadingFiles}>
             <RefreshCw size={13} className={isPending ? "animate-spin" : ""} />
-            Refresh All
+            {t("m_quota.refresh_all")}
           </Button>
           <Button variant="secondary" size="sm" onClick={() => void loadFiles()} disabled={loadingFiles}>
             <RefreshCw size={13} className={loadingFiles ? "animate-spin" : ""} />
-            Refresh Files
+            {t("m_quota.refresh_files")}
           </Button>
         </div>
       </div>
@@ -341,7 +341,7 @@ export function QuotaPage() {
         <div className="flex items-center justify-center py-8">
           <div className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white/85 px-3 py-2 text-xs font-medium text-slate-500 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/80 dark:text-white/60">
             <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-slate-400 border-t-transparent dark:border-white/50 dark:border-t-transparent" />
-            Loading auth files…
+            {t("m_quota.loading_files")}
           </div>
         </div>
       )}

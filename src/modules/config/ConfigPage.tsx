@@ -174,7 +174,7 @@ function RuntimeConfigPanel() {
         routingStrategy: typeof strategy === "string" ? strategy : "round-robin",
       });
     } catch (err: unknown) {
-      notify({ type: "error", message: err instanceof Error ? err.message : "Failed to load config" });
+      notify({ type: "error", message: err instanceof Error ? err.message : t("config_page.toast_load_failed") });
     } finally {
       setLoading(false);
     }
@@ -195,9 +195,9 @@ function RuntimeConfigPanel() {
         if (key === "switchProject") await configApi.updateSwitchProject(next);
         if (key === "switchPreviewModel") await configApi.updateSwitchPreviewModel(next);
         if (key === "forceModelPrefix") await configApi.updateForceModelPrefix(next);
-        notify({ type: "success", message: "Updated" });
+        notify({ type: "success", message: t("config_page.toast_updated") });
       } catch (err: unknown) {
-        notify({ type: "error", message: err instanceof Error ? err.message : "Update failed" });
+        notify({ type: "error", message: err instanceof Error ? err.message : t("config_page.toast_update_failed") });
         throw err;
       }
     },
@@ -217,15 +217,15 @@ function RuntimeConfigPanel() {
     const trimmedStrategy = routingStrategy.trim();
 
     if (!Number.isFinite(retryParsed) || retryParsed < 0) {
-      notify({ type: "error", message: "Retry count must be a non-negative number" });
+      notify({ type: "error", message: t("config_page.retry_non_negative") });
       return;
     }
     if (!Number.isFinite(logsParsed) || logsParsed < 0) {
-      notify({ type: "error", message: "Log size limit must be a non-negative number" });
+      notify({ type: "error", message: t("config_page.log_size_non_negative") });
       return;
     }
     if (!trimmedStrategy) {
-      notify({ type: "error", message: "Routing strategy is required" });
+      notify({ type: "error", message: t("config_page.routing_required") });
       return;
     }
 
@@ -250,10 +250,10 @@ function RuntimeConfigPanel() {
         await configApi.updateRoutingStrategy(trimmedStrategy);
       }
 
-      notify({ type: "success", message: "Saved" });
+      notify({ type: "success", message: t("config_page.toast_updated") });
       startTransition(() => void loadRuntimeConfig());
     } catch (err: unknown) {
-      notify({ type: "error", message: err instanceof Error ? err.message : "Save failed" });
+      notify({ type: "error", message: err instanceof Error ? err.message : t("config_page.toast_save_failed") });
       startTransition(() => void loadRuntimeConfig());
     }
   }, [
@@ -357,7 +357,7 @@ function RuntimeConfigPanel() {
             />
             <ToggleSwitch
               label={t("config_page.quota_switch_project")}
-              description="quota-exceeded.switch-project"
+              description={t("config_page.quota_switch_project_desc")}
               checked={switchProjectEnabled}
               onCheckedChange={(next) => {
                 setSwitchProjectEnabled(next);
@@ -368,7 +368,7 @@ function RuntimeConfigPanel() {
             />
             <ToggleSwitch
               label={t("config_page.quota_switch_preview")}
-              description="quota-exceeded.switch-preview-model"
+              description={t("config_page.quota_switch_preview_desc")}
               checked={switchPreviewModelEnabled}
               onCheckedChange={(next) => {
                 setSwitchPreviewModelEnabled(next);
@@ -379,7 +379,7 @@ function RuntimeConfigPanel() {
             />
             <ToggleSwitch
               label={t("config_page.force_model_prefix")}
-              description="force-model-prefix"
+              description={t("config_page.force_prefix_desc")}
               checked={forceModelPrefixEnabled}
               onCheckedChange={(next) => {
                 setForceModelPrefixEnabled(next);
@@ -406,7 +406,7 @@ function RuntimeConfigPanel() {
                 />
               </div>
               <p className="text-xs text-slate-600 dark:text-white/65">
-                Click "Save Changes" above after editing.
+                {t("config_page.save_hint")}
               </p>
             </div>
           </Card>
@@ -425,11 +425,11 @@ function RuntimeConfigPanel() {
                 <TextInput
                   value={routingStrategy}
                   onChange={(e) => setRoutingStrategy(e.currentTarget.value)}
-                  placeholder="routing-strategy (e.g. round-robin)"
+                  placeholder={t("config_page.routing_placeholder")}
                 />
               </div>
               <p className="text-xs text-slate-600 dark:text-white/65">
-                Current config preview: {rawConfig ? "Loaded" : "Not loaded"}
+                {t("config_page.config_preview", { status: rawConfig ? t("config_page.config_loaded") : t("config_page.config_not_loaded") })}
               </p>
             </div>
           </Card>
@@ -483,7 +483,7 @@ export function ConfigPage() {
       setLastSearchedQuery("");
       loadVisualValuesFromYaml(text);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Failed to load config.yaml";
+      const message = err instanceof Error ? err.message : t("config_page.toast_load_failed");
       setError(message);
       notify({ type: "error", message });
     } finally {
@@ -518,9 +518,9 @@ export function ConfigPage() {
       setYamlText(latest);
       setYamlDirty(false);
       loadVisualValuesFromYaml(latest);
-      notify({ type: "success", message: "config.yaml saved" });
+      notify({ type: "success", message: t("config_page.toast_saved") });
       if (commercialModeChanged) {
-        notify({ type: "info", message: "commercial-mode changed: restart required" });
+        notify({ type: "info", message: t("config_page.toast_commercial_changed") });
       }
     } catch (err: unknown) {
       notify({ type: "error", message: err instanceof Error ? err.message : "Save failed" });
@@ -578,7 +578,7 @@ export function ConfigPage() {
         setSearchIndex(0);
         setLastSearchedQuery(q);
         if (!positions.length) {
-          notify({ type: "info", message: "No match found" });
+          notify({ type: "info", message: t("config_page.no_match_found") });
           return;
         }
         jumpToMatch(0, q);
@@ -590,7 +590,7 @@ export function ConfigPage() {
         setSearchPositions(positions);
         setSearchIndex(0);
         if (!positions.length) {
-          notify({ type: "info", message: "No match found" });
+          notify({ type: "info", message: t("config_page.no_match_found") });
           return;
         }
         jumpToMatch(0, q);
@@ -859,8 +859,8 @@ export function ConfigPage() {
         open={confirmReloadOpen}
         title={t("config_page.discard_title")}
         description={t("config_page.discard_desc")}
-        confirmText="Continue Reload"
-        cancelText="Cancel"
+        confirmText={t("config_page.confirm_reload")}
+        cancelText={t("ui.cancel_default")}
         variant="danger"
         onClose={() => setConfirmReloadOpen(false)}
         onConfirm={() => {

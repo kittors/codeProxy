@@ -378,7 +378,7 @@ export function LogsPage() {
           setBuffer((prev) => trimAndAppend(prev, lines));
         }
       } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : "Failed to fetch logs";
+        const message = err instanceof Error ? err.message : t("logs_page.failed_fetch");
         notifyRef.current({ type: "error", message });
       } finally {
         if (shouldBlockUi) setLoading(false);
@@ -470,9 +470,9 @@ export function LogsPage() {
       stickToBottomRef.current = true;
       setIsAtBottom(true);
       setDisplayCount(INITIAL_DISPLAY_LINES);
-      notify({ type: "success", message: "Server logs cleared" });
+      notify({ type: "success", message: t("logs_page.logs_cleared") });
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Failed to clear logs";
+      const message = err instanceof Error ? err.message : t("logs_page.failed_clear");
       notify({ type: "error", message });
     }
   }, [notify]);
@@ -484,7 +484,7 @@ export function LogsPage() {
       const files = Array.isArray(result?.files) ? (result.files as ErrorLogItem[]) : [];
       setErrorLogs(files);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Failed to fetch error log list";
+      const message = err instanceof Error ? err.message : t("logs_page.failed_fetch_error_list");
       notify({ type: "error", message });
     } finally {
       setErrorLogsLoading(false);
@@ -504,7 +504,7 @@ export function LogsPage() {
         const blob = await logsApi.downloadErrorLog(file.name);
         downloadBlob(blob, file.name);
       } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : "Failed to download error log";
+        const message = err instanceof Error ? err.message : t("logs_page.failed_download_error_log");
         notify({ type: "error", message });
       }
     },
@@ -513,7 +513,7 @@ export function LogsPage() {
 
   const handleDownloadLogs = useCallback(() => {
     if (filteredLines.length === 0) {
-      notify({ type: "info", message: "No downloadable log content" });
+      notify({ type: "info", message: t("logs_page.no_download_content") });
       return;
     }
     const text = filteredLines.join("\n");
@@ -523,20 +523,20 @@ export function LogsPage() {
       ? "unknown"
       : date.toISOString().replace(/[:.]/g, "-");
     downloadBlob(blob, `logs-${stamp}.txt`);
-    notify({ type: "success", message: "Log file download started" });
+    notify({ type: "success", message: t("logs_page.download_started") });
   }, [filteredLines, notify]);
 
   const handleDownloadRequestLog = useCallback(async () => {
     const id = requestLogId.trim();
     if (!id) {
-      notify({ type: "info", message: "Please enter request ID" });
+      notify({ type: "info", message: t("logs_page.enter_request_id") });
       return;
     }
     try {
       const blob = await logsApi.downloadRequestLogById(id);
       downloadBlob(blob, `request-log-${id}.log`);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Failed to download request log";
+      const message = err instanceof Error ? err.message : t("logs_page.failed_download_request_log");
       notify({ type: "error", message });
     }
   }, [notify, requestLogId]);
@@ -558,7 +558,7 @@ export function LogsPage() {
         <TabsContent value="content">
           <Card
             title={t("logs_page.live_logs")}
-            description={`Latest: ${latestLabel} (buffer: last ${MAX_BUFFER_LINES} lines)`}
+            description={t("logs_page.latest_label", { time: latestLabel, max: MAX_BUFFER_LINES.toLocaleString() })}
             actions={
               <div className="flex flex-wrap items-center gap-2">
                 <Button
@@ -568,7 +568,7 @@ export function LogsPage() {
                   disabled={loading || refreshing}
                 >
                   <RefreshCw size={14} className={refreshing ? "animate-spin" : ""} />
-                  Refresh
+                  {t("logs_page.refresh")}
                 </Button>
                 <Button
                   variant="secondary"
@@ -577,7 +577,7 @@ export function LogsPage() {
                   disabled={loading || filteredLines.length === 0}
                 >
                   <Download size={14} />
-                  Download
+                  {t("logs_page.download")}
                 </Button>
                 <Button
                   variant="danger"
@@ -586,7 +586,7 @@ export function LogsPage() {
                   disabled={loading || refreshing}
                 >
                   <Trash2 size={14} />
-                  Clear
+                  {t("logs_page.clear")}
                 </Button>
               </div>
             }
@@ -607,8 +607,11 @@ export function LogsPage() {
               <div className="rounded-2xl border border-slate-200 bg-white/60 px-4 py-3 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/40">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="text-xs text-slate-600 dark:text-white/65">
-                    Auto Refresh: {autoRefresh ? "On" : "Off"} · Hide management traffic:
-                    {hideManagement ? "On" : "Off"} · Raw logs: {showRawLogs ? "On" : "Off"}
+                    {t("logs_page.status_summary", {
+                      autoRefresh: autoRefresh ? t("logs_page.auto_refresh_on") : t("logs_page.auto_refresh_off"),
+                      hideManagement: hideManagement ? t("logs_page.auto_refresh_on") : t("logs_page.auto_refresh_off"),
+                      rawLogs: showRawLogs ? t("logs_page.auto_refresh_on") : t("logs_page.auto_refresh_off"),
+                    })}
                   </div>
                   <Button
                     variant="ghost"
@@ -623,7 +626,7 @@ export function LogsPage() {
                         optionsOpen ? "rotate-180" : "rotate-0",
                       ].join(" ")}
                     />
-                    {optionsOpen ? "Collapse options" : "Expand options"}
+                    {optionsOpen ? t("logs_page.collapse_options") : t("logs_page.expand_options")}
                   </Button>
                 </div>
 
@@ -660,11 +663,10 @@ export function LogsPage() {
                 <div className="min-w-0">
                   <span
                     className="block truncate whitespace-nowrap tabular-nums"
-                    title={`Showing ${visibleLines.length.toLocaleString()} / ${filteredLines.length.toLocaleString()} lines${canLoadMore ? " (scroll up to load more)" : ""}`}
+                    title={t("logs_page.showing_lines", { visible: visibleLines.length.toLocaleString(), total: filteredLines.length.toLocaleString() }) + (canLoadMore ? " " + t("logs_page.scroll_up_hint") : "")}
                   >
-                    Showing {visibleLines.length.toLocaleString()} /{" "}
-                    {filteredLines.length.toLocaleString()}  lines
-                    {canLoadMore ? " (scroll up to load more)" : ""}
+                    {t("logs_page.showing_lines", { visible: visibleLines.length.toLocaleString(), total: filteredLines.length.toLocaleString() })}
+                    {canLoadMore ? " " + t("logs_page.scroll_up_hint") : ""}
                   </span>
                 </div>
                 <div className="shrink-0">
@@ -677,7 +679,7 @@ export function LogsPage() {
                       visibleLines.length === 0 || isAtBottom ? "pointer-events-none opacity-0" : ""
                     }
                   >
-                    Jump to latest
+                    {t("logs_page.jump_to_latest")}
                   </Button>
                 </div>
               </div>
@@ -792,7 +794,7 @@ export function LogsPage() {
                   disabled={errorLogsLoading}
                 >
                   <RefreshCw size={14} className={errorLogsLoading ? "animate-spin" : ""} />
-                  Refresh列表
+                  {t("logs_page.refresh_list")}
                 </Button>
               </div>
             }
@@ -802,10 +804,10 @@ export function LogsPage() {
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="min-w-0">
                     <p className="text-sm font-semibold text-slate-900 dark:text-white">
-                      按请求 ID Download
+                      {t("logs_page.request_id_download_title")}
                     </p>
                     <p className="mt-1 text-sm text-slate-600 dark:text-white/65">
-                      Input Request ID (8 chars) to download correspond log.
+                      {t("logs_page.request_id_download_desc")}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -824,7 +826,7 @@ export function LogsPage() {
                       onClick={handleDownloadRequestLog}
                       disabled={requestLogId.trim().length === 0}
                     >
-                      Download
+                      {t("logs_page.download")}
                     </Button>
                   </div>
                 </div>
@@ -833,12 +835,12 @@ export function LogsPage() {
               <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
                 <p className="text-sm font-semibold text-slate-900 dark:text-white">{t("logs_page.error_log_files")}</p>
                 <p className="mt-1 text-sm text-slate-600 dark:text-white/65">
-                  List by file name, click Download to obtain file.
+                  {t("logs_page.error_log_list_desc")}
                 </p>
 
                 <div className="mt-4">
                   {errorLogsLoading ? (
-                    <div className="text-sm text-slate-600 dark:text-white/65">Loading…</div>
+                    <div className="text-sm text-slate-600 dark:text-white/65">{t("logs_page.loading")}</div>
                   ) : errorLogs.length === 0 ? (
                     <EmptyState
                       title={t("logs_page.no_error_logs")}
@@ -857,7 +859,7 @@ export function LogsPage() {
                             </p>
                             <p className="mt-1 text-xs text-slate-600 dark:text-white/65">
                               {typeof file.size === "number"
-                                ? `${file.size.toLocaleString()} bytes`
+                                ? t("logs_page.bytes", { size: file.size.toLocaleString() })
                                 : "--"}{" "}
                               ·{" "}
                               {typeof file.modified === "number"
@@ -873,7 +875,7 @@ export function LogsPage() {
                             onClick={() => void downloadErrorLog(file)}
                           >
                             <Download size={14} />
-                            Download
+                            {t("logs_page.download")}
                           </Button>
                         </div>
                       ))}
@@ -888,9 +890,9 @@ export function LogsPage() {
 
       <ConfirmModal
         open={confirmClearOpen}
-        title={t("logs.clear_server_logs", "Clear Server Logs")}
-        description={t("logs.confirm_clear_logs", "Are you sure you want to clear server logs? This operation is irreversible.")}
-        confirmText="Clear"
+        title={t("logs_page.clear_server_logs")}
+        description={t("logs_page.confirm_clear_logs")}
+        confirmText={t("logs_page.confirm_clear_btn")}
         onClose={() => setConfirmClearOpen(false)}
         onConfirm={() => {
           setConfirmClearOpen(false);

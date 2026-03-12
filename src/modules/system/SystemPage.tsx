@@ -204,7 +204,7 @@ function ModelTag({ id }: { id: string }) {
       {copied ? (
         <>
           <Check size={11} className="text-emerald-500" />
-          Copied
+          {t("system_page.copied")}
         </>
       ) : (
         <>
@@ -283,7 +283,7 @@ export function SystemPage() {
           </div>
           <div>
             <h2 className="text-lg font-semibold tracking-tight text-slate-900 dark:text-white">
-              System Info
+              {t("system_page.title")}
             </h2>
             <p className="text-xs text-slate-500 dark:text-white/45">{t("system_page.subtitle")}</p>
           </div>
@@ -326,7 +326,7 @@ export function SystemPage() {
             </div>
             <Button variant="secondary" size="sm" onClick={() => void loadModels()} disabled={modelsLoading}>
               <RefreshCw size={13} className={modelsLoading ? "animate-spin" : ""} />
-              Refresh
+              {t("system_page.refresh")}
             </Button>
           </div>
         </div>
@@ -361,7 +361,7 @@ export function SystemPage() {
           {modelsLoading && models.length === 0 ? (
             <div className="flex items-center justify-center py-12 text-sm text-slate-500 dark:text-white/50">
               <RefreshCw size={14} className="animate-spin mr-2" />
-              Loading models…
+              {t("system_page.loading_models")}
             </div>
           ) : filteredModels.length > 0 ? (
             <div className="flex flex-wrap gap-2">
@@ -372,7 +372,7 @@ export function SystemPage() {
           ) : (
             <div className="flex flex-col items-center justify-center py-12 text-slate-400 dark:text-white/30">
               <Layers size={28} className="mb-2 opacity-40" />
-              <p className="text-sm">{models.length === 0 ? "No model data" : "No results"}</p>
+              <p className="text-sm">{models.length === 0 ? t("system_page.no_models") : t("system_page.no_match")}</p>
             </div>
           )}
         </div>

@@ -1545,5 +1545,24 @@
     "query": "Query",
     "querying": "Querying…",
     "no_data": "Enter an API Key to query"
+  },
+  "system_page": {
+    "title": "Информация о системе",
+    "available_models": "Доступные модели",
+    "subtitle": "Сервис, версия и модели",
+    "api_base": "API Base",
+    "api_key_lookup": "Поиск API-ключа",
+    "build_time": "Время сборки",
+    "frontend_version": "Версия интерфейса",
+    "mgmt_endpoint": "Конечная точка управления",
+    "server_version": "Версия сервера",
+    "search_models": "Поиск моделей…",
+    "click_copy": "Нажмите, чтобы скопировать",
+    "copy": "Копировать",
+    "copied": "Скопировано",
+    "refresh": "Обновить",
+    "loading_models": "Загрузка моделей…",
+    "no_models": "Нет данных о моделях",
+    "no_match": "Нет результатов"
   }
 }

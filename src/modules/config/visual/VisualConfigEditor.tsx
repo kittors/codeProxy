@@ -171,11 +171,11 @@ function ApiKeysEditor({
   const handleSave = () => {
     const trimmed = inputValue.trim();
     if (!trimmed) {
-      setFormError("API Key cannot be empty");
+      setFormError(t("visual_config.api_key_empty_err"));
       return;
     }
     if (!isValidApiKeyCharset(trimmed)) {
-      setFormError("API Key only allows visible ASCII characters");
+      setFormError(t("visual_config.api_key_charset_err"));
       return;
     }
 
@@ -190,13 +190,13 @@ function ApiKeysEditor({
   const handleCopy = async (apiKey: string) => {
     try {
       if (!navigator.clipboard?.writeText) {
-        notify({ type: "error", message: "Browser does not support clipboard" });
+        notify({ type: "error", message: t("visual_config.clipboard_unsupported") });
         return;
       }
       await navigator.clipboard.writeText(apiKey);
-      notify({ type: "success", message: "Copied" });
+      notify({ type: "success", message: t("visual_config.copied") });
     } catch {
-      notify({ type: "error", message: "Copy failed" });
+      notify({ type: "error", message: t("visual_config.copy_failed") });
     }
   };
 
@@ -206,13 +206,13 @@ function ApiKeysEditor({
         <div className="text-sm font-semibold text-slate-900 dark:text-white">{t("visual_config.api_keys")}</div>
         <Button size="sm" onClick={openAddModal} disabled={disabled}>
           <Plus size={14} />
-          Add
+          {t("visual_config.btn_add")}
         </Button>
       </div>
 
       {apiKeys.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-slate-200 bg-white/60 p-4 text-center text-sm text-slate-600 dark:border-neutral-800 dark:bg-neutral-950/40 dark:text-white/65">
-          No API Keys
+          {t("visual_config.no_api_keys")}
         </div>
       ) : (
         <div className="space-y-2">
@@ -227,7 +227,7 @@ function ApiKeysEditor({
                     #{index + 1}
                   </span>
                   <span className="text-sm font-semibold text-slate-900 dark:text-white">
-                    API Key
+                    {t("visual_config.api_key")}
                   </span>
                 </div>
                 <div className="mt-1 truncate font-mono text-xs text-slate-600 dark:text-white/65">
@@ -242,7 +242,7 @@ function ApiKeysEditor({
                   disabled={disabled}
                 >
                   <Copy size={14} />
-                  Copy
+                  {t("visual_config.btn_copy")}
                 </Button>
                 <Button
                   variant="secondary"
@@ -250,7 +250,7 @@ function ApiKeysEditor({
                   onClick={() => openEditModal(index)}
                   disabled={disabled}
                 >
-                  Edit
+                  {t("visual_config.btn_edit")}
                 </Button>
                 <Button
                   variant="danger"
@@ -259,7 +259,7 @@ function ApiKeysEditor({
                   disabled={disabled}
                 >
                   <Trash2 size={14} />
-                  Delete
+                  {t("visual_config.btn_delete")}
                 </Button>
               </div>
             </div>
@@ -268,21 +268,21 @@ function ApiKeysEditor({
       )}
 
       <p className="text-xs text-slate-600 dark:text-white/65">
-        Corresponds to `api-keys` in `config.yaml` (one per line).
+        {t("visual_config.api_keys_hint")}
       </p>
 
       <Modal
         open={modalOpen}
         onClose={closeModal}
-        title={editingIndex !== null ? "Edit API Key" : "Add API Key"}
+        title={editingIndex !== null ? t("visual_config.edit_api_key_title") : t("visual_config.add_api_key_title")}
         footer={
           <>
             <Button variant="secondary" onClick={closeModal} disabled={disabled}>
-              Cancel
+              {t("visual_config.btn_cancel")}
             </Button>
             <Button onClick={handleSave} disabled={disabled}>
               <Check size={14} />
-              {editingIndex !== null ? "Update" : "Add"}
+              {editingIndex !== null ? t("visual_config.btn_update") : t("visual_config.btn_add")}
             </Button>
           </>
         }
@@ -304,7 +304,7 @@ function ApiKeysEditor({
         open={deleteIndex !== null}
         title={t("visual_config.delete_api_key")}
         description={t("common.confirm_delete_api_key", "Are you sure you want to delete this API Key? This operation is irreversible.")}
-        confirmText="Delete"
+        confirmText={t("visual_config.btn_delete")}
         variant="danger"
         onClose={() => setDeleteIndex(null)}
         onConfirm={() => {
@@ -432,13 +432,13 @@ function PayloadRulesEditor({
       actions={
         <Button size="sm" onClick={addRule} disabled={disabled}>
           <Plus size={14} />
-          AddRule
+          {t("visual_config.add_rule")}
         </Button>
       }
     >
       {rules.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-slate-200 bg-white/60 p-4 text-center text-sm text-slate-600 dark:border-neutral-800 dark:bg-neutral-950/40 dark:text-white/65">
-          No Rules
+          {t("visual_config.no_rules")}
         </div>
       ) : (
         <div className="space-y-4">
@@ -449,7 +449,7 @@ function PayloadRulesEditor({
             >
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="text-sm font-semibold text-slate-900 dark:text-white">
-                  Rule {ruleIndex + 1}
+                  {t("visual_config.rule_n", { n: ruleIndex + 1 })}
                 </div>
                 <Button
                   variant="ghost"
@@ -458,14 +458,14 @@ function PayloadRulesEditor({
                   disabled={disabled}
                 >
                   <Trash2 size={14} />
-                  DeleteRule
+                  {t("visual_config.delete_rule")}
                 </Button>
               </div>
 
               <div className="space-y-2">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="text-xs font-semibold text-slate-600 dark:text-white/65">
-                    Match Models
+                    {t("visual_config.match_models")}
                   </div>
                   <Button
                     variant="secondary"
@@ -474,7 +474,7 @@ function PayloadRulesEditor({
                     disabled={disabled}
                   >
                     <Plus size={14} />
-                    Add模型
+                    {t("visual_config.add_model_btn")}
                   </Button>
                 </div>
 
@@ -507,7 +507,7 @@ function PayloadRulesEditor({
                         disabled={disabled || (rule.models || []).length <= 1}
                       >
                         <Trash2 size={14} />
-                        Delete
+                        {t("visual_config.btn_delete")}
                       </Button>
                     </div>
                   ))}
@@ -517,7 +517,7 @@ function PayloadRulesEditor({
               <div className="space-y-2">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="text-xs font-semibold text-slate-600 dark:text-white/65">
-                    Override Params
+                    {t("visual_config.override_params")}
                   </div>
                   <Button
                     variant="secondary"
@@ -526,13 +526,13 @@ function PayloadRulesEditor({
                     disabled={disabled}
                   >
                     <Plus size={14} />
-                    Add参数
+                    {t("visual_config.add_param_btn")}
                   </Button>
                 </div>
 
                 {(rule.params || []).length === 0 ? (
                   <div className="rounded-2xl border border-dashed border-slate-200 bg-white/60 p-3 text-center text-xs text-slate-600 dark:border-neutral-800 dark:bg-neutral-950/40 dark:text-white/65">
-                    No params (model match only)
+                    {t("visual_config.no_params")}
                   </div>
                 ) : (
                   <div className="space-y-2">
@@ -568,7 +568,7 @@ function PayloadRulesEditor({
                             disabled={disabled}
                           >
                             <Trash2 size={14} />
-                            Delete
+                            {t("visual_config.btn_delete")}
                           </Button>
                         </div>
 
@@ -678,13 +678,13 @@ function PayloadFilterRulesEditor({
       actions={
         <Button size="sm" onClick={addRule} disabled={disabled}>
           <Plus size={14} />
-          AddRule
+          {t("visual_config.add_rule")}
         </Button>
       }
     >
       {rules.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-slate-200 bg-white/60 p-4 text-center text-sm text-slate-600 dark:border-neutral-800 dark:bg-neutral-950/40 dark:text-white/65">
-          No Rules
+          {t("visual_config.no_rules")}
         </div>
       ) : (
         <div className="space-y-4">
@@ -695,7 +695,7 @@ function PayloadFilterRulesEditor({
             >
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="text-sm font-semibold text-slate-900 dark:text-white">
-                  Rule {ruleIndex + 1}
+                  {t("visual_config.rule_n", { n: ruleIndex + 1 })}
                 </div>
                 <Button
                   variant="ghost"
@@ -704,14 +704,14 @@ function PayloadFilterRulesEditor({
                   disabled={disabled}
                 >
                   <Trash2 size={14} />
-                  DeleteRule
+                  {t("visual_config.delete_rule")}
                 </Button>
               </div>
 
               <div className="space-y-2">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="text-xs font-semibold text-slate-600 dark:text-white/65">
-                    Match Models
+                    {t("visual_config.match_models")}
                   </div>
                   <Button
                     variant="secondary"
@@ -720,7 +720,7 @@ function PayloadFilterRulesEditor({
                     disabled={disabled}
                   >
                     <Plus size={14} />
-                    Add模型
+                    {t("visual_config.add_model_btn")}
                   </Button>
                 </div>
 
@@ -732,7 +732,7 @@ function PayloadFilterRulesEditor({
                         onChange={(e) =>
                           updateModel(ruleIndex, modelIndex, { name: e.currentTarget.value })
                         }
-                        placeholder="model name"
+                        placeholder={t("visual_config.model_name")}
                         disabled={disabled}
                       />
                       <SelectInput
@@ -753,7 +753,7 @@ function PayloadFilterRulesEditor({
                         disabled={disabled || (rule.models || []).length <= 1}
                       >
                         <Trash2 size={14} />
-                        Delete
+                        {t("visual_config.btn_delete")}
                       </Button>
                     </div>
                   ))}
@@ -763,7 +763,7 @@ function PayloadFilterRulesEditor({
               <div className="space-y-2">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="text-xs font-semibold text-slate-600 dark:text-white/65">
-                    Remove Param Paths
+                    {t("visual_config.remove_param_paths")}
                   </div>
                   <Button
                     variant="secondary"
@@ -772,13 +772,13 @@ function PayloadFilterRulesEditor({
                     disabled={disabled}
                   >
                     <Plus size={14} />
-                    Add路径
+                    {t("visual_config.add_path_btn")}
                   </Button>
                 </div>
 
                 {(rule.params || []).length === 0 ? (
                   <div className="rounded-2xl border border-dashed border-slate-200 bg-white/60 p-3 text-center text-xs text-slate-600 dark:border-neutral-800 dark:bg-neutral-950/40 dark:text-white/65">
-                    No Paths
+                    {t("visual_config.no_paths")}
                   </div>
                 ) : (
                   <div className="space-y-2">
@@ -802,7 +802,7 @@ function PayloadFilterRulesEditor({
                           disabled={disabled}
                         >
                           <Trash2 size={14} />
-                          Delete
+                          {t("visual_config.btn_delete")}
                         </Button>
                       </div>
                     ))}
@@ -879,12 +879,12 @@ export function VisualConfigEditor({
 
             <div className="rounded-xl border border-indigo-200 bg-indigo-50/50 px-4 py-3 dark:border-indigo-800 dark:bg-indigo-950/30">
               <p className="text-sm text-indigo-800 dark:text-indigo-300">
-                API Keys have been migrated to the dedicated management page.
+                {t("visual_config.api_migrated")}
                 <a
                   href="#/api-keys"
                   className="ml-1 font-semibold underline underline-offset-2 hover:text-indigo-600 dark:hover:text-indigo-200"
                 >
-                  Go to API Keys →
+                  {t("visual_config.go_to_api_keys")}
                 </a>
               </p>
             </div>
@@ -927,14 +927,14 @@ export function VisualConfigEditor({
           <div className="space-y-4">
             <ToggleSwitch
               label={t("visual_config.allow_remote")}
-              description="remote-management.allow-remote"
+              description={t("visual_config.remote_allow_desc")}
               checked={values.rmAllowRemote}
               onCheckedChange={(next) => update({ rmAllowRemote: next })}
               disabled={disabled}
             />
             <ToggleSwitch
               label={t("visual_config.disable_panel")}
-              description="remote-management.disable-control-panel"
+              description={t("visual_config.remote_disable_desc")}
               checked={values.rmDisableControlPanel}
               onCheckedChange={(next) => update({ rmDisableControlPanel: next })}
               disabled={disabled}
@@ -962,11 +962,11 @@ export function VisualConfigEditor({
       </Card>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card title="Switches" description={t("visual_config.runtime_desc")}>
+        <Card title={t("visual_config.switches")} description={t("visual_config.runtime_desc")}>
           <div className="space-y-4">
             <ToggleSwitch
-              label="Debug"
-              description="debug"
+              label={t("visual_config.debug_label")}
+              description={t("visual_config.debug_desc")}
               checked={values.debug}
               onCheckedChange={(next) => update({ debug: next })}
               disabled={disabled}
@@ -979,15 +979,15 @@ export function VisualConfigEditor({
               disabled={disabled}
             />
             <ToggleSwitch
-              label="Log to File"
-              description="logging-to-file"
+              label={t("visual_config.log_to_file_label")}
+              description={t("visual_config.log_to_file_desc")}
               checked={values.loggingToFile}
               onCheckedChange={(next) => update({ loggingToFile: next })}
               disabled={disabled}
             />
             <ToggleSwitch
-              label="Usage Statistics"
-              description="usage-statistics-enabled"
+              label={t("visual_config.usage_stats_label")}
+              description={t("visual_config.usage_stats_desc")}
               checked={values.usageStatisticsEnabled}
               onCheckedChange={(next) => update({ usageStatisticsEnabled: next })}
               disabled={disabled}
@@ -995,7 +995,7 @@ export function VisualConfigEditor({
           </div>
         </Card>
 
-        <Card title={t("visual_config.proxy_retry")} description="proxy-url, request-retry, max-retry-interval.">
+        <Card title={t("visual_config.proxy_retry")} description={t("visual_config.proxy_retry_card_desc")}>
           <div className="space-y-4">
             <Field label="proxy-url" hint={t("visual_config.empty_no_proxy")}>
               <TextInput
@@ -1006,7 +1006,7 @@ export function VisualConfigEditor({
               />
             </Field>
             <div className="grid gap-3 lg:grid-cols-2">
-              <Field label="request-retry" hint="Non-negative integer.">
+              <Field label="request-retry" hint={t("visual_config.non_negative_int")}>
                 <TextInput
                   value={values.requestRetry}
                   onChange={(e) => update({ requestRetry: e.currentTarget.value })}
@@ -1026,15 +1026,15 @@ export function VisualConfigEditor({
               </Field>
             </div>
             <ToggleSwitch
-              label="Force Model Prefix"
-              description="force-model-prefix"
+              label={t("visual_config.force_prefix_label")}
+              description={t("visual_config.force_prefix_desc")}
               checked={values.forceModelPrefix}
               onCheckedChange={(next) => update({ forceModelPrefix: next })}
               disabled={disabled}
             />
             <ToggleSwitch
-              label="WebSocket Auth"
-              description="ws-auth"
+              label={t("visual_config.ws_auth_label")}
+              description={t("visual_config.ws_auth_desc")}
               checked={values.wsAuth}
               onCheckedChange={(next) => update({ wsAuth: next })}
               disabled={disabled}
@@ -1044,7 +1044,7 @@ export function VisualConfigEditor({
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card title={t("visual_config.log_limits")} description="logs-max-total-size-mb。">
+        <Card title={t("visual_config.log_limits")} description={t("visual_config.log_limits_desc")}>
           <div className="space-y-4">
             <Field label="logs-max-total-size-mb" hint={t("visual_config.log_max")}>
               <TextInput
@@ -1060,19 +1060,19 @@ export function VisualConfigEditor({
 
         <Card
           title={t("visual_config.quota_strategy")}
-          description="quota-exceeded.switch-project / switch-preview-model。"
+          description={t("visual_config.quota_strategy_desc")}
         >
           <div className="space-y-4">
             <ToggleSwitch
               label={t("visual_config.switch_project")}
-              description="quota-exceeded.switch-project"
+              description={t("visual_config.quota_switch_project_desc")}
               checked={values.quotaSwitchProject}
               onCheckedChange={(next) => update({ quotaSwitchProject: next })}
               disabled={disabled}
             />
             <ToggleSwitch
               label={t("visual_config.switch_preview")}
-              description="quota-exceeded.switch-preview-model"
+              description={t("visual_config.quota_switch_preview_desc")}
               checked={values.quotaSwitchPreviewModel}
               onCheckedChange={(next) => update({ quotaSwitchPreviewModel: next })}
               disabled={disabled}
@@ -1082,7 +1082,7 @@ export function VisualConfigEditor({
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card title="Routing" description="routing.strategy。">
+        <Card title={t("visual_config.routing")} description={t("visual_config.routing_desc")}>
           <div className="space-y-4">
             <Field label="routing.strategy" hint={t("visual_config.routing_select")}>
               <SelectInput
@@ -1097,12 +1097,12 @@ export function VisualConfigEditor({
         </Card>
 
         <Card
-          title="Streaming"
-          description="streaming.keepalive-seconds / bootstrap-retries / nonstream-keepalive-interval。"
+          title={t("visual_config.streaming")}
+          description={t("visual_config.streaming_desc")}
         >
           <div className="space-y-4">
             <div className="grid gap-3 lg:grid-cols-2">
-              <Field label="streaming.keepalive-seconds" hint="Non-negative integer (seconds).">
+              <Field label="streaming.keepalive-seconds" hint={t("visual_config.non_negative_int_sec")}>
                 <TextInput
                   value={values.streaming.keepaliveSeconds}
                   onChange={(e) =>
@@ -1115,7 +1115,7 @@ export function VisualConfigEditor({
                   disabled={disabled}
                 />
               </Field>
-              <Field label="streaming.bootstrap-retries" hint="Non-negative integer.">
+              <Field label="streaming.bootstrap-retries" hint={t("visual_config.non_negative_int")}>
                 <TextInput
                   value={values.streaming.bootstrapRetries}
                   onChange={(e) =>
@@ -1129,7 +1129,7 @@ export function VisualConfigEditor({
                 />
               </Field>
             </div>
-            <Field label="nonstream-keepalive-interval" hint="Non-negative integer (seconds).">
+            <Field label="nonstream-keepalive-interval" hint={t("visual_config.non_negative_int_sec")}>
               <TextInput
                 value={values.streaming.nonstreamKeepaliveInterval}
                 onChange={(e) =>
