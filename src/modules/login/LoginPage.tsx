@@ -49,7 +49,7 @@ export function LoginPage() {
       event.preventDefault();
 
       if (!managementKey.trim()) {
-        notify({ type: "error", message: "请输入管理密钥" });
+        notify({ type: "error", message: "Enter management key" });
         return;
       }
 
@@ -164,7 +164,7 @@ export function LoginPage() {
                         className="rounded-full px-5 py-3"
                       />
                       <p className="text-[11px] leading-5 text-slate-500 dark:text-white/50">
-                        连接地址：{managementEndpoint}
+                        Connect地址：{managementEndpoint}
                       </p>
                     </label>
 

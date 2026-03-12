@@ -24,7 +24,7 @@ export function ModelInputList({
   title,
   entries,
   onChange,
-  namePlaceholder = "模型名称",
+  namePlaceholder = "Model Name",
   aliasPlaceholder = "模型别名（可选）",
   disabled = false,
   showPriority = true,

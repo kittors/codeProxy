@@ -99,7 +99,7 @@ export function QuotaFileCard({
             {file.name}
           </p>
           <p className="text-[10px] text-slate-400 dark:text-white/40">
-            {disabled ? "已禁用" : "已启用"}
+            {disabled ? "Disabled" : "Enabled"}
             {state.updatedAt
               ? ` · ${new Date(state.updatedAt).toLocaleTimeString()}`
               : ""}
@@ -123,11 +123,11 @@ export function QuotaFileCard({
         {state.status === "error" ? (
           <div className="flex items-start gap-1.5 rounded-lg bg-rose-50 px-2.5 py-1.5 text-[11px] text-rose-700 dark:bg-rose-500/10 dark:text-rose-200">
             <ShieldAlert size={12} className="mt-0.5 shrink-0" />
-            <span className="line-clamp-2">{state.error || "加载失败"}</span>
+            <span className="line-clamp-2">{state.error || "Load failed"}</span>
           </div>
         ) : state.items.length === 0 ? (
           <p className="py-1 text-center text-[11px] text-slate-400 dark:text-white/35">
-            {state.status === "loading" ? "加载中…" : "点击刷新查询额度"}
+            {state.status === "loading" ? "Loading…" : "Click to check quota"}
           </p>
         ) : (
           <div className="space-y-2">

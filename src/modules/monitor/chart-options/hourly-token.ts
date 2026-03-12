@@ -15,7 +15,7 @@ export const createHourlyTokenOption = (input: {
   const selectedKeys = input.hourlySeries.tokenKeys.filter(
     (key) => input.hourlyTokenSelected[key] ?? true,
   );
-  const showTotalLine = input.hourlyTokenSelected["总 Token"] ?? true;
+  const showTotalLine = input.hourlyTokenSelected["Total Token"] ?? true;
 
   const series = selectedKeys.map((key) => {
     const data = points.map((point) => {
@@ -58,10 +58,10 @@ export const createHourlyTokenOption = (input: {
   return {
     backgroundColor: "transparent",
     color: [
-      input.paletteColorByKey["输入"],
-      input.paletteColorByKey["输出"],
-      input.paletteColorByKey["推理"],
-      input.paletteColorByKey["缓存"],
+      input.paletteColorByKey["Input"],
+      input.paletteColorByKey["Output"],
+      input.paletteColorByKey["Reasoning"],
+      input.paletteColorByKey["Cached"],
     ],
     tooltip: {
       trigger: "axis",
@@ -111,7 +111,7 @@ export const createHourlyTokenOption = (input: {
       ...(showTotalLine
         ? [
             {
-              name: "总 Token",
+              name: "Total Token",
               type: "line",
               smooth: true,
               symbol: "circle",

@@ -189,9 +189,9 @@ function CodeBlock({ language, children }: { language: string; children: string 
                     className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-slate-400 transition-colors hover:bg-white/10 hover:text-slate-200"
                 >
                     {copied ? (
-                        <><Check size={13} className="text-emerald-400" /><span className="text-emerald-400">已复制</span></>
+                        <><Check size={13} className="text-emerald-400" /><span className="text-emerald-400">已Copy</span></>
                     ) : (
-                        <><Copy size={13} /><span>复制</span></>
+                        <><Copy size={13} /><span>Copy</span></>
                     )}
                 </button>
             </div>
@@ -569,7 +569,7 @@ function parseInputMessages(raw: string): Msg[] | null {
     }
 
     if (result.length > 0) {
-        result.push({ role: "system", content: "⚠️ 注意：原始内容因超过大小限制被截断，部分消息可能不完整。" });
+        result.push({ role: "system", content: "⚠️ 注意：Raw Content因超过大小限制被截断，部分消息可能不完整。" });
         return result;
     }
 
@@ -822,7 +822,7 @@ function ContentModal({
                 <div className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-200 px-5 py-4 dark:border-neutral-800">
                     <div className="min-w-0">
                         <h2 className="truncate text-base font-semibold tracking-tight text-slate-900 dark:text-white">
-                            消息内容{model ? ` · ${model}` : ""}
+                            Message Content{model ? ` · ${model}` : ""}
                         </h2>
                         <p className="mt-1 text-sm text-slate-500 dark:text-white/50">请求/响应的消息详情</p>
                     </div>
@@ -938,7 +938,7 @@ export function LogContentModal({ open, logId, initialTab = "input", onClose, fe
                 {(
                     [
                         { key: "input" as const, label: "输入消息", Icon: FileInput },
-                        { key: "output" as const, label: "输出内容", Icon: FileOutput },
+                        { key: "output" as const, label: "Output", Icon: FileOutput },
                     ] as const
                 ).map(({ key, label, Icon }) => (
                     <button
@@ -1010,7 +1010,7 @@ export function LogContentModal({ open, logId, initialTab = "input", onClose, fe
             return (
                 <div className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-white/25">
                     <FileInput size={40} className="mb-3 opacity-40" />
-                    <p className="text-sm">暂无输入内容记录</p>
+                    <p className="text-sm">暂无Input记录</p>
                 </div>
             );
         }
@@ -1040,7 +1040,7 @@ export function LogContentModal({ open, logId, initialTab = "input", onClose, fe
             return (
                 <div className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-white/25">
                     <FileOutput size={40} className="mb-3 opacity-40" />
-                    <p className="text-sm">暂无输出内容记录</p>
+                    <p className="text-sm">暂无Output记录</p>
                 </div>
             );
         }

@@ -706,7 +706,7 @@ export function ApiKeyLookupPage() {
                 // Ignore stale responses
                 if (myFetchId !== fetchIdRef.current) return;
 
-                const message = err instanceof Error ? err.message : "查询失败";
+                const message = err instanceof Error ? err.message : "Query失败";
                 setError(message);
                 if (page === 1) {
                     setRawItems([]);
@@ -990,7 +990,7 @@ export function ApiKeyLookupPage() {
                             <Key size={16} className="text-white dark:text-neutral-950" />
                         </div>
                         <span className="text-base font-bold tracking-tight text-slate-900 dark:text-white">
-                            API Key 使用查询
+                            API Key 使用Query
                         </span>
                     </div>
                     <ThemeToggleButton className="rounded-xl p-2 text-slate-600 transition hover:bg-slate-100 dark:text-white/70 dark:hover:bg-white/10" />
@@ -1015,7 +1015,7 @@ export function ApiKeyLookupPage() {
                                     id="apikey-input"
                                     value={apiKeyInput}
                                     onChange={(e) => setApiKeyInput(e.target.value)}
-                                    placeholder="输入 API Key 查询使用记录"
+                                    placeholder="输入 API Key Lookup使用记录"
                                     autoComplete="off"
                                     spellCheck={false}
                                     className="h-10 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-white dark:placeholder:text-white/30"
@@ -1034,7 +1034,7 @@ export function ApiKeyLookupPage() {
                                     aria-hidden="true"
                                 />
                             )}
-                            查询
+                            Query
                         </button>
                     </form>
                 </section>
@@ -1332,7 +1332,7 @@ export function ApiKeyLookupPage() {
                                 <Search size={28} className="text-slate-600 dark:text-white/70" />
                             </div>
                             <h3 className="text-base font-semibold text-slate-900 dark:text-white">
-                                查询您的 API Key 使用情况
+                                Query您的 API Key 使用情况
                             </h3>
                             <p className="text-sm text-slate-600 dark:text-white/65">
                                 在上方输入框中输入您的 API Key，即可查看详细的使用统计和请求日志。

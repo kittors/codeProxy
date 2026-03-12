@@ -370,7 +370,7 @@ export function ModelsPage() {
                     <div>
                         <h2 className="flex items-center gap-2 text-base font-semibold text-slate-900 dark:text-white">
                             <Cpu size={18} className="text-slate-900 dark:text-white" />
-                            模型定价管理
+                            Model Pricing管理
                         </h2>
                         <p className="mt-1 text-xs text-slate-500 dark:text-white/45">
                             管理所有可用模型的定价配置。定价数据持久化存储在数据库中，用于计算请求费用和执行消费限额。
@@ -406,8 +406,8 @@ export function ModelsPage() {
                         rowKey={(row) => row.id}
                         loading={loading}
                         rowHeight={44}
-                        caption="模型定价管理表格"
-                        emptyText={searchFilter ? "无匹配结果" : "暂无模型数据"}
+                        caption="Model Pricing管理表格"
+                        emptyText={searchFilter ? "无匹配结果" : "No model data"}
                         minWidth="min-w-[800px]"
                         height="h-[calc(100vh-390px)]"
                     />
@@ -426,7 +426,7 @@ export function ModelsPage() {
             <Modal
                 open={pricingModel !== null}
                 onClose={() => setPricingModel(null)}
-                title="设置模型定价"
+                title="设置Model Pricing"
                 description={pricingModel ? `为 ${pricingModel} 设置每百万 Token 价格（美元）` : ""}
                 footer={
                     <>

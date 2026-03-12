@@ -390,7 +390,7 @@ export function RequestLogsPage() {
         setStats(resp.stats ?? { total: 0, success_rate: 0, total_tokens: 0 });
         setLastUpdatedAt(Date.now());
       } catch (err) {
-        const message = err instanceof Error ? err.message : "请求日志刷新失败";
+        const message = err instanceof Error ? err.message : "Request Logs刷新失败";
         notify({ type: "error", message });
       } finally {
         fetchInFlightRef.current = false;
@@ -441,14 +441,14 @@ export function RequestLogsPage() {
   }, [filterOptions.models]);
 
   const lastUpdatedText = useMemo(() => {
-    if (loading) return "刷新中…";
+    if (loading) return "Refreshing…";
     if (!lastUpdatedAt) return "尚未刷新";
     return `更新于 ${new Date(lastUpdatedAt).toLocaleTimeString()}`;
   }, [lastUpdatedAt, loading]);
 
   return (
     <section className="flex flex-1 flex-col">
-      <h1 className="sr-only">请求日志</h1>
+      <h1 className="sr-only">Request Logs</h1>
 
       {/* 单层卡片：标题 + 筛选 + 统计 + 表格 */}
       <div className="flex flex-1 flex-col rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-950/70">
@@ -456,7 +456,7 @@ export function RequestLogsPage() {
         <div className="flex flex-wrap items-center justify-between gap-3 px-5 pt-5 pb-3">
           <h2 className="flex items-center gap-2 text-base font-semibold text-slate-900 dark:text-white">
             <ScrollText size={18} className="text-slate-900 dark:text-white" aria-hidden="true" />
-            请求日志
+            Request Logs
           </h2>
           <div className="flex flex-wrap items-center gap-2">
             <TimeRangeSelector value={timeRange} onChange={setTimeRange} />
@@ -535,7 +535,7 @@ export function RequestLogsPage() {
             loadingMore={loadingMore}
             onScrollBottom={loadNextPage}
             rowHeight={44}
-            caption="请求日志表格"
+            caption="Request Logs表格"
             emptyText="暂无数据"
           />
           {loading ? (

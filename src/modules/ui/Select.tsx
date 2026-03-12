@@ -52,7 +52,7 @@ export function Select({
     value,
     onChange,
     options,
-    placeholder = "请选择",
+    placeholder = "",
     "aria-label": ariaLabel,
     name,
     className,

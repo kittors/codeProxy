@@ -86,8 +86,8 @@ export function VirtualTable<T>({
     scrollThreshold = DEFAULT_SCROLL_THRESHOLD,
     minWidth = "min-w-[1320px]",
     height = "h-[calc(100vh-260px)]",
-    caption = "数据表格",
-    emptyText = "暂无数据",
+    caption = "data table",
+    emptyText = "",
     rowClassName,
 }: VirtualTableProps<T>) {
     const containerRef = useRef<HTMLDivElement | null>(null);
@@ -262,7 +262,7 @@ export function VirtualTable<T>({
                                 className="h-4 w-4 rounded-full border-2 border-slate-300 border-t-slate-900 motion-reduce:animate-none motion-safe:animate-spin dark:border-white/20 dark:border-t-white/80"
                                 aria-hidden="true"
                             />
-                            加载更多…
+                            Loading more…
                         </div>
                     </div>
                 )}
@@ -270,7 +270,7 @@ export function VirtualTable<T>({
                 {/* All data loaded */}
                 {!hasMore && rows.length > 0 && !loading && (
                     <div className="py-3 text-center text-xs text-slate-400 dark:text-white/30">
-                        已加载全部 {rows.length.toLocaleString()} 条数据
+                        All {rows.length.toLocaleString()} records loaded
                     </div>
                 )}
             </div>

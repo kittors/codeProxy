@@ -611,10 +611,10 @@ const formatCodexResetLabel = (window?: CodexUsageWindow | null): string => {
   const after = normalizeNumberValue(window.reset_after_seconds ?? window.resetAfterSeconds);
   if (after === null) return "--";
   const minutes = Math.max(0, Math.round(after / 60));
-  if (minutes < 60) return `${minutes} 分钟后`;
+  if (minutes < 60) return `in ${minutes} min`;
   const hours = Math.floor(minutes / 60);
   const rest = minutes % 60;
-  return rest ? `${hours} 小时 ${rest} 分钟后` : `${hours} 小时后`;
+  return rest ? `in ${hours}h ${rest}m` : `in ${hours}h`;
 };
 
 export const buildCodexItems = (payload: CodexUsagePayload): QuotaItem[] => {
@@ -665,12 +665,12 @@ export const buildCodexItems = (payload: CodexUsagePayload): QuotaItem[] => {
   };
 
   const rateWindows = pickWindows(rate);
-  addWindow("代码：5小时", rateWindows.fiveHour, rate);
-  addWindow("代码：周", rateWindows.weekly, rate);
+  addWindow("Code: 5h", rateWindows.fiveHour, rate);
+  addWindow("Code: Weekly", rateWindows.weekly, rate);
 
   const reviewWindows = pickWindows(codeReview);
-  addWindow("审查：5小时", reviewWindows.fiveHour, codeReview);
-  addWindow("审查：周", reviewWindows.weekly, codeReview);
+  addWindow("Review: 5h", reviewWindows.fiveHour, codeReview);
+  addWindow("Review: Weekly", reviewWindows.weekly, codeReview);
 
   return items;
 };
@@ -717,7 +717,7 @@ export const buildKiroItems = (payload: KiroQuotaPayload): QuotaItem[] => {
       const remaining = Math.max(0, limit - used);
       const percent = limit > 0 ? Math.round((remaining / limit) * 100) : 0;
       items.push({
-        label: "基础额度",
+        label: "Base Quota",
         percent,
         resetLabel: resetTime !== null ? formatUnixSeconds(resetTime) : "--",
         meta: `used ${Math.round(used).toLocaleString()} / limit ${Math.round(limit).toLocaleString()}`,
@@ -733,7 +733,7 @@ export const buildKiroItems = (payload: KiroQuotaPayload): QuotaItem[] => {
         const remaining = Math.max(0, trialLimit - trialUsed);
         const percent = trialLimit > 0 ? Math.round((remaining / trialLimit) * 100) : 0;
         items.push({
-          label: "试用额度",
+          label: "Trial Quota",
           percent,
           resetLabel: trialExpiry !== null ? formatUnixSeconds(trialExpiry) : "--",
           meta: `${status ?? "trial"} · used ${Math.round(trialUsed).toLocaleString()} / limit ${Math.round(trialLimit).toLocaleString()}`,
@@ -743,7 +743,7 @@ export const buildKiroItems = (payload: KiroQuotaPayload): QuotaItem[] => {
   }
   const subscriptionTitle = normalizeStringValue(payload.subscriptionInfo?.subscriptionTitle);
   if (subscriptionTitle) {
-    items.unshift({ label: "订阅", percent: null, meta: subscriptionTitle });
+    items.unshift({ label: "Subscription", percent: null, meta: subscriptionTitle });
   }
   return items;
 };

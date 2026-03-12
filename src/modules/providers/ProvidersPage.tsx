@@ -218,7 +218,7 @@ export function ProvidersPage() {
     }
   }, []);
 
-  // refreshAll 保留作为兼容入口（保存后刷新当前 Tab）
+  // refreshAll 保留作为兼容入口（Save后刷新当前 Tab）
   const refreshAll = useCallback(async () => {
     await refreshTab(tab);
   }, [refreshTab, tab]);
@@ -333,11 +333,11 @@ export function ProvidersPage() {
         setVertexKeys(next);
         await providersApi.saveVertexConfigs(next);
       }
-      notify({ type: "success", message: "已保存" });
+      notify({ type: "success", message: "已Save" });
       closeKeyEditor();
       startTransition(() => void refreshAll());
     } catch (err: unknown) {
-      notify({ type: "error", message: err instanceof Error ? err.message : "保存失败" });
+      notify({ type: "error", message: err instanceof Error ? err.message : "Save失败" });
     }
   }, [
     claudeKeys,
@@ -380,9 +380,9 @@ export function ProvidersPage() {
           await providersApi.deleteVertexConfig(entry.apiKey);
           setVertexKeys((prev) => prev.filter((_, i) => i !== index));
         }
-        notify({ type: "success", message: "已删除" });
+        notify({ type: "success", message: "已Delete" });
       } catch (err: unknown) {
-        notify({ type: "error", message: err instanceof Error ? err.message : "删除失败" });
+        notify({ type: "error", message: err instanceof Error ? err.message : "Delete失败" });
       }
     },
     [claudeKeys, codexKeys, geminiKeys, notify, vertexKeys],
@@ -413,7 +413,7 @@ export function ProvidersPage() {
           setCodexKeys(nextList);
           await providersApi.saveCodexConfigs(nextList);
         }
-        notify({ type: "success", message: enabled ? "已启用" : "已禁用" });
+        notify({ type: "success", message: enabled ? "Enabled" : "Disabled" });
         startTransition(() => void refreshAll());
       } catch (err: unknown) {
         if (type === "gemini") setGeminiKeys(prev);
@@ -556,11 +556,11 @@ export function ProvidersPage() {
 
       setOpenaiProviders(next);
       await providersApi.saveOpenAIProviders(next);
-      notify({ type: "success", message: "已保存" });
+      notify({ type: "success", message: "已Save" });
       closeOpenAIEditor();
       startTransition(() => void refreshAll());
     } catch (err: unknown) {
-      notify({ type: "error", message: err instanceof Error ? err.message : "保存失败" });
+      notify({ type: "error", message: err instanceof Error ? err.message : "Save失败" });
     }
   }, [
     closeOpenAIEditor,
@@ -579,9 +579,9 @@ export function ProvidersPage() {
       try {
         await providersApi.deleteOpenAIProvider(entry.name);
         setOpenaiProviders((prev) => prev.filter((_, i) => i !== index));
-        notify({ type: "success", message: "已删除" });
+        notify({ type: "success", message: "已Delete" });
       } catch (err: unknown) {
-        notify({ type: "error", message: err instanceof Error ? err.message : "删除失败" });
+        notify({ type: "error", message: err instanceof Error ? err.message : "Delete失败" });
       }
     },
     [notify, openaiProviders],
@@ -676,11 +676,11 @@ export function ProvidersPage() {
         .filter((m) => m.from && m.to);
       await ampcodeApi.patchModelMappings(mappings);
 
-      notify({ type: "success", message: "Ampcode 配置已保存" });
+      notify({ type: "success", message: "Ampcode 配置已Save" });
       startTransition(() => void refreshAll());
       setAmpUpstreamApiKey("");
     } catch (err: unknown) {
-      notify({ type: "error", message: err instanceof Error ? err.message : "保存失败" });
+      notify({ type: "error", message: err instanceof Error ? err.message : "Save失败" });
     }
   }, [
     ampForceMappings,
@@ -696,9 +696,9 @@ export function ProvidersPage() {
     async (value: string) => {
       try {
         await navigator.clipboard.writeText(value);
-        notify({ type: "success", message: "已复制" });
+        notify({ type: "success", message: "Copied" });
       } catch {
-        notify({ type: "error", message: "复制失败" });
+        notify({ type: "error", message: "Copy失败" });
       }
     },
     [notify],
@@ -915,12 +915,12 @@ export function ProvidersPage() {
             actions={
               <Button variant="primary" size="sm" onClick={() => openOpenAIEditor(null)}>
                 <Plus size={14} />
-                新增提供商
+                Add提供商
               </Button>
             }
           >
             {openaiProviders.length === 0 ? (
-              <EmptyState title="暂无 OpenAI 提供商" description="点击“新增提供商”开始配置。" />
+              <EmptyState title="暂无 OpenAI 提供商" description="点击“Add提供商”开始配置。" />
             ) : (
               <div className="space-y-3">
                 {openaiProviders.map((provider, idx) => {
@@ -1048,7 +1048,7 @@ export function ProvidersPage() {
                             onClick={() => openOpenAIEditor(idx)}
                           >
                             <Settings2 size={14} />
-                            编辑
+                            Edit
                           </Button>
                           <Button
                             variant="danger"
@@ -1056,7 +1056,7 @@ export function ProvidersPage() {
                             onClick={() => setConfirm({ type: "deleteOpenAI", index: idx })}
                           >
                             <Trash2 size={14} />
-                            删除
+                            Delete
                           </Button>
                         </div>
                       </div>
@@ -1080,7 +1080,7 @@ export function ProvidersPage() {
                 disabled={loading || isPending}
               >
                 <Save size={14} />
-                保存
+                Save
               </Button>
             }
           >
@@ -1145,8 +1145,8 @@ export function ProvidersPage() {
                         size="sm"
                         onClick={() => setAmpMappings((prev) => prev.filter((_, i) => i !== idx))}
                         disabled={ampMappings.length <= 1}
-                        aria-label="删除映射"
-                        title="删除映射"
+                        aria-label="Delete映射"
+                        title="Delete映射"
                       >
                         <Trash2 size={14} />
                       </Button>
@@ -1165,7 +1165,7 @@ export function ProvidersPage() {
                     }
                   >
                     <Plus size={14} />
-                    新增
+                    Add
                   </Button>
                   <Button
                     variant="secondary"
@@ -1185,7 +1185,7 @@ export function ProvidersPage() {
 
       <Modal
         open={editKeyOpen}
-        title={`${editKeyIndex === null ? "新增" : "编辑"} ${editKeyTitle} 配置`}
+        title={`${editKeyIndex === null ? "Add" : "Edit"} ${editKeyTitle} 配置`}
         description={
           editKeyType === "vertex"
             ? "Vertex 的 models 必须填写 alias（name => alias）。Excluded Models 中使用 * 可一键禁用该配置。"
@@ -1200,11 +1200,11 @@ export function ProvidersPage() {
               </span>
             ) : null}
             <Button variant="secondary" onClick={closeKeyEditor}>
-              取消
+              Cancel
             </Button>
             <Button variant="primary" onClick={() => void saveKeyDraft()}>
               <Check size={14} />
-              保存
+              Save
             </Button>
           </div>
         }
@@ -1218,7 +1218,7 @@ export function ProvidersPage() {
                   : "rounded-full bg-amber-500/15 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:text-amber-200"
               }
             >
-              {editKeyEnabled ? "已启用" : "已禁用"}
+              {editKeyEnabled ? "Enabled" : "Disabled"}
             </span>
             <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-700 dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-white/75">
               headers：<span className="font-semibold tabular-nums">{editKeyHeaderCount}</span>
@@ -1264,7 +1264,7 @@ export function ProvidersPage() {
             />
             <p className="mt-2 text-xs text-slate-500 dark:text-white/55">
               禁用本质是向 Excluded Models 写入 <span className="font-mono">*</span>
-              ；你也可以在下方手动编辑。
+              ；你也可以在下方手动Edit。
             </p>
           </div>
 
@@ -1289,8 +1289,8 @@ export function ProvidersPage() {
                     onClick={() => void copyText(keyDraft.apiKey.trim())}
                     disabled={!keyDraft.apiKey.trim()}
                     className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 bg-white/80 text-slate-700 shadow-sm transition hover:bg-white disabled:opacity-50 dark:border-neutral-800 dark:bg-neutral-950/70 dark:text-slate-200 dark:hover:bg-neutral-950"
-                    aria-label="复制 API Key"
-                    title="复制"
+                    aria-label="Copy API Key"
+                    title="Copy"
                   >
                     <Copy size={14} />
                   </button>
@@ -1436,7 +1436,7 @@ export function ProvidersPage() {
 
       <Modal
         open={editOpenAIOpen}
-        title={`${editOpenAIIndex === null ? "新增" : "编辑"} OpenAI 提供商`}
+        title={`${editOpenAIIndex === null ? "Add" : "Edit"} OpenAI 提供商`}
         description="配置 name/baseUrl、多个 apiKeyEntries、headers 与模型别名；支持通过 /models 自动拉取并合并。"
         onClose={closeOpenAIEditor}
         footer={
@@ -1447,11 +1447,11 @@ export function ProvidersPage() {
               </span>
             ) : null}
             <Button variant="secondary" onClick={closeOpenAIEditor}>
-              取消
+              Cancel
             </Button>
             <Button variant="primary" onClick={() => void saveOpenAIDraft()}>
               <Check size={14} />
-              保存
+              Save
             </Button>
           </div>
         }
@@ -1550,7 +1550,7 @@ export function ProvidersPage() {
                 }
               >
                 <Plus size={14} />
-                新增
+                Add
               </Button>
             </div>
 
@@ -1576,7 +1576,7 @@ export function ProvidersPage() {
                       disabled={openaiDraft.apiKeyEntries.length <= 1}
                     >
                       <Trash2 size={14} />
-                      删除
+                      Delete
                     </Button>
                   </div>
 
@@ -1607,7 +1607,7 @@ export function ProvidersPage() {
                           disabled={!entry.apiKey.trim()}
                         >
                           <Copy size={14} />
-                          复制
+                          Copy
                         </Button>
                       </div>
                     </div>
@@ -1727,15 +1727,15 @@ export function ProvidersPage() {
 
       <ConfirmModal
         open={confirm !== null}
-        title="确认删除"
+        title="确认Delete"
         description={
           confirm?.type === "deleteOpenAI"
-            ? `确定要删除 OpenAI 提供商 “${openaiProviders[confirm.index]?.name ?? ""}” 吗？此操作不可恢复。`
+            ? `确定要Delete OpenAI 提供商 “${openaiProviders[confirm.index]?.name ?? ""}” 吗？此操作不可恢复。`
             : confirm?.type === "deleteKey"
-              ? "确定要删除该配置吗？此操作不可恢复。"
-              : "确定要删除吗？"
+              ? "确定要Delete该配置吗？此操作不可恢复。"
+              : "确定要Delete吗？"
         }
-        confirmText="删除"
+        confirmText="Delete"
         onClose={() => setConfirm(null)}
         onConfirm={() => {
           const action = confirm;

@@ -164,7 +164,7 @@ function InfoCard({ icon: Icon, label, value, mono = false, copyable = false, li
             type="button"
             onClick={handleCopy}
             className="shrink-0 rounded-md p-1 text-slate-400 opacity-0 transition group-hover:opacity-100 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-neutral-800 dark:hover:text-white"
-            title="复制"
+            title="Copy"
           >
             {copied ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} />}
           </button>
@@ -195,13 +195,13 @@ function ModelTag({ id }: { id: string }) {
     <button
       type="button"
       onClick={handleClick}
-      title="点击复制模型名称"
+      title="Click to copy"
       className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 font-mono text-xs transition hover:shadow-sm active:scale-95 ${vc.bg} ${vc.text} ${vc.border}`}
     >
       {copied ? (
         <>
           <Check size={11} className="text-emerald-500" />
-          已复制
+          Copied
         </>
       ) : (
         <>
@@ -235,7 +235,7 @@ export function SystemPage() {
       const payload = await apiClient.get<V1ModelsResponse>("/models");
       setModels(extractModelIds(payload));
     } catch (err: unknown) {
-      setModelsError(err instanceof Error ? err.message : "加载模型失败");
+      setModelsError(err instanceof Error ? err.message : "Failed to load models");
     } finally {
       setModelsLoading(false);
     }
@@ -258,7 +258,7 @@ export function SystemPage() {
     const map = new Map<string, number>();
     for (const id of models) {
       const lower = id.toLowerCase();
-      let vendor = "其他";
+      let vendor = "Other";
       for (const prefix of Object.keys(VENDOR_COLORS)) {
         if (lower.startsWith(prefix)) { vendor = prefix; break; }
       }
@@ -279,9 +279,9 @@ export function SystemPage() {
           </div>
           <div>
             <h2 className="text-lg font-semibold tracking-tight text-slate-900 dark:text-white">
-              系统信息
+              System Info
             </h2>
-            <p className="text-xs text-slate-500 dark:text-white/45">服务连接、版本与可用模型</p>
+            <p className="text-xs text-slate-500 dark:text-white/45">Service, version & models</p>
           </div>
         </div>
       </div>
@@ -289,11 +289,11 @@ export function SystemPage() {
       {/* ── Connection & Version Grid ── */}
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         <InfoCard icon={Globe} label="API Base" value={auth.state.apiBase || "--"} mono copyable />
-        <InfoCard icon={Globe} label="管理接口" value={auth.meta.managementEndpoint || "--"} mono copyable />
-        <InfoCard icon={GitBranch} label="服务版本" value={auth.state.serverVersion ?? "--"} />
-        <InfoCard icon={CalendarClock} label="构建时间" value={auth.state.serverBuildDate ?? "--"} mono />
-        <InfoCard icon={MonitorSmartphone} label="前端版本" value={__APP_VERSION__ || "--"} />
-        <InfoCard icon={KeyRound} label="API Key 查询" value={apiKeyLookupUrl} link />
+        <InfoCard icon={Globe} label="Management Endpoint" value={auth.meta.managementEndpoint || "--"} mono copyable />
+        <InfoCard icon={GitBranch} label="Server Version" value={auth.state.serverVersion ?? "--"} />
+        <InfoCard icon={CalendarClock} label="Build Time" value={auth.state.serverBuildDate ?? "--"} mono />
+        <InfoCard icon={MonitorSmartphone} label="Frontend Version" value={__APP_VERSION__ || "--"} />
+        <InfoCard icon={KeyRound} label="API Key Lookup" value={apiKeyLookupUrl} link />
       </div>
 
       {/* ── Model List ── */}
@@ -302,7 +302,7 @@ export function SystemPage() {
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-3.5 dark:border-neutral-800">
           <div className="flex items-center gap-2.5">
             <Layers size={15} className="text-slate-500 dark:text-white/40" />
-            <h3 className="text-sm font-semibold text-slate-900 dark:text-white">可用模型</h3>
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Available Models</h3>
             <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[11px] font-bold tabular-nums text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-300">
               {filteredModels.length}
             </span>
@@ -316,7 +316,7 @@ export function SystemPage() {
               <TextInput
                 value={modelFilter}
                 onChange={(e) => setModelFilter(e.target.value)}
-                placeholder="搜索模型…"
+                placeholder="Search models…"
                 className="!w-48 !rounded-lg !py-1.5 !pl-8 !text-xs"
               />
             </div>
@@ -357,7 +357,7 @@ export function SystemPage() {
           {modelsLoading && models.length === 0 ? (
             <div className="flex items-center justify-center py-12 text-sm text-slate-500 dark:text-white/50">
               <RefreshCw size={14} className="animate-spin mr-2" />
-              加载模型列表…
+              Loading models…
             </div>
           ) : filteredModels.length > 0 ? (
             <div className="flex flex-wrap gap-2">
@@ -368,7 +368,7 @@ export function SystemPage() {
           ) : (
             <div className="flex flex-col items-center justify-center py-12 text-slate-400 dark:text-white/30">
               <Layers size={28} className="mb-2 opacity-40" />
-              <p className="text-sm">{models.length === 0 ? "暂无模型数据" : "无匹配结果"}</p>
+              <p className="text-sm">{models.length === 0 ? "No model data" : "No results"}</p>
             </div>
           )}
         </div>

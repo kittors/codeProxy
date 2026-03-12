@@ -112,7 +112,7 @@ export const commitModelEntries = (
 
     const alias = draft.alias.trim();
     if (options?.requireAlias && !alias) {
-      return { error: "models 必须填写 alias（使用 name => alias）" };
+      return { error: "Models must have alias (name => alias)" };
     }
 
     const priorityText = draft.priorityText.trim();

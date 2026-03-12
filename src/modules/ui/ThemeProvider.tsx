@@ -101,7 +101,7 @@ export function ThemeProvider({ children }: PropsWithChildren) {
 export const useTheme = (): ThemeContextState => {
   const context = use(ThemeContext);
   if (!context) {
-    throw new Error("useTheme 必须在 ThemeProvider 内使用");
+    throw new Error("useTheme must be used within ThemeProvider");
   }
   return context;
 };
@@ -113,7 +113,7 @@ export function ThemeToggleButton({ className, label }: { className?: string; la
   } = useTheme();
 
   const Icon = mode === "dark" ? Sun : Moon;
-  const text = label ?? (mode === "dark" ? "切换到亮色" : "切换到深色");
+  const text = label ?? (mode === "dark" ? "Switch to light" : "Switch to dark");
 
   return (
     <button type="button" onClick={toggle} className={className} aria-label={text} title={text}>

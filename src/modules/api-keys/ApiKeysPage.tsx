@@ -431,11 +431,11 @@ export function ApiKeysPage() {
         setSaving(true);
         try {
             await apiKeyEntriesApi.delete({ index: deleteIndex });
-            notify({ type: "success", message: "删除成功" });
+            notify({ type: "success", message: "Delete成功" });
             setDeleteIndex(null);
             await loadEntries();
         } catch (err: unknown) {
-            notify({ type: "error", message: err instanceof Error ? err.message : "删除失败" });
+            notify({ type: "error", message: err instanceof Error ? err.message : "Delete失败" });
         } finally {
             setSaving(false);
         }
@@ -446,9 +446,9 @@ export function ApiKeysPage() {
     const handleCopy = async (key: string) => {
         try {
             await navigator.clipboard.writeText(key);
-            notify({ type: "success", message: "已复制到剪贴板" });
+            notify({ type: "success", message: "Copied到剪贴板" });
         } catch {
-            notify({ type: "error", message: "复制失败" });
+            notify({ type: "error", message: "Copy失败" });
         }
     };
 
@@ -642,21 +642,21 @@ export function ApiKeysPage() {
                     <button
                         onClick={() => void handleCopy(row.key)}
                         className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-indigo-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-indigo-400"
-                        title="复制 Key"
+                        title="Copy Key"
                     >
                         <Copy size={15} />
                     </button>
                     <button
                         onClick={() => handleOpenEdit(idx)}
                         className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-amber-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-amber-400"
-                        title="编辑"
+                        title="Edit"
                     >
                         <Pencil size={15} />
                     </button>
                     <button
                         onClick={() => setDeleteIndex(idx)}
                         className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-red-50 hover:text-red-600 dark:text-white/50 dark:hover:bg-red-900/20 dark:hover:text-red-400"
-                        title="删除"
+                        title="Delete"
                     >
                         <Trash2 size={15} />
                     </button>
@@ -861,7 +861,7 @@ export function ApiKeysPage() {
                     value={form.allowedModels}
                     onChange={(selected) => setForm((p) => ({ ...p, allowedModels: selected }))}
                     placeholder="选择模型..."
-                    emptyLabel="全部模型"
+                    emptyLabel="All Models"
                 />
             </div>
 
@@ -888,7 +888,7 @@ export function ApiKeysPage() {
     return (
         <div className="space-y-6">
             <Card
-                title="API Keys 管理"
+                title="API Keys Management"
                 description="创建和管理 API Keys，设置请求限制和模型权限。数据持久化在服务端，重启不丢失。"
                 actions={
                     <div className="flex gap-2">
@@ -906,7 +906,7 @@ export function ApiKeysPage() {
             >
                 {entries.length === 0 ? (
                     <EmptyState
-                        title="暂无 API Key"
+                        title="No API Keys"
                         description="点击「创建 Key」按钮来添加第一个 API Key。"
                         icon={<KeyRound size={32} className="text-slate-400" />}
                     />
@@ -919,7 +919,7 @@ export function ApiKeysPage() {
                         height="h-auto max-h-[70vh]"
                         minWidth="min-w-[1200px]"
                         caption="API Keys 列表"
-                        emptyText="暂无 API Key"
+                        emptyText="No API Keys"
                         rowClassName={(row) => row.disabled ? "opacity-50" : ""}
                     />
                 )}
@@ -949,7 +949,7 @@ export function ApiKeysPage() {
             <Modal
                 open={editIndex !== null}
                 onClose={() => setEditIndex(null)}
-                title="编辑 API Key"
+                title="Edit API Key"
                 description="修改名称、限制和模型权限"
                 footer={
                     <>
@@ -969,15 +969,15 @@ export function ApiKeysPage() {
             <Modal
                 open={deleteIndex !== null}
                 onClose={() => setDeleteIndex(null)}
-                title="确认删除"
-                description="删除后将无法恢复，使用此 Key 的所有客户端将无法访问。"
+                title="确认Delete"
+                description="Delete后将无法恢复，使用此 Key 的所有客户端将无法访问。"
                 footer={
                     <>
                         <Button variant="secondary" onClick={() => setDeleteIndex(null)}>
                             取消
                         </Button>
                         <Button variant="danger" onClick={() => void handleDelete()} disabled={saving}>
-                            {saving ? "删除中..." : "确认删除"}
+                            {saving ? "Delete中..." : "确认Delete"}
                         </Button>
                     </>
                 }

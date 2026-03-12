@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
 export function EmptyState({
-  title = "暂无数据",
+  title = "",
   description,
   icon,
   action,

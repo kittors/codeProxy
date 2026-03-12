@@ -55,7 +55,7 @@ export function DashboardPage() {
       {/* ── Header ── */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-lg font-semibold tracking-tight text-slate-900 dark:text-white">
-          仪表盘
+          Dashboard
         </h2>
         <div className="flex flex-wrap items-center gap-2">
           <Tabs value={String(range)} onValueChange={(next) => setRange(Number(next) as DashboardRange)}>

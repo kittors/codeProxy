@@ -42,7 +42,7 @@ export const createDailyTrendOption = (input: {
 
   const showInput = hasInput && (input.dailyLegendSelected["输入 Token"] ?? true);
   const showOutput = hasOutput && (input.dailyLegendSelected["输出 Token"] ?? true);
-  const showRequests = hasRequests && (input.dailyLegendSelected["请求数"] ?? true);
+  const showRequests = hasRequests && (input.dailyLegendSelected["Requests"] ?? true);
 
   const tokenAxisAnchor =
     showInput || showOutput
@@ -104,7 +104,7 @@ export const createDailyTrendOption = (input: {
 
   if (showRequests) {
     series.push({
-      name: "请求数",
+      name: "Requests",
       type: "line",
       yAxisIndex: 1,
       smooth: true,
@@ -197,7 +197,7 @@ export const createDailyTrendOption = (input: {
       },
       {
         type: "value",
-        name: "请求数",
+        name: "Requests",
         min: 0,
         max: requestAxisMax,
         nameLocation: "middle",

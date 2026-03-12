@@ -36,8 +36,8 @@ export function KeyValueInputList({
   title,
   entries,
   onChange,
-  keyPlaceholder = "Header 名称",
-  valuePlaceholder = "Header 值",
+  keyPlaceholder = "Header Name",
+  valuePlaceholder = "Header Value",
   disabled = false,
 }: {
   title: string;

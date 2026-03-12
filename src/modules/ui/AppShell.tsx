@@ -8,6 +8,7 @@ import {
   useState,
 } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import {
   Activity,
   Bot,
@@ -31,7 +32,7 @@ import { ThemeToggleButton } from "@/modules/ui/ThemeProvider";
 
 interface ShellContextState {
   state: {
-    title: string;
+    titleKey: string;
   };
   actions: {
     logout: () => void;
@@ -42,58 +43,34 @@ const ShellContext = createContext<ShellContextState | null>(null);
 const STORAGE_KEY_SIDEBAR_COLLAPSED = "cli-proxy-sidebar-collapsed";
 
 const NAV_ITEMS = [
-  { to: "/dashboard", label: "仪表盘", icon: LayoutDashboard },
-  { to: "/monitor", label: "监控中心", icon: Activity },
-  { to: "/monitor/request-logs", label: "请求日志", icon: ScrollText },
-  { to: "/ai-providers", label: "AI供应商", icon: Bot },
-  { to: "/auth-files", label: "认证文件", icon: FileKey },
-  { to: "/oauth", label: "OAuth登录", icon: KeyRound },
-  { to: "/api-keys", label: "API Keys", icon: Sparkles },
-  { to: "/models", label: "模型管理", icon: Cpu },
-  { to: "/quota", label: "配额管理", icon: Coins },
-  { to: "/config", label: "配置面板", icon: Settings },
-  { to: "/system", label: "系统信息", icon: Info },
-  { to: "/logs", label: "日志查询", icon: FileText },
+  { to: "/dashboard", i18nKey: "shell.nav_dashboard", icon: LayoutDashboard },
+  { to: "/monitor", i18nKey: "shell.nav_monitor", icon: Activity },
+  { to: "/monitor/request-logs", i18nKey: "shell.nav_request_logs", icon: ScrollText },
+  { to: "/ai-providers", i18nKey: "shell.nav_ai_providers", icon: Bot },
+  { to: "/auth-files", i18nKey: "shell.nav_auth_files", icon: FileKey },
+  { to: "/oauth", i18nKey: "shell.nav_oauth", icon: KeyRound },
+  { to: "/api-keys", i18nKey: "shell.nav_api_keys", icon: Sparkles },
+  { to: "/models", i18nKey: "shell.nav_models", icon: Cpu },
+  { to: "/quota", i18nKey: "shell.nav_quota", icon: Coins },
+  { to: "/config", i18nKey: "shell.nav_config", icon: Settings },
+  { to: "/system", i18nKey: "shell.nav_system", icon: Info },
+  { to: "/logs", i18nKey: "shell.nav_logs", icon: FileText },
 ] as const;
 
-const getPageTitle = (pathname: string): string => {
-  if (pathname.startsWith("/dashboard")) {
-    return "仪表盘";
-  }
-  if (pathname.startsWith("/monitor/request-logs")) {
-    return "请求日志";
-  }
-  if (pathname.startsWith("/monitor")) {
-    return "监控中心";
-  }
-  if (pathname.startsWith("/ai-providers")) {
-    return "AI供应商";
-  }
-  if (pathname.startsWith("/auth-files")) {
-    return "认证文件";
-  }
-  if (pathname.startsWith("/oauth")) {
-    return "OAuth登录";
-  }
-  if (pathname.startsWith("/quota")) {
-    return "配额管理";
-  }
-  if (pathname.startsWith("/api-keys")) {
-    return "API Keys 管理";
-  }
-  if (pathname.startsWith("/models")) {
-    return "模型管理";
-  }
-  if (pathname.startsWith("/config")) {
-    return "配置面板";
-  }
-  if (pathname.startsWith("/system")) {
-    return "系统信息";
-  }
-  if (pathname.startsWith("/logs")) {
-    return "日志查询";
-  }
-  return "后台首页";
+const getPageTitleKey = (pathname: string): string => {
+  if (pathname.startsWith("/dashboard")) return "shell.nav_dashboard";
+  if (pathname.startsWith("/monitor/request-logs")) return "shell.nav_request_logs";
+  if (pathname.startsWith("/monitor")) return "shell.nav_monitor";
+  if (pathname.startsWith("/ai-providers")) return "shell.nav_ai_providers";
+  if (pathname.startsWith("/auth-files")) return "shell.nav_auth_files";
+  if (pathname.startsWith("/oauth")) return "shell.nav_oauth";
+  if (pathname.startsWith("/quota")) return "shell.nav_quota";
+  if (pathname.startsWith("/api-keys")) return "shell.page_api_keys";
+  if (pathname.startsWith("/models")) return "shell.nav_models";
+  if (pathname.startsWith("/config")) return "shell.nav_config";
+  if (pathname.startsWith("/system")) return "shell.nav_system";
+  if (pathname.startsWith("/logs")) return "shell.nav_logs";
+  return "shell.page_home";
 };
 
 function ShellFrame({ children }: PropsWithChildren) {
@@ -102,6 +79,7 @@ function ShellFrame({ children }: PropsWithChildren) {
 
 function ShellSidebar({ collapsed }: { collapsed: boolean }) {
   const location = useLocation();
+  const { t } = useTranslation();
   const activeTo = useMemo(() => {
     const pathname = location.pathname;
     const sorted = [...NAV_ITEMS].sort((a, b) => b.to.length - a.to.length);
@@ -128,7 +106,7 @@ function ShellSidebar({ collapsed }: { collapsed: boolean }) {
       >
         <div className="flex h-16 items-center gap-2 px-6 text-lg font-semibold tracking-tight text-slate-900 dark:text-white whitespace-nowrap">
           <LayoutDashboard size={18} className="text-slate-900 dark:text-white" />
-          <span>控制台</span>
+          <span>{t("shell.console")}</span>
         </div>
         <nav className="flex-1 space-y-1 overflow-y-auto px-3 pb-4">
           {NAV_ITEMS.map((item) => {
@@ -146,7 +124,7 @@ function ShellSidebar({ collapsed }: { collapsed: boolean }) {
                 }
               >
                 <Icon size={16} className="shrink-0 opacity-90" />
-                <span className="min-w-0 truncate">{item.label}</span>
+                <span className="min-w-0 truncate">{t(item.i18nKey)}</span>
               </Link>
             );
           })}
@@ -164,13 +142,14 @@ function ShellHeader({
   onToggleSidebar: () => void;
 }) {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const {
-    state: { title },
+    state: { titleKey },
     actions: { logout },
   } = useShell();
 
   const SidebarIcon = sidebarCollapsed ? PanelLeftOpen : PanelLeftClose;
-  const sidebarLabel = sidebarCollapsed ? "展开侧边栏" : "收起侧边栏";
+  const sidebarLabel = sidebarCollapsed ? t("shell.expand_sidebar") : t("shell.collapse_sidebar");
 
   return (
     <header className="z-20 shrink-0 border-b border-slate-200 bg-white/75 backdrop-blur-xl dark:border-neutral-800 dark:bg-neutral-950/60">
@@ -187,7 +166,7 @@ function ShellHeader({
           </button>
           <h1 className="flex items-center gap-2 text-base font-semibold tracking-tight text-slate-900 dark:text-white">
             <Sparkles size={16} className="text-slate-900 dark:text-white" />
-            <span>{title}</span>
+            <span>{t(titleKey)}</span>
           </h1>
         </div>
         <div className="flex items-center gap-2">
@@ -201,7 +180,7 @@ function ShellHeader({
             className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-slate-800 dark:bg-white dark:text-neutral-950 dark:hover:bg-slate-200"
           >
             <LogOut size={14} />
-            退出登录
+            {t("shell.logout_button")}
           </button>
         </div>
       </div>
@@ -219,6 +198,7 @@ function ShellMain({ children }: PropsWithChildren) {
 
 export function AppShell({ children }: PropsWithChildren) {
   const location = useLocation();
+  const { t } = useTranslation();
   const {
     actions: { logout },
   } = useAuth();
@@ -246,7 +226,7 @@ export function AppShell({ children }: PropsWithChildren) {
   const value = useMemo<ShellContextState>(
     () => ({
       state: {
-        title: getPageTitle(location.pathname),
+        titleKey: getPageTitleKey(location.pathname),
       },
       actions: {
         logout,
@@ -262,7 +242,7 @@ export function AppShell({ children }: PropsWithChildren) {
           href="#main-content"
           className="sr-only z-[200] rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 shadow-sm focus:not-sr-only focus:fixed focus:left-4 focus:top-4 dark:border-neutral-800 dark:bg-neutral-950 dark:text-white"
         >
-          跳到主要内容
+          {t("shell.skip_to_content")}
         </a>
         <div className="flex h-screen overflow-hidden">
           <ShellSidebar collapsed={sidebarCollapsed} />

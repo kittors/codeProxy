@@ -26,7 +26,7 @@ function formatUptime(s: number): string {
     const d = Math.floor(s / 86400);
     const h = Math.floor((s % 86400) / 3600);
     const m = Math.floor((s % 3600) / 60);
-    if (d > 0) return `${d}天 ${h}时 ${m}分`;
+    if (d > 0) return `${d}d ${h}时 ${m}分`;
     if (h > 0) return `${h}时 ${m}分`;
     return `${m}分`;
 }
@@ -206,7 +206,7 @@ function ChannelLatencyCard({ data }: { data: ChannelLatency[] }) {
             <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-white/40 mb-2.5">
                 <Network size={12} />
                 渠道平均延迟
-                <span className="ml-auto text-[9px] font-normal normal-case tracking-normal">Top 5 · 近 7 天</span>
+                <span className="ml-auto text-[9px] font-normal normal-case tracking-normal">Top 5 · 近 7 d</span>
             </div>
             <div className="space-y-1.5">
                 {top5.map((ch) => {
@@ -264,7 +264,7 @@ function ConcurrencyCard({ stats }: { stats: SystemStats }) {
                     <p className="mt-1 text-2xl font-bold tabular-nums text-slate-900 dark:text-white">
                         {rpm.toLocaleString()}
                     </p>
-                    <p className="mt-0.5 text-[10px] text-slate-400 dark:text-white/35">每分钟请求数</p>
+                    <p className="mt-0.5 text-[10px] text-slate-400 dark:text-white/35">每m请求数</p>
                 </div>
                 <div className="rounded-lg bg-slate-50 px-3 py-2.5 dark:bg-neutral-800/50">
                     <div className="flex items-center gap-1 text-[9px] font-semibold uppercase tracking-wider text-slate-400 dark:text-white/35">
@@ -274,7 +274,7 @@ function ConcurrencyCard({ stats }: { stats: SystemStats }) {
                     <p className="mt-1 text-2xl font-bold tabular-nums text-slate-900 dark:text-white">
                         {tpm.toLocaleString()}
                     </p>
-                    <p className="mt-0.5 text-[10px] text-slate-400 dark:text-white/35">每分钟 Token 数</p>
+                    <p className="mt-0.5 text-[10px] text-slate-400 dark:text-white/35">每m Token 数</p>
                 </div>
             </div>
         </div>

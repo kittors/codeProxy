@@ -36,12 +36,12 @@ const PROVIDERS: { id: OAuthProvider; title: string; hint: string }[] = [
   {
     id: "anthropic",
     title: "Anthropic OAuth",
-    hint: "用于 Claude / Anthropic 服务的 OAuth 登录。",
+    hint: "用于 Claude / Anthropic 服务的 OAuth Login。",
   },
   {
     id: "antigravity",
     title: "Antigravity OAuth",
-    hint: "用于 Antigravity 配额/能力相关的 OAuth 登录。",
+    hint: "用于 Antigravity 配额/能力相关的 OAuth Login。",
   },
   {
     id: "gemini-cli",

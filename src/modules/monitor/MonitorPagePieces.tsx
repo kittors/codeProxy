@@ -43,7 +43,7 @@ export const TimeRangeSelector = ({
     <Tabs value={String(value)} onValueChange={(next) => onChange(Number(next) as TimeRange)}>
       <TabsList>
         {TIME_RANGES.map((range) => {
-          const label = range === 1 ? "今天" : `${range} 天`;
+          const label = range === 1 ? "Today" : `${range} days`;
           return (
             <TabsTrigger key={range} value={String(range)}>
               {label}
@@ -67,7 +67,7 @@ export const HourWindowSelector = ({
       <TabsList>
         {HOUR_WINDOWS.map((range) => (
           <TabsTrigger key={range} value={String(range)}>
-            最近{range}小时
+            Last {range}h
           </TabsTrigger>
         ))}
       </TabsList>
@@ -115,7 +115,7 @@ export const MonitorCard = ({
                 className="h-4 w-4 rounded-full border-2 border-slate-300/80 border-t-slate-900 motion-reduce:animate-none motion-safe:animate-spin dark:border-white/20 dark:border-t-white/85"
                 aria-hidden="true"
               />
-              <span className="tabular-nums">加载中…</span>
+              <span className="tabular-nums">Loading…</span>
             </div>
           </div>
         ) : null}
