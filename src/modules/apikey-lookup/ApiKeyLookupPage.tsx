@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { useTheme } from "@/modules/ui/ThemeProvider";
 import { ThemeToggleButton } from "@/modules/ui/ThemeProvider";
+import { LanguageSelector } from "@/modules/ui/LanguageSelector";
 import { AnimatedNumber } from "@/modules/ui/AnimatedNumber";
 import { Reveal } from "@/modules/ui/Reveal";
 import { OverflowTooltip } from "@/modules/ui/Tooltip";
@@ -1108,7 +1109,10 @@ export function ApiKeyLookupPage() {
               {t("apikey_lookup.title")}
             </span>
           </div>
-          <ThemeToggleButton className="rounded-xl p-2 text-slate-600 transition hover:bg-slate-100 dark:text-white/70 dark:hover:bg-white/10" />
+          <div className="flex items-center gap-2">
+            <LanguageSelector className="inline-flex items-center rounded-xl p-2 text-slate-600 transition hover:bg-slate-100 dark:text-white/70 dark:hover:bg-white/10" />
+            <ThemeToggleButton className="rounded-xl p-2 text-slate-600 transition hover:bg-slate-100 dark:text-white/70 dark:hover:bg-white/10" />
+          </div>
         </div>
       </header>
 

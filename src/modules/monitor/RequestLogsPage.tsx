@@ -507,7 +507,7 @@ export function RequestLogsPage() {
           {/* 统计摘要 */}
           <span className="inline-flex items-center gap-1.5 text-xs text-slate-600 dark:text-white/55">
             <Filter size={12} aria-hidden="true" />
-            {t("request_logs.records_count", { total: stats.total.toLocaleString() } as Record<
+            {t("request_logs.records_count", { count: stats.total.toLocaleString() } as Record<
               string,
               string
             >)}
