@@ -54,7 +54,8 @@
     "priority_optional": "Priority (Optional)",
     "all_models": "All Models",
     "clear_action": "Clear",
-    "chart_legend": "Chart legend"
+    "chart_legend": "Chart legend",
+    "success_rate": "Success Rate"
   },
   "title": {
     "main": "CLI Proxy API Management Center",
@@ -1817,7 +1818,31 @@
     "all_models_placeholder": "All Models",
     "view_error": "Click to view error details",
     "view_input": "Click to view input",
-    "view_output": "Click to view output"
+    "view_output": "Click to view output",
+    "today": "Today",
+    "n_days": "{{count}} days",
+    "heading": "Request Logs",
+    "col_time": "Time",
+    "col_key_name": "Key Name",
+    "col_model": "Model",
+    "col_channel": "Channel",
+    "col_status": "Status",
+    "col_duration": "Duration",
+    "col_input": "Input",
+    "col_cache_read": "Cache Read",
+    "col_output": "Output",
+    "col_total_token": "Total Token",
+    "col_cost": "Cost",
+    "status_failed": "Failed",
+    "status_success": "Success",
+    "search_keys": "Search Keys…",
+    "search_models": "Search models…",
+    "records_count": "{{count}} records",
+    "refreshing": "Refreshing…",
+    "not_refreshed": "Not yet refreshed",
+    "table_caption": "Request Logs Table",
+    "no_data": "No Data",
+    "refresh_failed": "Request Logs refresh failed"
   },
   "api_keys_page": {
     "title": "API Keys Management",

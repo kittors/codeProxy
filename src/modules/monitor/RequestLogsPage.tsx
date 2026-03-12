@@ -73,11 +73,12 @@ const TimeRangeSelector = ({
   value: TimeRange;
   onChange: (next: TimeRange) => void;
 }) => {
+  const { t } = useTranslation();
   return (
     <Tabs value={String(value)} onValueChange={(next) => onChange(Number(next) as TimeRange)}>
       <TabsList>
         {TIME_RANGES.map((range) => {
-          const label = range === 1 ? "Today" : `${range} days`;
+          const label = range === 1 ? t("request_logs.today") : t("request_logs.n_days", { count: range });
           return (
             <TabsTrigger key={range} value={String(range)}>
               {label}
@@ -99,7 +100,7 @@ function buildLogColumns(
   return [
     {
       key: "timestamp",
-      label: "Time",
+      label: t("request_logs.col_time"),
       width: "w-52",
       cellClassName:
         "font-mono text-xs tabular-nums text-slate-700 dark:text-slate-200",
@@ -111,7 +112,7 @@ function buildLogColumns(
     },
     {
       key: "apiKeyName",
-      label: "Key Name",
+      label: t("request_logs.col_key_name"),
       width: "w-32",
       render: (row) => (
         <OverflowTooltip content={row.apiKeyName || "--"} className="block min-w-0">
@@ -125,7 +126,7 @@ function buildLogColumns(
     },
     {
       key: "model",
-      label: "Model",
+      label: t("request_logs.col_model"),
       width: "w-56",
       render: (row) => (
         <OverflowTooltip content={row.model} className="block min-w-0">
@@ -135,7 +136,7 @@ function buildLogColumns(
     },
     {
       key: "channelName",
-      label: "Channel",
+      label: t("request_logs.col_channel"),
       width: "w-32",
       render: (row) => (
         <OverflowTooltip content={row.channelName || "--"} className="block min-w-0">
@@ -149,7 +150,7 @@ function buildLogColumns(
     },
     {
       key: "status",
-      label: "Status",
+      label: t("request_logs.col_status"),
       width: "w-20",
       render: (row) =>
         row.failed ? (
@@ -159,17 +160,17 @@ function buildLogColumns(
             className="inline-flex min-w-[52px] cursor-pointer justify-center rounded-full bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-600 transition hover:bg-rose-100 hover:shadow-sm dark:bg-rose-500/15 dark:text-rose-300 dark:hover:bg-rose-500/25"
             title={t("request_logs.view_error")}
           >
-            Failed
+            {t("request_logs.status_failed")}
           </button>
         ) : (
           <span className="inline-flex min-w-[52px] justify-center rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-300">
-            Success
+            {t("request_logs.status_success")}
           </span>
         ),
     },
     {
       key: "latency",
-      label: "Duration",
+      label: t("request_logs.col_duration"),
       width: "w-24",
       headerClassName: "text-right",
       cellClassName:
@@ -182,7 +183,7 @@ function buildLogColumns(
     },
     {
       key: "inputTokens",
-      label: "Input",
+      label: t("request_logs.col_input"),
       width: "w-24",
       headerClassName: "text-right",
       cellClassName:
@@ -207,7 +208,7 @@ function buildLogColumns(
     },
     {
       key: "cachedTokens",
-      label: "Cache Read",
+      label: t("request_logs.col_cache_read"),
       width: "w-24",
       headerClassName: "text-right",
       cellClassName: "text-right font-mono text-xs tabular-nums",
@@ -223,7 +224,7 @@ function buildLogColumns(
     },
     {
       key: "outputTokens",
-      label: "Output",
+      label: t("request_logs.col_output"),
       width: "w-24",
       headerClassName: "text-right",
       cellClassName:
@@ -248,7 +249,7 @@ function buildLogColumns(
     },
     {
       key: "totalTokens",
-      label: "Total Token",
+      label: t("request_logs.col_total_token"),
       width: "w-28",
       headerClassName: "text-right",
       cellClassName:
@@ -261,7 +262,7 @@ function buildLogColumns(
     },
     {
       key: "cost",
-      label: "Cost",
+      label: t("request_logs.col_cost"),
       width: "w-24",
       headerClassName: "text-right",
       cellClassName:
@@ -393,7 +394,7 @@ export function RequestLogsPage() {
         setStats(resp.stats ?? { total: 0, success_rate: 0, total_tokens: 0 });
         setLastUpdatedAt(Date.now());
       } catch (err) {
-        const message = err instanceof Error ? err.message : "Request Logs refresh failed";
+        const message = err instanceof Error ? err.message : t("request_logs.refresh_failed");
         notify({ type: "error", message });
       } finally {
         fetchInFlightRef.current = false;
@@ -427,27 +428,27 @@ export function RequestLogsPage() {
   const keyOptions = useMemo(() => {
     const names = filterOptions.api_key_names ?? {};
     return [
-      { value: "", label: "All Keys" },
+      { value: "", label: t("request_logs.all_keys") },
       ...filterOptions.api_keys.map((key) => ({
         value: key,
         label: names[key] || maskApiKey(key),
         searchText: `${names[key] || ""} ${key}`,
       })),
     ];
-  }, [filterOptions.api_keys, filterOptions.api_key_names]);
+  }, [filterOptions.api_keys, filterOptions.api_key_names, t]);
 
   const modelOptions = useMemo(() => {
     return [
-      { value: "", label: "All Models" },
+      { value: "", label: t("request_logs.all_models") },
       ...filterOptions.models.map((m) => ({ value: m, label: m })),
     ];
-  }, [filterOptions.models]);
+  }, [filterOptions.models, t]);
 
   const lastUpdatedText = useMemo(() => {
-    if (loading) return "Refreshing…";
-    if (!lastUpdatedAt) return "Not yet refreshed";
-    return `Updated at ${new Date(lastUpdatedAt).toLocaleTimeString()}`;
-  }, [lastUpdatedAt, loading]);
+    if (loading) return t("request_logs.refreshing");
+    if (!lastUpdatedAt) return t("request_logs.not_refreshed");
+    return t("request_logs.updated_at", { time: new Date(lastUpdatedAt).toLocaleTimeString() });
+  }, [lastUpdatedAt, loading, t]);
 
   return (
     <section className="flex flex-1 flex-col">
@@ -459,7 +460,7 @@ export function RequestLogsPage() {
         <div className="flex flex-wrap items-center justify-between gap-3 px-5 pt-5 pb-3">
           <h2 className="flex items-center gap-2 text-base font-semibold text-slate-900 dark:text-white">
             <ScrollText size={18} className="text-slate-900 dark:text-white" aria-hidden="true" />
-            Request Logs
+            {t("request_logs.heading")}
           </h2>
           <div className="flex flex-wrap items-center gap-2">
             <TimeRangeSelector value={timeRange} onChange={setTimeRange} />
@@ -488,7 +489,7 @@ export function RequestLogsPage() {
             onChange={setApiQuery}
             options={keyOptions}
             placeholder={t("request_logs.all_keys_placeholder")}
-            searchPlaceholder="Search Keys…"
+            searchPlaceholder={t("request_logs.search_keys")}
             aria-label={t("request_logs.filter_key")}
           />
           <SearchableSelect
@@ -496,16 +497,16 @@ export function RequestLogsPage() {
             onChange={setModelQuery}
             options={modelOptions}
             placeholder={t("request_logs.all_models_placeholder")}
-            searchPlaceholder="Search models…"
+            searchPlaceholder={t("request_logs.search_models")}
             aria-label={t("request_logs.filter_model")}
           />
           <Select
             value={statusFilter}
             onChange={(v) => setStatusFilter(v as StatusFilter)}
             options={[
-              { value: "", label: "All Status" },
-              { value: "success", label: "Success" },
-              { value: "failed", label: "Failed" },
+              { value: "", label: t("request_logs.all_status") },
+              { value: "success", label: t("request_logs.status_success") },
+              { value: "failed", label: t("request_logs.status_failed") },
             ]}
             aria-label={t("request_logs.filter_status")}
             name="statusFilter"
@@ -517,10 +518,10 @@ export function RequestLogsPage() {
           {/* 统计摘要 */}
           <span className="inline-flex items-center gap-1.5 text-xs text-slate-600 dark:text-white/55">
             <Filter size={12} aria-hidden="true" />
-            <span className="font-mono tabular-nums">{stats.total.toLocaleString()}</span>  records
-            <span className="text-slate-300 dark:text-white/10" aria-hidden="true">·</span>{t("common.success_rate", "Success Rate")}<span className="font-mono tabular-nums">{stats.success_rate.toFixed(1)}%</span>
+            {t("request_logs.records_count", { count: stats.total.toLocaleString() })}
+            <span className="text-slate-300 dark:text-white/10" aria-hidden="true">·</span>{t("common.success_rate")}<span className="font-mono tabular-nums">{stats.success_rate.toFixed(1)}%</span>
             <span className="text-slate-300 dark:text-white/10" aria-hidden="true">·</span>
-            Token <span className="font-mono tabular-nums">{stats.total_tokens.toLocaleString()}</span>
+            {t("request_logs.col_total_token")} <span className="font-mono tabular-nums">{stats.total_tokens.toLocaleString()}</span>
             <span className="text-slate-300 dark:text-white/10" aria-hidden="true">·</span>
             <span className="text-slate-400 dark:text-white/40">{lastUpdatedText}</span>
           </span>
@@ -537,8 +538,8 @@ export function RequestLogsPage() {
             loadingMore={loadingMore}
             onScrollBottom={loadNextPage}
             rowHeight={44}
-            caption="Request Logs Table"
-            emptyText="No Data"
+            caption={t("request_logs.table_caption")}
+            emptyText={t("request_logs.no_data")}
           />
           {loading ? (
             <div className="absolute inset-0 z-10 flex items-center justify-center rounded-b-2xl bg-white/70 backdrop-blur-sm dark:bg-neutral-950/55">
