@@ -10,3 +10,4 @@ bun.lockb
 test-results/
 playwright-report/
 .sisyphus/
+.agentflow/
