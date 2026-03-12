@@ -504,7 +504,6 @@ export function LogsPage() {
   };
 
   const downloadLogs = () => {
-  const { t } = useTranslation();
     const text = logState.buffer.join("\n");
     const blob = new Blob([text], { type: "text/plain" });
     const url = window.URL.createObjectURL(blob);

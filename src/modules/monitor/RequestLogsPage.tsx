@@ -92,10 +92,10 @@ const TimeRangeSelector = ({
 import { VirtualTable, type VirtualTableColumn } from "@/modules/ui/VirtualTable";
 
 function buildLogColumns(
+  t: (key: string) => string,
   onContentClick?: (logId: number, tab: "input" | "output") => void,
   onErrorClick?: (logId: number, model: string) => void,
 ): VirtualTableColumn<LogRow>[] {
-  const { t } = useTranslation();
   return [
     {
       key: "timestamp",
@@ -325,7 +325,7 @@ export function RequestLogsPage() {
   }, []);
 
   // Build columns with content click handler
-  const logColumns = useMemo(() => buildLogColumns(handleContentClick, handleErrorClick), [handleContentClick, handleErrorClick]);
+  const logColumns = useMemo(() => buildLogColumns(t, handleContentClick, handleErrorClick), [t, handleContentClick, handleErrorClick]);
 
   // Accumulated raw items from all loaded pages (name resolution done by backend)
   const [rawItems, setRawItems] = useState<UsageLogItem[]>([]);

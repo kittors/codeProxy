@@ -269,7 +269,6 @@ export function QuotaPage() {
     list: AuthFileItem[],
     stateMap: Record<string, QuotaState>,
   ) => {
-  const { t } = useTranslation();
     const meta = PROVIDER_META[type];
     return (
       <section key={type}>

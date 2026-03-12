@@ -1010,7 +1010,6 @@ export function LogContentModal({ open, logId, initialTab = "input", onClose, fe
 
     /* ---- Render input ---- */
     const renderInput = () => {
-  const { t } = useTranslation();
         if (!inputContent) {
             return (
                 <div className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-white/25">
@@ -1041,7 +1040,6 @@ export function LogContentModal({ open, logId, initialTab = "input", onClose, fe
 
     /* ---- Render output ---- */
     const renderOutput = () => {
-  const { t } = useTranslation();
         if (!outputContent) {
             return (
                 <div className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-white/25">
