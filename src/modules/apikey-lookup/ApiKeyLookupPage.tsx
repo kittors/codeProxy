@@ -188,6 +188,7 @@ function VendorIcon({ modelId, size = 14 }: { modelId: string; size?: number }) 
 }
 
 function ModelTag({ id }: { id: string }) {
+    const { t } = useTranslation();
     const [copied, setCopied] = useState(false);
     const vc = getVendorColor(id);
     const handleClick = () => {
@@ -199,7 +200,7 @@ function ModelTag({ id }: { id: string }) {
         <button
             type="button"
             onClick={handleClick}
-            title="Click to copy model name"
+            title={t("apikey_lookup.copy_model")}
             className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 font-mono text-xs transition hover:shadow-sm active:scale-95 ${vc.bg} ${vc.text} ${vc.border}`}
         >
             {copied ? (
@@ -340,6 +341,7 @@ function formatLocalDateLabel(dateStr: string): string {
 // ── Columns ─────────────────────────────────────────────────────────────────
 
 function buildLogColumns(
+    t: (key: string, options?: Record<string, unknown>) => string,
     onContentClick?: (logId: number, tab: "input" | "output") => void,
 ): VirtualTableColumn<LogRow>[] {
     return [
@@ -403,7 +405,7 @@ function buildLogColumns(
                         type="button"
                         onClick={() => onContentClick(Number(row.id), "input")}
                         className="inline-block ml-auto cursor-pointer rounded px-1.5 py-0.5 transition hover:bg-sky-50 dark:hover:bg-sky-950/30"
-                        title="Click to view input"
+                        title={t("apikey_lookup.view_input")}
                     >
                         <span className="truncate text-sky-600 dark:text-sky-400 underline decoration-sky-300/50 dark:decoration-sky-500/40 underline-offset-2">
                             {row.inputTokens.toLocaleString()}
@@ -439,7 +441,7 @@ function buildLogColumns(
                         type="button"
                         onClick={() => onContentClick(Number(row.id), "output")}
                         className="inline-block ml-auto cursor-pointer rounded px-1.5 py-0.5 transition hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
-                        title="Click to view output"
+                        title={t("apikey_lookup.view_output")}
                     >
                         <span className="truncate text-emerald-600 dark:text-emerald-400 underline decoration-emerald-300/50 dark:decoration-emerald-500/40 underline-offset-2">
                             {row.outputTokens.toLocaleString()}
@@ -491,6 +493,7 @@ function ModelsTabContent({
     searchFilter: string;
     onSearchChange: (v: string) => void;
 }) {
+    const { t } = useTranslation();
     const filteredModels = useMemo(() => {
         const needle = searchFilter.trim().toLowerCase();
         if (!needle) return models;
@@ -516,7 +519,7 @@ function ModelsTabContent({
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-3.5 dark:border-neutral-800">
                 <div className="flex items-center gap-2.5">
                     <Layers size={15} className="text-slate-500 dark:text-white/40" />
-                    <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Available Models</h3>
+                    <h3 className="text-sm font-semibold text-slate-900 dark:text-white">{t("apikey_lookup.available_models")}</h3>
                     <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[11px] font-bold tabular-nums text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-300">
                         {filteredModels.length}
                     </span>
@@ -606,7 +609,7 @@ export function ApiKeyLookupPage() {
         setContentModalOpen(true);
     }, []);
 
-    const logColumns = useMemo(() => buildLogColumns(handleContentClick), [handleContentClick]);
+    const logColumns = useMemo(() => buildLogColumns(t, handleContentClick), [t, handleContentClick]);
 
     // ── Tab state ──
     const [activeTab, setActiveTab] = useState<"usage" | "logs" | "models">("usage");
@@ -1017,7 +1020,7 @@ export function ApiKeyLookupPage() {
                                     id="apikey-input"
                                     value={apiKeyInput}
                                     onChange={(e) => setApiKeyInput(e.target.value)}
-                                    placeholder="Enter API Key to lookup usage"
+                                    placeholder={t("apikey_lookup.placeholder")}
                                     autoComplete="off"
                                     spellCheck={false}
                                     className="h-10 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-white dark:placeholder:text-white/30"
@@ -1056,8 +1059,8 @@ export function ApiKeyLookupPage() {
                             <div className="flex flex-wrap items-center gap-3">
                                 <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "usage" | "logs" | "models")}>
                                     <TabsList>
-                                        <TabsTrigger value="usage">Usage Stats</TabsTrigger>
-                                        <TabsTrigger value="logs">Request Logs</TabsTrigger>
+                                        <TabsTrigger value="usage">{t("apikey_lookup.usage_stats")}</TabsTrigger>
+                                        <TabsTrigger value="logs">{t("apikey_lookup.request_logs")}</TabsTrigger>
                                         <TabsTrigger value="models">Available Models</TabsTrigger>
                                     </TabsList>
                                 </Tabs>
@@ -1085,7 +1088,7 @@ export function ApiKeyLookupPage() {
                                     {/* KPI cards */}
                                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                                         <KpiCard
-                                            title="Total Requests"
+                                            title={t("apikey_lookup.total_requests")}
                                             icon={Activity}
                                             hint={`Last ${timeRange} days`}
                                             value={<AnimatedNumber value={chartStats?.total ?? 0} format={formatNumber} />}
@@ -1097,13 +1100,13 @@ export function ApiKeyLookupPage() {
                                             value={<AnimatedNumber value={chartStats?.success_rate ?? 0} format={formatRate} />}
                                         />
                                         <KpiCard
-                                            title="Total Tokens"
+                                            title={t("apikey_lookup.total_tokens")}
                                             icon={Sigma}
                                             hint={`Last ${timeRange} days`}
                                             value={<AnimatedNumber value={chartStats?.total_tokens ?? 0} format={formatNumber} />}
                                         />
                                         <KpiCard
-                                            title="Total Cost"
+                                            title={t("apikey_lookup.total_cost")}
                                             icon={Coins}
                                             hint={`Last ${timeRange} days`}
                                             value={<AnimatedNumber value={chartStats?.total_cost ?? 0} format={(v) => `$${v.toFixed(4)}`} />}
@@ -1113,13 +1116,13 @@ export function ApiKeyLookupPage() {
                                     {/* Charts */}
                                     <section className="grid gap-4 lg:grid-cols-[minmax(0,560px)_minmax(0,1fr)]">
                                         <Card
-                                            title="Model Distribution"
+                                            title={t("apikey_lookup.model_distribution")}
                                             description={`Model ${modelMetric === "requests" ? "request" : "token"} share`}
                                             actions={
                                                 <Tabs value={modelMetric} onValueChange={(next) => setModelMetric(next as "requests" | "tokens")}>
                                                     <TabsList>
-                                                        <TabsTrigger value="requests">Requests</TabsTrigger>
-                                                        <TabsTrigger value="tokens">Token</TabsTrigger>
+                                                        <TabsTrigger value="requests">{t("apikey_lookup.requests", "请求数")}</TabsTrigger>
+                                                        <TabsTrigger value="tokens">{t("apikey_lookup.token", "Token")}</TabsTrigger>
                                                     </TabsList>
                                                 </Tabs>
                                             }
@@ -1160,7 +1163,7 @@ export function ApiKeyLookupPage() {
                                         </Card>
 
                                         <Card
-                                            title="Daily Usage Trend"
+                                            title={t("apikey_lookup.daily_usage")}
                                             description={`Last ${timeRange} days · Requests & Token usage trend`}
                                             loading={chartLoading}
                                         >

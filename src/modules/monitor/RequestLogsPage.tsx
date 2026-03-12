@@ -450,7 +450,7 @@ export function RequestLogsPage() {
 
   return (
     <section className="flex flex-1 flex-col">
-      <h1 className="sr-only">Request Logs</h1>
+      <h1 className="sr-only">{t("request_logs.title")}</h1>
 
       {/* 单层卡片：标题 + 筛选 + 统计 + 表格 */}
       <div className="flex flex-1 flex-col rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-950/70">

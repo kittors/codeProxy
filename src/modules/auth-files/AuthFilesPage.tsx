@@ -1111,8 +1111,8 @@ export function AuthFilesPage() {
   return (
     <div className="space-y-6">
       <Card
-        title="Auth Files"
-        description="Manage auth file upload/enable/download, OAuth excluded models & model aliases."
+        title={t("auth_files_page.title")}
+        description={t("auth_files_page.description")}
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <Button variant="secondary" size="sm" onClick={() => navigate("/quota")}>
@@ -1164,9 +1164,9 @@ export function AuthFilesPage() {
       >
         <Tabs value={tab} onValueChange={(next) => setTab(next as typeof tab)}>
           <TabsList>
-            <TabsTrigger value="files">Files</TabsTrigger>
-            <TabsTrigger value="excluded">OAuth Excluded Models</TabsTrigger>
-            <TabsTrigger value="alias">OAuth Model Aliases</TabsTrigger>
+            <TabsTrigger value="files">{t("auth_files_page.files_tab")}</TabsTrigger>
+            <TabsTrigger value="excluded">{t("auth_files_page.excluded_tab")}</TabsTrigger>
+            <TabsTrigger value="alias">{t("auth_files_page.alias_tab")}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="files" className="mt-4">
@@ -1231,7 +1231,7 @@ export function AuthFilesPage() {
                   <TextInput
                     value={search}
                     onChange={(e) => setSearch(e.currentTarget.value)}
-                    placeholder="Filename / provider / type"
+                    placeholder={t("auth_files_page.filename_hint")}
                     endAdornment={<Search size={16} className="text-slate-400" />}
                   />
                 </div>
@@ -1249,7 +1249,7 @@ export function AuthFilesPage() {
                         if (Number.isFinite(parsed)) setPageSize(clampPageSize(parsed));
                         else setPageSizeInput(String(pageSize));
                       }}
-                      aria-label="Per page"
+                      aria-label={t("auth_files_page.per_page")}
                       placeholder="Count"
                       inputMode="numeric"
                       className="w-24"
@@ -1274,8 +1274,8 @@ export function AuthFilesPage() {
                 {pageItems.length === 0 ? (
                   <div className="md:col-span-2 xl:col-span-3">
                     <EmptyState
-                      title="No auth files"
-                      description="You can import JSON auth files via the Upload button."
+                      title={t("auth_files_page.no_files")}
+                      description={t("auth_files_page.no_files_desc")}
                     />
                   </div>
                 ) : (
@@ -1469,8 +1469,8 @@ export function AuthFilesPage() {
 
           <TabsContent value="excluded" className="mt-4">
             <Card
-              title="OAuth ExcludedModels"
-              description="Maintain disabled models list by provider (one model per line)."
+              title={t("auth_files_page.excluded_title")}
+              description={t("auth_files_page.excluded_desc")}
               actions={
                 <div className="flex flex-wrap items-center gap-2">
                   <Button
@@ -1489,7 +1489,7 @@ export function AuthFilesPage() {
               {excludedUnsupported ? (
                 <div className="mb-4">
                   <EmptyState
-                    title="API Not Supported"
+                    title={t("auth_files_page.api_not_supported")}
                     description="Server does not implement /oauth-excluded-models (or version is too old). Please update the server."
                   />
                 </div>
@@ -1516,8 +1516,8 @@ export function AuthFilesPage() {
               <div className="mt-4 space-y-3">
                 {Object.keys(excluded).length === 0 ? (
                   <EmptyState
-                    title="No config"
-                    description="You can add a provider and save the excluded models list."
+                    title={t("auth_files_page.no_config")}
+                    description={t("auth_files_page.no_excluded_desc")}
                   />
                 ) : (
                   Object.entries(excluded)
@@ -1589,7 +1589,7 @@ export function AuthFilesPage() {
 
           <TabsContent value="alias" className="mt-4">
             <Card
-              title="OAuth Model Alias"
+              title={t("auth_files_page.alias_title")}
               description="Maintain Models name -> alias mapping by channel (for OAuth)."
               actions={
                 <div className="flex flex-wrap items-center gap-2">
@@ -1634,7 +1634,7 @@ export function AuthFilesPage() {
 
               <div className="mt-4 space-y-3">
                 {Object.keys(aliasEditing).length === 0 ? (
-                  <EmptyState title="No config" description="You can add a channel and maintain mapping." />
+                  <EmptyState title="No config" description={t("auth_files_page.alias_no_config")} />
                 ) : (
                   Object.keys(aliasEditing)
                     .sort((a, b) => a.localeCompare(b))
@@ -1842,7 +1842,7 @@ export function AuthFilesPage() {
         ) : modelsList.length === 0 ? (
           <EmptyState
             title={t("common.no_model_data", "No Models Data")}
-            description="Auth file might not support querying models, or server did not return data."
+            description={t("auth_files_page.models_hint")}
           />
         ) : (
           <div className="space-y-2">
@@ -1985,7 +1985,7 @@ export function AuthFilesPage() {
             </div>
           </div>
         ) : (
-          <EmptyState title="Cannot Edit" description={prefixProxyEditor.error || "Unknown error"} />
+          <EmptyState title={t("auth_files_page.cannot_edit")} description={prefixProxyEditor.error || "Unknown error"} />
         )}
       </Modal>
 
@@ -2015,7 +2015,7 @@ export function AuthFilesPage() {
         ) : importModels.length === 0 ? (
           <EmptyState
             title={t("common.no_model_def", "No Model Definitions")}
-            description="Server did not return models or channel unsupported."
+            description={t("auth_files_page.cannot_edit_desc")}
           />
         ) : (
           <div className="space-y-3">

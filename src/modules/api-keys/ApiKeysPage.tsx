@@ -550,7 +550,7 @@ export function ApiKeysPage() {
             cellClassName: "whitespace-nowrap text-slate-700 dark:text-white/70",
             headerRender: () => (
                 <HoverTooltip content="Requests Per Minute，Requests Per Minute" className="inline-flex items-center gap-1">
-                    <span>RPM</span>
+                    <span>{t("api_keys_page.rpm")}</span>
                     <Info size={12} className="text-slate-400 dark:text-white/40" />
                 </HoverTooltip>
             ),
@@ -571,7 +571,7 @@ export function ApiKeysPage() {
             cellClassName: "whitespace-nowrap text-slate-700 dark:text-white/70",
             headerRender: () => (
                 <HoverTooltip content="Tokens Per Minute，Tokens Per Minute" className="inline-flex items-center gap-1">
-                    <span>TPM</span>
+                    <span>{t("api_keys_page.tpm")}</span>
                     <Info size={12} className="text-slate-400 dark:text-white/40" />
                 </HoverTooltip>
             ),
@@ -637,14 +637,14 @@ export function ApiKeysPage() {
                     <button
                         onClick={() => handleViewUsage(row)}
                         className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-blue-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-blue-400"
-                        title="View usage"
+                        title={t("api_keys_page.view_usage")}
                     >
                         <BarChart3 size={15} />
                     </button>
                     <button
                         onClick={() => void handleCopy(row.key)}
                         className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-indigo-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-indigo-400"
-                        title="Copy Key"
+                        title={t("api_keys_page.copy_key")}
                     >
                         <Copy size={15} />
                     </button>
@@ -862,7 +862,7 @@ export function ApiKeysPage() {
                     options={availableModels}
                     value={form.allowedModels}
                     onChange={(selected) => setForm((p) => ({ ...p, allowedModels: selected }))}
-                    placeholder="Select models..."
+                    placeholder={t("api_keys_page.select_models")}
                     emptyLabel="All Models"
                 />
             </div>
@@ -874,7 +874,7 @@ export function ApiKeysPage() {
                 <textarea
                     value={form.systemPrompt}
                     onChange={(e) => setForm((p) => ({ ...p, systemPrompt: e.target.value }))}
-                    placeholder="Optional. Requests using this API Key will automatically inject this System Prompt."
+                    placeholder={t("api_keys_page.system_prompt_hint")}
                     rows={3}
                     className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition-all focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white dark:focus:border-indigo-500 resize-y"
                 />
@@ -890,8 +890,8 @@ export function ApiKeysPage() {
     return (
         <div className="space-y-6">
             <Card
-                title="API Keys Management"
-                description="Create and manage API Keys, set request limits and model permissions. Data persists on server."
+                title={t("api_keys_page.title")}
+                description={t("api_keys_page.description")}
                 actions={
                     <div className="flex gap-2">
                         <Button variant="secondary" size="sm" onClick={() => void loadEntries()} disabled={loading}>
@@ -908,7 +908,7 @@ export function ApiKeysPage() {
             >
                 {entries.length === 0 ? (
                     <EmptyState
-                        title="No API Keys"
+                        title={t("api_keys_page.no_keys")}
                         description="Click 'Create Key' to add the first API Key."
                         icon={<KeyRound size={32} className="text-slate-400" />}
                     />
@@ -931,8 +931,8 @@ export function ApiKeysPage() {
             <Modal
                 open={showCreate}
                 onClose={() => setShowCreate(false)}
-                title="Create API Key"
-                description="Fill in details and generate a new API Key (name required)"
+                title={t("api_keys_page.create")}
+                description={t("api_keys_page.create_desc")}
                 footer={
                     <>
                         <Button variant="secondary" onClick={() => setShowCreate(false)}>
@@ -951,8 +951,8 @@ export function ApiKeysPage() {
             <Modal
                 open={editIndex !== null}
                 onClose={() => setEditIndex(null)}
-                title="Edit API Key"
-                description="Modify name, limits and model permissions"
+                title={t("api_keys_page.edit")}
+                description={t("api_keys_page.edit_desc")}
                 footer={
                     <>
                         <Button variant="secondary" onClick={() => setEditIndex(null)}>
@@ -971,8 +971,8 @@ export function ApiKeysPage() {
             <Modal
                 open={deleteIndex !== null}
                 onClose={() => setDeleteIndex(null)}
-                title="Confirm Delete"
-                description="This cannot be undone. All clients using this Key will lose access."
+                title={t("api_keys_page.confirm_delete")}
+                description={t("api_keys_page.delete_warning")}
                 footer={
                     <>
                         <Button variant="secondary" onClick={() => setDeleteIndex(null)}>
@@ -1006,7 +1006,7 @@ export function ApiKeysPage() {
                 {usageLoading ? (
                     <div className="py-8 text-center text-sm text-slate-500 dark:text-white/50">Loading...</div>
                 ) : usageRows.length === 0 ? (
-                    <div className="py-8 text-center text-sm text-slate-500 dark:text-white/50">No usage records</div>
+                    <div className="py-8 text-center text-sm text-slate-500 dark:text-white/50">{t("api_keys_page.no_usage")}</div>
                 ) : (
                     <VirtualTable<UsageLogRow>
                         rows={usageRows}

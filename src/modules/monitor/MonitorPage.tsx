@@ -51,10 +51,12 @@ import {
 } from "@/modules/monitor/monitor-chart-options";
 import { Tabs, TabsList, TabsTrigger } from "@/modules/ui/Tabs";
 import { useToast } from "@/modules/ui/ToastProvider";
+import { useTranslation } from "react-i18next";
 
 const createEmptyUsage = (): UsageData => ({ apis: {} });
 
 export function MonitorPage() {
+  const { t } = useTranslation();
   const { notify } = useToast();
   const {
     state: { mode },
@@ -101,7 +103,7 @@ export function MonitorPage() {
         setRawUsage(usageData);
       });
     } catch (requestError) {
-      const message = requestError instanceof Error ? requestError.message : "Failed to fetch data";
+      const message = requestError instanceof Error ? requestError.message : t("monitor.failed_fetch");
       setError(message);
     } finally {
       setIsRefreshing(false);
@@ -459,8 +461,8 @@ export function MonitorPage() {
   const modelActions = (
     <Tabs value={modelMetric} onValueChange={(next) => setModelMetric(next as "requests" | "tokens")}>
       <TabsList>
-        <TabsTrigger value="requests">Requests</TabsTrigger>
-        <TabsTrigger value="tokens">Token</TabsTrigger>
+        <TabsTrigger value="requests">{t("monitor.requests")}</TabsTrigger>
+        <TabsTrigger value="tokens">{t("monitor.token")}</TabsTrigger>
       </TabsList>
     </Tabs>
   );
@@ -472,7 +474,7 @@ export function MonitorPage() {
           <div>
             <h2 className="flex items-center gap-2 text-lg font-semibold text-slate-900 dark:text-white">
               <ChartSpline size={18} className="text-slate-900 dark:text-white" />
-              <span>Monitor</span>
+              <span>{t("monitor.title")}</span>
             </h2>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -484,7 +486,7 @@ export function MonitorPage() {
                 onChange={(event) => setApiFilterInput(event.target.value)}
                 variant="ghost"
                 className="w-36"
-                placeholder="Filter by API key"
+                placeholder={t("monitor.filter_placeholder")}
               />
             </div>
             <button
@@ -493,7 +495,7 @@ export function MonitorPage() {
               className="inline-flex items-center gap-1.5 rounded-2xl border border-slate-200 bg-white px-3 py-1.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-white/80 dark:hover:bg-white/10"
             >
               <Filter size={14} />
-              Apply
+              {t("monitor.apply")}
             </button>
             <button
               type="button"
@@ -538,27 +540,27 @@ export function MonitorPage() {
       <Reveal>
         <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <KpiCard
-            title="Total Requests"
+            title={t("monitor.total_requests")}
             value={<AnimatedNumber value={metrics.requestCount} format={formatNumber} />}
-            hint="Filtered by time range"
+            hint={t("monitor.filtered_by_time")}
             icon={Activity}
           />
           <KpiCard
-            title="Success Rate"
+            title={t("monitor.success_rate")}
             value={<AnimatedNumber value={metrics.successRate} format={formatRate} />}
-            hint={`Success ${formatNumber(metrics.successCount)} / Failed ${formatNumber(metrics.failedCount)}`}
+            hint={t("monitor.success_count", { success: formatNumber(metrics.successCount), failed: formatNumber(metrics.failedCount) })}
             icon={ShieldCheck}
           />
           <KpiCard
-            title="Total Token"
+            title={t("monitor.total_token")}
             value={<AnimatedNumber value={metrics.totalTokens} format={formatNumber} />}
-            hint="Input + Output + Reasoning + Cached"
+            hint={t("monitor.input_output_hint")}
             icon={Sigma}
           />
           <KpiCard
-            title="Output Token"
+            title={t("monitor.output_token")}
             value={<AnimatedNumber value={metrics.outputTokens} format={formatNumber} />}
-            hint={`Input Tokens: ${formatNumber(metrics.inputTokens)}`}
+            hint={t("monitor.input_tokens_hint", { count: formatNumber(metrics.inputTokens) } as Record<string, unknown>)}
             icon={Coins}
           />
         </section>
@@ -571,9 +573,9 @@ export function MonitorPage() {
               <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-900/5 text-slate-700 dark:bg-white/10 dark:text-white/70">
                 <ChartSpline size={20} />
               </div>
-              <p className="text-sm font-semibold text-slate-900 dark:text-white">No monitoring data</p>
+              <p className="text-sm font-semibold text-slate-900 dark:text-white">{t("monitor.no_data")}</p>
               <p className="text-sm text-slate-600 dark:text-white/65">
-                You can click "Refresh" above to re-fetch data.
+                {t("monitor.no_data_hint")}
               </p>
               <button
                 type="button"
@@ -581,7 +583,7 @@ export function MonitorPage() {
                 className="inline-flex min-w-[96px] items-center justify-center gap-1.5 rounded-2xl bg-slate-900 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-slate-800 dark:bg-white dark:text-neutral-950 dark:hover:bg-slate-200"
               >
                 <RefreshCw size={14} />
-                Refresh
+                {t("monitor.refresh")}
               </button>
             </div>
           </section>
@@ -591,8 +593,8 @@ export function MonitorPage() {
           <Reveal>
             <section className="grid gap-4 lg:grid-cols-[minmax(0,560px)_minmax(0,1fr)]">
               <Card
-                title="Model Distribution"
-                description={`Last ${timeRange} days · by ${modelMetric === "requests" ? "Requests" : "Token"} · Top10`}
+                title={t("monitor.model_distribution")}
+                description={t("monitor.last_days_desc", { days: timeRange, metric: modelMetric === "requests" ? t("monitor.requests") : t("monitor.token") })}
                 actions={modelActions}
                 loading={isRefreshing}
               >
@@ -625,8 +627,8 @@ export function MonitorPage() {
               </Card>
 
               <Card
-                title="Daily Usage Trend"
-                description={`Last ${timeRange} days · Requests & Token usage trend`}
+                title={t("monitor.daily_usage_trend")}
+                description={t("monitor.daily_desc", { days: timeRange })}
                 loading={isRefreshing}
               >
                 <div className="flex h-72 min-w-0 flex-col overflow-hidden">
@@ -680,8 +682,8 @@ export function MonitorPage() {
 
           <Reveal>
             <Card
-              title="Hourly Model Requests"
-              description="Hourly aggregated (Top5 models + Other)"
+              title={t("monitor.hourly_model")}
+              description={t("monitor.hourly_model_desc")}
               actions={<HourWindowSelector value={modelHourWindow} onChange={setModelHourWindow} />}
               loading={isRefreshing}
             >
@@ -716,8 +718,8 @@ export function MonitorPage() {
 
           <Reveal>
             <Card
-              title="Hourly Token Usage"
-              description="Hourly aggregated (Input / Output / Reasoning / Cached)"
+              title={t("monitor.hourly_token")}
+              description={t("monitor.hourly_token_desc")}
               actions={<HourWindowSelector value={tokenHourWindow} onChange={setTokenHourWindow} />}
               loading={isRefreshing}
             >

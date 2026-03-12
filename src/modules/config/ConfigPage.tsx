@@ -22,6 +22,7 @@ import { TextInput } from "@/modules/ui/Input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/modules/ui/Tabs";
 import { ToggleSwitch } from "@/modules/ui/ToggleSwitch";
 import { useToast } from "@/modules/ui/ToastProvider";
+import { useTranslation } from "react-i18next";
 import { HoverTooltip } from "@/modules/ui/Tooltip";
 import { YamlCodeEditor } from "@/modules/config/YamlCodeEditor";
 
@@ -100,6 +101,7 @@ function useStickyTab(): [ConfigTab, (next: ConfigTab) => void] {
 }
 
 function RuntimeConfigPanel() {
+  const { t } = useTranslation();
   const { notify } = useToast();
   const [isPending, startTransition] = useTransition();
 
@@ -271,8 +273,8 @@ function RuntimeConfigPanel() {
   return (
     <div className="space-y-6">
       <Card
-        title="Runtime Switches"
-        description="These configs are written to server via management API (complements config.yaml)."
+        title={t("config_page.runtime_switches")}
+        description={t("config_page.runtime_desc")}
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <Button
@@ -282,7 +284,7 @@ function RuntimeConfigPanel() {
               disabled={loading || isPending}
             >
               <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
-              Refresh
+              {t("common.refresh")}
             </Button>
             <Button
               variant="primary"
@@ -291,7 +293,7 @@ function RuntimeConfigPanel() {
               disabled={loading || isPending || !runtimeTextDirty}
             >
               <Save size={14} />
-              Save Changes
+              {t("config_page.save_changes")}
             </Button>
           </div>
         }
@@ -300,8 +302,8 @@ function RuntimeConfigPanel() {
         <div className="grid gap-4 lg:grid-cols-2">
           <div className="space-y-3 rounded-2xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
             <ToggleSwitch
-              label="Debug Mode"
-              description="Enable verbose debug logs (recommended for temporary use)."
+              label={t("config_page.debug_mode")}
+              description={t("config_page.debug_desc")}
               checked={debugEnabled}
               onCheckedChange={(next) => {
                 setDebugEnabled(next);
@@ -309,8 +311,8 @@ function RuntimeConfigPanel() {
               }}
             />
             <ToggleSwitch
-              label="Usage Statistics"
-              description="Track request and token usage."
+              label={t("config_page.usage_statistics")}
+              description={t("config_page.usage_desc")}
               checked={usageStatisticsEnabled}
               onCheckedChange={(next) => {
                 setUsageStatisticsEnabled(next);
@@ -320,8 +322,8 @@ function RuntimeConfigPanel() {
               }}
             />
             <ToggleSwitch
-              label="Request Logs"
-              description="Record request logs for querying and troubleshooting."
+              label={t("config_page.request_logs")}
+              description={t("config_page.request_logs_desc")}
               checked={requestLogEnabled}
               onCheckedChange={(next) => {
                 setRequestLogEnabled(next);
@@ -331,8 +333,8 @@ function RuntimeConfigPanel() {
               }}
             />
             <ToggleSwitch
-              label="Log to File"
-              description="Write logs to file (for downloading error logs)."
+              label={t("config_page.log_to_file")}
+              description={t("config_page.log_to_file_desc")}
               checked={loggingToFileEnabled}
               onCheckedChange={(next) => {
                 setLoggingToFileEnabled(next);
@@ -345,8 +347,8 @@ function RuntimeConfigPanel() {
 
           <div className="space-y-3 rounded-2xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
             <ToggleSwitch
-              label="WebSocket Auth"
-              description="Authenticate WebSocket connections."
+              label={t("config_page.ws_auth")}
+              description={t("config_page.ws_auth_desc")}
               checked={wsAuthEnabled}
               onCheckedChange={(next) => {
                 setWsAuthEnabled(next);
@@ -354,7 +356,7 @@ function RuntimeConfigPanel() {
               }}
             />
             <ToggleSwitch
-              label="Quota Exceeded: Switch Project"
+              label={t("config_page.quota_switch_project")}
               description="quota-exceeded.switch-project"
               checked={switchProjectEnabled}
               onCheckedChange={(next) => {
@@ -365,7 +367,7 @@ function RuntimeConfigPanel() {
               }}
             />
             <ToggleSwitch
-              label="Quota Exceeded: Switch Preview Model"
+              label={t("config_page.quota_switch_preview")}
               description="quota-exceeded.switch-preview-model"
               checked={switchPreviewModelEnabled}
               onCheckedChange={(next) => {
@@ -376,7 +378,7 @@ function RuntimeConfigPanel() {
               }}
             />
             <ToggleSwitch
-              label="Force Model Prefix"
+              label={t("config_page.force_model_prefix")}
               description="force-model-prefix"
               checked={forceModelPrefixEnabled}
               onCheckedChange={(next) => {
@@ -388,7 +390,7 @@ function RuntimeConfigPanel() {
             />
           </div>
 
-          <Card title="Proxy & Retry" description="Request proxy and retry strategy.">
+          <Card title={t("config_page.proxy_retry")} description={t("config_page.proxy_retry_desc")}>
             <div className="space-y-3">
               <TextInput
                 value={proxyUrl}
@@ -409,7 +411,7 @@ function RuntimeConfigPanel() {
             </div>
           </Card>
 
-          <Card title="Logs & Routing" description="Log size limit and routing strategy.">
+          <Card title={t("config_page.logs_routing")} description={t("config_page.logs_routing_desc")}>
             <div className="space-y-3">
               <div className="flex flex-wrap items-center gap-2">
                 <TextInput
@@ -438,6 +440,7 @@ function RuntimeConfigPanel() {
 }
 
 export function ConfigPage() {
+  const { t } = useTranslation();
   const { notify } = useToast();
   const [tab, setTab] = useStickyTab();
 
@@ -682,15 +685,15 @@ export function ConfigPage() {
             <TabsList>
               <TabsTrigger value="visual">
                 <Eye size={14} />
-                Visual Editor
+                {t("config_page.visual_editor")}
               </TabsTrigger>
               <TabsTrigger value="source">
                 <Code2 size={14} />
-                Source Editor
+                {t("config_page.source_editor")}
               </TabsTrigger>
               <TabsTrigger value="runtime">
                 <Settings size={14} />
-                Runtime Config
+                {t("config_page.runtime_config")}
               </TabsTrigger>
             </TabsList>
           </div>
@@ -700,8 +703,8 @@ export function ConfigPage() {
               <div className="flex min-h-0 h-full flex-col gap-4">
 
                 <Card
-                  title="config.yaml (Visual)"
-                  description="Scroll to edit; saves to server."
+                  title={t("config_page.visual_title")}
+                  description={t("config_page.visual_desc")}
                   loading={loading}
                   className="flex min-h-0 flex-1 flex-col"
                   bodyClassName="min-h-0 flex-1 overflow-y-auto"
@@ -726,8 +729,8 @@ export function ConfigPage() {
             <TabsContent value="source">
               <div className="space-y-4">
                 <Card
-                  title="config.yaml (Source)"
-                  description="Supports search, prev/next match & keyboard shortcuts."
+                  title={t("config_page.source_title")}
+                  description={t("config_page.search_hint")}
                   loading={loading}
                 >
                   {error ? (
@@ -738,8 +741,8 @@ export function ConfigPage() {
 
                   {!loading && !yamlText ? (
                     <EmptyState
-                      title="Empty"
-                      description="Server may not have config.yaml or API returned empty."
+                      title={t("config_page.empty")}
+                      description={t("config_page.empty_desc")}
                     />
                   ) : (
                     <div className="space-y-3">
@@ -755,7 +758,7 @@ export function ConfigPage() {
                                 setSearchIndex(0);
                               }
                             }}
-                            placeholder="Search config content"
+                            placeholder={t("config_page.search_placeholder")}
                             onKeyDown={(e) => {
                               if (e.key !== "Enter") return;
                               e.preventDefault();
@@ -774,10 +777,10 @@ export function ConfigPage() {
                             Enter: next · Shift+Enter: prev · Results: 
                             <span className="ml-1 font-mono tabular-nums">
                               {!lastSearchedQuery.trim()
-                                ? "Not searched"
+                                ? t("config_page.not_searched")
                                 : searchStats.total
                                   ? `${searchStats.current}/${searchStats.total}`
-                                  : "No match"}
+                                  : t("config_page.no_match")}
                             </span>
                           </p>
                         </div>
@@ -854,8 +857,8 @@ export function ConfigPage() {
 
       <ConfirmModal
         open={confirmReloadOpen}
-        title="Discard Unsaved Changes"
-        description="You have unsaved changes. Reloading will discard them. Continue?"
+        title={t("config_page.discard_title")}
+        description={t("config_page.discard_desc")}
         confirmText="Continue Reload"
         cancelText="Cancel"
         variant="danger"

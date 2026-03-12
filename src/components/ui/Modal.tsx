@@ -7,6 +7,7 @@ import {
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
+import { useTranslation } from "react-i18next";
 import { IconX } from "./icons";
 
 interface ModalProps {
@@ -116,6 +117,7 @@ export function Modal({
   closeDisabled = false,
   children,
 }: PropsWithChildren<ModalProps>) {
+  const { t } = useTranslation();
   const [isVisible, setIsVisible] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const closeTimerRef = useRef<number | null>(null);
@@ -193,7 +195,7 @@ export function Modal({
           type="button"
           className="modal-close-floating"
           onClick={closeDisabled ? undefined : handleClose}
-          aria-label="Close"
+          aria-label={t("common.close_modal")}
           disabled={closeDisabled}
         >
           <IconX size={20} />
