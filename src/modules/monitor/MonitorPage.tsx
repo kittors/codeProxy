@@ -682,7 +682,7 @@ export function MonitorPage() {
 
           <Reveal>
             <Card
-              title={t("monitor.hourly_model")}
+              title={t("monitor.hourly_model.title")}
               description={t("monitor.hourly_model_desc")}
               actions={<HourWindowSelector value={modelHourWindow} onChange={setModelHourWindow} />}
               loading={isRefreshing}
@@ -718,7 +718,7 @@ export function MonitorPage() {
 
           <Reveal>
             <Card
-              title={t("monitor.hourly_token")}
+              title={t("monitor.hourly_token.title")}
               description={t("monitor.hourly_token_desc")}
               actions={<HourWindowSelector value={tokenHourWindow} onChange={setTokenHourWindow} />}
               loading={isRefreshing}
