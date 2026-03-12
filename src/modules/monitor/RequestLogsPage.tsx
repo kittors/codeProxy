@@ -518,7 +518,7 @@ export function RequestLogsPage() {
           {/* 统计摘要 */}
           <span className="inline-flex items-center gap-1.5 text-xs text-slate-600 dark:text-white/55">
             <Filter size={12} aria-hidden="true" />
-            {t("request_logs.records_count", { count: stats.total.toLocaleString() })}
+            {t("request_logs.records_count", { total: stats.total.toLocaleString() } as Record<string, string>)}
             <span className="text-slate-300 dark:text-white/10" aria-hidden="true">·</span>{t("common.success_rate")}<span className="font-mono tabular-nums">{stats.success_rate.toFixed(1)}%</span>
             <span className="text-slate-300 dark:text-white/10" aria-hidden="true">·</span>
             {t("request_logs.col_total_token")} <span className="font-mono tabular-nums">{stats.total_tokens.toLocaleString()}</span>

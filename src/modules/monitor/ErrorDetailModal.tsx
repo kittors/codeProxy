@@ -12,7 +12,7 @@ interface ErrorDetailModalProps {
 }
 
 export function ErrorDetailModal({ open, logId, model, onClose }: ErrorDetailModalProps) {
-  const { t } = useTranslation();
+    const { t } = useTranslation();
     const [visible, setVisible] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -139,8 +139,8 @@ export function ErrorDetailModal({ open, logId, model, onClose }: ErrorDetailMod
                         <div className="space-y-3">
                             {/* Error summary */}
                             {errorMessage && (
-                                <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 dark:border-red-900/30 dark:bg-red-950/20">
-                                    <p className="text-sm font-medium text-red-700 dark:text-red-300">{errorMessage}</p>
+                                <div className="overflow-hidden rounded-xl border border-red-200 bg-red-50 px-4 py-3 dark:border-red-900/30 dark:bg-red-950/20">
+                                    <p className="whitespace-pre-wrap break-all text-sm font-medium text-red-700 dark:text-red-300">{errorMessage}</p>
                                 </div>
                             )}
 

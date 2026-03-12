@@ -1887,7 +1887,7 @@
     "all_keys": "全部密钥",
     "all_models": "全部模型",
     "all_status": "全部状态",
-    "records": "{{count}} 条记录",
+    "records": "{{total}} 条记录",
     "updated_at": "更新于 {{time}}",
     "filter_key": "按密钥名称过滤",
     "filter_model": "按模型过滤",

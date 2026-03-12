@@ -1433,7 +1433,7 @@
     },
     "logs": {
       "title": "Request Logs",
-      "total_count": "{{count}} records",
+      "total_count": "{{total}} records",
       "sort_hint": "Auto sorted by time desc",
       "scroll_hint": "Scroll to browse all data",
       "virtual_scroll_info": "Showing {{visible}} rows, {{total}} records total",
