@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import {
   Bot,
   Check,
@@ -115,6 +116,45 @@ export function ProvidersPage() {
   const [discoveredModels, setDiscoveredModels] = useState<{ id: string; owned_by?: string }[]>([]);
   const [discovering, setDiscovering] = useState(false);
   const [discoverSelected, setDiscoverSelected] = useState<Set<string>>(new Set());
+  const [discoverQuery, setDiscoverQuery] = useState("");
+
+  const discoveredListRef = useRef<HTMLDivElement | null>(null);
+
+  const filteredDiscoveredModels = useMemo(() => {
+    const query = discoverQuery.trim().toLowerCase();
+    if (!query) return discoveredModels;
+    return discoveredModels.filter((model) => {
+      const id = model.id.toLowerCase();
+      const owner = (model.owned_by ?? "").toLowerCase();
+      return id.includes(query) || owner.includes(query);
+    });
+  }, [discoverQuery, discoveredModels]);
+
+  const discoveredModelsVirtualizer = useVirtualizer({
+    count: filteredDiscoveredModels.length,
+    getScrollElement: () => discoveredListRef.current,
+    estimateSize: () => 28,
+    overscan: 12,
+  });
+
+  const selectAllDiscovered = useCallback(() => {
+    const list = discoverQuery.trim() ? filteredDiscoveredModels : discoveredModels;
+    setDiscoverSelected((prev) => {
+      const next = new Set(prev);
+      list.forEach((model) => next.add(model.id));
+      return next;
+    });
+  }, [discoverQuery, discoveredModels, filteredDiscoveredModels]);
+
+  const deselectAllDiscovered = useCallback(() => {
+    const query = discoverQuery.trim();
+    setDiscoverSelected((prev) => {
+      if (!query) return new Set();
+      const next = new Set(prev);
+      filteredDiscoveredModels.forEach((model) => next.delete(model.id));
+      return next;
+    });
+  }, [discoverQuery, filteredDiscoveredModels]);
 
   const [confirm, setConfirm] = useState<
     | null
@@ -620,6 +660,7 @@ export function ProvidersPage() {
     setDiscovering(true);
     setDiscoveredModels([]);
     setDiscoverSelected(new Set());
+    setDiscoverQuery("");
     try {
       const endpoint = buildModelsEndpoint(baseUrl);
 
@@ -1524,7 +1565,7 @@ export function ProvidersPage() {
           </div>
         }
       >
-        <div className="space-y-4">
+        <div className="space-y-5">
           <div className="grid gap-3 md:grid-cols-2">
             <div className="space-y-2">
               <p className="text-sm font-semibold text-slate-900 dark:text-white">
@@ -1532,9 +1573,10 @@ export function ProvidersPage() {
               </p>
               <TextInput
                 value={openaiDraft.name}
-                onChange={(e) =>
-                  setOpenaiDraft((prev) => ({ ...prev, name: e.currentTarget.value }))
-                }
+                onChange={(e) => {
+                  const value = e.currentTarget.value;
+                  setOpenaiDraft((prev) => ({ ...prev, name: value }));
+                }}
                 placeholder={t("providers.name_placeholder")}
               />
             </div>
@@ -1544,12 +1586,13 @@ export function ProvidersPage() {
               </p>
               <TextInput
                 value={openaiDraft.baseUrl}
-                onChange={(e) =>
+                onChange={(e) => {
+                  const value = e.currentTarget.value;
                   setOpenaiDraft((prev) => ({
                     ...prev,
-                    baseUrl: e.currentTarget.value,
-                  }))
-                }
+                    baseUrl: value,
+                  }));
+                }}
                 placeholder={t("providers.base_url_placeholder")}
               />
               <p className="text-xs text-slate-500 dark:text-white/55">
@@ -1566,9 +1609,10 @@ export function ProvidersPage() {
               </p>
               <TextInput
                 value={openaiDraft.prefix}
-                onChange={(e) =>
-                  setOpenaiDraft((prev) => ({ ...prev, prefix: e.currentTarget.value }))
-                }
+                onChange={(e) => {
+                  const value = e.currentTarget.value;
+                  setOpenaiDraft((prev) => ({ ...prev, prefix: value }));
+                }}
                 placeholder={t("providers.prefix_placeholder")}
               />
             </div>
@@ -1578,9 +1622,10 @@ export function ProvidersPage() {
               </p>
               <TextInput
                 value={openaiDraft.priorityText}
-                onChange={(e) =>
-                  setOpenaiDraft((prev) => ({ ...prev, priorityText: e.currentTarget.value }))
-                }
+                onChange={(e) => {
+                  const value = e.currentTarget.value;
+                  setOpenaiDraft((prev) => ({ ...prev, priorityText: value }));
+                }}
                 placeholder={t("providers.priority_placeholder")}
                 inputMode="numeric"
               />
@@ -1591,21 +1636,24 @@ export function ProvidersPage() {
               </p>
               <TextInput
                 value={openaiDraft.testModel}
-                onChange={(e) =>
-                  setOpenaiDraft((prev) => ({ ...prev, testModel: e.currentTarget.value }))
-                }
+                onChange={(e) => {
+                  const value = e.currentTarget.value;
+                  setOpenaiDraft((prev) => ({ ...prev, testModel: value }));
+                }}
                 placeholder={t("providers.test_model_placeholder")}
               />
             </div>
           </div>
 
+          <div className="border-t border-slate-200/60 dark:border-neutral-800/60 pt-5">
           <KeyValueInputList
             title={t("providers.provider_headers")}
             entries={openaiDraft.headersEntries}
             onChange={(next) => setOpenaiDraft((prev) => ({ ...prev, headersEntries: next }))}
           />
+          </div>
 
-          <section className="space-y-2">
+          <section className="space-y-2 border-t border-slate-200/60 dark:border-neutral-800/60 pt-5">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-sm font-semibold text-slate-900 dark:text-white">
                 {t("providers.api_key_entries")}
@@ -1726,7 +1774,7 @@ export function ProvidersPage() {
             </div>
           </section>
 
-          <section className="space-y-2">
+          <section className="space-y-3 border-t border-slate-200/60 dark:border-neutral-800/60 pt-5">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-sm font-semibold text-slate-900 dark:text-white">
                 {t("providers.models_label")}
@@ -1762,40 +1810,88 @@ export function ProvidersPage() {
             />
 
             {discoveredModels.length ? (
-              <div className="rounded-2xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
-                <p className="text-xs text-slate-600 dark:text-white/65">
-                  {t("providers.found_models", { count: discoveredModels.length })}
-                </p>
-                <div className="mt-2 max-h-48 overflow-y-auto space-y-1">
-                  {discoveredModels.map((model) => {
-                    const checked = discoverSelected.has(model.id);
-                    return (
-                      <label
-                        key={model.id}
-                        className={[
-                          "flex cursor-pointer items-center gap-2 rounded-xl px-2 py-1 text-xs font-mono",
-                          checked
-                            ? "bg-slate-900 text-white dark:bg-white dark:text-neutral-950"
-                            : "hover:bg-slate-50 dark:hover:bg-white/5",
-                        ].join(" ")}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          onChange={() => {
-                            setDiscoverSelected((prev) => {
-                              const next = new Set(prev);
-                              if (next.has(model.id)) next.delete(model.id);
-                              else next.add(model.id);
-                              return next;
-                            });
+              <div className="rounded-2xl border border-slate-200 bg-slate-50/50 p-4 dark:border-neutral-800 dark:bg-neutral-900/40">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-xs font-medium text-slate-700 dark:text-white/70">
+                    {t("providers.found_models", { count: discoveredModels.length })}
+                  </p>
+                  <p className="text-xs tabular-nums text-slate-500 dark:text-white/50">
+                    {t("providers.models_selected_count", { count: discoverSelected.size })}
+                  </p>
+                </div>
+
+                <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                  <TextInput
+                    value={discoverQuery}
+                    onChange={(e) => setDiscoverQuery(e.currentTarget.value)}
+                    placeholder={t("providers.models_search_placeholder")}
+                    className="max-w-xs"
+                  />
+                  <Button variant="secondary" size="sm" onClick={selectAllDiscovered}>
+                    {t("providers.models_select_all")}
+                  </Button>
+                  <Button variant="secondary" size="sm" onClick={deselectAllDiscovered}>
+                    {t("providers.models_select_none")}
+                  </Button>
+                  {discoverQuery.trim() ? (
+                    <span className="text-xs text-slate-500 dark:text-white/55">
+                      {t("providers.models_filtered_count", {
+                        shown: filteredDiscoveredModels.length,
+                        total: discoveredModels.length,
+                      })}
+                    </span>
+                  ) : null}
+                </div>
+
+                <div
+                  ref={discoveredListRef}
+                  className="mt-2.5 max-h-52 overflow-y-auto rounded-xl border border-slate-200/80 bg-white dark:border-neutral-800/60 dark:bg-neutral-950/60"
+                  role="list"
+                  aria-label={t("providers.found_models", { count: discoveredModels.length })}
+                >
+                  <div
+                    style={{
+                      height: discoveredModelsVirtualizer.getTotalSize(),
+                      position: "relative",
+                    }}
+                  >
+                    {discoveredModelsVirtualizer.getVirtualItems().map((item) => {
+                      const model = filteredDiscoveredModels[item.index];
+                      if (!model) return null;
+                      const checked = discoverSelected.has(model.id);
+                      return (
+                        <div
+                          key={model.id}
+                          style={{
+                            position: "absolute",
+                            top: 0,
+                            left: 0,
+                            width: "100%",
+                            transform: `translateY(${item.start}px)`,
                           }}
-                          className="h-4 w-4 rounded border-slate-300 text-slate-900 focus-visible:ring-2 focus-visible:ring-slate-400/35 dark:border-neutral-700 dark:bg-neutral-950 dark:text-white dark:focus-visible:ring-white/15"
-                        />
-                        <span className="truncate">{model.id}</span>
-                      </label>
-                    );
-                  })}
+                        >
+                          <label
+                            className="flex cursor-pointer items-center gap-2.5 px-3 py-1 text-xs font-mono text-slate-700 transition-colors hover:bg-slate-50 dark:text-white/80 dark:hover:bg-white/5"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => {
+                                setDiscoverSelected((prev) => {
+                                  const next = new Set(prev);
+                                  if (next.has(model.id)) next.delete(model.id);
+                                  else next.add(model.id);
+                                  return next;
+                                });
+                              }}
+                              className="h-3.5 w-3.5 shrink-0 rounded border-slate-300 text-blue-600 focus-visible:ring-2 focus-visible:ring-blue-400/35 dark:border-neutral-600 dark:bg-neutral-900 dark:text-blue-400 dark:focus-visible:ring-blue-400/20"
+                            />
+                            <span className="truncate">{model.id}</span>
+                          </label>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             ) : null}
