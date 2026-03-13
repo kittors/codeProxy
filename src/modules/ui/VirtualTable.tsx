@@ -131,8 +131,11 @@ export function VirtualTable<T>({
     const next = el.scrollTop;
 
     const scrollBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
-    const { hasMore: latestHasMore, loadingMore: latestLoadingMore, onScrollBottom: latestCb } =
-      latestRef.current;
+    const {
+      hasMore: latestHasMore,
+      loadingMore: latestLoadingMore,
+      onScrollBottom: latestCb,
+    } = latestRef.current;
     const threshold = latestRef.current.scrollThreshold;
 
     const shouldSchedule =

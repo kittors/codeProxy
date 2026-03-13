@@ -1179,51 +1179,51 @@ export function AuthFilesPage() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-            <Button variant="secondary" size="sm" onClick={() => navigate("/quota")}>
-              <ShieldCheck size={14} />
-              {t("auth_files.quota")}
-            </Button>
-            {tab === "files" ? (
-              <>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="application/json,.json"
-                  multiple
-                  className="hidden"
-                  onChange={(e) => void handleUpload(e.currentTarget.files)}
-                />
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => void loadAll()}
-                  disabled={loading || usageLoading}
-                >
-                  <RefreshCw size={14} className={loading || usageLoading ? "animate-spin" : ""} />
-                  {t("auth_files.refresh")}
-                </Button>
-                <Button
-                  variant="primary"
-                  size="sm"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={uploading}
-                >
-                  <Upload size={14} />
-                  {t("auth_files.upload")}
-                </Button>
-                <Button
-                  variant="danger"
-                  size="sm"
-                  onClick={() => setConfirm({ type: "deleteAll" })}
-                  disabled={deletingAll || loading || uploading}
-                >
-                  <Trash2 size={14} />
-                  {filter === "all"
-                    ? t("auth_files.delete_all")
-                    : t("auth_files.delete_type", { type: filter })}
-                </Button>
-              </>
-            ) : null}
+          <Button variant="secondary" size="sm" onClick={() => navigate("/quota")}>
+            <ShieldCheck size={14} />
+            {t("auth_files.quota")}
+          </Button>
+          {tab === "files" ? (
+            <>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="application/json,.json"
+                multiple
+                className="hidden"
+                onChange={(e) => void handleUpload(e.currentTarget.files)}
+              />
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => void loadAll()}
+                disabled={loading || usageLoading}
+              >
+                <RefreshCw size={14} className={loading || usageLoading ? "animate-spin" : ""} />
+                {t("auth_files.refresh")}
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+              >
+                <Upload size={14} />
+                {t("auth_files.upload")}
+              </Button>
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={() => setConfirm({ type: "deleteAll" })}
+                disabled={deletingAll || loading || uploading}
+              >
+                <Trash2 size={14} />
+                {filter === "all"
+                  ? t("auth_files.delete_all")
+                  : t("auth_files.delete_type", { type: filter })}
+              </Button>
+            </>
+          ) : null}
         </div>
       </div>
 
@@ -1574,104 +1574,105 @@ export function AuthFilesPage() {
             ) : (
               <div className="space-y-4">
                 {excludedUnsupported ? (
-                <div className="mb-4">
-                  <EmptyState
-                    title={t("auth_files_page.api_not_supported")}
-                    description={t("auth_files.no_excluded_api")}
+                  <div className="mb-4">
+                    <EmptyState
+                      title={t("auth_files_page.api_not_supported")}
+                      description={t("auth_files.no_excluded_api")}
+                    />
+                  </div>
+                ) : null}
+                <div className="flex flex-wrap items-center gap-2">
+                  <TextInput
+                    value={excludedNewProvider}
+                    onChange={(e) => setExcludedNewProvider(e.currentTarget.value)}
+                    placeholder={t("auth_files.add_provider_placeholder")}
+                    endAdornment={<FileJson size={16} className="text-slate-400" />}
+                    disabled={excludedUnsupported}
                   />
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={addExcludedProvider}
+                    disabled={isPending || excludedUnsupported}
+                  >
+                    <Plus size={14} />
+                    {t("auth_files.add")}
+                  </Button>
                 </div>
-              ) : null}
-              <div className="flex flex-wrap items-center gap-2">
-                <TextInput
-                  value={excludedNewProvider}
-                  onChange={(e) => setExcludedNewProvider(e.currentTarget.value)}
-                  placeholder={t("auth_files.add_provider_placeholder")}
-                  endAdornment={<FileJson size={16} className="text-slate-400" />}
-                  disabled={excludedUnsupported}
-                />
-                <Button
-                  variant="primary"
-                  size="sm"
-                  onClick={addExcludedProvider}
-                  disabled={isPending || excludedUnsupported}
-                >
-                  <Plus size={14} />
-                  {t("auth_files.add")}
-                </Button>
-              </div>
 
-              <div className="mt-4 space-y-3">
-                {Object.keys(excluded).length === 0 ? (
-                  <EmptyState
-                    title={t("auth_files_page.no_config")}
-                    description={t("auth_files_page.no_excluded_desc")}
-                  />
-                ) : (
-                  Object.entries(excluded)
-                    .sort(([a], [b]) => a.localeCompare(b))
-                    .map(([provider, models]) => {
-                      const text =
-                        excludedDraft[provider] ?? (Array.isArray(models) ? models.join("\n") : "");
-                      const count = (excludedDraft[provider] ?? text)
-                        .split(/[\n,]+/)
-                        .map((s) => s.trim())
-                        .filter(Boolean).length;
+                <div className="mt-4 space-y-3">
+                  {Object.keys(excluded).length === 0 ? (
+                    <EmptyState
+                      title={t("auth_files_page.no_config")}
+                      description={t("auth_files_page.no_excluded_desc")}
+                    />
+                  ) : (
+                    Object.entries(excluded)
+                      .sort(([a], [b]) => a.localeCompare(b))
+                      .map(([provider, models]) => {
+                        const text =
+                          excludedDraft[provider] ??
+                          (Array.isArray(models) ? models.join("\n") : "");
+                        const count = (excludedDraft[provider] ?? text)
+                          .split(/[\n,]+/)
+                          .map((s) => s.trim())
+                          .filter(Boolean).length;
 
-                      return (
-                        <div
-                          key={provider}
-                          className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/70"
-                        >
-                          <div className="flex flex-wrap items-center justify-between gap-3">
-                            <div className="min-w-0">
-                              <p className="font-mono text-xs text-slate-900 dark:text-white">
-                                {provider}
-                              </p>
-                              <p className="mt-1 text-xs text-slate-500 dark:text-white/55">
-                                {t("auth_files.count_items", { count })}
-                              </p>
+                        return (
+                          <div
+                            key={provider}
+                            className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/70"
+                          >
+                            <div className="flex flex-wrap items-center justify-between gap-3">
+                              <div className="min-w-0">
+                                <p className="font-mono text-xs text-slate-900 dark:text-white">
+                                  {provider}
+                                </p>
+                                <p className="mt-1 text-xs text-slate-500 dark:text-white/55">
+                                  {t("auth_files.count_items", { count })}
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  variant="secondary"
+                                  size="sm"
+                                  onClick={() =>
+                                    void saveExcludedProvider(
+                                      provider,
+                                      excludedDraft[provider] ?? text,
+                                    )
+                                  }
+                                  disabled={isPending || excludedUnsupported}
+                                >
+                                  {t("auth_files.save")}
+                                </Button>
+                                <Button
+                                  variant="danger"
+                                  size="sm"
+                                  onClick={() => void deleteExcludedProvider(provider)}
+                                  disabled={isPending || excludedUnsupported}
+                                >
+                                  {t("common.delete")}
+                                </Button>
+                              </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <Button
-                                variant="secondary"
-                                size="sm"
-                                onClick={() =>
-                                  void saveExcludedProvider(
-                                    provider,
-                                    excludedDraft[provider] ?? text,
-                                  )
-                                }
-                                disabled={isPending || excludedUnsupported}
-                              >
-                                {t("auth_files.save")}
-                              </Button>
-                              <Button
-                                variant="danger"
-                                size="sm"
-                                onClick={() => void deleteExcludedProvider(provider)}
-                                disabled={isPending || excludedUnsupported}
-                              >
-                                {t("common.delete")}
-                              </Button>
-                            </div>
+                            <textarea
+                              value={excludedDraft[provider] ?? text}
+                              onChange={(e) => {
+                                const nextText = e.currentTarget.value;
+                                setExcludedDraft((prev) => ({ ...prev, [provider]: nextText }));
+                              }}
+                              placeholder={t("auth_files.one_model_per_line")}
+                              aria-label={`${provider} ${t("auth_files_page.excluded_tab")}`}
+                              disabled={excludedUnsupported}
+                              className="mt-3 min-h-[120px] w-full resize-y rounded-2xl border border-slate-200 bg-white px-3 py-2 font-mono text-xs text-slate-900 outline-none transition placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-slate-400/35 dark:border-neutral-800 dark:bg-neutral-950 dark:text-slate-100 dark:placeholder:text-neutral-500 dark:focus-visible:ring-white/15"
+                            />
                           </div>
-                          <textarea
-                            value={excludedDraft[provider] ?? text}
-                            onChange={(e) => {
-                              const nextText = e.currentTarget.value;
-                              setExcludedDraft((prev) => ({ ...prev, [provider]: nextText }));
-                            }}
-                            placeholder={t("auth_files.one_model_per_line")}
-                            aria-label={`${provider} ${t("auth_files_page.excluded_tab")}`}
-                            disabled={excludedUnsupported}
-                            className="mt-3 min-h-[120px] w-full resize-y rounded-2xl border border-slate-200 bg-white px-3 py-2 font-mono text-xs text-slate-900 outline-none transition placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-slate-400/35 dark:border-neutral-800 dark:bg-neutral-950 dark:text-slate-100 dark:placeholder:text-neutral-500 dark:focus-visible:ring-white/15"
-                          />
-                        </div>
-                      );
-                    })
-                )}
+                        );
+                      })
+                  )}
+                </div>
               </div>
-            </div>
             )}
           </TabsContent>
 
@@ -1705,187 +1706,187 @@ export function AuthFilesPage() {
             ) : (
               <div className="space-y-4">
                 {aliasUnsupported ? (
-                <div className="mb-4">
-                  <EmptyState
-                    title={t("auth_files.api_not_supported")}
-                    description={t("auth_files.no_alias_api")}
+                  <div className="mb-4">
+                    <EmptyState
+                      title={t("auth_files.api_not_supported")}
+                      description={t("auth_files.no_alias_api")}
+                    />
+                  </div>
+                ) : null}
+                <div className="flex flex-wrap items-center gap-2">
+                  <TextInput
+                    value={aliasNewChannel}
+                    onChange={(e) => setAliasNewChannel(e.currentTarget.value)}
+                    placeholder={t("auth_files.add_channel_placeholder")}
+                    disabled={aliasUnsupported}
                   />
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={addAliasChannel}
+                    disabled={isPending || aliasUnsupported}
+                  >
+                    <Plus size={14} />
+                    {t("auth_files.add")}
+                  </Button>
                 </div>
-              ) : null}
-              <div className="flex flex-wrap items-center gap-2">
-                <TextInput
-                  value={aliasNewChannel}
-                  onChange={(e) => setAliasNewChannel(e.currentTarget.value)}
-                  placeholder={t("auth_files.add_channel_placeholder")}
-                  disabled={aliasUnsupported}
-                />
-                <Button
-                  variant="primary"
-                  size="sm"
-                  onClick={addAliasChannel}
-                  disabled={isPending || aliasUnsupported}
-                >
-                  <Plus size={14} />
-                  {t("auth_files.add")}
-                </Button>
-              </div>
 
-              <div className="mt-4 space-y-3">
-                {Object.keys(aliasEditing).length === 0 ? (
-                  <EmptyState
-                    title={t("auth_files.no_config")}
-                    description={t("auth_files_page.alias_no_config")}
-                  />
-                ) : (
-                  Object.keys(aliasEditing)
-                    .sort((a, b) => a.localeCompare(b))
-                    .map((channel) => {
-                      const rows = aliasEditing[channel] ?? buildAliasRows([]);
-                      const mappingCount = rows.filter(
-                        (r) => r.name.trim() && r.alias.trim(),
-                      ).length;
+                <div className="mt-4 space-y-3">
+                  {Object.keys(aliasEditing).length === 0 ? (
+                    <EmptyState
+                      title={t("auth_files.no_config")}
+                      description={t("auth_files_page.alias_no_config")}
+                    />
+                  ) : (
+                    Object.keys(aliasEditing)
+                      .sort((a, b) => a.localeCompare(b))
+                      .map((channel) => {
+                        const rows = aliasEditing[channel] ?? buildAliasRows([]);
+                        const mappingCount = rows.filter(
+                          (r) => r.name.trim() && r.alias.trim(),
+                        ).length;
 
-                      return (
-                        <div
-                          key={channel}
-                          className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/70"
-                        >
-                          <div className="flex flex-wrap items-center justify-between gap-3">
-                            <div className="min-w-0">
-                              <p className="font-mono text-xs text-slate-900 dark:text-white">
-                                {channel}
-                              </p>
-                              <p className="mt-1 text-xs text-slate-500 dark:text-white/55">
-                                {t("auth_files.valid_mappings", { count: mappingCount })}
-                              </p>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Button
-                                variant="secondary"
-                                size="sm"
-                                onClick={() => void openImport(channel)}
-                                disabled={aliasUnsupported}
-                              >
-                                <ShieldCheck size={14} />
-                                {t("auth_files.import_models")}
-                              </Button>
-                              <Button
-                                variant="secondary"
-                                size="sm"
-                                onClick={() => void saveAliasChannel(channel)}
-                                disabled={isPending || aliasUnsupported}
-                              >
-                                {t("auth_files.save")}
-                              </Button>
-                              <Button
-                                variant="danger"
-                                size="sm"
-                                onClick={() => void deleteAliasChannel(channel)}
-                                disabled={isPending || aliasUnsupported}
-                              >
-                                {t("common.delete")}
-                              </Button>
-                            </div>
-                          </div>
-
-                          <div className="mt-3 space-y-2">
-                            {rows.map((row, idx) => (
-                              <div key={row.id} className="grid gap-2 lg:grid-cols-12">
-                                <div className="lg:col-span-5">
-                                  <TextInput
-                                    value={row.name}
-                                    onChange={(e) => {
-                                      const value = e.currentTarget.value;
-                                      setAliasEditing((prev) => ({
-                                        ...prev,
-                                        [channel]: (prev[channel] ?? []).map((it, i) =>
-                                          i === idx ? { ...it, name: value } : it,
-                                        ),
-                                      }));
-                                    }}
-                                    placeholder={t("auth_files.name_placeholder", "name")}
-                                  />
-                                </div>
-                                <div className="lg:col-span-5">
-                                  <TextInput
-                                    value={row.alias}
-                                    onChange={(e) => {
-                                      const value = e.currentTarget.value;
-                                      setAliasEditing((prev) => ({
-                                        ...prev,
-                                        [channel]: (prev[channel] ?? []).map((it, i) =>
-                                          i === idx ? { ...it, alias: value } : it,
-                                        ),
-                                      }));
-                                    }}
-                                    placeholder={t("auth_files.alias_placeholder", "alias")}
-                                  />
-                                </div>
-                                <div className="lg:col-span-1 flex items-center justify-between gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
-                                  <span className="text-xs text-slate-600 dark:text-white/65">
-                                    {t("auth_files.fork")}
-                                  </span>
-                                  <input
-                                    type="checkbox"
-                                    checked={Boolean(row.fork)}
-                                    onChange={(e) => {
-                                      const checked = e.currentTarget.checked;
-                                      setAliasEditing((prev) => ({
-                                        ...prev,
-                                        [channel]: (prev[channel] ?? []).map((it, i) =>
-                                          i === idx ? { ...it, fork: checked } : it,
-                                        ),
-                                      }));
-                                    }}
-                                    className="h-4 w-4 rounded border-slate-300 text-slate-900 focus-visible:ring-2 focus-visible:ring-slate-400/35 dark:border-neutral-700 dark:bg-neutral-950 dark:text-white dark:focus-visible:ring-white/15"
-                                  />
-                                </div>
-                                <div className="lg:col-span-1 flex items-center justify-end">
-                                  <Button
-                                    variant="danger"
-                                    size="sm"
-                                    onClick={() => {
-                                      setAliasEditing((prev) => ({
-                                        ...prev,
-                                        [channel]: (prev[channel] ?? []).filter(
-                                          (_, i) => i !== idx,
-                                        ),
-                                      }));
-                                    }}
-                                    aria-label={t("common.delete_row", "Delete Row")}
-                                    title={t("common.delete")}
-                                  >
-                                    <X size={14} />
-                                  </Button>
-                                </div>
+                        return (
+                          <div
+                            key={channel}
+                            className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/70"
+                          >
+                            <div className="flex flex-wrap items-center justify-between gap-3">
+                              <div className="min-w-0">
+                                <p className="font-mono text-xs text-slate-900 dark:text-white">
+                                  {channel}
+                                </p>
+                                <p className="mt-1 text-xs text-slate-500 dark:text-white/55">
+                                  {t("auth_files.valid_mappings", { count: mappingCount })}
+                                </p>
                               </div>
-                            ))}
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  variant="secondary"
+                                  size="sm"
+                                  onClick={() => void openImport(channel)}
+                                  disabled={aliasUnsupported}
+                                >
+                                  <ShieldCheck size={14} />
+                                  {t("auth_files.import_models")}
+                                </Button>
+                                <Button
+                                  variant="secondary"
+                                  size="sm"
+                                  onClick={() => void saveAliasChannel(channel)}
+                                  disabled={isPending || aliasUnsupported}
+                                >
+                                  {t("auth_files.save")}
+                                </Button>
+                                <Button
+                                  variant="danger"
+                                  size="sm"
+                                  onClick={() => void deleteAliasChannel(channel)}
+                                  disabled={isPending || aliasUnsupported}
+                                >
+                                  {t("common.delete")}
+                                </Button>
+                              </div>
+                            </div>
 
-                            <div className="flex items-center gap-2">
-                              <Button
-                                variant="secondary"
-                                size="sm"
-                                onClick={() => {
-                                  setAliasEditing((prev) => ({
-                                    ...prev,
-                                    [channel]: [
-                                      ...(prev[channel] ?? []),
-                                      { id: `row-${Date.now()}`, name: "", alias: "" },
-                                    ],
-                                  }));
-                                }}
-                              >
-                                <Plus size={14} />
-                                {t("auth_files.add_row")}
-                              </Button>
+                            <div className="mt-3 space-y-2">
+                              {rows.map((row, idx) => (
+                                <div key={row.id} className="grid gap-2 lg:grid-cols-12">
+                                  <div className="lg:col-span-5">
+                                    <TextInput
+                                      value={row.name}
+                                      onChange={(e) => {
+                                        const value = e.currentTarget.value;
+                                        setAliasEditing((prev) => ({
+                                          ...prev,
+                                          [channel]: (prev[channel] ?? []).map((it, i) =>
+                                            i === idx ? { ...it, name: value } : it,
+                                          ),
+                                        }));
+                                      }}
+                                      placeholder={t("auth_files.name_placeholder", "name")}
+                                    />
+                                  </div>
+                                  <div className="lg:col-span-5">
+                                    <TextInput
+                                      value={row.alias}
+                                      onChange={(e) => {
+                                        const value = e.currentTarget.value;
+                                        setAliasEditing((prev) => ({
+                                          ...prev,
+                                          [channel]: (prev[channel] ?? []).map((it, i) =>
+                                            i === idx ? { ...it, alias: value } : it,
+                                          ),
+                                        }));
+                                      }}
+                                      placeholder={t("auth_files.alias_placeholder", "alias")}
+                                    />
+                                  </div>
+                                  <div className="lg:col-span-1 flex items-center justify-between gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
+                                    <span className="text-xs text-slate-600 dark:text-white/65">
+                                      {t("auth_files.fork")}
+                                    </span>
+                                    <input
+                                      type="checkbox"
+                                      checked={Boolean(row.fork)}
+                                      onChange={(e) => {
+                                        const checked = e.currentTarget.checked;
+                                        setAliasEditing((prev) => ({
+                                          ...prev,
+                                          [channel]: (prev[channel] ?? []).map((it, i) =>
+                                            i === idx ? { ...it, fork: checked } : it,
+                                          ),
+                                        }));
+                                      }}
+                                      className="h-4 w-4 rounded border-slate-300 text-slate-900 focus-visible:ring-2 focus-visible:ring-slate-400/35 dark:border-neutral-700 dark:bg-neutral-950 dark:text-white dark:focus-visible:ring-white/15"
+                                    />
+                                  </div>
+                                  <div className="lg:col-span-1 flex items-center justify-end">
+                                    <Button
+                                      variant="danger"
+                                      size="sm"
+                                      onClick={() => {
+                                        setAliasEditing((prev) => ({
+                                          ...prev,
+                                          [channel]: (prev[channel] ?? []).filter(
+                                            (_, i) => i !== idx,
+                                          ),
+                                        }));
+                                      }}
+                                      aria-label={t("common.delete_row", "Delete Row")}
+                                      title={t("common.delete")}
+                                    >
+                                      <X size={14} />
+                                    </Button>
+                                  </div>
+                                </div>
+                              ))}
+
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  variant="secondary"
+                                  size="sm"
+                                  onClick={() => {
+                                    setAliasEditing((prev) => ({
+                                      ...prev,
+                                      [channel]: [
+                                        ...(prev[channel] ?? []),
+                                        { id: `row-${Date.now()}`, name: "", alias: "" },
+                                      ],
+                                    }));
+                                  }}
+                                >
+                                  <Plus size={14} />
+                                  {t("auth_files.add_row")}
+                                </Button>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      );
-                    })
-                )}
+                        );
+                      })
+                  )}
+                </div>
               </div>
-            </div>
             )}
           </TabsContent>
         </Tabs>

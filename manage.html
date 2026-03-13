@@ -6,26 +6,29 @@
     <title>CLI Proxy API Management Center</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
     <!-- 阻塞渲染的主题恢复脚本：在 body 绘制前读取 localStorage 并应用暗色模式 -->
     <script>
-      (function() {
+      (function () {
         try {
-          var t = localStorage.getItem('code-proxy-admin-theme');
-          if (t === 'dark') {
-            document.documentElement.classList.add('dark');
-            document.documentElement.style.colorScheme = 'dark';
-          } else if (t === 'light') {
-            document.documentElement.classList.remove('dark');
-            document.documentElement.style.colorScheme = 'light';
+          var t = localStorage.getItem("code-proxy-admin-theme");
+          if (t === "dark") {
+            document.documentElement.classList.add("dark");
+            document.documentElement.style.colorScheme = "dark";
+          } else if (t === "light") {
+            document.documentElement.classList.remove("dark");
+            document.documentElement.style.colorScheme = "light";
           } else {
             // 跟随系统偏好
-            if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-              document.documentElement.classList.add('dark');
-              document.documentElement.style.colorScheme = 'dark';
+            if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) {
+              document.documentElement.classList.add("dark");
+              document.documentElement.style.colorScheme = "dark";
             }
           }
-        } catch(e) {}
+        } catch (e) {}
       })();
     </script>
     <style>
@@ -35,7 +38,7 @@
         --loading-text: #64748b;
         --loading-ring: rgba(99, 102, 241, 0.55);
         --loading-ring-track: rgba(99, 102, 241, 0.12);
-        --loading-glow-1: rgba(59, 130, 246, 0.10);
+        --loading-glow-1: rgba(59, 130, 246, 0.1);
         --loading-glow-2: rgba(20, 184, 166, 0.08);
         --loading-glow-3: rgba(168, 85, 247, 0.07);
       }
@@ -45,8 +48,8 @@
         --loading-ring: rgba(129, 140, 248, 0.65);
         --loading-ring-track: rgba(129, 140, 248, 0.12);
         --loading-glow-1: rgba(99, 102, 241, 0.16);
-        --loading-glow-2: rgba(45, 212, 191, 0.10);
-        --loading-glow-3: rgba(168, 85, 247, 0.10);
+        --loading-glow-2: rgba(45, 212, 191, 0.1);
+        --loading-glow-3: rgba(168, 85, 247, 0.1);
       }
 
       body {
@@ -65,7 +68,9 @@
         flex-direction: column;
         background-color: var(--loading-bg);
         opacity: 1;
-        transition: opacity 0.4s ease, visibility 0.4s ease;
+        transition:
+          opacity 0.4s ease,
+          visibility 0.4s ease;
         font-family: "Inter", "SF Pro Text", system-ui, sans-serif;
       }
       #app-loader.fade-out {
@@ -83,19 +88,25 @@
         animation: glow-pulse 4s ease-in-out infinite alternate;
       }
       .loader-glow-1 {
-        width: 28rem; height: 28rem;
-        top: -8rem; left: -6rem;
+        width: 28rem;
+        height: 28rem;
+        top: -8rem;
+        left: -6rem;
         background: var(--loading-glow-1);
       }
       .loader-glow-2 {
-        width: 24rem; height: 24rem;
-        top: -4rem; right: -6rem;
+        width: 24rem;
+        height: 24rem;
+        top: -4rem;
+        right: -6rem;
         background: var(--loading-glow-2);
         animation-delay: 1.3s;
       }
       .loader-glow-3 {
-        width: 28rem; height: 28rem;
-        bottom: -8rem; left: 25%;
+        width: 28rem;
+        height: 28rem;
+        bottom: -8rem;
+        left: 25%;
         background: var(--loading-glow-3);
         animation-delay: 2.6s;
       }
@@ -130,19 +141,38 @@
       }
 
       @keyframes ring-spin {
-        to { transform: rotate(360deg); }
+        to {
+          transform: rotate(360deg);
+        }
       }
       @keyframes text-breathe {
-        0%, 100% { opacity: 0.5; }
-        50% { opacity: 1; }
+        0%,
+        100% {
+          opacity: 0.5;
+        }
+        50% {
+          opacity: 1;
+        }
       }
       @keyframes glow-pulse {
-        0% { opacity: 0.5; transform: scale(0.95); }
-        100% { opacity: 1; transform: scale(1.05); }
+        0% {
+          opacity: 0.5;
+          transform: scale(0.95);
+        }
+        100% {
+          opacity: 1;
+          transform: scale(1.05);
+        }
       }
       @keyframes content-fade-in {
-        from { opacity: 0; transform: translateY(8px); }
-        to { opacity: 1; transform: translateY(0); }
+        from {
+          opacity: 0;
+          transform: translateY(8px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
       }
     </style>
   </head>

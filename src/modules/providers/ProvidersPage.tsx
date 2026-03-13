@@ -147,14 +147,8 @@ export function ProvidersPage() {
   }, [discoverQuery, discoveredModels, filteredDiscoveredModels]);
 
   const deselectAllDiscovered = useCallback(() => {
-    const query = discoverQuery.trim();
-    setDiscoverSelected((prev) => {
-      if (!query) return new Set();
-      const next = new Set(prev);
-      filteredDiscoveredModels.forEach((model) => next.delete(model.id));
-      return next;
-    });
-  }, [discoverQuery, filteredDiscoveredModels]);
+    setDiscoverSelected(() => new Set());
+  }, []);
 
   const [confirm, setConfirm] = useState<
     | null
@@ -1646,11 +1640,11 @@ export function ProvidersPage() {
           </div>
 
           <div className="border-t border-slate-200/60 dark:border-neutral-800/60 pt-5">
-          <KeyValueInputList
-            title={t("providers.provider_headers")}
-            entries={openaiDraft.headersEntries}
-            onChange={(next) => setOpenaiDraft((prev) => ({ ...prev, headersEntries: next }))}
-          />
+            <KeyValueInputList
+              title={t("providers.provider_headers")}
+              entries={openaiDraft.headersEntries}
+              onChange={(next) => setOpenaiDraft((prev) => ({ ...prev, headersEntries: next }))}
+            />
           </div>
 
           <section className="space-y-2 border-t border-slate-200/60 dark:border-neutral-800/60 pt-5">
@@ -1870,9 +1864,7 @@ export function ProvidersPage() {
                             transform: `translateY(${item.start}px)`,
                           }}
                         >
-                          <label
-                            className="flex cursor-pointer items-center gap-2.5 px-3 py-1 text-xs font-mono text-slate-700 transition-colors hover:bg-slate-50 dark:text-white/80 dark:hover:bg-white/5"
-                          >
+                          <label className="flex cursor-pointer items-center gap-2.5 px-3 py-1 text-xs font-mono text-slate-700 transition-colors hover:bg-slate-50 dark:text-white/80 dark:hover:bg-white/5">
                             <input
                               type="checkbox"
                               checked={checked}

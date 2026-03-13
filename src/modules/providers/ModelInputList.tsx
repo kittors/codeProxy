@@ -25,8 +25,8 @@ export function ModelInputList({
   title,
   entries,
   onChange,
-  namePlaceholder = "Model Name",
-  aliasPlaceholder = "Model Alias (Optional)",
+  namePlaceholder,
+  aliasPlaceholder,
   disabled = false,
   showPriority = true,
   showTestModel = false,
@@ -41,6 +41,9 @@ export function ModelInputList({
   showTestModel?: boolean;
 }) {
   const { t } = useTranslation();
+  const resolvedNamePlaceholder = namePlaceholder ?? t("common.model_name_placeholder");
+  const resolvedAliasPlaceholder = aliasPlaceholder ?? t("common.model_alias_placeholder");
+  const resolvedTestModelPlaceholder = t("providers.test_model_placeholder");
   return (
     <section className="space-y-2">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -66,7 +69,7 @@ export function ModelInputList({
                 <div className={showPriority || showTestModel ? "md:col-span-4" : "md:col-span-6"}>
                   <TextInput
                     value={entry.name}
-                    placeholder={namePlaceholder}
+                    placeholder={resolvedNamePlaceholder}
                     disabled={disabled}
                     onChange={(e) => {
                       const value = e.currentTarget.value;
@@ -77,7 +80,7 @@ export function ModelInputList({
                 <div className={showPriority || showTestModel ? "md:col-span-4" : "md:col-span-6"}>
                   <TextInput
                     value={entry.alias}
-                    placeholder={aliasPlaceholder}
+                    placeholder={resolvedAliasPlaceholder}
                     disabled={disabled}
                     onChange={(e) => {
                       const value = e.currentTarget.value;
@@ -105,7 +108,7 @@ export function ModelInputList({
                   <div className="md:col-span-2">
                     <TextInput
                       value={entry.testModel}
-                      placeholder="testModel(Optional)"
+                      placeholder={resolvedTestModelPlaceholder}
                       disabled={disabled}
                       onChange={(e) => {
                         const value = e.currentTarget.value;
