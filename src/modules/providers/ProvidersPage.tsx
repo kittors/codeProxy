@@ -1565,7 +1565,7 @@ export function ProvidersPage() {
           </div>
         }
       >
-        <div className="space-y-4">
+        <div className="space-y-5">
           <div className="grid gap-3 md:grid-cols-2">
             <div className="space-y-2">
               <p className="text-sm font-semibold text-slate-900 dark:text-white">
@@ -1645,13 +1645,15 @@ export function ProvidersPage() {
             </div>
           </div>
 
+          <div className="border-t border-slate-200/60 dark:border-neutral-800/60 pt-5">
           <KeyValueInputList
             title={t("providers.provider_headers")}
             entries={openaiDraft.headersEntries}
             onChange={(next) => setOpenaiDraft((prev) => ({ ...prev, headersEntries: next }))}
           />
+          </div>
 
-          <section className="space-y-2">
+          <section className="space-y-2 border-t border-slate-200/60 dark:border-neutral-800/60 pt-5">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-sm font-semibold text-slate-900 dark:text-white">
                 {t("providers.api_key_entries")}
@@ -1772,7 +1774,7 @@ export function ProvidersPage() {
             </div>
           </section>
 
-          <section className="space-y-2">
+          <section className="space-y-3 border-t border-slate-200/60 dark:border-neutral-800/60 pt-5">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-sm font-semibold text-slate-900 dark:text-white">
                 {t("providers.models_label")}
@@ -1808,22 +1810,22 @@ export function ProvidersPage() {
             />
 
             {discoveredModels.length ? (
-              <div className="rounded-2xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50/50 p-4 dark:border-neutral-800 dark:bg-neutral-900/40">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-xs text-slate-600 dark:text-white/65">
+                  <p className="text-xs font-medium text-slate-700 dark:text-white/70">
                     {t("providers.found_models", { count: discoveredModels.length })}
                   </p>
-                  <p className="text-xs text-slate-600 dark:text-white/65">
+                  <p className="text-xs tabular-nums text-slate-500 dark:text-white/50">
                     {t("providers.models_selected_count", { count: discoverSelected.size })}
                   </p>
                 </div>
 
-                <div className="mt-2 flex flex-wrap items-center gap-2">
+                <div className="mt-2.5 flex flex-wrap items-center gap-2">
                   <TextInput
                     value={discoverQuery}
                     onChange={(e) => setDiscoverQuery(e.currentTarget.value)}
                     placeholder={t("providers.models_search_placeholder")}
-                    className="max-w-sm"
+                    className="max-w-xs"
                   />
                   <Button variant="secondary" size="sm" onClick={selectAllDiscovered}>
                     {t("providers.models_select_all")}
@@ -1843,7 +1845,7 @@ export function ProvidersPage() {
 
                 <div
                   ref={discoveredListRef}
-                  className="mt-2 max-h-48 overflow-y-auto"
+                  className="mt-2.5 max-h-52 overflow-y-auto rounded-xl border border-slate-200/80 bg-white dark:border-neutral-800/60 dark:bg-neutral-950/60"
                   role="list"
                   aria-label={t("providers.found_models", { count: discoveredModels.length })}
                 >
@@ -1869,12 +1871,7 @@ export function ProvidersPage() {
                           }}
                         >
                           <label
-                            className={[
-                              "flex cursor-pointer items-center gap-2 rounded-xl px-2 py-1 text-xs font-mono",
-                              checked
-                                ? "bg-slate-900 text-white dark:bg-white dark:text-neutral-950"
-                                : "hover:bg-slate-50 dark:hover:bg-white/5",
-                            ].join(" ")}
+                            className="flex cursor-pointer items-center gap-2.5 px-3 py-1 text-xs font-mono text-slate-700 transition-colors hover:bg-slate-50 dark:text-white/80 dark:hover:bg-white/5"
                           >
                             <input
                               type="checkbox"
@@ -1887,7 +1884,7 @@ export function ProvidersPage() {
                                   return next;
                                 });
                               }}
-                              className="h-4 w-4 rounded border-slate-300 text-slate-900 focus-visible:ring-2 focus-visible:ring-slate-400/35 dark:border-neutral-700 dark:bg-neutral-950 dark:text-white dark:focus-visible:ring-white/15"
+                              className="h-3.5 w-3.5 shrink-0 rounded border-slate-300 text-blue-600 focus-visible:ring-2 focus-visible:ring-blue-400/35 dark:border-neutral-600 dark:bg-neutral-900 dark:text-blue-400 dark:focus-visible:ring-blue-400/20"
                             />
                             <span className="truncate">{model.id}</span>
                           </label>

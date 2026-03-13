@@ -61,72 +61,72 @@ export function ModelInputList({
       ) : (
         <div className="space-y-2">
           {entries.map((entry, idx) => (
-            <div key={entry.id} className="grid gap-2 md:grid-cols-12">
-              <div className={showPriority || showTestModel ? "md:col-span-4" : "md:col-span-5"}>
-                <TextInput
-                  value={entry.name}
-                  placeholder={namePlaceholder}
-                  disabled={disabled}
-                  onChange={(e) => {
-                    const value = e.currentTarget.value;
-                    onChange(entries.map((it, i) => (i === idx ? { ...it, name: value } : it)));
-                  }}
-                />
-              </div>
-              <div className={showPriority || showTestModel ? "md:col-span-4" : "md:col-span-6"}>
-                <TextInput
-                  value={entry.alias}
-                  placeholder={aliasPlaceholder}
-                  disabled={disabled}
-                  onChange={(e) => {
-                    const value = e.currentTarget.value;
-                    onChange(entries.map((it, i) => (i === idx ? { ...it, alias: value } : it)));
-                  }}
-                />
-              </div>
-              {showPriority ? (
-                <div className={showTestModel ? "md:col-span-2" : "md:col-span-3"}>
+            <div key={entry.id} className="flex items-start gap-2">
+              <div className="min-w-0 flex-1 grid gap-2 md:grid-cols-12">
+                <div className={showPriority || showTestModel ? "md:col-span-4" : "md:col-span-6"}>
                   <TextInput
-                    value={entry.priorityText}
-                    placeholder={t("common.priority_optional")}
-                    disabled={disabled}
-                    inputMode="numeric"
-                    onChange={(e) => {
-                      const value = e.currentTarget.value;
-                      onChange(
-                        entries.map((it, i) => (i === idx ? { ...it, priorityText: value } : it)),
-                      );
-                    }}
-                  />
-                </div>
-              ) : null}
-              {showTestModel ? (
-                <div className="md:col-span-2">
-                  <TextInput
-                    value={entry.testModel}
-                    placeholder="testModel(Optional)"
+                    value={entry.name}
+                    placeholder={namePlaceholder}
                     disabled={disabled}
                     onChange={(e) => {
                       const value = e.currentTarget.value;
-                      onChange(
-                        entries.map((it, i) => (i === idx ? { ...it, testModel: value } : it)),
-                      );
+                      onChange(entries.map((it, i) => (i === idx ? { ...it, name: value } : it)));
                     }}
                   />
                 </div>
-              ) : null}
-              <div className="md:col-span-1 flex items-center justify-end">
-                <Button
-                  variant="danger"
-                  size="sm"
-                  onClick={() => onChange(entries.filter((_, i) => i !== idx))}
-                  disabled={disabled}
-                  aria-label={t("common.delete_model")}
-                  title={t("common.delete")}
-                >
-                  <Trash2 size={14} />
-                </Button>
+                <div className={showPriority || showTestModel ? "md:col-span-4" : "md:col-span-6"}>
+                  <TextInput
+                    value={entry.alias}
+                    placeholder={aliasPlaceholder}
+                    disabled={disabled}
+                    onChange={(e) => {
+                      const value = e.currentTarget.value;
+                      onChange(entries.map((it, i) => (i === idx ? { ...it, alias: value } : it)));
+                    }}
+                  />
+                </div>
+                {showPriority ? (
+                  <div className={showTestModel ? "md:col-span-2" : "md:col-span-4"}>
+                    <TextInput
+                      value={entry.priorityText}
+                      placeholder={t("common.priority_optional")}
+                      disabled={disabled}
+                      inputMode="numeric"
+                      onChange={(e) => {
+                        const value = e.currentTarget.value;
+                        onChange(
+                          entries.map((it, i) => (i === idx ? { ...it, priorityText: value } : it)),
+                        );
+                      }}
+                    />
+                  </div>
+                ) : null}
+                {showTestModel ? (
+                  <div className="md:col-span-2">
+                    <TextInput
+                      value={entry.testModel}
+                      placeholder="testModel(Optional)"
+                      disabled={disabled}
+                      onChange={(e) => {
+                        const value = e.currentTarget.value;
+                        onChange(
+                          entries.map((it, i) => (i === idx ? { ...it, testModel: value } : it)),
+                        );
+                      }}
+                    />
+                  </div>
+                ) : null}
               </div>
+              <button
+                type="button"
+                onClick={() => onChange(entries.filter((_, i) => i !== idx))}
+                disabled={disabled}
+                aria-label={t("common.delete_model")}
+                title={t("common.delete")}
+                className="mt-1.5 shrink-0 inline-flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 transition hover:bg-rose-50 hover:text-rose-500 disabled:opacity-40 dark:text-white/35 dark:hover:bg-rose-500/10 dark:hover:text-rose-400"
+              >
+                <Trash2 size={14} />
+              </button>
             </div>
           ))}
         </div>
