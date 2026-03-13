@@ -45,7 +45,12 @@ export function LanguageSelector({ className }: { className?: string }) {
     const el = triggerRef.current;
     if (!el) return;
     const rect = el.getBoundingClientRect();
-    setPos({ top: rect.bottom + 6, left: rect.right - 130 });
+    const width = 130;
+    const margin = 8;
+    const nextLeft = rect.right - width;
+    const maxLeft = Math.max(margin, window.innerWidth - width - margin);
+    const left = Math.min(Math.max(margin, nextLeft), maxLeft);
+    setPos({ top: rect.bottom + 6, left });
   }, []);
 
   useLayoutEffect(() => {

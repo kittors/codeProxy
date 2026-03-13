@@ -104,7 +104,7 @@ function ShellSidebar({
     <aside
       className={[
         "shrink-0 overflow-hidden bg-white/80 backdrop-blur-xl dark:bg-neutral-950/70",
-        isMobile ? "fixed inset-y-0 left-0 z-40 w-64" : "h-screen",
+        isMobile ? "fixed inset-y-0 left-0 z-40 w-64" : "h-[100dvh]",
         "border-r border-slate-200 dark:border-neutral-800",
         "motion-reduce:transition-none motion-safe:transition-all motion-safe:duration-300 motion-safe:ease-out",
         isMobile
@@ -174,8 +174,9 @@ function ShellHeader({
 
   return (
     <header className="z-20 shrink-0 border-b border-slate-200 bg-white/75 backdrop-blur-xl dark:border-neutral-800 dark:bg-neutral-950/60">
-      <div className="flex h-16 items-center justify-between px-6">
-        <div className="flex items-center gap-3">
+      <h1 className="sr-only">{t(titleKey)}</h1>
+      <div className="flex h-16 items-center justify-between gap-3 px-3 sm:px-6">
+        <div className="flex min-w-0 items-center gap-2 sm:gap-3">
           <button
             type="button"
             onClick={onToggleSidebar}
@@ -185,12 +186,8 @@ function ShellHeader({
           >
             <SidebarIcon size={16} />
           </button>
-          <h1 className="flex items-center gap-2 text-base font-semibold tracking-tight text-slate-900 dark:text-white">
-            <Sparkles size={16} className="text-slate-900 dark:text-white" />
-            <span>{t(titleKey)}</span>
-          </h1>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-1 sm:gap-2">
           <LanguageSelector className="inline-flex h-9 items-center justify-center gap-0.5 rounded-xl px-1.5 text-slate-500 transition hover:text-slate-900 dark:text-slate-400 dark:hover:text-white" />
           <ThemeToggleButton className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 transition hover:text-slate-900 dark:text-slate-400 dark:hover:text-white" />
           <button
@@ -199,10 +196,12 @@ function ShellHeader({
               navigate("/login", { replace: true, viewTransition: true });
               logout();
             }}
-            className="inline-flex min-w-[72px] items-center justify-center gap-1.5 rounded-xl bg-slate-900 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-slate-800 dark:bg-white dark:text-neutral-950 dark:hover:bg-slate-200"
+            aria-label={t("shell.logout_button")}
+            title={t("shell.logout_button")}
+            className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-slate-900 px-2.5 py-1.5 text-sm font-semibold text-white transition hover:bg-slate-800 dark:bg-white dark:text-neutral-950 dark:hover:bg-slate-200 sm:min-w-[72px] sm:px-3"
           >
             <LogOut size={14} />
-            {t("shell.logout_button")}
+            <span className="hidden sm:inline">{t("shell.logout_button")}</span>
           </button>
         </div>
       </div>
@@ -215,7 +214,7 @@ function ShellMain({ children }: PropsWithChildren) {
     <main
       id="main-content"
       tabIndex={-1}
-      className="flex min-h-full flex-col p-6 focus-visible:outline-none"
+      className="flex min-h-full flex-col p-4 focus-visible:outline-none sm:p-6"
     >
       {children}
     </main>
@@ -334,7 +333,7 @@ export function AppShell({ children }: PropsWithChildren) {
               mode="mobile"
               onNavigate={() => setMobileSidebarOpen(false)}
             />
-            <div className="flex h-screen overflow-hidden">
+            <div className="flex h-[100dvh] overflow-hidden">
               <div className="flex min-w-0 flex-1 flex-col">
                 <ShellHeader sidebarCollapsed={sidebarCollapsed} onToggleSidebar={toggleSidebar} />
                 <div className="flex-1 overflow-y-auto">
@@ -344,7 +343,7 @@ export function AppShell({ children }: PropsWithChildren) {
             </div>
           </>
         ) : (
-          <div className="flex h-screen overflow-hidden">
+          <div className="flex h-[100dvh] overflow-hidden">
             <ShellSidebar collapsed={sidebarCollapsed} mode="desktop" />
             <div className="flex min-w-0 flex-1 flex-col">
               <ShellHeader sidebarCollapsed={sidebarCollapsed} onToggleSidebar={toggleSidebar} />

@@ -183,9 +183,12 @@ function ResourceBar({
         </div>
         <div className="flex items-center gap-2">
           <span className={`text-sm font-bold tabular-nums ${sc.text}`}>{value}</span>
-          <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${sc.labelBg}`}>
-            {t(sc.labelKey)}
-          </span>
+          <span
+            className={`h-2.5 w-2.5 shrink-0 rounded-full ${sc.bg} ring-1 ring-black/5 dark:ring-white/10`}
+            title={t(sc.labelKey)}
+            role="img"
+            aria-label={t(sc.labelKey)}
+          />
         </div>
       </div>
       <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-neutral-800">
