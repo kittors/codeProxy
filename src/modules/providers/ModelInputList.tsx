@@ -132,10 +132,7 @@ export function ModelInputList({
         </div>
       )}
 
-      <p className="text-xs text-slate-500 dark:text-white/55">
-        Hint: One model per line; alias is used to rewrite downstream model name. Higher priority
-        number takes precedence.
-      </p>
+      <p className="text-xs text-slate-500 dark:text-white/55">{t("providers.models_hint")}</p>
     </section>
   );
 }
