@@ -17,6 +17,7 @@ export const createDailyTrendOption = (input: {
     requestAxis: string;
   };
   isDark: boolean;
+  compact?: boolean;
 }): Record<string, unknown> => {
   const points = input.dailySeries.filter(
     (item) => item.requests > 0 || item.inputTokens > 0 || item.outputTokens > 0,
@@ -156,6 +157,8 @@ export const createDailyTrendOption = (input: {
     itemStyle: { opacity: 0 },
   });
 
+  const compact = input.compact ?? false;
+
   return {
     backgroundColor: "transparent",
     color: ["rgba(196,181,253,0.88)", "rgba(110,231,183,0.88)", "#3b82f6"],
@@ -173,12 +176,16 @@ export const createDailyTrendOption = (input: {
     legend: {
       show: false,
     },
-    grid: { left: 74, right: 74, top: 18, bottom: 78, containLabel: true },
+    grid: compact
+      ? { left: 8, right: 8, top: 12, bottom: 34, containLabel: true }
+      : { left: 74, right: 74, top: 18, bottom: 78, containLabel: true },
     xAxis: {
       type: "category",
       data: x,
       axisTick: { show: false },
-      axisLabel: { margin: 34, hideOverlap: true },
+      axisLabel: compact
+        ? { margin: 10, hideOverlap: true, fontSize: 10 }
+        : { margin: 34, hideOverlap: true },
       axisLine: {
         lineStyle: {
           color: input.isDark ? "rgba(255,255,255,0.16)" : "rgba(148, 163, 184, 0.55)",
@@ -188,19 +195,16 @@ export const createDailyTrendOption = (input: {
     yAxis: [
       {
         type: "value",
-        name: input.labels.tokenAxis,
+        name: compact ? "" : input.labels.tokenAxis,
         min: 0,
         max: tokenAxisMax,
         nameLocation: "middle",
         nameRotate: 90,
-        nameGap: 58,
+        nameGap: compact ? 0 : 58,
         nameTextStyle: { fontWeight: 600 },
-        axisLabel: {
-          formatter: (value: number) => formatTokenCompact(value),
-          margin: 12,
-          width: 56,
-          overflow: "truncate",
-        },
+        axisLabel: compact
+          ? { formatter: (value: number) => formatTokenCompact(value), margin: 4, width: 36, overflow: "truncate", fontSize: 10 }
+          : { formatter: (value: number) => formatTokenCompact(value), margin: 12, width: 56, overflow: "truncate" },
         splitNumber: 4,
         splitLine: {
           lineStyle: {
@@ -210,19 +214,16 @@ export const createDailyTrendOption = (input: {
       },
       {
         type: "value",
-        name: input.labels.requestAxis,
+        name: compact ? "" : input.labels.requestAxis,
         min: 0,
         max: requestAxisMax,
         nameLocation: "middle",
         nameRotate: 270,
-        nameGap: 58,
+        nameGap: compact ? 0 : 58,
         nameTextStyle: { fontWeight: 600 },
-        axisLabel: {
-          formatter: (value: number) => formatNumber(value),
-          margin: 12,
-          width: 56,
-          overflow: "truncate",
-        },
+        axisLabel: compact
+          ? { formatter: (value: number) => formatNumber(value), margin: 4, width: 36, overflow: "truncate", fontSize: 10 }
+          : { formatter: (value: number) => formatNumber(value), margin: 12, width: 56, overflow: "truncate" },
         splitNumber: 4,
         splitLine: { show: false },
       },
@@ -231,28 +232,5 @@ export const createDailyTrendOption = (input: {
     animationEasing: "cubicOut" as const,
     animationDuration: 520,
     animationDurationUpdate: 360,
-    media: [
-      {
-        query: { maxWidth: 700 },
-        option: {
-          grid: { left: 8, right: 8, top: 12, bottom: 34, containLabel: true },
-          xAxis: {
-            axisLabel: { margin: 10, hideOverlap: true, fontSize: 10 },
-          },
-          yAxis: [
-            {
-              name: "",
-              nameGap: 0,
-              axisLabel: { margin: 4, width: 36, overflow: "truncate", fontSize: 10 },
-            },
-            {
-              name: "",
-              nameGap: 0,
-              axisLabel: { margin: 4, width: 36, overflow: "truncate", fontSize: 10 },
-            },
-          ],
-        },
-      },
-    ],
   };
 };

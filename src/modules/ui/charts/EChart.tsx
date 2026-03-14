@@ -133,7 +133,6 @@ export function EChart({
         showLoading={false}
         notMerge={notMerge}
         replaceMerge={replaceMerge}
-        lazyUpdate
         autoResize={false}
         className="h-full w-full"
         onEvents={onEvents}

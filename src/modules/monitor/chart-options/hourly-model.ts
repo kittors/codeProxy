@@ -10,6 +10,7 @@ export const createHourlyModelOption = (input: {
   totalLineKey: string;
   getSeriesLabel: (key: string) => string;
   isDark: boolean;
+  compact?: boolean;
 }): Record<string, unknown> => {
   const points = input.hourlySeries.modelPoints.slice(-input.modelHourWindow);
   const x = points.map((point) => point.label);
@@ -57,6 +58,8 @@ export const createHourlyModelOption = (input: {
   );
   const yAxisMax = Math.max(1, Math.ceil(yAxisMaxRaw * 1.1));
 
+  const compact = input.compact ?? false;
+
   return {
     backgroundColor: "transparent",
     color: HOURLY_MODEL_COLORS,
@@ -74,12 +77,16 @@ export const createHourlyModelOption = (input: {
     legend: {
       show: false,
     },
-    grid: { left: 74, right: 74, top: 18, bottom: 78, containLabel: true },
+    grid: compact
+      ? { left: 8, right: 8, top: 12, bottom: 34, containLabel: true }
+      : { left: 74, right: 74, top: 18, bottom: 78, containLabel: true },
     xAxis: {
       type: "category",
       data: x,
       axisTick: { show: false },
-      axisLabel: { margin: 34, hideOverlap: true },
+      axisLabel: compact
+        ? { margin: 10, hideOverlap: true, fontSize: 10, rotate: 45 }
+        : { margin: 34, hideOverlap: true },
       axisLine: {
         lineStyle: {
           color: input.isDark ? "rgba(255,255,255,0.16)" : "rgba(148, 163, 184, 0.55)",
@@ -91,12 +98,9 @@ export const createHourlyModelOption = (input: {
       min: 0,
       max: yAxisMax,
       splitNumber: 4,
-      axisLabel: {
-        formatter: (value: number) => formatNumber(value),
-        margin: 12,
-        width: 56,
-        overflow: "truncate",
-      },
+      axisLabel: compact
+        ? { formatter: (value: number) => formatNumber(value), margin: 4, width: 36, overflow: "truncate", fontSize: 10 }
+        : { formatter: (value: number) => formatNumber(value), margin: 12, width: 56, overflow: "truncate" },
       splitLine: {
         lineStyle: {
           color: input.isDark ? "rgba(255,255,255,0.08)" : "rgba(148, 163, 184, 0.25)",
@@ -136,19 +140,5 @@ export const createHourlyModelOption = (input: {
     animationEasing: "cubicOut" as const,
     animationDuration: 520,
     animationDurationUpdate: 360,
-    media: [
-      {
-        query: { maxWidth: 700 },
-        option: {
-          grid: { left: 8, right: 8, top: 12, bottom: 34, containLabel: true },
-          xAxis: {
-            axisLabel: { margin: 10, hideOverlap: true, fontSize: 10, rotate: 45 },
-          },
-          yAxis: {
-            axisLabel: { margin: 4, width: 36, overflow: "truncate", fontSize: 10 },
-          },
-        },
-      },
-    ],
   };
 };

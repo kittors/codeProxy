@@ -44,19 +44,5 @@ export const createModelDistributionOption = (input: {
     animationEasing: "cubicOut" as const,
     animationDuration: 520,
     animationDurationUpdate: 360,
-    media: [
-      {
-        query: { maxWidth: 700 },
-        option: {
-          series: [
-            {
-              radius: ["40%", "58%"],
-              center: ["50%", "46%"],
-              emphasis: { scale: true, scaleSize: 4 },
-            },
-          ],
-        },
-      },
-    ],
   };
 };

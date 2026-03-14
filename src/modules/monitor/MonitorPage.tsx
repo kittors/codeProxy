@@ -70,6 +70,15 @@ export function MonitorPage() {
   } = useTheme();
   const isDark = mode === "dark";
 
+  const [compact, setCompact] = useState(() => window.innerWidth < 700);
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 699px)");
+    const handler = (e: MediaQueryListEvent) => setCompact(e.matches);
+    setCompact(mq.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+
   const [dailyLegendSelected, setDailyLegendSelected] = useState<Record<string, boolean>>({
     [DAILY_LEGEND_KEYS.input]: true,
     [DAILY_LEGEND_KEYS.output]: true,
@@ -434,8 +443,9 @@ export function MonitorPage() {
           requestAxis: t("monitor.requests"),
         },
         isDark,
+        compact,
       }),
-    [dailyLegendSelected, dailySeries, isDark, t],
+    [compact, dailyLegendSelected, dailySeries, isDark, t],
   );
 
   const getHourlyModelSeriesLabel = useCallback(
@@ -468,8 +478,10 @@ export function MonitorPage() {
         totalLineKey: HOURLY_MODEL_TOTAL_KEY,
         getSeriesLabel: getHourlyModelSeriesLabel,
         isDark,
+        compact,
       }),
     [
+      compact,
       getHourlyModelSeriesLabel,
       hourlyModelPalette.colorByKey,
       hourlyModelSelected,
@@ -490,8 +502,10 @@ export function MonitorPage() {
         labelsByKey: hourlyTokenLabels,
         totalLineKey: HOURLY_TOKEN_KEYS.total,
         isDark,
+        compact,
       }),
     [
+      compact,
       hourlySeries.tokenKeys,
       hourlySeries.tokenPoints,
       hourlyTokenLabels,
