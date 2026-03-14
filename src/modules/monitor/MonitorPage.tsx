@@ -653,7 +653,7 @@ export function MonitorPage() {
                 loading={isRefreshing}
               >
                 <div className="flex h-auto flex-col gap-4 md:h-72 md:grid md:grid-cols-[minmax(0,1fr)_220px]">
-                  <EChart option={modelDistributionOption} className="h-52 md:h-72 min-w-0" />
+                  <EChart option={modelDistributionOption} className="h-48 md:h-72 min-w-0" />
                   <div className="flex h-auto md:h-72 flex-col justify-center gap-2 overflow-y-auto pr-1">
                     {modelDistributionLegend.map((item) => (
                       <div
@@ -742,34 +742,34 @@ export function MonitorPage() {
               loading={isRefreshing}
             >
               <div className="-mx-5 overflow-x-auto sm:mx-0">
-                <div className="flex h-72 min-w-[520px] sm:min-w-[600px] flex-col overflow-hidden px-5 sm:px-0">
+                <div className="min-w-[520px] sm:min-w-[600px] px-5 sm:px-0">
                   <EChart
                     option={hourlyModelOption}
-                    className="min-h-0 flex-1"
+                    className="h-64 sm:h-72"
                     replaceMerge="series"
-                  />
-                  <ChartLegend
-                    className="shrink-0 pt-4"
-                    items={[
-                      ...hourlySeries.modelKeys.map((key) => ({
-                        key,
-                        label: getHourlyModelSeriesLabel(key),
-                        colorClass: hourlyModelPalette.classByKey[key] ?? "bg-slate-400",
-                        enabled: hourlyModelSelected[key] ?? true,
-                        onToggle: toggleHourlyModelLegend,
-                      })),
-                      {
-                        key: HOURLY_MODEL_TOTAL_KEY,
-                        label: getHourlyModelSeriesLabel(HOURLY_MODEL_TOTAL_KEY),
-                        colorClass:
-                          hourlyModelPalette.classByKey[HOURLY_MODEL_TOTAL_KEY] ?? "bg-blue-500",
-                        enabled: hourlyModelSelected[HOURLY_MODEL_TOTAL_KEY] ?? true,
-                        onToggle: toggleHourlyModelLegend,
-                      },
-                    ]}
                   />
                 </div>
               </div>
+              <ChartLegend
+                className="pt-4 max-h-32 overflow-y-auto justify-start sm:justify-center sm:max-h-none"
+                items={[
+                  ...hourlySeries.modelKeys.map((key) => ({
+                    key,
+                    label: getHourlyModelSeriesLabel(key),
+                    colorClass: hourlyModelPalette.classByKey[key] ?? "bg-slate-400",
+                    enabled: hourlyModelSelected[key] ?? true,
+                    onToggle: toggleHourlyModelLegend,
+                  })),
+                  {
+                    key: HOURLY_MODEL_TOTAL_KEY,
+                    label: getHourlyModelSeriesLabel(HOURLY_MODEL_TOTAL_KEY),
+                    colorClass:
+                      hourlyModelPalette.classByKey[HOURLY_MODEL_TOTAL_KEY] ?? "bg-blue-500",
+                    enabled: hourlyModelSelected[HOURLY_MODEL_TOTAL_KEY] ?? true,
+                    onToggle: toggleHourlyModelLegend,
+                  },
+                ]}
+              />
             </Card>
           </Reveal>
 
@@ -781,34 +781,34 @@ export function MonitorPage() {
               loading={isRefreshing}
             >
               <div className="-mx-5 overflow-x-auto sm:mx-0">
-                <div className="flex h-72 min-w-[520px] sm:min-w-[600px] flex-col overflow-hidden px-5 sm:px-0">
+                <div className="min-w-[520px] sm:min-w-[600px] px-5 sm:px-0">
                   <EChart
                     option={hourlyTokenOption}
-                    className="min-h-0 flex-1"
+                    className="h-64 sm:h-72"
                     replaceMerge="series"
-                  />
-                  <ChartLegend
-                    className="shrink-0 pt-4"
-                    items={[
-                      ...hourlySeries.tokenKeys.map((key) => ({
-                        key,
-                        label: hourlyTokenLabels[key] ?? key,
-                        colorClass: hourlyTokenPalette.classByKey[key] ?? "bg-slate-400",
-                        enabled: hourlyTokenSelected[key] ?? true,
-                        onToggle: toggleHourlyTokenLegend,
-                      })),
-                      {
-                        key: HOURLY_TOKEN_KEYS.total,
-                        label: hourlyTokenLabels[HOURLY_TOKEN_KEYS.total],
-                        colorClass:
-                          hourlyTokenPalette.classByKey[HOURLY_TOKEN_KEYS.total] ?? "bg-blue-500",
-                        enabled: hourlyTokenSelected[HOURLY_TOKEN_KEYS.total] ?? true,
-                        onToggle: toggleHourlyTokenLegend,
-                      },
-                    ]}
                   />
                 </div>
               </div>
+              <ChartLegend
+                className="pt-4 max-h-32 overflow-y-auto justify-start sm:justify-center sm:max-h-none"
+                items={[
+                  ...hourlySeries.tokenKeys.map((key) => ({
+                    key,
+                    label: hourlyTokenLabels[key] ?? key,
+                    colorClass: hourlyTokenPalette.classByKey[key] ?? "bg-slate-400",
+                    enabled: hourlyTokenSelected[key] ?? true,
+                    onToggle: toggleHourlyTokenLegend,
+                  })),
+                  {
+                    key: HOURLY_TOKEN_KEYS.total,
+                    label: hourlyTokenLabels[HOURLY_TOKEN_KEYS.total],
+                    colorClass:
+                      hourlyTokenPalette.classByKey[HOURLY_TOKEN_KEYS.total] ?? "bg-blue-500",
+                    enabled: hourlyTokenSelected[HOURLY_TOKEN_KEYS.total] ?? true,
+                    onToggle: toggleHourlyTokenLegend,
+                  },
+                ]}
+              />
             </Card>
           </Reveal>
         </>

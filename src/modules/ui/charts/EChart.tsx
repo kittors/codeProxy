@@ -91,6 +91,30 @@ export function EChart({
   }, []);
 
   useEffect(() => {
+    const handler = () => {
+      const container = containerRef.current;
+      if (!container) return;
+      const width = container.clientWidth;
+      const height = container.clientHeight;
+      if (width > 0 && height > 0) requestResize(width, height);
+    };
+
+    window.addEventListener("resize", handler, { passive: true });
+    window.addEventListener("orientationchange", handler, { passive: true });
+
+    const viewport = window.visualViewport;
+    viewport?.addEventListener("resize", handler, { passive: true });
+    viewport?.addEventListener("scroll", handler, { passive: true });
+
+    return () => {
+      window.removeEventListener("resize", handler);
+      window.removeEventListener("orientationchange", handler);
+      viewport?.removeEventListener("resize", handler);
+      viewport?.removeEventListener("scroll", handler);
+    };
+  }, []);
+
+  useEffect(() => {
     instanceRef.current = null;
     didResizeOnceRef.current = false;
     lastSizeRef.current = null;
@@ -105,6 +129,7 @@ export function EChart({
         ref={chartRef}
         option={option}
         theme={mode === "dark" ? "dark" : undefined}
+        style={{ height: "100%", width: "100%" }}
         showLoading={false}
         notMerge={notMerge}
         replaceMerge={replaceMerge}
@@ -127,6 +152,12 @@ export function EChart({
           const height = container.clientHeight;
           if (width > 0 && height > 0) {
             requestResize(width, height);
+            window.setTimeout(() => {
+              requestResize(container.clientWidth, container.clientHeight);
+            }, 60);
+            window.setTimeout(() => {
+              requestResize(container.clientWidth, container.clientHeight);
+            }, 240);
           } else {
             const size = lastSizeRef.current;
             if (!size) return;
