@@ -743,15 +743,11 @@ export function MonitorPage() {
               actions={<HourWindowSelector value={modelHourWindow} onChange={setModelHourWindow} />}
               loading={isRefreshing}
             >
-              <div className="max-w-full overflow-x-auto">
-                <div className="min-w-[520px] sm:min-w-[600px] max-w-full">
-                  <EChart
-                    option={hourlyModelOption}
-                    className="h-64 sm:h-72"
-                    replaceMerge="series"
-                  />
-                </div>
-              </div>
+              <EChart
+                option={hourlyModelOption}
+                className="h-64 sm:h-72"
+                replaceMerge="series"
+              />
               <ChartLegend
                 className="pt-4 max-h-32 overflow-y-auto justify-start sm:justify-center sm:max-h-none"
                 items={[
@@ -782,15 +778,11 @@ export function MonitorPage() {
               actions={<HourWindowSelector value={tokenHourWindow} onChange={setTokenHourWindow} />}
               loading={isRefreshing}
             >
-              <div className="max-w-full overflow-x-auto">
-                <div className="min-w-[520px] sm:min-w-[600px] max-w-full">
-                  <EChart
-                    option={hourlyTokenOption}
-                    className="h-64 sm:h-72"
-                    replaceMerge="series"
-                  />
-                </div>
-              </div>
+              <EChart
+                option={hourlyTokenOption}
+                className="h-64 sm:h-72"
+                replaceMerge="series"
+              />
               <ChartLegend
                 className="pt-4 max-h-32 overflow-y-auto justify-start sm:justify-center sm:max-h-none"
                 items={[

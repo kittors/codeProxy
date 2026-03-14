@@ -158,6 +158,9 @@ export function EChart({
             window.setTimeout(() => {
               requestResize(container.clientWidth, container.clientHeight);
             }, 240);
+            window.setTimeout(() => {
+              requestResize(container.clientWidth, container.clientHeight);
+            }, 500);
           } else {
             const size = lastSizeRef.current;
             if (!size) return;

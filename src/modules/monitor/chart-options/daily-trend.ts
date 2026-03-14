@@ -235,20 +235,20 @@ export const createDailyTrendOption = (input: {
       {
         query: { maxWidth: 700 },
         option: {
-          grid: { left: 44, right: 16, top: 12, bottom: 54, containLabel: true },
+          grid: { left: 8, right: 8, top: 12, bottom: 34, containLabel: true },
           xAxis: {
-            axisLabel: { margin: 18, hideOverlap: true, fontSize: 10 },
+            axisLabel: { margin: 10, hideOverlap: true, fontSize: 10 },
           },
           yAxis: [
             {
               name: "",
               nameGap: 0,
-              axisLabel: { margin: 8, width: 44, overflow: "truncate" },
+              axisLabel: { margin: 4, width: 36, overflow: "truncate", fontSize: 10 },
             },
             {
               name: "",
               nameGap: 0,
-              axisLabel: { margin: 8, width: 44, overflow: "truncate" },
+              axisLabel: { margin: 4, width: 36, overflow: "truncate", fontSize: 10 },
             },
           ],
         },
