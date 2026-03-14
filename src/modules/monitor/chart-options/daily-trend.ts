@@ -177,15 +177,15 @@ export const createDailyTrendOption = (input: {
       show: false,
     },
     grid: compact
-      ? { left: 8, right: 8, top: 12, bottom: 34, containLabel: true }
-      : { left: 74, right: 74, top: 18, bottom: 78, containLabel: true },
+      ? { left: 4, right: 4, top: 12, bottom: 34, containLabel: true }
+      : { left: 12, right: 12, top: 18, bottom: 48, containLabel: true },
     xAxis: {
       type: "category",
       data: x,
       axisTick: { show: false },
       axisLabel: compact
         ? { margin: 10, hideOverlap: true, fontSize: 10 }
-        : { margin: 34, hideOverlap: true },
+        : { margin: 14, hideOverlap: true },
       axisLine: {
         lineStyle: {
           color: input.isDark ? "rgba(255,255,255,0.16)" : "rgba(148, 163, 184, 0.55)",
@@ -200,11 +200,11 @@ export const createDailyTrendOption = (input: {
         max: tokenAxisMax,
         nameLocation: "middle",
         nameRotate: 90,
-        nameGap: compact ? 0 : 58,
+        nameGap: compact ? 0 : 40,
         nameTextStyle: { fontWeight: 600 },
         axisLabel: compact
           ? { formatter: (value: number) => formatTokenCompact(value), margin: 4, width: 36, overflow: "truncate", fontSize: 10 }
-          : { formatter: (value: number) => formatTokenCompact(value), margin: 12, width: 56, overflow: "truncate" },
+          : { formatter: (value: number) => formatTokenCompact(value), margin: 6, width: 56, overflow: "truncate" },
         splitNumber: 4,
         splitLine: {
           lineStyle: {
@@ -219,11 +219,11 @@ export const createDailyTrendOption = (input: {
         max: requestAxisMax,
         nameLocation: "middle",
         nameRotate: 270,
-        nameGap: compact ? 0 : 58,
+        nameGap: compact ? 0 : 40,
         nameTextStyle: { fontWeight: 600 },
         axisLabel: compact
           ? { formatter: (value: number) => formatNumber(value), margin: 4, width: 36, overflow: "truncate", fontSize: 10 }
-          : { formatter: (value: number) => formatNumber(value), margin: 12, width: 56, overflow: "truncate" },
+          : { formatter: (value: number) => formatNumber(value), margin: 6, width: 56, overflow: "truncate" },
         splitNumber: 4,
         splitLine: { show: false },
       },
