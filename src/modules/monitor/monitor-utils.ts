@@ -20,6 +20,17 @@ export const parseUsageTimestampMs = (value: string): number => {
   const raw = value.trim();
   if (!raw) return Number.NaN;
 
+  if (/^\d+$/.test(raw)) {
+    const numeric = Number(raw);
+    if (Number.isFinite(numeric)) {
+      // 10 digits: seconds, 13 digits: milliseconds, 16 digits: microseconds, 19 digits: nanoseconds
+      if (raw.length <= 10) return numeric * 1000;
+      if (raw.length <= 13) return numeric;
+      if (raw.length <= 16) return Math.floor(numeric / 1000);
+      return Math.floor(numeric / 1_000_000);
+    }
+  }
+
   const direct = Date.parse(raw);
   if (Number.isFinite(direct)) return direct;
 
@@ -30,6 +41,9 @@ export const parseUsageTimestampMs = (value: string): number => {
   let normalized = raw
     .replace(/^(\d{4})\/(\d{2})\/(\d{2})\s+/, "$1-$2-$3T")
     .replace(/^(\d{4})-(\d{2})-(\d{2})\s+/, "$1-$2-$3T")
+    // Truncate >3 fractional second digits (e.g. 2026-03-14T01:02:03.123456Z)
+    .replace(/\.(\d{3})\d+(?=[Z+-]|$)/, ".$1")
+    // Normalize timezone offset without colon: +0800 -> +08:00
     .replace(/([+-]\d{2})(\d{2})$/, "$1:$2");
 
   const normalizedParsed = Date.parse(normalized);
@@ -38,7 +52,7 @@ export const parseUsageTimestampMs = (value: string): number => {
   // Manual local-time parse for non-ISO strings.
   const match =
     raw.match(
-      /^(\d{4})[-/](\d{1,2})[-/](\d{1,2})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2})(?:\.(\d{1,3}))?)?)?$/,
+      /^(\d{4})[-/](\d{1,2})[-/](\d{1,2})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2})(?:\.(\d{1,9}))?)?)?$/,
     ) ?? null;
 
   if (!match) return Number.NaN;
