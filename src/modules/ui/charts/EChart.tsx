@@ -59,8 +59,8 @@ export function EChart({
         }
 
         instance.resize?.({
-          width: "auto",
-          height: "auto",
+          width: containerWidth,
+          height: containerHeight,
           animation: { duration: 0 },
         });
         didResizeOnceRef.current = true;
