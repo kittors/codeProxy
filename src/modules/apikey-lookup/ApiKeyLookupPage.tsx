@@ -682,6 +682,15 @@ export function ApiKeyLookupPage() {
   } = useTheme();
   const isDark = mode === "dark";
 
+  const [compact, setCompact] = useState(() => window.innerWidth < 700);
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 699px)");
+    const handler = (e: MediaQueryListEvent) => setCompact(e.matches);
+    setCompact(mq.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+
   const [apiKeyInput, setApiKeyInput] = useState("");
   const [queriedKey, setQueriedKey] = useState("");
 
@@ -1012,8 +1021,9 @@ export function ApiKeyLookupPage() {
           requestAxis: t("apikey_lookup.requests"),
         },
         isDark,
+        compact,
       }),
-    [dailySeries, dailyLegendSelected, isDark, t],
+    [compact, dailySeries, dailyLegendSelected, isDark, t],
   );
 
   const toggleDailyLegend = useCallback((key: string) => {
@@ -1278,17 +1288,17 @@ export function ApiKeyLookupPage() {
                       loading={chartLoading}
                     >
                       {modelDistributionData.length > 0 ? (
-                        <div className="grid h-72 grid-cols-[minmax(0,1fr)_220px] gap-4">
-                          <EChart option={modelDistributionOption} className="h-72 min-w-0" />
-                          <div className="flex h-72 flex-col justify-center gap-2 overflow-y-auto pr-1">
+                        <div className="flex flex-col sm:grid sm:h-72 sm:grid-cols-[minmax(0,1fr)_220px] gap-4">
+                          <EChart option={modelDistributionOption} className="h-52 sm:h-72 min-w-0" />
+                          <div className="flex flex-row flex-wrap sm:flex-col sm:h-72 justify-center gap-2 overflow-y-auto pr-1">
                             {modelDistributionLegend.map((item) => (
                               <div
                                 key={item.name}
-                                className="grid grid-cols-[minmax(0,120px)_40px_52px] items-center gap-x-1 text-sm"
+                                className="inline-flex sm:grid sm:grid-cols-[minmax(0,120px)_40px_52px] items-center gap-x-1 text-xs sm:text-sm"
                               >
-                                <div className="flex min-w-0 items-center gap-2">
+                                <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
                                   <span
-                                    className={`h-3.5 w-3.5 shrink-0 rounded-full ${item.colorClass} opacity-80 ring-1 ring-black/5 dark:ring-white/10`}
+                                    className={`h-3 w-3 sm:h-3.5 sm:w-3.5 shrink-0 rounded-full ${item.colorClass} opacity-80 ring-1 ring-black/5 dark:ring-white/10`}
                                   />
                                   <span className="min-w-0 truncate text-slate-700 dark:text-white/80">
                                     {item.name}
@@ -1297,7 +1307,7 @@ export function ApiKeyLookupPage() {
                                 <span className="text-right font-semibold tabular-nums text-slate-900 dark:text-white">
                                   {item.valueLabel}
                                 </span>
-                                <span className="text-right tabular-nums text-slate-500 dark:text-white/55">
+                                <span className="hidden sm:inline text-right tabular-nums text-slate-500 dark:text-white/55">
                                   {item.percentLabel}
                                 </span>
                               </div>
@@ -1380,7 +1390,7 @@ export function ApiKeyLookupPage() {
               <Reveal>
                 <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-950/70">
                   {/* Filter bar + stats */}
-                  <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-3 dark:border-neutral-800/60">
+                  <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-3 sm:px-5 py-3 dark:border-neutral-800/60">
                     <div className="flex flex-wrap items-center gap-2">
                       <SearchableSelect
                         value={statusFilter}
@@ -1399,7 +1409,7 @@ export function ApiKeyLookupPage() {
                         />
                       )}
                     </div>
-                    <span className="inline-flex items-center gap-1.5 text-xs text-slate-600 dark:text-white/55">
+                    <span className="inline-flex flex-wrap items-center gap-1.5 text-xs text-slate-600 dark:text-white/55">
                       <Filter size={12} aria-hidden="true" />
                       <span className="font-mono tabular-nums">
                         {t("request_logs.records_count", { count: stats.total })}
@@ -1411,19 +1421,19 @@ export function ApiKeyLookupPage() {
                       <span className="font-mono tabular-nums">
                         {stats.success_rate.toFixed(1)}%
                       </span>
-                      <span className="text-slate-300 dark:text-white/10" aria-hidden="true">
+                      <span className="hidden sm:inline text-slate-300 dark:text-white/10" aria-hidden="true">
                         ·
                       </span>
-                      {t("apikey_lookup.token")}{" "}
-                      <span className="font-mono tabular-nums">
+                      <span className="hidden sm:inline">{t("apikey_lookup.token")}</span>
+                      <span className="hidden sm:inline font-mono tabular-nums">
                         {stats.total_tokens.toLocaleString()}
                       </span>
                       {lastUpdatedText && (
                         <>
-                          <span className="text-slate-300 dark:text-white/10" aria-hidden="true">
+                          <span className="hidden sm:inline text-slate-300 dark:text-white/10" aria-hidden="true">
                             ·
                           </span>
-                          <span className="text-slate-400 dark:text-white/40">
+                          <span className="hidden sm:inline text-slate-400 dark:text-white/40">
                             {t("request_logs.updated_at", { time: lastUpdatedText })}
                           </span>
                         </>
@@ -1432,7 +1442,7 @@ export function ApiKeyLookupPage() {
                   </div>
 
                   {/* VirtualTable */}
-                  <div className="relative px-5 pb-5">
+                  <div className="relative px-3 sm:px-5 pb-5 overflow-x-auto">
                     <VirtualTable<LogRow>
                       rows={rows}
                       columns={logColumns}
@@ -1502,7 +1512,7 @@ export function ApiKeyLookupPage() {
 
         {/* Empty state */}
         {!queriedKey && !error && (
-          <section className="rounded-2xl border border-dashed border-slate-200 bg-white p-16 text-center shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
+          <section className="rounded-2xl border border-dashed border-slate-200 bg-white px-6 py-10 sm:p-16 text-center shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
             <div className="mx-auto flex max-w-sm flex-col items-center gap-4">
               <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100 dark:bg-white/10">
                 <Search size={28} className="text-slate-600 dark:text-white/70" />
