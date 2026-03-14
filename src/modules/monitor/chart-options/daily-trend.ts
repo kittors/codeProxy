@@ -195,13 +195,8 @@ export const createDailyTrendOption = (input: {
     yAxis: [
       {
         type: "value",
-        name: compact ? "" : input.labels.tokenAxis,
         min: 0,
         max: tokenAxisMax,
-        nameLocation: "middle",
-        nameRotate: 90,
-        nameGap: compact ? 0 : 40,
-        nameTextStyle: { fontWeight: 600 },
         axisLabel: compact
           ? { formatter: (value: number) => formatTokenCompact(value), margin: 4, width: 36, overflow: "truncate", fontSize: 10 }
           : { formatter: (value: number) => formatTokenCompact(value), margin: 6, width: 56, overflow: "truncate" },
@@ -214,13 +209,8 @@ export const createDailyTrendOption = (input: {
       },
       {
         type: "value",
-        name: compact ? "" : input.labels.requestAxis,
         min: 0,
         max: requestAxisMax,
-        nameLocation: "middle",
-        nameRotate: 270,
-        nameGap: compact ? 0 : 40,
-        nameTextStyle: { fontWeight: 600 },
         axisLabel: compact
           ? { formatter: (value: number) => formatNumber(value), margin: 4, width: 36, overflow: "truncate", fontSize: 10 }
           : { formatter: (value: number) => formatNumber(value), margin: 6, width: 56, overflow: "truncate" },
