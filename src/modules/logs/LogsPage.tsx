@@ -359,7 +359,7 @@ export function LogsPage() {
         const after =
           options.mode === "incremental" ? (latestTimestampRef.current ?? undefined) : undefined;
 
-        const result = await logsApi.fetchLogs(after ? { after } : {});
+        const result = await logsApi.fetchLogs(after ? { after, limit: 2000 } : { limit: 2000 });
         const lines = Array.isArray(result?.lines) ? result.lines : [];
         const nextLatest =
           typeof result?.["latest-timestamp"] === "number" ? result["latest-timestamp"] : null;
@@ -723,78 +723,78 @@ export function LogsPage() {
                   </pre>
                 ) : (
                   <div className="overflow-x-auto">
-                  <div className="min-w-[640px] divide-y divide-slate-200 rounded-xl border border-slate-200 bg-white/70 dark:divide-neutral-800 dark:border-neutral-800 dark:bg-neutral-950/40">
-                    {parsedVisibleLines.map((line, index) => {
-                      const levelStyles = line.level ? getLevelStyles(line.level) : null;
-                      const rowClassName = [
-                        "px-3 py-2",
-                        "hover:bg-slate-50 dark:hover:bg-white/5",
-                        levelStyles?.row,
-                      ]
-                        .filter(Boolean)
-                        .join(" ");
+                    <div className="min-w-[640px] divide-y divide-slate-200 rounded-xl border border-slate-200 bg-white/70 dark:divide-neutral-800 dark:border-neutral-800 dark:bg-neutral-950/40">
+                      {parsedVisibleLines.map((line, index) => {
+                        const levelStyles = line.level ? getLevelStyles(line.level) : null;
+                        const rowClassName = [
+                          "px-3 py-2",
+                          "hover:bg-slate-50 dark:hover:bg-white/5",
+                          levelStyles?.row,
+                        ]
+                          .filter(Boolean)
+                          .join(" ");
 
-                      return (
-                        <div
-                          key={`${filteredLines.length - visibleLines.length + index}`}
-                          className={rowClassName}
-                        >
-                          <div className="flex items-start gap-3">
-                            <div className="w-36 shrink-0 tabular-nums text-[11px] text-slate-500 dark:text-white/55">
-                              {line.timestamp ?? ""}
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <div className="flex flex-wrap items-center gap-2">
-                                {line.level ? (
-                                  <Badge className={levelStyles?.badge ?? ""}>
-                                    {line.level.toUpperCase()}
-                                  </Badge>
-                                ) : null}
-                                {line.source ? (
-                                  <Badge className="border-slate-200 bg-white text-slate-700 dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-white/70">
-                                    {line.source}
-                                  </Badge>
-                                ) : null}
-                                {line.requestId ? (
-                                  <Badge className="border-slate-200 bg-slate-50 font-mono text-slate-700 dark:border-neutral-800 dark:bg-white/5 dark:text-white/70">
-                                    {line.requestId}
-                                  </Badge>
-                                ) : null}
-                                {typeof line.statusCode === "number" ? (
-                                  <Badge className={getStatusStyles(line.statusCode)}>
-                                    {line.statusCode}
-                                  </Badge>
-                                ) : null}
-                                {line.latency ? (
-                                  <Badge className="border-slate-200 bg-white text-slate-700 dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-white/70">
-                                    {line.latency}
-                                  </Badge>
-                                ) : null}
-                                {line.ip ? (
-                                  <Badge className="border-slate-200 bg-white font-mono text-slate-700 dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-white/70">
-                                    {line.ip}
-                                  </Badge>
-                                ) : null}
-                                {line.method ? (
-                                  <Badge className="border-slate-200 bg-white text-slate-700 dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-white/70">
-                                    {line.method}
-                                  </Badge>
-                                ) : null}
-                                {line.path ? (
-                                  <Badge className="border-slate-200 bg-white font-mono text-slate-700 dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-white/70">
-                                    <span className="max-w-[18rem] truncate">{line.path}</span>
-                                  </Badge>
-                                ) : null}
+                        return (
+                          <div
+                            key={`${filteredLines.length - visibleLines.length + index}`}
+                            className={rowClassName}
+                          >
+                            <div className="flex items-start gap-3">
+                              <div className="w-36 shrink-0 tabular-nums text-[11px] text-slate-500 dark:text-white/55">
+                                {line.timestamp ?? ""}
                               </div>
-                              <div className="mt-1 whitespace-pre-wrap break-words font-mono text-xs leading-relaxed text-slate-900 dark:text-slate-100">
-                                {line.message}
+                              <div className="min-w-0 flex-1">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  {line.level ? (
+                                    <Badge className={levelStyles?.badge ?? ""}>
+                                      {line.level.toUpperCase()}
+                                    </Badge>
+                                  ) : null}
+                                  {line.source ? (
+                                    <Badge className="border-slate-200 bg-white text-slate-700 dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-white/70">
+                                      {line.source}
+                                    </Badge>
+                                  ) : null}
+                                  {line.requestId ? (
+                                    <Badge className="border-slate-200 bg-slate-50 font-mono text-slate-700 dark:border-neutral-800 dark:bg-white/5 dark:text-white/70">
+                                      {line.requestId}
+                                    </Badge>
+                                  ) : null}
+                                  {typeof line.statusCode === "number" ? (
+                                    <Badge className={getStatusStyles(line.statusCode)}>
+                                      {line.statusCode}
+                                    </Badge>
+                                  ) : null}
+                                  {line.latency ? (
+                                    <Badge className="border-slate-200 bg-white text-slate-700 dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-white/70">
+                                      {line.latency}
+                                    </Badge>
+                                  ) : null}
+                                  {line.ip ? (
+                                    <Badge className="border-slate-200 bg-white font-mono text-slate-700 dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-white/70">
+                                      {line.ip}
+                                    </Badge>
+                                  ) : null}
+                                  {line.method ? (
+                                    <Badge className="border-slate-200 bg-white text-slate-700 dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-white/70">
+                                      {line.method}
+                                    </Badge>
+                                  ) : null}
+                                  {line.path ? (
+                                    <Badge className="border-slate-200 bg-white font-mono text-slate-700 dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-white/70">
+                                      <span className="max-w-[18rem] truncate">{line.path}</span>
+                                    </Badge>
+                                  ) : null}
+                                </div>
+                                <div className="mt-1 whitespace-pre-wrap break-words font-mono text-xs leading-relaxed text-slate-900 dark:text-slate-100">
+                                  {line.message}
+                                </div>
                               </div>
                             </div>
                           </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
               </div>
@@ -889,8 +889,8 @@ export function LogsPage() {
                               ·{" "}
                               {typeof file.modified === "number"
                                 ? new Date(
-                                    file.modified < 1e12 ? file.modified * 1000 : file.modified,
-                                  ).toLocaleString()
+                                  file.modified < 1e12 ? file.modified * 1000 : file.modified,
+                                ).toLocaleString()
                                 : "--"}
                             </p>
                           </div>

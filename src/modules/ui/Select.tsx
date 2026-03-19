@@ -156,53 +156,54 @@ export function Select({
       {/* Dropdown (portal) */}
       {open
         ? createPortal(
-            <div
-              ref={listRef}
-              role="listbox"
-              aria-label={ariaLabel}
-              className={cn(
-                "fixed z-[9999] overflow-hidden rounded-xl border border-slate-200 bg-white p-1 shadow-lg",
-                "dark:border-neutral-700 dark:bg-neutral-900",
-              )}
-              style={{
-                top: pos.top,
-                left: pos.left,
-                minWidth: pos.width,
-                maxHeight: 280,
-                overflowY: "auto",
-              }}
-            >
-              {options.map((opt) => {
-                const selected = opt.value === value;
-                return (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    role="option"
-                    aria-selected={selected}
-                    onClick={() => handleSelect(opt.value)}
-                    className={cn(
-                      "flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm outline-none transition-colors",
-                      "hover:bg-slate-100 dark:hover:bg-white/10",
-                      selected
-                        ? "font-medium text-slate-900 dark:text-white"
-                        : "text-slate-600 dark:text-slate-300",
-                    )}
-                  >
-                    <span className="flex-1 truncate">{opt.label}</span>
-                    {selected ? (
-                      <Check
-                        size={14}
-                        className="shrink-0 text-slate-400 dark:text-white/50"
-                        aria-hidden="true"
-                      />
-                    ) : null}
-                  </button>
-                );
-              })}
-            </div>,
-            document.body,
-          )
+          <div
+            ref={listRef}
+            role="listbox"
+            aria-label={ariaLabel}
+            className={cn(
+              "fixed z-[9999] overflow-hidden rounded-xl border border-slate-200 bg-white p-1 shadow-lg",
+              "dark:border-neutral-700 dark:bg-neutral-900",
+            )}
+            style={{
+              top: pos.top,
+              left: pos.left,
+              minWidth: pos.width,
+              maxWidth: 'min(500px, 90vw)',
+              maxHeight: 280,
+              overflowY: "auto",
+            }}
+          >
+            {options.map((opt) => {
+              const selected = opt.value === value;
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  role="option"
+                  aria-selected={selected}
+                  onClick={() => handleSelect(opt.value)}
+                  className={cn(
+                    "flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm outline-none transition-colors",
+                    "hover:bg-slate-100 dark:hover:bg-white/10",
+                    selected
+                      ? "font-medium text-slate-900 dark:text-white"
+                      : "text-slate-600 dark:text-slate-300",
+                  )}
+                >
+                  <span className="flex-1 whitespace-nowrap">{opt.label}</span>
+                  {selected ? (
+                    <Check
+                      size={14}
+                      className="shrink-0 text-slate-400 dark:text-white/50"
+                      aria-hidden="true"
+                    />
+                  ) : null}
+                </button>
+              );
+            })}
+          </div>,
+          document.body,
+        )
         : null}
     </>
   );

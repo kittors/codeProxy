@@ -161,6 +161,7 @@ export interface IFlowCookieAuthResponse {
 
 export interface LogsQuery {
   after?: number;
+  limit?: number;
 }
 
 export interface LogsResponse {
