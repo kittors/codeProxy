@@ -7,7 +7,7 @@ import {
   useMemo,
   useState,
 } from "react";
-import { Link, useLocation, useNavigate, useNavigation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
   Activity,
@@ -89,19 +89,41 @@ function ShellSidebar({
   onNavigate?: () => void;
 }) {
   const location = useLocation();
-  const navigation = useNavigation();
   const { t } = useTranslation();
-  // Use the pending navigation destination when available so menu highlights
-  // update instantly on click, without waiting for lazy chunks to load.
-  const effectivePathname = navigation.location?.pathname ?? location.pathname;
-  const activeTo = useMemo(() => {
+  // Track the clicked nav target so the highlight updates instantly on click,
+  // without waiting for lazy chunks to load & location to update.
+  const [pendingTo, setPendingTo] = useState<string | null>(null);
+
+  // Clear pendingTo once location catches up (chunk loaded, route rendered).
+  useEffect(() => {
+    setPendingTo(null);
+  }, [location.pathname]);
+
+  const resolveActiveTo = useCallback((pathname: string) => {
     const sorted = [...NAV_ITEMS].sort((a, b) => b.to.length - a.to.length);
     return (
-      sorted.find((item) => effectivePathname === item.to || effectivePathname.startsWith(`${item.to}/`))?.to ?? null
+      sorted.find((item) => pathname === item.to || pathname.startsWith(`${item.to}/`))?.to ?? null
     );
-  }, [effectivePathname]);
+  }, []);
+
+  const activeTo = useMemo(() => {
+    // If user just clicked a nav item, use that immediately for highlighting
+    if (pendingTo) return resolveActiveTo(pendingTo);
+    return resolveActiveTo(location.pathname);
+  }, [pendingTo, location.pathname, resolveActiveTo]);
 
   const isMobile = mode === "mobile";
+
+  const handleNavClick = useCallback(
+    (to: string) => {
+      // Immediately mark as pending so highlight is instant
+      if (to !== location.pathname) {
+        setPendingTo(to);
+      }
+      onNavigate?.();
+    },
+    [location.pathname, onNavigate],
+  );
 
   return (
     <aside
@@ -140,7 +162,7 @@ function ShellSidebar({
                 key={item.to}
                 to={item.to}
                 viewTransition
-                onClick={onNavigate}
+                onClick={() => handleNavClick(item.to)}
                 className={
                   active
                     ? "flex min-w-0 items-center gap-2 rounded-xl bg-slate-900 px-3 py-2 text-sm font-semibold text-white dark:bg-white dark:text-neutral-950 whitespace-nowrap"
