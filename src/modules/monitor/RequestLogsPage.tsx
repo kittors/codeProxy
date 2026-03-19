@@ -483,7 +483,7 @@ export function RequestLogsPage() {
                 placeholder={t("request_logs.all_keys_placeholder")}
                 searchPlaceholder={t("request_logs.search_keys")}
                 aria-label={t("request_logs.filter_key")}
-                className="w-full sm:w-[220px]"
+                className="w-full sm:w-auto"
               />
               <SearchableSelect
                 value={modelQuery}
@@ -492,7 +492,7 @@ export function RequestLogsPage() {
                 placeholder={t("request_logs.all_models_placeholder")}
                 searchPlaceholder={t("request_logs.search_models")}
                 aria-label={t("request_logs.filter_model")}
-                className="w-full sm:w-[220px]"
+                className="w-full sm:w-auto"
               />
               <Select
                 value={statusFilter}
@@ -504,11 +504,11 @@ export function RequestLogsPage() {
                 ]}
                 aria-label={t("request_logs.filter_status")}
                 name="statusFilter"
-                className="w-full sm:w-[160px]"
+                className="w-full sm:w-auto"
               />
             </div>
 
-            <div className="hidden sm:flex-1" />
+            <div className="hidden sm:block sm:flex-1" />
 
             <div className="grid grid-cols-2 items-center gap-x-3 gap-y-1.5 text-xs text-slate-600 dark:text-white/55 sm:flex sm:items-center sm:gap-1.5">
               <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
