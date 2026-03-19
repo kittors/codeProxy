@@ -84,6 +84,8 @@ export const filterUsageByDays = (data: UsageData, days: number, apiFilter: stri
 
   const filtered: UsageData = { apis: {} };
 
+  if (!data?.apis) return filtered;
+
   for (const [apiKey, apiData] of Object.entries(data.apis)) {
     if (normalizedFilter && !apiKey.toLowerCase().includes(normalizedFilter)) {
       continue;
@@ -91,8 +93,10 @@ export const filterUsageByDays = (data: UsageData, days: number, apiFilter: stri
 
     const nextModels: UsageData["apis"][string]["models"] = {};
 
+    if (!apiData?.models) continue;
+
     for (const [modelName, modelData] of Object.entries(apiData.models)) {
-      const details = modelData.details.filter((detail) => {
+      const details = (modelData?.details || []).filter((detail) => {
         const timestamp = parseUsageTimestampMs(detail.timestamp);
         return Number.isFinite(timestamp) ? timestamp >= cutoff : false;
       });
@@ -112,9 +116,11 @@ export const filterUsageByDays = (data: UsageData, days: number, apiFilter: stri
 
 export const iterateUsageRecords = (data: UsageData): UsageRecord[] => {
   const details: UsageRecord[] = [];
+  if (!data?.apis) return details;
   for (const apiData of Object.values(data.apis)) {
+    if (!apiData?.models) continue;
     for (const [model, modelData] of Object.entries(apiData.models)) {
-      details.push(...modelData.details.map((detail) => ({ ...detail, model })));
+      details.push(...(modelData?.details || []).map((detail) => ({ ...detail, model })));
     }
   }
   return details;
