@@ -54,17 +54,48 @@ export interface UsageDetail {
 }
 
 export interface UsageData {
+  total_requests: number;
+  success_count: number;
+  failure_count: number;
+  total_tokens: number;
   apis: Record<
     string,
     {
+      total_requests: number;
+      total_tokens: number;
       models: Record<
         string,
         {
-          details: UsageDetail[];
+          total_requests: number;
+          total_tokens: number;
         }
       >;
     }
   >;
+  requests_by_day: Record<string, number>;
+  requests_by_hour: Record<string, number>;
+  tokens_by_day: Record<string, number>;
+  tokens_by_hour: Record<string, number>;
+}
+
+export interface ChartDataResponse {
+  daily_series: { date: string; requests: number; failed_requests: number; input_tokens: number; output_tokens: number }[];
+  model_distribution: { model: string; requests: number; tokens: number }[];
+  hourly_tokens: { hour: string; input_tokens: number; output_tokens: number; reasoning_tokens: number; cached_tokens: number; total_tokens: number }[];
+  hourly_models: { hour: string; model: string; requests: number }[];
+}
+
+export interface EntityStatPoint {
+  entity_name: string;
+  requests: number;
+  failed: number;
+  avg_latency: number;
+  total_tokens: number;
+}
+
+export interface EntityStatsResponse {
+  source: EntityStatPoint[];
+  auth_index: EntityStatPoint[];
 }
 
 export interface ProviderModel {
@@ -130,6 +161,7 @@ export interface IFlowCookieAuthResponse {
 
 export interface LogsQuery {
   after?: number;
+  limit?: number;
 }
 
 export interface LogsResponse {

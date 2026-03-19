@@ -16,8 +16,7 @@ import {
   X,
 } from "lucide-react";
 import { authFilesApi, usageApi } from "@/lib/http/apis";
-import type { AuthFileItem, OAuthModelAliasEntry, UsageDetail, UsageData } from "@/lib/http/types";
-import { iterateUsageRecords } from "@/modules/monitor/monitor-utils";
+import type { AuthFileItem, OAuthModelAliasEntry, UsageData } from "@/lib/http/types";
 import { Button } from "@/modules/ui/Button";
 import { Card } from "@/modules/ui/Card";
 import { ConfirmModal } from "@/modules/ui/ConfirmModal";
@@ -168,61 +167,34 @@ const downloadTextAsFile = (content: string, filename: string) => {
   window.setTimeout(() => URL.revokeObjectURL(url), 800);
 };
 
-type UsageEntry = {
-  timestamp: string;
-  failed: boolean;
-  source: string;
-  authIndexKey: string | null;
-};
-
 type UsageIndex = {
-  entriesBySource: Record<string, UsageEntry[]>;
-  entriesByAuthIndex: Record<string, UsageEntry[]>;
   statsBySource: Record<string, KeyStatBucket>;
   statsByAuthIndex: Record<string, KeyStatBucket>;
 };
 
-const buildUsageIndex = (usage: UsageData | null): { entries: UsageEntry[]; index: UsageIndex } => {
-  const entries = usage
-    ? (iterateUsageRecords(usage)
-        .map((detail) => {
-          const source = normalizeUsageSourceId((detail as UsageDetail).source, (v) => v);
-          if (!source) return null;
-          const authIndexKey = normalizeAuthIndexValue((detail as UsageDetail).auth_index);
-          return {
-            timestamp: (detail as UsageDetail).timestamp,
-            failed: Boolean((detail as UsageDetail).failed),
-            source,
-            authIndexKey,
-          };
-        })
-        .filter(Boolean) as UsageEntry[])
-    : [];
-
-  const entriesBySource: Record<string, UsageEntry[]> = {};
-  const entriesByAuthIndex: Record<string, UsageEntry[]> = {};
+const buildUsageIndex = (usage: import("@/lib/http/types").EntityStatsResponse | null): { index: UsageIndex } => {
   const statsBySource: Record<string, KeyStatBucket> = {};
   const statsByAuthIndex: Record<string, KeyStatBucket> = {};
 
-  const bump = (bucket: KeyStatBucket, failed: boolean) => {
-    if (failed) bucket.failure += 1;
-    else bucket.success += 1;
-  };
+  if (usage?.source) {
+    usage.source.forEach(pt => {
+      const src = normalizeUsageSourceId(pt.entity_name, v => v);
+      if (src) {
+        statsBySource[src] = { success: pt.requests - pt.failed, failure: pt.failed };
+      }
+    });
+  }
 
-  entries.forEach((entry) => {
-    (entriesBySource[entry.source] ??= []).push(entry);
-    bump((statsBySource[entry.source] ??= { success: 0, failure: 0 }), entry.failed);
+  if (usage?.auth_index) {
+    usage.auth_index.forEach(pt => {
+      const idx = normalizeAuthIndexValue(pt.entity_name);
+      if (idx) {
+        statsByAuthIndex[idx] = { success: pt.requests - pt.failed, failure: pt.failed };
+      }
+    });
+  }
 
-    if (entry.authIndexKey) {
-      (entriesByAuthIndex[entry.authIndexKey] ??= []).push(entry);
-      bump((statsByAuthIndex[entry.authIndexKey] ??= { success: 0, failure: 0 }), entry.failed);
-    }
-  });
-
-  return {
-    entries,
-    index: { entriesBySource, entriesByAuthIndex, statsBySource, statsByAuthIndex },
-  };
+  return { index: { statsBySource, statsByAuthIndex } };
 };
 
 const buildAuthFileSourceCandidates = (file: AuthFileItem): string[] => {
@@ -254,31 +226,52 @@ const resolveAuthFileStats = (file: AuthFileItem, index: UsageIndex): KeyStatBuc
   return bucket;
 };
 
-const resolveAuthFileStatusBar = (file: AuthFileItem, index: UsageIndex): StatusBarData => {
-  const authIndexKey = normalizeAuthIndexValue(
-    file.auth_index ?? file.authIndex ?? file.authIndex ?? file.auth_index,
-  );
-  if (authIndexKey && index.entriesByAuthIndex[authIndexKey]?.length) {
-    const details = index.entriesByAuthIndex[authIndexKey].map((e) => ({
-      timestamp: e.timestamp,
-      failed: e.failed,
-    }));
-    return calculateStatusBarData(details);
+const resolveAuthFileStatusBar = (file: AuthFileItem, index: UsageIndex): import("@/utils/usage").StatusBarData => {
+  const stats = resolveAuthFileStats(file, index);
+  if (stats.success === 0 && stats.failure === 0) {
+    return { blocks: [], blockDetails: [], successRate: 100, totalSuccess: 0, totalFailure: 0 };
   }
 
-  const candidates = buildAuthFileSourceCandidates(file);
-  const merged: UsageEntry[] = [];
-  const seen = new Set<string>();
-  candidates.forEach((key) => {
-    const list = index.entriesBySource[key] ?? [];
-    list.forEach((item) => {
-      const dedupe = `${item.timestamp}::${item.failed ? 1 : 0}`;
-      if (seen.has(dedupe)) return;
-      seen.add(dedupe);
-      merged.push(item);
+  const total = stats.success + stats.failure;
+  const BLOCK_COUNT = 20;
+  const blocks: import("@/utils/usage").StatusBlockState[] = [];
+  const blockDetails: import("@/utils/usage").StatusBlockDetail[] = [];
+
+  let tempFail = stats.failure;
+  let tempSuccess = stats.success;
+
+  for (let i = 0; i < BLOCK_COUNT; i++) {
+    const failPart = Math.floor(tempFail / (BLOCK_COUNT - i));
+    const successPart = Math.floor(tempSuccess / (BLOCK_COUNT - i));
+    tempFail -= failPart;
+    tempSuccess -= successPart;
+
+    if (failPart === 0 && successPart === 0) {
+      blocks.push("idle");
+    } else if (failPart === 0) {
+      blocks.push("success");
+    } else if (successPart === 0) {
+      blocks.push("failure");
+    } else {
+      blocks.push("mixed");
+    }
+
+    blockDetails.push({
+      success: successPart,
+      failure: failPart,
+      rate: (successPart + failPart) > 0 ? (successPart / (successPart + failPart)) : -1,
+      startTime: 0,
+      endTime: 0,
     });
-  });
-  return calculateStatusBarData(merged.map((e) => ({ timestamp: e.timestamp, failed: e.failed })));
+  }
+
+  return {
+    blocks,
+    blockDetails,
+    successRate: (stats.success / total) * 100,
+    totalSuccess: stats.success,
+    totalFailure: stats.failure,
+  };
 };
 
 type PrefixProxyEditorState = {
@@ -332,7 +325,7 @@ export function AuthFilesPage() {
   const modelsCacheRef = useRef<Map<string, AuthFileModelItem[]>>(new Map());
 
   const [usageLoading, setUsageLoading] = useState(false);
-  const [usageData, setUsageData] = useState<UsageData | null>(null);
+  const [usageData, setUsageData] = useState<import("@/lib/http/types").EntityStatsResponse | null>(null);
 
   const { index: usageIndex } = useMemo(() => buildUsageIndex(usageData), [usageData]);
 
@@ -386,7 +379,7 @@ export function AuthFilesPage() {
     try {
       const [filesRes, usageRes] = await Promise.all([
         authFilesApi.list(),
-        usageApi.getUsage().catch(() => null),
+        usageApi.getEntityStats(30, "all").catch(() => null),
       ]);
       const list = Array.isArray(filesRes?.files) ? filesRes.files : [];
       setFiles(list);
@@ -2205,8 +2198,8 @@ export function AuthFilesPage() {
               ? t("auth_files.confirm_delete_all")
               : t("auth_files.confirm_delete_filter", { filter })
             : t("auth_files.confirm_delete_file", {
-                name: confirm?.type === "deleteFile" ? confirm.name : "",
-              })
+              name: confirm?.type === "deleteFile" ? confirm.name : "",
+            })
         }
         confirmText={t("common.delete")}
         busy={deletingAll}

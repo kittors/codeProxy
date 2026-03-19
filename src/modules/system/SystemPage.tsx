@@ -356,10 +356,6 @@ export function SystemPage() {
   useEffect(() => {
     void loadModels();
   }, [loadModels]);
-  useEffect(() => {
-    const timer = setInterval(() => void loadModels(), AUTO_REFRESH_INTERVAL);
-    return () => clearInterval(timer);
-  }, [loadModels]);
 
   const filteredModels = useMemo(() => {
     const needle = modelFilter.trim().toLowerCase();

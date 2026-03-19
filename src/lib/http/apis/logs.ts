@@ -2,8 +2,12 @@ import { apiClient } from "@/lib/http/client";
 import type { ErrorLogsResponse, LogsQuery, LogsResponse } from "@/lib/http/types";
 
 export const logsApi = {
-  fetchLogs: ({ after }: LogsQuery = {}): Promise<LogsResponse> =>
-    apiClient.get("/logs", { params: after ? { after } : undefined, timeoutMs: 60000 }),
+  fetchLogs: ({ after, limit }: LogsQuery = {}): Promise<LogsResponse> => {
+    const params: Record<string, number> = {};
+    if (after) params.after = after;
+    if (limit) params.limit = limit;
+    return apiClient.get("/logs", { params: Object.keys(params).length ? params : undefined, timeoutMs: 60000 });
+  },
   clearLogs: (): Promise<void> => apiClient.delete("/logs"),
   fetchErrorLogs: (): Promise<ErrorLogsResponse> =>
     apiClient.get("/request-error-logs", { timeoutMs: 60000 }),

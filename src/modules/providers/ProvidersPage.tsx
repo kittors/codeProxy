@@ -31,7 +31,6 @@ import {
   usageApi,
 } from "@/lib/http/apis";
 import type { ApiCallResult, OpenAIProvider, ProviderSimpleConfig } from "@/lib/http/types";
-import { iterateUsageRecords } from "@/modules/monitor/monitor-utils";
 import { Button } from "@/modules/ui/Button";
 import { Card } from "@/modules/ui/Card";
 import { EmptyState } from "@/modules/ui/EmptyState";
@@ -90,9 +89,6 @@ export function ProvidersPage() {
   const [vertexKeys, setVertexKeys] = useState<ProviderSimpleConfig[]>([]);
   const [openaiProviders, setOpenaiProviders] = useState<OpenAIProvider[]>([]);
 
-  const [usageEntries, setUsageEntries] = useState<
-    Array<{ timestamp: string; failed: boolean; source: string }>
-  >([]);
   const [usageStatsBySource, setUsageStatsBySource] = useState<Record<string, KeyStatBucket>>({});
 
   const [ampcode, setAmpcode] = useState<Record<string, unknown> | null>(null);
@@ -228,28 +224,20 @@ export function ProvidersPage() {
     [notify],
   );
 
-  // Usage 统计单独加载一次
   const loadUsage = useCallback(async () => {
     try {
-      const usage = await usageApi.getUsage().catch(() => null);
-      if (usage) {
-        const flattened = iterateUsageRecords(usage);
-        const normalized = flattened
-          .map((detail) => {
-            const source = normalizeUsageSourceId(detail.source, maskApiKey);
-            if (!source) return null;
-            return { timestamp: detail.timestamp, failed: Boolean(detail.failed), source };
-          })
-          .filter(Boolean) as Array<{ timestamp: string; failed: boolean; source: string }>;
-
+      const usage = await usageApi.getEntityStats(30, "all").catch(() => null);
+      if (usage?.source) {
         const stats: Record<string, KeyStatBucket> = {};
-        normalized.forEach((detail) => {
-          const bucket = (stats[detail.source] ??= { success: 0, failure: 0 });
-          if (detail.failed) bucket.failure += 1;
-          else bucket.success += 1;
+        usage.source.forEach((pt) => {
+          const src = normalizeUsageSourceId(pt.entity_name, maskApiKey);
+          if (src) {
+            const bucket = stats[src] ?? { success: 0, failure: 0 };
+            bucket.success += pt.requests - pt.failed;
+            bucket.failure += pt.failed;
+            stats[src] = bucket;
+          }
         });
-
-        setUsageEntries(normalized);
         setUsageStatsBySource(stats);
       }
     } catch {
@@ -780,31 +768,66 @@ export function ProvidersPage() {
     [usageStatsBySource],
   );
 
+  const mockStatusBarData = useCallback((stats: KeyStatBucket): import("@/utils/usage").StatusBarData => {
+    if (stats.success === 0 && stats.failure === 0) {
+      return { blocks: [], blockDetails: [], successRate: 100, totalSuccess: 0, totalFailure: 0 };
+    }
+    const BLOCK_COUNT = 20;
+    const blocks: import("@/utils/usage").StatusBlockState[] = [];
+    const blockDetails: import("@/utils/usage").StatusBlockDetail[] = [];
+    const total = stats.success + stats.failure;
+    let tempFail = stats.failure;
+    let tempSuccess = stats.success;
+
+    for (let i = 0; i < BLOCK_COUNT; i++) {
+      const failPart = Math.floor(tempFail / (BLOCK_COUNT - i));
+      const successPart = Math.floor(tempSuccess / (BLOCK_COUNT - i));
+      tempFail -= failPart;
+      tempSuccess -= successPart;
+
+      if (failPart === 0 && successPart === 0) {
+        blocks.push("idle");
+      } else if (failPart === 0) {
+        blocks.push("success");
+      } else if (successPart === 0) {
+        blocks.push("failure");
+      } else {
+        blocks.push("mixed");
+      }
+      blockDetails.push({
+        success: successPart,
+        failure: failPart,
+        rate: (successPart + failPart) > 0 ? (successPart / (successPart + failPart)) : -1,
+        startTime: 0,
+        endTime: 0,
+      });
+    }
+
+    return {
+      blocks,
+      blockDetails,
+      successRate: (stats.success / total) * 100,
+      totalSuccess: stats.success,
+      totalFailure: stats.failure,
+    };
+  }, []);
+
   const getSimpleStatusBar = useCallback(
-    (config: ProviderSimpleConfig): StatusBarData => {
-      const candidates = new Set(
-        buildCandidateUsageSourceIds({
-          apiKey: config.apiKey,
-          prefix: config.prefix,
-          masker: maskApiKey,
-        }),
-      );
-      const details = candidates.size ? usageEntries.filter((d) => candidates.has(d.source)) : [];
-      return calculateStatusBarData(details);
+    (config: ProviderSimpleConfig): import("@/utils/usage").StatusBarData => {
+      return mockStatusBarData(getSimpleStats(config));
     },
-    [usageEntries],
+    [getSimpleStats, mockStatusBarData],
   );
 
   const getOpenAIProviderStats = useCallback(
     (provider: OpenAIProvider): KeyStatBucket => {
       const candidates = new Set<string>();
-      buildCandidateUsageSourceIds({ prefix: provider.prefix, masker: maskApiKey }).forEach((id) =>
-        candidates.add(id),
-      );
       (provider.apiKeyEntries || []).forEach((entry) => {
-        buildCandidateUsageSourceIds({ apiKey: entry.apiKey, masker: maskApiKey }).forEach((id) =>
-          candidates.add(id),
-        );
+        buildCandidateUsageSourceIds({
+          apiKey: entry.apiKey,
+          prefix: provider.prefix,
+          masker: maskApiKey,
+        }).forEach((c) => candidates.add(c));
       });
       return sumStatsByCandidates(Array.from(candidates), usageStatsBySource);
     },
@@ -812,20 +835,10 @@ export function ProvidersPage() {
   );
 
   const getOpenAIProviderStatusBar = useCallback(
-    (provider: OpenAIProvider): StatusBarData => {
-      const candidates = new Set<string>();
-      buildCandidateUsageSourceIds({ prefix: provider.prefix, masker: maskApiKey }).forEach((id) =>
-        candidates.add(id),
-      );
-      (provider.apiKeyEntries || []).forEach((entry) => {
-        buildCandidateUsageSourceIds({ apiKey: entry.apiKey, masker: maskApiKey }).forEach((id) =>
-          candidates.add(id),
-        );
-      });
-      const details = candidates.size ? usageEntries.filter((d) => candidates.has(d.source)) : [];
-      return calculateStatusBarData(details);
+    (provider: OpenAIProvider): import("@/utils/usage").StatusBarData => {
+      return mockStatusBarData(getOpenAIProviderStats(provider));
     },
-    [usageEntries],
+    [getOpenAIProviderStats, mockStatusBarData],
   );
 
   const editKeyEnabled = useMemo(() => {
@@ -1897,8 +1910,8 @@ export function ProvidersPage() {
         description={
           confirm?.type === "deleteOpenAI"
             ? t("providers.confirm_delete_openai", {
-                name: openaiProviders[confirm.index]?.name ?? "",
-              })
+              name: openaiProviders[confirm.index]?.name ?? "",
+            })
             : confirm?.type === "deleteKey"
               ? t("providers.confirm_delete_config")
               : t("providers.confirm_delete_generic")

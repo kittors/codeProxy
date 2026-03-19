@@ -77,82 +77,46 @@ export const parseUsageTimestampMs = (value: string): number => {
   return Number.isFinite(time) ? time : Number.NaN;
 };
 
-export const filterUsageByDays = (data: UsageData, days: number, apiFilter: string): UsageData => {
-  const now = Date.now();
-  const cutoff = now - days * 24 * 60 * 60 * 1000;
+
+
+export const computeKpiMetrics = (data: UsageData, apiFilter: string): KpiMetrics => {
   const normalizedFilter = apiFilter.trim().toLowerCase();
 
-  const filtered: UsageData = { apis: {} };
-
-  for (const [apiKey, apiData] of Object.entries(data.apis)) {
-    if (normalizedFilter && !apiKey.toLowerCase().includes(normalizedFilter)) {
-      continue;
-    }
-
-    const nextModels: UsageData["apis"][string]["models"] = {};
-
-    for (const [modelName, modelData] of Object.entries(apiData.models)) {
-      const details = modelData.details.filter((detail) => {
-        const timestamp = parseUsageTimestampMs(detail.timestamp);
-        return Number.isFinite(timestamp) ? timestamp >= cutoff : false;
-      });
-
-      if (details.length > 0) {
-        nextModels[modelName] = { details };
-      }
-    }
-
-    if (Object.keys(nextModels).length > 0) {
-      filtered.apis[apiKey] = { models: nextModels };
-    }
+  if (!normalizedFilter || normalizedFilter === "all" || normalizedFilter === "*") {
+    // Return top-level metrics if no filter
+    return {
+      requestCount: data.total_requests || 0,
+      successCount: data.success_count || 0,
+      failedCount: data.failure_count || 0,
+      successRate: data.total_requests > 0 ? ((data.success_count || 0) / data.total_requests) * 100 : 0,
+      totalTokens: data.total_tokens || 0,
+      inputTokens: 0,
+      outputTokens: 0,
+      reasoningTokens: 0,
+      cachedTokens: 0,
+    };
   }
 
-  return filtered;
-};
-
-export const iterateUsageRecords = (data: UsageData): UsageRecord[] => {
-  const details: UsageRecord[] = [];
-  for (const apiData of Object.values(data.apis)) {
-    for (const [model, modelData] of Object.entries(apiData.models)) {
-      details.push(...modelData.details.map((detail) => ({ ...detail, model })));
+  // Sum up from filtered APIs
+  let reqs = 0;
+  let tokens = 0;
+  for (const [apiKey, apiData] of Object.entries(data.apis || {})) {
+    if (apiKey.toLowerCase().includes(normalizedFilter)) {
+      reqs += apiData.total_requests || 0;
+      tokens += apiData.total_tokens || 0;
     }
   }
-  return details;
-};
-
-export const computeKpiMetrics = (data: UsageData): KpiMetrics => {
-  const details = iterateUsageRecords(data);
-
-  const requestCount = details.length;
-  const failedCount = details.reduce((count, detail) => (detail.failed ? count + 1 : count), 0);
-  const successCount = requestCount - failedCount;
-  const successRate = requestCount === 0 ? 0 : (successCount / requestCount) * 100;
-
-  const inputTokens = details.reduce((sum, detail) => sum + (detail.tokens?.input_tokens ?? 0), 0);
-  const outputTokens = details.reduce(
-    (sum, detail) => sum + (detail.tokens?.output_tokens ?? 0),
-    0,
-  );
-  const reasoningTokens = details.reduce(
-    (sum, detail) => sum + (detail.tokens?.reasoning_tokens ?? 0),
-    0,
-  );
-  const cachedTokens = details.reduce(
-    (sum, detail) => sum + (detail.tokens?.cached_tokens ?? 0),
-    0,
-  );
-  const totalTokens = details.reduce((sum, detail) => sum + (detail.tokens?.total_tokens ?? 0), 0);
 
   return {
-    requestCount,
-    successCount,
-    failedCount,
-    successRate,
-    totalTokens,
-    inputTokens,
-    outputTokens,
-    reasoningTokens,
-    cachedTokens,
+    requestCount: reqs,
+    successCount: reqs,
+    failedCount: 0,
+    successRate: reqs > 0 ? 100 : 0,
+    totalTokens: tokens,
+    inputTokens: 0,
+    outputTokens: 0,
+    reasoningTokens: 0,
+    cachedTokens: 0,
   };
 };
 

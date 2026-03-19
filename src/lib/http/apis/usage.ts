@@ -1,5 +1,5 @@
 import { apiClient } from "@/lib/http/client";
-import type { UsageData } from "@/lib/http/types";
+import type { UsageData, ChartDataResponse, EntityStatsResponse } from "@/lib/http/types";
 
 export interface UsageExportPayload {
   version?: number;
@@ -23,18 +23,44 @@ export const usageApi = {
       response.usage && typeof response.usage === "object" ? response.usage : response;
 
     if (!candidate || typeof candidate !== "object") {
-      return { apis: {} };
+      return {
+        total_requests: 0, success_count: 0, failure_count: 0, total_tokens: 0,
+        apis: {}, requests_by_day: {}, requests_by_hour: {}, tokens_by_day: {}, tokens_by_hour: {}
+      };
     }
 
     const payload = candidate as { apis?: UsageData["apis"] };
 
     if (!payload.apis || typeof payload.apis !== "object") {
-      return { apis: {} };
+      return {
+        total_requests: 0, success_count: 0, failure_count: 0, total_tokens: 0,
+        apis: {}, requests_by_day: {}, requests_by_hour: {}, tokens_by_day: {}, tokens_by_hour: {}
+      };
     }
 
     return {
       apis: payload.apis,
+      total_requests: (payload as any).total_requests ?? 0,
+      success_count: (payload as any).success_count ?? 0,
+      failure_count: (payload as any).failure_count ?? 0,
+      total_tokens: (payload as any).total_tokens ?? 0,
+      requests_by_day: (payload as any).requests_by_day || {},
+      requests_by_hour: (payload as any).requests_by_hour || {},
+      tokens_by_day: (payload as any).tokens_by_day || {},
+      tokens_by_hour: (payload as any).tokens_by_hour || {},
     };
+  },
+
+  async getChartData(days = 7, apiKey = ""): Promise<ChartDataResponse> {
+    const qs = new URLSearchParams({ days: String(days) });
+    if (apiKey && apiKey !== "all") qs.set("api_key", apiKey);
+    return apiClient.get<ChartDataResponse>(`/usage/chart-data?${qs.toString()}`);
+  },
+
+  async getEntityStats(days = 7, apiKey = ""): Promise<EntityStatsResponse> {
+    const qs = new URLSearchParams({ days: String(days) });
+    if (apiKey && apiKey !== "all") qs.set("api_key", apiKey);
+    return apiClient.get<EntityStatsResponse>(`/usage/entity-stats?${qs.toString()}`);
   },
 
   async getUsageLogs(params: {

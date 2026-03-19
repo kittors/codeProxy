@@ -13,11 +13,8 @@ import { usageApi } from "@/lib/http/apis";
 import type { UsageData } from "@/lib/http/types";
 import {
   computeKpiMetrics,
-  filterUsageByDays,
   formatNumber,
   formatRate,
-  iterateUsageRecords,
-  parseUsageTimestampMs,
 } from "@/modules/monitor/monitor-utils";
 import { AnimatedNumber } from "@/modules/ui/AnimatedNumber";
 import { TextInput } from "@/modules/ui/Input";
@@ -47,7 +44,17 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/modules/ui/Tabs";
 import { useTranslation } from "react-i18next";
 
-const createEmptyUsage = (): UsageData => ({ apis: {} });
+const createEmptyUsage = (): UsageData => ({
+  total_requests: 0,
+  success_count: 0,
+  failure_count: 0,
+  total_tokens: 0,
+  apis: {},
+  requests_by_day: {},
+  requests_by_hour: {},
+  tokens_by_day: {},
+  tokens_by_hour: {},
+});
 const DAILY_LEGEND_KEYS = {
   input: "daily_input",
   output: "daily_output",
@@ -98,6 +105,7 @@ export function MonitorPage() {
   });
 
   const [rawUsage, setRawUsage] = useState<UsageData>(createEmptyUsage);
+  const [chartData, setChartData] = useState<import("@/lib/http/types").ChartDataResponse | null>(null);
   const [timeRange, setTimeRange] = useState<TimeRange>(7);
   const [apiFilterInput, setApiFilterInput] = useState("");
   const [apiFilter, setApiFilter] = useState("");
@@ -112,9 +120,9 @@ export function MonitorPage() {
     setIsRefreshing(true);
     setError(null);
     try {
-      const usageData = await usageApi.getUsage();
+      const chartResp = await usageApi.getChartData(timeRange, apiFilter);
       startTransition(() => {
-        setRawUsage(usageData);
+        setChartData(chartResp);
       });
     } catch (requestError) {
       const message =
@@ -123,15 +131,37 @@ export function MonitorPage() {
     } finally {
       setIsRefreshing(false);
     }
-  }, [t]);
+  }, [t, timeRange, apiFilter]);
 
-  const filteredUsage = useMemo(() => {
-    return filterUsageByDays(rawUsage, timeRange, apiFilter);
-  }, [rawUsage, timeRange, apiFilter]);
+  const metrics = useMemo(() => {
+    let requests = 0;
+    let failed = 0;
+    let inputTokens = 0;
+    let outputTokens = 0;
 
-  const metrics = useMemo(() => computeKpiMetrics(filteredUsage), [filteredUsage]);
+    if (chartData?.daily_series) {
+      for (const pt of chartData.daily_series) {
+        requests += pt.requests || 0;
+        failed += pt.failed_requests || 0;
+        inputTokens += pt.input_tokens || 0;
+        outputTokens += pt.output_tokens || 0;
+      }
+    }
 
-  const records = useMemo(() => iterateUsageRecords(filteredUsage), [filteredUsage]);
+    const success = requests - failed;
+    const rate = requests > 0 ? (success / requests) * 100 : 0;
+
+    return {
+      totalRequests: requests,
+      successCount: success,
+      failureCount: failed,
+      successRate: rate,
+      inputTokens,
+      outputTokens,
+      totalTokens: inputTokens + outputTokens
+    };
+  }, [chartData]);
+
 
   const applyFilter = useCallback(() => {
     setApiFilter(apiFilterInput);
@@ -156,7 +186,7 @@ export function MonitorPage() {
     setHourlyTokenSelected((prev) => ({ ...prev, [key]: !(prev[key] ?? true) }));
   }, []);
 
-  const hasData = metrics.requestCount > 0;
+  const hasData = metrics.totalRequests > 0;
   const isLoading = isRefreshing || isPending;
 
   useEffect(() => {
@@ -164,21 +194,11 @@ export function MonitorPage() {
   }, [refreshData]);
 
   const modelTotals = useMemo(() => {
-    const byModel = new Map<string, { requests: number; tokens: number }>();
-    records.forEach((record) => {
-      const current = byModel.get(record.model) ?? { requests: 0, tokens: 0 };
-      byModel.set(record.model, {
-        requests: current.requests + 1,
-        tokens: current.tokens + (record.tokens?.total_tokens ?? 0),
-      });
-    });
-
-    return [...byModel.entries()]
-      .map(([model, value]) => ({ model, ...value }))
-      .sort(
-        (left, right) => right.requests - left.requests || left.model.localeCompare(right.model),
-      );
-  }, [records]);
+    if (!chartData?.model_distribution) return [];
+    return chartData.model_distribution.sort(
+      (left, right) => right.requests - left.requests || left.model.localeCompare(right.model)
+    );
+  }, [chartData]);
 
   const sortedModelsByMetric = useMemo(() => {
     const list = [...modelTotals];
@@ -213,111 +233,87 @@ export function MonitorPage() {
   }, [modelMetric, sortedModelsByMetric, t]);
 
   const dailySeries = useMemo(() => {
-    const byDay = new Map<
-      string,
-      { requests: number; inputTokens: number; outputTokens: number }
-    >();
+    if (!chartData?.daily_series) return [];
 
-    records.forEach((record) => {
-      const ms = parseUsageTimestampMs(record.timestamp);
-      if (!Number.isFinite(ms)) return;
-      const date = new Date(ms);
-      const key = formatLocalDateKey(date);
-      const current = byDay.get(key) ?? { requests: 0, inputTokens: 0, outputTokens: 0 };
-      byDay.set(key, {
-        requests: current.requests + 1,
-        inputTokens: current.inputTokens + (record.tokens?.input_tokens ?? 0),
-        outputTokens: current.outputTokens + (record.tokens?.output_tokens ?? 0),
-      });
+    // Parse backend date strings ("YYYY-MM-DD") to Date objects and format label
+    // Using UTC parsing trick to match backend day strings consistently
+    return chartData.daily_series.map(pt => {
+      // Create a date assuming noon UTC so boundary issues don't push it across
+      // local day boundaries.
+      const match = pt.date.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      let label = pt.date;
+      if (match) {
+        // Create local Date from the year, month, day
+        const localD = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+        label = formatMonthDay(localD);
+      }
+      return {
+        label,
+        requests: pt.requests,
+        inputTokens: pt.input_tokens,
+        outputTokens: pt.output_tokens,
+        totalTokens: pt.input_tokens + pt.output_tokens,
+      };
     });
-
-    const today = new Date();
-    const points = Array.from({ length: timeRange }).map((_, index) => {
-      const date = new Date(today);
-      date.setDate(today.getDate() - (timeRange - 1 - index));
-      const key = formatLocalDateKey(date);
-      const label = formatMonthDay(date);
-      const value = byDay.get(key) ?? { requests: 0, inputTokens: 0, outputTokens: 0 };
-      return { label, ...value, totalTokens: value.inputTokens + value.outputTokens };
-    });
-
-    return points;
-  }, [records, timeRange]);
+  }, [chartData]);
 
   const hourlySeries = useMemo(() => {
-    const hourWindow = 24;
-    const now = Date.now();
-    const endHour = Math.floor(now / 3_600_000);
-    const startHour = endHour - hourWindow + 1;
-
-    const hourLabels = Array.from({ length: hourWindow }).map((_, index) => {
-      const hour = startHour + index;
-      const date = new Date(hour * 3_600_000);
-      const label = `${String(date.getHours()).padStart(2, "0")}:00`;
-      return { hour, label };
-    });
-
-    const modelBuckets = new Map<number, Map<string, number>>();
-    const tokenBuckets = new Map<
-      number,
-      { input: number; output: number; reasoning: number; cached: number }
-    >();
-
-    records.forEach((record) => {
-      const ts = parseUsageTimestampMs(record.timestamp);
-      if (!Number.isFinite(ts)) return;
-      const hour = Math.floor(ts / 3_600_000);
-      if (hour < startHour || hour > endHour) return;
-
-      const modelMap = modelBuckets.get(hour) ?? new Map<string, number>();
-      modelMap.set(record.model, (modelMap.get(record.model) ?? 0) + 1);
-      modelBuckets.set(hour, modelMap);
-
-      const tokens = tokenBuckets.get(hour) ?? { input: 0, output: 0, reasoning: 0, cached: 0 };
-      tokenBuckets.set(hour, {
-        input: tokens.input + (record.tokens?.input_tokens ?? 0),
-        output: tokens.output + (record.tokens?.output_tokens ?? 0),
-        reasoning: tokens.reasoning + (record.tokens?.reasoning_tokens ?? 0),
-        cached: tokens.cached + (record.tokens?.cached_tokens ?? 0),
-      });
-    });
-
     const modelKeys = [...topModelKeys, HOURLY_MODEL_OTHER_KEY];
 
-    const modelPoints = hourLabels.map(({ hour, label }) => {
-      const map = modelBuckets.get(hour) ?? new Map<string, number>();
-      const stacks = modelKeys.map((key) => {
+    const modelPoints = (chartData?.hourly_models || []).reduce((acc, pt) => {
+      const [datePart, timePart] = pt.hour.split(' '); // "2023-10-10 15:00"
+      const label = timePart || pt.hour;
+
+      let bucket = acc.find(x => x.label === label);
+      if (!bucket) {
+        bucket = { label, stacksMap: new Map<string, number>() };
+        acc.push(bucket);
+      }
+      const current = bucket.stacksMap.get(pt.model) || 0;
+      bucket.stacksMap.set(pt.model, current + pt.requests);
+      return acc;
+    }, [] as { label: string, stacksMap: Map<string, number> }[]).map(bucket => {
+      const stacks = modelKeys.map(key => {
         if (key === HOURLY_MODEL_OTHER_KEY) {
-          const sum = [...map.entries()].reduce((acc, [model, value]) => {
-            return topModelKeys.includes(model) ? acc : acc + value;
-          }, 0);
+          let sum = 0;
+          for (const [m, v] of bucket.stacksMap.entries()) {
+            if (!topModelKeys.includes(m)) sum += v;
+          }
           return { key, value: sum };
         }
-        return { key, value: map.get(key) ?? 0 };
+        return { key, value: bucket.stacksMap.get(key) || 0 };
       });
-      return { label, stacks };
+      return { label: bucket.label, stacks };
     });
 
-    const tokenKeys = [
-      HOURLY_TOKEN_KEYS.input,
-      HOURLY_TOKEN_KEYS.output,
-      HOURLY_TOKEN_KEYS.reasoning,
-      HOURLY_TOKEN_KEYS.cached,
-    ] as const;
-
-    const tokenPoints = hourLabels.map(({ hour, label }) => {
-      const totals = tokenBuckets.get(hour) ?? { input: 0, output: 0, reasoning: 0, cached: 0 };
-      const stacks = [
-        { key: HOURLY_TOKEN_KEYS.input, value: totals.input },
-        { key: HOURLY_TOKEN_KEYS.output, value: totals.output },
-        { key: HOURLY_TOKEN_KEYS.reasoning, value: totals.reasoning },
-        { key: HOURLY_TOKEN_KEYS.cached, value: totals.cached },
-      ];
-      return { label, stacks };
+    const tokenPoints = (chartData?.hourly_tokens || []).map(pt => {
+      const [datePart, timePart] = pt.hour.split(' ');
+      const label = timePart || pt.hour;
+      return {
+        label,
+        stacks: [
+          { key: HOURLY_TOKEN_KEYS.input, value: pt.input_tokens },
+          { key: HOURLY_TOKEN_KEYS.output, value: pt.output_tokens },
+          { key: HOURLY_TOKEN_KEYS.reasoning, value: pt.reasoning_tokens },
+          { key: HOURLY_TOKEN_KEYS.cached, value: pt.cached_tokens },
+          { key: HOURLY_TOKEN_KEYS.total, value: pt.total_tokens },
+        ]
+      };
     });
 
-    return { modelKeys, modelPoints, tokenKeys: [...tokenKeys], tokenPoints };
-  }, [records, topModelKeys]);
+    return {
+      modelKeys,
+      modelPoints,
+      tokenKeys: [
+        HOURLY_TOKEN_KEYS.input,
+        HOURLY_TOKEN_KEYS.output,
+        HOURLY_TOKEN_KEYS.reasoning,
+        HOURLY_TOKEN_KEYS.cached,
+        HOURLY_TOKEN_KEYS.total,
+      ],
+      tokenPoints,
+    };
+  }, [chartData, topModelKeys]);
 
   const hourlyModelPalette = useMemo(() => {
     const palette = [
@@ -601,7 +597,7 @@ export function MonitorPage() {
         <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <KpiCard
             title={t("monitor.total_requests")}
-            value={<AnimatedNumber value={metrics.requestCount} format={formatNumber} />}
+            value={<AnimatedNumber value={metrics.totalRequests} format={formatNumber} />}
             hint={t("monitor.filtered_by_time")}
             icon={Activity}
           />
@@ -610,7 +606,7 @@ export function MonitorPage() {
             value={<AnimatedNumber value={metrics.successRate} format={formatRate} />}
             hint={t("monitor.success_count", {
               success: formatNumber(metrics.successCount),
-              failed: formatNumber(metrics.failedCount),
+              failed: formatNumber(metrics.failureCount),
             })}
             icon={ShieldCheck}
           />
@@ -712,36 +708,36 @@ export function MonitorPage() {
                     items={[
                       ...(dailyLegendAvailability.hasInput
                         ? [
-                            {
-                              key: DAILY_LEGEND_KEYS.input,
-                              label: t("monitor.input_token"),
-                              colorClass: "bg-violet-400",
-                              enabled: dailyLegendSelected[DAILY_LEGEND_KEYS.input] ?? true,
-                              onToggle: toggleDailyLegend,
-                            },
-                          ]
+                          {
+                            key: DAILY_LEGEND_KEYS.input,
+                            label: t("monitor.input_token"),
+                            colorClass: "bg-violet-400",
+                            enabled: dailyLegendSelected[DAILY_LEGEND_KEYS.input] ?? true,
+                            onToggle: toggleDailyLegend,
+                          },
+                        ]
                         : []),
                       ...(dailyLegendAvailability.hasOutput
                         ? [
-                            {
-                              key: DAILY_LEGEND_KEYS.output,
-                              label: t("monitor.output_token_legend"),
-                              colorClass: "bg-emerald-400",
-                              enabled: dailyLegendSelected[DAILY_LEGEND_KEYS.output] ?? true,
-                              onToggle: toggleDailyLegend,
-                            },
-                          ]
+                          {
+                            key: DAILY_LEGEND_KEYS.output,
+                            label: t("monitor.output_token_legend"),
+                            colorClass: "bg-emerald-400",
+                            enabled: dailyLegendSelected[DAILY_LEGEND_KEYS.output] ?? true,
+                            onToggle: toggleDailyLegend,
+                          },
+                        ]
                         : []),
                       ...(dailyLegendAvailability.hasRequests
                         ? [
-                            {
-                              key: DAILY_LEGEND_KEYS.requests,
-                              label: t("monitor.requests"),
-                              colorClass: "bg-blue-500",
-                              enabled: dailyLegendSelected[DAILY_LEGEND_KEYS.requests] ?? true,
-                              onToggle: toggleDailyLegend,
-                            },
-                          ]
+                          {
+                            key: DAILY_LEGEND_KEYS.requests,
+                            label: t("monitor.requests"),
+                            colorClass: "bg-blue-500",
+                            enabled: dailyLegendSelected[DAILY_LEGEND_KEYS.requests] ?? true,
+                            onToggle: toggleDailyLegend,
+                          },
+                        ]
                         : []),
                     ]}
                   />

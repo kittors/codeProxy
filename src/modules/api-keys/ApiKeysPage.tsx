@@ -162,36 +162,6 @@ interface UsageLogRow {
   totalTokens: number;
 }
 
-const buildUsageRows = (usage: UsageData, apiKey: string): UsageLogRow[] => {
-  const apiData = (usage.apis ?? {})[apiKey];
-  if (!apiData) return [];
-  const rows: UsageLogRow[] = [];
-  let id = 0;
-  Object.entries(apiData.models ?? {}).forEach(([model, modelData]) => {
-    (modelData.details ?? []).forEach((detail: any) => {
-      const tokens = detail.tokens;
-      rows.push({
-        id: `${id++}`,
-        timestamp: detail.timestamp ?? "",
-        model,
-        failed: Boolean(detail.failed),
-        latencyText: readLatencyText(detail),
-        inputTokens: tokens?.input_tokens ?? 0,
-        outputTokens: tokens?.output_tokens ?? 0,
-        totalTokens:
-          tokens?.total_tokens ?? (tokens?.input_tokens ?? 0) + (tokens?.output_tokens ?? 0),
-      });
-    });
-  });
-  return rows.sort((a, b) => {
-    const ta = a.timestamp ? new Date(a.timestamp).getTime() : 0;
-    const tb = b.timestamp ? new Date(b.timestamp).getTime() : 0;
-    return tb - ta;
-  });
-};
-
-/* ─── types ─── */
-
 interface FormValues {
   name: string;
   key: string;
@@ -218,8 +188,8 @@ export function ApiKeysPage() {
   const [usageViewKey, setUsageViewKey] = useState<string | null>(null);
   const [usageViewName, setUsageViewName] = useState<string>("");
   const [saving, setSaving] = useState(false);
-  const [usage, setUsage] = useState<UsageData>({ apis: {} });
   const [usageLoading, setUsageLoading] = useState(false);
+  const [usageRows, setUsageRows] = useState<any[]>([]);
   const [availableModels, setAvailableModels] = useState<MultiSelectOption[]>([]);
   const [form, setForm] = useState<FormValues>({
     name: "",
@@ -299,22 +269,9 @@ export function ApiKeysPage() {
     }
   }, [notify, loadModels]);
 
-  const loadUsage = useCallback(async () => {
-    setUsageLoading(true);
-    try {
-      const data = await usageApi.getUsage();
-      setUsage(data);
-    } catch {
-      // silent
-    } finally {
-      setUsageLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
     void loadEntries();
-    void loadUsage();
-  }, [loadEntries, loadUsage]);
+  }, [loadEntries]);
 
   /* ─── toggle disable ─── */
 
@@ -482,16 +439,29 @@ export function ApiKeysPage() {
 
   /* ─── usage view ─── */
 
-  const handleViewUsage = (entry: ApiKeyEntry) => {
+  const handleViewUsage = async (entry: ApiKeyEntry) => {
     setUsageViewKey(entry.key);
     setUsageViewName(entry.name || t("api_keys_page.unnamed"));
-    void loadUsage();
+    setUsageLoading(true);
+    try {
+      const result = await usageApi.getUsageLogs({ api_key: entry.key, size: 200, days: 7 });
+      const rows = (result.items || []).map((r, i) => ({
+        id: r.id?.toString() || `${i}`,
+        timestamp: r.timestamp || "",
+        model: r.model || "",
+        failed: Boolean(r.failed),
+        latencyText: formatLatencyMs(r.latency_ms || 0),
+        inputTokens: r.input_tokens || 0,
+        outputTokens: r.output_tokens || 0,
+        totalTokens: r.total_tokens || ((r.input_tokens || 0) + (r.output_tokens || 0))
+      }));
+      setUsageRows(rows);
+    } catch {
+      setUsageRows([]);
+    } finally {
+      setUsageLoading(false);
+    }
   };
-
-  const usageRows = useMemo<UsageLogRow[]>(() => {
-    if (!usageViewKey) return [];
-    return buildUsageRows(usage, usageViewKey);
-  }, [usageViewKey, usage]);
 
   /* ─── column definitions ─── */
 
@@ -509,11 +479,10 @@ export function ApiKeysPage() {
             title={
               row.disabled ? t("api_keys_page.click_enable") : t("api_keys_page.click_disable")
             }
-            className={`inline-flex h-7 w-7 items-center justify-center rounded-lg transition-colors ${
-              row.disabled
-                ? "text-slate-400 hover:bg-red-50 hover:text-red-500 dark:text-white/30 dark:hover:bg-red-900/20 dark:hover:text-red-400"
-                : "text-emerald-500 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-900/20"
-            }`}
+            className={`inline-flex h-7 w-7 items-center justify-center rounded-lg transition-colors ${row.disabled
+              ? "text-slate-400 hover:bg-red-50 hover:text-red-500 dark:text-white/30 dark:hover:bg-red-900/20 dark:hover:text-red-400"
+              : "text-emerald-500 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-900/20"
+              }`}
           >
             <Power size={15} />
           </button>

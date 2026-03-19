@@ -8,6 +8,7 @@ import { Button } from "@/modules/ui/Button";
 import { EmptyState } from "@/modules/ui/EmptyState";
 import { Tabs, TabsList, TabsTrigger } from "@/modules/ui/Tabs";
 import { useToast } from "@/modules/ui/ToastProvider";
+import { AnimatedNumber } from "@/modules/ui/AnimatedNumber";
 
 type DashboardRange = 1 | 7 | 30;
 
@@ -105,7 +106,7 @@ export function DashboardPage() {
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <KpiCard
           title={t("dashboard.total_requests")}
-          value={<span className="tabular-nums">{formatNumber(kpi?.total_requests ?? 0)}</span>}
+          value={<AnimatedNumber value={kpi?.total_requests ?? 0} format={formatNumber} />}
           hint={
             range === 1
               ? t("dashboard.total_hint_today")
@@ -115,7 +116,7 @@ export function DashboardPage() {
         />
         <KpiCard
           title={t("dashboard.success_rate")}
-          value={<span className="tabular-nums">{formatRate(kpi?.success_rate ?? 0)}</span>}
+          value={<AnimatedNumber value={kpi?.success_rate ?? 0} format={formatRate} />}
           hint={t("dashboard.success_hint", {
             success: formatNumber(kpi?.success_requests ?? 0),
             failed: formatNumber(kpi?.failed_requests ?? 0),
@@ -124,7 +125,7 @@ export function DashboardPage() {
         />
         <KpiCard
           title={t("dashboard.total_tokens")}
-          value={<span className="tabular-nums">{formatNumber(kpi?.total_tokens ?? 0)}</span>}
+          value={<AnimatedNumber value={kpi?.total_tokens ?? 0} format={formatNumber} />}
           hint={t("dashboard.token_hint", {
             input: formatNumber(kpi?.input_tokens ?? 0),
             output: formatNumber(kpi?.output_tokens ?? 0),
@@ -133,7 +134,7 @@ export function DashboardPage() {
         />
         <KpiCard
           title={t("dashboard.failed_requests")}
-          value={<span className="tabular-nums">{formatNumber(kpi?.failed_requests ?? 0)}</span>}
+          value={<AnimatedNumber value={kpi?.failed_requests ?? 0} format={formatNumber} />}
           hint={t("dashboard.failed_hint")}
           icon={TriangleAlert}
         />

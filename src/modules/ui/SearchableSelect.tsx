@@ -162,80 +162,81 @@ export function SearchableSelect({
 
       {open
         ? createPortal(
-            <div
-              ref={listRef}
-              role="listbox"
-              aria-label={ariaLabel}
-              className={cn(
-                "fixed z-[9999] flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg",
-                "dark:border-neutral-700 dark:bg-neutral-900",
-              )}
-              style={{
-                top: pos.top,
-                left: pos.left,
-                minWidth: pos.width,
-                maxHeight: 320,
-              }}
-            >
-              {/* Search input */}
-              <div className="flex items-center gap-2 border-b border-slate-100 px-3 py-2 dark:border-neutral-800">
-                <Search
-                  size={14}
-                  className="shrink-0 text-slate-400 dark:text-white/40"
-                  aria-hidden="true"
-                />
-                <input
-                  ref={inputRef}
-                  type="text"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder={searchPlaceholder}
-                  className="h-6 w-full bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400 dark:text-white/80 dark:placeholder:text-white/30"
-                  autoComplete="off"
-                  spellCheck={false}
-                />
-              </div>
+          <div
+            ref={listRef}
+            role="listbox"
+            aria-label={ariaLabel}
+            className={cn(
+              "fixed z-[9999] flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg",
+              "dark:border-neutral-700 dark:bg-neutral-900",
+            )}
+            style={{
+              top: pos.top,
+              left: pos.left,
+              minWidth: pos.width,
+              maxWidth: 'min(500px, 90vw)',
+              maxHeight: 320,
+            }}
+          >
+            {/* Search input */}
+            <div className="flex items-center gap-2 border-b border-slate-100 px-3 py-2 dark:border-neutral-800">
+              <Search
+                size={14}
+                className="shrink-0 text-slate-400 dark:text-white/40"
+                aria-hidden="true"
+              />
+              <input
+                ref={inputRef}
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder={searchPlaceholder}
+                className="h-6 w-full bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400 dark:text-white/80 dark:placeholder:text-white/30"
+                autoComplete="off"
+                spellCheck={false}
+              />
+            </div>
 
-              {/* Options list */}
-              <div className="flex-1 overflow-y-auto p-1">
-                {filtered.length === 0 ? (
-                  <div className="px-2.5 py-3 text-center text-xs text-slate-400 dark:text-white/30">
-                    No results
-                  </div>
-                ) : (
-                  filtered.map((opt) => {
-                    const selected = opt.value === value;
-                    return (
-                      <button
-                        key={opt.value}
-                        type="button"
-                        role="option"
-                        aria-selected={selected}
-                        onClick={() => handleSelect(opt.value)}
-                        className={cn(
-                          "flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm outline-none transition-colors",
-                          "hover:bg-slate-100 dark:hover:bg-white/10",
-                          selected
-                            ? "font-medium text-slate-900 dark:text-white"
-                            : "text-slate-600 dark:text-slate-300",
-                        )}
-                      >
-                        <span className="flex-1 truncate">{opt.label}</span>
-                        {selected ? (
-                          <Check
-                            size={14}
-                            className="shrink-0 text-slate-400 dark:text-white/50"
-                            aria-hidden="true"
-                          />
-                        ) : null}
-                      </button>
-                    );
-                  })
-                )}
-              </div>
-            </div>,
-            document.body,
-          )
+            {/* Options list */}
+            <div className="flex-1 overflow-y-auto p-1">
+              {filtered.length === 0 ? (
+                <div className="px-2.5 py-3 text-center text-xs text-slate-400 dark:text-white/30">
+                  No results
+                </div>
+              ) : (
+                filtered.map((opt) => {
+                  const selected = opt.value === value;
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      role="option"
+                      aria-selected={selected}
+                      onClick={() => handleSelect(opt.value)}
+                      className={cn(
+                        "flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm outline-none transition-colors",
+                        "hover:bg-slate-100 dark:hover:bg-white/10",
+                        selected
+                          ? "font-medium text-slate-900 dark:text-white"
+                          : "text-slate-600 dark:text-slate-300",
+                      )}
+                    >
+                      <span className="flex-1 whitespace-nowrap">{opt.label}</span>
+                      {selected ? (
+                        <Check
+                          size={14}
+                          className="shrink-0 text-slate-400 dark:text-white/50"
+                          aria-hidden="true"
+                        />
+                      ) : null}
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          </div>,
+          document.body,
+        )
         : null}
     </>
   );
