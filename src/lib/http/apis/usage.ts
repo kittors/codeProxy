@@ -54,13 +54,23 @@ export const usageApi = {
   async getChartData(days = 7, apiKey = ""): Promise<ChartDataResponse> {
     const qs = new URLSearchParams({ days: String(days) });
     if (apiKey && apiKey !== "all") qs.set("api_key", apiKey);
-    return apiClient.get<ChartDataResponse>(`/usage/chart-data?${qs.toString()}`);
+    const resp = await apiClient.get<ChartDataResponse>(`/usage/chart-data?${qs.toString()}`);
+    return {
+      daily_series: Array.isArray(resp?.daily_series) ? resp.daily_series : [],
+      model_distribution: Array.isArray(resp?.model_distribution) ? resp.model_distribution : [],
+      hourly_tokens: Array.isArray(resp?.hourly_tokens) ? resp.hourly_tokens : [],
+      hourly_models: Array.isArray(resp?.hourly_models) ? resp.hourly_models : [],
+    };
   },
 
   async getEntityStats(days = 7, apiKey = ""): Promise<EntityStatsResponse> {
     const qs = new URLSearchParams({ days: String(days) });
     if (apiKey && apiKey !== "all") qs.set("api_key", apiKey);
-    return apiClient.get<EntityStatsResponse>(`/usage/entity-stats?${qs.toString()}`);
+    const resp = await apiClient.get<EntityStatsResponse>(`/usage/entity-stats?${qs.toString()}`);
+    return {
+      source: Array.isArray(resp?.source) ? resp.source : [],
+      auth_index: Array.isArray(resp?.auth_index) ? resp.auth_index : [],
+    };
   },
 
   async getUsageLogs(params: {
