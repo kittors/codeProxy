@@ -67,12 +67,17 @@ export function Select({
     const el = triggerRef.current;
     if (!el) return;
     const rect = el.getBoundingClientRect();
+    const gap = 6;
+    // Estimate dropdown height: each option ~36px + padding 8px, capped at maxHeight 280
+    const estimatedHeight = Math.min(options.length * 36 + 8, 280);
+    const spaceBelow = window.innerHeight - rect.bottom - gap;
+    const fitsBelow = spaceBelow >= estimatedHeight;
     setPos({
-      top: rect.bottom + 6,
+      top: fitsBelow ? rect.bottom + gap : rect.top - gap - estimatedHeight,
       left: rect.left,
       width: rect.width,
     });
-  }, []);
+  }, [options.length]);
 
   /* Recompute position on open and on scroll/resize */
   useLayoutEffect(() => {
