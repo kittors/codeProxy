@@ -95,6 +95,17 @@ function buildLogColumns(
 ): VirtualTableColumn<LogRow>[] {
   return [
     {
+      key: "id",
+      label: t("request_logs.col_id"),
+      width: "w-20",
+      cellClassName: "font-mono text-xs tabular-nums text-slate-500 dark:text-white/50",
+      render: (row) => (
+        <OverflowTooltip content={`#${row.id}`} className="block min-w-0">
+          <span className="block min-w-0 truncate">#{row.id}</span>
+        </OverflowTooltip>
+      ),
+    },
+    {
       key: "timestamp",
       label: t("request_logs.col_time"),
       width: "w-52",

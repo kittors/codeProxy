@@ -2090,6 +2090,7 @@
     "today": "今天",
     "n_days": "{{count}} 天",
     "heading": "请求日志",
+    "col_id": "ID",
     "col_time": "时间",
     "col_key_name": "密钥名称",
     "col_model": "模型",

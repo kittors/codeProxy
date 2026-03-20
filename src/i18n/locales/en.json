@@ -1928,6 +1928,7 @@
     "today": "Today",
     "n_days": "{{count}} days",
     "heading": "Request Logs",
+    "col_id": "ID",
     "col_time": "Time",
     "col_key_name": "Key Name",
     "col_model": "Model",
