@@ -440,17 +440,16 @@ function PaginationBar({
         <span className="text-xs text-slate-500 dark:text-white/50 whitespace-nowrap">
           {t("request_logs.rows_per_page")}
         </span>
-        <select
-          value={pageSize}
-          onChange={(e) => onPageSizeChange(Number(e.target.value))}
-          className="h-8 rounded-lg border border-slate-200 bg-white px-2 text-xs text-slate-700 outline-none transition focus:border-slate-400 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white/80 dark:focus:border-neutral-500"
-        >
-          {PAGE_SIZE_OPTIONS.map((size) => (
-            <option key={size} value={size}>
-              {size}
-            </option>
-          ))}
-        </select>
+        <Select
+          value={String(pageSize)}
+          onChange={(v) => onPageSizeChange(Number(v))}
+          options={PAGE_SIZE_OPTIONS.map((size) => ({
+            value: String(size),
+            label: String(size),
+          }))}
+          name="pageSize"
+          className="w-auto"
+        />
       </div>
     </div>
   );
