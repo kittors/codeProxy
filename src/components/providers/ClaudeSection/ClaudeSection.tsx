@@ -16,6 +16,7 @@ import styles from "@/pages/AiProvidersPage.module.scss";
 import { ProviderList } from "../ProviderList";
 import { ProviderStatusBar } from "../ProviderStatusBar";
 import { getStatsBySource, hasDisableAllModelsRule } from "../utils";
+import { LatencyBadge } from "../LatencyBadge";
 
 interface ClaudeSectionProps {
   configs: ProviderKeyConfig[];
@@ -106,7 +107,10 @@ export function ClaudeSection({
 
             return (
               <Fragment>
-                <div className="item-title">{item.name || maskApiKey(item.apiKey)}</div>
+                <div className="item-title">
+                  {item.name || maskApiKey(item.apiKey)}
+                  <LatencyBadge baseUrl={item.baseUrl} />
+                </div>
                 <div className={styles.fieldRow}>
                   <span className={styles.fieldLabel}>{t("common.api_key")}:</span>
                   <span className={styles.fieldValue}>{maskApiKey(item.apiKey)}</span>

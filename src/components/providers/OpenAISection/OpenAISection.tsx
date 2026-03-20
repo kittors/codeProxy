@@ -16,6 +16,7 @@ import styles from "@/pages/AiProvidersPage.module.scss";
 import { ProviderList } from "../ProviderList";
 import { ProviderStatusBar } from "../ProviderStatusBar";
 import { getOpenAIProviderStats, getStatsBySource } from "../utils";
+import { LatencyBadge } from "../LatencyBadge";
 
 interface OpenAISectionProps {
   configs: OpenAIProviderConfig[];
@@ -96,7 +97,10 @@ export function OpenAISection({
 
             return (
               <Fragment>
-                <div className="item-title">{item.name}</div>
+                <div className="item-title">
+                  {item.name}
+                  <LatencyBadge baseUrl={item.baseUrl} />
+                </div>
                 {item.prefix && (
                   <div className={styles.fieldRow}>
                     <span className={styles.fieldLabel}>{t("common.prefix")}:</span>

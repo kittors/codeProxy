@@ -16,6 +16,7 @@ import styles from "@/pages/AiProvidersPage.module.scss";
 import { ProviderList } from "../ProviderList";
 import { ProviderStatusBar } from "../ProviderStatusBar";
 import { getStatsBySource, hasDisableAllModelsRule } from "../utils";
+import { LatencyBadge } from "../LatencyBadge";
 
 interface CodexSectionProps {
   configs: ProviderKeyConfig[];
@@ -108,7 +109,10 @@ export function CodexSection({
 
             return (
               <Fragment>
-                <div className="item-title">{t("ai_providers.codex_item_title")}</div>
+                <div className="item-title">
+                  {t("ai_providers.codex_item_title")}
+                  <LatencyBadge baseUrl={item.baseUrl} />
+                </div>
                 <div className={styles.fieldRow}>
                   <span className={styles.fieldLabel}>{t("common.api_key")}:</span>
                   <span className={styles.fieldValue}>{maskApiKey(item.apiKey)}</span>

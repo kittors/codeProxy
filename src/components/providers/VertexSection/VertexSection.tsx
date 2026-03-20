@@ -15,6 +15,7 @@ import styles from "@/pages/AiProvidersPage.module.scss";
 import { ProviderList } from "../ProviderList";
 import { ProviderStatusBar } from "../ProviderStatusBar";
 import { getStatsBySource } from "../utils";
+import { LatencyBadge } from "../LatencyBadge";
 
 interface VertexSectionProps {
   configs: ProviderKeyConfig[];
@@ -93,6 +94,7 @@ export function VertexSection({
               <Fragment>
                 <div className="item-title">
                   {t("ai_providers.vertex_item_title")} #{index + 1}
+                  <LatencyBadge baseUrl={item.baseUrl} />
                 </div>
                 <div className={styles.fieldRow}>
                   <span className={styles.fieldLabel}>{t("common.api_key")}:</span>

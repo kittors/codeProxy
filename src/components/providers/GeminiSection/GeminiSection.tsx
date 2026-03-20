@@ -16,6 +16,7 @@ import styles from "@/pages/AiProvidersPage.module.scss";
 import { ProviderList } from "../ProviderList";
 import { ProviderStatusBar } from "../ProviderStatusBar";
 import { getStatsBySource, hasDisableAllModelsRule } from "../utils";
+import { LatencyBadge } from "../LatencyBadge";
 
 interface GeminiSectionProps {
   configs: GeminiKeyConfig[];
@@ -108,6 +109,7 @@ export function GeminiSection({
               <Fragment>
                 <div className="item-title">
                   {t("ai_providers.gemini_item_title")} #{index + 1}
+                  <LatencyBadge baseUrl={item.baseUrl} />
                 </div>
                 <div className={styles.fieldRow}>
                   <span className={styles.fieldLabel}>{t("common.api_key")}:</span>
