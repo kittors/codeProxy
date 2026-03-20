@@ -6,6 +6,7 @@ import {
   Download,
   Eye,
   FileJson,
+  Loader2,
   Plus,
   RefreshCw,
   Search,
@@ -14,8 +15,10 @@ import {
   Trash2,
   Upload,
   X,
+  Zap,
 } from "lucide-react";
 import { authFilesApi, usageApi } from "@/lib/http/apis";
+import { formatLatency } from "@/modules/providers/hooks/useProviderLatency";
 import type { AuthFileItem, OAuthModelAliasEntry, UsageData } from "@/lib/http/types";
 import { Button } from "@/modules/ui/Button";
 import { Card } from "@/modules/ui/Card";
@@ -372,6 +375,48 @@ export function AuthFilesPage() {
   const [importModels, setImportModels] = useState<AuthFileModelItem[]>([]);
   const [importSearch, setImportSearch] = useState("");
   const [importSelected, setImportSelected] = useState<Set<string>>(new Set());
+
+  // Connectivity check state: fileName → { loading, latencyMs, error }
+  const [connectivityState, setConnectivityState] = useState<
+    Map<string, { loading: boolean; latencyMs: number | null; error: boolean }>
+  >(new Map());
+
+  const checkAuthFileConnectivity = useCallback(
+    async (fileName: string) => {
+      const current = connectivityState.get(fileName);
+      if (current?.loading) return;
+
+      setConnectivityState((prev) => {
+        const next = new Map(prev);
+        next.set(fileName, { loading: true, latencyMs: null, error: false });
+        return next;
+      });
+
+      const start = performance.now();
+      try {
+        await authFilesApi.getModelsForAuthFile(fileName);
+        const elapsed = performance.now() - start;
+        setConnectivityState((prev) => {
+          const next = new Map(prev);
+          next.set(fileName, { loading: false, latencyMs: elapsed, error: false });
+          return next;
+        });
+      } catch {
+        const elapsed = performance.now() - start;
+        setConnectivityState((prev) => {
+          const next = new Map(prev);
+          // If we got a quick response (even error), show latency
+          if (elapsed < 20000) {
+            next.set(fileName, { loading: false, latencyMs: elapsed, error: false });
+          } else {
+            next.set(fileName, { loading: false, latencyMs: null, error: true });
+          }
+          return next;
+        });
+      }
+    },
+    [connectivityState],
+  );
 
   const loadAll = useCallback(async () => {
     setLoading(true);
@@ -1368,8 +1413,33 @@ export function AuthFilesPage() {
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
-                            <p className="truncate font-mono text-xs text-slate-900 dark:text-white">
-                              {file.name}
+                            <p className="flex items-center gap-2 truncate font-mono text-xs text-slate-900 dark:text-white">
+                              <span className="truncate">{file.name}</span>
+                              {(() => {
+                                const cs = connectivityState.get(file.name);
+                                return (
+                                  <button
+                                    type="button"
+                                    disabled={cs?.loading}
+                                    className="inline-flex shrink-0 cursor-pointer items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[11px] tabular-nums text-slate-600 transition-colors hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-default disabled:opacity-40 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white/60 dark:hover:border-blue-600 dark:hover:bg-blue-950 dark:hover:text-blue-300"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      void checkAuthFileConnectivity(file.name);
+                                    }}
+                                    title={t("auth_files.check_connectivity")}
+                                  >
+                                    {cs?.loading ? (
+                                      <Loader2 size={10} className="animate-spin" />
+                                    ) : cs?.error ? (
+                                      <span className="font-bold text-rose-500">✕</span>
+                                    ) : cs?.latencyMs != null ? (
+                                      <span className="font-medium">{formatLatency(cs.latencyMs)}</span>
+                                    ) : (
+                                      <Zap size={10} />
+                                    )}
+                                  </button>
+                                );
+                              })()}
                             </p>
                             <div className="mt-2 flex flex-wrap items-center gap-2">
                               <span

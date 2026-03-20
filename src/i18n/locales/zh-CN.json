@@ -637,7 +637,8 @@
     "load_excluded_failed": "加载 OAuth 排除模型失败",
     "load_alias_failed": "加载 OAuth 模型别名失败",
     "count_items": "共 {{count}} 条",
-    "file_too_large_detail": "文件过大（{{size}}）：{{name}}（最大 {{maxSize}}）"
+    "file_too_large_detail": "文件过大（{{size}}）：{{name}}（最大 {{maxSize}}）",
+    "check_connectivity": "检查连通性"
   },
   "antigravity_quota": {
     "title": "Antigravity 额度",

@@ -629,7 +629,8 @@
     "load_excluded_failed": "Failed to load OAuth excluded models",
     "load_alias_failed": "Failed to load OAuth model aliases",
     "count_items": "{{count}} items",
-    "file_too_large_detail": "File too large ({{size}}): {{name}} (max {{maxSize}})"
+    "file_too_large_detail": "File too large ({{size}}): {{name}} (max {{maxSize}})",
+    "check_connectivity": "Check connectivity"
   },
   "antigravity_quota": {
     "title": "Antigravity Quota",
