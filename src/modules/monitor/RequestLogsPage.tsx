@@ -711,7 +711,7 @@ export function RequestLogsPage() {
         </div>
 
         {/* 表格区域 — 自适应视口高度，内部滚动 */}
-        <div className="relative min-h-[360px] h-[calc(100dvh-280px)] overflow-hidden px-5">
+        <div className="relative min-h-[360px] h-[calc(100dvh-300px)] overflow-hidden px-5">
           <div className="h-full overflow-auto">
             <table className="w-full min-w-[1320px] table-fixed border-separate border-spacing-0 text-sm">
               <caption className="sr-only">{t("request_logs.table_caption")}</caption>
