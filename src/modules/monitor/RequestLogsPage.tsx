@@ -410,7 +410,7 @@ export function RequestLogsPage() {
   );
 
   // Derive display rows from raw items (names already resolved by backend)
-  const rows = useMemo<LogRow[]>(() => rawItems.map((item) => toLogRow(item)), [rawItems]);
+  const rows = useMemo<LogRow[]>(() => (rawItems ?? []).map((item) => toLogRow(item)), [rawItems]);
 
   const hasMore = rawItems.length < totalCount;
 

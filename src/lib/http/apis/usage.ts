@@ -89,7 +89,23 @@ export const usageApi = {
     if (params.model) qs.set("model", params.model);
     if (params.status) qs.set("status", params.status);
     const query = qs.toString();
-    return apiClient.get<UsageLogsResponse>(`/usage/logs${query ? `?${query}` : ""}`);
+    const resp = await apiClient.get<UsageLogsResponse>(`/usage/logs${query ? `?${query}` : ""}`);
+    return {
+      items: Array.isArray(resp?.items) ? resp.items : [],
+      total: resp?.total ?? 0,
+      page: resp?.page ?? 1,
+      size: resp?.size ?? params.size ?? 50,
+      filters: {
+        api_keys: Array.isArray(resp?.filters?.api_keys) ? resp.filters.api_keys : [],
+        api_key_names: resp?.filters?.api_key_names ?? {},
+        models: Array.isArray(resp?.filters?.models) ? resp.filters.models : [],
+      },
+      stats: {
+        total: resp?.stats?.total ?? 0,
+        success_rate: resp?.stats?.success_rate ?? 0,
+        total_tokens: resp?.stats?.total_tokens ?? 0,
+      },
+    };
   },
 
   exportUsage(): Promise<UsageExportPayload> {
