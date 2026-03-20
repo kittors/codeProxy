@@ -97,7 +97,7 @@ export function OpenAISection({
 
             return (
               <Fragment>
-                <div className="item-title">
+                <div className="item-title flex items-center gap-2">
                   {item.name}
                   <LatencyBadge baseUrl={item.baseUrl} />
                 </div>

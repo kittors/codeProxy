@@ -107,7 +107,7 @@ export function ClaudeSection({
 
             return (
               <Fragment>
-                <div className="item-title">
+                <div className="item-title flex items-center gap-2">
                   {item.name || maskApiKey(item.apiKey)}
                   <LatencyBadge baseUrl={item.baseUrl} />
                 </div>

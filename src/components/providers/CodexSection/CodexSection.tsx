@@ -109,7 +109,7 @@ export function CodexSection({
 
             return (
               <Fragment>
-                <div className="item-title">
+                <div className="item-title flex items-center gap-2">
                   {t("ai_providers.codex_item_title")}
                   <LatencyBadge baseUrl={item.baseUrl} />
                 </div>

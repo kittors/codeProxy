@@ -107,7 +107,7 @@ export function GeminiSection({
 
             return (
               <Fragment>
-                <div className="item-title">
+                <div className="item-title flex items-center gap-2">
                   {t("ai_providers.gemini_item_title")} #{index + 1}
                   <LatencyBadge baseUrl={item.baseUrl} />
                 </div>
