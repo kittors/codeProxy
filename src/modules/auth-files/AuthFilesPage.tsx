@@ -2272,6 +2272,7 @@ export function AuthFilesPage() {
             })
         }
         confirmText={t("common.delete")}
+        cancelText={t("common.cancel")}
         busy={deletingAll}
         onClose={() => setConfirm(null)}
         onConfirm={() => {
