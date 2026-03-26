@@ -333,6 +333,12 @@ export function useVisualConfig() {
           bootstrapRetries: String(streaming?.["bootstrap-retries"] ?? ""),
           nonstreamKeepaliveInterval: String(parsed["nonstream-keepalive-interval"] ?? ""),
         },
+
+        kimiHeaderDefaults: {
+          userAgent: String(asRecord(parsed["kimi-header-defaults"])?.["user-agent"] ?? ""),
+          platform: String(asRecord(parsed["kimi-header-defaults"])?.["platform"] ?? ""),
+          version: String(asRecord(parsed["kimi-header-defaults"])?.["version"] ?? ""),
+        },
       };
 
       setVisualValuesState(newValues);
@@ -448,6 +454,40 @@ export function useVisualConfig() {
 
         setIntFromString(parsed, "nonstream-keepalive-interval", nonstreamKeepaliveInterval);
 
+        // Handle kimi-header-defaults
+        const kimiUserAgent = typeof values.kimiHeaderDefaults?.userAgent === "string"
+          ? values.kimiHeaderDefaults.userAgent
+          : "";
+        const kimiPlatform = typeof values.kimiHeaderDefaults?.platform === "string"
+          ? values.kimiHeaderDefaults.platform
+          : "";
+        const kimiVersion = typeof values.kimiHeaderDefaults?.version === "string"
+          ? values.kimiHeaderDefaults.version
+          : "";
+
+        if (
+          hasOwn(parsed, "kimi-header-defaults") ||
+          kimiUserAgent.trim() ||
+          kimiPlatform.trim() ||
+          kimiVersion.trim()
+        ) {
+          const kimiHeaderDefaults: Record<string, unknown> = {};
+          if (kimiUserAgent.trim()) {
+            kimiHeaderDefaults["user-agent"] = kimiUserAgent.trim();
+          }
+          if (kimiPlatform.trim()) {
+            kimiHeaderDefaults["platform"] = kimiPlatform.trim();
+          }
+          if (kimiVersion.trim()) {
+            kimiHeaderDefaults["version"] = kimiVersion.trim();
+          }
+          if (Object.keys(kimiHeaderDefaults).length > 0) {
+            parsed["kimi-header-defaults"] = kimiHeaderDefaults;
+          } else if (hasOwn(parsed, "kimi-header-defaults")) {
+            delete parsed["kimi-header-defaults"];
+          }
+        }
+
         if (
           hasOwn(parsed, "payload") ||
           values.payloadDefaultRules.length > 0 ||
@@ -486,6 +526,9 @@ export function useVisualConfig() {
       const next: VisualConfigValues = { ...prev, ...newValues } as VisualConfigValues;
       if (newValues.streaming) {
         next.streaming = { ...prev.streaming, ...newValues.streaming };
+      }
+      if (newValues.kimiHeaderDefaults) {
+        next.kimiHeaderDefaults = { ...prev.kimiHeaderDefaults, ...newValues.kimiHeaderDefaults };
       }
       return next;
     });

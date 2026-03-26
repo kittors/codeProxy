@@ -79,6 +79,12 @@ export type VisualConfigValues = {
   payloadFilterRules: PayloadFilterRule[];
 
   streaming: StreamingConfig;
+
+  kimiHeaderDefaults: {
+    userAgent: string;
+    platform: string;
+    version: string;
+  };
 };
 
 export const makeClientId = () => {
@@ -118,5 +124,10 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
     keepaliveSeconds: "",
     bootstrapRetries: "",
     nonstreamKeepaliveInterval: "",
+  },
+  kimiHeaderDefaults: {
+    userAgent: "",
+    platform: "",
+    version: "",
   },
 };

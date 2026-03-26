@@ -2613,7 +2613,13 @@
     "clipboard_unsupported": "Browser does not support clipboard",
     "rule_n": "Rule {{n}}",
     "api_migrated": "API Keys have been migrated to the dedicated management page.",
-    "go_to_api_keys": "Go to API Keys →"
+    "go_to_api_keys": "Go to API Keys →",
+    "kimi_headers": "Kimi Header Configuration",
+    "kimi_headers_desc": "Configure headers used when calling Kimi API, affecting how requests appear in Kimi console.",
+    "kimi_user_agent_hint": "User-Agent default: KimiCLI/1.10.6",
+    "kimi_platform_hint": "X-Msh-Platform default: kimi_cli",
+    "kimi_version_hint": "X-Msh-Version default: 1.10.6",
+    "kimi_headers_note": "Note: Leave empty to use Kimi CLI defaults. Changes take effect on next request after saving."
   },
   "config_page": {
     "runtime_switches": "Runtime Switches",

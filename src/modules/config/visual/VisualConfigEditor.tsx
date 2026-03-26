@@ -1055,6 +1055,62 @@ export function VisualConfigEditor({
         </Card>
       </div>
 
+      <Card
+        title={t("visual_config.kimi_headers")}
+        description={t("visual_config.kimi_headers_desc")}
+      >
+        <div className="grid gap-4 lg:grid-cols-3">
+          <Field label="User-Agent" hint={t("visual_config.kimi_user_agent_hint")}>
+            <TextInput
+              value={values.kimiHeaderDefaults.userAgent}
+              onChange={(e) =>
+                update({
+                  kimiHeaderDefaults: {
+                    ...values.kimiHeaderDefaults,
+                    userAgent: e.currentTarget.value,
+                  },
+                })
+              }
+              placeholder="KimiCLI/1.10.6"
+              disabled={disabled}
+            />
+          </Field>
+          <Field label="X-Msh-Platform" hint={t("visual_config.kimi_platform_hint")}>
+            <TextInput
+              value={values.kimiHeaderDefaults.platform}
+              onChange={(e) =>
+                update({
+                  kimiHeaderDefaults: {
+                    ...values.kimiHeaderDefaults,
+                    platform: e.currentTarget.value,
+                  },
+                })
+              }
+              placeholder="kimi_cli"
+              disabled={disabled}
+            />
+          </Field>
+          <Field label="X-Msh-Version" hint={t("visual_config.kimi_version_hint")}>
+            <TextInput
+              value={values.kimiHeaderDefaults.version}
+              onChange={(e) =>
+                update({
+                  kimiHeaderDefaults: {
+                    ...values.kimiHeaderDefaults,
+                    version: e.currentTarget.value,
+                  },
+                })
+              }
+              placeholder="1.10.6"
+              disabled={disabled}
+            />
+          </Field>
+        </div>
+        <p className="mt-4 text-xs text-slate-600 dark:text-white/65">
+          {t("visual_config.kimi_headers_note")}
+        </p>
+      </Card>
+
       <div className="grid gap-6 lg:grid-cols-2">
         <Card
           title={t("visual_config.log_limits")}

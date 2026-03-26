@@ -2692,7 +2692,13 @@
     "clipboard_unsupported": "浏览器不支持剪贴板",
     "rule_n": "规则 {{n}}",
     "api_migrated": "API 密钥已迁移到专属管理页面。",
-    "go_to_api_keys": "前往 API 密钥管理 →"
+    "go_to_api_keys": "前往 API 密钥管理 →",
+    "kimi_headers": "Kimi 请求头配置",
+    "kimi_headers_desc": "配置调用 Kimi API 时使用的请求头，影响 Kimi 控制台中显示的来源标识。",
+    "kimi_user_agent_hint": "User-Agent 默认值: KimiCLI/1.10.6",
+    "kimi_platform_hint": "X-Msh-Platform 默认值: kimi_cli",
+    "kimi_version_hint": "X-Msh-Version 默认值: 1.10.6",
+    "kimi_headers_note": "注意：留空将使用 Kimi CLI 默认值。修改后需保存配置并在下次请求时生效。"
   },
   "floating_save_bar": {
     "saved": "已保存",

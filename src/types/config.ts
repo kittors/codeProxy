@@ -11,6 +11,12 @@ export interface QuotaExceededConfig {
   switchPreviewModel?: boolean;
 }
 
+export interface KimiHeaderDefaults {
+  userAgent?: string;
+  platform?: string;
+  version?: string;
+}
+
 export interface Config {
   debug?: boolean;
   proxyUrl?: string;
@@ -31,6 +37,7 @@ export interface Config {
   vertexApiKeys?: ProviderKeyConfig[];
   openaiCompatibility?: OpenAIProviderConfig[];
   oauthExcludedModels?: Record<string, string[]>;
+  kimiHeaderDefaults?: KimiHeaderDefaults;
   raw?: Record<string, unknown>;
 }
 
