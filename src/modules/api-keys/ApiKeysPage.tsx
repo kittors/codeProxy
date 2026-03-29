@@ -14,7 +14,8 @@ import {
   Info,
 } from "lucide-react";
 import { apiKeyEntriesApi, apiKeysApi, type ApiKeyEntry } from "@/lib/http/apis/api-keys";
-import { usageApi } from "@/lib/http/apis";
+import { authFilesApi, providersApi, usageApi } from "@/lib/http/apis";
+import type { AuthFileItem } from "@/lib/http/types";
 import type { UsageData } from "@/lib/http/types";
 import { apiClient } from "@/lib/http/client";
 import { Card } from "@/modules/ui/Card";
@@ -171,8 +172,21 @@ interface FormValues {
   rpmLimit: string;
   tpmLimit: string;
   allowedModels: string[];
+  allowedChannels: string[];
   systemPrompt: string;
 }
+
+const normalizeChannelKey = (value: string) => value.trim().toLowerCase();
+
+const readAuthFileChannelName = (file: AuthFileItem): string => {
+  const candidates = [file.label, file.email, file.provider, file.type];
+  for (const candidate of candidates) {
+    if (typeof candidate === "string" && candidate.trim()) {
+      return candidate.trim();
+    }
+  }
+  return "";
+};
 
 /* ─── component ─── */
 
@@ -191,6 +205,7 @@ export function ApiKeysPage() {
   const [usageLoading, setUsageLoading] = useState(false);
   const [usageRows, setUsageRows] = useState<any[]>([]);
   const [availableModels, setAvailableModels] = useState<MultiSelectOption[]>([]);
+  const [availableChannels, setAvailableChannels] = useState<MultiSelectOption[]>([]);
   const [form, setForm] = useState<FormValues>({
     name: "",
     key: "",
@@ -200,6 +215,7 @@ export function ApiKeysPage() {
     rpmLimit: "",
     tpmLimit: "",
     allowedModels: [],
+    allowedChannels: [],
     systemPrompt: "",
   });
 
@@ -221,6 +237,53 @@ export function ApiKeysPage() {
       }
     } catch {
       // silent — models list is supplementary
+    }
+  }, []);
+
+  const loadChannels = useCallback(async () => {
+    try {
+      const [geminiKeys, claudeKeys, codexKeys, vertexKeys, openaiProviders, authFiles] =
+        await Promise.all([
+          providersApi.getGeminiKeys().catch(() => []),
+          providersApi.getClaudeConfigs().catch(() => []),
+          providersApi.getCodexConfigs().catch(() => []),
+          providersApi.getVertexConfigs().catch(() => []),
+          providersApi.getOpenAIProviders().catch(() => []),
+          authFilesApi.list().catch(() => ({ files: [] })),
+        ]);
+
+      const seen = new Set<string>();
+      const options: MultiSelectOption[] = [];
+      const push = (rawName: string, source: string) => {
+        const name = String(rawName ?? "").trim();
+        const key = normalizeChannelKey(name);
+        if (!key || seen.has(key)) return;
+        seen.add(key);
+        options.push({
+          value: name,
+          label: name,
+          icon: (
+            <span className="inline-flex rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-600 dark:bg-neutral-800 dark:text-white/60">
+              {source}
+            </span>
+          ),
+        });
+      };
+
+      geminiKeys.forEach((item) => push(item.name || "", "API"));
+      claudeKeys.forEach((item) => push(item.name || "", "API"));
+      codexKeys.forEach((item) => push(item.name || "", "API"));
+      vertexKeys.forEach((item) => push(item.name || "", "API"));
+      openaiProviders.forEach((item) => push(item.name || "", "API"));
+      (authFiles.files || []).forEach((file) => {
+        if (String(file.account_type || "").trim().toLowerCase() !== "oauth") return;
+        push(readAuthFileChannelName(file), "OAuth");
+      });
+
+      options.sort((a, b) => a.label.localeCompare(b.label));
+      setAvailableChannels(options);
+    } catch {
+      // silent — channel list is supplementary
     }
   }, []);
 
@@ -259,6 +322,7 @@ export function ApiKeysPage() {
       setEntries(finalEntries);
       // Load models after entries are available (needs a valid API key)
       void loadModels();
+      void loadChannels();
     } catch (err: unknown) {
       notify({
         type: "error",
@@ -267,7 +331,7 @@ export function ApiKeysPage() {
     } finally {
       setLoading(false);
     }
-  }, [notify, loadModels]);
+  }, [notify, loadChannels, loadModels]);
 
   useEffect(() => {
     void loadEntries();
@@ -310,6 +374,7 @@ export function ApiKeysPage() {
       rpmLimit: "",
       tpmLimit: "",
       allowedModels: [],
+      allowedChannels: [],
       systemPrompt: "",
     });
     setShowCreate(true);
@@ -337,6 +402,7 @@ export function ApiKeysPage() {
         "rpm-limit": form.rpmLimit ? parseInt(form.rpmLimit, 10) || 0 : undefined,
         "tpm-limit": form.tpmLimit ? parseInt(form.tpmLimit, 10) || 0 : undefined,
         "allowed-models": form.allowedModels.length > 0 ? form.allowedModels : undefined,
+        "allowed-channels": form.allowedChannels.length > 0 ? form.allowedChannels : undefined,
         "system-prompt": form.systemPrompt.trim() || undefined,
         "created-at": new Date().toISOString(),
       };
@@ -367,6 +433,7 @@ export function ApiKeysPage() {
       rpmLimit: entry["rpm-limit"]?.toString() || "",
       tpmLimit: entry["tpm-limit"]?.toString() || "",
       allowedModels: entry["allowed-models"] || [],
+      allowedChannels: entry["allowed-channels"] || [],
       systemPrompt: entry["system-prompt"] || "",
     });
     setEditIndex(index);
@@ -393,6 +460,7 @@ export function ApiKeysPage() {
           "rpm-limit": form.rpmLimit ? parseInt(form.rpmLimit, 10) || 0 : 0,
           "tpm-limit": form.tpmLimit ? parseInt(form.tpmLimit, 10) || 0 : 0,
           "allowed-models": form.allowedModels.length > 0 ? form.allowedModels : [],
+          "allowed-channels": form.allowedChannels.length > 0 ? form.allowedChannels : [],
           "system-prompt": form.systemPrompt.trim(),
         },
       });
@@ -638,6 +706,44 @@ export function ApiKeysPage() {
           ) : (
             <span className="inline-flex items-center gap-1 whitespace-nowrap text-green-600 dark:text-green-400">
               <ShieldCheck size={14} /> {t("api_keys_page.all_models")}
+            </span>
+          ),
+      },
+      {
+        key: "allowedChannels",
+        label: t("api_keys_page.col_channels"),
+        width: "w-[110px]",
+        cellClassName: "text-slate-700 dark:text-white/70 overflow-hidden min-w-0",
+        render: (row) =>
+          row["allowed-channels"]?.length ? (
+            <HoverTooltip
+              content={
+                <div className="flex max-w-xs flex-wrap gap-1.5">
+                  {row["allowed-channels"].map((channel) => (
+                    <span
+                      key={channel}
+                      className="inline-flex items-center rounded-md border border-slate-200/60 bg-slate-50 px-2 py-0.5 font-mono text-[11px] text-slate-700 dark:border-neutral-700/40 dark:bg-neutral-800/60 dark:text-white/80"
+                    >
+                      {channel}
+                    </span>
+                  ))}
+                </div>
+              }
+              className="block min-w-0"
+            >
+              <span className="inline-flex min-w-0 w-full items-center gap-1.5 text-xs">
+                <span className="inline-flex h-5 min-w-[20px] flex-shrink-0 items-center justify-center rounded-md bg-cyan-50 px-1.5 font-semibold tabular-nums text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300">
+                  {row["allowed-channels"].length}
+                </span>
+                <span className="block min-w-0 flex-1 truncate text-slate-500 dark:text-white/50">
+                  {row["allowed-channels"][0]}
+                  {row["allowed-channels"].length > 1 ? t("api_keys_page.more_suffix") : ""}
+                </span>
+              </span>
+            </HoverTooltip>
+          ) : (
+            <span className="inline-flex items-center gap-1 whitespace-nowrap text-green-600 dark:text-green-400">
+              <ShieldCheck size={14} /> {t("api_keys_page.all_channels")}
             </span>
           ),
       },
@@ -890,6 +996,20 @@ export function ApiKeysPage() {
 
       <div>
         <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
+          {t("api_keys_page.form_allowed_channels")}
+        </label>
+        <MultiSelect
+          options={availableChannels}
+          value={form.allowedChannels}
+          onChange={(selected) => setForm((p) => ({ ...p, allowedChannels: selected }))}
+          placeholder={t("api_keys_page.select_channels")}
+          emptyLabel={t("api_keys_page.form_all_channels")}
+          selectAllLabel={t("api_keys_page.form_all_channels")}
+        />
+      </div>
+
+      <div>
+        <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
           {t("api_keys_page.form_allowed_models")}
         </label>
         <MultiSelect
@@ -898,6 +1018,7 @@ export function ApiKeysPage() {
           onChange={(selected) => setForm((p) => ({ ...p, allowedModels: selected }))}
           placeholder={t("api_keys_page.select_models")}
           emptyLabel={t("api_keys_page.form_all_models")}
+          selectAllLabel={t("api_keys_page.form_all_models")}
         />
       </div>
 

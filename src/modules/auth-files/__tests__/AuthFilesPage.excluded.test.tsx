@@ -2,12 +2,14 @@ import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { describe, expect, test, vi } from "vitest";
 import { ToastProvider } from "@/modules/ui/ToastProvider";
+import { ThemeProvider } from "@/modules/ui/ThemeProvider";
 import { AuthFilesPage } from "@/modules/auth-files/AuthFilesPage";
 
 const mocks = vi.hoisted(() => ({
   list: vi.fn(async () => ({ files: [] })),
   getOauthExcludedModels: vi.fn(async () => ({})),
   getUsage: vi.fn(async () => ({ apis: {} })),
+  getEntityStats: vi.fn(async () => ({ source: [], auth_index: [] })),
 }));
 
 vi.mock("@/lib/http/apis", () => ({
@@ -17,6 +19,7 @@ vi.mock("@/lib/http/apis", () => ({
   },
   usageApi: {
     getUsage: mocks.getUsage,
+    getEntityStats: mocks.getEntityStats,
   },
 }));
 
@@ -24,11 +27,13 @@ describe("AuthFilesPage OAuth excluded models", () => {
   test("does not refetch endlessly when excluded models map is empty", async () => {
     render(
       <MemoryRouter initialEntries={["/auth-files?tab=excluded"]}>
-        <ToastProvider>
-          <Routes>
-            <Route path="/auth-files" element={<AuthFilesPage />} />
-          </Routes>
-        </ToastProvider>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
       </MemoryRouter>,
     );
 
@@ -36,7 +41,7 @@ describe("AuthFilesPage OAuth excluded models", () => {
       expect(mocks.getOauthExcludedModels).toHaveBeenCalledTimes(1);
     });
 
-    expect(await screen.findByText("No configuration")).toBeInTheDocument();
+    expect(await screen.findByText("No config")).toBeInTheDocument();
 
     await new Promise((r) => setTimeout(r, 30));
     expect(mocks.getOauthExcludedModels).toHaveBeenCalledTimes(1);

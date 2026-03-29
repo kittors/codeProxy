@@ -10,6 +10,7 @@ export interface ApiKeyEntry {
   "rpm-limit"?: number;
   "tpm-limit"?: number;
   "allowed-models"?: string[];
+  "allowed-channels"?: string[];
   "system-prompt"?: string;
   "created-at"?: string;
 }

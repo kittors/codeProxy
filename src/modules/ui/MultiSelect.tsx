@@ -23,6 +23,7 @@ interface MultiSelectProps {
   onChange: (selected: string[]) => void;
   placeholder?: string;
   emptyLabel?: string;
+  selectAllLabel?: string;
   searchable?: boolean;
   disabled?: boolean;
   className?: string;
@@ -34,6 +35,7 @@ export function MultiSelect({
   onChange,
   placeholder = "",
   emptyLabel = "All",
+  selectAllLabel,
   searchable = true,
   disabled = false,
   className = "",
@@ -184,8 +186,8 @@ export function MultiSelect({
                   ? "bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400"
                   : "text-slate-700 hover:bg-slate-50 dark:text-white/70 dark:hover:bg-white/5"
               }`}
-            >
-              <div
+              >
+                <div
                 className={`flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border ${
                   value.length === 0
                     ? "border-green-500 bg-green-500 dark:border-green-400 dark:bg-green-400"
@@ -194,7 +196,7 @@ export function MultiSelect({
               >
                 {value.length === 0 && <Check size={12} className="text-white dark:text-black" />}
               </div>
-              <span className="font-medium">{t("common.all_models")}</span>
+              <span className="font-medium">{selectAllLabel || t("common.all_models")}</span>
             </button>
 
             <div className="mx-3 my-1 h-px bg-slate-100 dark:bg-neutral-800" />

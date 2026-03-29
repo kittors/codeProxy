@@ -22,6 +22,10 @@ export interface AuthFileItem {
   name: string;
   type?: AuthFileType | string;
   provider?: string;
+  label?: string;
+  email?: string;
+  account_type?: string;
+  account?: string;
   size?: number;
   authIndex?: string | number | null;
   auth_index?: string | number | null;

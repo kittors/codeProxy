@@ -144,6 +144,14 @@ const resolveFileType = (file: AuthFileItem): string => {
   return candidate || "unknown";
 };
 
+const readAuthFileChannelName = (file: AuthFileItem): string => {
+  const candidates = [file.label, file.email, file.provider, file.type];
+  for (const candidate of candidates) {
+    if (typeof candidate === "string" && candidate.trim()) return candidate.trim();
+  }
+  return "";
+};
+
 const isRuntimeOnlyAuthFile = (file: AuthFileItem): boolean => {
   const raw = (file.runtime_only ?? file.runtimeOnly) as unknown;
   if (typeof raw === "boolean") return raw;
@@ -288,6 +296,14 @@ type PrefixProxyEditorState = {
   proxyUrl: string;
 };
 
+type ChannelEditorState = {
+  open: boolean;
+  fileName: string;
+  label: string;
+  saving: boolean;
+  error: string | null;
+};
+
 type AliasRow = OAuthModelAliasEntry & { id: string };
 
 const buildAliasRows = (entries: OAuthModelAliasEntry[] | undefined): AliasRow[] => {
@@ -353,6 +369,13 @@ export function AuthFilesPage() {
     json: null,
     prefix: "",
     proxyUrl: "",
+  });
+  const [channelEditor, setChannelEditor] = useState<ChannelEditorState>({
+    open: false,
+    fileName: "",
+    label: "",
+    saving: false,
+    error: null,
   });
 
   const [excludedLoading, setExcludedLoading] = useState(false);
@@ -831,6 +854,38 @@ export function AuthFilesPage() {
     },
     [notify, t],
   );
+
+  const openChannelEditor = useCallback((file: AuthFileItem) => {
+    setChannelEditor({
+      open: true,
+      fileName: file.name,
+      label: readAuthFileChannelName(file),
+      saving: false,
+      error: null,
+    });
+  }, []);
+
+  const saveChannelEditor = useCallback(async () => {
+    const fileName = channelEditor.fileName.trim();
+    const label = channelEditor.label.trim();
+    if (!fileName) return;
+    if (!label) {
+      setChannelEditor((prev) => ({ ...prev, error: t("auth_files.channel_name_required") }));
+      return;
+    }
+
+    setChannelEditor((prev) => ({ ...prev, saving: true, error: null }));
+    try {
+      await authFilesApi.patchFields({ name: fileName, label });
+      notify({ type: "success", message: t("auth_files.saved") });
+      await loadAll();
+      setChannelEditor({ open: false, fileName: "", label: "", saving: false, error: null });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : t("auth_files.save_failed");
+      setChannelEditor((prev) => ({ ...prev, saving: false, error: message }));
+      notify({ type: "error", message });
+    }
+  }, [channelEditor.fileName, channelEditor.label, loadAll, notify, t]);
 
   const prefixProxyDirty = useMemo(() => {
     if (!prefixProxyEditor.json) return false;
@@ -1394,6 +1449,11 @@ export function AuthFilesPage() {
                     const switching = Boolean(statusUpdating[file.name]);
                     const runtimeOnly = isRuntimeOnlyAuthFile(file);
                     const authIndexKey = normalizeAuthIndexValue(file.auth_index ?? file.authIndex);
+                    const isOauthFile =
+                      String(file.account_type || "")
+                        .trim()
+                        .toLowerCase() === "oauth";
+                    const channelName = readAuthFileChannelName(file);
 
                     const stats = resolveAuthFileStats(file, usageIndex);
                     const statusData = resolveAuthFileStatusBar(file, usageIndex);
@@ -1470,6 +1530,14 @@ export function AuthFilesPage() {
                             <p className="mt-2 text-xs text-slate-600 dark:text-white/65">
                               {formatFileSize(file.size)} · {formatModified(file)}
                             </p>
+                            {isOauthFile && channelName ? (
+                              <p className="mt-2 text-xs text-slate-600 dark:text-white/65">
+                                {t("auth_files.channel_name")}:{" "}
+                                <span className="font-medium text-slate-800 dark:text-white/80">
+                                  {channelName}
+                                </span>
+                              </p>
+                            ) : null}
                             <div className="mt-2 flex flex-wrap items-center gap-2 text-xs tabular-nums">
                               <span className="rounded-full bg-emerald-600/10 px-2 py-0.5 font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200">
                                 {t("auth_files.success_count", { count: stats.success })}
@@ -1517,6 +1585,16 @@ export function AuthFilesPage() {
                             </p>
                           ) : (
                             <>
+                              {isOauthFile && !runtimeOnly ? (
+                                <Button
+                                  variant="secondary"
+                                  size="sm"
+                                  onClick={() => openChannelEditor(file)}
+                                >
+                                  <Settings2 size={14} />
+                                  {t("auth_files.edit_channel_name")}
+                                </Button>
+                              ) : null}
                               <Button
                                 variant="secondary"
                                 size="sm"
@@ -1954,6 +2032,59 @@ export function AuthFilesPage() {
           </TabsContent>
         </Tabs>
       )}
+
+      <Modal
+        open={channelEditor.open}
+        title={t("auth_files.edit_channel_name_title", { name: channelEditor.fileName || "--" })}
+        description={t("auth_files.edit_channel_name_desc")}
+        onClose={() =>
+          setChannelEditor({ open: false, fileName: "", label: "", saving: false, error: null })
+        }
+        footer={
+          <div className="flex items-center gap-2">
+            <Button
+              variant="secondary"
+              onClick={() =>
+                setChannelEditor({
+                  open: false,
+                  fileName: "",
+                  label: "",
+                  saving: false,
+                  error: null,
+                })
+              }
+            >
+              {t("auth_files.cancel")}
+            </Button>
+            <Button variant="primary" onClick={() => void saveChannelEditor()} disabled={channelEditor.saving}>
+              <ShieldCheck size={14} />
+              {t("auth_files.save")}
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-3">
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
+              {t("auth_files.channel_name_label")}
+            </label>
+            <TextInput
+              value={channelEditor.label}
+              onChange={(e) =>
+                setChannelEditor((prev) => ({ ...prev, label: e.currentTarget.value, error: null }))
+              }
+              placeholder={t("auth_files.channel_name_placeholder")}
+            />
+          </div>
+          {channelEditor.error ? (
+            <p className="text-sm text-rose-600 dark:text-rose-300">{channelEditor.error}</p>
+          ) : (
+            <p className="text-xs text-slate-500 dark:text-white/55">
+              {t("auth_files.channel_name_hint")}
+            </p>
+          )}
+        </div>
+      </Modal>
 
       <Modal
         open={detailOpen}

@@ -18,6 +18,13 @@ export const authFilesApi = {
   deleteAll: () => apiClient.delete("/auth-files", undefined, { params: { all: true } }),
   downloadText: (name: string) =>
     apiClient.getText("/auth-files/download", { params: { name }, timeoutMs: 60000 }),
+  patchFields: (payload: {
+    name: string;
+    label?: string;
+    prefix?: string;
+    proxy_url?: string;
+    priority?: number;
+  }) => apiClient.patch("/auth-files/fields", payload),
 
   getOauthExcludedModels: async (): Promise<Record<string, string[]>> => {
     const data = await apiClient.get("/oauth-excluded-models");
