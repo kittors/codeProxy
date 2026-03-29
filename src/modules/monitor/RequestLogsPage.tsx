@@ -506,10 +506,12 @@ export function RequestLogsPage() {
     api_keys: string[];
     api_key_names: Record<string, string>;
     models: string[];
+    channels: string[];
   }>({
     api_keys: [],
     api_key_names: {},
     models: [],
+    channels: [],
   });
   const [stats, setStats] = useState<{ total: number; success_rate: number; total_tokens: number }>(
     { total: 0, success_rate: 0, total_tokens: 0 },
@@ -519,6 +521,7 @@ export function RequestLogsPage() {
   const [timeRange, setTimeRange] = useState<TimeRange>(7);
   const [apiQuery, setApiQuery] = useState("");
   const [modelQuery, setModelQuery] = useState("");
+  const [channelQuery, setChannelQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("");
 
   const fetchInFlightRef = useRef(false);
@@ -537,13 +540,14 @@ export function RequestLogsPage() {
           days: timeRange,
           api_key: apiQuery || undefined,
           model: modelQuery || undefined,
+          channel: channelQuery || undefined,
           status: statusFilter || undefined,
         });
 
         setRawItems(resp.items ?? []);
         setTotalCount(resp.total ?? 0);
         setCurrentPage(page);
-        setFilterOptions(resp.filters ?? { api_keys: [], api_key_names: {}, models: [] });
+        setFilterOptions(resp.filters ?? { api_keys: [], api_key_names: {}, models: [], channels: [] });
         setStats(resp.stats ?? { total: 0, success_rate: 0, total_tokens: 0 });
         setLastUpdatedAt(Date.now());
       } catch (err) {
@@ -554,7 +558,7 @@ export function RequestLogsPage() {
         setLoading(false);
       }
     },
-    [timeRange, apiQuery, modelQuery, statusFilter, notify, t],
+    [timeRange, apiQuery, modelQuery, channelQuery, statusFilter, notify, t],
   );
 
   // Derive display rows from raw items
@@ -581,7 +585,7 @@ export function RequestLogsPage() {
   // Fetch page 1 when filters change
   useEffect(() => {
     fetchLogs(1, pageSize);
-  }, [timeRange, apiQuery, modelQuery, statusFilter]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [timeRange, apiQuery, modelQuery, channelQuery, statusFilter]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Build options from backend filter data
   const keyOptions = useMemo(() => {
@@ -602,6 +606,13 @@ export function RequestLogsPage() {
       ...filterOptions.models.map((m) => ({ value: m, label: m })),
     ];
   }, [filterOptions.models, t]);
+
+  const channelOptions = useMemo(() => {
+    return [
+      { value: "", label: t("request_logs.all_channels") },
+      ...filterOptions.channels.map((ch) => ({ value: ch, label: ch })),
+    ];
+  }, [filterOptions.channels, t]);
 
   const lastUpdatedText = useMemo(() => {
     if (loading) return t("request_logs.refreshing");
@@ -663,6 +674,15 @@ export function RequestLogsPage() {
                 placeholder={t("request_logs.all_models_placeholder")}
                 searchPlaceholder={t("request_logs.search_models")}
                 aria-label={t("request_logs.filter_model")}
+                className="w-full sm:w-auto"
+              />
+              <SearchableSelect
+                value={channelQuery}
+                onChange={setChannelQuery}
+                options={channelOptions}
+                placeholder={t("request_logs.all_channels_placeholder")}
+                searchPlaceholder={t("request_logs.search_channels")}
+                aria-label={t("request_logs.filter_channel")}
                 className="w-full sm:w-auto"
               />
               <Select

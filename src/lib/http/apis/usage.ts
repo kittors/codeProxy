@@ -80,6 +80,7 @@ export const usageApi = {
     days?: number;
     api_key?: string;
     model?: string;
+    channel?: string;
     status?: string;
   }): Promise<UsageLogsResponse> {
     const qs = new URLSearchParams();
@@ -88,6 +89,7 @@ export const usageApi = {
     if (params.days) qs.set("days", String(params.days));
     if (params.api_key) qs.set("api_key", params.api_key);
     if (params.model) qs.set("model", params.model);
+    if (params.channel) qs.set("channel", params.channel);
     if (params.status) qs.set("status", params.status);
     const query = qs.toString();
     const resp = await apiClient.get<UsageLogsResponse>(`/usage/logs${query ? `?${query}` : ""}`);
@@ -100,6 +102,7 @@ export const usageApi = {
         api_keys: Array.isArray(resp?.filters?.api_keys) ? resp.filters.api_keys : [],
         api_key_names: resp?.filters?.api_key_names ?? {},
         models: Array.isArray(resp?.filters?.models) ? resp.filters.models : [],
+        channels: Array.isArray(resp?.filters?.channels) ? resp.filters.channels : [],
       },
       stats: {
         total: resp?.stats?.total ?? 0,
@@ -180,6 +183,7 @@ export interface UsageLogsResponse {
     api_keys: string[];
     api_key_names: Record<string, string>;
     models: string[];
+    channels: string[];
   };
   stats: {
     total: number;
