@@ -36,46 +36,130 @@ This dashboard provides a complete management interface for your AI proxy infras
 - 📋 **Request Logs** — Full request history with token counts, latency, status, and clickable error details
 - 💬 **Message Viewer** — Beautiful Markdown-rendered input/output content with XML tag collapsible sections
 - 🔗 **AI Provider Management** — Multi-tab provider config (Gemini, Claude, Codex, Vertex, OpenAI, Ampcode) with enable/disable toggles
+- 🗂️ **Auth File Workspace** — Saved OAuth/auth files with model inspection, prefix/proxy controls, and download actions
+- 🧪 **OAuth Workbench** — Provider-specific authorization launcher with remote callback submission
 - 🔑 **API Key Management** — Create, edit, delete keys with quota & rate limit controls
 - 🔐 **OAuth Login Management** — Manage OAuth authentication credentials
 - 📦 **Config Panel** — Visual YAML configuration editor with import/export
 - 🎯 **Model Management** — Model alias mapping and routing rules
 - 📊 **Quota Management** — Per-key usage quota tracking and limits
 - 🔍 **API Key Lookup** — Public self-service page for users to check their own usage statistics and request logs
-- ℹ️ **System Info** — Connection info grid, model listing with colorful vendor icons and click-to-copy
+- 💲 **Model Pricing** — Built-in pricing table for quota cost accounting and per-model cost controls
+- ℹ️ **System Info** — Connection info grid, version/build metadata, model listing with colorful vendor icons and click-to-copy
+- 🪵 **Live Logs** — Streaming log viewer with search, download, clear, and runtime filter controls
 - 🌙 **Dark Mode** — Full dark theme with smooth transitions
 - 🌐 **i18n Ready** — Internationalization support (Chinese, English)
 
 ## 📸 Screenshots
 
-<p align="center">
-  <img src="docs/images/dashboard.png" width="100%" />
-</p>
-<p align="center"><em>Dashboard — KPI cards, health score, system monitoring, channel latency, resource usage</em></p>
+The gallery below uses the latest 13 management-panel screenshots and maps each screen to its operational role.
+
+| Screen | What it shows |
+| :----- | :------------ |
+| Dashboard Overview | KPI cards, health score, live system monitor, throughput, resource usage, latency ranking |
+| Monitor Center | Request KPIs, model distribution, daily token trends, API Key usage share |
+| Request Logs | Multi-filter log table, time range selector, status/channel/model filtering |
+| Request Details | Input/output viewer with Markdown rendering and instruction block inspection |
+| AI Providers | Multi-provider tabs, per-channel success rate, model tags, enable/edit/delete controls |
+| Auth Files | Saved auth file inventory with model inspection, proxy prefix controls, and download |
+| OAuth Login | Authorization launcher plus remote callback submission workflow |
+| API Keys | Keys, quotas, RPM/TPM, model permissions, channel bindings, quick actions |
+| Models | Pricing table for input/output/cache cost accounting |
+| Quota | Remaining refresh time and current usage bars for provider-specific quotas |
+| Config | YAML source editor with search and runtime mode switching |
+| System | API base, management endpoint, version metadata, API Key lookup link, model tags |
+| Logs | Live log console with search, download, clear, and toggleable filters |
+
+### 1. Dashboard Overview
 
 <p align="center">
-  <img src="docs/images/monitor-light.png" width="48%" />
-  <img src="docs/images/monitor-dark.png" width="48%" />
+  <img src="docs/images/dashboard-overview.png" width="100%" />
 </p>
-<p align="center"><em>Monitor Center — Model distribution, daily trends, hourly heatmaps (Light / Dark mode)</em></p>
+<p align="center"><em>Dashboard — KPI cards, health score, live system monitor, throughput, storage, and channel latency ranking.</em></p>
+
+### 2. Monitor Center
 
 <p align="center">
-  <img src="docs/images/request-logs.png" width="48%" />
-  <img src="docs/images/log-content-modal.png" width="48%" />
+  <img src="docs/images/monitor-center-zh.png" width="100%" />
 </p>
-<p align="center"><em>Request Logs with multi-filter & Message Content Viewer (Markdown rendered)</em></p>
+<p align="center"><em>Monitor Center (Chinese locale) — request summary, model distribution, daily token/request trends, and API Key usage share.</em></p>
+
+### 3. Request Logs
 
 <p align="center">
-  <img src="docs/images/providers.png" width="48%" />
-  <img src="docs/images/system-info.png" width="48%" />
+  <img src="docs/images/request-logs-table.png" width="100%" />
 </p>
-<p align="center"><em>AI Provider Management & System Info with vendor-colored model tags</em></p>
+<p align="center"><em>Request Logs — time-range switcher, multi-filter toolbar, high-density table, and success metrics at a glance.</em></p>
+
+### 4. Request Details Viewer
 
 <p align="center">
-  <img src="docs/images/apikey-lookup-stats.png" width="48%" />
-  <img src="docs/images/apikey-lookup-logs.png" width="48%" />
+  <img src="docs/images/request-details-modal.png" width="100%" />
 </p>
-<p align="center"><em>API Key Lookup — Self-service usage statistics & request logs for end users</em></p>
+<p align="center"><em>Request Details — input/output tabs, Markdown rendering, collapsible sections, and copy/export helpers.</em></p>
+
+### 5. AI Providers
+
+<p align="center">
+  <img src="docs/images/providers-codex.png" width="100%" />
+</p>
+<p align="center"><em>AI Providers — provider tabs, per-channel success/failure stats, model badges, latency bars, and CRUD actions.</em></p>
+
+### 6. Auth Files
+
+<p align="center">
+  <img src="docs/images/auth-files-grid.png" width="100%" />
+</p>
+<p align="center"><em>Auth Files — card-based inventory for saved credentials with model inspection, rename, proxy-prefix, download, and delete actions.</em></p>
+
+### 7. OAuth Login Workbench
+
+<p align="center">
+  <img src="docs/images/oauth-login-workbench.png" width="100%" />
+</p>
+<p align="center"><em>OAuth Login — provider-specific authorization launcher plus remote callback URL submission workflow.</em></p>
+
+### 8. API Keys Management
+
+<p align="center">
+  <img src="docs/images/api-keys-management.png" width="100%" />
+</p>
+<p align="center"><em>API Keys — quotas, RPM/TPM limits, model permissions, channel bindings, and quick analytics/edit actions.</em></p>
+
+### 9. Model Pricing
+
+<p align="center">
+  <img src="docs/images/model-pricing.png" width="100%" />
+</p>
+<p align="center"><em>Models — built-in pricing catalog for input/output/cache cost calculation and quota accounting.</em></p>
+
+### 10. Quota Management
+
+<p align="center">
+  <img src="docs/images/quota-management.png" width="100%" />
+</p>
+<p align="center"><em>Quota — remaining refresh time and progress bars for Codex, Gemini CLI, Kiro, and other provider-specific quotas.</em></p>
+
+### 11. Config Editor
+
+<p align="center">
+  <img src="docs/images/config-source-editor.png" width="100%" />
+</p>
+<p align="center"><em>Config — source editor mode with YAML search, keyboard-friendly navigation, and runtime config switching.</em></p>
+
+### 12. System Info
+
+<p align="center">
+  <img src="docs/images/system-info-models.png" width="100%" />
+</p>
+<p align="center"><em>System — API base, management endpoint, version/build metadata, API Key lookup entry, and vendor-colored model tags.</em></p>
+
+### 13. Live Logs
+
+<p align="center">
+  <img src="docs/images/live-logs.png" width="100%" />
+</p>
+<p align="center"><em>Logs — live stream viewer with keyword search, hide-management toggle, download, clear, and jump-to-latest controls.</em></p>
 
 ## 🧩 Feature Details
 
