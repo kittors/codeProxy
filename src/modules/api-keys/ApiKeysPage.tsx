@@ -553,7 +553,7 @@ export function ApiKeysPage() {
       {
         key: "status",
         label: t("api_keys_page.col_status"),
-        width: "w-[52px]",
+        width: "w-[88px] min-w-[88px]",
         headerClassName: "text-center",
         cellClassName: "text-center",
         render: (row, idx) => (
@@ -574,7 +574,7 @@ export function ApiKeysPage() {
       {
         key: "name",
         label: t("api_keys_page.col_name"),
-        width: "w-[80px]",
+        width: "w-[120px] min-w-[120px]",
         cellClassName: "font-medium",
         render: (row) => (
           <OverflowTooltip
@@ -594,7 +594,7 @@ export function ApiKeysPage() {
       {
         key: "key",
         label: t("api_keys_page.col_key"),
-        width: "w-[220px]",
+        width: "w-[240px] min-w-[240px]",
         cellClassName: "whitespace-nowrap",
         render: (row) => (
           <code className="rounded-md bg-slate-100 px-2 py-0.5 font-mono text-xs text-slate-700 dark:bg-neutral-800 dark:text-white/70">
@@ -605,7 +605,7 @@ export function ApiKeysPage() {
       {
         key: "dailyLimit",
         label: t("api_keys_page.col_daily_limit"),
-        width: "w-[80px]",
+        width: "w-[132px] min-w-[132px]",
         cellClassName: "whitespace-nowrap text-slate-700 dark:text-white/70",
         render: (row) => (
           <span className="inline-flex items-center gap-1">
@@ -622,7 +622,7 @@ export function ApiKeysPage() {
       {
         key: "totalQuota",
         label: t("api_keys_page.col_total_quota"),
-        width: "w-[80px]",
+        width: "w-[132px] min-w-[132px]",
         cellClassName: "whitespace-nowrap text-slate-700 dark:text-white/70",
         render: (row) => (
           <span className="inline-flex items-center gap-1">
@@ -639,7 +639,7 @@ export function ApiKeysPage() {
       {
         key: "rpmLimit",
         label: "RPM",
-        width: "w-[70px]",
+        width: "w-[108px] min-w-[108px]",
         cellClassName: "whitespace-nowrap text-slate-700 dark:text-white/70",
         headerRender: () => (
           <HoverTooltip content={t("api_keys.rpm_full")} className="inline-flex items-center gap-1">
@@ -662,7 +662,7 @@ export function ApiKeysPage() {
       {
         key: "tpmLimit",
         label: "TPM",
-        width: "w-[70px]",
+        width: "w-[108px] min-w-[108px]",
         cellClassName: "whitespace-nowrap text-slate-700 dark:text-white/70",
         headerRender: () => (
           <HoverTooltip content={t("api_keys.tpm_full")} className="inline-flex items-center gap-1">
@@ -685,7 +685,7 @@ export function ApiKeysPage() {
       {
         key: "allowedModels",
         label: t("api_keys_page.col_models"),
-        width: "w-[110px]",
+        width: "w-[150px] min-w-[150px]",
         cellClassName: "text-slate-700 dark:text-white/70 overflow-hidden min-w-0",
         render: (row) =>
           row["allowed-models"]?.length ? (
@@ -711,7 +711,6 @@ export function ApiKeysPage() {
                 </span>
                 <span className="block min-w-0 flex-1 truncate text-slate-500 dark:text-white/50">
                   {row["allowed-models"][0]}
-                  {row["allowed-models"].length > 1 ? t("api_keys_page.more_suffix") : ""}
                 </span>
               </span>
             </HoverTooltip>
@@ -724,7 +723,7 @@ export function ApiKeysPage() {
       {
         key: "allowedChannels",
         label: t("api_keys_page.col_channels"),
-        width: "w-[110px]",
+        width: "w-[172px] min-w-[172px]",
         cellClassName: "text-slate-700 dark:text-white/70 overflow-hidden min-w-0",
         render: (row) =>
           row["allowed-channels"]?.length ? (
@@ -749,7 +748,6 @@ export function ApiKeysPage() {
                 </span>
                 <span className="block min-w-0 flex-1 truncate text-slate-500 dark:text-white/50">
                   {row["allowed-channels"][0]}
-                  {row["allowed-channels"].length > 1 ? t("api_keys_page.more_suffix") : ""}
                 </span>
               </span>
             </HoverTooltip>
@@ -762,16 +760,16 @@ export function ApiKeysPage() {
       {
         key: "createdAt",
         label: t("api_keys_page.col_created"),
-        width: "w-[140px]",
+        width: "w-[168px] min-w-[168px]",
         cellClassName: "whitespace-nowrap text-slate-500 dark:text-white/50",
         render: (row) => <>{formatDate(row["created-at"])}</>,
       },
       {
         key: "actions",
         label: t("api_keys_page.col_actions"),
-        width: "w-[130px]",
+        width: "w-[152px] min-w-[152px]",
         render: (row, idx) => (
-          <div className="flex gap-1">
+          <div className="flex items-center gap-1.5">
             <button
               onClick={() => handleViewUsage(row)}
               className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-blue-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-blue-400"
@@ -1091,7 +1089,7 @@ export function ApiKeysPage() {
             rowKey={(row) => row.key}
             rowHeight={44}
             height="h-auto max-h-[70vh]"
-            minWidth="min-w-[1200px]"
+            minWidth="min-w-[1560px]"
             caption={t("api_keys_page.table_caption")}
             emptyText={t("api_keys_page.no_api_keys")}
             rowClassName={(row) => (row.disabled ? "opacity-50" : "")}
