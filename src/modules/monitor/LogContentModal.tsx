@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { usageApi } from "@/lib/http/apis";
 import { createPortal } from "react-dom";
@@ -44,6 +44,45 @@ interface LogContentModalProps {
 }
 
 type Msg = { role: string; content: string };
+
+/* ========================================================================== */
+/*  Async scheduling helpers                                                  */
+/* ========================================================================== */
+
+type CancelFn = () => void;
+
+function scheduleIdle(cb: () => void, timeoutMs = 250): CancelFn {
+  let cancelled = false;
+  let handle: number | null = null;
+
+  const run = () => {
+    if (cancelled) return;
+    cb();
+  };
+
+  const ric = (window as unknown as { requestIdleCallback?: unknown }).requestIdleCallback as
+    | ((fn: () => void, opts?: { timeout?: number }) => number)
+    | undefined;
+  const cic = (window as unknown as { cancelIdleCallback?: unknown }).cancelIdleCallback as
+    | ((id: number) => void)
+    | undefined;
+
+  if (ric) {
+    handle = ric(run, { timeout: timeoutMs });
+    return () => {
+      cancelled = true;
+      if (handle !== null && cic) cic(handle);
+      handle = null;
+    };
+  }
+
+  handle = window.setTimeout(run, 0);
+  return () => {
+    cancelled = true;
+    if (handle !== null) window.clearTimeout(handle);
+    handle = null;
+  };
+}
 
 /* ========================================================================== */
 /*  Role config                                                               */
@@ -161,6 +200,18 @@ const PROSE_CLASSES = `prose prose-sm dark:prose-invert max-w-none break-words l
 
 /* ---- macOS-style code block with syntax highlighting & copy ---- */
 
+function shouldShowLineNumbers(text: string): boolean {
+  // Avoid `split("\n")` on huge blocks (time + memory).
+  let newlines = 0;
+  for (let i = 0; i < text.length; i++) {
+    if (text.charCodeAt(i) === 10 /* \n */) {
+      newlines += 1;
+      if (newlines > 5) return true;
+    }
+  }
+  return false;
+}
+
 function CodeBlock({ language, children }: { language: string; children: string }) {
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
@@ -171,6 +222,7 @@ function CodeBlock({ language, children }: { language: string; children: string 
     });
   };
   const displayLang = language || "text";
+  const normalized = children.endsWith("\n") ? children.slice(0, -1) : children;
 
   return (
     <div className="overflow-hidden rounded-xl my-3" style={{ border: "1px solid #3e4451" }}>
@@ -215,10 +267,10 @@ function CodeBlock({ language, children }: { language: string; children: string 
           lineHeight: "1.6",
           padding: "10px 16px 16px 16px",
         }}
-        showLineNumbers={children.split("\n").length > 5}
+        showLineNumbers={shouldShowLineNumbers(normalized)}
         wrapLongLines
       >
-        {children.replace(/\n$/, "")}
+        {normalized}
       </SyntaxHighlighter>
     </div>
   );
@@ -390,11 +442,20 @@ function isShortContent(content: string): boolean {
 
 /* ---- MarkdownContent: auto-detects XML tags and renders appropriately ---- */
 
+function mayContainXmlLikeTags(raw: string): boolean {
+  // Conservative fast-path: only skip parsing when it's impossible to contain tags.
+  return raw.includes("<");
+}
+
 function MarkdownContent({ content }: { content: string }) {
-  const cleaned = cleanContent(content);
-  const segments = parseContentSegments(cleaned);
+  const cleaned = useMemo(() => cleanContent(content), [content]);
+  const segments = useMemo(
+    () => (mayContainXmlLikeTags(cleaned) ? parseContentSegments(cleaned) : null),
+    [cleaned],
+  );
 
   // No tags found — render as plain markdown
+  if (!segments) return <MarkdownBlock text={cleaned} />;
   if (segments.length <= 1 && (segments.length === 0 || segments[0].type === "text")) {
     return <MarkdownBlock text={cleaned} />;
   }
@@ -434,7 +495,10 @@ function MessageBlock({
   const style = ROLE_STYLES[role] || DEFAULT_STYLE;
 
   return (
-    <div className={`overflow-hidden rounded-xl border ${style.border} transition-colors`}>
+    <div
+      className={`overflow-hidden rounded-xl border ${style.border} transition-colors`}
+      style={{ contentVisibility: "auto", containIntrinsicSize: "240px" }}
+    >
       {/* Header — always visible, acts as toggle */}
       <button
         type="button"
@@ -918,6 +982,53 @@ function ContentModal({
 /*  LogContentModal                                                           */
 /* ========================================================================== */
 
+type RenderedView =
+  | { kind: "messages"; messages: Msg[] }
+  | { kind: "text"; text: string }
+  | { kind: "pretty_json"; pretty: string }
+  | { kind: "raw"; raw: string };
+
+type AsyncParsedState = { status: "idle" | "parsing" | "ready"; view: RenderedView | null };
+type AsyncPrettyState = { status: "idle" | "formatting" | "ready"; pretty: string | null };
+
+function tryPrettyPrintJson(raw: string): string | null {
+  try {
+    return JSON.stringify(JSON.parse(raw), null, 2);
+  } catch {
+    return null;
+  }
+}
+
+function buildInputRenderedView(raw: string): RenderedView {
+  const messages = parseInputMessages(raw);
+  if (messages && messages.length > 0) return { kind: "messages", messages };
+  const pretty = tryPrettyPrintJson(raw);
+  if (pretty) return { kind: "pretty_json", pretty };
+  return { kind: "raw", raw };
+}
+
+function buildOutputRenderedView(raw: string): RenderedView {
+  const parsed = parseOutputMessages(raw);
+  if (parsed) {
+    if ("messages" in parsed) return { kind: "messages", messages: parsed.messages };
+    return { kind: "text", text: parsed.text };
+  }
+  const pretty = tryPrettyPrintJson(raw);
+  if (pretty) return { kind: "pretty_json", pretty };
+  return { kind: "raw", raw };
+}
+
+function PlainPre({ text }: { text: string }) {
+  return (
+    <pre
+      className="whitespace-pre-wrap break-words rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs leading-relaxed font-mono dark:border-neutral-800 dark:bg-neutral-900 dark:text-slate-200"
+      style={{ contentVisibility: "auto", containIntrinsicSize: "800px" }}
+    >
+      {text}
+    </pre>
+  );
+}
+
 export function LogContentModal({
   open,
   logId,
@@ -933,6 +1044,21 @@ export function LogContentModal({
   const [model, setModel] = useState("");
   const [activeTab, setActiveTab] = useState<"input" | "output">(initialTab);
   const [viewMode, setViewMode] = useState<"rendered" | "raw">("rendered");
+  const [inputParsed, setInputParsed] = useState<AsyncParsedState>({ status: "idle", view: null });
+  const [outputParsed, setOutputParsed] = useState<AsyncParsedState>({
+    status: "idle",
+    view: null,
+  });
+  const [inputRawPretty, setInputRawPretty] = useState<AsyncPrettyState>({
+    status: "idle",
+    pretty: null,
+  });
+  const [outputRawPretty, setOutputRawPretty] = useState<AsyncPrettyState>({
+    status: "idle",
+    pretty: null,
+  });
+  const [inputRevealCount, setInputRevealCount] = useState(0);
+  const [outputRevealCount, setOutputRevealCount] = useState(0);
 
   useEffect(() => {
     setActiveTab(initialTab);
@@ -959,6 +1085,110 @@ export function LogContentModal({
   useEffect(() => {
     if (open && logId) fetchContent(logId);
   }, [open, logId, fetchContent]);
+
+  // Reset derived state whenever content changes
+  useEffect(() => {
+    setInputParsed({ status: inputContent ? "parsing" : "idle", view: null });
+    setInputRawPretty({ status: "idle", pretty: null });
+    setInputRevealCount(0);
+  }, [inputContent]);
+
+  useEffect(() => {
+    setOutputParsed({ status: outputContent ? "parsing" : "idle", view: null });
+    setOutputRawPretty({ status: "idle", pretty: null });
+    setOutputRevealCount(0);
+  }, [outputContent]);
+
+  // Parse rendered views off the initial synchronous render.
+  useEffect(() => {
+    if (!open || !inputContent) return;
+    let cancelled = false;
+    const cancel = scheduleIdle(() => {
+      const view = buildInputRenderedView(inputContent);
+      if (cancelled) return;
+      setInputParsed({ status: "ready", view });
+    });
+    return () => {
+      cancelled = true;
+      cancel();
+    };
+  }, [open, inputContent]);
+
+  useEffect(() => {
+    if (!open || !outputContent) return;
+    let cancelled = false;
+    const cancel = scheduleIdle(() => {
+      const view = buildOutputRenderedView(outputContent);
+      if (cancelled) return;
+      setOutputParsed({ status: "ready", view });
+    });
+    return () => {
+      cancelled = true;
+      cancel();
+    };
+  }, [open, outputContent]);
+
+  // Progressive mount for large message lists (final DOM remains full, but avoids one huge commit).
+  const activeRenderedView = useMemo(() => {
+    if (activeTab === "input") return inputParsed.view;
+    return outputParsed.view;
+  }, [activeTab, inputParsed.view, outputParsed.view]);
+
+  useEffect(() => {
+    if (!open || viewMode !== "rendered") return;
+    if (!activeRenderedView || activeRenderedView.kind !== "messages") return;
+
+    const total = activeRenderedView.messages.length;
+    if (total <= 0) return;
+
+    const BATCH_SIZE = 6;
+    const setCount = activeTab === "input" ? setInputRevealCount : setOutputRevealCount;
+
+    let cancelled = false;
+    let current = Math.min(total, BATCH_SIZE);
+    setCount(current);
+
+    let cancel: CancelFn | null = null;
+    const step = () => {
+      if (cancelled) return;
+      current = Math.min(total, current + BATCH_SIZE);
+      setCount(current);
+      if (current < total) cancel = scheduleIdle(step, 120);
+    };
+
+    if (current < total) cancel = scheduleIdle(step, 120);
+
+    return () => {
+      cancelled = true;
+      if (cancel) cancel();
+    };
+  }, [open, viewMode, activeTab, activeRenderedView]);
+
+  // Raw JSON pretty-print in idle time (keeps behavior, avoids blocking when switching to Raw).
+  useEffect(() => {
+    if (!open || viewMode !== "raw") return;
+    const isInput = activeTab === "input";
+    const raw = isInput ? inputContent : outputContent;
+    if (!raw) return;
+
+    const state = isInput ? inputRawPretty : outputRawPretty;
+    const setState = isInput ? setInputRawPretty : setOutputRawPretty;
+    if (state.status === "ready") return;
+
+    let cancelled = false;
+    setState({ status: "formatting", pretty: null });
+
+    const cancel = scheduleIdle(() => {
+      const pretty = tryPrettyPrintJson(raw);
+      if (cancelled) return;
+      setState({ status: "ready", pretty });
+    });
+
+    return () => {
+      cancelled = true;
+      cancel();
+    };
+  }, [open, viewMode, activeTab, inputContent, outputContent]);
 
   /* ---- Download handler ---- */
   const handleDownload = () => {
@@ -998,17 +1228,9 @@ export function LogContentModal({
         </div>
       );
     }
-    let formatted = content;
-    try {
-      formatted = JSON.stringify(JSON.parse(content), null, 2);
-    } catch {
-      /* not JSON, show as-is */
-    }
-    return (
-      <pre className="whitespace-pre-wrap break-words rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs leading-relaxed font-mono dark:border-neutral-800 dark:bg-neutral-900 dark:text-slate-200">
-        {formatted}
-      </pre>
-    );
+    const state = activeTab === "input" ? inputRawPretty : outputRawPretty;
+    const formatted = state.pretty ?? content;
+    return <PlainPre text={formatted} />;
   };
 
   /* ---- Tab bar with controls ---- */
@@ -1097,31 +1319,23 @@ export function LogContentModal({
       );
     }
     if (viewMode === "raw") return renderRaw(inputContent);
-    const messages = parseInputMessages(inputContent);
-    if (messages && messages.length > 0) {
+    if (inputParsed.status !== "ready" || !inputParsed.view)
+      return <PlainPre text={inputContent} />;
+
+    const view = inputParsed.view;
+    if (view.kind === "messages") {
+      const count = inputRevealCount > 0 ? inputRevealCount : Math.min(view.messages.length, 6);
+      const visible = view.messages.slice(0, count);
       return (
         <div className="space-y-3">
-          {messages.map((msg, idx) => (
+          {visible.map((msg, idx) => (
             <MessageBlock key={idx} role={msg.role} content={msg.content} />
           ))}
         </div>
       );
     }
-    // Fallback
-    try {
-      const fmt = JSON.stringify(JSON.parse(inputContent), null, 2);
-      return (
-        <pre className="whitespace-pre-wrap break-words rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs leading-relaxed dark:border-neutral-800 dark:bg-neutral-900 dark:text-slate-200">
-          {fmt}
-        </pre>
-      );
-    } catch {
-      return (
-        <pre className="whitespace-pre-wrap break-words rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm leading-relaxed dark:border-neutral-800 dark:bg-neutral-900 dark:text-slate-200">
-          {inputContent}
-        </pre>
-      );
-    }
+    if (view.kind === "pretty_json") return <PlainPre text={view.pretty} />;
+    return <PlainPre text={view.kind === "raw" ? view.raw : view.text} />;
   };
 
   /* ---- Render output ---- */
@@ -1135,37 +1349,30 @@ export function LogContentModal({
       );
     }
     if (viewMode === "raw") return renderRaw(outputContent);
-    const parsed = parseOutputMessages(outputContent);
-    if (parsed) {
-      if ("messages" in parsed) {
-        return (
-          <div className="space-y-3">
-            {parsed.messages.map((msg, idx) => (
-              <MessageBlock key={idx} role={msg.role} content={msg.content} />
-            ))}
-          </div>
-        );
-      }
+    if (outputParsed.status !== "ready" || !outputParsed.view)
+      return <PlainPre text={outputContent} />;
+
+    const view = outputParsed.view;
+    if (view.kind === "messages") {
+      const count = outputRevealCount > 0 ? outputRevealCount : Math.min(view.messages.length, 6);
+      const visible = view.messages.slice(0, count);
       return (
         <div className="space-y-3">
-          <MessageBlock role="assistant" content={parsed.text} />
+          {visible.map((msg, idx) => (
+            <MessageBlock key={idx} role={msg.role} content={msg.content} />
+          ))}
         </div>
       );
     }
-    try {
-      const fmt = JSON.stringify(JSON.parse(outputContent), null, 2);
+    if (view.kind === "pretty_json") return <PlainPre text={view.pretty} />;
+    if (view.kind === "text") {
       return (
-        <pre className="whitespace-pre-wrap break-words rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs leading-relaxed dark:border-neutral-800 dark:bg-neutral-900 dark:text-slate-200">
-          {fmt}
-        </pre>
-      );
-    } catch {
-      return (
-        <pre className="whitespace-pre-wrap break-words rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm leading-relaxed dark:border-neutral-800 dark:bg-neutral-900 dark:text-slate-200">
-          {outputContent}
-        </pre>
+        <div className="space-y-3">
+          <MessageBlock role="assistant" content={view.text} />
+        </div>
       );
     }
+    return <PlainPre text={view.raw} />;
   };
 
   return (
