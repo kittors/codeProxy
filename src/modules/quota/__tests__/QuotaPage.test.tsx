@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   list: vi.fn(),
   downloadText: vi.fn(),
   request: vi.fn(),
+  reconcile: vi.fn(),
   getApiCallErrorMessage: vi.fn((result: { statusCode?: number }) => `HTTP ${result.statusCode ?? 0}`),
 }));
 
@@ -20,6 +21,9 @@ vi.mock("@/lib/http/apis", () => ({
   },
   apiCallApi: {
     request: mocks.request,
+  },
+  quotaApi: {
+    reconcile: mocks.reconcile,
   },
   getApiCallErrorMessage: mocks.getApiCallErrorMessage,
 }));
@@ -57,6 +61,7 @@ describe("QuotaPage", () => {
     mocks.list.mockReset();
     mocks.downloadText.mockReset();
     mocks.request.mockReset();
+    mocks.reconcile.mockReset();
     mocks.getApiCallErrorMessage.mockClear();
   });
 
@@ -78,6 +83,7 @@ describe("QuotaPage", () => {
     mocks.request
       .mockResolvedValueOnce(makeCodexResult(10))
       .mockImplementationOnce(() => secondRequest.promise);
+    mocks.reconcile.mockResolvedValue({ status: "ok", changed: true });
 
     render(
       <ThemeProvider>
@@ -99,5 +105,7 @@ describe("QuotaPage", () => {
     await waitFor(() => {
       expect(screen.getByText("73%")).toBeInTheDocument();
     });
+
+    expect(mocks.reconcile).toHaveBeenCalledWith("1");
   });
 });

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useTranslation } from "react-i18next";
 import { RefreshCw } from "lucide-react";
-import { apiCallApi, authFilesApi, getApiCallErrorMessage } from "@/lib/http/apis";
+import { apiCallApi, authFilesApi, getApiCallErrorMessage, quotaApi } from "@/lib/http/apis";
 import { useInterval } from "@/hooks/useInterval";
 import type { ApiCallResult, AuthFileItem } from "@/lib/http/types";
 import { Button } from "@/modules/ui/Button";
@@ -306,6 +306,11 @@ export function QuotaPage() {
       }));
       try {
         const items = await fetchQuota(type, file);
+        const rawAuthIndex = (file as any)["auth_index"] ?? file.authIndex;
+        const authIndex = normalizeAuthIndexValue(rawAuthIndex);
+        if (authIndex) {
+          void quotaApi.reconcile(authIndex).catch(() => {});
+        }
         setMap((prev) => ({
           ...prev,
           [name]: { status: "success", items, updatedAt: Date.now() },

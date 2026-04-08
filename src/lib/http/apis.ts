@@ -11,3 +11,4 @@ export { vertexApi } from "./apis/vertex";
 export { apiKeysApi } from "./apis/api-keys";
 export { modelsApi } from "./apis/models";
 export { versionApi } from "./apis/version";
+export { quotaApi } from "./apis/quota";
