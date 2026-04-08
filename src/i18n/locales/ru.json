@@ -490,7 +490,16 @@
     "quota_refresh_single": "Обновить квоту",
     "quota_refresh_hint": "Обновить квоту только для этих учётных данных",
     "quota_refresh_success": "Квота для \"{{name}}\" обновлена",
-    "quota_refresh_failed": "Не удалось обновить квоту для \"{{name}}\": {{message}}"
+    "quota_refresh_failed": "Не удалось обновить квоту для \"{{name}}\": {{message}}",
+    "view_auth_file": "Просмотр файла авторизации",
+    "view_file_title": "Просмотр: {{name}}",
+    "detail_tab_json": "Содержимое",
+    "detail_tab_models": "Модели",
+    "detail_tab_fields": "Поля",
+    "detail_tab_channel": "Канал",
+    "detail_tab_json_desc": "Просмотр исходного JSON содержимого этого файла авторизации.",
+    "detail_tab_models_desc": "Запросить поддерживаемые модели для этих учётных данных, чтобы проверить права и исключения.",
+    "detail_models_refresh": "Обновить модели"
   },
   "antigravity_quota": {
     "title": "Квота Antigravity",
@@ -1285,7 +1294,6 @@
     "nav_oauth": "OAuth Login",
     "nav_api_keys": "API Keys",
     "nav_models": "Models",
-    "nav_quota": "Quota",
     "nav_config": "Config",
     "nav_system": "System",
     "nav_logs": "Logs",

@@ -12,7 +12,6 @@ import { useTranslation } from "react-i18next";
 import {
   Activity,
   Bot,
-  Coins,
   Cpu,
   LayoutDashboard,
   FileKey,
@@ -51,7 +50,6 @@ const NAV_ITEMS = [
   { to: "/auth-files", i18nKey: "shell.nav_auth_files", icon: FileKey },
   { to: "/api-keys", i18nKey: "shell.nav_api_keys", icon: Sparkles },
   { to: "/models", i18nKey: "shell.nav_models", icon: Cpu },
-  { to: "/quota", i18nKey: "shell.nav_quota", icon: Coins },
   { to: "/config", i18nKey: "shell.nav_config", icon: Settings },
   { to: "/system", i18nKey: "shell.nav_system", icon: Info },
   { to: "/logs", i18nKey: "shell.nav_logs", icon: FileText },
@@ -63,7 +61,6 @@ const getPageTitleKey = (pathname: string): string => {
   if (pathname.startsWith("/monitor")) return "shell.nav_monitor";
   if (pathname.startsWith("/ai-providers")) return "shell.nav_ai_providers";
   if (pathname.startsWith("/auth-files")) return "shell.nav_auth_files";
-  if (pathname.startsWith("/quota")) return "shell.nav_quota";
   if (pathname.startsWith("/api-keys")) return "shell.page_api_keys";
   if (pathname.startsWith("/models")) return "shell.nav_models";
   if (pathname.startsWith("/config")) return "shell.nav_config";

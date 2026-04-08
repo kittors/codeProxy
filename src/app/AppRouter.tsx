@@ -25,9 +25,6 @@ const ProvidersPage = lazy(() =>
 const AuthFilesPage = lazy(() =>
   import("@/modules/auth-files/AuthFilesPage").then((m) => ({ default: m.AuthFilesPage })),
 );
-const QuotaPage = lazy(() =>
-  import("@/modules/quota/QuotaPage").then((m) => ({ default: m.QuotaPage })),
-);
 const ConfigPage = lazy(() =>
   import("@/modules/config/ConfigPage").then((m) => ({ default: m.ConfigPage })),
 );
@@ -81,7 +78,6 @@ export function AppRouter() {
                               path="/auth-files/oauth-model-alias"
                               element={<Navigate to="/auth-files?tab=alias" replace />}
                             />
-                            <Route path="/quota" element={<QuotaPage />} />
                             <Route path="/usage" element={<Navigate to="/monitor" replace />} />
                             <Route path="/config" element={<ConfigPage />} />
                             <Route path="/logs" element={<LogsPage />} />

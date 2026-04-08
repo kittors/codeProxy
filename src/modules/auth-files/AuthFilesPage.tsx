@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import {
   CircleHelp,
   Download,
@@ -10,7 +10,6 @@ import {
   Plus,
   RefreshCw,
   Search,
-  Settings2,
   ShieldCheck,
   Trash2,
   Upload,
@@ -327,7 +326,6 @@ const buildAliasRows = (entries: OAuthModelAliasEntry[] | undefined): AliasRow[]
 export function AuthFilesPage() {
   const { t } = useTranslation();
   const { notify } = useToast();
-  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [isPending, startTransition] = useTransition();
 
@@ -363,10 +361,9 @@ export function AuthFilesPage() {
   const [detailFile, setDetailFile] = useState<AuthFileItem | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailText, setDetailText] = useState("");
+  const [detailTab, setDetailTab] = useState<"json" | "models" | "fields" | "channel">("json");
 
-  const [modelsOpen, setModelsOpen] = useState(false);
   const [modelsLoading, setModelsLoading] = useState(false);
-  const [modelsFileName, setModelsFileName] = useState("");
   const [modelsFileType, setModelsFileType] = useState("");
   const [modelsList, setModelsList] = useState<AuthFileModelItem[]>([]);
   const [modelsError, setModelsError] = useState<string | null>(null);
@@ -471,6 +468,41 @@ export function AuthFilesPage() {
         : t("m_quota.days_later", { days });
     },
     [nowMs, t],
+  );
+
+  const loadModelsForDetail = useCallback(
+    async (file: AuthFileItem, options?: { force?: boolean }) => {
+      const force = Boolean(options?.force);
+      setModelsFileType(resolveFileType(file));
+      setModelsLoading(true);
+      setModelsList([]);
+      setModelsError(null);
+
+      if (!force) {
+        const cached = modelsCacheRef.current.get(file.name);
+        if (cached) {
+          setModelsList(cached);
+          setModelsLoading(false);
+          return;
+        }
+      }
+
+      try {
+        const list = await authFilesApi.getModelsForAuthFile(file.name);
+        modelsCacheRef.current.set(file.name, list);
+        setModelsList(list);
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : "";
+        if (/404|not found/i.test(message)) {
+          setModelsError("unsupported");
+          return;
+        }
+        notify({ type: "error", message: message || t("auth_files.failed_get_models") });
+      } finally {
+        setModelsLoading(false);
+      }
+    },
+    [notify, t],
   );
 
   const refreshQuota = useCallback(
@@ -685,6 +717,7 @@ export function AuthFilesPage() {
   const openDetail = useCallback(
     async (file: AuthFileItem) => {
       setDetailOpen(true);
+      setDetailTab("json");
       setDetailFile(file);
       setDetailLoading(true);
       setDetailText("");
@@ -698,40 +731,6 @@ export function AuthFilesPage() {
         });
       } finally {
         setDetailLoading(false);
-      }
-    },
-    [notify, t],
-  );
-
-  const openModels = useCallback(
-    async (file: AuthFileItem) => {
-      setModelsOpen(true);
-      setModelsFileName(file.name);
-      setModelsFileType(resolveFileType(file));
-      setModelsLoading(true);
-      setModelsList([]);
-      setModelsError(null);
-
-      const cached = modelsCacheRef.current.get(file.name);
-      if (cached) {
-        setModelsList(cached);
-        setModelsLoading(false);
-        return;
-      }
-
-      try {
-        const list = await authFilesApi.getModelsForAuthFile(file.name);
-        modelsCacheRef.current.set(file.name, list);
-        setModelsList(list);
-      } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : "";
-        if (/404|not found/i.test(message)) {
-          setModelsError("unsupported");
-          return;
-        }
-        notify({ type: "error", message: message || t("auth_files.failed_get_models") });
-      } finally {
-        setModelsLoading(false);
       }
     },
     [notify, t],
@@ -1037,13 +1036,41 @@ export function AuthFilesPage() {
       await authFilesApi.patchFields({ name: fileName, label });
       notify({ type: "success", message: t("auth_files.saved") });
       await loadAll();
-      setChannelEditor({ open: false, fileName: "", label: "", saving: false, error: null });
+      setChannelEditor((prev) => ({ ...prev, saving: false, error: null }));
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : t("auth_files.save_failed");
       setChannelEditor((prev) => ({ ...prev, saving: false, error: message }));
       notify({ type: "error", message });
     }
   }, [channelEditor.fileName, channelEditor.label, loadAll, notify, t]);
+
+  useEffect(() => {
+    if (!detailOpen || !detailFile) return;
+    if (detailTab === "models") {
+      void loadModelsForDetail(detailFile);
+      return;
+    }
+    if (detailTab === "fields") {
+      if (prefixProxyEditor.fileName !== detailFile.name) {
+        void openPrefixProxyEditor(detailFile);
+      }
+      return;
+    }
+    if (detailTab === "channel") {
+      if (channelEditor.fileName !== detailFile.name) {
+        openChannelEditor(detailFile);
+      }
+    }
+  }, [
+    channelEditor.fileName,
+    detailFile,
+    detailOpen,
+    detailTab,
+    loadModelsForDetail,
+    openChannelEditor,
+    openPrefixProxyEditor,
+    prefixProxyEditor.fileName,
+  ]);
 
   const prefixProxyDirty = useMemo(() => {
     if (!prefixProxyEditor.json) return false;
@@ -1092,16 +1119,19 @@ export function AuthFilesPage() {
       await authFilesApi.upload(file);
       notify({ type: "success", message: t("auth_files.saved") });
       await loadAll();
-      setPrefixProxyEditor({
-        open: false,
-        fileName: "",
-        loading: false,
-        saving: false,
-        error: null,
-        json: null,
-        prefix: "",
-        proxyUrl: "",
-      });
+      try {
+        const parsed = JSON.parse(payload) as Record<string, unknown>;
+        setPrefixProxyEditor((prev) => ({
+          ...prev,
+          loading: false,
+          saving: false,
+          error: null,
+          json: parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : prev.json,
+        }));
+      } catch {
+        setPrefixProxyEditor((prev) => ({ ...prev, saving: false, error: null }));
+      }
+      setDetailText((prev) => (name && detailFile?.name === name ? payload : prev));
     } catch (err: unknown) {
       notify({
         type: "error",
@@ -1110,6 +1140,7 @@ export function AuthFilesPage() {
       setPrefixProxyEditor((prev) => ({ ...prev, saving: false }));
     }
   }, [
+    detailFile?.name,
     loadAll,
     notify,
     prefixProxyDirty,
@@ -1573,6 +1604,7 @@ export function AuthFilesPage() {
         key: "quota",
         label: t("auth_files.col_quota"),
         width: "w-80",
+        headerClassName: "text-center",
         render: (file) => {
           const provider = resolveQuotaProvider(file);
           if (!provider) {
@@ -1690,17 +1722,11 @@ export function AuthFilesPage() {
         label: t("common.action"),
         width: "w-72",
         headerClassName: "text-center",
-        cellClassName: "text-right",
+        cellClassName: "text-center",
         render: (file) => {
           const runtimeOnly = isRuntimeOnlyAuthFile(file);
-          const typeKey = resolveFileType(file);
-          const isOauthFile =
-            String(file.account_type || "")
-              .trim()
-              .toLowerCase() === "oauth";
-          const showModels = !runtimeOnly || typeKey === "aistudio";
 
-          if (runtimeOnly && !showModels) {
+          if (runtimeOnly) {
             return (
               <span className="text-xs text-slate-500 dark:text-white/55">
                 {t("auth_files.virtual_hint")}
@@ -1715,7 +1741,7 @@ export function AuthFilesPage() {
 
           const iconBtnCls = "h-9 w-9 px-0";
           return (
-            <div className="inline-flex flex-wrap items-center justify-end gap-1">
+            <div className="inline-flex flex-wrap items-center justify-center gap-1">
               {quotaProvider ? (
                 <HoverTooltip content={t("common.refresh")}>
                   <Button
@@ -1731,88 +1757,45 @@ export function AuthFilesPage() {
                   </Button>
                 </HoverTooltip>
               ) : null}
-              {showModels ? (
-                <HoverTooltip content={t("auth_files.models")}>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className={iconBtnCls}
-                    onClick={() => void openModels(file)}
-                    title={t("auth_files.models")}
-                    aria-label={t("auth_files.models")}
-                  >
-                    <ShieldCheck size={16} />
-                  </Button>
-                </HoverTooltip>
-              ) : null}
 
-              {runtimeOnly ? null : (
-                <>
-                  {isOauthFile ? (
-                    <HoverTooltip content={t("auth_files.edit_channel_name")}>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className={iconBtnCls}
-                        onClick={() => openChannelEditor(file)}
-                        title={t("auth_files.edit_channel_name")}
-                        aria-label={t("auth_files.edit_channel_name")}
-                      >
-                        <Settings2 size={16} />
-                      </Button>
-                    </HoverTooltip>
-                  ) : null}
+              <HoverTooltip content={t("auth_files.view")}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={iconBtnCls}
+                  onClick={() => void openDetail(file)}
+                  title={t("auth_files.view")}
+                  aria-label={t("auth_files.view")}
+                >
+                  <Eye size={16} />
+                </Button>
+              </HoverTooltip>
 
-                  <HoverTooltip content={t("auth_files.view")}>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className={iconBtnCls}
-                      onClick={() => void openDetail(file)}
-                      title={t("auth_files.view")}
-                      aria-label={t("auth_files.view")}
-                    >
-                      <Eye size={16} />
-                    </Button>
-                  </HoverTooltip>
-                  <HoverTooltip content={t("auth_files.prefix_proxy")}>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className={iconBtnCls}
-                      onClick={() => void openPrefixProxyEditor(file)}
-                      title={t("auth_files.prefix_proxy")}
-                      aria-label={t("auth_files.prefix_proxy")}
-                    >
-                      <Settings2 size={16} />
-                    </Button>
-                  </HoverTooltip>
-                  <HoverTooltip content={t("auth_files.download")}>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className={iconBtnCls}
-                      onClick={() => void downloadAuthFile(file)}
-                      title={t("auth_files.download")}
-                      aria-label={t("auth_files.download")}
-                    >
-                      <Download size={16} />
-                    </Button>
-                  </HoverTooltip>
-                  <HoverTooltip content={t("common.delete")}>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className={`${iconBtnCls} text-rose-600 hover:bg-rose-50 hover:text-rose-700 dark:text-rose-300 dark:hover:bg-rose-500/10 dark:hover:text-rose-200`}
-                      onClick={() => setConfirm({ type: "deleteFile", name: file.name })}
-                      title={t("common.delete")}
-                      aria-label={t("common.delete")}
-                    >
-                      <Trash2 size={16} />
-                    </Button>
-                  </HoverTooltip>
-                </>
-              )}
+              <HoverTooltip content={t("auth_files.download")}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={iconBtnCls}
+                  onClick={() => void downloadAuthFile(file)}
+                  title={t("auth_files.download")}
+                  aria-label={t("auth_files.download")}
+                >
+                  <Download size={16} />
+                </Button>
+              </HoverTooltip>
+
+              <HoverTooltip content={t("common.delete")}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={`${iconBtnCls} text-rose-600 hover:bg-rose-50 hover:text-rose-700 dark:text-rose-300 dark:hover:bg-rose-500/10 dark:hover:text-rose-200`}
+                  onClick={() => setConfirm({ type: "deleteFile", name: file.name })}
+                  title={t("common.delete")}
+                  aria-label={t("common.delete")}
+                >
+                  <Trash2 size={16} />
+                </Button>
+              </HoverTooltip>
             </div>
           );
         },
@@ -1822,10 +1805,7 @@ export function AuthFilesPage() {
     checkAuthFileConnectivity,
     connectivityState,
     downloadAuthFile,
-    openChannelEditor,
     openDetail,
-    openModels,
-    openPrefixProxyEditor,
     quotaByFileName,
     refreshQuota,
     setFileEnabled,
@@ -1860,10 +1840,6 @@ export function AuthFilesPage() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button variant="secondary" size="sm" onClick={() => navigate("/quota")}>
-            <ShieldCheck size={14} />
-            {t("auth_files.quota")}
-          </Button>
           {tab === "files" ? (
             <>
               <input
@@ -2426,279 +2402,292 @@ export function AuthFilesPage() {
       )}
 
       <Modal
-        open={channelEditor.open}
-        title={t("auth_files.edit_channel_name_title", { name: channelEditor.fileName || "--" })}
-        description={t("auth_files.edit_channel_name_desc")}
-        onClose={() =>
-          setChannelEditor({ open: false, fileName: "", label: "", saving: false, error: null })
-        }
-        footer={
-          <div className="flex items-center gap-2">
-            <Button
-              variant="secondary"
-              onClick={() =>
-                setChannelEditor({
-                  open: false,
-                  fileName: "",
-                  label: "",
-                  saving: false,
-                  error: null,
-                })
-              }
-            >
-              {t("auth_files.cancel")}
-            </Button>
-            <Button
-              variant="primary"
-              onClick={() => void saveChannelEditor()}
-              disabled={channelEditor.saving}
-            >
-              <ShieldCheck size={14} />
-              {t("auth_files.save")}
-            </Button>
-          </div>
-        }
-      >
-        <div className="space-y-3">
-          <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
-              {t("auth_files.channel_name_label")}
-            </label>
-            <TextInput
-              value={channelEditor.label}
-              onChange={(e) => {
-                const value = e.currentTarget.value;
-                setChannelEditor((prev) => ({ ...prev, label: value, error: null }));
-              }}
-              placeholder={t("auth_files.channel_name_placeholder")}
-            />
-          </div>
-          {channelEditor.error ? (
-            <p className="text-sm text-rose-600 dark:text-rose-300">{channelEditor.error}</p>
-          ) : (
-            <p className="text-xs text-slate-500 dark:text-white/55">
-              {t("auth_files.channel_name_hint")}
-            </p>
-          )}
-        </div>
-      </Modal>
-
-      <Modal
         open={detailOpen}
         title={
           detailFile
             ? t("auth_files.view_file_title", { name: detailFile.name })
             : t("auth_files.view_auth_file")
         }
-        onClose={() => setDetailOpen(false)}
+        maxWidth="max-w-5xl"
+        bodyHeightClassName="h-[70vh]"
+        onClose={() => {
+          setDetailOpen(false);
+          setDetailTab("json");
+        }}
         footer={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {detailTab === "models" && detailFile ? (
+              <Button
+                variant="secondary"
+                onClick={() => void loadModelsForDetail(detailFile, { force: true })}
+                disabled={modelsLoading}
+              >
+                <RefreshCw size={14} className={modelsLoading ? "animate-spin" : ""} />
+                {t("auth_files.detail_models_refresh")}
+              </Button>
+            ) : null}
+
+            {detailTab === "json" ? (
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  if (detailFile) {
+                    downloadTextAsFile(detailText, detailFile.name);
+                  }
+                }}
+                disabled={!detailFile || detailLoading}
+              >
+                <Download size={14} />
+                {t("auth_files.download")}
+              </Button>
+            ) : null}
+
+            {detailTab === "fields" ? (
+              <Button
+                variant="primary"
+                onClick={() => void savePrefixProxy()}
+                disabled={
+                  prefixProxyEditor.loading ||
+                  prefixProxyEditor.saving ||
+                  !prefixProxyEditor.json ||
+                  !prefixProxyDirty
+                }
+              >
+                <ShieldCheck size={14} />
+                {t("auth_files.save")}
+              </Button>
+            ) : null}
+
+            {detailTab === "channel" ? (
+              <Button
+                variant="primary"
+                onClick={() => void saveChannelEditor()}
+                disabled={channelEditor.saving}
+              >
+                <ShieldCheck size={14} />
+                {t("auth_files.save")}
+              </Button>
+            ) : null}
+
             <Button
               variant="secondary"
               onClick={() => {
-                if (detailFile) {
-                  downloadTextAsFile(detailText, detailFile.name);
-                }
+                setDetailOpen(false);
+                setDetailTab("json");
               }}
-              disabled={!detailFile || detailLoading}
             >
-              <Download size={14} />
-              {t("auth_files.download")}
-            </Button>
-            <Button variant="secondary" onClick={() => setDetailOpen(false)}>
               {t("auth_files.close")}
             </Button>
           </div>
         }
       >
-        {detailLoading ? (
-          <div className="text-sm text-slate-600 dark:text-white/65">
-            {t("common.loading_ellipsis")}
-          </div>
+        {!detailFile ? (
+          <EmptyState title={t("auth_files.view_auth_file")} description="--" />
         ) : (
-          <pre className="whitespace-pre-wrap break-words rounded-2xl border border-slate-200 bg-white p-4 font-mono text-xs text-slate-900 dark:border-neutral-800 dark:bg-neutral-950 dark:text-slate-100">
-            {detailText || "--"}
-          </pre>
-        )}
-      </Modal>
+          <Tabs value={detailTab} onValueChange={(next) => setDetailTab(next as typeof detailTab)}>
+            <div className="space-y-4">
+              <TabsList>
+                <TabsTrigger value="json">{t("auth_files.detail_tab_json")}</TabsTrigger>
+                <TabsTrigger value="models">{t("auth_files.detail_tab_models")}</TabsTrigger>
+                <TabsTrigger value="fields">{t("auth_files.detail_tab_fields")}</TabsTrigger>
+                {String(detailFile.account_type || "")
+                  .trim()
+                  .toLowerCase() === "oauth" ? (
+                  <TabsTrigger value="channel">{t("auth_files.detail_tab_channel")}</TabsTrigger>
+                ) : null}
+              </TabsList>
 
-      <Modal
-        open={modelsOpen}
-        title={t("auth_files.models_list_title", {
-          name: modelsFileName || "--",
-          type: modelsFileType || "",
-        })}
-        onClose={() => setModelsOpen(false)}
-        footer={
-          <Button variant="secondary" onClick={() => setModelsOpen(false)}>
-            {t("auth_files.close")}
-          </Button>
-        }
-      >
-        {modelsLoading ? (
-          <div className="text-sm text-slate-600 dark:text-white/65">
-            {t("common.loading_ellipsis")}
-          </div>
-        ) : modelsError === "unsupported" ? (
-          <EmptyState
-            title={t("auth_files.api_not_supported")}
-            description={t("auth_files.no_models_api")}
-          />
-        ) : modelsList.length === 0 ? (
-          <EmptyState
-            title={t("common.no_model_data")}
-            description={t("auth_files_page.models_hint")}
-          />
-        ) : (
-          <div className="space-y-2">
-            {modelsList.map((model) => (
-              <div
-                key={model.id}
-                className="rounded-2xl border border-slate-200 bg-white/70 px-4 py-3 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60"
-              >
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="font-mono text-xs text-slate-900 dark:text-white">{model.id}</p>
-                  {(() => {
-                    const providerKey = normalizeProviderKey(modelsFileType);
-                    const excludedModels = excluded[providerKey] ?? [];
-                    const hit = excludedModels.some((pattern) =>
-                      matchesModelPattern(model.id, pattern),
-                    );
-                    if (!hit) return null;
-                    return (
-                      <span className="inline-flex rounded-lg bg-rose-600/10 px-2 py-0.5 text-[11px] font-semibold text-rose-700 dark:bg-rose-500/15 dark:text-rose-200">
-                        {t("auth_files.oauth_excluded")}
-                      </span>
-                    );
-                  })()}
+              <TabsContent value="json" className="space-y-4">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
+                  <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                    {t("auth_files.detail_tab_json")}
+                  </p>
+                  <p className="mt-1 text-xs text-slate-600 dark:text-white/60">
+                    {t("auth_files.detail_tab_json_desc")}
+                  </p>
                 </div>
-                <p className="mt-1 text-xs text-slate-600 dark:text-white/65">
-                  {model.display_name ? `display_name: ${model.display_name}` : ""}
-                  {model.owned_by ? ` · owned_by: ${model.owned_by}` : ""}
-                </p>
-              </div>
-            ))}
-          </div>
-        )}
-      </Modal>
 
-      <Modal
-        open={prefixProxyEditor.open}
-        title={t("auth_files.edit_title", { name: prefixProxyEditor.fileName || "--" })}
-        description={t("auth_files.prefix_proxy_desc")}
-        onClose={() =>
-          setPrefixProxyEditor({
-            open: false,
-            fileName: "",
-            loading: false,
-            saving: false,
-            error: null,
-            json: null,
-            prefix: "",
-            proxyUrl: "",
-          })
-        }
-        footer={
-          <div className="flex flex-wrap items-center gap-2">
-            {prefixProxyEditor.error ? (
-              <span className="text-sm font-semibold text-rose-700 dark:text-rose-200">
-                {prefixProxyEditor.error}
-              </span>
-            ) : null}
-            <Button
-              variant="secondary"
-              onClick={() =>
-                setPrefixProxyEditor({
-                  open: false,
-                  fileName: "",
-                  loading: false,
-                  saving: false,
-                  error: null,
-                  json: null,
-                  prefix: "",
-                  proxyUrl: "",
-                })
-              }
-            >
-              {t("auth_files.cancel")}
-            </Button>
-            <Button
-              variant="primary"
-              onClick={() => void savePrefixProxy()}
-              disabled={
-                prefixProxyEditor.loading ||
-                prefixProxyEditor.saving ||
-                !prefixProxyEditor.json ||
-                !prefixProxyDirty
-              }
-            >
-              <ShieldCheck size={14} />
-              {t("auth_files.save")}
-            </Button>
-          </div>
-        }
-      >
-        {prefixProxyEditor.loading ? (
-          <div className="text-sm text-slate-600 dark:text-white/65">
-            {t("common.loading_ellipsis")}
-          </div>
-        ) : prefixProxyEditor.json ? (
-          <div className="space-y-4">
-            <div className="rounded-2xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
-              <p className="text-sm font-semibold text-slate-900 dark:text-white">
-                {t("auth_files.prefix_label")}
-              </p>
-              <div className="mt-2">
-                <TextInput
-                  value={prefixProxyEditor.prefix}
-                  onChange={(e) => {
-                    const value = e.currentTarget.value;
-                    setPrefixProxyEditor((prev) => ({ ...prev, prefix: value }));
-                  }}
-                  placeholder={t("auth_files.prefix_placeholder")}
-                />
-              </div>
-              <p className="mt-2 text-xs text-slate-500 dark:text-white/55">
-                {t("auth_files.leave_empty_prefix")}
-              </p>
-            </div>
+                {detailLoading ? (
+                  <div className="text-sm text-slate-600 dark:text-white/65">
+                    {t("common.loading_ellipsis")}
+                  </div>
+                ) : (
+                  <pre className="whitespace-pre-wrap break-words rounded-2xl border border-slate-200 bg-white p-4 font-mono text-xs text-slate-900 dark:border-neutral-800 dark:bg-neutral-950 dark:text-slate-100">
+                    {detailText || "--"}
+                  </pre>
+                )}
+              </TabsContent>
 
-            <div className="rounded-2xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
-              <p className="text-sm font-semibold text-slate-900 dark:text-white">
-                {t("auth_files.proxy_url_label")}
-              </p>
-              <div className="mt-2">
-                <TextInput
-                  value={prefixProxyEditor.proxyUrl}
-                  onChange={(e) => {
-                    const value = e.currentTarget.value;
-                    setPrefixProxyEditor((prev) => ({ ...prev, proxyUrl: value }));
-                  }}
-                  placeholder={t("auth_files.proxy_url_placeholder")}
-                />
-              </div>
-              <p className="mt-2 text-xs text-slate-500 dark:text-white/55">
-                {t("auth_files.leave_empty_proxy")}
-              </p>
-            </div>
+              <TabsContent value="models" className="space-y-4">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
+                  <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                    {t("auth_files.detail_tab_models")}
+                  </p>
+                  <p className="mt-1 text-xs text-slate-600 dark:text-white/60">
+                    {t("auth_files.detail_tab_models_desc")}
+                  </p>
+                </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
-              <p className="text-sm font-semibold text-slate-900 dark:text-white">
-                {t("auth_files.preview_after_save")}
-              </p>
-              <pre className="mt-3 max-h-64 overflow-y-auto whitespace-pre-wrap break-words rounded-2xl border border-slate-200 bg-white p-3 font-mono text-xs text-slate-900 dark:border-neutral-800 dark:bg-neutral-950 dark:text-slate-100">
-                {prefixProxyUpdatedText}
-              </pre>
-              <p className="mt-2 text-xs text-slate-500 dark:text-white/55">
-                {t("auth_files.save_note", { size: formatFileSize(MAX_AUTH_FILE_SIZE) })}
-              </p>
+                {modelsLoading ? (
+                  <div className="text-sm text-slate-600 dark:text-white/65">
+                    {t("common.loading_ellipsis")}
+                  </div>
+                ) : modelsError === "unsupported" ? (
+                  <EmptyState
+                    title={t("auth_files.api_not_supported")}
+                    description={t("auth_files.no_models_api")}
+                  />
+                ) : modelsList.length === 0 ? (
+                  <EmptyState
+                    title={t("common.no_model_data")}
+                    description={t("auth_files_page.models_hint")}
+                  />
+                ) : (
+                  <div className="space-y-2">
+                    {modelsList.map((model) => (
+                      <div
+                        key={model.id}
+                        className="rounded-2xl border border-slate-200 bg-white/70 px-4 py-3 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60"
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <p className="font-mono text-xs text-slate-900 dark:text-white">
+                            {model.id}
+                          </p>
+                          {(() => {
+                            const providerKey = normalizeProviderKey(modelsFileType);
+                            const excludedModels = excluded[providerKey] ?? [];
+                            const hit = excludedModels.some((pattern) =>
+                              matchesModelPattern(model.id, pattern),
+                            );
+                            if (!hit) return null;
+                            return (
+                              <span className="inline-flex rounded-lg bg-rose-600/10 px-2 py-0.5 text-[11px] font-semibold text-rose-700 dark:bg-rose-500/15 dark:text-rose-200">
+                                {t("auth_files.oauth_excluded")}
+                              </span>
+                            );
+                          })()}
+                        </div>
+                        <p className="mt-1 text-xs text-slate-600 dark:text-white/65">
+                          {model.display_name ? `display_name: ${model.display_name}` : ""}
+                          {model.owned_by ? ` · owned_by: ${model.owned_by}` : ""}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+
+              <TabsContent value="fields" className="space-y-4">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
+                  <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                    {t("auth_files.detail_tab_fields")}
+                  </p>
+                  <p className="mt-1 text-xs text-slate-600 dark:text-white/60">
+                    {t("auth_files.prefix_proxy_desc")}
+                  </p>
+                </div>
+
+                {prefixProxyEditor.loading ? (
+                  <div className="text-sm text-slate-600 dark:text-white/65">
+                    {t("common.loading_ellipsis")}
+                  </div>
+                ) : prefixProxyEditor.json ? (
+                  <div className="space-y-4">
+                    <div className="rounded-2xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
+                      <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                        {t("auth_files.prefix_label")}
+                      </p>
+                      <div className="mt-2">
+                        <TextInput
+                          value={prefixProxyEditor.prefix}
+                          onChange={(e) => {
+                            const value = e.currentTarget.value;
+                            setPrefixProxyEditor((prev) => ({ ...prev, prefix: value }));
+                          }}
+                          placeholder={t("auth_files.prefix_placeholder")}
+                        />
+                      </div>
+                      <p className="mt-2 text-xs text-slate-500 dark:text-white/55">
+                        {t("auth_files.leave_empty_prefix")}
+                      </p>
+                    </div>
+
+                    <div className="rounded-2xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
+                      <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                        {t("auth_files.proxy_url_label")}
+                      </p>
+                      <div className="mt-2">
+                        <TextInput
+                          value={prefixProxyEditor.proxyUrl}
+                          onChange={(e) => {
+                            const value = e.currentTarget.value;
+                            setPrefixProxyEditor((prev) => ({ ...prev, proxyUrl: value }));
+                          }}
+                          placeholder={t("auth_files.proxy_url_placeholder")}
+                        />
+                      </div>
+                      <p className="mt-2 text-xs text-slate-500 dark:text-white/55">
+                        {t("auth_files.leave_empty_proxy")}
+                      </p>
+                    </div>
+
+                    <div className="rounded-2xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
+                      <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                        {t("auth_files.preview_after_save")}
+                      </p>
+                      <pre className="mt-3 max-h-64 overflow-y-auto whitespace-pre-wrap break-words rounded-2xl border border-slate-200 bg-white p-3 font-mono text-xs text-slate-900 dark:border-neutral-800 dark:bg-neutral-950 dark:text-slate-100">
+                        {prefixProxyUpdatedText}
+                      </pre>
+                      <p className="mt-2 text-xs text-slate-500 dark:text-white/55">
+                        {t("auth_files.save_note", { size: formatFileSize(MAX_AUTH_FILE_SIZE) })}
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <EmptyState
+                    title={t("auth_files_page.cannot_edit")}
+                    description={prefixProxyEditor.error || t("auth_files.unknown_error")}
+                  />
+                )}
+              </TabsContent>
+
+              <TabsContent value="channel" className="space-y-4">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
+                  <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                    {t("auth_files.detail_tab_channel")}
+                  </p>
+                  <p className="mt-1 text-xs text-slate-600 dark:text-white/60">
+                    {t("auth_files.edit_channel_name_desc")}
+                  </p>
+                </div>
+
+                <div className="space-y-3">
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
+                      {t("auth_files.channel_name_label")}
+                    </label>
+                    <TextInput
+                      value={channelEditor.label}
+                      onChange={(e) => {
+                        const value = e.currentTarget.value;
+                        setChannelEditor((prev) => ({ ...prev, label: value, error: null }));
+                      }}
+                      placeholder={t("auth_files.channel_name_placeholder")}
+                    />
+                  </div>
+                  {channelEditor.error ? (
+                    <p className="text-sm text-rose-600 dark:text-rose-300">
+                      {channelEditor.error}
+                    </p>
+                  ) : (
+                    <p className="text-xs text-slate-500 dark:text-white/55">
+                      {t("auth_files.channel_name_hint")}
+                    </p>
+                  )}
+                </div>
+              </TabsContent>
             </div>
-          </div>
-        ) : (
-          <EmptyState
-            title={t("auth_files_page.cannot_edit")}
-            description={prefixProxyEditor.error || t("auth_files.unknown_error")}
-          />
+          </Tabs>
         )}
       </Modal>
 
