@@ -38,6 +38,8 @@ export interface VirtualTableProps<T> {
   loadingMore?: boolean;
   /** Callback when scrolled near bottom (triggers next page load) */
   onScrollBottom?: () => void;
+  /** Enable row virtualization (default true). Disable to allow natural row height. */
+  virtualize?: boolean;
   /** Row height in px (default 44) */
   rowHeight?: number;
   /** Overscan rows above/below viewport (default 12) */
@@ -78,6 +80,7 @@ export function VirtualTable<T>({
   hasMore = false,
   loadingMore = false,
   onScrollBottom,
+  virtualize = true,
   rowHeight = DEFAULT_ROW_HEIGHT,
   overscan = DEFAULT_OVERSCAN,
   scrollThreshold = DEFAULT_SCROLL_THRESHOLD,
@@ -198,6 +201,14 @@ export function VirtualTable<T>({
 
   // Virtual window calculation
   const { startIndex, endIndex, topSpacerHeight, bottomSpacerHeight } = useMemo(() => {
+    if (!virtualize) {
+      return {
+        startIndex: 0,
+        endIndex: rows.length,
+        topSpacerHeight: 0,
+        bottomSpacerHeight: 0,
+      };
+    }
     const total = rows.length;
     if (!total) return { startIndex: 0, endIndex: 0, topSpacerHeight: 0, bottomSpacerHeight: 0 };
 
@@ -214,9 +225,12 @@ export function VirtualTable<T>({
       topSpacerHeight: start * rowHeight,
       bottomSpacerHeight: (total - end) * rowHeight,
     };
-  }, [rows.length, scrollTop, viewportHeight, rowHeight, overscan]);
+  }, [overscan, rowHeight, rows.length, scrollTop, viewportHeight, virtualize]);
 
-  const visibleRows = useMemo(() => rows.slice(startIndex, endIndex), [rows, startIndex, endIndex]);
+  const visibleRows = useMemo(
+    () => (virtualize ? rows.slice(startIndex, endIndex) : rows),
+    [endIndex, rows, startIndex, virtualize],
+  );
 
   return (
     <div className="min-w-0 overflow-hidden">
@@ -267,11 +281,13 @@ export function VirtualTable<T>({
               </tr>
             ) : (
               <>
-                <tr aria-hidden="true">
-                  <td colSpan={colCount} height={topSpacerHeight} className="p-0" />
-                </tr>
+                {virtualize ? (
+                  <tr aria-hidden="true">
+                    <td colSpan={colCount} height={topSpacerHeight} className="p-0" />
+                  </tr>
+                ) : null}
                 {visibleRows.map((row, localIdx) => {
-                  const globalIdx = startIndex + localIdx;
+                  const globalIdx = virtualize ? startIndex + localIdx : localIdx;
                   const key = rowKey(row, globalIdx);
                   const extraCls =
                     typeof rowClassName === "function"
@@ -281,7 +297,7 @@ export function VirtualTable<T>({
                     <tr
                       key={key}
                       className={`text-sm transition-colors hover:bg-slate-50 dark:hover:bg-white/[0.04] ${extraCls}`}
-                      style={{ height: rowHeight }}
+                      style={virtualize ? { height: rowHeight } : undefined}
                     >
                       {columns.map((col, colIdx) => {
                         const isFirst = colIdx === 0;
@@ -304,9 +320,11 @@ export function VirtualTable<T>({
                     </tr>
                   );
                 })}
-                <tr aria-hidden="true">
-                  <td colSpan={colCount} height={bottomSpacerHeight} className="p-0" />
-                </tr>
+                {virtualize ? (
+                  <tr aria-hidden="true">
+                    <td colSpan={colCount} height={bottomSpacerHeight} className="p-0" />
+                  </tr>
+                ) : null}
               </>
             )}
           </tbody>

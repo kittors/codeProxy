@@ -35,12 +35,7 @@ import { OAuthLoginDialog } from "@/modules/oauth/OAuthLoginDialog";
 import { normalizeUsageSourceId, type KeyStatBucket } from "@/modules/providers/provider-usage";
 import { fetchQuota, resolveQuotaProvider, type QuotaProvider } from "@/modules/quota/quota-fetch";
 import { useInterval } from "@/hooks/useInterval";
-import {
-  clampPercent,
-  formatRelativeResetLabel,
-  type QuotaItem,
-  type QuotaState,
-} from "@/modules/quota/quota-helpers";
+import { clampPercent, type QuotaItem, type QuotaState } from "@/modules/quota/quota-helpers";
 
 type AuthFileModelItem = { id: string; display_name?: string; type?: string; owned_by?: string };
 type OAuthDialogTab =
@@ -451,19 +446,29 @@ export function AuthFilesPage() {
     [t],
   );
 
-  const translateRelativeResetLabel = useCallback(
+  const formatQuotaResetText = useCallback(
     (resetAtMs?: number) => {
-      const raw = formatRelativeResetLabel(resetAtMs, nowMs);
-      if (!raw) return null;
-      if (!raw.startsWith("m_quota.")) return raw;
+      if (typeof resetAtMs !== "number" || !Number.isFinite(resetAtMs)) return null;
 
-      const parts = raw.split("::");
-      const key = parts[0];
-      if (key === "m_quota.minutes_later") return t(key, { minutes: parts[1] });
-      if (key === "m_quota.hours_later") return t(key, { hours: parts[1] });
-      if (key === "m_quota.hours_minutes_later")
-        return t(key, { hours: parts[1], minutes: parts[2] });
-      return t(key);
+      const diffMs = resetAtMs - nowMs;
+      if (diffMs <= 0) return t("m_quota.refresh_due");
+
+      const minutes = Math.max(1, Math.ceil(diffMs / 60000));
+      if (minutes < 60) return t("m_quota.minutes_later", { minutes });
+
+      const totalHours = Math.floor(minutes / 60);
+      const restMinutes = minutes % 60;
+      if (totalHours < 24) {
+        return restMinutes
+          ? t("m_quota.hours_minutes_later", { hours: totalHours, minutes: restMinutes })
+          : t("m_quota.hours_later", { hours: totalHours });
+      }
+
+      const days = Math.floor(totalHours / 24);
+      const restHours = totalHours % 24;
+      return restHours
+        ? t("m_quota.days_hours_later", { days, hours: restHours })
+        : t("m_quota.days_later", { days });
     },
     [nowMs, t],
   );
@@ -1600,105 +1605,60 @@ export function AuthFilesPage() {
             );
           };
 
-          const tooltipContent = hasError ? (
-            <div className="max-w-80">
-              <p className="text-xs font-semibold">{t("common.error")}</p>
-              <p className="mt-1 text-xs">{translateQuotaText(state.error ?? "")}</p>
-            </div>
-          ) : items.length > 0 ? (
-            <div className="max-h-64 w-80 overflow-auto space-y-2">
-              {items.map((item) => {
-                const percentText =
-                  item.percent === null ? "--" : `${Math.round(clampPercent(item.percent))}%`;
-                const resetText = translateRelativeResetLabel(item.resetAtMs);
-                return (
-                  <div key={item.label} className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="w-16 shrink-0 truncate text-[11px] font-medium text-slate-700 dark:text-white/80">
-                        {translateQuotaText(item.label)}
-                      </span>
-                      <div className="min-w-0 flex-1">{bar(item.percent)}</div>
-                      <span className="w-12 shrink-0 text-right text-[11px] font-semibold tabular-nums text-slate-800 dark:text-white/85">
-                        {percentText}
-                      </span>
-                      {resetText ? (
-                        <span className="w-20 shrink-0 text-right text-[10px] tabular-nums text-slate-400 dark:text-white/35">
-                          {resetText}
-                        </span>
-                      ) : null}
-                    </div>
-                    {item.meta ? (
-                      <p className="text-[11px] text-slate-600 dark:text-white/65">{item.meta}</p>
-                    ) : null}
-                  </div>
-                );
-              })}
-            </div>
-          ) : null;
-
-          const summaryItems = items.slice(0, 2);
-          const moreCount = Math.max(0, items.length - summaryItems.length);
-
           return (
-            <div className="flex items-start justify-between gap-2">
-              <HoverTooltip content={tooltipContent} disabled={!tooltipContent}>
-                <div className="min-w-0 flex-1">
-                  {isLoading && items.length === 0 ? (
-                    <div className="inline-flex items-center gap-2 text-xs text-slate-500 dark:text-white/55">
-                      <Loader2 size={12} className="animate-spin" />
-                      {t("common.loading_ellipsis")}
-                    </div>
-                  ) : hasError && items.length === 0 ? (
-                    <p className="truncate text-xs font-semibold text-rose-700 dark:text-rose-200">
+            <div className="space-y-2">
+              {isLoading && items.length === 0 ? (
+                <div className="inline-flex items-center gap-2 text-xs text-slate-500 dark:text-white/55">
+                  <Loader2 size={12} className="animate-spin" />
+                  {t("common.loading_ellipsis")}
+                </div>
+              ) : hasError && items.length === 0 ? (
+                <p className="truncate text-xs font-semibold text-rose-700 dark:text-rose-200">
+                  {translateQuotaText(state.error ?? t("common.error"))}
+                </p>
+              ) : items.length === 0 ? (
+                <span className="text-xs text-slate-400 dark:text-white/40">--</span>
+              ) : (
+                <>
+                  {hasError ? (
+                    <p className="truncate text-[11px] font-semibold text-rose-700 dark:text-rose-200">
                       {translateQuotaText(state.error ?? t("common.error"))}
                     </p>
-                  ) : summaryItems.length === 0 ? (
-                    <span className="text-xs text-slate-400 dark:text-white/40">--</span>
-                  ) : (
-                    <div className="space-y-1.5">
-                      {summaryItems.map((item) => {
-                        const percentText =
-                          item.percent === null ? "--" : `${Math.round(clampPercent(item.percent))}%`;
-                        const resetText = translateRelativeResetLabel(item.resetAtMs);
-                        return (
-                          <div key={item.label} className="flex items-center gap-2">
-                            <span className="w-16 shrink-0 truncate text-[11px] font-medium text-slate-700 dark:text-white/70">
+                  ) : null}
+                  <div className="space-y-2">
+                    {items.map((item) => {
+                      const percentText =
+                        item.percent === null ? "--" : `${Math.round(clampPercent(item.percent))}%`;
+                      const resetText = formatQuotaResetText(item.resetAtMs);
+                      return (
+                        <div key={item.label} className="space-y-1">
+                          <div className="grid grid-cols-[3.25rem_1fr_3.25rem_8.25rem] items-center gap-2">
+                            <span className="truncate text-[11px] font-medium text-slate-700 dark:text-white/75">
                               {translateQuotaText(item.label)}
                             </span>
-                            <div className="min-w-0 flex-1">{bar(item.percent)}</div>
-                            <span className="w-12 shrink-0 text-right text-[11px] font-semibold tabular-nums text-slate-800 dark:text-white/80">
+                            <div className="min-w-0">{bar(item.percent)}</div>
+                            <span className="text-right text-[11px] font-semibold tabular-nums text-slate-800 dark:text-white/85">
                               {percentText}
                             </span>
                             {resetText ? (
-                              <span className="w-20 shrink-0 text-right text-[10px] tabular-nums text-slate-400 dark:text-white/35">
+                              <span className="truncate whitespace-nowrap text-right text-[10px] tabular-nums text-slate-400 dark:text-white/35">
                                 {resetText}
                               </span>
-                            ) : null}
+                            ) : (
+                              <span />
+                            )}
                           </div>
-                        );
-                      })}
-                      {moreCount ? (
-                        <p className="text-[11px] text-slate-400 dark:text-white/35">
-                          +{moreCount}
-                        </p>
-                      ) : null}
-                    </div>
-                  )}
-                </div>
-              </HoverTooltip>
-
-              <HoverTooltip content={t("common.refresh")}>
-                <button
-                  type="button"
-                  onClick={() => void refreshQuota(file, provider)}
-                  disabled={isLoading}
-                  aria-label={`${t("common.refresh")} ${file.name}`}
-                  title={t("common.refresh")}
-                  className="shrink-0 rounded-md p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 disabled:opacity-40 dark:text-white/35 dark:hover:bg-white/10 dark:hover:text-white"
-                >
-                  <RefreshCw size={12} className={isLoading ? "animate-spin" : ""} />
-                </button>
-              </HoverTooltip>
+                          {item.meta ? (
+                            <p className="pl-[3.25rem] text-[10px] text-slate-500 dark:text-white/55">
+                              {item.meta}
+                            </p>
+                          ) : null}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
             </div>
           );
         },
@@ -1729,7 +1689,7 @@ export function AuthFilesPage() {
         key: "actions",
         label: t("common.action"),
         width: "w-72",
-        headerClassName: "text-right",
+        headerClassName: "text-center",
         cellClassName: "text-right",
         render: (file) => {
           const runtimeOnly = isRuntimeOnlyAuthFile(file);
@@ -1748,9 +1708,29 @@ export function AuthFilesPage() {
             );
           }
 
+          const quotaProvider = resolveQuotaProvider(file);
+          const quotaRefreshing = quotaProvider
+            ? quotaByFileName[file.name]?.status === "loading"
+            : false;
+
           const iconBtnCls = "h-9 w-9 px-0";
           return (
             <div className="inline-flex flex-wrap items-center justify-end gap-1">
+              {quotaProvider ? (
+                <HoverTooltip content={t("common.refresh")}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={iconBtnCls}
+                    onClick={() => void refreshQuota(file, quotaProvider)}
+                    title={t("common.refresh")}
+                    aria-label={t("common.refresh")}
+                    disabled={quotaRefreshing}
+                  >
+                    <RefreshCw size={16} className={quotaRefreshing ? "animate-spin" : ""} />
+                  </Button>
+                </HoverTooltip>
+              ) : null}
               {showModels ? (
                 <HoverTooltip content={t("auth_files.models")}>
                   <Button
@@ -1852,7 +1832,7 @@ export function AuthFilesPage() {
     statusUpdating,
     t,
     translateQuotaText,
-    translateRelativeResetLabel,
+    formatQuotaResetText,
     usageIndex,
   ]);
 
@@ -2041,6 +2021,7 @@ export function AuthFilesPage() {
                     columns={fileColumns}
                     rowKey={(row) => row.name}
                     loading={false}
+                    virtualize={false}
                     rowHeight={84}
                     caption={t("auth_files.table_caption")}
                     emptyText={t("auth_files_page.no_files_desc")}

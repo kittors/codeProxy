@@ -1488,6 +1488,8 @@
     "minutes_later": "in {{minutes}} minutes",
     "hours_later": "in {{hours}} hours",
     "hours_minutes_later": "in {{hours}} hours {{minutes}} minutes",
+    "days_later": "in {{days}}d",
+    "days_hours_later": "in {{days}}d {{hours}}h",
     "code_5h": "Code: 5h",
     "code_weekly": "Code: Weekly",
     "review_5h": "Review: 5h",

@@ -1873,6 +1873,8 @@
     "minutes_later": "{{minutes}} 分钟后",
     "hours_later": "{{hours}} 小时后",
     "hours_minutes_later": "{{hours}} 小时 {{minutes}} 分钟后",
+    "days_later": "{{days}} 天后",
+    "days_hours_later": "{{days}} 天 {{hours}} 小时后",
     "code_5h": "5小时",
     "code_weekly": "周",
     "review_5h": "审查：5小时",
