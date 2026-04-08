@@ -20,15 +20,27 @@ describe("LogContentModal", () => {
       })),
     };
 
-    const fetchFn = vi.fn().mockResolvedValue({
-      input_content: JSON.stringify(inputPayload),
-      output_content: '{"choices":[{"message":{"content":"ok"}}]}',
-      model: "gpt-test",
+    const fetchPartFn = vi.fn(async (_id: number, part: "input" | "output") => {
+      if (part === "input") {
+        return { id: 1, model: "gpt-test", part, content: JSON.stringify(inputPayload) };
+      }
+      return {
+        id: 1,
+        model: "gpt-test",
+        part,
+        content: '{"choices":[{"message":{"content":"ok"}}]}',
+      };
     });
 
     render(
       <ThemeProvider>
-        <LogContentModal open logId={1} initialTab="input" onClose={() => {}} fetchFn={fetchFn} />
+        <LogContentModal
+          open
+          logId={1}
+          initialTab="input"
+          onClose={() => {}}
+          fetchPartFn={fetchPartFn}
+        />
       </ThemeProvider>,
     );
 
@@ -36,7 +48,8 @@ describe("LogContentModal", () => {
       await Promise.resolve();
       await Promise.resolve();
     });
-    expect(fetchFn).toHaveBeenCalled();
+    expect(fetchPartFn).toHaveBeenCalled();
+    expect(fetchPartFn.mock.calls[0]?.[1]).toBe("input");
 
     // Before idle parsing runs: show a full raw preview (no freeze, full content available).
     expect(screen.getByText(/"messages"/)).toBeInTheDocument();
@@ -59,15 +72,22 @@ describe("LogContentModal", () => {
   test("pretty-prints JSON in Raw view asynchronously", async () => {
     vi.useFakeTimers();
 
-    const fetchFn = vi.fn().mockResolvedValue({
-      input_content: '{"a":1,"b":{"c":2}}',
-      output_content: "",
-      model: "gpt-test",
+    const fetchPartFn = vi.fn(async (_id: number, part: "input" | "output") => {
+      if (part === "input") {
+        return { id: 1, model: "gpt-test", part, content: '{"a":1,"b":{"c":2}}' };
+      }
+      return { id: 1, model: "gpt-test", part, content: "" };
     });
 
     render(
       <ThemeProvider>
-        <LogContentModal open logId={1} initialTab="input" onClose={() => {}} fetchFn={fetchFn} />
+        <LogContentModal
+          open
+          logId={1}
+          initialTab="input"
+          onClose={() => {}}
+          fetchPartFn={fetchPartFn}
+        />
       </ThemeProvider>,
     );
 
@@ -75,7 +95,7 @@ describe("LogContentModal", () => {
       await Promise.resolve();
       await Promise.resolve();
     });
-    expect(fetchFn).toHaveBeenCalled();
+    expect(fetchPartFn).toHaveBeenCalled();
 
     // Switch to Raw mode.
     await act(async () => {

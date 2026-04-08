@@ -68,6 +68,15 @@ export class ApiClient {
     const controller = new AbortController();
     const timeoutMs = options?.timeoutMs ?? REQUEST_TIMEOUT_MS;
     const timer = setTimeout(() => controller.abort(), timeoutMs);
+    const externalSignal = options?.signal;
+    const onExternalAbort = () => controller.abort();
+    if (externalSignal) {
+      if (externalSignal.aborted) {
+        controller.abort();
+      } else {
+        externalSignal.addEventListener("abort", onExternalAbort, { once: true });
+      }
+    }
 
     try {
       const url = this.buildUrl(path, options?.params);
@@ -167,6 +176,9 @@ export class ApiClient {
       }
     } finally {
       clearTimeout(timer);
+      if (externalSignal) {
+        externalSignal.removeEventListener("abort", onExternalAbort);
+      }
     }
   }
 

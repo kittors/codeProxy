@@ -618,32 +618,65 @@ function PaginationBar({
 
       {/* Page nav */}
       <div className="flex items-center gap-1 overflow-x-auto">
-        <button type="button" className={btnNormal} disabled={currentPage <= 1} onClick={() => onPageChange(1)} aria-label={t("request_logs.first_page")}>
+        <button
+          type="button"
+          className={btnNormal}
+          disabled={currentPage <= 1}
+          onClick={() => onPageChange(1)}
+          aria-label={t("request_logs.first_page")}
+        >
           <ChevronsLeft size={14} />
         </button>
-        <button type="button" className={btnNormal} disabled={currentPage <= 1} onClick={() => onPageChange(currentPage - 1)} aria-label={t("request_logs.prev_page")}>
+        <button
+          type="button"
+          className={btnNormal}
+          disabled={currentPage <= 1}
+          onClick={() => onPageChange(currentPage - 1)}
+          aria-label={t("request_logs.prev_page")}
+        >
           <ChevronLeft size={14} />
         </button>
         {pageNumbers.map((p, i) =>
           p === "..." ? (
-            <span key={`dots-${i}`} className="px-1 text-xs text-slate-400 dark:text-white/30">…</span>
+            <span key={`dots-${i}`} className="px-1 text-xs text-slate-400 dark:text-white/30">
+              …
+            </span>
           ) : (
-            <button key={p} type="button" className={p === currentPage ? btnActive : btnNormal} onClick={() => onPageChange(p)}>
+            <button
+              key={p}
+              type="button"
+              className={p === currentPage ? btnActive : btnNormal}
+              onClick={() => onPageChange(p)}
+            >
               {p}
             </button>
           ),
         )}
-        <button type="button" className={btnNormal} disabled={currentPage >= totalPages} onClick={() => onPageChange(currentPage + 1)} aria-label={t("request_logs.next_page")}>
+        <button
+          type="button"
+          className={btnNormal}
+          disabled={currentPage >= totalPages}
+          onClick={() => onPageChange(currentPage + 1)}
+          aria-label={t("request_logs.next_page")}
+        >
           <ChevronRight size={14} />
         </button>
-        <button type="button" className={btnNormal} disabled={currentPage >= totalPages} onClick={() => onPageChange(totalPages)} aria-label={t("request_logs.last_page")}>
+        <button
+          type="button"
+          className={btnNormal}
+          disabled={currentPage >= totalPages}
+          onClick={() => onPageChange(totalPages)}
+          aria-label={t("request_logs.last_page")}
+        >
           <ChevronsRight size={14} />
         </button>
       </div>
 
       {/* Rows per page */}
       <div className="flex items-center gap-1.5">
-        <span className="text-xs text-slate-500 dark:text-white/50 whitespace-nowrap">{t("request_logs.rows_per_page")}</span>
+        <span className="text-xs text-slate-500 dark:text-white/50 whitespace-nowrap">
+          {t("request_logs.rows_per_page")}
+        </span>
         <Select
           value={String(pageSize)}
           onChange={(v) => onPageSizeChange(Number(v))}
@@ -1385,7 +1418,10 @@ export function ApiKeyLookupPage() {
                     >
                       {modelDistributionData.length > 0 ? (
                         <div className="flex flex-col sm:grid sm:h-72 sm:grid-cols-[minmax(0,1fr)_220px] gap-4">
-                          <EChart option={modelDistributionOption} className="h-52 sm:h-72 min-w-0" />
+                          <EChart
+                            option={modelDistributionOption}
+                            className="h-52 sm:h-72 min-w-0"
+                          />
                           <div className="flex flex-row flex-wrap sm:flex-col sm:h-72 justify-center gap-2 overflow-y-auto pr-1">
                             {modelDistributionLegend.map((item) => (
                               <div
@@ -1434,38 +1470,38 @@ export function ApiKeyLookupPage() {
                             items={[
                               ...(dailyLegendAvailability.hasInput
                                 ? [
-                                  {
-                                    key: DAILY_LEGEND_KEYS.input,
-                                    label: t("apikey_lookup.input_token"),
-                                    colorClass: "bg-violet-400",
-                                    enabled: dailyLegendSelected[DAILY_LEGEND_KEYS.input] ?? true,
-                                    onToggle: toggleDailyLegend,
-                                  },
-                                ]
+                                    {
+                                      key: DAILY_LEGEND_KEYS.input,
+                                      label: t("apikey_lookup.input_token"),
+                                      colorClass: "bg-violet-400",
+                                      enabled: dailyLegendSelected[DAILY_LEGEND_KEYS.input] ?? true,
+                                      onToggle: toggleDailyLegend,
+                                    },
+                                  ]
                                 : []),
                               ...(dailyLegendAvailability.hasOutput
                                 ? [
-                                  {
-                                    key: DAILY_LEGEND_KEYS.output,
-                                    label: t("apikey_lookup.output_token"),
-                                    colorClass: "bg-emerald-400",
-                                    enabled:
-                                      dailyLegendSelected[DAILY_LEGEND_KEYS.output] ?? true,
-                                    onToggle: toggleDailyLegend,
-                                  },
-                                ]
+                                    {
+                                      key: DAILY_LEGEND_KEYS.output,
+                                      label: t("apikey_lookup.output_token"),
+                                      colorClass: "bg-emerald-400",
+                                      enabled:
+                                        dailyLegendSelected[DAILY_LEGEND_KEYS.output] ?? true,
+                                      onToggle: toggleDailyLegend,
+                                    },
+                                  ]
                                 : []),
                               ...(dailyLegendAvailability.hasRequests
                                 ? [
-                                  {
-                                    key: DAILY_LEGEND_KEYS.requests,
-                                    label: t("apikey_lookup.requests"),
-                                    colorClass: "bg-blue-500",
-                                    enabled:
-                                      dailyLegendSelected[DAILY_LEGEND_KEYS.requests] ?? true,
-                                    onToggle: toggleDailyLegend,
-                                  },
-                                ]
+                                    {
+                                      key: DAILY_LEGEND_KEYS.requests,
+                                      label: t("apikey_lookup.requests"),
+                                      colorClass: "bg-blue-500",
+                                      enabled:
+                                        dailyLegendSelected[DAILY_LEGEND_KEYS.requests] ?? true,
+                                      onToggle: toggleDailyLegend,
+                                    },
+                                  ]
                                 : []),
                             ]}
                           />
@@ -1525,7 +1561,9 @@ export function ApiKeyLookupPage() {
                           </span>
                         </span>
                         <span className="hidden sm:inline-flex items-center gap-1.5 whitespace-nowrap">
-                          <span className="text-slate-300 dark:text-white/10" aria-hidden="true">·</span>
+                          <span className="text-slate-300 dark:text-white/10" aria-hidden="true">
+                            ·
+                          </span>
                           {t("apikey_lookup.token")}
                           <span className="font-mono tabular-nums">
                             {stats.total_tokens.toLocaleString()}
@@ -1533,7 +1571,9 @@ export function ApiKeyLookupPage() {
                         </span>
                         {lastUpdatedText && (
                           <span className="hidden sm:inline-flex items-center gap-1.5 whitespace-nowrap">
-                            <span className="text-slate-300 dark:text-white/10" aria-hidden="true">·</span>
+                            <span className="text-slate-300 dark:text-white/10" aria-hidden="true">
+                              ·
+                            </span>
                             <span className="text-slate-400 dark:text-white/40">
                               {t("request_logs.updated_at", { time: lastUpdatedText })}
                             </span>
@@ -1563,13 +1603,20 @@ export function ApiKeyLookupPage() {
                         <tbody className="text-slate-900 dark:text-white">
                           {!loading && rows.length === 0 ? (
                             <tr>
-                              <td colSpan={logColumns.length} className="px-4 py-12 text-center text-sm text-slate-600 dark:text-white/70">
+                              <td
+                                colSpan={logColumns.length}
+                                className="px-4 py-12 text-center text-sm text-slate-600 dark:text-white/70"
+                              >
                                 {t("request_logs.no_data")}
                               </td>
                             </tr>
                           ) : (
                             rows.map((row, idx) => (
-                              <tr key={row.id} className="text-sm transition-colors hover:bg-slate-50 dark:hover:bg-white/[0.04]" style={{ height: 44 }}>
+                              <tr
+                                key={row.id}
+                                className="text-sm transition-colors hover:bg-slate-50 dark:hover:bg-white/[0.04]"
+                                style={{ height: 44 }}
+                              >
                                 {logColumns.map((col, colIdx) => (
                                   <td
                                     key={col.key}
@@ -1587,7 +1634,10 @@ export function ApiKeyLookupPage() {
                     {loading ? (
                       <div className="absolute inset-0 z-10 flex items-center justify-center rounded-b-2xl bg-white/70 backdrop-blur-sm dark:bg-neutral-950/55">
                         <div className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white/85 px-3 py-2 text-sm font-medium text-slate-700 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/70 dark:text-white/75">
-                          <span className="h-4 w-4 rounded-full border-2 border-slate-300 border-t-slate-900 motion-reduce:animate-none motion-safe:animate-spin dark:border-white/20 dark:border-t-white/80" aria-hidden="true" />
+                          <span
+                            className="h-4 w-4 rounded-full border-2 border-slate-300 border-t-slate-900 motion-reduce:animate-none motion-safe:animate-spin dark:border-white/20 dark:border-t-white/80"
+                            aria-hidden="true"
+                          />
                           <span role="status">{t("common.loading_ellipsis")}</span>
                         </div>
                       </div>
@@ -1629,18 +1679,22 @@ export function ApiKeyLookupPage() {
           logId={contentModalLogId}
           initialTab={contentModalTab}
           onClose={() => setContentModalOpen(false)}
-          fetchFn={
+          fetchPartFn={
             queriedKey
-              ? async (id: number) => {
-                const base = detectApiBaseFromLocation();
-                const url = `${base}${MANAGEMENT_API_PREFIX}/public/usage/logs/${id}/content?api_key=${encodeURIComponent(queriedKey)}`;
-                const resp = await fetch(url);
-                if (!resp.ok) {
-                  const text = await resp.text().catch(() => "");
-                  throw new Error(text || `Request failed (${resp.status})`);
+              ? async (
+                  id: number,
+                  part: "input" | "output",
+                  options?: { signal?: AbortSignal },
+                ) => {
+                  const base = detectApiBaseFromLocation();
+                  const url = `${base}${MANAGEMENT_API_PREFIX}/public/usage/logs/${id}/content?api_key=${encodeURIComponent(queriedKey)}&part=${encodeURIComponent(part)}&format=json`;
+                  const resp = await fetch(url, { signal: options?.signal });
+                  if (!resp.ok) {
+                    const text = await resp.text().catch(() => "");
+                    throw new Error(text || `Request failed (${resp.status})`);
+                  }
+                  return resp.json();
                 }
-                return resp.json();
-              }
               : undefined
           }
         />

@@ -24,8 +24,15 @@ export const usageApi = {
 
     if (!candidate || typeof candidate !== "object") {
       return {
-        total_requests: 0, success_count: 0, failure_count: 0, total_tokens: 0,
-        apis: {}, requests_by_day: {}, requests_by_hour: {}, tokens_by_day: {}, tokens_by_hour: {}
+        total_requests: 0,
+        success_count: 0,
+        failure_count: 0,
+        total_tokens: 0,
+        apis: {},
+        requests_by_day: {},
+        requests_by_hour: {},
+        tokens_by_day: {},
+        tokens_by_hour: {},
       };
     }
 
@@ -33,8 +40,15 @@ export const usageApi = {
 
     if (!payload.apis || typeof payload.apis !== "object") {
       return {
-        total_requests: 0, success_count: 0, failure_count: 0, total_tokens: 0,
-        apis: {}, requests_by_day: {}, requests_by_hour: {}, tokens_by_day: {}, tokens_by_hour: {}
+        total_requests: 0,
+        success_count: 0,
+        failure_count: 0,
+        total_tokens: 0,
+        apis: {},
+        requests_by_day: {},
+        requests_by_hour: {},
+        tokens_by_day: {},
+        tokens_by_hour: {},
       };
     }
 
@@ -127,6 +141,42 @@ export const usageApi = {
   async getLogContent(id: number): Promise<LogContentResponse> {
     return apiClient.get<LogContentResponse>(`/usage/logs/${id}/content`);
   },
+
+  async getLogContentPart(
+    id: number,
+    part: "input" | "output",
+    options?: { signal?: AbortSignal; timeoutMs?: number },
+  ): Promise<LogContentPartResponse> {
+    const resp = await apiClient.get<unknown>(`/usage/logs/${id}/content`, {
+      params: { part, format: "json" },
+      signal: options?.signal,
+      timeoutMs: options?.timeoutMs,
+    });
+
+    if (resp && typeof resp === "object") {
+      const record = resp as Record<string, unknown>;
+      if (record.part === "input" || record.part === "output") {
+        return {
+          id: Number(record.id ?? id),
+          model: String(record.model ?? ""),
+          part: record.part as "input" | "output",
+          content: String(record.content ?? ""),
+        };
+      }
+      if ("input_content" in record || "output_content" in record) {
+        return {
+          id: Number(record.id ?? id),
+          model: String(record.model ?? ""),
+          part,
+          content: String(
+            part === "input" ? (record.input_content ?? "") : (record.output_content ?? ""),
+          ),
+        };
+      }
+    }
+
+    return { id, model: "", part, content: "" };
+  },
 };
 
 export interface DashboardSummary {
@@ -198,4 +248,11 @@ export interface LogContentResponse {
   input_content: string;
   output_content: string;
   model: string;
+}
+
+export interface LogContentPartResponse {
+  id: number;
+  model: string;
+  part: "input" | "output";
+  content: string;
 }

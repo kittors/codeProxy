@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { usageApi } from "@/lib/http/apis";
 import { createPortal } from "react-dom";
@@ -41,6 +41,15 @@ interface LogContentModalProps {
   fetchFn?: (
     id: number,
   ) => Promise<{ input_content: string; output_content: string; model: string }>;
+  /** Optional part fetch function. When provided, it replaces the default usageApi.getLogContentPart call. */
+  fetchPartFn?: (
+    id: number,
+    part: "input" | "output",
+    options?: { signal?: AbortSignal },
+  ) => Promise<
+    | { id: number; model: string; part: "input" | "output"; content: string }
+    | { input_content: string; output_content: string; model: string }
+  >;
 }
 
 type Msg = { role: string; content: string };
@@ -1035,10 +1044,13 @@ export function LogContentModal({
   initialTab = "input",
   onClose,
   fetchFn,
+  fetchPartFn,
 }: LogContentModalProps) {
   const { t } = useTranslation();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [inputLoading, setInputLoading] = useState(false);
+  const [outputLoading, setOutputLoading] = useState(false);
+  const [inputError, setInputError] = useState<string | null>(null);
+  const [outputError, setOutputError] = useState<string | null>(null);
   const [inputContent, setInputContent] = useState("");
   const [outputContent, setOutputContent] = useState("");
   const [model, setModel] = useState("");
@@ -1059,32 +1071,99 @@ export function LogContentModal({
   });
   const [inputRevealCount, setInputRevealCount] = useState(0);
   const [outputRevealCount, setOutputRevealCount] = useState(0);
+  const abortRef = useRef<{ input: AbortController | null; output: AbortController | null }>({
+    input: null,
+    output: null,
+  });
 
   useEffect(() => {
     setActiveTab(initialTab);
   }, [initialTab, logId]);
 
-  const fetchContent = useCallback(
-    async (id: number) => {
+  const fetchPart = useCallback(
+    async (id: number, part: "input" | "output", opts?: { prefetch?: boolean }) => {
+      const controller = new AbortController();
+      const prev = abortRef.current[part];
+      if (prev) prev.abort();
+      abortRef.current[part] = controller;
+
+      const setLoading = part === "input" ? setInputLoading : setOutputLoading;
+      const setError = part === "input" ? setInputError : setOutputError;
+      const setContent = part === "input" ? setInputContent : setOutputContent;
+
       setLoading(true);
-      setError(null);
+      if (!opts?.prefetch) setError(null);
+
       try {
-        const result = fetchFn ? await fetchFn(id) : await usageApi.getLogContent(id);
-        setInputContent(result.input_content || "");
-        setOutputContent(result.output_content || "");
-        setModel(result.model || "");
+        const result = fetchPartFn
+          ? await fetchPartFn(id, part, { signal: controller.signal })
+          : fetchFn
+            ? await fetchFn(id)
+            : await usageApi.getLogContentPart(id, part, {
+                signal: controller.signal,
+                timeoutMs: 60_000,
+              });
+
+        const record = result as Record<string, unknown>;
+        if (typeof record.content === "string") {
+          setContent(record.content || "");
+          setModel(typeof record.model === "string" ? record.model : "");
+          return;
+        }
+
+        const input = typeof record.input_content === "string" ? record.input_content : "";
+        const output = typeof record.output_content === "string" ? record.output_content : "";
+        setContent(part === "input" ? input : output);
+        setModel(typeof record.model === "string" ? record.model : "");
       } catch (err) {
+        if (controller.signal.aborted) return;
+        if (opts?.prefetch) return;
         setError(err instanceof Error ? err.message : t("error_detail.load_failed"));
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) setLoading(false);
       }
     },
-    [fetchFn, t],
+    [fetchFn, fetchPartFn, t],
   );
 
   useEffect(() => {
-    if (open && logId) fetchContent(logId);
-  }, [open, logId, fetchContent]);
+    if (!open || !logId) return;
+
+    setInputContent("");
+    setOutputContent("");
+    setModel("");
+    setInputError(null);
+    setOutputError(null);
+    setInputLoading(false);
+    setOutputLoading(false);
+
+    let cancelled = false;
+    void fetchPart(logId, initialTab).then(() => {
+      if (cancelled) return;
+      const other = initialTab === "input" ? "output" : "input";
+      scheduleIdle(() => {
+        if (!cancelled) void fetchPart(logId, other, { prefetch: true });
+      }, 500);
+    });
+
+    return () => {
+      cancelled = true;
+      abortRef.current.input?.abort();
+      abortRef.current.output?.abort();
+      abortRef.current.input = null;
+      abortRef.current.output = null;
+      setInputLoading(false);
+      setOutputLoading(false);
+    };
+  }, [open, logId, initialTab, fetchPart]);
+
+  useEffect(() => {
+    if (!open || !logId) return;
+    const content = activeTab === "input" ? inputContent : outputContent;
+    const loading = activeTab === "input" ? inputLoading : outputLoading;
+    if (content || loading) return;
+    void fetchPart(logId, activeTab);
+  }, [open, logId, activeTab, inputContent, outputContent, inputLoading, outputLoading, fetchPart]);
 
   // Reset derived state whenever content changes
   useEffect(() => {
@@ -1235,6 +1314,8 @@ export function LogContentModal({
 
   /* ---- Tab bar with controls ---- */
   const currentContent = activeTab === "input" ? inputContent : outputContent;
+  const activeLoading = activeTab === "input" ? inputLoading : outputLoading;
+  const activeError = activeTab === "input" ? inputError : outputError;
   const tabBar = (
     <div className="flex items-center gap-3">
       {/* Input / Output tabs */}
@@ -1377,16 +1458,16 @@ export function LogContentModal({
 
   return (
     <ContentModal open={open} model={model} onClose={onClose} tabs={tabBar}>
-      {loading ? (
+      {activeLoading && !currentContent ? (
         <div className="flex items-center justify-center py-20">
           <Loader2 size={24} className="animate-spin text-slate-400 dark:text-white/40" />
           <span className="ml-3 text-sm text-slate-500 dark:text-white/50">
             {t("common.loading_ellipsis")}
           </span>
         </div>
-      ) : error ? (
+      ) : activeError && !currentContent ? (
         <div className="flex flex-col items-center justify-center py-16">
-          <p className="text-sm text-red-500 dark:text-red-400">{error}</p>
+          <p className="text-sm text-red-500 dark:text-red-400">{activeError}</p>
         </div>
       ) : (
         <div className="min-h-[200px]">
