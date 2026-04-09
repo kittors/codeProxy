@@ -1,5 +1,6 @@
-import { render, screen } from "@testing-library/react";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import type { ReactNode } from "react";
+import { act, render, screen } from "@testing-library/react";
+import { createMemoryRouter, MemoryRouter, Route, RouterProvider, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { ToastProvider } from "@/modules/ui/ToastProvider";
 import { ThemeProvider } from "@/modules/ui/ThemeProvider";
@@ -32,6 +33,7 @@ vi.mock("@/lib/http/apis", () => ({
 describe("AuthFilesPage files table", () => {
   beforeEach(() => {
     window.localStorage.clear();
+    window.sessionStorage.clear();
   });
 
   test("renders VirtualTable for auth files and keeps actions available", async () => {
@@ -54,6 +56,75 @@ describe("AuthFilesPage files table", () => {
     expect(screen.getByText("5h")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Add OAuth Login" })).toBeInTheDocument();
     expect(screen.getByRole("switch", { name: "Enable/Disable" })).toBeInTheDocument();
+  });
+
+  test("shows a skeleton table while first loading", async () => {
+    mocks.list.mockImplementationOnce(() => new Promise(() => {}));
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByTestId("auth-files-table-skeleton")).toBeInTheDocument();
+  });
+
+  test("restores last data on route switch and refreshes quietly", async () => {
+    const wrap = (node: ReactNode) => (
+      <ThemeProvider>
+        <ToastProvider>{node}</ToastProvider>
+      </ThemeProvider>
+    );
+
+    const router = createMemoryRouter(
+      [
+        { path: "/auth-files", element: wrap(<AuthFilesPage />) },
+        { path: "/api-keys", element: wrap(<div>api keys</div>) },
+      ],
+      { initialEntries: ["/auth-files"] },
+    );
+
+    render(<RouterProvider router={router} />);
+
+    expect(await screen.findByText("qwen.json")).toBeInTheDocument();
+
+    await act(async () => {
+      await router.navigate("/api-keys");
+    });
+    expect(screen.getByText("api keys")).toBeInTheDocument();
+
+    mocks.list.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          window.setTimeout(() => {
+            resolve({
+              files: [
+                {
+                  name: "qwen.json",
+                  type: "qwen",
+                  size: 1024,
+                  modified: Date.now(),
+                  disabled: false,
+                },
+              ],
+            });
+          }, 200);
+        }),
+    );
+
+    await act(async () => {
+      await router.navigate("/auth-files");
+    });
+
+    // Should render immediately from sessionStorage cache (no blank state)
+    expect(screen.getByText("qwen.json")).toBeInTheDocument();
   });
 
   test("reads quota preview setting from localStorage", async () => {

@@ -53,6 +53,7 @@ const AUTH_FILES_PAGE_SIZE = 9;
 const MAX_AUTH_FILE_SIZE = 50 * 1024;
 
 const AUTH_FILES_UI_STATE_KEY = "authFilesPage.uiState.v3";
+const AUTH_FILES_DATA_CACHE_KEY = "authFilesPage.dataCache.v1";
 const AUTH_FILES_QUOTA_PREVIEW_KEY = "authFilesPage.quotaPreview.v1";
 const AUTH_FILES_QUOTA_AUTO_REFRESH_KEY = "authFilesPage.quotaAutoRefreshMs.v1";
 
@@ -64,6 +65,13 @@ type AuthFilesUiState = {
   filter?: string;
   search?: string;
   page?: number;
+};
+
+type AuthFilesDataCache = {
+  savedAtMs: number;
+  files: AuthFileItem[];
+  usageData: import("@/lib/http/types").EntityStatsResponse | null;
+  quotaByFileName: Record<string, QuotaState>;
 };
 
 const readAuthFilesUiState = (): AuthFilesUiState | null => {
@@ -82,6 +90,58 @@ const writeAuthFilesUiState = (state: AuthFilesUiState) => {
   if (typeof window === "undefined") return;
   try {
     window.sessionStorage.setItem(AUTH_FILES_UI_STATE_KEY, JSON.stringify(state));
+  } catch {
+    // ignore
+  }
+};
+
+const trimQuotaCache = (input: Record<string, QuotaState>): Record<string, QuotaState> => {
+  const entries = Object.entries(input);
+  if (entries.length <= 200) return input;
+
+  entries.sort((a, b) => {
+    const aUpdated = a[1]?.updatedAt ?? 0;
+    const bUpdated = b[1]?.updatedAt ?? 0;
+    return bUpdated - aUpdated;
+  });
+
+  return Object.fromEntries(entries.slice(0, 200));
+};
+
+const readAuthFilesDataCache = (): AuthFilesDataCache | null => {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.sessionStorage.getItem(AUTH_FILES_DATA_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<AuthFilesDataCache>;
+    const files = Array.isArray(parsed?.files) ? (parsed.files as AuthFileItem[]) : null;
+    if (!files) return null;
+    const quotaByFileName =
+      parsed?.quotaByFileName && typeof parsed.quotaByFileName === "object"
+        ? (parsed.quotaByFileName as Record<string, QuotaState>)
+        : {};
+    const usageData =
+      parsed?.usageData && typeof parsed.usageData === "object" ? (parsed.usageData as any) : null;
+    const savedAtMs =
+      typeof parsed?.savedAtMs === "number" && Number.isFinite(parsed.savedAtMs)
+        ? parsed.savedAtMs
+        : Date.now();
+
+    return {
+      savedAtMs,
+      files,
+      usageData,
+      quotaByFileName,
+    };
+  } catch {
+    return null;
+  }
+};
+
+const writeAuthFilesDataCache = (cache: AuthFilesDataCache) => {
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.setItem(AUTH_FILES_DATA_CACHE_KEY, JSON.stringify(cache));
   } catch {
     // ignore
   }
@@ -369,10 +429,13 @@ export function AuthFilesPage() {
   const [searchParams] = useSearchParams();
   const [isPending, startTransition] = useTransition();
 
+  const initialDataCache = useMemo(() => readAuthFilesDataCache(), []);
+
   const [tab, setTab] = useState<"files" | "excluded" | "alias">("files");
 
-  const [files, setFiles] = useState<AuthFileItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [files, setFiles] = useState<AuthFileItem[]>(() => initialDataCache?.files ?? []);
+  const [loading, setLoading] = useState(() => !((initialDataCache?.files?.length ?? 0) > 0));
+  const [refreshingAll, setRefreshingAll] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [deletingAll, setDeletingAll] = useState(false);
   const [statusUpdating, setStatusUpdating] = useState<Record<string, boolean>>({});
@@ -392,7 +455,7 @@ export function AuthFilesPage() {
 
   const [usageLoading, setUsageLoading] = useState(false);
   const [usageData, setUsageData] = useState<import("@/lib/http/types").EntityStatsResponse | null>(
-    null,
+    () => initialDataCache?.usageData ?? null,
   );
 
   const { index: usageIndex } = useMemo(() => buildUsageIndex(usageData), [usageData]);
@@ -452,10 +515,15 @@ export function AuthFilesPage() {
     Map<string, { loading: boolean; latencyMs: number | null; error: boolean }>
   >(new Map());
 
-  const [quotaByFileName, setQuotaByFileName] = useState<Record<string, QuotaState>>({});
-  const quotaAutoRefreshedRef = useRef<Set<string>>(new Set());
+  const [quotaByFileName, setQuotaByFileName] = useState<Record<string, QuotaState>>(
+    () => initialDataCache?.quotaByFileName ?? {},
+  );
   const quotaInFlightRef = useRef<Set<string>>(new Set());
   const quotaAutoRefreshingRef = useRef<Set<string>>(new Set());
+  const quotaByFileNameRef = useRef<Record<string, QuotaState>>(quotaByFileName);
+  const quotaWarmupAttemptRef = useRef<Map<string, number>>(new Map());
+  const filesRef = useRef<AuthFileItem[]>(files);
+  const usageDataRef = useRef<import("@/lib/http/types").EntityStatsResponse | null>(usageData);
   const [nowMs, setNowMs] = useState(() => Date.now());
   const [quotaPreviewMode, setQuotaPreviewMode] = useLocalStorage<QuotaPreviewMode>(
     AUTH_FILES_QUOTA_PREVIEW_KEY,
@@ -638,8 +706,10 @@ export function AuthFilesPage() {
   );
 
   const loadAll = useCallback(async () => {
-    setLoading(true);
-    setUsageLoading(true);
+    const hasExisting = files.length > 0;
+    if (hasExisting) setRefreshingAll(true);
+    else setLoading(true);
+    if (!hasExisting) setUsageLoading(true);
     try {
       const [filesRes, usageRes] = await Promise.all([
         authFilesApi.list(),
@@ -654,14 +724,54 @@ export function AuthFilesPage() {
         message: err instanceof Error ? err.message : t("auth_files.load_failed"),
       });
     } finally {
-      setLoading(false);
-      setUsageLoading(false);
+      if (hasExisting) setRefreshingAll(false);
+      else setLoading(false);
+      if (!hasExisting) setUsageLoading(false);
     }
-  }, [notify, t]);
+  }, [files.length, notify, t]);
 
   useEffect(() => {
     void loadAll();
   }, [loadAll]);
+
+  useEffect(() => {
+    quotaByFileNameRef.current = quotaByFileName;
+  }, [quotaByFileName]);
+
+  useEffect(() => {
+    filesRef.current = files;
+  }, [files]);
+
+  useEffect(() => {
+    usageDataRef.current = usageData;
+  }, [usageData]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    let timer: number | null = null;
+    timer = window.setTimeout(() => {
+      writeAuthFilesDataCache({
+        savedAtMs: Date.now(),
+        files,
+        usageData,
+        quotaByFileName: trimQuotaCache(quotaByFileName),
+      });
+    }, 250);
+    return () => {
+      if (timer) window.clearTimeout(timer);
+    };
+  }, [files, quotaByFileName, usageData]);
+
+  useEffect(() => {
+    return () => {
+      writeAuthFilesDataCache({
+        savedAtMs: Date.now(),
+        files: filesRef.current,
+        usageData: usageDataRef.current,
+        quotaByFileName: trimQuotaCache(quotaByFileNameRef.current),
+      });
+    };
+  }, []);
 
   useEffect(() => {
     const state = readAuthFilesUiState();
@@ -740,10 +850,23 @@ export function AuthFilesPage() {
       })
       .filter(Boolean) as { file: AuthFileItem; provider: QuotaProvider }[];
 
-    const toFetch = candidates.filter(({ file }) => !quotaAutoRefreshedRef.current.has(file.name));
-    if (!toFetch.length) return;
+    const staleMs = Math.max(15_000, quotaAutoRefreshMs || 30_000);
+    const now = Date.now();
+    const toFetch = candidates.filter(({ file }) => {
+      if (quotaInFlightRef.current.has(file.name)) return false;
+      const state = quotaByFileNameRef.current[file.name];
+      const items = Array.isArray(state?.items) ? state.items : [];
+      const updatedAt = state?.updatedAt ?? 0;
+      const isStale =
+        typeof updatedAt === "number" && updatedAt > 0 ? now - updatedAt > staleMs : true;
+      const needs = !state || state.status === "error" || items.length === 0 || isStale;
+      if (!needs) return false;
 
-    toFetch.forEach(({ file }) => quotaAutoRefreshedRef.current.add(file.name));
+      const lastAttempt = quotaWarmupAttemptRef.current.get(file.name) ?? 0;
+      if (now - lastAttempt < 5_000) return false;
+      return true;
+    });
+    if (!toFetch.length) return;
 
     let cancelled = false;
     const CONCURRENCY = 3;
@@ -754,6 +877,7 @@ export function AuthFilesPage() {
         const current = toFetch[idx];
         idx += 1;
         if (!current) return;
+        quotaWarmupAttemptRef.current.set(current.file.name, Date.now());
         await refreshQuota(current.file, current.provider);
       }
     });
@@ -763,7 +887,7 @@ export function AuthFilesPage() {
     return () => {
       cancelled = true;
     };
-  }, [loading, pageItems, refreshQuota, tab]);
+  }, [loading, pageItems, quotaAutoRefreshMs, refreshQuota, tab]);
 
   const quotaLastUpdatedAtMs = useMemo(() => {
     let latest = 0;
@@ -1740,7 +1864,6 @@ export function AuthFilesPage() {
 
           const state = quotaByFileName[file.name] ?? { status: "idle", items: [] };
           const items = Array.isArray(state.items) ? (state.items as QuotaItem[]) : [];
-          const isLoading = state.status === "loading";
           const hasError = state.status === "error";
 
           const progressCircle = (percent: number | null) => {
@@ -2038,7 +2161,7 @@ export function AuthFilesPage() {
                 variant="secondary"
                 size="sm"
                 onClick={() => void loadAll()}
-                disabled={loading || usageLoading}
+                disabled={loading || usageLoading || refreshingAll}
               >
                 <RefreshCw size={14} className={loading || usageLoading ? "animate-spin" : ""} />
                 {t("auth_files.refresh")}
@@ -2089,534 +2212,571 @@ export function AuthFilesPage() {
         </div>
       </div>
 
-      {loading ? (
-        <div className="flex h-32 items-center justify-center text-sm text-slate-500">
-          {t("common.loading_ellipsis")}
-        </div>
-      ) : (
-        <Tabs value={tab} onValueChange={(next) => setTab(next as typeof tab)}>
-          <TabsList>
-            <TabsTrigger value="files">{t("auth_files_page.files_tab")}</TabsTrigger>
-            <TabsTrigger value="excluded">{t("auth_files_page.excluded_tab")}</TabsTrigger>
-            <TabsTrigger value="alias">{t("auth_files_page.alias_tab")}</TabsTrigger>
-          </TabsList>
+      <Tabs value={tab} onValueChange={(next) => setTab(next as typeof tab)}>
+        <TabsList>
+          <TabsTrigger value="files">{t("auth_files_page.files_tab")}</TabsTrigger>
+          <TabsTrigger value="excluded">{t("auth_files_page.excluded_tab")}</TabsTrigger>
+          <TabsTrigger value="alias">{t("auth_files_page.alias_tab")}</TabsTrigger>
+        </TabsList>
 
-          <TabsContent value="files" className="mt-4">
-            <div className="space-y-4">
-              <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:gap-4">
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center gap-2">
-                    <p className="text-[11px] font-semibold text-slate-600 dark:text-white/65">
-                      {t("auth_files.type_filter")}
-                    </p>
-                    <HoverTooltip content={t("auth_files.count_hint")} placement="top">
-                      <span
-                        className="inline-flex h-5 w-5 items-center justify-center rounded-full text-slate-400 dark:text-white/45"
-                        aria-label={t("auth_files.count_info")}
-                      >
-                        <CircleHelp size={14} />
-                      </span>
-                    </HoverTooltip>
-                  </div>
-                  <div className="inline-flex max-w-full gap-1 overflow-x-auto whitespace-nowrap rounded-2xl border border-slate-200 bg-white p-1 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
-                    {filterChips.map((key) => {
-                      const active = filter === key;
-                      const normalizedKey = normalizeProviderKey(key);
-                      const count =
-                        key === "all"
-                          ? filterCounts.total
-                          : (filterCounts.counts[normalizedKey] ?? 0);
-                      const label = key === "all" ? t("auth_files.all") : key;
-                      const countClass = active
-                        ? "bg-white/20 text-white dark:bg-neutral-950/10 dark:text-neutral-950"
-                        : "bg-slate-100 text-slate-700 dark:bg-white/10 dark:text-white/70";
-                      return (
-                        <button
-                          key={key}
-                          type="button"
-                          onClick={() => setFilter(key)}
-                          className={
-                            active
-                              ? "inline-flex shrink-0 items-center rounded-xl bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white dark:bg-white dark:text-neutral-950"
-                              : "inline-flex shrink-0 items-center rounded-xl px-3 py-1.5 text-xs text-slate-700 transition hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white"
-                          }
-                        >
-                          {label}
-                          <span
-                            className={[
-                              "ml-2 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-semibold tabular-nums",
-                              countClass,
-                            ].join(" ")}
-                          >
-                            {count}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div className="flex min-w-[240px] flex-1 flex-col gap-1">
+        <TabsContent value="files" className="mt-4">
+          <div className="space-y-4">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:gap-4">
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center gap-2">
                   <p className="text-[11px] font-semibold text-slate-600 dark:text-white/65">
-                    {t("auth_files.search")}
+                    {t("auth_files.type_filter")}
                   </p>
-                  <TextInput
-                    value={search}
-                    onChange={(e) => setSearch(e.currentTarget.value)}
-                    placeholder={t("auth_files_page.filename_hint")}
-                    endAdornment={<Search size={16} className="text-slate-400" />}
-                  />
+                  <HoverTooltip content={t("auth_files.count_hint")} placement="top">
+                    <span
+                      className="inline-flex h-5 w-5 items-center justify-center rounded-full text-slate-400 dark:text-white/45"
+                      aria-label={t("auth_files.count_info")}
+                    >
+                      <CircleHelp size={14} />
+                    </span>
+                  </HoverTooltip>
+                </div>
+                <div className="inline-flex max-w-full gap-1 overflow-x-auto whitespace-nowrap rounded-2xl border border-slate-200 bg-white p-1 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
+                  {filterChips.map((key) => {
+                    const active = filter === key;
+                    const normalizedKey = normalizeProviderKey(key);
+                    const count =
+                      key === "all"
+                        ? filterCounts.total
+                        : (filterCounts.counts[normalizedKey] ?? 0);
+                    const label = key === "all" ? t("auth_files.all") : key;
+                    const countClass = active
+                      ? "bg-white/20 text-white dark:bg-neutral-950/10 dark:text-neutral-950"
+                      : "bg-slate-100 text-slate-700 dark:bg-white/10 dark:text-white/70";
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => setFilter(key)}
+                        className={
+                          active
+                            ? "inline-flex shrink-0 items-center rounded-xl bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white dark:bg-white dark:text-neutral-950"
+                            : "inline-flex shrink-0 items-center rounded-xl px-3 py-1.5 text-xs text-slate-700 transition hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white"
+                        }
+                      >
+                        {label}
+                        <span
+                          className={[
+                            "ml-2 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-semibold tabular-nums",
+                            countClass,
+                          ].join(" ")}
+                        >
+                          {count}
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
-              {pageItems.length === 0 ? (
-                <EmptyState
-                  title={t("auth_files_page.no_files")}
-                  description={t("auth_files_page.no_files_desc")}
+              <div className="flex min-w-[240px] flex-1 flex-col gap-1">
+                <p className="text-[11px] font-semibold text-slate-600 dark:text-white/65">
+                  {t("auth_files.search")}
+                </p>
+                <TextInput
+                  value={search}
+                  onChange={(e) => setSearch(e.currentTarget.value)}
+                  placeholder={t("auth_files_page.filename_hint")}
+                  endAdornment={<Search size={16} className="text-slate-400" />}
                 />
-              ) : (
-                <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white/70 shadow-sm backdrop-blur dark:border-neutral-800 dark:bg-neutral-950/40">
-                  <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3">
-                    <div className="inline-flex items-center gap-2 text-xs text-slate-500 dark:text-white/45">
-                      <span className="font-medium">{t("auth_files.quota_updated_at")}</span>
-                      <span className="font-mono tabular-nums">{quotaLastUpdatedText}</span>
-                    </div>
+              </div>
+            </div>
+
+            {loading && files.length === 0 ? (
+              <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white/70 shadow-sm backdrop-blur dark:border-neutral-800 dark:bg-neutral-950/40">
+                <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3">
+                  <div className="inline-flex items-center gap-2 text-xs text-slate-500 dark:text-white/45">
+                    <span className="font-medium">{t("auth_files.quota_updated_at")}</span>
+                    <span className="font-mono tabular-nums">--</span>
+                  </div>
 
                     <div className="inline-flex items-center gap-2">
                       <span className="text-xs font-medium text-slate-500 dark:text-white/45">
                         {t("auth_files.quota_auto_refresh")}
                       </span>
-                      <Select
-                        value={String(quotaAutoRefreshMs)}
-                        onChange={(value) =>
-                          setQuotaAutoRefreshMsRaw(normalizeQuotaAutoRefreshMs(value))
-                        }
-                        options={[
-                          { value: "0", label: t("auth_files.quota_refresh_off") },
-                          { value: "5000", label: "5s" },
-                          { value: "10000", label: "10s" },
-                          { value: "30000", label: "30s" },
-                          { value: "60000", label: "60s" },
-                        ]}
-                        aria-label={t("auth_files.quota_auto_refresh")}
-                        variant="chip"
-                        className="w-[88px]"
-                      />
+                      <div className="pointer-events-none opacity-60">
+                        <Select
+                          value={String(quotaAutoRefreshMs)}
+                          onChange={(value) =>
+                            setQuotaAutoRefreshMsRaw(normalizeQuotaAutoRefreshMs(value))
+                          }
+                          options={[
+                            { value: "0", label: t("auth_files.quota_refresh_off") },
+                            { value: "5000", label: "5s" },
+                            { value: "10000", label: "10s" },
+                            { value: "30000", label: "30s" },
+                            { value: "60000", label: "60s" },
+                          ]}
+                          aria-label={t("auth_files.quota_auto_refresh")}
+                          variant="chip"
+                          className="w-[88px]"
+                        />
+                      </div>
                     </div>
                   </div>
 
-                  <div className="px-5 pb-4">
-                    <VirtualTable<AuthFileItem>
-                      rows={pageItems}
-                      columns={fileColumns}
-                      rowKey={(row) => row.name}
-                      loading={false}
-                      virtualize={false}
-                      rowHeight={84}
-                      caption={t("auth_files.table_caption")}
-                      emptyText={t("auth_files_page.no_files_desc")}
-                      minWidth="min-w-[1800px]"
-                      height="h-[calc(100dvh-468px)]"
-                      rowClassName={(row) => {
-                        const runtimeOnly = isRuntimeOnlyAuthFile(row);
-                        const disabled = Boolean(row.disabled);
-                        return [
-                          runtimeOnly
-                            ? "bg-slate-50/80 dark:bg-neutral-950/55 hover:bg-slate-100/80 dark:hover:bg-neutral-900/60"
-                            : "",
-                          disabled ? "opacity-85" : "",
-                        ]
-                          .filter(Boolean)
-                          .join(" ");
-                      }}
-                    />
+                <div className="px-5 pb-4" data-testid="auth-files-table-skeleton">
+                  <div className="space-y-2">
+                    {Array.from({ length: 7 }).map((_, idx) => (
+                      <div
+                        key={`s-${idx}`}
+                        className="h-[84px] rounded-xl bg-slate-50/80 motion-safe:animate-pulse dark:bg-white/[0.03]"
+                      />
+                    ))}
                   </div>
                 </div>
-              )}
-
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <p className="text-xs text-slate-600 dark:text-white/65 tabular-nums">
-                  {t("auth_files.total_page", {
-                    total: filteredFiles.length,
-                    page: safePage,
-                    pages: totalPages,
-                  })}
-                </p>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => setPage((prev) => Math.max(1, prev - 1))}
-                    disabled={safePage <= 1}
-                  >
-                    {t("auth_files.prev")}
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
-                    disabled={safePage >= totalPages}
-                  >
-                    {t("auth_files.next")}
-                  </Button>
-                </div>
               </div>
-
-              {usageData ? null : (
-                <p className="text-xs text-slate-500 dark:text-white/55">
-                  {t("auth_files.usage_stats_warning")}
-                </p>
-              )}
-            </div>
-          </TabsContent>
-
-          <TabsContent value="excluded" className="mt-4 space-y-4">
-            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-              <div>
-                <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-                  {t("auth_files_page.excluded_title")}
-                </h2>
-                <p className="mt-1 text-sm text-slate-500 dark:text-neutral-400">
-                  {t("auth_files_page.excluded_desc")}
-                </p>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => void refreshExcluded()}
-                  disabled={excludedLoading || isPending}
-                >
-                  <RefreshCw size={14} className={excludedLoading ? "animate-spin" : ""} />
-                  {t("auth_files.refresh")}
-                </Button>
-              </div>
-            </div>
-
-            {excludedLoading ? (
-              <div className="flex h-32 items-center justify-center text-sm text-slate-500">
-                {t("common.loading_ellipsis")}
-              </div>
+            ) : pageItems.length === 0 ? (
+              <EmptyState
+                title={t("auth_files_page.no_files")}
+                description={t("auth_files_page.no_files_desc")}
+              />
             ) : (
-              <div className="space-y-4">
-                {excludedUnsupported ? (
-                  <div className="mb-4">
-                    <EmptyState
-                      title={t("auth_files_page.api_not_supported")}
-                      description={t("auth_files.no_excluded_api")}
+              <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white/70 shadow-sm backdrop-blur dark:border-neutral-800 dark:bg-neutral-950/40">
+                <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3">
+                  <div className="inline-flex items-center gap-2 text-xs text-slate-500 dark:text-white/45">
+                    <span className="font-medium">{t("auth_files.quota_updated_at")}</span>
+                    <span className="font-mono tabular-nums">{quotaLastUpdatedText}</span>
+                  </div>
+
+                  <div className="inline-flex items-center gap-2">
+                    <span className="text-xs font-medium text-slate-500 dark:text-white/45">
+                      {t("auth_files.quota_auto_refresh")}
+                    </span>
+                    <Select
+                      value={String(quotaAutoRefreshMs)}
+                      onChange={(value) =>
+                        setQuotaAutoRefreshMsRaw(normalizeQuotaAutoRefreshMs(value))
+                      }
+                      options={[
+                        { value: "0", label: t("auth_files.quota_refresh_off") },
+                        { value: "5000", label: "5s" },
+                        { value: "10000", label: "10s" },
+                        { value: "30000", label: "30s" },
+                        { value: "60000", label: "60s" },
+                      ]}
+                      aria-label={t("auth_files.quota_auto_refresh")}
+                      variant="chip"
+                      className="w-[88px]"
                     />
                   </div>
-                ) : null}
-                <div className="flex flex-wrap items-center gap-2">
-                  <TextInput
-                    value={excludedNewProvider}
-                    onChange={(e) => setExcludedNewProvider(e.currentTarget.value)}
-                    placeholder={t("auth_files.add_provider_placeholder")}
-                    endAdornment={<FileJson size={16} className="text-slate-400" />}
-                    disabled={excludedUnsupported}
-                  />
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    onClick={addExcludedProvider}
-                    disabled={isPending || excludedUnsupported}
-                  >
-                    <Plus size={14} />
-                    {t("auth_files.add")}
-                  </Button>
                 </div>
 
-                <div className="mt-4 space-y-3">
-                  {Object.keys(excluded).length === 0 ? (
-                    <EmptyState
-                      title={t("auth_files_page.no_config")}
-                      description={t("auth_files_page.no_excluded_desc")}
-                    />
-                  ) : (
-                    Object.entries(excluded)
-                      .sort(([a], [b]) => a.localeCompare(b))
-                      .map(([provider, models]) => {
-                        const text =
-                          excludedDraft[provider] ??
-                          (Array.isArray(models) ? models.join("\n") : "");
-                        const count = (excludedDraft[provider] ?? text)
-                          .split(/[\n,]+/)
-                          .map((s) => s.trim())
-                          .filter(Boolean).length;
-
-                        return (
-                          <div
-                            key={provider}
-                            className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/70"
-                          >
-                            <div className="flex flex-wrap items-center justify-between gap-3">
-                              <div className="min-w-0">
-                                <p className="font-mono text-xs text-slate-900 dark:text-white">
-                                  {provider}
-                                </p>
-                                <p className="mt-1 text-xs text-slate-500 dark:text-white/55">
-                                  {t("auth_files.count_items", { count })}
-                                </p>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <Button
-                                  variant="secondary"
-                                  size="sm"
-                                  onClick={() =>
-                                    void saveExcludedProvider(
-                                      provider,
-                                      excludedDraft[provider] ?? text,
-                                    )
-                                  }
-                                  disabled={isPending || excludedUnsupported}
-                                >
-                                  {t("auth_files.save")}
-                                </Button>
-                                <Button
-                                  variant="danger"
-                                  size="sm"
-                                  onClick={() => void deleteExcludedProvider(provider)}
-                                  disabled={isPending || excludedUnsupported}
-                                >
-                                  {t("common.delete")}
-                                </Button>
-                              </div>
-                            </div>
-                            <textarea
-                              value={excludedDraft[provider] ?? text}
-                              onChange={(e) => {
-                                const nextText = e.currentTarget.value;
-                                setExcludedDraft((prev) => ({ ...prev, [provider]: nextText }));
-                              }}
-                              placeholder={t("auth_files.one_model_per_line")}
-                              aria-label={`${provider} ${t("auth_files_page.excluded_tab")}`}
-                              disabled={excludedUnsupported}
-                              className="mt-3 min-h-[120px] w-full resize-y rounded-2xl border border-slate-200 bg-white px-3 py-2 font-mono text-xs text-slate-900 outline-none transition placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-slate-400/35 dark:border-neutral-800 dark:bg-neutral-950 dark:text-slate-100 dark:placeholder:text-neutral-500 dark:focus-visible:ring-white/15"
-                            />
-                          </div>
-                        );
-                      })
-                  )}
+                <div className="px-5 pb-4">
+                  <VirtualTable<AuthFileItem>
+                    rows={pageItems}
+                    columns={fileColumns}
+                    rowKey={(row) => row.name}
+                    loading={false}
+                    virtualize={false}
+                    rowHeight={84}
+                    caption={t("auth_files.table_caption")}
+                    emptyText={t("auth_files_page.no_files_desc")}
+                    minWidth="min-w-[1800px]"
+                    height="h-[calc(100dvh-468px)]"
+                    rowClassName={(row) => {
+                      const runtimeOnly = isRuntimeOnlyAuthFile(row);
+                      const disabled = Boolean(row.disabled);
+                      return [
+                        runtimeOnly
+                          ? "bg-slate-50/80 dark:bg-neutral-950/55 hover:bg-slate-100/80 dark:hover:bg-neutral-900/60"
+                          : "",
+                        disabled ? "opacity-85" : "",
+                      ]
+                        .filter(Boolean)
+                        .join(" ");
+                    }}
+                  />
                 </div>
               </div>
             )}
-          </TabsContent>
 
-          <TabsContent value="alias" className="mt-4 space-y-4">
-            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-              <div>
-                <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-                  {t("auth_files_page.alias_title")}
-                </h2>
-                <p className="mt-1 text-sm text-slate-500 dark:text-neutral-400">
-                  {t("auth_files.model_alias_desc")}
-                </p>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-xs text-slate-600 dark:text-white/65 tabular-nums">
+                {t("auth_files.total_page", {
+                  total: filteredFiles.length,
+                  page: safePage,
+                  pages: totalPages,
+                })}
+              </p>
+              <div className="flex items-center gap-2">
                 <Button
                   variant="secondary"
                   size="sm"
-                  onClick={() => void refreshAlias()}
-                  disabled={aliasLoading || isPending}
+                  onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+                  disabled={safePage <= 1}
                 >
-                  <RefreshCw size={14} className={aliasLoading ? "animate-spin" : ""} />
-                  {t("auth_files.refresh")}
+                  {t("auth_files.prev")}
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+                  disabled={safePage >= totalPages}
+                >
+                  {t("auth_files.next")}
                 </Button>
               </div>
             </div>
 
-            {aliasLoading ? (
-              <div className="flex h-32 items-center justify-center text-sm text-slate-500">
-                {t("common.loading_ellipsis")}
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {aliasUnsupported ? (
-                  <div className="mb-4">
-                    <EmptyState
-                      title={t("auth_files.api_not_supported")}
-                      description={t("auth_files.no_alias_api")}
-                    />
-                  </div>
-                ) : null}
-                <div className="flex flex-wrap items-center gap-2">
-                  <TextInput
-                    value={aliasNewChannel}
-                    onChange={(e) => setAliasNewChannel(e.currentTarget.value)}
-                    placeholder={t("auth_files.add_channel_placeholder")}
-                    disabled={aliasUnsupported}
+            {usageData ? null : (
+              <p className="text-xs text-slate-500 dark:text-white/55">
+                {t("auth_files.usage_stats_warning")}
+              </p>
+            )}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="excluded" className="mt-4 space-y-4">
+          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+            <div>
+              <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+                {t("auth_files_page.excluded_title")}
+              </h2>
+              <p className="mt-1 text-sm text-slate-500 dark:text-neutral-400">
+                {t("auth_files_page.excluded_desc")}
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => void refreshExcluded()}
+                disabled={excludedLoading || isPending}
+              >
+                <RefreshCw size={14} className={excludedLoading ? "animate-spin" : ""} />
+                {t("auth_files.refresh")}
+              </Button>
+            </div>
+          </div>
+
+          {excludedLoading ? (
+            <div className="flex h-32 items-center justify-center text-sm text-slate-500">
+              {t("common.loading_ellipsis")}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {excludedUnsupported ? (
+                <div className="mb-4">
+                  <EmptyState
+                    title={t("auth_files_page.api_not_supported")}
+                    description={t("auth_files.no_excluded_api")}
                   />
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    onClick={addAliasChannel}
-                    disabled={isPending || aliasUnsupported}
-                  >
-                    <Plus size={14} />
-                    {t("auth_files.add")}
-                  </Button>
                 </div>
+              ) : null}
+              <div className="flex flex-wrap items-center gap-2">
+                <TextInput
+                  value={excludedNewProvider}
+                  onChange={(e) => setExcludedNewProvider(e.currentTarget.value)}
+                  placeholder={t("auth_files.add_provider_placeholder")}
+                  endAdornment={<FileJson size={16} className="text-slate-400" />}
+                  disabled={excludedUnsupported}
+                />
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={addExcludedProvider}
+                  disabled={isPending || excludedUnsupported}
+                >
+                  <Plus size={14} />
+                  {t("auth_files.add")}
+                </Button>
+              </div>
 
-                <div className="mt-4 space-y-3">
-                  {Object.keys(aliasEditing).length === 0 ? (
-                    <EmptyState
-                      title={t("auth_files.no_config")}
-                      description={t("auth_files_page.alias_no_config")}
-                    />
-                  ) : (
-                    Object.keys(aliasEditing)
-                      .sort((a, b) => a.localeCompare(b))
-                      .map((channel) => {
-                        const rows = aliasEditing[channel] ?? buildAliasRows([]);
-                        const mappingCount = rows.filter(
-                          (r) => r.name.trim() && r.alias.trim(),
-                        ).length;
+              <div className="mt-4 space-y-3">
+                {Object.keys(excluded).length === 0 ? (
+                  <EmptyState
+                    title={t("auth_files_page.no_config")}
+                    description={t("auth_files_page.no_excluded_desc")}
+                  />
+                ) : (
+                  Object.entries(excluded)
+                    .sort(([a], [b]) => a.localeCompare(b))
+                    .map(([provider, models]) => {
+                      const text =
+                        excludedDraft[provider] ?? (Array.isArray(models) ? models.join("\n") : "");
+                      const count = (excludedDraft[provider] ?? text)
+                        .split(/[\n,]+/)
+                        .map((s) => s.trim())
+                        .filter(Boolean).length;
 
-                        return (
-                          <div
-                            key={channel}
-                            className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/70"
-                          >
-                            <div className="flex flex-wrap items-center justify-between gap-3">
-                              <div className="min-w-0">
-                                <p className="font-mono text-xs text-slate-900 dark:text-white">
-                                  {channel}
-                                </p>
-                                <p className="mt-1 text-xs text-slate-500 dark:text-white/55">
-                                  {t("auth_files.valid_mappings", { count: mappingCount })}
-                                </p>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <Button
-                                  variant="secondary"
-                                  size="sm"
-                                  onClick={() => void openImport(channel)}
-                                  disabled={aliasUnsupported}
-                                >
-                                  <ShieldCheck size={14} />
-                                  {t("auth_files.import_models")}
-                                </Button>
-                                <Button
-                                  variant="secondary"
-                                  size="sm"
-                                  onClick={() => void saveAliasChannel(channel)}
-                                  disabled={isPending || aliasUnsupported}
-                                >
-                                  {t("auth_files.save")}
-                                </Button>
-                                <Button
-                                  variant="danger"
-                                  size="sm"
-                                  onClick={() => void deleteAliasChannel(channel)}
-                                  disabled={isPending || aliasUnsupported}
-                                >
-                                  {t("common.delete")}
-                                </Button>
-                              </div>
+                      return (
+                        <div
+                          key={provider}
+                          className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/70"
+                        >
+                          <div className="flex flex-wrap items-center justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="font-mono text-xs text-slate-900 dark:text-white">
+                                {provider}
+                              </p>
+                              <p className="mt-1 text-xs text-slate-500 dark:text-white/55">
+                                {t("auth_files.count_items", { count })}
+                              </p>
                             </div>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={() =>
+                                  void saveExcludedProvider(
+                                    provider,
+                                    excludedDraft[provider] ?? text,
+                                  )
+                                }
+                                disabled={isPending || excludedUnsupported}
+                              >
+                                {t("auth_files.save")}
+                              </Button>
+                              <Button
+                                variant="danger"
+                                size="sm"
+                                onClick={() => void deleteExcludedProvider(provider)}
+                                disabled={isPending || excludedUnsupported}
+                              >
+                                {t("common.delete")}
+                              </Button>
+                            </div>
+                          </div>
+                          <textarea
+                            value={excludedDraft[provider] ?? text}
+                            onChange={(e) => {
+                              const nextText = e.currentTarget.value;
+                              setExcludedDraft((prev) => ({ ...prev, [provider]: nextText }));
+                            }}
+                            placeholder={t("auth_files.one_model_per_line")}
+                            aria-label={`${provider} ${t("auth_files_page.excluded_tab")}`}
+                            disabled={excludedUnsupported}
+                            className="mt-3 min-h-[120px] w-full resize-y rounded-2xl border border-slate-200 bg-white px-3 py-2 font-mono text-xs text-slate-900 outline-none transition placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-slate-400/35 dark:border-neutral-800 dark:bg-neutral-950 dark:text-slate-100 dark:placeholder:text-neutral-500 dark:focus-visible:ring-white/15"
+                          />
+                        </div>
+                      );
+                    })
+                )}
+              </div>
+            </div>
+          )}
+        </TabsContent>
 
-                            <div className="mt-3 space-y-2">
-                              {rows.map((row, idx) => (
-                                <div key={row.id} className="grid gap-2 lg:grid-cols-12">
-                                  <div className="lg:col-span-5">
-                                    <TextInput
-                                      value={row.name}
-                                      onChange={(e) => {
-                                        const value = e.currentTarget.value;
-                                        setAliasEditing((prev) => ({
-                                          ...prev,
-                                          [channel]: (prev[channel] ?? []).map((it, i) =>
-                                            i === idx ? { ...it, name: value } : it,
-                                          ),
-                                        }));
-                                      }}
-                                      placeholder={t("auth_files.name_placeholder", "name")}
-                                    />
-                                  </div>
-                                  <div className="lg:col-span-5">
-                                    <TextInput
-                                      value={row.alias}
-                                      onChange={(e) => {
-                                        const value = e.currentTarget.value;
-                                        setAliasEditing((prev) => ({
-                                          ...prev,
-                                          [channel]: (prev[channel] ?? []).map((it, i) =>
-                                            i === idx ? { ...it, alias: value } : it,
-                                          ),
-                                        }));
-                                      }}
-                                      placeholder={t("auth_files.alias_placeholder", "alias")}
-                                    />
-                                  </div>
-                                  <div className="lg:col-span-1 flex items-center justify-between gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
-                                    <span className="text-xs text-slate-600 dark:text-white/65">
-                                      {t("auth_files.fork")}
-                                    </span>
-                                    <input
-                                      type="checkbox"
-                                      checked={Boolean(row.fork)}
-                                      onChange={(e) => {
-                                        const checked = e.currentTarget.checked;
-                                        setAliasEditing((prev) => ({
-                                          ...prev,
-                                          [channel]: (prev[channel] ?? []).map((it, i) =>
-                                            i === idx ? { ...it, fork: checked } : it,
-                                          ),
-                                        }));
-                                      }}
-                                      className="h-4 w-4 rounded border-slate-300 text-slate-900 focus-visible:ring-2 focus-visible:ring-slate-400/35 dark:border-neutral-700 dark:bg-neutral-950 dark:text-white dark:focus-visible:ring-white/15"
-                                    />
-                                  </div>
-                                  <div className="lg:col-span-1 flex items-center justify-end">
-                                    <Button
-                                      variant="danger"
-                                      size="sm"
-                                      onClick={() => {
-                                        setAliasEditing((prev) => ({
-                                          ...prev,
-                                          [channel]: (prev[channel] ?? []).filter(
-                                            (_, i) => i !== idx,
-                                          ),
-                                        }));
-                                      }}
-                                      aria-label={t("common.delete_row", "Delete Row")}
-                                      title={t("common.delete")}
-                                    >
-                                      <X size={14} />
-                                    </Button>
-                                  </div>
+        <TabsContent value="alias" className="mt-4 space-y-4">
+          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+            <div>
+              <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+                {t("auth_files_page.alias_title")}
+              </h2>
+              <p className="mt-1 text-sm text-slate-500 dark:text-neutral-400">
+                {t("auth_files.model_alias_desc")}
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => void refreshAlias()}
+                disabled={aliasLoading || isPending}
+              >
+                <RefreshCw size={14} className={aliasLoading ? "animate-spin" : ""} />
+                {t("auth_files.refresh")}
+              </Button>
+            </div>
+          </div>
+
+          {aliasLoading ? (
+            <div className="flex h-32 items-center justify-center text-sm text-slate-500">
+              {t("common.loading_ellipsis")}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {aliasUnsupported ? (
+                <div className="mb-4">
+                  <EmptyState
+                    title={t("auth_files.api_not_supported")}
+                    description={t("auth_files.no_alias_api")}
+                  />
+                </div>
+              ) : null}
+              <div className="flex flex-wrap items-center gap-2">
+                <TextInput
+                  value={aliasNewChannel}
+                  onChange={(e) => setAliasNewChannel(e.currentTarget.value)}
+                  placeholder={t("auth_files.add_channel_placeholder")}
+                  disabled={aliasUnsupported}
+                />
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={addAliasChannel}
+                  disabled={isPending || aliasUnsupported}
+                >
+                  <Plus size={14} />
+                  {t("auth_files.add")}
+                </Button>
+              </div>
+
+              <div className="mt-4 space-y-3">
+                {Object.keys(aliasEditing).length === 0 ? (
+                  <EmptyState
+                    title={t("auth_files.no_config")}
+                    description={t("auth_files_page.alias_no_config")}
+                  />
+                ) : (
+                  Object.keys(aliasEditing)
+                    .sort((a, b) => a.localeCompare(b))
+                    .map((channel) => {
+                      const rows = aliasEditing[channel] ?? buildAliasRows([]);
+                      const mappingCount = rows.filter(
+                        (r) => r.name.trim() && r.alias.trim(),
+                      ).length;
+
+                      return (
+                        <div
+                          key={channel}
+                          className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/70"
+                        >
+                          <div className="flex flex-wrap items-center justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="font-mono text-xs text-slate-900 dark:text-white">
+                                {channel}
+                              </p>
+                              <p className="mt-1 text-xs text-slate-500 dark:text-white/55">
+                                {t("auth_files.valid_mappings", { count: mappingCount })}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => void openImport(channel)}
+                                disabled={aliasUnsupported}
+                              >
+                                <ShieldCheck size={14} />
+                                {t("auth_files.import_models")}
+                              </Button>
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => void saveAliasChannel(channel)}
+                                disabled={isPending || aliasUnsupported}
+                              >
+                                {t("auth_files.save")}
+                              </Button>
+                              <Button
+                                variant="danger"
+                                size="sm"
+                                onClick={() => void deleteAliasChannel(channel)}
+                                disabled={isPending || aliasUnsupported}
+                              >
+                                {t("common.delete")}
+                              </Button>
+                            </div>
+                          </div>
+
+                          <div className="mt-3 space-y-2">
+                            {rows.map((row, idx) => (
+                              <div key={row.id} className="grid gap-2 lg:grid-cols-12">
+                                <div className="lg:col-span-5">
+                                  <TextInput
+                                    value={row.name}
+                                    onChange={(e) => {
+                                      const value = e.currentTarget.value;
+                                      setAliasEditing((prev) => ({
+                                        ...prev,
+                                        [channel]: (prev[channel] ?? []).map((it, i) =>
+                                          i === idx ? { ...it, name: value } : it,
+                                        ),
+                                      }));
+                                    }}
+                                    placeholder={t("auth_files.name_placeholder", "name")}
+                                  />
                                 </div>
-                              ))}
-
-                              <div className="flex items-center gap-2">
-                                <Button
-                                  variant="secondary"
-                                  size="sm"
-                                  onClick={() => {
-                                    setAliasEditing((prev) => ({
-                                      ...prev,
-                                      [channel]: [
-                                        ...(prev[channel] ?? []),
-                                        { id: `row-${Date.now()}`, name: "", alias: "" },
-                                      ],
-                                    }));
-                                  }}
-                                >
-                                  <Plus size={14} />
-                                  {t("auth_files.add_row")}
-                                </Button>
+                                <div className="lg:col-span-5">
+                                  <TextInput
+                                    value={row.alias}
+                                    onChange={(e) => {
+                                      const value = e.currentTarget.value;
+                                      setAliasEditing((prev) => ({
+                                        ...prev,
+                                        [channel]: (prev[channel] ?? []).map((it, i) =>
+                                          i === idx ? { ...it, alias: value } : it,
+                                        ),
+                                      }));
+                                    }}
+                                    placeholder={t("auth_files.alias_placeholder", "alias")}
+                                  />
+                                </div>
+                                <div className="lg:col-span-1 flex items-center justify-between gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
+                                  <span className="text-xs text-slate-600 dark:text-white/65">
+                                    {t("auth_files.fork")}
+                                  </span>
+                                  <input
+                                    type="checkbox"
+                                    checked={Boolean(row.fork)}
+                                    onChange={(e) => {
+                                      const checked = e.currentTarget.checked;
+                                      setAliasEditing((prev) => ({
+                                        ...prev,
+                                        [channel]: (prev[channel] ?? []).map((it, i) =>
+                                          i === idx ? { ...it, fork: checked } : it,
+                                        ),
+                                      }));
+                                    }}
+                                    className="h-4 w-4 rounded border-slate-300 text-slate-900 focus-visible:ring-2 focus-visible:ring-slate-400/35 dark:border-neutral-700 dark:bg-neutral-950 dark:text-white dark:focus-visible:ring-white/15"
+                                  />
+                                </div>
+                                <div className="lg:col-span-1 flex items-center justify-end">
+                                  <Button
+                                    variant="danger"
+                                    size="sm"
+                                    onClick={() => {
+                                      setAliasEditing((prev) => ({
+                                        ...prev,
+                                        [channel]: (prev[channel] ?? []).filter(
+                                          (_, i) => i !== idx,
+                                        ),
+                                      }));
+                                    }}
+                                    aria-label={t("common.delete_row", "Delete Row")}
+                                    title={t("common.delete")}
+                                  >
+                                    <X size={14} />
+                                  </Button>
+                                </div>
                               </div>
+                            ))}
+
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => {
+                                  setAliasEditing((prev) => ({
+                                    ...prev,
+                                    [channel]: [
+                                      ...(prev[channel] ?? []),
+                                      { id: `row-${Date.now()}`, name: "", alias: "" },
+                                    ],
+                                  }));
+                                }}
+                              >
+                                <Plus size={14} />
+                                {t("auth_files.add_row")}
+                              </Button>
                             </div>
                           </div>
-                        );
-                      })
-                  )}
-                </div>
+                        </div>
+                      );
+                    })
+                )}
               </div>
-            )}
-          </TabsContent>
-        </Tabs>
-      )}
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
 
       <Modal
         open={detailOpen}
