@@ -1636,19 +1636,17 @@ export function AuthFilesPage() {
         width: "w-80",
         headerClassName: "text-center",
         headerRender: () => (
-          <div className="flex items-center justify-center gap-2 normal-case">
-            <span>{t("auth_files.col_quota")}</span>
+          <div className="flex items-center justify-center normal-case">
             <Select
               value={quotaPreviewMode}
-              onChange={(value) =>
-                setQuotaPreviewMode(value === "week" ? "week" : ("5h" as QuotaPreviewMode))
-              }
+              onChange={(value) => setQuotaPreviewMode(value === "week" ? "week" : "5h")}
               options={[
                 { value: "5h", label: t("auth_files.quota_preview_5h") },
                 { value: "week", label: t("auth_files.quota_preview_week") },
               ]}
               aria-label={t("auth_files.col_quota")}
-              className="w-[92px]"
+              className="w-[72px]"
+              variant="chip"
             />
           </div>
         ),
@@ -1675,7 +1673,7 @@ export function AuthFilesPage() {
                     ? "bg-amber-500"
                     : "bg-rose-500";
             return (
-              <div className="h-1.5 w-full rounded-full bg-slate-200/70 dark:bg-neutral-800/80">
+              <div className="h-1 w-full rounded-full bg-slate-200/70 dark:bg-neutral-800/80">
                 <div
                   className={`h-full rounded-full transition-all duration-300 ${color}`}
                   style={{ width: `${width}%` }}
@@ -1684,13 +1682,13 @@ export function AuthFilesPage() {
             );
           };
 
-          const renderQuotaLine = (item: QuotaItem, showMeta: boolean) => {
+          const renderQuotaLineFull = (item: QuotaItem) => {
             const percentText =
               item.percent === null ? "--" : `${Math.round(clampPercent(item.percent))}%`;
             const resetText = formatQuotaResetText(item.resetAtMs);
             return (
               <div key={item.label} className="space-y-1">
-                <div className="grid grid-cols-[3.25rem_1fr_3.25rem_8.25rem] items-center gap-2">
+                <div className="grid grid-cols-[3.25rem_1fr_3.25rem_6.5rem] items-center gap-1">
                   <span className="truncate text-[11px] font-medium text-slate-700 dark:text-white/75">
                     {translateQuotaText(item.label)}
                   </span>
@@ -1706,11 +1704,27 @@ export function AuthFilesPage() {
                     <span />
                   )}
                 </div>
-                {showMeta && item.meta ? (
+                {item.meta ? (
                   <p className="pl-[3.25rem] text-[10px] text-slate-500 dark:text-white/55">
                     {item.meta}
                   </p>
                 ) : null}
+              </div>
+            );
+          };
+
+          const renderQuotaLinePreview = (item: QuotaItem) => {
+            const percentText =
+              item.percent === null ? "--" : `${Math.round(clampPercent(item.percent))}%`;
+            return (
+              <div key={item.label} className="grid grid-cols-[2.5rem_1fr_3rem] items-center gap-1">
+                <span className="truncate text-[11px] font-medium text-slate-700 dark:text-white/75">
+                  {translateQuotaText(item.label)}
+                </span>
+                <div className="min-w-0">{bar(item.percent)}</div>
+                <span className="text-right text-[11px] font-semibold tabular-nums text-slate-800 dark:text-white/85">
+                  {percentText}
+                </span>
               </div>
             );
           };
@@ -1720,21 +1734,21 @@ export function AuthFilesPage() {
               disabled={!hasError && items.length === 0}
               className="w-full"
               content={
-                <div className="space-y-2">
+                <div className="space-y-1">
                   {hasError ? (
                     <p className="max-w-80 truncate text-[11px] font-semibold text-rose-700 dark:text-rose-200">
                       {translateQuotaText(state.error ?? t("common.error"))}
                     </p>
                   ) : null}
                   {items.length > 0 ? (
-                    <div className="space-y-2">
-                      {items.map((item) => renderQuotaLine(item, true))}
+                    <div className="space-y-1">
+                      {items.map((item) => renderQuotaLineFull(item))}
                     </div>
                   ) : null}
                 </div>
               }
             >
-              <div className="w-full space-y-2">
+              <div className="w-full">
                 {isLoading && items.length === 0 ? (
                   <div className="inline-flex items-center gap-2 text-xs text-slate-500 dark:text-white/55">
                     <Loader2 size={12} className="animate-spin" />
@@ -1747,7 +1761,7 @@ export function AuthFilesPage() {
                 ) : items.length === 0 ? (
                   <span className="text-xs text-slate-400 dark:text-white/40">--</span>
                 ) : (
-                  renderQuotaLine(pickQuotaPreviewItem(items, quotaPreviewMode) ?? items[0], false)
+                  renderQuotaLinePreview(pickQuotaPreviewItem(items, quotaPreviewMode) ?? items[0])
                 )}
               </div>
             </HoverTooltip>
