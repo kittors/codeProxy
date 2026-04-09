@@ -658,7 +658,9 @@
     "col_name": "名称",
     "col_type": "类型",
     "col_connectivity": "连通性",
-    "col_quota": "配额"
+    "col_quota": "配额",
+    "quota_preview_5h": "5小时",
+    "quota_preview_week": "周"
   },
   "antigravity_quota": {
     "title": "Antigravity 额度",

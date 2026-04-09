@@ -28,12 +28,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/modules/ui/Tabs";
 import { ToggleSwitch } from "@/modules/ui/ToggleSwitch";
 import { useToast } from "@/modules/ui/ToastProvider";
 import { HoverTooltip } from "@/modules/ui/Tooltip";
+import { Select } from "@/modules/ui/Select";
 import { VirtualTable, type VirtualTableColumn } from "@/modules/ui/VirtualTable";
 import { ProviderStatusBar } from "@/modules/providers/ProviderStatusBar";
 import { OAuthLoginDialog } from "@/modules/oauth/OAuthLoginDialog";
 import { normalizeUsageSourceId, type KeyStatBucket } from "@/modules/providers/provider-usage";
 import { fetchQuota, resolveQuotaProvider, type QuotaProvider } from "@/modules/quota/quota-fetch";
 import { useInterval } from "@/hooks/useInterval";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { clampPercent, type QuotaItem, type QuotaState } from "@/modules/quota/quota-helpers";
 
 type AuthFileModelItem = { id: string; display_name?: string; type?: string; owned_by?: string };
@@ -51,6 +53,9 @@ const AUTH_FILES_PAGE_SIZE = 9;
 const MAX_AUTH_FILE_SIZE = 50 * 1024;
 
 const AUTH_FILES_UI_STATE_KEY = "authFilesPage.uiState.v3";
+const AUTH_FILES_QUOTA_PREVIEW_KEY = "authFilesPage.quotaPreview.v1";
+
+type QuotaPreviewMode = "5h" | "week";
 
 type AuthFilesUiState = {
   tab?: "files" | "excluded" | "alias";
@@ -178,6 +183,27 @@ const downloadTextAsFile = (content: string, filename: string) => {
   link.download = filename;
   link.click();
   window.setTimeout(() => URL.revokeObjectURL(url), 800);
+};
+
+const normalizeQuotaLabel = (label: string): string =>
+  String(label ?? "")
+    .trim()
+    .toLowerCase();
+
+const pickQuotaPreviewItem = (items: QuotaItem[], mode: QuotaPreviewMode): QuotaItem | null => {
+  if (!Array.isArray(items) || items.length === 0) return null;
+
+  const patterns =
+    mode === "week"
+      ? ["weekly", "week", "周", "7天", "seven_day", "seven day"]
+      : ["_5h", "5h", "5小时", "five_hour", "five hour"];
+
+  const match = items.find((item) => {
+    const key = normalizeQuotaLabel(item.label);
+    return patterns.some((p) => key.includes(normalizeQuotaLabel(p)));
+  });
+
+  return match ?? items[0] ?? null;
 };
 
 type UsageIndex = {
@@ -416,6 +442,10 @@ export function AuthFilesPage() {
   const quotaAutoRefreshedRef = useRef<Set<string>>(new Set());
   const quotaInFlightRef = useRef<Set<string>>(new Set());
   const [nowMs, setNowMs] = useState(() => Date.now());
+  const [quotaPreviewMode, setQuotaPreviewMode] = useLocalStorage<QuotaPreviewMode>(
+    AUTH_FILES_QUOTA_PREVIEW_KEY,
+    "5h",
+  );
 
   useInterval(
     () => {
@@ -1605,6 +1635,23 @@ export function AuthFilesPage() {
         label: t("auth_files.col_quota"),
         width: "w-80",
         headerClassName: "text-center",
+        headerRender: () => (
+          <div className="flex items-center justify-center gap-2 normal-case">
+            <span>{t("auth_files.col_quota")}</span>
+            <Select
+              value={quotaPreviewMode}
+              onChange={(value) =>
+                setQuotaPreviewMode(value === "week" ? "week" : ("5h" as QuotaPreviewMode))
+              }
+              options={[
+                { value: "5h", label: t("auth_files.quota_preview_5h") },
+                { value: "week", label: t("auth_files.quota_preview_week") },
+              ]}
+              aria-label={t("auth_files.col_quota")}
+              className="w-[92px]"
+            />
+          </div>
+        ),
         render: (file) => {
           const provider = resolveQuotaProvider(file);
           if (!provider) {
@@ -1637,61 +1684,73 @@ export function AuthFilesPage() {
             );
           };
 
-          return (
-            <div className="space-y-2">
-              {isLoading && items.length === 0 ? (
-                <div className="inline-flex items-center gap-2 text-xs text-slate-500 dark:text-white/55">
-                  <Loader2 size={12} className="animate-spin" />
-                  {t("common.loading_ellipsis")}
+          const renderQuotaLine = (item: QuotaItem, showMeta: boolean) => {
+            const percentText =
+              item.percent === null ? "--" : `${Math.round(clampPercent(item.percent))}%`;
+            const resetText = formatQuotaResetText(item.resetAtMs);
+            return (
+              <div key={item.label} className="space-y-1">
+                <div className="grid grid-cols-[3.25rem_1fr_3.25rem_8.25rem] items-center gap-2">
+                  <span className="truncate text-[11px] font-medium text-slate-700 dark:text-white/75">
+                    {translateQuotaText(item.label)}
+                  </span>
+                  <div className="min-w-0">{bar(item.percent)}</div>
+                  <span className="text-right text-[11px] font-semibold tabular-nums text-slate-800 dark:text-white/85">
+                    {percentText}
+                  </span>
+                  {resetText ? (
+                    <span className="truncate whitespace-nowrap text-right text-[10px] tabular-nums text-slate-400 dark:text-white/35">
+                      {resetText}
+                    </span>
+                  ) : (
+                    <span />
+                  )}
                 </div>
-              ) : hasError && items.length === 0 ? (
-                <p className="truncate text-xs font-semibold text-rose-700 dark:text-rose-200">
-                  {translateQuotaText(state.error ?? t("common.error"))}
-                </p>
-              ) : items.length === 0 ? (
-                <span className="text-xs text-slate-400 dark:text-white/40">--</span>
-              ) : (
-                <>
+                {showMeta && item.meta ? (
+                  <p className="pl-[3.25rem] text-[10px] text-slate-500 dark:text-white/55">
+                    {item.meta}
+                  </p>
+                ) : null}
+              </div>
+            );
+          };
+
+          return (
+            <HoverTooltip
+              disabled={!hasError && items.length === 0}
+              className="w-full"
+              content={
+                <div className="space-y-2">
                   {hasError ? (
-                    <p className="truncate text-[11px] font-semibold text-rose-700 dark:text-rose-200">
+                    <p className="max-w-80 truncate text-[11px] font-semibold text-rose-700 dark:text-rose-200">
                       {translateQuotaText(state.error ?? t("common.error"))}
                     </p>
                   ) : null}
-                  <div className="space-y-2">
-                    {items.map((item) => {
-                      const percentText =
-                        item.percent === null ? "--" : `${Math.round(clampPercent(item.percent))}%`;
-                      const resetText = formatQuotaResetText(item.resetAtMs);
-                      return (
-                        <div key={item.label} className="space-y-1">
-                          <div className="grid grid-cols-[3.25rem_1fr_3.25rem_8.25rem] items-center gap-2">
-                            <span className="truncate text-[11px] font-medium text-slate-700 dark:text-white/75">
-                              {translateQuotaText(item.label)}
-                            </span>
-                            <div className="min-w-0">{bar(item.percent)}</div>
-                            <span className="text-right text-[11px] font-semibold tabular-nums text-slate-800 dark:text-white/85">
-                              {percentText}
-                            </span>
-                            {resetText ? (
-                              <span className="truncate whitespace-nowrap text-right text-[10px] tabular-nums text-slate-400 dark:text-white/35">
-                                {resetText}
-                              </span>
-                            ) : (
-                              <span />
-                            )}
-                          </div>
-                          {item.meta ? (
-                            <p className="pl-[3.25rem] text-[10px] text-slate-500 dark:text-white/55">
-                              {item.meta}
-                            </p>
-                          ) : null}
-                        </div>
-                      );
-                    })}
+                  {items.length > 0 ? (
+                    <div className="space-y-2">
+                      {items.map((item) => renderQuotaLine(item, true))}
+                    </div>
+                  ) : null}
+                </div>
+              }
+            >
+              <div className="w-full space-y-2">
+                {isLoading && items.length === 0 ? (
+                  <div className="inline-flex items-center gap-2 text-xs text-slate-500 dark:text-white/55">
+                    <Loader2 size={12} className="animate-spin" />
+                    {t("common.loading_ellipsis")}
                   </div>
-                </>
-              )}
-            </div>
+                ) : hasError && items.length === 0 ? (
+                  <p className="truncate text-xs font-semibold text-rose-700 dark:text-rose-200">
+                    {translateQuotaText(state.error ?? t("common.error"))}
+                  </p>
+                ) : items.length === 0 ? (
+                  <span className="text-xs text-slate-400 dark:text-white/40">--</span>
+                ) : (
+                  renderQuotaLine(pickQuotaPreviewItem(items, quotaPreviewMode) ?? items[0], false)
+                )}
+              </div>
+            </HoverTooltip>
           );
         },
       },
@@ -1807,6 +1866,8 @@ export function AuthFilesPage() {
     downloadAuthFile,
     openDetail,
     quotaByFileName,
+    quotaPreviewMode,
+    setQuotaPreviewMode,
     refreshQuota,
     setFileEnabled,
     statusUpdating,
@@ -2007,7 +2068,9 @@ export function AuthFilesPage() {
                       const runtimeOnly = isRuntimeOnlyAuthFile(row);
                       const disabled = Boolean(row.disabled);
                       return [
-                        runtimeOnly ? "bg-slate-50/80 dark:bg-neutral-950/55" : "",
+                        runtimeOnly
+                          ? "bg-slate-50/80 dark:bg-neutral-950/55 hover:bg-slate-100/80 dark:hover:bg-neutral-900/60"
+                          : "",
                         disabled ? "opacity-85" : "",
                       ]
                         .filter(Boolean)

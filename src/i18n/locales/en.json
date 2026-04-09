@@ -650,7 +650,9 @@
     "col_name": "Name",
     "col_type": "Type",
     "col_connectivity": "Connectivity",
-    "col_quota": "Quota"
+    "col_quota": "Quota",
+    "quota_preview_5h": "5h",
+    "quota_preview_week": "Week"
   },
   "antigravity_quota": {
     "title": "Antigravity Quota",
