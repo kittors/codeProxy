@@ -643,19 +643,131 @@ export function AuthFilesPage() {
         key: normalize(String(item.label ?? "")),
       }));
 
+      const findExact = (label: string) => items.find((item) => item.label === label) ?? null;
       const find = (re: RegExp) => candidates.find((c) => re.test(c.key))?.item ?? null;
 
-      const fiveHour = find(/(5h|5小时|5hour)/i);
-      const reviewWeek = find(/(reviewweek|review_week|审查周)/i);
-      const week = find(/^week$|^周$/i);
+      // Prefer stable label keys from quota fetch (e.g. codex returns "m_quota.code_weekly").
+      // Fallback to fuzzy matching for other providers / legacy labels.
+      const codeFiveHour =
+        findExact("m_quota.code_5h") ?? find(/(mquotacode5h|code5h|5h|5小时|fivehour|5hour)/i);
+      const codeWeek =
+        findExact("m_quota.code_weekly") ?? find(/(mquotacodeweekly|codeweekly|weekly|week|周)/i);
+      const reviewWeek =
+        findExact("m_quota.review_weekly") ??
+        find(/(mquotareviewweekly|reviewweekly|reviewweek|review_week|审查周|审查：周)/i);
 
       return [
-        { id: "5h" as const, label: t("auth_files.quota_preview_5h"), item: fiveHour },
-        { id: "week" as const, label: t("auth_files.quota_preview_week"), item: week },
-        { id: "review_week" as const, label: t("auth_files.quota_review_week"), item: reviewWeek },
+        {
+          id: "code_5h" as const,
+          label: translateQuotaText("m_quota.code_5h"),
+          item: codeFiveHour,
+        },
+        {
+          id: "code_week" as const,
+          label: translateQuotaText("m_quota.code_weekly"),
+          item: codeWeek,
+        },
+        {
+          id: "review_week" as const,
+          label: translateQuotaText("m_quota.review_weekly"),
+          item: reviewWeek,
+        },
       ];
     },
-    [t],
+    [translateQuotaText],
+  );
+
+  const quotaProgressCircle = useCallback((percent: number | null) => {
+    const normalized = percent === null ? null : clampPercent(percent);
+    const color =
+      normalized === null
+        ? "bg-slate-300/40 dark:bg-white/8"
+        : normalized >= 60
+          ? "bg-emerald-500"
+          : normalized >= 20
+            ? "bg-amber-500"
+            : "bg-rose-500";
+
+    const fill =
+      color === "bg-emerald-500"
+        ? "#10b981"
+        : color === "bg-amber-500"
+          ? "#f59e0b"
+          : color === "bg-rose-500"
+            ? "#f43f5e"
+            : "#cbd5e1";
+
+    const deg = normalized === null ? 0 : Math.max(0, Math.min(360, (normalized / 100) * 360));
+
+    return (
+      <span
+        className="relative inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center"
+        aria-hidden="true"
+      >
+        <span
+          className="absolute inset-0 rounded-full dark:hidden"
+          style={{
+            background: `conic-gradient(${fill} ${deg}deg, rgba(148, 163, 184, 0.35) 0deg)`,
+          }}
+        />
+        <span
+          className="absolute inset-0 hidden rounded-full dark:block"
+          style={{
+            background: `conic-gradient(${fill} ${deg}deg, rgba(255, 255, 255, 0.14) 0deg)`,
+          }}
+        />
+        <span className="absolute inset-[2px] rounded-full bg-white dark:bg-neutral-950" />
+      </span>
+    );
+  }, []);
+
+  const renderQuotaHoverContent = useCallback(
+    (state: QuotaState) => {
+      const items = Array.isArray(state.items) ? (state.items as QuotaItem[]) : [];
+      const hasError = state.status === "error";
+
+      return (
+        <div className="space-y-1">
+          {hasError ? (
+            <p className="max-w-80 truncate text-[11px] font-semibold text-rose-700 dark:text-rose-200">
+              {translateQuotaText(state.error ?? t("common.error"))}
+            </p>
+          ) : null}
+
+          {items.length > 0 ? (
+            <div className="grid w-[min(22rem,calc(100vw-2rem))] grid-cols-[auto_0.875rem_2.5rem_1fr] items-center gap-x-1 gap-y-1">
+              {items.map((item) => {
+                const percentText =
+                  item.percent === null ? "--" : `${Math.round(clampPercent(item.percent))}%`;
+                const resetText = formatQuotaResetTextCompact(item.resetAtMs);
+                return (
+                  <div key={item.label} className="contents">
+                    <span className="min-w-0 truncate text-[10px] font-semibold text-slate-600 dark:text-white/70">
+                      {translateQuotaText(item.label)}
+                    </span>
+                    <span className="flex items-center justify-center">
+                      {quotaProgressCircle(item.percent)}
+                    </span>
+                    <span className="text-[10px] font-semibold tabular-nums text-slate-800 dark:text-white/85">
+                      {percentText}
+                    </span>
+                    <span className="min-w-0 truncate whitespace-nowrap text-[10px] tabular-nums text-slate-500 dark:text-white/40">
+                      {resetText ?? "--"}
+                    </span>
+                    {item.meta ? (
+                      <span className="col-span-4 truncate text-[10px] text-slate-500 dark:text-white/55">
+                        {item.meta}
+                      </span>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
+          ) : null}
+        </div>
+      );
+    },
+    [formatQuotaResetTextCompact, quotaProgressCircle, t, translateQuotaText],
   );
 
   const renderQuotaBar = useCallback(
@@ -1976,78 +2088,6 @@ export function AuthFilesPage() {
           const items = Array.isArray(state.items) ? (state.items as QuotaItem[]) : [];
           const hasError = state.status === "error";
 
-          const progressCircle = (percent: number | null) => {
-            const normalized = percent === null ? null : clampPercent(percent);
-            const color =
-              normalized === null
-                ? "bg-slate-300/40 dark:bg-white/8"
-                : normalized >= 60
-                  ? "bg-emerald-500"
-                  : normalized >= 20
-                    ? "bg-amber-500"
-                    : "bg-rose-500";
-
-            const fill =
-              color === "bg-emerald-500"
-                ? "#10b981"
-                : color === "bg-amber-500"
-                  ? "#f59e0b"
-                  : color === "bg-rose-500"
-                    ? "#f43f5e"
-                    : "#cbd5e1";
-
-            const deg =
-              normalized === null ? 0 : Math.max(0, Math.min(360, (normalized / 100) * 360));
-
-            return (
-              <span
-                className="relative inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center"
-                aria-hidden="true"
-              >
-                <span
-                  className="absolute inset-0 rounded-full dark:hidden"
-                  style={{
-                    background: `conic-gradient(${fill} ${deg}deg, rgba(148, 163, 184, 0.35) 0deg)`,
-                  }}
-                />
-                <span
-                  className="absolute inset-0 hidden rounded-full dark:block"
-                  style={{
-                    background: `conic-gradient(${fill} ${deg}deg, rgba(255, 255, 255, 0.14) 0deg)`,
-                  }}
-                />
-                <span className="absolute inset-[2px] rounded-full bg-white dark:bg-neutral-950" />
-              </span>
-            );
-          };
-
-          const renderQuotaLineFull = (item: QuotaItem) => {
-            const percentText =
-              item.percent === null ? "--" : `${Math.round(clampPercent(item.percent))}%`;
-            const resetText = formatQuotaResetTextCompact(item.resetAtMs);
-            return (
-              <>
-                <span className="min-w-0 truncate text-[10px] font-semibold text-slate-600 dark:text-white/70">
-                  {translateQuotaText(item.label)}
-                </span>
-                <span className="flex items-center justify-center">
-                  {progressCircle(item.percent)}
-                </span>
-                <span className="text-[10px] font-semibold tabular-nums text-slate-800 dark:text-white/85">
-                  {percentText}
-                </span>
-                <span className="min-w-0 truncate whitespace-nowrap text-[10px] tabular-nums text-slate-500 dark:text-white/40">
-                  {resetText ?? "--"}
-                </span>
-                {item.meta ? (
-                  <span className="col-span-4 truncate text-[10px] text-slate-500 dark:text-white/55">
-                    {item.meta}
-                  </span>
-                ) : null}
-              </>
-            );
-          };
-
           const renderQuotaLinePreview = (item: QuotaItem) => {
             const percentText =
               item.percent === null ? "--" : `${Math.round(clampPercent(item.percent))}%`;
@@ -2057,7 +2097,7 @@ export function AuthFilesPage() {
                 <span className="shrink-0 truncate text-[10px] font-semibold text-slate-600 dark:text-white/70">
                   {translateQuotaText(item.label)}
                 </span>
-                {progressCircle(item.percent)}
+                {quotaProgressCircle(item.percent)}
                 <span className="inline-flex shrink-0 items-center gap-1 text-[10px] font-semibold tabular-nums text-slate-800 dark:text-white/85">
                   {percentText}
                 </span>
@@ -2072,24 +2112,7 @@ export function AuthFilesPage() {
             <HoverTooltip
               disabled={!hasError && items.length === 0}
               className="w-full min-w-0"
-              content={
-                <div className="space-y-1">
-                  {hasError ? (
-                    <p className="max-w-80 truncate text-[11px] font-semibold text-rose-700 dark:text-rose-200">
-                      {translateQuotaText(state.error ?? t("common.error"))}
-                    </p>
-                  ) : null}
-                  {items.length > 0 ? (
-                    <div className="grid w-[min(22rem,calc(100vw-2rem))] grid-cols-[auto_0.875rem_2.5rem_1fr] items-center gap-x-1 gap-y-1">
-                      {items.map((item) => (
-                        <div key={item.label} className="contents">
-                          {renderQuotaLineFull(item)}
-                        </div>
-                      ))}
-                    </div>
-                  ) : null}
-                </div>
-              }
+              content={renderQuotaHoverContent(state)}
             >
               <div className="w-full min-w-0">
                 {hasError && items.length === 0 ? (
@@ -2230,6 +2253,8 @@ export function AuthFilesPage() {
     t,
     translateQuotaText,
     formatQuotaResetTextCompact,
+    quotaProgressCircle,
+    renderQuotaHoverContent,
     usageIndex,
   ]);
 
@@ -2584,13 +2609,19 @@ export function AuthFilesPage() {
                               </div>
                             </div>
 
-                            <div className="mt-3 space-y-3">
-                              {provider
-                                ? slots.map((slot) => renderQuotaBar(slot.label, slot.item))
-                                : resolveQuotaCardSlots([]).map((slot) =>
-                                    renderQuotaBar(slot.label, slot.item),
-                                  )}
-                            </div>
+                            <HoverTooltip
+                              disabled={state.status !== "error" && items.length === 0}
+                              className="mt-3 w-full min-w-0"
+                              content={renderQuotaHoverContent(state)}
+                            >
+                              <div className="space-y-3">
+                                {provider
+                                  ? slots.map((slot) => renderQuotaBar(slot.label, slot.item))
+                                  : resolveQuotaCardSlots([]).map((slot) =>
+                                      renderQuotaBar(slot.label, slot.item),
+                                    )}
+                              </div>
+                            </HoverTooltip>
 
                             <div className="mt-4 flex items-center justify-between gap-2">
                               <div className="inline-flex items-center gap-1">

@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { act, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { createMemoryRouter, MemoryRouter, Route, RouterProvider, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { ToastProvider } from "@/modules/ui/ToastProvider";
@@ -165,5 +165,72 @@ describe("AuthFilesPage files table", () => {
     expect(await screen.findByText("qwen.json")).toBeInTheDocument();
     expect(screen.getByTestId("auth-files-cards")).toBeInTheDocument();
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
+  });
+
+  test("cards view shows codex quota bars by stable label keys and hover reveals full quota list", async () => {
+    const now = Date.now();
+    const file = {
+      name: "codex.json",
+      type: "codex",
+      size: 1024,
+      modified: now,
+      disabled: false,
+      auth_index: "1",
+    } as any;
+
+    mocks.list.mockImplementationOnce(async () => ({ files: [file] }));
+
+    window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
+    window.sessionStorage.setItem(
+      "authFilesPage.dataCache.v1",
+      JSON.stringify({
+        savedAtMs: now,
+        files: [file],
+        usageData: null,
+        quotaByFileName: {
+          "codex.json": {
+            status: "success",
+            updatedAt: now,
+            items: [
+              { label: "m_quota.code_5h", percent: 12, resetAtMs: now + 60_000 },
+              { label: "m_quota.code_weekly", percent: 34, resetAtMs: now + 120_000 },
+              { label: "m_quota.review_weekly", percent: 56, resetAtMs: now + 180_000 },
+            ],
+          },
+        },
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("codex.json")).toBeInTheDocument();
+    expect(screen.getByTestId("auth-files-cards")).toBeInTheDocument();
+
+    expect(screen.getByText("Code: 5h")).toBeInTheDocument();
+    expect(screen.getByText("Code: Weekly")).toBeInTheDocument();
+    expect(screen.getByText("Review: Weekly")).toBeInTheDocument();
+    expect(screen.getByText("12%")).toBeInTheDocument();
+    expect(screen.getByText("34%")).toBeInTheDocument();
+    expect(screen.getByText("56%")).toBeInTheDocument();
+
+    expect(screen.getAllByText("Review: Weekly")).toHaveLength(1);
+
+    const quotaLabel = screen.getByText("Code: 5h");
+    const tooltipTrigger = quotaLabel.closest("span[aria-describedby]");
+    expect(tooltipTrigger).toBeTruthy();
+
+    fireEvent.mouseEnter(tooltipTrigger as HTMLElement);
+    expect(await screen.findByRole("tooltip")).toBeInTheDocument();
+    expect(screen.getAllByText("Review: Weekly").length).toBeGreaterThan(1);
   });
 });
