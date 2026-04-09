@@ -1789,7 +1789,7 @@ export function AuthFilesPage() {
             return (
               <div key={item.label} className="space-y-0.5">
                 <div className="flex min-w-0 items-center gap-1">
-                  <span className="w-8 shrink-0 truncate text-[10px] font-semibold text-slate-600 dark:text-white/70">
+                  <span className="shrink-0 truncate text-[10px] font-semibold text-slate-600 dark:text-white/70">
                     {translateQuotaText(item.label)}
                   </span>
                   {progressCircle(item.percent)}
@@ -1805,7 +1805,7 @@ export function AuthFilesPage() {
                   )}
                 </div>
                 {item.meta ? (
-                  <p className="pl-8 text-[10px] text-slate-500 dark:text-white/55">{item.meta}</p>
+                  <p className="pl-0 text-[10px] text-slate-500 dark:text-white/55">{item.meta}</p>
                 ) : null}
               </div>
             );
@@ -1815,18 +1815,14 @@ export function AuthFilesPage() {
             const percentText =
               item.percent === null ? "--" : `${Math.round(clampPercent(item.percent))}%`;
             const resetText = formatQuotaResetTextCompact(item.resetAtMs) ?? "--";
-            const showRefreshing = isLoading && items.length > 0;
             return (
               <div key={item.label} className="flex min-w-0 items-center gap-1">
-                <span className="w-8 shrink-0 truncate text-[10px] font-semibold text-slate-600 dark:text-white/70">
+                <span className="shrink-0 truncate text-[10px] font-semibold text-slate-600 dark:text-white/70">
                   {translateQuotaText(item.label)}
                 </span>
                 {progressCircle(item.percent)}
                 <span className="inline-flex shrink-0 items-center gap-1 text-[10px] font-semibold tabular-nums text-slate-800 dark:text-white/85">
                   {percentText}
-                  {showRefreshing ? (
-                    <Loader2 size={12} className="animate-spin text-slate-400 dark:text-white/40" />
-                  ) : null}
                 </span>
                 <span className="min-w-0 flex-1 truncate whitespace-nowrap text-[10px] tabular-nums text-slate-500 dark:text-white/40">
                   {resetText}
@@ -1855,12 +1851,7 @@ export function AuthFilesPage() {
               }
             >
               <div className="w-full min-w-0">
-                {isLoading && items.length === 0 ? (
-                  <div className="inline-flex items-center gap-2 text-xs text-slate-500 dark:text-white/55">
-                    <Loader2 size={12} className="animate-spin" />
-                    {t("common.loading_ellipsis")}
-                  </div>
-                ) : hasError && items.length === 0 ? (
+                {hasError && items.length === 0 ? (
                   <p className="truncate text-xs font-semibold text-rose-700 dark:text-rose-200">
                     {translateQuotaText(state.error ?? t("common.error"))}
                   </p>
