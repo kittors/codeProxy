@@ -1766,26 +1766,26 @@ export function AuthFilesPage() {
             const resetText = formatQuotaResetText(item.resetAtMs);
             return (
               <div key={item.label} className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <span className="w-11 shrink-0 truncate text-[11px] font-medium text-slate-700 dark:text-white/75">
+                <div className="flex min-w-0 items-center gap-2">
+                  <span className="w-9 shrink-0 truncate text-[11px] font-medium text-slate-700 dark:text-white/75">
                     {translateQuotaText(item.label)}
                   </span>
-                  <div className="w-40 shrink-0">{bar(item.percent)}</div>
-                  <span className="w-12 shrink-0 text-right text-[11px] font-semibold tabular-nums text-slate-800 dark:text-white/85">
+                  <div className="min-w-0 flex-1 overflow-hidden">
+                    <div className="w-full max-w-[160px]">{bar(item.percent)}</div>
+                  </div>
+                  <span className="w-10 shrink-0 text-right text-[11px] font-semibold tabular-nums text-slate-800 dark:text-white/85">
                     {percentText}
                   </span>
                   {resetText ? (
-                    <span className="w-[92px] shrink-0 truncate whitespace-nowrap text-right text-[10px] tabular-nums text-slate-400 dark:text-white/35">
+                    <span className="w-[88px] shrink-0 truncate whitespace-nowrap text-right text-[10px] tabular-nums text-slate-400 dark:text-white/35">
                       {resetText}
                     </span>
                   ) : (
-                    <span className="w-[92px] shrink-0" />
+                    <span className="w-[88px] shrink-0" />
                   )}
                 </div>
                 {item.meta ? (
-                  <p className="pl-[44px] text-[10px] text-slate-500 dark:text-white/55">
-                    {item.meta}
-                  </p>
+                  <p className="pl-9 text-[10px] text-slate-500 dark:text-white/55">{item.meta}</p>
                 ) : null}
               </div>
             );
@@ -1797,18 +1797,20 @@ export function AuthFilesPage() {
             const resetText = formatQuotaResetText(item.resetAtMs) ?? "--";
             const showRefreshing = isLoading && items.length > 0;
             return (
-              <div key={item.label} className="flex items-center gap-2">
-                <span className="w-11 shrink-0 truncate text-[11px] font-medium text-slate-700 dark:text-white/75">
+              <div key={item.label} className="flex min-w-0 items-center gap-2">
+                <span className="w-9 shrink-0 truncate text-[11px] font-medium text-slate-700 dark:text-white/75">
                   {translateQuotaText(item.label)}
                 </span>
-                <div className="w-40 shrink-0">{bar(item.percent)}</div>
-                <span className="inline-flex w-12 shrink-0 items-center justify-end gap-1 text-right text-[11px] font-semibold tabular-nums text-slate-800 dark:text-white/85">
+                <div className="min-w-0 flex-1 overflow-hidden">
+                  <div className="w-full max-w-[160px]">{bar(item.percent)}</div>
+                </div>
+                <span className="inline-flex w-10 shrink-0 items-center justify-end gap-1 text-right text-[11px] font-semibold tabular-nums text-slate-800 dark:text-white/85">
                   {showRefreshing ? (
                     <Loader2 size={12} className="animate-spin text-slate-400 dark:text-white/40" />
                   ) : null}
                   {percentText}
                 </span>
-                <span className="w-[92px] shrink-0 truncate whitespace-nowrap text-right text-[10px] tabular-nums text-slate-400 dark:text-white/35">
+                <span className="w-[88px] shrink-0 truncate whitespace-nowrap text-right text-[10px] tabular-nums text-slate-400 dark:text-white/35">
                   {resetText}
                 </span>
               </div>
