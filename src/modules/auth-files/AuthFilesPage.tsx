@@ -473,7 +473,7 @@ export function AuthFilesPage() {
     () => {
       setNowMs(Date.now());
     },
-    tab === "files" ? Math.min(30_000, quotaAutoRefreshMs || 30_000) : null,
+    tab === "files" ? Math.min(10_000, quotaAutoRefreshMs || 10_000) : null,
   );
 
   const translateQuotaText = useCallback(
@@ -495,29 +495,27 @@ export function AuthFilesPage() {
     [t],
   );
 
-  const formatQuotaResetText = useCallback(
+  const formatQuotaResetTextCompact = useCallback(
     (resetAtMs?: number) => {
       if (typeof resetAtMs !== "number" || !Number.isFinite(resetAtMs)) return null;
 
       const diffMs = resetAtMs - nowMs;
       if (diffMs <= 0) return t("m_quota.refresh_due");
 
-      const minutes = Math.max(1, Math.ceil(diffMs / 60000));
-      if (minutes < 60) return t("m_quota.minutes_later", { minutes });
+      let seconds = Math.max(1, Math.ceil(diffMs / 1000));
+      const days = Math.floor(seconds / 86400);
+      seconds -= days * 86400;
+      const hours = Math.floor(seconds / 3600);
+      seconds -= hours * 3600;
+      const minutes = Math.floor(seconds / 60);
+      seconds -= minutes * 60;
 
-      const totalHours = Math.floor(minutes / 60);
-      const restMinutes = minutes % 60;
-      if (totalHours < 24) {
-        return restMinutes
-          ? t("m_quota.hours_minutes_later", { hours: totalHours, minutes: restMinutes })
-          : t("m_quota.hours_later", { hours: totalHours });
-      }
-
-      const days = Math.floor(totalHours / 24);
-      const restHours = totalHours % 24;
-      return restHours
-        ? t("m_quota.days_hours_later", { days, hours: restHours })
-        : t("m_quota.days_later", { days });
+      const parts: string[] = [];
+      if (days) parts.push(`${days}天`);
+      if (hours) parts.push(`${hours}小时`);
+      if (minutes) parts.push(`${minutes}分`);
+      parts.push(`${seconds}秒`);
+      return parts.join("");
     },
     [nowMs, t],
   );
@@ -1708,7 +1706,7 @@ export function AuthFilesPage() {
       {
         key: "quota",
         label: t("auth_files.col_quota"),
-        width: "w-80",
+        width: "w-64",
         headerClassName: "text-center",
         headerRender: () => (
           <div className="flex items-center justify-center gap-2 normal-case">
@@ -1739,9 +1737,8 @@ export function AuthFilesPage() {
           const isLoading = state.status === "loading";
           const hasError = state.status === "error";
 
-          const bar = (percent: number | null) => {
+          const progressCircle = (percent: number | null) => {
             const normalized = percent === null ? null : clampPercent(percent);
-            const width = normalized ?? 0;
             const color =
               normalized === null
                 ? "bg-slate-300/40 dark:bg-white/8"
@@ -1750,40 +1747,65 @@ export function AuthFilesPage() {
                   : normalized >= 20
                     ? "bg-amber-500"
                     : "bg-rose-500";
+
+            const fill =
+              color === "bg-emerald-500"
+                ? "#10b981"
+                : color === "bg-amber-500"
+                  ? "#f59e0b"
+                  : color === "bg-rose-500"
+                    ? "#f43f5e"
+                    : "#cbd5e1";
+
+            const deg =
+              normalized === null ? 0 : Math.max(0, Math.min(360, (normalized / 100) * 360));
+
             return (
-              <div className="h-1 w-full rounded-full bg-slate-200/70 dark:bg-neutral-800/80">
-                <div
-                  className={`h-full rounded-full transition-all duration-300 ${color}`}
-                  style={{ width: `${width}%` }}
+              <span
+                className="relative inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center"
+                aria-hidden="true"
+              >
+                <span
+                  className="absolute inset-0 rounded-full dark:hidden"
+                  style={{
+                    background: `conic-gradient(${fill} ${deg}deg, rgba(148, 163, 184, 0.35) 0deg)`,
+                  }}
                 />
-              </div>
+                <span
+                  className="absolute inset-0 hidden rounded-full dark:block"
+                  style={{
+                    background: `conic-gradient(${fill} ${deg}deg, rgba(255, 255, 255, 0.14) 0deg)`,
+                  }}
+                />
+                <span className="absolute inset-[2px] rounded-full bg-white dark:bg-neutral-950" />
+              </span>
             );
           };
 
           const renderQuotaLineFull = (item: QuotaItem) => {
             const percentText =
               item.percent === null ? "--" : `${Math.round(clampPercent(item.percent))}%`;
-            const resetText = formatQuotaResetText(item.resetAtMs);
+            const resetText = formatQuotaResetTextCompact(item.resetAtMs);
             return (
-              <div key={item.label} className="space-y-1">
-                <div className="flex min-w-0 items-center gap-2">
-                  <span className="w-9 shrink-0 truncate text-[11px] font-medium text-slate-700 dark:text-white/75">
+              <div key={item.label} className="space-y-0.5">
+                <div className="flex min-w-0 items-center gap-1">
+                  <span className="w-8 shrink-0 truncate text-[10px] font-semibold text-slate-600 dark:text-white/70">
                     {translateQuotaText(item.label)}
                   </span>
-                  <div className="w-[140px] shrink-0">{bar(item.percent)}</div>
-                  <span className="w-10 shrink-0 text-right text-[11px] font-semibold tabular-nums text-slate-800 dark:text-white/85">
+                  {progressCircle(item.percent)}
+                  <span className="shrink-0 text-[10px] font-semibold tabular-nums text-slate-800 dark:text-white/85">
                     {percentText}
                   </span>
                   {resetText ? (
-                    <span className="w-[88px] shrink-0 truncate whitespace-nowrap text-right text-[10px] tabular-nums text-slate-400 dark:text-white/35">
+                    <span className="min-w-0 flex-1 truncate whitespace-nowrap text-[10px] tabular-nums text-slate-500 dark:text-white/40">
                       {resetText}
                     </span>
                   ) : (
-                    <span className="w-[88px] shrink-0" />
+                    <span className="min-w-0 flex-1" />
                   )}
                 </div>
                 {item.meta ? (
-                  <p className="pl-9 text-[10px] text-slate-500 dark:text-white/55">{item.meta}</p>
+                  <p className="pl-8 text-[10px] text-slate-500 dark:text-white/55">{item.meta}</p>
                 ) : null}
               </div>
             );
@@ -1792,21 +1814,21 @@ export function AuthFilesPage() {
           const renderQuotaLinePreview = (item: QuotaItem) => {
             const percentText =
               item.percent === null ? "--" : `${Math.round(clampPercent(item.percent))}%`;
-            const resetText = formatQuotaResetText(item.resetAtMs) ?? "--";
+            const resetText = formatQuotaResetTextCompact(item.resetAtMs) ?? "--";
             const showRefreshing = isLoading && items.length > 0;
             return (
-              <div key={item.label} className="flex min-w-0 items-center gap-2">
-                <span className="w-9 shrink-0 truncate text-[11px] font-medium text-slate-700 dark:text-white/75">
+              <div key={item.label} className="flex min-w-0 items-center gap-1">
+                <span className="w-8 shrink-0 truncate text-[10px] font-semibold text-slate-600 dark:text-white/70">
                   {translateQuotaText(item.label)}
                 </span>
-                <div className="w-[140px] shrink-0">{bar(item.percent)}</div>
-                <span className="inline-flex w-10 shrink-0 items-center justify-end gap-1 text-right text-[11px] font-semibold tabular-nums text-slate-800 dark:text-white/85">
+                {progressCircle(item.percent)}
+                <span className="inline-flex shrink-0 items-center gap-1 text-[10px] font-semibold tabular-nums text-slate-800 dark:text-white/85">
+                  {percentText}
                   {showRefreshing ? (
                     <Loader2 size={12} className="animate-spin text-slate-400 dark:text-white/40" />
                   ) : null}
-                  {percentText}
                 </span>
-                <span className="w-[88px] shrink-0 truncate whitespace-nowrap text-right text-[10px] tabular-nums text-slate-400 dark:text-white/35">
+                <span className="min-w-0 flex-1 truncate whitespace-nowrap text-[10px] tabular-nums text-slate-500 dark:text-white/40">
                   {resetText}
                 </span>
               </div>
@@ -1816,7 +1838,7 @@ export function AuthFilesPage() {
           return (
             <HoverTooltip
               disabled={!hasError && items.length === 0}
-              className="w-full"
+              className="w-full min-w-0"
               content={
                 <div className="space-y-1">
                   {hasError ? (
@@ -1832,7 +1854,7 @@ export function AuthFilesPage() {
                 </div>
               }
             >
-              <div className="w-full">
+              <div className="w-full min-w-0">
                 {isLoading && items.length === 0 ? (
                   <div className="inline-flex items-center gap-2 text-xs text-slate-500 dark:text-white/55">
                     <Loader2 size={12} className="animate-spin" />
@@ -1971,7 +1993,7 @@ export function AuthFilesPage() {
     statusUpdating,
     t,
     translateQuotaText,
-    formatQuotaResetText,
+    formatQuotaResetTextCompact,
     usageIndex,
   ]);
 
