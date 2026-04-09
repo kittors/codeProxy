@@ -67,7 +67,10 @@
     "restoring_session": "正在恢复会话...",
     "loading_more": "正在加载更多…",
     "all_records_loaded": "已加载全部 {{count}} 条记录",
-    "other": "其他"
+    "other": "其他",
+    "view_mode": "视图模式",
+    "view_mode_list": "列表",
+    "view_mode_cards": "卡片"
   },
   "title": {
     "main": "CLI Proxy API Management Center",
@@ -661,6 +664,7 @@
     "col_quota": "配额",
     "quota_preview_5h": "5小时",
     "quota_preview_week": "周",
+    "quota_review_week": "审查周",
     "quota_auto_refresh": "自动刷新",
     "quota_refresh_off": "关闭",
     "quota_updated_at": "更新于"

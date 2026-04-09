@@ -629,45 +629,41 @@ export function AuthFilesPage() {
     );
   }, [filesViewMode, setFilesViewMode, t]);
 
-  const pickQuotaCardItems = useCallback((items: QuotaItem[]) => {
-    if (!items.length) return [];
-    const normalized = items.map((item) => ({
-      item,
-      key: String(item.label ?? "")
-        .trim()
-        .toLowerCase()
-        .replaceAll(/\s+/g, ""),
-    }));
+  const resolveQuotaCardSlots = useCallback(
+    (items: QuotaItem[]) => {
+      const normalize = (value: string) =>
+        value
+          .trim()
+          .toLowerCase()
+          // Keep only alnum + CJK to make matching stable across punctuation (e.g. "审查:周")
+          .replaceAll(/[^a-z0-9\u4e00-\u9fff]/g, "");
 
-    const pickOne = (re: RegExp) => normalized.find((x) => re.test(x.key))?.item ?? null;
+      const candidates = items.map((item) => ({
+        item,
+        key: normalize(String(item.label ?? "")),
+      }));
 
-    const picked: QuotaItem[] = [];
-    const used = new Set<string>();
-    const push = (item: QuotaItem | null) => {
-      if (!item) return;
-      const key = String(item.label ?? "");
-      if (used.has(key)) return;
-      used.add(key);
-      picked.push(item);
-    };
+      const find = (re: RegExp) => candidates.find((c) => re.test(c.key))?.item ?? null;
 
-    push(pickOne(/^(5h|5小时|5hour)/i));
-    push(pickOne(/(review.*week|审查.*周|review_week|reviewweek)/i));
-    push(pickOne(/(week|周)$/i));
+      const fiveHour = find(/(5h|5小时|5hour)/i);
+      const reviewWeek = find(/(reviewweek|review_week|审查周)/i);
+      const week = find(/^week$|^周$/i);
 
-    for (const it of items) {
-      if (picked.length >= 3) break;
-      push(it);
-    }
-
-    return picked.slice(0, 3);
-  }, []);
+      return [
+        { id: "5h" as const, label: t("auth_files.quota_preview_5h"), item: fiveHour },
+        { id: "week" as const, label: t("auth_files.quota_preview_week"), item: week },
+        { id: "review_week" as const, label: t("auth_files.quota_review_week"), item: reviewWeek },
+      ];
+    },
+    [t],
+  );
 
   const renderQuotaBar = useCallback(
-    (item: QuotaItem) => {
-      const normalized = item.percent === null ? null : clampPercent(item.percent);
+    (label: string, item: QuotaItem | null) => {
+      const normalized =
+        item?.percent === null || item?.percent == null ? null : clampPercent(item.percent);
       const percentText = normalized === null ? "--" : `${Math.round(normalized)}%`;
-      const resetText = formatQuotaResetTextCompact(item.resetAtMs) ?? "--";
+      const resetText = formatQuotaResetTextCompact(item?.resetAtMs) ?? "--";
       const fillClass =
         normalized === null
           ? "bg-slate-300/50 dark:bg-white/10"
@@ -678,10 +674,10 @@ export function AuthFilesPage() {
               : "bg-rose-500";
 
       return (
-        <div key={item.label} className="space-y-1">
+        <div key={label} className="space-y-1">
           <div className="flex items-center justify-between gap-2">
             <span className="min-w-0 truncate text-[11px] font-semibold text-slate-700 dark:text-white/80">
-              {translateQuotaText(item.label)}
+              {label}
             </span>
             <span className="shrink-0 text-[11px] font-semibold tabular-nums text-slate-900 dark:text-white">
               {percentText}
@@ -700,7 +696,7 @@ export function AuthFilesPage() {
         </div>
       );
     },
-    [formatQuotaResetTextCompact, t, translateQuotaText],
+    [formatQuotaResetTextCompact],
   );
 
   const loadModelsForDetail = useCallback(
@@ -2532,7 +2528,7 @@ export function AuthFilesPage() {
                         const items = Array.isArray(state.items)
                           ? (state.items as QuotaItem[])
                           : [];
-                        const showItems = provider ? pickQuotaCardItems(items) : [];
+                        const slots = resolveQuotaCardSlots(provider ? items : []);
 
                         const quotaRefreshing = provider
                           ? quotaByFileName[file.name]?.status === "loading"
@@ -2589,17 +2585,11 @@ export function AuthFilesPage() {
                             </div>
 
                             <div className="mt-3 space-y-3">
-                              {provider ? (
-                                showItems.length > 0 ? (
-                                  showItems.map((it) => renderQuotaBar(it))
-                                ) : (
-                                  <div className="text-xs text-slate-400 dark:text-white/40">
-                                    --
-                                  </div>
-                                )
-                              ) : (
-                                <div className="text-xs text-slate-400 dark:text-white/40">--</div>
-                              )}
+                              {provider
+                                ? slots.map((slot) => renderQuotaBar(slot.label, slot.item))
+                                : resolveQuotaCardSlots([]).map((slot) =>
+                                    renderQuotaBar(slot.label, slot.item),
+                                  )}
                             </div>
 
                             <div className="mt-4 flex items-center justify-between gap-2">

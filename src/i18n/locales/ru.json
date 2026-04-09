@@ -47,7 +47,10 @@
     "custom_headers_value_placeholder": "Значение заголовка",
     "model_name_placeholder": "Имя модели, напр. claude-3-5-sonnet-20241022",
     "model_alias_placeholder": "Псевдоним модели (необязательно)",
-    "invalid_provider_index": "Неверный индекс провайдера."
+    "invalid_provider_index": "Неверный индекс провайдера.",
+    "view_mode": "Режим просмотра",
+    "view_mode_list": "Список",
+    "view_mode_cards": "Карточки"
   },
   "title": {
     "main": "Центр управления CLI Proxy API",
@@ -411,6 +414,13 @@
     "page_size_unit": "элементов",
     "view_mode_paged": "Постранично",
     "view_mode_all": "Показать все",
+    "col_quota": "Квота",
+    "quota_preview_5h": "5ч",
+    "quota_preview_week": "Неделя",
+    "quota_review_week": "Неделя проверки",
+    "quota_auto_refresh": "Автообновление",
+    "quota_refresh_off": "Выкл",
+    "quota_updated_at": "Обновлено",
     "too_many_files_warning": "Слишком много учётных данных. Полный список может повлиять на производительность, используйте постраничный режим.",
     "filter_all": "Все",
     "filter_qwen": "Qwen",

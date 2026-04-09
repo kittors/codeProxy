@@ -65,7 +65,10 @@
     "no_model_data": "No model data",
     "no_model_def": "No model definitions",
     "unnamed": "Unnamed",
-    "other": "Other"
+    "other": "Other",
+    "view_mode": "View mode",
+    "view_mode_list": "List",
+    "view_mode_cards": "Cards"
   },
   "title": {
     "main": "CLI Proxy API Management Center",
@@ -653,6 +656,7 @@
     "col_quota": "Quota",
     "quota_preview_5h": "5h",
     "quota_preview_week": "Week",
+    "quota_review_week": "Review week",
     "quota_auto_refresh": "Auto refresh",
     "quota_refresh_off": "Off",
     "quota_updated_at": "Updated"
