@@ -1793,25 +1793,25 @@ export function AuthFilesPage() {
               item.percent === null ? "--" : `${Math.round(clampPercent(item.percent))}%`;
             const resetText = formatQuotaResetTextCompact(item.resetAtMs);
             return (
-              <div key={item.label} className="space-y-0.5">
-                <div className="grid min-w-0 grid-cols-[auto_0.875rem_2.5rem_1fr] items-center gap-x-1">
-                  <span className="min-w-0 truncate text-[10px] font-semibold text-slate-600 dark:text-white/70">
-                    {translateQuotaText(item.label)}
-                  </span>
-                  <span className="flex items-center justify-center">
-                    {progressCircle(item.percent)}
-                  </span>
-                  <span className="text-[10px] font-semibold tabular-nums text-slate-800 dark:text-white/85">
-                    {percentText}
-                  </span>
-                  <span className="min-w-0 truncate whitespace-nowrap text-[10px] tabular-nums text-slate-500 dark:text-white/40">
-                    {resetText ?? "--"}
-                  </span>
-                </div>
+              <>
+                <span className="min-w-0 truncate text-[10px] font-semibold text-slate-600 dark:text-white/70">
+                  {translateQuotaText(item.label)}
+                </span>
+                <span className="flex items-center justify-center">
+                  {progressCircle(item.percent)}
+                </span>
+                <span className="text-[10px] font-semibold tabular-nums text-slate-800 dark:text-white/85">
+                  {percentText}
+                </span>
+                <span className="min-w-0 truncate whitespace-nowrap text-[10px] tabular-nums text-slate-500 dark:text-white/40">
+                  {resetText ?? "--"}
+                </span>
                 {item.meta ? (
-                  <p className="text-[10px] text-slate-500 dark:text-white/55">{item.meta}</p>
+                  <span className="col-span-4 truncate text-[10px] text-slate-500 dark:text-white/55">
+                    {item.meta}
+                  </span>
                 ) : null}
-              </div>
+              </>
             );
           };
 
@@ -1847,8 +1847,12 @@ export function AuthFilesPage() {
                     </p>
                   ) : null}
                   {items.length > 0 ? (
-                    <div className="space-y-1">
-                      {items.map((item) => renderQuotaLineFull(item))}
+                    <div className="grid w-[min(22rem,calc(100vw-2rem))] grid-cols-[auto_0.875rem_2.5rem_1fr] items-center gap-x-1 gap-y-1">
+                      {items.map((item) => (
+                        <div key={item.label} className="contents">
+                          {renderQuotaLineFull(item)}
+                        </div>
+                      ))}
                     </div>
                   ) : null}
                 </div>
