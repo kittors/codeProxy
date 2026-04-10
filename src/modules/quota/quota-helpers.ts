@@ -682,9 +682,10 @@ export const buildCodexItems = (payload: CodexUsagePayload): QuotaItem[] => {
   addWindow("m_quota.code_5h", rateWindows.fiveHour, rate);
   addWindow("m_quota.code_weekly", rateWindows.weekly, rate);
 
-  const reviewWindows = pickWindows(codeReview);
-  addWindow("m_quota.review_5h", reviewWindows.fiveHour, codeReview);
-  addWindow("m_quota.review_weekly", reviewWindows.weekly, codeReview);
+  const reviewSource = codeReview ?? rate;
+  const reviewWindows = pickWindows(reviewSource);
+  addWindow("m_quota.review_5h", reviewWindows.fiveHour, reviewSource);
+  addWindow("m_quota.review_weekly", reviewWindows.weekly, reviewSource);
 
   return items;
 };

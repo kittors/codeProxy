@@ -670,7 +670,7 @@ export function AuthFilesPage() {
         {
           id: "review_week" as const,
           label: translateQuotaText("m_quota.review_weekly"),
-          item: reviewWeek,
+          item: reviewWeek ?? codeWeek,
         },
       ];
     },
