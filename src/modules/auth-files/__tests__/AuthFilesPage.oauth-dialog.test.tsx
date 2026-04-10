@@ -11,23 +11,22 @@ const mocks = vi.hoisted(() => ({
   getEntityStats: vi.fn(async () => ({ source: [], auth_index: [] })),
 }));
 
-vi.mock("@/lib/http/apis", () => ({
-  authFilesApi: {
-    list: mocks.list,
-  },
-  usageApi: {
-    getEntityStats: mocks.getEntityStats,
-  },
-  oauthApi: {
-    startAuth: vi.fn(async () => ({ url: "", state: "" })),
-    getAuthStatus: vi.fn(async () => ({ status: "waiting" })),
-    submitCallback: vi.fn(async () => ({})),
-    iflowCookieAuth: vi.fn(async () => ({ status: "ok" })),
-  },
-  vertexApi: {
-    importCredential: vi.fn(async () => ({})),
-  },
-}));
+vi.mock("@/lib/http/apis", async (importOriginal) => {
+  const mod = await importOriginal<typeof import("@/lib/http/apis")>();
+  return {
+    ...mod,
+    authFilesApi: { ...mod.authFilesApi, list: mocks.list },
+    usageApi: { ...mod.usageApi, getEntityStats: mocks.getEntityStats },
+    oauthApi: {
+      ...mod.oauthApi,
+      startAuth: vi.fn(async () => ({ url: "", state: "" })),
+      getAuthStatus: vi.fn(async () => ({ status: "waiting" })),
+      submitCallback: vi.fn(async () => ({})),
+      iflowCookieAuth: vi.fn(async () => ({ status: "ok" })),
+    },
+    vertexApi: { ...mod.vertexApi, importCredential: vi.fn(async () => ({})) },
+  };
+});
 
 describe("AuthFilesPage OAuth login dialog", () => {
   test("opens OAuth dialog with provider/iFlow/Vertex tabs", async () => {

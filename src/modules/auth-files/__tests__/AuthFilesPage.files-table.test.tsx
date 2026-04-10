@@ -176,6 +176,8 @@ describe("AuthFilesPage files table", () => {
     expect(await screen.findByText("qwen.json")).toBeInTheDocument();
     expect(screen.getByTestId("auth-files-cards")).toBeInTheDocument();
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
+    // non-quota providers should not show Codex-specific quota labels
+    expect(screen.queryByText("Code: 5h")).not.toBeInTheDocument();
   });
 
   test("cards view shows codex quota bars by stable label keys (no quota tooltip)", async () => {
@@ -237,57 +239,6 @@ describe("AuthFilesPage files table", () => {
     const quotaLabel = screen.getByText("Code: 5h");
     fireEvent.mouseEnter(quotaLabel);
     expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
-  });
-
-  test("cards view falls back review weekly to code weekly when missing", async () => {
-    const now = Date.now();
-    const file = {
-      name: "codex.json",
-      type: "codex",
-      size: 1024,
-      modified: now,
-      disabled: false,
-      auth_index: "1",
-    } as any;
-
-    mocks.list.mockImplementationOnce(async () => ({ files: [file] }));
-
-    window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
-    window.sessionStorage.setItem(
-      "authFilesPage.dataCache.v1",
-      JSON.stringify({
-        savedAtMs: now,
-        files: [file],
-        usageData: null,
-        quotaByFileName: {
-          "codex.json": {
-            status: "success",
-            updatedAt: now,
-            items: [
-              { label: "m_quota.code_5h", percent: 12, resetAtMs: now + 60_000 },
-              { label: "m_quota.code_weekly", percent: 34, resetAtMs: now + 120_000 },
-            ],
-          },
-        },
-      }),
-    );
-
-    render(
-      <MemoryRouter initialEntries={["/auth-files"]}>
-        <ThemeProvider>
-          <ToastProvider>
-            <Routes>
-              <Route path="/auth-files" element={<AuthFilesPage />} />
-            </Routes>
-          </ToastProvider>
-        </ThemeProvider>
-      </MemoryRouter>,
-    );
-
-    expect(await screen.findByText("codex.json")).toBeInTheDocument();
-    expect(screen.getByText("Review: Weekly")).toBeInTheDocument();
-    // should reuse code weekly percent
-    expect(screen.getAllByText("34%").length).toBeGreaterThan(1);
   });
 
   test("cards view shows inline error when quota fetch fails", async () => {

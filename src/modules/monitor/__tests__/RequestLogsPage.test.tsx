@@ -10,12 +10,17 @@ const mocks = vi.hoisted(() => ({
   getLogContent: vi.fn(),
 }));
 
-vi.mock("@/lib/http/apis", () => ({
-  usageApi: {
-    getUsageLogs: mocks.getUsageLogs,
-    getLogContent: mocks.getLogContent,
-  },
-}));
+vi.mock("@/lib/http/apis", async (importOriginal) => {
+  const mod = await importOriginal<typeof import("@/lib/http/apis")>();
+  return {
+    ...mod,
+    usageApi: {
+      ...mod.usageApi,
+      getUsageLogs: mocks.getUsageLogs,
+      getLogContent: mocks.getLogContent,
+    },
+  };
+});
 
 describe("RequestLogsPage", () => {
   afterEach(async () => {

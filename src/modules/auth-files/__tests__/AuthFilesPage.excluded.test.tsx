@@ -12,25 +12,26 @@ const mocks = vi.hoisted(() => ({
   getEntityStats: vi.fn(async () => ({ source: [], auth_index: [] })),
 }));
 
-vi.mock("@/lib/http/apis", () => ({
-  authFilesApi: {
-    list: mocks.list,
-    getOauthExcludedModels: mocks.getOauthExcludedModels,
-  },
-  usageApi: {
-    getUsage: mocks.getUsage,
-    getEntityStats: mocks.getEntityStats,
-  },
-  oauthApi: {
-    startAuth: vi.fn(async () => ({ url: "", state: "" })),
-    getAuthStatus: vi.fn(async () => ({ status: "waiting" })),
-    submitCallback: vi.fn(async () => ({})),
-    iflowCookieAuth: vi.fn(async () => ({ status: "ok" })),
-  },
-  vertexApi: {
-    importCredential: vi.fn(async () => ({})),
-  },
-}));
+vi.mock("@/lib/http/apis", async (importOriginal) => {
+  const mod = await importOriginal<typeof import("@/lib/http/apis")>();
+  return {
+    ...mod,
+    authFilesApi: {
+      ...mod.authFilesApi,
+      list: mocks.list,
+      getOauthExcludedModels: mocks.getOauthExcludedModels,
+    },
+    usageApi: { ...mod.usageApi, getUsage: mocks.getUsage, getEntityStats: mocks.getEntityStats },
+    oauthApi: {
+      ...mod.oauthApi,
+      startAuth: vi.fn(async () => ({ url: "", state: "" })),
+      getAuthStatus: vi.fn(async () => ({ status: "waiting" })),
+      submitCallback: vi.fn(async () => ({})),
+      iflowCookieAuth: vi.fn(async () => ({ status: "ok" })),
+    },
+    vertexApi: { ...mod.vertexApi, importCredential: vi.fn(async () => ({})) },
+  };
+});
 
 describe("AuthFilesPage OAuth excluded models", () => {
   test("does not refetch endlessly when excluded models map is empty", async () => {

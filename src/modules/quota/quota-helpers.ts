@@ -682,10 +682,29 @@ export const buildCodexItems = (payload: CodexUsagePayload): QuotaItem[] => {
   addWindow("m_quota.code_5h", rateWindows.fiveHour, rate);
   addWindow("m_quota.code_weekly", rateWindows.weekly, rate);
 
-  const reviewSource = codeReview ?? rate;
-  const reviewWindows = pickWindows(reviewSource);
-  addWindow("m_quota.review_5h", reviewWindows.fiveHour, reviewSource);
-  addWindow("m_quota.review_weekly", reviewWindows.weekly, reviewSource);
+  // "code_review_rate_limit" can be null for accounts that are not subject to a separate review cap.
+  // In that case, treat review quota as 100% remaining, reusing the same reset window timestamps
+  // for a consistent UI countdown experience.
+  if (codeReview) {
+    const reviewWindows = pickWindows(codeReview);
+    addWindow("m_quota.review_5h", reviewWindows.fiveHour, codeReview);
+    addWindow("m_quota.review_weekly", reviewWindows.weekly, codeReview);
+  } else {
+    if (rateWindows.fiveHour) {
+      items.push({
+        label: "m_quota.review_5h",
+        percent: 100,
+        resetAtMs: resolveCodexResetAtMs(rateWindows.fiveHour),
+      });
+    }
+    if (rateWindows.weekly) {
+      items.push({
+        label: "m_quota.review_weekly",
+        percent: 100,
+        resetAtMs: resolveCodexResetAtMs(rateWindows.weekly),
+      });
+    }
+  }
 
   return items;
 };

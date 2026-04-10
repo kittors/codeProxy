@@ -630,7 +630,15 @@ export function AuthFilesPage() {
   }, [filesViewMode, setFilesViewMode, t]);
 
   const resolveQuotaCardSlots = useCallback(
-    (items: QuotaItem[]) => {
+    (provider: QuotaProvider, items: QuotaItem[]) => {
+      if (provider !== "codex") {
+        return items.slice(0, 3).map((item) => ({
+          id: item.label,
+          label: translateQuotaText(item.label),
+          item,
+        }));
+      }
+
       const normalize = (value: string) =>
         value
           .trim()
@@ -670,7 +678,7 @@ export function AuthFilesPage() {
         {
           id: "review_week" as const,
           label: translateQuotaText("m_quota.review_weekly"),
-          item: reviewWeek ?? codeWeek,
+          item: reviewWeek,
         },
       ];
     },
@@ -2553,7 +2561,7 @@ export function AuthFilesPage() {
                         const items = Array.isArray(state.items)
                           ? (state.items as QuotaItem[])
                           : [];
-                        const slots = resolveQuotaCardSlots(provider ? items : []);
+                        const slots = provider ? resolveQuotaCardSlots(provider, items) : [];
 
                         const quotaRefreshing = provider
                           ? quotaByFileName[file.name]?.status === "loading"
@@ -2609,18 +2617,23 @@ export function AuthFilesPage() {
                               </div>
                             </div>
 
-                            <div className="mt-3 min-w-0 space-y-3">
+                            <div
+                              className="mt-3 min-w-0 space-y-3"
+                              data-testid="auth-file-card-quota"
+                            >
                               {provider && (state.status === "error" || state.error) ? (
                                 <p className="truncate text-[11px] font-semibold text-rose-700 dark:text-rose-200">
                                   {translateQuotaText(state.error ?? t("common.error"))}
                                 </p>
                               ) : null}
 
-                              {provider
-                                ? slots.map((slot) => renderQuotaBar(slot.label, slot.item))
-                                : resolveQuotaCardSlots([]).map((slot) =>
-                                    renderQuotaBar(slot.label, slot.item),
-                                  )}
+                              {!provider ? (
+                                <div className="text-xs text-slate-400 dark:text-white/40">--</div>
+                              ) : slots.length > 0 ? (
+                                slots.map((slot) => renderQuotaBar(slot.label, slot.item))
+                              ) : (
+                                <div className="text-xs text-slate-400 dark:text-white/40">--</div>
+                              )}
                             </div>
 
                             <div className="mt-4 flex items-center justify-between gap-2">
