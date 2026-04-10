@@ -2,18 +2,9 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import i18n from "@/i18n";
+import { usageApi } from "@/lib/http/apis";
 import { MonitorPage } from "@/modules/monitor/MonitorPage";
 import { ThemeProvider } from "@/modules/ui/ThemeProvider";
-
-const mocks = vi.hoisted(() => ({
-  getChartData: vi.fn(),
-}));
-
-vi.mock("@/lib/http/apis", () => ({
-  usageApi: {
-    getChartData: mocks.getChartData,
-  },
-}));
 
 vi.mock("@/modules/ui/charts/EChart", () => ({
   EChart: ({ className }: { className?: string }) => <div className={className}>chart</div>,
@@ -22,13 +13,13 @@ vi.mock("@/modules/ui/charts/EChart", () => ({
 describe("MonitorPage distribution legends", () => {
   afterEach(async () => {
     await i18n.changeLanguage("zh-CN");
-    mocks.getChartData.mockReset();
+    vi.restoreAllMocks();
   });
 
   test("renders model distribution legend rows as toggle buttons", async () => {
     await i18n.changeLanguage("en");
 
-    mocks.getChartData.mockResolvedValue({
+    vi.spyOn(usageApi, "getChartData").mockResolvedValue({
       daily_series: [
         {
           date: "2026-04-01",

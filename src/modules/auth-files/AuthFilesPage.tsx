@@ -857,6 +857,7 @@ export function AuthFilesPage() {
         [name]: {
           status: "loading",
           items: prev[name]?.items ?? [],
+          error: prev[name]?.error,
           updatedAt: prev[name]?.updatedAt,
         },
       }));
@@ -2254,7 +2255,6 @@ export function AuthFilesPage() {
     translateQuotaText,
     formatQuotaResetTextCompact,
     quotaProgressCircle,
-    renderQuotaHoverContent,
     usageIndex,
   ]);
 
@@ -2609,19 +2609,19 @@ export function AuthFilesPage() {
                               </div>
                             </div>
 
-                            <HoverTooltip
-                              disabled={state.status !== "error" && items.length === 0}
-                              className="mt-3 w-full min-w-0"
-                              content={renderQuotaHoverContent(state)}
-                            >
-                              <div className="space-y-3">
-                                {provider
-                                  ? slots.map((slot) => renderQuotaBar(slot.label, slot.item))
-                                  : resolveQuotaCardSlots([]).map((slot) =>
-                                      renderQuotaBar(slot.label, slot.item),
-                                    )}
-                              </div>
-                            </HoverTooltip>
+                            <div className="mt-3 min-w-0 space-y-3">
+                              {provider && (state.status === "error" || state.error) ? (
+                                <p className="truncate text-[11px] font-semibold text-rose-700 dark:text-rose-200">
+                                  {translateQuotaText(state.error ?? t("common.error"))}
+                                </p>
+                              ) : null}
+
+                              {provider
+                                ? slots.map((slot) => renderQuotaBar(slot.label, slot.item))
+                                : resolveQuotaCardSlots([]).map((slot) =>
+                                    renderQuotaBar(slot.label, slot.item),
+                                  )}
+                            </div>
 
                             <div className="mt-4 flex items-center justify-between gap-2">
                               <div className="inline-flex items-center gap-1">

@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { createMemoryRouter, MemoryRouter, Route, RouterProvider, Routes } from "react-router-dom";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { ToastProvider } from "@/modules/ui/ToastProvider";
 import { ThemeProvider } from "@/modules/ui/ThemeProvider";
 import { AuthFilesPage } from "@/modules/auth-files/AuthFilesPage";
@@ -19,19 +19,30 @@ const mocks = vi.hoisted(() => ({
     ],
   })),
   getEntityStats: vi.fn(async () => ({ source: [], auth_index: [] })),
+  fetchQuota: vi.fn(() => new Promise(() => {})),
 }));
 
-vi.mock("@/lib/http/apis", () => ({
-  authFilesApi: {
-    list: mocks.list,
-  },
-  usageApi: {
-    getEntityStats: mocks.getEntityStats,
-  },
-}));
+vi.mock("@/lib/http/apis", async (importOriginal) => {
+  const mod = await importOriginal<typeof import("@/lib/http/apis")>();
+  return {
+    ...mod,
+    authFilesApi: { ...mod.authFilesApi, list: mocks.list },
+    usageApi: { ...mod.usageApi, getEntityStats: mocks.getEntityStats },
+  };
+});
+
+vi.mock("@/modules/quota/quota-fetch", async (importOriginal) => {
+  const mod = await importOriginal<typeof import("@/modules/quota/quota-fetch")>();
+  return { ...mod, fetchQuota: mocks.fetchQuota };
+});
 
 describe("AuthFilesPage files table", () => {
   beforeEach(() => {
+    window.localStorage.clear();
+    window.sessionStorage.clear();
+  });
+
+  afterEach(() => {
     window.localStorage.clear();
     window.sessionStorage.clear();
   });
@@ -167,7 +178,7 @@ describe("AuthFilesPage files table", () => {
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
   });
 
-  test("cards view shows codex quota bars by stable label keys and hover reveals full quota list", async () => {
+  test("cards view shows codex quota bars by stable label keys (no quota tooltip)", async () => {
     const now = Date.now();
     const file = {
       name: "codex.json",
@@ -223,14 +234,56 @@ describe("AuthFilesPage files table", () => {
     expect(screen.getByText("34%")).toBeInTheDocument();
     expect(screen.getByText("56%")).toBeInTheDocument();
 
-    expect(screen.getAllByText("Review: Weekly")).toHaveLength(1);
-
     const quotaLabel = screen.getByText("Code: 5h");
-    const tooltipTrigger = quotaLabel.closest("span[aria-describedby]");
-    expect(tooltipTrigger).toBeTruthy();
+    fireEvent.mouseEnter(quotaLabel);
+    expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+  });
 
-    fireEvent.mouseEnter(tooltipTrigger as HTMLElement);
-    expect(await screen.findByRole("tooltip")).toBeInTheDocument();
-    expect(screen.getAllByText("Review: Weekly").length).toBeGreaterThan(1);
+  test("cards view shows inline error when quota fetch fails", async () => {
+    const now = Date.now();
+    const file = {
+      name: "codex.json",
+      type: "codex",
+      size: 1024,
+      modified: now,
+      disabled: false,
+      auth_index: "1",
+    } as any;
+
+    mocks.list.mockImplementationOnce(async () => ({ files: [file] }));
+
+    window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
+    window.sessionStorage.setItem(
+      "authFilesPage.dataCache.v1",
+      JSON.stringify({
+        savedAtMs: now,
+        files: [file],
+        usageData: null,
+        quotaByFileName: {
+          "codex.json": {
+            status: "error",
+            updatedAt: now,
+            items: [],
+            error: "request_failed",
+          },
+        },
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("codex.json")).toBeInTheDocument();
+    expect(screen.getByTestId("auth-files-cards")).toBeInTheDocument();
+    expect(screen.getByText("Request failed")).toBeInTheDocument();
   });
 });
