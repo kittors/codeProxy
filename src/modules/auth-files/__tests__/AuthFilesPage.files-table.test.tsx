@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { createMemoryRouter, MemoryRouter, Route, RouterProvider, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { ToastProvider } from "@/modules/ui/ToastProvider";
@@ -20,13 +20,16 @@ const mocks = vi.hoisted(() => ({
   })),
   getEntityStats: vi.fn(async () => ({ source: [], auth_index: [] })),
   fetchQuota: vi.fn(() => new Promise(() => {})),
+  deleteFile: vi.fn(async () => ({})),
+  reconcile: vi.fn(async () => ({})),
 }));
 
 vi.mock("@/lib/http/apis", async (importOriginal) => {
   const mod = await importOriginal<typeof import("@/lib/http/apis")>();
   return {
     ...mod,
-    authFilesApi: { ...mod.authFilesApi, list: mocks.list },
+    authFilesApi: { ...mod.authFilesApi, list: mocks.list, deleteFile: mocks.deleteFile },
+    quotaApi: { ...mod.quotaApi, reconcile: mocks.reconcile },
     usageApi: { ...mod.usageApi, getEntityStats: mocks.getEntityStats },
   };
 });
@@ -56,6 +59,10 @@ describe("AuthFilesPage files table", () => {
     mocks.getEntityStats.mockImplementation(async () => ({ source: [], auth_index: [] }));
     mocks.fetchQuota.mockReset();
     mocks.fetchQuota.mockImplementation(() => new Promise(() => {}));
+    mocks.deleteFile.mockReset();
+    mocks.deleteFile.mockImplementation(async () => ({}));
+    mocks.reconcile.mockReset();
+    mocks.reconcile.mockImplementation(async () => ({}));
   });
 
   afterEach(() => {
@@ -82,7 +89,34 @@ describe("AuthFilesPage files table", () => {
     expect(screen.getByRole("combobox", { name: "Quota" })).toBeInTheDocument();
     expect(screen.getByText("5h")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Add OAuth Login" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Select current page" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Delete All" })).not.toBeInTheDocument();
     expect(screen.getByRole("switch", { name: "Enable/Disable" })).toBeInTheDocument();
+  });
+
+  test("supports multi-select delete from the toolbar", async () => {
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("qwen.json")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText("Select qwen.json"));
+    fireEvent.click(screen.getByRole("button", { name: "Delete selected (1)" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Delete" }));
+
+    await waitFor(() => {
+      expect(mocks.deleteFile).toHaveBeenCalledWith("qwen.json");
+      expect(screen.queryByText("qwen.json")).not.toBeInTheDocument();
+    });
   });
 
   test("shows a skeleton table while first loading", async () => {
@@ -411,5 +445,38 @@ describe("AuthFilesPage files table", () => {
     expect(await screen.findByText("codex.json")).toBeInTheDocument();
     expect(screen.getByTestId("auth-files-cards")).toBeInTheDocument();
     expect(screen.getByText("Request failed")).toBeInTheDocument();
+  });
+
+  test("runtime-only cards do not render a selection checkbox", async () => {
+    const now = Date.now();
+    mocks.list.mockImplementationOnce(async () => ({
+      files: [
+        {
+          name: "gemini-runtime",
+          label: "Gemini Runtime",
+          type: "gemini-cli",
+          runtime_only: true,
+          size: 1024,
+          modified: now,
+          disabled: false,
+        },
+      ],
+    }));
+    window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByTestId("auth-files-cards")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Select Gemini Runtime")).not.toBeInTheDocument();
   });
 });

@@ -11,7 +11,6 @@ import {
   RefreshCw,
   Search,
   ShieldCheck,
-  Trash2,
   Upload,
   X,
   Zap,
@@ -455,9 +454,7 @@ export function AuthFilesPage() {
   const [uploading, setUploading] = useState(false);
   const [deletingAll, setDeletingAll] = useState(false);
   const [statusUpdating, setStatusUpdating] = useState<Record<string, boolean>>({});
-  const [confirm, setConfirm] = useState<
-    null | { type: "deleteAll" } | { type: "deleteFile"; name: string }
-  >(null);
+  const [confirm, setConfirm] = useState<null | { type: "deleteSelection"; names: string[] }>(null);
 
   const [oauthDialogOpen, setOauthDialogOpen] = useState(false);
   const [oauthDialogDefaultTab, setOauthDialogDefaultTab] = useState<OAuthDialogTab>("codex");
@@ -465,6 +462,7 @@ export function AuthFilesPage() {
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [selectedFileNames, setSelectedFileNames] = useState<string[]>([]);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const modelsCacheRef = useRef<Map<string, AuthFileModelItem[]>>(new Map());
@@ -1104,10 +1102,77 @@ export function AuthFilesPage() {
     const start = (safePage - 1) * AUTH_FILES_PAGE_SIZE;
     return filteredFiles.slice(start, start + AUTH_FILES_PAGE_SIZE);
   }, [filteredFiles, safePage]);
+  const selectableFilteredFiles = useMemo(
+    () => filteredFiles.filter((file) => !isRuntimeOnlyAuthFile(file)),
+    [filteredFiles],
+  );
+  const selectablePageFiles = useMemo(
+    () => pageItems.filter((file) => !isRuntimeOnlyAuthFile(file)),
+    [pageItems],
+  );
+  const selectableFilteredNameSet = useMemo(
+    () => new Set(selectableFilteredFiles.map((file) => file.name)),
+    [selectableFilteredFiles],
+  );
+  const selectablePageNames = useMemo(
+    () => selectablePageFiles.map((file) => file.name),
+    [selectablePageFiles],
+  );
+  const selectedFileNameSet = useMemo(() => new Set(selectedFileNames), [selectedFileNames]);
+  const selectedCount = selectedFileNames.length;
+  const allPageSelected =
+    selectablePageNames.length > 0 &&
+    selectablePageNames.every((name) => selectedFileNameSet.has(name));
+  const somePageSelected =
+    !allPageSelected && selectablePageNames.some((name) => selectedFileNameSet.has(name));
+  const allFilteredSelected =
+    selectableFilteredFiles.length > 0 &&
+    selectableFilteredFiles.every((file) => selectedFileNameSet.has(file.name));
 
   useEffect(() => {
     if (safePage !== page) setPage(safePage);
   }, [page, safePage]);
+
+  useEffect(() => {
+    setSelectedFileNames((prev) => prev.filter((name) => selectableFilteredNameSet.has(name)));
+  }, [selectableFilteredNameSet]);
+
+  const toggleFileSelection = useCallback((name: string, checked: boolean) => {
+    setSelectedFileNames((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(name);
+      else next.delete(name);
+      return Array.from(next);
+    });
+  }, []);
+
+  const selectCurrentPage = useCallback(
+    (checked: boolean) => {
+      setSelectedFileNames((prev) => {
+        const next = new Set(prev);
+        selectablePageNames.forEach((name) => {
+          if (checked) next.add(name);
+          else next.delete(name);
+        });
+        return Array.from(next);
+      });
+    },
+    [selectablePageNames],
+  );
+
+  const selectFilteredFiles = useCallback(
+    (checked: boolean) => {
+      setSelectedFileNames((prev) => {
+        const next = new Set(prev);
+        selectableFilteredFiles.forEach((file) => {
+          if (checked) next.add(file.name);
+          else next.delete(file.name);
+        });
+        return Array.from(next);
+      });
+    },
+    [selectableFilteredFiles],
+  );
 
   useEffect(() => {
     if (tab !== "files") return;
@@ -1323,93 +1388,58 @@ export function AuthFilesPage() {
     [loadAll, notify, t],
   );
 
-  const handleDelete = useCallback(
-    async (name: string) => {
+  const handleDeleteSelection = useCallback(
+    async (names: string[]) => {
+      const targets = Array.from(new Set(names.map((name) => name.trim()).filter(Boolean)));
+      if (targets.length === 0) return;
+
+      setDeletingAll(true);
       try {
-        await authFilesApi.deleteFile(name);
-        setFiles((prev) => prev.filter((file) => file.name !== name));
-        notify({ type: "success", message: t("auth_files.deleted") });
+        let success = 0;
+        let failed = 0;
+        const deletedNames: string[] = [];
+
+        for (const name of targets) {
+          try {
+            await authFilesApi.deleteFile(name);
+            success += 1;
+            deletedNames.push(name);
+          } catch {
+            failed += 1;
+          }
+        }
+
+        if (deletedNames.length > 0) {
+          setFiles((prev) => prev.filter((file) => !deletedNames.includes(file.name)));
+          setSelectedFileNames((prev) => prev.filter((name) => !deletedNames.includes(name)));
+          setDetailFile((prev) => (prev && deletedNames.includes(prev.name) ? null : prev));
+          setDetailOpen((prev) =>
+            prev && detailFile && deletedNames.includes(detailFile.name) ? false : prev,
+          );
+        }
+
+        if (failed === 0) {
+          notify({
+            type: "success",
+            message: t("auth_files.batch_deleted_selected", { count: success }),
+          });
+        } else {
+          notify({
+            type: "error",
+            message: t("auth_files.batch_delete_partial", { success, failed }),
+          });
+        }
       } catch (err: unknown) {
         notify({
           type: "error",
           message: err instanceof Error ? err.message : t("auth_files.delete_failed"),
         });
+      } finally {
+        setDeletingAll(false);
       }
     },
-    [notify, t],
+    [detailFile, notify, t],
   );
-
-  const handleDeleteAll = useCallback(async () => {
-    setDeletingAll(true);
-    try {
-      const normalizedFilter = normalizeProviderKey(filter);
-      if (!normalizedFilter || normalizedFilter === "all") {
-        await authFilesApi.deleteAll();
-        setFiles([]);
-        notify({ type: "success", message: t("auth_files.delete_all_success") });
-        return;
-      }
-
-      const q = search.trim().toLowerCase();
-      const matchesSearch = (file: AuthFileItem) => {
-        if (!q) return true;
-        const name = String(file.name || "").toLowerCase();
-        const provider = String(file.provider || "").toLowerCase();
-        const type = String(file.type || "").toLowerCase();
-        return name.includes(q) || provider.includes(q) || type.includes(q);
-      };
-
-      const matchesFilter = (file: AuthFileItem) =>
-        normalizeProviderKey(resolveFileType(file)) === normalizedFilter;
-
-      const deletable = files.filter(
-        (file) => matchesSearch(file) && matchesFilter(file) && !isRuntimeOnlyAuthFile(file),
-      );
-      if (deletable.length === 0) {
-        notify({ type: "info", message: t("auth_files.delete_filtered_none", { type: filter }) });
-        return;
-      }
-
-      let success = 0;
-      let failed = 0;
-      const deletedNames: string[] = [];
-
-      for (const file of deletable) {
-        try {
-          await authFilesApi.deleteFile(file.name);
-          success += 1;
-          deletedNames.push(file.name);
-        } catch {
-          failed += 1;
-        }
-      }
-
-      if (deletedNames.length > 0) {
-        setFiles((prev) => prev.filter((file) => !deletedNames.includes(file.name)));
-      }
-
-      if (failed === 0) {
-        notify({
-          type: "success",
-          message: t("auth_files.batch_deleted", { count: success, filter }),
-        });
-      } else {
-        notify({
-          type: "error",
-          message: t("auth_files.delete_filtered_partial", { type: filter, success, failed }),
-        });
-      }
-      setFilter("all");
-      setPage(1);
-    } catch (err: unknown) {
-      notify({
-        type: "error",
-        message: err instanceof Error ? err.message : t("auth_files.delete_failed"),
-      });
-    } finally {
-      setDeletingAll(false);
-    }
-  }, [filter, files, notify, search, t]);
 
   const setFileEnabled = useCallback(
     async (file: AuthFileItem, enabled: boolean) => {
@@ -1943,6 +1973,47 @@ export function AuthFilesPage() {
   const fileColumns = useMemo<VirtualTableColumn<AuthFileItem>[]>(() => {
     return [
       {
+        key: "select",
+        label: "",
+        width: "w-16",
+        headerClassName: "text-center",
+        cellClassName: "text-center",
+        headerRender: () => (
+          <div className="flex items-center justify-center">
+            <input
+              type="checkbox"
+              aria-label={t("auth_files.select_current_page")}
+              checked={allPageSelected}
+              disabled={selectablePageNames.length === 0}
+              ref={(node) => {
+                if (node) node.indeterminate = somePageSelected;
+              }}
+              onChange={(e) => selectCurrentPage(e.currentTarget.checked)}
+              className="h-4 w-4 rounded border-slate-300 text-slate-900 focus-visible:ring-2 focus-visible:ring-slate-400/35 disabled:cursor-not-allowed disabled:opacity-40 dark:border-neutral-700 dark:bg-neutral-950 dark:text-white dark:focus-visible:ring-white/15"
+            />
+          </div>
+        ),
+        render: (file) => {
+          if (isRuntimeOnlyAuthFile(file)) {
+            return <span className="text-xs text-slate-400 dark:text-white/40">--</span>;
+          }
+          const checked = selectedFileNameSet.has(file.name);
+          return (
+            <div className="flex items-center justify-center">
+              <input
+                type="checkbox"
+                aria-label={t("auth_files.select_file", {
+                  name: resolveAuthFileDisplayName(file) || file.name,
+                })}
+                checked={checked}
+                onChange={(e) => toggleFileSelection(file.name, e.currentTarget.checked)}
+                className="h-4 w-4 rounded border-slate-300 text-slate-900 focus-visible:ring-2 focus-visible:ring-slate-400/35 dark:border-neutral-700 dark:bg-neutral-950 dark:text-white dark:focus-visible:ring-white/15"
+              />
+            </div>
+          );
+        },
+      },
+      {
         key: "name",
         label: t("auth_files.col_name"),
         width: "w-96",
@@ -2193,7 +2264,7 @@ export function AuthFilesPage() {
       {
         key: "actions",
         label: t("common.action"),
-        width: "w-72",
+        width: "w-56",
         headerClassName: "text-center",
         cellClassName: "text-center",
         render: (file) => {
@@ -2260,19 +2331,6 @@ export function AuthFilesPage() {
                   <Download size={16} />
                 </Button>
               </HoverTooltip>
-
-              <HoverTooltip content={t("common.delete")}>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={`${iconBtnCls} text-rose-600 hover:bg-rose-50 hover:text-rose-700 dark:text-rose-300 dark:hover:bg-rose-500/10 dark:hover:text-rose-200`}
-                  onClick={() => setConfirm({ type: "deleteFile", name: file.name })}
-                  title={t("common.delete")}
-                  aria-label={t("common.delete")}
-                >
-                  <Trash2 size={16} />
-                </Button>
-              </HoverTooltip>
             </div>
           );
         },
@@ -2288,8 +2346,14 @@ export function AuthFilesPage() {
     setQuotaPreviewMode,
     refreshQuota,
     setFileEnabled,
+    allPageSelected,
+    selectCurrentPage,
+    selectablePageNames.length,
+    selectedFileNameSet,
+    somePageSelected,
     statusUpdating,
     t,
+    toggleFileSelection,
     translateQuotaText,
     formatQuotaResetTextCompact,
     quotaProgressCircle,
@@ -2310,7 +2374,7 @@ export function AuthFilesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+      <div>
         <div>
           <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-2xl">
             {t("auth_files_page.title")}
@@ -2318,70 +2382,6 @@ export function AuthFilesPage() {
           <p className="mt-1 text-sm text-slate-500 dark:text-neutral-400">
             {t("auth_files_page.description")}
           </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {tab === "files" ? (
-            <>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="application/json,.json"
-                multiple
-                className="hidden"
-                onChange={(e) => void handleUpload(e.currentTarget.files)}
-              />
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => void loadAll()}
-                disabled={loading || usageLoading || refreshingAll}
-              >
-                <RefreshCw size={14} className={loading || usageLoading ? "animate-spin" : ""} />
-                {t("auth_files.refresh")}
-              </Button>
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploading}
-              >
-                <Upload size={14} />
-                {t("auth_files.upload")}
-              </Button>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => {
-                  const normalized = normalizeProviderKey(filter);
-                  const tab =
-                    normalized === "codex" ||
-                    normalized === "anthropic" ||
-                    normalized === "antigravity" ||
-                    normalized === "gemini-cli" ||
-                    normalized === "kimi" ||
-                    normalized === "qwen"
-                      ? (normalized as OAuthDialogTab)
-                      : "codex";
-                  setOauthDialogDefaultTab(tab);
-                  setOauthDialogOpen(true);
-                }}
-              >
-                <Plus size={14} />
-                {t("auth_files_page.add_oauth")}
-              </Button>
-              <Button
-                variant="danger"
-                size="sm"
-                onClick={() => setConfirm({ type: "deleteAll" })}
-                disabled={deletingAll || loading || uploading}
-              >
-                <Trash2 size={14} />
-                {filter === "all"
-                  ? t("auth_files.delete_all")
-                  : t("auth_files.delete_type", { type: filter })}
-              </Button>
-            </>
-          ) : null}
         </div>
       </div>
 
@@ -2460,74 +2460,87 @@ export function AuthFilesPage() {
               </div>
             </div>
 
-            {loading && files.length === 0 ? (
-              <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white/70 shadow-sm backdrop-blur dark:border-neutral-800 dark:bg-neutral-950/40">
-                <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3">
-                  <div className="inline-flex items-center gap-2 text-xs text-slate-500 dark:text-white/45">
-                    <span className="font-medium">{t("auth_files.quota_updated_at")}</span>
-                    <span className="font-mono tabular-nums">--</span>
-                  </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="application/json,.json"
+              multiple
+              className="hidden"
+              onChange={(e) => void handleUpload(e.currentTarget.files)}
+            />
 
-                  <div className="flex flex-wrap items-center gap-3">
-                    <div className="pointer-events-none opacity-60">{renderFilesViewModeTabs}</div>
-
-                    <div className="inline-flex items-center gap-2">
-                      <span className="text-xs font-medium text-slate-500 dark:text-white/45">
-                        {t("auth_files.quota_auto_refresh")}
-                      </span>
-                      <div className="pointer-events-none opacity-60">
-                        <Select
-                          value={String(quotaAutoRefreshMs)}
-                          onChange={(value) =>
-                            setQuotaAutoRefreshMsRaw(normalizeQuotaAutoRefreshMs(value))
-                          }
-                          options={[
-                            { value: "0", label: t("auth_files.quota_refresh_off") },
-                            { value: "5000", label: "5s" },
-                            { value: "10000", label: "10s" },
-                            { value: "30000", label: "30s" },
-                            { value: "60000", label: "60s" },
-                          ]}
-                          aria-label={t("auth_files.quota_auto_refresh")}
-                          variant="chip"
-                          className="w-[88px]"
-                        />
-                      </div>
-                    </div>
-                  </div>
+            <div className="rounded-2xl border border-slate-200 bg-white/70 px-4 py-3 shadow-sm backdrop-blur dark:border-neutral-800 dark:bg-neutral-950/40">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => void loadAll()}
+                    disabled={loading || usageLoading || refreshingAll}
+                  >
+                    <RefreshCw
+                      size={14}
+                      className={loading || usageLoading || refreshingAll ? "animate-spin" : ""}
+                    />
+                    {t("auth_files.refresh")}
+                  </Button>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading}
+                  >
+                    <Upload size={14} />
+                    {t("auth_files.upload")}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => {
+                      const normalized = normalizeProviderKey(filter);
+                      const oauthTab =
+                        normalized === "codex" ||
+                        normalized === "anthropic" ||
+                        normalized === "antigravity" ||
+                        normalized === "gemini-cli" ||
+                        normalized === "kimi" ||
+                        normalized === "qwen"
+                          ? (normalized as OAuthDialogTab)
+                          : "codex";
+                      setOauthDialogDefaultTab(oauthTab);
+                      setOauthDialogOpen(true);
+                    }}
+                  >
+                    <Plus size={14} />
+                    {t("auth_files_page.add_oauth")}
+                  </Button>
                 </div>
 
-                <div className="px-5 pb-4" data-testid="auth-files-table-skeleton">
-                  <div className="space-y-2">
-                    {Array.from({ length: 7 }).map((_, idx) => (
-                      <div
-                        key={`s-${idx}`}
-                        className="h-[84px] rounded-xl bg-slate-50/80 motion-safe:animate-pulse dark:bg-white/[0.03]"
-                      />
-                    ))}
-                  </div>
-                </div>
-              </div>
-            ) : pageItems.length === 0 ? (
-              <EmptyState
-                title={t("auth_files_page.no_files")}
-                description={t("auth_files_page.no_files_desc")}
-              />
-            ) : (
-              <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white/70 shadow-sm backdrop-blur dark:border-neutral-800 dark:bg-neutral-950/40">
-                <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3">
+                <div className="flex flex-wrap items-center gap-3">
                   <div className="inline-flex items-center gap-2 text-xs text-slate-500 dark:text-white/45">
                     <span className="font-medium">{t("auth_files.quota_updated_at")}</span>
-                    <span className="font-mono tabular-nums">{quotaLastUpdatedText}</span>
+                    <span className="font-mono tabular-nums">
+                      {loading && files.length === 0 ? "--" : quotaLastUpdatedText}
+                    </span>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-3">
+                  <div
+                    className={
+                      loading && files.length === 0 ? "pointer-events-none opacity-60" : ""
+                    }
+                  >
                     {renderFilesViewModeTabs}
+                  </div>
 
-                    <div className="inline-flex items-center gap-2">
-                      <span className="text-xs font-medium text-slate-500 dark:text-white/45">
-                        {t("auth_files.quota_auto_refresh")}
-                      </span>
+                  <div className="inline-flex items-center gap-2">
+                    <span className="text-xs font-medium text-slate-500 dark:text-white/45">
+                      {t("auth_files.quota_auto_refresh")}
+                    </span>
+                    <div
+                      className={
+                        loading && files.length === 0 ? "pointer-events-none opacity-60" : ""
+                      }
+                    >
                       <Select
                         value={String(quotaAutoRefreshMs)}
                         onChange={(value) =>
@@ -2547,7 +2560,80 @@ export function AuthFilesPage() {
                     </div>
                   </div>
                 </div>
+              </div>
 
+              {selectableFilteredFiles.length > 0 || selectedCount > 0 ? (
+                <div className="mt-3 flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50/80 px-3 py-3 dark:border-neutral-800 dark:bg-white/[0.03] lg:flex-row lg:items-center lg:justify-between">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => selectCurrentPage(!allPageSelected)}
+                      disabled={selectablePageNames.length === 0}
+                    >
+                      {allPageSelected
+                        ? t("auth_files.batch_deselect_page")
+                        : t("auth_files.batch_select_page")}
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => selectFilteredFiles(!allFilteredSelected)}
+                      disabled={selectableFilteredFiles.length === 0}
+                    >
+                      {allFilteredSelected
+                        ? t("auth_files.batch_deselect_filtered")
+                        : t("auth_files.batch_select_filtered")}
+                    </Button>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-xs font-medium text-slate-600 dark:text-white/65">
+                      {t("auth_files.batch_selected", { count: selectedCount })}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setSelectedFileNames([])}
+                      disabled={selectedCount === 0}
+                    >
+                      {t("auth_files.batch_clear")}
+                    </Button>
+                    <Button
+                      variant="danger"
+                      size="sm"
+                      onClick={() =>
+                        setConfirm({ type: "deleteSelection", names: [...selectedFileNames] })
+                      }
+                      disabled={selectedCount === 0 || deletingAll}
+                    >
+                      {t("auth_files.batch_delete_action", { count: selectedCount })}
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+
+            {loading && files.length === 0 ? (
+              <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white/70 shadow-sm backdrop-blur dark:border-neutral-800 dark:bg-neutral-950/40">
+                <div className="px-5 pb-4" data-testid="auth-files-table-skeleton">
+                  <div className="space-y-2">
+                    {Array.from({ length: 7 }).map((_, idx) => (
+                      <div
+                        key={`s-${idx}`}
+                        className="h-[84px] rounded-xl bg-slate-50/80 motion-safe:animate-pulse dark:bg-white/[0.03]"
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ) : pageItems.length === 0 ? (
+              <EmptyState
+                title={t("auth_files_page.no_files")}
+                description={t("auth_files_page.no_files_desc")}
+              />
+            ) : (
+              <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white/70 shadow-sm backdrop-blur dark:border-neutral-800 dark:bg-neutral-950/40">
                 <div className="px-5 pb-4">
                   {filesViewMode === "table" ? (
                     <VirtualTable<AuthFileItem>
@@ -2564,7 +2650,11 @@ export function AuthFilesPage() {
                       rowClassName={(row) => {
                         const runtimeOnly = isRuntimeOnlyAuthFile(row);
                         const disabled = Boolean(row.disabled);
+                        const selected = selectedFileNameSet.has(row.name);
                         return [
+                          selected
+                            ? "bg-slate-100/80 dark:bg-white/[0.08] hover:bg-slate-100 dark:hover:bg-white/[0.1]"
+                            : "",
                           runtimeOnly
                             ? "bg-slate-50/80 dark:bg-neutral-950/55 hover:bg-slate-100/80 dark:hover:bg-neutral-900/60"
                             : "",
@@ -2582,6 +2672,7 @@ export function AuthFilesPage() {
                       {pageItems.map((file) => {
                         const runtimeOnly = isRuntimeOnlyAuthFile(file);
                         const fileDisabled = Boolean(file.disabled);
+                        const fileSelected = selectedFileNameSet.has(file.name);
                         const typeKey = resolveFileType(file);
                         const badgeClass =
                           TYPE_BADGE_CLASSES[typeKey] ?? TYPE_BADGE_CLASSES.unknown;
@@ -2607,6 +2698,9 @@ export function AuthFilesPage() {
                             key={file.name}
                             className={[
                               "group min-w-0 rounded-2xl border border-slate-200 bg-white/80 p-4 shadow-sm transition-colors hover:border-slate-300 hover:bg-white dark:border-neutral-800 dark:bg-neutral-950/50 dark:hover:border-neutral-700 dark:hover:bg-neutral-950/70",
+                              fileSelected
+                                ? "border-slate-900 ring-1 ring-slate-300 dark:border-white dark:ring-white/20"
+                                : "",
                               runtimeOnly ? "opacity-90" : "",
                               fileDisabled ? "opacity-85" : "",
                             ]
@@ -2648,7 +2742,22 @@ export function AuthFilesPage() {
                                 </p>
                               </div>
 
-                              <div className="shrink-0">
+                              <div className="flex shrink-0 items-start gap-2">
+                                {runtimeOnly ? null : (
+                                  <label className="mt-0.5 inline-flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm transition-colors hover:border-slate-300 hover:bg-slate-50 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white/80 dark:hover:border-neutral-600 dark:hover:bg-neutral-800">
+                                    <input
+                                      type="checkbox"
+                                      aria-label={t("auth_files.select_file", {
+                                        name: displayTitle || file.name,
+                                      })}
+                                      checked={fileSelected}
+                                      onChange={(e) =>
+                                        toggleFileSelection(file.name, e.currentTarget.checked)
+                                      }
+                                      className="h-4 w-4 rounded border-slate-300 text-slate-900 focus-visible:ring-2 focus-visible:ring-slate-400/35 dark:border-neutral-700 dark:bg-neutral-950 dark:text-white dark:focus-visible:ring-white/15"
+                                    />
+                                  </label>
+                                )}
                                 {runtimeOnly ? (
                                   <span className="text-xs text-slate-400 dark:text-white/40">
                                     --
@@ -2733,21 +2842,6 @@ export function AuthFilesPage() {
                                     aria-label={t("auth_files.download")}
                                   >
                                     <Download size={16} />
-                                  </Button>
-                                </HoverTooltip>
-
-                                <HoverTooltip content={t("common.delete")}>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-9 w-9 px-0 text-rose-600 hover:bg-rose-50 hover:text-rose-700 dark:text-rose-300 dark:hover:bg-rose-500/10 dark:hover:text-rose-200"
-                                    onClick={() =>
-                                      setConfirm({ type: "deleteFile", name: file.name })
-                                    }
-                                    title={t("common.delete")}
-                                    aria-label={t("common.delete")}
-                                  >
-                                    <Trash2 size={16} />
                                   </Button>
                                 </HoverTooltip>
                               </div>
@@ -3529,22 +3623,8 @@ export function AuthFilesPage() {
 
       <ConfirmModal
         open={confirm !== null}
-        title={
-          confirm?.type === "deleteAll"
-            ? filter === "all"
-              ? t("auth_files.delete_all_auth_files")
-              : t("auth_files.delete_filter_title", { filter })
-            : t("auth_files.delete_auth_file")
-        }
-        description={
-          confirm?.type === "deleteAll"
-            ? filter === "all"
-              ? t("auth_files.confirm_delete_all")
-              : t("auth_files.confirm_delete_filter", { filter })
-            : t("auth_files.confirm_delete_file", {
-                name: confirm?.type === "deleteFile" ? confirm.name : "",
-              })
-        }
+        title={t("auth_files.batch_delete_title")}
+        description={t("auth_files.batch_delete_confirm", { count: confirm?.names.length ?? 0 })}
         confirmText={t("common.delete")}
         cancelText={t("common.cancel")}
         busy={deletingAll}
@@ -3552,11 +3632,7 @@ export function AuthFilesPage() {
         onConfirm={() => {
           const action = confirm;
           if (!action) return;
-          if (action.type === "deleteAll") {
-            void handleDeleteAll().finally(() => setConfirm(null));
-            return;
-          }
-          void handleDelete(action.name).finally(() => setConfirm(null));
+          void handleDeleteSelection(action.names).finally(() => setConfirm(null));
         }}
       />
     </div>
