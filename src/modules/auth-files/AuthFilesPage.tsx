@@ -2375,17 +2375,11 @@ export function AuthFilesPage() {
   return (
     <div className="space-y-4">
       <Tabs value={tab} onValueChange={(next) => setTab(next as typeof tab)}>
-        <div className="space-y-3">
-          <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-2xl">
-            {t("auth_files_page.title")}
-          </h1>
-
-          <TabsList>
-            <TabsTrigger value="files">{t("auth_files_page.files_tab")}</TabsTrigger>
-            <TabsTrigger value="excluded">{t("auth_files_page.excluded_tab")}</TabsTrigger>
-            <TabsTrigger value="alias">{t("auth_files_page.alias_tab")}</TabsTrigger>
-          </TabsList>
-        </div>
+        <TabsList>
+          <TabsTrigger value="files">{t("auth_files_page.files_tab")}</TabsTrigger>
+          <TabsTrigger value="excluded">{t("auth_files_page.excluded_tab")}</TabsTrigger>
+          <TabsTrigger value="alias">{t("auth_files_page.alias_tab")}</TabsTrigger>
+        </TabsList>
 
         <TabsContent value="files" className="mt-4">
           <div className="space-y-4">
@@ -2400,8 +2394,8 @@ export function AuthFilesPage() {
 
             <div className="rounded-2xl border border-slate-200 bg-white/70 px-3 py-3 shadow-sm backdrop-blur dark:border-neutral-800 dark:bg-neutral-950/40 sm:px-4">
               <div className="flex flex-col gap-3">
-                <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-start">
-                  <div className="space-y-3">
+                <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
+                  <div className="min-w-0 flex-1 space-y-3">
                     <div className="flex flex-col gap-2">
                       <div className="flex items-center gap-2">
                         <p className="text-[11px] font-semibold text-slate-600 dark:text-white/65">
@@ -2454,7 +2448,7 @@ export function AuthFilesPage() {
                       </div>
                     </div>
 
-                    <div className="max-w-xl space-y-1.5">
+                    <div className="max-w-2xl space-y-1.5">
                       <p className="text-[11px] font-semibold text-slate-600 dark:text-white/65">
                         {t("auth_files.search")}
                       </p>
@@ -2467,66 +2461,7 @@ export function AuthFilesPage() {
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-1.5 xl:max-w-[140px] xl:justify-end">
-                    <HoverTooltip content={t("auth_files.refresh")}>
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        className="!h-8 !w-8 !px-0"
-                        onClick={() => void loadAll()}
-                        disabled={loading || usageLoading || refreshingAll}
-                        aria-label={t("auth_files.refresh")}
-                        title={t("auth_files.refresh")}
-                      >
-                        <RefreshCw
-                          size={15}
-                          className={loading || usageLoading || refreshingAll ? "animate-spin" : ""}
-                        />
-                      </Button>
-                    </HoverTooltip>
-                    <HoverTooltip content={t("auth_files.upload")}>
-                      <Button
-                        variant="primary"
-                        size="sm"
-                        className="!h-8 !w-8 !px-0"
-                        onClick={() => fileInputRef.current?.click()}
-                        disabled={uploading}
-                        aria-label={t("auth_files.upload")}
-                        title={t("auth_files.upload")}
-                      >
-                        <Upload size={15} />
-                      </Button>
-                    </HoverTooltip>
-                    <HoverTooltip content={t("auth_files_page.add_oauth")}>
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        className="!h-8 !w-8 !px-0"
-                        onClick={() => {
-                          const normalized = normalizeProviderKey(filter);
-                          const oauthTab =
-                            normalized === "codex" ||
-                            normalized === "anthropic" ||
-                            normalized === "antigravity" ||
-                            normalized === "gemini-cli" ||
-                            normalized === "kimi" ||
-                            normalized === "qwen"
-                              ? (normalized as OAuthDialogTab)
-                              : "codex";
-                          setOauthDialogDefaultTab(oauthTab);
-                          setOauthDialogOpen(true);
-                        }}
-                        aria-label={t("auth_files_page.add_oauth")}
-                        title={t("auth_files_page.add_oauth")}
-                      >
-                        <Plus size={15} />
-                      </Button>
-                    </HoverTooltip>
-                  </div>
-                </div>
-
-                <div className="flex flex-col gap-3 border-t border-slate-200/80 pt-3 dark:border-neutral-800/80 lg:flex-row lg:items-center lg:justify-between">
-                  <div className="flex flex-wrap items-center gap-3">
+                  <div className="flex flex-wrap items-center gap-2 xl:max-w-[320px] xl:justify-end">
                     <div className="inline-flex items-center gap-2 text-xs text-slate-500 dark:text-white/45">
                       <span className="font-medium">{t("auth_files.quota_updated_at")}</span>
                       <span className="font-mono tabular-nums">
@@ -2542,7 +2477,7 @@ export function AuthFilesPage() {
                       {renderFilesViewModeTabs}
                     </div>
 
-                    <div className="inline-flex items-center gap-2">
+                    <div className="inline-flex items-center gap-1.5">
                       <span className="text-xs font-medium text-slate-500 dark:text-white/45">
                         {t("auth_files.quota_auto_refresh")}
                       </span>
@@ -2569,58 +2504,117 @@ export function AuthFilesPage() {
                         />
                       </div>
                     </div>
-                  </div>
 
-                  {selectableFilteredFiles.length > 0 || selectedCount > 0 ? (
-                    <div className="flex flex-wrap items-center gap-1.5 rounded-2xl bg-slate-50/80 px-2 py-1.5 dark:bg-white/[0.03]">
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        className="!h-8 px-2 text-xs"
-                        onClick={() => selectCurrentPage(!allPageSelected)}
-                        disabled={selectablePageNames.length === 0}
-                      >
-                        {allPageSelected
-                          ? t("auth_files.batch_deselect_page")
-                          : t("auth_files.batch_select_page")}
-                      </Button>
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        className="!h-8 px-2 text-xs"
-                        onClick={() => selectFilteredFiles(!allFilteredSelected)}
-                        disabled={selectableFilteredFiles.length === 0}
-                      >
-                        {allFilteredSelected
-                          ? t("auth_files.batch_deselect_filtered")
-                          : t("auth_files.batch_select_filtered")}
-                      </Button>
-                      <span className="ml-1 text-xs font-medium text-slate-600 dark:text-white/65">
-                        {t("auth_files.batch_selected", { count: selectedCount })}
-                      </span>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="!h-8 px-2 text-xs"
-                        onClick={() => setSelectedFileNames([])}
-                        disabled={selectedCount === 0}
-                      >
-                        {t("auth_files.batch_clear")}
-                      </Button>
-                      <Button
-                        variant="danger"
-                        size="sm"
-                        className="!h-8 px-2 text-xs"
-                        onClick={() =>
-                          setConfirm({ type: "deleteSelection", names: [...selectedFileNames] })
-                        }
-                        disabled={selectedCount === 0 || deletingAll}
-                      >
-                        {t("auth_files.batch_delete_action", { count: selectedCount })}
-                      </Button>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <HoverTooltip content={t("auth_files.refresh")}>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className="!h-8 !w-8 !px-0"
+                          onClick={() => void loadAll()}
+                          disabled={loading || usageLoading || refreshingAll}
+                          aria-label={t("auth_files.refresh")}
+                          title={t("auth_files.refresh")}
+                        >
+                          <RefreshCw
+                            size={15}
+                            className={
+                              loading || usageLoading || refreshingAll ? "animate-spin" : ""
+                            }
+                          />
+                        </Button>
+                      </HoverTooltip>
+                      <HoverTooltip content={t("auth_files.upload")}>
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          className="!h-8 !w-8 !px-0"
+                          onClick={() => fileInputRef.current?.click()}
+                          disabled={uploading}
+                          aria-label={t("auth_files.upload")}
+                          title={t("auth_files.upload")}
+                        >
+                          <Upload size={15} />
+                        </Button>
+                      </HoverTooltip>
+                      <HoverTooltip content={t("auth_files_page.add_oauth")}>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className="!h-8 !w-8 !px-0"
+                          onClick={() => {
+                            const normalized = normalizeProviderKey(filter);
+                            const oauthTab =
+                              normalized === "codex" ||
+                              normalized === "anthropic" ||
+                              normalized === "antigravity" ||
+                              normalized === "gemini-cli" ||
+                              normalized === "kimi" ||
+                              normalized === "qwen"
+                                ? (normalized as OAuthDialogTab)
+                                : "codex";
+                            setOauthDialogDefaultTab(oauthTab);
+                            setOauthDialogOpen(true);
+                          }}
+                          aria-label={t("auth_files_page.add_oauth")}
+                          title={t("auth_files_page.add_oauth")}
+                        >
+                          <Plus size={15} />
+                        </Button>
+                      </HoverTooltip>
                     </div>
-                  ) : null}
+                  </div>
                 </div>
+
+                {selectableFilteredFiles.length > 0 || selectedCount > 0 ? (
+                  <div className="flex flex-wrap items-center justify-end gap-1.5 rounded-2xl bg-slate-50/80 px-2 py-1.5 dark:bg-white/[0.03]">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className="!h-8 px-2 text-xs"
+                      onClick={() => selectCurrentPage(!allPageSelected)}
+                      disabled={selectablePageNames.length === 0}
+                    >
+                      {allPageSelected
+                        ? t("auth_files.batch_deselect_page")
+                        : t("auth_files.batch_select_page")}
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className="!h-8 px-2 text-xs"
+                      onClick={() => selectFilteredFiles(!allFilteredSelected)}
+                      disabled={selectableFilteredFiles.length === 0}
+                    >
+                      {allFilteredSelected
+                        ? t("auth_files.batch_deselect_filtered")
+                        : t("auth_files.batch_select_filtered")}
+                    </Button>
+                    <span className="ml-1 text-xs font-medium text-slate-600 dark:text-white/65">
+                      {t("auth_files.batch_selected", { count: selectedCount })}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="!h-8 px-2 text-xs"
+                      onClick={() => setSelectedFileNames([])}
+                      disabled={selectedCount === 0}
+                    >
+                      {t("auth_files.batch_clear")}
+                    </Button>
+                    <Button
+                      variant="danger"
+                      size="sm"
+                      className="!h-8 px-2 text-xs"
+                      onClick={() =>
+                        setConfirm({ type: "deleteSelection", names: [...selectedFileNames] })
+                      }
+                      disabled={selectedCount === 0 || deletingAll}
+                    >
+                      {t("auth_files.batch_delete_action", { count: selectedCount })}
+                    </Button>
+                  </div>
+                ) : null}
               </div>
             </div>
 
@@ -2703,6 +2697,8 @@ export function AuthFilesPage() {
                           : false;
                         const quotaAutoRefreshing = quotaAutoRefreshingRef.current.has(file.name);
 
+                        const showSelectionControl = fileSelected || selectedCount > 0;
+
                         return (
                           <div
                             key={file.name}
@@ -2754,7 +2750,15 @@ export function AuthFilesPage() {
 
                               <div className="flex shrink-0 items-start gap-2 pt-0.5">
                                 {runtimeOnly ? null : (
-                                  <label className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white/80 text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white/80 dark:hover:border-neutral-600 dark:hover:bg-neutral-800">
+                                  <label
+                                    className={[
+                                      "inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white/80 text-slate-700 transition-all dark:border-neutral-700 dark:bg-neutral-900 dark:text-white/80",
+                                      showSelectionControl
+                                        ? "opacity-100"
+                                        : "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100",
+                                      "hover:border-slate-300 hover:bg-slate-50 dark:hover:border-neutral-600 dark:hover:bg-neutral-800",
+                                    ].join(" ")}
+                                  >
                                     <input
                                       type="checkbox"
                                       aria-label={t("auth_files.select_file", {
@@ -2806,7 +2810,7 @@ export function AuthFilesPage() {
                               )}
                             </div>
 
-                            <div className="mt-4 flex items-center justify-between gap-2 border-t border-slate-200/80 pt-3 dark:border-neutral-800/80">
+                            <div className="mt-3 flex items-center justify-between gap-2">
                               <div className="inline-flex items-center gap-1">
                                 {provider ? (
                                   <HoverTooltip content={t("common.refresh")}>
