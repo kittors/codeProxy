@@ -24,6 +24,8 @@ export interface AuthFileItem {
   provider?: string;
   label?: string;
   email?: string;
+  plan_type?: string;
+  planType?: string;
   account_type?: string;
   account?: string;
   size?: number;

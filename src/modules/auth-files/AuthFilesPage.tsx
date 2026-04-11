@@ -37,6 +37,7 @@ import { fetchQuota, resolveQuotaProvider, type QuotaProvider } from "@/modules/
 import { useInterval } from "@/hooks/useInterval";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { clampPercent, type QuotaItem, type QuotaState } from "@/modules/quota/quota-helpers";
+import { resolveCodexPlanType } from "@/utils/quota/resolvers";
 
 type AuthFileModelItem = { id: string; display_name?: string; type?: string; owned_by?: string };
 type OAuthDialogTab =
@@ -222,6 +223,19 @@ const readAuthFileChannelName = (file: AuthFileItem): string => {
   }
   return "";
 };
+
+const isOauthAuthFile = (file: AuthFileItem): boolean =>
+  String(file.account_type || "")
+    .trim()
+    .toLowerCase() === "oauth";
+
+const resolveAuthFileDisplayName = (file: AuthFileItem): string => {
+  const channelName = readAuthFileChannelName(file);
+  if (isOauthAuthFile(file) && channelName) return channelName;
+  return String(file.name || "");
+};
+
+const resolveAuthFilePlanType = (file: AuthFileItem): string | null => resolveCodexPlanType(file);
 
 const isRuntimeOnlyAuthFile = (file: AuthFileItem): boolean => {
   const raw = (file.runtime_only ?? file.runtimeOnly) as unknown;
@@ -570,6 +584,23 @@ export function AuthFilesPage() {
     [t],
   );
 
+  const formatPlanTypeLabel = useCallback(
+    (planType: string) => {
+      const normalized = planType.trim().toLowerCase();
+      if (!normalized) return "";
+      if (normalized === "plus" || normalized === "team" || normalized === "free") {
+        return t(`codex_quota.plan_${normalized}`);
+      }
+      return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+    },
+    [t],
+  );
+
+  const patchAuthFileByName = useCallback((name: string, patch: Partial<AuthFileItem>) => {
+    setFiles((prev) => prev.map((item) => (item.name === name ? { ...item, ...patch } : item)));
+    setDetailFile((prev) => (prev?.name === name ? { ...prev, ...patch } : prev));
+  }, []);
+
   const formatQuotaResetTextCompact = useCallback(
     (resetAtMs?: number) => {
       if (typeof resetAtMs !== "number" || !Number.isFinite(resetAtMs)) return null;
@@ -871,11 +902,19 @@ export function AuthFilesPage() {
       }));
 
       try {
-        const items = await fetchQuota(provider, file);
+        const result = await fetchQuota(provider, file);
+        const items = Array.isArray(result) ? result : result.items;
+        const nextPlanType = Array.isArray(result) ? null : (result.planType ?? null);
         const rawAuthIndex = (file as any)["auth_index"] ?? file.authIndex;
         const authIndex = normalizeAuthIndexValue(rawAuthIndex);
         if (authIndex) {
           void quotaApi.reconcile(authIndex).catch(() => {});
+        }
+        if (nextPlanType) {
+          patchAuthFileByName(name, {
+            plan_type: nextPlanType,
+            planType: nextPlanType,
+          });
         }
         setQuotaByFileName((prev) => ({
           ...prev,
@@ -896,7 +935,7 @@ export function AuthFilesPage() {
         quotaInFlightRef.current.delete(name);
       }
     },
-    [t],
+    [patchAuthFileByName, t],
   );
 
   const checkAuthFileConnectivity = useCallback(
@@ -1908,25 +1947,13 @@ export function AuthFilesPage() {
         label: t("auth_files.col_name"),
         width: "w-96",
         render: (file) => {
-          const isOauthFile =
-            String(file.account_type || "")
-              .trim()
-              .toLowerCase() === "oauth";
-          const channelName = readAuthFileChannelName(file);
-          const displayTitle = isOauthFile && channelName ? channelName : file.name;
-          const showFileNameSecondary =
-            isOauthFile && channelName && channelName.trim() !== String(file.name || "").trim();
+          const displayTitle = resolveAuthFileDisplayName(file);
 
           return (
             <div className="min-w-0">
               <p className="truncate font-mono text-xs text-slate-900 dark:text-white">
                 {displayTitle}
               </p>
-              {showFileNameSecondary ? (
-                <p className="mt-1 truncate font-mono text-[11px] text-slate-500 dark:text-white/45">
-                  {file.name}
-                </p>
-              ) : null}
             </div>
           );
         },
@@ -1938,6 +1965,7 @@ export function AuthFilesPage() {
         render: (file) => {
           const typeKey = resolveFileType(file);
           const badgeClass = TYPE_BADGE_CLASSES[typeKey] ?? TYPE_BADGE_CLASSES.unknown;
+          const planType = resolveAuthFilePlanType(file);
           const runtimeOnly = isRuntimeOnlyAuthFile(file);
 
           return (
@@ -1948,6 +1976,11 @@ export function AuthFilesPage() {
                 >
                   {typeKey}
                 </span>
+                {planType ? (
+                  <span className="inline-flex rounded-lg bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-800 dark:bg-amber-500/15 dark:text-amber-200">
+                    {t("codex_quota.plan_label")} {formatPlanTypeLabel(planType)}
+                  </span>
+                ) : null}
               </div>
               {runtimeOnly ? (
                 <span className="inline-flex w-fit rounded-lg bg-slate-900 px-2 py-1 text-xs font-semibold text-white dark:bg-white dark:text-neutral-950">
@@ -1963,10 +1996,7 @@ export function AuthFilesPage() {
         label: t("auth_files.channel_name"),
         width: "w-52",
         render: (file) => {
-          const isOauthFile =
-            String(file.account_type || "")
-              .trim()
-              .toLowerCase() === "oauth";
+          const isOauthFile = isOauthAuthFile(file);
           const channelName = readAuthFileChannelName(file);
           if (!isOauthFile)
             return <span className="text-xs text-slate-400 dark:text-white/40">--</span>;
@@ -2555,6 +2585,10 @@ export function AuthFilesPage() {
                         const typeKey = resolveFileType(file);
                         const badgeClass =
                           TYPE_BADGE_CLASSES[typeKey] ?? TYPE_BADGE_CLASSES.unknown;
+                        const displayTitle = resolveAuthFileDisplayName(file);
+                        const planType = resolveAuthFilePlanType(file);
+                        const stats = resolveAuthFileStats(file, usageIndex);
+                        const totalCalls = stats.success + stats.failure;
 
                         const provider = resolveQuotaProvider(file);
                         const state = quotaByFileName[file.name] ?? { status: "idle", items: [] };
@@ -2583,8 +2617,10 @@ export function AuthFilesPage() {
                               <div className="min-w-0">
                                 <div className="flex items-center gap-2">
                                   <span className="min-w-0 truncate text-sm font-semibold text-slate-900 dark:text-white">
-                                    {file.name}
+                                    {displayTitle}
                                   </span>
+                                </div>
+                                <div className="mt-2 flex flex-wrap items-center gap-2">
                                   <span
                                     className={[
                                       "inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[10px] font-semibold",
@@ -2593,6 +2629,19 @@ export function AuthFilesPage() {
                                   >
                                     {typeKey}
                                   </span>
+                                  {planType ? (
+                                    <span className="inline-flex shrink-0 items-center rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-800 dark:bg-amber-500/15 dark:text-amber-200">
+                                      {t("codex_quota.plan_label")} {formatPlanTypeLabel(planType)}
+                                    </span>
+                                  ) : null}
+                                  <span className="inline-flex shrink-0 items-center rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-700 dark:bg-white/10 dark:text-white/70">
+                                    {t("auth_files.calls_count", { count: totalCalls })}
+                                  </span>
+                                  {runtimeOnly ? (
+                                    <span className="inline-flex shrink-0 items-center rounded-full bg-slate-900 px-2 py-0.5 text-[10px] font-semibold text-white dark:bg-white dark:text-neutral-950">
+                                      {t("auth_files.virtual_auth_file")}
+                                    </span>
+                                  ) : null}
                                 </div>
                                 <p className="mt-0.5 truncate text-[11px] text-slate-500 dark:text-white/45">
                                   {formatModified(file)}

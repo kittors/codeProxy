@@ -35,6 +35,10 @@ import {
 } from "@/modules/quota/quota-helpers";
 
 export type QuotaProvider = "antigravity" | "codex" | "gemini-cli" | "kiro";
+export type QuotaFetchResult = {
+  items: QuotaItem[];
+  planType?: string | null;
+};
 
 export const resolveQuotaProvider = (file: AuthFileItem): QuotaProvider | null => {
   const provider = resolveAuthProvider(file);
@@ -72,7 +76,10 @@ const resolveAntigravityProjectId = async (file: AuthFileItem): Promise<string> 
   return DEFAULT_ANTIGRAVITY_PROJECT_ID;
 };
 
-export const fetchQuota = async (type: QuotaProvider, file: AuthFileItem): Promise<QuotaItem[]> => {
+export const fetchQuota = async (
+  type: QuotaProvider,
+  file: AuthFileItem,
+): Promise<QuotaFetchResult> => {
   const rawAuthIndex = (file as any)["auth_index"] ?? file.authIndex;
   const authIndex = normalizeAuthIndexValue(rawAuthIndex);
   if (!authIndex) throw new Error("missing_auth_index");
@@ -95,11 +102,13 @@ export const fetchQuota = async (type: QuotaProvider, file: AuthFileItem): Promi
         const models = parsed?.models;
         if (!models || !isRecord(models)) throw new Error("no_model_quota");
         const groups = buildAntigravityGroups(models as AntigravityModelsPayload);
-        return groups.map((g) => ({
-          label: g.label,
-          percent: Math.round(clampPercent(g.remainingFraction * 100)),
-          resetAtMs: parseResetTimeToMs(g.resetTime),
-        }));
+        return {
+          items: groups.map((g) => ({
+            label: g.label,
+            percent: Math.round(clampPercent(g.remainingFraction * 100)),
+            resetAtMs: parseResetTimeToMs(g.resetTime),
+          })),
+        };
       }
     }
     if (last) throw new Error(getApiCallErrorMessage(last));
@@ -119,7 +128,10 @@ export const fetchQuota = async (type: QuotaProvider, file: AuthFileItem): Promi
       throw new Error(getApiCallErrorMessage(result));
     const payload = parseCodexUsagePayload(result.body ?? result.bodyText);
     if (!payload) throw new Error("parse_codex_failed");
-    return buildCodexItems(payload);
+    return {
+      items: buildCodexItems(payload),
+      planType: normalizeStringValue(payload.plan_type ?? payload.planType)?.toLowerCase() ?? null,
+    };
   }
 
   if (type === "gemini-cli") {
@@ -167,22 +179,24 @@ export const fetchQuota = async (type: QuotaProvider, file: AuthFileItem): Promi
       resetTime?: string;
     }[];
     const grouped = buildGeminiCliBuckets(parsed);
-    return grouped.map((b) => {
-      const percent =
-        b.remainingFraction === null ? null : Math.round(clampPercent(b.remainingFraction * 100));
-      const amount =
-        b.remainingAmount !== null
-          ? `${Math.round(b.remainingAmount).toLocaleString()} tokens`
-          : null;
-      const tokenType = b.tokenType ? `tokenType=${b.tokenType}` : null;
-      const meta = [tokenType, amount].filter(Boolean).join(" · ");
-      return {
-        label: b.label,
-        percent,
-        resetAtMs: parseResetTimeToMs(b.resetTime),
-        meta: meta || undefined,
-      };
-    });
+    return {
+      items: grouped.map((b) => {
+        const percent =
+          b.remainingFraction === null ? null : Math.round(clampPercent(b.remainingFraction * 100));
+        const amount =
+          b.remainingAmount !== null
+            ? `${Math.round(b.remainingAmount).toLocaleString()} tokens`
+            : null;
+        const tokenType = b.tokenType ? `tokenType=${b.tokenType}` : null;
+        const meta = [tokenType, amount].filter(Boolean).join(" · ");
+        return {
+          label: b.label,
+          percent,
+          resetAtMs: parseResetTimeToMs(b.resetTime),
+          meta: meta || undefined,
+        };
+      }),
+    };
   }
 
   const result = await apiCallApi.request({
@@ -196,5 +210,5 @@ export const fetchQuota = async (type: QuotaProvider, file: AuthFileItem): Promi
     throw new Error(getApiCallErrorMessage(result));
   const payload = parseKiroQuotaPayload(result.body ?? result.bodyText);
   if (!payload) throw new Error("parse_kiro_failed");
-  return buildKiroItems(payload);
+  return { items: buildKiroItems(payload) };
 };

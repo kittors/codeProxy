@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { createMemoryRouter, MemoryRouter, Route, RouterProvider, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { ToastProvider } from "@/modules/ui/ToastProvider";
@@ -40,6 +40,22 @@ describe("AuthFilesPage files table", () => {
   beforeEach(() => {
     window.localStorage.clear();
     window.sessionStorage.clear();
+    mocks.list.mockReset();
+    mocks.list.mockImplementation(async () => ({
+      files: [
+        {
+          name: "qwen.json",
+          type: "qwen",
+          size: 1024,
+          modified: Date.now(),
+          disabled: false,
+        },
+      ],
+    }));
+    mocks.getEntityStats.mockReset();
+    mocks.getEntityStats.mockImplementation(async () => ({ source: [], auth_index: [] }));
+    mocks.fetchQuota.mockReset();
+    mocks.fetchQuota.mockImplementation(() => new Promise(() => {}));
   });
 
   afterEach(() => {
@@ -180,6 +196,54 @@ describe("AuthFilesPage files table", () => {
     expect(screen.queryByText("Code: 5h")).not.toBeInTheDocument();
   });
 
+  test("prefers channel name over raw file name and shows plan plus calls", async () => {
+    const now = Date.now();
+    mocks.list.mockImplementation(async () => ({
+      files: [
+        {
+          name: "codex-prod.json",
+          label: "Main Codex",
+          account_type: "oauth",
+          type: "codex",
+          plan_type: "plus",
+          auth_index: "1",
+          size: 1024,
+          modified: now,
+          disabled: false,
+        },
+      ],
+    }));
+    mocks.getEntityStats.mockImplementation(
+      async () =>
+        ({
+          source: [],
+          auth_index: [
+            { entity_name: "1", requests: 9, failed: 2, avg_latency: 0, total_tokens: 0 },
+          ],
+        }) as any,
+    );
+    window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findAllByText("Main Codex")).not.toHaveLength(0);
+    expect(screen.queryByText("codex-prod.json")).not.toBeInTheDocument();
+    expect(
+      screen.getAllByText((_, node) => node?.textContent?.includes("Plan Plus") ?? false).length,
+    ).toBeGreaterThan(0);
+    expect(screen.getByText("9 calls")).toBeInTheDocument();
+  });
+
   test("cards view shows codex quota bars by stable label keys (no quota tooltip)", async () => {
     const now = Date.now();
     const file = {
@@ -191,7 +255,7 @@ describe("AuthFilesPage files table", () => {
       auth_index: "1",
     } as any;
 
-    mocks.list.mockImplementationOnce(async () => ({ files: [file] }));
+    mocks.list.mockImplementation(async () => ({ files: [file] }));
 
     window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
     window.sessionStorage.setItem(
@@ -239,6 +303,66 @@ describe("AuthFilesPage files table", () => {
     const quotaLabel = screen.getByText("Code: 5h");
     fireEvent.mouseEnter(quotaLabel);
     expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+  });
+
+  test("quota refresh updates the plan badge from api-call payload", async () => {
+    const now = Date.now();
+    const file = {
+      name: "codex.json",
+      label: "Codex Main",
+      account_type: "oauth",
+      type: "codex",
+      size: 1024,
+      modified: now,
+      disabled: false,
+      auth_index: "1",
+      plan_type: "free",
+    } as any;
+
+    mocks.list.mockImplementationOnce(async () => ({ files: [file] }));
+    mocks.fetchQuota.mockResolvedValue({
+      items: [{ label: "m_quota.code_5h", percent: 12, resetAtMs: now + 60_000 }],
+      planType: "plus",
+    });
+
+    window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
+    window.sessionStorage.setItem(
+      "authFilesPage.dataCache.v1",
+      JSON.stringify({
+        savedAtMs: now,
+        files: [file],
+        usageData: { source: [], auth_index: [] },
+        quotaByFileName: {
+          "codex.json": {
+            status: "success",
+            updatedAt: now,
+            items: [{ label: "m_quota.code_5h", percent: 20, resetAtMs: now + 30_000 }],
+          },
+        },
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("Codex Main")).toBeInTheDocument();
+    fireEvent.click(
+      within(screen.getByTestId("auth-files-cards")).getByRole("button", { name: "Refresh" }),
+    );
+
+    expect(
+      (await screen.findAllByText((_, node) => node?.textContent?.includes("Plan Plus") ?? false))
+        .length,
+    ).toBeGreaterThan(0);
   });
 
   test("cards view shows inline error when quota fetch fails", async () => {

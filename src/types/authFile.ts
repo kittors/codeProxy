@@ -21,11 +21,20 @@ export interface AuthFileItem {
   name: string;
   type?: AuthFileType | string;
   provider?: string;
+  label?: string;
+  email?: string;
+  plan_type?: string;
+  planType?: string;
+  account_type?: string;
+  account?: string;
   size?: number;
   authIndex?: string | number | null;
+  auth_index?: string | number | null;
   runtimeOnly?: boolean | string;
+  runtime_only?: boolean | string;
   disabled?: boolean;
   modified?: number;
+  modtime?: number;
   [key: string]: unknown;
 }
 

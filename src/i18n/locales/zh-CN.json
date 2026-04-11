@@ -615,6 +615,7 @@
     "oauth_excluded": "OAuth 已排除",
     "valid_mappings": "有效映射：{{count}}",
     "fork": "分叉",
+    "calls_count": "已调用 {{count}} 次",
     "success_count": "成功 {{count}}",
     "failed_count": "失败 {{count}}",
     "total_page": "共 {{total}} 条 · 第 {{page}} / {{pages}} 页",

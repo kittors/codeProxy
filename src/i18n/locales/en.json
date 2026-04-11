@@ -601,6 +601,7 @@
     "oauth_excluded": "OAuth Excluded",
     "valid_mappings": "Valid mappings: {{count}}",
     "fork": "fork",
+    "calls_count": "{{count}} calls",
     "success_count": "Success {{count}}",
     "failed_count": "Failed {{count}}",
     "total_page": "Total {{total}} · Page {{page}} / {{pages}}",

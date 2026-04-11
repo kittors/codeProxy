@@ -421,6 +421,7 @@
     "quota_auto_refresh": "Автообновление",
     "quota_refresh_off": "Выкл",
     "quota_updated_at": "Обновлено",
+    "calls_count": "{{count}} вызовов",
     "too_many_files_warning": "Слишком много учётных данных. Полный список может повлиять на производительность, используйте постраничный режим.",
     "filter_all": "Все",
     "filter_qwen": "Qwen",
