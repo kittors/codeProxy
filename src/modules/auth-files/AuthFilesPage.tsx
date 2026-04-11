@@ -2369,7 +2369,7 @@ export function AuthFilesPage() {
   }, [importModels, importSearch]);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <Tabs value={tab} onValueChange={(next) => setTab(next as typeof tab)}>
         <TabsList>
           <TabsTrigger value="files">{t("auth_files_page.files_tab")}</TabsTrigger>
@@ -2377,8 +2377,8 @@ export function AuthFilesPage() {
           <TabsTrigger value="alias">{t("auth_files_page.alias_tab")}</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="files" className="mt-4">
-          <div className="space-y-4">
+        <TabsContent value="files" className="mt-3">
+          <div className="space-y-3">
             <input
               ref={fileInputRef}
               type="file"
