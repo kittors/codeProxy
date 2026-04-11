@@ -2394,9 +2394,9 @@ export function AuthFilesPage() {
 
             <div className="rounded-2xl border border-slate-200 bg-white/70 px-3 py-3 shadow-sm backdrop-blur dark:border-neutral-800 dark:bg-neutral-950/40 sm:px-4">
               <div className="flex flex-col gap-3">
-                <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
-                  <div className="min-w-0 flex-1 space-y-3">
-                    <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+                  <div className="flex min-w-0 flex-1 flex-col gap-3 lg:flex-row lg:items-end">
+                    <div className="w-fit max-w-full space-y-1.5">
                       <div className="flex items-center gap-2">
                         <p className="text-[11px] font-semibold text-slate-600 dark:text-white/65">
                           {t("auth_files.type_filter")}
@@ -2410,7 +2410,7 @@ export function AuthFilesPage() {
                           </span>
                         </HoverTooltip>
                       </div>
-                      <div className="inline-flex max-w-full gap-1 overflow-x-auto whitespace-nowrap rounded-2xl border border-slate-200 bg-white p-1 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
+                      <div className="inline-flex w-fit max-w-full gap-1 overflow-x-auto whitespace-nowrap rounded-2xl border border-slate-200 bg-white p-1 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
                         {filterChips.map((key) => {
                           const active = filter === key;
                           const normalizedKey = normalizeProviderKey(key);
@@ -2448,7 +2448,7 @@ export function AuthFilesPage() {
                       </div>
                     </div>
 
-                    <div className="max-w-2xl space-y-1.5">
+                    <div className="w-full max-w-[560px] space-y-1.5">
                       <p className="text-[11px] font-semibold text-slate-600 dark:text-white/65">
                         {t("auth_files.search")}
                       </p>
@@ -2460,8 +2460,10 @@ export function AuthFilesPage() {
                       />
                     </div>
                   </div>
+                </div>
 
-                  <div className="flex flex-wrap items-center gap-2 xl:max-w-[320px] xl:justify-end">
+                <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+                  <div className="flex flex-wrap items-center gap-2">
                     <div className="inline-flex items-center gap-2 text-xs text-slate-500 dark:text-white/45">
                       <span className="font-medium">{t("auth_files.quota_updated_at")}</span>
                       <span className="font-mono tabular-nums">
@@ -2564,57 +2566,57 @@ export function AuthFilesPage() {
                       </HoverTooltip>
                     </div>
                   </div>
-                </div>
 
-                {selectableFilteredFiles.length > 0 || selectedCount > 0 ? (
-                  <div className="flex flex-wrap items-center justify-end gap-1.5 rounded-2xl bg-slate-50/80 px-2 py-1.5 dark:bg-white/[0.03]">
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      className="!h-8 px-2 text-xs"
-                      onClick={() => selectCurrentPage(!allPageSelected)}
-                      disabled={selectablePageNames.length === 0}
-                    >
-                      {allPageSelected
-                        ? t("auth_files.batch_deselect_page")
-                        : t("auth_files.batch_select_page")}
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      className="!h-8 px-2 text-xs"
-                      onClick={() => selectFilteredFiles(!allFilteredSelected)}
-                      disabled={selectableFilteredFiles.length === 0}
-                    >
-                      {allFilteredSelected
-                        ? t("auth_files.batch_deselect_filtered")
-                        : t("auth_files.batch_select_filtered")}
-                    </Button>
-                    <span className="ml-1 text-xs font-medium text-slate-600 dark:text-white/65">
-                      {t("auth_files.batch_selected", { count: selectedCount })}
-                    </span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="!h-8 px-2 text-xs"
-                      onClick={() => setSelectedFileNames([])}
-                      disabled={selectedCount === 0}
-                    >
-                      {t("auth_files.batch_clear")}
-                    </Button>
-                    <Button
-                      variant="danger"
-                      size="sm"
-                      className="!h-8 px-2 text-xs"
-                      onClick={() =>
-                        setConfirm({ type: "deleteSelection", names: [...selectedFileNames] })
-                      }
-                      disabled={selectedCount === 0 || deletingAll}
-                    >
-                      {t("auth_files.batch_delete_action", { count: selectedCount })}
-                    </Button>
-                  </div>
-                ) : null}
+                  {selectableFilteredFiles.length > 0 || selectedCount > 0 ? (
+                    <div className="flex flex-wrap items-center gap-1.5 rounded-2xl bg-slate-50/80 px-2 py-1.5 dark:bg-white/[0.03]">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        className="!h-8 px-2 text-xs"
+                        onClick={() => selectCurrentPage(!allPageSelected)}
+                        disabled={selectablePageNames.length === 0}
+                      >
+                        {allPageSelected
+                          ? t("auth_files.batch_deselect_page")
+                          : t("auth_files.batch_select_page")}
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        className="!h-8 px-2 text-xs"
+                        onClick={() => selectFilteredFiles(!allFilteredSelected)}
+                        disabled={selectableFilteredFiles.length === 0}
+                      >
+                        {allFilteredSelected
+                          ? t("auth_files.batch_deselect_filtered")
+                          : t("auth_files.batch_select_filtered")}
+                      </Button>
+                      <span className="ml-1 text-xs font-medium text-slate-600 dark:text-white/65">
+                        {t("auth_files.batch_selected", { count: selectedCount })}
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="!h-8 px-2 text-xs"
+                        onClick={() => setSelectedFileNames([])}
+                        disabled={selectedCount === 0}
+                      >
+                        {t("auth_files.batch_clear")}
+                      </Button>
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        className="!h-8 px-2 text-xs"
+                        onClick={() =>
+                          setConfirm({ type: "deleteSelection", names: [...selectedFileNames] })
+                        }
+                        disabled={selectedCount === 0 || deletingAll}
+                      >
+                        {t("auth_files.batch_delete_action", { count: selectedCount })}
+                      </Button>
+                    </div>
+                  ) : null}
+                </div>
               </div>
             </div>
 
