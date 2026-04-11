@@ -2284,7 +2284,6 @@ export function AuthFilesPage() {
             : false;
           const quotaAutoRefreshing = quotaAutoRefreshingRef.current.has(file.name);
 
-          const iconBtnCls = "h-9 w-9 px-0";
           return (
             <div className="inline-flex flex-wrap items-center justify-center gap-1">
               {quotaProvider ? (
@@ -2292,7 +2291,6 @@ export function AuthFilesPage() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className={iconBtnCls}
                     onClick={() => void refreshQuota(file, quotaProvider)}
                     title={t("common.refresh")}
                     aria-label={t("common.refresh")}
@@ -2310,7 +2308,6 @@ export function AuthFilesPage() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className={iconBtnCls}
                   onClick={() => void openDetail(file)}
                   title={t("auth_files.view")}
                   aria-label={t("auth_files.view")}
@@ -2323,7 +2320,6 @@ export function AuthFilesPage() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className={iconBtnCls}
                   onClick={() => void downloadAuthFile(file)}
                   title={t("auth_files.download")}
                   aria-label={t("auth_files.download")}
@@ -2512,7 +2508,6 @@ export function AuthFilesPage() {
                         <Button
                           variant="secondary"
                           size="sm"
-                          className="!h-8 !w-8 !px-0"
                           onClick={() => void loadAll()}
                           disabled={loading || usageLoading || refreshingAll}
                           aria-label={t("auth_files.refresh")}
@@ -2530,7 +2525,6 @@ export function AuthFilesPage() {
                         <Button
                           variant="primary"
                           size="sm"
-                          className="!h-8 !w-8 !px-0"
                           onClick={() => fileInputRef.current?.click()}
                           disabled={uploading}
                           aria-label={t("auth_files.upload")}
@@ -2543,7 +2537,6 @@ export function AuthFilesPage() {
                         <Button
                           variant="secondary"
                           size="sm"
-                          className="!h-8 !w-8 !px-0"
                           onClick={() => {
                             const normalized = normalizeProviderKey(filter);
                             const oauthTab =
@@ -2819,7 +2812,6 @@ export function AuthFilesPage() {
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      className="h-9 w-9 px-0"
                                       onClick={() => void refreshQuota(file, provider)}
                                       title={t("common.refresh")}
                                       aria-label={t("common.refresh")}
@@ -2841,7 +2833,6 @@ export function AuthFilesPage() {
                                   <Button
                                     variant="ghost"
                                     size="sm"
-                                    className="h-9 w-9 px-0"
                                     onClick={() => void openDetail(file)}
                                     title={t("auth_files.view")}
                                     aria-label={t("auth_files.view")}
@@ -2854,7 +2845,6 @@ export function AuthFilesPage() {
                                   <Button
                                     variant="ghost"
                                     size="sm"
-                                    className="h-9 w-9 px-0"
                                     onClick={() => void downloadAuthFile(file)}
                                     title={t("auth_files.download")}
                                     aria-label={t("auth_files.download")}

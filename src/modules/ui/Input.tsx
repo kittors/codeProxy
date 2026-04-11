@@ -9,7 +9,7 @@ export interface TextInputProps extends Omit<InputHTMLAttributes<HTMLInputElemen
 
 const VARIANT_STYLES: Record<InputVariant, string> = {
   solid:
-    "rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-slate-900 placeholder:text-slate-400 dark:border-neutral-800 dark:bg-neutral-900 dark:text-slate-100 dark:placeholder:text-neutral-500",
+    "h-9 rounded-xl border border-slate-200 bg-white px-3 text-slate-900 shadow-sm placeholder:text-slate-400 dark:border-neutral-800 dark:bg-neutral-900 dark:text-slate-100 dark:placeholder:text-neutral-500",
   ghost: "bg-transparent text-inherit placeholder:text-inherit placeholder:opacity-60",
 };
 

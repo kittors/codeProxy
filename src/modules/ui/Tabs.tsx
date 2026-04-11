@@ -153,8 +153,8 @@ export function TabsTrigger({
       onClick={onClick}
       className={
         active
-          ? "relative z-10 inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-xl px-3 py-1.5 text-xs font-semibold text-white transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/35 dark:text-neutral-950 dark:focus-visible:ring-white/15"
-          : "relative z-10 inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-xl px-3 py-1.5 text-xs text-slate-700 transition-colors duration-200 hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/35 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white dark:focus-visible:ring-white/15"
+          ? "relative z-10 inline-flex h-8 shrink-0 items-center gap-2 whitespace-nowrap rounded-xl px-3 text-xs font-semibold text-white transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/35 dark:text-neutral-950 dark:focus-visible:ring-white/15"
+          : "relative z-10 inline-flex h-8 shrink-0 items-center gap-2 whitespace-nowrap rounded-xl px-3 text-xs text-slate-700 transition-colors duration-200 hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/35 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white dark:focus-visible:ring-white/15"
       }
     >
       {children}

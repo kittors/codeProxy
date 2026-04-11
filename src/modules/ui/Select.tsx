@@ -146,13 +146,13 @@ export function Select({
         className={cn(
           variant === "chip"
             ? [
-                "inline-flex h-7 items-center justify-center gap-1.5 rounded-xl border px-2 text-[11px] font-semibold outline-none transition",
+                "inline-flex h-8 items-center justify-center gap-1.5 rounded-xl border px-2.5 text-[11px] font-semibold outline-none transition",
                 "border-slate-200/60 bg-white/70 text-slate-600 hover:bg-white/90 hover:text-slate-800",
                 "focus-visible:ring-2 focus-visible:ring-slate-400/35",
                 "dark:border-white/10 dark:bg-neutral-950/25 dark:text-white/70 dark:hover:bg-neutral-950/40 dark:hover:text-white/85 dark:focus-visible:ring-white/15",
               ].join(" ")
             : [
-                "inline-flex h-[34px] items-center gap-1.5 rounded-xl border border-slate-200 bg-white pl-3.5 pr-3 text-sm font-medium text-slate-700 shadow-sm outline-none transition",
+                "inline-flex h-9 items-center gap-1.5 rounded-xl border border-slate-200 bg-white pl-3 pr-3 text-sm font-medium text-slate-700 shadow-sm outline-none transition",
                 "hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-slate-400/35",
                 "dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-white/80 dark:hover:bg-white/10 dark:focus-visible:ring-white/15",
               ].join(" "),
