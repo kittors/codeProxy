@@ -2721,8 +2721,8 @@ export function AuthFilesPage() {
                                       className={[
                                         "flex h-8 items-center justify-center px-1 transition-opacity",
                                         showSelectionControl
-                                          ? "opacity-100"
-                                          : "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100",
+                                          ? "opacity-100 pointer-events-auto"
+                                          : "opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto",
                                       ].join(" ")}
                                     >
                                       <input
