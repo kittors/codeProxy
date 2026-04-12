@@ -224,6 +224,10 @@ export function ApiKeysPage() {
     channels: string[];
     models: string[];
   }>({ channels: [], models: [] });
+  const usageFilterOptionsRef = useRef<{ channels: string[]; models: string[] }>({
+    channels: [],
+    models: [],
+  });
   const [usageTimeRange, setUsageTimeRange] = useState<TimeRange>(7);
   const [usageChannelQuery, setUsageChannelQuery] = useState("");
   const [usageChannelGroupQuery, setUsageChannelGroupQuery] = useState("");
@@ -607,12 +611,12 @@ export function ApiKeysPage() {
       }
 
       if (!normalizedGroup) return "";
-      const matchedChannels = usageFilterOptions.channels.filter(
+      const matchedChannels = usageFilterOptionsRef.current.channels.filter(
         (channel) => channelGroupByName[channel] === normalizedGroup,
       );
       return matchedChannels.length > 0 ? matchedChannels.join(",") : "__no_match__";
     },
-    [channelGroupByName, usageFilterOptions.channels],
+    [channelGroupByName],
   );
 
   const fetchUsageLogs = useCallback(
@@ -981,6 +985,10 @@ export function ApiKeysPage() {
       time: new Date(usageLastUpdatedAt).toLocaleTimeString(),
     });
   }, [t, usageLastUpdatedAt, usageLoading]);
+
+  useEffect(() => {
+    usageFilterOptionsRef.current = usageFilterOptions;
+  }, [usageFilterOptions]);
 
   useEffect(() => {
     if (!usageViewKey) return;
