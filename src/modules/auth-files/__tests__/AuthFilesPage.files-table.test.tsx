@@ -479,4 +479,34 @@ describe("AuthFilesPage files table", () => {
     expect(await screen.findByTestId("auth-files-cards")).toBeInTheDocument();
     expect(screen.queryByLabelText("Select Gemini Runtime")).not.toBeInTheDocument();
   });
+
+  test("cards view keeps selection checkbox usable after deselect", async () => {
+    window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByTestId("auth-files-cards")).toBeInTheDocument();
+
+    const checkbox = screen.getByLabelText("Select qwen.json") as HTMLInputElement;
+    expect(checkbox).toBeInTheDocument();
+    expect(checkbox.checked).toBe(false);
+
+    fireEvent.click(checkbox);
+    expect(checkbox.checked).toBe(true);
+
+    fireEvent.click(checkbox);
+
+    expect(screen.getByLabelText("Select qwen.json")).toBeInTheDocument();
+    expect((screen.getByLabelText("Select qwen.json") as HTMLInputElement).checked).toBe(false);
+  });
 });

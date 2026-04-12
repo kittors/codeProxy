@@ -2692,8 +2692,6 @@ export function AuthFilesPage() {
                           : false;
                         const quotaAutoRefreshing = quotaAutoRefreshingRef.current.has(file.name);
 
-                        const showSelectionControl = fileSelected || selectedCount > 0;
-
                         return (
                           <div
                             key={file.name}
@@ -2745,15 +2743,7 @@ export function AuthFilesPage() {
 
                               <div className="flex shrink-0 items-start gap-2 pt-0.5">
                                 {runtimeOnly ? null : (
-                                  <label
-                                    className={[
-                                      "inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white/80 text-slate-700 transition-all dark:border-neutral-700 dark:bg-neutral-900 dark:text-white/80",
-                                      showSelectionControl
-                                        ? "opacity-100"
-                                        : "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100",
-                                      "hover:border-slate-300 hover:bg-slate-50 dark:hover:border-neutral-600 dark:hover:bg-neutral-800",
-                                    ].join(" ")}
-                                  >
+                                  <div className="flex h-8 items-center justify-center px-1">
                                     <input
                                       type="checkbox"
                                       aria-label={t("auth_files.select_file", {
@@ -2763,9 +2753,9 @@ export function AuthFilesPage() {
                                       onChange={(e) =>
                                         toggleFileSelection(file.name, e.currentTarget.checked)
                                       }
-                                      className="h-4 w-4 rounded border-slate-300 text-slate-900 focus-visible:ring-2 focus-visible:ring-slate-400/35 dark:border-neutral-700 dark:bg-neutral-950 dark:text-white dark:focus-visible:ring-white/15"
+                                      className="h-4 w-4 rounded border-slate-300 text-slate-900 accent-slate-900 focus-visible:ring-2 focus-visible:ring-slate-400/35 dark:border-neutral-700 dark:bg-neutral-950 dark:text-white dark:accent-white dark:focus-visible:ring-white/15"
                                     />
-                                  </label>
+                                  </div>
                                 )}
                                 {runtimeOnly ? (
                                   <span className="pt-1 text-xs text-slate-400 dark:text-white/40">
