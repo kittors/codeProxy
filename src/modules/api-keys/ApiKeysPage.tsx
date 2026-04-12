@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Plus,
@@ -16,7 +16,6 @@ import {
 import { apiKeyEntriesApi, apiKeysApi, type ApiKeyEntry } from "@/lib/http/apis/api-keys";
 import { authFilesApi, providersApi, usageApi } from "@/lib/http/apis";
 import type { AuthFileItem } from "@/lib/http/types";
-import type { UsageData } from "@/lib/http/types";
 import { apiClient } from "@/lib/http/client";
 import { Card } from "@/modules/ui/Card";
 import { Button } from "@/modules/ui/Button";
@@ -26,9 +25,21 @@ import { Modal } from "@/modules/ui/Modal";
 import { HoverTooltip, OverflowTooltip } from "@/modules/ui/Tooltip";
 import type { MultiSelectOption } from "@/modules/ui/MultiSelect";
 import { VirtualTable, type VirtualTableColumn } from "@/modules/ui/VirtualTable";
-import { useAuthStore } from "@/stores/useAuthStore";
-import { normalizeApiBase } from "@/lib/connection";
 import { RestrictionMultiSelect } from "@/modules/api-keys/RestrictionMultiSelect";
+import { SearchableSelect } from "@/modules/ui/SearchableSelect";
+import { Select } from "@/modules/ui/Select";
+import { LogContentModal } from "@/modules/monitor/LogContentModal";
+import { ErrorDetailModal } from "@/modules/monitor/ErrorDetailModal";
+import {
+  buildRequestLogsColumns,
+  DEFAULT_REQUEST_LOG_PAGE_SIZE,
+  maskRequestLogApiKey,
+  RequestLogsPaginationBar,
+  RequestLogsTimeRangeSelector,
+  toRequestLogsRow,
+  type RequestLogsRow,
+  type TimeRange,
+} from "@/modules/monitor/requestLogsShared";
 
 // Vendor SVG icons
 import iconClaude from "@/assets/icons/claude.svg";
@@ -121,48 +132,9 @@ const formatLimit = (limit: number | undefined) => {
   return limit.toLocaleString();
 };
 
-const formatTimestamp = (value: string): string => {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value || "--";
-  return date.toLocaleString();
-};
-
-const formatLatencyMs = (value: number): string => {
-  if (!Number.isFinite(value) || value < 0) return "--";
-  if (value < 1) return "<1ms";
-  if (value < 1000) return `${Math.round(value)}ms`;
-  const seconds = value / 1000;
-  const fixed = seconds.toFixed(seconds < 10 ? 2 : 1);
-  const trimmed = fixed.endsWith(".0") ? fixed.slice(0, -2) : fixed;
-  return `${trimmed}s`;
-};
-
-const readLatencyText = (detail: Record<string, unknown>): string => {
-  const candidates = [
-    detail["latency_ms"],
-    detail["latencyMs"],
-    detail["duration_ms"],
-    detail["latency"],
-  ];
-  for (const candidate of candidates) {
-    if (typeof candidate === "number") return formatLatencyMs(candidate);
-    if (typeof candidate === "string" && candidate.trim()) return candidate.trim();
-  }
-  return "--";
-};
-
 /* ─── usage detail row type ─── */
 
-interface UsageLogRow {
-  id: string;
-  timestamp: string;
-  model: string;
-  failed: boolean;
-  latencyText: string;
-  inputTokens: number;
-  outputTokens: number;
-  totalTokens: number;
-}
+type StatusFilter = "" | "success" | "failed";
 
 interface FormValues {
   name: string;
@@ -189,6 +161,27 @@ const readAuthFileChannelName = (file: AuthFileItem): string => {
   return "";
 };
 
+const CHANNEL_GROUP_LABELS: Record<string, string> = {
+  gemini: "Gemini",
+  claude: "Claude",
+  codex: "Codex",
+  vertex: "Vertex",
+  openai: "OpenAI Compatible",
+  "gemini-cli": "Gemini CLI",
+  antigravity: "Antigravity",
+  kimi: "Kimi",
+  qwen: "Qwen",
+  iflow: "iFlow",
+  kiro: "Kiro",
+};
+
+const normalizeChannelGroupKey = (value: string): string => value.trim().toLowerCase();
+
+const resolveChannelGroupLabel = (value: string): string => {
+  const key = normalizeChannelGroupKey(value);
+  return CHANNEL_GROUP_LABELS[key] || value;
+};
+
 /* ─── component ─── */
 
 export function ApiKeysPage() {
@@ -205,9 +198,9 @@ export function ApiKeysPage() {
   const [usageViewName, setUsageViewName] = useState<string>("");
   const [saving, setSaving] = useState(false);
   const [usageLoading, setUsageLoading] = useState(false);
-  const [usageRows, setUsageRows] = useState<any[]>([]);
   const [availableModels, setAvailableModels] = useState<MultiSelectOption[]>([]);
   const [availableChannels, setAvailableChannels] = useState<MultiSelectOption[]>([]);
+  const [channelGroupByName, setChannelGroupByName] = useState<Record<string, string>>({});
   const [form, setForm] = useState<FormValues>({
     name: "",
     key: "",
@@ -220,6 +213,29 @@ export function ApiKeysPage() {
     allowedChannels: [],
     systemPrompt: "",
   });
+  const [usageRawItems, setUsageRawItems] = useState<import("@/lib/http/apis/usage").UsageLogItem[]>(
+    [],
+  );
+  const [usageTotalCount, setUsageTotalCount] = useState(0);
+  const [usageCurrentPage, setUsageCurrentPage] = useState(1);
+  const [usagePageSize, setUsagePageSize] = useState(DEFAULT_REQUEST_LOG_PAGE_SIZE);
+  const [usageLastUpdatedAt, setUsageLastUpdatedAt] = useState<number | null>(null);
+  const [usageFilterOptions, setUsageFilterOptions] = useState<{
+    channels: string[];
+    models: string[];
+  }>({ channels: [], models: [] });
+  const [usageTimeRange, setUsageTimeRange] = useState<TimeRange>(7);
+  const [usageChannelQuery, setUsageChannelQuery] = useState("");
+  const [usageChannelGroupQuery, setUsageChannelGroupQuery] = useState("");
+  const [usageModelQuery, setUsageModelQuery] = useState("");
+  const [usageStatusFilter, setUsageStatusFilter] = useState<StatusFilter>("");
+  const [usageContentModalOpen, setUsageContentModalOpen] = useState(false);
+  const [usageContentModalLogId, setUsageContentModalLogId] = useState<number | null>(null);
+  const [usageContentModalTab, setUsageContentModalTab] = useState<"input" | "output">("input");
+  const [usageErrorModalOpen, setUsageErrorModalOpen] = useState(false);
+  const [usageErrorModalLogId, setUsageErrorModalLogId] = useState<number | null>(null);
+  const [usageErrorModalModel, setUsageErrorModalModel] = useState("");
+  const usageFetchInFlightRef = useRef(false);
 
   /* ─── load models ─── */
 
@@ -267,11 +283,13 @@ export function ApiKeysPage() {
 
       const seen = new Set<string>();
       const options: MultiSelectOption[] = [];
-      const push = (rawName: string, source: string) => {
+      const nextGroupByName: Record<string, string> = {};
+      const push = (rawName: string, source: string, groupKey: string) => {
         const name = String(rawName ?? "").trim();
         const key = normalizeChannelKey(name);
         if (!key || seen.has(key)) return;
         seen.add(key);
+        nextGroupByName[name] = groupKey;
         options.push({
           value: name,
           label: name,
@@ -283,11 +301,11 @@ export function ApiKeysPage() {
         });
       };
 
-      geminiKeys.forEach((item) => push(item.name || "", "API"));
-      claudeKeys.forEach((item) => push(item.name || "", "API"));
-      codexKeys.forEach((item) => push(item.name || "", "API"));
-      vertexKeys.forEach((item) => push(item.name || "", "API"));
-      openaiProviders.forEach((item) => push(item.name || "", "API"));
+      geminiKeys.forEach((item) => push(item.name || "", "API", "gemini"));
+      claudeKeys.forEach((item) => push(item.name || "", "API", "claude"));
+      codexKeys.forEach((item) => push(item.name || "", "API", "codex"));
+      vertexKeys.forEach((item) => push(item.name || "", "API", "vertex"));
+      openaiProviders.forEach((item) => push(item.name || "", "API", "openai"));
       (authFiles.files || []).forEach((file) => {
         if (
           String(file.account_type || "")
@@ -295,11 +313,15 @@ export function ApiKeysPage() {
             .toLowerCase() !== "oauth"
         )
           return;
-        push(readAuthFileChannelName(file), "OAuth");
+        const groupKey = String(file.type || file.provider || "")
+          .trim()
+          .toLowerCase();
+        push(readAuthFileChannelName(file), "OAuth", groupKey);
       });
 
       options.sort((a, b) => a.label.localeCompare(b.label));
       setAvailableChannels(options);
+      setChannelGroupByName(nextGroupByName);
     } catch {
       // silent — channel list is supplementary
     }
@@ -549,29 +571,121 @@ export function ApiKeysPage() {
 
   /* ─── usage view ─── */
 
-  const handleViewUsage = async (entry: ApiKeyEntry) => {
-    setUsageViewKey(entry.key);
-    setUsageViewName(entry.name || t("api_keys_page.unnamed"));
-    setUsageLoading(true);
-    try {
-      const result = await usageApi.getUsageLogs({ api_key: entry.key, size: 200, days: 7 });
-      const rows = (result.items || []).map((r, i) => ({
-        id: r.id?.toString() || `${i}`,
-        timestamp: r.timestamp || "",
-        model: r.model || "",
-        failed: Boolean(r.failed),
-        latencyText: formatLatencyMs(r.latency_ms || 0),
-        inputTokens: r.input_tokens || 0,
-        outputTokens: r.output_tokens || 0,
-        totalTokens: r.total_tokens || (r.input_tokens || 0) + (r.output_tokens || 0),
-      }));
-      setUsageRows(rows);
-    } catch {
-      setUsageRows([]);
-    } finally {
-      setUsageLoading(false);
-    }
-  };
+  const handleUsageContentClick = useCallback((logId: number, tab: "input" | "output") => {
+    setUsageContentModalLogId(logId);
+    setUsageContentModalTab(tab);
+    setUsageContentModalOpen(true);
+  }, []);
+
+  const handleUsageErrorClick = useCallback((logId: number, model: string) => {
+    setUsageErrorModalLogId(logId);
+    setUsageErrorModalModel(model);
+    setUsageErrorModalOpen(true);
+  }, []);
+
+  const usageLogColumns = useMemo(
+    () => buildRequestLogsColumns(t, handleUsageContentClick, handleUsageErrorClick),
+    [t, handleUsageContentClick, handleUsageErrorClick],
+  );
+
+  const usageRows = useMemo<RequestLogsRow[]>(
+    () => (usageRawItems ?? []).map((item) => toRequestLogsRow(item)),
+    [usageRawItems],
+  );
+
+  const usageTotalPages = Math.max(1, Math.ceil(usageTotalCount / usagePageSize));
+
+  const buildUsageChannelQuery = useCallback(
+    (channelName: string, groupKey: string) => {
+      const trimmedChannel = channelName.trim();
+      const normalizedGroup = normalizeChannelGroupKey(groupKey);
+
+      if (trimmedChannel) {
+        if (!normalizedGroup) return trimmedChannel;
+        const mappedGroup = channelGroupByName[trimmedChannel];
+        return mappedGroup === normalizedGroup ? trimmedChannel : "__no_match__";
+      }
+
+      if (!normalizedGroup) return "";
+      const matchedChannels = usageFilterOptions.channels.filter(
+        (channel) => channelGroupByName[channel] === normalizedGroup,
+      );
+      return matchedChannels.length > 0 ? matchedChannels.join(",") : "__no_match__";
+    },
+    [channelGroupByName, usageFilterOptions.channels],
+  );
+
+  const fetchUsageLogs = useCallback(
+    async (page: number, size: number) => {
+      if (!usageViewKey || usageFetchInFlightRef.current) return;
+      usageFetchInFlightRef.current = true;
+      setUsageLoading(true);
+
+      try {
+        const channelQuery = buildUsageChannelQuery(usageChannelQuery, usageChannelGroupQuery);
+        const result = await usageApi.getUsageLogs({
+          page,
+          size,
+          days: usageTimeRange,
+          api_key: usageViewKey,
+          model: usageModelQuery || undefined,
+          channel: channelQuery || undefined,
+          status: usageStatusFilter || undefined,
+        });
+
+        setUsageRawItems(result.items ?? []);
+        setUsageTotalCount(result.total ?? 0);
+        setUsageCurrentPage(page);
+        setUsageFilterOptions({
+          channels: Array.isArray(result.filters?.channels) ? result.filters.channels : [],
+          models: Array.isArray(result.filters?.models) ? result.filters.models : [],
+        });
+        setUsageLastUpdatedAt(Date.now());
+      } catch (err: unknown) {
+        notify({
+          type: "error",
+          message: err instanceof Error ? err.message : t("api_keys_page.load_usage_failed"),
+        });
+      } finally {
+        usageFetchInFlightRef.current = false;
+        setUsageLoading(false);
+      }
+    },
+    [
+      buildUsageChannelQuery,
+      notify,
+      t,
+      usageChannelGroupQuery,
+      usageChannelQuery,
+      usageModelQuery,
+      usageStatusFilter,
+      usageTimeRange,
+      usageViewKey,
+    ],
+  );
+
+  const resetUsageViewState = useCallback(() => {
+    setUsageRawItems([]);
+    setUsageTotalCount(0);
+    setUsageCurrentPage(1);
+    setUsagePageSize(DEFAULT_REQUEST_LOG_PAGE_SIZE);
+    setUsageLastUpdatedAt(null);
+    setUsageFilterOptions({ channels: [], models: [] });
+    setUsageTimeRange(7);
+    setUsageChannelQuery("");
+    setUsageChannelGroupQuery("");
+    setUsageModelQuery("");
+    setUsageStatusFilter("");
+  }, []);
+
+  const handleViewUsage = useCallback(
+    async (entry: ApiKeyEntry) => {
+      resetUsageViewState();
+      setUsageViewKey(entry.key);
+      setUsageViewName(entry.name || t("api_keys_page.unnamed"));
+    },
+    [resetUsageViewState, t],
+  );
 
   /* ─── column definitions ─── */
 
@@ -833,80 +947,60 @@ export function ApiKeysPage() {
     [handleToggleDisable, handleViewUsage, handleCopy, handleOpenEdit, handleOpenDelete, t],
   );
 
-  const usageLogColumns = useMemo<VirtualTableColumn<UsageLogRow>[]>(
-    () => [
-      {
-        key: "timestamp",
-        label: t("api_keys_page.col_time"),
-        width: "w-48",
-        cellClassName: "font-mono text-xs tabular-nums text-slate-700 dark:text-slate-200",
-        render: (row) => (
-          <span className="block min-w-0 truncate">{formatTimestamp(row.timestamp)}</span>
-        ),
-      },
-      {
-        key: "model",
-        label: t("api_keys_page.col_model"),
-        width: "w-48",
-        render: (row) => (
-          <OverflowTooltip content={row.model} className="block min-w-0">
-            <span className="block min-w-0 truncate">{row.model}</span>
-          </OverflowTooltip>
-        ),
-      },
-      {
-        key: "status",
-        label: t("api_keys_page.col_status"),
-        width: "w-16",
-        render: (row) =>
-          row.failed ? (
-            <span className="inline-flex min-w-[44px] justify-center rounded-lg bg-rose-50 px-2 py-1 text-xs font-semibold text-rose-700 dark:bg-rose-500/15 dark:text-rose-200">
-              {t("api_keys_page.status_failed")}
-            </span>
-          ) : (
-            <span className="inline-flex min-w-[44px] justify-center rounded-lg bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200">
-              {t("api_keys_page.status_success")}
-            </span>
-          ),
-      },
-      {
-        key: "latency",
-        label: t("api_keys_page.col_duration"),
-        width: "w-20",
-        headerClassName: "text-right",
-        cellClassName:
-          "text-right font-mono text-xs tabular-nums text-slate-700 dark:text-slate-200",
-        render: (row) => <>{row.latencyText}</>,
-      },
-      {
-        key: "inputTokens",
-        label: t("api_keys_page.col_input"),
-        width: "w-20",
-        headerClassName: "text-right",
-        cellClassName:
-          "text-right font-mono text-xs tabular-nums text-slate-700 dark:text-slate-200",
-        render: (row) => <>{row.inputTokens.toLocaleString()}</>,
-      },
-      {
-        key: "outputTokens",
-        label: t("api_keys_page.col_output"),
-        width: "w-20",
-        headerClassName: "text-right",
-        cellClassName:
-          "text-right font-mono text-xs tabular-nums text-slate-700 dark:text-slate-200",
-        render: (row) => <>{row.outputTokens.toLocaleString()}</>,
-      },
-      {
-        key: "totalTokens",
-        label: t("api_keys_page.col_total_token"),
-        width: "w-24",
-        headerClassName: "text-right",
-        cellClassName: "text-right font-mono text-xs tabular-nums text-slate-900 dark:text-white",
-        render: (row) => <>{row.totalTokens.toLocaleString()}</>,
-      },
-    ],
-    [],
-  );
+  const usageChannelOptions = useMemo(() => {
+    return [
+      { value: "", label: t("request_logs.all_channels") },
+      ...usageFilterOptions.channels.map((channel) => ({ value: channel, label: channel })),
+    ];
+  }, [t, usageFilterOptions.channels]);
+
+  const usageChannelGroupOptions = useMemo(() => {
+    const seen = new Set<string>();
+    const values: { value: string; label: string }[] = [];
+    usageFilterOptions.channels.forEach((channel) => {
+      const groupKey = channelGroupByName[channel];
+      if (!groupKey || seen.has(groupKey)) return;
+      seen.add(groupKey);
+      values.push({ value: groupKey, label: resolveChannelGroupLabel(groupKey) });
+    });
+    values.sort((a, b) => a.label.localeCompare(b.label));
+    return [{ value: "", label: t("api_keys_page.all_channel_groups") }, ...values];
+  }, [channelGroupByName, t, usageFilterOptions.channels]);
+
+  const usageModelOptions = useMemo(() => {
+    return [
+      { value: "", label: t("request_logs.all_models") },
+      ...usageFilterOptions.models.map((model) => ({ value: model, label: model })),
+    ];
+  }, [t, usageFilterOptions.models]);
+
+  const usageLastUpdatedText = useMemo(() => {
+    if (usageLoading) return t("request_logs.refreshing");
+    if (!usageLastUpdatedAt) return t("request_logs.not_refreshed");
+    return t("request_logs.updated_at", {
+      time: new Date(usageLastUpdatedAt).toLocaleTimeString(),
+    });
+  }, [t, usageLastUpdatedAt, usageLoading]);
+
+  useEffect(() => {
+    if (!usageViewKey) return;
+    void fetchUsageLogs(1, usagePageSize);
+  }, [
+    fetchUsageLogs,
+    usageChannelGroupQuery,
+    usageChannelQuery,
+    usageModelQuery,
+    usagePageSize,
+    usageStatusFilter,
+    usageTimeRange,
+    usageViewKey,
+  ]);
+
+  const closeUsageModal = useCallback(() => {
+    setUsageViewKey(null);
+    setUsageViewName("");
+    resetUsageViewState();
+  }, [resetUsageViewState]);
 
   /* ─── render form ─── */
 
@@ -1227,35 +1321,189 @@ export function ApiKeysPage() {
       {/* Usage View — detailed call log table */}
       <Modal
         open={usageViewKey !== null}
-        onClose={() => setUsageViewKey(null)}
+        onClose={closeUsageModal}
         title={t("api_keys_page.usage_title", { name: usageViewName })}
         description={
           usageViewKey
-            ? t("api_keys_page.usage_desc", { key: maskKey(usageViewKey), count: usageRows.length })
+            ? t("api_keys_page.usage_desc", {
+                key: maskKey(usageViewKey),
+                count: usageTotalCount,
+              })
             : ""
         }
+        maxWidth="max-w-[min(96vw,1600px)]"
+        bodyHeightClassName="h-[80vh]"
       >
-        {usageLoading ? (
-          <div className="py-8 text-center text-sm text-slate-500 dark:text-white/50">
-            {t("api_keys_page.loading")}
+        <div className="flex h-full flex-col">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-1 pb-3 dark:border-neutral-800/60">
+            <div className="flex flex-wrap items-center gap-2">
+              <RequestLogsTimeRangeSelector value={usageTimeRange} onChange={setUsageTimeRange} />
+              <button
+                type="button"
+                onClick={() => void fetchUsageLogs(1, usagePageSize)}
+                disabled={usageLoading}
+                aria-busy={usageLoading}
+                aria-label={t("request_logs.refresh")}
+                title={t("request_logs.refresh")}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-slate-900 text-white transition hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/35 disabled:cursor-not-allowed disabled:opacity-70 dark:bg-white dark:text-neutral-950 dark:hover:bg-slate-200 dark:focus-visible:ring-white/15"
+              >
+                <RefreshCw
+                  size={14}
+                  className={usageLoading ? "motion-reduce:animate-none motion-safe:animate-spin" : ""}
+                />
+              </button>
+            </div>
+            <span className="text-xs text-slate-400 dark:text-white/40">{usageLastUpdatedText}</span>
           </div>
-        ) : usageRows.length === 0 ? (
-          <div className="py-8 text-center text-sm text-slate-500 dark:text-white/50">
-            {t("api_keys_page.no_usage")}
+
+          <div className="grid gap-2 border-b border-slate-100 py-3 dark:border-neutral-800/60 sm:flex sm:flex-wrap sm:items-center">
+            <SearchableSelect
+              value={usageChannelGroupQuery}
+              onChange={(value) => {
+                setUsageChannelGroupQuery(value);
+                setUsageChannelQuery("");
+              }}
+              options={usageChannelGroupOptions}
+              placeholder={t("api_keys_page.all_channel_groups")}
+              searchPlaceholder={t("api_keys_page.search_channel_groups")}
+              aria-label={t("api_keys_page.filter_channel_group")}
+              className="w-full sm:w-auto"
+            />
+            <SearchableSelect
+              value={usageChannelQuery}
+              onChange={setUsageChannelQuery}
+              options={usageChannelOptions}
+              placeholder={t("request_logs.all_channels_placeholder")}
+              searchPlaceholder={t("request_logs.search_channels")}
+              aria-label={t("request_logs.filter_channel")}
+              className="w-full sm:w-auto"
+            />
+            <SearchableSelect
+              value={usageModelQuery}
+              onChange={setUsageModelQuery}
+              options={usageModelOptions}
+              placeholder={t("request_logs.all_models_placeholder")}
+              searchPlaceholder={t("request_logs.search_models")}
+              aria-label={t("request_logs.filter_model")}
+              className="w-full sm:w-auto"
+            />
+            <Select
+              value={usageStatusFilter}
+              onChange={(value) => setUsageStatusFilter(value as StatusFilter)}
+              options={[
+                { value: "", label: t("request_logs.all_status") },
+                { value: "success", label: t("request_logs.status_success") },
+                { value: "failed", label: t("request_logs.status_failed") },
+              ]}
+              aria-label={t("request_logs.filter_status")}
+              className="w-full sm:w-auto"
+            />
           </div>
-        ) : (
-          <VirtualTable<UsageLogRow>
-            rows={usageRows}
-            columns={usageLogColumns}
-            rowKey={(row) => row.id}
-            rowHeight={40}
-            height="h-auto max-h-[60vh]"
-            minWidth="min-w-[700px]"
-            caption={t("api_keys_page.usage_table_caption")}
-            emptyText={t("api_keys_page.no_usage_records")}
+
+          <div className="relative min-h-[320px] flex-1 overflow-hidden pt-3">
+            <div className="h-full overflow-auto">
+              <table className="w-full min-w-[1320px] table-fixed border-separate border-spacing-0 text-sm">
+                <caption className="sr-only">{t("api_keys_page.usage_table_caption")}</caption>
+                <thead className="sticky top-0 z-10">
+                  <tr className="text-left text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-white/55">
+                    {usageLogColumns.map((col, i) => {
+                      const isFirst = i === 0;
+                      const isLast = i === usageLogColumns.length - 1;
+                      const roundCls = [
+                        isFirst ? "first:rounded-l-xl" : "",
+                        isLast ? "last:rounded-r-xl" : "",
+                      ]
+                        .filter(Boolean)
+                        .join(" ");
+                      return (
+                        <th
+                          key={col.key}
+                          className={`whitespace-nowrap bg-slate-100 px-4 py-3 dark:bg-neutral-800 ${col.width ?? ""} ${col.headerClassName ?? ""} ${roundCls}`}
+                        >
+                          {col.label}
+                        </th>
+                      );
+                    })}
+                  </tr>
+                </thead>
+                <tbody className="text-slate-900 dark:text-white">
+                  {!usageLoading && usageRows.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={usageLogColumns.length}
+                        className="px-4 py-12 text-center text-sm text-slate-600 dark:text-white/70"
+                      >
+                        {t("api_keys_page.no_usage_records")}
+                      </td>
+                    </tr>
+                  ) : (
+                    usageRows.map((row, idx) => (
+                      <tr
+                        key={row.id}
+                        className="text-sm transition-colors hover:bg-slate-50 dark:hover:bg-white/[0.04]"
+                        style={{ height: 44 }}
+                      >
+                        {usageLogColumns.map((col, colIdx) => {
+                          const isFirst = colIdx === 0;
+                          const isLast = colIdx === usageLogColumns.length - 1;
+                          const roundCls = [
+                            isFirst ? "first:rounded-l-lg" : "",
+                            isLast ? "last:rounded-r-lg" : "",
+                          ]
+                            .filter(Boolean)
+                            .join(" ");
+                          return (
+                            <td
+                              key={col.key}
+                              className={`px-4 py-2.5 align-middle ${col.cellClassName ?? ""} ${roundCls}`}
+                            >
+                              {col.render(row, idx)}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {usageLoading ? (
+              <div className="absolute inset-0 z-10 flex items-center justify-center rounded-b-2xl bg-white/70 backdrop-blur-sm dark:bg-neutral-950/55">
+                <div className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white/85 px-3 py-2 text-sm font-medium text-slate-700 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/70 dark:text-white/75">
+                  <span className="h-4 w-4 rounded-full border-2 border-slate-300 border-t-slate-900 motion-reduce:animate-none motion-safe:animate-spin dark:border-white/20 dark:border-t-white/80" />
+                  <span role="status">{t("common.loading_ellipsis")}</span>
+                </div>
+              </div>
+            ) : null}
+          </div>
+
+          <RequestLogsPaginationBar
+            currentPage={usageCurrentPage}
+            totalPages={usageTotalPages}
+            totalCount={usageTotalCount}
+            pageSize={usagePageSize}
+            onPageChange={(page) => void fetchUsageLogs(page, usagePageSize)}
+            onPageSizeChange={(size) => {
+              setUsagePageSize(size);
+              void fetchUsageLogs(1, size);
+            }}
           />
-        )}
+        </div>
       </Modal>
+
+      <LogContentModal
+        open={usageContentModalOpen}
+        logId={usageContentModalLogId}
+        initialTab={usageContentModalTab}
+        onClose={() => setUsageContentModalOpen(false)}
+      />
+      <ErrorDetailModal
+        open={usageErrorModalOpen}
+        logId={usageErrorModalLogId}
+        model={usageErrorModalModel}
+        onClose={() => setUsageErrorModalOpen(false)}
+      />
     </div>
   );
 }
