@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
 import {
+  BarChart3,
   CircleHelp,
   Download,
   Eye,
@@ -418,6 +419,13 @@ type PrefixProxyEditorState = {
   proxyUrl: string;
 };
 
+type AuthFilesGroupOverview = {
+  totalCalls: number;
+  averageFiveHour: number | null;
+  averageWeekly: number | null;
+  quotaSampleCount: number;
+};
+
 type ChannelEditorState = {
   open: boolean;
   fileName: string;
@@ -551,6 +559,8 @@ export function AuthFilesPage() {
     AUTH_FILES_FILES_VIEW_MODE_KEY,
     "table",
   );
+  const [groupOverviewVisible, setGroupOverviewVisible] = useState(false);
+  const [groupOverviewLoading, setGroupOverviewLoading] = useState(false);
   const quotaAutoRefreshMs = useMemo(
     () => normalizeQuotaAutoRefreshMs(quotaAutoRefreshMsRaw),
     [quotaAutoRefreshMsRaw],
@@ -1096,6 +1106,14 @@ export function AuthFilesPage() {
     );
   }, [filter, searchFilteredFiles]);
 
+  const groupOverviewTitle = useMemo(() => {
+    const normalizedFilter = normalizeProviderKey(filter);
+    if (!normalizedFilter || normalizedFilter === "all") {
+      return t("auth_files.group_overview_current_results");
+    }
+    return t("auth_files.group_overview_group_label", { group: filter });
+  }, [filter, t]);
+
   const totalPages = Math.max(1, Math.ceil(filteredFiles.length / AUTH_FILES_PAGE_SIZE));
   const safePage = Math.min(totalPages, Math.max(1, page));
   const pageItems = useMemo(() => {
@@ -1174,55 +1192,88 @@ export function AuthFilesPage() {
     [selectableFilteredFiles],
   );
 
+  const collectQuotaFetchTargets = useCallback(
+    (targetFiles: AuthFileItem[]) => {
+      const staleMs = Math.max(15_000, quotaAutoRefreshMs || 30_000);
+      const now = Date.now();
+
+      return targetFiles
+        .map((file) => {
+          const provider = resolveQuotaProvider(file);
+          return provider ? { file, provider } : null;
+        })
+        .filter(Boolean)
+        .filter((candidate) => {
+          const current = candidate as { file: AuthFileItem; provider: QuotaProvider };
+          if (quotaInFlightRef.current.has(current.file.name)) return false;
+          const state = quotaByFileNameRef.current[current.file.name];
+          const items = Array.isArray(state?.items) ? state.items : [];
+          const updatedAt = state?.updatedAt ?? 0;
+          const isStale =
+            typeof updatedAt === "number" && updatedAt > 0 ? now - updatedAt > staleMs : true;
+          const needs = !state || state.status === "error" || items.length === 0 || isStale;
+          if (!needs) return false;
+
+          const lastAttempt = quotaWarmupAttemptRef.current.get(current.file.name) ?? 0;
+          if (now - lastAttempt < 5_000) return false;
+          return true;
+        }) as { file: AuthFileItem; provider: QuotaProvider }[];
+    },
+    [quotaAutoRefreshMs],
+  );
+
+  const runQuotaRefreshBatch = useCallback(
+    async (
+      targets: { file: AuthFileItem; provider: QuotaProvider }[],
+      options?: { markAsAutoRefreshing?: boolean },
+    ) => {
+      if (!targets.length) return;
+
+      const markAsAutoRefreshing = Boolean(options?.markAsAutoRefreshing);
+      const CONCURRENCY = 3;
+      let idx = 0;
+
+      const workers = Array.from({ length: Math.min(CONCURRENCY, targets.length) }).map(async () => {
+        for (;;) {
+          const current = targets[idx];
+          idx += 1;
+          if (!current) return;
+          quotaWarmupAttemptRef.current.set(current.file.name, Date.now());
+          if (markAsAutoRefreshing) {
+            quotaAutoRefreshingRef.current.add(current.file.name);
+          }
+          try {
+            await refreshQuota(current.file, current.provider);
+          } finally {
+            if (markAsAutoRefreshing) {
+              quotaAutoRefreshingRef.current.delete(current.file.name);
+            }
+          }
+        }
+      });
+
+      await Promise.allSettled(workers);
+    },
+    [refreshQuota],
+  );
+
   useEffect(() => {
     if (tab !== "files") return;
     if (loading) return;
 
-    const candidates = pageItems
-      .map((file) => {
-        const provider = resolveQuotaProvider(file);
-        return provider ? { file, provider } : null;
-      })
-      .filter(Boolean) as { file: AuthFileItem; provider: QuotaProvider }[];
-
-    const staleMs = Math.max(15_000, quotaAutoRefreshMs || 30_000);
-    const now = Date.now();
-    const toFetch = candidates.filter(({ file }) => {
-      if (quotaInFlightRef.current.has(file.name)) return false;
-      const state = quotaByFileNameRef.current[file.name];
-      const items = Array.isArray(state?.items) ? state.items : [];
-      const updatedAt = state?.updatedAt ?? 0;
-      const isStale =
-        typeof updatedAt === "number" && updatedAt > 0 ? now - updatedAt > staleMs : true;
-      const needs = !state || state.status === "error" || items.length === 0 || isStale;
-      if (!needs) return false;
-
-      const lastAttempt = quotaWarmupAttemptRef.current.get(file.name) ?? 0;
-      if (now - lastAttempt < 5_000) return false;
-      return true;
-    });
+    const toFetch = collectQuotaFetchTargets(pageItems);
     if (!toFetch.length) return;
 
     let cancelled = false;
-    const CONCURRENCY = 3;
-    let idx = 0;
-
-    const workers = Array.from({ length: Math.min(CONCURRENCY, toFetch.length) }).map(async () => {
-      while (!cancelled) {
-        const current = toFetch[idx];
-        idx += 1;
-        if (!current) return;
-        quotaWarmupAttemptRef.current.set(current.file.name, Date.now());
-        await refreshQuota(current.file, current.provider);
-      }
-    });
-
-    void Promise.allSettled(workers);
+    void (async () => {
+      if (cancelled) return;
+      await runQuotaRefreshBatch(toFetch);
+    })();
 
     return () => {
       cancelled = true;
     };
-  }, [loading, pageItems, quotaAutoRefreshMs, refreshQuota, tab]);
+  }, [collectQuotaFetchTargets, loading, pageItems, runQuotaRefreshBatch, tab]);
 
   const quotaLastUpdatedAtMs = useMemo(() => {
     let latest = 0;
@@ -1246,34 +1297,11 @@ export function AuthFilesPage() {
     if (loading) return;
     if (quotaInFlightRef.current.size > 0) return;
 
-    const candidates = pageItems
-      .map((file) => {
-        const provider = resolveQuotaProvider(file);
-        return provider ? { file, provider } : null;
-      })
-      .filter(Boolean) as { file: AuthFileItem; provider: QuotaProvider }[];
+    const candidates = collectQuotaFetchTargets(pageItems);
     if (!candidates.length) return;
 
-    const CONCURRENCY = 3;
-    let idx = 0;
-    const workers = Array.from({
-      length: Math.min(CONCURRENCY, candidates.length),
-    }).map(async () => {
-      for (;;) {
-        const current = candidates[idx];
-        idx += 1;
-        if (!current) return;
-        quotaAutoRefreshingRef.current.add(current.file.name);
-        try {
-          await refreshQuota(current.file, current.provider);
-        } finally {
-          quotaAutoRefreshingRef.current.delete(current.file.name);
-        }
-      }
-    });
-
-    await Promise.allSettled(workers);
-  }, [loading, pageItems, refreshQuota, tab]);
+    await runQuotaRefreshBatch(candidates, { markAsAutoRefreshing: true });
+  }, [collectQuotaFetchTargets, loading, pageItems, runQuotaRefreshBatch, tab]);
 
   useInterval(
     () => {
@@ -1281,6 +1309,64 @@ export function AuthFilesPage() {
     },
     tab === "files" && quotaAutoRefreshMs > 0 ? quotaAutoRefreshMs : null,
   );
+
+  const formatAveragePercent = useCallback((value: number | null) => {
+    if (typeof value !== "number" || !Number.isFinite(value)) return "--";
+    return `${Math.round(clampPercent(value))}%`;
+  }, []);
+
+  const groupOverview = useMemo<AuthFilesGroupOverview>(() => {
+    let totalCalls = 0;
+    const fiveHourValues: number[] = [];
+    const weeklyValues: number[] = [];
+
+    filteredFiles.forEach((file) => {
+      const stats = resolveAuthFileStats(file, usageIndex);
+      totalCalls += stats.success + stats.failure;
+
+      const provider = resolveQuotaProvider(file);
+      if (!provider) return;
+
+      const state = quotaByFileName[file.name];
+      const items = Array.isArray(state?.items) ? state.items : [];
+      if (items.length === 0) return;
+
+      const slots = resolveQuotaCardSlots(provider, items);
+      const fiveHour = slots.find((slot) => slot.id === "code_5h")?.item?.percent;
+      const weekly = slots.find((slot) => slot.id === "code_week")?.item?.percent;
+
+      if (typeof fiveHour === "number" && Number.isFinite(fiveHour)) {
+        fiveHourValues.push(fiveHour);
+      }
+      if (typeof weekly === "number" && Number.isFinite(weekly)) {
+        weeklyValues.push(weekly);
+      }
+    });
+
+    const average = (values: number[]) =>
+      values.length === 0
+        ? null
+        : values.reduce((sum, value) => sum + value, 0) / Math.max(values.length, 1);
+
+    return {
+      totalCalls,
+      averageFiveHour: average(fiveHourValues),
+      averageWeekly: average(weeklyValues),
+      quotaSampleCount: Math.max(fiveHourValues.length, weeklyValues.length),
+    };
+  }, [filteredFiles, quotaByFileName, resolveQuotaCardSlots, usageIndex]);
+
+  const refreshGroupOverview = useCallback(async () => {
+    if (tab !== "files") return;
+    setGroupOverviewVisible(true);
+    setGroupOverviewLoading(true);
+    try {
+      const targets = collectQuotaFetchTargets(filteredFiles);
+      await runQuotaRefreshBatch(targets, { markAsAutoRefreshing: true });
+    } finally {
+      setGroupOverviewLoading(false);
+    }
+  }, [collectQuotaFetchTargets, filteredFiles, runQuotaRefreshBatch, tab]);
 
   const openDetail = useCallback(
     async (file: AuthFileItem) => {
@@ -2504,6 +2590,19 @@ export function AuthFilesPage() {
                     </div>
 
                     <div className="flex flex-wrap items-center gap-1.5">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        className="!h-8 px-2 text-xs"
+                        onClick={() => void refreshGroupOverview()}
+                        disabled={loading || groupOverviewLoading || filteredFiles.length === 0}
+                      >
+                        <BarChart3
+                          size={14}
+                          className={groupOverviewLoading ? "animate-pulse" : ""}
+                        />
+                        {t("auth_files.group_overview_button")}
+                      </Button>
                       <HoverTooltip content={t("auth_files.refresh")}>
                         <Button
                           variant="secondary"
@@ -2610,6 +2709,42 @@ export function AuthFilesPage() {
                     </div>
                   ) : null}
                 </div>
+
+                {groupOverviewVisible ? (
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50/80 px-3 py-3 dark:border-neutral-800 dark:bg-white/[0.03]">
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">
+                      <span className="font-semibold text-slate-900 dark:text-white">
+                        {groupOverviewTitle}
+                      </span>
+                      <span className="text-slate-600 dark:text-white/65">
+                        {t("auth_files.group_overview_total_calls", {
+                          count: groupOverview.totalCalls,
+                        })}
+                      </span>
+                      <span className="text-slate-600 dark:text-white/65">
+                        {t("auth_files.group_overview_avg_5h", {
+                          value: formatAveragePercent(groupOverview.averageFiveHour),
+                        })}
+                      </span>
+                      <span className="text-slate-600 dark:text-white/65">
+                        {t("auth_files.group_overview_avg_week", {
+                          value: formatAveragePercent(groupOverview.averageWeekly),
+                        })}
+                      </span>
+                      {groupOverview.quotaSampleCount > 0 ? (
+                        <span className="text-slate-500 dark:text-white/45">
+                          {t("auth_files.group_overview_sample_count", {
+                            count: groupOverview.quotaSampleCount,
+                          })}
+                        </span>
+                      ) : (
+                        <span className="text-slate-500 dark:text-white/45">
+                          {t("auth_files.group_overview_no_quota")}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ) : null}
               </div>
             </div>
 

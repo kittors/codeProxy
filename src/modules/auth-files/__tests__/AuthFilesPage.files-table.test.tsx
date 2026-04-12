@@ -447,6 +447,70 @@ describe("AuthFilesPage files table", () => {
     expect(screen.getByText("Request failed")).toBeInTheDocument();
   });
 
+  test("group overview summarizes current filtered results from shared quota state", async () => {
+    const now = Date.now();
+    const file = {
+      name: "codex.json",
+      type: "codex",
+      size: 1024,
+      modified: now,
+      disabled: false,
+      auth_index: "1",
+    } as any;
+
+    mocks.list.mockImplementationOnce(async () => ({ files: [file] }));
+    mocks.getEntityStats.mockImplementationOnce(
+      async () =>
+        ({
+          source: [],
+          auth_index: [
+            { entity_name: "1", requests: 9, failed: 2, avg_latency: 0, total_tokens: 0 },
+          ],
+        }) as any,
+    );
+
+    window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
+    window.sessionStorage.setItem(
+      "authFilesPage.dataCache.v1",
+      JSON.stringify({
+        savedAtMs: now,
+        files: [file],
+        usageData: null,
+        quotaByFileName: {
+          "codex.json": {
+            status: "success",
+            updatedAt: now,
+            items: [
+              { label: "m_quota.code_5h", percent: 12, resetAtMs: now + 60_000 },
+              { label: "m_quota.code_weekly", percent: 34, resetAtMs: now + 120_000 },
+            ],
+          },
+        },
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByTestId("auth-files-cards")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Group overview" }));
+
+    expect(await screen.findByText("Current results")).toBeInTheDocument();
+    expect(screen.getByText("Total calls 9")).toBeInTheDocument();
+    expect(screen.getByText("Avg 5h 12%")).toBeInTheDocument();
+    expect(screen.getByText("Avg weekly 34%")).toBeInTheDocument();
+  });
+
   test("runtime-only cards do not render a selection checkbox", async () => {
     const now = Date.now();
     mocks.list.mockImplementationOnce(async () => ({
