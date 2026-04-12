@@ -2691,6 +2691,7 @@ export function AuthFilesPage() {
                           ? quotaByFileName[file.name]?.status === "loading"
                           : false;
                         const quotaAutoRefreshing = quotaAutoRefreshingRef.current.has(file.name);
+                        const showSelectionControl = fileSelected;
 
                         return (
                           <div
@@ -2706,14 +2707,55 @@ export function AuthFilesPage() {
                               .filter(Boolean)
                               .join(" ")}
                           >
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="min-w-0 space-y-2">
-                                <div className="flex items-center gap-2">
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between gap-3">
+                                <div className="min-w-0 flex items-center gap-2">
                                   <span className="min-w-0 truncate text-sm font-semibold text-slate-900 dark:text-white">
                                     {displayTitle}
                                   </span>
                                 </div>
-                                <div className="flex flex-wrap items-center gap-2">
+
+                                <div className="flex shrink-0 items-center gap-2">
+                                  {runtimeOnly ? null : (
+                                    <div
+                                      className={[
+                                        "flex h-8 items-center justify-center px-1 transition-opacity",
+                                        showSelectionControl
+                                          ? "opacity-100"
+                                          : "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100",
+                                      ].join(" ")}
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        aria-label={t("auth_files.select_file", {
+                                          name: displayTitle || file.name,
+                                        })}
+                                        checked={fileSelected}
+                                        onChange={(e) =>
+                                          toggleFileSelection(file.name, e.currentTarget.checked)
+                                        }
+                                        className="h-4 w-4 rounded border-slate-300 text-slate-900 accent-slate-900 focus-visible:ring-2 focus-visible:ring-slate-400/35 dark:border-neutral-700 dark:bg-neutral-950 dark:text-white dark:accent-white dark:focus-visible:ring-white/15"
+                                      />
+                                    </div>
+                                  )}
+                                  {runtimeOnly ? (
+                                    <span className="text-xs text-slate-400 dark:text-white/40">
+                                      --
+                                    </span>
+                                  ) : (
+                                    <ToggleSwitch
+                                      ariaLabel={t("auth_files.enable_disable")}
+                                      checked={!fileDisabled}
+                                      onCheckedChange={(enabled) =>
+                                        void setFileEnabled(file, enabled)
+                                      }
+                                      disabled={Boolean(statusUpdating[file.name])}
+                                    />
+                                  )}
+                                </div>
+                              </div>
+
+                              <div className="min-w-0 flex flex-wrap items-center gap-2">
                                   <span
                                     className={[
                                       "inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[10px] font-semibold",
@@ -2735,44 +2777,11 @@ export function AuthFilesPage() {
                                       {t("auth_files.virtual_auth_file")}
                                     </span>
                                   ) : null}
-                                </div>
+                              </div>
                                 <p className="truncate text-[11px] text-slate-500 dark:text-white/45">
                                   {formatModified(file)}
                                 </p>
                               </div>
-
-                              <div className="flex shrink-0 items-start gap-2 pt-0.5">
-                                {runtimeOnly ? null : (
-                                  <div className="flex h-8 items-center justify-center px-1">
-                                    <input
-                                      type="checkbox"
-                                      aria-label={t("auth_files.select_file", {
-                                        name: displayTitle || file.name,
-                                      })}
-                                      checked={fileSelected}
-                                      onChange={(e) =>
-                                        toggleFileSelection(file.name, e.currentTarget.checked)
-                                      }
-                                      className="h-4 w-4 rounded border-slate-300 text-slate-900 accent-slate-900 focus-visible:ring-2 focus-visible:ring-slate-400/35 dark:border-neutral-700 dark:bg-neutral-950 dark:text-white dark:accent-white dark:focus-visible:ring-white/15"
-                                    />
-                                  </div>
-                                )}
-                                {runtimeOnly ? (
-                                  <span className="pt-1 text-xs text-slate-400 dark:text-white/40">
-                                    --
-                                  </span>
-                                ) : (
-                                  <ToggleSwitch
-                                    ariaLabel={t("auth_files.enable_disable")}
-                                    checked={!fileDisabled}
-                                    onCheckedChange={(enabled) =>
-                                      void setFileEnabled(file, enabled)
-                                    }
-                                    disabled={Boolean(statusUpdating[file.name])}
-                                  />
-                                )}
-                              </div>
-                            </div>
 
                             <div
                               className="mt-4 min-w-0 rounded-2xl bg-slate-50/85 px-3 py-3 dark:bg-white/[0.03]"
