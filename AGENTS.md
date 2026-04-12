@@ -100,6 +100,12 @@
 
 <!-- PROJECT-OVERRIDES:START -->
 
+## 运维连接信息
+
+- `relay.07230805.xyz` 当前对应服务器：`104.194.69.137`
+- SSH 连接命令：`ssh -i ~/.ssh/id_bwg -p 2233 root@104.194.69.137`
+- 如需核对线上入口：`https://relay.07230805.xyz/manage`
+
 （可选）在此处追加本项目特有的关键路径、命令、约束与注意事项。该区块不会被生成脚本覆盖。
 
 <!-- PROJECT-OVERRIDES:END -->

@@ -200,6 +200,7 @@ export function ApiKeysPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [deleteIndex, setDeleteIndex] = useState<number | null>(null);
+  const [deleteLogsOnDelete, setDeleteLogsOnDelete] = useState(true);
   const [usageViewKey, setUsageViewKey] = useState<string | null>(null);
   const [usageViewName, setUsageViewName] = useState<string>("");
   const [saving, setSaving] = useState(false);
@@ -504,9 +505,21 @@ export function ApiKeysPage() {
     if (deleteIndex === null) return;
     setSaving(true);
     try {
-      await apiKeyEntriesApi.delete({ index: deleteIndex });
-      notify({ type: "success", message: t("api_keys_page.deleted_success") });
+      const response = (await apiKeyEntriesApi.delete({
+        index: deleteIndex,
+        deleteLogs: deleteLogsOnDelete,
+      })) as { logs_deleted?: number } | undefined;
+      const logsDeleted =
+        typeof response?.logs_deleted === "number" ? response.logs_deleted : undefined;
+      notify({
+        type: "success",
+        message:
+          deleteLogsOnDelete && typeof logsDeleted === "number"
+            ? t("api_keys_page.deleted_success_with_logs", { count: logsDeleted })
+            : t("api_keys_page.deleted_success"),
+      });
       setDeleteIndex(null);
+      setDeleteLogsOnDelete(true);
       await loadEntries();
     } catch (err: unknown) {
       notify({
@@ -516,6 +529,11 @@ export function ApiKeysPage() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleOpenDelete = (index: number) => {
+    setDeleteLogsOnDelete(true);
+    setDeleteIndex(index);
   };
 
   /* ─── copy ─── */
@@ -802,7 +820,7 @@ export function ApiKeysPage() {
               <Pencil size={15} />
             </button>
             <button
-              onClick={() => setDeleteIndex(idx)}
+              onClick={() => handleOpenDelete(idx)}
               className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-red-50 hover:text-red-600 dark:text-white/50 dark:hover:bg-red-900/20 dark:hover:text-red-400"
               title={t("common.delete")}
             >
@@ -812,7 +830,7 @@ export function ApiKeysPage() {
         ),
       },
     ],
-    [handleToggleDisable, handleViewUsage, handleCopy, handleOpenEdit, t],
+    [handleToggleDisable, handleViewUsage, handleCopy, handleOpenEdit, handleOpenDelete, t],
   );
 
   const usageLogColumns = useMemo<VirtualTableColumn<UsageLogRow>[]>(
@@ -1160,12 +1178,21 @@ export function ApiKeysPage() {
       {/* Delete Confirm */}
       <Modal
         open={deleteIndex !== null}
-        onClose={() => setDeleteIndex(null)}
+        onClose={() => {
+          setDeleteIndex(null);
+          setDeleteLogsOnDelete(true);
+        }}
         title={t("api_keys_page.confirm_delete")}
         description={t("api_keys_page.delete_warning")}
         footer={
           <>
-            <Button variant="secondary" onClick={() => setDeleteIndex(null)}>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setDeleteIndex(null);
+                setDeleteLogsOnDelete(true);
+              }}
+            >
               {t("api_keys_page.cancel")}
             </Button>
             <Button variant="danger" onClick={() => void handleDelete()} disabled={saving}>
@@ -1175,13 +1202,24 @@ export function ApiKeysPage() {
         }
       >
         {deleteIndex !== null && entries[deleteIndex] && (
-          <div className="rounded-xl bg-red-50 p-3 dark:bg-red-900/20">
-            <div className="text-sm font-medium text-red-800 dark:text-red-300">
-              {entries[deleteIndex].name || t("api_keys_page.unnamed")}
+          <div className="space-y-3">
+            <div className="rounded-xl bg-red-50 p-3 dark:bg-red-900/20">
+              <div className="text-sm font-medium text-red-800 dark:text-red-300">
+                {entries[deleteIndex].name || t("api_keys_page.unnamed")}
+              </div>
+              <code className="text-xs text-red-600 dark:text-red-400">
+                {maskKey(entries[deleteIndex].key)}
+              </code>
             </div>
-            <code className="text-xs text-red-600 dark:text-red-400">
-              {maskKey(entries[deleteIndex].key)}
-            </code>
+            <label className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-3 text-sm text-slate-700 dark:border-neutral-800 dark:bg-neutral-900/60 dark:text-white/75">
+              <input
+                type="checkbox"
+                checked={deleteLogsOnDelete}
+                onChange={(event) => setDeleteLogsOnDelete(event.currentTarget.checked)}
+                className="mt-0.5 h-4 w-4 rounded border-slate-300 text-rose-600 focus-visible:ring-2 focus-visible:ring-rose-400/30 dark:border-neutral-700 dark:bg-neutral-950"
+              />
+              <span>{t("api_keys_page.delete_logs_option")}</span>
+            </label>
           </div>
         )}
       </Modal>
