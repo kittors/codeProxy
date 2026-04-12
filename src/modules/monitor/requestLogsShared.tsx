@@ -10,6 +10,7 @@ import type { UsageLogItem } from "@/lib/http/apis/usage";
 import { parseUsageTimestampMs } from "@/modules/monitor/monitor-utils";
 import { Tabs, TabsList, TabsTrigger } from "@/modules/ui/Tabs";
 import { OverflowTooltip } from "@/modules/ui/Tooltip";
+import { Select } from "@/modules/ui/Select";
 
 export type TimeRange = 1 | 7 | 14 | 30;
 
@@ -435,18 +436,16 @@ export function RequestLogsPaginationBar({
         <span className="text-xs text-slate-500 dark:text-white/50 whitespace-nowrap">
           {t("request_logs.rows_per_page")}
         </span>
-        <select
+        <Select
           value={String(pageSize)}
-          onChange={(event) => onPageSizeChange(Number(event.currentTarget.value))}
-          className="h-9 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 shadow-sm transition hover:border-slate-300 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-300/40 dark:border-neutral-800 dark:bg-neutral-950 dark:text-white/80 dark:hover:border-neutral-700 dark:focus:border-neutral-700 dark:focus:ring-white/10"
+          onChange={(value) => onPageSizeChange(Number(value))}
+          options={REQUEST_LOG_PAGE_SIZE_OPTIONS.map((size) => ({
+            value: String(size),
+            label: String(size),
+          }))}
           aria-label={t("request_logs.rows_per_page")}
-        >
-          {REQUEST_LOG_PAGE_SIZE_OPTIONS.map((size) => (
-            <option key={size} value={String(size)}>
-              {size}
-            </option>
-          ))}
-        </select>
+          className="w-[88px]"
+        />
       </div>
     </div>
   );
