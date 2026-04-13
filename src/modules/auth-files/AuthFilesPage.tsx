@@ -216,6 +216,12 @@ const resolveFileType = (file: AuthFileItem): string => {
   return candidate || "unknown";
 };
 
+const resolveProviderLabel = (providerKey: string): string => {
+  const normalized = normalizeProviderKey(providerKey);
+  if (!normalized || normalized === "all") return "All";
+  return normalized.replace(/(^|-)([a-z])/g, (_, sep: string, ch: string) => `${sep}${ch.toUpperCase()}`);
+};
+
 const readAuthFileChannelName = (file: AuthFileItem): string => {
   const candidates = [file.label, file.email, file.provider, file.type];
   for (const candidate of candidates) {
@@ -426,6 +432,14 @@ type AuthFilesGroupOverview = {
   quotaSampleCount: number;
 };
 
+type AuthFilesGroupOverviewRow = {
+  name: string;
+  totalCalls: number;
+  averageFiveHour: number | null;
+  averageWeekly: number | null;
+  hasQuota: boolean;
+};
+
 type ChannelEditorState = {
   open: boolean;
   fileName: string;
@@ -559,7 +573,8 @@ export function AuthFilesPage() {
     AUTH_FILES_FILES_VIEW_MODE_KEY,
     "table",
   );
-  const [groupOverviewVisible, setGroupOverviewVisible] = useState(false);
+  const [groupOverviewOpen, setGroupOverviewOpen] = useState(false);
+  const [groupOverviewTab, setGroupOverviewTab] = useState("all");
   const [groupOverviewLoading, setGroupOverviewLoading] = useState(false);
   const quotaAutoRefreshMs = useMemo(
     () => normalizeQuotaAutoRefreshMs(quotaAutoRefreshMsRaw),
@@ -1106,14 +1121,6 @@ export function AuthFilesPage() {
     );
   }, [filter, searchFilteredFiles]);
 
-  const groupOverviewTitle = useMemo(() => {
-    const normalizedFilter = normalizeProviderKey(filter);
-    if (!normalizedFilter || normalizedFilter === "all") {
-      return t("auth_files.group_overview_current_results");
-    }
-    return t("auth_files.group_overview_group_label", { group: filter });
-  }, [filter, t]);
-
   const totalPages = Math.max(1, Math.ceil(filteredFiles.length / AUTH_FILES_PAGE_SIZE));
   const safePage = Math.min(totalPages, Math.max(1, page));
   const pageItems = useMemo(() => {
@@ -1315,58 +1322,140 @@ export function AuthFilesPage() {
     return `${Math.round(clampPercent(value))}%`;
   }, []);
 
-  const groupOverview = useMemo<AuthFilesGroupOverview>(() => {
-    let totalCalls = 0;
-    const fiveHourValues: number[] = [];
-    const weeklyValues: number[] = [];
+  const groupOverviewTabs = useMemo(() => ["all", ...providerOptions], [providerOptions]);
 
-    filteredFiles.forEach((file) => {
-      const stats = resolveAuthFileStats(file, usageIndex);
-      totalCalls += stats.success + stats.failure;
+  const computeGroupOverview = useCallback(
+    (targetFiles: AuthFileItem[]): AuthFilesGroupOverview => {
+      let totalCalls = 0;
+      const fiveHourValues: number[] = [];
+      const weeklyValues: number[] = [];
 
-      const provider = resolveQuotaProvider(file);
-      if (!provider) return;
+      targetFiles.forEach((file) => {
+        const stats = resolveAuthFileStats(file, usageIndex);
+        totalCalls += stats.success + stats.failure;
 
-      const state = quotaByFileName[file.name];
-      const items = Array.isArray(state?.items) ? state.items : [];
-      if (items.length === 0) return;
+        const provider = resolveQuotaProvider(file);
+        if (!provider) return;
 
-      const slots = resolveQuotaCardSlots(provider, items);
-      const fiveHour = slots.find((slot) => slot.id === "code_5h")?.item?.percent;
-      const weekly = slots.find((slot) => slot.id === "code_week")?.item?.percent;
+        const state = quotaByFileName[file.name];
+        const items = Array.isArray(state?.items) ? state.items : [];
+        if (items.length === 0) return;
 
-      if (typeof fiveHour === "number" && Number.isFinite(fiveHour)) {
-        fiveHourValues.push(fiveHour);
-      }
-      if (typeof weekly === "number" && Number.isFinite(weekly)) {
-        weeklyValues.push(weekly);
-      }
-    });
+        const slots = resolveQuotaCardSlots(provider, items);
+        const fiveHour = slots.find((slot) => slot.id === "code_5h")?.item?.percent;
+        const weekly = slots.find((slot) => slot.id === "code_week")?.item?.percent;
 
-    const average = (values: number[]) =>
-      values.length === 0
-        ? null
-        : values.reduce((sum, value) => sum + value, 0) / Math.max(values.length, 1);
+        if (typeof fiveHour === "number" && Number.isFinite(fiveHour)) {
+          fiveHourValues.push(fiveHour);
+        }
+        if (typeof weekly === "number" && Number.isFinite(weekly)) {
+          weeklyValues.push(weekly);
+        }
+      });
 
-    return {
-      totalCalls,
-      averageFiveHour: average(fiveHourValues),
-      averageWeekly: average(weeklyValues),
-      quotaSampleCount: Math.max(fiveHourValues.length, weeklyValues.length),
+      const average = (values: number[]) =>
+        values.length === 0
+          ? null
+          : values.reduce((sum, value) => sum + value, 0) / Math.max(values.length, 1);
+
+      return {
+        totalCalls,
+        averageFiveHour: average(fiveHourValues),
+        averageWeekly: average(weeklyValues),
+        quotaSampleCount: Math.max(fiveHourValues.length, weeklyValues.length),
+      };
+    },
+    [quotaByFileName, resolveQuotaCardSlots, usageIndex],
+  );
+
+  const groupOverviewByTab = useMemo<Record<string, AuthFilesGroupOverview>>(() => {
+    const map: Record<string, AuthFilesGroupOverview> = {
+      all: computeGroupOverview(filteredFiles),
     };
-  }, [filteredFiles, quotaByFileName, resolveQuotaCardSlots, usageIndex]);
+    providerOptions.forEach((key) => {
+      const filesForGroup = filteredFiles.filter(
+        (file) => normalizeProviderKey(resolveFileType(file)) === key,
+      );
+      map[key] = computeGroupOverview(filesForGroup);
+    });
+    return map;
+  }, [computeGroupOverview, filteredFiles, providerOptions]);
 
-  const refreshGroupOverview = useCallback(async () => {
+  const groupOverviewRowsByTab = useMemo<Record<string, AuthFilesGroupOverviewRow[]>>(() => {
+    const buildRows = (targetFiles: AuthFileItem[]) =>
+      targetFiles
+        .map((file) => {
+          const stats = resolveAuthFileStats(file, usageIndex);
+          const provider = resolveQuotaProvider(file);
+          const state = quotaByFileName[file.name];
+          const items = Array.isArray(state?.items) ? state.items : [];
+          const slots = provider ? resolveQuotaCardSlots(provider, items) : [];
+          const fiveHour = slots.find((slot) => slot.id === "code_5h")?.item?.percent ?? null;
+          const weekly = slots.find((slot) => slot.id === "code_week")?.item?.percent ?? null;
+          return {
+            name: resolveAuthFileDisplayName(file) || file.name,
+            totalCalls: stats.success + stats.failure,
+            averageFiveHour:
+              typeof fiveHour === "number" && Number.isFinite(fiveHour) ? fiveHour : null,
+            averageWeekly:
+              typeof weekly === "number" && Number.isFinite(weekly) ? weekly : null,
+            hasQuota: items.length > 0,
+          };
+        })
+        .sort((a, b) => b.totalCalls - a.totalCalls || a.name.localeCompare(b.name));
+
+    const map: Record<string, AuthFilesGroupOverviewRow[]> = {
+      all: buildRows(filteredFiles),
+    };
+    providerOptions.forEach((key) => {
+      const filesForGroup = filteredFiles.filter(
+        (file) => normalizeProviderKey(resolveFileType(file)) === key,
+      );
+      map[key] = buildRows(filesForGroup);
+    });
+    return map;
+  }, [filteredFiles, providerOptions, quotaByFileName, resolveQuotaCardSlots, usageIndex]);
+
+  const activeGroupOverview = useMemo<AuthFilesGroupOverview>(() => {
+    return groupOverviewByTab[groupOverviewTab] ?? groupOverviewByTab.all ?? computeGroupOverview([]);
+  }, [computeGroupOverview, groupOverviewByTab, groupOverviewTab]);
+
+  const activeGroupRows = useMemo<AuthFilesGroupOverviewRow[]>(() => {
+    return groupOverviewRowsByTab[groupOverviewTab] ?? groupOverviewRowsByTab.all ?? [];
+  }, [groupOverviewRowsByTab, groupOverviewTab]);
+
+  const activeGroupTitle = useMemo(() => {
+    if (groupOverviewTab === "all") return t("auth_files.group_overview_current_results");
+    return t("auth_files.group_overview_group_label", {
+      group: resolveProviderLabel(groupOverviewTab),
+    });
+  }, [groupOverviewTab, t]);
+
+  const refreshGroupOverview = useCallback(async (targetGroup = groupOverviewTab) => {
     if (tab !== "files") return;
-    setGroupOverviewVisible(true);
     setGroupOverviewLoading(true);
     try {
-      const targets = collectQuotaFetchTargets(filteredFiles);
+      const scopedFiles =
+        targetGroup === "all"
+          ? filteredFiles
+          : filteredFiles.filter((file) => normalizeProviderKey(resolveFileType(file)) === targetGroup);
+      const targets = collectQuotaFetchTargets(scopedFiles);
       await runQuotaRefreshBatch(targets, { markAsAutoRefreshing: true });
     } finally {
       setGroupOverviewLoading(false);
     }
-  }, [collectQuotaFetchTargets, filteredFiles, runQuotaRefreshBatch, tab]);
+  }, [collectQuotaFetchTargets, filteredFiles, groupOverviewTab, runQuotaRefreshBatch, tab]);
+
+  const openGroupOverview = useCallback(() => {
+    const normalizedFilter = normalizeProviderKey(filter);
+    const nextTab =
+      normalizedFilter && normalizedFilter !== "all" && providerOptions.includes(normalizedFilter)
+        ? normalizedFilter
+        : "all";
+    setGroupOverviewTab(nextTab);
+    setGroupOverviewOpen(true);
+    void refreshGroupOverview(nextTab);
+  }, [filter, providerOptions, refreshGroupOverview]);
 
   const openDetail = useCallback(
     async (file: AuthFileItem) => {
@@ -2594,7 +2683,7 @@ export function AuthFilesPage() {
                         variant="secondary"
                         size="sm"
                         className="!h-8 px-2 text-xs"
-                        onClick={() => void refreshGroupOverview()}
+                        onClick={() => openGroupOverview()}
                         disabled={loading || groupOverviewLoading || filteredFiles.length === 0}
                       >
                         <BarChart3
@@ -2710,41 +2799,6 @@ export function AuthFilesPage() {
                   ) : null}
                 </div>
 
-                {groupOverviewVisible ? (
-                  <div className="rounded-2xl border border-slate-200 bg-slate-50/80 px-3 py-3 dark:border-neutral-800 dark:bg-white/[0.03]">
-                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">
-                      <span className="font-semibold text-slate-900 dark:text-white">
-                        {groupOverviewTitle}
-                      </span>
-                      <span className="text-slate-600 dark:text-white/65">
-                        {t("auth_files.group_overview_total_calls", {
-                          count: groupOverview.totalCalls,
-                        })}
-                      </span>
-                      <span className="text-slate-600 dark:text-white/65">
-                        {t("auth_files.group_overview_avg_5h", {
-                          value: formatAveragePercent(groupOverview.averageFiveHour),
-                        })}
-                      </span>
-                      <span className="text-slate-600 dark:text-white/65">
-                        {t("auth_files.group_overview_avg_week", {
-                          value: formatAveragePercent(groupOverview.averageWeekly),
-                        })}
-                      </span>
-                      {groupOverview.quotaSampleCount > 0 ? (
-                        <span className="text-slate-500 dark:text-white/45">
-                          {t("auth_files.group_overview_sample_count", {
-                            count: groupOverview.quotaSampleCount,
-                          })}
-                        </span>
-                      ) : (
-                        <span className="text-slate-500 dark:text-white/45">
-                          {t("auth_files.group_overview_no_quota")}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                ) : null}
               </div>
             </div>
 
@@ -3756,6 +3810,159 @@ export function AuthFilesPage() {
         onClose={() => setOauthDialogOpen(false)}
         onAuthorized={() => void loadAll()}
       />
+
+      <Modal
+        open={groupOverviewOpen}
+        onClose={() => setGroupOverviewOpen(false)}
+        title={t("auth_files.group_overview_modal_title")}
+        description={t("auth_files.group_overview_modal_desc")}
+        maxWidth="max-w-5xl"
+        bodyHeightClassName="h-[70vh]"
+        footer={
+          <Button variant="secondary" onClick={() => setGroupOverviewOpen(false)}>
+            {t("auth_files.close")}
+          </Button>
+        }
+      >
+        <div className="flex h-full flex-col gap-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <Tabs value={groupOverviewTab} onValueChange={(value) => setGroupOverviewTab(value)}>
+              <TabsList>
+                {groupOverviewTabs.map((key) => (
+                  <TabsTrigger key={key} value={key}>
+                    {key === "all"
+                      ? t("auth_files.group_overview_current_results")
+                      : resolveProviderLabel(key)}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => void refreshGroupOverview(groupOverviewTab)}
+              disabled={groupOverviewLoading}
+            >
+              <RefreshCw size={14} className={groupOverviewLoading ? "animate-spin" : ""} />
+              {t("auth_files.refresh")}
+            </Button>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="rounded-2xl border border-slate-200 bg-white/70 px-4 py-3 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-white/45">
+                {activeGroupTitle}
+              </p>
+              <p className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">
+                {activeGroupRows.length}
+              </p>
+              <p className="mt-1 text-xs text-slate-500 dark:text-white/45">
+                {t("auth_files.group_overview_file_count")}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-white/70 px-4 py-3 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-white/45">
+                {t("auth_files.group_overview_total_calls_label")}
+              </p>
+              <p className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">
+                {activeGroupOverview.totalCalls.toLocaleString()}
+              </p>
+              <p className="mt-1 text-xs text-slate-500 dark:text-white/45">
+                {t("auth_files.group_overview_total_calls_help")}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-white/70 px-4 py-3 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-white/45">
+                {t("auth_files.group_overview_avg_5h_label")}
+              </p>
+              <p className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">
+                {formatAveragePercent(activeGroupOverview.averageFiveHour)}
+              </p>
+              <p className="mt-1 text-xs text-slate-500 dark:text-white/45">
+                {t("auth_files.group_overview_sample_count", {
+                  count: activeGroupOverview.quotaSampleCount,
+                })}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-white/70 px-4 py-3 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-white/45">
+                {t("auth_files.group_overview_avg_week_label")}
+              </p>
+              <p className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">
+                {formatAveragePercent(activeGroupOverview.averageWeekly)}
+              </p>
+              <p className="mt-1 text-xs text-slate-500 dark:text-white/45">
+                {activeGroupOverview.quotaSampleCount > 0
+                  ? t("auth_files.group_overview_quota_ready")
+                  : t("auth_files.group_overview_no_quota")}
+              </p>
+            </div>
+          </div>
+
+          <div className="min-h-0 flex-1 overflow-auto rounded-2xl border border-slate-200 bg-white/70 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
+            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-100 bg-white/90 px-4 py-3 backdrop-blur dark:border-neutral-800 dark:bg-neutral-950/85">
+              <div>
+                <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                  {t("auth_files.group_overview_channels_title")}
+                </p>
+                <p className="mt-1 text-xs text-slate-500 dark:text-white/45">
+                  {t("auth_files.group_overview_channels_desc")}
+                </p>
+              </div>
+            </div>
+
+            {activeGroupRows.length === 0 ? (
+              <div className="px-4 py-12 text-center text-sm text-slate-500 dark:text-white/50">
+                {t("auth_files.group_overview_empty")}
+              </div>
+            ) : (
+              <div className="divide-y divide-slate-100 dark:divide-neutral-800">
+                {activeGroupRows.map((row) => (
+                  <div
+                    key={row.name}
+                    className="grid gap-3 px-4 py-3 md:grid-cols-[minmax(0,1.6fr)_140px_120px_120px]"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-slate-900 dark:text-white">
+                        {row.name}
+                      </p>
+                      <p className="mt-1 text-xs text-slate-500 dark:text-white/45">
+                        {row.hasQuota
+                          ? t("auth_files.group_overview_quota_ready")
+                          : t("auth_files.group_overview_no_quota")}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-white/45">
+                        {t("auth_files.group_overview_total_calls_label")}
+                      </p>
+                      <p className="mt-1 text-sm font-semibold text-slate-900 dark:text-white">
+                        {row.totalCalls.toLocaleString()}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-white/45">
+                        {t("auth_files.group_overview_avg_5h_label")}
+                      </p>
+                      <p className="mt-1 text-sm font-semibold text-slate-900 dark:text-white">
+                        {formatAveragePercent(row.averageFiveHour)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-white/45">
+                        {t("auth_files.group_overview_avg_week_label")}
+                      </p>
+                      <p className="mt-1 text-sm font-semibold text-slate-900 dark:text-white">
+                        {formatAveragePercent(row.averageWeekly)}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </Modal>
 
       <ConfirmModal
         open={confirm !== null}

@@ -505,10 +505,14 @@ describe("AuthFilesPage files table", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Group overview" }));
 
-    expect(await screen.findByText("Current results")).toBeInTheDocument();
-    expect(screen.getByText("Total calls 9")).toBeInTheDocument();
-    expect(screen.getByText("Avg 5h 12%")).toBeInTheDocument();
-    expect(screen.getByText("Avg weekly 34%")).toBeInTheDocument();
+    expect(await screen.findByText("Channel Group Overview")).toBeInTheDocument();
+    expect(screen.getAllByText("Current results").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Total calls").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("9").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Avg 5h").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("12%").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Avg weekly").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("34%").length).toBeGreaterThan(0);
   });
 
   test("runtime-only cards do not render a selection checkbox", async () => {
