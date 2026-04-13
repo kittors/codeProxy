@@ -138,7 +138,7 @@ function parseInputMessages(raw: string): Msg[] | null {
     result.push({
       role: "system",
       content:
-        "⚠️ ⚠️ Note: Raw content was truncated due to size limits; some messages may be incomplete.",
+        "Note: This view was reconstructed from incomplete or non-standard raw content, so some message structure may be missing.",
     });
     return result;
   }

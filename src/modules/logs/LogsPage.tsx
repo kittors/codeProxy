@@ -21,9 +21,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/modules/ui/Tabs";
 
 type ErrorLogItem = { name: string; size?: number; modified?: number };
 
-const INITIAL_DISPLAY_LINES = 200;
-const LOAD_MORE_LINES = 200;
-const MAX_BUFFER_LINES = 10000;
+const INITIAL_DISPLAY_LINES = 400;
+const LOAD_MORE_LINES = 400;
+const MAX_BUFFER_LINES = 50000;
+const INCREMENTAL_FETCH_LIMIT = 2000;
 const LOAD_MORE_THRESHOLD_PX = 64;
 const STICK_TO_BOTTOM_THRESHOLD_PX = 48;
 
@@ -359,7 +360,11 @@ export function LogsPage() {
         const after =
           options.mode === "incremental" ? (latestTimestampRef.current ?? undefined) : undefined;
 
-        const result = await logsApi.fetchLogs(after ? { after, limit: 2000 } : { limit: 2000 });
+        const result = await logsApi.fetchLogs(
+          options.mode === "incremental"
+            ? { after, limit: INCREMENTAL_FETCH_LIMIT }
+            : { limit: MAX_BUFFER_LINES },
+        );
         const lines = Array.isArray(result?.lines) ? result.lines : [];
         const nextLatest =
           typeof result?.["latest-timestamp"] === "number" ? result["latest-timestamp"] : null;
@@ -373,9 +378,13 @@ export function LogsPage() {
           setLatestTimestamp(mergedLatest);
         }
 
-        if (lines.length) {
+        if (lines.length || options.mode === "full") {
           pendingScrollToBottomRef.current = shouldAutoScroll;
-          setBuffer((prev) => trimAndAppend(prev, lines));
+          setBuffer((prev) =>
+            options.mode === "full"
+              ? lines.slice(Math.max(0, lines.length - MAX_BUFFER_LINES))
+              : trimAndAppend(prev, lines),
+          );
         }
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : t("logs_page.failed_fetch");
