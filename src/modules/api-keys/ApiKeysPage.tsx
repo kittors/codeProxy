@@ -25,7 +25,7 @@ import { Modal } from "@/modules/ui/Modal";
 import { HoverTooltip, OverflowTooltip } from "@/modules/ui/Tooltip";
 import type { MultiSelectOption } from "@/modules/ui/MultiSelect";
 import { VirtualTable, type VirtualTableColumn } from "@/modules/ui/VirtualTable";
-import { RestrictionMultiSelect } from "@/modules/api-keys/RestrictionMultiSelect";
+import { ApiKeyFormModal } from "@/modules/api-keys/components/ApiKeyFormModal";
 import { SearchableSelect } from "@/modules/ui/SearchableSelect";
 import { Select } from "@/modules/ui/Select";
 import { LogContentModal } from "@/modules/monitor/LogContentModal";
@@ -39,6 +39,7 @@ import {
   type RequestLogsRow,
   type TimeRange,
 } from "@/modules/monitor/requestLogsShared";
+import type { ApiKeyFormValues } from "@/modules/api-keys/types";
 
 // Vendor SVG icons
 import iconClaude from "@/assets/icons/claude.svg";
@@ -135,19 +136,6 @@ const formatLimit = (limit: number | undefined) => {
 
 type StatusFilter = "" | "success" | "failed";
 
-interface FormValues {
-  name: string;
-  key: string;
-  dailyLimit: string;
-  totalQuota: string;
-  concurrencyLimit: string;
-  rpmLimit: string;
-  tpmLimit: string;
-  allowedModels: string[];
-  allowedChannels: string[];
-  systemPrompt: string;
-}
-
 const normalizeChannelKey = (value: string) => value.trim().toLowerCase();
 
 const readAuthFileChannelName = (file: AuthFileItem): string => {
@@ -200,7 +188,7 @@ export function ApiKeysPage() {
   const [availableModels, setAvailableModels] = useState<MultiSelectOption[]>([]);
   const [availableChannels, setAvailableChannels] = useState<MultiSelectOption[]>([]);
   const [channelGroupByName, setChannelGroupByName] = useState<Record<string, string>>({});
-  const [form, setForm] = useState<FormValues>({
+  const [form, setForm] = useState<ApiKeyFormValues>({
     name: "",
     key: "",
     dailyLimit: "",
@@ -1013,186 +1001,6 @@ export function ApiKeysPage() {
     resetUsageViewState();
   }, [resetUsageViewState]);
 
-  /* ─── render form ─── */
-
-  const renderForm = () => (
-    <div className="space-y-4">
-      <div>
-        <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
-          {t("api_keys_page.form_name_label")} <span className="text-rose-500">*</span>
-        </label>
-        <input
-          type="text"
-          value={form.name}
-          onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-          placeholder={t("api_keys_page.form_name_placeholder")}
-          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition-all focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white dark:focus:border-indigo-500"
-        />
-      </div>
-
-      <div>
-        <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
-          {t("api_keys_page.form_key_label")}
-        </label>
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={form.key}
-            onChange={(e) => setForm((p) => ({ ...p, key: e.target.value }))}
-            placeholder={t("api_keys_page.form_key_placeholder")}
-            className="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 font-mono text-sm outline-none transition-all focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white dark:focus:border-indigo-500"
-            readOnly
-          />
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => setForm((p) => ({ ...p, key: generateKey() }))}
-          >
-            <RefreshCw size={14} />
-            {editIndex !== null
-              ? t("api_keys_page.form_refresh_key")
-              : t("api_keys_page.form_regenerate")}
-          </Button>
-        </div>
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-3">
-        <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
-            {t("api_keys_page.form_daily_limit")}
-          </label>
-          <input
-            type="number"
-            value={form.dailyLimit}
-            onChange={(e) => setForm((p) => ({ ...p, dailyLimit: e.target.value }))}
-            placeholder={t("api_keys_page.form_unlimited_hint")}
-            min={0}
-            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition-all focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white dark:focus:border-indigo-500"
-          />
-        </div>
-        <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
-            {t("api_keys_page.form_total_quota")}
-          </label>
-          <input
-            type="number"
-            value={form.totalQuota}
-            onChange={(e) => setForm((p) => ({ ...p, totalQuota: e.target.value }))}
-            placeholder={t("api_keys_page.form_unlimited_hint")}
-            min={0}
-            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition-all focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white dark:focus:border-indigo-500"
-          />
-        </div>
-        <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
-            {t("api_keys_page.form_concurrency_limit")}
-          </label>
-          <input
-            type="number"
-            value={form.concurrencyLimit}
-            onChange={(e) => setForm((p) => ({ ...p, concurrencyLimit: e.target.value }))}
-            placeholder={t("api_keys_page.form_unlimited_hint")}
-            min={0}
-            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition-all focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white dark:focus:border-indigo-500"
-          />
-        </div>
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-2">
-        <div>
-          <HoverTooltip
-            content={t("api_keys.rpm_full")}
-            className="mb-1 inline-flex items-center gap-1"
-          >
-            <label className="text-sm font-medium text-slate-700 dark:text-white/80">
-              {t("api_keys_page.form_rpm_limit")}
-            </label>
-            <Info size={14} className="text-slate-400 dark:text-white/40" />
-          </HoverTooltip>
-          <input
-            type="number"
-            value={form.rpmLimit}
-            onChange={(e) => setForm((p) => ({ ...p, rpmLimit: e.target.value }))}
-            placeholder={t("api_keys_page.form_unlimited_hint")}
-            min={0}
-            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition-all focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white dark:focus:border-indigo-500"
-          />
-        </div>
-        <div>
-          <HoverTooltip
-            content={t("api_keys.tpm_full")}
-            className="mb-1 inline-flex items-center gap-1"
-          >
-            <label className="text-sm font-medium text-slate-700 dark:text-white/80">
-              {t("api_keys_page.form_tpm_limit")}
-            </label>
-            <Info size={14} className="text-slate-400 dark:text-white/40" />
-          </HoverTooltip>
-          <input
-            type="number"
-            value={form.tpmLimit}
-            onChange={(e) => setForm((p) => ({ ...p, tpmLimit: e.target.value }))}
-            placeholder={t("api_keys_page.form_unlimited_hint")}
-            min={0}
-            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition-all focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white dark:focus:border-indigo-500"
-          />
-        </div>
-      </div>
-
-      <div>
-        <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
-          {t("api_keys_page.form_allowed_channels")}
-        </label>
-        <RestrictionMultiSelect
-          options={availableChannels}
-          value={form.allowedChannels}
-          onChange={(selected) => setForm((p) => ({ ...p, allowedChannels: selected }))}
-          placeholder={t("api_keys_page.select_channels")}
-          unrestrictedLabel={t("api_keys_page.form_all_channels")}
-          selectedCountLabel={(count) => t("api_keys_page.selected_channels_count", { count })}
-          searchPlaceholder={t("api_keys_page.search_channels")}
-          selectFilteredLabel={t("api_keys_page.select_filtered")}
-          clearRestrictionLabel={t("api_keys_page.clear_restriction")}
-          noResultsLabel={t("api_keys_page.no_results")}
-        />
-      </div>
-
-      <div>
-        <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
-          {t("api_keys_page.form_allowed_models")}
-        </label>
-        <RestrictionMultiSelect
-          options={availableModels}
-          value={form.allowedModels}
-          onChange={(selected) => setForm((p) => ({ ...p, allowedModels: selected }))}
-          placeholder={t("api_keys_page.select_models")}
-          unrestrictedLabel={t("api_keys_page.form_all_models")}
-          selectedCountLabel={(count) => t("api_keys_page.selected_models_count", { count })}
-          searchPlaceholder={t("api_keys_page.search_models")}
-          selectFilteredLabel={t("api_keys_page.select_filtered")}
-          clearRestrictionLabel={t("api_keys_page.clear_restriction")}
-          noResultsLabel={t("api_keys_page.no_results")}
-        />
-      </div>
-
-      <div>
-        <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
-          {t("api_keys_page.form_system_prompt")}
-        </label>
-        <textarea
-          value={form.systemPrompt}
-          onChange={(e) => setForm((p) => ({ ...p, systemPrompt: e.target.value }))}
-          placeholder={t("api_keys_page.system_prompt_hint")}
-          rows={3}
-          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition-all focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white dark:focus:border-indigo-500 resize-y"
-        />
-        <p className="mt-1 text-xs text-slate-400 dark:text-white/40">
-          {t("api_keys_page.form_system_prompt_desc")}
-        </p>
-      </div>
-    </div>
-  );
-
   /* ─── main render ─── */
 
   return (
@@ -1240,45 +1048,33 @@ export function ApiKeysPage() {
         )}
       </Card>
 
-      {/* Create Modal */}
-      <Modal
+      <ApiKeyFormModal
+        t={t}
         open={showCreate}
+        editMode={false}
+        saving={saving}
+        form={form}
+        setForm={setForm}
+        availableChannels={availableChannels}
+        availableModels={availableModels}
         onClose={() => setShowCreate(false)}
-        title={t("api_keys_page.create")}
-        description={t("api_keys_page.create_desc")}
-        footer={
-          <>
-            <Button variant="secondary" onClick={() => setShowCreate(false)}>
-              {t("api_keys_page.cancel")}
-            </Button>
-            <Button variant="primary" onClick={() => void handleCreate()} disabled={saving}>
-              {saving ? t("api_keys_page.creating") : t("api_keys_page.create_btn")}
-            </Button>
-          </>
-        }
-      >
-        {renderForm()}
-      </Modal>
+        onSubmit={handleCreate}
+        regenerateKey={() => setForm((prev) => ({ ...prev, key: generateKey() }))}
+      />
 
-      {/* Edit Modal */}
-      <Modal
+      <ApiKeyFormModal
+        t={t}
         open={editIndex !== null}
+        editMode
+        saving={saving}
+        form={form}
+        setForm={setForm}
+        availableChannels={availableChannels}
+        availableModels={availableModels}
         onClose={() => setEditIndex(null)}
-        title={t("api_keys_page.edit")}
-        description={t("api_keys_page.edit_desc")}
-        footer={
-          <>
-            <Button variant="secondary" onClick={() => setEditIndex(null)}>
-              {t("api_keys_page.cancel")}
-            </Button>
-            <Button variant="primary" onClick={() => void handleEdit()} disabled={saving}>
-              {saving ? t("api_keys_page.saving") : t("api_keys_page.save_btn")}
-            </Button>
-          </>
-        }
-      >
-        {renderForm()}
-      </Modal>
+        onSubmit={handleEdit}
+        regenerateKey={() => setForm((prev) => ({ ...prev, key: generateKey() }))}
+      />
 
       {/* Delete Confirm */}
       <Modal

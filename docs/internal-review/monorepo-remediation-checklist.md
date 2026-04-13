@@ -34,6 +34,7 @@
 - [x] 将 `ProvidersPage` 中 OpenAI provider 编辑、模型发现与保存流程下沉到 `useOpenAIProviderEditor`，并修复 `/ai-providers/openai` 等直达路由未先加载目标 tab 数据的问题。完成时间：2026-04-13 20:38:21 +0800
 - [ ] 为 Providers 拆分后的 provider draft、model discovery、usage source 归一化、API key masking 补单测。完成时间：待填写
 - [ ] 将 `codeProxy/src/modules/api-keys/ApiKeysPage.tsx` 拆分为 key 表格、编辑弹窗、权限/限制选择器、日志快捷入口、配额展示 hooks，主页面文件降到 600 行以内。完成时间：待填写
+- [x] 将 `ApiKeysPage` 中创建/编辑共用表单与弹窗下沉到 `ApiKeyFormFields` / `ApiKeyFormModal`，减少页面主体的表单 UI 代码。完成时间：2026-04-13 22:18:18 +0800
 - [ ] 将 `codeProxy/src/modules/config/ConfigPage.tsx` 和 `codeProxy/src/modules/config/visual/VisualConfigEditor.tsx` 拆分为 source editor、runtime panel、visual editor sections、保存流程 hooks。完成时间：待填写
 - [ ] 将 `codeProxy/src/modules/apikey-lookup/ApiKeyLookupPage.tsx` 拆分为公开查询表单、KPI、图表、请求日志表、数据加载 hooks。完成时间：待填写
 - [x] 将 `codeProxy/src/modules/monitor/LogContentModal.tsx` 拆分为内容加载 hook、Markdown/XML 渲染组件、复制导出组件、输入/输出 tab 状态。完成时间：2026-04-13 15:38:53 +0800
