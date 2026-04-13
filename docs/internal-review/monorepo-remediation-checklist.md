@@ -64,6 +64,7 @@
 - [x] 收缩 `AuthFilesPage` 的 sessionStorage 缓存，只保留必要 UI 状态和最小恢复数据，去掉整页 usage/quota 大对象落盘。完成时间：2026-04-13 14:58:10 +0800
 - [x] 为 `AuthFilesPage` 缓存增加大小预算、字段白名单和节流策略，避免每次变更都触发大对象 `JSON.stringify`。完成时间：2026-04-13 14:58:10 +0800
 - [ ] 对 ECharts、Markdown 渲染、CodeMirror、syntax highlighter 做按交互懒加载，减少 `vendor-echarts`、`vendor-markdown`、`index` chunk 压力。完成时间：待填写
+- [x] 将 `LogContentModal` 的 Markdown / syntax highlighter 渲染下沉为按交互懒加载模块，拆出独立 `rendering-markdown` chunk，降低详情弹窗首包体积。完成时间：2026-04-13 18:01:39 +0800
 - [x] 对 `LogContentModal` 引入异步解析、分批渲染与源码优先首屏策略；性能优化不得以截断或删除完整 input/output 内容为代价。完成时间：2026-04-13 17:06:11 +0800
 - [x] 收敛 `LogContentModal` 中重复的 `JSON.parse` / `JSON.stringify` / SSE 解析逻辑，下沉到独立 parser / hook / rendering 模块。完成时间：2026-04-13 17:06:11 +0800
 - [x] 为 `LogContentModal` 的大内容详情实现按 input/output 分段加载、源码/渲染切换，并保留完整内容查看能力。完成时间：2026-04-13 17:06:11 +0800
@@ -103,6 +104,7 @@
 - [x] 为 public lookup 中间件和 multipart 上传大小限制补充 Go 回归测试，并确认 `CliRelay` 全量 `go test ./...` 通过。完成时间：2026-04-13 14:23:15 +0800
 - [ ] 前端每个拆分批次完成后运行 `bun run lint`、`bun run build`、相关 `bun run test`，并记录 bundle 差异。完成时间：待填写
 - [x] 完成前端安全基线与 lint 清理批次后运行 `bun run check`，确认 lint 0 warning 且构建通过。完成时间：2026-04-13 14:39:21 +0800
+- [x] 针对 `LogContentModal` 的源码首屏回退、渐进解析与 Raw pretty-print 运行组件测试，确认懒加载改造未破坏完整内容查看能力。完成时间：2026-04-13 18:01:39 +0800
 - [ ] 为拆分后的高风险模块补组件测试，覆盖 Auth Files、Providers、API Keys、Config、Log Content Modal 的关键交互。完成时间：待填写
 - [ ] 为登录、管理 key 生命周期、配置保存、OAuth 回调、请求日志详情新增或补齐 E2E 场景。完成时间：待填写
 - [x] 增加安全回归用例，覆盖 trusted proxies、CORS allowlist、multipart 文件大小限制、pprof 默认不可远程暴露。完成时间：2026-04-13 15:19:36 +0800
