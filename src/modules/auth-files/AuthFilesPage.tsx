@@ -30,6 +30,7 @@ import { useToast } from "@/modules/ui/ToastProvider";
 import { HoverTooltip } from "@/modules/ui/Tooltip";
 import { Select } from "@/modules/ui/Select";
 import { VirtualTable, type VirtualTableColumn } from "@/modules/ui/VirtualTable";
+import { EChart } from "@/modules/ui/charts/EChart";
 import { ProviderStatusBar } from "@/modules/providers/ProviderStatusBar";
 import { OAuthLoginDialog } from "@/modules/oauth/OAuthLoginDialog";
 import { normalizeUsageSourceId, type KeyStatBucket } from "@/modules/providers/provider-usage";
@@ -1115,9 +1116,14 @@ export function AuthFilesPage() {
 
   const filteredFiles = useMemo(() => {
     const normalizedFilter = normalizeProviderKey(filter);
-    if (!normalizedFilter || normalizedFilter === "all") return searchFilteredFiles;
-    return searchFilteredFiles.filter(
-      (file) => normalizeProviderKey(resolveFileType(file)) === normalizedFilter,
+    const scoped =
+      !normalizedFilter || normalizedFilter === "all"
+        ? searchFilteredFiles
+        : searchFilteredFiles.filter(
+          (file) => normalizeProviderKey(resolveFileType(file)) === normalizedFilter,
+        );
+    return [...scoped].sort((a, b) =>
+      resolveAuthFileDisplayName(a).localeCompare(resolveAuthFileDisplayName(b), "zh-Hans-CN"),
     );
   }, [filter, searchFilteredFiles]);
 
@@ -1402,7 +1408,7 @@ export function AuthFilesPage() {
             hasQuota: items.length > 0,
           };
         })
-        .sort((a, b) => b.totalCalls - a.totalCalls || a.name.localeCompare(b.name));
+        .sort((a, b) => a.name.localeCompare(b.name, "zh-Hans-CN"));
 
     const map: Record<string, AuthFilesGroupOverviewRow[]> = {
       all: buildRows(filteredFiles),
@@ -1430,6 +1436,101 @@ export function AuthFilesPage() {
       group: resolveProviderLabel(groupOverviewTab),
     });
   }, [groupOverviewTab, t]);
+
+  const groupOverviewChartOption = useMemo<Record<string, unknown>>(() => {
+    const rows = activeGroupRows;
+    const names = rows.map((row) => row.name);
+    const callValues = rows.map((row) => row.totalCalls);
+    const fiveHourValues = rows.map((row) => row.averageFiveHour ?? null);
+    const weeklyValues = rows.map((row) => row.averageWeekly ?? null);
+
+    return {
+      backgroundColor: "transparent",
+      animationDuration: 420,
+      animationDurationUpdate: 280,
+      grid: { left: 20, right: 20, top: 24, bottom: 56, containLabel: true },
+      tooltip: {
+        trigger: "axis",
+        axisPointer: { type: "shadow" },
+        renderMode: "html",
+        appendToBody: true,
+        confine: true,
+        borderWidth: 0,
+        backgroundColor: "rgba(15, 23, 42, 0.92)",
+        textStyle: { color: "#fff" },
+        extraCssText: "z-index: 10000;",
+      },
+      legend: {
+        top: 0,
+        textStyle: { color: "#64748b", fontSize: 11 },
+      },
+      xAxis: {
+        type: "category",
+        data: names,
+        axisTick: { show: false },
+        axisLabel: {
+          interval: 0,
+          hideOverlap: true,
+          width: 120,
+          overflow: "truncate",
+          color: "#64748b",
+          fontSize: 11,
+        },
+        axisLine: { lineStyle: { color: "rgba(148,163,184,0.45)" } },
+      },
+      yAxis: [
+        {
+          type: "value",
+          name: t("auth_files.group_overview_total_calls_label"),
+          axisLabel: { color: "#64748b", fontSize: 11 },
+          splitLine: { lineStyle: { color: "rgba(148,163,184,0.18)" } },
+        },
+        {
+          type: "value",
+          name: "%",
+          min: 0,
+          max: 100,
+          axisLabel: {
+            color: "#64748b",
+            fontSize: 11,
+            formatter: (value: number) => `${Math.round(value)}%`,
+          },
+          splitLine: { show: false },
+        },
+      ],
+      series: [
+        {
+          name: t("auth_files.group_overview_total_calls_label"),
+          type: "bar",
+          barMaxWidth: 28,
+          itemStyle: { color: "rgba(59,130,246,0.88)", borderRadius: [4, 4, 0, 0] },
+          data: callValues,
+        },
+        {
+          name: t("auth_files.group_overview_avg_5h_label"),
+          type: "line",
+          yAxisIndex: 1,
+          smooth: true,
+          symbol: "circle",
+          symbolSize: 7,
+          lineStyle: { width: 3, color: "#8b5cf6" },
+          itemStyle: { color: "#8b5cf6" },
+          data: fiveHourValues,
+        },
+        {
+          name: t("auth_files.group_overview_avg_week_label"),
+          type: "line",
+          yAxisIndex: 1,
+          smooth: true,
+          symbol: "circle",
+          symbolSize: 7,
+          lineStyle: { width: 3, color: "#10b981" },
+          itemStyle: { color: "#10b981" },
+          data: weeklyValues,
+        },
+      ],
+    };
+  }, [activeGroupRows, t]);
 
   const refreshGroupOverview = useCallback(async (targetGroup = groupOverviewTab) => {
     if (tab !== "files") return;
@@ -3899,7 +4000,7 @@ export function AuthFilesPage() {
             </div>
           </div>
 
-          <div className="min-h-0 flex-1 overflow-auto rounded-2xl border border-slate-200 bg-white/70 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
+          <div className="min-h-0 flex-1 overflow-hidden rounded-2xl border border-slate-200 bg-white/70 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
             <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-100 bg-white/90 px-4 py-3 backdrop-blur dark:border-neutral-800 dark:bg-neutral-950/85">
               <div>
                 <p className="text-sm font-semibold text-slate-900 dark:text-white">
@@ -3916,48 +4017,8 @@ export function AuthFilesPage() {
                 {t("auth_files.group_overview_empty")}
               </div>
             ) : (
-              <div className="divide-y divide-slate-100 dark:divide-neutral-800">
-                {activeGroupRows.map((row) => (
-                  <div
-                    key={row.name}
-                    className="grid gap-3 px-4 py-3 md:grid-cols-[minmax(0,1.6fr)_140px_120px_120px]"
-                  >
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-slate-900 dark:text-white">
-                        {row.name}
-                      </p>
-                      <p className="mt-1 text-xs text-slate-500 dark:text-white/45">
-                        {row.hasQuota
-                          ? t("auth_files.group_overview_quota_ready")
-                          : t("auth_files.group_overview_no_quota")}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-white/45">
-                        {t("auth_files.group_overview_total_calls_label")}
-                      </p>
-                      <p className="mt-1 text-sm font-semibold text-slate-900 dark:text-white">
-                        {row.totalCalls.toLocaleString()}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-white/45">
-                        {t("auth_files.group_overview_avg_5h_label")}
-                      </p>
-                      <p className="mt-1 text-sm font-semibold text-slate-900 dark:text-white">
-                        {formatAveragePercent(row.averageFiveHour)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-white/45">
-                        {t("auth_files.group_overview_avg_week_label")}
-                      </p>
-                      <p className="mt-1 text-sm font-semibold text-slate-900 dark:text-white">
-                        {formatAveragePercent(row.averageWeekly)}
-                      </p>
-                    </div>
-                  </div>
-                ))}
+              <div className="h-full px-4 py-4">
+                <EChart option={groupOverviewChartOption} className="h-full min-h-[320px]" />
               </div>
             )}
           </div>

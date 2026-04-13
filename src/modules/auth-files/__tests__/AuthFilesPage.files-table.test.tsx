@@ -39,6 +39,10 @@ vi.mock("@/modules/quota/quota-fetch", async (importOriginal) => {
   return { ...mod, fetchQuota: mocks.fetchQuota };
 });
 
+vi.mock("@/modules/ui/charts/EChart", () => ({
+  EChart: ({ className }: { className?: string }) => <div className={className}>chart</div>,
+}));
+
 describe("AuthFilesPage files table", () => {
   beforeEach(() => {
     window.localStorage.clear();
