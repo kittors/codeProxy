@@ -25,6 +25,7 @@
 - [ ] 将 `codeProxy/src/modules/auth-files/AuthFilesPage.tsx` 拆分为路由容器、文件列表、筛选分页、Quota 概览、OAuth 流程、弹窗组件、hooks、helpers、types、constants，主页面文件降到 600 行以内。完成时间：待填写
 - [x] 将 `AuthFilesPage` 中 OAuth excluded / alias / import models 的状态机与 API 编排下沉到 `useAuthFilesOAuthConfig`，把主页面中的 OAuth 配置流程从页面主体剥离。完成时间：2026-04-13 19:31:06 +0800
 - [x] 将 `AuthFilesPage` 中详情弹窗、模型读取、prefix/proxy 编辑、channel 编辑状态下沉到 `useAuthFilesDetailEditors`，进一步压缩页面主体职责。完成时间：2026-04-13 19:39:57 +0800
+- [x] 将 `AuthFilesPage` 中 group overview / trend 的统计派生与弹窗刷新逻辑下沉到 `useAuthFilesGroupOverview`，继续压缩主页面中与群组统计相关的业务编排。完成时间：2026-04-13 19:44:49 +0800
 - [ ] 为 Auth Files 拆分后的 quota 聚合、文件筛选、sessionStorage 缓存读写、OAuth 状态转换补单测。完成时间：待填写
 - [ ] 将 `codeProxy/src/modules/providers/ProvidersPage.tsx` 拆分为 Provider tabs、Provider key 卡片、OpenAI provider 表单、Ampcode 配置、模型发现、状态栏 hooks，主页面文件降到 600 行以内。完成时间：待填写
 - [ ] 为 Providers 拆分后的 provider draft、model discovery、usage source 归一化、API key masking 补单测。完成时间：待填写
@@ -110,6 +111,7 @@
 - [x] 针对 `LogContentModal` 的源码首屏回退、渐进解析与 Raw pretty-print 运行组件测试，确认懒加载改造未破坏完整内容查看能力。完成时间：2026-04-13 18:01:39 +0800
 - [x] 针对 `AuthFilesPage` 的 excluded tab 与 OAuth 登录流程运行组件测试，确认 OAuth 配置 hook 抽取未破坏核心交互。完成时间：2026-04-13 19:31:06 +0800
 - [x] 修正 `AuthFilesPage.files-table` 中依赖旧 session cache 的卡片视图测试，使其改为覆盖真实 quota refresh 渲染链路。完成时间：2026-04-13 19:39:57 +0800
+- [x] 复跑 `AuthFilesPage.files-table` 组件测试，确认 detail/group overview hook 抽取后文件卡片、配额刷新、分组总览入口仍可正常工作。完成时间：2026-04-13 19:44:49 +0800
 - [ ] 为拆分后的高风险模块补组件测试，覆盖 Auth Files、Providers、API Keys、Config、Log Content Modal 的关键交互。完成时间：待填写
 - [ ] 为登录、管理 key 生命周期、配置保存、OAuth 回调、请求日志详情新增或补齐 E2E 场景。完成时间：待填写
 - [x] 增加安全回归用例，覆盖 trusted proxies、CORS allowlist、multipart 文件大小限制、pprof 默认不可远程暴露。完成时间：2026-04-13 15:19:36 +0800
