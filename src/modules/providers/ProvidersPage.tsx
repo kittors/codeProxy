@@ -30,8 +30,8 @@ import { keyValueEntriesToRecord } from "@/modules/providers/KeyValueInputList";
 import { createEmptyModelEntry } from "@/modules/providers/ModelInputList";
 import { ProviderKeyListCard } from "@/modules/providers/ProviderKeyListCard";
 import { useProviderLatency } from "@/modules/providers/hooks/useProviderLatency";
+import { useProviderUsageSummary } from "@/modules/providers/hooks/useProviderUsageSummary";
 import {
-  buildCandidateUsageSourceIds,
   normalizeUsageSourceId,
   type KeyStatBucket,
 } from "@/modules/providers/provider-usage";
@@ -47,7 +47,6 @@ import {
   readBool,
   readString,
   stripDisableAllModelsRule,
-  sumStatsByCandidates,
   withDisableAllModelsRule,
   withoutDisableAllModelsRule,
   type AmpMappingEntry,
@@ -196,6 +195,17 @@ export function ProvidersPage() {
       // usage加载Failed不影响主要功能
     }
   }, []);
+
+  const {
+    getSimpleStats,
+    getSimpleStatusBar,
+    getOpenAIProviderStats,
+    getOpenAIKeyEntryStats,
+    getOpenAIProviderStatusBar,
+  } = useProviderUsageSummary({
+    usageStatsBySource,
+    maskApiKey,
+  });
 
   // refreshAll 保留作为兼容入口（Save后刷新当前 Tab）
   const refreshAll = useCallback(async () => {
@@ -708,105 +718,6 @@ export function ProvidersPage() {
       }
     },
     [notify],
-  );
-
-  const getSimpleStats = useCallback(
-    (config: ProviderSimpleConfig): KeyStatBucket => {
-      const candidates = buildCandidateUsageSourceIds({
-        apiKey: config.apiKey,
-        prefix: config.prefix,
-        masker: maskApiKey,
-      });
-      return sumStatsByCandidates(candidates, usageStatsBySource);
-    },
-    [usageStatsBySource],
-  );
-
-  const mockStatusBarData = useCallback(
-    (stats: KeyStatBucket): import("@/utils/usage").StatusBarData => {
-      if (stats.success === 0 && stats.failure === 0) {
-        return { blocks: [], blockDetails: [], successRate: 100, totalSuccess: 0, totalFailure: 0 };
-      }
-      const BLOCK_COUNT = 20;
-      const blocks: import("@/utils/usage").StatusBlockState[] = [];
-      const blockDetails: import("@/utils/usage").StatusBlockDetail[] = [];
-      const total = stats.success + stats.failure;
-      let tempFail = stats.failure;
-      let tempSuccess = stats.success;
-
-      for (let i = 0; i < BLOCK_COUNT; i++) {
-        const failPart = Math.floor(tempFail / (BLOCK_COUNT - i));
-        const successPart = Math.floor(tempSuccess / (BLOCK_COUNT - i));
-        tempFail -= failPart;
-        tempSuccess -= successPart;
-
-        if (failPart === 0 && successPart === 0) {
-          blocks.push("idle");
-        } else if (failPart === 0) {
-          blocks.push("success");
-        } else if (successPart === 0) {
-          blocks.push("failure");
-        } else {
-          blocks.push("mixed");
-        }
-        blockDetails.push({
-          success: successPart,
-          failure: failPart,
-          rate: successPart + failPart > 0 ? successPart / (successPart + failPart) : -1,
-          startTime: 0,
-          endTime: 0,
-        });
-      }
-
-      return {
-        blocks,
-        blockDetails,
-        successRate: (stats.success / total) * 100,
-        totalSuccess: stats.success,
-        totalFailure: stats.failure,
-      };
-    },
-    [],
-  );
-
-  const getSimpleStatusBar = useCallback(
-    (config: ProviderSimpleConfig): import("@/utils/usage").StatusBarData => {
-      return mockStatusBarData(getSimpleStats(config));
-    },
-    [getSimpleStats, mockStatusBarData],
-  );
-
-  const getOpenAIProviderStats = useCallback(
-    (provider: OpenAIProvider): KeyStatBucket => {
-      const candidates = new Set<string>();
-      (provider.apiKeyEntries || []).forEach((entry) => {
-        buildCandidateUsageSourceIds({
-          apiKey: entry.apiKey,
-          prefix: provider.prefix,
-          masker: maskApiKey,
-        }).forEach((c) => candidates.add(c));
-      });
-      return sumStatsByCandidates(Array.from(candidates), usageStatsBySource);
-    },
-    [usageStatsBySource],
-  );
-
-  const getOpenAIKeyEntryStats = useCallback(
-    (entry: NonNullable<OpenAIProvider["apiKeyEntries"]>[number]): KeyStatBucket => {
-      const candidates = buildCandidateUsageSourceIds({
-        apiKey: entry.apiKey,
-        masker: maskApiKey,
-      });
-      return sumStatsByCandidates(candidates, usageStatsBySource);
-    },
-    [usageStatsBySource],
-  );
-
-  const getOpenAIProviderStatusBar = useCallback(
-    (provider: OpenAIProvider): import("@/utils/usage").StatusBarData => {
-      return mockStatusBarData(getOpenAIProviderStats(provider));
-    },
-    [getOpenAIProviderStats, mockStatusBarData],
   );
 
   const editKeyEnabled = useMemo(() => {
