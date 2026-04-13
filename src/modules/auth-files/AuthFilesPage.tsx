@@ -39,7 +39,6 @@ import { useInterval } from "@/hooks/useInterval";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { clampPercent, type QuotaItem, type QuotaState } from "@/modules/quota/quota-helpers";
 import { resolveCodexPlanType } from "@/utils/quota/resolvers";
-import { RequestLogsTimeRangeSelector } from "@/modules/monitor/requestLogsShared";
 
 type AuthFileModelItem = { id: string; display_name?: string; type?: string; owned_by?: string };
 type OAuthDialogTab =
@@ -1488,7 +1487,7 @@ export function AuthFilesPage() {
       backgroundColor: "transparent",
       animationDuration: 420,
       animationDurationUpdate: 280,
-      grid: { left: 20, right: 20, top: 20, bottom: 40, containLabel: true },
+      grid: { left: 48, right: 44, top: 36, bottom: 44, containLabel: false },
       tooltip: {
         trigger: "axis",
         axisPointer: { type: "line" },
@@ -1502,6 +1501,7 @@ export function AuthFilesPage() {
       },
       legend: {
         top: 0,
+        left: 0,
         textStyle: { color: "#64748b", fontSize: 11 },
       },
       xAxis: {
@@ -1518,18 +1518,21 @@ export function AuthFilesPage() {
       yAxis: [
         {
           type: "value",
-          name: t("auth_files.group_overview_total_calls_label"),
-          axisLabel: { color: "#64748b", fontSize: 11 },
+          axisLabel: {
+            color: "#64748b",
+            fontSize: 11,
+            margin: 10,
+          },
           splitLine: { lineStyle: { color: "rgba(148,163,184,0.18)" } },
         },
         {
           type: "value",
-          name: "%",
           min: 0,
           max: 100,
           axisLabel: {
             color: "#64748b",
             fontSize: 11,
+            margin: 10,
             formatter: (value: number) => `${Math.round(value)}%`,
           },
           splitLine: { show: false },
@@ -3968,7 +3971,7 @@ export function AuthFilesPage() {
         title={t("auth_files.group_overview_modal_title")}
         description={t("auth_files.group_overview_modal_desc")}
         maxWidth="max-w-5xl"
-        bodyHeightClassName="h-[70vh]"
+        bodyHeightClassName="max-h-[68vh]"
         footer={
           <Button variant="secondary" onClick={() => setGroupOverviewOpen(false)}>
             {t("auth_files.close")}
@@ -3989,7 +3992,9 @@ export function AuthFilesPage() {
               </TabsList>
             </Tabs>
             <div className="flex flex-wrap items-center gap-2">
-              <RequestLogsTimeRangeSelector value={7} onChange={() => {}} />
+              <span className="inline-flex h-9 items-center rounded-2xl border border-slate-200 bg-slate-50 px-3 text-sm font-medium text-slate-700 dark:border-neutral-800 dark:bg-neutral-900/60 dark:text-white/75">
+                {t("auth_files.group_overview_fixed_7_days")}
+              </span>
               <Button
                 variant="secondary"
                 size="sm"
@@ -4065,7 +4070,7 @@ export function AuthFilesPage() {
                 {t("auth_files.group_overview_empty")}
               </div>
             ) : (
-              <EChart option={groupOverviewChartOption} className="h-full min-h-[420px]" />
+              <EChart option={groupOverviewChartOption} className="h-[320px] sm:h-[360px]" />
             )}
           </div>
         </div>
