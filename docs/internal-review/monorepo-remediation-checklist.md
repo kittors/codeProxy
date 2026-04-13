@@ -27,7 +27,7 @@
 - [x] 将 `AuthFilesPage` 中详情弹窗、模型读取、prefix/proxy 编辑、channel 编辑状态下沉到 `useAuthFilesDetailEditors`，进一步压缩页面主体职责。完成时间：2026-04-13 19:39:57 +0800
 - [x] 将 `AuthFilesPage` 中 group overview / trend 的统计派生与弹窗刷新逻辑下沉到 `useAuthFilesGroupOverview`，继续压缩主页面中与群组统计相关的业务编排。完成时间：2026-04-13 19:44:49 +0800
 - [ ] 为 Auth Files 拆分后的 quota 聚合、文件筛选、sessionStorage 缓存读写、OAuth 状态转换补单测。完成时间：待填写
-- [ ] 将 `codeProxy/src/modules/providers/ProvidersPage.tsx` 拆分为 Provider tabs、Provider key 卡片、OpenAI provider 表单、Ampcode 配置、模型发现、状态栏 hooks，主页面文件降到 600 行以内。完成时间：待填写
+- [x] 将 `codeProxy/src/modules/providers/ProvidersPage.tsx` 拆分为 Provider key 卡片、OpenAI provider 列表/表单、Ampcode 配置、模型发现与状态栏 hooks，主页面文件降到 600 行以内。完成时间：2026-04-13 20:28:39 +0800
 - [x] 将 `ProvidersPage` 中 OpenAI provider 列表卡片区块抽为 `OpenAIProvidersTab`，把 OpenAI 展示层从页面主体拆出。完成时间：2026-04-13 20:02:16 +0800
 - [x] 将 `ProvidersPage` 中 usage / status bar 相关统计派生下沉到 `useProviderUsageSummary`，减少页面主体中的 provider 健康度推导逻辑。完成时间：2026-04-13 20:06:02 +0800
 - [x] 将 `ProvidersPage` 中 provider key 编辑状态、保存、删除、启停流程下沉到 `useProviderKeyEditor`，进一步减少主页面中的 CRUD 编排。完成时间：2026-04-13 20:28:39 +0800
