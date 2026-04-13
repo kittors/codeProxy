@@ -42,6 +42,7 @@
 - [x] 将 `VisualConfigEditor` 中 payload default / override / filter 规则编辑器抽为 `PayloadRuleEditors`，并清理已迁移的 API key 可视化编辑死代码。完成时间：2026-04-13 22:52:46 +0800
 - [ ] 将 `codeProxy/src/modules/apikey-lookup/ApiKeyLookupPage.tsx` 拆分为公开查询表单、KPI、图表、请求日志表、数据加载 hooks。完成时间：待填写
 - [x] 将 `ApiKeyLookupPage` 中 public lookup 请求函数、models tab、logs tab、usage charts 展示层拆到独立文件，先行压缩主页面展示代码。完成时间：2026-04-13 23:28:15 +0800
+- [x] 将 `ApiKeyLookupPage` 中 public lookup 请求函数抽到 `apikey-lookup/api.ts`，并把 Usage / Logs / Models 三个 tab 的大块展示层拆到独立组件。完成时间：2026-04-14 07:37:48 +0800
 - [x] 将 `codeProxy/src/modules/monitor/LogContentModal.tsx` 拆分为内容加载 hook、Markdown/XML 渲染组件、复制导出组件、输入/输出 tab 状态。完成时间：2026-04-13 15:38:53 +0800
 - [ ] 将 `codeProxy/src/modules/monitor/MonitorPage.tsx` 拆分为 KPI 区、模型分布图、小时序列图、API Key 分布图、查询参数 hooks。完成时间：待填写
 - [ ] 将 `codeProxy/src/modules/logs/LogsPage.tsx` 拆分为日志工具栏、日志表格、下载流程、错误日志列表和 hooks。完成时间：待填写
