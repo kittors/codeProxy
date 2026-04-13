@@ -17,7 +17,6 @@ import {
   Zap,
 } from "lucide-react";
 import { authFilesApi, quotaApi, usageApi } from "@/lib/http/apis";
-import type { UsageLogItem } from "@/lib/http/apis/usage";
 import { formatLatency } from "@/modules/providers/hooks/useProviderLatency";
 import type { AuthFileItem, OAuthModelAliasEntry } from "@/lib/http/types";
 import { Button } from "@/modules/ui/Button";
@@ -1581,40 +1580,15 @@ export function AuthFilesPage() {
     setGroupTrendLoading(true);
 
     try {
-      const scopedFiles =
-        targetGroup === "all"
-          ? filteredFiles
-          : filteredFiles.filter((file) => normalizeProviderKey(resolveFileType(file)) === targetGroup);
-
       const axis = buildLast7DayAxis();
       const callsByDay = new Map(axis.map((item) => [item.date, 0]));
       const today = axis[axis.length - 1]?.date;
-
-      const channelNames = Array.from(
-        new Set(scopedFiles.map((file) => readAuthFileChannelName(file)).filter(Boolean)),
-      );
-
-      let page = 1;
-      let total = Number.POSITIVE_INFINITY;
-      const size = 200;
-      while ((page - 1) * size < total) {
-        const resp = await usageApi.getUsageLogs({
-          page,
-          size,
-          days: 7,
-          channel: channelNames.length > 0 ? channelNames.join(",") : undefined,
-        });
-        total = resp.total ?? 0;
-        const items = Array.isArray(resp.items) ? (resp.items as UsageLogItem[]) : [];
-        items.forEach((item) => {
-          const dateKey = String(item.timestamp || "").slice(0, 10);
-          if (callsByDay.has(dateKey)) {
-            callsByDay.set(dateKey, (callsByDay.get(dateKey) ?? 0) + 1);
-          }
-        });
-        if (items.length === 0) break;
-        page += 1;
-      }
+      const resp = await usageApi.getAuthFileGroupTrend(targetGroup, 7);
+      (resp.points || []).forEach((point) => {
+        if (callsByDay.has(point.date)) {
+          callsByDay.set(point.date, point.requests ?? 0);
+        }
+      });
 
       const weeklyPoint =
         (groupOverviewByTab[targetGroup] ?? groupOverviewByTab.all)?.averageWeekly ?? null;

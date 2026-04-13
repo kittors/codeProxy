@@ -20,6 +20,11 @@ const mocks = vi.hoisted(() => ({
   })),
   getEntityStats: vi.fn(async () => ({ source: [], auth_index: [] })),
   getUsageLogs: vi.fn(async () => ({ items: [], total: 0, page: 1, size: 200 })),
+  getAuthFileGroupTrend: vi.fn(async () => ({
+    days: 7,
+    group: "all",
+    points: [{ date: new Date().toISOString().slice(0, 10), requests: 9 }],
+  })),
   fetchQuota: vi.fn(() => new Promise(() => {})),
   deleteFile: vi.fn(async () => ({})),
   reconcile: vi.fn(async () => ({})),
@@ -35,6 +40,7 @@ vi.mock("@/lib/http/apis", async (importOriginal) => {
       ...mod.usageApi,
       getEntityStats: mocks.getEntityStats,
       getUsageLogs: mocks.getUsageLogs,
+      getAuthFileGroupTrend: mocks.getAuthFileGroupTrend,
     },
   };
 });
@@ -68,6 +74,12 @@ describe("AuthFilesPage files table", () => {
     mocks.getEntityStats.mockImplementation(async () => ({ source: [], auth_index: [] }));
     mocks.getUsageLogs.mockReset();
     mocks.getUsageLogs.mockImplementation(async () => ({ items: [], total: 0, page: 1, size: 200 }));
+    mocks.getAuthFileGroupTrend.mockReset();
+    mocks.getAuthFileGroupTrend.mockImplementation(async () => ({
+      days: 7,
+      group: "all",
+      points: [{ date: new Date().toISOString().slice(0, 10), requests: 9 }],
+    }));
     mocks.fetchQuota.mockReset();
     mocks.fetchQuota.mockImplementation(() => new Promise(() => {}));
     mocks.deleteFile.mockReset();

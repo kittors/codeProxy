@@ -16,6 +16,17 @@ export interface UsageImportResponse {
   [key: string]: unknown;
 }
 
+export interface AuthFileGroupTrendPoint {
+  date: string;
+  requests: number;
+}
+
+export interface AuthFileGroupTrendResponse {
+  days: number;
+  group: string;
+  points: AuthFileGroupTrendPoint[];
+}
+
 export const usageApi = {
   async getUsage(): Promise<UsageData> {
     const response = await apiClient.get<Record<string, unknown>>("/usage");
@@ -85,6 +96,18 @@ export const usageApi = {
     return {
       source: Array.isArray(resp?.source) ? resp.source : [],
       auth_index: Array.isArray(resp?.auth_index) ? resp.auth_index : [],
+    };
+  },
+
+  async getAuthFileGroupTrend(group: string, days = 7): Promise<AuthFileGroupTrendResponse> {
+    const qs = new URLSearchParams({ group, days: String(days) });
+    const resp = await apiClient.get<AuthFileGroupTrendResponse>(
+      `/usage/auth-file-group-trend?${qs.toString()}`,
+    );
+    return {
+      days: resp?.days ?? days,
+      group: resp?.group ?? group,
+      points: Array.isArray(resp?.points) ? resp.points : [],
     };
   },
 
