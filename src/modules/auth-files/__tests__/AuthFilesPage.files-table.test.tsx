@@ -300,6 +300,64 @@ describe("AuthFilesPage files table", () => {
     );
   });
 
+  test("uses natural sorting for displayed channel names", async () => {
+    const now = Date.now();
+    mocks.list.mockImplementation(async () => ({
+      files: [
+        {
+          name: "c.json",
+          label: "gptplus10",
+          account_type: "oauth",
+          type: "codex",
+          auth_index: "3",
+          size: 1024,
+          modified: now,
+          disabled: false,
+        },
+        {
+          name: "a.json",
+          label: "gptplus1",
+          account_type: "oauth",
+          type: "codex",
+          auth_index: "1",
+          size: 1024,
+          modified: now,
+          disabled: false,
+        },
+        {
+          name: "b.json",
+          label: "gptplus2",
+          account_type: "oauth",
+          type: "codex",
+          auth_index: "2",
+          size: 1024,
+          modified: now,
+          disabled: false,
+        },
+      ],
+    }));
+    window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("gptplus1")).toBeInTheDocument();
+
+    const cards = screen.getByTestId("auth-files-cards");
+    const text = cards.textContent ?? "";
+    expect(text.indexOf("gptplus1")).toBeLessThan(text.indexOf("gptplus2"));
+    expect(text.indexOf("gptplus2")).toBeLessThan(text.indexOf("gptplus10"));
+  });
+
   test("cards view shows codex quota bars by stable label keys (no quota tooltip)", async () => {
     const now = Date.now();
     const file = {

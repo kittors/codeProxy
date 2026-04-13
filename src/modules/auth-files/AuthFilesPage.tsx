@@ -248,6 +248,11 @@ const resolveAuthFileSortKey = (file: AuthFileItem): string => {
   return `${channelName || fileName}\u0000${fileName}`;
 };
 
+const authFilesSortCollator = new Intl.Collator("zh-Hans-CN", {
+  numeric: true,
+  sensitivity: "base",
+});
+
 const resolveAuthFilePlanType = (file: AuthFileItem): string | null => resolveCodexPlanType(file);
 
 const isRuntimeOnlyAuthFile = (file: AuthFileItem): boolean => {
@@ -1129,7 +1134,7 @@ export function AuthFilesPage() {
           (file) => normalizeProviderKey(resolveFileType(file)) === normalizedFilter,
         );
     return [...scoped].sort((a, b) =>
-      resolveAuthFileSortKey(a).localeCompare(resolveAuthFileSortKey(b), "zh-Hans-CN"),
+      authFilesSortCollator.compare(resolveAuthFileSortKey(a), resolveAuthFileSortKey(b)),
     );
   }, [filter, searchFilteredFiles]);
 
