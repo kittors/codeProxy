@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
 import {
@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { authFilesApi, quotaApi, usageApi } from "@/lib/http/apis";
 import { formatLatency } from "@/modules/providers/hooks/useProviderLatency";
-import type { AuthFileItem, OAuthModelAliasEntry } from "@/lib/http/types";
+import type { AuthFileItem } from "@/lib/http/types";
 import { Button } from "@/modules/ui/Button";
 import { ConfirmModal } from "@/modules/ui/ConfirmModal";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/modules/ui/Tabs";
@@ -27,6 +27,7 @@ import { AuthFilesAliasTab } from "@/modules/auth-files/components/AuthFilesAlia
 import { AuthFilesFilesTab } from "@/modules/auth-files/components/AuthFilesFilesTab";
 import { ImportModelsModal } from "@/modules/auth-files/components/ImportModelsModal";
 import { GroupOverviewModal } from "@/modules/auth-files/components/GroupOverviewModal";
+import { useAuthFilesOAuthConfig } from "@/modules/auth-files/hooks/useAuthFilesOAuthConfig";
 import { fetchQuota, resolveQuotaProvider, type QuotaProvider } from "@/modules/quota/quota-fetch";
 import { useInterval } from "@/hooks/useInterval";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
@@ -39,7 +40,6 @@ import {
   MAX_AUTH_FILE_SIZE,
   TYPE_BADGE_CLASSES,
   authFilesSortCollator,
-  buildAliasRows,
   buildLast7DayAxis,
   buildUsageIndex,
   downloadBlobAsFile,
@@ -63,7 +63,6 @@ import {
   sanitizeAuthFilesForCache,
   writeAuthFilesDataCache,
   writeAuthFilesUiState,
-  type AliasRow,
   type AuthFileModelItem,
   type AuthFilesGroupOverview,
   type AuthFilesGroupOverviewRow,
@@ -79,11 +78,46 @@ export function AuthFilesPage() {
   const { t } = useTranslation();
   const { notify } = useToast();
   const [searchParams] = useSearchParams();
-  const [isPending, startTransition] = useTransition();
 
   const initialDataCache = useMemo(() => readAuthFilesDataCache(), []);
 
   const [tab, setTab] = useState<"files" | "excluded" | "alias">("files");
+  const {
+    isPending,
+    excludedLoading,
+    excluded,
+    excludedDraft,
+    setExcludedDraft,
+    excludedNewProvider,
+    setExcludedNewProvider,
+    excludedUnsupported,
+    aliasLoading,
+    aliasEditing,
+    setAliasEditing,
+    aliasNewChannel,
+    setAliasNewChannel,
+    aliasUnsupported,
+    importOpen,
+    setImportOpen,
+    importChannel,
+    importLoading,
+    importModels,
+    importSearch,
+    setImportSearch,
+    importSelected,
+    setImportSelected,
+    importFilteredModels,
+    refreshExcluded,
+    refreshAlias,
+    saveExcludedProvider,
+    deleteExcludedProvider,
+    addExcludedProvider,
+    addAliasChannel,
+    saveAliasChannel,
+    deleteAliasChannel,
+    openImport,
+    applyImport,
+  } = useAuthFilesOAuthConfig(tab);
 
   const [files, setFiles] = useState<AuthFileItem[]>(() => initialDataCache?.files ?? []);
   const [loading, setLoading] = useState(() => !((initialDataCache?.files?.length ?? 0) > 0));
@@ -139,27 +173,6 @@ export function AuthFilesPage() {
     saving: false,
     error: null,
   });
-
-  const [excludedLoading, setExcludedLoading] = useState(false);
-  const [excluded, setExcluded] = useState<Record<string, string[]>>({});
-  const [excludedDraft, setExcludedDraft] = useState<Record<string, string>>({});
-  const [excludedNewProvider, setExcludedNewProvider] = useState("");
-  const [excludedUnsupported, setExcludedUnsupported] = useState(false);
-  const [excludedLoadAttempted, setExcludedLoadAttempted] = useState(false);
-
-  const [aliasLoading, setAliasLoading] = useState(false);
-  const [aliasMap, setAliasMap] = useState<Record<string, OAuthModelAliasEntry[]>>({});
-  const [aliasEditing, setAliasEditing] = useState<Record<string, AliasRow[]>>({});
-  const [aliasNewChannel, setAliasNewChannel] = useState("");
-  const [aliasUnsupported, setAliasUnsupported] = useState(false);
-  const [aliasLoadAttempted, setAliasLoadAttempted] = useState(false);
-
-  const [importOpen, setImportOpen] = useState(false);
-  const [importChannel, setImportChannel] = useState("");
-  const [importLoading, setImportLoading] = useState(false);
-  const [importModels, setImportModels] = useState<AuthFileModelItem[]>([]);
-  const [importSearch, setImportSearch] = useState("");
-  const [importSelected, setImportSelected] = useState<Set<string>>(new Set());
 
   // Connectivity check state: fileName → { loading, latencyMs, error }
   const [connectivityState, setConnectivityState] = useState<
@@ -1603,291 +1616,6 @@ export function AuthFilesPage() {
     t,
   ]);
 
-  const refreshExcluded = useCallback(async () => {
-    setExcludedLoadAttempted(true);
-    setExcludedLoading(true);
-    try {
-      const map = await authFilesApi.getOauthExcludedModels();
-      setExcludedUnsupported(false);
-      setExcluded(map);
-      setExcludedDraft(
-        Object.fromEntries(
-          Object.entries(map).map(([key, value]) => [
-            key,
-            Array.isArray(value) ? value.join("\n") : "",
-          ]),
-        ),
-      );
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "";
-      if (/404|not found/i.test(message)) {
-        setExcludedUnsupported(true);
-        setExcluded({});
-        setExcludedDraft({});
-        return;
-      }
-      notify({ type: "error", message: message || t("auth_files.load_excluded_failed") });
-    } finally {
-      setExcludedLoading(false);
-    }
-  }, [notify, t]);
-
-  const refreshAlias = useCallback(async () => {
-    setAliasLoadAttempted(true);
-    setAliasLoading(true);
-    try {
-      const map = await authFilesApi.getOauthModelAlias();
-      setAliasUnsupported(false);
-      setAliasMap(map);
-      setAliasEditing(
-        Object.fromEntries(Object.entries(map).map(([key, value]) => [key, buildAliasRows(value)])),
-      );
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "";
-      if (/404|not found/i.test(message)) {
-        setAliasUnsupported(true);
-        setAliasMap({});
-        setAliasEditing({});
-        return;
-      }
-      notify({ type: "error", message: message || t("auth_files.load_alias_failed") });
-    } finally {
-      setAliasLoading(false);
-    }
-  }, [notify, t]);
-
-  useEffect(() => {
-    if (
-      tab === "excluded" &&
-      !excludedLoadAttempted &&
-      !excludedLoading &&
-      !excludedUnsupported &&
-      Object.keys(excluded).length === 0
-    ) {
-      void refreshExcluded();
-    }
-    if (
-      tab === "alias" &&
-      !aliasLoadAttempted &&
-      !aliasLoading &&
-      !aliasUnsupported &&
-      Object.keys(aliasMap).length === 0
-    ) {
-      void refreshAlias();
-    }
-  }, [
-    aliasLoading,
-    aliasMap,
-    aliasUnsupported,
-    aliasLoadAttempted,
-    excluded,
-    excludedLoading,
-    excludedUnsupported,
-    excludedLoadAttempted,
-    refreshAlias,
-    refreshExcluded,
-    tab,
-  ]);
-
-  const saveExcludedProvider = useCallback(
-    async (provider: string, text: string) => {
-      if (excludedUnsupported) {
-        notify({
-          type: "error",
-          message: t("auth_files.server_no_excluded_api"),
-        });
-        return;
-      }
-      const key = normalizeProviderKey(provider);
-      const models = text
-        .split(/[\n,]+/)
-        .map((item) => item.trim())
-        .filter(Boolean);
-      try {
-        await authFilesApi.saveOauthExcludedModels(key, models);
-        notify({ type: "success", message: t("auth_files.saved") });
-        startTransition(() => void refreshExcluded());
-      } catch (err: unknown) {
-        notify({
-          type: "error",
-          message: err instanceof Error ? err.message : t("auth_files.save_failed"),
-        });
-      }
-    },
-    [excludedUnsupported, notify, refreshExcluded, startTransition],
-  );
-
-  const deleteExcludedProvider = useCallback(
-    async (provider: string) => {
-      if (excludedUnsupported) {
-        notify({
-          type: "error",
-          message:
-            "Server does not support OAuth excluded models API (/oauth-excluded-models). Please upgrade.",
-        });
-        return;
-      }
-      const key = normalizeProviderKey(provider);
-      try {
-        await authFilesApi.deleteOauthExcludedEntry(key);
-        notify({ type: "success", message: t("auth_files.deleted") });
-        startTransition(() => void refreshExcluded());
-      } catch (err: unknown) {
-        notify({
-          type: "error",
-          message: err instanceof Error ? err.message : t("auth_files.delete_failed"),
-        });
-      }
-    },
-    [excludedUnsupported, notify, refreshExcluded, startTransition],
-  );
-
-  const addExcludedProvider = useCallback(() => {
-    const key = normalizeProviderKey(excludedNewProvider);
-    if (!key) {
-      notify({ type: "info", message: t("auth_files.please_enter_provider") });
-      return;
-    }
-    setExcluded((prev) => (prev[key] ? prev : { ...prev, [key]: [] }));
-    setExcludedDraft((prev) => (prev[key] !== undefined ? prev : { ...prev, [key]: "" }));
-    setExcludedNewProvider("");
-  }, [excludedNewProvider, notify]);
-
-  const addAliasChannel = useCallback(() => {
-    const key = normalizeProviderKey(aliasNewChannel);
-    if (!key) {
-      notify({ type: "info", message: t("auth_files.please_enter_channel") });
-      return;
-    }
-    setAliasMap((prev) => (prev[key] ? prev : { ...prev, [key]: [] }));
-    setAliasEditing((prev) => (prev[key] ? prev : { ...prev, [key]: buildAliasRows([]) }));
-    setAliasNewChannel("");
-  }, [aliasNewChannel, notify]);
-
-  const saveAliasChannel = useCallback(
-    async (channel: string) => {
-      if (aliasUnsupported) {
-        notify({
-          type: "error",
-          message: t("auth_files.server_no_alias_api"),
-        });
-        return;
-      }
-      const key = normalizeProviderKey(channel);
-      const rows = aliasEditing[key] ?? [];
-      const next = rows
-        .map((row) => ({
-          name: row.name.trim(),
-          alias: row.alias.trim(),
-          ...(row.fork ? { fork: true } : {}),
-        }))
-        .filter((row) => row.name && row.alias);
-
-      try {
-        await authFilesApi.saveOauthModelAlias(key, next);
-        notify({ type: "success", message: t("auth_files.saved") });
-        startTransition(() => void refreshAlias());
-      } catch (err: unknown) {
-        notify({
-          type: "error",
-          message: err instanceof Error ? err.message : t("auth_files.save_failed"),
-        });
-      }
-    },
-    [aliasEditing, aliasUnsupported, notify, refreshAlias, startTransition],
-  );
-
-  const deleteAliasChannel = useCallback(
-    async (channel: string) => {
-      if (aliasUnsupported) {
-        notify({
-          type: "error",
-          message: t("auth_files.server_no_alias_api"),
-        });
-        return;
-      }
-      const key = normalizeProviderKey(channel);
-      try {
-        await authFilesApi.deleteOauthModelAlias(key);
-        notify({ type: "success", message: t("auth_files.deleted") });
-        startTransition(() => void refreshAlias());
-      } catch (err: unknown) {
-        notify({
-          type: "error",
-          message: err instanceof Error ? err.message : t("auth_files.delete_failed"),
-        });
-      }
-    },
-    [aliasUnsupported, notify, refreshAlias, startTransition],
-  );
-
-  const openImport = useCallback(
-    async (channel: string) => {
-      if (aliasUnsupported) return;
-      const key = normalizeProviderKey(channel);
-      if (!key) return;
-
-      setImportOpen(true);
-      setImportChannel(key);
-      setImportLoading(true);
-      setImportModels([]);
-      setImportSearch("");
-      setImportSelected(new Set());
-
-      try {
-        const models = await authFilesApi.getModelDefinitions(key);
-        const list = Array.isArray(models) ? models : [];
-        setImportModels(list);
-        setImportSelected(new Set(list.map((m) => m.id)));
-      } catch (err: unknown) {
-        notify({
-          type: "error",
-          message: err instanceof Error ? err.message : t("auth_files.failed_get_models"),
-        });
-        setImportOpen(false);
-      } finally {
-        setImportLoading(false);
-      }
-    },
-    [aliasUnsupported, notify],
-  );
-
-  const applyImport = useCallback(() => {
-    const key = importChannel;
-    if (!key) return;
-
-    const selected = new Set(importSelected);
-    const picked = importModels.filter((m) => selected.has(m.id));
-    if (picked.length === 0) {
-      notify({ type: "info", message: t("auth_files.no_models_selected") });
-      return;
-    }
-
-    setAliasEditing((prev) => {
-      const current = prev[key] ?? buildAliasRows([]);
-      const seen = new Set(
-        current.map(
-          (r) => `${r.name.toLowerCase()}::${r.alias.toLowerCase()}::${r.fork ? "1" : "0"}`,
-        ),
-      );
-
-      const merged = [...current];
-      picked.forEach((model) => {
-        const name = model.id;
-        const alias = model.id;
-        const dedupeKey = `${name.toLowerCase()}::${alias.toLowerCase()}::0`;
-        if (seen.has(dedupeKey)) return;
-        seen.add(dedupeKey);
-        merged.push({ id: `row-${Date.now()}-${name}`, name, alias });
-      });
-
-      return { ...prev, [key]: merged };
-    });
-
-    setImportOpen(false);
-    notify({ type: "success", message: t("auth_files.imported_default") });
-  }, [importChannel, importModels, importSelected, notify]);
-
   const filterChips = useMemo(() => ["all", ...providerOptions], [providerOptions]);
 
   const fileColumns = useMemo<VirtualTableColumn<AuthFileItem>[]>(() => {
@@ -2257,18 +1985,6 @@ export function AuthFilesPage() {
     quotaProgressCircle,
     usageIndex,
   ]);
-
-  const importFilteredModels = useMemo(() => {
-    const q = importSearch.trim().toLowerCase();
-    if (!q) return importModels;
-    return importModels.filter(
-      (m) =>
-        m.id.toLowerCase().includes(q) ||
-        String(m.display_name || "")
-          .toLowerCase()
-          .includes(q),
-    );
-  }, [importModels, importSearch]);
 
   return (
     <div className="space-y-3">
