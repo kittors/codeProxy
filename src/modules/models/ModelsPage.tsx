@@ -147,7 +147,7 @@ function getVendorPrefix(modelId: string): string {
   return "";
 }
 
-function getVendorColor(modelId: string) {
+function _getVendorColor(modelId: string) {
   const lower = modelId.toLowerCase();
   for (const [prefix, color] of Object.entries(VENDOR_COLORS)) {
     if (lower.startsWith(prefix)) return color;
@@ -169,8 +169,8 @@ function VendorIcon({ modelId, size = 14 }: { modelId: string; size?: number }) 
 
 /* ─── helpers ─── */
 
-const formatNumber = (n: number) => n.toLocaleString();
-const formatCurrency = (n: number) => `$${n.toFixed(4)}`;
+const _formatNumber = (n: number) => n.toLocaleString();
+const _formatCurrency = (n: number) => `$${n.toFixed(4)}`;
 const emptyPricing: ModelPricing = {
   inputPricePerMillion: 0,
   outputPricePerMillion: 0,
@@ -345,7 +345,7 @@ export function ModelsPage() {
     }
   };
 
-  const formatPricingBadge = (p: ModelPricing) => {
+  const _formatPricingBadge = (p: ModelPricing) => {
     if (
       p.inputPricePerMillion === 0 &&
       p.outputPricePerMillion === 0 &&

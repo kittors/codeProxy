@@ -10,8 +10,7 @@ import {
   Sigma,
 } from "lucide-react";
 import { usageApi } from "@/lib/http/apis";
-import type { UsageData } from "@/lib/http/types";
-import { computeKpiMetrics, formatNumber, formatRate } from "@/modules/monitor/monitor-utils";
+import { formatNumber, formatRate } from "@/modules/monitor/monitor-utils";
 import { AnimatedNumber } from "@/modules/ui/AnimatedNumber";
 import { TextInput } from "@/modules/ui/Input";
 import { Reveal } from "@/modules/ui/Reveal";
@@ -22,7 +21,6 @@ import type { HourWindow, TimeRange } from "@/modules/monitor/monitor-constants"
 import { CHART_COLOR_CLASSES, HOURLY_MODEL_COLORS } from "@/modules/monitor/monitor-constants";
 import {
   formatCompact,
-  formatLocalDateKey,
   formatMonthDay,
 } from "@/modules/monitor/monitor-format";
 import {
@@ -40,17 +38,6 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/modules/ui/Tabs";
 import { useTranslation } from "react-i18next";
 
-const createEmptyUsage = (): UsageData => ({
-  total_requests: 0,
-  success_count: 0,
-  failure_count: 0,
-  total_tokens: 0,
-  apis: {},
-  requests_by_day: {},
-  requests_by_hour: {},
-  tokens_by_day: {},
-  tokens_by_hour: {},
-});
 const DAILY_LEGEND_KEYS = {
   input: "daily_input",
   output: "daily_output",
@@ -100,7 +87,6 @@ export function MonitorPage() {
     [HOURLY_TOKEN_KEYS.total]: true,
   });
 
-  const [rawUsage, setRawUsage] = useState<UsageData>(createEmptyUsage);
   const [chartData, setChartData] = useState<import("@/lib/http/types").ChartDataResponse | null>(
     null,
   );
@@ -282,7 +268,7 @@ export function MonitorPage() {
     const modelPoints = (chartData?.hourly_models || [])
       .reduce(
         (acc, pt) => {
-          const [datePart, timePart] = pt.hour.split(" "); // "2023-10-10 15:00"
+          const [, timePart] = pt.hour.split(" "); // "2023-10-10 15:00"
           const label = timePart || pt.hour;
 
           let bucket = acc.find((x) => x.label === label);
@@ -311,7 +297,7 @@ export function MonitorPage() {
       });
 
     const tokenPoints = (chartData?.hourly_tokens || []).map((pt) => {
-      const [datePart, timePart] = pt.hour.split(" ");
+      const [, timePart] = pt.hour.split(" ");
       const label = timePart || pt.hour;
       return {
         label,

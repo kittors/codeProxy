@@ -47,10 +47,8 @@ import { ProviderKeyListCard } from "@/modules/providers/ProviderKeyListCard";
 import { useProviderLatency } from "@/modules/providers/hooks/useProviderLatency";
 import {
   buildCandidateUsageSourceIds,
-  calculateStatusBarData,
   normalizeUsageSourceId,
   type KeyStatBucket,
-  type StatusBarData,
 } from "@/modules/providers/provider-usage";
 import {
   buildModelsEndpoint,

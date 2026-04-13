@@ -654,6 +654,7 @@
     "please_enter_channel": "请输入渠道",
     "failed_get_models": "获取模型定义失败",
     "download_failed": "下载失败",
+    "download_sensitive_confirm": "这会下载完整认证文件，可能包含敏感凭据。确认继续？",
     "unknown_error": "未知错误",
     "delete_filter_title": "删除 {{filter}} 认证文件",
     "confirm_delete_filter": "确认删除当前筛选（{{filter}}）下的认证文件？此操作不可逆。",

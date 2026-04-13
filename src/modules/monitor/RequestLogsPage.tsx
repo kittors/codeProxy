@@ -16,7 +16,6 @@ import {
   RequestLogsTimeRangeSelector,
   toRequestLogsRow,
   type RequestLogsRow as LogRow,
-  type RequestLogsTableColumn as TableColumn,
   type TimeRange,
 } from "@/modules/monitor/requestLogsShared";
 type StatusFilter = "" | "success" | "failed";

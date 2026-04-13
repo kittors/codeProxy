@@ -294,7 +294,7 @@ export function LogsPage() {
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(false);
-  const [hideManagement, setHideManagement] = useState(true);
+  const [hideManagement, setHideManagement] = useState(false);
   const [search, setSearch] = useState("");
   const [displayCount, setDisplayCount] = useState(INITIAL_DISPLAY_LINES);
 
@@ -673,7 +673,7 @@ export function LogsPage() {
               <div className="flex min-h-11 items-center justify-between gap-3 border-b border-slate-200 px-4 py-3 text-xs text-slate-600 dark:border-neutral-800 dark:text-white/65">
                 <div className="min-w-0">
                   <span
-                    className="block truncate whitespace-nowrap tabular-nums"
+                    className="block whitespace-pre-wrap break-words tabular-nums"
                     title={
                       t("logs_page.showing_lines", {
                         visible: visibleLines.length.toLocaleString(),
@@ -782,7 +782,7 @@ export function LogsPage() {
                                   ) : null}
                                   {line.path ? (
                                     <Badge className="border-slate-200 bg-white font-mono text-slate-700 dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-white/70">
-                                      <span className="max-w-[18rem] truncate">{line.path}</span>
+                                      <span className="break-all">{line.path}</span>
                                     </Badge>
                                   ) : null}
                                 </div>
@@ -879,7 +879,7 @@ export function LogsPage() {
                           className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white/70 px-4 py-3 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60"
                         >
                           <div className="min-w-0">
-                            <p className="truncate font-mono text-xs text-slate-900 dark:text-white">
+                            <p className="break-all font-mono text-xs text-slate-900 dark:text-white">
                               {file.name}
                             </p>
                             <p className="mt-1 text-xs text-slate-600 dark:text-white/65">

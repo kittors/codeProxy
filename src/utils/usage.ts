@@ -977,7 +977,7 @@ export function buildHourlySeriesByModel(
 
     const modelName = detail.__modelName || "Unknown";
     if (!dataByModel.has(modelName)) {
-      dataByModel.set(modelName, new Array(labels.length).fill(0));
+      dataByModel.set(modelName, Array.from({ length: labels.length }, () => 0));
     }
 
     const bucketValues = dataByModel.get(modelName)!;
@@ -1138,7 +1138,7 @@ export function buildChartData(
 
   // Build "All" series as sum of all models
   const getAllSeries = (): number[] => {
-    const summed = new Array(labels.length).fill(0);
+    const summed = Array.from({ length: labels.length }, () => 0);
     dataByModel.forEach((values) => {
       values.forEach((value, idx) => {
         summed[idx] = (summed[idx] || 0) + value;
@@ -1154,7 +1154,7 @@ export function buildChartData(
     const isAll = model === "all";
     const data = isAll
       ? getAllSeries()
-      : dataByModel.get(model) || new Array(labels.length).fill(0);
+      : dataByModel.get(model) || Array.from({ length: labels.length }, () => 0);
     const colorIndex = index % CHART_COLORS.length;
     const style = CHART_COLORS[colorIndex];
     const shouldFill = modelsToShow.length === 1 || (isAll && modelsToShow.length > 1);
@@ -1490,10 +1490,10 @@ export function buildHourlyTokenBreakdown(
   }
 
   const dataByCategory: Record<TokenCategory, number[]> = {
-    input: new Array(labels.length).fill(0),
-    output: new Array(labels.length).fill(0),
-    cached: new Array(labels.length).fill(0),
-    reasoning: new Array(labels.length).fill(0),
+    input: Array.from({ length: labels.length }, () => 0),
+    output: Array.from({ length: labels.length }, () => 0),
+    cached: Array.from({ length: labels.length }, () => 0),
+    reasoning: Array.from({ length: labels.length }, () => 0),
   };
 
   const details = collectUsageDetails(usageData);
@@ -1608,7 +1608,7 @@ export function buildHourlyCostSeries(
     labels.push(formatHourLabel(new Date(earliestTime + i * hourMs)));
   }
 
-  const data = new Array(labels.length).fill(0);
+  const data = Array.from({ length: labels.length }, () => 0);
   const details = collectUsageDetails(usageData);
   let hasData = false;
 

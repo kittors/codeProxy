@@ -20,7 +20,7 @@ export function ToastProvider({ children }: PropsWithChildren) {
     (input: { type?: ToastType; title?: string; message: string; duration?: number }) => {
       const type = input.type ?? "info";
 
-      const defaultTitles: Record<ToastType, string> = {
+      const _defaultTitles: Record<ToastType, string> = {
         success: "Success",
         error: "Error",
         warning: "Warning",

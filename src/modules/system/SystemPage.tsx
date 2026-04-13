@@ -329,7 +329,7 @@ function ModelTag({ id }: { id: string }) {
    Main Page
    ═══════════════════════════════════════════════════════════ */
 
-const AUTO_REFRESH_INTERVAL = 30_000;
+const _AUTO_REFRESH_INTERVAL = 30_000;
 
 export function SystemPage() {
   const { t } = useTranslation();

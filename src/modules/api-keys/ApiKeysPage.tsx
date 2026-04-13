@@ -8,7 +8,7 @@ import {
   KeyRound,
   ShieldCheck,
   RefreshCw,
-  Infinity,
+  Infinity as InfinityIcon,
   BarChart3,
   Power,
   Info,
@@ -33,7 +33,6 @@ import { ErrorDetailModal } from "@/modules/monitor/ErrorDetailModal";
 import {
   buildRequestLogsColumns,
   DEFAULT_REQUEST_LOG_PAGE_SIZE,
-  maskRequestLogApiKey,
   RequestLogsPaginationBar,
   RequestLogsTimeRangeSelector,
   toRequestLogsRow,
@@ -757,7 +756,8 @@ export function ApiKeysPage() {
           <span className="inline-flex items-center gap-1">
             {!row["daily-limit"] ? (
               <>
-                <Infinity size={14} className="text-green-500" /> {t("api_keys_page.unlimited")}
+                <InfinityIcon size={14} className="text-green-500" />{" "}
+                {t("api_keys_page.unlimited")}
               </>
             ) : (
               formatLimit(row["daily-limit"])
@@ -774,7 +774,8 @@ export function ApiKeysPage() {
           <span className="inline-flex items-center gap-1">
             {!row["total-quota"] ? (
               <>
-                <Infinity size={14} className="text-green-500" /> {t("api_keys_page.unlimited")}
+                <InfinityIcon size={14} className="text-green-500" />{" "}
+                {t("api_keys_page.unlimited")}
               </>
             ) : (
               formatLimit(row["total-quota"])
@@ -797,7 +798,8 @@ export function ApiKeysPage() {
           <span className="inline-flex items-center gap-1">
             {!row["rpm-limit"] ? (
               <>
-                <Infinity size={14} className="text-green-500" /> {t("api_keys_page.unlimited")}
+                <InfinityIcon size={14} className="text-green-500" />{" "}
+                {t("api_keys_page.unlimited")}
               </>
             ) : (
               formatLimit(row["rpm-limit"])
@@ -820,7 +822,8 @@ export function ApiKeysPage() {
           <span className="inline-flex items-center gap-1">
             {!row["tpm-limit"] ? (
               <>
-                <Infinity size={14} className="text-green-500" /> {t("api_keys_page.unlimited")}
+                <InfinityIcon size={14} className="text-green-500" />{" "}
+                {t("api_keys_page.unlimited")}
               </>
             ) : (
               formatLimit(row["tpm-limit"])

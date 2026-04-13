@@ -338,15 +338,21 @@ async function fetchPublicLogs(params: {
   signal?: AbortSignal;
 }): Promise<PublicLogsResponse> {
   const base = detectApiBaseFromLocation();
-  const qs = new URLSearchParams();
-  qs.set("api_key", params.apiKey);
-  if (params.page) qs.set("page", String(params.page));
-  if (params.size) qs.set("size", String(params.size));
-  if (params.days) qs.set("days", String(params.days));
-  if (params.model) qs.set("model", params.model);
-  if (params.status) qs.set("status", params.status);
-  const url = `${base}${MANAGEMENT_API_PREFIX}/public/usage/logs?${qs}`;
-  const resp = await fetch(url, { signal: params.signal });
+  const resp = await fetch(`${base}${MANAGEMENT_API_PREFIX}/public/usage/logs`, {
+    method: "POST",
+    signal: params.signal,
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      api_key: params.apiKey,
+      page: params.page,
+      size: params.size,
+      days: params.days,
+      model: params.model,
+      status: params.status,
+    }),
+  });
   if (!resp.ok) {
     const text = await resp.text().catch(() => "");
     throw new Error(text || `Request failed (${resp.status})`);
@@ -359,11 +365,16 @@ async function fetchPublicChartData(params: {
   days?: number;
 }): Promise<ChartDataResponse> {
   const base = detectApiBaseFromLocation();
-  const qs = new URLSearchParams();
-  qs.set("api_key", params.apiKey);
-  if (params.days) qs.set("days", String(params.days));
-  const url = `${base}${MANAGEMENT_API_PREFIX}/public/usage/chart-data?${qs}`;
-  const resp = await fetch(url);
+  const resp = await fetch(`${base}${MANAGEMENT_API_PREFIX}/public/usage/chart-data`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      api_key: params.apiKey,
+      days: params.days,
+    }),
+  });
   if (!resp.ok) {
     const text = await resp.text().catch(() => "");
     throw new Error(text || `Request failed (${resp.status})`);
@@ -1063,17 +1074,6 @@ export function ApiKeyLookupPage() {
     (event?: React.FormEvent) => {
       event?.preventDefault();
       const val = apiKeyInput.trim();
-      try {
-        const url = new URL(window.location.href);
-        if (val) {
-          url.searchParams.set("api_key", val);
-        } else {
-          url.searchParams.delete("api_key");
-        }
-        window.history.replaceState({}, "", url.toString());
-      } catch {
-        // ignore
-      }
       if (val) {
         setModelQuery("");
         setStatusFilter("");
@@ -1107,16 +1107,24 @@ export function ApiKeyLookupPage() {
     }
   }, [queriedKey, activeTab, timeRange, fetchLogs, fetchChartDataFn, fetchModelsFn]);
 
-  // Read api_key from URL on mount
+  // Strip legacy sensitive query params from the URL on mount.
   useEffect(() => {
-    const searchStr = window.location.search || window.location.hash.split("?")[1] || "";
-    const params = new URLSearchParams(searchStr.startsWith("?") ? searchStr : `?${searchStr}`);
-    const key = params.get("api_key") ?? params.get("key") ?? "";
-    if (key) {
-      setApiKeyInput(key);
-      fetchLogs(key, 1);
-      void fetchChartDataFn(key, timeRange);
-      void fetchModelsFn(key);
+    try {
+      const url = new URL(window.location.href);
+      let changed = false;
+      if (url.searchParams.has("api_key")) {
+        url.searchParams.delete("api_key");
+        changed = true;
+      }
+      if (url.searchParams.has("key")) {
+        url.searchParams.delete("key");
+        changed = true;
+      }
+      if (changed) {
+        window.history.replaceState({}, "", url.toString());
+      }
+    } catch {
+      // ignore
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -1687,8 +1695,19 @@ export function ApiKeyLookupPage() {
                   options?: { signal?: AbortSignal },
                 ) => {
                   const base = detectApiBaseFromLocation();
-                  const url = `${base}${MANAGEMENT_API_PREFIX}/public/usage/logs/${id}/content?api_key=${encodeURIComponent(queriedKey)}&part=${encodeURIComponent(part)}&format=json`;
-                  const resp = await fetch(url, { signal: options?.signal });
+                  const url = `${base}${MANAGEMENT_API_PREFIX}/public/usage/logs/${id}/content`;
+                  const resp = await fetch(url, {
+                    method: "POST",
+                    signal: options?.signal,
+                    headers: {
+                      "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                      api_key: queriedKey,
+                      part,
+                      format: "json",
+                    }),
+                  });
                   if (!resp.ok) {
                     const text = await resp.text().catch(() => "");
                     throw new Error(text || `Request failed (${resp.status})`);

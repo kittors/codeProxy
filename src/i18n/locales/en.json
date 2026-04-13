@@ -640,6 +640,7 @@
     "please_enter_channel": "Please enter channel",
     "failed_get_models": "Failed to get model definitions",
     "download_failed": "Download failed",
+    "download_sensitive_confirm": "This downloads the full auth file and may include sensitive credentials. Continue?",
     "unknown_error": "Unknown error",
     "delete_filter_title": "Delete {{filter}} Auth Files",
     "confirm_delete_filter": "Are you sure you want to delete auth files under current filter ({{filter}})? This operation is irreversible.",

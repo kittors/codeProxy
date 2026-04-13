@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Check, ChevronDown, Copy, Plus, Trash2 } from "lucide-react";
+import { Check, Copy, Plus, Trash2 } from "lucide-react";
 import type {
   PayloadFilterRule,
   PayloadModelEntry,
@@ -112,7 +112,7 @@ function TextArea({
   );
 }
 
-function ApiKeysEditor({
+function _ApiKeysEditor({
   value,
   disabled,
   onChange,
