@@ -2303,7 +2303,7 @@ export function AuthFilesPage() {
           return (
             <div className="min-w-0">
               <p className="truncate font-mono text-xs text-slate-900 dark:text-white">
-                {file.name || "--"}
+                {resolveAuthFileDisplayName(file) || "--"}
               </p>
             </div>
           );
@@ -2339,22 +2339,6 @@ export function AuthFilesPage() {
                 </span>
               ) : null}
             </div>
-          );
-        },
-      },
-      {
-        key: "channel",
-        label: t("auth_files.channel_name"),
-        width: "w-52",
-        render: (file) => {
-          const isOauthFile = isOauthAuthFile(file);
-          const channelName = readAuthFileChannelName(file);
-          if (!isOauthFile)
-            return <span className="text-xs text-slate-400 dark:text-white/40">--</span>;
-          return (
-            <span className="truncate text-xs font-medium text-slate-900 dark:text-white/80">
-              {channelName || "--"}
-            </span>
           );
         },
       },
@@ -2969,8 +2953,7 @@ export function AuthFilesPage() {
                         const typeKey = resolveFileType(file);
                         const badgeClass =
                           TYPE_BADGE_CLASSES[typeKey] ?? TYPE_BADGE_CLASSES.unknown;
-                        const displayTitle = String(file.name || "");
-                        const channelName = readAuthFileChannelName(file);
+                        const displayTitle = resolveAuthFileDisplayName(file) || String(file.name || "");
                         const planType = resolveAuthFilePlanType(file);
                         const stats = resolveAuthFileStats(file, usageIndex);
                         const totalCalls = stats.success + stats.failure;
@@ -3051,11 +3034,6 @@ export function AuthFilesPage() {
                               </div>
 
                               <div className="min-w-0 flex flex-wrap items-center gap-2">
-                                  {channelName ? (
-                                    <span className="inline-flex shrink-0 items-center rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-700 dark:bg-white/10 dark:text-white/70">
-                                      {channelName}
-                                    </span>
-                                  ) : null}
                                   <span
                                     className={[
                                       "inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[10px] font-semibold",

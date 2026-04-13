@@ -234,7 +234,7 @@ describe("AuthFilesPage files table", () => {
     expect(screen.queryByText("Code: 5h")).not.toBeInTheDocument();
   });
 
-  test("keeps file name visible, shows channel name separately, and sorts by channel name", async () => {
+  test("uses channel name as display name and sorts by channel name", async () => {
     const now = Date.now();
     mocks.list.mockImplementation(async () => ({
       files: [
@@ -285,17 +285,18 @@ describe("AuthFilesPage files table", () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByText("codex-prod.json")).toBeInTheDocument();
-    expect(screen.getAllByText("Alpha Channel").length).toBeGreaterThan(0);
+    expect(await screen.findByText("Alpha Channel")).toBeInTheDocument();
     expect(screen.getAllByText("Beta Channel").length).toBeGreaterThan(0);
+    expect(screen.queryByText("z-last.json")).not.toBeInTheDocument();
+    expect(screen.queryByText("codex-prod.json")).not.toBeInTheDocument();
     expect(
       screen.getAllByText((_, node) => node?.textContent?.includes("Plan Plus") ?? false).length,
     ).toBeGreaterThan(0);
     expect(screen.getByText("9 calls")).toBeInTheDocument();
 
     const cards = screen.getByTestId("auth-files-cards");
-    expect(cards.textContent?.indexOf("z-last.json")).toBeLessThan(
-      cards.textContent?.indexOf("codex-prod.json") ?? Number.MAX_SAFE_INTEGER,
+    expect(cards.textContent?.indexOf("Alpha Channel")).toBeLessThan(
+      cards.textContent?.indexOf("Beta Channel") ?? Number.MAX_SAFE_INTEGER,
     );
   });
 
