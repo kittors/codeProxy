@@ -1,32 +1,23 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Key, RefreshCw, Search } from "lucide-react";
+import { Key } from "lucide-react";
 import { useTheme } from "@/modules/ui/ThemeProvider";
 import { ThemeToggleButton } from "@/modules/ui/ThemeProvider";
 import { LanguageSelector } from "@/modules/ui/LanguageSelector";
 import { Reveal } from "@/modules/ui/Reveal";
-import { Tabs, TabsList, TabsTrigger } from "@/modules/ui/Tabs";
-import { createModelDistributionOption } from "@/modules/monitor/chart-options/model-distribution";
-import { createDailyTrendOption } from "@/modules/monitor/chart-options/daily-trend";
-import { CHART_COLOR_CLASSES } from "@/modules/monitor/monitor-constants";
 import type { TimeRange } from "@/modules/monitor/monitor-constants";
-import { formatCompact } from "@/modules/monitor/monitor-format";
-import { TimeRangeSelector } from "@/modules/monitor/MonitorPagePieces";
 import { LogContentModal } from "@/modules/monitor/LogContentModal";
 import { MANAGEMENT_API_PREFIX } from "@/lib/constants";
 import { detectApiBaseFromLocation } from "@/lib/connection";
-import type { ModelDistributionDatum, DailySeriesPoint } from "@/modules/monitor/chart-options/types";
 import { fetchAvailableModels, fetchPublicChartData, fetchPublicLogs } from "@/modules/apikey-lookup/api";
+import { LookupEmptyState } from "@/modules/apikey-lookup/components/LookupEmptyState";
+import { LookupResultsToolbar } from "@/modules/apikey-lookup/components/LookupResultsToolbar";
+import { LookupSearchSection } from "@/modules/apikey-lookup/components/LookupSearchSection";
 import { ModelsTabContent } from "@/modules/apikey-lookup/components/ModelsTabContent";
 import { buildLogColumns, PublicLogsSection } from "@/modules/apikey-lookup/components/PublicLogsSection";
 import { UsageTabSection } from "@/modules/apikey-lookup/components/UsageTabSection";
+import { useApiKeyLookupCharts } from "@/modules/apikey-lookup/hooks/useApiKeyLookupCharts";
 import type { ChartDataResponse, LogRow, PublicLogItem } from "@/modules/apikey-lookup/types";
-
-const DAILY_LEGEND_KEYS = {
-  input: "daily_input",
-  output: "daily_output",
-  requests: "daily_requests",
-} as const;
 
 const DEFAULT_PAGE_SIZE = 50;
 
@@ -57,11 +48,6 @@ function toLogRow(item: PublicLogItem): LogRow {
     cost: item.cost ?? 0,
     hasContent: item.has_content,
   };
-}
-
-function formatLocalDateLabel(dateStr: string): string {
-  const d = new Date(dateStr + "T00:00:00");
-  return `${d.getMonth() + 1}/${d.getDate()}`;
 }
 
 // ── Page Component ──────────────────────────────────────────────────────────
@@ -142,14 +128,6 @@ export function ApiKeyLookupPage() {
     total_cost: number;
   }>({ total: 0, success_rate: 0, total_tokens: 0, total_cost: 0 });
   const [modelOptions, setModelOptions] = useState<string[]>([]);
-
-  // ── Chart controls ──
-  const [modelMetric, setModelMetric] = useState<"requests" | "tokens">("requests");
-  const [dailyLegendSelected, setDailyLegendSelected] = useState<Record<string, boolean>>({
-    [DAILY_LEGEND_KEYS.input]: true,
-    [DAILY_LEGEND_KEYS.output]: true,
-    [DAILY_LEGEND_KEYS.requests]: true,
-  });
 
   const abortControllerRef = useRef<AbortController | null>(null);
   const fetchIdRef = useRef(0);
@@ -371,106 +349,24 @@ export function ApiKeyLookupPage() {
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ================================================================
-  //  Chart computations
-  // ================================================================
-
-  const chartStats = chartData?.stats;
-
-  const dailySeries: DailySeriesPoint[] = useMemo(() => {
-    if (!chartData?.daily_series) return [];
-    return chartData.daily_series.map((d) => ({
-      label: formatLocalDateLabel(d.date),
-      requests: d.requests,
-      inputTokens: d.input_tokens,
-      outputTokens: d.output_tokens,
-    }));
-  }, [chartData]);
-
-  const dailyTrendOption = useMemo(
-    () =>
-      createDailyTrendOption({
-        dailySeries,
-        dailyLegendSelected,
-        legendKeys: DAILY_LEGEND_KEYS,
-        labels: {
-          input: t("apikey_lookup.input_token"),
-          output: t("apikey_lookup.output_token"),
-          requests: t("apikey_lookup.requests"),
-          tokenAxis: t("apikey_lookup.token"),
-          requestAxis: t("apikey_lookup.requests"),
-        },
-        isDark,
-        compact,
-      }),
-    [compact, dailySeries, dailyLegendSelected, isDark, t],
-  );
-
-  const toggleDailyLegend = useCallback((key: string) => {
-    if (
-      !Object.values(DAILY_LEGEND_KEYS).includes(
-        key as (typeof DAILY_LEGEND_KEYS)[keyof typeof DAILY_LEGEND_KEYS],
-      )
-    ) {
-      return;
-    }
-    setDailyLegendSelected((prev) => ({ ...prev, [key]: !(prev[key] ?? true) }));
-  }, []);
-
-  const dailyLegendAvailability = useMemo(() => {
-    const pts = dailySeries.filter(
-      (i) => i.requests > 0 || i.inputTokens > 0 || i.outputTokens > 0,
-    );
-    const vis = pts.length > 0 ? pts : dailySeries;
-    return {
-      hasInput: vis.some((i) => i.inputTokens > 0),
-      hasOutput: vis.some((i) => i.outputTokens > 0),
-      hasRequests: vis.some((i) => i.requests > 0),
-    };
-  }, [dailySeries]);
-
-  const modelDistributionData: ModelDistributionDatum[] = useMemo(() => {
-    if (!chartData?.model_distribution) return [];
-    const sorted = [...chartData.model_distribution].sort((a, b) => {
-      const av = modelMetric === "requests" ? a.requests : a.tokens;
-      const bv = modelMetric === "requests" ? b.requests : b.tokens;
-      return bv - av || a.model.localeCompare(b.model);
-    });
-    const top = sorted.slice(0, 10);
-    const otherValue = sorted
-      .slice(10)
-      .reduce((acc, item) => acc + (modelMetric === "requests" ? item.requests : item.tokens), 0);
-    const data = top.map((item) => ({
-      name: item.model,
-      value: modelMetric === "requests" ? item.requests : item.tokens,
-    }));
-    if (otherValue > 0) data.push({ name: t("common.other"), value: otherValue });
-    return data;
-  }, [chartData, modelMetric, t]);
-
-  const modelDistributionOption = useMemo(
-    () => createModelDistributionOption({ isDark, data: modelDistributionData }),
-    [isDark, modelDistributionData],
-  );
-
-  const modelDistributionLegend = useMemo(() => {
-    const total = modelDistributionData.reduce(
-      (acc, item) => acc + (Number.isFinite(item.value) ? item.value : 0),
-      0,
-    );
-    return modelDistributionData.map((item, index) => {
-      const colorClass =
-        index < CHART_COLOR_CLASSES.length ? CHART_COLOR_CLASSES[index] : "bg-slate-400";
-      const value = Number(item.value ?? 0);
-      const percent = total > 0 ? (value / total) * 100 : 0;
-      return {
-        name: item.name,
-        valueLabel: formatCompact(value),
-        percentLabel: `${percent.toFixed(1)}%`,
-        colorClass,
-      };
-    });
-  }, [modelDistributionData]);
+  const {
+    chartStats,
+    modelMetric,
+    setModelMetric,
+    dailyLegendSelected,
+    dailySeries,
+    dailyTrendOption,
+    toggleDailyLegend,
+    dailyLegendAvailability,
+    modelDistributionData,
+    modelDistributionOption,
+    modelDistributionLegend,
+  } = useApiKeyLookupCharts({
+    chartData,
+    compact,
+    isDark,
+    t,
+  });
 
   // ── Model filter options for SearchableSelect ──
   const modelFilterOptions = useMemo(
@@ -513,46 +409,13 @@ export function ApiKeyLookupPage() {
       </header>
 
       <main className="mx-auto max-w-screen-xl space-y-5 px-4 py-6 sm:px-6">
-        {/* Search */}
-        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/70">
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4 sm:flex-row sm:items-end">
-            <div className="flex-1">
-              <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-white/80">
-                {t("apikey_lookup.api_key_label")}
-              </label>
-              <div className="relative">
-                <Search
-                  size={16}
-                  className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-white/40"
-                />
-                <input
-                  type="password"
-                  id="apikey-input"
-                  value={apiKeyInput}
-                  onChange={(e) => setApiKeyInput(e.target.value)}
-                  placeholder={t("apikey_lookup.placeholder")}
-                  autoComplete="off"
-                  spellCheck={false}
-                  className="h-10 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-white dark:placeholder:text-white/30"
-                />
-              </div>
-            </div>
-            <button
-              type="submit"
-              id="apikey-lookup-submit"
-              disabled={!apiKeyInput.trim() || loading}
-              className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-slate-900 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-neutral-950 dark:hover:bg-slate-200"
-            >
-              {loading && (
-                <span
-                  className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white motion-reduce:animate-none motion-safe:animate-spin dark:border-neutral-950/30 dark:border-t-neutral-950"
-                  aria-hidden="true"
-                />
-              )}
-              {t("apikey_lookup.query")}
-            </button>
-          </form>
-        </section>
+        <LookupSearchSection
+          t={t}
+          apiKeyInput={apiKeyInput}
+          setApiKeyInput={setApiKeyInput}
+          handleSubmit={handleSubmit}
+          loading={loading}
+        />
 
         {/* Error */}
         {error && (
@@ -564,38 +427,17 @@ export function ApiKeyLookupPage() {
         {/* Results */}
         {queriedKey && !error && (
           <>
-            {/* Tab + Time range + Refresh */}
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="flex flex-wrap items-center gap-3">
-                <Tabs
-                  value={activeTab}
-                  onValueChange={(v) => setActiveTab(v as "usage" | "logs" | "models")}
-                >
-                  <TabsList>
-                    <TabsTrigger value="usage">{t("apikey_lookup.usage_stats")}</TabsTrigger>
-                    <TabsTrigger value="logs">{t("apikey_lookup.request_logs")}</TabsTrigger>
-                    <TabsTrigger value="models">{t("apikey_lookup.available_models")}</TabsTrigger>
-                  </TabsList>
-                </Tabs>
-                {activeTab !== "models" && (
-                  <TimeRangeSelector value={timeRange} onChange={setTimeRange} />
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={handleRefresh}
-                  disabled={loading || chartLoading || modelsLoading}
-                  className="inline-flex h-[34px] items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 text-xs font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:opacity-50 dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-white/80 dark:hover:bg-white/10"
-                >
-                  <RefreshCw
-                    size={13}
-                    className={loading || chartLoading || modelsLoading ? "animate-spin" : ""}
-                  />
-                  {t("common.refresh")}
-                </button>
-              </div>
-            </div>
+            <LookupResultsToolbar
+              t={t}
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
+              timeRange={timeRange}
+              setTimeRange={setTimeRange}
+              handleRefresh={handleRefresh}
+              loading={loading}
+              chartLoading={chartLoading}
+              modelsLoading={modelsLoading}
+            />
 
             {activeTab === "usage" ? (
               <UsageTabSection
@@ -691,22 +533,7 @@ export function ApiKeyLookupPage() {
           }
         />
 
-        {/* Empty state */}
-        {!queriedKey && !error && (
-          <section className="rounded-2xl border border-dashed border-slate-200 bg-white px-6 py-10 sm:p-16 text-center shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
-            <div className="mx-auto flex max-w-sm flex-col items-center gap-4">
-              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100 dark:bg-white/10">
-                <Search size={28} className="text-slate-600 dark:text-white/70" />
-              </div>
-              <h3 className="text-base font-semibold text-slate-900 dark:text-white">
-                {t("apikey_lookup.empty_title")}
-              </h3>
-              <p className="text-sm text-slate-600 dark:text-white/65">
-                {t("apikey_lookup.empty_desc")}
-              </p>
-            </div>
-          </section>
-        )}
+        {!queriedKey && !error ? <LookupEmptyState t={t} /> : null}
       </main>
     </div>
   );
