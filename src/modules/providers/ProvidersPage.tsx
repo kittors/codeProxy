@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import { useCallback, useEffect, useState, useTransition } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Bot, Database, FileKey, Globe, RefreshCw } from "lucide-react";
@@ -29,6 +29,7 @@ import { ProviderKeyModal } from "@/modules/providers/components/ProviderKeyModa
 import { keyValueEntriesToRecord } from "@/modules/providers/KeyValueInputList";
 import { createEmptyModelEntry } from "@/modules/providers/ModelInputList";
 import { ProviderKeyListCard } from "@/modules/providers/ProviderKeyListCard";
+import { useProviderKeyEditor } from "@/modules/providers/hooks/useProviderKeyEditor";
 import { useProviderLatency } from "@/modules/providers/hooks/useProviderLatency";
 import { useProviderUsageSummary } from "@/modules/providers/hooks/useProviderUsageSummary";
 import {
@@ -38,20 +39,13 @@ import {
 import {
   buildModelsEndpoint,
   buildOpenAIDraft,
-  buildProviderKeyDraft,
   commitModelEntries,
-  hasDisableAllModelsRule,
   maskApiKey,
   normalizeDiscoveredModels,
-  excludedModelsFromText,
   readBool,
   readString,
-  stripDisableAllModelsRule,
-  withDisableAllModelsRule,
-  withoutDisableAllModelsRule,
   type AmpMappingEntry,
   type OpenAIDraft,
-  type ProviderKeyDraft,
 } from "@/modules/providers/providers-helpers";
 
 export function ProvidersPage() {
@@ -81,14 +75,6 @@ export function ProvidersPage() {
   const [ampForceMappings, setAmpForceMappings] = useState(false);
   const [ampMappings, setAmpMappings] = useState<AmpMappingEntry[]>([]);
 
-  const [editKeyOpen, setEditKeyOpen] = useState(false);
-  const [editKeyType, setEditKeyType] = useState<"gemini" | "claude" | "codex" | "vertex">(
-    "gemini",
-  );
-  const [editKeyIndex, setEditKeyIndex] = useState<number | null>(null);
-  const [keyDraft, setKeyDraft] = useState<ProviderKeyDraft>(() => buildProviderKeyDraft(null));
-  const [keyDraftError, setKeyDraftError] = useState<string | null>(null);
-
   const [editOpenAIOpen, setEditOpenAIOpen] = useState(false);
   const [editOpenAIIndex, setEditOpenAIIndex] = useState<number | null>(null);
   const [openaiDraft, setOpenaiDraft] = useState<OpenAIDraft>(() => buildOpenAIDraft(null));
@@ -102,15 +88,6 @@ export function ProvidersPage() {
     | { type: "deleteKey"; keyType: "gemini" | "claude" | "codex" | "vertex"; index: number }
     | { type: "deleteOpenAI"; index: number }
   >(null);
-
-  const editKeyTitle =
-    editKeyType === "gemini"
-      ? "Gemini"
-      : editKeyType === "claude"
-        ? "Claude"
-        : editKeyType === "codex"
-          ? "Codex"
-          : "Vertex";
 
   // 按 Tab 加载数据，切换 Tab 时只请求当前 Tab 的数据
   const refreshTab = useCallback(
@@ -218,12 +195,43 @@ export function ProvidersPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const closeKeyEditor = useCallback(() => {
-    setEditKeyOpen(false);
+  const handleKeyEditorRouteClose = useCallback(() => {
     if (location.pathname !== "/ai-providers") {
       navigate("/ai-providers", { replace: true, viewTransition: true });
     }
   }, [location.pathname, navigate]);
+
+  const {
+    editKeyOpen,
+    editKeyType,
+    editKeyIndex,
+    editKeyTitle,
+    keyDraft,
+    setKeyDraft,
+    keyDraftError,
+    closeKeyEditor,
+    openKeyEditor,
+    saveKeyDraft,
+    deleteKey,
+    toggleKeyEnabled,
+    editKeyEnabled,
+    editKeyEnabledToggle,
+    editKeyExcludedCount,
+    editKeyHeaderCount,
+    editKeyModelCount,
+  } = useProviderKeyEditor({
+    geminiKeys,
+    claudeKeys,
+    codexKeys,
+    vertexKeys,
+    setGeminiKeys,
+    setClaudeKeys,
+    setCodexKeys,
+    setVertexKeys,
+    refreshAll,
+    startRefreshTransition: startTransition,
+    afterClose: handleKeyEditorRouteClose,
+  });
 
   const closeOpenAIEditor = useCallback(() => {
     setEditOpenAIOpen(false);
@@ -231,203 +239,6 @@ export function ProvidersPage() {
       navigate("/ai-providers", { replace: true, viewTransition: true });
     }
   }, [location.pathname, navigate]);
-
-  const openKeyEditor = useCallback(
-    (type: "gemini" | "claude" | "codex" | "vertex", index: number | null) => {
-      const list =
-        type === "gemini"
-          ? geminiKeys
-          : type === "claude"
-            ? claudeKeys
-            : type === "codex"
-              ? codexKeys
-              : vertexKeys;
-      const current = index === null ? null : (list[index] ?? null);
-      setEditKeyType(type);
-      setEditKeyIndex(index);
-      setKeyDraft(buildProviderKeyDraft(current));
-      setKeyDraftError(null);
-      setEditKeyOpen(true);
-    },
-    [claudeKeys, codexKeys, geminiKeys, vertexKeys],
-  );
-
-  const commitKeyDraft = useCallback((): ProviderSimpleConfig | null => {
-    const name = keyDraft.name.trim();
-    if (!name) {
-      setKeyDraftError(t("providers.channel_name_error"));
-      return null;
-    }
-
-    const apiKey = keyDraft.apiKey.trim();
-    if (!apiKey) {
-      setKeyDraftError(t("providers.api_key_error"));
-      return null;
-    }
-
-    const headers = keyValueEntriesToRecord(keyDraft.headersEntries);
-
-    const excludedModels = keyDraft.excludedModelsText.trim()
-      ? excludedModelsFromText(keyDraft.excludedModelsText)
-      : undefined;
-
-    const requireAlias = editKeyType === "vertex";
-    const modelCommit = commitModelEntries(keyDraft.modelEntries, { requireAlias });
-    if (modelCommit.error) {
-      setKeyDraftError(requireAlias ? `Vertex: ${modelCommit.error}` : modelCommit.error);
-      return null;
-    }
-
-    const result: ProviderSimpleConfig = {
-      apiKey,
-      name,
-      ...(keyDraft.prefix.trim() ? { prefix: keyDraft.prefix.trim() } : {}),
-      ...(keyDraft.baseUrl.trim() ? { baseUrl: keyDraft.baseUrl.trim() } : {}),
-      ...(keyDraft.proxyUrl.trim() ? { proxyUrl: keyDraft.proxyUrl.trim() } : {}),
-      ...(headers ? { headers } : {}),
-      ...(excludedModels ? { excludedModels } : {}),
-      ...(modelCommit.models ? { models: modelCommit.models } : {}),
-      ...(editKeyType === "claude" && keyDraft.skipAnthropicProcessing
-        ? { skipAnthropicProcessing: true }
-        : {}),
-    };
-
-    setKeyDraftError(null);
-    return result;
-  }, [editKeyType, keyDraft]);
-
-  const saveKeyDraft = useCallback(async () => {
-    const value = commitKeyDraft();
-    if (!value) return;
-
-    const type = editKeyType;
-    const index = editKeyIndex;
-    const apply = (list: ProviderSimpleConfig[]) => {
-      if (index === null) return [...list, value];
-      return list.map((item, i) => (i === index ? value : item));
-    };
-
-    try {
-      if (type === "gemini") {
-        const next = apply(geminiKeys);
-        setGeminiKeys(next);
-        await providersApi.saveGeminiKeys(next);
-      } else if (type === "claude") {
-        const next = apply(claudeKeys);
-        setClaudeKeys(next);
-        await providersApi.saveClaudeConfigs(next);
-      } else if (type === "codex") {
-        const next = apply(codexKeys);
-        setCodexKeys(next);
-        await providersApi.saveCodexConfigs(next);
-      } else {
-        const next = apply(vertexKeys);
-        setVertexKeys(next);
-        await providersApi.saveVertexConfigs(next);
-      }
-      notify({ type: "success", message: t("providers.saved") });
-      closeKeyEditor();
-      startTransition(() => void refreshAll());
-    } catch (err: unknown) {
-      notify({
-        type: "error",
-        message: err instanceof Error ? err.message : t("providers.save_failed"),
-      });
-    }
-  }, [
-    claudeKeys,
-    closeKeyEditor,
-    codexKeys,
-    commitKeyDraft,
-    editKeyIndex,
-    editKeyType,
-    geminiKeys,
-    notify,
-    refreshAll,
-    startTransition,
-    vertexKeys,
-  ]);
-
-  const deleteKey = useCallback(
-    async (type: "gemini" | "claude" | "codex" | "vertex", index: number) => {
-      const list =
-        type === "gemini"
-          ? geminiKeys
-          : type === "claude"
-            ? claudeKeys
-            : type === "codex"
-              ? codexKeys
-              : vertexKeys;
-      const entry = list[index];
-      if (!entry) return;
-
-      try {
-        if (type === "gemini") {
-          await providersApi.deleteGeminiKey(entry.apiKey);
-          setGeminiKeys((prev) => prev.filter((_, i) => i !== index));
-        } else if (type === "claude") {
-          await providersApi.deleteClaudeConfig(entry.apiKey);
-          setClaudeKeys((prev) => prev.filter((_, i) => i !== index));
-        } else if (type === "codex") {
-          await providersApi.deleteCodexConfig(entry.apiKey);
-          setCodexKeys((prev) => prev.filter((_, i) => i !== index));
-        } else {
-          await providersApi.deleteVertexConfig(entry.apiKey);
-          setVertexKeys((prev) => prev.filter((_, i) => i !== index));
-        }
-        notify({ type: "success", message: t("providers.deleted") });
-      } catch (err: unknown) {
-        notify({
-          type: "error",
-          message: err instanceof Error ? err.message : t("providers.delete_failed"),
-        });
-      }
-    },
-    [claudeKeys, codexKeys, geminiKeys, notify, vertexKeys],
-  );
-
-  const toggleKeyEnabled = useCallback(
-    async (type: "gemini" | "claude" | "codex", index: number, enabled: boolean) => {
-      const list = type === "gemini" ? geminiKeys : type === "claude" ? claudeKeys : codexKeys;
-      const current = list[index];
-      if (!current) return;
-      const prev = list;
-
-      const nextExcluded = enabled
-        ? withoutDisableAllModelsRule(current.excludedModels)
-        : withDisableAllModelsRule(current.excludedModels);
-
-      const nextItem: ProviderSimpleConfig = { ...current, excludedModels: nextExcluded };
-      const nextList = prev.map((item, i) => (i === index ? nextItem : item));
-
-      try {
-        if (type === "gemini") {
-          setGeminiKeys(nextList);
-          await providersApi.saveGeminiKeys(nextList);
-        } else if (type === "claude") {
-          setClaudeKeys(nextList);
-          await providersApi.saveClaudeConfigs(nextList);
-        } else {
-          setCodexKeys(nextList);
-          await providersApi.saveCodexConfigs(nextList);
-        }
-        notify({
-          type: "success",
-          message: enabled ? t("providers.toggle_enabled") : t("providers.toggle_disabled"),
-        });
-        startTransition(() => void refreshAll());
-      } catch (err: unknown) {
-        if (type === "gemini") setGeminiKeys(prev);
-        else if (type === "claude") setClaudeKeys(prev);
-        else setCodexKeys(prev);
-        notify({
-          type: "error",
-          message: err instanceof Error ? err.message : t("providers.update_failed"),
-        });
-      }
-    },
-    [claudeKeys, codexKeys, geminiKeys, notify, refreshAll, startTransition],
-  );
 
   const openOpenAIEditor = useCallback(
     (index: number | null) => {
@@ -719,35 +530,6 @@ export function ProvidersPage() {
     },
     [notify],
   );
-
-  const editKeyEnabled = useMemo(() => {
-    const list = excludedModelsFromText(keyDraft.excludedModelsText);
-    return !hasDisableAllModelsRule(list);
-  }, [keyDraft.excludedModelsText]);
-
-  const editKeyEnabledToggle = useCallback(
-    (enabled: boolean) => {
-      const current = excludedModelsFromText(keyDraft.excludedModelsText);
-      const next = enabled
-        ? withoutDisableAllModelsRule(current)
-        : withDisableAllModelsRule(current);
-      setKeyDraft((prev) => ({ ...prev, excludedModelsText: next.join("\n") }));
-    },
-    [keyDraft.excludedModelsText],
-  );
-
-  const editKeyExcludedCount = useMemo(() => {
-    const list = excludedModelsFromText(keyDraft.excludedModelsText);
-    return stripDisableAllModelsRule(list).length;
-  }, [keyDraft.excludedModelsText]);
-
-  const editKeyHeaderCount = useMemo(() => {
-    return keyDraft.headersEntries.filter((e) => e.key.trim() && e.value.trim()).length;
-  }, [keyDraft.headersEntries]);
-
-  const editKeyModelCount = useMemo(() => {
-    return keyDraft.modelEntries.filter((e) => e.name.trim()).length;
-  }, [keyDraft.modelEntries]);
 
   return (
     <div className="space-y-6">
