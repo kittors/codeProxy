@@ -1,6 +1,6 @@
 import type { AuthFileItem, OAuthModelAliasEntry } from "@/lib/http/types";
 import { normalizeUsageSourceId, type KeyStatBucket } from "@/modules/providers/provider-usage";
-import { clampPercent, type QuotaItem, type QuotaState } from "@/modules/quota/quota-helpers";
+import type { QuotaItem } from "@/modules/quota/quota-helpers";
 import { resolveCodexPlanType } from "@/utils/quota/resolvers";
 import type { StatusBarData, StatusBlockDetail, StatusBlockState } from "@/utils/usage";
 
