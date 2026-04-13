@@ -19,6 +19,7 @@ const mocks = vi.hoisted(() => ({
     ],
   })),
   getEntityStats: vi.fn(async () => ({ source: [], auth_index: [] })),
+  getUsageLogs: vi.fn(async () => ({ items: [], total: 0, page: 1, size: 200 })),
   fetchQuota: vi.fn(() => new Promise(() => {})),
   deleteFile: vi.fn(async () => ({})),
   reconcile: vi.fn(async () => ({})),
@@ -30,7 +31,11 @@ vi.mock("@/lib/http/apis", async (importOriginal) => {
     ...mod,
     authFilesApi: { ...mod.authFilesApi, list: mocks.list, deleteFile: mocks.deleteFile },
     quotaApi: { ...mod.quotaApi, reconcile: mocks.reconcile },
-    usageApi: { ...mod.usageApi, getEntityStats: mocks.getEntityStats },
+    usageApi: {
+      ...mod.usageApi,
+      getEntityStats: mocks.getEntityStats,
+      getUsageLogs: mocks.getUsageLogs,
+    },
   };
 });
 
@@ -61,6 +66,8 @@ describe("AuthFilesPage files table", () => {
     }));
     mocks.getEntityStats.mockReset();
     mocks.getEntityStats.mockImplementation(async () => ({ source: [], auth_index: [] }));
+    mocks.getUsageLogs.mockReset();
+    mocks.getUsageLogs.mockImplementation(async () => ({ items: [], total: 0, page: 1, size: 200 }));
     mocks.fetchQuota.mockReset();
     mocks.fetchQuota.mockImplementation(() => new Promise(() => {}));
     mocks.deleteFile.mockReset();
@@ -587,12 +594,7 @@ describe("AuthFilesPage files table", () => {
 
     expect(await screen.findByText("Channel Group Overview")).toBeInTheDocument();
     expect(screen.getAllByText("Current results").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Total calls").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("9").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Avg 5h").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("12%").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Avg weekly").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("34%").length).toBeGreaterThan(0);
+    expect(screen.getByText("chart")).toBeInTheDocument();
   });
 
   test("runtime-only cards do not render a selection checkbox", async () => {

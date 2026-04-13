@@ -17,6 +17,7 @@ import {
   Zap,
 } from "lucide-react";
 import { authFilesApi, quotaApi, usageApi } from "@/lib/http/apis";
+import type { UsageLogItem } from "@/lib/http/apis/usage";
 import { formatLatency } from "@/modules/providers/hooks/useProviderLatency";
 import type { AuthFileItem, OAuthModelAliasEntry } from "@/lib/http/types";
 import { Button } from "@/modules/ui/Button";
@@ -39,6 +40,7 @@ import { useInterval } from "@/hooks/useInterval";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { clampPercent, type QuotaItem, type QuotaState } from "@/modules/quota/quota-helpers";
 import { resolveCodexPlanType } from "@/utils/quota/resolvers";
+import { RequestLogsTimeRangeSelector } from "@/modules/monitor/requestLogsShared";
 
 type AuthFileModelItem = { id: string; display_name?: string; type?: string; owned_by?: string };
 type OAuthDialogTab =
@@ -221,6 +223,26 @@ const resolveProviderLabel = (providerKey: string): string => {
   const normalized = normalizeProviderKey(providerKey);
   if (!normalized || normalized === "all") return "All";
   return normalized.replace(/(^|-)([a-z])/g, (_, sep: string, ch: string) => `${sep}${ch.toUpperCase()}`);
+};
+
+const formatTrendDateKey = (date: Date): string => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+};
+
+const buildLast7DayAxis = () => {
+  const result: { date: string; label: string }[] = [];
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  for (let i = 6; i >= 0; i -= 1) {
+    const date = new Date(today);
+    date.setDate(today.getDate() - i);
+    const key = formatTrendDateKey(date);
+    result.push({ date: key, label: key.slice(5) });
+  }
+  return result;
 };
 
 const readAuthFileChannelName = (file: AuthFileItem): string => {
@@ -452,6 +474,13 @@ type AuthFilesGroupOverviewRow = {
   hasQuota: boolean;
 };
 
+type AuthFilesGroupTrendPoint = {
+  date: string;
+  label: string;
+  calls: number;
+  weeklyPercent: number | null;
+};
+
 type ChannelEditorState = {
   open: boolean;
   fileName: string;
@@ -588,6 +617,9 @@ export function AuthFilesPage() {
   const [groupOverviewOpen, setGroupOverviewOpen] = useState(false);
   const [groupOverviewTab, setGroupOverviewTab] = useState("all");
   const [groupOverviewLoading, setGroupOverviewLoading] = useState(false);
+  const [groupTrendLoading, setGroupTrendLoading] = useState(false);
+  const [groupTrendPoints, setGroupTrendPoints] = useState<AuthFilesGroupTrendPoint[]>([]);
+  const groupTrendRequestRef = useRef(0);
   const quotaAutoRefreshMs = useMemo(
     () => normalizeQuotaAutoRefreshMs(quotaAutoRefreshMsRaw),
     [quotaAutoRefreshMsRaw],
@@ -1449,20 +1481,18 @@ export function AuthFilesPage() {
   }, [groupOverviewTab, t]);
 
   const groupOverviewChartOption = useMemo<Record<string, unknown>>(() => {
-    const rows = activeGroupRows;
-    const names = rows.map((row) => row.name);
-    const callValues = rows.map((row) => row.totalCalls);
-    const fiveHourValues = rows.map((row) => row.averageFiveHour ?? null);
-    const weeklyValues = rows.map((row) => row.averageWeekly ?? null);
+    const labels = groupTrendPoints.map((point) => point.label);
+    const calls = groupTrendPoints.map((point) => point.calls);
+    const weekly = groupTrendPoints.map((point) => point.weeklyPercent);
 
     return {
       backgroundColor: "transparent",
       animationDuration: 420,
       animationDurationUpdate: 280,
-      grid: { left: 20, right: 20, top: 24, bottom: 56, containLabel: true },
+      grid: { left: 20, right: 20, top: 20, bottom: 40, containLabel: true },
       tooltip: {
         trigger: "axis",
-        axisPointer: { type: "shadow" },
+        axisPointer: { type: "line" },
         renderMode: "html",
         appendToBody: true,
         confine: true,
@@ -1477,13 +1507,10 @@ export function AuthFilesPage() {
       },
       xAxis: {
         type: "category",
-        data: names,
+        data: labels,
         axisTick: { show: false },
         axisLabel: {
           interval: 0,
-          hideOverlap: true,
-          width: 120,
-          overflow: "truncate",
           color: "#64748b",
           fontSize: 11,
         },
@@ -1513,20 +1540,9 @@ export function AuthFilesPage() {
         {
           name: t("auth_files.group_overview_total_calls_label"),
           type: "bar",
-          barMaxWidth: 28,
+          barMaxWidth: 26,
           itemStyle: { color: "rgba(59,130,246,0.88)", borderRadius: [4, 4, 0, 0] },
-          data: callValues,
-        },
-        {
-          name: t("auth_files.group_overview_avg_5h_label"),
-          type: "line",
-          yAxisIndex: 1,
-          smooth: true,
-          symbol: "circle",
-          symbolSize: 7,
-          lineStyle: { width: 3, color: "#8b5cf6" },
-          itemStyle: { color: "#8b5cf6" },
-          data: fiveHourValues,
+          data: calls,
         },
         {
           name: t("auth_files.group_overview_avg_week_label"),
@@ -1537,11 +1553,12 @@ export function AuthFilesPage() {
           symbolSize: 7,
           lineStyle: { width: 3, color: "#10b981" },
           itemStyle: { color: "#10b981" },
-          data: weeklyValues,
+          connectNulls: false,
+          data: weekly,
         },
       ],
     };
-  }, [activeGroupRows, t]);
+  }, [groupTrendPoints, t]);
 
   const refreshGroupOverview = useCallback(async (targetGroup = groupOverviewTab) => {
     if (tab !== "files") return;
@@ -1558,6 +1575,66 @@ export function AuthFilesPage() {
     }
   }, [collectQuotaFetchTargets, filteredFiles, groupOverviewTab, runQuotaRefreshBatch, tab]);
 
+  const refreshGroupTrend = useCallback(async (targetGroup = groupOverviewTab) => {
+    const requestId = Date.now();
+    groupTrendRequestRef.current = requestId;
+    setGroupTrendLoading(true);
+
+    try {
+      const scopedFiles =
+        targetGroup === "all"
+          ? filteredFiles
+          : filteredFiles.filter((file) => normalizeProviderKey(resolveFileType(file)) === targetGroup);
+
+      const axis = buildLast7DayAxis();
+      const callsByDay = new Map(axis.map((item) => [item.date, 0]));
+      const today = axis[axis.length - 1]?.date;
+
+      const channelNames = Array.from(
+        new Set(scopedFiles.map((file) => readAuthFileChannelName(file)).filter(Boolean)),
+      );
+
+      let page = 1;
+      let total = Number.POSITIVE_INFINITY;
+      const size = 200;
+      while ((page - 1) * size < total) {
+        const resp = await usageApi.getUsageLogs({
+          page,
+          size,
+          days: 7,
+          channel: channelNames.length > 0 ? channelNames.join(",") : undefined,
+        });
+        total = resp.total ?? 0;
+        const items = Array.isArray(resp.items) ? (resp.items as UsageLogItem[]) : [];
+        items.forEach((item) => {
+          const dateKey = String(item.timestamp || "").slice(0, 10);
+          if (callsByDay.has(dateKey)) {
+            callsByDay.set(dateKey, (callsByDay.get(dateKey) ?? 0) + 1);
+          }
+        });
+        if (items.length === 0) break;
+        page += 1;
+      }
+
+      const weeklyPoint =
+        (groupOverviewByTab[targetGroup] ?? groupOverviewByTab.all)?.averageWeekly ?? null;
+      const points: AuthFilesGroupTrendPoint[] = axis.map((item) => ({
+        date: item.date,
+        label: item.label,
+        calls: callsByDay.get(item.date) ?? 0,
+        weeklyPercent: item.date === today ? weeklyPoint : null,
+      }));
+
+      if (groupTrendRequestRef.current === requestId) {
+        setGroupTrendPoints(points);
+      }
+    } finally {
+      if (groupTrendRequestRef.current === requestId) {
+        setGroupTrendLoading(false);
+      }
+    }
+  }, [filteredFiles, groupOverviewByTab, groupOverviewTab]);
+
   const openGroupOverview = useCallback(() => {
     const normalizedFilter = normalizeProviderKey(filter);
     const nextTab =
@@ -1567,7 +1644,13 @@ export function AuthFilesPage() {
     setGroupOverviewTab(nextTab);
     setGroupOverviewOpen(true);
     void refreshGroupOverview(nextTab);
-  }, [filter, providerOptions, refreshGroupOverview]);
+    void refreshGroupTrend(nextTab);
+  }, [filter, providerOptions, refreshGroupOverview, refreshGroupTrend]);
+
+  useEffect(() => {
+    if (!groupOverviewOpen) return;
+    void refreshGroupTrend(groupOverviewTab);
+  }, [groupOverviewOpen, groupOverviewTab, refreshGroupTrend]);
 
   const openDetail = useCallback(
     async (file: AuthFileItem) => {
@@ -3931,15 +4014,24 @@ export function AuthFilesPage() {
                 ))}
               </TabsList>
             </Tabs>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => void refreshGroupOverview(groupOverviewTab)}
-              disabled={groupOverviewLoading}
-            >
-              <RefreshCw size={14} className={groupOverviewLoading ? "animate-spin" : ""} />
-              {t("auth_files.refresh")}
-            </Button>
+            <div className="flex flex-wrap items-center gap-2">
+              <RequestLogsTimeRangeSelector value={7} onChange={() => {}} />
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  void refreshGroupOverview(groupOverviewTab);
+                  void refreshGroupTrend(groupOverviewTab);
+                }}
+                disabled={groupOverviewLoading || groupTrendLoading}
+              >
+                <RefreshCw
+                  size={14}
+                  className={groupOverviewLoading || groupTrendLoading ? "animate-spin" : ""}
+                />
+                {t("auth_files.refresh")}
+              </Button>
+            </div>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -3967,23 +4059,12 @@ export function AuthFilesPage() {
             </div>
             <div className="rounded-2xl border border-slate-200 bg-white/70 px-4 py-3 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
               <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-white/45">
-                {t("auth_files.group_overview_avg_5h_label")}
-              </p>
-              <p className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">
-                {formatAveragePercent(activeGroupOverview.averageFiveHour)}
-              </p>
-              <p className="mt-1 text-xs text-slate-500 dark:text-white/45">
                 {t("auth_files.group_overview_sample_count", {
                   count: activeGroupOverview.quotaSampleCount,
                 })}
               </p>
-            </div>
-            <div className="rounded-2xl border border-slate-200 bg-white/70 px-4 py-3 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-white/45">
-                {t("auth_files.group_overview_avg_week_label")}
-              </p>
               <p className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">
-                {formatAveragePercent(activeGroupOverview.averageWeekly)}
+                {activeGroupOverview.quotaSampleCount}
               </p>
               <p className="mt-1 text-xs text-slate-500 dark:text-white/45">
                 {activeGroupOverview.quotaSampleCount > 0
@@ -3993,26 +4074,13 @@ export function AuthFilesPage() {
             </div>
           </div>
 
-          <div className="min-h-0 flex-1 overflow-hidden rounded-2xl border border-slate-200 bg-white/70 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
-            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-100 bg-white/90 px-4 py-3 backdrop-blur dark:border-neutral-800 dark:bg-neutral-950/85">
-              <div>
-                <p className="text-sm font-semibold text-slate-900 dark:text-white">
-                  {t("auth_files.group_overview_channels_title")}
-                </p>
-                <p className="mt-1 text-xs text-slate-500 dark:text-white/45">
-                  {t("auth_files.group_overview_channels_desc")}
-                </p>
-              </div>
-            </div>
-
+          <div className="min-h-0 flex-1">
             {activeGroupRows.length === 0 ? (
               <div className="px-4 py-12 text-center text-sm text-slate-500 dark:text-white/50">
                 {t("auth_files.group_overview_empty")}
               </div>
             ) : (
-              <div className="h-full px-4 py-4">
-                <EChart option={groupOverviewChartOption} className="h-full min-h-[320px]" />
-              </div>
+              <EChart option={groupOverviewChartOption} className="h-full min-h-[420px]" />
             )}
           </div>
         </div>
