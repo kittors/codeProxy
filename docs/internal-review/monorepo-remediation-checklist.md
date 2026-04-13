@@ -36,6 +36,7 @@
 - [ ] 将 `codeProxy/src/modules/api-keys/ApiKeysPage.tsx` 拆分为 key 表格、编辑弹窗、权限/限制选择器、日志快捷入口、配额展示 hooks，主页面文件降到 600 行以内。完成时间：待填写
 - [x] 将 `ApiKeysPage` 中创建/编辑共用表单与弹窗下沉到 `ApiKeyFormFields` / `ApiKeyFormModal`，减少页面主体的表单 UI 代码。完成时间：2026-04-13 22:18:18 +0800
 - [x] 将 `ApiKeysPage` 中 usage 明细弹窗 UI 下沉到 `ApiKeyUsageModal`，把筛选栏、日志表和分页视图从页面主体拆出。完成时间：2026-04-13 22:23:03 +0800
+- [x] 将 `ApiKeysPage` 中 usage 查询、筛选、分页、内容弹窗与错误详情状态机下沉到 `useApiKeyUsageView`，继续压缩页面主体中的日志查询编排。完成时间：2026-04-13 22:29:37 +0800
 - [ ] 将 `codeProxy/src/modules/config/ConfigPage.tsx` 和 `codeProxy/src/modules/config/visual/VisualConfigEditor.tsx` 拆分为 source editor、runtime panel、visual editor sections、保存流程 hooks。完成时间：待填写
 - [ ] 将 `codeProxy/src/modules/apikey-lookup/ApiKeyLookupPage.tsx` 拆分为公开查询表单、KPI、图表、请求日志表、数据加载 hooks。完成时间：待填写
 - [x] 将 `codeProxy/src/modules/monitor/LogContentModal.tsx` 拆分为内容加载 hook、Markdown/XML 渲染组件、复制导出组件、输入/输出 tab 状态。完成时间：2026-04-13 15:38:53 +0800
