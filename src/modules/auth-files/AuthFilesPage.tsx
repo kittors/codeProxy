@@ -23,17 +23,17 @@ import { Button } from "@/modules/ui/Button";
 import { ConfirmModal } from "@/modules/ui/ConfirmModal";
 import { EmptyState } from "@/modules/ui/EmptyState";
 import { TextInput } from "@/modules/ui/Input";
-import { Modal } from "@/modules/ui/Modal";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/modules/ui/Tabs";
 import { ToggleSwitch } from "@/modules/ui/ToggleSwitch";
 import { useToast } from "@/modules/ui/ToastProvider";
 import { HoverTooltip } from "@/modules/ui/Tooltip";
 import { Select } from "@/modules/ui/Select";
 import { VirtualTable, type VirtualTableColumn } from "@/modules/ui/VirtualTable";
-import { EChart } from "@/modules/ui/charts/EChart";
 import { ProviderStatusBar } from "@/modules/providers/ProviderStatusBar";
 import { OAuthLoginDialog } from "@/modules/oauth/OAuthLoginDialog";
 import { AuthFileDetailModal } from "@/modules/auth-files/components/AuthFileDetailModal";
+import { ImportModelsModal } from "@/modules/auth-files/components/ImportModelsModal";
+import { GroupOverviewModal } from "@/modules/auth-files/components/GroupOverviewModal";
 import { fetchQuota, resolveQuotaProvider, type QuotaProvider } from "@/modules/quota/quota-fetch";
 import { useInterval } from "@/hooks/useInterval";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
@@ -3191,86 +3191,19 @@ export function AuthFilesPage() {
         saveChannelEditor={saveChannelEditor}
       />
 
-      <Modal
+      <ImportModelsModal
         open={importOpen}
-        title={t("auth_files.import_title", { name: importChannel || "--" })}
-        description={t("auth_files.fetch_models_desc")}
-        onClose={() => setImportOpen(false)}
-        footer={
-          <div className="flex items-center gap-2">
-            <Button variant="secondary" onClick={() => setImportOpen(false)}>
-              {t("auth_files.cancel")}
-            </Button>
-            <Button
-              variant="primary"
-              onClick={applyImport}
-              disabled={importLoading || !importModels.length}
-            >
-              <ShieldCheck size={14} />
-              {t("auth_files.import_selected")}
-            </Button>
-          </div>
-        }
-      >
-        {importLoading ? (
-          <div className="text-sm text-slate-600 dark:text-white/65">
-            {t("common.loading_ellipsis")}
-          </div>
-        ) : importModels.length === 0 ? (
-          <EmptyState
-            title={t("common.no_model_def")}
-            description={t("auth_files_page.cannot_edit_desc")}
-          />
-        ) : (
-          <div className="space-y-3">
-            <TextInput
-              value={importSearch}
-              onChange={(e) => setImportSearch(e.currentTarget.value)}
-              placeholder={t("auth_files.search_models_placeholder")}
-              endAdornment={<Search size={16} className="text-slate-400" />}
-            />
-
-            <div className="rounded-2xl border border-slate-200 bg-white/70 p-3 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
-              <p className="text-xs text-slate-600 dark:text-white/65 tabular-nums">
-                {t("auth_files.models_selected", {
-                  models: importFilteredModels.length,
-                  selected: importSelected.size,
-                })}
-              </p>
-              <div className="mt-2 max-h-72 overflow-y-auto space-y-1">
-                {importFilteredModels.map((model) => {
-                  const checked = importSelected.has(model.id);
-                  return (
-                    <label
-                      key={model.id}
-                      className={
-                        checked
-                          ? "flex cursor-pointer items-center gap-2 rounded-xl bg-slate-900 px-2 py-1 text-xs font-mono text-white dark:bg-white dark:text-neutral-950"
-                          : "flex cursor-pointer items-center gap-2 rounded-xl px-2 py-1 text-xs font-mono hover:bg-slate-50 dark:hover:bg-white/5"
-                      }
-                    >
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={() => {
-                          setImportSelected((prev) => {
-                            const next = new Set(prev);
-                            if (next.has(model.id)) next.delete(model.id);
-                            else next.add(model.id);
-                            return next;
-                          });
-                        }}
-                        className="h-4 w-4 rounded border-slate-300 text-slate-900 focus-visible:ring-2 focus-visible:ring-slate-400/35 dark:border-neutral-700 dark:bg-neutral-950 dark:text-white dark:focus-visible:ring-white/15"
-                      />
-                      <span className="truncate">{model.id}</span>
-                    </label>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        )}
-      </Modal>
+        importChannel={importChannel}
+        importLoading={importLoading}
+        importModels={importModels}
+        importFilteredModels={importFilteredModels}
+        importSearch={importSearch}
+        setImportSearch={setImportSearch}
+        importSelected={importSelected}
+        setImportSelected={setImportSelected}
+        setImportOpen={setImportOpen}
+        applyImport={applyImport}
+      />
 
       <OAuthLoginDialog
         open={oauthDialogOpen}
@@ -3279,116 +3212,23 @@ export function AuthFilesPage() {
         onAuthorized={() => void loadAll()}
       />
 
-      <Modal
+      <GroupOverviewModal
         open={groupOverviewOpen}
         onClose={() => setGroupOverviewOpen(false)}
-        title={t("auth_files.group_overview_modal_title")}
-        description={t("auth_files.group_overview_modal_desc")}
-        maxWidth="max-w-5xl"
-        bodyHeightClassName="max-h-[68vh]"
-        footer={
-          <Button variant="secondary" onClick={() => setGroupOverviewOpen(false)}>
-            {t("auth_files.close")}
-          </Button>
-        }
-      >
-        <div className="flex h-full flex-col gap-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <Tabs value={groupOverviewTab} onValueChange={(value) => setGroupOverviewTab(value)}>
-              <TabsList>
-                {groupOverviewTabs.map((key) => (
-                  <TabsTrigger key={key} value={key}>
-                    {key === "all"
-                      ? t("auth_files.group_overview_current_results")
-                      : resolveProviderLabel(key)}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-            </Tabs>
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex h-9 items-center rounded-2xl border border-slate-200 bg-slate-50 px-3 text-sm font-medium text-slate-700 dark:border-neutral-800 dark:bg-neutral-900/60 dark:text-white/75">
-                {t("auth_files.group_overview_fixed_7_days")}
-              </span>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => {
-                  void refreshGroupOverview(groupOverviewTab);
-                  void refreshGroupTrend(groupOverviewTab);
-                }}
-                disabled={groupOverviewLoading || groupTrendLoading}
-              >
-                <RefreshCw
-                  size={14}
-                  className={groupOverviewLoading || groupTrendLoading ? "animate-spin" : ""}
-                />
-                {t("auth_files.refresh")}
-              </Button>
-            </div>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <div className="rounded-2xl border border-slate-200 bg-white/70 px-4 py-3 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-white/45">
-                {activeGroupTitle}
-              </p>
-              <p className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">
-                {activeGroupRows.length}
-              </p>
-              <p className="mt-1 text-xs text-slate-500 dark:text-white/45">
-                {t("auth_files.group_overview_file_count")}
-              </p>
-            </div>
-            <div className="rounded-2xl border border-slate-200 bg-white/70 px-4 py-3 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-white/45">
-                {t("auth_files.group_overview_total_calls_label")}
-              </p>
-              <p className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">
-                {activeGroupOverview.totalCalls.toLocaleString()}
-              </p>
-              <p className="mt-1 text-xs text-slate-500 dark:text-white/45">
-                {t("auth_files.group_overview_total_calls_help")}
-              </p>
-            </div>
-            <div className="rounded-2xl border border-slate-200 bg-white/70 px-4 py-3 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-white/45">
-                {t("auth_files.group_overview_avg_week_label")}
-              </p>
-              <p className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">
-                {formatAveragePercent(activeGroupOverview.averageWeekly)}
-              </p>
-              <p className="mt-1 text-xs text-slate-500 dark:text-white/45">
-                {t("auth_files.group_overview_avg_week_help")}
-              </p>
-            </div>
-            <div className="rounded-2xl border border-slate-200 bg-white/70 px-4 py-3 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-white/45">
-                {t("auth_files.group_overview_sample_count", {
-                  count: activeGroupOverview.quotaSampleCount,
-                })}
-              </p>
-              <p className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">
-                {activeGroupOverview.quotaSampleCount}
-              </p>
-              <p className="mt-1 text-xs text-slate-500 dark:text-white/45">
-                {activeGroupOverview.quotaSampleCount > 0
-                  ? t("auth_files.group_overview_quota_ready")
-                  : t("auth_files.group_overview_no_quota")}
-              </p>
-            </div>
-          </div>
-
-          <div className="min-h-0 flex-1">
-            {activeGroupRows.length === 0 ? (
-              <div className="px-4 py-12 text-center text-sm text-slate-500 dark:text-white/50">
-                {t("auth_files.group_overview_empty")}
-              </div>
-            ) : (
-              <EChart option={groupOverviewChartOption} className="h-[320px] sm:h-[360px]" />
-            )}
-          </div>
-        </div>
-      </Modal>
+        groupOverviewTab={groupOverviewTab}
+        setGroupOverviewTab={setGroupOverviewTab}
+        groupOverviewTabs={groupOverviewTabs}
+        resolveProviderLabel={resolveProviderLabel}
+        groupOverviewLoading={groupOverviewLoading}
+        groupTrendLoading={groupTrendLoading}
+        refreshGroupOverview={refreshGroupOverview}
+        refreshGroupTrend={refreshGroupTrend}
+        activeGroupTitle={activeGroupTitle}
+        activeGroupRows={activeGroupRows}
+        activeGroupOverview={activeGroupOverview}
+        formatAveragePercent={formatAveragePercent}
+        groupOverviewChartOption={groupOverviewChartOption}
+      />
 
       <ConfirmModal
         open={confirm !== null}
