@@ -242,6 +242,12 @@ const resolveAuthFileDisplayName = (file: AuthFileItem): string => {
   return String(file.name || "");
 };
 
+const resolveAuthFileSortKey = (file: AuthFileItem): string => {
+  const channelName = readAuthFileChannelName(file);
+  const fileName = String(file.name || "").trim();
+  return `${channelName || fileName}\u0000${fileName}`;
+};
+
 const resolveAuthFilePlanType = (file: AuthFileItem): string | null => resolveCodexPlanType(file);
 
 const isRuntimeOnlyAuthFile = (file: AuthFileItem): boolean => {
@@ -1123,7 +1129,7 @@ export function AuthFilesPage() {
           (file) => normalizeProviderKey(resolveFileType(file)) === normalizedFilter,
         );
     return [...scoped].sort((a, b) =>
-      resolveAuthFileDisplayName(a).localeCompare(resolveAuthFileDisplayName(b), "zh-Hans-CN"),
+      resolveAuthFileSortKey(a).localeCompare(resolveAuthFileSortKey(b), "zh-Hans-CN"),
     );
   }, [filter, searchFilteredFiles]);
 
@@ -2294,12 +2300,10 @@ export function AuthFilesPage() {
         label: t("auth_files.col_name"),
         width: "w-96",
         render: (file) => {
-          const displayTitle = resolveAuthFileDisplayName(file);
-
           return (
             <div className="min-w-0">
               <p className="truncate font-mono text-xs text-slate-900 dark:text-white">
-                {displayTitle}
+                {file.name || "--"}
               </p>
             </div>
           );
@@ -2965,7 +2969,8 @@ export function AuthFilesPage() {
                         const typeKey = resolveFileType(file);
                         const badgeClass =
                           TYPE_BADGE_CLASSES[typeKey] ?? TYPE_BADGE_CLASSES.unknown;
-                        const displayTitle = resolveAuthFileDisplayName(file);
+                        const displayTitle = String(file.name || "");
+                        const channelName = readAuthFileChannelName(file);
                         const planType = resolveAuthFilePlanType(file);
                         const stats = resolveAuthFileStats(file, usageIndex);
                         const totalCalls = stats.success + stats.failure;
@@ -3046,6 +3051,11 @@ export function AuthFilesPage() {
                               </div>
 
                               <div className="min-w-0 flex flex-wrap items-center gap-2">
+                                  {channelName ? (
+                                    <span className="inline-flex shrink-0 items-center rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-700 dark:bg-white/10 dark:text-white/70">
+                                      {channelName}
+                                    </span>
+                                  ) : null}
                                   <span
                                     className={[
                                       "inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[10px] font-semibold",

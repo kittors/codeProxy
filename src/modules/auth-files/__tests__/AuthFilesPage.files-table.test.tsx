@@ -234,13 +234,23 @@ describe("AuthFilesPage files table", () => {
     expect(screen.queryByText("Code: 5h")).not.toBeInTheDocument();
   });
 
-  test("prefers channel name over raw file name and shows plan plus calls", async () => {
+  test("keeps file name visible, shows channel name separately, and sorts by channel name", async () => {
     const now = Date.now();
     mocks.list.mockImplementation(async () => ({
       files: [
         {
+          name: "z-last.json",
+          label: "Alpha Channel",
+          account_type: "oauth",
+          type: "codex",
+          auth_index: "2",
+          size: 1024,
+          modified: now,
+          disabled: false,
+        },
+        {
           name: "codex-prod.json",
-          label: "Main Codex",
+          label: "Beta Channel",
           account_type: "oauth",
           type: "codex",
           plan_type: "plus",
@@ -257,6 +267,7 @@ describe("AuthFilesPage files table", () => {
           source: [],
           auth_index: [
             { entity_name: "1", requests: 9, failed: 2, avg_latency: 0, total_tokens: 0 },
+            { entity_name: "2", requests: 2, failed: 0, avg_latency: 0, total_tokens: 0 },
           ],
         }) as any,
     );
@@ -274,12 +285,18 @@ describe("AuthFilesPage files table", () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findAllByText("Main Codex")).not.toHaveLength(0);
-    expect(screen.queryByText("codex-prod.json")).not.toBeInTheDocument();
+    expect(await screen.findByText("codex-prod.json")).toBeInTheDocument();
+    expect(screen.getAllByText("Alpha Channel").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Beta Channel").length).toBeGreaterThan(0);
     expect(
       screen.getAllByText((_, node) => node?.textContent?.includes("Plan Plus") ?? false).length,
     ).toBeGreaterThan(0);
     expect(screen.getByText("9 calls")).toBeInTheDocument();
+
+    const cards = screen.getByTestId("auth-files-cards");
+    expect(cards.textContent?.indexOf("z-last.json")).toBeLessThan(
+      cards.textContent?.indexOf("codex-prod.json") ?? Number.MAX_SAFE_INTEGER,
+    );
   });
 
   test("cards view shows codex quota bars by stable label keys (no quota tooltip)", async () => {
