@@ -31,6 +31,7 @@
 - [x] 将 `ProvidersPage` 中 OpenAI provider 列表卡片区块抽为 `OpenAIProvidersTab`，把 OpenAI 展示层从页面主体拆出。完成时间：2026-04-13 20:02:16 +0800
 - [x] 将 `ProvidersPage` 中 usage / status bar 相关统计派生下沉到 `useProviderUsageSummary`，减少页面主体中的 provider 健康度推导逻辑。完成时间：2026-04-13 20:06:02 +0800
 - [x] 将 `ProvidersPage` 中 provider key 编辑状态、保存、删除、启停流程下沉到 `useProviderKeyEditor`，进一步减少主页面中的 CRUD 编排。完成时间：2026-04-13 20:28:39 +0800
+- [x] 将 `ProvidersPage` 中 OpenAI provider 编辑、模型发现与保存流程下沉到 `useOpenAIProviderEditor`，并修复 `/ai-providers/openai` 等直达路由未先加载目标 tab 数据的问题。完成时间：2026-04-13 20:38:21 +0800
 - [ ] 为 Providers 拆分后的 provider draft、model discovery、usage source 归一化、API key masking 补单测。完成时间：待填写
 - [ ] 将 `codeProxy/src/modules/api-keys/ApiKeysPage.tsx` 拆分为 key 表格、编辑弹窗、权限/限制选择器、日志快捷入口、配额展示 hooks，主页面文件降到 600 行以内。完成时间：待填写
 - [ ] 将 `codeProxy/src/modules/config/ConfigPage.tsx` 和 `codeProxy/src/modules/config/visual/VisualConfigEditor.tsx` 拆分为 source editor、runtime panel、visual editor sections、保存流程 hooks。完成时间：待填写
@@ -115,6 +116,7 @@
 - [x] 针对 `AuthFilesPage` 的 excluded tab 与 OAuth 登录流程运行组件测试，确认 OAuth 配置 hook 抽取未破坏核心交互。完成时间：2026-04-13 19:31:06 +0800
 - [x] 修正 `AuthFilesPage.files-table` 中依赖旧 session cache 的卡片视图测试，使其改为覆盖真实 quota refresh 渲染链路。完成时间：2026-04-13 19:39:57 +0800
 - [x] 复跑 `AuthFilesPage.files-table` 组件测试，确认 detail/group overview hook 抽取后文件卡片、配额刷新、分组总览入口仍可正常工作。完成时间：2026-04-13 19:44:49 +0800
+- [x] 为 `ProvidersPage` 增加 OpenAI tab 回归测试，覆盖直达路由、provider 卡片渲染、masked key 展示与聚合状态条。完成时间：2026-04-13 20:38:21 +0800
 - [ ] 为拆分后的高风险模块补组件测试，覆盖 Auth Files、Providers、API Keys、Config、Log Content Modal 的关键交互。完成时间：待填写
 - [ ] 为登录、管理 key 生命周期、配置保存、OAuth 回调、请求日志详情新增或补齐 E2E 场景。完成时间：待填写
 - [x] 增加安全回归用例，覆盖 trusted proxies、CORS allowlist、multipart 文件大小限制、pprof 默认不可远程暴露。完成时间：2026-04-13 15:19:36 +0800

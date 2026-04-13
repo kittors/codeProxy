@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Bot, Database, FileKey, Globe, RefreshCw } from "lucide-react";
@@ -65,6 +65,7 @@ export function ProvidersPage() {
     | { type: "deleteKey"; keyType: "gemini" | "claude" | "codex" | "vertex"; index: number }
     | { type: "deleteOpenAI"; index: number }
   >(null);
+  const handledRouteRef = useRef("");
 
   // 按 Tab 加载数据，切换 Tab 时只请求当前 Tab 的数据
   const refreshTab = useCallback(
@@ -243,47 +244,57 @@ export function ProvidersPage() {
   useEffect(() => {
     if (loading) return;
     const pathname = location.pathname;
-    if (!pathname.startsWith("/ai-providers/")) return;
+    if (!pathname.startsWith("/ai-providers/")) {
+      handledRouteRef.current = "";
+      return;
+    }
+    if (handledRouteRef.current === pathname) return;
+    handledRouteRef.current = pathname;
 
     const parts = pathname.split("/").filter(Boolean);
     const provider = parts[1] ?? "";
     const action = parts[2] ?? "";
 
-    if (
-      provider === "gemini" ||
-      provider === "claude" ||
-      provider === "codex" ||
-      provider === "vertex"
-    ) {
-      setTab(provider);
-      if (action === "new") {
-        openKeyEditor(provider, null);
+    void (async () => {
+      if (
+        provider === "gemini" ||
+        provider === "claude" ||
+        provider === "codex" ||
+        provider === "vertex"
+      ) {
+        setTab(provider);
+        await refreshTab(provider);
+        if (action === "new") {
+          openKeyEditor(provider, null);
+          return;
+        }
+        const index = Number(action);
+        if (Number.isFinite(index) && index >= 0) {
+          openKeyEditor(provider, index);
+        }
         return;
       }
-      const index = Number(action);
-      if (Number.isFinite(index) && index >= 0) {
-        openKeyEditor(provider, index);
-      }
-      return;
-    }
 
-    if (provider === "openai") {
-      setTab("openai");
-      if (action === "new") {
-        openOpenAIEditor(null);
+      if (provider === "openai") {
+        setTab("openai");
+        await refreshTab("openai");
+        if (action === "new") {
+          openOpenAIEditor(null);
+          return;
+        }
+        const index = Number(action);
+        if (Number.isFinite(index) && index >= 0) {
+          openOpenAIEditor(index);
+        }
         return;
       }
-      const index = Number(action);
-      if (Number.isFinite(index) && index >= 0) {
-        openOpenAIEditor(index);
-      }
-      return;
-    }
 
-    if (provider === "ampcode") {
-      setTab("ampcode");
-    }
-  }, [loading, location.pathname, openKeyEditor, openOpenAIEditor]);
+      if (provider === "ampcode") {
+        setTab("ampcode");
+        await refreshTab("ampcode");
+      }
+    })();
+  }, [loading, location.pathname, openKeyEditor, openOpenAIEditor, refreshTab]);
 
   const saveAmpcode = useCallback(async () => {
     try {
