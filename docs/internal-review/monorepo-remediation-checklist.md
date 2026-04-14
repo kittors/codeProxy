@@ -111,7 +111,7 @@
 - [x] 为公共查询接口增加限流或节流中间件，防止 key 存在性被批量探测。完成时间：2026-04-13 14:23:15 +0800
 - [x] 建立统一 HTTP client factory，集中配置 timeout、dialer、TLS handshake、response header、idle conn、keepalive。完成时间：2026-04-13 15:12:57 +0800
 - [x] 将散落的 bare `http.Client` / bare `http.Transport` 迁移到统一 factory，优先覆盖代理、OAuth、executor、管理工具调用。完成时间：2026-04-13 15:12:57 +0800
-- [ ] 为确实需要脱离请求生命周期的后台任务添加注释，说明 owner、取消条件、超时和清理策略。完成时间：待填写
+- [x] 为确实需要脱离请求生命周期的后台任务添加注释，说明 owner、取消条件、超时和清理策略。完成时间：2026-04-14 18:20:40 +0800
 - [ ] 为 OAuth 回调、WebSocket session、model registry hook、service watcher 等 goroutine 引入统一生命周期管理或 errgroup。完成时间：待填写
 - [ ] 为主 `http.Server` 增加 `ReadHeaderTimeout`、`ReadTimeout`、`WriteTimeout`、`IdleTimeout`，并为 SSE/WebSocket 路径设计例外策略。完成时间：待填写
 - [x] 为主 `http.Server` 增加 `ReadHeaderTimeout`、`ReadTimeout`、`IdleTimeout` 与 `MaxHeaderBytes` 基线配置。完成时间：2026-04-13 14:23:15 +0800
