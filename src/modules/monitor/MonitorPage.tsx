@@ -1,41 +1,24 @@
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
-import {
-  Activity,
-  ChartSpline,
-  Coins,
-  Filter,
-  RefreshCw,
-  Search,
-  ShieldCheck,
-  Sigma,
-} from "lucide-react";
 import { usageApi } from "@/lib/http/apis";
-import { formatNumber, formatRate } from "@/modules/monitor/monitor-utils";
-import { AnimatedNumber } from "@/modules/ui/AnimatedNumber";
-import { TextInput } from "@/modules/ui/Input";
-import { Reveal } from "@/modules/ui/Reveal";
-import { EChart } from "@/modules/ui/charts/EChart";
-import { ChartLegend } from "@/modules/ui/charts/ChartLegend";
 import { useTheme } from "@/modules/ui/ThemeProvider";
-import type { HourWindow, TimeRange } from "@/modules/monitor/monitor-constants";
 import { CHART_COLOR_CLASSES, HOURLY_MODEL_COLORS } from "@/modules/monitor/monitor-constants";
 import {
   formatCompact,
   formatMonthDay,
 } from "@/modules/monitor/monitor-format";
 import {
-  HourWindowSelector,
-  KpiCard,
-  MonitorCard as Card,
-  TimeRangeSelector,
-} from "@/modules/monitor/MonitorPagePieces";
-import {
   createDailyTrendOption,
   createHourlyModelOption,
   createHourlyTokenOption,
   createModelDistributionOption,
 } from "@/modules/monitor/monitor-chart-options";
-import { Tabs, TabsList, TabsTrigger } from "@/modules/ui/Tabs";
+import {
+  MonitorDistributionSections,
+  MonitorHourlySections,
+  MonitorKpiSection,
+} from "@/modules/monitor/MonitorDashboardSections";
+import { useMonitorDashboardState } from "@/modules/monitor/hooks/useMonitorDashboardState";
+import { MonitorToolbarSection } from "@/modules/monitor/MonitorToolbarSection";
 import { useTranslation } from "react-i18next";
 
 const DAILY_LEGEND_KEYS = {
@@ -60,14 +43,23 @@ export function MonitorPage() {
   } = useTheme();
   const isDark = mode === "dark";
 
-  const [compact, setCompact] = useState(() => window.innerWidth < 700);
-  useEffect(() => {
-    const mq = window.matchMedia("(max-width: 699px)");
-    const handler = (e: MediaQueryListEvent) => setCompact(e.matches);
-    setCompact(mq.matches);
-    mq.addEventListener("change", handler);
-    return () => mq.removeEventListener("change", handler);
-  }, []);
+  const {
+    compact,
+    timeRange,
+    setTimeRange,
+    apiFilterInput,
+    setApiFilterInput,
+    apiFilter,
+    applyFilter,
+    modelHourWindow,
+    setModelHourWindow,
+    tokenHourWindow,
+    setTokenHourWindow,
+    modelMetric,
+    setModelMetric,
+    apikeyMetric,
+    setApikeyMetric,
+  } = useMonitorDashboardState();
 
   const [dailyLegendSelected, setDailyLegendSelected] = useState<Record<string, boolean>>({
     [DAILY_LEGEND_KEYS.input]: true,
@@ -90,13 +82,6 @@ export function MonitorPage() {
   const [chartData, setChartData] = useState<import("@/lib/http/types").ChartDataResponse | null>(
     null,
   );
-  const [timeRange, setTimeRange] = useState<TimeRange>(7);
-  const [apiFilterInput, setApiFilterInput] = useState("");
-  const [apiFilter, setApiFilter] = useState("");
-  const [modelHourWindow, setModelHourWindow] = useState<HourWindow>(24);
-  const [tokenHourWindow, setTokenHourWindow] = useState<HourWindow>(24);
-  const [modelMetric, setModelMetric] = useState<"requests" | "tokens">("requests");
-  const [apikeyMetric, setApikeyMetric] = useState<"requests" | "tokens">("requests");
   const [modelDistributionSelected, setModelDistributionSelected] = useState<
     Record<string, boolean>
   >({});
@@ -152,10 +137,6 @@ export function MonitorPage() {
       totalTokens: inputTokens + outputTokens,
     };
   }, [chartData]);
-
-  const applyFilter = useCallback(() => {
-    setApiFilter(apiFilterInput);
-  }, [apiFilterInput]);
 
   const toggleDailyLegend = useCallback((key: string) => {
     if (
@@ -593,374 +574,78 @@ export function MonitorPage() {
     ],
   );
 
-  const modelActions = (
-    <Tabs
-      value={modelMetric}
-      onValueChange={(next) => setModelMetric(next as "requests" | "tokens")}
-    >
-      <TabsList>
-        <TabsTrigger value="requests">{t("monitor.requests")}</TabsTrigger>
-        <TabsTrigger value="tokens">{t("monitor.token")}</TabsTrigger>
-      </TabsList>
-    </Tabs>
-  );
-
-  const apikeyActions = (
-    <Tabs
-      value={apikeyMetric}
-      onValueChange={(next) => setApikeyMetric(next as "requests" | "tokens")}
-    >
-      <TabsList>
-        <TabsTrigger value="requests">{t("monitor.requests")}</TabsTrigger>
-        <TabsTrigger value="tokens">{t("monitor.token")}</TabsTrigger>
-      </TabsList>
-    </Tabs>
+  const hourlyModelLegendKeys = useMemo(
+    () => [...hourlySeries.modelKeys, HOURLY_MODEL_TOTAL_KEY],
+    [hourlySeries.modelKeys],
   );
 
   return (
     <div className="space-y-4">
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/70">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h2 className="flex items-center gap-2 text-lg font-semibold text-slate-900 dark:text-white">
-              <ChartSpline size={18} className="text-slate-900 dark:text-white" />
-              <span>{t("monitor.title")}</span>
-            </h2>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <TimeRangeSelector value={timeRange} onChange={setTimeRange} />
-            <div className="inline-flex items-center gap-1.5 rounded-2xl border border-slate-200 bg-white px-2.5 py-1.5 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
-              <Search size={14} className="text-slate-500 dark:text-white/55" />
-              <TextInput
-                value={apiFilterInput}
-                onChange={(event) => setApiFilterInput(event.target.value)}
-                variant="ghost"
-                className="w-36"
-                placeholder={t("monitor.filter_placeholder")}
-              />
-            </div>
-            <button
-              type="button"
-              onClick={applyFilter}
-              className="inline-flex items-center gap-1.5 rounded-2xl border border-slate-200 bg-white px-3 py-1.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-white/80 dark:hover:bg-white/10"
-            >
-              <Filter size={14} />
-              {t("monitor.apply")}
-            </button>
-            <button
-              type="button"
-              onClick={() => void refreshData()}
-              disabled={isLoading}
-              aria-busy={isLoading}
-              className="inline-flex min-w-[96px] items-center justify-center gap-1.5 rounded-2xl bg-slate-900 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70 dark:bg-white dark:text-neutral-950 dark:hover:bg-slate-200"
-            >
-              <RefreshCw size={14} className={isLoading ? "animate-spin" : ""} />
-              <span className="grid">
-                <span
-                  className={
-                    isLoading
-                      ? "col-start-1 row-start-1 opacity-0"
-                      : "col-start-1 row-start-1 opacity-100"
-                  }
-                >
-                  {t("monitor.refresh")}
-                </span>
-                <span
-                  className={
-                    isLoading
-                      ? "col-start-1 row-start-1 opacity-100"
-                      : "col-start-1 row-start-1 opacity-0"
-                  }
-                >
-                  {t("monitor.refreshing")}
-                </span>
-              </span>
-            </button>
-          </div>
-        </div>
+      <MonitorToolbarSection
+        t={t}
+        timeRange={timeRange}
+        setTimeRange={setTimeRange}
+        apiFilterInput={apiFilterInput}
+        setApiFilterInput={setApiFilterInput}
+        applyFilter={applyFilter}
+        refreshData={() => void refreshData()}
+        isLoading={isLoading}
+        error={error}
+      />
 
-        {error ? (
-          <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-            {error}
-          </div>
-        ) : null}
-      </section>
+      <MonitorKpiSection
+        t={t}
+        metrics={metrics}
+        hasData={hasData}
+        isLoading={isLoading}
+        refreshData={refreshData}
+      />
 
-      <Reveal>
-        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <KpiCard
-            title={t("monitor.total_requests")}
-            value={<AnimatedNumber value={metrics.totalRequests} format={formatNumber} />}
-            hint={t("monitor.filtered_by_time")}
-            icon={Activity}
-          />
-          <KpiCard
-            title={t("monitor.success_rate")}
-            value={<AnimatedNumber value={metrics.successRate} format={formatRate} />}
-            hint={t("monitor.success_count", {
-              success: formatNumber(metrics.successCount),
-              failed: formatNumber(metrics.failureCount),
-            })}
-            icon={ShieldCheck}
-          />
-          <KpiCard
-            title={t("monitor.total_token")}
-            value={<AnimatedNumber value={metrics.totalTokens} format={formatNumber} />}
-            hint={t("monitor.input_output_hint")}
-            icon={Sigma}
-          />
-          <KpiCard
-            title={t("monitor.output_token")}
-            value={<AnimatedNumber value={metrics.outputTokens} format={formatNumber} />}
-            hint={t("monitor.input_tokens_hint", {
-              count: formatNumber(metrics.inputTokens),
-            } as Record<string, unknown>)}
-            icon={Coins}
-          />
-        </section>
-      </Reveal>
-
-      {!hasData && !isLoading ? (
-        <Reveal>
-          <section className="rounded-2xl border border-dashed border-slate-200 bg-white p-10 text-center shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
-            <div className="mx-auto flex max-w-md flex-col items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-900/5 text-slate-700 dark:bg-white/10 dark:text-white/70">
-                <ChartSpline size={20} />
-              </div>
-              <p className="text-sm font-semibold text-slate-900 dark:text-white">
-                {t("monitor.no_data")}
-              </p>
-              <p className="text-sm text-slate-600 dark:text-white/65">
-                {t("monitor.no_data_hint")}
-              </p>
-              <button
-                type="button"
-                onClick={() => void refreshData()}
-                className="inline-flex min-w-[96px] items-center justify-center gap-1.5 rounded-2xl bg-slate-900 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-slate-800 dark:bg-white dark:text-neutral-950 dark:hover:bg-slate-200"
-              >
-                <RefreshCw size={14} />
-                {t("monitor.refresh")}
-              </button>
-            </div>
-          </section>
-        </Reveal>
-      ) : (
+      {hasData ? (
         <>
-          <Reveal>
-            <section className="grid gap-4 lg:grid-cols-[minmax(0,560px)_minmax(0,1fr)]">
-              <Card
-                title={t("monitor.model_distribution")}
-                description={t("monitor.last_days_desc", {
-                  days: timeRange,
-                  metric: modelMetric === "requests" ? t("monitor.requests") : t("monitor.token"),
-                })}
-                actions={modelActions}
-                loading={isRefreshing}
-              >
-                <div className="flex h-auto flex-col gap-4 md:grid md:grid-cols-[minmax(0,1fr)_minmax(16rem,20rem)] md:items-center">
-                  <EChart option={modelDistributionOption} className="h-56 min-w-0 md:h-[22rem]" />
-                  <div className="flex h-auto flex-col justify-start gap-2 overflow-y-auto pr-2 md:max-h-[22rem]">
-                    {modelDistributionLegend.map((item) => (
-                      <button
-                        key={item.name}
-                        type="button"
-                        aria-pressed={item.enabled}
-                        onClick={() => toggleModelDistributionLegend(item.name)}
-                        className={[
-                          "grid w-full grid-cols-[minmax(0,1fr)_max-content_max-content] items-center gap-x-3 rounded-xl px-2 py-1.5 text-left text-sm transition",
-                          item.enabled
-                            ? "text-slate-900 hover:bg-slate-100 dark:text-white dark:hover:bg-white/10"
-                            : "text-slate-400 opacity-60 hover:bg-slate-50 dark:text-white/35 dark:hover:bg-white/5",
-                        ].join(" ")}
-                      >
-                        <div className="flex min-w-0 items-center gap-2">
-                          <span
-                            className={`h-3.5 w-3.5 shrink-0 rounded-full ${item.colorClass} opacity-80 ring-1 ring-black/5 dark:ring-white/10`}
-                          />
-                          <span className="min-w-0 truncate text-slate-700 dark:text-white/80">
-                            {item.name}
-                          </span>
-                        </div>
-                        <span className="min-w-[3.5rem] whitespace-nowrap text-right font-semibold tabular-nums text-slate-900 dark:text-white">
-                          {item.valueLabel}
-                        </span>
-                        <span className="min-w-[4.25rem] whitespace-nowrap text-right tabular-nums text-slate-500 dark:text-white/55">
-                          {item.percentLabel}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </Card>
+          <MonitorDistributionSections
+            t={t}
+            timeRange={timeRange}
+            modelMetric={modelMetric}
+            setModelMetric={setModelMetric}
+            modelDistributionOption={modelDistributionOption}
+            modelDistributionLegend={modelDistributionLegend}
+            toggleModelDistributionLegend={toggleModelDistributionLegend}
+            dailyTrendOption={dailyTrendOption}
+            dailyLegendAvailability={dailyLegendAvailability}
+            dailyLegendSelected={dailyLegendSelected}
+            toggleDailyLegend={toggleDailyLegend}
+            apikeyDistributionData={apikeyDistributionData}
+            apikeyMetric={apikeyMetric}
+            setApikeyMetric={setApikeyMetric}
+            apikeyDistributionOption={apikeyDistributionOption}
+            apikeyDistributionLegend={apikeyDistributionLegend}
+            toggleApikeyDistributionLegend={toggleApikeyDistributionLegend}
+            isRefreshing={isRefreshing}
+          />
 
-              <Card
-                title={t("monitor.daily_usage_trend")}
-                description={t("monitor.daily_desc", { days: timeRange })}
-                loading={isRefreshing}
-              >
-                <div className="flex h-72 min-w-0 flex-col overflow-hidden">
-                  <EChart
-                    option={dailyTrendOption}
-                    className="min-h-0 flex-1 min-w-0"
-                    replaceMerge="series"
-                  />
-                  <ChartLegend
-                    className="shrink-0 pt-4"
-                    items={[
-                      ...(dailyLegendAvailability.hasInput
-                        ? [
-                            {
-                              key: DAILY_LEGEND_KEYS.input,
-                              label: t("monitor.input_token"),
-                              colorClass: "bg-violet-400",
-                              enabled: dailyLegendSelected[DAILY_LEGEND_KEYS.input] ?? true,
-                              onToggle: toggleDailyLegend,
-                            },
-                          ]
-                        : []),
-                      ...(dailyLegendAvailability.hasOutput
-                        ? [
-                            {
-                              key: DAILY_LEGEND_KEYS.output,
-                              label: t("monitor.output_token_legend"),
-                              colorClass: "bg-emerald-400",
-                              enabled: dailyLegendSelected[DAILY_LEGEND_KEYS.output] ?? true,
-                              onToggle: toggleDailyLegend,
-                            },
-                          ]
-                        : []),
-                      ...(dailyLegendAvailability.hasRequests
-                        ? [
-                            {
-                              key: DAILY_LEGEND_KEYS.requests,
-                              label: t("monitor.requests"),
-                              colorClass: "bg-blue-500",
-                              enabled: dailyLegendSelected[DAILY_LEGEND_KEYS.requests] ?? true,
-                              onToggle: toggleDailyLegend,
-                            },
-                          ]
-                        : []),
-                    ]}
-                  />
-                </div>
-              </Card>
-            </section>
-          </Reveal>
-
-          {apikeyDistributionData.length > 0 && (
-            <Reveal>
-              <Card
-                title={t("monitor.apikey_distribution")}
-                description={t("monitor.apikey_distribution_desc", {
-                  days: timeRange,
-                  metric: apikeyMetric === "requests" ? t("monitor.requests") : t("monitor.token"),
-                })}
-                actions={apikeyActions}
-                loading={isRefreshing}
-              >
-                <div className="flex h-auto flex-col gap-4 md:grid md:grid-cols-[minmax(0,1fr)_minmax(16rem,20rem)] md:items-center">
-                  <EChart option={apikeyDistributionOption} className="h-56 min-w-0 md:h-[22rem]" />
-                  <div className="flex h-auto flex-col justify-start gap-2 overflow-y-auto pr-2 md:max-h-[22rem]">
-                    {apikeyDistributionLegend.map((item) => (
-                      <button
-                        key={item.name}
-                        type="button"
-                        aria-pressed={item.enabled}
-                        onClick={() => toggleApikeyDistributionLegend(item.name)}
-                        className={[
-                          "grid w-full grid-cols-[minmax(0,1fr)_max-content_max-content] items-center gap-x-3 rounded-xl px-2 py-1.5 text-left text-sm transition",
-                          item.enabled
-                            ? "text-slate-900 hover:bg-slate-100 dark:text-white dark:hover:bg-white/10"
-                            : "text-slate-400 opacity-60 hover:bg-slate-50 dark:text-white/35 dark:hover:bg-white/5",
-                        ].join(" ")}
-                      >
-                        <div className="flex min-w-0 items-center gap-2">
-                          <span
-                            className={`h-3.5 w-3.5 shrink-0 rounded-full ${item.colorClass} opacity-80 ring-1 ring-black/5 dark:ring-white/10`}
-                          />
-                          <span className="min-w-0 truncate text-slate-700 dark:text-white/80">
-                            {item.name}
-                          </span>
-                        </div>
-                        <span className="min-w-[3.5rem] whitespace-nowrap text-right font-semibold tabular-nums text-slate-900 dark:text-white">
-                          {item.valueLabel}
-                        </span>
-                        <span className="min-w-[4.25rem] whitespace-nowrap text-right tabular-nums text-slate-500 dark:text-white/55">
-                          {item.percentLabel}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </Card>
-            </Reveal>
-          )}
-
-          <Reveal>
-            <Card
-              title={t("monitor.hourly_model.title")}
-              description={t("monitor.hourly_model_desc")}
-              actions={<HourWindowSelector value={modelHourWindow} onChange={setModelHourWindow} />}
-              loading={isRefreshing}
-            >
-              <EChart option={hourlyModelOption} className="h-64 sm:h-72" replaceMerge="series" />
-              <ChartLegend
-                className="pt-4 max-h-32 overflow-y-auto justify-start sm:justify-center sm:max-h-none"
-                items={[
-                  ...hourlySeries.modelKeys.map((key) => ({
-                    key,
-                    label: getHourlyModelSeriesLabel(key),
-                    colorClass: hourlyModelPalette.classByKey[key] ?? "bg-slate-400",
-                    enabled: hourlyModelSelected[key] ?? true,
-                    onToggle: toggleHourlyModelLegend,
-                  })),
-                  {
-                    key: HOURLY_MODEL_TOTAL_KEY,
-                    label: getHourlyModelSeriesLabel(HOURLY_MODEL_TOTAL_KEY),
-                    colorClass:
-                      hourlyModelPalette.classByKey[HOURLY_MODEL_TOTAL_KEY] ?? "bg-blue-500",
-                    enabled: hourlyModelSelected[HOURLY_MODEL_TOTAL_KEY] ?? true,
-                    onToggle: toggleHourlyModelLegend,
-                  },
-                ]}
-              />
-            </Card>
-          </Reveal>
-
-          <Reveal>
-            <Card
-              title={t("monitor.hourly_token.title")}
-              description={t("monitor.hourly_token_desc")}
-              actions={<HourWindowSelector value={tokenHourWindow} onChange={setTokenHourWindow} />}
-              loading={isRefreshing}
-            >
-              <EChart option={hourlyTokenOption} className="h-64 sm:h-72" replaceMerge="series" />
-              <ChartLegend
-                className="pt-4 max-h-32 overflow-y-auto justify-start sm:justify-center sm:max-h-none"
-                items={[
-                  ...hourlySeries.tokenKeys
-                    .filter((key) => key !== HOURLY_TOKEN_KEYS.total)
-                    .map((key) => ({
-                      key,
-                      label: hourlyTokenLabels[key] ?? key,
-                      colorClass: hourlyTokenPalette.classByKey[key] ?? "bg-slate-400",
-                      enabled: hourlyTokenSelected[key] ?? true,
-                      onToggle: toggleHourlyTokenLegend,
-                    })),
-                  {
-                    key: HOURLY_TOKEN_KEYS.total,
-                    label: hourlyTokenLabels[HOURLY_TOKEN_KEYS.total],
-                    colorClass:
-                      hourlyTokenPalette.classByKey[HOURLY_TOKEN_KEYS.total] ?? "bg-blue-500",
-                    enabled: hourlyTokenSelected[HOURLY_TOKEN_KEYS.total] ?? true,
-                    onToggle: toggleHourlyTokenLegend,
-                  },
-                ]}
-              />
-            </Card>
-          </Reveal>
+          <MonitorHourlySections
+            t={t}
+            isRefreshing={isRefreshing}
+            modelHourWindow={modelHourWindow}
+            setModelHourWindow={setModelHourWindow}
+            hourlyModelLegendKeys={hourlyModelLegendKeys}
+            hourlyModelOption={hourlyModelOption}
+            hourlySeries={hourlySeries}
+            getHourlyModelSeriesLabel={getHourlyModelSeriesLabel}
+            hourlyModelPalette={hourlyModelPalette}
+            hourlyModelSelected={hourlyModelSelected}
+            toggleHourlyModelLegend={toggleHourlyModelLegend}
+            tokenHourWindow={tokenHourWindow}
+            setTokenHourWindow={setTokenHourWindow}
+            hourlyTokenOption={hourlyTokenOption}
+            hourlyTokenLabels={hourlyTokenLabels}
+            hourlyTokenPalette={hourlyTokenPalette}
+            hourlyTokenSelected={hourlyTokenSelected}
+            toggleHourlyTokenLegend={toggleHourlyTokenLegend}
+          />
         </>
-      )}
+      ) : null}
     </div>
   );
 }
