@@ -82,7 +82,7 @@
 - [x] 为公共查询接口增加按 IP / 指纹的速率限制、失败审计和统一错误节奏，降低 key 枚举风险。完成时间：2026-04-13 15:29:38 +0800
 - [x] 收缩 `AuthFilesPage` 的 sessionStorage 缓存，只保留必要 UI 状态和最小恢复数据，去掉整页 usage/quota 大对象落盘。完成时间：2026-04-13 14:58:10 +0800
 - [x] 为 `AuthFilesPage` 缓存增加大小预算、字段白名单和节流策略，避免每次变更都触发大对象 `JSON.stringify`。完成时间：2026-04-13 14:58:10 +0800
-- [ ] 对 ECharts、Markdown 渲染、CodeMirror、syntax highlighter 做按交互懒加载，减少 `vendor-echarts`、`vendor-markdown`、`index` chunk 压力。完成时间：待填写
+- [x] 对 ECharts、Markdown 渲染、CodeMirror、syntax highlighter 做按交互懒加载，减少 `vendor-echarts`、`vendor-markdown`、`index` chunk 压力。完成时间：2026-04-14 23:02:18 +0800
 - [x] 将通用 `EChart` 改为轻量 Suspense 包装层，实际 `echarts-for-react` 渲染器按图表出现时再加载。完成时间：2026-04-13 18:06:38 +0800
 - [x] 将 `LogContentModal` 的 Markdown / syntax highlighter 渲染下沉为按交互懒加载模块，拆出独立 `rendering-markdown` chunk，降低详情弹窗首包体积。完成时间：2026-04-13 18:01:39 +0800
 - [x] 对 `LogContentModal` 引入异步解析、分批渲染与源码优先首屏策略；性能优化不得以截断或删除完整 input/output 内容为代价。完成时间：2026-04-13 17:06:11 +0800
