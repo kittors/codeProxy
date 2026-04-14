@@ -113,7 +113,7 @@
 - [x] 将散落的 bare `http.Client` / bare `http.Transport` 迁移到统一 factory，优先覆盖代理、OAuth、executor、管理工具调用。完成时间：2026-04-13 15:12:57 +0800
 - [x] 为确实需要脱离请求生命周期的后台任务添加注释，说明 owner、取消条件、超时和清理策略。完成时间：2026-04-14 18:20:40 +0800
 - [ ] 为 OAuth 回调、WebSocket session、model registry hook、service watcher 等 goroutine 引入统一生命周期管理或 errgroup。完成时间：待填写
-- [ ] 为主 `http.Server` 增加 `ReadHeaderTimeout`、`ReadTimeout`、`WriteTimeout`、`IdleTimeout`，并为 SSE/WebSocket 路径设计例外策略。完成时间：待填写
+- [x] 为主 `http.Server` 增加 `ReadHeaderTimeout`、`ReadTimeout`、`WriteTimeout`、`IdleTimeout`，并为 SSE/WebSocket 路径设计例外策略。完成时间：2026-04-14 22:34:12 +0800
 - [x] 为主 `http.Server` 增加 `ReadHeaderTimeout`、`ReadTimeout`、`IdleTimeout` 与 `MaxHeaderBytes` 基线配置。完成时间：2026-04-13 14:23:15 +0800
 - [x] 为 pprof 增加明确的非本地暴露保护策略，至少要求本地绑定默认不变、远程暴露需要显式额外开关或警告。完成时间：2026-04-13 15:05:40 +0800
 - [x] 盘点高敏操作审计日志，覆盖 auth 文件下载、auth 文件删除、OAuth 回调成功/失败、管理配置关键项变更。完成时间：2026-04-13 15:19:36 +0800
