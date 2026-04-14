@@ -14,6 +14,7 @@ import { AuthFilesFilesTab } from "@/modules/auth-files/components/AuthFilesFile
 import { ImportModelsModal } from "@/modules/auth-files/components/ImportModelsModal";
 import { GroupOverviewModal } from "@/modules/auth-files/components/GroupOverviewModal";
 import { useAuthFilesDetailEditors } from "@/modules/auth-files/hooks/useAuthFilesDetailEditors";
+import { useAuthFilesFileActions } from "@/modules/auth-files/hooks/useAuthFilesFileActions";
 import { useAuthFilesFilesPresentation } from "@/modules/auth-files/hooks/useAuthFilesFilesPresentation";
 import { useAuthFilesListState } from "@/modules/auth-files/hooks/useAuthFilesListState";
 import { useAuthFilesGroupOverview } from "@/modules/auth-files/hooks/useAuthFilesGroupOverview";
@@ -26,10 +27,7 @@ import {
   AUTH_FILES_FILES_VIEW_MODE_KEY,
   AUTH_FILES_QUOTA_AUTO_REFRESH_KEY,
   AUTH_FILES_QUOTA_PREVIEW_KEY,
-  MAX_AUTH_FILE_SIZE,
   buildUsageIndex,
-  downloadBlobAsFile,
-  formatFileSize,
   normalizeAuthIndexValue,
   normalizeQuotaAutoRefreshMs,
   readAuthFilesDataCache,
@@ -92,9 +90,6 @@ export function AuthFilesPage() {
   const [files, setFiles] = useState<AuthFileItem[]>(() => initialDataCache?.files ?? []);
   const [loading, setLoading] = useState(() => !((initialDataCache?.files?.length ?? 0) > 0));
   const [refreshingAll, setRefreshingAll] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [deletingAll, setDeletingAll] = useState(false);
-  const [statusUpdating, setStatusUpdating] = useState<Record<string, boolean>>({});
   const [confirm, setConfirm] = useState<null | { type: "deleteSelection"; names: string[] }>(null);
 
   const [oauthDialogOpen, setOauthDialogOpen] = useState(false);
@@ -357,6 +352,24 @@ export function AuthFilesPage() {
     saveChannelEditor,
   } = useAuthFilesDetailEditors(loadAll);
 
+  const {
+    uploading,
+    deletingAll,
+    statusUpdating,
+    downloadAuthFile,
+    handleUpload,
+    handleDeleteSelection,
+    setFileEnabled,
+  } = useAuthFilesFileActions({
+    loadAll,
+    fileInputRef,
+    detailFile,
+    setDetailFile,
+    setDetailOpen,
+    setFiles,
+    setSelectedFileNames,
+  });
+
   useEffect(() => {
     void loadAll();
   }, [loadAll]);
@@ -588,190 +601,6 @@ export function AuthFilesPage() {
     resolveAuthFileStats,
     resolveProviderLabel,
   });
-
-  const downloadAuthFile = useCallback(
-    async (file: AuthFileItem) => {
-      const confirmed = window.confirm(
-        t(
-          "auth_files.download_sensitive_confirm",
-          "This downloads the full auth file and may include sensitive credentials. Continue?",
-        ),
-      );
-      if (!confirmed) return;
-
-      try {
-        const blob = await authFilesApi.downloadBlob(file.name);
-        downloadBlobAsFile(blob, file.name);
-      } catch (err: unknown) {
-        notify({
-          type: "error",
-          message: err instanceof Error ? err.message : t("auth_files.download_failed"),
-        });
-      }
-    },
-    [notify, t],
-  );
-
-  const handleUpload = useCallback(
-    async (input: FileList | File[] | null) => {
-      const list = Array.isArray(input) ? input : input ? Array.from(input) : [];
-      const files = list.filter(Boolean);
-      if (files.length === 0) return;
-
-      const tooLarge: File[] = [];
-      const valid: File[] = [];
-
-      files.forEach((file) => {
-        if (file.size > MAX_AUTH_FILE_SIZE) {
-          tooLarge.push(file);
-          return;
-        }
-        valid.push(file);
-      });
-
-      if (tooLarge.length > 0 && valid.length === 0) {
-        const first = tooLarge[0];
-        notify({
-          type: "error",
-          message: t("auth_files.file_too_large_detail", {
-            size: formatFileSize(first.size),
-            name: first.name,
-            maxSize: formatFileSize(MAX_AUTH_FILE_SIZE),
-          }),
-        });
-        return;
-      }
-
-      setUploading(true);
-      try {
-        let success = 0;
-        let failed = 0;
-
-        for (const file of valid) {
-          try {
-            await authFilesApi.upload(file);
-            success += 1;
-          } catch {
-            failed += 1;
-          }
-        }
-
-        if (failed === 0 && tooLarge.length === 0) {
-          notify({ type: "success", message: t("auth_files.upload_success", { count: success }) });
-        } else {
-          notify({
-            type: failed > 0 ? "error" : "info",
-            message: t("auth_files.upload_partial", { success, failed, skipped: tooLarge.length }),
-          });
-        }
-
-        await loadAll();
-      } catch (err: unknown) {
-        notify({
-          type: "error",
-          message: err instanceof Error ? err.message : t("auth_files.upload_failed"),
-        });
-      } finally {
-        setUploading(false);
-        if (fileInputRef.current) {
-          fileInputRef.current.value = "";
-        }
-      }
-    },
-    [loadAll, notify, t],
-  );
-
-  const handleDeleteSelection = useCallback(
-    async (names: string[]) => {
-      const targets = Array.from(new Set(names.map((name) => name.trim()).filter(Boolean)));
-      if (targets.length === 0) return;
-
-      setDeletingAll(true);
-      try {
-        let success = 0;
-        let failed = 0;
-        const deletedNames: string[] = [];
-
-        for (const name of targets) {
-          try {
-            await authFilesApi.deleteFile(name);
-            success += 1;
-            deletedNames.push(name);
-          } catch {
-            failed += 1;
-          }
-        }
-
-        if (deletedNames.length > 0) {
-          setFiles((prev) => prev.filter((file) => !deletedNames.includes(file.name)));
-          setSelectedFileNames((prev) => prev.filter((name) => !deletedNames.includes(name)));
-          setDetailFile((prev) => (prev && deletedNames.includes(prev.name) ? null : prev));
-          setDetailOpen((prev) =>
-            prev && detailFile && deletedNames.includes(detailFile.name) ? false : prev,
-          );
-        }
-
-        if (failed === 0) {
-          notify({
-            type: "success",
-            message: t("auth_files.batch_deleted_selected", { count: success }),
-          });
-        } else {
-          notify({
-            type: "error",
-            message: t("auth_files.batch_delete_partial", { success, failed }),
-          });
-        }
-      } catch (err: unknown) {
-        notify({
-          type: "error",
-          message: err instanceof Error ? err.message : t("auth_files.delete_failed"),
-        });
-      } finally {
-        setDeletingAll(false);
-      }
-    },
-    [detailFile, notify, t],
-  );
-
-  const setFileEnabled = useCallback(
-    async (file: AuthFileItem, enabled: boolean) => {
-      const name = file.name;
-      const prevDisabled = Boolean(file.disabled);
-      const nextDisabled = !enabled;
-
-      setStatusUpdating((prev) => ({ ...prev, [name]: true }));
-      setFiles((prev) =>
-        prev.map((it) => (it.name === name ? { ...it, disabled: nextDisabled } : it)),
-      );
-
-      try {
-        const res = await authFilesApi.setStatus(name, nextDisabled);
-        setFiles((prev) =>
-          prev.map((it) => (it.name === name ? { ...it, disabled: res.disabled } : it)),
-        );
-        notify({
-          type: "success",
-          message: enabled ? t("auth_files.enabled") : t("auth_files.disabled"),
-        });
-      } catch (err: unknown) {
-        setFiles((prev) =>
-          prev.map((it) => (it.name === name ? { ...it, disabled: prevDisabled } : it)),
-        );
-        notify({
-          type: "error",
-          message: err instanceof Error ? err.message : t("auth_files.status_update_failed"),
-        });
-      } finally {
-        setStatusUpdating((prev) => {
-          const next = { ...prev };
-          delete next[name];
-          return next;
-        });
-      }
-    },
-    [notify, t],
-  );
 
   const filterChips = useMemo(() => ["all", ...providerOptions], [providerOptions]);
   const {
