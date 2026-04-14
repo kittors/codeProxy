@@ -2,8 +2,6 @@ import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Bot, Database, FileKey, Globe, RefreshCw } from "lucide-react";
-
-// Vendor SVG icons
 import iconGemini from "@/assets/icons/gemini.svg";
 import iconClaude from "@/assets/icons/claude.svg";
 import iconCodex from "@/assets/icons/codex.svg";
@@ -67,7 +65,6 @@ export function ProvidersPage() {
   >(null);
   const handledRouteRef = useRef("");
 
-  // 按 Tab 加载数据，切换 Tab 时只请求当前 Tab 的数据
   const refreshTab = useCallback(
     async (tabId: typeof tab) => {
       setLoading(true);
@@ -146,9 +143,7 @@ export function ProvidersPage() {
         });
         setUsageStatsBySource(stats);
       }
-    } catch {
-      // usage加载Failed不影响主要功能
-    }
+    } catch {}
   }, []);
 
   const {
@@ -162,7 +157,6 @@ export function ProvidersPage() {
     maskApiKey,
   });
 
-  // refreshAll 保留作为兼容入口（Save后刷新当前 Tab）
   const refreshAll = useCallback(async () => {
     await refreshTab(tab);
   }, [refreshTab, tab]);
@@ -350,7 +344,6 @@ export function ProvidersPage() {
 
   return (
     <div className="space-y-6">
-      {/* 标题头：描述 + 刷新 */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="space-y-0.5">
           <h2 className="text-base font-semibold text-slate-900 dark:text-white">
@@ -371,7 +364,6 @@ export function ProvidersPage() {
         </Button>
       </div>
 
-      {/* Tabs 导航 */}
       <Tabs
         value={tab}
         onValueChange={(next) => {
