@@ -1,0 +1,228 @@
+import { act, renderHook, waitFor } from "@testing-library/react";
+import { useState, type PropsWithChildren } from "react";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import type { AuthFileItem } from "@/lib/http/types";
+import {
+  AUTH_FILES_DATA_CACHE_KEY,
+  AUTH_FILES_UI_STATE_KEY,
+  buildUsageIndex,
+  pickQuotaPreviewItem,
+  readAuthFilesDataCache,
+  readAuthFilesUiState,
+  resolveAuthFileStats,
+  sanitizeAuthFilesForCache,
+  writeAuthFilesDataCache,
+  writeAuthFilesUiState,
+} from "@/modules/auth-files/helpers/authFilesPageUtils";
+import { useAuthFilesListState } from "@/modules/auth-files/hooks/useAuthFilesListState";
+import { useAuthFilesOAuthConfig } from "@/modules/auth-files/hooks/useAuthFilesOAuthConfig";
+import { ThemeProvider } from "@/modules/ui/ThemeProvider";
+import { ToastProvider } from "@/modules/ui/ToastProvider";
+
+const mocks = vi.hoisted(() => ({
+  getOauthExcludedModels: vi.fn(async () => ({})),
+  getOauthModelAlias: vi.fn(async () => ({ codex: [{ name: "existing", alias: "existing" }] })),
+  getModelDefinitions: vi.fn(async () => [
+    { id: "existing", display_name: "Existing" },
+    { id: "new-model", display_name: "New Model" },
+  ]),
+}));
+
+vi.mock("@/lib/http/apis", async (importOriginal) => {
+  const mod = await importOriginal<typeof import("@/lib/http/apis")>();
+  return {
+    ...mod,
+    authFilesApi: {
+      ...mod.authFilesApi,
+      getOauthExcludedModels: mocks.getOauthExcludedModels,
+      getOauthModelAlias: mocks.getOauthModelAlias,
+      getModelDefinitions: mocks.getModelDefinitions,
+    },
+  };
+});
+
+const wrapper = ({ children }: PropsWithChildren) => (
+  <ThemeProvider>
+    <ToastProvider>{children}</ToastProvider>
+  </ThemeProvider>
+);
+
+describe("Auth Files helper coverage", () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    window.sessionStorage.clear();
+    mocks.getOauthExcludedModels.mockReset();
+    mocks.getOauthModelAlias.mockReset();
+    mocks.getModelDefinitions.mockReset();
+    mocks.getOauthExcludedModels.mockImplementation(async () => ({}));
+    mocks.getOauthModelAlias.mockImplementation(async () => ({
+      codex: [{ name: "existing", alias: "existing" }],
+    }));
+    mocks.getModelDefinitions.mockImplementation(async () => [
+      { id: "existing", display_name: "Existing" },
+      { id: "new-model", display_name: "New Model" },
+    ]);
+  });
+
+  afterEach(() => {
+    window.localStorage.clear();
+    window.sessionStorage.clear();
+  });
+
+  test("round-trips ui state and sanitized session cache", () => {
+    writeAuthFilesUiState({
+      tab: "files",
+      filter: "codex",
+      search: "oauth",
+      page: 3,
+    });
+    expect(window.sessionStorage.getItem(AUTH_FILES_UI_STATE_KEY)).toContain('"filter":"codex"');
+    expect(readAuthFilesUiState()).toEqual({
+      tab: "files",
+      filter: "codex",
+      search: "oauth",
+      page: 3,
+    });
+
+    const files: AuthFileItem[] = [
+      {
+        name: "codex.json",
+        type: "codex",
+        provider: "codex",
+        label: "Codex Main",
+        disabled: false,
+        modified: 123456,
+        size: 2048,
+        runtimeOnly: true,
+        planType: "pro",
+        access_token: "should-not-persist",
+      } as AuthFileItem,
+    ];
+
+    const sanitized = sanitizeAuthFilesForCache(files);
+    expect(sanitized).toEqual([
+      {
+        name: "codex.json",
+        type: "codex",
+        provider: "codex",
+        label: "Codex Main",
+        disabled: false,
+        modified: 123456,
+        modtime: undefined,
+        size: 2048,
+        runtimeOnly: true,
+        runtime_only: undefined,
+        plan_type: undefined,
+        planType: "pro",
+      },
+    ]);
+
+    writeAuthFilesDataCache({
+      savedAtMs: 123,
+      files: sanitized,
+    });
+    expect(window.sessionStorage.getItem(AUTH_FILES_DATA_CACHE_KEY)).toContain('"savedAtMs":123');
+    expect(readAuthFilesDataCache()).toEqual({
+      savedAtMs: 123,
+      files: sanitized,
+    });
+  });
+
+  test("aggregates auth file usage and picks quota preview entries", () => {
+    const usage = buildUsageIndex({
+      source: [{ entity_name: "codex-main.json", requests: 8, failed: 3 }],
+      auth_index: [{ entity_name: "42", requests: 10, failed: 1 }],
+    } as any);
+
+    const authIndexedFile = {
+      name: "codex-main.json",
+      auth_index: "42",
+    } as AuthFileItem;
+    expect(resolveAuthFileStats(authIndexedFile, usage.index)).toEqual({ success: 9, failure: 1 });
+
+    const sourceOnlyFile = {
+      name: "codex-main.json",
+    } as AuthFileItem;
+    expect(resolveAuthFileStats(sourceOnlyFile, usage.index)).toEqual({ success: 5, failure: 3 });
+
+    const quotaItems = [
+      { label: "m_quota.code_weekly", percent: 80 } as any,
+      { label: "m_quota.code_5h", percent: 50 } as any,
+    ];
+    expect(pickQuotaPreviewItem(quotaItems, "5h")?.label).toBe("m_quota.code_5h");
+    expect(pickQuotaPreviewItem(quotaItems, "week")?.label).toBe("m_quota.code_weekly");
+  });
+
+  test("filters auth files, paginates, and prunes runtime-only selections", async () => {
+    const files = [
+      { name: "beta.json", type: "codex", provider: "codex" },
+      { name: "alpha.json", type: "codex", provider: "codex" },
+      { name: "runtime.json", type: "codex", provider: "codex", runtimeOnly: true },
+      { name: "gemini.json", type: "gemini-cli", provider: "gemini-cli" },
+    ] as AuthFileItem[];
+
+    const { result } = renderHook(
+      () => {
+        const [page, setPage] = useState(9);
+        const [selectedFileNames, setSelectedFileNames] = useState(["alpha.json", "runtime.json"]);
+        return useAuthFilesListState({
+          files,
+          filter: "codex",
+          search: ".json",
+          page,
+          setPage,
+          selectedFileNames,
+          setSelectedFileNames,
+        });
+      },
+      { wrapper },
+    );
+
+    await waitFor(() => {
+      expect(result.current.safePage).toBe(1);
+      expect(result.current.filteredFiles.map((file) => file.name)).toEqual([
+        "alpha.json",
+        "beta.json",
+        "runtime.json",
+      ]);
+      expect(Array.from(result.current.selectedFileNameSet)).toEqual(["alpha.json"]);
+      expect(result.current.filterCounts.counts.codex).toBe(3);
+      expect(result.current.selectableFilteredFiles.map((file) => file.name)).toEqual([
+        "alpha.json",
+        "beta.json",
+      ]);
+    });
+  });
+
+  test("transitions oauth alias import state and de-duplicates imported models", async () => {
+    const { result } = renderHook(() => useAuthFilesOAuthConfig("alias"), { wrapper });
+
+    await act(async () => {
+      await result.current.refreshAlias();
+    });
+
+    expect(result.current.aliasEditing.codex).toEqual([
+      { id: expect.any(String), name: "existing", alias: "existing" },
+    ]);
+
+    await act(async () => {
+      await result.current.openImport("codex");
+    });
+
+    await waitFor(() => {
+      expect(result.current.importOpen).toBe(true);
+      expect(result.current.importLoading).toBe(false);
+      expect(result.current.importModels.map((item) => item.id)).toEqual(["existing", "new-model"]);
+    });
+
+    await act(async () => {
+      result.current.applyImport();
+    });
+
+    expect(result.current.importOpen).toBe(false);
+    expect(result.current.aliasEditing.codex).toEqual([
+      { id: expect.any(String), name: "existing", alias: "existing" },
+      { id: expect.any(String), name: "new-model", alias: "new-model" },
+    ]);
+  });
+});

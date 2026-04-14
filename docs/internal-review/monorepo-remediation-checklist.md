@@ -31,7 +31,7 @@
 - [x] 将 `AuthFilesPage` 中文件上传、下载、批量删除与启停状态机下沉到 `useAuthFilesFileActions`，把高频文件操作动作从页面主体拆出。完成时间：2026-04-14 10:21:55 +0800
 - [x] 将 `AuthFilesPage` 中初始缓存恢复、列表刷新、usage stats 获取与 session cache 写回下沉到 `useAuthFilesDataState`，把数据层副作用从页面主体拆出。完成时间：2026-04-14 10:35:01 +0800
 - [x] 将 `AuthFilesPage` 中 Quota/连通性状态、Quota 自动刷新、Quota 视图偏好与 Quota 预取批处理下沉到 `useAuthFilesQuotaState`，把 Quota 状态机从页面主体拆出。完成时间：2026-04-14 10:41:09 +0800
-- [ ] 为 Auth Files 拆分后的 quota 聚合、文件筛选、sessionStorage 缓存读写、OAuth 状态转换补单测。完成时间：待填写
+- [x] 为 Auth Files 拆分后的 quota 聚合、文件筛选、sessionStorage 缓存读写、OAuth 状态转换补单测。完成时间：2026-04-14 18:04:15 +0800
 - [x] 将 `codeProxy/src/modules/providers/ProvidersPage.tsx` 拆分为 Provider key 卡片、OpenAI provider 列表/表单、Ampcode 配置、模型发现与状态栏 hooks，主页面文件降到 600 行以内。完成时间：2026-04-13 20:28:39 +0800
 - [x] 将 `ProvidersPage` 中 OpenAI provider 列表卡片区块抽为 `OpenAIProvidersTab`，把 OpenAI 展示层从页面主体拆出。完成时间：2026-04-13 20:02:16 +0800
 - [x] 将 `ProvidersPage` 中 usage / status bar 相关统计派生下沉到 `useProviderUsageSummary`，减少页面主体中的 provider 健康度推导逻辑。完成时间：2026-04-13 20:06:02 +0800
