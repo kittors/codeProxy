@@ -101,7 +101,7 @@
 - [x] 将 HTTP 请求体读取统一迁移到 `bodyutil.ReadRequestBody`、`LimitBodyMiddleware` 或等价限流封装。完成时间：2026-04-14 09:46:33 +0800
 - [x] 为 multipart auth 文件上传增加服务端大小限制，确保与 raw JSON 上传和 Vertex 导入的限制策略一致。完成时间：2026-04-13 14:23:15 +0800
 - [x] 为 auth 文件下载路径评估流式响应替代方案，减少 `os.ReadFile + c.Data` 的整文件读入模式。完成时间：2026-04-13 15:03:48 +0800
-- [ ] 为上游响应体和错误响应体定义 provider-specific 最大读取限制，避免大响应导致内存压力。完成时间：待填写
+- [x] 为上游响应体和错误响应体定义 provider-specific 最大读取限制，避免大响应导致内存压力。完成时间：2026-04-14 17:15:12 +0800
 - [ ] 将请求 handler 路径中的 `context.Background()` 改为 `c.Request.Context()` 或请求派生 context。完成时间：待填写
 - [x] 为 `gin.Engine` 显式配置 `SetTrustedProxies(nil)` 或受控代理白名单，禁止依赖 Gin 默认行为。完成时间：2026-04-13 14:23:15 +0800
 - [x] 增加管理接口安全回归测试，验证伪造 `X-Forwarded-For` 不能把远程请求伪装成本地请求。完成时间：2026-04-13 14:50:29 +0800
