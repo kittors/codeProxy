@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
-import { authFilesApi, quotaApi, usageApi } from "@/lib/http/apis";
+import { authFilesApi, quotaApi } from "@/lib/http/apis";
 import type { AuthFileItem } from "@/lib/http/types";
 import { ConfirmModal } from "@/modules/ui/ConfirmModal";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/modules/ui/Tabs";
-import { useToast } from "@/modules/ui/ToastProvider";
 import { OAuthLoginDialog } from "@/modules/oauth/OAuthLoginDialog";
 import { AuthFileDetailModal } from "@/modules/auth-files/components/AuthFileDetailModal";
 import { AuthFilesExcludedTab } from "@/modules/auth-files/components/AuthFilesExcludedTab";
@@ -13,6 +12,7 @@ import { AuthFilesAliasTab } from "@/modules/auth-files/components/AuthFilesAlia
 import { AuthFilesFilesTab } from "@/modules/auth-files/components/AuthFilesFilesTab";
 import { ImportModelsModal } from "@/modules/auth-files/components/ImportModelsModal";
 import { GroupOverviewModal } from "@/modules/auth-files/components/GroupOverviewModal";
+import { useAuthFilesDataState } from "@/modules/auth-files/hooks/useAuthFilesDataState";
 import { useAuthFilesDetailEditors } from "@/modules/auth-files/hooks/useAuthFilesDetailEditors";
 import { useAuthFilesFileActions } from "@/modules/auth-files/hooks/useAuthFilesFileActions";
 import { useAuthFilesFilesPresentation } from "@/modules/auth-files/hooks/useAuthFilesFilesPresentation";
@@ -27,15 +27,11 @@ import {
   AUTH_FILES_FILES_VIEW_MODE_KEY,
   AUTH_FILES_QUOTA_AUTO_REFRESH_KEY,
   AUTH_FILES_QUOTA_PREVIEW_KEY,
-  buildUsageIndex,
   normalizeAuthIndexValue,
   normalizeQuotaAutoRefreshMs,
-  readAuthFilesDataCache,
   readAuthFilesUiState,
   resolveAuthFileStats,
   resolveProviderLabel,
-  sanitizeAuthFilesForCache,
-  writeAuthFilesDataCache,
   writeAuthFilesUiState,
   type FilesViewMode,
   type OAuthDialogTab,
@@ -44,10 +40,7 @@ import {
 
 export function AuthFilesPage() {
   const { t } = useTranslation();
-  const { notify } = useToast();
   const [searchParams] = useSearchParams();
-
-  const initialDataCache = useMemo(() => readAuthFilesDataCache(), []);
 
   const [tab, setTab] = useState<"files" | "excluded" | "alias">("files");
   const {
@@ -87,9 +80,17 @@ export function AuthFilesPage() {
     applyImport,
   } = useAuthFilesOAuthConfig(tab);
 
-  const [files, setFiles] = useState<AuthFileItem[]>(() => initialDataCache?.files ?? []);
-  const [loading, setLoading] = useState(() => !((initialDataCache?.files?.length ?? 0) > 0));
-  const [refreshingAll, setRefreshingAll] = useState(false);
+  const {
+    files,
+    setFiles,
+    loading,
+    refreshingAll,
+    usageLoading,
+    usageData,
+    usageIndex,
+    loadAll,
+  } = useAuthFilesDataState();
+
   const [confirm, setConfirm] = useState<null | { type: "deleteSelection"; names: string[] }>(null);
 
   const [oauthDialogOpen, setOauthDialogOpen] = useState(false);
@@ -102,12 +103,6 @@ export function AuthFilesPage() {
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const [usageLoading, setUsageLoading] = useState(false);
-  const [usageData, setUsageData] = useState<import("@/lib/http/types").EntityStatsResponse | null>(
-    null,
-  );
-
-  const { index: usageIndex } = useMemo(() => buildUsageIndex(usageData), [usageData]);
   // Connectivity check state: fileName → { loading, latencyMs, error }
   const [connectivityState, setConnectivityState] = useState<
     Map<string, { loading: boolean; latencyMs: number | null; error: boolean }>
@@ -118,7 +113,6 @@ export function AuthFilesPage() {
   const quotaAutoRefreshingRef = useRef<Set<string>>(new Set());
   const quotaByFileNameRef = useRef<Record<string, QuotaState>>(quotaByFileName);
   const quotaWarmupAttemptRef = useRef<Map<string, number>>(new Map());
-  const filesRef = useRef<AuthFileItem[]>(files);
   const [nowMs, setNowMs] = useState(() => Date.now());
   const [quotaPreviewMode, setQuotaPreviewMode] = useLocalStorage<QuotaPreviewMode>(
     AUTH_FILES_QUOTA_PREVIEW_KEY,
@@ -302,31 +296,6 @@ export function AuthFilesPage() {
     [connectivityState],
   );
 
-  const loadAll = useCallback(async () => {
-    const hasExisting = files.length > 0;
-    if (hasExisting) setRefreshingAll(true);
-    else setLoading(true);
-    if (!hasExisting) setUsageLoading(true);
-    try {
-      const [filesRes, usageRes] = await Promise.all([
-        authFilesApi.list(),
-        usageApi.getEntityStats(30, "all").catch(() => null),
-      ]);
-      const list = Array.isArray(filesRes?.files) ? filesRes.files : [];
-      setFiles(list);
-      setUsageData(usageRes);
-    } catch (err: unknown) {
-      notify({
-        type: "error",
-        message: err instanceof Error ? err.message : t("auth_files.load_failed"),
-      });
-    } finally {
-      if (hasExisting) setRefreshingAll(false);
-      else setLoading(false);
-      if (!hasExisting) setUsageLoading(false);
-    }
-  }, [files.length, notify, t]);
-
   const {
     detailOpen,
     setDetailOpen,
@@ -371,39 +340,8 @@ export function AuthFilesPage() {
   });
 
   useEffect(() => {
-    void loadAll();
-  }, [loadAll]);
-
-  useEffect(() => {
     quotaByFileNameRef.current = quotaByFileName;
   }, [quotaByFileName]);
-
-  useEffect(() => {
-    filesRef.current = files;
-  }, [files]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    let timer: number | null = null;
-    timer = window.setTimeout(() => {
-      writeAuthFilesDataCache({
-        savedAtMs: Date.now(),
-        files: sanitizeAuthFilesForCache(files),
-      });
-    }, 250);
-    return () => {
-      if (timer) window.clearTimeout(timer);
-    };
-  }, [files]);
-
-  useEffect(() => {
-    return () => {
-      writeAuthFilesDataCache({
-        savedAtMs: Date.now(),
-        files: sanitizeAuthFilesForCache(filesRef.current),
-      });
-    };
-  }, []);
 
   useEffect(() => {
     const state = readAuthFilesUiState();
