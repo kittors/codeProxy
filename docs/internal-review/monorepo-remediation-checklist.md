@@ -37,7 +37,7 @@
 - [x] 将 `ProvidersPage` 中 usage / status bar 相关统计派生下沉到 `useProviderUsageSummary`，减少页面主体中的 provider 健康度推导逻辑。完成时间：2026-04-13 20:06:02 +0800
 - [x] 将 `ProvidersPage` 中 provider key 编辑状态、保存、删除、启停流程下沉到 `useProviderKeyEditor`，进一步减少主页面中的 CRUD 编排。完成时间：2026-04-13 20:28:39 +0800
 - [x] 将 `ProvidersPage` 中 OpenAI provider 编辑、模型发现与保存流程下沉到 `useOpenAIProviderEditor`，并修复 `/ai-providers/openai` 等直达路由未先加载目标 tab 数据的问题。完成时间：2026-04-13 20:38:21 +0800
-- [ ] 为 Providers 拆分后的 provider draft、model discovery、usage source 归一化、API key masking 补单测。完成时间：待填写
+- [x] 为 Providers 拆分后的 provider draft、model discovery、usage source 归一化、API key masking 补单测。完成时间：2026-04-14 17:54:22 +0800
 - [x] 将 `codeProxy/src/modules/api-keys/ApiKeysPage.tsx` 拆分为 key 表格、编辑弹窗、权限/限制选择器、日志快捷入口、配额展示 hooks，主页面文件降到 600 行以内。完成时间：2026-04-14 14:27:30 +0800
 - [x] 将 `ApiKeysPage` 中创建/编辑共用表单与弹窗下沉到 `ApiKeyFormFields` / `ApiKeyFormModal`，减少页面主体的表单 UI 代码。完成时间：2026-04-13 22:18:18 +0800
 - [x] 将 `ApiKeysPage` 中 usage 明细弹窗 UI 下沉到 `ApiKeyUsageModal`，把筛选栏、日志表和分页视图从页面主体拆出。完成时间：2026-04-13 22:23:03 +0800
