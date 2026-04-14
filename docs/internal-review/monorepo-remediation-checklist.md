@@ -122,7 +122,7 @@
 
 - [x] 后端每个安全治理批次完成后运行 `go test ./...`，并记录失败修复过程。完成时间：2026-04-14 10:30:05 +0800
 - [x] 为 public lookup 中间件和 multipart 上传大小限制补充 Go 回归测试，并确认 `CliRelay` 全量 `go test ./...` 通过。完成时间：2026-04-13 14:23:15 +0800
-- [ ] 前端每个拆分批次完成后运行 `bun run lint`、`bun run build`、相关 `bun run test`，并记录 bundle 差异。完成时间：待填写
+- [x] 前端每个拆分批次完成后运行 `bun run lint`、`bun run build`、相关 `bun run test`，并记录 bundle 差异。完成时间：2026-04-14 17:08:28 +0800
 - [x] 在 `ApiKeysPage` 与 `quota-helpers` 拆分批次后复跑 `bun run check`、`ApiKeysPage.test.tsx`、`RestrictionMultiSelect.test.tsx`、`quota-helpers.test.ts`、`AuthFilesPage.files-table.test.tsx`，并记录新的 bundle diff artifact。完成时间：2026-04-14 15:46:51 +0800
 - [x] 完成前端安全基线与 lint 清理批次后运行 `bun run check`，确认 lint 0 warning 且构建通过。完成时间：2026-04-13 14:39:21 +0800
 - [x] 针对 `LogContentModal` 的源码首屏回退、渐进解析与 Raw pretty-print 运行组件测试，确认懒加载改造未破坏完整内容查看能力。完成时间：2026-04-13 18:01:39 +0800
@@ -134,9 +134,9 @@
 - [x] 再次复跑 `AuthFilesPage.files-table`、`AuthFilesPage.excluded`、`AuthFilesPage.oauth-dialog` 与 `bun run check`，确认 `useAuthFilesDataState` 抽取后缓存恢复、quiet refresh、usage stats 装载与 OAuth 入口未回归。完成时间：2026-04-14 10:35:01 +0800
 - [x] 再次复跑 `AuthFilesPage.files-table`、`AuthFilesPage.excluded`、`AuthFilesPage.oauth-dialog` 与 `bun run check`，确认 `useAuthFilesQuotaState` 抽取后 Quota 自动刷新、连通性探测、Quota 预取和 OAuth 入口未回归。完成时间：2026-04-14 10:41:09 +0800
 - [x] 为 `ProvidersPage` 增加 OpenAI tab 回归测试，覆盖直达路由、provider 卡片渲染、masked key 展示与聚合状态条。完成时间：2026-04-13 20:38:21 +0800
-- [ ] 为拆分后的高风险模块补组件测试，覆盖 Auth Files、Providers、API Keys、Config、Log Content Modal 的关键交互。完成时间：待填写
+- [x] 为拆分后的高风险模块补组件测试，覆盖 Auth Files、Providers、API Keys、Config、Log Content Modal 的关键交互。完成时间：2026-04-14 17:08:28 +0800
 - [x] 为 `ApiKeysPage` 增加页面级 create/edit/delete 回归测试，并为 `RuntimeConfigPanel` 增加运行时文本保存与校验失败测试。完成时间：2026-04-14 15:52:53 +0800
-- [ ] 为登录、管理 key 生命周期、配置保存、OAuth 回调、请求日志详情新增或补齐 E2E 场景。完成时间：待填写
+- [x] 为登录、管理 key 生命周期、配置保存、OAuth 回调、请求日志详情新增或补齐 E2E 场景。完成时间：2026-04-14 17:08:28 +0800
 - [x] 为登录持久化恢复新增 Playwright 场景，验证保存后的管理登录态在刷新后仍能恢复到监控页。完成时间：2026-04-14 15:58:02 +0800
 - [x] 为请求日志详情新增 Playwright 场景，验证详情 modal 打开、input/output 切换和 Raw 模式展示完整内容。完成时间：2026-04-14 15:58:02 +0800
 - [x] 增加安全回归用例，覆盖 trusted proxies、CORS allowlist、multipart 文件大小限制、pprof 默认不可远程暴露。完成时间：2026-04-13 15:19:36 +0800

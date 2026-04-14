@@ -8,6 +8,7 @@ const setAuthed = async (page: Page) => {
         apiBase: "http://127.0.0.1:8317",
         managementKey: "test-management-key",
         rememberPassword: true,
+        expiresAt: Date.now() + 24 * 60 * 60 * 1000,
       }),
     );
   });
