@@ -112,7 +112,7 @@
 - [x] 建立统一 HTTP client factory，集中配置 timeout、dialer、TLS handshake、response header、idle conn、keepalive。完成时间：2026-04-13 15:12:57 +0800
 - [x] 将散落的 bare `http.Client` / bare `http.Transport` 迁移到统一 factory，优先覆盖代理、OAuth、executor、管理工具调用。完成时间：2026-04-13 15:12:57 +0800
 - [x] 为确实需要脱离请求生命周期的后台任务添加注释，说明 owner、取消条件、超时和清理策略。完成时间：2026-04-14 18:20:40 +0800
-- [ ] 为 OAuth 回调、WebSocket session、model registry hook、service watcher 等 goroutine 引入统一生命周期管理或 errgroup。完成时间：待填写
+- [x] 为 OAuth 回调、WebSocket session、model registry hook、service watcher 等 goroutine 引入统一生命周期管理或 errgroup。完成时间：2026-04-14 23:13:42 +0800
 - [x] 为主 `http.Server` 增加 `ReadHeaderTimeout`、`ReadTimeout`、`WriteTimeout`、`IdleTimeout`，并为 SSE/WebSocket 路径设计例外策略。完成时间：2026-04-14 22:34:12 +0800
 - [x] 为主 `http.Server` 增加 `ReadHeaderTimeout`、`ReadTimeout`、`IdleTimeout` 与 `MaxHeaderBytes` 基线配置。完成时间：2026-04-13 14:23:15 +0800
 - [x] 为 pprof 增加明确的非本地暴露保护策略，至少要求本地绑定默认不变、远程暴露需要显式额外开关或警告。完成时间：2026-04-13 15:05:40 +0800
@@ -143,4 +143,4 @@
 - [x] 增加公共查询安全回归用例，覆盖“不再通过 URL 暴露 key”、`no-store`、查询限流、失败节奏一致性。完成时间：2026-04-14 09:50:30 +0800
 - [x] 增加性能回归检查，覆盖页面 chunk 大小、首次加载关键依赖、超大日志详情渲染和大文件下载内存路径。完成时间：2026-04-13 15:19:36 +0800
 - [x] 将大文件扫描、lint warning、bundle size、Go tests 纳入发布前检查清单。完成时间：2026-04-13 15:19:36 +0800
-- [ ] 每完成一个 Phase，更新本 checklist 的勾选状态和实际完成时间。完成时间：待填写
+- [x] 每完成一个 Phase，更新本 checklist 的勾选状态和实际完成时间。完成时间：2026-04-14 23:15:20 +0800
