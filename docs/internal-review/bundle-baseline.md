@@ -1,6 +1,6 @@
 # codeProxy Bundle Baseline
 
-更新时间：2026-04-14 09:41:42 +0800
+更新时间：2026-04-14 10:15:17 +0800
 
 ## 当前构建命令
 
@@ -17,7 +17,7 @@ bun run build
 | `vendor-markdown` | 779.40 kB | 270.17 kB | Markdown + syntax highlighter 组合 |
 | `index` | 639.23 kB | 187.31 kB | 入口基础包仍偏大 |
 | `ConfigPage` | 152.50 kB | 44.45 kB | 页面 chunk 偏大 |
-| `AuthFilesPage` | 109.36 kB | 29.25 kB | 仍是最大业务页面 chunk，后续继续拆分 |
+| `AuthFilesPage` | 111.21 kB | 29.65 kB | 仍是最大业务页面 chunk，继续拆到 600 行以内 |
 | `ProvidersPage` | 72.07 kB | 18.34 kB | 已低于 `< 80 kB gzip` 页面预算 |
 | `MonitorPage` | 27.11 kB | 6.92 kB | 已拆为 toolbar / state hook / dashboard sections |
 | `LogsPage` | 18.96 kB | 5.77 kB | 已拆为 live logs / error logs / helpers |
@@ -36,7 +36,7 @@ bun run build
 
 | 页面/模块 | 当前体积 | 预算状态 | 最近治理结果 |
 | --- | ---: | --- | --- |
-| `AuthFilesPage` | 109.36 kB / 29.25 kB gzip | 通过 | 主页面已从 4095 行降到 1663 行，但仍需继续拆分到 600 行以内 |
+| `AuthFilesPage` | 111.21 kB / 29.65 kB gzip | 通过 | 主页面已从 4095 行降到 993 行，本轮继续拆出 `useAuthFilesListState` 与 `useAuthFilesFilesPresentation`，但仍需继续拆到 600 行以内 |
 | `ConfigPage` | 152.50 kB / 44.45 kB gzip | 通过 | 已拆出 runtime panel / visual payload editors，后续继续处理编辑器重依赖 |
 | `ProvidersPage` | 72.07 kB / 18.34 kB gzip | 通过且低于预算 | OpenAI tab、usage summary、provider editor hooks 已完成拆分 |
 | `LogContentModal` | 31.39 kB / 9.50 kB gzip | 通过且低于预算 | Markdown 渲染改为按交互懒加载，保留完整内容查看能力 |
