@@ -3,11 +3,7 @@ import { useTranslation } from "react-i18next";
 import { authFilesApi } from "@/lib/http/apis";
 import type { AuthFileItem } from "@/lib/http/types";
 import { useToast } from "@/modules/ui/ToastProvider";
-import {
-  downloadBlobAsFile,
-  formatFileSize,
-  MAX_AUTH_FILE_SIZE,
-} from "@/modules/auth-files/helpers/authFilesPageUtils";
+import { formatFileSize, MAX_AUTH_FILE_SIZE } from "@/modules/auth-files/helpers/authFilesPageUtils";
 
 interface UseAuthFilesFileActionsOptions {
   loadAll: () => Promise<void>;
@@ -46,8 +42,7 @@ export function useAuthFilesFileActions({
       if (!confirmed) return;
 
       try {
-        const blob = await authFilesApi.downloadBlob(file.name);
-        downloadBlobAsFile(blob, file.name);
+        await authFilesApi.downloadFile(file.name);
       } catch (err: unknown) {
         notify({
           type: "error",

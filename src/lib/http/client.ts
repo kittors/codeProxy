@@ -6,6 +6,18 @@ interface ApiClientConfig {
   managementKey: string;
 }
 
+type BrowserFilePickerWindow = Window &
+  typeof globalThis & {
+    showSaveFilePicker?: (options?: {
+      suggestedName?: string;
+    }) => Promise<{
+      createWritable: () => Promise<{
+        write: (data: BufferSource | Blob | string) => Promise<void>;
+        close: () => Promise<void>;
+      }>;
+    }>;
+  };
+
 type Primitive = string | number | boolean;
 
 export interface RequestOptions {
@@ -53,6 +65,119 @@ export class ApiClient {
     return null;
   }
 
+  private buildHeaders(init?: RequestInit, options?: RequestOptions): Headers {
+    const headersFromOptions = new Headers(options?.headers);
+    const headersFromInit = new Headers(init?.headers);
+    const hasContentType =
+      headersFromOptions.has("Content-Type") || headersFromInit.has("Content-Type");
+    const headers = new Headers();
+
+    if (typeof init?.body === "string" && !hasContentType) {
+      headers.set("Content-Type", "application/json");
+    }
+    if (this.managementKey) {
+      headers.set("Authorization", `Bearer ${this.managementKey}`);
+    }
+
+    headersFromOptions.forEach((value, key) => {
+      headers.set(key, value);
+    });
+    headersFromInit.forEach((value, key) => {
+      headers.set(key, value);
+    });
+
+    return headers;
+  }
+
+  private createAbortController(options?: RequestOptions) {
+    const controller = new AbortController();
+    const timeoutMs = options?.timeoutMs ?? REQUEST_TIMEOUT_MS;
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    const externalSignal = options?.signal;
+    const onExternalAbort = () => controller.abort();
+
+    if (externalSignal) {
+      if (externalSignal.aborted) {
+        controller.abort();
+      } else {
+        externalSignal.addEventListener("abort", onExternalAbort, { once: true });
+      }
+    }
+
+    return {
+      controller,
+      cleanup: () => {
+        clearTimeout(timer);
+        if (externalSignal) {
+          externalSignal.removeEventListener("abort", onExternalAbort);
+        }
+      },
+    };
+  }
+
+  private async buildErrorMessage(response: Response): Promise<string> {
+    let message = `Request failed (${response.status})`;
+    try {
+      const text = await response.text();
+      const trimmed = text.trim();
+
+      if (trimmed) {
+        try {
+          const errorPayload = JSON.parse(trimmed) as Record<string, unknown>;
+          const errorText =
+            typeof errorPayload.error === "string"
+              ? errorPayload.error
+              : typeof errorPayload.message === "string"
+                ? errorPayload.message
+                : null;
+          if (errorText) {
+            message = errorText;
+          } else {
+            message = trimmed;
+          }
+        } catch {
+          message = trimmed;
+        }
+      }
+    } catch {
+      // 忽略错误体解析失败
+    }
+    return message;
+  }
+
+  private applyVersionHeaders(response: Response): void {
+    const version = this.readHeader(response.headers, VERSION_HEADER_KEYS);
+    const buildDate = this.readHeader(response.headers, BUILD_DATE_HEADER_KEYS);
+
+    if (version || buildDate) {
+      window.dispatchEvent(
+        new CustomEvent("server-version-update", {
+          detail: { version, buildDate },
+        }),
+      );
+    }
+  }
+
+  private extractDownloadFilename(headers: Headers, fallback: string): string {
+    const header = headers.get("Content-Disposition")?.trim();
+    if (!header) return fallback;
+
+    const utf8Match = header.match(/filename\*=UTF-8''([^;]+)/i);
+    if (utf8Match?.[1]) {
+      try {
+        return decodeURIComponent(utf8Match[1]);
+      } catch {
+        return utf8Match[1];
+      }
+    }
+
+    const quotedMatch = header.match(/filename="([^"]+)"/i);
+    if (quotedMatch?.[1]) return quotedMatch[1];
+
+    const plainMatch = header.match(/filename=([^;]+)/i);
+    return plainMatch?.[1]?.trim() || fallback;
+  }
+
   private async request<T>(
     path: string,
     {
@@ -65,40 +190,11 @@ export class ApiClient {
       responseType?: ResponseType;
     } = {},
   ): Promise<T> {
-    const controller = new AbortController();
-    const timeoutMs = options?.timeoutMs ?? REQUEST_TIMEOUT_MS;
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
-    const externalSignal = options?.signal;
-    const onExternalAbort = () => controller.abort();
-    if (externalSignal) {
-      if (externalSignal.aborted) {
-        controller.abort();
-      } else {
-        externalSignal.addEventListener("abort", onExternalAbort, { once: true });
-      }
-    }
+    const { controller, cleanup } = this.createAbortController(options);
 
     try {
       const url = this.buildUrl(path, options?.params);
-      const headersFromOptions = new Headers(options?.headers);
-      const headersFromInit = new Headers(init?.headers);
-      const hasContentType =
-        headersFromOptions.has("Content-Type") || headersFromInit.has("Content-Type");
-      const headers = new Headers();
-
-      if (typeof init?.body === "string" && !hasContentType) {
-        headers.set("Content-Type", "application/json");
-      }
-      if (this.managementKey) {
-        headers.set("Authorization", `Bearer ${this.managementKey}`);
-      }
-
-      headersFromOptions.forEach((value, key) => {
-        headers.set(key, value);
-      });
-      headersFromInit.forEach((value, key) => {
-        headers.set(key, value);
-      });
+      const headers = this.buildHeaders(init, options);
 
       const response = await fetch(url, {
         ...init,
@@ -110,45 +206,10 @@ export class ApiClient {
         window.dispatchEvent(new Event("unauthorized"));
       }
 
-      const version = this.readHeader(response.headers, VERSION_HEADER_KEYS);
-      const buildDate = this.readHeader(response.headers, BUILD_DATE_HEADER_KEYS);
-
-      if (version || buildDate) {
-        window.dispatchEvent(
-          new CustomEvent("server-version-update", {
-            detail: { version, buildDate },
-          }),
-        );
-      }
+      this.applyVersionHeaders(response);
 
       if (!response.ok) {
-        let message = `Request failed (${response.status})`;
-        try {
-          const text = await response.text();
-          const trimmed = text.trim();
-
-          if (trimmed) {
-            try {
-              const errorPayload = JSON.parse(trimmed) as Record<string, unknown>;
-              const errorText =
-                typeof errorPayload.error === "string"
-                  ? errorPayload.error
-                  : typeof errorPayload.message === "string"
-                    ? errorPayload.message
-                    : null;
-              if (errorText) {
-                message = errorText;
-              } else {
-                message = trimmed;
-              }
-            } catch {
-              message = trimmed;
-            }
-          }
-        } catch {
-          // 忽略错误体解析失败
-        }
-        throw new Error(message);
+        throw new Error(await this.buildErrorMessage(response));
       }
 
       if (response.status === 204) {
@@ -175,10 +236,7 @@ export class ApiClient {
         return text as unknown as T;
       }
     } finally {
-      clearTimeout(timer);
-      if (externalSignal) {
-        externalSignal.removeEventListener("abort", onExternalAbort);
-      }
+      cleanup();
     }
   }
 
@@ -253,6 +311,66 @@ export class ApiClient {
 
   getBlob(path: string, options?: RequestOptions): Promise<Blob> {
     return this.request<Blob>(path, { options, responseType: "blob" });
+  }
+
+  async downloadToFile(path: string, preferredFilename: string, options?: RequestOptions): Promise<void> {
+    const { controller, cleanup } = this.createAbortController(options);
+
+    try {
+      const url = this.buildUrl(path, options?.params);
+      const headers = this.buildHeaders(undefined, options);
+      const response = await fetch(url, {
+        method: "GET",
+        headers,
+        signal: controller.signal,
+      });
+
+      if (response.status === 401) {
+        window.dispatchEvent(new Event("unauthorized"));
+      }
+      this.applyVersionHeaders(response);
+
+      if (!response.ok) {
+        throw new Error(await this.buildErrorMessage(response));
+      }
+
+      const filename = this.extractDownloadFilename(response.headers, preferredFilename);
+      const pickerWindow = window as BrowserFilePickerWindow;
+
+      if (pickerWindow.showSaveFilePicker && response.body) {
+        try {
+          const handle = await pickerWindow.showSaveFilePicker({ suggestedName: filename });
+          const writable = await handle.createWritable();
+          const reader = response.body.getReader();
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            if (value) {
+              await writable.write(value);
+            }
+          }
+          await writable.close();
+          return;
+        } catch (error) {
+          if (
+            error instanceof DOMException &&
+            (error.name === "AbortError" || error.name === "SecurityError")
+          ) {
+            return;
+          }
+        }
+      }
+
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = filename;
+      link.click();
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+    } finally {
+      cleanup();
+    }
   }
 }
 

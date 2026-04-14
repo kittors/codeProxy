@@ -256,8 +256,7 @@ export function LogsPage() {
   const downloadErrorLog = useCallback(
     async (file: ErrorLogItem) => {
       try {
-        const blob = await logsApi.downloadErrorLog(file.name);
-        downloadBlob(blob, file.name);
+        await logsApi.downloadErrorLog(file.name);
       } catch (err: unknown) {
         const message =
           err instanceof Error ? err.message : t("logs_page.failed_download_error_log");
@@ -289,8 +288,7 @@ export function LogsPage() {
       return;
     }
     try {
-      const blob = await logsApi.downloadRequestLogById(id);
-      downloadBlob(blob, `request-log-${id}.log`);
+      await logsApi.downloadRequestLogById(id);
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : t("logs_page.failed_download_request_log");
