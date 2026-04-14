@@ -45,7 +45,7 @@
 - [x] 将 `ApiKeyLookupPage` 中 public lookup 请求函数抽到 `apikey-lookup/api.ts`，并把 Usage / Logs / Models 三个 tab 的大块展示层拆到独立组件。完成时间：2026-04-14 07:37:48 +0800
 - [x] 将 `codeProxy/src/modules/monitor/LogContentModal.tsx` 拆分为内容加载 hook、Markdown/XML 渲染组件、复制导出组件、输入/输出 tab 状态。完成时间：2026-04-13 15:38:53 +0800
 - [ ] 将 `codeProxy/src/modules/monitor/MonitorPage.tsx` 拆分为 KPI 区、模型分布图、小时序列图、API Key 分布图、查询参数 hooks。完成时间：待填写
-- [ ] 将 `codeProxy/src/modules/logs/LogsPage.tsx` 拆分为日志工具栏、日志表格、下载流程、错误日志列表和 hooks。完成时间：待填写
+- [x] 将 `codeProxy/src/modules/logs/LogsPage.tsx` 拆分为日志工具栏、日志表格、下载流程、错误日志列表和 hooks。完成时间：2026-04-14 09:31:06 +0800
 - [x] 将 `codeProxy/src/utils/usage.ts` 拆分为 `sanitize`、`pricing`、`aggregation/details`、`chart-series`、`status`、`formatters` 等独立工具模块，并补纯函数单测。完成时间：2026-04-14 09:20:05 +0800
 - [ ] 将 `codeProxy/src/modules/quota/quota-helpers.ts` 拆分为 provider 识别、配额映射、显示格式化和校验函数，并补单测。完成时间：待填写
 - [x] 清理遗留 `useApi`、`useModelsStore`、`useConfigStore`、`useAuthStore` 与旧 `services/api` 的未使用路径，避免继续形成双轨架构。完成时间：2026-04-13 14:45:34 +0800
