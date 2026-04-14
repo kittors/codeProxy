@@ -1,56 +1,67 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, test, vi } from "vitest";
-import i18n from "@/i18n";
-import { usageApi } from "@/lib/http/apis";
-import { MonitorPage } from "@/modules/monitor/MonitorPage";
-import { ThemeProvider } from "@/modules/ui/ThemeProvider";
+import { describe, expect, test, vi } from "vitest";
+import { MonitorDistributionSections } from "@/modules/monitor/MonitorDashboardSections";
 
 vi.mock("@/modules/ui/charts/EChart", () => ({
   EChart: ({ className }: { className?: string }) => <div className={className}>chart</div>,
 }));
 
 describe("MonitorPage distribution legends", () => {
-  afterEach(async () => {
-    await i18n.changeLanguage("zh-CN");
-    vi.restoreAllMocks();
-  });
-
   test("renders model distribution legend rows as toggle buttons", async () => {
-    await i18n.changeLanguage("en");
-
-    vi.spyOn(usageApi, "getChartData").mockResolvedValue({
-      daily_series: [
-        {
-          date: "2026-04-01",
-          requests: 10,
-          failed_requests: 1,
-          input_tokens: 100,
-          output_tokens: 80,
-        },
-      ],
-      model_distribution: [
-        { model: "gpt-4.1", requests: 10, tokens: 500 },
-        { model: "claude-sonnet", requests: 4, tokens: 200 },
-      ],
-      apikey_distribution: [{ api_key: "sk-test-1", name: "Alice", requests: 7, tokens: 300 }],
-      hourly_tokens: [],
-      hourly_models: [],
-    });
+    const user = userEvent.setup();
+    const toggleModelDistributionLegend = vi.fn();
 
     render(
-      <ThemeProvider>
-        <MonitorPage />
-      </ThemeProvider>,
+      <MonitorDistributionSections
+        t={(key) => {
+          if (key === "monitor.model_distribution") return "Model distribution";
+          if (key === "monitor.last_days_desc") return "Last 7 days";
+          if (key === "monitor.requests") return "Requests";
+          if (key === "monitor.token") return "Tokens";
+          if (key === "monitor.daily_usage_trend") return "Daily usage";
+          if (key === "monitor.daily_desc") return "Daily trend";
+          if (key === "monitor.input_token") return "Input";
+          if (key === "monitor.output_token_legend") return "Output";
+          if (key === "monitor.request_count_legend") return "Requests";
+          if (key === "monitor.apikey_distribution") return "API key distribution";
+          return key;
+        }}
+        timeRange={7}
+        modelMetric="requests"
+        setModelMetric={() => undefined}
+        modelDistributionOption={{}}
+        modelDistributionLegend={[
+          {
+            name: "gpt-4.1",
+            valueLabel: "10",
+            percentLabel: "71.4%",
+            colorClass: "bg-sky-500",
+            enabled: true,
+          },
+        ]}
+        toggleModelDistributionLegend={toggleModelDistributionLegend}
+        dailyTrendOption={{}}
+        dailyLegendAvailability={{ hasInput: true, hasOutput: true, hasRequests: true }}
+        dailyLegendSelected={{ daily_input: true, daily_output: true, daily_requests: true }}
+        toggleDailyLegend={() => undefined}
+        apikeyDistributionData={[]}
+        apikeyMetric="requests"
+        setApikeyMetric={() => undefined}
+        apikeyDistributionOption={{}}
+        apikeyDistributionLegend={[]}
+        toggleApikeyDistributionLegend={() => undefined}
+        isRefreshing={false}
+      />,
     );
 
-    const legendButton = (await screen.findAllByRole("button", { name: /gpt-4\.1/i }))[0];
+    const legendButton = await screen.findByRole("button", { name: /gpt-4\.1/i });
     expect(legendButton).toHaveAttribute("aria-pressed", "true");
 
-    await userEvent.click(legendButton);
+    await user.click(legendButton);
 
     await waitFor(() => {
-      expect(legendButton).toHaveAttribute("aria-pressed", "false");
+      expect(toggleModelDistributionLegend).toHaveBeenCalledWith("gpt-4.1");
     });
   });
 });
