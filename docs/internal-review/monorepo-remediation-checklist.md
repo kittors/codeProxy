@@ -38,7 +38,7 @@
 - [x] 将 `ProvidersPage` 中 provider key 编辑状态、保存、删除、启停流程下沉到 `useProviderKeyEditor`，进一步减少主页面中的 CRUD 编排。完成时间：2026-04-13 20:28:39 +0800
 - [x] 将 `ProvidersPage` 中 OpenAI provider 编辑、模型发现与保存流程下沉到 `useOpenAIProviderEditor`，并修复 `/ai-providers/openai` 等直达路由未先加载目标 tab 数据的问题。完成时间：2026-04-13 20:38:21 +0800
 - [ ] 为 Providers 拆分后的 provider draft、model discovery、usage source 归一化、API key masking 补单测。完成时间：待填写
-- [ ] 将 `codeProxy/src/modules/api-keys/ApiKeysPage.tsx` 拆分为 key 表格、编辑弹窗、权限/限制选择器、日志快捷入口、配额展示 hooks，主页面文件降到 600 行以内。完成时间：待填写
+- [x] 将 `codeProxy/src/modules/api-keys/ApiKeysPage.tsx` 拆分为 key 表格、编辑弹窗、权限/限制选择器、日志快捷入口、配额展示 hooks，主页面文件降到 600 行以内。完成时间：2026-04-14 14:27:30 +0800
 - [x] 将 `ApiKeysPage` 中创建/编辑共用表单与弹窗下沉到 `ApiKeyFormFields` / `ApiKeyFormModal`，减少页面主体的表单 UI 代码。完成时间：2026-04-13 22:18:18 +0800
 - [x] 将 `ApiKeysPage` 中 usage 明细弹窗 UI 下沉到 `ApiKeyUsageModal`，把筛选栏、日志表和分页视图从页面主体拆出。完成时间：2026-04-13 22:23:03 +0800
 - [x] 将 `ApiKeysPage` 中 usage 查询、筛选、分页、内容弹窗与错误详情状态机下沉到 `useApiKeyUsageView`，继续压缩页面主体中的日志查询编排。完成时间：2026-04-13 22:29:37 +0800
@@ -98,7 +98,7 @@
 ## Phase 4：后端安全与稳定性治理
 
 - [x] 盘点 `CliRelay/internal` 与 `CliRelay/sdk` 中所有非测试 `io.ReadAll`，按请求体、上游响应体、本地文件、对象存储、压缩内容分类。完成时间：2026-04-13 15:19:36 +0800
-- [ ] 将 HTTP 请求体读取统一迁移到 `bodyutil.ReadRequestBody`、`LimitBodyMiddleware` 或等价限流封装。完成时间：待填写
+- [x] 将 HTTP 请求体读取统一迁移到 `bodyutil.ReadRequestBody`、`LimitBodyMiddleware` 或等价限流封装。完成时间：2026-04-14 09:46:33 +0800
 - [x] 为 multipart auth 文件上传增加服务端大小限制，确保与 raw JSON 上传和 Vertex 导入的限制策略一致。完成时间：2026-04-13 14:23:15 +0800
 - [x] 为 auth 文件下载路径评估流式响应替代方案，减少 `os.ReadFile + c.Data` 的整文件读入模式。完成时间：2026-04-13 15:03:48 +0800
 - [ ] 为上游响应体和错误响应体定义 provider-specific 最大读取限制，避免大响应导致内存压力。完成时间：待填写
@@ -120,7 +120,7 @@
 
 ## Phase 5：验证与守护
 
-- [ ] 后端每个安全治理批次完成后运行 `go test ./...`，并记录失败修复过程。完成时间：待填写
+- [x] 后端每个安全治理批次完成后运行 `go test ./...`，并记录失败修复过程。完成时间：2026-04-14 10:30:05 +0800
 - [x] 为 public lookup 中间件和 multipart 上传大小限制补充 Go 回归测试，并确认 `CliRelay` 全量 `go test ./...` 通过。完成时间：2026-04-13 14:23:15 +0800
 - [ ] 前端每个拆分批次完成后运行 `bun run lint`、`bun run build`、相关 `bun run test`，并记录 bundle 差异。完成时间：待填写
 - [x] 完成前端安全基线与 lint 清理批次后运行 `bun run check`，确认 lint 0 warning 且构建通过。完成时间：2026-04-13 14:39:21 +0800
@@ -136,7 +136,7 @@
 - [ ] 为拆分后的高风险模块补组件测试，覆盖 Auth Files、Providers、API Keys、Config、Log Content Modal 的关键交互。完成时间：待填写
 - [ ] 为登录、管理 key 生命周期、配置保存、OAuth 回调、请求日志详情新增或补齐 E2E 场景。完成时间：待填写
 - [x] 增加安全回归用例，覆盖 trusted proxies、CORS allowlist、multipart 文件大小限制、pprof 默认不可远程暴露。完成时间：2026-04-13 15:19:36 +0800
-- [ ] 增加公共查询安全回归用例，覆盖“不再通过 URL 暴露 key”、`no-store`、查询限流、失败节奏一致性。完成时间：待填写
+- [x] 增加公共查询安全回归用例，覆盖“不再通过 URL 暴露 key”、`no-store`、查询限流、失败节奏一致性。完成时间：2026-04-14 09:50:30 +0800
 - [x] 增加性能回归检查，覆盖页面 chunk 大小、首次加载关键依赖、超大日志详情渲染和大文件下载内存路径。完成时间：2026-04-13 15:19:36 +0800
 - [x] 将大文件扫描、lint warning、bundle size、Go tests 纳入发布前检查清单。完成时间：2026-04-13 15:19:36 +0800
 - [ ] 每完成一个 Phase，更新本 checklist 的勾选状态和实际完成时间。完成时间：待填写
