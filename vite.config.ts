@@ -49,6 +49,7 @@ export default defineConfig({
       output: {
         manualChunks: {
           "vendor-react": ["react", "react-dom", "react-router-dom"],
+          "vendor-i18n": ["i18next", "react-i18next", "goey-toast"],
           "vendor-echarts": ["echarts", "echarts-for-react"],
           "vendor-codemirror": [
             "@uiw/react-codemirror",
