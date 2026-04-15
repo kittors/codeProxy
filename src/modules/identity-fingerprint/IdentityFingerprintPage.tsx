@@ -23,9 +23,9 @@ const PROVIDERS: Array<{ id: ProviderTab; label: string }> = [
 ];
 
 const SESSION_MODE_OPTIONS = [
+  { value: "per-request", labelKey: "identity_fingerprint.session_per_request" },
   { value: "server-stable", labelKey: "identity_fingerprint.session_server_stable" },
   { value: "fixed", labelKey: "identity_fingerprint.session_fixed" },
-  { value: "per-request", labelKey: "identity_fingerprint.session_per_request" },
 ] as const;
 
 const EMPTY_CODEX: Required<CodexIdentityFingerprint> = {
@@ -34,7 +34,7 @@ const EMPTY_CODEX: Required<CodexIdentityFingerprint> = {
   version: "",
   originator: "",
   "websocket-beta": "",
-  "session-mode": "server-stable",
+  "session-mode": "per-request",
   "session-id": "",
   "custom-headers": {},
 };
@@ -133,7 +133,9 @@ export function IdentityFingerprintPage() {
         t("identity_fingerprint.preview_session"),
         codex["session-mode"] === "per-request"
           ? t("identity_fingerprint.session_per_request")
-          : codex["session-id"] || t("identity_fingerprint.preview_server_generated"),
+          : codex["session-mode"] === "fixed"
+            ? codex["session-id"] || t("identity_fingerprint.preview_server_generated")
+            : t("identity_fingerprint.session_server_stable"),
       ],
       [t("identity_fingerprint.preview_transport"), codex["websocket-beta"]],
     ],
@@ -241,7 +243,7 @@ export function IdentityFingerprintPage() {
                         <TextInput
                           value={codex["session-id"]}
                           onChange={(event) => updateCodex({ "session-id": event.target.value })}
-                          disabled={saving || codex["session-mode"] === "per-request"}
+                          disabled={saving || codex["session-mode"] !== "fixed"}
                           placeholder={t("identity_fingerprint.session_id_placeholder")}
                         />
                       </Field>
