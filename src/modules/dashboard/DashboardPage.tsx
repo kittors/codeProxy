@@ -57,7 +57,6 @@ export function DashboardPage() {
 
   return (
     <div className="space-y-5">
-      {/* ── Header ── */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-lg font-semibold tracking-tight text-slate-900 dark:text-white">
           {t("dashboard.heading")}
@@ -87,7 +86,6 @@ export function DashboardPage() {
         </div>
       </div>
 
-      {/* ── Error State ── */}
       {error ? (
         <EmptyState
           title={t("dashboard.load_failed")}
@@ -102,7 +100,6 @@ export function DashboardPage() {
         />
       ) : null}
 
-      {/* ── KPI Row ── */}
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <KpiCard
           title={t("dashboard.total_requests")}
@@ -140,7 +137,6 @@ export function DashboardPage() {
         />
       </div>
 
-      {/* ── System Monitor (real-time) ── */}
       <SystemMonitorSection />
     </div>
   );

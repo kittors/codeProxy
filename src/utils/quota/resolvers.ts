@@ -2,7 +2,7 @@
  * Resolver functions for extracting data from auth files.
  */
 
-import type { AuthFileItem } from "@/types";
+import type { AuthFileItem } from "@/lib/http/types";
 import { normalizeStringValue, normalizePlanType, parseIdTokenPayload } from "./parsers";
 
 export function extractCodexChatgptAccountId(value: unknown): string | null {

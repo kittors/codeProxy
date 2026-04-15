@@ -14,8 +14,16 @@ export const logsApi = {
   clearLogs: (): Promise<void> => apiClient.delete("/logs"),
   fetchErrorLogs: (): Promise<ErrorLogsResponse> =>
     apiClient.get("/request-error-logs", { timeoutMs: 60000 }),
-  downloadErrorLog: (filename: string): Promise<Blob> =>
-    apiClient.getBlob(`/request-error-logs/${encodeURIComponent(filename)}`, { timeoutMs: 60000 }),
-  downloadRequestLogById: (id: string): Promise<Blob> =>
-    apiClient.getBlob(`/request-log-by-id/${encodeURIComponent(id)}`, { timeoutMs: 60000 }),
+  downloadErrorLog: (filename: string): Promise<void> =>
+    apiClient.downloadToFile(`/request-error-logs/${encodeURIComponent(filename)}`, filename, {
+      timeoutMs: 60000,
+    }),
+  downloadRequestLogById: (id: string): Promise<void> =>
+    apiClient.downloadToFile(
+      `/request-log-by-id/${encodeURIComponent(id)}`,
+      `request-log-${id}.log`,
+      {
+        timeoutMs: 60000,
+      },
+    ),
 };

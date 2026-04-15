@@ -8,8 +8,6 @@ import { OverflowTooltip } from "@/modules/ui/Tooltip";
 import { Modal } from "@/modules/ui/Modal";
 import { VirtualTable, type VirtualTableColumn } from "@/modules/ui/VirtualTable";
 import { apiClient } from "@/lib/http/client";
-
-// Vendor SVG icons
 import iconClaude from "@/assets/icons/claude.svg";
 import iconOpenai from "@/assets/icons/openai.svg";
 import iconGemini from "@/assets/icons/gemini.svg";
@@ -25,8 +23,6 @@ import iconKiro from "@/assets/icons/kiro.svg";
 import iconVertex from "@/assets/icons/vertex.svg";
 import iconIflow from "@/assets/icons/iflow.svg";
 
-/* ─── types ─── */
-
 interface ModelPricing {
   inputPricePerMillion: number;
   outputPricePerMillion: number;
@@ -38,8 +34,6 @@ interface ModelItem {
   owned_by?: string;
   pricing: ModelPricing;
 }
-
-/* ─── Vendor icons ─── */
 
 const VENDOR_ICONS: Record<string, { light: string; dark: string }> = {
   claude: { light: iconClaude, dark: iconClaude },
@@ -147,7 +141,7 @@ function getVendorPrefix(modelId: string): string {
   return "";
 }
 
-function getVendorColor(modelId: string) {
+function _getVendorColor(modelId: string) {
   const lower = modelId.toLowerCase();
   for (const [prefix, color] of Object.entries(VENDOR_COLORS)) {
     if (lower.startsWith(prefix)) return color;
@@ -167,17 +161,13 @@ function VendorIcon({ modelId, size = 14 }: { modelId: string; size?: number }) 
   );
 }
 
-/* ─── helpers ─── */
-
-const formatNumber = (n: number) => n.toLocaleString();
-const formatCurrency = (n: number) => `$${n.toFixed(4)}`;
+const _formatNumber = (n: number) => n.toLocaleString();
+const _formatCurrency = (n: number) => `$${n.toFixed(4)}`;
 const emptyPricing: ModelPricing = {
   inputPricePerMillion: 0,
   outputPricePerMillion: 0,
   cachedPricePerMillion: 0,
 };
-
-/* ─── API calls ─── */
 
 async function fetchModels(): Promise<ModelItem[]> {
   const data = await apiClient.get<{
@@ -220,8 +210,6 @@ async function savePricingToBackend(
   await apiClient.put("/model-pricing", { items });
 }
 
-/* ─── component ─── */
-
 export function ModelsPage() {
   const { t } = useTranslation();
   const { notify } = useToast();
@@ -235,7 +223,6 @@ export function ModelsPage() {
   const [searchFilter, setSearchFilter] = useState("");
   const [totalCost, setTotalCost] = useState(0);
 
-  // Pricing modal state
   const [pricingModel, setPricingModel] = useState<string | null>(null);
   const [editInputPrice, setEditInputPrice] = useState("");
   const [editOutputPrice, setEditOutputPrice] = useState("");
@@ -247,15 +234,12 @@ export function ModelsPage() {
     try {
       const data = await fetchModels();
       setModels(data);
-      // Fetch total cost from usage stats
       try {
         const usageData = await apiClient.get<{ stats?: { total_cost?: number } }>(
           "/usage/logs?days=9999&size=1",
         );
         setTotalCost(usageData?.stats?.total_cost ?? 0);
-      } catch {
-        // ignore cost fetch failure
-      }
+      } catch {}
     } catch (err: unknown) {
       notify({
         type: "error",
@@ -283,8 +267,6 @@ export function ModelsPage() {
     });
     return { modelCount: models.length, pricedCount };
   }, [models]);
-
-  /* ─── pricing modal ─── */
 
   const handleOpenPricing = (modelId: string) => {
     const model = models.find((m) => m.id === modelId);
@@ -318,7 +300,6 @@ export function ModelsPage() {
         },
       ]);
 
-      // Update local state
       setModels((prev) =>
         prev.map((m) =>
           m.id === pricingModel
@@ -345,7 +326,7 @@ export function ModelsPage() {
     }
   };
 
-  const formatPricingBadge = (p: ModelPricing) => {
+  const _formatPricingBadge = (p: ModelPricing) => {
     if (
       p.inputPricePerMillion === 0 &&
       p.outputPricePerMillion === 0 &&
@@ -450,7 +431,6 @@ export function ModelsPage() {
 
   return (
     <section className="flex flex-1 flex-col gap-4">
-      {/* KPI Row */}
       <div className="grid gap-4 md:grid-cols-3">
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
           <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 dark:text-white/55">
@@ -486,9 +466,7 @@ export function ModelsPage() {
         </div>
       </div>
 
-      {/* 表格卡片 */}
       <div className="flex flex-1 flex-col rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-950/70">
-        {/* 标题栏 */}
         <div className="flex flex-wrap items-center justify-between gap-3 px-5 pt-5 pb-3">
           <div>
             <h2 className="flex items-center gap-2 text-base font-semibold text-slate-900 dark:text-white">
@@ -524,7 +502,6 @@ export function ModelsPage() {
           </div>
         </div>
 
-        {/* 表格 */}
         <div className="relative px-5 pb-5">
           <VirtualTable<ModelItem>
             rows={filteredModels}
@@ -548,7 +525,6 @@ export function ModelsPage() {
         </div>
       </div>
 
-      {/* Pricing Modal */}
       <Modal
         open={pricingModel !== null}
         onClose={() => setPricingModel(null)}

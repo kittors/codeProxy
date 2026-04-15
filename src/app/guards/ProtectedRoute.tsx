@@ -13,12 +13,10 @@ export function ProtectedRoute() {
       <PageBackground variant="app">
         <div className="flex min-h-screen items-center justify-center">
           <div className="flex flex-col items-center animate-[fadeInUp_0.5s_ease-out]">
-            {/* 旋转光环 */}
             <div className="relative mb-6">
               <div className="h-12 w-12 rounded-full border-[3px] border-indigo-500/15 dark:border-indigo-400/15" />
               <div className="absolute inset-0 h-12 w-12 rounded-full border-[3px] border-transparent border-t-indigo-500/60 dark:border-t-indigo-400/70 animate-spin" />
             </div>
-            {/* 品牌文字 */}
             <span className="text-[13px] font-medium tracking-wider text-slate-400 dark:text-white/40 animate-pulse">
               CLI Proxy
             </span>

@@ -2,7 +2,7 @@
  * Validation and type checking functions for quota management.
  */
 
-import type { AuthFileItem } from "@/types";
+import type { AuthFileItem } from "@/lib/http/types";
 import { GEMINI_CLI_IGNORED_MODEL_PREFIXES } from "./constants";
 
 export function resolveAuthProvider(file: AuthFileItem): string {

@@ -17,6 +17,32 @@ export interface KimiHeaderDefaults {
   version?: string;
 }
 
+export interface RoutingChannelGroupMatch {
+  prefixes?: string[];
+  channels?: string[];
+}
+
+export interface RoutingChannelGroupConfig {
+  name?: string;
+  description?: string;
+  priority?: number;
+  match?: RoutingChannelGroupMatch;
+}
+
+export interface RoutingPathRouteConfig {
+  path?: string;
+  group?: string;
+  stripPrefix?: boolean;
+  fallback?: "none" | "default";
+}
+
+export interface RoutingConfig {
+  strategy?: string;
+  includeDefaultGroup?: boolean;
+  channelGroups?: RoutingChannelGroupConfig[];
+  pathRoutes?: RoutingPathRouteConfig[];
+}
+
 export interface Config {
   debug?: boolean;
   proxyUrl?: string;
@@ -29,6 +55,7 @@ export interface Config {
   wsAuth?: boolean;
   forceModelPrefix?: boolean;
   routingStrategy?: string;
+  routing?: RoutingConfig;
   apiKeys?: string[];
   ampcode?: AmpcodeConfig;
   geminiApiKeys?: GeminiKeyConfig[];

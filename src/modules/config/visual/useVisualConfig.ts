@@ -5,6 +5,10 @@ import type {
   PayloadParamValueType,
   PayloadProtocol,
   PayloadRule,
+  RoutingChannelGroupEntry,
+  RoutingChannelGroupMemberEntry,
+  RoutingFallback,
+  RoutingPathRouteEntry,
   VisualConfigValues,
 } from "@/modules/config/visual/types";
 import { DEFAULT_VISUAL_VALUES, makeClientId } from "@/modules/config/visual/types";
@@ -203,6 +207,70 @@ function parsePayloadFilterRules(rules: unknown): PayloadFilterRule[] {
   });
 }
 
+function parseRoutingFallback(raw: unknown): RoutingFallback {
+  return raw === "default" ? "default" : "none";
+}
+
+function parseRoutingChannelGroups(raw: unknown): RoutingChannelGroupEntry[] {
+  if (!Array.isArray(raw)) return [];
+
+  return raw.map((item, index) => {
+    const record = asRecord(item) ?? {};
+    const match = asRecord(record.match);
+    const priorityRecord = asRecord(record["channel-priorities"]);
+    const channels = Array.isArray(match?.channels)
+      ? match.channels
+          .map((value) => String(value ?? "").trim())
+          .filter(Boolean)
+      : [];
+    const priorityNames = priorityRecord
+      ? Object.keys(priorityRecord)
+          .map((value) => String(value ?? "").trim())
+          .filter(Boolean)
+      : [];
+    const names = Array.from(new Set([...channels, ...priorityNames]));
+    const members: RoutingChannelGroupMemberEntry[] = names.map((name, memberIndex) => {
+      let priority = "";
+      if (priorityRecord) {
+        const rawPriority = Object.entries(priorityRecord).find(
+          ([key]) => key.trim().toLowerCase() === name.toLowerCase(),
+        )?.[1];
+        if (typeof rawPriority === "number" && Number.isFinite(rawPriority)) {
+          priority = String(rawPriority);
+        } else if (typeof rawPriority === "string" && rawPriority.trim()) {
+          priority = rawPriority.trim();
+        }
+      }
+      return {
+        id: `routing-group-${index}-channel-${memberIndex}-${makeClientId()}`,
+        name,
+        priority,
+      };
+    });
+    return {
+      id: `routing-group-${index}-${makeClientId()}`,
+      name: typeof record.name === "string" ? record.name : "",
+      description: typeof record.description === "string" ? record.description : "",
+      channels: members,
+    };
+  });
+}
+
+function parseRoutingPathRoutes(raw: unknown): RoutingPathRouteEntry[] {
+  if (!Array.isArray(raw)) return [];
+
+  return raw.map((item, index) => {
+    const record = asRecord(item) ?? {};
+    return {
+      id: `routing-path-${index}-${makeClientId()}`,
+      path: typeof record.path === "string" ? record.path : "",
+      group: typeof record.group === "string" ? record.group : "",
+      stripPrefix: record["strip-prefix"] !== false,
+      fallback: parseRoutingFallback(record.fallback),
+    };
+  });
+}
+
 function serializePayloadRulesForYaml(rules: PayloadRule[]): Array<Record<string, unknown>> {
   return rules
     .map((rule) => {
@@ -258,6 +326,71 @@ function serializePayloadFilterRulesForYaml(
       return { models, params };
     })
     .filter((rule) => rule.models.length > 0);
+}
+
+function serializeRoutingChannelGroupsForYaml(
+  groups: RoutingChannelGroupEntry[],
+): Array<Record<string, unknown>> {
+  return groups
+    .map((group) => {
+      const name = group.name.trim();
+      if (!name) return null;
+
+      const item: Record<string, unknown> = { name };
+      if (group.description.trim()) {
+        item.description = group.description.trim();
+      }
+
+      const match: Record<string, unknown> = {};
+      const channels = group.channels
+        .map((channel) => channel.name.trim())
+        .filter(Boolean);
+      if (channels.length > 0) {
+        match.channels = Array.from(new Set(channels));
+      }
+      if (Object.keys(match).length > 0) {
+        item.match = match;
+      }
+
+      const channelPriorities = group.channels.reduce<Record<string, number>>((acc, channel) => {
+        const channelName = channel.name.trim();
+        const priority = Number.parseInt(channel.priority.trim(), 10);
+        if (channelName && Number.isFinite(priority) && priority !== 0) {
+          acc[channelName] = priority;
+        }
+        return acc;
+      }, {});
+      if (Object.keys(channelPriorities).length > 0) {
+        item["channel-priorities"] = channelPriorities;
+      }
+
+      return item;
+    })
+    .filter((group): group is Record<string, unknown> => group !== null);
+}
+
+function serializeRoutingPathRoutesForYaml(
+  routes: RoutingPathRouteEntry[],
+): Array<Record<string, unknown>> {
+  return routes
+    .map((route) => {
+      const path = route.path.trim();
+      const group = route.group.trim();
+      if (!path || !group) return null;
+
+      const item: Record<string, unknown> = {
+        path,
+        group,
+      };
+      if (!route.stripPrefix) {
+        item["strip-prefix"] = false;
+      }
+      if (route.fallback !== "none") {
+        item.fallback = route.fallback;
+      }
+      return item;
+    })
+    .filter((route): route is Record<string, unknown> => route !== null);
 }
 
 export function useVisualConfig() {
@@ -323,6 +456,9 @@ export function useVisualConfig() {
         quotaSwitchPreviewModel: Boolean(quotaExceeded?.["switch-preview-model"] ?? true),
 
         routingStrategy: routing?.strategy === "fill-first" ? "fill-first" : "round-robin",
+        routingIncludeDefaultGroup: routing?.["include-default-group"] !== false,
+        routingChannelGroups: parseRoutingChannelGroups(routing?.["channel-groups"]),
+        routingPathRoutes: parseRoutingPathRoutes(routing?.["path-routes"]),
 
         payloadDefaultRules: parsePayloadRules(payload?.default),
         payloadOverrideRules: parsePayloadRules(payload?.override),
@@ -424,9 +560,34 @@ export function useVisualConfig() {
           deleteIfEmpty(parsed, "quota-exceeded");
         }
 
-        if (hasOwn(parsed, "routing") || values.routingStrategy !== "round-robin") {
+        if (
+          hasOwn(parsed, "routing") ||
+          values.routingStrategy !== "round-robin" ||
+          !values.routingIncludeDefaultGroup ||
+          values.routingChannelGroups.length > 0 ||
+          values.routingPathRoutes.length > 0
+        ) {
+          const serializedRoutingGroups = serializeRoutingChannelGroupsForYaml(
+            values.routingChannelGroups,
+          );
+          const serializedPathRoutes = serializeRoutingPathRoutesForYaml(values.routingPathRoutes);
           const routing = ensureRecord(parsed, "routing");
           routing.strategy = values.routingStrategy;
+          if (!values.routingIncludeDefaultGroup) {
+            routing["include-default-group"] = false;
+          } else if (hasOwn(routing, "include-default-group")) {
+            delete routing["include-default-group"];
+          }
+          if (serializedRoutingGroups.length > 0) {
+            routing["channel-groups"] = serializedRoutingGroups;
+          } else if (hasOwn(routing, "channel-groups")) {
+            delete routing["channel-groups"];
+          }
+          if (serializedPathRoutes.length > 0) {
+            routing["path-routes"] = serializedPathRoutes;
+          } else if (hasOwn(routing, "path-routes")) {
+            delete routing["path-routes"];
+          }
           deleteIfEmpty(parsed, "routing");
         }
 

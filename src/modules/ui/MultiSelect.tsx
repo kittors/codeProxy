@@ -33,7 +33,7 @@ export function MultiSelect({
   options,
   value,
   onChange,
-  placeholder = "",
+  placeholder: _placeholder = "",
   emptyLabel = "All",
   selectAllLabel,
   searchable = true,

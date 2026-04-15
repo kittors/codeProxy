@@ -13,6 +13,7 @@ import {
   Activity,
   Bot,
   Cpu,
+  Layers,
   LayoutDashboard,
   FileKey,
   FileText,
@@ -49,6 +50,7 @@ const NAV_ITEMS = [
   { to: "/ai-providers", i18nKey: "shell.nav_ai_providers", icon: Bot },
   { to: "/auth-files", i18nKey: "shell.nav_auth_files", icon: FileKey },
   { to: "/api-keys", i18nKey: "shell.nav_api_keys", icon: Sparkles },
+  { to: "/channel-groups", i18nKey: "shell.nav_channel_groups", icon: Layers },
   { to: "/models", i18nKey: "shell.nav_models", icon: Cpu },
   { to: "/config", i18nKey: "shell.nav_config", icon: Settings },
   { to: "/system", i18nKey: "shell.nav_system", icon: Info },
@@ -62,6 +64,7 @@ const getPageTitleKey = (pathname: string): string => {
   if (pathname.startsWith("/ai-providers")) return "shell.nav_ai_providers";
   if (pathname.startsWith("/auth-files")) return "shell.nav_auth_files";
   if (pathname.startsWith("/api-keys")) return "shell.page_api_keys";
+  if (pathname.startsWith("/channel-groups")) return "shell.page_channel_groups";
   if (pathname.startsWith("/models")) return "shell.nav_models";
   if (pathname.startsWith("/config")) return "shell.nav_config";
   if (pathname.startsWith("/system")) return "shell.nav_system";

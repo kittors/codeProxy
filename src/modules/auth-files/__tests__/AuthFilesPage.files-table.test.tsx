@@ -389,6 +389,13 @@ describe("AuthFilesPage files table", () => {
     } as any;
 
     mocks.list.mockImplementation(async () => ({ files: [file] }));
+    mocks.fetchQuota.mockResolvedValue({
+      items: [
+        { label: "m_quota.code_5h", percent: 12, resetAtMs: now + 60_000 },
+        { label: "m_quota.code_weekly", percent: 34, resetAtMs: now + 120_000 },
+        { label: "m_quota.review_weekly", percent: 56, resetAtMs: now + 180_000 },
+      ],
+    });
 
     window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
     window.sessionStorage.setItem(
@@ -396,18 +403,6 @@ describe("AuthFilesPage files table", () => {
       JSON.stringify({
         savedAtMs: now,
         files: [file],
-        usageData: null,
-        quotaByFileName: {
-          "codex.json": {
-            status: "success",
-            updatedAt: now,
-            items: [
-              { label: "m_quota.code_5h", percent: 12, resetAtMs: now + 60_000 },
-              { label: "m_quota.code_weekly", percent: 34, resetAtMs: now + 120_000 },
-              { label: "m_quota.review_weekly", percent: 56, resetAtMs: now + 180_000 },
-            ],
-          },
-        },
       }),
     );
 
@@ -425,11 +420,14 @@ describe("AuthFilesPage files table", () => {
 
     expect(await screen.findByText("codex.json")).toBeInTheDocument();
     expect(screen.getByTestId("auth-files-cards")).toBeInTheDocument();
+    fireEvent.click(
+      within(screen.getByTestId("auth-files-cards")).getByRole("button", { name: "Refresh" }),
+    );
 
-    expect(screen.getByText("Code: 5h")).toBeInTheDocument();
+    expect(await screen.findByText("Code: 5h")).toBeInTheDocument();
     expect(screen.getByText("Code: Weekly")).toBeInTheDocument();
     expect(screen.getByText("Review: Weekly")).toBeInTheDocument();
-    expect(screen.getByText("12%")).toBeInTheDocument();
+    expect(await screen.findByText("12%")).toBeInTheDocument();
     expect(screen.getByText("34%")).toBeInTheDocument();
     expect(screen.getByText("56%")).toBeInTheDocument();
 
@@ -510,6 +508,7 @@ describe("AuthFilesPage files table", () => {
     } as any;
 
     mocks.list.mockImplementationOnce(async () => ({ files: [file] }));
+    mocks.fetchQuota.mockRejectedValue(new Error("request_failed"));
 
     window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
     window.sessionStorage.setItem(
@@ -517,15 +516,6 @@ describe("AuthFilesPage files table", () => {
       JSON.stringify({
         savedAtMs: now,
         files: [file],
-        usageData: null,
-        quotaByFileName: {
-          "codex.json": {
-            status: "error",
-            updatedAt: now,
-            items: [],
-            error: "request_failed",
-          },
-        },
       }),
     );
 
@@ -543,7 +533,10 @@ describe("AuthFilesPage files table", () => {
 
     expect(await screen.findByText("codex.json")).toBeInTheDocument();
     expect(screen.getByTestId("auth-files-cards")).toBeInTheDocument();
-    expect(screen.getByText("Request failed")).toBeInTheDocument();
+    fireEvent.click(
+      within(screen.getByTestId("auth-files-cards")).getByRole("button", { name: "Refresh" }),
+    );
+    expect(await screen.findByText("Request failed")).toBeInTheDocument();
   });
 
   test("group overview summarizes current filtered results from shared quota state", async () => {
