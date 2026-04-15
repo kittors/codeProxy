@@ -25,6 +25,10 @@ jobs:
       - name: Build production bundle
         run: bunx vite build
 
+      - name: Write deployment version marker
+        run: |
+          printf '%s\n' "${VITE_APP_VERSION}" > dist/version.txt
+
       - name: Clean old static files
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -56,4 +60,12 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             ls -la /home/web/html/relay-panel/
+            test -f /home/web/html/relay-panel/manage.html
+            test -f /home/web/html/relay-panel/version.txt
+            echo "UI version:"
+            cat /home/web/html/relay-panel/version.txt
+            if ! grep -R --include='*.js' -q "/channel-groups" /home/web/html/relay-panel/assets; then
+              echo "channel-groups route was not found in deployed frontend assets"
+              exit 1
+            fi
             echo "Frontend deployed successfully"
