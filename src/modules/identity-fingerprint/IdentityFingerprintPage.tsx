@@ -8,6 +8,7 @@ import {
 import { Button } from "@/modules/ui/Button";
 import { Card } from "@/modules/ui/Card";
 import { TextInput } from "@/modules/ui/Input";
+import { Select } from "@/modules/ui/Select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/modules/ui/Tabs";
 import { ToggleSwitch } from "@/modules/ui/ToggleSwitch";
 import { useToast } from "@/modules/ui/ToastProvider";
@@ -20,6 +21,12 @@ const PROVIDERS: Array<{ id: ProviderTab; label: string }> = [
   { id: "gemini", label: "Gemini" },
   { id: "kimi", label: "Kimi" },
 ];
+
+const SESSION_MODE_OPTIONS = [
+  { value: "server-stable", labelKey: "identity_fingerprint.session_server_stable" },
+  { value: "fixed", labelKey: "identity_fingerprint.session_fixed" },
+  { value: "per-request", labelKey: "identity_fingerprint.session_per_request" },
+] as const;
 
 const EMPTY_CODEX: Required<CodexIdentityFingerprint> = {
   enabled: false,
@@ -207,24 +214,25 @@ export function IdentityFingerprintPage() {
                   >
                     <div className="grid gap-3 md:grid-cols-2">
                       <Field label={t("identity_fingerprint.session_mode")}>
-                        <select
+                        <Select
                           value={codex["session-mode"]}
-                          onChange={(event) =>
+                          onChange={(value) =>
                             updateCodex({
-                              "session-mode": event.target.value as CodexIdentityFingerprint["session-mode"],
+                              "session-mode": value as CodexIdentityFingerprint["session-mode"],
                             })
                           }
-                          disabled={saving}
-                          className="h-9 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm outline-none dark:border-neutral-800 dark:bg-neutral-900 dark:text-slate-100"
-                        >
-                          <option value="server-stable">
-                            {t("identity_fingerprint.session_server_stable")}
-                          </option>
-                          <option value="fixed">{t("identity_fingerprint.session_fixed")}</option>
-                          <option value="per-request">
-                            {t("identity_fingerprint.session_per_request")}
-                          </option>
-                        </select>
+                          options={SESSION_MODE_OPTIONS.map((option) => ({
+                            value: option.value,
+                            label: t(option.labelKey),
+                          }))}
+                          aria-label={t("identity_fingerprint.session_mode")}
+                          className={[
+                            "w-full justify-between",
+                            saving ? "pointer-events-none opacity-60" : null,
+                          ]
+                            .filter(Boolean)
+                            .join(" ")}
+                        />
                       </Field>
                       <Field
                         label={t("identity_fingerprint.session_id")}
