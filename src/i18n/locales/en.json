@@ -2149,7 +2149,7 @@
     "base_settings_title": "Basic routing settings",
     "base_settings_desc": "Group actual channels, then reuse those groups in paths and API key permissions.",
     "routing_strategy_label": "In-group scheduling",
-    "routing_strategy_hint": "Applies only among candidate channels inside the same group. Equal priority rotates; higher priority wins first.",
+    "routing_strategy_hint": "Applies only among candidate channels inside the same group. Priority is a weight; empty means 1 and 0 excludes the channel.",
     "routing_strategy_round_robin": "Round robin",
     "routing_strategy_fill_first": "Prefer first available",
     "include_default_group_short": "Keep the default group available when no custom group matches.",

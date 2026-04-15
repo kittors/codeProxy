@@ -24,6 +24,13 @@ function createEmptyRoutingValues(): VisualConfigValues {
   };
 }
 
+function parsePriorityText(value: string): number | null {
+  const trimmed = value.trim();
+  if (!/^\d+$/.test(trimmed)) return null;
+  const priority = Number(trimmed);
+  return Number.isSafeInteger(priority) ? priority : null;
+}
+
 function hydrateRoutingValues(payload: RoutingConfigItem | undefined): VisualConfigValues {
   const next = createEmptyRoutingValues();
   next.routingStrategy = payload?.strategy === "fill-first" ? "fill-first" : "round-robin";
@@ -76,8 +83,8 @@ function serializeRoutingValues(values: VisualConfigValues): RoutingConfigItem {
       const channels = group.channels.map((channel) => channel.name.trim()).filter(Boolean);
       const channelPriorities = group.channels.reduce<Record<string, number>>((map, channel) => {
         const channelName = channel.name.trim();
-        const priority = Number.parseInt(channel.priority.trim(), 10);
-        if (channelName && Number.isFinite(priority) && priority !== 0) {
+        const priority = parsePriorityText(channel.priority);
+        if (channelName && priority !== null) {
           map[channelName] = priority;
         }
         return map;

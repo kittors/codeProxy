@@ -50,7 +50,7 @@ describe("RoutingConfigEditor", () => {
     await user.click(screen.getByRole("option", { name: "Team A Claude" }));
     await user.click(screen.getByRole("combobox", { name: "选择渠道" }));
 
-    const priorityInput = screen.getByPlaceholderText("0");
+    const priorityInput = screen.getByPlaceholderText("1");
     await user.type(priorityInput, "80");
     await user.click(screen.getByRole("button", { name: "添加" }));
 

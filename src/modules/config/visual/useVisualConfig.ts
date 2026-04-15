@@ -211,6 +211,13 @@ function parseRoutingFallback(raw: unknown): RoutingFallback {
   return raw === "default" ? "default" : "none";
 }
 
+function parseRoutingPriorityText(value: string): number | null {
+  const trimmed = value.trim();
+  if (!/^\d+$/.test(trimmed)) return null;
+  const priority = Number(trimmed);
+  return Number.isSafeInteger(priority) ? priority : null;
+}
+
 function parseRoutingChannelGroups(raw: unknown): RoutingChannelGroupEntry[] {
   if (!Array.isArray(raw)) return [];
 
@@ -354,8 +361,8 @@ function serializeRoutingChannelGroupsForYaml(
 
       const channelPriorities = group.channels.reduce<Record<string, number>>((acc, channel) => {
         const channelName = channel.name.trim();
-        const priority = Number.parseInt(channel.priority.trim(), 10);
-        if (channelName && Number.isFinite(priority) && priority !== 0) {
+        const priority = parseRoutingPriorityText(channel.priority);
+        if (channelName && priority !== null) {
           acc[channelName] = priority;
         }
         return acc;

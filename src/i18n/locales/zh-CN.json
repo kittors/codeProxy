@@ -2313,7 +2313,7 @@
     "base_settings_title": "基础路由设置",
     "base_settings_desc": "把渠道归到分组里，路径和 API Key 权限都引用这些分组。",
     "routing_strategy_label": "分组内调度策略",
-    "routing_strategy_hint": "仅在同一分组候选渠道之间生效；相同优先级轮询，更高优先级优先。",
+    "routing_strategy_hint": "仅在同一分组候选渠道之间生效；优先级按权重调度，留空按 1，0 表示不参与。",
     "routing_strategy_round_robin": "轮询分配",
     "routing_strategy_fill_first": "优先首个可用渠道",
     "include_default_group_short": "没有命中自定义分组时，仍允许使用默认分组。",

@@ -85,8 +85,10 @@ function syncDraftChannels(
 }
 
 function parsePriority(value: string): number | null {
-  const parsed = Number.parseInt(value.trim(), 10);
-  return Number.isFinite(parsed) ? parsed : null;
+  const trimmed = value.trim();
+  if (!/^\d+$/.test(trimmed)) return null;
+  const parsed = Number(trimmed);
+  return Number.isSafeInteger(parsed) ? parsed : null;
 }
 
 function normalizeRoutePathInput(value: string): string {
@@ -556,10 +558,12 @@ export function RoutingConfigEditor({
             value={channel.priority}
             onChange={(event) => {
               const value = event.currentTarget.value;
+              if (!/^\d*$/.test(value)) return;
               updateDraftChannel(channel.id, { priority: value });
             }}
-            placeholder="0"
+            placeholder="1"
             inputMode="numeric"
+            pattern="[0-9]*"
             disabled={disabled}
           />
         ),
