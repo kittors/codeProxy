@@ -42,6 +42,11 @@ const ChannelGroupsPage = lazy(() =>
     default: m.ChannelGroupsPage,
   })),
 );
+const IdentityFingerprintPage = lazy(() =>
+  import("@/modules/identity-fingerprint/IdentityFingerprintPage").then((m) => ({
+    default: m.IdentityFingerprintPage,
+  })),
+);
 const ModelsPage = lazy(() =>
   import("@/modules/models/ModelsPage").then((m) => ({ default: m.ModelsPage })),
 );
@@ -90,6 +95,7 @@ export function AppRouter() {
                             <Route path="/settings" element={<Navigate to="/config" replace />} />
                             <Route path="/api-keys" element={<ApiKeysPage />} />
                             <Route path="/channel-groups" element={<ChannelGroupsPage />} />
+                            <Route path="/identity-fingerprint" element={<IdentityFingerprintPage />} />
                             <Route path="/models" element={<ModelsPage />} />
                             <Route path="/" element={<Navigate to="/dashboard" replace />} />
                           </Route>
