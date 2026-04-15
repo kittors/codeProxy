@@ -89,6 +89,38 @@ function parsePriority(value: string): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+function normalizeRoutePathInput(value: string): string {
+  let trimmed = value.trim();
+  if (!trimmed) return "";
+
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.protocol && parsed.host) {
+      trimmed = decodeURIComponent(parsed.pathname || "");
+    }
+  } catch {
+    // Keep non-URL inputs as-is.
+  }
+
+  const queryIndex = trimmed.search(/[?#]/);
+  if (queryIndex >= 0) {
+    trimmed = trimmed.slice(0, queryIndex);
+  }
+
+  trimmed = trimmed.replace(/^\/+|\/+$/g, "");
+  if (!trimmed) return "";
+
+  const segments = trimmed.split("/");
+  for (const segment of segments) {
+    if (!segment) return "";
+    if (Array.from(segment).some((char) => !/[\p{L}\p{N}_-]/u.test(char))) {
+      return "";
+    }
+  }
+
+  return `/${trimmed}`;
+}
+
 function summarizeList(values: string[], moreLabel: string): string {
   if (values.length === 0) return "";
   if (values.length === 1) return values[0];
@@ -171,13 +203,24 @@ export function RoutingConfigEditor({
   );
 
   const primaryRoute = groupDraft.routes[0] ?? EMPTY_ROUTE_DRAFT();
+  const normalizedPrimaryRoutePath = useMemo(
+    () => normalizeRoutePathInput(primaryRoute.path),
+    [primaryRoute.path],
+  );
 
   const groupDraftError = useMemo(() => {
     if (!groupDraft.name.trim()) return t("channel_groups_page.group_name_required");
     if (!primaryRoute.path.trim()) return t("channel_groups_page.route_path_required");
+    if (!normalizedPrimaryRoutePath) return t("channel_groups_page.route_path_invalid");
     if (groupDraft.channels.length === 0) return t("channel_groups_page.group_channels_required");
     return "";
-  }, [groupDraft.channels.length, groupDraft.name, primaryRoute.path, t]);
+  }, [
+    groupDraft.channels.length,
+    groupDraft.name,
+    normalizedPrimaryRoutePath,
+    primaryRoute.path,
+    t,
+  ]);
 
   const openCreateGroup = useCallback(() => {
     setGroupEditorId(null);
@@ -264,7 +307,7 @@ export function RoutingConfigEditor({
     const normalizedRoute = {
       ...primaryRoute,
       id: primaryRoute.id || makeClientId(),
-      path: primaryRoute.path.trim(),
+      path: normalizedPrimaryRoutePath,
       group: groupName,
     };
     const normalizedRoutes = normalizedRoute.path
@@ -300,6 +343,7 @@ export function RoutingConfigEditor({
     groupDraft,
     groupDraftError,
     groupEditorId,
+    normalizedPrimaryRoutePath,
     primaryRoute,
     update,
     values.routingChannelGroups,

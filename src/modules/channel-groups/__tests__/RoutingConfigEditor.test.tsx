@@ -78,6 +78,27 @@ describe("RoutingConfigEditor", () => {
     expect(screen.getByTestId("route-path")).toHaveTextContent("/team-a");
   });
 
+  test("normalizes a full access URL into the saved route path", async () => {
+    await i18n.changeLanguage("zh-CN");
+    const user = userEvent.setup();
+
+    render(<Harness />);
+
+    await user.click(screen.getByRole("button", { name: "新增分组" }));
+    await user.type(screen.getByPlaceholderText("pro"), "team-url");
+    await user.type(
+      screen.getByPlaceholderText("/pro"),
+      "https://relay.07230805.xyz/openai/team-url",
+    );
+    await user.click(screen.getByRole("combobox", { name: "选择渠道" }));
+    await user.click(screen.getByRole("option", { name: "Main Codex" }));
+    await user.click(screen.getByRole("combobox", { name: "选择渠道" }));
+    await user.click(screen.getByRole("button", { name: "添加" }));
+
+    expect(screen.getByTestId("route-count")).toHaveTextContent("1");
+    expect(screen.getByTestId("route-path")).toHaveTextContent("/openai/team-url");
+  });
+
   test("supports selecting and deselecting filtered channels from the dropdown header", async () => {
     await i18n.changeLanguage("zh-CN");
     const user = userEvent.setup();
@@ -113,6 +134,23 @@ describe("RoutingConfigEditor", () => {
     await user.click(screen.getByRole("combobox", { name: "选择渠道" }));
 
     expect(screen.getByText("请填写路径。")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "添加" })).toBeDisabled();
+  });
+
+  test("rejects invalid paths that contain empty segments", async () => {
+    await i18n.changeLanguage("zh-CN");
+    const user = userEvent.setup();
+
+    render(<Harness />);
+
+    await user.click(screen.getByRole("button", { name: "新增分组" }));
+    await user.type(screen.getByPlaceholderText("pro"), "team-invalid");
+    await user.type(screen.getByPlaceholderText("/pro"), "https://relay.07230805.xyz/openai//pro");
+    await user.click(screen.getByRole("combobox", { name: "选择渠道" }));
+    await user.click(screen.getByRole("option", { name: "Main Codex" }));
+    await user.click(screen.getByRole("combobox", { name: "选择渠道" }));
+
+    expect(screen.getByText("路径格式不正确，请填写域名后的路径，例如 /pro 或 /openai/pro。")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "添加" })).toBeDisabled();
   });
 });
