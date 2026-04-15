@@ -86,15 +86,25 @@ describe("Auth Files helper coverage", () => {
 
     const files: AuthFileItem[] = [
       {
+        id: "codex-main",
         name: "codex.json",
         type: "codex",
         provider: "codex",
         label: "Codex Main",
+        email: "codex@example.com",
+        account: "Codex Account",
+        account_type: "oauth",
+        auth_index: "auth-1",
+        authIndex: "auth-1",
         disabled: false,
         modified: 123456,
         size: 2048,
         runtimeOnly: true,
         planType: "pro",
+        id_token: {
+          chatgpt_account_id: "acct-1",
+          plan_type: "pro",
+        },
         access_token: "should-not-persist",
       } as AuthFileItem,
     ];
@@ -102,10 +112,16 @@ describe("Auth Files helper coverage", () => {
     const sanitized = sanitizeAuthFilesForCache(files);
     expect(sanitized).toEqual([
       {
+        id: "codex-main",
         name: "codex.json",
         type: "codex",
         provider: "codex",
         label: "Codex Main",
+        email: "codex@example.com",
+        account: "Codex Account",
+        account_type: "oauth",
+        auth_index: "auth-1",
+        authIndex: "auth-1",
         disabled: false,
         modified: 123456,
         modtime: undefined,
@@ -114,6 +130,10 @@ describe("Auth Files helper coverage", () => {
         runtime_only: undefined,
         plan_type: undefined,
         planType: "pro",
+        id_token: {
+          chatgpt_account_id: "acct-1",
+          plan_type: "pro",
+        },
       },
     ]);
 

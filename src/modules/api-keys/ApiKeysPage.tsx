@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Plus, KeyRound, RefreshCw } from "lucide-react";
 import { apiKeyEntriesApi, apiKeysApi, type ApiKeyEntry } from "@/lib/http/apis/api-keys";
+import { channelGroupsApi, type ChannelGroupItem } from "@/lib/http/apis/channel-groups";
 import { authFilesApi, providersApi } from "@/lib/http/apis";
 import { apiClient } from "@/lib/http/client";
 import {
@@ -40,6 +41,10 @@ export function ApiKeysPage() {
   const [saving, setSaving] = useState(false);
   const [availableModels, setAvailableModels] = useState<MultiSelectOption[]>([]);
   const [availableChannels, setAvailableChannels] = useState<MultiSelectOption[]>([]);
+  const [availableChannelGroups, setAvailableChannelGroups] = useState<MultiSelectOption[]>([]);
+  const [channelRouteGroupsByName, setChannelRouteGroupsByName] = useState<Record<string, string[]>>(
+    {},
+  );
   const [channelGroupByName, setChannelGroupByName] = useState<Record<string, string>>({});
   const [form, setForm] = useState<ApiKeyFormValues>(() => makeEmptyApiKeyForm());
   const {
@@ -82,14 +87,22 @@ export function ApiKeysPage() {
 
   /* ─── load models ─── */
 
-  const loadModels = useCallback(async (channels?: string[]) => {
+  const loadModels = useCallback(async (channels?: string[], groups?: string[]) => {
     try {
-      const raw = Array.isArray(channels) ? channels : [];
-      const normalized = raw.map((c) => String(c ?? "").trim()).filter(Boolean);
-      const qs =
-        normalized.length > 0
-          ? `?allowed_channels=${encodeURIComponent(normalized.join(","))}`
-          : "";
+      const normalizedChannels = (Array.isArray(channels) ? channels : [])
+        .map((c) => String(c ?? "").trim())
+        .filter(Boolean);
+      const normalizedGroups = (Array.isArray(groups) ? groups : [])
+        .map((group) => String(group ?? "").trim().toLowerCase())
+        .filter(Boolean);
+      const params = new URLSearchParams();
+      if (normalizedChannels.length > 0) {
+        params.set("allowed_channels", normalizedChannels.join(","));
+      }
+      if (normalizedGroups.length > 0) {
+        params.set("allowed_channel_groups", normalizedGroups.join(","));
+      }
+      const qs = params.toString() ? `?${params.toString()}` : "";
       const data = await apiClient.get<{ data?: Array<{ id?: string }> }>(`/models${qs}`);
       if (data?.data) {
         const opts: MultiSelectOption[] = data.data
@@ -109,6 +122,45 @@ export function ApiKeysPage() {
       }
     } catch {
       // silent — models list is supplementary
+    }
+  }, []);
+
+  const loadChannelGroups = useCallback(async () => {
+    try {
+      const groups = await channelGroupsApi.list();
+      const options: MultiSelectOption[] = groups
+        .map((group) => ({
+          value: String(group.name ?? "").trim().toLowerCase(),
+          label: String(group.name ?? "").trim().toLowerCase(),
+          description:
+            typeof group.description === "string" && group.description.trim()
+              ? group.description.trim()
+              : undefined,
+        }))
+        .filter((option) => option.value)
+        .sort((a, b) => a.label.localeCompare(b.label));
+      setAvailableChannelGroups(options);
+
+      const nextMembership: Record<string, string[]> = {};
+      groups.forEach((group: ChannelGroupItem) => {
+        const groupName = String(group.name ?? "").trim().toLowerCase();
+        if (!groupName) return;
+        const channels = Array.isArray(group.channels) ? group.channels : [];
+        channels.forEach((channel) => {
+          const name = String(channel ?? "").trim();
+          if (!name) return;
+          const existing = nextMembership[name] ?? [];
+          if (!existing.includes(groupName)) {
+            nextMembership[name] = [...existing, groupName];
+          }
+        });
+      });
+      Object.keys(nextMembership).forEach((name) => {
+        nextMembership[name] = [...nextMembership[name]].sort((a, b) => a.localeCompare(b));
+      });
+      setChannelRouteGroupsByName(nextMembership);
+    } catch {
+      // silent — routing group list is supplementary
     }
   }, []);
 
@@ -206,6 +258,7 @@ export function ApiKeysPage() {
       // Load models after entries are available (needs a valid API key)
       void loadModels();
       void loadChannels();
+      void loadChannelGroups();
     } catch (err: unknown) {
       notify({
         type: "error",
@@ -214,11 +267,22 @@ export function ApiKeysPage() {
     } finally {
       setLoading(false);
     }
-  }, [notify, loadChannels, loadModels]);
+  }, [notify, loadChannelGroups, loadChannels, loadModels]);
 
   useEffect(() => {
     void loadEntries();
   }, [loadEntries]);
+
+  useEffect(() => {
+    if (!showCreate && editIndex === null) return;
+    void loadModels(form.allowedChannels, form.allowedChannelGroups);
+  }, [
+    editIndex,
+    form.allowedChannelGroups,
+    form.allowedChannels,
+    loadModels,
+    showCreate,
+  ]);
 
   /* ─── toggle disable ─── */
 
@@ -250,7 +314,7 @@ export function ApiKeysPage() {
   const handleOpenCreate = () => {
     const next = makeEmptyApiKeyForm(generateApiKey());
     setForm(next);
-    void loadModels(next.allowedChannels);
+    void loadModels(next.allowedChannels, next.allowedChannelGroups);
     setShowCreate(true);
   };
 
@@ -277,6 +341,8 @@ export function ApiKeysPage() {
         "tpm-limit": form.tpmLimit ? parseInt(form.tpmLimit, 10) || 0 : undefined,
         "allowed-models": form.allowedModels.length > 0 ? form.allowedModels : undefined,
         "allowed-channels": form.allowedChannels.length > 0 ? form.allowedChannels : undefined,
+        "allowed-channel-groups":
+          form.allowedChannelGroups.length > 0 ? form.allowedChannelGroups : undefined,
         "system-prompt": form.systemPrompt.trim() || undefined,
         "created-at": new Date().toISOString(),
       };
@@ -308,10 +374,11 @@ export function ApiKeysPage() {
       tpmLimit: entry["tpm-limit"]?.toString() || "",
       allowedModels: entry["allowed-models"] || [],
       allowedChannels: entry["allowed-channels"] || [],
+      allowedChannelGroups: entry["allowed-channel-groups"] || [],
       systemPrompt: entry["system-prompt"] || "",
     };
     setForm(next);
-    void loadModels(next.allowedChannels);
+    void loadModels(next.allowedChannels, next.allowedChannelGroups);
     setEditIndex(index);
   };
 
@@ -337,6 +404,8 @@ export function ApiKeysPage() {
           "tpm-limit": form.tpmLimit ? parseInt(form.tpmLimit, 10) || 0 : 0,
           "allowed-models": form.allowedModels.length > 0 ? form.allowedModels : [],
           "allowed-channels": form.allowedChannels.length > 0 ? form.allowedChannels : [],
+          "allowed-channel-groups":
+            form.allowedChannelGroups.length > 0 ? form.allowedChannelGroups : [],
           "system-prompt": form.systemPrompt.trim(),
         },
       });
@@ -416,6 +485,32 @@ export function ApiKeysPage() {
     [handleToggleDisable, handleViewUsage, handleCopy, handleOpenEdit, handleOpenDelete, t],
   );
 
+  const filteredAvailableChannels = useMemo(() => {
+    if (form.allowedChannelGroups.length === 0) {
+      return availableChannels;
+    }
+    const allowedGroups = new Set(form.allowedChannelGroups.map((group) => group.toLowerCase()));
+    return availableChannels.filter((option) => {
+      const groups = channelRouteGroupsByName[option.value] ?? [];
+      return groups.some((group) => allowedGroups.has(group));
+    });
+  }, [availableChannels, channelRouteGroupsByName, form.allowedChannelGroups]);
+
+  useEffect(() => {
+    if (form.allowedChannelGroups.length === 0) {
+      return;
+    }
+    const allowedChannelSet = new Set(filteredAvailableChannels.map((option) => option.value));
+    setForm((prev) => {
+      const nextAllowedChannels = prev.allowedChannels.filter((channel) =>
+        allowedChannelSet.has(channel),
+      );
+      return nextAllowedChannels.length === prev.allowedChannels.length
+        ? prev
+        : { ...prev, allowedChannels: nextAllowedChannels };
+    });
+  }, [filteredAvailableChannels, form.allowedChannelGroups.length]);
+
   /* ─── main render ─── */
 
   return (
@@ -455,7 +550,7 @@ export function ApiKeysPage() {
             rowKey={(row) => row.key}
             rowHeight={44}
             height="h-auto max-h-[70vh]"
-            minWidth="min-w-[1560px]"
+            minWidth="min-w-[1740px]"
             caption={t("api_keys_page.table_caption")}
             emptyText={t("api_keys_page.no_api_keys")}
             rowClassName={(row) => (row.disabled ? "opacity-50" : "")}
@@ -470,7 +565,8 @@ export function ApiKeysPage() {
         saving={saving}
         form={form}
         setForm={setForm}
-        availableChannels={availableChannels}
+        availableChannels={filteredAvailableChannels}
+        availableChannelGroups={availableChannelGroups}
         availableModels={availableModels}
         onClose={() => setShowCreate(false)}
         onSubmit={handleCreate}
@@ -484,7 +580,8 @@ export function ApiKeysPage() {
         saving={saving}
         form={form}
         setForm={setForm}
-        availableChannels={availableChannels}
+        availableChannels={filteredAvailableChannels}
+        availableChannelGroups={availableChannelGroups}
         availableModels={availableModels}
         onClose={() => setEditIndex(null)}
         onSubmit={handleEdit}

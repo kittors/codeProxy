@@ -11,6 +11,7 @@ export interface ApiKeyEntry {
   "tpm-limit"?: number;
   "allowed-models"?: string[];
   "allowed-channels"?: string[];
+  "allowed-channel-groups"?: string[];
   "system-prompt"?: string;
   "created-at"?: string;
 }

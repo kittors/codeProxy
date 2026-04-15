@@ -10,6 +10,7 @@ export function ApiKeyFormFields({
   form,
   setForm,
   availableChannels,
+  availableChannelGroups,
   availableModels,
   editMode,
   regenerateKey,
@@ -18,6 +19,7 @@ export function ApiKeyFormFields({
   form: ApiKeyFormValues;
   setForm: React.Dispatch<React.SetStateAction<ApiKeyFormValues>>;
   availableChannels: MultiSelectOption[];
+  availableChannelGroups: MultiSelectOption[];
   availableModels: MultiSelectOption[];
   editMode: boolean;
   regenerateKey: () => void;
@@ -134,6 +136,29 @@ export function ApiKeyFormFields({
             className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition-all focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white dark:focus:border-indigo-500"
           />
         </div>
+      </div>
+
+      <div>
+        <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
+          {t("api_keys_page.form_allowed_channel_groups")}
+        </label>
+        <RestrictionMultiSelect
+          options={availableChannelGroups}
+          value={form.allowedChannelGroups}
+          onChange={(selected) =>
+            setForm((prev) => ({
+              ...prev,
+              allowedChannelGroups: selected,
+            }))
+          }
+          placeholder={t("api_keys_page.select_channel_groups")}
+          unrestrictedLabel={t("api_keys_page.form_all_channel_groups")}
+          selectedCountLabel={(count) => t("api_keys_page.selected_channel_groups_count", { count })}
+          searchPlaceholder={t("api_keys_page.search_channel_groups")}
+          selectFilteredLabel={t("api_keys_page.select_filtered")}
+          clearRestrictionLabel={t("api_keys_page.clear_restriction")}
+          noResultsLabel={t("api_keys_page.no_results")}
+        />
       </div>
 
       <div>

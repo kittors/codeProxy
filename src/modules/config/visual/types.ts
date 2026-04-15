@@ -41,6 +41,29 @@ export interface StreamingConfig {
 
 export type RoutingStrategy = "round-robin" | "fill-first";
 
+export type RoutingFallback = "none" | "default";
+
+export type RoutingChannelGroupMemberEntry = {
+  id: string;
+  name: string;
+  priority: string;
+};
+
+export type RoutingChannelGroupEntry = {
+  id: string;
+  name: string;
+  description: string;
+  channels: RoutingChannelGroupMemberEntry[];
+};
+
+export type RoutingPathRouteEntry = {
+  id: string;
+  path: string;
+  group: string;
+  stripPrefix: boolean;
+  fallback: RoutingFallback;
+};
+
 export type VisualConfigValues = {
   host: string;
   port: string;
@@ -73,6 +96,9 @@ export type VisualConfigValues = {
   quotaSwitchPreviewModel: boolean;
 
   routingStrategy: RoutingStrategy;
+  routingIncludeDefaultGroup: boolean;
+  routingChannelGroups: RoutingChannelGroupEntry[];
+  routingPathRoutes: RoutingPathRouteEntry[];
 
   payloadDefaultRules: PayloadRule[];
   payloadOverrideRules: PayloadRule[];
@@ -117,6 +143,9 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   quotaSwitchProject: true,
   quotaSwitchPreviewModel: true,
   routingStrategy: "round-robin",
+  routingIncludeDefaultGroup: true,
+  routingChannelGroups: [],
+  routingPathRoutes: [],
   payloadDefaultRules: [],
   payloadOverrideRules: [],
   payloadFilterRules: [],

@@ -152,7 +152,7 @@ export function Select({
                 "dark:border-white/10 dark:bg-neutral-950/25 dark:text-white/70 dark:hover:bg-neutral-950/40 dark:hover:text-white/85 dark:focus-visible:ring-white/15",
               ].join(" ")
             : [
-                "inline-flex h-9 items-center gap-1.5 rounded-xl border border-slate-200 bg-white pl-3 pr-3 text-sm font-medium text-slate-700 shadow-sm outline-none transition",
+                "inline-flex h-10 items-center gap-1.5 rounded-xl border border-slate-200 bg-white pl-3 pr-3 text-sm font-medium text-slate-700 shadow-sm outline-none transition",
                 "hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-slate-400/35",
                 "dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-white/80 dark:hover:bg-white/10 dark:focus-visible:ring-white/15",
               ].join(" "),

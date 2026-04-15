@@ -12,6 +12,7 @@ export function ApiKeyFormModal({
   form,
   setForm,
   availableChannels,
+  availableChannelGroups,
   availableModels,
   onClose,
   onSubmit,
@@ -24,6 +25,7 @@ export function ApiKeyFormModal({
   form: ApiKeyFormValues;
   setForm: React.Dispatch<React.SetStateAction<ApiKeyFormValues>>;
   availableChannels: MultiSelectOption[];
+  availableChannelGroups: MultiSelectOption[];
   availableModels: MultiSelectOption[];
   onClose: () => void;
   onSubmit: () => Promise<void>;
@@ -57,6 +59,7 @@ export function ApiKeyFormModal({
         form={form}
         setForm={setForm}
         availableChannels={availableChannels}
+        availableChannelGroups={availableChannelGroups}
         availableModels={availableModels}
         editMode={editMode}
         regenerateKey={regenerateKey}

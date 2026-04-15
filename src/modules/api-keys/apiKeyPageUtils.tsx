@@ -63,6 +63,7 @@ export const makeEmptyApiKeyForm = (key = ""): ApiKeyFormValues => ({
   tpmLimit: "",
   allowedModels: [],
   allowedChannels: [],
+  allowedChannelGroups: [],
   systemPrompt: "",
 });
 

@@ -19,7 +19,7 @@ export const AUTH_FILES_PAGE_SIZE = 9;
 export const MAX_AUTH_FILE_SIZE = 50 * 1024;
 
 export const AUTH_FILES_UI_STATE_KEY = "authFilesPage.uiState.v3";
-export const AUTH_FILES_DATA_CACHE_KEY = "authFilesPage.dataCache.v1";
+export const AUTH_FILES_DATA_CACHE_KEY = "authFilesPage.dataCache.v2";
 export const AUTH_FILES_QUOTA_PREVIEW_KEY = "authFilesPage.quotaPreview.v1";
 export const AUTH_FILES_QUOTA_AUTO_REFRESH_KEY = "authFilesPage.quotaAutoRefreshMs.v1";
 export const AUTH_FILES_FILES_VIEW_MODE_KEY = "authFilesPage.filesViewMode.v1";
@@ -38,6 +38,11 @@ export type AuthFilesUiState = {
 export type AuthFilesDataCache = {
   savedAtMs: number;
   files: AuthFileItem[];
+};
+
+const sanitizeDecodedIdToken = (value: unknown): unknown => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  return value;
 };
 
 export const readAuthFilesUiState = (): AuthFilesUiState | null => {
@@ -63,10 +68,16 @@ export const writeAuthFilesUiState = (state: AuthFilesUiState) => {
 
 export const sanitizeAuthFilesForCache = (files: AuthFileItem[]): AuthFileItem[] =>
   files.map((file) => ({
+    id: file.id,
     name: file.name,
     type: file.type,
     provider: file.provider,
     label: file.label,
+    email: file.email,
+    account: file.account,
+    account_type: file.account_type,
+    auth_index: file.auth_index,
+    authIndex: file.authIndex,
     disabled: file.disabled,
     modified: file.modified,
     modtime: file.modtime,
@@ -75,6 +86,7 @@ export const sanitizeAuthFilesForCache = (files: AuthFileItem[]): AuthFileItem[]
     runtime_only: file.runtime_only,
     plan_type: file.plan_type,
     planType: file.planType,
+    id_token: sanitizeDecodedIdToken(file.id_token),
   }));
 
 export const readAuthFilesDataCache = (): AuthFilesDataCache | null => {

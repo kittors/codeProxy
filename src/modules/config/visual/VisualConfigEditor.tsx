@@ -1,9 +1,8 @@
-import { useCallback, useMemo } from "react";
+import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import type { RoutingStrategy, VisualConfigValues } from "@/modules/config/visual/types";
+import type { VisualConfigValues } from "@/modules/config/visual/types";
 import { Card } from "@/modules/ui/Card";
 import { TextInput } from "@/modules/ui/Input";
-import { Select } from "@/modules/ui/Select";
 import { ToggleSwitch } from "@/modules/ui/ToggleSwitch";
 import {
   PayloadFilterRulesEditor,
@@ -28,30 +27,6 @@ function Field({
   );
 }
 
-function SelectInput({
-  value,
-  onChange,
-  options,
-  disabled,
-  ariaLabel,
-}: {
-  value: string;
-  onChange: (value: string) => void;
-  options: ReadonlyArray<{ value: string; label: string }>;
-  disabled?: boolean;
-  ariaLabel: string;
-}) {
-  return (
-    <Select
-      value={value}
-      onChange={onChange}
-      options={options.map((opt) => ({ value: opt.value, label: opt.label }))}
-      aria-label={ariaLabel}
-      className={disabled ? "pointer-events-none opacity-60" : undefined}
-    />
-  );
-}
-
 export function VisualConfigEditor({
   values,
   disabled,
@@ -67,15 +42,6 @@ export function VisualConfigEditor({
       onChange(patch);
     },
     [onChange],
-  );
-
-  const routingOptions = useMemo(
-    () =>
-      [
-        { value: "round-robin", label: "round-robin" },
-        { value: "fill-first", label: "fill-first" },
-      ] satisfies ReadonlyArray<{ value: RoutingStrategy; label: string }>,
-    [],
   );
 
   return (
@@ -379,20 +345,6 @@ export function VisualConfigEditor({
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card title={t("visual_config.routing")} description={t("visual_config.routing_desc")}>
-          <div className="space-y-4">
-            <Field label="routing.strategy" hint={t("visual_config.routing_select")}>
-              <SelectInput
-                value={values.routingStrategy}
-                onChange={(value) => update({ routingStrategy: value as RoutingStrategy })}
-                options={routingOptions}
-                disabled={disabled}
-                ariaLabel="routing.strategy"
-              />
-            </Field>
-          </div>
-        </Card>
-
         <Card title={t("visual_config.streaming")} description={t("visual_config.streaming_desc")}>
           <div className="space-y-4">
             <div className="grid gap-3 lg:grid-cols-2">

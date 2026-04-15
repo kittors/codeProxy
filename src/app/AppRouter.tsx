@@ -37,6 +37,11 @@ const SystemPage = lazy(() =>
 const ApiKeysPage = lazy(() =>
   import("@/modules/api-keys/ApiKeysPage").then((m) => ({ default: m.ApiKeysPage })),
 );
+const ChannelGroupsPage = lazy(() =>
+  import("@/modules/channel-groups/ChannelGroupsPage").then((m) => ({
+    default: m.ChannelGroupsPage,
+  })),
+);
 const ModelsPage = lazy(() =>
   import("@/modules/models/ModelsPage").then((m) => ({ default: m.ModelsPage })),
 );
@@ -84,6 +89,7 @@ export function AppRouter() {
                             <Route path="/system" element={<SystemPage />} />
                             <Route path="/settings" element={<Navigate to="/config" replace />} />
                             <Route path="/api-keys" element={<ApiKeysPage />} />
+                            <Route path="/channel-groups" element={<ChannelGroupsPage />} />
                             <Route path="/models" element={<ModelsPage />} />
                             <Route path="/" element={<Navigate to="/dashboard" replace />} />
                           </Route>

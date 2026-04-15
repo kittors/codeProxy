@@ -61,5 +61,22 @@ export default defineConfig({
   server: {
     host: true,
     port: 5173,
+    proxy: {
+      "/v0": {
+        target: "http://127.0.0.1:8317",
+        changeOrigin: false,
+        ws: true,
+      },
+      "/v1": {
+        target: "http://127.0.0.1:8317",
+        changeOrigin: false,
+        ws: true,
+      },
+      "/v1beta": {
+        target: "http://127.0.0.1:8317",
+        changeOrigin: false,
+        ws: true,
+      },
+    },
   },
 });

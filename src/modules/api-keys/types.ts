@@ -8,5 +8,6 @@ export interface ApiKeyFormValues {
   tpmLimit: string;
   allowedModels: string[];
   allowedChannels: string[];
+  allowedChannelGroups: string[];
   systemPrompt: string;
 }

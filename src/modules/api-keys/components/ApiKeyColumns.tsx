@@ -201,6 +201,43 @@ export const createApiKeyColumns = ({
       ),
   },
   {
+    key: "allowedChannelGroups",
+    label: t("api_keys_page.col_channel_groups"),
+    width: "w-[172px] min-w-[172px]",
+    cellClassName: "min-w-0 overflow-hidden text-slate-700 dark:text-white/70",
+    render: (row) =>
+      row["allowed-channel-groups"]?.length ? (
+        <HoverTooltip
+          content={
+            <div className="flex max-w-xs flex-wrap gap-1.5">
+              {row["allowed-channel-groups"].map((group) => (
+                <span
+                  key={group}
+                  className="inline-flex items-center rounded-md border border-slate-200/60 bg-slate-50 px-2 py-0.5 font-mono text-[11px] text-slate-700 dark:border-neutral-700/40 dark:bg-neutral-800/60 dark:text-white/80"
+                >
+                  {group}
+                </span>
+              ))}
+            </div>
+          }
+          className="block min-w-0"
+        >
+          <span className="inline-flex min-w-0 w-full items-center gap-1.5 text-xs">
+            <span className="inline-flex h-5 min-w-[20px] flex-shrink-0 items-center justify-center rounded-md bg-violet-50 px-1.5 font-semibold tabular-nums text-violet-700 dark:bg-violet-900/30 dark:text-violet-300">
+              {row["allowed-channel-groups"].length}
+            </span>
+            <span className="block min-w-0 flex-1 truncate text-slate-500 dark:text-white/50">
+              {row["allowed-channel-groups"][0]}
+            </span>
+          </span>
+        </HoverTooltip>
+      ) : (
+        <span className="inline-flex items-center gap-1 whitespace-nowrap text-green-600 dark:text-green-400">
+          <ShieldCheck size={14} /> {t("api_keys_page.all_channel_groups")}
+        </span>
+      ),
+  },
+  {
     key: "allowedChannels",
     label: t("api_keys_page.col_channels"),
     width: "w-[172px] min-w-[172px]",
