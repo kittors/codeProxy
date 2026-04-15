@@ -96,6 +96,7 @@ export function AppRouter() {
                             <Route path="/api-keys" element={<ApiKeysPage />} />
                             <Route path="/channel-groups" element={<ChannelGroupsPage />} />
                             <Route path="/identity-fingerprint" element={<IdentityFingerprintPage />} />
+                            <Route path="/manage/identity-fingerprint" element={<IdentityFingerprintPage />} />
                             <Route path="/models" element={<ModelsPage />} />
                             <Route path="/" element={<Navigate to="/dashboard" replace />} />
                           </Route>
