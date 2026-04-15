@@ -532,6 +532,62 @@ export function RoutingConfigEditor({
     [disabled, openEditGroup, removeRoutingGroup, routesByGroup, t],
   );
 
+  const groupMemberColumns = useMemo<VirtualTableColumn<RoutingChannelGroupMemberEntry>[]>(
+    () => [
+      {
+        key: "channel",
+        label: t("channel_groups_page.table_channels"),
+        cellClassName: "min-w-0 whitespace-nowrap",
+        render: (channel) => (
+          <OverflowTooltip content={channel.name} className="block min-w-0">
+            <span className="block truncate text-sm text-slate-900 dark:text-white">
+              {channel.name}
+            </span>
+          </OverflowTooltip>
+        ),
+      },
+      {
+        key: "priority",
+        label: t("channel_groups_page.channel_priority_label"),
+        width: "w-[156px] min-w-[156px]",
+        cellClassName: "whitespace-nowrap",
+        render: (channel) => (
+          <TextInput
+            value={channel.priority}
+            onChange={(event) => {
+              const value = event.currentTarget.value;
+              updateDraftChannel(channel.id, { priority: value });
+            }}
+            placeholder="0"
+            inputMode="numeric"
+            disabled={disabled}
+          />
+        ),
+      },
+      {
+        key: "actions",
+        label: t("common.action"),
+        width: "w-[72px] min-w-[72px]",
+        headerClassName: "text-right",
+        cellClassName: "whitespace-nowrap text-right",
+        render: (channel) => (
+          <div className="flex justify-end">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => removeDraftChannel(channel.id)}
+              disabled={disabled}
+              aria-label={t("channel_groups_page.remove_channel")}
+            >
+              <X size={14} />
+            </Button>
+          </div>
+        ),
+      },
+    ],
+    [disabled, removeDraftChannel, t, updateDraftChannel],
+  );
+
   return (
     <>
       <div className="space-y-3">
@@ -654,50 +710,17 @@ export function RoutingConfigEditor({
             </Field>
           </div>
 
-          {groupDraft.channels.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-200 px-4 py-6 text-sm text-slate-500 dark:border-neutral-800 dark:text-white/55">
-              {t("channel_groups_page.empty_group_channels")}
-            </div>
-          ) : (
-            <div className="overflow-hidden rounded-2xl border border-slate-200/80 dark:border-neutral-800">
-              <div className="grid grid-cols-[minmax(0,1.5fr)_140px_56px] gap-3 border-b border-slate-200/80 bg-slate-50/80 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:border-neutral-800 dark:bg-neutral-900/50 dark:text-white/40">
-                <div>{t("channel_groups_page.table_channels")}</div>
-                <div>{t("channel_groups_page.channel_priority_label")}</div>
-                <div className="text-right">{t("common.action")}</div>
-              </div>
-              {groupDraft.channels.map((channel) => (
-                <div
-                  key={channel.id}
-                  className="grid grid-cols-[minmax(0,1.5fr)_140px_56px] gap-3 border-b border-slate-200/70 px-4 py-3 last:border-b-0 dark:border-neutral-800"
-                >
-                  <div className="truncate pt-2 text-sm text-slate-900 dark:text-white">
-                    {channel.name}
-                  </div>
-                  <TextInput
-                    value={channel.priority}
-                    onChange={(event) => {
-                      const value = event.currentTarget.value;
-                      updateDraftChannel(channel.id, { priority: value });
-                    }}
-                    placeholder="0"
-                    inputMode="numeric"
-                    disabled={disabled}
-                  />
-                  <div className="flex justify-end">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeDraftChannel(channel.id)}
-                      disabled={disabled}
-                      aria-label={t("channel_groups_page.remove_channel")}
-                    >
-                      <X size={14} />
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+          <VirtualTable<RoutingChannelGroupMemberEntry>
+            rows={groupDraft.channels}
+            columns={groupMemberColumns}
+            rowKey={(channel) => channel.id}
+            virtualize={false}
+            rowHeight={52}
+            height="h-[248px]"
+            minWidth="min-w-[640px]"
+            caption={t("channel_groups_page.select_channel_label")}
+            emptyText={t("channel_groups_page.empty_group_channels")}
+          />
 
         </div>
       </Modal>
