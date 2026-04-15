@@ -21,10 +21,17 @@ export interface AuthFileGroupTrendPoint {
   requests: number;
 }
 
+export interface AuthFileQuotaTrendPoint {
+  date: string;
+  percent: number | null;
+  samples: number;
+}
+
 export interface AuthFileGroupTrendResponse {
   days: number;
   group: string;
   points: AuthFileGroupTrendPoint[];
+  quota_points: AuthFileQuotaTrendPoint[];
 }
 
 export const usageApi = {
@@ -108,7 +115,16 @@ export const usageApi = {
       days: resp?.days ?? days,
       group: resp?.group ?? group,
       points: Array.isArray(resp?.points) ? resp.points : [],
+      quota_points: Array.isArray(resp?.quota_points) ? resp.quota_points : [],
     };
+  },
+
+  async recordAuthFileQuotaSnapshot(payload: {
+    auth_index: string;
+    provider?: string;
+    quotas: Record<string, number | null>;
+  }): Promise<void> {
+    await apiClient.post("/usage/auth-file-quota-snapshot", payload);
   },
 
   async getUsageLogs(params: {

@@ -285,19 +285,24 @@ export function useAuthFilesGroupOverview({
       try {
         const axis = buildLast7DayAxis();
         const callsByDay = new Map(axis.map((item) => [item.date, 0]));
-        const today = axis[axis.length - 1]?.date;
+        const weeklyByDay = new Map(axis.map((item) => [item.date, null as number | null]));
         const resp = await usageApi.getAuthFileGroupTrend(targetGroup, 7);
         (resp.points || []).forEach((point) => {
           if (callsByDay.has(point.date)) callsByDay.set(point.date, point.requests ?? 0);
         });
-
-        const weeklyPoint =
-          (groupOverviewByTab[targetGroup] ?? groupOverviewByTab.all)?.averageWeekly ?? null;
+        (resp.quota_points || []).forEach((point) => {
+          if (!weeklyByDay.has(point.date)) return;
+          const percent = point.percent;
+          weeklyByDay.set(
+            point.date,
+            typeof percent === "number" && Number.isFinite(percent) ? percent : null,
+          );
+        });
         const points: AuthFilesGroupTrendPoint[] = axis.map((item) => ({
           date: item.date,
           label: item.label,
           calls: callsByDay.get(item.date) ?? 0,
-          weeklyPercent: item.date === today ? weeklyPoint : null,
+          weeklyPercent: weeklyByDay.get(item.date) ?? null,
         }));
 
         if (groupTrendRequestRef.current === requestId) {
@@ -309,7 +314,7 @@ export function useAuthFilesGroupOverview({
         }
       }
     },
-    [groupOverviewByTab, groupOverviewTab],
+    [groupOverviewTab],
   );
 
   const openGroupOverview = useCallback(() => {

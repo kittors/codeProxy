@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { useTranslation } from "react-i18next";
-import { authFilesApi, quotaApi } from "@/lib/http/apis";
+import { authFilesApi, quotaApi, usageApi } from "@/lib/http/apis";
 import type { AuthFileItem } from "@/lib/http/types";
 import { useInterval } from "@/hooks/useInterval";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
@@ -162,6 +162,21 @@ export function useAuthFilesQuotaState({
         const authIndex = normalizeAuthIndexValue(rawAuthIndex);
         if (authIndex) {
           void quotaApi.reconcile(authIndex).catch(() => {});
+          const slots = resolveQuotaCardSlots(provider, items);
+          const quotaValueByKey = Object.fromEntries(
+            slots
+              .map((slot) => [slot.id, slot.item?.percent ?? null] as const)
+              .filter(([, value]) => value === null || Number.isFinite(value)),
+          );
+          if (Object.keys(quotaValueByKey).length > 0) {
+            await usageApi
+              .recordAuthFileQuotaSnapshot({
+                auth_index: authIndex,
+                provider,
+                quotas: quotaValueByKey,
+              })
+              .catch(() => {});
+          }
         }
         if (nextPlanType) {
           patchAuthFileByName(name, {
@@ -188,7 +203,7 @@ export function useAuthFilesQuotaState({
         quotaInFlightRef.current.delete(name);
       }
     },
-    [patchAuthFileByName, t],
+    [patchAuthFileByName, resolveQuotaCardSlots, t],
   );
 
   const checkAuthFileConnectivity = useCallback(
