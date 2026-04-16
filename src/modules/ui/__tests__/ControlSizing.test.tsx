@@ -49,11 +49,32 @@ describe("shared control sizing", () => {
     expect(screen.getByRole("textbox", { name: "Search" })).toHaveClass(
       "h-9",
       "rounded-2xl",
-      "border-0",
+      "border",
+      "border-black/[0.04]",
       "bg-white",
+      "text-[#71717A]",
+      "shadow-[2px_2px_6px_rgb(0_0_0_/_0.055)]",
+      "hover:bg-[#FAFAFA]",
+      "hover:text-[#18181B]",
+      "dark:bg-[#27272A]",
+      "dark:hover:bg-[#303036]",
+      "dark:hover:text-white",
     );
     screen.getAllByRole("combobox").forEach((control) => {
-      expect(control).toHaveClass("h-9", "rounded-2xl", "border-0", "bg-white");
+      expect(control).toHaveClass(
+        "h-9",
+        "rounded-2xl",
+        "border",
+        "border-black/[0.04]",
+        "bg-white",
+        "text-[#71717A]",
+        "shadow-[2px_2px_6px_rgb(0_0_0_/_0.055)]",
+        "hover:bg-[#FAFAFA]",
+        "hover:text-[#18181B]",
+        "dark:bg-[#27272A]",
+        "dark:hover:bg-[#303036]",
+        "dark:hover:text-white",
+      );
     });
   });
 

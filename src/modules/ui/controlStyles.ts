@@ -19,4 +19,4 @@ export const controlPaddingBySize: Record<ControlSize, string> = {
 };
 
 export const controlSurface =
-  "rounded-2xl border-0 bg-white text-[#71717A] shadow-[0_3px_12px_rgb(0_0_0_/_0.12)] outline-none transition-colors placeholder:text-[#96969B] hover:bg-white hover:text-[#18181B] focus-visible:ring-2 focus-visible:ring-black/[0.08] dark:bg-[#27272A] dark:text-[#A1A1AA] dark:shadow-[0_8px_24px_rgb(0_0_0_/_0.24)] dark:placeholder:text-[#9F9FA8] dark:hover:bg-[#303036] dark:hover:text-white dark:focus-visible:ring-white/10";
+  "rounded-2xl border border-black/[0.04] bg-white text-[#71717A] shadow-[2px_2px_6px_rgb(0_0_0_/_0.055)] outline-none transition-colors placeholder:text-[#96969B] hover:bg-[#FAFAFA] hover:text-[#18181B] focus-visible:ring-2 focus-visible:ring-black/[0.08] dark:border-transparent dark:bg-[#27272A] dark:text-[#A1A1AA] dark:shadow-[0_8px_24px_rgb(0_0_0_/_0.24)] dark:placeholder:text-[#9F9FA8] dark:hover:bg-[#303036] dark:hover:text-white dark:focus-visible:ring-white/10";
