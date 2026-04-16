@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
   getLogsMaxTotalSizeMb: vi.fn(),
   getForceModelPrefix: vi.fn(),
   getRoutingStrategy: vi.fn(),
+  getAutoUpdateEnabled: vi.fn(),
   updateProxyUrl: vi.fn(),
   clearProxyUrl: vi.fn(),
   updateRequestRetry: vi.fn(),
@@ -24,6 +25,7 @@ const mocks = vi.hoisted(() => ({
   updateSwitchProject: vi.fn(),
   updateSwitchPreviewModel: vi.fn(),
   updateForceModelPrefix: vi.fn(),
+  updateAutoUpdateEnabled: vi.fn(),
 }));
 
 vi.mock("@/lib/http/apis/config", () => ({
@@ -32,6 +34,7 @@ vi.mock("@/lib/http/apis/config", () => ({
     getLogsMaxTotalSizeMb: mocks.getLogsMaxTotalSizeMb,
     getForceModelPrefix: mocks.getForceModelPrefix,
     getRoutingStrategy: mocks.getRoutingStrategy,
+    getAutoUpdateEnabled: mocks.getAutoUpdateEnabled,
     updateProxyUrl: mocks.updateProxyUrl,
     clearProxyUrl: mocks.clearProxyUrl,
     updateRequestRetry: mocks.updateRequestRetry,
@@ -45,6 +48,7 @@ vi.mock("@/lib/http/apis/config", () => ({
     updateSwitchProject: mocks.updateSwitchProject,
     updateSwitchPreviewModel: mocks.updateSwitchPreviewModel,
     updateForceModelPrefix: mocks.updateForceModelPrefix,
+    updateAutoUpdateEnabled: mocks.updateAutoUpdateEnabled,
   },
 }));
 
@@ -73,11 +77,13 @@ describe("RuntimeConfigPanel", () => {
     mocks.getLogsMaxTotalSizeMb.mockResolvedValue(128);
     mocks.getForceModelPrefix.mockResolvedValue(false);
     mocks.getRoutingStrategy.mockResolvedValue("round-robin");
+    mocks.getAutoUpdateEnabled.mockResolvedValue(true);
     mocks.updateProxyUrl.mockResolvedValue({});
     mocks.clearProxyUrl.mockResolvedValue({});
     mocks.updateRequestRetry.mockResolvedValue({});
     mocks.updateLogsMaxTotalSizeMb.mockResolvedValue({});
     mocks.updateRoutingStrategy.mockResolvedValue({});
+    mocks.updateAutoUpdateEnabled.mockResolvedValue({});
   });
 
   test("saves modified runtime text fields and reloads config", async () => {
@@ -118,6 +124,17 @@ describe("RuntimeConfigPanel", () => {
 
     await waitFor(() => {
       expect(mocks.updateRequestRetry).not.toHaveBeenCalled();
+    });
+  });
+
+  test("toggles automatic update checks", async () => {
+    renderPanel();
+
+    const toggle = await screen.findByRole("switch", { name: /automatic update/i });
+    await userEvent.click(toggle);
+
+    await waitFor(() => {
+      expect(mocks.updateAutoUpdateEnabled).toHaveBeenCalledWith(false);
     });
   });
 });
