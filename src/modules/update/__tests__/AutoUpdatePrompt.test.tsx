@@ -1,5 +1,4 @@
 import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import i18n from "@/i18n";
 import { AutoUpdatePrompt } from "@/modules/update/AutoUpdatePrompt";
@@ -38,7 +37,7 @@ function renderPrompt() {
   return render(
     <ThemeProvider>
       <ToastProvider>
-        <AutoUpdatePrompt initialDelayMs={0} heartbeatIntervalMs={1} heartbeatTimeoutMs={200} />
+        <AutoUpdatePrompt initialDelayMs={0} />
       </ToastProvider>
     </ThemeProvider>,
   );
@@ -66,17 +65,15 @@ describe("AutoUpdatePrompt", () => {
     mocks.get.mockResolvedValue({ uptime: 10 });
   });
 
-  test("shows release notes and applies update after confirmation", async () => {
+  test("only shows a toast notification when an update is available", async () => {
     renderPrompt();
 
-    expect(await screen.findByText(/Fixes and improvements/i)).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: /update now/i }));
-
     await waitFor(() => {
-      expect(mocks.apply).toHaveBeenCalledTimes(1);
+      expect(mocks.check).toHaveBeenCalledTimes(1);
     });
-    await waitFor(() => {
-      expect(mocks.get).toHaveBeenCalledWith("/system-stats", expect.any(Object));
-    });
+    expect(screen.queryByText(/Fixes and improvements/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /update now/i })).not.toBeInTheDocument();
+    expect(mocks.apply).not.toHaveBeenCalled();
+    expect(mocks.get).not.toHaveBeenCalled();
   });
 });
