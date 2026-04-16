@@ -210,17 +210,11 @@ export function UpdateDetailsCard({
                 </p>
               ) : null}
 
-              {candidate.enabled &&
-              candidate.update_available &&
-              candidate.updater_available ? null : (
+              {!candidate.enabled || !candidate.update_available ? (
                 <p className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-200">
-                  {!candidate.enabled
-                    ? t("auto_update.disabled")
-                    : candidate.update_available
-                      ? t("auto_update.updater_unavailable")
-                      : t("auto_update.no_update")}
+                  {!candidate.enabled ? t("auto_update.disabled") : t("auto_update.no_update")}
                 </p>
-              )}
+              ) : null}
             </>
           ) : null}
         </div>

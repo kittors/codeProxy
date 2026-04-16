@@ -117,4 +117,27 @@ describe("SystemPage", () => {
     );
     expect(screen.getByTestId("update-image-value")).toHaveClass("break-all");
   });
+
+  test("shows updater sidecar unavailable warning only once", async () => {
+    mocks.check.mockResolvedValue({
+      enabled: true,
+      update_available: true,
+      current_version: "dev-1111111",
+      current_commit: "1111111",
+      latest_version: "v1.2.3",
+      latest_commit: "abcdef123456",
+      target_channel: "main",
+      docker_image: "ghcr.io/kittors/clirelay",
+      docker_tag: "latest",
+      release_notes: "Fixes and improvements",
+      updater_available: false,
+    });
+    renderPage();
+
+    await userEvent.click(await screen.findByRole("button", { name: /check docker update/i }));
+    const dialog = await screen.findByRole("dialog");
+
+    expect(within(dialog).getAllByText(/updater sidecar/i, { exact: false })).toHaveLength(1);
+    expect(within(dialog).getByRole("button", { name: /update now/i })).toBeDisabled();
+  });
 });
