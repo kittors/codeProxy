@@ -413,9 +413,9 @@ export function LogContentModal({
         ) : (
           <motion.div
             key={`content-${activeTab}-${viewMode}-${logId ?? "none"}`}
-            className="min-h-0 flex-1 will-change-[opacity,transform,filter]"
-            initial={{ opacity: 0, y: 10, filter: "blur(3px)" }}
-            animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+            className="min-h-0 flex-1 will-change-[opacity,filter]"
+            initial={{ opacity: 0, filter: "blur(3px)" }}
+            animate={{ opacity: 1, filter: "blur(0px)" }}
             exit={{ opacity: 0 }}
             transition={{ duration: CONTENT_ENTER_MS / 1000, ease: [0.16, 1, 0.3, 1] }}
           >

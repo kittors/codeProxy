@@ -27,6 +27,7 @@ describe("LogContentModal", () => {
     expect(modalSource).toContain("CONTENT_ENTER_MS");
     expect(modalSource).toContain('contentPhase === "loading" ? 1 : 0');
     expect(modalSource).toContain('filter: "blur(3px)"');
+    expect(modalSource).not.toContain("y: 10");
     expect(modalSource).toContain("min-h-0 flex-1 items-center justify-center");
     expect(modalSource).toContain("exit={{ opacity: 0");
   });
