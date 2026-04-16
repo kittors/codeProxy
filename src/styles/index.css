@@ -89,23 +89,3 @@
     transform: translateY(0);
   }
 }
-
-/* HeroUI: make Select triggers borderless globally (light + dark). */
-@layer components {
-  .select__trigger {
-    @apply border-0;
-    border-width: 0;
-  }
-
-  /* Secondary variant normally removes shadow and uses "default" bg.
-     For our design, keep it consistent with the primary trigger surface. */
-  .select--secondary .select__trigger {
-    background-color: #ebebec;
-    box-shadow: none;
-  }
-
-  .dark .select--secondary .select__trigger {
-    background-color: #27272a;
-    box-shadow: none;
-  }
-}
