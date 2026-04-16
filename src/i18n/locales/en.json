@@ -2948,6 +2948,8 @@
   "auto_update": {
     "title": "Update available",
     "description": "Review the release notes before updating the Docker deployment.",
+    "up_to_date_title": "Already up to date",
+    "up_to_date_description": "The current Docker deployment already matches the selected update channel.",
     "toast_title": "Update available",
     "toast_message": "A new version is available: {{version}}",
     "system_title": "Docker Updates",
@@ -2960,6 +2962,7 @@
     "current": "Current",
     "target": "Target",
     "image": "Docker image",
+    "commit": "Commit",
     "release_notes": "Release notes",
     "no_release_notes": "No release notes were provided for this update.",
     "updater_unavailable": "The updater sidecar is not reachable. Docker deployments installed with the latest compose file can update from here.",

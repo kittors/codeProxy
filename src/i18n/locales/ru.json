@@ -1740,6 +1740,8 @@
   "auto_update": {
     "title": "Доступно обновление",
     "description": "Проверьте заметки о выпуске перед обновлением Docker-развертывания.",
+    "up_to_date_title": "Уже актуально",
+    "up_to_date_description": "Текущее Docker-развертывание уже соответствует выбранному каналу обновлений.",
     "toast_title": "Доступно обновление",
     "toast_message": "Доступна новая версия: {{version}}",
     "system_title": "Docker updates",
@@ -1752,6 +1754,7 @@
     "current": "Текущая",
     "target": "Целевая",
     "image": "Docker image",
+    "commit": "Commit",
     "release_notes": "Заметки о выпуске",
     "no_release_notes": "Для этого обновления нет заметок о выпуске.",
     "updater_unavailable": "Updater sidecar недоступен. Обновление из панели доступно для Docker-развертываний с новым compose-файлом.",

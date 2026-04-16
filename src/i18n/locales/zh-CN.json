@@ -2540,6 +2540,8 @@
   "auto_update": {
     "title": "发现新版本",
     "description": "更新 Docker 部署前请先查看本次更新内容。",
+    "up_to_date_title": "当前已是最新版本",
+    "up_to_date_description": "当前 Docker 部署已经和所选更新通道保持一致。",
     "toast_title": "发现新版本",
     "toast_message": "发现可用新版本：{{version}}",
     "system_title": "Docker 更新",
@@ -2552,6 +2554,7 @@
     "current": "当前版本",
     "target": "目标版本",
     "image": "Docker 镜像",
+    "commit": "提交",
     "release_notes": "更新内容",
     "no_release_notes": "本次更新没有提供 release notes。",
     "updater_unavailable": "当前无法连接 updater sidecar。使用最新 Docker Compose 部署后即可从这里更新。",

@@ -115,7 +115,7 @@ describe("SystemPage", () => {
       "overflow-y-auto",
       "break-words",
     );
-    expect(screen.getByTestId("update-image-value")).toHaveClass("break-all");
+    expect(screen.getByTestId("update-image-value")).toHaveClass("break-words");
   });
 
   test("shows updater sidecar unavailable warning only once", async () => {
@@ -164,5 +164,34 @@ describe("SystemPage", () => {
     expect(await within(dialog).findByRole("heading", { name: "Changes" })).toBeInTheDocument();
     expect(within(dialog).getByText("Markdown")).toBeInTheDocument();
     expect(within(dialog).getAllByRole("listitem")).toHaveLength(2);
+  });
+
+  test("shows concrete docker versions without release notes when already up to date", async () => {
+    mocks.check.mockResolvedValue({
+      enabled: true,
+      update_available: false,
+      current_version: "main-de96948",
+      current_commit: "de96948c21de3f0a47a8e1e08cb1b859c73069ba",
+      latest_version: "main-de96948",
+      latest_commit: "de96948c21de3f0a47a8e1e08cb1b859c73069ba",
+      latest_commit_url:
+        "https://github.com/kittors/CliRelay/commit/de96948c21de3f0a47a8e1e08cb1b859c73069ba",
+      target_channel: "main",
+      docker_image: "ghcr.io/kittors/clirelay",
+      docker_tag: "latest",
+      release_notes: "## Changelog\n\n- Older release note that should not be shown",
+      updater_available: true,
+    });
+    renderPage();
+
+    await userEvent.click(await screen.findByRole("button", { name: /check docker update/i }));
+    const dialog = await screen.findByRole("dialog");
+
+    expect(
+      within(dialog).getByRole("heading", { name: /already up to date/i }),
+    ).toBeInTheDocument();
+    expect(within(dialog).getAllByText("main-de96948")).toHaveLength(2);
+    expect(within(dialog).queryByText(/older release note/i)).not.toBeInTheDocument();
+    expect(within(dialog).getByRole("button", { name: /update now/i })).toBeDisabled();
   });
 });

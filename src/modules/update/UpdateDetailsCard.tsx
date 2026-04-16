@@ -30,6 +30,19 @@ const RELEASE_NOTES_PROSE_CLASSES = `prose prose-sm dark:prose-invert max-w-none
   dark:prose-th:border-neutral-700 dark:prose-th:bg-neutral-800
   prose-td:border prose-td:border-slate-300 prose-td:px-3 prose-td:py-2 dark:prose-td:border-neutral-700`;
 
+const shortCommit = (commit?: string) => {
+  const trimmed = commit?.trim() ?? "";
+  return trimmed.length > 7 ? trimmed.slice(0, 7) : trimmed;
+};
+
+const versionLabel = (version?: string, commit?: string, channel?: string) => {
+  const trimmedVersion = version?.trim();
+  if (trimmedVersion) return trimmedVersion;
+  const short = shortCommit(commit);
+  if (short && channel) return `${channel}-${short}`;
+  return short || "--";
+};
+
 function ReleaseNotesMarkdown({ text }: { text: string }) {
   return (
     <div
@@ -130,6 +143,24 @@ export function UpdateDetailsCard({
   const canUpdate = Boolean(
     candidate?.enabled && candidate.update_available && candidate.updater_available,
   );
+  const modalTitle =
+    candidate && !candidate.update_available
+      ? t("auto_update.up_to_date_title")
+      : t("auto_update.title");
+  const modalDescription =
+    candidate && !candidate.update_available
+      ? t("auto_update.up_to_date_description")
+      : t("auto_update.description");
+  const showReleaseNotes = Boolean(candidate?.update_available);
+  const currentVersion = candidate
+    ? versionLabel(candidate.current_version, candidate.current_commit, candidate.target_channel)
+    : "--";
+  const targetVersion = candidate
+    ? versionLabel(candidate.latest_version, candidate.latest_commit, candidate.target_channel)
+    : "--";
+  const dockerImage = candidate
+    ? [candidate.docker_image, candidate.docker_tag].filter(Boolean).join(":")
+    : "--";
 
   return (
     <>
@@ -159,8 +190,8 @@ export function UpdateDetailsCard({
 
       <Modal
         open={modalOpen}
-        title={t("auto_update.title")}
-        description={t("auto_update.description")}
+        title={modalTitle}
+        description={modalDescription}
         maxWidth="max-w-[min(92vw,900px)]"
         bodyHeightClassName="max-h-[min(76vh,720px)]"
         onClose={() => {
@@ -198,42 +229,65 @@ export function UpdateDetailsCard({
 
           {candidate ? (
             <>
-              <dl className="grid min-w-0 gap-3 sm:grid-cols-3">
+              <dl className="grid min-w-0 gap-3 sm:grid-cols-2">
                 <div className="min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-neutral-800 dark:bg-neutral-900/50">
                   <dt className="text-xs font-medium text-slate-500 dark:text-white/55">
                     {t("auto_update.current")}
                   </dt>
-                  <dd className="mt-1 break-all font-mono text-sm text-slate-900 dark:text-white">
-                    {candidate.current_version || candidate.current_commit || "--"}
+                  <dd className="mt-1 break-words font-mono text-sm text-slate-900 dark:text-white">
+                    {currentVersion}
                   </dd>
+                  {candidate.current_commit ? (
+                    <p className="mt-1 truncate text-xs text-slate-500 dark:text-white/50">
+                      {t("auto_update.commit")}: {shortCommit(candidate.current_commit)}
+                    </p>
+                  ) : null}
                 </div>
                 <div className="min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-neutral-800 dark:bg-neutral-900/50">
                   <dt className="text-xs font-medium text-slate-500 dark:text-white/55">
                     {t("auto_update.target")}
                   </dt>
-                  <dd className="mt-1 break-all font-mono text-sm text-slate-900 dark:text-white">
-                    {candidate.latest_version || candidate.latest_commit || "--"}
+                  <dd className="mt-1 break-words font-mono text-sm text-slate-900 dark:text-white">
+                    {targetVersion}
                   </dd>
+                  {candidate.latest_commit ? (
+                    candidate.latest_commit_url ? (
+                      <a
+                        href={candidate.latest_commit_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-1 block truncate text-xs text-indigo-600 hover:underline dark:text-indigo-300"
+                      >
+                        {t("auto_update.commit")}: {shortCommit(candidate.latest_commit)}
+                      </a>
+                    ) : (
+                      <p className="mt-1 truncate text-xs text-slate-500 dark:text-white/50">
+                        {t("auto_update.commit")}: {shortCommit(candidate.latest_commit)}
+                      </p>
+                    )
+                  ) : null}
                 </div>
-                <div className="min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-neutral-800 dark:bg-neutral-900/50">
+                <div className="min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-neutral-800 dark:bg-neutral-900/50 sm:col-span-2">
                   <dt className="text-xs font-medium text-slate-500 dark:text-white/55">
                     {t("auto_update.image")}
                   </dt>
                   <dd
                     data-testid="update-image-value"
-                    className="mt-1 break-all font-mono text-sm text-slate-900 dark:text-white"
+                    className="mt-1 break-words font-mono text-sm text-slate-900 dark:text-white"
                   >
-                    {candidate.docker_image}:{candidate.docker_tag}
+                    {dockerImage}
                   </dd>
                 </div>
               </dl>
 
-              <div className="min-w-0">
-                <h3 className="mb-2 text-sm font-semibold text-slate-900 dark:text-white">
-                  {t("auto_update.release_notes")}
-                </h3>
-                <ReleaseNotesMarkdown text={releaseNotes} />
-              </div>
+              {showReleaseNotes ? (
+                <div className="min-w-0">
+                  <h3 className="mb-2 text-sm font-semibold text-slate-900 dark:text-white">
+                    {t("auto_update.release_notes")}
+                  </h3>
+                  <ReleaseNotesMarkdown text={releaseNotes} />
+                </div>
+              ) : null}
 
               {!candidate.updater_available ? (
                 <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200">
