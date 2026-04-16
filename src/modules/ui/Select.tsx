@@ -9,9 +9,12 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { Check, ChevronDown } from "lucide-react";
+import { motion } from "framer-motion";
 import {
   cn,
   selectChevron,
+  selectDropdownMotion,
+  selectDropdownTransition,
   selectOptionBase,
   selectOptionIdle,
   selectOptionSelected,
@@ -164,11 +167,13 @@ export function Select({
       {/* Dropdown (portal) */}
       {open
         ? createPortal(
-            <div
+            <motion.div
               ref={listRef}
               role="listbox"
               aria-label={ariaLabel}
               className={selectPanel}
+              {...selectDropdownMotion}
+              transition={selectDropdownTransition}
               style={{
                 top: pos.top,
                 left: pos.left,
@@ -203,7 +208,7 @@ export function Select({
                   </button>
                 );
               })}
-            </div>,
+            </motion.div>,
             document.body,
           )
         : null}

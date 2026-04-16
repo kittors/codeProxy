@@ -10,6 +10,8 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { Check, ChevronDown, Search } from "lucide-react";
+import { motion } from "framer-motion";
+import { selectDropdownMotion, selectDropdownTransition } from "./selectStyles";
 
 export interface SearchableCheckboxMultiSelectOption {
   value: string;
@@ -240,10 +242,12 @@ export function SearchableCheckboxMultiSelect({
 
       {open
         ? createPortal(
-            <div
+            <motion.div
               ref={dropdownRef}
               style={dropdownStyle}
               className="flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl shadow-black/10 dark:border-neutral-700 dark:bg-neutral-900 dark:shadow-black/30"
+              {...selectDropdownMotion}
+              transition={selectDropdownTransition}
             >
               <div className="flex shrink-0 items-center gap-2 border-b border-slate-100 px-3 py-2 dark:border-neutral-800">
                 <Search
@@ -334,7 +338,7 @@ export function SearchableCheckboxMultiSelect({
                   })
                 )}
               </div>
-            </div>,
+            </motion.div>,
             document.body,
           )
         : null}

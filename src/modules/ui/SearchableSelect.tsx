@@ -9,10 +9,13 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { Check, ChevronDown, Search } from "lucide-react";
+import { motion } from "framer-motion";
 import {
   cn,
   searchableSelectPanel,
   selectChevron,
+  selectDropdownMotion,
+  selectDropdownTransition,
   selectEmptyState,
   selectOptionBase,
   selectOptionIdle,
@@ -161,11 +164,13 @@ export function SearchableSelect({
 
       {open
         ? createPortal(
-            <div
+            <motion.div
               ref={listRef}
               role="listbox"
               aria-label={ariaLabel}
               className={searchableSelectPanel}
+              {...selectDropdownMotion}
+              transition={selectDropdownTransition}
               style={{
                 top: pos.top,
                 left: pos.left,
@@ -225,7 +230,7 @@ export function SearchableSelect({
                   })
                 )}
               </div>
-            </div>,
+            </motion.div>,
             document.body,
           )
         : null}

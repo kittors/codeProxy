@@ -10,10 +10,13 @@ import {
 import { useTranslation } from "react-i18next";
 import { createPortal } from "react-dom";
 import { Check, ChevronDown, X } from "lucide-react";
+import { motion } from "framer-motion";
 import {
   cn,
   searchableSelectPanel,
   selectChevron,
+  selectDropdownMotion,
+  selectDropdownTransition,
   selectEmptyState,
   selectOptionBase,
   selectOptionIdle,
@@ -172,10 +175,12 @@ export function MultiSelect({
 
   const dropdown = open
     ? createPortal(
-        <div
+        <motion.div
           ref={dropdownRef}
           style={dropdownStyle}
           className={cn(searchableSelectPanel, "flex flex-col")}
+          {...selectDropdownMotion}
+          transition={selectDropdownTransition}
         >
           {searchable && (
             <div className="flex-shrink-0 border-b border-black/[0.06] px-3 py-2 dark:border-white/10">
@@ -246,7 +251,7 @@ export function MultiSelect({
               })
             )}
           </div>
-        </div>,
+        </motion.div>,
         document.body,
       )
     : null;
