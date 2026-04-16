@@ -1,17 +1,12 @@
 import { useCallback, useMemo, type ReactNode, type RefObject } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  Download,
-  Eye,
-  Loader2,
-  RefreshCw,
-  Zap,
-} from "lucide-react";
+import { Download, Eye, Loader2, RefreshCw, Zap } from "lucide-react";
 import type { AuthFileItem } from "@/lib/http/types";
 import { formatLatency } from "@/modules/providers/hooks/useProviderLatency";
 import { ProviderStatusBar } from "@/modules/providers/ProviderStatusBar";
 import { Button } from "@/modules/ui/Button";
 import { Select } from "@/modules/ui/Select";
+import { Tabs, TabsList, TabsTrigger } from "@/modules/ui/Tabs";
 import { HoverTooltip } from "@/modules/ui/Tooltip";
 import { ToggleSwitch } from "@/modules/ui/ToggleSwitch";
 import type { VirtualTableColumn } from "@/modules/ui/VirtualTable";
@@ -145,31 +140,21 @@ export function useAuthFilesFilesPresentation({
       { value: "cards", label: t("common.view_mode_cards") },
     ];
     return (
-      <div
-        role="tablist"
-        aria-label={t("common.view_mode")}
-        className="inline-flex items-center gap-1 rounded-2xl border border-slate-200 bg-white p-1 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60"
+      <Tabs
+        value={filesViewMode}
+        onValueChange={(next) => setFilesViewMode(next as FilesViewMode)}
+        size="sm"
       >
-        {options.map((opt) => {
-          const active = filesViewMode === opt.value;
-          return (
-            <button
-              key={opt.value}
-              type="button"
-              role="tab"
-              aria-selected={active}
-              onClick={() => setFilesViewMode(opt.value)}
-              className={
-                active
-                  ? "inline-flex items-center rounded-xl bg-slate-900 px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm dark:bg-white dark:text-neutral-950"
-                  : "inline-flex items-center rounded-xl px-2.5 py-1 text-[11px] text-slate-700 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white"
-              }
-            >
-              {opt.label}
-            </button>
-          );
-        })}
-      </div>
+        <TabsList>
+          {options.map((opt) => {
+            return (
+              <TabsTrigger key={opt.value} value={opt.value}>
+                {opt.label}
+              </TabsTrigger>
+            );
+          })}
+        </TabsList>
+      </Tabs>
     );
   }, [filesViewMode, setFilesViewMode, t]);
 

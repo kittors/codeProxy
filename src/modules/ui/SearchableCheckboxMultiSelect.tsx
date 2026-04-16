@@ -10,6 +10,23 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { Check, ChevronDown, Search } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+  cn,
+  getSelectDropdownMotion,
+  getSelectTriggerBase,
+  searchableSelectPanel,
+  selectChevron,
+  selectDropdownTransition,
+  selectEmptyState,
+  selectOptionBase,
+  selectOptionIdle,
+  selectOptionSelected,
+  selectSearchInput,
+  selectSearchRow,
+  selectTriggerDisabled,
+} from "./selectStyles";
+import type { ControlSize } from "@/modules/ui/controlStyles";
 
 export interface SearchableCheckboxMultiSelectOption {
   value: string;
@@ -30,9 +47,8 @@ export interface SearchableCheckboxMultiSelectProps {
   disabled?: boolean;
   "aria-label"?: string;
   className?: string;
+  size?: ControlSize;
 }
-
-const cn = (...classes: (string | false | undefined | null)[]) => classes.filter(Boolean).join(" ");
 
 function optionText(option: SearchableCheckboxMultiSelectOption): string {
   if (typeof option.label === "string") return option.label;
@@ -52,6 +68,7 @@ export function SearchableCheckboxMultiSelect({
   disabled = false,
   "aria-label": ariaLabel,
   className,
+  size = "default",
 }: SearchableCheckboxMultiSelectProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -59,6 +76,7 @@ export function SearchableCheckboxMultiSelect({
   const dropdownRef = useRef<HTMLDivElement | null>(null);
   const searchRef = useRef<HTMLInputElement | null>(null);
   const [dropdownStyle, setDropdownStyle] = useState<CSSProperties>({});
+  const [dropdownPlacement, setDropdownPlacement] = useState<"bottom" | "top">("bottom");
 
   const selectedSet = useMemo(() => new Set(value), [value]);
 
@@ -92,6 +110,7 @@ export function SearchableCheckboxMultiSelect({
     const openAbove = spaceBelow < maxHeight && spaceAbove > spaceBelow;
 
     if (openAbove) {
+      setDropdownPlacement("top");
       setDropdownStyle({
         position: "fixed",
         bottom: window.innerHeight - rect.top + gap,
@@ -103,6 +122,7 @@ export function SearchableCheckboxMultiSelect({
       return;
     }
 
+    setDropdownPlacement("bottom");
     setDropdownStyle({
       position: "fixed",
       top: rect.bottom + gap,
@@ -190,7 +210,9 @@ export function SearchableCheckboxMultiSelect({
     if (value.length === 0) return placeholder;
     const labels = value
       .slice(0, 2)
-      .map((item) => optionText(options.find((option) => option.value === item) ?? { value: item, label: item }))
+      .map((item) =>
+        optionText(options.find((option) => option.value === item) ?? { value: item, label: item }),
+      )
       .join(", ");
     return value.length > 2 ? `${labels} +${value.length - 2}` : labels;
   }, [options, placeholder, value]);
@@ -210,9 +232,9 @@ export function SearchableCheckboxMultiSelect({
           setOpen((current) => !current);
         }}
         className={cn(
-          "inline-flex h-10 w-full items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white pl-3.5 pr-3 text-left text-sm font-medium text-slate-700 shadow-sm outline-none transition",
-          "hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-slate-400/35 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400",
-          "dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-white/80 dark:hover:bg-white/10 dark:disabled:bg-neutral-800 dark:disabled:text-white/35",
+          getSelectTriggerBase(size),
+          "w-full justify-between text-left",
+          disabled && selectTriggerDisabled,
           className,
         )}
       >
@@ -227,26 +249,26 @@ export function SearchableCheckboxMultiSelect({
           ) : null}
           <ChevronDown
             size={14}
-            className={cn(
-              "text-slate-400 transition-transform duration-200 dark:text-white/40",
-              open && "rotate-180",
-            )}
+            className={cn(selectChevron, open && "rotate-180")}
             aria-hidden="true"
           />
         </span>
       </button>
 
-      {open
-        ? createPortal(
-            <div
+      {createPortal(
+        <AnimatePresence>
+          {open ? (
+            <motion.div
               ref={dropdownRef}
               style={dropdownStyle}
-              className="flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl shadow-black/10 dark:border-neutral-700 dark:bg-neutral-900 dark:shadow-black/30"
+              className={cn(searchableSelectPanel, "flex flex-col")}
+              {...getSelectDropdownMotion(dropdownPlacement)}
+              transition={selectDropdownTransition}
             >
-              <div className="flex shrink-0 items-center gap-2 border-b border-slate-100 px-3 py-2 dark:border-neutral-800">
+              <div className={cn(selectSearchRow, "shrink-0")}>
                 <Search
                   size={14}
-                  className="shrink-0 text-slate-400 dark:text-white/40"
+                  className="shrink-0 text-[#96969B] dark:text-[#9F9FA8]"
                   aria-hidden="true"
                 />
                 <input
@@ -255,7 +277,7 @@ export function SearchableCheckboxMultiSelect({
                   value={query}
                   onChange={(event) => setQuery(event.currentTarget.value)}
                   placeholder={searchPlaceholder}
-                  className="h-7 w-full bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400 dark:text-white/80 dark:placeholder:text-white/30"
+                  className={selectSearchInput}
                   autoComplete="off"
                   spellCheck={false}
                 />
@@ -265,18 +287,19 @@ export function SearchableCheckboxMultiSelect({
                 onClick={toggleFiltered}
                 disabled={visibleValues.length === 0}
                 className={cn(
-                  "flex shrink-0 items-center gap-2 border-b border-slate-100 px-3 py-2 text-left text-sm font-medium transition-colors dark:border-neutral-800",
+                  "mx-1 mt-1 shrink-0",
+                  selectOptionBase,
                   visibleValues.length === 0
-                    ? "cursor-not-allowed text-slate-300 dark:text-white/20"
-                    : "text-slate-700 hover:bg-slate-50 dark:text-white/75 dark:hover:bg-white/5",
+                    ? "cursor-not-allowed text-[#A1A1AA] dark:text-[#71717A]"
+                    : selectOptionIdle,
                 )}
               >
                 <span
                   className={cn(
                     "flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors",
                     allVisibleSelected
-                      ? "border-sky-500 bg-sky-500 text-white dark:border-sky-400 dark:bg-sky-400 dark:text-neutral-950"
-                      : "border-slate-300 bg-white dark:border-neutral-600 dark:bg-neutral-900",
+                      ? "border-[#18181B] bg-[#18181B] text-white dark:border-white dark:bg-white dark:text-[#18181B]"
+                      : "border-[#96969B] bg-white dark:border-[#9F9FA8] dark:bg-[#27272A]",
                   )}
                   aria-hidden="true"
                 >
@@ -289,11 +312,13 @@ export function SearchableCheckboxMultiSelect({
                   {selectedCountLabel(value.length)}
                 </span>
               </button>
-              <div role="listbox" aria-label={ariaLabel} className="min-h-0 flex-1 overflow-y-auto p-1">
+              <div
+                role="listbox"
+                aria-label={ariaLabel}
+                className="min-h-0 flex-1 overflow-y-auto p-1"
+              >
                 {filteredOptions.length === 0 ? (
-                  <div className="px-3 py-5 text-center text-xs text-slate-400 dark:text-white/30">
-                    {noResultsLabel}
-                  </div>
+                  <div className={selectEmptyState}>{noResultsLabel}</div>
                 ) : (
                   filteredOptions.map((option) => {
                     const checked = selectedSet.has(option.value);
@@ -305,18 +330,16 @@ export function SearchableCheckboxMultiSelect({
                         aria-selected={checked}
                         onClick={() => toggleOption(option.value)}
                         className={cn(
-                          "flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm outline-none transition-colors",
-                          checked
-                            ? "bg-sky-50 text-sky-700 dark:bg-sky-900/20 dark:text-sky-300"
-                            : "text-slate-700 hover:bg-slate-50 dark:text-white/70 dark:hover:bg-white/5",
+                          selectOptionBase,
+                          checked ? selectOptionSelected : selectOptionIdle,
                         )}
                       >
                         <span
                           className={cn(
                             "flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors",
                             checked
-                              ? "border-sky-500 bg-sky-500 text-white dark:border-sky-400 dark:bg-sky-400 dark:text-neutral-950"
-                              : "border-slate-300 bg-white dark:border-neutral-600 dark:bg-neutral-900",
+                              ? "border-[#18181B] bg-[#18181B] text-white dark:border-white dark:bg-white dark:text-[#18181B]"
+                              : "border-[#96969B] bg-white dark:border-[#9F9FA8] dark:bg-[#27272A]",
                           )}
                           aria-hidden="true"
                         >
@@ -328,10 +351,11 @@ export function SearchableCheckboxMultiSelect({
                   })
                 )}
               </div>
-            </div>,
-            document.body,
-          )
-        : null}
+            </motion.div>
+          ) : null}
+        </AnimatePresence>,
+        document.body,
+      )}
     </>
   );
 }

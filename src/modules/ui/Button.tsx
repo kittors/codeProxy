@@ -1,12 +1,20 @@
 import { Children, type ButtonHTMLAttributes, type PropsWithChildren } from "react";
 
-type ButtonVariant = "primary" | "secondary" | "danger" | "ghost";
+type ButtonVariant =
+  | "default"
+  | "primary"
+  | "secondary"
+  | "danger"
+  | "error"
+  | "success"
+  | "warning"
+  | "ghost";
 type ButtonSize = "sm" | "md";
 
 export function Button({
   children,
   className,
-  variant = "primary",
+  variant = "default",
   size = "md",
   ...props
 }: PropsWithChildren<
@@ -20,9 +28,11 @@ export function Button({
     childNodes.length === 1 &&
     typeof childNodes[0] !== "string" &&
     typeof childNodes[0] !== "number";
+  const resolvedVariant =
+    variant === "secondary" ? "default" : variant === "danger" ? "error" : variant;
 
   const base =
-    "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl font-semibold transition focus-visible:outline-none focus-visible:ring-2";
+    "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full border-0 font-semibold shadow-none transition-all duration-150 ease-out active:translate-y-px active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 disabled:pointer-events-none disabled:opacity-45";
 
   const sizeClass = iconOnly
     ? size === "sm"
@@ -32,39 +42,26 @@ export function Button({
       ? "h-9 px-3 text-sm"
       : "h-10 px-4 text-sm";
 
-  const variantClass: Record<ButtonVariant, string> = {
+  const variantClass: Record<Exclude<ButtonVariant, "secondary" | "danger">, string> = {
+    default:
+      "bg-[#EBEBEC] text-[#18181B] hover:bg-[#E4E4E7] active:bg-[#D4D4D8] focus-visible:ring-black/10 dark:bg-[#27272A] dark:text-white dark:hover:bg-[#303036] dark:active:bg-[#3F3F46] dark:focus-visible:ring-white/15",
     primary:
-      "bg-slate-900 text-white hover:bg-slate-800 focus-visible:ring-slate-400/35 disabled:bg-slate-400/70 dark:bg-white dark:text-neutral-950 dark:hover:bg-slate-200 dark:focus-visible:ring-white/15 dark:disabled:bg-white/50",
-    secondary:
-      "border border-slate-200 bg-white/70 text-slate-800 hover:bg-white focus-visible:ring-slate-400/35 disabled:opacity-60 dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-slate-100 dark:hover:bg-neutral-950/80 dark:focus-visible:ring-white/15",
-    danger:
-      "bg-rose-600 text-white hover:bg-rose-500 focus-visible:ring-rose-400/35 disabled:bg-rose-300/70 dark:bg-rose-500 dark:hover:bg-rose-400 dark:focus-visible:ring-rose-300/20 dark:disabled:bg-rose-500/40",
+      "bg-[#18181B] text-white hover:bg-[#27272A] active:bg-[#09090B] focus-visible:ring-black/20 dark:bg-white dark:text-[#18181B] dark:hover:bg-[#E4E4E7] dark:active:bg-[#D4D4D8] dark:focus-visible:ring-white/15",
+    error:
+      "bg-rose-600 text-white hover:bg-rose-500 active:bg-rose-700 focus-visible:ring-rose-400/35 dark:bg-rose-500 dark:hover:bg-rose-400 dark:active:bg-rose-600 dark:focus-visible:ring-rose-300/20",
+    success:
+      "bg-emerald-600 text-white hover:bg-emerald-500 active:bg-emerald-700 focus-visible:ring-emerald-400/35 dark:bg-emerald-500 dark:hover:bg-emerald-400 dark:active:bg-emerald-600 dark:focus-visible:ring-emerald-300/20",
+    warning:
+      "bg-amber-400 text-amber-950 hover:bg-amber-300 active:bg-amber-500 focus-visible:ring-amber-400/35 dark:bg-amber-400 dark:text-amber-950 dark:hover:bg-amber-300 dark:active:bg-amber-500 dark:focus-visible:ring-amber-300/25",
     ghost:
-      "text-slate-700 hover:bg-slate-100 hover:text-slate-900 focus-visible:ring-slate-400/35 disabled:opacity-50 dark:text-slate-200 dark:hover:bg-white/10 dark:hover:text-white dark:focus-visible:ring-white/15",
-  };
-
-  const iconOnlyToneClass: Record<ButtonVariant, string> = {
-    primary:
-      "bg-transparent text-slate-900 hover:bg-slate-100 active:bg-slate-200/80 focus-visible:ring-slate-400/35 disabled:opacity-45 dark:text-white dark:hover:bg-white/10 dark:active:bg-white/14 dark:focus-visible:ring-white/15",
-    secondary:
-      "bg-transparent text-slate-700 hover:bg-slate-100 active:bg-slate-200/80 focus-visible:ring-slate-400/35 disabled:opacity-45 dark:text-slate-200 dark:hover:bg-white/10 dark:active:bg-white/14 dark:focus-visible:ring-white/15",
-    danger:
-      "bg-transparent text-rose-600 hover:bg-rose-50 active:bg-rose-100 focus-visible:ring-rose-400/35 disabled:opacity-45 dark:text-rose-300 dark:hover:bg-rose-500/10 dark:active:bg-rose-500/15 dark:focus-visible:ring-rose-300/20",
-    ghost:
-      "bg-transparent text-slate-700 hover:bg-slate-100 active:bg-slate-200/80 focus-visible:ring-slate-400/35 disabled:opacity-45 dark:text-slate-200 dark:hover:bg-white/10 dark:active:bg-white/14 dark:focus-visible:ring-white/15",
+      "bg-transparent text-[#3F3F46] hover:bg-[#EBEBEC] hover:text-[#18181B] active:bg-[#E4E4E7] focus-visible:ring-black/10 dark:text-[#D4D4D8] dark:hover:bg-[#27272A] dark:hover:text-white dark:active:bg-[#303036] dark:focus-visible:ring-white/15",
   };
 
   return (
     <button
       type="button"
       {...props}
-      className={[
-        base,
-        iconOnly ? "rounded-lg" : null,
-        sizeClass,
-        iconOnly ? iconOnlyToneClass[variant] : variantClass[variant],
-        className,
-      ]
+      className={[base, sizeClass, variantClass[resolvedVariant], className]
         .filter(Boolean)
         .join(" ")}
     >

@@ -1,4 +1,7 @@
 import { Search } from "lucide-react";
+import { Button } from "@/modules/ui/Button";
+import { Card } from "@/modules/ui/Card";
+import { TextInput } from "@/modules/ui/Input";
 
 export function LookupSearchSection({
   t,
@@ -14,34 +17,29 @@ export function LookupSearchSection({
   loading: boolean;
 }) {
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/70">
+    <Card>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4 sm:flex-row sm:items-end">
         <div className="flex-1">
           <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-white/80">
             {t("apikey_lookup.api_key_label")}
           </label>
-          <div className="relative">
-            <Search
-              size={16}
-              className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-white/40"
-            />
-            <input
-              type="password"
-              id="apikey-input"
-              value={apiKeyInput}
-              onChange={(e) => setApiKeyInput(e.target.value)}
-              placeholder={t("apikey_lookup.placeholder")}
-              autoComplete="off"
-              spellCheck={false}
-              className="h-10 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-white dark:placeholder:text-white/30"
-            />
-          </div>
+          <TextInput
+            type="password"
+            id="apikey-input"
+            value={apiKeyInput}
+            onChange={(e) => setApiKeyInput(e.target.value)}
+            placeholder={t("apikey_lookup.placeholder")}
+            autoComplete="off"
+            spellCheck={false}
+            startAdornment={<Search size={16} className="text-slate-400 dark:text-white/40" />}
+          />
         </div>
-        <button
+        <Button
+          variant="primary"
           type="submit"
           id="apikey-lookup-submit"
           disabled={!apiKeyInput.trim() || loading}
-          className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-slate-900 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-neutral-950 dark:hover:bg-slate-200"
+          className="shrink-0 px-5"
         >
           {loading ? (
             <span
@@ -50,8 +48,8 @@ export function LookupSearchSection({
             />
           ) : null}
           {t("apikey_lookup.query")}
-        </button>
+        </Button>
       </form>
-    </section>
+    </Card>
   );
 }

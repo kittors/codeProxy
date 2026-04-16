@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Filter } from "lucide-react";
+import { Card } from "@/modules/ui/Card";
 import { Reveal } from "@/modules/ui/Reveal";
 import { SearchableSelect } from "@/modules/ui/SearchableSelect";
 import { Select } from "@/modules/ui/Select";
@@ -304,7 +305,7 @@ export function PublicLogsSection({
 }) {
   return (
     <Reveal>
-      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-950/70">
+      <Card padding="none" className="overflow-hidden" bodyClassName="mt-0">
         <div className="border-b border-slate-100 px-3 py-3 sm:px-5 dark:border-neutral-800/60">
           <div className="grid gap-2 sm:flex sm:flex-wrap sm:items-center sm:gap-2">
             <div className="grid grid-cols-1 gap-2 sm:flex sm:items-center sm:gap-2">
@@ -346,7 +347,9 @@ export function PublicLogsSection({
                   ·
                 </span>
                 {t("apikey_lookup.token")}
-                <span className="font-mono tabular-nums">{stats.total_tokens.toLocaleString()}</span>
+                <span className="font-mono tabular-nums">
+                  {stats.total_tokens.toLocaleString()}
+                </span>
               </span>
               {lastUpdatedText ? (
                 <span className="hidden sm:inline-flex items-center gap-1.5 whitespace-nowrap">
@@ -431,7 +434,7 @@ export function PublicLogsSection({
           onPageSizeChange={onPageSizeChange}
           t={t}
         />
-      </section>
+      </Card>
     </Reveal>
   );
 }

@@ -1,6 +1,8 @@
 import { createPortal } from "react-dom";
-import { Suspense, lazy, useEffect, useMemo, useState, type ReactNode } from "react";
+import { Suspense, lazy, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
+import { useVirtualizer } from "@tanstack/react-virtual";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   Bot,
   Brain,
@@ -14,7 +16,12 @@ import {
   X,
   Zap,
 } from "lucide-react";
-const ANIMATION_MS = 180;
+
+const LARGE_TEXT_CHAR_THRESHOLD = 50_000;
+const LARGE_TEXT_LINE_THRESHOLD = 400;
+const VIRTUAL_TEXT_CHUNK_SIZE = 4_000;
+const VIRTUAL_MESSAGE_THRESHOLD = 80;
+
 const LazyRichMarkdown = lazy(() =>
   import("./rendering-markdown").then((mod) => ({ default: mod.RichMarkdown })),
 );
@@ -247,9 +254,18 @@ function mayContainXmlLikeTags(raw: string): boolean {
 function MarkdownContent({ content }: { content: string }) {
   const cleaned = useMemo(() => cleanContent(content), [content]);
   const segments = useMemo(
-    () => (mayContainXmlLikeTags(cleaned) ? parseContentSegments(cleaned) : null),
+    () =>
+      cleaned.length > LARGE_TEXT_CHAR_THRESHOLD
+        ? null
+        : mayContainXmlLikeTags(cleaned)
+          ? parseContentSegments(cleaned)
+          : null,
     [cleaned],
   );
+
+  if (cleaned.length > LARGE_TEXT_CHAR_THRESHOLD) {
+    return <PlainPre text={cleaned} />;
+  }
 
   if (!segments) return <MarkdownBlock text={cleaned} />;
   if (segments.length <= 1 && (segments.length === 0 || segments[0].type === "text")) {
@@ -311,6 +327,14 @@ export function MessageBlock({
 }
 
 export function PlainPre({ text }: { text: string }) {
+  const rows = useMemo(() => buildVirtualTextRows(text), [text]);
+  const shouldVirtualize =
+    text.length > LARGE_TEXT_CHAR_THRESHOLD || rows.length > LARGE_TEXT_LINE_THRESHOLD;
+
+  if (shouldVirtualize) {
+    return <VirtualPlainPre rows={rows} />;
+  }
+
   return (
     <pre
       className="whitespace-pre-wrap break-words rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs leading-relaxed font-mono dark:border-neutral-800 dark:bg-neutral-900 dark:text-slate-200"
@@ -318,6 +342,104 @@ export function PlainPre({ text }: { text: string }) {
     >
       {text}
     </pre>
+  );
+}
+
+function buildVirtualTextRows(text: string): string[] {
+  const rows: string[] = [];
+  const lines = text.split("\n");
+
+  for (const line of lines) {
+    if (line.length <= VIRTUAL_TEXT_CHUNK_SIZE) {
+      rows.push(line);
+      continue;
+    }
+
+    for (let start = 0; start < line.length; start += VIRTUAL_TEXT_CHUNK_SIZE) {
+      rows.push(line.slice(start, start + VIRTUAL_TEXT_CHUNK_SIZE));
+    }
+  }
+
+  return rows.length > 0 ? rows : [""];
+}
+
+function VirtualPlainPre({ rows }: { rows: string[] }) {
+  const parentRef = useRef<HTMLDivElement | null>(null);
+  const virtualizer = useVirtualizer({
+    count: rows.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 22,
+    overscan: 24,
+  });
+  const virtualRows = virtualizer.getVirtualItems();
+
+  return (
+    <div
+      ref={parentRef}
+      className="h-[min(58vh,620px)] overflow-y-auto overscroll-contain rounded-xl border border-slate-200 bg-slate-50 text-xs leading-relaxed font-mono dark:border-neutral-800 dark:bg-neutral-900 dark:text-slate-200"
+    >
+      <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
+        {virtualRows.map((virtualRow) => (
+          <div
+            key={virtualRow.key}
+            data-index={virtualRow.index}
+            ref={virtualizer.measureElement}
+            className="absolute left-0 top-0 w-full whitespace-pre-wrap break-words px-4 py-0.5"
+            style={{ transform: `translateY(${virtualRow.start}px)` }}
+          >
+            {rows[virtualRow.index] || "\u00A0"}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export function MessageList({ messages }: { messages: { role: string; content: string }[] }) {
+  if (messages.length <= VIRTUAL_MESSAGE_THRESHOLD) {
+    return (
+      <div className="space-y-3">
+        {messages.map((msg, idx) => (
+          <MessageBlock key={idx} role={msg.role} content={msg.content} />
+        ))}
+      </div>
+    );
+  }
+
+  return <VirtualMessageList messages={messages} />;
+}
+
+function VirtualMessageList({ messages }: { messages: { role: string; content: string }[] }) {
+  const parentRef = useRef<HTMLDivElement | null>(null);
+  const virtualizer = useVirtualizer({
+    count: messages.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 220,
+    overscan: 5,
+  });
+  const virtualRows = virtualizer.getVirtualItems();
+
+  return (
+    <div ref={parentRef} className="h-[min(62vh,660px)] overflow-y-auto overscroll-contain pr-1">
+      <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
+        {virtualRows.map((virtualRow) => {
+          const msg = messages[virtualRow.index];
+          if (!msg) return null;
+
+          return (
+            <div
+              key={virtualRow.key}
+              data-index={virtualRow.index}
+              ref={virtualizer.measureElement}
+              className="absolute left-0 top-0 w-full pb-3"
+              style={{ transform: `translateY(${virtualRow.start}px)` }}
+            >
+              <MessageBlock role={msg.role} content={msg.content} />
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
@@ -335,19 +457,6 @@ export function ContentModal({
   tabs: React.ReactNode;
 }) {
   const { t } = useTranslation();
-  const [mounted, setMounted] = useState(open);
-  const [visible, setVisible] = useState(open);
-
-  useEffect(() => {
-    if (open) {
-      setMounted(true);
-      const raf = requestAnimationFrame(() => setVisible(true));
-      return () => cancelAnimationFrame(raf);
-    }
-    setVisible(false);
-    const timer = setTimeout(() => setMounted(false), ANIMATION_MS);
-    return () => clearTimeout(timer);
-  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -358,53 +467,64 @@ export function ContentModal({
     return () => window.removeEventListener("keydown", h);
   }, [onClose, open]);
 
-  if (!mounted) return null;
-
   return createPortal(
-    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-      <button
-        type="button"
-        onClick={() => open && onClose()}
-        aria-label={t("common.close")}
-        className={[
-          "absolute inset-0 cursor-default bg-slate-900/40 backdrop-blur-sm dark:bg-black/50",
-          "transition-opacity duration-200",
-          visible ? "opacity-100" : "opacity-0",
-        ].join(" ")}
-      />
-      <div
-        role="dialog"
-        aria-modal="true"
-        className={[
-          "relative z-10 flex w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-neutral-800 dark:bg-neutral-950",
-          "max-h-[85vh] transition-all duration-200",
-          visible ? "opacity-100 translate-y-0 scale-100" : "opacity-0 translate-y-2 scale-95",
-        ].join(" ")}
-      >
-        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-200 px-5 py-4 dark:border-neutral-800">
-          <div className="min-w-0">
-            <h2 className="truncate text-base font-semibold tracking-tight text-slate-900 dark:text-white">
-              {t("log_content.message_content")}
-              {model ? ` · ${model}` : ""}
-            </h2>
-            <p className="mt-1 text-sm text-slate-500 dark:text-white/50">{t("log_content.title")}</p>
-          </div>
-          <button
+    <AnimatePresence>
+      {open ? (
+        <motion.div
+          key="log-content-modal"
+          className="fixed inset-0 z-[200] flex items-center justify-center p-4"
+          initial="hidden"
+          animate="show"
+          exit="hidden"
+        >
+          <motion.button
             type="button"
             onClick={onClose}
-            disabled={!open}
-            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white/70 text-slate-700 shadow-sm transition hover:bg-white dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-slate-200 dark:hover:bg-neutral-950/80"
             aria-label={t("common.close")}
+            className="absolute inset-0 cursor-default bg-slate-900/40 backdrop-blur-sm dark:bg-black/50"
+            variants={{
+              hidden: { opacity: 0 },
+              show: { opacity: 1 },
+            }}
+            transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
+          />
+          <motion.div
+            role="dialog"
+            aria-modal="true"
+            className="relative z-10 flex max-h-[85vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-neutral-800 dark:bg-neutral-950"
+            variants={{
+              hidden: { opacity: 0, y: 18, scale: 0.96, filter: "blur(2px)" },
+              show: { opacity: 1, y: 0, scale: 1, filter: "blur(0px)" },
+            }}
+            transition={{ type: "spring", stiffness: 420, damping: 34, mass: 0.8 }}
           >
-            <X size={16} />
-          </button>
-        </div>
-        <div className="shrink-0 border-b border-slate-100 bg-white px-5 py-2 dark:border-neutral-800/60 dark:bg-neutral-950">
-          {tabs}
-        </div>
-        <div className="flex-1 overflow-y-auto overscroll-contain px-5 py-4">{children}</div>
-      </div>
-    </div>,
+            <div className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-200 px-5 py-4 dark:border-neutral-800">
+              <div className="min-w-0">
+                <h2 className="truncate text-base font-semibold tracking-tight text-slate-900 dark:text-white">
+                  {t("log_content.message_content")}
+                  {model ? ` · ${model}` : ""}
+                </h2>
+                <p className="mt-1 text-sm text-slate-500 dark:text-white/50">
+                  {t("log_content.title")}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={onClose}
+                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white/70 text-slate-700 shadow-sm transition hover:bg-white dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-slate-200 dark:hover:bg-neutral-950/80"
+                aria-label={t("common.close")}
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <div className="shrink-0 border-b border-slate-100 bg-white px-5 py-2 dark:border-neutral-800/60 dark:bg-neutral-950">
+              {tabs}
+            </div>
+            <div className="flex-1 overflow-y-auto overscroll-contain px-5 py-4">{children}</div>
+          </motion.div>
+        </motion.div>
+      ) : null}
+    </AnimatePresence>,
     document.body,
   );
 }

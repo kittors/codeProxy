@@ -9,6 +9,23 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { Check, ChevronDown, Search } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+  cn,
+  getSelectDropdownMotion,
+  getSelectTriggerBase,
+  searchableSelectPanel,
+  selectChevron,
+  selectDropdownTransition,
+  selectEmptyState,
+  selectOptionBase,
+  selectOptionIdle,
+  selectOptionSelected,
+  selectSearchInput,
+  selectSearchRow,
+  selectTriggerOpen,
+} from "./selectStyles";
+import type { ControlSize } from "@/modules/ui/controlStyles";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -30,13 +47,8 @@ export interface SearchableSelectProps {
   "aria-label"?: string;
   name?: string;
   className?: string;
+  size?: ControlSize;
 }
-
-/* ------------------------------------------------------------------ */
-/*  Helpers                                                            */
-/* ------------------------------------------------------------------ */
-
-const cn = (...classes: (string | false | undefined | null)[]) => classes.filter(Boolean).join(" ");
 
 /* ------------------------------------------------------------------ */
 /*  Component                                                          */
@@ -51,6 +63,7 @@ export function SearchableSelect({
   "aria-label": ariaLabel,
   name,
   className,
+  size = "default",
 }: SearchableSelectProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -142,34 +155,26 @@ export function SearchableSelect({
         aria-haspopup="listbox"
         aria-label={ariaLabel}
         onClick={() => setOpen((prev) => !prev)}
-        className={cn(
-          "inline-flex h-10 items-center gap-1.5 rounded-xl border border-slate-200 bg-white pl-3.5 pr-3 text-sm font-medium text-slate-700 shadow-sm outline-none transition",
-          "hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-slate-400/35",
-          "dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-white/80 dark:hover:bg-white/10 dark:focus-visible:ring-white/15",
-          className,
-        )}
+        className={cn(getSelectTriggerBase(size), open && selectTriggerOpen, className)}
       >
         <span className="truncate">{selectedLabel ?? placeholder}</span>
         <ChevronDown
           size={14}
-          className={cn(
-            "shrink-0 text-slate-400 transition-transform duration-200 dark:text-white/40",
-            open && "rotate-180",
-          )}
+          className={cn(selectChevron, open && "rotate-180")}
           aria-hidden="true"
         />
       </button>
 
-      {open
-        ? createPortal(
-            <div
+      {createPortal(
+        <AnimatePresence>
+          {open ? (
+            <motion.div
               ref={listRef}
               role="listbox"
               aria-label={ariaLabel}
-              className={cn(
-                "fixed z-[9999] flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg",
-                "dark:border-neutral-700 dark:bg-neutral-900",
-              )}
+              className={searchableSelectPanel}
+              {...getSelectDropdownMotion()}
+              transition={selectDropdownTransition}
               style={{
                 top: pos.top,
                 left: pos.left,
@@ -179,10 +184,10 @@ export function SearchableSelect({
               }}
             >
               {/* Search input */}
-              <div className="flex items-center gap-2 border-b border-slate-100 px-3 py-2 dark:border-neutral-800">
+              <div className={selectSearchRow}>
                 <Search
                   size={14}
-                  className="shrink-0 text-slate-400 dark:text-white/40"
+                  className="shrink-0 text-[#96969B] dark:text-[#9F9FA8]"
                   aria-hidden="true"
                 />
                 <input
@@ -191,7 +196,7 @@ export function SearchableSelect({
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder={searchPlaceholder}
-                  className="h-6 w-full bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400 dark:text-white/80 dark:placeholder:text-white/30"
+                  className={selectSearchInput}
                   autoComplete="off"
                   spellCheck={false}
                 />
@@ -200,9 +205,7 @@ export function SearchableSelect({
               {/* Options list */}
               <div className="flex-1 overflow-y-auto p-1">
                 {filtered.length === 0 ? (
-                  <div className="px-2.5 py-3 text-center text-xs text-slate-400 dark:text-white/30">
-                    No results
-                  </div>
+                  <div className={selectEmptyState}>No results</div>
                 ) : (
                   filtered.map((opt) => {
                     const selected = opt.value === value;
@@ -214,18 +217,15 @@ export function SearchableSelect({
                         aria-selected={selected}
                         onClick={() => handleSelect(opt.value)}
                         className={cn(
-                          "flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm outline-none transition-colors",
-                          "hover:bg-slate-100 dark:hover:bg-white/10",
-                          selected
-                            ? "font-medium text-slate-900 dark:text-white"
-                            : "text-slate-600 dark:text-slate-300",
+                          selectOptionBase,
+                          selected ? selectOptionSelected : selectOptionIdle,
                         )}
                       >
                         <span className="flex-1 whitespace-nowrap">{opt.label}</span>
                         {selected ? (
                           <Check
                             size={14}
-                            className="shrink-0 text-slate-400 dark:text-white/50"
+                            className="shrink-0 text-[#96969B] dark:text-[#9F9FA8]"
                             aria-hidden="true"
                           />
                         ) : null}
@@ -234,10 +234,11 @@ export function SearchableSelect({
                   })
                 )}
               </div>
-            </div>,
-            document.body,
-          )
-        : null}
+            </motion.div>
+          ) : null}
+        </AnimatePresence>,
+        document.body,
+      )}
     </>
   );
 }

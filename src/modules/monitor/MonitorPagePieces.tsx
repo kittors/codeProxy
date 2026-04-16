@@ -20,7 +20,7 @@ export const KpiCard = ({
   icon: ComponentType<{ size?: number; className?: string }>;
 }) => {
   return (
-    <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/70">
+    <article className="rounded-2xl border border-black/[0.06] bg-white p-5 shadow-[0_1px_2px_rgb(15_23_42_/_0.035)] dark:border-white/[0.06] dark:bg-neutral-950/70 dark:shadow-[0_1px_2px_rgb(0_0_0_/_0.22)]">
       <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-white/55">
         <Icon size={14} className="text-slate-900 dark:text-white" />
         <span>{title}</span>
@@ -94,7 +94,7 @@ export const MonitorCard = ({
   const { t } = useTranslation();
   return (
     <section
-      className="min-w-0 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/70"
+      className="min-w-0 rounded-2xl border border-black/[0.06] bg-white p-5 shadow-[0_1px_2px_rgb(15_23_42_/_0.035)] dark:border-white/[0.06] dark:bg-neutral-950/70 dark:shadow-[0_1px_2px_rgb(0_0_0_/_0.22)]"
       aria-busy={loading}
     >
       <div className="flex flex-wrap items-start justify-between gap-3">

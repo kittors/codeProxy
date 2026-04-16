@@ -1,9 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Code2, Download, Eye, FileInput, FileOutput, Loader2 } from "lucide-react";
-import { buildInputRenderedView, buildOutputRenderedView, tryPrettyPrintJson } from "@/modules/monitor/log-content/parsers";
-import { ContentModal, MessageBlock, PlainPre } from "@/modules/monitor/log-content/rendering";
+import {
+  buildInputRenderedView,
+  buildOutputRenderedView,
+  tryPrettyPrintJson,
+} from "@/modules/monitor/log-content/parsers";
+import {
+  ContentModal,
+  MessageBlock,
+  MessageList,
+  PlainPre,
+} from "@/modules/monitor/log-content/rendering";
 import { scheduleIdle, type CancelFn } from "@/modules/monitor/log-content/scheduler";
+import { Tabs, TabsList, TabsTrigger } from "@/modules/ui/Tabs";
 import type {
   AsyncParsedState,
   AsyncPrettyState,
@@ -11,6 +21,9 @@ import type {
   RenderedView,
 } from "@/modules/monitor/log-content/types";
 import { useLogContentData } from "@/modules/monitor/log-content/useLogContentData";
+
+const VIRTUAL_MESSAGE_REVEAL_THRESHOLD = 80;
+const MODAL_CONTENT_LOAD_DELAY_MS = 260;
 
 export function LogContentModal({
   open,
@@ -24,7 +37,10 @@ export function LogContentModal({
   const [activeTab, setActiveTab] = useState<"input" | "output">(initialTab);
   const [viewMode, setViewMode] = useState<"rendered" | "raw">("rendered");
   const [inputParsed, setInputParsed] = useState<AsyncParsedState>({ status: "idle", view: null });
-  const [outputParsed, setOutputParsed] = useState<AsyncParsedState>({ status: "idle", view: null });
+  const [outputParsed, setOutputParsed] = useState<AsyncParsedState>({
+    status: "idle",
+    view: null,
+  });
   const [inputRawPretty, setInputRawPretty] = useState<AsyncPrettyState>({
     status: "idle",
     pretty: null,
@@ -35,6 +51,8 @@ export function LogContentModal({
   });
   const [inputRevealCount, setInputRevealCount] = useState(0);
   const [outputRevealCount, setOutputRevealCount] = useState(0);
+  const [contentLoadReady, setContentLoadReady] = useState(false);
+  const dataOpen = open && contentLoadReady;
   const {
     inputLoading,
     outputLoading,
@@ -45,7 +63,7 @@ export function LogContentModal({
     model,
     fetchPart,
   } = useLogContentData({
-    open,
+    open: dataOpen,
     logId,
     initialTab,
     fetchFn,
@@ -57,12 +75,36 @@ export function LogContentModal({
   }, [initialTab, logId]);
 
   useEffect(() => {
-    if (!open || !logId) return;
+    if (!open) {
+      setContentLoadReady(false);
+      return;
+    }
+
+    setContentLoadReady(false);
+    const timer = window.setTimeout(() => {
+      setContentLoadReady(true);
+    }, MODAL_CONTENT_LOAD_DELAY_MS);
+
+    return () => window.clearTimeout(timer);
+  }, [open, logId]);
+
+  useEffect(() => {
+    if (!dataOpen || !logId) return;
+    if (activeTab === initialTab) return;
     const content = activeTab === "input" ? inputContent : outputContent;
     const loading = activeTab === "input" ? inputLoading : outputLoading;
     if (content || loading) return;
     void fetchPart(logId, activeTab);
-  }, [open, logId, activeTab, inputContent, outputContent, inputLoading, outputLoading, fetchPart]);
+  }, [
+    dataOpen,
+    logId,
+    activeTab,
+    inputContent,
+    outputContent,
+    inputLoading,
+    outputLoading,
+    fetchPart,
+  ]);
 
   useEffect(() => {
     setInputParsed({ status: inputContent ? "parsing" : "idle", view: null });
@@ -77,7 +119,7 @@ export function LogContentModal({
   }, [outputContent]);
 
   useEffect(() => {
-    if (!open || !inputContent) return;
+    if (!dataOpen || !inputContent) return;
     let cancelled = false;
     const cancel = scheduleIdle(() => {
       const view = buildInputRenderedView(inputContent);
@@ -88,10 +130,10 @@ export function LogContentModal({
       cancelled = true;
       cancel();
     };
-  }, [open, inputContent]);
+  }, [dataOpen, inputContent]);
 
   useEffect(() => {
-    if (!open || !outputContent) return;
+    if (!dataOpen || !outputContent) return;
     let cancelled = false;
     const cancel = scheduleIdle(() => {
       const view = buildOutputRenderedView(outputContent);
@@ -102,14 +144,14 @@ export function LogContentModal({
       cancelled = true;
       cancel();
     };
-  }, [open, outputContent]);
+  }, [dataOpen, outputContent]);
 
   const activeRenderedView = useMemo<RenderedView | null>(() => {
     return activeTab === "input" ? inputParsed.view : outputParsed.view;
   }, [activeTab, inputParsed.view, outputParsed.view]);
 
   useEffect(() => {
-    if (!open || viewMode !== "rendered") return;
+    if (!dataOpen || viewMode !== "rendered") return;
     if (!activeRenderedView || activeRenderedView.kind !== "messages") return;
 
     const total = activeRenderedView.messages.length;
@@ -117,6 +159,11 @@ export function LogContentModal({
 
     const batchSize = 6;
     const setCount = activeTab === "input" ? setInputRevealCount : setOutputRevealCount;
+
+    if (total > VIRTUAL_MESSAGE_REVEAL_THRESHOLD) {
+      setCount(total);
+      return;
+    }
 
     let cancelled = false;
     let current = Math.min(total, batchSize);
@@ -136,10 +183,10 @@ export function LogContentModal({
       cancelled = true;
       if (cancel) cancel();
     };
-  }, [open, viewMode, activeTab, activeRenderedView]);
+  }, [dataOpen, viewMode, activeTab, activeRenderedView]);
 
   useEffect(() => {
-    if (!open || viewMode !== "raw") return;
+    if (!dataOpen || viewMode !== "raw") return;
     const isInput = activeTab === "input";
     const raw = isInput ? inputContent : outputContent;
     if (!raw) return;
@@ -161,7 +208,7 @@ export function LogContentModal({
       cancelled = true;
       cancel();
     };
-  }, [open, viewMode, activeTab, inputContent, outputContent]);
+  }, [dataOpen, viewMode, activeTab, inputContent, outputContent]);
 
   const handleDownload = () => {
     const content = activeTab === "input" ? inputContent : outputContent;
@@ -206,60 +253,40 @@ export function LogContentModal({
   const activeLoading = activeTab === "input" ? inputLoading : outputLoading;
   const activeError = activeTab === "input" ? inputError : outputError;
 
+  const renderPreparing = () => (
+    <div className="flex items-center justify-center py-20">
+      <Loader2 size={22} className="animate-spin text-slate-400 dark:text-white/40" />
+      <span className="ml-3 text-sm text-slate-500 dark:text-white/50">
+        {t("common.loading_ellipsis")}
+      </span>
+    </div>
+  );
+
   const tabBar = (
     <div className="flex items-center gap-3">
-      <div className="flex flex-1 gap-1 rounded-xl bg-slate-100 p-1 dark:bg-neutral-900">
-        {(
-          [
-            { key: "input" as const, label: t("log_content.input_messages"), Icon: FileInput },
-            { key: "output" as const, label: t("log_content.output"), Icon: FileOutput },
-          ] as const
-        ).map(({ key, label, Icon }) => (
-          <button
-            key={key}
-            type="button"
-            onClick={() => setActiveTab(key)}
-            className={[
-              "flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all",
-              activeTab === key
-                ? "bg-white text-slate-900 shadow-sm dark:bg-neutral-800 dark:text-white"
-                : "text-slate-500 hover:text-slate-700 dark:text-white/40 dark:hover:text-white/60",
-            ].join(" ")}
-          >
-            <Icon size={15} />
-            {label}
-          </button>
-        ))}
-      </div>
+      <Tabs value={activeTab} onValueChange={(next) => setActiveTab(next as typeof activeTab)}>
+        <TabsList>
+          <TabsTrigger value="input">
+            <FileInput size={15} />
+            {t("log_content.input_messages")}
+          </TabsTrigger>
+          <TabsTrigger value="output">
+            <FileOutput size={15} />
+            {t("log_content.output")}
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
       <div className="flex items-center gap-1">
-        <div className="flex gap-0.5 rounded-lg bg-slate-100 p-0.5 dark:bg-neutral-900">
-          <button
-            type="button"
-            onClick={() => setViewMode("rendered")}
-            title={t("log_content.rendered")}
-            className={[
-              "flex items-center justify-center rounded-md p-1.5 transition-all",
-              viewMode === "rendered"
-                ? "bg-white text-slate-900 shadow-sm dark:bg-neutral-800 dark:text-white"
-                : "text-slate-400 hover:text-slate-600 dark:text-white/30 dark:hover:text-white/60",
-            ].join(" ")}
-          >
-            <Eye size={14} />
-          </button>
-          <button
-            type="button"
-            onClick={() => setViewMode("raw")}
-            title={t("log_content.raw_data")}
-            className={[
-              "flex items-center justify-center rounded-md p-1.5 transition-all",
-              viewMode === "raw"
-                ? "bg-white text-slate-900 shadow-sm dark:bg-neutral-800 dark:text-white"
-                : "text-slate-400 hover:text-slate-600 dark:text-white/30 dark:hover:text-white/60",
-            ].join(" ")}
-          >
-            <Code2 size={14} />
-          </button>
-        </div>
+        <Tabs value={viewMode} onValueChange={(next) => setViewMode(next as typeof viewMode)}>
+          <TabsList>
+            <TabsTrigger value="rendered" title={t("log_content.rendered")}>
+              <Eye size={14} />
+            </TabsTrigger>
+            <TabsTrigger value="raw" title={t("log_content.raw_data")}>
+              <Code2 size={14} />
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
         <button
           type="button"
           onClick={handleDownload}
@@ -283,18 +310,12 @@ export function LogContentModal({
       );
     }
     if (viewMode === "raw") return renderRaw(inputContent);
-    if (inputParsed.status !== "ready" || !inputParsed.view) return <PlainPre text={inputContent} />;
+    if (inputParsed.status !== "ready" || !inputParsed.view) return renderPreparing();
 
     const view = inputParsed.view;
     if (view.kind === "messages") {
       const count = inputRevealCount > 0 ? inputRevealCount : Math.min(view.messages.length, 6);
-      return (
-        <div className="space-y-3">
-          {view.messages.slice(0, count).map((msg, idx) => (
-            <MessageBlock key={idx} role={msg.role} content={msg.content} />
-          ))}
-        </div>
-      );
+      return <MessageList messages={view.messages.slice(0, count)} />;
     }
     if (view.kind === "pretty_json") return <PlainPre text={view.pretty} />;
     return <PlainPre text={view.kind === "raw" ? view.raw : view.text} />;
@@ -310,18 +331,12 @@ export function LogContentModal({
       );
     }
     if (viewMode === "raw") return renderRaw(outputContent);
-    if (outputParsed.status !== "ready" || !outputParsed.view) return <PlainPre text={outputContent} />;
+    if (outputParsed.status !== "ready" || !outputParsed.view) return renderPreparing();
 
     const view = outputParsed.view;
     if (view.kind === "messages") {
       const count = outputRevealCount > 0 ? outputRevealCount : Math.min(view.messages.length, 6);
-      return (
-        <div className="space-y-3">
-          {view.messages.slice(0, count).map((msg, idx) => (
-            <MessageBlock key={idx} role={msg.role} content={msg.content} />
-          ))}
-        </div>
-      );
+      return <MessageList messages={view.messages.slice(0, count)} />;
     }
     if (view.kind === "pretty_json") return <PlainPre text={view.pretty} />;
     if (view.kind === "text") {
@@ -336,7 +351,9 @@ export function LogContentModal({
 
   return (
     <ContentModal open={open} model={model} onClose={onClose} tabs={tabBar}>
-      {activeLoading && !currentContent ? (
+      {!contentLoadReady ? (
+        <div className="min-h-[200px]" aria-hidden="true" />
+      ) : activeLoading && !currentContent ? (
         <div className="flex items-center justify-center py-20">
           <Loader2 size={24} className="animate-spin text-slate-400 dark:text-white/40" />
           <span className="ml-3 text-sm text-slate-500 dark:text-white/50">
@@ -348,7 +365,9 @@ export function LogContentModal({
           <p className="text-sm text-red-500 dark:text-red-400">{activeError}</p>
         </div>
       ) : (
-        <div className="min-h-[200px]">{activeTab === "input" ? renderInput() : renderOutput()}</div>
+        <div className="min-h-[200px]">
+          {activeTab === "input" ? renderInput() : renderOutput()}
+        </div>
       )}
     </ContentModal>
   );

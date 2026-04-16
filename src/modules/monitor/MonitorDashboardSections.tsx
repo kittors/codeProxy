@@ -5,6 +5,7 @@ import { AnimatedNumber } from "@/modules/ui/AnimatedNumber";
 import { Reveal } from "@/modules/ui/Reveal";
 import { EChart } from "@/modules/ui/charts/EChart";
 import { ChartLegend } from "@/modules/ui/charts/ChartLegend";
+import { Tabs, TabsList, TabsTrigger } from "@/modules/ui/Tabs";
 import {
   HourWindowSelector,
   KpiCard,
@@ -25,8 +26,8 @@ export function MonitorKpiSection({
     failureCount: number;
     successRate: number;
     inputTokens: number;
-      outputTokens: number;
-      totalTokens: number;
+    outputTokens: number;
+    totalTokens: number;
   };
   hasData: boolean;
   isLoading: boolean;
@@ -121,7 +122,13 @@ export function MonitorDistributionSections({
   modelMetric: "requests" | "tokens";
   setModelMetric: (value: "requests" | "tokens") => void;
   modelDistributionOption: Record<string, unknown>;
-  modelDistributionLegend: Array<{ name: string; valueLabel: string; percentLabel: string; colorClass: string; enabled: boolean }>;
+  modelDistributionLegend: Array<{
+    name: string;
+    valueLabel: string;
+    percentLabel: string;
+    colorClass: string;
+    enabled: boolean;
+  }>;
   toggleModelDistributionLegend: (name: string) => void;
   dailyTrendOption: Record<string, unknown>;
   dailyLegendAvailability: { hasInput: boolean; hasOutput: boolean; hasRequests: boolean };
@@ -131,50 +138,35 @@ export function MonitorDistributionSections({
   apikeyMetric: "requests" | "tokens";
   setApikeyMetric: (value: "requests" | "tokens") => void;
   apikeyDistributionOption: Record<string, unknown>;
-  apikeyDistributionLegend: Array<{ name: string; valueLabel: string; percentLabel: string; colorClass: string; enabled: boolean }>;
+  apikeyDistributionLegend: Array<{
+    name: string;
+    valueLabel: string;
+    percentLabel: string;
+    colorClass: string;
+    enabled: boolean;
+  }>;
   toggleApikeyDistributionLegend: (name: string) => void;
   isRefreshing: boolean;
 }) {
   const modelActions = (
-    <div className="flex">
-      <div className="relative inline-flex max-w-full gap-1 overflow-x-auto whitespace-nowrap rounded-2xl border border-slate-200 bg-white p-1 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
-        <button
-          type="button"
-          onClick={() => setModelMetric("requests")}
-          className={modelMetric === "requests" ? "relative z-10 inline-flex h-8 shrink-0 items-center gap-2 whitespace-nowrap rounded-xl px-3 text-xs font-semibold text-white bg-slate-900 dark:text-neutral-950 dark:bg-white" : "relative z-10 inline-flex h-8 shrink-0 items-center gap-2 whitespace-nowrap rounded-xl px-3 text-xs text-slate-700 transition-colors duration-200 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white"}
-        >
-          {t("monitor.requests")}
-        </button>
-        <button
-          type="button"
-          onClick={() => setModelMetric("tokens")}
-          className={modelMetric === "tokens" ? "relative z-10 inline-flex h-8 shrink-0 items-center gap-2 whitespace-nowrap rounded-xl px-3 text-xs font-semibold text-white bg-slate-900 dark:text-neutral-950 dark:bg-white" : "relative z-10 inline-flex h-8 shrink-0 items-center gap-2 whitespace-nowrap rounded-xl px-3 text-xs text-slate-700 transition-colors duration-200 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white"}
-        >
-          {t("monitor.token")}
-        </button>
-      </div>
-    </div>
+    <Tabs value={modelMetric} onValueChange={(next) => setModelMetric(next as typeof modelMetric)}>
+      <TabsList>
+        <TabsTrigger value="requests">{t("monitor.requests")}</TabsTrigger>
+        <TabsTrigger value="tokens">{t("monitor.token")}</TabsTrigger>
+      </TabsList>
+    </Tabs>
   );
 
   const apikeyActions = (
-    <div className="flex">
-      <div className="relative inline-flex max-w-full gap-1 overflow-x-auto whitespace-nowrap rounded-2xl border border-slate-200 bg-white p-1 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
-        <button
-          type="button"
-          onClick={() => setApikeyMetric("requests")}
-          className={apikeyMetric === "requests" ? "relative z-10 inline-flex h-8 shrink-0 items-center gap-2 whitespace-nowrap rounded-xl px-3 text-xs font-semibold text-white bg-slate-900 dark:text-neutral-950 dark:bg-white" : "relative z-10 inline-flex h-8 shrink-0 items-center gap-2 whitespace-nowrap rounded-xl px-3 text-xs text-slate-700 transition-colors duration-200 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white"}
-        >
-          {t("monitor.requests")}
-        </button>
-        <button
-          type="button"
-          onClick={() => setApikeyMetric("tokens")}
-          className={apikeyMetric === "tokens" ? "relative z-10 inline-flex h-8 shrink-0 items-center gap-2 whitespace-nowrap rounded-xl px-3 text-xs font-semibold text-white bg-slate-900 dark:text-neutral-950 dark:bg-white" : "relative z-10 inline-flex h-8 shrink-0 items-center gap-2 whitespace-nowrap rounded-xl px-3 text-xs text-slate-700 transition-colors duration-200 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white"}
-        >
-          {t("monitor.token")}
-        </button>
-      </div>
-    </div>
+    <Tabs
+      value={apikeyMetric}
+      onValueChange={(next) => setApikeyMetric(next as typeof apikeyMetric)}
+    >
+      <TabsList>
+        <TabsTrigger value="requests">{t("monitor.requests")}</TabsTrigger>
+        <TabsTrigger value="tokens">{t("monitor.token")}</TabsTrigger>
+      </TabsList>
+    </Tabs>
   );
 
   return (
@@ -232,7 +224,11 @@ export function MonitorDistributionSections({
             loading={isRefreshing}
           >
             <div className="flex h-72 min-w-0 flex-col overflow-hidden">
-              <EChart option={dailyTrendOption} className="min-h-0 flex-1 min-w-0" replaceMerge="series" />
+              <EChart
+                option={dailyTrendOption}
+                className="min-h-0 flex-1 min-w-0"
+                replaceMerge="series"
+              />
               <ChartLegend
                 className="shrink-0 pt-4"
                 items={[
@@ -376,7 +372,9 @@ export function MonitorHourlySections({
         <Card
           title={t("monitor.hourly_model.title")}
           description={t("monitor.hourly_model_desc")}
-          actions={<HourWindowSelector value={modelHourWindow as any} onChange={setModelHourWindow} />}
+          actions={
+            <HourWindowSelector value={modelHourWindow as any} onChange={setModelHourWindow} />
+          }
           loading={isRefreshing}
         >
           <EChart option={hourlyModelOption} className="h-64 sm:h-72" replaceMerge="series" />
@@ -397,7 +395,9 @@ export function MonitorHourlySections({
         <Card
           title={t("monitor.hourly_token.title")}
           description={t("monitor.hourly_token_desc")}
-          actions={<HourWindowSelector value={tokenHourWindow as any} onChange={setTokenHourWindow} />}
+          actions={
+            <HourWindowSelector value={tokenHourWindow as any} onChange={setTokenHourWindow} />
+          }
           loading={isRefreshing}
         >
           <EChart option={hourlyTokenOption} className="h-64 sm:h-72" replaceMerge="series" />

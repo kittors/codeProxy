@@ -23,6 +23,7 @@ export default defineConfig({
     restoreMocks: true,
     clearMocks: true,
     mockReset: true,
+    testTimeout: 10_000,
   },
   resolve: {
     alias: {

@@ -12,10 +12,12 @@ import {
 } from "lucide-react";
 import type { AuthFileItem } from "@/lib/http/types";
 import { Button } from "@/modules/ui/Button";
+import { Card } from "@/modules/ui/Card";
 import { EmptyState } from "@/modules/ui/EmptyState";
 import { TextInput } from "@/modules/ui/Input";
 import { HoverTooltip } from "@/modules/ui/Tooltip";
 import { Select } from "@/modules/ui/Select";
+import { Tabs, TabsList, TabsTrigger } from "@/modules/ui/Tabs";
 import { VirtualTable, type VirtualTableColumn } from "@/modules/ui/VirtualTable";
 import { ToggleSwitch } from "@/modules/ui/ToggleSwitch";
 import type {
@@ -87,7 +89,10 @@ interface AuthFilesFilesTabProps {
   setFileEnabled: (file: AuthFileItem, enabled: boolean) => Promise<void>;
   statusUpdating: Record<string, boolean>;
   usageIndex: UsageIndex;
-  resolveAuthFileStats: (file: AuthFileItem, index: UsageIndex) => { success: number; failure: number };
+  resolveAuthFileStats: (
+    file: AuthFileItem,
+    index: UsageIndex,
+  ) => { success: number; failure: number };
   toggleFileSelection: (name: string, checked: boolean) => void;
   formatPlanTypeLabel: (planType: string) => string;
   translateQuotaText: (text: string) => string;
@@ -173,7 +178,7 @@ export function AuthFilesFilesTab({
         onChange={(e) => void handleUpload(e.currentTarget.files)}
       />
 
-      <div className="rounded-2xl border border-slate-200 bg-white/70 px-3 py-3 shadow-sm backdrop-blur dark:border-neutral-800 dark:bg-neutral-950/40 sm:px-4">
+      <Card padding="compact">
         <div className="flex flex-col gap-3">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
             <div className="flex min-w-0 flex-1 flex-col gap-3 lg:flex-row lg:items-end">
@@ -191,40 +196,35 @@ export function AuthFilesFilesTab({
                     </span>
                   </HoverTooltip>
                 </div>
-                <div className="inline-flex w-fit max-w-full gap-1 overflow-x-auto whitespace-nowrap rounded-2xl border border-slate-200 bg-white p-1 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
-                  {filterChips.map((key) => {
-                    const active = filter === key;
-                    const normalizedKey = normalizeProviderKey(key);
-                    const count =
-                      key === "all" ? filterCounts.total : (filterCounts.counts[normalizedKey] ?? 0);
-                    const label = key === "all" ? t("auth_files.all") : key;
-                    const countClass = active
-                      ? "bg-white/20 text-white dark:bg-neutral-950/10 dark:text-neutral-950"
-                      : "bg-slate-100 text-slate-700 dark:bg-white/10 dark:text-white/70";
-                    return (
-                      <button
-                        key={key}
-                        type="button"
-                        onClick={() => setFilter(key)}
-                        className={
-                          active
-                            ? "inline-flex shrink-0 items-center rounded-xl bg-slate-900 px-2.5 py-1 text-xs font-semibold text-white dark:bg-white dark:text-neutral-950"
-                            : "inline-flex shrink-0 items-center rounded-xl px-2.5 py-1 text-xs text-slate-700 transition hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white"
-                        }
-                      >
-                        {label}
-                        <span
-                          className={[
-                            "ml-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-semibold tabular-nums",
-                            countClass,
-                          ].join(" ")}
-                        >
-                          {count}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
+                <Tabs value={filter} onValueChange={setFilter}>
+                  <TabsList>
+                    {filterChips.map((key) => {
+                      const active = filter === key;
+                      const normalizedKey = normalizeProviderKey(key);
+                      const count =
+                        key === "all"
+                          ? filterCounts.total
+                          : (filterCounts.counts[normalizedKey] ?? 0);
+                      const label = key === "all" ? t("auth_files.all") : key;
+                      const countClass = active
+                        ? "bg-black/[0.06] text-[#18181B] dark:bg-white/12 dark:text-white"
+                        : "bg-slate-100 text-slate-700 dark:bg-white/10 dark:text-white/70";
+                      return (
+                        <TabsTrigger key={key} value={key}>
+                          {label}
+                          <span
+                            className={[
+                              "ml-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-semibold tabular-nums",
+                              countClass,
+                            ].join(" ")}
+                          >
+                            {count}
+                          </span>
+                        </TabsTrigger>
+                      );
+                    })}
+                  </TabsList>
+                </Tabs>
               </div>
 
               <div className="w-full max-w-[560px] space-y-1.5">
@@ -258,10 +258,14 @@ export function AuthFilesFilesTab({
                 <span className="text-xs font-medium text-slate-500 dark:text-white/45">
                   {t("auth_files.quota_auto_refresh")}
                 </span>
-                <div className={loading && filesLength === 0 ? "pointer-events-none opacity-60" : ""}>
+                <div
+                  className={loading && filesLength === 0 ? "pointer-events-none opacity-60" : ""}
+                >
                   <Select
                     value={String(quotaAutoRefreshMs)}
-                    onChange={(value) => setQuotaAutoRefreshMsRaw(normalizeQuotaAutoRefreshMs(value))}
+                    onChange={(value) =>
+                      setQuotaAutoRefreshMsRaw(normalizeQuotaAutoRefreshMs(value))
+                    }
                     options={[
                       { value: "0", label: t("auth_files.quota_refresh_off") },
                       { value: "5000", label: "5s" },
@@ -284,10 +288,7 @@ export function AuthFilesFilesTab({
                   onClick={openGroupOverview}
                   disabled={loading || groupOverviewLoading || filteredFiles.length === 0}
                 >
-                  <BarChart3
-                    size={14}
-                    className={groupOverviewLoading ? "animate-pulse" : ""}
-                  />
+                  <BarChart3 size={14} className={groupOverviewLoading ? "animate-pulse" : ""} />
                   {t("auth_files.group_overview_button")}
                 </Button>
                 <HoverTooltip content={t("auth_files.refresh")}>
@@ -384,7 +385,9 @@ export function AuthFilesFilesTab({
                   variant="danger"
                   size="sm"
                   className="!h-8 px-2 text-xs"
-                  onClick={() => setConfirm({ type: "deleteSelection", names: [...selectedFileNames] })}
+                  onClick={() =>
+                    setConfirm({ type: "deleteSelection", names: [...selectedFileNames] })
+                  }
                   disabled={selectedCount === 0 || deletingAll}
                 >
                   {t("auth_files.batch_delete_action", { count: selectedCount })}
@@ -393,10 +396,10 @@ export function AuthFilesFilesTab({
             ) : null}
           </div>
         </div>
-      </div>
+      </Card>
 
       {loading && filesLength === 0 ? (
-        <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white/70 shadow-sm backdrop-blur dark:border-neutral-800 dark:bg-neutral-950/40">
+        <Card padding="none" className="relative overflow-hidden">
           <div className="p-4 sm:p-5" data-testid="auth-files-table-skeleton">
             <div className="space-y-2">
               {Array.from({ length: 7 }).map((_, idx) => (
@@ -407,14 +410,14 @@ export function AuthFilesFilesTab({
               ))}
             </div>
           </div>
-        </div>
+        </Card>
       ) : pageItems.length === 0 ? (
         <EmptyState
           title={t("auth_files_page.no_files")}
           description={t("auth_files_page.no_files_desc")}
         />
       ) : (
-        <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white/70 shadow-sm backdrop-blur dark:border-neutral-800 dark:bg-neutral-950/40">
+        <Card padding="none" className="relative overflow-hidden">
           <div className="p-4 sm:p-5">
             {filesViewMode === "table" ? (
               <VirtualTable<AuthFileItem>
@@ -473,10 +476,12 @@ export function AuthFilesFilesTab({
                   const showSelectionControl = fileSelected;
 
                   return (
-                    <div
+                    <Card
                       key={file.name}
+                      padding="default"
+                      bodyClassName="mt-0"
                       className={[
-                        "group min-w-0 rounded-2xl border border-slate-200 bg-white/80 p-4 shadow-sm transition-colors hover:border-slate-300 hover:bg-white dark:border-neutral-800 dark:bg-neutral-950/50 dark:hover:border-neutral-700 dark:hover:bg-neutral-950/70 sm:p-5",
+                        "group transition-colors hover:border-slate-300 hover:bg-white dark:hover:border-neutral-700 dark:hover:bg-neutral-950/70",
                         fileSelected
                           ? "border-slate-900 ring-1 ring-slate-300 dark:border-white dark:ring-white/20"
                           : "",
@@ -626,13 +631,13 @@ export function AuthFilesFilesTab({
                           </HoverTooltip>
                         </div>
                       </div>
-                    </div>
+                    </Card>
                   );
                 })}
               </div>
             )}
           </div>
-        </div>
+        </Card>
       )}
 
       <div className="flex flex-wrap items-center justify-between gap-3">
