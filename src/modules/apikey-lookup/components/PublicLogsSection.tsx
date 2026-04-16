@@ -304,7 +304,7 @@ export function PublicLogsSection({
 }) {
   return (
     <Reveal>
-      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-950/70">
+      <section className="overflow-hidden rounded-2xl border border-black/[0.06] bg-white shadow-[0_1px_2px_rgb(15_23_42_/_0.035)] dark:border-white/[0.06] dark:bg-neutral-950/70 dark:shadow-[0_1px_2px_rgb(0_0_0_/_0.22)]">
         <div className="border-b border-slate-100 px-3 py-3 sm:px-5 dark:border-neutral-800/60">
           <div className="grid gap-2 sm:flex sm:flex-wrap sm:items-center sm:gap-2">
             <div className="grid grid-cols-1 gap-2 sm:flex sm:items-center sm:gap-2">
@@ -346,7 +346,9 @@ export function PublicLogsSection({
                   ·
                 </span>
                 {t("apikey_lookup.token")}
-                <span className="font-mono tabular-nums">{stats.total_tokens.toLocaleString()}</span>
+                <span className="font-mono tabular-nums">
+                  {stats.total_tokens.toLocaleString()}
+                </span>
               </span>
               {lastUpdatedText ? (
                 <span className="hidden sm:inline-flex items-center gap-1.5 whitespace-nowrap">
