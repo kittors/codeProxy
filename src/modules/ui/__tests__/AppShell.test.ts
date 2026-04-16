@@ -19,4 +19,14 @@ describe("AppShell", () => {
     expect(toggleButtonClass).not.toContain("border border");
     expect(toggleButtonClass).not.toContain("shadow-sm");
   });
+
+  test("smoothly transitions shell theme surfaces without animating every property", () => {
+    const source = readModule("modules/ui/AppShell.tsx");
+
+    expect(source).toContain(
+      "motion-safe:transition-[width,transform,background-color,border-color]",
+    );
+    expect(source).toContain("motion-safe:transition-colors");
+    expect(source).toContain("transition-colors duration-200 ease-out");
+  });
 });

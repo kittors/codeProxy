@@ -50,6 +50,16 @@ describe("shared primitive usage", () => {
     );
   });
 
+  test("auth files channel surfaces transition naturally between themes", () => {
+    const aliasSource = readModule("modules/auth-files/components/AuthFilesAliasTab.tsx");
+    const excludedSource = readModule("modules/auth-files/components/AuthFilesExcludedTab.tsx");
+    const filesTabSource = readModule("modules/auth-files/components/AuthFilesFilesTab.tsx");
+
+    expect(aliasSource).toContain("transition-colors duration-200 ease-out");
+    expect(excludedSource).toContain("transition-colors duration-200 ease-out");
+    expect(filesTabSource).toContain("transition-colors duration-200 ease-out");
+  });
+
   test("system page and api key form reuse shared card and input primitives", () => {
     const systemSource = readModule("modules/system/SystemPage.tsx");
     const formSource = readModule("modules/api-keys/components/ApiKeyFormFields.tsx");

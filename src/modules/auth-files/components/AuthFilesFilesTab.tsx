@@ -346,7 +346,7 @@ export function AuthFilesFilesTab({
             </div>
 
             {selectableFilteredFiles.length > 0 || selectedCount > 0 ? (
-              <div className="flex flex-wrap items-center gap-1.5 rounded-2xl bg-slate-50/80 px-2 py-1.5 dark:bg-white/[0.03]">
+              <div className="flex flex-wrap items-center gap-1.5 rounded-2xl bg-slate-50/80 px-2 py-1.5 transition-colors duration-200 ease-out dark:bg-white/[0.03]">
                 <Button
                   variant="secondary"
                   size="sm"
@@ -405,7 +405,7 @@ export function AuthFilesFilesTab({
               {Array.from({ length: 7 }).map((_, idx) => (
                 <div
                   key={`s-${idx}`}
-                  className="h-[84px] rounded-xl bg-slate-50/80 motion-safe:animate-pulse dark:bg-white/[0.03]"
+                  className="h-[84px] rounded-xl bg-slate-50/80 transition-colors duration-200 ease-out motion-safe:animate-pulse dark:bg-white/[0.03]"
                 />
               ))}
             </div>
@@ -481,7 +481,7 @@ export function AuthFilesFilesTab({
                       padding="default"
                       bodyClassName="mt-0"
                       className={[
-                        "group transition-colors hover:border-slate-300 hover:bg-white dark:hover:border-neutral-700 dark:hover:bg-neutral-950/70",
+                        "group transition-colors duration-200 ease-out hover:border-slate-300 hover:bg-white dark:hover:border-neutral-700 dark:hover:bg-neutral-950/70",
                         fileSelected
                           ? "border-slate-900 ring-1 ring-slate-300 dark:border-white dark:ring-white/20"
                           : "",
@@ -564,7 +564,7 @@ export function AuthFilesFilesTab({
                       </div>
 
                       <div
-                        className="mt-4 min-w-0 rounded-2xl bg-slate-50/85 px-3 py-3 dark:bg-white/[0.03]"
+                        className="mt-4 min-w-0 rounded-2xl bg-slate-50/85 px-3 py-3 transition-colors duration-200 ease-out dark:bg-white/[0.03]"
                         data-testid="auth-file-card-quota"
                       >
                         {provider && (state.status === "error" || state.error) ? (

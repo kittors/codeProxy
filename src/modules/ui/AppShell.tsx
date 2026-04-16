@@ -139,7 +139,7 @@ function ShellSidebar({
         "shrink-0 overflow-hidden bg-white/80 backdrop-blur-xl dark:bg-neutral-950/70",
         isMobile ? "fixed inset-y-0 left-0 z-40 w-64" : "h-[100dvh]",
         "border-r border-slate-200 dark:border-neutral-800",
-        "motion-reduce:transition-none motion-safe:transition-all motion-safe:duration-300 motion-safe:ease-out",
+        "motion-reduce:transition-none motion-safe:transition-[width,transform,background-color,border-color] motion-safe:duration-300 motion-safe:ease-out",
         isMobile
           ? collapsed
             ? "-translate-x-full"
@@ -153,12 +153,15 @@ function ShellSidebar({
       <div
         className={[
           "flex h-full w-64 flex-col",
-          "motion-reduce:transition-none motion-safe:transition-all motion-safe:duration-300 motion-safe:ease-out",
+          "motion-reduce:transition-none motion-safe:transition-[transform,opacity] motion-safe:duration-300 motion-safe:ease-out",
           collapsed ? "pointer-events-none opacity-0 -translate-x-6" : "opacity-100 translate-x-0",
         ].join(" ")}
       >
-        <div className="flex h-16 items-center gap-2 px-6 text-lg font-semibold tracking-tight text-slate-900 dark:text-white whitespace-nowrap">
-          <LayoutDashboard size={18} className="text-slate-900 dark:text-white" />
+        <div className="flex h-16 items-center gap-2 px-6 text-lg font-semibold tracking-tight text-slate-900 transition-colors duration-200 ease-out dark:text-white whitespace-nowrap">
+          <LayoutDashboard
+            size={18}
+            className="text-slate-900 transition-colors duration-200 ease-out dark:text-white"
+          />
           <span>{t("shell.console")}</span>
         </div>
         <nav className="flex-1 space-y-1 overflow-y-auto px-3 pb-4">
@@ -173,11 +176,14 @@ function ShellSidebar({
                 onClick={() => handleNavClick(item.to)}
                 className={
                   active
-                    ? "flex min-w-0 items-center gap-2 rounded-xl bg-slate-900 px-3 py-2 text-sm font-semibold text-white dark:bg-white dark:text-neutral-950 whitespace-nowrap"
-                    : "flex min-w-0 items-center gap-2 rounded-xl px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white whitespace-nowrap"
+                    ? "flex min-w-0 items-center gap-2 rounded-xl bg-slate-900 px-3 py-2 text-sm font-semibold text-white transition-colors duration-200 ease-out dark:bg-white dark:text-neutral-950 whitespace-nowrap"
+                    : "flex min-w-0 items-center gap-2 rounded-xl px-3 py-2 text-sm text-slate-700 transition-colors duration-200 ease-out hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white whitespace-nowrap"
                 }
               >
-                <Icon size={16} className="shrink-0 opacity-90" />
+                <Icon
+                  size={16}
+                  className="shrink-0 opacity-90 transition-colors duration-200 ease-out"
+                />
                 <span className="min-w-0 truncate">{t(item.i18nKey)}</span>
               </Link>
             );
@@ -206,7 +212,7 @@ function ShellHeader({
   const sidebarLabel = sidebarCollapsed ? t("shell.expand_sidebar") : t("shell.collapse_sidebar");
 
   return (
-    <header className="z-20 shrink-0 border-b border-slate-200 bg-white/75 backdrop-blur-xl dark:border-neutral-800 dark:bg-neutral-950/60">
+    <header className="z-20 shrink-0 border-b border-slate-200 bg-white/75 backdrop-blur-xl motion-reduce:transition-none motion-safe:transition-colors motion-safe:duration-200 motion-safe:ease-out dark:border-neutral-800 dark:bg-neutral-950/60">
       <h1 className="sr-only">{t(titleKey)}</h1>
       <div className="flex h-16 items-center justify-between gap-3 px-3 sm:px-6">
         <div className="flex min-w-0 items-center gap-2 sm:gap-3">
@@ -215,14 +221,14 @@ function ShellHeader({
             onClick={onToggleSidebar}
             aria-label={sidebarLabel}
             title={sidebarLabel}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full border-0 bg-transparent text-slate-500 shadow-none transition-all duration-150 hover:-translate-y-0.5 hover:text-slate-900 active:translate-y-0 active:scale-95 dark:text-slate-400 dark:hover:text-white"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full border-0 bg-transparent text-slate-500 shadow-none transition-[color,transform] duration-150 ease-out hover:-translate-y-0.5 hover:text-slate-900 active:translate-y-0 active:scale-95 dark:text-slate-400 dark:hover:text-white"
           >
             <SidebarIcon size={16} />
           </button>
         </div>
         <div className="flex shrink-0 items-center gap-1 sm:gap-2">
-          <LanguageSelector className="inline-flex h-9 items-center justify-center gap-0.5 rounded-xl px-1.5 text-slate-500 transition hover:text-slate-900 dark:text-slate-400 dark:hover:text-white" />
-          <ThemeToggleButton className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 transition hover:text-slate-900 dark:text-slate-400 dark:hover:text-white" />
+          <LanguageSelector className="inline-flex h-9 items-center justify-center gap-0.5 rounded-xl px-1.5 text-slate-500 transition-colors duration-200 ease-out hover:text-slate-900 dark:text-slate-400 dark:hover:text-white" />
+          <ThemeToggleButton className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 transition-colors duration-200 ease-out hover:text-slate-900 dark:text-slate-400 dark:hover:text-white" />
           <button
             type="button"
             onClick={() => {
