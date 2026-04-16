@@ -14,6 +14,7 @@ import {
   Zap,
   Layers,
 } from "lucide-react";
+import { Card } from "@/modules/ui/Card";
 import { useSystemStats, type SystemStats, type ChannelLatency } from "./useSystemStats";
 
 /* ═══════════════════════════════════════════════════════════
@@ -175,7 +176,7 @@ function ResourceBar({
   const { t } = useTranslation();
   const sc = statusColor(pct);
   return (
-    <div className="rounded-xl border border-slate-200/80 bg-white px-3.5 py-2.5 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
+    <Card padding="compact" bodyClassName="mt-0">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Icon size={14} className="text-slate-400 dark:text-slate-500" />
@@ -198,7 +199,7 @@ function ResourceBar({
         />
       </div>
       {detail && <p className="mt-1 text-[10px] text-slate-400 dark:text-white/35">{detail}</p>}
-    </div>
+    </Card>
   );
 }
 
@@ -220,7 +221,7 @@ function MiniKpi({
   sublabel?: string;
 }) {
   return (
-    <div className="rounded-xl border border-slate-200/80 bg-white px-3.5 py-3 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
+    <Card padding="compact" bodyClassName="mt-0">
       <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-white/40">
         <Icon size={12} />
         {label}
@@ -229,7 +230,7 @@ function MiniKpi({
       {sublabel && (
         <p className="mt-0.5 text-[10px] text-slate-400 dark:text-white/35">{sublabel}</p>
       )}
-    </div>
+    </Card>
   );
 }
 
@@ -240,7 +241,7 @@ function MiniKpi({
 function NetworkCard({ stats }: { stats: SystemStats }) {
   const { t } = useTranslation();
   return (
-    <div className="rounded-xl border border-slate-200/80 bg-white p-3.5 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
+    <Card padding="compact" bodyClassName="mt-0">
       <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-white/40 mb-2.5">
         <Wifi size={12} />
         {t("system_monitor.network_traffic")}
@@ -277,7 +278,7 @@ function NetworkCard({ stats }: { stats: SystemStats }) {
           {formatBytes(stats.net_bytes_sent + stats.net_bytes_recv)}
         </span>
       </div>
-    </div>
+    </Card>
   );
 }
 
@@ -292,7 +293,7 @@ function ChannelLatencyCard({ data }: { data: ChannelLatency[] }) {
   const maxMs = Math.max(...top5.map((d) => d.avg_ms));
 
   return (
-    <div className="min-w-0 overflow-hidden rounded-xl border border-slate-200/80 bg-white p-3.5 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
+    <Card padding="compact" bodyClassName="mt-0" className="overflow-hidden">
       <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-white/40 mb-2.5">
         <Network size={12} />
         {t("system_monitor.channel_avg_latency")}
@@ -324,7 +325,7 @@ function ChannelLatencyCard({ data }: { data: ChannelLatency[] }) {
           );
         })}
       </div>
-    </div>
+    </Card>
   );
 }
 
@@ -338,7 +339,7 @@ function ConcurrencyCard({ stats }: { stats: SystemStats }) {
   const tpm = stats.total_tpm ?? 0;
 
   return (
-    <div className="rounded-xl border border-slate-200/80 bg-white p-3.5 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
+    <Card padding="compact" bodyClassName="mt-0">
       <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-white/40 mb-3">
         <Layers size={12} />
         {t("system_monitor.realtime_throughput")}
@@ -381,7 +382,7 @@ function ConcurrencyCard({ stats }: { stats: SystemStats }) {
           </p>
         </div>
       </div>
-    </div>
+    </Card>
   );
 }
 
@@ -397,31 +398,25 @@ function SkeletonLayout() {
   return (
     <div className="space-y-4">
       <div className="grid gap-4 lg:grid-cols-[280px_1fr]">
-        <div className="flex items-center justify-center rounded-xl border border-slate-200/80 bg-white p-6 dark:border-neutral-800 dark:bg-neutral-950/60">
+        <Card padding="compact" bodyClassName="mt-0 flex items-center justify-center p-2.5">
           <Skeleton className="h-40 w-40 rounded-full" />
-        </div>
+        </Card>
         <div className="grid gap-3 grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div
-              key={i}
-              className="rounded-xl border border-slate-200/80 bg-white p-3.5 dark:border-neutral-800 dark:bg-neutral-950/60"
-            >
+            <Card key={i} padding="compact" bodyClassName="mt-0">
               <Skeleton className="h-3 w-16 mb-3" />
               <Skeleton className="h-5 w-20" />
-            </div>
+            </Card>
           ))}
         </div>
       </div>
       <div className="grid gap-3 grid-cols-2 lg:grid-cols-5">
         {Array.from({ length: 5 }).map((_, i) => (
-          <div
-            key={i}
-            className="rounded-xl border border-slate-200/80 bg-white p-3.5 dark:border-neutral-800 dark:bg-neutral-950/60"
-          >
+          <Card key={i} padding="compact" bodyClassName="mt-0">
             <Skeleton className="h-3 w-12 mb-2" />
             <Skeleton className="h-4 w-16 mb-2" />
             <Skeleton className="h-1.5 w-full" />
-          </div>
+          </Card>
         ))}
       </div>
     </div>
@@ -438,21 +433,17 @@ export function SystemMonitorSection() {
 
   if (!stats) {
     return (
-      <section className="rounded-2xl border border-slate-200 bg-white/50 p-5 shadow-sm backdrop-blur dark:border-neutral-800 dark:bg-neutral-950/50">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <Activity size={16} className="text-slate-600 dark:text-white" />
-            <span className="text-sm font-semibold text-slate-900 dark:text-white">
-              {t("system_monitor.title")}
-            </span>
-          </div>
+      <Card
+        title={t("system_monitor.title")}
+        actions={
           <div className="flex items-center gap-1.5 text-xs text-slate-400">
             <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-slate-300 dark:bg-neutral-600" />
             {t("system_monitor.connecting")}
           </div>
-        </div>
+        }
+      >
         <SkeletonLayout />
-      </section>
+      </Card>
     );
   }
 
@@ -460,33 +451,29 @@ export function SystemMonitorSection() {
   const logDirSizeBytes = stats.log_dir_size_bytes || stats.log_size_bytes;
 
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white/50 p-5 shadow-sm backdrop-blur dark:border-neutral-800 dark:bg-neutral-950/50">
-      {/* ── Header ── */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <Activity size={16} className="text-slate-600 dark:text-white" />
-          <span className="text-sm font-semibold text-slate-900 dark:text-white">
-            {t("system_monitor.title")}
-          </span>
-          <span className="text-[10px] text-slate-400 dark:text-white/35">
-            {t("system_monitor.updated_at", { time: new Date().toLocaleTimeString() })}
-          </span>
-        </div>
+    <Card
+      title={t("system_monitor.title")}
+      description={t("system_monitor.updated_at", { time: new Date().toLocaleTimeString() })}
+      actions={
         <div className="flex items-center gap-1.5 text-xs text-slate-400">
           <span
             className={`inline-block h-2 w-2 rounded-full ${connected ? "bg-emerald-500 animate-pulse" : "bg-slate-300 dark:bg-neutral-600"}`}
           />
           {connected ? t("system_monitor.live") : t("system_monitor.polling")}
         </div>
-      </div>
-
+      }
+    >
       <div className="space-y-4">
         {/* ── Row 1: Health Gauge (left) + Core KPIs (right) ── */}
         <div className="grid gap-4 lg:grid-cols-[280px_1fr]">
           {/* Left: big gauge */}
-          <div className="flex items-center justify-center rounded-xl border border-slate-200/80 bg-gradient-to-br from-slate-50 to-white p-4 dark:border-neutral-800 dark:from-neutral-900/50 dark:to-neutral-950/60">
+          <Card
+            padding="compact"
+            className="bg-gradient-to-br from-slate-50 to-white dark:from-neutral-900/50 dark:to-neutral-950/60"
+            bodyClassName="mt-0 flex items-center justify-center"
+          >
             <HealthGauge score={health} />
-          </div>
+          </Card>
 
           {/* Right: core KPIs in 2x3 grid */}
           <div className="grid gap-3 grid-cols-2 lg:grid-cols-3">
@@ -594,6 +581,6 @@ export function SystemMonitorSection() {
           </div>
         </div>
       </div>
-    </section>
+    </Card>
   );
 }
