@@ -1,6 +1,10 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, test, vi } from "vitest";
 import { TextInput } from "@/modules/ui/Input";
+import { SearchableCheckboxMultiSelect } from "@/modules/ui/SearchableCheckboxMultiSelect";
+import { SearchableSelect } from "@/modules/ui/SearchableSelect";
+import { Select } from "@/modules/ui/Select";
 import { Tabs, TabsList, TabsTrigger } from "@/modules/ui/Tabs";
 
 describe("shared control sizing", () => {
@@ -14,6 +18,29 @@ describe("shared control sizing", () => {
           </TabsList>
         </Tabs>
         <TextInput placeholder="Search" />
+        <Select
+          value=""
+          onChange={vi.fn()}
+          options={[{ value: "", label: "All status" }]}
+          aria-label="Status"
+        />
+        <SearchableSelect
+          value=""
+          onChange={vi.fn()}
+          options={[{ value: "", label: "All models" }]}
+          aria-label="Model"
+        />
+        <SearchableCheckboxMultiSelect
+          value={[]}
+          onChange={vi.fn()}
+          options={[{ value: "gpt", label: "GPT" }]}
+          placeholder="All items"
+          selectFilteredLabel="Select filtered"
+          deselectFilteredLabel="Deselect filtered"
+          selectedCountLabel={(count) => `${count} selected`}
+          noResultsLabel="No results"
+          aria-label="Multi model"
+        />
       </>,
     );
 
@@ -25,6 +52,9 @@ describe("shared control sizing", () => {
       "border-0",
       "bg-white",
     );
+    screen.getAllByRole("combobox").forEach((control) => {
+      expect(control).toHaveClass("h-9", "rounded-2xl", "border-0", "bg-white");
+    });
   });
 
   test("exposes sm and lg sizes for shared controls", () => {
@@ -44,5 +74,28 @@ describe("shared control sizing", () => {
     expect(screen.getByRole("tab", { name: "Small" })).toHaveClass("h-7");
     expect(screen.getByRole("textbox", { name: "Small input" })).toHaveClass("h-8");
     expect(screen.getByRole("textbox", { name: "Large input" })).toHaveClass("h-10");
+  });
+
+  test("uses shared select surface for searchable checkbox multi-select dropdown", async () => {
+    const user = userEvent.setup();
+    render(
+      <SearchableCheckboxMultiSelect
+        value={[]}
+        onChange={vi.fn()}
+        options={[{ value: "gpt", label: "GPT" }]}
+        placeholder="All items"
+        selectFilteredLabel="Select filtered"
+        deselectFilteredLabel="Deselect filtered"
+        selectedCountLabel={(count) => `${count} selected`}
+        noResultsLabel="No results"
+        aria-label="Multi model"
+      />,
+    );
+
+    await user.click(screen.getByRole("combobox", { name: "Multi model" }));
+
+    const dropdown = screen.getByRole("listbox", { name: "Multi model" }).parentElement;
+    expect(dropdown).toHaveClass("rounded-2xl", "border-0", "bg-white");
+    expect(screen.getByRole("textbox")).toHaveClass("h-6", "bg-transparent");
   });
 });
