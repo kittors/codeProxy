@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Check, Layers, RefreshCw, Search } from "lucide-react";
+import { Card } from "@/modules/ui/Card";
+import { TextInput } from "@/modules/ui/Input";
 
 // Vendor SVG icons
 import iconClaude from "@/assets/icons/claude.svg";
@@ -215,7 +217,7 @@ export function ModelsTabContent({
   }, [models, t]);
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white/70 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
+    <Card padding="none" className="overflow-hidden">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-3.5 dark:border-neutral-800">
         <div className="flex items-center gap-2.5">
           <Layers size={15} className="text-slate-500 dark:text-white/40" />
@@ -229,18 +231,13 @@ export function ModelsTabContent({
             <span className="text-[10px] text-slate-400 dark:text-white/30">/ {models.length}</span>
           ) : null}
         </div>
-        <div className="relative">
-          <Search
-            size={13}
-            className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-white/30"
-          />
-          <input
-            value={searchFilter}
-            onChange={(e) => onSearchChange(e.target.value)}
-            placeholder={t("models_page.search")}
-            className="w-48 rounded-lg border border-slate-200 bg-white py-1.5 pl-8 pr-3 text-xs text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-indigo-300 dark:border-neutral-700 dark:bg-neutral-900/60 dark:text-white dark:placeholder:text-white/30 dark:focus:border-indigo-600"
-          />
-        </div>
+        <TextInput
+          value={searchFilter}
+          onChange={(e) => onSearchChange(e.target.value)}
+          placeholder={t("models_page.search")}
+          className="!w-48"
+          startAdornment={<Search size={14} className="text-slate-400 dark:text-white/35" />}
+        />
       </div>
 
       {vendorStats.length > 0 && !loading ? (
@@ -289,6 +286,6 @@ export function ModelsTabContent({
           </div>
         )}
       </div>
-    </div>
+    </Card>
   );
 }

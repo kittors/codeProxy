@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Filter } from "lucide-react";
+import { Card } from "@/modules/ui/Card";
 import { Reveal } from "@/modules/ui/Reveal";
 import { SearchableSelect } from "@/modules/ui/SearchableSelect";
 import { Select } from "@/modules/ui/Select";
@@ -304,7 +305,7 @@ export function PublicLogsSection({
 }) {
   return (
     <Reveal>
-      <section className="overflow-hidden rounded-2xl border border-black/[0.06] bg-white shadow-[0_1px_2px_rgb(15_23_42_/_0.035)] dark:border-white/[0.06] dark:bg-neutral-950/70 dark:shadow-[0_1px_2px_rgb(0_0_0_/_0.22)]">
+      <Card padding="none" className="overflow-hidden" bodyClassName="mt-0">
         <div className="border-b border-slate-100 px-3 py-3 sm:px-5 dark:border-neutral-800/60">
           <div className="grid gap-2 sm:flex sm:flex-wrap sm:items-center sm:gap-2">
             <div className="grid grid-cols-1 gap-2 sm:flex sm:items-center sm:gap-2">
@@ -433,7 +434,7 @@ export function PublicLogsSection({
           onPageSizeChange={onPageSizeChange}
           t={t}
         />
-      </section>
+      </Card>
     </Reveal>
   );
 }

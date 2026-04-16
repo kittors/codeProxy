@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { RefreshCw, Cpu, DollarSign, Activity, Check, Search } from "lucide-react";
-import { useTheme } from "@/modules/ui/ThemeProvider";
 import { Button } from "@/modules/ui/Button";
+import { Card } from "@/modules/ui/Card";
+import { TextInput } from "@/modules/ui/Input";
 import { useToast } from "@/modules/ui/ToastProvider";
 import { OverflowTooltip } from "@/modules/ui/Tooltip";
 import { Modal } from "@/modules/ui/Modal";
@@ -213,10 +214,6 @@ async function savePricingToBackend(
 export function ModelsPage() {
   const { t } = useTranslation();
   const { notify } = useToast();
-  const {
-    state: { mode },
-  } = useTheme();
-  const _isDark = mode === "dark";
 
   const [models, setModels] = useState<ModelItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -432,15 +429,15 @@ export function ModelsPage() {
   return (
     <section className="flex flex-1 flex-col gap-4">
       <div className="grid gap-4 md:grid-cols-3">
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
+        <Card padding="compact" bodyClassName="mt-0">
           <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 dark:text-white/55">
             <Cpu size={14} /> {t("models_page.available_models")}
           </div>
           <div className="mt-2 text-2xl font-bold tabular-nums text-slate-900 dark:text-white">
             {totalStats.modelCount}
           </div>
-        </div>
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
+        </Card>
+        <Card padding="compact" bodyClassName="mt-0">
           <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 dark:text-white/55">
             <DollarSign size={14} /> {t("models_page.priced_models")}
           </div>
@@ -452,8 +449,8 @@ export function ModelsPage() {
               count: totalStats.modelCount,
             })}
           </div>
-        </div>
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
+        </Card>
+        <Card padding="compact" bodyClassName="mt-0">
           <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 dark:text-white/55">
             <Activity size={14} /> {t("models_page.quota_cost")}
           </div>
@@ -463,67 +460,56 @@ export function ModelsPage() {
           <div className="mt-0.5 text-xs text-slate-500 dark:text-white/45">
             {t("models_page.total_cost")}
           </div>
-        </div>
+        </Card>
       </div>
 
-      <div className="flex flex-1 flex-col rounded-2xl border border-black/[0.06] bg-white shadow-[0_1px_2px_rgb(15_23_42_/_0.035)] dark:border-white/[0.06] dark:bg-neutral-950/70 dark:shadow-[0_1px_2px_rgb(0_0_0_/_0.22)]">
-        <div className="flex flex-wrap items-center justify-between gap-3 px-5 pt-5 pb-3">
-          <div>
-            <h2 className="flex items-center gap-2 text-base font-semibold text-slate-900 dark:text-white">
-              <Cpu size={18} className="text-slate-900 dark:text-white" />
-              {t("models_page.model_pricing")}
-            </h2>
-            <p className="mt-1 text-xs text-slate-500 dark:text-white/45">
-              {t("models_page.model_pricing_desc")}
-            </p>
-          </div>
+      <Card
+        title={t("models_page.model_pricing")}
+        description={t("models_page.model_pricing_desc")}
+        className="flex flex-1 flex-col overflow-hidden"
+        bodyClassName="relative flex min-h-0 flex-1 flex-col"
+        actions={
           <div className="flex items-center gap-2">
-            <div className="relative">
-              <Search
-                size={13}
-                className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-white/30 pointer-events-none"
-              />
-              <input
-                value={searchFilter}
-                onChange={(e) => setSearchFilter(e.target.value)}
-                placeholder={t("models_page.search")}
-                className="w-48 rounded-lg border border-slate-200 bg-white py-1.5 pl-8 pr-3 text-xs text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-indigo-300 dark:border-neutral-700 dark:bg-neutral-900/60 dark:text-white dark:placeholder:text-white/30 dark:focus:border-indigo-600"
-              />
-            </div>
-            <button
-              type="button"
+            <TextInput
+              value={searchFilter}
+              onChange={(e) => setSearchFilter(e.target.value)}
+              placeholder={t("models_page.search")}
+              className="!w-48"
+              startAdornment={<Search size={14} className="text-slate-400 dark:text-white/35" />}
+            />
+            <Button
+              variant="primary"
+              size="sm"
               onClick={() => void loadModels()}
               disabled={loading}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-slate-900 text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70 dark:bg-white dark:text-neutral-950 dark:hover:bg-slate-200"
               title={t("models_page.refresh")}
+              aria-label={t("models_page.refresh")}
             >
               <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
-            </button>
+            </Button>
           </div>
-        </div>
-
-        <div className="relative px-5 pb-5">
-          <VirtualTable<ModelItem>
-            rows={filteredModels}
-            columns={modelColumns}
-            rowKey={(row) => row.id}
-            loading={loading}
-            rowHeight={44}
-            caption={t("models_page.table_caption")}
-            emptyText={searchFilter ? t("models_page.no_results") : t("models_page.no_model_data")}
-            minWidth="min-w-[800px]"
-            height="h-[calc(100vh-390px)]"
-          />
-          {loading ? (
-            <div className="absolute inset-0 z-10 flex items-center justify-center rounded-b-2xl bg-white/70 backdrop-blur-sm dark:bg-neutral-950/55">
-              <div className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white/85 px-3 py-2 text-sm font-medium text-slate-700 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/70 dark:text-white/75">
-                <span className="h-4 w-4 rounded-full border-2 border-slate-300 border-t-slate-900 animate-spin dark:border-white/20 dark:border-t-white/80" />
-                {t("models_page.loading")}
-              </div>
+        }
+      >
+        <VirtualTable<ModelItem>
+          rows={filteredModels}
+          columns={modelColumns}
+          rowKey={(row) => row.id}
+          loading={loading}
+          rowHeight={44}
+          caption={t("models_page.table_caption")}
+          emptyText={searchFilter ? t("models_page.no_results") : t("models_page.no_model_data")}
+          minWidth="min-w-[800px]"
+          height="h-[calc(100vh-390px)]"
+        />
+        {loading ? (
+          <div className="absolute inset-0 z-10 flex items-center justify-center rounded-b-2xl bg-white/70 backdrop-blur-sm dark:bg-neutral-950/55">
+            <div className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white/85 px-3 py-2 text-sm font-medium text-slate-700 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/70 dark:text-white/75">
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-slate-900 dark:border-white/20 dark:border-t-white/80" />
+              {t("models_page.loading")}
             </div>
-          ) : null}
-        </div>
-      </div>
+          </div>
+        ) : null}
+      </Card>
 
       <Modal
         open={pricingModel !== null}
@@ -561,14 +547,13 @@ export function ModelsPage() {
             <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
               {t("models_page.input_token_price")}
             </label>
-            <input
+            <TextInput
               type="number"
               value={editInputPrice}
               onChange={(e) => setEditInputPrice(e.target.value)}
               placeholder={t("models_page.input_price_placeholder")}
               step="0.01"
               min={0}
-              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition-all focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white dark:focus:border-indigo-500"
             />
           </div>
 
@@ -576,14 +561,13 @@ export function ModelsPage() {
             <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
               {t("models_page.output_token_price")}
             </label>
-            <input
+            <TextInput
               type="number"
               value={editOutputPrice}
               onChange={(e) => setEditOutputPrice(e.target.value)}
               placeholder={t("models_page.output_price_placeholder")}
               step="0.01"
               min={0}
-              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition-all focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white dark:focus:border-indigo-500"
             />
           </div>
 
@@ -591,14 +575,13 @@ export function ModelsPage() {
             <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
               {t("models_page.cache_token_price")}
             </label>
-            <input
+            <TextInput
               type="number"
               value={editCachedPrice}
               onChange={(e) => setEditCachedPrice(e.target.value)}
               placeholder={t("models_page.input_price_hint")}
               step="0.01"
               min={0}
-              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition-all focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white dark:focus:border-indigo-500"
             />
           </div>
         </div>
