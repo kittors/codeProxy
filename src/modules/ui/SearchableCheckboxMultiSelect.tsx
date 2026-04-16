@@ -10,8 +10,8 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { Check, ChevronDown, Search } from "lucide-react";
-import { motion } from "framer-motion";
-import { selectDropdownMotion, selectDropdownTransition } from "./selectStyles";
+import { AnimatePresence, motion } from "framer-motion";
+import { getSelectDropdownMotion, selectDropdownTransition } from "./selectStyles";
 
 export interface SearchableCheckboxMultiSelectOption {
   value: string;
@@ -61,6 +61,7 @@ export function SearchableCheckboxMultiSelect({
   const dropdownRef = useRef<HTMLDivElement | null>(null);
   const searchRef = useRef<HTMLInputElement | null>(null);
   const [dropdownStyle, setDropdownStyle] = useState<CSSProperties>({});
+  const [dropdownPlacement, setDropdownPlacement] = useState<"bottom" | "top">("bottom");
 
   const selectedSet = useMemo(() => new Set(value), [value]);
 
@@ -94,6 +95,7 @@ export function SearchableCheckboxMultiSelect({
     const openAbove = spaceBelow < maxHeight && spaceAbove > spaceBelow;
 
     if (openAbove) {
+      setDropdownPlacement("top");
       setDropdownStyle({
         position: "fixed",
         bottom: window.innerHeight - rect.top + gap,
@@ -105,6 +107,7 @@ export function SearchableCheckboxMultiSelect({
       return;
     }
 
+    setDropdownPlacement("bottom");
     setDropdownStyle({
       position: "fixed",
       top: rect.bottom + gap,
@@ -240,13 +243,14 @@ export function SearchableCheckboxMultiSelect({
         </span>
       </button>
 
-      {open
-        ? createPortal(
+      {createPortal(
+        <AnimatePresence>
+          {open ? (
             <motion.div
               ref={dropdownRef}
               style={dropdownStyle}
               className="flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl shadow-black/10 dark:border-neutral-700 dark:bg-neutral-900 dark:shadow-black/30"
-              {...selectDropdownMotion}
+              {...getSelectDropdownMotion(dropdownPlacement)}
               transition={selectDropdownTransition}
             >
               <div className="flex shrink-0 items-center gap-2 border-b border-slate-100 px-3 py-2 dark:border-neutral-800">
@@ -338,10 +342,11 @@ export function SearchableCheckboxMultiSelect({
                   })
                 )}
               </div>
-            </motion.div>,
-            document.body,
-          )
-        : null}
+            </motion.div>
+          ) : null}
+        </AnimatePresence>,
+        document.body,
+      )}
     </>
   );
 }

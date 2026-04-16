@@ -37,10 +37,16 @@ export const selectOptionIdle = "text-[#18181B] dark:text-[#9F9FA8]";
 export const selectEmptyState =
   "px-2.5 py-3 text-center text-xs text-[#96969B] dark:text-[#9F9FA8]";
 
-export const selectDropdownMotion = {
-  initial: { opacity: 0, scale: 0.98, y: -4 },
-  animate: { opacity: 1, scale: 1, y: 0 },
-} as const;
+export const getSelectDropdownMotion = (placement: "bottom" | "top" = "bottom") => {
+  const offset = placement === "top" ? 4 : -4;
+  const exitOffset = placement === "top" ? 2 : -2;
+
+  return {
+    initial: { opacity: 0, scale: 0.98, y: offset },
+    animate: { opacity: 1, scale: 1, y: 0 },
+    exit: { opacity: 0, scale: 0.98, y: exitOffset },
+  } as const;
+};
 
 export const selectDropdownTransition = {
   duration: 0.14,

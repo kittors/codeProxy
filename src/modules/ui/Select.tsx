@@ -9,11 +9,11 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { Check, ChevronDown } from "lucide-react";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   cn,
+  getSelectDropdownMotion,
   selectChevron,
-  selectDropdownMotion,
   selectDropdownTransition,
   selectOptionBase,
   selectOptionIdle,
@@ -71,7 +71,12 @@ export function Select({
   const listRef = useRef<HTMLDivElement | null>(null);
 
   /* --- position state for the portal popover ---  */
-  const [pos, setPos] = useState({ top: 0, left: 0, width: 0 });
+  const [pos, setPos] = useState({
+    top: 0,
+    left: 0,
+    width: 0,
+    placement: "bottom" as "bottom" | "top",
+  });
 
   const reposition = useCallback(() => {
     const el = triggerRef.current;
@@ -86,6 +91,7 @@ export function Select({
       top: fitsBelow ? rect.bottom + gap : rect.top - gap - estimatedHeight,
       left: rect.left,
       width: rect.width,
+      placement: fitsBelow ? "bottom" : "top",
     });
   }, [options.length]);
 
@@ -165,14 +171,15 @@ export function Select({
       </button>
 
       {/* Dropdown (portal) */}
-      {open
-        ? createPortal(
+      {createPortal(
+        <AnimatePresence>
+          {open ? (
             <motion.div
               ref={listRef}
               role="listbox"
               aria-label={ariaLabel}
               className={selectPanel}
-              {...selectDropdownMotion}
+              {...getSelectDropdownMotion(pos.placement)}
               transition={selectDropdownTransition}
               style={{
                 top: pos.top,
@@ -208,10 +215,11 @@ export function Select({
                   </button>
                 );
               })}
-            </motion.div>,
-            document.body,
-          )
-        : null}
+            </motion.div>
+          ) : null}
+        </AnimatePresence>,
+        document.body,
+      )}
     </>
   );
 }

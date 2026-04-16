@@ -10,12 +10,12 @@ import {
 import { useTranslation } from "react-i18next";
 import { createPortal } from "react-dom";
 import { Check, ChevronDown, X } from "lucide-react";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   cn,
+  getSelectDropdownMotion,
   searchableSelectPanel,
   selectChevron,
-  selectDropdownMotion,
   selectDropdownTransition,
   selectEmptyState,
   selectOptionBase,
@@ -63,6 +63,7 @@ export function MultiSelect({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
+  const [dropdownPlacement, setDropdownPlacement] = useState<"bottom" | "top">("bottom");
 
   // Compute dropdown position from trigger bounding rect, with viewport flip
   const updatePosition = useCallback(() => {
@@ -77,6 +78,7 @@ export function MultiSelect({
     const openAbove = spaceBelow < dropdownMaxH && spaceAbove > spaceBelow;
 
     if (openAbove) {
+      setDropdownPlacement("top");
       setDropdownStyle({
         position: "fixed",
         bottom: window.innerHeight - rect.top + gap,
@@ -86,6 +88,7 @@ export function MultiSelect({
         zIndex: 99999,
       });
     } else {
+      setDropdownPlacement("bottom");
       setDropdownStyle({
         position: "fixed",
         top: rect.bottom + gap,
@@ -173,13 +176,14 @@ export function MultiSelect({
     return map;
   }, [options]);
 
-  const dropdown = open
-    ? createPortal(
+  const dropdown = createPortal(
+    <AnimatePresence>
+      {open ? (
         <motion.div
           ref={dropdownRef}
           style={dropdownStyle}
           className={cn(searchableSelectPanel, "flex flex-col")}
-          {...selectDropdownMotion}
+          {...getSelectDropdownMotion(dropdownPlacement)}
           transition={selectDropdownTransition}
         >
           {searchable && (
@@ -251,10 +255,11 @@ export function MultiSelect({
               })
             )}
           </div>
-        </motion.div>,
-        document.body,
-      )
-    : null;
+        </motion.div>
+      ) : null}
+    </AnimatePresence>,
+    document.body,
+  );
 
   return (
     <div className={`relative ${className}`}>
