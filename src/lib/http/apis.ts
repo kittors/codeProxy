@@ -13,3 +13,5 @@ export { modelsApi } from "./apis/models";
 export { versionApi } from "./apis/version";
 export { quotaApi } from "./apis/quota";
 export { identityFingerprintApi } from "./apis/identity-fingerprint";
+export { updateApi } from "./apis/update";
+export type { UpdateApplyResponse, UpdateCheckResponse } from "./apis/update";

@@ -37,4 +37,17 @@ export const configApi = {
   },
   updateRoutingStrategy: (strategy: string) =>
     apiClient.put("/routing/strategy", { value: strategy }),
+  getAutoUpdateEnabled: async (): Promise<boolean> => {
+    const data = await apiClient.get<Record<string, unknown>>("/auto-update/enabled");
+    return Boolean(data?.enabled ?? data?.["auto-update-enabled"] ?? true);
+  },
+  updateAutoUpdateEnabled: (enabled: boolean) =>
+    apiClient.put("/auto-update/enabled", { value: enabled }),
+  getAutoUpdateChannel: async (): Promise<string> => {
+    const data = await apiClient.get<Record<string, unknown>>("/auto-update/channel");
+    const channel = data?.channel ?? data?.["auto-update-channel"];
+    return typeof channel === "string" && channel.trim() ? channel.trim() : "main";
+  },
+  updateAutoUpdateChannel: (channel: string) =>
+    apiClient.put("/auto-update/channel", { value: channel }),
 };

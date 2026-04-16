@@ -1736,5 +1736,30 @@
     "loading_models": "Загрузка моделей…",
     "no_models": "Нет данных о моделях",
     "no_match": "Нет результатов"
+  },
+  "auto_update": {
+    "title": "Доступно обновление",
+    "description": "Проверьте заметки о выпуске перед обновлением Docker-развертывания.",
+    "toast_title": "Доступно обновление",
+    "toast_message": "Доступна новая версия: {{version}}",
+    "system_title": "Docker updates",
+    "system_description": "Check Docker image updates, review release notes, and apply updates when ready.",
+    "system_idle": "Click Check Docker Update to load the latest version details.",
+    "check_button": "Check Docker Update",
+    "check_failed": "Update check failed",
+    "no_update": "You are already on the latest Docker image.",
+    "disabled": "Automatic update checks are disabled.",
+    "current": "Текущая",
+    "target": "Целевая",
+    "image": "Docker image",
+    "release_notes": "Заметки о выпуске",
+    "no_release_notes": "Для этого обновления нет заметок о выпуске.",
+    "updater_unavailable": "Updater sidecar недоступен. Обновление из панели доступно для Docker-развертываний с новым compose-файлом.",
+    "later": "Не сейчас",
+    "update_now": "Обновить",
+    "updating": "Обновление…",
+    "success": "Обновление завершено. Перезагрузка…",
+    "failed": "Не удалось обновить",
+    "timeout": "Обновление запущено, но heartbeat сервера не восстановился вовремя. Проверьте Docker logs."
   }
 }

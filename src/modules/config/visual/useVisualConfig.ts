@@ -107,6 +107,10 @@ function setIntFromString(obj: Record<string, unknown>, key: string, value: unkn
   if (hasOwn(obj, key)) delete obj[key];
 }
 
+function normalizeAutoUpdateChannel(value: unknown): "main" | "dev" {
+  return typeof value === "string" && value.trim().toLowerCase() === "dev" ? "dev" : "main";
+}
+
 function parsePayloadParamValue(raw: unknown): { valueType: PayloadParamValueType; value: string } {
   if (typeof raw === "number") {
     return { valueType: "number", value: String(raw) };
@@ -226,9 +230,7 @@ function parseRoutingChannelGroups(raw: unknown): RoutingChannelGroupEntry[] {
     const match = asRecord(record.match);
     const priorityRecord = asRecord(record["channel-priorities"]);
     const channels = Array.isArray(match?.channels)
-      ? match.channels
-          .map((value) => String(value ?? "").trim())
-          .filter(Boolean)
+      ? match.channels.map((value) => String(value ?? "").trim()).filter(Boolean)
       : [];
     const priorityNames = priorityRecord
       ? Object.keys(priorityRecord)
@@ -349,9 +351,7 @@ function serializeRoutingChannelGroupsForYaml(
       }
 
       const match: Record<string, unknown> = {};
-      const channels = group.channels
-        .map((channel) => channel.name.trim())
-        .filter(Boolean);
+      const channels = group.channels.map((channel) => channel.name.trim()).filter(Boolean);
       if (channels.length > 0) {
         match.channels = Array.from(new Set(channels));
       }
@@ -422,6 +422,7 @@ export function useVisualConfig() {
       const routing = asRecord(parsed.routing);
       const payload = asRecord(parsed.payload);
       const streaming = asRecord(parsed.streaming);
+      const autoUpdate = asRecord(parsed["auto-update"]);
 
       const newValues: VisualConfigValues = {
         host: typeof parsed.host === "string" ? parsed.host : "",
@@ -452,6 +453,8 @@ export function useVisualConfig() {
         loggingToFile: Boolean(parsed["logging-to-file"]),
         logsMaxTotalSizeMb: String(parsed["logs-max-total-size-mb"] ?? ""),
         usageStatisticsEnabled: Boolean(parsed["usage-statistics-enabled"]),
+        autoUpdateEnabled: Boolean(autoUpdate?.enabled ?? true),
+        autoUpdateChannel: normalizeAutoUpdateChannel(autoUpdate?.channel),
 
         proxyUrl: typeof parsed["proxy-url"] === "string" ? parsed["proxy-url"] : "",
         forceModelPrefix: Boolean(parsed["force-model-prefix"]),
@@ -549,6 +552,17 @@ export function useVisualConfig() {
         setBoolean(parsed, "logging-to-file", values.loggingToFile);
         setIntFromString(parsed, "logs-max-total-size-mb", values.logsMaxTotalSizeMb);
         setBoolean(parsed, "usage-statistics-enabled", values.usageStatisticsEnabled);
+
+        if (
+          hasOwn(parsed, "auto-update") ||
+          !values.autoUpdateEnabled ||
+          values.autoUpdateChannel !== "main"
+        ) {
+          const autoUpdate = ensureRecord(parsed, "auto-update");
+          autoUpdate.enabled = values.autoUpdateEnabled;
+          autoUpdate.channel = values.autoUpdateChannel;
+          deleteIfEmpty(parsed, "auto-update");
+        }
 
         setString(parsed, "proxy-url", values.proxyUrl);
         setBoolean(parsed, "force-model-prefix", values.forceModelPrefix);

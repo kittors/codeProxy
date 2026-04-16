@@ -17,6 +17,7 @@
 - `src/modules/login/`：登录页
 - `src/modules/monitor/`：监控中心
 - `src/modules/system/`：系统信息
+- `src/modules/update/`：自动更新提示、release notes 二次确认与更新心跳等待
 - `src/modules/ui/`：复合 UI 容器
 - `src/modules/usage/`：用量统计（当前复用监控视图）
 - `src/styles/`：全局样式与主题变量
@@ -86,6 +87,7 @@
 - 历史多入口脚本：`src/management.tsx`（默认不再构建产物）
 - 主要模块目录：`src/`
 - OAuth 登录弹窗：`src/modules/oauth/OAuthLoginDialog.tsx`
+- 自动更新提示：`src/modules/update/AutoUpdatePrompt.tsx`
 - 关键配置文件：`package.json`, `tsconfig.json`, `vite.config.ts`
 - 入口文件：`index.html`（默认构建）
 

@@ -39,6 +39,6 @@ summary: 目录职责、依赖方向与最小模块化策略
 
 <!-- PROJECT-OVERRIDES:START -->
 
-（可选）在此处记录本项目的目录基线、依赖方向与关键模块边界（脚手架不会覆盖）。
+- `src/modules/update/`：登录后全局自动更新体验，包含更新检查、release notes 二次确认、触发更新与心跳等待。只能依赖 `src/lib/http` 与通用 UI 组件，不反向耦合具体页面。
 
 <!-- PROJECT-OVERRIDES:END -->

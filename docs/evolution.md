@@ -33,6 +33,33 @@
 
 （可选）在此处追加本项目的历史演进条目（脚手架不会覆盖）。
 
+## 2026-04-16 · Docker 自动更新提示与确认流程
+
+### 背景
+
+CliRelay 后端新增 Docker-first 自动更新能力，需要前端在用户登录后自动检查新版本、展示 release notes，并允许用户从管理面板触发 Docker 更新。
+
+### 结论
+
+- 新增 `src/modules/update/AutoUpdatePrompt.tsx`，作为登录后全局提示组件。
+- 新增 `src/lib/http/apis/update.ts`，封装 `/update/check` 与 `/update/apply` 管理接口。
+- 配置页运行时开关新增 `auto-update.enabled` 的图形化开关。
+- 配置页运行时设置新增更新渠道选择，默认跟随 `main`，可切换到 `dev` 或 `auto`。
+- 登录后全局检查只发 Toast，不再弹出确认窗口；更新详情、release notes 和执行按钮集中在系统信息页。
+
+### 影响范围
+
+- `AppRouter` 在 `AuthProvider` 内挂载自动更新 Toast 提示。
+- `SystemPage` 挂载 `UpdateDetailsCard`，由用户点击按钮后加载更新详情并执行更新。
+- i18n 增加 `auto_update` 文案。
+- 新增 `src/modules/update/` 模块，需要后续维护时保持与后端 update API 字段一致。
+
+### 回滚策略（如适用）
+
+- 从 `AppRouter` 移除 `AutoUpdatePrompt` 挂载。
+- 删除 `src/modules/update/` 和 `src/lib/http/apis/update.ts`。
+- 从配置页移除 `auto-update.enabled` 开关，并保留 YAML 手动配置能力。
+
 ## 2026-02-22 · 引入 CPAMC 兼容管理中心（多页面构建）
 
 ### 背景

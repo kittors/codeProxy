@@ -43,6 +43,14 @@ export interface RoutingConfig {
   pathRoutes?: RoutingPathRouteConfig[];
 }
 
+export interface AutoUpdateConfig {
+  enabled?: boolean;
+  channel?: "main" | "dev" | "auto" | string;
+  repository?: string;
+  dockerImage?: string;
+  updaterUrl?: string;
+}
+
 export interface Config {
   debug?: boolean;
   proxyUrl?: string;
@@ -65,6 +73,7 @@ export interface Config {
   openaiCompatibility?: OpenAIProviderConfig[];
   oauthExcludedModels?: Record<string, string[]>;
   kimiHeaderDefaults?: KimiHeaderDefaults;
+  autoUpdate?: AutoUpdateConfig;
   raw?: Record<string, unknown>;
 }
 
@@ -80,6 +89,7 @@ export type RawConfigSection =
   | "ws-auth"
   | "force-model-prefix"
   | "routing/strategy"
+  | "auto-update"
   | "api-keys"
   | "ampcode"
   | "gemini-api-key"
