@@ -1,8 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Code2, Download, Eye, FileInput, FileOutput, Loader2 } from "lucide-react";
-import { buildInputRenderedView, buildOutputRenderedView, tryPrettyPrintJson } from "@/modules/monitor/log-content/parsers";
-import { ContentModal, MessageBlock, PlainPre } from "@/modules/monitor/log-content/rendering";
+import {
+  buildInputRenderedView,
+  buildOutputRenderedView,
+  tryPrettyPrintJson,
+} from "@/modules/monitor/log-content/parsers";
+import {
+  ContentModal,
+  MessageBlock,
+  MessageList,
+  PlainPre,
+} from "@/modules/monitor/log-content/rendering";
 import { scheduleIdle, type CancelFn } from "@/modules/monitor/log-content/scheduler";
 import type {
   AsyncParsedState,
@@ -11,6 +20,8 @@ import type {
   RenderedView,
 } from "@/modules/monitor/log-content/types";
 import { useLogContentData } from "@/modules/monitor/log-content/useLogContentData";
+
+const VIRTUAL_MESSAGE_REVEAL_THRESHOLD = 80;
 
 export function LogContentModal({
   open,
@@ -24,7 +35,10 @@ export function LogContentModal({
   const [activeTab, setActiveTab] = useState<"input" | "output">(initialTab);
   const [viewMode, setViewMode] = useState<"rendered" | "raw">("rendered");
   const [inputParsed, setInputParsed] = useState<AsyncParsedState>({ status: "idle", view: null });
-  const [outputParsed, setOutputParsed] = useState<AsyncParsedState>({ status: "idle", view: null });
+  const [outputParsed, setOutputParsed] = useState<AsyncParsedState>({
+    status: "idle",
+    view: null,
+  });
   const [inputRawPretty, setInputRawPretty] = useState<AsyncPrettyState>({
     status: "idle",
     pretty: null,
@@ -118,6 +132,11 @@ export function LogContentModal({
     const batchSize = 6;
     const setCount = activeTab === "input" ? setInputRevealCount : setOutputRevealCount;
 
+    if (total > VIRTUAL_MESSAGE_REVEAL_THRESHOLD) {
+      setCount(total);
+      return;
+    }
+
     let cancelled = false;
     let current = Math.min(total, batchSize);
     setCount(current);
@@ -206,6 +225,15 @@ export function LogContentModal({
   const activeLoading = activeTab === "input" ? inputLoading : outputLoading;
   const activeError = activeTab === "input" ? inputError : outputError;
 
+  const renderPreparing = () => (
+    <div className="flex items-center justify-center py-20">
+      <Loader2 size={22} className="animate-spin text-slate-400 dark:text-white/40" />
+      <span className="ml-3 text-sm text-slate-500 dark:text-white/50">
+        {t("common.loading_ellipsis")}
+      </span>
+    </div>
+  );
+
   const tabBar = (
     <div className="flex items-center gap-3">
       <div className="flex flex-1 gap-1 rounded-xl bg-slate-100 p-1 dark:bg-neutral-900">
@@ -283,18 +311,12 @@ export function LogContentModal({
       );
     }
     if (viewMode === "raw") return renderRaw(inputContent);
-    if (inputParsed.status !== "ready" || !inputParsed.view) return <PlainPre text={inputContent} />;
+    if (inputParsed.status !== "ready" || !inputParsed.view) return renderPreparing();
 
     const view = inputParsed.view;
     if (view.kind === "messages") {
       const count = inputRevealCount > 0 ? inputRevealCount : Math.min(view.messages.length, 6);
-      return (
-        <div className="space-y-3">
-          {view.messages.slice(0, count).map((msg, idx) => (
-            <MessageBlock key={idx} role={msg.role} content={msg.content} />
-          ))}
-        </div>
-      );
+      return <MessageList messages={view.messages.slice(0, count)} />;
     }
     if (view.kind === "pretty_json") return <PlainPre text={view.pretty} />;
     return <PlainPre text={view.kind === "raw" ? view.raw : view.text} />;
@@ -310,18 +332,12 @@ export function LogContentModal({
       );
     }
     if (viewMode === "raw") return renderRaw(outputContent);
-    if (outputParsed.status !== "ready" || !outputParsed.view) return <PlainPre text={outputContent} />;
+    if (outputParsed.status !== "ready" || !outputParsed.view) return renderPreparing();
 
     const view = outputParsed.view;
     if (view.kind === "messages") {
       const count = outputRevealCount > 0 ? outputRevealCount : Math.min(view.messages.length, 6);
-      return (
-        <div className="space-y-3">
-          {view.messages.slice(0, count).map((msg, idx) => (
-            <MessageBlock key={idx} role={msg.role} content={msg.content} />
-          ))}
-        </div>
-      );
+      return <MessageList messages={view.messages.slice(0, count)} />;
     }
     if (view.kind === "pretty_json") return <PlainPre text={view.pretty} />;
     if (view.kind === "text") {
@@ -348,7 +364,9 @@ export function LogContentModal({
           <p className="text-sm text-red-500 dark:text-red-400">{activeError}</p>
         </div>
       ) : (
-        <div className="min-h-[200px]">{activeTab === "input" ? renderInput() : renderOutput()}</div>
+        <div className="min-h-[200px]">
+          {activeTab === "input" ? renderInput() : renderOutput()}
+        </div>
       )}
     </ContentModal>
   );

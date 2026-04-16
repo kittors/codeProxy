@@ -51,8 +51,8 @@ describe("LogContentModal", () => {
     expect(fetchPartFn).toHaveBeenCalled();
     expect(fetchPartFn.mock.calls[0]?.[1]).toBe("input");
 
-    // Before idle parsing runs: show a full raw preview (no freeze, full content available).
-    expect(screen.getByText(/"messages"/)).toBeInTheDocument();
+    // Before idle parsing runs: avoid mounting the full raw payload in the opening frame.
+    expect(document.body.textContent).not.toContain('"messages"');
     expect(screen.queryByText("hello-29")).not.toBeInTheDocument();
 
     // After idle tasks: parsing + progressive reveal completes.
@@ -112,5 +112,47 @@ describe("LogContentModal", () => {
 
     expect(getPre()!.textContent).toContain('\n  "a": 1');
     expect(getPre()!.textContent).toContain('\n    "c": 2');
+  });
+
+  test("does not mount massive raw content while rendered view parsing is deferred", async () => {
+    vi.useFakeTimers();
+
+    const tailMarker = "large-tail-marker";
+    const inputPayload = {
+      messages: [
+        {
+          role: "user",
+          content: `${"large line ".repeat(20_000)}${tailMarker}`,
+        },
+      ],
+    };
+
+    const fetchPartFn = vi.fn(async (_id: number, part: "input" | "output") => {
+      if (part === "input") {
+        return { id: 1, model: "gpt-test", part, content: JSON.stringify(inputPayload) };
+      }
+      return { id: 1, model: "gpt-test", part, content: "" };
+    });
+
+    render(
+      <ThemeProvider>
+        <LogContentModal
+          open
+          logId={1}
+          initialTab="input"
+          onClose={() => {}}
+          fetchPartFn={fetchPartFn}
+        />
+      </ThemeProvider>,
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(fetchPartFn).toHaveBeenCalled();
+    expect(document.body.textContent).not.toContain(tailMarker);
+    expect(document.body.querySelector("pre")).toBeNull();
   });
 });
