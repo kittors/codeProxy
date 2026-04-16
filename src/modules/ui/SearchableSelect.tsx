@@ -13,6 +13,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   cn,
   getSelectDropdownMotion,
+  getSelectTriggerBase,
   searchableSelectPanel,
   selectChevron,
   selectDropdownTransition,
@@ -22,9 +23,9 @@ import {
   selectOptionSelected,
   selectSearchInput,
   selectSearchRow,
-  selectTriggerBase,
   selectTriggerOpen,
 } from "./selectStyles";
+import type { ControlSize } from "@/modules/ui/controlStyles";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -46,6 +47,7 @@ export interface SearchableSelectProps {
   "aria-label"?: string;
   name?: string;
   className?: string;
+  size?: ControlSize;
 }
 
 /* ------------------------------------------------------------------ */
@@ -61,6 +63,7 @@ export function SearchableSelect({
   "aria-label": ariaLabel,
   name,
   className,
+  size = "default",
 }: SearchableSelectProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -152,7 +155,7 @@ export function SearchableSelect({
         aria-haspopup="listbox"
         aria-label={ariaLabel}
         onClick={() => setOpen((prev) => !prev)}
-        className={cn(selectTriggerBase, open && selectTriggerOpen, className)}
+        className={cn(getSelectTriggerBase(size), open && selectTriggerOpen, className)}
       >
         <span className="truncate">{selectedLabel ?? placeholder}</span>
         <ChevronDown

@@ -1,8 +1,24 @@
+import {
+  controlHeightBySize,
+  controlPaddingBySize,
+  controlSurface,
+  controlTextBySize,
+  type ControlSize,
+} from "@/modules/ui/controlStyles";
+
 export const cn = (...classes: (string | false | undefined | null)[]) =>
   classes.filter(Boolean).join(" ");
 
-export const selectTriggerBase =
-  "inline-flex h-9 items-center gap-1.5 rounded-2xl border-0 bg-white px-3.5 text-sm font-medium text-[#71717A] shadow-[0_3px_12px_rgb(0_0_0_/_0.12)] outline-none transition-colors hover:bg-white hover:text-[#18181B] focus-visible:ring-2 focus-visible:ring-black/[0.08] dark:bg-[#27272A] dark:text-[#A1A1AA] dark:shadow-[0_8px_24px_rgb(0_0_0_/_0.24)] dark:hover:bg-[#303036] dark:hover:text-white dark:focus-visible:ring-white/10";
+export const getSelectTriggerBase = (size: ControlSize = "default") =>
+  [
+    "inline-flex items-center gap-1.5 font-medium",
+    controlHeightBySize[size],
+    controlTextBySize[size],
+    controlPaddingBySize[size],
+    controlSurface,
+  ].join(" ");
+
+export const selectTriggerBase = getSelectTriggerBase();
 
 export const selectTriggerOpen = "";
 

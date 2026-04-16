@@ -13,16 +13,17 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   cn,
   getSelectDropdownMotion,
+  getSelectTriggerBase,
   selectChevron,
   selectDropdownTransition,
   selectOptionBase,
   selectOptionIdle,
   selectOptionSelected,
   selectPanel,
-  selectTriggerBase,
   selectTriggerChip,
   selectTriggerOpen,
 } from "./selectStyles";
+import type { ControlSize } from "@/modules/ui/controlStyles";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -50,6 +51,8 @@ export interface SelectProps {
   className?: string;
   /** Visual style variant */
   variant?: "default" | "chip";
+  /** Shared control size */
+  size?: ControlSize;
 }
 
 /* ------------------------------------------------------------------ */
@@ -65,6 +68,7 @@ export function Select({
   name,
   className,
   variant = "default",
+  size = "default",
 }: SelectProps) {
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
@@ -157,7 +161,7 @@ export function Select({
         aria-label={ariaLabel}
         onClick={() => setOpen((prev) => !prev)}
         className={cn(
-          variant === "chip" ? selectTriggerChip : selectTriggerBase,
+          variant === "chip" ? selectTriggerChip : getSelectTriggerBase(size),
           open && selectTriggerOpen,
           className,
         )}

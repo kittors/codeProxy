@@ -14,6 +14,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   cn,
   getSelectDropdownMotion,
+  getSelectTriggerBase,
   searchableSelectPanel,
   selectChevron,
   selectDropdownTransition,
@@ -22,10 +23,10 @@ import {
   selectOptionIdle,
   selectOptionSelected,
   selectSearchInput,
-  selectTriggerBase,
   selectTriggerDisabled,
   selectTriggerOpen,
 } from "./selectStyles";
+import type { ControlSize } from "@/modules/ui/controlStyles";
 
 export interface MultiSelectOption {
   value: string;
@@ -43,6 +44,7 @@ interface MultiSelectProps {
   searchable?: boolean;
   disabled?: boolean;
   className?: string;
+  size?: ControlSize;
 }
 
 export function MultiSelect({
@@ -55,6 +57,7 @@ export function MultiSelect({
   searchable = true,
   disabled = false,
   className = "",
+  size = "default",
 }: MultiSelectProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
@@ -274,7 +277,7 @@ export function MultiSelect({
           setOpen(!open);
         }}
         className={cn(
-          selectTriggerBase,
+          getSelectTriggerBase(size),
           "h-auto min-h-9 w-full justify-between py-1 text-left",
           open && selectTriggerOpen,
           disabled && selectTriggerDisabled,

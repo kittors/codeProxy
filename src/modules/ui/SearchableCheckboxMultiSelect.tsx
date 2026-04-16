@@ -11,7 +11,15 @@ import {
 import { createPortal } from "react-dom";
 import { Check, ChevronDown, Search } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
-import { getSelectDropdownMotion, selectDropdownTransition } from "./selectStyles";
+import {
+  cn,
+  getSelectDropdownMotion,
+  getSelectTriggerBase,
+  selectChevron,
+  selectDropdownTransition,
+  selectTriggerDisabled,
+} from "./selectStyles";
+import type { ControlSize } from "@/modules/ui/controlStyles";
 
 export interface SearchableCheckboxMultiSelectOption {
   value: string;
@@ -32,9 +40,8 @@ export interface SearchableCheckboxMultiSelectProps {
   disabled?: boolean;
   "aria-label"?: string;
   className?: string;
+  size?: ControlSize;
 }
-
-const cn = (...classes: (string | false | undefined | null)[]) => classes.filter(Boolean).join(" ");
 
 function optionText(option: SearchableCheckboxMultiSelectOption): string {
   if (typeof option.label === "string") return option.label;
@@ -54,6 +61,7 @@ export function SearchableCheckboxMultiSelect({
   disabled = false,
   "aria-label": ariaLabel,
   className,
+  size = "default",
 }: SearchableCheckboxMultiSelectProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -217,9 +225,9 @@ export function SearchableCheckboxMultiSelect({
           setOpen((current) => !current);
         }}
         className={cn(
-          "inline-flex h-9 w-full items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white pl-3.5 pr-3 text-left text-sm font-medium text-slate-700 shadow-sm outline-none transition",
-          "hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-slate-400/35 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400",
-          "dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-white/80 dark:hover:bg-white/10 dark:disabled:bg-neutral-800 dark:disabled:text-white/35",
+          getSelectTriggerBase(size),
+          "w-full justify-between text-left",
+          disabled && selectTriggerDisabled,
           className,
         )}
       >
@@ -234,10 +242,7 @@ export function SearchableCheckboxMultiSelect({
           ) : null}
           <ChevronDown
             size={14}
-            className={cn(
-              "text-slate-400 transition-transform duration-200 dark:text-white/40",
-              open && "rotate-180",
-            )}
+            className={cn(selectChevron, open && "rotate-180")}
             aria-hidden="true"
           />
         </span>

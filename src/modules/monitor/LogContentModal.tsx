@@ -13,6 +13,7 @@ import {
   PlainPre,
 } from "@/modules/monitor/log-content/rendering";
 import { scheduleIdle, type CancelFn } from "@/modules/monitor/log-content/scheduler";
+import { Tabs, TabsList, TabsTrigger } from "@/modules/ui/Tabs";
 import type {
   AsyncParsedState,
   AsyncPrettyState,
@@ -263,58 +264,29 @@ export function LogContentModal({
 
   const tabBar = (
     <div className="flex items-center gap-3">
-      <div className="flex flex-1 gap-1 rounded-xl bg-slate-100 p-1 dark:bg-neutral-900">
-        {(
-          [
-            { key: "input" as const, label: t("log_content.input_messages"), Icon: FileInput },
-            { key: "output" as const, label: t("log_content.output"), Icon: FileOutput },
-          ] as const
-        ).map(({ key, label, Icon }) => (
-          <button
-            key={key}
-            type="button"
-            onClick={() => setActiveTab(key)}
-            className={[
-              "flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all",
-              activeTab === key
-                ? "bg-white text-slate-900 shadow-sm dark:bg-neutral-800 dark:text-white"
-                : "text-slate-500 hover:text-slate-700 dark:text-white/40 dark:hover:text-white/60",
-            ].join(" ")}
-          >
-            <Icon size={15} />
-            {label}
-          </button>
-        ))}
-      </div>
+      <Tabs value={activeTab} onValueChange={(next) => setActiveTab(next as typeof activeTab)}>
+        <TabsList>
+          <TabsTrigger value="input">
+            <FileInput size={15} />
+            {t("log_content.input_messages")}
+          </TabsTrigger>
+          <TabsTrigger value="output">
+            <FileOutput size={15} />
+            {t("log_content.output")}
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
       <div className="flex items-center gap-1">
-        <div className="flex gap-0.5 rounded-lg bg-slate-100 p-0.5 dark:bg-neutral-900">
-          <button
-            type="button"
-            onClick={() => setViewMode("rendered")}
-            title={t("log_content.rendered")}
-            className={[
-              "flex items-center justify-center rounded-md p-1.5 transition-all",
-              viewMode === "rendered"
-                ? "bg-white text-slate-900 shadow-sm dark:bg-neutral-800 dark:text-white"
-                : "text-slate-400 hover:text-slate-600 dark:text-white/30 dark:hover:text-white/60",
-            ].join(" ")}
-          >
-            <Eye size={14} />
-          </button>
-          <button
-            type="button"
-            onClick={() => setViewMode("raw")}
-            title={t("log_content.raw_data")}
-            className={[
-              "flex items-center justify-center rounded-md p-1.5 transition-all",
-              viewMode === "raw"
-                ? "bg-white text-slate-900 shadow-sm dark:bg-neutral-800 dark:text-white"
-                : "text-slate-400 hover:text-slate-600 dark:text-white/30 dark:hover:text-white/60",
-            ].join(" ")}
-          >
-            <Code2 size={14} />
-          </button>
-        </div>
+        <Tabs value={viewMode} onValueChange={(next) => setViewMode(next as typeof viewMode)}>
+          <TabsList>
+            <TabsTrigger value="rendered" title={t("log_content.rendered")}>
+              <Eye size={14} />
+            </TabsTrigger>
+            <TabsTrigger value="raw" title={t("log_content.raw_data")}>
+              <Code2 size={14} />
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
         <button
           type="button"
           onClick={handleDownload}

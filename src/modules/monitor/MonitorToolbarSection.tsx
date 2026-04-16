@@ -35,22 +35,19 @@ export function MonitorToolbarSection({
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <TimeRangeSelector value={timeRange} onChange={setTimeRange} />
-          <div className="inline-flex items-center gap-1.5 rounded-2xl border border-slate-200 bg-white px-2.5 py-1.5 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
-            <Search size={14} className="text-slate-500 dark:text-white/55" />
-            <TextInput
-              value={apiFilterInput}
-              onChange={(event) => setApiFilterInput(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  event.preventDefault();
-                  applyFilter();
-                }
-              }}
-              variant="ghost"
-              className="w-36"
-              placeholder={t("monitor.filter_placeholder")}
-            />
-          </div>
+          <TextInput
+            value={apiFilterInput}
+            onChange={(event) => setApiFilterInput(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                applyFilter();
+              }
+            }}
+            startAdornment={<Search size={14} className="text-[#71717A] dark:text-[#A1A1AA]" />}
+            className="w-44"
+            placeholder={t("monitor.filter_placeholder")}
+          />
           <button
             type="button"
             onClick={applyFilter}

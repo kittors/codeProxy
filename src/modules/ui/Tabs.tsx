@@ -7,36 +7,65 @@ import {
   useMemo,
   useRef,
   useState,
+  type ButtonHTMLAttributes,
   type PropsWithChildren,
 } from "react";
 import { motion } from "framer-motion";
+import type { ControlSize } from "@/modules/ui/controlStyles";
 
 type TabsValue = string;
 
 interface TabsContextState {
   value: TabsValue;
   onValueChange: (next: TabsValue) => void;
+  size: ControlSize;
 }
+
+const tabsListHeightBySize: Record<ControlSize, string> = {
+  sm: "h-8",
+  default: "h-9",
+  lg: "h-10",
+};
+
+const tabsTriggerHeightBySize: Record<ControlSize, string> = {
+  sm: "h-7",
+  default: "h-8",
+  lg: "h-9",
+};
+
+const tabsTriggerPaddingBySize: Record<ControlSize, string> = {
+  sm: "px-2.5",
+  default: "px-3",
+  lg: "px-4",
+};
+
+const tabsTriggerTextBySize: Record<ControlSize, string> = {
+  sm: "text-[11px]",
+  default: "text-xs",
+  lg: "text-sm",
+};
 
 const TabsContext = createContext<TabsContextState | null>(null);
 
 export function Tabs({
   value,
   onValueChange,
+  size = "default",
   children,
 }: PropsWithChildren<{
   value: TabsValue;
   onValueChange: (next: TabsValue) => void;
+  size?: ControlSize;
 }>) {
   const valueObj = useMemo<TabsContextState>(
-    () => ({ value, onValueChange }),
-    [onValueChange, value],
+    () => ({ value, onValueChange, size }),
+    [onValueChange, size, value],
   );
   return <TabsContext value={valueObj}>{children}</TabsContext>;
 }
 
 export function TabsList({ children }: PropsWithChildren) {
-  const { value } = useTabs();
+  const { size, value } = useTabs();
   const containerRef = useRef<HTMLDivElement>(null);
   const [indicator, setIndicator] = useState<{ x: number; width: number } | null>(null);
 
@@ -74,12 +103,16 @@ export function TabsList({ children }: PropsWithChildren) {
   return (
     <div
       ref={containerRef}
-      className="scrollbar-hidden relative inline-flex max-w-full gap-1 overflow-x-auto whitespace-nowrap rounded-full bg-[#EBEBEC] p-1 dark:bg-[#27272A]"
+      role="tablist"
+      className={[
+        "scrollbar-hidden relative inline-flex max-w-full gap-0.5 overflow-x-auto whitespace-nowrap rounded-full bg-[#EBEBEC] p-0.5 dark:bg-[#27272A]",
+        tabsListHeightBySize[size],
+      ].join(" ")}
     >
       {indicator ? (
         <motion.div
           aria-hidden="true"
-          className="pointer-events-none absolute bottom-1 left-0 top-1 z-0 rounded-full bg-white shadow-sm shadow-black/[0.04] dark:bg-[#46464C] dark:shadow-none"
+          className="pointer-events-none absolute bottom-0.5 left-0 top-0.5 z-0 rounded-full bg-white shadow-sm shadow-black/[0.04] dark:bg-[#46464C] dark:shadow-none"
           initial={false}
           animate={{ x: indicator.x, width: indicator.width }}
           transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
@@ -93,10 +126,13 @@ export function TabsList({ children }: PropsWithChildren) {
 export function TabsTrigger({
   value,
   children,
-}: PropsWithChildren<{
-  value: TabsValue;
-}>) {
-  const { value: current, onValueChange } = useTabs();
+  ...buttonProps
+}: PropsWithChildren<
+  {
+    value: TabsValue;
+  } & Omit<ButtonHTMLAttributes<HTMLButtonElement>, "onClick" | "type" | "value">
+>) {
+  const { size, value: current, onValueChange } = useTabs();
   const active = current === value;
 
   const onClick = useCallback(() => {
@@ -106,13 +142,21 @@ export function TabsTrigger({
   return (
     <button
       type="button"
+      role="tab"
+      aria-selected={active}
       data-tab-value={value}
       onClick={onClick}
-      className={
+      {...buttonProps}
+      className={[
+        "relative z-10 inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/10 dark:focus-visible:ring-white/20",
+        tabsTriggerHeightBySize[size],
+        tabsTriggerPaddingBySize[size],
+        tabsTriggerTextBySize[size],
         active
-          ? "relative z-10 inline-flex h-8 shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-3 text-xs font-semibold text-[#18181B] transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/10 dark:text-white dark:focus-visible:ring-white/20"
-          : "relative z-10 inline-flex h-8 shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-3 text-xs font-medium text-[#96969B] transition-colors duration-200 hover:text-[#18181B] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/10 dark:text-[#9F9FA8] dark:hover:text-white dark:focus-visible:ring-white/20"
-      }
+          ? "font-semibold text-[#18181B] dark:text-white"
+          : "font-medium text-[#96969B] hover:text-[#18181B] dark:text-[#9F9FA8] dark:hover:text-white",
+        buttonProps.className,
+      ].join(" ")}
     >
       {children}
     </button>
