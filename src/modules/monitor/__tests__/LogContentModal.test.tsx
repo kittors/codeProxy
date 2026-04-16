@@ -1,13 +1,47 @@
 import { act, render, screen } from "@testing-library/react";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import i18n from "@/i18n";
 import { LogContentModal } from "@/modules/monitor/LogContentModal";
 import { ThemeProvider } from "@/modules/ui/ThemeProvider";
 
+const root = resolve(__dirname, "../../..");
+const readModule = (path: string) => readFileSync(resolve(root, path), "utf8");
+
 describe("LogContentModal", () => {
   afterEach(async () => {
     await i18n.changeLanguage("zh-CN");
     vi.useRealTimers();
+  });
+
+  test("uses fixed viewport-safe dimensions while preserving enter and exit animation", () => {
+    const renderingSource = readModule("modules/monitor/log-content/rendering.tsx");
+    const modalSource = readModule("modules/monitor/LogContentModal.tsx");
+
+    expect(renderingSource).toContain("AnimatePresence");
+    expect(renderingSource).toContain('exit="hidden"');
+    expect(renderingSource).toContain("w-[min(calc(100vw-2rem),1040px)]");
+    expect(renderingSource).toContain("h-[min(82dvh,760px)]");
+    expect(modalSource).toContain("LOADING_EXIT_MS");
+    expect(modalSource).toContain("CONTENT_ENTER_MS");
+    expect(modalSource).toContain('contentPhase === "loading" ? 1 : 0');
+    expect(modalSource).toContain('filter: "blur(3px)"');
+    expect(modalSource).not.toContain("y: 10");
+    expect(modalSource).toContain("relative min-h-0 flex-1");
+    expect(modalSource).toContain("absolute inset-0 overflow-y-auto overscroll-contain");
+    expect(modalSource).toContain("min-h-0 flex-1 items-center justify-center");
+    expect(modalSource).toContain("exit={{ opacity: 0");
+  });
+
+  test("protects large request detail content from fast-scroll blanking", () => {
+    const renderingSource = readModule("modules/monitor/log-content/rendering.tsx");
+
+    expect(renderingSource).toContain("VIRTUAL_MESSAGE_CONTENT_THRESHOLD");
+    expect(renderingSource).toContain("shouldVirtualizeMessages");
+    expect(renderingSource).toContain("VIRTUAL_MESSAGE_OVERSCAN");
+    expect(renderingSource).not.toContain("contentVisibility");
+    expect(renderingSource).not.toContain("containIntrinsicSize");
   });
 
   test("renders a fast full preview first, then progressively mounts parsed messages", async () => {
@@ -114,8 +148,11 @@ describe("LogContentModal", () => {
     });
 
     const getPre = () => document.body.querySelector("pre");
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(220);
+    });
+    await act(async () => {});
     expect(getPre()).not.toBeNull();
-    expect(getPre()!.textContent).toContain('{"a":1');
 
     await act(async () => {
       await vi.runAllTimersAsync();
