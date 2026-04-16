@@ -121,7 +121,7 @@ export function ErrorDetailModal({ open, logId, model, onClose }: ErrorDetailMod
           <button
             type="button"
             onClick={onClose}
-            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-red-200 bg-white/80 text-red-700 transition hover:bg-white dark:border-red-900/40 dark:bg-neutral-950/60 dark:text-red-300 dark:hover:bg-neutral-900"
+            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-0 bg-transparent p-0 text-red-600 shadow-none transition-colors hover:bg-slate-100 hover:text-red-700 dark:text-red-300 dark:hover:bg-white/10 dark:hover:text-red-200"
             aria-label={t("common.close")}
           >
             <X size={14} />

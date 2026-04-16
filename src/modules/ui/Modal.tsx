@@ -107,7 +107,7 @@ export function Modal({
             type="button"
             onClick={onClose}
             disabled={!open}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white/70 text-slate-700 shadow-sm transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/35 disabled:opacity-60 dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-slate-200 dark:hover:bg-neutral-950/80 dark:focus-visible:ring-white/15"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full border-0 bg-transparent p-0 text-slate-500 shadow-none transition-colors hover:bg-slate-100 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white"
             aria-label="close"
           >
             <X size={16} />

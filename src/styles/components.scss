@@ -490,8 +490,8 @@ textarea {
   width: 32px;
   height: 32px;
   padding: 0;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
+  background: transparent;
+  border: 0;
   color: var(--text-secondary);
   cursor: pointer;
   border-radius: $radius-full;
@@ -500,8 +500,7 @@ textarea {
   justify-content: center;
   transition:
     color 0.15s ease,
-    background-color 0.15s ease,
-    transform 0.15s ease;
+    background-color 0.15s ease;
   z-index: 10;
 
   svg {
@@ -511,23 +510,20 @@ textarea {
   &:hover {
     color: var(--text-primary);
     background: var(--bg-tertiary);
-    transform: scale(1.1);
   }
 
   &:active {
-    transform: scale(0.95);
+    color: var(--text-primary);
   }
 
   &:disabled {
     cursor: not-allowed;
     opacity: 0.6;
-    transform: none;
   }
 
   &:disabled:hover {
     color: var(--text-secondary);
-    background: var(--bg-secondary);
-    transform: none;
+    background: transparent;
   }
 }
 
