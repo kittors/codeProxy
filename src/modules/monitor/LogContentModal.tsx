@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Code2, Download, Eye, FileInput, FileOutput, Loader2 } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   buildInputRenderedView,
   buildOutputRenderedView,
@@ -24,6 +25,9 @@ import { useLogContentData } from "@/modules/monitor/log-content/useLogContentDa
 
 const VIRTUAL_MESSAGE_REVEAL_THRESHOLD = 80;
 const MODAL_CONTENT_LOAD_DELAY_MS = 260;
+const LOADING_EXIT_MS = 220;
+const CONTENT_ENTER_MS = 340;
+type ContentPhase = "loading" | "error" | "content";
 
 export function LogContentModal({
   open,
@@ -52,6 +56,7 @@ export function LogContentModal({
   const [inputRevealCount, setInputRevealCount] = useState(0);
   const [outputRevealCount, setOutputRevealCount] = useState(0);
   const [contentLoadReady, setContentLoadReady] = useState(false);
+  const [displayPhase, setDisplayPhase] = useState<ContentPhase>("loading");
   const dataOpen = open && contentLoadReady;
   const {
     inputLoading,
@@ -252,10 +257,41 @@ export function LogContentModal({
   const currentContent = activeTab === "input" ? inputContent : outputContent;
   const activeLoading = activeTab === "input" ? inputLoading : outputLoading;
   const activeError = activeTab === "input" ? inputError : outputError;
+  const activeParsed = activeTab === "input" ? inputParsed : outputParsed;
+  const waitingForRenderedContent =
+    Boolean(currentContent) &&
+    viewMode === "rendered" &&
+    (activeParsed.status !== "ready" || !activeParsed.view);
+  const contentPhase =
+    !contentLoadReady || (activeLoading && !currentContent) || waitingForRenderedContent
+      ? "loading"
+      : activeError && !currentContent
+        ? "error"
+        : "content";
 
-  const renderPreparing = () => (
-    <div className="flex items-center justify-center py-20">
-      <Loader2 size={22} className="animate-spin text-slate-400 dark:text-white/40" />
+  useEffect(() => {
+    if (contentPhase === displayPhase) return;
+
+    if (contentPhase === "loading") {
+      setDisplayPhase("loading");
+      return;
+    }
+
+    if (displayPhase !== "loading") {
+      setDisplayPhase(contentPhase);
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setDisplayPhase(contentPhase);
+    }, LOADING_EXIT_MS);
+
+    return () => window.clearTimeout(timer);
+  }, [contentPhase, displayPhase]);
+
+  const renderCenteredLoading = () => (
+    <div className="flex min-h-0 flex-1 items-center justify-center">
+      <Loader2 size={24} className="animate-spin text-slate-400 dark:text-white/40" />
       <span className="ml-3 text-sm text-slate-500 dark:text-white/50">
         {t("common.loading_ellipsis")}
       </span>
@@ -310,7 +346,7 @@ export function LogContentModal({
       );
     }
     if (viewMode === "raw") return renderRaw(inputContent);
-    if (inputParsed.status !== "ready" || !inputParsed.view) return renderPreparing();
+    if (inputParsed.status !== "ready" || !inputParsed.view) return renderCenteredLoading();
 
     const view = inputParsed.view;
     if (view.kind === "messages") {
@@ -331,7 +367,7 @@ export function LogContentModal({
       );
     }
     if (viewMode === "raw") return renderRaw(outputContent);
-    if (outputParsed.status !== "ready" || !outputParsed.view) return renderPreparing();
+    if (outputParsed.status !== "ready" || !outputParsed.view) return renderCenteredLoading();
 
     const view = outputParsed.view;
     if (view.kind === "messages") {
@@ -351,24 +387,42 @@ export function LogContentModal({
 
   return (
     <ContentModal open={open} model={model} onClose={onClose} tabs={tabBar}>
-      {!contentLoadReady ? (
-        <div className="min-h-[200px]" aria-hidden="true" />
-      ) : activeLoading && !currentContent ? (
-        <div className="flex items-center justify-center py-20">
-          <Loader2 size={24} className="animate-spin text-slate-400 dark:text-white/40" />
-          <span className="ml-3 text-sm text-slate-500 dark:text-white/50">
-            {t("common.loading_ellipsis")}
-          </span>
-        </div>
-      ) : activeError && !currentContent ? (
-        <div className="flex flex-col items-center justify-center py-16">
-          <p className="text-sm text-red-500 dark:text-red-400">{activeError}</p>
-        </div>
-      ) : (
-        <div className="min-h-[200px]">
-          {activeTab === "input" ? renderInput() : renderOutput()}
-        </div>
-      )}
+      <AnimatePresence initial={false}>
+        {displayPhase === "loading" ? (
+          <motion.div
+            key={`loading-${activeTab}-${logId ?? "none"}`}
+            className="flex min-h-0 flex-1"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: contentPhase === "loading" ? 1 : 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
+          >
+            {renderCenteredLoading()}
+          </motion.div>
+        ) : displayPhase === "error" ? (
+          <motion.div
+            key={`error-${activeTab}-${logId ?? "none"}`}
+            className="flex min-h-0 flex-1 flex-col items-center justify-center"
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+          >
+            <p className="text-sm text-red-500 dark:text-red-400">{activeError}</p>
+          </motion.div>
+        ) : (
+          <motion.div
+            key={`content-${activeTab}-${viewMode}-${logId ?? "none"}`}
+            className="min-h-0 flex-1 will-change-[opacity,transform,filter]"
+            initial={{ opacity: 0, y: 10, filter: "blur(3px)" }}
+            animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: CONTENT_ENTER_MS / 1000, ease: [0.16, 1, 0.3, 1] }}
+          >
+            {activeTab === "input" ? renderInput() : renderOutput()}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </ContentModal>
   );
 }

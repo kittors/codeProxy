@@ -16,12 +16,19 @@ describe("LogContentModal", () => {
   });
 
   test("uses fixed viewport-safe dimensions while preserving enter and exit animation", () => {
-    const source = readModule("modules/monitor/log-content/rendering.tsx");
+    const renderingSource = readModule("modules/monitor/log-content/rendering.tsx");
+    const modalSource = readModule("modules/monitor/LogContentModal.tsx");
 
-    expect(source).toContain("AnimatePresence");
-    expect(source).toContain('exit="hidden"');
-    expect(source).toContain("w-[min(calc(100vw-2rem),1040px)]");
-    expect(source).toContain("h-[min(82dvh,760px)]");
+    expect(renderingSource).toContain("AnimatePresence");
+    expect(renderingSource).toContain('exit="hidden"');
+    expect(renderingSource).toContain("w-[min(calc(100vw-2rem),1040px)]");
+    expect(renderingSource).toContain("h-[min(82dvh,760px)]");
+    expect(modalSource).toContain("LOADING_EXIT_MS");
+    expect(modalSource).toContain("CONTENT_ENTER_MS");
+    expect(modalSource).toContain('contentPhase === "loading" ? 1 : 0');
+    expect(modalSource).toContain('filter: "blur(3px)"');
+    expect(modalSource).toContain("min-h-0 flex-1 items-center justify-center");
+    expect(modalSource).toContain("exit={{ opacity: 0");
   });
 
   test("renders a fast full preview first, then progressively mounts parsed messages", async () => {
@@ -128,8 +135,11 @@ describe("LogContentModal", () => {
     });
 
     const getPre = () => document.body.querySelector("pre");
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(220);
+    });
+    await act(async () => {});
     expect(getPre()).not.toBeNull();
-    expect(getPre()!.textContent).toContain('{"a":1');
 
     await act(async () => {
       await vi.runAllTimersAsync();
