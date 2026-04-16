@@ -44,11 +44,17 @@ describe("LogContentModal", () => {
       </ThemeProvider>,
     );
 
+    expect(fetchPartFn).not.toHaveBeenCalled();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(260);
+    });
     await act(async () => {
       await Promise.resolve();
       await Promise.resolve();
     });
     expect(fetchPartFn).toHaveBeenCalled();
+    expect(fetchPartFn).toHaveBeenCalledTimes(1);
     expect(fetchPartFn.mock.calls[0]?.[1]).toBe("input");
 
     // Before idle parsing runs: avoid mounting the full raw payload in the opening frame.
@@ -91,6 +97,11 @@ describe("LogContentModal", () => {
       </ThemeProvider>,
     );
 
+    expect(fetchPartFn).not.toHaveBeenCalled();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(260);
+    });
     await act(async () => {
       await Promise.resolve();
       await Promise.resolve();
@@ -146,6 +157,12 @@ describe("LogContentModal", () => {
       </ThemeProvider>,
     );
 
+    expect(fetchPartFn).not.toHaveBeenCalled();
+    expect(document.body.querySelector("pre")).toBeNull();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(260);
+    });
     await act(async () => {
       await Promise.resolve();
       await Promise.resolve();

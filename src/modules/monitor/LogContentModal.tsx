@@ -22,6 +22,7 @@ import type {
 import { useLogContentData } from "@/modules/monitor/log-content/useLogContentData";
 
 const VIRTUAL_MESSAGE_REVEAL_THRESHOLD = 80;
+const MODAL_CONTENT_LOAD_DELAY_MS = 260;
 
 export function LogContentModal({
   open,
@@ -49,6 +50,8 @@ export function LogContentModal({
   });
   const [inputRevealCount, setInputRevealCount] = useState(0);
   const [outputRevealCount, setOutputRevealCount] = useState(0);
+  const [contentLoadReady, setContentLoadReady] = useState(false);
+  const dataOpen = open && contentLoadReady;
   const {
     inputLoading,
     outputLoading,
@@ -59,7 +62,7 @@ export function LogContentModal({
     model,
     fetchPart,
   } = useLogContentData({
-    open,
+    open: dataOpen,
     logId,
     initialTab,
     fetchFn,
@@ -71,12 +74,36 @@ export function LogContentModal({
   }, [initialTab, logId]);
 
   useEffect(() => {
-    if (!open || !logId) return;
+    if (!open) {
+      setContentLoadReady(false);
+      return;
+    }
+
+    setContentLoadReady(false);
+    const timer = window.setTimeout(() => {
+      setContentLoadReady(true);
+    }, MODAL_CONTENT_LOAD_DELAY_MS);
+
+    return () => window.clearTimeout(timer);
+  }, [open, logId]);
+
+  useEffect(() => {
+    if (!dataOpen || !logId) return;
+    if (activeTab === initialTab) return;
     const content = activeTab === "input" ? inputContent : outputContent;
     const loading = activeTab === "input" ? inputLoading : outputLoading;
     if (content || loading) return;
     void fetchPart(logId, activeTab);
-  }, [open, logId, activeTab, inputContent, outputContent, inputLoading, outputLoading, fetchPart]);
+  }, [
+    dataOpen,
+    logId,
+    activeTab,
+    inputContent,
+    outputContent,
+    inputLoading,
+    outputLoading,
+    fetchPart,
+  ]);
 
   useEffect(() => {
     setInputParsed({ status: inputContent ? "parsing" : "idle", view: null });
@@ -91,7 +118,7 @@ export function LogContentModal({
   }, [outputContent]);
 
   useEffect(() => {
-    if (!open || !inputContent) return;
+    if (!dataOpen || !inputContent) return;
     let cancelled = false;
     const cancel = scheduleIdle(() => {
       const view = buildInputRenderedView(inputContent);
@@ -102,10 +129,10 @@ export function LogContentModal({
       cancelled = true;
       cancel();
     };
-  }, [open, inputContent]);
+  }, [dataOpen, inputContent]);
 
   useEffect(() => {
-    if (!open || !outputContent) return;
+    if (!dataOpen || !outputContent) return;
     let cancelled = false;
     const cancel = scheduleIdle(() => {
       const view = buildOutputRenderedView(outputContent);
@@ -116,14 +143,14 @@ export function LogContentModal({
       cancelled = true;
       cancel();
     };
-  }, [open, outputContent]);
+  }, [dataOpen, outputContent]);
 
   const activeRenderedView = useMemo<RenderedView | null>(() => {
     return activeTab === "input" ? inputParsed.view : outputParsed.view;
   }, [activeTab, inputParsed.view, outputParsed.view]);
 
   useEffect(() => {
-    if (!open || viewMode !== "rendered") return;
+    if (!dataOpen || viewMode !== "rendered") return;
     if (!activeRenderedView || activeRenderedView.kind !== "messages") return;
 
     const total = activeRenderedView.messages.length;
@@ -155,10 +182,10 @@ export function LogContentModal({
       cancelled = true;
       if (cancel) cancel();
     };
-  }, [open, viewMode, activeTab, activeRenderedView]);
+  }, [dataOpen, viewMode, activeTab, activeRenderedView]);
 
   useEffect(() => {
-    if (!open || viewMode !== "raw") return;
+    if (!dataOpen || viewMode !== "raw") return;
     const isInput = activeTab === "input";
     const raw = isInput ? inputContent : outputContent;
     if (!raw) return;
@@ -180,7 +207,7 @@ export function LogContentModal({
       cancelled = true;
       cancel();
     };
-  }, [open, viewMode, activeTab, inputContent, outputContent]);
+  }, [dataOpen, viewMode, activeTab, inputContent, outputContent]);
 
   const handleDownload = () => {
     const content = activeTab === "input" ? inputContent : outputContent;
@@ -352,7 +379,9 @@ export function LogContentModal({
 
   return (
     <ContentModal open={open} model={model} onClose={onClose} tabs={tabBar}>
-      {activeLoading && !currentContent ? (
+      {!contentLoadReady ? (
+        <div className="min-h-[200px]" aria-hidden="true" />
+      ) : activeLoading && !currentContent ? (
         <div className="flex items-center justify-center py-20">
           <Loader2 size={24} className="animate-spin text-slate-400 dark:text-white/40" />
           <span className="ml-3 text-sm text-slate-500 dark:text-white/50">
