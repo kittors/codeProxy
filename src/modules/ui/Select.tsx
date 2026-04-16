@@ -9,6 +9,17 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { Check, ChevronDown } from "lucide-react";
+import {
+  cn,
+  selectChevron,
+  selectOptionBase,
+  selectOptionIdle,
+  selectOptionSelected,
+  selectPanel,
+  selectTriggerBase,
+  selectTriggerChip,
+  selectTriggerOpen,
+} from "./selectStyles";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -37,13 +48,6 @@ export interface SelectProps {
   /** Visual style variant */
   variant?: "default" | "chip";
 }
-
-/* ------------------------------------------------------------------ */
-/*  Helpers                                                            */
-/* ------------------------------------------------------------------ */
-
-/** Merge multiple class-name strings. */
-const cn = (...classes: (string | false | undefined | null)[]) => classes.filter(Boolean).join(" ");
 
 /* ------------------------------------------------------------------ */
 /*  Component                                                          */
@@ -144,28 +148,15 @@ export function Select({
         aria-label={ariaLabel}
         onClick={() => setOpen((prev) => !prev)}
         className={cn(
-          variant === "chip"
-            ? [
-                "inline-flex h-8 items-center justify-center gap-1.5 rounded-xl border px-2.5 text-[11px] font-semibold outline-none transition",
-                "border-slate-200/60 bg-white/70 text-slate-600 hover:bg-white/90 hover:text-slate-800",
-                "focus-visible:ring-2 focus-visible:ring-slate-400/35",
-                "dark:border-white/10 dark:bg-neutral-950/25 dark:text-white/70 dark:hover:bg-neutral-950/40 dark:hover:text-white/85 dark:focus-visible:ring-white/15",
-              ].join(" ")
-            : [
-                "inline-flex h-10 items-center gap-1.5 rounded-xl border border-slate-200 bg-white pl-3 pr-3 text-sm font-medium text-slate-700 shadow-sm outline-none transition",
-                "hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-slate-400/35",
-                "dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-white/80 dark:hover:bg-white/10 dark:focus-visible:ring-white/15",
-              ].join(" "),
+          variant === "chip" ? selectTriggerChip : selectTriggerBase,
+          open && selectTriggerOpen,
           className,
         )}
       >
         <span className="truncate">{selectedLabel ?? placeholder}</span>
         <ChevronDown
           size={14}
-          className={cn(
-            "shrink-0 text-slate-400 transition-transform duration-200 dark:text-white/40",
-            open && "rotate-180",
-          )}
+          className={cn(selectChevron, open && "rotate-180")}
           aria-hidden="true"
         />
       </button>
@@ -177,10 +168,7 @@ export function Select({
               ref={listRef}
               role="listbox"
               aria-label={ariaLabel}
-              className={cn(
-                "fixed z-[9999] overflow-hidden rounded-xl border border-slate-200 bg-white p-1 shadow-lg",
-                "dark:border-neutral-700 dark:bg-neutral-900",
-              )}
+              className={selectPanel}
               style={{
                 top: pos.top,
                 left: pos.left,
@@ -200,18 +188,15 @@ export function Select({
                     aria-selected={selected}
                     onClick={() => handleSelect(opt.value)}
                     className={cn(
-                      "flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm outline-none transition-colors",
-                      "hover:bg-slate-100 dark:hover:bg-white/10",
-                      selected
-                        ? "font-medium text-slate-900 dark:text-white"
-                        : "text-slate-600 dark:text-slate-300",
+                      selectOptionBase,
+                      selected ? selectOptionSelected : selectOptionIdle,
                     )}
                   >
                     <span className="flex-1 whitespace-nowrap">{opt.label}</span>
                     {selected ? (
                       <Check
                         size={14}
-                        className="shrink-0 text-slate-400 dark:text-white/50"
+                        className="shrink-0 text-[#96969B] dark:text-[#9F9FA8]"
                         aria-hidden="true"
                       />
                     ) : null}

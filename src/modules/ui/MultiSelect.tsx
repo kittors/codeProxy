@@ -10,6 +10,19 @@ import {
 import { useTranslation } from "react-i18next";
 import { createPortal } from "react-dom";
 import { Check, ChevronDown, X } from "lucide-react";
+import {
+  cn,
+  searchableSelectPanel,
+  selectChevron,
+  selectEmptyState,
+  selectOptionBase,
+  selectOptionIdle,
+  selectOptionSelected,
+  selectSearchInput,
+  selectTriggerBase,
+  selectTriggerDisabled,
+  selectTriggerOpen,
+} from "./selectStyles";
 
 export interface MultiSelectOption {
   value: string;
@@ -162,17 +175,17 @@ export function MultiSelect({
         <div
           ref={dropdownRef}
           style={dropdownStyle}
-          className="flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl shadow-black/10 dark:border-neutral-700 dark:bg-neutral-900 dark:shadow-black/30"
+          className={cn(searchableSelectPanel, "flex flex-col")}
         >
           {searchable && (
-            <div className="flex-shrink-0 border-b border-slate-100 px-3 py-2 dark:border-neutral-800">
+            <div className="flex-shrink-0 border-b border-black/[0.06] px-3 py-2 dark:border-white/10">
               <input
                 ref={searchRef}
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder=""
-                className="w-full bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400 dark:text-white dark:placeholder:text-white/30"
+                className={selectSearchInput}
               />
             </div>
           )}
@@ -181,30 +194,29 @@ export function MultiSelect({
             <button
               type="button"
               onClick={selectAll}
-              className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors ${
-                value.length === 0
-                  ? "bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400"
-                  : "text-slate-700 hover:bg-slate-50 dark:text-white/70 dark:hover:bg-white/5"
-              }`}
+              className={cn(
+                selectOptionBase,
+                value.length === 0 ? selectOptionSelected : selectOptionIdle,
+              )}
             >
               <div
-                className={`flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border ${
+                className={`flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border transition ${
                   value.length === 0
-                    ? "border-green-500 bg-green-500 dark:border-green-400 dark:bg-green-400"
-                    : "border-slate-300 dark:border-neutral-600"
+                    ? "border-[#18181B] bg-[#18181B] dark:border-white dark:bg-white"
+                    : "border-[#96969B] dark:border-[#9F9FA8]"
                 }`}
               >
-                {value.length === 0 && <Check size={12} className="text-white dark:text-black" />}
+                {value.length === 0 && (
+                  <Check size={12} className="text-white dark:text-[#18181B]" />
+                )}
               </div>
               <span className="font-medium">{selectAllLabel || t("common.all_models")}</span>
             </button>
 
-            <div className="mx-3 my-1 h-px bg-slate-100 dark:bg-neutral-800" />
+            <div className="mx-3 my-1 h-px bg-black/[0.06] dark:bg-white/10" />
 
             {filteredOptions.length === 0 ? (
-              <div className="px-3 py-4 text-center text-xs text-slate-400 dark:text-white/30">
-                No results
-              </div>
+              <div className={selectEmptyState}>No results</div>
             ) : (
               filteredOptions.map((opt) => {
                 const checked = selectedSet.has(opt.value);
@@ -213,20 +225,19 @@ export function MultiSelect({
                     key={opt.value}
                     type="button"
                     onClick={() => toggle(opt.value)}
-                    className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors ${
-                      checked
-                        ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-300"
-                        : "text-slate-700 hover:bg-slate-50 dark:text-white/70 dark:hover:bg-white/5"
-                    }`}
+                    className={cn(
+                      selectOptionBase,
+                      checked ? selectOptionSelected : selectOptionIdle,
+                    )}
                   >
                     <div
                       className={`flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border transition ${
                         checked
-                          ? "border-indigo-500 bg-indigo-500 dark:border-indigo-400 dark:bg-indigo-400"
-                          : "border-slate-300 dark:border-neutral-600"
+                          ? "border-[#18181B] bg-[#18181B] dark:border-white dark:bg-white"
+                          : "border-[#96969B] dark:border-[#9F9FA8]"
                       }`}
                     >
-                      {checked && <Check size={12} className="text-white dark:text-black" />}
+                      {checked && <Check size={12} className="text-white dark:text-[#18181B]" />}
                     </div>
                     {opt.icon && <span className="flex-shrink-0">{opt.icon}</span>}
                     <span className="truncate font-mono text-xs">{opt.label}</span>
@@ -252,18 +263,17 @@ export function MultiSelect({
           if (!open) updatePosition();
           setOpen(!open);
         }}
-        className={`flex min-h-[38px] w-full items-center justify-between gap-2 rounded-xl border px-3 py-1.5 text-left text-sm transition-all ${
-          disabled
-            ? "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-500 dark:border-neutral-700 dark:bg-neutral-800 dark:text-white/40"
-            : open
-              ? "border-indigo-400 bg-white ring-2 ring-indigo-400/20 dark:border-indigo-500 dark:bg-neutral-900"
-              : "border-slate-200 bg-white hover:border-slate-300 dark:border-neutral-700 dark:bg-neutral-900 dark:hover:border-neutral-600"
-        }`}
+        className={cn(
+          selectTriggerBase,
+          "h-auto min-h-10 w-full justify-between py-1.5 text-left",
+          open && selectTriggerOpen,
+          disabled && selectTriggerDisabled,
+        )}
       >
         <div className="flex min-w-0 flex-1 flex-wrap gap-1">
           {value.length === 0 ? (
-            <span className="inline-flex items-center gap-1 text-green-600 dark:text-green-400">
-              ✓ {emptyLabel}
+            <span className="inline-flex items-center gap-1 text-[#18181B] dark:text-white">
+              {emptyLabel}
             </span>
           ) : (
             value.slice(0, 5).map((v) => {
@@ -271,7 +281,7 @@ export function MultiSelect({
               return (
                 <span
                   key={v}
-                  className="inline-flex max-w-[180px] items-center gap-1 rounded-md bg-indigo-50 px-1.5 py-0.5 text-xs text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300"
+                  className="inline-flex max-w-[180px] items-center gap-1 rounded-full bg-white px-1.5 py-0.5 text-xs text-[#18181B] dark:bg-[#46464C] dark:text-white"
                 >
                   {opt?.icon && <span className="flex-shrink-0">{opt.icon}</span>}
                   <span className="truncate">{labelMap.get(v) || v}</span>
@@ -279,7 +289,7 @@ export function MultiSelect({
                     <button
                       type="button"
                       onClick={(e) => removeTag(v, e)}
-                      className="ml-0.5 flex-shrink-0 rounded-full p-0.5 hover:bg-indigo-200 dark:hover:bg-indigo-800"
+                      className="ml-0.5 flex-shrink-0 rounded-full p-0.5 hover:bg-[#EBEBEC] dark:hover:bg-[#27272A]"
                     >
                       <X size={10} />
                     </button>
@@ -292,7 +302,7 @@ export function MultiSelect({
         </div>
         <ChevronDown
           size={16}
-          className={`flex-shrink-0 text-slate-400 transition-transform ${open ? "rotate-180" : ""}`}
+          className={cn(selectChevron, "flex-shrink-0", open && "rotate-180")}
         />
       </button>
 
