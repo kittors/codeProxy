@@ -2,7 +2,7 @@ export const cn = (...classes: (string | false | undefined | null)[]) =>
   classes.filter(Boolean).join(" ");
 
 export const selectTriggerBase =
-  "inline-flex h-10 items-center gap-1.5 rounded-2xl border-0 bg-white px-3.5 text-sm font-medium text-[#71717A] shadow-[0_3px_12px_rgb(0_0_0_/_0.12)] outline-none transition-colors hover:bg-white hover:text-[#18181B] focus-visible:ring-2 focus-visible:ring-black/[0.08] dark:bg-[#27272A] dark:text-[#A1A1AA] dark:shadow-[0_8px_24px_rgb(0_0_0_/_0.24)] dark:hover:bg-[#303036] dark:hover:text-white dark:focus-visible:ring-white/10";
+  "inline-flex h-9 items-center gap-1.5 rounded-2xl border-0 bg-white px-3.5 text-sm font-medium text-[#71717A] shadow-[0_3px_12px_rgb(0_0_0_/_0.12)] outline-none transition-colors hover:bg-white hover:text-[#18181B] focus-visible:ring-2 focus-visible:ring-black/[0.08] dark:bg-[#27272A] dark:text-[#A1A1AA] dark:shadow-[0_8px_24px_rgb(0_0_0_/_0.24)] dark:hover:bg-[#303036] dark:hover:text-white dark:focus-visible:ring-white/10";
 
 export const selectTriggerOpen = "";
 
@@ -10,7 +10,7 @@ export const selectTriggerDisabled =
   "cursor-not-allowed bg-white/70 text-[#A1A1AA] opacity-70 shadow-none dark:bg-[#27272A]/70 dark:text-[#71717A]";
 
 export const selectTriggerChip =
-  "inline-flex h-8 items-center justify-center gap-1.5 rounded-xl border-0 bg-white px-2.5 text-[11px] font-semibold text-[#71717A] shadow-[0_2px_8px_rgb(0_0_0_/_0.10)] outline-none transition-colors hover:bg-white hover:text-[#18181B] focus-visible:ring-2 focus-visible:ring-black/[0.08] dark:bg-[#27272A] dark:text-[#A1A1AA] dark:shadow-[0_6px_18px_rgb(0_0_0_/_0.22)] dark:hover:bg-[#303036] dark:hover:text-white dark:focus-visible:ring-white/10";
+  "inline-flex h-7 items-center justify-center gap-1.5 rounded-xl border-0 bg-white px-2.5 text-[11px] font-semibold text-[#71717A] shadow-[0_2px_8px_rgb(0_0_0_/_0.10)] outline-none transition-colors hover:bg-white hover:text-[#18181B] focus-visible:ring-2 focus-visible:ring-black/[0.08] dark:bg-[#27272A] dark:text-[#A1A1AA] dark:shadow-[0_6px_18px_rgb(0_0_0_/_0.22)] dark:hover:bg-[#303036] dark:hover:text-white dark:focus-visible:ring-white/10";
 
 export const selectChevron =
   "shrink-0 text-[#71717A] transition-transform duration-200 dark:text-[#A1A1AA]";

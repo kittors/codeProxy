@@ -190,7 +190,9 @@ export function SearchableCheckboxMultiSelect({
     if (value.length === 0) return placeholder;
     const labels = value
       .slice(0, 2)
-      .map((item) => optionText(options.find((option) => option.value === item) ?? { value: item, label: item }))
+      .map((item) =>
+        optionText(options.find((option) => option.value === item) ?? { value: item, label: item }),
+      )
       .join(", ");
     return value.length > 2 ? `${labels} +${value.length - 2}` : labels;
   }, [options, placeholder, value]);
@@ -210,7 +212,7 @@ export function SearchableCheckboxMultiSelect({
           setOpen((current) => !current);
         }}
         className={cn(
-          "inline-flex h-10 w-full items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white pl-3.5 pr-3 text-left text-sm font-medium text-slate-700 shadow-sm outline-none transition",
+          "inline-flex h-9 w-full items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white pl-3.5 pr-3 text-left text-sm font-medium text-slate-700 shadow-sm outline-none transition",
           "hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-slate-400/35 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400",
           "dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-white/80 dark:hover:bg-white/10 dark:disabled:bg-neutral-800 dark:disabled:text-white/35",
           className,
@@ -289,7 +291,11 @@ export function SearchableCheckboxMultiSelect({
                   {selectedCountLabel(value.length)}
                 </span>
               </button>
-              <div role="listbox" aria-label={ariaLabel} className="min-h-0 flex-1 overflow-y-auto p-1">
+              <div
+                role="listbox"
+                aria-label={ariaLabel}
+                className="min-h-0 flex-1 overflow-y-auto p-1"
+              >
                 {filteredOptions.length === 0 ? (
                   <div className="px-3 py-5 text-center text-xs text-slate-400 dark:text-white/30">
                     {noResultsLabel}

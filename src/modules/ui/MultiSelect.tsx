@@ -265,7 +265,7 @@ export function MultiSelect({
         }}
         className={cn(
           selectTriggerBase,
-          "h-auto min-h-10 w-full justify-between py-1.5 text-left",
+          "h-auto min-h-9 w-full justify-between py-1 text-left",
           open && selectTriggerOpen,
           disabled && selectTriggerDisabled,
         )}
