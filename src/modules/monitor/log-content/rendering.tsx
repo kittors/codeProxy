@@ -491,7 +491,7 @@ export function ContentModal({
           <motion.div
             role="dialog"
             aria-modal="true"
-            className="relative z-10 flex max-h-[85vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-neutral-800 dark:bg-neutral-950"
+            className="relative z-10 flex h-[min(82dvh,760px)] w-[min(calc(100vw-2rem),1040px)] max-w-none flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-neutral-800 dark:bg-neutral-950"
             variants={{
               hidden: { opacity: 0, y: 18, scale: 0.96, filter: "blur(2px)" },
               show: { opacity: 1, y: 0, scale: 1, filter: "blur(0px)" },
@@ -520,7 +520,9 @@ export function ContentModal({
             <div className="shrink-0 border-b border-slate-100 bg-white px-5 py-2 dark:border-neutral-800/60 dark:bg-neutral-950">
               {tabs}
             </div>
-            <div className="flex-1 overflow-y-auto overscroll-contain px-5 py-4">{children}</div>
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4">
+              {children}
+            </div>
           </motion.div>
         </motion.div>
       ) : null}

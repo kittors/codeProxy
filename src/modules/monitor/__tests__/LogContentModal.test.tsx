@@ -1,13 +1,27 @@
 import { act, render, screen } from "@testing-library/react";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import i18n from "@/i18n";
 import { LogContentModal } from "@/modules/monitor/LogContentModal";
 import { ThemeProvider } from "@/modules/ui/ThemeProvider";
 
+const root = resolve(__dirname, "../../..");
+const readModule = (path: string) => readFileSync(resolve(root, path), "utf8");
+
 describe("LogContentModal", () => {
   afterEach(async () => {
     await i18n.changeLanguage("zh-CN");
     vi.useRealTimers();
+  });
+
+  test("uses fixed viewport-safe dimensions while preserving enter and exit animation", () => {
+    const source = readModule("modules/monitor/log-content/rendering.tsx");
+
+    expect(source).toContain("AnimatePresence");
+    expect(source).toContain('exit="hidden"');
+    expect(source).toContain("w-[min(calc(100vw-2rem),1040px)]");
+    expect(source).toContain("h-[min(82dvh,760px)]");
   });
 
   test("renders a fast full preview first, then progressively mounts parsed messages", async () => {
