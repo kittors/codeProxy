@@ -44,6 +44,7 @@ CliRelay 后端新增 Docker-first 自动更新能力，需要前端在用户登
 - 新增 `src/modules/update/AutoUpdatePrompt.tsx`，作为登录后全局提示组件。
 - 新增 `src/lib/http/apis/update.ts`，封装 `/update/check` 与 `/update/apply` 管理接口。
 - 配置页运行时开关新增 `auto-update.enabled` 的图形化开关。
+- 配置页运行时设置新增更新渠道选择，默认跟随 `main`，可切换到 `dev` 或 `auto`。
 - 更新确认弹窗复用现有 `Modal`、`Button` 与 `ToastProvider`，避免新增 UI 依赖。
 
 ### 影响范围

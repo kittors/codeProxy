@@ -45,7 +45,7 @@ export interface RoutingConfig {
 
 export interface AutoUpdateConfig {
   enabled?: boolean;
-  channel?: string;
+  channel?: "main" | "dev" | "auto" | string;
   repository?: string;
   dockerImage?: string;
   updaterUrl?: string;

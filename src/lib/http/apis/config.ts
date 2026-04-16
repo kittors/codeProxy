@@ -43,4 +43,11 @@ export const configApi = {
   },
   updateAutoUpdateEnabled: (enabled: boolean) =>
     apiClient.put("/auto-update/enabled", { value: enabled }),
+  getAutoUpdateChannel: async (): Promise<string> => {
+    const data = await apiClient.get<Record<string, unknown>>("/auto-update/channel");
+    const channel = data?.channel ?? data?.["auto-update-channel"];
+    return typeof channel === "string" && channel.trim() ? channel.trim() : "main";
+  },
+  updateAutoUpdateChannel: (channel: string) =>
+    apiClient.put("/auto-update/channel", { value: channel }),
 };
