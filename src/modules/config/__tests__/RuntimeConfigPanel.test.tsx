@@ -144,11 +144,12 @@ describe("RuntimeConfigPanel", () => {
     });
   });
 
-  test("selects the automatic update channel", async () => {
+  test("selects the automatic update source branch", async () => {
     renderPanel();
 
-    const select = await screen.findByRole("combobox", { name: /update channel/i });
+    const select = await screen.findByRole("combobox", { name: /update source branch/i });
     await userEvent.click(select);
+    expect(screen.queryByRole("option", { name: /auto-detect/i })).not.toBeInTheDocument();
     await userEvent.click(await screen.findByRole("option", { name: /development/i }));
 
     await waitFor(() => {

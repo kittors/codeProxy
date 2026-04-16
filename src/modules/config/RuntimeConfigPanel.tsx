@@ -48,7 +48,7 @@ const readNumber = (obj: Record<string, unknown> | null, ...keys: string[]): num
 
 const normalizeUpdateChannel = (value: string) => {
   const channel = value.trim().toLowerCase();
-  return channel === "dev" || channel === "auto" ? channel : "main";
+  return channel === "dev" ? channel : "main";
 };
 
 export function RuntimeConfigPanel() {
@@ -399,7 +399,6 @@ export function RuntimeConfigPanel() {
                 options={[
                   { value: "main", label: t("config_page.auto_update_channel_main") },
                   { value: "dev", label: t("config_page.auto_update_channel_dev") },
-                  { value: "auto", label: t("config_page.auto_update_channel_auto") },
                 ]}
               />
             </div>
