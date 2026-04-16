@@ -28,6 +28,8 @@ describe("LogContentModal", () => {
     expect(modalSource).toContain('contentPhase === "loading" ? 1 : 0');
     expect(modalSource).toContain('filter: "blur(3px)"');
     expect(modalSource).not.toContain("y: 10");
+    expect(modalSource).toContain("relative min-h-0 flex-1");
+    expect(modalSource).toContain("absolute inset-0 overflow-y-auto overscroll-contain");
     expect(modalSource).toContain("min-h-0 flex-1 items-center justify-center");
     expect(modalSource).toContain("exit={{ opacity: 0");
   });

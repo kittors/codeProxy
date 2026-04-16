@@ -520,9 +520,7 @@ export function ContentModal({
             <div className="shrink-0 border-b border-slate-100 bg-white px-5 py-2 dark:border-neutral-800/60 dark:bg-neutral-950">
               {tabs}
             </div>
-            <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-5 py-4">
-              {children}
-            </div>
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-5 py-4">{children}</div>
           </motion.div>
         </motion.div>
       ) : null}

@@ -387,42 +387,44 @@ export function LogContentModal({
 
   return (
     <ContentModal open={open} model={model} onClose={onClose} tabs={tabBar}>
-      <AnimatePresence initial={false}>
-        {displayPhase === "loading" ? (
-          <motion.div
-            key={`loading-${activeTab}-${logId ?? "none"}`}
-            className="flex min-h-0 flex-1"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: contentPhase === "loading" ? 1 : 0 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
-          >
-            {renderCenteredLoading()}
-          </motion.div>
-        ) : displayPhase === "error" ? (
-          <motion.div
-            key={`error-${activeTab}-${logId ?? "none"}`}
-            className="flex min-h-0 flex-1 flex-col items-center justify-center"
-            initial={{ opacity: 0, y: 4 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
-          >
-            <p className="text-sm text-red-500 dark:text-red-400">{activeError}</p>
-          </motion.div>
-        ) : (
-          <motion.div
-            key={`content-${activeTab}-${viewMode}-${logId ?? "none"}`}
-            className="min-h-0 flex-1 will-change-[opacity,filter]"
-            initial={{ opacity: 0, filter: "blur(3px)" }}
-            animate={{ opacity: 1, filter: "blur(0px)" }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: CONTENT_ENTER_MS / 1000, ease: [0.16, 1, 0.3, 1] }}
-          >
-            {activeTab === "input" ? renderInput() : renderOutput()}
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <div className="relative min-h-0 flex-1">
+        <AnimatePresence initial={false}>
+          {displayPhase === "loading" ? (
+            <motion.div
+              key={`loading-${activeTab}-${logId ?? "none"}`}
+              className="absolute inset-0 flex overflow-y-auto overscroll-contain"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: contentPhase === "loading" ? 1 : 0 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
+            >
+              {renderCenteredLoading()}
+            </motion.div>
+          ) : displayPhase === "error" ? (
+            <motion.div
+              key={`error-${activeTab}-${logId ?? "none"}`}
+              className="absolute inset-0 flex flex-col items-center justify-center overflow-y-auto overscroll-contain"
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+            >
+              <p className="text-sm text-red-500 dark:text-red-400">{activeError}</p>
+            </motion.div>
+          ) : (
+            <motion.div
+              key={`content-${activeTab}-${viewMode}-${logId ?? "none"}`}
+              className="absolute inset-0 overflow-y-auto overscroll-contain will-change-[opacity,filter]"
+              initial={{ opacity: 0, filter: "blur(3px)" }}
+              animate={{ opacity: 1, filter: "blur(0px)" }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: CONTENT_ENTER_MS / 1000, ease: [0.16, 1, 0.3, 1] }}
+            >
+              {activeTab === "input" ? renderInput() : renderOutput()}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
     </ContentModal>
   );
 }
