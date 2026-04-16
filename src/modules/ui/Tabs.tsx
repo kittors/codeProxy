@@ -1,4 +1,5 @@
 import { createContext, use, useCallback, useMemo, type PropsWithChildren } from "react";
+import { motion } from "framer-motion";
 
 type TabsValue = string;
 
@@ -52,11 +53,18 @@ export function TabsTrigger({
       onClick={onClick}
       className={
         active
-          ? "inline-flex h-8 shrink-0 items-center gap-2 whitespace-nowrap rounded-full bg-white px-3 text-xs font-semibold text-[#18181B] shadow-sm shadow-black/[0.04] transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/10 dark:bg-[#46464C] dark:text-white dark:shadow-none dark:focus-visible:ring-white/20"
-          : "inline-flex h-8 shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-3 text-xs font-medium text-[#96969B] transition-colors duration-200 hover:text-[#18181B] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/10 dark:text-[#9F9FA8] dark:hover:text-white dark:focus-visible:ring-white/20"
+          ? "relative inline-flex h-8 shrink-0 items-center gap-2 overflow-hidden whitespace-nowrap rounded-full px-3 text-xs font-semibold text-[#18181B] transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/10 dark:text-white dark:focus-visible:ring-white/20"
+          : "relative inline-flex h-8 shrink-0 items-center gap-2 overflow-hidden whitespace-nowrap rounded-full px-3 text-xs font-medium text-[#96969B] transition-colors duration-200 hover:text-[#18181B] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/10 dark:text-[#9F9FA8] dark:hover:text-white dark:focus-visible:ring-white/20"
       }
     >
-      {children}
+      {active ? (
+        <motion.span
+          layoutId="tabs-active-indicator"
+          className="absolute inset-0 rounded-full bg-white shadow-sm shadow-black/[0.04] dark:bg-[#46464C] dark:shadow-none"
+          transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
+        />
+      ) : null}
+      <span className="relative z-10 inline-flex items-center gap-2">{children}</span>
     </button>
   );
 }
