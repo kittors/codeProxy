@@ -113,12 +113,12 @@ export function TabsList({ children }: PropsWithChildren) {
   return (
     <div
       ref={containerRef}
-      className="relative inline-flex max-w-full gap-1 overflow-x-auto whitespace-nowrap rounded-2xl border border-slate-200 bg-white p-1 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60"
+      className="scrollbar-hidden relative inline-flex max-w-full gap-1 overflow-x-auto whitespace-nowrap rounded-full bg-[#EBEBEC] p-1 dark:bg-[#27272A]"
     >
       {/* Sliding indicator */}
       {indicator && (
         <div
-          className="pointer-events-none absolute top-1 bottom-1 z-0 rounded-xl bg-slate-900 dark:bg-white"
+          className="pointer-events-none absolute bottom-1 top-1 z-0 rounded-full bg-white dark:bg-[#46464C]"
           style={{
             left: indicator.left,
             width: indicator.width,
@@ -153,8 +153,8 @@ export function TabsTrigger({
       onClick={onClick}
       className={
         active
-          ? "relative z-10 inline-flex h-8 shrink-0 items-center gap-2 whitespace-nowrap rounded-xl px-3 text-xs font-semibold text-white transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/35 dark:text-neutral-950 dark:focus-visible:ring-white/15"
-          : "relative z-10 inline-flex h-8 shrink-0 items-center gap-2 whitespace-nowrap rounded-xl px-3 text-xs text-slate-700 transition-colors duration-200 hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/35 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white dark:focus-visible:ring-white/15"
+          ? "relative z-10 inline-flex h-8 shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-3 text-xs font-semibold text-[#18181B] transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/10 dark:text-white dark:focus-visible:ring-white/20"
+          : "relative z-10 inline-flex h-8 shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-3 text-xs font-medium text-[#96969B] transition-colors duration-200 hover:text-[#18181B] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/10 dark:text-[#9F9FA8] dark:hover:text-white dark:focus-visible:ring-white/20"
       }
     >
       {children}
