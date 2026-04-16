@@ -34,6 +34,16 @@ describe("LogContentModal", () => {
     expect(modalSource).toContain("exit={{ opacity: 0");
   });
 
+  test("protects large request detail content from fast-scroll blanking", () => {
+    const renderingSource = readModule("modules/monitor/log-content/rendering.tsx");
+
+    expect(renderingSource).toContain("VIRTUAL_MESSAGE_CONTENT_THRESHOLD");
+    expect(renderingSource).toContain("shouldVirtualizeMessages");
+    expect(renderingSource).toContain("VIRTUAL_MESSAGE_OVERSCAN");
+    expect(renderingSource).not.toContain("contentVisibility");
+    expect(renderingSource).not.toContain("containIntrinsicSize");
+  });
+
   test("renders a fast full preview first, then progressively mounts parsed messages", async () => {
     vi.useFakeTimers();
 

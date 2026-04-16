@@ -20,7 +20,12 @@ import {
 const LARGE_TEXT_CHAR_THRESHOLD = 50_000;
 const LARGE_TEXT_LINE_THRESHOLD = 400;
 const VIRTUAL_TEXT_CHUNK_SIZE = 4_000;
-const VIRTUAL_MESSAGE_THRESHOLD = 80;
+const VIRTUAL_MESSAGE_COUNT_THRESHOLD = 80;
+const VIRTUAL_MESSAGE_CONTENT_THRESHOLD = 48_000;
+const VIRTUAL_MESSAGE_ITEM_CONTENT_THRESHOLD = 18_000;
+const VIRTUAL_MESSAGE_OVERSCAN = 12;
+
+type LogMessage = { role: string; content: string };
 
 const LazyRichMarkdown = lazy(() =>
   import("./rendering-markdown").then((mod) => ({ default: mod.RichMarkdown })),
@@ -302,8 +307,7 @@ export function MessageBlock({
 
   return (
     <div
-      className={`overflow-hidden rounded-xl border ${style.border} transition-colors`}
-      style={{ contentVisibility: "auto", containIntrinsicSize: "240px" }}
+      className={`overflow-hidden rounded-xl border ${style.border} transition-colors [contain:layout_paint]`}
     >
       <button
         type="button"
@@ -338,7 +342,6 @@ export function PlainPre({ text }: { text: string }) {
   return (
     <pre
       className="whitespace-pre-wrap break-words rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs leading-relaxed font-mono dark:border-neutral-800 dark:bg-neutral-900 dark:text-slate-200"
-      style={{ contentVisibility: "auto", containIntrinsicSize: "800px" }}
     >
       {text}
     </pre>
@@ -370,13 +373,14 @@ function VirtualPlainPre({ rows }: { rows: string[] }) {
     getScrollElement: () => parentRef.current,
     estimateSize: () => 22,
     overscan: 24,
+    useAnimationFrameWithResizeObserver: true,
   });
   const virtualRows = virtualizer.getVirtualItems();
 
   return (
     <div
       ref={parentRef}
-      className="h-[min(58vh,620px)] overflow-y-auto overscroll-contain rounded-xl border border-slate-200 bg-slate-50 text-xs leading-relaxed font-mono dark:border-neutral-800 dark:bg-neutral-900 dark:text-slate-200"
+      className="h-[min(58vh,620px)] overflow-y-auto overscroll-contain rounded-xl border border-slate-200 bg-slate-50 text-xs leading-relaxed font-mono [contain:layout_paint] dark:border-neutral-800 dark:bg-neutral-900 dark:text-slate-200"
     >
       <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
         {virtualRows.map((virtualRow) => (
@@ -395,8 +399,22 @@ function VirtualPlainPre({ rows }: { rows: string[] }) {
   );
 }
 
-export function MessageList({ messages }: { messages: { role: string; content: string }[] }) {
-  if (messages.length <= VIRTUAL_MESSAGE_THRESHOLD) {
+function shouldVirtualizeMessages(messages: LogMessage[]) {
+  if (messages.length > VIRTUAL_MESSAGE_COUNT_THRESHOLD) return true;
+
+  let totalLength = 0;
+  for (const message of messages) {
+    const length = message.content.length;
+    if (length > VIRTUAL_MESSAGE_ITEM_CONTENT_THRESHOLD) return true;
+    totalLength += length;
+    if (totalLength > VIRTUAL_MESSAGE_CONTENT_THRESHOLD) return true;
+  }
+
+  return false;
+}
+
+export function MessageList({ messages }: { messages: LogMessage[] }) {
+  if (!shouldVirtualizeMessages(messages)) {
     return (
       <div className="space-y-3">
         {messages.map((msg, idx) => (
@@ -415,12 +433,16 @@ function VirtualMessageList({ messages }: { messages: { role: string; content: s
     count: messages.length,
     getScrollElement: () => parentRef.current,
     estimateSize: () => 220,
-    overscan: 5,
+    overscan: VIRTUAL_MESSAGE_OVERSCAN,
+    useAnimationFrameWithResizeObserver: true,
   });
   const virtualRows = virtualizer.getVirtualItems();
 
   return (
-    <div ref={parentRef} className="h-[min(62vh,660px)] overflow-y-auto overscroll-contain pr-1">
+    <div
+      ref={parentRef}
+      className="h-[min(62vh,660px)] overflow-y-auto overscroll-contain pr-1 [contain:layout_paint]"
+    >
       <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
         {virtualRows.map((virtualRow) => {
           const msg = messages[virtualRow.index];
