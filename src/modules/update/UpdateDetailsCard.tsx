@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { Suspense, lazy, useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { RefreshCw } from "lucide-react";
 import { apiClient } from "@/lib/http/client";
@@ -12,6 +12,42 @@ const DEFAULT_HEARTBEAT_INTERVAL_MS = 2000;
 const DEFAULT_HEARTBEAT_TIMEOUT_MS = 180000;
 
 const sleep = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms));
+const LazyRichMarkdown = lazy(() =>
+  import("@/modules/monitor/log-content/rendering-markdown").then((mod) => ({
+    default: mod.RichMarkdown,
+  })),
+);
+const RELEASE_NOTES_PROSE_CLASSES = `prose prose-sm dark:prose-invert max-w-none break-words leading-relaxed
+  prose-headings:mt-3 prose-headings:mb-2 prose-headings:font-semibold
+  prose-h1:text-base prose-h2:text-sm prose-h3:text-sm
+  prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5
+  prose-code:rounded-md prose-code:bg-slate-100 prose-code:px-1.5 prose-code:py-0.5 prose-code:text-[13px] prose-code:font-mono prose-code:text-slate-700 prose-code:before:content-none prose-code:after:content-none
+  dark:prose-code:bg-neutral-800 dark:prose-code:text-slate-300
+  prose-pre:rounded-lg prose-pre:bg-slate-900 prose-pre:text-xs dark:prose-pre:bg-neutral-900
+  prose-a:break-all prose-a:text-indigo-600 dark:prose-a:text-indigo-300
+  prose-table:border-collapse prose-table:text-sm prose-table:w-full
+  prose-th:border prose-th:border-slate-300 prose-th:bg-slate-100 prose-th:px-3 prose-th:py-2 prose-th:text-left
+  dark:prose-th:border-neutral-700 dark:prose-th:bg-neutral-800
+  prose-td:border prose-td:border-slate-300 prose-td:px-3 prose-td:py-2 dark:prose-td:border-neutral-700`;
+
+function ReleaseNotesMarkdown({ text }: { text: string }) {
+  return (
+    <div
+      data-testid="update-release-notes"
+      className="max-h-[42vh] overflow-y-auto break-words rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-700 dark:border-neutral-800 dark:bg-neutral-950 dark:text-slate-200"
+    >
+      <Suspense
+        fallback={
+          <pre className="whitespace-pre-wrap break-words text-sm leading-6 text-slate-700 dark:text-slate-200">
+            {text}
+          </pre>
+        }
+      >
+        <LazyRichMarkdown proseClasses={RELEASE_NOTES_PROSE_CLASSES} text={text} />
+      </Suspense>
+    </div>
+  );
+}
 
 export function UpdateDetailsCard({
   heartbeatIntervalMs = DEFAULT_HEARTBEAT_INTERVAL_MS,
@@ -32,17 +68,17 @@ export function UpdateDetailsCard({
   const waitForHeartbeat = useCallback(async () => {
     const deadline = Date.now() + heartbeatTimeoutMs;
     await sleep(Math.min(heartbeatIntervalMs, 3000));
-    while (Date.now() < deadline) {
+    while (true) {
       try {
         await apiClient.get("/system-stats", {
           timeoutMs: Math.min(5000, heartbeatIntervalMs + 3000),
         });
         return true;
       } catch {
+        if (Date.now() >= deadline) return false;
         await sleep(heartbeatIntervalMs);
       }
     }
-    return false;
   }, [heartbeatIntervalMs, heartbeatTimeoutMs]);
 
   const checkUpdate = useCallback(async () => {
@@ -196,12 +232,7 @@ export function UpdateDetailsCard({
                 <h3 className="mb-2 text-sm font-semibold text-slate-900 dark:text-white">
                   {t("auto_update.release_notes")}
                 </h3>
-                <pre
-                  data-testid="update-release-notes"
-                  className="max-h-[42vh] overflow-y-auto whitespace-pre-wrap break-words rounded-xl border border-slate-200 bg-white p-3 text-sm leading-6 text-slate-700 dark:border-neutral-800 dark:bg-neutral-950 dark:text-slate-200"
-                >
-                  {releaseNotes}
-                </pre>
+                <ReleaseNotesMarkdown text={releaseNotes} />
               </div>
 
               {!candidate.updater_available ? (

@@ -140,4 +140,29 @@ describe("SystemPage", () => {
     expect(within(dialog).getAllByText(/updater sidecar/i, { exact: false })).toHaveLength(1);
     expect(within(dialog).getByRole("button", { name: /update now/i })).toBeDisabled();
   });
+
+  test("renders update release notes as markdown", async () => {
+    mocks.check.mockResolvedValue({
+      enabled: true,
+      update_available: true,
+      current_version: "dev-1111111",
+      current_commit: "1111111",
+      latest_version: "v1.2.3",
+      latest_commit: "abcdef123456",
+      target_channel: "main",
+      docker_image: "ghcr.io/kittors/clirelay",
+      docker_tag: "latest",
+      release_notes:
+        "## Changes\n\n- Fix duplicate updater notice\n- Render release notes as **Markdown**",
+      updater_available: true,
+    });
+    renderPage();
+
+    await userEvent.click(await screen.findByRole("button", { name: /check docker update/i }));
+    const dialog = await screen.findByRole("dialog");
+
+    expect(await within(dialog).findByRole("heading", { name: "Changes" })).toBeInTheDocument();
+    expect(within(dialog).getByText("Markdown")).toBeInTheDocument();
+    expect(within(dialog).getAllByRole("listitem")).toHaveLength(2);
+  });
 });
