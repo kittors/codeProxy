@@ -23,6 +23,7 @@ export default defineConfig({
     restoreMocks: true,
     clearMocks: true,
     mockReset: true,
+    testTimeout: 10_000,
   },
   resolve: {
     alias: {
@@ -49,12 +50,8 @@ export default defineConfig({
       output: {
         manualChunks: {
           "vendor-react": ["react", "react-dom", "react-router-dom"],
+          "vendor-i18n": ["i18next", "react-i18next", "goey-toast"],
           "vendor-echarts": ["echarts", "echarts-for-react"],
-          "vendor-codemirror": [
-            "@uiw/react-codemirror",
-            "@codemirror/lang-yaml",
-            "@codemirror/merge",
-          ],
           "vendor-animation": ["framer-motion", "gsap"],
           "vendor-charts": ["chart.js", "react-chartjs-2"],
           "vendor-markdown": ["react-markdown", "react-syntax-highlighter", "remark-gfm"],
@@ -65,5 +62,22 @@ export default defineConfig({
   server: {
     host: true,
     port: 5173,
+    proxy: {
+      "/v0": {
+        target: "http://127.0.0.1:8317",
+        changeOrigin: false,
+        ws: true,
+      },
+      "/v1": {
+        target: "http://127.0.0.1:8317",
+        changeOrigin: false,
+        ws: true,
+      },
+      "/v1beta": {
+        target: "http://127.0.0.1:8317",
+        changeOrigin: false,
+        ws: true,
+      },
+    },
   },
 });

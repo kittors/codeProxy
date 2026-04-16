@@ -13,6 +13,8 @@ import {
   Activity,
   Bot,
   Cpu,
+  Fingerprint,
+  Layers,
   LayoutDashboard,
   FileKey,
   FileText,
@@ -49,6 +51,12 @@ const NAV_ITEMS = [
   { to: "/ai-providers", i18nKey: "shell.nav_ai_providers", icon: Bot },
   { to: "/auth-files", i18nKey: "shell.nav_auth_files", icon: FileKey },
   { to: "/api-keys", i18nKey: "shell.nav_api_keys", icon: Sparkles },
+  { to: "/channel-groups", i18nKey: "shell.nav_channel_groups", icon: Layers },
+  {
+    to: "/manage/identity-fingerprint",
+    i18nKey: "shell.nav_identity_fingerprint",
+    icon: Fingerprint,
+  },
   { to: "/models", i18nKey: "shell.nav_models", icon: Cpu },
   { to: "/config", i18nKey: "shell.nav_config", icon: Settings },
   { to: "/system", i18nKey: "shell.nav_system", icon: Info },
@@ -62,6 +70,12 @@ const getPageTitleKey = (pathname: string): string => {
   if (pathname.startsWith("/ai-providers")) return "shell.nav_ai_providers";
   if (pathname.startsWith("/auth-files")) return "shell.nav_auth_files";
   if (pathname.startsWith("/api-keys")) return "shell.page_api_keys";
+  if (pathname.startsWith("/channel-groups")) return "shell.page_channel_groups";
+  if (
+    pathname.startsWith("/identity-fingerprint") ||
+    pathname.startsWith("/manage/identity-fingerprint")
+  )
+    return "shell.nav_identity_fingerprint";
   if (pathname.startsWith("/models")) return "shell.nav_models";
   if (pathname.startsWith("/config")) return "shell.nav_config";
   if (pathname.startsWith("/system")) return "shell.nav_system";
@@ -201,7 +215,7 @@ function ShellHeader({
             onClick={onToggleSidebar}
             aria-label={sidebarLabel}
             title={sidebarLabel}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white/70 text-slate-700 shadow-sm backdrop-blur transition hover:bg-white dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-slate-200 dark:hover:bg-neutral-950/80"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full border-0 bg-transparent text-slate-500 shadow-none transition-all duration-150 hover:-translate-y-0.5 hover:text-slate-900 active:translate-y-0 active:scale-95 dark:text-slate-400 dark:hover:text-white"
           >
             <SidebarIcon size={16} />
           </button>

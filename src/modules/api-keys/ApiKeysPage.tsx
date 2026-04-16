@@ -1,195 +1,32 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  Plus,
-  Copy,
-  Pencil,
-  Trash2,
-  KeyRound,
-  ShieldCheck,
-  RefreshCw,
-  Infinity,
-  BarChart3,
-  Power,
-  Info,
-} from "lucide-react";
+import { Plus, KeyRound, RefreshCw } from "lucide-react";
 import { apiKeyEntriesApi, apiKeysApi, type ApiKeyEntry } from "@/lib/http/apis/api-keys";
-import { authFilesApi, providersApi, usageApi } from "@/lib/http/apis";
-import type { AuthFileItem } from "@/lib/http/types";
-import type { UsageData } from "@/lib/http/types";
+import { channelGroupsApi, type ChannelGroupItem } from "@/lib/http/apis/channel-groups";
+import { authFilesApi, providersApi } from "@/lib/http/apis";
 import { apiClient } from "@/lib/http/client";
+import {
+  generateApiKey,
+  makeEmptyApiKeyForm,
+  normalizeChannelKey,
+  readAuthFileChannelName,
+  maskApiKey,
+  VendorIcon,
+} from "@/modules/api-keys/apiKeyPageUtils";
+import { createApiKeyColumns } from "@/modules/api-keys/components/ApiKeyColumns";
+import { DeleteApiKeyModal } from "@/modules/api-keys/components/DeleteApiKeyModal";
 import { Card } from "@/modules/ui/Card";
 import { Button } from "@/modules/ui/Button";
 import { EmptyState } from "@/modules/ui/EmptyState";
 import { useToast } from "@/modules/ui/ToastProvider";
-import { Modal } from "@/modules/ui/Modal";
-import { HoverTooltip, OverflowTooltip } from "@/modules/ui/Tooltip";
 import type { MultiSelectOption } from "@/modules/ui/MultiSelect";
-import { VirtualTable, type VirtualTableColumn } from "@/modules/ui/VirtualTable";
-import { useAuthStore } from "@/stores/useAuthStore";
-import { normalizeApiBase } from "@/lib/connection";
-import { RestrictionMultiSelect } from "@/modules/api-keys/RestrictionMultiSelect";
-
-// Vendor SVG icons
-import iconClaude from "@/assets/icons/claude.svg";
-import iconOpenai from "@/assets/icons/openai.svg";
-import iconGemini from "@/assets/icons/gemini.svg";
-import iconDeepseek from "@/assets/icons/deepseek.svg";
-import iconQwen from "@/assets/icons/qwen.svg";
-import iconMinimax from "@/assets/icons/minimax.svg";
-import iconGrok from "@/assets/icons/grok.svg";
-import iconKimiLight from "@/assets/icons/kimi-light.svg";
-import iconKimiDark from "@/assets/icons/kimi-dark.svg";
-import iconCodex from "@/assets/icons/codex.svg";
-import iconGlm from "@/assets/icons/glm.svg";
-import iconKiro from "@/assets/icons/kiro.svg";
-import iconVertex from "@/assets/icons/vertex.svg";
-import iconIflow from "@/assets/icons/iflow.svg";
-
-/* ─── vendor icon helpers ─── */
-
-const VENDOR_ICONS: Record<string, { light: string; dark: string }> = {
-  claude: { light: iconClaude, dark: iconClaude },
-  gpt: { light: iconOpenai, dark: iconOpenai },
-  o1: { light: iconOpenai, dark: iconOpenai },
-  o3: { light: iconOpenai, dark: iconOpenai },
-  o4: { light: iconOpenai, dark: iconOpenai },
-  gemini: { light: iconGemini, dark: iconGemini },
-  deepseek: { light: iconDeepseek, dark: iconDeepseek },
-  qwen: { light: iconQwen, dark: iconQwen },
-  minimax: { light: iconMinimax, dark: iconMinimax },
-  grok: { light: iconGrok, dark: iconGrok },
-  kimi: { light: iconKimiLight, dark: iconKimiDark },
-  codex: { light: iconCodex, dark: iconCodex },
-  glm: { light: iconGlm, dark: iconGlm },
-  kiro: { light: iconKiro, dark: iconKiro },
-  vertex: { light: iconVertex, dark: iconVertex },
-  iflow: { light: iconIflow, dark: iconIflow },
-};
-
-function VendorIcon({ modelId, size = 14 }: { modelId: string; size?: number }) {
-  const lower = modelId.toLowerCase();
-  let icons: { light: string; dark: string } | null = null;
-  for (const prefix of Object.keys(VENDOR_ICONS)) {
-    if (lower.startsWith(prefix)) {
-      icons = VENDOR_ICONS[prefix];
-      break;
-    }
-  }
-  if (!icons) return null;
-  return (
-    <>
-      <img src={icons.light} alt="" width={size} height={size} className="dark:hidden" />
-      <img src={icons.dark} alt="" width={size} height={size} className="hidden dark:block" />
-    </>
-  );
-}
-
-/* ─── helpers ─── */
-
-const generateKey = () => {
-  const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
-  let result = "sk-";
-  for (let i = 0; i < 32; i++) {
-    result += chars[Math.floor(Math.random() * chars.length)];
-  }
-  return result;
-};
-
-const maskKey = (key: string) => {
-  if (key.length <= 8) return key;
-  return key.slice(0, 5) + "•".repeat(Math.min(key.length - 8, 20)) + key.slice(-3);
-};
-
-const formatDate = (iso: string | undefined) => {
-  if (!iso) return "—";
-  try {
-    return new Date(iso).toLocaleDateString("zh-CN", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  } catch {
-    return iso;
-  }
-};
-
-const formatLimit = (limit: number | undefined) => {
-  if (!limit || limit <= 0) return null;
-  return limit.toLocaleString();
-};
-
-const formatTimestamp = (value: string): string => {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value || "--";
-  return date.toLocaleString();
-};
-
-const formatLatencyMs = (value: number): string => {
-  if (!Number.isFinite(value) || value < 0) return "--";
-  if (value < 1) return "<1ms";
-  if (value < 1000) return `${Math.round(value)}ms`;
-  const seconds = value / 1000;
-  const fixed = seconds.toFixed(seconds < 10 ? 2 : 1);
-  const trimmed = fixed.endsWith(".0") ? fixed.slice(0, -2) : fixed;
-  return `${trimmed}s`;
-};
-
-const readLatencyText = (detail: Record<string, unknown>): string => {
-  const candidates = [
-    detail["latency_ms"],
-    detail["latencyMs"],
-    detail["duration_ms"],
-    detail["latency"],
-  ];
-  for (const candidate of candidates) {
-    if (typeof candidate === "number") return formatLatencyMs(candidate);
-    if (typeof candidate === "string" && candidate.trim()) return candidate.trim();
-  }
-  return "--";
-};
-
-/* ─── usage detail row type ─── */
-
-interface UsageLogRow {
-  id: string;
-  timestamp: string;
-  model: string;
-  failed: boolean;
-  latencyText: string;
-  inputTokens: number;
-  outputTokens: number;
-  totalTokens: number;
-}
-
-interface FormValues {
-  name: string;
-  key: string;
-  dailyLimit: string;
-  totalQuota: string;
-  concurrencyLimit: string;
-  rpmLimit: string;
-  tpmLimit: string;
-  allowedModels: string[];
-  allowedChannels: string[];
-  systemPrompt: string;
-}
-
-const normalizeChannelKey = (value: string) => value.trim().toLowerCase();
-
-const readAuthFileChannelName = (file: AuthFileItem): string => {
-  const candidates = [file.label, file.email, file.provider, file.type];
-  for (const candidate of candidates) {
-    if (typeof candidate === "string" && candidate.trim()) {
-      return candidate.trim();
-    }
-  }
-  return "";
-};
-
-/* ─── component ─── */
+import { VirtualTable } from "@/modules/ui/VirtualTable";
+import { ApiKeyFormModal } from "@/modules/api-keys/components/ApiKeyFormModal";
+import { ApiKeyUsageModal } from "@/modules/api-keys/components/ApiKeyUsageModal";
+import { useApiKeyUsageView } from "@/modules/api-keys/hooks/useApiKeyUsageView";
+import { LogContentModal } from "@/modules/monitor/LogContentModal";
+import { ErrorDetailModal } from "@/modules/monitor/ErrorDetailModal";
+import type { ApiKeyFormValues } from "@/modules/api-keys/types";
 
 export function ApiKeysPage() {
   const { t } = useTranslation();
@@ -200,36 +37,72 @@ export function ApiKeysPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [deleteIndex, setDeleteIndex] = useState<number | null>(null);
-  const [usageViewKey, setUsageViewKey] = useState<string | null>(null);
-  const [usageViewName, setUsageViewName] = useState<string>("");
+  const [deleteLogsOnDelete, setDeleteLogsOnDelete] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [usageLoading, setUsageLoading] = useState(false);
-  const [usageRows, setUsageRows] = useState<any[]>([]);
   const [availableModels, setAvailableModels] = useState<MultiSelectOption[]>([]);
   const [availableChannels, setAvailableChannels] = useState<MultiSelectOption[]>([]);
-  const [form, setForm] = useState<FormValues>({
-    name: "",
-    key: "",
-    dailyLimit: "",
-    totalQuota: "",
-    concurrencyLimit: "",
-    rpmLimit: "",
-    tpmLimit: "",
-    allowedModels: [],
-    allowedChannels: [],
-    systemPrompt: "",
-  });
+  const [availableChannelGroups, setAvailableChannelGroups] = useState<MultiSelectOption[]>([]);
+  const [channelRouteGroupsByName, setChannelRouteGroupsByName] = useState<Record<string, string[]>>(
+    {},
+  );
+  const [channelGroupByName, setChannelGroupByName] = useState<Record<string, string>>({});
+  const [form, setForm] = useState<ApiKeyFormValues>(() => makeEmptyApiKeyForm());
+  const {
+    usageViewKey,
+    usageViewName,
+    usageLoading,
+    usageTotalCount,
+    usageCurrentPage,
+    usagePageSize,
+    setUsagePageSize,
+    usageLastUpdatedText,
+    usageTimeRange,
+    setUsageTimeRange,
+    usageChannelQuery,
+    setUsageChannelQuery,
+    usageChannelGroupQuery,
+    setUsageChannelGroupQuery,
+    usageModelQuery,
+    setUsageModelQuery,
+    usageStatusFilter,
+    setUsageStatusFilter,
+    usageContentModalOpen,
+    setUsageContentModalOpen,
+    usageContentModalLogId,
+    usageContentModalTab,
+    usageErrorModalOpen,
+    setUsageErrorModalOpen,
+    usageErrorModalLogId,
+    usageErrorModalModel,
+    usageLogColumns,
+    usageRows,
+    usageTotalPages,
+    usageChannelOptions,
+    usageChannelGroupOptions,
+    usageModelOptions,
+    fetchUsageLogs,
+    handleViewUsage,
+    closeUsageModal,
+  } = useApiKeyUsageView({ channelGroupByName });
 
   /* ─── load models ─── */
 
-  const loadModels = useCallback(async (channels?: string[]) => {
+  const loadModels = useCallback(async (channels?: string[], groups?: string[]) => {
     try {
-      const raw = Array.isArray(channels) ? channels : [];
-      const normalized = raw.map((c) => String(c ?? "").trim()).filter(Boolean);
-      const qs =
-        normalized.length > 0
-          ? `?allowed_channels=${encodeURIComponent(normalized.join(","))}`
-          : "";
+      const normalizedChannels = (Array.isArray(channels) ? channels : [])
+        .map((c) => String(c ?? "").trim())
+        .filter(Boolean);
+      const normalizedGroups = (Array.isArray(groups) ? groups : [])
+        .map((group) => String(group ?? "").trim().toLowerCase())
+        .filter(Boolean);
+      const params = new URLSearchParams();
+      if (normalizedChannels.length > 0) {
+        params.set("allowed_channels", normalizedChannels.join(","));
+      }
+      if (normalizedGroups.length > 0) {
+        params.set("allowed_channel_groups", normalizedGroups.join(","));
+      }
+      const qs = params.toString() ? `?${params.toString()}` : "";
       const data = await apiClient.get<{ data?: Array<{ id?: string }> }>(`/models${qs}`);
       if (data?.data) {
         const opts: MultiSelectOption[] = data.data
@@ -252,6 +125,45 @@ export function ApiKeysPage() {
     }
   }, []);
 
+  const loadChannelGroups = useCallback(async () => {
+    try {
+      const groups = await channelGroupsApi.list();
+      const options: MultiSelectOption[] = groups
+        .map((group) => ({
+          value: String(group.name ?? "").trim().toLowerCase(),
+          label: String(group.name ?? "").trim().toLowerCase(),
+          description:
+            typeof group.description === "string" && group.description.trim()
+              ? group.description.trim()
+              : undefined,
+        }))
+        .filter((option) => option.value)
+        .sort((a, b) => a.label.localeCompare(b.label));
+      setAvailableChannelGroups(options);
+
+      const nextMembership: Record<string, string[]> = {};
+      groups.forEach((group: ChannelGroupItem) => {
+        const groupName = String(group.name ?? "").trim().toLowerCase();
+        if (!groupName) return;
+        const channels = Array.isArray(group.channels) ? group.channels : [];
+        channels.forEach((channel) => {
+          const name = String(channel ?? "").trim();
+          if (!name) return;
+          const existing = nextMembership[name] ?? [];
+          if (!existing.includes(groupName)) {
+            nextMembership[name] = [...existing, groupName];
+          }
+        });
+      });
+      Object.keys(nextMembership).forEach((name) => {
+        nextMembership[name] = [...nextMembership[name]].sort((a, b) => a.localeCompare(b));
+      });
+      setChannelRouteGroupsByName(nextMembership);
+    } catch {
+      // silent — routing group list is supplementary
+    }
+  }, []);
+
   const loadChannels = useCallback(async () => {
     try {
       const [geminiKeys, claudeKeys, codexKeys, vertexKeys, openaiProviders, authFiles] =
@@ -266,11 +178,13 @@ export function ApiKeysPage() {
 
       const seen = new Set<string>();
       const options: MultiSelectOption[] = [];
-      const push = (rawName: string, source: string) => {
+      const nextGroupByName: Record<string, string> = {};
+      const push = (rawName: string, source: string, groupKey: string) => {
         const name = String(rawName ?? "").trim();
         const key = normalizeChannelKey(name);
         if (!key || seen.has(key)) return;
         seen.add(key);
+        nextGroupByName[name] = groupKey;
         options.push({
           value: name,
           label: name,
@@ -282,11 +196,11 @@ export function ApiKeysPage() {
         });
       };
 
-      geminiKeys.forEach((item) => push(item.name || "", "API"));
-      claudeKeys.forEach((item) => push(item.name || "", "API"));
-      codexKeys.forEach((item) => push(item.name || "", "API"));
-      vertexKeys.forEach((item) => push(item.name || "", "API"));
-      openaiProviders.forEach((item) => push(item.name || "", "API"));
+      geminiKeys.forEach((item) => push(item.name || "", "API", "gemini"));
+      claudeKeys.forEach((item) => push(item.name || "", "API", "claude"));
+      codexKeys.forEach((item) => push(item.name || "", "API", "codex"));
+      vertexKeys.forEach((item) => push(item.name || "", "API", "vertex"));
+      openaiProviders.forEach((item) => push(item.name || "", "API", "openai"));
       (authFiles.files || []).forEach((file) => {
         if (
           String(file.account_type || "")
@@ -294,11 +208,15 @@ export function ApiKeysPage() {
             .toLowerCase() !== "oauth"
         )
           return;
-        push(readAuthFileChannelName(file), "OAuth");
+        const groupKey = String(file.type || file.provider || "")
+          .trim()
+          .toLowerCase();
+        push(readAuthFileChannelName(file), "OAuth", groupKey);
       });
 
       options.sort((a, b) => a.label.localeCompare(b.label));
       setAvailableChannels(options);
+      setChannelGroupByName(nextGroupByName);
     } catch {
       // silent — channel list is supplementary
     }
@@ -340,6 +258,7 @@ export function ApiKeysPage() {
       // Load models after entries are available (needs a valid API key)
       void loadModels();
       void loadChannels();
+      void loadChannelGroups();
     } catch (err: unknown) {
       notify({
         type: "error",
@@ -348,11 +267,22 @@ export function ApiKeysPage() {
     } finally {
       setLoading(false);
     }
-  }, [notify, loadChannels, loadModels]);
+  }, [notify, loadChannelGroups, loadChannels, loadModels]);
 
   useEffect(() => {
     void loadEntries();
   }, [loadEntries]);
+
+  useEffect(() => {
+    if (!showCreate && editIndex === null) return;
+    void loadModels(form.allowedChannels, form.allowedChannelGroups);
+  }, [
+    editIndex,
+    form.allowedChannelGroups,
+    form.allowedChannels,
+    loadModels,
+    showCreate,
+  ]);
 
   /* ─── toggle disable ─── */
 
@@ -382,20 +312,9 @@ export function ApiKeysPage() {
   /* ─── create ─── */
 
   const handleOpenCreate = () => {
-    const next = {
-      name: "",
-      key: generateKey(),
-      dailyLimit: "",
-      totalQuota: "",
-      concurrencyLimit: "",
-      rpmLimit: "",
-      tpmLimit: "",
-      allowedModels: [],
-      allowedChannels: [],
-      systemPrompt: "",
-    };
+    const next = makeEmptyApiKeyForm(generateApiKey());
     setForm(next);
-    void loadModels(next.allowedChannels);
+    void loadModels(next.allowedChannels, next.allowedChannelGroups);
     setShowCreate(true);
   };
 
@@ -422,6 +341,8 @@ export function ApiKeysPage() {
         "tpm-limit": form.tpmLimit ? parseInt(form.tpmLimit, 10) || 0 : undefined,
         "allowed-models": form.allowedModels.length > 0 ? form.allowedModels : undefined,
         "allowed-channels": form.allowedChannels.length > 0 ? form.allowedChannels : undefined,
+        "allowed-channel-groups":
+          form.allowedChannelGroups.length > 0 ? form.allowedChannelGroups : undefined,
         "system-prompt": form.systemPrompt.trim() || undefined,
         "created-at": new Date().toISOString(),
       };
@@ -453,10 +374,11 @@ export function ApiKeysPage() {
       tpmLimit: entry["tpm-limit"]?.toString() || "",
       allowedModels: entry["allowed-models"] || [],
       allowedChannels: entry["allowed-channels"] || [],
+      allowedChannelGroups: entry["allowed-channel-groups"] || [],
       systemPrompt: entry["system-prompt"] || "",
     };
     setForm(next);
-    void loadModels(next.allowedChannels);
+    void loadModels(next.allowedChannels, next.allowedChannelGroups);
     setEditIndex(index);
   };
 
@@ -482,6 +404,8 @@ export function ApiKeysPage() {
           "tpm-limit": form.tpmLimit ? parseInt(form.tpmLimit, 10) || 0 : 0,
           "allowed-models": form.allowedModels.length > 0 ? form.allowedModels : [],
           "allowed-channels": form.allowedChannels.length > 0 ? form.allowedChannels : [],
+          "allowed-channel-groups":
+            form.allowedChannelGroups.length > 0 ? form.allowedChannelGroups : [],
           "system-prompt": form.systemPrompt.trim(),
         },
       });
@@ -504,9 +428,21 @@ export function ApiKeysPage() {
     if (deleteIndex === null) return;
     setSaving(true);
     try {
-      await apiKeyEntriesApi.delete({ index: deleteIndex });
-      notify({ type: "success", message: t("api_keys_page.deleted_success") });
+      const response = (await apiKeyEntriesApi.delete({
+        index: deleteIndex,
+        deleteLogs: deleteLogsOnDelete,
+      })) as { logs_deleted?: number } | undefined;
+      const logsDeleted =
+        typeof response?.logs_deleted === "number" ? response.logs_deleted : undefined;
+      notify({
+        type: "success",
+        message:
+          deleteLogsOnDelete && typeof logsDeleted === "number"
+            ? t("api_keys_page.deleted_success_with_logs", { count: logsDeleted })
+            : t("api_keys_page.deleted_success"),
+      });
       setDeleteIndex(null);
+      setDeleteLogsOnDelete(true);
       await loadEntries();
     } catch (err: unknown) {
       notify({
@@ -516,6 +452,11 @@ export function ApiKeysPage() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleOpenDelete = (index: number) => {
+    setDeleteLogsOnDelete(true);
+    setDeleteIndex(index);
   };
 
   /* ─── copy ─── */
@@ -529,546 +470,46 @@ export function ApiKeysPage() {
     }
   };
 
-  /* ─── usage view ─── */
-
-  const handleViewUsage = async (entry: ApiKeyEntry) => {
-    setUsageViewKey(entry.key);
-    setUsageViewName(entry.name || t("api_keys_page.unnamed"));
-    setUsageLoading(true);
-    try {
-      const result = await usageApi.getUsageLogs({ api_key: entry.key, size: 200, days: 7 });
-      const rows = (result.items || []).map((r, i) => ({
-        id: r.id?.toString() || `${i}`,
-        timestamp: r.timestamp || "",
-        model: r.model || "",
-        failed: Boolean(r.failed),
-        latencyText: formatLatencyMs(r.latency_ms || 0),
-        inputTokens: r.input_tokens || 0,
-        outputTokens: r.output_tokens || 0,
-        totalTokens: r.total_tokens || (r.input_tokens || 0) + (r.output_tokens || 0),
-      }));
-      setUsageRows(rows);
-    } catch {
-      setUsageRows([]);
-    } finally {
-      setUsageLoading(false);
-    }
-  };
-
   /* ─── column definitions ─── */
 
-  const apiKeyColumns = useMemo<VirtualTableColumn<ApiKeyEntry>[]>(
-    () => [
-      {
-        key: "status",
-        label: t("api_keys_page.col_status"),
-        width: "w-[88px] min-w-[88px]",
-        headerClassName: "text-center",
-        cellClassName: "text-center",
-        render: (row, idx) => (
-          <button
-            onClick={() => void handleToggleDisable(idx)}
-            title={
-              row.disabled ? t("api_keys_page.click_enable") : t("api_keys_page.click_disable")
-            }
-            className={`inline-flex h-7 w-7 items-center justify-center rounded-lg transition-colors ${
-              row.disabled
-                ? "text-slate-400 hover:bg-red-50 hover:text-red-500 dark:text-white/30 dark:hover:bg-red-900/20 dark:hover:text-red-400"
-                : "text-emerald-500 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-900/20"
-            }`}
-          >
-            <Power size={15} />
-          </button>
-        ),
-      },
-      {
-        key: "name",
-        label: t("api_keys_page.col_name"),
-        width: "w-[120px] min-w-[120px]",
-        cellClassName: "font-medium",
-        render: (row) => (
-          <OverflowTooltip
-            content={row.name || t("api_keys_page.unnamed")}
-            className="block min-w-0"
-          >
-            <span className="block min-w-0 truncate">
-              {row.name || (
-                <span className="text-slate-400 dark:text-white/40">
-                  {t("common.unnamed", "Unnamed")}
-                </span>
-              )}
-            </span>
-          </OverflowTooltip>
-        ),
-      },
-      {
-        key: "key",
-        label: t("api_keys_page.col_key"),
-        width: "w-[240px] min-w-[240px]",
-        cellClassName: "whitespace-nowrap",
-        render: (row) => (
-          <code className="rounded-md bg-slate-100 px-2 py-0.5 font-mono text-xs text-slate-700 dark:bg-neutral-800 dark:text-white/70">
-            {maskKey(row.key)}
-          </code>
-        ),
-      },
-      {
-        key: "dailyLimit",
-        label: t("api_keys_page.col_daily_limit"),
-        width: "w-[132px] min-w-[132px]",
-        cellClassName: "whitespace-nowrap text-slate-700 dark:text-white/70",
-        render: (row) => (
-          <span className="inline-flex items-center gap-1">
-            {!row["daily-limit"] ? (
-              <>
-                <Infinity size={14} className="text-green-500" /> {t("api_keys_page.unlimited")}
-              </>
-            ) : (
-              formatLimit(row["daily-limit"])
-            )}
-          </span>
-        ),
-      },
-      {
-        key: "totalQuota",
-        label: t("api_keys_page.col_total_quota"),
-        width: "w-[132px] min-w-[132px]",
-        cellClassName: "whitespace-nowrap text-slate-700 dark:text-white/70",
-        render: (row) => (
-          <span className="inline-flex items-center gap-1">
-            {!row["total-quota"] ? (
-              <>
-                <Infinity size={14} className="text-green-500" /> {t("api_keys_page.unlimited")}
-              </>
-            ) : (
-              formatLimit(row["total-quota"])
-            )}
-          </span>
-        ),
-      },
-      {
-        key: "rpmLimit",
-        label: "RPM",
-        width: "w-[108px] min-w-[108px]",
-        cellClassName: "whitespace-nowrap text-slate-700 dark:text-white/70",
-        headerRender: () => (
-          <HoverTooltip content={t("api_keys.rpm_full")} className="inline-flex items-center gap-1">
-            <span>{t("api_keys_page.rpm")}</span>
-            <Info size={12} className="text-slate-400 dark:text-white/40" />
-          </HoverTooltip>
-        ),
-        render: (row) => (
-          <span className="inline-flex items-center gap-1">
-            {!row["rpm-limit"] ? (
-              <>
-                <Infinity size={14} className="text-green-500" /> {t("api_keys_page.unlimited")}
-              </>
-            ) : (
-              formatLimit(row["rpm-limit"])
-            )}
-          </span>
-        ),
-      },
-      {
-        key: "tpmLimit",
-        label: "TPM",
-        width: "w-[108px] min-w-[108px]",
-        cellClassName: "whitespace-nowrap text-slate-700 dark:text-white/70",
-        headerRender: () => (
-          <HoverTooltip content={t("api_keys.tpm_full")} className="inline-flex items-center gap-1">
-            <span>{t("api_keys_page.tpm")}</span>
-            <Info size={12} className="text-slate-400 dark:text-white/40" />
-          </HoverTooltip>
-        ),
-        render: (row) => (
-          <span className="inline-flex items-center gap-1">
-            {!row["tpm-limit"] ? (
-              <>
-                <Infinity size={14} className="text-green-500" /> {t("api_keys_page.unlimited")}
-              </>
-            ) : (
-              formatLimit(row["tpm-limit"])
-            )}
-          </span>
-        ),
-      },
-      {
-        key: "allowedModels",
-        label: t("api_keys_page.col_models"),
-        width: "w-[150px] min-w-[150px]",
-        cellClassName: "text-slate-700 dark:text-white/70 overflow-hidden min-w-0",
-        render: (row) =>
-          row["allowed-models"]?.length ? (
-            <HoverTooltip
-              content={
-                <div className="flex flex-wrap gap-1.5 max-w-xs">
-                  {row["allowed-models"].map((m) => (
-                    <span
-                      key={m}
-                      className="inline-flex items-center gap-1 rounded-md border border-slate-200/60 bg-slate-50 px-2 py-0.5 font-mono text-[11px] text-slate-700 dark:border-neutral-700/40 dark:bg-neutral-800/60 dark:text-white/80"
-                    >
-                      <VendorIcon modelId={m} size={12} />
-                      {m}
-                    </span>
-                  ))}
-                </div>
-              }
-              className="block min-w-0"
-            >
-              <span className="inline-flex items-center gap-1.5 text-xs min-w-0 w-full">
-                <span className="inline-flex h-5 min-w-[20px] flex-shrink-0 items-center justify-center rounded-md bg-indigo-50 px-1.5 font-semibold tabular-nums text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-300">
-                  {row["allowed-models"].length}
-                </span>
-                <span className="block min-w-0 flex-1 truncate text-slate-500 dark:text-white/50">
-                  {row["allowed-models"][0]}
-                </span>
-              </span>
-            </HoverTooltip>
-          ) : (
-            <span className="inline-flex items-center gap-1 whitespace-nowrap text-green-600 dark:text-green-400">
-              <ShieldCheck size={14} /> {t("api_keys_page.all_models")}
-            </span>
-          ),
-      },
-      {
-        key: "allowedChannels",
-        label: t("api_keys_page.col_channels"),
-        width: "w-[172px] min-w-[172px]",
-        cellClassName: "text-slate-700 dark:text-white/70 overflow-hidden min-w-0",
-        render: (row) =>
-          row["allowed-channels"]?.length ? (
-            <HoverTooltip
-              content={
-                <div className="flex max-w-xs flex-wrap gap-1.5">
-                  {row["allowed-channels"].map((channel) => (
-                    <span
-                      key={channel}
-                      className="inline-flex items-center rounded-md border border-slate-200/60 bg-slate-50 px-2 py-0.5 font-mono text-[11px] text-slate-700 dark:border-neutral-700/40 dark:bg-neutral-800/60 dark:text-white/80"
-                    >
-                      {channel}
-                    </span>
-                  ))}
-                </div>
-              }
-              className="block min-w-0"
-            >
-              <span className="inline-flex min-w-0 w-full items-center gap-1.5 text-xs">
-                <span className="inline-flex h-5 min-w-[20px] flex-shrink-0 items-center justify-center rounded-md bg-cyan-50 px-1.5 font-semibold tabular-nums text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300">
-                  {row["allowed-channels"].length}
-                </span>
-                <span className="block min-w-0 flex-1 truncate text-slate-500 dark:text-white/50">
-                  {row["allowed-channels"][0]}
-                </span>
-              </span>
-            </HoverTooltip>
-          ) : (
-            <span className="inline-flex items-center gap-1 whitespace-nowrap text-green-600 dark:text-green-400">
-              <ShieldCheck size={14} /> {t("api_keys_page.all_channels")}
-            </span>
-          ),
-      },
-      {
-        key: "createdAt",
-        label: t("api_keys_page.col_created"),
-        width: "w-[168px] min-w-[168px]",
-        cellClassName: "whitespace-nowrap text-slate-500 dark:text-white/50",
-        render: (row) => <>{formatDate(row["created-at"])}</>,
-      },
-      {
-        key: "actions",
-        label: t("api_keys_page.col_actions"),
-        width: "w-[152px] min-w-[152px]",
-        render: (row, idx) => (
-          <div className="flex items-center gap-1.5">
-            <button
-              onClick={() => handleViewUsage(row)}
-              className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-blue-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-blue-400"
-              title={t("api_keys_page.view_usage")}
-            >
-              <BarChart3 size={15} />
-            </button>
-            <button
-              onClick={() => void handleCopy(row.key)}
-              className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-indigo-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-indigo-400"
-              title={t("api_keys_page.copy_key")}
-            >
-              <Copy size={15} />
-            </button>
-            <button
-              onClick={() => handleOpenEdit(idx)}
-              className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-amber-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-amber-400"
-              title={t("common.edit")}
-            >
-              <Pencil size={15} />
-            </button>
-            <button
-              onClick={() => setDeleteIndex(idx)}
-              className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-red-50 hover:text-red-600 dark:text-white/50 dark:hover:bg-red-900/20 dark:hover:text-red-400"
-              title={t("common.delete")}
-            >
-              <Trash2 size={15} />
-            </button>
-          </div>
-        ),
-      },
-    ],
-    [handleToggleDisable, handleViewUsage, handleCopy, handleOpenEdit, t],
+  const apiKeyColumns = useMemo(
+    () =>
+      createApiKeyColumns({
+        t,
+        onToggleDisable: (index) => void handleToggleDisable(index),
+        onViewUsage: handleViewUsage,
+        onCopy: (key) => void handleCopy(key),
+        onEdit: handleOpenEdit,
+        onDelete: handleOpenDelete,
+      }),
+    [handleToggleDisable, handleViewUsage, handleCopy, handleOpenEdit, handleOpenDelete, t],
   );
 
-  const usageLogColumns = useMemo<VirtualTableColumn<UsageLogRow>[]>(
-    () => [
-      {
-        key: "timestamp",
-        label: t("api_keys_page.col_time"),
-        width: "w-48",
-        cellClassName: "font-mono text-xs tabular-nums text-slate-700 dark:text-slate-200",
-        render: (row) => (
-          <span className="block min-w-0 truncate">{formatTimestamp(row.timestamp)}</span>
-        ),
-      },
-      {
-        key: "model",
-        label: t("api_keys_page.col_model"),
-        width: "w-48",
-        render: (row) => (
-          <OverflowTooltip content={row.model} className="block min-w-0">
-            <span className="block min-w-0 truncate">{row.model}</span>
-          </OverflowTooltip>
-        ),
-      },
-      {
-        key: "status",
-        label: t("api_keys_page.col_status"),
-        width: "w-16",
-        render: (row) =>
-          row.failed ? (
-            <span className="inline-flex min-w-[44px] justify-center rounded-lg bg-rose-50 px-2 py-1 text-xs font-semibold text-rose-700 dark:bg-rose-500/15 dark:text-rose-200">
-              {t("api_keys_page.status_failed")}
-            </span>
-          ) : (
-            <span className="inline-flex min-w-[44px] justify-center rounded-lg bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200">
-              {t("api_keys_page.status_success")}
-            </span>
-          ),
-      },
-      {
-        key: "latency",
-        label: t("api_keys_page.col_duration"),
-        width: "w-20",
-        headerClassName: "text-right",
-        cellClassName:
-          "text-right font-mono text-xs tabular-nums text-slate-700 dark:text-slate-200",
-        render: (row) => <>{row.latencyText}</>,
-      },
-      {
-        key: "inputTokens",
-        label: t("api_keys_page.col_input"),
-        width: "w-20",
-        headerClassName: "text-right",
-        cellClassName:
-          "text-right font-mono text-xs tabular-nums text-slate-700 dark:text-slate-200",
-        render: (row) => <>{row.inputTokens.toLocaleString()}</>,
-      },
-      {
-        key: "outputTokens",
-        label: t("api_keys_page.col_output"),
-        width: "w-20",
-        headerClassName: "text-right",
-        cellClassName:
-          "text-right font-mono text-xs tabular-nums text-slate-700 dark:text-slate-200",
-        render: (row) => <>{row.outputTokens.toLocaleString()}</>,
-      },
-      {
-        key: "totalTokens",
-        label: t("api_keys_page.col_total_token"),
-        width: "w-24",
-        headerClassName: "text-right",
-        cellClassName: "text-right font-mono text-xs tabular-nums text-slate-900 dark:text-white",
-        render: (row) => <>{row.totalTokens.toLocaleString()}</>,
-      },
-    ],
-    [],
-  );
+  const filteredAvailableChannels = useMemo(() => {
+    if (form.allowedChannelGroups.length === 0) {
+      return availableChannels;
+    }
+    const allowedGroups = new Set(form.allowedChannelGroups.map((group) => group.toLowerCase()));
+    return availableChannels.filter((option) => {
+      const groups = channelRouteGroupsByName[option.value] ?? [];
+      return groups.some((group) => allowedGroups.has(group));
+    });
+  }, [availableChannels, channelRouteGroupsByName, form.allowedChannelGroups]);
 
-  /* ─── render form ─── */
-
-  const renderForm = () => (
-    <div className="space-y-4">
-      <div>
-        <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
-          {t("api_keys_page.form_name_label")} <span className="text-rose-500">*</span>
-        </label>
-        <input
-          type="text"
-          value={form.name}
-          onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-          placeholder={t("api_keys_page.form_name_placeholder")}
-          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition-all focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white dark:focus:border-indigo-500"
-        />
-      </div>
-
-      <div>
-        <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
-          {t("api_keys_page.form_key_label")}
-        </label>
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={form.key}
-            onChange={(e) => setForm((p) => ({ ...p, key: e.target.value }))}
-            placeholder={t("api_keys_page.form_key_placeholder")}
-            className="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 font-mono text-sm outline-none transition-all focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white dark:focus:border-indigo-500"
-            readOnly
-          />
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => setForm((p) => ({ ...p, key: generateKey() }))}
-          >
-            <RefreshCw size={14} />
-            {editIndex !== null
-              ? t("api_keys_page.form_refresh_key")
-              : t("api_keys_page.form_regenerate")}
-          </Button>
-        </div>
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-3">
-        <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
-            {t("api_keys_page.form_daily_limit")}
-          </label>
-          <input
-            type="number"
-            value={form.dailyLimit}
-            onChange={(e) => setForm((p) => ({ ...p, dailyLimit: e.target.value }))}
-            placeholder={t("api_keys_page.form_unlimited_hint")}
-            min={0}
-            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition-all focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white dark:focus:border-indigo-500"
-          />
-        </div>
-        <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
-            {t("api_keys_page.form_total_quota")}
-          </label>
-          <input
-            type="number"
-            value={form.totalQuota}
-            onChange={(e) => setForm((p) => ({ ...p, totalQuota: e.target.value }))}
-            placeholder={t("api_keys_page.form_unlimited_hint")}
-            min={0}
-            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition-all focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white dark:focus:border-indigo-500"
-          />
-        </div>
-        <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
-            {t("api_keys_page.form_concurrency_limit")}
-          </label>
-          <input
-            type="number"
-            value={form.concurrencyLimit}
-            onChange={(e) => setForm((p) => ({ ...p, concurrencyLimit: e.target.value }))}
-            placeholder={t("api_keys_page.form_unlimited_hint")}
-            min={0}
-            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition-all focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white dark:focus:border-indigo-500"
-          />
-        </div>
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-2">
-        <div>
-          <HoverTooltip
-            content={t("api_keys.rpm_full")}
-            className="mb-1 inline-flex items-center gap-1"
-          >
-            <label className="text-sm font-medium text-slate-700 dark:text-white/80">
-              {t("api_keys_page.form_rpm_limit")}
-            </label>
-            <Info size={14} className="text-slate-400 dark:text-white/40" />
-          </HoverTooltip>
-          <input
-            type="number"
-            value={form.rpmLimit}
-            onChange={(e) => setForm((p) => ({ ...p, rpmLimit: e.target.value }))}
-            placeholder={t("api_keys_page.form_unlimited_hint")}
-            min={0}
-            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition-all focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white dark:focus:border-indigo-500"
-          />
-        </div>
-        <div>
-          <HoverTooltip
-            content={t("api_keys.tpm_full")}
-            className="mb-1 inline-flex items-center gap-1"
-          >
-            <label className="text-sm font-medium text-slate-700 dark:text-white/80">
-              {t("api_keys_page.form_tpm_limit")}
-            </label>
-            <Info size={14} className="text-slate-400 dark:text-white/40" />
-          </HoverTooltip>
-          <input
-            type="number"
-            value={form.tpmLimit}
-            onChange={(e) => setForm((p) => ({ ...p, tpmLimit: e.target.value }))}
-            placeholder={t("api_keys_page.form_unlimited_hint")}
-            min={0}
-            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition-all focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white dark:focus:border-indigo-500"
-          />
-        </div>
-      </div>
-
-      <div>
-        <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
-          {t("api_keys_page.form_allowed_channels")}
-        </label>
-        <RestrictionMultiSelect
-          options={availableChannels}
-          value={form.allowedChannels}
-          onChange={(selected) => setForm((p) => ({ ...p, allowedChannels: selected }))}
-          placeholder={t("api_keys_page.select_channels")}
-          unrestrictedLabel={t("api_keys_page.form_all_channels")}
-          selectedCountLabel={(count) => t("api_keys_page.selected_channels_count", { count })}
-          searchPlaceholder={t("api_keys_page.search_channels")}
-          selectFilteredLabel={t("api_keys_page.select_filtered")}
-          clearRestrictionLabel={t("api_keys_page.clear_restriction")}
-          noResultsLabel={t("api_keys_page.no_results")}
-        />
-      </div>
-
-      <div>
-        <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
-          {t("api_keys_page.form_allowed_models")}
-        </label>
-        <RestrictionMultiSelect
-          options={availableModels}
-          value={form.allowedModels}
-          onChange={(selected) => setForm((p) => ({ ...p, allowedModels: selected }))}
-          placeholder={t("api_keys_page.select_models")}
-          unrestrictedLabel={t("api_keys_page.form_all_models")}
-          selectedCountLabel={(count) => t("api_keys_page.selected_models_count", { count })}
-          searchPlaceholder={t("api_keys_page.search_models")}
-          selectFilteredLabel={t("api_keys_page.select_filtered")}
-          clearRestrictionLabel={t("api_keys_page.clear_restriction")}
-          noResultsLabel={t("api_keys_page.no_results")}
-        />
-      </div>
-
-      <div>
-        <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
-          {t("api_keys_page.form_system_prompt")}
-        </label>
-        <textarea
-          value={form.systemPrompt}
-          onChange={(e) => setForm((p) => ({ ...p, systemPrompt: e.target.value }))}
-          placeholder={t("api_keys_page.system_prompt_hint")}
-          rows={3}
-          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition-all focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white dark:focus:border-indigo-500 resize-y"
-        />
-        <p className="mt-1 text-xs text-slate-400 dark:text-white/40">
-          {t("api_keys_page.form_system_prompt_desc")}
-        </p>
-      </div>
-    </div>
-  );
+  useEffect(() => {
+    if (form.allowedChannelGroups.length === 0) {
+      return;
+    }
+    const allowedChannelSet = new Set(filteredAvailableChannels.map((option) => option.value));
+    setForm((prev) => {
+      const nextAllowedChannels = prev.allowedChannels.filter((channel) =>
+        allowedChannelSet.has(channel),
+      );
+      return nextAllowedChannels.length === prev.allowedChannels.length
+        ? prev
+        : { ...prev, allowedChannels: nextAllowedChannels };
+    });
+  }, [filteredAvailableChannels, form.allowedChannelGroups.length]);
 
   /* ─── main render ─── */
 
@@ -1109,7 +550,7 @@ export function ApiKeysPage() {
             rowKey={(row) => row.key}
             rowHeight={44}
             height="h-auto max-h-[70vh]"
-            minWidth="min-w-[1560px]"
+            minWidth="min-w-[1740px]"
             caption={t("api_keys_page.table_caption")}
             emptyText={t("api_keys_page.no_api_keys")}
             rowClassName={(row) => (row.disabled ? "opacity-50" : "")}
@@ -1117,107 +558,93 @@ export function ApiKeysPage() {
         )}
       </Card>
 
-      {/* Create Modal */}
-      <Modal
+      <ApiKeyFormModal
+        t={t}
         open={showCreate}
+        editMode={false}
+        saving={saving}
+        form={form}
+        setForm={setForm}
+        availableChannels={filteredAvailableChannels}
+        availableChannelGroups={availableChannelGroups}
+        availableModels={availableModels}
         onClose={() => setShowCreate(false)}
-        title={t("api_keys_page.create")}
-        description={t("api_keys_page.create_desc")}
-        footer={
-          <>
-            <Button variant="secondary" onClick={() => setShowCreate(false)}>
-              {t("api_keys_page.cancel")}
-            </Button>
-            <Button variant="primary" onClick={() => void handleCreate()} disabled={saving}>
-              {saving ? t("api_keys_page.creating") : t("api_keys_page.create_btn")}
-            </Button>
-          </>
-        }
-      >
-        {renderForm()}
-      </Modal>
+        onSubmit={handleCreate}
+        regenerateKey={() => setForm((prev) => ({ ...prev, key: generateApiKey() }))}
+      />
 
-      {/* Edit Modal */}
-      <Modal
+      <ApiKeyFormModal
+        t={t}
         open={editIndex !== null}
+        editMode
+        saving={saving}
+        form={form}
+        setForm={setForm}
+        availableChannels={filteredAvailableChannels}
+        availableChannelGroups={availableChannelGroups}
+        availableModels={availableModels}
         onClose={() => setEditIndex(null)}
-        title={t("api_keys_page.edit")}
-        description={t("api_keys_page.edit_desc")}
-        footer={
-          <>
-            <Button variant="secondary" onClick={() => setEditIndex(null)}>
-              {t("api_keys_page.cancel")}
-            </Button>
-            <Button variant="primary" onClick={() => void handleEdit()} disabled={saving}>
-              {saving ? t("api_keys_page.saving") : t("api_keys_page.save_btn")}
-            </Button>
-          </>
-        }
-      >
-        {renderForm()}
-      </Modal>
+        onSubmit={handleEdit}
+        regenerateKey={() => setForm((prev) => ({ ...prev, key: generateApiKey() }))}
+      />
 
-      {/* Delete Confirm */}
-      <Modal
+      <DeleteApiKeyModal
+        t={t}
+        entry={deleteIndex === null ? null : entries[deleteIndex] ?? null}
         open={deleteIndex !== null}
-        onClose={() => setDeleteIndex(null)}
-        title={t("api_keys_page.confirm_delete")}
-        description={t("api_keys_page.delete_warning")}
-        footer={
-          <>
-            <Button variant="secondary" onClick={() => setDeleteIndex(null)}>
-              {t("api_keys_page.cancel")}
-            </Button>
-            <Button variant="danger" onClick={() => void handleDelete()} disabled={saving}>
-              {saving ? t("api_keys_page.deleting") : t("api_keys_page.confirm_delete_btn")}
-            </Button>
-          </>
-        }
-      >
-        {deleteIndex !== null && entries[deleteIndex] && (
-          <div className="rounded-xl bg-red-50 p-3 dark:bg-red-900/20">
-            <div className="text-sm font-medium text-red-800 dark:text-red-300">
-              {entries[deleteIndex].name || t("api_keys_page.unnamed")}
-            </div>
-            <code className="text-xs text-red-600 dark:text-red-400">
-              {maskKey(entries[deleteIndex].key)}
-            </code>
-          </div>
-        )}
-      </Modal>
+        saving={saving}
+        deleteLogsOnDelete={deleteLogsOnDelete}
+        onDeleteLogsChange={setDeleteLogsOnDelete}
+        onClose={() => {
+          setDeleteIndex(null);
+          setDeleteLogsOnDelete(true);
+        }}
+        onConfirm={handleDelete}
+      />
 
-      {/* Usage View — detailed call log table */}
-      <Modal
+      <ApiKeyUsageModal
         open={usageViewKey !== null}
-        onClose={() => setUsageViewKey(null)}
-        title={t("api_keys_page.usage_title", { name: usageViewName })}
-        description={
-          usageViewKey
-            ? t("api_keys_page.usage_desc", { key: maskKey(usageViewKey), count: usageRows.length })
-            : ""
-        }
-      >
-        {usageLoading ? (
-          <div className="py-8 text-center text-sm text-slate-500 dark:text-white/50">
-            {t("api_keys_page.loading")}
-          </div>
-        ) : usageRows.length === 0 ? (
-          <div className="py-8 text-center text-sm text-slate-500 dark:text-white/50">
-            {t("api_keys_page.no_usage")}
-          </div>
-        ) : (
-          <VirtualTable<UsageLogRow>
-            rows={usageRows}
-            columns={usageLogColumns}
-            rowKey={(row) => row.id}
-            rowHeight={40}
-            height="h-auto max-h-[60vh]"
-            minWidth="min-w-[700px]"
-            caption={t("api_keys_page.usage_table_caption")}
-            emptyText={t("api_keys_page.no_usage_records")}
-          />
-        )}
-      </Modal>
+        onClose={closeUsageModal}
+        usageViewName={usageViewName}
+        maskedKey={usageViewKey ? maskApiKey(usageViewKey) : ""}
+        usageTotalCount={usageTotalCount}
+        usageTimeRange={usageTimeRange}
+        setUsageTimeRange={setUsageTimeRange}
+        fetchUsageLogs={fetchUsageLogs}
+        usagePageSize={usagePageSize}
+        usageLoading={usageLoading}
+        usageLastUpdatedText={usageLastUpdatedText}
+        usageChannelGroupQuery={usageChannelGroupQuery}
+        setUsageChannelGroupQuery={setUsageChannelGroupQuery}
+        setUsageChannelQuery={setUsageChannelQuery}
+        usageChannelGroupOptions={usageChannelGroupOptions}
+        usageChannelQuery={usageChannelQuery}
+        setUsageChannelQueryDirect={setUsageChannelQuery}
+        usageChannelOptions={usageChannelOptions}
+        usageModelQuery={usageModelQuery}
+        setUsageModelQuery={setUsageModelQuery}
+        usageModelOptions={usageModelOptions}
+        usageStatusFilter={usageStatusFilter}
+        setUsageStatusFilter={setUsageStatusFilter}
+        usageLogColumns={usageLogColumns}
+        usageRows={usageRows}
+        usageCurrentPage={usageCurrentPage}
+        usageTotalPages={usageTotalPages}
+        setUsagePageSize={setUsagePageSize}
+      />
+
+      <LogContentModal
+        open={usageContentModalOpen}
+        logId={usageContentModalLogId}
+        initialTab={usageContentModalTab}
+        onClose={() => setUsageContentModalOpen(false)}
+      />
+      <ErrorDetailModal
+        open={usageErrorModalOpen}
+        logId={usageErrorModalLogId}
+        model={usageErrorModalModel}
+        onClose={() => setUsageErrorModalOpen(false)}
+      />
     </div>
   );
 }

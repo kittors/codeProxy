@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Activity, RefreshCw, Sigma, TriangleAlert } from "lucide-react";
 import { usageApi, type DashboardSummary } from "@/lib/http/apis/usage";
-import { KpiCard } from "@/modules/monitor/MonitorPagePieces";
 import { SystemMonitorSection } from "@/modules/dashboard/SystemMonitorSection";
 import { Button } from "@/modules/ui/Button";
+import { Card } from "@/modules/ui/Card";
 import { EmptyState } from "@/modules/ui/EmptyState";
 import { Tabs, TabsList, TabsTrigger } from "@/modules/ui/Tabs";
 import { useToast } from "@/modules/ui/ToastProvider";
@@ -22,6 +22,31 @@ const formatNumber = (n: number) =>
   n >= 10_000 ? `${(n / 1000).toFixed(1)}k` : n.toLocaleString();
 
 const formatRate = (rate: number) => `${rate.toFixed(2)}%`;
+
+function DashboardKpiCard({
+  title,
+  value,
+  hint,
+  icon: Icon,
+}: {
+  title: string;
+  value: ReactNode;
+  hint: string;
+  icon: typeof Activity;
+}) {
+  return (
+    <Card
+      title={title}
+      actions={<Icon size={14} className="text-slate-900 dark:text-white" />}
+      bodyClassName="mt-3"
+    >
+      <p className="text-2xl font-semibold tracking-tight text-slate-900 dark:text-white">
+        {value}
+      </p>
+      <p className="mt-2 text-xs text-slate-600 dark:text-white/65">{hint}</p>
+    </Card>
+  );
+}
 
 export function DashboardPage() {
   const { t } = useTranslation();
@@ -57,7 +82,6 @@ export function DashboardPage() {
 
   return (
     <div className="space-y-5">
-      {/* ── Header ── */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-lg font-semibold tracking-tight text-slate-900 dark:text-white">
           {t("dashboard.heading")}
@@ -87,7 +111,6 @@ export function DashboardPage() {
         </div>
       </div>
 
-      {/* ── Error State ── */}
       {error ? (
         <EmptyState
           title={t("dashboard.load_failed")}
@@ -102,9 +125,8 @@ export function DashboardPage() {
         />
       ) : null}
 
-      {/* ── KPI Row ── */}
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <KpiCard
+        <DashboardKpiCard
           title={t("dashboard.total_requests")}
           value={<AnimatedNumber value={kpi?.total_requests ?? 0} format={formatNumber} />}
           hint={
@@ -114,7 +136,7 @@ export function DashboardPage() {
           }
           icon={Activity}
         />
-        <KpiCard
+        <DashboardKpiCard
           title={t("dashboard.success_rate")}
           value={<AnimatedNumber value={kpi?.success_rate ?? 0} format={formatRate} />}
           hint={t("dashboard.success_hint", {
@@ -123,7 +145,7 @@ export function DashboardPage() {
           })}
           icon={Sigma}
         />
-        <KpiCard
+        <DashboardKpiCard
           title={t("dashboard.total_tokens")}
           value={<AnimatedNumber value={kpi?.total_tokens ?? 0} format={formatNumber} />}
           hint={t("dashboard.token_hint", {
@@ -132,7 +154,7 @@ export function DashboardPage() {
           })}
           icon={Sigma}
         />
-        <KpiCard
+        <DashboardKpiCard
           title={t("dashboard.failed_requests")}
           value={<AnimatedNumber value={kpi?.failed_requests ?? 0} format={formatNumber} />}
           hint={t("dashboard.failed_hint")}
@@ -140,7 +162,6 @@ export function DashboardPage() {
         />
       </div>
 
-      {/* ── System Monitor (real-time) ── */}
       <SystemMonitorSection />
     </div>
   );

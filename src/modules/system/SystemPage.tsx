@@ -17,6 +17,7 @@ import {
 import { apiClient } from "@/lib/http/client";
 import { useAuth } from "@/modules/auth/AuthProvider";
 import { Button } from "@/modules/ui/Button";
+import { Card } from "@/modules/ui/Card";
 import { TextInput } from "@/modules/ui/Input";
 import { useToast } from "@/modules/ui/ToastProvider";
 
@@ -236,9 +237,11 @@ function InfoCard({
   const hasExternal = link && value && value !== "--";
 
   return (
-    <div
+    <Card
+      padding="compact"
+      bodyClassName="mt-0"
       className={[
-        "group relative min-w-0 rounded-xl border border-slate-200/80 bg-white px-3 py-2.5 shadow-sm transition hover:shadow-md dark:border-neutral-800 dark:bg-neutral-950/60 sm:px-4 sm:py-3",
+        "group transition hover:shadow-[2px_2px_8px_rgb(0_0_0_/_0.06)] dark:hover:shadow-[2px_2px_8px_rgb(0_0_0_/_0.24)]",
         hasCopy || hasExternal ? "pr-11" : "",
       ]
         .filter(Boolean)
@@ -282,7 +285,7 @@ function InfoCard({
           <ExternalLink size={11} className="hidden shrink-0 text-indigo-400/50 sm:inline" />
         ) : null}
       </div>
-    </div>
+    </Card>
   );
 }
 
@@ -329,7 +332,7 @@ function ModelTag({ id }: { id: string }) {
    Main Page
    ═══════════════════════════════════════════════════════════ */
 
-const AUTO_REFRESH_INTERVAL = 30_000;
+const _AUTO_REFRESH_INTERVAL = 30_000;
 
 export function SystemPage() {
   const { t } = useTranslation();
@@ -442,7 +445,7 @@ export function SystemPage() {
       </div>
 
       {/* ── Model List ── */}
-      <div className="rounded-2xl border border-slate-200 bg-white/70 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
+      <Card padding="none" className="overflow-hidden" bodyClassName="mt-0">
         {/* Header */}
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-3.5 dark:border-neutral-800">
           <div className="flex items-center gap-2.5">
@@ -460,18 +463,13 @@ export function SystemPage() {
             )}
           </div>
           <div className="flex items-center gap-2">
-            <div className="relative">
-              <Search
-                size={13}
-                className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-white/30 pointer-events-none"
-              />
-              <TextInput
-                value={modelFilter}
-                onChange={(e) => setModelFilter(e.target.value)}
-                placeholder={t("system_page.search_models")}
-                className="!w-32 sm:!w-48 !rounded-lg !py-1.5 !pl-8 !text-xs"
-              />
-            </div>
+            <TextInput
+              value={modelFilter}
+              onChange={(e) => setModelFilter(e.target.value)}
+              placeholder={t("system_page.search_models")}
+              className="!w-32 sm:!w-48"
+              startAdornment={<Search size={14} className="text-slate-400 dark:text-white/35" />}
+            />
             <Button
               variant="secondary"
               size="sm"
@@ -534,7 +532,7 @@ export function SystemPage() {
             </div>
           )}
         </div>
-      </div>
+      </Card>
     </div>
   );
 }

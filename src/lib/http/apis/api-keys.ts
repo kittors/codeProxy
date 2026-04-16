@@ -11,6 +11,7 @@ export interface ApiKeyEntry {
   "tpm-limit"?: number;
   "allowed-models"?: string[];
   "allowed-channels"?: string[];
+  "allowed-channel-groups"?: string[];
   "system-prompt"?: string;
   "created-at"?: string;
 }
@@ -41,8 +42,16 @@ export const apiKeyEntriesApi = {
   update: (payload: { index?: number; match?: string; value: Partial<ApiKeyEntry> }) =>
     apiClient.patch("/api-key-entries", payload),
 
-  delete: (params: { index?: number; key?: string }) => {
-    const query = params.key ? `key=${encodeURIComponent(params.key)}` : `index=${params.index}`;
-    return apiClient.delete(`/api-key-entries?${query}`);
+  delete: (params: { index?: number; key?: string; deleteLogs?: boolean }) => {
+    const query = new URLSearchParams();
+    if (params.key) {
+      query.set("key", params.key);
+    } else if (params.index !== undefined) {
+      query.set("index", String(params.index));
+    }
+    if (params.deleteLogs !== undefined) {
+      query.set("delete_logs", String(params.deleteLogs));
+    }
+    return apiClient.delete(`/api-key-entries?${query.toString()}`);
   },
 };

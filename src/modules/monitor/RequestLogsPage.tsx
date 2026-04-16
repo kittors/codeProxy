@@ -1,478 +1,24 @@
 import { useTranslation } from "react-i18next";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  ChevronLeft,
-  ChevronRight,
-  ChevronsLeft,
-  ChevronsRight,
-  Filter,
-  RefreshCw,
-  ScrollText,
-} from "lucide-react";
+import { Filter, RefreshCw, ScrollText } from "lucide-react";
 import { usageApi } from "@/lib/http/apis";
 import type { UsageLogItem, UsageLogsResponse } from "@/lib/http/apis/usage";
-import { parseUsageTimestampMs } from "@/modules/monitor/monitor-utils";
-import { Tabs, TabsList, TabsTrigger } from "@/modules/ui/Tabs";
 import { useToast } from "@/modules/ui/ToastProvider";
-import { OverflowTooltip } from "@/modules/ui/Tooltip";
 import { Select } from "@/modules/ui/Select";
 import { SearchableSelect } from "@/modules/ui/SearchableSelect";
 import { LogContentModal } from "@/modules/monitor/LogContentModal";
 import { ErrorDetailModal } from "@/modules/monitor/ErrorDetailModal";
-
-type TimeRange = 1 | 7 | 14 | 30;
+import {
+  buildRequestLogsColumns,
+  DEFAULT_REQUEST_LOG_PAGE_SIZE,
+  maskRequestLogApiKey,
+  RequestLogsPaginationBar,
+  RequestLogsTimeRangeSelector,
+  toRequestLogsRow,
+  type RequestLogsRow as LogRow,
+  type TimeRange,
+} from "@/modules/monitor/requestLogsShared";
 type StatusFilter = "" | "success" | "failed";
-
-interface LogRow {
-  id: string;
-  timestamp: string;
-  timestampMs: number;
-  apiKey: string;
-  apiKeyName: string;
-  channelName: string;
-  maskedApiKey: string;
-  model: string;
-  failed: boolean;
-  latencyText: string;
-  firstTokenText: string;
-  inputTokens: number;
-  cachedTokens: number;
-  outputTokens: number;
-  totalTokens: number;
-  cost: number;
-  hasContent: boolean;
-}
-
-const DEFAULT_PAGE_SIZE = 50;
-const PAGE_SIZE_OPTIONS = [20, 50, 100];
-
-const TIME_RANGES: readonly TimeRange[] = [1, 7, 14, 30] as const;
-
-const maskApiKey = (value: string): string => {
-  const trimmed = value.trim();
-  if (!trimmed) return "--";
-  if (trimmed.length <= 10) return `${trimmed.slice(0, 2)}***${trimmed.slice(-2)}`;
-  return `${trimmed.slice(0, 6)}***${trimmed.slice(-4)}`;
-};
-
-const formatTimestamp = (value: string): string => {
-  const ms = parseUsageTimestampMs(value);
-  if (!Number.isFinite(ms)) return value || "--";
-  return new Date(ms).toLocaleString();
-};
-
-const formatLatencyMs = (value: number): string => {
-  if (!Number.isFinite(value) || value < 0) return "--";
-  if (value < 1) return "<1ms";
-  if (value < 1000) return `${Math.round(value)}ms`;
-  const seconds = value / 1000;
-  const fixed = seconds.toFixed(seconds < 10 ? 2 : 1);
-  const trimmed = fixed.endsWith(".0") ? fixed.slice(0, -2) : fixed;
-  return `${trimmed}s`;
-};
-
-const formatOptionalLatencyMs = (value: number): string => {
-  if (!Number.isFinite(value) || value <= 0) return "--";
-  return formatLatencyMs(value);
-};
-
-const TimeRangeSelector = ({
-  value,
-  onChange,
-}: {
-  value: TimeRange;
-  onChange: (next: TimeRange) => void;
-}) => {
-  const { t } = useTranslation();
-  return (
-    <Tabs value={String(value)} onValueChange={(next) => onChange(Number(next) as TimeRange)}>
-      <TabsList>
-        {TIME_RANGES.map((range) => {
-          const label =
-            range === 1 ? t("request_logs.today") : t("request_logs.n_days", { count: range });
-          return (
-            <TabsTrigger key={range} value={String(range)}>
-              {label}
-            </TabsTrigger>
-          );
-        })}
-      </TabsList>
-    </Tabs>
-  );
-};
-
-// ---------------------------------------------------------------------------
-// Column definitions (kept as-is)
-// ---------------------------------------------------------------------------
-
-interface TableColumn<T> {
-  key: string;
-  label: string;
-  width?: string;
-  headerClassName?: string;
-  cellClassName?: string;
-  render: (row: T, index: number) => React.ReactNode;
-}
-
-function buildLogColumns(
-  t: (key: string) => string,
-  onContentClick?: (logId: number, tab: "input" | "output") => void,
-  onErrorClick?: (logId: number, model: string) => void,
-): TableColumn<LogRow>[] {
-  return [
-    {
-      key: "id",
-      label: t("request_logs.col_id"),
-      width: "w-20",
-      cellClassName: "font-mono text-xs tabular-nums text-slate-500 dark:text-white/50",
-      render: (row) => (
-        <OverflowTooltip content={`#${row.id}`} className="block min-w-0">
-          <span className="block min-w-0 truncate">#{row.id}</span>
-        </OverflowTooltip>
-      ),
-    },
-    {
-      key: "timestamp",
-      label: t("request_logs.col_time"),
-      width: "w-52",
-      cellClassName: "font-mono text-xs tabular-nums text-slate-700 dark:text-slate-200",
-      render: (row) => (
-        <OverflowTooltip content={formatTimestamp(row.timestamp)} className="block min-w-0">
-          <span className="block min-w-0 truncate">{formatTimestamp(row.timestamp)}</span>
-        </OverflowTooltip>
-      ),
-    },
-    {
-      key: "apiKeyName",
-      label: t("request_logs.col_key_name"),
-      width: "w-32",
-      render: (row) => (
-        <OverflowTooltip content={row.apiKeyName || "--"} className="block min-w-0">
-          <span
-            className={`block min-w-0 truncate text-xs font-medium ${row.apiKeyName ? "text-indigo-600 dark:text-indigo-400" : "text-slate-400 dark:text-white/30"}`}
-          >
-            {row.apiKeyName || "--"}
-          </span>
-        </OverflowTooltip>
-      ),
-    },
-    {
-      key: "model",
-      label: t("request_logs.col_model"),
-      width: "w-56",
-      render: (row) => (
-        <OverflowTooltip content={row.model} className="block min-w-0">
-          <span className="block min-w-0 truncate">{row.model}</span>
-        </OverflowTooltip>
-      ),
-    },
-    {
-      key: "channelName",
-      label: t("request_logs.col_channel"),
-      width: "w-32",
-      render: (row) => (
-        <OverflowTooltip content={row.channelName || "--"} className="block min-w-0">
-          <span
-            className={`block min-w-0 truncate text-xs font-medium ${row.channelName ? "text-violet-600 dark:text-violet-400" : "text-slate-400 dark:text-white/30"}`}
-          >
-            {row.channelName || "--"}
-          </span>
-        </OverflowTooltip>
-      ),
-    },
-    {
-      key: "status",
-      label: t("request_logs.col_status"),
-      width: "w-20",
-      render: (row) =>
-        row.failed ? (
-          <button
-            type="button"
-            onClick={() => onErrorClick?.(Number(row.id), row.model)}
-            className="inline-flex min-w-[52px] cursor-pointer justify-center rounded-full bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-600 transition hover:bg-rose-100 hover:shadow-sm dark:bg-rose-500/15 dark:text-rose-300 dark:hover:bg-rose-500/25"
-            title={t("request_logs.view_error")}
-          >
-            {t("request_logs.status_failed")}
-          </button>
-        ) : (
-          <span className="inline-flex min-w-[52px] justify-center rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-300">
-            {t("request_logs.status_success")}
-          </span>
-        ),
-    },
-    {
-      key: "latency",
-      label: t("request_logs.col_duration"),
-      width: "w-24",
-      headerClassName: "text-right",
-      cellClassName: "text-right font-mono text-xs tabular-nums text-slate-700 dark:text-slate-200",
-      render: (row) => (
-        <OverflowTooltip content={row.latencyText} className="block min-w-0">
-          <span className="block min-w-0 truncate">{row.latencyText}</span>
-        </OverflowTooltip>
-      ),
-    },
-    {
-      key: "firstToken",
-      label: t("request_logs.col_first_token"),
-      width: "w-24",
-      headerClassName: "text-right",
-      cellClassName: "text-right font-mono text-xs tabular-nums text-slate-700 dark:text-slate-200",
-      render: (row) => (
-        <OverflowTooltip content={row.firstTokenText} className="block min-w-0">
-          <span className="block min-w-0 truncate">{row.firstTokenText}</span>
-        </OverflowTooltip>
-      ),
-    },
-    {
-      key: "inputTokens",
-      label: t("request_logs.col_input"),
-      width: "w-24",
-      headerClassName: "text-right",
-      cellClassName: "text-right font-mono text-xs tabular-nums text-slate-700 dark:text-slate-200",
-      render: (row) =>
-        row.hasContent && onContentClick ? (
-          <button
-            type="button"
-            onClick={() => onContentClick(Number(row.id), "input")}
-            className="inline-block ml-auto cursor-pointer rounded px-1.5 py-0.5 transition hover:bg-sky-50 dark:hover:bg-sky-950/30"
-            title={t("request_logs.view_input")}
-          >
-            <span className="truncate text-sky-600 dark:text-sky-400 underline decoration-sky-300/50 dark:decoration-sky-500/40 underline-offset-2">
-              {row.inputTokens.toLocaleString()}
-            </span>
-          </button>
-        ) : (
-          <OverflowTooltip content={row.inputTokens.toLocaleString()} className="block min-w-0">
-            <span className="block min-w-0 truncate">{row.inputTokens.toLocaleString()}</span>
-          </OverflowTooltip>
-        ),
-    },
-    {
-      key: "cachedTokens",
-      label: t("request_logs.col_cache_read"),
-      width: "w-24",
-      headerClassName: "text-right",
-      cellClassName: "text-right font-mono text-xs tabular-nums",
-      render: (row) => (
-        <OverflowTooltip content={row.cachedTokens.toLocaleString()} className="block min-w-0">
-          <span
-            className={`block min-w-0 truncate ${row.cachedTokens > 0 ? "font-semibold text-amber-600 dark:text-amber-400" : "text-slate-400 dark:text-white/30"}`}
-          >
-            {row.cachedTokens > 0 ? row.cachedTokens.toLocaleString() : "0"}
-          </span>
-        </OverflowTooltip>
-      ),
-    },
-    {
-      key: "outputTokens",
-      label: t("request_logs.col_output"),
-      width: "w-24",
-      headerClassName: "text-right",
-      cellClassName: "text-right font-mono text-xs tabular-nums text-slate-700 dark:text-slate-200",
-      render: (row) =>
-        row.hasContent && onContentClick ? (
-          <button
-            type="button"
-            onClick={() => onContentClick(Number(row.id), "output")}
-            className="inline-block ml-auto cursor-pointer rounded px-1.5 py-0.5 transition hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
-            title={t("request_logs.view_output")}
-          >
-            <span className="truncate text-emerald-600 dark:text-emerald-400 underline decoration-emerald-300/50 dark:decoration-emerald-500/40 underline-offset-2">
-              {row.outputTokens.toLocaleString()}
-            </span>
-          </button>
-        ) : (
-          <OverflowTooltip content={row.outputTokens.toLocaleString()} className="block min-w-0">
-            <span className="block min-w-0 truncate">{row.outputTokens.toLocaleString()}</span>
-          </OverflowTooltip>
-        ),
-    },
-    {
-      key: "totalTokens",
-      label: t("request_logs.col_total_token"),
-      width: "w-28",
-      headerClassName: "text-right",
-      cellClassName: "text-right font-mono text-xs tabular-nums text-slate-900 dark:text-white",
-      render: (row) => (
-        <OverflowTooltip content={row.totalTokens.toLocaleString()} className="block min-w-0">
-          <span className="block min-w-0 truncate">{row.totalTokens.toLocaleString()}</span>
-        </OverflowTooltip>
-      ),
-    },
-    {
-      key: "cost",
-      label: t("request_logs.col_cost"),
-      width: "w-24",
-      headerClassName: "text-right",
-      cellClassName:
-        "text-right font-mono text-xs tabular-nums text-emerald-700 dark:text-emerald-400",
-      render: (row) => (
-        <OverflowTooltip content={`$${row.cost.toFixed(6)}`} className="block min-w-0">
-          <span className="block min-w-0 truncate">${row.cost.toFixed(4)}</span>
-        </OverflowTooltip>
-      ),
-    },
-  ];
-}
-
-/** Convert a backend log item to a UI-friendly LogRow */
-function toLogRow(item: UsageLogItem): LogRow {
-  return {
-    id: String(item.id),
-    timestamp: item.timestamp,
-    timestampMs: parseUsageTimestampMs(item.timestamp),
-    apiKey: item.api_key,
-    apiKeyName: item.api_key_name || "",
-    channelName: item.channel_name || "",
-    maskedApiKey: maskApiKey(item.api_key),
-    model: item.model,
-    failed: item.failed,
-    latencyText: formatLatencyMs(item.latency_ms),
-    firstTokenText: formatOptionalLatencyMs(item.first_token_ms),
-    inputTokens: item.input_tokens,
-    cachedTokens: item.cached_tokens,
-    outputTokens: item.output_tokens,
-    totalTokens: item.total_tokens,
-    cost: item.cost ?? 0,
-    hasContent: item.has_content ?? false,
-  };
-}
-
-// ---------------------------------------------------------------------------
-// Pagination Bar
-// ---------------------------------------------------------------------------
-
-function PaginationBar({
-  currentPage,
-  totalPages,
-  totalCount,
-  pageSize,
-  onPageChange,
-  onPageSizeChange,
-}: {
-  currentPage: number;
-  totalPages: number;
-  totalCount: number;
-  pageSize: number;
-  onPageChange: (page: number) => void;
-  onPageSizeChange: (size: number) => void;
-}) {
-  const { t } = useTranslation();
-
-  const start = totalCount === 0 ? 0 : (currentPage - 1) * pageSize + 1;
-  const end = Math.min(currentPage * pageSize, totalCount);
-
-  // Build visible page numbers (always max ~7 buttons)
-  const pageNumbers = useMemo(() => {
-    const pages: (number | "...")[] = [];
-    if (totalPages <= 7) {
-      for (let i = 1; i <= totalPages; i++) pages.push(i);
-    } else {
-      pages.push(1);
-      if (currentPage > 3) pages.push("...");
-      const rangeStart = Math.max(2, currentPage - 1);
-      const rangeEnd = Math.min(totalPages - 1, currentPage + 1);
-      for (let i = rangeStart; i <= rangeEnd; i++) pages.push(i);
-      if (currentPage < totalPages - 2) pages.push("...");
-      pages.push(totalPages);
-    }
-    return pages;
-  }, [currentPage, totalPages]);
-
-  const btnBase =
-    "inline-flex h-8 min-w-[32px] items-center justify-center rounded-lg text-xs font-medium transition-colors disabled:pointer-events-none disabled:opacity-40";
-  const btnNormal = `${btnBase} text-slate-600 hover:bg-slate-100 dark:text-white/60 dark:hover:bg-white/10`;
-  const btnActive = `${btnBase} bg-slate-900 text-white dark:bg-white dark:text-neutral-950`;
-
-  return (
-    <div className="flex flex-shrink-0 flex-col gap-2 border-t border-slate-100 px-3 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:px-5 dark:border-neutral-800/60">
-      {/* Left: info */}
-      <span className="text-xs text-slate-500 dark:text-white/50 tabular-nums whitespace-nowrap">
-        {t("request_logs.page_info", { start, end, total: totalCount })}
-      </span>
-
-      {/* Center: page buttons */}
-      <div className="flex items-center gap-1 overflow-x-auto">
-        <button
-          type="button"
-          className={btnNormal}
-          disabled={currentPage <= 1}
-          onClick={() => onPageChange(1)}
-          title={t("request_logs.first_page")}
-          aria-label={t("request_logs.first_page")}
-        >
-          <ChevronsLeft size={14} />
-        </button>
-        <button
-          type="button"
-          className={btnNormal}
-          disabled={currentPage <= 1}
-          onClick={() => onPageChange(currentPage - 1)}
-          title={t("request_logs.prev_page")}
-          aria-label={t("request_logs.prev_page")}
-        >
-          <ChevronLeft size={14} />
-        </button>
-
-        {pageNumbers.map((p, i) =>
-          p === "..." ? (
-            <span key={`dots-${i}`} className="px-1 text-xs text-slate-400 dark:text-white/30">
-              …
-            </span>
-          ) : (
-            <button
-              key={p}
-              type="button"
-              className={p === currentPage ? btnActive : btnNormal}
-              onClick={() => onPageChange(p)}
-            >
-              {p}
-            </button>
-          ),
-        )}
-
-        <button
-          type="button"
-          className={btnNormal}
-          disabled={currentPage >= totalPages}
-          onClick={() => onPageChange(currentPage + 1)}
-          title={t("request_logs.next_page")}
-          aria-label={t("request_logs.next_page")}
-        >
-          <ChevronRight size={14} />
-        </button>
-        <button
-          type="button"
-          className={btnNormal}
-          disabled={currentPage >= totalPages}
-          onClick={() => onPageChange(totalPages)}
-          title={t("request_logs.last_page")}
-          aria-label={t("request_logs.last_page")}
-        >
-          <ChevronsRight size={14} />
-        </button>
-      </div>
-
-      {/* Right: rows per page */}
-      <div className="flex items-center gap-1.5">
-        <span className="text-xs text-slate-500 dark:text-white/50 whitespace-nowrap">
-          {t("request_logs.rows_per_page")}
-        </span>
-        <Select
-          value={String(pageSize)}
-          onChange={(v) => onPageSizeChange(Number(v))}
-          options={PAGE_SIZE_OPTIONS.map((size) => ({
-            value: String(size),
-            label: String(size),
-          }))}
-          name="pageSize"
-          className="w-auto"
-        />
-      </div>
-    </div>
-  );
-}
 
 // ---------------------------------------------------------------------------
 // Main page
@@ -506,7 +52,7 @@ export function RequestLogsPage() {
 
   // Build columns with content click handler
   const logColumns = useMemo(
-    () => buildLogColumns(t, handleContentClick, handleErrorClick),
+    () => buildRequestLogsColumns(t, handleContentClick, handleErrorClick),
     [t, handleContentClick, handleErrorClick],
   );
 
@@ -518,7 +64,7 @@ export function RequestLogsPage() {
   // Pagination state
   const [totalCount, setTotalCount] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const [pageSize, setPageSize] = useState(DEFAULT_REQUEST_LOG_PAGE_SIZE);
 
   // Backend-provided metadata
   const [filterOptions, setFilterOptions] = useState<{
@@ -593,7 +139,10 @@ export function RequestLogsPage() {
   );
 
   // Derive display rows from raw items
-  const rows = useMemo<LogRow[]>(() => (rawItems ?? []).map((item) => toLogRow(item)), [rawItems]);
+  const rows = useMemo<LogRow[]>(
+    () => (rawItems ?? []).map((item) => toRequestLogsRow(item)),
+    [rawItems],
+  );
 
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 
@@ -625,7 +174,7 @@ export function RequestLogsPage() {
       { value: "", label: t("request_logs.all_keys") },
       ...filterOptions.api_keys.map((key) => ({
         value: key,
-        label: names[key] || maskApiKey(key),
+        label: names[key] || maskRequestLogApiKey(key),
         searchText: `${names[key] || ""} ${key}`,
       })),
     ];
@@ -658,7 +207,7 @@ export function RequestLogsPage() {
       <h1 className="sr-only">{t("request_logs.title")}</h1>
 
       {/* 单层卡片：标题 + 筛选 + 统计 + 表格 + 分页 */}
-      <div className="flex flex-1 flex-col rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-950/70">
+      <div className="flex flex-1 flex-col rounded-2xl border border-black/[0.06] bg-white shadow-[0_1px_2px_rgb(15_23_42_/_0.035)] dark:border-white/[0.06] dark:bg-neutral-950/70 dark:shadow-[0_1px_2px_rgb(0_0_0_/_0.22)]">
         {/* 标题栏 */}
         <div className="flex flex-wrap items-center justify-between gap-3 px-5 pt-5 pb-3">
           <h2 className="flex items-center gap-2 text-base font-semibold text-slate-900 dark:text-white">
@@ -666,7 +215,7 @@ export function RequestLogsPage() {
             {t("request_logs.heading")}
           </h2>
           <div className="flex flex-wrap items-center gap-2">
-            <TimeRangeSelector value={timeRange} onChange={setTimeRange} />
+            <RequestLogsTimeRangeSelector value={timeRange} onChange={setTimeRange} />
             <button
               type="button"
               onClick={() => fetchLogs(1, pageSize)}
@@ -848,7 +397,7 @@ export function RequestLogsPage() {
         </div>
 
         {/* 分页控件 — flex-shrink-0 固定在底部 */}
-        <PaginationBar
+        <RequestLogsPaginationBar
           currentPage={currentPage}
           totalPages={totalPages}
           totalCount={totalCount}

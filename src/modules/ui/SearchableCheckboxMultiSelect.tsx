@@ -1,0 +1,361 @@
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
+import { createPortal } from "react-dom";
+import { Check, ChevronDown, Search } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+  cn,
+  getSelectDropdownMotion,
+  getSelectTriggerBase,
+  searchableSelectPanel,
+  selectChevron,
+  selectDropdownTransition,
+  selectEmptyState,
+  selectOptionBase,
+  selectOptionIdle,
+  selectOptionSelected,
+  selectSearchInput,
+  selectSearchRow,
+  selectTriggerDisabled,
+} from "./selectStyles";
+import type { ControlSize } from "@/modules/ui/controlStyles";
+
+export interface SearchableCheckboxMultiSelectOption {
+  value: string;
+  label: ReactNode;
+  searchText?: string;
+}
+
+export interface SearchableCheckboxMultiSelectProps {
+  value: string[];
+  onChange: (value: string[]) => void;
+  options: SearchableCheckboxMultiSelectOption[];
+  placeholder?: string;
+  searchPlaceholder?: string;
+  selectFilteredLabel: string;
+  deselectFilteredLabel: string;
+  selectedCountLabel: (count: number) => string;
+  noResultsLabel: string;
+  disabled?: boolean;
+  "aria-label"?: string;
+  className?: string;
+  size?: ControlSize;
+}
+
+function optionText(option: SearchableCheckboxMultiSelectOption): string {
+  if (typeof option.label === "string") return option.label;
+  return option.searchText ?? option.value;
+}
+
+export function SearchableCheckboxMultiSelect({
+  value,
+  onChange,
+  options,
+  placeholder = "",
+  searchPlaceholder = "",
+  selectFilteredLabel,
+  deselectFilteredLabel,
+  selectedCountLabel,
+  noResultsLabel,
+  disabled = false,
+  "aria-label": ariaLabel,
+  className,
+  size = "default",
+}: SearchableCheckboxMultiSelectProps) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const dropdownRef = useRef<HTMLDivElement | null>(null);
+  const searchRef = useRef<HTMLInputElement | null>(null);
+  const [dropdownStyle, setDropdownStyle] = useState<CSSProperties>({});
+  const [dropdownPlacement, setDropdownPlacement] = useState<"bottom" | "top">("bottom");
+
+  const selectedSet = useMemo(() => new Set(value), [value]);
+
+  const filteredOptions = useMemo(() => {
+    const keyword = query.trim().toLowerCase();
+    if (!keyword) return options;
+    return options.filter((option) => {
+      const searchText = (option.searchText ?? option.value).toLowerCase();
+      const labelText = optionText(option).toLowerCase();
+      return searchText.includes(keyword) || labelText.includes(keyword);
+    });
+  }, [options, query]);
+
+  const visibleValues = useMemo(
+    () => filteredOptions.map((option) => option.value),
+    [filteredOptions],
+  );
+
+  const allVisibleSelected =
+    visibleValues.length > 0 && visibleValues.every((optionValue) => selectedSet.has(optionValue));
+
+  const updatePosition = useCallback(() => {
+    const trigger = triggerRef.current;
+    if (!trigger) return;
+
+    const rect = trigger.getBoundingClientRect();
+    const gap = 6;
+    const maxHeight = 360;
+    const spaceBelow = window.innerHeight - rect.bottom - gap;
+    const spaceAbove = rect.top - gap;
+    const openAbove = spaceBelow < maxHeight && spaceAbove > spaceBelow;
+
+    if (openAbove) {
+      setDropdownPlacement("top");
+      setDropdownStyle({
+        position: "fixed",
+        bottom: window.innerHeight - rect.top + gap,
+        left: rect.left,
+        width: Math.max(rect.width, 260),
+        maxHeight: Math.min(maxHeight, spaceAbove),
+        zIndex: 99999,
+      });
+      return;
+    }
+
+    setDropdownPlacement("bottom");
+    setDropdownStyle({
+      position: "fixed",
+      top: rect.bottom + gap,
+      left: rect.left,
+      width: Math.max(rect.width, 260),
+      maxHeight: Math.min(maxHeight, spaceBelow),
+      zIndex: 99999,
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    const handleOutsideClick = (event: MouseEvent) => {
+      const target = event.target as Node | null;
+      if (triggerRef.current?.contains(target)) return;
+      if (dropdownRef.current?.contains(target)) return;
+      setOpen(false);
+      setQuery("");
+    };
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setOpen(false);
+        setQuery("");
+      }
+    };
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, [open]);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    updatePosition();
+    requestAnimationFrame(() => searchRef.current?.focus());
+  }, [open, updatePosition]);
+
+  useEffect(() => {
+    if (!open) return;
+    window.addEventListener("scroll", updatePosition, true);
+    window.addEventListener("resize", updatePosition);
+    return () => {
+      window.removeEventListener("scroll", updatePosition, true);
+      window.removeEventListener("resize", updatePosition);
+    };
+  }, [open, updatePosition]);
+
+  const commitSelection = useCallback(
+    (next: string[]) => {
+      const allowed = new Set(options.map((option) => option.value));
+      const unique = next.filter(
+        (item, index) => allowed.has(item) && next.indexOf(item) === index,
+      );
+      onChange(unique);
+    },
+    [onChange, options],
+  );
+
+  const toggleOption = useCallback(
+    (optionValue: string) => {
+      if (selectedSet.has(optionValue)) {
+        commitSelection(value.filter((item) => item !== optionValue));
+        return;
+      }
+      commitSelection([...value, optionValue]);
+    },
+    [commitSelection, selectedSet, value],
+  );
+
+  const toggleFiltered = useCallback(() => {
+    if (visibleValues.length === 0) return;
+    if (allVisibleSelected) {
+      const visibleSet = new Set(visibleValues);
+      commitSelection(value.filter((item) => !visibleSet.has(item)));
+      return;
+    }
+    commitSelection([...value, ...visibleValues]);
+  }, [allVisibleSelected, commitSelection, value, visibleValues]);
+
+  const selectedSummary = useMemo(() => {
+    if (value.length === 0) return placeholder;
+    const labels = value
+      .slice(0, 2)
+      .map((item) =>
+        optionText(options.find((option) => option.value === item) ?? { value: item, label: item }),
+      )
+      .join(", ");
+    return value.length > 2 ? `${labels} +${value.length - 2}` : labels;
+  }, [options, placeholder, value]);
+
+  return (
+    <>
+      <button
+        ref={triggerRef}
+        type="button"
+        role="combobox"
+        aria-expanded={open}
+        aria-haspopup="listbox"
+        aria-label={ariaLabel}
+        disabled={disabled}
+        onClick={() => {
+          if (!open) updatePosition();
+          setOpen((current) => !current);
+        }}
+        className={cn(
+          getSelectTriggerBase(size),
+          "w-full justify-between text-left",
+          disabled && selectTriggerDisabled,
+          className,
+        )}
+      >
+        <span className={cn("truncate", value.length === 0 && "text-slate-400 dark:text-white/35")}>
+          {selectedSummary}
+        </span>
+        <span className="flex shrink-0 items-center gap-2">
+          {value.length > 0 ? (
+            <span className="rounded-md bg-sky-50 px-1.5 py-0.5 text-[11px] font-semibold text-sky-700 dark:bg-sky-900/30 dark:text-sky-300">
+              {selectedCountLabel(value.length)}
+            </span>
+          ) : null}
+          <ChevronDown
+            size={14}
+            className={cn(selectChevron, open && "rotate-180")}
+            aria-hidden="true"
+          />
+        </span>
+      </button>
+
+      {createPortal(
+        <AnimatePresence>
+          {open ? (
+            <motion.div
+              ref={dropdownRef}
+              style={dropdownStyle}
+              className={cn(searchableSelectPanel, "flex flex-col")}
+              {...getSelectDropdownMotion(dropdownPlacement)}
+              transition={selectDropdownTransition}
+            >
+              <div className={cn(selectSearchRow, "shrink-0")}>
+                <Search
+                  size={14}
+                  className="shrink-0 text-[#96969B] dark:text-[#9F9FA8]"
+                  aria-hidden="true"
+                />
+                <input
+                  ref={searchRef}
+                  type="text"
+                  value={query}
+                  onChange={(event) => setQuery(event.currentTarget.value)}
+                  placeholder={searchPlaceholder}
+                  className={selectSearchInput}
+                  autoComplete="off"
+                  spellCheck={false}
+                />
+              </div>
+              <button
+                type="button"
+                onClick={toggleFiltered}
+                disabled={visibleValues.length === 0}
+                className={cn(
+                  "mx-1 mt-1 shrink-0",
+                  selectOptionBase,
+                  visibleValues.length === 0
+                    ? "cursor-not-allowed text-[#A1A1AA] dark:text-[#71717A]"
+                    : selectOptionIdle,
+                )}
+              >
+                <span
+                  className={cn(
+                    "flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors",
+                    allVisibleSelected
+                      ? "border-[#18181B] bg-[#18181B] text-white dark:border-white dark:bg-white dark:text-[#18181B]"
+                      : "border-[#96969B] bg-white dark:border-[#9F9FA8] dark:bg-[#27272A]",
+                  )}
+                  aria-hidden="true"
+                >
+                  {allVisibleSelected ? <Check size={12} /> : null}
+                </span>
+                <span className="min-w-0 flex-1 truncate">
+                  {allVisibleSelected ? deselectFilteredLabel : selectFilteredLabel}
+                </span>
+                <span className="shrink-0 text-xs text-slate-400 dark:text-white/35">
+                  {selectedCountLabel(value.length)}
+                </span>
+              </button>
+              <div
+                role="listbox"
+                aria-label={ariaLabel}
+                className="min-h-0 flex-1 overflow-y-auto p-1"
+              >
+                {filteredOptions.length === 0 ? (
+                  <div className={selectEmptyState}>{noResultsLabel}</div>
+                ) : (
+                  filteredOptions.map((option) => {
+                    const checked = selectedSet.has(option.value);
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        role="option"
+                        aria-selected={checked}
+                        onClick={() => toggleOption(option.value)}
+                        className={cn(
+                          selectOptionBase,
+                          checked ? selectOptionSelected : selectOptionIdle,
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            "flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors",
+                            checked
+                              ? "border-[#18181B] bg-[#18181B] text-white dark:border-white dark:bg-white dark:text-[#18181B]"
+                              : "border-[#96969B] bg-white dark:border-[#9F9FA8] dark:bg-[#27272A]",
+                          )}
+                          aria-hidden="true"
+                        >
+                          {checked ? <Check size={12} /> : null}
+                        </span>
+                        <span className="min-w-0 flex-1 truncate">{option.label}</span>
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+            </motion.div>
+          ) : null}
+        </AnimatePresence>,
+        document.body,
+      )}
+    </>
+  );
+}

@@ -50,9 +50,9 @@ describe("AuthFilesPage OAuth login dialog", () => {
     const scoped = within(dialog);
 
     expect(scoped.getByText("Add OAuth Login")).toBeInTheDocument();
-    expect(scoped.getByRole("button", { name: "Codex OAuth" })).toBeInTheDocument();
-    expect(scoped.getByRole("button", { name: "Anthropic OAuth" })).toBeInTheDocument();
-    expect(scoped.getByRole("button", { name: "iFlow Cookie Auth" })).toBeInTheDocument();
-    expect(scoped.getByRole("button", { name: "Vertex Credential Import" })).toBeInTheDocument();
+    expect(scoped.getByRole("tab", { name: "Codex OAuth" })).toBeInTheDocument();
+    expect(scoped.getByRole("tab", { name: "Anthropic OAuth" })).toBeInTheDocument();
+    expect(scoped.getByRole("tab", { name: "iFlow Cookie Auth" })).toBeInTheDocument();
+    expect(scoped.getByRole("tab", { name: "Vertex Credential Import" })).toBeInTheDocument();
   });
 });

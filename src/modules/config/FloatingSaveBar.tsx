@@ -55,7 +55,6 @@ export function FloatingSaveBar({
   const { t } = useTranslation();
   const toneConfig = STATUS_TONE[status];
 
-  // Track visibility with delayed exit for smooth transition
   const shouldShow = status === "dirty" || status === "saving";
   const [visible, setVisible] = useState(false);
   const [rendered, setRendered] = useState(false);
@@ -67,7 +66,6 @@ export function FloatingSaveBar({
     const prevStatus = prevStatusRef.current;
     prevStatusRef.current = status;
 
-    // Detect save completion: saving → saved
     if (prevStatus === "saving" && status === "saved") {
       setJustSaved(true);
       setVisible(true);
@@ -84,7 +82,6 @@ export function FloatingSaveBar({
       clearTimeout(exitTimerRef.current);
       setJustSaved(false);
       setRendered(true);
-      // Micro-delay to trigger CSS transition after mount
       requestAnimationFrame(() => {
         requestAnimationFrame(() => setVisible(true));
       });
@@ -113,7 +110,6 @@ export function FloatingSaveBar({
           "bg-white/85 backdrop-blur-xl backdrop-saturate-150",
           "dark:bg-neutral-950/80 dark:backdrop-blur-xl dark:backdrop-saturate-150",
           "border-slate-200/80 dark:border-neutral-700/60",
-          // Transition
           "transition-all duration-[400ms]",
           visible ? "translate-y-0 opacity-100 scale-100" : "translate-y-8 opacity-0 scale-[0.96]",
         ].join(" ")}
@@ -123,7 +119,6 @@ export function FloatingSaveBar({
             : "cubic-bezier(0.4, 0, 1, 1)",
         }}
       >
-        {/* Status badge */}
         <div
           className={[
             "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-semibold",
@@ -141,10 +136,8 @@ export function FloatingSaveBar({
           )}
         </div>
 
-        {/* Divider */}
         <div className="h-5 w-px bg-slate-200/80 dark:bg-neutral-700/60" />
 
-        {/* Actions */}
         <div className="flex items-center gap-1.5">
           <Button
             variant="ghost"

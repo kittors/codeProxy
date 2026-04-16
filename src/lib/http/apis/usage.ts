@@ -16,6 +16,24 @@ export interface UsageImportResponse {
   [key: string]: unknown;
 }
 
+export interface AuthFileGroupTrendPoint {
+  date: string;
+  requests: number;
+}
+
+export interface AuthFileQuotaTrendPoint {
+  date: string;
+  percent: number | null;
+  samples: number;
+}
+
+export interface AuthFileGroupTrendResponse {
+  days: number;
+  group: string;
+  points: AuthFileGroupTrendPoint[];
+  quota_points: AuthFileQuotaTrendPoint[];
+}
+
 export const usageApi = {
   async getUsage(): Promise<UsageData> {
     const response = await apiClient.get<Record<string, unknown>>("/usage");
@@ -86,6 +104,27 @@ export const usageApi = {
       source: Array.isArray(resp?.source) ? resp.source : [],
       auth_index: Array.isArray(resp?.auth_index) ? resp.auth_index : [],
     };
+  },
+
+  async getAuthFileGroupTrend(group: string, days = 7): Promise<AuthFileGroupTrendResponse> {
+    const qs = new URLSearchParams({ group, days: String(days) });
+    const resp = await apiClient.get<AuthFileGroupTrendResponse>(
+      `/usage/auth-file-group-trend?${qs.toString()}`,
+    );
+    return {
+      days: resp?.days ?? days,
+      group: resp?.group ?? group,
+      points: Array.isArray(resp?.points) ? resp.points : [],
+      quota_points: Array.isArray(resp?.quota_points) ? resp.quota_points : [],
+    };
+  },
+
+  async recordAuthFileQuotaSnapshot(payload: {
+    auth_index: string;
+    provider?: string;
+    quotas: Record<string, number | null>;
+  }): Promise<void> {
+    await apiClient.post("/usage/auth-file-quota-snapshot", payload);
   },
 
   async getUsageLogs(params: {

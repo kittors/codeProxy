@@ -10,7 +10,7 @@ const PLACEMENT_CLASS: Record<TooltipPlacement, string> = {
   left: "right-full mr-2 top-1/2 -translate-y-1/2",
 };
 
-function TooltipBubble({
+function _TooltipBubble({
   id,
   open,
   content,

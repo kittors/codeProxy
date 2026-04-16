@@ -18,6 +18,8 @@ export const authFilesApi = {
   deleteAll: () => apiClient.delete("/auth-files", undefined, { params: { all: true } }),
   downloadText: (name: string) =>
     apiClient.getText("/auth-files/download", { params: { name }, timeoutMs: 60000 }),
+  downloadFile: (name: string) =>
+    apiClient.downloadToFile("/auth-files/download", name, { params: { name }, timeoutMs: 60000 }),
   patchFields: (payload: {
     name: string;
     label?: string;

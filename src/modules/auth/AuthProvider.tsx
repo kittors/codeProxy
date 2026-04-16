@@ -17,6 +17,8 @@ import { apiClient } from "@/lib/http/client";
 import { configApi } from "@/lib/http/apis";
 import type { AuthSnapshot } from "@/lib/http/types";
 
+const AUTH_PERSIST_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+
 interface AuthContextState {
   state: {
     isAuthenticated: boolean;
@@ -43,13 +45,21 @@ interface AuthContextState {
 
 const AuthContext = createContext<AuthContextState | null>(null);
 
+interface PersistedAuthSnapshot extends AuthSnapshot {
+  expiresAt: number;
+}
+
 const readAuthSnapshot = (): AuthSnapshot | null => {
   try {
-    const raw = localStorage.getItem(AUTH_STORAGE_KEY);
+    const raw = window.localStorage.getItem(AUTH_STORAGE_KEY);
     if (!raw) {
       return null;
     }
-    const parsed = JSON.parse(raw) as Partial<AuthSnapshot>;
+    const parsed = JSON.parse(raw) as Partial<PersistedAuthSnapshot>;
+    if (typeof parsed.expiresAt !== "number" || parsed.expiresAt <= Date.now()) {
+      window.localStorage.removeItem(AUTH_STORAGE_KEY);
+      return null;
+    }
     if (!parsed.apiBase || !parsed.managementKey) {
       return null;
     }
@@ -64,11 +74,15 @@ const readAuthSnapshot = (): AuthSnapshot | null => {
 };
 
 const writeAuthSnapshot = (snapshot: AuthSnapshot): void => {
-  localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(snapshot));
+  const payload: PersistedAuthSnapshot = {
+    ...snapshot,
+    expiresAt: Date.now() + AUTH_PERSIST_TTL_MS,
+  };
+  window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(payload));
 };
 
 const clearAuthSnapshot = (): void => {
-  localStorage.removeItem(AUTH_STORAGE_KEY);
+  window.localStorage.removeItem(AUTH_STORAGE_KEY);
 };
 
 export function AuthProvider({ children }: PropsWithChildren) {

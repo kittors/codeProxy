@@ -6,7 +6,6 @@ import "@/styles/index.css";
 import "goey-toast/styles.css";
 import "@/i18n/index";
 
-/** 淡出并移除 HTML 首屏 loading */
 function dismissAppLoader() {
   const loader = document.getElementById("app-loader");
   if (!loader) return;

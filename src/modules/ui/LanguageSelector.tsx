@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
+import { ensureLanguageResources } from "@/i18n";
 import { Check, Languages } from "lucide-react";
 import { SUPPORTED_LANGUAGES, LANGUAGE_LABEL_KEYS, STORAGE_KEY_LANGUAGE } from "@/utils/constants";
 import type { Language } from "@/types";
@@ -27,7 +28,9 @@ export function LanguageSelector({ className }: { className?: string }) {
 
   const handleLanguageChange = useCallback(
     (lng: string) => {
-      i18n.changeLanguage(lng).catch(console.error);
+      void ensureLanguageResources(lng)
+        .then(() => i18n.changeLanguage(lng))
+        .catch(console.error);
       try {
         localStorage.setItem(
           STORAGE_KEY_LANGUAGE,

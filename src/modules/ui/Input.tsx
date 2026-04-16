@@ -1,20 +1,28 @@
 import { forwardRef, type InputHTMLAttributes, type ReactNode } from "react";
+import {
+  controlHeightBySize,
+  controlPaddingBySize,
+  controlSurface,
+  controlTextBySize,
+  type ControlSize,
+} from "@/modules/ui/controlStyles";
 
 type InputVariant = "solid" | "ghost";
 
 export interface TextInputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "size"> {
   variant?: InputVariant;
+  size?: ControlSize;
+  startAdornment?: ReactNode;
   endAdornment?: ReactNode;
 }
 
 const VARIANT_STYLES: Record<InputVariant, string> = {
-  solid:
-    "rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-slate-900 placeholder:text-slate-400 dark:border-neutral-800 dark:bg-neutral-900 dark:text-slate-100 dark:placeholder:text-neutral-500",
+  solid: controlSurface,
   ghost: "bg-transparent text-inherit placeholder:text-inherit placeholder:opacity-60",
 };
 
 export const TextInput = forwardRef<HTMLInputElement, TextInputProps>(function TextInput(
-  { className, endAdornment, variant = "solid", ...props },
+  { className, endAdornment, startAdornment, variant = "solid", size = "default", ...props },
   ref,
 ) {
   const ariaLabel =
@@ -24,21 +32,32 @@ export const TextInput = forwardRef<HTMLInputElement, TextInputProps>(function T
     "w-full text-sm outline-none",
     "focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0",
     "transition",
+    controlHeightBySize[size],
+    controlTextBySize[size],
+    variant === "solid" ? controlPaddingBySize[size] : null,
     VARIANT_STYLES[variant],
+    startAdornment ? "pl-9" : null,
     endAdornment ? "pr-10" : null,
     className,
   ]
     .filter(Boolean)
     .join(" ");
 
-  if (!endAdornment) {
+  if (!startAdornment && !endAdornment) {
     return <input ref={ref} className={mergedClassName} aria-label={ariaLabel} {...props} />;
   }
 
   return (
     <div className="relative">
+      {startAdornment ? (
+        <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2">
+          {startAdornment}
+        </div>
+      ) : null}
       <input ref={ref} className={mergedClassName} aria-label={ariaLabel} {...props} />
-      <div className="absolute right-2 top-1/2 -translate-y-1/2">{endAdornment}</div>
+      {endAdornment ? (
+        <div className="absolute right-2 top-1/2 -translate-y-1/2">{endAdornment}</div>
+      ) : null}
     </div>
   );
 });
