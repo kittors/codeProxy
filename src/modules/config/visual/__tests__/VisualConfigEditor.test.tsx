@@ -1,4 +1,4 @@
-import { act, render, renderHook, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, renderHook, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import i18n from "@/i18n";
@@ -15,6 +15,7 @@ function renderEditor(onChange = vi.fn()) {
           ...DEFAULT_VISUAL_VALUES,
           autoUpdateEnabled: true,
           autoUpdateChannel: "main",
+          autoUpdateDockerImage: "ghcr.io/kittors/clirelay",
         }}
         onChange={onChange}
       />
@@ -43,17 +44,34 @@ describe("VisualConfigEditor auto update config", () => {
     expect(onChange).toHaveBeenCalledWith({ autoUpdateChannel: "dev" });
   });
 
+  test("exposes custom docker image repository with a risk warning", async () => {
+    const onChange = renderEditor();
+
+    const input = screen.getByRole("textbox", { name: /docker image repository/i });
+    expect(input).toHaveValue("ghcr.io/kittors/clirelay");
+    expect(screen.getByText(/custom images can break updates/i)).toBeInTheDocument();
+
+    fireEvent.change(input, { target: { value: "registry.local/mirror/clirelay" } });
+
+    expect(onChange).toHaveBeenLastCalledWith({
+      autoUpdateDockerImage: "registry.local/mirror/clirelay",
+    });
+  });
+
   test("loads and writes auto-update settings in config yaml", async () => {
     const { result } = renderHook(() => useVisualConfig());
 
     act(() => {
-      result.current.loadVisualValuesFromYaml("auto-update:\n  enabled: false\n  channel: dev\n");
+      result.current.loadVisualValuesFromYaml(
+        "auto-update:\n  enabled: false\n  channel: dev\n  docker-image: registry.local/mirror/clirelay\n",
+      );
     });
 
     await waitFor(() => {
       expect(result.current.visualValues).toMatchObject({
         autoUpdateEnabled: false,
         autoUpdateChannel: "dev",
+        autoUpdateDockerImage: "registry.local/mirror/clirelay",
       });
     });
 
@@ -61,6 +79,7 @@ describe("VisualConfigEditor auto update config", () => {
       result.current.setVisualValues({
         autoUpdateEnabled: true,
         autoUpdateChannel: "dev",
+        autoUpdateDockerImage: "registry.example.com/team/clirelay",
       });
     });
 
@@ -68,6 +87,9 @@ describe("VisualConfigEditor auto update config", () => {
       expect(result.current.applyVisualChangesToYaml("")).toContain("auto-update:");
       expect(result.current.applyVisualChangesToYaml("")).toContain("enabled: true");
       expect(result.current.applyVisualChangesToYaml("")).toContain("channel: dev");
+      expect(result.current.applyVisualChangesToYaml("")).toContain(
+        "docker-image: registry.example.com/team/clirelay",
+      );
     });
   });
 });
