@@ -6,6 +6,42 @@ import { useToast } from "@/modules/ui/ToastProvider";
 
 const DEFAULT_INITIAL_DELAY_MS = 2500;
 
+const sameCommit = (left?: string, right?: string) => {
+  const normalizedLeft = left?.trim().toLowerCase() ?? "";
+  const normalizedRight = right?.trim().toLowerCase() ?? "";
+  if (!normalizedLeft || !normalizedRight) return false;
+  return (
+    normalizedLeft.startsWith(normalizedRight) ||
+    normalizedRight.startsWith(normalizedLeft)
+  );
+};
+
+const updateToastVersion = (
+  info: Awaited<ReturnType<typeof updateApi.check>>,
+) => {
+  const backendChanged =
+    Boolean(info.latest_commit?.trim()) &&
+    !sameCommit(info.current_commit, info.latest_commit);
+  if (!backendChanged && info.latest_ui_version?.trim()) {
+    return info.latest_ui_version;
+  }
+  return (
+    info.latest_version ||
+    info.latest_commit ||
+    info.latest_ui_commit ||
+    info.docker_tag ||
+    ""
+  );
+};
+
+const updateToastIdentity = (
+  info: Awaited<ReturnType<typeof updateApi.check>>,
+) =>
+  updateToastVersion(info) ||
+  info.latest_commit ||
+  info.latest_ui_commit ||
+  `${info.docker_image ?? ""}:${info.docker_tag ?? ""}`;
+
 export function AutoUpdatePrompt({
   initialDelayMs = DEFAULT_INITIAL_DELAY_MS,
 }: {
@@ -32,17 +68,14 @@ export function AutoUpdatePrompt({
         .check()
         .then((info) => {
           if (cancelled || !info.enabled || !info.update_available) return;
-          const identity =
-            info.latest_commit ||
-            info.latest_version ||
-            `${info.docker_image ?? ""}:${info.docker_tag ?? ""}`;
+          const identity = updateToastIdentity(info);
           if (identity && notifiedRef.current.has(identity)) return;
           if (identity) notifiedRef.current.add(identity);
           notify({
             type: "info",
             title: t("auto_update.toast_title"),
             message: t("auto_update.toast_message", {
-              version: info.latest_version || info.latest_commit || info.docker_tag || "",
+              version: updateToastVersion(info),
             }),
             duration: 6000,
           });
@@ -59,7 +92,13 @@ export function AutoUpdatePrompt({
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [auth.state.isAuthenticated, auth.state.isRestoring, initialDelayMs, notify, t]);
+  }, [
+    auth.state.isAuthenticated,
+    auth.state.isRestoring,
+    initialDelayMs,
+    notify,
+    t,
+  ]);
 
   return null;
 }

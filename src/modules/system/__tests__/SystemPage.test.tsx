@@ -42,7 +42,10 @@ function renderPage() {
   return render(
     <ThemeProvider>
       <ToastProvider>
-        <SystemPage updateHeartbeatIntervalMs={1} updateHeartbeatTimeoutMs={200} />
+        <SystemPage
+          updateHeartbeatIntervalMs={1}
+          updateHeartbeatTimeoutMs={200}
+        />
       </ToastProvider>
     </ThemeProvider>,
   );
@@ -103,17 +106,26 @@ describe("SystemPage", () => {
 
     renderPage();
 
-    await userEvent.click(await screen.findByRole("button", { name: /check docker update/i }));
+    await userEvent.click(
+      await screen.findByRole("button", { name: /check docker update/i }),
+    );
     const dialog = await screen.findByRole("dialog");
-    expect(within(dialog).getByText(/Fixes and improvements/i)).toBeInTheDocument();
+    expect(
+      within(dialog).getByText(/Fixes and improvements/i),
+    ).toBeInTheDocument();
 
-    await userEvent.click(within(dialog).getByRole("button", { name: /update now/i }));
+    await userEvent.click(
+      within(dialog).getByRole("button", { name: /update now/i }),
+    );
 
     await waitFor(() => {
       expect(mocks.apply).toHaveBeenCalledTimes(1);
     });
     await waitFor(() => {
-      expect(mocks.apiGet).toHaveBeenCalledWith("/system-stats", expect.any(Object));
+      expect(mocks.apiGet).toHaveBeenCalledWith(
+        "/system-stats",
+        expect.any(Object),
+      );
     });
     await waitFor(() => {
       expect(mocks.check).toHaveBeenCalledTimes(2);
@@ -127,8 +139,12 @@ describe("SystemPage", () => {
         update_available: true,
         current_version: "main-1111111",
         current_commit: "1111111",
+        current_ui_version: "panel-dev-1111111",
+        current_ui_commit: "1111111",
         latest_version: "dev-abcdef1",
         latest_commit: "abcdef123456",
+        latest_ui_version: "panel-dev-abcdef1",
+        latest_ui_commit: "abcdef123456",
         target_channel: "dev",
         docker_image: "ghcr.io/kittors/clirelay",
         docker_tag: "dev",
@@ -140,8 +156,12 @@ describe("SystemPage", () => {
         update_available: true,
         current_version: "main-1111111",
         current_commit: "1111111",
+        current_ui_version: "panel-dev-abcdef1",
+        current_ui_commit: "abcdef123456",
         latest_version: "dev-abcdef1",
         latest_commit: "abcdef123456",
+        latest_ui_version: "panel-dev-abcdef1",
+        latest_ui_commit: "abcdef123456",
         target_channel: "dev",
         docker_image: "ghcr.io/kittors/clirelay",
         docker_tag: "dev",
@@ -151,9 +171,13 @@ describe("SystemPage", () => {
 
     renderPage();
 
-    await userEvent.click(await screen.findByRole("button", { name: /check docker update/i }));
+    await userEvent.click(
+      await screen.findByRole("button", { name: /check docker update/i }),
+    );
     const dialog = await screen.findByRole("dialog");
-    await userEvent.click(within(dialog).getByRole("button", { name: /update now/i }));
+    await userEvent.click(
+      within(dialog).getByRole("button", { name: /update now/i }),
+    );
 
     await waitFor(() => {
       expect(mocks.apply).toHaveBeenCalledTimes(1);
@@ -166,13 +190,47 @@ describe("SystemPage", () => {
     ).toBeInTheDocument();
   });
 
+  test("shows backend and management ui versions separately inside update details", async () => {
+    mocks.check.mockResolvedValue({
+      enabled: true,
+      update_available: true,
+      current_version: "main-a0ed5c6",
+      current_commit: "a0ed5c63a118412d5b4da8d57ec6d049111b7888",
+      current_ui_version: "panel-main-1111111",
+      current_ui_commit: "1111111",
+      latest_version: "main-a0ed5c6",
+      latest_commit: "a0ed5c63a118412d5b4da8d57ec6d049111b7888",
+      latest_ui_version: "panel-main-9477958",
+      latest_ui_commit: "94779588adb784b1ceff19c662d3ab55155997e1",
+      target_channel: "main",
+      docker_image: "ghcr.io/kittors/clirelay",
+      docker_tag: "latest",
+      release_notes: "Fixes and improvements",
+      updater_available: true,
+    });
+    renderPage();
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: /check docker update/i }),
+    );
+    const dialog = await screen.findByRole("dialog");
+
+    expect(within(dialog).getByText("Service version")).toBeInTheDocument();
+    expect(within(dialog).getAllByText("main-a0ed5c6")).toHaveLength(2);
+    expect(
+      within(dialog).getByText("Management UI version"),
+    ).toBeInTheDocument();
+    expect(within(dialog).getByText("panel-main-9477958")).toBeInTheDocument();
+  });
+
   test("keeps long update details contained inside the user-opened dialog", async () => {
     mocks.check.mockResolvedValue({
       enabled: true,
       update_available: true,
       current_version: "main-1111111-with-an-extra-long-build-identifier",
       current_commit: "1111111",
-      latest_version: "dev-abcdef1234567890-with-an-extra-long-build-identifier",
+      latest_version:
+        "dev-abcdef1234567890-with-an-extra-long-build-identifier",
       latest_commit: "abcdef1234567890",
       target_channel: "dev",
       docker_image:
@@ -183,7 +241,9 @@ describe("SystemPage", () => {
     });
     renderPage();
 
-    await userEvent.click(await screen.findByRole("button", { name: /check docker update/i }));
+    await userEvent.click(
+      await screen.findByRole("button", { name: /check docker update/i }),
+    );
 
     const dialog = await screen.findByRole("dialog");
     expect(dialog).toHaveClass("max-w-[min(92vw,900px)]");
@@ -211,11 +271,17 @@ describe("SystemPage", () => {
     });
     renderPage();
 
-    await userEvent.click(await screen.findByRole("button", { name: /check docker update/i }));
+    await userEvent.click(
+      await screen.findByRole("button", { name: /check docker update/i }),
+    );
     const dialog = await screen.findByRole("dialog");
 
-    expect(within(dialog).getAllByText(/updater sidecar/i, { exact: false })).toHaveLength(1);
-    expect(within(dialog).getByRole("button", { name: /update now/i })).toBeDisabled();
+    expect(
+      within(dialog).getAllByText(/updater sidecar/i, { exact: false }),
+    ).toHaveLength(1);
+    expect(
+      within(dialog).getByRole("button", { name: /update now/i }),
+    ).toBeDisabled();
   });
 
   test("renders update release notes as markdown", async () => {
@@ -235,10 +301,14 @@ describe("SystemPage", () => {
     });
     renderPage();
 
-    await userEvent.click(await screen.findByRole("button", { name: /check docker update/i }));
+    await userEvent.click(
+      await screen.findByRole("button", { name: /check docker update/i }),
+    );
     const dialog = await screen.findByRole("dialog");
 
-    expect(await within(dialog).findByRole("heading", { name: "Changes" })).toBeInTheDocument();
+    expect(
+      await within(dialog).findByRole("heading", { name: "Changes" }),
+    ).toBeInTheDocument();
     expect(within(dialog).getByText("Markdown")).toBeInTheDocument();
     expect(within(dialog).getAllByRole("listitem")).toHaveLength(2);
   });
@@ -256,19 +326,26 @@ describe("SystemPage", () => {
       target_channel: "main",
       docker_image: "ghcr.io/kittors/clirelay",
       docker_tag: "latest",
-      release_notes: "## Changelog\n\n- Older release note that should not be shown",
+      release_notes:
+        "## Changelog\n\n- Older release note that should not be shown",
       updater_available: true,
     });
     renderPage();
 
-    await userEvent.click(await screen.findByRole("button", { name: /check docker update/i }));
+    await userEvent.click(
+      await screen.findByRole("button", { name: /check docker update/i }),
+    );
     const dialog = await screen.findByRole("dialog");
 
     expect(
       within(dialog).getByRole("heading", { name: /already up to date/i }),
     ).toBeInTheDocument();
     expect(within(dialog).getAllByText("main-de96948")).toHaveLength(2);
-    expect(within(dialog).queryByText(/older release note/i)).not.toBeInTheDocument();
-    expect(within(dialog).getByRole("button", { name: /update now/i })).toBeDisabled();
+    expect(
+      within(dialog).queryByText(/older release note/i),
+    ).not.toBeInTheDocument();
+    expect(
+      within(dialog).getByRole("button", { name: /update now/i }),
+    ).toBeDisabled();
   });
 });

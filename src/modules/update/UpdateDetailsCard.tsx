@@ -11,7 +11,8 @@ import { useToast } from "@/modules/ui/ToastProvider";
 const DEFAULT_HEARTBEAT_INTERVAL_MS = 2000;
 const DEFAULT_HEARTBEAT_TIMEOUT_MS = 180000;
 
-const sleep = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms));
+const sleep = (ms: number) =>
+  new Promise((resolve) => window.setTimeout(resolve, ms));
 const LazyRichMarkdown = lazy(() =>
   import("@/modules/monitor/log-content/rendering-markdown").then((mod) => ({
     default: mod.RichMarkdown,
@@ -39,7 +40,10 @@ const sameCommit = (left?: string, right?: string) => {
   const normalizedLeft = left?.trim().toLowerCase() ?? "";
   const normalizedRight = right?.trim().toLowerCase() ?? "";
   if (!normalizedLeft || !normalizedRight) return false;
-  return normalizedLeft.startsWith(normalizedRight) || normalizedRight.startsWith(normalizedLeft);
+  return (
+    normalizedLeft.startsWith(normalizedRight) ||
+    normalizedRight.startsWith(normalizedLeft)
+  );
 };
 
 const matchesAppliedTarget = (
@@ -47,11 +51,31 @@ const matchesAppliedTarget = (
   target?: UpdateCheckResponse | null,
 ) => {
   if (!target) return !info.update_available;
-  if (sameCommit(info.current_commit, target.latest_commit)) return true;
+  const backendNeedsChange =
+    Boolean(target.latest_commit?.trim()) &&
+    !sameCommit(target.current_commit, target.latest_commit);
+  const uiNeedsChange =
+    Boolean(target.latest_ui_commit?.trim()) &&
+    !sameCommit(target.current_ui_commit, target.latest_ui_commit);
   const currentVersion = info.current_version?.trim() ?? "";
   const targetVersion = target.latest_version?.trim() ?? "";
-  if (currentVersion && targetVersion && currentVersion === targetVersion) return true;
-  return false;
+  const currentUIVersion = info.current_ui_version?.trim() ?? "";
+  const targetUIVersion = target.latest_ui_version?.trim() ?? "";
+  const backendApplied =
+    !backendNeedsChange ||
+    sameCommit(info.current_commit, target.latest_commit) ||
+    Boolean(
+      currentVersion && targetVersion && currentVersion === targetVersion,
+    );
+  const uiApplied =
+    !uiNeedsChange ||
+    sameCommit(info.current_ui_commit, target.latest_ui_commit) ||
+    Boolean(
+      currentUIVersion &&
+      targetUIVersion &&
+      currentUIVersion === targetUIVersion,
+    );
+  return backendApplied && uiApplied;
 };
 
 const versionLabel = (version?: string, commit?: string, channel?: string) => {
@@ -60,6 +84,19 @@ const versionLabel = (version?: string, commit?: string, channel?: string) => {
   const short = shortCommit(commit);
   if (short && channel) return `${channel}-${short}`;
   return short || "--";
+};
+
+const uiVersionLabel = (
+  version?: string,
+  commit?: string,
+  channel?: string,
+) => {
+  const trimmedVersion = version?.trim();
+  if (trimmedVersion) return trimmedVersion;
+  const short = shortCommit(commit);
+  const normalizedChannel = channel?.trim() || "main";
+  if (short) return `panel-${normalizedChannel}-${short}`;
+  return "--";
 };
 
 function ReleaseNotesMarkdown({ text }: { text: string }) {
@@ -75,7 +112,10 @@ function ReleaseNotesMarkdown({ text }: { text: string }) {
           </pre>
         }
       >
-        <LazyRichMarkdown proseClasses={RELEASE_NOTES_PROSE_CLASSES} text={text} />
+        <LazyRichMarkdown
+          proseClasses={RELEASE_NOTES_PROSE_CLASSES}
+          text={text}
+        />
       </Suspense>
     </div>
   );
@@ -97,30 +137,33 @@ export function UpdateDetailsCard({
   const [modalOpen, setModalOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const waitForAppliedTarget = useCallback(async (target?: UpdateCheckResponse | null) => {
-    const deadline = Date.now() + heartbeatTimeoutMs;
-    let lastCheck: UpdateCheckResponse | null = null;
-    await sleep(Math.min(heartbeatIntervalMs, 3000));
-    while (true) {
-      try {
-        await apiClient.get("/system-stats", {
-          timeoutMs: Math.min(5000, heartbeatIntervalMs + 3000),
-        });
-        const info = await updateApi.check({
-          timeoutMs: Math.min(8000, heartbeatIntervalMs + 5000),
-        });
-        lastCheck = info;
-        setCandidate(info);
-        if (matchesAppliedTarget(info, target)) {
-          return { ok: true, latest: info };
+  const waitForAppliedTarget = useCallback(
+    async (target?: UpdateCheckResponse | null) => {
+      const deadline = Date.now() + heartbeatTimeoutMs;
+      let lastCheck: UpdateCheckResponse | null = null;
+      await sleep(Math.min(heartbeatIntervalMs, 3000));
+      while (true) {
+        try {
+          await apiClient.get("/system-stats", {
+            timeoutMs: Math.min(5000, heartbeatIntervalMs + 3000),
+          });
+          const info = await updateApi.check({
+            timeoutMs: Math.min(8000, heartbeatIntervalMs + 5000),
+          });
+          lastCheck = info;
+          setCandidate(info);
+          if (matchesAppliedTarget(info, target)) {
+            return { ok: true, latest: info };
+          }
+        } catch {
+          // Keep polling until timeout so restarts and short network blips do not look like failures.
         }
-      } catch {
-        // Keep polling until timeout so restarts and short network blips do not look like failures.
+        if (Date.now() >= deadline) return { ok: false, latest: lastCheck };
+        await sleep(heartbeatIntervalMs);
       }
-      if (Date.now() >= deadline) return { ok: false, latest: lastCheck };
-      await sleep(heartbeatIntervalMs);
-    }
-  }, [heartbeatIntervalMs, heartbeatTimeoutMs]);
+    },
+    [heartbeatIntervalMs, heartbeatTimeoutMs],
+  );
 
   const checkUpdate = useCallback(async () => {
     setModalOpen(true);
@@ -138,10 +181,13 @@ export function UpdateDetailsCard({
     } catch (err: unknown) {
       notify({
         type: "error",
-        message: err instanceof Error ? err.message : t("auto_update.check_failed"),
+        message:
+          err instanceof Error ? err.message : t("auto_update.check_failed"),
       });
       setCandidate(null);
-      setError(err instanceof Error ? err.message : t("auto_update.check_failed"));
+      setError(
+        err instanceof Error ? err.message : t("auto_update.check_failed"),
+      );
     } finally {
       setChecking(false);
     }
@@ -181,9 +227,12 @@ export function UpdateDetailsCard({
     }
   }, [candidate, notify, t, waitForAppliedTarget]);
 
-  const releaseNotes = candidate?.release_notes?.trim() || t("auto_update.no_release_notes");
+  const releaseNotes =
+    candidate?.release_notes?.trim() || t("auto_update.no_release_notes");
   const canUpdate = Boolean(
-    candidate?.enabled && candidate.update_available && candidate.updater_available,
+    candidate?.enabled &&
+    candidate.update_available &&
+    candidate.updater_available,
   );
   const modalTitle =
     candidate && !candidate.update_available
@@ -195,10 +244,32 @@ export function UpdateDetailsCard({
       : t("auto_update.description");
   const showReleaseNotes = Boolean(candidate?.update_available);
   const currentVersion = candidate
-    ? versionLabel(candidate.current_version, candidate.current_commit, candidate.target_channel)
+    ? versionLabel(
+        candidate.current_version,
+        candidate.current_commit,
+        candidate.target_channel,
+      )
     : "--";
   const targetVersion = candidate
-    ? versionLabel(candidate.latest_version, candidate.latest_commit, candidate.target_channel)
+    ? versionLabel(
+        candidate.latest_version,
+        candidate.latest_commit,
+        candidate.target_channel,
+      )
+    : "--";
+  const currentUIVersion = candidate
+    ? uiVersionLabel(
+        candidate.current_ui_version,
+        candidate.current_ui_commit,
+        candidate.target_channel,
+      )
+    : "--";
+  const targetUIVersion = candidate
+    ? uiVersionLabel(
+        candidate.latest_ui_version,
+        candidate.latest_ui_commit,
+        candidate.target_channel,
+      )
     : "--";
   const dockerImage = candidate
     ? [candidate.docker_image, candidate.docker_tag].filter(Boolean).join(":")
@@ -241,7 +312,11 @@ export function UpdateDetailsCard({
         }}
         footer={
           <>
-            <Button variant="secondary" onClick={() => setModalOpen(false)} disabled={updating}>
+            <Button
+              variant="secondary"
+              onClick={() => setModalOpen(false)}
+              disabled={updating}
+            >
               {t("common.close")}
             </Button>
             <Button
@@ -249,8 +324,12 @@ export function UpdateDetailsCard({
               onClick={() => void applyUpdate()}
               disabled={checking || updating || !canUpdate}
             >
-              {updating ? <RefreshCw size={14} className="animate-spin" /> : null}
-              {updating ? t("auto_update.updating") : t("auto_update.update_now")}
+              {updating ? (
+                <RefreshCw size={14} className="animate-spin" />
+              ) : null}
+              {updating
+                ? t("auto_update.updating")
+                : t("auto_update.update_now")}
             </Button>
           </>
         }
@@ -271,23 +350,24 @@ export function UpdateDetailsCard({
 
           {candidate ? (
             <>
-              <dl className="grid min-w-0 gap-3 sm:grid-cols-2">
+              <dl className="grid min-w-0 gap-3 lg:grid-cols-2">
                 <div className="min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-neutral-800 dark:bg-neutral-900/50">
                   <dt className="text-xs font-medium text-slate-500 dark:text-white/55">
-                    {t("auto_update.current")}
+                    {t("auto_update.current_service")}
                   </dt>
                   <dd className="mt-1 break-words font-mono text-sm text-slate-900 dark:text-white">
                     {currentVersion}
                   </dd>
                   {candidate.current_commit ? (
                     <p className="mt-1 truncate text-xs text-slate-500 dark:text-white/50">
-                      {t("auto_update.commit")}: {shortCommit(candidate.current_commit)}
+                      {t("auto_update.commit")}:{" "}
+                      {shortCommit(candidate.current_commit)}
                     </p>
                   ) : null}
                 </div>
                 <div className="min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-neutral-800 dark:bg-neutral-900/50">
                   <dt className="text-xs font-medium text-slate-500 dark:text-white/55">
-                    {t("auto_update.target")}
+                    {t("auto_update.target_service")}
                   </dt>
                   <dd className="mt-1 break-words font-mono text-sm text-slate-900 dark:text-white">
                     {targetVersion}
@@ -300,16 +380,58 @@ export function UpdateDetailsCard({
                         rel="noreferrer"
                         className="mt-1 block truncate text-xs text-indigo-600 hover:underline dark:text-indigo-300"
                       >
-                        {t("auto_update.commit")}: {shortCommit(candidate.latest_commit)}
+                        {t("auto_update.commit")}:{" "}
+                        {shortCommit(candidate.latest_commit)}
                       </a>
                     ) : (
                       <p className="mt-1 truncate text-xs text-slate-500 dark:text-white/50">
-                        {t("auto_update.commit")}: {shortCommit(candidate.latest_commit)}
+                        {t("auto_update.commit")}:{" "}
+                        {shortCommit(candidate.latest_commit)}
                       </p>
                     )
                   ) : null}
                 </div>
-                <div className="min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-neutral-800 dark:bg-neutral-900/50 sm:col-span-2">
+                <div className="min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-neutral-800 dark:bg-neutral-900/50">
+                  <dt className="text-xs font-medium text-slate-500 dark:text-white/55">
+                    {t("auto_update.current_ui")}
+                  </dt>
+                  <dd className="mt-1 break-words font-mono text-sm text-slate-900 dark:text-white">
+                    {currentUIVersion}
+                  </dd>
+                  {candidate.current_ui_commit ? (
+                    <p className="mt-1 truncate text-xs text-slate-500 dark:text-white/50">
+                      {t("auto_update.commit")}:{" "}
+                      {shortCommit(candidate.current_ui_commit)}
+                    </p>
+                  ) : null}
+                </div>
+                <div className="min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-neutral-800 dark:bg-neutral-900/50">
+                  <dt className="text-xs font-medium text-slate-500 dark:text-white/55">
+                    {t("auto_update.target_ui")}
+                  </dt>
+                  <dd className="mt-1 break-words font-mono text-sm text-slate-900 dark:text-white">
+                    {targetUIVersion}
+                  </dd>
+                  {candidate.latest_ui_commit ? (
+                    candidate.latest_ui_commit_url ? (
+                      <a
+                        href={candidate.latest_ui_commit_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-1 block truncate text-xs text-indigo-600 hover:underline dark:text-indigo-300"
+                      >
+                        {t("auto_update.commit")}:{" "}
+                        {shortCommit(candidate.latest_ui_commit)}
+                      </a>
+                    ) : (
+                      <p className="mt-1 truncate text-xs text-slate-500 dark:text-white/50">
+                        {t("auto_update.commit")}:{" "}
+                        {shortCommit(candidate.latest_ui_commit)}
+                      </p>
+                    )
+                  ) : null}
+                </div>
+                <div className="min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-neutral-800 dark:bg-neutral-900/50 lg:col-span-2">
                   <dt className="text-xs font-medium text-slate-500 dark:text-white/55">
                     {t("auto_update.image")}
                   </dt>
@@ -339,7 +461,9 @@ export function UpdateDetailsCard({
 
               {!candidate.enabled || !candidate.update_available ? (
                 <p className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-200">
-                  {!candidate.enabled ? t("auto_update.disabled") : t("auto_update.no_update")}
+                  {!candidate.enabled
+                    ? t("auto_update.disabled")
+                    : t("auto_update.no_update")}
                 </p>
               ) : null}
             </>

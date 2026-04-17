@@ -71,9 +71,36 @@ describe("AutoUpdatePrompt", () => {
     await waitFor(() => {
       expect(mocks.check).toHaveBeenCalledTimes(1);
     });
-    expect(screen.queryByText(/Fixes and improvements/i)).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /update now/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/Fixes and improvements/i),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /update now/i }),
+    ).not.toBeInTheDocument();
     expect(mocks.apply).not.toHaveBeenCalled();
     expect(mocks.get).not.toHaveBeenCalled();
+  });
+
+  test("uses the management ui version in the toast when only the panel changed", async () => {
+    mocks.check.mockResolvedValue({
+      enabled: true,
+      update_available: true,
+      current_version: "main-a0ed5c6",
+      current_commit: "a0ed5c63a118412d5b4da8d57ec6d049111b7888",
+      current_ui_version: "panel-main-1111111",
+      current_ui_commit: "1111111",
+      latest_version: "main-a0ed5c6",
+      latest_commit: "a0ed5c63a118412d5b4da8d57ec6d049111b7888",
+      latest_ui_version: "panel-main-9477958",
+      latest_ui_commit: "94779588adb784b1ceff19c662d3ab55155997e1",
+      target_channel: "main",
+      docker_image: "ghcr.io/kittors/clirelay",
+      docker_tag: "latest",
+      updater_available: true,
+    });
+
+    renderPrompt();
+
+    expect(await screen.findByText(/panel-main-9477958/i)).toBeInTheDocument();
   });
 });
