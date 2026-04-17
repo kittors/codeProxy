@@ -79,6 +79,7 @@ export type VisualConfigValues = {
 
   authDir: string;
   apiKeysText: string;
+  corsAllowOriginsText: string;
 
   debug: boolean;
   commercialMode: boolean;
@@ -133,6 +134,7 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   rmPanelRepo: "",
   authDir: "",
   apiKeysText: "",
+  corsAllowOriginsText: "",
   debug: false,
   commercialMode: false,
   loggingToFile: false,

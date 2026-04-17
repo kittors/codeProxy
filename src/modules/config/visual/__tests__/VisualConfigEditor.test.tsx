@@ -92,4 +92,54 @@ describe("VisualConfigEditor auto update config", () => {
       );
     });
   });
+
+  test("exposes browser CORS origins as one origin per line", async () => {
+    const onChange = renderEditor();
+
+    const textarea = screen.getByRole("textbox", { name: /cors allowed origins/i });
+    fireEvent.change(textarea, {
+      target: {
+        value: "chrome-extension://abcdefghijklmnop\nhttp://localhost:5173",
+      },
+    });
+
+    expect(onChange).toHaveBeenLastCalledWith({
+      corsAllowOriginsText: "chrome-extension://abcdefghijklmnop\nhttp://localhost:5173",
+    });
+  });
+
+  test("loads and writes cors allow origins in config yaml", async () => {
+    const { result } = renderHook(() => useVisualConfig());
+
+    act(() => {
+      result.current.loadVisualValuesFromYaml(
+        [
+          "cors-allow-origins:",
+          "  - https://admin.example.com",
+          "  - chrome-extension://abcdefghijklmnop",
+        ].join("\n"),
+      );
+    });
+
+    await waitFor(() => {
+      expect(result.current.visualValues.corsAllowOriginsText).toBe(
+        "https://admin.example.com\nchrome-extension://abcdefghijklmnop",
+      );
+    });
+
+    act(() => {
+      result.current.setVisualValues({
+        corsAllowOriginsText:
+          " https://plugin.example \n\nchrome-extension://abcdefghijklmnop\nhttps://plugin.example",
+      });
+    });
+
+    await waitFor(() => {
+      const nextYaml = result.current.applyVisualChangesToYaml("");
+      expect(nextYaml).toContain("cors-allow-origins:");
+      expect(nextYaml).toContain("- https://plugin.example");
+      expect(nextYaml).toContain("- chrome-extension://abcdefghijklmnop");
+      expect(nextYaml.match(/https:\/\/plugin\.example/g)).toHaveLength(1);
+    });
+  });
 });

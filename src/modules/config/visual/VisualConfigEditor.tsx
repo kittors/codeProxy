@@ -28,6 +28,40 @@ function Field({
   );
 }
 
+function MultilineField({
+  value,
+  onChange,
+  disabled,
+  ariaLabel,
+  placeholder,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  disabled?: boolean;
+  ariaLabel: string;
+  placeholder: string;
+}) {
+  return (
+    <textarea
+      value={value}
+      onChange={(e) => onChange(e.currentTarget.value)}
+      disabled={disabled}
+      aria-label={ariaLabel}
+      placeholder={placeholder}
+      rows={6}
+      spellCheck={false}
+      className={[
+        "min-h-36 w-full resize-y rounded-2xl border border-black/[0.04] bg-white px-3.5 py-3 font-mono text-xs leading-5 text-[#3F3F46] shadow-[2px_2px_6px_rgb(0_0_0_/_0.055)] outline-none transition-colors",
+        "placeholder:text-[#96969B] hover:bg-[#FAFAFA] hover:text-[#18181B] focus-visible:ring-2 focus-visible:ring-slate-400/35",
+        "dark:border-transparent dark:bg-[#27272A] dark:text-[#E4E4E7] dark:shadow-[0_8px_24px_rgb(0_0_0_/_0.24)] dark:placeholder:text-[#9F9FA8] dark:hover:bg-[#303036] dark:hover:text-white dark:focus-visible:ring-white/15",
+        disabled ? "cursor-not-allowed opacity-60" : null,
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    />
+  );
+}
+
 export function VisualConfigEditor({
   values,
   disabled,
@@ -159,6 +193,34 @@ export function VisualConfigEditor({
                 disabled={disabled}
               />
             </Field>
+          </div>
+        </div>
+      </Card>
+
+      <Card title={t("visual_config.cors_title")} description={t("visual_config.cors_desc")}>
+        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_280px]">
+          <Field
+            label={t("visual_config.cors_origins_label")}
+            hint={t("visual_config.cors_origins_hint")}
+          >
+            <MultilineField
+              value={values.corsAllowOriginsText}
+              onChange={(next) => update({ corsAllowOriginsText: next })}
+              disabled={disabled}
+              ariaLabel={t("visual_config.cors_origins_label")}
+              placeholder={[
+                "chrome-extension://abcdefghijklmnop",
+                "http://localhost:5173",
+                "https://admin.example.com",
+              ].join("\n")}
+            />
+          </Field>
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50/70 px-4 py-3 text-xs leading-5 text-emerald-900 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-100">
+            <div className="font-semibold">{t("visual_config.cors_default_title")}</div>
+            <p className="mt-1">{t("visual_config.cors_default_desc")}</p>
+            <p className="mt-3 rounded-xl bg-white/65 px-3 py-2 font-mono text-[11px] text-emerald-950 dark:bg-black/20 dark:text-emerald-100">
+              chrome-extension://&lt;extension-id&gt;
+            </p>
           </div>
         </div>
       </Card>

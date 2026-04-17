@@ -58,6 +58,25 @@ function parseApiKeysText(raw: unknown): string {
   return keys.join("\n");
 }
 
+function parseStringListText(raw: unknown): string {
+  if (!Array.isArray(raw)) return "";
+
+  const values = raw.map((item) => String(item ?? "").trim()).filter(Boolean);
+  return Array.from(new Set(values)).join("\n");
+}
+
+function parseMultilineList(value: string): string[] {
+  const seen = new Set<string>();
+  const items: string[] = [];
+  for (const line of value.split(/\r?\n/)) {
+    const item = line.trim();
+    if (!item || seen.has(item)) continue;
+    seen.add(item);
+    items.push(item);
+  }
+  return items;
+}
+
 function ensureRecord(parent: Record<string, unknown>, key: string): Record<string, unknown> {
   const existing = asRecord(parent[key]);
   if (existing) return existing;
@@ -447,6 +466,7 @@ export function useVisualConfig() {
 
         authDir: typeof parsed["auth-dir"] === "string" ? parsed["auth-dir"] : "",
         apiKeysText: parseApiKeysText(parsed["api-keys"]),
+        corsAllowOriginsText: parseStringListText(parsed["cors-allow-origins"]),
 
         debug: Boolean(parsed.debug),
         commercialMode: Boolean(parsed["commercial-mode"]),
@@ -538,6 +558,15 @@ export function useVisualConfig() {
         }
 
         setString(parsed, "auth-dir", values.authDir);
+
+        if (hasOwn(parsed, "cors-allow-origins") || values.corsAllowOriginsText.trim()) {
+          const origins = parseMultilineList(values.corsAllowOriginsText);
+          if (origins.length > 0) {
+            parsed["cors-allow-origins"] = origins;
+          } else if (hasOwn(parsed, "cors-allow-origins")) {
+            delete parsed["cors-allow-origins"];
+          }
+        }
 
         if (hasOwn(parsed, "api-keys") || values.apiKeysText.trim()) {
           const apiKeys = values.apiKeysText
