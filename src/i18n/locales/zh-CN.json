@@ -2563,7 +2563,8 @@
     "updating": "更新中…",
     "success": "更新完成，正在刷新…",
     "failed": "更新失败",
-    "timeout": "已触发更新，但后端心跳未在预期时间内恢复。请检查 Docker 日志。"
+    "timeout": "已触发更新，但后端心跳未在预期时间内恢复。请检查 Docker 日志。",
+    "version_mismatch": "已触发更新，但当前运行版本仍未切换到 {{version}}。请检查 updater 和 Docker Compose 日志。"
   },
   "auth_files_page": {
     "files_tab": "文件",

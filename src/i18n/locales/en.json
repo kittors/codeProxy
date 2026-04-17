@@ -2971,7 +2971,8 @@
     "updating": "Updating…",
     "success": "Update completed. Reloading…",
     "failed": "Update failed",
-    "timeout": "Update was triggered, but the server heartbeat did not recover in time. Please check Docker logs."
+    "timeout": "Update was triggered, but the server heartbeat did not recover in time. Please check Docker logs.",
+    "version_mismatch": "Update was triggered, but the running version is still not {{version}}. Please check the updater and Docker Compose logs."
   },
   "floating_save_bar": {
     "saved": "Saved",

@@ -35,6 +35,25 @@ const shortCommit = (commit?: string) => {
   return trimmed.length > 7 ? trimmed.slice(0, 7) : trimmed;
 };
 
+const sameCommit = (left?: string, right?: string) => {
+  const normalizedLeft = left?.trim().toLowerCase() ?? "";
+  const normalizedRight = right?.trim().toLowerCase() ?? "";
+  if (!normalizedLeft || !normalizedRight) return false;
+  return normalizedLeft.startsWith(normalizedRight) || normalizedRight.startsWith(normalizedLeft);
+};
+
+const matchesAppliedTarget = (
+  info: UpdateCheckResponse,
+  target?: UpdateCheckResponse | null,
+) => {
+  if (!target) return !info.update_available;
+  if (sameCommit(info.current_commit, target.latest_commit)) return true;
+  const currentVersion = info.current_version?.trim() ?? "";
+  const targetVersion = target.latest_version?.trim() ?? "";
+  if (currentVersion && targetVersion && currentVersion === targetVersion) return true;
+  return false;
+};
+
 const versionLabel = (version?: string, commit?: string, channel?: string) => {
   const trimmedVersion = version?.trim();
   if (trimmedVersion) return trimmedVersion;
@@ -78,19 +97,28 @@ export function UpdateDetailsCard({
   const [modalOpen, setModalOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const waitForHeartbeat = useCallback(async () => {
+  const waitForAppliedTarget = useCallback(async (target?: UpdateCheckResponse | null) => {
     const deadline = Date.now() + heartbeatTimeoutMs;
+    let lastCheck: UpdateCheckResponse | null = null;
     await sleep(Math.min(heartbeatIntervalMs, 3000));
     while (true) {
       try {
         await apiClient.get("/system-stats", {
           timeoutMs: Math.min(5000, heartbeatIntervalMs + 3000),
         });
-        return true;
+        const info = await updateApi.check({
+          timeoutMs: Math.min(8000, heartbeatIntervalMs + 5000),
+        });
+        lastCheck = info;
+        setCandidate(info);
+        if (matchesAppliedTarget(info, target)) {
+          return { ok: true, latest: info };
+        }
       } catch {
-        if (Date.now() >= deadline) return false;
-        await sleep(heartbeatIntervalMs);
+        // Keep polling until timeout so restarts and short network blips do not look like failures.
       }
+      if (Date.now() >= deadline) return { ok: false, latest: lastCheck };
+      await sleep(heartbeatIntervalMs);
     }
   }, [heartbeatIntervalMs, heartbeatTimeoutMs]);
 
@@ -122,10 +150,24 @@ export function UpdateDetailsCard({
   const applyUpdate = useCallback(async () => {
     setUpdating(true);
     try {
-      await updateApi.apply();
-      const ok = await waitForHeartbeat();
-      if (!ok) {
-        notify({ type: "warning", message: t("auto_update.timeout") });
+      const response = await updateApi.apply();
+      const target = response.target ?? candidate;
+      const result = await waitForAppliedTarget(target);
+      if (!result.ok) {
+        notify({
+          type: "warning",
+          message:
+            result.latest || target
+              ? t("auto_update.version_mismatch", {
+                  version: versionLabel(
+                    target?.latest_version,
+                    target?.latest_commit,
+                    target?.target_channel,
+                  ),
+                })
+              : t("auto_update.timeout"),
+        });
+        setUpdating(false);
         return;
       }
       notify({ type: "success", message: t("auto_update.success") });
@@ -137,7 +179,7 @@ export function UpdateDetailsCard({
       });
       setUpdating(false);
     }
-  }, [notify, t, waitForHeartbeat]);
+  }, [candidate, notify, t, waitForAppliedTarget]);
 
   const releaseNotes = candidate?.release_notes?.trim() || t("auto_update.no_release_notes");
   const canUpdate = Boolean(

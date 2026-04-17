@@ -73,6 +73,34 @@ describe("SystemPage", () => {
   });
 
   test("checks update details and applies updates from system info", async () => {
+    mocks.check
+      .mockResolvedValueOnce({
+        enabled: true,
+        update_available: true,
+        current_version: "main-1111111",
+        current_commit: "1111111",
+        latest_version: "main-abcdef1",
+        latest_commit: "abcdef123456",
+        target_channel: "main",
+        docker_image: "ghcr.io/kittors/clirelay",
+        docker_tag: "latest",
+        release_notes: "Fixes and improvements",
+        updater_available: true,
+      })
+      .mockResolvedValueOnce({
+        enabled: true,
+        update_available: false,
+        current_version: "main-abcdef1",
+        current_commit: "abcdef123456",
+        latest_version: "main-abcdef1",
+        latest_commit: "abcdef123456",
+        target_channel: "main",
+        docker_image: "ghcr.io/kittors/clirelay",
+        docker_tag: "latest",
+        release_notes: "Fixes and improvements",
+        updater_available: true,
+      });
+
     renderPage();
 
     await userEvent.click(await screen.findByRole("button", { name: /check docker update/i }));
@@ -87,6 +115,55 @@ describe("SystemPage", () => {
     await waitFor(() => {
       expect(mocks.apiGet).toHaveBeenCalledWith("/system-stats", expect.any(Object));
     });
+    await waitFor(() => {
+      expect(mocks.check).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  test("rechecks the target version before treating the update as successful", async () => {
+    mocks.check
+      .mockResolvedValueOnce({
+        enabled: true,
+        update_available: true,
+        current_version: "main-1111111",
+        current_commit: "1111111",
+        latest_version: "dev-abcdef1",
+        latest_commit: "abcdef123456",
+        target_channel: "dev",
+        docker_image: "ghcr.io/kittors/clirelay",
+        docker_tag: "dev",
+        release_notes: "Fixes and improvements",
+        updater_available: true,
+      })
+      .mockResolvedValue({
+        enabled: true,
+        update_available: true,
+        current_version: "main-1111111",
+        current_commit: "1111111",
+        latest_version: "dev-abcdef1",
+        latest_commit: "abcdef123456",
+        target_channel: "dev",
+        docker_image: "ghcr.io/kittors/clirelay",
+        docker_tag: "dev",
+        release_notes: "Fixes and improvements",
+        updater_available: true,
+      });
+
+    renderPage();
+
+    await userEvent.click(await screen.findByRole("button", { name: /check docker update/i }));
+    const dialog = await screen.findByRole("dialog");
+    await userEvent.click(within(dialog).getByRole("button", { name: /update now/i }));
+
+    await waitFor(() => {
+      expect(mocks.apply).toHaveBeenCalledTimes(1);
+    });
+    await waitFor(() => {
+      expect(mocks.check.mock.calls.length).toBeGreaterThan(1);
+    });
+    expect(
+      await screen.findByText(/running version is still not dev-abcdef1/i),
+    ).toBeInTheDocument();
   });
 
   test("keeps long update details contained inside the user-opened dialog", async () => {

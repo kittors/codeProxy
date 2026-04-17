@@ -1,4 +1,4 @@
-import { apiClient } from "@/lib/http/client";
+import { apiClient, type RequestOptions } from "@/lib/http/client";
 
 export interface UpdateCheckResponse {
   enabled: boolean;
@@ -25,7 +25,8 @@ export interface UpdateApplyResponse {
 }
 
 export const updateApi = {
-  check: () => apiClient.get<UpdateCheckResponse>("/update/check", { timeoutMs: 20000 }),
+  check: (options?: RequestOptions) =>
+    apiClient.get<UpdateCheckResponse>("/update/check", { timeoutMs: 20000, ...options }),
   apply: () =>
     apiClient.post<UpdateApplyResponse>("/update/apply", undefined, { timeoutMs: 20000 }),
 };
