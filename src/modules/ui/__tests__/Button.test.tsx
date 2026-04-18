@@ -58,4 +58,10 @@ describe("Button", () => {
       "bg-[#EBEBEC]",
     );
   });
+
+  test("supports a compact xs size for dense actions", () => {
+    render(<Button size="xs">Confirm</Button>);
+
+    expect(screen.getByRole("button", { name: "Confirm" })).toHaveClass("h-8", "px-2.5", "text-xs");
+  });
 });

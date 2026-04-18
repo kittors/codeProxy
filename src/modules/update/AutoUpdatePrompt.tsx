@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { updateApi, type UpdateCheckResponse } from "@/lib/http/apis/update";
 import { useAuth } from "@/modules/auth/AuthProvider";
+import { buttonClassName } from "@/modules/ui/Button";
 import { useToast } from "@/modules/ui/ToastProvider";
 import { UpdateDetailsModal } from "@/modules/update/UpdateDetailsModal";
 import {
@@ -65,8 +66,14 @@ export function AutoUpdatePrompt({
               },
             },
             classNames: {
-              actionButton:
-                "clirelay-update-toast-action h-6 min-h-0 rounded-md px-2 text-xs font-medium leading-none",
+              actionWrapper:
+                "clirelay-update-toast-action-wrapper flex justify-end overflow-visible",
+              actionButton: buttonClassName({
+                size: "xs",
+                variant: "default",
+                className:
+                  "clirelay-update-toast-action !inline-flex !w-auto !min-w-0 !self-end !rounded-full !px-2.5 !text-xs",
+              }),
             },
           });
         })
