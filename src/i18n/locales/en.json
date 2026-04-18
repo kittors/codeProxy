@@ -2962,7 +2962,7 @@
     "up_to_date_title": "Already up to date",
     "up_to_date_description": "The current Docker deployment already matches the selected update channel.",
     "toast_title": "Update available",
-    "toast_message": "A new version is available: {{version}}",
+    "toast_message": "A new version is available: {{version}}. Update now?",
     "system_title": "Docker Updates",
     "system_description": "Check Docker image updates, review release notes, and apply updates when ready.",
     "system_idle": "Click Check Docker Update to load the latest version details.",

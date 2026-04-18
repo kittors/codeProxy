@@ -6,7 +6,13 @@ import { useTheme } from "@/modules/ui/ThemeProvider";
 type ToastType = "success" | "error" | "info" | "warning";
 
 interface ToastContextState {
-  notify: (input: { type?: ToastType; title?: string; message: string; duration?: number }) => void;
+  notify: (input: {
+    type?: ToastType;
+    title?: string;
+    message: string;
+    duration?: number;
+    action?: { label: string; onClick: () => void; successLabel?: string };
+  }) => void;
 }
 
 const ToastContext = createContext<ToastContextState | null>(null);
@@ -17,7 +23,13 @@ export function ToastProvider({ children }: PropsWithChildren) {
   } = useTheme();
 
   const notify = useCallback(
-    (input: { type?: ToastType; title?: string; message: string; duration?: number }) => {
+    (input: {
+      type?: ToastType;
+      title?: string;
+      message: string;
+      duration?: number;
+      action?: { label: string; onClick: () => void; successLabel?: string };
+    }) => {
       const type = input.type ?? "info";
 
       const _defaultTitles: Record<ToastType, string> = {
@@ -33,6 +45,9 @@ export function ToastProvider({ children }: PropsWithChildren) {
       };
       if (input.title) {
         options.description = input.message;
+      }
+      if (input.action) {
+        options.action = input.action;
       }
 
       switch (type) {

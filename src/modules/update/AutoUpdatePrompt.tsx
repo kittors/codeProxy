@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { updateApi, type UpdateCheckResponse } from "@/lib/http/apis/update";
 import { useAuth } from "@/modules/auth/AuthProvider";
-import { ConfirmModal } from "@/modules/ui/ConfirmModal";
 import { useToast } from "@/modules/ui/ToastProvider";
 import { UpdateDetailsModal } from "@/modules/update/UpdateDetailsModal";
 import {
@@ -30,7 +29,6 @@ export function AutoUpdatePrompt({
   const checkingRef = useRef(false);
   const notifiedRef = useRef(new Set<string>());
   const [candidate, setCandidate] = useState<UpdateCheckResponse | null>(null);
-  const [confirmOpen, setConfirmOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [updating, setUpdating] = useState(false);
 
@@ -52,8 +50,21 @@ export function AutoUpdatePrompt({
           const identity = updateIdentity(info);
           if (identity && notifiedRef.current.has(identity)) return;
           if (identity) notifiedRef.current.add(identity);
-          setCandidate(info);
-          setConfirmOpen(true);
+          notify({
+            type: "info",
+            title: t("auto_update.toast_title"),
+            message: t("auto_update.toast_message", {
+              version: updateDisplayVersion(info),
+            }),
+            duration: 10000,
+            action: {
+              label: t("common.confirm"),
+              onClick: () => {
+                setCandidate(info);
+                setDetailsOpen(true);
+              },
+            },
+          });
         })
         .catch(() => {
           // 自动检查失败不打扰用户；系统页仍可手动检查版本。
@@ -67,7 +78,7 @@ export function AutoUpdatePrompt({
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [auth.state.isAuthenticated, auth.state.isRestoring, initialDelayMs]);
+  }, [auth.state.isAuthenticated, auth.state.isRestoring, initialDelayMs, notify, t]);
 
   const applyUpdate = useCallback(async () => {
     setUpdating(true);
@@ -95,21 +106,6 @@ export function AutoUpdatePrompt({
 
   return (
     <>
-      <ConfirmModal
-        open={confirmOpen}
-        title={t("auto_update.prompt_title")}
-        description={t("auto_update.prompt_description", {
-          version: candidate ? updateDisplayVersion(candidate) : "--",
-        })}
-        confirmText={t("common.confirm")}
-        cancelText={t("auto_update.later")}
-        variant="primary"
-        onClose={() => setConfirmOpen(false)}
-        onConfirm={() => {
-          setConfirmOpen(false);
-          setDetailsOpen(true);
-        }}
-      />
       <UpdateDetailsModal
         open={detailsOpen}
         candidate={candidate}

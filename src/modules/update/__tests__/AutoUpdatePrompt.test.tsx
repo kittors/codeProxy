@@ -1,5 +1,4 @@
-import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import i18n from "@/i18n";
 import { AutoUpdatePrompt } from "@/modules/update/AutoUpdatePrompt";
@@ -68,16 +67,18 @@ describe("AutoUpdatePrompt", () => {
   });
 
   test("asks whether to update before showing the fixed-height update dialog", async () => {
-    const user = userEvent.setup();
-
     renderPrompt();
 
-    expect(await screen.findByText(/Update to v1\.2\.3 now\?/i)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/A new version is available: v1\.2\.3.*update now\?/i),
+    ).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: /confirm/i })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: /new version found/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /update now/i })).not.toBeInTheDocument();
     expect(mocks.apply).not.toHaveBeenCalled();
     expect(mocks.get).not.toHaveBeenCalled();
 
-    await user.click(screen.getByRole("button", { name: /confirm/i }));
+    fireEvent.click(screen.getByRole("button", { name: /confirm/i }));
 
     expect(await screen.findByRole("heading", { name: /new version found/i })).toBeInTheDocument();
     expect(await screen.findByText(/Fixes and improvements/i)).toBeInTheDocument();
@@ -106,6 +107,6 @@ describe("AutoUpdatePrompt", () => {
 
     renderPrompt();
 
-    expect(await screen.findByText(/panel-main-9477958/i)).toBeInTheDocument();
+    expect(await screen.findByText(/panel-main-9477958.*update now\?/i)).toBeInTheDocument();
   });
 });

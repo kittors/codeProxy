@@ -2548,7 +2548,7 @@
     "up_to_date_title": "当前已是最新版本",
     "up_to_date_description": "当前 Docker 部署已经和所选更新通道保持一致。",
     "toast_title": "发现新版本",
-    "toast_message": "发现可用新版本：{{version}}",
+    "toast_message": "发现可用新版本：{{version}}，是否立即更新？",
     "system_title": "Docker 更新",
     "system_description": "检查 Docker 镜像更新，查看更新内容，并在确认后执行更新。",
     "system_idle": "点击「检查 Docker 更新」加载最新版本详情。",
