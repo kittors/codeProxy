@@ -72,7 +72,11 @@ describe("AutoUpdatePrompt", () => {
     expect(
       await screen.findByText(/A new version is available: v1\.2\.3.*update now\?/i),
     ).toBeInTheDocument();
-    expect(await screen.findByRole("button", { name: /confirm/i })).toBeInTheDocument();
+    const confirmButton = await screen.findByRole("button", { name: /confirm/i });
+    expect(confirmButton).toHaveClass("clirelay-update-toast-action");
+    expect(confirmButton.className).toContain("h-6");
+    expect(confirmButton.className).toContain("px-2");
+    expect(confirmButton.className).toContain("text-xs");
     expect(screen.queryByRole("heading", { name: /new version found/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /update now/i })).not.toBeInTheDocument();
     expect(mocks.apply).not.toHaveBeenCalled();

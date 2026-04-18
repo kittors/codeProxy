@@ -64,6 +64,10 @@ export function AutoUpdatePrompt({
                 setDetailsOpen(true);
               },
             },
+            classNames: {
+              actionButton:
+                "clirelay-update-toast-action h-6 min-h-0 rounded-md px-2 text-xs font-medium leading-none",
+            },
           });
         })
         .catch(() => {

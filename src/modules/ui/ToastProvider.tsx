@@ -4,6 +4,19 @@ import "goey-toast/styles.css";
 import { useTheme } from "@/modules/ui/ThemeProvider";
 
 type ToastType = "success" | "error" | "info" | "warning";
+type ToastClassNames = Partial<
+  Record<
+    | "wrapper"
+    | "content"
+    | "header"
+    | "title"
+    | "icon"
+    | "description"
+    | "actionWrapper"
+    | "actionButton",
+    string
+  >
+>;
 
 interface ToastContextState {
   notify: (input: {
@@ -12,6 +25,7 @@ interface ToastContextState {
     message: string;
     duration?: number;
     action?: { label: string; onClick: () => void; successLabel?: string };
+    classNames?: ToastClassNames;
   }) => void;
 }
 
@@ -29,6 +43,7 @@ export function ToastProvider({ children }: PropsWithChildren) {
       message: string;
       duration?: number;
       action?: { label: string; onClick: () => void; successLabel?: string };
+      classNames?: ToastClassNames;
     }) => {
       const type = input.type ?? "info";
 
@@ -48,6 +63,9 @@ export function ToastProvider({ children }: PropsWithChildren) {
       }
       if (input.action) {
         options.action = input.action;
+      }
+      if (input.classNames) {
+        options.classNames = input.classNames;
       }
 
       switch (type) {
