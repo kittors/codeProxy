@@ -42,10 +42,7 @@ function renderPage() {
   return render(
     <ThemeProvider>
       <ToastProvider>
-        <SystemPage
-          updateHeartbeatIntervalMs={1}
-          updateHeartbeatTimeoutMs={200}
-        />
+        <SystemPage updateHeartbeatIntervalMs={1} updateHeartbeatTimeoutMs={200} />
       </ToastProvider>
     </ThemeProvider>,
   );
@@ -106,26 +103,17 @@ describe("SystemPage", () => {
 
     renderPage();
 
-    await userEvent.click(
-      await screen.findByRole("button", { name: /check docker update/i }),
-    );
+    await userEvent.click(await screen.findByRole("button", { name: /check docker update/i }));
     const dialog = await screen.findByRole("dialog");
-    expect(
-      within(dialog).getByText(/Fixes and improvements/i),
-    ).toBeInTheDocument();
+    expect(within(dialog).getByText(/Fixes and improvements/i)).toBeInTheDocument();
 
-    await userEvent.click(
-      within(dialog).getByRole("button", { name: /update now/i }),
-    );
+    await userEvent.click(within(dialog).getByRole("button", { name: /update now/i }));
 
     await waitFor(() => {
       expect(mocks.apply).toHaveBeenCalledTimes(1);
     });
     await waitFor(() => {
-      expect(mocks.apiGet).toHaveBeenCalledWith(
-        "/system-stats",
-        expect.any(Object),
-      );
+      expect(mocks.apiGet).toHaveBeenCalledWith("/system-stats", expect.any(Object));
     });
     await waitFor(() => {
       expect(mocks.check).toHaveBeenCalledTimes(2);
@@ -171,13 +159,9 @@ describe("SystemPage", () => {
 
     renderPage();
 
-    await userEvent.click(
-      await screen.findByRole("button", { name: /check docker update/i }),
-    );
+    await userEvent.click(await screen.findByRole("button", { name: /check docker update/i }));
     const dialog = await screen.findByRole("dialog");
-    await userEvent.click(
-      within(dialog).getByRole("button", { name: /update now/i }),
-    );
+    await userEvent.click(within(dialog).getByRole("button", { name: /update now/i }));
 
     await waitFor(() => {
       expect(mocks.apply).toHaveBeenCalledTimes(1);
@@ -210,16 +194,12 @@ describe("SystemPage", () => {
     });
     renderPage();
 
-    await userEvent.click(
-      await screen.findByRole("button", { name: /check docker update/i }),
-    );
+    await userEvent.click(await screen.findByRole("button", { name: /check docker update/i }));
     const dialog = await screen.findByRole("dialog");
 
     expect(within(dialog).getByText("Service version")).toBeInTheDocument();
     expect(within(dialog).getAllByText("main-a0ed5c6")).toHaveLength(2);
-    expect(
-      within(dialog).getByText("Management UI version"),
-    ).toBeInTheDocument();
+    expect(within(dialog).getByText("Management UI version")).toBeInTheDocument();
     expect(within(dialog).getByText("panel-main-9477958")).toBeInTheDocument();
   });
 
@@ -229,8 +209,7 @@ describe("SystemPage", () => {
       update_available: true,
       current_version: "main-1111111-with-an-extra-long-build-identifier",
       current_commit: "1111111",
-      latest_version:
-        "dev-abcdef1234567890-with-an-extra-long-build-identifier",
+      latest_version: "dev-abcdef1234567890-with-an-extra-long-build-identifier",
       latest_commit: "abcdef1234567890",
       target_channel: "dev",
       docker_image:
@@ -241,14 +220,13 @@ describe("SystemPage", () => {
     });
     renderPage();
 
-    await userEvent.click(
-      await screen.findByRole("button", { name: /check docker update/i }),
-    );
+    await userEvent.click(await screen.findByRole("button", { name: /check docker update/i }));
 
     const dialog = await screen.findByRole("dialog");
     expect(dialog).toHaveClass("max-w-[min(92vw,900px)]");
+    expect(screen.getByTestId("update-details-modal-body")).toHaveClass("h-[min(68vh,560px)]");
     expect(screen.getByTestId("update-release-notes")).toHaveClass(
-      "max-h-[42vh]",
+      "max-h-60",
       "overflow-y-auto",
       "break-words",
     );
@@ -271,17 +249,11 @@ describe("SystemPage", () => {
     });
     renderPage();
 
-    await userEvent.click(
-      await screen.findByRole("button", { name: /check docker update/i }),
-    );
+    await userEvent.click(await screen.findByRole("button", { name: /check docker update/i }));
     const dialog = await screen.findByRole("dialog");
 
-    expect(
-      within(dialog).getAllByText(/updater sidecar/i, { exact: false }),
-    ).toHaveLength(1);
-    expect(
-      within(dialog).getByRole("button", { name: /update now/i }),
-    ).toBeDisabled();
+    expect(within(dialog).getAllByText(/updater sidecar/i, { exact: false })).toHaveLength(1);
+    expect(within(dialog).getByRole("button", { name: /update now/i })).toBeDisabled();
   });
 
   test("renders update release notes as markdown", async () => {
@@ -301,14 +273,10 @@ describe("SystemPage", () => {
     });
     renderPage();
 
-    await userEvent.click(
-      await screen.findByRole("button", { name: /check docker update/i }),
-    );
+    await userEvent.click(await screen.findByRole("button", { name: /check docker update/i }));
     const dialog = await screen.findByRole("dialog");
 
-    expect(
-      await within(dialog).findByRole("heading", { name: "Changes" }),
-    ).toBeInTheDocument();
+    expect(await within(dialog).findByRole("heading", { name: "Changes" })).toBeInTheDocument();
     expect(within(dialog).getByText("Markdown")).toBeInTheDocument();
     expect(within(dialog).getAllByRole("listitem")).toHaveLength(2);
   });
@@ -326,26 +294,19 @@ describe("SystemPage", () => {
       target_channel: "main",
       docker_image: "ghcr.io/kittors/clirelay",
       docker_tag: "latest",
-      release_notes:
-        "## Changelog\n\n- Older release note that should not be shown",
+      release_notes: "## Changelog\n\n- Older release note that should not be shown",
       updater_available: true,
     });
     renderPage();
 
-    await userEvent.click(
-      await screen.findByRole("button", { name: /check docker update/i }),
-    );
+    await userEvent.click(await screen.findByRole("button", { name: /check docker update/i }));
     const dialog = await screen.findByRole("dialog");
 
     expect(
       within(dialog).getByRole("heading", { name: /already up to date/i }),
     ).toBeInTheDocument();
     expect(within(dialog).getAllByText("main-de96948")).toHaveLength(2);
-    expect(
-      within(dialog).queryByText(/older release note/i),
-    ).not.toBeInTheDocument();
-    expect(
-      within(dialog).getByRole("button", { name: /update now/i }),
-    ).toBeDisabled();
+    expect(within(dialog).queryByText(/older release note/i)).not.toBeInTheDocument();
+    expect(within(dialog).getByRole("button", { name: /update now/i })).toBeDisabled();
   });
 });

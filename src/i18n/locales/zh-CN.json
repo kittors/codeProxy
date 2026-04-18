@@ -2543,6 +2543,8 @@
   "auto_update": {
     "title": "发现新版本",
     "description": "更新 Docker 部署前请先查看本次更新内容。",
+    "prompt_title": "发现可用更新",
+    "prompt_description": "是否立即更新到 {{version}}？",
     "up_to_date_title": "当前已是最新版本",
     "up_to_date_description": "当前 Docker 部署已经和所选更新通道保持一致。",
     "toast_title": "发现新版本",

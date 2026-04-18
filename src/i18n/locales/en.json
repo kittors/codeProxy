@@ -2955,8 +2955,10 @@
     "no_match_found": "No match found"
   },
   "auto_update": {
-    "title": "Update available",
+    "title": "New Version Found",
     "description": "Review the release notes before updating the Docker deployment.",
+    "prompt_title": "Update available",
+    "prompt_description": "Update to {{version}} now?",
     "up_to_date_title": "Already up to date",
     "up_to_date_description": "The current Docker deployment already matches the selected update channel.",
     "toast_title": "Update available",

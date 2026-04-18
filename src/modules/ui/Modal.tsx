@@ -11,6 +11,7 @@ export function Modal({
   footer,
   maxWidth = "max-w-3xl",
   bodyHeightClassName,
+  bodyTestId,
   onClose,
   children,
 }: PropsWithChildren<{
@@ -20,6 +21,7 @@ export function Modal({
   footer?: ReactNode;
   maxWidth?: string;
   bodyHeightClassName?: string;
+  bodyTestId?: string;
   onClose: () => void;
 }>) {
   const [mounted, setMounted] = useState(open);
@@ -114,7 +116,10 @@ export function Modal({
           </button>
         </div>
 
-        <div className={`${bodyHeightCls} overflow-y-auto overscroll-contain px-5 py-4`}>
+        <div
+          data-testid={bodyTestId}
+          className={`${bodyHeightCls} overflow-y-auto overscroll-contain px-5 py-4`}
+        >
           {children}
         </div>
 

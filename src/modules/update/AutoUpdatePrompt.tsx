@@ -1,57 +1,38 @@
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { updateApi } from "@/lib/http/apis/update";
+import { updateApi, type UpdateCheckResponse } from "@/lib/http/apis/update";
 import { useAuth } from "@/modules/auth/AuthProvider";
+import { ConfirmModal } from "@/modules/ui/ConfirmModal";
 import { useToast } from "@/modules/ui/ToastProvider";
+import { UpdateDetailsModal } from "@/modules/update/UpdateDetailsModal";
+import {
+  DEFAULT_HEARTBEAT_INTERVAL_MS,
+  DEFAULT_HEARTBEAT_TIMEOUT_MS,
+  applyUpdateFlow,
+  updateDisplayVersion,
+  updateIdentity,
+} from "@/modules/update/updateShared";
 
 const DEFAULT_INITIAL_DELAY_MS = 2500;
 
-const sameCommit = (left?: string, right?: string) => {
-  const normalizedLeft = left?.trim().toLowerCase() ?? "";
-  const normalizedRight = right?.trim().toLowerCase() ?? "";
-  if (!normalizedLeft || !normalizedRight) return false;
-  return (
-    normalizedLeft.startsWith(normalizedRight) ||
-    normalizedRight.startsWith(normalizedLeft)
-  );
-};
-
-const updateToastVersion = (
-  info: Awaited<ReturnType<typeof updateApi.check>>,
-) => {
-  const backendChanged =
-    Boolean(info.latest_commit?.trim()) &&
-    !sameCommit(info.current_commit, info.latest_commit);
-  if (!backendChanged && info.latest_ui_version?.trim()) {
-    return info.latest_ui_version;
-  }
-  return (
-    info.latest_version ||
-    info.latest_commit ||
-    info.latest_ui_commit ||
-    info.docker_tag ||
-    ""
-  );
-};
-
-const updateToastIdentity = (
-  info: Awaited<ReturnType<typeof updateApi.check>>,
-) =>
-  updateToastVersion(info) ||
-  info.latest_commit ||
-  info.latest_ui_commit ||
-  `${info.docker_image ?? ""}:${info.docker_tag ?? ""}`;
-
 export function AutoUpdatePrompt({
   initialDelayMs = DEFAULT_INITIAL_DELAY_MS,
+  heartbeatIntervalMs = DEFAULT_HEARTBEAT_INTERVAL_MS,
+  heartbeatTimeoutMs = DEFAULT_HEARTBEAT_TIMEOUT_MS,
 }: {
   initialDelayMs?: number;
+  heartbeatIntervalMs?: number;
+  heartbeatTimeoutMs?: number;
 }) {
   const { t } = useTranslation();
   const { notify } = useToast();
   const auth = useAuth();
   const checkingRef = useRef(false);
   const notifiedRef = useRef(new Set<string>());
+  const [candidate, setCandidate] = useState<UpdateCheckResponse | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [updating, setUpdating] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -68,17 +49,11 @@ export function AutoUpdatePrompt({
         .check()
         .then((info) => {
           if (cancelled || !info.enabled || !info.update_available) return;
-          const identity = updateToastIdentity(info);
+          const identity = updateIdentity(info);
           if (identity && notifiedRef.current.has(identity)) return;
           if (identity) notifiedRef.current.add(identity);
-          notify({
-            type: "info",
-            title: t("auto_update.toast_title"),
-            message: t("auto_update.toast_message", {
-              version: updateToastVersion(info),
-            }),
-            duration: 6000,
-          });
+          setCandidate(info);
+          setConfirmOpen(true);
         })
         .catch(() => {
           // 自动检查失败不打扰用户；系统页仍可手动检查版本。
@@ -92,13 +67,56 @@ export function AutoUpdatePrompt({
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [
-    auth.state.isAuthenticated,
-    auth.state.isRestoring,
-    initialDelayMs,
-    notify,
-    t,
-  ]);
+  }, [auth.state.isAuthenticated, auth.state.isRestoring, initialDelayMs]);
 
-  return null;
+  const applyUpdate = useCallback(async () => {
+    setUpdating(true);
+    try {
+      const completed = await applyUpdateFlow({
+        candidate,
+        heartbeatIntervalMs,
+        heartbeatTimeoutMs,
+        notify,
+        onCheck: setCandidate,
+        onSuccess: () => window.location.reload(),
+        t,
+      });
+      if (!completed) {
+        setUpdating(false);
+      }
+    } catch (err: unknown) {
+      notify({
+        type: "error",
+        message: err instanceof Error ? err.message : t("auto_update.failed"),
+      });
+      setUpdating(false);
+    }
+  }, [candidate, heartbeatIntervalMs, heartbeatTimeoutMs, notify, t]);
+
+  return (
+    <>
+      <ConfirmModal
+        open={confirmOpen}
+        title={t("auto_update.prompt_title")}
+        description={t("auto_update.prompt_description", {
+          version: candidate ? updateDisplayVersion(candidate) : "--",
+        })}
+        confirmText={t("common.confirm")}
+        cancelText={t("auto_update.later")}
+        variant="primary"
+        onClose={() => setConfirmOpen(false)}
+        onConfirm={() => {
+          setConfirmOpen(false);
+          setDetailsOpen(true);
+        }}
+      />
+      <UpdateDetailsModal
+        open={detailsOpen}
+        candidate={candidate}
+        updating={updating}
+        onApply={() => void applyUpdate()}
+        onClose={() => setDetailsOpen(false)}
+      />
+    </>
+  );
 }
