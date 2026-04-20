@@ -103,7 +103,7 @@ export function AutoUpdatePrompt({
     setProgress(createPendingUpdateProgress(candidate));
     setUpdating(true);
     try {
-      const completed = await applyUpdateFlow({
+      await applyUpdateFlow({
         candidate,
         heartbeatIntervalMs,
         heartbeatTimeoutMs,
@@ -113,9 +113,7 @@ export function AutoUpdatePrompt({
         onSuccess: () => window.location.reload(),
         t,
       });
-      if (!completed) {
-        setUpdating(false);
-      }
+      setUpdating(false);
     } catch (err: unknown) {
       notify({
         type: "error",

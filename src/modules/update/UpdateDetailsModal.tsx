@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useMemo, useState } from "react";
+import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import { RefreshCw } from "lucide-react";
@@ -106,6 +106,7 @@ function UpdateProgressConsole({
   progress?: UpdateProgressResponse | null;
 }) {
   const { t } = useTranslation();
+  const logStreamRef = useRef<HTMLDivElement | null>(null);
   const stage = normalizedStage(progress);
   const currentVersion = versionLabel(
     candidate.current_version,
@@ -133,6 +134,13 @@ function UpdateProgressConsole({
     "--";
   const logs = progress?.logs ?? [];
   const activeStageIndex = Math.max(0, UPDATE_STAGE_ORDER.indexOf(stage));
+  const isRunning = progress?.status === "running";
+
+  useEffect(() => {
+    const node = logStreamRef.current;
+    if (!node) return;
+    node.scrollTop = node.scrollHeight;
+  }, [logs]);
 
   return (
     <section
@@ -142,7 +150,12 @@ function UpdateProgressConsole({
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-white">
-            <RefreshCw size={14} className="animate-spin text-sky-600 dark:text-sky-300" />
+            <RefreshCw
+              size={14}
+              className={[isRunning ? "animate-spin" : "", "text-sky-600 dark:text-sky-300"].join(
+                " ",
+              )}
+            />
             {t("auto_update.progress_title")}
           </h3>
           <p className="mt-1 text-xs text-slate-600 dark:text-white/60">
@@ -212,6 +225,7 @@ function UpdateProgressConsole({
         </div>
         <div
           data-testid="update-log-stream"
+          ref={logStreamRef}
           className="max-h-64 min-h-32 overflow-y-auto whitespace-pre-wrap break-words p-3 font-mono leading-5"
         >
           {logs.length ? (
@@ -254,25 +268,38 @@ export function UpdateDetailsModal({
 }) {
   const { t } = useTranslation();
   const [releaseNotesExpanded, setReleaseNotesExpanded] = useState(false);
-  const displayCandidate = updating ? (updateTarget ?? candidate) : candidate;
+  const showProgressConsole = Boolean(progress && progress.status !== "idle");
+  const progressStatus = progress?.status?.trim().toLowerCase();
+  const progressCompleted = showProgressConsole && progressStatus === "completed";
+  const progressFailed = showProgressConsole && progressStatus === "failed";
+  const activeUpdate = updating || progress?.status === "running";
+  const displayCandidate = showProgressConsole ? (updateTarget ?? candidate) : candidate;
 
   const canUpdate = Boolean(
     displayCandidate?.enabled &&
     displayCandidate.update_available &&
     displayCandidate.updater_available,
   );
-  const modalTitle = updating
-    ? t("auto_update.updating_title")
-    : displayCandidate && !displayCandidate.update_available
-      ? t("auto_update.up_to_date_title")
-      : t("auto_update.title");
-  const modalDescription = updating
-    ? t("auto_update.updating_description")
-    : displayCandidate && !displayCandidate.update_available
-      ? t("auto_update.up_to_date_description")
-      : t("auto_update.description");
+  const modalTitle = progressCompleted
+    ? t("auto_update.completed_title")
+    : progressFailed
+      ? t("auto_update.failed")
+      : showProgressConsole
+        ? t("auto_update.updating_title")
+        : displayCandidate && !displayCandidate.update_available
+          ? t("auto_update.up_to_date_title")
+          : t("auto_update.title");
+  const modalDescription = progressCompleted
+    ? t("auto_update.completed_description")
+    : progressFailed
+      ? t("auto_update.failed_description")
+      : showProgressConsole
+        ? t("auto_update.updating_description")
+        : displayCandidate && !displayCandidate.update_available
+          ? t("auto_update.up_to_date_description")
+          : t("auto_update.description");
   const releaseNotes = displayCandidate?.release_notes?.trim() || t("auto_update.no_release_notes");
-  const showReleaseNotes = Boolean(displayCandidate?.update_available) && !updating;
+  const showReleaseNotes = Boolean(displayCandidate?.update_available) && !showProgressConsole;
   const releaseNotesPreview = useMemo(() => buildReleaseNotesPreview(releaseNotes), [releaseNotes]);
   const visibleReleaseNotes =
     releaseNotesExpanded || !releaseNotesPreview.truncated
@@ -324,17 +351,23 @@ export function UpdateDetailsModal({
       bodyHeightClassName="h-[min(68vh,560px)]"
       bodyTestId="update-details-modal-body"
       onClose={() => {
-        if (!updating) onClose();
+        if (!activeUpdate) onClose();
       }}
       footer={
         <>
-          <Button variant="secondary" onClick={onClose} disabled={updating}>
+          <Button variant="secondary" onClick={onClose} disabled={activeUpdate}>
             {t("common.close")}
           </Button>
-          <Button variant="primary" onClick={onApply} disabled={checking || updating || !canUpdate}>
-            {updating ? <RefreshCw size={14} className="animate-spin" /> : null}
-            {updating ? t("auto_update.updating") : t("auto_update.update_now")}
-          </Button>
+          {!showProgressConsole || activeUpdate ? (
+            <Button
+              variant="primary"
+              onClick={onApply}
+              disabled={checking || activeUpdate || !canUpdate}
+            >
+              {activeUpdate ? <RefreshCw size={14} className="animate-spin" /> : null}
+              {activeUpdate ? t("auto_update.updating") : t("auto_update.update_now")}
+            </Button>
+          ) : null}
         </>
       }
     >
@@ -354,7 +387,7 @@ export function UpdateDetailsModal({
 
         {displayCandidate ? (
           <>
-            {updating ? (
+            {showProgressConsole ? (
               <UpdateProgressConsole candidate={displayCandidate} progress={progress} />
             ) : formattedCandidateMessage ? (
               <p className="whitespace-pre-line break-words rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200">
@@ -362,7 +395,7 @@ export function UpdateDetailsModal({
               </p>
             ) : null}
 
-            {!updating ? (
+            {!showProgressConsole ? (
               <dl className="grid min-w-0 gap-3 lg:grid-cols-2">
                 <div className="min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-neutral-800 dark:bg-neutral-900/50">
                   <dt className="text-xs font-medium text-slate-500 dark:text-white/55">
@@ -493,13 +526,13 @@ export function UpdateDetailsModal({
               </div>
             ) : null}
 
-            {!updating && !displayCandidate.updater_available ? (
+            {!showProgressConsole && !displayCandidate.updater_available ? (
               <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200">
                 {t("auto_update.updater_unavailable")}
               </p>
             ) : null}
 
-            {!updating &&
+            {!showProgressConsole &&
             (!displayCandidate.enabled ||
               (!displayCandidate.update_available && !displayCandidate.message)) ? (
               <p className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-200">

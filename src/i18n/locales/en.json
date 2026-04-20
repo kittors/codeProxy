@@ -3020,6 +3020,8 @@
     "release_notes_preview_notice": "Showing the latest {{count}} changes first.",
     "updating_title": "Update in progress",
     "updating_description": "The updater is running now. Follow the version transition and live Docker logs below.",
+    "completed_title": "Update completed",
+    "completed_description": "The updater finished successfully. Review the version transition and Docker logs below.",
     "progress_title": "Update Console",
     "progress_default_message": "Waiting for updater progress…",
     "progress_service_path": "Service version transition",
@@ -3041,6 +3043,7 @@
     "updating": "Updating…",
     "success": "Update completed. Reloading…",
     "failed": "Update failed",
+    "failed_description": "The updater reported a failure. Review the Docker logs below.",
     "timeout": "Update was triggered, but the server heartbeat did not recover in time. Please check Docker logs.",
     "version_mismatch": "Update was triggered, but the running version is still not {{version}}. Please check the updater and Docker Compose logs."
   },

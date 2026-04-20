@@ -2606,6 +2606,8 @@
     "release_notes_preview_notice": "默认先展示最近 {{count}} 条变更。",
     "updating_title": "更新进行中",
     "updating_description": "Updater 正在执行更新。下方会实时显示版本切换和 Docker 日志。",
+    "completed_title": "更新已完成",
+    "completed_description": "Updater 已成功完成更新。下方保留版本切换和 Docker 日志，方便确认结果。",
     "progress_title": "更新控制台",
     "progress_default_message": "正在等待 updater 返回进度…",
     "progress_service_path": "服务版本变更",
@@ -2627,6 +2629,7 @@
     "updating": "更新中…",
     "success": "更新完成，正在刷新…",
     "failed": "更新失败",
+    "failed_description": "Updater 返回失败。请查看下方 Docker 日志定位原因。",
     "timeout": "已触发更新，但后端心跳未在预期时间内恢复。请检查 Docker 日志。",
     "version_mismatch": "已触发更新，但当前运行版本仍未切换到 {{version}}。请检查 updater 和 Docker Compose 日志。"
   },

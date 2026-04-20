@@ -389,34 +389,62 @@ describe("SystemPage", () => {
   });
 
   test("switches to an update console while updating and hides release notes", async () => {
-    let resolveCurrent: ((value: Record<string, unknown>) => void) | undefined;
-    mocks.current.mockImplementation(
-      () =>
-        new Promise((resolve) => {
-          resolveCurrent = resolve;
-        }),
-    );
-    mocks.progress.mockResolvedValue({
-      status: "running",
-      stage: "pulling",
-      started_at: "2026-04-20T07:30:00Z",
-      target_version: "main-abcdef1",
-      target_commit: "abcdef123456",
-      target_ui_version: "panel-main-fedcba9",
-      target_ui_commit: "fedcba987654",
-      logs: [
-        {
-          timestamp: "2026-04-20T07:30:01Z",
-          stream: "stdout",
-          message: "docker compose pull clirelay",
-        },
-        {
-          timestamp: "2026-04-20T07:30:02Z",
-          stream: "stdout",
-          message: "Pulling clirelay ... done",
-        },
-      ],
+    mocks.current.mockResolvedValue({
+      enabled: true,
+      current_version: "main-abcdef1",
+      current_commit: "abcdef123456",
+      current_ui_version: "panel-main-fedcba9",
+      current_ui_commit: "fedcba987654",
+      target_channel: "main",
+      docker_image: "ghcr.io/kittors/clirelay",
+      docker_tag: "latest",
+      updater_available: true,
     });
+    mocks.progress
+      .mockResolvedValueOnce({
+        status: "running",
+        stage: "pulling",
+        started_at: "2026-04-20T07:30:00Z",
+        target_version: "main-abcdef1",
+        target_commit: "abcdef123456",
+        target_ui_version: "panel-main-fedcba9",
+        target_ui_commit: "fedcba987654",
+        logs: [
+          {
+            timestamp: "2026-04-20T07:30:01Z",
+            stream: "stdout",
+            message: "docker compose pull clirelay",
+          },
+          {
+            timestamp: "2026-04-20T07:30:02Z",
+            stream: "stdout",
+            message: "Pulling clirelay ... done",
+          },
+        ],
+      })
+      .mockResolvedValueOnce({
+        status: "completed",
+        stage: "completed",
+        message: "update completed",
+        started_at: "2026-04-20T07:30:00Z",
+        finished_at: "2026-04-20T07:30:05Z",
+        target_version: "main-abcdef1",
+        target_commit: "abcdef123456",
+        target_ui_version: "panel-main-fedcba9",
+        target_ui_commit: "fedcba987654",
+        logs: [
+          {
+            timestamp: "2026-04-20T07:30:01Z",
+            stream: "stdout",
+            message: "docker compose pull clirelay",
+          },
+          {
+            timestamp: "2026-04-20T07:30:05Z",
+            stream: "stderr",
+            message: "Container clirelay Started",
+          },
+        ],
+      });
 
     renderPage();
 
@@ -438,20 +466,16 @@ describe("SystemPage", () => {
 
     expect(within(dialog).getByTestId("update-progress-console")).toBeInTheDocument();
     expect(within(dialog).getByText(/docker compose pull clirelay/i)).toBeInTheDocument();
-    expect(within(dialog).getByText(/Pulling clirelay \.\.\. done/i)).toBeInTheDocument();
+    expect(within(dialog).getByText(/Container clirelay Started/i)).toBeInTheDocument();
     expect(within(dialog).getByText(/main-1111111/i)).toBeInTheDocument();
     expect(within(dialog).getByText(/main-abcdef1/i)).toBeInTheDocument();
+    expect(within(dialog).getAllByText("Completed").length).toBeGreaterThan(0);
+    expect(within(dialog).getByRole("heading", { name: /update completed/i })).toBeInTheDocument();
 
-    resolveCurrent?.({
-      enabled: true,
-      current_version: "main-abcdef1",
-      current_commit: "abcdef123456",
-      current_ui_version: "panel-main-fedcba9",
-      current_ui_commit: "fedcba987654",
-      target_channel: "main",
-      docker_image: "ghcr.io/kittors/clirelay",
-      docker_tag: "latest",
-      updater_available: true,
+    await waitFor(() => {
+      expect(within(dialog).queryByRole("button", { name: /updating/i })).toBeNull();
     });
+    expect(within(dialog).getAllByRole("button", { name: /close/i }).at(-1)).toBeEnabled();
+    expect(within(dialog).getByTestId("update-progress-console")).toBeInTheDocument();
   });
 });

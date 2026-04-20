@@ -70,7 +70,7 @@ export function UpdateDetailsCard({
     setProgress(createPendingUpdateProgress(candidate));
     setUpdating(true);
     try {
-      const completed = await applyUpdateFlow({
+      await applyUpdateFlow({
         candidate,
         heartbeatIntervalMs,
         heartbeatTimeoutMs,
@@ -80,9 +80,7 @@ export function UpdateDetailsCard({
         onSuccess: () => window.location.reload(),
         t,
       });
-      if (!completed) {
-        setUpdating(false);
-      }
+      setUpdating(false);
     } catch (err: unknown) {
       notify({
         type: "error",
