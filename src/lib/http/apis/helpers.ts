@@ -113,6 +113,9 @@ export const serializeProviderKey = (config: ProviderSimpleConfig) => {
   if (baseUrl) payload["base-url"] = baseUrl;
   const proxyUrl = normalizeString(config.proxyUrl);
   if (proxyUrl) payload["proxy-url"] = proxyUrl;
+  if (typeof config.priority === "number" && Number.isFinite(config.priority)) {
+    payload.priority = config.priority;
+  }
   const headers = serializeHeaders(config.headers);
   if (headers) payload.headers = headers;
   const models = serializeModels(config.models);
@@ -134,6 +137,9 @@ export const serializeGeminiKey = (config: ProviderSimpleConfig) => {
   if (prefix) payload.prefix = prefix;
   const baseUrl = normalizeString(config.baseUrl);
   if (baseUrl) payload["base-url"] = baseUrl;
+  if (typeof config.priority === "number" && Number.isFinite(config.priority)) {
+    payload.priority = config.priority;
+  }
   const headers = serializeHeaders(config.headers);
   if (headers) payload.headers = headers;
   const models = serializeModels(config.models);

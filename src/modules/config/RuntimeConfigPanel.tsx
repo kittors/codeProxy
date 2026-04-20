@@ -442,12 +442,25 @@ export function RuntimeConfigPanel() {
                 />
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <TextInput
+                <Select
                   value={routingStrategy}
-                  onChange={(e) => setRoutingStrategy(e.currentTarget.value)}
-                  placeholder={t("config_page.routing_placeholder")}
+                  onChange={setRoutingStrategy}
+                  aria-label={t("basic_settings.routing_strategy_label")}
+                  options={[
+                    {
+                      value: "round-robin",
+                      label: t("basic_settings.routing_strategy_round_robin"),
+                    },
+                    {
+                      value: "fill-first",
+                      label: t("basic_settings.routing_strategy_fill_first"),
+                    },
+                  ]}
                 />
               </div>
+              <p className="text-xs text-slate-600 dark:text-white/65">
+                {t("basic_settings.routing_strategy_hint")}
+              </p>
               <p className="text-xs text-slate-600 dark:text-white/65">
                 {t("config_page.config_preview", {
                   status: rawConfig

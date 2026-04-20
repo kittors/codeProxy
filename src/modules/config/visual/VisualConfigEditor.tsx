@@ -419,6 +419,25 @@ export function VisualConfigEditor({
                 disabled={disabled}
               />
             </Field>
+            <Field
+              label={t("basic_settings.routing_strategy_label")}
+              hint={t("basic_settings.routing_strategy_hint")}
+            >
+              <Select
+                value={values.routingStrategy}
+                onChange={(routingStrategy) => update({ routingStrategy: routingStrategy as VisualConfigValues["routingStrategy"] })}
+                options={[
+                  {
+                    value: "round-robin",
+                    label: t("basic_settings.routing_strategy_round_robin"),
+                  },
+                  {
+                    value: "fill-first",
+                    label: t("basic_settings.routing_strategy_fill_first"),
+                  },
+                ]}
+              />
+            </Field>
           </div>
         </Card>
 

@@ -148,6 +148,7 @@ export interface ProviderSimpleConfig {
   prefix?: string;
   baseUrl?: string;
   proxyUrl?: string;
+  priority?: number;
   headers?: Record<string, string>;
   models?: ProviderModel[];
   excludedModels?: string[];
