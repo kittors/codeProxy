@@ -1,5 +1,10 @@
 import { describe, expect, test } from "vitest";
-import { buildCodexItems, formatRelativeResetLabel } from "@/modules/quota/quota-helpers";
+import {
+  buildCodexItems,
+  buildKimiItems,
+  formatRelativeResetLabel,
+  parseKimiUsagePayload,
+} from "@/modules/quota/quota-helpers";
 
 describe("formatRelativeResetLabel", () => {
   const nowMs = Date.UTC(2026, 3, 1, 12, 0, 0);
@@ -49,5 +54,54 @@ describe("buildCodexItems", () => {
 
     const reviewWeekly = items.find((item) => item.label === "m_quota.review_weekly");
     expect(reviewWeekly?.percent).toBe(100);
+  });
+});
+
+describe("buildKimiItems", () => {
+  test("maps kimi coding usage into 5h and weekly quota items", () => {
+    const payload = parseKimiUsagePayload(`{
+      "usages": [
+        {
+          "scope": "FEATURE_CODING",
+          "detail": {
+            "limit": "100",
+            "used": "3",
+            "remaining": "97",
+            "resetTime": "2026-04-27T02:54:38.657133Z"
+          },
+          "limits": [
+            {
+              "window": {
+                "duration": 300,
+                "timeUnit": "TIME_UNIT_MINUTE"
+              },
+              "detail": {
+                "limit": "100",
+                "used": "15",
+                "remaining": "85",
+                "resetTime": "2026-04-20T07:54:38.657133Z"
+              }
+            }
+          ]
+        }
+      ]
+    }`);
+
+    expect(payload).not.toBeNull();
+
+    const items = buildKimiItems(payload!);
+
+    expect(items).toEqual([
+      {
+        label: "m_quota.code_5h",
+        percent: 85,
+        resetAtMs: Date.parse("2026-04-20T07:54:38.657133Z"),
+      },
+      {
+        label: "m_quota.code_weekly",
+        percent: 97,
+        resetAtMs: Date.parse("2026-04-27T02:54:38.657133Z"),
+      },
+    ]);
   });
 });

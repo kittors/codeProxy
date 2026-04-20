@@ -8,12 +8,16 @@ import {
   DEFAULT_ANTIGRAVITY_PROJECT_ID,
   GEMINI_CLI_QUOTA_URL,
   GEMINI_CLI_REQUEST_HEADERS,
+  KIMI_REQUEST_BODY,
+  KIMI_REQUEST_HEADERS,
+  KIMI_USAGE_URL,
   KIRO_QUOTA_URL,
   KIRO_REQUEST_BODY,
   KIRO_REQUEST_HEADERS,
   buildAntigravityGroups,
   buildCodexItems,
   buildGeminiCliBuckets,
+  buildKimiItems,
   buildKiroItems,
   clampPercent,
   isRecord,
@@ -25,6 +29,7 @@ import {
   parseAntigravityPayload,
   parseCodexUsagePayload,
   parseGeminiCliQuotaPayload,
+  parseKimiUsagePayload,
   parseKiroQuotaPayload,
   parseResetTimeToMs,
   resolveAuthProvider,
@@ -34,7 +39,7 @@ import {
   type QuotaItem,
 } from "@/modules/quota/quota-helpers";
 
-export type QuotaProvider = "antigravity" | "codex" | "gemini-cli" | "kiro";
+export type QuotaProvider = "antigravity" | "codex" | "gemini-cli" | "kimi" | "kiro";
 export type QuotaFetchResult = {
   items: QuotaItem[];
   planType?: string | null;
@@ -45,6 +50,7 @@ export const resolveQuotaProvider = (file: AuthFileItem): QuotaProvider | null =
   if (provider === "antigravity") return "antigravity";
   if (provider === "codex") return "codex";
   if (provider === "gemini-cli") return "gemini-cli";
+  if (provider === "kimi") return "kimi";
   if (provider === "kiro") return "kiro";
   return null;
 };
@@ -74,6 +80,29 @@ const resolveAntigravityProjectId = async (file: AuthFileItem): Promise<string> 
     return DEFAULT_ANTIGRAVITY_PROJECT_ID;
   }
   return DEFAULT_ANTIGRAVITY_PROJECT_ID;
+};
+
+const resolveKimiTimezone = (): string => {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || "Asia/Shanghai";
+  } catch {
+    return "Asia/Shanghai";
+  }
+};
+
+const resolveKimiDeviceId = async (file: AuthFileItem): Promise<string | null> => {
+  try {
+    const text = await authFilesApi.downloadText(file.name);
+    const trimmed = text.trim();
+    if (!trimmed) return null;
+    const parsed = JSON.parse(trimmed) as Record<string, unknown>;
+    const top = normalizeStringValue(parsed.device_id ?? parsed.deviceId);
+    if (top) return top;
+    const metadata = isRecord(parsed.metadata) ? (parsed.metadata as Record<string, unknown>) : null;
+    return metadata ? normalizeStringValue(metadata.device_id ?? metadata.deviceId) : null;
+  } catch {
+    return null;
+  }
 };
 
 export const fetchQuota = async (
@@ -197,6 +226,26 @@ export const fetchQuota = async (
         };
       }),
     };
+  }
+
+  if (type === "kimi") {
+    const deviceId = await resolveKimiDeviceId(file);
+    const result = await apiCallApi.request({
+      authIndex,
+      method: "POST",
+      url: KIMI_USAGE_URL,
+      header: {
+        ...KIMI_REQUEST_HEADERS,
+        "R-Timezone": resolveKimiTimezone(),
+        ...(deviceId ? { "X-Msh-Device-Id": deviceId } : {}),
+      },
+      data: KIMI_REQUEST_BODY,
+    });
+    if (result.statusCode < 200 || result.statusCode >= 300)
+      throw new Error(getApiCallErrorMessage(result));
+    const payload = parseKimiUsagePayload(result.body ?? result.bodyText);
+    if (!payload) throw new Error("parse_kimi_failed");
+    return { items: buildKimiItems(payload) };
   }
 
   const result = await apiCallApi.request({

@@ -87,7 +87,8 @@ export function useAuthFilesQuotaState({
         return text;
       };
 
-      if (provider !== "codex") {
+      const supportsStableCodingSlots = provider === "codex" || provider === "kimi";
+      if (!supportsStableCodingSlots) {
         return items.slice(0, 3).map((item) => ({
           id: item.label,
           label: translateQuotaLabel(item.label),
