@@ -381,11 +381,33 @@ describe("SystemPage", () => {
     const dialog = await screen.findByRole("dialog");
 
     expect(
-      within(dialog).getByRole("heading", { name: /already up to date/i }),
+      within(dialog).getByRole("heading", { name: /already updated to latest/i }),
     ).toBeInTheDocument();
     expect(within(dialog).getAllByText("main-de96948")).toHaveLength(2);
     expect(within(dialog).queryByText(/older release note/i)).not.toBeInTheDocument();
     expect(within(dialog).getByRole("button", { name: /update now/i })).toBeDisabled();
+  });
+
+  test("uses localized success toast instead of raw already up to date message", async () => {
+    mocks.check.mockResolvedValueOnce({
+      enabled: true,
+      update_available: false,
+      current_version: "main-de96948",
+      current_commit: "de96948c21de3f0a47a8e1e08cb1b859c73069ba",
+      latest_version: "main-de96948",
+      latest_commit: "de96948c21de3f0a47a8e1e08cb1b859c73069ba",
+      target_channel: "main",
+      docker_image: "ghcr.io/kittors/clirelay",
+      docker_tag: "latest",
+      message: "already up to date",
+      updater_available: true,
+    });
+    renderPage();
+
+    await userEvent.click(await screen.findByRole("button", { name: /check docker update/i }));
+
+    expect(await screen.findAllByText(/already updated to latest/i)).not.toHaveLength(0);
+    expect(screen.queryByText("already up to date")).not.toBeInTheDocument();
   });
 
   test("switches to an update console while updating and hides release notes", async () => {

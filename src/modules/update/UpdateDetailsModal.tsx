@@ -7,6 +7,7 @@ import { Button } from "@/modules/ui/Button";
 import { Modal } from "@/modules/ui/Modal";
 import {
   formatUpdateStatusMessage,
+  isAlreadyUpToDateMessage,
   shortCommit,
   uiVersionLabel,
   versionLabel,
@@ -274,6 +275,11 @@ export function UpdateDetailsModal({
   const progressFailed = showProgressConsole && progressStatus === "failed";
   const activeUpdate = updating || progress?.status === "running";
   const displayCandidate = showProgressConsole ? (updateTarget ?? candidate) : candidate;
+  const alreadyUpToDate = Boolean(
+    displayCandidate &&
+      !displayCandidate.update_available &&
+      (!displayCandidate.message || isAlreadyUpToDateMessage(displayCandidate.message)),
+  );
 
   const canUpdate = Boolean(
     displayCandidate?.enabled &&
@@ -286,7 +292,7 @@ export function UpdateDetailsModal({
       ? t("auto_update.failed")
       : showProgressConsole
         ? t("auto_update.updating_title")
-        : displayCandidate && !displayCandidate.update_available
+        : alreadyUpToDate
           ? t("auto_update.up_to_date_title")
           : t("auto_update.title");
   const modalDescription = progressCompleted
@@ -295,7 +301,7 @@ export function UpdateDetailsModal({
       ? t("auto_update.failed_description")
       : showProgressConsole
         ? t("auto_update.updating_description")
-        : displayCandidate && !displayCandidate.update_available
+        : alreadyUpToDate
           ? t("auto_update.up_to_date_description")
           : t("auto_update.description");
   const releaseNotes = displayCandidate?.release_notes?.trim() || t("auto_update.no_release_notes");
@@ -336,7 +342,22 @@ export function UpdateDetailsModal({
   const dockerImage = displayCandidate
     ? [displayCandidate.docker_image, displayCandidate.docker_tag].filter(Boolean).join(":")
     : "--";
-  const formattedCandidateMessage = formatUpdateStatusMessage(displayCandidate?.message);
+  const formattedCandidateMessage =
+    alreadyUpToDate && isAlreadyUpToDateMessage(displayCandidate?.message)
+      ? ""
+      : formatUpdateStatusMessage(displayCandidate?.message);
+  const versionCardClass = alreadyUpToDate
+    ? "min-w-0 rounded-xl border border-emerald-200 bg-emerald-50 p-3 dark:border-emerald-500/20 dark:bg-emerald-500/10"
+    : "min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-neutral-800 dark:bg-neutral-900/50";
+  const versionCardLabelClass = alreadyUpToDate
+    ? "text-xs font-medium text-emerald-700 dark:text-emerald-200"
+    : "text-xs font-medium text-slate-500 dark:text-white/55";
+  const versionCardValueClass = alreadyUpToDate
+    ? "mt-1 break-words font-mono text-sm text-emerald-900 dark:text-emerald-100"
+    : "mt-1 break-words font-mono text-sm text-slate-900 dark:text-white";
+  const versionCardMetaClass = alreadyUpToDate
+    ? "mt-1 truncate text-xs text-emerald-700/80 dark:text-emerald-200/80"
+    : "mt-1 truncate text-xs text-slate-500 dark:text-white/50";
 
   useEffect(() => {
     setReleaseNotesExpanded(false);
@@ -397,24 +418,24 @@ export function UpdateDetailsModal({
 
             {!showProgressConsole ? (
               <dl className="grid min-w-0 gap-3 lg:grid-cols-2">
-                <div className="min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-neutral-800 dark:bg-neutral-900/50">
-                  <dt className="text-xs font-medium text-slate-500 dark:text-white/55">
+                <div className={versionCardClass}>
+                  <dt className={versionCardLabelClass}>
                     {t("auto_update.current_service")}
                   </dt>
-                  <dd className="mt-1 break-words font-mono text-sm text-slate-900 dark:text-white">
+                  <dd className={versionCardValueClass}>
                     {currentVersion}
                   </dd>
                   {displayCandidate.current_commit ? (
-                    <p className="mt-1 truncate text-xs text-slate-500 dark:text-white/50">
+                    <p className={versionCardMetaClass}>
                       {t("auto_update.commit")}: {shortCommit(displayCandidate.current_commit)}
                     </p>
                   ) : null}
                 </div>
-                <div className="min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-neutral-800 dark:bg-neutral-900/50">
-                  <dt className="text-xs font-medium text-slate-500 dark:text-white/55">
+                <div className={versionCardClass}>
+                  <dt className={versionCardLabelClass}>
                     {t("auto_update.target_service")}
                   </dt>
-                  <dd className="mt-1 break-words font-mono text-sm text-slate-900 dark:text-white">
+                  <dd className={versionCardValueClass}>
                     {targetVersion}
                   </dd>
                   {displayCandidate.latest_commit ? (
@@ -423,35 +444,39 @@ export function UpdateDetailsModal({
                         href={displayCandidate.latest_commit_url}
                         target="_blank"
                         rel="noreferrer"
-                        className="mt-1 block truncate text-xs text-indigo-600 hover:underline dark:text-indigo-300"
+                        className={
+                          alreadyUpToDate
+                            ? "mt-1 block truncate text-xs text-emerald-700 hover:underline dark:text-emerald-200"
+                            : "mt-1 block truncate text-xs text-indigo-600 hover:underline dark:text-indigo-300"
+                        }
                       >
                         {t("auto_update.commit")}: {shortCommit(displayCandidate.latest_commit)}
                       </a>
                     ) : (
-                      <p className="mt-1 truncate text-xs text-slate-500 dark:text-white/50">
+                      <p className={versionCardMetaClass}>
                         {t("auto_update.commit")}: {shortCommit(displayCandidate.latest_commit)}
                       </p>
                     )
                   ) : null}
                 </div>
-                <div className="min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-neutral-800 dark:bg-neutral-900/50">
-                  <dt className="text-xs font-medium text-slate-500 dark:text-white/55">
+                <div className={versionCardClass}>
+                  <dt className={versionCardLabelClass}>
                     {t("auto_update.current_ui")}
                   </dt>
-                  <dd className="mt-1 break-words font-mono text-sm text-slate-900 dark:text-white">
+                  <dd className={versionCardValueClass}>
                     {currentUIVersion}
                   </dd>
                   {displayCandidate.current_ui_commit ? (
-                    <p className="mt-1 truncate text-xs text-slate-500 dark:text-white/50">
+                    <p className={versionCardMetaClass}>
                       {t("auto_update.commit")}: {shortCommit(displayCandidate.current_ui_commit)}
                     </p>
                   ) : null}
                 </div>
-                <div className="min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-neutral-800 dark:bg-neutral-900/50">
-                  <dt className="text-xs font-medium text-slate-500 dark:text-white/55">
+                <div className={versionCardClass}>
+                  <dt className={versionCardLabelClass}>
                     {t("auto_update.target_ui")}
                   </dt>
-                  <dd className="mt-1 break-words font-mono text-sm text-slate-900 dark:text-white">
+                  <dd className={versionCardValueClass}>
                     {targetUIVersion}
                   </dd>
                   {displayCandidate.latest_ui_commit ? (
@@ -460,24 +485,28 @@ export function UpdateDetailsModal({
                         href={displayCandidate.latest_ui_commit_url}
                         target="_blank"
                         rel="noreferrer"
-                        className="mt-1 block truncate text-xs text-indigo-600 hover:underline dark:text-indigo-300"
+                        className={
+                          alreadyUpToDate
+                            ? "mt-1 block truncate text-xs text-emerald-700 hover:underline dark:text-emerald-200"
+                            : "mt-1 block truncate text-xs text-indigo-600 hover:underline dark:text-indigo-300"
+                        }
                       >
                         {t("auto_update.commit")}: {shortCommit(displayCandidate.latest_ui_commit)}
                       </a>
                     ) : (
-                      <p className="mt-1 truncate text-xs text-slate-500 dark:text-white/50">
+                      <p className={versionCardMetaClass}>
                         {t("auto_update.commit")}: {shortCommit(displayCandidate.latest_ui_commit)}
                       </p>
                     )
                   ) : null}
                 </div>
-                <div className="min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-neutral-800 dark:bg-neutral-900/50 lg:col-span-2">
-                  <dt className="text-xs font-medium text-slate-500 dark:text-white/55">
+                <div className={`${versionCardClass} lg:col-span-2`}>
+                  <dt className={versionCardLabelClass}>
                     {t("auto_update.image")}
                   </dt>
                   <dd
                     data-testid="update-image-value"
-                    className="mt-1 break-words font-mono text-sm text-slate-900 dark:text-white"
+                    className={versionCardValueClass}
                   >
                     {dockerImage}
                   </dd>
@@ -532,9 +561,7 @@ export function UpdateDetailsModal({
               </p>
             ) : null}
 
-            {!showProgressConsole &&
-            (!displayCandidate.enabled ||
-              (!displayCandidate.update_available && !displayCandidate.message)) ? (
+            {!showProgressConsole && (!displayCandidate.enabled || alreadyUpToDate) ? (
               <p className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-200">
                 {!displayCandidate.enabled ? t("auto_update.disabled") : t("auto_update.no_update")}
               </p>

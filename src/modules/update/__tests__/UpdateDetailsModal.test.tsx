@@ -80,4 +80,31 @@ describe("UpdateDetailsModal", () => {
 
     expect(await screen.findByTestId("update-log-stream")).toHaveProperty("scrollTop", 960);
   });
+
+  test("renders localized success styling when already up to date", async () => {
+    render(
+      <UpdateDetailsModal
+        open
+        candidate={{
+          ...candidate,
+          update_available: false,
+          latest_version: candidate.current_version,
+          latest_commit: candidate.current_commit,
+          latest_ui_version: candidate.current_ui_version,
+          latest_ui_commit: candidate.current_ui_commit,
+          message: "already up to date",
+        }}
+        onApply={() => {}}
+        onClose={() => {}}
+      />,
+    );
+
+    expect(screen.getByRole("heading", { name: /already updated to latest/i })).toBeInTheDocument();
+    expect(screen.queryByText("already up to date")).not.toBeInTheDocument();
+    expect(
+      screen.getByText(/already updated to latest/i, {
+        selector: "p.rounded-xl",
+      }),
+    ).toHaveClass("text-emerald-800");
+  });
 });

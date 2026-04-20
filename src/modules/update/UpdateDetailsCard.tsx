@@ -16,6 +16,7 @@ import {
   applyUpdateFlow,
   createPendingUpdateProgress,
   formatUpdateStatusMessage,
+  isAlreadyUpToDateMessage,
 } from "@/modules/update/updateShared";
 
 export function UpdateDetailsCard({
@@ -48,6 +49,8 @@ export function UpdateDetailsCard({
       setCandidate(info);
       if (!info.enabled) {
         notify({ type: "info", message: t("auto_update.disabled") });
+      } else if (!info.update_available && isAlreadyUpToDateMessage(info.message)) {
+        notify({ type: "success", message: t("auto_update.no_update") });
       } else if (info.message && !info.update_available) {
         notify({ type: "warning", message: formatUpdateStatusMessage(info.message) });
       } else if (!info.update_available) {

@@ -49,6 +49,9 @@ export const formatUpdateStatusMessage = (message?: string | null) => {
   );
 };
 
+export const isAlreadyUpToDateMessage = (message?: string | null) =>
+  (message?.trim().toLowerCase() ?? "") === "already up to date";
+
 export const updateDisplayVersion = (info: UpdateCheckResponse) => {
   const backendChanged =
     Boolean(info.latest_commit?.trim()) && !sameCommit(info.current_commit, info.latest_commit);
