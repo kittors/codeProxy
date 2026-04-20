@@ -265,6 +265,14 @@ export function useAuthFilesFilesPresentation({
             : normalized >= 20
               ? "bg-amber-500"
               : "bg-rose-500";
+      const percentClass =
+        normalized === null
+          ? "text-slate-900 dark:text-white"
+          : normalized >= 60
+            ? "text-emerald-700 dark:text-emerald-200"
+            : normalized >= 20
+              ? "text-amber-700 dark:text-amber-200"
+              : "text-rose-700 dark:text-rose-200";
 
       return (
         <div key={label} className="space-y-1">
@@ -272,7 +280,11 @@ export function useAuthFilesFilesPresentation({
             <span className="min-w-0 truncate text-[11px] font-semibold text-slate-700 dark:text-white/80">
               {label}
             </span>
-            <span className="shrink-0 text-[11px] font-semibold tabular-nums text-slate-900 dark:text-white">
+            <span
+              className={["shrink-0 text-[11px] font-semibold tabular-nums", percentClass].join(
+                " ",
+              )}
+            >
               {percentText}
             </span>
           </div>

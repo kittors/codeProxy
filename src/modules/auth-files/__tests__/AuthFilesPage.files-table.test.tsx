@@ -73,7 +73,12 @@ describe("AuthFilesPage files table", () => {
     mocks.getEntityStats.mockReset();
     mocks.getEntityStats.mockImplementation(async () => ({ source: [], auth_index: [] }));
     mocks.getUsageLogs.mockReset();
-    mocks.getUsageLogs.mockImplementation(async () => ({ items: [], total: 0, page: 1, size: 200 }));
+    mocks.getUsageLogs.mockImplementation(async () => ({
+      items: [],
+      total: 0,
+      page: 1,
+      size: 200,
+    }));
     mocks.getAuthFileGroupTrend.mockReset();
     mocks.getAuthFileGroupTrend.mockImplementation(async () => ({
       days: 7,
@@ -434,6 +439,58 @@ describe("AuthFilesPage files table", () => {
     const quotaLabel = screen.getByText("Code: 5h");
     fireEvent.mouseEnter(quotaLabel);
     expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+  });
+
+  test("cards view shows only kimi coding quotas and marks depleted weekly quota red", async () => {
+    const now = Date.now();
+    const file = {
+      name: "kimi.json",
+      type: "kimi",
+      size: 1024,
+      modified: now,
+      disabled: false,
+      auth_index: "9",
+    } as any;
+
+    mocks.list.mockImplementation(async () => ({ files: [file] }));
+    mocks.fetchQuota.mockResolvedValue({
+      items: [
+        { label: "m_quota.code_5h", percent: 100, resetAtMs: now + 60_000 },
+        { label: "m_quota.code_weekly", percent: 0, resetAtMs: now + 120_000 },
+        { label: "m_quota.review_weekly", percent: 56, resetAtMs: now + 180_000 },
+      ],
+    });
+
+    window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
+    window.sessionStorage.setItem(
+      "authFilesPage.dataCache.v1",
+      JSON.stringify({
+        savedAtMs: now,
+        files: [file],
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("kimi.json")).toBeInTheDocument();
+    fireEvent.click(
+      within(screen.getByTestId("auth-files-cards")).getByRole("button", { name: "Refresh" }),
+    );
+
+    expect(await screen.findByText("Code: 5h")).toBeInTheDocument();
+    expect(screen.getByText("Code: Weekly")).toBeInTheDocument();
+    expect(screen.queryByText("Review: Weekly")).not.toBeInTheDocument();
+    expect(screen.getByText("0%")).toHaveClass("text-rose-700");
   });
 
   test("quota refresh updates the plan badge from api-call payload", async () => {

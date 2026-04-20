@@ -78,22 +78,10 @@ export const KIRO_REQUEST_BODY = JSON.stringify({
   resourceType: "AGENTIC_REQUEST",
 });
 
-export const KIMI_USAGE_URL =
-  "https://www.kimi.com/apiv2/kimi.gateway.billing.v1.BillingService/GetUsages";
+export const KIMI_USAGE_URL = "https://api.kimi.com/coding/v1/usages";
 export const KIMI_REQUEST_HEADERS = {
-  Accept: "*/*",
   Authorization: "Bearer $TOKEN$",
-  "Content-Type": "application/json",
-  Origin: "https://www.kimi.com",
-  Referer: "https://www.kimi.com/code/console?from=kfc_overview_topbar",
-  "R-Timezone": "Asia/Shanghai",
-  "X-Language": "zh-CN",
-  "X-Msh-Platform": "web",
-  "X-Msh-Version": "1.0.0",
 };
-export const KIMI_REQUEST_BODY = JSON.stringify({
-  scope: ["FEATURE_CODING"],
-});
 
 export const resolveAuthProvider = (file: AuthFileItem): string => {
   const raw = (file.provider ?? file.type ?? "") as unknown;

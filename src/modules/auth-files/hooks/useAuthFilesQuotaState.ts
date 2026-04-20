@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type Dispatch,
+  type SetStateAction,
+} from "react";
 import { useTranslation } from "react-i18next";
 import { authFilesApi, quotaApi, usageApi } from "@/lib/http/apis";
 import type { AuthFileItem } from "@/lib/http/types";
@@ -108,7 +116,8 @@ export function useAuthFilesQuotaState({
       }));
 
       const findExact = (label: string) => items.find((item) => item.label === label) ?? null;
-      const find = (re: RegExp) => candidates.find((candidate) => re.test(candidate.key))?.item ?? null;
+      const find = (re: RegExp) =>
+        candidates.find((candidate) => re.test(candidate.key))?.item ?? null;
 
       const codeFiveHour =
         findExact("m_quota.code_5h") ?? find(/(mquotacode5h|code5h|5h|5小时|fivehour|5hour)/i);
@@ -118,7 +127,7 @@ export function useAuthFilesQuotaState({
         findExact("m_quota.review_weekly") ??
         find(/(mquotareviewweekly|reviewweekly|reviewweek|review_week|审查周|审查：周)/i);
 
-      return [
+      const codingSlots = [
         {
           id: "code_5h" as const,
           label: translateQuotaLabel("m_quota.code_5h"),
@@ -129,6 +138,11 @@ export function useAuthFilesQuotaState({
           label: translateQuotaLabel("m_quota.code_weekly"),
           item: codeWeek,
         },
+      ];
+      if (provider === "kimi") return codingSlots;
+
+      return [
+        ...codingSlots,
         {
           id: "review_week" as const,
           label: translateQuotaLabel("m_quota.review_weekly"),
@@ -283,24 +297,26 @@ export function useAuthFilesQuotaState({
       const concurrency = 3;
       let index = 0;
 
-      const workers = Array.from({ length: Math.min(concurrency, targets.length) }).map(async () => {
-        for (;;) {
-          const current = targets[index];
-          index += 1;
-          if (!current) return;
-          quotaWarmupAttemptRef.current.set(current.file.name, Date.now());
-          if (markAsAutoRefreshing) {
-            quotaAutoRefreshingRef.current.add(current.file.name);
-          }
-          try {
-            await refreshQuota(current.file, current.provider);
-          } finally {
+      const workers = Array.from({ length: Math.min(concurrency, targets.length) }).map(
+        async () => {
+          for (;;) {
+            const current = targets[index];
+            index += 1;
+            if (!current) return;
+            quotaWarmupAttemptRef.current.set(current.file.name, Date.now());
             if (markAsAutoRefreshing) {
-              quotaAutoRefreshingRef.current.delete(current.file.name);
+              quotaAutoRefreshingRef.current.add(current.file.name);
+            }
+            try {
+              await refreshQuota(current.file, current.provider);
+            } finally {
+              if (markAsAutoRefreshing) {
+                quotaAutoRefreshingRef.current.delete(current.file.name);
+              }
             }
           }
-        }
-      });
+        },
+      );
 
       await Promise.allSettled(workers);
     },

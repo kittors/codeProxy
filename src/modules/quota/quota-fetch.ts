@@ -8,7 +8,6 @@ import {
   DEFAULT_ANTIGRAVITY_PROJECT_ID,
   GEMINI_CLI_QUOTA_URL,
   GEMINI_CLI_REQUEST_HEADERS,
-  KIMI_REQUEST_BODY,
   KIMI_REQUEST_HEADERS,
   KIMI_USAGE_URL,
   KIRO_QUOTA_URL,
@@ -80,29 +79,6 @@ const resolveAntigravityProjectId = async (file: AuthFileItem): Promise<string> 
     return DEFAULT_ANTIGRAVITY_PROJECT_ID;
   }
   return DEFAULT_ANTIGRAVITY_PROJECT_ID;
-};
-
-const resolveKimiTimezone = (): string => {
-  try {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone || "Asia/Shanghai";
-  } catch {
-    return "Asia/Shanghai";
-  }
-};
-
-const resolveKimiDeviceId = async (file: AuthFileItem): Promise<string | null> => {
-  try {
-    const text = await authFilesApi.downloadText(file.name);
-    const trimmed = text.trim();
-    if (!trimmed) return null;
-    const parsed = JSON.parse(trimmed) as Record<string, unknown>;
-    const top = normalizeStringValue(parsed.device_id ?? parsed.deviceId);
-    if (top) return top;
-    const metadata = isRecord(parsed.metadata) ? (parsed.metadata as Record<string, unknown>) : null;
-    return metadata ? normalizeStringValue(metadata.device_id ?? metadata.deviceId) : null;
-  } catch {
-    return null;
-  }
 };
 
 export const fetchQuota = async (
@@ -229,17 +205,11 @@ export const fetchQuota = async (
   }
 
   if (type === "kimi") {
-    const deviceId = await resolveKimiDeviceId(file);
     const result = await apiCallApi.request({
       authIndex,
-      method: "POST",
+      method: "GET",
       url: KIMI_USAGE_URL,
-      header: {
-        ...KIMI_REQUEST_HEADERS,
-        "R-Timezone": resolveKimiTimezone(),
-        ...(deviceId ? { "X-Msh-Device-Id": deviceId } : {}),
-      },
-      data: KIMI_REQUEST_BODY,
+      header: { ...KIMI_REQUEST_HEADERS },
     });
     if (result.statusCode < 200 || result.statusCode >= 300)
       throw new Error(getApiCallErrorMessage(result));

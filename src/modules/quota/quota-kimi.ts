@@ -32,6 +32,8 @@ type KimiUsageEntry = {
 };
 
 export type KimiUsagePayload = {
+  usage?: KimiUsageDetail | null;
+  limits?: KimiUsageLimit[] | null;
   usages?: KimiUsageEntry[] | null;
 };
 
@@ -88,7 +90,24 @@ const buildKimiItem = (label: string, detail?: KimiUsageDetail | null): QuotaIte
   };
 };
 
+const buildItemsFromTopLevelPayload = (payload: KimiUsagePayload): QuotaItem[] => {
+  const limits = Array.isArray(payload.limits) ? payload.limits : [];
+  const fiveHourLimit =
+    limits.find((item) => resolveKimiWindowMinutes(item.window) === 300) ?? null;
+  const weeklyLimit =
+    limits.find((item) => resolveKimiWindowMinutes(item.window) === 7 * 24 * 60) ?? null;
+
+  return [
+    buildKimiItem("m_quota.code_5h", fiveHourLimit?.detail),
+    buildKimiItem("m_quota.code_weekly", payload.usage ?? weeklyLimit?.detail ?? null),
+  ].filter(Boolean) as QuotaItem[];
+};
+
 export const buildKimiItems = (payload: KimiUsagePayload): QuotaItem[] => {
+  if (payload.usage || payload.limits) {
+    return buildItemsFromTopLevelPayload(payload);
+  }
+
   const usages = Array.isArray(payload.usages) ? payload.usages : [];
   const codingUsage =
     usages.find((usage) => normalizeStringValue(usage.scope)?.toUpperCase() === "FEATURE_CODING") ??
