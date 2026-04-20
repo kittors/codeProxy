@@ -203,6 +203,35 @@ describe("SystemPage", () => {
     expect(within(dialog).getByText("panel-main-9477958")).toBeInTheDocument();
   });
 
+  test("shows degraded update check messages returned by the backend", async () => {
+    mocks.check.mockResolvedValue({
+      enabled: true,
+      update_available: false,
+      current_version: "dev-1111111",
+      current_commit: "1111111",
+      current_ui_version: "panel-dev-1111111",
+      current_ui_commit: "1111111",
+      latest_version: "dev-1111111",
+      latest_commit: "1111111",
+      latest_ui_version: "panel-dev-1111111",
+      latest_ui_commit: "1111111",
+      target_channel: "dev",
+      docker_image: "ghcr.io/kittors/clirelay",
+      docker_tag: "dev",
+      updater_available: true,
+      message: "service update check degraded: github rate limit exceeded",
+    });
+    renderPage();
+
+    await userEvent.click(await screen.findByRole("button", { name: /check docker update/i }));
+    const dialog = await screen.findByRole("dialog");
+
+    expect(
+      within(dialog).getByText(/service update check degraded: github rate limit exceeded/i),
+    ).toBeInTheDocument();
+    expect(within(dialog).queryByText("You are already on the latest Docker image.")).toBeNull();
+  });
+
   test("keeps long update details contained inside the user-opened dialog", async () => {
     mocks.check.mockResolvedValue({
       enabled: true,

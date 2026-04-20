@@ -139,6 +139,12 @@ export function UpdateDetailsModal({
 
         {candidate ? (
           <>
+            {candidate.message ? (
+              <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200">
+                {candidate.message}
+              </p>
+            ) : null}
+
             <dl className="grid min-w-0 gap-3 lg:grid-cols-2">
               <div className="min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-neutral-800 dark:bg-neutral-900/50">
                 <dt className="text-xs font-medium text-slate-500 dark:text-white/55">
@@ -242,7 +248,7 @@ export function UpdateDetailsModal({
               </p>
             ) : null}
 
-            {!candidate.enabled || !candidate.update_available ? (
+            {!candidate.enabled || (!candidate.update_available && !candidate.message) ? (
               <p className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-200">
                 {!candidate.enabled ? t("auto_update.disabled") : t("auto_update.no_update")}
               </p>
