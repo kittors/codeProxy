@@ -202,4 +202,45 @@ describe("ApiKeysPage", () => {
     });
     expect(screen.queryByText("Renamed Key")).not.toBeInTheDocument();
   });
+
+  test("clears exact channel restrictions when the advanced override is turned off", async () => {
+    state.entries = [
+      {
+        key: "sk-existing-1234567890",
+        name: "Pinned Key",
+        "allowed-channels": ["Kimi渠道"],
+        "allowed-channel-groups": ["kimi-pool"],
+        "created-at": "2026-04-14T00:00:00.000Z",
+      },
+    ];
+
+    render(
+      <MemoryRouter>
+        <ThemeProvider>
+          <ToastProvider>
+            <ApiKeysPage />
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("Pinned Key")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByTitle("Edit"));
+    await userEvent.click(screen.getByRole("switch", { name: /exact channel override/i }));
+    await userEvent.click(screen.getByRole("button", { name: /save/i }));
+
+    await waitFor(() => {
+      expect(mocks.apiKeyEntriesUpdate).toHaveBeenCalled();
+    });
+
+    expect(mocks.apiKeyEntriesUpdate).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        value: expect.objectContaining({
+          "allowed-channels": [],
+          "allowed-channel-groups": ["kimi-pool"],
+        }),
+      }),
+    );
+  });
 });

@@ -64,6 +64,7 @@ export const makeEmptyApiKeyForm = (key = ""): ApiKeyFormValues => ({
   allowedModels: [],
   allowedChannels: [],
   allowedChannelGroups: [],
+  useExactChannelRestrictions: false,
   systemPrompt: "",
 });
 

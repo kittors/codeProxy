@@ -1,6 +1,7 @@
 import { Info, RefreshCw } from "lucide-react";
 import { Button } from "@/modules/ui/Button";
 import { TextInput } from "@/modules/ui/Input";
+import { ToggleSwitch } from "@/modules/ui/ToggleSwitch";
 import { HoverTooltip } from "@/modules/ui/Tooltip";
 import { RestrictionMultiSelect } from "@/modules/api-keys/RestrictionMultiSelect";
 import type { MultiSelectOption } from "@/modules/ui/MultiSelect";
@@ -163,21 +164,51 @@ export function ApiKeyFormFields({
       </div>
 
       <div>
-        <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
-          {t("api_keys_page.form_allowed_channels")}
-        </label>
-        <RestrictionMultiSelect
-          options={availableChannels}
-          value={form.allowedChannels}
-          onChange={(selected) => setForm((prev) => ({ ...prev, allowedChannels: selected }))}
-          placeholder={t("api_keys_page.select_channels")}
-          unrestrictedLabel={t("api_keys_page.form_all_channels")}
-          selectedCountLabel={(count) => t("api_keys_page.selected_channels_count", { count })}
-          searchPlaceholder={t("api_keys_page.search_channels")}
-          selectFilteredLabel={t("api_keys_page.select_filtered")}
-          clearRestrictionLabel={t("api_keys_page.clear_restriction")}
-          noResultsLabel={t("api_keys_page.no_results")}
-        />
+        <div className="mb-2 flex items-start justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50/70 px-3 py-2 dark:border-amber-500/25 dark:bg-amber-500/10">
+          <div className="min-w-0">
+            <div className="text-sm font-medium text-slate-800 dark:text-white/85">
+              {t("api_keys_page.form_exact_channels")}
+            </div>
+            <p className="mt-0.5 text-xs text-amber-800 dark:text-amber-100/75">
+              {t("api_keys_page.form_exact_channels_desc")}
+            </p>
+          </div>
+          <ToggleSwitch
+            checked={form.useExactChannelRestrictions}
+            ariaLabel={t("api_keys_page.form_exact_channels")}
+            onCheckedChange={(checked) =>
+              setForm((prev) => ({
+                ...prev,
+                useExactChannelRestrictions: checked,
+                allowedChannels: checked ? prev.allowedChannels : [],
+              }))
+            }
+          />
+        </div>
+        {form.useExactChannelRestrictions ? (
+          <>
+            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
+              {t("api_keys_page.form_allowed_channels")}
+            </label>
+            <RestrictionMultiSelect
+              options={availableChannels}
+              value={form.allowedChannels}
+              onChange={(selected) => setForm((prev) => ({ ...prev, allowedChannels: selected }))}
+              placeholder={t("api_keys_page.select_channels")}
+              unrestrictedLabel={t("api_keys_page.form_all_channels")}
+              selectedCountLabel={(count) => t("api_keys_page.selected_channels_count", { count })}
+              searchPlaceholder={t("api_keys_page.search_channels")}
+              selectFilteredLabel={t("api_keys_page.select_filtered")}
+              clearRestrictionLabel={t("api_keys_page.clear_restriction")}
+              noResultsLabel={t("api_keys_page.no_results")}
+            />
+            {form.allowedChannelGroups.length > 0 ? (
+              <p className="mt-1 text-xs text-amber-700 dark:text-amber-200">
+                {t("api_keys_page.form_exact_channels_intersection_warning")}
+              </p>
+            ) : null}
+          </>
+        ) : null}
       </div>
 
       <div>
