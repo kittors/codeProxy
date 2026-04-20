@@ -2,10 +2,11 @@ import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "node:path";
+import { panelMetadataPlugin } from "./src/build/panelMetadata";
 
 export default defineConfig({
   base: "/manage/",
-  plugins: [react(), tailwindcss()],
+  plugins: [react(), tailwindcss(), panelMetadataPlugin()],
   define: {
     // Prefer CI-provided build version (branch+sha/tag) so UI version auto-refreshes on deploy.
     __APP_VERSION__: JSON.stringify(
