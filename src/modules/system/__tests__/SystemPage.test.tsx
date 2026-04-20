@@ -311,6 +311,47 @@ describe("SystemPage", () => {
     expect(within(dialog).getAllByRole("listitem")).toHaveLength(2);
   });
 
+  test("shows only a short release-notes preview until expanded", async () => {
+    mocks.check.mockResolvedValue({
+      enabled: true,
+      update_available: true,
+      current_version: "dev-1111111",
+      current_commit: "1111111",
+      latest_version: "v1.2.3",
+      latest_commit: "abcdef123456",
+      target_channel: "main",
+      docker_image: "ghcr.io/kittors/clirelay",
+      docker_tag: "latest",
+      release_url: "https://github.com/kittors/CliRelay/releases/tag/v1.2.3",
+      release_notes: `## Changelog
+
+- Change 1
+- Change 2
+- Change 3
+- Change 4
+- Change 5
+- Change 6
+- Change 7`,
+      updater_available: true,
+    });
+    renderPage();
+
+    await userEvent.click(await screen.findByRole("button", { name: /check docker update/i }));
+    const dialog = await screen.findByRole("dialog");
+
+    expect(within(dialog).getByText("Change 5")).toBeInTheDocument();
+    expect(within(dialog).queryByText("Change 6")).toBeNull();
+    expect(within(dialog).getByRole("button", { name: /show all changes/i })).toBeInTheDocument();
+
+    await userEvent.click(within(dialog).getByRole("button", { name: /show all changes/i }));
+
+    expect(await within(dialog).findByText("Change 7")).toBeInTheDocument();
+    expect(within(dialog).getByRole("button", { name: /show fewer changes/i })).toBeInTheDocument();
+    expect(
+      within(dialog).getByRole("link", { name: /view full release notes/i }),
+    ).toHaveAttribute("href", "https://github.com/kittors/CliRelay/releases/tag/v1.2.3");
+  });
+
   test("shows concrete docker versions without release notes when already up to date", async () => {
     mocks.check.mockResolvedValue({
       enabled: true,

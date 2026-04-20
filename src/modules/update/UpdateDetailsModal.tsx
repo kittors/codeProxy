@@ -1,4 +1,4 @@
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { RefreshCw } from "lucide-react";
 import type { UpdateCheckResponse } from "@/lib/http/apis/update";
@@ -49,6 +49,27 @@ function ReleaseNotesMarkdown({ text }: { text: string }) {
   );
 }
 
+const MAX_RELEASE_NOTE_ITEMS = 5;
+const LIST_ITEM_PATTERN = /^\s*(?:[-*+]|\d+\.)\s+/;
+
+function buildReleaseNotesPreview(text: string) {
+  const lines = text.split("\n");
+  let itemCount = 0;
+  let cutoffIndex = lines.length;
+  for (let index = 0; index < lines.length; index += 1) {
+    if (!LIST_ITEM_PATTERN.test(lines[index])) continue;
+    itemCount += 1;
+    if (itemCount > MAX_RELEASE_NOTE_ITEMS) {
+      cutoffIndex = index;
+      break;
+    }
+  }
+  if (cutoffIndex === lines.length) {
+    return { text, truncated: false };
+  }
+  return { text: lines.slice(0, cutoffIndex).join("\n").trimEnd(), truncated: true };
+}
+
 export function UpdateDetailsModal({
   open,
   candidate,
@@ -67,6 +88,7 @@ export function UpdateDetailsModal({
   onClose: () => void;
 }) {
   const { t } = useTranslation();
+  const [releaseNotesExpanded, setReleaseNotesExpanded] = useState(false);
 
   const canUpdate = Boolean(
     candidate?.enabled && candidate.update_available && candidate.updater_available,
@@ -81,6 +103,9 @@ export function UpdateDetailsModal({
       : t("auto_update.description");
   const releaseNotes = candidate?.release_notes?.trim() || t("auto_update.no_release_notes");
   const showReleaseNotes = Boolean(candidate?.update_available);
+  const releaseNotesPreview = useMemo(() => buildReleaseNotesPreview(releaseNotes), [releaseNotes]);
+  const visibleReleaseNotes =
+    releaseNotesExpanded || !releaseNotesPreview.truncated ? releaseNotes : releaseNotesPreview.text;
   const currentVersion = candidate
     ? versionLabel(candidate.current_version, candidate.current_commit, candidate.target_channel)
     : "--";
@@ -105,6 +130,10 @@ export function UpdateDetailsModal({
     ? [candidate.docker_image, candidate.docker_tag].filter(Boolean).join(":")
     : "--";
   const formattedCandidateMessage = formatUpdateStatusMessage(candidate?.message);
+
+  useEffect(() => {
+    setReleaseNotesExpanded(false);
+  }, [candidate?.latest_commit, candidate?.latest_ui_commit, open]);
 
   return (
     <Modal
@@ -241,10 +270,42 @@ export function UpdateDetailsModal({
 
             {showReleaseNotes ? (
               <div className="min-w-0">
-                <h3 className="mb-2 text-sm font-semibold text-slate-900 dark:text-white">
-                  {t("auto_update.release_notes")}
-                </h3>
-                <ReleaseNotesMarkdown text={releaseNotes} />
+                <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                  <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
+                    {t("auto_update.release_notes")}
+                  </h3>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {releaseNotesPreview.truncated ? (
+                      <Button
+                        variant="ghost"
+                        size="xs"
+                        onClick={() => setReleaseNotesExpanded((prev) => !prev)}
+                      >
+                        {releaseNotesExpanded
+                          ? t("auto_update.release_notes_show_less")
+                          : t("auto_update.release_notes_show_more")}
+                      </Button>
+                    ) : null}
+                    {candidate.release_url ? (
+                      <a
+                        href={candidate.release_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-xs font-medium text-indigo-600 hover:underline dark:text-indigo-300"
+                      >
+                        {t("auto_update.release_notes_open")}
+                      </a>
+                    ) : null}
+                  </div>
+                </div>
+                {!releaseNotesExpanded && releaseNotesPreview.truncated ? (
+                  <p className="mb-2 text-xs text-slate-500 dark:text-white/55">
+                    {t("auto_update.release_notes_preview_notice", {
+                      count: MAX_RELEASE_NOTE_ITEMS,
+                    })}
+                  </p>
+                ) : null}
+                <ReleaseNotesMarkdown text={visibleReleaseNotes} />
               </div>
             ) : null}
 
