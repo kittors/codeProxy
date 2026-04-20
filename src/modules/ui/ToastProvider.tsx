@@ -18,12 +18,23 @@ type ToastClassNames = Partial<
   >
 >;
 
-const MULTILINE_TEXT_CLASSNAME = "whitespace-pre-line break-words leading-5";
+const TOAST_WRAPPER_CLASSNAME = "!max-w-[min(calc(100vw-2rem),42rem)] min-w-0";
+const TOAST_CONTENT_CLASSNAME =
+  "!max-w-[min(calc(100vw-2rem),42rem)] min-w-0 overflow-hidden";
+const TOAST_HEADER_CLASSNAME = "flex min-w-0 max-w-full items-start";
+const MULTILINE_TEXT_CLASSNAME =
+  "!max-w-full min-w-0 !whitespace-pre-line break-words [overflow-wrap:anywhere] !leading-5";
+
+const mergeClassName = (baseClassName: string, className?: string) =>
+  [baseClassName, className].filter(Boolean).join(" ");
 
 const mergeToastClassNames = (classNames?: ToastClassNames): ToastClassNames => ({
   ...classNames,
-  title: [MULTILINE_TEXT_CLASSNAME, classNames?.title].filter(Boolean).join(" "),
-  description: [MULTILINE_TEXT_CLASSNAME, classNames?.description].filter(Boolean).join(" "),
+  wrapper: mergeClassName(TOAST_WRAPPER_CLASSNAME, classNames?.wrapper),
+  content: mergeClassName(TOAST_CONTENT_CLASSNAME, classNames?.content),
+  header: mergeClassName(TOAST_HEADER_CLASSNAME, classNames?.header),
+  title: mergeClassName(MULTILINE_TEXT_CLASSNAME, classNames?.title),
+  description: mergeClassName(MULTILINE_TEXT_CLASSNAME, classNames?.description),
 });
 
 interface ToastContextState {

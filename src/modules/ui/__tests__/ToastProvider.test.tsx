@@ -23,17 +23,34 @@ vi.mock("goey-toast", () => ({
 function Trigger() {
   const { notify } = useToast();
   return (
-    <button
-      type="button"
-      onClick={() =>
-        notify({
-          type: "warning",
-          message: "line 1\nline 2",
-        })
-      }
-    >
-      Notify
-    </button>
+    <>
+      <button
+        type="button"
+        onClick={() =>
+          notify({
+            type: "warning",
+            message: "line 1\nline 2",
+          })
+        }
+      >
+        Notify
+      </button>
+      <button
+        type="button"
+        onClick={() =>
+          notify({
+            type: "warning",
+            message:
+              'service update check degraded: github commit status 403: {"documentation_url":"https://docs.github.com/rest/overview/resources-in-the-rest-api#rate-limiting"}',
+            classNames: {
+              actionWrapper: "custom-action-wrapper",
+            },
+          })
+        }
+      >
+        Notify Long
+      </button>
+    </>
   );
 }
 
@@ -54,6 +71,31 @@ describe("ToastProvider", () => {
       expect.objectContaining({
         classNames: expect.objectContaining({
           title: expect.stringContaining("whitespace-pre-line"),
+        }),
+      }),
+    );
+  });
+
+  test("constrains long toast messages without dropping caller class names", () => {
+    render(
+      <ThemeProvider>
+        <ToastProvider>
+          <Trigger />
+        </ToastProvider>
+      </ThemeProvider>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Notify Long" }));
+
+    expect(mocks.warning).toHaveBeenCalledWith(
+      expect.stringContaining("github commit status 403"),
+      expect.objectContaining({
+        classNames: expect.objectContaining({
+          wrapper: expect.stringContaining("max-w"),
+          content: expect.stringContaining("min-w-0"),
+          header: expect.stringContaining("min-w-0"),
+          title: expect.stringContaining("overflow-wrap:anywhere"),
+          actionWrapper: "custom-action-wrapper",
         }),
       }),
     );
