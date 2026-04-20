@@ -35,6 +35,11 @@ export const updateApi = {
       timeoutMs: 20000,
       ...options,
     }),
+  current: (options?: RequestOptions) =>
+    apiClient.get<UpdateCheckResponse>("/update/current", {
+      timeoutMs: 5000,
+      ...options,
+    }),
   apply: () =>
     apiClient.post<UpdateApplyResponse>("/update/apply", undefined, {
       timeoutMs: 20000,

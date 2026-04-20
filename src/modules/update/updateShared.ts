@@ -107,9 +107,10 @@ const waitForAppliedTarget = async ({
       await apiClient.get("/system-stats", {
         timeoutMs: Math.min(5000, heartbeatIntervalMs + 3000),
       });
-      const info = await updateApi.check({
+      const current = await updateApi.current({
         timeoutMs: Math.min(8000, heartbeatIntervalMs + 5000),
       });
+      const info = { ...target, ...current };
       lastCheck = info;
       onCheck?.(info);
       if (matchesAppliedTarget(info, target)) {

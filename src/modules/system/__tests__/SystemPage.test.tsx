@@ -9,6 +9,7 @@ import { ToastProvider } from "@/modules/ui/ToastProvider";
 const mocks = vi.hoisted(() => ({
   apiGet: vi.fn(),
   check: vi.fn(),
+  current: vi.fn(),
   apply: vi.fn(),
 }));
 
@@ -21,6 +22,7 @@ vi.mock("@/lib/http/client", () => ({
 vi.mock("@/lib/http/apis/update", () => ({
   updateApi: {
     check: mocks.check,
+    current: mocks.current,
     apply: mocks.apply,
   },
 }));
@@ -69,37 +71,34 @@ describe("SystemPage", () => {
       release_notes: "Fixes and improvements",
       updater_available: true,
     });
+    mocks.current.mockResolvedValue({
+      enabled: true,
+      current_version: "main-abcdef1",
+      current_commit: "abcdef123456",
+      current_ui_version: "panel-main-abcdef1",
+      current_ui_commit: "abcdef123456",
+      target_channel: "main",
+      docker_image: "ghcr.io/kittors/clirelay",
+      docker_tag: "latest",
+      updater_available: true,
+    });
     mocks.apply.mockResolvedValue({ status: "accepted" });
   });
 
   test("checks update details and applies updates from system info", async () => {
-    mocks.check
-      .mockResolvedValueOnce({
-        enabled: true,
-        update_available: true,
-        current_version: "main-1111111",
-        current_commit: "1111111",
-        latest_version: "main-abcdef1",
-        latest_commit: "abcdef123456",
-        target_channel: "main",
-        docker_image: "ghcr.io/kittors/clirelay",
-        docker_tag: "latest",
-        release_notes: "Fixes and improvements",
-        updater_available: true,
-      })
-      .mockResolvedValueOnce({
-        enabled: true,
-        update_available: false,
-        current_version: "main-abcdef1",
-        current_commit: "abcdef123456",
-        latest_version: "main-abcdef1",
-        latest_commit: "abcdef123456",
-        target_channel: "main",
-        docker_image: "ghcr.io/kittors/clirelay",
-        docker_tag: "latest",
-        release_notes: "Fixes and improvements",
-        updater_available: true,
-      });
+    mocks.check.mockResolvedValueOnce({
+      enabled: true,
+      update_available: true,
+      current_version: "main-1111111",
+      current_commit: "1111111",
+      latest_version: "main-abcdef1",
+      latest_commit: "abcdef123456",
+      target_channel: "main",
+      docker_image: "ghcr.io/kittors/clirelay",
+      docker_tag: "latest",
+      release_notes: "Fixes and improvements",
+      updater_available: true,
+    });
 
     renderPage();
 
@@ -116,8 +115,9 @@ describe("SystemPage", () => {
       expect(mocks.apiGet).toHaveBeenCalledWith("/system-stats", expect.any(Object));
     });
     await waitFor(() => {
-      expect(mocks.check).toHaveBeenCalledTimes(2);
+      expect(mocks.current).toHaveBeenCalled();
     });
+    expect(mocks.check).toHaveBeenCalledTimes(1);
   });
 
   test("rechecks the target version before treating the update as successful", async () => {
@@ -139,7 +139,7 @@ describe("SystemPage", () => {
         release_notes: "Fixes and improvements",
         updater_available: true,
       })
-      .mockResolvedValue({
+    mocks.current.mockResolvedValue({
         enabled: true,
         update_available: true,
         current_version: "main-1111111",
@@ -167,8 +167,9 @@ describe("SystemPage", () => {
       expect(mocks.apply).toHaveBeenCalledTimes(1);
     });
     await waitFor(() => {
-      expect(mocks.check.mock.calls.length).toBeGreaterThan(1);
+      expect(mocks.current.mock.calls.length).toBeGreaterThan(1);
     });
+    expect(mocks.check).toHaveBeenCalledTimes(1);
     expect(
       await screen.findByText(/running version is still not dev-abcdef1/i),
     ).toBeInTheDocument();

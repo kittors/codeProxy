@@ -7,6 +7,7 @@ import { ToastProvider } from "@/modules/ui/ToastProvider";
 
 const mocks = vi.hoisted(() => ({
   check: vi.fn(),
+  current: vi.fn(),
   apply: vi.fn(),
   get: vi.fn(),
 }));
@@ -14,6 +15,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@/lib/http/apis/update", () => ({
   updateApi: {
     check: mocks.check,
+    current: mocks.current,
     apply: mocks.apply,
   },
 }));
@@ -63,6 +65,15 @@ describe("AutoUpdatePrompt", () => {
       updater_available: true,
     });
     mocks.apply.mockResolvedValue({ status: "accepted" });
+    mocks.current.mockResolvedValue({
+      enabled: true,
+      current_version: "main-abcdef1",
+      current_commit: "abcdef123456",
+      target_channel: "main",
+      docker_image: "ghcr.io/kittors/clirelay",
+      docker_tag: "latest",
+      updater_available: true,
+    });
     mocks.get.mockResolvedValue({ uptime: 10 });
   });
 
