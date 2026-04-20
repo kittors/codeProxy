@@ -18,6 +18,14 @@ type ToastClassNames = Partial<
   >
 >;
 
+const MULTILINE_TEXT_CLASSNAME = "whitespace-pre-line break-words leading-5";
+
+const mergeToastClassNames = (classNames?: ToastClassNames): ToastClassNames => ({
+  ...classNames,
+  title: [MULTILINE_TEXT_CLASSNAME, classNames?.title].filter(Boolean).join(" "),
+  description: [MULTILINE_TEXT_CLASSNAME, classNames?.description].filter(Boolean).join(" "),
+});
+
 interface ToastContextState {
   notify: (input: {
     type?: ToastType;
@@ -64,9 +72,7 @@ export function ToastProvider({ children }: PropsWithChildren) {
       if (input.action) {
         options.action = input.action;
       }
-      if (input.classNames) {
-        options.classNames = input.classNames;
-      }
+      options.classNames = mergeToastClassNames(input.classNames);
 
       switch (type) {
         case "success":

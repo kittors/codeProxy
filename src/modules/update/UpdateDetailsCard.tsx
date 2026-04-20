@@ -10,6 +10,7 @@ import {
   DEFAULT_HEARTBEAT_INTERVAL_MS,
   DEFAULT_HEARTBEAT_TIMEOUT_MS,
   applyUpdateFlow,
+  formatUpdateStatusMessage,
 } from "@/modules/update/updateShared";
 
 export function UpdateDetailsCard({
@@ -39,7 +40,7 @@ export function UpdateDetailsCard({
       if (!info.enabled) {
         notify({ type: "info", message: t("auto_update.disabled") });
       } else if (info.message && !info.update_available) {
-        notify({ type: "warning", message: info.message });
+        notify({ type: "warning", message: formatUpdateStatusMessage(info.message) });
       } else if (!info.update_available) {
         notify({ type: "success", message: t("auto_update.no_update") });
       }

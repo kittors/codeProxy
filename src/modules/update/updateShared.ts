@@ -36,6 +36,15 @@ export const uiVersionLabel = (version?: string, commit?: string, channel?: stri
   return "--";
 };
 
+export const formatUpdateStatusMessage = (message?: string | null) => {
+  const trimmed = message?.trim() ?? "";
+  if (!trimmed) return "";
+  return trimmed.replace(
+    /;\s+(?=(?:service update check degraded|management UI update check degraded):)/gi,
+    ";\n",
+  );
+};
+
 export const updateDisplayVersion = (info: UpdateCheckResponse) => {
   const backendChanged =
     Boolean(info.latest_commit?.trim()) && !sameCommit(info.current_commit, info.latest_commit);

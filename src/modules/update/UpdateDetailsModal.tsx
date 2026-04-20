@@ -4,7 +4,12 @@ import { RefreshCw } from "lucide-react";
 import type { UpdateCheckResponse } from "@/lib/http/apis/update";
 import { Button } from "@/modules/ui/Button";
 import { Modal } from "@/modules/ui/Modal";
-import { shortCommit, uiVersionLabel, versionLabel } from "@/modules/update/updateShared";
+import {
+  formatUpdateStatusMessage,
+  shortCommit,
+  uiVersionLabel,
+  versionLabel,
+} from "@/modules/update/updateShared";
 
 const LazyRichMarkdown = lazy(() =>
   import("@/modules/monitor/log-content/rendering-markdown").then((mod) => ({
@@ -99,6 +104,7 @@ export function UpdateDetailsModal({
   const dockerImage = candidate
     ? [candidate.docker_image, candidate.docker_tag].filter(Boolean).join(":")
     : "--";
+  const formattedCandidateMessage = formatUpdateStatusMessage(candidate?.message);
 
   return (
     <Modal
@@ -139,9 +145,9 @@ export function UpdateDetailsModal({
 
         {candidate ? (
           <>
-            {candidate.message ? (
-              <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200">
-                {candidate.message}
+            {formattedCandidateMessage ? (
+              <p className="whitespace-pre-line break-words rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200">
+                {formattedCandidateMessage}
               </p>
             ) : null}
 
