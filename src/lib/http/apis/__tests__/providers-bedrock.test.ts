@@ -31,6 +31,7 @@ describe("providersApi Bedrock", () => {
           "force-global": true,
           "base-url": "https://bedrock.local",
           "proxy-id": "hk",
+          priority: -7,
           headers: { "X-Test": "yes" },
           models: [{ name: "claude-sonnet-4-5", alias: "aws-sonnet" }],
           "excluded-models": ["claude-opus-*"],
@@ -58,6 +59,7 @@ describe("providersApi Bedrock", () => {
         forceGlobal: true,
         baseUrl: "https://bedrock.local",
         proxyId: "hk",
+        priority: -7,
         headers: { "X-Test": "yes" },
         models: [{ name: "claude-sonnet-4-5", alias: "aws-sonnet" }],
         excludedModels: ["claude-opus-*"],
@@ -74,6 +76,33 @@ describe("providersApi Bedrock", () => {
     ]);
   });
 
+  test("normalizes and serializes simple provider priority with proxy-id", async () => {
+    const { providersApi } = await import("@/lib/http/apis/providers");
+    getMock.mockResolvedValue({
+      "claude-api-key": [
+        {
+          "api-key": "sk-claude",
+          name: "Claude",
+          "proxy-id": "hk",
+          priority: -1001,
+        },
+      ],
+    });
+    putMock.mockResolvedValue({ status: "ok" });
+
+    const result = await providersApi.getClaudeConfigs();
+    expect(result).toEqual([
+      expect.objectContaining({ apiKey: "sk-claude", proxyId: "hk", priority: -1001 }),
+    ]);
+
+    await providersApi.saveClaudeConfigs([{ ...result[0], priority: 1001 }]);
+
+    expect(putMock).toHaveBeenCalledWith(
+      "/claude-api-key",
+      [expect.objectContaining({ "proxy-id": "hk", priority: 1001 })],
+    );
+  });
+
   test("serializes and deletes Bedrock configs", async () => {
     const { providersApi } = await import("@/lib/http/apis/providers");
     putMock.mockResolvedValue({ status: "ok" });
@@ -86,6 +115,7 @@ describe("providersApi Bedrock", () => {
         apiKey: "br-key",
         region: "eu-west-1",
         forceGlobal: true,
+        priority: 4096,
       },
       {
         name: "Bedrock SigV4",
@@ -105,6 +135,7 @@ describe("providersApi Bedrock", () => {
         "api-key": "br-key",
         region: "eu-west-1",
         "force-global": true,
+        priority: 4096,
       }),
       expect.objectContaining({
         name: "Bedrock SigV4",

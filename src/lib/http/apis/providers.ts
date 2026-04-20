@@ -50,12 +50,16 @@ export const providersApi = {
         const excludedModels = normalizeExcludedModels(
           item["excluded-models"] ?? item.excludedModels,
         );
+        const priorityRaw = item.priority;
+        const priority =
+          typeof priorityRaw === "number" && Number.isFinite(priorityRaw) ? priorityRaw : undefined;
         return {
           apiKey,
           ...(name ? { name } : {}),
           ...(prefix ? { prefix } : {}),
           ...(baseUrl ? { baseUrl } : {}),
           ...(proxyId ? { proxyId } : {}),
+          ...(priority !== undefined ? { priority } : {}),
           ...(headers ? { headers } : {}),
           ...(models ? { models } : {}),
           ...(excludedModels ? { excludedModels } : {}),
@@ -92,6 +96,9 @@ export const providersApi = {
         const excludedModels = normalizeExcludedModels(
           item["excluded-models"] ?? item.excludedModels,
         );
+        const priorityRaw = item.priority;
+        const priority =
+          typeof priorityRaw === "number" && Number.isFinite(priorityRaw) ? priorityRaw : undefined;
         return {
           apiKey,
           ...(name ? { name } : {}),
@@ -99,6 +106,7 @@ export const providersApi = {
           ...(baseUrl ? { baseUrl } : {}),
           ...(proxyUrl ? { proxyUrl } : {}),
           ...(proxyId ? { proxyId } : {}),
+          ...(priority !== undefined ? { priority } : {}),
           ...(headers ? { headers } : {}),
           ...(models ? { models } : {}),
           ...(excludedModels ? { excludedModels } : {}),
@@ -176,6 +184,9 @@ export const providersApi = {
         );
         const skipAnthropicProcessing =
           item["skip-anthropic-processing"] === true || item.skipAnthropicProcessing === true;
+        const priorityRaw = item.priority;
+        const priority =
+          typeof priorityRaw === "number" && Number.isFinite(priorityRaw) ? priorityRaw : undefined;
         return {
           apiKey,
           ...(name ? { name } : {}),
@@ -183,6 +194,7 @@ export const providersApi = {
           ...(baseUrl ? { baseUrl } : {}),
           ...(proxyUrl ? { proxyUrl } : {}),
           ...(proxyId ? { proxyId } : {}),
+          ...(priority !== undefined ? { priority } : {}),
           ...(headers ? { headers } : {}),
           ...(models ? { models } : {}),
           ...(excludedModels ? { excludedModels } : {}),
@@ -233,6 +245,9 @@ export const providersApi = {
         const excludedModels = normalizeExcludedModels(
           item["excluded-models"] ?? item.excludedModels,
         );
+        const priorityRaw = item.priority;
+        const priority =
+          typeof priorityRaw === "number" && Number.isFinite(priorityRaw) ? priorityRaw : undefined;
         return {
           apiKey: credential,
           authMode,
@@ -246,6 +261,7 @@ export const providersApi = {
           ...(baseUrl ? { baseUrl } : {}),
           ...(proxyUrl ? { proxyUrl } : {}),
           ...(proxyId ? { proxyId } : {}),
+          ...(priority !== undefined ? { priority } : {}),
           ...(headers ? { headers } : {}),
           ...(models ? { models } : {}),
           ...(excludedModels ? { excludedModels } : {}),
@@ -279,6 +295,9 @@ export const providersApi = {
         const proxyId = normalizeString(item["proxy-id"] ?? item.proxyId) ?? undefined;
         const headers = normalizeHeaders(item.headers);
         const models = normalizeModels(item.models);
+        const priorityRaw = item.priority;
+        const priority =
+          typeof priorityRaw === "number" && Number.isFinite(priorityRaw) ? priorityRaw : undefined;
         return {
           apiKey,
           ...(name ? { name } : {}),
@@ -286,6 +305,7 @@ export const providersApi = {
           ...(baseUrl ? { baseUrl } : {}),
           ...(proxyUrl ? { proxyUrl } : {}),
           ...(proxyId ? { proxyId } : {}),
+          ...(priority !== undefined ? { priority } : {}),
           ...(headers ? { headers } : {}),
           ...(models ? { models } : {}),
         };

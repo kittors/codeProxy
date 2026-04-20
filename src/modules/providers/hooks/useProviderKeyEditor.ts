@@ -122,6 +122,12 @@ export function useProviderKeyEditor({
     const excludedModels = keyDraft.excludedModelsText.trim()
       ? excludedModelsFromText(keyDraft.excludedModelsText)
       : undefined;
+    const priorityText = keyDraft.priorityText.trim();
+    const priority = priorityText !== "" ? Number(priorityText) : undefined;
+    if (priority !== undefined && (!Number.isFinite(priority) || !Number.isInteger(priority))) {
+      setKeyDraftError(t("providers.priority_error"));
+      return null;
+    }
     const isOpenCodeGo = editKeyType === "opencode-go";
 
     const requireAlias = editKeyType === "vertex";
@@ -139,6 +145,7 @@ export function useProviderKeyEditor({
       ...(!isOpenCodeGo && keyDraft.baseUrl.trim() ? { baseUrl: keyDraft.baseUrl.trim() } : {}),
       ...(keyDraft.proxyUrl.trim() ? { proxyUrl: keyDraft.proxyUrl.trim() } : {}),
       ...(keyDraft.proxyId.trim() ? { proxyId: keyDraft.proxyId.trim() } : {}),
+      ...(priority !== undefined ? { priority } : {}),
       ...(headers ? { headers } : {}),
       ...(excludedModels ? { excludedModels } : {}),
       ...(!isOpenCodeGo && modelCommit.models ? { models: modelCommit.models } : {}),

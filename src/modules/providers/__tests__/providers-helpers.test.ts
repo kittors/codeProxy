@@ -22,6 +22,7 @@ describe("providers helpers", () => {
       baseUrl: "https://claude.example.com",
       proxyUrl: "https://proxy.example.com",
       proxyId: "hk",
+      priority: -7,
       excludedModels: ["claude-3-opus", "claude-3-haiku"],
       headers: { "x-test": "1" },
       models: [{ name: "claude-3-opus", alias: "opus", priority: 10, testModel: "probe-model" }],
@@ -31,6 +32,7 @@ describe("providers helpers", () => {
     expect(draft.name).toBe("Claude Main");
     expect(draft.apiKey).toBe("sk-ant-123456");
     expect(draft.proxyId).toBe("hk");
+    expect(draft.priorityText).toBe("-7");
     expect(draft.excludedModelsText).toBe("claude-3-opus\nclaude-3-haiku");
     expect(draft.headersEntries).toEqual([{ id: expect.any(String), key: "x-test", value: "1" }]);
     expect(draft.modelEntries).toEqual([

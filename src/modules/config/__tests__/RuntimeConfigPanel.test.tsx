@@ -98,7 +98,7 @@ describe("RuntimeConfigPanel", () => {
     const proxyInput = await screen.findByPlaceholderText(/proxy/i);
     const retryInput = screen.getByPlaceholderText(/retry/i);
     const logsInput = screen.getByPlaceholderText(/logs-max-total-size-mb/i);
-    const routingInput = screen.getByPlaceholderText(/routing/i);
+    const routingSelect = screen.getByRole("combobox", { name: /routing strategy/i });
 
     await userEvent.clear(proxyInput);
     await userEvent.type(proxyInput, "http://127.0.0.1:9999");
@@ -106,8 +106,8 @@ describe("RuntimeConfigPanel", () => {
     await userEvent.type(retryInput, "4");
     await userEvent.clear(logsInput);
     await userEvent.type(logsInput, "256");
-    await userEvent.clear(routingInput);
-    await userEvent.type(routingInput, "fill-first");
+    await userEvent.click(routingSelect);
+    await userEvent.click(await screen.findByRole("option", { name: /fill-first/i }));
 
     await userEvent.click(screen.getByRole("button", { name: /save changes/i }));
 

@@ -10,12 +10,15 @@ import type {
 } from "@/modules/config/visual/types";
 import { makeClientId } from "@/modules/config/visual/types";
 import { Button } from "@/modules/ui/Button";
+import { Card } from "@/modules/ui/Card";
 import { Checkbox } from "@/modules/ui/Checkbox";
 import { ConfirmModal } from "@/modules/ui/ConfirmModal";
 import { TextInput } from "@/modules/ui/Input";
 import { Modal } from "@/modules/ui/Modal";
 import { SearchableCheckboxMultiSelect } from "@/modules/ui/SearchableCheckboxMultiSelect";
+import { Select } from "@/modules/ui/Select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/modules/ui/Tabs";
+import { ToggleSwitch } from "@/modules/ui/ToggleSwitch";
 import { useToast } from "@/modules/ui/ToastProvider";
 import { HoverTooltip, OverflowTooltip } from "@/modules/ui/Tooltip";
 import { VirtualTable, type VirtualTableColumn } from "@/modules/ui/VirtualTable";
@@ -1030,38 +1033,80 @@ export function RoutingConfigEditor({
 
   return (
     <>
-      <div className="space-y-3">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="space-y-1">
-            <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
-              {t("channel_groups_page.groups_table_title")}
-            </h3>
-            <p className="text-xs text-slate-500 dark:text-white/55">
-              {t("channel_groups_page.groups_table_desc")}
-            </p>
-          </div>
-          <Button variant="primary" size="sm" onClick={openCreateGroup} disabled={disabled}>
-            <Plus size={14} />
-            {t("channel_groups_page.add_group")}
-          </Button>
-        </div>
+      <div className="space-y-6">
+        <Card
+          title={t("channel_groups_page.base_settings_title")}
+          description={t("channel_groups_page.base_settings_desc")}
+        >
+          <div className="space-y-4">
+            <Field
+              label={t("channel_groups_page.routing_strategy_label")}
+              hint={t("channel_groups_page.routing_strategy_hint")}
+            >
+              <Select
+                value={values.routingStrategy}
+                onChange={(routingStrategy) =>
+                  update({
+                    routingStrategy: routingStrategy as VisualConfigValues["routingStrategy"],
+                  })
+                }
+                options={[
+                  {
+                    value: "round-robin",
+                    label: t("channel_groups_page.routing_strategy_round_robin"),
+                  },
+                  {
+                    value: "fill-first",
+                    label: t("channel_groups_page.routing_strategy_fill_first"),
+                  },
+                ]}
+              />
+            </Field>
 
-        <VirtualTable<RoutingChannelGroupEntry>
-          rows={values.routingChannelGroups}
-          columns={groupColumns}
-          rowKey={(group) => group.id}
-          virtualize={false}
-          rowHeight={44}
-          height="h-auto max-h-[68vh]"
-          minWidth="min-w-[1660px]"
-          caption={t("channel_groups_page.groups_table_title")}
-          emptyText={t("channel_groups_page.empty_groups")}
-          rowClassName={(group) =>
-            (staleChannelsByGroup.get(group.id)?.length ?? 0) > 0
-              ? "bg-rose-50/35 dark:bg-rose-500/5"
-              : ""
-          }
-        />
+            <ToggleSwitch
+              label={t("channel_groups_page.include_default_group_short")}
+              checked={values.routingIncludeDefaultGroup}
+              onCheckedChange={(routingIncludeDefaultGroup) =>
+                update({ routingIncludeDefaultGroup })
+              }
+              disabled={disabled}
+            />
+          </div>
+        </Card>
+
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="space-y-1">
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
+                {t("channel_groups_page.groups_table_title")}
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-white/55">
+                {t("channel_groups_page.groups_table_desc")}
+              </p>
+            </div>
+            <Button variant="primary" size="sm" onClick={openCreateGroup} disabled={disabled}>
+              <Plus size={14} />
+              {t("channel_groups_page.add_group")}
+            </Button>
+          </div>
+
+          <VirtualTable<RoutingChannelGroupEntry>
+            rows={values.routingChannelGroups}
+            columns={groupColumns}
+            rowKey={(group) => group.id}
+            virtualize={false}
+            rowHeight={44}
+            height="h-auto max-h-[68vh]"
+            minWidth="min-w-[1660px]"
+            caption={t("channel_groups_page.groups_table_title")}
+            emptyText={t("channel_groups_page.empty_groups")}
+            rowClassName={(group) =>
+              (staleChannelsByGroup.get(group.id)?.length ?? 0) > 0
+                ? "bg-rose-50/35 dark:bg-rose-500/5"
+                : ""
+            }
+          />
+        </div>
       </div>
 
       <Modal

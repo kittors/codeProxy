@@ -179,7 +179,6 @@ export function OpenAIProviderModal({
                 setOpenaiDraft((prev) => ({ ...prev, priorityText: value }));
               }}
               placeholder={t("providers.priority_placeholder")}
-              inputMode="numeric"
             />
           </div>
           <div className="space-y-2">
