@@ -1,7 +1,8 @@
 import { Suspense, lazy, useEffect, useMemo, useState } from "react";
+import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import { RefreshCw } from "lucide-react";
-import type { UpdateCheckResponse } from "@/lib/http/apis/update";
+import type { UpdateCheckResponse, UpdateProgressResponse } from "@/lib/http/apis/update";
 import { Button } from "@/modules/ui/Button";
 import { Modal } from "@/modules/ui/Modal";
 import {
@@ -51,6 +52,16 @@ function ReleaseNotesMarkdown({ text }: { text: string }) {
 
 const MAX_RELEASE_NOTE_ITEMS = 5;
 const LIST_ITEM_PATTERN = /^\s*(?:[-*+]|\d+\.)\s+/;
+const UPDATE_STAGE_ORDER = ["preparing", "pulling", "restarting", "verifying", "completed"];
+const UPDATE_STAGE_LABEL_KEYS: Record<string, string> = {
+  preparing: "auto_update.progress_stage_preparing",
+  pulling: "auto_update.progress_stage_pulling",
+  restarting: "auto_update.progress_stage_restarting",
+  verifying: "auto_update.progress_stage_verifying",
+  completed: "auto_update.progress_stage_completed",
+  failed: "auto_update.progress_stage_failed",
+  idle: "auto_update.progress_stage_idle",
+};
 
 function buildReleaseNotesPreview(text: string) {
   const lines = text.split("\n");
@@ -70,9 +81,161 @@ function buildReleaseNotesPreview(text: string) {
   return { text: lines.slice(0, cutoffIndex).join("\n").trimEnd(), truncated: true };
 }
 
+function normalizedStage(progress?: UpdateProgressResponse | null) {
+  const stage = progress?.stage?.trim().toLowerCase();
+  if (stage) return stage;
+  return progress?.status === "completed" ? "completed" : "preparing";
+}
+
+function stageLabel(t: TFunction, stage: string) {
+  return t(UPDATE_STAGE_LABEL_KEYS[stage] ?? "auto_update.progress_stage_unknown");
+}
+
+function formatLogTimestamp(value?: string) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+}
+
+function UpdateProgressConsole({
+  candidate,
+  progress,
+}: {
+  candidate: UpdateCheckResponse;
+  progress?: UpdateProgressResponse | null;
+}) {
+  const { t } = useTranslation();
+  const stage = normalizedStage(progress);
+  const currentVersion = versionLabel(
+    candidate.current_version,
+    candidate.current_commit,
+    candidate.target_channel,
+  );
+  const targetVersion =
+    progress?.target_version?.trim() ||
+    versionLabel(candidate.latest_version, candidate.latest_commit, candidate.target_channel);
+  const currentUIVersion = uiVersionLabel(
+    candidate.current_ui_version,
+    candidate.current_ui_commit,
+    candidate.target_channel,
+  );
+  const targetUIVersion =
+    progress?.target_ui_version?.trim() ||
+    uiVersionLabel(
+      candidate.latest_ui_version,
+      candidate.latest_ui_commit,
+      candidate.target_channel,
+    );
+  const dockerImage =
+    [progress?.target_image, progress?.target_tag].filter(Boolean).join(":") ||
+    [candidate.docker_image, candidate.docker_tag].filter(Boolean).join(":") ||
+    "--";
+  const logs = progress?.logs ?? [];
+  const activeStageIndex = Math.max(0, UPDATE_STAGE_ORDER.indexOf(stage));
+
+  return (
+    <section
+      data-testid="update-progress-console"
+      className="min-w-0 space-y-3 rounded-2xl border border-sky-200 bg-sky-50/80 p-3 dark:border-sky-500/20 dark:bg-sky-500/10"
+    >
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-white">
+            <RefreshCw size={14} className="animate-spin text-sky-600 dark:text-sky-300" />
+            {t("auto_update.progress_title")}
+          </h3>
+          <p className="mt-1 text-xs text-slate-600 dark:text-white/60">
+            {progress?.message?.trim() || t("auto_update.progress_default_message")}
+          </p>
+        </div>
+        <span className="rounded-full bg-sky-100 px-2.5 py-1 text-xs font-medium text-sky-700 dark:bg-sky-400/15 dark:text-sky-200">
+          {stageLabel(t, stage)}
+        </span>
+      </div>
+
+      <dl className="grid min-w-0 gap-2 lg:grid-cols-2">
+        <div className="min-w-0 rounded-xl border border-sky-200/70 bg-white/80 p-3 dark:border-sky-500/15 dark:bg-neutral-950/50">
+          <dt className="text-xs font-medium text-slate-500 dark:text-white/55">
+            {t("auto_update.progress_service_path")}
+          </dt>
+          <dd className="mt-1 break-words font-mono text-sm text-slate-900 dark:text-white">
+            {currentVersion} <span className="text-slate-400">-&gt;</span> {targetVersion}
+          </dd>
+        </div>
+        <div className="min-w-0 rounded-xl border border-sky-200/70 bg-white/80 p-3 dark:border-sky-500/15 dark:bg-neutral-950/50">
+          <dt className="text-xs font-medium text-slate-500 dark:text-white/55">
+            {t("auto_update.progress_ui_path")}
+          </dt>
+          <dd className="mt-1 break-words font-mono text-sm text-slate-900 dark:text-white">
+            {currentUIVersion} <span className="text-slate-400">-&gt;</span> {targetUIVersion}
+          </dd>
+        </div>
+        <div className="min-w-0 rounded-xl border border-sky-200/70 bg-white/80 p-3 dark:border-sky-500/15 dark:bg-neutral-950/50 lg:col-span-2">
+          <dt className="text-xs font-medium text-slate-500 dark:text-white/55">
+            {t("auto_update.image")}
+          </dt>
+          <dd className="mt-1 break-words font-mono text-sm text-slate-900 dark:text-white">
+            {dockerImage}
+          </dd>
+        </div>
+      </dl>
+
+      <ol className="grid gap-2 text-xs sm:grid-cols-2 lg:grid-cols-5">
+        {UPDATE_STAGE_ORDER.map((item, index) => {
+          const completed = progress?.status === "completed" || index < activeStageIndex;
+          const active = progress?.status !== "completed" && item === stage;
+          return (
+            <li
+              key={item}
+              className={[
+                "rounded-lg border px-2.5 py-2",
+                completed
+                  ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-200"
+                  : active
+                    ? "border-sky-300 bg-sky-100 text-sky-800 dark:border-sky-400/25 dark:bg-sky-400/15 dark:text-sky-100"
+                    : "border-slate-200 bg-white/70 text-slate-500 dark:border-neutral-800 dark:bg-neutral-950/40 dark:text-white/45",
+              ].join(" ")}
+            >
+              {stageLabel(t, item)}
+            </li>
+          );
+        })}
+      </ol>
+
+      <div className="min-w-0 overflow-hidden rounded-xl border border-neutral-900 bg-neutral-950 text-xs text-slate-100 shadow-inner">
+        <div className="flex items-center justify-between border-b border-white/10 px-3 py-2 text-[11px] uppercase tracking-wide text-slate-400">
+          <span>{t("auto_update.progress_logs")}</span>
+          <span>
+            {logs.length ? t("auto_update.progress_log_count", { count: logs.length }) : ""}
+          </span>
+        </div>
+        <div
+          data-testid="update-log-stream"
+          className="max-h-64 min-h-32 overflow-y-auto whitespace-pre-wrap break-words p-3 font-mono leading-5"
+        >
+          {logs.length ? (
+            logs.map((entry, index) => (
+              <div key={`${entry.timestamp ?? "log"}-${index}`} className="break-words">
+                <span className="text-slate-500">{formatLogTimestamp(entry.timestamp)}</span>{" "}
+                <span className="text-sky-300">{entry.stream || "log"}</span>{" "}
+                <span>{entry.message}</span>
+              </div>
+            ))
+          ) : (
+            <p className="text-slate-400">{t("auto_update.progress_logs_empty")}</p>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export function UpdateDetailsModal({
   open,
   candidate,
+  updateTarget = null,
+  progress = null,
   checking = false,
   updating = false,
   error = null,
@@ -81,6 +244,8 @@ export function UpdateDetailsModal({
 }: {
   open: boolean;
   candidate: UpdateCheckResponse | null;
+  updateTarget?: UpdateCheckResponse | null;
+  progress?: UpdateProgressResponse | null;
   checking?: boolean;
   updating?: boolean;
   error?: string | null;
@@ -89,47 +254,62 @@ export function UpdateDetailsModal({
 }) {
   const { t } = useTranslation();
   const [releaseNotesExpanded, setReleaseNotesExpanded] = useState(false);
+  const displayCandidate = updating ? (updateTarget ?? candidate) : candidate;
 
   const canUpdate = Boolean(
-    candidate?.enabled && candidate.update_available && candidate.updater_available,
+    displayCandidate?.enabled &&
+    displayCandidate.update_available &&
+    displayCandidate.updater_available,
   );
-  const modalTitle =
-    candidate && !candidate.update_available
+  const modalTitle = updating
+    ? t("auto_update.updating_title")
+    : displayCandidate && !displayCandidate.update_available
       ? t("auto_update.up_to_date_title")
       : t("auto_update.title");
-  const modalDescription =
-    candidate && !candidate.update_available
+  const modalDescription = updating
+    ? t("auto_update.updating_description")
+    : displayCandidate && !displayCandidate.update_available
       ? t("auto_update.up_to_date_description")
       : t("auto_update.description");
-  const releaseNotes = candidate?.release_notes?.trim() || t("auto_update.no_release_notes");
-  const showReleaseNotes = Boolean(candidate?.update_available);
+  const releaseNotes = displayCandidate?.release_notes?.trim() || t("auto_update.no_release_notes");
+  const showReleaseNotes = Boolean(displayCandidate?.update_available) && !updating;
   const releaseNotesPreview = useMemo(() => buildReleaseNotesPreview(releaseNotes), [releaseNotes]);
   const visibleReleaseNotes =
-    releaseNotesExpanded || !releaseNotesPreview.truncated ? releaseNotes : releaseNotesPreview.text;
-  const currentVersion = candidate
-    ? versionLabel(candidate.current_version, candidate.current_commit, candidate.target_channel)
-    : "--";
-  const targetVersion = candidate
-    ? versionLabel(candidate.latest_version, candidate.latest_commit, candidate.target_channel)
-    : "--";
-  const currentUIVersion = candidate
-    ? uiVersionLabel(
-        candidate.current_ui_version,
-        candidate.current_ui_commit,
-        candidate.target_channel,
+    releaseNotesExpanded || !releaseNotesPreview.truncated
+      ? releaseNotes
+      : releaseNotesPreview.text;
+  const currentVersion = displayCandidate
+    ? versionLabel(
+        displayCandidate.current_version,
+        displayCandidate.current_commit,
+        displayCandidate.target_channel,
       )
     : "--";
-  const targetUIVersion = candidate
-    ? uiVersionLabel(
-        candidate.latest_ui_version,
-        candidate.latest_ui_commit,
-        candidate.target_channel,
+  const targetVersion = displayCandidate
+    ? versionLabel(
+        displayCandidate.latest_version,
+        displayCandidate.latest_commit,
+        displayCandidate.target_channel,
       )
     : "--";
-  const dockerImage = candidate
-    ? [candidate.docker_image, candidate.docker_tag].filter(Boolean).join(":")
+  const currentUIVersion = displayCandidate
+    ? uiVersionLabel(
+        displayCandidate.current_ui_version,
+        displayCandidate.current_ui_commit,
+        displayCandidate.target_channel,
+      )
     : "--";
-  const formattedCandidateMessage = formatUpdateStatusMessage(candidate?.message);
+  const targetUIVersion = displayCandidate
+    ? uiVersionLabel(
+        displayCandidate.latest_ui_version,
+        displayCandidate.latest_ui_commit,
+        displayCandidate.target_channel,
+      )
+    : "--";
+  const dockerImage = displayCandidate
+    ? [displayCandidate.docker_image, displayCandidate.docker_tag].filter(Boolean).join(":")
+    : "--";
+  const formattedCandidateMessage = formatUpdateStatusMessage(displayCandidate?.message);
 
   useEffect(() => {
     setReleaseNotesExpanded(false);
@@ -172,101 +352,105 @@ export function UpdateDetailsModal({
           </p>
         ) : null}
 
-        {candidate ? (
+        {displayCandidate ? (
           <>
-            {formattedCandidateMessage ? (
+            {updating ? (
+              <UpdateProgressConsole candidate={displayCandidate} progress={progress} />
+            ) : formattedCandidateMessage ? (
               <p className="whitespace-pre-line break-words rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200">
                 {formattedCandidateMessage}
               </p>
             ) : null}
 
-            <dl className="grid min-w-0 gap-3 lg:grid-cols-2">
-              <div className="min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-neutral-800 dark:bg-neutral-900/50">
-                <dt className="text-xs font-medium text-slate-500 dark:text-white/55">
-                  {t("auto_update.current_service")}
-                </dt>
-                <dd className="mt-1 break-words font-mono text-sm text-slate-900 dark:text-white">
-                  {currentVersion}
-                </dd>
-                {candidate.current_commit ? (
-                  <p className="mt-1 truncate text-xs text-slate-500 dark:text-white/50">
-                    {t("auto_update.commit")}: {shortCommit(candidate.current_commit)}
-                  </p>
-                ) : null}
-              </div>
-              <div className="min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-neutral-800 dark:bg-neutral-900/50">
-                <dt className="text-xs font-medium text-slate-500 dark:text-white/55">
-                  {t("auto_update.target_service")}
-                </dt>
-                <dd className="mt-1 break-words font-mono text-sm text-slate-900 dark:text-white">
-                  {targetVersion}
-                </dd>
-                {candidate.latest_commit ? (
-                  candidate.latest_commit_url ? (
-                    <a
-                      href={candidate.latest_commit_url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="mt-1 block truncate text-xs text-indigo-600 hover:underline dark:text-indigo-300"
-                    >
-                      {t("auto_update.commit")}: {shortCommit(candidate.latest_commit)}
-                    </a>
-                  ) : (
+            {!updating ? (
+              <dl className="grid min-w-0 gap-3 lg:grid-cols-2">
+                <div className="min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-neutral-800 dark:bg-neutral-900/50">
+                  <dt className="text-xs font-medium text-slate-500 dark:text-white/55">
+                    {t("auto_update.current_service")}
+                  </dt>
+                  <dd className="mt-1 break-words font-mono text-sm text-slate-900 dark:text-white">
+                    {currentVersion}
+                  </dd>
+                  {displayCandidate.current_commit ? (
                     <p className="mt-1 truncate text-xs text-slate-500 dark:text-white/50">
-                      {t("auto_update.commit")}: {shortCommit(candidate.latest_commit)}
+                      {t("auto_update.commit")}: {shortCommit(displayCandidate.current_commit)}
                     </p>
-                  )
-                ) : null}
-              </div>
-              <div className="min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-neutral-800 dark:bg-neutral-900/50">
-                <dt className="text-xs font-medium text-slate-500 dark:text-white/55">
-                  {t("auto_update.current_ui")}
-                </dt>
-                <dd className="mt-1 break-words font-mono text-sm text-slate-900 dark:text-white">
-                  {currentUIVersion}
-                </dd>
-                {candidate.current_ui_commit ? (
-                  <p className="mt-1 truncate text-xs text-slate-500 dark:text-white/50">
-                    {t("auto_update.commit")}: {shortCommit(candidate.current_ui_commit)}
-                  </p>
-                ) : null}
-              </div>
-              <div className="min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-neutral-800 dark:bg-neutral-900/50">
-                <dt className="text-xs font-medium text-slate-500 dark:text-white/55">
-                  {t("auto_update.target_ui")}
-                </dt>
-                <dd className="mt-1 break-words font-mono text-sm text-slate-900 dark:text-white">
-                  {targetUIVersion}
-                </dd>
-                {candidate.latest_ui_commit ? (
-                  candidate.latest_ui_commit_url ? (
-                    <a
-                      href={candidate.latest_ui_commit_url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="mt-1 block truncate text-xs text-indigo-600 hover:underline dark:text-indigo-300"
-                    >
-                      {t("auto_update.commit")}: {shortCommit(candidate.latest_ui_commit)}
-                    </a>
-                  ) : (
+                  ) : null}
+                </div>
+                <div className="min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-neutral-800 dark:bg-neutral-900/50">
+                  <dt className="text-xs font-medium text-slate-500 dark:text-white/55">
+                    {t("auto_update.target_service")}
+                  </dt>
+                  <dd className="mt-1 break-words font-mono text-sm text-slate-900 dark:text-white">
+                    {targetVersion}
+                  </dd>
+                  {displayCandidate.latest_commit ? (
+                    displayCandidate.latest_commit_url ? (
+                      <a
+                        href={displayCandidate.latest_commit_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-1 block truncate text-xs text-indigo-600 hover:underline dark:text-indigo-300"
+                      >
+                        {t("auto_update.commit")}: {shortCommit(displayCandidate.latest_commit)}
+                      </a>
+                    ) : (
+                      <p className="mt-1 truncate text-xs text-slate-500 dark:text-white/50">
+                        {t("auto_update.commit")}: {shortCommit(displayCandidate.latest_commit)}
+                      </p>
+                    )
+                  ) : null}
+                </div>
+                <div className="min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-neutral-800 dark:bg-neutral-900/50">
+                  <dt className="text-xs font-medium text-slate-500 dark:text-white/55">
+                    {t("auto_update.current_ui")}
+                  </dt>
+                  <dd className="mt-1 break-words font-mono text-sm text-slate-900 dark:text-white">
+                    {currentUIVersion}
+                  </dd>
+                  {displayCandidate.current_ui_commit ? (
                     <p className="mt-1 truncate text-xs text-slate-500 dark:text-white/50">
-                      {t("auto_update.commit")}: {shortCommit(candidate.latest_ui_commit)}
+                      {t("auto_update.commit")}: {shortCommit(displayCandidate.current_ui_commit)}
                     </p>
-                  )
-                ) : null}
-              </div>
-              <div className="min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-neutral-800 dark:bg-neutral-900/50 lg:col-span-2">
-                <dt className="text-xs font-medium text-slate-500 dark:text-white/55">
-                  {t("auto_update.image")}
-                </dt>
-                <dd
-                  data-testid="update-image-value"
-                  className="mt-1 break-words font-mono text-sm text-slate-900 dark:text-white"
-                >
-                  {dockerImage}
-                </dd>
-              </div>
-            </dl>
+                  ) : null}
+                </div>
+                <div className="min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-neutral-800 dark:bg-neutral-900/50">
+                  <dt className="text-xs font-medium text-slate-500 dark:text-white/55">
+                    {t("auto_update.target_ui")}
+                  </dt>
+                  <dd className="mt-1 break-words font-mono text-sm text-slate-900 dark:text-white">
+                    {targetUIVersion}
+                  </dd>
+                  {displayCandidate.latest_ui_commit ? (
+                    displayCandidate.latest_ui_commit_url ? (
+                      <a
+                        href={displayCandidate.latest_ui_commit_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-1 block truncate text-xs text-indigo-600 hover:underline dark:text-indigo-300"
+                      >
+                        {t("auto_update.commit")}: {shortCommit(displayCandidate.latest_ui_commit)}
+                      </a>
+                    ) : (
+                      <p className="mt-1 truncate text-xs text-slate-500 dark:text-white/50">
+                        {t("auto_update.commit")}: {shortCommit(displayCandidate.latest_ui_commit)}
+                      </p>
+                    )
+                  ) : null}
+                </div>
+                <div className="min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-neutral-800 dark:bg-neutral-900/50 lg:col-span-2">
+                  <dt className="text-xs font-medium text-slate-500 dark:text-white/55">
+                    {t("auto_update.image")}
+                  </dt>
+                  <dd
+                    data-testid="update-image-value"
+                    className="mt-1 break-words font-mono text-sm text-slate-900 dark:text-white"
+                  >
+                    {dockerImage}
+                  </dd>
+                </div>
+              </dl>
+            ) : null}
 
             {showReleaseNotes ? (
               <div className="min-w-0">
@@ -286,9 +470,9 @@ export function UpdateDetailsModal({
                           : t("auto_update.release_notes_show_more")}
                       </Button>
                     ) : null}
-                    {candidate.release_url ? (
+                    {displayCandidate.release_url ? (
                       <a
-                        href={candidate.release_url}
+                        href={displayCandidate.release_url}
                         target="_blank"
                         rel="noreferrer"
                         className="text-xs font-medium text-indigo-600 hover:underline dark:text-indigo-300"
@@ -309,15 +493,17 @@ export function UpdateDetailsModal({
               </div>
             ) : null}
 
-            {!candidate.updater_available ? (
+            {!updating && !displayCandidate.updater_available ? (
               <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200">
                 {t("auto_update.updater_unavailable")}
               </p>
             ) : null}
 
-            {!candidate.enabled || (!candidate.update_available && !candidate.message) ? (
+            {!updating &&
+            (!displayCandidate.enabled ||
+              (!displayCandidate.update_available && !displayCandidate.message)) ? (
               <p className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-200">
-                {!candidate.enabled ? t("auto_update.disabled") : t("auto_update.no_update")}
+                {!displayCandidate.enabled ? t("auto_update.disabled") : t("auto_update.no_update")}
               </p>
             ) : null}
           </>

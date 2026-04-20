@@ -1,7 +1,11 @@
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { RefreshCw } from "lucide-react";
-import { updateApi, type UpdateCheckResponse } from "@/lib/http/apis/update";
+import {
+  updateApi,
+  type UpdateCheckResponse,
+  type UpdateProgressResponse,
+} from "@/lib/http/apis/update";
 import { Button } from "@/modules/ui/Button";
 import { Card } from "@/modules/ui/Card";
 import { useToast } from "@/modules/ui/ToastProvider";
@@ -10,6 +14,7 @@ import {
   DEFAULT_HEARTBEAT_INTERVAL_MS,
   DEFAULT_HEARTBEAT_TIMEOUT_MS,
   applyUpdateFlow,
+  createPendingUpdateProgress,
   formatUpdateStatusMessage,
 } from "@/modules/update/updateShared";
 
@@ -23,6 +28,8 @@ export function UpdateDetailsCard({
   const { t } = useTranslation();
   const { notify } = useToast();
   const [candidate, setCandidate] = useState<UpdateCheckResponse | null>(null);
+  const [updateTarget, setUpdateTarget] = useState<UpdateCheckResponse | null>(null);
+  const [progress, setProgress] = useState<UpdateProgressResponse | null>(null);
   const [checked, setChecked] = useState(false);
   const [checking, setChecking] = useState(false);
   const [updating, setUpdating] = useState(false);
@@ -34,6 +41,8 @@ export function UpdateDetailsCard({
     setChecking(true);
     setChecked(true);
     setError(null);
+    setProgress(null);
+    setUpdateTarget(null);
     try {
       const info = await updateApi.check();
       setCandidate(info);
@@ -57,6 +66,8 @@ export function UpdateDetailsCard({
   }, [notify, t]);
 
   const applyUpdate = useCallback(async () => {
+    setUpdateTarget(candidate);
+    setProgress(createPendingUpdateProgress(candidate));
     setUpdating(true);
     try {
       const completed = await applyUpdateFlow({
@@ -65,6 +76,7 @@ export function UpdateDetailsCard({
         heartbeatTimeoutMs,
         notify,
         onCheck: setCandidate,
+        onProgress: setProgress,
         onSuccess: () => window.location.reload(),
         t,
       });
@@ -76,6 +88,7 @@ export function UpdateDetailsCard({
         type: "error",
         message: err instanceof Error ? err.message : t("auto_update.failed"),
       });
+      setProgress(null);
       setUpdating(false);
     }
   }, [candidate, heartbeatIntervalMs, heartbeatTimeoutMs, notify, t]);
@@ -109,11 +122,17 @@ export function UpdateDetailsCard({
       <UpdateDetailsModal
         open={modalOpen}
         candidate={candidate}
+        updateTarget={updateTarget}
+        progress={progress}
         checking={checking}
         updating={updating}
         error={error}
         onApply={() => void applyUpdate()}
-        onClose={() => setModalOpen(false)}
+        onClose={() => {
+          setProgress(null);
+          setUpdateTarget(null);
+          setModalOpen(false);
+        }}
       />
     </>
   );

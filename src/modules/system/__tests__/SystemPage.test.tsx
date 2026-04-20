@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
   check: vi.fn(),
   current: vi.fn(),
   apply: vi.fn(),
+  progress: vi.fn(),
 }));
 
 vi.mock("@/lib/http/client", () => ({
@@ -24,6 +25,7 @@ vi.mock("@/lib/http/apis/update", () => ({
     check: mocks.check,
     current: mocks.current,
     apply: mocks.apply,
+    progress: mocks.progress,
   },
 }));
 
@@ -83,6 +85,11 @@ describe("SystemPage", () => {
       updater_available: true,
     });
     mocks.apply.mockResolvedValue({ status: "accepted" });
+    mocks.progress.mockResolvedValue({
+      status: "idle",
+      stage: "idle",
+      logs: [],
+    });
   });
 
   test("checks update details and applies updates from system info", async () => {
@@ -121,41 +128,40 @@ describe("SystemPage", () => {
   });
 
   test("rechecks the target version before treating the update as successful", async () => {
-    mocks.check
-      .mockResolvedValueOnce({
-        enabled: true,
-        update_available: true,
-        current_version: "main-1111111",
-        current_commit: "1111111",
-        current_ui_version: "panel-dev-1111111",
-        current_ui_commit: "1111111",
-        latest_version: "dev-abcdef1",
-        latest_commit: "abcdef123456",
-        latest_ui_version: "panel-dev-abcdef1",
-        latest_ui_commit: "abcdef123456",
-        target_channel: "dev",
-        docker_image: "ghcr.io/kittors/clirelay",
-        docker_tag: "dev",
-        release_notes: "Fixes and improvements",
-        updater_available: true,
-      })
+    mocks.check.mockResolvedValueOnce({
+      enabled: true,
+      update_available: true,
+      current_version: "main-1111111",
+      current_commit: "1111111",
+      current_ui_version: "panel-dev-1111111",
+      current_ui_commit: "1111111",
+      latest_version: "dev-abcdef1",
+      latest_commit: "abcdef123456",
+      latest_ui_version: "panel-dev-abcdef1",
+      latest_ui_commit: "abcdef123456",
+      target_channel: "dev",
+      docker_image: "ghcr.io/kittors/clirelay",
+      docker_tag: "dev",
+      release_notes: "Fixes and improvements",
+      updater_available: true,
+    });
     mocks.current.mockResolvedValue({
-        enabled: true,
-        update_available: true,
-        current_version: "main-1111111",
-        current_commit: "1111111",
-        current_ui_version: "panel-dev-abcdef1",
-        current_ui_commit: "abcdef123456",
-        latest_version: "dev-abcdef1",
-        latest_commit: "abcdef123456",
-        latest_ui_version: "panel-dev-abcdef1",
-        latest_ui_commit: "abcdef123456",
-        target_channel: "dev",
-        docker_image: "ghcr.io/kittors/clirelay",
-        docker_tag: "dev",
-        release_notes: "Fixes and improvements",
-        updater_available: true,
-      });
+      enabled: true,
+      update_available: true,
+      current_version: "main-1111111",
+      current_commit: "1111111",
+      current_ui_version: "panel-dev-abcdef1",
+      current_ui_commit: "abcdef123456",
+      latest_version: "dev-abcdef1",
+      latest_commit: "abcdef123456",
+      latest_ui_version: "panel-dev-abcdef1",
+      latest_ui_commit: "abcdef123456",
+      target_channel: "dev",
+      docker_image: "ghcr.io/kittors/clirelay",
+      docker_tag: "dev",
+      release_notes: "Fixes and improvements",
+      updater_available: true,
+    });
 
     renderPage();
 
@@ -347,9 +353,10 @@ describe("SystemPage", () => {
 
     expect(await within(dialog).findByText("Change 7")).toBeInTheDocument();
     expect(within(dialog).getByRole("button", { name: /show fewer changes/i })).toBeInTheDocument();
-    expect(
-      within(dialog).getByRole("link", { name: /view full release notes/i }),
-    ).toHaveAttribute("href", "https://github.com/kittors/CliRelay/releases/tag/v1.2.3");
+    expect(within(dialog).getByRole("link", { name: /view full release notes/i })).toHaveAttribute(
+      "href",
+      "https://github.com/kittors/CliRelay/releases/tag/v1.2.3",
+    );
   });
 
   test("shows concrete docker versions without release notes when already up to date", async () => {
@@ -379,5 +386,72 @@ describe("SystemPage", () => {
     expect(within(dialog).getAllByText("main-de96948")).toHaveLength(2);
     expect(within(dialog).queryByText(/older release note/i)).not.toBeInTheDocument();
     expect(within(dialog).getByRole("button", { name: /update now/i })).toBeDisabled();
+  });
+
+  test("switches to an update console while updating and hides release notes", async () => {
+    let resolveCurrent: ((value: Record<string, unknown>) => void) | undefined;
+    mocks.current.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveCurrent = resolve;
+        }),
+    );
+    mocks.progress.mockResolvedValue({
+      status: "running",
+      stage: "pulling",
+      started_at: "2026-04-20T07:30:00Z",
+      target_version: "main-abcdef1",
+      target_commit: "abcdef123456",
+      target_ui_version: "panel-main-fedcba9",
+      target_ui_commit: "fedcba987654",
+      logs: [
+        {
+          timestamp: "2026-04-20T07:30:01Z",
+          stream: "stdout",
+          message: "docker compose pull clirelay",
+        },
+        {
+          timestamp: "2026-04-20T07:30:02Z",
+          stream: "stdout",
+          message: "Pulling clirelay ... done",
+        },
+      ],
+    });
+
+    renderPage();
+
+    await userEvent.click(await screen.findByRole("button", { name: /check docker update/i }));
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText(/Fixes and improvements/i)).toBeInTheDocument();
+
+    await userEvent.click(within(dialog).getByRole("button", { name: /update now/i }));
+
+    await waitFor(() => {
+      expect(mocks.apply).toHaveBeenCalledTimes(1);
+    });
+    await waitFor(() => {
+      expect(mocks.progress).toHaveBeenCalled();
+    });
+    await waitFor(() => {
+      expect(within(dialog).queryByTestId("update-release-notes")).toBeNull();
+    });
+
+    expect(within(dialog).getByTestId("update-progress-console")).toBeInTheDocument();
+    expect(within(dialog).getByText(/docker compose pull clirelay/i)).toBeInTheDocument();
+    expect(within(dialog).getByText(/Pulling clirelay \.\.\. done/i)).toBeInTheDocument();
+    expect(within(dialog).getByText(/main-1111111/i)).toBeInTheDocument();
+    expect(within(dialog).getByText(/main-abcdef1/i)).toBeInTheDocument();
+
+    resolveCurrent?.({
+      enabled: true,
+      current_version: "main-abcdef1",
+      current_commit: "abcdef123456",
+      current_ui_version: "panel-main-fedcba9",
+      current_ui_commit: "fedcba987654",
+      target_channel: "main",
+      docker_image: "ghcr.io/kittors/clirelay",
+      docker_tag: "latest",
+      updater_available: true,
+    });
   });
 });

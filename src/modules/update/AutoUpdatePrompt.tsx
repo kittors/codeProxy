@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { updateApi, type UpdateCheckResponse } from "@/lib/http/apis/update";
+import {
+  updateApi,
+  type UpdateCheckResponse,
+  type UpdateProgressResponse,
+} from "@/lib/http/apis/update";
 import { useAuth } from "@/modules/auth/AuthProvider";
 import { buttonClassName } from "@/modules/ui/Button";
 import { useToast } from "@/modules/ui/ToastProvider";
@@ -9,6 +13,7 @@ import {
   DEFAULT_HEARTBEAT_INTERVAL_MS,
   DEFAULT_HEARTBEAT_TIMEOUT_MS,
   applyUpdateFlow,
+  createPendingUpdateProgress,
   updateDisplayVersion,
   updateIdentity,
 } from "@/modules/update/updateShared";
@@ -30,6 +35,8 @@ export function AutoUpdatePrompt({
   const checkingRef = useRef(false);
   const notifiedRef = useRef(new Set<string>());
   const [candidate, setCandidate] = useState<UpdateCheckResponse | null>(null);
+  const [updateTarget, setUpdateTarget] = useState<UpdateCheckResponse | null>(null);
+  const [progress, setProgress] = useState<UpdateProgressResponse | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [updating, setUpdating] = useState(false);
 
@@ -92,6 +99,8 @@ export function AutoUpdatePrompt({
   }, [auth.state.isAuthenticated, auth.state.isRestoring, initialDelayMs, notify, t]);
 
   const applyUpdate = useCallback(async () => {
+    setUpdateTarget(candidate);
+    setProgress(createPendingUpdateProgress(candidate));
     setUpdating(true);
     try {
       const completed = await applyUpdateFlow({
@@ -100,6 +109,7 @@ export function AutoUpdatePrompt({
         heartbeatTimeoutMs,
         notify,
         onCheck: setCandidate,
+        onProgress: setProgress,
         onSuccess: () => window.location.reload(),
         t,
       });
@@ -111,6 +121,7 @@ export function AutoUpdatePrompt({
         type: "error",
         message: err instanceof Error ? err.message : t("auto_update.failed"),
       });
+      setProgress(null);
       setUpdating(false);
     }
   }, [candidate, heartbeatIntervalMs, heartbeatTimeoutMs, notify, t]);
@@ -120,9 +131,15 @@ export function AutoUpdatePrompt({
       <UpdateDetailsModal
         open={detailsOpen}
         candidate={candidate}
+        updateTarget={updateTarget}
+        progress={progress}
         updating={updating}
         onApply={() => void applyUpdate()}
-        onClose={() => setDetailsOpen(false)}
+        onClose={() => {
+          setProgress(null);
+          setUpdateTarget(null);
+          setDetailsOpen(false);
+        }}
       />
     </>
   );
