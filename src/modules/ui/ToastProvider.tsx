@@ -1,6 +1,7 @@
 import { createContext, type PropsWithChildren, use, useCallback, useMemo } from "react";
 import { GoeyToaster, goeyToast } from "goey-toast";
 import "goey-toast/styles.css";
+import "@/modules/ui/ToastProvider.css";
 import { useTheme } from "@/modules/ui/ThemeProvider";
 
 type ToastType = "success" | "error" | "info" | "warning";
@@ -37,6 +38,8 @@ const mergeToastClassNames = (classNames?: ToastClassNames): ToastClassNames => 
   description: mergeClassName(MULTILINE_TEXT_CLASSNAME, classNames?.description),
 });
 
+const shouldUseDescriptionBody = (message: string) => message.includes("\n") || message.length > 80;
+
 interface ToastContextState {
   notify: (input: {
     type?: ToastType;
@@ -66,18 +69,17 @@ export function ToastProvider({ children }: PropsWithChildren) {
     }) => {
       const type = input.type ?? "info";
 
-      const _defaultTitles: Record<ToastType, string> = {
+      const defaultTitles: Record<ToastType, string> = {
         success: "Success",
         error: "Error",
         warning: "Warning",
         info: "Info",
       };
-      // Use message as the pill title; only set description when a separate title is provided
-      const title = input.title ?? input.message;
+      const title = input.title ?? (shouldUseDescriptionBody(input.message) ? defaultTitles[type] : input.message);
       const options: Record<string, unknown> = {
         duration: input.duration ?? 1500,
       };
-      if (input.title) {
+      if (input.title || title !== input.message) {
         options.description = input.message;
       }
       if (input.action) {

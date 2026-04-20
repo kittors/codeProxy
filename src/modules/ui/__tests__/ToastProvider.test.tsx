@@ -55,7 +55,7 @@ function Trigger() {
 }
 
 describe("ToastProvider", () => {
-  test("passes multiline-friendly class names to goey-toast", () => {
+  test("puts multiline messages in the toast description body", () => {
     render(
       <ThemeProvider>
         <ToastProvider>
@@ -67,10 +67,11 @@ describe("ToastProvider", () => {
     fireEvent.click(screen.getByRole("button", { name: "Notify" }));
 
     expect(mocks.warning).toHaveBeenCalledWith(
-      "line 1\nline 2",
+      "Warning",
       expect.objectContaining({
+        description: "line 1\nline 2",
         classNames: expect.objectContaining({
-          title: expect.stringContaining("whitespace-pre-line"),
+          description: expect.stringContaining("whitespace-pre-line"),
         }),
       }),
     );
@@ -88,8 +89,9 @@ describe("ToastProvider", () => {
     fireEvent.click(screen.getByRole("button", { name: "Notify Long" }));
 
     expect(mocks.warning).toHaveBeenCalledWith(
-      expect.stringContaining("github commit status 403"),
+      "Warning",
       expect.objectContaining({
+        description: expect.stringContaining("github commit status 403"),
         classNames: expect.objectContaining({
           wrapper: expect.stringContaining("max-w"),
           content: expect.stringContaining("min-w-0"),
