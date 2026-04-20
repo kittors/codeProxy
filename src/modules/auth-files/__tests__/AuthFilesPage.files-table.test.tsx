@@ -493,6 +493,57 @@ describe("AuthFilesPage files table", () => {
     expect(screen.getByText("0%")).toHaveClass("text-rose-700");
   });
 
+  test("table preview and hover mark depleted codex quotas red", async () => {
+    const now = Date.now();
+    const file = {
+      name: "codex-table.json",
+      type: "codex",
+      size: 1024,
+      modified: now,
+      disabled: false,
+      auth_index: "3",
+    } as any;
+
+    mocks.list.mockImplementationOnce(async () => ({ files: [file] }));
+    mocks.fetchQuota.mockResolvedValue({
+      items: [
+        { label: "m_quota.code_5h", percent: 88, resetAtMs: now + 60_000 },
+        { label: "m_quota.code_weekly", percent: 0, resetAtMs: now + 120_000 },
+        { label: "m_quota.review_weekly", percent: 0, resetAtMs: now + 180_000 },
+      ],
+    });
+    window.localStorage.setItem("authFilesPage.quotaPreview.v1", JSON.stringify("week"));
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("codex-table.json")).toBeInTheDocument();
+
+    const table = screen.getByRole("table");
+    const row = screen.getByText("codex-table.json").closest("tr");
+    expect(row).not.toBeNull();
+
+    fireEvent.click(within(row as HTMLElement).getByRole("button", { name: "Refresh" }));
+
+    const previewZero = await within(row as HTMLElement).findByText("0%");
+    expect(previewZero).toHaveClass("text-rose-700");
+
+    fireEvent.mouseEnter(within(row as HTMLElement).getByText("Code: Weekly"));
+    const tooltip = await screen.findByRole("tooltip");
+    const tooltipPercents = within(tooltip).getAllByText("0%");
+    expect(tooltipPercents[0]).toHaveClass("text-rose-700");
+    expect(table).toBeInTheDocument();
+  });
+
   test("quota refresh updates the plan badge from api-call payload", async () => {
     const now = Date.now();
     const file = {
