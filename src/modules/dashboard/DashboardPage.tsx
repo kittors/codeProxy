@@ -42,9 +42,24 @@ const formatCompactNumber = (n: number) => {
   return n.toLocaleString();
 };
 
+const throughputNumberFormatter = new Intl.NumberFormat(undefined, {
+  maximumFractionDigits: 2,
+});
+const formatThroughputValue = (value: number) =>
+  throughputNumberFormatter.format(Number.isFinite(value) ? value : 0);
 const formatRate = (rate: number) => `${rate.toFixed(2)}%`;
 const PANEL_SURFACE =
   "rounded-[18px] border border-slate-200/85 bg-white shadow-[0_10px_26px_rgba(15,23,42,0.05)]";
+
+const formatThroughputTooltip = (params: any) => {
+  const items = Array.isArray(params) ? params : [params];
+  const title = items[0]?.axisValueLabel ?? "";
+  const lines = items.map(
+    (item) =>
+      `${item?.marker ?? ""}${item?.seriesName ?? ""} ${formatThroughputValue(Number(item?.data ?? 0))}`,
+  );
+  return [title, ...lines].join("<br/>");
+};
 
 function createSparklineOption(points: DashboardTrendPoint[], color: string): ECBasicOption {
   const labels = points.map((point) => point.label);
@@ -119,6 +134,7 @@ function createThroughputOption(
       borderWidth: 0,
       backgroundColor: "rgba(15, 23, 42, 0.92)",
       textStyle: { color: "#fff" },
+      formatter: formatThroughputTooltip,
     },
     grid: { left: 12, right: 12, top: 12, bottom: 22, containLabel: true },
     xAxis: {
@@ -133,13 +149,21 @@ function createThroughputOption(
       {
         type: "value",
         splitNumber: 4,
-        axisLabel: { color: "#64748b", fontSize: 10 },
+        axisLabel: {
+          color: "#64748b",
+          fontSize: 10,
+          formatter: (value: number) => formatThroughputValue(value),
+        },
         splitLine: { lineStyle: { color: "rgba(148,163,184,0.16)" } },
       },
       {
         type: "value",
         splitNumber: 4,
-        axisLabel: { color: "#64748b", fontSize: 10 },
+        axisLabel: {
+          color: "#64748b",
+          fontSize: 10,
+          formatter: (value: number) => formatThroughputValue(value),
+        },
         splitLine: { show: false },
       },
     ],

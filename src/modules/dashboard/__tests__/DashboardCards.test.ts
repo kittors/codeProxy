@@ -28,6 +28,15 @@ describe("dashboard card composition", () => {
     expect(source).not.toContain("<KpiCard");
   });
 
+  test("formats throughput chart values with at most two decimal places", () => {
+    const source = readModule("modules/dashboard/DashboardPage.tsx");
+
+    expect(source).toContain("formatThroughputValue");
+    expect(source).toContain("maximumFractionDigits: 2");
+    expect(source).toContain("formatThroughputTooltip");
+    expect(source).toContain("formatter: formatThroughputTooltip");
+  });
+
   test("uses the shared Card component for system monitor panels", () => {
     const source = readModule("modules/dashboard/SystemMonitorSection.tsx");
 
