@@ -11,6 +11,10 @@ describe("dashboard card composition", () => {
     const source = readModule("modules/dashboard/DashboardPage.tsx");
 
     expect(source).toContain('from "@/modules/ui/Card"');
+    expect(source).toContain("Sparkline");
+    expect(source).toContain("ThroughputTrendChart");
+    expect(source).toContain("summary?.trends");
+    expect(source).toContain("meta.generated_at");
     expect(source).not.toContain('from "@/modules/monitor/MonitorPagePieces"');
     expect(source).not.toContain("<KpiCard");
   });
@@ -21,6 +25,8 @@ describe("dashboard card composition", () => {
     expect(source).toContain('from "@/modules/ui/Card"');
     expect(source).not.toContain('className="rounded-2xl border border-slate-200 bg-white/50');
     expect(source).not.toContain('className="rounded-xl border border-slate-200/80 bg-white');
-    expect(source).not.toContain('className="min-w-0 overflow-hidden rounded-xl border border-slate-200/80 bg-white');
+    expect(source).not.toContain(
+      'className="min-w-0 overflow-hidden rounded-xl border border-slate-200/80 bg-white',
+    );
   });
 });

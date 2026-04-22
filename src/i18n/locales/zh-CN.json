@@ -175,6 +175,8 @@
     "load_failed": "加载失败",
     "success_rate": "成功率",
     "heading": "仪表盘",
+    "hero_badge": "运行概览",
+    "hero_subtitle": "实时监控系统运行状态、关键指标与资源健康度",
     "today": "今天",
     "last_7_days": "最近 7 天",
     "last_30_days": "最近 30 天",
@@ -183,7 +185,14 @@
     "total_hint_today": "今天的总请求数",
     "total_hint_days": "最近 {{count}} 天的总请求数",
     "success_hint": "成功 {{success}} · 失败 {{failed}}",
-    "token_hint": "输入 {{input}} · 输出 {{output}}"
+    "token_hint": "输入 {{input}} · 输出 {{output}}",
+    "throughput_title": "请求吞吐趋势",
+    "overview_title": "资源总览",
+    "overview_hint": "数据更新时间 {{time}}",
+    "summary_api_keys": "API Keys",
+    "summary_providers": "供应商接入",
+    "summary_auth_files": "认证文件",
+    "updated_fallback": "刚刚"
   },
   "basic_settings": {
     "title": "基础设置",
@@ -1731,7 +1740,11 @@
     "expand_sidebar": "展开侧边栏",
     "collapse_sidebar": "收起侧边栏",
     "logout_button": "退出登录",
-    "skip_to_content": "跳到主要内容"
+    "skip_to_content": "跳到主要内容",
+    "upgrade_title": "升级到专业版",
+    "upgrade_description": "获得更高吞吐、更细粒度监控与优先技术支持。",
+    "upgrade_action": "立即升级",
+    "sidebar_account_role": "超级管理员"
   },
   "identity_fingerprint": {
     "title": "身份指纹",

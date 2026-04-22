@@ -136,9 +136,9 @@ function ShellSidebar({
   return (
     <aside
       className={[
-        "shrink-0 overflow-hidden bg-white/80 backdrop-blur-xl dark:bg-neutral-950/70",
+        "shrink-0 overflow-hidden bg-white/86 backdrop-blur-2xl dark:bg-neutral-950/82",
         isMobile ? "fixed inset-y-0 left-0 z-40 w-64" : "h-[100dvh]",
-        "border-r border-slate-200 dark:border-neutral-800",
+        "border-r border-blue-100/80 shadow-[18px_0_45px_rgba(15,23,42,0.05)] dark:border-neutral-800",
         "motion-reduce:transition-none motion-safe:transition-[width,transform,background-color,border-color] motion-safe:duration-300 motion-safe:ease-out",
         isMobile
           ? collapsed
@@ -157,14 +157,18 @@ function ShellSidebar({
           collapsed ? "pointer-events-none opacity-0 -translate-x-6" : "opacity-100 translate-x-0",
         ].join(" ")}
       >
-        <div className="flex h-16 items-center gap-2 px-6 text-lg font-semibold tracking-tight text-slate-900 transition-colors duration-200 ease-out dark:text-white whitespace-nowrap">
-          <LayoutDashboard
-            size={18}
-            className="text-slate-900 transition-colors duration-200 ease-out dark:text-white"
-          />
-          <span>{t("shell.console")}</span>
+        <div className="flex h-20 items-center gap-3 px-6 text-lg font-semibold tracking-tight text-slate-900 transition-colors duration-200 ease-out dark:text-white whitespace-nowrap">
+          <span className="grid h-10 w-10 place-items-center rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-[0_14px_30px_rgba(37,99,235,0.30)]">
+            <LayoutDashboard size={20} />
+          </span>
+          <span className="leading-tight">
+            <span className="block">{t("shell.console")}</span>
+            <span className="block text-[11px] font-medium tracking-normal text-slate-400">
+              CLI Proxy
+            </span>
+          </span>
         </div>
-        <nav className="flex-1 space-y-1 overflow-y-auto px-3 pb-4">
+        <nav className="flex-1 space-y-1.5 overflow-y-auto px-4 pb-4">
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
             const active = activeTo === item.to;
@@ -176,8 +180,8 @@ function ShellSidebar({
                 onClick={() => handleNavClick(item.to)}
                 className={
                   active
-                    ? "flex min-w-0 items-center gap-2 rounded-xl bg-slate-900 px-3 py-2 text-sm font-semibold text-white transition-colors duration-200 ease-out dark:bg-white dark:text-neutral-950 whitespace-nowrap"
-                    : "flex min-w-0 items-center gap-2 rounded-xl px-3 py-2 text-sm text-slate-700 transition-colors duration-200 ease-out hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white whitespace-nowrap"
+                    ? "flex min-w-0 items-center gap-3 rounded-2xl bg-gradient-to-r from-blue-600 to-blue-500 px-4 py-3 text-sm font-semibold text-white shadow-[0_16px_34px_rgba(37,99,235,0.28)] transition-colors duration-200 ease-out whitespace-nowrap"
+                    : "flex min-w-0 items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-slate-700 transition-colors duration-200 ease-out hover:bg-blue-50 hover:text-blue-700 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white whitespace-nowrap"
                 }
               >
                 <Icon
@@ -189,6 +193,37 @@ function ShellSidebar({
             );
           })}
         </nav>
+        <div className="space-y-3 px-4 pb-5">
+          <div className="relative overflow-hidden rounded-[1.35rem] border border-blue-100 bg-gradient-to-br from-blue-50 via-white to-indigo-50 p-4 shadow-[0_16px_38px_rgba(37,99,235,0.12)]">
+            <div className="absolute -right-6 -top-6 h-20 w-20 rounded-full bg-blue-300/30 blur-2xl" />
+            <div className="relative">
+              <div className="text-sm font-semibold text-slate-950">{t("shell.upgrade_title")}</div>
+              <p className="mt-2 text-xs leading-5 text-slate-500">
+                {t("shell.upgrade_description")}
+              </p>
+              <button
+                type="button"
+                className="mt-3 inline-flex items-center gap-1 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-blue-600 shadow-sm"
+              >
+                {t("shell.upgrade_action")}
+                <Sparkles size={12} />
+              </button>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 rounded-[1.35rem] border border-slate-200/80 bg-white/80 p-3 shadow-[0_10px_26px_rgba(15,23,42,0.06)] dark:border-neutral-800 dark:bg-neutral-900/80">
+            <div className="grid h-11 w-11 place-items-center rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-500 text-sm font-bold text-white">
+              A
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-sm font-semibold text-slate-950 dark:text-white">
+                Admin
+              </div>
+              <div className="truncate text-xs text-slate-400">
+                {t("shell.sidebar_account_role")}
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </aside>
   );

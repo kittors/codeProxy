@@ -173,6 +173,8 @@
     "load_failed": "Load failed",
     "success_rate": "Success Rate",
     "heading": "Dashboard",
+    "hero_badge": "Operations Overview",
+    "hero_subtitle": "Track runtime health, key metrics, and system resources in one place",
     "today": "Today",
     "last_7_days": "Last 7 days",
     "last_30_days": "Last 30 days",
@@ -181,7 +183,14 @@
     "total_hint_today": "Total requests for today",
     "total_hint_days": "Total requests for last {{count}} days",
     "success_hint": "Success {{success}} · Failed {{failed}}",
-    "token_hint": "Input {{input}} · Output {{output}}"
+    "token_hint": "Input {{input}} · Output {{output}}",
+    "throughput_title": "Throughput Trend",
+    "overview_title": "Resource Overview",
+    "overview_hint": "Data updated {{time}}",
+    "summary_api_keys": "API Keys",
+    "summary_providers": "Providers",
+    "summary_auth_files": "Auth Files",
+    "updated_fallback": "Just now"
   },
   "basic_settings": {
     "title": "Basic Settings",
@@ -1716,7 +1725,11 @@
     "expand_sidebar": "Expand Sidebar",
     "collapse_sidebar": "Collapse Sidebar",
     "logout_button": "Logout",
-    "skip_to_content": "Skip to main content"
+    "skip_to_content": "Skip to main content",
+    "upgrade_title": "Upgrade Plan",
+    "upgrade_description": "Unlock higher throughput, deeper monitoring, and priority support.",
+    "upgrade_action": "Upgrade now",
+    "sidebar_account_role": "Super Admin"
   },
   "identity_fingerprint": {
     "title": "Identity Fingerprint",

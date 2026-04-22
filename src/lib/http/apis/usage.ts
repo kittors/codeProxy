@@ -230,6 +230,16 @@ export interface DashboardSummary {
     cached_tokens: number;
     total_tokens: number;
   };
+  trends?: {
+    request_volume?: DashboardTrendPoint[];
+    success_rate?: DashboardTrendPoint[];
+    total_tokens?: DashboardTrendPoint[];
+    failed_requests?: DashboardTrendPoint[];
+    throughput_series?: DashboardThroughputPoint[];
+  };
+  meta?: {
+    generated_at?: string;
+  };
   counts: {
     api_keys: number;
     providers_total: number;
@@ -241,6 +251,17 @@ export interface DashboardSummary {
     auth_files: number;
   };
   days: number;
+}
+
+export interface DashboardTrendPoint {
+  label: string;
+  value: number;
+}
+
+export interface DashboardThroughputPoint {
+  label: string;
+  rpm: number;
+  tpm: number;
 }
 
 export interface UsageLogItem {

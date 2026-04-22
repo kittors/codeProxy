@@ -29,4 +29,13 @@ describe("AppShell", () => {
     expect(source).toContain("motion-safe:transition-colors");
     expect(source).toContain("transition-colors duration-200 ease-out");
   });
+
+  test("keeps the current nav structure while adding visual sidebar support blocks", () => {
+    const source = readModule("modules/ui/AppShell.tsx");
+
+    expect(source).toContain("shell.upgrade_title");
+    expect(source).toContain("shell.sidebar_account_role");
+    expect(source).toContain("NAV_ITEMS.map");
+    expect(source).not.toContain("nav_home_placeholder");
+  });
 });
