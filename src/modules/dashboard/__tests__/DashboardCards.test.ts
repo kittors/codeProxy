@@ -18,11 +18,12 @@ describe("dashboard card composition", () => {
     expect(source).toContain("ChartLegend");
     expect(source).toContain("useInterval");
     expect(source).toContain("summary?.trends");
-    expect(source).toContain("const { stats, connected } = useSystemStats(3)");
+    expect(source).toContain("const { stats, connected } = useSystemStats(5)");
     expect(source).toContain("rpm={stats?.total_rpm ?? 0}");
     expect(source).toContain("tpm={stats?.total_tpm ?? 0}");
     expect(source).toContain("meta.generated_at");
     expect(source).toContain('<EChart option={option} className="h-10" overflowVisible />');
+    expect(source).toContain("}, 5000);");
     expect(source).not.toContain('replaceMerge="series"');
     expect(source).not.toContain('from "@/modules/monitor/MonitorPagePieces"');
     expect(source).not.toContain("<KpiCard");
