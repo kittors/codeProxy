@@ -11,6 +11,7 @@ export type EChartProps = {
   onEvents?: EChartEvents;
   notMerge?: boolean;
   replaceMerge?: string | string[];
+  overflowVisible?: boolean;
 };
 
 export function EChartRenderer({
@@ -19,6 +20,7 @@ export function EChartRenderer({
   onEvents,
   notMerge = false,
   replaceMerge,
+  overflowVisible = false,
 }: EChartProps) {
   const {
     state: { mode },
@@ -125,7 +127,13 @@ export function EChartRenderer({
   return (
     <div
       ref={containerRef}
-      className={["relative w-full min-w-0 overflow-hidden", className].filter(Boolean).join(" ")}
+      className={[
+        "relative w-full min-w-0",
+        overflowVisible ? "overflow-visible" : "overflow-hidden",
+        className,
+      ]
+        .filter(Boolean)
+        .join(" ")}
     >
       <ReactECharts
         ref={chartRef}

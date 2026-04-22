@@ -235,7 +235,7 @@ function DashboardKpiCard({
         <p className="mt-2 text-[11px] text-slate-500">{hint}</p>
       </div>
       <div className="mt-auto pt-3">
-        <EChart option={option} className="h-10" />
+        <EChart option={option} className="h-10" overflowVisible />
       </div>
     </Card>
   );

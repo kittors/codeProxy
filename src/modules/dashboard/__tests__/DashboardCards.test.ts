@@ -22,6 +22,7 @@ describe("dashboard card composition", () => {
     expect(source).toContain("rpm={stats?.total_rpm ?? 0}");
     expect(source).toContain("tpm={stats?.total_tpm ?? 0}");
     expect(source).toContain("meta.generated_at");
+    expect(source).toContain('<EChart option={option} className="h-10" overflowVisible />');
     expect(source).not.toContain('replaceMerge="series"');
     expect(source).not.toContain('from "@/modules/monitor/MonitorPagePieces"');
     expect(source).not.toContain("<KpiCard");

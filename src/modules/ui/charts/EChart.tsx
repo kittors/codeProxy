@@ -10,11 +10,13 @@ const LazyEChartRenderer = lazy(() =>
 export type { EChartEvents };
 
 export function EChart(props: EChartProps) {
+  const overflowClass = props.overflowVisible ? "overflow-visible" : "overflow-hidden";
+
   return (
     <Suspense
       fallback={
         <div
-          className={["relative w-full min-w-0 overflow-hidden", props.className]
+          className={["relative w-full min-w-0", overflowClass, props.className]
             .filter(Boolean)
             .join(" ")}
         />
