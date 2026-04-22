@@ -14,6 +14,7 @@ import {
   Bot,
   Cpu,
   Fingerprint,
+  Image,
   Layers,
   LayoutDashboard,
   FileKey,
@@ -52,6 +53,7 @@ const NAV_ITEMS = [
   { to: "/ai-providers", i18nKey: "shell.nav_ai_providers", icon: Bot },
   { to: "/auth-files", i18nKey: "shell.nav_auth_files", icon: FileKey },
   { to: "/api-keys", i18nKey: "shell.nav_api_keys", icon: Sparkles },
+  { to: "/image-generation", i18nKey: "shell.nav_image_generation", icon: Image },
   { to: "/channel-groups", i18nKey: "shell.nav_channel_groups", icon: Layers },
   {
     to: "/manage/identity-fingerprint",
@@ -71,6 +73,7 @@ const getPageTitleKey = (pathname: string): string => {
   if (pathname.startsWith("/ai-providers")) return "shell.nav_ai_providers";
   if (pathname.startsWith("/auth-files")) return "shell.nav_auth_files";
   if (pathname.startsWith("/api-keys")) return "shell.page_api_keys";
+  if (pathname.startsWith("/image-generation")) return "shell.nav_image_generation";
   if (pathname.startsWith("/channel-groups")) return "shell.page_channel_groups";
   if (
     pathname.startsWith("/identity-fingerprint") ||
