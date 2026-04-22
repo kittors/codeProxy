@@ -17,6 +17,9 @@ import {
 import { Card } from "@/modules/ui/Card";
 import { useSystemStats, type SystemStats, type ChannelLatency } from "./useSystemStats";
 
+const PANEL_SURFACE =
+  "rounded-[18px] border border-slate-200/85 bg-white shadow-[0_10px_26px_rgba(15,23,42,0.05)]";
+
 /* ═══════════════════════════════════════════════════════════
    Helpers
    ═══════════════════════════════════════════════════════════ */
@@ -122,7 +125,7 @@ function HealthGauge({ score }: { score: number }) {
 
   return (
     <div className="flex flex-col items-center justify-center">
-      <div className="relative h-40 w-40">
+      <div className="relative h-32 w-32">
         <svg viewBox="0 0 150 150" className="h-full w-full -rotate-90">
           <circle
             cx="75"
@@ -145,7 +148,7 @@ function HealthGauge({ score }: { score: number }) {
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className={`text-4xl font-bold tabular-nums ${hl.color}`}>{Math.round(score)}</span>
+          <span className={`text-3xl font-bold tabular-nums ${hl.color}`}>{Math.round(score)}</span>
           <span className={`mt-0.5 text-xs font-semibold ${hl.color}`}>{t(hl.key)}</span>
         </div>
       </div>
@@ -176,7 +179,7 @@ function ResourceBar({
   const { t } = useTranslation();
   const sc = statusColor(pct);
   return (
-    <Card padding="compact" bodyClassName="mt-0">
+    <Card padding="compact" bodyClassName="mt-0" className={PANEL_SURFACE}>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Icon size={14} className="text-slate-400 dark:text-slate-500" />
@@ -221,7 +224,7 @@ function MiniKpi({
   sublabel?: string;
 }) {
   return (
-    <Card padding="compact" bodyClassName="mt-0">
+    <Card padding="compact" bodyClassName="mt-0" className={PANEL_SURFACE}>
       <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-white/40">
         <Icon size={12} />
         {label}
@@ -241,7 +244,7 @@ function MiniKpi({
 function NetworkCard({ stats }: { stats: SystemStats }) {
   const { t } = useTranslation();
   return (
-    <Card padding="compact" bodyClassName="mt-0">
+    <Card padding="compact" bodyClassName="mt-0" className={PANEL_SURFACE}>
       <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-white/40 mb-2.5">
         <Wifi size={12} />
         {t("system_monitor.network_traffic")}
@@ -270,7 +273,7 @@ function NetworkCard({ stats }: { stats: SystemStats }) {
           </p>
         </div>
       </div>
-      <div className="mt-2 flex items-center justify-between rounded-lg bg-slate-50 px-2.5 py-1.5 dark:bg-neutral-800/50">
+      <div className="mt-2 flex items-center justify-between rounded-[12px] bg-slate-50 px-2.5 py-1.5 dark:bg-neutral-800/50">
         <span className="text-[10px] text-slate-500 dark:text-white/45">
           {t("system_monitor.total_traffic")}
         </span>
@@ -293,7 +296,7 @@ function ChannelLatencyCard({ data }: { data: ChannelLatency[] }) {
   const maxMs = Math.max(...top5.map((d) => d.avg_ms));
 
   return (
-    <Card padding="compact" bodyClassName="mt-0" className="overflow-hidden">
+    <Card padding="compact" bodyClassName="mt-0" className={`${PANEL_SURFACE} overflow-hidden`}>
       <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-white/40 mb-2.5">
         <Network size={12} />
         {t("system_monitor.channel_avg_latency")}
@@ -339,7 +342,7 @@ function ConcurrencyCard({ stats }: { stats: SystemStats }) {
   const tpm = stats.total_tpm ?? 0;
 
   return (
-    <Card padding="compact" bodyClassName="mt-0">
+    <Card padding="compact" bodyClassName="mt-0" className={PANEL_SURFACE}>
       <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-white/40 mb-3">
         <Layers size={12} />
         {t("system_monitor.realtime_throughput")}
@@ -357,24 +360,24 @@ function ConcurrencyCard({ stats }: { stats: SystemStats }) {
         </span>
       </div>
       <div className="grid grid-cols-2 gap-4">
-        <div className="rounded-lg bg-slate-50 px-3 py-2.5 dark:bg-neutral-800/50">
+        <div className="rounded-[12px] bg-slate-50 px-3 py-2.5 dark:bg-neutral-800/50">
           <div className="flex items-center gap-1 text-[9px] font-semibold uppercase tracking-wider text-slate-400 dark:text-white/35">
             <Zap size={10} />
             RPM
           </div>
-          <p className="mt-1 text-2xl font-bold tabular-nums text-slate-900 dark:text-white">
+          <p className="mt-1 text-xl font-bold tabular-nums text-slate-900 dark:text-white">
             {formatCompactNumber(rpm)}
           </p>
           <p className="mt-0.5 text-[10px] text-slate-400 dark:text-white/35">
             {t("system_monitor.rpm")}
           </p>
         </div>
-        <div className="rounded-lg bg-slate-50 px-3 py-2.5 dark:bg-neutral-800/50">
+        <div className="rounded-[12px] bg-slate-50 px-3 py-2.5 dark:bg-neutral-800/50">
           <div className="flex items-center gap-1 text-[9px] font-semibold uppercase tracking-wider text-slate-400 dark:text-white/35">
             <Activity size={10} />
             TPM
           </div>
-          <p className="mt-1 text-2xl font-bold tabular-nums text-slate-900 dark:text-white">
+          <p className="mt-1 text-xl font-bold tabular-nums text-slate-900 dark:text-white">
             {formatCompactNumber(tpm)}
           </p>
           <p className="mt-0.5 text-[10px] text-slate-400 dark:text-white/35">
@@ -397,9 +400,13 @@ function Skeleton({ className = "" }: { className?: string }) {
 function SkeletonLayout() {
   return (
     <div className="space-y-4">
-      <div className="grid gap-4 lg:grid-cols-[280px_1fr]">
-        <Card padding="compact" bodyClassName="mt-0 flex items-center justify-center p-2.5">
-          <Skeleton className="h-40 w-40 rounded-full" />
+      <div className="grid gap-3 lg:grid-cols-[220px_1fr]">
+        <Card
+          padding="compact"
+          bodyClassName="mt-0 flex items-center justify-center p-2.5"
+          className={PANEL_SURFACE}
+        >
+          <Skeleton className="h-32 w-32 rounded-full" />
         </Card>
         <div className="grid gap-3 grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 6 }).map((_, i) => (
@@ -435,6 +442,7 @@ export function SystemMonitorSection() {
     return (
       <Card
         title={t("system_monitor.title")}
+        className={PANEL_SURFACE}
         actions={
           <div className="flex items-center gap-1.5 text-xs text-slate-400">
             <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-slate-300 dark:bg-neutral-600" />
@@ -454,6 +462,7 @@ export function SystemMonitorSection() {
     <Card
       title={t("system_monitor.title")}
       description={t("system_monitor.updated_at", { time: new Date().toLocaleTimeString() })}
+      className={PANEL_SURFACE}
       actions={
         <div className="flex items-center gap-1.5 text-xs text-slate-400">
           <span
@@ -463,13 +472,13 @@ export function SystemMonitorSection() {
         </div>
       }
     >
-      <div className="space-y-4">
+      <div className="space-y-3">
         {/* ── Row 1: Health Gauge (left) + Core KPIs (right) ── */}
-        <div className="grid gap-4 lg:grid-cols-[280px_1fr]">
+        <div className="grid gap-3 lg:grid-cols-[220px_1fr]">
           {/* Left: big gauge */}
           <Card
             padding="compact"
-            className="bg-gradient-to-br from-slate-50 to-white dark:from-neutral-900/50 dark:to-neutral-950/60"
+            className={`${PANEL_SURFACE} bg-gradient-to-br from-slate-50 to-white dark:from-neutral-900/50 dark:to-neutral-950/60`}
             bodyClassName="mt-0 flex items-center justify-center"
           >
             <HealthGauge score={health} />
