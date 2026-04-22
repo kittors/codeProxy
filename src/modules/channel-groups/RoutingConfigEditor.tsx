@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
-import { Pencil, Plus, Trash2, X } from "lucide-react";
+import { Pencil, Plus, Trash2, TriangleAlert, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type {
   RoutingChannelGroupEntry,
@@ -12,6 +12,7 @@ import { Button } from "@/modules/ui/Button";
 import { TextInput } from "@/modules/ui/Input";
 import { Modal } from "@/modules/ui/Modal";
 import { SearchableCheckboxMultiSelect } from "@/modules/ui/SearchableCheckboxMultiSelect";
+import { useToast } from "@/modules/ui/ToastProvider";
 import { HoverTooltip, OverflowTooltip } from "@/modules/ui/Tooltip";
 import { VirtualTable, type VirtualTableColumn } from "@/modules/ui/VirtualTable";
 
@@ -154,6 +155,10 @@ function summarizePriorityMode(
   return `${top.name} · ${priorityShortLabel.replace("{{value}}", String(top.priority))}`;
 }
 
+function normalizeChannelName(value: string): string {
+  return value.trim().toLowerCase();
+}
+
 export function RoutingConfigEditor({
   values,
   disabled,
@@ -166,6 +171,7 @@ export function RoutingConfigEditor({
   onChange: (values: Partial<VisualConfigValues>) => void;
 }) {
   const { t } = useTranslation();
+  const { notify } = useToast();
   const [groupEditorOpen, setGroupEditorOpen] = useState(false);
   const [groupEditorId, setGroupEditorId] = useState<string | null>(null);
   const [groupDraft, setGroupDraft] = useState<GroupDraft>(() => createEmptyGroupDraft());
@@ -199,6 +205,29 @@ export function RoutingConfigEditor({
       }));
   }, [availableChannels]);
 
+  const availableChannelSet = useMemo(() => {
+    return new Set(
+      availableChannels.map((channel) => normalizeChannelName(channel)).filter(Boolean),
+    );
+  }, [availableChannels]);
+
+  const getStaleChannels = useCallback(
+    (channels: RoutingChannelGroupMemberEntry[]) =>
+      channels.filter((channel) => {
+        const normalized = normalizeChannelName(channel.name);
+        return normalized && !availableChannelSet.has(normalized);
+      }),
+    [availableChannelSet],
+  );
+
+  const staleChannelsByGroup = useMemo(() => {
+    const map = new Map<string, RoutingChannelGroupMemberEntry[]>();
+    values.routingChannelGroups.forEach((group) => {
+      map.set(group.id, getStaleChannels(group.channels));
+    });
+    return map;
+  }, [getStaleChannels, values.routingChannelGroups]);
+
   const selectedChannelValues = useMemo(
     () => groupDraft.channels.map((channel) => channel.name.trim()).filter(Boolean),
     [groupDraft.channels],
@@ -210,13 +239,49 @@ export function RoutingConfigEditor({
     [primaryRoute.path],
   );
 
+  const draftStaleChannels = useMemo(
+    () => getStaleChannels(groupDraft.channels),
+    [getStaleChannels, groupDraft.channels],
+  );
+
+  const draftStaleChannelIds = useMemo(
+    () => new Set(draftStaleChannels.map((channel) => channel.id)),
+    [draftStaleChannels],
+  );
+
+  const notifyStaleChannels = useCallback(
+    (groupName: string, staleChannels: RoutingChannelGroupMemberEntry[]) => {
+      if (staleChannels.length === 0) return;
+      const details = staleChannels
+        .map((channel) => `• ${channel.name.trim()}`)
+        .filter(Boolean)
+        .join("\n");
+      notify({
+        type: "warning",
+        title: t("channel_groups_page.stale_toast_title"),
+        message: `${t("channel_groups_page.stale_toast_message", {
+          count: staleChannels.length,
+          group: groupName || t("channel_groups_page.unnamed_group"),
+        })}\n${details}`,
+        duration: 2800,
+      });
+    },
+    [notify, t],
+  );
+
   const groupDraftError = useMemo(() => {
     if (!groupDraft.name.trim()) return t("channel_groups_page.group_name_required");
     if (!primaryRoute.path.trim()) return t("channel_groups_page.route_path_required");
     if (!normalizedPrimaryRoutePath) return t("channel_groups_page.route_path_invalid");
     if (groupDraft.channels.length === 0) return t("channel_groups_page.group_channels_required");
+    if (draftStaleChannels.length > 0) {
+      return t("channel_groups_page.stale_channels_required_cleanup", {
+        count: draftStaleChannels.length,
+      });
+    }
     return "";
   }, [
+    draftStaleChannels.length,
     groupDraft.channels.length,
     groupDraft.name,
     normalizedPrimaryRoutePath,
@@ -242,11 +307,15 @@ export function RoutingConfigEditor({
         name: group.name,
         description: group.description,
         channels: cloneMembers(group.channels),
-        routes: existingRoutes.length > 0 ? existingRoutes : [{ ...EMPTY_ROUTE_DRAFT(), group: group.name.trim() }],
+        routes:
+          existingRoutes.length > 0
+            ? existingRoutes
+            : [{ ...EMPTY_ROUTE_DRAFT(), group: group.name.trim() }],
       });
+      notifyStaleChannels(group.name.trim(), staleChannelsByGroup.get(group.id) ?? []);
       setGroupEditorOpen(true);
     },
-    [values.routingPathRoutes],
+    [notifyStaleChannels, staleChannelsByGroup, values.routingPathRoutes],
   );
 
   const closeGroupEditor = useCallback(() => {
@@ -283,7 +352,10 @@ export function RoutingConfigEditor({
 
   const updatePrimaryRoute = useCallback((patch: Partial<RoutingPathRouteEntry>) => {
     setGroupDraft((current) => {
-      const currentRoute = current.routes[0] ?? { ...EMPTY_ROUTE_DRAFT(), group: current.name.trim() };
+      const currentRoute = current.routes[0] ?? {
+        ...EMPTY_ROUTE_DRAFT(),
+        group: current.name.trim(),
+      };
       return {
         ...current,
         routes: [{ ...currentRoute, ...patch }],
@@ -409,16 +481,48 @@ export function RoutingConfigEditor({
         ),
       },
       {
+        key: "status",
+        label: t("channel_groups_page.table_status"),
+        width: "w-[170px] min-w-[170px]",
+        cellClassName: "whitespace-nowrap",
+        render: (group) => {
+          const staleChannels = staleChannelsByGroup.get(group.id) ?? [];
+          if (staleChannels.length === 0) {
+            return (
+              <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200">
+                {t("channel_groups_page.status_normal")}
+              </span>
+            );
+          }
+          return (
+            <button
+              type="button"
+              onClick={() => openEditGroup(group)}
+              disabled={disabled}
+              className="inline-flex items-center gap-2 rounded-full border border-rose-200 bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-700 transition-colors hover:bg-rose-100 disabled:opacity-40 dark:border-rose-400/30 dark:bg-rose-500/10 dark:text-rose-200 dark:hover:bg-rose-500/15"
+            >
+              <TriangleAlert size={13} />
+              <span>{t("channel_groups_page.status_invalid")}</span>
+              <span className="text-[11px] font-medium text-rose-600 dark:text-rose-200/85">
+                {t("channel_groups_page.deleted_channels_count", { count: staleChannels.length })}
+              </span>
+            </button>
+          );
+        },
+      },
+      {
         key: "channels",
         label: t("channel_groups_page.table_channels"),
         width: "w-[280px] min-w-[280px]",
         cellClassName: "min-w-0 whitespace-nowrap text-slate-700 dark:text-white/75",
         render: (group) => {
-          const names = group.channels
-            .map((channel) => channel.name.trim())
-            .filter(Boolean);
+          const names = group.channels.map((channel) => channel.name.trim()).filter(Boolean);
           if (names.length === 0) {
-            return <span className="text-slate-400 dark:text-white/35">{t("channel_groups_page.none")}</span>;
+            return (
+              <span className="text-slate-400 dark:text-white/35">
+                {t("channel_groups_page.none")}
+              </span>
+            );
           }
           return (
             <HoverTooltip
@@ -475,7 +579,11 @@ export function RoutingConfigEditor({
           const routes = routesByGroup.get(group.name.trim().toLowerCase()) ?? [];
           const routePaths = routes.map((route) => route.path.trim()).filter(Boolean);
           if (routePaths.length === 0) {
-            return <span className="text-slate-400 dark:text-white/35">{t("channel_groups_page.none")}</span>;
+            return (
+              <span className="text-slate-400 dark:text-white/35">
+                {t("channel_groups_page.none")}
+              </span>
+            );
           }
           return (
             <HoverTooltip
@@ -531,7 +639,7 @@ export function RoutingConfigEditor({
         ),
       },
     ],
-    [disabled, openEditGroup, removeRoutingGroup, routesByGroup, t],
+    [disabled, openEditGroup, removeRoutingGroup, routesByGroup, staleChannelsByGroup, t],
   );
 
   const groupMemberColumns = useMemo<VirtualTableColumn<RoutingChannelGroupMemberEntry>[]>(
@@ -542,8 +650,19 @@ export function RoutingConfigEditor({
         cellClassName: "min-w-0 whitespace-nowrap",
         render: (channel) => (
           <OverflowTooltip content={channel.name} className="block min-w-0">
-            <span className="block truncate text-sm text-slate-900 dark:text-white">
-              {channel.name}
+            <span
+              className={`flex min-w-0 items-center gap-2 truncate text-sm ${
+                draftStaleChannelIds.has(channel.id)
+                  ? "text-rose-700 dark:text-rose-200"
+                  : "text-slate-900 dark:text-white"
+              }`}
+            >
+              <span className="truncate">{channel.name}</span>
+              {draftStaleChannelIds.has(channel.id) ? (
+                <span className="inline-flex shrink-0 items-center rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-700 dark:bg-rose-500/15 dark:text-rose-200">
+                  {t("channel_groups_page.deleted_badge")}
+                </span>
+              ) : null}
             </span>
           </OverflowTooltip>
         ),
@@ -589,7 +708,7 @@ export function RoutingConfigEditor({
         ),
       },
     ],
-    [disabled, removeDraftChannel, t, updateDraftChannel],
+    [disabled, draftStaleChannelIds, removeDraftChannel, t, updateDraftChannel],
   );
 
   return (
@@ -617,9 +736,14 @@ export function RoutingConfigEditor({
           virtualize={false}
           rowHeight={44}
           height="h-auto max-h-[68vh]"
-          minWidth="min-w-[1360px]"
+          minWidth="min-w-[1540px]"
           caption={t("channel_groups_page.groups_table_title")}
           emptyText={t("channel_groups_page.empty_groups")}
+          rowClassName={(group) =>
+            (staleChannelsByGroup.get(group.id)?.length ?? 0) > 0
+              ? "bg-rose-50/35 dark:bg-rose-500/5"
+              : ""
+          }
         />
       </div>
 
@@ -652,6 +776,38 @@ export function RoutingConfigEditor({
         }
       >
         <div className="space-y-5">
+          {draftStaleChannels.length > 0 ? (
+            <div
+              role="alert"
+              className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-400/25 dark:bg-rose-500/10 dark:text-rose-200"
+            >
+              <div className="flex items-start gap-3">
+                <TriangleAlert size={18} className="mt-0.5 shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold">{t("channel_groups_page.stale_alert_title")}</p>
+                  <p className="mt-1 text-xs leading-5 text-rose-700/90 dark:text-rose-100/85">
+                    {t("channel_groups_page.stale_alert_message", {
+                      count: draftStaleChannels.length,
+                    })}
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {draftStaleChannels.map((channel) => (
+                      <span
+                        key={channel.id}
+                        className="inline-flex items-center gap-1.5 rounded-full border border-rose-200 bg-white/80 px-2.5 py-1 text-xs font-medium text-rose-700 dark:border-rose-400/30 dark:bg-neutral-950/50 dark:text-rose-100"
+                      >
+                        <span>{channel.name}</span>
+                        <span className="rounded-full bg-rose-100 px-1.5 py-0.5 text-[10px] font-semibold text-rose-700 dark:bg-rose-500/15 dark:text-rose-200">
+                          {t("channel_groups_page.deleted_badge")}
+                        </span>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : null}
+
           <div className="grid gap-4 md:grid-cols-2">
             <Field label={t("channel_groups_page.group_name_label")}>
               <TextInput
@@ -724,8 +880,10 @@ export function RoutingConfigEditor({
             minWidth="min-w-[640px]"
             caption={t("channel_groups_page.select_channel_label")}
             emptyText={t("channel_groups_page.empty_group_channels")}
+            rowClassName={(channel) =>
+              draftStaleChannelIds.has(channel.id) ? "bg-rose-50/70 dark:bg-rose-500/10" : ""
+            }
           />
-
         </div>
       </Modal>
     </>
