@@ -20,6 +20,10 @@ import {
 
 const DEFAULT_INITIAL_DELAY_MS = 2500;
 
+function canPromptForUpdate(info: UpdateCheckResponse): boolean {
+  return info.enabled && !!info.update_available && info.updater_available !== false;
+}
+
 export function AutoUpdatePrompt({
   initialDelayMs = DEFAULT_INITIAL_DELAY_MS,
   heartbeatIntervalMs = DEFAULT_HEARTBEAT_INTERVAL_MS,
@@ -54,7 +58,7 @@ export function AutoUpdatePrompt({
       void updateApi
         .check()
         .then((info) => {
-          if (cancelled || !info.enabled || !info.update_available) return;
+          if (cancelled || !canPromptForUpdate(info)) return;
           const identity = updateIdentity(info);
           if (identity && notifiedRef.current.has(identity)) return;
           if (identity) notifiedRef.current.add(identity);

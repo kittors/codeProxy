@@ -125,4 +125,26 @@ describe("AutoUpdatePrompt", () => {
 
     expect(await screen.findByText(/panel-main-9477958.*update now\?/i)).toBeInTheDocument();
   });
+
+  test("does not show auto update toast when updater sidecar is unavailable", async () => {
+    mocks.check.mockResolvedValue({
+      enabled: true,
+      update_available: true,
+      current_version: "main-1111111",
+      current_commit: "1111111",
+      latest_version: "v1.2.3",
+      latest_commit: "abcdef123456",
+      target_channel: "main",
+      docker_image: "ghcr.io/kittors/clirelay",
+      docker_tag: "latest",
+      updater_available: false,
+    });
+
+    renderPrompt();
+
+    expect(
+      screen.queryByText(/A new version is available: v1\.2\.3.*update now\?/i),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /confirm/i })).not.toBeInTheDocument();
+  });
 });
