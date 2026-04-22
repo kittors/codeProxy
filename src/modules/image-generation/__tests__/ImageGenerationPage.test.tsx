@@ -1,7 +1,7 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import i18n from "@/i18n";
 import { authFilesApi, imageGenerationApi } from "@/lib/http/apis";
 import { ImageGenerationPage } from "@/modules/image-generation/ImageGenerationPage";
@@ -10,6 +10,16 @@ import { ToastProvider } from "@/modules/ui/ToastProvider";
 
 const authFilesListMock = () => vi.mocked(authFilesApi.list);
 const imageGenerationTestMock = () => vi.mocked(imageGenerationApi.test);
+
+function createDeferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+}
 
 function renderPage() {
   return render(
@@ -52,23 +62,64 @@ describe("ImageGenerationPage", () => {
     });
   });
 
-  test("renders only the request example and test entry for gpt-image-2", async () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  test("renders the request example and places the test action in the call card header", async () => {
     renderPage();
 
     expect(await screen.findByRole("tab", { name: "gpt-image-2" })).toBeInTheDocument();
+    const callCard = screen.getByText("调用方式").closest("section");
+    expect(callCard).not.toBeNull();
     expect(screen.getByText(/POST \/v1\/images\/generations/)).toBeInTheDocument();
     expect(screen.getByText(/Authorization: Bearer YOUR_API_KEY/)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "测试生成" })).toBeEnabled();
+    expect(within(callCard as HTMLElement).getByRole("button", { name: "测试生成" })).toBeEnabled();
     expect(
       screen.queryByText("查看 gpt-image-2 的调用方式、当前使用渠道，并直接发起测试生成。"),
     ).not.toBeInTheDocument();
+    expect(screen.queryByText("测试调用会自动轮询当前可用渠道。")).not.toBeInTheDocument();
     expect(screen.queryByText("设计号 A")).not.toBeInTheDocument();
     expect(screen.queryByText("设计号 B")).not.toBeInTheDocument();
     expect(screen.queryByText("Gemini 账号")).not.toBeInTheDocument();
   });
 
-  test("opens a fixed-size modal and shows returned image after a successful test call", async () => {
-    imageGenerationTestMock().mockResolvedValue({
+  test("opens the redesigned modal, rotates loading copy, and previews the returned image", async () => {
+    const user = userEvent.setup();
+    const deferred = createDeferred<{
+      created: number;
+      data: Array<{ b64_json: string; revised_prompt: string }>;
+    }>();
+    imageGenerationTestMock().mockReturnValue(deferred.promise);
+
+    renderPage();
+
+    await screen.findByRole("tab", { name: "gpt-image-2" });
+    await user.click(screen.getByRole("button", { name: "测试生成" }));
+
+    const dialog = await screen.findByRole("dialog", { name: "测试生成" });
+    expect(dialog.className).toContain("w-[92vw]");
+    expect(dialog.className).toContain("h-[78vh]");
+    expect(within(dialog).getByTestId("image-generation-stage")).toBeInTheDocument();
+    expect(within(dialog).getByTestId("image-generation-composer")).toBeInTheDocument();
+
+    await user.type(within(dialog).getByPlaceholderText(/输入提示词/i), "画一只狐狸");
+    await user.click(within(dialog).getByRole("button", { name: /生成图片/i }));
+
+    await waitFor(() => {
+      expect(imageGenerationTestMock()).toHaveBeenCalledWith({
+        model: "gpt-image-2",
+        prompt: "画一只狐狸",
+      });
+    });
+
+    expect(within(dialog).getByText("正在生成图片")).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(within(dialog).getByText("正在打草稿")).toBeInTheDocument();
+    }, { timeout: 2400 });
+
+    deferred.resolve({
       created: 1,
       data: [
         {
@@ -78,30 +129,15 @@ describe("ImageGenerationPage", () => {
       ],
     });
 
-    renderPage();
-
-    await screen.findByRole("tab", { name: "gpt-image-2" });
-    await userEvent.click(screen.getByRole("button", { name: "测试生成" }));
-
-    const dialog = await screen.findByRole("dialog", { name: "测试生成" });
-    expect(dialog.className).toContain("w-[92vw]");
-    expect(dialog.className).toContain("h-[78vh]");
-
-    await userEvent.type(within(dialog).getByPlaceholderText(/输入提示词/i), "画一只狐狸");
-    await userEvent.click(within(dialog).getByRole("button", { name: /生成图片/i }));
-
-    await waitFor(() => {
-      expect(imageGenerationTestMock()).toHaveBeenCalledWith({
-        model: "gpt-image-2",
-        prompt: "画一只狐狸",
-      });
-    });
-
-    expect(await within(dialog).findByRole("img", { name: /gpt-image-2 预览/i })).toHaveAttribute(
+    const image = await within(dialog).findByRole("img", { name: /gpt-image-2 预览/i });
+    expect(image).toHaveAttribute(
       "src",
       "data:image/png;base64,aGVsbG8=",
     );
     expect(within(dialog).getByText("修订提示词")).toBeInTheDocument();
+
+    await user.click(image);
+    expect(await screen.findByRole("dialog", { name: "图片预览" })).toBeInTheDocument();
   });
 
   test("greys the preview area and shows the error message inside the modal when generation fails", async () => {
@@ -135,7 +171,8 @@ describe("ImageGenerationPage", () => {
     renderPage();
 
     expect(await screen.findByText("当前没有可用于 gpt-image-2 的渠道。")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "测试生成" })).toBeDisabled();
+    const callCard = screen.getByText("调用方式").closest("section");
+    expect(within(callCard as HTMLElement).getByRole("button", { name: "测试生成" })).toBeDisabled();
     expect(screen.getByTestId("image-generation-disabled-state")).toHaveClass("opacity-60");
   });
 });

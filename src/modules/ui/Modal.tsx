@@ -12,7 +12,9 @@ export function Modal({
   maxWidth = "max-w-3xl",
   panelClassName,
   bodyHeightClassName,
+  bodyClassName,
   bodyTestId,
+  hideHeader = false,
   onClose,
   children,
 }: PropsWithChildren<{
@@ -23,7 +25,9 @@ export function Modal({
   maxWidth?: string;
   panelClassName?: string;
   bodyHeightClassName?: string;
+  bodyClassName?: string;
   bodyTestId?: string;
+  hideHeader?: boolean;
   onClose: () => void;
 }>) {
   const [mounted, setMounted] = useState(open);
@@ -93,7 +97,8 @@ export function Modal({
       <div
         role="dialog"
         aria-modal="true"
-        aria-labelledby={titleId}
+        aria-label={hideHeader ? title : undefined}
+        aria-labelledby={hideHeader ? undefined : titleId}
         className={[
           `relative z-10 w-full ${maxWidth} overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-neutral-800 dark:bg-neutral-950`,
           "transition-all duration-200 ease-out motion-reduce:transition-none",
@@ -101,29 +106,41 @@ export function Modal({
           panelClassName,
         ].join(" ")}
       >
-        <div className="flex items-start justify-between gap-3 border-b border-slate-200 px-5 py-4 dark:border-neutral-800">
-          <div className="min-w-0">
-            <h2 className="truncate text-base font-semibold tracking-tight text-slate-900 dark:text-white">
-              <span id={titleId}>{title}</span>
-            </h2>
-            {description ? (
-              <p className="mt-1 text-sm text-slate-600 dark:text-white/65">{description}</p>
-            ) : null}
-          </div>
+        {hideHeader ? (
           <button
             type="button"
             onClick={onClose}
             disabled={!open}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full border-0 bg-transparent p-0 text-slate-500 shadow-none transition-colors hover:bg-slate-100 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white"
+            className="absolute top-4 right-4 z-20 inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-black/35 p-0 text-white/75 shadow-none backdrop-blur transition-colors hover:bg-black/55 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
             aria-label="close"
           >
             <X size={16} />
           </button>
-        </div>
+        ) : (
+          <div className="flex items-start justify-between gap-3 border-b border-slate-200 px-5 py-4 dark:border-neutral-800">
+            <div className="min-w-0">
+              <h2 className="truncate text-base font-semibold tracking-tight text-slate-900 dark:text-white">
+                <span id={titleId}>{title}</span>
+              </h2>
+              {description ? (
+                <p className="mt-1 text-sm text-slate-600 dark:text-white/65">{description}</p>
+              ) : null}
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={!open}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full border-0 bg-transparent p-0 text-slate-500 shadow-none transition-colors hover:bg-slate-100 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white"
+              aria-label="close"
+            >
+              <X size={16} />
+            </button>
+          </div>
+        )}
 
         <div
           data-testid={bodyTestId}
-          className={`${bodyHeightCls} overflow-y-auto overscroll-contain px-5 py-4`}
+          className={`${bodyHeightCls} overflow-y-auto overscroll-contain px-5 py-4 ${bodyClassName ?? ""}`}
         >
           {children}
         </div>
