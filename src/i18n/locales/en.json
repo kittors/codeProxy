@@ -2640,6 +2640,7 @@
     "goroutines": "Goroutines",
     "database": "Database",
     "latency": "Latency",
+    "users": "Users",
     "disk": "Disk",
     "network_traffic": "Network Traffic",
     "channel_avg_latency": "Channel Avg Latency",

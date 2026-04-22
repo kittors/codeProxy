@@ -11,8 +11,11 @@ describe("dashboard card composition", () => {
     const source = readModule("modules/dashboard/DashboardPage.tsx");
 
     expect(source).toContain('from "@/modules/ui/Card"');
-    expect(source).toContain("Sparkline");
+    expect(source).toContain('from "@/modules/ui/charts/EChart"');
+    expect(source).toContain("createSparklineOption");
     expect(source).toContain("ThroughputTrendChart");
+    expect(source).toContain("ChartLegend");
+    expect(source).toContain("useInterval");
     expect(source).toContain("summary?.trends");
     expect(source).toContain("meta.generated_at");
     expect(source).not.toContain('from "@/modules/monitor/MonitorPagePieces"');
@@ -23,6 +26,8 @@ describe("dashboard card composition", () => {
     const source = readModule("modules/dashboard/SystemMonitorSection.tsx");
 
     expect(source).toContain('from "@/modules/ui/Card"');
+    expect(source).toContain("AverageLatencyCard");
+    expect(source).toContain("apiKeyCount");
     expect(source).not.toContain('className="rounded-2xl border border-slate-200 bg-white/50');
     expect(source).not.toContain('className="rounded-xl border border-slate-200/80 bg-white');
     expect(source).not.toContain(

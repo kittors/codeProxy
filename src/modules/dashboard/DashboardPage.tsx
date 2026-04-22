@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Activity, RefreshCw, Sigma, Sparkles, TriangleAlert } from "lucide-react";
+import type { ECBasicOption } from "echarts/types/dist/shared";
 import {
   usageApi,
   type DashboardSummary,
@@ -14,6 +15,9 @@ import { Card } from "@/modules/ui/Card";
 import { EmptyState } from "@/modules/ui/EmptyState";
 import { Tabs, TabsList, TabsTrigger } from "@/modules/ui/Tabs";
 import { useToast } from "@/modules/ui/ToastProvider";
+import { EChart } from "@/modules/ui/charts/EChart";
+import { ChartLegend } from "@/modules/ui/charts/ChartLegend";
+import { useInterval } from "@/hooks/useInterval";
 
 type DashboardRange = 1 | 7 | 30;
 
@@ -34,57 +38,160 @@ const formatRate = (rate: number) => `${rate.toFixed(2)}%`;
 const PANEL_SURFACE =
   "rounded-[18px] border border-slate-200/85 bg-white shadow-[0_10px_26px_rgba(15,23,42,0.05)]";
 
-function buildSparklinePath(points: DashboardTrendPoint[]) {
-  if (points.length === 0) {
-    return "";
-  }
-
+function createSparklineOption(points: DashboardTrendPoint[], color: string): ECBasicOption {
+  const labels = points.map((point) => point.label);
   const values = points.map((point) => point.value);
-  const max = Math.max(...values, 1);
-  const min = Math.min(...values, 0);
-  const span = Math.max(max - min, 1);
 
-  return points
-    .map((point, index) => {
-      const x = points.length === 1 ? 50 : (index / (points.length - 1)) * 100;
-      const y = 100 - ((point.value - min) / span) * 84 - 8;
-      return `${index === 0 ? "M" : "L"} ${x.toFixed(2)} ${y.toFixed(2)}`;
-    })
-    .join(" ");
+  return {
+    animationDuration: 320,
+    animationDurationUpdate: 240,
+    grid: { left: 0, right: 0, top: 6, bottom: 0 },
+    tooltip: {
+      trigger: "axis",
+      borderWidth: 0,
+      backgroundColor: "rgba(15, 23, 42, 0.9)",
+      textStyle: { color: "#fff", fontSize: 11 },
+      formatter: (params: any) => {
+        const first = Array.isArray(params) ? params[0] : params;
+        return `${first?.axisValueLabel ?? ""}<br/>${formatNumber(Number(first?.data ?? 0))}`;
+      },
+    },
+    xAxis: {
+      type: "category",
+      data: labels,
+      show: false,
+      boundaryGap: false,
+    },
+    yAxis: {
+      type: "value",
+      show: false,
+      min: (value: { min: number }) => Math.min(0, value.min),
+    },
+    series: [
+      {
+        type: "line",
+        data: values,
+        smooth: true,
+        symbol: "none",
+        lineStyle: { color, width: 2.5 },
+        areaStyle: {
+          color: {
+            type: "linear",
+            x: 0,
+            y: 0,
+            x2: 0,
+            y2: 1,
+            colorStops: [
+              { offset: 0, color: `${color}33` },
+              { offset: 1, color: `${color}00` },
+            ],
+          },
+        },
+      },
+    ],
+  };
 }
 
-function Sparkline({
-  points,
-  strokeClassName,
-  fillClassName,
-}: {
-  points: DashboardTrendPoint[];
-  strokeClassName: string;
-  fillClassName: string;
-}) {
-  const path = buildSparklinePath(points);
-  const area = path ? `${path} L 100 100 L 0 100 Z` : "";
+function createThroughputOption(
+  points: DashboardThroughputPoint[],
+  showRPM: boolean,
+  showTPM: boolean,
+): ECBasicOption {
+  const labels = points.map((point) => point.label);
+  const rpmValues = points.map((point) => point.rpm);
+  const tpmValues = points.map((point) => point.tpm);
 
-  return (
-    <svg
-      viewBox="0 0 100 100"
-      className="h-10 w-full"
-      preserveAspectRatio="none"
-      aria-hidden="true"
-    >
-      {area ? <path d={area} className={fillClassName} /> : null}
-      {path ? (
-        <path
-          d={path}
-          fill="none"
-          strokeWidth="3"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className={strokeClassName}
-        />
-      ) : null}
-    </svg>
-  );
+  return {
+    animationDuration: 360,
+    animationDurationUpdate: 240,
+    tooltip: {
+      trigger: "axis",
+      borderWidth: 0,
+      backgroundColor: "rgba(15, 23, 42, 0.92)",
+      textStyle: { color: "#fff" },
+    },
+    grid: { left: 12, right: 12, top: 12, bottom: 22, containLabel: true },
+    xAxis: {
+      type: "category",
+      data: labels,
+      boundaryGap: false,
+      axisTick: { show: false },
+      axisLine: { lineStyle: { color: "rgba(148,163,184,0.45)" } },
+      axisLabel: { color: "#64748b", fontSize: 10, hideOverlap: true },
+    },
+    yAxis: [
+      {
+        type: "value",
+        splitNumber: 4,
+        axisLabel: { color: "#64748b", fontSize: 10 },
+        splitLine: { lineStyle: { color: "rgba(148,163,184,0.16)" } },
+      },
+      {
+        type: "value",
+        splitNumber: 4,
+        axisLabel: { color: "#64748b", fontSize: 10 },
+        splitLine: { show: false },
+      },
+    ],
+    series: [
+      ...(showRPM
+        ? [
+            {
+              name: "RPM",
+              type: "line",
+              yAxisIndex: 0,
+              data: rpmValues,
+              smooth: true,
+              symbol: "circle",
+              symbolSize: 6,
+              lineStyle: { width: 3, color: "#2563eb" },
+              itemStyle: { color: "#2563eb" },
+              areaStyle: {
+                color: {
+                  type: "linear",
+                  x: 0,
+                  y: 0,
+                  x2: 0,
+                  y2: 1,
+                  colorStops: [
+                    { offset: 0, color: "rgba(37,99,235,0.18)" },
+                    { offset: 1, color: "rgba(37,99,235,0.02)" },
+                  ],
+                },
+              },
+            },
+          ]
+        : []),
+      ...(showTPM
+        ? [
+            {
+              name: "TPM",
+              type: "line",
+              yAxisIndex: 1,
+              data: tpmValues,
+              smooth: true,
+              symbol: "circle",
+              symbolSize: 6,
+              lineStyle: { width: 3, color: "#7c3aed" },
+              itemStyle: { color: "#7c3aed" },
+              areaStyle: {
+                color: {
+                  type: "linear",
+                  x: 0,
+                  y: 0,
+                  x2: 0,
+                  y2: 1,
+                  colorStops: [
+                    { offset: 0, color: "rgba(124,58,237,0.14)" },
+                    { offset: 1, color: "rgba(124,58,237,0.02)" },
+                  ],
+                },
+              },
+            },
+          ]
+        : []),
+    ],
+  };
 }
 
 function DashboardKpiCard({
@@ -92,19 +199,17 @@ function DashboardKpiCard({
   value,
   hint,
   icon: Icon,
-  points,
+  option,
   accent,
 }: {
   title: string;
   value: ReactNode;
   hint: string;
   icon: typeof Activity;
-  points: DashboardTrendPoint[];
+  option: ECBasicOption;
   accent: {
     iconWrap: string;
     iconColor: string;
-    line: string;
-    fill: string;
   };
 }) {
   return (
@@ -119,7 +224,6 @@ function DashboardKpiCard({
         >
           <Icon size={16} className={accent.iconColor} />
         </div>
-        <div className="text-[10px] font-medium text-slate-400">{points.at(-1)?.label}</div>
       </div>
       <div className="mt-3">
         <p className="text-sm font-semibold text-slate-700">{title}</p>
@@ -129,50 +233,31 @@ function DashboardKpiCard({
         <p className="mt-2 text-[11px] text-slate-500">{hint}</p>
       </div>
       <div className="mt-auto pt-3">
-        <Sparkline points={points} strokeClassName={accent.line} fillClassName={accent.fill} />
+        <EChart option={option} className="h-10" replaceMerge="series" />
       </div>
     </Card>
   );
 }
 
 function ThroughputTrendChart({
+  title,
   points,
-  subtitle,
+  showRPM,
+  showTPM,
+  onToggle,
 }: {
+  title: string;
   points: DashboardThroughputPoint[];
-  subtitle: string;
+  showRPM: boolean;
+  showTPM: boolean;
+  onToggle: (key: string) => void;
 }) {
-  const width = 720;
-  const height = 220;
-  const padding = 18;
-  const chartHeight = height - padding * 2;
-  const chartWidth = width - padding * 2;
-  const rpmMax = Math.max(...points.map((point) => point.rpm), 1);
-  const tpmMax = Math.max(...points.map((point) => point.tpm), 1);
-
-  const buildLine = (values: number[], max: number) =>
-    values
-      .map((value, index) => {
-        const x =
-          points.length === 1 ? padding : padding + (index / (points.length - 1)) * chartWidth;
-        const y = padding + chartHeight - (value / max) * chartHeight;
-        return `${index === 0 ? "M" : "L"} ${x.toFixed(2)} ${y.toFixed(2)}`;
-      })
-      .join(" ");
-
-  const rpmPath = buildLine(
-    points.map((point) => point.rpm),
-    rpmMax,
-  );
-  const tpmPath = buildLine(
-    points.map((point) => point.tpm),
-    tpmMax,
-  );
+  const current = points.at(-1) ?? { rpm: 0, tpm: 0 };
 
   return (
     <Card
       className={PANEL_SURFACE}
-      title={subtitle}
+      title={title}
       actions={
         <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-600">
           <span className="h-2 w-2 rounded-full bg-emerald-500" />
@@ -181,44 +266,48 @@ function ThroughputTrendChart({
       }
       padding="compact"
     >
-      <div className="mb-3 flex items-center gap-4 text-[11px] font-semibold">
-        <span className="inline-flex items-center gap-2 text-blue-600">
-          <span className="h-2.5 w-2.5 rounded-full bg-blue-500" />
-          RPM
-        </span>
-        <span className="inline-flex items-center gap-2 text-violet-600">
-          <span className="h-2.5 w-2.5 rounded-full bg-violet-500" />
-          TPM
-        </span>
-      </div>
-      <svg viewBox={`0 0 ${width} ${height}`} className="h-52 w-full" preserveAspectRatio="none">
-        {Array.from({ length: 4 }).map((_, index) => {
-          const y = padding + (chartHeight / 3) * index;
-          return (
-            <line
-              key={index}
-              x1={padding}
-              x2={width - padding}
-              y1={y}
-              y2={y}
-              className="stroke-slate-200"
-              strokeDasharray="4 6"
-            />
-          );
-        })}
-        <path d={rpmPath} fill="none" stroke="#2563eb" strokeWidth="3.5" strokeLinecap="round" />
-        <path d={tpmPath} fill="none" stroke="#7c3aed" strokeWidth="3.5" strokeLinecap="round" />
-      </svg>
-      <div className="mt-3 grid grid-cols-4 gap-2 text-[10px] text-slate-500 md:grid-cols-6">
-        {points.slice(Math.max(points.length - 6, 0)).map((point) => (
-          <div
-            key={point.label}
-            className="truncate rounded-[12px] bg-slate-50 px-2 py-1.5 text-center"
-          >
-            {point.label}
+      <div className="mb-3 grid gap-3 sm:grid-cols-2">
+        <div className="rounded-[14px] bg-slate-50 px-3 py-2">
+          <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+            RPM
           </div>
-        ))}
+          <div className="mt-1 text-xl font-semibold tabular-nums text-blue-600">
+            {current.rpm.toFixed(2)}
+          </div>
+        </div>
+        <div className="rounded-[14px] bg-slate-50 px-3 py-2">
+          <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+            TPM
+          </div>
+          <div className="mt-1 text-xl font-semibold tabular-nums text-violet-600">
+            {current.tpm.toFixed(2)}
+          </div>
+        </div>
       </div>
+      <EChart
+        option={createThroughputOption(points, showRPM, showTPM)}
+        className="h-56"
+        replaceMerge="series"
+      />
+      <ChartLegend
+        className="justify-start pt-3"
+        items={[
+          {
+            key: "rpm",
+            label: "RPM",
+            colorClass: "bg-blue-500",
+            enabled: showRPM,
+            onToggle,
+          },
+          {
+            key: "tpm",
+            label: "TPM",
+            colorClass: "bg-violet-500",
+            enabled: showTPM,
+            onToggle,
+          },
+        ]}
+      />
     </Card>
   );
 }
@@ -230,10 +319,13 @@ export function DashboardPage() {
   const [range, setRange] = useState<DashboardRange>(7);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [throughputLegend, setThroughputLegend] = useState({ rpm: true, tpm: true });
 
   const refresh = useCallback(
-    async (days: DashboardRange) => {
-      setLoading(true);
+    async (days: DashboardRange, silent = false) => {
+      if (!silent) {
+        setLoading(true);
+      }
       setError(null);
       try {
         const data = await usageApi.getDashboardSummary(days);
@@ -243,7 +335,9 @@ export function DashboardPage() {
         setError(message);
         notify({ type: "error", message });
       } finally {
-        setLoading(false);
+        if (!silent) {
+          setLoading(false);
+        }
       }
     },
     [notify, t],
@@ -252,6 +346,10 @@ export function DashboardPage() {
   useEffect(() => {
     void refresh(range);
   }, [refresh, range]);
+
+  useInterval(() => {
+    void refresh(range, true);
+  }, 15000);
 
   const kpi = summary?.kpi;
   const trends = summary?.trends;
@@ -262,6 +360,23 @@ export function DashboardPage() {
   const throughputSeries = useMemo(
     () => trends?.throughput_series ?? [],
     [trends?.throughput_series],
+  );
+
+  const totalRequestOption = useMemo(
+    () => createSparklineOption(trends?.request_volume ?? [], "#2563eb"),
+    [trends?.request_volume],
+  );
+  const successRateOption = useMemo(
+    () => createSparklineOption(trends?.success_rate ?? [], "#10b981"),
+    [trends?.success_rate],
+  );
+  const totalTokenOption = useMemo(
+    () => createSparklineOption(trends?.total_tokens ?? [], "#7c3aed"),
+    [trends?.total_tokens],
+  );
+  const failedRequestOption = useMemo(
+    () => createSparklineOption(trends?.failed_requests ?? [], "#ef4444"),
+    [trends?.failed_requests],
   );
 
   return (
@@ -325,13 +440,8 @@ export function DashboardPage() {
               : t("dashboard.total_hint_days", { count: range })
           }
           icon={Activity}
-          points={trends?.request_volume ?? []}
-          accent={{
-            iconWrap: "bg-blue-50",
-            iconColor: "text-blue-600",
-            line: "stroke-blue-500",
-            fill: "fill-blue-100/70",
-          }}
+          option={totalRequestOption}
+          accent={{ iconWrap: "bg-blue-50", iconColor: "text-blue-600" }}
         />
         <DashboardKpiCard
           title={t("dashboard.success_rate")}
@@ -341,13 +451,8 @@ export function DashboardPage() {
             failed: formatNumber(kpi?.failed_requests ?? 0),
           })}
           icon={Sigma}
-          points={trends?.success_rate ?? []}
-          accent={{
-            iconWrap: "bg-emerald-50",
-            iconColor: "text-emerald-600",
-            line: "stroke-emerald-500",
-            fill: "fill-emerald-100/70",
-          }}
+          option={successRateOption}
+          accent={{ iconWrap: "bg-emerald-50", iconColor: "text-emerald-600" }}
         />
         <DashboardKpiCard
           title={t("dashboard.total_tokens")}
@@ -357,32 +462,30 @@ export function DashboardPage() {
             output: formatNumber(kpi?.output_tokens ?? 0),
           })}
           icon={Sparkles}
-          points={trends?.total_tokens ?? []}
-          accent={{
-            iconWrap: "bg-violet-50",
-            iconColor: "text-violet-600",
-            line: "stroke-violet-500",
-            fill: "fill-violet-100/75",
-          }}
+          option={totalTokenOption}
+          accent={{ iconWrap: "bg-violet-50", iconColor: "text-violet-600" }}
         />
         <DashboardKpiCard
           title={t("dashboard.failed_requests")}
           value={<AnimatedNumber value={kpi?.failed_requests ?? 0} format={formatNumber} />}
           hint={t("dashboard.failed_hint")}
           icon={TriangleAlert}
-          points={trends?.failed_requests ?? []}
-          accent={{
-            iconWrap: "bg-rose-50",
-            iconColor: "text-rose-600",
-            line: "stroke-rose-500",
-            fill: "fill-rose-100/75",
-          }}
+          option={failedRequestOption}
+          accent={{ iconWrap: "bg-rose-50", iconColor: "text-rose-600" }}
         />
       </div>
 
-      <SystemMonitorSection />
+      <SystemMonitorSection apiKeyCount={summary?.counts.api_keys ?? 0} />
 
-      <ThroughputTrendChart points={throughputSeries} subtitle={t("dashboard.throughput_title")} />
+      <ThroughputTrendChart
+        title={t("dashboard.throughput_title")}
+        points={throughputSeries}
+        showRPM={throughputLegend.rpm}
+        showTPM={throughputLegend.tpm}
+        onToggle={(key) =>
+          setThroughputLegend((prev) => ({ ...prev, [key]: !prev[key as "rpm" | "tpm"] }))
+        }
+      />
     </div>
   );
 }

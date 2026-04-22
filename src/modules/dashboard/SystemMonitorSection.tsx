@@ -15,7 +15,7 @@ import {
   Layers,
 } from "lucide-react";
 import { Card } from "@/modules/ui/Card";
-import { useSystemStats, type SystemStats, type ChannelLatency } from "./useSystemStats";
+import { useSystemStats, type SystemStats } from "./useSystemStats";
 
 const PANEL_SURFACE =
   "rounded-[18px] border border-slate-200/85 bg-white shadow-[0_10px_26px_rgba(15,23,42,0.05)]";
@@ -289,44 +289,36 @@ function NetworkCard({ stats }: { stats: SystemStats }) {
    Channel Latency (compact bar chart)
    ═══════════════════════════════════════════════════════════ */
 
-function ChannelLatencyCard({ data }: { data: ChannelLatency[] }) {
+function AverageLatencyCard({
+  avgLatency,
+  apiKeyCount,
+}: {
+  avgLatency: number;
+  apiKeyCount: number;
+}) {
   const { t } = useTranslation();
-  if (!data || data.length === 0) return null;
-  const top5 = data.slice(0, 5);
-  const maxMs = Math.max(...top5.map((d) => d.avg_ms));
 
   return (
     <Card padding="compact" bodyClassName="mt-0" className={`${PANEL_SURFACE} overflow-hidden`}>
       <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-white/40 mb-2.5">
         <Network size={12} />
         {t("system_monitor.channel_avg_latency")}
-        <span className="ml-auto text-[9px] font-normal normal-case tracking-normal">
-          {t("system_monitor.top5")}
-        </span>
       </div>
-      <div className="space-y-1.5">
-        {top5.map((ch) => {
-          const pct = maxMs > 0 ? (ch.avg_ms / maxMs) * 100 : 0;
-          return (
-            <div key={ch.source} className="flex items-center gap-1.5 sm:gap-2">
-              <span className="w-14 sm:w-20 shrink-0 truncate text-[11px] font-medium text-slate-600 dark:text-slate-300">
-                {ch.source}
-              </span>
-              <div className="flex-1 min-w-0 h-4 overflow-hidden rounded bg-slate-100 dark:bg-neutral-800">
-                <div
-                  className="h-full rounded bg-gradient-to-r from-indigo-500 to-violet-500 transition-all duration-500"
-                  style={{ width: `${Math.max(pct, 3)}%` }}
-                />
-              </div>
-              <span className="w-12 sm:w-14 shrink-0 text-right text-[11px] font-bold tabular-nums text-slate-600 dark:text-slate-300">
-                {formatMs(ch.avg_ms)}
-              </span>
-              <span className="hidden min-[400px]:inline w-10 shrink-0 text-right text-[9px] text-slate-400 tabular-nums">
-                {t("system_monitor.reqs", { count: ch.count })}
-              </span>
-            </div>
-          );
-        })}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="rounded-[12px] bg-slate-50 px-3 py-2.5">
+          <div className="text-[9px] font-semibold uppercase tracking-wider text-slate-400">
+            {t("system_monitor.latency")}
+          </div>
+          <div className="mt-1 text-xl font-bold tabular-nums text-slate-900">
+            {formatMs(avgLatency)}
+          </div>
+        </div>
+        <div className="rounded-[12px] bg-slate-50 px-3 py-2.5">
+          <div className="text-[9px] font-semibold uppercase tracking-wider text-slate-400">
+            {t("system_monitor.users")}
+          </div>
+          <div className="mt-1 text-xl font-bold tabular-nums text-slate-900">{apiKeyCount}</div>
+        </div>
       </div>
     </Card>
   );
@@ -434,7 +426,7 @@ function SkeletonLayout() {
    Main Section — exported
    ═══════════════════════════════════════════════════════════ */
 
-export function SystemMonitorSection() {
+export function SystemMonitorSection({ apiKeyCount = 0 }: { apiKeyCount?: number }) {
   const { t } = useTranslation();
   const { stats, connected } = useSystemStats(3);
 
@@ -457,6 +449,12 @@ export function SystemMonitorSection() {
 
   const health = computeHealthScore(stats);
   const logDirSizeBytes = stats.log_dir_size_bytes || stats.log_size_bytes;
+  const channelLatency = stats.channel_latency ?? [];
+  const latencyWeight = channelLatency.reduce((acc, item) => acc + item.count, 0);
+  const averageLatency =
+    latencyWeight > 0
+      ? channelLatency.reduce((acc, item) => acc + item.avg_ms * item.count, 0) / latencyWeight
+      : 0;
 
   return (
     <Card
@@ -514,16 +512,7 @@ export function SystemMonitorSection() {
               sublabel={t("system_monitor.request_log_content")}
             />
             <NetworkCard stats={stats} />
-            {stats.channel_latency?.length > 0 ? (
-              <ChannelLatencyCard data={stats.channel_latency} />
-            ) : (
-              <MiniKpi
-                label={t("system_monitor.latency")}
-                value="--"
-                icon={Network}
-                sublabel={t("system_monitor.no_data")}
-              />
-            )}
+            <AverageLatencyCard avgLatency={averageLatency} apiKeyCount={apiKeyCount} />
           </div>
         </div>
 
