@@ -41,14 +41,31 @@ describe("AppShell", () => {
     expect(source).not.toContain("nav_home_placeholder");
   });
 
-  test("places logout as an icon button inside the sidebar account card", () => {
+  test("uses an icon-based account section without bordered card chrome", () => {
     const source = readModule("modules/ui/AppShell.tsx");
-    const headerBlock = source.match(/function ShellHeader[\s\S]*?function ShellMain/)?.[0] ?? "";
+    const accountBlock =
+      source.match(
+        /<div className="space-y-3 px-3 pb-4">[\s\S]*?<\/div>\s*<\/div>\s*<\/aside>/,
+      )?.[0] ?? "";
 
     expect(source).toContain("accountLogoutLabel");
     expect(source).toContain("<LogOut size={15} />");
     expect(source).toContain("aria-label={accountLogoutLabel}");
-    expect(headerBlock).not.toContain("logout();");
-    expect(headerBlock).not.toContain("<LogOut");
+    expect(accountBlock).not.toContain(">A<");
+    expect(accountBlock).not.toContain("border border-slate");
+    expect(accountBlock).not.toContain("bg-white p-3");
+    expect(accountBlock).not.toContain("shadow-[0_8px_20px");
+  });
+
+  test("keeps the logout icon button plain without background or motion bounce", () => {
+    const source = readModule("modules/ui/AppShell.tsx");
+    const logoutButtonClass =
+      source.match(/aria-label=\{accountLogoutLabel\}[\s\S]*?className="([^"]+)"/)?.[1] ?? "";
+
+    expect(logoutButtonClass).toContain("bg-transparent");
+    expect(logoutButtonClass).not.toContain("bg-slate-100");
+    expect(logoutButtonClass).not.toContain("dark:bg-neutral-800");
+    expect(logoutButtonClass).not.toContain("hover:-translate-y-0.5");
+    expect(logoutButtonClass).not.toContain("active:scale-95");
   });
 });

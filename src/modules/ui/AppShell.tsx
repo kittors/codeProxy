@@ -24,6 +24,7 @@ import {
   PanelLeftOpen,
   ScrollText,
   Settings,
+  ShieldCheck,
   Sparkles,
 } from "lucide-react";
 import { useAuth } from "@/modules/auth/AuthProvider";
@@ -199,9 +200,9 @@ function ShellSidebar({
           })}
         </nav>
         <div className="space-y-3 px-3 pb-4">
-          <div className="flex items-center gap-3 rounded-[18px] border border-slate-200/80 bg-white p-3 shadow-[0_8px_20px_rgba(15,23,42,0.05)] dark:border-neutral-800 dark:bg-neutral-900/80">
-            <div className="grid h-10 w-10 place-items-center rounded-[14px] bg-gradient-to-br from-indigo-500 to-violet-500 text-sm font-bold text-white">
-              A
+          <div className="flex items-center gap-3 rounded-[18px] bg-slate-50/80 p-3 dark:bg-white/[0.04]">
+            <div className="grid h-10 w-10 place-items-center rounded-[14px] bg-gradient-to-br from-blue-600 to-sky-500 text-white shadow-[0_10px_22px_rgba(37,99,235,0.2)]">
+              <ShieldCheck size={18} />
             </div>
             <div className="min-w-0 flex-1">
               <div className="truncate text-sm font-semibold text-slate-950 dark:text-white">
@@ -219,7 +220,7 @@ function ShellSidebar({
               }}
               aria-label={accountLogoutLabel}
               title={accountLogoutLabel}
-              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-[14px] bg-slate-100 text-slate-500 transition-[transform,color,background-color] duration-200 ease-out hover:-translate-y-0.5 hover:bg-slate-900 hover:text-white active:translate-y-0 dark:bg-neutral-800 dark:text-slate-300 dark:hover:bg-white dark:hover:text-neutral-950"
+              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-[14px] bg-transparent text-slate-400 transition-colors duration-200 ease-out hover:text-rose-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400/30 dark:text-slate-500 dark:hover:text-rose-300 dark:focus-visible:ring-rose-300/20"
             >
               <LogOut size={15} />
             </button>
