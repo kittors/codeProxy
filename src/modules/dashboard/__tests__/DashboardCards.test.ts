@@ -53,4 +53,15 @@ describe("dashboard card composition", () => {
       'className="min-w-0 overflow-hidden rounded-xl border border-slate-200/80 bg-white',
     );
   });
+
+  test("uses a centered health hero and circular disk usage card in system monitor", () => {
+    const source = readModule("modules/dashboard/SystemMonitorSection.tsx");
+
+    expect(source).toContain("HealthHeroCard");
+    expect(source).toContain("DiskUsageRingCard");
+    expect(source).toContain('bodyClassName="mt-0 flex h-full items-center justify-center"');
+    expect(source).toContain("strokeDasharray={circumference}");
+    expect(source).toContain("grid gap-3 xl:grid-cols-[260px_minmax(0,1fr)_280px]");
+    expect(source).not.toContain('label={t("system_monitor.disk_free")}');
+  });
 });

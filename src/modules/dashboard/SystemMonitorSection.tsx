@@ -151,6 +151,96 @@ function HealthGauge({ score }: { score: number }) {
   );
 }
 
+function HealthHeroCard({ score }: { score: number }) {
+  return (
+    <Card
+      padding="compact"
+      className={`${PANEL_SURFACE} h-full min-h-[246px] bg-gradient-to-br from-blue-50/70 via-white to-slate-50 dark:from-blue-950/20 dark:via-neutral-950/80 dark:to-neutral-900/60`}
+      bodyClassName="mt-0 flex h-full items-center justify-center"
+    >
+      <HealthGauge score={score} />
+    </Card>
+  );
+}
+
+function DiskUsageRingCard({ stats }: { stats: SystemStats }) {
+  const { t } = useTranslation();
+  const pct = Math.min(Math.max(stats.disk_pct, 0), 100);
+  const sc = statusColor(pct);
+  const radius = 54;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference - (pct / 100) * circumference;
+
+  return (
+    <Card
+      padding="compact"
+      className={`${PANEL_SURFACE} h-full min-h-[246px] overflow-hidden bg-gradient-to-br from-emerald-50/70 via-white to-slate-50 dark:from-emerald-950/20 dark:via-neutral-950/80 dark:to-neutral-900/60`}
+      bodyClassName="mt-0 flex h-full flex-col justify-between"
+    >
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-300">
+          <HardDrive size={15} className="text-slate-400" />
+          {t("system_monitor.disk")}
+        </div>
+        <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${sc.labelBg}`}>
+          {t(sc.labelKey)}
+        </span>
+      </div>
+
+      <div className="flex flex-1 items-center justify-center py-3">
+        <div className="relative h-36 w-36">
+          <svg viewBox="0 0 140 140" className="h-full w-full -rotate-90">
+            <circle
+              cx="70"
+              cy="70"
+              r={radius}
+              fill="none"
+              strokeWidth="12"
+              className="stroke-slate-200/70 dark:stroke-neutral-800"
+            />
+            <circle
+              cx="70"
+              cy="70"
+              r={radius}
+              fill="none"
+              strokeWidth="12"
+              strokeLinecap="round"
+              strokeDasharray={circumference}
+              strokeDashoffset={offset}
+              className={`${sc.ring} transition-all duration-700 ease-out`}
+            />
+          </svg>
+          <div className="absolute inset-0 flex flex-col items-center justify-center">
+            <span className={`text-2xl font-bold tabular-nums ${sc.text}`}>
+              {stats.disk_pct.toFixed(1)}%
+            </span>
+            <span className="mt-0.5 text-[10px] font-semibold text-slate-400">
+              {t("system_monitor.disk")}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <div className="rounded-[14px] bg-white/70 px-3 py-2 shadow-sm ring-1 ring-slate-200/70 dark:bg-neutral-900/60 dark:ring-white/10">
+          <p className="text-[10px] text-slate-400">{t("system_monitor.disk_free")}</p>
+          <p className="mt-1 text-sm font-bold tabular-nums text-emerald-500">
+            {formatBytes(stats.disk_free)}
+          </p>
+        </div>
+        <div className="rounded-[14px] bg-white/70 px-3 py-2 shadow-sm ring-1 ring-slate-200/70 dark:bg-neutral-900/60 dark:ring-white/10">
+          <p className="text-[10px] text-slate-400">
+            {t("system_monitor.total_size", { size: formatBytes(stats.disk_total) })}
+          </p>
+          <p className="mt-1 text-sm font-bold tabular-nums text-slate-700 dark:text-white">
+            {formatBytes(stats.disk_used)}
+          </p>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
 /* ═══════════════════════════════════════════════════════════
    Resource Bar (compact horizontal card with progress)
    ═══════════════════════════════════════════════════════════ */
@@ -171,7 +261,7 @@ function ResourceBar({
   const { t } = useTranslation();
   const sc = statusColor(pct);
   return (
-    <Card padding="compact" bodyClassName="mt-0" className={PANEL_SURFACE}>
+    <Card padding="compact" bodyClassName="mt-0" className={`${PANEL_SURFACE} h-full`}>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Icon size={14} className="text-slate-400 dark:text-slate-500" />
@@ -216,7 +306,7 @@ function MiniKpi({
   sublabel?: string;
 }) {
   return (
-    <Card padding="compact" bodyClassName="mt-0" className={PANEL_SURFACE}>
+    <Card padding="compact" bodyClassName="mt-0" className={`${PANEL_SURFACE} h-full`}>
       <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-white/40">
         <Icon size={12} />
         {label}
@@ -236,7 +326,7 @@ function MiniKpi({
 function NetworkCard({ stats }: { stats: SystemStats }) {
   const { t } = useTranslation();
   return (
-    <Card padding="compact" bodyClassName="mt-0" className={PANEL_SURFACE}>
+    <Card padding="compact" bodyClassName="mt-0" className={`${PANEL_SURFACE} h-full`}>
       <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-white/40 mb-2.5">
         <Wifi size={12} />
         {t("system_monitor.network_traffic")}
@@ -291,7 +381,11 @@ function AverageLatencyCard({
   const { t } = useTranslation();
 
   return (
-    <Card padding="compact" bodyClassName="mt-0" className={`${PANEL_SURFACE} overflow-hidden`}>
+    <Card
+      padding="compact"
+      bodyClassName="mt-0"
+      className={`${PANEL_SURFACE} h-full overflow-hidden`}
+    >
       <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-white/40 mb-2.5">
         <Network size={12} />
         {t("system_monitor.channel_avg_latency")}
@@ -327,25 +421,32 @@ function Skeleton({ className = "" }: { className?: string }) {
 function SkeletonLayout() {
   return (
     <div className="space-y-4">
-      <div className="grid gap-3 lg:grid-cols-[220px_1fr]">
+      <div className="grid gap-3 xl:grid-cols-[260px_minmax(0,1fr)_280px]">
         <Card
           padding="compact"
-          bodyClassName="mt-0 flex items-center justify-center p-2.5"
-          className={PANEL_SURFACE}
+          bodyClassName="mt-0 flex h-full items-center justify-center p-2.5"
+          className={`${PANEL_SURFACE} min-h-[246px]`}
         >
           <Skeleton className="h-32 w-32 rounded-full" />
         </Card>
-        <div className="grid gap-3 grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 6 }).map((_, i) => (
+        <div className="grid gap-3 sm:grid-cols-2">
+          {Array.from({ length: 4 }).map((_, i) => (
             <Card key={i} padding="compact" bodyClassName="mt-0">
               <Skeleton className="h-3 w-16 mb-3" />
               <Skeleton className="h-5 w-20" />
             </Card>
           ))}
         </div>
+        <Card
+          padding="compact"
+          bodyClassName="mt-0 flex h-full items-center justify-center"
+          className={`${PANEL_SURFACE} min-h-[246px]`}
+        >
+          <Skeleton className="h-36 w-36 rounded-full" />
+        </Card>
       </div>
-      <div className="grid gap-3 grid-cols-2 lg:grid-cols-5">
-        {Array.from({ length: 5 }).map((_, i) => (
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, i) => (
           <Card key={i} padding="compact" bodyClassName="mt-0">
             <Skeleton className="h-3 w-12 mb-2" />
             <Skeleton className="h-4 w-16 mb-2" />
@@ -413,19 +514,10 @@ export function SystemMonitorSection({
       }
     >
       <div className="space-y-3">
-        {/* ── Row 1: Health Gauge (left) + Core KPIs (right) ── */}
-        <div className="grid gap-3 lg:grid-cols-[220px_1fr]">
-          {/* Left: big gauge */}
-          <Card
-            padding="compact"
-            className={`${PANEL_SURFACE} bg-gradient-to-br from-slate-50 to-white dark:from-neutral-900/50 dark:to-neutral-950/60`}
-            bodyClassName="mt-0 flex items-center justify-center"
-          >
-            <HealthGauge score={health} />
-          </Card>
+        <div className="grid gap-3 xl:grid-cols-[260px_minmax(0,1fr)_280px]">
+          <HealthHeroCard score={health} />
 
-          {/* Right: core KPIs in 2x3 grid */}
-          <div className="grid gap-3 grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2">
             <MiniKpi
               label={t("system_monitor.uptime")}
               value={formatUptime(stats.uptime_seconds)}
@@ -453,13 +545,12 @@ export function SystemMonitorSection({
               icon={FileText}
               sublabel={t("system_monitor.request_log_content")}
             />
-            <NetworkCard stats={stats} />
-            <AverageLatencyCard avgLatency={averageLatency} apiKeyCount={apiKeyCount} />
           </div>
+
+          <DiskUsageRingCard stats={stats} />
         </div>
 
-        {/* ── Row 2: System Resources — compact horizontal bars ── */}
-        <div className="grid gap-3 grid-cols-2 md:grid-cols-3 xl:grid-cols-5">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <ResourceBar
             icon={Cpu}
             label={t("system_monitor.system_cpu")}
@@ -486,35 +577,16 @@ export function SystemMonitorSection({
             pct={stats.process_mem_pct}
             detail={formatBytes(stats.process_mem_bytes)}
           />
-          <ResourceBar
-            icon={HardDrive}
-            label={t("system_monitor.disk")}
-            value={`${stats.disk_pct.toFixed(1)}%`}
-            pct={stats.disk_pct}
-            detail={`${formatBytes(stats.disk_used)} / ${formatBytes(stats.disk_total)}`}
-          />
         </div>
 
-        {/* ── Row 3: Storage tail KPIs ── */}
-        <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-3 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)_220px]">
+          <NetworkCard stats={stats} />
+          <AverageLatencyCard avgLatency={averageLatency} apiKeyCount={apiKeyCount} />
           <MiniKpi
             label={t("system_monitor.log_dir")}
             value={formatBytes(logDirSizeBytes)}
             icon={Layers}
             sublabel={t("system_monitor.log_files")}
-          />
-          <MiniKpi
-            label={t("system_monitor.disk_free")}
-            value={formatBytes(stats.disk_free)}
-            icon={HardDrive}
-            color={
-              stats.disk_pct >= 90
-                ? "text-red-500"
-                : stats.disk_pct >= 75
-                  ? "text-amber-500"
-                  : "text-emerald-500"
-            }
-            sublabel={t("system_monitor.total_size", { size: formatBytes(stats.disk_total) })}
           />
         </div>
       </div>
