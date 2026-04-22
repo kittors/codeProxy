@@ -2640,6 +2640,7 @@
     "goroutines": "Goroutines",
     "database": "Database",
     "latency": "Latency",
+    "key_count": "Key Count",
     "users": "Users",
     "disk": "Disk",
     "network_traffic": "Network Traffic",

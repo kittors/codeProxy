@@ -66,6 +66,13 @@ describe("dashboard card composition", () => {
     expect(source).not.toContain('label={t("system_monitor.disk_free")}');
   });
 
+  test("labels api key count explicitly instead of users in latency summary", () => {
+    const source = readModule("modules/dashboard/SystemMonitorSection.tsx");
+
+    expect(source).toContain('t("system_monitor.key_count")');
+    expect(source).not.toContain('t("system_monitor.users")');
+  });
+
   test("includes dark mode surfaces for throughput and system monitor summary cards", () => {
     const dashboardSource = readModule("modules/dashboard/DashboardPage.tsx");
     const systemMonitorSource = readModule("modules/dashboard/SystemMonitorSection.tsx");

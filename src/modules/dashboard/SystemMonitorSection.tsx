@@ -403,7 +403,7 @@ function AverageLatencyCard({
         </div>
         <div className="rounded-[12px] bg-slate-50 px-3 py-2.5 dark:bg-neutral-900/70 dark:ring-1 dark:ring-white/8">
           <div className="text-[9px] font-semibold uppercase tracking-wider text-slate-400 dark:text-white/45">
-            {t("system_monitor.users")}
+            {t("system_monitor.key_count")}
           </div>
           <div className="mt-1 text-xl font-bold tabular-nums text-slate-900 dark:text-white">
             {apiKeyCount}

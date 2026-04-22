@@ -2789,6 +2789,7 @@
     "goroutines": "协程数",
     "database": "数据库",
     "latency": "延迟",
+    "key_count": "Key 数量",
     "users": "用户数",
     "disk": "磁盘",
     "network_traffic": "网络流量",
