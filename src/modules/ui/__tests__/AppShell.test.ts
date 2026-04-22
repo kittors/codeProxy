@@ -40,4 +40,15 @@ describe("AppShell", () => {
     expect(source).not.toContain("shell.upgrade_action");
     expect(source).not.toContain("nav_home_placeholder");
   });
+
+  test("places logout as an icon button inside the sidebar account card", () => {
+    const source = readModule("modules/ui/AppShell.tsx");
+    const headerBlock = source.match(/function ShellHeader[\s\S]*?function ShellMain/)?.[0] ?? "";
+
+    expect(source).toContain("accountLogoutLabel");
+    expect(source).toContain("<LogOut size={15} />");
+    expect(source).toContain("aria-label={accountLogoutLabel}");
+    expect(headerBlock).not.toContain("logout();");
+    expect(headerBlock).not.toContain("<LogOut");
+  });
 });

@@ -98,6 +98,10 @@ function ShellSidebar({
 }) {
   const location = useLocation();
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  const {
+    actions: { logout },
+  } = useShell();
   // Track the clicked nav target so the highlight updates instantly on click,
   // without waiting for lazy chunks to load & location to update.
   const [pendingTo, setPendingTo] = useState<string | null>(null);
@@ -121,6 +125,7 @@ function ShellSidebar({
   }, [pendingTo, location.pathname, resolveActiveTo]);
 
   const isMobile = mode === "mobile";
+  const accountLogoutLabel = t("shell.logout_button");
 
   const handleNavClick = useCallback(
     (to: string) => {
@@ -206,6 +211,18 @@ function ShellSidebar({
                 {t("shell.sidebar_account_role")}
               </div>
             </div>
+            <button
+              type="button"
+              onClick={() => {
+                navigate("/login", { replace: true, viewTransition: true });
+                logout();
+              }}
+              aria-label={accountLogoutLabel}
+              title={accountLogoutLabel}
+              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-[14px] bg-slate-100 text-slate-500 transition-[transform,color,background-color] duration-200 ease-out hover:-translate-y-0.5 hover:bg-slate-900 hover:text-white active:translate-y-0 dark:bg-neutral-800 dark:text-slate-300 dark:hover:bg-white dark:hover:text-neutral-950"
+            >
+              <LogOut size={15} />
+            </button>
           </div>
         </div>
       </div>
@@ -220,11 +237,9 @@ function ShellHeader({
   sidebarCollapsed: boolean;
   onToggleSidebar: () => void;
 }) {
-  const navigate = useNavigate();
   const { t } = useTranslation();
   const {
     state: { titleKey },
-    actions: { logout },
   } = useShell();
 
   const SidebarIcon = sidebarCollapsed ? PanelLeftOpen : PanelLeftClose;
@@ -248,19 +263,6 @@ function ShellHeader({
         <div className="flex shrink-0 items-center gap-1 sm:gap-2">
           <LanguageSelector className="inline-flex h-9 items-center justify-center gap-0.5 rounded-xl px-1.5 text-slate-500 transition-colors duration-200 ease-out hover:text-slate-900 dark:text-slate-400 dark:hover:text-white" />
           <ThemeToggleButton className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 transition-colors duration-200 ease-out hover:text-slate-900 dark:text-slate-400 dark:hover:text-white" />
-          <button
-            type="button"
-            onClick={() => {
-              navigate("/login", { replace: true, viewTransition: true });
-              logout();
-            }}
-            aria-label={t("shell.logout_button")}
-            title={t("shell.logout_button")}
-            className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-slate-900 px-2.5 py-1.5 text-sm font-semibold text-white transition hover:bg-slate-800 dark:bg-white dark:text-neutral-950 dark:hover:bg-slate-200 sm:min-w-[72px] sm:px-3"
-          >
-            <LogOut size={14} />
-            <span className="hidden sm:inline">{t("shell.logout_button")}</span>
-          </button>
         </div>
       </div>
     </header>
