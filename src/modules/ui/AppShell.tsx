@@ -194,22 +194,6 @@ function ShellSidebar({
           })}
         </nav>
         <div className="space-y-3 px-3 pb-4">
-          <div className="relative overflow-hidden rounded-[18px] border border-slate-200 bg-gradient-to-br from-slate-50 via-white to-blue-50 p-3.5 shadow-[0_10px_22px_rgba(15,23,42,0.05)]">
-            <div className="absolute -right-6 -top-6 h-16 w-16 rounded-full bg-blue-200/35 blur-2xl" />
-            <div className="relative">
-              <div className="text-sm font-semibold text-slate-950">{t("shell.upgrade_title")}</div>
-              <p className="mt-1.5 text-[11px] leading-5 text-slate-500">
-                {t("shell.upgrade_description")}
-              </p>
-              <button
-                type="button"
-                className="mt-3 inline-flex items-center gap-1 rounded-full bg-white px-3 py-1.5 text-[11px] font-semibold text-blue-600 shadow-sm"
-              >
-                {t("shell.upgrade_action")}
-                <Sparkles size={12} />
-              </button>
-            </div>
-          </div>
           <div className="flex items-center gap-3 rounded-[18px] border border-slate-200/80 bg-white p-3 shadow-[0_8px_20px_rgba(15,23,42,0.05)] dark:border-neutral-800 dark:bg-neutral-900/80">
             <div className="grid h-10 w-10 place-items-center rounded-[14px] bg-gradient-to-br from-indigo-500 to-violet-500 text-sm font-bold text-white">
               A

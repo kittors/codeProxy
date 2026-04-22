@@ -64,4 +64,14 @@ describe("dashboard card composition", () => {
     expect(source).toContain("grid gap-3 xl:grid-cols-[260px_minmax(0,1fr)_280px]");
     expect(source).not.toContain('label={t("system_monitor.disk_free")}');
   });
+
+  test("includes dark mode surfaces for throughput and system monitor summary cards", () => {
+    const dashboardSource = readModule("modules/dashboard/DashboardPage.tsx");
+    const systemMonitorSource = readModule("modules/dashboard/SystemMonitorSection.tsx");
+
+    expect(dashboardSource).toContain("dark:bg-neutral-900/70");
+    expect(dashboardSource).toContain("dark:text-slate-200");
+    expect(systemMonitorSource).toContain("dark:bg-neutral-900/70");
+    expect(systemMonitorSource).toContain("dark:text-white/80");
+  });
 });
