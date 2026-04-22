@@ -209,12 +209,12 @@ function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: (
   };
 
   const stageClassName = [
-    "relative flex min-h-0 flex-1 overflow-hidden rounded-[22px] border transition-colors duration-200",
+    "relative min-h-[260px] overflow-hidden rounded-2xl border transition-colors duration-200 sm:min-h-[320px]",
     errorMessage
-      ? "border-white/8 bg-slate-100 text-slate-700 dark:bg-[#2f2f2f] dark:text-white/80"
+      ? "border-slate-200 bg-slate-100 text-slate-700 dark:border-neutral-800 dark:bg-neutral-900 dark:text-white/85"
       : imageSrc
-        ? "border-white/8 bg-[#171717]"
-        : "border-white/8 bg-[#2f2f2f] text-white/70",
+        ? "border-slate-200 bg-slate-100 dark:border-neutral-800 dark:bg-black"
+        : "border-slate-200 bg-slate-50 text-slate-500 dark:border-neutral-800 dark:bg-neutral-900 dark:text-white/55",
   ].join(" ");
   const statusText = t(GENERATION_STATUS_KEYS[statusIndex]);
   const showGeneratingState = submitting && !imageSrc && !errorMessage;
@@ -226,14 +226,13 @@ function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: (
         open={open}
         title={t("image_generation.test_title")}
         onClose={onClose}
-        maxWidth="max-w-none"
-        panelClassName="h-[72vh] w-[78vw] max-w-[920px] min-w-[720px] border-black/20 bg-[#202020] p-0 shadow-2xl dark:border-white/10 dark:bg-[#202020]"
-        bodyHeightClassName="h-full"
-        bodyClassName="!overflow-hidden !p-3"
-        hideHeader
+        maxWidth="max-w-[640px]"
+        panelClassName="w-full border-slate-200 bg-white shadow-2xl dark:border-neutral-800 dark:bg-neutral-950"
+        bodyHeightClassName="max-h-[calc(100vh-10rem)]"
+        bodyClassName="!overflow-y-auto !px-4 !py-4 sm:!px-5"
       >
         <form
-          className="flex h-full min-h-0 flex-col gap-3"
+          className="flex min-h-0 flex-col gap-3"
           onSubmit={(event) => {
             event.preventDefault();
             void handleGenerate();
@@ -246,10 +245,10 @@ function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: (
             aria-live="polite"
             style={{
               backgroundImage:
-                showGeneratingState || showIdleCanvas
-                  ? "radial-gradient(circle, rgba(255,255,255,0.16) 1.15px, transparent 1.35px)"
+                showGeneratingState
+                  ? "radial-gradient(circle, rgba(148,163,184,0.38) 1.25px, transparent 1.45px)"
                   : undefined,
-              backgroundSize: showGeneratingState || showIdleCanvas ? "32px 32px" : undefined,
+              backgroundSize: showGeneratingState ? "28px 28px" : undefined,
             }}
           >
             {imageSrc ? (
@@ -260,7 +259,7 @@ function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: (
                   className="h-full w-full cursor-zoom-in object-contain"
                   onClick={() => setPreviewOpen(true)}
                 />
-                <span className="pointer-events-none absolute right-3 bottom-3 rounded-full bg-black/50 px-3 py-1 text-xs font-medium text-white/80 backdrop-blur">
+                <span className="pointer-events-none absolute right-3 bottom-3 rounded-full bg-black/55 px-3 py-1 text-xs font-medium text-white/85 backdrop-blur">
                   {t("image_generation.open_preview")}
                 </span>
               </>
@@ -268,20 +267,28 @@ function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: (
               <div
                 data-testid="image-generation-preview"
                 className={[
-                  "relative flex h-full w-full overflow-hidden px-8 py-8 shadow-inner",
+                  "relative flex h-full w-full overflow-hidden px-6 py-6 sm:px-8 sm:py-8",
                   errorMessage
-                    ? "bg-slate-100 text-slate-700 dark:bg-[#2f2f2f] dark:text-white"
-                    : "bg-transparent text-white",
+                    ? "bg-slate-100 text-slate-700 dark:bg-neutral-900 dark:text-white"
+                    : "bg-transparent",
                 ].join(" ")}
               >
                 <div className="relative z-10 flex h-full w-full items-start">
                   {showGeneratingState ? (
                     <div className="max-w-md">
-                      <p className="text-[42px] font-semibold tracking-tight text-white/92">
+                      <p className="text-3xl font-semibold tracking-tight text-slate-700 dark:text-white/92 sm:text-[38px]">
                         {statusText}
                       </p>
-                      <p className="mt-2 text-sm text-white/45">
+                      <p className="mt-2 text-sm text-slate-500 dark:text-white/45">
                         {t("image_generation.generating_subtitle")}
+                      </p>
+                    </div>
+                  ) : null}
+
+                  {showIdleCanvas ? (
+                    <div className="max-w-md">
+                      <p className="text-lg font-medium text-slate-600 dark:text-white/72">
+                        {t("image_generation.idle_hint")}
                       </p>
                     </div>
                   ) : null}
@@ -299,8 +306,8 @@ function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: (
           </div>
 
           {revisedPrompt ? (
-            <div className="shrink-0 rounded-[16px] border border-white/8 bg-white/6 px-4 py-3 text-white/75">
-              <p className="text-xs font-medium text-white/40">
+            <div className="shrink-0 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-700 dark:border-neutral-800 dark:bg-neutral-900 dark:text-slate-200">
+              <p className="text-xs font-medium text-slate-500 dark:text-white/40">
                 {t("image_generation.revised_prompt_label")}
               </p>
               <p className="mt-1 line-clamp-2 text-sm">{revisedPrompt}</p>
@@ -309,7 +316,7 @@ function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: (
 
           <div
             data-testid="image-generation-composer"
-            className="shrink-0 rounded-[18px] border border-white/10 bg-[#161616] px-3 py-3 shadow-[0_14px_36px_rgb(0_0_0_/_0.24)]"
+            className="shrink-0 rounded-2xl border border-slate-200 bg-white px-3 py-3 shadow-sm dark:border-neutral-800 dark:bg-neutral-950"
           >
             <label htmlFor="image-generation-prompt" className="sr-only">
               {t("image_generation.prompt_label")}
@@ -321,14 +328,14 @@ function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: (
                 onChange={(event) => setPrompt(event.target.value)}
                 placeholder={t("image_generation.prompt_placeholder")}
                 rows={3}
-                className="min-h-[84px] flex-1 resize-none rounded-[14px] border border-white/10 bg-[#222222] px-4 py-3 text-sm leading-6 text-white outline-none transition-colors focus:border-white/20 placeholder:text-white/32"
+                className="min-h-[88px] flex-1 resize-none border-0 bg-transparent px-1 py-1 text-sm leading-6 text-slate-900 outline-none placeholder:text-slate-400 dark:text-white dark:placeholder:text-white/30"
               />
               <Button
                 type="submit"
                 variant="primary"
                 disabled={!prompt.trim() || submitting}
                 aria-busy={submitting}
-                className="h-11 shrink-0 rounded-[12px] px-4"
+                className="h-10 shrink-0 rounded-xl px-4"
               >
                 {submitting
                   ? t("image_generation.generating_button")
@@ -343,18 +350,17 @@ function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: (
         open={previewOpen && Boolean(imageSrc)}
         title={t("image_generation.image_preview_title")}
         onClose={() => setPreviewOpen(false)}
-        maxWidth="max-w-none"
-        panelClassName="h-[82vh] w-[78vw] max-w-[960px] border-black/20 bg-[#111111] p-0 shadow-2xl dark:border-white/10 dark:bg-[#111111]"
+        maxWidth="max-w-[860px]"
+        panelClassName="w-full border-slate-200 bg-white shadow-2xl dark:border-neutral-800 dark:bg-neutral-950"
         bodyHeightClassName="h-full"
-        bodyClassName="!overflow-hidden !p-3"
-        hideHeader
+        bodyClassName="!overflow-hidden !px-4 !py-4 sm:!px-5"
       >
         {imageSrc ? (
-          <div className="flex h-full items-center justify-center rounded-[18px] bg-black">
+          <div className="flex min-h-[360px] items-center justify-center rounded-2xl bg-slate-100 dark:bg-black">
             <img
               src={imageSrc}
               alt={t("image_generation.preview_alt", { model: GPT_IMAGE_MODEL })}
-              className="h-full w-full rounded-[14px] object-contain"
+              className="h-full w-full rounded-xl object-contain"
             />
           </div>
         ) : null}

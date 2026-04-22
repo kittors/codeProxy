@@ -98,14 +98,17 @@ describe("ImageGenerationPage", () => {
     await user.click(screen.getByRole("button", { name: "测试生成" }));
 
     const dialog = await screen.findByRole("dialog", { name: "测试生成" });
-    expect(dialog.className).toContain("w-[78vw]");
-    expect(dialog.className).toContain("h-[72vh]");
+    expect(dialog.className).toContain("max-w-[640px]");
+    expect(dialog.className).not.toContain("w-[78vw]");
+    expect(dialog.className).not.toContain("min-w-[720px]");
     expect(within(dialog).getByTestId("image-generation-stage")).toBeInTheDocument();
     expect(within(dialog).getByTestId("image-generation-composer")).toBeInTheDocument();
     expect(within(dialog).queryByText("准备创建图片")).not.toBeInTheDocument();
     expect(within(dialog).queryByText("正在生成图片")).not.toBeInTheDocument();
+    expect(within(dialog).getByText("输入提示词后开始生成图片")).toBeInTheDocument();
     expect(within(dialog).getByRole("textbox", { name: "提示词" })).toBeInTheDocument();
     expect(within(dialog).getByRole("button", { name: "生成图片" })).toBeVisible();
+    expect(within(dialog).getByTestId("image-generation-stage")).toHaveClass("bg-slate-50");
 
     await user.type(within(dialog).getByPlaceholderText(/输入提示词/i), "画一只狐狸");
     await user.click(within(dialog).getByRole("button", { name: /生成图片/i }));
@@ -118,6 +121,7 @@ describe("ImageGenerationPage", () => {
     });
 
     expect(within(dialog).getByText("正在生成图片")).toBeInTheDocument();
+    expect(within(dialog).getByTestId("image-generation-stage")).toHaveClass("bg-slate-50");
 
     await waitFor(() => {
       expect(within(dialog).getByText("正在打草稿")).toBeInTheDocument();

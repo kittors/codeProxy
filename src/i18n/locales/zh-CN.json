@@ -1765,6 +1765,7 @@
     "generate_button": "生成图片",
     "generating_button": "生成中...",
     "preview_alt": "{{model}} 预览",
+    "idle_hint": "输入提示词后开始生成图片",
     "preview_placeholder": "准备创建图片",
     "generating_subtitle": "请保持弹窗打开，生成完成后会自动替换为最新图片。",
     "generation_status_creating": "正在生成图片",

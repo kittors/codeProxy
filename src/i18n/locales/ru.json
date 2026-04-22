@@ -1349,6 +1349,7 @@
     "generate_button": "Сгенерировать",
     "generating_button": "Генерация...",
     "preview_alt": "Предпросмотр {{model}}",
+    "idle_hint": "Введите prompt, чтобы начать генерацию изображения",
     "preview_placeholder": "Готово к созданию изображения",
     "generating_subtitle": "Оставьте модальное окно открытым. Новое изображение появится здесь автоматически.",
     "generation_status_creating": "Генерируем изображение",
