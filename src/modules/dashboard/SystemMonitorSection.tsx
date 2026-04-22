@@ -15,7 +15,7 @@ import {
   Layers,
 } from "lucide-react";
 import { Card } from "@/modules/ui/Card";
-import { useSystemStats, type SystemStats } from "./useSystemStats";
+import type { SystemStats } from "./useSystemStats";
 
 const PANEL_SURFACE =
   "rounded-[18px] border border-slate-200/85 bg-white shadow-[0_10px_26px_rgba(15,23,42,0.05)]";
@@ -35,14 +35,6 @@ function formatRate(bps: number): string {
   if (bps < 1024) return `${bps.toFixed(0)} B/s`;
   if (bps < 1024 * 1024) return `${(bps / 1024).toFixed(1)} KB/s`;
   return `${(bps / 1024 / 1024).toFixed(2)} MB/s`;
-}
-
-/** 紧凑数字格式：1234 → 1.2k, 1234567 → 1.2m */
-function formatCompactNumber(n: number): string {
-  if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(1)}b`;
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}m`;
-  if (n >= 10_000) return `${(n / 1_000).toFixed(1)}k`;
-  return n.toLocaleString();
 }
 
 function formatUptime(s: number): string {
@@ -325,63 +317,6 @@ function AverageLatencyCard({
 }
 
 /* ═══════════════════════════════════════════════════════════
-   Concurrency Card (real-time in-flight requests)
-   ═══════════════════════════════════════════════════════════ */
-
-function ConcurrencyCard({ stats }: { stats: SystemStats }) {
-  const { t } = useTranslation();
-  const rpm = stats.total_rpm ?? 0;
-  const tpm = stats.total_tpm ?? 0;
-
-  return (
-    <Card padding="compact" bodyClassName="mt-0" className={PANEL_SURFACE}>
-      <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-white/40 mb-3">
-        <Layers size={12} />
-        {t("system_monitor.realtime_throughput")}
-        <span
-          className={`ml-auto inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold tabular-nums ${
-            rpm > 0
-              ? "bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400"
-              : "bg-slate-100 text-slate-400 dark:bg-neutral-800 dark:text-white/35"
-          }`}
-        >
-          <span
-            className={`inline-block h-1.5 w-1.5 rounded-full ${rpm > 0 ? "bg-emerald-500 animate-pulse" : "bg-slate-300 dark:bg-neutral-600"}`}
-          />
-          {rpm > 0 ? t("system_monitor.active") : t("system_monitor.idle")}
-        </span>
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div className="rounded-[12px] bg-slate-50 px-3 py-2.5 dark:bg-neutral-800/50">
-          <div className="flex items-center gap-1 text-[9px] font-semibold uppercase tracking-wider text-slate-400 dark:text-white/35">
-            <Zap size={10} />
-            RPM
-          </div>
-          <p className="mt-1 text-xl font-bold tabular-nums text-slate-900 dark:text-white">
-            {formatCompactNumber(rpm)}
-          </p>
-          <p className="mt-0.5 text-[10px] text-slate-400 dark:text-white/35">
-            {t("system_monitor.rpm")}
-          </p>
-        </div>
-        <div className="rounded-[12px] bg-slate-50 px-3 py-2.5 dark:bg-neutral-800/50">
-          <div className="flex items-center gap-1 text-[9px] font-semibold uppercase tracking-wider text-slate-400 dark:text-white/35">
-            <Activity size={10} />
-            TPM
-          </div>
-          <p className="mt-1 text-xl font-bold tabular-nums text-slate-900 dark:text-white">
-            {formatCompactNumber(tpm)}
-          </p>
-          <p className="mt-0.5 text-[10px] text-slate-400 dark:text-white/35">
-            {t("system_monitor.tpm")}
-          </p>
-        </div>
-      </div>
-    </Card>
-  );
-}
-
-/* ═══════════════════════════════════════════════════════════
    Skeleton
    ═══════════════════════════════════════════════════════════ */
 
@@ -426,9 +361,16 @@ function SkeletonLayout() {
    Main Section — exported
    ═══════════════════════════════════════════════════════════ */
 
-export function SystemMonitorSection({ apiKeyCount = 0 }: { apiKeyCount?: number }) {
+export function SystemMonitorSection({
+  stats,
+  connected = false,
+  apiKeyCount = 0,
+}: {
+  stats?: SystemStats | null;
+  connected?: boolean;
+  apiKeyCount?: number;
+}) {
   const { t } = useTranslation();
-  const { stats, connected } = useSystemStats(3);
 
   if (!stats) {
     return (
@@ -553,30 +495,27 @@ export function SystemMonitorSection({ apiKeyCount = 0 }: { apiKeyCount?: number
           />
         </div>
 
-        {/* ── Row 3: Concurrency ── */}
-        <div className="grid gap-3 grid-cols-1 lg:grid-cols-2">
-          <ConcurrencyCard stats={stats} />
-          <div className="grid gap-3 grid-cols-2">
-            <MiniKpi
-              label={t("system_monitor.log_dir")}
-              value={formatBytes(logDirSizeBytes)}
-              icon={Layers}
-              sublabel={t("system_monitor.log_files")}
-            />
-            <MiniKpi
-              label={t("system_monitor.disk_free")}
-              value={formatBytes(stats.disk_free)}
-              icon={HardDrive}
-              color={
-                stats.disk_pct >= 90
-                  ? "text-red-500"
-                  : stats.disk_pct >= 75
-                    ? "text-amber-500"
-                    : "text-emerald-500"
-              }
-              sublabel={t("system_monitor.total_size", { size: formatBytes(stats.disk_total) })}
-            />
-          </div>
+        {/* ── Row 3: Storage tail KPIs ── */}
+        <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+          <MiniKpi
+            label={t("system_monitor.log_dir")}
+            value={formatBytes(logDirSizeBytes)}
+            icon={Layers}
+            sublabel={t("system_monitor.log_files")}
+          />
+          <MiniKpi
+            label={t("system_monitor.disk_free")}
+            value={formatBytes(stats.disk_free)}
+            icon={HardDrive}
+            color={
+              stats.disk_pct >= 90
+                ? "text-red-500"
+                : stats.disk_pct >= 75
+                  ? "text-amber-500"
+                  : "text-emerald-500"
+            }
+            sublabel={t("system_monitor.total_size", { size: formatBytes(stats.disk_total) })}
+          />
         </div>
       </div>
     </Card>

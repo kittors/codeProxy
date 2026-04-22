@@ -9,6 +9,7 @@ import {
   type DashboardTrendPoint,
 } from "@/lib/http/apis/usage";
 import { SystemMonitorSection } from "@/modules/dashboard/SystemMonitorSection";
+import { useSystemStats } from "@/modules/dashboard/useSystemStats";
 import { AnimatedNumber } from "@/modules/ui/AnimatedNumber";
 import { Button } from "@/modules/ui/Button";
 import { Card } from "@/modules/ui/Card";
@@ -33,6 +34,13 @@ const formatNumber = (n: number) =>
     : n >= 10_000
       ? `${(n / 1000).toFixed(1)}k`
       : n.toLocaleString();
+
+const formatCompactNumber = (n: number) => {
+  if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(1)}b`;
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}m`;
+  if (n >= 10_000) return `${(n / 1_000).toFixed(1)}k`;
+  return n.toLocaleString();
+};
 
 const formatRate = (rate: number) => `${rate.toFixed(2)}%`;
 const PANEL_SURFACE =
@@ -69,6 +77,8 @@ function createSparklineOption(points: DashboardTrendPoint[], color: string): EC
     },
     series: [
       {
+        id: "sparkline",
+        name: "trend",
         type: "line",
         data: values,
         smooth: true,
@@ -103,7 +113,7 @@ function createThroughputOption(
 
   return {
     animationDuration: 360,
-    animationDurationUpdate: 240,
+    animationDurationUpdate: 80,
     tooltip: {
       trigger: "axis",
       borderWidth: 0,
@@ -134,62 +144,54 @@ function createThroughputOption(
       },
     ],
     series: [
-      ...(showRPM
-        ? [
-            {
-              name: "RPM",
-              type: "line",
-              yAxisIndex: 0,
-              data: rpmValues,
-              smooth: true,
-              symbol: "circle",
-              symbolSize: 6,
-              lineStyle: { width: 3, color: "#2563eb" },
-              itemStyle: { color: "#2563eb" },
-              areaStyle: {
-                color: {
-                  type: "linear",
-                  x: 0,
-                  y: 0,
-                  x2: 0,
-                  y2: 1,
-                  colorStops: [
-                    { offset: 0, color: "rgba(37,99,235,0.18)" },
-                    { offset: 1, color: "rgba(37,99,235,0.02)" },
-                  ],
-                },
-              },
-            },
-          ]
-        : []),
-      ...(showTPM
-        ? [
-            {
-              name: "TPM",
-              type: "line",
-              yAxisIndex: 1,
-              data: tpmValues,
-              smooth: true,
-              symbol: "circle",
-              symbolSize: 6,
-              lineStyle: { width: 3, color: "#7c3aed" },
-              itemStyle: { color: "#7c3aed" },
-              areaStyle: {
-                color: {
-                  type: "linear",
-                  x: 0,
-                  y: 0,
-                  x2: 0,
-                  y2: 1,
-                  colorStops: [
-                    { offset: 0, color: "rgba(124,58,237,0.14)" },
-                    { offset: 1, color: "rgba(124,58,237,0.02)" },
-                  ],
-                },
-              },
-            },
-          ]
-        : []),
+      {
+        id: "rpm",
+        name: "RPM",
+        type: "line",
+        yAxisIndex: 0,
+        data: showRPM ? rpmValues : [],
+        smooth: true,
+        showSymbol: false,
+        lineStyle: { width: 3, color: "#2563eb" },
+        itemStyle: { color: "#2563eb" },
+        areaStyle: {
+          color: {
+            type: "linear",
+            x: 0,
+            y: 0,
+            x2: 0,
+            y2: 1,
+            colorStops: [
+              { offset: 0, color: "rgba(37,99,235,0.18)" },
+              { offset: 1, color: "rgba(37,99,235,0.02)" },
+            ],
+          },
+        },
+      },
+      {
+        id: "tpm",
+        name: "TPM",
+        type: "line",
+        yAxisIndex: 1,
+        data: showTPM ? tpmValues : [],
+        smooth: true,
+        showSymbol: false,
+        lineStyle: { width: 3, color: "#7c3aed" },
+        itemStyle: { color: "#7c3aed" },
+        areaStyle: {
+          color: {
+            type: "linear",
+            x: 0,
+            y: 0,
+            x2: 0,
+            y2: 1,
+            colorStops: [
+              { offset: 0, color: "rgba(124,58,237,0.14)" },
+              { offset: 1, color: "rgba(124,58,237,0.02)" },
+            ],
+          },
+        },
+      },
     ],
   };
 }
@@ -233,7 +235,7 @@ function DashboardKpiCard({
         <p className="mt-2 text-[11px] text-slate-500">{hint}</p>
       </div>
       <div className="mt-auto pt-3">
-        <EChart option={option} className="h-10" replaceMerge="series" />
+        <EChart option={option} className="h-10" />
       </div>
     </Card>
   );
@@ -242,26 +244,45 @@ function DashboardKpiCard({
 function ThroughputTrendChart({
   title,
   points,
+  rpm,
+  tpm,
+  connected,
   showRPM,
   showTPM,
   onToggle,
 }: {
   title: string;
   points: DashboardThroughputPoint[];
+  rpm: number;
+  tpm: number;
+  connected: boolean;
   showRPM: boolean;
   showTPM: boolean;
   onToggle: (key: string) => void;
 }) {
-  const current = points.at(-1) ?? { rpm: 0, tpm: 0 };
+  const { t } = useTranslation();
+  const option = useMemo(
+    () => createThroughputOption(points, showRPM, showTPM),
+    [points, showRPM, showTPM],
+  );
+  const active = rpm > 0 || tpm > 0;
 
   return (
     <Card
       className={PANEL_SURFACE}
       title={title}
       actions={
-        <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-600">
-          <span className="h-2 w-2 rounded-full bg-emerald-500" />
-          Realtime
+        <div
+          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+            connected ? "bg-emerald-50 text-emerald-600" : "bg-slate-100 text-slate-400"
+          }`}
+        >
+          <span
+            className={`h-2 w-2 rounded-full ${
+              active ? "animate-pulse bg-emerald-500" : "bg-slate-300"
+            }`}
+          />
+          {connected ? t("system_monitor.live") : t("system_monitor.polling")}
         </div>
       }
       padding="compact"
@@ -272,7 +293,7 @@ function ThroughputTrendChart({
             RPM
           </div>
           <div className="mt-1 text-xl font-semibold tabular-nums text-blue-600">
-            {current.rpm.toFixed(2)}
+            {formatCompactNumber(rpm)}
           </div>
         </div>
         <div className="rounded-[14px] bg-slate-50 px-3 py-2">
@@ -280,15 +301,11 @@ function ThroughputTrendChart({
             TPM
           </div>
           <div className="mt-1 text-xl font-semibold tabular-nums text-violet-600">
-            {current.tpm.toFixed(2)}
+            {formatCompactNumber(tpm)}
           </div>
         </div>
       </div>
-      <EChart
-        option={createThroughputOption(points, showRPM, showTPM)}
-        className="h-56"
-        replaceMerge="series"
-      />
+      <EChart option={option} className="h-56" />
       <ChartLegend
         className="justify-start pt-3"
         items={[
@@ -315,6 +332,7 @@ function ThroughputTrendChart({
 export function DashboardPage() {
   const { t } = useTranslation();
   const { notify } = useToast();
+  const { stats, connected } = useSystemStats(3);
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [range, setRange] = useState<DashboardRange>(7);
   const [loading, setLoading] = useState(true);
@@ -475,11 +493,18 @@ export function DashboardPage() {
         />
       </div>
 
-      <SystemMonitorSection apiKeyCount={summary?.counts.api_keys ?? 0} />
+      <SystemMonitorSection
+        stats={stats}
+        connected={connected}
+        apiKeyCount={summary?.counts.api_keys ?? 0}
+      />
 
       <ThroughputTrendChart
         title={t("dashboard.throughput_title")}
         points={throughputSeries}
+        rpm={stats?.total_rpm ?? 0}
+        tpm={stats?.total_tpm ?? 0}
+        connected={connected}
         showRPM={throughputLegend.rpm}
         showTPM={throughputLegend.tpm}
         onToggle={(key) =>
