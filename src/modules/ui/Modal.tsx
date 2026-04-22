@@ -1,5 +1,5 @@
 import { createPortal } from "react-dom";
-import { useEffect, useRef, useState, type PropsWithChildren, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type PropsWithChildren, type ReactNode } from "react";
 import { X } from "lucide-react";
 
 const ANIMATION_MS = 180;
@@ -10,6 +10,7 @@ export function Modal({
   description,
   footer,
   maxWidth = "max-w-3xl",
+  panelClassName,
   bodyHeightClassName,
   bodyTestId,
   onClose,
@@ -20,6 +21,7 @@ export function Modal({
   description?: string;
   footer?: ReactNode;
   maxWidth?: string;
+  panelClassName?: string;
   bodyHeightClassName?: string;
   bodyTestId?: string;
   onClose: () => void;
@@ -27,6 +29,7 @@ export function Modal({
   const [mounted, setMounted] = useState(open);
   const [visible, setVisible] = useState(open);
   const timeoutRef = useRef<number | null>(null);
+  const titleId = useId();
 
   useEffect(() => {
     if (open) {
@@ -90,16 +93,18 @@ export function Modal({
       <div
         role="dialog"
         aria-modal="true"
+        aria-labelledby={titleId}
         className={[
           `relative z-10 w-full ${maxWidth} overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-neutral-800 dark:bg-neutral-950`,
           "transition-all duration-200 ease-out motion-reduce:transition-none",
           visible ? "opacity-100 translate-y-0 scale-100" : "opacity-0 translate-y-2 scale-95",
+          panelClassName,
         ].join(" ")}
       >
         <div className="flex items-start justify-between gap-3 border-b border-slate-200 px-5 py-4 dark:border-neutral-800">
           <div className="min-w-0">
             <h2 className="truncate text-base font-semibold tracking-tight text-slate-900 dark:text-white">
-              {title}
+              <span id={titleId}>{title}</span>
             </h2>
             {description ? (
               <p className="mt-1 text-sm text-slate-600 dark:text-white/65">{description}</p>
