@@ -20,6 +20,11 @@ vi.mock("goey-toast", () => ({
   },
 }));
 
+const expectClassNameToInclude = (value: unknown, className: string) => {
+  expect(value).toEqual(expect.any(String));
+  expect(String(value)).toContain(className);
+};
+
 function Trigger() {
   const { notify } = useToast();
   return (
@@ -66,18 +71,20 @@ describe("ToastProvider", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Notify" }));
 
-    expect(mocks.warning).toHaveBeenCalledWith(
-      "Warning",
+    const [, options] = mocks.warning.mock.calls.at(-1) ?? [];
+
+    expect(mocks.warning).toHaveBeenCalledWith("Warning", expect.any(Object));
+    expect(options).toEqual(
       expect.objectContaining({
         description: "line 1\nline 2",
-        classNames: expect.objectContaining({
-          description: expect.stringContaining("whitespace-pre-line"),
-        }),
+        classNames: expect.any(Object),
       }),
     );
+    expectClassNameToInclude(options?.classNames?.title, "whitespace-nowrap");
+    expectClassNameToInclude(options?.classNames?.description, "whitespace-pre-line");
   });
 
-  test("constrains long toast messages without dropping caller class names", () => {
+  test("keeps toast titles single-line while moving long content into the description body", () => {
     render(
       <ThemeProvider>
         <ToastProvider>
@@ -88,18 +95,21 @@ describe("ToastProvider", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Notify Long" }));
 
-    expect(mocks.warning).toHaveBeenCalledWith(
-      "Warning",
+    const [, options] = mocks.warning.mock.calls.at(-1) ?? [];
+
+    expect(mocks.warning).toHaveBeenCalledWith("Warning", expect.any(Object));
+    expect(options).toEqual(
       expect.objectContaining({
         description: expect.stringContaining("github commit status 403"),
-        classNames: expect.objectContaining({
-          wrapper: expect.stringContaining("max-w"),
-          content: expect.stringContaining("min-w-0"),
-          header: expect.stringContaining("min-w-0"),
-          title: expect.stringContaining("overflow-wrap:anywhere"),
-          actionWrapper: "custom-action-wrapper",
-        }),
+        classNames: expect.any(Object),
       }),
     );
+    expectClassNameToInclude(options?.classNames?.wrapper, "max-w");
+    expectClassNameToInclude(options?.classNames?.content, "min-w-0");
+    expectClassNameToInclude(options?.classNames?.header, "min-w-0");
+    expectClassNameToInclude(options?.classNames?.title, "truncate");
+    expectClassNameToInclude(options?.classNames?.title, "whitespace-nowrap");
+    expectClassNameToInclude(options?.classNames?.description, "overflow-wrap:anywhere");
+    expect(options?.classNames?.actionWrapper).toBe("custom-action-wrapper");
   });
 });

@@ -23,8 +23,11 @@ const TOAST_WRAPPER_CLASSNAME = "!max-w-[min(calc(100vw-2rem),42rem)] min-w-0";
 const TOAST_CONTENT_CLASSNAME =
   "!max-w-[min(calc(100vw-2rem),42rem)] min-w-0 overflow-hidden";
 const TOAST_HEADER_CLASSNAME = "flex min-w-0 max-w-full items-start";
-const MULTILINE_TEXT_CLASSNAME =
+const SINGLE_LINE_TITLE_CLASSNAME =
+  "!max-w-full min-w-0 flex-1 truncate !whitespace-nowrap !leading-5";
+const DESCRIPTION_TEXT_CLASSNAME =
   "!max-w-full min-w-0 !whitespace-pre-line break-words [overflow-wrap:anywhere] !leading-5";
+const MAX_TOAST_TITLE_CHARACTERS = 48;
 
 const mergeClassName = (baseClassName: string, className?: string) =>
   [baseClassName, className].filter(Boolean).join(" ");
@@ -34,11 +37,12 @@ const mergeToastClassNames = (classNames?: ToastClassNames): ToastClassNames => 
   wrapper: mergeClassName(TOAST_WRAPPER_CLASSNAME, classNames?.wrapper),
   content: mergeClassName(TOAST_CONTENT_CLASSNAME, classNames?.content),
   header: mergeClassName(TOAST_HEADER_CLASSNAME, classNames?.header),
-  title: mergeClassName(MULTILINE_TEXT_CLASSNAME, classNames?.title),
-  description: mergeClassName(MULTILINE_TEXT_CLASSNAME, classNames?.description),
+  title: mergeClassName(SINGLE_LINE_TITLE_CLASSNAME, classNames?.title),
+  description: mergeClassName(DESCRIPTION_TEXT_CLASSNAME, classNames?.description),
 });
 
-const shouldUseDescriptionBody = (message: string) => message.includes("\n") || message.length > 80;
+const shouldUseDescriptionBody = (message: string) =>
+  message.includes("\n") || message.length > MAX_TOAST_TITLE_CHARACTERS;
 
 interface ToastContextState {
   notify: (input: {

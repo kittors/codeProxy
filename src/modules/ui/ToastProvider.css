@@ -20,11 +20,17 @@
 .goey-description {
   max-width: 100%;
   min-width: 0;
-  white-space: pre-line !important;
-  overflow-wrap: anywhere;
-  word-break: break-word;
 }
 
 .goey-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap !important;
   line-height: 1.35 !important;
+}
+
+.goey-description {
+  white-space: pre-line !important;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
