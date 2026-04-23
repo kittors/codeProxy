@@ -481,6 +481,14 @@ function revokeUploadPreviewUrl(url: string) {
   }
 }
 
+function formatGenerationElapsed(ms: number | null): string | null {
+  if (ms === null) return null;
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}
+
 function ImageGenerationTestModal({
   open,
   onClose,
@@ -503,8 +511,12 @@ function ImageGenerationTestModal({
   const [previewOpen, setPreviewOpen] = useState(false);
   const [uploadPreviewOpen, setUploadPreviewOpen] = useState(false);
   const [uploadPreviewIndex, setUploadPreviewIndex] = useState(0);
+  const [generationElapsedMs, setGenerationElapsedMs] = useState<number | null>(
+    null,
+  );
   const uploadedImagesRef = useRef<UploadedImage[]>([]);
   const resultSwipeRef = useRef<{ x: number; y: number } | null>(null);
+  const generationStartedAtRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -524,6 +536,8 @@ function ImageGenerationTestModal({
     setPreviewOpen(false);
     setUploadPreviewOpen(false);
     setUploadPreviewIndex(0);
+    setGenerationElapsedMs(null);
+    generationStartedAtRef.current = null;
   }, [open]);
 
   useEffect(() => {
@@ -552,6 +566,19 @@ function ImageGenerationTestModal({
       });
     }, GENERATION_STATUS_INTERVAL_MS);
 
+    return () => window.clearInterval(id);
+  }, [submitting]);
+
+  useEffect(() => {
+    if (!submitting || generationStartedAtRef.current === null) return;
+
+    const updateElapsed = () => {
+      if (generationStartedAtRef.current === null) return;
+      setGenerationElapsedMs(Date.now() - generationStartedAtRef.current);
+    };
+
+    updateElapsed();
+    const id = window.setInterval(updateElapsed, 1000);
     return () => window.clearInterval(id);
   }, [submitting]);
 
@@ -619,6 +646,8 @@ function ImageGenerationTestModal({
     const trimmedPrompt = prompt.trim();
     if (!trimmedPrompt || submitting) return;
 
+    generationStartedAtRef.current = Date.now();
+    setGenerationElapsedMs(0);
     setSubmitting(true);
     setImages([]);
     setActiveImageIndex(0);
@@ -670,6 +699,9 @@ function ImageGenerationTestModal({
           : t("image_generation.test_failed_generic"),
       );
     } finally {
+      if (generationStartedAtRef.current !== null) {
+        setGenerationElapsedMs(Date.now() - generationStartedAtRef.current);
+      }
       setSubmitting(false);
     }
   };
@@ -690,6 +722,7 @@ function ImageGenerationTestModal({
   const statusText = t(GENERATION_STATUS_KEYS[statusIndex]);
   const showGeneratingState = submitting && !activeImage && !errorMessage;
   const showIdleCanvas = !submitting && !activeImage && !errorMessage;
+  const generationElapsedLabel = formatGenerationElapsed(generationElapsedMs);
 
   return (
     <>
@@ -762,6 +795,16 @@ function ImageGenerationTestModal({
             className={stageClassName}
             aria-live="polite"
           >
+            {generationElapsedLabel ? (
+              <div
+                className={[
+                  "absolute top-3 z-20 rounded-full border border-white/45 bg-white/80 px-2.5 py-1 text-xs font-semibold tabular-nums text-slate-700 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-neutral-950/65 dark:text-white/82",
+                  activeImage ? "left-3" : "right-3",
+                ].join(" ")}
+              >
+                {generationElapsedLabel}
+              </div>
+            ) : null}
             {showGeneratingState ? (
               <>
                 <div className="image-generation-dots-layer" />

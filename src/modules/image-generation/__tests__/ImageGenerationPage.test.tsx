@@ -239,6 +239,7 @@ describe("ImageGenerationPage", () => {
     });
 
     expect(within(dialog).getByText("正在打草稿")).toBeInTheDocument();
+    expect(within(dialog).getByText("00:00")).toBeInTheDocument();
     expect(within(dialog).getByTestId("image-generation-stage")).toHaveClass(
       "bg-slate-50",
     );
@@ -248,6 +249,11 @@ describe("ImageGenerationPage", () => {
     expect(
       dialog.querySelectorAll(".image-generation-flow-layer"),
     ).toHaveLength(1);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1000);
+    });
+    expect(within(dialog).getByText("00:01")).toBeInTheDocument();
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(1800);
@@ -270,8 +276,6 @@ describe("ImageGenerationPage", () => {
     expect(within(dialog).getByText("开始生成")).toBeInTheDocument();
     expect(within(dialog).queryByText("正在打草稿")).not.toBeInTheDocument();
 
-    vi.useRealTimers();
-
     await act(async () => {
       deferred.resolve({
         created: 1,
@@ -287,6 +291,7 @@ describe("ImageGenerationPage", () => {
         ],
       });
     });
+    vi.useRealTimers();
 
     const image = await within(dialog).findByRole("img", {
       name: /gpt-image-2 预览/i,
@@ -295,6 +300,7 @@ describe("ImageGenerationPage", () => {
     expect(
       within(dialog).getByTestId("image-generation-counter"),
     ).toHaveTextContent("1/2");
+    expect(within(dialog).getByText("00:10")).toBeInTheDocument();
     expect(
       within(dialog).getByTestId("image-generation-carousel-track"),
     ).toHaveStyle({ transform: "translateX(0%)" });
@@ -355,7 +361,8 @@ describe("ImageGenerationPage", () => {
   });
 
   test("greys the preview area and shows the error message inside the modal when generation fails", async () => {
-    imageGenerationTestMock().mockRejectedValue(new Error("上游图片生成失败"));
+    const deferred = createDeferred<never>();
+    imageGenerationTestMock().mockReturnValue(deferred.promise);
 
     renderPage();
 
@@ -367,11 +374,24 @@ describe("ImageGenerationPage", () => {
       within(dialog).getByPlaceholderText(/输入提示词/i),
       "画一只狐狸",
     );
-    await userEvent.click(within(dialog).getByRole("button", { name: "发送" }));
+    vi.useFakeTimers();
+    await act(async () => {
+      fireEvent.click(within(dialog).getByRole("button", { name: "发送" }));
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2000);
+    });
+    expect(within(dialog).getByText("00:02")).toBeInTheDocument();
+
+    await act(async () => {
+      deferred.reject(new Error("上游图片生成失败"));
+    });
+    vi.useRealTimers();
 
     expect(
       await within(dialog).findByText("上游图片生成失败"),
     ).toBeInTheDocument();
+    expect(within(dialog).getByText("00:02")).toBeInTheDocument();
     expect(within(dialog).getByTestId("image-generation-preview")).toHaveClass(
       "bg-slate-100",
     );
