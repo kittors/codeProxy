@@ -1,6 +1,6 @@
 import { apiClient } from "@/lib/http/client";
 
-const IMAGE_GENERATION_TEST_TIMEOUT_MS = 6 * 60 * 1000;
+const IMAGE_GENERATION_TASK_POLL_TIMEOUT_MS = 10 * 1000;
 
 export interface ImageGenerationTestRequest {
   mode?: "generations";
@@ -31,8 +31,38 @@ export interface ImageGenerationTestResponse {
   data?: ImageGenerationResultItem[];
 }
 
+export type ImageGenerationTestTaskStatus =
+  | "queued"
+  | "running"
+  | "succeeded"
+  | "failed";
+
+export interface ImageGenerationTestTaskStartResponse {
+  task_id: string;
+  status: ImageGenerationTestTaskStatus;
+  phase?: string;
+  elapsed_ms?: number;
+}
+
+export interface ImageGenerationTestTaskResponse
+  extends ImageGenerationTestTaskStartResponse {
+  result?: ImageGenerationTestResponse;
+  error?: {
+    status?: number;
+    body?: {
+      error?: {
+        message?: string;
+        type?: string;
+        upstream?: unknown;
+      };
+    };
+  };
+}
+
 export const imageGenerationApi = {
-  test: (payload: ImageGenerationTestRequest | ImageEditTestRequest): Promise<ImageGenerationTestResponse> => {
+  startTestTask: (
+    payload: ImageGenerationTestRequest | ImageEditTestRequest,
+  ): Promise<ImageGenerationTestTaskStartResponse> => {
     if (payload.mode === "edits") {
       const formData = new FormData();
       formData.set("model", payload.model);
@@ -41,13 +71,24 @@ export const imageGenerationApi = {
       if (payload.quality) formData.set("quality", payload.quality);
       if (payload.n) formData.set("n", String(payload.n));
       payload.images.forEach((image) => formData.append("image", image));
-      return apiClient.postForm<ImageGenerationTestResponse>("/image-generation/test", formData, {
-        timeoutMs: IMAGE_GENERATION_TEST_TIMEOUT_MS,
-      });
+      return apiClient.postForm<ImageGenerationTestTaskStartResponse>(
+        "/image-generation/test",
+        formData,
+      );
     }
     const { mode: _mode, ...body } = payload;
-    return apiClient.post<ImageGenerationTestResponse>("/image-generation/test", body, {
-      timeoutMs: IMAGE_GENERATION_TEST_TIMEOUT_MS,
-    });
+    return apiClient.post<ImageGenerationTestTaskStartResponse>(
+      "/image-generation/test",
+      body,
+    );
+  },
+
+  getTestTask: (taskId: string): Promise<ImageGenerationTestTaskResponse> => {
+    return apiClient.get<ImageGenerationTestTaskResponse>(
+      `/image-generation/test/${encodeURIComponent(taskId)}`,
+      {
+        timeoutMs: IMAGE_GENERATION_TASK_POLL_TIMEOUT_MS,
+      },
+    );
   },
 };

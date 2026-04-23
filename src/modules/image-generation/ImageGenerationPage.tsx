@@ -29,6 +29,19 @@ const GENERATION_STATUS_KEYS = [
   "image_generation.generation_status_starting",
 ] as const;
 const GENERATION_STATUS_INTERVAL_MS = 1800;
+const IMAGE_GENERATION_TASK_POLL_INTERVAL_MS = 1200;
+const IMAGE_GENERATION_PHASE_STATUS_INDEX: Record<string, number> = {
+  queued: 0,
+  bootstrap: 0,
+  chat_requirements: 0,
+  conversation_init: 0,
+  conversation_prepare: 0,
+  conversation_request: 1,
+  conversation_stream: 1,
+  conversation_poll: 2,
+  image_download: 3,
+  completed: 3,
+};
 const SIZE_OPTIONS = [
   "1024x1024",
   "1792x1024",
@@ -489,6 +502,26 @@ function formatGenerationElapsed(ms: number | null): string | null {
   return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 }
 
+function wait(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
+}
+
+function extractImageGenerationTaskError(error: unknown): string | null {
+  if (!error || typeof error !== "object") return null;
+  const body =
+    "body" in error && error.body && typeof error.body === "object"
+      ? (error.body as Record<string, unknown>)
+      : null;
+  const nested =
+    body?.error && typeof body.error === "object" && !Array.isArray(body.error)
+      ? (body.error as Record<string, unknown>)
+      : null;
+  const message = nested?.message;
+  return typeof message === "string" && message.trim() ? message.trim() : null;
+}
+
 function ImageGenerationTestModal({
   open,
   onClose,
@@ -517,9 +550,11 @@ function ImageGenerationTestModal({
   const uploadedImagesRef = useRef<UploadedImage[]>([]);
   const resultSwipeRef = useRef<{ x: number; y: number } | null>(null);
   const generationStartedAtRef = useRef<number | null>(null);
+  const generationSessionRef = useRef(0);
 
   useEffect(() => {
     if (!open) return;
+    generationSessionRef.current += 1;
     setPrompt("");
     setSize("1024x1024");
     setQuality("medium");
@@ -646,6 +681,8 @@ function ImageGenerationTestModal({
     const trimmedPrompt = prompt.trim();
     if (!trimmedPrompt || submitting) return;
 
+    const sessionId = generationSessionRef.current + 1;
+    generationSessionRef.current = sessionId;
     generationStartedAtRef.current = Date.now();
     setGenerationElapsedMs(0);
     setSubmitting(true);
@@ -655,9 +692,9 @@ function ImageGenerationTestModal({
     setPreviewOpen(false);
 
     try {
-      const response =
+      const startTask =
         requestMode === "edits"
-          ? await imageGenerationApi.test({
+          ? await imageGenerationApi.startTestTask({
               mode: "edits",
               model: GPT_IMAGE_MODEL,
               prompt: trimmedPrompt,
@@ -666,7 +703,7 @@ function ImageGenerationTestModal({
               n: count,
               images: uploadedImages.map((item) => item.file),
             })
-          : await imageGenerationApi.test({
+          : await imageGenerationApi.startTestTask({
               mode: "generations",
               model: GPT_IMAGE_MODEL,
               prompt: trimmedPrompt,
@@ -674,31 +711,67 @@ function ImageGenerationTestModal({
               quality,
               n: count,
             });
-
-      const nextImages = (response.data ?? [])
-        .map<GeneratedImage | null>((item) => {
-          const b64Json = item.b64_json?.trim() ?? "";
-          if (!b64Json) return null;
-          return {
-            src: `data:image/png;base64,${b64Json}`,
-            revisedPrompt: item.revised_prompt?.trim() || undefined,
-          };
-        })
-        .filter((item): item is GeneratedImage => item !== null);
-
-      if (nextImages.length === 0) {
-        throw new Error(t("image_generation.test_empty_result"));
+      if (generationSessionRef.current !== sessionId) return;
+      if (!startTask.task_id) {
+        throw new Error(t("image_generation.test_failed_generic"));
       }
 
-      setImages(nextImages);
-      setActiveImageIndex(0);
+      let task = await imageGenerationApi.getTestTask(startTask.task_id);
+      while (generationSessionRef.current === sessionId) {
+        const phaseIndex =
+          task.phase && task.phase in IMAGE_GENERATION_PHASE_STATUS_INDEX
+            ? IMAGE_GENERATION_PHASE_STATUS_INDEX[task.phase]
+            : null;
+        if (phaseIndex !== null) {
+          setStatusIndex((current) => Math.max(current, phaseIndex));
+        }
+
+        if (task.status === "succeeded") {
+          if (!task.result) {
+            throw new Error(t("image_generation.test_empty_result"));
+          }
+          const response = task.result;
+
+          const nextImages = (response.data ?? [])
+            .map<GeneratedImage | null>((item) => {
+              const b64Json = item.b64_json?.trim() ?? "";
+              if (!b64Json) return null;
+              return {
+                src: `data:image/png;base64,${b64Json}`,
+                revisedPrompt: item.revised_prompt?.trim() || undefined,
+              };
+            })
+            .filter((item): item is GeneratedImage => item !== null);
+
+          if (nextImages.length === 0) {
+            throw new Error(t("image_generation.test_empty_result"));
+          }
+
+          setImages(nextImages);
+          setActiveImageIndex(0);
+          return;
+        }
+
+        if (task.status === "failed") {
+          throw new Error(
+            extractImageGenerationTaskError(task.error) ??
+              t("image_generation.test_failed_generic"),
+          );
+        }
+
+        await wait(IMAGE_GENERATION_TASK_POLL_INTERVAL_MS);
+        if (generationSessionRef.current !== sessionId) return;
+        task = await imageGenerationApi.getTestTask(startTask.task_id);
+      }
     } catch (error) {
+      if (generationSessionRef.current !== sessionId) return;
       setErrorMessage(
         error instanceof Error
           ? error.message
           : t("image_generation.test_failed_generic"),
       );
     } finally {
+      if (generationSessionRef.current !== sessionId) return;
       if (generationStartedAtRef.current !== null) {
         setGenerationElapsedMs(Date.now() - generationStartedAtRef.current);
       }

@@ -10,8 +10,10 @@ import { ToastProvider } from "@/modules/ui/ToastProvider";
 
 const authFilesListMock = () =>
   authFilesApi.list as unknown as ReturnType<typeof vi.fn>;
-const imageGenerationTestMock = () =>
-  imageGenerationApi.test as unknown as ReturnType<typeof vi.fn>;
+const imageGenerationStartTaskMock = () =>
+  imageGenerationApi.startTestTask as unknown as ReturnType<typeof vi.fn>;
+const imageGenerationGetTaskMock = () =>
+  imageGenerationApi.getTestTask as unknown as ReturnType<typeof vi.fn>;
 
 function createDeferred<T>() {
   let resolve!: (value: T) => void;
@@ -39,7 +41,8 @@ describe("ImageGenerationPage", () => {
   beforeEach(async () => {
     await i18n.changeLanguage("zh-CN");
     vi.spyOn(authFilesApi, "list");
-    vi.spyOn(imageGenerationApi, "test");
+    vi.spyOn(imageGenerationApi, "startTestTask");
+    vi.spyOn(imageGenerationApi, "getTestTask");
     authFilesListMock().mockResolvedValue({
       files: [
         {
@@ -143,10 +146,20 @@ describe("ImageGenerationPage", () => {
   test("opens the redesigned modal without mode tabs and uses options plus a round send button", async () => {
     const user = userEvent.setup();
     const deferred = createDeferred<{
-      created: number;
-      data: Array<{ b64_json: string; revised_prompt: string }>;
+      task_id: string;
+      status: "succeeded";
+      phase: string;
+      result: {
+        created: number;
+        data: Array<{ b64_json: string; revised_prompt: string }>;
+      };
     }>();
-    imageGenerationTestMock().mockReturnValue(deferred.promise);
+    imageGenerationStartTaskMock().mockResolvedValue({
+      task_id: "task-1",
+      status: "queued",
+      phase: "queued",
+    });
+    imageGenerationGetTaskMock().mockReturnValue(deferred.promise);
 
     renderPage();
 
@@ -229,7 +242,7 @@ describe("ImageGenerationPage", () => {
       fireEvent.click(within(dialog).getByRole("button", { name: "发送" }));
     });
 
-    expect(imageGenerationTestMock()).toHaveBeenCalledWith({
+    expect(imageGenerationStartTaskMock()).toHaveBeenCalledWith({
       mode: "generations",
       model: "gpt-image-2",
       prompt: "画一只狐狸",
@@ -278,17 +291,22 @@ describe("ImageGenerationPage", () => {
 
     await act(async () => {
       deferred.resolve({
-        created: 1,
-        data: [
-          {
-            b64_json: "aGVsbG8=",
-            revised_prompt: "修订提示词",
-          },
-          {
-            b64_json: "d29ybGQ=",
-            revised_prompt: "第二张",
-          },
-        ],
+        task_id: "task-1",
+        status: "succeeded",
+        phase: "completed",
+        result: {
+          created: 1,
+          data: [
+            {
+              b64_json: "aGVsbG8=",
+              revised_prompt: "修订提示词",
+            },
+            {
+              b64_json: "d29ybGQ=",
+              revised_prompt: "第二张",
+            },
+          ],
+        },
       });
     });
     vi.useRealTimers();
@@ -361,8 +379,22 @@ describe("ImageGenerationPage", () => {
   });
 
   test("greys the preview area and shows the error message inside the modal when generation fails", async () => {
-    const deferred = createDeferred<never>();
-    imageGenerationTestMock().mockReturnValue(deferred.promise);
+    const deferred = createDeferred<{
+      task_id: string;
+      status: "failed";
+      error: {
+        body: {
+          error: {
+            message: string;
+          };
+        };
+      };
+    }>();
+    imageGenerationStartTaskMock().mockResolvedValue({
+      task_id: "task-1",
+      status: "queued",
+    });
+    imageGenerationGetTaskMock().mockReturnValue(deferred.promise);
 
     renderPage();
 
@@ -384,7 +416,17 @@ describe("ImageGenerationPage", () => {
     expect(within(dialog).getByText("00:02")).toBeInTheDocument();
 
     await act(async () => {
-      deferred.reject(new Error("上游图片生成失败"));
+      deferred.resolve({
+        task_id: "task-1",
+        status: "failed",
+        error: {
+          body: {
+            error: {
+              message: "上游图片生成失败",
+            },
+          },
+        },
+      });
     });
     vi.useRealTimers();
 
