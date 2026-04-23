@@ -2858,8 +2858,9 @@
   },
   "error_detail": {
     "upstream_error": "Error response from upstream API",
+    "historical_missing": "This historical request did not record any upstream error response",
     "full_response": "Full Response",
-    "no_content": "No error content recorded",
+    "no_content": "This historical log did not record any upstream error response, so the original upstream failure cannot be reconstructed. New failed logs will store the actual error details.",
     "load_failed": "Load failed",
     "request_failed": "Request failed"
   },

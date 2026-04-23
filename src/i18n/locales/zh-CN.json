@@ -3007,8 +3007,9 @@
   },
   "error_detail": {
     "upstream_error": "上游 API 错误响应",
+    "historical_missing": "该历史请求未记录上游错误响应内容",
     "full_response": "完整响应",
-    "no_content": "无错误内容记录",
+    "no_content": "该历史日志没有记录上游错误响应内容，无法还原真实上游报错。新版本会在失败日志中记录实际错误详情。",
     "load_failed": "加载失败",
     "request_failed": "请求失败"
   },
