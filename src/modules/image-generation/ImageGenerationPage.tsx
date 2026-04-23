@@ -10,6 +10,13 @@ import { Modal } from "@/modules/ui/Modal";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/modules/ui/Tabs";
 
 const GPT_IMAGE_MODEL = "gpt-image-2";
+const GENERATION_STATUS_KEYS = [
+  "image_generation.generation_status_drafting",
+  "image_generation.generation_status_creating",
+  "image_generation.generation_status_refining",
+  "image_generation.generation_status_starting",
+] as const;
+const GENERATION_STATUS_INTERVAL_MS = 1800;
 
 const isCodexOauthFile = (file: AuthFileItem): boolean => {
   const accountType = String(file.account_type ?? "")
@@ -151,6 +158,7 @@ function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: (
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const [revisedPrompt, setRevisedPrompt] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [statusIndex, setStatusIndex] = useState(0);
   const [previewOpen, setPreviewOpen] = useState(false);
 
   useEffect(() => {
@@ -160,8 +168,26 @@ function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: (
     setImageSrc(null);
     setRevisedPrompt("");
     setErrorMessage("");
+    setStatusIndex(0);
     setPreviewOpen(false);
   }, [open]);
+
+  useEffect(() => {
+    if (!submitting) return;
+
+    setStatusIndex(0);
+    const id = window.setInterval(() => {
+      setStatusIndex((current) => {
+        if (current >= GENERATION_STATUS_KEYS.length - 1) {
+          window.clearInterval(id);
+          return current;
+        }
+        return current + 1;
+      });
+    }, GENERATION_STATUS_INTERVAL_MS);
+
+    return () => window.clearInterval(id);
+  }, [submitting]);
 
   const handleGenerate = async () => {
     const trimmedPrompt = prompt.trim();
@@ -201,7 +227,7 @@ function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: (
         ? "border-slate-200 bg-slate-100 dark:border-neutral-800 dark:bg-black"
         : "border-slate-200 bg-slate-50 text-slate-500 dark:border-neutral-800 dark:bg-neutral-900 dark:text-white/55",
   ].join(" ");
-  const statusText = t("image_generation.generation_status_generating");
+  const statusText = t(GENERATION_STATUS_KEYS[statusIndex]);
   const showGeneratingState = submitting && !imageSrc && !errorMessage;
   const showIdleCanvas = !submitting && !imageSrc && !errorMessage;
 
@@ -241,18 +267,22 @@ function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: (
                   data-testid="image-generation-result-scroll"
                   className="relative z-10 h-full w-full overflow-auto"
                 >
-                  <div className="inline-flex min-h-full min-w-full items-center justify-center p-3 sm:p-4">
+                  <div className="min-h-full w-full p-3 sm:p-4">
                     <img
                       src={imageSrc}
                       alt={t("image_generation.preview_alt", { model: GPT_IMAGE_MODEL })}
-                      className="block h-auto w-auto max-w-none cursor-zoom-in"
+                      className="block h-auto w-full cursor-zoom-in"
                       onClick={() => setPreviewOpen(true)}
                     />
                   </div>
                 </div>
-                <span className="pointer-events-none absolute right-3 bottom-3 rounded-full bg-black/55 px-3 py-1 text-xs font-medium text-white/85 backdrop-blur">
+                <button
+                  type="button"
+                  onClick={() => setPreviewOpen(true)}
+                  className="absolute right-3 bottom-3 z-20 rounded-full bg-black/60 px-3 py-1 text-xs font-medium text-white/90 shadow-sm backdrop-blur transition-colors hover:bg-black/75 hover:text-white"
+                >
                   {t("image_generation.open_preview")}
-                </span>
+                </button>
               </>
             ) : (
               <div
@@ -380,7 +410,7 @@ function ImagePreviewOverlay({
       aria-modal="true"
       aria-label={title}
       data-variant="image-only"
-      className="fixed inset-0 z-[220] bg-slate-950/88 backdrop-blur-sm"
+      className="fixed inset-0 z-[220] bg-slate-900/40 backdrop-blur-sm dark:bg-black/50"
     >
       <div className="absolute top-4 right-4 z-20 sm:top-5 sm:right-5">
         <button

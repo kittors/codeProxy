@@ -1768,7 +1768,6 @@
     "idle_hint": "输入提示词后开始生成图片",
     "preview_placeholder": "准备创建图片",
     "generating_subtitle": "请保持弹窗打开，生成完成后会自动替换为最新图片。",
-    "generation_status_generating": "正在生成",
     "generation_status_creating": "正在生成图片",
     "generation_status_drafting": "正在打草稿",
     "generation_status_starting": "开始生成",

@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
@@ -112,29 +112,54 @@ describe("ImageGenerationPage", () => {
     expect(dialog.querySelector(".image-generation-dots-layer")).not.toBeInTheDocument();
 
     await user.type(within(dialog).getByPlaceholderText(/输入提示词/i), "画一只狐狸");
-    await user.click(within(dialog).getByRole("button", { name: /生成图片/i }));
-
-    await waitFor(() => {
-      expect(imageGenerationTestMock()).toHaveBeenCalledWith({
-        model: "gpt-image-2",
-        prompt: "画一只狐狸",
-      });
+    vi.useFakeTimers();
+    await act(async () => {
+      fireEvent.click(within(dialog).getByRole("button", { name: /生成图片/i }));
     });
 
-    expect(within(dialog).getByText("正在生成")).toBeInTheDocument();
-    expect(within(dialog).queryByText("正在打草稿")).not.toBeInTheDocument();
+    expect(imageGenerationTestMock()).toHaveBeenCalledWith({
+      model: "gpt-image-2",
+      prompt: "画一只狐狸",
+    });
+
+    expect(within(dialog).getByText("正在打草稿")).toBeInTheDocument();
     expect(within(dialog).getByTestId("image-generation-stage")).toHaveClass("bg-slate-50");
     expect(dialog.querySelectorAll(".image-generation-dots-layer")).toHaveLength(1);
     expect(dialog.querySelectorAll(".image-generation-flow-layer")).toHaveLength(1);
 
-    deferred.resolve({
-      created: 1,
-      data: [
-        {
-          b64_json: "aGVsbG8=",
-          revised_prompt: "修订提示词",
-        },
-      ],
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1800);
+    });
+    expect(within(dialog).getByText("正在生成图片")).toBeInTheDocument();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1800);
+    });
+    expect(within(dialog).getByText("正在细化细节")).toBeInTheDocument();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1800);
+    });
+    expect(within(dialog).getByText("开始生成")).toBeInTheDocument();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3600);
+    });
+    expect(within(dialog).getByText("开始生成")).toBeInTheDocument();
+    expect(within(dialog).queryByText("正在打草稿")).not.toBeInTheDocument();
+
+    vi.useRealTimers();
+
+    await act(async () => {
+      deferred.resolve({
+        created: 1,
+        data: [
+          {
+            b64_json: "aGVsbG8=",
+            revised_prompt: "修订提示词",
+          },
+        ],
+      });
     });
 
     const image = await within(dialog).findByRole("img", { name: /gpt-image-2 预览/i });
@@ -143,8 +168,9 @@ describe("ImageGenerationPage", () => {
       "data:image/png;base64,aGVsbG8=",
     );
     expect(within(dialog).getByTestId("image-generation-result-scroll")).toHaveClass("overflow-auto");
-    expect(image).toHaveClass("max-w-none");
+    expect(image).toHaveClass("w-full");
     expect(within(dialog).getByText("修订提示词")).toBeInTheDocument();
+    expect(within(dialog).getByRole("button", { name: "点击预览" })).toBeVisible();
 
     await user.click(image);
     const preview = await screen.findByRole("dialog", { name: "图片预览" });

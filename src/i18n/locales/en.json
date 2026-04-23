@@ -1753,7 +1753,6 @@
     "idle_hint": "Enter a prompt to start generating an image",
     "preview_placeholder": "Ready to create an image",
     "generating_subtitle": "Keep this modal open. The latest image will replace this area when ready.",
-    "generation_status_generating": "Generating",
     "generation_status_creating": "Generating image",
     "generation_status_drafting": "Drafting composition",
     "generation_status_starting": "Starting generation",
