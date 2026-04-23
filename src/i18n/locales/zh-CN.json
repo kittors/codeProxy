@@ -1754,7 +1754,7 @@
   },
   "image_generation": {
     "title": "生图模型",
-    "description": "查看 gpt-image-2 的文生图与图生图调用方式，并通过测试弹窗验证图片生成链路。",
+    "description": "查看 gpt-image-2 的文生图调用方式，并通过测试弹窗验证图片生成链路。",
     "call_title": "调用方式",
     "call_description": "使用 API Keys 页面配置的 API Key 调用对应图片接口；服务会自动轮询可用的 Codex OAuth 渠道。",
     "base_url_label": "BaseURL",

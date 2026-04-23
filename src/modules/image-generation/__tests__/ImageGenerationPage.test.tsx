@@ -68,8 +68,7 @@ describe("ImageGenerationPage", () => {
     vi.useRealTimers();
   });
 
-  test("renders text-to-image and image-to-image call docs with structured endpoint tables", async () => {
-    const user = userEvent.setup();
+  test("renders text-to-image call docs with structured endpoint tables", async () => {
     renderPage();
 
     expect(
@@ -81,7 +80,9 @@ describe("ImageGenerationPage", () => {
     const callCard = screen.getByText("调用方式").closest("section");
     expect(callCard).not.toBeNull();
     expect(screen.getByRole("tab", { name: "文生图" })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "图生图" })).toBeInTheDocument();
+    expect(
+      screen.queryByRole("tab", { name: "图生图" }),
+    ).not.toBeInTheDocument();
     expect(
       within(callCard as HTMLElement).getByText("POST"),
     ).toBeInTheDocument();
@@ -119,17 +120,9 @@ describe("ImageGenerationPage", () => {
     expect(screen.getByText("n")).toBeInTheDocument();
     expect(screen.getByText(/"size": "1024x1024"/)).toBeInTheDocument();
     expect(screen.getByText(/"quality": "high"/)).toBeInTheDocument();
-
-    await user.click(screen.getByRole("tab", { name: "图生图" }));
-    expect(screen.getByText("/v1/images/edits")).toBeInTheDocument();
-    expect(screen.getByText("image")).toBeInTheDocument();
-    expect(screen.getByText("multipart/form-data")).toBeInTheDocument();
     expect(screen.queryByText("BaseURL")).not.toBeInTheDocument();
     expect(
       screen.getByText(/Authorization: Bearer YOUR_API_KEY/),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText(/-F "image=@\/path\/to\/image.png"/),
     ).toBeInTheDocument();
     expect(
       within(callCard as HTMLElement).getByRole("button", { name: "测试生成" }),
@@ -193,11 +186,11 @@ describe("ImageGenerationPage", () => {
     expect(
       within(dialog).getByRole("combobox", { name: "生成数量" }),
     ).toBeInTheDocument();
-    expect(within(dialog).getByLabelText("上传图片")).toBeInTheDocument();
+    expect(within(dialog).queryByLabelText("上传图片")).not.toBeInTheDocument();
     expect(within(dialog).getByRole("button", { name: "发送" })).toBeVisible();
     expect(
-      within(dialog).getByTestId("image-generation-upload-trigger"),
-    ).toHaveClass("bottom-2", "left-2", "h-7", "w-7");
+      within(dialog).queryByTestId("image-generation-upload-trigger"),
+    ).not.toBeInTheDocument();
     expect(
       within(dialog).getByTestId("image-generation-send-button"),
     ).toHaveClass("right-2", "bottom-2", "h-7", "w-7");
@@ -334,12 +327,8 @@ describe("ImageGenerationPage", () => {
     ).toHaveClass("max-w-none");
   });
 
-  test("shows uploaded images inside the composer and automatically sends image-to-image requests", async () => {
+  test("hides image edit upload controls while edits are temporarily disabled", async () => {
     const user = userEvent.setup();
-    imageGenerationTestMock().mockResolvedValue({
-      created: 1,
-      data: [{ b64_json: "aGVsbG8=", revised_prompt: "图生图结果" }],
-    });
 
     renderPage();
 
@@ -347,106 +336,16 @@ describe("ImageGenerationPage", () => {
     await user.click(screen.getByRole("button", { name: "测试生成" }));
 
     const dialog = await screen.findByRole("dialog", { name: "测试生成" });
+    expect(within(dialog).queryByLabelText("上传图片")).not.toBeInTheDocument();
     expect(
-      within(dialog).queryByRole("tab", { name: "图生图" }),
+      within(dialog).queryByTestId("image-generation-upload-trigger"),
     ).not.toBeInTheDocument();
-
-    const files = [
-      new File(["a"], "1.png", { type: "image/png" }),
-      new File(["b"], "2.png", { type: "image/png" }),
-      new File(["c"], "3.png", { type: "image/png" }),
-      new File(["d"], "4.png", { type: "image/png" }),
-      new File(["e"], "5.png", { type: "image/png" }),
-      new File(["f"], "6.png", { type: "image/png" }),
-    ];
-    const composer = within(dialog).getByTestId("image-generation-composer");
-    const composerScope = within(composer);
-    await user.upload(composerScope.getByLabelText("上传图片"), files);
     expect(
-      composerScope.getAllByTestId("image-generation-upload-chip"),
-    ).toHaveLength(5);
-    expect(within(dialog).getByTestId("image-generation-stage")).toHaveClass(
-      "h-[clamp(220px,34vh,320px)]",
-    );
+      within(dialog).queryByTestId("image-generation-upload-strip"),
+    ).not.toBeInTheDocument();
     expect(
-      composerScope.getByTestId("image-generation-upload-strip"),
-    ).toHaveClass("absolute", "flex", "overflow-x-auto", "overflow-y-hidden");
-    expect(composerScope.queryByText("6.png")).not.toBeInTheDocument();
-    expect(composerScope.getByText("1.png")).toBeInTheDocument();
-    expect(
-      composerScope.getByRole("img", { name: "1.png" }),
-    ).toBeInTheDocument();
-    expect(
-      composerScope.getAllByTestId("image-generation-upload-chip")[0],
-    ).toHaveClass("h-10", "shrink-0", "rounded-xl", "px-2", "py-1.5");
-    expect(within(dialog).getByRole("textbox", { name: "提示词" })).toHaveClass(
-      "pt-12",
-    );
-
-    await user.click(
-      composerScope.getByRole("button", { name: "预览图片 1.png" }),
-    );
-    const uploadPreview = await screen.findByRole("dialog", {
-      name: "图片预览",
-    });
-    expect(uploadPreview).toBeInTheDocument();
-    await user.click(
-      within(uploadPreview).getByRole("button", { name: "关闭" }),
-    );
-
-    await user.click(
-      composerScope.getByRole("button", { name: "删除图片 5.png" }),
-    );
-    expect(
-      composerScope.getAllByTestId("image-generation-upload-chip"),
-    ).toHaveLength(4);
-    await user.type(
-      within(dialog).getByPlaceholderText(/输入提示词/i),
-      "改成蓝色图标",
-    );
-    await user.click(
-      within(dialog).getByRole("combobox", { name: "生成数量" }),
-    );
-    await user.click(await screen.findByRole("option", { name: "2 张" }));
-    await user.click(within(dialog).getByRole("button", { name: "发送" }));
-
-    expect(imageGenerationTestMock()).toHaveBeenCalledWith({
-      mode: "edits",
-      model: "gpt-image-2",
-      prompt: "改成蓝色图标",
-      size: "1024x1024",
-      quality: "medium",
-      n: 2,
-      images: files.slice(0, 4),
-    });
-    expect(await within(dialog).findByText("图生图结果")).toBeInTheDocument();
-    expect(
-      within(dialog).getAllByRole("img", { name: /gpt-image-2 预览/i })[0],
-    ).toBeInTheDocument();
-  });
-
-  test("keeps uploaded image chips visible after the file input is cleared", async () => {
-    const user = userEvent.setup();
-
-    renderPage();
-
-    await screen.findByRole("tab", { name: "gpt-image-2" });
-    await user.click(screen.getByRole("button", { name: "测试生成" }));
-
-    const dialog = await screen.findByRole("dialog", { name: "测试生成" });
-    const input = within(dialog).getByLabelText("上传图片") as HTMLInputElement;
-    const file = new File(["a"], "cover.png", { type: "image/png" });
-
-    await user.upload(input, file);
-
-    expect(input.value).toBe("");
-    expect(
-      within(dialog).getByTestId("image-generation-upload-chip"),
-    ).toBeInTheDocument();
-    expect(within(dialog).getByText("cover.png")).toBeInTheDocument();
-    expect(
-      within(dialog).getByRole("img", { name: "cover.png" }),
-    ).toBeInTheDocument();
+      within(dialog).getByRole("textbox", { name: "提示词" }),
+    ).not.toHaveClass("pt-12");
   });
 
   test("greys the preview area and shows the error message inside the modal when generation fails", async () => {

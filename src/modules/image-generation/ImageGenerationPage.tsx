@@ -33,6 +33,7 @@ const SIZE_OPTIONS = ["1024x1024", "1792x1024", "1024x1792"] as const;
 const QUALITY_OPTIONS = ["low", "medium", "high"] as const;
 const COUNT_OPTIONS = [1, 2, 3, 4] as const;
 const MAX_UPLOAD_IMAGES = 5;
+const IMAGE_EDITS_ENABLED = false;
 
 type ImageMode = "generations" | "edits";
 type SpecRow = {
@@ -202,6 +203,9 @@ const ENDPOINT_DOCS: EndpointDoc[] = [
     curl: imageToImageCurl,
   },
 ];
+const VISIBLE_ENDPOINT_DOCS = IMAGE_EDITS_ENABLED
+  ? ENDPOINT_DOCS
+  : ENDPOINT_DOCS.filter((doc) => doc.mode === "generations");
 
 export function ImageGenerationPage() {
   const { t } = useTranslation();
@@ -241,7 +245,8 @@ export function ImageGenerationPage() {
   const disabled = !channelsLoading && !hasCodexOauthChannel;
   const activeDoc = useMemo(
     () =>
-      ENDPOINT_DOCS.find((doc) => doc.mode === activeMode) ?? ENDPOINT_DOCS[0],
+      VISIBLE_ENDPOINT_DOCS.find((doc) => doc.mode === activeMode) ??
+      VISIBLE_ENDPOINT_DOCS[0],
     [activeMode],
   );
 
@@ -297,13 +302,13 @@ export function ImageGenerationPage() {
                     onValueChange={(value) => setActiveMode(value as ImageMode)}
                   >
                     <TabsList>
-                      {ENDPOINT_DOCS.map((doc) => (
+                      {VISIBLE_ENDPOINT_DOCS.map((doc) => (
                         <TabsTrigger key={doc.mode} value={doc.mode}>
                           {t(doc.titleKey)}
                         </TabsTrigger>
                       ))}
                     </TabsList>
-                    {ENDPOINT_DOCS.map((doc) => (
+                    {VISIBLE_ENDPOINT_DOCS.map((doc) => (
                       <TabsContent
                         key={doc.mode}
                         value={doc.mode}
@@ -546,7 +551,7 @@ function ImageGenerationTestModal({
 
   const activeImage = images[activeImageIndex] ?? null;
   const requestMode: ImageMode =
-    uploadedImages.length > 0 ? "edits" : "generations";
+    IMAGE_EDITS_ENABLED && uploadedImages.length > 0 ? "edits" : "generations";
   const canSend = Boolean(prompt.trim()) && !submitting;
   const hasMultipleResults = images.length > 1;
   const canShowPrevImage = activeImageIndex > 0;
@@ -664,7 +669,7 @@ function ImageGenerationTestModal({
   };
 
   const stageSizeClassName =
-    uploadedImages.length > 0
+    IMAGE_EDITS_ENABLED && uploadedImages.length > 0
       ? "h-[clamp(220px,34vh,320px)] sm:h-[clamp(240px,36vh,360px)]"
       : "h-[clamp(240px,42vh,400px)] sm:h-[clamp(280px,44vh,440px)]";
   const stageClassName = [
@@ -898,7 +903,7 @@ function ImageGenerationTestModal({
             data-testid="image-generation-composer"
             className="relative shrink-0 overflow-hidden rounded-[20px] border border-slate-200 bg-white px-2.5 pt-2.5 pb-11 shadow-sm dark:border-neutral-800 dark:bg-neutral-950"
           >
-            {uploadedImages.length > 0 ? (
+            {IMAGE_EDITS_ENABLED && uploadedImages.length > 0 ? (
               <div
                 data-testid="image-generation-upload-strip"
                 className="absolute top-2.5 right-2.5 left-2.5 z-10 flex gap-2 overflow-x-auto overflow-y-hidden pb-1 [scrollbar-width:thin]"
@@ -946,22 +951,24 @@ function ImageGenerationTestModal({
             <label htmlFor="image-generation-prompt" className="sr-only">
               {t("image_generation.prompt_label")}
             </label>
-            <input
-              id="image-generation-reference"
-              aria-label={t("image_generation.upload_images_label")}
-              type="file"
-              accept="image/*"
-              multiple
-              disabled={uploadedImages.length >= MAX_UPLOAD_IMAGES}
-              className="sr-only"
-              onChange={(event) => {
-                const selectedFiles = Array.from(
-                  event.currentTarget.files ?? [],
-                );
-                handleUploadImages(selectedFiles);
-                event.currentTarget.value = "";
-              }}
-            />
+            {IMAGE_EDITS_ENABLED ? (
+              <input
+                id="image-generation-reference"
+                aria-label={t("image_generation.upload_images_label")}
+                type="file"
+                accept="image/*"
+                multiple
+                disabled={uploadedImages.length >= MAX_UPLOAD_IMAGES}
+                className="sr-only"
+                onChange={(event) => {
+                  const selectedFiles = Array.from(
+                    event.currentTarget.files ?? [],
+                  );
+                  handleUploadImages(selectedFiles);
+                  event.currentTarget.value = "";
+                }}
+              />
+            ) : null}
             <textarea
               id="image-generation-prompt"
               value={prompt}
@@ -970,22 +977,26 @@ function ImageGenerationTestModal({
               rows={4}
               className={[
                 "min-h-[112px] w-full resize-none border-0 bg-transparent px-1 pr-8 pb-10 text-sm leading-6 text-slate-900 outline-none placeholder:text-slate-400 dark:text-white dark:placeholder:text-white/30",
-                uploadedImages.length > 0 ? "pt-12" : "pt-0",
+                IMAGE_EDITS_ENABLED && uploadedImages.length > 0
+                  ? "pt-12"
+                  : "pt-0",
               ].join(" ")}
             />
-            <label
-              htmlFor="image-generation-reference"
-              data-testid="image-generation-upload-trigger"
-              className={[
-                "absolute bottom-2 left-2 inline-flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-full text-slate-500 transition-colors",
-                uploadedImages.length >= MAX_UPLOAD_IMAGES
-                  ? "cursor-not-allowed opacity-40"
-                  : "hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-white/10 dark:hover:text-white",
-              ].join(" ")}
-              title={t("image_generation.upload_images_label")}
-            >
-              <Plus size={14} />
-            </label>
+            {IMAGE_EDITS_ENABLED ? (
+              <label
+                htmlFor="image-generation-reference"
+                data-testid="image-generation-upload-trigger"
+                className={[
+                  "absolute bottom-2 left-2 inline-flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-full text-slate-500 transition-colors",
+                  uploadedImages.length >= MAX_UPLOAD_IMAGES
+                    ? "cursor-not-allowed opacity-40"
+                    : "hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-white/10 dark:hover:text-white",
+                ].join(" ")}
+                title={t("image_generation.upload_images_label")}
+              >
+                <Plus size={14} />
+              </label>
+            ) : null}
             <button
               type="submit"
               disabled={!canSend}
@@ -1016,7 +1027,9 @@ function ImageGenerationTestModal({
         onClose={() => setPreviewOpen(false)}
       />
       <ImagePreviewOverlay
-        open={uploadPreviewOpen && uploadedImages.length > 0}
+        open={
+          IMAGE_EDITS_ENABLED && uploadPreviewOpen && uploadedImages.length > 0
+        }
         imageSrc={uploadedImages[uploadPreviewIndex]?.previewUrl ?? null}
         imageAlt={
           uploadedImages[uploadPreviewIndex]?.file.name ??
