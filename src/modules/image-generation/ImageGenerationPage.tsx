@@ -1,5 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowUp, Plus, X } from "lucide-react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type PointerEvent,
+} from "react";
+import { ArrowUp, ChevronLeft, ChevronRight, Plus, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { authFilesApi, imageGenerationApi } from "@/lib/http/apis";
 import type { AuthFileItem } from "@/lib/http/types";
@@ -481,6 +488,7 @@ function ImageGenerationTestModal({
   const [uploadPreviewOpen, setUploadPreviewOpen] = useState(false);
   const [uploadPreviewIndex, setUploadPreviewIndex] = useState(0);
   const uploadedImagesRef = useRef<UploadedImage[]>([]);
+  const resultSwipeRef = useRef<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -535,6 +543,29 @@ function ImageGenerationTestModal({
   const requestMode: ImageMode =
     uploadedImages.length > 0 ? "edits" : "generations";
   const canSend = Boolean(prompt.trim()) && !submitting;
+  const hasMultipleResults = images.length > 1;
+  const canShowPrevImage = activeImageIndex > 0;
+  const canShowNextImage = activeImageIndex < images.length - 1;
+
+  const showImageAt = (index: number) => {
+    setActiveImageIndex(Math.min(Math.max(index, 0), Math.max(images.length - 1, 0)));
+  };
+
+  const handleResultPointerDown = (event: PointerEvent<HTMLDivElement>) => {
+    resultSwipeRef.current = { x: event.clientX, y: event.clientY };
+  };
+
+  const handleResultPointerUp = (event: PointerEvent<HTMLDivElement>) => {
+    const start = resultSwipeRef.current;
+    resultSwipeRef.current = null;
+    if (!start || !hasMultipleResults) return;
+    const deltaX = event.clientX - start.x;
+    const deltaY = event.clientY - start.y;
+    if (Math.abs(deltaX) < 48 || Math.abs(deltaX) < Math.abs(deltaY) * 1.2) {
+      return;
+    }
+    showImageAt(activeImageIndex + (deltaX < 0 ? 1 : -1));
+  };
 
   const handleUploadImages = (files: FileList | null) => {
     if (!files || files.length === 0) return;
@@ -716,20 +747,75 @@ function ImageGenerationTestModal({
             {activeImage ? (
               <>
                 <div
-                  data-testid="image-generation-result-scroll"
-                  className="relative z-10 h-full w-full overflow-auto"
+                  className="relative z-10 h-full w-full overflow-hidden"
+                  onPointerDown={handleResultPointerDown}
+                  onPointerUp={handleResultPointerUp}
                 >
-                  <div className="min-h-full w-full p-3 sm:p-4">
-                    <img
-                      src={activeImage.src}
-                      alt={t("image_generation.preview_alt", {
-                        model: GPT_IMAGE_MODEL,
-                      })}
-                      className="block h-auto w-full cursor-zoom-in"
-                      onClick={() => setPreviewOpen(true)}
-                    />
+                  <div
+                    data-testid="image-generation-carousel-track"
+                    className="flex h-full w-full transition-transform duration-500 ease-out motion-reduce:transition-none"
+                    style={{
+                      transform: `translateX(${activeImageIndex === 0 ? 0 : -activeImageIndex * 100}%)`,
+                    }}
+                  >
+                    {images.map((image, index) => (
+                      <div
+                        key={`generated-image-${index}`}
+                        className="h-full w-full shrink-0"
+                        aria-hidden={index !== activeImageIndex}
+                      >
+                        <div
+                          data-testid={
+                            index === activeImageIndex
+                              ? "image-generation-result-scroll"
+                              : undefined
+                          }
+                          className="h-full w-full overflow-auto"
+                        >
+                          <div className="min-h-full w-full p-3 sm:p-4">
+                            <img
+                              src={image.src}
+                              alt={t("image_generation.preview_alt", {
+                                model: GPT_IMAGE_MODEL,
+                              })}
+                              className="block h-auto w-full cursor-zoom-in select-none"
+                              draggable={false}
+                              onClick={() => setPreviewOpen(true)}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
+                {hasMultipleResults ? (
+                  <>
+                    <div
+                      data-testid="image-generation-counter"
+                      className="absolute top-3 right-3 z-20 rounded-full border border-white/45 bg-white/75 px-2.5 py-1 text-xs font-semibold tabular-nums text-slate-700 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-neutral-950/60 dark:text-white/80"
+                    >
+                      {activeImageIndex + 1}/{images.length}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => showImageAt(activeImageIndex - 1)}
+                      disabled={!canShowPrevImage}
+                      aria-label={t("image_generation.prev_image")}
+                      className="absolute top-1/2 left-3 z-20 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-white/40 bg-white/75 text-slate-700 shadow-sm backdrop-blur-md transition hover:bg-white disabled:pointer-events-none disabled:opacity-35 dark:border-white/10 dark:bg-neutral-950/60 dark:text-white/80 dark:hover:bg-neutral-900/85"
+                    >
+                      <ChevronLeft size={16} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => showImageAt(activeImageIndex + 1)}
+                      disabled={!canShowNextImage}
+                      aria-label={t("image_generation.next_image")}
+                      className="absolute top-1/2 right-3 z-20 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-white/40 bg-white/75 text-slate-700 shadow-sm backdrop-blur-md transition hover:bg-white disabled:pointer-events-none disabled:opacity-35 dark:border-white/10 dark:bg-neutral-950/60 dark:text-white/80 dark:hover:bg-neutral-900/85"
+                    >
+                      <ChevronRight size={16} />
+                    </button>
+                  </>
+                ) : null}
                 <button
                   type="button"
                   onClick={() => setPreviewOpen(true)}
@@ -783,31 +869,6 @@ function ImageGenerationTestModal({
               </div>
             )}
           </div>
-
-          {images.length > 1 ? (
-            <div className="flex flex-wrap gap-2">
-              {images.map((_, index) => (
-                <button
-                  key={`image-item-${index}`}
-                  type="button"
-                  onClick={() => setActiveImageIndex(index)}
-                  className={[
-                    "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
-                    activeImageIndex === index
-                      ? "border-slate-900 bg-slate-900 text-white dark:border-white dark:bg-white dark:text-neutral-950"
-                      : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 dark:border-neutral-800 dark:bg-neutral-950 dark:text-white/70",
-                  ].join(" ")}
-                  aria-label={t("image_generation.image_index_label", {
-                    index: index + 1,
-                  })}
-                >
-                  {t("image_generation.image_index_label", {
-                    index: index + 1,
-                  })}
-                </button>
-              ))}
-            </div>
-          ) : null}
 
           {activeImage?.revisedPrompt ? (
             <div className="shrink-0 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-700 dark:border-neutral-800 dark:bg-neutral-900 dark:text-slate-200">

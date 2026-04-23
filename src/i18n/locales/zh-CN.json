@@ -1814,6 +1814,8 @@
     "generation_status_refining": "正在细化细节",
     "open_preview": "点击预览",
     "image_index_label": "第 {{index}} 张",
+    "prev_image": "上一张",
+    "next_image": "下一张",
     "image_preview_title": "图片预览",
     "revised_prompt_label": "修订后的提示词",
     "test_empty_result": "上游未返回图片结果",

@@ -1799,6 +1799,8 @@
     "generation_status_refining": "Refining details",
     "open_preview": "Click to preview",
     "image_index_label": "Image {{index}}",
+    "prev_image": "Previous image",
+    "next_image": "Next image",
     "image_preview_title": "Image Preview",
     "revised_prompt_label": "Revised Prompt",
     "test_empty_result": "Upstream did not return an image result",

@@ -271,10 +271,28 @@ describe("ImageGenerationPage", () => {
     });
     expect(image).toHaveAttribute("src", "data:image/png;base64,aGVsbG8=");
     expect(
-      within(dialog).getByRole("button", { name: "第 1 张" }),
-    ).toBeInTheDocument();
-    await user.click(within(dialog).getByRole("button", { name: "第 2 张" }));
-    expect(image).toHaveAttribute("src", "data:image/png;base64,d29ybGQ=");
+      within(dialog).getByTestId("image-generation-counter"),
+    ).toHaveTextContent("1/2");
+    expect(
+      within(dialog).getByTestId("image-generation-carousel-track"),
+    ).toHaveStyle({ transform: "translateX(0%)" });
+    expect(
+      within(dialog).getByRole("button", { name: "上一张" }),
+    ).toBeDisabled();
+    await user.click(within(dialog).getByRole("button", { name: "下一张" }));
+    const activeImageAfterNext = within(dialog).getByRole("img", {
+      name: /gpt-image-2 预览/i,
+    });
+    expect(activeImageAfterNext).toHaveAttribute(
+      "src",
+      "data:image/png;base64,d29ybGQ=",
+    );
+    expect(
+      within(dialog).getByTestId("image-generation-counter"),
+    ).toHaveTextContent("2/2");
+    expect(
+      within(dialog).getByTestId("image-generation-carousel-track"),
+    ).toHaveStyle({ transform: "translateX(-100%)" });
     expect(
       within(dialog).getByTestId("image-generation-result-scroll"),
     ).toHaveClass("overflow-auto");
@@ -370,6 +388,9 @@ describe("ImageGenerationPage", () => {
       images: files.slice(0, 4),
     });
     expect(await within(dialog).findByText("图生图结果")).toBeInTheDocument();
+    expect(
+      within(dialog).getAllByRole("img", { name: /gpt-image-2 预览/i })[0],
+    ).toBeInTheDocument();
   });
 
   test("greys the preview area and shows the error message inside the modal when generation fails", async () => {
