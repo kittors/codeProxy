@@ -189,6 +189,7 @@ export function LogContentModal({
   const [contentLoadReady, setContentLoadReady] = useState(false);
   const [displayPhase, setDisplayPhase] = useState<ContentPhase>("loading");
   const [imagePreviewOpen, setImagePreviewOpen] = useState(false);
+  const [outputImagePreviewIndex, setOutputImagePreviewIndex] = useState(0);
   const dataOpen = open && contentLoadReady;
   const {
     inputLoading,
@@ -252,6 +253,7 @@ export function LogContentModal({
   useEffect(() => {
     setOutputParsed({ status: outputContent ? "parsing" : "idle", view: null });
     setOutputRevealCount(0);
+    setOutputImagePreviewIndex(0);
   }, [outputContent]);
 
   useEffect(() => {
@@ -372,7 +374,10 @@ export function LogContentModal({
     () => (isImageGenerationLog ? parseImageGenerationOutput(outputContent) : null),
     [outputContent, isImageGenerationLog],
   );
-  const outputImagePreviewSrc = imageGenerationOutput?.images[0]?.src ?? null;
+  const outputImagePreviewSrc =
+    imageGenerationOutput?.images[outputImagePreviewIndex]?.src ??
+    imageGenerationOutput?.images[0]?.src ??
+    null;
   const activeDownloadName = useMemo(() => {
     const suffix = activeTab === "input" ? "input" : "output";
     return `${model || "request-log"}-${suffix}.png`;
@@ -512,11 +517,17 @@ export function LogContentModal({
                   src={image.src}
                   alt={t("log_content.output")}
                   className="block h-auto w-full cursor-zoom-in"
-                  onClick={() => setImagePreviewOpen(true)}
+                  onClick={() => {
+                    setOutputImagePreviewIndex(index);
+                    setImagePreviewOpen(true);
+                  }}
                 />
                 <button
                   type="button"
-                  onClick={() => setImagePreviewOpen(true)}
+                  onClick={() => {
+                    setOutputImagePreviewIndex(index);
+                    setImagePreviewOpen(true);
+                  }}
                   className="absolute right-3 bottom-3 z-20 rounded-full bg-black/60 px-3 py-1 text-xs font-medium text-white/90 shadow-sm backdrop-blur transition-colors hover:bg-black/75 hover:text-white"
                 >
                   {t("image_generation.open_preview")}
@@ -638,6 +649,13 @@ export function LogContentModal({
         imageAlt={t("log_content.output")}
         title={model ? `${t("log_content.output")} · ${model}` : t("log_content.output")}
         downloadName={activeDownloadName}
+        images={imageGenerationOutput?.images.map((image, index) => ({
+          src: image.src,
+          alt: t("log_content.output"),
+          downloadName: `${model || "request-log"}-output-${index + 1}.png`,
+        }))}
+        activeIndex={outputImagePreviewIndex}
+        onActiveIndexChange={setOutputImagePreviewIndex}
         onClose={() => setImagePreviewOpen(false)}
       />
     </ContentModal>

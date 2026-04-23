@@ -80,6 +80,11 @@ describe("ImageGenerationPage", () => {
     expect(within(callCard as HTMLElement).getByText("/v1/images/generations")).toBeInTheDocument();
     expect(screen.getByText("请求参数")).toBeInTheDocument();
     expect(screen.getByText("返回结构")).toBeInTheDocument();
+    expect(within(callCard as HTMLElement).getByText("size")).toBeInTheDocument();
+    expect(within(callCard as HTMLElement).getByText("quality")).toBeInTheDocument();
+    expect(within(callCard as HTMLElement).getByText("n")).toBeInTheDocument();
+    expect(screen.getByText(/"size": "1024x1024"/)).toBeInTheDocument();
+    expect(screen.getByText(/"quality": "high"/)).toBeInTheDocument();
 
     await user.click(screen.getByRole("tab", { name: "图生图" }));
     expect(screen.getByText("/v1/images/edits")).toBeInTheDocument();
@@ -121,9 +126,21 @@ describe("ImageGenerationPage", () => {
     expect(within(dialog).queryByText("正在生成图片")).not.toBeInTheDocument();
     expect(within(dialog).getByText("输入提示词后开始生成图片")).toBeInTheDocument();
     expect(within(dialog).getByRole("textbox", { name: "提示词" })).toBeInTheDocument();
+    expect(within(dialog).getByRole("tab", { name: "文生图" })).toBeInTheDocument();
+    expect(within(dialog).getByRole("tab", { name: "图生图" })).toBeInTheDocument();
+    expect(within(dialog).getByRole("combobox", { name: "分辨率" })).toBeInTheDocument();
+    expect(within(dialog).getByRole("combobox", { name: "质量" })).toBeInTheDocument();
+    expect(within(dialog).getByRole("combobox", { name: "生成数量" })).toBeInTheDocument();
     expect(within(dialog).getByRole("button", { name: "生成图片" })).toBeVisible();
     expect(within(dialog).getByTestId("image-generation-stage")).toHaveClass("bg-slate-50");
     expect(dialog.querySelector(".image-generation-dots-layer")).not.toBeInTheDocument();
+
+    await user.click(within(dialog).getByRole("combobox", { name: "分辨率" }));
+    await user.click(await screen.findByRole("option", { name: "1024x1792" }));
+    await user.click(within(dialog).getByRole("combobox", { name: "质量" }));
+    await user.click(await screen.findByRole("option", { name: "high" }));
+    await user.click(within(dialog).getByRole("combobox", { name: "生成数量" }));
+    await user.click(await screen.findByRole("option", { name: "2 张" }));
 
     await user.type(within(dialog).getByPlaceholderText(/输入提示词/i), "画一只狐狸");
     vi.useFakeTimers();
@@ -132,8 +149,12 @@ describe("ImageGenerationPage", () => {
     });
 
     expect(imageGenerationTestMock()).toHaveBeenCalledWith({
+      mode: "generations",
       model: "gpt-image-2",
       prompt: "画一只狐狸",
+      quality: "high",
+      size: "1024x1792",
+      n: 2,
     });
 
     expect(within(dialog).getByText("正在打草稿")).toBeInTheDocument();
@@ -172,6 +193,10 @@ describe("ImageGenerationPage", () => {
             b64_json: "aGVsbG8=",
             revised_prompt: "修订提示词",
           },
+          {
+            b64_json: "d29ybGQ=",
+            revised_prompt: "第二张",
+          },
         ],
       });
     });
@@ -181,9 +206,12 @@ describe("ImageGenerationPage", () => {
       "src",
       "data:image/png;base64,aGVsbG8=",
     );
+    expect(within(dialog).getByRole("button", { name: "第 1 张" })).toBeInTheDocument();
+    await user.click(within(dialog).getByRole("button", { name: "第 2 张" }));
+    expect(image).toHaveAttribute("src", "data:image/png;base64,d29ybGQ=");
     expect(within(dialog).getByTestId("image-generation-result-scroll")).toHaveClass("overflow-auto");
     expect(image).toHaveClass("w-full");
-    expect(within(dialog).getByText("修订提示词")).toBeInTheDocument();
+    expect(within(dialog).getByText("第二张")).toBeInTheDocument();
     expect(within(dialog).getByRole("button", { name: "点击预览" })).toBeVisible();
 
     await user.click(image);
@@ -191,6 +219,40 @@ describe("ImageGenerationPage", () => {
     expect(preview).toHaveAttribute("data-variant", "image-only");
     expect(preview).not.toHaveClass("max-w-[860px]");
     expect(within(preview).getByRole("img", { name: /gpt-image-2 预览/i })).toHaveClass("max-w-none");
+  });
+
+  test("supports image-to-image test generation with uploaded source images", async () => {
+    const user = userEvent.setup();
+    imageGenerationTestMock().mockResolvedValue({
+      created: 1,
+      data: [{ b64_json: "aGVsbG8=", revised_prompt: "图生图结果" }],
+    });
+
+    renderPage();
+
+    await screen.findByRole("tab", { name: "gpt-image-2" });
+    await user.click(screen.getByRole("button", { name: "测试生成" }));
+
+    const dialog = await screen.findByRole("dialog", { name: "测试生成" });
+    await user.click(within(dialog).getByRole("tab", { name: "图生图" }));
+
+    const file = new File(["hello"], "icon.png", { type: "image/png" });
+    await user.upload(within(dialog).getByLabelText("参考图片"), file);
+    await user.type(within(dialog).getByPlaceholderText(/输入提示词/i), "改成蓝色图标");
+    await user.click(within(dialog).getByRole("combobox", { name: "生成数量" }));
+    await user.click(await screen.findByRole("option", { name: "2 张" }));
+    await user.click(within(dialog).getByRole("button", { name: /生成图片/i }));
+
+    expect(imageGenerationTestMock()).toHaveBeenCalledWith({
+      mode: "edits",
+      model: "gpt-image-2",
+      prompt: "改成蓝色图标",
+      size: "1024x1024",
+      quality: "medium",
+      n: 2,
+      image: file,
+    });
+    expect(await within(dialog).findByText("图生图结果")).toBeInTheDocument();
   });
 
   test("greys the preview area and shows the error message inside the modal when generation fails", async () => {

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { ImagePlus } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { authFilesApi, imageGenerationApi } from "@/lib/http/apis";
 import type { AuthFileItem } from "@/lib/http/types";
@@ -6,6 +7,7 @@ import { Button } from "@/modules/ui/Button";
 import { Card } from "@/modules/ui/Card";
 import { ImagePreviewOverlay } from "@/modules/ui/ImagePreviewOverlay";
 import { Modal } from "@/modules/ui/Modal";
+import { Select } from "@/modules/ui/Select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/modules/ui/Tabs";
 
 const GPT_IMAGE_MODEL = "gpt-image-2";
@@ -16,6 +18,9 @@ const GENERATION_STATUS_KEYS = [
   "image_generation.generation_status_starting",
 ] as const;
 const GENERATION_STATUS_INTERVAL_MS = 1800;
+const SIZE_OPTIONS = ["1024x1024", "1792x1024", "1024x1792"] as const;
+const QUALITY_OPTIONS = ["low", "medium", "high"] as const;
+const COUNT_OPTIONS = [1, 2, 3, 4] as const;
 
 type ImageMode = "generations" | "edits";
 type SpecRow = {
@@ -35,6 +40,7 @@ type EndpointDoc = {
   responseRows: SpecRow[];
   curl: string;
 };
+type GeneratedImage = { src: string; revisedPrompt?: string };
 
 const isCodexOauthFile = (file: AuthFileItem): boolean => {
   const accountType = String(file.account_type ?? "")
@@ -47,21 +53,26 @@ const isCodexOauthFile = (file: AuthFileItem): boolean => {
 };
 
 const textToImageCurl = [
-  'curl -X POST "https://your-domain.example/v1/images/generations" \\',
-  '  -H "Authorization: Bearer YOUR_KEY" \\',
+  'curl http://127.0.0.1:8317/v1/images/generations \\',
+  '  -H "Authorization: Bearer $API_KEY" \\',
   '  -H "Content-Type: application/json" \\',
   "  -d '{",
   '    "model": "gpt-image-2",',
-  '    "prompt": "生成一张干净的蓝色 App 图标",',
-  '    "response_format": "b64_json"',
+  '    "prompt": "你的中文描述",',
+  '    "size": "1024x1024",',
+  '    "quality": "high",',
+  '    "n": 1',
   "  }'",
 ].join("\n");
 
 const imageToImageCurl = [
-  'curl -X POST "https://your-domain.example/v1/images/edits" \\',
-  '  -H "Authorization: Bearer YOUR_KEY" \\',
+  'curl http://127.0.0.1:8317/v1/images/edits \\',
+  '  -H "Authorization: Bearer $API_KEY" \\',
   '  -F "model=gpt-image-2" \\',
   '  -F "prompt=把这张图改成蓝色图标风格" \\',
+  '  -F "size=1024x1024" \\',
+  '  -F "quality=high" \\',
+  '  -F "n=1" \\',
   '  -F "image=@/path/to/image.png"',
 ].join("\n");
 
@@ -108,10 +119,22 @@ const ENDPOINT_DOCS: EndpointDoc[] = [
         descriptionKey: "image_generation.param_prompt_desc",
       },
       {
-        name: "response_format",
+        name: "size",
         type: "string",
         required: false,
-        descriptionKey: "image_generation.param_response_format_desc",
+        descriptionKey: "image_generation.param_size_desc",
+      },
+      {
+        name: "quality",
+        type: "string",
+        required: false,
+        descriptionKey: "image_generation.param_quality_desc",
+      },
+      {
+        name: "n",
+        type: "number",
+        required: false,
+        descriptionKey: "image_generation.param_n_desc",
       },
     ],
     responseRows: RESPONSE_ROWS,
@@ -142,6 +165,24 @@ const ENDPOINT_DOCS: EndpointDoc[] = [
         type: "file",
         required: true,
         descriptionKey: "image_generation.param_image_desc",
+      },
+      {
+        name: "size",
+        type: "string",
+        required: false,
+        descriptionKey: "image_generation.param_size_desc",
+      },
+      {
+        name: "quality",
+        type: "string",
+        required: false,
+        descriptionKey: "image_generation.param_quality_desc",
+      },
+      {
+        name: "n",
+        type: "number",
+        required: false,
+        descriptionKey: "image_generation.param_n_desc",
       },
     ],
     responseRows: RESPONSE_ROWS,
@@ -262,7 +303,11 @@ export function ImageGenerationPage() {
         </Tabs>
       </section>
 
-      <ImageGenerationTestModal open={testOpen} onClose={() => setTestOpen(false)} />
+      <ImageGenerationTestModal
+        open={testOpen}
+        initialMode={activeMode}
+        onClose={() => setTestOpen(false)}
+      />
     </div>
   );
 }
@@ -356,26 +401,44 @@ function SpecTable({ title, rows }: { title: string; rows: SpecRow[] }) {
   );
 }
 
-function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+function ImageGenerationTestModal({
+  open,
+  initialMode,
+  onClose,
+}: {
+  open: boolean;
+  initialMode: ImageMode;
+  onClose: () => void;
+}) {
   const { t } = useTranslation();
+  const [mode, setMode] = useState<ImageMode>(initialMode);
   const [prompt, setPrompt] = useState("");
+  const [size, setSize] = useState<(typeof SIZE_OPTIONS)[number]>("1024x1024");
+  const [quality, setQuality] = useState<(typeof QUALITY_OPTIONS)[number]>("medium");
+  const [count, setCount] = useState<(typeof COUNT_OPTIONS)[number]>(1);
+  const [referenceImage, setReferenceImage] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [imageSrc, setImageSrc] = useState<string | null>(null);
-  const [revisedPrompt, setRevisedPrompt] = useState("");
+  const [images, setImages] = useState<GeneratedImage[]>([]);
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [errorMessage, setErrorMessage] = useState("");
   const [statusIndex, setStatusIndex] = useState(0);
   const [previewOpen, setPreviewOpen] = useState(false);
 
   useEffect(() => {
     if (!open) return;
+    setMode(initialMode);
     setPrompt("");
+    setSize("1024x1024");
+    setQuality("medium");
+    setCount(1);
+    setReferenceImage(null);
     setSubmitting(false);
-    setImageSrc(null);
-    setRevisedPrompt("");
+    setImages([]);
+    setActiveImageIndex(0);
     setErrorMessage("");
     setStatusIndex(0);
     setPreviewOpen(false);
-  }, [open]);
+  }, [initialMode, open]);
 
   useEffect(() => {
     if (!submitting) return;
@@ -394,27 +457,57 @@ function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: (
     return () => window.clearInterval(id);
   }, [submitting]);
 
+  const activeImage = images[activeImageIndex] ?? null;
+
   const handleGenerate = async () => {
     const trimmedPrompt = prompt.trim();
     if (!trimmedPrompt || submitting) return;
+    if (mode === "edits" && !referenceImage) return;
 
     setSubmitting(true);
-    setImageSrc(null);
-    setRevisedPrompt("");
+    setImages([]);
+    setActiveImageIndex(0);
     setErrorMessage("");
     setPreviewOpen(false);
 
     try {
-      const response = await imageGenerationApi.test({
-        model: GPT_IMAGE_MODEL,
-        prompt: trimmedPrompt,
-      });
-      const item = response.data?.[0];
-      if (!item?.b64_json) {
+      const response =
+        mode === "edits" && referenceImage
+          ? await imageGenerationApi.test({
+              mode: "edits",
+              model: GPT_IMAGE_MODEL,
+              prompt: trimmedPrompt,
+              size,
+              quality,
+              n: count,
+              image: referenceImage,
+            })
+          : await imageGenerationApi.test({
+              mode: "generations",
+              model: GPT_IMAGE_MODEL,
+              prompt: trimmedPrompt,
+              size,
+              quality,
+              n: count,
+            });
+
+      const nextImages = (response.data ?? [])
+        .map<GeneratedImage | null>((item) => {
+          const b64Json = item.b64_json?.trim() ?? "";
+          if (!b64Json) return null;
+          return {
+            src: `data:image/png;base64,${b64Json}`,
+            revisedPrompt: item.revised_prompt?.trim() || undefined,
+          };
+        })
+        .filter((item): item is GeneratedImage => item !== null);
+
+      if (nextImages.length === 0) {
         throw new Error(t("image_generation.test_empty_result"));
       }
-      setImageSrc(`data:image/png;base64,${item.b64_json}`);
-      setRevisedPrompt(item.revised_prompt?.trim() ?? "");
+
+      setImages(nextImages);
+      setActiveImageIndex(0);
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : t("image_generation.test_failed_generic"),
@@ -428,13 +521,13 @@ function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: (
     "relative h-[clamp(240px,42vh,400px)] overflow-hidden rounded-2xl border transition-colors duration-200 sm:h-[clamp(280px,44vh,440px)]",
     errorMessage
       ? "border-slate-200 bg-slate-100 text-slate-700 dark:border-neutral-800 dark:bg-neutral-900 dark:text-white/85"
-      : imageSrc
+      : activeImage
         ? "border-slate-200 bg-slate-100 dark:border-neutral-800 dark:bg-black"
         : "border-slate-200 bg-slate-50 text-slate-500 dark:border-neutral-800 dark:bg-neutral-900 dark:text-white/55",
   ].join(" ");
   const statusText = t(GENERATION_STATUS_KEYS[statusIndex]);
-  const showGeneratingState = submitting && !imageSrc && !errorMessage;
-  const showIdleCanvas = !submitting && !imageSrc && !errorMessage;
+  const showGeneratingState = submitting && !activeImage && !errorMessage;
+  const showIdleCanvas = !submitting && !activeImage && !errorMessage;
 
   return (
     <>
@@ -454,9 +547,47 @@ function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: (
             void handleGenerate();
           }}
         >
+          <div className="flex flex-wrap items-center gap-2">
+            <Tabs value={mode} onValueChange={(value) => setMode(value as ImageMode)}>
+              <TabsList>
+                <TabsTrigger value="generations">{t("image_generation.text_to_image_title")}</TabsTrigger>
+                <TabsTrigger value="edits">{t("image_generation.image_to_image_title")}</TabsTrigger>
+              </TabsList>
+            </Tabs>
+            <div className="flex flex-wrap gap-2">
+              <Select
+                aria-label={t("image_generation.size_label")}
+                value={size}
+                onChange={(value) => setSize(value as (typeof SIZE_OPTIONS)[number])}
+                options={SIZE_OPTIONS.map((value) => ({ value, label: value }))}
+                className="min-w-[132px]"
+                size="sm"
+              />
+              <Select
+                aria-label={t("image_generation.quality_label")}
+                value={quality}
+                onChange={(value) => setQuality(value as (typeof QUALITY_OPTIONS)[number])}
+                options={QUALITY_OPTIONS.map((value) => ({ value, label: value }))}
+                className="min-w-[108px]"
+                size="sm"
+              />
+              <Select
+                aria-label={t("image_generation.count_label")}
+                value={String(count)}
+                onChange={(value) => setCount(Number(value) as (typeof COUNT_OPTIONS)[number])}
+                options={COUNT_OPTIONS.map((value) => ({
+                  value: String(value),
+                  label: t("image_generation.count_option", { count: value }),
+                }))}
+                className="min-w-[96px]"
+                size="sm"
+              />
+            </div>
+          </div>
+
           <div
             data-testid="image-generation-stage"
-            data-state={submitting ? "generating" : imageSrc ? "ready" : errorMessage ? "error" : "idle"}
+            data-state={submitting ? "generating" : activeImage ? "ready" : errorMessage ? "error" : "idle"}
             className={stageClassName}
             aria-live="polite"
           >
@@ -466,7 +597,7 @@ function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: (
                 <div className="image-generation-flow-layer" />
               </>
             ) : null}
-            {imageSrc ? (
+            {activeImage ? (
               <>
                 <div
                   data-testid="image-generation-result-scroll"
@@ -474,7 +605,7 @@ function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: (
                 >
                   <div className="min-h-full w-full p-3 sm:p-4">
                     <img
-                      src={imageSrc}
+                      src={activeImage.src}
                       alt={t("image_generation.preview_alt", { model: GPT_IMAGE_MODEL })}
                       className="block h-auto w-full cursor-zoom-in"
                       onClick={() => setPreviewOpen(true)}
@@ -514,7 +645,11 @@ function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: (
                   {showIdleCanvas ? (
                     <div className="max-w-md">
                       <p className="text-lg font-medium text-slate-600 dark:text-white/72">
-                        {t("image_generation.idle_hint")}
+                        {t(
+                          mode === "edits"
+                            ? "image_generation.idle_hint_edits"
+                            : "image_generation.idle_hint",
+                        )}
                       </p>
                     </div>
                   ) : null}
@@ -531,12 +666,33 @@ function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: (
             )}
           </div>
 
-          {revisedPrompt ? (
+          {images.length > 1 ? (
+            <div className="flex flex-wrap gap-2">
+              {images.map((_, index) => (
+                <button
+                  key={`image-item-${index}`}
+                  type="button"
+                  onClick={() => setActiveImageIndex(index)}
+                  className={[
+                    "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                    activeImageIndex === index
+                      ? "border-slate-900 bg-slate-900 text-white dark:border-white dark:bg-white dark:text-neutral-950"
+                      : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 dark:border-neutral-800 dark:bg-neutral-950 dark:text-white/70",
+                  ].join(" ")}
+                  aria-label={t("image_generation.image_index_label", { index: index + 1 })}
+                >
+                  {t("image_generation.image_index_label", { index: index + 1 })}
+                </button>
+              ))}
+            </div>
+          ) : null}
+
+          {activeImage?.revisedPrompt ? (
             <div className="shrink-0 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-700 dark:border-neutral-800 dark:bg-neutral-900 dark:text-slate-200">
               <p className="text-xs font-medium text-slate-500 dark:text-white/40">
                 {t("image_generation.revised_prompt_label")}
               </p>
-              <p className="mt-1 line-clamp-2 text-sm">{revisedPrompt}</p>
+              <p className="mt-1 line-clamp-2 text-sm">{activeImage.revisedPrompt}</p>
             </div>
           ) : null}
 
@@ -544,6 +700,30 @@ function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: (
             data-testid="image-generation-composer"
             className="shrink-0 rounded-2xl border border-slate-200 bg-white px-3 py-3 shadow-sm dark:border-neutral-800 dark:bg-neutral-950"
           >
+            {mode === "edits" ? (
+              <div className="mb-3 flex flex-wrap items-center gap-2">
+                <label
+                  htmlFor="image-generation-reference"
+                  className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-100 dark:border-neutral-800 dark:bg-neutral-900 dark:text-white/75 dark:hover:bg-neutral-800"
+                >
+                  <ImagePlus size={14} />
+                  <span>{referenceImage ? referenceImage.name : t("image_generation.upload_label")}</span>
+                </label>
+                <input
+                  id="image-generation-reference"
+                  aria-label={t("image_generation.reference_image_label")}
+                  type="file"
+                  accept="image/*"
+                  className="sr-only"
+                  onChange={(event) => setReferenceImage(event.target.files?.[0] ?? null)}
+                />
+                {referenceImage ? (
+                  <span className="text-xs text-slate-500 dark:text-white/45">
+                    {t("image_generation.reference_ready")}
+                  </span>
+                ) : null}
+              </div>
+            ) : null}
             <label htmlFor="image-generation-prompt" className="sr-only">
               {t("image_generation.prompt_label")}
             </label>
@@ -559,7 +739,7 @@ function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: (
               <Button
                 type="submit"
                 variant="primary"
-                disabled={!prompt.trim() || submitting}
+                disabled={!prompt.trim() || submitting || (mode === "edits" && !referenceImage)}
                 aria-busy={submitting}
                 className="h-10 shrink-0 rounded-xl px-4"
               >
@@ -573,11 +753,18 @@ function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: (
       </Modal>
 
       <ImagePreviewOverlay
-        open={previewOpen && Boolean(imageSrc)}
-        imageSrc={imageSrc}
+        open={previewOpen && Boolean(activeImage)}
+        imageSrc={activeImage?.src ?? null}
         imageAlt={t("image_generation.preview_alt", { model: GPT_IMAGE_MODEL })}
         title={t("image_generation.image_preview_title")}
-        downloadName={`${GPT_IMAGE_MODEL}.png`}
+        downloadName={`${GPT_IMAGE_MODEL}-${activeImageIndex + 1}.png`}
+        images={images.map((image, index) => ({
+          src: image.src,
+          alt: t("image_generation.preview_alt", { model: GPT_IMAGE_MODEL }),
+          downloadName: `${GPT_IMAGE_MODEL}-${index + 1}.png`,
+        }))}
+        activeIndex={activeImageIndex}
+        onActiveIndexChange={setActiveImageIndex}
         onClose={() => setPreviewOpen(false)}
       />
     </>

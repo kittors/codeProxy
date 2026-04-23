@@ -1,6 +1,16 @@
 import { createPortal } from "react-dom";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type PointerEvent } from "react";
-import { Download, RotateCcw, RotateCw, Scan, X, ZoomIn, ZoomOut } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  RotateCcw,
+  RotateCw,
+  Scan,
+  X,
+  ZoomIn,
+  ZoomOut,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 const MIN_SCALE = 1;
@@ -41,6 +51,9 @@ export function ImagePreviewOverlay({
   title,
   onClose,
   downloadName,
+  images,
+  activeIndex,
+  onActiveIndexChange,
 }: {
   open: boolean;
   imageSrc: string | null;
@@ -48,8 +61,24 @@ export function ImagePreviewOverlay({
   title: string;
   onClose: () => void;
   downloadName?: string;
+  images?: Array<{ src: string; alt?: string; downloadName?: string }>;
+  activeIndex?: number;
+  onActiveIndexChange?: (index: number) => void;
 }) {
   const { t } = useTranslation();
+  const resolvedImages = useMemo(() => {
+    if (images && images.length > 0) return images;
+    return imageSrc ? [{ src: imageSrc, alt: imageAlt, downloadName }] : [];
+  }, [downloadName, imageAlt, imageSrc, images]);
+  const resolvedActiveIndex = clamp(activeIndex ?? 0, 0, Math.max(resolvedImages.length - 1, 0));
+  const activeImage = resolvedImages[resolvedActiveIndex] ?? null;
+  const resolvedImageSrc = activeImage?.src ?? imageSrc;
+  const resolvedImageAlt = activeImage?.alt ?? imageAlt;
+  const resolvedDownloadName =
+    activeImage?.downloadName || downloadName || buildDownloadName(title);
+  const canGoPrev = resolvedImages.length > 1 && resolvedActiveIndex > 0;
+  const canGoNext = resolvedImages.length > 1 && resolvedActiveIndex < resolvedImages.length - 1;
+
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const dragRef = useRef<{ pointerId: number; x: number; y: number; left: number; top: number } | null>(null);
   const movedRef = useRef(false);
@@ -74,7 +103,7 @@ export function ImagePreviewOverlay({
     setQuarterTurns(0);
     dragRef.current = null;
     previousMetricsRef.current = null;
-  }, [imageSrc, open]);
+  }, [resolvedImageSrc, open]);
 
   useEffect(() => {
     if (!open) return;
@@ -155,11 +184,15 @@ export function ImagePreviewOverlay({
     };
   }, [geometry.boxHeight, geometry.boxWidth, open, quarterTurns, scale]);
 
-  if (!open || !imageSrc) return null;
+  if (!open || !resolvedImageSrc) return null;
 
   const canZoomOut = scale > MIN_SCALE;
   const canZoomIn = scale < MAX_SCALE;
-  const resolvedDownloadName = downloadName || buildDownloadName(title);
+
+  const changeImage = (nextIndex: number) => {
+    if (!onActiveIndexChange) return;
+    onActiveIndexChange(clamp(nextIndex, 0, Math.max(resolvedImages.length - 1, 0)));
+  };
 
   const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
     const element = scrollRef.current;
@@ -250,8 +283,8 @@ export function ImagePreviewOverlay({
             style={{ width: geometry.boxWidth, height: geometry.boxHeight }}
           >
             <img
-              src={imageSrc}
-              alt={imageAlt}
+              src={resolvedImageSrc}
+              alt={resolvedImageAlt}
               draggable={false}
               onLoad={(event) => {
                 const image = event.currentTarget;
@@ -276,6 +309,26 @@ export function ImagePreviewOverlay({
 
       <div className="pointer-events-none absolute right-0 bottom-5 left-0 z-20 flex justify-center px-4">
         <div className="pointer-events-auto flex items-center gap-1 rounded-full border border-white/25 bg-white/68 p-1.5 shadow-[0_16px_48px_rgba(15,23,42,0.22)] backdrop-blur-xl dark:border-white/12 dark:bg-neutral-950/55">
+          <button
+            type="button"
+            className={controlButtonClass}
+            onClick={() => changeImage(resolvedActiveIndex - 1)}
+            disabled={!canGoPrev}
+            title={t("common.prev")}
+            aria-label={t("common.prev")}
+          >
+            <ChevronLeft size={17} />
+          </button>
+          <button
+            type="button"
+            className={controlButtonClass}
+            onClick={() => changeImage(resolvedActiveIndex + 1)}
+            disabled={!canGoNext}
+            title={t("common.next")}
+            aria-label={t("common.next")}
+          >
+            <ChevronRight size={17} />
+          </button>
           <button
             type="button"
             className={controlButtonClass}
@@ -331,7 +384,7 @@ export function ImagePreviewOverlay({
           </button>
           <a
             className={controlButtonClass}
-            href={imageSrc}
+            href={resolvedImageSrc ?? undefined}
             download={resolvedDownloadName}
             title={t("log_content.download")}
             aria-label={t("log_content.download")}

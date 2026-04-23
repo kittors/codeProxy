@@ -240,7 +240,8 @@ describe("LogContentModal", () => {
         id: 1,
         model: "gpt-image-2",
         part,
-        content: '{"created":1776910933,"data":[{"b64_json":"aGVsbG8="}]}',
+        content:
+          '{"created":1776910933,"data":[{"b64_json":"aGVsbG8="},{"b64_json":"d29ybGQ="}]}',
       };
     });
 
@@ -273,21 +274,27 @@ describe("LogContentModal", () => {
 
     expect(document.body.textContent).not.toContain('"b64_json"');
     expect(document.body.textContent).not.toContain('"created":1776910933');
-    const image = screen.getByRole("img", { name: "输出" });
+    const images = screen.getAllByRole("img", { name: "输出" });
+    expect(images).toHaveLength(2);
+    const image = images[0]!;
     expect(image).toHaveAttribute("src", "data:image/png;base64,aGVsbG8=");
-    expect(screen.getByRole("button", { name: "点击预览" })).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "点击预览" })).toHaveLength(2);
 
     await act(async () => {
-      image.click();
+      images[1]!.click();
     });
 
     const preview = screen.getByRole("dialog", { name: /输出 · gpt-image-2/ });
     expect(preview).toHaveAttribute("data-variant", "image-only");
     expect(screen.getByRole("button", { name: "放大" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "向左旋转" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "下载" })).toHaveAttribute("download", "gpt-image-2-output.png");
+    expect(screen.getByRole("link", { name: "下载" })).toHaveAttribute(
+      "download",
+      "gpt-image-2-output-2.png",
+    );
 
     const previewImage = within(preview).getByRole("img", { name: "输出" });
+    expect(previewImage).toHaveAttribute("src", "data:image/png;base64,d29ybGQ=");
     const rotateRight = screen.getByRole("button", { name: "向右旋转" });
     await act(async () => {
       rotateRight.click();
@@ -306,7 +313,7 @@ describe("LogContentModal", () => {
       screen.getByTitle("原始数据").click();
     });
     expect(document.body.querySelector("pre")!.textContent).toBe(
-      '{"created":1776910933,"data":[{"b64_json":"aGVsbG8="}]}',
+      '{"created":1776910933,"data":[{"b64_json":"aGVsbG8="},{"b64_json":"d29ybGQ="}]}',
     );
   });
 
