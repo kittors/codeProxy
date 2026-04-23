@@ -884,15 +884,18 @@ function ImageGenerationTestModal({
 
           <div
             data-testid="image-generation-composer"
-            className="relative shrink-0 rounded-[20px] border border-slate-200 bg-white px-2.5 pt-2.5 pb-11 shadow-sm dark:border-neutral-800 dark:bg-neutral-950"
+            className="relative shrink-0 overflow-hidden rounded-[20px] border border-slate-200 bg-white px-2.5 pt-2.5 pb-11 shadow-sm dark:border-neutral-800 dark:bg-neutral-950"
           >
             {uploadedImages.length > 0 ? (
-              <div className="mb-2 flex max-h-32 flex-col gap-1.5 overflow-y-auto pr-0.5">
+              <div
+                data-testid="image-generation-upload-strip"
+                className="absolute top-2.5 right-2.5 left-2.5 z-10 flex gap-2 overflow-x-auto overflow-y-hidden pb-1 [scrollbar-width:thin]"
+              >
                 {uploadedImages.map((item, index) => (
                   <div
                     key={item.id}
                     data-testid="image-generation-upload-chip"
-                    className="group flex max-w-full items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-2 py-1.5 dark:border-neutral-800 dark:bg-neutral-900"
+                    className="group flex h-10 max-w-[220px] shrink-0 items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-2 py-1.5 dark:border-neutral-800 dark:bg-neutral-900"
                   >
                     <button
                       type="button"
@@ -951,7 +954,10 @@ function ImageGenerationTestModal({
               onChange={(event) => setPrompt(event.target.value)}
               placeholder={t("image_generation.prompt_placeholder")}
               rows={4}
-              className="min-h-[112px] w-full resize-none border-0 bg-transparent px-1 py-0 pr-8 pb-10 text-sm leading-6 text-slate-900 outline-none placeholder:text-slate-400 dark:text-white dark:placeholder:text-white/30"
+              className={[
+                "min-h-[112px] w-full resize-none border-0 bg-transparent px-1 pr-8 pb-10 text-sm leading-6 text-slate-900 outline-none placeholder:text-slate-400 dark:text-white dark:placeholder:text-white/30",
+                uploadedImages.length > 0 ? "pt-12" : "pt-0",
+              ].join(" ")}
             />
             <label
               htmlFor="image-generation-reference"

@@ -342,6 +342,9 @@ describe("ImageGenerationPage", () => {
     expect(
       composerScope.getAllByTestId("image-generation-upload-chip"),
     ).toHaveLength(5);
+    expect(
+      composerScope.getByTestId("image-generation-upload-strip"),
+    ).toHaveClass("absolute", "flex", "overflow-x-auto", "overflow-y-hidden");
     expect(composerScope.queryByText("6.png")).not.toBeInTheDocument();
     expect(composerScope.getByText("1.png")).toBeInTheDocument();
     expect(
@@ -349,7 +352,10 @@ describe("ImageGenerationPage", () => {
     ).toBeInTheDocument();
     expect(
       composerScope.getAllByTestId("image-generation-upload-chip")[0],
-    ).toHaveClass("rounded-xl", "px-2", "py-1.5");
+    ).toHaveClass("h-10", "shrink-0", "rounded-xl", "px-2", "py-1.5");
+    expect(within(dialog).getByRole("textbox", { name: "提示词" })).toHaveClass(
+      "pt-12",
+    );
 
     await user.click(
       composerScope.getByRole("button", { name: "预览图片 1.png" }),
