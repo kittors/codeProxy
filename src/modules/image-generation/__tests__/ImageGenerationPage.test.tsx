@@ -100,19 +100,23 @@ describe("ImageGenerationPage", () => {
     const specCards = screen.getAllByTestId("image-generation-spec-card");
     expect(specCards).toHaveLength(2);
     for (const card of specCards) {
+      expect(callCard).not.toContainElement(card);
+      expect(card.className).toContain("p-4");
       expect(card.className).not.toContain("shadow");
     }
+    expect(
+      within(callCard as HTMLElement).queryByText("请求参数"),
+    ).not.toBeInTheDocument();
+    expect(
+      within(callCard as HTMLElement).queryByText("返回结构"),
+    ).not.toBeInTheDocument();
     expect(screen.getByText("data[].revised_prompt").className).toContain(
       "break-all",
     );
     expect(screen.queryByText(/已加载全部/)).not.toBeInTheDocument();
-    expect(
-      within(callCard as HTMLElement).getByText("size"),
-    ).toBeInTheDocument();
-    expect(
-      within(callCard as HTMLElement).getByText("quality"),
-    ).toBeInTheDocument();
-    expect(within(callCard as HTMLElement).getByText("n")).toBeInTheDocument();
+    expect(screen.getByText("size")).toBeInTheDocument();
+    expect(screen.getByText("quality")).toBeInTheDocument();
+    expect(screen.getByText("n")).toBeInTheDocument();
     expect(screen.getByText(/"size": "1024x1024"/)).toBeInTheDocument();
     expect(screen.getByText(/"quality": "high"/)).toBeInTheDocument();
 

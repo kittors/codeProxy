@@ -309,7 +309,7 @@ export function ImageGenerationPage() {
                         value={doc.mode}
                         className="mt-4"
                       >
-                        <EndpointDocView doc={doc} />
+                        <EndpointCallDoc doc={doc} />
                       </TabsContent>
                     ))}
                   </Tabs>
@@ -321,6 +321,17 @@ export function ImageGenerationPage() {
                   </div>
                 </div>
               </Card>
+
+              <div className="grid gap-4 xl:grid-cols-2">
+                <SpecTable
+                  title={t("image_generation.request_params_title")}
+                  rows={activeDoc.requestRows}
+                />
+                <SpecTable
+                  title={t("image_generation.response_schema_title")}
+                  rows={activeDoc.responseRows}
+                />
+              </div>
             </div>
           </TabsContent>
         </Tabs>
@@ -334,7 +345,7 @@ export function ImageGenerationPage() {
   );
 }
 
-function EndpointDocView({ doc }: { doc: EndpointDoc }) {
+function EndpointCallDoc({ doc }: { doc: EndpointDoc }) {
   const { t } = useTranslation();
 
   return (
@@ -375,17 +386,6 @@ function EndpointDocView({ doc }: { doc: EndpointDoc }) {
         <pre className="overflow-x-auto px-4 py-3 text-[13px] leading-6 text-slate-100">
           <code>{doc.curl}</code>
         </pre>
-      </div>
-
-      <div className="grid gap-4 xl:grid-cols-2">
-        <SpecTable
-          title={t("image_generation.request_params_title")}
-          rows={doc.requestRows}
-        />
-        <SpecTable
-          title={t("image_generation.response_schema_title")}
-          rows={doc.responseRows}
-        />
       </div>
     </div>
   );
@@ -430,25 +430,25 @@ function SpecTable({ title, rows }: { title: string; rows: SpecRow[] }) {
   return (
     <div
       data-testid="image-generation-spec-card"
-      className="overflow-hidden rounded-2xl bg-white dark:bg-neutral-950/80"
+      className="overflow-hidden rounded-2xl bg-white p-4 dark:bg-neutral-950/80"
     >
-      <div className="px-4 py-3">
-        <h4 className="text-sm font-semibold text-slate-900 dark:text-white">
-          {title}
-        </h4>
+      <h4 className="text-sm font-semibold text-slate-900 dark:text-white">
+        {title}
+      </h4>
+      <div className="mt-4">
+        <VirtualTable<SpecRow>
+          rows={rows}
+          columns={columns}
+          rowKey={(row) => row.name}
+          virtualize={false}
+          height="h-auto"
+          minHeight="min-h-0"
+          minWidth="min-w-[560px]"
+          caption={`${title} table`}
+          rowHeight={48}
+          showAllLoadedMessage={false}
+        />
       </div>
-      <VirtualTable<SpecRow>
-        rows={rows}
-        columns={columns}
-        rowKey={(row) => row.name}
-        virtualize={false}
-        height="h-auto"
-        minHeight="min-h-0"
-        minWidth="min-w-[560px]"
-        caption={`${title} table`}
-        rowHeight={48}
-        showAllLoadedMessage={false}
-      />
     </div>
   );
 }
