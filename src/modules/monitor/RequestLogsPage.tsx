@@ -9,10 +9,9 @@ import { SearchableSelect } from "@/modules/ui/SearchableSelect";
 import { LogContentModal } from "@/modules/monitor/LogContentModal";
 import { ErrorDetailModal } from "@/modules/monitor/ErrorDetailModal";
 import {
+  buildRequestLogKeyOptions,
   buildRequestLogsColumns,
   DEFAULT_REQUEST_LOG_PAGE_SIZE,
-  isSystemRequestLogKey,
-  maskRequestLogApiKey,
   RequestLogsPaginationBar,
   RequestLogsTimeRangeSelector,
   toRequestLogsRow,
@@ -31,14 +30,21 @@ export function RequestLogsPage() {
 
   // Content modal state
   const [contentModalOpen, setContentModalOpen] = useState(false);
-  const [contentModalLogId, setContentModalLogId] = useState<number | null>(null);
-  const [contentModalTab, setContentModalTab] = useState<"input" | "output">("input");
+  const [contentModalLogId, setContentModalLogId] = useState<number | null>(
+    null,
+  );
+  const [contentModalTab, setContentModalTab] = useState<"input" | "output">(
+    "input",
+  );
 
-  const handleContentClick = useCallback((logId: number, tab: "input" | "output") => {
-    setContentModalLogId(logId);
-    setContentModalTab(tab);
-    setContentModalOpen(true);
-  }, []);
+  const handleContentClick = useCallback(
+    (logId: number, tab: "input" | "output") => {
+      setContentModalLogId(logId);
+      setContentModalTab(tab);
+      setContentModalOpen(true);
+    },
+    [],
+  );
 
   // Error modal state
   const [errorModalOpen, setErrorModalOpen] = useState(false);
@@ -79,9 +85,11 @@ export function RequestLogsPage() {
     models: [],
     channels: [],
   });
-  const [stats, setStats] = useState<{ total: number; success_rate: number; total_tokens: number }>(
-    { total: 0, success_rate: 0, total_tokens: 0 },
-  );
+  const [stats, setStats] = useState<{
+    total: number;
+    success_rate: number;
+    total_tokens: number;
+  }>({ total: 0, success_rate: 0, total_tokens: 0 });
 
   // Filters
   const [timeRange, setTimeRange] = useState<TimeRange>(7);
@@ -114,22 +122,31 @@ export function RequestLogsPage() {
         setTotalCount(resp.total ?? 0);
         setCurrentPage(page);
         const filtersCandidate =
-          resp.filters && typeof resp.filters === "object" ? (resp.filters as any) : null;
+          resp.filters && typeof resp.filters === "object"
+            ? (resp.filters as any)
+            : null;
         setFilterOptions({
-          api_keys: Array.isArray(filtersCandidate?.api_keys) ? filtersCandidate.api_keys : [],
+          api_keys: Array.isArray(filtersCandidate?.api_keys)
+            ? filtersCandidate.api_keys
+            : [],
           api_key_names:
             filtersCandidate?.api_key_names &&
             typeof filtersCandidate.api_key_names === "object" &&
             !Array.isArray(filtersCandidate.api_key_names)
               ? (filtersCandidate.api_key_names as Record<string, string>)
               : {},
-          models: Array.isArray(filtersCandidate?.models) ? filtersCandidate.models : [],
-          channels: Array.isArray(filtersCandidate?.channels) ? filtersCandidate.channels : [],
+          models: Array.isArray(filtersCandidate?.models)
+            ? filtersCandidate.models
+            : [],
+          channels: Array.isArray(filtersCandidate?.channels)
+            ? filtersCandidate.channels
+            : [],
         });
         setStats(resp.stats ?? { total: 0, success_rate: 0, total_tokens: 0 });
         setLastUpdatedAt(Date.now());
       } catch (err) {
-        const message = err instanceof Error ? err.message : t("request_logs.refresh_failed");
+        const message =
+          err instanceof Error ? err.message : t("request_logs.refresh_failed");
         notify({ type: "error", message });
       } finally {
         fetchInFlightRef.current = false;
@@ -170,17 +187,14 @@ export function RequestLogsPage() {
 
   // Build options from backend filter data
   const keyOptions = useMemo(() => {
-    const names = filterOptions.api_key_names ?? {};
-    return [
-      { value: "", label: t("request_logs.all_keys") },
-      ...filterOptions.api_keys.map((key) => ({
-        value: key,
-        label: isSystemRequestLogKey(key, names[key])
-          ? t("request_logs.system_call")
-          : names[key] || maskRequestLogApiKey(key),
-        searchText: `${names[key] || ""} ${key}`,
-      })),
-    ];
+    return buildRequestLogKeyOptions(
+      filterOptions.api_keys,
+      filterOptions.api_key_names ?? {},
+      {
+        allKeys: t("request_logs.all_keys"),
+        systemCall: t("request_logs.system_call"),
+      },
+    );
   }, [filterOptions.api_keys, filterOptions.api_key_names, t]);
 
   const modelOptions = useMemo(() => {
@@ -200,7 +214,9 @@ export function RequestLogsPage() {
   const lastUpdatedText = useMemo(() => {
     if (loading) return t("request_logs.refreshing");
     if (!lastUpdatedAt) return t("request_logs.not_refreshed");
-    return t("request_logs.updated_at", { time: new Date(lastUpdatedAt).toLocaleTimeString() });
+    return t("request_logs.updated_at", {
+      time: new Date(lastUpdatedAt).toLocaleTimeString(),
+    });
   }, [lastUpdatedAt, loading, t]);
 
   const colCount = logColumns.length;
@@ -214,11 +230,18 @@ export function RequestLogsPage() {
         {/* 标题栏 */}
         <div className="flex flex-wrap items-center justify-between gap-3 px-5 pt-5 pb-3">
           <h2 className="flex items-center gap-2 text-base font-semibold text-slate-900 dark:text-white">
-            <ScrollText size={18} className="text-slate-900 dark:text-white" aria-hidden="true" />
+            <ScrollText
+              size={18}
+              className="text-slate-900 dark:text-white"
+              aria-hidden="true"
+            />
             {t("request_logs.heading")}
           </h2>
           <div className="flex flex-wrap items-center gap-2">
-            <RequestLogsTimeRangeSelector value={timeRange} onChange={setTimeRange} />
+            <RequestLogsTimeRangeSelector
+              value={timeRange}
+              onChange={setTimeRange}
+            />
             <button
               type="button"
               onClick={() => fetchLogs(1, pageSize)}
@@ -230,7 +253,11 @@ export function RequestLogsPage() {
             >
               <RefreshCw
                 size={14}
-                className={loading ? "motion-reduce:animate-none motion-safe:animate-spin" : ""}
+                className={
+                  loading
+                    ? "motion-reduce:animate-none motion-safe:animate-spin"
+                    : ""
+                }
                 aria-hidden="true"
               />
             </button>
@@ -287,15 +314,16 @@ export function RequestLogsPage() {
             <div className="grid grid-cols-2 items-center gap-x-3 gap-y-1.5 text-xs text-slate-600 dark:text-white/55 sm:flex sm:items-center sm:gap-1.5">
               <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
                 <Filter size={12} aria-hidden="true" />
-                {t("request_logs.records_count", { count: stats.total.toLocaleString() } as Record<
-                  string,
-                  string
-                >)}
+                {t("request_logs.records_count", {
+                  count: stats.total.toLocaleString(),
+                } as Record<string, string>)}
               </span>
 
               <span className="inline-flex items-center justify-end gap-1.5 whitespace-nowrap sm:justify-start">
                 {t("common.success_rate")}
-                <span className="font-mono tabular-nums">{stats.success_rate.toFixed(1)}%</span>
+                <span className="font-mono tabular-nums">
+                  {stats.success_rate.toFixed(1)}%
+                </span>
               </span>
 
               <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
@@ -316,7 +344,9 @@ export function RequestLogsPage() {
         <div className="relative min-h-[360px] h-[calc(100dvh-300px)] overflow-hidden px-5">
           <div className="h-full overflow-auto">
             <table className="w-full min-w-[1320px] table-fixed border-separate border-spacing-0 text-sm">
-              <caption className="sr-only">{t("request_logs.table_caption")}</caption>
+              <caption className="sr-only">
+                {t("request_logs.table_caption")}
+              </caption>
 
               {/* 表头 */}
               <thead className="sticky top-0 z-10">

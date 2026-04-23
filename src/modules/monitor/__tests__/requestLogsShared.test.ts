@@ -1,12 +1,19 @@
 import { describe, expect, test } from "vitest";
-import { isSystemRequestLogKey, toRequestLogsRow } from "@/modules/monitor/requestLogsShared";
+import {
+  buildRequestLogKeyOptions,
+  isSystemRequestLogKey,
+  SYSTEM_REQUEST_LOG_FILTER_VALUE,
+  toRequestLogsRow,
+} from "@/modules/monitor/requestLogsShared";
 
 describe("requestLogsShared", () => {
   test("recognizes management-triggered system request logs", () => {
     expect(isSystemRequestLogKey("POST /image-generation/test", "")).toBe(true);
     expect(isSystemRequestLogKey("", "")).toBe(true);
     expect(isSystemRequestLogKey("sk-live-123", "")).toBe(false);
-    expect(isSystemRequestLogKey("POST /image-generation/test", "已有名称")).toBe(false);
+    expect(
+      isSystemRequestLogKey("POST /image-generation/test", "已有名称"),
+    ).toBe(false);
   });
 
   test("marks system-triggered logs so key name can render as 系统调用", () => {
@@ -33,5 +40,27 @@ describe("requestLogsShared", () => {
 
     expect(row.isSystemCall).toBe(true);
     expect(row.apiKeyName).toBe("");
+  });
+
+  test("deduplicates system call filter options", () => {
+    const options = buildRequestLogKeyOptions(
+      [
+        "POST /image-generation/test",
+        "/v0/management/image-generation/test",
+        "sk-live-123456",
+      ],
+      { "sk-live-123456": "Live Key" },
+      { allKeys: "全部密钥", systemCall: "系统调用" },
+    );
+
+    expect(
+      options.filter((option) => option.label === "系统调用"),
+    ).toHaveLength(1);
+    expect(options.find((option) => option.label === "系统调用")?.value).toBe(
+      SYSTEM_REQUEST_LOG_FILTER_VALUE,
+    );
+    expect(options.find((option) => option.label === "Live Key")?.value).toBe(
+      "sk-live-123456",
+    );
   });
 });
