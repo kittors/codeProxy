@@ -97,7 +97,11 @@ describe("ImageGenerationPage", () => {
     ).toBeTruthy();
     expect(screen.getByText("请求参数")).toBeInTheDocument();
     expect(screen.getByText("返回结构")).toBeInTheDocument();
-    expect(screen.getAllByTestId("image-generation-spec-card")).toHaveLength(2);
+    const specCards = screen.getAllByTestId("image-generation-spec-card");
+    expect(specCards).toHaveLength(2);
+    for (const card of specCards) {
+      expect(card.className).not.toContain("shadow");
+    }
     expect(screen.queryByText(/已加载全部/)).not.toBeInTheDocument();
     expect(
       within(callCard as HTMLElement).getByText("size"),

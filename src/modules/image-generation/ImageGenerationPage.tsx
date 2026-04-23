@@ -429,7 +429,7 @@ function SpecTable({ title, rows }: { title: string; rows: SpecRow[] }) {
   return (
     <div
       data-testid="image-generation-spec-card"
-      className="overflow-hidden rounded-2xl bg-white shadow-[0_12px_32px_rgb(15_23_42_/_0.08)] dark:bg-neutral-950/80 dark:shadow-[0_12px_32px_rgb(0_0_0_/_0.22)]"
+      className="overflow-hidden rounded-2xl bg-white dark:bg-neutral-950/80"
     >
       <div className="px-4 py-3">
         <h4 className="text-sm font-semibold text-slate-900 dark:text-white">
