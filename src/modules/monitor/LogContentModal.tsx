@@ -1,15 +1,28 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Code2, Download, Eye, FileInput, FileOutput, Loader2 } from "lucide-react";
+import {
+  Code2,
+  Download,
+  Eye,
+  FileInput,
+  FileOutput,
+  Loader2,
+} from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
-import { buildInputRenderedView, buildOutputRenderedView } from "@/modules/monitor/log-content/parsers";
+import {
+  buildInputRenderedView,
+  buildOutputRenderedView,
+} from "@/modules/monitor/log-content/parsers";
 import {
   ContentModal,
   MessageBlock,
   MessageList,
   PlainPre,
 } from "@/modules/monitor/log-content/rendering";
-import { scheduleIdle, type CancelFn } from "@/modules/monitor/log-content/scheduler";
+import {
+  scheduleIdle,
+  type CancelFn,
+} from "@/modules/monitor/log-content/scheduler";
 import { Tabs, TabsList, TabsTrigger } from "@/modules/ui/Tabs";
 import { ImagePreviewOverlay } from "@/modules/ui/ImagePreviewOverlay";
 import type {
@@ -40,7 +53,8 @@ function parseJsonObject(raw: string): JsonObject | null {
   if (!raw) return null;
   try {
     const parsed = JSON.parse(raw) as unknown;
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed))
+      return null;
     return parsed as JsonObject;
   } catch {
     return null;
@@ -49,12 +63,15 @@ function parseJsonObject(raw: string): JsonObject | null {
 
 function stringifyFieldValue(value: unknown): string {
   if (typeof value === "string") return value;
-  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  if (typeof value === "number" || typeof value === "boolean")
+    return String(value);
   if (value === null || value === undefined) return "";
   return JSON.stringify(value, null, 2);
 }
 
-function parseImageGenerationInput(raw: string): ImageGenerationInputView | null {
+function parseImageGenerationInput(
+  raw: string,
+): ImageGenerationInputView | null {
   const parsed = parseJsonObject(raw);
   if (!parsed) return null;
   const model = typeof parsed.model === "string" ? parsed.model : "";
@@ -73,7 +90,9 @@ function parseImageGenerationInput(raw: string): ImageGenerationInputView | null
   };
 }
 
-function parseImageGenerationOutput(raw: string): ImageGenerationOutputView | null {
+function parseImageGenerationOutput(
+  raw: string,
+): ImageGenerationOutputView | null {
   const parsed = parseJsonObject(raw);
   if (!parsed || !Array.isArray(parsed.data)) return null;
 
@@ -81,11 +100,13 @@ function parseImageGenerationOutput(raw: string): ImageGenerationOutputView | nu
     .map((item) => {
       if (!item || typeof item !== "object") return null;
       const record = item as JsonObject;
-      const b64Json = typeof record.b64_json === "string" ? record.b64_json.trim() : "";
+      const b64Json =
+        typeof record.b64_json === "string" ? record.b64_json.trim() : "";
       if (!b64Json) return null;
       const src = `data:image/png;base64,${b64Json}`;
       const revisedPrompt =
-        typeof record.revised_prompt === "string" && record.revised_prompt.trim()
+        typeof record.revised_prompt === "string" &&
+        record.revised_prompt.trim()
           ? record.revised_prompt.trim()
           : "";
       return revisedPrompt ? { src, revisedPrompt } : { src };
@@ -154,7 +175,9 @@ function StructuredRequestCard({
                   key={item.key}
                   className="rounded-2xl border border-slate-200 bg-white px-3 py-3 dark:border-neutral-800 dark:bg-neutral-950"
                 >
-                  <p className="font-mono text-[11px] text-slate-500 dark:text-white/40">{item.key}</p>
+                  <p className="font-mono text-[11px] text-slate-500 dark:text-white/40">
+                    {item.key}
+                  </p>
                   <pre className="mt-1 whitespace-pre-wrap break-words font-sans text-sm leading-6 text-slate-900 dark:text-white">
                     {item.value}
                   </pre>
@@ -179,7 +202,10 @@ export function LogContentModal({
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<"input" | "output">(initialTab);
   const [viewMode, setViewMode] = useState<"rendered" | "raw">("rendered");
-  const [inputParsed, setInputParsed] = useState<AsyncParsedState>({ status: "idle", view: null });
+  const [inputParsed, setInputParsed] = useState<AsyncParsedState>({
+    status: "idle",
+    view: null,
+  });
   const [outputParsed, setOutputParsed] = useState<AsyncParsedState>({
     status: "idle",
     view: null,
@@ -198,6 +224,8 @@ export function LogContentModal({
     outputError,
     inputContent,
     outputContent,
+    inputLoaded,
+    outputLoaded,
     model,
     fetchPart,
   } = useLogContentData({
@@ -232,7 +260,8 @@ export function LogContentModal({
     if (activeTab === initialTab) return;
     const content = activeTab === "input" ? inputContent : outputContent;
     const loading = activeTab === "input" ? inputLoading : outputLoading;
-    if (content || loading) return;
+    const loaded = activeTab === "input" ? inputLoaded : outputLoaded;
+    if (content || loading || loaded) return;
     void fetchPart(logId, activeTab);
   }, [
     dataOpen,
@@ -242,6 +271,8 @@ export function LogContentModal({
     outputContent,
     inputLoading,
     outputLoading,
+    inputLoaded,
+    outputLoaded,
     fetchPart,
   ]);
 
@@ -296,7 +327,8 @@ export function LogContentModal({
     if (total <= 0) return;
 
     const batchSize = 6;
-    const setCount = activeTab === "input" ? setInputRevealCount : setOutputRevealCount;
+    const setCount =
+      activeTab === "input" ? setInputRevealCount : setOutputRevealCount;
 
     if (total > VIRTUAL_MESSAGE_REVEAL_THRESHOLD) {
       setCount(total);
@@ -353,7 +385,9 @@ export function LogContentModal({
         <div className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-white/25">
           <Icon size={40} className="mb-3 opacity-40" />
           <p className="text-sm">
-            {activeTab === "input" ? t("log_content.no_input") : t("log_content.no_output")}
+            {activeTab === "input"
+              ? t("log_content.no_input")
+              : t("log_content.no_output")}
           </p>
         </div>
       );
@@ -367,11 +401,13 @@ export function LogContentModal({
   const activeParsed = activeTab === "input" ? inputParsed : outputParsed;
   const isImageGenerationLog = model === "gpt-image-2";
   const imageGenerationInput = useMemo(
-    () => (isImageGenerationLog ? parseImageGenerationInput(inputContent) : null),
+    () =>
+      isImageGenerationLog ? parseImageGenerationInput(inputContent) : null,
     [inputContent, isImageGenerationLog],
   );
   const imageGenerationOutput = useMemo(
-    () => (isImageGenerationLog ? parseImageGenerationOutput(outputContent) : null),
+    () =>
+      isImageGenerationLog ? parseImageGenerationOutput(outputContent) : null,
     [outputContent, isImageGenerationLog],
   );
   const outputImagePreviewSrc =
@@ -387,7 +423,9 @@ export function LogContentModal({
     viewMode === "rendered" &&
     (activeParsed.status !== "ready" || !activeParsed.view);
   const contentPhase =
-    !contentLoadReady || (activeLoading && !currentContent) || waitingForRenderedContent
+    !contentLoadReady ||
+    (activeLoading && !currentContent) ||
+    waitingForRenderedContent
       ? "loading"
       : activeError && !currentContent
         ? "error"
@@ -415,7 +453,10 @@ export function LogContentModal({
 
   const renderCenteredLoading = () => (
     <div className="flex min-h-0 flex-1 items-center justify-center">
-      <Loader2 size={24} className="animate-spin text-slate-400 dark:text-white/40" />
+      <Loader2
+        size={24}
+        className="animate-spin text-slate-400 dark:text-white/40"
+      />
       <span className="ml-3 text-sm text-slate-500 dark:text-white/50">
         {t("common.loading_ellipsis")}
       </span>
@@ -424,7 +465,10 @@ export function LogContentModal({
 
   const tabBar = (
     <div className="flex items-center gap-3">
-      <Tabs value={activeTab} onValueChange={(next) => setActiveTab(next as typeof activeTab)}>
+      <Tabs
+        value={activeTab}
+        onValueChange={(next) => setActiveTab(next as typeof activeTab)}
+      >
         <TabsList>
           <TabsTrigger value="input">
             <FileInput size={15} />
@@ -437,7 +481,10 @@ export function LogContentModal({
         </TabsList>
       </Tabs>
       <div className="flex items-center gap-1">
-        <Tabs value={viewMode} onValueChange={(next) => setViewMode(next as typeof viewMode)}>
+        <Tabs
+          value={viewMode}
+          onValueChange={(next) => setViewMode(next as typeof viewMode)}
+        >
           <TabsList>
             <TabsTrigger value="rendered" title={t("log_content.rendered")}>
               <Eye size={14} />
@@ -483,11 +530,15 @@ export function LogContentModal({
         />
       );
     }
-    if (inputParsed.status !== "ready" || !inputParsed.view) return renderCenteredLoading();
+    if (inputParsed.status !== "ready" || !inputParsed.view)
+      return renderCenteredLoading();
 
     const view = inputParsed.view;
     if (view.kind === "messages") {
-      const count = inputRevealCount > 0 ? inputRevealCount : Math.min(view.messages.length, 6);
+      const count =
+        inputRevealCount > 0
+          ? inputRevealCount
+          : Math.min(view.messages.length, 6);
       return <MessageList messages={view.messages.slice(0, count)} />;
     }
     if (view.kind === "pretty_json") return <PlainPre text={view.pretty} />;
@@ -548,7 +599,8 @@ export function LogContentModal({
         </div>
       );
     }
-    if (outputParsed.status !== "ready" || !outputParsed.view) return renderCenteredLoading();
+    if (outputParsed.status !== "ready" || !outputParsed.view)
+      return renderCenteredLoading();
 
     const view = outputParsed.view;
     const imagePreviewCard = outputImagePreviewSrc ? (
@@ -571,7 +623,10 @@ export function LogContentModal({
       </div>
     ) : null;
     if (view.kind === "messages") {
-      const count = outputRevealCount > 0 ? outputRevealCount : Math.min(view.messages.length, 6);
+      const count =
+        outputRevealCount > 0
+          ? outputRevealCount
+          : Math.min(view.messages.length, 6);
       return (
         <div>
           {imagePreviewCard}
@@ -627,7 +682,9 @@ export function LogContentModal({
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
             >
-              <p className="text-sm text-red-500 dark:text-red-400">{activeError}</p>
+              <p className="text-sm text-red-500 dark:text-red-400">
+                {activeError}
+              </p>
             </motion.div>
           ) : (
             <motion.div
@@ -636,7 +693,10 @@ export function LogContentModal({
               initial={{ opacity: 0, filter: "blur(3px)" }}
               animate={{ opacity: 1, filter: "blur(0px)" }}
               exit={{ opacity: 0 }}
-              transition={{ duration: CONTENT_ENTER_MS / 1000, ease: [0.16, 1, 0.3, 1] }}
+              transition={{
+                duration: CONTENT_ENTER_MS / 1000,
+                ease: [0.16, 1, 0.3, 1],
+              }}
             >
               {activeTab === "input" ? renderInput() : renderOutput()}
             </motion.div>
@@ -647,7 +707,11 @@ export function LogContentModal({
         open={imagePreviewOpen && Boolean(outputImagePreviewSrc)}
         imageSrc={outputImagePreviewSrc}
         imageAlt={t("log_content.output")}
-        title={model ? `${t("log_content.output")} · ${model}` : t("log_content.output")}
+        title={
+          model
+            ? `${t("log_content.output")} · ${model}`
+            : t("log_content.output")
+        }
         downloadName={activeDownloadName}
         images={imageGenerationOutput?.images.map((image, index) => ({
           src: image.src,

@@ -16,7 +16,9 @@ describe("LogContentModal", () => {
   });
 
   test("uses fixed viewport-safe dimensions while preserving enter and exit animation", () => {
-    const renderingSource = readModule("modules/monitor/log-content/rendering.tsx");
+    const renderingSource = readModule(
+      "modules/monitor/log-content/rendering.tsx",
+    );
     const modalSource = readModule("modules/monitor/LogContentModal.tsx");
 
     expect(renderingSource).toContain("AnimatePresence");
@@ -29,13 +31,17 @@ describe("LogContentModal", () => {
     expect(modalSource).toContain('filter: "blur(3px)"');
     expect(modalSource).not.toContain("y: 10");
     expect(modalSource).toContain("relative min-h-0 flex-1");
-    expect(modalSource).toContain("absolute inset-0 overflow-y-auto overscroll-contain");
+    expect(modalSource).toContain(
+      "absolute inset-0 overflow-y-auto overscroll-contain",
+    );
     expect(modalSource).toContain("min-h-0 flex-1 items-center justify-center");
     expect(modalSource).toContain("exit={{ opacity: 0");
   });
 
   test("protects large request detail content from fast-scroll blanking", () => {
-    const renderingSource = readModule("modules/monitor/log-content/rendering.tsx");
+    const renderingSource = readModule(
+      "modules/monitor/log-content/rendering.tsx",
+    );
 
     expect(renderingSource).toContain("VIRTUAL_MESSAGE_CONTENT_THRESHOLD");
     expect(renderingSource).toContain("shouldVirtualizeMessages");
@@ -56,7 +62,12 @@ describe("LogContentModal", () => {
 
     const fetchPartFn = vi.fn(async (_id: number, part: "input" | "output") => {
       if (part === "input") {
-        return { id: 1, model: "gpt-test", part, content: JSON.stringify(inputPayload) };
+        return {
+          id: 1,
+          model: "gpt-test",
+          part,
+          content: JSON.stringify(inputPayload),
+        };
       }
       return {
         id: 1,
@@ -114,7 +125,12 @@ describe("LogContentModal", () => {
 
     const fetchPartFn = vi.fn(async (_id: number, part: "input" | "output") => {
       if (part === "input") {
-        return { id: 1, model: "gpt-test", part, content: '{"a":1,"b":{"c":2}}' };
+        return {
+          id: 1,
+          model: "gpt-test",
+          part,
+          content: '{"a":1,"b":{"c":2}}',
+        };
       }
       return { id: 1, model: "gpt-test", part, content: "" };
     });
@@ -167,7 +183,8 @@ describe("LogContentModal", () => {
           id: 1,
           model: "gpt-image-2",
           part,
-          content: '{"model":"gpt-image-2","prompt":"画一只狐狸","size":"1024x1536"}',
+          content:
+            '{"model":"gpt-image-2","prompt":"画一只狐狸","size":"1024x1536"}',
         };
       }
       return {
@@ -218,7 +235,11 @@ describe("LogContentModal", () => {
     await act(async () => {
       screen.getByTitle("原始数据").click();
     });
-    expect(Array.from(document.body.querySelectorAll("pre")).map((pre) => pre.textContent)).toContain(
+    expect(
+      Array.from(document.body.querySelectorAll("pre")).map(
+        (pre) => pre.textContent,
+      ),
+    ).toContain(
       '{"model":"gpt-image-2","prompt":"画一只狐狸","size":"1024x1536"}',
     );
   });
@@ -287,14 +308,19 @@ describe("LogContentModal", () => {
     const preview = screen.getByRole("dialog", { name: /输出 · gpt-image-2/ });
     expect(preview).toHaveAttribute("data-variant", "image-only");
     expect(screen.getByRole("button", { name: "放大" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "向左旋转" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "向左旋转" }),
+    ).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "下载" })).toHaveAttribute(
       "download",
       "gpt-image-2-output-2.png",
     );
 
     const previewImage = within(preview).getByRole("img", { name: "输出" });
-    expect(previewImage).toHaveAttribute("src", "data:image/png;base64,d29ybGQ=");
+    expect(previewImage).toHaveAttribute(
+      "src",
+      "data:image/png;base64,d29ybGQ=",
+    );
     const rotateRight = screen.getByRole("button", { name: "向右旋转" });
     await act(async () => {
       rotateRight.click();
@@ -332,7 +358,12 @@ describe("LogContentModal", () => {
 
     const fetchPartFn = vi.fn(async (_id: number, part: "input" | "output") => {
       if (part === "input") {
-        return { id: 1, model: "gpt-test", part, content: JSON.stringify(inputPayload) };
+        return {
+          id: 1,
+          model: "gpt-test",
+          part,
+          content: JSON.stringify(inputPayload),
+        };
       }
       return { id: 1, model: "gpt-test", part, content: "" };
     });
@@ -363,5 +394,66 @@ describe("LogContentModal", () => {
     expect(fetchPartFn).toHaveBeenCalled();
     expect(document.body.textContent).not.toContain(tailMarker);
     expect(document.body.querySelector("pre")).toBeNull();
+  });
+
+  test("does not refetch endlessly when a prefetched tab resolves to empty content", async () => {
+    vi.useFakeTimers();
+    await i18n.changeLanguage("zh-CN");
+
+    const fetchPartFn = vi.fn(async (_id: number, part: "input" | "output") => {
+      if (part === "input") {
+        return {
+          id: 1,
+          model: "gpt-image-2",
+          part,
+          content: '{"model":"gpt-image-2","prompt":"画一只狐狸"}',
+        };
+      }
+      return {
+        id: 1,
+        model: "gpt-image-2",
+        part,
+        content: "",
+      };
+    });
+
+    render(
+      <ThemeProvider>
+        <LogContentModal
+          open
+          logId={1}
+          initialTab="input"
+          onClose={() => {}}
+          fetchPartFn={fetchPartFn}
+        />
+      </ThemeProvider>,
+    );
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(260);
+    });
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(500);
+    });
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(fetchPartFn).toHaveBeenCalledTimes(2);
+
+    await act(async () => {
+      screen.getByRole("tab", { name: "输出" }).click();
+    });
+    await act(async () => {
+      await vi.runAllTimersAsync();
+    });
+
+    expect(fetchPartFn).toHaveBeenCalledTimes(2);
+    expect(screen.getByText("暂无输出记录")).toBeInTheDocument();
   });
 });
