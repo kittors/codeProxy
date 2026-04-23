@@ -205,12 +205,14 @@ describe("LogContentModal", () => {
       await vi.runAllTimersAsync();
     });
 
-    expect(screen.getByText("模型")).toBeInTheDocument();
-    expect(screen.getByText("gpt-image-2")).toBeInTheDocument();
-    expect(screen.getByText("提示词")).toBeInTheDocument();
-    expect(screen.getByText("画一只狐狸")).toBeInTheDocument();
-    expect(screen.getByText("size")).toBeInTheDocument();
-    expect(screen.getByText("1024x1536")).toBeInTheDocument();
+    const structuredCard = screen.getByTestId("image-request-structured-card");
+    expect(structuredCard).toBeInTheDocument();
+    expect(within(structuredCard).getByText("模型")).toBeInTheDocument();
+    expect(within(structuredCard).getByText("gpt-image-2")).toBeInTheDocument();
+    expect(within(structuredCard).getByText("提示词")).toBeInTheDocument();
+    expect(within(structuredCard).getByText("画一只狐狸")).toBeInTheDocument();
+    expect(within(structuredCard).getByText("size")).toBeInTheDocument();
+    expect(within(structuredCard).getByText("1024x1536")).toBeInTheDocument();
     expect(document.body.textContent).not.toContain('{"model":"gpt-image-2"');
 
     await act(async () => {

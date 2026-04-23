@@ -100,27 +100,70 @@ function parseImageGenerationOutput(raw: string): ImageGenerationOutputView | nu
   };
 }
 
-function StructuredField({
-  label,
-  value,
-  multiline = false,
+function StructuredRequestCard({
+  model,
+  prompt,
+  parameters,
+  testId,
+  modelLabel,
+  promptLabel,
+  parametersLabel,
 }: {
-  label: string;
-  value: string;
-  multiline?: boolean;
+  model: string;
+  prompt: string;
+  parameters: Array<{ key: string; value: string }>;
+  testId?: string;
+  modelLabel: string;
+  promptLabel: string;
+  parametersLabel: string;
 }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-neutral-800 dark:bg-neutral-900">
-      <p className="text-xs font-medium uppercase tracking-[0.12em] text-slate-500 dark:text-white/40">
-        {label}
-      </p>
-      {multiline ? (
-        <pre className="mt-2 whitespace-pre-wrap break-words font-sans text-sm leading-6 text-slate-900 dark:text-white">
-          {value}
-        </pre>
-      ) : (
-        <p className="mt-2 break-words text-sm font-medium text-slate-900 dark:text-white">{value}</p>
-      )}
+    <div
+      data-testid={testId}
+      className="overflow-hidden rounded-[28px] border border-slate-200 bg-slate-50/90 dark:border-neutral-800 dark:bg-neutral-900/75"
+    >
+      <div className="grid gap-0 divide-y divide-slate-200/90 dark:divide-neutral-800">
+        {model ? (
+          <div className="px-5 py-4 sm:px-6">
+            <p className="text-xs font-medium uppercase tracking-[0.12em] text-slate-500 dark:text-white/40">
+              {modelLabel}
+            </p>
+            <p className="mt-2 break-words text-sm font-semibold text-slate-900 dark:text-white">
+              {model}
+            </p>
+          </div>
+        ) : null}
+        {prompt ? (
+          <div className="px-5 py-4 sm:px-6">
+            <p className="text-xs font-medium uppercase tracking-[0.12em] text-slate-500 dark:text-white/40">
+              {promptLabel}
+            </p>
+            <pre className="mt-2 whitespace-pre-wrap break-words font-sans text-sm leading-7 text-slate-900 dark:text-white">
+              {prompt}
+            </pre>
+          </div>
+        ) : null}
+        {parameters.length > 0 ? (
+          <div className="px-5 py-4 sm:px-6">
+            <p className="text-xs font-medium uppercase tracking-[0.12em] text-slate-500 dark:text-white/40">
+              {parametersLabel}
+            </p>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              {parameters.map((item) => (
+                <div
+                  key={item.key}
+                  className="rounded-2xl border border-slate-200 bg-white px-3 py-3 dark:border-neutral-800 dark:bg-neutral-950"
+                >
+                  <p className="font-mono text-[11px] text-slate-500 dark:text-white/40">{item.key}</p>
+                  <pre className="mt-1 whitespace-pre-wrap break-words font-sans text-sm leading-6 text-slate-900 dark:text-white">
+                    {item.value}
+                  </pre>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -424,40 +467,15 @@ export function LogContentModal({
     if (viewMode === "raw") return renderRaw(inputContent);
     if (imageGenerationInput) {
       return (
-        <div className="space-y-3">
-          {imageGenerationInput.model ? (
-            <StructuredField label={t("log_content.field_model")} value={imageGenerationInput.model} />
-          ) : null}
-          {imageGenerationInput.prompt ? (
-            <StructuredField
-              label={t("log_content.field_prompt")}
-              value={imageGenerationInput.prompt}
-              multiline
-            />
-          ) : null}
-          {imageGenerationInput.parameters.length > 0 ? (
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-950">
-              <p className="text-xs font-medium uppercase tracking-[0.12em] text-slate-500 dark:text-white/40">
-                {t("log_content.field_parameters")}
-              </p>
-              <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                {imageGenerationInput.parameters.map((item) => (
-                  <div
-                    key={item.key}
-                    className="rounded-xl bg-slate-50 px-3 py-2 dark:bg-neutral-900"
-                  >
-                    <p className="font-mono text-[11px] text-slate-500 dark:text-white/40">
-                      {item.key}
-                    </p>
-                    <pre className="mt-1 whitespace-pre-wrap break-words font-sans text-sm text-slate-900 dark:text-white">
-                      {item.value}
-                    </pre>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : null}
-        </div>
+        <StructuredRequestCard
+          testId="image-request-structured-card"
+          model={imageGenerationInput.model}
+          prompt={imageGenerationInput.prompt}
+          parameters={imageGenerationInput.parameters}
+          modelLabel={t("log_content.field_model")}
+          promptLabel={t("log_content.field_prompt")}
+          parametersLabel={t("log_content.field_parameters")}
+        />
       );
     }
     if (inputParsed.status !== "ready" || !inputParsed.view) return renderCenteredLoading();

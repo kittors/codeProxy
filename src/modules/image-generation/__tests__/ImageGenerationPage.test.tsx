@@ -66,14 +66,28 @@ describe("ImageGenerationPage", () => {
     vi.useRealTimers();
   });
 
-  test("renders the request example and places the test action in the call card header", async () => {
+  test("renders text-to-image and image-to-image call docs with structured endpoint tables", async () => {
+    const user = userEvent.setup();
     renderPage();
 
     expect(await screen.findByRole("tab", { name: "gpt-image-2" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "生图模型" })).toBeInTheDocument();
     const callCard = screen.getByText("调用方式").closest("section");
     expect(callCard).not.toBeNull();
-    expect(screen.getByText(/POST \/v1\/images\/generations/)).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "文生图" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "图生图" })).toBeInTheDocument();
+    expect(within(callCard as HTMLElement).getByText("POST")).toBeInTheDocument();
+    expect(within(callCard as HTMLElement).getByText("/v1/images/generations")).toBeInTheDocument();
+    expect(screen.getByText("请求参数")).toBeInTheDocument();
+    expect(screen.getByText("返回结构")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("tab", { name: "图生图" }));
+    expect(screen.getByText("/v1/images/edits")).toBeInTheDocument();
+    expect(screen.getByText("image")).toBeInTheDocument();
+    expect(screen.getByText("multipart/form-data")).toBeInTheDocument();
+    expect(screen.queryByText("BaseURL")).not.toBeInTheDocument();
     expect(screen.getByText(/Authorization: Bearer YOUR_API_KEY/)).toBeInTheDocument();
+    expect(screen.getByText(/-F "image=@\/path\/to\/image.png"/)).toBeInTheDocument();
     expect(within(callCard as HTMLElement).getByRole("button", { name: "测试生成" })).toBeEnabled();
     expect(
       screen.queryByText("查看 gpt-image-2 的调用方式、当前使用渠道，并直接发起测试生成。"),

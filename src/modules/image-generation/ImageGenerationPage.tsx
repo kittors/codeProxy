@@ -17,6 +17,25 @@ const GENERATION_STATUS_KEYS = [
 ] as const;
 const GENERATION_STATUS_INTERVAL_MS = 1800;
 
+type ImageMode = "generations" | "edits";
+type SpecRow = {
+  name: string;
+  type: string;
+  required: boolean;
+  descriptionKey: string;
+};
+type EndpointDoc = {
+  mode: ImageMode;
+  titleKey: string;
+  descriptionKey: string;
+  method: "POST";
+  path: string;
+  contentType: string;
+  requestRows: SpecRow[];
+  responseRows: SpecRow[];
+  curl: string;
+};
+
 const isCodexOauthFile = (file: AuthFileItem): boolean => {
   const accountType = String(file.account_type ?? "")
     .trim()
@@ -27,23 +46,113 @@ const isCodexOauthFile = (file: AuthFileItem): boolean => {
   return accountType === "oauth" && provider === "codex";
 };
 
-const buildExampleRequest = (baseUrl: string) =>
-  [
-    "POST /v1/images/generations",
-    `Host: ${baseUrl.replace(/^https?:\/\//, "")}`,
-    "Authorization: Bearer YOUR_API_KEY",
-    "Content-Type: application/json",
-    "",
-    "{",
-    '  "model": "gpt-image-2",',
-    '  "prompt": "A studio-quality product photo of a ceramic mug on a wooden table",',
-    '  "response_format": "b64_json"',
-    "}",
-  ].join("\n");
+const textToImageCurl = [
+  'curl -X POST "https://your-domain.example/v1/images/generations" \\',
+  '  -H "Authorization: Bearer YOUR_KEY" \\',
+  '  -H "Content-Type: application/json" \\',
+  "  -d '{",
+  '    "model": "gpt-image-2",',
+  '    "prompt": "生成一张干净的蓝色 App 图标",',
+  '    "response_format": "b64_json"',
+  "  }'",
+].join("\n");
+
+const imageToImageCurl = [
+  'curl -X POST "https://your-domain.example/v1/images/edits" \\',
+  '  -H "Authorization: Bearer YOUR_KEY" \\',
+  '  -F "model=gpt-image-2" \\',
+  '  -F "prompt=把这张图改成蓝色图标风格" \\',
+  '  -F "image=@/path/to/image.png"',
+].join("\n");
+
+const RESPONSE_ROWS: SpecRow[] = [
+  {
+    name: "created",
+    type: "number",
+    required: false,
+    descriptionKey: "image_generation.response_created_desc",
+  },
+  {
+    name: "data[].b64_json",
+    type: "string",
+    required: true,
+    descriptionKey: "image_generation.response_b64_desc",
+  },
+  {
+    name: "data[].revised_prompt",
+    type: "string",
+    required: false,
+    descriptionKey: "image_generation.response_revised_prompt_desc",
+  },
+];
+
+const ENDPOINT_DOCS: EndpointDoc[] = [
+  {
+    mode: "generations",
+    titleKey: "image_generation.text_to_image_title",
+    descriptionKey: "image_generation.text_to_image_desc",
+    method: "POST",
+    path: "/v1/images/generations",
+    contentType: "application/json",
+    requestRows: [
+      {
+        name: "model",
+        type: "string",
+        required: true,
+        descriptionKey: "image_generation.param_model_desc",
+      },
+      {
+        name: "prompt",
+        type: "string",
+        required: true,
+        descriptionKey: "image_generation.param_prompt_desc",
+      },
+      {
+        name: "response_format",
+        type: "string",
+        required: false,
+        descriptionKey: "image_generation.param_response_format_desc",
+      },
+    ],
+    responseRows: RESPONSE_ROWS,
+    curl: textToImageCurl,
+  },
+  {
+    mode: "edits",
+    titleKey: "image_generation.image_to_image_title",
+    descriptionKey: "image_generation.image_to_image_desc",
+    method: "POST",
+    path: "/v1/images/edits",
+    contentType: "multipart/form-data",
+    requestRows: [
+      {
+        name: "model",
+        type: "string",
+        required: true,
+        descriptionKey: "image_generation.param_model_desc",
+      },
+      {
+        name: "prompt",
+        type: "string",
+        required: true,
+        descriptionKey: "image_generation.param_edit_prompt_desc",
+      },
+      {
+        name: "image",
+        type: "file",
+        required: true,
+        descriptionKey: "image_generation.param_image_desc",
+      },
+    ],
+    responseRows: RESPONSE_ROWS,
+    curl: imageToImageCurl,
+  },
+];
 
 export function ImageGenerationPage() {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState(GPT_IMAGE_MODEL);
+  const [activeMode, setActiveMode] = useState<ImageMode>("generations");
   const [hasCodexOauthChannel, setHasCodexOauthChannel] = useState(false);
   const [channelsLoading, setChannelsLoading] = useState(true);
   const [testOpen, setTestOpen] = useState(false);
@@ -75,15 +184,11 @@ export function ImageGenerationPage() {
     };
   }, []);
 
-  const exampleBaseUrl = useMemo(() => {
-    if (typeof window === "undefined" || !window.location?.origin) {
-      return "https://your-domain.example/v1";
-    }
-    return `${window.location.origin}/v1`;
-  }, []);
-
-  const requestExample = useMemo(() => buildExampleRequest(exampleBaseUrl), [exampleBaseUrl]);
   const disabled = !channelsLoading && !hasCodexOauthChannel;
+  const activeDoc = useMemo(
+    () => ENDPOINT_DOCS.find((doc) => doc.mode === activeMode) ?? ENDPOINT_DOCS[0],
+    [activeMode],
+  );
 
   const openTest = useCallback(() => {
     if (disabled || channelsLoading) return;
@@ -116,6 +221,7 @@ export function ImageGenerationPage() {
             >
               <Card
                 title={t("image_generation.call_title")}
+                description={t("image_generation.call_description")}
                 actions={
                   <Button
                     variant="primary"
@@ -128,16 +234,27 @@ export function ImageGenerationPage() {
                   </Button>
                 }
               >
-                <div className="space-y-3">
-                  <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-700 dark:bg-neutral-900 dark:text-slate-200">
-                    <p className="font-medium text-slate-900 dark:text-white">
-                      {t("image_generation.base_url_label")}
-                    </p>
-                    <p className="mt-1 break-all font-mono text-[13px]">{exampleBaseUrl}</p>
+                <div className="space-y-4">
+                  <Tabs value={activeMode} onValueChange={(value) => setActiveMode(value as ImageMode)}>
+                    <TabsList>
+                      {ENDPOINT_DOCS.map((doc) => (
+                        <TabsTrigger key={doc.mode} value={doc.mode}>
+                          {t(doc.titleKey)}
+                        </TabsTrigger>
+                      ))}
+                    </TabsList>
+                    {ENDPOINT_DOCS.map((doc) => (
+                      <TabsContent key={doc.mode} value={doc.mode} className="mt-4">
+                        <EndpointDocView doc={doc} />
+                      </TabsContent>
+                    ))}
+                  </Tabs>
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs leading-6 text-slate-600 dark:border-neutral-800 dark:bg-neutral-900 dark:text-white/55">
+                    {t("image_generation.active_endpoint_hint", {
+                      method: activeDoc.method,
+                      path: activeDoc.path,
+                    })}
                   </div>
-                  <pre className="overflow-x-auto rounded-2xl bg-slate-950 px-4 py-3 text-[13px] leading-6 text-slate-100">
-                    <code>{requestExample}</code>
-                  </pre>
                 </div>
               </Card>
             </div>
@@ -146,6 +263,95 @@ export function ImageGenerationPage() {
       </section>
 
       <ImageGenerationTestModal open={testOpen} onClose={() => setTestOpen(false)} />
+    </div>
+  );
+}
+
+function EndpointDocView({ doc }: { doc: EndpointDoc }) {
+  const { t } = useTranslation();
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4 dark:border-neutral-800 dark:bg-neutral-900">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-slate-900 dark:text-white">{t(doc.titleKey)}</p>
+            <p className="mt-1 text-xs leading-5 text-slate-600 dark:text-white/55">
+              {t(doc.descriptionKey)}
+            </p>
+          </div>
+          <div className="flex max-w-full items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 font-mono text-xs dark:border-neutral-800 dark:bg-neutral-950">
+            <span className="rounded-full bg-slate-900 px-2 py-0.5 font-semibold text-white dark:bg-white dark:text-neutral-950">
+              {doc.method}
+            </span>
+            <span className="truncate text-slate-700 dark:text-white/75">{doc.path}</span>
+          </div>
+        </div>
+        <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-600 dark:text-white/55">
+          <span className="rounded-full bg-white px-2.5 py-1 dark:bg-neutral-950">
+            Authorization: Bearer YOUR_API_KEY
+          </span>
+          <span className="rounded-full bg-white px-2.5 py-1 dark:bg-neutral-950">
+            {doc.contentType}
+          </span>
+        </div>
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-2">
+        <SpecTable title={t("image_generation.request_params_title")} rows={doc.requestRows} />
+        <SpecTable title={t("image_generation.response_schema_title")} rows={doc.responseRows} />
+      </div>
+
+      <div className="overflow-hidden rounded-[22px] border border-slate-200 bg-slate-950 dark:border-neutral-800">
+        <div className="border-b border-white/10 px-4 py-2 text-xs font-medium text-slate-300">
+          curl
+        </div>
+        <pre className="overflow-x-auto px-4 py-3 text-[13px] leading-6 text-slate-100">
+          <code>{doc.curl}</code>
+        </pre>
+      </div>
+    </div>
+  );
+}
+
+function SpecTable({ title, rows }: { title: string; rows: SpecRow[] }) {
+  const { t } = useTranslation();
+
+  return (
+    <div className="overflow-hidden rounded-[22px] border border-slate-200 bg-white dark:border-neutral-800 dark:bg-neutral-950">
+      <div className="border-b border-slate-200 px-4 py-3 dark:border-neutral-800">
+        <h4 className="text-sm font-semibold text-slate-900 dark:text-white">{title}</h4>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[520px] text-left text-sm">
+          <thead className="bg-slate-50 text-xs font-medium uppercase tracking-[0.08em] text-slate-500 dark:bg-neutral-900 dark:text-white/40">
+            <tr>
+              <th className="px-4 py-3">{t("image_generation.table_param")}</th>
+              <th className="px-4 py-3">{t("image_generation.table_type")}</th>
+              <th className="px-4 py-3">{t("image_generation.table_required")}</th>
+              <th className="px-4 py-3">{t("image_generation.table_description")}</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-200 dark:divide-neutral-800">
+            {rows.map((row) => (
+              <tr key={row.name}>
+                <td className="px-4 py-3 font-mono text-xs text-slate-900 dark:text-white">
+                  {row.name}
+                </td>
+                <td className="px-4 py-3 font-mono text-xs text-slate-600 dark:text-white/55">
+                  {row.type}
+                </td>
+                <td className="px-4 py-3 text-xs text-slate-600 dark:text-white/55">
+                  {row.required ? t("common.yes") : t("common.no")}
+                </td>
+                <td className="px-4 py-3 text-xs leading-5 text-slate-600 dark:text-white/60">
+                  {t(row.descriptionKey)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
