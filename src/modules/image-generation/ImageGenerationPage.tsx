@@ -656,8 +656,13 @@ function ImageGenerationTestModal({
     }
   };
 
+  const stageSizeClassName =
+    uploadedImages.length > 0
+      ? "h-[clamp(220px,34vh,320px)] sm:h-[clamp(240px,36vh,360px)]"
+      : "h-[clamp(240px,42vh,400px)] sm:h-[clamp(280px,44vh,440px)]";
   const stageClassName = [
-    "relative h-[clamp(240px,42vh,400px)] overflow-hidden rounded-2xl border transition-colors duration-200 sm:h-[clamp(280px,44vh,440px)]",
+    "relative overflow-hidden rounded-2xl border transition-all duration-200",
+    stageSizeClassName,
     errorMessage
       ? "border-slate-200 bg-slate-100 text-slate-700 dark:border-neutral-800 dark:bg-neutral-900 dark:text-white/85"
       : activeImage

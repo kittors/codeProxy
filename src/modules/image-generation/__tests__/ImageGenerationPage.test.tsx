@@ -184,6 +184,7 @@ describe("ImageGenerationPage", () => {
     );
     expect(within(dialog).getByTestId("image-generation-stage")).toHaveClass(
       "bg-slate-50",
+      "h-[clamp(240px,42vh,400px)]",
     );
     expect(
       dialog.querySelector(".image-generation-dots-layer"),
@@ -342,6 +343,9 @@ describe("ImageGenerationPage", () => {
     expect(
       composerScope.getAllByTestId("image-generation-upload-chip"),
     ).toHaveLength(5);
+    expect(within(dialog).getByTestId("image-generation-stage")).toHaveClass(
+      "h-[clamp(220px,34vh,320px)]",
+    );
     expect(
       composerScope.getByTestId("image-generation-upload-strip"),
     ).toHaveClass("absolute", "flex", "overflow-x-auto", "overflow-y-hidden");
