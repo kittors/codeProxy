@@ -1,5 +1,5 @@
 import { createPortal } from "react-dom";
-import { useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type PointerEvent } from "react";
 import { Download, RotateCcw, RotateCw, Scan, X, ZoomIn, ZoomOut } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -18,9 +18,15 @@ function normalizeQuarterTurns(value: number) {
 }
 
 function rotationDegrees(quarterTurns: number) {
-  const normalized = normalizeQuarterTurns(quarterTurns);
-  if (normalized === 3) return -90;
-  return normalized * 90;
+  return quarterTurns * 90;
+}
+
+function nearestUprightQuarterTurns(current: number) {
+  const normalized = normalizeQuarterTurns(current);
+  if (normalized === 0) return current;
+  const backward = -normalized;
+  const forward = 4 - normalized;
+  return current + (Math.abs(backward) <= Math.abs(forward) ? backward : forward);
 }
 
 function buildDownloadName(model?: string) {
@@ -47,6 +53,16 @@ export function ImagePreviewOverlay({
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const dragRef = useRef<{ pointerId: number; x: number; y: number; left: number; top: number } | null>(null);
   const movedRef = useRef(false);
+  const previousMetricsRef = useRef<{
+    scale: number;
+    quarterTurns: number;
+    scrollWidth: number;
+    scrollHeight: number;
+    clientWidth: number;
+    clientHeight: number;
+    scrollLeft: number;
+    scrollTop: number;
+  } | null>(null);
   const [scale, setScale] = useState(1);
   const [quarterTurns, setQuarterTurns] = useState(0);
   const [naturalSize, setNaturalSize] = useState({ width: 0, height: 0 });
@@ -57,6 +73,7 @@ export function ImagePreviewOverlay({
     setScale(1);
     setQuarterTurns(0);
     dragRef.current = null;
+    previousMetricsRef.current = null;
   }, [imageSrc, open]);
 
   useEffect(() => {
@@ -87,11 +104,9 @@ export function ImagePreviewOverlay({
     const naturalWidth = naturalSize.width || 1;
     const naturalHeight = naturalSize.height || 1;
     const rotated = normalizeQuarterTurns(quarterTurns) % 2 === 1;
-    const effectiveWidth = rotated ? naturalHeight : naturalWidth;
-    const effectiveHeight = rotated ? naturalWidth : naturalHeight;
     const maxWidth = Math.max(320, viewportSize.width - VIEWPORT_PADDING_X);
     const maxHeight = Math.max(240, viewportSize.height - VIEWPORT_PADDING_Y);
-    const fitScale = Math.min(maxWidth / effectiveWidth, maxHeight / effectiveHeight, 1);
+    const fitScale = Math.min(maxWidth / naturalWidth, maxHeight / naturalHeight, 1);
     const baseWidth = naturalWidth * fitScale;
     const baseHeight = naturalHeight * fitScale;
     const boxWidth = (rotated ? baseHeight : baseWidth) * scale;
@@ -104,6 +119,41 @@ export function ImagePreviewOverlay({
       boxHeight,
     };
   }, [naturalSize.height, naturalSize.width, quarterTurns, scale, viewportSize.height, viewportSize.width]);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    const element = scrollRef.current;
+    if (!element) return;
+
+    const previous = previousMetricsRef.current;
+    if (previous && (previous.scale !== scale || previous.quarterTurns !== quarterTurns)) {
+      const previousCenterX = previous.scrollLeft + previous.clientWidth / 2;
+      const previousCenterY = previous.scrollTop + previous.clientHeight / 2;
+      const ratioX =
+        previous.scrollWidth > previous.clientWidth
+          ? previousCenterX / previous.scrollWidth
+          : 0.5;
+      const ratioY =
+        previous.scrollHeight > previous.clientHeight
+          ? previousCenterY / previous.scrollHeight
+          : 0.5;
+      const maxLeft = Math.max(0, element.scrollWidth - element.clientWidth);
+      const maxTop = Math.max(0, element.scrollHeight - element.clientHeight);
+      element.scrollLeft = clamp(ratioX * element.scrollWidth - element.clientWidth / 2, 0, maxLeft);
+      element.scrollTop = clamp(ratioY * element.scrollHeight - element.clientHeight / 2, 0, maxTop);
+    }
+
+    previousMetricsRef.current = {
+      scale,
+      quarterTurns,
+      scrollWidth: element.scrollWidth,
+      scrollHeight: element.scrollHeight,
+      clientWidth: element.clientWidth,
+      clientHeight: element.clientHeight,
+      scrollLeft: element.scrollLeft,
+      scrollTop: element.scrollTop,
+    };
+  }, [geometry.boxHeight, geometry.boxWidth, open, quarterTurns, scale]);
 
   if (!open || !imageSrc) return null;
 
@@ -179,6 +229,20 @@ export function ImagePreviewOverlay({
         onPointerMove={handlePointerMove}
         onPointerUp={stopDragging}
         onPointerCancel={stopDragging}
+        onScroll={() => {
+          const element = scrollRef.current;
+          const previous = previousMetricsRef.current;
+          if (!element || !previous) return;
+          previousMetricsRef.current = {
+            ...previous,
+            scrollWidth: element.scrollWidth,
+            scrollHeight: element.scrollHeight,
+            clientWidth: element.clientWidth,
+            clientHeight: element.clientHeight,
+            scrollLeft: element.scrollLeft,
+            scrollTop: element.scrollTop,
+          };
+        }}
       >
         <div className="inline-flex min-h-full min-w-full items-center justify-center p-6 sm:p-10">
           <div
@@ -235,7 +299,7 @@ export function ImagePreviewOverlay({
           <button
             type="button"
             className={controlButtonClass}
-            onClick={() => setQuarterTurns((current) => normalizeQuarterTurns(current - 1))}
+            onClick={() => setQuarterTurns((current) => current - 1)}
             title={t("common.rotate_left")}
             aria-label={t("common.rotate_left")}
           >
@@ -244,7 +308,7 @@ export function ImagePreviewOverlay({
           <button
             type="button"
             className={controlButtonClass}
-            onClick={() => setQuarterTurns((current) => normalizeQuarterTurns(current + 1))}
+            onClick={() => setQuarterTurns((current) => current + 1)}
             title={t("common.rotate_right")}
             aria-label={t("common.rotate_right")}
           >
@@ -255,7 +319,7 @@ export function ImagePreviewOverlay({
             className={controlButtonClass}
             onClick={() => {
               setScale(1);
-              setQuarterTurns(0);
+              setQuarterTurns((current) => nearestUprightQuarterTurns(current));
               if (scrollRef.current) {
                 scrollRef.current.scrollTo({ left: 0, top: 0, behavior: "smooth" });
               }
