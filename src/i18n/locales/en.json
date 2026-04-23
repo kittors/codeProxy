@@ -1759,7 +1759,7 @@
     "param_edit_prompt_desc": "Describe how the uploaded image should be changed.",
     "param_image_desc": "Image file to edit, uploaded with multipart/form-data.",
     "param_images_desc": "Image files to edit. Repeat the multipart/form-data `image` field, up to 5 images.",
-    "param_size_desc": "Optional size: 1024x1024, 1792x1024, or 1024x1792.",
+    "param_size_desc": "Optional size: 1024x1024, 1792x1024, 1024x1792, 2560x1440, or 2160x3840.",
     "param_quality_desc": "Optional quality: low, medium, or high.",
     "param_n_desc": "Number of images to generate. Recommended range: 1-4.",
     "param_response_format_desc": "Use b64_json so request logs can preview the generated image directly.",

@@ -29,7 +29,13 @@ const GENERATION_STATUS_KEYS = [
   "image_generation.generation_status_starting",
 ] as const;
 const GENERATION_STATUS_INTERVAL_MS = 1800;
-const SIZE_OPTIONS = ["1024x1024", "1792x1024", "1024x1792"] as const;
+const SIZE_OPTIONS = [
+  "1024x1024",
+  "1792x1024",
+  "1024x1792",
+  "2560x1440",
+  "2160x3840",
+] as const;
 const QUALITY_OPTIONS = ["low", "medium", "high"] as const;
 const COUNT_OPTIONS = [1, 2, 3, 4] as const;
 const MAX_UPLOAD_IMAGES = 5;

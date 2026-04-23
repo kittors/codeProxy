@@ -1358,7 +1358,7 @@
     "param_edit_prompt_desc": "Описание изменения загруженного изображения.",
     "param_image_desc": "Файл изображения для редактирования, загружается через multipart/form-data.",
     "param_images_desc": "Файлы изображения для редактирования. Повторяйте поле `image` в multipart/form-data, максимум 5 файлов.",
-    "param_size_desc": "Опциональный размер: 1024x1024, 1792x1024 или 1024x1792.",
+    "param_size_desc": "Опциональный размер: 1024x1024, 1792x1024, 1024x1792, 2560x1440 или 2160x3840.",
     "param_quality_desc": "Опциональное качество: low, medium или high.",
     "param_n_desc": "Количество изображений. Рекомендуемый диапазон: 1-4.",
     "param_response_format_desc": "Используйте b64_json, чтобы request logs могли показать preview.",

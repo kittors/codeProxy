@@ -206,7 +206,13 @@ describe("ImageGenerationPage", () => {
     ).not.toBeInTheDocument();
 
     await user.click(within(dialog).getByRole("combobox", { name: "分辨率" }));
-    await user.click(await screen.findByRole("option", { name: "1024x1792" }));
+    expect(
+      await screen.findByRole("option", { name: "2560x1440" }),
+    ).toBeVisible();
+    expect(
+      await screen.findByRole("option", { name: "2160x3840" }),
+    ).toBeVisible();
+    await user.click(await screen.findByRole("option", { name: "2160x3840" }));
     await user.click(within(dialog).getByRole("combobox", { name: "质量" }));
     await user.click(await screen.findByRole("option", { name: "high" }));
     await user.click(
@@ -228,7 +234,7 @@ describe("ImageGenerationPage", () => {
       model: "gpt-image-2",
       prompt: "画一只狐狸",
       quality: "high",
-      size: "1024x1792",
+      size: "2160x3840",
       n: 2,
     });
 
