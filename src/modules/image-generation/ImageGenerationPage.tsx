@@ -567,12 +567,13 @@ function ImageGenerationTestModal({
     showImageAt(activeImageIndex + (deltaX < 0 ? 1 : -1));
   };
 
-  const handleUploadImages = (files: FileList | null) => {
-    if (!files || files.length === 0) return;
+  const handleUploadImages = (files: FileList | File[] | null) => {
+    const nextSelectedFiles = files ? Array.from(files) : [];
+    if (nextSelectedFiles.length === 0) return;
     setUploadedImages((current) => {
       const remainingSlots = Math.max(0, MAX_UPLOAD_IMAGES - current.length);
       if (remainingSlots === 0) return current;
-      const nextFiles = Array.from(files).slice(0, remainingSlots);
+      const nextFiles = nextSelectedFiles.slice(0, remainingSlots);
       return [
         ...current,
         ...nextFiles.map((file, index) => ({
@@ -939,7 +940,8 @@ function ImageGenerationTestModal({
               disabled={uploadedImages.length >= MAX_UPLOAD_IMAGES}
               className="sr-only"
               onChange={(event) => {
-                handleUploadImages(event.target.files);
+                const selectedFiles = Array.from(event.currentTarget.files ?? []);
+                handleUploadImages(selectedFiles);
                 event.currentTarget.value = "";
               }}
             />

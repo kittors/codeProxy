@@ -393,6 +393,30 @@ describe("ImageGenerationPage", () => {
     ).toBeInTheDocument();
   });
 
+  test("keeps uploaded image chips visible after the file input is cleared", async () => {
+    const user = userEvent.setup();
+
+    renderPage();
+
+    await screen.findByRole("tab", { name: "gpt-image-2" });
+    await user.click(screen.getByRole("button", { name: "测试生成" }));
+
+    const dialog = await screen.findByRole("dialog", { name: "测试生成" });
+    const input = within(dialog).getByLabelText("上传图片") as HTMLInputElement;
+    const file = new File(["a"], "cover.png", { type: "image/png" });
+
+    await user.upload(input, file);
+
+    expect(input.value).toBe("");
+    expect(
+      within(dialog).getByTestId("image-generation-upload-chip"),
+    ).toBeInTheDocument();
+    expect(within(dialog).getByText("cover.png")).toBeInTheDocument();
+    expect(
+      within(dialog).getByRole("img", { name: "cover.png" }),
+    ).toBeInTheDocument();
+  });
+
   test("greys the preview area and shows the error message inside the modal when generation fails", async () => {
     imageGenerationTestMock().mockRejectedValue(new Error("上游图片生成失败"));
 
