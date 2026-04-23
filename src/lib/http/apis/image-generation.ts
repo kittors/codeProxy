@@ -1,5 +1,7 @@
 import { apiClient } from "@/lib/http/client";
 
+const IMAGE_GENERATION_TEST_TIMEOUT_MS = 6 * 60 * 1000;
+
 export interface ImageGenerationTestRequest {
   mode?: "generations";
   model: "gpt-image-2" | string;
@@ -40,12 +42,12 @@ export const imageGenerationApi = {
       if (payload.n) formData.set("n", String(payload.n));
       payload.images.forEach((image) => formData.append("image", image));
       return apiClient.postForm<ImageGenerationTestResponse>("/image-generation/test", formData, {
-        timeoutMs: 180000,
+        timeoutMs: IMAGE_GENERATION_TEST_TIMEOUT_MS,
       });
     }
     const { mode: _mode, ...body } = payload;
     return apiClient.post<ImageGenerationTestResponse>("/image-generation/test", body, {
-      timeoutMs: 180000,
+      timeoutMs: IMAGE_GENERATION_TEST_TIMEOUT_MS,
     });
   },
 };
