@@ -123,7 +123,8 @@ describe("ImageGenerationPage", () => {
 
     expect(within(dialog).getByText("正在生成图片")).toBeInTheDocument();
     expect(within(dialog).getByTestId("image-generation-stage")).toHaveClass("bg-slate-50");
-    expect(dialog.querySelectorAll(".image-generation-dots-layer")).toHaveLength(2);
+    expect(dialog.querySelectorAll(".image-generation-dots-layer")).toHaveLength(1);
+    expect(dialog.querySelectorAll(".image-generation-flow-layer")).toHaveLength(1);
 
     await waitFor(() => {
       expect(within(dialog).getByText("正在打草稿")).toBeInTheDocument();

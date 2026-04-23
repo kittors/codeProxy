@@ -209,7 +209,7 @@ function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: (
   };
 
   const stageClassName = [
-    "relative min-h-[260px] overflow-hidden rounded-2xl border transition-colors duration-200 sm:min-h-[320px]",
+    "relative h-[clamp(240px,42vh,400px)] overflow-hidden rounded-2xl border transition-colors duration-200 sm:h-[clamp(280px,44vh,440px)]",
     errorMessage
       ? "border-slate-200 bg-slate-100 text-slate-700 dark:border-neutral-800 dark:bg-neutral-900 dark:text-white/85"
       : imageSrc
@@ -244,12 +244,18 @@ function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: (
             className={stageClassName}
             aria-live="polite"
           >
+            {showGeneratingState ? (
+              <>
+                <div className="image-generation-dots-layer" />
+                <div className="image-generation-flow-layer" />
+              </>
+            ) : null}
             {imageSrc ? (
               <>
                 <img
                   src={imageSrc}
                   alt={t("image_generation.preview_alt", { model: GPT_IMAGE_MODEL })}
-                  className="h-full w-full cursor-zoom-in object-contain"
+                  className="relative z-10 h-full max-h-full w-full max-w-full cursor-zoom-in object-contain p-3 sm:p-4"
                   onClick={() => setPreviewOpen(true)}
                 />
                 <span className="pointer-events-none absolute right-3 bottom-3 rounded-full bg-black/55 px-3 py-1 text-xs font-medium text-white/85 backdrop-blur">
@@ -266,12 +272,6 @@ function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: (
                     : "bg-transparent",
                 ].join(" ")}
               >
-                {showGeneratingState ? (
-                  <>
-                    <div className="image-generation-dots-layer image-generation-dots-layer--primary" />
-                    <div className="image-generation-dots-layer image-generation-dots-layer--secondary" />
-                  </>
-                ) : null}
                 <div className="relative z-10 flex h-full w-full items-start">
                   {showGeneratingState ? (
                     <div className="max-w-md">
@@ -351,15 +351,15 @@ function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: (
         onClose={() => setPreviewOpen(false)}
         maxWidth="max-w-[860px]"
         panelClassName="w-full border-slate-200 bg-white shadow-2xl dark:border-neutral-800 dark:bg-neutral-950"
-        bodyHeightClassName="h-full"
+        bodyHeightClassName="max-h-[calc(100vh-8rem)]"
         bodyClassName="!overflow-hidden !px-4 !py-4 sm:!px-5"
       >
         {imageSrc ? (
-          <div className="flex min-h-[360px] items-center justify-center rounded-2xl bg-slate-100 dark:bg-black">
+          <div className="flex h-[min(72vh,720px)] max-h-[calc(100vh-10rem)] items-center justify-center overflow-hidden rounded-2xl bg-slate-100 dark:bg-black">
             <img
               src={imageSrc}
               alt={t("image_generation.preview_alt", { model: GPT_IMAGE_MODEL })}
-              className="h-full w-full rounded-xl object-contain"
+              className="max-h-full max-w-full rounded-xl object-contain"
             />
           </div>
         ) : null}

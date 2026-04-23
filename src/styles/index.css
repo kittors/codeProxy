@@ -92,84 +92,67 @@
 
 @keyframes imageGenerationDotsDrift {
   0% {
-    transform: translate3d(0, 0, 0) scale(1);
-    opacity: 0.5;
-  }
-  25% {
-    transform: translate3d(10px, -6px, 0) scale(1.015);
-    opacity: 0.72;
+    transform: translate3d(0, 0, 0);
+    background-position: 0 0;
+    opacity: 0.92;
   }
   50% {
-    transform: translate3d(-8px, 6px, 0) scale(0.995);
-    opacity: 0.58;
-  }
-  75% {
-    transform: translate3d(8px, 10px, 0) scale(1.01);
-    opacity: 0.7;
+    transform: translate3d(5px, -4px, 0);
+    background-position: 8px 6px;
+    opacity: 0.72;
   }
   100% {
-    transform: translate3d(0, 0, 0) scale(1);
-    opacity: 0.5;
+    transform: translate3d(0, 0, 0);
+    background-position: 0 0;
+    opacity: 0.92;
   }
 }
 
-@keyframes imageGenerationDotsDriftReverse {
+@keyframes imageGenerationFlowSweep {
   0% {
-    transform: translate3d(0, 0, 0) scale(1);
-    opacity: 0.36;
-  }
-  25% {
-    transform: translate3d(-8px, 8px, 0) scale(0.99);
-    opacity: 0.52;
+    transform: translate3d(-18%, -8%, 0);
+    opacity: 0.18;
   }
   50% {
-    transform: translate3d(10px, -8px, 0) scale(1.02);
-    opacity: 0.4;
-  }
-  75% {
-    transform: translate3d(-6px, -4px, 0) scale(1.005);
-    opacity: 0.56;
+    transform: translate3d(12%, 10%, 0);
+    opacity: 0.34;
   }
   100% {
-    transform: translate3d(0, 0, 0) scale(1);
-    opacity: 0.36;
+    transform: translate3d(-18%, -8%, 0);
+    opacity: 0.18;
   }
 }
 
 .image-generation-dots-layer {
   position: absolute;
-  inset: 0;
+  inset: -20px;
   pointer-events: none;
-  background-image:
-    radial-gradient(circle, rgba(148, 163, 184, 0.34) 1.4px, transparent 1.8px),
-    radial-gradient(circle at 22% 18%, rgba(255, 255, 255, 0.42), transparent 26%),
-    radial-gradient(circle at 74% 36%, rgba(148, 163, 184, 0.22), transparent 24%);
-  background-size: 20px 20px, 100% 100%, 100% 100%;
+  background-image: radial-gradient(circle, rgba(148, 163, 184, 0.2) 1.2px, transparent 1.45px);
+  background-repeat: repeat;
+  background-size: 16px 16px;
   transform-origin: center;
+  will-change: transform, opacity, background-position;
+  animation: imageGenerationDotsDrift 6.8s ease-in-out infinite;
+}
+
+.image-generation-flow-layer {
+  position: absolute;
+  inset: -24%;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 28% 28%, rgba(255, 255, 255, 0.55), transparent 28%),
+    radial-gradient(circle at 72% 62%, rgba(191, 219, 254, 0.3), transparent 24%);
+  filter: blur(22px);
   will-change: transform, opacity;
-}
-
-.image-generation-dots-layer--primary {
-  animation: imageGenerationDotsDrift 7s ease-in-out infinite;
-}
-
-.image-generation-dots-layer--secondary {
-  background-image:
-    radial-gradient(circle, rgba(148, 163, 184, 0.24) 1.1px, transparent 1.5px),
-    radial-gradient(circle at 68% 62%, rgba(255, 255, 255, 0.24), transparent 28%);
-  background-size: 18px 18px, 100% 100%;
-  animation: imageGenerationDotsDriftReverse 9s ease-in-out infinite;
+  animation: imageGenerationFlowSweep 8.2s ease-in-out infinite;
 }
 
 .dark .image-generation-dots-layer {
-  background-image:
-    radial-gradient(circle, rgba(255, 255, 255, 0.16) 1.4px, transparent 1.8px),
-    radial-gradient(circle at 22% 18%, rgba(255, 255, 255, 0.12), transparent 26%),
-    radial-gradient(circle at 74% 36%, rgba(255, 255, 255, 0.08), transparent 24%);
+  background-image: radial-gradient(circle, rgba(255, 255, 255, 0.14) 1.2px, transparent 1.45px);
 }
 
-.dark .image-generation-dots-layer--secondary {
-  background-image:
-    radial-gradient(circle, rgba(255, 255, 255, 0.11) 1.1px, transparent 1.5px),
-    radial-gradient(circle at 68% 62%, rgba(255, 255, 255, 0.12), transparent 28%);
+.dark .image-generation-flow-layer {
+  background:
+    radial-gradient(circle at 28% 28%, rgba(255, 255, 255, 0.18), transparent 28%),
+    radial-gradient(circle at 72% 62%, rgba(148, 163, 184, 0.16), transparent 24%);
 }
