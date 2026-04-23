@@ -162,6 +162,70 @@ describe("LogContentModal", () => {
     expect(getPre()!.textContent).toContain('\n    "c": 2');
   });
 
+  test("renders formatted image-generation output with reusable image preview controls", async () => {
+    vi.useFakeTimers();
+    await i18n.changeLanguage("zh-CN");
+
+    const fetchPartFn = vi.fn(async (_id: number, part: "input" | "output") => {
+      if (part === "input") {
+        return {
+          id: 1,
+          model: "gpt-image-2",
+          part,
+          content: '{"model":"gpt-image-2","prompt":"画一只狐狸"}',
+        };
+      }
+      return {
+        id: 1,
+        model: "gpt-image-2",
+        part,
+        content: '{"created":1776910933,"data":[{"b64_json":"aGVsbG8="}]}',
+      };
+    });
+
+    render(
+      <ThemeProvider>
+        <LogContentModal
+          open
+          logId={1}
+          initialTab="output"
+          onClose={() => {}}
+          fetchPartFn={fetchPartFn}
+        />
+      </ThemeProvider>,
+    );
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(260);
+    });
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    await act(async () => {
+      await vi.runAllTimersAsync();
+    });
+    await act(async () => {});
+    await act(async () => {
+      await vi.runAllTimersAsync();
+    });
+
+    expect(document.body.textContent).toContain('"created": 1776910933');
+    const image = screen.getByRole("img", { name: "输出" });
+    expect(image).toHaveAttribute("src", "data:image/png;base64,aGVsbG8=");
+    expect(screen.getByRole("button", { name: "点击预览" })).toBeInTheDocument();
+
+    await act(async () => {
+      image.click();
+    });
+
+    const preview = screen.getByRole("dialog", { name: /输出 · gpt-image-2/ });
+    expect(preview).toHaveAttribute("data-variant", "image-only");
+    expect(screen.getByRole("button", { name: "放大" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "向左旋转" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "下载" })).toHaveAttribute("download", "gpt-image-2-output.png");
+  });
+
   test("does not mount massive raw content while rendered view parsing is deferred", async () => {
     vi.useFakeTimers();
 

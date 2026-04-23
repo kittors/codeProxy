@@ -15,6 +15,7 @@ import {
 } from "@/modules/monitor/log-content/rendering";
 import { scheduleIdle, type CancelFn } from "@/modules/monitor/log-content/scheduler";
 import { Tabs, TabsList, TabsTrigger } from "@/modules/ui/Tabs";
+import { ImagePreviewOverlay } from "@/modules/ui/ImagePreviewOverlay";
 import type {
   AsyncParsedState,
   AsyncPrettyState,
@@ -28,6 +29,18 @@ const MODAL_CONTENT_LOAD_DELAY_MS = 260;
 const LOADING_EXIT_MS = 220;
 const CONTENT_ENTER_MS = 340;
 type ContentPhase = "loading" | "error" | "content";
+
+function extractImagePreviewSource(raw: string): string | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as { data?: Array<{ b64_json?: string }> };
+    const image = parsed?.data?.find((item) => typeof item?.b64_json === "string" && item.b64_json.trim());
+    if (!image?.b64_json) return null;
+    return `data:image/png;base64,${image.b64_json}`;
+  } catch {
+    return null;
+  }
+}
 
 export function LogContentModal({
   open,
@@ -57,6 +70,7 @@ export function LogContentModal({
   const [outputRevealCount, setOutputRevealCount] = useState(0);
   const [contentLoadReady, setContentLoadReady] = useState(false);
   const [displayPhase, setDisplayPhase] = useState<ContentPhase>("loading");
+  const [imagePreviewOpen, setImagePreviewOpen] = useState(false);
   const dataOpen = open && contentLoadReady;
   const {
     inputLoading,
@@ -82,6 +96,7 @@ export function LogContentModal({
   useEffect(() => {
     if (!open) {
       setContentLoadReady(false);
+      setImagePreviewOpen(false);
       return;
     }
 
@@ -258,6 +273,11 @@ export function LogContentModal({
   const activeLoading = activeTab === "input" ? inputLoading : outputLoading;
   const activeError = activeTab === "input" ? inputError : outputError;
   const activeParsed = activeTab === "input" ? inputParsed : outputParsed;
+  const outputImagePreviewSrc = useMemo(() => extractImagePreviewSource(outputContent), [outputContent]);
+  const activeDownloadName = useMemo(() => {
+    const suffix = activeTab === "input" ? "input" : "output";
+    return `${model || "request-log"}-${suffix}.png`;
+  }, [activeTab, model]);
   const waitingForRenderedContent =
     Boolean(currentContent) &&
     viewMode === "rendered" &&
@@ -370,19 +390,56 @@ export function LogContentModal({
     if (outputParsed.status !== "ready" || !outputParsed.view) return renderCenteredLoading();
 
     const view = outputParsed.view;
+    const imagePreviewCard = outputImagePreviewSrc ? (
+      <div className="mb-4 rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-neutral-800 dark:bg-neutral-900">
+        <div className="relative min-h-[160px] overflow-hidden rounded-xl bg-slate-100 dark:bg-black">
+          <img
+            src={outputImagePreviewSrc}
+            alt={t("log_content.output")}
+            className="block h-auto w-full cursor-zoom-in"
+            onClick={() => setImagePreviewOpen(true)}
+          />
+          <button
+            type="button"
+            onClick={() => setImagePreviewOpen(true)}
+            className="absolute right-3 bottom-3 z-20 rounded-full bg-black/60 px-3 py-1 text-xs font-medium text-white/90 shadow-sm backdrop-blur transition-colors hover:bg-black/75 hover:text-white"
+          >
+            {t("image_generation.open_preview")}
+          </button>
+        </div>
+      </div>
+    ) : null;
     if (view.kind === "messages") {
       const count = outputRevealCount > 0 ? outputRevealCount : Math.min(view.messages.length, 6);
-      return <MessageList messages={view.messages.slice(0, count)} />;
+      return (
+        <div>
+          {imagePreviewCard}
+          <MessageList messages={view.messages.slice(0, count)} />
+        </div>
+      );
     }
-    if (view.kind === "pretty_json") return <PlainPre text={view.pretty} />;
+    if (view.kind === "pretty_json") {
+      return (
+        <div>
+          {imagePreviewCard}
+          <PlainPre text={view.pretty} />
+        </div>
+      );
+    }
     if (view.kind === "text") {
       return (
         <div className="space-y-3">
+          {imagePreviewCard}
           <MessageBlock role="assistant" content={view.text} />
         </div>
       );
     }
-    return <PlainPre text={view.raw} />;
+    return (
+      <div>
+        {imagePreviewCard}
+        <PlainPre text={view.raw} />
+      </div>
+    );
   };
 
   return (
@@ -425,6 +482,14 @@ export function LogContentModal({
           )}
         </AnimatePresence>
       </div>
+      <ImagePreviewOverlay
+        open={imagePreviewOpen && Boolean(outputImagePreviewSrc)}
+        imageSrc={outputImagePreviewSrc}
+        imageAlt={t("log_content.output")}
+        title={model ? `${t("log_content.output")} · ${model}` : t("log_content.output")}
+        downloadName={activeDownloadName}
+        onClose={() => setImagePreviewOpen(false)}
+      />
     </ContentModal>
   );
 }

@@ -20,6 +20,7 @@ export type RequestLogsRow = {
   timestampMs: number;
   apiKey: string;
   apiKeyName: string;
+  isSystemCall: boolean;
   channelName: string;
   maskedApiKey: string;
   model: string;
@@ -76,12 +77,14 @@ export const formatOptionalRequestLogLatencyMs = (value: number): string => {
 };
 
 export const toRequestLogsRow = (item: UsageLogItem): RequestLogsRow => {
+  const isSystemCall = isSystemRequestLogKey(item.api_key, item.api_key_name);
   return {
     id: String(item.id),
     timestamp: item.timestamp,
     timestampMs: parseUsageTimestampMs(item.timestamp),
     apiKey: item.api_key,
     apiKeyName: item.api_key_name || "",
+    isSystemCall,
     channelName: item.channel_name || "",
     maskedApiKey: maskRequestLogApiKey(item.api_key),
     model: item.model,
@@ -95,6 +98,13 @@ export const toRequestLogsRow = (item: UsageLogItem): RequestLogsRow => {
     cost: item.cost ?? 0,
     hasContent: item.has_content ?? false,
   };
+};
+
+export const isSystemRequestLogKey = (apiKey: string, apiKeyName?: string): boolean => {
+  if (String(apiKeyName || "").trim()) return false;
+  const trimmed = String(apiKey || "").trim();
+  if (!trimmed) return true;
+  return /^(GET|POST|PUT|PATCH|DELETE|OPTIONS|HEAD)\s+\//i.test(trimmed) || trimmed.startsWith("/");
 };
 
 export function RequestLogsTimeRangeSelector({
@@ -155,11 +165,14 @@ export function buildRequestLogsColumns(
       label: t("request_logs.col_key_name"),
       width: "w-32",
       render: (row) => (
-        <OverflowTooltip content={row.apiKeyName || "--"} className="block min-w-0">
+        <OverflowTooltip
+          content={row.isSystemCall ? t("request_logs.system_call") : row.apiKeyName || "--"}
+          className="block min-w-0"
+        >
           <span
-            className={`block min-w-0 truncate text-xs font-medium ${row.apiKeyName ? "text-indigo-600 dark:text-indigo-400" : "text-slate-400 dark:text-white/30"}`}
+            className={`block min-w-0 truncate text-xs font-medium ${row.apiKeyName || row.isSystemCall ? "text-indigo-600 dark:text-indigo-400" : "text-slate-400 dark:text-white/30"}`}
           >
-            {row.apiKeyName || "--"}
+            {row.isSystemCall ? t("request_logs.system_call") : row.apiKeyName || "--"}
           </span>
         </OverflowTooltip>
       ),

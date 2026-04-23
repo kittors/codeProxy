@@ -70,7 +70,12 @@
     "other": "其他",
     "view_mode": "视图模式",
     "view_mode_list": "列表",
-    "view_mode_cards": "卡片"
+    "view_mode_cards": "卡片",
+    "zoom_in": "放大",
+    "zoom_out": "缩小",
+    "rotate_left": "向左旋转",
+    "rotate_right": "向右旋转",
+    "reset_image": "还原图片"
   },
   "title": {
     "main": "CLI Proxy API Management Center",
@@ -2284,6 +2289,7 @@
     "today": "今天",
     "n_days": "{{count}} 天",
     "heading": "请求日志",
+    "system_call": "系统调用",
     "col_id": "ID",
     "col_time": "时间",
     "col_key_name": "密钥名称",

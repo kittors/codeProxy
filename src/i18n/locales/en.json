@@ -68,7 +68,12 @@
     "other": "Other",
     "view_mode": "View mode",
     "view_mode_list": "List",
-    "view_mode_cards": "Cards"
+    "view_mode_cards": "Cards",
+    "zoom_in": "Zoom in",
+    "zoom_out": "Zoom out",
+    "rotate_left": "Rotate left",
+    "rotate_right": "Rotate right",
+    "reset_image": "Reset image"
   },
   "title": {
     "main": "CLI Proxy API Management Center",
@@ -2115,6 +2120,7 @@
     "today": "Today",
     "n_days": "{{count}} days",
     "heading": "Request Logs",
+    "system_call": "System Call",
     "col_id": "ID",
     "col_time": "Time",
     "col_key_name": "Key Name",

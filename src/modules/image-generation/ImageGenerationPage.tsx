@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { createPortal } from "react-dom";
-import { X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { authFilesApi, imageGenerationApi } from "@/lib/http/apis";
 import type { AuthFileItem } from "@/lib/http/types";
 import { Button } from "@/modules/ui/Button";
 import { Card } from "@/modules/ui/Card";
+import { ImagePreviewOverlay } from "@/modules/ui/ImagePreviewOverlay";
 import { Modal } from "@/modules/ui/Modal";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/modules/ui/Tabs";
 
@@ -372,68 +371,9 @@ function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: (
         imageSrc={imageSrc}
         imageAlt={t("image_generation.preview_alt", { model: GPT_IMAGE_MODEL })}
         title={t("image_generation.image_preview_title")}
+        downloadName={`${GPT_IMAGE_MODEL}.png`}
         onClose={() => setPreviewOpen(false)}
       />
     </>
-  );
-}
-
-function ImagePreviewOverlay({
-  open,
-  imageSrc,
-  imageAlt,
-  title,
-  onClose,
-}: {
-  open: boolean;
-  imageSrc: string | null;
-  imageAlt: string;
-  title: string;
-  onClose: () => void;
-}) {
-  useEffect(() => {
-    if (!open) return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [onClose, open]);
-
-  if (!open || !imageSrc) return null;
-
-  return createPortal(
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-label={title}
-      data-variant="image-only"
-      className="fixed inset-0 z-[220] bg-slate-900/40 backdrop-blur-sm dark:bg-black/50"
-    >
-      <div className="absolute top-4 right-4 z-20 sm:top-5 sm:right-5">
-        <button
-          type="button"
-          onClick={onClose}
-          className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-black/35 text-white/80 backdrop-blur transition-colors hover:bg-black/55 hover:text-white"
-          aria-label="close"
-        >
-          <X size={18} />
-        </button>
-      </div>
-
-      <div className="h-full w-full overflow-auto overscroll-contain" onClick={onClose}>
-        <div className="inline-flex min-h-full min-w-full items-center justify-center p-6 sm:p-10">
-          <img
-            src={imageSrc}
-            alt={imageAlt}
-            className="block h-auto w-auto max-w-none select-none"
-            onClick={(event) => event.stopPropagation()}
-          />
-        </div>
-      </div>
-    </div>,
-    document.body,
   );
 }
