@@ -8,8 +8,10 @@ import { ImageGenerationPage } from "@/modules/image-generation/ImageGenerationP
 import { ThemeProvider } from "@/modules/ui/ThemeProvider";
 import { ToastProvider } from "@/modules/ui/ToastProvider";
 
-const authFilesListMock = () => vi.mocked(authFilesApi.list);
-const imageGenerationTestMock = () => vi.mocked(imageGenerationApi.test);
+const authFilesListMock = () =>
+  authFilesApi.list as unknown as ReturnType<typeof vi.fn>;
+const imageGenerationTestMock = () =>
+  imageGenerationApi.test as unknown as ReturnType<typeof vi.fn>;
 
 function createDeferred<T>() {
   let resolve!: (value: T) => void;
@@ -86,8 +88,17 @@ describe("ImageGenerationPage", () => {
     expect(
       within(callCard as HTMLElement).getByText("/v1/images/generations"),
     ).toBeInTheDocument();
+    const textCurl = screen.getByText(
+      /curl http:\/\/127\.0\.0\.1:8317\/v1\/images\/generations/,
+    );
+    expect(
+      textCurl.compareDocumentPosition(screen.getByText("请求参数")) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
     expect(screen.getByText("请求参数")).toBeInTheDocument();
     expect(screen.getByText("返回结构")).toBeInTheDocument();
+    expect(screen.getAllByTestId("image-generation-spec-card")).toHaveLength(2);
+    expect(screen.queryByText(/已加载全部/)).not.toBeInTheDocument();
     expect(
       within(callCard as HTMLElement).getByText("size"),
     ).toBeInTheDocument();

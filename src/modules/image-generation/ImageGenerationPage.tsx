@@ -368,6 +368,15 @@ function EndpointDocView({ doc }: { doc: EndpointDoc }) {
         </div>
       </div>
 
+      <div className="overflow-hidden rounded-2xl bg-slate-950 shadow-[0_14px_42px_rgb(15_23_42_/_0.16)] dark:bg-black/45">
+        <div className="border-b border-white/10 px-4 py-2 text-xs font-medium text-slate-300">
+          curl
+        </div>
+        <pre className="overflow-x-auto px-4 py-3 text-[13px] leading-6 text-slate-100">
+          <code>{doc.curl}</code>
+        </pre>
+      </div>
+
       <div className="grid gap-4 xl:grid-cols-2">
         <SpecTable
           title={t("image_generation.request_params_title")}
@@ -377,15 +386,6 @@ function EndpointDocView({ doc }: { doc: EndpointDoc }) {
           title={t("image_generation.response_schema_title")}
           rows={doc.responseRows}
         />
-      </div>
-
-      <div className="overflow-hidden rounded-[22px] border border-slate-200 bg-slate-950 dark:border-neutral-800">
-        <div className="border-b border-white/10 px-4 py-2 text-xs font-medium text-slate-300">
-          curl
-        </div>
-        <pre className="overflow-x-auto px-4 py-3 text-[13px] leading-6 text-slate-100">
-          <code>{doc.curl}</code>
-        </pre>
       </div>
     </div>
   );
@@ -427,8 +427,11 @@ function SpecTable({ title, rows }: { title: string; rows: SpecRow[] }) {
   );
 
   return (
-    <div className="overflow-hidden rounded-[22px] border border-slate-200 bg-white dark:border-neutral-800 dark:bg-neutral-950">
-      <div className="border-b border-slate-200 px-4 py-3 dark:border-neutral-800">
+    <div
+      data-testid="image-generation-spec-card"
+      className="overflow-hidden rounded-2xl bg-white shadow-[0_12px_32px_rgb(15_23_42_/_0.08)] dark:bg-neutral-950/80 dark:shadow-[0_12px_32px_rgb(0_0_0_/_0.22)]"
+    >
+      <div className="px-4 py-3">
         <h4 className="text-sm font-semibold text-slate-900 dark:text-white">
           {title}
         </h4>
@@ -443,6 +446,7 @@ function SpecTable({ title, rows }: { title: string; rows: SpecRow[] }) {
         minWidth="min-w-[560px]"
         caption={`${title} table`}
         rowHeight={48}
+        showAllLoadedMessage={false}
       />
     </div>
   );
@@ -548,7 +552,9 @@ function ImageGenerationTestModal({
   const canShowNextImage = activeImageIndex < images.length - 1;
 
   const showImageAt = (index: number) => {
-    setActiveImageIndex(Math.min(Math.max(index, 0), Math.max(images.length - 1, 0)));
+    setActiveImageIndex(
+      Math.min(Math.max(index, 0), Math.max(images.length - 1, 0)),
+    );
   };
 
   const handleResultPointerDown = (event: PointerEvent<HTMLDivElement>) => {
@@ -948,7 +954,9 @@ function ImageGenerationTestModal({
               disabled={uploadedImages.length >= MAX_UPLOAD_IMAGES}
               className="sr-only"
               onChange={(event) => {
-                const selectedFiles = Array.from(event.currentTarget.files ?? []);
+                const selectedFiles = Array.from(
+                  event.currentTarget.files ?? [],
+                );
                 handleUploadImages(selectedFiles);
                 event.currentTarget.value = "";
               }}
