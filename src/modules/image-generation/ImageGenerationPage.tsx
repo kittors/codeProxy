@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { ImagePlus } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ArrowUp, Plus, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { authFilesApi, imageGenerationApi } from "@/lib/http/apis";
 import type { AuthFileItem } from "@/lib/http/types";
@@ -9,6 +9,7 @@ import { ImagePreviewOverlay } from "@/modules/ui/ImagePreviewOverlay";
 import { Modal } from "@/modules/ui/Modal";
 import { Select } from "@/modules/ui/Select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/modules/ui/Tabs";
+import { VirtualTable, type VirtualTableColumn } from "@/modules/ui/VirtualTable";
 
 const GPT_IMAGE_MODEL = "gpt-image-2";
 const GENERATION_STATUS_KEYS = [
@@ -21,6 +22,7 @@ const GENERATION_STATUS_INTERVAL_MS = 1800;
 const SIZE_OPTIONS = ["1024x1024", "1792x1024", "1024x1792"] as const;
 const QUALITY_OPTIONS = ["low", "medium", "high"] as const;
 const COUNT_OPTIONS = [1, 2, 3, 4] as const;
+const MAX_UPLOAD_IMAGES = 5;
 
 type ImageMode = "generations" | "edits";
 type SpecRow = {
@@ -41,6 +43,7 @@ type EndpointDoc = {
   curl: string;
 };
 type GeneratedImage = { src: string; revisedPrompt?: string };
+type UploadedImage = { id: string; file: File; previewUrl: string };
 
 const isCodexOauthFile = (file: AuthFileItem): boolean => {
   const accountType = String(file.account_type ?? "")
@@ -164,7 +167,7 @@ const ENDPOINT_DOCS: EndpointDoc[] = [
         name: "image",
         type: "file",
         required: true,
-        descriptionKey: "image_generation.param_image_desc",
+        descriptionKey: "image_generation.param_images_desc",
       },
       {
         name: "size",
@@ -361,44 +364,70 @@ function EndpointDocView({ doc }: { doc: EndpointDoc }) {
 
 function SpecTable({ title, rows }: { title: string; rows: SpecRow[] }) {
   const { t } = useTranslation();
+  const columns = useMemo<VirtualTableColumn<SpecRow>[]>(
+    () => [
+      {
+        key: "name",
+        label: t("image_generation.table_param"),
+        width: "w-32",
+        cellClassName: "font-mono text-xs text-slate-900 dark:text-white",
+        render: (row) => row.name,
+      },
+      {
+        key: "type",
+        label: t("image_generation.table_type"),
+        width: "w-28",
+        cellClassName: "font-mono text-xs text-slate-600 dark:text-white/55",
+        render: (row) => row.type,
+      },
+      {
+        key: "required",
+        label: t("image_generation.table_required"),
+        width: "w-20",
+        cellClassName: "text-xs text-slate-600 dark:text-white/55",
+        render: (row) => (row.required ? t("common.yes") : t("common.no")),
+      },
+      {
+        key: "description",
+        label: t("image_generation.table_description"),
+        cellClassName: "text-xs leading-5 text-slate-600 dark:text-white/60",
+        render: (row) => t(row.descriptionKey),
+      },
+    ],
+    [t],
+  );
 
   return (
     <div className="overflow-hidden rounded-[22px] border border-slate-200 bg-white dark:border-neutral-800 dark:bg-neutral-950">
       <div className="border-b border-slate-200 px-4 py-3 dark:border-neutral-800">
         <h4 className="text-sm font-semibold text-slate-900 dark:text-white">{title}</h4>
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[520px] text-left text-sm">
-          <thead className="bg-slate-50 text-xs font-medium uppercase tracking-[0.08em] text-slate-500 dark:bg-neutral-900 dark:text-white/40">
-            <tr>
-              <th className="px-4 py-3">{t("image_generation.table_param")}</th>
-              <th className="px-4 py-3">{t("image_generation.table_type")}</th>
-              <th className="px-4 py-3">{t("image_generation.table_required")}</th>
-              <th className="px-4 py-3">{t("image_generation.table_description")}</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-200 dark:divide-neutral-800">
-            {rows.map((row) => (
-              <tr key={row.name}>
-                <td className="px-4 py-3 font-mono text-xs text-slate-900 dark:text-white">
-                  {row.name}
-                </td>
-                <td className="px-4 py-3 font-mono text-xs text-slate-600 dark:text-white/55">
-                  {row.type}
-                </td>
-                <td className="px-4 py-3 text-xs text-slate-600 dark:text-white/55">
-                  {row.required ? t("common.yes") : t("common.no")}
-                </td>
-                <td className="px-4 py-3 text-xs leading-5 text-slate-600 dark:text-white/60">
-                  {t(row.descriptionKey)}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <VirtualTable<SpecRow>
+        rows={rows}
+        columns={columns}
+        rowKey={(row) => row.name}
+        virtualize={false}
+        height="h-auto"
+        minHeight="min-h-0"
+        minWidth="min-w-[560px]"
+        caption={`${title} table`}
+        rowHeight={48}
+      />
     </div>
   );
+}
+
+function createUploadPreviewUrl(file: File): string {
+  if (typeof URL.createObjectURL === "function") {
+    return URL.createObjectURL(file);
+  }
+  return `data:${file.type || "image/png"};base64,`;
+}
+
+function revokeUploadPreviewUrl(url: string) {
+  if (url && url.startsWith("blob:") && typeof URL.revokeObjectURL === "function") {
+    URL.revokeObjectURL(url);
+  }
 }
 
 function ImageGenerationTestModal({
@@ -416,13 +445,16 @@ function ImageGenerationTestModal({
   const [size, setSize] = useState<(typeof SIZE_OPTIONS)[number]>("1024x1024");
   const [quality, setQuality] = useState<(typeof QUALITY_OPTIONS)[number]>("medium");
   const [count, setCount] = useState<(typeof COUNT_OPTIONS)[number]>(1);
-  const [referenceImage, setReferenceImage] = useState<File | null>(null);
+  const [uploadedImages, setUploadedImages] = useState<UploadedImage[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [images, setImages] = useState<GeneratedImage[]>([]);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [errorMessage, setErrorMessage] = useState("");
   const [statusIndex, setStatusIndex] = useState(0);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [uploadPreviewOpen, setUploadPreviewOpen] = useState(false);
+  const [uploadPreviewIndex, setUploadPreviewIndex] = useState(0);
+  const uploadedImagesRef = useRef<UploadedImage[]>([]);
 
   useEffect(() => {
     if (!open) return;
@@ -431,14 +463,29 @@ function ImageGenerationTestModal({
     setSize("1024x1024");
     setQuality("medium");
     setCount(1);
-    setReferenceImage(null);
+    setUploadedImages((current) => {
+      current.forEach((item) => revokeUploadPreviewUrl(item.previewUrl));
+      return [];
+    });
     setSubmitting(false);
     setImages([]);
     setActiveImageIndex(0);
     setErrorMessage("");
     setStatusIndex(0);
     setPreviewOpen(false);
+    setUploadPreviewOpen(false);
+    setUploadPreviewIndex(0);
   }, [initialMode, open]);
+
+  useEffect(() => {
+    uploadedImagesRef.current = uploadedImages;
+  }, [uploadedImages]);
+
+  useEffect(() => {
+    return () => {
+      uploadedImagesRef.current.forEach((item) => revokeUploadPreviewUrl(item.previewUrl));
+    };
+  }, []);
 
   useEffect(() => {
     if (!submitting) return;
@@ -458,11 +505,43 @@ function ImageGenerationTestModal({
   }, [submitting]);
 
   const activeImage = images[activeImageIndex] ?? null;
+  const canSend =
+    Boolean(prompt.trim()) && !submitting && (mode !== "edits" || uploadedImages.length > 0);
+
+  const handleUploadImages = (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    setMode("edits");
+    setUploadedImages((current) => {
+      const remainingSlots = Math.max(0, MAX_UPLOAD_IMAGES - current.length);
+      if (remainingSlots === 0) return current;
+      const nextFiles = Array.from(files).slice(0, remainingSlots);
+      return [
+        ...current,
+        ...nextFiles.map((file, index) => ({
+          id: `${file.name}-${file.size}-${file.lastModified}-${Date.now()}-${index}`,
+          file,
+          previewUrl: createUploadPreviewUrl(file),
+        })),
+      ];
+    });
+  };
+
+  const removeUploadedImage = (id: string) => {
+    setUploadedImages((current) => {
+      const target = current.find((item) => item.id === id);
+      if (target) revokeUploadPreviewUrl(target.previewUrl);
+      const next = current.filter((item) => item.id !== id);
+      if (uploadPreviewIndex >= next.length) {
+        setUploadPreviewIndex(Math.max(0, next.length - 1));
+      }
+      return next;
+    });
+  };
 
   const handleGenerate = async () => {
     const trimmedPrompt = prompt.trim();
     if (!trimmedPrompt || submitting) return;
-    if (mode === "edits" && !referenceImage) return;
+    if (mode === "edits" && uploadedImages.length === 0) return;
 
     setSubmitting(true);
     setImages([]);
@@ -472,7 +551,7 @@ function ImageGenerationTestModal({
 
     try {
       const response =
-        mode === "edits" && referenceImage
+        mode === "edits" && uploadedImages.length > 0
           ? await imageGenerationApi.test({
               mode: "edits",
               model: GPT_IMAGE_MODEL,
@@ -480,7 +559,7 @@ function ImageGenerationTestModal({
               size,
               quality,
               n: count,
-              image: referenceImage,
+              images: uploadedImages.map((item) => item.file),
             })
           : await imageGenerationApi.test({
               mode: "generations",
@@ -700,34 +779,73 @@ function ImageGenerationTestModal({
             data-testid="image-generation-composer"
             className="shrink-0 rounded-2xl border border-slate-200 bg-white px-3 py-3 shadow-sm dark:border-neutral-800 dark:bg-neutral-950"
           >
-            {mode === "edits" ? (
-              <div className="mb-3 flex flex-wrap items-center gap-2">
-                <label
-                  htmlFor="image-generation-reference"
-                  className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-100 dark:border-neutral-800 dark:bg-neutral-900 dark:text-white/75 dark:hover:bg-neutral-800"
-                >
-                  <ImagePlus size={14} />
-                  <span>{referenceImage ? referenceImage.name : t("image_generation.upload_label")}</span>
-                </label>
-                <input
-                  id="image-generation-reference"
-                  aria-label={t("image_generation.reference_image_label")}
-                  type="file"
-                  accept="image/*"
-                  className="sr-only"
-                  onChange={(event) => setReferenceImage(event.target.files?.[0] ?? null)}
-                />
-                {referenceImage ? (
-                  <span className="text-xs text-slate-500 dark:text-white/45">
-                    {t("image_generation.reference_ready")}
-                  </span>
-                ) : null}
+            {uploadedImages.length > 0 ? (
+              <div className="mb-3 flex flex-wrap gap-2">
+                {uploadedImages.map((item, index) => (
+                  <div
+                    key={item.id}
+                    data-testid="image-generation-upload-chip"
+                    className="group inline-flex items-center overflow-hidden rounded-full border border-slate-200 bg-slate-50 pr-1 shadow-sm dark:border-neutral-800 dark:bg-neutral-900"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setUploadPreviewIndex(index);
+                        setUploadPreviewOpen(true);
+                      }}
+                      className="inline-flex max-w-[180px] items-center gap-2 rounded-full px-2.5 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-100 dark:text-white/75 dark:hover:bg-neutral-800"
+                      aria-label={t("image_generation.preview_upload_label", { name: item.file.name })}
+                    >
+                      <span className="h-5 w-5 overflow-hidden rounded-md bg-white dark:bg-neutral-950">
+                        <img
+                          src={item.previewUrl}
+                          alt=""
+                          className="h-full w-full object-cover"
+                        />
+                      </span>
+                      <span className="truncate">{item.file.name}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => removeUploadedImage(item.id)}
+                      className="inline-flex h-6 w-6 items-center justify-center rounded-full text-slate-400 opacity-100 transition hover:bg-red-50 hover:text-red-500 sm:opacity-0 sm:group-hover:opacity-100 dark:text-white/35 dark:hover:bg-red-500/15 dark:hover:text-red-300"
+                      aria-label={t("image_generation.remove_upload_label", { name: item.file.name })}
+                    >
+                      <X size={13} />
+                    </button>
+                  </div>
+                ))}
               </div>
             ) : null}
             <label htmlFor="image-generation-prompt" className="sr-only">
               {t("image_generation.prompt_label")}
             </label>
-            <div className="flex items-end gap-3">
+            <div className="flex items-end gap-2">
+              <label
+                htmlFor="image-generation-reference"
+                className={[
+                  "mb-1 inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full text-slate-500 transition-colors",
+                  uploadedImages.length >= MAX_UPLOAD_IMAGES
+                    ? "cursor-not-allowed opacity-40"
+                    : "hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-white/10 dark:hover:text-white",
+                ].join(" ")}
+                title={t("image_generation.upload_images_label")}
+              >
+                <Plus size={22} />
+              </label>
+              <input
+                id="image-generation-reference"
+                aria-label={t("image_generation.upload_images_label")}
+                type="file"
+                accept="image/*"
+                multiple
+                disabled={uploadedImages.length >= MAX_UPLOAD_IMAGES}
+                className="sr-only"
+                onChange={(event) => {
+                  handleUploadImages(event.target.files);
+                  event.currentTarget.value = "";
+                }}
+              />
               <textarea
                 id="image-generation-prompt"
                 value={prompt}
@@ -736,17 +854,15 @@ function ImageGenerationTestModal({
                 rows={3}
                 className="min-h-[88px] flex-1 resize-none border-0 bg-transparent px-1 py-1 text-sm leading-6 text-slate-900 outline-none placeholder:text-slate-400 dark:text-white dark:placeholder:text-white/30"
               />
-              <Button
+              <button
                 type="submit"
-                variant="primary"
-                disabled={!prompt.trim() || submitting || (mode === "edits" && !referenceImage)}
+                disabled={!canSend}
                 aria-busy={submitting}
-                className="h-10 shrink-0 rounded-xl px-4"
+                aria-label={t("image_generation.send_button")}
+                className="mb-1 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-950 text-white shadow-sm transition active:translate-y-px disabled:pointer-events-none disabled:opacity-40 dark:bg-white dark:text-neutral-950"
               >
-                {submitting
-                  ? t("image_generation.generating_button")
-                  : t("image_generation.generate_button")}
-              </Button>
+                <ArrowUp size={19} />
+              </button>
             </div>
           </div>
         </form>
@@ -766,6 +882,21 @@ function ImageGenerationTestModal({
         activeIndex={activeImageIndex}
         onActiveIndexChange={setActiveImageIndex}
         onClose={() => setPreviewOpen(false)}
+      />
+      <ImagePreviewOverlay
+        open={uploadPreviewOpen && uploadedImages.length > 0}
+        imageSrc={uploadedImages[uploadPreviewIndex]?.previewUrl ?? null}
+        imageAlt={uploadedImages[uploadPreviewIndex]?.file.name ?? t("image_generation.upload_images_label")}
+        title={t("image_generation.image_preview_title")}
+        downloadName={uploadedImages[uploadPreviewIndex]?.file.name}
+        images={uploadedImages.map((item) => ({
+          src: item.previewUrl,
+          alt: item.file.name,
+          downloadName: item.file.name,
+        }))}
+        activeIndex={uploadPreviewIndex}
+        onActiveIndexChange={setUploadPreviewIndex}
+        onClose={() => setUploadPreviewOpen(false)}
       />
     </>
   );

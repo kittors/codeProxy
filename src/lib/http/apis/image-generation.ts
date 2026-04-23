@@ -16,7 +16,7 @@ export interface ImageEditTestRequest {
   size?: string;
   quality?: string;
   n?: number;
-  image: File;
+  images: File[];
 }
 
 export interface ImageGenerationResultItem {
@@ -38,7 +38,7 @@ export const imageGenerationApi = {
       if (payload.size) formData.set("size", payload.size);
       if (payload.quality) formData.set("quality", payload.quality);
       if (payload.n) formData.set("n", String(payload.n));
-      formData.set("image", payload.image);
+      payload.images.forEach((image) => formData.append("image", image));
       return apiClient.postForm<ImageGenerationTestResponse>("/image-generation/test", formData, {
         timeoutMs: 180000,
       });

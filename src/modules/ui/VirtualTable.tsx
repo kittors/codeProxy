@@ -52,6 +52,8 @@ export interface VirtualTableProps<T> {
   minWidth?: string;
   /** Container height class (default "h-[calc(100dvh-260px)]") */
   height?: string;
+  /** Container minimum height class (default "min-h-[360px]") */
+  minHeight?: string;
   /** Screen-reader caption */
   caption?: string;
   /** Empty state message */
@@ -87,6 +89,7 @@ export function VirtualTable<T>({
   bottomDebounceMs = DEFAULT_BOTTOM_DEBOUNCE_MS,
   minWidth = "min-w-[1320px]",
   height = "h-[calc(100dvh-260px)]",
+  minHeight = "min-h-[360px]",
   caption = "data table",
   emptyText = "",
   rowClassName,
@@ -237,7 +240,7 @@ export function VirtualTable<T>({
       <div
         ref={containerRef}
         onScroll={onScroll}
-        className={`${height} min-h-[360px] overflow-auto`}
+        className={`${height} ${minHeight} overflow-auto`}
       >
         <table
           className={`w-full ${minWidth} table-fixed border-separate border-spacing-0 text-sm`}

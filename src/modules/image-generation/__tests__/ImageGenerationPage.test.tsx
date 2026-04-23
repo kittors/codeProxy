@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
@@ -103,7 +103,7 @@ describe("ImageGenerationPage", () => {
     expect(screen.queryByText("Gemini 账号")).not.toBeInTheDocument();
   });
 
-  test("opens the redesigned modal, shows a fixed loading copy, and previews the returned image", async () => {
+  test("opens the redesigned modal, shows upload entry and uses a round send button", async () => {
     const user = userEvent.setup();
     const deferred = createDeferred<{
       created: number;
@@ -131,7 +131,8 @@ describe("ImageGenerationPage", () => {
     expect(within(dialog).getByRole("combobox", { name: "分辨率" })).toBeInTheDocument();
     expect(within(dialog).getByRole("combobox", { name: "质量" })).toBeInTheDocument();
     expect(within(dialog).getByRole("combobox", { name: "生成数量" })).toBeInTheDocument();
-    expect(within(dialog).getByRole("button", { name: "生成图片" })).toBeVisible();
+    expect(within(dialog).getByLabelText("上传图片")).toBeInTheDocument();
+    expect(within(dialog).getByRole("button", { name: "发送" })).toBeVisible();
     expect(within(dialog).getByTestId("image-generation-stage")).toHaveClass("bg-slate-50");
     expect(dialog.querySelector(".image-generation-dots-layer")).not.toBeInTheDocument();
 
@@ -145,7 +146,7 @@ describe("ImageGenerationPage", () => {
     await user.type(within(dialog).getByPlaceholderText(/输入提示词/i), "画一只狐狸");
     vi.useFakeTimers();
     await act(async () => {
-      fireEvent.click(within(dialog).getByRole("button", { name: /生成图片/i }));
+      fireEvent.click(within(dialog).getByRole("button", { name: "发送" }));
     });
 
     expect(imageGenerationTestMock()).toHaveBeenCalledWith({
@@ -221,7 +222,7 @@ describe("ImageGenerationPage", () => {
     expect(within(preview).getByRole("img", { name: /gpt-image-2 预览/i })).toHaveClass("max-w-none");
   });
 
-  test("supports image-to-image test generation with uploaded source images", async () => {
+  test("supports uploading up to five temporary images, previewing them, deleting them, and sending all kept images", async () => {
     const user = userEvent.setup();
     imageGenerationTestMock().mockResolvedValue({
       created: 1,
@@ -236,12 +237,29 @@ describe("ImageGenerationPage", () => {
     const dialog = await screen.findByRole("dialog", { name: "测试生成" });
     await user.click(within(dialog).getByRole("tab", { name: "图生图" }));
 
-    const file = new File(["hello"], "icon.png", { type: "image/png" });
-    await user.upload(within(dialog).getByLabelText("参考图片"), file);
+    const files = [
+      new File(["a"], "1.png", { type: "image/png" }),
+      new File(["b"], "2.png", { type: "image/png" }),
+      new File(["c"], "3.png", { type: "image/png" }),
+      new File(["d"], "4.png", { type: "image/png" }),
+      new File(["e"], "5.png", { type: "image/png" }),
+      new File(["f"], "6.png", { type: "image/png" }),
+    ];
+    await user.upload(within(dialog).getByLabelText("上传图片"), files);
+    expect(within(dialog).getAllByTestId("image-generation-upload-chip")).toHaveLength(5);
+    expect(within(dialog).queryByText("6.png")).not.toBeInTheDocument();
+
+    await user.click(within(dialog).getByRole("button", { name: "预览图片 1.png" }));
+    const uploadPreview = await screen.findByRole("dialog", { name: "图片预览" });
+    expect(uploadPreview).toBeInTheDocument();
+    await user.click(within(uploadPreview).getByRole("button", { name: "关闭" }));
+
+    await user.click(within(dialog).getByRole("button", { name: "删除图片 5.png" }));
+    expect(within(dialog).getAllByTestId("image-generation-upload-chip")).toHaveLength(4);
     await user.type(within(dialog).getByPlaceholderText(/输入提示词/i), "改成蓝色图标");
     await user.click(within(dialog).getByRole("combobox", { name: "生成数量" }));
     await user.click(await screen.findByRole("option", { name: "2 张" }));
-    await user.click(within(dialog).getByRole("button", { name: /生成图片/i }));
+    await user.click(within(dialog).getByRole("button", { name: "发送" }));
 
     expect(imageGenerationTestMock()).toHaveBeenCalledWith({
       mode: "edits",
@@ -250,7 +268,7 @@ describe("ImageGenerationPage", () => {
       size: "1024x1024",
       quality: "medium",
       n: 2,
-      image: file,
+      images: files.slice(0, 4),
     });
     expect(await within(dialog).findByText("图生图结果")).toBeInTheDocument();
   });
@@ -265,7 +283,7 @@ describe("ImageGenerationPage", () => {
 
     const dialog = await screen.findByRole("dialog", { name: "测试生成" });
     await userEvent.type(within(dialog).getByPlaceholderText(/输入提示词/i), "画一只狐狸");
-    await userEvent.click(within(dialog).getByRole("button", { name: /生成图片/i }));
+    await userEvent.click(within(dialog).getByRole("button", { name: "发送" }));
 
     expect(await within(dialog).findByText("上游图片生成失败")).toBeInTheDocument();
     expect(within(dialog).getByTestId("image-generation-preview")).toHaveClass("bg-slate-100");
