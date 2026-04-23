@@ -102,6 +102,9 @@ describe("ImageGenerationPage", () => {
     for (const card of specCards) {
       expect(card.className).not.toContain("shadow");
     }
+    expect(screen.getByText("data[].revised_prompt").className).toContain(
+      "break-all",
+    );
     expect(screen.queryByText(/已加载全部/)).not.toBeInTheDocument();
     expect(
       within(callCard as HTMLElement).getByText("size"),

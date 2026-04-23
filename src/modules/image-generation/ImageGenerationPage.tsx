@@ -398,8 +398,9 @@ function SpecTable({ title, rows }: { title: string; rows: SpecRow[] }) {
       {
         key: "name",
         label: t("image_generation.table_param"),
-        width: "w-32",
-        cellClassName: "font-mono text-xs text-slate-900 dark:text-white",
+        width: "w-40",
+        cellClassName:
+          "font-mono text-xs break-all leading-5 text-slate-900 dark:text-white",
         render: (row) => row.name,
       },
       {
