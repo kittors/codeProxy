@@ -109,6 +109,7 @@ describe("ImageGenerationPage", () => {
     expect(within(dialog).getByRole("textbox", { name: "提示词" })).toBeInTheDocument();
     expect(within(dialog).getByRole("button", { name: "生成图片" })).toBeVisible();
     expect(within(dialog).getByTestId("image-generation-stage")).toHaveClass("bg-slate-50");
+    expect(dialog.querySelector(".image-generation-dots-layer")).not.toBeInTheDocument();
 
     await user.type(within(dialog).getByPlaceholderText(/输入提示词/i), "画一只狐狸");
     await user.click(within(dialog).getByRole("button", { name: /生成图片/i }));
@@ -122,6 +123,7 @@ describe("ImageGenerationPage", () => {
 
     expect(within(dialog).getByText("正在生成图片")).toBeInTheDocument();
     expect(within(dialog).getByTestId("image-generation-stage")).toHaveClass("bg-slate-50");
+    expect(dialog.querySelectorAll(".image-generation-dots-layer")).toHaveLength(2);
 
     await waitFor(() => {
       expect(within(dialog).getByText("正在打草稿")).toBeInTheDocument();

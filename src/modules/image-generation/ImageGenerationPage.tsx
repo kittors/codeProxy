@@ -243,13 +243,6 @@ function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: (
             data-state={submitting ? "generating" : imageSrc ? "ready" : errorMessage ? "error" : "idle"}
             className={stageClassName}
             aria-live="polite"
-            style={{
-              backgroundImage:
-                showGeneratingState
-                  ? "radial-gradient(circle, rgba(148,163,184,0.38) 1.25px, transparent 1.45px)"
-                  : undefined,
-              backgroundSize: showGeneratingState ? "28px 28px" : undefined,
-            }}
           >
             {imageSrc ? (
               <>
@@ -273,6 +266,12 @@ function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: (
                     : "bg-transparent",
                 ].join(" ")}
               >
+                {showGeneratingState ? (
+                  <>
+                    <div className="image-generation-dots-layer image-generation-dots-layer--primary" />
+                    <div className="image-generation-dots-layer image-generation-dots-layer--secondary" />
+                  </>
+                ) : null}
                 <div className="relative z-10 flex h-full w-full items-start">
                   {showGeneratingState ? (
                     <div className="max-w-md">
