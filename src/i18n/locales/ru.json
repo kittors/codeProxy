@@ -1352,6 +1352,7 @@
     "idle_hint": "Введите prompt, чтобы начать генерацию изображения",
     "preview_placeholder": "Готово к созданию изображения",
     "generating_subtitle": "Оставьте модальное окно открытым. Новое изображение появится здесь автоматически.",
+    "generation_status_generating": "Генерируем",
     "generation_status_creating": "Генерируем изображение",
     "generation_status_drafting": "Готовим черновик",
     "generation_status_starting": "Запускаем генерацию",

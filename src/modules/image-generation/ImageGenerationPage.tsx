@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
+import { X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { authFilesApi, imageGenerationApi } from "@/lib/http/apis";
 import type { AuthFileItem } from "@/lib/http/types";
@@ -8,12 +10,6 @@ import { Modal } from "@/modules/ui/Modal";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/modules/ui/Tabs";
 
 const GPT_IMAGE_MODEL = "gpt-image-2";
-const GENERATION_STATUS_KEYS = [
-  "image_generation.generation_status_creating",
-  "image_generation.generation_status_drafting",
-  "image_generation.generation_status_starting",
-  "image_generation.generation_status_refining",
-] as const;
 
 const isCodexOauthFile = (file: AuthFileItem): boolean => {
   const accountType = String(file.account_type ?? "")
@@ -155,7 +151,6 @@ function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: (
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const [revisedPrompt, setRevisedPrompt] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
-  const [statusIndex, setStatusIndex] = useState(0);
   const [previewOpen, setPreviewOpen] = useState(false);
 
   useEffect(() => {
@@ -165,18 +160,8 @@ function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: (
     setImageSrc(null);
     setRevisedPrompt("");
     setErrorMessage("");
-    setStatusIndex(0);
     setPreviewOpen(false);
   }, [open]);
-
-  useEffect(() => {
-    if (!submitting) return;
-    setStatusIndex(0);
-    const id = window.setInterval(() => {
-      setStatusIndex((current) => (current + 1) % GENERATION_STATUS_KEYS.length);
-    }, 1800);
-    return () => window.clearInterval(id);
-  }, [submitting]);
 
   const handleGenerate = async () => {
     const trimmedPrompt = prompt.trim();
@@ -216,7 +201,7 @@ function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: (
         ? "border-slate-200 bg-slate-100 dark:border-neutral-800 dark:bg-black"
         : "border-slate-200 bg-slate-50 text-slate-500 dark:border-neutral-800 dark:bg-neutral-900 dark:text-white/55",
   ].join(" ");
-  const statusText = t(GENERATION_STATUS_KEYS[statusIndex]);
+  const statusText = t("image_generation.generation_status_generating");
   const showGeneratingState = submitting && !imageSrc && !errorMessage;
   const showIdleCanvas = !submitting && !imageSrc && !errorMessage;
 
@@ -252,12 +237,19 @@ function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: (
             ) : null}
             {imageSrc ? (
               <>
-                <img
-                  src={imageSrc}
-                  alt={t("image_generation.preview_alt", { model: GPT_IMAGE_MODEL })}
-                  className="relative z-10 h-full max-h-full w-full max-w-full cursor-zoom-in object-contain p-3 sm:p-4"
-                  onClick={() => setPreviewOpen(true)}
-                />
+                <div
+                  data-testid="image-generation-result-scroll"
+                  className="relative z-10 h-full w-full overflow-auto"
+                >
+                  <div className="inline-flex min-h-full min-w-full items-center justify-center p-3 sm:p-4">
+                    <img
+                      src={imageSrc}
+                      alt={t("image_generation.preview_alt", { model: GPT_IMAGE_MODEL })}
+                      className="block h-auto w-auto max-w-none cursor-zoom-in"
+                      onClick={() => setPreviewOpen(true)}
+                    />
+                  </div>
+                </div>
                 <span className="pointer-events-none absolute right-3 bottom-3 rounded-full bg-black/55 px-3 py-1 text-xs font-medium text-white/85 backdrop-blur">
                   {t("image_generation.open_preview")}
                 </span>
@@ -345,25 +337,73 @@ function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: (
         </form>
       </Modal>
 
-      <Modal
+      <ImagePreviewOverlay
         open={previewOpen && Boolean(imageSrc)}
+        imageSrc={imageSrc}
+        imageAlt={t("image_generation.preview_alt", { model: GPT_IMAGE_MODEL })}
         title={t("image_generation.image_preview_title")}
         onClose={() => setPreviewOpen(false)}
-        maxWidth="max-w-[860px]"
-        panelClassName="w-full border-slate-200 bg-white shadow-2xl dark:border-neutral-800 dark:bg-neutral-950"
-        bodyHeightClassName="max-h-[calc(100vh-8rem)]"
-        bodyClassName="!overflow-hidden !px-4 !py-4 sm:!px-5"
-      >
-        {imageSrc ? (
-          <div className="flex h-[min(72vh,720px)] max-h-[calc(100vh-10rem)] items-center justify-center overflow-hidden rounded-2xl bg-slate-100 dark:bg-black">
-            <img
-              src={imageSrc}
-              alt={t("image_generation.preview_alt", { model: GPT_IMAGE_MODEL })}
-              className="max-h-full max-w-full rounded-xl object-contain"
-            />
-          </div>
-        ) : null}
-      </Modal>
+      />
     </>
+  );
+}
+
+function ImagePreviewOverlay({
+  open,
+  imageSrc,
+  imageAlt,
+  title,
+  onClose,
+}: {
+  open: boolean;
+  imageSrc: string | null;
+  imageAlt: string;
+  title: string;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [onClose, open]);
+
+  if (!open || !imageSrc) return null;
+
+  return createPortal(
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={title}
+      data-variant="image-only"
+      className="fixed inset-0 z-[220] bg-slate-950/88 backdrop-blur-sm"
+    >
+      <div className="absolute top-4 right-4 z-20 sm:top-5 sm:right-5">
+        <button
+          type="button"
+          onClick={onClose}
+          className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-black/35 text-white/80 backdrop-blur transition-colors hover:bg-black/55 hover:text-white"
+          aria-label="close"
+        >
+          <X size={18} />
+        </button>
+      </div>
+
+      <div className="h-full w-full overflow-auto overscroll-contain" onClick={onClose}>
+        <div className="inline-flex min-h-full min-w-full items-center justify-center p-6 sm:p-10">
+          <img
+            src={imageSrc}
+            alt={imageAlt}
+            className="block h-auto w-auto max-w-none select-none"
+            onClick={(event) => event.stopPropagation()}
+          />
+        </div>
+      </div>
+    </div>,
+    document.body,
   );
 }

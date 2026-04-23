@@ -84,7 +84,7 @@ describe("ImageGenerationPage", () => {
     expect(screen.queryByText("Gemini 账号")).not.toBeInTheDocument();
   });
 
-  test("opens the redesigned modal, rotates loading copy, and previews the returned image", async () => {
+  test("opens the redesigned modal, shows a fixed loading copy, and previews the returned image", async () => {
     const user = userEvent.setup();
     const deferred = createDeferred<{
       created: number;
@@ -121,14 +121,11 @@ describe("ImageGenerationPage", () => {
       });
     });
 
-    expect(within(dialog).getByText("正在生成图片")).toBeInTheDocument();
+    expect(within(dialog).getByText("正在生成")).toBeInTheDocument();
+    expect(within(dialog).queryByText("正在打草稿")).not.toBeInTheDocument();
     expect(within(dialog).getByTestId("image-generation-stage")).toHaveClass("bg-slate-50");
     expect(dialog.querySelectorAll(".image-generation-dots-layer")).toHaveLength(1);
     expect(dialog.querySelectorAll(".image-generation-flow-layer")).toHaveLength(1);
-
-    await waitFor(() => {
-      expect(within(dialog).getByText("正在打草稿")).toBeInTheDocument();
-    }, { timeout: 2400 });
 
     deferred.resolve({
       created: 1,
@@ -145,11 +142,15 @@ describe("ImageGenerationPage", () => {
       "src",
       "data:image/png;base64,aGVsbG8=",
     );
-    expect(image.parentElement?.tagName).not.toBe("BUTTON");
+    expect(within(dialog).getByTestId("image-generation-result-scroll")).toHaveClass("overflow-auto");
+    expect(image).toHaveClass("max-w-none");
     expect(within(dialog).getByText("修订提示词")).toBeInTheDocument();
 
     await user.click(image);
-    expect(await screen.findByRole("dialog", { name: "图片预览" })).toBeInTheDocument();
+    const preview = await screen.findByRole("dialog", { name: "图片预览" });
+    expect(preview).toHaveAttribute("data-variant", "image-only");
+    expect(preview).not.toHaveClass("max-w-[860px]");
+    expect(within(preview).getByRole("img", { name: /gpt-image-2 预览/i })).toHaveClass("max-w-none");
   });
 
   test("greys the preview area and shows the error message inside the modal when generation fails", async () => {
