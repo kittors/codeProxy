@@ -46,10 +46,12 @@ describe("ErrorDetailModal", () => {
       expect(mocks.getLogContent).toHaveBeenCalledWith(53912);
     });
 
-    expect(screen.getByText("该历史请求未记录上游错误响应内容")).toBeInTheDocument();
+    expect(
+      screen.getByText("No upstream error response was recorded for this historical request"),
+    ).toBeInTheDocument();
     expect(
       screen.getByText(
-        "该历史日志没有记录上游错误响应内容，无法还原真实上游报错。新版本会在失败日志中记录实际错误详情。",
+        "No upstream error response was recorded for this historical log, so the original upstream failure cannot be reconstructed. New failed logs will store the actual error details.",
       ),
     ).toBeInTheDocument();
     expect(screen.queryByText("完整响应")).not.toBeInTheDocument();

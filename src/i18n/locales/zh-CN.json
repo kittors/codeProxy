@@ -3007,9 +3007,9 @@
   },
   "error_detail": {
     "upstream_error": "上游 API 错误响应",
-    "historical_missing": "该历史请求未记录上游错误响应内容",
+    "historical_missing": "No upstream error response was recorded for this historical request",
     "full_response": "完整响应",
-    "no_content": "该历史日志没有记录上游错误响应内容，无法还原真实上游报错。新版本会在失败日志中记录实际错误详情。",
+    "no_content": "No upstream error response was recorded for this historical log, so the original upstream failure cannot be reconstructed. New failed logs will store the actual error details.",
     "load_failed": "加载失败",
     "request_failed": "请求失败"
   },
