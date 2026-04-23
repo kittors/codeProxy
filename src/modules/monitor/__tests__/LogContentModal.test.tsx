@@ -1,4 +1,4 @@
-import { act, render, screen } from "@testing-library/react";
+import { act, render, screen, within } from "@testing-library/react";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { afterEach, describe, expect, test, vi } from "vitest";
@@ -109,7 +109,7 @@ describe("LogContentModal", () => {
     expect(screen.getByText("hello-29")).toBeInTheDocument();
   });
 
-  test("pretty-prints JSON in Raw view asynchronously", async () => {
+  test("keeps the original payload in Raw view instead of pretty-printing it", async () => {
     vi.useFakeTimers();
 
     const fetchPartFn = vi.fn(async (_id: number, part: "input" | "output") => {
@@ -154,12 +154,167 @@ describe("LogContentModal", () => {
     await act(async () => {});
     expect(getPre()).not.toBeNull();
 
+    expect(getPre()!.textContent).toBe('{"a":1,"b":{"c":2}}');
+  });
+
+  test("renders gpt-image-2 input as structured fields and keeps Raw as the original source", async () => {
+    vi.useFakeTimers();
+    await i18n.changeLanguage("zh-CN");
+
+    const fetchPartFn = vi.fn(async (_id: number, part: "input" | "output") => {
+      if (part === "input") {
+        return {
+          id: 1,
+          model: "gpt-image-2",
+          part,
+          content: '{"model":"gpt-image-2","prompt":"画一只狐狸","size":"1024x1536"}',
+        };
+      }
+      return {
+        id: 1,
+        model: "gpt-image-2",
+        part,
+        content: '{"created":1776910933,"data":[{"b64_json":"aGVsbG8="}]}',
+      };
+    });
+
+    render(
+      <ThemeProvider>
+        <LogContentModal
+          open
+          logId={1}
+          initialTab="input"
+          onClose={() => {}}
+          fetchPartFn={fetchPartFn}
+        />
+      </ThemeProvider>,
+    );
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(260);
+    });
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    await act(async () => {
+      await vi.runAllTimersAsync();
+    });
+    await act(async () => {});
     await act(async () => {
       await vi.runAllTimersAsync();
     });
 
-    expect(getPre()!.textContent).toContain('\n  "a": 1');
-    expect(getPre()!.textContent).toContain('\n    "c": 2');
+    const structuredCard = screen.getByTestId("image-request-structured-card");
+    expect(structuredCard).toBeInTheDocument();
+    expect(within(structuredCard).getByText("模型")).toBeInTheDocument();
+    expect(within(structuredCard).getByText("gpt-image-2")).toBeInTheDocument();
+    expect(within(structuredCard).getByText("提示词")).toBeInTheDocument();
+    expect(within(structuredCard).getByText("画一只狐狸")).toBeInTheDocument();
+    expect(within(structuredCard).getByText("size")).toBeInTheDocument();
+    expect(within(structuredCard).getByText("1024x1536")).toBeInTheDocument();
+    expect(document.body.textContent).not.toContain('{"model":"gpt-image-2"');
+
+    await act(async () => {
+      screen.getByTitle("原始数据").click();
+    });
+    expect(Array.from(document.body.querySelectorAll("pre")).map((pre) => pre.textContent)).toContain(
+      '{"model":"gpt-image-2","prompt":"画一只狐狸","size":"1024x1536"}',
+    );
+  });
+
+  test("renders gpt-image-2 output as an image-only rendered view with reusable preview controls", async () => {
+    vi.useFakeTimers();
+    await i18n.changeLanguage("zh-CN");
+
+    const fetchPartFn = vi.fn(async (_id: number, part: "input" | "output") => {
+      if (part === "input") {
+        return {
+          id: 1,
+          model: "gpt-image-2",
+          part,
+          content: '{"model":"gpt-image-2","prompt":"画一只狐狸"}',
+        };
+      }
+      return {
+        id: 1,
+        model: "gpt-image-2",
+        part,
+        content:
+          '{"created":1776910933,"data":[{"b64_json":"aGVsbG8="},{"b64_json":"d29ybGQ="}]}',
+      };
+    });
+
+    render(
+      <ThemeProvider>
+        <LogContentModal
+          open
+          logId={1}
+          initialTab="output"
+          onClose={() => {}}
+          fetchPartFn={fetchPartFn}
+        />
+      </ThemeProvider>,
+    );
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(260);
+    });
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    await act(async () => {
+      await vi.runAllTimersAsync();
+    });
+    await act(async () => {});
+    await act(async () => {
+      await vi.runAllTimersAsync();
+    });
+
+    expect(document.body.textContent).not.toContain('"b64_json"');
+    expect(document.body.textContent).not.toContain('"created":1776910933');
+    const images = screen.getAllByRole("img", { name: "输出" });
+    expect(images).toHaveLength(2);
+    const image = images[0]!;
+    expect(image).toHaveAttribute("src", "data:image/png;base64,aGVsbG8=");
+    expect(screen.getAllByRole("button", { name: "点击预览" })).toHaveLength(2);
+
+    await act(async () => {
+      images[1]!.click();
+    });
+
+    const preview = screen.getByRole("dialog", { name: /输出 · gpt-image-2/ });
+    expect(preview).toHaveAttribute("data-variant", "image-only");
+    expect(screen.getByRole("button", { name: "放大" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "向左旋转" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "下载" })).toHaveAttribute(
+      "download",
+      "gpt-image-2-output-2.png",
+    );
+
+    const previewImage = within(preview).getByRole("img", { name: "输出" });
+    expect(previewImage).toHaveAttribute("src", "data:image/png;base64,d29ybGQ=");
+    const rotateRight = screen.getByRole("button", { name: "向右旋转" });
+    await act(async () => {
+      rotateRight.click();
+    });
+    expect(previewImage.getAttribute("style")).toContain("rotate(90deg)");
+    await act(async () => {
+      rotateRight.click();
+    });
+    expect(previewImage.getAttribute("style")).toContain("rotate(180deg)");
+    await act(async () => {
+      rotateRight.click();
+    });
+    expect(previewImage.getAttribute("style")).toContain("rotate(270deg)");
+
+    await act(async () => {
+      screen.getByTitle("原始数据").click();
+    });
+    expect(document.body.querySelector("pre")!.textContent).toBe(
+      '{"created":1776910933,"data":[{"b64_json":"aGVsbG8="},{"b64_json":"d29ybGQ="}]}',
+    );
   });
 
   test("does not mount massive raw content while rendered view parsing is deferred", async () => {

@@ -11,6 +11,7 @@ import { ErrorDetailModal } from "@/modules/monitor/ErrorDetailModal";
 import {
   buildRequestLogsColumns,
   DEFAULT_REQUEST_LOG_PAGE_SIZE,
+  isSystemRequestLogKey,
   maskRequestLogApiKey,
   RequestLogsPaginationBar,
   RequestLogsTimeRangeSelector,
@@ -174,7 +175,9 @@ export function RequestLogsPage() {
       { value: "", label: t("request_logs.all_keys") },
       ...filterOptions.api_keys.map((key) => ({
         value: key,
-        label: names[key] || maskRequestLogApiKey(key),
+        label: isSystemRequestLogKey(key, names[key])
+          ? t("request_logs.system_call")
+          : names[key] || maskRequestLogApiKey(key),
         searchText: `${names[key] || ""} ${key}`,
       })),
     ];

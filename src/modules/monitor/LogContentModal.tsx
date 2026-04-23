@@ -2,11 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Code2, Download, Eye, FileInput, FileOutput, Loader2 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
-import {
-  buildInputRenderedView,
-  buildOutputRenderedView,
-  tryPrettyPrintJson,
-} from "@/modules/monitor/log-content/parsers";
+import { buildInputRenderedView, buildOutputRenderedView } from "@/modules/monitor/log-content/parsers";
 import {
   ContentModal,
   MessageBlock,
@@ -15,9 +11,9 @@ import {
 } from "@/modules/monitor/log-content/rendering";
 import { scheduleIdle, type CancelFn } from "@/modules/monitor/log-content/scheduler";
 import { Tabs, TabsList, TabsTrigger } from "@/modules/ui/Tabs";
+import { ImagePreviewOverlay } from "@/modules/ui/ImagePreviewOverlay";
 import type {
   AsyncParsedState,
-  AsyncPrettyState,
   LogContentModalProps,
   RenderedView,
 } from "@/modules/monitor/log-content/types";
@@ -28,6 +24,149 @@ const MODAL_CONTENT_LOAD_DELAY_MS = 260;
 const LOADING_EXIT_MS = 220;
 const CONTENT_ENTER_MS = 340;
 type ContentPhase = "loading" | "error" | "content";
+type JsonObject = Record<string, unknown>;
+type ImageGenerationInputView = {
+  model: string;
+  prompt: string;
+  parameters: Array<{ key: string; value: string }>;
+};
+type ImageGenerationOutputView = {
+  created?: number;
+  images: Array<{ src: string; revisedPrompt?: string }>;
+};
+type ImageGenerationOutputImage = { src: string; revisedPrompt?: string };
+
+function parseJsonObject(raw: string): JsonObject | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+    return parsed as JsonObject;
+  } catch {
+    return null;
+  }
+}
+
+function stringifyFieldValue(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  if (value === null || value === undefined) return "";
+  return JSON.stringify(value, null, 2);
+}
+
+function parseImageGenerationInput(raw: string): ImageGenerationInputView | null {
+  const parsed = parseJsonObject(raw);
+  if (!parsed) return null;
+  const model = typeof parsed.model === "string" ? parsed.model : "";
+  const prompt = typeof parsed.prompt === "string" ? parsed.prompt : "";
+  if (!model && !prompt) return null;
+
+  const parameters = Object.entries(parsed)
+    .filter(([key]) => key !== "model" && key !== "prompt")
+    .map(([key, value]) => ({ key, value: stringifyFieldValue(value) }))
+    .filter((item) => item.value);
+
+  return {
+    model,
+    prompt,
+    parameters,
+  };
+}
+
+function parseImageGenerationOutput(raw: string): ImageGenerationOutputView | null {
+  const parsed = parseJsonObject(raw);
+  if (!parsed || !Array.isArray(parsed.data)) return null;
+
+  const images = parsed.data
+    .map((item) => {
+      if (!item || typeof item !== "object") return null;
+      const record = item as JsonObject;
+      const b64Json = typeof record.b64_json === "string" ? record.b64_json.trim() : "";
+      if (!b64Json) return null;
+      const src = `data:image/png;base64,${b64Json}`;
+      const revisedPrompt =
+        typeof record.revised_prompt === "string" && record.revised_prompt.trim()
+          ? record.revised_prompt.trim()
+          : "";
+      return revisedPrompt ? { src, revisedPrompt } : { src };
+    })
+    .filter((item): item is ImageGenerationOutputImage => item !== null);
+
+  if (images.length === 0) return null;
+
+  return {
+    created: typeof parsed.created === "number" ? parsed.created : undefined,
+    images,
+  };
+}
+
+function StructuredRequestCard({
+  model,
+  prompt,
+  parameters,
+  testId,
+  modelLabel,
+  promptLabel,
+  parametersLabel,
+}: {
+  model: string;
+  prompt: string;
+  parameters: Array<{ key: string; value: string }>;
+  testId?: string;
+  modelLabel: string;
+  promptLabel: string;
+  parametersLabel: string;
+}) {
+  return (
+    <div
+      data-testid={testId}
+      className="overflow-hidden rounded-[28px] border border-slate-200 bg-slate-50/90 dark:border-neutral-800 dark:bg-neutral-900/75"
+    >
+      <div className="grid gap-0 divide-y divide-slate-200/90 dark:divide-neutral-800">
+        {model ? (
+          <div className="px-5 py-4 sm:px-6">
+            <p className="text-xs font-medium uppercase tracking-[0.12em] text-slate-500 dark:text-white/40">
+              {modelLabel}
+            </p>
+            <p className="mt-2 break-words text-sm font-semibold text-slate-900 dark:text-white">
+              {model}
+            </p>
+          </div>
+        ) : null}
+        {prompt ? (
+          <div className="px-5 py-4 sm:px-6">
+            <p className="text-xs font-medium uppercase tracking-[0.12em] text-slate-500 dark:text-white/40">
+              {promptLabel}
+            </p>
+            <pre className="mt-2 whitespace-pre-wrap break-words font-sans text-sm leading-7 text-slate-900 dark:text-white">
+              {prompt}
+            </pre>
+          </div>
+        ) : null}
+        {parameters.length > 0 ? (
+          <div className="px-5 py-4 sm:px-6">
+            <p className="text-xs font-medium uppercase tracking-[0.12em] text-slate-500 dark:text-white/40">
+              {parametersLabel}
+            </p>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              {parameters.map((item) => (
+                <div
+                  key={item.key}
+                  className="rounded-2xl border border-slate-200 bg-white px-3 py-3 dark:border-neutral-800 dark:bg-neutral-950"
+                >
+                  <p className="font-mono text-[11px] text-slate-500 dark:text-white/40">{item.key}</p>
+                  <pre className="mt-1 whitespace-pre-wrap break-words font-sans text-sm leading-6 text-slate-900 dark:text-white">
+                    {item.value}
+                  </pre>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
 
 export function LogContentModal({
   open,
@@ -45,18 +184,12 @@ export function LogContentModal({
     status: "idle",
     view: null,
   });
-  const [inputRawPretty, setInputRawPretty] = useState<AsyncPrettyState>({
-    status: "idle",
-    pretty: null,
-  });
-  const [outputRawPretty, setOutputRawPretty] = useState<AsyncPrettyState>({
-    status: "idle",
-    pretty: null,
-  });
   const [inputRevealCount, setInputRevealCount] = useState(0);
   const [outputRevealCount, setOutputRevealCount] = useState(0);
   const [contentLoadReady, setContentLoadReady] = useState(false);
   const [displayPhase, setDisplayPhase] = useState<ContentPhase>("loading");
+  const [imagePreviewOpen, setImagePreviewOpen] = useState(false);
+  const [outputImagePreviewIndex, setOutputImagePreviewIndex] = useState(0);
   const dataOpen = open && contentLoadReady;
   const {
     inputLoading,
@@ -82,6 +215,7 @@ export function LogContentModal({
   useEffect(() => {
     if (!open) {
       setContentLoadReady(false);
+      setImagePreviewOpen(false);
       return;
     }
 
@@ -113,14 +247,13 @@ export function LogContentModal({
 
   useEffect(() => {
     setInputParsed({ status: inputContent ? "parsing" : "idle", view: null });
-    setInputRawPretty({ status: "idle", pretty: null });
     setInputRevealCount(0);
   }, [inputContent]);
 
   useEffect(() => {
     setOutputParsed({ status: outputContent ? "parsing" : "idle", view: null });
-    setOutputRawPretty({ status: "idle", pretty: null });
     setOutputRevealCount(0);
+    setOutputImagePreviewIndex(0);
   }, [outputContent]);
 
   useEffect(() => {
@@ -190,31 +323,6 @@ export function LogContentModal({
     };
   }, [dataOpen, viewMode, activeTab, activeRenderedView]);
 
-  useEffect(() => {
-    if (!dataOpen || viewMode !== "raw") return;
-    const isInput = activeTab === "input";
-    const raw = isInput ? inputContent : outputContent;
-    if (!raw) return;
-
-    const state = isInput ? inputRawPretty : outputRawPretty;
-    const setState = isInput ? setInputRawPretty : setOutputRawPretty;
-    if (state.status === "ready") return;
-
-    let cancelled = false;
-    setState({ status: "formatting", pretty: null });
-
-    const cancel = scheduleIdle(() => {
-      const pretty = tryPrettyPrintJson(raw);
-      if (cancelled) return;
-      setState({ status: "ready", pretty });
-    });
-
-    return () => {
-      cancelled = true;
-      cancel();
-    };
-  }, [dataOpen, viewMode, activeTab, inputContent, outputContent]);
-
   const handleDownload = () => {
     const content = activeTab === "input" ? inputContent : outputContent;
     if (!content) return;
@@ -250,14 +358,30 @@ export function LogContentModal({
         </div>
       );
     }
-    const state = activeTab === "input" ? inputRawPretty : outputRawPretty;
-    return <PlainPre text={state.pretty ?? content} />;
+    return <PlainPre text={content} />;
   };
 
   const currentContent = activeTab === "input" ? inputContent : outputContent;
   const activeLoading = activeTab === "input" ? inputLoading : outputLoading;
   const activeError = activeTab === "input" ? inputError : outputError;
   const activeParsed = activeTab === "input" ? inputParsed : outputParsed;
+  const isImageGenerationLog = model === "gpt-image-2";
+  const imageGenerationInput = useMemo(
+    () => (isImageGenerationLog ? parseImageGenerationInput(inputContent) : null),
+    [inputContent, isImageGenerationLog],
+  );
+  const imageGenerationOutput = useMemo(
+    () => (isImageGenerationLog ? parseImageGenerationOutput(outputContent) : null),
+    [outputContent, isImageGenerationLog],
+  );
+  const outputImagePreviewSrc =
+    imageGenerationOutput?.images[outputImagePreviewIndex]?.src ??
+    imageGenerationOutput?.images[0]?.src ??
+    null;
+  const activeDownloadName = useMemo(() => {
+    const suffix = activeTab === "input" ? "input" : "output";
+    return `${model || "request-log"}-${suffix}.png`;
+  }, [activeTab, model]);
   const waitingForRenderedContent =
     Boolean(currentContent) &&
     viewMode === "rendered" &&
@@ -346,6 +470,19 @@ export function LogContentModal({
       );
     }
     if (viewMode === "raw") return renderRaw(inputContent);
+    if (imageGenerationInput) {
+      return (
+        <StructuredRequestCard
+          testId="image-request-structured-card"
+          model={imageGenerationInput.model}
+          prompt={imageGenerationInput.prompt}
+          parameters={imageGenerationInput.parameters}
+          modelLabel={t("log_content.field_model")}
+          promptLabel={t("log_content.field_prompt")}
+          parametersLabel={t("log_content.field_parameters")}
+        />
+      );
+    }
     if (inputParsed.status !== "ready" || !inputParsed.view) return renderCenteredLoading();
 
     const view = inputParsed.view;
@@ -367,22 +504,103 @@ export function LogContentModal({
       );
     }
     if (viewMode === "raw") return renderRaw(outputContent);
+    if (imageGenerationOutput) {
+      return (
+        <div className="space-y-4">
+          {imageGenerationOutput.images.map((image, index) => (
+            <div
+              key={`${image.src.slice(0, 48)}-${index}`}
+              className="rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-neutral-800 dark:bg-neutral-900"
+            >
+              <div className="relative min-h-[160px] overflow-hidden rounded-xl bg-slate-100 dark:bg-black">
+                <img
+                  src={image.src}
+                  alt={t("log_content.output")}
+                  className="block h-auto w-full cursor-zoom-in"
+                  onClick={() => {
+                    setOutputImagePreviewIndex(index);
+                    setImagePreviewOpen(true);
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOutputImagePreviewIndex(index);
+                    setImagePreviewOpen(true);
+                  }}
+                  className="absolute right-3 bottom-3 z-20 rounded-full bg-black/60 px-3 py-1 text-xs font-medium text-white/90 shadow-sm backdrop-blur transition-colors hover:bg-black/75 hover:text-white"
+                >
+                  {t("image_generation.open_preview")}
+                </button>
+              </div>
+              {image.revisedPrompt ? (
+                <div className="mt-3 rounded-xl bg-white px-3 py-2 dark:bg-neutral-950">
+                  <p className="text-xs font-medium text-slate-500 dark:text-white/40">
+                    {t("image_generation.revised_prompt_label")}
+                  </p>
+                  <p className="mt-1 text-sm text-slate-700 dark:text-slate-200">
+                    {image.revisedPrompt}
+                  </p>
+                </div>
+              ) : null}
+            </div>
+          ))}
+        </div>
+      );
+    }
     if (outputParsed.status !== "ready" || !outputParsed.view) return renderCenteredLoading();
 
     const view = outputParsed.view;
+    const imagePreviewCard = outputImagePreviewSrc ? (
+      <div className="mb-4 rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-neutral-800 dark:bg-neutral-900">
+        <div className="relative min-h-[160px] overflow-hidden rounded-xl bg-slate-100 dark:bg-black">
+          <img
+            src={outputImagePreviewSrc}
+            alt={t("log_content.output")}
+            className="block h-auto w-full cursor-zoom-in"
+            onClick={() => setImagePreviewOpen(true)}
+          />
+          <button
+            type="button"
+            onClick={() => setImagePreviewOpen(true)}
+            className="absolute right-3 bottom-3 z-20 rounded-full bg-black/60 px-3 py-1 text-xs font-medium text-white/90 shadow-sm backdrop-blur transition-colors hover:bg-black/75 hover:text-white"
+          >
+            {t("image_generation.open_preview")}
+          </button>
+        </div>
+      </div>
+    ) : null;
     if (view.kind === "messages") {
       const count = outputRevealCount > 0 ? outputRevealCount : Math.min(view.messages.length, 6);
-      return <MessageList messages={view.messages.slice(0, count)} />;
+      return (
+        <div>
+          {imagePreviewCard}
+          <MessageList messages={view.messages.slice(0, count)} />
+        </div>
+      );
     }
-    if (view.kind === "pretty_json") return <PlainPre text={view.pretty} />;
+    if (view.kind === "pretty_json") {
+      return (
+        <div>
+          {imagePreviewCard}
+          <PlainPre text={view.pretty} />
+        </div>
+      );
+    }
     if (view.kind === "text") {
       return (
         <div className="space-y-3">
+          {imagePreviewCard}
           <MessageBlock role="assistant" content={view.text} />
         </div>
       );
     }
-    return <PlainPre text={view.raw} />;
+    return (
+      <div>
+        {imagePreviewCard}
+        <PlainPre text={view.raw} />
+      </div>
+    );
   };
 
   return (
@@ -425,6 +643,21 @@ export function LogContentModal({
           )}
         </AnimatePresence>
       </div>
+      <ImagePreviewOverlay
+        open={imagePreviewOpen && Boolean(outputImagePreviewSrc)}
+        imageSrc={outputImagePreviewSrc}
+        imageAlt={t("log_content.output")}
+        title={model ? `${t("log_content.output")} · ${model}` : t("log_content.output")}
+        downloadName={activeDownloadName}
+        images={imageGenerationOutput?.images.map((image, index) => ({
+          src: image.src,
+          alt: t("log_content.output"),
+          downloadName: `${model || "request-log"}-output-${index + 1}.png`,
+        }))}
+        activeIndex={outputImagePreviewIndex}
+        onActiveIndexChange={setOutputImagePreviewIndex}
+        onClose={() => setImagePreviewOpen(false)}
+      />
     </ContentModal>
   );
 }

@@ -1,8 +1,22 @@
 import { apiClient } from "@/lib/http/client";
 
 export interface ImageGenerationTestRequest {
+  mode?: "generations";
   model: "gpt-image-2" | string;
   prompt: string;
+  size?: string;
+  quality?: string;
+  n?: number;
+}
+
+export interface ImageEditTestRequest {
+  mode: "edits";
+  model: "gpt-image-2" | string;
+  prompt: string;
+  size?: string;
+  quality?: string;
+  n?: number;
+  image: File;
 }
 
 export interface ImageGenerationResultItem {
@@ -16,8 +30,22 @@ export interface ImageGenerationTestResponse {
 }
 
 export const imageGenerationApi = {
-  test: (payload: ImageGenerationTestRequest): Promise<ImageGenerationTestResponse> =>
-    apiClient.post<ImageGenerationTestResponse>("/image-generation/test", payload, {
+  test: (payload: ImageGenerationTestRequest | ImageEditTestRequest): Promise<ImageGenerationTestResponse> => {
+    if (payload.mode === "edits") {
+      const formData = new FormData();
+      formData.set("model", payload.model);
+      formData.set("prompt", payload.prompt);
+      if (payload.size) formData.set("size", payload.size);
+      if (payload.quality) formData.set("quality", payload.quality);
+      if (payload.n) formData.set("n", String(payload.n));
+      formData.set("image", payload.image);
+      return apiClient.postForm<ImageGenerationTestResponse>("/image-generation/test", formData, {
+        timeoutMs: 180000,
+      });
+    }
+    const { mode: _mode, ...body } = payload;
+    return apiClient.post<ImageGenerationTestResponse>("/image-generation/test", body, {
       timeoutMs: 180000,
-    }),
+    });
+  },
 };
