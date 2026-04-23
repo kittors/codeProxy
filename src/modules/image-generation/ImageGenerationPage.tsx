@@ -9,7 +9,10 @@ import { ImagePreviewOverlay } from "@/modules/ui/ImagePreviewOverlay";
 import { Modal } from "@/modules/ui/Modal";
 import { Select } from "@/modules/ui/Select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/modules/ui/Tabs";
-import { VirtualTable, type VirtualTableColumn } from "@/modules/ui/VirtualTable";
+import {
+  VirtualTable,
+  type VirtualTableColumn,
+} from "@/modules/ui/VirtualTable";
 
 const GPT_IMAGE_MODEL = "gpt-image-2";
 const GENERATION_STATUS_KEYS = [
@@ -56,7 +59,7 @@ const isCodexOauthFile = (file: AuthFileItem): boolean => {
 };
 
 const textToImageCurl = [
-  'curl http://127.0.0.1:8317/v1/images/generations \\',
+  "curl http://127.0.0.1:8317/v1/images/generations \\",
   '  -H "Authorization: Bearer $API_KEY" \\',
   '  -H "Content-Type: application/json" \\',
   "  -d '{",
@@ -69,7 +72,7 @@ const textToImageCurl = [
 ].join("\n");
 
 const imageToImageCurl = [
-  'curl http://127.0.0.1:8317/v1/images/edits \\',
+  "curl http://127.0.0.1:8317/v1/images/edits \\",
   '  -H "Authorization: Bearer $API_KEY" \\',
   '  -F "model=gpt-image-2" \\',
   '  -F "prompt=把这张图改成蓝色图标风格" \\',
@@ -230,7 +233,8 @@ export function ImageGenerationPage() {
 
   const disabled = !channelsLoading && !hasCodexOauthChannel;
   const activeDoc = useMemo(
-    () => ENDPOINT_DOCS.find((doc) => doc.mode === activeMode) ?? ENDPOINT_DOCS[0],
+    () =>
+      ENDPOINT_DOCS.find((doc) => doc.mode === activeMode) ?? ENDPOINT_DOCS[0],
     [activeMode],
   );
 
@@ -259,7 +263,9 @@ export function ImageGenerationPage() {
             ) : null}
 
             <div
-              data-testid={disabled ? "image-generation-disabled-state" : undefined}
+              data-testid={
+                disabled ? "image-generation-disabled-state" : undefined
+              }
               className={disabled ? "space-y-4 opacity-60" : "space-y-4"}
               aria-disabled={disabled}
             >
@@ -279,7 +285,10 @@ export function ImageGenerationPage() {
                 }
               >
                 <div className="space-y-4">
-                  <Tabs value={activeMode} onValueChange={(value) => setActiveMode(value as ImageMode)}>
+                  <Tabs
+                    value={activeMode}
+                    onValueChange={(value) => setActiveMode(value as ImageMode)}
+                  >
                     <TabsList>
                       {ENDPOINT_DOCS.map((doc) => (
                         <TabsTrigger key={doc.mode} value={doc.mode}>
@@ -288,7 +297,11 @@ export function ImageGenerationPage() {
                       ))}
                     </TabsList>
                     {ENDPOINT_DOCS.map((doc) => (
-                      <TabsContent key={doc.mode} value={doc.mode} className="mt-4">
+                      <TabsContent
+                        key={doc.mode}
+                        value={doc.mode}
+                        className="mt-4"
+                      >
                         <EndpointDocView doc={doc} />
                       </TabsContent>
                     ))}
@@ -308,7 +321,6 @@ export function ImageGenerationPage() {
 
       <ImageGenerationTestModal
         open={testOpen}
-        initialMode={activeMode}
         onClose={() => setTestOpen(false)}
       />
     </div>
@@ -323,7 +335,9 @@ function EndpointDocView({ doc }: { doc: EndpointDoc }) {
       <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4 dark:border-neutral-800 dark:bg-neutral-900">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-slate-900 dark:text-white">{t(doc.titleKey)}</p>
+            <p className="text-sm font-semibold text-slate-900 dark:text-white">
+              {t(doc.titleKey)}
+            </p>
             <p className="mt-1 text-xs leading-5 text-slate-600 dark:text-white/55">
               {t(doc.descriptionKey)}
             </p>
@@ -332,7 +346,9 @@ function EndpointDocView({ doc }: { doc: EndpointDoc }) {
             <span className="rounded-full bg-slate-900 px-2 py-0.5 font-semibold text-white dark:bg-white dark:text-neutral-950">
               {doc.method}
             </span>
-            <span className="truncate text-slate-700 dark:text-white/75">{doc.path}</span>
+            <span className="truncate text-slate-700 dark:text-white/75">
+              {doc.path}
+            </span>
           </div>
         </div>
         <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-600 dark:text-white/55">
@@ -346,8 +362,14 @@ function EndpointDocView({ doc }: { doc: EndpointDoc }) {
       </div>
 
       <div className="grid gap-4 xl:grid-cols-2">
-        <SpecTable title={t("image_generation.request_params_title")} rows={doc.requestRows} />
-        <SpecTable title={t("image_generation.response_schema_title")} rows={doc.responseRows} />
+        <SpecTable
+          title={t("image_generation.request_params_title")}
+          rows={doc.requestRows}
+        />
+        <SpecTable
+          title={t("image_generation.response_schema_title")}
+          rows={doc.responseRows}
+        />
       </div>
 
       <div className="overflow-hidden rounded-[22px] border border-slate-200 bg-slate-950 dark:border-neutral-800">
@@ -400,7 +422,9 @@ function SpecTable({ title, rows }: { title: string; rows: SpecRow[] }) {
   return (
     <div className="overflow-hidden rounded-[22px] border border-slate-200 bg-white dark:border-neutral-800 dark:bg-neutral-950">
       <div className="border-b border-slate-200 px-4 py-3 dark:border-neutral-800">
-        <h4 className="text-sm font-semibold text-slate-900 dark:text-white">{title}</h4>
+        <h4 className="text-sm font-semibold text-slate-900 dark:text-white">
+          {title}
+        </h4>
       </div>
       <VirtualTable<SpecRow>
         rows={rows}
@@ -425,25 +449,27 @@ function createUploadPreviewUrl(file: File): string {
 }
 
 function revokeUploadPreviewUrl(url: string) {
-  if (url && url.startsWith("blob:") && typeof URL.revokeObjectURL === "function") {
+  if (
+    url &&
+    url.startsWith("blob:") &&
+    typeof URL.revokeObjectURL === "function"
+  ) {
     URL.revokeObjectURL(url);
   }
 }
 
 function ImageGenerationTestModal({
   open,
-  initialMode,
   onClose,
 }: {
   open: boolean;
-  initialMode: ImageMode;
   onClose: () => void;
 }) {
   const { t } = useTranslation();
-  const [mode, setMode] = useState<ImageMode>(initialMode);
   const [prompt, setPrompt] = useState("");
   const [size, setSize] = useState<(typeof SIZE_OPTIONS)[number]>("1024x1024");
-  const [quality, setQuality] = useState<(typeof QUALITY_OPTIONS)[number]>("medium");
+  const [quality, setQuality] =
+    useState<(typeof QUALITY_OPTIONS)[number]>("medium");
   const [count, setCount] = useState<(typeof COUNT_OPTIONS)[number]>(1);
   const [uploadedImages, setUploadedImages] = useState<UploadedImage[]>([]);
   const [submitting, setSubmitting] = useState(false);
@@ -458,7 +484,6 @@ function ImageGenerationTestModal({
 
   useEffect(() => {
     if (!open) return;
-    setMode(initialMode);
     setPrompt("");
     setSize("1024x1024");
     setQuality("medium");
@@ -475,7 +500,7 @@ function ImageGenerationTestModal({
     setPreviewOpen(false);
     setUploadPreviewOpen(false);
     setUploadPreviewIndex(0);
-  }, [initialMode, open]);
+  }, [open]);
 
   useEffect(() => {
     uploadedImagesRef.current = uploadedImages;
@@ -483,7 +508,9 @@ function ImageGenerationTestModal({
 
   useEffect(() => {
     return () => {
-      uploadedImagesRef.current.forEach((item) => revokeUploadPreviewUrl(item.previewUrl));
+      uploadedImagesRef.current.forEach((item) =>
+        revokeUploadPreviewUrl(item.previewUrl),
+      );
     };
   }, []);
 
@@ -505,12 +532,12 @@ function ImageGenerationTestModal({
   }, [submitting]);
 
   const activeImage = images[activeImageIndex] ?? null;
-  const canSend =
-    Boolean(prompt.trim()) && !submitting && (mode !== "edits" || uploadedImages.length > 0);
+  const requestMode: ImageMode =
+    uploadedImages.length > 0 ? "edits" : "generations";
+  const canSend = Boolean(prompt.trim()) && !submitting;
 
   const handleUploadImages = (files: FileList | null) => {
     if (!files || files.length === 0) return;
-    setMode("edits");
     setUploadedImages((current) => {
       const remainingSlots = Math.max(0, MAX_UPLOAD_IMAGES - current.length);
       if (remainingSlots === 0) return current;
@@ -541,7 +568,6 @@ function ImageGenerationTestModal({
   const handleGenerate = async () => {
     const trimmedPrompt = prompt.trim();
     if (!trimmedPrompt || submitting) return;
-    if (mode === "edits" && uploadedImages.length === 0) return;
 
     setSubmitting(true);
     setImages([]);
@@ -551,7 +577,7 @@ function ImageGenerationTestModal({
 
     try {
       const response =
-        mode === "edits" && uploadedImages.length > 0
+        requestMode === "edits"
           ? await imageGenerationApi.test({
               mode: "edits",
               model: GPT_IMAGE_MODEL,
@@ -589,7 +615,9 @@ function ImageGenerationTestModal({
       setActiveImageIndex(0);
     } catch (error) {
       setErrorMessage(
-        error instanceof Error ? error.message : t("image_generation.test_failed_generic"),
+        error instanceof Error
+          ? error.message
+          : t("image_generation.test_failed_generic"),
       );
     } finally {
       setSubmitting(false);
@@ -626,47 +654,56 @@ function ImageGenerationTestModal({
             void handleGenerate();
           }}
         >
-          <div className="flex flex-wrap items-center gap-2">
-            <Tabs value={mode} onValueChange={(value) => setMode(value as ImageMode)}>
-              <TabsList>
-                <TabsTrigger value="generations">{t("image_generation.text_to_image_title")}</TabsTrigger>
-                <TabsTrigger value="edits">{t("image_generation.image_to_image_title")}</TabsTrigger>
-              </TabsList>
-            </Tabs>
-            <div className="flex flex-wrap gap-2">
-              <Select
-                aria-label={t("image_generation.size_label")}
-                value={size}
-                onChange={(value) => setSize(value as (typeof SIZE_OPTIONS)[number])}
-                options={SIZE_OPTIONS.map((value) => ({ value, label: value }))}
-                className="min-w-[132px]"
-                size="sm"
-              />
-              <Select
-                aria-label={t("image_generation.quality_label")}
-                value={quality}
-                onChange={(value) => setQuality(value as (typeof QUALITY_OPTIONS)[number])}
-                options={QUALITY_OPTIONS.map((value) => ({ value, label: value }))}
-                className="min-w-[108px]"
-                size="sm"
-              />
-              <Select
-                aria-label={t("image_generation.count_label")}
-                value={String(count)}
-                onChange={(value) => setCount(Number(value) as (typeof COUNT_OPTIONS)[number])}
-                options={COUNT_OPTIONS.map((value) => ({
-                  value: String(value),
-                  label: t("image_generation.count_option", { count: value }),
-                }))}
-                className="min-w-[96px]"
-                size="sm"
-              />
-            </div>
+          <div className="flex flex-wrap gap-2">
+            <Select
+              aria-label={t("image_generation.size_label")}
+              value={size}
+              onChange={(value) =>
+                setSize(value as (typeof SIZE_OPTIONS)[number])
+              }
+              options={SIZE_OPTIONS.map((value) => ({ value, label: value }))}
+              className="min-w-[132px]"
+              size="sm"
+            />
+            <Select
+              aria-label={t("image_generation.quality_label")}
+              value={quality}
+              onChange={(value) =>
+                setQuality(value as (typeof QUALITY_OPTIONS)[number])
+              }
+              options={QUALITY_OPTIONS.map((value) => ({
+                value,
+                label: value,
+              }))}
+              className="min-w-[108px]"
+              size="sm"
+            />
+            <Select
+              aria-label={t("image_generation.count_label")}
+              value={String(count)}
+              onChange={(value) =>
+                setCount(Number(value) as (typeof COUNT_OPTIONS)[number])
+              }
+              options={COUNT_OPTIONS.map((value) => ({
+                value: String(value),
+                label: t("image_generation.count_option", { count: value }),
+              }))}
+              className="min-w-[96px]"
+              size="sm"
+            />
           </div>
 
           <div
             data-testid="image-generation-stage"
-            data-state={submitting ? "generating" : activeImage ? "ready" : errorMessage ? "error" : "idle"}
+            data-state={
+              submitting
+                ? "generating"
+                : activeImage
+                  ? "ready"
+                  : errorMessage
+                    ? "error"
+                    : "idle"
+            }
             className={stageClassName}
             aria-live="polite"
           >
@@ -685,7 +722,9 @@ function ImageGenerationTestModal({
                   <div className="min-h-full w-full p-3 sm:p-4">
                     <img
                       src={activeImage.src}
-                      alt={t("image_generation.preview_alt", { model: GPT_IMAGE_MODEL })}
+                      alt={t("image_generation.preview_alt", {
+                        model: GPT_IMAGE_MODEL,
+                      })}
                       className="block h-auto w-full cursor-zoom-in"
                       onClick={() => setPreviewOpen(true)}
                     />
@@ -725,7 +764,7 @@ function ImageGenerationTestModal({
                     <div className="max-w-md">
                       <p className="text-lg font-medium text-slate-600 dark:text-white/72">
                         {t(
-                          mode === "edits"
+                          requestMode === "edits"
                             ? "image_generation.idle_hint_edits"
                             : "image_generation.idle_hint",
                         )}
@@ -758,9 +797,13 @@ function ImageGenerationTestModal({
                       ? "border-slate-900 bg-slate-900 text-white dark:border-white dark:bg-white dark:text-neutral-950"
                       : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 dark:border-neutral-800 dark:bg-neutral-950 dark:text-white/70",
                   ].join(" ")}
-                  aria-label={t("image_generation.image_index_label", { index: index + 1 })}
+                  aria-label={t("image_generation.image_index_label", {
+                    index: index + 1,
+                  })}
                 >
-                  {t("image_generation.image_index_label", { index: index + 1 })}
+                  {t("image_generation.image_index_label", {
+                    index: index + 1,
+                  })}
                 </button>
               ))}
             </div>
@@ -771,21 +814,23 @@ function ImageGenerationTestModal({
               <p className="text-xs font-medium text-slate-500 dark:text-white/40">
                 {t("image_generation.revised_prompt_label")}
               </p>
-              <p className="mt-1 line-clamp-2 text-sm">{activeImage.revisedPrompt}</p>
+              <p className="mt-1 line-clamp-2 text-sm">
+                {activeImage.revisedPrompt}
+              </p>
             </div>
           ) : null}
 
           <div
             data-testid="image-generation-composer"
-            className="shrink-0 rounded-2xl border border-slate-200 bg-white px-3 py-3 shadow-sm dark:border-neutral-800 dark:bg-neutral-950"
+            className="relative shrink-0 rounded-[20px] border border-slate-200 bg-white px-2.5 pt-2.5 pb-11 shadow-sm dark:border-neutral-800 dark:bg-neutral-950"
           >
             {uploadedImages.length > 0 ? (
-              <div className="mb-3 flex flex-wrap gap-2">
+              <div className="mb-2 flex max-h-32 flex-col gap-1.5 overflow-y-auto pr-0.5">
                 {uploadedImages.map((item, index) => (
                   <div
                     key={item.id}
                     data-testid="image-generation-upload-chip"
-                    className="group inline-flex items-center overflow-hidden rounded-full border border-slate-200 bg-slate-50 pr-1 shadow-sm dark:border-neutral-800 dark:bg-neutral-900"
+                    className="group flex max-w-full items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-2 py-1.5 dark:border-neutral-800 dark:bg-neutral-900"
                   >
                     <button
                       type="button"
@@ -793,13 +838,15 @@ function ImageGenerationTestModal({
                         setUploadPreviewIndex(index);
                         setUploadPreviewOpen(true);
                       }}
-                      className="inline-flex max-w-[180px] items-center gap-2 rounded-full px-2.5 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-100 dark:text-white/75 dark:hover:bg-neutral-800"
-                      aria-label={t("image_generation.preview_upload_label", { name: item.file.name })}
+                      className="inline-flex min-w-0 flex-1 items-center gap-2 rounded-lg text-left text-xs font-medium text-slate-700 transition-colors hover:text-slate-900 dark:text-white/75 dark:hover:text-white"
+                      aria-label={t("image_generation.preview_upload_label", {
+                        name: item.file.name,
+                      })}
                     >
-                      <span className="h-5 w-5 overflow-hidden rounded-md bg-white dark:bg-neutral-950">
+                      <span className="h-8 w-8 shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-neutral-700 dark:bg-neutral-950">
                         <img
                           src={item.previewUrl}
-                          alt=""
+                          alt={item.file.name}
                           className="h-full w-full object-cover"
                         />
                       </span>
@@ -808,8 +855,10 @@ function ImageGenerationTestModal({
                     <button
                       type="button"
                       onClick={() => removeUploadedImage(item.id)}
-                      className="inline-flex h-6 w-6 items-center justify-center rounded-full text-slate-400 opacity-100 transition hover:bg-red-50 hover:text-red-500 sm:opacity-0 sm:group-hover:opacity-100 dark:text-white/35 dark:hover:bg-red-500/15 dark:hover:text-red-300"
-                      aria-label={t("image_generation.remove_upload_label", { name: item.file.name })}
+                      className="inline-flex h-6 w-6 shrink-0 items-center justify-center self-center rounded-full text-slate-400 opacity-100 transition hover:bg-red-50 hover:text-red-500 sm:opacity-0 sm:group-hover:opacity-100 dark:text-white/35 dark:hover:bg-red-500/15 dark:hover:text-red-300"
+                      aria-label={t("image_generation.remove_upload_label", {
+                        name: item.file.name,
+                      })}
                     >
                       <X size={13} />
                     </button>
@@ -820,50 +869,50 @@ function ImageGenerationTestModal({
             <label htmlFor="image-generation-prompt" className="sr-only">
               {t("image_generation.prompt_label")}
             </label>
-            <div className="flex items-end gap-2">
-              <label
-                htmlFor="image-generation-reference"
-                className={[
-                  "mb-1 inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full text-slate-500 transition-colors",
-                  uploadedImages.length >= MAX_UPLOAD_IMAGES
-                    ? "cursor-not-allowed opacity-40"
-                    : "hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-white/10 dark:hover:text-white",
-                ].join(" ")}
-                title={t("image_generation.upload_images_label")}
-              >
-                <Plus size={22} />
-              </label>
-              <input
-                id="image-generation-reference"
-                aria-label={t("image_generation.upload_images_label")}
-                type="file"
-                accept="image/*"
-                multiple
-                disabled={uploadedImages.length >= MAX_UPLOAD_IMAGES}
-                className="sr-only"
-                onChange={(event) => {
-                  handleUploadImages(event.target.files);
-                  event.currentTarget.value = "";
-                }}
-              />
-              <textarea
-                id="image-generation-prompt"
-                value={prompt}
-                onChange={(event) => setPrompt(event.target.value)}
-                placeholder={t("image_generation.prompt_placeholder")}
-                rows={3}
-                className="min-h-[88px] flex-1 resize-none border-0 bg-transparent px-1 py-1 text-sm leading-6 text-slate-900 outline-none placeholder:text-slate-400 dark:text-white dark:placeholder:text-white/30"
-              />
-              <button
-                type="submit"
-                disabled={!canSend}
-                aria-busy={submitting}
-                aria-label={t("image_generation.send_button")}
-                className="mb-1 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-950 text-white shadow-sm transition active:translate-y-px disabled:pointer-events-none disabled:opacity-40 dark:bg-white dark:text-neutral-950"
-              >
-                <ArrowUp size={19} />
-              </button>
-            </div>
+            <input
+              id="image-generation-reference"
+              aria-label={t("image_generation.upload_images_label")}
+              type="file"
+              accept="image/*"
+              multiple
+              disabled={uploadedImages.length >= MAX_UPLOAD_IMAGES}
+              className="sr-only"
+              onChange={(event) => {
+                handleUploadImages(event.target.files);
+                event.currentTarget.value = "";
+              }}
+            />
+            <textarea
+              id="image-generation-prompt"
+              value={prompt}
+              onChange={(event) => setPrompt(event.target.value)}
+              placeholder={t("image_generation.prompt_placeholder")}
+              rows={4}
+              className="min-h-[112px] w-full resize-none border-0 bg-transparent px-1 py-0 pr-8 pb-10 text-sm leading-6 text-slate-900 outline-none placeholder:text-slate-400 dark:text-white dark:placeholder:text-white/30"
+            />
+            <label
+              htmlFor="image-generation-reference"
+              data-testid="image-generation-upload-trigger"
+              className={[
+                "absolute bottom-2 left-2 inline-flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-full text-slate-500 transition-colors",
+                uploadedImages.length >= MAX_UPLOAD_IMAGES
+                  ? "cursor-not-allowed opacity-40"
+                  : "hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-white/10 dark:hover:text-white",
+              ].join(" ")}
+              title={t("image_generation.upload_images_label")}
+            >
+              <Plus size={14} />
+            </label>
+            <button
+              type="submit"
+              disabled={!canSend}
+              aria-busy={submitting}
+              aria-label={t("image_generation.send_button")}
+              data-testid="image-generation-send-button"
+              className="absolute right-2 bottom-2 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-950 text-white shadow-sm transition active:translate-y-px disabled:pointer-events-none disabled:opacity-40 dark:bg-white dark:text-neutral-950"
+            >
+              <ArrowUp size={14} />
+            </button>
           </div>
         </form>
       </Modal>
@@ -886,7 +935,10 @@ function ImageGenerationTestModal({
       <ImagePreviewOverlay
         open={uploadPreviewOpen && uploadedImages.length > 0}
         imageSrc={uploadedImages[uploadPreviewIndex]?.previewUrl ?? null}
-        imageAlt={uploadedImages[uploadPreviewIndex]?.file.name ?? t("image_generation.upload_images_label")}
+        imageAlt={
+          uploadedImages[uploadPreviewIndex]?.file.name ??
+          t("image_generation.upload_images_label")
+        }
         title={t("image_generation.image_preview_title")}
         downloadName={uploadedImages[uploadPreviewIndex]?.file.name}
         images={uploadedImages.map((item) => ({
