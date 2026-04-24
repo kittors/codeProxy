@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { useTranslation } from "react-i18next";
 
 // ---------------------------------------------------------------------------
@@ -154,7 +161,10 @@ export function VirtualTable<T>({
     const threshold = latestRef.current.scrollThreshold;
 
     const shouldSchedule =
-      scrollBottom <= threshold && latestHasMore && !latestLoadingMore && Boolean(latestCb);
+      scrollBottom <= threshold &&
+      latestHasMore &&
+      !latestLoadingMore &&
+      Boolean(latestCb);
 
     if (!shouldSchedule) {
       if (bottomTimeoutRef.current) {
@@ -162,7 +172,8 @@ export function VirtualTable<T>({
         bottomTimeoutRef.current = null;
       }
     } else if (!bottomPendingRef.current) {
-      if (bottomTimeoutRef.current) window.clearTimeout(bottomTimeoutRef.current);
+      if (bottomTimeoutRef.current)
+        window.clearTimeout(bottomTimeoutRef.current);
       bottomTimeoutRef.current = window.setTimeout(() => {
         bottomTimeoutRef.current = null;
         const node = containerRef.current;
@@ -171,7 +182,8 @@ export function VirtualTable<T>({
         const st = latestRef.current;
         if (!st.hasMore || st.loadingMore || !st.onScrollBottom) return;
 
-        const bottomNow = node.scrollHeight - node.scrollTop - node.clientHeight;
+        const bottomNow =
+          node.scrollHeight - node.scrollTop - node.clientHeight;
         if (bottomNow > st.scrollThreshold) return;
 
         bottomPendingRef.current = true;
@@ -212,38 +224,46 @@ export function VirtualTable<T>({
   }, []);
 
   // Virtual window calculation
-  const { startIndex, endIndex, topSpacerHeight, bottomSpacerHeight } = useMemo(() => {
-    if (!virtualize) {
+  const { startIndex, endIndex, topSpacerHeight, bottomSpacerHeight } =
+    useMemo(() => {
+      if (!virtualize) {
+        return {
+          startIndex: 0,
+          endIndex: rows.length,
+          topSpacerHeight: 0,
+          bottomSpacerHeight: 0,
+        };
+      }
+      const total = rows.length;
+      if (!total)
+        return {
+          startIndex: 0,
+          endIndex: 0,
+          topSpacerHeight: 0,
+          bottomSpacerHeight: 0,
+        };
+
+      const visibleStart = Math.floor(scrollTop / rowHeight);
+      const visibleCount = Math.max(1, Math.ceil(viewportHeight / rowHeight));
+      const visibleEnd = visibleStart + visibleCount;
+
+      const start = Math.max(0, visibleStart - overscan);
+      const end = Math.min(total, visibleEnd + overscan);
+
       return {
-        startIndex: 0,
-        endIndex: rows.length,
-        topSpacerHeight: 0,
-        bottomSpacerHeight: 0,
+        startIndex: start,
+        endIndex: end,
+        topSpacerHeight: start * rowHeight,
+        bottomSpacerHeight: (total - end) * rowHeight,
       };
-    }
-    const total = rows.length;
-    if (!total)
-      return {
-        startIndex: 0,
-        endIndex: 0,
-        topSpacerHeight: 0,
-        bottomSpacerHeight: 0,
-      };
-
-    const visibleStart = Math.floor(scrollTop / rowHeight);
-    const visibleCount = Math.max(1, Math.ceil(viewportHeight / rowHeight));
-    const visibleEnd = visibleStart + visibleCount;
-
-    const start = Math.max(0, visibleStart - overscan);
-    const end = Math.min(total, visibleEnd + overscan);
-
-    return {
-      startIndex: start,
-      endIndex: end,
-      topSpacerHeight: start * rowHeight,
-      bottomSpacerHeight: (total - end) * rowHeight,
-    };
-  }, [overscan, rowHeight, rows.length, scrollTop, viewportHeight, virtualize]);
+    }, [
+      overscan,
+      rowHeight,
+      rows.length,
+      scrollTop,
+      viewportHeight,
+      virtualize,
+    ]);
 
   const visibleRows = useMemo(
     () => (virtualize ? rows.slice(startIndex, endIndex) : rows),
@@ -255,7 +275,7 @@ export function VirtualTable<T>({
       <div
         ref={containerRef}
         onScroll={onScroll}
-        className={`${height} ${minHeight} table-scrollbar overflow-auto`}
+        className={`${height} ${minHeight} overflow-auto`}
       >
         <table
           className={`w-full ${minWidth} table-fixed border-separate border-spacing-0 text-sm`}
@@ -301,11 +321,17 @@ export function VirtualTable<T>({
               <>
                 {virtualize ? (
                   <tr aria-hidden="true">
-                    <td colSpan={colCount} height={topSpacerHeight} className="p-0" />
+                    <td
+                      colSpan={colCount}
+                      height={topSpacerHeight}
+                      className="p-0"
+                    />
                   </tr>
                 ) : null}
                 {visibleRows.map((row, localIdx) => {
-                  const globalIdx = virtualize ? startIndex + localIdx : localIdx;
+                  const globalIdx = virtualize
+                    ? startIndex + localIdx
+                    : localIdx;
                   const key = rowKey(row, globalIdx);
                   const extraCls =
                     typeof rowClassName === "function"
@@ -340,7 +366,11 @@ export function VirtualTable<T>({
                 })}
                 {virtualize ? (
                   <tr aria-hidden="true">
-                    <td colSpan={colCount} height={bottomSpacerHeight} className="p-0" />
+                    <td
+                      colSpan={colCount}
+                      height={bottomSpacerHeight}
+                      className="p-0"
+                    />
                   </tr>
                 ) : null}
               </>
