@@ -49,14 +49,25 @@
   height: 0;
 }
 
-/* 统一表格滚动条：仅在溢出时显示，浅色/深色都保持清晰可见 */
+/* 统一表格滚动条：默认收起，鼠标移入表格区域后显示原生滚动条 */
 .table-scrollbar {
   scrollbar-gutter: stable both-edges;
-  scrollbar-width: thin;
+  scrollbar-width: none;
   scrollbar-color: rgba(71 85 105 / 0.42) rgba(148 163 184 / 0.14);
 }
 
 .table-scrollbar::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+.table-scrollbar:hover,
+.table-scrollbar:focus-within {
+  scrollbar-width: thin;
+}
+
+.table-scrollbar:hover::-webkit-scrollbar,
+.table-scrollbar:focus-within::-webkit-scrollbar {
   width: 12px;
   height: 12px;
 }

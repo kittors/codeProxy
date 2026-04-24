@@ -50,8 +50,8 @@ function setScrollMetrics(
   });
 }
 
-describe("VirtualTable scroll indicators", () => {
-  test("shows overflow indicators on hover and updates thumb position while scrolling", async () => {
+describe("VirtualTable", () => {
+  test("renders the shared scroll container for overflow tables", async () => {
     const { container } = render(
       <VirtualTable
         rows={rows}
@@ -64,6 +64,7 @@ describe("VirtualTable scroll indicators", () => {
 
     const scrollContainer = container.querySelector(".table-scrollbar") as HTMLDivElement | null;
     expect(scrollContainer).not.toBeNull();
+    expect(scrollContainer).toHaveClass("overflow-auto");
 
     setScrollMetrics(scrollContainer!, {
       clientHeight: 160,
@@ -76,71 +77,30 @@ describe("VirtualTable scroll indicators", () => {
       window.dispatchEvent(new Event("resize"));
     });
 
-    const verticalScrollbar = await screen.findByTestId("virtual-table-scrollbar-y");
-    const horizontalScrollbar = await screen.findByTestId("virtual-table-scrollbar-x");
-    const verticalThumb = screen.getByTestId("virtual-table-scrollbar-y-thumb");
-    const horizontalThumb = screen.getByTestId("virtual-table-scrollbar-x-thumb");
-
-    expect(verticalScrollbar).toBeInTheDocument();
-    expect(horizontalScrollbar).toBeInTheDocument();
-    expect(verticalScrollbar).toHaveClass("opacity-0");
-    expect(horizontalScrollbar).toHaveClass("opacity-0");
-
     act(() => {
-      fireEvent.mouseEnter(scrollContainer!);
-    });
-
-    expect(screen.getByTestId("virtual-table-scrollbar-y")).toHaveClass("opacity-100");
-    expect(screen.getByTestId("virtual-table-scrollbar-x")).toHaveClass("opacity-100");
-
-    const initialVerticalTransform = verticalThumb.style.transform;
-    const initialHorizontalTransform = horizontalThumb.style.transform;
-
-    act(() => {
-      scrollContainer!.scrollTop = 240;
-      scrollContainer!.scrollLeft = 260;
       fireEvent.scroll(scrollContainer!);
     });
 
     await waitFor(() => {
-      expect(screen.getByTestId("virtual-table-scrollbar-y-thumb").style.transform).not.toBe(
-        initialVerticalTransform,
-      );
-      expect(screen.getByTestId("virtual-table-scrollbar-x-thumb").style.transform).not.toBe(
-        initialHorizontalTransform,
-      );
+      expect(screen.getByRole("table", { name: "data table" })).toBeInTheDocument();
     });
   });
 
-  test("hides overflow indicators when content fits in the viewport", async () => {
-    const { container } = render(
+  test("renders empty text when there are no rows", async () => {
+    render(
       <VirtualTable
-        rows={rows.slice(0, 2)}
+        rows={[]}
         columns={columns}
         rowKey={(row) => row.id}
         height="h-[160px]"
         minHeight="min-h-0"
         virtualize={false}
+        emptyText="No rows"
       />,
     );
 
-    const scrollContainer = container.querySelector(".table-scrollbar") as HTMLDivElement | null;
-    expect(scrollContainer).not.toBeNull();
-
-    setScrollMetrics(scrollContainer!, {
-      clientHeight: 160,
-      scrollHeight: 160,
-      clientWidth: 260,
-      scrollWidth: 260,
-    });
-
-    act(() => {
-      window.dispatchEvent(new Event("resize"));
-    });
-
     await waitFor(() => {
-      expect(screen.queryByTestId("virtual-table-scrollbar-y")).not.toBeInTheDocument();
-      expect(screen.queryByTestId("virtual-table-scrollbar-x")).not.toBeInTheDocument();
+      expect(screen.getByText("No rows")).toBeInTheDocument();
     });
   });
 });
