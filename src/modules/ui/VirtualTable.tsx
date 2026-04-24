@@ -387,6 +387,28 @@ export function VirtualTable<T>({
     };
   }, [updateScrollMetrics]);
 
+  // Content size can change without the scroll container's box size changing (e.g. rows loaded after refresh).
+  // ResizeObserver won't fire for scrollHeight/scrollWidth changes, so re-measure on data/structure changes.
+  useEffect(() => {
+    const id = window.requestAnimationFrame(() => {
+      updateScrollMetrics();
+    });
+    return () => {
+      window.cancelAnimationFrame(id);
+    };
+  }, [
+    updateScrollMetrics,
+    rows.length,
+    colCount,
+    loading,
+    loadingMore,
+    hasMore,
+    showAllLoadedMessage,
+    virtualize,
+    rowHeight,
+    minWidth,
+  ]);
+
   // Cleanup rAF
   useEffect(() => {
     return () => {

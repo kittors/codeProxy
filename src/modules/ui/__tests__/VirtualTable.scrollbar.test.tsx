@@ -97,4 +97,59 @@ describe("VirtualTable scrollbar wrapper", () => {
       expect(y).toHaveClass("right-1");
     });
   });
+
+  test("shows vertical scrollbar after data change without requiring a user scroll", async () => {
+    const { container, rerender } = render(
+      <VirtualTable
+        rows={[{ id: "1", name: "Row 1" }]}
+        columns={columns}
+        rowKey={(row) => row.id}
+        height="h-[160px]"
+        minHeight="min-h-0"
+        virtualize={false}
+      />,
+    );
+
+    const scrollContainer = container.querySelector(".table-scrollbar") as HTMLDivElement | null;
+    expect(scrollContainer).not.toBeNull();
+
+    setScrollMetrics(scrollContainer!, {
+      clientHeight: 160,
+      scrollHeight: 160,
+      clientWidth: 260,
+      scrollWidth: 780,
+    });
+
+    window.dispatchEvent(new Event("resize"));
+
+    await waitFor(() => {
+      // only horizontal overflow so far
+      expect(container.querySelector('[data-vt-scrollbar="y"]')).toBeNull();
+      expect(container.querySelector('[data-vt-scrollbar="x"]')).not.toBeNull();
+    });
+
+    rerender(
+      <VirtualTable
+        rows={Array.from({ length: 60 }, (_, i) => ({ id: String(i), name: `Row ${i}` }))}
+        columns={columns}
+        rowKey={(row) => row.id}
+        height="h-[160px]"
+        minHeight="min-h-0"
+        virtualize={false}
+      />,
+    );
+
+    const scrollContainer2 = container.querySelector(".table-scrollbar") as HTMLDivElement | null;
+    expect(scrollContainer2).not.toBeNull();
+    setScrollMetrics(scrollContainer2!, {
+      clientHeight: 160,
+      scrollHeight: 640,
+      clientWidth: 260,
+      scrollWidth: 780,
+    });
+
+    await waitFor(() => {
+      expect(container.querySelector('[data-vt-scrollbar="y"]')).not.toBeNull();
+    });
+  });
 });
