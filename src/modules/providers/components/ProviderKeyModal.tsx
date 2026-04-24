@@ -181,22 +181,45 @@ export function ProviderKeyModal({
         </div>
 
         <div className="rounded-2xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
-          <p className="text-sm font-semibold text-slate-900 dark:text-white">
-            {t("providers.prefix_label")}
-          </p>
-          <div className="mt-2">
-            <TextInput
-              value={keyDraft.prefix}
-              onChange={(e) => {
-                const val = e.currentTarget.value;
-                setKeyDraft((prev) => ({ ...prev, prefix: val }));
-              }}
-              placeholder={t("providers.prefix_placeholder")}
-            />
+          <div className="grid gap-3 md:grid-cols-2">
+            <div>
+              <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                {t("providers.prefix_label")}
+              </p>
+              <div className="mt-2">
+                <TextInput
+                  value={keyDraft.prefix}
+                  onChange={(e) => {
+                    const val = e.currentTarget.value;
+                    setKeyDraft((prev) => ({ ...prev, prefix: val }));
+                  }}
+                  placeholder={t("providers.prefix_placeholder")}
+                />
+              </div>
+              <p className="mt-2 text-xs text-slate-500 dark:text-white/55">
+                {t("providers.prefix_hint")}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                {t("providers.priority_label")}
+              </p>
+              <div className="mt-2">
+                <TextInput
+                  value={keyDraft.priorityText}
+                  onChange={(e) => {
+                    const val = e.currentTarget.value;
+                    setKeyDraft((prev) => ({ ...prev, priorityText: val }));
+                  }}
+                  placeholder={t("providers.priority_placeholder")}
+                  inputMode="numeric"
+                />
+              </div>
+              <p className="mt-2 text-xs text-slate-500 dark:text-white/55">
+                {t("providers.priority_hint")}
+              </p>
+            </div>
           </div>
-          <p className="mt-2 text-xs text-slate-500 dark:text-white/55">
-            {t("providers.prefix_hint")}
-          </p>
         </div>
 
         <div className="rounded-2xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">

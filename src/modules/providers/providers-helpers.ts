@@ -85,6 +85,7 @@ export type ProviderKeyDraft = {
   prefix: string;
   baseUrl: string;
   proxyUrl: string;
+  priorityText: string;
   excludedModelsText: string;
   headersEntries: KeyValueEntry[];
   modelEntries: ModelEntryDraft[];
@@ -141,6 +142,7 @@ export const buildProviderKeyDraft = (input?: ProviderSimpleConfig | null): Prov
   prefix: input?.prefix ?? "",
   baseUrl: input?.baseUrl ?? "",
   proxyUrl: input?.proxyUrl ?? "",
+  priorityText: input?.priority !== undefined ? String(input.priority) : "",
   excludedModelsText: excludedModelsToText(input?.excludedModels),
   headersEntries: recordToKeyValueEntries(input?.headers),
   modelEntries: buildModelEntries(input?.models),

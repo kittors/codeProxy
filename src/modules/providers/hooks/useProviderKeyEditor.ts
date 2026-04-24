@@ -99,6 +99,15 @@ export function useProviderKeyEditor({
     const excludedModels = keyDraft.excludedModelsText.trim()
       ? excludedModelsFromText(keyDraft.excludedModelsText)
       : undefined;
+    const priorityText = keyDraft.priorityText.trim();
+    const priority = priorityText !== "" ? Number(priorityText) : undefined;
+    if (
+      priority !== undefined &&
+      (!Number.isInteger(priority) || priority < 0 || priority > 999)
+    ) {
+      setKeyDraftError(t("providers.priority_error"));
+      return null;
+    }
 
     const requireAlias = editKeyType === "vertex";
     const modelCommit = commitModelEntries(keyDraft.modelEntries, { requireAlias });
@@ -113,6 +122,7 @@ export function useProviderKeyEditor({
       ...(keyDraft.prefix.trim() ? { prefix: keyDraft.prefix.trim() } : {}),
       ...(keyDraft.baseUrl.trim() ? { baseUrl: keyDraft.baseUrl.trim() } : {}),
       ...(keyDraft.proxyUrl.trim() ? { proxyUrl: keyDraft.proxyUrl.trim() } : {}),
+      ...(priority !== undefined ? { priority } : {}),
       ...(headers ? { headers } : {}),
       ...(excludedModels ? { excludedModels } : {}),
       ...(modelCommit.models ? { models: modelCommit.models } : {}),
