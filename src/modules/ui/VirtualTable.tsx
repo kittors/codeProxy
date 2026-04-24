@@ -112,7 +112,6 @@ export function VirtualTable<T>({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [scrollTop, setScrollTop] = useState(0);
   const [viewportHeight, setViewportHeight] = useState(480);
-  const [isScrollbarVisible, setIsScrollbarVisible] = useState(false);
   const [scrollIndicators, setScrollIndicators] = useState<ScrollIndicatorState>({
     hasVertical: false,
     hasHorizontal: false,
@@ -370,17 +369,12 @@ export function VirtualTable<T>({
     () => (virtualize ? rows.slice(startIndex, endIndex) : rows),
     [endIndex, rows, startIndex, virtualize],
   );
-  const scrollbarVisibilityClass = isScrollbarVisible
-    ? "opacity-100 scale-100"
-    : "opacity-0 scale-95";
 
   return (
     <div className="relative min-w-0 overflow-hidden">
       <div
         ref={containerRef}
         onScroll={onScroll}
-        onMouseEnter={() => setIsScrollbarVisible(true)}
-        onMouseLeave={() => setIsScrollbarVisible(false)}
         className={`${height} ${minHeight} table-scrollbar overflow-auto`}
       >
         <table
@@ -499,7 +493,7 @@ export function VirtualTable<T>({
         <div
           data-testid="virtual-table-scrollbar-y"
           aria-hidden="true"
-          className={`pointer-events-none absolute inset-y-2 right-1 z-20 w-2 rounded-full bg-slate-200/95 shadow-[0_0_0_1px_rgba(255,255,255,0.45)] transition-all duration-150 ease-out dark:bg-white/10 dark:shadow-[0_0_0_1px_rgba(255,255,255,0.08)] ${scrollbarVisibilityClass}`}
+          className="pointer-events-none absolute inset-y-2 right-1 z-20 w-1.5 rounded-full bg-slate-200/90 shadow-[0_0_0_1px_rgba(255,255,255,0.45)] dark:bg-white/10 dark:shadow-[0_0_0_1px_rgba(255,255,255,0.08)]"
         >
           <div
             data-testid="virtual-table-scrollbar-y-thumb"
@@ -516,7 +510,7 @@ export function VirtualTable<T>({
         <div
           data-testid="virtual-table-scrollbar-x"
           aria-hidden="true"
-          className={`pointer-events-none absolute bottom-1 left-2 right-2 z-20 h-2 rounded-full bg-slate-200/95 shadow-[0_0_0_1px_rgba(255,255,255,0.45)] transition-all duration-150 ease-out dark:bg-white/10 dark:shadow-[0_0_0_1px_rgba(255,255,255,0.08)] ${scrollbarVisibilityClass}`}
+          className="pointer-events-none absolute bottom-1 left-2 right-2 z-20 h-1.5 rounded-full bg-slate-200/90 shadow-[0_0_0_1px_rgba(255,255,255,0.45)] dark:bg-white/10 dark:shadow-[0_0_0_1px_rgba(255,255,255,0.08)]"
         >
           <div
             data-testid="virtual-table-scrollbar-x-thumb"
