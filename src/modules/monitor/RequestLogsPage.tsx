@@ -306,7 +306,10 @@ export function RequestLogsPage() {
         </div>
 
         {/* 表格区域 — 自适应视口高度，内部滚动 */}
-        <div className="relative min-h-0 flex-1 overflow-hidden px-5">
+        <div
+          className="relative min-h-[360px] flex-1 overflow-hidden px-5"
+          style={{ height: "min(100%, calc(100dvh - 300px))" }}
+        >
           <VirtualTable
             rows={rows}
             columns={logColumns}
@@ -315,7 +318,7 @@ export function RequestLogsPage() {
             virtualize={false}
             minWidth="min-w-[1320px]"
             height="h-full"
-            minHeight="min-h-0"
+            minHeight="min-h-full"
             caption={t("request_logs.table_caption")}
             emptyText={t("request_logs.no_data")}
             showAllLoadedMessage={false}
