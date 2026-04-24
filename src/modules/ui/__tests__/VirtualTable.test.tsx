@@ -51,7 +51,7 @@ function setScrollMetrics(
 }
 
 describe("VirtualTable scroll indicators", () => {
-  test("shows overflow indicators and updates thumb position while scrolling", async () => {
+  test("shows overflow indicators on hover and updates thumb position while scrolling", async () => {
     const { container } = render(
       <VirtualTable
         rows={rows}
@@ -83,6 +83,15 @@ describe("VirtualTable scroll indicators", () => {
 
     expect(verticalScrollbar).toBeInTheDocument();
     expect(horizontalScrollbar).toBeInTheDocument();
+    expect(verticalScrollbar).toHaveClass("opacity-0");
+    expect(horizontalScrollbar).toHaveClass("opacity-0");
+
+    act(() => {
+      fireEvent.mouseEnter(scrollContainer!);
+    });
+
+    expect(screen.getByTestId("virtual-table-scrollbar-y")).toHaveClass("opacity-100");
+    expect(screen.getByTestId("virtual-table-scrollbar-x")).toHaveClass("opacity-100");
 
     const initialVerticalTransform = verticalThumb.style.transform;
     const initialHorizontalTransform = horizontalThumb.style.transform;
