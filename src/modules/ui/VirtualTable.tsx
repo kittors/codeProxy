@@ -71,6 +71,17 @@ const DEFAULT_ROW_HEIGHT = 44;
 const DEFAULT_OVERSCAN = 12;
 const DEFAULT_SCROLL_THRESHOLD = 100;
 const DEFAULT_BOTTOM_DEBOUNCE_MS = 120;
+const MIN_SCROLLBAR_THUMB_SIZE = 36;
+const SCROLLBAR_TRACK_INSET = 16;
+
+interface ScrollIndicatorState {
+  hasVertical: boolean;
+  hasHorizontal: boolean;
+  verticalThumbSize: number;
+  verticalThumbOffset: number;
+  horizontalThumbSize: number;
+  horizontalThumbOffset: number;
+}
 
 // ---------------------------------------------------------------------------
 // Component
@@ -101,6 +112,14 @@ export function VirtualTable<T>({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [scrollTop, setScrollTop] = useState(0);
   const [viewportHeight, setViewportHeight] = useState(480);
+  const [scrollIndicators, setScrollIndicators] = useState<ScrollIndicatorState>({
+    hasVertical: false,
+    hasHorizontal: false,
+    verticalThumbSize: 0,
+    verticalThumbOffset: 0,
+    horizontalThumbSize: 0,
+    horizontalThumbOffset: 0,
+  });
   const rafRef = useRef<number | null>(null);
   const bottomTimeoutRef = useRef<number | null>(null);
   const bottomPendingRef = useRef(false);
@@ -138,6 +157,68 @@ export function VirtualTable<T>({
   useEffect(() => {
     if (!hasMore) bottomPendingRef.current = false;
   }, [hasMore]);
+
+  const updateScrollMetrics = useCallback(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const nextViewportHeight = el.clientHeight || 480;
+    setViewportHeight((prev) => (prev === nextViewportHeight ? prev : nextViewportHeight));
+
+    const { clientHeight, scrollHeight, clientWidth, scrollWidth, scrollLeft, scrollTop } = el;
+    const hasVertical = scrollHeight - clientHeight > 1;
+    const hasHorizontal = scrollWidth - clientWidth > 1;
+
+    const verticalTrackHeight = Math.max(clientHeight - SCROLLBAR_TRACK_INSET, 0);
+    const horizontalTrackWidth = Math.max(clientWidth - SCROLLBAR_TRACK_INSET, 0);
+
+    const verticalThumbSize = hasVertical
+      ? Math.min(
+          verticalTrackHeight,
+          Math.max(MIN_SCROLLBAR_THUMB_SIZE, (clientHeight / scrollHeight) * verticalTrackHeight),
+        )
+      : 0;
+    const horizontalThumbSize = hasHorizontal
+      ? Math.min(
+          horizontalTrackWidth,
+          Math.max(MIN_SCROLLBAR_THUMB_SIZE, (clientWidth / scrollWidth) * horizontalTrackWidth),
+        )
+      : 0;
+
+    const verticalScrollableDistance = Math.max(scrollHeight - clientHeight, 0);
+    const horizontalScrollableDistance = Math.max(scrollWidth - clientWidth, 0);
+    const verticalTravel = Math.max(verticalTrackHeight - verticalThumbSize, 0);
+    const horizontalTravel = Math.max(horizontalTrackWidth - horizontalThumbSize, 0);
+
+    const verticalThumbOffset =
+      hasVertical && verticalScrollableDistance > 0
+        ? (scrollTop / verticalScrollableDistance) * verticalTravel
+        : 0;
+    const horizontalThumbOffset =
+      hasHorizontal && horizontalScrollableDistance > 0
+        ? (scrollLeft / horizontalScrollableDistance) * horizontalTravel
+        : 0;
+
+    setScrollIndicators((prev) => {
+      const nextState = {
+        hasVertical,
+        hasHorizontal,
+        verticalThumbSize,
+        verticalThumbOffset,
+        horizontalThumbSize,
+        horizontalThumbOffset,
+      };
+
+      return prev.hasVertical === nextState.hasVertical &&
+        prev.hasHorizontal === nextState.hasHorizontal &&
+        prev.verticalThumbSize === nextState.verticalThumbSize &&
+        prev.verticalThumbOffset === nextState.verticalThumbOffset &&
+        prev.horizontalThumbSize === nextState.horizontalThumbSize &&
+        prev.horizontalThumbOffset === nextState.horizontalThumbOffset
+        ? prev
+        : nextState;
+    });
+  }, []);
 
   // Scroll handler with infinite-scroll detection
   const onScroll = useCallback(() => {
@@ -183,19 +264,58 @@ export function VirtualTable<T>({
       rafRef.current = window.requestAnimationFrame(() => {
         rafRef.current = null;
         setScrollTop(next);
+        updateScrollMetrics();
       });
     }
-  }, [hasMore, loadingMore, onScrollBottom, scrollThreshold]);
+  }, [hasMore, loadingMore, onScrollBottom, scrollThreshold, updateScrollMetrics]);
 
-  // Track viewport height
+  // Track viewport height and overflow metrics
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-    const update = () => setViewportHeight(el.clientHeight || 480);
-    update();
-    window.addEventListener("resize", update);
-    return () => window.removeEventListener("resize", update);
-  }, []);
+
+    const frame = window.requestAnimationFrame(() => {
+      updateScrollMetrics();
+    });
+
+    const handleResize = () => updateScrollMetrics();
+    window.addEventListener("resize", handleResize);
+
+    const observer =
+      typeof ResizeObserver !== "undefined"
+        ? new ResizeObserver(() => updateScrollMetrics())
+        : null;
+    observer?.observe(el);
+    if (el.firstElementChild instanceof HTMLElement) {
+      observer?.observe(el.firstElementChild);
+    }
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      observer?.disconnect();
+      window.removeEventListener("resize", handleResize);
+    };
+  }, [updateScrollMetrics]);
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      updateScrollMetrics();
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [
+    columns.length,
+    hasMore,
+    height,
+    loading,
+    loadingMore,
+    minHeight,
+    minWidth,
+    rowHeight,
+    rows.length,
+    showAllLoadedMessage,
+    updateScrollMetrics,
+    virtualize,
+  ]);
 
   // Cleanup rAF
   useEffect(() => {
@@ -251,7 +371,7 @@ export function VirtualTable<T>({
   );
 
   return (
-    <div className="min-w-0 overflow-hidden">
+    <div className="relative min-w-0 overflow-hidden">
       <div
         ref={containerRef}
         onScroll={onScroll}
@@ -368,6 +488,40 @@ export function VirtualTable<T>({
           </div>
         )}
       </div>
+
+      {scrollIndicators.hasVertical && (
+        <div
+          data-testid="virtual-table-scrollbar-y"
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-y-2 right-1 z-20 w-1.5 rounded-full bg-slate-200/90 shadow-[0_0_0_1px_rgba(255,255,255,0.45)] dark:bg-white/10 dark:shadow-[0_0_0_1px_rgba(255,255,255,0.08)]"
+        >
+          <div
+            data-testid="virtual-table-scrollbar-y-thumb"
+            className="absolute left-0 top-0 w-full rounded-full bg-gradient-to-b from-sky-500 via-cyan-500 to-blue-600 shadow-[0_6px_18px_rgba(14,165,233,0.3)] dark:from-sky-400 dark:via-cyan-300 dark:to-blue-500"
+            style={{
+              height: `${scrollIndicators.verticalThumbSize}px`,
+              transform: `translateY(${scrollIndicators.verticalThumbOffset}px)`,
+            }}
+          />
+        </div>
+      )}
+
+      {scrollIndicators.hasHorizontal && (
+        <div
+          data-testid="virtual-table-scrollbar-x"
+          aria-hidden="true"
+          className="pointer-events-none absolute bottom-1 left-2 right-2 z-20 h-1.5 rounded-full bg-slate-200/90 shadow-[0_0_0_1px_rgba(255,255,255,0.45)] dark:bg-white/10 dark:shadow-[0_0_0_1px_rgba(255,255,255,0.08)]"
+        >
+          <div
+            data-testid="virtual-table-scrollbar-x-thumb"
+            className="absolute left-0 top-0 h-full rounded-full bg-gradient-to-r from-sky-500 via-cyan-500 to-blue-600 shadow-[0_6px_18px_rgba(14,165,233,0.3)] dark:from-sky-400 dark:via-cyan-300 dark:to-blue-500"
+            style={{
+              width: `${scrollIndicators.horizontalThumbSize}px`,
+              transform: `translateX(${scrollIndicators.horizontalThumbOffset}px)`,
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 }
