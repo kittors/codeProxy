@@ -210,4 +210,53 @@ describe("VirtualTable scrollbar wrapper", () => {
       expect(parseFloat(xThumb!.style.left)).toBeGreaterThanOrEqual(0);
     });
   });
+
+  test("vertical track starts below sticky header", async () => {
+    const { container } = render(
+      <VirtualTable
+        rows={Array.from({ length: 60 }, (_, i) => ({ id: String(i), name: `Row ${i}` }))}
+        columns={columns}
+        rowKey={(row) => row.id}
+        height="h-[160px]"
+        minHeight="min-h-0"
+        virtualize={false}
+      />,
+    );
+
+    const scrollContainer = container.querySelector(".table-scrollbar") as HTMLDivElement | null;
+    expect(scrollContainer).not.toBeNull();
+
+    const thead = container.querySelector("thead") as HTMLTableSectionElement | null;
+    expect(thead).not.toBeNull();
+    Object.defineProperty(thead!, "getBoundingClientRect", {
+      configurable: true,
+      value: () =>
+        ({
+          x: 0,
+          y: 0,
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 40,
+          width: 0,
+          height: 40,
+          toJSON: () => ({}),
+        }) as DOMRect,
+    });
+
+    setScrollMetrics(scrollContainer!, {
+      clientHeight: 160,
+      scrollHeight: 640,
+      clientWidth: 260,
+      scrollWidth: 780,
+    });
+
+    window.dispatchEvent(new Event("resize"));
+
+    await waitFor(() => {
+      const track = container.querySelector('[data-vt-scrollbar="y"]') as HTMLDivElement | null;
+      expect(track).not.toBeNull();
+      expect(track!.style.top).toBe("48px"); // header 40 + inset 8
+    });
+  });
 });

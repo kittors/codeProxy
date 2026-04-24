@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -108,6 +109,9 @@ export function VirtualTable<T>({
 }: VirtualTableProps<T>) {
   const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const headerRef = useRef<HTMLTableSectionElement | null>(null);
+  const headerHeightRef = useRef(0);
+  const [headerHeight, setHeaderHeight] = useState(0);
   const [scrollTop, setScrollTop] = useState(0);
   const [viewportHeight, setViewportHeight] = useState(480);
   const [scrollMetrics, setScrollMetrics] = useState(() => ({
@@ -288,9 +292,10 @@ export function VirtualTable<T>({
       e.currentTarget.setPointerCapture(pointerId);
 
       if (axis === "y") {
-        const trackLength = Math.max(0, el.clientHeight - 16);
-        const contentLength = el.scrollHeight;
-        const viewportLength = el.clientHeight;
+        const headerH = headerHeightRef.current;
+        const trackLength = Math.max(0, el.clientHeight - headerH - 16);
+        const viewportLength = Math.max(0, el.clientHeight - headerH);
+        const contentLength = Math.max(viewportLength, el.scrollHeight - headerH);
         const thumbLength = Math.max(
           28,
           Math.round((viewportLength / contentLength) * trackLength),
@@ -366,12 +371,24 @@ export function VirtualTable<T>({
     dragRef.current = null;
   }, []);
 
+  const measureHeaderHeight = useCallback(() => {
+    const node = headerRef.current;
+    if (!node) return 0;
+    const next = Math.max(0, Math.ceil(node.getBoundingClientRect().height || 0));
+    if (next !== headerHeightRef.current) {
+      headerHeightRef.current = next;
+      setHeaderHeight(next);
+    }
+    return next;
+  }, []);
+
   // Track viewport/scroll metrics
-  useEffect(() => {
+  useLayoutEffect(() => {
     const el = containerRef.current;
     if (!el) return;
     const update = () => {
-      setViewportHeight(el.clientHeight || 480);
+      const headerH = measureHeaderHeight();
+      setViewportHeight(Math.max(0, (el.clientHeight || 480) - headerH));
       updateScrollMetrics();
     };
     update();
@@ -385,18 +402,20 @@ export function VirtualTable<T>({
       window.removeEventListener("resize", update);
       observer?.disconnect();
     };
-  }, [updateScrollMetrics]);
+  }, [measureHeaderHeight, updateScrollMetrics]);
 
   // Content size can change without the scroll container's box size changing (e.g. rows loaded after refresh).
   // ResizeObserver won't fire for scrollHeight/scrollWidth changes, so re-measure on data/structure changes.
   useEffect(() => {
     const id = window.requestAnimationFrame(() => {
+      measureHeaderHeight();
       updateScrollMetrics();
     });
     return () => {
       window.cancelAnimationFrame(id);
     };
   }, [
+    measureHeaderHeight,
     updateScrollMetrics,
     rows.length,
     colCount,
@@ -472,17 +491,28 @@ export function VirtualTable<T>({
 
   const { vThumb, hThumb } = useMemo(() => {
     const trackInset = 8; // matches `inset-y-2` / `inset-x-2` (8px)
-    const hasV = scrollMetrics.scrollHeight > scrollMetrics.clientHeight + 1;
+    const effectiveViewportY = Math.max(0, scrollMetrics.clientHeight - headerHeight);
+    const effectiveContentY = Math.max(
+      effectiveViewportY,
+      scrollMetrics.scrollHeight - headerHeight,
+    );
+    const hasV = effectiveContentY > effectiveViewportY + 1;
     const hasH = scrollMetrics.scrollWidth > scrollMetrics.clientWidth + 1;
 
     const v = (() => {
       if (!hasV) return null;
-      const trackLength = Math.max(0, scrollMetrics.clientHeight - trackInset * 2);
-      const viewport = scrollMetrics.clientHeight;
-      const content = scrollMetrics.scrollHeight;
+      const trackLength = Math.max(
+        0,
+        scrollMetrics.clientHeight - headerHeight - trackInset * 2,
+      );
+      const viewport = Math.max(1, effectiveViewportY);
+      const content = Math.max(viewport, effectiveContentY);
       const thumbLength = Math.max(28, Math.round((viewport / content) * trackLength));
       const maxThumbOffset = Math.max(0, trackLength - thumbLength);
-      const scrollRange = Math.max(1, content - viewport);
+      const scrollRange = Math.max(
+        1,
+        scrollMetrics.scrollHeight - scrollMetrics.clientHeight,
+      );
       const offset = Math.min(
         maxThumbOffset,
         Math.max(0, Math.round((scrollMetrics.scrollTop / scrollRange) * maxThumbOffset)),
@@ -507,7 +537,7 @@ export function VirtualTable<T>({
     })();
 
     return { vThumb: v, hThumb: h };
-  }, [scrollMetrics]);
+  }, [headerHeight, scrollMetrics]);
 
   return (
     <div className={`${height} ${minHeight} relative min-w-0 overflow-hidden group`}>
@@ -526,7 +556,7 @@ export function VirtualTable<T>({
           <caption className="sr-only">{caption}</caption>
 
           {/* ── HeroUI-styled header ── */}
-          <thead className="sticky top-0 z-10">
+          <thead ref={headerRef} className="sticky top-0 z-10">
             <tr className="text-left text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-white/55">
               {columns.map((col, i) => {
                 const isFirst = i === 0;
@@ -645,7 +675,8 @@ export function VirtualTable<T>({
       {vThumb ? (
         <div
           data-vt-scrollbar="y"
-          className="pointer-events-none absolute inset-y-2 right-0 w-2 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
+          className="pointer-events-none absolute right-0 w-2 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
+          style={{ top: headerHeight + 8, bottom: 8 }}
         >
           <div className="absolute inset-0 rounded-full bg-slate-200/40 dark:bg-white/10" />
           <div
