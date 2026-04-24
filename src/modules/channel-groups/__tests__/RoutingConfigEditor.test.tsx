@@ -1,33 +1,53 @@
 import { useState } from "react";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 import i18n from "@/i18n";
-import {
-  DEFAULT_VISUAL_VALUES,
-  type VisualConfigValues,
-} from "@/modules/config/visual/types";
+import { DEFAULT_VISUAL_VALUES, type VisualConfigValues } from "@/modules/config/visual/types";
 import { RoutingConfigEditor } from "@/modules/channel-groups/RoutingConfigEditor";
 import { ThemeProvider } from "@/modules/ui/ThemeProvider";
+import { ToastProvider } from "@/modules/ui/ToastProvider";
 
-function Harness() {
+const toastMocks = vi.hoisted(() => ({
+  info: vi.fn(),
+  success: vi.fn(),
+  warning: vi.fn(),
+  error: vi.fn(),
+}));
+
+vi.mock("goey-toast", () => ({
+  GoeyToaster: () => null,
+  goeyToast: {
+    info: toastMocks.info,
+    success: toastMocks.success,
+    warning: toastMocks.warning,
+    error: toastMocks.error,
+  },
+}));
+
+function Harness({ initialValues }: { initialValues?: VisualConfigValues }) {
   const [values, setValues] = useState<VisualConfigValues>({
     ...DEFAULT_VISUAL_VALUES,
     routingChannelGroups: [],
     routingPathRoutes: [],
+    ...initialValues,
   });
 
   return (
     <ThemeProvider>
-      <RoutingConfigEditor
-        values={values}
-        availableChannels={["Team A Claude", "Main Codex", "Backup Claude"]}
-        onChange={(patch) => setValues((prev) => ({ ...prev, ...patch }))}
-      />
+      <ToastProvider>
+        <RoutingConfigEditor
+          values={values}
+          availableChannels={["Team A Claude", "Main Codex", "Backup Claude"]}
+          onChange={(patch) => setValues((prev) => ({ ...prev, ...patch }))}
+        />
+      </ToastProvider>
       <div data-testid="group-count">{values.routingChannelGroups.length}</div>
       <div data-testid="route-count">{values.routingPathRoutes.length}</div>
       <div data-testid="group-name">{values.routingChannelGroups[0]?.name ?? ""}</div>
-      <div data-testid="channel-name">{values.routingChannelGroups[0]?.channels[0]?.name ?? ""}</div>
+      <div data-testid="channel-name">
+        {values.routingChannelGroups[0]?.channels[0]?.name ?? ""}
+      </div>
       <div data-testid="channel-priority">
         {values.routingChannelGroups[0]?.channels[0]?.priority ?? ""}
       </div>
@@ -37,6 +57,13 @@ function Harness() {
 }
 
 describe("RoutingConfigEditor", () => {
+  beforeEach(() => {
+    toastMocks.info.mockReset();
+    toastMocks.success.mockReset();
+    toastMocks.warning.mockReset();
+    toastMocks.error.mockReset();
+  });
+
   test("creates a group with searchable channel selection and priority", async () => {
     await i18n.changeLanguage("zh-CN");
     const user = userEvent.setup();
@@ -150,7 +177,57 @@ describe("RoutingConfigEditor", () => {
     await user.click(screen.getByRole("option", { name: "Main Codex" }));
     await user.click(screen.getByRole("combobox", { name: "选择渠道" }));
 
-    expect(screen.getByText("路径格式不正确，请填写域名后的路径，例如 /pro 或 /openai/pro。")).toBeInTheDocument();
+    expect(
+      screen.getByText("路径格式不正确，请填写域名后的路径，例如 /pro 或 /openai/pro。"),
+    ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "添加" })).toBeDisabled();
+  });
+
+  test("shows stale channel status and details for groups that reference deleted channels", async () => {
+    await i18n.changeLanguage("zh-CN");
+    const user = userEvent.setup();
+
+    render(
+      <Harness
+        initialValues={{
+          ...DEFAULT_VISUAL_VALUES,
+          routingChannelGroups: [
+            {
+              id: "group-stale",
+              name: "legacy",
+              description: "历史分组",
+              channels: [
+                { id: "channel-stale", name: "Legacy Claude", priority: "90" },
+                { id: "channel-valid", name: "Main Codex", priority: "" },
+              ],
+            },
+          ],
+          routingPathRoutes: [
+            {
+              id: "route-stale",
+              path: "/legacy",
+              group: "legacy",
+              stripPrefix: true,
+              fallback: "none",
+            },
+          ],
+        }}
+      />,
+    );
+
+    expect(screen.getByText("异常")).toBeInTheDocument();
+    expect(screen.getByText("1 个已删除渠道")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /异常/ }));
+
+    expect(screen.getByText("该分组包含已删除渠道")).toBeInTheDocument();
+    expect(screen.getAllByText("Legacy Claude").length).toBeGreaterThan(1);
+    expect(screen.getAllByText("已删除").length).toBeGreaterThan(0);
+    expect(toastMocks.warning).toHaveBeenCalledWith(
+      "分组存在失效渠道",
+      expect.objectContaining({
+        description: expect.stringContaining("Legacy Claude"),
+      }),
+    );
   });
 });

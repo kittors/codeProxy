@@ -1,14 +1,24 @@
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Activity, RefreshCw, Sigma, TriangleAlert } from "lucide-react";
-import { usageApi, type DashboardSummary } from "@/lib/http/apis/usage";
+import { Activity, RefreshCw, Sigma, Sparkles, TriangleAlert } from "lucide-react";
+import type { ECBasicOption } from "echarts/types/dist/shared";
+import {
+  usageApi,
+  type DashboardSummary,
+  type DashboardThroughputPoint,
+  type DashboardTrendPoint,
+} from "@/lib/http/apis/usage";
 import { SystemMonitorSection } from "@/modules/dashboard/SystemMonitorSection";
+import { useSystemStats } from "@/modules/dashboard/useSystemStats";
+import { AnimatedNumber } from "@/modules/ui/AnimatedNumber";
 import { Button } from "@/modules/ui/Button";
 import { Card } from "@/modules/ui/Card";
 import { EmptyState } from "@/modules/ui/EmptyState";
 import { Tabs, TabsList, TabsTrigger } from "@/modules/ui/Tabs";
 import { useToast } from "@/modules/ui/ToastProvider";
-import { AnimatedNumber } from "@/modules/ui/AnimatedNumber";
+import { EChart } from "@/modules/ui/charts/EChart";
+import { ChartLegend } from "@/modules/ui/charts/ChartLegend";
+import { useInterval } from "@/hooks/useInterval";
 
 type DashboardRange = 1 | 7 | 30;
 
@@ -19,31 +29,328 @@ const RANGE_KEYS: Record<DashboardRange, string> = {
 };
 
 const formatNumber = (n: number) =>
-  n >= 10_000 ? `${(n / 1000).toFixed(1)}k` : n.toLocaleString();
+  n >= 1_000_000
+    ? `${(n / 1_000_000).toFixed(1)}m`
+    : n >= 10_000
+      ? `${(n / 1000).toFixed(1)}k`
+      : n.toLocaleString();
 
+const formatCompactNumber = (n: number) => {
+  if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(1)}b`;
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}m`;
+  if (n >= 10_000) return `${(n / 1_000).toFixed(1)}k`;
+  return n.toLocaleString();
+};
+
+const throughputNumberFormatter = new Intl.NumberFormat(undefined, {
+  maximumFractionDigits: 2,
+});
+const formatThroughputValue = (value: number) =>
+  throughputNumberFormatter.format(Number.isFinite(value) ? value : 0);
 const formatRate = (rate: number) => `${rate.toFixed(2)}%`;
+const PANEL_SURFACE =
+  "rounded-[18px] border border-slate-200/85 bg-white shadow-[0_10px_26px_rgba(15,23,42,0.05)] dark:border-neutral-800 dark:bg-neutral-950/85 dark:shadow-[0_10px_26px_rgba(0,0,0,0.28)]";
+
+const formatThroughputTooltip = (params: any) => {
+  const items = Array.isArray(params) ? params : [params];
+  const title = items[0]?.axisValueLabel ?? "";
+  const lines = items.map(
+    (item) =>
+      `${item?.marker ?? ""}${item?.seriesName ?? ""} ${formatThroughputValue(Number(item?.data ?? 0))}`,
+  );
+  return [title, ...lines].join("<br/>");
+};
+
+function createSparklineOption(points: DashboardTrendPoint[], color: string): ECBasicOption {
+  const labels = points.map((point) => point.label);
+  const values = points.map((point) => point.value);
+
+  return {
+    animationDuration: 320,
+    animationDurationUpdate: 240,
+    grid: { left: 0, right: 0, top: 6, bottom: 0 },
+    tooltip: {
+      trigger: "axis",
+      borderWidth: 0,
+      backgroundColor: "rgba(15, 23, 42, 0.9)",
+      textStyle: { color: "#fff", fontSize: 11 },
+      formatter: (params: any) => {
+        const first = Array.isArray(params) ? params[0] : params;
+        return `${first?.axisValueLabel ?? ""}<br/>${formatNumber(Number(first?.data ?? 0))}`;
+      },
+    },
+    xAxis: {
+      type: "category",
+      data: labels,
+      show: false,
+      boundaryGap: false,
+    },
+    yAxis: {
+      type: "value",
+      show: false,
+      min: (value: { min: number }) => Math.min(0, value.min),
+    },
+    series: [
+      {
+        id: "sparkline",
+        name: "trend",
+        type: "line",
+        data: values,
+        smooth: true,
+        symbol: "none",
+        lineStyle: { color, width: 2.5 },
+        areaStyle: {
+          color: {
+            type: "linear",
+            x: 0,
+            y: 0,
+            x2: 0,
+            y2: 1,
+            colorStops: [
+              { offset: 0, color: `${color}33` },
+              { offset: 1, color: `${color}00` },
+            ],
+          },
+        },
+      },
+    ],
+  };
+}
+
+function createThroughputOption(
+  points: DashboardThroughputPoint[],
+  showRPM: boolean,
+  showTPM: boolean,
+): ECBasicOption {
+  const labels = points.map((point) => point.label);
+  const rpmValues = points.map((point) => point.rpm);
+  const tpmValues = points.map((point) => point.tpm);
+
+  return {
+    animationDuration: 360,
+    animationDurationUpdate: 80,
+    tooltip: {
+      trigger: "axis",
+      borderWidth: 0,
+      backgroundColor: "rgba(15, 23, 42, 0.92)",
+      textStyle: { color: "#fff" },
+      formatter: formatThroughputTooltip,
+    },
+    grid: { left: 12, right: 12, top: 12, bottom: 22, containLabel: true },
+    xAxis: {
+      type: "category",
+      data: labels,
+      boundaryGap: false,
+      axisTick: { show: false },
+      axisLine: { lineStyle: { color: "rgba(148,163,184,0.45)" } },
+      axisLabel: { color: "#64748b", fontSize: 10, hideOverlap: true },
+    },
+    yAxis: [
+      {
+        type: "value",
+        splitNumber: 4,
+        axisLabel: {
+          color: "#64748b",
+          fontSize: 10,
+          formatter: (value: number) => formatThroughputValue(value),
+        },
+        splitLine: { lineStyle: { color: "rgba(148,163,184,0.16)" } },
+      },
+      {
+        type: "value",
+        splitNumber: 4,
+        axisLabel: {
+          color: "#64748b",
+          fontSize: 10,
+          formatter: (value: number) => formatThroughputValue(value),
+        },
+        splitLine: { show: false },
+      },
+    ],
+    series: [
+      {
+        id: "rpm",
+        name: "RPM",
+        type: "line",
+        yAxisIndex: 0,
+        data: showRPM ? rpmValues : [],
+        smooth: true,
+        showSymbol: false,
+        lineStyle: { width: 3, color: "#2563eb" },
+        itemStyle: { color: "#2563eb" },
+        areaStyle: {
+          color: {
+            type: "linear",
+            x: 0,
+            y: 0,
+            x2: 0,
+            y2: 1,
+            colorStops: [
+              { offset: 0, color: "rgba(37,99,235,0.18)" },
+              { offset: 1, color: "rgba(37,99,235,0.02)" },
+            ],
+          },
+        },
+      },
+      {
+        id: "tpm",
+        name: "TPM",
+        type: "line",
+        yAxisIndex: 1,
+        data: showTPM ? tpmValues : [],
+        smooth: true,
+        showSymbol: false,
+        lineStyle: { width: 3, color: "#7c3aed" },
+        itemStyle: { color: "#7c3aed" },
+        areaStyle: {
+          color: {
+            type: "linear",
+            x: 0,
+            y: 0,
+            x2: 0,
+            y2: 1,
+            colorStops: [
+              { offset: 0, color: "rgba(124,58,237,0.14)" },
+              { offset: 1, color: "rgba(124,58,237,0.02)" },
+            ],
+          },
+        },
+      },
+    ],
+  };
+}
 
 function DashboardKpiCard({
   title,
   value,
   hint,
   icon: Icon,
+  option,
+  accent,
 }: {
   title: string;
   value: ReactNode;
   hint: string;
   icon: typeof Activity;
+  option: ECBasicOption;
+  accent: {
+    iconWrap: string;
+    iconColor: string;
+  };
 }) {
   return (
     <Card
-      title={title}
-      actions={<Icon size={14} className="text-slate-900 dark:text-white" />}
-      bodyClassName="mt-3"
+      className={`${PANEL_SURFACE} h-full`}
+      bodyClassName="mt-0 flex h-full flex-col"
+      padding="compact"
     >
-      <p className="text-2xl font-semibold tracking-tight text-slate-900 dark:text-white">
-        {value}
-      </p>
-      <p className="mt-2 text-xs text-slate-600 dark:text-white/65">{hint}</p>
+      <div className="flex items-start justify-between gap-2">
+        <div
+          className={`inline-flex h-9 w-9 items-center justify-center rounded-[14px] ${accent.iconWrap}`}
+        >
+          <Icon size={16} className={accent.iconColor} />
+        </div>
+      </div>
+      <div className="mt-3">
+        <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">{title}</p>
+        <div className="mt-2 text-[2rem] font-semibold leading-none tracking-tight text-slate-950 dark:text-white">
+          {value}
+        </div>
+        <p className="mt-2 text-[11px] text-slate-500 dark:text-white/45">{hint}</p>
+      </div>
+      <div className="mt-auto pt-3">
+        <EChart option={option} className="h-10" overflowVisible />
+      </div>
+    </Card>
+  );
+}
+
+function ThroughputTrendChart({
+  title,
+  points,
+  rpm,
+  tpm,
+  connected,
+  showRPM,
+  showTPM,
+  onToggle,
+}: {
+  title: string;
+  points: DashboardThroughputPoint[];
+  rpm: number;
+  tpm: number;
+  connected: boolean;
+  showRPM: boolean;
+  showTPM: boolean;
+  onToggle: (key: string) => void;
+}) {
+  const { t } = useTranslation();
+  const option = useMemo(
+    () => createThroughputOption(points, showRPM, showTPM),
+    [points, showRPM, showTPM],
+  );
+  const active = rpm > 0 || tpm > 0;
+
+  return (
+    <Card
+      className={PANEL_SURFACE}
+      title={title}
+      actions={
+        <div
+          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+            connected
+              ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-300"
+              : "bg-slate-100 text-slate-400 dark:bg-neutral-800 dark:text-white/45"
+          }`}
+        >
+          <span
+            className={`h-2 w-2 rounded-full ${
+              active ? "animate-pulse bg-emerald-500" : "bg-slate-300 dark:bg-neutral-600"
+            }`}
+          />
+          {connected ? t("system_monitor.live") : t("system_monitor.polling")}
+        </div>
+      }
+      padding="compact"
+    >
+      <div className="mb-3 grid gap-3 sm:grid-cols-2">
+        <div className="rounded-[14px] bg-slate-50 px-3 py-2 dark:bg-neutral-900/70 dark:ring-1 dark:ring-white/8">
+          <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+            RPM
+          </div>
+          <div className="mt-1 text-xl font-semibold tabular-nums text-blue-600 dark:text-blue-400">
+            {formatCompactNumber(rpm)}
+          </div>
+        </div>
+        <div className="rounded-[14px] bg-slate-50 px-3 py-2 dark:bg-neutral-900/70 dark:ring-1 dark:ring-white/8">
+          <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+            TPM
+          </div>
+          <div className="mt-1 text-xl font-semibold tabular-nums text-violet-600 dark:text-violet-400">
+            {formatCompactNumber(tpm)}
+          </div>
+        </div>
+      </div>
+      <EChart option={option} className="h-56" />
+      <ChartLegend
+        className="justify-start pt-3"
+        items={[
+          {
+            key: "rpm",
+            label: "RPM",
+            colorClass: "bg-blue-500",
+            enabled: showRPM,
+            onToggle,
+          },
+          {
+            key: "tpm",
+            label: "TPM",
+            colorClass: "bg-violet-500",
+            enabled: showTPM,
+            onToggle,
+          },
+        ]}
+      />
     </Card>
   );
 }
@@ -51,14 +358,18 @@ function DashboardKpiCard({
 export function DashboardPage() {
   const { t } = useTranslation();
   const { notify } = useToast();
+  const { stats, connected } = useSystemStats(5);
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [range, setRange] = useState<DashboardRange>(7);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [throughputLegend, setThroughputLegend] = useState({ rpm: true, tpm: true });
 
   const refresh = useCallback(
-    async (days: DashboardRange) => {
-      setLoading(true);
+    async (days: DashboardRange, silent = false) => {
+      if (!silent) {
+        setLoading(true);
+      }
       setError(null);
       try {
         const data = await usageApi.getDashboardSummary(days);
@@ -68,7 +379,9 @@ export function DashboardPage() {
         setError(message);
         notify({ type: "error", message });
       } finally {
-        setLoading(false);
+        if (!silent) {
+          setLoading(false);
+        }
       }
     },
     [notify, t],
@@ -78,14 +391,52 @@ export function DashboardPage() {
     void refresh(range);
   }, [refresh, range]);
 
+  useInterval(() => {
+    void refresh(range, true);
+  }, 5000);
+
   const kpi = summary?.kpi;
+  const trends = summary?.trends;
+  const meta = summary?.meta ?? {};
+  const generatedAt = meta.generated_at
+    ? new Date(meta.generated_at).toLocaleString()
+    : t("dashboard.updated_fallback");
+  const throughputSeries = useMemo(
+    () => trends?.throughput_series ?? [],
+    [trends?.throughput_series],
+  );
+
+  const totalRequestOption = useMemo(
+    () => createSparklineOption(trends?.request_volume ?? [], "#2563eb"),
+    [trends?.request_volume],
+  );
+  const successRateOption = useMemo(
+    () => createSparklineOption(trends?.success_rate ?? [], "#10b981"),
+    [trends?.success_rate],
+  );
+  const totalTokenOption = useMemo(
+    () => createSparklineOption(trends?.total_tokens ?? [], "#7c3aed"),
+    [trends?.total_tokens],
+  );
+  const failedRequestOption = useMemo(
+    () => createSparklineOption(trends?.failed_requests ?? [], "#ef4444"),
+    [trends?.failed_requests],
+  );
 
   return (
-    <div className="space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold tracking-tight text-slate-900 dark:text-white">
-          {t("dashboard.heading")}
-        </h2>
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h2 className="text-[2rem] font-semibold tracking-tight text-slate-950 text-balance dark:text-white">
+            {t("dashboard.heading")}
+          </h2>
+          <p className="mt-1 text-sm text-slate-500 dark:text-white/55">
+            {t("dashboard.hero_subtitle")}
+          </p>
+          <p className="mt-2 text-[11px] text-slate-400 dark:text-white/40">
+            {t("dashboard.overview_hint", { time: generatedAt })}
+          </p>
+        </div>
         <div className="flex flex-wrap items-center gap-2">
           <Tabs
             value={String(range)}
@@ -125,7 +476,7 @@ export function DashboardPage() {
         />
       ) : null}
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <DashboardKpiCard
           title={t("dashboard.total_requests")}
           value={<AnimatedNumber value={kpi?.total_requests ?? 0} format={formatNumber} />}
@@ -135,6 +486,11 @@ export function DashboardPage() {
               : t("dashboard.total_hint_days", { count: range })
           }
           icon={Activity}
+          option={totalRequestOption}
+          accent={{
+            iconWrap: "bg-blue-50 dark:bg-blue-500/12",
+            iconColor: "text-blue-600 dark:text-blue-400",
+          }}
         />
         <DashboardKpiCard
           title={t("dashboard.success_rate")}
@@ -144,6 +500,11 @@ export function DashboardPage() {
             failed: formatNumber(kpi?.failed_requests ?? 0),
           })}
           icon={Sigma}
+          option={successRateOption}
+          accent={{
+            iconWrap: "bg-emerald-50 dark:bg-emerald-500/12",
+            iconColor: "text-emerald-600 dark:text-emerald-400",
+          }}
         />
         <DashboardKpiCard
           title={t("dashboard.total_tokens")}
@@ -152,17 +513,44 @@ export function DashboardPage() {
             input: formatNumber(kpi?.input_tokens ?? 0),
             output: formatNumber(kpi?.output_tokens ?? 0),
           })}
-          icon={Sigma}
+          icon={Sparkles}
+          option={totalTokenOption}
+          accent={{
+            iconWrap: "bg-violet-50 dark:bg-violet-500/12",
+            iconColor: "text-violet-600 dark:text-violet-400",
+          }}
         />
         <DashboardKpiCard
           title={t("dashboard.failed_requests")}
           value={<AnimatedNumber value={kpi?.failed_requests ?? 0} format={formatNumber} />}
           hint={t("dashboard.failed_hint")}
           icon={TriangleAlert}
+          option={failedRequestOption}
+          accent={{
+            iconWrap: "bg-rose-50 dark:bg-rose-500/12",
+            iconColor: "text-rose-600 dark:text-rose-400",
+          }}
         />
       </div>
 
-      <SystemMonitorSection />
+      <SystemMonitorSection
+        stats={stats}
+        connected={connected}
+        apiKeyCount={summary?.counts.api_keys ?? 0}
+      />
+
+      <ThroughputTrendChart
+        title={t("dashboard.throughput_title")}
+        points={throughputSeries}
+        rpm={stats?.total_rpm ?? 0}
+        tpm={stats?.total_tpm ?? 0}
+        connected={connected}
+        showRPM={throughputLegend.rpm}
+        showTPM={throughputLegend.tpm}
+        onToggle={(key) =>
+          setThroughputLegend((prev) => ({ ...prev, [key]: !prev[key as "rpm" | "tpm"] }))
+        }
+      />
     </div>
   );
 }

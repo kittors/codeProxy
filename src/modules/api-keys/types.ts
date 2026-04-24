@@ -9,5 +9,6 @@ export interface ApiKeyFormValues {
   allowedModels: string[];
   allowedChannels: string[];
   allowedChannelGroups: string[];
+  useExactChannelRestrictions: boolean;
   systemPrompt: string;
 }

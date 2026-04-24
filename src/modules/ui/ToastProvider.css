@@ -1,0 +1,36 @@
+.goey-wrapper {
+  max-width: min(calc(100vw - 2rem), 42rem) !important;
+  min-width: 0;
+}
+
+.goey-content {
+  box-sizing: border-box;
+  max-width: min(calc(100vw - 2rem), 42rem) !important;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.goey-header {
+  max-width: 100%;
+  min-width: 0;
+  align-items: flex-start;
+}
+
+.goey-title,
+.goey-description {
+  max-width: 100%;
+  min-width: 0;
+}
+
+.goey-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap !important;
+  line-height: 1.35 !important;
+}
+
+.goey-description {
+  white-space: pre-line !important;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}

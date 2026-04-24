@@ -42,9 +42,9 @@ export function ApiKeysPage() {
   const [availableModels, setAvailableModels] = useState<MultiSelectOption[]>([]);
   const [availableChannels, setAvailableChannels] = useState<MultiSelectOption[]>([]);
   const [availableChannelGroups, setAvailableChannelGroups] = useState<MultiSelectOption[]>([]);
-  const [channelRouteGroupsByName, setChannelRouteGroupsByName] = useState<Record<string, string[]>>(
-    {},
-  );
+  const [channelRouteGroupsByName, setChannelRouteGroupsByName] = useState<
+    Record<string, string[]>
+  >({});
   const [channelGroupByName, setChannelGroupByName] = useState<Record<string, string>>({});
   const [form, setForm] = useState<ApiKeyFormValues>(() => makeEmptyApiKeyForm());
   const {
@@ -93,7 +93,11 @@ export function ApiKeysPage() {
         .map((c) => String(c ?? "").trim())
         .filter(Boolean);
       const normalizedGroups = (Array.isArray(groups) ? groups : [])
-        .map((group) => String(group ?? "").trim().toLowerCase())
+        .map((group) =>
+          String(group ?? "")
+            .trim()
+            .toLowerCase(),
+        )
         .filter(Boolean);
       const params = new URLSearchParams();
       if (normalizedChannels.length > 0) {
@@ -130,8 +134,12 @@ export function ApiKeysPage() {
       const groups = await channelGroupsApi.list();
       const options: MultiSelectOption[] = groups
         .map((group) => ({
-          value: String(group.name ?? "").trim().toLowerCase(),
-          label: String(group.name ?? "").trim().toLowerCase(),
+          value: String(group.name ?? "")
+            .trim()
+            .toLowerCase(),
+          label: String(group.name ?? "")
+            .trim()
+            .toLowerCase(),
           description:
             typeof group.description === "string" && group.description.trim()
               ? group.description.trim()
@@ -143,7 +151,9 @@ export function ApiKeysPage() {
 
       const nextMembership: Record<string, string[]> = {};
       groups.forEach((group: ChannelGroupItem) => {
-        const groupName = String(group.name ?? "").trim().toLowerCase();
+        const groupName = String(group.name ?? "")
+          .trim()
+          .toLowerCase();
         if (!groupName) return;
         const channels = Array.isArray(group.channels) ? group.channels : [];
         channels.forEach((channel) => {
@@ -275,11 +285,15 @@ export function ApiKeysPage() {
 
   useEffect(() => {
     if (!showCreate && editIndex === null) return;
-    void loadModels(form.allowedChannels, form.allowedChannelGroups);
+    void loadModels(
+      form.useExactChannelRestrictions ? form.allowedChannels : [],
+      form.allowedChannelGroups,
+    );
   }, [
     editIndex,
     form.allowedChannelGroups,
     form.allowedChannels,
+    form.useExactChannelRestrictions,
     loadModels,
     showCreate,
   ]);
@@ -314,7 +328,7 @@ export function ApiKeysPage() {
   const handleOpenCreate = () => {
     const next = makeEmptyApiKeyForm(generateApiKey());
     setForm(next);
-    void loadModels(next.allowedChannels, next.allowedChannelGroups);
+    void loadModels([], next.allowedChannelGroups);
     setShowCreate(true);
   };
 
@@ -340,7 +354,10 @@ export function ApiKeysPage() {
         "rpm-limit": form.rpmLimit ? parseInt(form.rpmLimit, 10) || 0 : undefined,
         "tpm-limit": form.tpmLimit ? parseInt(form.tpmLimit, 10) || 0 : undefined,
         "allowed-models": form.allowedModels.length > 0 ? form.allowedModels : undefined,
-        "allowed-channels": form.allowedChannels.length > 0 ? form.allowedChannels : undefined,
+        "allowed-channels":
+          form.useExactChannelRestrictions && form.allowedChannels.length > 0
+            ? form.allowedChannels
+            : undefined,
         "allowed-channel-groups":
           form.allowedChannelGroups.length > 0 ? form.allowedChannelGroups : undefined,
         "system-prompt": form.systemPrompt.trim() || undefined,
@@ -375,10 +392,14 @@ export function ApiKeysPage() {
       allowedModels: entry["allowed-models"] || [],
       allowedChannels: entry["allowed-channels"] || [],
       allowedChannelGroups: entry["allowed-channel-groups"] || [],
+      useExactChannelRestrictions: (entry["allowed-channels"] || []).length > 0,
       systemPrompt: entry["system-prompt"] || "",
     };
     setForm(next);
-    void loadModels(next.allowedChannels, next.allowedChannelGroups);
+    void loadModels(
+      next.useExactChannelRestrictions ? next.allowedChannels : [],
+      next.allowedChannelGroups,
+    );
     setEditIndex(index);
   };
 
@@ -403,7 +424,10 @@ export function ApiKeysPage() {
           "rpm-limit": form.rpmLimit ? parseInt(form.rpmLimit, 10) || 0 : 0,
           "tpm-limit": form.tpmLimit ? parseInt(form.tpmLimit, 10) || 0 : 0,
           "allowed-models": form.allowedModels.length > 0 ? form.allowedModels : [],
-          "allowed-channels": form.allowedChannels.length > 0 ? form.allowedChannels : [],
+          "allowed-channels":
+            form.useExactChannelRestrictions && form.allowedChannels.length > 0
+              ? form.allowedChannels
+              : [],
           "allowed-channel-groups":
             form.allowedChannelGroups.length > 0 ? form.allowedChannelGroups : [],
           "system-prompt": form.systemPrompt.trim(),
@@ -486,7 +510,7 @@ export function ApiKeysPage() {
   );
 
   const filteredAvailableChannels = useMemo(() => {
-    if (form.allowedChannelGroups.length === 0) {
+    if (!form.useExactChannelRestrictions || form.allowedChannelGroups.length === 0) {
       return availableChannels;
     }
     const allowedGroups = new Set(form.allowedChannelGroups.map((group) => group.toLowerCase()));
@@ -494,10 +518,15 @@ export function ApiKeysPage() {
       const groups = channelRouteGroupsByName[option.value] ?? [];
       return groups.some((group) => allowedGroups.has(group));
     });
-  }, [availableChannels, channelRouteGroupsByName, form.allowedChannelGroups]);
+  }, [
+    availableChannels,
+    channelRouteGroupsByName,
+    form.allowedChannelGroups,
+    form.useExactChannelRestrictions,
+  ]);
 
   useEffect(() => {
-    if (form.allowedChannelGroups.length === 0) {
+    if (!form.useExactChannelRestrictions || form.allowedChannelGroups.length === 0) {
       return;
     }
     const allowedChannelSet = new Set(filteredAvailableChannels.map((option) => option.value));
@@ -509,7 +538,11 @@ export function ApiKeysPage() {
         ? prev
         : { ...prev, allowedChannels: nextAllowedChannels };
     });
-  }, [filteredAvailableChannels, form.allowedChannelGroups.length]);
+  }, [
+    filteredAvailableChannels,
+    form.allowedChannelGroups.length,
+    form.useExactChannelRestrictions,
+  ]);
 
   /* ─── main render ─── */
 
@@ -590,7 +623,7 @@ export function ApiKeysPage() {
 
       <DeleteApiKeyModal
         t={t}
-        entry={deleteIndex === null ? null : entries[deleteIndex] ?? null}
+        entry={deleteIndex === null ? null : (entries[deleteIndex] ?? null)}
         open={deleteIndex !== null}
         saving={saving}
         deleteLogsOnDelete={deleteLogsOnDelete}

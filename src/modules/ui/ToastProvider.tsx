@@ -1,12 +1,58 @@
 import { createContext, type PropsWithChildren, use, useCallback, useMemo } from "react";
 import { GoeyToaster, goeyToast } from "goey-toast";
 import "goey-toast/styles.css";
+import "@/modules/ui/ToastProvider.css";
 import { useTheme } from "@/modules/ui/ThemeProvider";
 
 type ToastType = "success" | "error" | "info" | "warning";
+type ToastClassNames = Partial<
+  Record<
+    | "wrapper"
+    | "content"
+    | "header"
+    | "title"
+    | "icon"
+    | "description"
+    | "actionWrapper"
+    | "actionButton",
+    string
+  >
+>;
+
+const TOAST_WRAPPER_CLASSNAME = "!max-w-[min(calc(100vw-2rem),42rem)] min-w-0";
+const TOAST_CONTENT_CLASSNAME =
+  "!max-w-[min(calc(100vw-2rem),42rem)] min-w-0 overflow-hidden";
+const TOAST_HEADER_CLASSNAME = "flex min-w-0 max-w-full items-start";
+const SINGLE_LINE_TITLE_CLASSNAME =
+  "!max-w-full min-w-0 flex-1 truncate !whitespace-nowrap !leading-5";
+const DESCRIPTION_TEXT_CLASSNAME =
+  "!max-w-full min-w-0 !whitespace-pre-line break-words [overflow-wrap:anywhere] !leading-5";
+const MAX_TOAST_TITLE_CHARACTERS = 48;
+
+const mergeClassName = (baseClassName: string, className?: string) =>
+  [baseClassName, className].filter(Boolean).join(" ");
+
+const mergeToastClassNames = (classNames?: ToastClassNames): ToastClassNames => ({
+  ...classNames,
+  wrapper: mergeClassName(TOAST_WRAPPER_CLASSNAME, classNames?.wrapper),
+  content: mergeClassName(TOAST_CONTENT_CLASSNAME, classNames?.content),
+  header: mergeClassName(TOAST_HEADER_CLASSNAME, classNames?.header),
+  title: mergeClassName(SINGLE_LINE_TITLE_CLASSNAME, classNames?.title),
+  description: mergeClassName(DESCRIPTION_TEXT_CLASSNAME, classNames?.description),
+});
+
+const shouldUseDescriptionBody = (message: string) =>
+  message.includes("\n") || message.length > MAX_TOAST_TITLE_CHARACTERS;
 
 interface ToastContextState {
-  notify: (input: { type?: ToastType; title?: string; message: string; duration?: number }) => void;
+  notify: (input: {
+    type?: ToastType;
+    title?: string;
+    message: string;
+    duration?: number;
+    action?: { label: string; onClick: () => void; successLabel?: string };
+    classNames?: ToastClassNames;
+  }) => void;
 }
 
 const ToastContext = createContext<ToastContextState | null>(null);
@@ -17,23 +63,33 @@ export function ToastProvider({ children }: PropsWithChildren) {
   } = useTheme();
 
   const notify = useCallback(
-    (input: { type?: ToastType; title?: string; message: string; duration?: number }) => {
+    (input: {
+      type?: ToastType;
+      title?: string;
+      message: string;
+      duration?: number;
+      action?: { label: string; onClick: () => void; successLabel?: string };
+      classNames?: ToastClassNames;
+    }) => {
       const type = input.type ?? "info";
 
-      const _defaultTitles: Record<ToastType, string> = {
+      const defaultTitles: Record<ToastType, string> = {
         success: "Success",
         error: "Error",
         warning: "Warning",
         info: "Info",
       };
-      // Use message as the pill title; only set description when a separate title is provided
-      const title = input.title ?? input.message;
+      const title = input.title ?? (shouldUseDescriptionBody(input.message) ? defaultTitles[type] : input.message);
       const options: Record<string, unknown> = {
         duration: input.duration ?? 1500,
       };
-      if (input.title) {
+      if (input.title || title !== input.message) {
         options.description = input.message;
       }
+      if (input.action) {
+        options.action = input.action;
+      }
+      options.classNames = mergeToastClassNames(input.classNames);
 
       switch (type) {
         case "success":

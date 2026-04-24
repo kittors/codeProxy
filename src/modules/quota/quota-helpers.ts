@@ -22,6 +22,8 @@ export {
 } from "@/modules/quota/quota-gemini-cli";
 export { type KiroQuotaPayload } from "@/modules/quota/quota-kiro";
 export { buildKiroItems, parseKiroQuotaPayload } from "@/modules/quota/quota-kiro";
+export { type KimiUsagePayload } from "@/modules/quota/quota-kimi";
+export { buildKimiItems, parseKimiUsagePayload } from "@/modules/quota/quota-kimi";
 export {
   clampPercent,
   formatRelativeResetLabel,
@@ -75,6 +77,11 @@ export const KIRO_REQUEST_BODY = JSON.stringify({
   origin: "AI_EDITOR",
   resourceType: "AGENTIC_REQUEST",
 });
+
+export const KIMI_USAGE_URL = "https://api.kimi.com/coding/v1/usages";
+export const KIMI_REQUEST_HEADERS = {
+  Authorization: "Bearer $TOKEN$",
+};
 
 export const resolveAuthProvider = (file: AuthFileItem): string => {
   const raw = (file.provider ?? file.type ?? "") as unknown;

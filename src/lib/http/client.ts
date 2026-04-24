@@ -124,9 +124,17 @@ export class ApiClient {
       if (trimmed) {
         try {
           const errorPayload = JSON.parse(trimmed) as Record<string, unknown>;
+          const nestedError =
+            errorPayload.error &&
+            typeof errorPayload.error === "object" &&
+            !Array.isArray(errorPayload.error)
+              ? (errorPayload.error as Record<string, unknown>)
+              : null;
           const errorText =
             typeof errorPayload.error === "string"
               ? errorPayload.error
+              : typeof nestedError?.message === "string"
+                ? nestedError.message
               : typeof errorPayload.message === "string"
                 ? errorPayload.message
                 : null;

@@ -6,12 +6,13 @@ import type { UsageLogItem, UsageLogsResponse } from "@/lib/http/apis/usage";
 import { useToast } from "@/modules/ui/ToastProvider";
 import { Select } from "@/modules/ui/Select";
 import { SearchableSelect } from "@/modules/ui/SearchableSelect";
+import { VirtualTable } from "@/modules/ui/VirtualTable";
 import { LogContentModal } from "@/modules/monitor/LogContentModal";
 import { ErrorDetailModal } from "@/modules/monitor/ErrorDetailModal";
 import {
+  buildRequestLogKeyOptions,
   buildRequestLogsColumns,
   DEFAULT_REQUEST_LOG_PAGE_SIZE,
-  maskRequestLogApiKey,
   RequestLogsPaginationBar,
   RequestLogsTimeRangeSelector,
   toRequestLogsRow,
@@ -78,9 +79,11 @@ export function RequestLogsPage() {
     models: [],
     channels: [],
   });
-  const [stats, setStats] = useState<{ total: number; success_rate: number; total_tokens: number }>(
-    { total: 0, success_rate: 0, total_tokens: 0 },
-  );
+  const [stats, setStats] = useState<{
+    total: number;
+    success_rate: number;
+    total_tokens: number;
+  }>({ total: 0, success_rate: 0, total_tokens: 0 });
 
   // Filters
   const [timeRange, setTimeRange] = useState<TimeRange>(7);
@@ -169,15 +172,10 @@ export function RequestLogsPage() {
 
   // Build options from backend filter data
   const keyOptions = useMemo(() => {
-    const names = filterOptions.api_key_names ?? {};
-    return [
-      { value: "", label: t("request_logs.all_keys") },
-      ...filterOptions.api_keys.map((key) => ({
-        value: key,
-        label: names[key] || maskRequestLogApiKey(key),
-        searchText: `${names[key] || ""} ${key}`,
-      })),
-    ];
+    return buildRequestLogKeyOptions(filterOptions.api_keys, filterOptions.api_key_names ?? {}, {
+      allKeys: t("request_logs.all_keys"),
+      systemCall: t("request_logs.system_call"),
+    });
   }, [filterOptions.api_keys, filterOptions.api_key_names, t]);
 
   const modelOptions = useMemo(() => {
@@ -197,11 +195,10 @@ export function RequestLogsPage() {
   const lastUpdatedText = useMemo(() => {
     if (loading) return t("request_logs.refreshing");
     if (!lastUpdatedAt) return t("request_logs.not_refreshed");
-    return t("request_logs.updated_at", { time: new Date(lastUpdatedAt).toLocaleTimeString() });
+    return t("request_logs.updated_at", {
+      time: new Date(lastUpdatedAt).toLocaleTimeString(),
+    });
   }, [lastUpdatedAt, loading, t]);
-
-  const colCount = logColumns.length;
-
   return (
     <section className="flex flex-1 flex-col">
       <h1 className="sr-only">{t("request_logs.title")}</h1>
@@ -284,10 +281,9 @@ export function RequestLogsPage() {
             <div className="grid grid-cols-2 items-center gap-x-3 gap-y-1.5 text-xs text-slate-600 dark:text-white/55 sm:flex sm:items-center sm:gap-1.5">
               <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
                 <Filter size={12} aria-hidden="true" />
-                {t("request_logs.records_count", { count: stats.total.toLocaleString() } as Record<
-                  string,
-                  string
-                >)}
+                {t("request_logs.records_count", {
+                  count: stats.total.toLocaleString(),
+                } as Record<string, string>)}
               </span>
 
               <span className="inline-flex items-center justify-end gap-1.5 whitespace-nowrap sm:justify-start">
@@ -311,76 +307,19 @@ export function RequestLogsPage() {
 
         {/* 表格区域 — 自适应视口高度，内部滚动 */}
         <div className="relative min-h-[360px] h-[calc(100dvh-300px)] overflow-hidden px-5">
-          <div className="h-full overflow-auto">
-            <table className="w-full min-w-[1320px] table-fixed border-separate border-spacing-0 text-sm">
-              <caption className="sr-only">{t("request_logs.table_caption")}</caption>
-
-              {/* 表头 */}
-              <thead className="sticky top-0 z-10">
-                <tr className="text-left text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-white/55">
-                  {logColumns.map((col, i) => {
-                    const isFirst = i === 0;
-                    const isLast = i === logColumns.length - 1;
-                    const roundCls = [
-                      isFirst ? "first:rounded-l-xl" : "",
-                      isLast ? "last:rounded-r-xl" : "",
-                    ]
-                      .filter(Boolean)
-                      .join(" ");
-                    return (
-                      <th
-                        key={col.key}
-                        className={`whitespace-nowrap bg-slate-100 px-4 py-3 dark:bg-neutral-800 ${col.width ?? ""} ${col.headerClassName ?? ""} ${roundCls}`}
-                      >
-                        {col.label}
-                      </th>
-                    );
-                  })}
-                </tr>
-              </thead>
-
-              {/* 表体 */}
-              <tbody className="text-slate-900 dark:text-white">
-                {!loading && rows.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={colCount}
-                      className="px-4 py-12 text-center text-sm text-slate-600 dark:text-white/70"
-                    >
-                      {t("request_logs.no_data")}
-                    </td>
-                  </tr>
-                ) : (
-                  rows.map((row, idx) => (
-                    <tr
-                      key={row.id}
-                      className="text-sm transition-colors hover:bg-slate-50 dark:hover:bg-white/[0.04]"
-                      style={{ height: 44 }}
-                    >
-                      {logColumns.map((col, colIdx) => {
-                        const isFirst = colIdx === 0;
-                        const isLast = colIdx === logColumns.length - 1;
-                        const roundCls = [
-                          isFirst ? "first:rounded-l-lg" : "",
-                          isLast ? "last:rounded-r-lg" : "",
-                        ]
-                          .filter(Boolean)
-                          .join(" ");
-                        return (
-                          <td
-                            key={col.key}
-                            className={`px-4 py-2.5 align-middle ${col.cellClassName ?? ""} ${roundCls}`}
-                          >
-                            {col.render(row, idx)}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+          <VirtualTable
+            rows={rows}
+            columns={logColumns}
+            rowKey={(row) => row.id}
+            loading={loading}
+            virtualize={false}
+            minWidth="min-w-[1320px]"
+            height="h-full"
+            minHeight="min-h-full"
+            caption={t("request_logs.table_caption")}
+            emptyText={t("request_logs.no_data")}
+            showAllLoadedMessage={false}
+          />
 
           {/* Loading overlay */}
           {loading ? (

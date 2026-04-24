@@ -1,4 +1,14 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+  type WheelEvent as ReactWheelEvent,
+} from "react";
 import { useTranslation } from "react-i18next";
 
 // ---------------------------------------------------------------------------
@@ -52,10 +62,14 @@ export interface VirtualTableProps<T> {
   minWidth?: string;
   /** Container height class (default "h-[calc(100dvh-260px)]") */
   height?: string;
+  /** Container minimum height class (default "min-h-[360px]") */
+  minHeight?: string;
   /** Screen-reader caption */
   caption?: string;
   /** Empty state message */
   emptyText?: string;
+  /** Show the "all records loaded" footer when there is no next page. */
+  showAllLoadedMessage?: boolean;
   /** Extra row className */
   rowClassName?: string | ((row: T, index: number) => string);
 }
@@ -87,14 +101,27 @@ export function VirtualTable<T>({
   bottomDebounceMs = DEFAULT_BOTTOM_DEBOUNCE_MS,
   minWidth = "min-w-[1320px]",
   height = "h-[calc(100dvh-260px)]",
+  minHeight = "min-h-[360px]",
   caption = "data table",
   emptyText = "",
+  showAllLoadedMessage = true,
   rowClassName,
 }: VirtualTableProps<T>) {
   const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const headerRef = useRef<HTMLTableSectionElement | null>(null);
+  const headerHeightRef = useRef(0);
+  const [headerHeight, setHeaderHeight] = useState(0);
   const [scrollTop, setScrollTop] = useState(0);
   const [viewportHeight, setViewportHeight] = useState(480);
+  const [scrollMetrics, setScrollMetrics] = useState(() => ({
+    scrollTop: 0,
+    scrollLeft: 0,
+    scrollHeight: 0,
+    scrollWidth: 0,
+    clientHeight: 0,
+    clientWidth: 0,
+  }));
   const rafRef = useRef<number | null>(null);
   const bottomTimeoutRef = useRef<number | null>(null);
   const bottomPendingRef = useRef(false);
@@ -109,9 +136,43 @@ export function VirtualTable<T>({
 
   const colCount = columns.length;
 
+  const updateScrollMetrics = useCallback(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const next = {
+      scrollTop: el.scrollTop,
+      scrollLeft: el.scrollLeft,
+      scrollHeight: el.scrollHeight,
+      scrollWidth: el.scrollWidth,
+      clientHeight: el.clientHeight,
+      clientWidth: el.clientWidth,
+    };
+
+    setScrollMetrics((prev) => {
+      if (
+        prev.scrollTop === next.scrollTop &&
+        prev.scrollLeft === next.scrollLeft &&
+        prev.scrollHeight === next.scrollHeight &&
+        prev.scrollWidth === next.scrollWidth &&
+        prev.clientHeight === next.clientHeight &&
+        prev.clientWidth === next.clientWidth
+      ) {
+        return prev;
+      }
+      return next;
+    });
+  }, []);
+
   // Keep latest props for timeout callbacks (avoid stale closures)
   useEffect(() => {
-    latestRef.current = { hasMore, loadingMore, onScrollBottom, scrollThreshold, bottomDebounceMs };
+    latestRef.current = {
+      hasMore,
+      loadingMore,
+      onScrollBottom,
+      scrollThreshold,
+      bottomDebounceMs,
+    };
   }, [hasMore, loadingMore, onScrollBottom, scrollThreshold, bottomDebounceMs]);
 
   // Clear the pending gate after a next-page load completes
@@ -132,6 +193,7 @@ export function VirtualTable<T>({
     const el = containerRef.current;
     if (!el) return;
     const next = el.scrollTop;
+    updateScrollMetrics();
 
     const scrollBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
     const {
@@ -142,7 +204,10 @@ export function VirtualTable<T>({
     const threshold = latestRef.current.scrollThreshold;
 
     const shouldSchedule =
-      scrollBottom <= threshold && latestHasMore && !latestLoadingMore && Boolean(latestCb);
+      scrollBottom <= threshold &&
+      latestHasMore &&
+      !latestLoadingMore &&
+      Boolean(latestCb);
 
     if (!shouldSchedule) {
       if (bottomTimeoutRef.current) {
@@ -150,7 +215,8 @@ export function VirtualTable<T>({
         bottomTimeoutRef.current = null;
       }
     } else if (!bottomPendingRef.current) {
-      if (bottomTimeoutRef.current) window.clearTimeout(bottomTimeoutRef.current);
+      if (bottomTimeoutRef.current)
+        window.clearTimeout(bottomTimeoutRef.current);
       bottomTimeoutRef.current = window.setTimeout(() => {
         bottomTimeoutRef.current = null;
         const node = containerRef.current;
@@ -159,7 +225,8 @@ export function VirtualTable<T>({
         const st = latestRef.current;
         if (!st.hasMore || st.loadingMore || !st.onScrollBottom) return;
 
-        const bottomNow = node.scrollHeight - node.scrollTop - node.clientHeight;
+        const bottomNow =
+          node.scrollHeight - node.scrollTop - node.clientHeight;
         if (bottomNow > st.scrollThreshold) return;
 
         bottomPendingRef.current = true;
@@ -173,17 +240,193 @@ export function VirtualTable<T>({
         setScrollTop(next);
       });
     }
-  }, [hasMore, loadingMore, onScrollBottom, scrollThreshold]);
+  }, [updateScrollMetrics]);
 
-  // Track viewport height
-  useEffect(() => {
+  const onWheelCapture = useCallback((e: ReactWheelEvent<HTMLDivElement>) => {
     const el = containerRef.current;
     if (!el) return;
-    const update = () => setViewportHeight(el.clientHeight || 480);
-    update();
-    window.addEventListener("resize", update);
-    return () => window.removeEventListener("resize", update);
+
+    const canScrollY = el.scrollHeight > el.clientHeight + 1;
+    if (canScrollY) {
+      const maxTop = Math.max(0, el.scrollHeight - el.clientHeight);
+      const atTop = el.scrollTop <= 0;
+      const atBottom = el.scrollTop >= maxTop - 1;
+      if ((e.deltaY < 0 && !atTop) || (e.deltaY > 0 && !atBottom)) {
+        e.stopPropagation();
+      }
+    }
+
+    const canScrollX = el.scrollWidth > el.clientWidth + 1;
+    if (canScrollX) {
+      const maxLeft = Math.max(0, el.scrollWidth - el.clientWidth);
+      const atLeft = el.scrollLeft <= 0;
+      const atRight = el.scrollLeft >= maxLeft - 1;
+      if ((e.deltaX < 0 && !atLeft) || (e.deltaX > 0 && !atRight)) {
+        e.stopPropagation();
+      }
+    }
   }, []);
+
+  const dragRef = useRef<
+    | null
+    | {
+        axis: "x" | "y";
+        pointerId: number;
+        startClientX: number;
+        startClientY: number;
+        startScrollTop: number;
+        startScrollLeft: number;
+        trackLength: number;
+        thumbLength: number;
+        contentLength: number;
+        viewportLength: number;
+      }
+  >(null);
+
+  const handleThumbPointerDown = useCallback(
+    (axis: "x" | "y", e: ReactPointerEvent<HTMLDivElement>) => {
+      const el = containerRef.current;
+      if (!el) return;
+
+      const pointerId = e.pointerId;
+      e.currentTarget.setPointerCapture(pointerId);
+
+      if (axis === "y") {
+        const headerH = headerHeightRef.current;
+        const trackLength = Math.max(0, el.clientHeight - headerH - 16);
+        const viewportLength = Math.max(0, el.clientHeight - headerH);
+        const contentLength = Math.max(viewportLength, el.scrollHeight - headerH);
+        const thumbLength = Math.max(
+          28,
+          Math.round((viewportLength / contentLength) * trackLength),
+        );
+
+        dragRef.current = {
+          axis,
+          pointerId,
+          startClientX: e.clientX,
+          startClientY: e.clientY,
+          startScrollTop: el.scrollTop,
+          startScrollLeft: el.scrollLeft,
+          trackLength,
+          thumbLength,
+          contentLength,
+          viewportLength,
+        };
+      } else {
+        const trackLength = Math.max(0, el.clientWidth - 16);
+        const contentLength = el.scrollWidth;
+        const viewportLength = el.clientWidth;
+        const thumbLength = Math.max(
+          28,
+          Math.round((viewportLength / contentLength) * trackLength),
+        );
+
+        dragRef.current = {
+          axis,
+          pointerId,
+          startClientX: e.clientX,
+          startClientY: e.clientY,
+          startScrollTop: el.scrollTop,
+          startScrollLeft: el.scrollLeft,
+          trackLength,
+          thumbLength,
+          contentLength,
+          viewportLength,
+        };
+      }
+    },
+    [],
+  );
+
+  const handleThumbPointerMove = useCallback((e: ReactPointerEvent<HTMLDivElement>) => {
+    const drag = dragRef.current;
+    const el = containerRef.current;
+    if (!drag || !el) return;
+    if (drag.pointerId !== e.pointerId) return;
+
+    e.preventDefault();
+
+    if (drag.axis === "y") {
+      const scrollRange = Math.max(0, drag.contentLength - drag.viewportLength);
+      const thumbRange = Math.max(1, drag.trackLength - drag.thumbLength);
+      const dy = e.clientY - drag.startClientY;
+      const next = drag.startScrollTop + (dy * scrollRange) / thumbRange;
+      el.scrollTop = Math.max(0, Math.min(scrollRange, next));
+    } else {
+      const scrollRange = Math.max(0, drag.contentLength - drag.viewportLength);
+      const thumbRange = Math.max(1, drag.trackLength - drag.thumbLength);
+      const dx = e.clientX - drag.startClientX;
+      const next = drag.startScrollLeft + (dx * scrollRange) / thumbRange;
+      el.scrollLeft = Math.max(0, Math.min(scrollRange, next));
+    }
+
+    updateScrollMetrics();
+  }, [updateScrollMetrics]);
+
+  const handleThumbPointerUp = useCallback((e: ReactPointerEvent<HTMLDivElement>) => {
+    const drag = dragRef.current;
+    if (!drag) return;
+    if (drag.pointerId !== e.pointerId) return;
+    dragRef.current = null;
+  }, []);
+
+  const measureHeaderHeight = useCallback(() => {
+    const node = headerRef.current;
+    if (!node) return 0;
+    const next = Math.max(0, Math.ceil(node.getBoundingClientRect().height || 0));
+    if (next !== headerHeightRef.current) {
+      headerHeightRef.current = next;
+      setHeaderHeight(next);
+    }
+    return next;
+  }, []);
+
+  // Track viewport/scroll metrics
+  useLayoutEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const update = () => {
+      const headerH = measureHeaderHeight();
+      setViewportHeight(Math.max(0, (el.clientHeight || 480) - headerH));
+      updateScrollMetrics();
+    };
+    update();
+
+    window.addEventListener("resize", update);
+    const observer =
+      typeof ResizeObserver !== "undefined" ? new ResizeObserver(update) : null;
+    observer?.observe(el);
+
+    return () => {
+      window.removeEventListener("resize", update);
+      observer?.disconnect();
+    };
+  }, [measureHeaderHeight, updateScrollMetrics]);
+
+  // Content size can change without the scroll container's box size changing (e.g. rows loaded after refresh).
+  // ResizeObserver won't fire for scrollHeight/scrollWidth changes, so re-measure on data/structure changes.
+  useEffect(() => {
+    const id = window.requestAnimationFrame(() => {
+      measureHeaderHeight();
+      updateScrollMetrics();
+    });
+    return () => {
+      window.cancelAnimationFrame(id);
+    };
+  }, [
+    measureHeaderHeight,
+    updateScrollMetrics,
+    rows.length,
+    colCount,
+    loading,
+    loadingMore,
+    hasMore,
+    showAllLoadedMessage,
+    virtualize,
+    rowHeight,
+    minWidth,
+  ]);
 
   // Cleanup rAF
   useEffect(() => {
@@ -200,44 +443,112 @@ export function VirtualTable<T>({
   }, []);
 
   // Virtual window calculation
-  const { startIndex, endIndex, topSpacerHeight, bottomSpacerHeight } = useMemo(() => {
-    if (!virtualize) {
+  const { startIndex, endIndex, topSpacerHeight, bottomSpacerHeight } =
+    useMemo(() => {
+      if (!virtualize) {
+        return {
+          startIndex: 0,
+          endIndex: rows.length,
+          topSpacerHeight: 0,
+          bottomSpacerHeight: 0,
+        };
+      }
+      const total = rows.length;
+      if (!total)
+        return {
+          startIndex: 0,
+          endIndex: 0,
+          topSpacerHeight: 0,
+          bottomSpacerHeight: 0,
+        };
+
+      const visibleStart = Math.floor(scrollTop / rowHeight);
+      const visibleCount = Math.max(1, Math.ceil(viewportHeight / rowHeight));
+      const visibleEnd = visibleStart + visibleCount;
+
+      const start = Math.max(0, visibleStart - overscan);
+      const end = Math.min(total, visibleEnd + overscan);
+
       return {
-        startIndex: 0,
-        endIndex: rows.length,
-        topSpacerHeight: 0,
-        bottomSpacerHeight: 0,
+        startIndex: start,
+        endIndex: end,
+        topSpacerHeight: start * rowHeight,
+        bottomSpacerHeight: (total - end) * rowHeight,
       };
-    }
-    const total = rows.length;
-    if (!total) return { startIndex: 0, endIndex: 0, topSpacerHeight: 0, bottomSpacerHeight: 0 };
-
-    const visibleStart = Math.floor(scrollTop / rowHeight);
-    const visibleCount = Math.max(1, Math.ceil(viewportHeight / rowHeight));
-    const visibleEnd = visibleStart + visibleCount;
-
-    const start = Math.max(0, visibleStart - overscan);
-    const end = Math.min(total, visibleEnd + overscan);
-
-    return {
-      startIndex: start,
-      endIndex: end,
-      topSpacerHeight: start * rowHeight,
-      bottomSpacerHeight: (total - end) * rowHeight,
-    };
-  }, [overscan, rowHeight, rows.length, scrollTop, viewportHeight, virtualize]);
+    }, [
+      overscan,
+      rowHeight,
+      rows.length,
+      scrollTop,
+      viewportHeight,
+      virtualize,
+    ]);
 
   const visibleRows = useMemo(
     () => (virtualize ? rows.slice(startIndex, endIndex) : rows),
     [endIndex, rows, startIndex, virtualize],
   );
 
+  const { vThumb, hThumb } = useMemo(() => {
+    const trackInset = 8; // matches `inset-y-2` / `inset-x-2` (8px)
+    const effectiveViewportY = Math.max(0, scrollMetrics.clientHeight - headerHeight);
+    const effectiveContentY = Math.max(
+      effectiveViewportY,
+      scrollMetrics.scrollHeight - headerHeight,
+    );
+    const hasV = effectiveContentY > effectiveViewportY + 1;
+    const hasH = scrollMetrics.scrollWidth > scrollMetrics.clientWidth + 1;
+
+    const v = (() => {
+      if (!hasV) return null;
+      const trackLength = Math.max(
+        0,
+        scrollMetrics.clientHeight - headerHeight - trackInset * 2,
+      );
+      const viewport = Math.max(1, effectiveViewportY);
+      const content = Math.max(viewport, effectiveContentY);
+      const thumbLength = Math.max(28, Math.round((viewport / content) * trackLength));
+      const maxThumbOffset = Math.max(0, trackLength - thumbLength);
+      const scrollRange = Math.max(
+        1,
+        scrollMetrics.scrollHeight - scrollMetrics.clientHeight,
+      );
+      const offset = Math.min(
+        maxThumbOffset,
+        Math.max(0, Math.round((scrollMetrics.scrollTop / scrollRange) * maxThumbOffset)),
+      );
+      // NOTE: thumb is positioned *inside* the track element, so offset is relative to track's top.
+      return { top: offset, height: thumbLength };
+    })();
+
+    const h = (() => {
+      if (!hasH) return null;
+      const trackLength = Math.max(0, scrollMetrics.clientWidth - trackInset * 2);
+      const viewport = scrollMetrics.clientWidth;
+      const content = scrollMetrics.scrollWidth;
+      const thumbLength = Math.max(28, Math.round((viewport / content) * trackLength));
+      const maxThumbOffset = Math.max(0, trackLength - thumbLength);
+      const scrollRange = Math.max(1, content - viewport);
+      const offset = Math.min(
+        maxThumbOffset,
+        Math.max(0, Math.round((scrollMetrics.scrollLeft / scrollRange) * maxThumbOffset)),
+      );
+      return { left: offset, width: thumbLength };
+    })();
+
+    return { vThumb: v, hThumb: h };
+  }, [headerHeight, scrollMetrics]);
+
   return (
-    <div className="min-w-0 overflow-hidden">
+    <div className={`${height} ${minHeight} relative min-w-0 overflow-hidden group`}>
       <div
         ref={containerRef}
         onScroll={onScroll}
-        className={`${height} min-h-[360px] overflow-auto`}
+        onWheelCapture={onWheelCapture}
+        tabIndex={0}
+        data-scrollbar-visibility="hover"
+        // Reserve space for the overlay vertical scrollbar so it won't cover the header's rightmost column.
+        className={`h-full min-h-0 table-scrollbar overflow-auto ${vThumb ? "pr-4" : ""}`}
       >
         <table
           className={`w-full ${minWidth} table-fixed border-separate border-spacing-0 text-sm`}
@@ -245,7 +556,7 @@ export function VirtualTable<T>({
           <caption className="sr-only">{caption}</caption>
 
           {/* ── HeroUI-styled header ── */}
-          <thead className="sticky top-0 z-10">
+          <thead ref={headerRef} className="sticky top-0 z-10">
             <tr className="text-left text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-white/55">
               {columns.map((col, i) => {
                 const isFirst = i === 0;
@@ -283,11 +594,17 @@ export function VirtualTable<T>({
               <>
                 {virtualize ? (
                   <tr aria-hidden="true">
-                    <td colSpan={colCount} height={topSpacerHeight} className="p-0" />
+                    <td
+                      colSpan={colCount}
+                      height={topSpacerHeight}
+                      className="p-0"
+                    />
                   </tr>
                 ) : null}
                 {visibleRows.map((row, localIdx) => {
-                  const globalIdx = virtualize ? startIndex + localIdx : localIdx;
+                  const globalIdx = virtualize
+                    ? startIndex + localIdx
+                    : localIdx;
                   const key = rowKey(row, globalIdx);
                   const extraCls =
                     typeof rowClassName === "function"
@@ -322,7 +639,11 @@ export function VirtualTable<T>({
                 })}
                 {virtualize ? (
                   <tr aria-hidden="true">
-                    <td colSpan={colCount} height={bottomSpacerHeight} className="p-0" />
+                    <td
+                      colSpan={colCount}
+                      height={bottomSpacerHeight}
+                      className="p-0"
+                    />
                   </tr>
                 ) : null}
               </>
@@ -344,12 +665,49 @@ export function VirtualTable<T>({
         )}
 
         {/* All data loaded */}
-        {!hasMore && rows.length > 0 && !loading && (
+        {showAllLoadedMessage && !hasMore && rows.length > 0 && !loading && (
           <div className="py-3 text-center text-xs text-slate-400 dark:text-white/30">
             {t("common.all_records_loaded", { count: rows.length })}
           </div>
         )}
       </div>
+
+      {vThumb ? (
+        <div
+          data-vt-scrollbar="y"
+          className="pointer-events-none absolute right-0 w-2 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
+          style={{ top: headerHeight + 8, bottom: 8 }}
+        >
+          <div className="absolute inset-0 rounded-full bg-slate-200/40 dark:bg-white/10" />
+          <div
+            role="presentation"
+            className="pointer-events-auto absolute left-0 right-0 rounded-full bg-slate-500/40 transition-colors hover:bg-slate-500/60 dark:bg-white/25 dark:hover:bg-white/40"
+            style={{ top: vThumb.top, height: vThumb.height }}
+            onPointerDown={(e) => handleThumbPointerDown("y", e)}
+            onPointerMove={handleThumbPointerMove}
+            onPointerUp={handleThumbPointerUp}
+            onPointerCancel={handleThumbPointerUp}
+          />
+        </div>
+      ) : null}
+
+      {hThumb ? (
+        <div
+          data-vt-scrollbar="x"
+          className="pointer-events-none absolute inset-x-2 bottom-1 h-2 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
+        >
+          <div className="absolute inset-0 rounded-full bg-slate-200/40 dark:bg-white/10" />
+          <div
+            role="presentation"
+            className="pointer-events-auto absolute top-0 bottom-0 rounded-full bg-slate-500/40 transition-colors hover:bg-slate-500/60 dark:bg-white/25 dark:hover:bg-white/40"
+            style={{ left: hThumb.left, width: hThumb.width }}
+            onPointerDown={(e) => handleThumbPointerDown("x", e)}
+            onPointerMove={handleThumbPointerMove}
+            onPointerUp={handleThumbPointerUp}
+            onPointerCancel={handleThumbPointerUp}
+          />
+        </div>
+      ) : null}
     </div>
   );
 }

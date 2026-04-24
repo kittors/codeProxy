@@ -9,6 +9,8 @@ import iconVertex from "@/assets/icons/vertex.svg";
 import iconAmp from "@/assets/icons/amp.svg";
 import iconOpenai from "@/assets/icons/openai.svg";
 import { ampcodeApi, providersApi, usageApi } from "@/lib/http/apis";
+import { apiKeyEntriesApi, type ApiKeyEntry } from "@/lib/http/apis/api-keys";
+import { channelGroupsApi, type ChannelGroupItem } from "@/lib/http/apis/channel-groups";
 import type { OpenAIProvider, ProviderSimpleConfig } from "@/lib/http/types";
 import { Button } from "@/modules/ui/Button";
 import { ConfirmModal } from "@/modules/ui/ConfirmModal";
@@ -30,6 +32,7 @@ import {
   readString,
   type AmpMappingEntry,
 } from "@/modules/providers/providers-helpers";
+import { summarizeProviderAccess } from "@/modules/providers/provider-access";
 
 export function ProvidersPage() {
   const { t } = useTranslation();
@@ -49,6 +52,8 @@ export function ProvidersPage() {
   const [codexKeys, setCodexKeys] = useState<ProviderSimpleConfig[]>([]);
   const [vertexKeys, setVertexKeys] = useState<ProviderSimpleConfig[]>([]);
   const [openaiProviders, setOpenaiProviders] = useState<OpenAIProvider[]>([]);
+  const [apiKeyEntries, setApiKeyEntries] = useState<ApiKeyEntry[]>([]);
+  const [channelGroups, setChannelGroups] = useState<ChannelGroupItem[]>([]);
 
   const [usageStatsBySource, setUsageStatsBySource] = useState<Record<string, KeyStatBucket>>({});
 
@@ -146,6 +151,20 @@ export function ProvidersPage() {
     } catch {}
   }, []);
 
+  const loadAccessSnapshot = useCallback(async () => {
+    try {
+      const [entries, groups] = await Promise.all([
+        apiKeyEntriesApi.list(),
+        channelGroupsApi.list(),
+      ]);
+      setApiKeyEntries(entries);
+      setChannelGroups(groups);
+    } catch {
+      setApiKeyEntries([]);
+      setChannelGroups([]);
+    }
+  }, []);
+
   const {
     getSimpleStats,
     getSimpleStatusBar,
@@ -158,14 +177,26 @@ export function ProvidersPage() {
   });
 
   const refreshAll = useCallback(async () => {
-    await refreshTab(tab);
-  }, [refreshTab, tab]);
+    await Promise.all([refreshTab(tab), loadUsage(), loadAccessSnapshot()]);
+  }, [loadAccessSnapshot, loadUsage, refreshTab, tab]);
 
   useEffect(() => {
     void refreshTab(tab);
     void loadUsage();
+    void loadAccessSnapshot();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const getProviderAccessSummary = useCallback(
+    (item: ProviderSimpleConfig) => {
+      const channelName = String(item.name ?? "").trim();
+      if (!channelName) {
+        return null;
+      }
+      return summarizeProviderAccess(channelName, apiKeyEntries, channelGroups);
+    },
+    [apiKeyEntries, channelGroups],
+  );
 
   const handleKeyEditorRouteClose = useCallback(() => {
     if (location.pathname !== "/ai-providers") {
@@ -413,6 +444,7 @@ export function ProvidersPage() {
             onToggleEnabled={(idx, enabled) => void toggleKeyEnabled("gemini", idx, enabled)}
             getStats={getSimpleStats}
             getStatusBar={getSimpleStatusBar}
+            getAccessSummary={getProviderAccessSummary}
             getLatencyEntry={getLatencyEntry}
             checkLatency={checkLatency}
           />
@@ -430,6 +462,7 @@ export function ProvidersPage() {
             onToggleEnabled={(idx, enabled) => void toggleKeyEnabled("claude", idx, enabled)}
             getStats={getSimpleStats}
             getStatusBar={getSimpleStatusBar}
+            getAccessSummary={getProviderAccessSummary}
             getLatencyEntry={getLatencyEntry}
             checkLatency={checkLatency}
           />
@@ -447,6 +480,7 @@ export function ProvidersPage() {
             onToggleEnabled={(idx, enabled) => void toggleKeyEnabled("codex", idx, enabled)}
             getStats={getSimpleStats}
             getStatusBar={getSimpleStatusBar}
+            getAccessSummary={getProviderAccessSummary}
             getLatencyEntry={getLatencyEntry}
             checkLatency={checkLatency}
           />
@@ -463,6 +497,7 @@ export function ProvidersPage() {
             onDelete={(idx) => setConfirm({ type: "deleteKey", keyType: "vertex", index: idx })}
             getStats={getSimpleStats}
             getStatusBar={getSimpleStatusBar}
+            getAccessSummary={getProviderAccessSummary}
             getLatencyEntry={getLatencyEntry}
             checkLatency={checkLatency}
           />

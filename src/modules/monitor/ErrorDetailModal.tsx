@@ -63,19 +63,23 @@ export function ErrorDetailModal({ open, logId, model, onClose }: ErrorDetailMod
 
   if (!open) return null;
 
+  const hasErrorContent = errorContent.trim().length > 0;
+
   /** Try to format JSON nicely, extract error message */
   let formattedContent = errorContent;
   let errorMessage = "";
-  try {
-    const parsed = JSON.parse(errorContent);
-    formattedContent = JSON.stringify(parsed, null, 2);
-    // Extract common error message patterns
-    if (parsed?.error?.message) errorMessage = parsed.error.message;
-    else if (parsed?.error && typeof parsed.error === "string") errorMessage = parsed.error;
-    else if (parsed?.message) errorMessage = parsed.message;
-  } catch {
-    // Not JSON, use raw text
-    errorMessage = errorContent.slice(0, 200);
+  if (hasErrorContent) {
+    try {
+      const parsed = JSON.parse(errorContent);
+      formattedContent = JSON.stringify(parsed, null, 2);
+      // Extract common error message patterns
+      if (parsed?.error?.message) errorMessage = parsed.error.message;
+      else if (parsed?.error && typeof parsed.error === "string") errorMessage = parsed.error;
+      else if (parsed?.message) errorMessage = parsed.message;
+    } catch {
+      // Not JSON, use raw text
+      errorMessage = errorContent.slice(0, 200);
+    }
   }
 
   return createPortal(
@@ -114,7 +118,9 @@ export function ErrorDetailModal({ open, logId, model, onClose }: ErrorDetailMod
                 {model ? ` · ${model}` : ""}
               </h2>
               <p className="mt-0.5 text-xs text-red-600/70 dark:text-red-400/60">
-                {t("error_detail.upstream_error")}
+                {hasErrorContent
+                  ? t("error_detail.upstream_error")
+                  : t("error_detail.historical_missing")}
               </p>
             </div>
           </div>
@@ -139,10 +145,10 @@ export function ErrorDetailModal({ open, logId, model, onClose }: ErrorDetailMod
             <div className="flex flex-col items-center justify-center py-12">
               <p className="text-sm text-red-500">{error}</p>
             </div>
-          ) : !errorContent ? (
-            <div className="flex flex-col items-center justify-center py-12 text-slate-400 dark:text-white/30">
+          ) : !hasErrorContent ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center text-slate-500 dark:text-white/45">
               <AlertTriangle size={32} className="mb-2 opacity-40" />
-              <p className="text-sm">{t("error_detail.no_content")}</p>
+              <p className="max-w-sm text-sm leading-6">{t("error_detail.no_content")}</p>
             </div>
           ) : (
             <div className="space-y-3">

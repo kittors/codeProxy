@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import i18n from "@/i18n";
 import { AutoUpdatePrompt } from "@/modules/update/AutoUpdatePrompt";
@@ -7,6 +7,7 @@ import { ToastProvider } from "@/modules/ui/ToastProvider";
 
 const mocks = vi.hoisted(() => ({
   check: vi.fn(),
+  current: vi.fn(),
   apply: vi.fn(),
   get: vi.fn(),
 }));
@@ -14,6 +15,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@/lib/http/apis/update", () => ({
   updateApi: {
     check: mocks.check,
+    current: mocks.current,
     apply: mocks.apply,
   },
 }));
@@ -45,6 +47,7 @@ function renderPrompt() {
 
 describe("AutoUpdatePrompt", () => {
   beforeEach(async () => {
+    vi.useRealTimers();
     await i18n.changeLanguage("en");
     localStorage.clear();
     mocks.check.mockResolvedValue({
@@ -62,26 +65,45 @@ describe("AutoUpdatePrompt", () => {
       updater_available: true,
     });
     mocks.apply.mockResolvedValue({ status: "accepted" });
+    mocks.current.mockResolvedValue({
+      enabled: true,
+      current_version: "main-abcdef1",
+      current_commit: "abcdef123456",
+      target_channel: "main",
+      docker_image: "ghcr.io/kittors/clirelay",
+      docker_tag: "latest",
+      updater_available: true,
+    });
     mocks.get.mockResolvedValue({ uptime: 10 });
   });
 
-  test("only shows a toast notification when an update is available", async () => {
+  test("asks whether to update before showing the fixed-height update dialog", async () => {
     renderPrompt();
 
-    await waitFor(() => {
-      expect(mocks.check).toHaveBeenCalledTimes(1);
-    });
     expect(
-      screen.queryByText(/Fixes and improvements/i),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: /update now/i }),
-    ).not.toBeInTheDocument();
+      await screen.findByText(/A new version is available: v1\.2\.3.*update now\?/i),
+    ).toBeInTheDocument();
+    const confirmButton = await screen.findByRole("button", { name: /confirm/i });
+    expect(confirmButton).toHaveClass("clirelay-update-toast-action");
+    expect(confirmButton.className).toContain("h-8");
+    expect(confirmButton.className).toContain("px-2.5");
+    expect(confirmButton.className).toContain("text-xs");
+    expect(confirmButton.className).toContain("!w-auto");
+    expect(screen.queryByRole("heading", { name: /new version found/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /update now/i })).not.toBeInTheDocument();
     expect(mocks.apply).not.toHaveBeenCalled();
     expect(mocks.get).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: /confirm/i }));
+
+    expect(await screen.findByRole("heading", { name: /new version found/i })).toBeInTheDocument();
+    expect(await screen.findByText(/Fixes and improvements/i)).toBeInTheDocument();
+    expect(screen.getByTestId("update-details-modal-body")).toHaveClass("h-[min(68vh,560px)]");
+    expect(screen.getByRole("button", { name: /update now/i })).toBeInTheDocument();
+    expect(mocks.apply).not.toHaveBeenCalled();
   });
 
-  test("uses the management ui version in the toast when only the panel changed", async () => {
+  test("uses the management ui version in the confirmation prompt when only the panel changed", async () => {
     mocks.check.mockResolvedValue({
       enabled: true,
       update_available: true,
@@ -101,6 +123,28 @@ describe("AutoUpdatePrompt", () => {
 
     renderPrompt();
 
-    expect(await screen.findByText(/panel-main-9477958/i)).toBeInTheDocument();
+    expect(await screen.findByText(/panel-main-9477958.*update now\?/i)).toBeInTheDocument();
+  });
+
+  test("does not show auto update toast when updater sidecar is unavailable", async () => {
+    mocks.check.mockResolvedValue({
+      enabled: true,
+      update_available: true,
+      current_version: "main-1111111",
+      current_commit: "1111111",
+      latest_version: "v1.2.3",
+      latest_commit: "abcdef123456",
+      target_channel: "main",
+      docker_image: "ghcr.io/kittors/clirelay",
+      docker_tag: "latest",
+      updater_available: false,
+    });
+
+    renderPrompt();
+
+    expect(
+      screen.queryByText(/A new version is available: v1\.2\.3.*update now\?/i),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /confirm/i })).not.toBeInTheDocument();
   });
 });

@@ -12,6 +12,8 @@ const mocks = vi.hoisted(() => ({
   getVertexConfigs: vi.fn(async () => []),
   getOpenAIProviders: vi.fn(async () => []),
   getEntityStats: vi.fn(async () => ({ source: [] })),
+  apiKeyEntriesList: vi.fn(async () => []),
+  channelGroupsList: vi.fn(async () => []),
 }));
 
 vi.mock("@/lib/http/apis", async (importOriginal) => {
@@ -33,6 +35,18 @@ vi.mock("@/lib/http/apis", async (importOriginal) => {
   };
 });
 
+vi.mock("@/lib/http/apis/api-keys", () => ({
+  apiKeyEntriesApi: {
+    list: mocks.apiKeyEntriesList,
+  },
+}));
+
+vi.mock("@/lib/http/apis/channel-groups", () => ({
+  channelGroupsApi: {
+    list: mocks.channelGroupsList,
+  },
+}));
+
 describe("ProvidersPage openai tab", () => {
   beforeEach(() => {
     mocks.getGeminiKeys.mockReset();
@@ -41,11 +55,15 @@ describe("ProvidersPage openai tab", () => {
     mocks.getVertexConfigs.mockReset();
     mocks.getOpenAIProviders.mockReset();
     mocks.getEntityStats.mockReset();
+    mocks.apiKeyEntriesList.mockReset();
+    mocks.channelGroupsList.mockReset();
 
     mocks.getGeminiKeys.mockImplementation(async () => []);
     mocks.getClaudeConfigs.mockImplementation(async () => []);
     mocks.getCodexConfigs.mockImplementation(async () => []);
     mocks.getVertexConfigs.mockImplementation(async () => []);
+    mocks.apiKeyEntriesList.mockImplementation(async () => []);
+    mocks.channelGroupsList.mockImplementation(async () => []);
     mocks.getEntityStats.mockImplementation(
       async () =>
         ({

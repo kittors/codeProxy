@@ -9,7 +9,10 @@ export function useLogContentData({
   initialTab,
   fetchFn,
   fetchPartFn,
-}: Pick<LogContentModalProps, "open" | "logId" | "initialTab" | "fetchFn" | "fetchPartFn">) {
+}: Pick<
+  LogContentModalProps,
+  "open" | "logId" | "initialTab" | "fetchFn" | "fetchPartFn"
+>) {
   const { t } = useTranslation();
   const resolvedInitialTab = initialTab ?? "input";
   const [inputLoading, setInputLoading] = useState(false);
@@ -18,14 +21,23 @@ export function useLogContentData({
   const [outputError, setOutputError] = useState<string | null>(null);
   const [inputContent, setInputContent] = useState("");
   const [outputContent, setOutputContent] = useState("");
+  const [inputLoaded, setInputLoaded] = useState(false);
+  const [outputLoaded, setOutputLoaded] = useState(false);
   const [model, setModel] = useState("");
-  const abortRef = useRef<{ input: AbortController | null; output: AbortController | null }>({
+  const abortRef = useRef<{
+    input: AbortController | null;
+    output: AbortController | null;
+  }>({
     input: null,
     output: null,
   });
 
   const fetchPart = useCallback(
-    async (id: number, part: "input" | "output", opts?: { prefetch?: boolean }) => {
+    async (
+      id: number,
+      part: "input" | "output",
+      opts?: { prefetch?: boolean },
+    ) => {
       const controller = new AbortController();
       const prev = abortRef.current[part];
       if (prev) prev.abort();
@@ -34,6 +46,7 @@ export function useLogContentData({
       const setLoading = part === "input" ? setInputLoading : setOutputLoading;
       const setError = part === "input" ? setInputError : setOutputError;
       const setContent = part === "input" ? setInputContent : setOutputContent;
+      const setLoaded = part === "input" ? setInputLoaded : setOutputLoaded;
 
       setLoading(true);
       if (!opts?.prefetch) setError(null);
@@ -52,17 +65,25 @@ export function useLogContentData({
         if (typeof record.content === "string") {
           setContent(record.content || "");
           setModel(typeof record.model === "string" ? record.model : "");
+          setLoaded(true);
           return;
         }
 
-        const input = typeof record.input_content === "string" ? record.input_content : "";
-        const output = typeof record.output_content === "string" ? record.output_content : "";
+        const input =
+          typeof record.input_content === "string" ? record.input_content : "";
+        const output =
+          typeof record.output_content === "string"
+            ? record.output_content
+            : "";
         setContent(part === "input" ? input : output);
         setModel(typeof record.model === "string" ? record.model : "");
+        setLoaded(true);
       } catch (err) {
         if (controller.signal.aborted) return;
         if (opts?.prefetch) return;
-        setError(err instanceof Error ? err.message : t("error_detail.load_failed"));
+        setError(
+          err instanceof Error ? err.message : t("error_detail.load_failed"),
+        );
       } finally {
         if (!controller.signal.aborted) setLoading(false);
       }
@@ -75,6 +96,8 @@ export function useLogContentData({
 
     setInputContent("");
     setOutputContent("");
+    setInputLoaded(false);
+    setOutputLoaded(false);
     setModel("");
     setInputError(null);
     setOutputError(null);
@@ -108,6 +131,8 @@ export function useLogContentData({
     outputError,
     inputContent,
     outputContent,
+    inputLoaded,
+    outputLoaded,
     model,
     fetchPart,
   };

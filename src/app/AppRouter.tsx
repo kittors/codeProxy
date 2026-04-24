@@ -54,6 +54,11 @@ const ModelsPage = lazy(() =>
 const ApiKeyLookupPage = lazy(() =>
   import("@/modules/apikey-lookup/ApiKeyLookupPage").then((m) => ({ default: m.ApiKeyLookupPage })),
 );
+const ImageGenerationPage = lazy(() =>
+  import("@/modules/image-generation/ImageGenerationPage").then((m) => ({
+    default: m.ImageGenerationPage,
+  })),
+);
 
 export function AppRouter() {
   return (
@@ -96,6 +101,7 @@ export function AppRouter() {
                             <Route path="/system" element={<SystemPage />} />
                             <Route path="/settings" element={<Navigate to="/config" replace />} />
                             <Route path="/api-keys" element={<ApiKeysPage />} />
+                            <Route path="/image-generation" element={<ImageGenerationPage />} />
                             <Route path="/channel-groups" element={<ChannelGroupsPage />} />
                             <Route
                               path="/identity-fingerprint"

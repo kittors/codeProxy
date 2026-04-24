@@ -38,6 +38,51 @@ const KNOWN_QUOTA_TEXT_KEYS = new Set([
   "parse_kiro_failed",
 ]);
 
+type QuotaVisualTone = {
+  normalized: number | null;
+  fillClass: string;
+  percentClass: string;
+  fillHex: string;
+};
+
+const resolveQuotaVisualTone = (percent: number | null | undefined): QuotaVisualTone => {
+  const normalized = percent === null || percent == null ? null : clampPercent(percent);
+
+  if (normalized === null) {
+    return {
+      normalized,
+      fillClass: "bg-slate-300/50 dark:bg-white/10",
+      percentClass: "text-slate-900 dark:text-white",
+      fillHex: "#cbd5e1",
+    };
+  }
+
+  if (normalized >= 60) {
+    return {
+      normalized,
+      fillClass: "bg-emerald-500",
+      percentClass: "text-emerald-700 dark:text-emerald-200",
+      fillHex: "#10b981",
+    };
+  }
+
+  if (normalized >= 20) {
+    return {
+      normalized,
+      fillClass: "bg-amber-500",
+      percentClass: "text-amber-700 dark:text-amber-200",
+      fillHex: "#f59e0b",
+    };
+  }
+
+  return {
+    normalized,
+    fillClass: "bg-rose-500",
+    percentClass: "text-rose-700 dark:text-rose-200",
+    fillHex: "#f43f5e",
+  };
+};
+
 interface UseAuthFilesFilesPresentationOptions {
   filesViewMode: FilesViewMode;
   setFilesViewMode: (value: FilesViewMode) => void;
@@ -159,25 +204,8 @@ export function useAuthFilesFilesPresentation({
   }, [filesViewMode, setFilesViewMode, t]);
 
   const quotaProgressCircle = useCallback((percent: number | null) => {
-    const normalized = percent === null ? null : clampPercent(percent);
-    const color =
-      normalized === null
-        ? "bg-slate-300/40 dark:bg-white/8"
-        : normalized >= 60
-          ? "bg-emerald-500"
-          : normalized >= 20
-            ? "bg-amber-500"
-            : "bg-rose-500";
-
-    const fill =
-      color === "bg-emerald-500"
-        ? "#10b981"
-        : color === "bg-amber-500"
-          ? "#f59e0b"
-          : color === "bg-rose-500"
-            ? "#f43f5e"
-            : "#cbd5e1";
-
+    const tone = resolveQuotaVisualTone(percent);
+    const normalized = tone.normalized;
     const deg = normalized === null ? 0 : Math.max(0, Math.min(360, (normalized / 100) * 360));
 
     return (
@@ -188,13 +216,13 @@ export function useAuthFilesFilesPresentation({
         <span
           className="absolute inset-0 rounded-full dark:hidden"
           style={{
-            background: `conic-gradient(${fill} ${deg}deg, rgba(148, 163, 184, 0.35) 0deg)`,
+            background: `conic-gradient(${tone.fillHex} ${deg}deg, rgba(148, 163, 184, 0.35) 0deg)`,
           }}
         />
         <span
           className="absolute inset-0 hidden rounded-full dark:block"
           style={{
-            background: `conic-gradient(${fill} ${deg}deg, rgba(255, 255, 255, 0.14) 0deg)`,
+            background: `conic-gradient(${tone.fillHex} ${deg}deg, rgba(255, 255, 255, 0.14) 0deg)`,
           }}
         />
         <span className="absolute inset-[2px] rounded-full bg-white dark:bg-neutral-950" />
@@ -218,8 +246,9 @@ export function useAuthFilesFilesPresentation({
           {items.length > 0 ? (
             <div className="grid w-[min(22rem,calc(100vw-2rem))] grid-cols-[auto_0.875rem_2.5rem_1fr] items-center gap-x-1 gap-y-1">
               {items.map((item) => {
+                const tone = resolveQuotaVisualTone(item.percent);
                 const percentText =
-                  item.percent === null ? "--" : `${Math.round(clampPercent(item.percent))}%`;
+                  tone.normalized === null ? "--" : `${Math.round(tone.normalized)}%`;
                 const resetText = formatQuotaResetTextCompact(item.resetAtMs);
                 return (
                   <div key={item.label} className="contents">
@@ -229,7 +258,11 @@ export function useAuthFilesFilesPresentation({
                     <span className="flex items-center justify-center">
                       {quotaProgressCircle(item.percent)}
                     </span>
-                    <span className="text-[10px] font-semibold tabular-nums text-slate-800 dark:text-white/85">
+                    <span
+                      className={["text-[10px] font-semibold tabular-nums", tone.percentClass].join(
+                        " ",
+                      )}
+                    >
                       {percentText}
                     </span>
                     <span className="min-w-0 truncate whitespace-nowrap text-[10px] tabular-nums text-slate-500 dark:text-white/40">
@@ -253,18 +286,10 @@ export function useAuthFilesFilesPresentation({
 
   const renderQuotaBar = useCallback(
     (label: string, item: QuotaItem | null): ReactNode => {
-      const normalized =
-        item?.percent === null || item?.percent == null ? null : clampPercent(item.percent);
+      const tone = resolveQuotaVisualTone(item?.percent);
+      const normalized = tone.normalized;
       const percentText = normalized === null ? "--" : `${Math.round(normalized)}%`;
       const resetText = formatQuotaResetTextCompact(item?.resetAtMs) ?? "--";
-      const fillClass =
-        normalized === null
-          ? "bg-slate-300/50 dark:bg-white/10"
-          : normalized >= 60
-            ? "bg-emerald-500"
-            : normalized >= 20
-              ? "bg-amber-500"
-              : "bg-rose-500";
 
       return (
         <div key={label} className="space-y-1">
@@ -272,13 +297,18 @@ export function useAuthFilesFilesPresentation({
             <span className="min-w-0 truncate text-[11px] font-semibold text-slate-700 dark:text-white/80">
               {label}
             </span>
-            <span className="shrink-0 text-[11px] font-semibold tabular-nums text-slate-900 dark:text-white">
+            <span
+              className={[
+                "shrink-0 text-[11px] font-semibold tabular-nums",
+                tone.percentClass,
+              ].join(" ")}
+            >
               {percentText}
             </span>
           </div>
           <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200/80 dark:bg-white/10">
             <div
-              className={["h-full rounded-full", fillClass].join(" ")}
+              className={["h-full rounded-full", tone.fillClass].join(" ")}
               style={{ width: `${normalized ?? 0}%` }}
               aria-hidden="true"
             />
@@ -501,8 +531,8 @@ export function useAuthFilesFilesPresentation({
           const hasError = state.status === "error";
 
           const renderQuotaLinePreview = (item: QuotaItem) => {
-            const percentText =
-              item.percent === null ? "--" : `${Math.round(clampPercent(item.percent))}%`;
+            const tone = resolveQuotaVisualTone(item.percent);
+            const percentText = tone.normalized === null ? "--" : `${Math.round(tone.normalized)}%`;
             const resetText = formatQuotaResetTextCompact(item.resetAtMs) ?? "--";
             return (
               <div key={item.label} className="flex min-w-0 items-center gap-1">
@@ -510,7 +540,12 @@ export function useAuthFilesFilesPresentation({
                   {translateQuotaText(item.label)}
                 </span>
                 {quotaProgressCircle(item.percent)}
-                <span className="inline-flex shrink-0 items-center gap-1 text-[10px] font-semibold tabular-nums text-slate-800 dark:text-white/85">
+                <span
+                  className={[
+                    "inline-flex shrink-0 items-center gap-1 text-[10px] font-semibold tabular-nums",
+                    tone.percentClass,
+                  ].join(" ")}
+                >
                   {percentText}
                 </span>
                 <span className="min-w-0 flex-1 truncate whitespace-nowrap text-[10px] tabular-nums text-slate-500 dark:text-white/40">

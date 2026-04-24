@@ -1,57 +1,48 @@
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { updateApi } from "@/lib/http/apis/update";
+import {
+  updateApi,
+  type UpdateCheckResponse,
+  type UpdateProgressResponse,
+} from "@/lib/http/apis/update";
 import { useAuth } from "@/modules/auth/AuthProvider";
+import { buttonClassName } from "@/modules/ui/Button";
 import { useToast } from "@/modules/ui/ToastProvider";
+import { UpdateDetailsModal } from "@/modules/update/UpdateDetailsModal";
+import {
+  DEFAULT_HEARTBEAT_INTERVAL_MS,
+  DEFAULT_HEARTBEAT_TIMEOUT_MS,
+  applyUpdateFlow,
+  createPendingUpdateProgress,
+  updateDisplayVersion,
+  updateIdentity,
+} from "@/modules/update/updateShared";
 
 const DEFAULT_INITIAL_DELAY_MS = 2500;
 
-const sameCommit = (left?: string, right?: string) => {
-  const normalizedLeft = left?.trim().toLowerCase() ?? "";
-  const normalizedRight = right?.trim().toLowerCase() ?? "";
-  if (!normalizedLeft || !normalizedRight) return false;
-  return (
-    normalizedLeft.startsWith(normalizedRight) ||
-    normalizedRight.startsWith(normalizedLeft)
-  );
-};
-
-const updateToastVersion = (
-  info: Awaited<ReturnType<typeof updateApi.check>>,
-) => {
-  const backendChanged =
-    Boolean(info.latest_commit?.trim()) &&
-    !sameCommit(info.current_commit, info.latest_commit);
-  if (!backendChanged && info.latest_ui_version?.trim()) {
-    return info.latest_ui_version;
-  }
-  return (
-    info.latest_version ||
-    info.latest_commit ||
-    info.latest_ui_commit ||
-    info.docker_tag ||
-    ""
-  );
-};
-
-const updateToastIdentity = (
-  info: Awaited<ReturnType<typeof updateApi.check>>,
-) =>
-  updateToastVersion(info) ||
-  info.latest_commit ||
-  info.latest_ui_commit ||
-  `${info.docker_image ?? ""}:${info.docker_tag ?? ""}`;
+function canPromptForUpdate(info: UpdateCheckResponse): boolean {
+  return info.enabled && !!info.update_available && info.updater_available !== false;
+}
 
 export function AutoUpdatePrompt({
   initialDelayMs = DEFAULT_INITIAL_DELAY_MS,
+  heartbeatIntervalMs = DEFAULT_HEARTBEAT_INTERVAL_MS,
+  heartbeatTimeoutMs = DEFAULT_HEARTBEAT_TIMEOUT_MS,
 }: {
   initialDelayMs?: number;
+  heartbeatIntervalMs?: number;
+  heartbeatTimeoutMs?: number;
 }) {
   const { t } = useTranslation();
   const { notify } = useToast();
   const auth = useAuth();
   const checkingRef = useRef(false);
   const notifiedRef = useRef(new Set<string>());
+  const [candidate, setCandidate] = useState<UpdateCheckResponse | null>(null);
+  const [updateTarget, setUpdateTarget] = useState<UpdateCheckResponse | null>(null);
+  const [progress, setProgress] = useState<UpdateProgressResponse | null>(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [updating, setUpdating] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -67,17 +58,34 @@ export function AutoUpdatePrompt({
       void updateApi
         .check()
         .then((info) => {
-          if (cancelled || !info.enabled || !info.update_available) return;
-          const identity = updateToastIdentity(info);
+          if (cancelled || !canPromptForUpdate(info)) return;
+          const identity = updateIdentity(info);
           if (identity && notifiedRef.current.has(identity)) return;
           if (identity) notifiedRef.current.add(identity);
           notify({
             type: "info",
             title: t("auto_update.toast_title"),
             message: t("auto_update.toast_message", {
-              version: updateToastVersion(info),
+              version: updateDisplayVersion(info),
             }),
-            duration: 6000,
+            duration: 10000,
+            action: {
+              label: t("common.confirm"),
+              onClick: () => {
+                setCandidate(info);
+                setDetailsOpen(true);
+              },
+            },
+            classNames: {
+              actionWrapper:
+                "clirelay-update-toast-action-wrapper flex justify-end overflow-visible",
+              actionButton: buttonClassName({
+                size: "xs",
+                variant: "default",
+                className:
+                  "clirelay-update-toast-action !inline-flex !w-auto !min-w-0 !self-end !rounded-full !px-2.5 !text-xs",
+              }),
+            },
           });
         })
         .catch(() => {
@@ -92,13 +100,49 @@ export function AutoUpdatePrompt({
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [
-    auth.state.isAuthenticated,
-    auth.state.isRestoring,
-    initialDelayMs,
-    notify,
-    t,
-  ]);
+  }, [auth.state.isAuthenticated, auth.state.isRestoring, initialDelayMs, notify, t]);
 
-  return null;
+  const applyUpdate = useCallback(async () => {
+    setUpdateTarget(candidate);
+    setProgress(createPendingUpdateProgress(candidate));
+    setUpdating(true);
+    try {
+      await applyUpdateFlow({
+        candidate,
+        heartbeatIntervalMs,
+        heartbeatTimeoutMs,
+        notify,
+        onCheck: setCandidate,
+        onProgress: setProgress,
+        onSuccess: () => window.location.reload(),
+        t,
+      });
+      setUpdating(false);
+    } catch (err: unknown) {
+      notify({
+        type: "error",
+        message: err instanceof Error ? err.message : t("auto_update.failed"),
+      });
+      setProgress(null);
+      setUpdating(false);
+    }
+  }, [candidate, heartbeatIntervalMs, heartbeatTimeoutMs, notify, t]);
+
+  return (
+    <>
+      <UpdateDetailsModal
+        open={detailsOpen}
+        candidate={candidate}
+        updateTarget={updateTarget}
+        progress={progress}
+        updating={updating}
+        onApply={() => void applyUpdate()}
+        onClose={() => {
+          setProgress(null);
+          setUpdateTarget(null);
+          setDetailsOpen(false);
+        }}
+      />
+    </>
+  );
 }
