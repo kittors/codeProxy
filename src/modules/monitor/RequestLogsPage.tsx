@@ -6,6 +6,7 @@ import type { UsageLogItem, UsageLogsResponse } from "@/lib/http/apis/usage";
 import { useToast } from "@/modules/ui/ToastProvider";
 import { Select } from "@/modules/ui/Select";
 import { SearchableSelect } from "@/modules/ui/SearchableSelect";
+import { VirtualTable } from "@/modules/ui/VirtualTable";
 import { LogContentModal } from "@/modules/monitor/LogContentModal";
 import { ErrorDetailModal } from "@/modules/monitor/ErrorDetailModal";
 import {
@@ -30,21 +31,14 @@ export function RequestLogsPage() {
 
   // Content modal state
   const [contentModalOpen, setContentModalOpen] = useState(false);
-  const [contentModalLogId, setContentModalLogId] = useState<number | null>(
-    null,
-  );
-  const [contentModalTab, setContentModalTab] = useState<"input" | "output">(
-    "input",
-  );
+  const [contentModalLogId, setContentModalLogId] = useState<number | null>(null);
+  const [contentModalTab, setContentModalTab] = useState<"input" | "output">("input");
 
-  const handleContentClick = useCallback(
-    (logId: number, tab: "input" | "output") => {
-      setContentModalLogId(logId);
-      setContentModalTab(tab);
-      setContentModalOpen(true);
-    },
-    [],
-  );
+  const handleContentClick = useCallback((logId: number, tab: "input" | "output") => {
+    setContentModalLogId(logId);
+    setContentModalTab(tab);
+    setContentModalOpen(true);
+  }, []);
 
   // Error modal state
   const [errorModalOpen, setErrorModalOpen] = useState(false);
@@ -122,31 +116,22 @@ export function RequestLogsPage() {
         setTotalCount(resp.total ?? 0);
         setCurrentPage(page);
         const filtersCandidate =
-          resp.filters && typeof resp.filters === "object"
-            ? (resp.filters as any)
-            : null;
+          resp.filters && typeof resp.filters === "object" ? (resp.filters as any) : null;
         setFilterOptions({
-          api_keys: Array.isArray(filtersCandidate?.api_keys)
-            ? filtersCandidate.api_keys
-            : [],
+          api_keys: Array.isArray(filtersCandidate?.api_keys) ? filtersCandidate.api_keys : [],
           api_key_names:
             filtersCandidate?.api_key_names &&
             typeof filtersCandidate.api_key_names === "object" &&
             !Array.isArray(filtersCandidate.api_key_names)
               ? (filtersCandidate.api_key_names as Record<string, string>)
               : {},
-          models: Array.isArray(filtersCandidate?.models)
-            ? filtersCandidate.models
-            : [],
-          channels: Array.isArray(filtersCandidate?.channels)
-            ? filtersCandidate.channels
-            : [],
+          models: Array.isArray(filtersCandidate?.models) ? filtersCandidate.models : [],
+          channels: Array.isArray(filtersCandidate?.channels) ? filtersCandidate.channels : [],
         });
         setStats(resp.stats ?? { total: 0, success_rate: 0, total_tokens: 0 });
         setLastUpdatedAt(Date.now());
       } catch (err) {
-        const message =
-          err instanceof Error ? err.message : t("request_logs.refresh_failed");
+        const message = err instanceof Error ? err.message : t("request_logs.refresh_failed");
         notify({ type: "error", message });
       } finally {
         fetchInFlightRef.current = false;
@@ -187,14 +172,10 @@ export function RequestLogsPage() {
 
   // Build options from backend filter data
   const keyOptions = useMemo(() => {
-    return buildRequestLogKeyOptions(
-      filterOptions.api_keys,
-      filterOptions.api_key_names ?? {},
-      {
-        allKeys: t("request_logs.all_keys"),
-        systemCall: t("request_logs.system_call"),
-      },
-    );
+    return buildRequestLogKeyOptions(filterOptions.api_keys, filterOptions.api_key_names ?? {}, {
+      allKeys: t("request_logs.all_keys"),
+      systemCall: t("request_logs.system_call"),
+    });
   }, [filterOptions.api_keys, filterOptions.api_key_names, t]);
 
   const modelOptions = useMemo(() => {
@@ -218,9 +199,6 @@ export function RequestLogsPage() {
       time: new Date(lastUpdatedAt).toLocaleTimeString(),
     });
   }, [lastUpdatedAt, loading, t]);
-
-  const colCount = logColumns.length;
-
   return (
     <section className="flex flex-1 flex-col">
       <h1 className="sr-only">{t("request_logs.title")}</h1>
@@ -230,18 +208,11 @@ export function RequestLogsPage() {
         {/* 标题栏 */}
         <div className="flex flex-wrap items-center justify-between gap-3 px-5 pt-5 pb-3">
           <h2 className="flex items-center gap-2 text-base font-semibold text-slate-900 dark:text-white">
-            <ScrollText
-              size={18}
-              className="text-slate-900 dark:text-white"
-              aria-hidden="true"
-            />
+            <ScrollText size={18} className="text-slate-900 dark:text-white" aria-hidden="true" />
             {t("request_logs.heading")}
           </h2>
           <div className="flex flex-wrap items-center gap-2">
-            <RequestLogsTimeRangeSelector
-              value={timeRange}
-              onChange={setTimeRange}
-            />
+            <RequestLogsTimeRangeSelector value={timeRange} onChange={setTimeRange} />
             <button
               type="button"
               onClick={() => fetchLogs(1, pageSize)}
@@ -253,11 +224,7 @@ export function RequestLogsPage() {
             >
               <RefreshCw
                 size={14}
-                className={
-                  loading
-                    ? "motion-reduce:animate-none motion-safe:animate-spin"
-                    : ""
-                }
+                className={loading ? "motion-reduce:animate-none motion-safe:animate-spin" : ""}
                 aria-hidden="true"
               />
             </button>
@@ -321,9 +288,7 @@ export function RequestLogsPage() {
 
               <span className="inline-flex items-center justify-end gap-1.5 whitespace-nowrap sm:justify-start">
                 {t("common.success_rate")}
-                <span className="font-mono tabular-nums">
-                  {stats.success_rate.toFixed(1)}%
-                </span>
+                <span className="font-mono tabular-nums">{stats.success_rate.toFixed(1)}%</span>
               </span>
 
               <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
@@ -342,78 +307,19 @@ export function RequestLogsPage() {
 
         {/* 表格区域 — 自适应视口高度，内部滚动 */}
         <div className="relative min-h-[360px] h-[calc(100dvh-300px)] overflow-hidden px-5">
-          <div className="h-full overflow-auto">
-            <table className="w-full min-w-[1320px] table-fixed border-separate border-spacing-0 text-sm">
-              <caption className="sr-only">
-                {t("request_logs.table_caption")}
-              </caption>
-
-              {/* 表头 */}
-              <thead className="sticky top-0 z-10">
-                <tr className="text-left text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-white/55">
-                  {logColumns.map((col, i) => {
-                    const isFirst = i === 0;
-                    const isLast = i === logColumns.length - 1;
-                    const roundCls = [
-                      isFirst ? "first:rounded-l-xl" : "",
-                      isLast ? "last:rounded-r-xl" : "",
-                    ]
-                      .filter(Boolean)
-                      .join(" ");
-                    return (
-                      <th
-                        key={col.key}
-                        className={`whitespace-nowrap bg-slate-100 px-4 py-3 dark:bg-neutral-800 ${col.width ?? ""} ${col.headerClassName ?? ""} ${roundCls}`}
-                      >
-                        {col.label}
-                      </th>
-                    );
-                  })}
-                </tr>
-              </thead>
-
-              {/* 表体 */}
-              <tbody className="text-slate-900 dark:text-white">
-                {!loading && rows.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={colCount}
-                      className="px-4 py-12 text-center text-sm text-slate-600 dark:text-white/70"
-                    >
-                      {t("request_logs.no_data")}
-                    </td>
-                  </tr>
-                ) : (
-                  rows.map((row, idx) => (
-                    <tr
-                      key={row.id}
-                      className="text-sm transition-colors hover:bg-slate-50 dark:hover:bg-white/[0.04]"
-                      style={{ height: 44 }}
-                    >
-                      {logColumns.map((col, colIdx) => {
-                        const isFirst = colIdx === 0;
-                        const isLast = colIdx === logColumns.length - 1;
-                        const roundCls = [
-                          isFirst ? "first:rounded-l-lg" : "",
-                          isLast ? "last:rounded-r-lg" : "",
-                        ]
-                          .filter(Boolean)
-                          .join(" ");
-                        return (
-                          <td
-                            key={col.key}
-                            className={`px-4 py-2.5 align-middle ${col.cellClassName ?? ""} ${roundCls}`}
-                          >
-                            {col.render(row, idx)}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+          <VirtualTable
+            rows={rows}
+            columns={logColumns}
+            rowKey={(row) => row.id}
+            loading={loading}
+            virtualize={false}
+            minWidth="min-w-[1320px]"
+            height="h-full"
+            minHeight="min-h-full"
+            caption={t("request_logs.table_caption")}
+            emptyText={t("request_logs.no_data")}
+            showAllLoadedMessage={false}
+          />
 
           {/* Loading overlay */}
           {loading ? (

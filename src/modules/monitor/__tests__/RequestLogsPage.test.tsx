@@ -114,4 +114,58 @@ describe("RequestLogsPage", () => {
 
     expect(await screen.findByText("No Data")).toBeInTheDocument();
   });
+
+  test("renders request logs table through the shared VirtualTable wrapper", async () => {
+    await i18n.changeLanguage("zh-CN");
+
+    mocks.getUsageLogs.mockResolvedValue({
+      items: [
+        {
+          id: 1,
+          timestamp: "2026-04-08T12:00:00Z",
+          api_key: "sk-test-123456",
+          api_key_name: "Primary",
+          model: "gpt-5.4",
+          source: "codex",
+          channel_name: "Codex",
+          auth_index: "auth-1",
+          failed: false,
+          latency_ms: 1200,
+          first_token_ms: 183,
+          input_tokens: 10,
+          output_tokens: 20,
+          reasoning_tokens: 0,
+          cached_tokens: 0,
+          total_tokens: 30,
+          cost: 0.0123,
+          has_content: false,
+        },
+      ],
+      total: 1,
+      page: 1,
+      size: 50,
+      filters: {
+        api_keys: [],
+        api_key_names: {},
+        models: [],
+        channels: [],
+      },
+      stats: {
+        total: 1,
+        success_rate: 100,
+        total_tokens: 30,
+      },
+    });
+
+    const { container } = render(
+      <ThemeProvider>
+        <ToastProvider>
+          <RequestLogsPage />
+        </ToastProvider>
+      </ThemeProvider>,
+    );
+
+    await screen.findByRole("table", { name: "请求日志表" });
+    expect(container.querySelector(".table-scrollbar")).not.toBeNull();
+  });
 });
