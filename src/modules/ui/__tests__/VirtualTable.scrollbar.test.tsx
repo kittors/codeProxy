@@ -53,6 +53,13 @@ describe("VirtualTable scrollbar wrapper", () => {
     expect(scrollContainer).toHaveClass("overflow-auto");
     expect(scrollContainer).toHaveAttribute("data-scrollbar-visibility", "hover");
     expect(scrollContainer).toHaveAttribute("tabindex", "0");
+
+    // Height must be applied on the outer wrapper so `h-full` works when the caller
+    // constrains the table area; otherwise the inner scroll container can expand to content.
+    const root = scrollContainer!.parentElement as HTMLDivElement | null;
+    expect(root).not.toBeNull();
+    expect(root).toHaveClass("h-[160px]");
+    expect(root).toHaveClass("min-h-0");
   });
 
   test("renders DOM scrollbars only when overflow exists", async () => {
@@ -83,8 +90,11 @@ describe("VirtualTable scrollbar wrapper", () => {
     scrollContainer!.dispatchEvent(new Event("scroll"));
 
     await waitFor(() => {
-      expect(container.querySelector('[data-vt-scrollbar="y"]')).not.toBeNull();
-      expect(container.querySelector('[data-vt-scrollbar="x"]')).not.toBeNull();
+      const y = container.querySelector('[data-vt-scrollbar="y"]') as HTMLDivElement | null;
+      const x = container.querySelector('[data-vt-scrollbar="x"]') as HTMLDivElement | null;
+      expect(y).not.toBeNull();
+      expect(x).not.toBeNull();
+      expect(y).toHaveClass("left-1");
     });
   });
 });
