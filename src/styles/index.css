@@ -49,6 +49,97 @@
   height: 0;
 }
 
+/* 统一表格滚动条：默认隐藏，hover/focus-within 时显示。仅对支持 hover 的桌面设备生效。 */
+@media (hover: hover) and (pointer: fine) {
+  .table-scrollbar[data-scrollbar-visibility="hover"] {
+    scrollbar-gutter: stable both-edges;
+    scrollbar-width: none; /* Firefox */
+    scrollbar-color: transparent transparent;
+  }
+
+  .table-scrollbar[data-scrollbar-visibility="hover"]::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    background: transparent;
+  }
+
+  .table-scrollbar[data-scrollbar-visibility="hover"]:hover,
+  .table-scrollbar[data-scrollbar-visibility="hover"]:focus-within {
+    scrollbar-width: thin; /* Firefox */
+    scrollbar-color: rgba(71 85 105 / 0.42) rgba(148 163 184 / 0.14);
+  }
+
+  .table-scrollbar[data-scrollbar-visibility="hover"]:hover::-webkit-scrollbar,
+  .table-scrollbar[data-scrollbar-visibility="hover"]:focus-within::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+  }
+
+  .table-scrollbar[data-scrollbar-visibility="hover"]::-webkit-scrollbar-track {
+    background: transparent;
+    border-radius: 9999px;
+  }
+
+  .table-scrollbar[data-scrollbar-visibility="hover"]::-webkit-scrollbar-thumb {
+    background: transparent;
+    border-radius: 9999px;
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+
+  .table-scrollbar[data-scrollbar-visibility="hover"]:hover::-webkit-scrollbar-track,
+  .table-scrollbar[data-scrollbar-visibility="hover"]:focus-within::-webkit-scrollbar-track {
+    background: linear-gradient(180deg, rgba(248 250 252 / 0.9), rgba(226 232 240 / 0.72));
+  }
+
+  .table-scrollbar[data-scrollbar-visibility="hover"]:hover::-webkit-scrollbar-thumb,
+  .table-scrollbar[data-scrollbar-visibility="hover"]:focus-within::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, rgba(148 163 184 / 0.92), rgba(100 116 139 / 0.88));
+  }
+
+  .table-scrollbar[data-scrollbar-visibility="hover"]::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, rgba(99 102 241 / 0.88), rgba(79 70 229 / 0.92));
+  }
+
+  .table-scrollbar[data-scrollbar-visibility="hover"]::-webkit-scrollbar-thumb:active {
+    background: linear-gradient(180deg, rgba(67 56 202 / 0.96), rgba(49 46 129 / 0.96));
+  }
+
+  .table-scrollbar[data-scrollbar-visibility="hover"]::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
+  /* Dark mode: use softer contrast but keep hover affordance. */
+  .dark .table-scrollbar[data-scrollbar-visibility="hover"] {
+    scrollbar-color: transparent transparent;
+  }
+
+  .dark .table-scrollbar[data-scrollbar-visibility="hover"]:hover,
+  .dark .table-scrollbar[data-scrollbar-visibility="hover"]:focus-within {
+    scrollbar-color: rgba(148 163 184 / 0.62) rgba(255 255 255 / 0.06);
+  }
+
+  .dark .table-scrollbar[data-scrollbar-visibility="hover"]:hover::-webkit-scrollbar-track,
+  .dark .table-scrollbar[data-scrollbar-visibility="hover"]:focus-within::-webkit-scrollbar-track {
+    background: linear-gradient(180deg, rgba(23 23 23 / 0.92), rgba(38 38 38 / 0.82));
+  }
+
+  .dark .table-scrollbar[data-scrollbar-visibility="hover"]:hover::-webkit-scrollbar-thumb,
+  .dark .table-scrollbar[data-scrollbar-visibility="hover"]:focus-within::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, rgba(148 163 184 / 0.82), rgba(100 116 139 / 0.9));
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+
+  .dark .table-scrollbar[data-scrollbar-visibility="hover"]::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, rgba(129 140 248 / 0.95), rgba(99 102 241 / 0.95));
+  }
+
+  .dark .table-scrollbar[data-scrollbar-visibility="hover"]::-webkit-scrollbar-thumb:active {
+    background: linear-gradient(180deg, rgba(99 102 241 / 0.98), rgba(67 56 202 / 0.98));
+  }
+}
+
 /* Dark mode scrollbar */
 .dark {
   scrollbar-color: rgba(255 255 255 / 0.2) transparent;

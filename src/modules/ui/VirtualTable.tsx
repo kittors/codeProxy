@@ -275,7 +275,9 @@ export function VirtualTable<T>({
       <div
         ref={containerRef}
         onScroll={onScroll}
-        className={`${height} ${minHeight} overflow-auto`}
+        tabIndex={0}
+        data-scrollbar-visibility="hover"
+        className={`${height} ${minHeight} table-scrollbar overflow-auto overscroll-contain`}
       >
         <table
           className={`w-full ${minWidth} table-fixed border-separate border-spacing-0 text-sm`}
