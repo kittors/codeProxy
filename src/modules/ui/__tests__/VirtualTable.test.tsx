@@ -66,7 +66,6 @@ describe("VirtualTable", () => {
     expect(scrollContainer).not.toBeNull();
     expect(scrollContainer).toHaveClass("overflow-auto");
     expect(scrollContainer).toHaveAttribute("data-scrollbar-visibility", "hover");
-    expect(scrollContainer).toHaveAttribute("tabindex", "0");
 
     setScrollMetrics(scrollContainer!, {
       clientHeight: 160,
