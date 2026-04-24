@@ -471,13 +471,13 @@ export function VirtualTable<T>({
   );
 
   const { vThumb, hThumb } = useMemo(() => {
-    const inset = 8;
+    const trackInset = 8; // matches `inset-y-2` / `inset-x-2` (8px)
     const hasV = scrollMetrics.scrollHeight > scrollMetrics.clientHeight + 1;
     const hasH = scrollMetrics.scrollWidth > scrollMetrics.clientWidth + 1;
 
     const v = (() => {
       if (!hasV) return null;
-      const trackLength = Math.max(0, scrollMetrics.clientHeight - inset * 2);
+      const trackLength = Math.max(0, scrollMetrics.clientHeight - trackInset * 2);
       const viewport = scrollMetrics.clientHeight;
       const content = scrollMetrics.scrollHeight;
       const thumbLength = Math.max(28, Math.round((viewport / content) * trackLength));
@@ -487,12 +487,13 @@ export function VirtualTable<T>({
         maxThumbOffset,
         Math.max(0, Math.round((scrollMetrics.scrollTop / scrollRange) * maxThumbOffset)),
       );
-      return { inset, top: inset + offset, height: thumbLength };
+      // NOTE: thumb is positioned *inside* the track element, so offset is relative to track's top.
+      return { top: offset, height: thumbLength };
     })();
 
     const h = (() => {
       if (!hasH) return null;
-      const trackLength = Math.max(0, scrollMetrics.clientWidth - inset * 2);
+      const trackLength = Math.max(0, scrollMetrics.clientWidth - trackInset * 2);
       const viewport = scrollMetrics.clientWidth;
       const content = scrollMetrics.scrollWidth;
       const thumbLength = Math.max(28, Math.round((viewport / content) * trackLength));
@@ -502,7 +503,7 @@ export function VirtualTable<T>({
         maxThumbOffset,
         Math.max(0, Math.round((scrollMetrics.scrollLeft / scrollRange) * maxThumbOffset)),
       );
-      return { inset, left: inset + offset, width: thumbLength };
+      return { left: offset, width: thumbLength };
     })();
 
     return { vThumb: v, hThumb: h };
@@ -516,7 +517,8 @@ export function VirtualTable<T>({
         onWheelCapture={onWheelCapture}
         tabIndex={0}
         data-scrollbar-visibility="hover"
-        className="h-full min-h-0 table-scrollbar overflow-auto"
+        // Reserve space for the overlay vertical scrollbar so it won't cover the header's rightmost column.
+        className={`h-full min-h-0 table-scrollbar overflow-auto ${vThumb ? "pr-4" : ""}`}
       >
         <table
           className={`w-full ${minWidth} table-fixed border-separate border-spacing-0 text-sm`}
@@ -643,7 +645,7 @@ export function VirtualTable<T>({
       {vThumb ? (
         <div
           data-vt-scrollbar="y"
-          className="pointer-events-none absolute inset-y-2 right-1 w-2 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
+          className="pointer-events-none absolute inset-y-2 right-0 w-2 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
         >
           <div className="absolute inset-0 rounded-full bg-slate-200/40 dark:bg-white/10" />
           <div

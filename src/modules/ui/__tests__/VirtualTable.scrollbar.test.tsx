@@ -94,7 +94,7 @@ describe("VirtualTable scrollbar wrapper", () => {
       const x = container.querySelector('[data-vt-scrollbar="x"]') as HTMLDivElement | null;
       expect(y).not.toBeNull();
       expect(x).not.toBeNull();
-      expect(y).toHaveClass("right-1");
+      expect(y).toHaveClass("right-0");
     });
   });
 
@@ -150,6 +150,64 @@ describe("VirtualTable scrollbar wrapper", () => {
 
     await waitFor(() => {
       expect(container.querySelector('[data-vt-scrollbar="y"]')).not.toBeNull();
+    });
+  });
+
+  test("thumb aligns to track edges at scroll start/end", async () => {
+    const { container } = render(
+      <VirtualTable
+        rows={Array.from({ length: 60 }, (_, i) => ({ id: String(i), name: `Row ${i}` }))}
+        columns={columns}
+        rowKey={(row) => row.id}
+        height="h-[160px]"
+        minHeight="min-h-0"
+        virtualize={false}
+      />,
+    );
+
+    const scrollContainer = container.querySelector(".table-scrollbar") as HTMLDivElement | null;
+    expect(scrollContainer).not.toBeNull();
+
+    setScrollMetrics(scrollContainer!, {
+      clientHeight: 160,
+      scrollHeight: 640,
+      clientWidth: 260,
+      scrollWidth: 780,
+      scrollTop: 0,
+      scrollLeft: 0,
+    });
+
+    window.dispatchEvent(new Event("resize"));
+
+    await waitFor(() => {
+      const yThumb = container.querySelector(
+        '[data-vt-scrollbar="y"] [role="presentation"]',
+      ) as HTMLDivElement | null;
+      const xThumb = container.querySelector(
+        '[data-vt-scrollbar="x"] [role="presentation"]',
+      ) as HTMLDivElement | null;
+      expect(yThumb).not.toBeNull();
+      expect(xThumb).not.toBeNull();
+      expect(yThumb!.style.top).toBe("0px");
+      expect(xThumb!.style.left).toBe("0px");
+    });
+
+    // Scroll to end and verify thumb stays within track (>= 0px).
+    scrollContainer!.scrollTop = 99999;
+    scrollContainer!.scrollLeft = 99999;
+    scrollContainer!.dispatchEvent(new Event("scroll"));
+
+    await waitFor(() => {
+      const yThumb = container.querySelector(
+        '[data-vt-scrollbar="y"] [role="presentation"]',
+      ) as HTMLDivElement | null;
+      const xThumb = container.querySelector(
+        '[data-vt-scrollbar="x"] [role="presentation"]',
+      ) as HTMLDivElement | null;
+      expect(yThumb).not.toBeNull();
+      expect(xThumb).not.toBeNull();
+      expect(parseFloat(yThumb!.style.top)).toBeGreaterThanOrEqual(0);
+      expect(parseFloat(xThumb!.style.left)).toBeGreaterThanOrEqual(0);
     });
   });
 });
