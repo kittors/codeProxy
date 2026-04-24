@@ -200,11 +200,11 @@ export function RequestLogsPage() {
     });
   }, [lastUpdatedAt, loading, t]);
   return (
-    <section className="flex min-h-0 flex-1 flex-col">
+    <section className="flex flex-1 flex-col">
       <h1 className="sr-only">{t("request_logs.title")}</h1>
 
       {/* 单层卡片：标题 + 筛选 + 统计 + 表格 + 分页 */}
-      <div className="flex min-h-0 flex-1 flex-col rounded-2xl border border-black/[0.06] bg-white shadow-[0_1px_2px_rgb(15_23_42_/_0.035)] dark:border-white/[0.06] dark:bg-neutral-950/70 dark:shadow-[0_1px_2px_rgb(0_0_0_/_0.22)]">
+      <div className="flex flex-1 flex-col rounded-2xl border border-black/[0.06] bg-white shadow-[0_1px_2px_rgb(15_23_42_/_0.035)] dark:border-white/[0.06] dark:bg-neutral-950/70 dark:shadow-[0_1px_2px_rgb(0_0_0_/_0.22)]">
         {/* 标题栏 */}
         <div className="flex flex-wrap items-center justify-between gap-3 px-5 pt-5 pb-3">
           <h2 className="flex items-center gap-2 text-base font-semibold text-slate-900 dark:text-white">
@@ -306,7 +306,7 @@ export function RequestLogsPage() {
         </div>
 
         {/* 表格区域 — 自适应视口高度，内部滚动 */}
-        <div className="relative min-h-0 flex-1 overflow-hidden px-5">
+        <div className="relative min-h-[360px] h-[calc(100dvh-300px)] overflow-hidden px-5">
           <VirtualTable
             rows={rows}
             columns={logColumns}
@@ -315,7 +315,7 @@ export function RequestLogsPage() {
             virtualize={false}
             minWidth="min-w-[1320px]"
             height="h-full"
-            minHeight="min-h-0"
+            minHeight="min-h-full"
             caption={t("request_logs.table_caption")}
             emptyText={t("request_logs.no_data")}
             showAllLoadedMessage={false}
