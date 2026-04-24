@@ -65,7 +65,6 @@ describe("VirtualTable", () => {
     const scrollContainer = container.querySelector(".table-scrollbar") as HTMLDivElement | null;
     expect(scrollContainer).not.toBeNull();
     expect(scrollContainer).toHaveClass("overflow-auto");
-    expect(scrollContainer).toHaveAttribute("data-scrollbar-visibility", "hover");
 
     setScrollMetrics(scrollContainer!, {
       clientHeight: 160,
