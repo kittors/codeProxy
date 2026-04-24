@@ -1,11 +1,4 @@
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type PointerEvent,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
 import { ArrowUp, ChevronLeft, ChevronRight, Plus, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { authFilesApi, imageGenerationApi } from "@/lib/http/apis";
@@ -16,10 +9,7 @@ import { ImagePreviewOverlay } from "@/modules/ui/ImagePreviewOverlay";
 import { Modal } from "@/modules/ui/Modal";
 import { Select } from "@/modules/ui/Select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/modules/ui/Tabs";
-import {
-  VirtualTable,
-  type VirtualTableColumn,
-} from "@/modules/ui/VirtualTable";
+import { VirtualTable, type VirtualTableColumn } from "@/modules/ui/VirtualTable";
 
 const GPT_IMAGE_MODEL = "gpt-image-2";
 const GENERATION_STATUS_KEYS = [
@@ -42,17 +32,11 @@ const IMAGE_GENERATION_PHASE_STATUS_INDEX: Record<string, number> = {
   image_download: 3,
   completed: 3,
 };
-const SIZE_OPTIONS = [
-  "1024x1024",
-  "1792x1024",
-  "1024x1792",
-  "2560x1440",
-  "2160x3840",
-] as const;
+const SIZE_OPTIONS = ["1024x1024", "1792x1024", "1024x1792", "2560x1440", "2160x3840"] as const;
 const QUALITY_OPTIONS = ["low", "medium", "high"] as const;
 const COUNT_OPTIONS = [1, 2, 3, 4] as const;
 const MAX_UPLOAD_IMAGES = 5;
-const IMAGE_EDITS_ENABLED = false;
+const IMAGE_EDITS_ENABLED = true;
 
 type ImageMode = "generations" | "edits";
 type SpecRow = {
@@ -263,9 +247,7 @@ export function ImageGenerationPage() {
 
   const disabled = !channelsLoading && !hasCodexOauthChannel;
   const activeDoc = useMemo(
-    () =>
-      VISIBLE_ENDPOINT_DOCS.find((doc) => doc.mode === activeMode) ??
-      VISIBLE_ENDPOINT_DOCS[0],
+    () => VISIBLE_ENDPOINT_DOCS.find((doc) => doc.mode === activeMode) ?? VISIBLE_ENDPOINT_DOCS[0],
     [activeMode],
   );
 
@@ -294,9 +276,7 @@ export function ImageGenerationPage() {
             ) : null}
 
             <div
-              data-testid={
-                disabled ? "image-generation-disabled-state" : undefined
-              }
+              data-testid={disabled ? "image-generation-disabled-state" : undefined}
               className={disabled ? "space-y-4 opacity-60" : "space-y-4"}
               aria-disabled={disabled}
             >
@@ -328,11 +308,7 @@ export function ImageGenerationPage() {
                       ))}
                     </TabsList>
                     {VISIBLE_ENDPOINT_DOCS.map((doc) => (
-                      <TabsContent
-                        key={doc.mode}
-                        value={doc.mode}
-                        className="mt-4"
-                      >
+                      <TabsContent key={doc.mode} value={doc.mode} className="mt-4">
                         <EndpointCallDoc doc={doc} />
                       </TabsContent>
                     ))}
@@ -361,10 +337,7 @@ export function ImageGenerationPage() {
         </Tabs>
       </section>
 
-      <ImageGenerationTestModal
-        open={testOpen}
-        onClose={() => setTestOpen(false)}
-      />
+      <ImageGenerationTestModal open={testOpen} onClose={() => setTestOpen(false)} />
     </div>
   );
 }
@@ -388,9 +361,7 @@ function EndpointCallDoc({ doc }: { doc: EndpointDoc }) {
             <span className="rounded-full bg-slate-900 px-2 py-0.5 font-semibold text-white dark:bg-white dark:text-neutral-950">
               {doc.method}
             </span>
-            <span className="truncate text-slate-700 dark:text-white/75">
-              {doc.path}
-            </span>
+            <span className="truncate text-slate-700 dark:text-white/75">{doc.path}</span>
           </div>
         </div>
         <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-600 dark:text-white/55">
@@ -423,8 +394,7 @@ function SpecTable({ title, rows }: { title: string; rows: SpecRow[] }) {
         key: "name",
         label: t("image_generation.table_param"),
         width: "w-40",
-        cellClassName:
-          "font-mono text-xs break-all leading-5 text-slate-900 dark:text-white",
+        cellClassName: "font-mono text-xs break-all leading-5 text-slate-900 dark:text-white",
         render: (row) => row.name,
       },
       {
@@ -456,9 +426,7 @@ function SpecTable({ title, rows }: { title: string; rows: SpecRow[] }) {
       data-testid="image-generation-spec-card"
       className="overflow-hidden rounded-2xl bg-white p-4 dark:bg-neutral-950/80"
     >
-      <h4 className="text-sm font-semibold text-slate-900 dark:text-white">
-        {title}
-      </h4>
+      <h4 className="text-sm font-semibold text-slate-900 dark:text-white">{title}</h4>
       <div className="mt-4">
         <VirtualTable<SpecRow>
           rows={rows}
@@ -485,11 +453,7 @@ function createUploadPreviewUrl(file: File): string {
 }
 
 function revokeUploadPreviewUrl(url: string) {
-  if (
-    url &&
-    url.startsWith("blob:") &&
-    typeof URL.revokeObjectURL === "function"
-  ) {
+  if (url && url.startsWith("blob:") && typeof URL.revokeObjectURL === "function") {
     URL.revokeObjectURL(url);
   }
 }
@@ -522,18 +486,11 @@ function extractImageGenerationTaskError(error: unknown): string | null {
   return typeof message === "string" && message.trim() ? message.trim() : null;
 }
 
-function ImageGenerationTestModal({
-  open,
-  onClose,
-}: {
-  open: boolean;
-  onClose: () => void;
-}) {
+function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { t } = useTranslation();
   const [prompt, setPrompt] = useState("");
   const [size, setSize] = useState<(typeof SIZE_OPTIONS)[number]>("1024x1024");
-  const [quality, setQuality] =
-    useState<(typeof QUALITY_OPTIONS)[number]>("medium");
+  const [quality, setQuality] = useState<(typeof QUALITY_OPTIONS)[number]>("medium");
   const [count, setCount] = useState<(typeof COUNT_OPTIONS)[number]>(1);
   const [uploadedImages, setUploadedImages] = useState<UploadedImage[]>([]);
   const [submitting, setSubmitting] = useState(false);
@@ -544,9 +501,7 @@ function ImageGenerationTestModal({
   const [previewOpen, setPreviewOpen] = useState(false);
   const [uploadPreviewOpen, setUploadPreviewOpen] = useState(false);
   const [uploadPreviewIndex, setUploadPreviewIndex] = useState(0);
-  const [generationElapsedMs, setGenerationElapsedMs] = useState<number | null>(
-    null,
-  );
+  const [generationElapsedMs, setGenerationElapsedMs] = useState<number | null>(null);
   const uploadedImagesRef = useRef<UploadedImage[]>([]);
   const resultSwipeRef = useRef<{ x: number; y: number } | null>(null);
   const generationStartedAtRef = useRef<number | null>(null);
@@ -581,9 +536,7 @@ function ImageGenerationTestModal({
 
   useEffect(() => {
     return () => {
-      uploadedImagesRef.current.forEach((item) =>
-        revokeUploadPreviewUrl(item.previewUrl),
-      );
+      uploadedImagesRef.current.forEach((item) => revokeUploadPreviewUrl(item.previewUrl));
     };
   }, []);
 
@@ -626,9 +579,7 @@ function ImageGenerationTestModal({
   const canShowNextImage = activeImageIndex < images.length - 1;
 
   const showImageAt = (index: number) => {
-    setActiveImageIndex(
-      Math.min(Math.max(index, 0), Math.max(images.length - 1, 0)),
-    );
+    setActiveImageIndex(Math.min(Math.max(index, 0), Math.max(images.length - 1, 0)));
   };
 
   const handleResultPointerDown = (event: PointerEvent<HTMLDivElement>) => {
@@ -766,16 +717,15 @@ function ImageGenerationTestModal({
     } catch (error) {
       if (generationSessionRef.current !== sessionId) return;
       setErrorMessage(
-        error instanceof Error
-          ? error.message
-          : t("image_generation.test_failed_generic"),
+        error instanceof Error ? error.message : t("image_generation.test_failed_generic"),
       );
     } finally {
-      if (generationSessionRef.current !== sessionId) return;
-      if (generationStartedAtRef.current !== null) {
-        setGenerationElapsedMs(Date.now() - generationStartedAtRef.current);
+      if (generationSessionRef.current === sessionId) {
+        if (generationStartedAtRef.current !== null) {
+          setGenerationElapsedMs(Date.now() - generationStartedAtRef.current);
+        }
+        setSubmitting(false);
       }
-      setSubmitting(false);
     }
   };
 
@@ -819,9 +769,7 @@ function ImageGenerationTestModal({
             <Select
               aria-label={t("image_generation.size_label")}
               value={size}
-              onChange={(value) =>
-                setSize(value as (typeof SIZE_OPTIONS)[number])
-              }
+              onChange={(value) => setSize(value as (typeof SIZE_OPTIONS)[number])}
               options={SIZE_OPTIONS.map((value) => ({ value, label: value }))}
               className="min-w-[132px]"
               size="sm"
@@ -829,9 +777,7 @@ function ImageGenerationTestModal({
             <Select
               aria-label={t("image_generation.quality_label")}
               value={quality}
-              onChange={(value) =>
-                setQuality(value as (typeof QUALITY_OPTIONS)[number])
-              }
+              onChange={(value) => setQuality(value as (typeof QUALITY_OPTIONS)[number])}
               options={QUALITY_OPTIONS.map((value) => ({
                 value,
                 label: value,
@@ -842,9 +788,7 @@ function ImageGenerationTestModal({
             <Select
               aria-label={t("image_generation.count_label")}
               value={String(count)}
-              onChange={(value) =>
-                setCount(Number(value) as (typeof COUNT_OPTIONS)[number])
-              }
+              onChange={(value) => setCount(Number(value) as (typeof COUNT_OPTIONS)[number])}
               options={COUNT_OPTIONS.map((value) => ({
                 value: String(value),
                 label: t("image_generation.count_option", { count: value }),
@@ -857,13 +801,7 @@ function ImageGenerationTestModal({
           <div
             data-testid="image-generation-stage"
             data-state={
-              submitting
-                ? "generating"
-                : activeImage
-                  ? "ready"
-                  : errorMessage
-                    ? "error"
-                    : "idle"
+              submitting ? "generating" : activeImage ? "ready" : errorMessage ? "error" : "idle"
             }
             className={stageClassName}
             aria-live="polite"
@@ -1015,9 +953,7 @@ function ImageGenerationTestModal({
               <p className="text-xs font-medium text-slate-500 dark:text-white/40">
                 {t("image_generation.revised_prompt_label")}
               </p>
-              <p className="mt-1 line-clamp-2 text-sm">
-                {activeImage.revisedPrompt}
-              </p>
+              <p className="mt-1 line-clamp-2 text-sm">{activeImage.revisedPrompt}</p>
             </div>
           ) : null}
 
@@ -1083,9 +1019,7 @@ function ImageGenerationTestModal({
                 disabled={uploadedImages.length >= MAX_UPLOAD_IMAGES}
                 className="sr-only"
                 onChange={(event) => {
-                  const selectedFiles = Array.from(
-                    event.currentTarget.files ?? [],
-                  );
+                  const selectedFiles = Array.from(event.currentTarget.files ?? []);
                   handleUploadImages(selectedFiles);
                   event.currentTarget.value = "";
                 }}
@@ -1099,9 +1033,7 @@ function ImageGenerationTestModal({
               rows={4}
               className={[
                 "min-h-[112px] w-full resize-none border-0 bg-transparent px-1 pr-8 pb-10 text-sm leading-6 text-slate-900 outline-none placeholder:text-slate-400 dark:text-white dark:placeholder:text-white/30",
-                IMAGE_EDITS_ENABLED && uploadedImages.length > 0
-                  ? "pt-12"
-                  : "pt-0",
+                IMAGE_EDITS_ENABLED && uploadedImages.length > 0 ? "pt-12" : "pt-0",
               ].join(" ")}
             />
             {IMAGE_EDITS_ENABLED ? (
@@ -1149,13 +1081,10 @@ function ImageGenerationTestModal({
         onClose={() => setPreviewOpen(false)}
       />
       <ImagePreviewOverlay
-        open={
-          IMAGE_EDITS_ENABLED && uploadPreviewOpen && uploadedImages.length > 0
-        }
+        open={IMAGE_EDITS_ENABLED && uploadPreviewOpen && uploadedImages.length > 0}
         imageSrc={uploadedImages[uploadPreviewIndex]?.previewUrl ?? null}
         imageAlt={
-          uploadedImages[uploadPreviewIndex]?.file.name ??
-          t("image_generation.upload_images_label")
+          uploadedImages[uploadPreviewIndex]?.file.name ?? t("image_generation.upload_images_label")
         }
         title={t("image_generation.image_preview_title")}
         downloadName={uploadedImages[uploadPreviewIndex]?.file.name}
