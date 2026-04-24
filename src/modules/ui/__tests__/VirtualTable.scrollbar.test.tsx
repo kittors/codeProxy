@@ -94,7 +94,7 @@ describe("VirtualTable scrollbar wrapper", () => {
       const x = container.querySelector('[data-vt-scrollbar="x"]') as HTMLDivElement | null;
       expect(y).not.toBeNull();
       expect(x).not.toBeNull();
-      expect(y).toHaveClass("left-1");
+      expect(y).toHaveClass("right-1");
     });
   });
 });

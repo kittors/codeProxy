@@ -621,7 +621,7 @@ export function VirtualTable<T>({
       {vThumb ? (
         <div
           data-vt-scrollbar="y"
-          className="pointer-events-none absolute inset-y-2 left-1 w-2 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
+          className="pointer-events-none absolute inset-y-2 right-1 w-2 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
         >
           <div className="absolute inset-0 rounded-full bg-slate-200/40 dark:bg-white/10" />
           <div
