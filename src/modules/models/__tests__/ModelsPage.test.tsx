@@ -1,4 +1,4 @@
-import { render, screen, waitFor, waitForElementToBeRemoved, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import i18n from "@/i18n";
@@ -40,7 +40,7 @@ describe("ModelsPage", () => {
     mocks.apiPut.mockReset();
     mocks.apiDelete.mockReset();
     mocks.apiGet.mockImplementation((path: string) => {
-      if (path === "/model-configs") {
+      if (path === "/model-configs?scope=active" || path === "/model-configs") {
         return Promise.resolve({
           data: [
             {
@@ -51,6 +51,24 @@ describe("ModelsPage", () => {
               pricing: {
                 mode: "call",
                 price_per_call: 0.04,
+              },
+            },
+          ],
+        });
+      }
+      if (path === "/model-configs?scope=library") {
+        return Promise.resolve({
+          data: [
+            {
+              id: "seed-only-model",
+              owned_by: "openai",
+              description: "Seeded model library entry",
+              enabled: true,
+              source: "seed",
+              pricing: {
+                mode: "token",
+                input_price_per_million: 1,
+                output_price_per_million: 3,
               },
             },
           ],
@@ -81,7 +99,21 @@ describe("ModelsPage", () => {
     expect(await screen.findByText("gpt-image-2")).toBeInTheDocument();
     expect(screen.getByText("Image generation model billed per invocation")).toBeInTheDocument();
     expect(screen.getByText("$0.04 / call")).toBeInTheDocument();
-    expect(mocks.apiGet).toHaveBeenCalledWith("/model-configs");
+    expect(mocks.apiGet).toHaveBeenCalledWith("/model-configs?scope=active");
+    expect(screen.queryByText("seed-only-model")).not.toBeInTheDocument();
+  });
+
+  test("loads the full model library only after switching to the library tab", async () => {
+    renderPage();
+
+    expect(await screen.findByText("gpt-image-2")).toBeInTheDocument();
+    expect(screen.queryByText("seed-only-model")).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("tab", { name: /model library/i }));
+
+    expect(await screen.findByText("seed-only-model")).toBeInTheDocument();
+    expect(screen.getByText("Seeded model library entry")).toBeInTheDocument();
+    expect(mocks.apiGet).toHaveBeenCalledWith("/model-configs?scope=library");
   });
 
   test("deletes a model only after confirmation", async () => {
@@ -184,20 +216,20 @@ describe("ModelsPage", () => {
     });
   });
 
-  test("loads owner presets from the API and saves preset maintenance changes", async () => {
+  test("maintains owner presets directly on the owner management page", async () => {
     renderPage();
 
     await screen.findByText("gpt-image-2");
-    await userEvent.click(screen.getByRole("button", { name: /manage owner presets/i }));
+    await userEvent.click(screen.getByRole("tab", { name: /owner management/i }));
 
-    const presetDialog = await screen.findByRole("dialog", { name: /owner presets/i });
-    expect(within(presetDialog).getByText("Acme AI")).toBeInTheDocument();
-    expect(within(presetDialog).getByText("1 model")).toBeInTheDocument();
+    const ownerPanel = await screen.findByTestId("owner-management-panel");
+    expect(within(ownerPanel).getByText("Acme AI")).toBeInTheDocument();
+    expect(within(ownerPanel).getByText("1 model")).toBeInTheDocument();
 
-    await userEvent.click(within(presetDialog).getByRole("button", { name: /add owner/i }));
-    await userEvent.type(within(presetDialog).getByLabelText(/owner value/i), "new-lab");
-    await userEvent.type(within(presetDialog).getByLabelText(/owner label/i), "New Lab");
-    await userEvent.click(within(presetDialog).getByRole("button", { name: /^save$/i }));
+    await userEvent.click(within(ownerPanel).getByRole("button", { name: /add owner/i }));
+    await userEvent.type(within(ownerPanel).getByLabelText(/owner value/i), "new-lab");
+    await userEvent.type(within(ownerPanel).getByLabelText(/owner label/i), "New Lab");
+    await userEvent.click(within(ownerPanel).getByRole("button", { name: /^save$/i }));
 
     await waitFor(() => {
       expect(mocks.apiPut).toHaveBeenCalledWith(
@@ -209,8 +241,8 @@ describe("ModelsPage", () => {
         }),
       );
     });
-    await waitForElementToBeRemoved(presetDialog);
 
+    await userEvent.click(screen.getByRole("tab", { name: /active models/i }));
     await userEvent.click(screen.getByRole("button", { name: /add model/i }));
     const modelDialog = await screen.findByRole("dialog", { name: /add model/i });
     await userEvent.click(within(modelDialog).getByRole("combobox", { name: /owner/i }));
