@@ -5,6 +5,7 @@ import { Button } from "@/modules/ui/Button";
 import { Card } from "@/modules/ui/Card";
 import { TextInput } from "@/modules/ui/Input";
 import { Modal } from "@/modules/ui/Modal";
+import { SearchableSelect, type SearchableSelectOption } from "@/modules/ui/SearchableSelect";
 import { Select } from "@/modules/ui/Select";
 import { ToggleSwitch } from "@/modules/ui/ToggleSwitch";
 import { useToast } from "@/modules/ui/ToastProvider";
@@ -96,6 +97,25 @@ const emptyForm: ModelFormState = {
   cachedPrice: "",
   pricePerCall: "",
 };
+
+const PRESET_OWNERS = [
+  { value: "openai", label: "OpenAI" },
+  { value: "anthropic", label: "Anthropic" },
+  { value: "google", label: "Google" },
+  { value: "gemini", label: "Gemini" },
+  { value: "vertex", label: "Vertex AI" },
+  { value: "deepseek", label: "DeepSeek" },
+  { value: "qwen", label: "Qwen" },
+  { value: "kimi", label: "Kimi" },
+  { value: "minimax", label: "MiniMax" },
+  { value: "grok", label: "Grok" },
+  { value: "glm", label: "GLM" },
+  { value: "codex", label: "Codex" },
+  { value: "iflow", label: "iFlow" },
+  { value: "kiro", label: "Kiro" },
+  { value: "openrouter", label: "OpenRouter" },
+  { value: "azure-openai", label: "Azure OpenAI" },
+] as const;
 
 function getVendorPrefix(modelId: string): string {
   const lower = modelId.toLowerCase();
@@ -190,7 +210,7 @@ function toFormState(model: ModelItem): ModelFormState {
   return {
     originalId: model.id,
     id: model.id,
-    ownedBy: model.owned_by,
+    ownedBy: normalizeOwnerValue(model.owned_by),
     description: model.description,
     enabled: model.enabled,
     mode: model.pricing.mode,
@@ -296,6 +316,10 @@ function formatPrice(model: ModelItem, notPricedLabel: string): string {
   return `$${model.pricing.inputPricePerMillion} / $${model.pricing.outputPricePerMillion} / $${model.pricing.cachedPricePerMillion}`;
 }
 
+function normalizeOwnerValue(value: string): string {
+  return value.trim().replace(/\s+/g, "-").toLowerCase();
+}
+
 export function ModelsPage() {
   const { t } = useTranslation();
   const { notify } = useToast();
@@ -348,6 +372,39 @@ export function ModelsPage() {
     const enabledCount = models.filter((model) => model.enabled).length;
     return { modelCount: models.length, pricedCount, enabledCount };
   }, [models]);
+
+  const ownerOptions = useMemo<SearchableSelectOption[]>(() => {
+    const optionMap = new Map<string, SearchableSelectOption>();
+    for (const owner of PRESET_OWNERS) {
+      optionMap.set(owner.value, {
+        value: owner.value,
+        label: owner.label,
+        searchText: `${owner.value} ${owner.label}`,
+      });
+    }
+
+    for (const model of models) {
+      const value = normalizeOwnerValue(model.owned_by);
+      if (!value || optionMap.has(value)) continue;
+      optionMap.set(value, {
+        value,
+        label: model.owned_by,
+        searchText: model.owned_by,
+      });
+    }
+
+    const currentOwner = form?.ownedBy ?? "";
+    const currentValue = normalizeOwnerValue(currentOwner);
+    if (currentValue && !optionMap.has(currentValue)) {
+      optionMap.set(currentValue, {
+        value: currentValue,
+        label: currentOwner.trim(),
+        searchText: currentOwner,
+      });
+    }
+
+    return Array.from(optionMap.values());
+  }, [form?.ownedBy, models]);
 
   const openEditModel = useCallback(
     (modelId: string) => {
@@ -599,17 +656,22 @@ export function ModelsPage() {
                 />
               </div>
               <div>
-                <label
-                  htmlFor="model-config-owner"
-                  className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80"
-                >
+                <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
                   {t("models_page.owner")}
                 </label>
-                <TextInput
-                  id="model-config-owner"
+                <SearchableSelect
                   value={form.ownedBy}
-                  onChange={(e) => updateForm({ ownedBy: e.target.value })}
-                  placeholder="openai"
+                  onChange={(ownedBy) => updateForm({ ownedBy })}
+                  onCreate={(ownedBy) => updateForm({ ownedBy: normalizeOwnerValue(ownedBy) })}
+                  options={ownerOptions}
+                  placeholder={t("models_page.owner_placeholder")}
+                  searchPlaceholder={t("models_page.owner_search_placeholder")}
+                  aria-label={t("models_page.owner")}
+                  allowCreate
+                  normalizeCreateValue={normalizeOwnerValue}
+                  createLabel={(ownedBy) =>
+                    t("models_page.owner_create_option", { owner: normalizeOwnerValue(ownedBy) })
+                  }
                 />
               </div>
             </div>

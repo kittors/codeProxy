@@ -8,7 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
-import { Check, ChevronDown, Search } from "lucide-react";
+import { Check, ChevronDown, Plus, Search } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   cn,
@@ -42,6 +42,10 @@ export interface SearchableSelectProps {
   value: string;
   onChange: (value: string) => void;
   options: SearchableSelectOption[];
+  allowCreate?: boolean;
+  normalizeCreateValue?: (value: string) => string;
+  createLabel?: (value: string) => ReactNode;
+  onCreate?: (value: string) => void;
   placeholder?: string;
   searchPlaceholder?: string;
   "aria-label"?: string;
@@ -58,6 +62,10 @@ export function SearchableSelect({
   value,
   onChange,
   options,
+  allowCreate = false,
+  normalizeCreateValue = (next) => next.trim(),
+  createLabel,
+  onCreate,
   placeholder = "",
   searchPlaceholder = "",
   "aria-label": ariaLabel,
@@ -135,6 +143,20 @@ export function SearchableSelect({
     });
   }, [options, query]);
 
+  const createValue = query.trim();
+  const canCreate = useMemo(() => {
+    if (!allowCreate || !createValue) return false;
+    const key = normalizeCreateValue(createValue).toLowerCase();
+    return !options.some((option) => {
+      const labelText = typeof option.label === "string" ? option.label : "";
+      return (
+        option.value.toLowerCase() === key ||
+        (option.searchText ?? "").toLowerCase() === key ||
+        labelText.toLowerCase() === key
+      );
+    });
+  }, [allowCreate, createValue, normalizeCreateValue, options]);
+
   const handleSelect = useCallback(
     (v: string) => {
       onChange(v);
@@ -142,6 +164,14 @@ export function SearchableSelect({
     },
     [onChange],
   );
+
+  const handleCreate = useCallback(() => {
+    const next = normalizeCreateValue(createValue);
+    if (!next) return;
+    if (onCreate) onCreate(next);
+    else onChange(next);
+    setOpen(false);
+  }, [createValue, normalizeCreateValue, onChange, onCreate]);
 
   return (
     <>
@@ -204,34 +234,57 @@ export function SearchableSelect({
 
               {/* Options list */}
               <div className="flex-1 overflow-y-auto p-1">
-                {filtered.length === 0 ? (
+                {filtered.length === 0 && !canCreate ? (
                   <div className={selectEmptyState}>No results</div>
                 ) : (
-                  filtered.map((opt) => {
-                    const selected = opt.value === value;
-                    return (
+                  <>
+                    {filtered.map((opt) => {
+                      const selected = opt.value === value;
+                      return (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          role="option"
+                          aria-selected={selected}
+                          onClick={() => handleSelect(opt.value)}
+                          className={cn(
+                            selectOptionBase,
+                            selected ? selectOptionSelected : selectOptionIdle,
+                          )}
+                        >
+                          <span className="flex-1 whitespace-nowrap">{opt.label}</span>
+                          {selected ? (
+                            <Check
+                              size={14}
+                              className="shrink-0 text-[#96969B] dark:text-[#9F9FA8]"
+                              aria-hidden="true"
+                            />
+                          ) : null}
+                        </button>
+                      );
+                    })}
+                    {canCreate ? (
                       <button
-                        key={opt.value}
                         type="button"
                         role="option"
-                        aria-selected={selected}
-                        onClick={() => handleSelect(opt.value)}
+                        aria-selected={false}
+                        onClick={handleCreate}
                         className={cn(
                           selectOptionBase,
-                          selected ? selectOptionSelected : selectOptionIdle,
+                          "font-medium text-[#18181B] dark:text-white",
                         )}
                       >
-                        <span className="flex-1 whitespace-nowrap">{opt.label}</span>
-                        {selected ? (
-                          <Check
-                            size={14}
-                            className="shrink-0 text-[#96969B] dark:text-[#9F9FA8]"
-                            aria-hidden="true"
-                          />
-                        ) : null}
+                        <Plus
+                          size={14}
+                          className="shrink-0 text-[#71717A] dark:text-[#A1A1AA]"
+                          aria-hidden="true"
+                        />
+                        <span className="flex-1 whitespace-nowrap">
+                          {createLabel ? createLabel(createValue) : createValue}
+                        </span>
                       </button>
-                    );
-                  })
+                    ) : null}
+                  </>
                 )}
               </div>
             </motion.div>

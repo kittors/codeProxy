@@ -8,12 +8,14 @@ import { ToastProvider } from "@/modules/ui/ToastProvider";
 
 const mocks = vi.hoisted(() => ({
   apiGet: vi.fn(),
+  apiPost: vi.fn(),
   apiPut: vi.fn(),
 }));
 
 vi.mock("@/lib/http/client", () => ({
   apiClient: {
     get: mocks.apiGet,
+    post: mocks.apiPost,
     put: mocks.apiPut,
   },
 }));
@@ -32,6 +34,7 @@ describe("ModelsPage", () => {
   beforeEach(async () => {
     await i18n.changeLanguage("en");
     mocks.apiGet.mockReset();
+    mocks.apiPost.mockReset();
     mocks.apiPut.mockReset();
     mocks.apiGet.mockImplementation((path: string) => {
       if (path === "/model-configs") {
@@ -55,6 +58,7 @@ describe("ModelsPage", () => {
       }
       return Promise.resolve({});
     });
+    mocks.apiPost.mockResolvedValue({ status: "ok" });
     mocks.apiPut.mockResolvedValue({ status: "ok" });
   });
 
@@ -96,6 +100,55 @@ describe("ModelsPage", () => {
           price_per_call: 0.08,
         },
       });
+    });
+  });
+
+  test("lets users choose preset owners or add a new owner from the owner dropdown", async () => {
+    renderPage();
+
+    await screen.findByText("gpt-image-2");
+    await userEvent.click(screen.getByRole("button", { name: /edit gpt-image-2/i }));
+
+    const dialog = await screen.findByRole("dialog");
+    await userEvent.click(within(dialog).getByRole("combobox", { name: /owner/i }));
+
+    expect(await screen.findByRole("option", { name: "OpenAI" })).toBeInTheDocument();
+    expect(await screen.findByRole("option", { name: "Anthropic" })).toBeInTheDocument();
+
+    await userEvent.type(screen.getByPlaceholderText(/search or add owner/i), "acme-ai");
+    await userEvent.click(await screen.findByRole("option", { name: /add "acme-ai"/i }));
+    await userEvent.click(within(dialog).getByRole("button", { name: /^save$/i }));
+
+    await waitFor(() => {
+      expect(mocks.apiPut).toHaveBeenCalledWith(
+        "/model-configs/gpt-image-2",
+        expect.objectContaining({
+          owned_by: "acme-ai",
+        }),
+      );
+    });
+  });
+
+  test("lets users choose a preset owner when adding a model", async () => {
+    renderPage();
+
+    await screen.findByText("gpt-image-2");
+    await userEvent.click(screen.getByRole("button", { name: /add model/i }));
+
+    const dialog = await screen.findByRole("dialog");
+    await userEvent.type(within(dialog).getByLabelText(/model id/i), "claude-sonnet-4.5");
+    await userEvent.click(within(dialog).getByRole("combobox", { name: /owner/i }));
+    await userEvent.click(await screen.findByRole("option", { name: "Anthropic" }));
+    await userEvent.click(within(dialog).getByRole("button", { name: /^save$/i }));
+
+    await waitFor(() => {
+      expect(mocks.apiPost).toHaveBeenCalledWith(
+        "/model-configs",
+        expect.objectContaining({
+          id: "claude-sonnet-4.5",
+          owned_by: "anthropic",
+        }),
+      );
     });
   });
 });
