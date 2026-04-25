@@ -11,9 +11,8 @@
 }
 
 .goey-header {
-  max-width: 100%;
   min-width: 0;
-  align-items: flex-start;
+  align-items: center;
 }
 
 .goey-title,
@@ -26,6 +25,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap !important;
+  max-width: min(calc(100vw - 9rem), 32rem);
   line-height: 1.35 !important;
 }
 

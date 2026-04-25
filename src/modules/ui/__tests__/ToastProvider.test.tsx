@@ -55,6 +55,17 @@ function Trigger() {
       >
         Notify Long
       </button>
+      <button
+        type="button"
+        onClick={() =>
+          notify({
+            type: "success",
+            message: "保存成功",
+          })
+        }
+      >
+        Notify Saved
+      </button>
     </>
   );
 }
@@ -111,5 +122,31 @@ describe("ToastProvider", () => {
     expectClassNameToInclude(options?.classNames?.title, "whitespace-nowrap");
     expectClassNameToInclude(options?.classNames?.description, "overflow-wrap:anywhere");
     expect(options?.classNames?.actionWrapper).toBe("custom-action-wrapper");
+  });
+
+  test("keeps short success titles readable in compact toasts", () => {
+    render(
+      <ThemeProvider>
+        <ToastProvider>
+          <Trigger />
+        </ToastProvider>
+      </ThemeProvider>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Notify Saved" }));
+
+    const [, options] = mocks.success.mock.calls.at(-1) ?? [];
+
+    expect(mocks.success).toHaveBeenCalledWith("保存成功", expect.any(Object));
+    expect(options).toEqual(
+      expect.objectContaining({
+        classNames: expect.any(Object),
+      }),
+    );
+    expect(options).not.toHaveProperty("description");
+    expectClassNameToInclude(options?.classNames?.header, "items-center");
+    expectClassNameToInclude(options?.classNames?.title, "shrink");
+    expect(String(options?.classNames?.title)).not.toContain("flex-1");
+    expect(String(options?.classNames?.title)).not.toContain("!max-w-full");
   });
 });
