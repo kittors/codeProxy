@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { render, screen, waitFor, waitForElementToBeRemoved, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import i18n from "@/i18n";
@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   apiGet: vi.fn(),
   apiPost: vi.fn(),
   apiPut: vi.fn(),
+  apiDelete: vi.fn(),
 }));
 
 vi.mock("@/lib/http/client", () => ({
@@ -17,6 +18,7 @@ vi.mock("@/lib/http/client", () => ({
     get: mocks.apiGet,
     post: mocks.apiPost,
     put: mocks.apiPut,
+    delete: mocks.apiDelete,
   },
 }));
 
@@ -36,6 +38,7 @@ describe("ModelsPage", () => {
     mocks.apiGet.mockReset();
     mocks.apiPost.mockReset();
     mocks.apiPut.mockReset();
+    mocks.apiDelete.mockReset();
     mocks.apiGet.mockImplementation((path: string) => {
       if (path === "/model-configs") {
         return Promise.resolve({
@@ -53,6 +56,15 @@ describe("ModelsPage", () => {
           ],
         });
       }
+      if (path === "/model-owner-presets") {
+        return Promise.resolve({
+          data: [
+            { value: "openai", label: "OpenAI", description: "OpenAI official models" },
+            { value: "anthropic", label: "Anthropic", description: "Claude models" },
+            { value: "acme-ai", label: "Acme AI", description: "Private preset owner" },
+          ],
+        });
+      }
       if (path.startsWith("/usage/logs")) {
         return Promise.resolve({ stats: { total_cost: 12.34 } });
       }
@@ -60,6 +72,7 @@ describe("ModelsPage", () => {
     });
     mocks.apiPost.mockResolvedValue({ status: "ok" });
     mocks.apiPut.mockResolvedValue({ status: "ok" });
+    mocks.apiDelete.mockResolvedValue({ status: "ok" });
   });
 
   test("loads database-backed model configs and renders per-call pricing", async () => {
@@ -69,6 +82,25 @@ describe("ModelsPage", () => {
     expect(screen.getByText("Image generation model billed per invocation")).toBeInTheDocument();
     expect(screen.getByText("$0.04 / call")).toBeInTheDocument();
     expect(mocks.apiGet).toHaveBeenCalledWith("/model-configs");
+  });
+
+  test("deletes a model only after confirmation", async () => {
+    renderPage();
+
+    expect(await screen.findByText("gpt-image-2")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /delete gpt-image-2/i }));
+
+    const confirmDialog = await screen.findByRole("dialog", {
+      name: /delete model configuration/i,
+    });
+    expect(within(confirmDialog).getByText(/gpt-image-2/)).toBeInTheDocument();
+
+    await userEvent.click(within(confirmDialog).getByRole("button", { name: /^delete$/i }));
+
+    await waitFor(() => {
+      expect(mocks.apiDelete).toHaveBeenCalledWith("/model-configs/gpt-image-2");
+      expect(screen.queryByText("gpt-image-2")).not.toBeInTheDocument();
+    });
   });
 
   test("saves model id, description, enabled state, pricing mode, and per-call price", async () => {
@@ -115,15 +147,15 @@ describe("ModelsPage", () => {
     expect(await screen.findByRole("option", { name: "OpenAI" })).toBeInTheDocument();
     expect(await screen.findByRole("option", { name: "Anthropic" })).toBeInTheDocument();
 
-    await userEvent.type(screen.getByPlaceholderText(/search or add owner/i), "acme-ai");
-    await userEvent.click(await screen.findByRole("option", { name: /add "acme-ai"/i }));
+    await userEvent.type(screen.getByPlaceholderText(/search or add owner/i), "new-owner");
+    await userEvent.click(await screen.findByRole("option", { name: /add "new-owner"/i }));
     await userEvent.click(within(dialog).getByRole("button", { name: /^save$/i }));
 
     await waitFor(() => {
       expect(mocks.apiPut).toHaveBeenCalledWith(
         "/model-configs/gpt-image-2",
         expect.objectContaining({
-          owned_by: "acme-ai",
+          owned_by: "new-owner",
         }),
       );
     });
@@ -150,5 +182,40 @@ describe("ModelsPage", () => {
         }),
       );
     });
+  });
+
+  test("loads owner presets from the API and saves preset maintenance changes", async () => {
+    renderPage();
+
+    await screen.findByText("gpt-image-2");
+    await userEvent.click(screen.getByRole("button", { name: /manage owner presets/i }));
+
+    const presetDialog = await screen.findByRole("dialog", { name: /owner presets/i });
+    expect(within(presetDialog).getByText("Acme AI")).toBeInTheDocument();
+    expect(within(presetDialog).getByText("1 model")).toBeInTheDocument();
+
+    await userEvent.click(within(presetDialog).getByRole("button", { name: /add owner/i }));
+    await userEvent.type(within(presetDialog).getByLabelText(/owner value/i), "new-lab");
+    await userEvent.type(within(presetDialog).getByLabelText(/owner label/i), "New Lab");
+    await userEvent.click(within(presetDialog).getByRole("button", { name: /^save$/i }));
+
+    await waitFor(() => {
+      expect(mocks.apiPut).toHaveBeenCalledWith(
+        "/model-owner-presets",
+        expect.objectContaining({
+          items: expect.arrayContaining([
+            expect.objectContaining({ value: "new-lab", label: "New Lab" }),
+          ]),
+        }),
+      );
+    });
+    await waitForElementToBeRemoved(presetDialog);
+
+    await userEvent.click(screen.getByRole("button", { name: /add model/i }));
+    const modelDialog = await screen.findByRole("dialog", { name: /add model/i });
+    await userEvent.click(within(modelDialog).getByRole("combobox", { name: /owner/i }));
+
+    expect(await screen.findByRole("option", { name: "Acme AI" })).toBeInTheDocument();
+    expect(await screen.findByRole("option", { name: "New Lab" })).toBeInTheDocument();
   });
 });

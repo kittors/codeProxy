@@ -1,8 +1,19 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Activity, Check, Cpu, Edit3, Plus, RefreshCw, Search } from "lucide-react";
+import {
+  Activity,
+  Check,
+  Cpu,
+  Edit3,
+  Plus,
+  RefreshCw,
+  Search,
+  Settings2,
+  Trash2,
+} from "lucide-react";
 import { Button } from "@/modules/ui/Button";
 import { Card } from "@/modules/ui/Card";
+import { ConfirmModal } from "@/modules/ui/ConfirmModal";
 import { TextInput } from "@/modules/ui/Input";
 import { Modal } from "@/modules/ui/Modal";
 import { SearchableSelect, type SearchableSelectOption } from "@/modules/ui/SearchableSelect";
@@ -43,6 +54,14 @@ interface ModelItem {
   description: string;
   enabled: boolean;
   pricing: ModelPricing;
+}
+
+interface ModelOwnerPreset {
+  value: string;
+  label: string;
+  description: string;
+  enabled: boolean;
+  modelCount?: number;
 }
 
 interface ModelFormState {
@@ -97,25 +116,6 @@ const emptyForm: ModelFormState = {
   cachedPrice: "",
   pricePerCall: "",
 };
-
-const PRESET_OWNERS = [
-  { value: "openai", label: "OpenAI" },
-  { value: "anthropic", label: "Anthropic" },
-  { value: "google", label: "Google" },
-  { value: "gemini", label: "Gemini" },
-  { value: "vertex", label: "Vertex AI" },
-  { value: "deepseek", label: "DeepSeek" },
-  { value: "qwen", label: "Qwen" },
-  { value: "kimi", label: "Kimi" },
-  { value: "minimax", label: "MiniMax" },
-  { value: "grok", label: "Grok" },
-  { value: "glm", label: "GLM" },
-  { value: "codex", label: "Codex" },
-  { value: "iflow", label: "iFlow" },
-  { value: "kiro", label: "Kiro" },
-  { value: "openrouter", label: "OpenRouter" },
-  { value: "azure-openai", label: "Azure OpenAI" },
-] as const;
 
 function getVendorPrefix(modelId: string): string {
   const lower = modelId.toLowerCase();
@@ -195,6 +195,38 @@ function normalizeModelConfigResponse(payload: unknown): ModelItem[] {
     .sort((a, b) => a.id.localeCompare(b.id));
 }
 
+function normalizeOwnerPreset(raw: Record<string, unknown>): ModelOwnerPreset | null {
+  const value = normalizeOwnerValue(String(raw.value ?? raw.id ?? raw.owner ?? "")).trim();
+  if (!value) return null;
+  return {
+    value,
+    label: String(raw.label ?? raw.name ?? value).trim() || value,
+    description: String(raw.description ?? ""),
+    enabled: raw.enabled === false ? false : true,
+    modelCount: asNumber(raw.model_count ?? raw.modelCount),
+  };
+}
+
+function normalizeOwnerPresetResponse(payload: unknown): ModelOwnerPreset[] {
+  const record = payload && typeof payload === "object" ? (payload as Record<string, unknown>) : {};
+  const rawList = Array.isArray(record.items)
+    ? record.items
+    : Array.isArray(record.data)
+      ? record.data
+      : Array.isArray(payload)
+        ? payload
+        : [];
+
+  return rawList
+    .map((item) =>
+      item && typeof item === "object"
+        ? normalizeOwnerPreset(item as Record<string, unknown>)
+        : null,
+    )
+    .filter((item): item is ModelOwnerPreset => Boolean(item))
+    .sort((a, b) => a.label.localeCompare(b.label));
+}
+
 async function fetchModelConfigs(): Promise<ModelItem[]> {
   try {
     return normalizeModelConfigResponse(await apiClient.get("/model-configs"));
@@ -204,6 +236,10 @@ async function fetchModelConfigs(): Promise<ModelItem[]> {
     if (legacyModels.length > 0) return legacyModels;
     throw error;
   }
+}
+
+async function fetchOwnerPresets(): Promise<ModelOwnerPreset[]> {
+  return normalizeOwnerPresetResponse(await apiClient.get("/model-owner-presets"));
 }
 
 function toFormState(model: ModelItem): ModelFormState {
@@ -320,6 +356,30 @@ function normalizeOwnerValue(value: string): string {
   return value.trim().replace(/\s+/g, "-").toLowerCase();
 }
 
+function buildOwnerPresetDrafts(
+  models: ModelItem[],
+  presets: ModelOwnerPreset[],
+): ModelOwnerPreset[] {
+  const map = new Map<string, ModelOwnerPreset>();
+  for (const preset of presets) {
+    const value = normalizeOwnerValue(preset.value);
+    if (!value) continue;
+    map.set(value, { ...preset, value });
+  }
+  for (const model of models) {
+    const value = normalizeOwnerValue(model.owned_by);
+    if (!value || map.has(value)) continue;
+    map.set(value, {
+      value,
+      label: model.owned_by || value,
+      description: "",
+      enabled: true,
+      modelCount: 0,
+    });
+  }
+  return Array.from(map.values()).sort((a, b) => a.label.localeCompare(b.label));
+}
+
 export function ModelsPage() {
   const { t } = useTranslation();
   const { notify } = useToast();
@@ -330,12 +390,20 @@ export function ModelsPage() {
   const [totalCost, setTotalCost] = useState(0);
   const [form, setForm] = useState<ModelFormState | null>(null);
   const [saving, setSaving] = useState(false);
+  const [ownerPresets, setOwnerPresets] = useState<ModelOwnerPreset[]>([]);
+  const [ownerPresetOpen, setOwnerPresetOpen] = useState(false);
+  const [ownerPresetDraft, setOwnerPresetDraft] = useState<ModelOwnerPreset[]>([]);
+  const [selectedOwner, setSelectedOwner] = useState("");
+  const [savingOwnerPresets, setSavingOwnerPresets] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<ModelItem | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const loadModels = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await fetchModelConfigs();
+      const [data, presets] = await Promise.all([fetchModelConfigs(), fetchOwnerPresets()]);
       setModels(data);
+      setOwnerPresets(presets);
       try {
         const usageData = await apiClient.get<{ stats?: { total_cost?: number } }>(
           "/usage/logs?days=9999&size=1",
@@ -373,13 +441,26 @@ export function ModelsPage() {
     return { modelCount: models.length, pricedCount, enabledCount };
   }, [models]);
 
+  const ownerModelCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const model of models) {
+      const owner = normalizeOwnerValue(model.owned_by);
+      if (!owner) continue;
+      counts.set(owner, (counts.get(owner) ?? 0) + 1);
+    }
+    return counts;
+  }, [models]);
+
   const ownerOptions = useMemo<SearchableSelectOption[]>(() => {
     const optionMap = new Map<string, SearchableSelectOption>();
-    for (const owner of PRESET_OWNERS) {
-      optionMap.set(owner.value, {
-        value: owner.value,
-        label: owner.label,
-        searchText: `${owner.value} ${owner.label}`,
+    for (const owner of ownerPresets) {
+      if (!owner.enabled) continue;
+      const value = normalizeOwnerValue(owner.value);
+      if (!value) continue;
+      optionMap.set(value, {
+        value,
+        label: owner.label || value,
+        searchText: `${value} ${owner.label} ${owner.description}`,
       });
     }
 
@@ -404,7 +485,7 @@ export function ModelsPage() {
     }
 
     return Array.from(optionMap.values());
-  }, [form?.ownedBy, models]);
+  }, [form?.ownedBy, models, ownerPresets]);
 
   const openEditModel = useCallback(
     (modelId: string) => {
@@ -413,6 +494,19 @@ export function ModelsPage() {
     },
     [models],
   );
+
+  const openAddModel = useCallback((ownedBy = "") => {
+    setForm({ ...emptyForm, ownedBy });
+  }, []);
+
+  const openOwnerPresetModal = useCallback(() => {
+    const draft = buildOwnerPresetDrafts(models, ownerPresets);
+    setOwnerPresetDraft(draft);
+    setSelectedOwner((current) =>
+      current && draft.some((owner) => owner.value === current) ? current : draft[0]?.value || "",
+    );
+    setOwnerPresetOpen(true);
+  }, [models, ownerPresets]);
 
   const updateForm = useCallback((patch: Partial<ModelFormState>) => {
     setForm((current) => (current ? { ...current, ...patch } : current));
@@ -427,6 +521,7 @@ export function ModelsPage() {
         const withoutOriginal = prev.filter((model) => model.id !== (form.originalId ?? saved.id));
         return [...withoutOriginal, saved].sort((a, b) => a.id.localeCompare(b.id));
       });
+      setOwnerPresets((prev) => buildOwnerPresetDrafts([saved], prev));
       setForm(null);
       notify({ type: "success", message: t("models_page.config_saved") });
     } catch (err: unknown) {
@@ -438,6 +533,105 @@ export function ModelsPage() {
       setSaving(false);
     }
   }, [form, notify, t]);
+
+  const handleDelete = useCallback(async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await apiClient.delete(`/model-configs/${encodeURIComponent(deleteTarget.id)}`);
+      setModels((prev) => prev.filter((model) => model.id !== deleteTarget.id));
+      setDeleteTarget(null);
+      notify({ type: "success", message: t("models_page.delete_saved") });
+    } catch (err: unknown) {
+      notify({
+        type: "error",
+        message: err instanceof Error ? err.message : t("models_page.delete_failed"),
+      });
+    } finally {
+      setDeleting(false);
+    }
+  }, [deleteTarget, notify, t]);
+
+  const selectedOwnerDraft = useMemo(
+    () => ownerPresetDraft.find((owner) => owner.value === selectedOwner) ?? null,
+    [ownerPresetDraft, selectedOwner],
+  );
+
+  const selectedOwnerModels = useMemo(
+    () => models.filter((model) => normalizeOwnerValue(model.owned_by) === selectedOwner),
+    [models, selectedOwner],
+  );
+
+  const updateSelectedOwnerDraft = useCallback(
+    (patch: Partial<ModelOwnerPreset>) => {
+      if (!selectedOwnerDraft) return;
+      setOwnerPresetDraft((prev) =>
+        prev.map((owner) => {
+          if (owner.value !== selectedOwnerDraft.value) return owner;
+          const next = { ...owner, ...patch };
+          if (patch.value !== undefined) {
+            const nextValue = normalizeOwnerValue(patch.value);
+            next.value = nextValue;
+            setSelectedOwner(nextValue);
+          }
+          return next;
+        }),
+      );
+    },
+    [selectedOwnerDraft],
+  );
+
+  const addOwnerPresetDraft = useCallback(() => {
+    const next: ModelOwnerPreset = {
+      value: "",
+      label: "",
+      description: "",
+      enabled: true,
+      modelCount: 0,
+    };
+    setOwnerPresetDraft((prev) => [next, ...prev]);
+    setSelectedOwner("");
+  }, []);
+
+  const removeSelectedOwnerDraft = useCallback(() => {
+    if (!selectedOwnerDraft) return;
+    setOwnerPresetDraft((prev) => {
+      const next = prev.filter((owner) => owner.value !== selectedOwnerDraft.value);
+      setSelectedOwner(next[0]?.value || "");
+      return next;
+    });
+  }, [selectedOwnerDraft]);
+
+  const saveOwnerPresets = useCallback(async () => {
+    const items = ownerPresetDraft
+      .map((owner) => ({
+        value: normalizeOwnerValue(owner.value),
+        label: owner.label.trim(),
+        description: owner.description.trim(),
+        enabled: owner.enabled,
+      }))
+      .filter((owner) => owner.value && owner.label);
+
+    const deduped = Array.from(new Map(items.map((item) => [item.value, item])).values()).sort(
+      (a, b) => a.label.localeCompare(b.label),
+    );
+
+    setSavingOwnerPresets(true);
+    try {
+      await apiClient.put("/model-owner-presets", { items: deduped });
+      setOwnerPresets(deduped);
+      setOwnerPresetDraft(deduped);
+      setOwnerPresetOpen(false);
+      notify({ type: "success", message: t("models_page.owner_presets_saved") });
+    } catch (err: unknown) {
+      notify({
+        type: "error",
+        message: err instanceof Error ? err.message : t("models_page.owner_presets_save_failed"),
+      });
+    } finally {
+      setSavingOwnerPresets(false);
+    }
+  }, [notify, ownerPresetDraft, t]);
 
   const modelColumns = useMemo<VirtualTableColumn<ModelItem>[]>(
     () => [
@@ -513,17 +707,28 @@ export function ModelsPage() {
       {
         key: "actions",
         label: t("models_page.col_actions"),
-        width: "w-20",
+        width: "w-24",
         render: (row) => (
-          <Button
-            variant="ghost"
-            size="xs"
-            onClick={() => openEditModel(row.id)}
-            aria-label={t("models_page.edit_model_aria", { model: row.id })}
-            title={t("models_page.edit_model_aria", { model: row.id })}
-          >
-            <Edit3 size={14} />
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="xs"
+              onClick={() => openEditModel(row.id)}
+              aria-label={t("models_page.edit_model_aria", { model: row.id })}
+              title={t("models_page.edit_model_aria", { model: row.id })}
+            >
+              <Edit3 size={14} />
+            </Button>
+            <Button
+              variant="ghost"
+              size="xs"
+              onClick={() => setDeleteTarget(row)}
+              aria-label={t("models_page.delete_model_aria", { model: row.id })}
+              title={t("models_page.delete_model_aria", { model: row.id })}
+            >
+              <Trash2 size={14} />
+            </Button>
+          </div>
         ),
       },
     ],
@@ -582,7 +787,16 @@ export function ModelsPage() {
             <Button
               variant="secondary"
               size="sm"
-              onClick={() => setForm(emptyForm)}
+              onClick={() => openOwnerPresetModal()}
+              aria-label={t("models_page.manage_owner_presets")}
+              title={t("models_page.manage_owner_presets")}
+            >
+              <Settings2 size={14} />
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => openAddModel()}
               aria-label={t("models_page.add_model")}
               title={t("models_page.add_model")}
             >
@@ -621,6 +835,218 @@ export function ModelsPage() {
           </div>
         ) : null}
       </Card>
+
+      <Modal
+        open={ownerPresetOpen}
+        onClose={() => setOwnerPresetOpen(false)}
+        title={t("models_page.owner_presets_title")}
+        description={t("models_page.owner_presets_desc")}
+        maxWidth="max-w-5xl"
+        bodyHeightClassName="max-h-[72vh]"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setOwnerPresetOpen(false)}>
+              {t("models_page.cancel")}
+            </Button>
+            <Button
+              variant="primary"
+              onClick={() => void saveOwnerPresets()}
+              disabled={savingOwnerPresets}
+            >
+              {savingOwnerPresets ? t("models_page.saving") : t("models_page.save")}
+            </Button>
+          </>
+        }
+      >
+        <div className="grid gap-4 lg:grid-cols-[17rem_minmax(0,1fr)]">
+          <div className="min-w-0 rounded-xl border border-slate-200 bg-slate-50/70 p-2 dark:border-neutral-800 dark:bg-white/[0.03]">
+            <div className="mb-2 flex items-center justify-between gap-2 px-1">
+              <div className="text-xs font-semibold uppercase text-slate-500 dark:text-white/45">
+                {t("models_page.owner_presets")}
+              </div>
+              <Button size="xs" variant="secondary" onClick={addOwnerPresetDraft}>
+                <Plus size={13} />
+                {t("models_page.add_owner")}
+              </Button>
+            </div>
+            <div className="max-h-[52vh] space-y-1 overflow-y-auto pr-1">
+              {ownerPresetDraft.map((owner, index) => {
+                const value = owner.value || "";
+                const count = ownerModelCounts.get(value) ?? owner.modelCount ?? 0;
+                const selected =
+                  value === selectedOwner &&
+                  index === ownerPresetDraft.findIndex((item) => item.value === selectedOwner);
+                return (
+                  <button
+                    key={`${value}-${index}`}
+                    type="button"
+                    onClick={() => setSelectedOwner(value)}
+                    className={[
+                      "flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-sm transition",
+                      selected
+                        ? "bg-white text-slate-950 shadow-sm ring-1 ring-slate-200 dark:bg-neutral-900 dark:text-white dark:ring-neutral-700"
+                        : "text-slate-700 hover:bg-white/70 dark:text-white/70 dark:hover:bg-white/[0.06]",
+                    ].join(" ")}
+                  >
+                    <span className="min-w-0">
+                      <span className="block truncate font-medium">
+                        {owner.label || owner.value || t("models_page.new_owner")}
+                      </span>
+                      <span className="block truncate text-[11px] text-slate-500 dark:text-white/40">
+                        {value || t("models_page.owner_value_pending")}
+                      </span>
+                    </span>
+                    <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-500 dark:bg-white/[0.08] dark:text-white/45">
+                      {t("models_page.owner_model_count", { count })}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="min-w-0 space-y-4">
+            {selectedOwnerDraft ? (
+              <>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <label
+                      htmlFor="owner-preset-value"
+                      className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80"
+                    >
+                      {t("models_page.owner_value")}
+                    </label>
+                    <TextInput
+                      id="owner-preset-value"
+                      value={selectedOwnerDraft.value}
+                      onChange={(e) => updateSelectedOwnerDraft({ value: e.target.value })}
+                      placeholder="openai"
+                    />
+                  </div>
+                  <div>
+                    <label
+                      htmlFor="owner-preset-label"
+                      className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80"
+                    >
+                      {t("models_page.owner_label")}
+                    </label>
+                    <TextInput
+                      id="owner-preset-label"
+                      value={selectedOwnerDraft.label}
+                      onChange={(e) => updateSelectedOwnerDraft({ label: e.target.value })}
+                      placeholder="OpenAI"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="owner-preset-description"
+                    className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80"
+                  >
+                    {t("models_page.owner_description")}
+                  </label>
+                  <TextInput
+                    id="owner-preset-description"
+                    value={selectedOwnerDraft.description}
+                    onChange={(e) => updateSelectedOwnerDraft({ description: e.target.value })}
+                    placeholder={t("models_page.owner_description_placeholder")}
+                  />
+                </div>
+
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <ToggleSwitch
+                    checked={selectedOwnerDraft.enabled}
+                    onCheckedChange={(enabled) => updateSelectedOwnerDraft({ enabled })}
+                    label={t("models_page.enabled")}
+                  />
+                  <Button
+                    size="sm"
+                    variant="danger"
+                    onClick={removeSelectedOwnerDraft}
+                    disabled={selectedOwnerModels.length > 0}
+                    title={
+                      selectedOwnerModels.length > 0
+                        ? t("models_page.owner_remove_disabled")
+                        : t("models_page.remove_owner")
+                    }
+                  >
+                    <Trash2 size={14} />
+                    {t("models_page.remove_owner")}
+                  </Button>
+                </div>
+
+                <div className="rounded-xl border border-slate-200 dark:border-neutral-800">
+                  <div className="flex items-center justify-between gap-2 border-b border-slate-200 px-3 py-2 dark:border-neutral-800">
+                    <div className="text-sm font-semibold text-slate-900 dark:text-white">
+                      {t("models_page.owner_models")}
+                    </div>
+                    <Button
+                      size="xs"
+                      variant="secondary"
+                      onClick={() => {
+                        setOwnerPresetOpen(false);
+                        openAddModel(selectedOwnerDraft.value);
+                      }}
+                    >
+                      <Plus size={13} />
+                      {t("models_page.add_model")}
+                    </Button>
+                  </div>
+                  <div className="divide-y divide-slate-100 dark:divide-neutral-800">
+                    {selectedOwnerModels.length === 0 ? (
+                      <div className="px-3 py-6 text-center text-sm text-slate-500 dark:text-white/45">
+                        {t("models_page.no_owner_models")}
+                      </div>
+                    ) : (
+                      selectedOwnerModels.map((model) => (
+                        <div
+                          key={model.id}
+                          className="flex min-w-0 items-center justify-between gap-3 px-3 py-2"
+                        >
+                          <div className="min-w-0">
+                            <div className="truncate text-sm font-medium text-slate-900 dark:text-white">
+                              {model.id}
+                            </div>
+                            <div className="truncate text-xs text-slate-500 dark:text-white/45">
+                              {formatPrice(model, t("models_page.not_priced"))}
+                            </div>
+                          </div>
+                          <div className="flex shrink-0 items-center gap-1">
+                            <Button
+                              size="xs"
+                              variant="ghost"
+                              onClick={() => {
+                                setOwnerPresetOpen(false);
+                                openEditModel(model.id);
+                              }}
+                              aria-label={t("models_page.edit_model_aria", { model: model.id })}
+                            >
+                              <Edit3 size={14} />
+                            </Button>
+                            <Button
+                              size="xs"
+                              variant="ghost"
+                              onClick={() => setDeleteTarget(model)}
+                              aria-label={t("models_page.delete_model_aria", { model: model.id })}
+                            >
+                              <Trash2 size={14} />
+                            </Button>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="flex h-full min-h-48 items-center justify-center rounded-xl border border-dashed border-slate-200 text-sm text-slate-500 dark:border-neutral-800 dark:text-white/45">
+                {t("models_page.no_owner_presets")}
+              </div>
+            )}
+          </div>
+        </div>
+      </Modal>
 
       <Modal
         open={form !== null}
@@ -790,6 +1216,16 @@ export function ModelsPage() {
           </div>
         ) : null}
       </Modal>
+
+      <ConfirmModal
+        open={deleteTarget !== null}
+        title={t("models_page.delete_model_title")}
+        description={t("models_page.delete_model_desc", { model: deleteTarget?.id ?? "" })}
+        confirmText={t("models_page.delete")}
+        busy={deleting}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={() => void handleDelete()}
+      />
     </section>
   );
 }
