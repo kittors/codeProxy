@@ -21,10 +21,14 @@ export interface RateStats {
   tokenCount: number;
 }
 
+export type ModelBillingMode = "token" | "call";
+
 export interface ModelPrice {
+  mode?: ModelBillingMode;
   prompt: number;
   completion: number;
   cache: number;
+  perCall?: number;
 }
 
 export interface UsageDetail {

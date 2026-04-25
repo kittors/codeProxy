@@ -88,6 +88,7 @@
 - 主要模块目录：`src/`
 - OAuth 登录弹窗：`src/modules/oauth/OAuthLoginDialog.tsx`
 - 自动更新提示：`src/modules/update/AutoUpdatePrompt.tsx`
+- 模型配置管理：`src/modules/models/ModelsPage.tsx`（`/manage/models`，数据库模型配置与计价规则）
 - 关键配置文件：`package.json`, `tsconfig.json`, `vite.config.ts`
 - 入口文件：`index.html`（默认构建）
 
