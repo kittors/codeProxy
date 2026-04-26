@@ -49,6 +49,13 @@ type ImageGenerationOutputView = {
 };
 type ImageGenerationOutputImage = { src: string; revisedPrompt?: string };
 type RequestDetailRecord = Record<string, unknown>;
+type RequestDetailRow = { label: string; value: string };
+type RequestDetailGroup = { title: string; rows: RequestDetailRow[] };
+type RequestDetailAttempt = {
+  title?: string;
+  rows: RequestDetailRow[];
+  groups: RequestDetailGroup[];
+};
 
 function parseJsonObject(raw: string): JsonObject | null {
   if (!raw) return null;
@@ -72,133 +79,313 @@ function parseRequestDetails(raw: string): RequestDetailRecord | null {
   return parseJsonObject(raw);
 }
 
-function formatDetailScalar(value: unknown): string {
+function isRecord(value: unknown): value is RequestDetailRecord {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function formatDetailValue(value: unknown): string {
   if (value === null) return "null";
   if (value === undefined) return "";
-  if (typeof value === "string") return value;
+  if (typeof value === "string") return value.trim();
   if (typeof value === "number" || typeof value === "boolean") return String(value);
-  return JSON.stringify(value, null, 2);
-}
-
-function isComplexDetailValue(value: unknown): value is Record<string, unknown> | unknown[] {
-  return Boolean(value) && typeof value === "object";
-}
-
-function RequestDetailCodeBlock({ text }: { text: string }) {
-  return (
-    <pre className="max-h-80 overflow-auto rounded-md border border-slate-200 bg-slate-50 px-3 py-2.5 font-mono text-xs leading-5 whitespace-pre-wrap text-slate-800 dark:border-neutral-800 dark:bg-neutral-900/70 dark:text-slate-200">
-      {text || "--"}
-    </pre>
-  );
-}
-
-function RequestDetailPrimitive({ value }: { value: unknown }) {
-  const text = formatDetailScalar(value);
-  if (text.includes("\n") || text.length > 120) {
-    return <RequestDetailCodeBlock text={text} />;
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => formatDetailValue(item))
+      .filter(Boolean)
+      .join(", ");
   }
-  return (
-    <span className="font-mono text-[13px] leading-5 break-all text-slate-800 dark:text-slate-100">
-      {text || "--"}
-    </span>
-  );
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return String(value);
+  }
 }
 
-function RequestDetailObject({
-  entries,
-  depth = 0,
-}: {
-  entries: Array<[string, unknown]>;
-  depth?: number;
-}) {
-  if (entries.length === 0) {
-    return <span className="text-slate-400 dark:text-white/35">{"{}"}</span>;
+function hasDetailValue(value: string): boolean {
+  return value.trim() !== "" && value.trim() !== "<empty>" && value.trim() !== "<none>";
+}
+
+function pushDetailRow(rows: RequestDetailRow[], label: string, value: unknown) {
+  const text = formatDetailValue(value);
+  if (hasDetailValue(text)) rows.push({ label, value: text });
+}
+
+function normalizeHeaderRows(value: unknown): RequestDetailRow[] {
+  if (!isRecord(value)) return [];
+  return Object.entries(value)
+    .map(([label, rawValue]) => ({ label, value: formatDetailValue(rawValue) }))
+    .filter((row) => hasDetailValue(row.value))
+    .sort((a, b) => a.label.localeCompare(b.label));
+}
+
+function parseExchangeLog(raw: unknown, kind: "request" | "response"): RequestDetailAttempt[] {
+  const text = formatDetailValue(raw);
+  if (!hasDetailValue(text)) return [];
+
+  const lines = text.split(/\r?\n/);
+  const attempts: RequestDetailAttempt[] = [];
+  let current: RequestDetailAttempt | null = null;
+  let currentGroup: RequestDetailGroup | null = null;
+  let readingHeaders = false;
+  let skippingBody = false;
+
+  const ensureCurrent = () => {
+    if (!current) {
+      current = { rows: [], groups: [] };
+      attempts.push(current);
+    }
+    return current;
+  };
+
+  const flushGroup = () => {
+    if (current && currentGroup && currentGroup.rows.length > 0) {
+      current.groups.push(currentGroup);
+    }
+    currentGroup = null;
+  };
+
+  for (const rawLine of lines) {
+    const line = rawLine.trimEnd();
+    const sectionMatch = line.match(/^=== API (REQUEST|RESPONSE)\s*(\d+)? ===$/);
+    if (sectionMatch) {
+      flushGroup();
+      const attemptNumber = sectionMatch[2];
+      current = {
+        title: attemptNumber ? `#${attemptNumber}` : undefined,
+        rows: [],
+        groups: [],
+      };
+      attempts.push(current);
+      readingHeaders = false;
+      skippingBody = false;
+      continue;
+    }
+
+    if (!line.trim()) {
+      if (readingHeaders) {
+        flushGroup();
+        readingHeaders = false;
+      }
+      continue;
+    }
+
+    if (/^Body:$/i.test(line)) {
+      flushGroup();
+      readingHeaders = false;
+      skippingBody = true;
+      continue;
+    }
+    if (skippingBody) continue;
+
+    if (/^Headers:$/i.test(line)) {
+      flushGroup();
+      currentGroup = { title: "Headers", rows: [] };
+      readingHeaders = true;
+      ensureCurrent();
+      continue;
+    }
+
+    const separator = line.indexOf(":");
+    if (separator === -1) {
+      if (line !== "<missing>")
+        pushDetailRow(ensureCurrent().rows, kind === "request" ? "请求" : "响应", line);
+      continue;
+    }
+
+    const label = line.slice(0, separator).trim();
+    const value = line.slice(separator + 1).trim();
+    if (!hasDetailValue(value)) continue;
+
+    if (readingHeaders) {
+      currentGroup?.rows.push({ label, value });
+      continue;
+    }
+
+    pushDetailRow(ensureCurrent().rows, label, value);
   }
 
+  flushGroup();
+  return attempts.filter((attempt) => attempt.rows.length > 0 || attempt.groups.length > 0);
+}
+
+const BODY_DETAIL_KEYS = new Set([
+  "body",
+  "bodytext",
+  "body_text",
+  "requestbody",
+  "request_body",
+  "responsebody",
+  "response_body",
+  "raw",
+  "payload",
+  "content",
+  "input_content",
+  "output_content",
+  "requestlog",
+  "request_log",
+  "upstreamlog",
+  "upstream_log",
+]);
+
+function isBodyDetailKey(key: string): boolean {
+  return BODY_DETAIL_KEYS.has(key.trim().toLowerCase());
+}
+
+function buildGenericRows(record: unknown, skipKeys: Iterable<string> = []): RequestDetailRow[] {
+  if (!isRecord(record)) return [];
+  const skip = new Set([...BODY_DETAIL_KEYS, ...skipKeys]);
+  return Object.entries(record).reduce<RequestDetailRow[]>((rows, [key, value]) => {
+    const normalizedKey = key.trim().toLowerCase();
+    if (
+      skip.has(normalizedKey) ||
+      normalizedKey === "headers" ||
+      normalizedKey === "fingerprint_headers"
+    ) {
+      return rows;
+    }
+    pushDetailRow(rows, key, value);
+    return rows;
+  }, []);
+}
+
+function buildClientAttempt(client: unknown): RequestDetailAttempt {
+  const record = isRecord(client) ? client : {};
+  const preferredKeys = [
+    "ip",
+    "remote_addr",
+    "method",
+    "url",
+    "path",
+    "query",
+    "host",
+    "content_length",
+  ];
+  const rows: RequestDetailRow[] = [];
+  preferredKeys.forEach((key) => pushDetailRow(rows, key, record[key]));
+  const preferredSet = new Set(preferredKeys);
+  buildGenericRows(record, preferredSet).forEach((row) => rows.push(row));
+
+  const groups: RequestDetailGroup[] = [];
+  const headers = normalizeHeaderRows(record.headers);
+  if (headers.length > 0) groups.push({ title: "Headers", rows: headers });
+  const fingerprints = normalizeHeaderRows(record.fingerprint_headers);
+  if (fingerprints.length > 0) groups.push({ title: "指纹 / 透传", rows: fingerprints });
+
+  return { rows, groups };
+}
+
+function buildUpstreamAttempts(upstream: unknown): RequestDetailAttempt[] {
+  if (!isRecord(upstream)) return [];
+  const parsed = parseExchangeLog(upstream.request_log, "request");
+  if (parsed.length > 0) return parsed;
+
+  const rows = buildGenericRows(upstream);
+  const headers = normalizeHeaderRows(upstream.headers);
+  return [{ rows, groups: headers.length > 0 ? [{ title: "Headers", rows: headers }] : [] }];
+}
+
+function buildResponseAttempts(response: unknown): RequestDetailAttempt[] {
+  if (!isRecord(response)) return [];
+  const parsed = parseExchangeLog(response.upstream_log, "response");
+  if (parsed.length > 0) return parsed;
+
+  const rows = buildGenericRows(response);
+  const headers = normalizeHeaderRows(response.headers);
+  return [{ rows, groups: headers.length > 0 ? [{ title: "Headers", rows: headers }] : [] }];
+}
+
+function RequestDetailRows({ rows }: { rows: RequestDetailRow[] }) {
+  if (rows.length === 0) return null;
   return (
-    <div
-      className={[
-        "overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-neutral-800 dark:bg-neutral-950/50",
-        depth > 0 ? "" : "shadow-sm shadow-slate-950/[0.02]",
-      ].join(" ")}
-    >
-      {entries.map(([key, entryValue]) => (
+    <div className="divide-y divide-slate-100 dark:divide-neutral-800/80">
+      {rows.map((row) => (
         <div
-          key={key}
-          className="grid gap-2 border-b border-slate-100 px-3 py-2.5 last:border-b-0 dark:border-neutral-800/80 sm:grid-cols-[minmax(8rem,12rem)_minmax(0,1fr)]"
+          key={`${row.label}:${row.value}`}
+          className="grid min-w-0 gap-1.5 px-3 py-2.5 sm:grid-cols-[minmax(8rem,13rem)_minmax(0,1fr)] sm:gap-3"
         >
-          <code className="min-w-0 font-mono text-xs leading-5 break-all text-slate-500 dark:text-slate-400">
-            {key}
-          </code>
-          <div className="min-w-0 text-sm text-slate-900 dark:text-white">
-            <RequestDetailValue value={entryValue} depth={depth + 1} />
-          </div>
+          <span className="min-w-0 font-mono text-[12px] leading-5 break-all text-slate-500 dark:text-white/40">
+            {row.label}
+          </span>
+          <span className="min-w-0 font-mono text-[12px] leading-5 break-words whitespace-pre-wrap text-slate-900 dark:text-slate-100">
+            {row.value}
+          </span>
         </div>
       ))}
     </div>
   );
 }
 
-function RequestDetailValue({ value, depth = 0 }: { value: unknown; depth?: number }) {
-  if (Array.isArray(value)) {
-    if (value.length === 0) {
-      return <span className="text-slate-400 dark:text-white/35">[]</span>;
-    }
-    return (
-      <div className="grid gap-2">
-        {value.map((item, index) => (
-          <div
-            key={index}
-            className="rounded-lg border border-slate-200 bg-white px-3 py-2 dark:border-neutral-800 dark:bg-neutral-950/50"
-          >
-            <div className="mb-2 font-mono text-[11px] text-slate-400 dark:text-white/35">
-              #{index + 1}
-            </div>
-            <RequestDetailValue value={item} depth={depth + 1} />
-          </div>
-        ))}
+function RequestDetailGroupView({ group }: { group: RequestDetailGroup }) {
+  if (group.rows.length === 0) return null;
+  return (
+    <div className="border-t border-slate-100 dark:border-neutral-800/80">
+      <div className="px-3 pt-3 pb-1.5 text-[11px] font-medium text-slate-400 dark:text-white/35">
+        {group.title}
       </div>
-    );
-  }
+      <RequestDetailRows rows={group.rows} />
+    </div>
+  );
+}
 
-  if (value && typeof value === "object") {
-    const entries = Object.entries(value as Record<string, unknown>);
-    return <RequestDetailObject entries={entries} depth={depth} />;
-  }
+function RequestDetailAttemptView({
+  attempt,
+  showTitle,
+}: {
+  attempt: RequestDetailAttempt;
+  showTitle: boolean;
+}) {
+  return (
+    <div className="overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-neutral-800 dark:bg-neutral-950/60">
+      {showTitle && attempt.title ? (
+        <div className="border-b border-slate-100 px-3 py-2 font-mono text-[11px] text-slate-400 dark:border-neutral-800/80 dark:text-white/35">
+          {attempt.title}
+        </div>
+      ) : null}
+      <RequestDetailRows rows={attempt.rows} />
+      {attempt.groups.map((group) => (
+        <RequestDetailGroupView key={group.title} group={group} />
+      ))}
+    </div>
+  );
+}
 
-  return <RequestDetailPrimitive value={value} />;
+function RequestDetailEmpty() {
+  return <span className="px-3 py-3 text-sm text-slate-400 dark:text-white/35">--</span>;
 }
 
 function RequestDetailSection({
   title,
-  value,
+  attempts,
   testId,
   defaultOpen = true,
 }: {
   title: string;
-  value: unknown;
+  attempts: RequestDetailAttempt[];
   testId?: string;
   defaultOpen?: boolean;
 }) {
   const [open, setOpen] = useState(defaultOpen);
-  const content = isComplexDetailValue(value) ? value : { value };
   const contentId = testId ? `${testId}-content` : undefined;
+  const visibleAttempts = attempts.filter(
+    (attempt) => attempt.rows.length > 0 || attempt.groups.some((group) => group.rows.length > 0),
+  );
+  const showAttemptTitle = visibleAttempts.length > 1;
 
   return (
     <section
       data-testid={testId}
-      className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm shadow-slate-950/[0.03] dark:border-neutral-800 dark:bg-neutral-950"
+      className="overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-neutral-800 dark:bg-neutral-950"
     >
       <button
         type="button"
         aria-expanded={open}
         aria-controls={contentId}
         onClick={() => setOpen((prev) => !prev)}
-        className="flex w-full items-center justify-between gap-3 px-3.5 py-3 text-left transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/10 dark:hover:bg-white/[0.04] dark:focus-visible:ring-white/20"
+        className="flex w-full touch-manipulation items-center justify-between gap-3 px-3.5 py-2.5 text-left transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/10 dark:hover:bg-white/[0.04] dark:focus-visible:ring-white/20"
       >
-        <div className="min-w-0">
-          <h3 className="truncate text-sm font-semibold text-slate-900 dark:text-white">{title}</h3>
-        </div>
+        <h3 className="min-w-0 truncate text-sm font-medium text-slate-900 dark:text-white">
+          {title}
+        </h3>
         <ChevronDown
           size={16}
           className={`shrink-0 text-slate-400 transition-transform duration-200 dark:text-white/35 ${open ? "rotate-180" : ""}`}
@@ -215,14 +402,55 @@ function RequestDetailSection({
             transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
             className="overflow-hidden"
           >
-            <div className="border-t border-slate-100 bg-slate-50/35 p-3 dark:border-neutral-800/80 dark:bg-white/[0.02]">
-              <RequestDetailValue value={content ?? {}} />
+            <div className="space-y-2 border-t border-slate-100 bg-slate-50/40 p-2.5 dark:border-neutral-800/80 dark:bg-white/[0.02]">
+              {visibleAttempts.length > 0 ? (
+                visibleAttempts.map((attempt, index) => (
+                  <RequestDetailAttemptView
+                    key={`${attempt.title ?? "attempt"}-${index}`}
+                    attempt={attempt}
+                    showTitle={showAttemptTitle}
+                  />
+                ))
+              ) : (
+                <RequestDetailEmpty />
+              )}
             </div>
           </motion.div>
         ) : null}
       </AnimatePresence>
     </section>
   );
+}
+
+function buildExtraDetailSections(details: RequestDetailRecord): Array<{
+  key: string;
+  attempts: RequestDetailAttempt[];
+}> {
+  return Object.entries(details)
+    .filter(([key]) => !["client", "upstream", "response"].includes(key) && !isBodyDetailKey(key))
+    .map(([key, value]) => {
+      if (isRecord(value)) {
+        const rows = buildGenericRows(value);
+        const headers = normalizeHeaderRows(value.headers);
+        return {
+          key,
+          attempts: [
+            { rows, groups: headers.length > 0 ? [{ title: "Headers", rows: headers }] : [] },
+          ],
+        };
+      }
+      const text = formatDetailValue(value);
+      return {
+        key,
+        attempts: hasDetailValue(text) ? [{ rows: [{ label: key, value: text }], groups: [] }] : [],
+      };
+    })
+    .filter((section) =>
+      section.attempts.some(
+        (attempt) =>
+          attempt.rows.length > 0 || attempt.groups.some((group) => group.rows.length > 0),
+      ),
+    );
 }
 
 function parseImageGenerationInput(raw: string): ImageGenerationInputView | null {
@@ -841,29 +1069,31 @@ export function LogContentModal({
 
     const details = parseRequestDetails(detailsContent);
     if (!details) return renderRaw(detailsContent);
+    const clientAttempt = buildClientAttempt(details.client);
+    const upstreamAttempts = buildUpstreamAttempts(details.upstream);
+    const responseAttempts = buildResponseAttempts(details.response);
+    const extraSections = buildExtraDetailSections(details);
 
     return (
-      <div className="space-y-4 p-1">
+      <div className="space-y-3 p-1">
         <RequestDetailSection
           testId="request-detail-section-client"
           title={t("log_content.details_client")}
-          value={details.client}
+          attempts={[clientAttempt]}
         />
         <RequestDetailSection
           testId="request-detail-section-upstream"
           title={t("log_content.details_upstream")}
-          value={details.upstream}
+          attempts={upstreamAttempts}
         />
         <RequestDetailSection
           testId="request-detail-section-response"
           title={t("log_content.details_response")}
-          value={details.response}
+          attempts={responseAttempts}
         />
-        {Object.entries(details)
-          .filter(([key]) => !["client", "upstream", "response"].includes(key))
-          .map(([key, value]) => (
-            <RequestDetailSection key={key} title={key} value={value} />
-          ))}
+        {extraSections.map((section) => (
+          <RequestDetailSection key={section.key} title={section.key} attempts={section.attempts} />
+        ))}
       </div>
     );
   };

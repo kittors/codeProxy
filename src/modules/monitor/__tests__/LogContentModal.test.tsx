@@ -613,4 +613,112 @@ describe("LogContentModal", () => {
     });
     expect(upstreamToggle).toHaveAttribute("aria-expanded", "false");
   });
+
+  test("keeps request details focused on metadata and hides duplicated body payloads", async () => {
+    vi.useFakeTimers();
+    await i18n.changeLanguage("zh-CN");
+
+    const fetchPartFn = vi.fn(async (_id: number, part: "input" | "output") => ({
+      id: 1,
+      model: "gpt-test",
+      part,
+      content: "{}",
+    }));
+    const fetchDetailsFn = vi.fn(async (_id: number) => ({
+      id: 1,
+      model: "gpt-test",
+      part: "details" as const,
+      content: JSON.stringify({
+        client: {
+          ip: "203.0.113.8",
+          method: "POST",
+          url: "/backend-api/codex/responses",
+          headers: {
+            "User-Agent": ["codex_cli_rs/0.120.0"],
+            "X-Client-Request-Id": ["019dca13"],
+          },
+          fingerprint_headers: {
+            "Chatgpt-Account-Id": ["account-plaintext"],
+          },
+        },
+        upstream: {
+          request_log: [
+            "=== API REQUEST 1 ===",
+            "Timestamp: 2026-04-26T21:59:19.707677645+08:00",
+            "Upstream URL: https://chatgpt.com/backend-api/codex/responses",
+            "HTTP Method: POST",
+            "Auth: provider=codex, auth_id=codex-plus.json, label=GptPlus7, type=oauth",
+            "",
+            "Headers:",
+            "Accept: text/event-stream",
+            "Authorization: Bearer eyJh...J83E",
+            'X-Codex-Turn-Metadata: {"thread_source":"subagent"}',
+            "",
+            "Body:",
+            '{"model":"gpt-5.2","instructions":"AUTONOMY DIRECTIVE"}',
+          ].join("\n"),
+        },
+        response: {
+          upstream_log: [
+            "=== API RESPONSE 1 ===",
+            "Timestamp: 2026-04-26T21:59:20.707677645+08:00",
+            "",
+            "Status: 200",
+            "Headers:",
+            "Content-Type: text/event-stream",
+            "X-Request-Id: req-plaintext",
+            "",
+            "Body:",
+            "event: response.created",
+            'data: {"type":"response.created"}',
+          ].join("\n"),
+        },
+      }),
+    }));
+
+    render(
+      <ThemeProvider>
+        <LogContentModal
+          open
+          logId={1}
+          initialTab="input"
+          onClose={() => {}}
+          fetchPartFn={fetchPartFn}
+          fetchDetailsFn={fetchDetailsFn}
+          showRequestDetails
+        />
+      </ThemeProvider>,
+    );
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(260);
+    });
+    await act(async () => {});
+
+    await act(async () => {
+      screen.getByRole("tab", { name: "请求详情" }).click();
+    });
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+      await vi.runOnlyPendingTimersAsync();
+    });
+
+    expect(screen.getByText("https://chatgpt.com/backend-api/codex/responses")).toBeInTheDocument();
+    expect(
+      screen.getByText("provider=codex, auth_id=codex-plus.json, label=GptPlus7, type=oauth"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Accept")).toBeInTheDocument();
+    expect(screen.getAllByText("text/event-stream").length).toBeGreaterThan(0);
+    expect(screen.getByText("X-Request-Id")).toBeInTheDocument();
+    expect(screen.getByText("req-plaintext")).toBeInTheDocument();
+    expect(screen.getByText("Chatgpt-Account-Id")).toBeInTheDocument();
+    expect(screen.getByText("account-plaintext")).toBeInTheDocument();
+
+    expect(document.body.textContent).not.toContain("Body:");
+    expect(document.body.textContent).not.toContain("AUTONOMY DIRECTIVE");
+    expect(document.body.textContent).not.toContain("event: response.created");
+    expect(document.body.textContent).not.toContain("request_log");
+    expect(document.body.textContent).not.toContain("upstream_log");
+  });
 });
