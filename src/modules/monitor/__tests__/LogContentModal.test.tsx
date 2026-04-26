@@ -16,9 +16,7 @@ describe("LogContentModal", () => {
   });
 
   test("uses fixed viewport-safe dimensions while preserving enter and exit animation", () => {
-    const renderingSource = readModule(
-      "modules/monitor/log-content/rendering.tsx",
-    );
+    const renderingSource = readModule("modules/monitor/log-content/rendering.tsx");
     const modalSource = readModule("modules/monitor/LogContentModal.tsx");
 
     expect(renderingSource).toContain("AnimatePresence");
@@ -31,17 +29,13 @@ describe("LogContentModal", () => {
     expect(modalSource).toContain('filter: "blur(3px)"');
     expect(modalSource).not.toContain("y: 10");
     expect(modalSource).toContain("relative min-h-0 flex-1");
-    expect(modalSource).toContain(
-      "absolute inset-0 overflow-y-auto overscroll-contain",
-    );
+    expect(modalSource).toContain("absolute inset-0 overflow-y-auto overscroll-contain");
     expect(modalSource).toContain("min-h-0 flex-1 items-center justify-center");
     expect(modalSource).toContain("exit={{ opacity: 0");
   });
 
   test("protects large request detail content from fast-scroll blanking", () => {
-    const renderingSource = readModule(
-      "modules/monitor/log-content/rendering.tsx",
-    );
+    const renderingSource = readModule("modules/monitor/log-content/rendering.tsx");
 
     expect(renderingSource).toContain("VIRTUAL_MESSAGE_CONTENT_THRESHOLD");
     expect(renderingSource).toContain("shouldVirtualizeMessages");
@@ -183,8 +177,7 @@ describe("LogContentModal", () => {
           id: 1,
           model: "gpt-image-2",
           part,
-          content:
-            '{"model":"gpt-image-2","prompt":"画一只狐狸","size":"1024x1536"}',
+          content: '{"model":"gpt-image-2","prompt":"画一只狐狸","size":"1024x1536"}',
         };
       }
       return {
@@ -236,12 +229,8 @@ describe("LogContentModal", () => {
       screen.getByTitle("原始数据").click();
     });
     expect(
-      Array.from(document.body.querySelectorAll("pre")).map(
-        (pre) => pre.textContent,
-      ),
-    ).toContain(
-      '{"model":"gpt-image-2","prompt":"画一只狐狸","size":"1024x1536"}',
-    );
+      Array.from(document.body.querySelectorAll("pre")).map((pre) => pre.textContent),
+    ).toContain('{"model":"gpt-image-2","prompt":"画一只狐狸","size":"1024x1536"}');
   });
 
   test("renders gpt-image-2 output as an image-only rendered view with reusable preview controls", async () => {
@@ -261,8 +250,7 @@ describe("LogContentModal", () => {
         id: 1,
         model: "gpt-image-2",
         part,
-        content:
-          '{"created":1776910933,"data":[{"b64_json":"aGVsbG8="},{"b64_json":"d29ybGQ="}]}',
+        content: '{"created":1776910933,"data":[{"b64_json":"aGVsbG8="},{"b64_json":"d29ybGQ="}]}',
       };
     });
 
@@ -308,19 +296,14 @@ describe("LogContentModal", () => {
     const preview = screen.getByRole("dialog", { name: /输出 · gpt-image-2/ });
     expect(preview).toHaveAttribute("data-variant", "image-only");
     expect(screen.getByRole("button", { name: "放大" })).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "向左旋转" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "向左旋转" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "下载" })).toHaveAttribute(
       "download",
       "gpt-image-2-output-2.png",
     );
 
     const previewImage = within(preview).getByRole("img", { name: "输出" });
-    expect(previewImage).toHaveAttribute(
-      "src",
-      "data:image/png;base64,d29ybGQ=",
-    );
+    expect(previewImage).toHaveAttribute("src", "data:image/png;base64,d29ybGQ=");
     const rotateRight = screen.getByRole("button", { name: "向右旋转" });
     await act(async () => {
       rotateRight.click();
@@ -455,5 +438,93 @@ describe("LogContentModal", () => {
 
     expect(fetchPartFn).toHaveBeenCalledTimes(2);
     expect(screen.getByText("暂无输出记录")).toBeInTheDocument();
+  });
+
+  test("shows a separate request details tab with plaintext headers and fingerprint data", async () => {
+    vi.useFakeTimers();
+    await i18n.changeLanguage("zh-CN");
+
+    const fetchPartFn = vi.fn(async (_id: number, part: "input" | "output") => {
+      return {
+        id: 1,
+        model: "gpt-test",
+        part,
+        content: part === "input" ? '{"messages":[]}' : '{"choices":[]}',
+      };
+    });
+    const fetchDetailsFn = vi.fn(async (_id: number) => ({
+      id: 1,
+      model: "gpt-test",
+      part: "details" as const,
+      content: JSON.stringify({
+        client: {
+          ip: "203.0.113.8",
+          headers: {
+            Authorization: "Bearer sk-client-plaintext",
+            "User-Agent": "codex-cli/1.2.3",
+          },
+        },
+        upstream: {
+          url: "https://api.example.test/v1/chat/completions",
+          headers: {
+            Authorization: "Bearer sk-upstream-plaintext",
+            "X-Codex-Session-Id": "session-plaintext",
+          },
+          fingerprint: {
+            source: "identity-fingerprint",
+            version: "0.42.0",
+          },
+        },
+        response: {
+          status: 200,
+          headers: {
+            "X-Request-Id": "req-plaintext",
+          },
+        },
+      }),
+    }));
+
+    render(
+      <ThemeProvider>
+        <LogContentModal
+          open
+          logId={1}
+          initialTab="input"
+          onClose={() => {}}
+          fetchPartFn={fetchPartFn}
+          fetchDetailsFn={fetchDetailsFn}
+          showRequestDetails
+        />
+      </ThemeProvider>,
+    );
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(260);
+    });
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      screen.getByRole("tab", { name: "请求详情" }).click();
+    });
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    await act(async () => {
+      await vi.runOnlyPendingTimersAsync();
+    });
+
+    expect(fetchDetailsFn).toHaveBeenCalledWith(1, expect.any(Object));
+    expect(screen.getByText("客户端传入")).toBeInTheDocument();
+    expect(screen.getByText("传给上游")).toBeInTheDocument();
+    expect(screen.getByText("上游响应")).toBeInTheDocument();
+    expect(screen.getByText("203.0.113.8")).toBeInTheDocument();
+    expect(screen.getByText("Bearer sk-client-plaintext")).toBeInTheDocument();
+    expect(screen.getByText("Bearer sk-upstream-plaintext")).toBeInTheDocument();
+    expect(screen.getByText("session-plaintext")).toBeInTheDocument();
+    expect(screen.getByText("req-plaintext")).toBeInTheDocument();
   });
 });

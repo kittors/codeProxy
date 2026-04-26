@@ -1,19 +1,27 @@
+export type LogContentBodyPart = "input" | "output";
+export type LogContentPart = LogContentBodyPart | "details";
+
 export interface LogContentModalProps {
   open: boolean;
   logId: number | null;
-  initialTab?: "input" | "output";
+  initialTab?: LogContentBodyPart;
   onClose: () => void;
+  showRequestDetails?: boolean;
   fetchFn?: (
     id: number,
   ) => Promise<{ input_content: string; output_content: string; model: string }>;
   fetchPartFn?: (
     id: number,
-    part: "input" | "output",
+    part: LogContentBodyPart,
     options?: { signal?: AbortSignal },
   ) => Promise<
-    | { id: number; model: string; part: "input" | "output"; content: string }
+    | { id: number; model: string; part: LogContentBodyPart; content: string }
     | { input_content: string; output_content: string; model: string }
   >;
+  fetchDetailsFn?: (
+    id: number,
+    options?: { signal?: AbortSignal },
+  ) => Promise<{ id: number; model: string; part: "details"; content: string }>;
 }
 
 export type Msg = { role: string; content: string };

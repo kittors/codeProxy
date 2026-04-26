@@ -183,7 +183,7 @@ export const usageApi = {
 
   async getLogContentPart(
     id: number,
-    part: "input" | "output",
+    part: LogContentPart,
     options?: { signal?: AbortSignal; timeoutMs?: number },
   ): Promise<LogContentPartResponse> {
     const resp = await apiClient.get<unknown>(`/usage/logs/${id}/content`, {
@@ -194,11 +194,11 @@ export const usageApi = {
 
     if (resp && typeof resp === "object") {
       const record = resp as Record<string, unknown>;
-      if (record.part === "input" || record.part === "output") {
+      if (record.part === "input" || record.part === "output" || record.part === "details") {
         return {
           id: Number(record.id ?? id),
           model: String(record.model ?? ""),
-          part: record.part as "input" | "output",
+          part: record.part as LogContentPart,
           content: String(record.content ?? ""),
         };
       }
@@ -208,7 +208,11 @@ export const usageApi = {
           model: String(record.model ?? ""),
           part,
           content: String(
-            part === "input" ? (record.input_content ?? "") : (record.output_content ?? ""),
+            part === "input"
+              ? (record.input_content ?? "")
+              : part === "output"
+                ? (record.output_content ?? "")
+                : (record.detail_content ?? record.details_content ?? ""),
           ),
         };
       }
@@ -313,6 +317,8 @@ export interface LogContentResponse {
 export interface LogContentPartResponse {
   id: number;
   model: string;
-  part: "input" | "output";
+  part: LogContentPart;
   content: string;
 }
+
+export type LogContentPart = "input" | "output" | "details";

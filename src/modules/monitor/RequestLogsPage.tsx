@@ -351,6 +351,7 @@ export function RequestLogsPage() {
         logId={contentModalLogId}
         initialTab={contentModalTab}
         onClose={() => setContentModalOpen(false)}
+        showRequestDetails
       />
       <ErrorDetailModal
         open={errorModalOpen}
