@@ -1,12 +1,5 @@
 import { useTranslation } from "react-i18next";
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { logsApi } from "@/lib/http/apis";
 import { ConfirmModal } from "@/modules/ui/ConfirmModal";
 import { useToast } from "@/modules/ui/ToastProvider";
@@ -27,6 +20,7 @@ const INCREMENTAL_FETCH_LIMIT = 2000;
 const LOAD_MORE_THRESHOLD_PX = 64;
 const STICK_TO_BOTTOM_THRESHOLD_PX = 48;
 
+type ErrorLogsStatus = "idle" | "loading" | "success" | "error";
 
 export function LogsPage() {
   const { t } = useTranslation();
@@ -45,8 +39,9 @@ export function LogsPage() {
   const [search, setSearch] = useState("");
   const [displayCount, setDisplayCount] = useState(INITIAL_DISPLAY_LINES);
 
-  const [errorLogsLoading, setErrorLogsLoading] = useState(false);
+  const [errorLogsStatus, setErrorLogsStatus] = useState<ErrorLogsStatus>("idle");
   const [errorLogs, setErrorLogs] = useState<ErrorLogItem[]>([]);
+  const errorLogsLoading = errorLogsStatus === "loading";
 
   const [requestLogId, setRequestLogId] = useState("");
   const [confirmClearOpen, setConfirmClearOpen] = useState(false);
@@ -233,25 +228,24 @@ export function LogsPage() {
   }, [notify]);
 
   const loadErrorLogs = useCallback(async () => {
-    setErrorLogsLoading(true);
+    setErrorLogsStatus("loading");
     try {
       const result = await logsApi.fetchErrorLogs();
       const files = Array.isArray(result?.files) ? (result.files as ErrorLogItem[]) : [];
       setErrorLogs(files);
+      setErrorLogsStatus("success");
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : t("logs_page.failed_fetch_error_list");
       notify({ type: "error", message });
-    } finally {
-      setErrorLogsLoading(false);
+      setErrorLogsStatus("error");
     }
   }, [notify]);
 
   useEffect(() => {
     if (tab !== "errors") return;
-    if (errorLogsLoading) return;
-    if (errorLogs.length) return;
+    if (errorLogsStatus !== "idle") return;
     void loadErrorLogs();
-  }, [errorLogs.length, errorLogsLoading, loadErrorLogs, tab]);
+  }, [errorLogsStatus, loadErrorLogs, tab]);
 
   const downloadErrorLog = useCallback(
     async (file: ErrorLogItem) => {

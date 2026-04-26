@@ -156,7 +156,44 @@ describe("ModelsPage", () => {
     expect(ownerSidebar).toHaveClass("h-full", "min-h-0");
     expect(modelLibrary).toHaveClass("h-full", "min-h-0");
     expect(ownerList).toHaveClass("min-h-0", "flex-1", "overflow-y-auto");
+    expect(ownerList).toHaveClass("-mx-1", "px-1", "py-1", "overflow-x-hidden");
     expect(within(ownerList).getByText("Owner 32")).toBeInTheDocument();
+  });
+
+  test("reveals owner row actions with a smooth hover treatment", async () => {
+    renderPage();
+
+    expect(await screen.findByText("gpt-image-2")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("tab", { name: /model library/i }));
+
+    const ownerSidebar = await screen.findByTestId("owner-sidebar-card");
+    const editButton = within(ownerSidebar).getByRole("button", { name: /edit anthropic/i });
+    const deleteButton = within(ownerSidebar).getByRole("button", { name: /delete anthropic/i });
+    const ownerRow = editButton.parentElement?.parentElement as HTMLElement | null;
+
+    expect(ownerRow).not.toBeNull();
+    expect(ownerRow).toHaveClass("group/owner", "relative", "overflow-hidden");
+
+    const countBadge = within(ownerRow!).getByText(/0 models/i);
+    expect(countBadge).toHaveClass(
+      "transition-transform",
+      "group-hover/owner:-translate-x-16",
+      "group-focus-within/owner:-translate-x-16",
+    );
+
+    const actionRail = editButton.parentElement as HTMLElement;
+    expect(actionRail).toHaveClass(
+      "absolute",
+      "right-2",
+      "opacity-0",
+      "translate-x-3",
+      "group-hover/owner:opacity-100",
+      "group-hover/owner:translate-x-0",
+      "group-focus-within/owner:opacity-100",
+      "group-focus-within/owner:translate-x-0",
+    );
+    expect(editButton).toHaveClass("transition-all");
+    expect(deleteButton).toHaveClass("transition-all");
   });
 
   test("deletes a model only after confirmation", async () => {

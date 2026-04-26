@@ -247,23 +247,34 @@ export function VirtualTable<T>({
     if (!el) return;
 
     const canScrollY = el.scrollHeight > el.clientHeight + 1;
-    if (canScrollY) {
-      const maxTop = Math.max(0, el.scrollHeight - el.clientHeight);
-      const atTop = el.scrollTop <= 0;
-      const atBottom = el.scrollTop >= maxTop - 1;
-      if ((e.deltaY < 0 && !atTop) || (e.deltaY > 0 && !atBottom)) {
-        e.stopPropagation();
-      }
+    const canScrollX = el.scrollWidth > el.clientWidth + 1;
+    const wantsY = e.deltaY !== 0;
+    const wantsX = e.deltaX !== 0;
+
+    const maxTop = Math.max(0, el.scrollHeight - el.clientHeight);
+    const maxLeft = Math.max(0, el.scrollWidth - el.clientWidth);
+    const atTop = el.scrollTop <= 0;
+    const atBottom = el.scrollTop >= maxTop - 1;
+    const atLeft = el.scrollLeft <= 0;
+    const atRight = el.scrollLeft >= maxLeft - 1;
+
+    const canMoveY =
+      wantsY &&
+      canScrollY &&
+      ((e.deltaY < 0 && !atTop) || (e.deltaY > 0 && !atBottom));
+    const canMoveX =
+      wantsX &&
+      canScrollX &&
+      ((e.deltaX < 0 && !atLeft) || (e.deltaX > 0 && !atRight));
+
+    if (canMoveY || canMoveX) {
+      e.stopPropagation();
+      return;
     }
 
-    const canScrollX = el.scrollWidth > el.clientWidth + 1;
-    if (canScrollX) {
-      const maxLeft = Math.max(0, el.scrollWidth - el.clientWidth);
-      const atLeft = el.scrollLeft <= 0;
-      const atRight = el.scrollLeft >= maxLeft - 1;
-      if ((e.deltaX < 0 && !atLeft) || (e.deltaX > 0 && !atRight)) {
-        e.stopPropagation();
-      }
+    if (wantsY || wantsX) {
+      e.preventDefault();
+      e.stopPropagation();
     }
   }, []);
 
@@ -540,37 +551,40 @@ export function VirtualTable<T>({
   }, [headerHeight, scrollMetrics]);
 
   return (
-    <div className={`${height} ${minHeight} relative min-w-0 overflow-hidden group`}>
+    <div
+      className={`${height} ${minHeight} relative grid min-w-0 grid-cols-[minmax(0,1fr)_0.75rem] overflow-hidden group`}
+    >
+      <div
+        data-vt-header-backdrop
+        className="pointer-events-none absolute inset-x-0 top-0 z-0 rounded-xl bg-slate-100 dark:bg-neutral-800"
+        style={{ height: headerHeight }}
+      />
       <div
         ref={containerRef}
         onScroll={onScroll}
         onWheelCapture={onWheelCapture}
         tabIndex={0}
         data-scrollbar-visibility="hover"
-        // Reserve space for the overlay vertical scrollbar so it won't cover the header's rightmost column.
-        className={`h-full min-h-0 table-scrollbar overflow-auto ${vThumb ? "pr-4" : ""}`}
+        className="relative z-10 col-start-1 row-start-1 h-full min-h-0 table-scrollbar overflow-auto overscroll-x-none overscroll-y-none rounded-tl-xl"
       >
+        <div
+          data-vt-header-overlay
+          className="pointer-events-none sticky left-0 top-0 z-10 w-full rounded-l-xl bg-slate-100 dark:bg-neutral-800"
+          style={{ height: headerHeight, marginBottom: -headerHeight }}
+        />
         <table
           className={`w-full ${minWidth} table-fixed border-separate border-spacing-0 text-sm`}
         >
           <caption className="sr-only">{caption}</caption>
 
           {/* ── HeroUI-styled header ── */}
-          <thead ref={headerRef} className="sticky top-0 z-10">
+          <thead ref={headerRef} className="sticky top-0 z-20">
             <tr className="text-left text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-white/55">
-              {columns.map((col, i) => {
-                const isFirst = i === 0;
-                const isLast = i === columns.length - 1;
-                const roundCls = [
-                  isFirst ? "first:rounded-l-xl" : "",
-                  isLast ? "last:rounded-r-xl" : "",
-                ]
-                  .filter(Boolean)
-                  .join(" ");
+              {columns.map((col) => {
                 return (
                   <th
                     key={col.key}
-                    className={`whitespace-nowrap bg-slate-100 px-4 py-3 dark:bg-neutral-800 ${col.width ?? ""} ${col.headerClassName ?? ""} ${roundCls}`}
+                    className={`whitespace-nowrap px-4 py-3 ${col.width ?? ""} ${col.headerClassName ?? ""}`}
                   >
                     {col.headerRender ? col.headerRender() : col.label}
                   </th>
@@ -672,29 +686,39 @@ export function VirtualTable<T>({
         )}
       </div>
 
-      {vThumb ? (
+      <div
+        data-vt-scrollbar-gutter
+        className="relative z-20 col-start-2 row-start-1 h-full w-3 justify-self-end"
+      >
         <div
-          data-vt-scrollbar="y"
-          className="pointer-events-none absolute right-0 w-2 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
-          style={{ top: headerHeight + 8, bottom: 8 }}
-        >
-          <div className="absolute inset-0 rounded-full bg-slate-200/40 dark:bg-white/10" />
+          data-vt-header-gutter
+          className="absolute inset-x-0 top-0 rounded-r-xl bg-slate-100 dark:bg-neutral-800"
+          style={{ height: headerHeight }}
+        />
+        {vThumb ? (
           <div
-            role="presentation"
-            className="pointer-events-auto absolute left-0 right-0 rounded-full bg-slate-500/40 transition-colors hover:bg-slate-500/60 dark:bg-white/25 dark:hover:bg-white/40"
-            style={{ top: vThumb.top, height: vThumb.height }}
-            onPointerDown={(e) => handleThumbPointerDown("y", e)}
-            onPointerMove={handleThumbPointerMove}
-            onPointerUp={handleThumbPointerUp}
-            onPointerCancel={handleThumbPointerUp}
-          />
-        </div>
-      ) : null}
+            data-vt-scrollbar="y"
+            className="pointer-events-none absolute right-0 w-2 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
+            style={{ top: headerHeight + 8, bottom: 8 }}
+          >
+            <div className="absolute inset-0 rounded-full bg-slate-200/40 dark:bg-white/10" />
+            <div
+              role="presentation"
+              className="pointer-events-auto absolute left-0 right-0 rounded-full bg-slate-500/40 transition-colors hover:bg-slate-500/60 dark:bg-white/25 dark:hover:bg-white/40"
+              style={{ top: vThumb.top, height: vThumb.height }}
+              onPointerDown={(e) => handleThumbPointerDown("y", e)}
+              onPointerMove={handleThumbPointerMove}
+              onPointerUp={handleThumbPointerUp}
+              onPointerCancel={handleThumbPointerUp}
+            />
+          </div>
+        ) : null}
+      </div>
 
       {hThumb ? (
         <div
           data-vt-scrollbar="x"
-          className="pointer-events-none absolute inset-x-2 bottom-1 h-2 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
+          className="pointer-events-none absolute bottom-1 left-2 right-5 h-2 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
         >
           <div className="absolute inset-0 rounded-full bg-slate-200/40 dark:bg-white/10" />
           <div

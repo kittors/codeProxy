@@ -861,7 +861,7 @@ export function ModelsPage() {
 
               <div
                 data-testid="owner-sidebar-list"
-                className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1"
+                className="-mx-1 min-h-0 flex-1 space-y-2 overflow-x-hidden overflow-y-auto px-1 py-1"
               >
                 {libraryOwners.length === 0 ? (
                   <div className="rounded-xl border border-dashed border-slate-200 px-3 py-6 text-center text-sm text-slate-500 dark:border-neutral-800 dark:text-white/45">
@@ -875,7 +875,7 @@ export function ModelsPage() {
                       <div
                         key={owner.value}
                         className={[
-                          "group flex items-center gap-2 rounded-xl px-2 py-1.5 transition",
+                          "group/owner relative flex items-center gap-2 overflow-hidden rounded-xl px-2 py-1.5 transition-colors duration-200 ease-out",
                           selected
                             ? "bg-slate-100 ring-1 ring-slate-200 dark:bg-white/[0.08] dark:ring-white/10"
                             : "hover:bg-slate-50 dark:hover:bg-white/[0.04]",
@@ -894,27 +894,31 @@ export function ModelsPage() {
                             {owner.value}
                           </span>
                         </button>
-                        <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-500 dark:bg-white/[0.08] dark:text-white/45">
+                        <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-500 transition-transform duration-200 ease-out group-focus-within/owner:-translate-x-16 group-hover/owner:-translate-x-16 motion-reduce:transition-none dark:bg-white/[0.08] dark:text-white/45">
                           {t("models_page.owner_model_count", { count })}
                         </span>
-                        <Button
-                          size="xs"
-                          variant="ghost"
-                          onClick={() => setOwnerForm(toOwnerFormState(owner))}
-                          aria-label={t("models_page.edit_owner_aria", { owner: owner.label })}
-                          title={t("models_page.edit_owner_aria", { owner: owner.label })}
-                        >
-                          <Edit3 size={13} />
-                        </Button>
-                        <Button
-                          size="xs"
-                          variant="ghost"
-                          onClick={() => setDeleteOwnerTarget(owner)}
-                          aria-label={t("models_page.delete_owner_aria", { owner: owner.label })}
-                          title={t("models_page.delete_owner_aria", { owner: owner.label })}
-                        >
-                          <Trash2 size={13} />
-                        </Button>
+                        <div className="pointer-events-none absolute right-2 top-1/2 flex -translate-y-1/2 translate-x-3 items-center gap-1 opacity-0 transition-all duration-200 ease-out group-focus-within/owner:pointer-events-auto group-focus-within/owner:translate-x-0 group-focus-within/owner:opacity-100 group-hover/owner:pointer-events-auto group-hover/owner:translate-x-0 group-hover/owner:opacity-100 motion-reduce:transition-none">
+                          <Button
+                            size="xs"
+                            variant="ghost"
+                            className="transition-all duration-200 ease-out"
+                            onClick={() => setOwnerForm(toOwnerFormState(owner))}
+                            aria-label={t("models_page.edit_owner_aria", { owner: owner.label })}
+                            title={t("models_page.edit_owner_aria", { owner: owner.label })}
+                          >
+                            <Edit3 size={13} />
+                          </Button>
+                          <Button
+                            size="xs"
+                            variant="ghost"
+                            className="transition-all duration-200 ease-out"
+                            onClick={() => setDeleteOwnerTarget(owner)}
+                            aria-label={t("models_page.delete_owner_aria", { owner: owner.label })}
+                            title={t("models_page.delete_owner_aria", { owner: owner.label })}
+                          >
+                            <Trash2 size={13} />
+                          </Button>
+                        </div>
                       </div>
                     );
                   })
