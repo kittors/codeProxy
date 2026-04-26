@@ -20,11 +20,10 @@ type ToastClassNames = Partial<
 >;
 
 const TOAST_WRAPPER_CLASSNAME = "!max-w-[min(calc(100vw-2rem),42rem)] min-w-0";
-const TOAST_CONTENT_CLASSNAME =
-  "!max-w-[min(calc(100vw-2rem),42rem)] min-w-0 overflow-hidden";
-const TOAST_HEADER_CLASSNAME = "flex min-w-0 max-w-full items-start";
+const TOAST_CONTENT_CLASSNAME = "!max-w-[min(calc(100vw-2rem),42rem)] min-w-0 overflow-hidden";
+const TOAST_HEADER_CLASSNAME = "flex min-w-0 items-center";
 const SINGLE_LINE_TITLE_CLASSNAME =
-  "!max-w-full min-w-0 flex-1 truncate !whitespace-nowrap !leading-5";
+  "min-w-0 max-w-[min(calc(100vw-9rem),32rem)] shrink truncate !whitespace-nowrap !leading-5";
 const DESCRIPTION_TEXT_CLASSNAME =
   "!max-w-full min-w-0 !whitespace-pre-line break-words [overflow-wrap:anywhere] !leading-5";
 const MAX_TOAST_TITLE_CHARACTERS = 48;
@@ -79,7 +78,9 @@ export function ToastProvider({ children }: PropsWithChildren) {
         warning: "Warning",
         info: "Info",
       };
-      const title = input.title ?? (shouldUseDescriptionBody(input.message) ? defaultTitles[type] : input.message);
+      const title =
+        input.title ??
+        (shouldUseDescriptionBody(input.message) ? defaultTitles[type] : input.message);
       const options: Record<string, unknown> = {
         duration: input.duration ?? 1500,
       };

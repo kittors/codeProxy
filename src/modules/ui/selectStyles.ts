@@ -54,11 +54,10 @@ export const selectEmptyState =
   "px-2.5 py-3 text-center text-xs text-[#96969B] dark:text-[#9F9FA8]";
 
 export const getSelectDropdownMotion = (placement: "bottom" | "top" = "bottom") => {
-  const offset = placement === "top" ? 4 : -4;
   const exitOffset = placement === "top" ? 2 : -2;
 
   return {
-    initial: { opacity: 0, scale: 0.98, y: offset },
+    initial: { opacity: 1, scale: 1, y: 0 },
     animate: { opacity: 1, scale: 1, y: 0 },
     exit: { opacity: 0, scale: 0.98, y: exitOffset },
   } as const;

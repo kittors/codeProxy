@@ -111,7 +111,11 @@ export function AppRouter() {
                               path="/manage/identity-fingerprint"
                               element={<IdentityFingerprintPage />}
                             />
-                            <Route path="/models" element={<ModelsPage />} />
+                            <Route
+                              path="/models"
+                              element={<Navigate to="/manage/models" replace />}
+                            />
+                            <Route path="/manage/models" element={<ModelsPage />} />
                             <Route path="/" element={<Navigate to="/dashboard" replace />} />
                           </Route>
                         </Route>

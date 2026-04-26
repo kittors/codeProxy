@@ -40,6 +40,34 @@ describe("usage utils", () => {
     expect(calculateCost(detail, prices)).toBeCloseTo(0.0164, 6);
   });
 
+  test("calculateCost supports per-call pricing for invocation billed models", () => {
+    const detail = {
+      timestamp: "2026-04-25T10:00:00Z",
+      source: "image-provider",
+      auth_index: 0,
+      failed: false,
+      __modelName: "gpt-image-2",
+      tokens: {
+        input_tokens: 0,
+        output_tokens: 0,
+        reasoning_tokens: 0,
+        cached_tokens: 0,
+        total_tokens: 0,
+      },
+    };
+    const prices: Record<string, ModelPrice> = {
+      "gpt-image-2": {
+        mode: "call",
+        prompt: 0,
+        completion: 0,
+        cache: 0,
+        perCall: 0.04,
+      },
+    };
+
+    expect(calculateCost(detail, prices)).toBeCloseTo(0.04, 6);
+  });
+
   test("filterUsageByTimeRange keeps only recent details", () => {
     const now = Date.now();
     const recent = new Date(now - 60 * 60 * 1000).toISOString();
@@ -56,14 +84,26 @@ describe("usage utils", () => {
                   source: "sk-recent",
                   auth_index: 1,
                   failed: false,
-                  tokens: { input_tokens: 1, output_tokens: 2, reasoning_tokens: 0, cached_tokens: 0, total_tokens: 3 },
+                  tokens: {
+                    input_tokens: 1,
+                    output_tokens: 2,
+                    reasoning_tokens: 0,
+                    cached_tokens: 0,
+                    total_tokens: 3,
+                  },
                 },
                 {
                   timestamp: old,
                   source: "sk-old",
                   auth_index: 1,
                   failed: false,
-                  tokens: { input_tokens: 1, output_tokens: 2, reasoning_tokens: 0, cached_tokens: 0, total_tokens: 3 },
+                  tokens: {
+                    input_tokens: 1,
+                    output_tokens: 2,
+                    reasoning_tokens: 0,
+                    cached_tokens: 0,
+                    total_tokens: 3,
+                  },
                 },
               ],
             },
@@ -73,7 +113,8 @@ describe("usage utils", () => {
     };
 
     const filtered = filterUsageByTimeRange(usageData, "7d", now);
-    const details = (filtered.apis["/v1/chat/completions"].models["gpt-4.1"].details ?? []) as Array<{
+    const details = (filtered.apis["/v1/chat/completions"].models["gpt-4.1"].details ??
+      []) as Array<{
       timestamp: string;
     }>;
 

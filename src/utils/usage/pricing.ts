@@ -10,10 +10,18 @@ import {
 import { collectUsageDetails } from "./details";
 import { maskUsageSensitiveValue } from "./sanitize";
 
-export function calculateCost(detail: UsageDetail, modelPrices: Record<string, ModelPrice>): number {
+export function calculateCost(
+  detail: UsageDetail,
+  modelPrices: Record<string, ModelPrice>,
+): number {
   const modelName = detail.__modelName || "";
   const price = modelPrices[modelName];
   if (!price) return 0;
+
+  if (price.mode === "call") {
+    const perCall = Number(price.perCall);
+    return Number.isFinite(perCall) && perCall > 0 ? perCall : 0;
+  }
 
   const tokens = detail.tokens;
   const rawInputTokens = Number(tokens.input_tokens);
@@ -63,11 +71,14 @@ export function loadModelPrices(): Record<string, ModelPrice> {
       const promptRaw = Number(priceRecord?.prompt);
       const completionRaw = Number(priceRecord?.completion);
       const cacheRaw = Number(priceRecord?.cache);
+      const perCallRaw = Number(priceRecord?.perCall);
+      const mode = priceRecord?.mode === "call" ? "call" : "token";
 
       if (
         !Number.isFinite(promptRaw) &&
         !Number.isFinite(completionRaw) &&
-        !Number.isFinite(cacheRaw)
+        !Number.isFinite(cacheRaw) &&
+        !Number.isFinite(perCallRaw)
       ) {
         return;
       }
@@ -80,8 +91,9 @@ export function loadModelPrices(): Record<string, ModelPrice> {
           : Number.isFinite(promptRaw) && promptRaw >= 0
             ? promptRaw
             : prompt;
+      const perCall = Number.isFinite(perCallRaw) && perCallRaw >= 0 ? perCallRaw : 0;
 
-      normalized[model] = { prompt, completion, cache };
+      normalized[model] = { mode, prompt, completion, cache, perCall };
     });
     return normalized;
   } catch {
