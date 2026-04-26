@@ -2783,6 +2783,8 @@
     "owner_presets_title": "归属预设",
     "owner_presets_desc": "维护归属下拉选项，并快速查看每个归属下的模型。",
     "owner_presets": "归属预设",
+    "model_owners": "模型归属",
+    "model_owners_desc": "选择归属筛选全部模型，也可以维护归属预设。",
     "all_owners": "全部归属",
     "owner_filter": "归属筛选",
     "add_owner": "新增归属",

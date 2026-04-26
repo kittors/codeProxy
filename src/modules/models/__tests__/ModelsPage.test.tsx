@@ -129,6 +129,9 @@ describe("ModelsPage", () => {
 
     expect(await screen.findByText("seed-only-model")).toBeInTheDocument();
     expect(screen.getByText("Seeded model library entry")).toBeInTheDocument();
+    expect(await screen.findByTestId("owner-library-layout")).toBeInTheDocument();
+    expect(screen.getByTestId("owner-sidebar-card")).toHaveTextContent(/model owners/i);
+    expect(screen.getByTestId("model-library-card")).toHaveTextContent(/seed-only-model/i);
     expect(mocks.apiGet).toHaveBeenCalledWith("/model-configs?scope=library");
   });
 
@@ -238,10 +241,10 @@ describe("ModelsPage", () => {
     await screen.findByText("gpt-image-2");
     await userEvent.click(screen.getByRole("tab", { name: /model library/i }));
 
-    const ownerToolbar = await screen.findByTestId("owner-library-toolbar");
-    expect(within(ownerToolbar).getByText("Acme AI")).toBeInTheDocument();
+    const ownerSidebar = await screen.findByTestId("owner-sidebar-card");
+    expect(within(ownerSidebar).getByText("Acme AI")).toBeInTheDocument();
 
-    await userEvent.click(within(ownerToolbar).getByRole("button", { name: /add owner/i }));
+    await userEvent.click(within(ownerSidebar).getByRole("button", { name: /add owner/i }));
     const ownerDialog = await screen.findByRole("dialog", { name: /add owner/i });
     await userEvent.type(within(ownerDialog).getByLabelText(/owner value/i), "new-lab");
     await userEvent.type(within(ownerDialog).getByLabelText(/owner label/i), "New Lab");
@@ -273,8 +276,8 @@ describe("ModelsPage", () => {
     await screen.findByText("gpt-image-2");
     await userEvent.click(screen.getByRole("tab", { name: /model library/i }));
 
-    const ownerToolbar = await screen.findByTestId("owner-library-toolbar");
-    await userEvent.click(within(ownerToolbar).getByRole("button", { name: /delete acme ai/i }));
+    const ownerSidebar = await screen.findByTestId("owner-sidebar-card");
+    await userEvent.click(within(ownerSidebar).getByRole("button", { name: /delete acme ai/i }));
 
     const confirmDialog = await screen.findByRole("dialog", {
       name: /delete owner preset/i,

@@ -543,17 +543,6 @@ export function ModelsPage() {
     [models, ownerPresets],
   );
 
-  const ownerFilterOptions = useMemo(
-    () => [
-      { value: "", label: t("models_page.all_owners") },
-      ...libraryOwners.map((owner) => ({
-        value: owner.value,
-        label: owner.label || owner.value,
-      })),
-    ],
-    [libraryOwners, t],
-  );
-
   const openEditModel = useCallback(
     (modelId: string) => {
       const model = models.find((entry) => entry.id === modelId);
@@ -823,147 +812,219 @@ export function ModelsPage() {
         </Tabs>
       </div>
 
-      <Card
-        title={
-          activeTab === "library" ? t("models_page.model_library") : t("models_page.model_configs")
-        }
-        description={
-          activeTab === "library"
-            ? t("models_page.model_library_desc")
-            : t("models_page.model_configs_desc")
-        }
-        className="flex flex-1 flex-col overflow-hidden"
-        bodyClassName="relative flex min-h-0 flex-1 flex-col"
-        actions={
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            <TextInput
-              value={searchFilter}
-              onChange={(e) => setSearchFilter(e.target.value)}
-              placeholder={t("models_page.search")}
-              className="!w-48"
-              startAdornment={<Search size={14} className="text-slate-400 dark:text-white/35" />}
-            />
-            {activeTab === "library" ? (
-              <>
-                <Select
-                  value={ownerFilter}
-                  onChange={setOwnerFilter}
-                  options={ownerFilterOptions}
-                  aria-label={t("models_page.owner_filter")}
-                  className="!w-40"
-                  size="sm"
-                />
-              </>
-            ) : null}
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => openAddModel()}
-              aria-label={t("models_page.add_model")}
-              title={t("models_page.add_model")}
+      {activeTab === "library" ? (
+        <div
+          data-testid="owner-library-layout"
+          className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[18rem_minmax(0,1fr)]"
+        >
+          <div data-testid="owner-sidebar-card" className="min-w-0">
+            <Card
+              title={t("models_page.model_owners")}
+              description={t("models_page.model_owners_desc")}
+              className="h-full"
+              bodyClassName="flex flex-col gap-2"
+              actions={
+                <Button
+                  variant="secondary"
+                  size="xs"
+                  onClick={() => setOwnerForm(emptyOwnerForm)}
+                  aria-label={t("models_page.add_owner")}
+                  title={t("models_page.add_owner")}
+                >
+                  <Plus size={13} />
+                  {t("models_page.add_owner")}
+                </Button>
+              }
             >
-              <Plus size={14} />
-            </Button>
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={() => void loadModels()}
-              disabled={loading}
-              title={t("models_page.refresh")}
-              aria-label={t("models_page.refresh")}
-            >
-              <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
-            </Button>
-          </div>
-        }
-      >
-        {activeTab === "library" ? (
-          <div
-            data-testid="owner-library-toolbar"
-            className="mb-3 flex min-h-12 items-center gap-2 overflow-x-auto rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2 dark:border-neutral-800 dark:bg-white/[0.03]"
-          >
-            <div className="shrink-0 text-xs font-semibold text-slate-500 dark:text-white/45">
-              {t("models_page.owner_presets")}
-            </div>
-            <Button
-              variant="secondary"
-              size="xs"
-              onClick={() => setOwnerForm(emptyOwnerForm)}
-              aria-label={t("models_page.add_owner")}
-              title={t("models_page.add_owner")}
-            >
-              <Plus size={13} />
-              {t("models_page.add_owner")}
-            </Button>
-            {libraryOwners.length === 0 ? (
-              <div className="shrink-0 text-xs text-slate-500 dark:text-white/45">
-                {t("models_page.no_owner_presets")}
-              </div>
-            ) : (
-              libraryOwners.map((owner) => {
-                const count = ownerModelCounts.get(owner.value) ?? owner.modelCount ?? 0;
-                return (
-                  <div
-                    key={owner.value}
-                    className="group inline-flex shrink-0 items-center gap-2 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-700 shadow-sm dark:border-neutral-800 dark:bg-neutral-950 dark:text-white/70"
-                  >
-                    <button
-                      type="button"
-                      onClick={() => setOwnerFilter(owner.value)}
-                      className="max-w-36 truncate font-medium hover:text-slate-950 dark:hover:text-white"
-                      title={owner.description || owner.value}
-                    >
-                      {owner.label || owner.value}
-                    </button>
-                    <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-500 dark:bg-white/[0.08] dark:text-white/45">
-                      {t("models_page.owner_model_count", { count })}
-                    </span>
-                    <span className="flex items-center gap-0.5">
-                      <Button
-                        size="xs"
-                        variant="ghost"
-                        onClick={() => setOwnerForm(toOwnerFormState(owner))}
-                        aria-label={t("models_page.edit_owner_aria", { owner: owner.label })}
-                        title={t("models_page.edit_owner_aria", { owner: owner.label })}
-                      >
-                        <Edit3 size={13} />
-                      </Button>
-                      <Button
-                        size="xs"
-                        variant="ghost"
-                        onClick={() => setDeleteOwnerTarget(owner)}
-                        aria-label={t("models_page.delete_owner_aria", { owner: owner.label })}
-                        title={t("models_page.delete_owner_aria", { owner: owner.label })}
-                      >
-                        <Trash2 size={13} />
-                      </Button>
-                    </span>
+              <button
+                type="button"
+                onClick={() => setOwnerFilter("")}
+                className={[
+                  "flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2 text-left text-sm transition",
+                  ownerFilter === ""
+                    ? "bg-slate-950 text-white shadow-sm dark:bg-white dark:text-slate-950"
+                    : "bg-slate-50 text-slate-700 hover:bg-slate-100 dark:bg-white/[0.04] dark:text-white/70 dark:hover:bg-white/[0.08]",
+                ].join(" ")}
+              >
+                <span className="min-w-0 truncate font-medium">{t("models_page.all_owners")}</span>
+                <span
+                  className={[
+                    "shrink-0 rounded-full px-2 py-0.5 text-[11px]",
+                    ownerFilter === ""
+                      ? "bg-white/15 text-white/80 dark:bg-slate-950/10 dark:text-slate-700"
+                      : "bg-white text-slate-500 dark:bg-neutral-950 dark:text-white/45",
+                  ].join(" ")}
+                >
+                  {t("models_page.owner_model_count", { count: models.length })}
+                </span>
+              </button>
+
+              <div className="min-h-0 space-y-2 overflow-y-auto pr-1">
+                {libraryOwners.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-slate-200 px-3 py-6 text-center text-sm text-slate-500 dark:border-neutral-800 dark:text-white/45">
+                    {t("models_page.no_owner_presets")}
                   </div>
-                );
-              })
-            )}
+                ) : (
+                  libraryOwners.map((owner) => {
+                    const count = ownerModelCounts.get(owner.value) ?? owner.modelCount ?? 0;
+                    const selected = ownerFilter === owner.value;
+                    return (
+                      <div
+                        key={owner.value}
+                        className={[
+                          "group flex items-center gap-2 rounded-xl px-2 py-1.5 transition",
+                          selected
+                            ? "bg-slate-100 ring-1 ring-slate-200 dark:bg-white/[0.08] dark:ring-white/10"
+                            : "hover:bg-slate-50 dark:hover:bg-white/[0.04]",
+                        ].join(" ")}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => setOwnerFilter(owner.value)}
+                          className="min-w-0 flex-1 text-left"
+                          title={owner.description || owner.value}
+                        >
+                          <span className="block truncate text-sm font-medium text-slate-900 dark:text-white">
+                            {owner.label || owner.value}
+                          </span>
+                          <span className="block truncate text-[11px] text-slate-500 dark:text-white/45">
+                            {owner.value}
+                          </span>
+                        </button>
+                        <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-500 dark:bg-white/[0.08] dark:text-white/45">
+                          {t("models_page.owner_model_count", { count })}
+                        </span>
+                        <Button
+                          size="xs"
+                          variant="ghost"
+                          onClick={() => setOwnerForm(toOwnerFormState(owner))}
+                          aria-label={t("models_page.edit_owner_aria", { owner: owner.label })}
+                          title={t("models_page.edit_owner_aria", { owner: owner.label })}
+                        >
+                          <Edit3 size={13} />
+                        </Button>
+                        <Button
+                          size="xs"
+                          variant="ghost"
+                          onClick={() => setDeleteOwnerTarget(owner)}
+                          aria-label={t("models_page.delete_owner_aria", { owner: owner.label })}
+                          title={t("models_page.delete_owner_aria", { owner: owner.label })}
+                        >
+                          <Trash2 size={13} />
+                        </Button>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </Card>
           </div>
-        ) : null}
-        <VirtualTable<ModelItem>
-          rows={filteredModels}
-          columns={modelColumns}
-          rowKey={(row) => row.id}
-          loading={loading}
-          rowHeight={52}
-          caption={t("models_page.table_caption")}
-          emptyText={searchFilter ? t("models_page.no_results") : t("models_page.no_model_data")}
-          minWidth="min-w-[1100px]"
-          height={activeTab === "library" ? "h-[calc(100vh-490px)]" : "h-[calc(100vh-430px)]"}
-        />
-        {loading ? (
-          <div className="absolute inset-0 z-10 flex items-center justify-center rounded-b-2xl bg-white/70 backdrop-blur-sm dark:bg-neutral-950/55">
-            <div className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white/85 px-3 py-2 text-sm font-medium text-slate-700 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/70 dark:text-white/75">
-              <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-slate-900 dark:border-white/20 dark:border-t-white/80" />
-              {t("models_page.loading")}
+
+          <div data-testid="model-library-card" className="min-w-0">
+            <Card
+              title={t("models_page.model_library")}
+              description={t("models_page.model_library_desc")}
+              className="flex h-full flex-col overflow-hidden"
+              bodyClassName="relative flex min-h-0 flex-1 flex-col"
+              actions={
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                  <TextInput
+                    value={searchFilter}
+                    onChange={(e) => setSearchFilter(e.target.value)}
+                    placeholder={t("models_page.search")}
+                    className="!w-48"
+                    startAdornment={
+                      <Search size={14} className="text-slate-400 dark:text-white/35" />
+                    }
+                  />
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => openAddModel(ownerFilter)}
+                    aria-label={t("models_page.add_model")}
+                    title={t("models_page.add_model")}
+                  >
+                    <Plus size={14} />
+                  </Button>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => void loadModels()}
+                    disabled={loading}
+                    title={t("models_page.refresh")}
+                    aria-label={t("models_page.refresh")}
+                  >
+                    <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+                  </Button>
+                </div>
+              }
+            >
+              <VirtualTable<ModelItem>
+                rows={filteredModels}
+                columns={modelColumns}
+                rowKey={(row) => row.id}
+                loading={loading}
+                rowHeight={52}
+                caption={t("models_page.table_caption")}
+                emptyText={
+                  searchFilter ? t("models_page.no_results") : t("models_page.no_model_data")
+                }
+                minWidth="min-w-[1100px]"
+                height="h-[calc(100vh-430px)]"
+              />
+            </Card>
+          </div>
+        </div>
+      ) : (
+        <Card
+          title={t("models_page.model_configs")}
+          description={t("models_page.model_configs_desc")}
+          className="flex flex-1 flex-col overflow-hidden"
+          bodyClassName="relative flex min-h-0 flex-1 flex-col"
+          actions={
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <TextInput
+                value={searchFilter}
+                onChange={(e) => setSearchFilter(e.target.value)}
+                placeholder={t("models_page.search")}
+                className="!w-48"
+                startAdornment={<Search size={14} className="text-slate-400 dark:text-white/35" />}
+              />
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => openAddModel()}
+                aria-label={t("models_page.add_model")}
+                title={t("models_page.add_model")}
+              >
+                <Plus size={14} />
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => void loadModels()}
+                disabled={loading}
+                title={t("models_page.refresh")}
+                aria-label={t("models_page.refresh")}
+              >
+                <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+              </Button>
             </div>
-          </div>
-        ) : null}
-      </Card>
+          }
+        >
+          <VirtualTable<ModelItem>
+            rows={filteredModels}
+            columns={modelColumns}
+            rowKey={(row) => row.id}
+            loading={loading}
+            rowHeight={52}
+            caption={t("models_page.table_caption")}
+            emptyText={searchFilter ? t("models_page.no_results") : t("models_page.no_model_data")}
+            minWidth="min-w-[1100px]"
+            height="h-[calc(100vh-430px)]"
+          />
+        </Card>
+      )}
 
       <Modal
         open={form !== null}

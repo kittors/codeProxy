@@ -2483,6 +2483,8 @@
     "owner_presets_title": "Owner presets",
     "owner_presets_desc": "Maintain owner options and quickly review the models under each owner.",
     "owner_presets": "Owner presets",
+    "model_owners": "Model owners",
+    "model_owners_desc": "Pick an owner to filter the library, or maintain owner presets.",
     "all_owners": "All owners",
     "owner_filter": "Owner filter",
     "add_owner": "Add owner",
