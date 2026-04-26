@@ -56,11 +56,11 @@ const NAV_ITEMS = [
   { to: "/image-generation", i18nKey: "shell.nav_image_generation", icon: Image },
   { to: "/channel-groups", i18nKey: "shell.nav_channel_groups", icon: Layers },
   {
-    to: "/manage/identity-fingerprint",
+    to: "/identity-fingerprint",
     i18nKey: "shell.nav_identity_fingerprint",
     icon: Fingerprint,
   },
-  { to: "/manage/models", i18nKey: "shell.nav_models", icon: Cpu },
+  { to: "/models", i18nKey: "shell.nav_models", icon: Cpu },
   { to: "/config", i18nKey: "shell.nav_config", icon: Settings },
   { to: "/system", i18nKey: "shell.nav_system", icon: Info },
   { to: "/logs", i18nKey: "shell.nav_logs", icon: FileText },
