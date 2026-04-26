@@ -33,8 +33,20 @@ function renderPage() {
 }
 
 describe("ModelsPage", () => {
+  let ownerPresetItems: Array<{
+    value: string;
+    label: string;
+    description: string;
+    enabled?: boolean;
+  }>;
+
   beforeEach(async () => {
     await i18n.changeLanguage("en");
+    ownerPresetItems = [
+      { value: "openai", label: "OpenAI", description: "OpenAI official models" },
+      { value: "anthropic", label: "Anthropic", description: "Claude models" },
+      { value: "acme-ai", label: "Acme AI", description: "Private preset owner" },
+    ];
     mocks.apiGet.mockReset();
     mocks.apiPost.mockReset();
     mocks.apiPut.mockReset();
@@ -76,11 +88,7 @@ describe("ModelsPage", () => {
       }
       if (path === "/model-owner-presets") {
         return Promise.resolve({
-          data: [
-            { value: "openai", label: "OpenAI", description: "OpenAI official models" },
-            { value: "anthropic", label: "Anthropic", description: "Claude models" },
-            { value: "acme-ai", label: "Acme AI", description: "Private preset owner" },
-          ],
+          data: ownerPresetItems,
         });
       }
       if (path.startsWith("/usage/logs")) {
@@ -89,7 +97,14 @@ describe("ModelsPage", () => {
       return Promise.resolve({});
     });
     mocks.apiPost.mockResolvedValue({ status: "ok" });
-    mocks.apiPut.mockResolvedValue({ status: "ok" });
+    mocks.apiPut.mockImplementation(
+      (path: string, payload: { items?: typeof ownerPresetItems }) => {
+        if (path === "/model-owner-presets" && Array.isArray(payload.items)) {
+          ownerPresetItems = payload.items;
+        }
+        return Promise.resolve({ status: "ok" });
+      },
+    );
     mocks.apiDelete.mockResolvedValue({ status: "ok" });
   });
 
@@ -108,6 +123,7 @@ describe("ModelsPage", () => {
 
     expect(await screen.findByText("gpt-image-2")).toBeInTheDocument();
     expect(screen.queryByText("seed-only-model")).not.toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: /owner management/i })).not.toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("tab", { name: /model library/i }));
 
@@ -216,20 +232,20 @@ describe("ModelsPage", () => {
     });
   });
 
-  test("maintains owner presets directly on the owner management page", async () => {
+  test("maintains owner presets from the model library with an add-owner dialog", async () => {
     renderPage();
 
     await screen.findByText("gpt-image-2");
-    await userEvent.click(screen.getByRole("tab", { name: /owner management/i }));
+    await userEvent.click(screen.getByRole("tab", { name: /model library/i }));
 
-    const ownerPanel = await screen.findByTestId("owner-management-panel");
-    expect(within(ownerPanel).getByText("Acme AI")).toBeInTheDocument();
-    expect(within(ownerPanel).getByText("1 model")).toBeInTheDocument();
+    const ownerToolbar = await screen.findByTestId("owner-library-toolbar");
+    expect(within(ownerToolbar).getByText("Acme AI")).toBeInTheDocument();
 
-    await userEvent.click(within(ownerPanel).getByRole("button", { name: /add owner/i }));
-    await userEvent.type(within(ownerPanel).getByLabelText(/owner value/i), "new-lab");
-    await userEvent.type(within(ownerPanel).getByLabelText(/owner label/i), "New Lab");
-    await userEvent.click(within(ownerPanel).getByRole("button", { name: /^save$/i }));
+    await userEvent.click(within(ownerToolbar).getByRole("button", { name: /add owner/i }));
+    const ownerDialog = await screen.findByRole("dialog", { name: /add owner/i });
+    await userEvent.type(within(ownerDialog).getByLabelText(/owner value/i), "new-lab");
+    await userEvent.type(within(ownerDialog).getByLabelText(/owner label/i), "New Lab");
+    await userEvent.click(within(ownerDialog).getByRole("button", { name: /^save$/i }));
 
     await waitFor(() => {
       expect(mocks.apiPut).toHaveBeenCalledWith(
@@ -249,5 +265,31 @@ describe("ModelsPage", () => {
 
     expect(await screen.findByRole("option", { name: "Acme AI" })).toBeInTheDocument();
     expect(await screen.findByRole("option", { name: "New Lab" })).toBeInTheDocument();
+  });
+
+  test("deletes an owner preset only after confirmation", async () => {
+    renderPage();
+
+    await screen.findByText("gpt-image-2");
+    await userEvent.click(screen.getByRole("tab", { name: /model library/i }));
+
+    const ownerToolbar = await screen.findByTestId("owner-library-toolbar");
+    await userEvent.click(within(ownerToolbar).getByRole("button", { name: /delete acme ai/i }));
+
+    const confirmDialog = await screen.findByRole("dialog", {
+      name: /delete owner preset/i,
+    });
+    expect(within(confirmDialog).getByText(/Acme AI/)).toBeInTheDocument();
+
+    await userEvent.click(within(confirmDialog).getByRole("button", { name: /^delete$/i }));
+
+    await waitFor(() => {
+      expect(mocks.apiPut).toHaveBeenCalledWith(
+        "/model-owner-presets",
+        expect.objectContaining({
+          items: expect.not.arrayContaining([expect.objectContaining({ value: "acme-ai" })]),
+        }),
+      );
+    });
   });
 });

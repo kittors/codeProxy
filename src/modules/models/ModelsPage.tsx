@@ -30,8 +30,8 @@ import iconQwen from "@/assets/icons/qwen.svg";
 import iconVertex from "@/assets/icons/vertex.svg";
 
 type PricingMode = "token" | "call";
-type ModelPageTab = "active" | "library" | "owners";
 type ModelScope = "active" | "library";
+type ModelPageTab = ModelScope;
 
 interface ModelPricing {
   mode: PricingMode;
@@ -69,6 +69,14 @@ interface ModelFormState {
   outputPrice: string;
   cachedPrice: string;
   pricePerCall: string;
+}
+
+interface OwnerFormState {
+  originalValue: string | null;
+  value: string;
+  label: string;
+  description: string;
+  enabled: boolean;
 }
 
 const VENDOR_ICONS: Record<string, { light: string; dark: string }> = {
@@ -109,6 +117,14 @@ const emptyForm: ModelFormState = {
   outputPrice: "",
   cachedPrice: "",
   pricePerCall: "",
+};
+
+const emptyOwnerForm: OwnerFormState = {
+  originalValue: null,
+  value: "",
+  label: "",
+  description: "",
+  enabled: true,
 };
 
 function getVendorPrefix(modelId: string): string {
@@ -376,6 +392,31 @@ function buildOwnerPresetDrafts(
   return Array.from(map.values()).sort((a, b) => a.label.localeCompare(b.label));
 }
 
+function toOwnerFormState(owner: ModelOwnerPreset): OwnerFormState {
+  return {
+    originalValue: owner.value,
+    value: owner.value,
+    label: owner.label,
+    description: owner.description,
+    enabled: owner.enabled,
+  };
+}
+
+function normalizeOwnerPresetItems(presets: ModelOwnerPreset[]) {
+  const items = presets
+    .map((owner) => ({
+      value: normalizeOwnerValue(owner.value),
+      label: owner.label.trim(),
+      description: owner.description.trim(),
+      enabled: owner.enabled,
+    }))
+    .filter((owner) => owner.value && owner.label);
+
+  return Array.from(new Map(items.map((item) => [item.value, item])).values()).sort((a, b) =>
+    a.label.localeCompare(b.label),
+  );
+}
+
 export function ModelsPage() {
   const { t } = useTranslation();
   const { notify } = useToast();
@@ -388,13 +429,14 @@ export function ModelsPage() {
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<ModelPageTab>("active");
   const [ownerPresets, setOwnerPresets] = useState<ModelOwnerPreset[]>([]);
-  const [ownerPresetDraft, setOwnerPresetDraft] = useState<ModelOwnerPreset[]>([]);
-  const [selectedOwner, setSelectedOwner] = useState("");
+  const [ownerFilter, setOwnerFilter] = useState("");
+  const [ownerForm, setOwnerForm] = useState<OwnerFormState | null>(null);
+  const [deleteOwnerTarget, setDeleteOwnerTarget] = useState<ModelOwnerPreset | null>(null);
   const [savingOwnerPresets, setSavingOwnerPresets] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<ModelItem | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  const modelScope: ModelScope = activeTab === "library" ? "library" : "active";
+  const modelScope: ModelScope = activeTab;
 
   const loadModels = useCallback(async () => {
     setLoading(true);
@@ -405,11 +447,12 @@ export function ModelsPage() {
       ]);
       setModels(data);
       setOwnerPresets(presets);
-      const draft = buildOwnerPresetDrafts(data, presets);
-      setOwnerPresetDraft(draft);
-      setSelectedOwner((current) =>
-        current && draft.some((owner) => owner.value === current) ? current : draft[0]?.value || "",
-      );
+      setOwnerFilter((current) => {
+        if (!current) return "";
+        return buildOwnerPresetDrafts(data, presets).some((owner) => owner.value === current)
+          ? current
+          : "";
+      });
       try {
         const usageData = await apiClient.get<{ stats?: { total_cost?: number } }>(
           "/usage/logs?days=9999&size=1",
@@ -434,12 +477,14 @@ export function ModelsPage() {
 
   const filteredModels = useMemo(() => {
     const needle = searchFilter.trim().toLowerCase();
-    if (!needle) return models;
+    const ownerNeedle = activeTab === "library" ? ownerFilter : "";
     return models.filter((model) => {
+      if (ownerNeedle && normalizeOwnerValue(model.owned_by) !== ownerNeedle) return false;
+      if (!needle) return true;
       const haystack = `${model.id} ${model.owned_by} ${model.description}`.toLowerCase();
       return haystack.includes(needle);
     });
-  }, [models, searchFilter]);
+  }, [activeTab, models, ownerFilter, searchFilter]);
 
   const totalStats = useMemo(() => {
     const pricedCount = models.filter(hasPricing).length;
@@ -492,6 +537,22 @@ export function ModelsPage() {
 
     return Array.from(optionMap.values());
   }, [form?.ownedBy, models, ownerPresets]);
+
+  const libraryOwners = useMemo(
+    () => buildOwnerPresetDrafts(models, ownerPresets),
+    [models, ownerPresets],
+  );
+
+  const ownerFilterOptions = useMemo(
+    () => [
+      { value: "", label: t("models_page.all_owners") },
+      ...libraryOwners.map((owner) => ({
+        value: owner.value,
+        label: owner.label || owner.value,
+      })),
+    ],
+    [libraryOwners, t],
+  );
 
   const openEditModel = useCallback(
     (modelId: string) => {
@@ -549,85 +610,68 @@ export function ModelsPage() {
     }
   }, [deleteTarget, notify, t]);
 
-  const selectedOwnerDraft = useMemo(
-    () => ownerPresetDraft.find((owner) => owner.value === selectedOwner) ?? null,
-    [ownerPresetDraft, selectedOwner],
-  );
-
-  const selectedOwnerModels = useMemo(
-    () => models.filter((model) => normalizeOwnerValue(model.owned_by) === selectedOwner),
-    [models, selectedOwner],
-  );
-
-  const updateSelectedOwnerDraft = useCallback(
-    (patch: Partial<ModelOwnerPreset>) => {
-      if (!selectedOwnerDraft) return;
-      setOwnerPresetDraft((prev) =>
-        prev.map((owner) => {
-          if (owner.value !== selectedOwnerDraft.value) return owner;
-          const next = { ...owner, ...patch };
-          if (patch.value !== undefined) {
-            const nextValue = normalizeOwnerValue(patch.value);
-            next.value = nextValue;
-            setSelectedOwner(nextValue);
-          }
-          return next;
-        }),
-      );
+  const persistOwnerPresets = useCallback(
+    async (nextPresets: ModelOwnerPreset[]) => {
+      const deduped = normalizeOwnerPresetItems(nextPresets);
+      setSavingOwnerPresets(true);
+      try {
+        await apiClient.put("/model-owner-presets", { items: deduped });
+        setOwnerPresets(deduped);
+        notify({ type: "success", message: t("models_page.owner_presets_saved") });
+        return true;
+      } catch (err: unknown) {
+        notify({
+          type: "error",
+          message: err instanceof Error ? err.message : t("models_page.owner_presets_save_failed"),
+        });
+        return false;
+      } finally {
+        setSavingOwnerPresets(false);
+      }
     },
-    [selectedOwnerDraft],
+    [notify, t],
   );
 
-  const addOwnerPresetDraft = useCallback(() => {
-    const next: ModelOwnerPreset = {
-      value: "",
-      label: "",
-      description: "",
-      enabled: true,
-      modelCount: 0,
-    };
-    setOwnerPresetDraft((prev) => [next, ...prev]);
-    setSelectedOwner("");
+  const updateOwnerForm = useCallback((patch: Partial<OwnerFormState>) => {
+    setOwnerForm((current) => (current ? { ...current, ...patch } : current));
   }, []);
 
-  const removeSelectedOwnerDraft = useCallback(() => {
-    if (!selectedOwnerDraft) return;
-    setOwnerPresetDraft((prev) => {
-      const next = prev.filter((owner) => owner.value !== selectedOwnerDraft.value);
-      setSelectedOwner(next[0]?.value || "");
-      return next;
-    });
-  }, [selectedOwnerDraft]);
+  const saveOwnerForm = useCallback(async () => {
+    if (!ownerForm) return;
+    const value = normalizeOwnerValue(ownerForm.value);
+    const label = ownerForm.label.trim() || value;
+    if (!value || !label) return;
 
-  const saveOwnerPresets = useCallback(async () => {
-    const items = ownerPresetDraft
-      .map((owner) => ({
-        value: normalizeOwnerValue(owner.value),
-        label: owner.label.trim(),
-        description: owner.description.trim(),
-        enabled: owner.enabled,
-      }))
-      .filter((owner) => owner.value && owner.label);
+    const nextOwner: ModelOwnerPreset = {
+      value,
+      label,
+      description: ownerForm.description.trim(),
+      enabled: ownerForm.enabled,
+      modelCount: ownerForm.originalValue
+        ? (ownerModelCounts.get(ownerForm.originalValue) ?? 0)
+        : 0,
+    };
 
-    const deduped = Array.from(new Map(items.map((item) => [item.value, item])).values()).sort(
-      (a, b) => a.label.localeCompare(b.label),
+    const withoutOriginal = ownerPresets.filter(
+      (owner) => owner.value !== (ownerForm.originalValue ?? value) && owner.value !== value,
     );
-
-    setSavingOwnerPresets(true);
-    try {
-      await apiClient.put("/model-owner-presets", { items: deduped });
-      setOwnerPresets(deduped);
-      setOwnerPresetDraft(deduped);
-      notify({ type: "success", message: t("models_page.owner_presets_saved") });
-    } catch (err: unknown) {
-      notify({
-        type: "error",
-        message: err instanceof Error ? err.message : t("models_page.owner_presets_save_failed"),
-      });
-    } finally {
-      setSavingOwnerPresets(false);
+    const saved = await persistOwnerPresets([...withoutOriginal, nextOwner]);
+    if (saved) {
+      setOwnerForm(null);
+      setOwnerFilter((current) => (current === ownerForm.originalValue ? value : current));
     }
-  }, [notify, ownerPresetDraft, t]);
+  }, [ownerForm, ownerModelCounts, ownerPresets, persistOwnerPresets]);
+
+  const deleteOwnerPreset = useCallback(async () => {
+    if (!deleteOwnerTarget) return;
+    const saved = await persistOwnerPresets(
+      ownerPresets.filter((owner) => owner.value !== deleteOwnerTarget.value),
+    );
+    if (saved) {
+      setDeleteOwnerTarget(null);
+      setOwnerFilter((current) => (current === deleteOwnerTarget.value ? "" : current));
+    }
+  }, [deleteOwnerTarget, ownerPresets, persistOwnerPresets]);
 
   const modelColumns = useMemo<VirtualTableColumn<ModelItem>[]>(
     () => [
@@ -766,55 +810,60 @@ export function ModelsPage() {
         </Card>
       </div>
 
-      <Tabs value={activeTab} onValueChange={(next) => setActiveTab(next as ModelPageTab)}>
-        <TabsList>
-          <TabsTrigger value="active">{t("models_page.tab_active_models")}</TabsTrigger>
-          <TabsTrigger value="library">{t("models_page.tab_model_library")}</TabsTrigger>
-          <TabsTrigger value="owners">{t("models_page.tab_owner_management")}</TabsTrigger>
-        </TabsList>
-      </Tabs>
+      <div className="flex">
+        <Tabs
+          value={activeTab}
+          onValueChange={(next) => setActiveTab(next as ModelPageTab)}
+          size="sm"
+        >
+          <TabsList>
+            <TabsTrigger value="active">{t("models_page.tab_active_models")}</TabsTrigger>
+            <TabsTrigger value="library">{t("models_page.tab_model_library")}</TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
 
       <Card
         title={
-          activeTab === "owners"
-            ? t("models_page.owner_presets_title")
-            : activeTab === "library"
-              ? t("models_page.model_library")
-              : t("models_page.model_configs")
+          activeTab === "library" ? t("models_page.model_library") : t("models_page.model_configs")
         }
         description={
-          activeTab === "owners"
-            ? t("models_page.owner_presets_desc")
-            : activeTab === "library"
-              ? t("models_page.model_library_desc")
-              : t("models_page.model_configs_desc")
+          activeTab === "library"
+            ? t("models_page.model_library_desc")
+            : t("models_page.model_configs_desc")
         }
         className="flex flex-1 flex-col overflow-hidden"
         bodyClassName="relative flex min-h-0 flex-1 flex-col"
         actions={
-          <div className="flex items-center gap-2">
-            {activeTab === "owners" ? null : (
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <TextInput
+              value={searchFilter}
+              onChange={(e) => setSearchFilter(e.target.value)}
+              placeholder={t("models_page.search")}
+              className="!w-48"
+              startAdornment={<Search size={14} className="text-slate-400 dark:text-white/35" />}
+            />
+            {activeTab === "library" ? (
               <>
-                <TextInput
-                  value={searchFilter}
-                  onChange={(e) => setSearchFilter(e.target.value)}
-                  placeholder={t("models_page.search")}
-                  className="!w-48"
-                  startAdornment={
-                    <Search size={14} className="text-slate-400 dark:text-white/35" />
-                  }
-                />
-                <Button
-                  variant="secondary"
+                <Select
+                  value={ownerFilter}
+                  onChange={setOwnerFilter}
+                  options={ownerFilterOptions}
+                  aria-label={t("models_page.owner_filter")}
+                  className="!w-40"
                   size="sm"
-                  onClick={() => openAddModel()}
-                  aria-label={t("models_page.add_model")}
-                  title={t("models_page.add_model")}
-                >
-                  <Plus size={14} />
-                </Button>
+                />
               </>
-            )}
+            ) : null}
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => openAddModel()}
+              aria-label={t("models_page.add_model")}
+              title={t("models_page.add_model")}
+            >
+              <Plus size={14} />
+            </Button>
             <Button
               variant="primary"
               size="sm"
@@ -828,222 +877,85 @@ export function ModelsPage() {
           </div>
         }
       >
-        {activeTab === "owners" ? (
+        {activeTab === "library" ? (
           <div
-            data-testid="owner-management-panel"
-            className="grid gap-4 lg:grid-cols-[17rem_minmax(0,1fr)]"
+            data-testid="owner-library-toolbar"
+            className="mb-3 flex min-h-12 items-center gap-2 overflow-x-auto rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2 dark:border-neutral-800 dark:bg-white/[0.03]"
           >
-            <div className="min-w-0 rounded-xl border border-slate-200 bg-slate-50/70 p-2 dark:border-neutral-800 dark:bg-white/[0.03]">
-              <div className="mb-2 flex items-center justify-between gap-2 px-1">
-                <div className="text-xs font-semibold uppercase text-slate-500 dark:text-white/45">
-                  {t("models_page.owner_presets")}
-                </div>
-                <Button size="xs" variant="secondary" onClick={addOwnerPresetDraft}>
-                  <Plus size={13} />
-                  {t("models_page.add_owner")}
-                </Button>
-              </div>
-              <div className="max-h-[52vh] space-y-1 overflow-y-auto pr-1">
-                {ownerPresetDraft.map((owner, index) => {
-                  const value = owner.value || "";
-                  const count = ownerModelCounts.get(value) ?? owner.modelCount ?? 0;
-                  const selected =
-                    value === selectedOwner &&
-                    index === ownerPresetDraft.findIndex((item) => item.value === selectedOwner);
-                  return (
-                    <button
-                      key={`${value}-${index}`}
-                      type="button"
-                      onClick={() => setSelectedOwner(value)}
-                      className={[
-                        "flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-sm transition",
-                        selected
-                          ? "bg-white text-slate-950 shadow-sm ring-1 ring-slate-200 dark:bg-neutral-900 dark:text-white dark:ring-neutral-700"
-                          : "text-slate-700 hover:bg-white/70 dark:text-white/70 dark:hover:bg-white/[0.06]",
-                      ].join(" ")}
-                    >
-                      <span className="min-w-0">
-                        <span className="block truncate font-medium">
-                          {owner.label || owner.value || t("models_page.new_owner")}
-                        </span>
-                        <span className="block truncate text-[11px] text-slate-500 dark:text-white/40">
-                          {value || t("models_page.owner_value_pending")}
-                        </span>
-                      </span>
-                      <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-500 dark:bg-white/[0.08] dark:text-white/45">
-                        {t("models_page.owner_model_count", { count })}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
+            <div className="shrink-0 text-xs font-semibold text-slate-500 dark:text-white/45">
+              {t("models_page.owner_presets")}
             </div>
-
-            <div className="min-w-0 space-y-4">
-              {selectedOwnerDraft ? (
-                <>
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <div>
-                      <label
-                        htmlFor="owner-preset-value"
-                        className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80"
-                      >
-                        {t("models_page.owner_value")}
-                      </label>
-                      <TextInput
-                        id="owner-preset-value"
-                        value={selectedOwnerDraft.value}
-                        onChange={(e) => updateSelectedOwnerDraft({ value: e.target.value })}
-                        placeholder="openai"
-                      />
-                    </div>
-                    <div>
-                      <label
-                        htmlFor="owner-preset-label"
-                        className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80"
-                      >
-                        {t("models_page.owner_label")}
-                      </label>
-                      <TextInput
-                        id="owner-preset-label"
-                        value={selectedOwnerDraft.label}
-                        onChange={(e) => updateSelectedOwnerDraft({ label: e.target.value })}
-                        placeholder="OpenAI"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label
-                      htmlFor="owner-preset-description"
-                      className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80"
+            <Button
+              variant="secondary"
+              size="xs"
+              onClick={() => setOwnerForm(emptyOwnerForm)}
+              aria-label={t("models_page.add_owner")}
+              title={t("models_page.add_owner")}
+            >
+              <Plus size={13} />
+              {t("models_page.add_owner")}
+            </Button>
+            {libraryOwners.length === 0 ? (
+              <div className="shrink-0 text-xs text-slate-500 dark:text-white/45">
+                {t("models_page.no_owner_presets")}
+              </div>
+            ) : (
+              libraryOwners.map((owner) => {
+                const count = ownerModelCounts.get(owner.value) ?? owner.modelCount ?? 0;
+                return (
+                  <div
+                    key={owner.value}
+                    className="group inline-flex shrink-0 items-center gap-2 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-700 shadow-sm dark:border-neutral-800 dark:bg-neutral-950 dark:text-white/70"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setOwnerFilter(owner.value)}
+                      className="max-w-36 truncate font-medium hover:text-slate-950 dark:hover:text-white"
+                      title={owner.description || owner.value}
                     >
-                      {t("models_page.owner_description")}
-                    </label>
-                    <TextInput
-                      id="owner-preset-description"
-                      value={selectedOwnerDraft.description}
-                      onChange={(e) => updateSelectedOwnerDraft({ description: e.target.value })}
-                      placeholder={t("models_page.owner_description_placeholder")}
-                    />
-                  </div>
-
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <ToggleSwitch
-                      checked={selectedOwnerDraft.enabled}
-                      onCheckedChange={(enabled) => updateSelectedOwnerDraft({ enabled })}
-                      label={t("models_page.enabled")}
-                    />
-                    <div className="flex items-center gap-2">
-                      <Button
-                        size="sm"
-                        variant="danger"
-                        onClick={removeSelectedOwnerDraft}
-                        disabled={selectedOwnerModels.length > 0}
-                        title={
-                          selectedOwnerModels.length > 0
-                            ? t("models_page.owner_remove_disabled")
-                            : t("models_page.remove_owner")
-                        }
-                      >
-                        <Trash2 size={14} />
-                        {t("models_page.remove_owner")}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="primary"
-                        onClick={() => void saveOwnerPresets()}
-                        disabled={savingOwnerPresets}
-                      >
-                        {savingOwnerPresets ? t("models_page.saving") : t("models_page.save")}
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div className="rounded-xl border border-slate-200 dark:border-neutral-800">
-                    <div className="flex items-center justify-between gap-2 border-b border-slate-200 px-3 py-2 dark:border-neutral-800">
-                      <div className="text-sm font-semibold text-slate-900 dark:text-white">
-                        {t("models_page.owner_models")}
-                      </div>
+                      {owner.label || owner.value}
+                    </button>
+                    <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-500 dark:bg-white/[0.08] dark:text-white/45">
+                      {t("models_page.owner_model_count", { count })}
+                    </span>
+                    <span className="flex items-center gap-0.5">
                       <Button
                         size="xs"
-                        variant="secondary"
-                        onClick={() => {
-                          setActiveTab("active");
-                          openAddModel(selectedOwnerDraft.value);
-                        }}
+                        variant="ghost"
+                        onClick={() => setOwnerForm(toOwnerFormState(owner))}
+                        aria-label={t("models_page.edit_owner_aria", { owner: owner.label })}
+                        title={t("models_page.edit_owner_aria", { owner: owner.label })}
                       >
-                        <Plus size={13} />
-                        {t("models_page.add_model")}
+                        <Edit3 size={13} />
                       </Button>
-                    </div>
-                    <div className="divide-y divide-slate-100 dark:divide-neutral-800">
-                      {selectedOwnerModels.length === 0 ? (
-                        <div className="px-3 py-6 text-center text-sm text-slate-500 dark:text-white/45">
-                          {t("models_page.no_owner_models")}
-                        </div>
-                      ) : (
-                        selectedOwnerModels.map((model) => (
-                          <div
-                            key={model.id}
-                            className="flex min-w-0 items-center justify-between gap-3 px-3 py-2"
-                          >
-                            <div className="min-w-0">
-                              <div className="truncate text-sm font-medium text-slate-900 dark:text-white">
-                                {model.id}
-                              </div>
-                              <div className="truncate text-xs text-slate-500 dark:text-white/45">
-                                {formatPrice(model, t("models_page.not_priced"))}
-                              </div>
-                            </div>
-                            <div className="flex shrink-0 items-center gap-1">
-                              <Button
-                                size="xs"
-                                variant="ghost"
-                                onClick={() => {
-                                  setActiveTab("active");
-                                  openEditModel(model.id);
-                                }}
-                                aria-label={t("models_page.edit_model_aria", { model: model.id })}
-                              >
-                                <Edit3 size={14} />
-                              </Button>
-                              <Button
-                                size="xs"
-                                variant="ghost"
-                                onClick={() => setDeleteTarget(model)}
-                                aria-label={t("models_page.delete_model_aria", { model: model.id })}
-                              >
-                                <Trash2 size={14} />
-                              </Button>
-                            </div>
-                          </div>
-                        ))
-                      )}
-                    </div>
+                      <Button
+                        size="xs"
+                        variant="ghost"
+                        onClick={() => setDeleteOwnerTarget(owner)}
+                        aria-label={t("models_page.delete_owner_aria", { owner: owner.label })}
+                        title={t("models_page.delete_owner_aria", { owner: owner.label })}
+                      >
+                        <Trash2 size={13} />
+                      </Button>
+                    </span>
                   </div>
-                </>
-              ) : (
-                <div className="flex h-full min-h-48 items-center justify-center rounded-xl border border-dashed border-slate-200 text-sm text-slate-500 dark:border-neutral-800 dark:text-white/45">
-                  {t("models_page.no_owner_presets")}
-                </div>
-              )}
-            </div>
+                );
+              })
+            )}
           </div>
-        ) : (
-          <VirtualTable<ModelItem>
-            rows={filteredModels}
-            columns={modelColumns}
-            rowKey={(row) => row.id}
-            loading={loading}
-            rowHeight={52}
-            caption={t("models_page.table_caption")}
-            emptyText={searchFilter ? t("models_page.no_results") : t("models_page.no_model_data")}
-            minWidth="min-w-[1100px]"
-            height="h-[calc(100vh-430px)]"
-          />
-        )}
-        {loading && activeTab !== "owners" ? (
+        ) : null}
+        <VirtualTable<ModelItem>
+          rows={filteredModels}
+          columns={modelColumns}
+          rowKey={(row) => row.id}
+          loading={loading}
+          rowHeight={52}
+          caption={t("models_page.table_caption")}
+          emptyText={searchFilter ? t("models_page.no_results") : t("models_page.no_model_data")}
+          minWidth="min-w-[1100px]"
+          height={activeTab === "library" ? "h-[calc(100vh-490px)]" : "h-[calc(100vh-430px)]"}
+        />
+        {loading ? (
           <div className="absolute inset-0 z-10 flex items-center justify-center rounded-b-2xl bg-white/70 backdrop-blur-sm dark:bg-neutral-950/55">
             <div className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white/85 px-3 py-2 text-sm font-medium text-slate-700 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/70 dark:text-white/75">
               <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-slate-900 dark:border-white/20 dark:border-t-white/80" />
@@ -1221,6 +1133,97 @@ export function ModelsPage() {
           </div>
         ) : null}
       </Modal>
+
+      <Modal
+        open={ownerForm !== null}
+        onClose={() => setOwnerForm(null)}
+        title={ownerForm?.originalValue ? t("models_page.edit_owner") : t("models_page.add_owner")}
+        description={t("models_page.owner_form_desc")}
+        maxWidth="max-w-xl"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setOwnerForm(null)}>
+              {t("models_page.cancel")}
+            </Button>
+            <Button
+              variant="primary"
+              onClick={() => void saveOwnerForm()}
+              disabled={savingOwnerPresets}
+            >
+              {savingOwnerPresets ? t("models_page.saving") : t("models_page.save")}
+            </Button>
+          </>
+        }
+      >
+        {ownerForm ? (
+          <div className="space-y-4">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label
+                  htmlFor="owner-preset-value"
+                  className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80"
+                >
+                  {t("models_page.owner_value")}
+                </label>
+                <TextInput
+                  id="owner-preset-value"
+                  value={ownerForm.value}
+                  onChange={(e) => updateOwnerForm({ value: e.target.value })}
+                  placeholder="openai"
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor="owner-preset-label"
+                  className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80"
+                >
+                  {t("models_page.owner_label")}
+                </label>
+                <TextInput
+                  id="owner-preset-label"
+                  value={ownerForm.label}
+                  onChange={(e) => updateOwnerForm({ label: e.target.value })}
+                  placeholder="OpenAI"
+                />
+              </div>
+            </div>
+            <div>
+              <label
+                htmlFor="owner-preset-description"
+                className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80"
+              >
+                {t("models_page.owner_description")}
+              </label>
+              <TextInput
+                id="owner-preset-description"
+                value={ownerForm.description}
+                onChange={(e) => updateOwnerForm({ description: e.target.value })}
+                placeholder={t("models_page.owner_description_placeholder")}
+              />
+            </div>
+            <ToggleSwitch
+              checked={ownerForm.enabled}
+              onCheckedChange={(enabled) => updateOwnerForm({ enabled })}
+              label={t("models_page.enabled")}
+            />
+          </div>
+        ) : null}
+      </Modal>
+
+      <ConfirmModal
+        open={deleteOwnerTarget !== null}
+        title={t("models_page.delete_owner_title")}
+        description={t("models_page.delete_owner_desc", {
+          owner: deleteOwnerTarget?.label ?? "",
+          count: deleteOwnerTarget
+            ? (ownerModelCounts.get(deleteOwnerTarget.value) ?? deleteOwnerTarget.modelCount ?? 0)
+            : 0,
+        })}
+        confirmText={t("models_page.delete")}
+        busy={savingOwnerPresets}
+        onClose={() => setDeleteOwnerTarget(null)}
+        onConfirm={() => void deleteOwnerPreset()}
+      />
 
       <ConfirmModal
         open={deleteTarget !== null}
