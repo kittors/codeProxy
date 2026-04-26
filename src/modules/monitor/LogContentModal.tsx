@@ -80,12 +80,6 @@ function formatDetailScalar(value: unknown): string {
   return JSON.stringify(value, null, 2);
 }
 
-function countDetailEntries(value: unknown): number {
-  if (Array.isArray(value)) return value.length;
-  if (value && typeof value === "object") return Object.keys(value).length;
-  return value === null || value === undefined || value === "" ? 0 : 1;
-}
-
 function isComplexDetailValue(value: unknown): value is Record<string, unknown> | unknown[] {
   return Boolean(value) && typeof value === "object";
 }
@@ -187,7 +181,6 @@ function RequestDetailSection({
   defaultOpen?: boolean;
 }) {
   const [open, setOpen] = useState(defaultOpen);
-  const entryCount = countDetailEntries(value);
   const content = isComplexDetailValue(value) ? value : { value };
   const contentId = testId ? `${testId}-content` : undefined;
 
@@ -205,7 +198,6 @@ function RequestDetailSection({
       >
         <div className="min-w-0">
           <h3 className="truncate text-sm font-semibold text-slate-900 dark:text-white">{title}</h3>
-          <p className="mt-0.5 font-mono text-xs text-slate-500 dark:text-white/40">{entryCount}</p>
         </div>
         <ChevronDown
           size={16}
