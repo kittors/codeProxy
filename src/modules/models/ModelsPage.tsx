@@ -861,7 +861,7 @@ export function ModelsPage() {
 
               <div
                 data-testid="owner-sidebar-list"
-                className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1"
+                className="-mx-1 min-h-0 flex-1 space-y-2 overflow-x-hidden overflow-y-auto px-1 py-1"
               >
                 {libraryOwners.length === 0 ? (
                   <div className="rounded-xl border border-dashed border-slate-200 px-3 py-6 text-center text-sm text-slate-500 dark:border-neutral-800 dark:text-white/45">

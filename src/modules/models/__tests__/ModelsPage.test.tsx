@@ -156,6 +156,7 @@ describe("ModelsPage", () => {
     expect(ownerSidebar).toHaveClass("h-full", "min-h-0");
     expect(modelLibrary).toHaveClass("h-full", "min-h-0");
     expect(ownerList).toHaveClass("min-h-0", "flex-1", "overflow-y-auto");
+    expect(ownerList).toHaveClass("-mx-1", "px-1", "py-1", "overflow-x-hidden");
     expect(within(ownerList).getByText("Owner 32")).toBeInTheDocument();
   });
 
