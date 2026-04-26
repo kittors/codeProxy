@@ -815,14 +815,14 @@ export function ModelsPage() {
       {activeTab === "library" ? (
         <div
           data-testid="owner-library-layout"
-          className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[18rem_minmax(0,1fr)]"
+          className="grid h-[calc(100dvh-300px)] min-h-[28rem] gap-4 lg:grid-cols-[18rem_minmax(0,1fr)]"
         >
-          <div data-testid="owner-sidebar-card" className="min-w-0">
+          <div data-testid="owner-sidebar-card" className="h-full min-h-0 min-w-0">
             <Card
               title={t("models_page.model_owners")}
               description={t("models_page.model_owners_desc")}
-              className="h-full"
-              bodyClassName="flex flex-col gap-2"
+              className="flex h-full min-h-0 flex-col overflow-hidden"
+              bodyClassName="flex min-h-0 flex-1 flex-col gap-2"
               actions={
                 <Button
                   variant="secondary"
@@ -859,7 +859,10 @@ export function ModelsPage() {
                 </span>
               </button>
 
-              <div className="min-h-0 space-y-2 overflow-y-auto pr-1">
+              <div
+                data-testid="owner-sidebar-list"
+                className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1"
+              >
                 {libraryOwners.length === 0 ? (
                   <div className="rounded-xl border border-dashed border-slate-200 px-3 py-6 text-center text-sm text-slate-500 dark:border-neutral-800 dark:text-white/45">
                     {t("models_page.no_owner_presets")}
@@ -920,7 +923,7 @@ export function ModelsPage() {
             </Card>
           </div>
 
-          <div data-testid="model-library-card" className="min-w-0">
+          <div data-testid="model-library-card" className="h-full min-h-0 min-w-0">
             <Card
               title={t("models_page.model_library")}
               description={t("models_page.model_library_desc")}
@@ -970,7 +973,8 @@ export function ModelsPage() {
                   searchFilter ? t("models_page.no_results") : t("models_page.no_model_data")
                 }
                 minWidth="min-w-[1100px]"
-                height="h-[calc(100vh-430px)]"
+                height="h-full"
+                minHeight="min-h-0"
               />
             </Card>
           </div>

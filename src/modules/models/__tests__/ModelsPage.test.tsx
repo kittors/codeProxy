@@ -135,6 +135,30 @@ describe("ModelsPage", () => {
     expect(mocks.apiGet).toHaveBeenCalledWith("/model-configs?scope=library");
   });
 
+  test("keeps the owner sidebar constrained while the owner list scrolls internally", async () => {
+    ownerPresetItems = Array.from({ length: 32 }, (_, index) => ({
+      value: `owner-${index + 1}`,
+      label: `Owner ${index + 1}`,
+      description: `Owner preset ${index + 1}`,
+    }));
+
+    renderPage();
+
+    expect(await screen.findByText("gpt-image-2")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("tab", { name: /model library/i }));
+
+    const layout = await screen.findByTestId("owner-library-layout");
+    const ownerSidebar = screen.getByTestId("owner-sidebar-card");
+    const modelLibrary = screen.getByTestId("model-library-card");
+    const ownerList = screen.getByTestId("owner-sidebar-list");
+
+    expect(layout).toHaveClass("h-[calc(100dvh-300px)]", "min-h-[28rem]");
+    expect(ownerSidebar).toHaveClass("h-full", "min-h-0");
+    expect(modelLibrary).toHaveClass("h-full", "min-h-0");
+    expect(ownerList).toHaveClass("min-h-0", "flex-1", "overflow-y-auto");
+    expect(within(ownerList).getByText("Owner 32")).toBeInTheDocument();
+  });
+
   test("deletes a model only after confirmation", async () => {
     renderPage();
 
