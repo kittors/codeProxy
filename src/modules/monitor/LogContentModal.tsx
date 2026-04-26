@@ -1,17 +1,14 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  Braces,
+  ChevronDown,
   Code2,
   Download,
   Eye,
   FileInput,
   FileOutput,
-  Globe2,
   Info,
   Loader2,
-  SendHorizontal,
-  ServerCog,
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -52,37 +49,6 @@ type ImageGenerationOutputView = {
 };
 type ImageGenerationOutputImage = { src: string; revisedPrompt?: string };
 type RequestDetailRecord = Record<string, unknown>;
-type RequestDetailTone = "client" | "upstream" | "response" | "extra";
-
-const REQUEST_DETAIL_TONE_STYLES: Record<
-  RequestDetailTone,
-  { accent: string; badge: string; header: string }
-> = {
-  client: {
-    accent: "border-l-sky-400 dark:border-l-sky-400/80",
-    badge:
-      "bg-sky-50 text-sky-700 ring-sky-200 dark:bg-sky-500/10 dark:text-sky-300 dark:ring-sky-400/20",
-    header: "from-sky-50/80 to-white dark:from-sky-500/10 dark:to-neutral-950",
-  },
-  upstream: {
-    accent: "border-l-amber-400 dark:border-l-amber-300/80",
-    badge:
-      "bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-400/10 dark:text-amber-200 dark:ring-amber-300/20",
-    header: "from-amber-50/80 to-white dark:from-amber-400/10 dark:to-neutral-950",
-  },
-  response: {
-    accent: "border-l-emerald-400 dark:border-l-emerald-300/80",
-    badge:
-      "bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-400/10 dark:text-emerald-200 dark:ring-emerald-300/20",
-    header: "from-emerald-50/80 to-white dark:from-emerald-400/10 dark:to-neutral-950",
-  },
-  extra: {
-    accent: "border-l-slate-300 dark:border-l-neutral-600",
-    badge:
-      "bg-slate-100 text-slate-600 ring-slate-200 dark:bg-white/10 dark:text-slate-200 dark:ring-white/15",
-    header: "from-slate-50 to-white dark:from-white/5 dark:to-neutral-950",
-  },
-};
 
 function parseJsonObject(raw: string): JsonObject | null {
   if (!raw) return null;
@@ -126,7 +92,7 @@ function isComplexDetailValue(value: unknown): value is Record<string, unknown> 
 
 function RequestDetailCodeBlock({ text }: { text: string }) {
   return (
-    <pre className="max-h-80 overflow-auto rounded-lg border border-slate-200 bg-slate-950 px-3 py-2.5 font-mono text-xs leading-5 whitespace-pre-wrap text-slate-100 shadow-inner dark:border-neutral-800 dark:bg-black/60">
+    <pre className="max-h-80 overflow-auto rounded-md border border-slate-200 bg-slate-50 px-3 py-2.5 font-mono text-xs leading-5 whitespace-pre-wrap text-slate-800 dark:border-neutral-800 dark:bg-neutral-900/70 dark:text-slate-200">
       {text || "--"}
     </pre>
   );
@@ -138,7 +104,7 @@ function RequestDetailPrimitive({ value }: { value: unknown }) {
     return <RequestDetailCodeBlock text={text} />;
   }
   return (
-    <span className="inline-block max-w-full break-all rounded-md bg-slate-50 px-2 py-1 font-mono text-[13px] leading-5 text-slate-800 ring-1 ring-slate-200/70 dark:bg-white/[0.04] dark:text-slate-100 dark:ring-white/10">
+    <span className="font-mono text-[13px] leading-5 break-all text-slate-800 dark:text-slate-100">
       {text || "--"}
     </span>
   );
@@ -158,20 +124,18 @@ function RequestDetailObject({
   return (
     <div
       className={[
-        "overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-neutral-800 dark:bg-neutral-950/70",
-        depth > 0 ? "shadow-none" : "shadow-sm shadow-slate-950/[0.03]",
+        "overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-neutral-800 dark:bg-neutral-950/50",
+        depth > 0 ? "" : "shadow-sm shadow-slate-950/[0.02]",
       ].join(" ")}
     >
       {entries.map(([key, entryValue]) => (
         <div
           key={key}
-          className="grid gap-2 border-b border-slate-100 px-3 py-3 last:border-b-0 dark:border-neutral-800/80 sm:grid-cols-[minmax(8rem,13rem)_minmax(0,1fr)]"
+          className="grid gap-2 border-b border-slate-100 px-3 py-2.5 last:border-b-0 dark:border-neutral-800/80 sm:grid-cols-[minmax(8rem,12rem)_minmax(0,1fr)]"
         >
-          <div className="min-w-0">
-            <code className="inline-flex max-w-full items-center rounded-md bg-slate-100 px-2 py-1 font-mono text-[11px] leading-4 break-all text-slate-600 ring-1 ring-slate-200/80 dark:bg-white/[0.06] dark:text-slate-300 dark:ring-white/10">
-              {key}
-            </code>
-          </div>
+          <code className="min-w-0 font-mono text-xs leading-5 break-all text-slate-500 dark:text-slate-400">
+            {key}
+          </code>
           <div className="min-w-0 text-sm text-slate-900 dark:text-white">
             <RequestDetailValue value={entryValue} depth={depth + 1} />
           </div>
@@ -191,7 +155,7 @@ function RequestDetailValue({ value, depth = 0 }: { value: unknown; depth?: numb
         {value.map((item, index) => (
           <div
             key={index}
-            className="rounded-xl border border-slate-200 bg-white px-3 py-2 dark:border-neutral-800 dark:bg-neutral-950/70"
+            className="rounded-lg border border-slate-200 bg-white px-3 py-2 dark:border-neutral-800 dark:bg-neutral-950/50"
           >
             <div className="mb-2 font-mono text-[11px] text-slate-400 dark:text-white/35">
               #{index + 1}
@@ -214,52 +178,57 @@ function RequestDetailValue({ value, depth = 0 }: { value: unknown; depth?: numb
 function RequestDetailSection({
   title,
   value,
-  tone = "extra",
-  icon,
   testId,
+  defaultOpen = true,
 }: {
   title: string;
   value: unknown;
-  tone?: RequestDetailTone;
-  icon: ReactNode;
   testId?: string;
+  defaultOpen?: boolean;
 }) {
-  const styles = REQUEST_DETAIL_TONE_STYLES[tone];
+  const [open, setOpen] = useState(defaultOpen);
   const entryCount = countDetailEntries(value);
   const content = isComplexDetailValue(value) ? value : { value };
+  const contentId = testId ? `${testId}-content` : undefined;
 
   return (
     <section
       data-testid={testId}
-      className={[
-        "overflow-hidden rounded-2xl border border-l-4 border-slate-200 bg-white shadow-sm shadow-slate-950/[0.04] dark:border-neutral-800 dark:bg-neutral-950",
-        styles.accent,
-      ].join(" ")}
+      className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm shadow-slate-950/[0.03] dark:border-neutral-800 dark:bg-neutral-950"
     >
-      <div
-        className={[
-          "flex items-center justify-between gap-3 border-b border-slate-100 bg-gradient-to-r px-4 py-3 dark:border-neutral-800/80",
-          styles.header,
-        ].join(" ")}
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-controls={contentId}
+        onClick={() => setOpen((prev) => !prev)}
+        className="flex w-full items-center justify-between gap-3 px-3.5 py-3 text-left transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/10 dark:hover:bg-white/[0.04] dark:focus-visible:ring-white/20"
       >
-        <div className="flex min-w-0 items-center gap-3">
-          <span
-            className={[
-              "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ring-1",
-              styles.badge,
-            ].join(" ")}
-          >
-            {icon}
-          </span>
-          <h3 className="truncate text-sm font-semibold text-slate-950 dark:text-white">{title}</h3>
+        <div className="min-w-0">
+          <h3 className="truncate text-sm font-semibold text-slate-900 dark:text-white">{title}</h3>
+          <p className="mt-0.5 font-mono text-xs text-slate-500 dark:text-white/40">{entryCount}</p>
         </div>
-        <span className="shrink-0 rounded-full bg-white/80 px-2 py-0.5 font-mono text-[11px] text-slate-500 ring-1 ring-slate-200 dark:bg-white/[0.06] dark:text-slate-300 dark:ring-white/10">
-          {entryCount}
-        </span>
-      </div>
-      <div className="bg-slate-50/50 p-3 dark:bg-neutral-900/40">
-        <RequestDetailValue value={content ?? {}} />
-      </div>
+        <ChevronDown
+          size={16}
+          className={`shrink-0 text-slate-400 transition-transform duration-200 dark:text-white/35 ${open ? "rotate-180" : ""}`}
+          aria-hidden="true"
+        />
+      </button>
+      <AnimatePresence initial={false}>
+        {open ? (
+          <motion.div
+            id={contentId}
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
+            className="overflow-hidden"
+          >
+            <div className="border-t border-slate-100 bg-slate-50/35 p-3 dark:border-neutral-800/80 dark:bg-white/[0.02]">
+              <RequestDetailValue value={content ?? {}} />
+            </div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
     </section>
   );
 }
@@ -887,33 +856,21 @@ export function LogContentModal({
           testId="request-detail-section-client"
           title={t("log_content.details_client")}
           value={details.client}
-          tone="client"
-          icon={<Globe2 size={16} />}
         />
         <RequestDetailSection
           testId="request-detail-section-upstream"
           title={t("log_content.details_upstream")}
           value={details.upstream}
-          tone="upstream"
-          icon={<SendHorizontal size={16} />}
         />
         <RequestDetailSection
           testId="request-detail-section-response"
           title={t("log_content.details_response")}
           value={details.response}
-          tone="response"
-          icon={<ServerCog size={16} />}
         />
         {Object.entries(details)
           .filter(([key]) => !["client", "upstream", "response"].includes(key))
           .map(([key, value]) => (
-            <RequestDetailSection
-              key={key}
-              title={key}
-              value={value}
-              tone="extra"
-              icon={<Braces size={16} />}
-            />
+            <RequestDetailSection key={key} title={key} value={value} />
           ))}
       </div>
     );

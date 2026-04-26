@@ -528,7 +528,7 @@ describe("LogContentModal", () => {
     expect(screen.getByText("req-plaintext")).toBeInTheDocument();
   });
 
-  test("renders request details in polished grouped sections", async () => {
+  test("renders request details in simple collapsible sections with animation", async () => {
     vi.useFakeTimers();
     await i18n.changeLanguage("zh-CN");
 
@@ -595,12 +595,22 @@ describe("LogContentModal", () => {
     const clientSection = screen.getByTestId("request-detail-section-client");
     const upstreamSection = screen.getByTestId("request-detail-section-upstream");
     const responseSection = screen.getByTestId("request-detail-section-response");
+    const upstreamToggle = within(upstreamSection).getByRole("button", { name: /传给上游/ });
 
     expect(clientSection).toHaveClass("overflow-hidden");
+    expect(clientSection).not.toHaveClass("border-l-4");
+    expect(clientSection.innerHTML).not.toContain("bg-gradient-to-r");
     expect(upstreamSection).toHaveClass("overflow-hidden");
     expect(responseSection).toHaveClass("overflow-hidden");
+    expect(upstreamToggle).toHaveAttribute("aria-expanded", "true");
+    expect(upstreamSection.innerHTML).toContain("height");
     expect(within(clientSection).getByText("Authorization")).toBeInTheDocument();
     expect(within(upstreamSection).getByText("fingerprint")).toBeInTheDocument();
     expect(within(responseSection).getByText("X-Request-Id")).toBeInTheDocument();
+
+    await act(async () => {
+      upstreamToggle.click();
+    });
+    expect(upstreamToggle).toHaveAttribute("aria-expanded", "false");
   });
 });
