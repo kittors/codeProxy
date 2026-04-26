@@ -124,12 +124,19 @@ describe("VirtualTable scrollbar wrapper", () => {
 
     await waitFor(() => {
       const gutter = container.querySelector("[data-vt-scrollbar-gutter]") as HTMLDivElement | null;
+      const headerBackdrop = container.querySelector(
+        "[data-vt-header-backdrop]",
+      ) as HTMLDivElement | null;
       const headerGutter = container.querySelector(
         "[data-vt-header-gutter]",
       ) as HTMLDivElement | null;
       const y = container.querySelector('[data-vt-scrollbar="y"]') as HTMLDivElement | null;
 
       expect(gutter).not.toBeNull();
+      expect(scrollContainer).toHaveClass("overscroll-x-none");
+      expect(headerBackdrop).not.toBeNull();
+      expect(scrollContainer!.parentElement).toContainElement(headerBackdrop);
+      expect(headerBackdrop).toHaveClass("rounded-xl", "bg-slate-100");
       expect(gutter).toContainElement(y);
       expect(gutter).toContainElement(headerGutter);
       expect(headerGutter).toHaveClass("rounded-r-xl", "bg-slate-100");

@@ -544,12 +544,17 @@ export function VirtualTable<T>({
       className={`${height} ${minHeight} relative grid min-w-0 grid-cols-[minmax(0,1fr)_0.75rem] overflow-hidden group`}
     >
       <div
+        data-vt-header-backdrop
+        className="pointer-events-none absolute inset-x-0 top-0 z-0 rounded-xl bg-slate-100 dark:bg-neutral-800"
+        style={{ height: headerHeight }}
+      />
+      <div
         ref={containerRef}
         onScroll={onScroll}
         onWheelCapture={onWheelCapture}
         tabIndex={0}
         data-scrollbar-visibility="hover"
-        className="col-start-1 row-start-1 h-full min-h-0 table-scrollbar overflow-auto"
+        className="relative z-10 col-start-1 row-start-1 h-full min-h-0 table-scrollbar overflow-auto overscroll-x-none overscroll-y-contain"
       >
         <table
           className={`w-full ${minWidth} table-fixed border-separate border-spacing-0 text-sm`}
@@ -673,7 +678,7 @@ export function VirtualTable<T>({
 
       <div
         data-vt-scrollbar-gutter
-        className="relative col-start-2 row-start-1 h-full w-3 justify-self-end"
+        className="relative z-20 col-start-2 row-start-1 h-full w-3 justify-self-end"
       >
         <div
           data-vt-header-gutter
