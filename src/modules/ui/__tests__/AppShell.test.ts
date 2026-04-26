@@ -41,6 +41,16 @@ describe("AppShell", () => {
     expect(source).not.toContain("nav_home_placeholder");
   });
 
+  test("uses basename-relative management navigation targets", () => {
+    const source = readModule("modules/ui/AppShell.tsx");
+    const navBlock = source.match(/const NAV_ITEMS = \[[\s\S]*?\] as const;/)?.[0] ?? "";
+
+    expect(navBlock).toContain('to: "/identity-fingerprint"');
+    expect(navBlock).toContain('to: "/models"');
+    expect(navBlock).not.toContain('to: "/manage/identity-fingerprint"');
+    expect(navBlock).not.toContain('to: "/manage/models"');
+  });
+
   test("uses an icon-based account section without bordered card chrome", () => {
     const source = readModule("modules/ui/AppShell.tsx");
     const accountBlock =
