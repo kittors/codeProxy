@@ -540,15 +540,16 @@ export function VirtualTable<T>({
   }, [headerHeight, scrollMetrics]);
 
   return (
-    <div className={`${height} ${minHeight} relative min-w-0 overflow-hidden group`}>
+    <div
+      className={`${height} ${minHeight} relative grid min-w-0 grid-cols-[minmax(0,1fr)_0.75rem] overflow-hidden group`}
+    >
       <div
         ref={containerRef}
         onScroll={onScroll}
         onWheelCapture={onWheelCapture}
         tabIndex={0}
         data-scrollbar-visibility="hover"
-        // Reserve space for the overlay vertical scrollbar so it won't cover the header's rightmost column.
-        className={`h-full min-h-0 table-scrollbar overflow-auto ${vThumb ? "pr-4" : ""}`}
+        className="col-start-1 row-start-1 h-full min-h-0 table-scrollbar overflow-auto"
       >
         <table
           className={`w-full ${minWidth} table-fixed border-separate border-spacing-0 text-sm`}
@@ -672,29 +673,34 @@ export function VirtualTable<T>({
         )}
       </div>
 
-      {vThumb ? (
-        <div
-          data-vt-scrollbar="y"
-          className="pointer-events-none absolute right-0 w-2 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
-          style={{ top: headerHeight + 8, bottom: 8 }}
-        >
-          <div className="absolute inset-0 rounded-full bg-slate-200/40 dark:bg-white/10" />
+      <div
+        data-vt-scrollbar-gutter
+        className="relative col-start-2 row-start-1 h-full w-3 justify-self-end"
+      >
+        {vThumb ? (
           <div
-            role="presentation"
-            className="pointer-events-auto absolute left-0 right-0 rounded-full bg-slate-500/40 transition-colors hover:bg-slate-500/60 dark:bg-white/25 dark:hover:bg-white/40"
-            style={{ top: vThumb.top, height: vThumb.height }}
-            onPointerDown={(e) => handleThumbPointerDown("y", e)}
-            onPointerMove={handleThumbPointerMove}
-            onPointerUp={handleThumbPointerUp}
-            onPointerCancel={handleThumbPointerUp}
-          />
-        </div>
-      ) : null}
+            data-vt-scrollbar="y"
+            className="pointer-events-none absolute right-0 w-2 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
+            style={{ top: headerHeight + 8, bottom: 8 }}
+          >
+            <div className="absolute inset-0 rounded-full bg-slate-200/40 dark:bg-white/10" />
+            <div
+              role="presentation"
+              className="pointer-events-auto absolute left-0 right-0 rounded-full bg-slate-500/40 transition-colors hover:bg-slate-500/60 dark:bg-white/25 dark:hover:bg-white/40"
+              style={{ top: vThumb.top, height: vThumb.height }}
+              onPointerDown={(e) => handleThumbPointerDown("y", e)}
+              onPointerMove={handleThumbPointerMove}
+              onPointerUp={handleThumbPointerUp}
+              onPointerCancel={handleThumbPointerUp}
+            />
+          </div>
+        ) : null}
+      </div>
 
       {hThumb ? (
         <div
           data-vt-scrollbar="x"
-          className="pointer-events-none absolute inset-x-2 bottom-1 h-2 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
+          className="pointer-events-none absolute bottom-1 left-2 right-5 h-2 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
         >
           <div className="absolute inset-0 rounded-full bg-slate-200/40 dark:bg-white/10" />
           <div

@@ -98,6 +98,41 @@ describe("VirtualTable scrollbar wrapper", () => {
     });
   });
 
+  test("keeps the vertical scrollbar in a gutter outside the table viewport", async () => {
+    const { container } = render(
+      <VirtualTable
+        rows={Array.from({ length: 60 }, (_, i) => ({ id: String(i), name: `Row ${i}` }))}
+        columns={columns}
+        rowKey={(row) => row.id}
+        height="h-[160px]"
+        minHeight="min-h-0"
+        virtualize={false}
+      />,
+    );
+
+    const scrollContainer = container.querySelector(".table-scrollbar") as HTMLDivElement | null;
+    expect(scrollContainer).not.toBeNull();
+
+    setScrollMetrics(scrollContainer!, {
+      clientHeight: 160,
+      scrollHeight: 640,
+      clientWidth: 260,
+      scrollWidth: 260,
+    });
+
+    window.dispatchEvent(new Event("resize"));
+
+    await waitFor(() => {
+      const gutter = container.querySelector("[data-vt-scrollbar-gutter]") as HTMLDivElement | null;
+      const y = container.querySelector('[data-vt-scrollbar="y"]') as HTMLDivElement | null;
+
+      expect(gutter).not.toBeNull();
+      expect(gutter).toContainElement(y);
+      expect(scrollContainer).not.toHaveClass("pr-4");
+      expect(scrollContainer!.parentElement).toHaveClass("grid-cols-[minmax(0,1fr)_0.75rem]");
+    });
+  });
+
   test("shows vertical scrollbar after data change without requiring a user scroll", async () => {
     const { container, rerender } = render(
       <VirtualTable
