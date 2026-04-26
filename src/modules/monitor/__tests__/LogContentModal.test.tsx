@@ -527,4 +527,80 @@ describe("LogContentModal", () => {
     expect(screen.getByText("session-plaintext")).toBeInTheDocument();
     expect(screen.getByText("req-plaintext")).toBeInTheDocument();
   });
+
+  test("renders request details in polished grouped sections", async () => {
+    vi.useFakeTimers();
+    await i18n.changeLanguage("zh-CN");
+
+    const fetchPartFn = vi.fn(async (_id: number, part: "input" | "output") => ({
+      id: 1,
+      model: "gpt-test",
+      part,
+      content: "{}",
+    }));
+    const fetchDetailsFn = vi.fn(async (_id: number) => ({
+      id: 1,
+      model: "gpt-test",
+      part: "details" as const,
+      content: JSON.stringify({
+        client: {
+          ip: "203.0.113.8",
+          headers: {
+            Authorization: "Bearer sk-client-plaintext",
+          },
+        },
+        upstream: {
+          url: "https://api.example.test/v1/chat/completions",
+          fingerprint: {
+            source: "identity-fingerprint",
+          },
+        },
+        response: {
+          status: 200,
+          headers: {
+            "X-Request-Id": "req-plaintext",
+          },
+        },
+      }),
+    }));
+
+    render(
+      <ThemeProvider>
+        <LogContentModal
+          open
+          logId={1}
+          initialTab="input"
+          onClose={() => {}}
+          fetchPartFn={fetchPartFn}
+          fetchDetailsFn={fetchDetailsFn}
+          showRequestDetails
+        />
+      </ThemeProvider>,
+    );
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(260);
+    });
+    await act(async () => {});
+
+    await act(async () => {
+      screen.getByRole("tab", { name: "请求详情" }).click();
+    });
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+      await vi.runOnlyPendingTimersAsync();
+    });
+
+    const clientSection = screen.getByTestId("request-detail-section-client");
+    const upstreamSection = screen.getByTestId("request-detail-section-upstream");
+    const responseSection = screen.getByTestId("request-detail-section-response");
+
+    expect(clientSection).toHaveClass("overflow-hidden");
+    expect(upstreamSection).toHaveClass("overflow-hidden");
+    expect(responseSection).toHaveClass("overflow-hidden");
+    expect(within(clientSection).getByText("Authorization")).toBeInTheDocument();
+    expect(within(upstreamSection).getByText("fingerprint")).toBeInTheDocument();
+    expect(within(responseSection).getByText("X-Request-Id")).toBeInTheDocument();
+  });
 });
