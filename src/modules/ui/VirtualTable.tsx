@@ -561,10 +561,8 @@ export function VirtualTable<T>({
             <tr className="text-left text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-white/55">
               {columns.map((col, i) => {
                 const isFirst = i === 0;
-                const isLast = i === columns.length - 1;
                 const roundCls = [
                   isFirst ? "first:rounded-l-xl" : "",
-                  isLast ? "last:rounded-r-xl" : "",
                 ]
                   .filter(Boolean)
                   .join(" ");
@@ -677,6 +675,11 @@ export function VirtualTable<T>({
         data-vt-scrollbar-gutter
         className="relative col-start-2 row-start-1 h-full w-3 justify-self-end"
       >
+        <div
+          data-vt-header-gutter
+          className="absolute inset-x-0 top-0 rounded-r-xl bg-slate-100 dark:bg-neutral-800"
+          style={{ height: headerHeight }}
+        />
         {vThumb ? (
           <div
             data-vt-scrollbar="y"
