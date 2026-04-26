@@ -247,23 +247,34 @@ export function VirtualTable<T>({
     if (!el) return;
 
     const canScrollY = el.scrollHeight > el.clientHeight + 1;
-    if (canScrollY) {
-      const maxTop = Math.max(0, el.scrollHeight - el.clientHeight);
-      const atTop = el.scrollTop <= 0;
-      const atBottom = el.scrollTop >= maxTop - 1;
-      if ((e.deltaY < 0 && !atTop) || (e.deltaY > 0 && !atBottom)) {
-        e.stopPropagation();
-      }
+    const canScrollX = el.scrollWidth > el.clientWidth + 1;
+    const wantsY = e.deltaY !== 0;
+    const wantsX = e.deltaX !== 0;
+
+    const maxTop = Math.max(0, el.scrollHeight - el.clientHeight);
+    const maxLeft = Math.max(0, el.scrollWidth - el.clientWidth);
+    const atTop = el.scrollTop <= 0;
+    const atBottom = el.scrollTop >= maxTop - 1;
+    const atLeft = el.scrollLeft <= 0;
+    const atRight = el.scrollLeft >= maxLeft - 1;
+
+    const canMoveY =
+      wantsY &&
+      canScrollY &&
+      ((e.deltaY < 0 && !atTop) || (e.deltaY > 0 && !atBottom));
+    const canMoveX =
+      wantsX &&
+      canScrollX &&
+      ((e.deltaX < 0 && !atLeft) || (e.deltaX > 0 && !atRight));
+
+    if (canMoveY || canMoveX) {
+      e.stopPropagation();
+      return;
     }
 
-    const canScrollX = el.scrollWidth > el.clientWidth + 1;
-    if (canScrollX) {
-      const maxLeft = Math.max(0, el.scrollWidth - el.clientWidth);
-      const atLeft = el.scrollLeft <= 0;
-      const atRight = el.scrollLeft >= maxLeft - 1;
-      if ((e.deltaX < 0 && !atLeft) || (e.deltaX > 0 && !atRight)) {
-        e.stopPropagation();
-      }
+    if (wantsY || wantsX) {
+      e.preventDefault();
+      e.stopPropagation();
     }
   }, []);
 
@@ -554,7 +565,7 @@ export function VirtualTable<T>({
         onWheelCapture={onWheelCapture}
         tabIndex={0}
         data-scrollbar-visibility="hover"
-        className="relative z-10 col-start-1 row-start-1 h-full min-h-0 table-scrollbar overflow-auto overscroll-x-none overscroll-y-contain"
+        className="relative z-10 col-start-1 row-start-1 h-full min-h-0 table-scrollbar overflow-auto overscroll-x-none overscroll-y-none rounded-tl-xl"
       >
         <table
           className={`w-full ${minWidth} table-fixed border-separate border-spacing-0 text-sm`}
@@ -564,17 +575,11 @@ export function VirtualTable<T>({
           {/* ── HeroUI-styled header ── */}
           <thead ref={headerRef} className="sticky top-0 z-10">
             <tr className="text-left text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-white/55">
-              {columns.map((col, i) => {
-                const isFirst = i === 0;
-                const roundCls = [
-                  isFirst ? "first:rounded-l-xl" : "",
-                ]
-                  .filter(Boolean)
-                  .join(" ");
+              {columns.map((col) => {
                 return (
                   <th
                     key={col.key}
-                    className={`whitespace-nowrap bg-slate-100 px-4 py-3 dark:bg-neutral-800 ${col.width ?? ""} ${col.headerClassName ?? ""} ${roundCls}`}
+                    className={`whitespace-nowrap bg-slate-100 px-4 py-3 dark:bg-neutral-800 ${col.width ?? ""} ${col.headerClassName ?? ""}`}
                   >
                     {col.headerRender ? col.headerRender() : col.label}
                   </th>

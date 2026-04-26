@@ -1,5 +1,5 @@
-import { render, waitFor } from "@testing-library/react";
-import { describe, expect, test } from "vitest";
+import { createEvent, fireEvent, render, waitFor } from "@testing-library/react";
+import { describe, expect, test, vi } from "vitest";
 import { VirtualTable, type VirtualTableColumn } from "@/modules/ui/VirtualTable";
 
 interface DemoRow {
@@ -134,6 +134,8 @@ describe("VirtualTable scrollbar wrapper", () => {
 
       expect(gutter).not.toBeNull();
       expect(scrollContainer).toHaveClass("overscroll-x-none");
+      expect(scrollContainer).toHaveClass("overscroll-y-none");
+      expect(scrollContainer).toHaveClass("rounded-tl-xl");
       expect(headerBackdrop).not.toBeNull();
       expect(scrollContainer!.parentElement).toContainElement(headerBackdrop);
       expect(headerBackdrop).toHaveClass("rounded-xl", "bg-slate-100");
@@ -143,6 +145,65 @@ describe("VirtualTable scrollbar wrapper", () => {
       expect(scrollContainer).not.toHaveClass("pr-4");
       expect(scrollContainer!.parentElement).toHaveClass("grid-cols-[minmax(0,1fr)_0.75rem]");
     });
+  });
+
+  test("keeps the header corner fixed to the viewport instead of scrolling cells", () => {
+    const wideColumns: VirtualTableColumn<DemoRow>[] = [
+      { key: "name", label: "Name", width: "w-40", render: (row) => row.name },
+      { key: "id", label: "ID", width: "w-40", render: (row) => row.id },
+    ];
+
+    const { container } = render(
+      <VirtualTable
+        rows={[{ id: "1", name: "Row 1" }]}
+        columns={wideColumns}
+        rowKey={(row) => row.id}
+        height="h-[160px]"
+        minHeight="min-h-0"
+        minWidth="min-w-[760px]"
+        virtualize={false}
+      />,
+    );
+
+    const firstHeader = container.querySelector("th") as HTMLTableCellElement | null;
+    expect(firstHeader).not.toBeNull();
+    expect(firstHeader!.className).not.toContain("rounded-l-xl");
+  });
+
+  test("prevents vertical wheel bounce when already at a scroll boundary", () => {
+    const { container } = render(
+      <VirtualTable
+        rows={Array.from({ length: 60 }, (_, i) => ({ id: String(i), name: `Row ${i}` }))}
+        columns={columns}
+        rowKey={(row) => row.id}
+        height="h-[160px]"
+        minHeight="min-h-0"
+        virtualize={false}
+      />,
+    );
+
+    const scrollContainer = container.querySelector(".table-scrollbar") as HTMLDivElement | null;
+    expect(scrollContainer).not.toBeNull();
+
+    setScrollMetrics(scrollContainer!, {
+      clientHeight: 160,
+      scrollHeight: 640,
+      clientWidth: 260,
+      scrollWidth: 780,
+      scrollTop: 0,
+      scrollLeft: 0,
+    });
+
+    const event = createEvent.wheel(scrollContainer!, {
+      deltaY: -80,
+      bubbles: true,
+      cancelable: true,
+    });
+    const preventDefault = vi.spyOn(event, "preventDefault");
+
+    fireEvent(scrollContainer!, event);
+
+    expect(preventDefault).toHaveBeenCalled();
   });
 
   test("shows vertical scrollbar after data change without requiring a user scroll", async () => {
