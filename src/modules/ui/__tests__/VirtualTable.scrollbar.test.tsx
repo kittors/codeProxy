@@ -168,6 +168,8 @@ describe("VirtualTable scrollbar wrapper", () => {
     const firstHeader = container.querySelector("th") as HTMLTableCellElement | null;
     expect(firstHeader).not.toBeNull();
     expect(firstHeader!.className).not.toContain("rounded-l-xl");
+    expect(firstHeader!.className).not.toContain("bg-slate-100");
+    expect(firstHeader!.className).not.toContain("dark:bg-neutral-800");
   });
 
   test("prevents vertical wheel bounce when already at a scroll boundary", () => {

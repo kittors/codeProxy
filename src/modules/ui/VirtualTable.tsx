@@ -579,7 +579,7 @@ export function VirtualTable<T>({
                 return (
                   <th
                     key={col.key}
-                    className={`whitespace-nowrap bg-slate-100 px-4 py-3 dark:bg-neutral-800 ${col.width ?? ""} ${col.headerClassName ?? ""}`}
+                    className={`whitespace-nowrap px-4 py-3 ${col.width ?? ""} ${col.headerClassName ?? ""}`}
                   >
                     {col.headerRender ? col.headerRender() : col.label}
                   </th>
