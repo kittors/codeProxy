@@ -567,13 +567,18 @@ export function VirtualTable<T>({
         data-scrollbar-visibility="hover"
         className="relative z-10 col-start-1 row-start-1 h-full min-h-0 table-scrollbar overflow-auto overscroll-x-none overscroll-y-none rounded-tl-xl"
       >
+        <div
+          data-vt-header-overlay
+          className="pointer-events-none sticky left-0 top-0 z-10 w-full rounded-l-xl bg-slate-100 dark:bg-neutral-800"
+          style={{ height: headerHeight, marginBottom: -headerHeight }}
+        />
         <table
           className={`w-full ${minWidth} table-fixed border-separate border-spacing-0 text-sm`}
         >
           <caption className="sr-only">{caption}</caption>
 
           {/* ── HeroUI-styled header ── */}
-          <thead ref={headerRef} className="sticky top-0 z-10">
+          <thead ref={headerRef} className="sticky top-0 z-20">
             <tr className="text-left text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-white/55">
               {columns.map((col) => {
                 return (

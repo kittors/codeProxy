@@ -127,6 +127,9 @@ describe("VirtualTable scrollbar wrapper", () => {
       const headerBackdrop = container.querySelector(
         "[data-vt-header-backdrop]",
       ) as HTMLDivElement | null;
+      const headerOverlay = container.querySelector(
+        "[data-vt-header-overlay]",
+      ) as HTMLDivElement | null;
       const headerGutter = container.querySelector(
         "[data-vt-header-gutter]",
       ) as HTMLDivElement | null;
@@ -139,6 +142,16 @@ describe("VirtualTable scrollbar wrapper", () => {
       expect(headerBackdrop).not.toBeNull();
       expect(scrollContainer!.parentElement).toContainElement(headerBackdrop);
       expect(headerBackdrop).toHaveClass("rounded-xl", "bg-slate-100");
+      expect(headerOverlay).not.toBeNull();
+      expect(scrollContainer).toContainElement(headerOverlay);
+      expect(headerOverlay).toHaveClass(
+        "sticky",
+        "left-0",
+        "top-0",
+        "z-10",
+        "rounded-l-xl",
+        "bg-slate-100",
+      );
       expect(gutter).toContainElement(y);
       expect(gutter).toContainElement(headerGutter);
       expect(headerGutter).toHaveClass("rounded-r-xl", "bg-slate-100");
@@ -166,10 +179,13 @@ describe("VirtualTable scrollbar wrapper", () => {
     );
 
     const firstHeader = container.querySelector("th") as HTMLTableCellElement | null;
+    const headerOverlay = container.querySelector("[data-vt-header-overlay]") as HTMLDivElement | null;
     expect(firstHeader).not.toBeNull();
+    expect(headerOverlay).not.toBeNull();
     expect(firstHeader!.className).not.toContain("rounded-l-xl");
     expect(firstHeader!.className).not.toContain("bg-slate-100");
     expect(firstHeader!.className).not.toContain("dark:bg-neutral-800");
+    expect(headerOverlay).toHaveClass("bg-slate-100", "dark:bg-neutral-800");
   });
 
   test("prevents vertical wheel bounce when already at a scroll boundary", () => {
