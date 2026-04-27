@@ -129,7 +129,7 @@ export function ProxiesPage() {
       {
         key: "name",
         label: t("proxies.name"),
-        width: "w-56",
+        width: "w-44",
         render: (entry) => (
           <div className="min-w-0">
             <div className="flex min-w-0 items-center gap-2">
@@ -149,7 +149,7 @@ export function ProxiesPage() {
       {
         key: "url",
         label: t("proxies.url"),
-        width: "w-[360px]",
+        width: "w-[280px]",
         render: (entry) => (
           <p className="truncate font-mono text-xs text-slate-700 dark:text-white/70">
             {proxyDisplayURL(entry)}
@@ -159,7 +159,7 @@ export function ProxiesPage() {
       {
         key: "status",
         label: t("proxies.status"),
-        width: "w-32",
+        width: "w-24",
         render: (entry) => (
           <span
             className={[
@@ -176,7 +176,7 @@ export function ProxiesPage() {
       {
         key: "check",
         label: t("proxies.last_check"),
-        width: "w-44",
+        width: "w-32",
         render: (entry) => {
           const result = checkState[entry.id];
           if (!result || result.checking) {
@@ -205,7 +205,7 @@ export function ProxiesPage() {
       {
         key: "description",
         label: t("proxies.description_label"),
-        width: "w-[280px]",
+        width: "w-[180px]",
         render: (entry) => (
           <p className="truncate text-xs text-slate-600 dark:text-white/60">
             {entry.description || "--"}
@@ -215,7 +215,7 @@ export function ProxiesPage() {
       {
         key: "actions",
         label: t("proxies.actions"),
-        width: "w-36",
+        width: "w-28",
         headerClassName: "text-right",
         cellClassName: "text-right",
         render: (entry) => {
@@ -282,21 +282,20 @@ export function ProxiesPage() {
       </div>
 
       <Card
-        title={t("proxies.table_title")}
-        description={t("proxies.table_description")}
         padding="none"
-        bodyClassName="mt-0"
+        className="overflow-hidden"
         loading={loading}
       >
         <VirtualTable<ProxyPoolEntry>
           rows={sortedEntries}
           columns={columns}
           rowKey={(entry) => entry.id}
-          rowHeight={58}
+          rowHeight={56}
           height="h-auto max-h-[70vh]"
-          minWidth="min-w-[1320px]"
+          minHeight="min-h-[240px]"
+          minWidth="min-w-[960px]"
           caption={t("proxies.table_caption")}
-          emptyText={t("proxies.empty_desc")}
+          emptyText={t("proxies.empty_title")}
           showAllLoadedMessage={false}
         />
       </Card>

@@ -66,6 +66,18 @@ describe("ProxiesPage", () => {
     expect(screen.getByRole("button", { name: /check hk proxy/i })).toBeInTheDocument();
   });
 
+  test("keeps the proxy table chrome minimal when empty", async () => {
+    mocks.apiGet.mockResolvedValue({ items: [] });
+
+    renderPage();
+
+    expect(await screen.findByRole("table", { name: /proxy pool table/i })).toBeInTheDocument();
+    expect(screen.queryByText("Proxy Pool")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Manage proxy entries in a compact table/i)).not.toBeInTheDocument();
+    expect(screen.getByText("No proxies yet")).toBeInTheDocument();
+    expect(screen.queryByText(/Add HTTP, HTTPS, or SOCKS5 proxies/i)).not.toBeInTheDocument();
+  });
+
   test("adds a proxy and persists through the proxy pool API", async () => {
     renderPage();
 

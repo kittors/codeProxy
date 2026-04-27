@@ -1350,8 +1350,6 @@
     "name": "Name",
     "url": "Proxy URL",
     "description_label": "Description",
-    "table_title": "Proxy Pool",
-    "table_description": "Manage proxy entries in a compact table. Use row actions to check, edit, or delete a proxy.",
     "table_caption": "Proxy pool table",
     "status": "Status",
     "last_check": "Last check",
