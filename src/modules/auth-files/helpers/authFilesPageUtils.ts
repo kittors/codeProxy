@@ -425,6 +425,7 @@ export type PrefixProxyEditorState = {
   json: Record<string, unknown> | null;
   prefix: string;
   proxyUrl: string;
+  proxyId: string;
 };
 
 export type AuthFilesGroupOverview = {

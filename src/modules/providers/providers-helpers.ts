@@ -85,6 +85,7 @@ export type ProviderKeyDraft = {
   prefix: string;
   baseUrl: string;
   proxyUrl: string;
+  proxyId: string;
   excludedModelsText: string;
   headersEntries: KeyValueEntry[];
   modelEntries: ModelEntryDraft[];
@@ -141,6 +142,7 @@ export const buildProviderKeyDraft = (input?: ProviderSimpleConfig | null): Prov
   prefix: input?.prefix ?? "",
   baseUrl: input?.baseUrl ?? "",
   proxyUrl: input?.proxyUrl ?? "",
+  proxyId: input?.proxyId ?? "",
   excludedModelsText: excludedModelsToText(input?.excludedModels),
   headersEntries: recordToKeyValueEntries(input?.headers),
   modelEntries: buildModelEntries(input?.models),
@@ -157,6 +159,7 @@ export type OpenAIDraft = {
   apiKeyEntries: {
     apiKey: string;
     proxyUrl: string;
+    proxyId: string;
     headersEntries: KeyValueEntry[];
     id: string;
   }[];
@@ -176,9 +179,10 @@ export const buildOpenAIDraft = (input?: OpenAIProvider | null): OpenAIDraft => 
           id: `key-${idx}-${entry.apiKey}`,
           apiKey: entry.apiKey ?? "",
           proxyUrl: entry.proxyUrl ?? "",
+          proxyId: entry.proxyId ?? "",
           headersEntries: recordToKeyValueEntries(entry.headers),
         }))
-      : [{ id: `key-${Date.now()}`, apiKey: "", proxyUrl: "", headersEntries: [] }],
+      : [{ id: `key-${Date.now()}`, apiKey: "", proxyUrl: "", proxyId: "", headersEntries: [] }],
   modelEntries: buildModelEntries(input?.models),
 });
 

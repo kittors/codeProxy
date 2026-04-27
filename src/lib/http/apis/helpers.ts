@@ -113,6 +113,8 @@ export const serializeProviderKey = (config: ProviderSimpleConfig) => {
   if (baseUrl) payload["base-url"] = baseUrl;
   const proxyUrl = normalizeString(config.proxyUrl);
   if (proxyUrl) payload["proxy-url"] = proxyUrl;
+  const proxyId = normalizeString(config.proxyId);
+  if (proxyId) payload["proxy-id"] = proxyId;
   const headers = serializeHeaders(config.headers);
   if (headers) payload.headers = headers;
   const models = serializeModels(config.models);
@@ -134,6 +136,8 @@ export const serializeGeminiKey = (config: ProviderSimpleConfig) => {
   if (prefix) payload.prefix = prefix;
   const baseUrl = normalizeString(config.baseUrl);
   if (baseUrl) payload["base-url"] = baseUrl;
+  const proxyId = normalizeString(config.proxyId);
+  if (proxyId) payload["proxy-id"] = proxyId;
   const headers = serializeHeaders(config.headers);
   if (headers) payload.headers = headers;
   const models = serializeModels(config.models);
@@ -168,6 +172,8 @@ export const serializeOpenAIProvider = (provider: OpenAIProvider) => {
         const entryPayload: Record<string, unknown> = { "api-key": apiKey };
         const proxyUrl = normalizeString(entry.proxyUrl);
         if (proxyUrl) entryPayload["proxy-url"] = proxyUrl;
+        const proxyId = normalizeString(entry.proxyId);
+        if (proxyId) entryPayload["proxy-id"] = proxyId;
         const entryHeaders = serializeHeaders(entry.headers);
         if (entryHeaders) entryPayload.headers = entryHeaders;
         return entryPayload;
@@ -250,10 +256,12 @@ export const normalizeApiKeyEntries = (raw: unknown): ProviderApiKeyEntry[] | un
       const apiKey = normalizeString(entry["api-key"] ?? entry.apiKey) ?? "";
       if (!apiKey) return null;
       const proxyUrl = normalizeString(entry["proxy-url"] ?? entry.proxyUrl) ?? undefined;
+      const proxyId = normalizeString(entry["proxy-id"] ?? entry.proxyId) ?? undefined;
       const entryHeaders = normalizeHeaders(entry.headers);
       return {
         apiKey,
         ...(proxyUrl ? { proxyUrl } : {}),
+        ...(proxyId ? { proxyId } : {}),
         ...(entryHeaders ? { headers: entryHeaders } : {}),
       };
     })

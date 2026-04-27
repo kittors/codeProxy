@@ -25,6 +25,7 @@ export const authFilesApi = {
     label?: string;
     prefix?: string;
     proxy_url?: string;
+    proxy_id?: string;
     priority?: number;
   }) => apiClient.patch("/auth-files/fields", payload),
 
