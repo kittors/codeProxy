@@ -39,7 +39,7 @@ test("Config: page should not horizontally scroll; editor should allow horizonta
   });
 
   await page.goto("/#/config");
-  await page.getByRole("button", { name: /Source Editor|源码编辑/i }).click();
+  await page.getByRole("tab", { name: /Source Editor|源码编辑/i }).click();
 
   const editor = page.getByLabel(/config\.yaml (editor|编辑器)/i);
   await expect(editor).toBeVisible();
@@ -111,7 +111,103 @@ test("Sidebar: collapse/expand should keep nav items nowrap and slide out of vie
     .toBeGreaterThan(200);
 });
 
-test("Config: source editor save should persist edited yaml through save path", async ({ page }) => {
+test("API Keys: table should scroll vertically when many keys are listed", async ({ page }) => {
+  await setAuthed(page);
+
+  const entries = Array.from({ length: 80 }, (_, index) => ({
+    key: `sk-e2e-scroll-${String(index).padStart(3, "0")}`,
+    name: `Scroll Key ${String(index + 1).padStart(2, "0")}`,
+    "created-at": "2026-04-14T00:00:00.000Z",
+  }));
+
+  await page.route("**/v0/management/**", async (route) => {
+    const url = route.request().url();
+
+    if (url.endsWith("/v0/management/config")) {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({}),
+      });
+      return;
+    }
+
+    if (url.endsWith("/v0/management/api-key-entries")) {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ "api-key-entries": entries }),
+      });
+      return;
+    }
+
+    if (url.endsWith("/v0/management/api-keys")) {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ "api-keys": [] }),
+      });
+      return;
+    }
+
+    if (url.endsWith("/v0/management/channel-groups")) {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ items: [] }),
+      });
+      return;
+    }
+
+    if (url.endsWith("/v0/management/auth-files")) {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ files: [] }),
+      });
+      return;
+    }
+
+    if (url.endsWith("/v0/management/models")) {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ data: [] }),
+      });
+      return;
+    }
+
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({}),
+    });
+  });
+
+  await page.goto("/#/api-keys");
+
+  const tableScroller = page.locator(".table-scrollbar");
+  await expect(tableScroller).toBeVisible();
+
+  await expect
+    .poll(async () => {
+      return await tableScroller.evaluate((el) => el.scrollHeight - el.clientHeight);
+    })
+    .toBeGreaterThan(100);
+
+  await tableScroller.hover();
+  await page.mouse.wheel(0, 600);
+
+  await expect
+    .poll(async () => {
+      return await tableScroller.evaluate((el) => el.scrollTop);
+    })
+    .toBeGreaterThan(0);
+});
+
+test("Config: source editor save should persist edited yaml through save path", async ({
+  page,
+}) => {
   await setAuthed(page);
 
   let currentYaml = "server:\n  host: 127.0.0.1\n";
@@ -146,7 +242,7 @@ test("Config: source editor save should persist edited yaml through save path", 
   });
 
   await page.goto("/#/config");
-  await page.getByRole("button", { name: /源代码编辑|Source Editor/i }).click();
+  await page.getByRole("tab", { name: /源代码编辑|Source Editor/i }).click();
 
   const editor = page.getByLabel(/config\.yaml (editor|编辑器)/i);
   await expect(editor).toBeVisible();
