@@ -204,10 +204,7 @@ export function VirtualTable<T>({
     const threshold = latestRef.current.scrollThreshold;
 
     const shouldSchedule =
-      scrollBottom <= threshold &&
-      latestHasMore &&
-      !latestLoadingMore &&
-      Boolean(latestCb);
+      scrollBottom <= threshold && latestHasMore && !latestLoadingMore && Boolean(latestCb);
 
     if (!shouldSchedule) {
       if (bottomTimeoutRef.current) {
@@ -215,8 +212,7 @@ export function VirtualTable<T>({
         bottomTimeoutRef.current = null;
       }
     } else if (!bottomPendingRef.current) {
-      if (bottomTimeoutRef.current)
-        window.clearTimeout(bottomTimeoutRef.current);
+      if (bottomTimeoutRef.current) window.clearTimeout(bottomTimeoutRef.current);
       bottomTimeoutRef.current = window.setTimeout(() => {
         bottomTimeoutRef.current = null;
         const node = containerRef.current;
@@ -225,8 +221,7 @@ export function VirtualTable<T>({
         const st = latestRef.current;
         if (!st.hasMore || st.loadingMore || !st.onScrollBottom) return;
 
-        const bottomNow =
-          node.scrollHeight - node.scrollTop - node.clientHeight;
+        const bottomNow = node.scrollHeight - node.scrollTop - node.clientHeight;
         if (bottomNow > st.scrollThreshold) return;
 
         bottomPendingRef.current = true;
@@ -259,13 +254,9 @@ export function VirtualTable<T>({
     const atRight = el.scrollLeft >= maxLeft - 1;
 
     const canMoveY =
-      wantsY &&
-      canScrollY &&
-      ((e.deltaY < 0 && !atTop) || (e.deltaY > 0 && !atBottom));
+      wantsY && canScrollY && ((e.deltaY < 0 && !atTop) || (e.deltaY > 0 && !atBottom));
     const canMoveX =
-      wantsX &&
-      canScrollX &&
-      ((e.deltaX < 0 && !atLeft) || (e.deltaX > 0 && !atRight));
+      wantsX && canScrollX && ((e.deltaX < 0 && !atLeft) || (e.deltaX > 0 && !atRight));
 
     if (canMoveY || canMoveX) {
       e.stopPropagation();
@@ -278,21 +269,18 @@ export function VirtualTable<T>({
     }
   }, []);
 
-  const dragRef = useRef<
-    | null
-    | {
-        axis: "x" | "y";
-        pointerId: number;
-        startClientX: number;
-        startClientY: number;
-        startScrollTop: number;
-        startScrollLeft: number;
-        trackLength: number;
-        thumbLength: number;
-        contentLength: number;
-        viewportLength: number;
-      }
-  >(null);
+  const dragRef = useRef<null | {
+    axis: "x" | "y";
+    pointerId: number;
+    startClientX: number;
+    startClientY: number;
+    startScrollTop: number;
+    startScrollLeft: number;
+    trackLength: number;
+    thumbLength: number;
+    contentLength: number;
+    viewportLength: number;
+  }>(null);
 
   const handleThumbPointerDown = useCallback(
     (axis: "x" | "y", e: ReactPointerEvent<HTMLDivElement>) => {
@@ -350,30 +338,33 @@ export function VirtualTable<T>({
     [],
   );
 
-  const handleThumbPointerMove = useCallback((e: ReactPointerEvent<HTMLDivElement>) => {
-    const drag = dragRef.current;
-    const el = containerRef.current;
-    if (!drag || !el) return;
-    if (drag.pointerId !== e.pointerId) return;
+  const handleThumbPointerMove = useCallback(
+    (e: ReactPointerEvent<HTMLDivElement>) => {
+      const drag = dragRef.current;
+      const el = containerRef.current;
+      if (!drag || !el) return;
+      if (drag.pointerId !== e.pointerId) return;
 
-    e.preventDefault();
+      e.preventDefault();
 
-    if (drag.axis === "y") {
-      const scrollRange = Math.max(0, drag.contentLength - drag.viewportLength);
-      const thumbRange = Math.max(1, drag.trackLength - drag.thumbLength);
-      const dy = e.clientY - drag.startClientY;
-      const next = drag.startScrollTop + (dy * scrollRange) / thumbRange;
-      el.scrollTop = Math.max(0, Math.min(scrollRange, next));
-    } else {
-      const scrollRange = Math.max(0, drag.contentLength - drag.viewportLength);
-      const thumbRange = Math.max(1, drag.trackLength - drag.thumbLength);
-      const dx = e.clientX - drag.startClientX;
-      const next = drag.startScrollLeft + (dx * scrollRange) / thumbRange;
-      el.scrollLeft = Math.max(0, Math.min(scrollRange, next));
-    }
+      if (drag.axis === "y") {
+        const scrollRange = Math.max(0, drag.contentLength - drag.viewportLength);
+        const thumbRange = Math.max(1, drag.trackLength - drag.thumbLength);
+        const dy = e.clientY - drag.startClientY;
+        const next = drag.startScrollTop + (dy * scrollRange) / thumbRange;
+        el.scrollTop = Math.max(0, Math.min(scrollRange, next));
+      } else {
+        const scrollRange = Math.max(0, drag.contentLength - drag.viewportLength);
+        const thumbRange = Math.max(1, drag.trackLength - drag.thumbLength);
+        const dx = e.clientX - drag.startClientX;
+        const next = drag.startScrollLeft + (dx * scrollRange) / thumbRange;
+        el.scrollLeft = Math.max(0, Math.min(scrollRange, next));
+      }
 
-    updateScrollMetrics();
-  }, [updateScrollMetrics]);
+      updateScrollMetrics();
+    },
+    [updateScrollMetrics],
+  );
 
   const handleThumbPointerUp = useCallback((e: ReactPointerEvent<HTMLDivElement>) => {
     const drag = dragRef.current;
@@ -405,8 +396,7 @@ export function VirtualTable<T>({
     update();
 
     window.addEventListener("resize", update);
-    const observer =
-      typeof ResizeObserver !== "undefined" ? new ResizeObserver(update) : null;
+    const observer = typeof ResizeObserver !== "undefined" ? new ResizeObserver(update) : null;
     observer?.observe(el);
 
     return () => {
@@ -454,46 +444,38 @@ export function VirtualTable<T>({
   }, []);
 
   // Virtual window calculation
-  const { startIndex, endIndex, topSpacerHeight, bottomSpacerHeight } =
-    useMemo(() => {
-      if (!virtualize) {
-        return {
-          startIndex: 0,
-          endIndex: rows.length,
-          topSpacerHeight: 0,
-          bottomSpacerHeight: 0,
-        };
-      }
-      const total = rows.length;
-      if (!total)
-        return {
-          startIndex: 0,
-          endIndex: 0,
-          topSpacerHeight: 0,
-          bottomSpacerHeight: 0,
-        };
-
-      const visibleStart = Math.floor(scrollTop / rowHeight);
-      const visibleCount = Math.max(1, Math.ceil(viewportHeight / rowHeight));
-      const visibleEnd = visibleStart + visibleCount;
-
-      const start = Math.max(0, visibleStart - overscan);
-      const end = Math.min(total, visibleEnd + overscan);
-
+  const { startIndex, endIndex, topSpacerHeight, bottomSpacerHeight } = useMemo(() => {
+    if (!virtualize) {
       return {
-        startIndex: start,
-        endIndex: end,
-        topSpacerHeight: start * rowHeight,
-        bottomSpacerHeight: (total - end) * rowHeight,
+        startIndex: 0,
+        endIndex: rows.length,
+        topSpacerHeight: 0,
+        bottomSpacerHeight: 0,
       };
-    }, [
-      overscan,
-      rowHeight,
-      rows.length,
-      scrollTop,
-      viewportHeight,
-      virtualize,
-    ]);
+    }
+    const total = rows.length;
+    if (!total)
+      return {
+        startIndex: 0,
+        endIndex: 0,
+        topSpacerHeight: 0,
+        bottomSpacerHeight: 0,
+      };
+
+    const visibleStart = Math.floor(scrollTop / rowHeight);
+    const visibleCount = Math.max(1, Math.ceil(viewportHeight / rowHeight));
+    const visibleEnd = visibleStart + visibleCount;
+
+    const start = Math.max(0, visibleStart - overscan);
+    const end = Math.min(total, visibleEnd + overscan);
+
+    return {
+      startIndex: start,
+      endIndex: end,
+      topSpacerHeight: start * rowHeight,
+      bottomSpacerHeight: (total - end) * rowHeight,
+    };
+  }, [overscan, rowHeight, rows.length, scrollTop, viewportHeight, virtualize]);
 
   const visibleRows = useMemo(
     () => (virtualize ? rows.slice(startIndex, endIndex) : rows),
@@ -512,18 +494,12 @@ export function VirtualTable<T>({
 
     const v = (() => {
       if (!hasV) return null;
-      const trackLength = Math.max(
-        0,
-        scrollMetrics.clientHeight - headerHeight - trackInset * 2,
-      );
+      const trackLength = Math.max(0, scrollMetrics.clientHeight - headerHeight - trackInset * 2);
       const viewport = Math.max(1, effectiveViewportY);
       const content = Math.max(viewport, effectiveContentY);
       const thumbLength = Math.max(28, Math.round((viewport / content) * trackLength));
       const maxThumbOffset = Math.max(0, trackLength - thumbLength);
-      const scrollRange = Math.max(
-        1,
-        scrollMetrics.scrollHeight - scrollMetrics.clientHeight,
-      );
+      const scrollRange = Math.max(1, scrollMetrics.scrollHeight - scrollMetrics.clientHeight);
       const offset = Math.min(
         maxThumbOffset,
         Math.max(0, Math.round((scrollMetrics.scrollTop / scrollRange) * maxThumbOffset)),
@@ -608,17 +584,11 @@ export function VirtualTable<T>({
               <>
                 {virtualize ? (
                   <tr aria-hidden="true">
-                    <td
-                      colSpan={colCount}
-                      height={topSpacerHeight}
-                      className="p-0"
-                    />
+                    <td colSpan={colCount} height={topSpacerHeight} className="p-0" />
                   </tr>
                 ) : null}
                 {visibleRows.map((row, localIdx) => {
-                  const globalIdx = virtualize
-                    ? startIndex + localIdx
-                    : localIdx;
+                  const globalIdx = virtualize ? startIndex + localIdx : localIdx;
                   const key = rowKey(row, globalIdx);
                   const extraCls =
                     typeof rowClassName === "function"
@@ -653,11 +623,7 @@ export function VirtualTable<T>({
                 })}
                 {virtualize ? (
                   <tr aria-hidden="true">
-                    <td
-                      colSpan={colCount}
-                      height={bottomSpacerHeight}
-                      className="p-0"
-                    />
+                    <td colSpan={colCount} height={bottomSpacerHeight} className="p-0" />
                   </tr>
                 ) : null}
               </>
@@ -698,13 +664,13 @@ export function VirtualTable<T>({
         {vThumb ? (
           <div
             data-vt-scrollbar="y"
-            className="pointer-events-none absolute right-0 w-2 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
+            className="pointer-events-auto absolute right-0 w-2 opacity-0 transition-opacity hover:opacity-100 group-hover:opacity-100 group-focus-within:opacity-100"
             style={{ top: headerHeight + 8, bottom: 8 }}
           >
             <div className="absolute inset-0 rounded-full bg-slate-200/40 dark:bg-white/10" />
             <div
               role="presentation"
-              className="pointer-events-auto absolute left-0 right-0 rounded-full bg-slate-500/40 transition-colors hover:bg-slate-500/60 dark:bg-white/25 dark:hover:bg-white/40"
+              className="pointer-events-auto absolute left-0 right-0 cursor-pointer rounded-full bg-slate-500/40 transition-colors hover:bg-slate-500/70 dark:bg-white/25 dark:hover:bg-white/50"
               style={{ top: vThumb.top, height: vThumb.height }}
               onPointerDown={(e) => handleThumbPointerDown("y", e)}
               onPointerMove={handleThumbPointerMove}
@@ -718,12 +684,12 @@ export function VirtualTable<T>({
       {hThumb ? (
         <div
           data-vt-scrollbar="x"
-          className="pointer-events-none absolute bottom-1 left-2 right-5 h-2 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
+          className="pointer-events-auto absolute bottom-1 left-2 right-5 h-2 opacity-0 transition-opacity hover:opacity-100 group-hover:opacity-100 group-focus-within:opacity-100"
         >
           <div className="absolute inset-0 rounded-full bg-slate-200/40 dark:bg-white/10" />
           <div
             role="presentation"
-            className="pointer-events-auto absolute top-0 bottom-0 rounded-full bg-slate-500/40 transition-colors hover:bg-slate-500/60 dark:bg-white/25 dark:hover:bg-white/40"
+            className="pointer-events-auto absolute top-0 bottom-0 cursor-pointer rounded-full bg-slate-500/40 transition-colors hover:bg-slate-500/70 dark:bg-white/25 dark:hover:bg-white/50"
             style={{ left: hThumb.left, width: hThumb.width }}
             onPointerDown={(e) => handleThumbPointerDown("x", e)}
             onPointerMove={handleThumbPointerMove}
