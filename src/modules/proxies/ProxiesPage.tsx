@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { CheckCircle2, Pencil, Plus, RefreshCw, Trash2, Network } from "lucide-react";
+import { CheckCircle2, Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { proxiesApi, type ProxyCheckResult, type ProxyPoolEntry } from "@/lib/http/apis/proxies";
 import { Button } from "@/modules/ui/Button";
 import { Card } from "@/modules/ui/Card";
-import { EmptyState } from "@/modules/ui/EmptyState";
 import { TextInput } from "@/modules/ui/Input";
 import { Modal } from "@/modules/ui/Modal";
 import { ToggleSwitch } from "@/modules/ui/ToggleSwitch";
 import { useToast } from "@/modules/ui/ToastProvider";
+import { VirtualTable, type VirtualTableColumn } from "@/modules/ui/VirtualTable";
 import {
   emptyProxyDraft,
   proxyDisplayURL,
@@ -49,20 +49,20 @@ export function ProxiesPage() {
     void loadEntries();
   }, [loadEntries]);
 
-  const closeModal = () => {
+  const closeModal = useCallback(() => {
     setEditingID(null);
     setDraft(emptyProxyDraft());
-  };
+  }, []);
 
-  const openCreate = () => {
+  const openCreate = useCallback(() => {
     setEditingID("");
     setDraft(emptyProxyDraft());
-  };
+  }, []);
 
-  const openEdit = (entry: ProxyPoolEntry) => {
+  const openEdit = useCallback((entry: ProxyPoolEntry) => {
     setEditingID(entry.id);
     setDraft({ ...entry });
-  };
+  }, []);
 
   const saveDraft = async () => {
     const invalidField = validateProxyDraft(draft);
@@ -97,7 +97,7 @@ export function ProxiesPage() {
     }
   };
 
-  const deleteEntry = async (id: string) => {
+  const deleteEntry = useCallback(async (id: string) => {
     const nextEntries = entries.filter((entry) => entry.id !== id);
     try {
       await proxiesApi.saveAll(nextEntries);
@@ -106,9 +106,9 @@ export function ProxiesPage() {
     } catch (error) {
       notify({ type: "error", message: error instanceof Error ? error.message : t("common.error") });
     }
-  };
+  }, [entries, notify, t]);
 
-  const checkEntry = async (entry: ProxyPoolEntry) => {
+  const checkEntry = useCallback(async (entry: ProxyPoolEntry) => {
     setCheckState((prev) => ({ ...prev, [entry.id]: { ...prev[entry.id], checking: true } }));
     try {
       const result = await proxiesApi.check({ id: entry.id });
@@ -122,7 +122,139 @@ export function ProxiesPage() {
         },
       }));
     }
-  };
+  }, [t]);
+
+  const columns = useMemo<VirtualTableColumn<ProxyPoolEntry>[]>(
+    () => [
+      {
+        key: "name",
+        label: t("proxies.name"),
+        width: "w-56",
+        render: (entry) => (
+          <div className="min-w-0">
+            <div className="flex min-w-0 items-center gap-2">
+              <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-semibold text-slate-600 dark:border-neutral-800 dark:bg-neutral-900 dark:text-slate-300">
+                {proxyProtocol(entry.url)}
+              </span>
+              <span className="truncate font-semibold text-slate-950 dark:text-white">
+                {entry.name}
+              </span>
+            </div>
+            <p className="mt-1 truncate font-mono text-[11px] text-slate-500 dark:text-white/50">
+              {entry.id}
+            </p>
+          </div>
+        ),
+      },
+      {
+        key: "url",
+        label: t("proxies.url"),
+        width: "w-[360px]",
+        render: (entry) => (
+          <p className="truncate font-mono text-xs text-slate-700 dark:text-white/70">
+            {proxyDisplayURL(entry)}
+          </p>
+        ),
+      },
+      {
+        key: "status",
+        label: t("proxies.status"),
+        width: "w-32",
+        render: (entry) => (
+          <span
+            className={[
+              "inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold",
+              entry.enabled
+                ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300"
+                : "bg-slate-100 text-slate-500 dark:bg-neutral-900 dark:text-slate-400",
+            ].join(" ")}
+          >
+            {entry.enabled ? t("proxies.enabled") : t("proxies.disabled")}
+          </span>
+        ),
+      },
+      {
+        key: "check",
+        label: t("proxies.last_check"),
+        width: "w-44",
+        render: (entry) => {
+          const result = checkState[entry.id];
+          if (!result || result.checking) {
+            return (
+              <span className="text-xs text-slate-500 dark:text-white/45">
+                {result?.checking ? t("common.loading_ellipsis") : "--"}
+              </span>
+            );
+          }
+          return (
+            <span
+              className={[
+                "text-xs font-medium",
+                result.ok
+                  ? "text-emerald-700 dark:text-emerald-300"
+                  : "text-rose-600 dark:text-rose-300",
+              ].join(" ")}
+            >
+              {result.ok ? t("proxies.check_ok") : t("proxies.check_failed")}
+              {result.statusCode ? ` · ${result.statusCode}` : ""}
+              {typeof result.latencyMs === "number" ? ` · ${result.latencyMs} ms` : ""}
+            </span>
+          );
+        },
+      },
+      {
+        key: "description",
+        label: t("proxies.description_label"),
+        width: "w-[280px]",
+        render: (entry) => (
+          <p className="truncate text-xs text-slate-600 dark:text-white/60">
+            {entry.description || "--"}
+          </p>
+        ),
+      },
+      {
+        key: "actions",
+        label: t("proxies.actions"),
+        width: "w-36",
+        headerClassName: "text-right",
+        cellClassName: "text-right",
+        render: (entry) => {
+          const result = checkState[entry.id];
+          return (
+            <div className="flex justify-end gap-1">
+              <Button
+                aria-label={t("proxies.check_label", { name: entry.name })}
+                title={t("proxies.check_label", { name: entry.name })}
+                onClick={() => void checkEntry(entry)}
+                disabled={result?.checking}
+                size="xs"
+              >
+                {result?.checking ? <RefreshCw size={14} /> : <CheckCircle2 size={14} />}
+              </Button>
+              <Button
+                aria-label={t("proxies.edit_label", { name: entry.name })}
+                title={t("proxies.edit_label", { name: entry.name })}
+                onClick={() => openEdit(entry)}
+                size="xs"
+              >
+                <Pencil size={14} />
+              </Button>
+              <Button
+                aria-label={t("proxies.delete_label", { name: entry.name })}
+                title={t("proxies.delete_label", { name: entry.name })}
+                onClick={() => void deleteEntry(entry.id)}
+                variant="ghost"
+                size="xs"
+              >
+                <Trash2 size={14} />
+              </Button>
+            </div>
+          );
+        },
+      },
+    ],
+    [checkEntry, checkState, deleteEntry, openEdit, t],
+  );
 
   const modalTitle = editingID ? t("proxies.edit_title") : t("proxies.add_title");
 
@@ -149,101 +281,25 @@ export function ProxiesPage() {
         </div>
       </div>
 
-      {sortedEntries.length === 0 && !loading ? (
-        <EmptyState
-          icon={<Network size={24} />}
-          title={t("proxies.empty_title")}
-          description={t("proxies.empty_desc")}
-          action={
-            <Button onClick={openCreate} variant="primary" size="sm">
-              <Plus size={15} />
-              {t("proxies.add")}
-            </Button>
-          }
+      <Card
+        title={t("proxies.table_title")}
+        description={t("proxies.table_description")}
+        padding="none"
+        bodyClassName="mt-0"
+        loading={loading}
+      >
+        <VirtualTable<ProxyPoolEntry>
+          rows={sortedEntries}
+          columns={columns}
+          rowKey={(entry) => entry.id}
+          rowHeight={58}
+          height="h-auto max-h-[70vh]"
+          minWidth="min-w-[1320px]"
+          caption={t("proxies.table_caption")}
+          emptyText={t("proxies.empty_desc")}
+          showAllLoadedMessage={false}
         />
-      ) : (
-        <div className="grid gap-3 xl:grid-cols-2">
-          {sortedEntries.map((entry) => {
-            const result = checkState[entry.id];
-            return (
-              <Card key={entry.id} padding="compact" loading={loading}>
-                <div className="flex min-w-0 items-start justify-between gap-3">
-                  <div className="min-w-0 space-y-2">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-semibold text-slate-600 dark:border-neutral-800 dark:bg-neutral-900 dark:text-slate-300">
-                        {proxyProtocol(entry.url)}
-                      </span>
-                      <h3 className="truncate text-sm font-semibold text-slate-950 dark:text-white">
-                        {entry.name}
-                      </h3>
-                      <span
-                        className={[
-                          "rounded-full px-2 py-0.5 text-[11px] font-semibold",
-                          entry.enabled
-                            ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300"
-                            : "bg-slate-100 text-slate-500 dark:bg-neutral-900 dark:text-slate-400",
-                        ].join(" ")}
-                      >
-                        {entry.enabled ? t("proxies.enabled") : t("proxies.disabled")}
-                      </span>
-                    </div>
-                    <p className="truncate font-mono text-xs text-slate-600 dark:text-white/65">
-                      {proxyDisplayURL(entry)}
-                    </p>
-                    {entry.description ? (
-                      <p className="text-xs text-slate-500 dark:text-white/55">
-                        {entry.description}
-                      </p>
-                    ) : null}
-                    {result && !result.checking ? (
-                      <p
-                        className={[
-                          "text-xs font-medium",
-                          result.ok
-                            ? "text-emerald-700 dark:text-emerald-300"
-                            : "text-rose-600 dark:text-rose-300",
-                        ].join(" ")}
-                      >
-                        {result.ok ? t("proxies.check_ok") : t("proxies.check_failed")}
-                        {result.statusCode ? ` · ${result.statusCode}` : ""}
-                        {typeof result.latencyMs === "number" ? ` · ${result.latencyMs} ms` : ""}
-                      </p>
-                    ) : null}
-                  </div>
-                  <div className="flex shrink-0 items-center gap-1">
-                    <Button
-                      aria-label={t("proxies.check_label", { name: entry.name })}
-                      title={t("proxies.check_label", { name: entry.name })}
-                      onClick={() => void checkEntry(entry)}
-                      disabled={result?.checking}
-                      size="xs"
-                    >
-                      {result?.checking ? <RefreshCw size={14} /> : <CheckCircle2 size={14} />}
-                    </Button>
-                    <Button
-                      aria-label={t("proxies.edit_label", { name: entry.name })}
-                      title={t("proxies.edit_label", { name: entry.name })}
-                      onClick={() => openEdit(entry)}
-                      size="xs"
-                    >
-                      <Pencil size={14} />
-                    </Button>
-                    <Button
-                      aria-label={t("proxies.delete_label", { name: entry.name })}
-                      title={t("proxies.delete_label", { name: entry.name })}
-                      onClick={() => void deleteEntry(entry.id)}
-                      variant="ghost"
-                      size="xs"
-                    >
-                      <Trash2 size={14} />
-                    </Button>
-                  </div>
-                </div>
-              </Card>
-            );
-          })}
-        </div>
-      )}
+      </Card>
 
       <Modal
         open={editingID !== null}
@@ -302,4 +358,3 @@ export function ProxiesPage() {
     </div>
   );
 }
-

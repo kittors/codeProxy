@@ -55,6 +55,11 @@ describe("ProxiesPage", () => {
   test("loads proxy entries with masked URLs and status actions", async () => {
     renderPage();
 
+    expect(await screen.findByRole("table", { name: /proxy pool table/i })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: /name/i })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: /proxy url/i })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: /status/i })).toBeInTheDocument();
+
     expect(await screen.findByText("HK Proxy")).toBeInTheDocument();
     expect(screen.getByText("socks5://127.0.0.1:1080")).toBeInTheDocument();
     expect(screen.getByText("Codex egress")).toBeInTheDocument();
@@ -103,4 +108,3 @@ describe("ProxiesPage", () => {
     );
   });
 });
-
