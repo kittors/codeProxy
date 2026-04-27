@@ -78,9 +78,9 @@
     "reset_image": "还原图片"
   },
   "title": {
-    "main": "CLI Proxy API Management Center",
-    "login": "CLI Proxy API Management Center",
-    "abbr": "CPAMC"
+    "main": "Code Proxy 管理后台",
+    "login": "Code Proxy 管理后台",
+    "abbr": "CPAD"
   },
   "splash": {
     "title": "CLI Proxy API",
@@ -1389,7 +1389,7 @@
   },
   "system_info": {
     "title": "管理中心信息",
-    "about_title": "CLI Proxy API Management Center",
+    "about_title": "Code Proxy 管理后台",
     "connection_status_title": "连接状态",
     "api_status_label": "API 状态:",
     "config_status_label": "配置状态:",
@@ -1421,7 +1421,7 @@
     "link_main_repo": "主程序仓库",
     "link_main_repo_desc": "CLI Proxy API 核心程序源代码",
     "link_webui_repo": "WebUI 仓库",
-    "link_webui_repo_desc": "管理中心前端界面源代码",
+    "link_webui_repo_desc": "Code Proxy 管理后台前端源代码",
     "link_docs": "使用教程",
     "link_docs_desc": "配置指南和使用说明",
     "clear_login_title": "本地登录信息",

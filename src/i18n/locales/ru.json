@@ -58,9 +58,9 @@
     "reset_image": "Сбросить изображение"
   },
   "title": {
-    "main": "Центр управления CLI Proxy API",
-    "login": "Центр управления CLI Proxy API",
-    "abbr": "CPAMC"
+    "main": "Панель администратора Code Proxy",
+    "login": "Панель администратора Code Proxy",
+    "abbr": "CPAD"
   },
   "splash": {
     "title": "CLI Proxy API",
@@ -1178,7 +1178,7 @@
   },
   "system_info": {
     "title": "Информация о центре управления",
-    "about_title": "CLI Proxy API Management Center",
+    "about_title": "Панель администратора Code Proxy",
     "connection_status_title": "Статус подключения",
     "api_status_label": "Статус API:",
     "config_status_label": "Статус конфигурации:",
@@ -1210,7 +1210,7 @@
     "link_main_repo": "Основной репозиторий",
     "link_main_repo_desc": "Исходный код основной программы CLI Proxy API",
     "link_webui_repo": "Репозиторий WebUI",
-    "link_webui_repo_desc": "Исходный код фронтенда центра управления",
+    "link_webui_repo_desc": "Исходный код панели администратора Code Proxy",
     "link_docs": "Документация",
     "link_docs_desc": "Учебные пособия и руководства по настройке",
     "clear_login_title": "Локальные данные входа",

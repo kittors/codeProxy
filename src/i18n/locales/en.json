@@ -76,9 +76,9 @@
     "reset_image": "Reset image"
   },
   "title": {
-    "main": "CLI Proxy API Management Center",
-    "login": "CLI Proxy API Management Center",
-    "abbr": "CPAMC"
+    "main": "Code Proxy Admin Dashboard",
+    "login": "Code Proxy Admin Dashboard",
+    "abbr": "CPAD"
   },
   "splash": {
     "title": "CLI Proxy API",
@@ -155,7 +155,7 @@
   },
   "dashboard": {
     "title": "Dashboard",
-    "subtitle": "Welcome to CLI Proxy API Management Center",
+    "subtitle": "Welcome to Code Proxy Admin Dashboard",
     "openai_providers": "OpenAI Providers",
     "quick_actions": "Quick Actions",
     "current_config": "Current Configuration",
@@ -1378,7 +1378,7 @@
   },
   "system_info": {
     "title": "Management Center Info",
-    "about_title": "CLI Proxy API Management Center",
+    "about_title": "Code Proxy Admin Dashboard",
     "connection_status_title": "Connection Status",
     "api_status_label": "API Status:",
     "config_status_label": "Config Status:",
@@ -1410,7 +1410,7 @@
     "link_main_repo": "Main Repository",
     "link_main_repo_desc": "CLI Proxy API core program source code",
     "link_webui_repo": "WebUI Repository",
-    "link_webui_repo_desc": "Management Center frontend source code",
+    "link_webui_repo_desc": "Code Proxy admin frontend source code",
     "link_docs": "Documentation",
     "link_docs_desc": "Usage tutorials and configuration guides",
     "clear_login_title": "Local Login Data",
