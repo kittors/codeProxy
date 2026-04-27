@@ -528,7 +528,7 @@ export function VirtualTable<T>({
 
   return (
     <div
-      className={`${height} ${minHeight} relative grid min-w-0 grid-cols-[minmax(0,1fr)_0.75rem] overflow-hidden group`}
+      className={`${height} ${minHeight} group relative isolate grid min-w-0 grid-cols-[minmax(0,1fr)_0.75rem] overflow-hidden`}
     >
       <div
         data-vt-header-backdrop
@@ -654,7 +654,7 @@ export function VirtualTable<T>({
 
       <div
         data-vt-scrollbar-gutter
-        className="relative z-20 col-start-2 row-start-1 h-full w-3 justify-self-end"
+        className="relative z-30 col-start-2 row-start-1 h-full w-3 justify-self-end"
       >
         <div
           data-vt-header-gutter
@@ -664,7 +664,7 @@ export function VirtualTable<T>({
         {vThumb ? (
           <div
             data-vt-scrollbar="y"
-            className="pointer-events-auto absolute right-0 w-2 opacity-0 transition-opacity hover:opacity-100 group-hover:opacity-100 group-focus-within:opacity-100"
+            className="pointer-events-auto absolute right-0 z-30 w-2 opacity-0 transition-opacity hover:opacity-100 group-hover:opacity-100 group-focus-within:opacity-100"
             style={{ top: headerHeight + 8, bottom: 8 }}
           >
             <div className="absolute inset-0 rounded-full bg-slate-200/40 dark:bg-white/10" />
@@ -684,7 +684,7 @@ export function VirtualTable<T>({
       {hThumb ? (
         <div
           data-vt-scrollbar="x"
-          className="pointer-events-auto absolute bottom-1 left-2 right-5 h-2 opacity-0 transition-opacity hover:opacity-100 group-hover:opacity-100 group-focus-within:opacity-100"
+          className="pointer-events-auto absolute bottom-1 left-2 right-5 z-30 h-2 opacity-0 transition-opacity hover:opacity-100 group-hover:opacity-100 group-focus-within:opacity-100"
         >
           <div className="absolute inset-0 rounded-full bg-slate-200/40 dark:bg-white/10" />
           <div
