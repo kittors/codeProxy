@@ -71,7 +71,9 @@ describe("ProxiesPage", () => {
 
     renderPage();
 
-    expect(await screen.findByRole("table", { name: /proxy pool table/i })).toBeInTheDocument();
+    const table = await screen.findByRole("table", { name: /proxy pool table/i });
+    expect(table).toBeInTheDocument();
+    expect(table.closest("section")).toHaveClass("p-5");
     expect(screen.queryByText("Proxy Pool")).not.toBeInTheDocument();
     expect(screen.queryByText(/Manage proxy entries in a compact table/i)).not.toBeInTheDocument();
     expect(screen.getByText("No proxies yet")).toBeInTheDocument();

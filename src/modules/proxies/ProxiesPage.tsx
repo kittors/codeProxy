@@ -281,11 +281,7 @@ export function ProxiesPage() {
         </div>
       </div>
 
-      <Card
-        padding="none"
-        className="overflow-hidden"
-        loading={loading}
-      >
+      <Card className="overflow-hidden" loading={loading}>
         <VirtualTable<ProxyPoolEntry>
           rows={sortedEntries}
           columns={columns}
