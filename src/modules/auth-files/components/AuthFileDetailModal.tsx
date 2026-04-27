@@ -319,6 +319,29 @@ export function AuthFileDetailModal({
 
                   <div className="rounded-2xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
                     <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                      {t("auth_files.subscription_expires_at_label")}
+                    </p>
+                    <div className="mt-2">
+                      <TextInput
+                        type="datetime-local"
+                        value={prefixProxyEditor.subscriptionExpiresAt}
+                        onChange={(e) => {
+                          const value = e.currentTarget.value;
+                          setPrefixProxyEditor((prev) => ({
+                            ...prev,
+                            subscriptionExpiresAt: value,
+                          }));
+                        }}
+                        aria-label={t("auth_files.subscription_expires_at_label")}
+                      />
+                    </div>
+                    <p className="mt-2 text-xs text-slate-500 dark:text-white/55">
+                      {t("auth_files.subscription_expires_at_hint")}
+                    </p>
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
+                    <p className="text-sm font-semibold text-slate-900 dark:text-white">
                       {t("auth_files.preview_after_save")}
                     </p>
                     <pre className="mt-3 max-h-64 overflow-y-auto whitespace-pre-wrap break-words rounded-2xl border border-slate-200 bg-white p-3 font-mono text-xs text-slate-900 dark:border-neutral-800 dark:bg-neutral-950 dark:text-slate-100">

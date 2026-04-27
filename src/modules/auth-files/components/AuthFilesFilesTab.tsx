@@ -96,6 +96,7 @@ interface AuthFilesFilesTabProps {
   toggleFileSelection: (name: string, checked: boolean) => void;
   formatPlanTypeLabel: (planType: string) => string;
   translateQuotaText: (text: string) => string;
+  renderSubscriptionBadge: (file: AuthFileItem) => ReactNode | null;
   renderQuotaBar: (label: string, item: QuotaItem | null) => ReactNode;
   openDetail: (file: AuthFileItem) => Promise<void>;
   downloadAuthFile: (file: AuthFileItem) => Promise<void>;
@@ -157,6 +158,7 @@ export function AuthFilesFilesTab({
   toggleFileSelection,
   formatPlanTypeLabel,
   translateQuotaText,
+  renderSubscriptionBadge,
   renderQuotaBar,
   openDetail,
   downloadAuthFile,
@@ -429,7 +431,7 @@ export function AuthFilesFilesTab({
                 rowHeight={84}
                 caption={t("auth_files.table_caption")}
                 emptyText={t("auth_files_page.no_files_desc")}
-                minWidth="min-w-[1800px]"
+                minWidth="min-w-[1960px]"
                 height="h-[calc(100dvh-452px)]"
                 rowClassName={(row) => {
                   const runtimeOnly = isRuntimeOnlyAuthFile(row);
@@ -461,6 +463,7 @@ export function AuthFilesFilesTab({
                   const badgeClass = TYPE_BADGE_CLASSES[typeKey] ?? TYPE_BADGE_CLASSES.unknown;
                   const displayTitle = resolveAuthFileDisplayName(file) || String(file.name || "");
                   const planType = resolveAuthFilePlanType(file);
+                  const subscriptionBadge = renderSubscriptionBadge(file);
                   const stats = resolveAuthFileStats(file, usageIndex);
                   const totalCalls = stats.success + stats.failure;
 
@@ -552,6 +555,7 @@ export function AuthFilesFilesTab({
                           <span className="inline-flex shrink-0 items-center rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-700 dark:bg-white/10 dark:text-white/70">
                             {t("auth_files.calls_count", { count: totalCalls })}
                           </span>
+                          {subscriptionBadge}
                           {runtimeOnly ? (
                             <span className="inline-flex shrink-0 items-center rounded-full bg-slate-900 px-2 py-0.5 text-[10px] font-semibold text-white dark:bg-white dark:text-neutral-950">
                               {t("auth_files.virtual_auth_file")}

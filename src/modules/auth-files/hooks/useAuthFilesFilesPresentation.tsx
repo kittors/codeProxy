@@ -1,6 +1,6 @@
 import { useCallback, useMemo, type ReactNode, type RefObject } from "react";
 import { useTranslation } from "react-i18next";
-import { Download, Eye, Loader2, RefreshCw, Zap } from "lucide-react";
+import { CalendarClock, Download, Eye, Loader2, RefreshCw, Zap } from "lucide-react";
 import type { AuthFileItem } from "@/lib/http/types";
 import { formatLatency } from "@/modules/providers/hooks/useProviderLatency";
 import { ProviderStatusBar } from "@/modules/providers/ProviderStatusBar";
@@ -23,6 +23,7 @@ import {
   resolveAuthFilePlanType,
   resolveAuthFileStats,
   resolveAuthFileStatusBar,
+  resolveAuthFileSubscriptionStatus,
   resolveFileType,
 } from "@/modules/auth-files/helpers/authFilesPageUtils";
 import { resolveQuotaProvider, type QuotaProvider } from "@/modules/quota/quota-fetch";
@@ -37,6 +38,17 @@ const KNOWN_QUOTA_TEXT_KEYS = new Set([
   "missing_project_id",
   "parse_kiro_failed",
 ]);
+
+const SUBSCRIPTION_TONE_CLASSES = {
+  active:
+    "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-500/20 dark:bg-emerald-500/15 dark:text-emerald-200",
+  warning:
+    "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/15 dark:text-amber-200",
+  urgent:
+    "border-orange-200 bg-orange-50 text-orange-800 dark:border-orange-500/20 dark:bg-orange-500/15 dark:text-orange-200",
+  expired:
+    "border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-500/20 dark:bg-rose-500/15 dark:text-rose-200",
+} as const;
 
 type QuotaVisualTone = {
   normalized: number | null;
@@ -152,6 +164,54 @@ export function useAuthFilesFilesPresentation({
       return normalized.charAt(0).toUpperCase() + normalized.slice(1);
     },
     [t],
+  );
+
+  const formatSubscriptionDuration = useCallback(
+    (minutesValue: number) => {
+      const totalMinutes = Math.max(0, Math.abs(minutesValue));
+      if (totalMinutes <= 0) return t("auth_files.subscription_less_than_minute");
+      const days = Math.floor(totalMinutes / 1440);
+      const hours = Math.floor((totalMinutes % 1440) / 60);
+      const minutes = totalMinutes % 60;
+      if (days > 0) {
+        return t("auth_files.subscription_duration_dhm", { days, hours, minutes });
+      }
+      if (hours > 0) {
+        return t("auth_files.subscription_duration_hm", { hours, minutes });
+      }
+      return t("auth_files.subscription_duration_m", { minutes });
+    },
+    [t],
+  );
+
+  const renderSubscriptionBadge = useCallback(
+    (file: AuthFileItem): ReactNode | null => {
+      const status = resolveAuthFileSubscriptionStatus(file, nowMs);
+      if (!status) return null;
+
+      const duration = formatSubscriptionDuration(status.remainingMinutes);
+      const label = status.expired
+        ? t("auth_files.subscription_expired_short", { duration })
+        : t("auth_files.subscription_remaining_short", { duration });
+      const title = t("auth_files.subscription_expires_at_title", {
+        date: status.expiresAtText,
+      });
+
+      return (
+        <HoverTooltip content={title}>
+          <span
+            className={[
+              "inline-flex max-w-full items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold tabular-nums",
+              SUBSCRIPTION_TONE_CLASSES[status.tone],
+            ].join(" ")}
+          >
+            <CalendarClock size={12} className="shrink-0" />
+            <span className="min-w-0 truncate">{label}</span>
+          </span>
+        </HoverTooltip>
+      );
+    },
+    [formatSubscriptionDuration, nowMs, t],
   );
 
   const formatQuotaResetTextCompact = useCallback(
@@ -409,6 +469,15 @@ export function useAuthFilesFilesPresentation({
             </div>
           );
         },
+      },
+      {
+        key: "subscription",
+        label: t("auth_files.col_subscription"),
+        width: "w-56",
+        render: (file) =>
+          renderSubscriptionBadge(file) ?? (
+            <span className="text-xs text-slate-400 dark:text-white/40">--</span>
+          ),
       },
       {
         key: "size",
@@ -678,6 +747,7 @@ export function useAuthFilesFilesPresentation({
     quotaPreviewMode,
     quotaProgressCircle,
     refreshQuota,
+    renderSubscriptionBadge,
     selectCurrentPage,
     selectablePageNames.length,
     selectedFileNameSet,
@@ -694,6 +764,7 @@ export function useAuthFilesFilesPresentation({
   return {
     translateQuotaText,
     formatPlanTypeLabel,
+    renderSubscriptionBadge,
     renderQuotaBar,
     renderFilesViewModeTabs,
     fileColumns,
