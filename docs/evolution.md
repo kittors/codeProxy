@@ -60,28 +60,28 @@ CliRelay 后端新增 Docker-first 自动更新能力，需要前端在用户登
 - 删除 `src/modules/update/` 和 `src/lib/http/apis/update.ts`。
 - 从配置页移除 `auto-update.enabled` 开关，并保留 YAML 手动配置能力。
 
-## 2026-02-22 · 引入 CPAMC 兼容管理中心（多页面构建）
+## 2026-02-22 · 引入历史兼容管理入口（多页面构建）
 
 ### 背景
 
-需要将上游项目 `Cli-Proxy-API-Management-Center` 的完整功能移植到本仓库，作为兼容入口补齐仪表盘/系统信息/使用统计等能力。
+需要在当前仓库内补齐早期兼容管理入口，覆盖仪表盘、系统信息、使用统计等能力，并为后续重写后的主入口演进预留过渡空间。
 
 ### 结论
 
 - 保留现有 Tailwind 后台（`index.html` / `src/main.tsx`）。
-- 新增第二页面入口 `management.html` / `src/management.tsx`，承载 CPAMC 兼容管理中心（HashRouter + SCSS Modules）。
+- 新增第二页面入口 `management.html` / `src/management.tsx`，承载历史兼容管理入口（HashRouter + SCSS Modules）。
 - `vite.config.ts` 改为多页面构建，并补齐 `__APP_VERSION__`、SCSS 预处理与 CSS Modules 配置。
 
 ### 影响范围
 
-- 新增大量 CPAMC 相关目录：`src/pages/`、`src/components/`、`src/services/`、`src/stores/`、`src/i18n/` 等。
+- 新增历史兼容入口相关目录：`src/pages/`、`src/components/`、`src/services/`、`src/stores/`、`src/i18n/` 等。
 - `dist/` 产物新增 `management.html` 及对应静态资源。
 - 依赖新增：`axios`、`zustand`、`i18next`、`react-i18next`、`@uiw/react-codemirror`、`@codemirror/*`、`chart.js`、`react-chartjs-2`、`@tanstack/react-virtual`、`gsap`、`sass` 等。
 
 ### 回滚策略（如适用）
 
 - 删除 `management.html`、`src/management.tsx`，并从 `vite.config.ts` 移除多页面 `rollupOptions.input` 与 SCSS/CSS Modules 配置。
-- 移除 CPAMC 移植目录（`src/pages/` 等）及对应新增依赖后重新 `bun install`。
+- 移除历史兼容入口目录（`src/pages/` 等）及对应新增依赖后重新 `bun install`。
 
 ## 2026-02-22 · 业务功能补齐（保持默认入口为 Tailwind 后台）
 
