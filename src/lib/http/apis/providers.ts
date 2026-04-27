@@ -25,6 +25,7 @@ export const providersApi = {
         const name = normalizeString(item.name) ?? undefined;
         const prefix = normalizeString(item.prefix) ?? undefined;
         const baseUrl = normalizeString(item["base-url"] ?? item.baseUrl) ?? undefined;
+        const proxyId = normalizeString(item["proxy-id"] ?? item.proxyId) ?? undefined;
         const headers = normalizeHeaders(item.headers);
         const models = normalizeModels(item.models);
         const excludedModels = normalizeExcludedModels(
@@ -35,6 +36,7 @@ export const providersApi = {
           ...(name ? { name } : {}),
           ...(prefix ? { prefix } : {}),
           ...(baseUrl ? { baseUrl } : {}),
+          ...(proxyId ? { proxyId } : {}),
           ...(headers ? { headers } : {}),
           ...(models ? { models } : {}),
           ...(excludedModels ? { excludedModels } : {}),
@@ -64,6 +66,7 @@ export const providersApi = {
         const prefix = normalizeString(item.prefix) ?? undefined;
         const baseUrl = normalizeString(item["base-url"] ?? item.baseUrl) ?? undefined;
         const proxyUrl = normalizeString(item["proxy-url"] ?? item.proxyUrl) ?? undefined;
+        const proxyId = normalizeString(item["proxy-id"] ?? item.proxyId) ?? undefined;
         const headers = normalizeHeaders(item.headers);
         const models = normalizeModels(item.models);
         const excludedModels = normalizeExcludedModels(
@@ -75,6 +78,7 @@ export const providersApi = {
           ...(prefix ? { prefix } : {}),
           ...(baseUrl ? { baseUrl } : {}),
           ...(proxyUrl ? { proxyUrl } : {}),
+          ...(proxyId ? { proxyId } : {}),
           ...(headers ? { headers } : {}),
           ...(models ? { models } : {}),
           ...(excludedModels ? { excludedModels } : {}),
@@ -104,6 +108,7 @@ export const providersApi = {
         const prefix = normalizeString(item.prefix) ?? undefined;
         const baseUrl = normalizeString(item["base-url"] ?? item.baseUrl) ?? undefined;
         const proxyUrl = normalizeString(item["proxy-url"] ?? item.proxyUrl) ?? undefined;
+        const proxyId = normalizeString(item["proxy-id"] ?? item.proxyId) ?? undefined;
         const headers = normalizeHeaders(item.headers);
         const models = normalizeModels(item.models);
         const excludedModels = normalizeExcludedModels(
@@ -117,6 +122,7 @@ export const providersApi = {
           ...(prefix ? { prefix } : {}),
           ...(baseUrl ? { baseUrl } : {}),
           ...(proxyUrl ? { proxyUrl } : {}),
+          ...(proxyId ? { proxyId } : {}),
           ...(headers ? { headers } : {}),
           ...(models ? { models } : {}),
           ...(excludedModels ? { excludedModels } : {}),
@@ -147,6 +153,7 @@ export const providersApi = {
         const prefix = normalizeString(item.prefix) ?? undefined;
         const baseUrl = normalizeString(item["base-url"] ?? item.baseUrl) ?? undefined;
         const proxyUrl = normalizeString(item["proxy-url"] ?? item.proxyUrl) ?? undefined;
+        const proxyId = normalizeString(item["proxy-id"] ?? item.proxyId) ?? undefined;
         const headers = normalizeHeaders(item.headers);
         const models = normalizeModels(item.models);
         return {
@@ -155,6 +162,7 @@ export const providersApi = {
           ...(prefix ? { prefix } : {}),
           ...(baseUrl ? { baseUrl } : {}),
           ...(proxyUrl ? { proxyUrl } : {}),
+          ...(proxyId ? { proxyId } : {}),
           ...(headers ? { headers } : {}),
           ...(models ? { models } : {}),
         };

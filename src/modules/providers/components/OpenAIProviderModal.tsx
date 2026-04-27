@@ -9,6 +9,8 @@ import { TextInput } from "@/modules/ui/Input";
 import { Modal } from "@/modules/ui/Modal";
 import { KeyValueInputList } from "@/modules/providers/KeyValueInputList";
 import { ModelInputList } from "@/modules/providers/ModelInputList";
+import type { ProxyPoolEntry } from "@/lib/http/apis/proxies";
+import { ProxyPoolSelect } from "@/modules/proxies/ProxyPoolSelect";
 
 interface OpenAIProviderModalProps {
   open: boolean;
@@ -24,6 +26,7 @@ interface OpenAIProviderModalProps {
   discoveredModels: { id: string; owned_by?: string }[];
   discoverSelected: Set<string>;
   setDiscoverSelected: Dispatch<SetStateAction<Set<string>>>;
+  proxyPoolEntries: ProxyPoolEntry[];
   copyText: (text: string) => Promise<void>;
   maskApiKey: (value: string) => string;
 }
@@ -42,6 +45,7 @@ export function OpenAIProviderModal({
   discoveredModels,
   discoverSelected,
   setDiscoverSelected,
+  proxyPoolEntries,
   copyText,
   maskApiKey,
 }: OpenAIProviderModalProps) {
@@ -214,7 +218,13 @@ export function OpenAIProviderModal({
                   ...prev,
                   apiKeyEntries: [
                     ...prev.apiKeyEntries,
-                    { id: `key-${Date.now()}`, apiKey: "", proxyUrl: "", headersEntries: [] },
+                    {
+                      id: `key-${Date.now()}`,
+                      apiKey: "",
+                      proxyUrl: "",
+                      proxyId: "",
+                      headersEntries: [],
+                    },
                   ],
                 }))
               }
@@ -250,7 +260,7 @@ export function OpenAIProviderModal({
                   </Button>
                 </div>
 
-                <div className="mt-3 grid gap-3 md:grid-cols-2">
+                <div className="mt-3 grid gap-3 md:grid-cols-3">
                   <div className="space-y-2">
                     <p className="text-sm font-semibold text-slate-900 dark:text-white">
                       {t("providers.api_key")}
@@ -280,6 +290,23 @@ export function OpenAIProviderModal({
                         {t("providers.copy")}
                       </Button>
                     </div>
+                  </div>
+                  <div className="space-y-2">
+                    <ProxyPoolSelect
+                      value={entry.proxyId}
+                      entries={proxyPoolEntries}
+                      onChange={(value) => {
+                        setOpenaiDraft((prev) => ({
+                          ...prev,
+                          apiKeyEntries: prev.apiKeyEntries.map((it, i) =>
+                            i === idx ? { ...it, proxyId: value } : it,
+                          ),
+                        }));
+                      }}
+                      label={t("providers.proxy_pool_label")}
+                      hint={t("providers.proxy_pool_hint")}
+                      ariaLabel={`${t("providers.proxy_pool_label")} ${idx + 1}`}
+                    />
                   </div>
                   <div className="space-y-2">
                     <p className="text-sm font-semibold text-slate-900 dark:text-white">

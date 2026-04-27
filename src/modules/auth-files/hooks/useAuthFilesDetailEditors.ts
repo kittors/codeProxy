@@ -24,6 +24,7 @@ const createPrefixProxyEditorState = (): PrefixProxyEditorState => ({
   json: null,
   prefix: "",
   proxyUrl: "",
+  proxyId: "",
 });
 
 const createChannelEditorState = (): ChannelEditorState => ({
@@ -125,6 +126,7 @@ export function useAuthFilesDetailEditors(loadAll: () => Promise<void>) {
         json: null,
         prefix: "",
         proxyUrl: "",
+        proxyId: "",
       });
 
       try {
@@ -155,6 +157,7 @@ export function useAuthFilesDetailEditors(loadAll: () => Promise<void>) {
         const json = parsed as Record<string, unknown>;
         const prefix = typeof json.prefix === "string" ? json.prefix : "";
         const proxyUrl = typeof json.proxy_url === "string" ? json.proxy_url : "";
+        const proxyId = typeof json.proxy_id === "string" ? json.proxy_id : "";
 
         setPrefixProxyEditor((prev) => ({
           ...prev,
@@ -162,6 +165,7 @@ export function useAuthFilesDetailEditors(loadAll: () => Promise<void>) {
           json,
           prefix,
           proxyUrl,
+          proxyId,
           error: null,
         }));
       } catch (err: unknown) {
@@ -245,10 +249,19 @@ export function useAuthFilesDetailEditors(loadAll: () => Promise<void>) {
       typeof prefixProxyEditor.json.prefix === "string" ? prefixProxyEditor.json.prefix : "";
     const originalProxyUrl =
       typeof prefixProxyEditor.json.proxy_url === "string" ? prefixProxyEditor.json.proxy_url : "";
+    const originalProxyId =
+      typeof prefixProxyEditor.json.proxy_id === "string" ? prefixProxyEditor.json.proxy_id : "";
     return (
-      originalPrefix !== prefixProxyEditor.prefix || originalProxyUrl !== prefixProxyEditor.proxyUrl
+      originalPrefix !== prefixProxyEditor.prefix ||
+      originalProxyUrl !== prefixProxyEditor.proxyUrl ||
+      originalProxyId !== prefixProxyEditor.proxyId
     );
-  }, [prefixProxyEditor.json, prefixProxyEditor.prefix, prefixProxyEditor.proxyUrl]);
+  }, [
+    prefixProxyEditor.json,
+    prefixProxyEditor.prefix,
+    prefixProxyEditor.proxyId,
+    prefixProxyEditor.proxyUrl,
+  ]);
 
   const prefixProxyUpdatedText = useMemo(() => {
     if (!prefixProxyEditor.json) return "";
@@ -262,8 +275,17 @@ export function useAuthFilesDetailEditors(loadAll: () => Promise<void>) {
     if (proxyUrl) next.proxy_url = proxyUrl;
     else delete next.proxy_url;
 
+    const proxyId = prefixProxyEditor.proxyId.trim();
+    if (proxyId) next.proxy_id = proxyId;
+    else delete next.proxy_id;
+
     return JSON.stringify(next, null, 2);
-  }, [prefixProxyEditor.json, prefixProxyEditor.prefix, prefixProxyEditor.proxyUrl]);
+  }, [
+    prefixProxyEditor.json,
+    prefixProxyEditor.prefix,
+    prefixProxyEditor.proxyId,
+    prefixProxyEditor.proxyUrl,
+  ]);
 
   const savePrefixProxy = useCallback(async () => {
     if (!prefixProxyEditor.json) return;

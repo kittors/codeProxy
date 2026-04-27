@@ -15,6 +15,7 @@ import {
   writeAuthFilesUiState,
 } from "@/modules/auth-files/helpers/authFilesPageUtils";
 import { useAuthFilesListState } from "@/modules/auth-files/hooks/useAuthFilesListState";
+import { useAuthFilesDetailEditors } from "@/modules/auth-files/hooks/useAuthFilesDetailEditors";
 import { useAuthFilesOAuthConfig } from "@/modules/auth-files/hooks/useAuthFilesOAuthConfig";
 import { ThemeProvider } from "@/modules/ui/ThemeProvider";
 import { ToastProvider } from "@/modules/ui/ToastProvider";
@@ -22,6 +23,8 @@ import { ToastProvider } from "@/modules/ui/ToastProvider";
 const mocks = vi.hoisted(() => ({
   getOauthExcludedModels: vi.fn(async () => ({})),
   getOauthModelAlias: vi.fn(async () => ({ codex: [{ name: "existing", alias: "existing" }] })),
+  downloadText: vi.fn(async () => "{}"),
+  upload: vi.fn(async (_file: File) => ({})),
   getModelDefinitions: vi.fn(async () => [
     { id: "existing", display_name: "Existing" },
     { id: "new-model", display_name: "New Model" },
@@ -36,6 +39,8 @@ vi.mock("@/lib/http/apis", async (importOriginal) => {
       ...mod.authFilesApi,
       getOauthExcludedModels: mocks.getOauthExcludedModels,
       getOauthModelAlias: mocks.getOauthModelAlias,
+      downloadText: mocks.downloadText,
+      upload: mocks.upload,
       getModelDefinitions: mocks.getModelDefinitions,
     },
   };
@@ -53,11 +58,15 @@ describe("Auth Files helper coverage", () => {
     window.sessionStorage.clear();
     mocks.getOauthExcludedModels.mockReset();
     mocks.getOauthModelAlias.mockReset();
+    mocks.downloadText.mockReset();
+    mocks.upload.mockReset();
     mocks.getModelDefinitions.mockReset();
     mocks.getOauthExcludedModels.mockImplementation(async () => ({}));
     mocks.getOauthModelAlias.mockImplementation(async () => ({
       codex: [{ name: "existing", alias: "existing" }],
     }));
+    mocks.downloadText.mockImplementation(async () => "{}");
+    mocks.upload.mockImplementation(async () => ({}));
     mocks.getModelDefinitions.mockImplementation(async () => [
       { id: "existing", display_name: "Existing" },
       { id: "new-model", display_name: "New Model" },
@@ -244,5 +253,54 @@ describe("Auth Files helper coverage", () => {
       { id: expect.any(String), name: "existing", alias: "existing" },
       { id: expect.any(String), name: "new-model", alias: "new-model" },
     ]);
+  });
+
+  test("edits auth file proxy_id together with prefix and proxy_url", async () => {
+    let uploadedText = "";
+    mocks.downloadText.mockImplementation(async () =>
+      JSON.stringify({
+        prefix: "codex-main",
+        proxy_url: "http://fallback.example:7890",
+        proxy_id: "hk",
+      }),
+    );
+    mocks.upload.mockImplementation(async (file: File) => {
+      uploadedText = await file.text();
+      return {};
+    });
+
+    const loadAll = vi.fn(async () => {});
+    const { result } = renderHook(() => useAuthFilesDetailEditors(loadAll), { wrapper });
+
+    await act(async () => {
+      result.current.setDetailFile({ name: "codex.json" } as AuthFileItem);
+      result.current.setDetailOpen(true);
+      result.current.setDetailTab("fields");
+    });
+
+    await waitFor(() => {
+      expect(result.current.prefixProxyEditor.proxyId).toBe("hk");
+    });
+
+    await act(async () => {
+      result.current.setPrefixProxyEditor((prev) => ({
+        ...prev,
+        proxyId: "jp",
+      }));
+    });
+
+    expect(result.current.prefixProxyUpdatedText).toContain('"proxy_id": "jp"');
+
+    await act(async () => {
+      await result.current.savePrefixProxy();
+    });
+
+    expect(mocks.upload).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(uploadedText)).toEqual({
+      prefix: "codex-main",
+      proxy_url: "http://fallback.example:7890",
+      proxy_id: "jp",
+    });
+    expect(loadAll).toHaveBeenCalledTimes(1);
   });
 });

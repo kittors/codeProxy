@@ -128,6 +128,7 @@ export interface ProviderModel {
 export interface ProviderApiKeyEntry {
   apiKey: string;
   proxyUrl?: string;
+  proxyId?: string;
   headers?: Record<string, string>;
 }
 
@@ -148,6 +149,7 @@ export interface ProviderSimpleConfig {
   prefix?: string;
   baseUrl?: string;
   proxyUrl?: string;
+  proxyId?: string;
   headers?: Record<string, string>;
   models?: ProviderModel[];
   excludedModels?: string[];
