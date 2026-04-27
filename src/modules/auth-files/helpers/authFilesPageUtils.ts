@@ -4,7 +4,12 @@ import type { QuotaItem } from "@/modules/quota/quota-helpers";
 import { resolveCodexPlanType } from "@/utils/quota/resolvers";
 import type { StatusBarData, StatusBlockDetail, StatusBlockState } from "@/utils/usage";
 
-export type AuthFileModelItem = { id: string; display_name?: string; type?: string; owned_by?: string };
+export type AuthFileModelItem = {
+  id: string;
+  display_name?: string;
+  type?: string;
+  owned_by?: string;
+};
 export type OAuthDialogTab =
   | "codex"
   | "anthropic"
@@ -86,6 +91,14 @@ export const sanitizeAuthFilesForCache = (files: AuthFileItem[]): AuthFileItem[]
     runtime_only: file.runtime_only,
     plan_type: file.plan_type,
     planType: file.planType,
+    subscription_expires_at: file.subscription_expires_at,
+    subscriptionExpiresAt: file.subscriptionExpiresAt,
+    subscription_expires_at_ms: file.subscription_expires_at_ms,
+    subscriptionExpiresAtMs: file.subscriptionExpiresAtMs,
+    subscription_remaining_minutes: file.subscription_remaining_minutes,
+    subscriptionRemainingMinutes: file.subscriptionRemainingMinutes,
+    subscription_expired: file.subscription_expired,
+    subscriptionExpired: file.subscriptionExpired,
     id_token: sanitizeDecodedIdToken(file.id_token),
   }));
 
@@ -141,6 +154,93 @@ export const formatModified = (file: AuthFileItem): string => {
   return Number.isNaN(date.getTime()) ? "--" : date.toLocaleString();
 };
 
+const parseDateLikeMs = (value: unknown): number | null => {
+  if (typeof value === "number" && Number.isFinite(value) && value > 0) {
+    return value < 1e12 ? value * 1000 : value;
+  }
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+    const numeric = Number(trimmed);
+    if (Number.isFinite(numeric) && numeric > 0) {
+      return numeric < 1e12 ? numeric * 1000 : numeric;
+    }
+    const parsed = Date.parse(trimmed);
+    return Number.isNaN(parsed) ? null : parsed;
+  }
+  return null;
+};
+
+export type AuthFileSubscriptionStatus = {
+  expiresAtMs: number;
+  expiresAtText: string;
+  remainingMinutes: number;
+  expired: boolean;
+  tone: "active" | "warning" | "urgent" | "expired";
+};
+
+export const resolveAuthFileSubscriptionStatus = (
+  file: AuthFileItem,
+  nowMs = Date.now(),
+): AuthFileSubscriptionStatus | null => {
+  const expiresAtMs =
+    parseDateLikeMs(file.subscription_expires_at_ms ?? file.subscriptionExpiresAtMs) ??
+    parseDateLikeMs(file.subscription_expires_at ?? file.subscriptionExpiresAt);
+  if (expiresAtMs === null) return null;
+
+  const diffMs = expiresAtMs - nowMs;
+  const remainingMinutes =
+    diffMs === 0
+      ? 0
+      : diffMs > 0
+        ? Math.ceil(diffMs / 60_000)
+        : -Math.ceil(Math.abs(diffMs) / 60_000);
+  const expired = remainingMinutes <= 0;
+  const tone = expired
+    ? "expired"
+    : remainingMinutes <= 24 * 60
+      ? "urgent"
+      : remainingMinutes <= 7 * 24 * 60
+        ? "warning"
+        : "active";
+
+  return {
+    expiresAtMs,
+    expiresAtText: new Date(expiresAtMs).toLocaleString(),
+    remainingMinutes,
+    expired,
+    tone,
+  };
+};
+
+const padDatePart = (value: number): string => String(value).padStart(2, "0");
+
+export const dateLikeToDateTimeLocalInput = (value: unknown): string => {
+  const ms = parseDateLikeMs(value);
+  if (ms === null) return "";
+  const date = new Date(ms);
+  if (Number.isNaN(date.getTime())) return "";
+  return [
+    date.getFullYear(),
+    "-",
+    padDatePart(date.getMonth() + 1),
+    "-",
+    padDatePart(date.getDate()),
+    "T",
+    padDatePart(date.getHours()),
+    ":",
+    padDatePart(date.getMinutes()),
+  ].join("");
+};
+
+export const dateTimeLocalInputToIso = (value: string): string | null => {
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  const date = new Date(trimmed);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toISOString();
+};
+
 export const normalizeProviderKey = (value: string): string => value.trim().toLowerCase();
 
 export const escapeRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -189,7 +289,10 @@ export const resolveFileType = (file: AuthFileItem): string => {
 export const resolveProviderLabel = (providerKey: string): string => {
   const normalized = normalizeProviderKey(providerKey);
   if (!normalized || normalized === "all") return "All";
-  return normalized.replace(/(^|-)([a-z])/g, (_, sep: string, ch: string) => `${sep}${ch.toUpperCase()}`);
+  return normalized.replace(
+    /(^|-)([a-z])/g,
+    (_, sep: string, ch: string) => `${sep}${ch.toUpperCase()}`,
+  );
 };
 
 export const formatTrendDateKey = (date: Date): string => {
@@ -242,7 +345,8 @@ export const authFilesSortCollator = new Intl.Collator("zh-Hans-CN", {
   sensitivity: "base",
 });
 
-export const resolveAuthFilePlanType = (file: AuthFileItem): string | null => resolveCodexPlanType(file);
+export const resolveAuthFilePlanType = (file: AuthFileItem): string | null =>
+  resolveCodexPlanType(file);
 
 export const isRuntimeOnlyAuthFile = (file: AuthFileItem): boolean => {
   const raw = (file.runtime_only ?? file.runtimeOnly) as unknown;
@@ -279,7 +383,10 @@ export const normalizeQuotaLabel = (label: string): string =>
     .trim()
     .toLowerCase();
 
-export const pickQuotaPreviewItem = (items: QuotaItem[], mode: QuotaPreviewMode): QuotaItem | null => {
+export const pickQuotaPreviewItem = (
+  items: QuotaItem[],
+  mode: QuotaPreviewMode,
+): QuotaItem | null => {
   if (!Array.isArray(items) || items.length === 0) return null;
 
   const patterns =
@@ -426,6 +533,7 @@ export type PrefixProxyEditorState = {
   prefix: string;
   proxyUrl: string;
   proxyId: string;
+  subscriptionExpiresAt: string;
 };
 
 export type AuthFilesGroupOverview = {

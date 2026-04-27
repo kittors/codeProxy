@@ -36,6 +36,14 @@ export interface AuthFileItem {
   disabled?: boolean;
   modified?: number;
   modtime?: number;
+  subscription_expires_at?: string;
+  subscriptionExpiresAt?: string;
+  subscription_expires_at_ms?: number;
+  subscriptionExpiresAtMs?: number;
+  subscription_remaining_minutes?: number;
+  subscriptionRemainingMinutes?: number;
+  subscription_expired?: boolean;
+  subscriptionExpired?: boolean;
   [key: string]: unknown;
 }
 

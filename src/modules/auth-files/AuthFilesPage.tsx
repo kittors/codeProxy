@@ -71,16 +71,8 @@ export function AuthFilesPage() {
     applyImport,
   } = useAuthFilesOAuthConfig(tab);
 
-  const {
-    files,
-    setFiles,
-    loading,
-    refreshingAll,
-    usageLoading,
-    usageData,
-    usageIndex,
-    loadAll,
-  } = useAuthFilesDataState();
+  const { files, setFiles, loading, refreshingAll, usageLoading, usageData, usageIndex, loadAll } =
+    useAuthFilesDataState();
 
   const [confirm, setConfirm] = useState<null | { type: "deleteSelection"; names: string[] }>(null);
 
@@ -253,6 +245,7 @@ export function AuthFilesPage() {
   const {
     translateQuotaText,
     formatPlanTypeLabel,
+    renderSubscriptionBadge,
     renderQuotaBar,
     renderFilesViewModeTabs,
     fileColumns,
@@ -342,6 +335,7 @@ export function AuthFilesPage() {
             toggleFileSelection={toggleFileSelection}
             formatPlanTypeLabel={formatPlanTypeLabel}
             translateQuotaText={translateQuotaText}
+            renderSubscriptionBadge={renderSubscriptionBadge}
             renderQuotaBar={renderQuotaBar}
             openDetail={openDetail}
             downloadAuthFile={downloadAuthFile}
