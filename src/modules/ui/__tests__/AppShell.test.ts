@@ -47,6 +47,7 @@ describe("AppShell", () => {
 
     expect(navBlock).toContain('to: "/identity-fingerprint"');
     expect(navBlock).toContain('to: "/models"');
+    expect(navBlock).toContain('to: "/proxies"');
     expect(navBlock).not.toContain('to: "/manage/identity-fingerprint"');
     expect(navBlock).not.toContain('to: "/manage/models"');
   });
