@@ -18,6 +18,7 @@
 - `src/modules/monitor/`：监控中心
 - `src/modules/system/`：系统信息
 - `src/modules/update/`：自动更新提示、release notes 二次确认与更新心跳等待
+- `src/modules/proxies/`：代理池管理页面与代理检测交互
 - `src/modules/ui/`：复合 UI 容器
 - `src/modules/usage/`：用量统计（当前复用监控视图）
 - `src/styles/`：全局样式与主题变量
@@ -89,6 +90,7 @@
 - OAuth 登录弹窗：`src/modules/oauth/OAuthLoginDialog.tsx`
 - 自动更新提示：`src/modules/update/AutoUpdatePrompt.tsx`
 - 模型配置管理：`src/modules/models/ModelsPage.tsx`（`/manage/models`，数据库模型配置与计价规则）
+- 代理池管理：`src/modules/proxies/ProxiesPage.tsx`（`/proxies`，集中维护可复用出站代理）
 - 关键配置文件：`package.json`, `tsconfig.json`, `vite.config.ts`
 - 入口文件：`index.html`（默认构建）
 
