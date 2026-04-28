@@ -34,6 +34,7 @@ import type { ControlSize } from "@/modules/ui/controlStyles";
 export interface SearchableSelectOption {
   value: string;
   label: ReactNode;
+  triggerLabel?: ReactNode;
   /** searchable text (defaults to value if omitted) */
   searchText?: string;
 }
@@ -130,7 +131,7 @@ export function SearchableSelect({
 
   const selectedLabel = useMemo(() => {
     const match = options.find((o) => o.value === value);
-    return match ? match.label : null;
+    return match ? (match.triggerLabel ?? match.label) : null;
   }, [options, value]);
 
   const filtered = useMemo(() => {
@@ -187,7 +188,7 @@ export function SearchableSelect({
         onClick={() => setOpen((prev) => !prev)}
         className={cn(getSelectTriggerBase(size), open && selectTriggerOpen, className)}
       >
-        <span className="truncate">{selectedLabel ?? placeholder}</span>
+        <span className="min-w-0 flex-1 truncate text-left">{selectedLabel ?? placeholder}</span>
         <ChevronDown
           size={14}
           className={cn(selectChevron, open && "rotate-180")}
@@ -252,7 +253,7 @@ export function SearchableSelect({
                             selected ? selectOptionSelected : selectOptionIdle,
                           )}
                         >
-                          <span className="flex-1 whitespace-nowrap">{opt.label}</span>
+                          <span className="min-w-0 flex-1">{opt.label}</span>
                           {selected ? (
                             <Check
                               size={14}
@@ -279,7 +280,7 @@ export function SearchableSelect({
                           className="shrink-0 text-[#71717A] dark:text-[#A1A1AA]"
                           aria-hidden="true"
                         />
-                        <span className="flex-1 whitespace-nowrap">
+                        <span className="min-w-0 flex-1">
                           {createLabel ? createLabel(createValue) : createValue}
                         </span>
                       </button>

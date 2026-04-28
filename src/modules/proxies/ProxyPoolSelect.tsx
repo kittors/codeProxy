@@ -55,6 +55,9 @@ export function ProxyPoolSelect({
       seen.add(id);
       const result = checkState[id];
       const tone = proxyLatencyTone(result);
+      const protocol = proxyProtocol(entry.url);
+      const endpoint = proxyEndpoint(entry);
+      const displayName = entry.name || id;
       const latencyText =
         typeof result?.latencyMs === "number"
           ? `${result.latencyMs} ms`
@@ -69,19 +72,33 @@ export function ProxyPoolSelect({
           : t("proxies.check_pending");
       base.push({
         value: id,
+        triggerLabel: showDetails ? (
+          <span className="flex min-w-0 items-center gap-2">
+            <Network size={14} className="shrink-0 text-slate-400 dark:text-white/45" />
+            <span className="min-w-0 flex-1 truncate">{displayName}</span>
+            <span className="shrink-0 text-xs font-semibold text-slate-500 dark:text-white/50">
+              {protocol} · {endpoint}
+            </span>
+          </span>
+        ) : undefined,
         label: (
           <span className="flex min-w-0 flex-1 items-center gap-2">
             <Network size={14} className="shrink-0 text-slate-400 dark:text-white/45" />
             <span className="min-w-0 flex-1">
               <span className="block truncate">
-                {entry.name || id}
+                {displayName}
                 <span className="ml-1 text-xs text-slate-500 dark:text-white/50">({id})</span>
               </span>
               {showDetails ? (
                 <span className="mt-0.5 flex min-w-0 flex-wrap items-center gap-1.5 text-[11px] text-slate-500 dark:text-white/50">
-                  <span className="font-semibold">{proxyProtocol(entry.url)}</span>
-                  <span className="font-mono">{proxyEndpoint(entry)}</span>
+                  <span className="font-semibold">{protocol}</span>
+                  <span className="font-mono">{endpoint}</span>
                   {entry.description ? <span className="truncate">{entry.description}</span> : null}
+                  {result?.message && result.ok === false ? (
+                    <span className="truncate text-rose-600 dark:text-rose-300">
+                      {result.message}
+                    </span>
+                  ) : null}
                 </span>
               ) : null}
             </span>

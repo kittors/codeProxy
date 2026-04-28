@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Copy, ExternalLink, RefreshCw, Send, ShieldCheck, Sparkles, Upload } from "lucide-react";
 import { oauthApi, vertexApi } from "@/lib/http/apis";
 import type { IFlowCookieAuthResponse, OAuthProvider } from "@/lib/http/types";
-import { proxiesApi, type ProxyCheckResult, type ProxyPoolEntry } from "@/lib/http/apis/proxies";
+import type { ProxyPoolEntry } from "@/lib/http/apis/proxies";
 import { Button } from "@/modules/ui/Button";
 import { Card } from "@/modules/ui/Card";
 import { TextInput } from "@/modules/ui/Input";
@@ -11,11 +11,7 @@ import { Modal } from "@/modules/ui/Modal";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/modules/ui/Tabs";
 import { useToast } from "@/modules/ui/ToastProvider";
 import { ProxyPoolSelect } from "@/modules/proxies/ProxyPoolSelect";
-import {
-  readCachedProxyCheckState,
-  writeCachedProxyCheckState,
-  type ProxyCheckState,
-} from "@/modules/proxies/proxy-utils";
+import { useProxyPoolChecks } from "@/modules/proxies/useProxyPoolChecks";
 
 type ProviderStatus = "idle" | "waiting" | "success" | "error";
 
@@ -87,13 +83,10 @@ export function OAuthLoginDialog({
   const { t } = useTranslation();
   const { notify } = useToast();
   const timers = useRef<Record<string, number>>({});
-  const autoCheckedProxyIDs = useRef<Set<string>>(new Set());
 
   const [tab, setTab] = useState<TabValue>(defaultTab);
   const [selectedProxyID, setSelectedProxyID] = useState("");
-  const [proxyCheckState, setProxyCheckState] = useState<ProxyCheckState>(() =>
-    readCachedProxyCheckState(),
-  );
+  const proxyCheckState = useProxyPoolChecks(proxyPoolEntries, open);
 
   const [states, setStates] = useState<Record<OAuthProvider, ProviderState>>(
     {} as Record<OAuthProvider, ProviderState>,
@@ -121,7 +114,6 @@ export function OAuthLoginDialog({
   useEffect(() => {
     if (!open) {
       clearTimers();
-      autoCheckedProxyIDs.current.clear();
       return;
     }
     return () => clearTimers();
@@ -131,51 +123,7 @@ export function OAuthLoginDialog({
     if (!open) return;
     setTab(defaultTab);
     setSelectedProxyID("");
-    setProxyCheckState(readCachedProxyCheckState());
   }, [defaultTab, open]);
-
-  const storeProxyCheckResult = useCallback((id: string, result: ProxyCheckResult) => {
-    setProxyCheckState((prev) => {
-      const next = { ...prev, [id]: result };
-      writeCachedProxyCheckState(next);
-      return next;
-    });
-  }, []);
-
-  useEffect(() => {
-    if (!open || proxyPoolEntries.length === 0) return;
-
-    const pendingEntries = proxyPoolEntries.filter((entry) => {
-      const id = entry.id.trim();
-      if (!id || autoCheckedProxyIDs.current.has(id)) return false;
-      const result = proxyCheckState[id];
-      return typeof result?.latencyMs !== "number";
-    });
-    if (pendingEntries.length === 0) return;
-
-    setProxyCheckState((prev) => {
-      const next = { ...prev };
-      for (const entry of pendingEntries) {
-        const id = entry.id.trim();
-        autoCheckedProxyIDs.current.add(id);
-        next[id] = { ...next[id], checking: true };
-      }
-      return next;
-    });
-
-    pendingEntries.forEach((entry) => {
-      const id = entry.id.trim();
-      void proxiesApi
-        .check({ id })
-        .then((result) => storeProxyCheckResult(id, result))
-        .catch((error) =>
-          storeProxyCheckResult(id, {
-            ok: false,
-            message: error instanceof Error ? error.message : t("common.error"),
-          }),
-        );
-    });
-  }, [open, proxyCheckState, proxyPoolEntries, storeProxyCheckResult, t]);
 
   const getProviderTitle = useCallback(
     (provider: OAuthProvider) =>
