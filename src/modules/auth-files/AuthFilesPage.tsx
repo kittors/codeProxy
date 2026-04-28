@@ -423,6 +423,7 @@ export function AuthFilesPage() {
       <OAuthLoginDialog
         open={oauthDialogOpen}
         defaultTab={oauthDialogDefaultTab}
+        proxyPoolEntries={proxyPoolEntries}
         onClose={() => setOauthDialogOpen(false)}
         onAuthorized={() => void loadAll()}
       />
