@@ -13,6 +13,7 @@ describe("ModelsTabContent", () => {
 
   test("renders CC Switch import cards and launches selected provider deeplink", async () => {
     await i18n.changeLanguage("en");
+    window.localStorage.clear();
     const openSpy = vi.spyOn(window, "open").mockReturnValue(null);
     vi.spyOn(document, "hasFocus").mockReturnValue(false);
 
@@ -45,7 +46,9 @@ describe("ModelsTabContent", () => {
     const openedUrl = String(openSpy.mock.calls.at(-1)?.[0] ?? "");
     const parsed = new URL(openedUrl);
     expect(parsed.searchParams.get("app")).toBe("codex");
-    expect(parsed.searchParams.get("model")).toBe("gpt-5.3-codex");
+    expect(parsed.searchParams.get("model")).toBe("gpt-5.5");
+    expect(parsed.searchParams.get("endpoint")).toMatch(/\/v1$/);
+    expect(parsed.searchParams.get("usageBaseUrl")).not.toMatch(/\/v1$/);
     expect(parsed.searchParams.get("apiKey")).toBe("sk-lookup-key");
   });
 });

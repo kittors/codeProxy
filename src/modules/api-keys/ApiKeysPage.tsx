@@ -31,9 +31,9 @@ import {
   buildCcSwitchImportUrl,
   buildCcSwitchProviderName,
   openCcSwitchImportUrl,
-  pickCcSwitchDefaultModel,
   type CcSwitchClientType,
 } from "@/modules/ccswitch/ccswitchImport";
+import { readCcSwitchImportSettings } from "@/modules/ccswitch/ccswitchImportSettings";
 import { LogContentModal } from "@/modules/monitor/LogContentModal";
 import { ErrorDetailModal } from "@/modules/monitor/ErrorDetailModal";
 import type { ApiKeyFormValues } from "@/modules/api-keys/types";
@@ -511,6 +511,7 @@ export function ApiKeysPage() {
       if (!ccSwitchImportEntry) return;
       const baseUrl = auth?.state.apiBase || detectApiBaseFromLocation();
       const models = ccSwitchImportEntry["allowed-models"] ?? [];
+      const settings = readCcSwitchImportSettings();
       const url = buildCcSwitchImportUrl({
         apiKey: ccSwitchImportEntry.key,
         baseUrl,
@@ -519,7 +520,8 @@ export function ApiKeysPage() {
           rawName: ccSwitchImportEntry.name,
           clientType,
         }),
-        model: pickCcSwitchDefaultModel(clientType, models),
+        models,
+        settings,
       });
 
       openCcSwitchImportUrl(url, {
