@@ -11,66 +11,23 @@ import { useToast } from "@/modules/ui/ToastProvider";
 import { VirtualTable, type VirtualTableColumn } from "@/modules/ui/VirtualTable";
 import {
   emptyProxyDraft,
-  proxyDisplayURL,
+  proxyEndpoint,
+  proxyLatencyTone,
   proxyProtocol,
+  readCachedProxyCheckState,
   slugifyProxyID,
   validateProxyDraft,
+  writeCachedProxyCheckState,
+  type ProxyCheckState,
+  type ProxyLatencyTone,
 } from "@/modules/proxies/proxy-utils";
 
-type CheckStateEntry = Partial<ProxyCheckResult> & { checking?: boolean };
-type CheckState = Record<string, CheckStateEntry>;
-
-const PROXIES_CHECK_STATE_CACHE_KEY = "proxiesPage.checkState.v1";
-
-const readCachedNumber = (value: unknown): number | undefined =>
-  typeof value === "number" && Number.isFinite(value) ? Math.round(value) : undefined;
-
-const readCachedCheckState = (): CheckState => {
-  if (typeof window === "undefined") return {};
-  try {
-    const raw = window.sessionStorage.getItem(PROXIES_CHECK_STATE_CACHE_KEY);
-    if (!raw) return {};
-    const parsed = JSON.parse(raw) as unknown;
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
-
-    const next: CheckState = {};
-    for (const [id, value] of Object.entries(parsed)) {
-      if (!id || !value || typeof value !== "object" || Array.isArray(value)) continue;
-      const item = value as Record<string, unknown>;
-      if (typeof item.ok !== "boolean") continue;
-      const statusCode = readCachedNumber(item.statusCode);
-      const latencyMs = readCachedNumber(item.latencyMs);
-      const message = typeof item.message === "string" ? item.message : "";
-      next[id] = {
-        ok: item.ok,
-        ...(typeof statusCode === "number" ? { statusCode } : {}),
-        ...(typeof latencyMs === "number" ? { latencyMs } : {}),
-        ...(message ? { message } : {}),
-      };
-    }
-    return next;
-  } catch {
-    return {};
-  }
-};
-
-const writeCachedCheckState = (state: CheckState) => {
-  if (typeof window === "undefined") return;
-  try {
-    const cache: Record<string, ProxyCheckResult> = {};
-    for (const [id, result] of Object.entries(state)) {
-      if (typeof result.ok !== "boolean") continue;
-      cache[id] = {
-        ok: result.ok,
-        ...(typeof result.statusCode === "number" ? { statusCode: result.statusCode } : {}),
-        ...(typeof result.latencyMs === "number" ? { latencyMs: result.latencyMs } : {}),
-        ...(result.message ? { message: result.message } : {}),
-      };
-    }
-    window.sessionStorage.setItem(PROXIES_CHECK_STATE_CACHE_KEY, JSON.stringify(cache));
-  } catch {
-    // 忽略缓存写入失败。
-  }
+const latencyToneClasses: Record<ProxyLatencyTone, string> = {
+  none: "bg-slate-100 text-slate-600 dark:bg-neutral-900 dark:text-slate-300",
+  fast: "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300",
+  medium: "bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-200",
+  slow: "bg-orange-50 text-orange-700 dark:bg-orange-950/30 dark:text-orange-200",
+  failed: "bg-rose-50 text-rose-700 dark:bg-rose-950/30 dark:text-rose-300",
 };
 
 export function ProxiesPage() {
@@ -81,7 +38,7 @@ export function ProxiesPage() {
   const [saving, setSaving] = useState(false);
   const [draft, setDraft] = useState<ProxyPoolEntry>(() => emptyProxyDraft());
   const [editingID, setEditingID] = useState<string | null>(null);
-  const [checkState, setCheckState] = useState<CheckState>(() => readCachedCheckState());
+  const [checkState, setCheckState] = useState<ProxyCheckState>(() => readCachedProxyCheckState());
 
   const sortedEntries = useMemo(
     () => [...entries].sort((a, b) => a.name.localeCompare(b.name)),
@@ -91,7 +48,7 @@ export function ProxiesPage() {
   const storeCheckResult = useCallback((id: string, result: ProxyCheckResult) => {
     setCheckState((prev) => {
       const next = { ...prev, [id]: result };
-      writeCachedCheckState(next);
+      writeCachedProxyCheckState(next);
       return next;
     });
   }, []);
@@ -188,7 +145,7 @@ export function ProxiesPage() {
         setCheckState((prev) => {
           const next = { ...prev };
           delete next[editingID];
-          writeCachedCheckState(next);
+          writeCachedProxyCheckState(next);
           return next;
         });
       }
@@ -213,7 +170,7 @@ export function ProxiesPage() {
         setCheckState((prev) => {
           const next = { ...prev };
           delete next[id];
-          writeCachedCheckState(next);
+          writeCachedProxyCheckState(next);
           return next;
         });
         notify({ type: "success", message: t("proxies.deleted") });
@@ -242,14 +199,7 @@ export function ProxiesPage() {
         width: "w-44",
         render: (entry) => (
           <div className="min-w-0">
-            <div className="flex min-w-0 items-center gap-2">
-              <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-semibold text-slate-600 dark:border-neutral-800 dark:bg-neutral-900 dark:text-slate-300">
-                {proxyProtocol(entry.url)}
-              </span>
-              <span className="truncate font-semibold text-slate-950 dark:text-white">
-                {entry.name}
-              </span>
-            </div>
+            <p className="truncate font-semibold text-slate-950 dark:text-white">{entry.name}</p>
             <p className="mt-1 truncate font-mono text-[11px] text-slate-500 dark:text-white/50">
               {entry.id}
             </p>
@@ -257,36 +207,24 @@ export function ProxiesPage() {
         ),
       },
       {
-        key: "url",
-        label: t("proxies.url"),
-        width: "w-[280px]",
+        key: "endpoint",
+        label: t("proxies.endpoint_label"),
+        width: "w-[180px]",
         render: (entry) => (
-          <p className="truncate font-mono text-xs text-slate-700 dark:text-white/70">
-            {proxyDisplayURL(entry)}
-          </p>
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-semibold text-slate-600 dark:border-neutral-800 dark:bg-neutral-900 dark:text-slate-300">
+              {proxyProtocol(entry.url)}
+            </span>
+            <span className="truncate font-mono text-xs text-slate-700 dark:text-white/70">
+              {proxyEndpoint(entry)}
+            </span>
+          </div>
         ),
       },
       {
         key: "status",
         label: t("proxies.status"),
-        width: "w-24",
-        render: (entry) => (
-          <span
-            className={[
-              "inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold",
-              entry.enabled
-                ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300"
-                : "bg-slate-100 text-slate-500 dark:bg-neutral-900 dark:text-slate-400",
-            ].join(" ")}
-          >
-            {entry.enabled ? t("proxies.enabled") : t("proxies.disabled")}
-          </span>
-        ),
-      },
-      {
-        key: "check",
-        label: t("proxies.last_check"),
-        width: "w-32",
+        width: "w-40",
         render: (entry) => {
           const result = checkState[entry.id];
           const hasCheckResult = typeof result?.ok === "boolean";
@@ -297,26 +235,27 @@ export function ProxiesPage() {
               </span>
             );
           }
-          const summary = [
-            result.ok ? t("proxies.check_ok") : t("proxies.check_failed"),
-            result.statusCode ? String(result.statusCode) : null,
-            typeof result.latencyMs === "number" ? `${result.latencyMs} ms` : null,
-          ]
-            .filter(Boolean)
-            .join(" · ");
+          const tone = proxyLatencyTone(result);
+          const statusText = result.ok ? t("proxies.check_ok") : t("proxies.check_failed");
+          const latencyText =
+            typeof result.latencyMs === "number" ? `${result.latencyMs} ms` : null;
+          const summary = [statusText, latencyText].filter(Boolean).join(" · ");
           return (
             <div
-              className={[
-                "min-w-0 text-xs font-medium",
-                result.ok
-                  ? "text-emerald-700 dark:text-emerald-300"
-                  : "text-rose-600 dark:text-rose-300",
-              ].join(" ")}
+              className="min-w-0 text-xs"
               title={result.message ? `${summary} · ${result.message}` : summary}
             >
-              <span className="block truncate">{summary}</span>
+              <span
+                data-latency-tone={tone}
+                className={[
+                  "inline-flex max-w-full rounded-full px-2 py-0.5 text-[11px] font-semibold",
+                  latencyToneClasses[tone],
+                ].join(" ")}
+              >
+                <span className="truncate">{summary}</span>
+              </span>
               {result.message ? (
-                <span className="mt-0.5 block truncate font-normal opacity-80">
+                <span className="mt-1 block truncate font-normal text-rose-600 dark:text-rose-300">
                   {result.message}
                 </span>
               ) : null}
@@ -326,7 +265,7 @@ export function ProxiesPage() {
       },
       {
         key: "description",
-        label: t("proxies.description_label"),
+        label: t("proxies.remark_label"),
         width: "w-[180px]",
         render: (entry) => (
           <p className="truncate text-xs text-slate-600 dark:text-white/60">

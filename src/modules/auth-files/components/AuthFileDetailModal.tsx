@@ -7,8 +7,10 @@ import { Button } from "@/modules/ui/Button";
 import { EmptyState } from "@/modules/ui/EmptyState";
 import { TextInput } from "@/modules/ui/Input";
 import { Modal } from "@/modules/ui/Modal";
+import { SearchableSelect, type SearchableSelectOption } from "@/modules/ui/SearchableSelect";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/modules/ui/Tabs";
 import { ProxyPoolSelect } from "@/modules/proxies/ProxyPoolSelect";
+import { useProxyPoolChecks } from "@/modules/proxies/useProxyPoolChecks";
 import {
   downloadTextAsFile,
   formatFileSize,
@@ -16,6 +18,7 @@ import {
   matchesModelPattern,
   normalizeProviderKey,
   type AuthFileModelItem,
+  type AuthFileModelOwnerGroup,
   type ChannelEditorState,
   type PrefixProxyEditorState,
 } from "@/modules/auth-files/helpers/authFilesPageUtils";
@@ -31,10 +34,15 @@ interface AuthFileDetailModalProps {
   setDetailOpen: Dispatch<SetStateAction<boolean>>;
   setDetailTab: Dispatch<SetStateAction<DetailTab>>;
   loadModelsForDetail: (file: AuthFileItem, options?: { force?: boolean }) => Promise<void>;
+  loadModelOwnerGroups: () => Promise<void>;
   modelsLoading: boolean;
   modelsError: string | null;
   modelsList: AuthFileModelItem[];
   modelsFileType: string;
+  modelOwnerGroupsLoading: boolean;
+  modelOwnerGroups: AuthFileModelOwnerGroup[];
+  selectedModelOwner: string;
+  setSelectedModelOwner: Dispatch<SetStateAction<string>>;
   excluded: Record<string, string[]>;
   prefixProxyEditor: PrefixProxyEditorState;
   setPrefixProxyEditor: Dispatch<SetStateAction<PrefixProxyEditorState>>;
@@ -56,10 +64,15 @@ export function AuthFileDetailModal({
   setDetailOpen,
   setDetailTab,
   loadModelsForDetail,
+  loadModelOwnerGroups,
   modelsLoading,
   modelsError,
   modelsList,
   modelsFileType,
+  modelOwnerGroupsLoading,
+  modelOwnerGroups,
+  selectedModelOwner,
+  setSelectedModelOwner,
   excluded,
   prefixProxyEditor,
   setPrefixProxyEditor,
@@ -72,6 +85,28 @@ export function AuthFileDetailModal({
   saveChannelEditor,
 }: AuthFileDetailModalProps) {
   const { t } = useTranslation();
+  const proxyCheckState = useProxyPoolChecks(proxyPoolEntries, open && detailTab === "fields");
+  const selectedModelOwnerGroup =
+    selectedModelOwner === ""
+      ? null
+      : (modelOwnerGroups.find((group) => group.value === selectedModelOwner) ?? null);
+  const visibleModelsList = selectedModelOwner
+    ? (selectedModelOwnerGroup?.models ?? [])
+    : modelsList;
+  const visibleModelsLoading = selectedModelOwner ? modelOwnerGroupsLoading : modelsLoading;
+  const visibleModelsError = selectedModelOwner ? null : modelsError;
+  const modelOwnerOptions: SearchableSelectOption[] = [
+    {
+      value: "",
+      label: t("auth_files.auth_file_models_option"),
+      searchText: t("auth_files.auth_file_models_option"),
+    },
+    ...modelOwnerGroups.map((group) => ({
+      value: group.value,
+      label: group.label,
+      searchText: `${group.value} ${group.label} ${group.description}`,
+    })),
+  ];
 
   return (
     <Modal
@@ -92,10 +127,18 @@ export function AuthFileDetailModal({
           {detailTab === "models" && detailFile ? (
             <Button
               variant="secondary"
-              onClick={() => void loadModelsForDetail(detailFile, { force: true })}
-              disabled={modelsLoading}
+              onClick={() => {
+                void Promise.all([
+                  loadModelsForDetail(detailFile, { force: true }),
+                  loadModelOwnerGroups(),
+                ]);
+              }}
+              disabled={modelsLoading || modelOwnerGroupsLoading}
             >
-              <RefreshCw size={14} className={modelsLoading ? "animate-spin" : ""} />
+              <RefreshCw
+                size={14}
+                className={modelsLoading || modelOwnerGroupsLoading ? "animate-spin" : ""}
+              />
               {t("auth_files.detail_models_refresh")}
             </Button>
           ) : null}
@@ -201,23 +244,51 @@ export function AuthFileDetailModal({
                 </p>
               </div>
 
-              {modelsLoading ? (
+              <div className="grid gap-3 rounded-2xl border border-slate-200 bg-white/70 p-4 shadow-sm sm:grid-cols-[minmax(0,18rem)_minmax(0,1fr)] dark:border-neutral-800 dark:bg-neutral-950/60">
+                <div className="min-w-0 space-y-1.5">
+                  <label className="block text-sm font-medium text-slate-700 dark:text-white/80">
+                    {t("auth_files.model_owner_group")}
+                  </label>
+                  <SearchableSelect
+                    value={selectedModelOwner}
+                    onChange={setSelectedModelOwner}
+                    options={modelOwnerOptions}
+                    placeholder={t("auth_files.auth_file_models_option")}
+                    searchPlaceholder={t("auth_files.model_owner_group_search_placeholder")}
+                    aria-label={t("auth_files.model_owner_group")}
+                  />
+                </div>
+                <div className="min-w-0 rounded-xl bg-slate-50 px-3 py-2 text-xs text-slate-600 dark:bg-white/[0.04] dark:text-white/60">
+                  {selectedModelOwnerGroup
+                    ? t("auth_files.model_owner_group_source_desc", {
+                        owner: selectedModelOwnerGroup.label,
+                        count: selectedModelOwnerGroup.models.length,
+                      })
+                    : t("auth_files.auth_file_models_source_desc")}
+                </div>
+              </div>
+
+              {visibleModelsLoading ? (
                 <div className="text-sm text-slate-600 dark:text-white/65">
                   {t("common.loading_ellipsis")}
                 </div>
-              ) : modelsError === "unsupported" ? (
+              ) : visibleModelsError === "unsupported" ? (
                 <EmptyState
                   title={t("auth_files.api_not_supported")}
                   description={t("auth_files.no_models_api")}
                 />
-              ) : modelsList.length === 0 ? (
+              ) : visibleModelsList.length === 0 ? (
                 <EmptyState
                   title={t("common.no_model_data")}
-                  description={t("auth_files_page.models_hint")}
+                  description={
+                    selectedModelOwner
+                      ? t("auth_files.no_owner_group_models")
+                      : t("auth_files_page.models_hint")
+                  }
                 />
               ) : (
                 <div className="space-y-2">
-                  {modelsList.map((model) => (
+                  {visibleModelsList.map((model) => (
                     <div
                       key={model.id}
                       className="rounded-2xl border border-slate-200 bg-white/70 px-4 py-3 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60"
@@ -295,6 +366,8 @@ export function AuthFileDetailModal({
                       label={t("auth_files.proxy_id_label")}
                       hint={t("auth_files.leave_empty_proxy_id")}
                       ariaLabel={t("auth_files.proxy_id_label")}
+                      checkState={proxyCheckState}
+                      showDetails
                     />
                   </div>
 

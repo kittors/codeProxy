@@ -32,6 +32,7 @@ import type { ControlSize } from "@/modules/ui/controlStyles";
 export interface SelectOption {
   value: string;
   label: ReactNode;
+  triggerLabel?: ReactNode;
 }
 
 export interface SelectProps {
@@ -135,7 +136,7 @@ export function Select({
 
   const selectedLabel = useMemo(() => {
     const match = options.find((o) => o.value === value);
-    return match ? match.label : null;
+    return match ? (match.triggerLabel ?? match.label) : null;
   }, [options, value]);
 
   const handleSelect = useCallback(
@@ -166,7 +167,7 @@ export function Select({
           className,
         )}
       >
-        <span className="truncate">{selectedLabel ?? placeholder}</span>
+        <span className="min-w-0 flex-1 truncate text-left">{selectedLabel ?? placeholder}</span>
         <ChevronDown
           size={14}
           className={cn(selectChevron, open && "rotate-180")}
@@ -208,7 +209,7 @@ export function Select({
                       selected ? selectOptionSelected : selectOptionIdle,
                     )}
                   >
-                    <span className="flex-1 whitespace-nowrap">{opt.label}</span>
+                    <span className="min-w-0 flex-1">{opt.label}</span>
                     {selected ? (
                       <Check
                         size={14}

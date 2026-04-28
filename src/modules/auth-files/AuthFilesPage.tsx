@@ -100,11 +100,16 @@ export function AuthFilesPage() {
     modelsFileType,
     modelsList,
     modelsError,
+    modelOwnerGroupsLoading,
+    modelOwnerGroups,
+    selectedModelOwner,
+    setSelectedModelOwner,
     prefixProxyEditor,
     setPrefixProxyEditor,
     channelEditor,
     setChannelEditor,
     loadModelsForDetail,
+    loadModelOwnerGroups,
     openDetail,
     prefixProxyDirty,
     prefixProxyUpdatedText,
@@ -390,10 +395,15 @@ export function AuthFilesPage() {
         setDetailOpen={setDetailOpen}
         setDetailTab={setDetailTab}
         loadModelsForDetail={loadModelsForDetail}
+        loadModelOwnerGroups={loadModelOwnerGroups}
         modelsLoading={modelsLoading}
         modelsError={modelsError}
         modelsList={modelsList}
         modelsFileType={modelsFileType}
+        modelOwnerGroupsLoading={modelOwnerGroupsLoading}
+        modelOwnerGroups={modelOwnerGroups}
+        selectedModelOwner={selectedModelOwner}
+        setSelectedModelOwner={setSelectedModelOwner}
         excluded={excluded}
         prefixProxyEditor={prefixProxyEditor}
         setPrefixProxyEditor={setPrefixProxyEditor}
@@ -423,6 +433,7 @@ export function AuthFilesPage() {
       <OAuthLoginDialog
         open={oauthDialogOpen}
         defaultTab={oauthDialogDefaultTab}
+        proxyPoolEntries={proxyPoolEntries}
         onClose={() => setOauthDialogOpen(false)}
         onAuthorized={() => void loadAll()}
       />
