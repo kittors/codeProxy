@@ -2406,6 +2406,19 @@
     "last_page": "末页",
     "rows_per_page": "每页行数"
   },
+  "ccswitch": {
+    "import_to_ccswitch": "导入到 CC Switch",
+    "import_modal_desc": "选择要添加到 CC Switch 的客户端配置类型。",
+    "import_client": "导入 {{client}}",
+    "client_claude_code": "Claude Code",
+    "client_claude_code_desc": "适用于 Claude Code 的 Anthropic 兼容配置。",
+    "client_codex": "Codex",
+    "client_codex_desc": "适用于 Codex CLI 的 OpenAI 兼容配置。",
+    "client_gemini_cli": "Gemini CLI",
+    "client_gemini_cli_desc": "适用于 Gemini CLI 的 Gemini 兼容配置。",
+    "model_hint": "模型：{{model}}",
+    "protocol_unavailable": "未检测到 CC Switch 或协议处理程序不可用。"
+  },
   "api_keys_page": {
     "title": "API 密钥管理",
     "description": "创建和管理 API 密钥，设置请求限制和模型权限。数据持久化保存在服务器。",

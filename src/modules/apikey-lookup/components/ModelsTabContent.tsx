@@ -1,8 +1,18 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Check, Layers, RefreshCw, Search } from "lucide-react";
+import { detectApiBaseFromLocation } from "@/lib/connection";
+import { CcSwitchImportOptions } from "@/modules/ccswitch/CcSwitchImportOptions";
+import {
+  buildCcSwitchImportUrl,
+  buildCcSwitchProviderName,
+  openCcSwitchImportUrl,
+  pickCcSwitchDefaultModel,
+  type CcSwitchClientType,
+} from "@/modules/ccswitch/ccswitchImport";
 import { Card } from "@/modules/ui/Card";
 import { TextInput } from "@/modules/ui/Input";
+import { useToast } from "@/modules/ui/ToastProvider";
 
 // Vendor SVG icons
 import iconClaude from "@/assets/icons/claude.svg";
@@ -185,14 +195,17 @@ export function ModelsTabContent({
   error,
   searchFilter,
   onSearchChange,
+  apiKey,
 }: {
   models: string[];
   loading: boolean;
   error: string | null;
   searchFilter: string;
   onSearchChange: (value: string) => void;
+  apiKey?: string;
 }) {
   const { t } = useTranslation();
+  const { notify } = useToast();
 
   const filteredModels = useMemo(() => {
     const needle = searchFilter.trim().toLowerCase();
@@ -216,6 +229,24 @@ export function ModelsTabContent({
     return Array.from(map.entries()).sort((a, b) => b[1] - a[1]);
   }, [models, t]);
 
+  const handleImportToCcSwitch = (clientType: CcSwitchClientType) => {
+    const key = String(apiKey ?? "").trim();
+    if (!key) return;
+
+    const url = buildCcSwitchImportUrl({
+      apiKey: key,
+      baseUrl: detectApiBaseFromLocation(),
+      clientType,
+      providerName: buildCcSwitchProviderName({ clientType }),
+      model: pickCcSwitchDefaultModel(clientType, models),
+    });
+
+    openCcSwitchImportUrl(url, {
+      onProtocolUnavailable: () =>
+        notify({ type: "error", message: t("ccswitch.protocol_unavailable") }),
+    });
+  };
+
   return (
     <Card padding="none" className="overflow-hidden">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-3.5 dark:border-neutral-800">
@@ -231,13 +262,23 @@ export function ModelsTabContent({
             <span className="text-[10px] text-slate-400 dark:text-white/30">/ {models.length}</span>
           ) : null}
         </div>
-        <TextInput
-          value={searchFilter}
-          onChange={(e) => onSearchChange(e.target.value)}
-          placeholder={t("models_page.search")}
-          className="!w-48"
-          startAdornment={<Search size={14} className="text-slate-400 dark:text-white/35" />}
-        />
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          {apiKey ? (
+            <CcSwitchImportOptions
+              t={t}
+              models={models}
+              compact
+              onSelect={handleImportToCcSwitch}
+            />
+          ) : null}
+          <TextInput
+            value={searchFilter}
+            onChange={(e) => onSearchChange(e.target.value)}
+            placeholder={t("models_page.search")}
+            className="!w-48"
+            startAdornment={<Search size={14} className="text-slate-400 dark:text-white/35" />}
+          />
+        </div>
       </div>
 
       {vendorStats.length > 0 && !loading ? (

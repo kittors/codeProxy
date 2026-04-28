@@ -272,6 +272,7 @@ src/
 ├── modules/
 │   ├── auth/            # Authentication provider & session
 │   ├── apikey-lookup/   # Public API Key usage lookup
+│   ├── ccswitch/        # CC Switch deeplink import helpers
 │   ├── config/          # Visual config editor (YAML)
 │   ├── dashboard/       # Dashboard overview + system monitor
 │   ├── login/           # Login page

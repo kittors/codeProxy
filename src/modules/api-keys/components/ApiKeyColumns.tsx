@@ -8,6 +8,7 @@ import {
   Power,
   ShieldCheck,
   Trash2,
+  Upload,
 } from "lucide-react";
 import type { ApiKeyEntry } from "@/lib/http/apis/api-keys";
 import {
@@ -24,6 +25,7 @@ type CreateApiKeyColumnsOptions = {
   onToggleDisable: (index: number) => void;
   onViewUsage: (entry: ApiKeyEntry) => void;
   onCopy: (key: string) => void;
+  onImportToCcSwitch: (entry: ApiKeyEntry) => void;
   onEdit: (index: number) => void;
   onDelete: (index: number) => void;
 };
@@ -33,6 +35,7 @@ export const createApiKeyColumns = ({
   onToggleDisable,
   onViewUsage,
   onCopy,
+  onImportToCcSwitch,
   onEdit,
   onDelete,
 }: CreateApiKeyColumnsOptions): VirtualTableColumn<ApiKeyEntry>[] => [
@@ -289,10 +292,11 @@ export const createApiKeyColumns = ({
   {
     key: "actions",
     label: t("api_keys_page.col_actions"),
-    width: "w-[152px] min-w-[152px]",
+    width: "w-[188px] min-w-[188px]",
     render: (row, idx) => {
       const viewUsageLabel = t("api_keys_page.view_usage");
       const copyKeyLabel = t("api_keys_page.copy_key");
+      const importLabel = t("ccswitch.import_to_ccswitch");
       const editLabel = t("common.edit");
       const deleteLabel = t("common.delete");
 
@@ -316,6 +320,16 @@ export const createApiKeyColumns = ({
               aria-label={copyKeyLabel}
             >
               <Copy size={15} />
+            </button>
+          </HoverTooltip>
+          <HoverTooltip content={importLabel}>
+            <button
+              type="button"
+              onClick={() => onImportToCcSwitch(row)}
+              className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-cyan-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-cyan-400"
+              aria-label={importLabel}
+            >
+              <Upload size={15} />
             </button>
           </HoverTooltip>
           <HoverTooltip content={editLabel}>

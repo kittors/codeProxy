@@ -2235,6 +2235,19 @@
     "last_page": "Last page",
     "rows_per_page": "Rows per page"
   },
+  "ccswitch": {
+    "import_to_ccswitch": "Import to CC Switch",
+    "import_modal_desc": "Choose the client configuration to add to CC Switch.",
+    "import_client": "Import {{client}}",
+    "client_claude_code": "Claude Code",
+    "client_claude_code_desc": "Anthropic-compatible provider for Claude Code.",
+    "client_codex": "Codex",
+    "client_codex_desc": "OpenAI-compatible provider for Codex CLI.",
+    "client_gemini_cli": "Gemini CLI",
+    "client_gemini_cli_desc": "Gemini-compatible provider for Gemini CLI.",
+    "model_hint": "Model: {{model}}",
+    "protocol_unavailable": "CC Switch is not installed or the protocol handler is unavailable."
+  },
   "api_keys_page": {
     "title": "API Keys Management",
     "description": "Create and manage API Keys, set request limits and model permissions. Data persists on server.",

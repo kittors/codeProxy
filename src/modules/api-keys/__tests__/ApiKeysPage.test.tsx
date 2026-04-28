@@ -261,4 +261,44 @@ describe("ApiKeysPage", () => {
 
     expect(screen.getByRole("tooltip")).toHaveTextContent(/copy key/i);
   });
+
+  test("opens CC Switch import modal and launches selected client deeplink", async () => {
+    const openSpy = vi.spyOn(window, "open").mockReturnValue(null);
+    vi.spyOn(document, "hasFocus").mockReturnValue(false);
+
+    render(
+      <MemoryRouter>
+        <ThemeProvider>
+          <ToastProvider>
+            <ApiKeysPage />
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("Existing Key")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: /import to cc switch/i }));
+
+    const dialog = await screen.findByRole("dialog", { name: /import to cc switch/i });
+    expect(dialog).toHaveTextContent(/claude code/i);
+    expect(dialog).toHaveTextContent(/codex/i);
+    expect(dialog).toHaveTextContent(/gemini cli/i);
+
+    await userEvent.click(screen.getByRole("button", { name: /import codex/i }));
+
+    await waitFor(() => {
+      expect(openSpy).toHaveBeenCalledWith(
+        expect.stringContaining("ccswitch://v1/import?"),
+        "_self",
+      );
+    });
+
+    const openedUrl = String(openSpy.mock.calls.at(-1)?.[0] ?? "");
+    const parsed = new URL(openedUrl);
+    expect(parsed.searchParams.get("app")).toBe("codex");
+    expect(parsed.searchParams.get("apiKey")).toBe("sk-existing-1234567890");
+
+    openSpy.mockRestore();
+  });
 });
