@@ -28,6 +28,15 @@ const mocks = vi.hoisted(() => ({
   fetchQuota: vi.fn(() => new Promise(() => {})),
   deleteFile: vi.fn(async () => ({})),
   downloadText: vi.fn(async () => "{}"),
+  getModelsForAuthFile: vi.fn(async () => [{ id: "live-only", owned_by: "runtime" }]),
+  getModelConfigs: vi.fn(async () => [
+    { id: "gpt-4.1", owned_by: "openai" },
+    { id: "claude-sonnet-4-5", owned_by: "anthropic" },
+  ]),
+  getModelOwnerPresets: vi.fn(async () => [
+    { value: "openai", label: "OpenAI", description: "OpenAI models", enabled: true },
+    { value: "anthropic", label: "Anthropic", description: "Anthropic models", enabled: true },
+  ]),
   upload: vi.fn(async () => ({})),
   reconcile: vi.fn(async () => ({})),
 }));
@@ -41,7 +50,13 @@ vi.mock("@/lib/http/apis", async (importOriginal) => {
       list: mocks.list,
       deleteFile: mocks.deleteFile,
       downloadText: mocks.downloadText,
+      getModelsForAuthFile: mocks.getModelsForAuthFile,
       upload: mocks.upload,
+    },
+    modelsApi: {
+      ...mod.modelsApi,
+      getModelConfigs: mocks.getModelConfigs,
+      getModelOwnerPresets: mocks.getModelOwnerPresets,
     },
     quotaApi: { ...mod.quotaApi, reconcile: mocks.reconcile },
     usageApi: {
@@ -99,6 +114,20 @@ describe("AuthFilesPage files table", () => {
     mocks.deleteFile.mockImplementation(async () => ({}));
     mocks.downloadText.mockReset();
     mocks.downloadText.mockImplementation(async () => "{}");
+    mocks.getModelsForAuthFile.mockReset();
+    mocks.getModelsForAuthFile.mockImplementation(async () => [
+      { id: "live-only", owned_by: "runtime" },
+    ]);
+    mocks.getModelConfigs.mockReset();
+    mocks.getModelConfigs.mockImplementation(async () => [
+      { id: "gpt-4.1", owned_by: "openai" },
+      { id: "claude-sonnet-4-5", owned_by: "anthropic" },
+    ]);
+    mocks.getModelOwnerPresets.mockReset();
+    mocks.getModelOwnerPresets.mockImplementation(async () => [
+      { value: "openai", label: "OpenAI", description: "OpenAI models", enabled: true },
+      { value: "anthropic", label: "Anthropic", description: "Anthropic models", enabled: true },
+    ]);
     mocks.upload.mockReset();
     mocks.upload.mockImplementation(async () => ({}));
     mocks.reconcile.mockReset();
@@ -495,6 +524,49 @@ describe("AuthFilesPage files table", () => {
     const uploaded = uploadCalls[0][0];
     const uploadedJson = JSON.parse(await uploaded.text()) as Record<string, unknown>;
     expect(uploadedJson.subscription_expires_at).toBe(new Date("2027-01-03T04:05").toISOString());
+  });
+
+  test("can show models from a selected model owner group in the detail model tab", async () => {
+    mocks.list.mockImplementation(async () => ({
+      files: [
+        {
+          name: "codex.json",
+          label: "Codex Main",
+          account_type: "oauth",
+          type: "codex",
+          size: 1024,
+          modified: Date.now(),
+          disabled: false,
+        },
+      ],
+    }));
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("Codex Main")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "View" }));
+    fireEvent.click(await screen.findByRole("tab", { name: "Models" }));
+
+    expect(await screen.findByText("live-only")).toBeInTheDocument();
+
+    const ownerSelect = await screen.findByRole("combobox", { name: "Model owner group" });
+    fireEvent.click(ownerSelect);
+    fireEvent.click(await screen.findByRole("option", { name: "OpenAI" }));
+
+    expect(await screen.findByText("gpt-4.1")).toBeInTheDocument();
+    expect(screen.queryByText("live-only")).not.toBeInTheDocument();
+    expect(mocks.getModelConfigs).toHaveBeenCalledWith("library");
+    expect(mocks.getModelOwnerPresets).toHaveBeenCalledTimes(1);
   });
 
   test("cards view shows codex quota bars by stable label keys (no quota tooltip)", async () => {

@@ -10,6 +10,14 @@ export type AuthFileModelItem = {
   type?: string;
   owned_by?: string;
 };
+
+export type AuthFileModelOwnerGroup = {
+  value: string;
+  label: string;
+  description: string;
+  models: AuthFileModelItem[];
+};
+
 export type OAuthDialogTab =
   | "codex"
   | "anthropic"

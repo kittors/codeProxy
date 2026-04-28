@@ -562,7 +562,14 @@
     "detail_tab_channel": "Канал",
     "detail_tab_json_desc": "Просмотр исходного JSON содержимого этого файла авторизации.",
     "detail_tab_models_desc": "Запросить поддерживаемые модели для этих учётных данных, чтобы проверить права и исключения.",
-    "detail_models_refresh": "Обновить модели"
+    "detail_models_refresh": "Обновить модели",
+    "failed_get_model_owners": "Не удалось получить группы владельцев моделей",
+    "model_owner_group": "Группа владельца моделей",
+    "auth_file_models_option": "Запрос файла авторизации",
+    "model_owner_group_search_placeholder": "Поиск групп владельцев…",
+    "auth_file_models_source_desc": "Показаны модели, запрошенные из этого файла авторизации.",
+    "model_owner_group_source_desc": "{{count}} моделей из {{owner}}.",
+    "no_owner_group_models": "В этой группе владельца нет моделей."
   },
   "antigravity_quota": {
     "title": "Квота Antigravity",

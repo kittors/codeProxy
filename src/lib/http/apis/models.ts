@@ -1,13 +1,32 @@
 import { apiCallApi, getApiCallErrorMessage } from "@/lib/http/apis/api-call";
+import { apiClient } from "@/lib/http/client";
 
 const DEFAULT_CLAUDE_BASE_URL = "https://api.anthropic.com";
 const DEFAULT_ANTHROPIC_VERSION = "2023-06-01";
 const CLAUDE_MODELS_IN_FLIGHT = new Map<string, Promise<ModelInfo[]>>();
 
+export type ModelConfigScope = "active" | "library";
+
 export type ModelInfo = {
   id: string;
   alias?: string;
   description?: string;
+};
+
+export type ModelConfigItem = {
+  id: string;
+  owned_by: string;
+  description: string;
+  enabled: boolean;
+  source: string;
+};
+
+export type ModelOwnerPresetItem = {
+  value: string;
+  label: string;
+  description: string;
+  enabled: boolean;
+  modelCount?: number;
 };
 
 const normalizeApiBase = (baseUrl: string): string => {
@@ -95,8 +114,89 @@ const normalizeModelList = (payload: unknown): ModelInfo[] => {
   return models.sort((a, b) => a.id.localeCompare(b.id));
 };
 
+const normalizeOwnerValue = (value: string): string =>
+  value.trim().replace(/\s+/g, "-").toLowerCase();
+
+const asNumber = (value: unknown): number => {
+  const num = Number(value);
+  return Number.isFinite(num) && num >= 0 ? num : 0;
+};
+
+const normalizeModelConfig = (raw: Record<string, unknown>): ModelConfigItem | null => {
+  const id = String(raw.id ?? raw.model_id ?? raw.name ?? "").trim();
+  if (!id) return null;
+
+  return {
+    id,
+    owned_by: String(raw.owned_by ?? raw.owner ?? ""),
+    description: String(raw.description ?? ""),
+    enabled: raw.enabled === false ? false : true,
+    source: String(raw.source ?? ""),
+  };
+};
+
+const normalizeModelConfigResponse = (payload: unknown): ModelConfigItem[] => {
+  const record = payload && typeof payload === "object" ? (payload as Record<string, unknown>) : {};
+  const rawList = Array.isArray(record.data)
+    ? record.data
+    : Array.isArray(record.models)
+      ? record.models
+      : Array.isArray(payload)
+        ? payload
+        : [];
+
+  return rawList
+    .map((item) =>
+      item && typeof item === "object"
+        ? normalizeModelConfig(item as Record<string, unknown>)
+        : null,
+    )
+    .filter((item): item is ModelConfigItem => Boolean(item))
+    .sort((a, b) => a.id.localeCompare(b.id));
+};
+
+const normalizeOwnerPreset = (raw: Record<string, unknown>): ModelOwnerPresetItem | null => {
+  const value = normalizeOwnerValue(String(raw.value ?? raw.id ?? raw.owner ?? "")).trim();
+  if (!value) return null;
+  return {
+    value,
+    label: String(raw.label ?? raw.name ?? value).trim() || value,
+    description: String(raw.description ?? ""),
+    enabled: raw.enabled === false ? false : true,
+    modelCount: asNumber(raw.model_count ?? raw.modelCount),
+  };
+};
+
+const normalizeOwnerPresetResponse = (payload: unknown): ModelOwnerPresetItem[] => {
+  const record = payload && typeof payload === "object" ? (payload as Record<string, unknown>) : {};
+  const rawList = Array.isArray(record.items)
+    ? record.items
+    : Array.isArray(record.data)
+      ? record.data
+      : Array.isArray(payload)
+        ? payload
+        : [];
+
+  return rawList
+    .map((item) =>
+      item && typeof item === "object"
+        ? normalizeOwnerPreset(item as Record<string, unknown>)
+        : null,
+    )
+    .filter((item): item is ModelOwnerPresetItem => Boolean(item))
+    .sort((a, b) => a.label.localeCompare(b.label));
+};
+
 export const modelsApi = {
   buildClaudeModelsEndpoint,
+
+  async getModelConfigs(scope: ModelConfigScope = "active") {
+    return normalizeModelConfigResponse(await apiClient.get(`/model-configs?scope=${scope}`));
+  },
+
+  async getModelOwnerPresets() {
+    return normalizeOwnerPresetResponse(await apiClient.get("/model-owner-presets"));
+  },
 
   async fetchV1Models(baseUrl: string, apiKey?: string, headers: Record<string, string> = {}) {
     const endpoint = buildV1ModelsEndpoint(baseUrl);
