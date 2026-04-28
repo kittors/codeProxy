@@ -9,12 +9,19 @@ import type { TimeRange } from "@/modules/monitor/monitor-constants";
 import { LogContentModal } from "@/modules/monitor/LogContentModal";
 import { MANAGEMENT_API_PREFIX } from "@/lib/constants";
 import { detectApiBaseFromLocation } from "@/lib/connection";
-import { fetchAvailableModels, fetchPublicChartData, fetchPublicLogs } from "@/modules/apikey-lookup/api";
+import {
+  fetchAvailableModels,
+  fetchPublicChartData,
+  fetchPublicLogs,
+} from "@/modules/apikey-lookup/api";
 import { LookupEmptyState } from "@/modules/apikey-lookup/components/LookupEmptyState";
 import { LookupResultsToolbar } from "@/modules/apikey-lookup/components/LookupResultsToolbar";
 import { LookupSearchSection } from "@/modules/apikey-lookup/components/LookupSearchSection";
 import { ModelsTabContent } from "@/modules/apikey-lookup/components/ModelsTabContent";
-import { buildLogColumns, PublicLogsSection } from "@/modules/apikey-lookup/components/PublicLogsSection";
+import {
+  buildLogColumns,
+  PublicLogsSection,
+} from "@/modules/apikey-lookup/components/PublicLogsSection";
 import { UsageTabSection } from "@/modules/apikey-lookup/components/UsageTabSection";
 import { useApiKeyLookupCharts } from "@/modules/apikey-lookup/hooks/useApiKeyLookupCharts";
 import type { ChartDataResponse, LogRow, PublicLogItem } from "@/modules/apikey-lookup/types";
@@ -490,6 +497,7 @@ export function ApiKeyLookupPage() {
                   error={modelsError}
                   searchFilter={modelsSearchFilter}
                   onSearchChange={setModelsSearchFilter}
+                  apiKey={queriedKey}
                 />
               </Reveal>
             ) : null}

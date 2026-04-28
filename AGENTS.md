@@ -88,6 +88,7 @@
 - 历史多入口脚本：`src/management.tsx`（默认不再构建产物）
 - 主要模块目录：`src/`
 - OAuth 登录弹窗：`src/modules/oauth/OAuthLoginDialog.tsx`
+- CC Switch 导入：`src/modules/ccswitch/`（deeplink 协议生成与复用入口组件）
 - 自动更新提示：`src/modules/update/AutoUpdatePrompt.tsx`
 - 模型配置管理：`src/modules/models/ModelsPage.tsx`（`/manage/models`，数据库模型配置与计价规则）
 - 代理池管理：`src/modules/proxies/ProxiesPage.tsx`（`/proxies`，集中维护可复用出站代理）

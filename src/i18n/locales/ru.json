@@ -57,6 +57,19 @@
     "rotate_right": "Повернуть вправо",
     "reset_image": "Сбросить изображение"
   },
+  "ccswitch": {
+    "import_to_ccswitch": "Импорт в CC Switch",
+    "import_modal_desc": "Выберите тип клиентской конфигурации для добавления в CC Switch.",
+    "import_client": "Импортировать {{client}}",
+    "client_claude_code": "Claude Code",
+    "client_claude_code_desc": "Anthropic-совместимый провайдер для Claude Code.",
+    "client_codex": "Codex",
+    "client_codex_desc": "OpenAI-совместимый провайдер для Codex CLI.",
+    "client_gemini_cli": "Gemini CLI",
+    "client_gemini_cli_desc": "Gemini-совместимый провайдер для Gemini CLI.",
+    "model_hint": "Модель: {{model}}",
+    "protocol_unavailable": "CC Switch не установлен или обработчик протокола недоступен."
+  },
   "title": {
     "main": "Панель администратора Code Proxy",
     "login": "Панель администратора Code Proxy",
