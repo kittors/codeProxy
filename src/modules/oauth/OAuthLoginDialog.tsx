@@ -500,20 +500,6 @@ export function OAuthLoginDialog({
       }
     >
       <div className="space-y-4">
-        <div className="rounded-2xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
-          <ProxyPoolSelect
-            value={selectedProxyID}
-            onChange={setSelectedProxyID}
-            entries={proxyPoolEntries}
-            checkState={proxyCheckState}
-            showDetails
-            noneLabel={t("oauth.proxy_default_local")}
-            label={t("oauth.authorization_proxy")}
-            hint={t("oauth.authorization_proxy_hint")}
-            ariaLabel={t("oauth.authorization_proxy")}
-          />
-        </div>
-
         <Tabs value={tab} onValueChange={(next) => setTab(next as TabValue)}>
           <TabsList>
             {PROVIDER_TAB_IDS.map((providerId) => {
@@ -527,6 +513,20 @@ export function OAuthLoginDialog({
             <TabsTrigger value="iflow">{t("oauth.iflow_title")}</TabsTrigger>
             <TabsTrigger value="vertex">{t("oauth.vertex_title")}</TabsTrigger>
           </TabsList>
+
+          <div className="mt-4 rounded-2xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
+            <ProxyPoolSelect
+              value={selectedProxyID}
+              onChange={setSelectedProxyID}
+              entries={proxyPoolEntries}
+              checkState={proxyCheckState}
+              showDetails
+              noneLabel={t("oauth.proxy_default_local")}
+              label={t("oauth.authorization_proxy")}
+              hint={t("oauth.authorization_proxy_hint")}
+              ariaLabel={t("oauth.authorization_proxy")}
+            />
+          </div>
 
           {PROVIDER_TAB_IDS.map((providerId) => (
             <TabsContent key={providerId} value={providerId} className="mt-4">
