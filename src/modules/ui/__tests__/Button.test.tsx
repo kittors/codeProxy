@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, test } from "vitest";
 import { Button } from "@/modules/ui/Button";
 
@@ -57,6 +58,18 @@ describe("Button", () => {
       "border-0",
       "bg-[#EBEBEC]",
     );
+  });
+
+  test("icon-only buttons expose their aria label through the shared tooltip", async () => {
+    render(
+      <Button aria-label="Refresh" size="sm">
+        <svg aria-hidden="true" />
+      </Button>,
+    );
+
+    await userEvent.hover(screen.getByRole("button", { name: "Refresh" }));
+
+    expect(screen.getByRole("tooltip")).toHaveTextContent("Refresh");
   });
 
   test("supports a compact xs size for dense actions", () => {

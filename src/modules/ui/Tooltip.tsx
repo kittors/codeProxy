@@ -1,97 +1,224 @@
-import { useCallback, useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { createPortal } from "react-dom";
 
-type TooltipPlacement = "top" | "right" | "bottom" | "left";
+export type TooltipPlacement = "top" | "right" | "bottom" | "left";
 
-const PLACEMENT_CLASS: Record<TooltipPlacement, string> = {
-  top: "left-1/2 -translate-x-1/2 bottom-full mb-2",
-  bottom: "left-1/2 -translate-x-1/2 top-full mt-2",
-  right: "left-full ml-2 top-1/2 -translate-y-1/2",
-  left: "right-full mr-2 top-1/2 -translate-y-1/2",
+type TooltipPosition = {
+  left: number;
+  placement: TooltipPlacement;
+  top: number;
 };
 
-function _TooltipBubble({
-  id,
-  open,
-  content,
-  placement,
-}: {
-  id: string;
-  open: boolean;
+type GlobalTooltipState = {
+  anchor: HTMLElement;
   content: string;
-  placement: TooltipPlacement;
-}) {
+};
+
+const TOOLTIP_OFFSET = 8;
+const VIEWPORT_PADDING = 8;
+const FALLBACK_PLACEMENTS: TooltipPlacement[] = ["right", "bottom", "left", "top"];
+
+export const TooltipTriggerContext = createContext(false);
+
+function isEmptyTooltipContent(content: ReactNode) {
+  return content === null || content === undefined || content === false || content === "";
+}
+
+function resolveIconButtonTooltip(target: EventTarget | null): GlobalTooltipState | null {
+  if (!(target instanceof Element)) return null;
+  const button = target.closest("button");
+  if (!(button instanceof HTMLButtonElement)) return null;
+  if (button.closest("[data-tooltip-managed='true']")) return null;
+
+  const hasVisibleText = (button.textContent ?? "").trim().length > 0;
+  if (hasVisibleText) return null;
+
+  const content =
+    button.getAttribute("data-tooltip") ||
+    button.getAttribute("aria-label") ||
+    button.getAttribute("title") ||
+    "";
+  const trimmedContent = content.trim();
+  if (!trimmedContent) return null;
+
+  return { anchor: button, content: trimmedContent };
+}
+
+function hideNativeTitle(button: HTMLElement) {
+  const title = button.getAttribute("title");
+  if (!title) return;
+  button.dataset.tooltipNativeTitle = title;
+  button.removeAttribute("title");
+}
+
+function restoreNativeTitle(button: HTMLElement | null | undefined) {
+  if (!button?.dataset.tooltipNativeTitle) return;
+  button.setAttribute("title", button.dataset.tooltipNativeTitle);
+  delete button.dataset.tooltipNativeTitle;
+}
+
+function clamp(value: number, min: number, max: number) {
+  if (max < min) return min;
+  return Math.max(min, Math.min(value, max));
+}
+
+function getPlacementOrder(preferred: TooltipPlacement) {
+  return [
+    preferred,
+    ...FALLBACK_PLACEMENTS.filter((placement) => placement !== preferred),
+  ] satisfies TooltipPlacement[];
+}
+
+function getPlacementPosition(
+  rect: DOMRect,
+  tooltipWidth: number,
+  tooltipHeight: number,
+  placement: TooltipPlacement,
+): TooltipPosition {
+  switch (placement) {
+    case "bottom":
+      return {
+        placement,
+        top: rect.bottom + TOOLTIP_OFFSET,
+        left: rect.left + rect.width / 2 - tooltipWidth / 2,
+      };
+    case "left":
+      return {
+        placement,
+        top: rect.top + rect.height / 2 - tooltipHeight / 2,
+        left: rect.left - tooltipWidth - TOOLTIP_OFFSET,
+      };
+    case "top":
+      return {
+        placement,
+        top: rect.top - tooltipHeight - TOOLTIP_OFFSET,
+        left: rect.left + rect.width / 2 - tooltipWidth / 2,
+      };
+    case "right":
+    default:
+      return {
+        placement,
+        top: rect.top + rect.height / 2 - tooltipHeight / 2,
+        left: rect.right + TOOLTIP_OFFSET,
+      };
+  }
+}
+
+function fitsViewport(
+  position: TooltipPosition,
+  tooltipWidth: number,
+  tooltipHeight: number,
+  viewportWidth: number,
+  viewportHeight: number,
+) {
   return (
-    <span
-      id={id}
-      role="tooltip"
-      aria-hidden={!open}
-      className={[
-        "pointer-events-none absolute z-[99999] w-max max-w-[calc(100vw-2rem)] rounded-2xl border px-3 py-2 text-sm shadow-lg backdrop-blur sm:max-w-80",
-        "border-slate-200 bg-white/95 text-slate-900 dark:border-neutral-800 dark:bg-neutral-950/90 dark:text-white",
-        "motion-reduce:transition-none motion-safe:transition motion-safe:duration-150",
-        open ? "opacity-100 translate-y-0" : "opacity-0 translate-y-[-2px]",
-        PLACEMENT_CLASS[placement],
-      ].join(" ")}
-    >
-      <span className="block break-words">{content}</span>
-    </span>
+    position.left >= VIEWPORT_PADDING &&
+    position.top >= VIEWPORT_PADDING &&
+    position.left + tooltipWidth <= viewportWidth - VIEWPORT_PADDING &&
+    position.top + tooltipHeight <= viewportHeight - VIEWPORT_PADDING
   );
 }
 
+function resolveTooltipPosition({
+  placement,
+  rect,
+  tooltipHeight,
+  tooltipWidth,
+  viewportHeight,
+  viewportWidth,
+}: {
+  placement: TooltipPlacement;
+  rect: DOMRect;
+  tooltipHeight: number;
+  tooltipWidth: number;
+  viewportHeight: number;
+  viewportWidth: number;
+}) {
+  const candidates = getPlacementOrder(placement).map((nextPlacement) =>
+    getPlacementPosition(rect, tooltipWidth, tooltipHeight, nextPlacement),
+  );
+  const selected =
+    candidates.find((candidate) =>
+      fitsViewport(candidate, tooltipWidth, tooltipHeight, viewportWidth, viewportHeight),
+    ) ?? candidates[0];
+
+  return {
+    ...selected,
+    left: clamp(selected.left, VIEWPORT_PADDING, viewportWidth - tooltipWidth - VIEWPORT_PADDING),
+    top: clamp(selected.top, VIEWPORT_PADDING, viewportHeight - tooltipHeight - VIEWPORT_PADDING),
+  };
+}
+
 /** Fixed-position tooltip rendered via portal — never clipped by overflow containers */
-function FixedTooltipBubble({
+export function TooltipBubble({
   id,
   open,
   content,
+  anchorElement,
   anchorRef,
-  placement = "top",
+  placement = "right",
 }: {
   id: string;
   open: boolean;
   content: ReactNode;
-  anchorRef: React.RefObject<HTMLElement | null>;
+  anchorElement?: HTMLElement | null;
+  anchorRef?: React.RefObject<HTMLElement | null>;
   placement?: TooltipPlacement;
 }) {
   const tooltipRef = useRef<HTMLSpanElement>(null);
   const [style, setStyle] = useState<React.CSSProperties>({ position: "fixed", opacity: 0 });
 
-  useLayoutEffect(() => {
-    if (!open || !anchorRef.current) return;
-    const rect = anchorRef.current.getBoundingClientRect();
+  const updatePosition = useCallback(() => {
+    const anchor = anchorElement ?? anchorRef?.current;
+    if (!anchor) return;
+    const rect = anchor.getBoundingClientRect();
     const tooltipEl = tooltipRef.current;
     const tooltipHeight = tooltipEl?.offsetHeight ?? 32;
     const tooltipWidth = tooltipEl?.offsetWidth ?? 200;
+    const {
+      left,
+      top,
+      placement: resolvedPlacement,
+    } = resolveTooltipPosition({
+      placement,
+      rect,
+      tooltipHeight,
+      tooltipWidth,
+      viewportHeight: window.innerHeight,
+      viewportWidth: window.innerWidth,
+    });
 
-    let top: number;
-    let left: number;
+    setStyle({
+      position: "fixed",
+      top,
+      left,
+      zIndex: 99999,
+      opacity: 1,
+      ["--tooltip-placement" as string]: resolvedPlacement,
+    });
+  }, [anchorElement, anchorRef, placement]);
 
-    switch (placement) {
-      case "bottom":
-        top = rect.bottom + 8;
-        left = rect.left + rect.width / 2 - tooltipWidth / 2;
-        break;
-      case "left":
-        top = rect.top + rect.height / 2 - tooltipHeight / 2;
-        left = rect.left - tooltipWidth - 8;
-        break;
-      case "right":
-        top = rect.top + rect.height / 2 - tooltipHeight / 2;
-        left = rect.right + 8;
-        break;
-      case "top":
-      default:
-        top = rect.top - tooltipHeight - 8;
-        left = rect.left + rect.width / 2 - tooltipWidth / 2;
-        break;
-    }
+  useLayoutEffect(() => {
+    if (!open) return;
 
-    // Clamp to viewport
-    left = Math.max(8, Math.min(left, window.innerWidth - tooltipWidth - 8));
-    top = Math.max(8, top);
+    updatePosition();
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
 
-    setStyle({ position: "fixed", top, left, zIndex: 99999, opacity: 1 });
-  }, [open, anchorRef, placement]);
+    return () => {
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
+  }, [open, updatePosition, content]);
 
   if (!open) return null;
 
@@ -114,7 +241,7 @@ export function HoverTooltip({
   children,
   className,
   disabled = false,
-  placement = "top",
+  placement = "right",
 }: {
   content: ReactNode;
   children: ReactNode;
@@ -125,34 +252,30 @@ export function HoverTooltip({
   const id = useId();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLSpanElement | null>(null);
+  const hasContent = !isEmptyTooltipContent(content);
 
   const show = useCallback(() => {
     if (disabled) return;
-    if (!content) return;
+    if (!hasContent) return;
     if (typeof content === "string" && !content.trim()) return;
     setOpen(true);
-  }, [content, disabled]);
+  }, [content, disabled, hasContent]);
 
   const hide = useCallback(() => setOpen(false), []);
 
   return (
     <span
       ref={ref}
+      data-tooltip-managed="true"
       className={["relative inline-flex", className].filter(Boolean).join(" ")}
       onMouseEnter={show}
       onMouseLeave={hide}
       onFocus={show}
       onBlur={hide}
-      aria-describedby={id}
+      aria-describedby={!disabled && hasContent ? id : undefined}
     >
-      {children}
-      <FixedTooltipBubble
-        id={id}
-        open={open}
-        content={content}
-        anchorRef={ref}
-        placement={placement}
-      />
+      <TooltipTriggerContext.Provider value={true}>{children}</TooltipTriggerContext.Provider>
+      <TooltipBubble id={id} open={open} content={content} anchorRef={ref} placement={placement} />
     </span>
   );
 }
@@ -161,7 +284,7 @@ export function OverflowTooltip({
   content,
   children,
   className,
-  placement = "top",
+  placement = "right",
 }: {
   content: string;
   children: ReactNode;
@@ -186,6 +309,7 @@ export function OverflowTooltip({
   return (
     <span
       ref={ref}
+      data-tooltip-managed="true"
       className={["relative", className].filter(Boolean).join(" ")}
       onMouseEnter={tryShow}
       onMouseLeave={hide}
@@ -194,13 +318,65 @@ export function OverflowTooltip({
       aria-describedby={id}
     >
       {children}
-      <FixedTooltipBubble
-        id={id}
-        open={open}
-        content={content}
-        anchorRef={ref}
-        placement={placement}
-      />
+      <TooltipBubble id={id} open={open} content={content} anchorRef={ref} placement={placement} />
     </span>
+  );
+}
+
+export function GlobalIconButtonTooltip({ placement = "right" }: { placement?: TooltipPlacement }) {
+  const id = useId();
+  const activeRef = useRef<GlobalTooltipState | null>(null);
+  const [active, setActive] = useState<GlobalTooltipState | null>(null);
+
+  const hide = useCallback((relatedTarget?: EventTarget | null) => {
+    const current = activeRef.current;
+    if (!current) return;
+    if (relatedTarget instanceof Node && current.anchor.contains(relatedTarget)) return;
+
+    restoreNativeTitle(current.anchor);
+    activeRef.current = null;
+    setActive(null);
+  }, []);
+
+  const show = useCallback((target: EventTarget | null) => {
+    const next = resolveIconButtonTooltip(target);
+    if (!next) return;
+
+    if (activeRef.current?.anchor !== next.anchor) {
+      restoreNativeTitle(activeRef.current?.anchor);
+    }
+    hideNativeTitle(next.anchor);
+    activeRef.current = next;
+    setActive(next);
+  }, []);
+
+  useEffect(() => {
+    const handleMouseOver = (event: MouseEvent) => show(event.target);
+    const handleMouseOut = (event: MouseEvent) => hide(event.relatedTarget);
+    const handleFocusIn = (event: FocusEvent) => show(event.target);
+    const handleFocusOut = (event: FocusEvent) => hide(event.relatedTarget);
+
+    document.addEventListener("mouseover", handleMouseOver);
+    document.addEventListener("mouseout", handleMouseOut);
+    document.addEventListener("focusin", handleFocusIn);
+    document.addEventListener("focusout", handleFocusOut);
+
+    return () => {
+      restoreNativeTitle(activeRef.current?.anchor);
+      document.removeEventListener("mouseover", handleMouseOver);
+      document.removeEventListener("mouseout", handleMouseOut);
+      document.removeEventListener("focusin", handleFocusIn);
+      document.removeEventListener("focusout", handleFocusOut);
+    };
+  }, [hide, show]);
+
+  return (
+    <TooltipBubble
+      id={id}
+      open={Boolean(active)}
+      content={active?.content ?? ""}
+      anchorElement={active?.anchor}
+      placement={placement}
+    />
   );
 }
