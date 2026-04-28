@@ -27,6 +27,7 @@ import { useApiKeyLookupCharts } from "@/modules/apikey-lookup/hooks/useApiKeyLo
 import type { ChartDataResponse, LogRow, PublicLogItem } from "@/modules/apikey-lookup/types";
 
 const DEFAULT_PAGE_SIZE = 50;
+const LOOKUP_LAST_API_KEY_STORAGE_KEY = "apiKeyLookup.lastApiKey.v1";
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -38,6 +39,35 @@ const formatLatencyMs = (value: number): string => {
   const fixed = seconds.toFixed(seconds < 10 ? 2 : 1);
   const trimmed = fixed.endsWith(".0") ? fixed.slice(0, -2) : fixed;
   return `${trimmed}s`;
+};
+
+const readStoredLookupKey = (): string => {
+  try {
+    return window.sessionStorage.getItem(LOOKUP_LAST_API_KEY_STORAGE_KEY)?.trim() ?? "";
+  } catch {
+    return "";
+  }
+};
+
+const writeStoredLookupKey = (value: string): void => {
+  try {
+    if (value) {
+      window.sessionStorage.setItem(LOOKUP_LAST_API_KEY_STORAGE_KEY, value);
+    } else {
+      window.sessionStorage.removeItem(LOOKUP_LAST_API_KEY_STORAGE_KEY);
+    }
+  } catch {
+    // ignore storage failures
+  }
+};
+
+const readLegacyLookupKeyFromUrl = (): string => {
+  try {
+    const url = new URL(window.location.href);
+    return (url.searchParams.get("api_key") || url.searchParams.get("key") || "").trim();
+  } catch {
+    return "";
+  }
 };
 
 function toLogRow(item: PublicLogItem): LogRow {
@@ -75,8 +105,9 @@ export function ApiKeyLookupPage() {
     return () => mq.removeEventListener("change", handler);
   }, []);
 
-  const [apiKeyInput, setApiKeyInput] = useState("");
-  const [queriedKey, setQueriedKey] = useState("");
+  const initialLookupKey = useMemo(() => readLegacyLookupKeyFromUrl() || readStoredLookupKey(), []);
+  const [apiKeyInput, setApiKeyInput] = useState(initialLookupKey);
+  const [queriedKey, setQueriedKey] = useState(initialLookupKey);
 
   // ── Content modal state ──
   const [contentModalOpen, setContentModalOpen] = useState(false);
@@ -139,6 +170,7 @@ export function ApiKeyLookupPage() {
   const abortControllerRef = useRef<AbortController | null>(null);
   const fetchIdRef = useRef(0);
   const paginationInFlightRef = useRef(false);
+  const restoredLookupFetchedRef = useRef(false);
 
   // ================================================================
   //  Logs fetching (with infinite scroll support)
@@ -179,6 +211,7 @@ export function ApiKeyLookupPage() {
         setModelOptions(resp.filters?.models ?? []);
         setLastUpdatedAt(Date.now());
         setQueriedKey(key.trim());
+        writeStoredLookupKey(key.trim());
       } catch (err) {
         if (err instanceof DOMException && err.name === "AbortError") return;
         if (myFetchId !== fetchIdRef.current) return;
@@ -278,6 +311,7 @@ export function ApiKeyLookupPage() {
   // When tab changes, fetch the appropriate data
   useEffect(() => {
     if (!queriedKey) return;
+    if (initialLookupKey && !restoredLookupFetchedRef.current) return;
     if (activeTab === "usage") {
       void fetchChartDataFn(queriedKey, timeRange);
     } else if (activeTab === "models") {
@@ -292,11 +326,21 @@ export function ApiKeyLookupPage() {
   // When time range changes, refetch current tab
   useEffect(() => {
     if (!queriedKey) return;
+    if (initialLookupKey && !restoredLookupFetchedRef.current) return;
     chartCacheRef.current = {};
     if (activeTab === "usage") {
       void fetchChartDataFn(queriedKey, timeRange);
     }
   }, [timeRange]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!initialLookupKey || restoredLookupFetchedRef.current) return;
+
+    restoredLookupFetchedRef.current = true;
+    chartCacheRef.current = {};
+    void fetchChartDataFn(initialLookupKey, timeRange);
+    fetchLogs(initialLookupKey, 1);
+  }, [fetchChartDataFn, fetchLogs, initialLookupKey, timeRange]);
 
   const handleSubmit = useCallback(
     (event?: React.FormEvent) => {
@@ -317,6 +361,7 @@ export function ApiKeyLookupPage() {
           fetchLogs(val, 1);
           void fetchChartDataFn(val, timeRange);
         }
+        writeStoredLookupKey(val);
       }
     },
     [apiKeyInput, activeTab, timeRange, fetchLogs, fetchChartDataFn, fetchModelsFn],
@@ -337,6 +382,9 @@ export function ApiKeyLookupPage() {
 
   // Strip legacy sensitive query params from the URL on mount.
   useEffect(() => {
+    if (initialLookupKey) {
+      writeStoredLookupKey(initialLookupKey);
+    }
     try {
       const url = new URL(window.location.href);
       let changed = false;
@@ -354,7 +402,7 @@ export function ApiKeyLookupPage() {
     } catch {
       // ignore
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [initialLookupKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const {
     chartStats,
