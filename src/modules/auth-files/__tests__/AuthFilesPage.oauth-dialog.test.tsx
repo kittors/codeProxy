@@ -86,6 +86,32 @@ describe("AuthFilesPage OAuth login dialog", () => {
     expect(scoped.getByRole("tab", { name: "Vertex Credential Import" })).toBeInTheDocument();
   });
 
+  test("places the authorization proxy selector below the OAuth provider tabs", async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    await user.click(await screen.findByRole("button", { name: "Add OAuth Login" }));
+
+    const dialog = await screen.findByRole("dialog");
+    const scoped = within(dialog);
+    const tabs = scoped.getByRole("tablist");
+    const proxySelect = await scoped.findByRole("combobox", { name: "Authorization Proxy" });
+
+    expect(tabs.compareDocumentPosition(proxySelect) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(
+      0,
+    );
+  });
+
   test("selects a proxy with IP, latency, and remark before starting OAuth authorization", async () => {
     const user = userEvent.setup();
     mocks.proxiesList.mockResolvedValue([
