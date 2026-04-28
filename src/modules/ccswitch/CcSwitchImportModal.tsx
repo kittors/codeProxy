@@ -22,7 +22,7 @@ export function CcSwitchImportModal({
       open={open}
       title={t("ccswitch.import_to_ccswitch")}
       description={t("ccswitch.import_modal_desc")}
-      maxWidth="max-w-2xl"
+      maxWidth="max-w-xl"
       onClose={onClose}
       footer={
         <Button variant="secondary" onClick={onClose}>
