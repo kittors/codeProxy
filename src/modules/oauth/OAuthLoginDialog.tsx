@@ -3,12 +3,19 @@ import { useTranslation } from "react-i18next";
 import { Copy, ExternalLink, RefreshCw, Send, ShieldCheck, Sparkles, Upload } from "lucide-react";
 import { oauthApi, vertexApi } from "@/lib/http/apis";
 import type { IFlowCookieAuthResponse, OAuthProvider } from "@/lib/http/types";
+import { proxiesApi, type ProxyCheckResult, type ProxyPoolEntry } from "@/lib/http/apis/proxies";
 import { Button } from "@/modules/ui/Button";
 import { Card } from "@/modules/ui/Card";
 import { TextInput } from "@/modules/ui/Input";
 import { Modal } from "@/modules/ui/Modal";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/modules/ui/Tabs";
 import { useToast } from "@/modules/ui/ToastProvider";
+import { ProxyPoolSelect } from "@/modules/proxies/ProxyPoolSelect";
+import {
+  readCachedProxyCheckState,
+  writeCachedProxyCheckState,
+  type ProxyCheckState,
+} from "@/modules/proxies/proxy-utils";
 
 type ProviderStatus = "idle" | "waiting" | "success" | "error";
 
@@ -69,17 +76,24 @@ export function OAuthLoginDialog({
   onClose,
   onAuthorized,
   defaultTab = "codex",
+  proxyPoolEntries = [],
 }: {
   open: boolean;
   onClose: () => void;
   onAuthorized?: () => void;
   defaultTab?: TabValue;
+  proxyPoolEntries?: ProxyPoolEntry[];
 }) {
   const { t } = useTranslation();
   const { notify } = useToast();
   const timers = useRef<Record<string, number>>({});
+  const autoCheckedProxyIDs = useRef<Set<string>>(new Set());
 
   const [tab, setTab] = useState<TabValue>(defaultTab);
+  const [selectedProxyID, setSelectedProxyID] = useState("");
+  const [proxyCheckState, setProxyCheckState] = useState<ProxyCheckState>(() =>
+    readCachedProxyCheckState(),
+  );
 
   const [states, setStates] = useState<Record<OAuthProvider, ProviderState>>(
     {} as Record<OAuthProvider, ProviderState>,
@@ -107,6 +121,7 @@ export function OAuthLoginDialog({
   useEffect(() => {
     if (!open) {
       clearTimers();
+      autoCheckedProxyIDs.current.clear();
       return;
     }
     return () => clearTimers();
@@ -115,7 +130,52 @@ export function OAuthLoginDialog({
   useEffect(() => {
     if (!open) return;
     setTab(defaultTab);
+    setSelectedProxyID("");
+    setProxyCheckState(readCachedProxyCheckState());
   }, [defaultTab, open]);
+
+  const storeProxyCheckResult = useCallback((id: string, result: ProxyCheckResult) => {
+    setProxyCheckState((prev) => {
+      const next = { ...prev, [id]: result };
+      writeCachedProxyCheckState(next);
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!open || proxyPoolEntries.length === 0) return;
+
+    const pendingEntries = proxyPoolEntries.filter((entry) => {
+      const id = entry.id.trim();
+      if (!id || autoCheckedProxyIDs.current.has(id)) return false;
+      const result = proxyCheckState[id];
+      return typeof result?.latencyMs !== "number";
+    });
+    if (pendingEntries.length === 0) return;
+
+    setProxyCheckState((prev) => {
+      const next = { ...prev };
+      for (const entry of pendingEntries) {
+        const id = entry.id.trim();
+        autoCheckedProxyIDs.current.add(id);
+        next[id] = { ...next[id], checking: true };
+      }
+      return next;
+    });
+
+    pendingEntries.forEach((entry) => {
+      const id = entry.id.trim();
+      void proxiesApi
+        .check({ id })
+        .then((result) => storeProxyCheckResult(id, result))
+        .catch((error) =>
+          storeProxyCheckResult(id, {
+            ok: false,
+            message: error instanceof Error ? error.message : t("common.error"),
+          }),
+        );
+    });
+  }, [open, proxyCheckState, proxyPoolEntries, storeProxyCheckResult, t]);
 
   const getProviderTitle = useCallback(
     (provider: OAuthProvider) =>
@@ -131,6 +191,18 @@ export function OAuthLoginDialog({
       }));
     },
     [],
+  );
+
+  const proxyOptions = useCallback(
+    (extra?: { projectId?: string }) => {
+      const proxyId = selectedProxyID.trim();
+      const projectId = extra?.projectId?.trim();
+      return {
+        ...(projectId ? { projectId } : {}),
+        ...(proxyId ? { proxyId } : {}),
+      };
+    },
+    [selectedProxyID],
   );
 
   const startPolling = useCallback(
@@ -193,7 +265,7 @@ export function OAuthLoginDialog({
       try {
         const res = await oauthApi.startAuth(
           provider,
-          provider === "gemini-cli" ? { projectId: projectId || undefined } : undefined,
+          proxyOptions(provider === "gemini-cli" ? { projectId } : undefined),
         );
         updateProviderState(provider, {
           url: res.url,
@@ -216,7 +288,7 @@ export function OAuthLoginDialog({
         });
       }
     },
-    [getProviderTitle, notify, startPolling, states, t, updateProviderState],
+    [getProviderTitle, notify, proxyOptions, startPolling, states, t, updateProviderState],
   );
 
   const copyLink = useCallback(
@@ -252,7 +324,7 @@ export function OAuthLoginDialog({
         callbackError: undefined,
       });
       try {
-        await oauthApi.submitCallback(provider, redirectUrl);
+        await oauthApi.submitCallback(provider, redirectUrl, proxyOptions());
         updateProviderState(provider, { callbackSubmitting: false, callbackStatus: "success" });
         notify({ type: "success", message: t("oauth.callback_submit_success") });
         onAuthorized?.();
@@ -266,7 +338,7 @@ export function OAuthLoginDialog({
         notify({ type: "error", message });
       }
     },
-    [notify, onAuthorized, states, t, updateProviderState],
+    [notify, onAuthorized, proxyOptions, states, t, updateProviderState],
   );
 
   const iflowHint = useMemo(() => {
@@ -286,7 +358,7 @@ export function OAuthLoginDialog({
     setIflowLoading(true);
     setIflowResult(null);
     try {
-      const res = await oauthApi.iflowCookieAuth(cookie);
+      const res = await oauthApi.iflowCookieAuth(cookie, proxyOptions());
       setIflowResult(res);
       notify({
         type: res.status === "ok" ? "success" : "error",
@@ -299,7 +371,7 @@ export function OAuthLoginDialog({
     } finally {
       setIflowLoading(false);
     }
-  }, [iflowCookie, notify, onAuthorized, t]);
+  }, [iflowCookie, notify, onAuthorized, proxyOptions, t]);
 
   const onVertexFileChange = useCallback(
     async (file: File | null) => {
@@ -308,7 +380,11 @@ export function OAuthLoginDialog({
       setVertexResult(null);
       setVertexFileName(file.name);
       try {
-        const res = await vertexApi.importCredential(file, vertexLocation.trim() || undefined);
+        const res = await vertexApi.importCredential(
+          file,
+          vertexLocation.trim() || undefined,
+          proxyOptions(),
+        );
         const authFile = (res as any)["auth-file"] ?? (res as any).auth_file;
         setVertexResult({
           projectId: (res as any).project_id,
@@ -324,7 +400,7 @@ export function OAuthLoginDialog({
         setVertexLoading(false);
       }
     },
-    [notify, onAuthorized, t, vertexLocation],
+    [notify, onAuthorized, proxyOptions, t, vertexLocation],
   );
 
   const renderProviderPanel = useCallback(
@@ -476,6 +552,20 @@ export function OAuthLoginDialog({
       }
     >
       <div className="space-y-4">
+        <div className="rounded-2xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
+          <ProxyPoolSelect
+            value={selectedProxyID}
+            onChange={setSelectedProxyID}
+            entries={proxyPoolEntries}
+            checkState={proxyCheckState}
+            showDetails
+            noneLabel={t("oauth.proxy_default_local")}
+            label={t("oauth.authorization_proxy")}
+            hint={t("oauth.authorization_proxy_hint")}
+            ariaLabel={t("oauth.authorization_proxy")}
+          />
+        </div>
+
         <Tabs value={tab} onValueChange={(next) => setTab(next as TabValue)}>
           <TabsList>
             {PROVIDER_TAB_IDS.map((providerId) => {

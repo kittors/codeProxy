@@ -55,16 +55,21 @@ describe("ProxiesPage", () => {
     mocks.apiPost.mockResolvedValue({ ok: true, status_code: 204, latency_ms: 31 });
   });
 
-  test("loads proxy entries with masked URLs and status actions", async () => {
+  test("loads proxy entries with protocol, IP, remark, and no proxy URL", async () => {
     renderPage();
 
     expect(await screen.findByRole("table", { name: /proxy pool table/i })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: /name/i })).toBeInTheDocument();
-    expect(screen.getByRole("columnheader", { name: /proxy url/i })).toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: /proxy url/i })).not.toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: /protocol.*ip/i })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: /status/i })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: /remark/i })).toBeInTheDocument();
 
     expect(await screen.findByText("HK Proxy")).toBeInTheDocument();
-    expect(screen.getByText("socks5://127.0.0.1:1080")).toBeInTheDocument();
+    expect(screen.getByText("SOCKS5")).toBeInTheDocument();
+    expect(screen.getByText("127.0.0.1:1080")).toBeInTheDocument();
+    expect(screen.queryByText("socks5://127.0.0.1:1080")).not.toBeInTheDocument();
+    expect(screen.queryByText("socks5://user:pass@127.0.0.1:1080")).not.toBeInTheDocument();
     expect(screen.getByText("Codex egress")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /check hk proxy/i })).toBeInTheDocument();
   });
@@ -177,7 +182,7 @@ describe("ProxiesPage", () => {
 
     await userEvent.type(within(dialog).getByLabelText(/name/i), "US Proxy");
     await userEvent.type(within(dialog).getByLabelText(/proxy url/i), "http://127.0.0.1:7890");
-    await userEvent.type(within(dialog).getByLabelText(/description/i), "OpenAI egress");
+    await userEvent.type(within(dialog).getByLabelText(/remark/i), "OpenAI egress");
     await userEvent.click(within(dialog).getByRole("button", { name: /^save$/i }));
 
     await waitFor(() => {
@@ -202,13 +207,26 @@ describe("ProxiesPage", () => {
 
     await userEvent.click(await screen.findByRole("button", { name: /check hk proxy/i }));
 
-    expect(await screen.findByText(/204/)).toBeInTheDocument();
-    expect(screen.getByText(/31 ms/i)).toBeInTheDocument();
+    expect(await screen.findByText(/available/i)).toBeInTheDocument();
+    const latency = screen.getByText(/31 ms/i);
+    expect(latency).toBeInTheDocument();
+    expect(latency.closest("[data-latency-tone]")).toHaveAttribute("data-latency-tone", "fast");
+    expect(screen.queryByText(/204/)).not.toBeInTheDocument();
     expect(mocks.apiPost).toHaveBeenCalledWith(
       "/proxy-pool/check",
       { id: "hk" },
       expect.objectContaining({ timeoutMs: 12000 }),
     );
+  });
+
+  test("uses a different latency tone for slow available checks", async () => {
+    mocks.apiPost.mockResolvedValue({ ok: true, latency_ms: 1800 });
+
+    renderPage();
+
+    const latency = await screen.findByText(/1800 ms/i);
+
+    expect(latency.closest("[data-latency-tone]")).toHaveAttribute("data-latency-tone", "slow");
   });
 
   test("renders failed proxy checks with the backend message", async () => {
