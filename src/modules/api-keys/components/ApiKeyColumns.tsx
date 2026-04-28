@@ -290,49 +290,56 @@ export const createApiKeyColumns = ({
     key: "actions",
     label: t("api_keys_page.col_actions"),
     width: "w-[152px] min-w-[152px]",
-    render: (row, idx) => (
-      <div className="flex items-center gap-1.5">
-        <button
-          type="button"
-          onClick={() => onViewUsage(row)}
-          className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-blue-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-blue-400"
-          aria-label={t("api_keys_page.view_usage")}
-          data-tooltip-placement="bottom"
-          title={t("api_keys_page.view_usage")}
-        >
-          <BarChart3 size={15} />
-        </button>
-        <button
-          type="button"
-          onClick={() => onCopy(row.key)}
-          className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-indigo-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-indigo-400"
-          aria-label={t("api_keys_page.copy_key")}
-          data-tooltip-placement="bottom"
-          title={t("api_keys_page.copy_key")}
-        >
-          <Copy size={15} />
-        </button>
-        <button
-          type="button"
-          onClick={() => onEdit(idx)}
-          className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-amber-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-amber-400"
-          aria-label={t("common.edit")}
-          data-tooltip-placement="bottom"
-          title={t("common.edit")}
-        >
-          <Pencil size={15} />
-        </button>
-        <button
-          type="button"
-          onClick={() => onDelete(idx)}
-          className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-red-50 hover:text-red-600 dark:text-white/50 dark:hover:bg-red-900/20 dark:hover:text-red-400"
-          aria-label={t("common.delete")}
-          data-tooltip-placement="bottom"
-          title={t("common.delete")}
-        >
-          <Trash2 size={15} />
-        </button>
-      </div>
-    ),
+    render: (row, idx) => {
+      const viewUsageLabel = t("api_keys_page.view_usage");
+      const copyKeyLabel = t("api_keys_page.copy_key");
+      const editLabel = t("common.edit");
+      const deleteLabel = t("common.delete");
+
+      return (
+        <div className="flex items-center gap-1.5">
+          <HoverTooltip content={viewUsageLabel}>
+            <button
+              type="button"
+              onClick={() => onViewUsage(row)}
+              className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-blue-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-blue-400"
+              aria-label={viewUsageLabel}
+            >
+              <BarChart3 size={15} />
+            </button>
+          </HoverTooltip>
+          <HoverTooltip content={copyKeyLabel}>
+            <button
+              type="button"
+              onClick={() => onCopy(row.key)}
+              className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-indigo-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-indigo-400"
+              aria-label={copyKeyLabel}
+            >
+              <Copy size={15} />
+            </button>
+          </HoverTooltip>
+          <HoverTooltip content={editLabel}>
+            <button
+              type="button"
+              onClick={() => onEdit(idx)}
+              className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-amber-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-amber-400"
+              aria-label={editLabel}
+            >
+              <Pencil size={15} />
+            </button>
+          </HoverTooltip>
+          <HoverTooltip content={deleteLabel}>
+            <button
+              type="button"
+              onClick={() => onDelete(idx)}
+              className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-red-50 hover:text-red-600 dark:text-white/50 dark:hover:bg-red-900/20 dark:hover:text-red-400"
+              aria-label={deleteLabel}
+            >
+              <Trash2 size={15} />
+            </button>
+          </HoverTooltip>
+        </div>
+      );
+    },
   },
 ];

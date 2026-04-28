@@ -184,7 +184,7 @@ describe("ApiKeysPage", () => {
     });
     expect(await screen.findByText("New Key")).toBeInTheDocument();
 
-    await userEvent.click(screen.getAllByTitle("Edit")[1]!);
+    await userEvent.click(screen.getAllByRole("button", { name: "Edit" })[1]!);
     const nameInput = screen.getAllByPlaceholderText(/team-a/i).at(-1)!;
     await userEvent.clear(nameInput);
     await userEvent.type(nameInput, "Renamed Key");
@@ -194,7 +194,7 @@ describe("ApiKeysPage", () => {
       expect(mocks.apiKeyEntriesUpdate).toHaveBeenCalled();
     });
 
-    await userEvent.click(screen.getAllByTitle("Delete")[1]!);
+    await userEvent.click(screen.getAllByRole("button", { name: "Delete" })[1]!);
     await userEvent.click(screen.getByRole("button", { name: /confirm delete/i }));
 
     await waitFor(() => {
@@ -226,7 +226,7 @@ describe("ApiKeysPage", () => {
 
     expect(await screen.findByText("Pinned Key")).toBeInTheDocument();
 
-    await userEvent.click(screen.getByTitle("Edit"));
+    await userEvent.click(screen.getByRole("button", { name: "Edit" }));
     await userEvent.click(screen.getByRole("switch", { name: /exact channel override/i }));
     await userEvent.click(screen.getByRole("button", { name: /save/i }));
 
@@ -242,5 +242,23 @@ describe("ApiKeysPage", () => {
         }),
       }),
     );
+  });
+
+  test("shows operation column icon tooltips without relying on the app-level tooltip listener", async () => {
+    render(
+      <MemoryRouter>
+        <ThemeProvider>
+          <ToastProvider>
+            <ApiKeysPage />
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("Existing Key")).toBeInTheDocument();
+
+    await userEvent.hover(screen.getByRole("button", { name: /copy key/i }));
+
+    expect(screen.getByRole("tooltip")).toHaveTextContent(/copy key/i);
   });
 });
