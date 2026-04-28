@@ -43,7 +43,7 @@ describe("HoverTooltip", () => {
     vi.restoreAllMocks();
   });
 
-  test("defaults to the right side of icon triggers", async () => {
+  test("defaults to the bottom side of icon triggers with compact styling", async () => {
     mockAnchorRect({ left: 100, right: 120, top: 100, bottom: 120, width: 20, height: 20 });
 
     render(
@@ -54,11 +54,12 @@ describe("HoverTooltip", () => {
 
     await userEvent.hover(screen.getByRole("button", { name: "Refresh" }));
 
-    expect(screen.getByRole("tooltip")).toHaveStyle({ left: "128px", top: "98px" });
+    expect(screen.getByRole("tooltip")).toHaveStyle({ left: "70px", top: "128px" });
+    expect(screen.getByRole("tooltip")).toHaveClass("px-2", "py-1.5", "text-xs");
   });
 
-  test("moves away from the right edge before clamping", async () => {
-    mockAnchorRect({ left: 760, right: 792, top: 100, bottom: 132, width: 32, height: 32 });
+  test("moves away from the bottom edge before clamping", async () => {
+    mockAnchorRect({ left: 100, right: 132, top: 560, bottom: 592, width: 32, height: 32 });
     setTooltipSize(120, 24);
 
     render(
@@ -69,7 +70,7 @@ describe("HoverTooltip", () => {
 
     await userEvent.hover(screen.getByRole("button", { name: "Delete" }));
 
-    expect(screen.getByRole("tooltip")).toHaveStyle({ left: "632px", top: "104px" });
+    expect(screen.getByRole("tooltip")).toHaveStyle({ left: "140px", top: "564px" });
   });
 
   test("adds the shared tooltip to unmanaged native icon buttons", async () => {

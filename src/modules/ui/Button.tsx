@@ -87,7 +87,7 @@ export function Button({
   onMouseLeave,
   title,
   tooltip,
-  tooltipPlacement = "right",
+  tooltipPlacement = "bottom",
   variant = "default",
   size = "md",
   ...props

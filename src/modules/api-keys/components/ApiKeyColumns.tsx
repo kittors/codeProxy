@@ -44,7 +44,12 @@ export const createApiKeyColumns = ({
     cellClassName: "text-center",
     render: (row, idx) => (
       <button
+        type="button"
         onClick={() => onToggleDisable(idx)}
+        aria-label={
+          row.disabled ? t("api_keys_page.click_enable") : t("api_keys_page.click_disable")
+        }
+        data-tooltip-placement="bottom"
         title={row.disabled ? t("api_keys_page.click_enable") : t("api_keys_page.click_disable")}
         className={`inline-flex h-7 w-7 items-center justify-center rounded-lg transition-colors ${
           row.disabled
@@ -288,29 +293,41 @@ export const createApiKeyColumns = ({
     render: (row, idx) => (
       <div className="flex items-center gap-1.5">
         <button
+          type="button"
           onClick={() => onViewUsage(row)}
           className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-blue-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-blue-400"
+          aria-label={t("api_keys_page.view_usage")}
+          data-tooltip-placement="bottom"
           title={t("api_keys_page.view_usage")}
         >
           <BarChart3 size={15} />
         </button>
         <button
+          type="button"
           onClick={() => onCopy(row.key)}
           className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-indigo-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-indigo-400"
+          aria-label={t("api_keys_page.copy_key")}
+          data-tooltip-placement="bottom"
           title={t("api_keys_page.copy_key")}
         >
           <Copy size={15} />
         </button>
         <button
+          type="button"
           onClick={() => onEdit(idx)}
           className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-amber-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-amber-400"
+          aria-label={t("common.edit")}
+          data-tooltip-placement="bottom"
           title={t("common.edit")}
         >
           <Pencil size={15} />
         </button>
         <button
+          type="button"
           onClick={() => onDelete(idx)}
           className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-red-50 hover:text-red-600 dark:text-white/50 dark:hover:bg-red-900/20 dark:hover:text-red-400"
+          aria-label={t("common.delete")}
+          data-tooltip-placement="bottom"
           title={t("common.delete")}
         >
           <Trash2 size={15} />
