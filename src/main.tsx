@@ -2,6 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { HashRouter } from "react-router-dom";
 import { AppRouter } from "@/app/AppRouter";
+import { GlobalIconButtonTooltip } from "@/modules/ui/Tooltip";
 import "@/styles/index.css";
 import "goey-toast/styles.css";
 import "@/i18n/index";
@@ -23,6 +24,7 @@ if (!rootElement) {
 createRoot(rootElement).render(
   <StrictMode>
     <HashRouter>
+      <GlobalIconButtonTooltip />
       <AppRouter />
     </HashRouter>
   </StrictMode>,

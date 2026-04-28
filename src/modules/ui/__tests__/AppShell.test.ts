@@ -45,6 +45,8 @@ describe("AppShell", () => {
     const source = readModule("modules/ui/AppShell.tsx");
     const navBlock = source.match(/const NAV_ITEMS = \[[\s\S]*?\] as const;/)?.[0] ?? "";
 
+    expect(navBlock).toContain('to: "/ccswitch-import-settings"');
+    expect(navBlock).toContain('i18nKey: "shell.nav_ccswitch_import_settings"');
     expect(navBlock).toContain('to: "/identity-fingerprint"');
     expect(navBlock).toContain('to: "/models"');
     expect(navBlock).toContain('to: "/proxies"');

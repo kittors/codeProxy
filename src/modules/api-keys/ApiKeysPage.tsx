@@ -5,6 +5,8 @@ import { apiKeyEntriesApi, apiKeysApi, type ApiKeyEntry } from "@/lib/http/apis/
 import { channelGroupsApi, type ChannelGroupItem } from "@/lib/http/apis/channel-groups";
 import { authFilesApi, providersApi } from "@/lib/http/apis";
 import { apiClient } from "@/lib/http/client";
+import { detectApiBaseFromLocation } from "@/lib/connection";
+import { useOptionalAuth } from "@/modules/auth/AuthProvider";
 import {
   generateApiKey,
   makeEmptyApiKeyForm,
@@ -24,6 +26,14 @@ import { VirtualTable } from "@/modules/ui/VirtualTable";
 import { ApiKeyFormModal } from "@/modules/api-keys/components/ApiKeyFormModal";
 import { ApiKeyUsageModal } from "@/modules/api-keys/components/ApiKeyUsageModal";
 import { useApiKeyUsageView } from "@/modules/api-keys/hooks/useApiKeyUsageView";
+import { CcSwitchImportModal } from "@/modules/ccswitch/CcSwitchImportModal";
+import {
+  buildCcSwitchImportUrl,
+  buildCcSwitchProviderName,
+  openCcSwitchImportUrl,
+  type CcSwitchClientType,
+} from "@/modules/ccswitch/ccswitchImport";
+import { readCcSwitchImportSettings } from "@/modules/ccswitch/ccswitchImportSettings";
 import { LogContentModal } from "@/modules/monitor/LogContentModal";
 import { ErrorDetailModal } from "@/modules/monitor/ErrorDetailModal";
 import type { ApiKeyFormValues } from "@/modules/api-keys/types";
@@ -31,6 +41,7 @@ import type { ApiKeyFormValues } from "@/modules/api-keys/types";
 export function ApiKeysPage() {
   const { t } = useTranslation();
   const { notify } = useToast();
+  const auth = useOptionalAuth();
 
   const [entries, setEntries] = useState<ApiKeyEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -38,6 +49,7 @@ export function ApiKeysPage() {
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [deleteIndex, setDeleteIndex] = useState<number | null>(null);
   const [deleteLogsOnDelete, setDeleteLogsOnDelete] = useState(true);
+  const [ccSwitchImportEntry, setCcSwitchImportEntry] = useState<ApiKeyEntry | null>(null);
   const [saving, setSaving] = useState(false);
   const [availableModels, setAvailableModels] = useState<MultiSelectOption[]>([]);
   const [availableChannels, setAvailableChannels] = useState<MultiSelectOption[]>([]);
@@ -494,6 +506,33 @@ export function ApiKeysPage() {
     }
   };
 
+  const handleImportToCcSwitch = useCallback(
+    (clientType: CcSwitchClientType) => {
+      if (!ccSwitchImportEntry) return;
+      const baseUrl = auth?.state.apiBase || detectApiBaseFromLocation();
+      const models = ccSwitchImportEntry["allowed-models"] ?? [];
+      const settings = readCcSwitchImportSettings();
+      const url = buildCcSwitchImportUrl({
+        apiKey: ccSwitchImportEntry.key,
+        baseUrl,
+        clientType,
+        providerName: buildCcSwitchProviderName({
+          rawName: ccSwitchImportEntry.name,
+          clientType,
+        }),
+        models,
+        settings,
+      });
+
+      openCcSwitchImportUrl(url, {
+        onProtocolUnavailable: () =>
+          notify({ type: "error", message: t("ccswitch.protocol_unavailable") }),
+      });
+      setCcSwitchImportEntry(null);
+    },
+    [auth?.state.apiBase, ccSwitchImportEntry, notify, t],
+  );
+
   /* ─── column definitions ─── */
 
   const apiKeyColumns = useMemo(
@@ -503,6 +542,7 @@ export function ApiKeysPage() {
         onToggleDisable: (index) => void handleToggleDisable(index),
         onViewUsage: handleViewUsage,
         onCopy: (key) => void handleCopy(key),
+        onImportToCcSwitch: setCcSwitchImportEntry,
         onEdit: handleOpenEdit,
         onDelete: handleOpenDelete,
       }),
@@ -634,6 +674,14 @@ export function ApiKeysPage() {
           setDeleteLogsOnDelete(true);
         }}
         onConfirm={handleDelete}
+      />
+
+      <CcSwitchImportModal
+        t={t}
+        open={ccSwitchImportEntry !== null}
+        models={ccSwitchImportEntry?.["allowed-models"] ?? []}
+        onClose={() => setCcSwitchImportEntry(null)}
+        onSelect={handleImportToCcSwitch}
       />
 
       <ApiKeyUsageModal

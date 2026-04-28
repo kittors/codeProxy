@@ -17,7 +17,61 @@ import {
   validateProxyDraft,
 } from "@/modules/proxies/proxy-utils";
 
-type CheckState = Record<string, ProxyCheckResult & { checking?: boolean }>;
+type CheckStateEntry = Partial<ProxyCheckResult> & { checking?: boolean };
+type CheckState = Record<string, CheckStateEntry>;
+
+const PROXIES_CHECK_STATE_CACHE_KEY = "proxiesPage.checkState.v1";
+
+const readCachedNumber = (value: unknown): number | undefined =>
+  typeof value === "number" && Number.isFinite(value) ? Math.round(value) : undefined;
+
+const readCachedCheckState = (): CheckState => {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = window.sessionStorage.getItem(PROXIES_CHECK_STATE_CACHE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as unknown;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+
+    const next: CheckState = {};
+    for (const [id, value] of Object.entries(parsed)) {
+      if (!id || !value || typeof value !== "object" || Array.isArray(value)) continue;
+      const item = value as Record<string, unknown>;
+      if (typeof item.ok !== "boolean") continue;
+      const statusCode = readCachedNumber(item.statusCode);
+      const latencyMs = readCachedNumber(item.latencyMs);
+      const message = typeof item.message === "string" ? item.message : "";
+      next[id] = {
+        ok: item.ok,
+        ...(typeof statusCode === "number" ? { statusCode } : {}),
+        ...(typeof latencyMs === "number" ? { latencyMs } : {}),
+        ...(message ? { message } : {}),
+      };
+    }
+    return next;
+  } catch {
+    return {};
+  }
+};
+
+const writeCachedCheckState = (state: CheckState) => {
+  if (typeof window === "undefined") return;
+  try {
+    const cache: Record<string, ProxyCheckResult> = {};
+    for (const [id, result] of Object.entries(state)) {
+      if (typeof result.ok !== "boolean") continue;
+      cache[id] = {
+        ok: result.ok,
+        ...(typeof result.statusCode === "number" ? { statusCode: result.statusCode } : {}),
+        ...(typeof result.latencyMs === "number" ? { latencyMs: result.latencyMs } : {}),
+        ...(result.message ? { message: result.message } : {}),
+      };
+    }
+    window.sessionStorage.setItem(PROXIES_CHECK_STATE_CACHE_KEY, JSON.stringify(cache));
+  } catch {
+    // 忽略缓存写入失败。
+  }
+};
 
 export function ProxiesPage() {
   const { t } = useTranslation();
@@ -27,23 +81,65 @@ export function ProxiesPage() {
   const [saving, setSaving] = useState(false);
   const [draft, setDraft] = useState<ProxyPoolEntry>(() => emptyProxyDraft());
   const [editingID, setEditingID] = useState<string | null>(null);
-  const [checkState, setCheckState] = useState<CheckState>({});
+  const [checkState, setCheckState] = useState<CheckState>(() => readCachedCheckState());
 
   const sortedEntries = useMemo(
     () => [...entries].sort((a, b) => a.name.localeCompare(b.name)),
     [entries],
   );
 
+  const storeCheckResult = useCallback((id: string, result: ProxyCheckResult) => {
+    setCheckState((prev) => {
+      const next = { ...prev, [id]: result };
+      writeCachedCheckState(next);
+      return next;
+    });
+  }, []);
+
+  const refreshCheckResults = useCallback(
+    async (items: ProxyPoolEntry[]) => {
+      if (!items.length) return;
+
+      setCheckState((prev) => {
+        const next = { ...prev };
+        for (const entry of items) {
+          next[entry.id] = { ...next[entry.id], checking: true };
+        }
+        return next;
+      });
+
+      await Promise.all(
+        items.map(async (entry) => {
+          try {
+            const result = await proxiesApi.check({ id: entry.id });
+            storeCheckResult(entry.id, result);
+          } catch (error) {
+            storeCheckResult(entry.id, {
+              ok: false,
+              message: error instanceof Error ? error.message : t("common.error"),
+            });
+          }
+        }),
+      );
+    },
+    [storeCheckResult, t],
+  );
+
   const loadEntries = useCallback(async () => {
     setLoading(true);
     try {
-      setEntries(await proxiesApi.list());
+      const nextEntries = await proxiesApi.list();
+      setEntries(nextEntries);
+      void refreshCheckResults(nextEntries);
     } catch (error) {
-      notify({ type: "error", message: error instanceof Error ? error.message : t("common.error") });
+      notify({
+        type: "error",
+        message: error instanceof Error ? error.message : t("common.error"),
+      });
     } finally {
       setLoading(false);
     }
-  }, [notify, t]);
+  }, [notify, refreshCheckResults, t]);
 
   useEffect(() => {
     void loadEntries();
@@ -88,41 +184,55 @@ export function ProxiesPage() {
     try {
       await proxiesApi.saveAll(nextEntries);
       setEntries(nextEntries);
+      if (editingID && editingID !== normalized.id) {
+        setCheckState((prev) => {
+          const next = { ...prev };
+          delete next[editingID];
+          writeCachedCheckState(next);
+          return next;
+        });
+      }
       notify({ type: "success", message: t("proxies.saved") });
       closeModal();
     } catch (error) {
-      notify({ type: "error", message: error instanceof Error ? error.message : t("common.error") });
+      notify({
+        type: "error",
+        message: error instanceof Error ? error.message : t("common.error"),
+      });
     } finally {
       setSaving(false);
     }
   };
 
-  const deleteEntry = useCallback(async (id: string) => {
-    const nextEntries = entries.filter((entry) => entry.id !== id);
-    try {
-      await proxiesApi.saveAll(nextEntries);
-      setEntries(nextEntries);
-      notify({ type: "success", message: t("proxies.deleted") });
-    } catch (error) {
-      notify({ type: "error", message: error instanceof Error ? error.message : t("common.error") });
-    }
-  }, [entries, notify, t]);
-
-  const checkEntry = useCallback(async (entry: ProxyPoolEntry) => {
-    setCheckState((prev) => ({ ...prev, [entry.id]: { ...prev[entry.id], checking: true } }));
-    try {
-      const result = await proxiesApi.check({ id: entry.id });
-      setCheckState((prev) => ({ ...prev, [entry.id]: result }));
-    } catch (error) {
-      setCheckState((prev) => ({
-        ...prev,
-        [entry.id]: {
-          ok: false,
+  const deleteEntry = useCallback(
+    async (id: string) => {
+      const nextEntries = entries.filter((entry) => entry.id !== id);
+      try {
+        await proxiesApi.saveAll(nextEntries);
+        setEntries(nextEntries);
+        setCheckState((prev) => {
+          const next = { ...prev };
+          delete next[id];
+          writeCachedCheckState(next);
+          return next;
+        });
+        notify({ type: "success", message: t("proxies.deleted") });
+      } catch (error) {
+        notify({
+          type: "error",
           message: error instanceof Error ? error.message : t("common.error"),
-        },
-      }));
-    }
-  }, [t]);
+        });
+      }
+    },
+    [entries, notify, t],
+  );
+
+  const checkEntry = useCallback(
+    async (entry: ProxyPoolEntry) => {
+      await refreshCheckResults([entry]);
+    },
+    [refreshCheckResults],
+  );
 
   const columns = useMemo<VirtualTableColumn<ProxyPoolEntry>[]>(
     () => [
@@ -179,26 +289,38 @@ export function ProxiesPage() {
         width: "w-32",
         render: (entry) => {
           const result = checkState[entry.id];
-          if (!result || result.checking) {
+          const hasCheckResult = typeof result?.ok === "boolean";
+          if (!result || !hasCheckResult) {
             return (
               <span className="text-xs text-slate-500 dark:text-white/45">
                 {result?.checking ? t("common.loading_ellipsis") : "--"}
               </span>
             );
           }
+          const summary = [
+            result.ok ? t("proxies.check_ok") : t("proxies.check_failed"),
+            result.statusCode ? String(result.statusCode) : null,
+            typeof result.latencyMs === "number" ? `${result.latencyMs} ms` : null,
+          ]
+            .filter(Boolean)
+            .join(" · ");
           return (
-            <span
+            <div
               className={[
-                "text-xs font-medium",
+                "min-w-0 text-xs font-medium",
                 result.ok
                   ? "text-emerald-700 dark:text-emerald-300"
                   : "text-rose-600 dark:text-rose-300",
               ].join(" ")}
+              title={result.message ? `${summary} · ${result.message}` : summary}
             >
-              {result.ok ? t("proxies.check_ok") : t("proxies.check_failed")}
-              {result.statusCode ? ` · ${result.statusCode}` : ""}
-              {typeof result.latencyMs === "number" ? ` · ${result.latencyMs} ms` : ""}
-            </span>
+              <span className="block truncate">{summary}</span>
+              {result.message ? (
+                <span className="mt-0.5 block truncate font-normal opacity-80">
+                  {result.message}
+                </span>
+              ) : null}
+            </div>
           );
         },
       },
@@ -281,7 +403,7 @@ export function ProxiesPage() {
         </div>
       </div>
 
-      <Card className="overflow-hidden" loading={loading}>
+      <Card className="overflow-hidden" loading={loading && entries.length === 0}>
         <VirtualTable<ProxyPoolEntry>
           rows={sortedEntries}
           columns={columns}

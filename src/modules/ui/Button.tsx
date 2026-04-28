@@ -1,4 +1,16 @@
-import { Children, type ButtonHTMLAttributes, type PropsWithChildren } from "react";
+import {
+  Children,
+  useContext,
+  useId,
+  useRef,
+  useState,
+  type ButtonHTMLAttributes,
+  type FocusEventHandler,
+  type MouseEventHandler,
+  type PropsWithChildren,
+  type ReactNode,
+} from "react";
+import { TooltipBubble, TooltipTriggerContext, type TooltipPlacement } from "@/modules/ui/Tooltip";
 
 type ButtonVariant =
   | "default"
@@ -67,27 +79,98 @@ export function buttonClassName({
 export function Button({
   children,
   className,
+  "aria-describedby": ariaDescribedBy,
+  "aria-label": ariaLabel,
+  onBlur,
+  onFocus,
+  onMouseEnter,
+  onMouseLeave,
+  title,
+  tooltip,
+  tooltipPlacement = "bottom",
   variant = "default",
   size = "md",
   ...props
 }: PropsWithChildren<
   ButtonHTMLAttributes<HTMLButtonElement> & {
+    tooltip?: ReactNode | false;
+    tooltipPlacement?: TooltipPlacement;
     variant?: ButtonVariant;
     size?: ButtonSize;
   }
 >) {
+  const tooltipId = useId();
+  const hasTooltipParent = useContext(TooltipTriggerContext);
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
+  const [tooltipOpen, setTooltipOpen] = useState(false);
   const childNodes = Children.toArray(children);
   const iconOnly =
     childNodes.length === 1 &&
     typeof childNodes[0] !== "string" &&
     typeof childNodes[0] !== "number";
+
+  const tooltipContent = tooltip === false ? null : (tooltip ?? title ?? ariaLabel);
+  const hasTooltipContent =
+    tooltipContent !== null &&
+    tooltipContent !== undefined &&
+    (typeof tooltipContent !== "string" || tooltipContent.trim().length > 0);
+  const autoAriaLabel =
+    !ariaLabel && iconOnly && typeof tooltipContent === "string" ? tooltipContent : undefined;
+  const shouldShowTooltip = iconOnly && !hasTooltipParent && hasTooltipContent;
+  const shouldSuppressNativeTitle = iconOnly && (shouldShowTooltip || hasTooltipParent);
+  const shouldSkipGlobalTooltip = iconOnly && tooltip === false;
+  const mergedAriaDescribedBy = [ariaDescribedBy, shouldShowTooltip ? tooltipId : null]
+    .filter(Boolean)
+    .join(" ");
+
+  const showTooltip = () => {
+    if (!shouldShowTooltip) return;
+    setTooltipOpen(true);
+  };
+  const hideTooltip = () => setTooltipOpen(false);
+
+  const handleMouseEnter: MouseEventHandler<HTMLButtonElement> = (event) => {
+    onMouseEnter?.(event);
+    showTooltip();
+  };
+  const handleMouseLeave: MouseEventHandler<HTMLButtonElement> = (event) => {
+    onMouseLeave?.(event);
+    hideTooltip();
+  };
+  const handleFocus: FocusEventHandler<HTMLButtonElement> = (event) => {
+    onFocus?.(event);
+    showTooltip();
+  };
+  const handleBlur: FocusEventHandler<HTMLButtonElement> = (event) => {
+    onBlur?.(event);
+    hideTooltip();
+  };
+
   return (
-    <button
-      type="button"
-      {...props}
-      className={buttonClassName({ className, iconOnly, size, variant })}
-    >
-      {children}
-    </button>
+    <>
+      <button
+        ref={buttonRef}
+        type="button"
+        {...props}
+        aria-describedby={mergedAriaDescribedBy || undefined}
+        aria-label={ariaLabel ?? autoAriaLabel}
+        data-tooltip-managed={shouldShowTooltip || shouldSkipGlobalTooltip ? true : undefined}
+        onBlur={handleBlur}
+        onFocus={handleFocus}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        title={shouldSuppressNativeTitle ? undefined : title}
+        className={buttonClassName({ className, iconOnly, size, variant })}
+      >
+        {children}
+      </button>
+      <TooltipBubble
+        id={tooltipId}
+        open={tooltipOpen && shouldShowTooltip}
+        content={tooltipContent}
+        anchorRef={buttonRef}
+        placement={tooltipPlacement}
+      />
+    </>
   );
 }

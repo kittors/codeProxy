@@ -8,6 +8,7 @@ import {
   Power,
   ShieldCheck,
   Trash2,
+  Upload,
 } from "lucide-react";
 import type { ApiKeyEntry } from "@/lib/http/apis/api-keys";
 import {
@@ -24,6 +25,7 @@ type CreateApiKeyColumnsOptions = {
   onToggleDisable: (index: number) => void;
   onViewUsage: (entry: ApiKeyEntry) => void;
   onCopy: (key: string) => void;
+  onImportToCcSwitch: (entry: ApiKeyEntry) => void;
   onEdit: (index: number) => void;
   onDelete: (index: number) => void;
 };
@@ -33,6 +35,7 @@ export const createApiKeyColumns = ({
   onToggleDisable,
   onViewUsage,
   onCopy,
+  onImportToCcSwitch,
   onEdit,
   onDelete,
 }: CreateApiKeyColumnsOptions): VirtualTableColumn<ApiKeyEntry>[] => [
@@ -44,7 +47,12 @@ export const createApiKeyColumns = ({
     cellClassName: "text-center",
     render: (row, idx) => (
       <button
+        type="button"
         onClick={() => onToggleDisable(idx)}
+        aria-label={
+          row.disabled ? t("api_keys_page.click_enable") : t("api_keys_page.click_disable")
+        }
+        data-tooltip-placement="bottom"
         title={row.disabled ? t("api_keys_page.click_enable") : t("api_keys_page.click_disable")}
         className={`inline-flex h-7 w-7 items-center justify-center rounded-lg transition-colors ${
           row.disabled
@@ -284,38 +292,68 @@ export const createApiKeyColumns = ({
   {
     key: "actions",
     label: t("api_keys_page.col_actions"),
-    width: "w-[152px] min-w-[152px]",
-    render: (row, idx) => (
-      <div className="flex items-center gap-1.5">
-        <button
-          onClick={() => onViewUsage(row)}
-          className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-blue-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-blue-400"
-          title={t("api_keys_page.view_usage")}
-        >
-          <BarChart3 size={15} />
-        </button>
-        <button
-          onClick={() => onCopy(row.key)}
-          className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-indigo-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-indigo-400"
-          title={t("api_keys_page.copy_key")}
-        >
-          <Copy size={15} />
-        </button>
-        <button
-          onClick={() => onEdit(idx)}
-          className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-amber-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-amber-400"
-          title={t("common.edit")}
-        >
-          <Pencil size={15} />
-        </button>
-        <button
-          onClick={() => onDelete(idx)}
-          className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-red-50 hover:text-red-600 dark:text-white/50 dark:hover:bg-red-900/20 dark:hover:text-red-400"
-          title={t("common.delete")}
-        >
-          <Trash2 size={15} />
-        </button>
-      </div>
-    ),
+    width: "w-[188px] min-w-[188px]",
+    render: (row, idx) => {
+      const viewUsageLabel = t("api_keys_page.view_usage");
+      const copyKeyLabel = t("api_keys_page.copy_key");
+      const importLabel = t("ccswitch.import_to_ccswitch");
+      const editLabel = t("common.edit");
+      const deleteLabel = t("common.delete");
+
+      return (
+        <div className="flex items-center gap-1.5">
+          <HoverTooltip content={viewUsageLabel}>
+            <button
+              type="button"
+              onClick={() => onViewUsage(row)}
+              className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-blue-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-blue-400"
+              aria-label={viewUsageLabel}
+            >
+              <BarChart3 size={15} />
+            </button>
+          </HoverTooltip>
+          <HoverTooltip content={copyKeyLabel}>
+            <button
+              type="button"
+              onClick={() => onCopy(row.key)}
+              className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-indigo-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-indigo-400"
+              aria-label={copyKeyLabel}
+            >
+              <Copy size={15} />
+            </button>
+          </HoverTooltip>
+          <HoverTooltip content={importLabel}>
+            <button
+              type="button"
+              onClick={() => onImportToCcSwitch(row)}
+              className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-cyan-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-cyan-400"
+              aria-label={importLabel}
+            >
+              <Upload size={15} />
+            </button>
+          </HoverTooltip>
+          <HoverTooltip content={editLabel}>
+            <button
+              type="button"
+              onClick={() => onEdit(idx)}
+              className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-amber-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-amber-400"
+              aria-label={editLabel}
+            >
+              <Pencil size={15} />
+            </button>
+          </HoverTooltip>
+          <HoverTooltip content={deleteLabel}>
+            <button
+              type="button"
+              onClick={() => onDelete(idx)}
+              className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-red-50 hover:text-red-600 dark:text-white/50 dark:hover:bg-red-900/20 dark:hover:text-red-400"
+              aria-label={deleteLabel}
+            >
+              <Trash2 size={15} />
+            </button>
+          </HoverTooltip>
+        </div>
+      );
+    },
   },
 ];
