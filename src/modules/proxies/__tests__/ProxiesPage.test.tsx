@@ -12,6 +12,8 @@ const mocks = vi.hoisted(() => ({
   apiPost: vi.fn(),
 }));
 
+const proxyCheckCacheKey = "proxiesPage.checkState.v1";
+
 vi.mock("@/lib/http/client", () => ({
   apiClient: {
     get: mocks.apiGet,
@@ -33,6 +35,7 @@ function renderPage() {
 describe("ProxiesPage", () => {
   beforeEach(async () => {
     await i18n.changeLanguage("en");
+    window.sessionStorage.clear();
     mocks.apiGet.mockReset();
     mocks.apiPut.mockReset();
     mocks.apiPost.mockReset();
@@ -64,6 +67,92 @@ describe("ProxiesPage", () => {
     expect(screen.getByText("socks5://127.0.0.1:1080")).toBeInTheDocument();
     expect(screen.getByText("Codex egress")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /check hk proxy/i })).toBeInTheDocument();
+  });
+
+  test("checks all proxy entries after loading the page", async () => {
+    mocks.apiGet.mockResolvedValue({
+      items: [
+        {
+          id: "hk",
+          name: "HK Proxy",
+          url: "socks5://user:pass@127.0.0.1:1080",
+          enabled: true,
+        },
+        {
+          id: "us",
+          name: "US Proxy",
+          url: "http://127.0.0.1:7890",
+          enabled: true,
+        },
+      ],
+    });
+
+    renderPage();
+
+    await screen.findByText("HK Proxy");
+    await waitFor(() => expect(mocks.apiPost).toHaveBeenCalledTimes(2));
+    expect(mocks.apiPost).toHaveBeenCalledWith(
+      "/proxy-pool/check",
+      { id: "hk" },
+      expect.objectContaining({ timeoutMs: 12000 }),
+    );
+    expect(mocks.apiPost).toHaveBeenCalledWith(
+      "/proxy-pool/check",
+      { id: "us" },
+      expect.objectContaining({ timeoutMs: 12000 }),
+    );
+  });
+
+  test("keeps the previous check result visible while refreshing checks", async () => {
+    let resolveNextCheck: ((value: unknown) => void) | undefined;
+    mocks.apiPost
+      .mockResolvedValueOnce({ ok: true, status_code: 204, latency_ms: 31 })
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveNextCheck = resolve;
+          }),
+      );
+
+    renderPage();
+
+    expect(await screen.findByText(/31 ms/i)).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: /^refresh$/i }));
+
+    await waitFor(() => expect(mocks.apiPost).toHaveBeenCalledTimes(2));
+    expect(screen.getByText(/31 ms/i)).toBeInTheDocument();
+    expect(screen.queryByText("Loading…")).not.toBeInTheDocument();
+
+    resolveNextCheck?.({ ok: true, status_code: 204, latency_ms: 44 });
+
+    expect(await screen.findByText(/44 ms/i)).toBeInTheDocument();
+  });
+
+  test("renders cached check results on page entry while refreshing them in the background", async () => {
+    let resolveNextCheck: ((value: unknown) => void) | undefined;
+    window.sessionStorage.setItem(
+      proxyCheckCacheKey,
+      JSON.stringify({
+        hk: { ok: true, statusCode: 204, latencyMs: 31 },
+      }),
+    );
+    mocks.apiPost.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveNextCheck = resolve;
+        }),
+    );
+
+    renderPage();
+
+    expect(await screen.findByText(/31 ms/i)).toBeInTheDocument();
+    await waitFor(() => expect(mocks.apiPost).toHaveBeenCalledTimes(1));
+    expect(screen.queryByText("Loading…")).not.toBeInTheDocument();
+
+    resolveNextCheck?.({ ok: true, status_code: 204, latency_ms: 44 });
+
+    expect(await screen.findByText(/44 ms/i)).toBeInTheDocument();
   });
 
   test("keeps the proxy table chrome minimal when empty", async () => {
