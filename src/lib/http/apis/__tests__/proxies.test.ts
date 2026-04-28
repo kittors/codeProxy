@@ -46,17 +46,17 @@ describe("proxiesApi", () => {
     });
   });
 
-  test("checks a proxy entry with a short timeout", async () => {
+  test("checks a proxy entry with a short timeout and normalizes backend field names", async () => {
     const { proxiesApi } = await import("@/lib/http/apis/proxies");
-    postMock.mockResolvedValue({ ok: true, statusCode: 204, latencyMs: 24 });
+    postMock.mockResolvedValue({ ok: true, status_code: 204, latency_ms: 24 });
 
-    await proxiesApi.check({ id: "hk" });
+    const result = await proxiesApi.check({ id: "hk" });
 
     expect(postMock).toHaveBeenCalledWith(
       "/proxy-pool/check",
       { id: "hk" },
       expect.objectContaining({ timeoutMs: 12000 }),
     );
+    expect(result).toEqual({ ok: true, statusCode: 204, latencyMs: 24 });
   });
 });
-
