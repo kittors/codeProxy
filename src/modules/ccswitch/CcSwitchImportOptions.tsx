@@ -5,6 +5,10 @@ import {
   type CcSwitchClientConfig,
   type CcSwitchClientType,
 } from "@/modules/ccswitch/ccswitchImport";
+import {
+  readCcSwitchImportSettings,
+  type CcSwitchImportSettingsInput,
+} from "@/modules/ccswitch/ccswitchImportSettings";
 import iconClaude from "@/assets/icons/claude.svg";
 import iconCodex from "@/assets/icons/codex.svg";
 import iconGemini from "@/assets/icons/gemini.svg";
@@ -19,17 +23,19 @@ function ImportOptionButton({
   t,
   client,
   models,
+  settings,
   compact,
   onSelect,
 }: {
   t: TFunction;
   client: CcSwitchClientConfig;
   models: readonly string[];
+  settings?: CcSwitchImportSettingsInput;
   compact?: boolean;
   onSelect: (clientType: CcSwitchClientType) => void;
 }) {
   const icon = iconByType[client.type];
-  const model = pickCcSwitchDefaultModel(client.type, models);
+  const model = pickCcSwitchDefaultModel(client.type, models, settings);
   const label = t(client.labelKey);
   const importLabel = t("ccswitch.import_client", { client: label });
 
@@ -88,14 +94,18 @@ function ImportOptionButton({
 export function CcSwitchImportOptions({
   t,
   models = [],
+  settings,
   compact = false,
   onSelect,
 }: {
   t: TFunction;
   models?: readonly string[];
+  settings?: CcSwitchImportSettingsInput;
   compact?: boolean;
   onSelect: (clientType: CcSwitchClientType) => void;
 }) {
+  const resolvedSettings = settings ?? readCcSwitchImportSettings();
+
   return (
     <div
       role={compact ? "group" : undefined}
@@ -117,6 +127,7 @@ export function CcSwitchImportOptions({
           t={t}
           client={client}
           models={models}
+          settings={resolvedSettings}
           compact={compact}
           onSelect={onSelect}
         />

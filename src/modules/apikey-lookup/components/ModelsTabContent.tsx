@@ -7,9 +7,9 @@ import {
   buildCcSwitchImportUrl,
   buildCcSwitchProviderName,
   openCcSwitchImportUrl,
-  pickCcSwitchDefaultModel,
   type CcSwitchClientType,
 } from "@/modules/ccswitch/ccswitchImport";
+import { readCcSwitchImportSettings } from "@/modules/ccswitch/ccswitchImportSettings";
 import { Card } from "@/modules/ui/Card";
 import { TextInput } from "@/modules/ui/Input";
 import { useToast } from "@/modules/ui/ToastProvider";
@@ -238,7 +238,8 @@ export function ModelsTabContent({
       baseUrl: detectApiBaseFromLocation(),
       clientType,
       providerName: buildCcSwitchProviderName({ clientType }),
-      model: pickCcSwitchDefaultModel(clientType, models),
+      models,
+      settings: readCcSwitchImportSettings(),
     });
 
     openCcSwitchImportUrl(url, {

@@ -1,4 +1,10 @@
 import { normalizeApiBase } from "@/lib/connection";
+import {
+  DEFAULT_CC_SWITCH_IMPORT_SETTINGS,
+  normalizeCcSwitchEndpointPath,
+  normalizeCcSwitchImportSettings,
+  type CcSwitchImportSettingsInput,
+} from "@/modules/ccswitch/ccswitchImportSettings";
 
 export type CcSwitchClientType = "claude" | "codex" | "gemini";
 
@@ -23,7 +29,7 @@ export const CC_SWITCH_CLIENTS: CcSwitchClientConfig[] = [
   {
     type: "codex",
     app: "codex",
-    icon: "openai",
+    icon: "codex",
     labelKey: "ccswitch.client_codex",
     descriptionKey: "ccswitch.client_codex_desc",
     fallbackLabel: "Codex",
@@ -42,7 +48,17 @@ const CLIENT_BY_TYPE = new Map(CC_SWITCH_CLIENTS.map((client) => [client.type, c
 
 const MODEL_PRIORITY: Record<CcSwitchClientType, string[]> = {
   claude: ["claude-sonnet", "claude-opus", "claude-haiku", "claude"],
-  codex: ["gpt-5.3-codex", "gpt-5-codex", "codex", "gpt-5", "gpt-4.1", "gpt-4", "o4", "o3"],
+  codex: [
+    "gpt-5.5",
+    "gpt-5.3-codex",
+    "gpt-5-codex",
+    "codex",
+    "gpt-5",
+    "gpt-4.1",
+    "gpt-4",
+    "o4",
+    "o3",
+  ],
   gemini: ["gemini-3", "gemini-2.5-pro", "gemini-2.5-flash", "gemini"],
 };
 
@@ -52,6 +68,18 @@ export function getCcSwitchClientConfig(type: CcSwitchClientType): CcSwitchClien
 
 export function normalizeCcSwitchBaseUrl(input: string): string {
   return normalizeApiBase(input).replace(/\/+$/, "");
+}
+
+function joinCcSwitchEndpoint(baseUrl: string, endpointPath: string): string {
+  const normalizedBaseUrl = normalizeCcSwitchBaseUrl(baseUrl);
+  const normalizedEndpointPath = normalizeCcSwitchEndpointPath(endpointPath);
+  if (!normalizedEndpointPath) return normalizedBaseUrl;
+
+  if (normalizedBaseUrl.toLowerCase().endsWith(normalizedEndpointPath.toLowerCase())) {
+    return normalizedBaseUrl;
+  }
+
+  return `${normalizedBaseUrl}${normalizedEndpointPath}`;
 }
 
 const encodeBase64 = (value: string): string => {
@@ -95,7 +123,13 @@ export function buildCcSwitchUsageScript(): string {
 export function pickCcSwitchDefaultModel(
   clientType: CcSwitchClientType,
   models: readonly string[] = [],
+  settings?: CcSwitchImportSettingsInput,
 ): string | undefined {
+  const configuredModel = normalizeCcSwitchImportSettings(
+    settings ?? DEFAULT_CC_SWITCH_IMPORT_SETTINGS,
+  )[clientType].defaultModel;
+  if (configuredModel) return configuredModel;
+
   const normalized = models.map((model) => String(model ?? "").trim()).filter(Boolean);
   if (normalized.length === 0) return undefined;
 
@@ -106,6 +140,34 @@ export function pickCcSwitchDefaultModel(
   }
 
   return undefined;
+}
+
+export function resolveCcSwitchImportConfig(input: {
+  baseUrl: string;
+  clientType: CcSwitchClientType;
+  models?: readonly string[];
+  settings?: CcSwitchImportSettingsInput;
+}): {
+  homepage: string;
+  endpoint: string;
+  usageBaseUrl: string;
+  usageAutoInterval: number;
+  model?: string;
+} {
+  const settings = normalizeCcSwitchImportSettings(
+    input.settings ?? DEFAULT_CC_SWITCH_IMPORT_SETTINGS,
+  );
+  const clientSettings = settings[input.clientType];
+  const homepage = normalizeCcSwitchBaseUrl(input.baseUrl);
+  const endpoint = joinCcSwitchEndpoint(homepage, clientSettings.endpointPath);
+
+  return {
+    homepage,
+    endpoint,
+    usageBaseUrl: homepage,
+    usageAutoInterval: clientSettings.usageAutoInterval,
+    model: pickCcSwitchDefaultModel(input.clientType, input.models ?? [], settings),
+  };
 }
 
 export function buildCcSwitchProviderName(input: {
@@ -125,24 +187,32 @@ export function buildCcSwitchImportUrl(input: {
   clientType: CcSwitchClientType;
   providerName: string;
   model?: string;
+  models?: readonly string[];
+  settings?: CcSwitchImportSettingsInput;
 }): string {
   const client = getCcSwitchClientConfig(input.clientType);
-  const baseUrl = normalizeCcSwitchBaseUrl(input.baseUrl);
+  const importConfig = resolveCcSwitchImportConfig({
+    baseUrl: input.baseUrl,
+    clientType: input.clientType,
+    models: input.models,
+    settings: input.settings,
+  });
   const params = new URLSearchParams({
     resource: "provider",
     app: client.app,
     name: input.providerName.trim() || buildCcSwitchProviderName({ clientType: input.clientType }),
-    homepage: baseUrl,
-    endpoint: baseUrl,
+    homepage: importConfig.homepage,
+    endpoint: importConfig.endpoint,
     apiKey: input.apiKey.trim(),
     icon: client.icon,
     configFormat: "json",
     usageEnabled: "true",
+    usageBaseUrl: importConfig.usageBaseUrl,
     usageScript: encodeBase64(buildCcSwitchUsageScript()),
-    usageAutoInterval: "30",
+    usageAutoInterval: String(importConfig.usageAutoInterval),
   });
 
-  const model = String(input.model ?? "").trim();
+  const model = String(input.model ?? importConfig.model ?? "").trim();
   if (model) {
     params.set("model", model);
   }
