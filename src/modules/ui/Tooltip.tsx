@@ -21,16 +21,24 @@ type TooltipPosition = {
 type GlobalTooltipState = {
   anchor: HTMLElement;
   content: string;
+  placement?: TooltipPlacement;
 };
 
 const TOOLTIP_OFFSET = 8;
 const VIEWPORT_PADDING = 8;
-const FALLBACK_PLACEMENTS: TooltipPlacement[] = ["right", "bottom", "left", "top"];
+const FALLBACK_PLACEMENTS: TooltipPlacement[] = ["bottom", "right", "left", "top"];
 
 export const TooltipTriggerContext = createContext(false);
 
 function isEmptyTooltipContent(content: ReactNode) {
   return content === null || content === undefined || content === false || content === "";
+}
+
+function parseTooltipPlacement(value: string | null): TooltipPlacement | undefined {
+  if (value === "top" || value === "right" || value === "bottom" || value === "left") {
+    return value;
+  }
+  return undefined;
 }
 
 function resolveIconButtonTooltip(target: EventTarget | null): GlobalTooltipState | null {
@@ -50,7 +58,11 @@ function resolveIconButtonTooltip(target: EventTarget | null): GlobalTooltipStat
   const trimmedContent = content.trim();
   if (!trimmedContent) return null;
 
-  return { anchor: button, content: trimmedContent };
+  return {
+    anchor: button,
+    content: trimmedContent,
+    placement: parseTooltipPlacement(button.getAttribute("data-tooltip-placement")),
+  };
 }
 
 function hideNativeTitle(button: HTMLElement) {
@@ -165,7 +177,7 @@ export function TooltipBubble({
   content,
   anchorElement,
   anchorRef,
-  placement = "right",
+  placement = "bottom",
 }: {
   id: string;
   open: boolean;
@@ -227,7 +239,7 @@ export function TooltipBubble({
       ref={tooltipRef}
       id={id}
       role="tooltip"
-      className="pointer-events-none w-max max-w-[calc(100vw-2rem)] rounded-2xl border border-slate-200 bg-white/95 px-3 py-2 text-sm shadow-lg backdrop-blur transition-opacity duration-150 sm:max-w-80 dark:border-neutral-800 dark:bg-neutral-950/90 dark:text-white"
+      className="pointer-events-none w-max max-w-[calc(100vw-2rem)] rounded-xl border border-slate-200 bg-white/95 px-2 py-1.5 text-xs shadow-lg backdrop-blur transition-opacity duration-150 sm:max-w-80 dark:border-neutral-800 dark:bg-neutral-950/90 dark:text-white"
       style={style}
     >
       <span className="block break-words text-slate-900 dark:text-white">{content}</span>
@@ -241,7 +253,7 @@ export function HoverTooltip({
   children,
   className,
   disabled = false,
-  placement = "right",
+  placement = "bottom",
 }: {
   content: ReactNode;
   children: ReactNode;
@@ -284,7 +296,7 @@ export function OverflowTooltip({
   content,
   children,
   className,
-  placement = "right",
+  placement = "bottom",
 }: {
   content: string;
   children: ReactNode;
@@ -323,7 +335,11 @@ export function OverflowTooltip({
   );
 }
 
-export function GlobalIconButtonTooltip({ placement = "right" }: { placement?: TooltipPlacement }) {
+export function GlobalIconButtonTooltip({
+  placement = "bottom",
+}: {
+  placement?: TooltipPlacement;
+}) {
   const id = useId();
   const activeRef = useRef<GlobalTooltipState | null>(null);
   const [active, setActive] = useState<GlobalTooltipState | null>(null);
@@ -376,7 +392,7 @@ export function GlobalIconButtonTooltip({ placement = "right" }: { placement?: T
       open={Boolean(active)}
       content={active?.content ?? ""}
       anchorElement={active?.anchor}
-      placement={placement}
+      placement={active?.placement ?? placement}
     />
   );
 }
