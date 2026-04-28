@@ -39,7 +39,10 @@ export function ProxiesPage() {
     try {
       setEntries(await proxiesApi.list());
     } catch (error) {
-      notify({ type: "error", message: error instanceof Error ? error.message : t("common.error") });
+      notify({
+        type: "error",
+        message: error instanceof Error ? error.message : t("common.error"),
+      });
     } finally {
       setLoading(false);
     }
@@ -91,38 +94,50 @@ export function ProxiesPage() {
       notify({ type: "success", message: t("proxies.saved") });
       closeModal();
     } catch (error) {
-      notify({ type: "error", message: error instanceof Error ? error.message : t("common.error") });
+      notify({
+        type: "error",
+        message: error instanceof Error ? error.message : t("common.error"),
+      });
     } finally {
       setSaving(false);
     }
   };
 
-  const deleteEntry = useCallback(async (id: string) => {
-    const nextEntries = entries.filter((entry) => entry.id !== id);
-    try {
-      await proxiesApi.saveAll(nextEntries);
-      setEntries(nextEntries);
-      notify({ type: "success", message: t("proxies.deleted") });
-    } catch (error) {
-      notify({ type: "error", message: error instanceof Error ? error.message : t("common.error") });
-    }
-  }, [entries, notify, t]);
-
-  const checkEntry = useCallback(async (entry: ProxyPoolEntry) => {
-    setCheckState((prev) => ({ ...prev, [entry.id]: { ...prev[entry.id], checking: true } }));
-    try {
-      const result = await proxiesApi.check({ id: entry.id });
-      setCheckState((prev) => ({ ...prev, [entry.id]: result }));
-    } catch (error) {
-      setCheckState((prev) => ({
-        ...prev,
-        [entry.id]: {
-          ok: false,
+  const deleteEntry = useCallback(
+    async (id: string) => {
+      const nextEntries = entries.filter((entry) => entry.id !== id);
+      try {
+        await proxiesApi.saveAll(nextEntries);
+        setEntries(nextEntries);
+        notify({ type: "success", message: t("proxies.deleted") });
+      } catch (error) {
+        notify({
+          type: "error",
           message: error instanceof Error ? error.message : t("common.error"),
-        },
-      }));
-    }
-  }, [t]);
+        });
+      }
+    },
+    [entries, notify, t],
+  );
+
+  const checkEntry = useCallback(
+    async (entry: ProxyPoolEntry) => {
+      setCheckState((prev) => ({ ...prev, [entry.id]: { ...prev[entry.id], checking: true } }));
+      try {
+        const result = await proxiesApi.check({ id: entry.id });
+        setCheckState((prev) => ({ ...prev, [entry.id]: result }));
+      } catch (error) {
+        setCheckState((prev) => ({
+          ...prev,
+          [entry.id]: {
+            ok: false,
+            message: error instanceof Error ? error.message : t("common.error"),
+          },
+        }));
+      }
+    },
+    [t],
+  );
 
   const columns = useMemo<VirtualTableColumn<ProxyPoolEntry>[]>(
     () => [
@@ -186,19 +201,30 @@ export function ProxiesPage() {
               </span>
             );
           }
+          const summary = [
+            result.ok ? t("proxies.check_ok") : t("proxies.check_failed"),
+            result.statusCode ? String(result.statusCode) : null,
+            typeof result.latencyMs === "number" ? `${result.latencyMs} ms` : null,
+          ]
+            .filter(Boolean)
+            .join(" · ");
           return (
-            <span
+            <div
               className={[
-                "text-xs font-medium",
+                "min-w-0 text-xs font-medium",
                 result.ok
                   ? "text-emerald-700 dark:text-emerald-300"
                   : "text-rose-600 dark:text-rose-300",
               ].join(" ")}
+              title={result.message ? `${summary} · ${result.message}` : summary}
             >
-              {result.ok ? t("proxies.check_ok") : t("proxies.check_failed")}
-              {result.statusCode ? ` · ${result.statusCode}` : ""}
-              {typeof result.latencyMs === "number" ? ` · ${result.latencyMs} ms` : ""}
-            </span>
+              <span className="block truncate">{summary}</span>
+              {result.message ? (
+                <span className="mt-0.5 block truncate font-normal opacity-80">
+                  {result.message}
+                </span>
+              ) : null}
+            </div>
           );
         },
       },

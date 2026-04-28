@@ -32,7 +32,23 @@ type RawProxyPoolEntry = {
   maskedUrl?: unknown;
 };
 
+type RawProxyCheckResult = {
+  ok?: unknown;
+  status_code?: unknown;
+  statusCode?: unknown;
+  latency_ms?: unknown;
+  latencyMs?: unknown;
+  message?: unknown;
+  error?: unknown;
+};
+
 const normalizeString = (value: unknown): string => (typeof value === "string" ? value.trim() : "");
+
+const normalizeNumber = (value: unknown): number | undefined => {
+  const numberValue =
+    typeof value === "number" ? value : typeof value === "string" ? Number(value) : NaN;
+  return Number.isFinite(numberValue) ? numberValue : undefined;
+};
 
 export const normalizeProxyEntry = (item: RawProxyPoolEntry): ProxyPoolEntry | null => {
   const id = normalizeString(item.id);
@@ -48,6 +64,25 @@ export const normalizeProxyEntry = (item: RawProxyPoolEntry): ProxyPoolEntry | n
     enabled: item.enabled !== false,
     ...(description ? { description } : {}),
     ...(maskedUrl ? { maskedUrl } : {}),
+  };
+};
+
+export const normalizeProxyCheckResult = (item: RawProxyCheckResult): ProxyCheckResult => {
+  const statusCode = normalizeNumber(item.status_code ?? item.statusCode);
+  const latencyMs = normalizeNumber(item.latency_ms ?? item.latencyMs);
+  const message = normalizeString(item.message ?? item.error);
+  const ok =
+    typeof item.ok === "boolean"
+      ? item.ok
+      : typeof statusCode === "number"
+        ? statusCode >= 200 && statusCode < 400
+        : false;
+
+  return {
+    ok,
+    ...(typeof statusCode === "number" ? { statusCode } : {}),
+    ...(typeof latencyMs === "number" ? { latencyMs: Math.round(latencyMs) } : {}),
+    ...(message ? { message } : {}),
   };
 };
 
@@ -72,8 +107,8 @@ export const proxiesApi = {
     });
   },
 
-  check(request: ProxyCheckRequest): Promise<ProxyCheckResult> {
-    return apiClient.post(
+  async check(request: ProxyCheckRequest): Promise<ProxyCheckResult> {
+    const data = await apiClient.post<RawProxyCheckResult>(
       "/proxy-pool/check",
       {
         ...(request.id ? { id: request.id } : {}),
@@ -82,6 +117,6 @@ export const proxiesApi = {
       },
       { timeoutMs: 12000 },
     );
+    return normalizeProxyCheckResult(data ?? {});
   },
 };
-

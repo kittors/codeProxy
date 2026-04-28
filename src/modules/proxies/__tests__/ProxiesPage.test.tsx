@@ -49,7 +49,7 @@ describe("ProxiesPage", () => {
       ],
     });
     mocks.apiPut.mockResolvedValue({ status: "ok" });
-    mocks.apiPost.mockResolvedValue({ ok: true, statusCode: 204, latencyMs: 31 });
+    mocks.apiPost.mockResolvedValue({ ok: true, status_code: 204, latency_ms: 31 });
   });
 
   test("loads proxy entries with masked URLs and status actions", async () => {
@@ -120,5 +120,21 @@ describe("ProxiesPage", () => {
       { id: "hk" },
       expect.objectContaining({ timeoutMs: 12000 }),
     );
+  });
+
+  test("renders failed proxy checks with the backend message", async () => {
+    mocks.apiPost.mockResolvedValue({
+      ok: false,
+      status_code: 0,
+      latency_ms: 12001,
+      message: "proxy dial timeout",
+    });
+
+    renderPage();
+
+    await userEvent.click(await screen.findByRole("button", { name: /check hk proxy/i }));
+
+    expect(await screen.findByText(/unavailable/i)).toBeInTheDocument();
+    expect(screen.getByText(/proxy dial timeout/i)).toBeInTheDocument();
   });
 });
