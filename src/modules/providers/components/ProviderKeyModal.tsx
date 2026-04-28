@@ -8,6 +8,8 @@ import { ToggleSwitch } from "@/modules/ui/ToggleSwitch";
 import { KeyValueInputList } from "@/modules/providers/KeyValueInputList";
 import { ModelInputList } from "@/modules/providers/ModelInputList";
 import type { ProviderKeyDraft } from "@/modules/providers/providers-helpers";
+import type { ProxyPoolEntry } from "@/lib/http/apis/proxies";
+import { ProxyPoolSelect } from "@/modules/proxies/ProxyPoolSelect";
 
 interface ProviderKeyModalProps {
   open: boolean;
@@ -24,6 +26,7 @@ interface ProviderKeyModalProps {
   editKeyHeaderCount: number;
   editKeyModelCount: number;
   editKeyExcludedCount: number;
+  proxyPoolEntries: ProxyPoolEntry[];
   copyText: (text: string) => Promise<void>;
   maskApiKey: (value: string) => string;
 }
@@ -43,6 +46,7 @@ export function ProviderKeyModal({
   editKeyHeaderCount,
   editKeyModelCount,
   editKeyExcludedCount,
+  proxyPoolEntries,
   copyText,
   maskApiKey,
 }: ProviderKeyModalProps) {
@@ -219,6 +223,16 @@ export function ProviderKeyModal({
                     ? t("providers.claude_base_url_placeholder")
                     : t("providers.base_url_placeholder")
                 }
+              />
+            </div>
+            <div className="space-y-2">
+              <ProxyPoolSelect
+                value={keyDraft.proxyId}
+                entries={proxyPoolEntries}
+                onChange={(value) => setKeyDraft((prev) => ({ ...prev, proxyId: value }))}
+                label={t("providers.proxy_pool_label")}
+                hint={t("providers.proxy_pool_hint")}
+                ariaLabel={t("providers.proxy_pool_label")}
               />
             </div>
             <div className="space-y-2">

@@ -2,11 +2,13 @@ import type { Dispatch, SetStateAction } from "react";
 import { useTranslation } from "react-i18next";
 import { Download, RefreshCw, ShieldCheck } from "lucide-react";
 import type { AuthFileItem } from "@/lib/http/types";
+import type { ProxyPoolEntry } from "@/lib/http/apis/proxies";
 import { Button } from "@/modules/ui/Button";
 import { EmptyState } from "@/modules/ui/EmptyState";
 import { TextInput } from "@/modules/ui/Input";
 import { Modal } from "@/modules/ui/Modal";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/modules/ui/Tabs";
+import { ProxyPoolSelect } from "@/modules/proxies/ProxyPoolSelect";
 import {
   downloadTextAsFile,
   formatFileSize,
@@ -39,6 +41,7 @@ interface AuthFileDetailModalProps {
   prefixProxyDirty: boolean;
   prefixProxyUpdatedText: string;
   savePrefixProxy: () => Promise<void>;
+  proxyPoolEntries: ProxyPoolEntry[];
   channelEditor: ChannelEditorState;
   setChannelEditor: Dispatch<SetStateAction<ChannelEditorState>>;
   saveChannelEditor: () => Promise<void>;
@@ -63,6 +66,7 @@ export function AuthFileDetailModal({
   prefixProxyDirty,
   prefixProxyUpdatedText,
   savePrefixProxy,
+  proxyPoolEntries,
   channelEditor,
   setChannelEditor,
   saveChannelEditor,
@@ -282,6 +286,19 @@ export function AuthFileDetailModal({
                   </div>
 
                   <div className="rounded-2xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
+                    <ProxyPoolSelect
+                      value={prefixProxyEditor.proxyId}
+                      entries={proxyPoolEntries}
+                      onChange={(value) =>
+                        setPrefixProxyEditor((prev) => ({ ...prev, proxyId: value }))
+                      }
+                      label={t("auth_files.proxy_id_label")}
+                      hint={t("auth_files.leave_empty_proxy_id")}
+                      ariaLabel={t("auth_files.proxy_id_label")}
+                    />
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
                     <p className="text-sm font-semibold text-slate-900 dark:text-white">
                       {t("auth_files.proxy_url_label")}
                     </p>
@@ -297,6 +314,29 @@ export function AuthFileDetailModal({
                     </div>
                     <p className="mt-2 text-xs text-slate-500 dark:text-white/55">
                       {t("auth_files.leave_empty_proxy")}
+                    </p>
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
+                    <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                      {t("auth_files.subscription_expires_at_label")}
+                    </p>
+                    <div className="mt-2">
+                      <TextInput
+                        type="datetime-local"
+                        value={prefixProxyEditor.subscriptionExpiresAt}
+                        onChange={(e) => {
+                          const value = e.currentTarget.value;
+                          setPrefixProxyEditor((prev) => ({
+                            ...prev,
+                            subscriptionExpiresAt: value,
+                          }));
+                        }}
+                        aria-label={t("auth_files.subscription_expires_at_label")}
+                      />
+                    </div>
+                    <p className="mt-2 text-xs text-slate-500 dark:text-white/55">
+                      {t("auth_files.subscription_expires_at_hint")}
                     </p>
                   </div>
 

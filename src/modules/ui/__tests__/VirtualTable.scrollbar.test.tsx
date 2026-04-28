@@ -98,6 +98,83 @@ describe("VirtualTable scrollbar wrapper", () => {
     });
   });
 
+  test("reveals scrollbars from their hover zones and marks thumbs as draggable", async () => {
+    const { container } = render(
+      <VirtualTable
+        rows={Array.from({ length: 60 }, (_, i) => ({ id: String(i), name: `Row ${i}` }))}
+        columns={columns}
+        rowKey={(row) => row.id}
+        height="h-[160px]"
+        minHeight="min-h-0"
+        virtualize={false}
+      />,
+    );
+
+    const scrollContainer = container.querySelector(".table-scrollbar") as HTMLDivElement | null;
+    expect(scrollContainer).not.toBeNull();
+
+    setScrollMetrics(scrollContainer!, {
+      clientHeight: 160,
+      scrollHeight: 640,
+      clientWidth: 260,
+      scrollWidth: 780,
+    });
+
+    window.dispatchEvent(new Event("resize"));
+
+    await waitFor(() => {
+      const yTrack = container.querySelector('[data-vt-scrollbar="y"]') as HTMLDivElement | null;
+      const xTrack = container.querySelector('[data-vt-scrollbar="x"]') as HTMLDivElement | null;
+      const yThumb = yTrack?.querySelector('[role="presentation"]') as HTMLDivElement | null;
+      const xThumb = xTrack?.querySelector('[role="presentation"]') as HTMLDivElement | null;
+
+      expect(yTrack).not.toBeNull();
+      expect(xTrack).not.toBeNull();
+      expect(yTrack).toHaveClass("pointer-events-auto", "hover:opacity-100");
+      expect(xTrack).toHaveClass("pointer-events-auto", "hover:opacity-100");
+      expect(yThumb).toHaveClass("cursor-pointer", "hover:bg-slate-500/70");
+      expect(xThumb).toHaveClass("cursor-pointer", "hover:bg-slate-500/70");
+    });
+  });
+
+  test("keeps custom scrollbar layers above row content badges", async () => {
+    const { container } = render(
+      <VirtualTable
+        rows={Array.from({ length: 60 }, (_, i) => ({ id: String(i), name: `Row ${i}` }))}
+        columns={columns}
+        rowKey={(row) => row.id}
+        height="h-[160px]"
+        minHeight="min-h-0"
+        virtualize={false}
+      />,
+    );
+
+    const scrollContainer = container.querySelector(".table-scrollbar") as HTMLDivElement | null;
+    expect(scrollContainer).not.toBeNull();
+
+    setScrollMetrics(scrollContainer!, {
+      clientHeight: 160,
+      scrollHeight: 640,
+      clientWidth: 260,
+      scrollWidth: 780,
+    });
+
+    window.dispatchEvent(new Event("resize"));
+
+    await waitFor(() => {
+      const root = scrollContainer!.parentElement as HTMLDivElement | null;
+      const gutter = container.querySelector("[data-vt-scrollbar-gutter]") as HTMLDivElement | null;
+      const yTrack = container.querySelector('[data-vt-scrollbar="y"]') as HTMLDivElement | null;
+      const xTrack = container.querySelector('[data-vt-scrollbar="x"]') as HTMLDivElement | null;
+
+      expect(root).toHaveClass("isolate");
+      expect(scrollContainer).toHaveClass("z-10");
+      expect(gutter).toHaveClass("z-30");
+      expect(yTrack).toHaveClass("z-30");
+      expect(xTrack).toHaveClass("z-30");
+    });
+  });
+
   test("keeps the vertical scrollbar in a gutter outside the table viewport", async () => {
     const { container } = render(
       <VirtualTable
@@ -179,7 +256,9 @@ describe("VirtualTable scrollbar wrapper", () => {
     );
 
     const firstHeader = container.querySelector("th") as HTMLTableCellElement | null;
-    const headerOverlay = container.querySelector("[data-vt-header-overlay]") as HTMLDivElement | null;
+    const headerOverlay = container.querySelector(
+      "[data-vt-header-overlay]",
+    ) as HTMLDivElement | null;
     expect(firstHeader).not.toBeNull();
     expect(headerOverlay).not.toBeNull();
     expect(firstHeader!.className).not.toContain("rounded-l-xl");

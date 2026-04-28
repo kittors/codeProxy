@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
 import { ConfirmModal } from "@/modules/ui/ConfirmModal";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/modules/ui/Tabs";
+import { proxiesApi, type ProxyPoolEntry } from "@/lib/http/apis/proxies";
 import { OAuthLoginDialog } from "@/modules/oauth/OAuthLoginDialog";
 import { AuthFileDetailModal } from "@/modules/auth-files/components/AuthFileDetailModal";
 import { AuthFilesExcludedTab } from "@/modules/auth-files/components/AuthFilesExcludedTab";
@@ -70,16 +71,8 @@ export function AuthFilesPage() {
     applyImport,
   } = useAuthFilesOAuthConfig(tab);
 
-  const {
-    files,
-    setFiles,
-    loading,
-    refreshingAll,
-    usageLoading,
-    usageData,
-    usageIndex,
-    loadAll,
-  } = useAuthFilesDataState();
+  const { files, setFiles, loading, refreshingAll, usageLoading, usageData, usageIndex, loadAll } =
+    useAuthFilesDataState();
 
   const [confirm, setConfirm] = useState<null | { type: "deleteSelection"; names: string[] }>(null);
 
@@ -90,6 +83,7 @@ export function AuthFilesPage() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [selectedFileNames, setSelectedFileNames] = useState<string[]>([]);
+  const [proxyPoolEntries, setProxyPoolEntries] = useState<ProxyPoolEntry[]>([]);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -152,6 +146,13 @@ export function AuthFilesPage() {
       setTab(requestedTab);
     }
   }, [searchParams]);
+
+  useEffect(() => {
+    void proxiesApi
+      .list()
+      .then(setProxyPoolEntries)
+      .catch(() => setProxyPoolEntries([]));
+  }, []);
 
   useEffect(() => {
     writeAuthFilesUiState({ tab, filter, search, page });
@@ -244,6 +245,7 @@ export function AuthFilesPage() {
   const {
     translateQuotaText,
     formatPlanTypeLabel,
+    renderSubscriptionBadge,
     renderQuotaBar,
     renderFilesViewModeTabs,
     fileColumns,
@@ -333,6 +335,7 @@ export function AuthFilesPage() {
             toggleFileSelection={toggleFileSelection}
             formatPlanTypeLabel={formatPlanTypeLabel}
             translateQuotaText={translateQuotaText}
+            renderSubscriptionBadge={renderSubscriptionBadge}
             renderQuotaBar={renderQuotaBar}
             openDetail={openDetail}
             downloadAuthFile={downloadAuthFile}
@@ -397,6 +400,7 @@ export function AuthFilesPage() {
         prefixProxyDirty={prefixProxyDirty}
         prefixProxyUpdatedText={prefixProxyUpdatedText}
         savePrefixProxy={savePrefixProxy}
+        proxyPoolEntries={proxyPoolEntries}
         channelEditor={channelEditor}
         setChannelEditor={setChannelEditor}
         saveChannelEditor={saveChannelEditor}

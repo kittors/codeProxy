@@ -18,6 +18,7 @@
 - `src/modules/monitor/`：监控中心
 - `src/modules/system/`：系统信息
 - `src/modules/update/`：自动更新提示、release notes 二次确认与更新心跳等待
+- `src/modules/proxies/`：代理池管理页面与代理检测交互
 - `src/modules/ui/`：复合 UI 容器
 - `src/modules/usage/`：用量统计（当前复用监控视图）
 - `src/styles/`：全局样式与主题变量
@@ -89,6 +90,7 @@
 - OAuth 登录弹窗：`src/modules/oauth/OAuthLoginDialog.tsx`
 - 自动更新提示：`src/modules/update/AutoUpdatePrompt.tsx`
 - 模型配置管理：`src/modules/models/ModelsPage.tsx`（`/manage/models`，数据库模型配置与计价规则）
+- 代理池管理：`src/modules/proxies/ProxiesPage.tsx`（`/proxies`，集中维护可复用出站代理）
 - 关键配置文件：`package.json`, `tsconfig.json`, `vite.config.ts`
 - 入口文件：`index.html`（默认构建）
 
@@ -113,6 +115,8 @@
 
 - 开始任何项目/任务前，必须先确保本地 `dev` 和 `main` 分支已同步到远端最新代码；建议先 `git fetch origin`，再分别更新 `dev` 与 `main`（优先使用 fast-forward 更新，避免无意产生合并提交）。若工作区存在未提交改动，先确认改动归属，避免覆盖用户或其它任务的变更。
 - 新需求必须从最新基线新建功能分支开始实现，不要直接在 `main` 或 `dev` 上开发；需求实现并完成验证后，推送该功能分支到远端，再按项目流程合并回 `dev` 并推送到 `origin/dev`。
+- 所有实现类任务（包含新增需求、bugfix、文档/规范修改、配置调整等）默认都必须以最新 `origin/dev` 为基线创建功能分支；不得从过期分支、`main` 或未同步的本地分支直接开始。若当前工作区已有未提交改动，必须使用隔离 worktree 或其它不污染现有改动的方式从最新 `dev` 开分支。
+- 除非用户明确要求“只开 PR 不合并”“暂不合并”“停在分支上”等相反指令，否则任务完成并验证通过后，必须主动把功能分支通过 PR/merge 合并回 `dev`，并确认 `origin/dev` 已包含本次提交；不能停留在“已推送分支”或“已创建 PR”状态就结束。
 - 未经用户明确要求，不允许合并、推送或以任何方式改动 `main`/`origin/main`。只有当用户清楚说明“合并到 main”“推送到 main”或同等含义时，才可以执行 `main` 相关操作。
 - 合并/推送时只包含本次任务相关文件，不要把本地未跟踪目录或无关改动一起提交。
 

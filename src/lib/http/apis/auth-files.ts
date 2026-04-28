@@ -25,7 +25,9 @@ export const authFilesApi = {
     label?: string;
     prefix?: string;
     proxy_url?: string;
+    proxy_id?: string;
     priority?: number;
+    subscription_expires_at?: string;
   }) => apiClient.patch("/auth-files/fields", payload),
 
   getOauthExcludedModels: async (): Promise<Record<string, string[]>> => {

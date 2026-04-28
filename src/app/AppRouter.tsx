@@ -51,6 +51,9 @@ const IdentityFingerprintPage = lazy(() =>
 const ModelsPage = lazy(() =>
   import("@/modules/models/ModelsPage").then((m) => ({ default: m.ModelsPage })),
 );
+const ProxiesPage = lazy(() =>
+  import("@/modules/proxies/ProxiesPage").then((m) => ({ default: m.ProxiesPage })),
+);
 const ApiKeyLookupPage = lazy(() =>
   import("@/modules/apikey-lookup/ApiKeyLookupPage").then((m) => ({ default: m.ApiKeyLookupPage })),
 );
@@ -112,6 +115,11 @@ export function AppRouter() {
                               element={<Navigate to="/identity-fingerprint" replace />}
                             />
                             <Route path="/models" element={<ModelsPage />} />
+                            <Route path="/proxies" element={<ProxiesPage />} />
+                            <Route
+                              path="/manage/proxies"
+                              element={<Navigate to="/proxies" replace />}
+                            />
                             <Route
                               path="/manage/models"
                               element={<Navigate to="/models" replace />}

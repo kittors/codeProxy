@@ -82,9 +82,11 @@ export function useOpenAIProviderEditor({
         if (!apiKey) return null;
         const entryHeaders = keyValueEntriesToRecord(entry.headersEntries);
         const proxyUrl = entry.proxyUrl.trim();
+        const proxyId = entry.proxyId.trim();
         return {
           apiKey,
           ...(proxyUrl ? { proxyUrl } : {}),
+          ...(proxyId ? { proxyId } : {}),
           ...(entryHeaders ? { headers: entryHeaders } : {}),
         };
       })

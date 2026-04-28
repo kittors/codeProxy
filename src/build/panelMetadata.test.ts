@@ -10,14 +10,14 @@ describe("createPanelMetadata", () => {
       buildDate: "2026-04-20T12:00:00.000Z",
       commit: "a28920de945ac13611eb88315cf5aff895bb8c78",
       ref: "dev",
-      repository: "https://github.com/router-for-me/Cli-Proxy-API-Management-Center.git",
+      repository: "https://github.com/kittors/codeProxy.git",
     });
 
     expect(metadata).toEqual({
       build_date: "2026-04-20T12:00:00.000Z",
       commit: "a28920de945ac13611eb88315cf5aff895bb8c78",
       ref: "dev",
-      repository: "https://github.com/router-for-me/Cli-Proxy-API-Management-Center.git",
+      repository: "https://github.com/kittors/codeProxy.git",
       version: "panel-dev-a28920d",
     });
   });
