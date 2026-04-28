@@ -9,6 +9,7 @@ import { TextInput } from "@/modules/ui/Input";
 import { Modal } from "@/modules/ui/Modal";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/modules/ui/Tabs";
 import { ProxyPoolSelect } from "@/modules/proxies/ProxyPoolSelect";
+import { useProxyPoolChecks } from "@/modules/proxies/useProxyPoolChecks";
 import {
   downloadTextAsFile,
   formatFileSize,
@@ -72,6 +73,7 @@ export function AuthFileDetailModal({
   saveChannelEditor,
 }: AuthFileDetailModalProps) {
   const { t } = useTranslation();
+  const proxyCheckState = useProxyPoolChecks(proxyPoolEntries, open && detailTab === "fields");
 
   return (
     <Modal
@@ -295,6 +297,8 @@ export function AuthFileDetailModal({
                       label={t("auth_files.proxy_id_label")}
                       hint={t("auth_files.leave_empty_proxy_id")}
                       ariaLabel={t("auth_files.proxy_id_label")}
+                      checkState={proxyCheckState}
+                      showDetails
                     />
                   </div>
 

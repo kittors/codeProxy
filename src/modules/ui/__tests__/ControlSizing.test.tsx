@@ -62,9 +62,7 @@ describe("shared control sizing", () => {
       "dark:hover:bg-[#303036]",
       "dark:hover:text-white",
     );
-    expect(screen.getByRole("textbox", { name: "Search" })).not.toHaveClass(
-      "focus-visible:ring-2",
-    );
+    expect(screen.getByRole("textbox", { name: "Search" })).not.toHaveClass("focus-visible:ring-2");
     screen.getAllByRole("combobox").forEach((control) => {
       expect(control).toHaveClass(
         "h-9",
@@ -103,6 +101,33 @@ describe("shared control sizing", () => {
     expect(screen.getByRole("tab", { name: "Small" })).toHaveClass("h-7");
     expect(screen.getByRole("textbox", { name: "Small input" })).toHaveClass("h-8");
     expect(screen.getByRole("textbox", { name: "Large input" })).toHaveClass("h-10");
+  });
+
+  test("keeps shared select chevrons aligned to the right edge", () => {
+    render(
+      <>
+        <Select
+          value=""
+          onChange={vi.fn()}
+          options={[{ value: "", label: "No proxy pool binding" }]}
+          aria-label="Proxy pool"
+          className="w-full"
+        />
+        <SearchableSelect
+          value=""
+          onChange={vi.fn()}
+          options={[{ value: "", label: "All models" }]}
+          aria-label="Model"
+          className="w-full"
+        />
+      </>,
+    );
+
+    for (const control of screen.getAllByRole("combobox")) {
+      expect(control).toHaveClass("justify-between");
+      expect(control.querySelector("span")).toHaveClass("min-w-0", "flex-1", "truncate");
+      expect(control.querySelector("svg")).toHaveClass("ml-auto", "shrink-0");
+    }
   });
 
   test("uses shared select surface for searchable checkbox multi-select dropdown", async () => {
