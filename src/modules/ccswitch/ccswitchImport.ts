@@ -217,6 +217,10 @@ export function buildCcSwitchImportUrl(input: {
     params.set("model", model);
   }
 
+  if (input.clientType === "claude") {
+    params.set("apiKeyField", "ANTHROPIC_API_KEY");
+  }
+
   return `ccswitch://v1/import?${params.toString()}`;
 }
 
