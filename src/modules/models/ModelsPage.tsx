@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Activity, Check, Cpu, Edit3, Plus, RefreshCw, Search, Trash2 } from "lucide-react";
 import { Button } from "@/modules/ui/Button";
@@ -79,6 +79,24 @@ interface OwnerFormState {
   enabled: boolean;
 }
 
+interface OpenRouterModelSyncState {
+  enabled: boolean;
+  intervalMinutes: number;
+  lastSyncAt: string;
+  lastSuccessAt: string;
+  lastError: string;
+  lastSeen: number;
+  lastAdded: number;
+  lastSkipped: number;
+  running: boolean;
+}
+
+interface OpenRouterModelSyncResult {
+  seen: number;
+  added: number;
+  skipped: number;
+}
+
 const VENDOR_ICONS: Record<string, { light: string; dark: string }> = {
   claude: { light: iconClaude, dark: iconClaude },
   codex: { light: iconCodex, dark: iconCodex },
@@ -125,6 +143,18 @@ const emptyOwnerForm: OwnerFormState = {
   label: "",
   description: "",
   enabled: true,
+};
+
+const defaultOpenRouterSyncState: OpenRouterModelSyncState = {
+  enabled: false,
+  intervalMinutes: 1440,
+  lastSyncAt: "",
+  lastSuccessAt: "",
+  lastError: "",
+  lastSeen: 0,
+  lastAdded: 0,
+  lastSkipped: 0,
+  running: false,
 };
 
 function getVendorPrefix(modelId: string): string {
@@ -426,6 +456,48 @@ function normalizeOwnerPresetItems(presets: ModelOwnerPreset[]) {
   );
 }
 
+function normalizeOpenRouterSyncState(payload: unknown): OpenRouterModelSyncState {
+  const record = payload && typeof payload === "object" ? (payload as Record<string, unknown>) : {};
+  return {
+    enabled: record.enabled === true,
+    intervalMinutes: Math.max(60, Math.round(asNumber(record.interval_minutes) || 1440)),
+    lastSyncAt: String(record.last_sync_at ?? ""),
+    lastSuccessAt: String(record.last_success_at ?? ""),
+    lastError: String(record.last_error ?? ""),
+    lastSeen: Math.round(asNumber(record.last_seen)),
+    lastAdded: Math.round(asNumber(record.last_added)),
+    lastSkipped: Math.round(asNumber(record.last_skipped)),
+    running: record.running === true,
+  };
+}
+
+function normalizeOpenRouterSyncResult(payload: unknown): OpenRouterModelSyncResult | null {
+  const record = payload && typeof payload === "object" ? (payload as Record<string, unknown>) : {};
+  if (!("seen" in record) && !("added" in record) && !("skipped" in record)) return null;
+  return {
+    seen: Math.round(asNumber(record.seen)),
+    added: Math.round(asNumber(record.added)),
+    skipped: Math.round(asNumber(record.skipped)),
+  };
+}
+
+function syncIntervalHoursValue(intervalMinutes: number): string {
+  return String(Math.max(1, Math.round(intervalMinutes / 60)));
+}
+
+function syncIntervalMinutesFromHours(value: string): number {
+  const parsed = Number.parseFloat(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) return 1440;
+  return Math.max(60, Math.round(parsed * 60));
+}
+
+function formatSyncTimestamp(value: string, emptyLabel: string): string {
+  if (!value) return emptyLabel;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString();
+}
+
 export function ModelsPage() {
   const { t } = useTranslation();
   const { notify } = useToast();
@@ -444,6 +516,17 @@ export function ModelsPage() {
   const [savingOwnerPresets, setSavingOwnerPresets] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<ModelItem | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [openRouterSyncState, setOpenRouterSyncState] = useState<OpenRouterModelSyncState>(
+    defaultOpenRouterSyncState,
+  );
+  const [openRouterSyncLoading, setOpenRouterSyncLoading] = useState(false);
+  const [openRouterSyncSaving, setOpenRouterSyncSaving] = useState(false);
+  const [openRouterSyncRunning, setOpenRouterSyncRunning] = useState(false);
+  const [openRouterSyncError, setOpenRouterSyncError] = useState<string | null>(null);
+  const [syncIntervalHours, setSyncIntervalHours] = useState(
+    syncIntervalHoursValue(defaultOpenRouterSyncState.intervalMinutes),
+  );
+  const skipSyncIntervalBlurRef = useRef(false);
 
   const modelScope: ModelScope = activeTab;
 
@@ -483,6 +566,28 @@ export function ModelsPage() {
   useEffect(() => {
     void loadModels();
   }, [loadModels]);
+
+  const loadOpenRouterSyncState = useCallback(async () => {
+    setOpenRouterSyncLoading(true);
+    setOpenRouterSyncError(null);
+    try {
+      const state = normalizeOpenRouterSyncState(await apiClient.get("/model-openrouter-sync"));
+      setOpenRouterSyncState(state);
+      setSyncIntervalHours(syncIntervalHoursValue(state.intervalMinutes));
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : t("models_page.openrouter_sync_load_failed");
+      setOpenRouterSyncError(message);
+    } finally {
+      setOpenRouterSyncLoading(false);
+    }
+  }, [t]);
+
+  useEffect(() => {
+    if (activeTab === "library") {
+      void loadOpenRouterSyncState();
+    }
+  }, [activeTab, loadOpenRouterSyncState]);
 
   const filteredModels = useMemo(() => {
     const needle = searchFilter.trim().toLowerCase();
@@ -670,6 +775,65 @@ export function ModelsPage() {
       setOwnerFilter((current) => (current === deleteOwnerTarget.value ? "" : current));
     }
   }, [deleteOwnerTarget, ownerPresets, persistOwnerPresets]);
+
+  const saveOpenRouterSyncSettings = useCallback(
+    async (enabled: boolean, intervalHours = syncIntervalHours) => {
+      const intervalMinutes = syncIntervalMinutesFromHours(intervalHours);
+      setOpenRouterSyncSaving(true);
+      setOpenRouterSyncError(null);
+      try {
+        const state = normalizeOpenRouterSyncState(
+          await apiClient.put("/model-openrouter-sync", {
+            enabled,
+            interval_minutes: intervalMinutes,
+          }),
+        );
+        setOpenRouterSyncState(state);
+        setSyncIntervalHours(syncIntervalHoursValue(state.intervalMinutes));
+      } catch (err: unknown) {
+        const message =
+          err instanceof Error ? err.message : t("models_page.openrouter_sync_save_failed");
+        setOpenRouterSyncError(message);
+        notify({ type: "error", message });
+      } finally {
+        setOpenRouterSyncSaving(false);
+      }
+    },
+    [notify, syncIntervalHours, t],
+  );
+
+  const runOpenRouterSync = useCallback(async () => {
+    setOpenRouterSyncRunning(true);
+    setOpenRouterSyncError(null);
+    try {
+      const payload = await apiClient.post<{
+        result?: unknown;
+        state?: unknown;
+      }>("/model-openrouter-sync/run");
+      const result = normalizeOpenRouterSyncResult(payload?.result);
+      const state = normalizeOpenRouterSyncState(payload?.state ?? payload);
+      setOpenRouterSyncState({
+        ...state,
+        ...(result
+          ? {
+              lastSeen: result.seen,
+              lastAdded: result.added,
+              lastSkipped: result.skipped,
+            }
+          : {}),
+        running: false,
+      });
+      setSyncIntervalHours(syncIntervalHoursValue(state.intervalMinutes));
+      await loadModels();
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : t("models_page.openrouter_sync_run_failed");
+      setOpenRouterSyncError(message);
+      notify({ type: "error", message });
+    } finally {
+      setOpenRouterSyncRunning(false);
+    }
+  }, [loadModels, notify, t]);
 
   const modelColumns = useMemo<VirtualTableColumn<ModelItem>[]>(
     () => [
@@ -975,6 +1139,116 @@ export function ModelsPage() {
                 </div>
               }
             >
+              <div
+                data-testid="openrouter-sync-section"
+                className="mb-3 border-b border-slate-200 pb-3 dark:border-neutral-800"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-semibold text-slate-900 dark:text-white">
+                      <span>{t("models_page.openrouter_sync_title")}</span>
+                      <span
+                        className={[
+                          "rounded-full px-2 py-0.5 text-[10px] font-semibold",
+                          openRouterSyncState.enabled
+                            ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-300"
+                            : "bg-slate-100 text-slate-500 dark:bg-white/[0.08] dark:text-white/45",
+                        ].join(" ")}
+                      >
+                        {openRouterSyncState.enabled
+                          ? t("models_page.openrouter_sync_auto_on")
+                          : t("models_page.openrouter_sync_auto_off")}
+                      </span>
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-600 dark:text-white/55">
+                      <span>
+                        {t("models_page.openrouter_sync_last_sync", {
+                          value: formatSyncTimestamp(
+                            openRouterSyncState.lastSyncAt,
+                            t("models_page.openrouter_sync_never"),
+                          ),
+                        })}
+                      </span>
+                      <span>
+                        {t("models_page.openrouter_sync_result", {
+                          seen: openRouterSyncState.lastSeen,
+                          added: openRouterSyncState.lastAdded,
+                          skipped: openRouterSyncState.lastSkipped,
+                        })}
+                      </span>
+                      {openRouterSyncLoading ? <span>{t("models_page.loading")}</span> : null}
+                    </div>
+                    {openRouterSyncState.lastError || openRouterSyncError ? (
+                      <div className="mt-2 text-xs text-rose-600 dark:text-rose-300">
+                        {t("models_page.openrouter_sync_error", {
+                          error: openRouterSyncError || openRouterSyncState.lastError,
+                        })}
+                      </div>
+                    ) : null}
+                  </div>
+
+                  <div className="flex flex-wrap items-end gap-3">
+                    <div className="w-28">
+                      <label
+                        htmlFor="openrouter-sync-interval"
+                        className="mb-1 block text-xs font-medium text-slate-600 dark:text-white/60"
+                      >
+                        {t("models_page.openrouter_sync_interval")}
+                      </label>
+                      <TextInput
+                        id="openrouter-sync-interval"
+                        type="number"
+                        value={syncIntervalHours}
+                        onChange={(e) => setSyncIntervalHours(e.target.value)}
+                        onBlur={() => {
+                          if (skipSyncIntervalBlurRef.current) {
+                            skipSyncIntervalBlurRef.current = false;
+                            return;
+                          }
+                          void saveOpenRouterSyncSettings(openRouterSyncState.enabled);
+                        }}
+                        min={1}
+                        step={1}
+                        size="sm"
+                      />
+                    </div>
+                    <div
+                      onMouseDownCapture={() => {
+                        skipSyncIntervalBlurRef.current = true;
+                      }}
+                      className="flex flex-wrap items-end gap-3"
+                    >
+                      <ToggleSwitch
+                        checked={openRouterSyncState.enabled}
+                        onCheckedChange={(enabled) => void saveOpenRouterSyncSettings(enabled)}
+                        label={t("models_page.openrouter_sync_auto")}
+                        disabled={openRouterSyncSaving}
+                      />
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        onClick={() => void runOpenRouterSync()}
+                        disabled={
+                          openRouterSyncRunning ||
+                          openRouterSyncState.running ||
+                          openRouterSyncLoading
+                        }
+                      >
+                        <RefreshCw
+                          size={14}
+                          className={
+                            openRouterSyncRunning || openRouterSyncState.running
+                              ? "animate-spin"
+                              : ""
+                          }
+                        />
+                        {t("models_page.openrouter_sync_now")}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <VirtualTable<ModelItem>
                 rows={filteredModels}
                 columns={modelColumns}
