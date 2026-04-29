@@ -91,6 +91,18 @@ describe("ModelsPage", () => {
           data: ownerPresetItems,
         });
       }
+      if (path === "/model-openrouter-sync") {
+        return Promise.resolve({
+          enabled: false,
+          interval_minutes: 1440,
+          last_sync_at: "2026-04-29T04:30:00Z",
+          last_success_at: "2026-04-29T04:30:00Z",
+          last_seen: 20,
+          last_added: 2,
+          last_skipped: 18,
+          running: false,
+        });
+      }
       if (path.startsWith("/usage/logs")) {
         return Promise.resolve({ stats: { total_cost: 12.34 } });
       }
@@ -371,6 +383,79 @@ describe("ModelsPage", () => {
     await waitFor(() => expect(refreshButton).not.toBeDisabled());
 
     expect(screen.getByText("custom-library-model")).toBeInTheDocument();
+  });
+
+  test("syncs OpenRouter models from the library tab and refreshes the library list", async () => {
+    renderPage();
+
+    await userEvent.click(await screen.findByRole("tab", { name: /model library/i }));
+    const libraryCard = await screen.findByTestId("model-library-card");
+
+    expect(mocks.apiGet).toHaveBeenCalledWith("/model-openrouter-sync");
+    expect(within(libraryCard).getByText(/seen 20/i)).toBeInTheDocument();
+
+    const libraryFetchesBeforeSync = mocks.apiGet.mock.calls.filter(
+      ([path]) => path === "/model-configs?scope=library",
+    ).length;
+
+    mocks.apiPost.mockResolvedValueOnce({
+      status: "ok",
+      result: { seen: 21, added: 1, skipped: 20 },
+      state: {
+        enabled: false,
+        interval_minutes: 1440,
+        last_sync_at: "2026-04-29T05:00:00Z",
+        last_success_at: "2026-04-29T05:00:00Z",
+        last_seen: 21,
+        last_added: 1,
+        last_skipped: 20,
+        running: false,
+      },
+    });
+
+    await userEvent.click(within(libraryCard).getByRole("button", { name: /sync openrouter/i }));
+
+    await waitFor(() => {
+      expect(mocks.apiPost).toHaveBeenCalledWith("/model-openrouter-sync/run");
+    });
+    await waitFor(() => {
+      expect(
+        mocks.apiGet.mock.calls.filter(([path]) => path === "/model-configs?scope=library").length,
+      ).toBeGreaterThan(libraryFetchesBeforeSync);
+    });
+    expect(within(libraryCard).getByText(/added 1/i)).toBeInTheDocument();
+  });
+
+  test("updates OpenRouter automatic sync settings from the library tab", async () => {
+    renderPage();
+
+    await userEvent.click(await screen.findByRole("tab", { name: /model library/i }));
+    const libraryCard = await screen.findByTestId("model-library-card");
+
+    const intervalInput = await within(libraryCard).findByLabelText(/sync interval/i);
+    await userEvent.clear(intervalInput);
+    await userEvent.type(intervalInput, "12");
+
+    mocks.apiPut.mockResolvedValueOnce({
+      enabled: true,
+      interval_minutes: 720,
+      last_sync_at: "2026-04-29T04:30:00Z",
+      last_success_at: "2026-04-29T04:30:00Z",
+      last_seen: 20,
+      last_added: 2,
+      last_skipped: 18,
+      running: false,
+    });
+
+    await userEvent.click(within(libraryCard).getByRole("switch", { name: /automatic sync/i }));
+
+    await waitFor(() => {
+      expect(mocks.apiPut).toHaveBeenCalledWith("/model-openrouter-sync", {
+        enabled: true,
+        interval_minutes: 720,
+      });
+    });
+    expect(intervalInput).toHaveValue(12);
   });
 
   test("maintains owner presets from the model library with an add-owner dialog", async () => {
