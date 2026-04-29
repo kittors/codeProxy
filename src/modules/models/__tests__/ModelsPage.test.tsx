@@ -520,7 +520,7 @@ describe("ModelsPage", () => {
     });
   });
 
-  test("reuses a model from the selected owner when adding from the library", async () => {
+  test("searches all library models by model id while adding from a selected owner", async () => {
     const libraryModels = [
       {
         id: "gpt-5.5",
@@ -585,17 +585,19 @@ describe("ModelsPage", () => {
     await userEvent.click(within(libraryCard).getByRole("button", { name: /add model/i }));
 
     const dialog = await screen.findByRole("dialog", { name: /add model/i });
-    await userEvent.click(within(dialog).getByRole("combobox", { name: /model id/i }));
-    await userEvent.type(screen.getByPlaceholderText(/search or reuse model id/i), "gpt-5.5");
+    const modelIdInput = within(dialog).getByRole("combobox", { name: /model id/i });
+    await userEvent.click(modelIdInput);
 
-    expect(screen.queryByRole("option", { name: /claude-sonnet-4-6/i })).not.toBeInTheDocument();
-    await userEvent.click(await screen.findByRole("option", { name: /gpt-5\.5/i }));
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+
+    await userEvent.type(modelIdInput, "claude");
+    await userEvent.click(await screen.findByRole("option", { name: /claude-sonnet-4-6/i }));
 
     expect(within(dialog).getByRole("combobox", { name: /owner/i })).toHaveTextContent("OpenAI");
-    expect(within(dialog).getByLabelText(/description/i)).toHaveValue("Reusable OpenAI model");
-    expect(within(dialog).getByLabelText(/input token/i)).toHaveValue(1.25);
-    expect(within(dialog).getByLabelText(/output token/i)).toHaveValue(10.5);
-    expect(within(dialog).getByLabelText(/cache token/i)).toHaveValue(0.25);
+    expect(within(dialog).getByLabelText(/description/i)).toHaveValue("Reusable Claude model");
+    expect(within(dialog).getByLabelText(/input token/i)).toHaveValue(3);
+    expect(within(dialog).getByLabelText(/output token/i)).toHaveValue(15);
+    expect(within(dialog).getByLabelText(/cache token/i)).toHaveValue(0.3);
   });
 
   test("keeps a model added from the model library after refreshing that tab", async () => {
