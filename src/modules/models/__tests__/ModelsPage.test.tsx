@@ -147,6 +147,63 @@ describe("ModelsPage", () => {
     expect(mocks.apiGet).toHaveBeenCalledWith("/model-configs?scope=library");
   });
 
+  test("formats synced OpenRouter prices without floating point noise or owner marker prefixes", async () => {
+    mocks.apiGet.mockImplementation((path: string) => {
+      if (path === "/model-configs?scope=active" || path === "/model-configs") {
+        return Promise.resolve({ data: [] });
+      }
+      if (path === "/model-configs?scope=library") {
+        return Promise.resolve({
+          data: [
+            {
+              id: "~moonshotai/kimi-latest",
+              owned_by: "moonshotai",
+              description: "OpenRouter alias model",
+              enabled: true,
+              source: "openrouter",
+              pricing: {
+                mode: "token",
+                input_price_per_million: 0.19999999999999998,
+                output_price_per_million: 4.655,
+                cached_price_per_million: 0.1463,
+              },
+            },
+          ],
+        });
+      }
+      if (path === "/model-owner-presets") {
+        return Promise.resolve({
+          data: [{ value: "moonshotai", label: "Moonshot AI", description: "" }],
+        });
+      }
+      if (path === "/model-openrouter-sync") {
+        return Promise.resolve({
+          enabled: false,
+          interval_minutes: 1440,
+          last_seen: 1,
+          last_added: 1,
+          last_updated: 0,
+          last_skipped: 0,
+          running: false,
+        });
+      }
+      if (path.startsWith("/usage/logs")) {
+        return Promise.resolve({ stats: { total_cost: 0 } });
+      }
+      return Promise.resolve({});
+    });
+
+    renderPage();
+
+    await userEvent.click(await screen.findByRole("tab", { name: /model library/i }));
+
+    expect(await screen.findByText("~moonshotai/kimi-latest")).toBeInTheDocument();
+    expect(screen.getByText("$0.2 / $4.655 / $0.1463")).toBeInTheDocument();
+    expect(screen.getAllByText("moonshotai").length).toBeGreaterThan(0);
+    expect(screen.queryByText("~moonshotai")).not.toBeInTheDocument();
+    expect(screen.queryByText(/\$0\.19999999999999998/)).not.toBeInTheDocument();
+  });
+
   test("keeps the owner sidebar constrained while the owner list scrolls internally", async () => {
     ownerPresetItems = Array.from({ length: 32 }, (_, index) => ({
       value: `owner-${index + 1}`,
