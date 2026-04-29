@@ -527,6 +527,7 @@ export function ModelsPage() {
   const [activeTab, setActiveTab] = useState<ModelPageTab>("active");
   const [ownerPresets, setOwnerPresets] = useState<ModelOwnerPreset[]>([]);
   const [ownerFilter, setOwnerFilter] = useState("");
+  const [ownerSearchFilter, setOwnerSearchFilter] = useState("");
   const [ownerForm, setOwnerForm] = useState<OwnerFormState | null>(null);
   const [deleteOwnerTarget, setDeleteOwnerTarget] = useState<ModelOwnerPreset | null>(null);
   const [savingOwnerPresets, setSavingOwnerPresets] = useState(false);
@@ -641,6 +642,7 @@ export function ModelsPage() {
   useEffect(() => {
     setSelectedModelIds(new Set());
     setBulkDeleteTargetIds(null);
+    setOwnerSearchFilter("");
   }, [activeTab]);
 
   const totalStats = useMemo(() => {
@@ -699,6 +701,15 @@ export function ModelsPage() {
     () => buildOwnerPresetDrafts(models, ownerPresets),
     [models, ownerPresets],
   );
+
+  const filteredLibraryOwners = useMemo(() => {
+    const needle = ownerSearchFilter.trim().toLowerCase();
+    if (!needle) return libraryOwners;
+    return libraryOwners.filter((owner) => {
+      const haystack = `${owner.label} ${owner.value} ${owner.description}`.toLowerCase();
+      return haystack.includes(needle);
+    });
+  }, [libraryOwners, ownerSearchFilter]);
 
   const openEditModel = useCallback(
     (modelId: string) => {
@@ -1152,7 +1163,6 @@ export function ModelsPage() {
           <div data-testid="owner-sidebar-card" className="h-full min-h-0 min-w-0">
             <Card
               title={t("models_page.model_owners")}
-              description={t("models_page.model_owners_desc")}
               className="flex h-full min-h-0 flex-col overflow-hidden"
               bodyClassName="flex min-h-0 flex-1 flex-col gap-2"
               actions={
@@ -1168,6 +1178,14 @@ export function ModelsPage() {
                 </Button>
               }
             >
+              <TextInput
+                value={ownerSearchFilter}
+                onChange={(e) => setOwnerSearchFilter(e.target.value)}
+                placeholder={t("models_page.owner_sidebar_search_placeholder")}
+                size="sm"
+                startAdornment={<Search size={14} className="text-slate-400 dark:text-white/35" />}
+              />
+
               <button
                 type="button"
                 onClick={() => setOwnerFilter("")}
@@ -1199,8 +1217,12 @@ export function ModelsPage() {
                   <div className="rounded-xl border border-dashed border-slate-200 px-3 py-6 text-center text-sm text-slate-500 dark:border-neutral-800 dark:text-white/45">
                     {t("models_page.no_owner_presets")}
                   </div>
+                ) : filteredLibraryOwners.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-slate-200 px-3 py-6 text-center text-sm text-slate-500 dark:border-neutral-800 dark:text-white/45">
+                    {t("models_page.no_owner_search_results")}
+                  </div>
                 ) : (
-                  libraryOwners.map((owner) => {
+                  filteredLibraryOwners.map((owner) => {
                     const count = ownerModelCounts.get(owner.value) ?? owner.modelCount ?? 0;
                     const selected = ownerFilter === owner.value;
                     return (
@@ -1262,7 +1284,6 @@ export function ModelsPage() {
           <div data-testid="model-library-card" className="h-full min-h-0 min-w-0">
             <Card
               title={t("models_page.model_library")}
-              description={t("models_page.model_library_desc")}
               className="flex h-full flex-col overflow-hidden"
               bodyClassName="relative flex min-h-0 flex-1 flex-col"
               actions={
