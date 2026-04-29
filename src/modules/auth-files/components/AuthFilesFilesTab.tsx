@@ -1,4 +1,4 @@
-import type { RefObject, ReactNode } from "react";
+import { useMemo, type RefObject, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import {
   BarChart3,
@@ -17,10 +17,12 @@ import { EmptyState } from "@/modules/ui/EmptyState";
 import { TextInput } from "@/modules/ui/Input";
 import { HoverTooltip } from "@/modules/ui/Tooltip";
 import { Select } from "@/modules/ui/Select";
+import { SearchableSelect, type SearchableSelectOption } from "@/modules/ui/SearchableSelect";
 import { Tabs, TabsList, TabsTrigger } from "@/modules/ui/Tabs";
 import { VirtualTable, type VirtualTableColumn } from "@/modules/ui/VirtualTable";
 import { ToggleSwitch } from "@/modules/ui/ToggleSwitch";
 import type {
+  AuthFileModelOwnerGroup,
   FilesViewMode,
   OAuthDialogTab,
   QuotaAutoRefreshMs,
@@ -45,6 +47,10 @@ interface AuthFilesFilesTabProps {
   filter: string;
   setFilter: (value: string) => void;
   filterCounts: { total: number; counts: Record<string, number> };
+  modelOwnerGroupsLoading: boolean;
+  modelOwnerGroups: AuthFileModelOwnerGroup[];
+  selectedModelOwner: string;
+  setSelectedModelOwner: (value: string) => void;
   search: string;
   setSearch: (value: string) => void;
   quotaLastUpdatedText: string;
@@ -113,6 +119,10 @@ export function AuthFilesFilesTab({
   filter,
   setFilter,
   filterCounts,
+  modelOwnerGroupsLoading,
+  modelOwnerGroups,
+  selectedModelOwner,
+  setSelectedModelOwner,
   search,
   setSearch,
   quotaLastUpdatedText,
@@ -168,6 +178,27 @@ export function AuthFilesFilesTab({
   usageData,
 }: AuthFilesFilesTabProps) {
   const { t } = useTranslation();
+  const normalizedFilter = normalizeProviderKey(filter);
+  const canSetModelOwnerGroup = normalizedFilter !== "all";
+  const selectedModelOwnerGroup =
+    selectedModelOwner === ""
+      ? null
+      : (modelOwnerGroups.find((group) => group.value === selectedModelOwner) ?? null);
+  const modelOwnerOptions = useMemo<SearchableSelectOption[]>(
+    () => [
+      {
+        value: "",
+        label: t("auth_files.auth_file_models_option"),
+        searchText: t("auth_files.auth_file_models_option"),
+      },
+      ...modelOwnerGroups.map((group) => ({
+        value: group.value,
+        label: group.label,
+        searchText: `${group.value} ${group.label} ${group.description}`,
+      })),
+    ],
+    [modelOwnerGroups, t],
+  );
 
   return (
     <div className="mt-3 space-y-3">
@@ -228,6 +259,32 @@ export function AuthFilesFilesTab({
                   </TabsList>
                 </Tabs>
               </div>
+
+              {canSetModelOwnerGroup ? (
+                <div className="w-full max-w-[300px] space-y-1.5">
+                  <p className="text-[11px] font-semibold text-slate-600 dark:text-white/65">
+                    {t("auth_files.model_owner_group")}
+                  </p>
+                  <SearchableSelect
+                    value={selectedModelOwner}
+                    onChange={setSelectedModelOwner}
+                    options={modelOwnerOptions}
+                    placeholder={t("auth_files.auth_file_models_option")}
+                    searchPlaceholder={t("auth_files.model_owner_group_search_placeholder")}
+                    aria-label={t("auth_files.model_owner_group")}
+                  />
+                  <p className="truncate text-[11px] text-slate-500 dark:text-white/50">
+                    {modelOwnerGroupsLoading
+                      ? t("common.loading_ellipsis")
+                      : selectedModelOwnerGroup
+                        ? t("auth_files.model_owner_group_source_desc", {
+                            owner: selectedModelOwnerGroup.label,
+                            count: selectedModelOwnerGroup.models.length,
+                          })
+                        : t("auth_files.auth_file_models_source_desc")}
+                  </p>
+                </div>
+              ) : null}
 
               <div className="w-full max-w-[560px] space-y-1.5">
                 <p className="text-[11px] font-semibold text-slate-600 dark:text-white/65">

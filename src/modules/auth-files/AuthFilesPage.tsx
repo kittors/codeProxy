@@ -16,14 +16,17 @@ import { useAuthFilesDetailEditors } from "@/modules/auth-files/hooks/useAuthFil
 import { useAuthFilesFileActions } from "@/modules/auth-files/hooks/useAuthFilesFileActions";
 import { useAuthFilesFilesPresentation } from "@/modules/auth-files/hooks/useAuthFilesFilesPresentation";
 import { useAuthFilesListState } from "@/modules/auth-files/hooks/useAuthFilesListState";
+import { useAuthFilesModelOwnerGroups } from "@/modules/auth-files/hooks/useAuthFilesModelOwnerGroups";
 import { useAuthFilesQuotaState } from "@/modules/auth-files/hooks/useAuthFilesQuotaState";
 import { useAuthFilesGroupOverview } from "@/modules/auth-files/hooks/useAuthFilesGroupOverview";
 import { useAuthFilesOAuthConfig } from "@/modules/auth-files/hooks/useAuthFilesOAuthConfig";
 import { resolveQuotaProvider } from "@/modules/quota/quota-fetch";
 import {
+  normalizeProviderKey,
   normalizeQuotaAutoRefreshMs,
   readAuthFilesUiState,
   resolveAuthFileStats,
+  resolveFileType,
   resolveProviderLabel,
   writeAuthFilesUiState,
   type OAuthDialogTab,
@@ -100,22 +103,25 @@ export function AuthFilesPage() {
     modelsFileType,
     modelsList,
     modelsError,
-    modelOwnerGroupsLoading,
-    modelOwnerGroups,
-    selectedModelOwner,
-    setSelectedModelOwner,
     prefixProxyEditor,
     setPrefixProxyEditor,
     channelEditor,
     setChannelEditor,
     loadModelsForDetail,
-    loadModelOwnerGroups,
     openDetail,
     prefixProxyDirty,
     prefixProxyUpdatedText,
     savePrefixProxy,
     saveChannelEditor,
   } = useAuthFilesDetailEditors(loadAll);
+
+  const {
+    modelOwnerGroupsLoading,
+    modelOwnerGroups,
+    modelOwnerByAuthGroup,
+    setModelOwnerForAuthGroup,
+    loadModelOwnerGroups,
+  } = useAuthFilesModelOwnerGroups();
 
   const {
     uploading,
@@ -162,6 +168,11 @@ export function AuthFilesPage() {
   useEffect(() => {
     writeAuthFilesUiState({ tab, filter, search, page });
   }, [filter, page, search, tab]);
+
+  useEffect(() => {
+    if (tab !== "files") return;
+    void loadModelOwnerGroups();
+  }, [loadModelOwnerGroups, tab]);
 
   const {
     providerOptions,
@@ -247,6 +258,15 @@ export function AuthFilesPage() {
   });
 
   const filterChips = useMemo(() => ["all", ...providerOptions], [providerOptions]);
+  const normalizedFilter = useMemo(() => normalizeProviderKey(filter), [filter]);
+  const selectedModelOwner =
+    normalizedFilter === "all" ? "" : (modelOwnerByAuthGroup[normalizedFilter] ?? "");
+  const detailModelOwnerValue = detailFile
+    ? (modelOwnerByAuthGroup[normalizeProviderKey(resolveFileType(detailFile))] ?? "")
+    : "";
+  const detailModelOwnerGroup = detailModelOwnerValue
+    ? (modelOwnerGroups.find((group) => group.value === detailModelOwnerValue) ?? null)
+    : null;
   const {
     translateQuotaText,
     formatPlanTypeLabel,
@@ -295,6 +315,10 @@ export function AuthFilesPage() {
             filter={filter}
             setFilter={setFilter}
             filterCounts={filterCounts}
+            modelOwnerGroupsLoading={modelOwnerGroupsLoading}
+            modelOwnerGroups={modelOwnerGroups}
+            selectedModelOwner={selectedModelOwner}
+            setSelectedModelOwner={(owner) => setModelOwnerForAuthGroup(filter, owner)}
             search={search}
             setSearch={setSearch}
             quotaLastUpdatedText={quotaLastUpdatedText}
@@ -401,9 +425,8 @@ export function AuthFilesPage() {
         modelsList={modelsList}
         modelsFileType={modelsFileType}
         modelOwnerGroupsLoading={modelOwnerGroupsLoading}
-        modelOwnerGroups={modelOwnerGroups}
-        selectedModelOwner={selectedModelOwner}
-        setSelectedModelOwner={setSelectedModelOwner}
+        mappedModelOwnerGroup={detailModelOwnerGroup}
+        mappedModelOwnerValue={detailModelOwnerValue}
         excluded={excluded}
         prefixProxyEditor={prefixProxyEditor}
         setPrefixProxyEditor={setPrefixProxyEditor}

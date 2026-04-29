@@ -526,7 +526,7 @@ describe("AuthFilesPage files table", () => {
     expect(uploadedJson.subscription_expires_at).toBe(new Date("2027-01-03T04:05").toISOString());
   });
 
-  test("can show models from a selected model owner group in the detail model tab", async () => {
+  test("sets model owner group for the selected auth-file group from the files toolbar", async () => {
     mocks.list.mockImplementation(async () => ({
       files: [
         {
@@ -554,17 +554,26 @@ describe("AuthFilesPage files table", () => {
     );
 
     expect(await screen.findByText("Codex Main")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "View" }));
-    fireEvent.click(await screen.findByRole("tab", { name: "Models" }));
-
-    expect(await screen.findByText("live-only")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: /codex/i }));
 
     const ownerSelect = await screen.findByRole("combobox", { name: "Model owner group" });
     fireEvent.click(ownerSelect);
     fireEvent.click(await screen.findByRole("option", { name: "OpenAI" }));
 
-    expect(await screen.findByText("gpt-4.1")).toBeInTheDocument();
-    expect(screen.queryByText("live-only")).not.toBeInTheDocument();
+    expect(ownerSelect).toHaveTextContent("OpenAI");
+    expect(window.localStorage.getItem("authFilesPage.modelOwnerGroupMap.v1")).toBe(
+      JSON.stringify({ codex: "openai" }),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "View" }));
+    const dialog = await screen.findByRole("dialog", { name: "View: codex.json" });
+    fireEvent.click(within(dialog).getByRole("tab", { name: "Models" }));
+
+    expect(
+      within(dialog).queryByRole("combobox", { name: "Model owner group" }),
+    ).not.toBeInTheDocument();
+    expect(await within(dialog).findByText("gpt-4.1")).toBeInTheDocument();
+    expect(within(dialog).queryByText("live-only")).not.toBeInTheDocument();
     expect(mocks.getModelConfigs).toHaveBeenCalledWith("library");
     expect(mocks.getModelOwnerPresets).toHaveBeenCalledTimes(1);
   });
