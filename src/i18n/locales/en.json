@@ -2649,6 +2649,7 @@
     "no_model_data": "No model data",
     "config_desc": "All model fields and prices are persisted by the management API.",
     "model_id": "Model ID",
+    "model_id_reuse_placeholder": "Search or reuse model ID…",
     "owner": "Owner",
     "owner_placeholder": "Choose or add owner",
     "owner_search_placeholder": "Search or add owner…",

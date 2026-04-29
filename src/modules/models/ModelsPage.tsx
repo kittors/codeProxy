@@ -542,6 +542,7 @@ export function ModelsPage() {
   const [openRouterSyncSaving, setOpenRouterSyncSaving] = useState(false);
   const [openRouterSyncRunning, setOpenRouterSyncRunning] = useState(false);
   const [openRouterSyncError, setOpenRouterSyncError] = useState<string | null>(null);
+  const [modelIdSuggestionsOpen, setModelIdSuggestionsOpen] = useState(false);
   const [syncIntervalHours, setSyncIntervalHours] = useState(
     syncIntervalHoursValue(defaultOpenRouterSyncState.intervalMinutes),
   );
@@ -711,6 +712,28 @@ export function ModelsPage() {
     });
   }, [libraryOwners, ownerSearchFilter]);
 
+  const reusableModelCandidates = useMemo(() => {
+    if (!form || form.originalId || activeTab !== "library") return [];
+    const ownerNeedle = normalizeOwnerValue(form.ownedBy);
+    const modelNeedle = form.id.trim().toLowerCase();
+    const seen = new Set<string>();
+    return models
+      .filter((model) => {
+        if (seen.has(model.id)) return false;
+        seen.add(model.id);
+        if (ownerNeedle && normalizeOwnerValue(model.owned_by) !== ownerNeedle) return false;
+        if (!modelNeedle) return true;
+        const haystack = `${model.id} ${model.owned_by} ${model.description}`.toLowerCase();
+        return haystack.includes(modelNeedle);
+      })
+      .slice(0, 8);
+  }, [activeTab, form, models]);
+
+  const showReusableModelCandidates =
+    modelIdSuggestionsOpen &&
+    reusableModelCandidates.length > 0 &&
+    Boolean(form && !form.originalId);
+
   const openEditModel = useCallback(
     (modelId: string) => {
       const model = models.find((entry) => entry.id === modelId);
@@ -721,10 +744,31 @@ export function ModelsPage() {
 
   const openAddModel = useCallback((ownedBy = "") => {
     setForm({ ...emptyForm, ownedBy });
+    setModelIdSuggestionsOpen(false);
   }, []);
 
   const updateForm = useCallback((patch: Partial<ModelFormState>) => {
     setForm((current) => (current ? { ...current, ...patch } : current));
+  }, []);
+
+  const applyReusableModel = useCallback((model: ModelItem) => {
+    const template = toFormState(model);
+    setForm((current) =>
+      current
+        ? {
+            ...current,
+            id: template.id,
+            ownedBy: current.ownedBy || template.ownedBy,
+            description: template.description,
+            mode: template.mode,
+            inputPrice: template.inputPrice,
+            outputPrice: template.outputPrice,
+            cachedPrice: template.cachedPrice,
+            pricePerCall: template.pricePerCall,
+          }
+        : current,
+    );
+    setModelIdSuggestionsOpen(false);
   }, []);
 
   const handleSave = useCallback(async () => {
@@ -1502,7 +1546,10 @@ export function ModelsPage() {
 
       <Modal
         open={form !== null}
-        onClose={() => setForm(null)}
+        onClose={() => {
+          setForm(null);
+          setModelIdSuggestionsOpen(false);
+        }}
         title={form?.originalId ? t("models_page.edit_model") : t("models_page.add_model")}
         description={t("models_page.config_desc")}
         footer={
@@ -1526,12 +1573,70 @@ export function ModelsPage() {
                 >
                   {t("models_page.model_id")}
                 </label>
-                <TextInput
-                  id="model-config-id"
-                  value={form.id}
-                  onChange={(e) => updateForm({ id: e.target.value })}
-                  placeholder="gpt-4.1"
-                />
+                <div className="relative">
+                  <TextInput
+                    id="model-config-id"
+                    role={!form.originalId && activeTab === "library" ? "combobox" : undefined}
+                    aria-label={t("models_page.model_id")}
+                    aria-autocomplete={
+                      !form.originalId && activeTab === "library" ? "list" : undefined
+                    }
+                    aria-controls={
+                      showReusableModelCandidates ? "model-config-id-reuse-options" : undefined
+                    }
+                    aria-expanded={
+                      !form.originalId && activeTab === "library"
+                        ? showReusableModelCandidates
+                        : undefined
+                    }
+                    value={form.id}
+                    onChange={(e) => {
+                      updateForm({ id: e.target.value });
+                      setModelIdSuggestionsOpen(true);
+                    }}
+                    onFocus={() => setModelIdSuggestionsOpen(true)}
+                    onBlur={() => {
+                      window.setTimeout(() => setModelIdSuggestionsOpen(false), 120);
+                    }}
+                    placeholder={
+                      !form.originalId && activeTab === "library"
+                        ? t("models_page.model_id_reuse_placeholder")
+                        : "gpt-4.1"
+                    }
+                    autoComplete="off"
+                  />
+                  {showReusableModelCandidates ? (
+                    <div
+                      id="model-config-id-reuse-options"
+                      role="listbox"
+                      className="absolute left-0 right-0 top-full z-30 mt-2 max-h-64 overflow-y-auto rounded-2xl bg-white p-1 shadow-[0_8px_28px_rgb(0_0_0_/_0.16)] dark:bg-[#27272A] dark:shadow-[0_14px_36px_rgb(0_0_0_/_0.38)]"
+                    >
+                      {reusableModelCandidates.map((model) => (
+                        <button
+                          key={model.id}
+                          type="button"
+                          role="option"
+                          aria-selected={form.id === model.id}
+                          onMouseDown={(event) => event.preventDefault()}
+                          onClick={() => applyReusableModel(model)}
+                          className="flex w-full min-w-0 items-center justify-between gap-3 rounded-xl px-3 py-2 text-left text-sm transition-colors hover:bg-[#F4F4F5] dark:hover:bg-white/[0.06]"
+                        >
+                          <span className="min-w-0">
+                            <span className="block truncate font-medium text-[#18181B] dark:text-white">
+                              {model.id}
+                            </span>
+                            <span className="block truncate text-xs text-[#71717A] dark:text-[#A1A1AA]">
+                              {model.description || model.owned_by}
+                            </span>
+                          </span>
+                          <span className="shrink-0 text-xs font-medium text-[#71717A] dark:text-[#A1A1AA]">
+                            {formatPrice(model, t("models_page.not_priced"))}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
               </div>
               <div>
                 <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">

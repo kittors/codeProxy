@@ -2948,6 +2948,7 @@
     "no_model_data": "暂无模型数据",
     "config_desc": "模型字段和价格均通过管理 API 持久化。",
     "model_id": "模型 ID",
+    "model_id_reuse_placeholder": "搜索或复用模型 ID…",
     "owner": "归属",
     "owner_placeholder": "选择或新增归属",
     "owner_search_placeholder": "搜索或新增归属…",
