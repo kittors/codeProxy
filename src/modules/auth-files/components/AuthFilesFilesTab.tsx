@@ -1,4 +1,4 @@
-import { useMemo, type RefObject, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type RefObject, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import {
   BarChart3,
@@ -8,6 +8,7 @@ import {
   Plus,
   RefreshCw,
   Search,
+  Settings2,
   Upload,
 } from "lucide-react";
 import type { AuthFileItem } from "@/lib/http/types";
@@ -15,6 +16,7 @@ import { Button } from "@/modules/ui/Button";
 import { Card } from "@/modules/ui/Card";
 import { EmptyState } from "@/modules/ui/EmptyState";
 import { TextInput } from "@/modules/ui/Input";
+import { Modal } from "@/modules/ui/Modal";
 import { HoverTooltip } from "@/modules/ui/Tooltip";
 import { Select } from "@/modules/ui/Select";
 import { SearchableSelect, type SearchableSelectOption } from "@/modules/ui/SearchableSelect";
@@ -178,12 +180,14 @@ export function AuthFilesFilesTab({
   usageData,
 }: AuthFilesFilesTabProps) {
   const { t } = useTranslation();
+  const [modelOwnerDialogOpen, setModelOwnerDialogOpen] = useState(false);
+  const [draftModelOwner, setDraftModelOwner] = useState(selectedModelOwner);
   const normalizedFilter = normalizeProviderKey(filter);
   const canSetModelOwnerGroup = normalizedFilter !== "all";
-  const selectedModelOwnerGroup =
-    selectedModelOwner === ""
+  const draftModelOwnerGroup =
+    draftModelOwner === ""
       ? null
-      : (modelOwnerGroups.find((group) => group.value === selectedModelOwner) ?? null);
+      : (modelOwnerGroups.find((group) => group.value === draftModelOwner) ?? null);
   const modelOwnerOptions = useMemo<SearchableSelectOption[]>(
     () => [
       {
@@ -199,6 +203,12 @@ export function AuthFilesFilesTab({
     ],
     [modelOwnerGroups, t],
   );
+
+  useEffect(() => {
+    if (!modelOwnerDialogOpen) {
+      setDraftModelOwner(selectedModelOwner);
+    }
+  }, [modelOwnerDialogOpen, selectedModelOwner]);
 
   return (
     <div className="mt-3 space-y-3">
@@ -261,28 +271,27 @@ export function AuthFilesFilesTab({
               </div>
 
               {canSetModelOwnerGroup ? (
-                <div className="w-full max-w-[300px] space-y-1.5">
-                  <p className="text-[11px] font-semibold text-slate-600 dark:text-white/65">
-                    {t("auth_files.model_owner_group")}
-                  </p>
-                  <SearchableSelect
-                    value={selectedModelOwner}
-                    onChange={setSelectedModelOwner}
-                    options={modelOwnerOptions}
-                    placeholder={t("auth_files.auth_file_models_option")}
-                    searchPlaceholder={t("auth_files.model_owner_group_search_placeholder")}
-                    aria-label={t("auth_files.model_owner_group")}
-                  />
-                  <p className="truncate text-[11px] text-slate-500 dark:text-white/50">
-                    {modelOwnerGroupsLoading
-                      ? t("common.loading_ellipsis")
-                      : selectedModelOwnerGroup
-                        ? t("auth_files.model_owner_group_source_desc", {
-                            owner: selectedModelOwnerGroup.label,
-                            count: selectedModelOwnerGroup.models.length,
-                          })
-                        : t("auth_files.auth_file_models_source_desc")}
-                  </p>
+                <div className="flex items-end">
+                  <HoverTooltip content={t("auth_files.model_owner_group")} placement="top">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className="relative !h-9 !w-9 px-0"
+                      onClick={() => {
+                        setDraftModelOwner(selectedModelOwner);
+                        setModelOwnerDialogOpen(true);
+                      }}
+                      aria-label={t("auth_files.model_owner_group")}
+                    >
+                      <Settings2 size={15} />
+                      {selectedModelOwner ? (
+                        <span
+                          aria-hidden="true"
+                          className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-neutral-900"
+                        />
+                      ) : null}
+                    </Button>
+                  </HoverTooltip>
                 </div>
               ) : null}
 
@@ -734,6 +743,115 @@ export function AuthFilesFilesTab({
           {t("auth_files.usage_stats_warning")}
         </p>
       )}
+
+      <Modal
+        open={modelOwnerDialogOpen}
+        title={t("auth_files.model_owner_group")}
+        description={canSetModelOwnerGroup ? normalizedFilter : undefined}
+        maxWidth="max-w-3xl"
+        bodyHeightClassName="max-h-[68vh]"
+        onClose={() => setModelOwnerDialogOpen(false)}
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setModelOwnerDialogOpen(false)}>
+              {t("common.cancel")}
+            </Button>
+            <Button
+              variant="primary"
+              onClick={() => {
+                setSelectedModelOwner(draftModelOwner);
+                setModelOwnerDialogOpen(false);
+              }}
+            >
+              {t("common.save")}
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <div className="grid gap-3 sm:grid-cols-[minmax(0,18rem)_minmax(0,1fr)]">
+            <div className="min-w-0 space-y-1.5">
+              <label className="block text-sm font-medium text-slate-700 dark:text-white/80">
+                {t("auth_files.model_owner_group")}
+              </label>
+              <SearchableSelect
+                value={draftModelOwner}
+                onChange={setDraftModelOwner}
+                options={modelOwnerOptions}
+                placeholder={t("auth_files.auth_file_models_option")}
+                searchPlaceholder={t("auth_files.model_owner_group_search_placeholder")}
+                aria-label={t("auth_files.model_owner_group")}
+              />
+            </div>
+
+            <div className="flex min-w-0 items-center rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-3 dark:border-neutral-800 dark:bg-white/[0.04]">
+              <div className="min-w-0">
+                <p className="text-[11px] font-semibold uppercase text-slate-400 dark:text-white/35">
+                  {t("auth_files.type_filter")}
+                </p>
+                <p className="mt-1 truncate font-mono text-sm font-semibold text-slate-900 dark:text-white">
+                  {normalizedFilter}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                {t("auth_files.detail_tab_models")}
+              </p>
+              {draftModelOwnerGroup ? (
+                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600 dark:bg-white/10 dark:text-white/65">
+                  {t("auth_files.count_items", { count: draftModelOwnerGroup.models.length })}
+                </span>
+              ) : null}
+            </div>
+
+            {modelOwnerGroupsLoading ? (
+              <div className="text-sm text-slate-600 dark:text-white/65">
+                {t("common.loading_ellipsis")}
+              </div>
+            ) : draftModelOwnerGroup ? (
+              draftModelOwnerGroup.models.length === 0 ? (
+                <EmptyState
+                  title={t("common.no_model_data")}
+                  description={t("auth_files.no_owner_group_models")}
+                />
+              ) : (
+                <div className="max-h-[340px] space-y-2 overflow-y-auto pr-1">
+                  {draftModelOwnerGroup.models.map((model) => {
+                    const modelMeta = [
+                      model.display_name ? `display_name: ${model.display_name}` : "",
+                      model.owned_by ? `owned_by: ${model.owned_by}` : "",
+                    ].filter(Boolean);
+                    return (
+                      <div
+                        key={model.id}
+                        className="rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2 dark:border-neutral-800 dark:bg-white/[0.03]"
+                      >
+                        <p className="truncate font-mono text-xs font-semibold text-slate-900 dark:text-white">
+                          {model.id}
+                        </p>
+                        {modelMeta.length > 0 ? (
+                          <p className="mt-1 truncate text-xs text-slate-600 dark:text-white/55">
+                            {modelMeta.join(" · ")}
+                          </p>
+                        ) : null}
+                      </div>
+                    );
+                  })}
+                </div>
+              )
+            ) : (
+              <EmptyState
+                title={t("common.no_model_data")}
+                description={t("auth_files.auth_file_models_option")}
+              />
+            )}
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

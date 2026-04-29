@@ -526,7 +526,7 @@ describe("AuthFilesPage files table", () => {
     expect(uploadedJson.subscription_expires_at).toBe(new Date("2027-01-03T04:05").toISOString());
   });
 
-  test("sets model owner group for the selected auth-file group from the files toolbar", async () => {
+  test("sets model owner group from an icon modal after confirmation", async () => {
     mocks.list.mockImplementation(async () => ({
       files: [
         {
@@ -556,11 +556,30 @@ describe("AuthFilesPage files table", () => {
     expect(await screen.findByText("Codex Main")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("tab", { name: /codex/i }));
 
-    const ownerSelect = await screen.findByRole("combobox", { name: "Model owner group" });
+    expect(
+      screen.queryByText("No owner group selected; each auth file uses live model query."),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("combobox", { name: "Model owner group" })).not.toBeInTheDocument();
+
+    const settingsButton = screen.getByRole("button", { name: "Model owner group" });
+    fireEvent.mouseEnter(settingsButton);
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("Model owner group");
+    fireEvent.mouseLeave(settingsButton);
+
+    fireEvent.click(settingsButton);
+    const settingsDialog = await screen.findByRole("dialog", { name: "Model owner group" });
+    const ownerSelect = within(settingsDialog).getByRole("combobox", {
+      name: "Model owner group",
+    });
     fireEvent.click(ownerSelect);
     fireEvent.click(await screen.findByRole("option", { name: "OpenAI" }));
 
     expect(ownerSelect).toHaveTextContent("OpenAI");
+    expect(await within(settingsDialog).findByText("gpt-4.1")).toBeInTheDocument();
+    expect(within(settingsDialog).queryByText("claude-sonnet-4-5")).not.toBeInTheDocument();
+    expect(window.localStorage.getItem("authFilesPage.modelOwnerGroupMap.v1")).toBeNull();
+
+    fireEvent.click(within(settingsDialog).getByRole("button", { name: "Save" }));
     expect(window.localStorage.getItem("authFilesPage.modelOwnerGroupMap.v1")).toBe(
       JSON.stringify({ codex: "openai" }),
     );
