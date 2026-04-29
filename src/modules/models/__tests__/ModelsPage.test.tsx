@@ -42,6 +42,7 @@ describe("ModelsPage", () => {
 
   beforeEach(async () => {
     await i18n.changeLanguage("en");
+    window.localStorage.clear();
     ownerPresetItems = [
       { value: "openai", label: "OpenAI", description: "OpenAI official models" },
       { value: "anthropic", label: "Anthropic", description: "Claude models" },
@@ -86,6 +87,18 @@ describe("ModelsPage", () => {
           ],
         });
       }
+      if (path === "/auth-files") {
+        return Promise.resolve({ files: [] });
+      }
+      if (
+        path === "/gemini-api-key" ||
+        path === "/claude-api-key" ||
+        path === "/codex-api-key" ||
+        path === "/vertex-api-key" ||
+        path === "/openai-compatibility"
+      ) {
+        return Promise.resolve([]);
+      }
       if (path === "/model-owner-presets") {
         return Promise.resolve({
           data: ownerPresetItems,
@@ -128,6 +141,139 @@ describe("ModelsPage", () => {
     expect(screen.getByText("$0.04 / call")).toBeInTheDocument();
     expect(mocks.apiGet).toHaveBeenCalledWith("/model-configs?scope=active");
     expect(screen.queryByText("seed-only-model")).not.toBeInTheDocument();
+  });
+
+  test("filters current models by auth-file model owner group mapping", async () => {
+    window.localStorage.setItem(
+      "authFilesPage.modelOwnerGroupMap.v1",
+      JSON.stringify({ claude: "anthropic" }),
+    );
+    mocks.apiGet.mockImplementation((path: string) => {
+      if (path === "/model-configs?scope=active" || path === "/model-configs") {
+        return Promise.resolve({
+          data: [
+            {
+              id: "claude-3-7-sonnet-latest",
+              owned_by: "anthropic",
+              description: "Mapped Claude model",
+              enabled: true,
+              source: "seed",
+              pricing: { mode: "token" },
+            },
+            {
+              id: "gpt-should-not-leak",
+              owned_by: "openai",
+              description: "Unmapped OpenAI model",
+              enabled: true,
+              source: "seed",
+              pricing: { mode: "token" },
+            },
+          ],
+        });
+      }
+      if (path === "/model-configs?scope=library") {
+        return Promise.resolve({
+          data: [
+            {
+              id: "claude-3-7-sonnet-latest",
+              owned_by: "anthropic",
+              description: "Mapped Claude model",
+              enabled: true,
+              source: "seed",
+              pricing: { mode: "token" },
+            },
+            {
+              id: "gpt-should-not-leak",
+              owned_by: "openai",
+              description: "Unmapped OpenAI model",
+              enabled: true,
+              source: "seed",
+              pricing: { mode: "token" },
+            },
+          ],
+        });
+      }
+      if (path === "/auth-files") {
+        return Promise.resolve({
+          files: [{ name: "claude-account.json", type: "claude", disabled: false }],
+        });
+      }
+      if (
+        path === "/gemini-api-key" ||
+        path === "/claude-api-key" ||
+        path === "/codex-api-key" ||
+        path === "/vertex-api-key" ||
+        path === "/openai-compatibility"
+      ) {
+        return Promise.resolve([]);
+      }
+      if (path === "/model-owner-presets") {
+        return Promise.resolve({ data: ownerPresetItems });
+      }
+      if (path.startsWith("/usage/logs")) {
+        return Promise.resolve({ stats: { total_cost: 0 } });
+      }
+      return Promise.resolve({});
+    });
+
+    renderPage();
+
+    expect(await screen.findByText("claude-3-7-sonnet-latest")).toBeInTheDocument();
+    expect(screen.queryByText("gpt-should-not-leak")).not.toBeInTheDocument();
+  });
+
+  test("adds configured ai-provider models missing from active model configs", async () => {
+    mocks.apiGet.mockImplementation((path: string) => {
+      if (path === "/model-configs?scope=active" || path === "/model-configs") {
+        return Promise.resolve({
+          data: [
+            {
+              id: "gpt-should-not-leak",
+              owned_by: "openai",
+              description: "Unconfigured registry model",
+              enabled: true,
+              source: "seed",
+              pricing: { mode: "token" },
+            },
+          ],
+        });
+      }
+      if (path === "/model-configs?scope=library") {
+        return Promise.resolve({ data: [] });
+      }
+      if (path === "/auth-files") {
+        return Promise.resolve({ files: [] });
+      }
+      if (path === "/claude-api-key") {
+        return Promise.resolve([
+          {
+            "api-key": "sk-claude",
+            name: "Claude Team",
+            models: [{ name: "claude-raw-upstream", alias: "claude-main" }],
+          },
+        ]);
+      }
+      if (
+        path === "/gemini-api-key" ||
+        path === "/codex-api-key" ||
+        path === "/vertex-api-key" ||
+        path === "/openai-compatibility"
+      ) {
+        return Promise.resolve([]);
+      }
+      if (path === "/model-owner-presets") {
+        return Promise.resolve({ data: ownerPresetItems });
+      }
+      if (path.startsWith("/usage/logs")) {
+        return Promise.resolve({ stats: { total_cost: 0 } });
+      }
+      return Promise.resolve({});
+    });
+
+    renderPage();
+
+    expect(await screen.findByText("claude-main")).toBeInTheDocument();
+    expect(screen.queryByText("gpt-should-not-leak")).not.toBeInTheDocument();
   });
 
   test("loads the full model library only after switching to the library tab", async () => {

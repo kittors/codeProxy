@@ -21,6 +21,7 @@ import { Card } from "@/modules/ui/Card";
 import { TextInput } from "@/modules/ui/Input";
 import { useToast } from "@/modules/ui/ToastProvider";
 import { UpdateDetailsCard } from "@/modules/update/UpdateDetailsCard";
+import { loadConfiguredModelAvailability } from "@/modules/models/modelAvailability";
 
 // Vendor SVG icons
 import iconClaude from "@/assets/icons/claude.svg";
@@ -354,6 +355,11 @@ export function SystemPage({
     setModelsLoading(true);
     setModelsError(null);
     try {
+      const availability = await loadConfiguredModelAvailability();
+      if (availability.scoped) {
+        setModels(availability.items.map((item) => item.id));
+        return;
+      }
       const payload = await apiClient.get<V1ModelsResponse>("/models");
       setModels(extractModelIds(payload));
     } catch (err: unknown) {

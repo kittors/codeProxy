@@ -28,6 +28,12 @@ import iconKiro from "@/assets/icons/kiro.svg";
 import iconMinimax from "@/assets/icons/minimax.svg";
 import iconOpenai from "@/assets/icons/openai.svg";
 import iconQwen from "@/assets/icons/qwen.svg";
+import {
+  filterByConfiguredModelAvailability,
+  loadConfiguredModelAvailability,
+  type ConfiguredModelAvailability,
+  type ModelAvailabilityItem,
+} from "@/modules/models/modelAvailability";
 import iconVertex from "@/assets/icons/vertex.svg";
 
 type PricingMode = "token" | "call";
@@ -285,6 +291,33 @@ async function fetchModelConfigs(scope: ModelScope): Promise<ModelItem[]> {
 
 async function fetchOwnerPresets(): Promise<ModelOwnerPreset[]> {
   return normalizeOwnerPresetResponse(await apiClient.get("/model-owner-presets"));
+}
+
+function availabilityItemToModel(item: ModelAvailabilityItem): ModelItem {
+  return {
+    id: item.id,
+    owned_by: item.owned_by ?? "",
+    description: item.description ?? "",
+    enabled: true,
+    source: item.source ?? "configured",
+    pricing: { ...emptyPricing },
+  };
+}
+
+function mergeConfiguredModelAvailability(
+  data: ModelItem[],
+  availability: ConfiguredModelAvailability | null,
+): ModelItem[] {
+  if (!availability?.scoped) return data;
+  const visible = filterByConfiguredModelAvailability(data, availability);
+  const seen = new Set(visible.map((model) => model.id.toLowerCase()));
+  for (const item of availability.items) {
+    const key = item.id.toLowerCase();
+    if (seen.has(key)) continue;
+    visible.push(availabilityItemToModel(item));
+    seen.add(key);
+  }
+  return visible.sort((a, b) => a.id.localeCompare(b.id));
 }
 
 function toFormState(model: ModelItem): ModelFormState {
@@ -553,15 +586,17 @@ export function ModelsPage() {
   const loadModels = useCallback(async () => {
     setLoading(true);
     try {
-      const [data, presets] = await Promise.all([
+      const [data, presets, availability] = await Promise.all([
         fetchModelConfigs(modelScope),
         fetchOwnerPresets(),
+        modelScope === "active" ? loadConfiguredModelAvailability() : Promise.resolve(null),
       ]);
-      setModels(data);
+      const visibleData = mergeConfiguredModelAvailability(data, availability);
+      setModels(visibleData);
       setOwnerPresets(presets);
       setOwnerFilter((current) => {
         if (!current) return "";
-        return buildOwnerPresetDrafts(data, presets).some((owner) => owner.value === current)
+        return buildOwnerPresetDrafts(visibleData, presets).some((owner) => owner.value === current)
           ? current
           : "";
       });
