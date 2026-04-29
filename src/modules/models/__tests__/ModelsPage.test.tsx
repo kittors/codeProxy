@@ -144,7 +144,25 @@ describe("ModelsPage", () => {
     expect(await screen.findByTestId("owner-library-layout")).toBeInTheDocument();
     expect(screen.getByTestId("owner-sidebar-card")).toHaveTextContent(/model owners/i);
     expect(screen.getByTestId("model-library-card")).toHaveTextContent(/seed-only-model/i);
+    expect(
+      screen.queryByText(/pick an owner to filter the library, or maintain owner presets/i),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/browse seeded database model definitions/i)).not.toBeInTheDocument();
     expect(mocks.apiGet).toHaveBeenCalledWith("/model-configs?scope=library");
+  });
+
+  test("filters owner presets from the owner sidebar search", async () => {
+    renderPage();
+
+    expect(await screen.findByText("gpt-image-2")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("tab", { name: /model library/i }));
+
+    const ownerSidebar = await screen.findByTestId("owner-sidebar-card");
+    await userEvent.type(within(ownerSidebar).getByPlaceholderText(/search owners/i), "acme");
+
+    expect(within(ownerSidebar).getByText("Acme AI")).toBeInTheDocument();
+    expect(within(ownerSidebar).queryByText("OpenAI")).not.toBeInTheDocument();
+    expect(within(ownerSidebar).queryByText("Anthropic")).not.toBeInTheDocument();
   });
 
   test("formats synced OpenRouter prices without floating point noise or provider prefixes", async () => {
