@@ -296,6 +296,83 @@ describe("ModelsPage", () => {
     });
   });
 
+  test("keeps a model added from the model library after refreshing that tab", async () => {
+    const libraryModels = [
+      {
+        id: "seed-only-model",
+        owned_by: "openai",
+        description: "Seeded model library entry",
+        enabled: true,
+        source: "seed",
+        pricing: {
+          mode: "token",
+          input_price_per_million: 1,
+          output_price_per_million: 3,
+        },
+      },
+    ];
+    mocks.apiGet.mockImplementation((path: string) => {
+      if (path === "/model-configs?scope=active" || path === "/model-configs") {
+        return Promise.resolve({ data: [] });
+      }
+      if (path === "/model-configs?scope=library") {
+        return Promise.resolve({ data: libraryModels });
+      }
+      if (path === "/model-owner-presets") {
+        return Promise.resolve({ data: ownerPresetItems });
+      }
+      if (path.startsWith("/usage/logs")) {
+        return Promise.resolve({ stats: { total_cost: 0 } });
+      }
+      return Promise.resolve({});
+    });
+    mocks.apiPost.mockImplementation((path: string, payload: Record<string, unknown>) => {
+      if (path === "/model-configs?scope=library") {
+        libraryModels.push({
+          ...(payload as (typeof libraryModels)[number]),
+          source: "seed",
+        });
+      }
+      return Promise.resolve({ status: "ok" });
+    });
+
+    renderPage();
+
+    await userEvent.click(await screen.findByRole("tab", { name: /model library/i }));
+    const libraryCard = await screen.findByTestId("model-library-card");
+
+    await userEvent.click(within(libraryCard).getByRole("button", { name: /add model/i }));
+    const dialog = await screen.findByRole("dialog", { name: /add model/i });
+    await userEvent.type(within(dialog).getByLabelText(/model id/i), "custom-library-model");
+    await userEvent.click(within(dialog).getByRole("combobox", { name: /owner/i }));
+    await userEvent.click(await screen.findByRole("option", { name: "Anthropic" }));
+    await userEvent.click(within(dialog).getByRole("button", { name: /^save$/i }));
+
+    await waitFor(() => {
+      expect(mocks.apiPost).toHaveBeenCalledWith(
+        "/model-configs?scope=library",
+        expect.objectContaining({
+          id: "custom-library-model",
+          owned_by: "anthropic",
+        }),
+      );
+    });
+
+    const refreshButton = within(libraryCard).getByRole("button", { name: /refresh/i });
+    const libraryFetchesBeforeRefresh = mocks.apiGet.mock.calls.filter(
+      ([path]) => path === "/model-configs?scope=library",
+    ).length;
+    await userEvent.click(refreshButton);
+    await waitFor(() => {
+      expect(
+        mocks.apiGet.mock.calls.filter(([path]) => path === "/model-configs?scope=library").length,
+      ).toBeGreaterThan(libraryFetchesBeforeRefresh);
+    });
+    await waitFor(() => expect(refreshButton).not.toBeDisabled());
+
+    expect(screen.getByText("custom-library-model")).toBeInTheDocument();
+  });
+
   test("maintains owner presets from the model library with an add-owner dialog", async () => {
     renderPage();
 

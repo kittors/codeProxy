@@ -303,7 +303,7 @@ function buildModelPayload(form: ModelFormState) {
   };
 }
 
-function payloadToModel(payload: ReturnType<typeof buildModelPayload>): ModelItem {
+function payloadToModel(payload: ReturnType<typeof buildModelPayload>, source: string): ModelItem {
   const pricing =
     payload.pricing.mode === "call"
       ? {
@@ -324,24 +324,33 @@ function payloadToModel(payload: ReturnType<typeof buildModelPayload>): ModelIte
     owned_by: payload.owned_by,
     description: payload.description,
     enabled: payload.enabled,
-    source: "user",
+    source,
     pricing,
   };
 }
 
-async function saveModelConfig(form: ModelFormState) {
+function modelConfigCollectionPath(scope: ModelScope): string {
+  return scope === "library" ? "/model-configs?scope=library" : "/model-configs";
+}
+
+function modelConfigItemPath(modelId: string, scope: ModelScope): string {
+  const suffix = scope === "library" ? "?scope=library" : "";
+  return `/model-configs/${encodeURIComponent(modelId)}${suffix}`;
+}
+
+async function saveModelConfig(form: ModelFormState, scope: ModelScope) {
   const payload = buildModelPayload(form);
   if (!payload.id) {
     throw new Error("Model ID is required");
   }
 
   if (form.originalId) {
-    await apiClient.put(`/model-configs/${encodeURIComponent(form.originalId)}`, payload);
+    await apiClient.put(modelConfigItemPath(form.originalId, scope), payload);
   } else {
-    await apiClient.post("/model-configs", payload);
+    await apiClient.post(modelConfigCollectionPath(scope), payload);
   }
 
-  return payloadToModel(payload);
+  return payloadToModel(payload, scope === "library" ? "seed" : "user");
 }
 
 function hasPricing(model: ModelItem): boolean {
@@ -563,7 +572,7 @@ export function ModelsPage() {
     if (!form) return;
     setSaving(true);
     try {
-      const saved = await saveModelConfig(form);
+      const saved = await saveModelConfig(form, modelScope);
       setModels((prev) => {
         const withoutOriginal = prev.filter((model) => model.id !== (form.originalId ?? saved.id));
         return [...withoutOriginal, saved].sort((a, b) => a.id.localeCompare(b.id));
@@ -579,7 +588,7 @@ export function ModelsPage() {
     } finally {
       setSaving(false);
     }
-  }, [form, notify, t]);
+  }, [form, modelScope, notify, t]);
 
   const handleDelete = useCallback(async () => {
     if (!deleteTarget) return;
