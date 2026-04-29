@@ -567,8 +567,9 @@
     "model_owner_group": "Группа владельца моделей",
     "auth_file_models_option": "Запрос файла авторизации",
     "model_owner_group_search_placeholder": "Поиск групп владельцев…",
-    "auth_file_models_source_desc": "Показаны модели, запрошенные из этого файла авторизации.",
+    "auth_file_models_source_desc": "Группа владельца не выбрана; каждый файл использует живой запрос моделей.",
     "model_owner_group_source_desc": "{{count}} моделей из {{owner}}.",
+    "model_owner_group_unavailable": "Выбранная группа владельца больше недоступна.",
     "no_owner_group_models": "В этой группе владельца нет моделей."
   },
   "antigravity_quota": {

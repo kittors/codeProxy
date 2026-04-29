@@ -36,10 +36,12 @@ export const AUTH_FILES_DATA_CACHE_KEY = "authFilesPage.dataCache.v2";
 export const AUTH_FILES_QUOTA_PREVIEW_KEY = "authFilesPage.quotaPreview.v1";
 export const AUTH_FILES_QUOTA_AUTO_REFRESH_KEY = "authFilesPage.quotaAutoRefreshMs.v1";
 export const AUTH_FILES_FILES_VIEW_MODE_KEY = "authFilesPage.filesViewMode.v1";
+export const AUTH_FILES_MODEL_OWNER_GROUP_MAP_KEY = "authFilesPage.modelOwnerGroupMap.v1";
 
 export type QuotaPreviewMode = "5h" | "week";
 export type QuotaAutoRefreshMs = 0 | 5000 | 10000 | 30000 | 60000;
 export type FilesViewMode = "table" | "cards";
+export type AuthFilesModelOwnerGroupMap = Record<string, string>;
 
 export type AuthFilesUiState = {
   tab?: "files" | "excluded" | "alias";
@@ -76,6 +78,44 @@ export const writeAuthFilesUiState = (state: AuthFilesUiState) => {
     window.sessionStorage.setItem(AUTH_FILES_UI_STATE_KEY, JSON.stringify(state));
   } catch {
     // ignore
+  }
+};
+
+const sanitizeModelOwnerGroupMap = (value: unknown): AuthFilesModelOwnerGroupMap => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  const output: AuthFilesModelOwnerGroupMap = {};
+  for (const [rawKey, rawValue] of Object.entries(value as Record<string, unknown>)) {
+    const key = normalizeProviderKey(rawKey);
+    const owner =
+      typeof rawValue === "string" ? rawValue.trim().replace(/\s+/g, "-").toLowerCase() : "";
+    if (!key || key === "all" || !owner) continue;
+    output[key] = owner;
+  }
+  return output;
+};
+
+export const readAuthFilesModelOwnerGroupMap = (): AuthFilesModelOwnerGroupMap => {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = window.localStorage.getItem(AUTH_FILES_MODEL_OWNER_GROUP_MAP_KEY);
+    if (!raw) return {};
+    return sanitizeModelOwnerGroupMap(JSON.parse(raw) as unknown);
+  } catch {
+    return {};
+  }
+};
+
+export const writeAuthFilesModelOwnerGroupMap = (map: AuthFilesModelOwnerGroupMap) => {
+  if (typeof window === "undefined") return;
+  const normalized = sanitizeModelOwnerGroupMap(map);
+  try {
+    if (Object.keys(normalized).length === 0) {
+      window.localStorage.removeItem(AUTH_FILES_MODEL_OWNER_GROUP_MAP_KEY);
+      return;
+    }
+    window.localStorage.setItem(AUTH_FILES_MODEL_OWNER_GROUP_MAP_KEY, JSON.stringify(normalized));
+  } catch {
+    // ignore storage failures; the in-memory selection still updates.
   }
 };
 

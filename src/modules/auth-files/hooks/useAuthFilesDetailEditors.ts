@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { authFilesApi, modelsApi } from "@/lib/http/apis";
-import type { ModelConfigItem, ModelOwnerPresetItem } from "@/lib/http/apis/models";
+import { authFilesApi } from "@/lib/http/apis";
 import type { AuthFileItem } from "@/lib/http/types";
 import { useToast } from "@/modules/ui/ToastProvider";
 import {
@@ -12,7 +11,6 @@ import {
   readAuthFileChannelName,
   resolveFileType,
   type AuthFileModelItem,
-  type AuthFileModelOwnerGroup,
   type ChannelEditorState,
   type PrefixProxyEditorState,
 } from "@/modules/auth-files/helpers/authFilesPageUtils";
@@ -40,53 +38,6 @@ const createChannelEditorState = (): ChannelEditorState => ({
   error: null,
 });
 
-const normalizeOwnerValue = (value: string): string =>
-  value.trim().replace(/\s+/g, "-").toLowerCase();
-
-const buildModelOwnerGroups = (
-  models: ModelConfigItem[],
-  presets: ModelOwnerPresetItem[],
-): AuthFileModelOwnerGroup[] => {
-  const groups = new Map<string, AuthFileModelOwnerGroup>();
-
-  for (const preset of presets) {
-    const value = normalizeOwnerValue(preset.value);
-    if (!value) continue;
-    groups.set(value, {
-      value,
-      label: preset.label || value,
-      description: preset.description,
-      models: [],
-    });
-  }
-
-  for (const model of models) {
-    const value = normalizeOwnerValue(model.owned_by);
-    if (!value) continue;
-    const group =
-      groups.get(value) ??
-      ({
-        value,
-        label: model.owned_by || value,
-        description: "",
-        models: [],
-      } satisfies AuthFileModelOwnerGroup);
-    group.models.push({
-      id: model.id,
-      display_name: model.description || undefined,
-      owned_by: model.owned_by || value,
-    });
-    groups.set(value, group);
-  }
-
-  return Array.from(groups.values())
-    .map((group) => ({
-      ...group,
-      models: group.models.sort((a, b) => a.id.localeCompare(b.id)),
-    }))
-    .sort((a, b) => a.label.localeCompare(b.label));
-};
-
 export function useAuthFilesDetailEditors(loadAll: () => Promise<void>) {
   const { t } = useTranslation();
   const { notify } = useToast();
@@ -102,9 +53,6 @@ export function useAuthFilesDetailEditors(loadAll: () => Promise<void>) {
   const [modelsFileType, setModelsFileType] = useState("");
   const [modelsList, setModelsList] = useState<AuthFileModelItem[]>([]);
   const [modelsError, setModelsError] = useState<string | null>(null);
-  const [modelOwnerGroupsLoading, setModelOwnerGroupsLoading] = useState(false);
-  const [modelOwnerGroups, setModelOwnerGroups] = useState<AuthFileModelOwnerGroup[]>([]);
-  const [selectedModelOwner, setSelectedModelOwner] = useState("");
 
   const [prefixProxyEditor, setPrefixProxyEditor] = useState<PrefixProxyEditorState>(() =>
     createPrefixProxyEditorState(),
@@ -112,28 +60,6 @@ export function useAuthFilesDetailEditors(loadAll: () => Promise<void>) {
   const [channelEditor, setChannelEditor] = useState<ChannelEditorState>(() =>
     createChannelEditorState(),
   );
-
-  const loadModelOwnerGroups = useCallback(async () => {
-    setModelOwnerGroupsLoading(true);
-    try {
-      const [models, presets] = await Promise.all([
-        modelsApi.getModelConfigs("library"),
-        modelsApi.getModelOwnerPresets(),
-      ]);
-      const groups = buildModelOwnerGroups(models, presets);
-      setModelOwnerGroups(groups);
-      setSelectedModelOwner((current) =>
-        current && !groups.some((group) => group.value === current) ? "" : current,
-      );
-    } catch (err: unknown) {
-      notify({
-        type: "error",
-        message: err instanceof Error ? err.message : t("auth_files.failed_get_model_owners"),
-      });
-    } finally {
-      setModelOwnerGroupsLoading(false);
-    }
-  }, [notify, t]);
 
   const loadModelsForDetail = useCallback(
     async (file: AuthFileItem, options?: { force?: boolean }) => {
@@ -177,7 +103,6 @@ export function useAuthFilesDetailEditors(loadAll: () => Promise<void>) {
       setDetailFile(file);
       setDetailLoading(true);
       setDetailText("");
-      setSelectedModelOwner("");
       try {
         const text = await authFilesApi.downloadText(file.name);
         setDetailText(text);
@@ -302,7 +227,6 @@ export function useAuthFilesDetailEditors(loadAll: () => Promise<void>) {
     if (!detailOpen || !detailFile) return;
     if (detailTab === "models") {
       void loadModelsForDetail(detailFile);
-      void loadModelOwnerGroups();
       return;
     }
     if (detailTab === "fields") {
@@ -321,7 +245,6 @@ export function useAuthFilesDetailEditors(loadAll: () => Promise<void>) {
     detailFile,
     detailOpen,
     detailTab,
-    loadModelOwnerGroups,
     loadModelsForDetail,
     openChannelEditor,
     openPrefixProxyEditor,
@@ -461,16 +384,11 @@ export function useAuthFilesDetailEditors(loadAll: () => Promise<void>) {
     modelsFileType,
     modelsList,
     modelsError,
-    modelOwnerGroupsLoading,
-    modelOwnerGroups,
-    selectedModelOwner,
-    setSelectedModelOwner,
     prefixProxyEditor,
     setPrefixProxyEditor,
     channelEditor,
     setChannelEditor,
     loadModelsForDetail,
-    loadModelOwnerGroups,
     openDetail,
     prefixProxyDirty,
     prefixProxyUpdatedText,
