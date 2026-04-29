@@ -714,15 +714,13 @@ export function ModelsPage() {
 
   const reusableModelCandidates = useMemo(() => {
     if (!form || form.originalId || activeTab !== "library") return [];
-    const ownerNeedle = normalizeOwnerValue(form.ownedBy);
     const modelNeedle = form.id.trim().toLowerCase();
+    if (!modelNeedle) return [];
     const seen = new Set<string>();
     return models
       .filter((model) => {
         if (seen.has(model.id)) return false;
         seen.add(model.id);
-        if (ownerNeedle && normalizeOwnerValue(model.owned_by) !== ownerNeedle) return false;
-        if (!modelNeedle) return true;
         const haystack = `${model.id} ${model.owned_by} ${model.description}`.toLowerCase();
         return haystack.includes(modelNeedle);
       })
@@ -1591,10 +1589,11 @@ export function ModelsPage() {
                     }
                     value={form.id}
                     onChange={(e) => {
-                      updateForm({ id: e.target.value });
-                      setModelIdSuggestionsOpen(true);
+                      const nextId = e.target.value;
+                      updateForm({ id: nextId });
+                      setModelIdSuggestionsOpen(Boolean(nextId.trim()));
                     }}
-                    onFocus={() => setModelIdSuggestionsOpen(true)}
+                    onFocus={() => setModelIdSuggestionsOpen(Boolean(form.id.trim()))}
                     onBlur={() => {
                       window.setTimeout(() => setModelIdSuggestionsOpen(false), 120);
                     }}
