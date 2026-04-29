@@ -2611,7 +2611,7 @@
     "openrouter_sync_interval": "Sync interval (hours)",
     "openrouter_sync_last_sync": "Last sync: {{value}}",
     "openrouter_sync_never": "Never",
-    "openrouter_sync_result": "Seen {{seen}} · Added {{added}} · Skipped {{skipped}}",
+    "openrouter_sync_result": "Seen {{seen}} · Added {{added}} · Updated {{updated}} · Skipped {{skipped}}",
     "openrouter_sync_error": "Error: {{error}}",
     "openrouter_sync_load_failed": "Failed to load OpenRouter sync state",
     "openrouter_sync_save_failed": "Failed to save OpenRouter sync settings",

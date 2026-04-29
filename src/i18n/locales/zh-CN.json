@@ -2912,7 +2912,7 @@
     "openrouter_sync_interval": "同步间隔（小时）",
     "openrouter_sync_last_sync": "最近同步：{{value}}",
     "openrouter_sync_never": "从未同步",
-    "openrouter_sync_result": "获取 {{seen}} · 新增 {{added}} · 跳过 {{skipped}}",
+    "openrouter_sync_result": "获取 {{seen}} · 新增 {{added}} · 更新 {{updated}} · 跳过 {{skipped}}",
     "openrouter_sync_error": "错误：{{error}}",
     "openrouter_sync_load_failed": "加载 OpenRouter 同步状态失败",
     "openrouter_sync_save_failed": "保存 OpenRouter 同步设置失败",

@@ -87,6 +87,7 @@ interface OpenRouterModelSyncState {
   lastError: string;
   lastSeen: number;
   lastAdded: number;
+  lastUpdated: number;
   lastSkipped: number;
   running: boolean;
 }
@@ -94,6 +95,7 @@ interface OpenRouterModelSyncState {
 interface OpenRouterModelSyncResult {
   seen: number;
   added: number;
+  updated: number;
   skipped: number;
 }
 
@@ -153,6 +155,7 @@ const defaultOpenRouterSyncState: OpenRouterModelSyncState = {
   lastError: "",
   lastSeen: 0,
   lastAdded: 0,
+  lastUpdated: 0,
   lastSkipped: 0,
   running: false,
 };
@@ -395,12 +398,22 @@ function hasPricing(model: ModelItem): boolean {
 function formatPrice(model: ModelItem, notPricedLabel: string): string {
   if (model.pricing.mode === "call") {
     return model.pricing.pricePerCall > 0
-      ? `$${model.pricing.pricePerCall} / call`
+      ? `$${formatPriceAmount(model.pricing.pricePerCall)} / call`
       : notPricedLabel;
   }
 
   if (!hasPricing(model)) return notPricedLabel;
-  return `$${model.pricing.inputPricePerMillion} / $${model.pricing.outputPricePerMillion} / $${model.pricing.cachedPricePerMillion}`;
+  return `$${formatPriceAmount(model.pricing.inputPricePerMillion)} / $${formatPriceAmount(model.pricing.outputPricePerMillion)} / $${formatPriceAmount(model.pricing.cachedPricePerMillion)}`;
+}
+
+function formatPriceAmount(value: number): string {
+  if (!Number.isFinite(value) || value <= 0) return "0";
+  const rounded = Math.round((value + Number.EPSILON) * 1_000_000) / 1_000_000;
+  return new Intl.NumberFormat("en-US", {
+    maximumFractionDigits: 6,
+    minimumFractionDigits: 0,
+    useGrouping: false,
+  }).format(rounded);
 }
 
 function normalizeOwnerValue(value: string): string {
@@ -466,6 +479,7 @@ function normalizeOpenRouterSyncState(payload: unknown): OpenRouterModelSyncStat
     lastError: String(record.last_error ?? ""),
     lastSeen: Math.round(asNumber(record.last_seen)),
     lastAdded: Math.round(asNumber(record.last_added)),
+    lastUpdated: Math.round(asNumber(record.last_updated)),
     lastSkipped: Math.round(asNumber(record.last_skipped)),
     running: record.running === true,
   };
@@ -477,6 +491,7 @@ function normalizeOpenRouterSyncResult(payload: unknown): OpenRouterModelSyncRes
   return {
     seen: Math.round(asNumber(record.seen)),
     added: Math.round(asNumber(record.added)),
+    updated: Math.round(asNumber(record.updated)),
     skipped: Math.round(asNumber(record.skipped)),
   };
 }
@@ -818,6 +833,7 @@ export function ModelsPage() {
           ? {
               lastSeen: result.seen,
               lastAdded: result.added,
+              lastUpdated: result.updated,
               lastSkipped: result.skipped,
             }
           : {}),
@@ -1173,6 +1189,7 @@ export function ModelsPage() {
                         {t("models_page.openrouter_sync_result", {
                           seen: openRouterSyncState.lastSeen,
                           added: openRouterSyncState.lastAdded,
+                          updated: openRouterSyncState.lastUpdated,
                           skipped: openRouterSyncState.lastSkipped,
                         })}
                       </span>
