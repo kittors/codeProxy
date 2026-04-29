@@ -520,6 +520,84 @@ describe("ModelsPage", () => {
     });
   });
 
+  test("reuses a model from the selected owner when adding from the library", async () => {
+    const libraryModels = [
+      {
+        id: "gpt-5.5",
+        owned_by: "openai",
+        description: "Reusable OpenAI model",
+        enabled: true,
+        source: "openrouter",
+        pricing: {
+          mode: "token",
+          input_price_per_million: 1.25,
+          output_price_per_million: 10.5,
+          cached_price_per_million: 0.25,
+        },
+      },
+      {
+        id: "claude-sonnet-4-6",
+        owned_by: "anthropic",
+        description: "Reusable Claude model",
+        enabled: true,
+        source: "openrouter",
+        pricing: {
+          mode: "token",
+          input_price_per_million: 3,
+          output_price_per_million: 15,
+          cached_price_per_million: 0.3,
+        },
+      },
+    ];
+    mocks.apiGet.mockImplementation((path: string) => {
+      if (path === "/model-configs?scope=active" || path === "/model-configs") {
+        return Promise.resolve({ data: [] });
+      }
+      if (path === "/model-configs?scope=library") {
+        return Promise.resolve({ data: libraryModels });
+      }
+      if (path === "/model-owner-presets") {
+        return Promise.resolve({ data: ownerPresetItems });
+      }
+      if (path === "/model-openrouter-sync") {
+        return Promise.resolve({
+          enabled: false,
+          interval_minutes: 1440,
+          last_seen: 2,
+          last_added: 2,
+          last_updated: 0,
+          last_skipped: 0,
+          running: false,
+        });
+      }
+      if (path.startsWith("/usage/logs")) {
+        return Promise.resolve({ stats: { total_cost: 0 } });
+      }
+      return Promise.resolve({});
+    });
+
+    renderPage();
+
+    await userEvent.click(await screen.findByRole("tab", { name: /model library/i }));
+    const ownerSidebar = await screen.findByTestId("owner-sidebar-card");
+    await userEvent.click(within(ownerSidebar).getByRole("button", { name: /^openai/i }));
+    const libraryCard = await screen.findByTestId("model-library-card");
+    await userEvent.click(within(libraryCard).getByRole("button", { name: /add model/i }));
+
+    const dialog = await screen.findByRole("dialog", { name: /add model/i });
+    await userEvent.click(within(dialog).getByRole("combobox", { name: /model id/i }));
+    await userEvent.type(screen.getByPlaceholderText(/search or reuse model id/i), "gpt-5.5");
+
+    expect(screen.queryByRole("option", { name: /claude-sonnet-4-6/i })).not.toBeInTheDocument();
+    await userEvent.click(await screen.findByRole("option", { name: /gpt-5\.5/i }));
+
+    expect(within(dialog).getByRole("combobox", { name: /owner/i })).toHaveTextContent("OpenAI");
+    expect(within(dialog).getByLabelText(/description/i)).toHaveValue("Reusable OpenAI model");
+    expect(within(dialog).getByLabelText(/input token/i)).toHaveValue(1.25);
+    expect(within(dialog).getByLabelText(/output token/i)).toHaveValue(10.5);
+    expect(within(dialog).getByLabelText(/cache token/i)).toHaveValue(0.25);
+  });
+
   test("keeps a model added from the model library after refreshing that tab", async () => {
     const libraryModels = [
       {
