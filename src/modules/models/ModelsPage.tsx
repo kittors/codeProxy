@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Activity, Check, Cpu, Edit3, Plus, RefreshCw, Search, Trash2 } from "lucide-react";
 import { Button } from "@/modules/ui/Button";
 import { Card } from "@/modules/ui/Card";
+import { Checkbox } from "@/modules/ui/Checkbox";
 import { ConfirmModal } from "@/modules/ui/ConfirmModal";
 import { TextInput } from "@/modules/ui/Input";
 import { Modal } from "@/modules/ui/Modal";
@@ -530,7 +531,9 @@ export function ModelsPage() {
   const [deleteOwnerTarget, setDeleteOwnerTarget] = useState<ModelOwnerPreset | null>(null);
   const [savingOwnerPresets, setSavingOwnerPresets] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<ModelItem | null>(null);
+  const [bulkDeleteTargetIds, setBulkDeleteTargetIds] = useState<string[] | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [selectedModelIds, setSelectedModelIds] = useState<Set<string>>(() => new Set());
   const [openRouterSyncState, setOpenRouterSyncState] = useState<OpenRouterModelSyncState>(
     defaultOpenRouterSyncState,
   );
@@ -614,6 +617,31 @@ export function ModelsPage() {
       return haystack.includes(needle);
     });
   }, [activeTab, models, ownerFilter, searchFilter]);
+
+  const filteredModelIds = useMemo(() => filteredModels.map((model) => model.id), [filteredModels]);
+
+  const selectedModels = useMemo(
+    () => models.filter((model) => selectedModelIds.has(model.id)),
+    [models, selectedModelIds],
+  );
+  const selectedModelCount = selectedModels.length;
+  const allVisibleModelsSelected =
+    filteredModelIds.length > 0 && filteredModelIds.every((id) => selectedModelIds.has(id));
+  const someVisibleModelsSelected = filteredModelIds.some((id) => selectedModelIds.has(id));
+
+  useEffect(() => {
+    setSelectedModelIds((current) => {
+      if (current.size === 0) return current;
+      const validIds = new Set(models.map((model) => model.id));
+      const next = new Set(Array.from(current).filter((id) => validIds.has(id)));
+      return next.size === current.size ? current : next;
+    });
+  }, [models]);
+
+  useEffect(() => {
+    setSelectedModelIds(new Set());
+    setBulkDeleteTargetIds(null);
+  }, [activeTab]);
 
   const totalStats = useMemo(() => {
     const pricedCount = models.filter(hasPricing).length;
@@ -716,6 +744,12 @@ export function ModelsPage() {
     try {
       await apiClient.delete(`/model-configs/${encodeURIComponent(deleteTarget.id)}`);
       setModels((prev) => prev.filter((model) => model.id !== deleteTarget.id));
+      setSelectedModelIds((prev) => {
+        if (!prev.has(deleteTarget.id)) return prev;
+        const next = new Set(prev);
+        next.delete(deleteTarget.id);
+        return next;
+      });
       setDeleteTarget(null);
       notify({ type: "success", message: t("models_page.delete_saved") });
     } catch (err: unknown) {
@@ -727,6 +761,65 @@ export function ModelsPage() {
       setDeleting(false);
     }
   }, [deleteTarget, notify, t]);
+
+  const toggleModelSelection = useCallback((modelId: string, checked: boolean) => {
+    setSelectedModelIds((current) => {
+      const next = new Set(current);
+      if (checked) {
+        next.add(modelId);
+      } else {
+        next.delete(modelId);
+      }
+      return next;
+    });
+  }, []);
+
+  const toggleVisibleModelSelection = useCallback(
+    (checked: boolean) => {
+      setSelectedModelIds((current) => {
+        const next = new Set(current);
+        for (const modelId of filteredModelIds) {
+          if (checked) {
+            next.add(modelId);
+          } else {
+            next.delete(modelId);
+          }
+        }
+        return next;
+      });
+    },
+    [filteredModelIds],
+  );
+
+  const handleBulkDelete = useCallback(async () => {
+    if (!bulkDeleteTargetIds || bulkDeleteTargetIds.length === 0) return;
+    const ids = [...bulkDeleteTargetIds];
+    setDeleting(true);
+    try {
+      for (const modelId of ids) {
+        await apiClient.delete(`/model-configs/${encodeURIComponent(modelId)}`);
+      }
+      const deletedIds = new Set(ids);
+      setModels((prev) => prev.filter((model) => !deletedIds.has(model.id)));
+      setSelectedModelIds((current) => {
+        const next = new Set(current);
+        for (const modelId of ids) next.delete(modelId);
+        return next;
+      });
+      setBulkDeleteTargetIds(null);
+      notify({
+        type: "success",
+        message: t("models_page.delete_selected_models_success", { count: ids.length }),
+      });
+    } catch (err: unknown) {
+      notify({
+        type: "error",
+        message: err instanceof Error ? err.message : t("models_page.delete_failed"),
+      });
+    } finally {
+      setDeleting(false);
+    }
+  }, [bulkDeleteTargetIds, notify, t]);
 
   const persistOwnerPresets = useCallback(
     async (nextPresets: ModelOwnerPreset[]) => {
@@ -854,6 +947,29 @@ export function ModelsPage() {
   const modelColumns = useMemo<VirtualTableColumn<ModelItem>[]>(
     () => [
       {
+        key: "select",
+        label: "",
+        width: "w-12",
+        headerClassName: "text-center",
+        cellClassName: "text-center",
+        headerRender: () => (
+          <Checkbox
+            aria-label={t("models_page.select_all_visible_models")}
+            checked={allVisibleModelsSelected}
+            indeterminate={someVisibleModelsSelected && !allVisibleModelsSelected}
+            disabled={filteredModelIds.length === 0}
+            onCheckedChange={toggleVisibleModelSelection}
+          />
+        ),
+        render: (row) => (
+          <Checkbox
+            aria-label={t("models_page.select_model_aria", { model: row.id })}
+            checked={selectedModelIds.has(row.id)}
+            onCheckedChange={(checked) => toggleModelSelection(row.id, checked)}
+          />
+        ),
+      },
+      {
         key: "model",
         label: t("models_page.col_model"),
         width: "w-[22rem]",
@@ -950,8 +1066,35 @@ export function ModelsPage() {
         ),
       },
     ],
-    [openEditModel, t],
+    [
+      allVisibleModelsSelected,
+      filteredModelIds.length,
+      openEditModel,
+      selectedModelIds,
+      someVisibleModelsSelected,
+      t,
+      toggleModelSelection,
+      toggleVisibleModelSelection,
+    ],
   );
+
+  const selectionToolbar =
+    selectedModelCount > 0 ? (
+      <>
+        <span className="inline-flex h-8 items-center rounded-full bg-slate-100 px-3 text-xs font-semibold text-slate-600 dark:bg-white/[0.08] dark:text-white/65">
+          {t("models_page.selected_models_count", { count: selectedModelCount })}
+        </span>
+        <Button
+          variant="danger"
+          size="sm"
+          onClick={() => setBulkDeleteTargetIds(selectedModels.map((model) => model.id))}
+          disabled={deleting}
+        >
+          <Trash2 size={14} />
+          {t("models_page.delete_selected_models", { count: selectedModelCount })}
+        </Button>
+      </>
+    ) : null;
 
   return (
     <section className="flex flex-1 flex-col gap-4">
@@ -1124,6 +1267,7 @@ export function ModelsPage() {
               bodyClassName="relative flex min-h-0 flex-1 flex-col"
               actions={
                 <div className="flex flex-wrap items-center justify-end gap-2">
+                  {selectionToolbar}
                   <TextInput
                     value={searchFilter}
                     onChange={(e) => setSearchFilter(e.target.value)}
@@ -1276,7 +1420,7 @@ export function ModelsPage() {
                 emptyText={
                   searchFilter ? t("models_page.no_results") : t("models_page.no_model_data")
                 }
-                minWidth="min-w-[1100px]"
+                minWidth="min-w-[1160px]"
                 height="h-full"
                 minHeight="min-h-0"
               />
@@ -1291,6 +1435,7 @@ export function ModelsPage() {
           bodyClassName="relative flex min-h-0 flex-1 flex-col"
           actions={
             <div className="flex flex-wrap items-center justify-end gap-2">
+              {selectionToolbar}
               <TextInput
                 value={searchFilter}
                 onChange={(e) => setSearchFilter(e.target.value)}
@@ -1328,7 +1473,7 @@ export function ModelsPage() {
             rowHeight={52}
             caption={t("models_page.table_caption")}
             emptyText={searchFilter ? t("models_page.no_results") : t("models_page.no_model_data")}
-            minWidth="min-w-[1100px]"
+            minWidth="min-w-[1160px]"
             height="h-[calc(100vh-430px)]"
           />
         </Card>
@@ -1602,6 +1747,18 @@ export function ModelsPage() {
         busy={deleting}
         onClose={() => setDeleteTarget(null)}
         onConfirm={() => void handleDelete()}
+      />
+
+      <ConfirmModal
+        open={bulkDeleteTargetIds !== null}
+        title={t("models_page.delete_selected_models_title")}
+        description={t("models_page.delete_selected_models_desc", {
+          count: bulkDeleteTargetIds?.length ?? 0,
+        })}
+        confirmText={t("models_page.delete")}
+        busy={deleting}
+        onClose={() => setBulkDeleteTargetIds(null)}
+        onConfirm={() => void handleBulkDelete()}
       />
     </section>
   );
