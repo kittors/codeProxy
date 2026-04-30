@@ -425,7 +425,11 @@ export function VisualConfigEditor({
             >
               <Select
                 value={values.routingStrategy}
-                onChange={(routingStrategy) => update({ routingStrategy: routingStrategy as VisualConfigValues["routingStrategy"] })}
+                onChange={(routingStrategy) =>
+                  update({
+                    routingStrategy: routingStrategy as VisualConfigValues["routingStrategy"],
+                  })
+                }
                 options={[
                   {
                     value: "round-robin",

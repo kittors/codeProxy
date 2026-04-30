@@ -5,7 +5,10 @@ import {
   maskApiKey,
   normalizeDiscoveredModels,
 } from "@/modules/providers/providers-helpers";
-import { buildCandidateUsageSourceIds, normalizeUsageSourceId } from "@/modules/providers/provider-usage";
+import {
+  buildCandidateUsageSourceIds,
+  normalizeUsageSourceId,
+} from "@/modules/providers/provider-usage";
 
 describe("providers helpers", () => {
   test("masks api keys consistently for provider cards", () => {
@@ -94,10 +97,7 @@ describe("providers helpers", () => {
           null,
         ],
       }),
-    ).toEqual([
-      { id: "gpt-4.1", owned_by: "openai" },
-      { id: "gpt-4o-mini" },
-    ]);
+    ).toEqual([{ id: "gpt-4.1", owned_by: "openai" }, { id: "gpt-4o-mini" }]);
   });
 
   test("normalizes usage sources and matches raw plus masked api key candidates", () => {

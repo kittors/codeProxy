@@ -97,10 +97,9 @@ describe("providersApi Bedrock", () => {
 
     await providersApi.saveClaudeConfigs([{ ...result[0], priority: 1001 }]);
 
-    expect(putMock).toHaveBeenCalledWith(
-      "/claude-api-key",
-      [expect.objectContaining({ "proxy-id": "hk", priority: 1001 })],
-    );
+    expect(putMock).toHaveBeenCalledWith("/claude-api-key", [
+      expect.objectContaining({ "proxy-id": "hk", priority: 1001 }),
+    ]);
   });
 
   test("serializes and deletes Bedrock configs", async () => {
