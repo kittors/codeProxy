@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Bot, Database, FileKey, Globe, RefreshCw } from "lucide-react";
+import { Bot, Cloud, Database, FileKey, Globe, RefreshCw } from "lucide-react";
 import iconGemini from "@/assets/icons/gemini.svg";
 import iconClaude from "@/assets/icons/claude.svg";
 import iconCodex from "@/assets/icons/codex.svg";
@@ -12,7 +12,7 @@ import { ampcodeApi, providersApi, usageApi } from "@/lib/http/apis";
 import { apiKeyEntriesApi, type ApiKeyEntry } from "@/lib/http/apis/api-keys";
 import { channelGroupsApi, type ChannelGroupItem } from "@/lib/http/apis/channel-groups";
 import { proxiesApi, type ProxyPoolEntry } from "@/lib/http/apis/proxies";
-import type { OpenAIProvider, ProviderSimpleConfig } from "@/lib/http/types";
+import type { BedrockProviderConfig, OpenAIProvider, ProviderSimpleConfig } from "@/lib/http/types";
 import { Button } from "@/modules/ui/Button";
 import { ConfirmModal } from "@/modules/ui/ConfirmModal";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/modules/ui/Tabs";
@@ -43,15 +43,16 @@ export function ProvidersPage() {
   const navigate = useNavigate();
   const { getEntry: getLatencyEntry, checkLatency } = useProviderLatency();
 
-  const [tab, setTab] = useState<"gemini" | "claude" | "codex" | "vertex" | "openai" | "ampcode">(
-    "gemini",
-  );
+  const [tab, setTab] = useState<
+    "gemini" | "claude" | "codex" | "vertex" | "bedrock" | "openai" | "ampcode"
+  >("gemini");
   const [loading, setLoading] = useState(true);
 
   const [geminiKeys, setGeminiKeys] = useState<ProviderSimpleConfig[]>([]);
   const [claudeKeys, setClaudeKeys] = useState<ProviderSimpleConfig[]>([]);
   const [codexKeys, setCodexKeys] = useState<ProviderSimpleConfig[]>([]);
   const [vertexKeys, setVertexKeys] = useState<ProviderSimpleConfig[]>([]);
+  const [bedrockKeys, setBedrockKeys] = useState<BedrockProviderConfig[]>([]);
   const [openaiProviders, setOpenaiProviders] = useState<OpenAIProvider[]>([]);
   const [apiKeyEntries, setApiKeyEntries] = useState<ApiKeyEntry[]>([]);
   const [channelGroups, setChannelGroups] = useState<ChannelGroupItem[]>([]);
@@ -67,7 +68,11 @@ export function ProvidersPage() {
 
   const [confirm, setConfirm] = useState<
     | null
-    | { type: "deleteKey"; keyType: "gemini" | "claude" | "codex" | "vertex"; index: number }
+    | {
+        type: "deleteKey";
+        keyType: "gemini" | "claude" | "codex" | "vertex" | "bedrock";
+        index: number;
+      }
     | { type: "deleteOpenAI"; index: number }
   >(null);
   const handledRouteRef = useRef("");
@@ -88,6 +93,9 @@ export function ProvidersPage() {
             break;
           case "vertex":
             setVertexKeys(await providersApi.getVertexConfigs());
+            break;
+          case "bedrock":
+            setBedrockKeys(await providersApi.getBedrockConfigs());
             break;
           case "openai":
             setOpenaiProviders(await providersApi.getOpenAIProviders());
@@ -244,10 +252,12 @@ export function ProvidersPage() {
     claudeKeys,
     codexKeys,
     vertexKeys,
+    bedrockKeys,
     setGeminiKeys,
     setClaudeKeys,
     setCodexKeys,
     setVertexKeys,
+    setBedrockKeys,
     refreshAll,
     startRefreshTransition: startTransition,
     afterClose: handleKeyEditorRouteClose,
@@ -296,7 +306,8 @@ export function ProvidersPage() {
         provider === "gemini" ||
         provider === "claude" ||
         provider === "codex" ||
-        provider === "vertex"
+        provider === "vertex" ||
+        provider === "bedrock"
       ) {
         setTab(provider);
         await refreshTab(provider);
@@ -432,6 +443,10 @@ export function ProvidersPage() {
             <img src={iconVertex} alt="" className="size-4" />
             Vertex
           </TabsTrigger>
+          <TabsTrigger value="bedrock">
+            <Cloud size={16} />
+            Bedrock
+          </TabsTrigger>
           <TabsTrigger value="openai">
             <img src={iconOpenai} alt="" className="size-4 dark:hidden" />
             <img src={iconOpenai} alt="" className="hidden size-4 dark:block" />
@@ -506,6 +521,24 @@ export function ProvidersPage() {
             onAdd={() => openKeyEditor("vertex", null)}
             onEdit={(idx) => openKeyEditor("vertex", idx)}
             onDelete={(idx) => setConfirm({ type: "deleteKey", keyType: "vertex", index: idx })}
+            getStats={getSimpleStats}
+            getStatusBar={getSimpleStatusBar}
+            getAccessSummary={getProviderAccessSummary}
+            getLatencyEntry={getLatencyEntry}
+            checkLatency={checkLatency}
+          />
+        </TabsContent>
+
+        <TabsContent value="bedrock" className="mt-6">
+          <ProviderKeyListCard
+            icon={Cloud}
+            title={t("providers.bedrock_keys")}
+            description={t("providers.bedrock_desc")}
+            items={bedrockKeys}
+            onAdd={() => openKeyEditor("bedrock", null)}
+            onEdit={(idx) => openKeyEditor("bedrock", idx)}
+            onDelete={(idx) => setConfirm({ type: "deleteKey", keyType: "bedrock", index: idx })}
+            onToggleEnabled={(idx, enabled) => void toggleKeyEnabled("bedrock", idx, enabled)}
             getStats={getSimpleStats}
             getStatusBar={getSimpleStatusBar}
             getAccessSummary={getProviderAccessSummary}

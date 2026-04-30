@@ -1,13 +1,14 @@
 import type { Dispatch, SetStateAction } from "react";
 import { useTranslation } from "react-i18next";
 import { Download, RefreshCw, ShieldCheck } from "lucide-react";
-import type { AuthFileItem } from "@/lib/http/types";
+import type { AuthFileItem, AuthFileSubscriptionPeriod } from "@/lib/http/types";
 import type { ProxyPoolEntry } from "@/lib/http/apis/proxies";
 import { Button } from "@/modules/ui/Button";
+import { DateTimePicker } from "@/modules/ui/DateTimePicker";
 import { EmptyState } from "@/modules/ui/EmptyState";
 import { TextInput } from "@/modules/ui/Input";
 import { Modal } from "@/modules/ui/Modal";
-import { SearchableSelect, type SearchableSelectOption } from "@/modules/ui/SearchableSelect";
+import { Select } from "@/modules/ui/Select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/modules/ui/Tabs";
 import { ProxyPoolSelect } from "@/modules/proxies/ProxyPoolSelect";
 import { useProxyPoolChecks } from "@/modules/proxies/useProxyPoolChecks";
@@ -40,9 +41,8 @@ interface AuthFileDetailModalProps {
   modelsList: AuthFileModelItem[];
   modelsFileType: string;
   modelOwnerGroupsLoading: boolean;
-  modelOwnerGroups: AuthFileModelOwnerGroup[];
-  selectedModelOwner: string;
-  setSelectedModelOwner: Dispatch<SetStateAction<string>>;
+  mappedModelOwnerGroup: AuthFileModelOwnerGroup | null;
+  mappedModelOwnerValue: string;
   excluded: Record<string, string[]>;
   prefixProxyEditor: PrefixProxyEditorState;
   setPrefixProxyEditor: Dispatch<SetStateAction<PrefixProxyEditorState>>;
@@ -70,9 +70,8 @@ export function AuthFileDetailModal({
   modelsList,
   modelsFileType,
   modelOwnerGroupsLoading,
-  modelOwnerGroups,
-  selectedModelOwner,
-  setSelectedModelOwner,
+  mappedModelOwnerGroup,
+  mappedModelOwnerValue,
   excluded,
   prefixProxyEditor,
   setPrefixProxyEditor,
@@ -84,29 +83,14 @@ export function AuthFileDetailModal({
   setChannelEditor,
   saveChannelEditor,
 }: AuthFileDetailModalProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const proxyCheckState = useProxyPoolChecks(proxyPoolEntries, open && detailTab === "fields");
-  const selectedModelOwnerGroup =
-    selectedModelOwner === ""
-      ? null
-      : (modelOwnerGroups.find((group) => group.value === selectedModelOwner) ?? null);
-  const visibleModelsList = selectedModelOwner
-    ? (selectedModelOwnerGroup?.models ?? [])
+  const usesMappedModelOwner = Boolean(mappedModelOwnerValue);
+  const visibleModelsList = usesMappedModelOwner
+    ? (mappedModelOwnerGroup?.models ?? [])
     : modelsList;
-  const visibleModelsLoading = selectedModelOwner ? modelOwnerGroupsLoading : modelsLoading;
-  const visibleModelsError = selectedModelOwner ? null : modelsError;
-  const modelOwnerOptions: SearchableSelectOption[] = [
-    {
-      value: "",
-      label: t("auth_files.auth_file_models_option"),
-      searchText: t("auth_files.auth_file_models_option"),
-    },
-    ...modelOwnerGroups.map((group) => ({
-      value: group.value,
-      label: group.label,
-      searchText: `${group.value} ${group.label} ${group.description}`,
-    })),
-  ];
+  const visibleModelsLoading = usesMappedModelOwner ? modelOwnerGroupsLoading : modelsLoading;
+  const visibleModelsError = usesMappedModelOwner ? null : modelsError;
 
   return (
     <Modal
@@ -128,17 +112,15 @@ export function AuthFileDetailModal({
             <Button
               variant="secondary"
               onClick={() => {
-                void Promise.all([
-                  loadModelsForDetail(detailFile, { force: true }),
-                  loadModelOwnerGroups(),
-                ]);
+                if (usesMappedModelOwner) {
+                  void loadModelOwnerGroups();
+                } else {
+                  void loadModelsForDetail(detailFile, { force: true });
+                }
               }}
-              disabled={modelsLoading || modelOwnerGroupsLoading}
+              disabled={visibleModelsLoading}
             >
-              <RefreshCw
-                size={14}
-                className={modelsLoading || modelOwnerGroupsLoading ? "animate-spin" : ""}
-              />
+              <RefreshCw size={14} className={visibleModelsLoading ? "animate-spin" : ""} />
               {t("auth_files.detail_models_refresh")}
             </Button>
           ) : null}
@@ -244,29 +226,16 @@ export function AuthFileDetailModal({
                 </p>
               </div>
 
-              <div className="grid gap-3 rounded-2xl border border-slate-200 bg-white/70 p-4 shadow-sm sm:grid-cols-[minmax(0,18rem)_minmax(0,1fr)] dark:border-neutral-800 dark:bg-neutral-950/60">
-                <div className="min-w-0 space-y-1.5">
-                  <label className="block text-sm font-medium text-slate-700 dark:text-white/80">
-                    {t("auth_files.model_owner_group")}
-                  </label>
-                  <SearchableSelect
-                    value={selectedModelOwner}
-                    onChange={setSelectedModelOwner}
-                    options={modelOwnerOptions}
-                    placeholder={t("auth_files.auth_file_models_option")}
-                    searchPlaceholder={t("auth_files.model_owner_group_search_placeholder")}
-                    aria-label={t("auth_files.model_owner_group")}
-                  />
-                </div>
-                <div className="min-w-0 rounded-xl bg-slate-50 px-3 py-2 text-xs text-slate-600 dark:bg-white/[0.04] dark:text-white/60">
-                  {selectedModelOwnerGroup
+              {usesMappedModelOwner ? (
+                <div className="rounded-2xl border border-slate-200 bg-white/70 p-4 text-xs text-slate-600 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-white/60">
+                  {mappedModelOwnerGroup
                     ? t("auth_files.model_owner_group_source_desc", {
-                        owner: selectedModelOwnerGroup.label,
-                        count: selectedModelOwnerGroup.models.length,
+                        owner: mappedModelOwnerGroup.label,
+                        count: mappedModelOwnerGroup.models.length,
                       })
-                    : t("auth_files.auth_file_models_source_desc")}
+                    : t("auth_files.model_owner_group_unavailable")}
                 </div>
-              </div>
+              ) : null}
 
               {visibleModelsLoading ? (
                 <div className="text-sm text-slate-600 dark:text-white/65">
@@ -281,7 +250,7 @@ export function AuthFileDetailModal({
                 <EmptyState
                   title={t("common.no_model_data")}
                   description={
-                    selectedModelOwner
+                    usesMappedModelOwner
                       ? t("auth_files.no_owner_group_models")
                       : t("auth_files_page.models_hint")
                   }
@@ -392,24 +361,53 @@ export function AuthFileDetailModal({
 
                   <div className="rounded-2xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
                     <p className="text-sm font-semibold text-slate-900 dark:text-white">
-                      {t("auth_files.subscription_expires_at_label")}
+                      {t("auth_files.subscription_started_at_label")}
                     </p>
-                    <div className="mt-2">
-                      <TextInput
-                        type="datetime-local"
-                        value={prefixProxyEditor.subscriptionExpiresAt}
-                        onChange={(e) => {
-                          const value = e.currentTarget.value;
+                    <div className="mt-2 grid gap-3 sm:grid-cols-[minmax(0,1fr)_10rem]">
+                      <DateTimePicker
+                        value={prefixProxyEditor.subscriptionStartedAt}
+                        onChange={(value) => {
                           setPrefixProxyEditor((prev) => ({
                             ...prev,
-                            subscriptionExpiresAt: value,
+                            subscriptionStartedAt: value,
                           }));
                         }}
-                        aria-label={t("auth_files.subscription_expires_at_label")}
+                        aria-label={t("auth_files.subscription_started_at_label")}
+                        locale={i18n.language}
+                        labels={{
+                          picker: t("auth_files.subscription_date_picker"),
+                          open: t("auth_files.subscription_date_picker_open"),
+                          previousMonth: t("auth_files.subscription_date_picker_previous_month"),
+                          nextMonth: t("auth_files.subscription_date_picker_next_month"),
+                          today: t("auth_files.subscription_date_picker_today"),
+                          clear: t("auth_files.subscription_date_picker_clear"),
+                          hour: t("auth_files.subscription_date_picker_hour"),
+                          minute: t("auth_files.subscription_date_picker_minute"),
+                        }}
+                      />
+                      <Select
+                        value={prefixProxyEditor.subscriptionPeriod}
+                        onChange={(value) =>
+                          setPrefixProxyEditor((prev) => ({
+                            ...prev,
+                            subscriptionPeriod: value as AuthFileSubscriptionPeriod,
+                          }))
+                        }
+                        options={[
+                          {
+                            value: "monthly",
+                            label: t("auth_files.subscription_period_monthly"),
+                          },
+                          {
+                            value: "yearly",
+                            label: t("auth_files.subscription_period_yearly"),
+                          },
+                        ]}
+                        aria-label={t("auth_files.subscription_period_label")}
                       />
                     </div>
                     <p className="mt-2 text-xs text-slate-500 dark:text-white/55">
-                      {t("auth_files.subscription_expires_at_hint")}
+                      {t("auth_files.subscription_started_at_hint")}
                     </p>
                   </div>
 

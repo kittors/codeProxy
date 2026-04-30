@@ -18,6 +18,8 @@ export type AuthFileType =
   | "empty"
   | "unknown";
 
+export type AuthFileSubscriptionPeriod = "monthly" | "yearly";
+
 export interface AuthFileItem {
   name: string;
   type?: AuthFileType | string;
@@ -36,6 +38,14 @@ export interface AuthFileItem {
   disabled?: boolean;
   modified?: number;
   modtime?: number;
+  subscription_started_at?: string;
+  subscriptionStartedAt?: string;
+  subscription_start_at?: string;
+  subscriptionStartAt?: string;
+  subscription_started_at_ms?: number;
+  subscriptionStartedAtMs?: number;
+  subscription_period?: AuthFileSubscriptionPeriod | string;
+  subscriptionPeriod?: AuthFileSubscriptionPeriod | string;
   subscription_expires_at?: string;
   subscriptionExpiresAt?: string;
   subscription_expires_at_ms?: number;
@@ -162,6 +172,17 @@ export interface ProviderSimpleConfig {
   models?: ProviderModel[];
   excludedModels?: string[];
   skipAnthropicProcessing?: boolean;
+}
+
+export type BedrockAuthMode = "api-key" | "sigv4";
+
+export interface BedrockProviderConfig extends ProviderSimpleConfig {
+  authMode: BedrockAuthMode;
+  accessKeyId?: string;
+  secretAccessKey?: string;
+  sessionToken?: string;
+  region?: string;
+  forceGlobal?: boolean;
 }
 
 export type OAuthProvider = "codex" | "anthropic" | "antigravity" | "gemini-cli" | "kimi" | "qwen";

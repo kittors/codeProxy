@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Activity, Check, Cpu, Edit3, Plus, RefreshCw, Search, Trash2 } from "lucide-react";
 import { Button } from "@/modules/ui/Button";
 import { Card } from "@/modules/ui/Card";
+import { Checkbox } from "@/modules/ui/Checkbox";
 import { ConfirmModal } from "@/modules/ui/ConfirmModal";
 import { TextInput } from "@/modules/ui/Input";
 import { Modal } from "@/modules/ui/Modal";
@@ -27,6 +28,12 @@ import iconKiro from "@/assets/icons/kiro.svg";
 import iconMinimax from "@/assets/icons/minimax.svg";
 import iconOpenai from "@/assets/icons/openai.svg";
 import iconQwen from "@/assets/icons/qwen.svg";
+import {
+  filterByConfiguredModelAvailability,
+  loadConfiguredModelAvailability,
+  type ConfiguredModelAvailability,
+  type ModelAvailabilityItem,
+} from "@/modules/models/modelAvailability";
 import iconVertex from "@/assets/icons/vertex.svg";
 
 type PricingMode = "token" | "call";
@@ -79,6 +86,26 @@ interface OwnerFormState {
   enabled: boolean;
 }
 
+interface OpenRouterModelSyncState {
+  enabled: boolean;
+  intervalMinutes: number;
+  lastSyncAt: string;
+  lastSuccessAt: string;
+  lastError: string;
+  lastSeen: number;
+  lastAdded: number;
+  lastUpdated: number;
+  lastSkipped: number;
+  running: boolean;
+}
+
+interface OpenRouterModelSyncResult {
+  seen: number;
+  added: number;
+  updated: number;
+  skipped: number;
+}
+
 const VENDOR_ICONS: Record<string, { light: string; dark: string }> = {
   claude: { light: iconClaude, dark: iconClaude },
   codex: { light: iconCodex, dark: iconCodex },
@@ -125,6 +152,19 @@ const emptyOwnerForm: OwnerFormState = {
   label: "",
   description: "",
   enabled: true,
+};
+
+const defaultOpenRouterSyncState: OpenRouterModelSyncState = {
+  enabled: false,
+  intervalMinutes: 1440,
+  lastSyncAt: "",
+  lastSuccessAt: "",
+  lastError: "",
+  lastSeen: 0,
+  lastAdded: 0,
+  lastUpdated: 0,
+  lastSkipped: 0,
+  running: false,
 };
 
 function getVendorPrefix(modelId: string): string {
@@ -253,6 +293,33 @@ async function fetchOwnerPresets(): Promise<ModelOwnerPreset[]> {
   return normalizeOwnerPresetResponse(await apiClient.get("/model-owner-presets"));
 }
 
+function availabilityItemToModel(item: ModelAvailabilityItem): ModelItem {
+  return {
+    id: item.id,
+    owned_by: item.owned_by ?? "",
+    description: item.description ?? "",
+    enabled: true,
+    source: item.source ?? "configured",
+    pricing: { ...emptyPricing },
+  };
+}
+
+function mergeConfiguredModelAvailability(
+  data: ModelItem[],
+  availability: ConfiguredModelAvailability | null,
+): ModelItem[] {
+  if (!availability?.scoped) return data;
+  const visible = filterByConfiguredModelAvailability(data, availability);
+  const seen = new Set(visible.map((model) => model.id.toLowerCase()));
+  for (const item of availability.items) {
+    const key = item.id.toLowerCase();
+    if (seen.has(key)) continue;
+    visible.push(availabilityItemToModel(item));
+    seen.add(key);
+  }
+  return visible.sort((a, b) => a.id.localeCompare(b.id));
+}
+
 function toFormState(model: ModelItem): ModelFormState {
   return {
     originalId: model.id,
@@ -303,7 +370,7 @@ function buildModelPayload(form: ModelFormState) {
   };
 }
 
-function payloadToModel(payload: ReturnType<typeof buildModelPayload>): ModelItem {
+function payloadToModel(payload: ReturnType<typeof buildModelPayload>, source: string): ModelItem {
   const pricing =
     payload.pricing.mode === "call"
       ? {
@@ -324,24 +391,33 @@ function payloadToModel(payload: ReturnType<typeof buildModelPayload>): ModelIte
     owned_by: payload.owned_by,
     description: payload.description,
     enabled: payload.enabled,
-    source: "user",
+    source,
     pricing,
   };
 }
 
-async function saveModelConfig(form: ModelFormState) {
+function modelConfigCollectionPath(scope: ModelScope): string {
+  return scope === "library" ? "/model-configs?scope=library" : "/model-configs";
+}
+
+function modelConfigItemPath(modelId: string, scope: ModelScope): string {
+  const suffix = scope === "library" ? "?scope=library" : "";
+  return `/model-configs/${encodeURIComponent(modelId)}${suffix}`;
+}
+
+async function saveModelConfig(form: ModelFormState, scope: ModelScope) {
   const payload = buildModelPayload(form);
   if (!payload.id) {
     throw new Error("Model ID is required");
   }
 
   if (form.originalId) {
-    await apiClient.put(`/model-configs/${encodeURIComponent(form.originalId)}`, payload);
+    await apiClient.put(modelConfigItemPath(form.originalId, scope), payload);
   } else {
-    await apiClient.post("/model-configs", payload);
+    await apiClient.post(modelConfigCollectionPath(scope), payload);
   }
 
-  return payloadToModel(payload);
+  return payloadToModel(payload, scope === "library" ? "seed" : "user");
 }
 
 function hasPricing(model: ModelItem): boolean {
@@ -356,12 +432,22 @@ function hasPricing(model: ModelItem): boolean {
 function formatPrice(model: ModelItem, notPricedLabel: string): string {
   if (model.pricing.mode === "call") {
     return model.pricing.pricePerCall > 0
-      ? `$${model.pricing.pricePerCall} / call`
+      ? `$${formatPriceAmount(model.pricing.pricePerCall)} / call`
       : notPricedLabel;
   }
 
   if (!hasPricing(model)) return notPricedLabel;
-  return `$${model.pricing.inputPricePerMillion} / $${model.pricing.outputPricePerMillion} / $${model.pricing.cachedPricePerMillion}`;
+  return `$${formatPriceAmount(model.pricing.inputPricePerMillion)} / $${formatPriceAmount(model.pricing.outputPricePerMillion)} / $${formatPriceAmount(model.pricing.cachedPricePerMillion)}`;
+}
+
+function formatPriceAmount(value: number): string {
+  if (!Number.isFinite(value) || value <= 0) return "0";
+  const rounded = Math.round((value + Number.EPSILON) * 1_000_000) / 1_000_000;
+  return new Intl.NumberFormat("en-US", {
+    maximumFractionDigits: 6,
+    minimumFractionDigits: 0,
+    useGrouping: false,
+  }).format(rounded);
 }
 
 function normalizeOwnerValue(value: string): string {
@@ -417,6 +503,50 @@ function normalizeOwnerPresetItems(presets: ModelOwnerPreset[]) {
   );
 }
 
+function normalizeOpenRouterSyncState(payload: unknown): OpenRouterModelSyncState {
+  const record = payload && typeof payload === "object" ? (payload as Record<string, unknown>) : {};
+  return {
+    enabled: record.enabled === true,
+    intervalMinutes: Math.max(60, Math.round(asNumber(record.interval_minutes) || 1440)),
+    lastSyncAt: String(record.last_sync_at ?? ""),
+    lastSuccessAt: String(record.last_success_at ?? ""),
+    lastError: String(record.last_error ?? ""),
+    lastSeen: Math.round(asNumber(record.last_seen)),
+    lastAdded: Math.round(asNumber(record.last_added)),
+    lastUpdated: Math.round(asNumber(record.last_updated)),
+    lastSkipped: Math.round(asNumber(record.last_skipped)),
+    running: record.running === true,
+  };
+}
+
+function normalizeOpenRouterSyncResult(payload: unknown): OpenRouterModelSyncResult | null {
+  const record = payload && typeof payload === "object" ? (payload as Record<string, unknown>) : {};
+  if (!("seen" in record) && !("added" in record) && !("skipped" in record)) return null;
+  return {
+    seen: Math.round(asNumber(record.seen)),
+    added: Math.round(asNumber(record.added)),
+    updated: Math.round(asNumber(record.updated)),
+    skipped: Math.round(asNumber(record.skipped)),
+  };
+}
+
+function syncIntervalHoursValue(intervalMinutes: number): string {
+  return String(Math.max(1, Math.round(intervalMinutes / 60)));
+}
+
+function syncIntervalMinutesFromHours(value: string): number {
+  const parsed = Number.parseFloat(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) return 1440;
+  return Math.max(60, Math.round(parsed * 60));
+}
+
+function formatSyncTimestamp(value: string, emptyLabel: string): string {
+  if (!value) return emptyLabel;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString();
+}
+
 export function ModelsPage() {
   const { t } = useTranslation();
   const { notify } = useToast();
@@ -430,26 +560,43 @@ export function ModelsPage() {
   const [activeTab, setActiveTab] = useState<ModelPageTab>("active");
   const [ownerPresets, setOwnerPresets] = useState<ModelOwnerPreset[]>([]);
   const [ownerFilter, setOwnerFilter] = useState("");
+  const [ownerSearchFilter, setOwnerSearchFilter] = useState("");
   const [ownerForm, setOwnerForm] = useState<OwnerFormState | null>(null);
   const [deleteOwnerTarget, setDeleteOwnerTarget] = useState<ModelOwnerPreset | null>(null);
   const [savingOwnerPresets, setSavingOwnerPresets] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<ModelItem | null>(null);
+  const [bulkDeleteTargetIds, setBulkDeleteTargetIds] = useState<string[] | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [selectedModelIds, setSelectedModelIds] = useState<Set<string>>(() => new Set());
+  const [openRouterSyncState, setOpenRouterSyncState] = useState<OpenRouterModelSyncState>(
+    defaultOpenRouterSyncState,
+  );
+  const [openRouterSyncLoading, setOpenRouterSyncLoading] = useState(false);
+  const [openRouterSyncSaving, setOpenRouterSyncSaving] = useState(false);
+  const [openRouterSyncRunning, setOpenRouterSyncRunning] = useState(false);
+  const [openRouterSyncError, setOpenRouterSyncError] = useState<string | null>(null);
+  const [modelIdSuggestionsOpen, setModelIdSuggestionsOpen] = useState(false);
+  const [syncIntervalHours, setSyncIntervalHours] = useState(
+    syncIntervalHoursValue(defaultOpenRouterSyncState.intervalMinutes),
+  );
+  const skipSyncIntervalBlurRef = useRef(false);
 
   const modelScope: ModelScope = activeTab;
 
   const loadModels = useCallback(async () => {
     setLoading(true);
     try {
-      const [data, presets] = await Promise.all([
+      const [data, presets, availability] = await Promise.all([
         fetchModelConfigs(modelScope),
         fetchOwnerPresets(),
+        modelScope === "active" ? loadConfiguredModelAvailability() : Promise.resolve(null),
       ]);
-      setModels(data);
+      const visibleData = mergeConfiguredModelAvailability(data, availability);
+      setModels(visibleData);
       setOwnerPresets(presets);
       setOwnerFilter((current) => {
         if (!current) return "";
-        return buildOwnerPresetDrafts(data, presets).some((owner) => owner.value === current)
+        return buildOwnerPresetDrafts(visibleData, presets).some((owner) => owner.value === current)
           ? current
           : "";
       });
@@ -475,6 +622,28 @@ export function ModelsPage() {
     void loadModels();
   }, [loadModels]);
 
+  const loadOpenRouterSyncState = useCallback(async () => {
+    setOpenRouterSyncLoading(true);
+    setOpenRouterSyncError(null);
+    try {
+      const state = normalizeOpenRouterSyncState(await apiClient.get("/model-openrouter-sync"));
+      setOpenRouterSyncState(state);
+      setSyncIntervalHours(syncIntervalHoursValue(state.intervalMinutes));
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : t("models_page.openrouter_sync_load_failed");
+      setOpenRouterSyncError(message);
+    } finally {
+      setOpenRouterSyncLoading(false);
+    }
+  }, [t]);
+
+  useEffect(() => {
+    if (activeTab === "library") {
+      void loadOpenRouterSyncState();
+    }
+  }, [activeTab, loadOpenRouterSyncState]);
+
   const filteredModels = useMemo(() => {
     const needle = searchFilter.trim().toLowerCase();
     const ownerNeedle = activeTab === "library" ? ownerFilter : "";
@@ -485,6 +654,32 @@ export function ModelsPage() {
       return haystack.includes(needle);
     });
   }, [activeTab, models, ownerFilter, searchFilter]);
+
+  const filteredModelIds = useMemo(() => filteredModels.map((model) => model.id), [filteredModels]);
+
+  const selectedModels = useMemo(
+    () => models.filter((model) => selectedModelIds.has(model.id)),
+    [models, selectedModelIds],
+  );
+  const selectedModelCount = selectedModels.length;
+  const allVisibleModelsSelected =
+    filteredModelIds.length > 0 && filteredModelIds.every((id) => selectedModelIds.has(id));
+  const someVisibleModelsSelected = filteredModelIds.some((id) => selectedModelIds.has(id));
+
+  useEffect(() => {
+    setSelectedModelIds((current) => {
+      if (current.size === 0) return current;
+      const validIds = new Set(models.map((model) => model.id));
+      const next = new Set(Array.from(current).filter((id) => validIds.has(id)));
+      return next.size === current.size ? current : next;
+    });
+  }, [models]);
+
+  useEffect(() => {
+    setSelectedModelIds(new Set());
+    setBulkDeleteTargetIds(null);
+    setOwnerSearchFilter("");
+  }, [activeTab]);
 
   const totalStats = useMemo(() => {
     const pricedCount = models.filter(hasPricing).length;
@@ -543,6 +738,35 @@ export function ModelsPage() {
     [models, ownerPresets],
   );
 
+  const filteredLibraryOwners = useMemo(() => {
+    const needle = ownerSearchFilter.trim().toLowerCase();
+    if (!needle) return libraryOwners;
+    return libraryOwners.filter((owner) => {
+      const haystack = `${owner.label} ${owner.value} ${owner.description}`.toLowerCase();
+      return haystack.includes(needle);
+    });
+  }, [libraryOwners, ownerSearchFilter]);
+
+  const reusableModelCandidates = useMemo(() => {
+    if (!form || form.originalId || activeTab !== "library") return [];
+    const modelNeedle = form.id.trim().toLowerCase();
+    if (!modelNeedle) return [];
+    const seen = new Set<string>();
+    return models
+      .filter((model) => {
+        if (seen.has(model.id)) return false;
+        seen.add(model.id);
+        const haystack = `${model.id} ${model.owned_by} ${model.description}`.toLowerCase();
+        return haystack.includes(modelNeedle);
+      })
+      .slice(0, 8);
+  }, [activeTab, form, models]);
+
+  const showReusableModelCandidates =
+    modelIdSuggestionsOpen &&
+    reusableModelCandidates.length > 0 &&
+    Boolean(form && !form.originalId);
+
   const openEditModel = useCallback(
     (modelId: string) => {
       const model = models.find((entry) => entry.id === modelId);
@@ -553,17 +777,38 @@ export function ModelsPage() {
 
   const openAddModel = useCallback((ownedBy = "") => {
     setForm({ ...emptyForm, ownedBy });
+    setModelIdSuggestionsOpen(false);
   }, []);
 
   const updateForm = useCallback((patch: Partial<ModelFormState>) => {
     setForm((current) => (current ? { ...current, ...patch } : current));
   }, []);
 
+  const applyReusableModel = useCallback((model: ModelItem) => {
+    const template = toFormState(model);
+    setForm((current) =>
+      current
+        ? {
+            ...current,
+            id: template.id,
+            ownedBy: current.ownedBy || template.ownedBy,
+            description: template.description,
+            mode: template.mode,
+            inputPrice: template.inputPrice,
+            outputPrice: template.outputPrice,
+            cachedPrice: template.cachedPrice,
+            pricePerCall: template.pricePerCall,
+          }
+        : current,
+    );
+    setModelIdSuggestionsOpen(false);
+  }, []);
+
   const handleSave = useCallback(async () => {
     if (!form) return;
     setSaving(true);
     try {
-      const saved = await saveModelConfig(form);
+      const saved = await saveModelConfig(form, modelScope);
       setModels((prev) => {
         const withoutOriginal = prev.filter((model) => model.id !== (form.originalId ?? saved.id));
         return [...withoutOriginal, saved].sort((a, b) => a.id.localeCompare(b.id));
@@ -579,7 +824,7 @@ export function ModelsPage() {
     } finally {
       setSaving(false);
     }
-  }, [form, notify, t]);
+  }, [form, modelScope, notify, t]);
 
   const handleDelete = useCallback(async () => {
     if (!deleteTarget) return;
@@ -587,6 +832,12 @@ export function ModelsPage() {
     try {
       await apiClient.delete(`/model-configs/${encodeURIComponent(deleteTarget.id)}`);
       setModels((prev) => prev.filter((model) => model.id !== deleteTarget.id));
+      setSelectedModelIds((prev) => {
+        if (!prev.has(deleteTarget.id)) return prev;
+        const next = new Set(prev);
+        next.delete(deleteTarget.id);
+        return next;
+      });
       setDeleteTarget(null);
       notify({ type: "success", message: t("models_page.delete_saved") });
     } catch (err: unknown) {
@@ -598,6 +849,65 @@ export function ModelsPage() {
       setDeleting(false);
     }
   }, [deleteTarget, notify, t]);
+
+  const toggleModelSelection = useCallback((modelId: string, checked: boolean) => {
+    setSelectedModelIds((current) => {
+      const next = new Set(current);
+      if (checked) {
+        next.add(modelId);
+      } else {
+        next.delete(modelId);
+      }
+      return next;
+    });
+  }, []);
+
+  const toggleVisibleModelSelection = useCallback(
+    (checked: boolean) => {
+      setSelectedModelIds((current) => {
+        const next = new Set(current);
+        for (const modelId of filteredModelIds) {
+          if (checked) {
+            next.add(modelId);
+          } else {
+            next.delete(modelId);
+          }
+        }
+        return next;
+      });
+    },
+    [filteredModelIds],
+  );
+
+  const handleBulkDelete = useCallback(async () => {
+    if (!bulkDeleteTargetIds || bulkDeleteTargetIds.length === 0) return;
+    const ids = [...bulkDeleteTargetIds];
+    setDeleting(true);
+    try {
+      for (const modelId of ids) {
+        await apiClient.delete(`/model-configs/${encodeURIComponent(modelId)}`);
+      }
+      const deletedIds = new Set(ids);
+      setModels((prev) => prev.filter((model) => !deletedIds.has(model.id)));
+      setSelectedModelIds((current) => {
+        const next = new Set(current);
+        for (const modelId of ids) next.delete(modelId);
+        return next;
+      });
+      setBulkDeleteTargetIds(null);
+      notify({
+        type: "success",
+        message: t("models_page.delete_selected_models_success", { count: ids.length }),
+      });
+    } catch (err: unknown) {
+      notify({
+        type: "error",
+        message: err instanceof Error ? err.message : t("models_page.delete_failed"),
+      });
+    } finally {
+      setDeleting(false);
+    }
+  }, [bulkDeleteTargetIds, notify, t]);
 
   const persistOwnerPresets = useCallback(
     async (nextPresets: ModelOwnerPreset[]) => {
@@ -662,8 +972,91 @@ export function ModelsPage() {
     }
   }, [deleteOwnerTarget, ownerPresets, persistOwnerPresets]);
 
+  const saveOpenRouterSyncSettings = useCallback(
+    async (enabled: boolean, intervalHours = syncIntervalHours) => {
+      const intervalMinutes = syncIntervalMinutesFromHours(intervalHours);
+      setOpenRouterSyncSaving(true);
+      setOpenRouterSyncError(null);
+      try {
+        const state = normalizeOpenRouterSyncState(
+          await apiClient.put("/model-openrouter-sync", {
+            enabled,
+            interval_minutes: intervalMinutes,
+          }),
+        );
+        setOpenRouterSyncState(state);
+        setSyncIntervalHours(syncIntervalHoursValue(state.intervalMinutes));
+      } catch (err: unknown) {
+        const message =
+          err instanceof Error ? err.message : t("models_page.openrouter_sync_save_failed");
+        setOpenRouterSyncError(message);
+        notify({ type: "error", message });
+      } finally {
+        setOpenRouterSyncSaving(false);
+      }
+    },
+    [notify, syncIntervalHours, t],
+  );
+
+  const runOpenRouterSync = useCallback(async () => {
+    setOpenRouterSyncRunning(true);
+    setOpenRouterSyncError(null);
+    try {
+      const payload = await apiClient.post<{
+        result?: unknown;
+        state?: unknown;
+      }>("/model-openrouter-sync/run");
+      const result = normalizeOpenRouterSyncResult(payload?.result);
+      const state = normalizeOpenRouterSyncState(payload?.state ?? payload);
+      setOpenRouterSyncState({
+        ...state,
+        ...(result
+          ? {
+              lastSeen: result.seen,
+              lastAdded: result.added,
+              lastUpdated: result.updated,
+              lastSkipped: result.skipped,
+            }
+          : {}),
+        running: false,
+      });
+      setSyncIntervalHours(syncIntervalHoursValue(state.intervalMinutes));
+      await loadModels();
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : t("models_page.openrouter_sync_run_failed");
+      setOpenRouterSyncError(message);
+      notify({ type: "error", message });
+    } finally {
+      setOpenRouterSyncRunning(false);
+    }
+  }, [loadModels, notify, t]);
+
   const modelColumns = useMemo<VirtualTableColumn<ModelItem>[]>(
     () => [
+      {
+        key: "select",
+        label: "",
+        width: "w-12",
+        headerClassName: "text-center",
+        cellClassName: "text-center",
+        headerRender: () => (
+          <Checkbox
+            aria-label={t("models_page.select_all_visible_models")}
+            checked={allVisibleModelsSelected}
+            indeterminate={someVisibleModelsSelected && !allVisibleModelsSelected}
+            disabled={filteredModelIds.length === 0}
+            onCheckedChange={toggleVisibleModelSelection}
+          />
+        ),
+        render: (row) => (
+          <Checkbox
+            aria-label={t("models_page.select_model_aria", { model: row.id })}
+            checked={selectedModelIds.has(row.id)}
+            onCheckedChange={(checked) => toggleModelSelection(row.id, checked)}
+          />
+        ),
+      },
       {
         key: "model",
         label: t("models_page.col_model"),
@@ -761,8 +1154,35 @@ export function ModelsPage() {
         ),
       },
     ],
-    [openEditModel, t],
+    [
+      allVisibleModelsSelected,
+      filteredModelIds.length,
+      openEditModel,
+      selectedModelIds,
+      someVisibleModelsSelected,
+      t,
+      toggleModelSelection,
+      toggleVisibleModelSelection,
+    ],
   );
+
+  const selectionToolbar =
+    selectedModelCount > 0 ? (
+      <>
+        <span className="inline-flex h-8 items-center rounded-full bg-slate-100 px-3 text-xs font-semibold text-slate-600 dark:bg-white/[0.08] dark:text-white/65">
+          {t("models_page.selected_models_count", { count: selectedModelCount })}
+        </span>
+        <Button
+          variant="danger"
+          size="sm"
+          onClick={() => setBulkDeleteTargetIds(selectedModels.map((model) => model.id))}
+          disabled={deleting}
+        >
+          <Trash2 size={14} />
+          {t("models_page.delete_selected_models", { count: selectedModelCount })}
+        </Button>
+      </>
+    ) : null;
 
   return (
     <section className="flex flex-1 flex-col gap-4">
@@ -820,7 +1240,6 @@ export function ModelsPage() {
           <div data-testid="owner-sidebar-card" className="h-full min-h-0 min-w-0">
             <Card
               title={t("models_page.model_owners")}
-              description={t("models_page.model_owners_desc")}
               className="flex h-full min-h-0 flex-col overflow-hidden"
               bodyClassName="flex min-h-0 flex-1 flex-col gap-2"
               actions={
@@ -836,6 +1255,14 @@ export function ModelsPage() {
                 </Button>
               }
             >
+              <TextInput
+                value={ownerSearchFilter}
+                onChange={(e) => setOwnerSearchFilter(e.target.value)}
+                placeholder={t("models_page.owner_sidebar_search_placeholder")}
+                size="sm"
+                startAdornment={<Search size={14} className="text-slate-400 dark:text-white/35" />}
+              />
+
               <button
                 type="button"
                 onClick={() => setOwnerFilter("")}
@@ -867,8 +1294,12 @@ export function ModelsPage() {
                   <div className="rounded-xl border border-dashed border-slate-200 px-3 py-6 text-center text-sm text-slate-500 dark:border-neutral-800 dark:text-white/45">
                     {t("models_page.no_owner_presets")}
                   </div>
+                ) : filteredLibraryOwners.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-slate-200 px-3 py-6 text-center text-sm text-slate-500 dark:border-neutral-800 dark:text-white/45">
+                    {t("models_page.no_owner_search_results")}
+                  </div>
                 ) : (
-                  libraryOwners.map((owner) => {
+                  filteredLibraryOwners.map((owner) => {
                     const count = ownerModelCounts.get(owner.value) ?? owner.modelCount ?? 0;
                     const selected = ownerFilter === owner.value;
                     return (
@@ -930,11 +1361,11 @@ export function ModelsPage() {
           <div data-testid="model-library-card" className="h-full min-h-0 min-w-0">
             <Card
               title={t("models_page.model_library")}
-              description={t("models_page.model_library_desc")}
               className="flex h-full flex-col overflow-hidden"
               bodyClassName="relative flex min-h-0 flex-1 flex-col"
               actions={
                 <div className="flex flex-wrap items-center justify-end gap-2">
+                  {selectionToolbar}
                   <TextInput
                     value={searchFilter}
                     onChange={(e) => setSearchFilter(e.target.value)}
@@ -966,6 +1397,117 @@ export function ModelsPage() {
                 </div>
               }
             >
+              <div
+                data-testid="openrouter-sync-section"
+                className="mb-3 border-b border-slate-200 pb-3 dark:border-neutral-800"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-semibold text-slate-900 dark:text-white">
+                      <span>{t("models_page.openrouter_sync_title")}</span>
+                      <span
+                        className={[
+                          "rounded-full px-2 py-0.5 text-[10px] font-semibold",
+                          openRouterSyncState.enabled
+                            ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-300"
+                            : "bg-slate-100 text-slate-500 dark:bg-white/[0.08] dark:text-white/45",
+                        ].join(" ")}
+                      >
+                        {openRouterSyncState.enabled
+                          ? t("models_page.openrouter_sync_auto_on")
+                          : t("models_page.openrouter_sync_auto_off")}
+                      </span>
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-600 dark:text-white/55">
+                      <span>
+                        {t("models_page.openrouter_sync_last_sync", {
+                          value: formatSyncTimestamp(
+                            openRouterSyncState.lastSyncAt,
+                            t("models_page.openrouter_sync_never"),
+                          ),
+                        })}
+                      </span>
+                      <span>
+                        {t("models_page.openrouter_sync_result", {
+                          seen: openRouterSyncState.lastSeen,
+                          added: openRouterSyncState.lastAdded,
+                          updated: openRouterSyncState.lastUpdated,
+                          skipped: openRouterSyncState.lastSkipped,
+                        })}
+                      </span>
+                      {openRouterSyncLoading ? <span>{t("models_page.loading")}</span> : null}
+                    </div>
+                    {openRouterSyncState.lastError || openRouterSyncError ? (
+                      <div className="mt-2 text-xs text-rose-600 dark:text-rose-300">
+                        {t("models_page.openrouter_sync_error", {
+                          error: openRouterSyncError || openRouterSyncState.lastError,
+                        })}
+                      </div>
+                    ) : null}
+                  </div>
+
+                  <div className="flex flex-wrap items-end gap-3">
+                    <div className="w-28">
+                      <label
+                        htmlFor="openrouter-sync-interval"
+                        className="mb-1 block text-xs font-medium text-slate-600 dark:text-white/60"
+                      >
+                        {t("models_page.openrouter_sync_interval")}
+                      </label>
+                      <TextInput
+                        id="openrouter-sync-interval"
+                        type="number"
+                        value={syncIntervalHours}
+                        onChange={(e) => setSyncIntervalHours(e.target.value)}
+                        onBlur={() => {
+                          if (skipSyncIntervalBlurRef.current) {
+                            skipSyncIntervalBlurRef.current = false;
+                            return;
+                          }
+                          void saveOpenRouterSyncSettings(openRouterSyncState.enabled);
+                        }}
+                        min={1}
+                        step={1}
+                        size="sm"
+                      />
+                    </div>
+                    <div
+                      onMouseDownCapture={() => {
+                        skipSyncIntervalBlurRef.current = true;
+                      }}
+                      className="flex flex-wrap items-end gap-3"
+                    >
+                      <ToggleSwitch
+                        checked={openRouterSyncState.enabled}
+                        onCheckedChange={(enabled) => void saveOpenRouterSyncSettings(enabled)}
+                        label={t("models_page.openrouter_sync_auto")}
+                        disabled={openRouterSyncSaving}
+                      />
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        onClick={() => void runOpenRouterSync()}
+                        disabled={
+                          openRouterSyncRunning ||
+                          openRouterSyncState.running ||
+                          openRouterSyncLoading
+                        }
+                      >
+                        <RefreshCw
+                          size={14}
+                          className={
+                            openRouterSyncRunning || openRouterSyncState.running
+                              ? "animate-spin"
+                              : ""
+                          }
+                        />
+                        {t("models_page.openrouter_sync_now")}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <VirtualTable<ModelItem>
                 rows={filteredModels}
                 columns={modelColumns}
@@ -976,7 +1518,7 @@ export function ModelsPage() {
                 emptyText={
                   searchFilter ? t("models_page.no_results") : t("models_page.no_model_data")
                 }
-                minWidth="min-w-[1100px]"
+                minWidth="min-w-[1160px]"
                 height="h-full"
                 minHeight="min-h-0"
               />
@@ -991,6 +1533,7 @@ export function ModelsPage() {
           bodyClassName="relative flex min-h-0 flex-1 flex-col"
           actions={
             <div className="flex flex-wrap items-center justify-end gap-2">
+              {selectionToolbar}
               <TextInput
                 value={searchFilter}
                 onChange={(e) => setSearchFilter(e.target.value)}
@@ -1028,7 +1571,7 @@ export function ModelsPage() {
             rowHeight={52}
             caption={t("models_page.table_caption")}
             emptyText={searchFilter ? t("models_page.no_results") : t("models_page.no_model_data")}
-            minWidth="min-w-[1100px]"
+            minWidth="min-w-[1160px]"
             height="h-[calc(100vh-430px)]"
           />
         </Card>
@@ -1036,7 +1579,10 @@ export function ModelsPage() {
 
       <Modal
         open={form !== null}
-        onClose={() => setForm(null)}
+        onClose={() => {
+          setForm(null);
+          setModelIdSuggestionsOpen(false);
+        }}
         title={form?.originalId ? t("models_page.edit_model") : t("models_page.add_model")}
         description={t("models_page.config_desc")}
         footer={
@@ -1060,12 +1606,71 @@ export function ModelsPage() {
                 >
                   {t("models_page.model_id")}
                 </label>
-                <TextInput
-                  id="model-config-id"
-                  value={form.id}
-                  onChange={(e) => updateForm({ id: e.target.value })}
-                  placeholder="gpt-4.1"
-                />
+                <div className="relative">
+                  <TextInput
+                    id="model-config-id"
+                    role={!form.originalId && activeTab === "library" ? "combobox" : undefined}
+                    aria-label={t("models_page.model_id")}
+                    aria-autocomplete={
+                      !form.originalId && activeTab === "library" ? "list" : undefined
+                    }
+                    aria-controls={
+                      showReusableModelCandidates ? "model-config-id-reuse-options" : undefined
+                    }
+                    aria-expanded={
+                      !form.originalId && activeTab === "library"
+                        ? showReusableModelCandidates
+                        : undefined
+                    }
+                    value={form.id}
+                    onChange={(e) => {
+                      const nextId = e.target.value;
+                      updateForm({ id: nextId });
+                      setModelIdSuggestionsOpen(Boolean(nextId.trim()));
+                    }}
+                    onFocus={() => setModelIdSuggestionsOpen(Boolean(form.id.trim()))}
+                    onBlur={() => {
+                      window.setTimeout(() => setModelIdSuggestionsOpen(false), 120);
+                    }}
+                    placeholder={
+                      !form.originalId && activeTab === "library"
+                        ? t("models_page.model_id_reuse_placeholder")
+                        : "gpt-4.1"
+                    }
+                    autoComplete="off"
+                  />
+                  {showReusableModelCandidates ? (
+                    <div
+                      id="model-config-id-reuse-options"
+                      role="listbox"
+                      className="absolute left-0 right-0 top-full z-30 mt-2 max-h-64 overflow-y-auto rounded-2xl bg-white p-1 shadow-[0_8px_28px_rgb(0_0_0_/_0.16)] dark:bg-[#27272A] dark:shadow-[0_14px_36px_rgb(0_0_0_/_0.38)]"
+                    >
+                      {reusableModelCandidates.map((model) => (
+                        <button
+                          key={model.id}
+                          type="button"
+                          role="option"
+                          aria-selected={form.id === model.id}
+                          onMouseDown={(event) => event.preventDefault()}
+                          onClick={() => applyReusableModel(model)}
+                          className="flex w-full min-w-0 items-center justify-between gap-3 rounded-xl px-3 py-2 text-left text-sm transition-colors hover:bg-[#F4F4F5] dark:hover:bg-white/[0.06]"
+                        >
+                          <span className="min-w-0">
+                            <span className="block truncate font-medium text-[#18181B] dark:text-white">
+                              {model.id}
+                            </span>
+                            <span className="block truncate text-xs text-[#71717A] dark:text-[#A1A1AA]">
+                              {model.description || model.owned_by}
+                            </span>
+                          </span>
+                          <span className="shrink-0 text-xs font-medium text-[#71717A] dark:text-[#A1A1AA]">
+                            {formatPrice(model, t("models_page.not_priced"))}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
               </div>
               <div>
                 <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
@@ -1302,6 +1907,18 @@ export function ModelsPage() {
         busy={deleting}
         onClose={() => setDeleteTarget(null)}
         onConfirm={() => void handleDelete()}
+      />
+
+      <ConfirmModal
+        open={bulkDeleteTargetIds !== null}
+        title={t("models_page.delete_selected_models_title")}
+        description={t("models_page.delete_selected_models_desc", {
+          count: bulkDeleteTargetIds?.length ?? 0,
+        })}
+        confirmText={t("models_page.delete")}
+        busy={deleting}
+        onClose={() => setBulkDeleteTargetIds(null)}
+        onConfirm={() => void handleBulkDelete()}
       />
     </section>
   );

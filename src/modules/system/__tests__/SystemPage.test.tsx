@@ -55,8 +55,20 @@ function renderPage() {
 describe("SystemPage", () => {
   beforeEach(async () => {
     await i18n.changeLanguage("en");
+    window.localStorage.clear();
     mocks.apiGet.mockImplementation((path: string) => {
       if (path === "/models") return Promise.resolve({ data: [] });
+      if (path === "/model-configs?scope=library") return Promise.resolve({ data: [] });
+      if (path === "/auth-files") return Promise.resolve({ files: [] });
+      if (
+        path === "/gemini-api-key" ||
+        path === "/claude-api-key" ||
+        path === "/codex-api-key" ||
+        path === "/vertex-api-key" ||
+        path === "/openai-compatibility"
+      ) {
+        return Promise.resolve([]);
+      }
       if (path === "/system-stats") return Promise.resolve({ uptime: 10 });
       return Promise.resolve({});
     });
@@ -125,6 +137,59 @@ describe("SystemPage", () => {
       expect(mocks.current).toHaveBeenCalled();
     });
     expect(mocks.check).toHaveBeenCalledTimes(1);
+  });
+
+  test("uses auth-file model owner groups instead of raw registry models", async () => {
+    window.localStorage.setItem(
+      "authFilesPage.modelOwnerGroupMap.v1",
+      JSON.stringify({ claude: "anthropic" }),
+    );
+    mocks.apiGet.mockImplementation((path: string) => {
+      if (path === "/models") {
+        return Promise.resolve({
+          data: [{ id: "claude-ghost-model" }, { id: "gpt-should-not-leak" }],
+        });
+      }
+      if (path === "/auth-files") {
+        return Promise.resolve({
+          files: [{ name: "claude-account.json", type: "claude", disabled: false }],
+        });
+      }
+      if (path === "/model-configs?scope=library") {
+        return Promise.resolve({
+          data: [
+            {
+              id: "claude-3-7-sonnet-latest",
+              owned_by: "anthropic",
+              description: "Mapped Claude model",
+              enabled: true,
+            },
+            {
+              id: "gpt-should-not-leak",
+              owned_by: "openai",
+              description: "Unmapped OpenAI model",
+              enabled: true,
+            },
+          ],
+        });
+      }
+      if (
+        path === "/gemini-api-key" ||
+        path === "/claude-api-key" ||
+        path === "/codex-api-key" ||
+        path === "/vertex-api-key" ||
+        path === "/openai-compatibility"
+      ) {
+        return Promise.resolve([]);
+      }
+      return Promise.resolve({});
+    });
+
+    renderPage();
+
+    expect(await screen.findByText("claude-3-7-sonnet-latest")).toBeInTheDocument();
+    expect(screen.queryByText("claude-ghost-model")).not.toBeInTheDocument();
+    expect(screen.queryByText("gpt-should-not-leak")).not.toBeInTheDocument();
   });
 
   test("rechecks the target version before treating the update as successful", async () => {

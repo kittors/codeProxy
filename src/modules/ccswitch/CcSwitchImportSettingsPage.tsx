@@ -7,13 +7,17 @@ import iconGemini from "@/assets/icons/gemini.svg";
 import { Button } from "@/modules/ui/Button";
 import { Card } from "@/modules/ui/Card";
 import { TextInput } from "@/modules/ui/Input";
+import { Select } from "@/modules/ui/Select";
 import { useToast } from "@/modules/ui/ToastProvider";
 import { CC_SWITCH_CLIENTS, type CcSwitchClientType } from "@/modules/ccswitch/ccswitchImport";
 import {
+  CC_SWITCH_CLAUDE_AUTH_FIELDS,
   normalizeCcSwitchImportSettings,
+  normalizeCcSwitchClaudeAuthField,
   readCcSwitchImportSettings,
   resetCcSwitchImportSettings,
   writeCcSwitchImportSettings,
+  type CcSwitchClaudeAuthField,
   type CcSwitchImportSettings,
 } from "@/modules/ccswitch/ccswitchImportSettings";
 
@@ -23,6 +27,7 @@ type FormSettings = Record<
     endpointPath: string;
     defaultModel: string;
     usageAutoInterval: string;
+    apiKeyField?: CcSwitchClaudeAuthField;
   }
 >;
 
@@ -38,6 +43,7 @@ function toFormSettings(settings: CcSwitchImportSettings): FormSettings {
       endpointPath: settings.claude.endpointPath,
       defaultModel: settings.claude.defaultModel,
       usageAutoInterval: String(settings.claude.usageAutoInterval),
+      apiKeyField: settings.claude.apiKeyField,
     },
     codex: {
       endpointPath: settings.codex.endpointPath,
@@ -58,6 +64,7 @@ function fromFormSettings(form: FormSettings): CcSwitchImportSettings {
       endpointPath: form.claude.endpointPath,
       defaultModel: form.claude.defaultModel,
       usageAutoInterval: Number(form.claude.usageAutoInterval),
+      apiKeyField: form.claude.apiKeyField,
     },
     codex: {
       endpointPath: form.codex.endpointPath,
@@ -76,6 +83,18 @@ export function CcSwitchImportSettingsPage() {
   const { t } = useTranslation();
   const { notify } = useToast();
   const clients = useMemo(() => CC_SWITCH_CLIENTS, []);
+  const authFieldOptions = useMemo(
+    () =>
+      CC_SWITCH_CLAUDE_AUTH_FIELDS.map((value) => ({
+        value,
+        label: t(
+          value === "ANTHROPIC_AUTH_TOKEN"
+            ? "ccswitch.auth_field_anthropic_auth_token"
+            : "ccswitch.auth_field_anthropic_api_key",
+        ),
+      })),
+    [t],
+  );
   const [form, setForm] = useState<FormSettings>(() =>
     toFormSettings(readCcSwitchImportSettings()),
   );
@@ -139,6 +158,7 @@ export function CcSwitchImportSettingsPage() {
           const endpointPathId = `ccswitch-${client.type}-endpoint-path`;
           const defaultModelId = `ccswitch-${client.type}-default-model`;
           const usageIntervalId = `ccswitch-${client.type}-usage-interval`;
+          const authFieldLabel = t("ccswitch.settings_auth_field", { client: label });
 
           return (
             <Card
@@ -197,6 +217,24 @@ export function CcSwitchImportSettingsPage() {
                     placeholder="30"
                   />
                 </label>
+
+                {client.type === "claude" ? (
+                  <div className="block space-y-1.5">
+                    <span className="text-xs font-semibold text-slate-700 dark:text-white/75">
+                      {authFieldLabel}
+                    </span>
+                    <Select
+                      value={form.claude.apiKeyField ?? "ANTHROPIC_API_KEY"}
+                      onChange={(value) =>
+                        updateClient("claude", {
+                          apiKeyField: normalizeCcSwitchClaudeAuthField(value),
+                        })
+                      }
+                      options={authFieldOptions}
+                      aria-label={authFieldLabel}
+                    />
+                  </div>
+                ) : null}
               </div>
             </Card>
           );

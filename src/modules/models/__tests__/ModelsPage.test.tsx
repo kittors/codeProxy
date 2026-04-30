@@ -42,6 +42,7 @@ describe("ModelsPage", () => {
 
   beforeEach(async () => {
     await i18n.changeLanguage("en");
+    window.localStorage.clear();
     ownerPresetItems = [
       { value: "openai", label: "OpenAI", description: "OpenAI official models" },
       { value: "anthropic", label: "Anthropic", description: "Claude models" },
@@ -86,9 +87,33 @@ describe("ModelsPage", () => {
           ],
         });
       }
+      if (path === "/auth-files") {
+        return Promise.resolve({ files: [] });
+      }
+      if (
+        path === "/gemini-api-key" ||
+        path === "/claude-api-key" ||
+        path === "/codex-api-key" ||
+        path === "/vertex-api-key" ||
+        path === "/openai-compatibility"
+      ) {
+        return Promise.resolve([]);
+      }
       if (path === "/model-owner-presets") {
         return Promise.resolve({
           data: ownerPresetItems,
+        });
+      }
+      if (path === "/model-openrouter-sync") {
+        return Promise.resolve({
+          enabled: false,
+          interval_minutes: 1440,
+          last_sync_at: "2026-04-29T04:30:00Z",
+          last_success_at: "2026-04-29T04:30:00Z",
+          last_seen: 20,
+          last_added: 2,
+          last_skipped: 18,
+          running: false,
         });
       }
       if (path.startsWith("/usage/logs")) {
@@ -118,6 +143,139 @@ describe("ModelsPage", () => {
     expect(screen.queryByText("seed-only-model")).not.toBeInTheDocument();
   });
 
+  test("filters current models by auth-file model owner group mapping", async () => {
+    window.localStorage.setItem(
+      "authFilesPage.modelOwnerGroupMap.v1",
+      JSON.stringify({ claude: "anthropic" }),
+    );
+    mocks.apiGet.mockImplementation((path: string) => {
+      if (path === "/model-configs?scope=active" || path === "/model-configs") {
+        return Promise.resolve({
+          data: [
+            {
+              id: "claude-3-7-sonnet-latest",
+              owned_by: "anthropic",
+              description: "Mapped Claude model",
+              enabled: true,
+              source: "seed",
+              pricing: { mode: "token" },
+            },
+            {
+              id: "gpt-should-not-leak",
+              owned_by: "openai",
+              description: "Unmapped OpenAI model",
+              enabled: true,
+              source: "seed",
+              pricing: { mode: "token" },
+            },
+          ],
+        });
+      }
+      if (path === "/model-configs?scope=library") {
+        return Promise.resolve({
+          data: [
+            {
+              id: "claude-3-7-sonnet-latest",
+              owned_by: "anthropic",
+              description: "Mapped Claude model",
+              enabled: true,
+              source: "seed",
+              pricing: { mode: "token" },
+            },
+            {
+              id: "gpt-should-not-leak",
+              owned_by: "openai",
+              description: "Unmapped OpenAI model",
+              enabled: true,
+              source: "seed",
+              pricing: { mode: "token" },
+            },
+          ],
+        });
+      }
+      if (path === "/auth-files") {
+        return Promise.resolve({
+          files: [{ name: "claude-account.json", type: "claude", disabled: false }],
+        });
+      }
+      if (
+        path === "/gemini-api-key" ||
+        path === "/claude-api-key" ||
+        path === "/codex-api-key" ||
+        path === "/vertex-api-key" ||
+        path === "/openai-compatibility"
+      ) {
+        return Promise.resolve([]);
+      }
+      if (path === "/model-owner-presets") {
+        return Promise.resolve({ data: ownerPresetItems });
+      }
+      if (path.startsWith("/usage/logs")) {
+        return Promise.resolve({ stats: { total_cost: 0 } });
+      }
+      return Promise.resolve({});
+    });
+
+    renderPage();
+
+    expect(await screen.findByText("claude-3-7-sonnet-latest")).toBeInTheDocument();
+    expect(screen.queryByText("gpt-should-not-leak")).not.toBeInTheDocument();
+  });
+
+  test("adds configured ai-provider models missing from active model configs", async () => {
+    mocks.apiGet.mockImplementation((path: string) => {
+      if (path === "/model-configs?scope=active" || path === "/model-configs") {
+        return Promise.resolve({
+          data: [
+            {
+              id: "gpt-should-not-leak",
+              owned_by: "openai",
+              description: "Unconfigured registry model",
+              enabled: true,
+              source: "seed",
+              pricing: { mode: "token" },
+            },
+          ],
+        });
+      }
+      if (path === "/model-configs?scope=library") {
+        return Promise.resolve({ data: [] });
+      }
+      if (path === "/auth-files") {
+        return Promise.resolve({ files: [] });
+      }
+      if (path === "/claude-api-key") {
+        return Promise.resolve([
+          {
+            "api-key": "sk-claude",
+            name: "Claude Team",
+            models: [{ name: "claude-raw-upstream", alias: "claude-main" }],
+          },
+        ]);
+      }
+      if (
+        path === "/gemini-api-key" ||
+        path === "/codex-api-key" ||
+        path === "/vertex-api-key" ||
+        path === "/openai-compatibility"
+      ) {
+        return Promise.resolve([]);
+      }
+      if (path === "/model-owner-presets") {
+        return Promise.resolve({ data: ownerPresetItems });
+      }
+      if (path.startsWith("/usage/logs")) {
+        return Promise.resolve({ stats: { total_cost: 0 } });
+      }
+      return Promise.resolve({});
+    });
+
+    renderPage();
+
+    expect(await screen.findByText("claude-main")).toBeInTheDocument();
+    expect(screen.queryByText("gpt-should-not-leak")).not.toBeInTheDocument();
+  });
+
   test("loads the full model library only after switching to the library tab", async () => {
     renderPage();
 
@@ -132,7 +290,83 @@ describe("ModelsPage", () => {
     expect(await screen.findByTestId("owner-library-layout")).toBeInTheDocument();
     expect(screen.getByTestId("owner-sidebar-card")).toHaveTextContent(/model owners/i);
     expect(screen.getByTestId("model-library-card")).toHaveTextContent(/seed-only-model/i);
+    expect(
+      screen.queryByText(/pick an owner to filter the library, or maintain owner presets/i),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/browse seeded database model definitions/i)).not.toBeInTheDocument();
     expect(mocks.apiGet).toHaveBeenCalledWith("/model-configs?scope=library");
+  });
+
+  test("filters owner presets from the owner sidebar search", async () => {
+    renderPage();
+
+    expect(await screen.findByText("gpt-image-2")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("tab", { name: /model library/i }));
+
+    const ownerSidebar = await screen.findByTestId("owner-sidebar-card");
+    await userEvent.type(within(ownerSidebar).getByPlaceholderText(/search owners/i), "acme");
+
+    expect(within(ownerSidebar).getByText("Acme AI")).toBeInTheDocument();
+    expect(within(ownerSidebar).queryByText("OpenAI")).not.toBeInTheDocument();
+    expect(within(ownerSidebar).queryByText("Anthropic")).not.toBeInTheDocument();
+  });
+
+  test("formats synced OpenRouter prices without floating point noise or provider prefixes", async () => {
+    mocks.apiGet.mockImplementation((path: string) => {
+      if (path === "/model-configs?scope=active" || path === "/model-configs") {
+        return Promise.resolve({ data: [] });
+      }
+      if (path === "/model-configs?scope=library") {
+        return Promise.resolve({
+          data: [
+            {
+              id: "kimi-latest",
+              owned_by: "moonshotai",
+              description: "OpenRouter alias model",
+              enabled: true,
+              source: "openrouter",
+              pricing: {
+                mode: "token",
+                input_price_per_million: 0.19999999999999998,
+                output_price_per_million: 4.655,
+                cached_price_per_million: 0.1463,
+              },
+            },
+          ],
+        });
+      }
+      if (path === "/model-owner-presets") {
+        return Promise.resolve({
+          data: [{ value: "moonshotai", label: "Moonshot AI", description: "" }],
+        });
+      }
+      if (path === "/model-openrouter-sync") {
+        return Promise.resolve({
+          enabled: false,
+          interval_minutes: 1440,
+          last_seen: 1,
+          last_added: 1,
+          last_updated: 0,
+          last_skipped: 0,
+          running: false,
+        });
+      }
+      if (path.startsWith("/usage/logs")) {
+        return Promise.resolve({ stats: { total_cost: 0 } });
+      }
+      return Promise.resolve({});
+    });
+
+    renderPage();
+
+    await userEvent.click(await screen.findByRole("tab", { name: /model library/i }));
+
+    expect(await screen.findByText("kimi-latest")).toBeInTheDocument();
+    expect(screen.getByText("$0.2 / $4.655 / $0.1463")).toBeInTheDocument();
+    expect(screen.getAllByText("moonshotai").length).toBeGreaterThan(0);
+    expect(screen.queryByText("~moonshotai")).not.toBeInTheDocument();
+    expect(screen.queryByText("~moonshotai/kimi-latest")).not.toBeInTheDocument();
+    expect(screen.queryByText(/\$0\.19999999999999998/)).not.toBeInTheDocument();
   });
 
   test("keeps the owner sidebar constrained while the owner list scrolls internally", async () => {
@@ -215,6 +449,142 @@ describe("ModelsPage", () => {
     });
   });
 
+  test("deletes selected model rows after checkbox selection and confirmation", async () => {
+    const libraryModels = [
+      {
+        id: "seed-only-model",
+        owned_by: "openai",
+        description: "Seeded model library entry",
+        enabled: true,
+        source: "seed",
+        pricing: {
+          mode: "token",
+          input_price_per_million: 1,
+          output_price_per_million: 3,
+        },
+      },
+      {
+        id: "openrouter-model",
+        owned_by: "anthropic",
+        description: "OpenRouter synced entry",
+        enabled: true,
+        source: "openrouter",
+        pricing: {
+          mode: "token",
+          input_price_per_million: 2,
+          output_price_per_million: 8,
+        },
+      },
+    ];
+    mocks.apiGet.mockImplementation((path: string) => {
+      if (path === "/model-configs?scope=active" || path === "/model-configs") {
+        return Promise.resolve({ data: [] });
+      }
+      if (path === "/model-configs?scope=library") {
+        return Promise.resolve({ data: libraryModels });
+      }
+      if (path === "/model-owner-presets") {
+        return Promise.resolve({ data: ownerPresetItems });
+      }
+      if (path === "/model-openrouter-sync") {
+        return Promise.resolve({
+          enabled: false,
+          interval_minutes: 1440,
+          last_seen: 2,
+          last_added: 2,
+          last_updated: 0,
+          last_skipped: 0,
+          running: false,
+        });
+      }
+      if (path.startsWith("/usage/logs")) {
+        return Promise.resolve({ stats: { total_cost: 0 } });
+      }
+      return Promise.resolve({});
+    });
+
+    renderPage();
+
+    await userEvent.click(await screen.findByRole("tab", { name: /model library/i }));
+    const libraryCard = await screen.findByTestId("model-library-card");
+
+    await userEvent.click(within(libraryCard).getByLabelText(/select seed-only-model/i));
+
+    expect(within(libraryCard).getByText(/1 selected/i)).toBeInTheDocument();
+    await userEvent.click(
+      within(libraryCard).getByRole("button", { name: /delete selected \(1\)/i }),
+    );
+
+    const confirmDialog = await screen.findByRole("dialog", { name: /delete selected models/i });
+    expect(within(confirmDialog).getByText(/1 selected model/)).toBeInTheDocument();
+
+    await userEvent.click(within(confirmDialog).getByRole("button", { name: /^delete$/i }));
+
+    await waitFor(() => {
+      expect(mocks.apiDelete).toHaveBeenCalledWith("/model-configs/seed-only-model");
+      expect(screen.queryByText("seed-only-model")).not.toBeInTheDocument();
+    });
+    expect(screen.getByText("openrouter-model")).toBeInTheDocument();
+  });
+
+  test("selects all filtered model rows from the table header checkbox", async () => {
+    const libraryModels = [
+      {
+        id: "gpt-5.5",
+        owned_by: "openai",
+        description: "OpenAI model",
+        enabled: true,
+        source: "openrouter",
+        pricing: { mode: "token", input_price_per_million: 1, output_price_per_million: 3 },
+      },
+      {
+        id: "claude-sonnet-4-6",
+        owned_by: "anthropic",
+        description: "Claude model",
+        enabled: true,
+        source: "openrouter",
+        pricing: { mode: "token", input_price_per_million: 3, output_price_per_million: 15 },
+      },
+    ];
+    mocks.apiGet.mockImplementation((path: string) => {
+      if (path === "/model-configs?scope=active" || path === "/model-configs") {
+        return Promise.resolve({ data: [] });
+      }
+      if (path === "/model-configs?scope=library") {
+        return Promise.resolve({ data: libraryModels });
+      }
+      if (path === "/model-owner-presets") {
+        return Promise.resolve({ data: ownerPresetItems });
+      }
+      if (path === "/model-openrouter-sync") {
+        return Promise.resolve({
+          enabled: false,
+          interval_minutes: 1440,
+          last_seen: 2,
+          last_added: 2,
+          last_updated: 0,
+          last_skipped: 0,
+          running: false,
+        });
+      }
+      if (path.startsWith("/usage/logs")) {
+        return Promise.resolve({ stats: { total_cost: 0 } });
+      }
+      return Promise.resolve({});
+    });
+
+    renderPage();
+
+    await userEvent.click(await screen.findByRole("tab", { name: /model library/i }));
+    const libraryCard = await screen.findByTestId("model-library-card");
+
+    await userEvent.click(within(libraryCard).getByLabelText(/select all visible models/i));
+
+    expect(within(libraryCard).getByText(/2 selected/i)).toBeInTheDocument();
+    expect(within(libraryCard).getByLabelText(/select gpt-5\.5/i)).toBeChecked();
+    expect(within(libraryCard).getByLabelText(/select claude-sonnet-4-6/i)).toBeChecked();
+  });
+
   test("saves model id, description, enabled state, pricing mode, and per-call price", async () => {
     renderPage();
 
@@ -294,6 +664,236 @@ describe("ModelsPage", () => {
         }),
       );
     });
+  });
+
+  test("searches all library models by model id while adding from a selected owner", async () => {
+    const libraryModels = [
+      {
+        id: "gpt-5.5",
+        owned_by: "openai",
+        description: "Reusable OpenAI model",
+        enabled: true,
+        source: "openrouter",
+        pricing: {
+          mode: "token",
+          input_price_per_million: 1.25,
+          output_price_per_million: 10.5,
+          cached_price_per_million: 0.25,
+        },
+      },
+      {
+        id: "claude-sonnet-4-6",
+        owned_by: "anthropic",
+        description: "Reusable Claude model",
+        enabled: true,
+        source: "openrouter",
+        pricing: {
+          mode: "token",
+          input_price_per_million: 3,
+          output_price_per_million: 15,
+          cached_price_per_million: 0.3,
+        },
+      },
+    ];
+    mocks.apiGet.mockImplementation((path: string) => {
+      if (path === "/model-configs?scope=active" || path === "/model-configs") {
+        return Promise.resolve({ data: [] });
+      }
+      if (path === "/model-configs?scope=library") {
+        return Promise.resolve({ data: libraryModels });
+      }
+      if (path === "/model-owner-presets") {
+        return Promise.resolve({ data: ownerPresetItems });
+      }
+      if (path === "/model-openrouter-sync") {
+        return Promise.resolve({
+          enabled: false,
+          interval_minutes: 1440,
+          last_seen: 2,
+          last_added: 2,
+          last_updated: 0,
+          last_skipped: 0,
+          running: false,
+        });
+      }
+      if (path.startsWith("/usage/logs")) {
+        return Promise.resolve({ stats: { total_cost: 0 } });
+      }
+      return Promise.resolve({});
+    });
+
+    renderPage();
+
+    await userEvent.click(await screen.findByRole("tab", { name: /model library/i }));
+    const ownerSidebar = await screen.findByTestId("owner-sidebar-card");
+    await userEvent.click(within(ownerSidebar).getByRole("button", { name: /^openai/i }));
+    const libraryCard = await screen.findByTestId("model-library-card");
+    await userEvent.click(within(libraryCard).getByRole("button", { name: /add model/i }));
+
+    const dialog = await screen.findByRole("dialog", { name: /add model/i });
+    const modelIdInput = within(dialog).getByRole("combobox", { name: /model id/i });
+    await userEvent.click(modelIdInput);
+
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+
+    await userEvent.type(modelIdInput, "claude");
+    await userEvent.click(await screen.findByRole("option", { name: /claude-sonnet-4-6/i }));
+
+    expect(within(dialog).getByRole("combobox", { name: /owner/i })).toHaveTextContent("OpenAI");
+    expect(within(dialog).getByLabelText(/description/i)).toHaveValue("Reusable Claude model");
+    expect(within(dialog).getByLabelText(/input token/i)).toHaveValue(3);
+    expect(within(dialog).getByLabelText(/output token/i)).toHaveValue(15);
+    expect(within(dialog).getByLabelText(/cache token/i)).toHaveValue(0.3);
+  });
+
+  test("keeps a model added from the model library after refreshing that tab", async () => {
+    const libraryModels = [
+      {
+        id: "seed-only-model",
+        owned_by: "openai",
+        description: "Seeded model library entry",
+        enabled: true,
+        source: "seed",
+        pricing: {
+          mode: "token",
+          input_price_per_million: 1,
+          output_price_per_million: 3,
+        },
+      },
+    ];
+    mocks.apiGet.mockImplementation((path: string) => {
+      if (path === "/model-configs?scope=active" || path === "/model-configs") {
+        return Promise.resolve({ data: [] });
+      }
+      if (path === "/model-configs?scope=library") {
+        return Promise.resolve({ data: libraryModels });
+      }
+      if (path === "/model-owner-presets") {
+        return Promise.resolve({ data: ownerPresetItems });
+      }
+      if (path.startsWith("/usage/logs")) {
+        return Promise.resolve({ stats: { total_cost: 0 } });
+      }
+      return Promise.resolve({});
+    });
+    mocks.apiPost.mockImplementation((path: string, payload: Record<string, unknown>) => {
+      if (path === "/model-configs?scope=library") {
+        libraryModels.push({
+          ...(payload as (typeof libraryModels)[number]),
+          source: "seed",
+        });
+      }
+      return Promise.resolve({ status: "ok" });
+    });
+
+    renderPage();
+
+    await userEvent.click(await screen.findByRole("tab", { name: /model library/i }));
+    const libraryCard = await screen.findByTestId("model-library-card");
+
+    await userEvent.click(within(libraryCard).getByRole("button", { name: /add model/i }));
+    const dialog = await screen.findByRole("dialog", { name: /add model/i });
+    await userEvent.type(within(dialog).getByLabelText(/model id/i), "custom-library-model");
+    await userEvent.click(within(dialog).getByRole("combobox", { name: /owner/i }));
+    await userEvent.click(await screen.findByRole("option", { name: "Anthropic" }));
+    await userEvent.click(within(dialog).getByRole("button", { name: /^save$/i }));
+
+    await waitFor(() => {
+      expect(mocks.apiPost).toHaveBeenCalledWith(
+        "/model-configs?scope=library",
+        expect.objectContaining({
+          id: "custom-library-model",
+          owned_by: "anthropic",
+        }),
+      );
+    });
+
+    const refreshButton = within(libraryCard).getByRole("button", { name: /refresh/i });
+    const libraryFetchesBeforeRefresh = mocks.apiGet.mock.calls.filter(
+      ([path]) => path === "/model-configs?scope=library",
+    ).length;
+    await userEvent.click(refreshButton);
+    await waitFor(() => {
+      expect(
+        mocks.apiGet.mock.calls.filter(([path]) => path === "/model-configs?scope=library").length,
+      ).toBeGreaterThan(libraryFetchesBeforeRefresh);
+    });
+    await waitFor(() => expect(refreshButton).not.toBeDisabled());
+
+    expect(screen.getByText("custom-library-model")).toBeInTheDocument();
+  });
+
+  test("syncs OpenRouter models from the library tab and refreshes the library list", async () => {
+    renderPage();
+
+    await userEvent.click(await screen.findByRole("tab", { name: /model library/i }));
+    const libraryCard = await screen.findByTestId("model-library-card");
+
+    expect(mocks.apiGet).toHaveBeenCalledWith("/model-openrouter-sync");
+    expect(within(libraryCard).getByText(/seen 20/i)).toBeInTheDocument();
+
+    const libraryFetchesBeforeSync = mocks.apiGet.mock.calls.filter(
+      ([path]) => path === "/model-configs?scope=library",
+    ).length;
+
+    mocks.apiPost.mockResolvedValueOnce({
+      status: "ok",
+      result: { seen: 21, added: 1, skipped: 20 },
+      state: {
+        enabled: false,
+        interval_minutes: 1440,
+        last_sync_at: "2026-04-29T05:00:00Z",
+        last_success_at: "2026-04-29T05:00:00Z",
+        last_seen: 21,
+        last_added: 1,
+        last_skipped: 20,
+        running: false,
+      },
+    });
+
+    await userEvent.click(within(libraryCard).getByRole("button", { name: /sync openrouter/i }));
+
+    await waitFor(() => {
+      expect(mocks.apiPost).toHaveBeenCalledWith("/model-openrouter-sync/run");
+    });
+    await waitFor(() => {
+      expect(
+        mocks.apiGet.mock.calls.filter(([path]) => path === "/model-configs?scope=library").length,
+      ).toBeGreaterThan(libraryFetchesBeforeSync);
+    });
+    expect(within(libraryCard).getByText(/added 1/i)).toBeInTheDocument();
+  });
+
+  test("updates OpenRouter automatic sync settings from the library tab", async () => {
+    renderPage();
+
+    await userEvent.click(await screen.findByRole("tab", { name: /model library/i }));
+    const libraryCard = await screen.findByTestId("model-library-card");
+
+    const intervalInput = await within(libraryCard).findByLabelText(/sync interval/i);
+    await userEvent.clear(intervalInput);
+    await userEvent.type(intervalInput, "12");
+
+    mocks.apiPut.mockResolvedValueOnce({
+      enabled: true,
+      interval_minutes: 720,
+      last_sync_at: "2026-04-29T04:30:00Z",
+      last_success_at: "2026-04-29T04:30:00Z",
+      last_seen: 20,
+      last_added: 2,
+      last_skipped: 18,
+      running: false,
+    });
+
+    await userEvent.click(within(libraryCard).getByRole("switch", { name: /automatic sync/i }));
+
+    await waitFor(() => {
+      expect(mocks.apiPut).toHaveBeenCalledWith("/model-openrouter-sync", {
+        enabled: true,
+        interval_minutes: 720,
+      });
+    });
+    expect(intervalInput).toHaveValue(12);
   });
 
   test("maintains owner presets from the model library with an add-owner dialog", async () => {

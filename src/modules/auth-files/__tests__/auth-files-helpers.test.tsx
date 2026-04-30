@@ -9,6 +9,7 @@ import {
   pickQuotaPreviewItem,
   readAuthFilesDataCache,
   readAuthFilesUiState,
+  resolveAuthFileSubscriptionStatus,
   resolveAuthFileStats,
   sanitizeAuthFilesForCache,
   writeAuthFilesDataCache,
@@ -180,6 +181,42 @@ describe("Auth Files helper coverage", () => {
     ];
     expect(pickQuotaPreviewItem(quotaItems, "5h")?.label).toBe("m_quota.code_5h");
     expect(pickQuotaPreviewItem(quotaItems, "week")?.label).toBe("m_quota.code_weekly");
+  });
+
+  test("derives subscription expiration from start time and billing period", () => {
+    const monthly = resolveAuthFileSubscriptionStatus(
+      {
+        name: "monthly.json",
+        subscription_started_at: "2026-04-01T00:00:00.000Z",
+        subscription_period: "monthly",
+      } as AuthFileItem,
+      Date.parse("2026-04-26T00:00:00.000Z"),
+    );
+    expect(monthly).toEqual(
+      expect.objectContaining({
+        expiresAtMs: Date.parse("2026-05-01T00:00:00.000Z"),
+        remainingDays: 5,
+        expired: false,
+        tone: "urgent",
+      }),
+    );
+
+    const yearly = resolveAuthFileSubscriptionStatus(
+      {
+        name: "yearly.json",
+        subscription_started_at: "2025-05-01T00:00:00.000Z",
+        subscription_period: "yearly",
+      } as AuthFileItem,
+      Date.parse("2026-04-26T00:00:00.000Z"),
+    );
+    expect(yearly).toEqual(
+      expect.objectContaining({
+        expiresAtMs: Date.parse("2026-05-01T00:00:00.000Z"),
+        remainingDays: 5,
+        expired: false,
+        tone: "urgent",
+      }),
+    );
   });
 
   test("filters auth files, paginates, and prunes runtime-only selections", async () => {

@@ -423,8 +423,10 @@ describe("AuthFilesPage files table", () => {
     expect(text.indexOf("gptplus2")).toBeLessThan(text.indexOf("gptplus10"));
   });
 
-  test("shows custom subscription expiration status in table and cards", async () => {
-    const expiresAtMs = Date.now() + 90 * 60 * 1000;
+  test("shows derived subscription days remaining in table and cards", async () => {
+    const expiresAt = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000);
+    const startedAt = new Date(expiresAt);
+    startedAt.setFullYear(startedAt.getFullYear() - 1);
     mocks.list.mockImplementation(async () => ({
       files: [
         {
@@ -435,7 +437,8 @@ describe("AuthFilesPage files table", () => {
           size: 1024,
           modified: Date.now(),
           disabled: false,
-          subscription_expires_at_ms: expiresAtMs,
+          subscription_started_at: startedAt.toISOString(),
+          subscription_period: "yearly",
         },
       ],
     }));
@@ -454,7 +457,7 @@ describe("AuthFilesPage files table", () => {
 
     expect(await screen.findByText("Codex Subscriber")).toBeInTheDocument();
     expect(screen.getByText("Subscription")).toBeInTheDocument();
-    expect(screen.getByText(/1h 30m/)).toBeInTheDocument();
+    expect(screen.getByText(/5d left/)).toBeInTheDocument();
 
     cleanup();
     window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
@@ -471,10 +474,10 @@ describe("AuthFilesPage files table", () => {
     );
 
     expect(await screen.findByTestId("auth-files-cards")).toBeInTheDocument();
-    expect(screen.getByText(/1h 30m/)).toBeInTheDocument();
+    expect(screen.getByText(/5d left/)).toBeInTheDocument();
   });
 
-  test("saves subscription expiration from the auth fields editor", async () => {
+  test("saves subscription start and period from the auth fields editor", async () => {
     mocks.list.mockImplementation(async () => ({
       files: [
         {
@@ -492,7 +495,9 @@ describe("AuthFilesPage files table", () => {
       JSON.stringify(
         {
           type: "codex",
-          subscription_expires_at: "2027-01-02T03:04:00Z",
+          subscription_started_at: "2027-01-02T03:04:00Z",
+          subscription_period: "monthly",
+          subscription_expires_at: "2099-01-01T00:00:00Z",
         },
         null,
         2,
@@ -515,18 +520,79 @@ describe("AuthFilesPage files table", () => {
     fireEvent.click(screen.getByRole("button", { name: "View" }));
     fireEvent.click(await screen.findByRole("tab", { name: "Fields" }));
 
-    const input = await screen.findByLabelText("Subscription expires at");
+    const input = await screen.findByLabelText("Subscription start date");
     fireEvent.change(input, { target: { value: "2027-01-03T04:05" } });
+    fireEvent.click(screen.getByRole("combobox", { name: "Subscription cycle" }));
+    fireEvent.click(await screen.findByRole("option", { name: "Yearly" }));
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => expect(mocks.upload).toHaveBeenCalledTimes(1));
     const uploadCalls = mocks.upload.mock.calls as unknown as [[File]];
     const uploaded = uploadCalls[0][0];
     const uploadedJson = JSON.parse(await uploaded.text()) as Record<string, unknown>;
-    expect(uploadedJson.subscription_expires_at).toBe(new Date("2027-01-03T04:05").toISOString());
+    expect(uploadedJson.subscription_started_at).toBe(new Date("2027-01-03T04:05").toISOString());
+    expect(uploadedJson.subscription_period).toBe("yearly");
+    expect(uploadedJson.subscription_expires_at).toBeUndefined();
   });
 
-  test("can show models from a selected model owner group in the detail model tab", async () => {
+  test("uses the subscription date picker from the auth fields editor", async () => {
+    const initialStartedAt = "2027-01-02T03:04:00Z";
+    const expectedStartedAt = new Date(initialStartedAt);
+    expectedStartedAt.setFullYear(2027, 0, 15);
+    mocks.list.mockImplementation(async () => ({
+      files: [
+        {
+          name: "codex-subscription.json",
+          label: "Codex Subscriber",
+          account_type: "oauth",
+          type: "codex",
+          size: 1024,
+          modified: Date.now(),
+          disabled: false,
+        },
+      ],
+    }));
+    mocks.downloadText.mockImplementation(async () =>
+      JSON.stringify(
+        {
+          type: "codex",
+          subscription_started_at: initialStartedAt,
+          subscription_period: "monthly",
+        },
+        null,
+        2,
+      ),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("Codex Subscriber")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "View" }));
+    fireEvent.click(await screen.findByRole("tab", { name: "Fields" }));
+
+    fireEvent.click(await screen.findByLabelText("Subscription start date"));
+    expect(screen.getByRole("dialog", { name: "Date picker" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "15" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(mocks.upload).toHaveBeenCalledTimes(1));
+    const uploadCalls = mocks.upload.mock.calls as unknown as [[File]];
+    const uploaded = uploadCalls[0][0];
+    const uploadedJson = JSON.parse(await uploaded.text()) as Record<string, unknown>;
+    expect(uploadedJson.subscription_started_at).toBe(expectedStartedAt.toISOString());
+  });
+
+  test("sets model owner group from an icon modal after confirmation", async () => {
     mocks.list.mockImplementation(async () => ({
       files: [
         {
@@ -554,17 +620,45 @@ describe("AuthFilesPage files table", () => {
     );
 
     expect(await screen.findByText("Codex Main")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "View" }));
-    fireEvent.click(await screen.findByRole("tab", { name: "Models" }));
+    fireEvent.click(screen.getByRole("tab", { name: /codex/i }));
 
-    expect(await screen.findByText("live-only")).toBeInTheDocument();
+    expect(
+      screen.queryByText("No owner group selected; each auth file uses live model query."),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("combobox", { name: "Model owner group" })).not.toBeInTheDocument();
 
-    const ownerSelect = await screen.findByRole("combobox", { name: "Model owner group" });
+    const settingsButton = screen.getByRole("button", { name: "Model owner group" });
+    fireEvent.mouseEnter(settingsButton);
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("Model owner group");
+    fireEvent.mouseLeave(settingsButton);
+
+    fireEvent.click(settingsButton);
+    const settingsDialog = await screen.findByRole("dialog", { name: "Model owner group" });
+    const ownerSelect = within(settingsDialog).getByRole("combobox", {
+      name: "Model owner group",
+    });
     fireEvent.click(ownerSelect);
     fireEvent.click(await screen.findByRole("option", { name: "OpenAI" }));
 
-    expect(await screen.findByText("gpt-4.1")).toBeInTheDocument();
-    expect(screen.queryByText("live-only")).not.toBeInTheDocument();
+    expect(ownerSelect).toHaveTextContent("OpenAI");
+    expect(await within(settingsDialog).findByText("gpt-4.1")).toBeInTheDocument();
+    expect(within(settingsDialog).queryByText("claude-sonnet-4-5")).not.toBeInTheDocument();
+    expect(window.localStorage.getItem("authFilesPage.modelOwnerGroupMap.v1")).toBeNull();
+
+    fireEvent.click(within(settingsDialog).getByRole("button", { name: "Save" }));
+    expect(window.localStorage.getItem("authFilesPage.modelOwnerGroupMap.v1")).toBe(
+      JSON.stringify({ codex: "openai" }),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "View" }));
+    const dialog = await screen.findByRole("dialog", { name: "View: codex.json" });
+    fireEvent.click(within(dialog).getByRole("tab", { name: "Models" }));
+
+    expect(
+      within(dialog).queryByRole("combobox", { name: "Model owner group" }),
+    ).not.toBeInTheDocument();
+    expect(await within(dialog).findByText("gpt-4.1")).toBeInTheDocument();
+    expect(within(dialog).queryByText("live-only")).not.toBeInTheDocument();
     expect(mocks.getModelConfigs).toHaveBeenCalledWith("library");
     expect(mocks.getModelOwnerPresets).toHaveBeenCalledTimes(1);
   });

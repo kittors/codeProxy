@@ -12,6 +12,35 @@ const decodeUsageScript = (url: string) => {
 };
 
 describe("ccswitchImport", () => {
+  test("builds a Claude provider deeplink with the Anthropic API key auth field", () => {
+    const url = buildCcSwitchImportUrl({
+      apiKey: "sk-ant-test-key",
+      baseUrl: "https://relay.example.com/",
+      clientType: "claude",
+      providerName: "Relay Claude",
+      model: "claude-sonnet-4-5",
+    });
+
+    const parsed = new URL(url);
+    expect(parsed.searchParams.get("app")).toBe("claude");
+    expect(parsed.searchParams.get("apiKey")).toBe("sk-ant-test-key");
+    expect(parsed.searchParams.get("apiKeyField")).toBe("ANTHROPIC_API_KEY");
+  });
+
+  test("uses the configured Claude auth field in provider deeplinks", () => {
+    const url = buildCcSwitchImportUrl({
+      apiKey: "sk-ant-test-key",
+      baseUrl: "https://relay.example.com/",
+      clientType: "claude",
+      providerName: "Relay Claude",
+      settings: {
+        claude: { apiKeyField: "ANTHROPIC_AUTH_TOKEN" },
+      },
+    });
+
+    expect(new URL(url).searchParams.get("apiKeyField")).toBe("ANTHROPIC_AUTH_TOKEN");
+  });
+
   test("builds a Codex provider deeplink with endpoint, model, and usage script", () => {
     const url = buildCcSwitchImportUrl({
       apiKey: "sk-test-key",
