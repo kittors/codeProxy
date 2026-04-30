@@ -111,7 +111,14 @@ describe("AuthFileDetailModal", () => {
   test("keeps field editing controls without showing JSON in the modal", () => {
     renderDetailModal({ detailTab: "fields" });
 
+    const body = screen.getByTestId("auth-file-detail-body");
+    const scroller = screen.getByTestId("auth-file-detail-scroll");
     const grid = screen.getByTestId("auth-file-fields-grid");
+    expect(body.className).toContain("!overflow-hidden");
+    expect(scroller.className).toContain("overflow-y-auto");
+    expect(scroller).not.toContainElement(screen.getByRole("tablist"));
+    expect(grid.className).not.toMatch(/\bborder\b/);
+    expect(grid.className).not.toContain("divide-y");
     expect(within(grid).getByPlaceholderText("e.g. team-a")).toHaveValue("team-a");
     expect(within(grid).getByLabelText("proxy_id (proxy pool)")).toBeInTheDocument();
     expect(within(grid).getByPlaceholderText("e.g. http://127.0.0.1:7890")).toHaveValue(
