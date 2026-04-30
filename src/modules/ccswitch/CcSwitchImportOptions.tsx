@@ -1,4 +1,5 @@
 import type { TFunction } from "i18next";
+import { useCallback, useMemo, useState } from "react";
 import {
   CC_SWITCH_CLIENTS,
   pickCcSwitchDefaultModel,
@@ -6,9 +7,15 @@ import {
   type CcSwitchClientType,
 } from "@/modules/ccswitch/ccswitchImport";
 import {
+  CC_SWITCH_CLAUDE_AUTH_FIELDS,
+  normalizeCcSwitchClaudeAuthField,
+  normalizeCcSwitchImportSettings,
   readCcSwitchImportSettings,
+  writeCcSwitchImportSettings,
+  type CcSwitchImportSettings,
   type CcSwitchImportSettingsInput,
 } from "@/modules/ccswitch/ccswitchImportSettings";
+import { Select } from "@/modules/ui/Select";
 import iconClaude from "@/assets/icons/claude.svg";
 import iconCodex from "@/assets/icons/codex.svg";
 import iconGemini from "@/assets/icons/gemini.svg";
@@ -91,6 +98,56 @@ function ImportOptionButton({
   );
 }
 
+function ClaudeAuthFieldSelect({
+  t,
+  settings,
+  compact,
+  onChange,
+}: {
+  t: TFunction;
+  settings: CcSwitchImportSettings;
+  compact: boolean;
+  onChange: (value: string) => void;
+}) {
+  const label = t("ccswitch.settings_auth_field", {
+    client: t("ccswitch.client_claude_code"),
+  });
+  const options = useMemo(
+    () =>
+      CC_SWITCH_CLAUDE_AUTH_FIELDS.map((value) => ({
+        value,
+        label: t(
+          value === "ANTHROPIC_AUTH_TOKEN"
+            ? "ccswitch.auth_field_anthropic_auth_token"
+            : "ccswitch.auth_field_anthropic_api_key",
+        ),
+      })),
+    [t],
+  );
+
+  return (
+    <div
+      className={
+        compact
+          ? "inline-flex min-w-0 items-center"
+          : "flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between"
+      }
+    >
+      {compact ? null : (
+        <span className="text-xs font-semibold text-slate-600 dark:text-white/55">{label}</span>
+      )}
+      <Select
+        value={settings.claude.apiKeyField ?? "ANTHROPIC_API_KEY"}
+        onChange={onChange}
+        options={options}
+        aria-label={label}
+        size="sm"
+        className={compact ? "w-44" : "w-full sm:w-64"}
+      />
+    </div>
+  );
+}
+
 export function CcSwitchImportOptions({
   t,
   models = [],
@@ -104,34 +161,62 @@ export function CcSwitchImportOptions({
   compact?: boolean;
   onSelect: (clientType: CcSwitchClientType) => void;
 }) {
-  const resolvedSettings = settings ?? readCcSwitchImportSettings();
+  const [resolvedSettings, setResolvedSettings] = useState<CcSwitchImportSettings>(() =>
+    normalizeCcSwitchImportSettings(settings ?? readCcSwitchImportSettings()),
+  );
+  const handleClaudeAuthFieldChange = useCallback(
+    (value: string) => {
+      const normalizedValue = normalizeCcSwitchClaudeAuthField(value);
+      const nextSettings = writeCcSwitchImportSettings({
+        ...resolvedSettings,
+        claude: {
+          ...resolvedSettings.claude,
+          apiKeyField: normalizedValue,
+        },
+      });
+      setResolvedSettings(nextSettings);
+    },
+    [resolvedSettings],
+  );
 
-  return (
+  const buttons = CC_SWITCH_CLIENTS.map((client) => (
+    <ImportOptionButton
+      key={client.type}
+      t={t}
+      client={client}
+      models={models}
+      settings={resolvedSettings}
+      compact={compact}
+      onSelect={onSelect}
+    />
+  ));
+
+  return compact ? (
     <div
-      role={compact ? "group" : undefined}
-      aria-label={compact ? t("ccswitch.import_to_ccswitch") : undefined}
-      className={
-        compact
-          ? "inline-flex min-w-0 flex-wrap items-center gap-1 rounded-xl border border-slate-200/70 bg-slate-50/75 p-1 dark:border-neutral-800 dark:bg-neutral-900/45"
-          : "grid gap-2.5 sm:grid-cols-3"
-      }
+      role="group"
+      aria-label={t("ccswitch.import_to_ccswitch")}
+      className="inline-flex min-w-0 flex-wrap items-center gap-1 rounded-xl border border-slate-200/70 bg-slate-50/75 p-1 dark:border-neutral-800 dark:bg-neutral-900/45"
     >
-      {compact ? (
-        <span className="px-1.5 text-[11px] font-semibold text-slate-500 dark:text-white/45">
-          {t("ccswitch.import_to_ccswitch")}
-        </span>
-      ) : null}
-      {CC_SWITCH_CLIENTS.map((client) => (
-        <ImportOptionButton
-          key={client.type}
-          t={t}
-          client={client}
-          models={models}
-          settings={resolvedSettings}
-          compact={compact}
-          onSelect={onSelect}
-        />
-      ))}
+      <span className="px-1.5 text-[11px] font-semibold text-slate-500 dark:text-white/45">
+        {t("ccswitch.import_to_ccswitch")}
+      </span>
+      <ClaudeAuthFieldSelect
+        t={t}
+        settings={resolvedSettings}
+        compact
+        onChange={handleClaudeAuthFieldChange}
+      />
+      {buttons}
+    </div>
+  ) : (
+    <div className="space-y-2.5">
+      <ClaudeAuthFieldSelect
+        t={t}
+        settings={resolvedSettings}
+        compact={false}
+        onChange={handleClaudeAuthFieldChange}
+      />
+      <div className="grid gap-2.5 sm:grid-cols-3">{buttons}</div>
     </div>
   );
 }
