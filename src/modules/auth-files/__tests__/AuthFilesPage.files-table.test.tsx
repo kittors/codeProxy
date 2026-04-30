@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { ToastProvider } from "@/modules/ui/ToastProvider";
 import { ThemeProvider } from "@/modules/ui/ThemeProvider";
 import { AuthFilesPage } from "@/modules/auth-files/AuthFilesPage";
+import i18n from "@/i18n";
 
 const mocks = vi.hoisted(() => ({
   list: vi.fn(async () => ({
@@ -25,7 +26,7 @@ const mocks = vi.hoisted(() => ({
     group: "all",
     points: [{ date: new Date().toISOString().slice(0, 10), requests: 9 }],
   })),
-  fetchQuota: vi.fn(() => new Promise(() => {})),
+  fetchQuota: vi.fn((_provider?: unknown, _file?: { name?: string }) => new Promise(() => {})),
   deleteFile: vi.fn(async () => ({})),
   downloadText: vi.fn(async () => "{}"),
   getModelsForAuthFile: vi.fn(async () => [{ id: "live-only", owned_by: "runtime" }]),
@@ -93,7 +94,8 @@ const toDateTimeLocalInput = (date: Date): string =>
   ].join("");
 
 describe("AuthFilesPage files table", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
+    await i18n.changeLanguage("en");
     window.localStorage.clear();
     window.sessionStorage.clear();
     mocks.list.mockReset();
@@ -844,6 +846,137 @@ describe("AuthFilesPage files table", () => {
     expect(screen.getByText("GPT-5.3-Codex-Spark: 5h")).toBeInTheDocument();
     expect(screen.getByText("GPT-5.3-Codex-Spark: Weekly")).toBeInTheDocument();
     expect(screen.getByText("96%")).toBeInTheDocument();
+  });
+
+  test("cards keep action buttons pinned to the bottom with mixed quota heights", async () => {
+    const now = Date.now();
+    const files = [
+      {
+        name: "codex-basic.json",
+        type: "codex",
+        size: 1024,
+        modified: now,
+        disabled: false,
+        auth_index: "7",
+      },
+      {
+        name: "codex-spark.json",
+        type: "codex",
+        size: 1024,
+        modified: now,
+        disabled: false,
+        auth_index: "8",
+      },
+    ] as any[];
+
+    mocks.list.mockImplementation(async () => ({ files }));
+    mocks.fetchQuota.mockImplementation(async (_provider, file) => ({
+      items:
+        file?.name === "codex-spark.json"
+          ? [
+              { label: "m_quota.code_5h", percent: 90, resetAtMs: now + 60_000 },
+              { label: "m_quota.code_weekly", percent: 80, resetAtMs: now + 120_000 },
+              { label: "m_quota.review_5h", percent: 70, resetAtMs: now + 180_000 },
+              { label: "GPT-5.3-Codex-Spark: Weekly", percent: 96, resetAtMs: now + 240_000 },
+            ]
+          : [
+              { label: "m_quota.code_5h", percent: 90, resetAtMs: now + 60_000 },
+              { label: "m_quota.code_weekly", percent: 80, resetAtMs: now + 120_000 },
+            ],
+    }));
+
+    window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
+    window.sessionStorage.setItem(
+      "authFilesPage.dataCache.v1",
+      JSON.stringify({
+        savedAtMs: now,
+        files,
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    const cards = await screen.findByTestId("auth-files-cards");
+    expect(cards).toHaveClass("items-stretch");
+
+    const refreshButtons = within(cards).getAllByRole("button", { name: "Refresh" });
+    refreshButtons.forEach((button) => fireEvent.click(button));
+
+    expect(await screen.findByText("GPT-5.3-Codex-Spark: Weekly")).toBeInTheDocument();
+
+    const card = screen.getByText("codex-basic.json").closest("section");
+    expect(card).not.toBeNull();
+    expect(card).toHaveClass("flex", "h-full", "flex-col");
+
+    const quota = within(card as HTMLElement).getByTestId("auth-file-card-quota");
+    const actions = quota.nextElementSibling;
+    expect(actions).not.toBeNull();
+    expect(actions).toHaveClass("mt-auto");
+  });
+
+  test("cards localize codex additional quota window labels in Chinese", async () => {
+    await act(async () => {
+      await i18n.changeLanguage("zh-CN");
+    });
+
+    const now = Date.now();
+    const file = {
+      name: "codex-spark.json",
+      type: "codex",
+      size: 1024,
+      modified: now,
+      disabled: false,
+      auth_index: "8",
+    } as any;
+
+    mocks.list.mockImplementation(async () => ({ files: [file] }));
+    mocks.fetchQuota.mockResolvedValue({
+      items: [
+        { label: "GPT-5.3-Codex-Spark: 5h", percent: 100, resetAtMs: now + 60_000 },
+        { label: "GPT-5.3-Codex-Spark: Weekly", percent: 96, resetAtMs: now + 120_000 },
+      ],
+    });
+
+    window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
+    window.sessionStorage.setItem(
+      "authFilesPage.dataCache.v1",
+      JSON.stringify({
+        savedAtMs: now,
+        files: [file],
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("codex-spark.json")).toBeInTheDocument();
+    fireEvent.click(
+      within(screen.getByTestId("auth-files-cards")).getByRole("button", { name: "刷新" }),
+    );
+
+    expect(await screen.findByText("GPT-5.3-Codex-Spark: 五小时")).toBeInTheDocument();
+    expect(screen.getByText("GPT-5.3-Codex-Spark: 周")).toBeInTheDocument();
+    expect(screen.queryByText("GPT-5.3-Codex-Spark: 5h")).not.toBeInTheDocument();
+    expect(screen.queryByText("GPT-5.3-Codex-Spark: Weekly")).not.toBeInTheDocument();
   });
 
   test("cards view shows only kimi coding quotas and marks depleted weekly quota red", async () => {

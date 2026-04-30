@@ -19,6 +19,7 @@ import {
   formatFileSize,
   formatModified,
   isRuntimeOnlyAuthFile,
+  parseAdditionalQuotaWindowLabel,
   resolveAuthFileDisplayName,
   resolveAuthFilePlanType,
   resolveAuthFileStats,
@@ -149,6 +150,12 @@ export function useAuthFilesFilesPresentation({
       if (!text) return text;
       if (text.startsWith("m_quota.")) return t(text);
       if (KNOWN_QUOTA_TEXT_KEYS.has(text)) return t(`m_quota.${text}`);
+      const additionalQuota = parseAdditionalQuotaWindowLabel(text);
+      if (additionalQuota) {
+        return t(`m_quota.additional_${additionalQuota.window}`, {
+          name: additionalQuota.name,
+        });
+      }
       return text;
     },
     [t],
@@ -339,7 +346,7 @@ export function useAuthFilesFilesPresentation({
         <div key={label} className="space-y-1">
           <div className="flex items-center justify-between gap-2">
             <span className="min-w-0 truncate text-[11px] font-semibold text-slate-700 dark:text-white/80">
-              {label}
+              {translateQuotaText(label)}
             </span>
             <span
               className={[
@@ -363,7 +370,7 @@ export function useAuthFilesFilesPresentation({
         </div>
       );
     },
-    [formatQuotaResetTextCompact],
+    [formatQuotaResetTextCompact, translateQuotaText],
   );
 
   const fileColumns = useMemo<VirtualTableColumn<AuthFileItem>[]>(() => {
