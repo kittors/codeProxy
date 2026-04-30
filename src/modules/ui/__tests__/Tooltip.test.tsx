@@ -1,7 +1,7 @@
-import { render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { GlobalIconButtonTooltip, HoverTooltip } from "@/modules/ui/Tooltip";
+import { GlobalIconButtonTooltip, HoverTooltip, OverflowTooltip } from "@/modules/ui/Tooltip";
 
 const setViewport = (width: number, height: number) => {
   Object.defineProperty(window, "innerWidth", { configurable: true, value: width });
@@ -88,5 +88,54 @@ describe("HoverTooltip", () => {
     await userEvent.hover(screen.getByRole("button", { name: "Close" }));
 
     expect(screen.getByRole("tooltip")).toHaveTextContent("Close");
+  });
+});
+
+describe("OverflowTooltip", () => {
+  beforeEach(() => {
+    setViewport(800, 600);
+    setTooltipSize(180, 48);
+    mockAnchorRect({ left: 100, right: 220, top: 100, bottom: 124, width: 120, height: 24 });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  test("stays open when the pointer moves from the trigger into the tooltip", () => {
+    vi.useFakeTimers();
+
+    render(
+      <OverflowTooltip content="Copyable full table cell value" className="block max-w-20 truncate">
+        <span>Copyable full table cell value</span>
+      </OverflowTooltip>,
+    );
+
+    const trigger = screen.getByText("Copyable full table cell value").parentElement!;
+    Object.defineProperties(trigger, {
+      clientWidth: { configurable: true, value: 80 },
+      scrollWidth: { configurable: true, value: 260 },
+    });
+
+    fireEvent.mouseEnter(trigger);
+    const tooltip = screen.getByRole("tooltip");
+    expect(tooltip).toHaveTextContent("Copyable full table cell value");
+
+    fireEvent.mouseLeave(trigger, { relatedTarget: tooltip });
+    fireEvent.mouseEnter(tooltip, { relatedTarget: trigger });
+    act(() => {
+      vi.advanceTimersByTime(150);
+    });
+
+    expect(screen.getByRole("tooltip")).toBe(tooltip);
+    expect(tooltip).toHaveClass("pointer-events-auto", "select-text");
+
+    fireEvent.mouseLeave(tooltip, { relatedTarget: document.body });
+    act(() => {
+      vi.advanceTimersByTime(150);
+    });
+
+    expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
   });
 });
