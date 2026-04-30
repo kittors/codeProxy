@@ -791,6 +791,61 @@ describe("AuthFilesPage files table", () => {
     expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
   });
 
+  test("cards view includes returned codex review 5h and additional quota bars", async () => {
+    const now = Date.now();
+    const file = {
+      name: "codex-spark.json",
+      type: "codex",
+      size: 1024,
+      modified: now,
+      disabled: false,
+      auth_index: "7",
+    } as any;
+
+    mocks.list.mockImplementation(async () => ({ files: [file] }));
+    mocks.fetchQuota.mockResolvedValue({
+      items: [
+        { label: "m_quota.code_5h", percent: 90, resetAtMs: now + 60_000 },
+        { label: "m_quota.code_weekly", percent: 80, resetAtMs: now + 120_000 },
+        { label: "m_quota.review_5h", percent: 70, resetAtMs: now + 180_000 },
+        { label: "m_quota.review_weekly", percent: 60, resetAtMs: now + 240_000 },
+        { label: "GPT-5.3-Codex-Spark: 5h", percent: 100, resetAtMs: now + 300_000 },
+        { label: "GPT-5.3-Codex-Spark: Weekly", percent: 96, resetAtMs: now + 360_000 },
+      ],
+    });
+
+    window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
+    window.sessionStorage.setItem(
+      "authFilesPage.dataCache.v1",
+      JSON.stringify({
+        savedAtMs: now,
+        files: [file],
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("codex-spark.json")).toBeInTheDocument();
+    fireEvent.click(
+      within(screen.getByTestId("auth-files-cards")).getByRole("button", { name: "Refresh" }),
+    );
+
+    expect(await screen.findByText("Review: 5h")).toBeInTheDocument();
+    expect(screen.getByText("GPT-5.3-Codex-Spark: 5h")).toBeInTheDocument();
+    expect(screen.getByText("GPT-5.3-Codex-Spark: Weekly")).toBeInTheDocument();
+    expect(screen.getByText("96%")).toBeInTheDocument();
+  });
+
   test("cards view shows only kimi coding quotas and marks depleted weekly quota red", async () => {
     const now = Date.now();
     const file = {

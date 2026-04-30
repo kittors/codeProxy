@@ -33,7 +33,7 @@ describe("formatRelativeResetLabel", () => {
 });
 
 describe("buildCodexItems", () => {
-  test("treats null code_review_rate_limit as 100% remaining", () => {
+  test("omits code review quota items when the API does not return review limits", () => {
     const items = buildCodexItems({
       rate_limit: {
         allowed: true,
@@ -52,8 +52,71 @@ describe("buildCodexItems", () => {
       code_review_rate_limit: null,
     });
 
-    const reviewWeekly = items.find((item) => item.label === "m_quota.review_weekly");
-    expect(reviewWeekly?.percent).toBe(100);
+    expect(items.map((item) => item.label)).toEqual(["m_quota.code_5h", "m_quota.code_weekly"]);
+  });
+
+  test("maps Codex Spark additional rate limits into displayable quota items", () => {
+    const items = buildCodexItems({
+      additional_rate_limits: [
+        {
+          limit_name: "GPT-5.3-Codex-Spark",
+          rate_limit: {
+            allowed: true,
+            limit_reached: false,
+            primary_window: {
+              used_percent: 25,
+              limit_window_seconds: 18000,
+              reset_after_seconds: 60,
+            },
+            secondary_window: {
+              used_percent: 4,
+              limit_window_seconds: 604800,
+              reset_at: 1778140862,
+            },
+          },
+        },
+      ],
+    });
+
+    expect(items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          label: "GPT-5.3-Codex-Spark: 5h",
+          percent: 75,
+        }),
+        expect.objectContaining({
+          label: "GPT-5.3-Codex-Spark: Weekly",
+          percent: 96,
+          resetAtMs: 1778140862000,
+        }),
+      ]),
+    );
+  });
+
+  test("maps returned code review 5-hour and weekly limits", () => {
+    const items = buildCodexItems({
+      code_review_rate_limit: {
+        allowed: true,
+        limit_reached: false,
+        primary_window: {
+          used_percent: 60,
+          limit_window_seconds: 18000,
+          reset_after_seconds: 60,
+        },
+        secondary_window: {
+          used_percent: 10,
+          limit_window_seconds: 604800,
+          reset_after_seconds: 120,
+        },
+      },
+    });
+
+    expect(items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ label: "m_quota.review_5h", percent: 40 }),
+        expect.objectContaining({ label: "m_quota.review_weekly", percent: 90 }),
+      ]),
+    );
   });
 });
 

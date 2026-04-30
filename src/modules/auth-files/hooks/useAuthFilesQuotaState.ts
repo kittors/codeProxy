@@ -123,32 +123,60 @@ export function useAuthFilesQuotaState({
         findExact("m_quota.code_5h") ?? find(/(mquotacode5h|code5h|5h|5小时|fivehour|5hour)/i);
       const codeWeek =
         findExact("m_quota.code_weekly") ?? find(/(mquotacodeweekly|codeweekly|weekly|week|周)/i);
+      const reviewFiveHour =
+        findExact("m_quota.review_5h") ??
+        find(/(mquotareview5h|review5h|review5hour|reviewfivehour|审查5小时|审查：5小时)/i);
       const reviewWeek =
         findExact("m_quota.review_weekly") ??
         find(/(mquotareviewweekly|reviewweekly|reviewweek|review_week|审查周|审查：周)/i);
 
-      const codingSlots = [
+      const knownItems = new Set<QuotaItem>();
+      [codeFiveHour, codeWeek, reviewFiveHour, reviewWeek].forEach((item) => {
+        if (item) knownItems.add(item);
+      });
+
+      const codingSlots: { id: string; label: string; item: QuotaItem | null }[] = [
         {
-          id: "code_5h" as const,
+          id: "code_5h",
           label: translateQuotaLabel("m_quota.code_5h"),
           item: codeFiveHour,
         },
         {
-          id: "code_week" as const,
+          id: "code_week",
           label: translateQuotaLabel("m_quota.code_weekly"),
           item: codeWeek,
         },
       ];
       if (provider === "kimi") return codingSlots;
 
-      return [
-        ...codingSlots,
-        {
-          id: "review_week" as const,
+      const codexSlots = [...codingSlots];
+      if (reviewFiveHour) {
+        codexSlots.push({
+          id: "review_5h",
+          label: translateQuotaLabel("m_quota.review_5h"),
+          item: reviewFiveHour,
+        });
+      }
+      if (reviewWeek) {
+        codexSlots.push({
+          id: "review_week",
           label: translateQuotaLabel("m_quota.review_weekly"),
           item: reviewWeek,
-        },
-      ];
+        });
+      }
+
+      const extraSlots = items
+        .filter((item) => !knownItems.has(item))
+        .map((item, index) => {
+          const idKey = normalize(String(item.label ?? "")) || `quota${index + 1}`;
+          return {
+            id: `extra_${idKey}` as const,
+            label: translateQuotaLabel(item.label),
+            item,
+          };
+        });
+
+      return [...codexSlots, ...extraSlots];
     },
     [t],
   );
