@@ -6,6 +6,7 @@ import {
   useLayoutEffect,
   useRef,
   useState,
+  type HTMLAttributes,
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
@@ -297,12 +298,13 @@ export function OverflowTooltip({
   children,
   className,
   placement = "bottom",
+  ...triggerProps
 }: {
   content: string;
   children: ReactNode;
   className?: string;
   placement?: TooltipPlacement;
-}) {
+} & Omit<HTMLAttributes<HTMLSpanElement>, "children" | "content">) {
   const id = useId();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLSpanElement | null>(null);
@@ -320,6 +322,7 @@ export function OverflowTooltip({
 
   return (
     <span
+      {...triggerProps}
       ref={ref}
       data-tooltip-managed="true"
       className={["relative", className].filter(Boolean).join(" ")}
