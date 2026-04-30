@@ -10,7 +10,7 @@ import {
   type WheelEvent as ReactWheelEvent,
 } from "react";
 import { useTranslation } from "react-i18next";
-import { OverflowTooltip } from "@/modules/ui/Tooltip";
+import { TableCellOverflowTooltip } from "@/modules/ui/TableCellOverflowTooltip";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -85,27 +85,19 @@ const DEFAULT_OVERSCAN = 12;
 const DEFAULT_SCROLL_THRESHOLD = 100;
 const DEFAULT_BOTTOM_DEBOUNCE_MS = 120;
 
-function primitiveTooltipContent(content: ReactNode) {
-  if (typeof content === "string" || typeof content === "number") {
-    return String(content);
-  }
-  return null;
-}
-
 function resolveCellOverflowTooltip<T>(
   column: VirtualTableColumn<T>,
   row: T,
   index: number,
-  content: ReactNode,
 ) {
-  if (column.overflowTooltip === false) return null;
+  if (column.overflowTooltip === false) return false;
 
   if (typeof column.overflowTooltip === "function") {
     const value = column.overflowTooltip(row, index);
     return value === null || value === undefined ? null : String(value);
   }
 
-  return primitiveTooltipContent(content);
+  return undefined;
 }
 
 // ---------------------------------------------------------------------------
@@ -630,12 +622,7 @@ export function VirtualTable<T>({
                         const isFirst = colIdx === 0;
                         const isLast = colIdx === columns.length - 1;
                         const content = col.render(row, globalIdx);
-                        const overflowTooltip = resolveCellOverflowTooltip(
-                          col,
-                          row,
-                          globalIdx,
-                          content,
-                        );
+                        const overflowTooltip = resolveCellOverflowTooltip(col, row, globalIdx);
                         const roundCls = [
                           isFirst ? "first:rounded-l-lg" : "",
                           isLast ? "last:rounded-r-lg" : "",
@@ -647,17 +634,12 @@ export function VirtualTable<T>({
                             key={col.key}
                             className={`px-4 py-2.5 align-middle ${col.cellClassName ?? ""} ${roundCls}`}
                           >
-                            {overflowTooltip === null ? (
-                              content
-                            ) : (
-                              <OverflowTooltip
-                                content={overflowTooltip}
-                                data-vt-cell-content
-                                className={`block min-w-0 max-w-full truncate ${col.cellClassName ?? ""}`}
-                              >
-                                {content}
-                              </OverflowTooltip>
-                            )}
+                            <TableCellOverflowTooltip
+                              tooltipContent={overflowTooltip}
+                              className={col.cellClassName}
+                            >
+                              {content}
+                            </TableCellOverflowTooltip>
                           </td>
                         );
                       })}

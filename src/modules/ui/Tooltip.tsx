@@ -1,4 +1,5 @@
 import {
+  createElement,
   createContext,
   useCallback,
   useEffect,
@@ -171,6 +172,20 @@ function resolveTooltipPosition({
   };
 }
 
+function isElementOverflowing(element: HTMLElement) {
+  return element.scrollWidth > element.clientWidth || element.scrollHeight > element.clientHeight;
+}
+
+function hasOverflowingContent(element: HTMLElement) {
+  if (isElementOverflowing(element)) return true;
+
+  for (const child of element.querySelectorAll("*")) {
+    if (child instanceof HTMLElement && isElementOverflowing(child)) return true;
+  }
+
+  return false;
+}
+
 /** Fixed-position tooltip rendered via portal — never clipped by overflow containers */
 export function TooltipBubble({
   id,
@@ -294,47 +309,48 @@ export function HoverTooltip({
 }
 
 export function OverflowTooltip({
+  as = "span",
   content,
   children,
   className,
   placement = "bottom",
   ...triggerProps
 }: {
+  as?: "div" | "span";
   content: string;
   children: ReactNode;
   className?: string;
   placement?: TooltipPlacement;
-} & Omit<HTMLAttributes<HTMLSpanElement>, "children" | "content">) {
+} & Omit<HTMLAttributes<HTMLElement>, "children" | "content">) {
   const id = useId();
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLSpanElement | null>(null);
+  const ref = useRef<HTMLElement | null>(null);
 
   const tryShow = useCallback(() => {
     const el = ref.current;
     if (!el) return;
     if (!content.trim()) return;
-    const isOverflowing = el.scrollWidth > el.clientWidth;
-    if (!isOverflowing) return;
+    if (!hasOverflowingContent(el)) return;
     setOpen(true);
   }, [content]);
 
   const hide = useCallback(() => setOpen(false), []);
 
-  return (
-    <span
-      {...triggerProps}
-      ref={ref}
-      data-tooltip-managed="true"
-      className={["relative", className].filter(Boolean).join(" ")}
-      onMouseEnter={tryShow}
-      onMouseLeave={hide}
-      onFocus={tryShow}
-      onBlur={hide}
-      aria-describedby={id}
-    >
-      {children}
-      <TooltipBubble id={id} open={open} content={content} anchorRef={ref} placement={placement} />
-    </span>
+  return createElement(
+    as,
+    {
+      ...triggerProps,
+      ref,
+      "data-tooltip-managed": "true",
+      className: ["relative", className].filter(Boolean).join(" "),
+      onMouseEnter: tryShow,
+      onMouseLeave: hide,
+      onFocus: tryShow,
+      onBlur: hide,
+      "aria-describedby": id,
+    },
+    children,
+    <TooltipBubble id={id} open={open} content={content} anchorRef={ref} placement={placement} />,
   );
 }
 
