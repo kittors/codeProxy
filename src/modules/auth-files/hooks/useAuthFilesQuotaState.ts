@@ -196,9 +196,9 @@ export function useAuthFilesQuotaState({
       const extraSlots = items
         .filter((item) => !knownItems.has(item))
         .map((item, index) => {
-          const idKey = normalize(String(item.label ?? "")) || `quota${index + 1}`;
+          const idKey = item.key ?? (normalize(String(item.label ?? "")) || `quota${index + 1}`);
           return {
-            id: `extra_${idKey}` as const,
+            id: idKey,
             label: translateQuotaLabel(item.label),
             item,
           };
@@ -236,15 +236,34 @@ export function useAuthFilesQuotaState({
           const slots = resolveQuotaCardSlots(provider, items);
           const quotaValueByKey = Object.fromEntries(
             slots
-              .map((slot) => [slot.id, slot.item?.percent ?? null] as const)
+              .map((slot) => [slot.item?.key ?? slot.id, slot.item?.percent ?? null] as const)
               .filter(([, value]) => value === null || Number.isFinite(value)),
           );
+          const quotaPoints = slots.flatMap((slot) => {
+            const item = slot.item;
+            if (!item) return [];
+            const quotaKey = item.key ?? slot.id;
+            if (!quotaKey) return [];
+            return [
+              {
+                quota_key: quotaKey,
+                quota_label: item.label,
+                percent: item.percent,
+                reset_at:
+                  typeof item.resetAtMs === "number" && Number.isFinite(item.resetAtMs)
+                    ? new Date(item.resetAtMs).toISOString()
+                    : undefined,
+                window_seconds: item.windowSeconds,
+              },
+            ];
+          });
           if (Object.keys(quotaValueByKey).length > 0) {
             await usageApi
               .recordAuthFileQuotaSnapshot({
                 auth_index: authIndex,
                 provider,
                 quotas: quotaValueByKey,
+                quota_points: quotaPoints,
               })
               .catch(() => {});
           }

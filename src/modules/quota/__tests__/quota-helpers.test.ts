@@ -81,13 +81,17 @@ describe("buildCodexItems", () => {
     expect(items).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
+          key: "additional:codex_bengalfox:5h",
           label: "GPT-5.3-Codex-Spark: 5h",
           percent: 75,
+          windowSeconds: 18000,
         }),
         expect.objectContaining({
+          key: "additional:codex_bengalfox:week",
           label: "GPT-5.3-Codex-Spark: Weekly",
           percent: 96,
           resetAtMs: 1778140862000,
+          windowSeconds: 604800,
         }),
       ]),
     );
@@ -149,14 +153,18 @@ describe("buildKimiItems", () => {
 
     expect(items).toEqual([
       {
+        key: "code_5h",
         label: "m_quota.code_5h",
         percent: 100,
         resetAtMs: Date.parse("2026-04-20T11:24:38.060611Z"),
+        windowSeconds: 18000,
       },
       {
+        key: "code_week",
         label: "m_quota.code_weekly",
         percent: 0,
         resetAtMs: Date.parse("2026-04-22T01:24:38.060611Z"),
+        windowSeconds: 604800,
       },
     ]);
   });

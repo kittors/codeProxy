@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
 import { ConfirmModal } from "@/modules/ui/ConfirmModal";
@@ -99,6 +99,12 @@ export function AuthFilesPage() {
     detailText,
     detailTab,
     setDetailTab,
+    detailTrendWindow,
+    setDetailTrendWindow,
+    detailTrend,
+    detailTrendLoading,
+    detailTrendError,
+    refreshDetailTrend,
     modelsLoading,
     modelsFileType,
     modelsList,
@@ -225,6 +231,20 @@ export function AuthFilesPage() {
     setDetailFile,
   });
 
+  const openDetailWithQuotaRefresh = useCallback(
+    (file: Parameters<typeof openDetail>[0]) => {
+      const openPromise = openDetail(file);
+      const provider = resolveQuotaProvider(file);
+      if (provider === "codex" || provider === "kimi") {
+        void refreshQuota(file, provider)
+          .catch(() => undefined)
+          .finally(() => void refreshDetailTrend(file));
+      }
+      return openPromise;
+    },
+    [openDetail, refreshDetailTrend, refreshQuota],
+  );
+
   const {
     groupOverviewOpen,
     setGroupOverviewOpen,
@@ -290,7 +310,7 @@ export function AuthFilesPage() {
     quotaByFileName,
     quotaAutoRefreshingRef,
     refreshQuota,
-    openDetail,
+    openDetail: openDetailWithQuotaRefresh,
     downloadAuthFile,
     statusUpdating,
     setFileEnabled,
@@ -365,7 +385,7 @@ export function AuthFilesPage() {
             translateQuotaText={translateQuotaText}
             renderSubscriptionBadge={renderSubscriptionBadge}
             renderQuotaBar={renderQuotaBar}
-            openDetail={openDetail}
+            openDetail={openDetailWithQuotaRefresh}
             downloadAuthFile={downloadAuthFile}
             safePage={safePage}
             totalPages={totalPages}
@@ -417,6 +437,12 @@ export function AuthFilesPage() {
         detailTab={detailTab}
         setDetailOpen={setDetailOpen}
         setDetailTab={setDetailTab}
+        detailTrendWindow={detailTrendWindow}
+        setDetailTrendWindow={setDetailTrendWindow}
+        detailTrend={detailTrend}
+        detailTrendLoading={detailTrendLoading}
+        detailTrendError={detailTrendError}
+        refreshDetailTrend={refreshDetailTrend}
         loadModelsForDetail={loadModelsForDetail}
         loadModelOwnerGroups={loadModelOwnerGroups}
         modelsLoading={modelsLoading}

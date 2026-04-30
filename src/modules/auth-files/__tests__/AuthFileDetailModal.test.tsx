@@ -32,9 +32,40 @@ const renderDetailModal = (overrides: Partial<DetailModalProps> = {}) => {
     },
     detailLoading: false,
     detailText: '{"token":"abc","nested":{"enabled":true}}',
-    detailTab: "fields",
+    detailTab: "usage",
     setDetailOpen: vi.fn(),
     setDetailTab: vi.fn(),
+    detailTrendWindow: "5h",
+    setDetailTrendWindow: vi.fn(),
+    detailTrendLoading: false,
+    detailTrendError: null,
+    detailTrend: {
+      auth_index: "auth-1",
+      days: 7,
+      hours: 5,
+      request_total: 3,
+      cycle_request_total: 2,
+      cycle_start: "2026-04-27T16:01:21Z",
+      daily_usage: [
+        { date: "2026-04-24", requests: 0 },
+        { date: "2026-04-25", requests: 0 },
+        { date: "2026-04-26", requests: 0 },
+        { date: "2026-04-27", requests: 1 },
+        { date: "2026-04-28", requests: 0 },
+        { date: "2026-04-29", requests: 0 },
+        { date: "2026-04-30", requests: 2 },
+      ],
+      hourly_usage: [{ hour: "2026-04-30 16:00", requests: 1 }],
+      quota_series: [
+        {
+          quota_key: "code_5h",
+          quota_label: "m_quota.code_5h",
+          window_seconds: 18000,
+          points: [{ timestamp: "2026-04-30T16:01:47Z", percent: 92 }],
+        },
+      ],
+    },
+    refreshDetailTrend: vi.fn(async () => undefined),
     loadModelsForDetail: vi.fn(async () => undefined),
     loadModelOwnerGroups: vi.fn(async () => undefined),
     modelsLoading: false,
@@ -82,7 +113,7 @@ describe("AuthFileDetailModal", () => {
     window.localStorage.clear();
   });
 
-  test("uses fields as the primary view without content or channel tabs", () => {
+  test("uses usage trend as the primary view for Codex files", () => {
     renderDetailModal();
 
     expect(screen.queryByTestId("auth-file-json-reader")).not.toBeInTheDocument();
@@ -90,8 +121,12 @@ describe("AuthFileDetailModal", () => {
     expect(screen.queryByRole("tab", { name: "Content" })).not.toBeInTheDocument();
     expect(screen.queryByRole("tab", { name: "Info" })).not.toBeInTheDocument();
     expect(screen.queryByRole("tab", { name: "Channel" })).not.toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Usage" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Fields" })).toBeInTheDocument();
-    expect(screen.getByPlaceholderText("e.g. Gemini Primary")).toHaveValue("Codex Primary");
+    expect(screen.getByText("Last 7 days requests")).toBeInTheDocument();
+    expect(screen.getByText("3")).toBeInTheDocument();
+    expect(screen.getByText("Current weekly cycle")).toBeInTheDocument();
+    expect(screen.getByText("2")).toBeInTheDocument();
     expect(screen.getByRole("dialog", { name: "View: codex.json" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Download" })).toBeEnabled();
   });
