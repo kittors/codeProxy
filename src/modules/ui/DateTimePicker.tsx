@@ -41,8 +41,8 @@ interface DateTimePickerProps {
 const VIEWPORT_MARGIN = 12;
 const POPOVER_GAP = 8;
 const POPOVER_WIDTH = 320;
-const POPOVER_HEIGHT = 360;
-const MIN_POPOVER_HEIGHT = 180;
+const FIVE_WEEK_POPOVER_HEIGHT = 392;
+const SIX_WEEK_POPOVER_HEIGHT = 428;
 
 const pad2 = (value: number): string => String(value).padStart(2, "0");
 
@@ -96,6 +96,12 @@ const clamp = (value: number, min: number, max: number): number =>
 const getDaysInMonth = (year: number, month: number): number =>
   new Date(year, month + 1, 0).getDate();
 
+const getCalendarCellCount = (year: number, month: number): number => {
+  const startOffset = new Date(year, month, 1).getDay();
+  const currentMonthDays = getDaysInMonth(year, month);
+  return Math.max(35, Math.ceil((startOffset + currentMonthDays) / 7) * 7);
+};
+
 export function DateTimePicker({
   value,
   onChange,
@@ -128,6 +134,13 @@ export function DateTimePicker({
     setVisibleMonth(new Date(date.getFullYear(), date.getMonth(), 1));
   }, [open, parsedValue]);
 
+  const calendarCellCount = useMemo(
+    () => getCalendarCellCount(visibleMonth.getFullYear(), visibleMonth.getMonth()),
+    [visibleMonth],
+  );
+  const estimatedPopoverHeight =
+    calendarCellCount > 35 ? SIX_WEEK_POPOVER_HEIGHT : FIVE_WEEK_POPOVER_HEIGHT;
+
   const updatePosition = useCallback(() => {
     const root = rootRef.current;
     if (!root) return;
@@ -141,19 +154,14 @@ export function DateTimePicker({
     const left = clamp(rect.left, minLeft, maxLeft);
     const spaceBelow = viewportHeight - rect.bottom - POPOVER_GAP - VIEWPORT_MARGIN;
     const spaceAbove = rect.top - POPOVER_GAP - VIEWPORT_MARGIN;
-    const openAbove = spaceBelow < POPOVER_HEIGHT && spaceAbove > spaceBelow;
-    const maxUsableHeight = Math.max(0, viewportHeight - VIEWPORT_MARGIN * 2);
-    const minUsableHeight = Math.min(MIN_POPOVER_HEIGHT, maxUsableHeight);
-    const preferredSpace = openAbove ? spaceAbove : spaceBelow;
-    const availableHeight = clamp(
-      Math.min(POPOVER_HEIGHT, preferredSpace),
-      minUsableHeight,
-      Math.max(minUsableHeight, maxUsableHeight),
-    );
+    const openAbove = spaceBelow < estimatedPopoverHeight && spaceAbove > spaceBelow;
     const minTop = VIEWPORT_MARGIN;
-    const maxTop = Math.max(VIEWPORT_MARGIN, viewportHeight - VIEWPORT_MARGIN - availableHeight);
+    const maxTop = Math.max(
+      VIEWPORT_MARGIN,
+      viewportHeight - VIEWPORT_MARGIN - estimatedPopoverHeight,
+    );
     const top = openAbove
-      ? clamp(rect.top - POPOVER_GAP - availableHeight, minTop, maxTop)
+      ? clamp(rect.top - POPOVER_GAP - estimatedPopoverHeight, minTop, maxTop)
       : clamp(rect.bottom + POPOVER_GAP, minTop, maxTop);
 
     setPlacement(openAbove ? "top" : "bottom");
@@ -162,10 +170,9 @@ export function DateTimePicker({
       top,
       left,
       width,
-      maxHeight: availableHeight,
       zIndex: 99999,
     });
-  }, []);
+  }, [estimatedPopoverHeight]);
 
   useLayoutEffect(() => {
     if (!open) return;
@@ -220,7 +227,7 @@ export function DateTimePicker({
     const previousMonthDays = getDaysInMonth(year, month - 1);
     const startOffset = new Date(year, month, 1).getDay();
 
-    return Array.from({ length: 42 }, (_, index) => {
+    return Array.from({ length: calendarCellCount }, (_, index) => {
       const dayOffset = index - startOffset + 1;
       if (dayOffset < 1) {
         const day = previousMonthDays + dayOffset;
@@ -232,7 +239,7 @@ export function DateTimePicker({
       }
       return { date: new Date(year, month, dayOffset), inMonth: true };
     });
-  }, [visibleMonth]);
+  }, [calendarCellCount, visibleMonth]);
 
   const selectedDateKey = parsedValue
     ? `${parsedValue.getFullYear()}-${parsedValue.getMonth()}-${parsedValue.getDate()}`
@@ -312,7 +319,7 @@ export function DateTimePicker({
               role="dialog"
               aria-label={labels.picker}
               data-placement={placement}
-              className={cn(selectPanel, "overflow-y-auto p-3 text-[#18181B] dark:text-white")}
+              className={cn(selectPanel, "p-3 text-[#18181B] dark:text-white")}
               style={panelStyle}
               {...getSelectDropdownMotion(placement)}
               transition={selectDropdownTransition}

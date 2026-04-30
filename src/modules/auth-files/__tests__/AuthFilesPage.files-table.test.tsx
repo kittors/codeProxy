@@ -77,6 +77,21 @@ vi.mock("@/modules/ui/charts/EChart", () => ({
   EChart: ({ className }: { className?: string }) => <div className={className}>chart</div>,
 }));
 
+const padDatePart = (value: number): string => String(value).padStart(2, "0");
+
+const toDateTimeLocalInput = (date: Date): string =>
+  [
+    date.getFullYear(),
+    "-",
+    padDatePart(date.getMonth() + 1),
+    "-",
+    padDatePart(date.getDate()),
+    "T",
+    padDatePart(date.getHours()),
+    ":",
+    padDatePart(date.getMinutes()),
+  ].join("");
+
 describe("AuthFilesPage files table", () => {
   beforeEach(() => {
     window.localStorage.clear();
@@ -590,6 +605,60 @@ describe("AuthFilesPage files table", () => {
     const uploaded = uploadCalls[0][0];
     const uploadedJson = JSON.parse(await uploaded.text()) as Record<string, unknown>;
     expect(uploadedJson.subscription_started_at).toBe(expectedStartedAt.toISOString());
+  });
+
+  test("closes the fields modal and refreshes the card subscription badge after saving", async () => {
+    const startedAt = new Date(Date.now() - 25 * 24 * 60 * 60 * 1000);
+    startedAt.setSeconds(0, 0);
+    const startedAtInput = toDateTimeLocalInput(startedAt);
+    window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
+    mocks.list.mockImplementation(async () => ({
+      files: [
+        {
+          name: "codex-subscription.json",
+          label: "Codex Subscriber",
+          account_type: "oauth",
+          type: "codex",
+          size: 1024,
+          modified: Date.now(),
+          disabled: false,
+        },
+      ],
+    }));
+    mocks.downloadText.mockImplementation(async () => JSON.stringify({ type: "codex" }, null, 2));
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    const cards = await screen.findByTestId("auth-files-cards");
+    expect(cards).not.toHaveTextContent(/d left/);
+    fireEvent.click(within(cards).getByRole("button", { name: "View" }));
+    const dialog = await screen.findByRole("dialog", { name: "View: codex-subscription.json" });
+    fireEvent.click(within(dialog).getByRole("tab", { name: "Fields" }));
+
+    const input = await within(dialog).findByLabelText("Subscription start date");
+    fireEvent.change(input, { target: { value: startedAtInput } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(mocks.upload).toHaveBeenCalledTimes(1));
+    const uploadCalls = mocks.upload.mock.calls as unknown as [[File]];
+    const uploadedJson = JSON.parse(await uploadCalls[0][0].text()) as Record<string, unknown>;
+    expect(uploadedJson.subscription_started_at).toBe(new Date(startedAtInput).toISOString());
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("dialog", { name: "View: codex-subscription.json" }),
+      ).not.toBeInTheDocument(),
+    );
+    await waitFor(() => expect(screen.getByTestId("auth-files-cards")).toHaveTextContent(/d left/));
   });
 
   test("sets model owner group from an icon modal after confirmation", async () => {
