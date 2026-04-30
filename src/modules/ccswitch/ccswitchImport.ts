@@ -191,11 +191,14 @@ export function buildCcSwitchImportUrl(input: {
   settings?: CcSwitchImportSettingsInput;
 }): string {
   const client = getCcSwitchClientConfig(input.clientType);
+  const settings = normalizeCcSwitchImportSettings(
+    input.settings ?? DEFAULT_CC_SWITCH_IMPORT_SETTINGS,
+  );
   const importConfig = resolveCcSwitchImportConfig({
     baseUrl: input.baseUrl,
     clientType: input.clientType,
     models: input.models,
-    settings: input.settings,
+    settings,
   });
   const params = new URLSearchParams({
     resource: "provider",
@@ -218,7 +221,7 @@ export function buildCcSwitchImportUrl(input: {
   }
 
   if (input.clientType === "claude") {
-    params.set("apiKeyField", "ANTHROPIC_API_KEY");
+    params.set("apiKeyField", settings.claude.apiKeyField ?? "ANTHROPIC_API_KEY");
   }
 
   return `ccswitch://v1/import?${params.toString()}`;

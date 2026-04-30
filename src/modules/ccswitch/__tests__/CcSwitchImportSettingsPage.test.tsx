@@ -48,4 +48,29 @@ describe("CcSwitchImportSettingsPage", () => {
       });
     });
   });
+
+  test("persists the Claude auth field selector", async () => {
+    renderPage();
+
+    const user = userEvent.setup();
+    const authField = screen.getByRole("combobox", {
+      name: /claude code auth field/i,
+    });
+
+    expect(authField).toHaveTextContent("ANTHROPIC_API_KEY");
+
+    await user.click(authField);
+    await user.click(screen.getByRole("option", { name: "ANTHROPIC_AUTH_TOKEN" }));
+    await user.click(screen.getByRole("button", { name: /save cc switch settings/i }));
+
+    await waitFor(() => {
+      const raw = window.localStorage.getItem("ccswitch.importSettings.v1");
+      expect(raw).toBeTruthy();
+      expect(JSON.parse(raw!)).toMatchObject({
+        claude: {
+          apiKeyField: "ANTHROPIC_AUTH_TOKEN",
+        },
+      });
+    });
+  });
 });

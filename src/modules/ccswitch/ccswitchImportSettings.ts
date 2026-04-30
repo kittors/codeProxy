@@ -2,10 +2,18 @@ import type { CcSwitchClientType } from "@/modules/ccswitch/ccswitchImport";
 
 export const CC_SWITCH_IMPORT_SETTINGS_STORAGE_KEY = "ccswitch.importSettings.v1";
 
+export type CcSwitchClaudeAuthField = "ANTHROPIC_API_KEY" | "ANTHROPIC_AUTH_TOKEN";
+
+export const CC_SWITCH_CLAUDE_AUTH_FIELDS: CcSwitchClaudeAuthField[] = [
+  "ANTHROPIC_API_KEY",
+  "ANTHROPIC_AUTH_TOKEN",
+];
+
 export interface CcSwitchClientImportSettings {
   endpointPath: string;
   defaultModel: string;
   usageAutoInterval: number;
+  apiKeyField?: CcSwitchClaudeAuthField;
 }
 
 export type CcSwitchImportSettings = Record<CcSwitchClientType, CcSwitchClientImportSettings>;
@@ -18,6 +26,7 @@ export const DEFAULT_CC_SWITCH_IMPORT_SETTINGS: CcSwitchImportSettings = {
     endpointPath: "",
     defaultModel: "",
     usageAutoInterval: 30,
+    apiKeyField: "ANTHROPIC_API_KEY",
   },
   codex: {
     endpointPath: "/v1",
@@ -38,6 +47,10 @@ export function normalizeCcSwitchEndpointPath(value: unknown): string {
   if (!raw || raw === "/") return "";
   const withSlash = raw.startsWith("/") ? raw : `/${raw}`;
   return withSlash.replace(/\/+$/, "");
+}
+
+export function normalizeCcSwitchClaudeAuthField(value: unknown): CcSwitchClaudeAuthField {
+  return value === "ANTHROPIC_AUTH_TOKEN" ? "ANTHROPIC_AUTH_TOKEN" : "ANTHROPIC_API_KEY";
 }
 
 function normalizeUsageAutoInterval(value: unknown, fallback: number): number {
@@ -69,6 +82,13 @@ export function normalizeCcSwitchImportSettings(
         "usageAutoInterval" in raw ? raw.usageAutoInterval : defaults.usageAutoInterval,
         defaults.usageAutoInterval,
       ),
+      ...(clientType === "claude"
+        ? {
+            apiKeyField: normalizeCcSwitchClaudeAuthField(
+              "apiKeyField" in raw ? raw.apiKeyField : defaults.apiKeyField,
+            ),
+          }
+        : {}),
     };
   }
 
