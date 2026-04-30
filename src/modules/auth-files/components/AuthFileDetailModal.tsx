@@ -4,6 +4,7 @@ import { Download, RefreshCw, ShieldCheck } from "lucide-react";
 import type { AuthFileItem, AuthFileSubscriptionPeriod } from "@/lib/http/types";
 import type { ProxyPoolEntry } from "@/lib/http/apis/proxies";
 import { Button } from "@/modules/ui/Button";
+import { DateTimePicker } from "@/modules/ui/DateTimePicker";
 import { EmptyState } from "@/modules/ui/EmptyState";
 import { TextInput } from "@/modules/ui/Input";
 import { Modal } from "@/modules/ui/Modal";
@@ -82,7 +83,7 @@ export function AuthFileDetailModal({
   setChannelEditor,
   saveChannelEditor,
 }: AuthFileDetailModalProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const proxyCheckState = useProxyPoolChecks(proxyPoolEntries, open && detailTab === "fields");
   const usesMappedModelOwner = Boolean(mappedModelOwnerValue);
   const visibleModelsList = usesMappedModelOwner
@@ -363,17 +364,26 @@ export function AuthFileDetailModal({
                       {t("auth_files.subscription_started_at_label")}
                     </p>
                     <div className="mt-2 grid gap-3 sm:grid-cols-[minmax(0,1fr)_10rem]">
-                      <TextInput
-                        type="datetime-local"
+                      <DateTimePicker
                         value={prefixProxyEditor.subscriptionStartedAt}
-                        onChange={(e) => {
-                          const value = e.currentTarget.value;
+                        onChange={(value) => {
                           setPrefixProxyEditor((prev) => ({
                             ...prev,
                             subscriptionStartedAt: value,
                           }));
                         }}
                         aria-label={t("auth_files.subscription_started_at_label")}
+                        locale={i18n.language}
+                        labels={{
+                          picker: t("auth_files.subscription_date_picker"),
+                          open: t("auth_files.subscription_date_picker_open"),
+                          previousMonth: t("auth_files.subscription_date_picker_previous_month"),
+                          nextMonth: t("auth_files.subscription_date_picker_next_month"),
+                          today: t("auth_files.subscription_date_picker_today"),
+                          clear: t("auth_files.subscription_date_picker_clear"),
+                          hour: t("auth_files.subscription_date_picker_hour"),
+                          minute: t("auth_files.subscription_date_picker_minute"),
+                        }}
                       />
                       <Select
                         value={prefixProxyEditor.subscriptionPeriod}
