@@ -45,7 +45,7 @@ const SUBSCRIPTION_TONE_CLASSES = {
   warning:
     "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/15 dark:text-amber-200",
   urgent:
-    "border-orange-200 bg-orange-50 text-orange-800 dark:border-orange-500/20 dark:bg-orange-500/15 dark:text-orange-200",
+    "border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-500/20 dark:bg-rose-500/15 dark:text-rose-200",
   expired:
     "border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-500/20 dark:bg-rose-500/15 dark:text-rose-200",
 } as const;
@@ -166,35 +166,19 @@ export function useAuthFilesFilesPresentation({
     [t],
   );
 
-  const formatSubscriptionDuration = useCallback(
-    (minutesValue: number) => {
-      const totalMinutes = Math.max(0, Math.abs(minutesValue));
-      if (totalMinutes <= 0) return t("auth_files.subscription_less_than_minute");
-      const days = Math.floor(totalMinutes / 1440);
-      const hours = Math.floor((totalMinutes % 1440) / 60);
-      const minutes = totalMinutes % 60;
-      if (days > 0) {
-        return t("auth_files.subscription_duration_dhm", { days, hours, minutes });
-      }
-      if (hours > 0) {
-        return t("auth_files.subscription_duration_hm", { hours, minutes });
-      }
-      return t("auth_files.subscription_duration_m", { minutes });
-    },
-    [t],
-  );
-
   const renderSubscriptionBadge = useCallback(
     (file: AuthFileItem): ReactNode | null => {
       const status = resolveAuthFileSubscriptionStatus(file, nowMs);
       if (!status) return null;
 
-      const duration = formatSubscriptionDuration(status.remainingMinutes);
+      const days = Math.max(0, Math.abs(status.remainingDays));
       const label = status.expired
-        ? t("auth_files.subscription_expired_short", { duration })
-        : t("auth_files.subscription_remaining_short", { duration });
+        ? t("auth_files.subscription_expired_short", { days })
+        : t("auth_files.subscription_remaining_short", { days });
       const title = t("auth_files.subscription_expires_at_title", {
+        start: status.startedAtText,
         date: status.expiresAtText,
+        period: t(`auth_files.subscription_period_${status.period}`),
       });
 
       return (
@@ -211,7 +195,7 @@ export function useAuthFilesFilesPresentation({
         </HoverTooltip>
       );
     },
-    [formatSubscriptionDuration, nowMs, t],
+    [nowMs, t],
   );
 
   const formatQuotaResetTextCompact = useCallback(

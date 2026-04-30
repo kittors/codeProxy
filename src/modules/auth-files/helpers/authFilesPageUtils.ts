@@ -1,4 +1,8 @@
-import type { AuthFileItem, OAuthModelAliasEntry } from "@/lib/http/types";
+import type {
+  AuthFileItem,
+  AuthFileSubscriptionPeriod,
+  OAuthModelAliasEntry,
+} from "@/lib/http/types";
 import { normalizeUsageSourceId, type KeyStatBucket } from "@/modules/providers/provider-usage";
 import type { QuotaItem } from "@/modules/quota/quota-helpers";
 import { resolveCodexPlanType } from "@/utils/quota/resolvers";
@@ -139,6 +143,14 @@ export const sanitizeAuthFilesForCache = (files: AuthFileItem[]): AuthFileItem[]
     runtime_only: file.runtime_only,
     plan_type: file.plan_type,
     planType: file.planType,
+    subscription_started_at: file.subscription_started_at,
+    subscriptionStartedAt: file.subscriptionStartedAt,
+    subscription_start_at: file.subscription_start_at,
+    subscriptionStartAt: file.subscriptionStartAt,
+    subscription_started_at_ms: file.subscription_started_at_ms,
+    subscriptionStartedAtMs: file.subscriptionStartedAtMs,
+    subscription_period: file.subscription_period,
+    subscriptionPeriod: file.subscriptionPeriod,
     subscription_expires_at: file.subscription_expires_at,
     subscriptionExpiresAt: file.subscriptionExpiresAt,
     subscription_expires_at_ms: file.subscription_expires_at_ms,
@@ -220,43 +232,82 @@ const parseDateLikeMs = (value: unknown): number | null => {
 };
 
 export type AuthFileSubscriptionStatus = {
+  startedAtMs: number;
+  startedAtText: string;
   expiresAtMs: number;
   expiresAtText: string;
-  remainingMinutes: number;
+  remainingDays: number;
   expired: boolean;
+  period: AuthFileSubscriptionPeriod;
   tone: "active" | "warning" | "urgent" | "expired";
+};
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+export const normalizeAuthFileSubscriptionPeriod = (value: unknown): AuthFileSubscriptionPeriod => {
+  const normalized = String(value ?? "")
+    .trim()
+    .toLowerCase();
+  if (normalized === "year" || normalized === "yearly" || normalized === "annual") {
+    return "yearly";
+  }
+  return "monthly";
+};
+
+const resolveSubscriptionStartMs = (file: AuthFileItem): number | null =>
+  parseDateLikeMs(file.subscription_started_at_ms ?? file.subscriptionStartedAtMs) ??
+  parseDateLikeMs(
+    file.subscription_started_at ??
+      file.subscriptionStartedAt ??
+      file.subscription_start_at ??
+      file.subscriptionStartAt,
+  );
+
+const addCalendarMonths = (startMs: number, months: number): number | null => {
+  const date = new Date(startMs);
+  if (Number.isNaN(date.getTime())) return null;
+
+  const day = date.getDate();
+  const result = new Date(startMs);
+  result.setDate(1);
+  result.setMonth(result.getMonth() + months);
+  const lastDayOfTargetMonth = new Date(result.getFullYear(), result.getMonth() + 1, 0).getDate();
+  result.setDate(Math.min(day, lastDayOfTargetMonth));
+
+  return Number.isNaN(result.getTime()) ? null : result.getTime();
 };
 
 export const resolveAuthFileSubscriptionStatus = (
   file: AuthFileItem,
   nowMs = Date.now(),
 ): AuthFileSubscriptionStatus | null => {
-  const expiresAtMs =
-    parseDateLikeMs(file.subscription_expires_at_ms ?? file.subscriptionExpiresAtMs) ??
-    parseDateLikeMs(file.subscription_expires_at ?? file.subscriptionExpiresAt);
+  const startedAtMs = resolveSubscriptionStartMs(file);
+  if (startedAtMs === null) return null;
+
+  const period = normalizeAuthFileSubscriptionPeriod(
+    file.subscription_period ?? file.subscriptionPeriod,
+  );
+  const expiresAtMs = addCalendarMonths(startedAtMs, period === "yearly" ? 12 : 1);
   if (expiresAtMs === null) return null;
 
   const diffMs = expiresAtMs - nowMs;
-  const remainingMinutes =
+  const remainingDays =
     diffMs === 0
       ? 0
       : diffMs > 0
-        ? Math.ceil(diffMs / 60_000)
-        : -Math.ceil(Math.abs(diffMs) / 60_000);
-  const expired = remainingMinutes <= 0;
-  const tone = expired
-    ? "expired"
-    : remainingMinutes <= 24 * 60
-      ? "urgent"
-      : remainingMinutes <= 7 * 24 * 60
-        ? "warning"
-        : "active";
+        ? Math.ceil(diffMs / DAY_MS)
+        : -Math.ceil(Math.abs(diffMs) / DAY_MS);
+  const expired = remainingDays <= 0;
+  const tone = expired ? "expired" : remainingDays <= 5 ? "urgent" : "active";
 
   return {
+    startedAtMs,
+    startedAtText: new Date(startedAtMs).toLocaleString(),
     expiresAtMs,
     expiresAtText: new Date(expiresAtMs).toLocaleString(),
-    remainingMinutes,
+    remainingDays,
     expired,
+    period,
     tone,
   };
 };
@@ -581,7 +632,8 @@ export type PrefixProxyEditorState = {
   prefix: string;
   proxyUrl: string;
   proxyId: string;
-  subscriptionExpiresAt: string;
+  subscriptionStartedAt: string;
+  subscriptionPeriod: AuthFileSubscriptionPeriod;
 };
 
 export type AuthFilesGroupOverview = {

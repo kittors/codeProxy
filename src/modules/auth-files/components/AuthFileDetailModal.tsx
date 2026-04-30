@@ -1,12 +1,13 @@
 import type { Dispatch, SetStateAction } from "react";
 import { useTranslation } from "react-i18next";
 import { Download, RefreshCw, ShieldCheck } from "lucide-react";
-import type { AuthFileItem } from "@/lib/http/types";
+import type { AuthFileItem, AuthFileSubscriptionPeriod } from "@/lib/http/types";
 import type { ProxyPoolEntry } from "@/lib/http/apis/proxies";
 import { Button } from "@/modules/ui/Button";
 import { EmptyState } from "@/modules/ui/EmptyState";
 import { TextInput } from "@/modules/ui/Input";
 import { Modal } from "@/modules/ui/Modal";
+import { Select } from "@/modules/ui/Select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/modules/ui/Tabs";
 import { ProxyPoolSelect } from "@/modules/proxies/ProxyPoolSelect";
 import { useProxyPoolChecks } from "@/modules/proxies/useProxyPoolChecks";
@@ -359,24 +360,44 @@ export function AuthFileDetailModal({
 
                   <div className="rounded-2xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
                     <p className="text-sm font-semibold text-slate-900 dark:text-white">
-                      {t("auth_files.subscription_expires_at_label")}
+                      {t("auth_files.subscription_started_at_label")}
                     </p>
-                    <div className="mt-2">
+                    <div className="mt-2 grid gap-3 sm:grid-cols-[minmax(0,1fr)_10rem]">
                       <TextInput
                         type="datetime-local"
-                        value={prefixProxyEditor.subscriptionExpiresAt}
+                        value={prefixProxyEditor.subscriptionStartedAt}
                         onChange={(e) => {
                           const value = e.currentTarget.value;
                           setPrefixProxyEditor((prev) => ({
                             ...prev,
-                            subscriptionExpiresAt: value,
+                            subscriptionStartedAt: value,
                           }));
                         }}
-                        aria-label={t("auth_files.subscription_expires_at_label")}
+                        aria-label={t("auth_files.subscription_started_at_label")}
+                      />
+                      <Select
+                        value={prefixProxyEditor.subscriptionPeriod}
+                        onChange={(value) =>
+                          setPrefixProxyEditor((prev) => ({
+                            ...prev,
+                            subscriptionPeriod: value as AuthFileSubscriptionPeriod,
+                          }))
+                        }
+                        options={[
+                          {
+                            value: "monthly",
+                            label: t("auth_files.subscription_period_monthly"),
+                          },
+                          {
+                            value: "yearly",
+                            label: t("auth_files.subscription_period_yearly"),
+                          },
+                        ]}
+                        aria-label={t("auth_files.subscription_period_label")}
                       />
                     </div>
                     <p className="mt-2 text-xs text-slate-500 dark:text-white/55">
-                      {t("auth_files.subscription_expires_at_hint")}
+                      {t("auth_files.subscription_started_at_hint")}
                     </p>
                   </div>
 
