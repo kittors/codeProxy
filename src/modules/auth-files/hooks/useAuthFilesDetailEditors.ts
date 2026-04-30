@@ -8,6 +8,7 @@ import {
   dateTimeLocalInputToIso,
   formatFileSize,
   MAX_AUTH_FILE_SIZE,
+  normalizeAuthFileSubscriptionPeriod,
   readAuthFileChannelName,
   resolveFileType,
   type AuthFileModelItem,
@@ -27,7 +28,8 @@ const createPrefixProxyEditorState = (): PrefixProxyEditorState => ({
   prefix: "",
   proxyUrl: "",
   proxyId: "",
-  subscriptionExpiresAt: "",
+  subscriptionStartedAt: "",
+  subscriptionPeriod: "monthly",
 });
 
 const createChannelEditorState = (): ChannelEditorState => ({
@@ -37,6 +39,31 @@ const createChannelEditorState = (): ChannelEditorState => ({
   saving: false,
   error: null,
 });
+
+const readSubscriptionStartValue = (json: Record<string, unknown>): unknown =>
+  json.subscription_started_at ??
+  json.subscriptionStartedAt ??
+  json.subscription_start_at ??
+  json.subscriptionStartAt;
+
+const removeSubscriptionFields = (json: Record<string, unknown>) => {
+  delete json.subscription_started_at;
+  delete json.subscriptionStartedAt;
+  delete json.subscription_start_at;
+  delete json.subscriptionStartAt;
+  delete json.subscription_started_at_ms;
+  delete json.subscriptionStartedAtMs;
+  delete json.subscription_period;
+  delete json.subscriptionPeriod;
+  delete json.subscription_expires_at;
+  delete json.subscriptionExpiresAt;
+  delete json.subscription_expires_at_ms;
+  delete json.subscriptionExpiresAtMs;
+  delete json.subscription_remaining_minutes;
+  delete json.subscriptionRemainingMinutes;
+  delete json.subscription_expired;
+  delete json.subscriptionExpired;
+};
 
 export function useAuthFilesDetailEditors(loadAll: () => Promise<void>) {
   const { t } = useTranslation();
@@ -130,7 +157,8 @@ export function useAuthFilesDetailEditors(loadAll: () => Promise<void>) {
         prefix: "",
         proxyUrl: "",
         proxyId: "",
-        subscriptionExpiresAt: "",
+        subscriptionStartedAt: "",
+        subscriptionPeriod: "monthly",
       });
 
       try {
@@ -162,8 +190,11 @@ export function useAuthFilesDetailEditors(loadAll: () => Promise<void>) {
         const prefix = typeof json.prefix === "string" ? json.prefix : "";
         const proxyUrl = typeof json.proxy_url === "string" ? json.proxy_url : "";
         const proxyId = typeof json.proxy_id === "string" ? json.proxy_id : "";
-        const subscriptionExpiresAt = dateLikeToDateTimeLocalInput(
-          json.subscription_expires_at ?? json.subscriptionExpiresAt,
+        const subscriptionStartedAt = dateLikeToDateTimeLocalInput(
+          readSubscriptionStartValue(json),
+        );
+        const subscriptionPeriod = normalizeAuthFileSubscriptionPeriod(
+          json.subscription_period ?? json.subscriptionPeriod,
         );
 
         setPrefixProxyEditor((prev) => ({
@@ -173,7 +204,8 @@ export function useAuthFilesDetailEditors(loadAll: () => Promise<void>) {
           prefix,
           proxyUrl,
           proxyId,
-          subscriptionExpiresAt,
+          subscriptionStartedAt,
+          subscriptionPeriod,
           error: null,
         }));
       } catch (err: unknown) {
@@ -259,22 +291,26 @@ export function useAuthFilesDetailEditors(loadAll: () => Promise<void>) {
       typeof prefixProxyEditor.json.proxy_url === "string" ? prefixProxyEditor.json.proxy_url : "";
     const originalProxyId =
       typeof prefixProxyEditor.json.proxy_id === "string" ? prefixProxyEditor.json.proxy_id : "";
-    const originalSubscriptionExpiresAt = dateLikeToDateTimeLocalInput(
-      prefixProxyEditor.json.subscription_expires_at ??
-        prefixProxyEditor.json.subscriptionExpiresAt,
+    const originalSubscriptionStartedAt = dateLikeToDateTimeLocalInput(
+      readSubscriptionStartValue(prefixProxyEditor.json),
+    );
+    const originalSubscriptionPeriod = normalizeAuthFileSubscriptionPeriod(
+      prefixProxyEditor.json.subscription_period ?? prefixProxyEditor.json.subscriptionPeriod,
     );
     return (
       originalPrefix !== prefixProxyEditor.prefix ||
       originalProxyUrl !== prefixProxyEditor.proxyUrl ||
       originalProxyId !== prefixProxyEditor.proxyId ||
-      originalSubscriptionExpiresAt !== prefixProxyEditor.subscriptionExpiresAt
+      originalSubscriptionStartedAt !== prefixProxyEditor.subscriptionStartedAt ||
+      originalSubscriptionPeriod !== prefixProxyEditor.subscriptionPeriod
     );
   }, [
     prefixProxyEditor.json,
     prefixProxyEditor.prefix,
     prefixProxyEditor.proxyId,
     prefixProxyEditor.proxyUrl,
-    prefixProxyEditor.subscriptionExpiresAt,
+    prefixProxyEditor.subscriptionPeriod,
+    prefixProxyEditor.subscriptionStartedAt,
   ]);
 
   const prefixProxyUpdatedText = useMemo(() => {
@@ -293,13 +329,14 @@ export function useAuthFilesDetailEditors(loadAll: () => Promise<void>) {
     if (proxyId) next.proxy_id = proxyId;
     else delete next.proxy_id;
 
-    const subscriptionExpiresAt = prefixProxyEditor.subscriptionExpiresAt.trim();
-    if (subscriptionExpiresAt) {
-      const isoValue = dateTimeLocalInputToIso(subscriptionExpiresAt);
-      if (isoValue) next.subscription_expires_at = isoValue;
-    } else {
-      delete next.subscription_expires_at;
-      delete next.subscriptionExpiresAt;
+    removeSubscriptionFields(next);
+    const subscriptionStartedAt = prefixProxyEditor.subscriptionStartedAt.trim();
+    if (subscriptionStartedAt) {
+      const isoValue = dateTimeLocalInputToIso(subscriptionStartedAt);
+      if (isoValue) {
+        next.subscription_started_at = isoValue;
+        next.subscription_period = prefixProxyEditor.subscriptionPeriod;
+      }
     }
 
     return JSON.stringify(next, null, 2);
@@ -308,17 +345,18 @@ export function useAuthFilesDetailEditors(loadAll: () => Promise<void>) {
     prefixProxyEditor.prefix,
     prefixProxyEditor.proxyId,
     prefixProxyEditor.proxyUrl,
-    prefixProxyEditor.subscriptionExpiresAt,
+    prefixProxyEditor.subscriptionPeriod,
+    prefixProxyEditor.subscriptionStartedAt,
   ]);
 
   const savePrefixProxy = useCallback(async () => {
     if (!prefixProxyEditor.json) return;
     if (!prefixProxyDirty) return;
     if (
-      prefixProxyEditor.subscriptionExpiresAt.trim() &&
-      dateTimeLocalInputToIso(prefixProxyEditor.subscriptionExpiresAt) === null
+      prefixProxyEditor.subscriptionStartedAt.trim() &&
+      dateTimeLocalInputToIso(prefixProxyEditor.subscriptionStartedAt) === null
     ) {
-      notify({ type: "error", message: t("auth_files.subscription_expires_at_invalid") });
+      notify({ type: "error", message: t("auth_files.subscription_started_at_invalid") });
       return;
     }
 
@@ -366,7 +404,7 @@ export function useAuthFilesDetailEditors(loadAll: () => Promise<void>) {
     prefixProxyDirty,
     prefixProxyEditor.fileName,
     prefixProxyEditor.json,
-    prefixProxyEditor.subscriptionExpiresAt,
+    prefixProxyEditor.subscriptionStartedAt,
     prefixProxyUpdatedText,
     t,
   ]);

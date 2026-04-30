@@ -27,6 +27,8 @@ export const authFilesApi = {
     proxy_url?: string;
     proxy_id?: string;
     priority?: number;
+    subscription_started_at?: string;
+    subscription_period?: string;
     subscription_expires_at?: string;
   }) => apiClient.patch("/auth-files/fields", payload),
 
