@@ -1,4 +1,5 @@
 import {
+  createElement,
   createContext,
   useCallback,
   useEffect,
@@ -6,6 +7,7 @@ import {
   useLayoutEffect,
   useRef,
   useState,
+  type HTMLAttributes,
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
@@ -170,6 +172,20 @@ function resolveTooltipPosition({
   };
 }
 
+function isElementOverflowing(element: HTMLElement) {
+  return element.scrollWidth > element.clientWidth || element.scrollHeight > element.clientHeight;
+}
+
+function hasOverflowingContent(element: HTMLElement) {
+  if (isElementOverflowing(element)) return true;
+
+  for (const child of element.querySelectorAll("*")) {
+    if (child instanceof HTMLElement && isElementOverflowing(child)) return true;
+  }
+
+  return false;
+}
+
 /** Fixed-position tooltip rendered via portal — never clipped by overflow containers */
 export function TooltipBubble({
   id,
@@ -177,6 +193,9 @@ export function TooltipBubble({
   content,
   anchorElement,
   anchorRef,
+  interactive = false,
+  onMouseEnter,
+  onMouseLeave,
   placement = "bottom",
 }: {
   id: string;
@@ -184,6 +203,9 @@ export function TooltipBubble({
   content: ReactNode;
   anchorElement?: HTMLElement | null;
   anchorRef?: React.RefObject<HTMLElement | null>;
+  interactive?: boolean;
+  onMouseEnter?: () => void;
+  onMouseLeave?: () => void;
   placement?: TooltipPlacement;
 }) {
   const tooltipRef = useRef<HTMLSpanElement>(null);
@@ -239,8 +261,13 @@ export function TooltipBubble({
       ref={tooltipRef}
       id={id}
       role="tooltip"
-      className="pointer-events-none w-max max-w-[calc(100vw-2rem)] rounded-xl border border-slate-200 bg-white/95 px-2 py-1.5 text-xs shadow-lg backdrop-blur transition-opacity duration-150 sm:max-w-80 dark:border-neutral-800 dark:bg-neutral-950/90 dark:text-white"
+      className={[
+        interactive ? "pointer-events-auto select-text" : "pointer-events-none",
+        "w-max max-w-[calc(100vw-2rem)] rounded-xl border border-slate-200 bg-white/95 px-2 py-1.5 text-xs shadow-lg backdrop-blur transition-opacity duration-150 sm:max-w-80 dark:border-neutral-800 dark:bg-neutral-950/90 dark:text-white",
+      ].join(" ")}
       style={style}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
     >
       <span className="block break-words text-slate-900 dark:text-white">{content}</span>
     </span>,
@@ -293,45 +320,80 @@ export function HoverTooltip({
 }
 
 export function OverflowTooltip({
+  as = "span",
   content,
   children,
   className,
   placement = "bottom",
+  ...triggerProps
 }: {
+  as?: "div" | "span";
   content: string;
   children: ReactNode;
   className?: string;
   placement?: TooltipPlacement;
-}) {
+} & Omit<HTMLAttributes<HTMLElement>, "children" | "content">) {
   const id = useId();
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLSpanElement | null>(null);
+  const ref = useRef<HTMLElement | null>(null);
+  const hideTimeoutRef = useRef<number | null>(null);
+
+  const cancelHide = useCallback(() => {
+    if (hideTimeoutRef.current === null) return;
+    window.clearTimeout(hideTimeoutRef.current);
+    hideTimeoutRef.current = null;
+  }, []);
 
   const tryShow = useCallback(() => {
     const el = ref.current;
     if (!el) return;
     if (!content.trim()) return;
-    const isOverflowing = el.scrollWidth > el.clientWidth;
-    if (!isOverflowing) return;
+    if (!hasOverflowingContent(el)) return;
+    cancelHide();
     setOpen(true);
-  }, [content]);
+  }, [cancelHide, content]);
 
-  const hide = useCallback(() => setOpen(false), []);
+  const hide = useCallback(() => {
+    cancelHide();
+    setOpen(false);
+  }, [cancelHide]);
 
-  return (
-    <span
-      ref={ref}
-      data-tooltip-managed="true"
-      className={["relative", className].filter(Boolean).join(" ")}
-      onMouseEnter={tryShow}
-      onMouseLeave={hide}
-      onFocus={tryShow}
-      onBlur={hide}
-      aria-describedby={id}
-    >
-      {children}
-      <TooltipBubble id={id} open={open} content={content} anchorRef={ref} placement={placement} />
-    </span>
+  const scheduleHide = useCallback(() => {
+    cancelHide();
+    hideTimeoutRef.current = window.setTimeout(() => {
+      hideTimeoutRef.current = null;
+      setOpen(false);
+    }, 120);
+  }, [cancelHide]);
+
+  useEffect(() => {
+    return () => cancelHide();
+  }, [cancelHide]);
+
+  return createElement(
+    as,
+    {
+      ...triggerProps,
+      ref,
+      "data-tooltip-managed": "true",
+      className: ["relative", className].filter(Boolean).join(" "),
+      onMouseEnter: tryShow,
+      onMouseLeave: scheduleHide,
+      onFocus: tryShow,
+      onBlur: hide,
+      "aria-describedby": id,
+    },
+    children,
+    <TooltipBubble
+      id={id}
+      open={open}
+      content={content}
+      anchorRef={ref}
+      interactive
+      placement={placement}
+      onMouseEnter={cancelHide}
+      onMouseLeave={scheduleHide}
+    />,
   );
 }
 

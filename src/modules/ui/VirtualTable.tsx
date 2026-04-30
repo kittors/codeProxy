@@ -10,6 +10,7 @@ import {
   type WheelEvent as ReactWheelEvent,
 } from "react";
 import { useTranslation } from "react-i18next";
+import { TableCellOverflowTooltip } from "@/modules/ui/TableCellOverflowTooltip";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -27,6 +28,8 @@ export interface VirtualTableColumn<T> {
   headerClassName?: string;
   /** Extra cell class */
   cellClassName?: string;
+  /** Overflow tooltip text for a truncated cell. Primitive render output is used by default. */
+  overflowTooltip?: boolean | ((row: T, index: number) => string | null | undefined);
   /** Custom header render function (overrides label) */
   headerRender?: () => ReactNode;
   /** Render function for cell content */
@@ -81,6 +84,21 @@ const DEFAULT_ROW_HEIGHT = 44;
 const DEFAULT_OVERSCAN = 12;
 const DEFAULT_SCROLL_THRESHOLD = 100;
 const DEFAULT_BOTTOM_DEBOUNCE_MS = 120;
+
+function resolveCellOverflowTooltip<T>(
+  column: VirtualTableColumn<T>,
+  row: T,
+  index: number,
+) {
+  if (column.overflowTooltip === false) return false;
+
+  if (typeof column.overflowTooltip === "function") {
+    const value = column.overflowTooltip(row, index);
+    return value === null || value === undefined ? null : String(value);
+  }
+
+  return undefined;
+}
 
 // ---------------------------------------------------------------------------
 // Component
@@ -603,6 +621,8 @@ export function VirtualTable<T>({
                       {columns.map((col, colIdx) => {
                         const isFirst = colIdx === 0;
                         const isLast = colIdx === columns.length - 1;
+                        const content = col.render(row, globalIdx);
+                        const overflowTooltip = resolveCellOverflowTooltip(col, row, globalIdx);
                         const roundCls = [
                           isFirst ? "first:rounded-l-lg" : "",
                           isLast ? "last:rounded-r-lg" : "",
@@ -614,7 +634,12 @@ export function VirtualTable<T>({
                             key={col.key}
                             className={`px-4 py-2.5 align-middle ${col.cellClassName ?? ""} ${roundCls}`}
                           >
-                            {col.render(row, globalIdx)}
+                            <TableCellOverflowTooltip
+                              tooltipContent={overflowTooltip}
+                              className={col.cellClassName}
+                            >
+                              {content}
+                            </TableCellOverflowTooltip>
                           </td>
                         );
                       })}

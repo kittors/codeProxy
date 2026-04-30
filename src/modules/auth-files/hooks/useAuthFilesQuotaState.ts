@@ -20,6 +20,9 @@ import {
   AUTH_FILES_QUOTA_PREVIEW_KEY,
   normalizeAuthIndexValue,
   normalizeQuotaAutoRefreshMs,
+  parseAdditionalQuotaWindowLabel,
+  readAuthFilesDataCache,
+  writeAuthFilesDataCache,
   type FilesViewMode,
   type QuotaPreviewMode,
 } from "@/modules/auth-files/helpers/authFilesPageUtils";
@@ -40,11 +43,14 @@ export function useAuthFilesQuotaState({
   setDetailFile,
 }: UseAuthFilesQuotaStateOptions) {
   const { t } = useTranslation();
+  const initialDataCache = useMemo(() => readAuthFilesDataCache(), []);
 
   const [connectivityState, setConnectivityState] = useState<
     Map<string, { loading: boolean; latencyMs: number | null; error: boolean }>
   >(new Map());
-  const [quotaByFileName, setQuotaByFileName] = useState<Record<string, QuotaState>>({});
+  const [quotaByFileName, setQuotaByFileName] = useState<Record<string, QuotaState>>(
+    () => initialDataCache?.quotaByFileName ?? {},
+  );
   const quotaInFlightRef = useRef<Set<string>>(new Set());
   const quotaAutoRefreshingRef = useRef<Set<string>>(new Set());
   const quotaByFileNameRef = useRef<Record<string, QuotaState>>(quotaByFileName);
@@ -79,6 +85,20 @@ export function useAuthFilesQuotaState({
     quotaByFileNameRef.current = quotaByFileName;
   }, [quotaByFileName]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    const timer = window.setTimeout(() => {
+      const current = readAuthFilesDataCache();
+      if (!current?.files?.length) return;
+      writeAuthFilesDataCache({
+        ...current,
+        savedAtMs: Date.now(),
+        quotaByFileName,
+      });
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [quotaByFileName]);
+
   const patchAuthFileByName = useCallback(
     (name: string, patch: Partial<AuthFileItem>) => {
       setFiles((prev) => prev.map((item) => (item.name === name ? { ...item, ...patch } : item)));
@@ -92,6 +112,12 @@ export function useAuthFilesQuotaState({
       const translateQuotaLabel = (text: string) => {
         if (!text) return text;
         if (text.startsWith("m_quota.")) return t(text);
+        const additionalQuota = parseAdditionalQuotaWindowLabel(text);
+        if (additionalQuota) {
+          return t(`m_quota.additional_${additionalQuota.window}`, {
+            name: additionalQuota.name,
+          });
+        }
         return text;
       };
 
@@ -110,10 +136,12 @@ export function useAuthFilesQuotaState({
           .toLowerCase()
           .replaceAll(/[^a-z0-9\u4e00-\u9fff]/g, "");
 
-      const candidates = items.map((item) => ({
-        item,
-        key: normalize(String(item.label ?? "")),
-      }));
+      const candidates = items
+        .filter((item) => !parseAdditionalQuotaWindowLabel(String(item.label ?? "")))
+        .map((item) => ({
+          item,
+          key: normalize(String(item.label ?? "")),
+        }));
 
       const findExact = (label: string) => items.find((item) => item.label === label) ?? null;
       const find = (re: RegExp) =>
@@ -123,32 +151,60 @@ export function useAuthFilesQuotaState({
         findExact("m_quota.code_5h") ?? find(/(mquotacode5h|code5h|5h|5小时|fivehour|5hour)/i);
       const codeWeek =
         findExact("m_quota.code_weekly") ?? find(/(mquotacodeweekly|codeweekly|weekly|week|周)/i);
+      const reviewFiveHour =
+        findExact("m_quota.review_5h") ??
+        find(/(mquotareview5h|review5h|review5hour|reviewfivehour|审查5小时|审查：5小时)/i);
       const reviewWeek =
         findExact("m_quota.review_weekly") ??
         find(/(mquotareviewweekly|reviewweekly|reviewweek|review_week|审查周|审查：周)/i);
 
-      const codingSlots = [
+      const knownItems = new Set<QuotaItem>();
+      [codeFiveHour, codeWeek, reviewFiveHour, reviewWeek].forEach((item) => {
+        if (item) knownItems.add(item);
+      });
+
+      const codingSlots: { id: string; label: string; item: QuotaItem | null }[] = [
         {
-          id: "code_5h" as const,
+          id: "code_5h",
           label: translateQuotaLabel("m_quota.code_5h"),
           item: codeFiveHour,
         },
         {
-          id: "code_week" as const,
+          id: "code_week",
           label: translateQuotaLabel("m_quota.code_weekly"),
           item: codeWeek,
         },
       ];
       if (provider === "kimi") return codingSlots;
 
-      return [
-        ...codingSlots,
-        {
-          id: "review_week" as const,
+      const codexSlots = [...codingSlots];
+      if (reviewFiveHour) {
+        codexSlots.push({
+          id: "review_5h",
+          label: translateQuotaLabel("m_quota.review_5h"),
+          item: reviewFiveHour,
+        });
+      }
+      if (reviewWeek) {
+        codexSlots.push({
+          id: "review_week",
           label: translateQuotaLabel("m_quota.review_weekly"),
           item: reviewWeek,
-        },
-      ];
+        });
+      }
+
+      const extraSlots = items
+        .filter((item) => !knownItems.has(item))
+        .map((item, index) => {
+          const idKey = normalize(String(item.label ?? "")) || `quota${index + 1}`;
+          return {
+            id: `extra_${idKey}` as const,
+            label: translateQuotaLabel(item.label),
+            item,
+          };
+        });
+
+      return [...codexSlots, ...extraSlots];
     },
     [t],
   );
@@ -333,7 +389,7 @@ export function useAuthFilesQuotaState({
     let cancelled = false;
     void (async () => {
       if (!cancelled) {
-        await runQuotaRefreshBatch(toFetch);
+        await runQuotaRefreshBatch(toFetch, { markAsAutoRefreshing: true });
       }
     })();
 

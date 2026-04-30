@@ -5,6 +5,8 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { ToastProvider } from "@/modules/ui/ToastProvider";
 import { ThemeProvider } from "@/modules/ui/ThemeProvider";
 import { AuthFilesPage } from "@/modules/auth-files/AuthFilesPage";
+import { AUTH_FILES_DATA_CACHE_KEY } from "@/modules/auth-files/helpers/authFilesPageUtils";
+import i18n from "@/i18n";
 
 const mocks = vi.hoisted(() => ({
   list: vi.fn(async () => ({
@@ -25,7 +27,7 @@ const mocks = vi.hoisted(() => ({
     group: "all",
     points: [{ date: new Date().toISOString().slice(0, 10), requests: 9 }],
   })),
-  fetchQuota: vi.fn(() => new Promise(() => {})),
+  fetchQuota: vi.fn((_provider?: unknown, _file?: { name?: string }) => new Promise(() => {})),
   deleteFile: vi.fn(async () => ({})),
   downloadText: vi.fn(async () => "{}"),
   getModelsForAuthFile: vi.fn(async () => [{ id: "live-only", owned_by: "runtime" }]),
@@ -77,8 +79,24 @@ vi.mock("@/modules/ui/charts/EChart", () => ({
   EChart: ({ className }: { className?: string }) => <div className={className}>chart</div>,
 }));
 
+const padDatePart = (value: number): string => String(value).padStart(2, "0");
+
+const toDateTimeLocalInput = (date: Date): string =>
+  [
+    date.getFullYear(),
+    "-",
+    padDatePart(date.getMonth() + 1),
+    "-",
+    padDatePart(date.getDate()),
+    "T",
+    padDatePart(date.getHours()),
+    ":",
+    padDatePart(date.getMinutes()),
+  ].join("");
+
 describe("AuthFilesPage files table", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
+    await i18n.changeLanguage("en");
     window.localStorage.clear();
     window.sessionStorage.clear();
     mocks.list.mockReset();
@@ -592,6 +610,60 @@ describe("AuthFilesPage files table", () => {
     expect(uploadedJson.subscription_started_at).toBe(expectedStartedAt.toISOString());
   });
 
+  test("closes the fields modal and refreshes the card subscription badge after saving", async () => {
+    const startedAt = new Date(Date.now() - 25 * 24 * 60 * 60 * 1000);
+    startedAt.setSeconds(0, 0);
+    const startedAtInput = toDateTimeLocalInput(startedAt);
+    window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
+    mocks.list.mockImplementation(async () => ({
+      files: [
+        {
+          name: "codex-subscription.json",
+          label: "Codex Subscriber",
+          account_type: "oauth",
+          type: "codex",
+          size: 1024,
+          modified: Date.now(),
+          disabled: false,
+        },
+      ],
+    }));
+    mocks.downloadText.mockImplementation(async () => JSON.stringify({ type: "codex" }, null, 2));
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    const cards = await screen.findByTestId("auth-files-cards");
+    expect(cards).not.toHaveTextContent(/d left/);
+    fireEvent.click(within(cards).getByRole("button", { name: "View" }));
+    const dialog = await screen.findByRole("dialog", { name: "View: codex-subscription.json" });
+    fireEvent.click(within(dialog).getByRole("tab", { name: "Fields" }));
+
+    const input = await within(dialog).findByLabelText("Subscription start date");
+    fireEvent.change(input, { target: { value: startedAtInput } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(mocks.upload).toHaveBeenCalledTimes(1));
+    const uploadCalls = mocks.upload.mock.calls as unknown as [[File]];
+    const uploadedJson = JSON.parse(await uploadCalls[0][0].text()) as Record<string, unknown>;
+    expect(uploadedJson.subscription_started_at).toBe(new Date(startedAtInput).toISOString());
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("dialog", { name: "View: codex-subscription.json" }),
+      ).not.toBeInTheDocument(),
+    );
+    await waitFor(() => expect(screen.getByTestId("auth-files-cards")).toHaveTextContent(/d left/));
+  });
+
   test("sets model owner group from an icon modal after confirmation", async () => {
     mocks.list.mockImplementation(async () => ({
       files: [
@@ -685,7 +757,7 @@ describe("AuthFilesPage files table", () => {
 
     window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
     window.sessionStorage.setItem(
-      "authFilesPage.dataCache.v1",
+      AUTH_FILES_DATA_CACHE_KEY,
       JSON.stringify({
         savedAtMs: now,
         files: [file],
@@ -722,6 +794,245 @@ describe("AuthFilesPage files table", () => {
     expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
   });
 
+  test("cards view restores cached quota while refreshing in the background", async () => {
+    const now = Date.now();
+    const file = {
+      name: "codex.json",
+      type: "codex",
+      size: 1024,
+      modified: now,
+      disabled: false,
+      auth_index: "1",
+    } as any;
+
+    mocks.list.mockImplementation(async () => ({ files: [file] }));
+    mocks.fetchQuota.mockImplementation(() => new Promise(() => {}));
+
+    window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
+    window.sessionStorage.setItem(
+      AUTH_FILES_DATA_CACHE_KEY,
+      JSON.stringify({
+        savedAtMs: now,
+        files: [file],
+        quotaByFileName: {
+          "codex.json": {
+            status: "success",
+            updatedAt: now - 60_000,
+            items: [
+              { label: "m_quota.code_5h", percent: 22, resetAtMs: now + 60_000 },
+              { label: "m_quota.code_weekly", percent: 44, resetAtMs: now + 120_000 },
+            ],
+          },
+        },
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("codex.json")).toBeInTheDocument();
+    expect(screen.getByText("22%")).toBeInTheDocument();
+    expect(screen.getByText("44%")).toBeInTheDocument();
+    await waitFor(() => expect(mocks.fetchQuota).toHaveBeenCalledTimes(1));
+    expect(screen.getByText("22%")).toBeInTheDocument();
+    expect(screen.getByText("44%")).toBeInTheDocument();
+  });
+
+  test("cards view includes returned codex review 5h and additional quota bars", async () => {
+    const now = Date.now();
+    const file = {
+      name: "codex-spark.json",
+      type: "codex",
+      size: 1024,
+      modified: now,
+      disabled: false,
+      auth_index: "7",
+    } as any;
+
+    mocks.list.mockImplementation(async () => ({ files: [file] }));
+    mocks.fetchQuota.mockResolvedValue({
+      items: [
+        { label: "m_quota.code_5h", percent: 90, resetAtMs: now + 60_000 },
+        { label: "m_quota.code_weekly", percent: 80, resetAtMs: now + 120_000 },
+        { label: "m_quota.review_5h", percent: 70, resetAtMs: now + 180_000 },
+        { label: "m_quota.review_weekly", percent: 60, resetAtMs: now + 240_000 },
+        { label: "GPT-5.3-Codex-Spark: 5h", percent: 100, resetAtMs: now + 300_000 },
+        { label: "GPT-5.3-Codex-Spark: Weekly", percent: 96, resetAtMs: now + 360_000 },
+      ],
+    });
+
+    window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
+    window.sessionStorage.setItem(
+      AUTH_FILES_DATA_CACHE_KEY,
+      JSON.stringify({
+        savedAtMs: now,
+        files: [file],
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("codex-spark.json")).toBeInTheDocument();
+    fireEvent.click(
+      within(screen.getByTestId("auth-files-cards")).getByRole("button", { name: "Refresh" }),
+    );
+
+    expect(await screen.findByText("Review: 5h")).toBeInTheDocument();
+    expect(screen.getByText("GPT-5.3-Codex-Spark: 5h")).toBeInTheDocument();
+    expect(screen.getByText("GPT-5.3-Codex-Spark: Weekly")).toBeInTheDocument();
+    expect(screen.getByText("96%")).toBeInTheDocument();
+  });
+
+  test("cards keep action buttons pinned to the bottom with mixed quota heights", async () => {
+    const now = Date.now();
+    const files = [
+      {
+        name: "codex-basic.json",
+        type: "codex",
+        size: 1024,
+        modified: now,
+        disabled: false,
+        auth_index: "7",
+      },
+      {
+        name: "codex-spark.json",
+        type: "codex",
+        size: 1024,
+        modified: now,
+        disabled: false,
+        auth_index: "8",
+      },
+    ] as any[];
+
+    mocks.list.mockImplementation(async () => ({ files }));
+    mocks.fetchQuota.mockImplementation(async (_provider, file) => ({
+      items:
+        file?.name === "codex-spark.json"
+          ? [
+              { label: "m_quota.code_5h", percent: 90, resetAtMs: now + 60_000 },
+              { label: "m_quota.code_weekly", percent: 80, resetAtMs: now + 120_000 },
+              { label: "m_quota.review_5h", percent: 70, resetAtMs: now + 180_000 },
+              { label: "GPT-5.3-Codex-Spark: Weekly", percent: 96, resetAtMs: now + 240_000 },
+            ]
+          : [
+              { label: "m_quota.code_5h", percent: 90, resetAtMs: now + 60_000 },
+              { label: "m_quota.code_weekly", percent: 80, resetAtMs: now + 120_000 },
+            ],
+    }));
+
+    window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
+    window.sessionStorage.setItem(
+      AUTH_FILES_DATA_CACHE_KEY,
+      JSON.stringify({
+        savedAtMs: now,
+        files,
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    const cards = await screen.findByTestId("auth-files-cards");
+    expect(cards).toHaveClass("items-stretch");
+
+    const refreshButtons = within(cards).getAllByRole("button", { name: "Refresh" });
+    refreshButtons.forEach((button) => fireEvent.click(button));
+
+    expect(await screen.findByText("GPT-5.3-Codex-Spark: Weekly")).toBeInTheDocument();
+
+    const card = screen.getByText("codex-basic.json").closest("section");
+    expect(card).not.toBeNull();
+    expect(card).toHaveClass("flex", "h-full", "flex-col");
+
+    const quota = within(card as HTMLElement).getByTestId("auth-file-card-quota");
+    const actions = quota.nextElementSibling;
+    expect(actions).not.toBeNull();
+    expect(actions).toHaveClass("mt-auto");
+  });
+
+  test("cards localize codex additional quota window labels in Chinese", async () => {
+    await act(async () => {
+      await i18n.changeLanguage("zh-CN");
+    });
+
+    const now = Date.now();
+    const file = {
+      name: "codex-spark.json",
+      type: "codex",
+      size: 1024,
+      modified: now,
+      disabled: false,
+      auth_index: "8",
+    } as any;
+
+    mocks.list.mockImplementation(async () => ({ files: [file] }));
+    mocks.fetchQuota.mockResolvedValue({
+      items: [
+        { label: "GPT-5.3-Codex-Spark: 5h", percent: 100, resetAtMs: now + 60_000 },
+        { label: "GPT-5.3-Codex-Spark: Weekly", percent: 96, resetAtMs: now + 120_000 },
+      ],
+    });
+
+    window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
+    window.sessionStorage.setItem(
+      AUTH_FILES_DATA_CACHE_KEY,
+      JSON.stringify({
+        savedAtMs: now,
+        files: [file],
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("codex-spark.json")).toBeInTheDocument();
+    fireEvent.click(
+      within(screen.getByTestId("auth-files-cards")).getByRole("button", { name: "刷新" }),
+    );
+
+    expect(await screen.findByText("GPT-5.3-Codex-Spark: 五小时")).toBeInTheDocument();
+    expect(screen.getByText("GPT-5.3-Codex-Spark: 周")).toBeInTheDocument();
+    expect(screen.queryByText("GPT-5.3-Codex-Spark: 5h")).not.toBeInTheDocument();
+    expect(screen.queryByText("GPT-5.3-Codex-Spark: Weekly")).not.toBeInTheDocument();
+  });
+
   test("cards view shows only kimi coding quotas and marks depleted weekly quota red", async () => {
     const now = Date.now();
     const file = {
@@ -744,7 +1055,7 @@ describe("AuthFilesPage files table", () => {
 
     window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
     window.sessionStorage.setItem(
-      "authFilesPage.dataCache.v1",
+      AUTH_FILES_DATA_CACHE_KEY,
       JSON.stringify({
         savedAtMs: now,
         files: [file],
@@ -847,7 +1158,7 @@ describe("AuthFilesPage files table", () => {
 
     window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
     window.sessionStorage.setItem(
-      "authFilesPage.dataCache.v1",
+      AUTH_FILES_DATA_CACHE_KEY,
       JSON.stringify({
         savedAtMs: now,
         files: [file],
@@ -901,7 +1212,7 @@ describe("AuthFilesPage files table", () => {
 
     window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
     window.sessionStorage.setItem(
-      "authFilesPage.dataCache.v1",
+      AUTH_FILES_DATA_CACHE_KEY,
       JSON.stringify({
         savedAtMs: now,
         files: [file],
@@ -952,7 +1263,7 @@ describe("AuthFilesPage files table", () => {
 
     window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
     window.sessionStorage.setItem(
-      "authFilesPage.dataCache.v1",
+      AUTH_FILES_DATA_CACHE_KEY,
       JSON.stringify({
         savedAtMs: now,
         files: [file],

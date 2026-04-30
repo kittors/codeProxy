@@ -4,6 +4,7 @@ import { Card } from "@/modules/ui/Card";
 import { Reveal } from "@/modules/ui/Reveal";
 import { SearchableSelect } from "@/modules/ui/SearchableSelect";
 import { Select } from "@/modules/ui/Select";
+import { TableCellOverflowTooltip } from "@/modules/ui/TableCellOverflowTooltip";
 import { OverflowTooltip } from "@/modules/ui/Tooltip";
 import type { LogRow, TableColumn } from "@/modules/apikey-lookup/types";
 
@@ -403,7 +404,9 @@ export function PublicLogsSection({
                           key={col.key}
                           className={`px-4 py-2.5 align-middle ${col.cellClassName ?? ""} ${colIndex === 0 ? "first:rounded-l-lg" : ""} ${colIndex === logColumns.length - 1 ? "last:rounded-r-lg" : ""}`}
                         >
-                          {col.render(row, rowIndex)}
+                          <TableCellOverflowTooltip className={col.cellClassName}>
+                            {col.render(row, rowIndex)}
+                          </TableCellOverflowTooltip>
                         </td>
                       ))}
                     </tr>

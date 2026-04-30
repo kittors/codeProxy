@@ -150,11 +150,25 @@ describe("Auth Files helper coverage", () => {
     writeAuthFilesDataCache({
       savedAtMs: 123,
       files: sanitized,
+      quotaByFileName: {
+        "codex.json": {
+          status: "success",
+          updatedAt: 456,
+          items: [{ label: "m_quota.code_5h", percent: 42, resetAtMs: 789 }],
+        },
+      },
     });
     expect(window.sessionStorage.getItem(AUTH_FILES_DATA_CACHE_KEY)).toContain('"savedAtMs":123');
     expect(readAuthFilesDataCache()).toEqual({
       savedAtMs: 123,
       files: sanitized,
+      quotaByFileName: {
+        "codex.json": {
+          status: "success",
+          updatedAt: 456,
+          items: [{ label: "m_quota.code_5h", percent: 42, resetAtMs: 789 }],
+        },
+      },
     });
   });
 
