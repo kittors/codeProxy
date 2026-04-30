@@ -3,6 +3,7 @@ import { RefreshCw } from "lucide-react";
 import { Modal } from "@/modules/ui/Modal";
 import { SearchableSelect } from "@/modules/ui/SearchableSelect";
 import { Select } from "@/modules/ui/Select";
+import { TableCellOverflowTooltip } from "@/modules/ui/TableCellOverflowTooltip";
 import {
   RequestLogsPaginationBar,
   RequestLogsTimeRangeSelector,
@@ -213,7 +214,9 @@ export function ApiKeyUsageModal({
                             key={col.key}
                             className={`px-4 py-2.5 align-middle ${col.cellClassName ?? ""} ${roundCls}`}
                           >
-                            {col.render(row, rowIndex)}
+                            <TableCellOverflowTooltip className={col.cellClassName}>
+                              {col.render(row, rowIndex)}
+                            </TableCellOverflowTooltip>
                           </td>
                         );
                       })}

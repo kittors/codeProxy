@@ -133,6 +133,46 @@ describe("VirtualTable scrollbar wrapper", () => {
     expect(screen.getByRole("tooltip")).toHaveTextContent(fullValue);
   });
 
+  test("infers overflow tooltip text from JSX cell content", () => {
+    const fullValue = "JSX-rendered table cell value";
+    const jsxColumns: VirtualTableColumn<DemoRow>[] = [
+      {
+        key: "name",
+        label: "Name",
+        width: "w-40",
+        render: (row) => (
+          <span className="block min-w-0 truncate">
+            <strong>{row.name}</strong>
+          </span>
+        ),
+      },
+    ];
+
+    render(
+      <VirtualTable
+        rows={[{ id: "1", name: fullValue }]}
+        columns={jsxColumns}
+        rowKey={(row) => row.id}
+        height="h-[160px]"
+        minHeight="min-h-0"
+        virtualize={false}
+      />,
+    );
+
+    const cellContent = screen
+      .getByText(fullValue)
+      .closest("[data-table-cell-overflow]") as HTMLElement | null;
+    expect(cellContent).not.toBeNull();
+    const innerContent = screen.getByText(fullValue).closest("span") as HTMLElement | null;
+    expect(innerContent).not.toBeNull();
+
+    setElementOverflow(cellContent!, { clientWidth: 120, scrollWidth: 120 });
+    setElementOverflow(innerContent!, { clientWidth: 120, scrollWidth: 420 });
+    fireEvent.mouseEnter(cellContent!);
+
+    expect(screen.getByRole("tooltip")).toHaveTextContent(fullValue);
+  });
+
   test("uses a focusable scroll container with hover-reveal metadata", () => {
     const { container } = render(
       <VirtualTable
