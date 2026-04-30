@@ -164,6 +164,17 @@ export interface ProviderSimpleConfig {
   skipAnthropicProcessing?: boolean;
 }
 
+export type BedrockAuthMode = "api-key" | "sigv4";
+
+export interface BedrockProviderConfig extends ProviderSimpleConfig {
+  authMode: BedrockAuthMode;
+  accessKeyId?: string;
+  secretAccessKey?: string;
+  sessionToken?: string;
+  region?: string;
+  forceGlobal?: boolean;
+}
+
 export type OAuthProvider = "codex" | "anthropic" | "antigravity" | "gemini-cli" | "kimi" | "qwen";
 
 export interface OAuthStartResponse {

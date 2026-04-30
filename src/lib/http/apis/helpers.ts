@@ -1,4 +1,5 @@
 import type {
+  BedrockProviderConfig,
   OAuthModelAliasEntry,
   OpenAIProvider,
   ProviderApiKeyEntry,
@@ -145,6 +146,44 @@ export const serializeGeminiKey = (config: ProviderSimpleConfig) => {
   if (config.excludedModels && config.excludedModels.length) {
     payload["excluded-models"] = config.excludedModels;
   }
+  return payload;
+};
+
+export const serializeBedrockKey = (config: BedrockProviderConfig) => {
+  const authMode = config.authMode === "sigv4" ? "sigv4" : "api-key";
+  const payload: Record<string, unknown> = { "auth-mode": authMode };
+  const name = normalizeString(config.name);
+  if (name) payload.name = name;
+  const prefix = normalizeString(config.prefix);
+  if (prefix) payload.prefix = prefix;
+  const region = normalizeString(config.region);
+  if (region) payload.region = region;
+  if (config.forceGlobal) payload["force-global"] = true;
+  const baseUrl = normalizeString(config.baseUrl);
+  if (baseUrl) payload["base-url"] = baseUrl;
+  const proxyUrl = normalizeString(config.proxyUrl);
+  if (proxyUrl) payload["proxy-url"] = proxyUrl;
+  const proxyId = normalizeString(config.proxyId);
+  if (proxyId) payload["proxy-id"] = proxyId;
+  const headers = serializeHeaders(config.headers);
+  if (headers) payload.headers = headers;
+  const models = serializeModels(config.models);
+  if (models && models.length) payload.models = models;
+  if (config.excludedModels && config.excludedModels.length) {
+    payload["excluded-models"] = config.excludedModels;
+  }
+
+  if (authMode === "api-key") {
+    payload["api-key"] = config.apiKey;
+  } else {
+    const accessKeyId = normalizeString(config.accessKeyId) ?? normalizeString(config.apiKey);
+    if (accessKeyId) payload["access-key-id"] = accessKeyId;
+    const secretAccessKey = normalizeString(config.secretAccessKey);
+    if (secretAccessKey) payload["secret-access-key"] = secretAccessKey;
+    const sessionToken = normalizeString(config.sessionToken);
+    if (sessionToken) payload["session-token"] = sessionToken;
+  }
+
   return payload;
 };
 
