@@ -535,6 +535,63 @@ describe("AuthFilesPage files table", () => {
     expect(uploadedJson.subscription_expires_at).toBeUndefined();
   });
 
+  test("uses the subscription date picker from the auth fields editor", async () => {
+    const initialStartedAt = "2027-01-02T03:04:00Z";
+    const expectedStartedAt = new Date(initialStartedAt);
+    expectedStartedAt.setFullYear(2027, 0, 15);
+    mocks.list.mockImplementation(async () => ({
+      files: [
+        {
+          name: "codex-subscription.json",
+          label: "Codex Subscriber",
+          account_type: "oauth",
+          type: "codex",
+          size: 1024,
+          modified: Date.now(),
+          disabled: false,
+        },
+      ],
+    }));
+    mocks.downloadText.mockImplementation(async () =>
+      JSON.stringify(
+        {
+          type: "codex",
+          subscription_started_at: initialStartedAt,
+          subscription_period: "monthly",
+        },
+        null,
+        2,
+      ),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("Codex Subscriber")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "View" }));
+    fireEvent.click(await screen.findByRole("tab", { name: "Fields" }));
+
+    fireEvent.click(await screen.findByLabelText("Subscription start date"));
+    expect(screen.getByRole("dialog", { name: "Date picker" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "15" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(mocks.upload).toHaveBeenCalledTimes(1));
+    const uploadCalls = mocks.upload.mock.calls as unknown as [[File]];
+    const uploaded = uploadCalls[0][0];
+    const uploadedJson = JSON.parse(await uploaded.text()) as Record<string, unknown>;
+    expect(uploadedJson.subscription_started_at).toBe(expectedStartedAt.toISOString());
+  });
+
   test("sets model owner group from an icon modal after confirmation", async () => {
     mocks.list.mockImplementation(async () => ({
       files: [
