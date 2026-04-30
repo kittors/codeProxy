@@ -110,7 +110,6 @@ export function AuthFilesPage() {
     loadModelsForDetail,
     openDetail,
     prefixProxyDirty,
-    prefixProxyUpdatedText,
     savePrefixProxy,
     saveChannelEditor,
   } = useAuthFilesDetailEditors(loadAll, setFiles);
@@ -431,7 +430,6 @@ export function AuthFilesPage() {
         prefixProxyEditor={prefixProxyEditor}
         setPrefixProxyEditor={setPrefixProxyEditor}
         prefixProxyDirty={prefixProxyDirty}
-        prefixProxyUpdatedText={prefixProxyUpdatedText}
         savePrefixProxy={savePrefixProxy}
         proxyPoolEntries={proxyPoolEntries}
         channelEditor={channelEditor}

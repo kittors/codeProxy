@@ -25,13 +25,14 @@ const renderDetailModal = (overrides: Partial<DetailModalProps> = {}) => {
     open: true,
     detailFile: {
       name: "codex.json",
+      label: "Codex Primary",
       type: "codex",
       size: 256,
       account_type: "oauth",
     },
     detailLoading: false,
     detailText: '{"token":"abc","nested":{"enabled":true}}',
-    detailTab: "json",
+    detailTab: "fields",
     setDetailOpen: vi.fn(),
     setDetailTab: vi.fn(),
     loadModelsForDetail: vi.fn(async () => undefined),
@@ -50,7 +51,6 @@ const renderDetailModal = (overrides: Partial<DetailModalProps> = {}) => {
     prefixProxyEditor: basePrefixProxyEditor,
     setPrefixProxyEditor: vi.fn(),
     prefixProxyDirty: true,
-    prefixProxyUpdatedText: '{\n  "prefix": "team-a"\n}',
     savePrefixProxy: vi.fn(async () => undefined),
     proxyPoolEntries: [
       {
@@ -68,7 +68,7 @@ const renderDetailModal = (overrides: Partial<DetailModalProps> = {}) => {
       error: null,
     },
     setChannelEditor: vi.fn(),
-    saveChannelEditor: vi.fn(async () => undefined),
+    saveChannelEditor: vi.fn(async () => true),
     ...overrides,
   };
 
@@ -82,12 +82,18 @@ describe("AuthFileDetailModal", () => {
     window.localStorage.clear();
   });
 
-  test("formats JSON into a readable viewer without changing the source text", () => {
+  test("uses fields as the primary view without content or channel tabs", () => {
     renderDetailModal();
 
-    const reader = screen.getByTestId("auth-file-json-reader");
-    expect(reader).toHaveTextContent('"token": "abc"');
-    expect(reader.textContent).toContain('\n  "nested": {');
+    expect(screen.queryByTestId("auth-file-json-reader")).not.toBeInTheDocument();
+    expect(screen.queryByText(/"token"/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "Content" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "Info" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "Channel" })).not.toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Fields" })).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("e.g. Gemini Primary")).toHaveValue("Codex Primary");
+    expect(screen.getByRole("dialog", { name: "View: codex.json" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Download" })).toBeEnabled();
   });
 
   test("renders models as a compact list without raw field labels", () => {
@@ -102,7 +108,7 @@ describe("AuthFileDetailModal", () => {
     expect(screen.queryByText(/owned_by:/)).not.toBeInTheDocument();
   });
 
-  test("keeps field editing controls and preview in a compact editor surface", () => {
+  test("keeps field editing controls without showing JSON in the modal", () => {
     renderDetailModal({ detailTab: "fields" });
 
     const grid = screen.getByTestId("auth-file-fields-grid");
@@ -112,19 +118,31 @@ describe("AuthFileDetailModal", () => {
       "http://127.0.0.1:7890",
     );
     expect(within(grid).getByLabelText(/Subscription start/)).toBeInTheDocument();
-
-    const preview = screen.getByTestId("auth-file-fields-preview");
-    expect(preview).toHaveTextContent('"prefix": "team-a"');
+    expect(screen.queryByTestId("auth-file-fields-preview")).not.toBeInTheDocument();
+    expect(screen.queryByText(/"prefix"/)).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Save" })).toBeEnabled();
   });
 
-  test("keeps the OAuth channel rename action available", () => {
-    const props = renderDetailModal({ detailTab: "channel" });
+  test("keeps the OAuth channel rename action available in fields", () => {
+    const saveChannelEditor = vi.fn(async () => true);
+    const props = renderDetailModal({
+      detailTab: "fields",
+      channelEditor: {
+        open: true,
+        fileName: "codex.json",
+        label: "Codex Team A",
+        saving: false,
+        error: null,
+      },
+      saveChannelEditor,
+    });
 
     fireEvent.change(screen.getByPlaceholderText("e.g. Gemini Primary"), {
-      target: { value: "Codex Team A" },
+      target: { value: "Codex Team B" },
     });
     expect(props.setChannelEditor).toHaveBeenCalled();
     expect(screen.getByRole("button", { name: "Save" })).toBeEnabled();
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(saveChannelEditor).toHaveBeenCalled();
   });
 });
