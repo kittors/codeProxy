@@ -16,6 +16,7 @@ import {
   dateTimeLocalInputToIso,
   formatFileSize,
   MAX_AUTH_FILE_SIZE,
+  isOauthAuthFile,
   normalizeAuthFileSubscriptionPeriod,
   readAuthFileChannelName,
   resolveFileType,
@@ -24,7 +25,7 @@ import {
   type PrefixProxyEditorState,
 } from "@/modules/auth-files/helpers/authFilesPageUtils";
 
-type DetailTab = "json" | "models" | "fields" | "channel";
+type DetailTab = "fields" | "models";
 
 const createPrefixProxyEditorState = (): PrefixProxyEditorState => ({
   open: false,
@@ -119,7 +120,7 @@ export function useAuthFilesDetailEditors(
   const [detailFile, setDetailFile] = useState<AuthFileItem | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailText, setDetailText] = useState("");
-  const [detailTab, setDetailTab] = useState<DetailTab>("json");
+  const [detailTab, setDetailTab] = useState<DetailTab>("fields");
 
   const [modelsLoading, setModelsLoading] = useState(false);
   const [modelsFileType, setModelsFileType] = useState("");
@@ -182,7 +183,7 @@ export function useAuthFilesDetailEditors(
   const openDetail = useCallback(
     async (file: AuthFileItem) => {
       setDetailOpen(true);
-      setDetailTab("json");
+      setDetailTab("fields");
       setDetailFile(file);
       setDetailLoading(true);
       setDetailText("");
@@ -289,13 +290,13 @@ export function useAuthFilesDetailEditors(
     });
   }, []);
 
-  const saveChannelEditor = useCallback(async () => {
+  const saveChannelEditor = useCallback(async (): Promise<boolean> => {
     const fileName = channelEditor.fileName.trim();
     const label = channelEditor.label.trim();
-    if (!fileName) return;
+    if (!fileName) return false;
     if (!label) {
       setChannelEditor((prev) => ({ ...prev, error: t("auth_files.channel_name_required") }));
-      return;
+      return false;
     }
 
     setChannelEditor((prev) => ({ ...prev, saving: true, error: null }));
@@ -304,10 +305,12 @@ export function useAuthFilesDetailEditors(
       notify({ type: "success", message: t("auth_files.saved") });
       await loadAll();
       setChannelEditor((prev) => ({ ...prev, saving: false, error: null }));
+      return true;
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : t("auth_files.save_failed");
       setChannelEditor((prev) => ({ ...prev, saving: false, error: message }));
       notify({ type: "error", message });
+      return false;
     }
   }, [channelEditor.fileName, channelEditor.label, loadAll, notify, t]);
 
@@ -321,12 +324,10 @@ export function useAuthFilesDetailEditors(
       if (prefixProxyEditor.fileName !== detailFile.name) {
         void openPrefixProxyEditor(detailFile);
       }
-      return;
-    }
-    if (detailTab === "channel") {
-      if (channelEditor.fileName !== detailFile.name) {
+      if (isOauthAuthFile(detailFile) && channelEditor.fileName !== detailFile.name) {
         openChannelEditor(detailFile);
       }
+      return;
     }
   }, [
     channelEditor.fileName,
@@ -446,7 +447,7 @@ export function useAuthFilesDetailEditors(
       }));
       setDetailText((prev) => (name && detailFile?.name === name ? payload : prev));
       setDetailOpen(false);
-      setDetailTab("json");
+      setDetailTab("fields");
       void loadAll().finally(() => applySavedAuthFilePatch(name, parsedPayload));
     } catch (err: unknown) {
       notify({
