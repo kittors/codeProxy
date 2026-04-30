@@ -78,15 +78,22 @@ const resolveKimiWindowMinutes = (window?: KimiUsageWindow | null): number | nul
   return null;
 };
 
-const buildKimiItem = (label: string, detail?: KimiUsageDetail | null): QuotaItem | null => {
+const buildKimiItem = (
+  key: string,
+  label: string,
+  windowSeconds: number,
+  detail?: KimiUsageDetail | null,
+): QuotaItem | null => {
   if (!detail) return null;
   const percent = resolveKimiPercent(detail);
   const resetAtMs = parseResetTimeToMs(detail.resetTime ?? detail.reset_time);
   if (percent === null && resetAtMs === undefined) return null;
   return {
+    key,
     label,
     percent,
     resetAtMs,
+    windowSeconds,
   };
 };
 
@@ -98,8 +105,13 @@ const buildItemsFromTopLevelPayload = (payload: KimiUsagePayload): QuotaItem[] =
     limits.find((item) => resolveKimiWindowMinutes(item.window) === 7 * 24 * 60) ?? null;
 
   return [
-    buildKimiItem("m_quota.code_5h", fiveHourLimit?.detail),
-    buildKimiItem("m_quota.code_weekly", payload.usage ?? weeklyLimit?.detail ?? null),
+    buildKimiItem("code_5h", "m_quota.code_5h", 18000, fiveHourLimit?.detail),
+    buildKimiItem(
+      "code_week",
+      "m_quota.code_weekly",
+      604800,
+      payload.usage ?? weeklyLimit?.detail ?? null,
+    ),
   ].filter(Boolean) as QuotaItem[];
 };
 
@@ -121,8 +133,13 @@ export const buildKimiItems = (payload: KimiUsagePayload): QuotaItem[] => {
     limits.find((item) => resolveKimiWindowMinutes(item.window) === 7 * 24 * 60) ?? null;
 
   const items = [
-    buildKimiItem("m_quota.code_5h", fiveHourLimit?.detail),
-    buildKimiItem("m_quota.code_weekly", codingUsage.detail ?? weeklyLimit?.detail ?? null),
+    buildKimiItem("code_5h", "m_quota.code_5h", 18000, fiveHourLimit?.detail),
+    buildKimiItem(
+      "code_week",
+      "m_quota.code_weekly",
+      604800,
+      codingUsage.detail ?? weeklyLimit?.detail ?? null,
+    ),
   ].filter(Boolean) as QuotaItem[];
 
   return items;

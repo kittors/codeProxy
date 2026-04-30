@@ -75,14 +75,18 @@ describe("fetchQuota for kimi", () => {
     );
     expect(result.items).toEqual([
       {
+        key: "code_5h",
         label: "m_quota.code_5h",
         percent: 100,
         resetAtMs: Date.parse("2026-04-20T11:24:38.060611Z"),
+        windowSeconds: 18000,
       },
       {
+        key: "code_week",
         label: "m_quota.code_weekly",
         percent: 0,
         resetAtMs: Date.parse("2026-04-22T01:24:38.060611Z"),
+        windowSeconds: 604800,
       },
     ]);
   });
