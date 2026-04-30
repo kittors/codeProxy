@@ -193,6 +193,9 @@ export function TooltipBubble({
   content,
   anchorElement,
   anchorRef,
+  interactive = false,
+  onMouseEnter,
+  onMouseLeave,
   placement = "bottom",
 }: {
   id: string;
@@ -200,6 +203,9 @@ export function TooltipBubble({
   content: ReactNode;
   anchorElement?: HTMLElement | null;
   anchorRef?: React.RefObject<HTMLElement | null>;
+  interactive?: boolean;
+  onMouseEnter?: () => void;
+  onMouseLeave?: () => void;
   placement?: TooltipPlacement;
 }) {
   const tooltipRef = useRef<HTMLSpanElement>(null);
@@ -255,8 +261,13 @@ export function TooltipBubble({
       ref={tooltipRef}
       id={id}
       role="tooltip"
-      className="pointer-events-none w-max max-w-[calc(100vw-2rem)] rounded-xl border border-slate-200 bg-white/95 px-2 py-1.5 text-xs shadow-lg backdrop-blur transition-opacity duration-150 sm:max-w-80 dark:border-neutral-800 dark:bg-neutral-950/90 dark:text-white"
+      className={[
+        interactive ? "pointer-events-auto select-text" : "pointer-events-none",
+        "w-max max-w-[calc(100vw-2rem)] rounded-xl border border-slate-200 bg-white/95 px-2 py-1.5 text-xs shadow-lg backdrop-blur transition-opacity duration-150 sm:max-w-80 dark:border-neutral-800 dark:bg-neutral-950/90 dark:text-white",
+      ].join(" ")}
       style={style}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
     >
       <span className="block break-words text-slate-900 dark:text-white">{content}</span>
     </span>,
@@ -325,16 +336,39 @@ export function OverflowTooltip({
   const id = useId();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLElement | null>(null);
+  const hideTimeoutRef = useRef<number | null>(null);
+
+  const cancelHide = useCallback(() => {
+    if (hideTimeoutRef.current === null) return;
+    window.clearTimeout(hideTimeoutRef.current);
+    hideTimeoutRef.current = null;
+  }, []);
 
   const tryShow = useCallback(() => {
     const el = ref.current;
     if (!el) return;
     if (!content.trim()) return;
     if (!hasOverflowingContent(el)) return;
+    cancelHide();
     setOpen(true);
-  }, [content]);
+  }, [cancelHide, content]);
 
-  const hide = useCallback(() => setOpen(false), []);
+  const hide = useCallback(() => {
+    cancelHide();
+    setOpen(false);
+  }, [cancelHide]);
+
+  const scheduleHide = useCallback(() => {
+    cancelHide();
+    hideTimeoutRef.current = window.setTimeout(() => {
+      hideTimeoutRef.current = null;
+      setOpen(false);
+    }, 120);
+  }, [cancelHide]);
+
+  useEffect(() => {
+    return () => cancelHide();
+  }, [cancelHide]);
 
   return createElement(
     as,
@@ -344,13 +378,22 @@ export function OverflowTooltip({
       "data-tooltip-managed": "true",
       className: ["relative", className].filter(Boolean).join(" "),
       onMouseEnter: tryShow,
-      onMouseLeave: hide,
+      onMouseLeave: scheduleHide,
       onFocus: tryShow,
       onBlur: hide,
       "aria-describedby": id,
     },
     children,
-    <TooltipBubble id={id} open={open} content={content} anchorRef={ref} placement={placement} />,
+    <TooltipBubble
+      id={id}
+      open={open}
+      content={content}
+      anchorRef={ref}
+      interactive
+      placement={placement}
+      onMouseEnter={cancelHide}
+      onMouseLeave={scheduleHide}
+    />,
   );
 }
 
