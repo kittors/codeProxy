@@ -19,9 +19,12 @@ export function useAuthFilesDataState() {
   const [loading, setLoading] = useState(() => !((initialDataCache?.files?.length ?? 0) > 0));
   const [refreshingAll, setRefreshingAll] = useState(false);
   const [usageLoading, setUsageLoading] = useState(false);
-  const [usageData, setUsageData] = useState<EntityStatsResponse | null>(null);
+  const [usageData, setUsageData] = useState<EntityStatsResponse | null>(
+    () => initialDataCache?.usageData ?? null,
+  );
 
   const filesRef = useRef<AuthFileItem[]>(files);
+  const usageDataRef = useRef<EntityStatsResponse | null>(usageData);
   const { index: usageIndex } = useMemo(() => buildUsageIndex(usageData), [usageData]);
 
   const loadAll = useCallback(async () => {
@@ -36,7 +39,7 @@ export function useAuthFilesDataState() {
       ]);
       const list = Array.isArray(filesRes?.files) ? filesRes.files : [];
       setFiles(list);
-      setUsageData(usageRes);
+      setUsageData((prev) => usageRes ?? prev);
     } catch (err: unknown) {
       notify({
         type: "error",
@@ -58,21 +61,27 @@ export function useAuthFilesDataState() {
   }, [files]);
 
   useEffect(() => {
+    usageDataRef.current = usageData;
+  }, [usageData]);
+
+  useEffect(() => {
     if (typeof window === "undefined") return undefined;
     const timer = window.setTimeout(() => {
       writeAuthFilesDataCache({
         savedAtMs: Date.now(),
         files: sanitizeAuthFilesForCache(files),
+        usageData,
       });
     }, 250);
     return () => window.clearTimeout(timer);
-  }, [files]);
+  }, [files, usageData]);
 
   useEffect(() => {
     return () => {
       writeAuthFilesDataCache({
         savedAtMs: Date.now(),
         files: sanitizeAuthFilesForCache(filesRef.current),
+        usageData: usageDataRef.current,
       });
     };
   }, []);

@@ -1,10 +1,11 @@
 import type {
   AuthFileItem,
   AuthFileSubscriptionPeriod,
+  EntityStatsResponse,
   OAuthModelAliasEntry,
 } from "@/lib/http/types";
 import { normalizeUsageSourceId, type KeyStatBucket } from "@/modules/providers/provider-usage";
-import type { QuotaItem } from "@/modules/quota/quota-helpers";
+import type { QuotaItem, QuotaState, QuotaStatus } from "@/modules/quota/quota-helpers";
 import { resolveCodexPlanType } from "@/utils/quota/resolvers";
 import type { StatusBarData, StatusBlockDetail, StatusBlockState } from "@/utils/usage";
 
@@ -57,6 +58,8 @@ export type AuthFilesUiState = {
 export type AuthFilesDataCache = {
   savedAtMs: number;
   files: AuthFileItem[];
+  usageData?: EntityStatsResponse | null;
+  quotaByFileName?: Record<string, QuotaState>;
 };
 
 const sanitizeDecodedIdToken = (value: unknown): unknown => {
@@ -162,6 +165,64 @@ export const sanitizeAuthFilesForCache = (files: AuthFileItem[]): AuthFileItem[]
     id_token: sanitizeDecodedIdToken(file.id_token),
   }));
 
+const QUOTA_CACHE_STATUSES = new Set<QuotaStatus>(["idle", "loading", "success", "error"]);
+
+const sanitizeQuotaItemsForCache = (items: unknown): QuotaItem[] => {
+  if (!Array.isArray(items)) return [];
+  return items
+    .map((item): QuotaItem | null => {
+      if (!item || typeof item !== "object" || Array.isArray(item)) return null;
+      const record = item as Record<string, unknown>;
+      const label = typeof record.label === "string" ? record.label : "";
+      if (!label) return null;
+      const percent =
+        record.percent === null ||
+        (typeof record.percent === "number" && Number.isFinite(record.percent))
+          ? record.percent
+          : null;
+      const resetAtMs =
+        typeof record.resetAtMs === "number" && Number.isFinite(record.resetAtMs)
+          ? record.resetAtMs
+          : undefined;
+      const meta = typeof record.meta === "string" ? record.meta : undefined;
+      return { label, percent, resetAtMs, meta };
+    })
+    .filter((item): item is QuotaItem => Boolean(item));
+};
+
+const sanitizeQuotaByFileNameForCache = (
+  quotaByFileName: unknown,
+  fileNames?: Set<string>,
+): Record<string, QuotaState> | undefined => {
+  if (!quotaByFileName || typeof quotaByFileName !== "object" || Array.isArray(quotaByFileName)) {
+    return undefined;
+  }
+
+  const output: Record<string, QuotaState> = {};
+  Object.entries(quotaByFileName as Record<string, unknown>).forEach(([fileName, rawState]) => {
+    if (!fileName || (fileNames && !fileNames.has(fileName))) return;
+    if (!rawState || typeof rawState !== "object" || Array.isArray(rawState)) return;
+    const state = rawState as Record<string, unknown>;
+    const items = sanitizeQuotaItemsForCache(state.items);
+    if (items.length === 0) return;
+    const rawStatus = typeof state.status === "string" ? state.status : "success";
+    const status = QUOTA_CACHE_STATUSES.has(rawStatus as QuotaStatus) ? rawStatus : "success";
+    const updatedAt =
+      typeof state.updatedAt === "number" && Number.isFinite(state.updatedAt)
+        ? state.updatedAt
+        : undefined;
+    const error = typeof state.error === "string" ? state.error : undefined;
+    output[fileName] = {
+      status: status === "loading" ? "success" : (status as QuotaStatus),
+      items,
+      updatedAt,
+      error: status === "error" ? error : undefined,
+    };
+  });
+
+  return Object.keys(output).length > 0 ? output : undefined;
+};
+
 export const readAuthFilesDataCache = (): AuthFilesDataCache | null => {
   if (typeof window === "undefined") return null;
   try {
@@ -178,6 +239,11 @@ export const readAuthFilesDataCache = (): AuthFilesDataCache | null => {
     return {
       savedAtMs,
       files,
+      usageData:
+        parsed?.usageData && typeof parsed.usageData === "object"
+          ? (parsed.usageData as EntityStatsResponse)
+          : undefined,
+      quotaByFileName: sanitizeQuotaByFileNameForCache(parsed?.quotaByFileName),
     };
   } catch {
     return null;
@@ -187,7 +253,22 @@ export const readAuthFilesDataCache = (): AuthFilesDataCache | null => {
 export const writeAuthFilesDataCache = (cache: AuthFilesDataCache) => {
   if (typeof window === "undefined") return;
   try {
-    window.sessionStorage.setItem(AUTH_FILES_DATA_CACHE_KEY, JSON.stringify(cache));
+    const raw = window.sessionStorage.getItem(AUTH_FILES_DATA_CACHE_KEY);
+    const previous = raw ? (JSON.parse(raw) as Partial<AuthFilesDataCache>) : null;
+    const fileNames = new Set(cache.files.map((file) => file.name).filter(Boolean));
+    const quotaByFileName = sanitizeQuotaByFileNameForCache(
+      cache.quotaByFileName ?? previous?.quotaByFileName,
+      fileNames,
+    );
+    window.sessionStorage.setItem(
+      AUTH_FILES_DATA_CACHE_KEY,
+      JSON.stringify({
+        savedAtMs: cache.savedAtMs,
+        files: cache.files,
+        usageData: cache.usageData ?? previous?.usageData,
+        quotaByFileName,
+      }),
+    );
   } catch {
     // ignore
   }

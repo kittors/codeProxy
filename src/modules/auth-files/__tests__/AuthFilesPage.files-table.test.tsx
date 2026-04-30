@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { ToastProvider } from "@/modules/ui/ToastProvider";
 import { ThemeProvider } from "@/modules/ui/ThemeProvider";
 import { AuthFilesPage } from "@/modules/auth-files/AuthFilesPage";
+import { AUTH_FILES_DATA_CACHE_KEY } from "@/modules/auth-files/helpers/authFilesPageUtils";
 import i18n from "@/i18n";
 
 const mocks = vi.hoisted(() => ({
@@ -756,7 +757,7 @@ describe("AuthFilesPage files table", () => {
 
     window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
     window.sessionStorage.setItem(
-      "authFilesPage.dataCache.v1",
+      AUTH_FILES_DATA_CACHE_KEY,
       JSON.stringify({
         savedAtMs: now,
         files: [file],
@@ -793,6 +794,59 @@ describe("AuthFilesPage files table", () => {
     expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
   });
 
+  test("cards view restores cached quota while refreshing in the background", async () => {
+    const now = Date.now();
+    const file = {
+      name: "codex.json",
+      type: "codex",
+      size: 1024,
+      modified: now,
+      disabled: false,
+      auth_index: "1",
+    } as any;
+
+    mocks.list.mockImplementation(async () => ({ files: [file] }));
+    mocks.fetchQuota.mockImplementation(() => new Promise(() => {}));
+
+    window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
+    window.sessionStorage.setItem(
+      AUTH_FILES_DATA_CACHE_KEY,
+      JSON.stringify({
+        savedAtMs: now,
+        files: [file],
+        quotaByFileName: {
+          "codex.json": {
+            status: "success",
+            updatedAt: now - 60_000,
+            items: [
+              { label: "m_quota.code_5h", percent: 22, resetAtMs: now + 60_000 },
+              { label: "m_quota.code_weekly", percent: 44, resetAtMs: now + 120_000 },
+            ],
+          },
+        },
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("codex.json")).toBeInTheDocument();
+    expect(screen.getByText("22%")).toBeInTheDocument();
+    expect(screen.getByText("44%")).toBeInTheDocument();
+    await waitFor(() => expect(mocks.fetchQuota).toHaveBeenCalledTimes(1));
+    expect(screen.getByText("22%")).toBeInTheDocument();
+    expect(screen.getByText("44%")).toBeInTheDocument();
+  });
+
   test("cards view includes returned codex review 5h and additional quota bars", async () => {
     const now = Date.now();
     const file = {
@@ -818,7 +872,7 @@ describe("AuthFilesPage files table", () => {
 
     window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
     window.sessionStorage.setItem(
-      "authFilesPage.dataCache.v1",
+      AUTH_FILES_DATA_CACHE_KEY,
       JSON.stringify({
         savedAtMs: now,
         files: [file],
@@ -887,7 +941,7 @@ describe("AuthFilesPage files table", () => {
 
     window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
     window.sessionStorage.setItem(
-      "authFilesPage.dataCache.v1",
+      AUTH_FILES_DATA_CACHE_KEY,
       JSON.stringify({
         savedAtMs: now,
         files,
@@ -949,7 +1003,7 @@ describe("AuthFilesPage files table", () => {
 
     window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
     window.sessionStorage.setItem(
-      "authFilesPage.dataCache.v1",
+      AUTH_FILES_DATA_CACHE_KEY,
       JSON.stringify({
         savedAtMs: now,
         files: [file],
@@ -1001,7 +1055,7 @@ describe("AuthFilesPage files table", () => {
 
     window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
     window.sessionStorage.setItem(
-      "authFilesPage.dataCache.v1",
+      AUTH_FILES_DATA_CACHE_KEY,
       JSON.stringify({
         savedAtMs: now,
         files: [file],
@@ -1104,7 +1158,7 @@ describe("AuthFilesPage files table", () => {
 
     window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
     window.sessionStorage.setItem(
-      "authFilesPage.dataCache.v1",
+      AUTH_FILES_DATA_CACHE_KEY,
       JSON.stringify({
         savedAtMs: now,
         files: [file],
@@ -1158,7 +1212,7 @@ describe("AuthFilesPage files table", () => {
 
     window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
     window.sessionStorage.setItem(
-      "authFilesPage.dataCache.v1",
+      AUTH_FILES_DATA_CACHE_KEY,
       JSON.stringify({
         savedAtMs: now,
         files: [file],
@@ -1209,7 +1263,7 @@ describe("AuthFilesPage files table", () => {
 
     window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
     window.sessionStorage.setItem(
-      "authFilesPage.dataCache.v1",
+      AUTH_FILES_DATA_CACHE_KEY,
       JSON.stringify({
         savedAtMs: now,
         files: [file],
