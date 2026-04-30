@@ -117,4 +117,26 @@ describe("DateTimePicker", () => {
     expect(dialog).toHaveAttribute("data-placement", "top");
     expect(dialog).toHaveStyle({ left: "12px", width: "296px" });
   });
+
+  test("renders as a complete popover without an internal vertical scrollbar", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    setViewport(900, 700);
+    mockAnchorRect({ bottom: 80, top: 40 });
+
+    render(
+      <DateTimePicker
+        value="2026-04-30T14:40"
+        onChange={onChange}
+        aria-label="Subscription start date"
+        labels={labels}
+      />,
+    );
+
+    await user.click(screen.getByLabelText("Subscription start date"));
+
+    const dialog = screen.getByRole("dialog", { name: "Date picker" });
+    expect(dialog).not.toHaveClass("overflow-y-auto");
+    expect(dialog).not.toHaveStyle({ maxHeight: "360px" });
+  });
 });

@@ -113,7 +113,7 @@ export function AuthFilesPage() {
     prefixProxyUpdatedText,
     savePrefixProxy,
     saveChannelEditor,
-  } = useAuthFilesDetailEditors(loadAll);
+  } = useAuthFilesDetailEditors(loadAll, setFiles);
 
   const {
     modelOwnerGroupsLoading,

@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type Dispatch,
+  type SetStateAction,
+} from "react";
 import { useTranslation } from "react-i18next";
 import { authFilesApi } from "@/lib/http/apis";
 import type { AuthFileItem } from "@/lib/http/types";
@@ -65,7 +73,44 @@ const removeSubscriptionFields = (json: Record<string, unknown>) => {
   delete json.subscriptionExpired;
 };
 
-export function useAuthFilesDetailEditors(loadAll: () => Promise<void>) {
+const mergeSavedSubscriptionFields = (
+  file: AuthFileItem,
+  json: Record<string, unknown>,
+): AuthFileItem => {
+  const next = { ...file };
+  const startedAt = readSubscriptionStartValue(json);
+
+  delete next.subscription_started_at;
+  delete next.subscriptionStartedAt;
+  delete next.subscription_start_at;
+  delete next.subscriptionStartAt;
+  delete next.subscription_started_at_ms;
+  delete next.subscriptionStartedAtMs;
+  delete next.subscription_period;
+  delete next.subscriptionPeriod;
+  delete next.subscription_expires_at;
+  delete next.subscriptionExpiresAt;
+  delete next.subscription_expires_at_ms;
+  delete next.subscriptionExpiresAtMs;
+  delete next.subscription_remaining_minutes;
+  delete next.subscriptionRemainingMinutes;
+  delete next.subscription_expired;
+  delete next.subscriptionExpired;
+
+  if (typeof startedAt === "string" && startedAt.trim()) {
+    next.subscription_started_at = startedAt;
+    next.subscription_period = normalizeAuthFileSubscriptionPeriod(
+      json.subscription_period ?? json.subscriptionPeriod,
+    );
+  }
+
+  return next;
+};
+
+export function useAuthFilesDetailEditors(
+  loadAll: () => Promise<void>,
+  setFiles?: Dispatch<SetStateAction<AuthFileItem[]>>,
+) {
   const { t } = useTranslation();
   const { notify } = useToast();
   const modelsCacheRef = useRef<Map<string, AuthFileModelItem[]>>(new Map());
@@ -86,6 +131,17 @@ export function useAuthFilesDetailEditors(loadAll: () => Promise<void>) {
   );
   const [channelEditor, setChannelEditor] = useState<ChannelEditorState>(() =>
     createChannelEditorState(),
+  );
+
+  const applySavedAuthFilePatch = useCallback(
+    (fileName: string, json: Record<string, unknown>) => {
+      const applyPatch = (file: AuthFileItem): AuthFileItem =>
+        file.name === fileName ? mergeSavedSubscriptionFields(file, json) : file;
+
+      setFiles?.((prev) => prev.map(applyPatch));
+      setDetailFile((prev) => (prev && prev.name === fileName ? applyPatch(prev) : prev));
+    },
+    [setFiles],
   );
 
   const loadModelsForDetail = useCallback(
@@ -375,21 +431,23 @@ export function useAuthFilesDetailEditors(loadAll: () => Promise<void>) {
     try {
       const file = new File([payload], name, { type: "application/json" });
       await authFilesApi.upload(file);
+      const parsedPayload = JSON.parse(payload) as Record<string, unknown>;
+      applySavedAuthFilePatch(name, parsedPayload);
       notify({ type: "success", message: t("auth_files.saved") });
-      await loadAll();
-      try {
-        const parsed = JSON.parse(payload) as Record<string, unknown>;
-        setPrefixProxyEditor((prev) => ({
-          ...prev,
-          loading: false,
-          saving: false,
-          error: null,
-          json: parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : prev.json,
-        }));
-      } catch {
-        setPrefixProxyEditor((prev) => ({ ...prev, saving: false, error: null }));
-      }
+      setPrefixProxyEditor((prev) => ({
+        ...prev,
+        loading: false,
+        saving: false,
+        error: null,
+        json:
+          parsedPayload && typeof parsedPayload === "object" && !Array.isArray(parsedPayload)
+            ? parsedPayload
+            : prev.json,
+      }));
       setDetailText((prev) => (name && detailFile?.name === name ? payload : prev));
+      setDetailOpen(false);
+      setDetailTab("json");
+      void loadAll().finally(() => applySavedAuthFilePatch(name, parsedPayload));
     } catch (err: unknown) {
       notify({
         type: "error",
@@ -398,6 +456,7 @@ export function useAuthFilesDetailEditors(loadAll: () => Promise<void>) {
       setPrefixProxyEditor((prev) => ({ ...prev, saving: false }));
     }
   }, [
+    applySavedAuthFilePatch,
     detailFile?.name,
     loadAll,
     notify,
