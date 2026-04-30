@@ -21,6 +21,8 @@ import {
   normalizeAuthIndexValue,
   normalizeQuotaAutoRefreshMs,
   parseAdditionalQuotaWindowLabel,
+  readAuthFilesDataCache,
+  writeAuthFilesDataCache,
   type FilesViewMode,
   type QuotaPreviewMode,
 } from "@/modules/auth-files/helpers/authFilesPageUtils";
@@ -41,11 +43,14 @@ export function useAuthFilesQuotaState({
   setDetailFile,
 }: UseAuthFilesQuotaStateOptions) {
   const { t } = useTranslation();
+  const initialDataCache = useMemo(() => readAuthFilesDataCache(), []);
 
   const [connectivityState, setConnectivityState] = useState<
     Map<string, { loading: boolean; latencyMs: number | null; error: boolean }>
   >(new Map());
-  const [quotaByFileName, setQuotaByFileName] = useState<Record<string, QuotaState>>({});
+  const [quotaByFileName, setQuotaByFileName] = useState<Record<string, QuotaState>>(
+    () => initialDataCache?.quotaByFileName ?? {},
+  );
   const quotaInFlightRef = useRef<Set<string>>(new Set());
   const quotaAutoRefreshingRef = useRef<Set<string>>(new Set());
   const quotaByFileNameRef = useRef<Record<string, QuotaState>>(quotaByFileName);
@@ -78,6 +83,20 @@ export function useAuthFilesQuotaState({
 
   useEffect(() => {
     quotaByFileNameRef.current = quotaByFileName;
+  }, [quotaByFileName]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    const timer = window.setTimeout(() => {
+      const current = readAuthFilesDataCache();
+      if (!current?.files?.length) return;
+      writeAuthFilesDataCache({
+        ...current,
+        savedAtMs: Date.now(),
+        quotaByFileName,
+      });
+    }, 250);
+    return () => window.clearTimeout(timer);
   }, [quotaByFileName]);
 
   const patchAuthFileByName = useCallback(
@@ -370,7 +389,7 @@ export function useAuthFilesQuotaState({
     let cancelled = false;
     void (async () => {
       if (!cancelled) {
-        await runQuotaRefreshBatch(toFetch);
+        await runQuotaRefreshBatch(toFetch, { markAsAutoRefreshing: true });
       }
     })();
 
