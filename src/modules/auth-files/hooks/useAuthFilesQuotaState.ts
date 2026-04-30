@@ -20,6 +20,7 @@ import {
   AUTH_FILES_QUOTA_PREVIEW_KEY,
   normalizeAuthIndexValue,
   normalizeQuotaAutoRefreshMs,
+  parseAdditionalQuotaWindowLabel,
   type FilesViewMode,
   type QuotaPreviewMode,
 } from "@/modules/auth-files/helpers/authFilesPageUtils";
@@ -92,6 +93,12 @@ export function useAuthFilesQuotaState({
       const translateQuotaLabel = (text: string) => {
         if (!text) return text;
         if (text.startsWith("m_quota.")) return t(text);
+        const additionalQuota = parseAdditionalQuotaWindowLabel(text);
+        if (additionalQuota) {
+          return t(`m_quota.additional_${additionalQuota.window}`, {
+            name: additionalQuota.name,
+          });
+        }
         return text;
       };
 
@@ -110,10 +117,12 @@ export function useAuthFilesQuotaState({
           .toLowerCase()
           .replaceAll(/[^a-z0-9\u4e00-\u9fff]/g, "");
 
-      const candidates = items.map((item) => ({
-        item,
-        key: normalize(String(item.label ?? "")),
-      }));
+      const candidates = items
+        .filter((item) => !parseAdditionalQuotaWindowLabel(String(item.label ?? "")))
+        .map((item) => ({
+          item,
+          key: normalize(String(item.label ?? "")),
+        }));
 
       const findExact = (label: string) => items.find((item) => item.label === label) ?? null;
       const find = (re: RegExp) =>

@@ -519,7 +519,7 @@ export function AuthFilesFilesTab({
             ) : (
               <div
                 data-testid="auth-files-cards"
-                className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3"
+                className="grid grid-cols-1 items-stretch gap-5 md:grid-cols-2 xl:grid-cols-3"
               >
                 {pageItems.map((file) => {
                   const runtimeOnly = isRuntimeOnlyAuthFile(file);
@@ -548,9 +548,9 @@ export function AuthFilesFilesTab({
                     <Card
                       key={file.name}
                       padding="default"
-                      bodyClassName="mt-0"
+                      bodyClassName="mt-0 flex min-h-0 flex-1 flex-col"
                       className={[
-                        "group transition-colors duration-200 ease-out hover:border-slate-300 hover:bg-white dark:hover:border-neutral-700 dark:hover:bg-neutral-950/70",
+                        "group flex h-full flex-col transition-colors duration-200 ease-out hover:border-slate-300 hover:bg-white dark:hover:border-neutral-700 dark:hover:bg-neutral-950/70",
                         fileSelected
                           ? "border-slate-900 ring-1 ring-slate-300 dark:border-white dark:ring-white/20"
                           : "",
@@ -646,7 +646,7 @@ export function AuthFilesFilesTab({
                         {!provider ? (
                           <div className="text-xs text-slate-400 dark:text-white/40">--</div>
                         ) : slots.length > 0 ? (
-                          <div className="space-y-3">
+                          <div className="space-y-2.5">
                             {slots.map((slot) => renderQuotaBar(slot.label, slot.item))}
                           </div>
                         ) : (
@@ -654,7 +654,7 @@ export function AuthFilesFilesTab({
                         )}
                       </div>
 
-                      <div className="mt-3 flex items-center justify-between gap-2">
+                      <div className="mt-auto flex items-center justify-between gap-2 pt-3">
                         <div className="inline-flex items-center gap-1">
                           {provider ? (
                             <HoverTooltip content={t("common.refresh")}>

@@ -482,6 +482,19 @@ export const normalizeQuotaLabel = (label: string): string =>
     .trim()
     .toLowerCase();
 
+export const parseAdditionalQuotaWindowLabel = (
+  label: string,
+): { name: string; window: "5h" | "weekly" } | null => {
+  const match = String(label ?? "").match(/^(.+?)\s*[:：]\s*(5h|weekly)$/i);
+  if (!match) return null;
+  const name = match[1]?.trim();
+  if (!name) return null;
+  return {
+    name,
+    window: match[2]?.toLowerCase() === "5h" ? "5h" : "weekly",
+  };
+};
+
 export const pickQuotaPreviewItem = (
   items: QuotaItem[],
   mode: QuotaPreviewMode,

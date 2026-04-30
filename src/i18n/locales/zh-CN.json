@@ -2152,6 +2152,8 @@
     "code_weekly": "代码：周",
     "review_5h": "审查：5小时",
     "review_weekly": "审查：周",
+    "additional_5h": "{{name}}: 五小时",
+    "additional_weekly": "{{name}}: 周",
     "base_quota": "基础额度",
     "trial_quota": "试用额度",
     "subscription": "订阅"

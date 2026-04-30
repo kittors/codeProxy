@@ -2137,6 +2137,8 @@
     "code_weekly": "Code: Weekly",
     "review_5h": "Review: 5h",
     "review_weekly": "Review: Weekly",
+    "additional_5h": "{{name}}: 5h",
+    "additional_weekly": "{{name}}: Weekly",
     "base_quota": "Base Quota",
     "trial_quota": "Trial Quota",
     "subscription": "Subscription"
