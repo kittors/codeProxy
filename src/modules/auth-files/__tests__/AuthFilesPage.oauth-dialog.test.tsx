@@ -5,10 +5,11 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import { ToastProvider } from "@/modules/ui/ToastProvider";
 import { ThemeProvider } from "@/modules/ui/ThemeProvider";
 import { AuthFilesPage } from "@/modules/auth-files/AuthFilesPage";
+import type { AuthFileItem } from "@/lib/http/types";
 import type { ProxyCheckResult, ProxyPoolEntry } from "@/lib/http/apis/proxies";
 
 const mocks = vi.hoisted(() => ({
-  list: vi.fn(async () => ({ files: [] })),
+  list: vi.fn<() => Promise<{ files: AuthFileItem[] }>>(async () => ({ files: [] })),
   getEntityStats: vi.fn(async () => ({ source: [], auth_index: [] })),
   startAuth: vi.fn(async () => ({ url: "", state: "" })),
   getAuthStatus: vi.fn(async () => ({ status: "waiting" })),
@@ -44,6 +45,7 @@ vi.mock("@/lib/http/apis/proxies", () => ({
 }));
 
 beforeEach(() => {
+  window.localStorage.clear();
   window.sessionStorage.clear();
   mocks.list.mockClear();
   mocks.getEntityStats.mockClear();
@@ -155,5 +157,84 @@ describe("AuthFilesPage OAuth login dialog", () => {
     await waitFor(() => {
       expect(mocks.startAuth).toHaveBeenCalledWith("codex", { proxyId: "hk" });
     });
+  });
+
+  test("shows translated callback guidance instead of raw oauth keys after starting authorization", async () => {
+    const user = userEvent.setup();
+    mocks.startAuth.mockResolvedValueOnce({
+      url: "https://example.com/oauth",
+      state: "oauth-state",
+    });
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    await user.click(await screen.findByRole("button", { name: "Add OAuth Login" }));
+
+    const dialog = await screen.findByRole("dialog");
+    const scoped = within(dialog);
+    await user.click(scoped.getByRole("button", { name: "Start authorization" }));
+
+    expect(await scoped.findByText("Status")).toBeInTheDocument();
+    expect(scoped.getByText("Callback URL")).toBeInTheDocument();
+    expect(
+      scoped.getByText(
+        "After authorizing in the browser, the browser address bar contains the callback URL. Copy the full URL and submit it below.",
+      ),
+    ).toBeInTheDocument();
+    expect(scoped.queryByText("oauth.status")).not.toBeInTheDocument();
+    expect(scoped.queryByText("oauth.callback")).not.toBeInTheDocument();
+  });
+
+  test("closes the dialog and refreshes cards after callback submission succeeds", async () => {
+    const user = userEvent.setup();
+    window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
+    mocks.list.mockResolvedValueOnce({ files: [] }).mockResolvedValueOnce({
+      files: [
+        {
+          name: "codex-new.json",
+          type: "codex",
+          size: 2048,
+          modified: Date.now(),
+          disabled: false,
+        },
+      ],
+    });
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    await user.click(await screen.findByRole("button", { name: "Add OAuth Login" }));
+
+    const dialog = await screen.findByRole("dialog");
+    const scoped = within(dialog);
+    await user.type(
+      scoped.getByPlaceholderText("Paste the full callback URL from browser"),
+      "http://localhost:1455/auth/callback?code=test-code&state=test-state",
+    );
+    await user.click(scoped.getByRole("button", { name: "Submit callback" }));
+
+    await waitFor(() => expect(mocks.submitCallback).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    await waitFor(() => expect(mocks.list).toHaveBeenCalledTimes(2));
+    expect(await screen.findByTestId("auth-files-cards")).toHaveTextContent("codex-new.json");
   });
 });
