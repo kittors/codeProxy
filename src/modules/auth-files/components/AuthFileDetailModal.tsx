@@ -1,7 +1,7 @@
 import { useMemo, type Dispatch, type SetStateAction } from "react";
 import { useTranslation } from "react-i18next";
 import { Download, RefreshCw, ShieldCheck } from "lucide-react";
-import type { AuthFileTrendResponse, AuthFileTrendQuotaSeries } from "@/lib/http/apis/usage";
+import type { AuthFileTrendResponse } from "@/lib/http/apis/usage";
 import type { AuthFileItem, AuthFileSubscriptionPeriod } from "@/lib/http/types";
 import type { ProxyPoolEntry } from "@/lib/http/apis/proxies";
 import { Button } from "@/modules/ui/Button";
@@ -31,6 +31,20 @@ import {
 type DetailTab = "usage" | "fields" | "models";
 type DetailTrendWindow = "5h" | "week";
 
+const padTwo = (value: number) => String(value).padStart(2, "0");
+
+const formatLocalDateKey = (timestamp: string) => {
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) return "";
+  return `${date.getFullYear()}-${padTwo(date.getMonth() + 1)}-${padTwo(date.getDate())}`;
+};
+
+const formatLocalHourKey = (timestamp: string) => {
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) return "";
+  return `${formatLocalDateKey(timestamp)} ${padTwo(date.getHours())}:00`;
+};
+
 interface AuthFileDetailModalProps {
   open: boolean;
   detailFile: AuthFileItem | null;
@@ -44,7 +58,7 @@ interface AuthFileDetailModalProps {
   detailTrend: AuthFileTrendResponse | null;
   detailTrendLoading: boolean;
   detailTrendError: string | null;
-  refreshDetailTrend: (file?: AuthFileItem | null) => Promise<void>;
+  refreshDetailTrend: (file?: AuthFileItem | null, options?: { silent?: boolean }) => Promise<void>;
   loadModelsForDetail: (file: AuthFileItem, options?: { force?: boolean }) => Promise<void>;
   loadModelOwnerGroups: () => Promise<void>;
   modelsLoading: boolean;
@@ -64,14 +78,6 @@ interface AuthFileDetailModalProps {
   setChannelEditor: Dispatch<SetStateAction<ChannelEditorState>>;
   saveChannelEditor: () => Promise<boolean>;
 }
-
-const latestQuotaPoint = (series: AuthFileTrendQuotaSeries) => {
-  for (let index = series.points.length - 1; index >= 0; index -= 1) {
-    const point = series.points[index];
-    if (point) return point;
-  }
-  return null;
-};
 
 export function AuthFileDetailModal({
   open,
@@ -173,9 +179,9 @@ export function AuthFileDetailModal({
         if (!point.timestamp) return;
         const key =
           detailTrendWindow === "5h"
-            ? `${point.timestamp.slice(0, 13).replace("T", " ")}:00`
-            : point.timestamp.slice(0, 10);
-        xKeys.add(key);
+            ? formatLocalHourKey(point.timestamp)
+            : formatLocalDateKey(point.timestamp);
+        if (!key || !xKeys.has(key)) return;
         values.set(key, point.percent);
       });
       return { series, values };
@@ -258,7 +264,7 @@ export function AuthFileDetailModal({
   };
 
   const renderUsageTrend = () => {
-    if (detailTrendLoading) {
+    if (detailTrendLoading && !detailTrend) {
       return (
         <div className="text-sm text-slate-600 dark:text-white/65">
           {t("common.loading_ellipsis")}
@@ -342,44 +348,6 @@ export function AuthFileDetailModal({
         <div className="min-w-0 rounded-lg bg-slate-50/70 p-3 dark:bg-white/[0.04]">
           <EChart option={trendChartOption} className="h-72 min-w-0" replaceMerge="series" />
         </div>
-
-        {activeQuotaSeries.length === 0 ? (
-          <div className="rounded-lg bg-slate-50/70 px-3 py-3 text-sm text-slate-600 dark:bg-white/[0.04] dark:text-white/60">
-            {t("auth_files.trend_no_quota_series")}
-          </div>
-        ) : (
-          <div className="grid gap-2 sm:grid-cols-2" data-testid="auth-file-quota-series-list">
-            {activeQuotaSeries.map((series) => {
-              const latest = latestQuotaPoint(series);
-              const percent =
-                latest?.percent === null || latest?.percent === undefined
-                  ? "--"
-                  : `${Math.round(latest.percent)}%`;
-              const resetAt = latest?.reset_at ? new Date(latest.reset_at).toLocaleString() : "";
-              return (
-                <div
-                  key={`${series.quota_key}:${series.window_seconds}`}
-                  className="rounded-lg bg-slate-50/80 px-3 py-2.5 dark:bg-white/[0.04]"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <p className="min-w-0 truncate text-sm font-semibold text-slate-900 dark:text-white">
-                      {translateQuotaLabel(series.quota_label)}
-                    </p>
-                    <span className="shrink-0 text-sm font-semibold text-slate-700 dark:text-white/80">
-                      {percent}
-                    </span>
-                  </div>
-                  <p className="mt-1 text-xs text-slate-500 dark:text-white/55">
-                    {t("auth_files.trend_quota_samples", {
-                      count: series.points.length,
-                    })}
-                    {resetAt ? ` · ${t("auth_files.trend_reset_at", { time: resetAt })}` : ""}
-                  </p>
-                </div>
-              );
-            })}
-          </div>
-        )}
       </div>
     );
   };

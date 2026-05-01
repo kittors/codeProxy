@@ -6,6 +6,24 @@ import i18n from "@/i18n";
 
 type DetailModalProps = ComponentProps<typeof AuthFileDetailModal>;
 
+const chartOptions = vi.hoisted(() => [] as any[]);
+
+vi.mock("@/modules/ui/charts/EChart", () => ({
+  EChart: ({ option, className }: { option: any; className?: string }) => {
+    chartOptions.push(option);
+    return (
+      <div
+        className={className}
+        data-testid="auth-file-trend-chart"
+        data-x-axis={JSON.stringify(option?.xAxis?.data ?? [])}
+        data-series={JSON.stringify(option?.series ?? [])}
+      >
+        chart
+      </div>
+    );
+  },
+}));
+
 const basePrefixProxyEditor: DetailModalProps["prefixProxyEditor"] = {
   open: true,
   fileName: "codex.json",
@@ -111,6 +129,7 @@ describe("AuthFileDetailModal", () => {
   beforeEach(async () => {
     await i18n.changeLanguage("en");
     window.localStorage.clear();
+    chartOptions.length = 0;
   });
 
   test("uses usage trend as the primary view for Codex files", () => {
@@ -129,6 +148,70 @@ describe("AuthFileDetailModal", () => {
     expect(screen.getByText("2")).toBeInTheDocument();
     expect(screen.getByRole("dialog", { name: "View: codex.json" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Download" })).toBeEnabled();
+  });
+
+  test("keeps the rendered trend visible while a background refresh is running", () => {
+    renderDetailModal({ detailTrendLoading: true });
+
+    expect(screen.getByText("Quota and request trends")).toBeInTheDocument();
+    expect(screen.getByText("Last 7 days requests")).toBeInTheDocument();
+    expect(screen.queryByText("Loading...")).not.toBeInTheDocument();
+  });
+
+  test("does not render quota sample summary cards below the trend chart", () => {
+    renderDetailModal();
+
+    expect(screen.queryByTestId("auth-file-quota-series-list")).not.toBeInTheDocument();
+    expect(screen.queryByText(/samples/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/resets/)).not.toBeInTheDocument();
+  });
+
+  test("five-hour trend uses only the latest five hourly buckets and maps quota timestamps to local hours", () => {
+    const localQuotaAt15 = new Date(2026, 4, 1, 15, 9, 0).toISOString();
+    const oldQuotaAt22 = new Date(2026, 3, 30, 22, 15, 0).toISOString();
+
+    renderDetailModal({
+      detailTrend: {
+        auth_index: "auth-1",
+        days: 7,
+        hours: 5,
+        request_total: 12,
+        cycle_request_total: 12,
+        cycle_start: "2026-04-28T05:34:34Z",
+        daily_usage: [],
+        hourly_usage: [
+          { hour: "2026-05-01 11:00", requests: 0 },
+          { hour: "2026-05-01 12:00", requests: 2 },
+          { hour: "2026-05-01 13:00", requests: 1 },
+          { hour: "2026-05-01 14:00", requests: 1 },
+          { hour: "2026-05-01 15:00", requests: 10 },
+        ],
+        quota_series: [
+          {
+            quota_key: "code_5h",
+            quota_label: "m_quota.code_5h",
+            window_seconds: 18000,
+            points: [
+              { timestamp: oldQuotaAt22, percent: 100 },
+              { timestamp: localQuotaAt15, percent: 94 },
+            ],
+          },
+        ],
+      },
+    });
+
+    const chart = screen.getByTestId("auth-file-trend-chart");
+    expect(JSON.parse(chart.dataset.xAxis ?? "[]")).toEqual([
+      "05-01 11:00",
+      "05-01 12:00",
+      "05-01 13:00",
+      "05-01 14:00",
+      "05-01 15:00",
+    ]);
+
+    const series = JSON.parse(chart.dataset.series ?? "[]");
+    expect(series[0].data).toEqual([0, 2, 1, 1, 10]);
+    expect(series[1].data).toEqual([null, null, null, null, 94]);
   });
 
   test("renders models as a compact list without raw field labels", () => {
