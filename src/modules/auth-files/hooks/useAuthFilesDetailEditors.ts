@@ -118,7 +118,7 @@ const supportsAuthFileTrend = (file: AuthFileItem): boolean => {
 };
 
 export function useAuthFilesDetailEditors(
-  loadAll: () => Promise<void>,
+  loadAll: () => Promise<AuthFileItem[]>,
   setFiles?: Dispatch<SetStateAction<AuthFileItem[]>>,
 ) {
   const { t } = useTranslation();

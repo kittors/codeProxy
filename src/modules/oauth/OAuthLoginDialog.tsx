@@ -65,6 +65,20 @@ const getErrorMessage = (err: unknown): string => {
   return "";
 };
 
+const extractCallbackState = (redirectUrl: string): string => {
+  try {
+    const url = new URL(redirectUrl, window.location.origin);
+    const queryState = url.searchParams.get("state")?.trim();
+    if (queryState) return queryState;
+
+    const hash = url.hash.replace(/^#/, "");
+    return new URLSearchParams(hash).get("state")?.trim() ?? "";
+  } catch {
+    const match = redirectUrl.match(/[?#&]state=([^&#]+)/);
+    return match?.[1] ? decodeURIComponent(match[1]).trim() : "";
+  }
+};
+
 type TabValue = OAuthProvider | "iflow" | "vertex";
 
 export function OAuthLoginDialog({
@@ -141,6 +155,13 @@ export function OAuthLoginDialog({
     [],
   );
 
+  const clearProviderTimer = useCallback((provider: OAuthProvider) => {
+    if (timers.current[provider]) {
+      window.clearInterval(timers.current[provider]);
+      delete timers.current[provider];
+    }
+  }, []);
+
   const proxyOptions = useCallback(
     (extra?: { projectId?: string }) => {
       const proxyId = selectedProxyID.trim();
@@ -153,25 +174,40 @@ export function OAuthLoginDialog({
     [selectedProxyID],
   );
 
+  const completeAuthorization = useCallback(
+    async (provider: OAuthProvider) => {
+      clearProviderTimer(provider);
+      updateProviderState(provider, {
+        status: "success",
+        polling: false,
+        callbackSubmitting: false,
+      });
+      notify({
+        type: "success",
+        message: t("oauth.authorization_success", { provider: getProviderTitle(provider) }),
+      });
+      await onAuthorized?.();
+      onClose();
+    },
+    [clearProviderTimer, getProviderTitle, notify, onAuthorized, onClose, t, updateProviderState],
+  );
+
   const startPolling = useCallback(
     (provider: OAuthProvider, state: string) => {
-      if (timers.current[provider]) {
-        window.clearInterval(timers.current[provider]);
-      }
-      const timer = window.setInterval(async () => {
+      clearProviderTimer(provider);
+      const pollOnce = async () => {
         try {
           const res = await oauthApi.getAuthStatus(state);
           if (res.status === "ok") {
-            updateProviderState(provider, { status: "success", polling: false });
-            notify({
-              type: "success",
-              message: t("oauth.authorization_success", { provider: getProviderTitle(provider) }),
-            });
-            onAuthorized?.();
-            window.clearInterval(timer);
-            delete timers.current[provider];
+            await completeAuthorization(provider);
           } else if (res.status === "error") {
-            updateProviderState(provider, { status: "error", error: res.error, polling: false });
+            clearProviderTimer(provider);
+            updateProviderState(provider, {
+              status: "error",
+              error: res.error,
+              polling: false,
+              callbackSubmitting: false,
+            });
             notify({
               type: "error",
               message: t("oauth.authorization_failed", {
@@ -179,22 +215,26 @@ export function OAuthLoginDialog({
                 error: res.error || "",
               }).trim(),
             });
-            window.clearInterval(timer);
-            delete timers.current[provider];
           }
         } catch (err: unknown) {
+          clearProviderTimer(provider);
           updateProviderState(provider, {
             status: "error",
             error: getErrorMessage(err),
             polling: false,
+            callbackSubmitting: false,
           });
-          window.clearInterval(timer);
-          delete timers.current[provider];
         }
+      };
+
+      updateProviderState(provider, { status: "waiting", polling: true });
+      const timer = window.setInterval(() => {
+        void pollOnce();
       }, 3000);
       timers.current[provider] = timer;
+      void pollOnce();
     },
-    [getProviderTitle, notify, onAuthorized, t, updateProviderState],
+    [clearProviderTimer, completeAuthorization, getProviderTitle, notify, t, updateProviderState],
   );
 
   const startAuth = useCallback(
@@ -272,20 +312,22 @@ export function OAuthLoginDialog({
         callbackError: undefined,
       });
       try {
+        const callbackState = states[provider]?.state || extractCallbackState(redirectUrl);
         await oauthApi.submitCallback(provider, redirectUrl, proxyOptions());
-        if (timers.current[provider]) {
-          window.clearInterval(timers.current[provider]);
-          delete timers.current[provider];
-        }
         updateProviderState(provider, {
           callbackStatus: "success",
-          status: "success",
-          polling: false,
+          state: callbackState || states[provider]?.state,
+          status: callbackState ? "waiting" : "success",
+          polling: Boolean(callbackState),
         });
         notify({ type: "success", message: t("oauth.callback_submit_success") });
-        await onAuthorized?.();
-        updateProviderState(provider, { callbackSubmitting: false });
-        onClose();
+        if (callbackState) {
+          startPolling(provider, callbackState);
+        } else {
+          await onAuthorized?.();
+          updateProviderState(provider, { callbackSubmitting: false });
+          onClose();
+        }
       } catch (err: unknown) {
         const message = getErrorMessage(err) || t("oauth.callback_submit_failed");
         updateProviderState(provider, {

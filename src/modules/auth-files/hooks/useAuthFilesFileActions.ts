@@ -3,10 +3,13 @@ import { useTranslation } from "react-i18next";
 import { authFilesApi } from "@/lib/http/apis";
 import type { AuthFileItem } from "@/lib/http/types";
 import { useToast } from "@/modules/ui/ToastProvider";
-import { formatFileSize, MAX_AUTH_FILE_SIZE } from "@/modules/auth-files/helpers/authFilesPageUtils";
+import {
+  formatFileSize,
+  MAX_AUTH_FILE_SIZE,
+} from "@/modules/auth-files/helpers/authFilesPageUtils";
 
 interface UseAuthFilesFileActionsOptions {
-  loadAll: () => Promise<void>;
+  loadAll: () => Promise<AuthFileItem[]>;
   fileInputRef: RefObject<HTMLInputElement | null>;
   detailFile: AuthFileItem | null;
   setDetailFile: Dispatch<SetStateAction<AuthFileItem | null>>;

@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
 import { ConfirmModal } from "@/modules/ui/ConfirmModal";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/modules/ui/Tabs";
+import type { AuthFileItem } from "@/lib/http/types";
 import { proxiesApi, type ProxyPoolEntry } from "@/lib/http/apis/proxies";
 import { OAuthLoginDialog } from "@/modules/oauth/OAuthLoginDialog";
 import { AuthFileDetailModal } from "@/modules/auth-files/components/AuthFileDetailModal";
@@ -31,6 +32,36 @@ import {
   writeAuthFilesUiState,
   type OAuthDialogTab,
 } from "@/modules/auth-files/helpers/authFilesPageUtils";
+
+const OAUTH_AUTH_FILES_REFRESH_TIMEOUT_MS = 12_000;
+const OAUTH_AUTH_FILES_REFRESH_INTERVAL_MS = 600;
+
+const wait = (ms: number) =>
+  new Promise<void>((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
+
+const buildAuthFilesSignature = (items: AuthFileItem[]): string =>
+  items
+    .map((file) =>
+      [
+        file.name,
+        file.type,
+        file.provider,
+        file.label,
+        file.email,
+        file.account_type,
+        file.size,
+        file.modified,
+        file.modtime,
+        file.authIndex,
+        file.auth_index,
+      ]
+        .map((value) => String(value ?? ""))
+        .join("|"),
+    )
+    .sort()
+    .join("\n");
 
 export function AuthFilesPage() {
   const { t } = useTranslation();
@@ -89,6 +120,39 @@ export function AuthFilesPage() {
   const [proxyPoolEntries, setProxyPoolEntries] = useState<ProxyPoolEntry[]>([]);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const filesRef = useRef<AuthFileItem[]>(files);
+  const oauthBaselineSignatureRef = useRef("");
+
+  useEffect(() => {
+    filesRef.current = files;
+  }, [files]);
+
+  const setOAuthDialogOpenWithBaseline = useCallback((open: boolean) => {
+    if (open) {
+      oauthBaselineSignatureRef.current = buildAuthFilesSignature(filesRef.current);
+    }
+    setOauthDialogOpen(open);
+  }, []);
+
+  const refreshAfterOAuthAuthorized = useCallback(async () => {
+    const previousSignature =
+      oauthBaselineSignatureRef.current || buildAuthFilesSignature(filesRef.current);
+    const deadline = Date.now() + OAUTH_AUTH_FILES_REFRESH_TIMEOUT_MS;
+
+    while (true) {
+      if (buildAuthFilesSignature(filesRef.current) !== previousSignature) {
+        return;
+      }
+      const nextFiles = await loadAll();
+      if (buildAuthFilesSignature(nextFiles) !== previousSignature) {
+        return;
+      }
+      if (Date.now() >= deadline) {
+        return;
+      }
+      await wait(OAUTH_AUTH_FILES_REFRESH_INTERVAL_MS);
+    }
+  }, [loadAll]);
 
   const {
     detailOpen,
@@ -355,7 +419,7 @@ export function AuthFilesPage() {
             refreshingAll={refreshingAll}
             uploading={uploading}
             setOauthDialogDefaultTab={setOauthDialogDefaultTab}
-            setOauthDialogOpen={setOauthDialogOpen}
+            setOauthDialogOpen={setOAuthDialogOpenWithBaseline}
             selectableFilteredFiles={selectableFilteredFiles}
             selectedCount={selectedCount}
             selectCurrentPage={selectCurrentPage}
@@ -482,7 +546,7 @@ export function AuthFilesPage() {
         defaultTab={oauthDialogDefaultTab}
         proxyPoolEntries={proxyPoolEntries}
         onClose={() => setOauthDialogOpen(false)}
-        onAuthorized={loadAll}
+        onAuthorized={refreshAfterOAuthAuthorized}
       />
 
       <GroupOverviewModal

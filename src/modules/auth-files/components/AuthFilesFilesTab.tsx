@@ -65,7 +65,7 @@ interface AuthFilesFilesTabProps {
   openGroupOverview: () => void;
   groupOverviewLoading: boolean;
   filteredFiles: AuthFileItem[];
-  loadAll: () => Promise<void>;
+  loadAll: () => Promise<AuthFileItem[]>;
   usageLoading: boolean;
   refreshingAll: boolean;
   uploading: boolean;
