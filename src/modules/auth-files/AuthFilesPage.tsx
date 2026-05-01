@@ -482,7 +482,7 @@ export function AuthFilesPage() {
         defaultTab={oauthDialogDefaultTab}
         proxyPoolEntries={proxyPoolEntries}
         onClose={() => setOauthDialogOpen(false)}
-        onAuthorized={() => void loadAll()}
+        onAuthorized={loadAll}
       />
 
       <GroupOverviewModal

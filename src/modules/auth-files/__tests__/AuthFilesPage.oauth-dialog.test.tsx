@@ -195,20 +195,14 @@ describe("AuthFilesPage OAuth login dialog", () => {
     expect(scoped.queryByText("oauth.callback")).not.toBeInTheDocument();
   });
 
-  test("closes the dialog and refreshes cards after callback submission succeeds", async () => {
+  test("keeps the dialog open until callback submission refreshes cards", async () => {
     const user = userEvent.setup();
     window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
-    mocks.list.mockResolvedValueOnce({ files: [] }).mockResolvedValueOnce({
-      files: [
-        {
-          name: "codex-new.json",
-          type: "codex",
-          size: 2048,
-          modified: Date.now(),
-          disabled: false,
-        },
-      ],
+    let resolveRefresh: ((value: { files: AuthFileItem[] }) => void) | undefined;
+    const refreshPromise = new Promise<{ files: AuthFileItem[] }>((resolve) => {
+      resolveRefresh = resolve;
     });
+    mocks.list.mockResolvedValueOnce({ files: [] }).mockReturnValueOnce(refreshPromise);
 
     render(
       <MemoryRouter initialEntries={["/auth-files"]}>
@@ -233,8 +227,23 @@ describe("AuthFilesPage OAuth login dialog", () => {
     await user.click(scoped.getByRole("button", { name: "Submit callback" }));
 
     await waitFor(() => expect(mocks.submitCallback).toHaveBeenCalledTimes(1));
-    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
     await waitFor(() => expect(mocks.list).toHaveBeenCalledTimes(2));
+    await new Promise((resolve) => window.setTimeout(resolve, 250));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+
+    resolveRefresh?.({
+      files: [
+        {
+          name: "codex-new.json",
+          type: "codex",
+          size: 2048,
+          modified: Date.now(),
+          disabled: false,
+        },
+      ],
+    });
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
     expect(await screen.findByTestId("auth-files-cards")).toHaveTextContent("codex-new.json");
   });
 });
