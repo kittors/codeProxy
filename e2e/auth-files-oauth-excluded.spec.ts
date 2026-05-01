@@ -52,7 +52,7 @@ test("Auth Files: OAuth excluded models tab should not stay loading on empty res
   await page.goto("/#/auth-files?tab=excluded");
 
   await expect(
-    page.getByRole("button", { name: /OAuth Excluded Models|OAuth 模型禁用/i }),
+    page.getByRole("tab", { name: /OAuth Excluded Models|OAuth 模型禁用/i }),
   ).toBeVisible();
   await expect(page.getByText(/No config|No configuration|暂无配置/i)).toBeVisible();
 
@@ -109,6 +109,14 @@ test("Auth Files: OAuth dialog should submit callback url through management api
       status: 200,
       contentType: "application/json",
       body: JSON.stringify({ ok: true }),
+    });
+  });
+
+  await page.route("**/v0/management/get-auth-status**", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ status: "wait" }),
     });
   });
 

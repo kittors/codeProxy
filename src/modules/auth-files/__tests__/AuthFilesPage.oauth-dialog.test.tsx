@@ -195,14 +195,28 @@ describe("AuthFilesPage OAuth login dialog", () => {
     expect(scoped.queryByText("oauth.callback")).not.toBeInTheDocument();
   });
 
-  test("keeps the dialog open until callback submission refreshes cards", async () => {
+  test("keeps the dialog open until OAuth completes and the new auth file is listed", async () => {
     const user = userEvent.setup();
     window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
-    let resolveRefresh: ((value: { files: AuthFileItem[] }) => void) | undefined;
-    const refreshPromise = new Promise<{ files: AuthFileItem[] }>((resolve) => {
-      resolveRefresh = resolve;
+    mocks.startAuth.mockResolvedValueOnce({
+      url: "https://example.com/oauth",
+      state: "oauth-state",
     });
-    mocks.list.mockResolvedValueOnce({ files: [] }).mockReturnValueOnce(refreshPromise);
+    mocks.getAuthStatus.mockResolvedValue({ status: "wait" });
+    mocks.list
+      .mockResolvedValueOnce({ files: [] })
+      .mockResolvedValueOnce({ files: [] })
+      .mockResolvedValueOnce({
+        files: [
+          {
+            name: "codex-new.json",
+            type: "codex",
+            size: 2048,
+            modified: Date.now(),
+            disabled: false,
+          },
+        ],
+      });
 
     render(
       <MemoryRouter initialEntries={["/auth-files"]}>
@@ -220,6 +234,9 @@ describe("AuthFilesPage OAuth login dialog", () => {
 
     const dialog = await screen.findByRole("dialog");
     const scoped = within(dialog);
+    await user.click(scoped.getByRole("button", { name: "Start authorization" }));
+    await waitFor(() => expect(mocks.startAuth).toHaveBeenCalledTimes(1));
+
     await user.type(
       scoped.getByPlaceholderText("Paste the full callback URL from browser"),
       "http://localhost:1455/auth/callback?code=test-code&state=test-state",
@@ -227,23 +244,14 @@ describe("AuthFilesPage OAuth login dialog", () => {
     await user.click(scoped.getByRole("button", { name: "Submit callback" }));
 
     await waitFor(() => expect(mocks.submitCallback).toHaveBeenCalledTimes(1));
-    await waitFor(() => expect(mocks.list).toHaveBeenCalledTimes(2));
     await new Promise((resolve) => window.setTimeout(resolve, 250));
     expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.queryByText("codex-new.json")).not.toBeInTheDocument();
 
-    resolveRefresh?.({
-      files: [
-        {
-          name: "codex-new.json",
-          type: "codex",
-          size: 2048,
-          modified: Date.now(),
-          disabled: false,
-        },
-      ],
-    });
+    mocks.getAuthStatus.mockResolvedValueOnce({ status: "ok" });
+    await waitFor(() => expect(mocks.list).toHaveBeenCalledTimes(3), { timeout: 5000 });
 
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
     expect(await screen.findByTestId("auth-files-cards")).toHaveTextContent("codex-new.json");
-  });
+  }, 12000);
 });

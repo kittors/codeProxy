@@ -27,7 +27,7 @@ export function useAuthFilesDataState() {
   const usageDataRef = useRef<EntityStatsResponse | null>(usageData);
   const { index: usageIndex } = useMemo(() => buildUsageIndex(usageData), [usageData]);
 
-  const loadAll = useCallback(async () => {
+  const loadAll = useCallback(async (): Promise<AuthFileItem[]> => {
     const hasExisting = filesRef.current.length > 0;
     if (hasExisting) setRefreshingAll(true);
     else setLoading(true);
@@ -40,11 +40,13 @@ export function useAuthFilesDataState() {
       const list = Array.isArray(filesRes?.files) ? filesRes.files : [];
       setFiles(list);
       setUsageData((prev) => usageRes ?? prev);
+      return list;
     } catch (err: unknown) {
       notify({
         type: "error",
         message: err instanceof Error ? err.message : t("auth_files.load_failed"),
       });
+      return filesRef.current;
     } finally {
       if (hasExisting) setRefreshingAll(false);
       else setLoading(false);
