@@ -302,7 +302,7 @@ export function AuthFilesPage() {
       if (provider === "codex" || provider === "kimi") {
         void refreshQuota(file, provider)
           .catch(() => undefined)
-          .finally(() => void refreshDetailTrend(file));
+          .finally(() => void refreshDetailTrend(file, { silent: true }));
       }
       return openPromise;
     },

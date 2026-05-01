@@ -30,6 +30,7 @@ import {
 
 type DetailTab = "usage" | "fields" | "models";
 type DetailTrendWindow = "5h" | "week";
+type RefreshDetailTrendOptions = { silent?: boolean };
 
 const createPrefixProxyEditorState = (): PrefixProxyEditorState => ({
   open: false,
@@ -124,6 +125,7 @@ export function useAuthFilesDetailEditors(
   const { t } = useTranslation();
   const { notify } = useToast();
   const modelsCacheRef = useRef<Map<string, AuthFileModelItem[]>>(new Map());
+  const detailTrendInFlightRef = useRef<Map<string, Promise<void>>>(new Map());
 
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailFile, setDetailFile] = useState<AuthFileItem | null>(null);
@@ -194,7 +196,7 @@ export function useAuthFilesDetailEditors(
   );
 
   const refreshDetailTrend = useCallback(
-    async (fileArg?: AuthFileItem | null) => {
+    async (fileArg?: AuthFileItem | null, options?: RefreshDetailTrendOptions) => {
       const file = fileArg ?? detailFile;
       if (!file || !supportsAuthFileTrend(file)) {
         setDetailTrend(null);
@@ -211,20 +213,44 @@ export function useAuthFilesDetailEditors(
         return;
       }
 
-      setDetailTrendLoading(true);
+      const existing = detailTrendInFlightRef.current.get(authIndex);
+      if (existing) {
+        try {
+          await existing;
+        } catch {
+          // 主请求会更新 detailTrendError；重复调用只负责复用同一个请求。
+        }
+        return;
+      }
+
+      const shouldShowLoading = !options?.silent || !detailTrend;
+      if (shouldShowLoading) {
+        setDetailTrendLoading(true);
+      }
       setDetailTrendError(null);
-      try {
+
+      const request = (async () => {
         const trend = await usageApi.getAuthFileTrend(authIndex, { days: 7, hours: 5 });
         setDetailTrend(trend);
+      })();
+      detailTrendInFlightRef.current.set(authIndex, request);
+
+      try {
+        await request;
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : t("auth_files.trend_load_failed");
         setDetailTrend(null);
         setDetailTrendError(message);
       } finally {
-        setDetailTrendLoading(false);
+        if (detailTrendInFlightRef.current.get(authIndex) === request) {
+          detailTrendInFlightRef.current.delete(authIndex);
+        }
+        if (shouldShowLoading) {
+          setDetailTrendLoading(false);
+        }
       }
     },
-    [detailFile, t],
+    [detailFile, detailTrend, t],
   );
 
   const openDetail = useCallback(
