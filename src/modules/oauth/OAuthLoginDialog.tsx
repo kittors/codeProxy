@@ -76,7 +76,7 @@ export function OAuthLoginDialog({
 }: {
   open: boolean;
   onClose: () => void;
-  onAuthorized?: () => void;
+  onAuthorized?: () => void | Promise<void>;
   defaultTab?: TabValue;
   proxyPoolEntries?: ProxyPoolEntry[];
 }) {
@@ -278,14 +278,14 @@ export function OAuthLoginDialog({
           delete timers.current[provider];
         }
         updateProviderState(provider, {
-          callbackSubmitting: false,
           callbackStatus: "success",
           status: "success",
           polling: false,
         });
         notify({ type: "success", message: t("oauth.callback_submit_success") });
+        await onAuthorized?.();
+        updateProviderState(provider, { callbackSubmitting: false });
         onClose();
-        onAuthorized?.();
       } catch (err: unknown) {
         const message = getErrorMessage(err) || t("oauth.callback_submit_failed");
         updateProviderState(provider, {
