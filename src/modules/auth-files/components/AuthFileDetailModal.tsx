@@ -31,6 +31,20 @@ import {
 type DetailTab = "usage" | "fields" | "models";
 type DetailTrendWindow = "5h" | "week";
 
+const padTwo = (value: number) => String(value).padStart(2, "0");
+
+const formatLocalDateKey = (timestamp: string) => {
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) return "";
+  return `${date.getFullYear()}-${padTwo(date.getMonth() + 1)}-${padTwo(date.getDate())}`;
+};
+
+const formatLocalHourKey = (timestamp: string) => {
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) return "";
+  return `${formatLocalDateKey(timestamp)} ${padTwo(date.getHours())}:00`;
+};
+
 interface AuthFileDetailModalProps {
   open: boolean;
   detailFile: AuthFileItem | null;
@@ -165,9 +179,9 @@ export function AuthFileDetailModal({
         if (!point.timestamp) return;
         const key =
           detailTrendWindow === "5h"
-            ? `${point.timestamp.slice(0, 13).replace("T", " ")}:00`
-            : point.timestamp.slice(0, 10);
-        xKeys.add(key);
+            ? formatLocalHourKey(point.timestamp)
+            : formatLocalDateKey(point.timestamp);
+        if (!key || !xKeys.has(key)) return;
         values.set(key, point.percent);
       });
       return { series, values };
