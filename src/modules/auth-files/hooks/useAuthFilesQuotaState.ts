@@ -118,8 +118,17 @@ export function useAuthFilesQuotaState({
             name: additionalQuota.name,
           });
         }
+        if (text.startsWith("claude_quota.")) return t(text);
         return text;
       };
+
+      if (provider === "claude") {
+        return items.map((item) => ({
+          id: item.key ?? item.label,
+          label: translateQuotaLabel(item.label),
+          item,
+        }));
+      }
 
       const supportsStableCodingSlots = provider === "codex" || provider === "kimi";
       if (!supportsStableCodingSlots) {
