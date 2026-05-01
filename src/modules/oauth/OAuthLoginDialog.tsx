@@ -273,8 +273,18 @@ export function OAuthLoginDialog({
       });
       try {
         await oauthApi.submitCallback(provider, redirectUrl, proxyOptions());
-        updateProviderState(provider, { callbackSubmitting: false, callbackStatus: "success" });
+        if (timers.current[provider]) {
+          window.clearInterval(timers.current[provider]);
+          delete timers.current[provider];
+        }
+        updateProviderState(provider, {
+          callbackSubmitting: false,
+          callbackStatus: "success",
+          status: "success",
+          polling: false,
+        });
         notify({ type: "success", message: t("oauth.callback_submit_success") });
+        onClose();
         onAuthorized?.();
       } catch (err: unknown) {
         const message = getErrorMessage(err) || t("oauth.callback_submit_failed");
@@ -286,7 +296,7 @@ export function OAuthLoginDialog({
         notify({ type: "error", message });
       }
     },
-    [notify, onAuthorized, proxyOptions, states, t, updateProviderState],
+    [notify, onAuthorized, onClose, proxyOptions, states, t, updateProviderState],
   );
 
   const iflowHint = useMemo(() => {
@@ -360,7 +370,7 @@ export function OAuthLoginDialog({
       const polling = Boolean(state.polling);
 
       const statusText = polling
-        ? t("oauth.status_polling")
+        ? t("oauth.status_waiting")
         : status === "success"
           ? t("oauth.status_success")
           : status === "error"
@@ -430,6 +440,11 @@ export function OAuthLoginDialog({
                 <p className="mt-1 truncate text-sm font-semibold text-slate-900 dark:text-white">
                   {statusText}
                 </p>
+                {status === "waiting" || polling ? (
+                  <p className="mt-1 break-words text-xs text-slate-600 dark:text-white/60">
+                    {t("oauth.callback_browser_address_hint")}
+                  </p>
+                ) : null}
                 {state.error ? (
                   <p className="mt-1 break-words text-xs text-rose-600 dark:text-rose-300">
                     {state.error}
