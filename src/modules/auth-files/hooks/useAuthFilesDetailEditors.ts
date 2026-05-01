@@ -8,7 +8,8 @@ import {
   type SetStateAction,
 } from "react";
 import { useTranslation } from "react-i18next";
-import { authFilesApi } from "@/lib/http/apis";
+import { authFilesApi, usageApi } from "@/lib/http/apis";
+import type { AuthFileTrendResponse } from "@/lib/http/apis/usage";
 import type { AuthFileItem } from "@/lib/http/types";
 import { useToast } from "@/modules/ui/ToastProvider";
 import {
@@ -16,6 +17,9 @@ import {
   dateTimeLocalInputToIso,
   formatFileSize,
   MAX_AUTH_FILE_SIZE,
+  isOauthAuthFile,
+  normalizeAuthIndexValue,
+  normalizeProviderKey,
   normalizeAuthFileSubscriptionPeriod,
   readAuthFileChannelName,
   resolveFileType,
@@ -24,7 +28,8 @@ import {
   type PrefixProxyEditorState,
 } from "@/modules/auth-files/helpers/authFilesPageUtils";
 
-type DetailTab = "json" | "models" | "fields" | "channel";
+type DetailTab = "usage" | "fields" | "models";
+type DetailTrendWindow = "5h" | "week";
 
 const createPrefixProxyEditorState = (): PrefixProxyEditorState => ({
   open: false,
@@ -107,8 +112,13 @@ const mergeSavedSubscriptionFields = (
   return next;
 };
 
+const supportsAuthFileTrend = (file: AuthFileItem): boolean => {
+  const provider = normalizeProviderKey(resolveFileType(file));
+  return provider === "kimi" || provider === "codex";
+};
+
 export function useAuthFilesDetailEditors(
-  loadAll: () => Promise<void>,
+  loadAll: () => Promise<AuthFileItem[]>,
   setFiles?: Dispatch<SetStateAction<AuthFileItem[]>>,
 ) {
   const { t } = useTranslation();
@@ -119,7 +129,11 @@ export function useAuthFilesDetailEditors(
   const [detailFile, setDetailFile] = useState<AuthFileItem | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailText, setDetailText] = useState("");
-  const [detailTab, setDetailTab] = useState<DetailTab>("json");
+  const [detailTab, setDetailTab] = useState<DetailTab>("fields");
+  const [detailTrendWindow, setDetailTrendWindow] = useState<DetailTrendWindow>("5h");
+  const [detailTrend, setDetailTrend] = useState<AuthFileTrendResponse | null>(null);
+  const [detailTrendLoading, setDetailTrendLoading] = useState(false);
+  const [detailTrendError, setDetailTrendError] = useState<string | null>(null);
 
   const [modelsLoading, setModelsLoading] = useState(false);
   const [modelsFileType, setModelsFileType] = useState("");
@@ -179,13 +193,54 @@ export function useAuthFilesDetailEditors(
     [notify, t],
   );
 
+  const refreshDetailTrend = useCallback(
+    async (fileArg?: AuthFileItem | null) => {
+      const file = fileArg ?? detailFile;
+      if (!file || !supportsAuthFileTrend(file)) {
+        setDetailTrend(null);
+        setDetailTrendError(null);
+        setDetailTrendLoading(false);
+        return;
+      }
+
+      const authIndex = normalizeAuthIndexValue(file.auth_index ?? file.authIndex);
+      if (!authIndex) {
+        setDetailTrend(null);
+        setDetailTrendError(t("auth_files.trend_missing_auth_index"));
+        setDetailTrendLoading(false);
+        return;
+      }
+
+      setDetailTrendLoading(true);
+      setDetailTrendError(null);
+      try {
+        const trend = await usageApi.getAuthFileTrend(authIndex, { days: 7, hours: 5 });
+        setDetailTrend(trend);
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : t("auth_files.trend_load_failed");
+        setDetailTrend(null);
+        setDetailTrendError(message);
+      } finally {
+        setDetailTrendLoading(false);
+      }
+    },
+    [detailFile, t],
+  );
+
   const openDetail = useCallback(
     async (file: AuthFileItem) => {
+      const hasTrend = supportsAuthFileTrend(file);
       setDetailOpen(true);
-      setDetailTab("json");
+      setDetailTab(hasTrend ? "usage" : "fields");
+      setDetailTrendWindow("5h");
       setDetailFile(file);
       setDetailLoading(true);
       setDetailText("");
+      setDetailTrend(null);
+      setDetailTrendError(null);
+      if (hasTrend) {
+        void refreshDetailTrend(file);
+      }
       try {
         const text = await authFilesApi.downloadText(file.name);
         setDetailText(text);
@@ -198,7 +253,7 @@ export function useAuthFilesDetailEditors(
         setDetailLoading(false);
       }
     },
-    [notify, t],
+    [notify, refreshDetailTrend, t],
   );
 
   const openPrefixProxyEditor = useCallback(
@@ -289,13 +344,13 @@ export function useAuthFilesDetailEditors(
     });
   }, []);
 
-  const saveChannelEditor = useCallback(async () => {
+  const saveChannelEditor = useCallback(async (): Promise<boolean> => {
     const fileName = channelEditor.fileName.trim();
     const label = channelEditor.label.trim();
-    if (!fileName) return;
+    if (!fileName) return false;
     if (!label) {
       setChannelEditor((prev) => ({ ...prev, error: t("auth_files.channel_name_required") }));
-      return;
+      return false;
     }
 
     setChannelEditor((prev) => ({ ...prev, saving: true, error: null }));
@@ -304,10 +359,12 @@ export function useAuthFilesDetailEditors(
       notify({ type: "success", message: t("auth_files.saved") });
       await loadAll();
       setChannelEditor((prev) => ({ ...prev, saving: false, error: null }));
+      return true;
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : t("auth_files.save_failed");
       setChannelEditor((prev) => ({ ...prev, saving: false, error: message }));
       notify({ type: "error", message });
+      return false;
     }
   }, [channelEditor.fileName, channelEditor.label, loadAll, notify, t]);
 
@@ -317,26 +374,33 @@ export function useAuthFilesDetailEditors(
       void loadModelsForDetail(detailFile);
       return;
     }
+    if (detailTab === "usage") {
+      if (supportsAuthFileTrend(detailFile) && !detailTrend && !detailTrendLoading) {
+        void refreshDetailTrend(detailFile);
+      }
+      return;
+    }
     if (detailTab === "fields") {
       if (prefixProxyEditor.fileName !== detailFile.name) {
         void openPrefixProxyEditor(detailFile);
       }
-      return;
-    }
-    if (detailTab === "channel") {
-      if (channelEditor.fileName !== detailFile.name) {
+      if (isOauthAuthFile(detailFile) && channelEditor.fileName !== detailFile.name) {
         openChannelEditor(detailFile);
       }
+      return;
     }
   }, [
     channelEditor.fileName,
     detailFile,
     detailOpen,
     detailTab,
+    detailTrend,
+    detailTrendLoading,
     loadModelsForDetail,
     openChannelEditor,
     openPrefixProxyEditor,
     prefixProxyEditor.fileName,
+    refreshDetailTrend,
   ]);
 
   const prefixProxyDirty = useMemo(() => {
@@ -446,7 +510,7 @@ export function useAuthFilesDetailEditors(
       }));
       setDetailText((prev) => (name && detailFile?.name === name ? payload : prev));
       setDetailOpen(false);
-      setDetailTab("json");
+      setDetailTab("fields");
       void loadAll().finally(() => applySavedAuthFilePatch(name, parsedPayload));
     } catch (err: unknown) {
       notify({
@@ -477,6 +541,12 @@ export function useAuthFilesDetailEditors(
     detailText,
     detailTab,
     setDetailTab,
+    detailTrendWindow,
+    setDetailTrendWindow,
+    detailTrend,
+    detailTrendLoading,
+    detailTrendError,
+    refreshDetailTrend,
     modelsLoading,
     modelsFileType,
     modelsList,

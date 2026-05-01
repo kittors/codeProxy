@@ -33,6 +33,8 @@ type CodexRateLimitInfo = {
 type CodexAdditionalRateLimit = {
   limit_name?: string;
   limitName?: string;
+  metered_feature?: string;
+  meteredFeature?: string;
   rate_limit?: CodexRateLimitInfo | null;
   rateLimit?: CodexRateLimitInfo | null;
 };
@@ -87,6 +89,25 @@ const resolveCodexResetAtMs = (window?: CodexUsageWindow | null): number | undef
   return Date.now() + after * 1000;
 };
 
+const codexAdditionalFeatureAliases: Record<string, string> = {
+  "gpt-5.3-codex-spark": "codex_bengalfox",
+};
+
+const normalizeCodexQuotaKeyPart = (value: string): string =>
+  value
+    .trim()
+    .toLowerCase()
+    .replaceAll(/[^a-z0-9]+/g, "_")
+    .replaceAll(/^_+|_+$/g, "");
+
+const resolveAdditionalQuotaKeyPart = (entry: CodexAdditionalRateLimit, name: string): string => {
+  const meteredFeature = normalizeStringValue(entry.metered_feature ?? entry.meteredFeature);
+  if (meteredFeature) return normalizeCodexQuotaKeyPart(meteredFeature) || meteredFeature;
+  const alias = codexAdditionalFeatureAliases[name.trim().toLowerCase()];
+  if (alias) return alias;
+  return normalizeCodexQuotaKeyPart(name) || "additional";
+};
+
 export const buildCodexItems = (payload: CodexUsagePayload): QuotaItem[] => {
   const fiveHourSeconds = 18000;
   const weekSeconds = 604800;
@@ -118,7 +139,9 @@ export const buildCodexItems = (payload: CodexUsagePayload): QuotaItem[] => {
   };
 
   const addWindow = (
+    key: string,
     label: string,
+    windowSeconds: number,
     window?: CodexUsageWindow | null,
     limitInfo?: CodexRateLimitInfo | null,
   ) => {
@@ -132,19 +155,33 @@ export const buildCodexItems = (payload: CodexUsagePayload): QuotaItem[] => {
           ? 100
           : null;
     items.push({
+      key,
       label,
       percent: used === null ? null : clampPercent(100 - used),
       resetAtMs: resolveCodexResetAtMs(window),
+      windowSeconds,
     });
   };
 
   const rateWindows = pickWindows(rate);
-  addWindow("m_quota.code_5h", rateWindows.fiveHour, rate);
-  addWindow("m_quota.code_weekly", rateWindows.weekly, rate);
+  addWindow("code_5h", "m_quota.code_5h", fiveHourSeconds, rateWindows.fiveHour, rate);
+  addWindow("code_week", "m_quota.code_weekly", weekSeconds, rateWindows.weekly, rate);
   if (codeReview) {
     const reviewWindows = pickWindows(codeReview);
-    addWindow("m_quota.review_5h", reviewWindows.fiveHour, codeReview);
-    addWindow("m_quota.review_weekly", reviewWindows.weekly, codeReview);
+    addWindow(
+      "review_5h",
+      "m_quota.review_5h",
+      fiveHourSeconds,
+      reviewWindows.fiveHour,
+      codeReview,
+    );
+    addWindow(
+      "review_week",
+      "m_quota.review_weekly",
+      weekSeconds,
+      reviewWindows.weekly,
+      codeReview,
+    );
   }
 
   additionalRateLimits.forEach((entry) => {
@@ -152,9 +189,22 @@ export const buildCodexItems = (payload: CodexUsagePayload): QuotaItem[] => {
     if (!limitInfo) return;
     const name =
       normalizeStringValue(entry.limit_name ?? entry.limitName) ?? "Additional Codex quota";
+    const keyPart = resolveAdditionalQuotaKeyPart(entry, name);
     const windows = pickWindows(limitInfo);
-    addWindow(`${name}: 5h`, windows.fiveHour, limitInfo);
-    addWindow(`${name}: Weekly`, windows.weekly, limitInfo);
+    addWindow(
+      `additional:${keyPart}:5h`,
+      `${name}: 5h`,
+      fiveHourSeconds,
+      windows.fiveHour,
+      limitInfo,
+    );
+    addWindow(
+      `additional:${keyPart}:week`,
+      `${name}: Weekly`,
+      weekSeconds,
+      windows.weekly,
+      limitInfo,
+    );
   });
 
   return items;
