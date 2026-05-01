@@ -1196,6 +1196,68 @@ describe("AuthFilesPage files table", () => {
     ).toBeGreaterThan(0);
   });
 
+  test("cards view exposes quota refresh for Anthropic OAuth files", async () => {
+    const now = Date.now();
+    const file = {
+      name: "claude-oauth.json",
+      label: "Claude Pro",
+      account_type: "oauth",
+      type: "claude",
+      provider: "anthropic",
+      size: 1024,
+      modified: now,
+      disabled: false,
+      auth_index: "claude-1",
+    } as any;
+
+    mocks.list.mockImplementationOnce(async () => ({ files: [file] }));
+    mocks.fetchQuota.mockResolvedValue({
+      items: [{ label: "claude_quota.five_hour", percent: 88, resetAtMs: now + 60_000 }],
+    });
+
+    window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
+    window.sessionStorage.setItem(
+      AUTH_FILES_DATA_CACHE_KEY,
+      JSON.stringify({
+        savedAtMs: now,
+        files: [file],
+        usageData: { source: [], auth_index: [] },
+        quotaByFileName: {
+          "claude-oauth.json": {
+            status: "success",
+            updatedAt: now,
+            items: [{ label: "claude_quota.five_hour", percent: 72, resetAtMs: now + 30_000 }],
+          },
+        },
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("Claude Pro")).toBeInTheDocument();
+    const refreshButton = within(screen.getByTestId("auth-files-cards")).getByRole("button", {
+      name: "Refresh",
+    });
+    fireEvent.click(refreshButton);
+
+    await waitFor(() => {
+      expect(mocks.fetchQuota).toHaveBeenCalledWith(
+        "claude",
+        expect.objectContaining({ name: "claude-oauth.json" }),
+      );
+    });
+  });
+
   test("cards view shows inline error when quota fetch fails", async () => {
     const now = Date.now();
     const file = {

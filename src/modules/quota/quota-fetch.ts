@@ -3,6 +3,8 @@ import type { ApiCallResult, AuthFileItem } from "@/lib/http/types";
 import {
   ANTIGRAVITY_QUOTA_URLS,
   ANTIGRAVITY_REQUEST_HEADERS,
+  CLAUDE_REQUEST_HEADERS,
+  CLAUDE_USAGE_URL,
   CODEX_REQUEST_HEADERS,
   CODEX_USAGE_URL,
   DEFAULT_ANTIGRAVITY_PROJECT_ID,
@@ -14,6 +16,7 @@ import {
   KIRO_REQUEST_BODY,
   KIRO_REQUEST_HEADERS,
   buildAntigravityGroups,
+  buildClaudeItems,
   buildCodexItems,
   buildGeminiCliBuckets,
   buildKimiItems,
@@ -26,6 +29,7 @@ import {
   normalizeQuotaFraction,
   normalizeStringValue,
   parseAntigravityPayload,
+  parseClaudeUsagePayload,
   parseCodexUsagePayload,
   parseGeminiCliQuotaPayload,
   parseKimiUsagePayload,
@@ -38,7 +42,7 @@ import {
   type QuotaItem,
 } from "@/modules/quota/quota-helpers";
 
-export type QuotaProvider = "antigravity" | "codex" | "gemini-cli" | "kimi" | "kiro";
+export type QuotaProvider = "antigravity" | "claude" | "codex" | "gemini-cli" | "kimi" | "kiro";
 export type QuotaFetchResult = {
   items: QuotaItem[];
   planType?: string | null;
@@ -47,6 +51,8 @@ export type QuotaFetchResult = {
 export const resolveQuotaProvider = (file: AuthFileItem): QuotaProvider | null => {
   const provider = resolveAuthProvider(file);
   if (provider === "antigravity") return "antigravity";
+  if ((provider === "anthropic" || provider === "claude") && isClaudeOAuthLikeFile(file))
+    return "claude";
   if (provider === "codex") return "codex";
   if (provider === "gemini-cli") return "gemini-cli";
   if (provider === "kimi") return "kimi";
@@ -79,6 +85,14 @@ const resolveAntigravityProjectId = async (file: AuthFileItem): Promise<string> 
     return DEFAULT_ANTIGRAVITY_PROJECT_ID;
   }
   return DEFAULT_ANTIGRAVITY_PROJECT_ID;
+};
+
+const isClaudeOAuthLikeFile = (file: AuthFileItem): boolean => {
+  const accountType = normalizeStringValue(file.account_type ?? file.accountType)?.toLowerCase();
+  if (accountType === "api-key" || accountType === "apikey" || accountType === "api_key") {
+    return false;
+  }
+  return true;
 };
 
 export const fetchQuota = async (
@@ -137,6 +151,20 @@ export const fetchQuota = async (
       items: buildCodexItems(payload),
       planType: normalizeStringValue(payload.plan_type ?? payload.planType)?.toLowerCase() ?? null,
     };
+  }
+
+  if (type === "claude") {
+    const result = await apiCallApi.request({
+      authIndex,
+      method: "GET",
+      url: CLAUDE_USAGE_URL,
+      header: { ...CLAUDE_REQUEST_HEADERS },
+    });
+    if (result.statusCode < 200 || result.statusCode >= 300)
+      throw new Error(getApiCallErrorMessage(result));
+    const payload = parseClaudeUsagePayload(result.body ?? result.bodyText);
+    if (!payload) throw new Error("parse_claude_failed");
+    return { items: buildClaudeItems(payload) };
   }
 
   if (type === "gemini-cli") {
