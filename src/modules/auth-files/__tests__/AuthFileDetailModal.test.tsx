@@ -131,6 +131,22 @@ describe("AuthFileDetailModal", () => {
     expect(screen.getByRole("button", { name: "Download" })).toBeEnabled();
   });
 
+  test("keeps the rendered trend visible while a background refresh is running", () => {
+    renderDetailModal({ detailTrendLoading: true });
+
+    expect(screen.getByText("Quota and request trends")).toBeInTheDocument();
+    expect(screen.getByText("Last 7 days requests")).toBeInTheDocument();
+    expect(screen.queryByText("Loading...")).not.toBeInTheDocument();
+  });
+
+  test("does not render quota sample summary cards below the trend chart", () => {
+    renderDetailModal();
+
+    expect(screen.queryByTestId("auth-file-quota-series-list")).not.toBeInTheDocument();
+    expect(screen.queryByText(/samples/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/resets/)).not.toBeInTheDocument();
+  });
+
   test("renders models as a compact list without raw field labels", () => {
     renderDetailModal({ detailTab: "models" });
 
