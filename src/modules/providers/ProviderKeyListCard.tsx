@@ -32,6 +32,7 @@ export function ProviderKeyListCard({
   getAccessSummary,
   getLatencyEntry,
   checkLatency,
+  showBaseUrl = true,
 }: {
   icon: LucideIcon;
   title: string;
@@ -46,6 +47,7 @@ export function ProviderKeyListCard({
   getAccessSummary?: (item: ProviderSimpleConfig) => ProviderAccessSummary | null;
   getLatencyEntry?: (key: string) => { latencyMs: number | null; loading: boolean; error: boolean };
   checkLatency?: (key: string, baseUrl: string) => void;
+  showBaseUrl?: boolean;
 }) {
   const { t } = useTranslation();
   return (
@@ -139,7 +141,9 @@ export function ProviderKeyListCard({
 
                     <div className="mt-1 space-y-1 text-xs text-slate-600 dark:text-white/65">
                       <p className="truncate font-mono">apiKey：{maskApiKey(item.apiKey)}</p>
-                      <p className="truncate font-mono">baseUrl：{item.baseUrl || "--"}</p>
+                      {showBaseUrl ? (
+                        <p className="truncate font-mono">baseUrl：{item.baseUrl || "--"}</p>
+                      ) : null}
                       {item.proxyUrl ? (
                         <p className="truncate font-mono">proxyUrl：{item.proxyUrl}</p>
                       ) : null}
