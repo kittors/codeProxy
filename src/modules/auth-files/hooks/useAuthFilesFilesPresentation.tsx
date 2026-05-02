@@ -676,7 +676,6 @@ export function useAuthFilesFilesPresentation({
           const quotaRefreshing = quotaProvider
             ? quotaByFileName[file.name]?.status === "loading"
             : false;
-          const quotaAutoRefreshing = quotaAutoRefreshingRef.current.has(file.name);
 
           return (
             <div className="inline-flex flex-wrap items-center justify-center gap-1">
@@ -688,11 +687,10 @@ export function useAuthFilesFilesPresentation({
                     onClick={() => void refreshQuota(file, quotaProvider)}
                     title={t("common.refresh")}
                     aria-label={t("common.refresh")}
-                    disabled={quotaRefreshing}
                   >
                     <RefreshCw
                       size={16}
-                      className={quotaRefreshing && !quotaAutoRefreshing ? "animate-spin" : ""}
+                      className={quotaRefreshing ? "animate-spin" : ""}
                     />
                   </Button>
                 </HoverTooltip>
