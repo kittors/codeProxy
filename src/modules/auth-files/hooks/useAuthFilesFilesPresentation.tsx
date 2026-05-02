@@ -434,7 +434,7 @@ export function useAuthFilesFilesPresentation({
         render: (file) => {
           const typeKey = resolveFileType(file);
           const badgeClass = TYPE_BADGE_CLASSES[typeKey] ?? TYPE_BADGE_CLASSES.unknown;
-          const planType = resolveAuthFilePlanType(file);
+          const planType = resolveAuthFilePlanType(file, quotaByFileName[file.name]);
           const runtimeOnly = isRuntimeOnlyAuthFile(file);
 
           return (
