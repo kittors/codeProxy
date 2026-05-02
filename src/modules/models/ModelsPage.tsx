@@ -1032,31 +1032,37 @@ export function ModelsPage() {
     }
   }, [loadModels, notify, t]);
 
+  const canDeleteModels = activeTab === "library";
+
   const modelColumns = useMemo<VirtualTableColumn<ModelItem>[]>(
     () => [
-      {
-        key: "select",
-        label: "",
-        width: "w-12",
-        headerClassName: "text-center",
-        cellClassName: "text-center",
-        headerRender: () => (
-          <Checkbox
-            aria-label={t("models_page.select_all_visible_models")}
-            checked={allVisibleModelsSelected}
-            indeterminate={someVisibleModelsSelected && !allVisibleModelsSelected}
-            disabled={filteredModelIds.length === 0}
-            onCheckedChange={toggleVisibleModelSelection}
-          />
-        ),
-        render: (row) => (
-          <Checkbox
-            aria-label={t("models_page.select_model_aria", { model: row.id })}
-            checked={selectedModelIds.has(row.id)}
-            onCheckedChange={(checked) => toggleModelSelection(row.id, checked)}
-          />
-        ),
-      },
+      ...(canDeleteModels
+        ? [
+            {
+              key: "select",
+              label: "",
+              width: "w-12",
+              headerClassName: "text-center",
+              cellClassName: "text-center",
+              headerRender: () => (
+                <Checkbox
+                  aria-label={t("models_page.select_all_visible_models")}
+                  checked={allVisibleModelsSelected}
+                  indeterminate={someVisibleModelsSelected && !allVisibleModelsSelected}
+                  disabled={filteredModelIds.length === 0}
+                  onCheckedChange={toggleVisibleModelSelection}
+                />
+              ),
+              render: (row) => (
+                <Checkbox
+                  aria-label={t("models_page.select_model_aria", { model: row.id })}
+                  checked={selectedModelIds.has(row.id)}
+                  onCheckedChange={(checked) => toggleModelSelection(row.id, checked)}
+                />
+              ),
+            } satisfies VirtualTableColumn<ModelItem>,
+          ]
+        : []),
       {
         key: "model",
         label: t("models_page.col_model"),
@@ -1141,21 +1147,24 @@ export function ModelsPage() {
             >
               <Edit3 size={14} />
             </Button>
-            <Button
-              variant="ghost"
-              size="xs"
-              onClick={() => setDeleteTarget(row)}
-              aria-label={t("models_page.delete_model_aria", { model: row.id })}
-              title={t("models_page.delete_model_aria", { model: row.id })}
-            >
-              <Trash2 size={14} />
-            </Button>
+            {canDeleteModels ? (
+              <Button
+                variant="ghost"
+                size="xs"
+                onClick={() => setDeleteTarget(row)}
+                aria-label={t("models_page.delete_model_aria", { model: row.id })}
+                title={t("models_page.delete_model_aria", { model: row.id })}
+              >
+                <Trash2 size={14} />
+              </Button>
+            ) : null}
           </div>
         ),
       },
     ],
     [
       allVisibleModelsSelected,
+      canDeleteModels,
       filteredModelIds.length,
       openEditModel,
       selectedModelIds,
@@ -1167,7 +1176,7 @@ export function ModelsPage() {
   );
 
   const selectionToolbar =
-    selectedModelCount > 0 ? (
+    canDeleteModels && selectedModelCount > 0 ? (
       <>
         <span className="inline-flex h-8 items-center rounded-full bg-slate-100 px-3 text-xs font-semibold text-slate-600 dark:bg-white/[0.08] dark:text-white/65">
           {t("models_page.selected_models_count", { count: selectedModelCount })}

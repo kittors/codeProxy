@@ -20,6 +20,14 @@ import {
   serializeProviderKey,
 } from "@/lib/http/apis/helpers";
 
+const isOauthBackedProviderRow = (item: Record<string, unknown>): boolean => {
+  const accountType = normalizeString(item.account_type ?? item.accountType)?.toLowerCase();
+  if (accountType === "oauth") return true;
+
+  const runtimeOnly = item.runtime_only ?? item.runtimeOnly;
+  return runtimeOnly === true || (typeof runtimeOnly === "string" && runtimeOnly === "true");
+};
+
 export const providersApi = {
   async getGeminiKeys(): Promise<ProviderSimpleConfig[]> {
     const data = await apiClient.get("/gemini-api-key");
@@ -109,6 +117,7 @@ export const providersApi = {
     return list
       .map((item) => {
         if (!isRecord(item)) return null;
+        if (isOauthBackedProviderRow(item)) return null;
         const apiKey = normalizeString(item["api-key"] ?? item.apiKey) ?? "";
         if (!apiKey) return null;
         const name = normalizeString(item.name) ?? undefined;
