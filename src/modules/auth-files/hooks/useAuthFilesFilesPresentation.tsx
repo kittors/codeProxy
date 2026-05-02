@@ -113,6 +113,7 @@ interface UseAuthFilesFilesPresentationOptions {
   quotaByFileName: Record<string, QuotaState>;
   quotaAutoRefreshingRef: RefObject<Set<string>>;
   refreshQuota: (file: AuthFileItem, provider: QuotaProvider) => Promise<void>;
+  forceRefreshPage: () => Promise<void>;
   openDetail: (file: AuthFileItem) => Promise<void>;
   downloadAuthFile: (file: AuthFileItem) => Promise<void>;
   statusUpdating: Record<string, boolean>;
@@ -137,6 +138,7 @@ export function useAuthFilesFilesPresentation({
   quotaByFileName,
   quotaAutoRefreshingRef,
   refreshQuota,
+  forceRefreshPage,
   openDetail,
   downloadAuthFile,
   statusUpdating,
@@ -684,7 +686,7 @@ export function useAuthFilesFilesPresentation({
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => void refreshQuota(file, quotaProvider)}
+                    onClick={() => void forceRefreshPage()}
                     title={t("common.refresh")}
                     aria-label={t("common.refresh")}
                   >

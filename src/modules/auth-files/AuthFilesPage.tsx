@@ -285,6 +285,7 @@ export function AuthFilesPage() {
     refreshQuota,
     checkAuthFileConnectivity,
     collectQuotaFetchTargets,
+    forceRefreshPage,
     runQuotaRefreshBatch,
     quotaLastUpdatedText,
   } = useAuthFilesQuotaState({
@@ -374,6 +375,7 @@ export function AuthFilesPage() {
     quotaByFileName,
     quotaAutoRefreshingRef,
     refreshQuota,
+    forceRefreshPage,
     openDetail: openDetailWithQuotaRefresh,
     downloadAuthFile,
     statusUpdating,
@@ -440,6 +442,7 @@ export function AuthFilesPage() {
             resolveQuotaCardSlots={resolveQuotaCardSlots}
             quotaAutoRefreshingRef={quotaAutoRefreshingRef}
             refreshQuota={refreshQuota}
+            forceRefreshPage={forceRefreshPage}
             setFileEnabled={setFileEnabled}
             statusUpdating={statusUpdating}
             usageIndex={usageIndex}
