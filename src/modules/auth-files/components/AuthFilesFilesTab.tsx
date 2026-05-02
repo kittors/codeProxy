@@ -65,7 +65,7 @@ interface AuthFilesFilesTabProps {
   openGroupOverview: () => void;
   groupOverviewLoading: boolean;
   filteredFiles: AuthFileItem[];
-  loadAll: () => Promise<AuthFileItem[]>;
+  refreshFilesAndQuota: () => Promise<void>;
   usageLoading: boolean;
   refreshingAll: boolean;
   uploading: boolean;
@@ -92,8 +92,6 @@ interface AuthFilesFilesTabProps {
     provider: QuotaProvider,
     items: QuotaItem[],
   ) => { id: string; label: string; item: QuotaItem | null }[];
-  quotaAutoRefreshingRef: RefObject<Set<string>>;
-  refreshQuota: (file: AuthFileItem, provider: QuotaProvider) => Promise<void>;
   forceRefreshPage: () => Promise<void>;
   setFileEnabled: (file: AuthFileItem, enabled: boolean) => Promise<void>;
   statusUpdating: Record<string, boolean>;
@@ -138,7 +136,7 @@ export function AuthFilesFilesTab({
   openGroupOverview,
   groupOverviewLoading,
   filteredFiles,
-  loadAll,
+  refreshFilesAndQuota,
   usageLoading,
   refreshingAll,
   uploading,
@@ -162,8 +160,6 @@ export function AuthFilesFilesTab({
   quotaByFileName,
   resolveQuotaProvider,
   resolveQuotaCardSlots,
-  quotaAutoRefreshingRef,
-  refreshQuota,
   forceRefreshPage,
   setFileEnabled,
   statusUpdating,
@@ -365,7 +361,7 @@ export function AuthFilesFilesTab({
                   <Button
                     variant="secondary"
                     size="sm"
-                    onClick={() => void loadAll()}
+                    onClick={() => void refreshFilesAndQuota()}
                     disabled={loading || usageLoading || refreshingAll}
                     aria-label={t("auth_files.refresh")}
                     title={t("auth_files.refresh")}

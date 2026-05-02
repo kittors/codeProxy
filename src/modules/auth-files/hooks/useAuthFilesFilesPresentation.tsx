@@ -1,4 +1,4 @@
-import { useCallback, useMemo, type ReactNode, type RefObject } from "react";
+import { useCallback, useMemo, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { CalendarClock, Download, Eye, Loader2, RefreshCw, Zap } from "lucide-react";
 import type { AuthFileItem } from "@/lib/http/types";
@@ -27,7 +27,7 @@ import {
   resolveAuthFileSubscriptionStatus,
   resolveFileType,
 } from "@/modules/auth-files/helpers/authFilesPageUtils";
-import { resolveQuotaProvider, type QuotaProvider } from "@/modules/quota/quota-fetch";
+import { resolveQuotaProvider } from "@/modules/quota/quota-fetch";
 import { clampPercent, type QuotaItem, type QuotaState } from "@/modules/quota/quota-helpers";
 
 const KNOWN_QUOTA_TEXT_KEYS = new Set([
@@ -111,8 +111,6 @@ interface UseAuthFilesFilesPresentationOptions {
   connectivityState: Map<string, { loading: boolean; latencyMs: number | null; error: boolean }>;
   checkAuthFileConnectivity: (name: string) => Promise<void>;
   quotaByFileName: Record<string, QuotaState>;
-  quotaAutoRefreshingRef: RefObject<Set<string>>;
-  refreshQuota: (file: AuthFileItem, provider: QuotaProvider) => Promise<void>;
   forceRefreshPage: () => Promise<void>;
   openDetail: (file: AuthFileItem) => Promise<void>;
   downloadAuthFile: (file: AuthFileItem) => Promise<void>;
@@ -136,8 +134,6 @@ export function useAuthFilesFilesPresentation({
   connectivityState,
   checkAuthFileConnectivity,
   quotaByFileName,
-  quotaAutoRefreshingRef,
-  refreshQuota,
   forceRefreshPage,
   openDetail,
   downloadAuthFile,
@@ -690,10 +686,7 @@ export function useAuthFilesFilesPresentation({
                     title={t("common.refresh")}
                     aria-label={t("common.refresh")}
                   >
-                    <RefreshCw
-                      size={16}
-                      className={quotaRefreshing ? "animate-spin" : ""}
-                    />
+                    <RefreshCw size={16} className={quotaRefreshing ? "animate-spin" : ""} />
                   </Button>
                 </HoverTooltip>
               ) : null}
@@ -733,12 +726,11 @@ export function useAuthFilesFilesPresentation({
     downloadAuthFile,
     formatPlanTypeLabel,
     formatQuotaResetTextCompact,
+    forceRefreshPage,
     openDetail,
-    quotaAutoRefreshingRef,
     quotaByFileName,
     quotaPreviewMode,
     quotaProgressCircle,
-    refreshQuota,
     renderSubscriptionBadge,
     selectCurrentPage,
     selectablePageNames.length,
