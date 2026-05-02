@@ -274,7 +274,9 @@ export function buildRequestLogsColumns(
     {
       key: "status",
       label: t("request_logs.col_status"),
-      width: "w-20",
+      width: "w-28",
+      headerClassName: "text-center",
+      cellClassName: "text-center",
       render: (row) =>
         row.failed ? (
           <button
