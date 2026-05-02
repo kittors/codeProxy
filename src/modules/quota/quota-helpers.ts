@@ -12,6 +12,8 @@ export {
   parseCodexUsagePayload,
   resolveCodexChatgptAccountId,
 } from "@/modules/quota/quota-codex";
+export { type ClaudeUsagePayload } from "@/modules/quota/quota-claude";
+export { buildClaudeItems, parseClaudeUsagePayload } from "@/modules/quota/quota-claude";
 export { type GeminiCliQuotaPayload } from "@/modules/quota/quota-gemini-cli";
 export {
   buildGeminiCliBuckets,
@@ -64,6 +66,15 @@ export const CODEX_REQUEST_HEADERS = {
   Authorization: "Bearer $TOKEN$",
   "Content-Type": "application/json",
   "User-Agent": "codex_cli_rs/0.76.0 (Debian 13.0.0; x86_64) WindowsTerminal",
+};
+
+export const CLAUDE_USAGE_URL = "https://api.anthropic.com/api/oauth/usage";
+export const CLAUDE_REQUEST_HEADERS = {
+  Accept: "application/json, text/plain, */*",
+  Authorization: "Bearer $TOKEN$",
+  "Content-Type": "application/json",
+  "User-Agent": "claude-code/2.1.7",
+  "anthropic-beta": "oauth-2025-04-20",
 };
 
 export const KIRO_QUOTA_URL = "https://codewhisperer.us-east-1.amazonaws.com";
