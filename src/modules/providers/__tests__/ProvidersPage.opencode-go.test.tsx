@@ -15,6 +15,18 @@ const mocks = vi.hoisted(() => ({
   getOpenCodeGoConfigs: vi.fn(async () => []),
   getOpenAIProviders: vi.fn(async () => []),
   saveOpenCodeGoConfigs: vi.fn(async (_configs: unknown[]) => ({})),
+  apiCallRequest: vi.fn(async (_payload: unknown) => ({
+    statusCode: 200,
+    header: {},
+    bodyText: "",
+    body: {
+      object: "list",
+      data: [
+        { id: "deepseek-v4-flash", object: "model", owned_by: "opencode" },
+        { id: "kimi-k2.6", object: "model", owned_by: "opencode" },
+      ],
+    },
+  })),
   getEntityStats: vi.fn(async () => ({ source: [] })),
   apiKeyEntriesList: vi.fn(async () => []),
   channelGroupsList: vi.fn(async () => []),
@@ -39,6 +51,10 @@ vi.mock("@/lib/http/apis", async (importOriginal) => {
     usageApi: {
       ...mod.usageApi,
       getEntityStats: mocks.getEntityStats,
+    },
+    apiCallApi: {
+      ...mod.apiCallApi,
+      request: mocks.apiCallRequest,
     },
   };
 });
@@ -72,6 +88,18 @@ describe("ProvidersPage OpenCode Go tab", () => {
     mocks.getOpenCodeGoConfigs.mockImplementation(async () => []);
     mocks.getOpenAIProviders.mockImplementation(async () => []);
     mocks.saveOpenCodeGoConfigs.mockImplementation(async () => ({}));
+    mocks.apiCallRequest.mockImplementation(async () => ({
+      statusCode: 200,
+      header: {},
+      bodyText: "",
+      body: {
+        object: "list",
+        data: [
+          { id: "deepseek-v4-flash", object: "model", owned_by: "opencode" },
+          { id: "kimi-k2.6", object: "model", owned_by: "opencode" },
+        ],
+      },
+    }));
     mocks.getEntityStats.mockImplementation(async () => ({ source: [] }));
     mocks.apiKeyEntriesList.mockImplementation(async () => []);
     mocks.channelGroupsList.mockImplementation(async () => []);
@@ -97,7 +125,7 @@ describe("ProvidersPage OpenCode Go tab", () => {
     const dialog = await screen.findByRole("dialog", { name: /Add OpenCode Go configuration/i });
 
     expect(within(dialog).queryByText("Base URL")).not.toBeInTheDocument();
-    expect(within(dialog).queryByText("Models")).not.toBeInTheDocument();
+    expect(within(dialog).queryByText("Models (optional)")).not.toBeInTheDocument();
 
     await user.type(within(dialog).getByPlaceholderText("e.g. Gemini Primary"), "OpenCode Go");
     await user.type(within(dialog).getByPlaceholderText(/Paste API Key/i), "sk-opencode-go");
@@ -112,5 +140,57 @@ describe("ProvidersPage OpenCode Go tab", () => {
       ]);
     });
     expect(mocks.saveOpenCodeGoConfigs.mock.calls[0][0][0]).not.toHaveProperty("baseUrl");
+  });
+
+  test("uses fixed tabs and saves OpenCode Go model exclusions from fetched models", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter initialEntries={["/ai-providers/opencode-go/new"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    const dialog = await screen.findByRole("dialog", { name: /Add OpenCode Go configuration/i });
+    expect(within(dialog).getByRole("tab", { name: /Basic/i })).toBeInTheDocument();
+    expect(within(dialog).getByRole("tab", { name: /Request/i })).toBeInTheDocument();
+    expect(within(dialog).getByRole("tab", { name: /Models/i })).toBeInTheDocument();
+
+    await user.click(within(dialog).getByRole("tab", { name: /Models/i }));
+
+    await waitFor(() => {
+      expect(mocks.apiCallRequest).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: "GET",
+          url: "https://opencode.ai/zen/go/v1/models",
+        }),
+      );
+    });
+
+    const deepseek = await within(dialog).findByRole("checkbox", { name: /deepseek-v4-flash/i });
+    expect(deepseek).toBeChecked();
+    await user.click(deepseek);
+
+    await user.click(within(dialog).getByRole("tab", { name: /Basic/i }));
+    await user.type(within(dialog).getByPlaceholderText("e.g. Gemini Primary"), "OpenCode Go");
+    await user.type(within(dialog).getByPlaceholderText(/Paste API Key/i), "sk-opencode-go");
+    await user.click(within(dialog).getByRole("button", { name: /Save/ }));
+
+    await waitFor(() => {
+      expect(mocks.saveOpenCodeGoConfigs).toHaveBeenCalledWith([
+        expect.objectContaining({
+          name: "OpenCode Go",
+          apiKey: "sk-opencode-go",
+          excludedModels: ["deepseek-v4-flash"],
+        }),
+      ]);
+    });
+    expect(mocks.saveOpenCodeGoConfigs.mock.calls[0][0][0]).not.toHaveProperty("models");
   });
 });

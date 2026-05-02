@@ -170,6 +170,7 @@ describe("ProvidersPage openai tab", () => {
 
     expect(await screen.findByText("Edit Codex configuration")).toBeInTheDocument();
 
+    await user.click(screen.getByRole("tab", { name: /Request/i }));
     await user.click(screen.getByRole("combobox", { name: "Proxy pool binding" }));
     await user.click(await screen.findByRole("option", { name: /Japan/ }));
     await user.click(screen.getByRole("button", { name: /Save/ }));
