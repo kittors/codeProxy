@@ -4,6 +4,7 @@ import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 import { configFileApi } from "@/lib/http/apis/config-file";
 import {
   identityFingerprintApi,
+  type ClaudeIdentityFingerprint,
   type CodexIdentityFingerprint,
   type IdentityFingerprintConfig,
 } from "@/lib/http/apis/identity-fingerprint";
@@ -41,24 +42,26 @@ const EMPTY_CODEX: Required<CodexIdentityFingerprint> = {
   "custom-headers": {},
 };
 
-type ClaudeHeaderDefaults = {
-  "user-agent": string;
-  "package-version": string;
-  "runtime-version": string;
-  timeout: string;
+const EMPTY_CLAUDE: Required<ClaudeIdentityFingerprint> = {
+  enabled: false,
+  "cli-version": "2.1.88",
+  entrypoint: "cli",
+  "user-agent": "claude-cli/2.1.88 (external, cli)",
+  "anthropic-beta":
+    "claude-code-20250219,oauth-2025-04-20,interleaved-thinking-2025-05-14,redact-thinking-2026-02-12,context-management-2025-06-27,prompt-caching-scope-2026-01-05,advanced-tool-use-2025-11-20,effort-2025-11-24",
+  "stainless-package-version": "0.74.0",
+  "stainless-runtime-version": "v22.13.0",
+  "stainless-timeout": "600",
+  "session-mode": "per-request",
+  "session-id": "",
+  "device-id": "",
+  "custom-headers": {},
 };
 
 type KimiHeaderDefaults = {
   "user-agent": string;
   platform: string;
   version: string;
-};
-
-const DEFAULT_CLAUDE_HEADERS: ClaudeHeaderDefaults = {
-  "user-agent": "claude-cli/2.1.44 (external, sdk-cli)",
-  "package-version": "0.74.0",
-  "runtime-version": "v24.3.0",
-  timeout: "600",
 };
 
 const DEFAULT_KIMI_HEADERS: KimiHeaderDefaults = {
@@ -77,6 +80,16 @@ function mergeCodex(
 ): Required<CodexIdentityFingerprint> {
   return {
     ...EMPTY_CODEX,
+    ...base,
+    "custom-headers": base?.["custom-headers"] ?? {},
+  };
+}
+
+function mergeClaude(
+  base: ClaudeIdentityFingerprint | undefined,
+): Required<ClaudeIdentityFingerprint> {
+  return {
+    ...EMPTY_CLAUDE,
     ...base,
     "custom-headers": base?.["custom-headers"] ?? {},
   };
@@ -125,24 +138,6 @@ function parseHeadersJson(raw: string): Record<string, string> {
 function parseConfigYaml(raw: string): Record<string, unknown> {
   const parsed = parseYaml(raw) as unknown;
   return asRecord(parsed) ?? {};
-}
-
-function normalizeClaudeHeaders(raw: unknown): ClaudeHeaderDefaults {
-  const record = asRecord(raw);
-  return {
-    "user-agent": readString(record, "user-agent", DEFAULT_CLAUDE_HEADERS["user-agent"]),
-    "package-version": readString(
-      record,
-      "package-version",
-      DEFAULT_CLAUDE_HEADERS["package-version"],
-    ),
-    "runtime-version": readString(
-      record,
-      "runtime-version",
-      DEFAULT_CLAUDE_HEADERS["runtime-version"],
-    ),
-    timeout: readString(record, "timeout", DEFAULT_CLAUDE_HEADERS.timeout),
-  };
 }
 
 function normalizeKimiHeaders(raw: unknown): KimiHeaderDefaults {
@@ -204,14 +199,17 @@ export function IdentityFingerprintPage() {
   const [tab, setTab] = useState<ProviderTab>("codex");
   const [codex, setCodex] = useState<Required<CodexIdentityFingerprint>>(EMPTY_CODEX);
   const [defaults, setDefaults] = useState<Required<CodexIdentityFingerprint>>(EMPTY_CODEX);
+  const [claude, setClaude] = useState<Required<ClaudeIdentityFingerprint>>(EMPTY_CLAUDE);
+  const [claudeDefaults, setClaudeDefaults] =
+    useState<Required<ClaudeIdentityFingerprint>>(EMPTY_CLAUDE);
   const [configYaml, setConfigYaml] = useState("");
-  const [claude, setClaude] = useState<ClaudeHeaderDefaults>(DEFAULT_CLAUDE_HEADERS);
   const [kimi, setKimi] = useState<KimiHeaderDefaults>(DEFAULT_KIMI_HEADERS);
   const [geminiHeadersText, setGeminiHeadersText] = useState(
     JSON.stringify(DEFAULT_GEMINI_HEADERS, null, 2),
   );
   const [geminiKeyCount, setGeminiKeyCount] = useState(0);
   const [customHeadersText, setCustomHeadersText] = useState("{}");
+  const [claudeCustomHeadersText, setClaudeCustomHeadersText] = useState("{}");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -226,16 +224,20 @@ export function IdentityFingerprintPage() {
       ]);
       const nextCodex = mergeCodex(payload["identity-fingerprint"]?.codex);
       const nextDefaults = mergeCodex(payload.defaults?.codex);
+      const nextClaude = mergeClaude(payload["identity-fingerprint"]?.claude);
+      const nextClaudeDefaults = mergeClaude(payload.defaults?.claude);
       const parsedConfig = parseConfigYaml(yamlText);
       const gemini = firstGeminiHeaders(parsedConfig["gemini-api-key"]);
       setCodex(nextCodex);
       setDefaults(nextDefaults);
+      setClaude(nextClaude);
+      setClaudeDefaults(nextClaudeDefaults);
       setConfigYaml(yamlText);
-      setClaude(normalizeClaudeHeaders(parsedConfig["claude-header-defaults"]));
       setKimi(normalizeKimiHeaders(parsedConfig["kimi-header-defaults"]));
       setGeminiHeadersText(JSON.stringify(gemini.headers, null, 2));
       setGeminiKeyCount(gemini.count);
       setCustomHeadersText(JSON.stringify(nextCodex["custom-headers"], null, 2));
+      setClaudeCustomHeadersText(JSON.stringify(nextClaude["custom-headers"], null, 2));
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : t("identity_fingerprint.load_failed");
       setError(message);
@@ -253,14 +255,19 @@ export function IdentityFingerprintPage() {
     setCodex((current) => ({ ...current, ...patch }));
   }, []);
 
+  const updateClaude = useCallback((patch: Partial<ClaudeIdentityFingerprint>) => {
+    setClaude((current) => ({ ...current, ...patch }));
+  }, []);
+
   const restoreDefaults = useCallback(() => {
     setCodex(defaults);
     setCustomHeadersText(JSON.stringify(defaults["custom-headers"], null, 2));
   }, [defaults]);
 
   const restoreClaudeDefaults = useCallback(() => {
-    setClaude(DEFAULT_CLAUDE_HEADERS);
-  }, []);
+    setClaude(claudeDefaults);
+    setClaudeCustomHeadersText(JSON.stringify(claudeDefaults["custom-headers"], null, 2));
+  }, [claudeDefaults]);
 
   const restoreGeminiDefaults = useCallback(() => {
     setGeminiHeadersText(JSON.stringify(DEFAULT_GEMINI_HEADERS, null, 2));
@@ -291,6 +298,7 @@ export function IdentityFingerprintPage() {
           ...codex,
           "custom-headers": customHeaders,
         },
+        claude,
       };
       await identityFingerprintApi.update(payload);
       notify({ type: "success", message: t("identity_fingerprint.saved") });
@@ -302,16 +310,21 @@ export function IdentityFingerprintPage() {
     } finally {
       setSaving(false);
     }
-  }, [codex, customHeadersText, loadPage, notify, t]);
+  }, [claude, codex, customHeadersText, loadPage, notify, t]);
 
   const saveClaude = useCallback(async () => {
     setSaving(true);
     setError("");
     try {
-      await saveConfigYaml((root) => {
-        root["claude-header-defaults"] = { ...claude };
-        return root;
-      });
+      const customHeaders = parseCustomHeaders(claudeCustomHeadersText);
+      const payload: IdentityFingerprintConfig = {
+        codex,
+        claude: {
+          ...claude,
+          "custom-headers": customHeaders,
+        },
+      };
+      await identityFingerprintApi.update(payload);
       notify({ type: "success", message: t("identity_fingerprint.saved") });
       await loadPage();
     } catch (err: unknown) {
@@ -321,7 +334,7 @@ export function IdentityFingerprintPage() {
     } finally {
       setSaving(false);
     }
-  }, [claude, loadPage, notify, saveConfigYaml, t]);
+  }, [claude, claudeCustomHeadersText, codex, loadPage, notify, t]);
 
   const saveGemini = useCallback(async () => {
     setSaving(true);
@@ -379,9 +392,20 @@ export function IdentityFingerprintPage() {
   const claudePreviewItems = useMemo(
     () => [
       [t("identity_fingerprint.preview_client"), claude["user-agent"]],
-      [t("identity_fingerprint.claude_package_version"), claude["package-version"]],
-      [t("identity_fingerprint.claude_runtime_version"), claude["runtime-version"]],
-      [t("identity_fingerprint.claude_timeout"), claude.timeout],
+      [t("identity_fingerprint.preview_version"), claude["cli-version"]],
+      [t("identity_fingerprint.claude_entrypoint"), claude.entrypoint],
+      [
+        t("identity_fingerprint.preview_session"),
+        claude["session-mode"] === "per-request"
+          ? t("identity_fingerprint.session_per_request")
+          : claude["session-mode"] === "fixed"
+            ? claude["session-id"] || t("identity_fingerprint.preview_server_generated")
+            : t("identity_fingerprint.session_server_stable"),
+      ],
+      [
+        t("identity_fingerprint.claude_stainless_package_version"),
+        claude["stainless-package-version"],
+      ],
     ],
     [claude, t],
   );
@@ -562,85 +586,192 @@ export function IdentityFingerprintPage() {
           </TabsContent>
 
           <TabsContent value="claude" className="mt-5">
-            <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
-              <SimplePanel
-                title={t("identity_fingerprint.claude_title")}
-                description={t("identity_fingerprint.claude_desc")}
-              >
-                <div className="grid gap-3 md:grid-cols-2">
-                  <Field
-                    label={t("identity_fingerprint.user_agent")}
-                    hint={t("identity_fingerprint.claude_user_agent_hint")}
-                  >
-                    <TextInput
-                      value={claude["user-agent"]}
-                      onChange={(event) =>
-                        setClaude((current) => ({ ...current, "user-agent": event.target.value }))
-                      }
-                      disabled={saving}
-                    />
-                  </Field>
-                  <Field label={t("identity_fingerprint.claude_package_version")}>
-                    <TextInput
-                      value={claude["package-version"]}
-                      onChange={(event) =>
-                        setClaude((current) => ({
-                          ...current,
-                          "package-version": event.target.value,
-                        }))
-                      }
-                      disabled={saving}
-                    />
-                  </Field>
-                  <Field label={t("identity_fingerprint.claude_runtime_version")}>
-                    <TextInput
-                      value={claude["runtime-version"]}
-                      onChange={(event) =>
-                        setClaude((current) => ({
-                          ...current,
-                          "runtime-version": event.target.value,
-                        }))
-                      }
-                      disabled={saving}
-                    />
-                  </Field>
-                  <Field
-                    label={t("identity_fingerprint.claude_timeout")}
-                    hint={t("identity_fingerprint.claude_timeout_hint")}
-                  >
-                    <TextInput
-                      value={claude.timeout}
-                      onChange={(event) =>
-                        setClaude((current) => ({ ...current, timeout: event.target.value }))
-                      }
-                      disabled={saving}
-                    />
-                  </Field>
+            <div className="space-y-4">
+              <section className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 dark:border-neutral-800 dark:bg-neutral-900/45">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                  <ToggleSwitch
+                    checked={Boolean(claude.enabled)}
+                    onCheckedChange={(enabled) => updateClaude({ enabled })}
+                    label={t("identity_fingerprint.claude_enabled")}
+                    description={t("identity_fingerprint.claude_enabled_desc")}
+                    disabled={saving}
+                  />
+                  <div className="flex shrink-0 flex-wrap gap-2">
+                    <Button
+                      variant="secondary"
+                      onClick={restoreClaudeDefaults}
+                      disabled={loading || saving}
+                    >
+                      {t("identity_fingerprint.restore_defaults")}
+                    </Button>
+                    <Button onClick={() => void saveClaude()} disabled={loading || saving}>
+                      {saving
+                        ? t("identity_fingerprint.saving")
+                        : t("identity_fingerprint.save_claude")}
+                    </Button>
+                  </div>
                 </div>
-                <ProviderActions
-                  restoreLabel={t("identity_fingerprint.restore_defaults")}
-                  saveLabel={
-                    saving
-                      ? t("identity_fingerprint.saving")
-                      : t("identity_fingerprint.save_claude")
-                  }
-                  onRestore={restoreClaudeDefaults}
-                  onSave={() => void saveClaude()}
-                  disabled={loading || saving}
-                />
-              </SimplePanel>
+              </section>
 
-              <SimplePanel
-                title={t("identity_fingerprint.preview_title")}
-                description={t("identity_fingerprint.claude_preview_desc")}
-              >
-                <div className="space-y-2">
-                  {claudePreviewItems.map(([label, value]) => (
-                    <PreviewRow key={label} label={label} value={value} />
-                  ))}
+              <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+                <div className="space-y-4">
+                  <SimplePanel
+                    title={t("identity_fingerprint.claude_title")}
+                    description={t("identity_fingerprint.claude_desc")}
+                  >
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <Field
+                        label={t("identity_fingerprint.claude_cli_version")}
+                        hint={t("identity_fingerprint.claude_cli_version_hint")}
+                      >
+                        <TextInput
+                          value={claude["cli-version"]}
+                          onChange={(event) => updateClaude({ "cli-version": event.target.value })}
+                          disabled={saving}
+                        />
+                      </Field>
+                      <Field label={t("identity_fingerprint.claude_entrypoint")}>
+                        <TextInput
+                          value={claude.entrypoint}
+                          onChange={(event) => updateClaude({ entrypoint: event.target.value })}
+                          disabled={saving}
+                        />
+                      </Field>
+                      <Field
+                        label={t("identity_fingerprint.user_agent")}
+                        hint={t("identity_fingerprint.claude_user_agent_hint")}
+                      >
+                        <TextInput
+                          value={claude["user-agent"]}
+                          onChange={(event) => updateClaude({ "user-agent": event.target.value })}
+                          disabled={saving}
+                        />
+                      </Field>
+                      <Field label={t("identity_fingerprint.claude_anthropic_beta")}>
+                        <TextInput
+                          value={claude["anthropic-beta"]}
+                          onChange={(event) =>
+                            updateClaude({ "anthropic-beta": event.target.value })
+                          }
+                          disabled={saving}
+                        />
+                      </Field>
+                    </div>
+                  </SimplePanel>
+
+                  <SimplePanel
+                    title={t("identity_fingerprint.claude_stainless_title")}
+                    description={t("identity_fingerprint.claude_stainless_desc")}
+                  >
+                    <div className="grid gap-3 md:grid-cols-3">
+                      <Field label={t("identity_fingerprint.claude_stainless_package_version")}>
+                        <TextInput
+                          value={claude["stainless-package-version"]}
+                          onChange={(event) =>
+                            updateClaude({ "stainless-package-version": event.target.value })
+                          }
+                          disabled={saving}
+                        />
+                      </Field>
+                      <Field label={t("identity_fingerprint.claude_stainless_runtime_version")}>
+                        <TextInput
+                          value={claude["stainless-runtime-version"]}
+                          onChange={(event) =>
+                            updateClaude({ "stainless-runtime-version": event.target.value })
+                          }
+                          disabled={saving}
+                        />
+                      </Field>
+                      <Field
+                        label={t("identity_fingerprint.claude_stainless_timeout")}
+                        hint={t("identity_fingerprint.claude_timeout_hint")}
+                      >
+                        <TextInput
+                          value={claude["stainless-timeout"]}
+                          onChange={(event) =>
+                            updateClaude({ "stainless-timeout": event.target.value })
+                          }
+                          disabled={saving}
+                        />
+                      </Field>
+                    </div>
+                  </SimplePanel>
+
+                  <SimplePanel
+                    title={t("identity_fingerprint.session_title")}
+                    description={t("identity_fingerprint.claude_session_desc")}
+                  >
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <Field label={t("identity_fingerprint.session_mode")}>
+                        <Select
+                          value={claude["session-mode"]}
+                          onChange={(value) =>
+                            updateClaude({
+                              "session-mode": value as ClaudeIdentityFingerprint["session-mode"],
+                            })
+                          }
+                          options={SESSION_MODE_OPTIONS.map((option) => ({
+                            value: option.value,
+                            label: t(option.labelKey),
+                          }))}
+                          aria-label={t("identity_fingerprint.session_mode")}
+                          className={[
+                            "w-full justify-between",
+                            saving ? "pointer-events-none opacity-60" : null,
+                          ]
+                            .filter(Boolean)
+                            .join(" ")}
+                        />
+                      </Field>
+                      <Field
+                        label={t("identity_fingerprint.session_id")}
+                        hint={t("identity_fingerprint.session_id_hint")}
+                      >
+                        <TextInput
+                          value={claude["session-id"]}
+                          onChange={(event) => updateClaude({ "session-id": event.target.value })}
+                          disabled={saving || claude["session-mode"] !== "fixed"}
+                          placeholder={t("identity_fingerprint.session_id_placeholder")}
+                        />
+                      </Field>
+                    </div>
+                    <Field
+                      label={t("identity_fingerprint.claude_device_id")}
+                      hint={t("identity_fingerprint.claude_device_id_hint")}
+                    >
+                      <TextInput
+                        value={claude["device-id"]}
+                        onChange={(event) => updateClaude({ "device-id": event.target.value })}
+                        disabled={saving}
+                      />
+                    </Field>
+                    <Field label={t("identity_fingerprint.custom_headers")}>
+                      <textarea
+                        value={claudeCustomHeadersText}
+                        onChange={(event) => setClaudeCustomHeadersText(event.target.value)}
+                        disabled={saving}
+                        spellCheck={false}
+                        className="min-h-24 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 font-mono text-sm text-slate-900 shadow-sm outline-none dark:border-neutral-800 dark:bg-neutral-900 dark:text-slate-100"
+                      />
+                      <p className="mt-2 text-xs text-slate-500 dark:text-white/50">
+                        {t("identity_fingerprint.claude_custom_headers_hint")}
+                      </p>
+                    </Field>
+                  </SimplePanel>
                 </div>
-                <ProviderNotice>{t("identity_fingerprint.claude_notice")}</ProviderNotice>
-              </SimplePanel>
+
+                <SimplePanel
+                  title={t("identity_fingerprint.preview_title")}
+                  description={t("identity_fingerprint.claude_preview_desc")}
+                >
+                  <div className="space-y-2">
+                    {claudePreviewItems.map(([label, value]) => (
+                      <PreviewRow key={label} label={label} value={value} />
+                    ))}
+                  </div>
+                  <ProviderNotice>{t("identity_fingerprint.claude_notice")}</ProviderNotice>
+                </SimplePanel>
+              </div>
             </div>
           </TabsContent>
 
