@@ -956,6 +956,156 @@ describe("AuthFilesPage files table", () => {
     await waitFor(() => expect(rowRefreshButton.querySelector("svg")).toHaveClass("animate-spin"));
   });
 
+  test("cards view refresh action only refreshes the clicked auth file", async () => {
+    const now = Date.now();
+    const files = [
+      {
+        name: "codex-a.json",
+        type: "codex",
+        size: 1024,
+        modified: now,
+        disabled: false,
+        auth_index: "1",
+      },
+      {
+        name: "codex-b.json",
+        type: "codex",
+        size: 1024,
+        modified: now,
+        disabled: false,
+        auth_index: "2",
+      },
+    ] as any[];
+
+    mocks.list.mockImplementation(async () => ({ files }));
+    mocks.fetchQuota.mockResolvedValue({
+      items: [{ label: "m_quota.code_5h", percent: 12, resetAtMs: now + 60_000 }],
+    });
+
+    window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
+    window.localStorage.setItem("authFilesPage.quotaAutoRefreshMs.v1", JSON.stringify(0));
+    window.sessionStorage.setItem(
+      AUTH_FILES_DATA_CACHE_KEY,
+      JSON.stringify({
+        savedAtMs: now,
+        files,
+        usageData: { source: [], auth_index: [] },
+        quotaByFileName: {
+          "codex-a.json": {
+            status: "success",
+            updatedAt: now,
+            items: [{ label: "m_quota.code_5h", percent: 22, resetAtMs: now + 30_000 }],
+          },
+          "codex-b.json": {
+            status: "success",
+            updatedAt: now,
+            items: [{ label: "m_quota.code_5h", percent: 44, resetAtMs: now + 30_000 }],
+          },
+        },
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("codex-a.json")).toBeInTheDocument();
+    const cards = screen.getByTestId("auth-files-cards");
+    const firstCard = screen.getByText("codex-a.json").closest("section");
+    expect(firstCard).not.toBeNull();
+
+    fireEvent.click(within(firstCard as HTMLElement).getByRole("button", { name: "Refresh" }));
+
+    await waitFor(() => expect(mocks.fetchQuota).toHaveBeenCalledTimes(1));
+    expect(mocks.fetchQuota).toHaveBeenCalledWith(
+      "codex",
+      expect.objectContaining({ name: "codex-a.json" }),
+    );
+    expect(within(cards).getByText("codex-b.json")).toBeInTheDocument();
+  });
+
+  test("table refresh action only refreshes the clicked auth file", async () => {
+    const now = Date.now();
+    const files = [
+      {
+        name: "codex-a.json",
+        type: "codex",
+        size: 1024,
+        modified: now,
+        disabled: false,
+        auth_index: "1",
+      },
+      {
+        name: "codex-b.json",
+        type: "codex",
+        size: 1024,
+        modified: now,
+        disabled: false,
+        auth_index: "2",
+      },
+    ] as any[];
+
+    mocks.list.mockImplementation(async () => ({ files }));
+    mocks.fetchQuota.mockResolvedValue({
+      items: [{ label: "m_quota.code_5h", percent: 18, resetAtMs: now + 60_000 }],
+    });
+
+    window.localStorage.setItem("authFilesPage.quotaAutoRefreshMs.v1", JSON.stringify(0));
+    window.sessionStorage.setItem(
+      AUTH_FILES_DATA_CACHE_KEY,
+      JSON.stringify({
+        savedAtMs: now,
+        files,
+        usageData: { source: [], auth_index: [] },
+        quotaByFileName: {
+          "codex-a.json": {
+            status: "success",
+            updatedAt: now,
+            items: [{ label: "m_quota.code_5h", percent: 22, resetAtMs: now + 30_000 }],
+          },
+          "codex-b.json": {
+            status: "success",
+            updatedAt: now,
+            items: [{ label: "m_quota.code_5h", percent: 44, resetAtMs: now + 30_000 }],
+          },
+        },
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("codex-a.json")).toBeInTheDocument();
+    const row = screen.getByText("codex-a.json").closest("tr");
+    expect(row).not.toBeNull();
+
+    fireEvent.click(within(row as HTMLElement).getByRole("button", { name: "Refresh" }));
+
+    await waitFor(() => expect(mocks.fetchQuota).toHaveBeenCalledTimes(1));
+    expect(mocks.fetchQuota).toHaveBeenCalledWith(
+      "codex",
+      expect.objectContaining({ name: "codex-a.json" }),
+    );
+    expect(screen.getByText("codex-b.json")).toBeInTheDocument();
+  });
+
   test("cards view includes returned codex review 5h and additional quota bars", async () => {
     const now = Date.now();
     const file = {
