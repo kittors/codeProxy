@@ -16,7 +16,7 @@ interface ProviderKeyModalProps {
   open: boolean;
   editKeyIndex: number | null;
   editKeyTitle: string;
-  editKeyType: "gemini" | "claude" | "codex" | "vertex" | "bedrock";
+  editKeyType: "gemini" | "claude" | "codex" | "opencode-go" | "vertex" | "bedrock";
   keyDraft: ProviderKeyDraft;
   setKeyDraft: Dispatch<SetStateAction<ProviderKeyDraft>>;
   keyDraftError: string | null;
@@ -54,6 +54,7 @@ export function ProviderKeyModal({
   const { t } = useTranslation();
   const isBedrock = editKeyType === "bedrock";
   const isBedrockSigV4 = isBedrock && keyDraft.authMode === "sigv4";
+  const isOpenCodeGo = editKeyType === "opencode-go";
 
   return (
     <Modal
@@ -68,7 +69,9 @@ export function ProviderKeyModal({
           ? t("providers.vertex_config_desc")
           : isBedrock
             ? t("providers.bedrock_config_desc")
-            : t("providers.generic_config_desc")
+            : isOpenCodeGo
+              ? t("providers.opencode_go_config_desc")
+              : t("providers.generic_config_desc")
       }
       onClose={closeKeyEditor}
       footer={
@@ -103,10 +106,12 @@ export function ProviderKeyModal({
             {t("providers.headers_optional")}:{" "}
             <span className="font-semibold tabular-nums">{editKeyHeaderCount}</span>
           </span>
-          <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-700 dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-white/75">
-            {t("providers.models_label")}:{" "}
-            <span className="font-semibold tabular-nums">{editKeyModelCount}</span>
-          </span>
+          {isOpenCodeGo ? null : (
+            <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-700 dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-white/75">
+              {t("providers.models_label")}:{" "}
+              <span className="font-semibold tabular-nums">{editKeyModelCount}</span>
+            </span>
+          )}
           <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-700 dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-white/75">
             {t("providers.excluded_models_label")}:{" "}
             <span className="font-semibold tabular-nums">{editKeyExcludedCount}</span>
@@ -339,23 +344,25 @@ export function ProviderKeyModal({
             {t("providers.connection_proxy_label")}
           </p>
           <div className="mt-3 grid gap-3">
-            <div className="space-y-2">
-              <p className="text-xs font-semibold text-slate-700 dark:text-white/75">
-                {t("providers.base_url")}
-              </p>
-              <TextInput
-                value={keyDraft.baseUrl}
-                onChange={(e) => {
-                  const val = e.currentTarget.value;
-                  setKeyDraft((prev) => ({ ...prev, baseUrl: val }));
-                }}
-                placeholder={
-                  editKeyType === "claude"
-                    ? t("providers.claude_base_url_placeholder")
-                    : t("providers.base_url_placeholder")
-                }
-              />
-            </div>
+            {isOpenCodeGo ? null : (
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-slate-700 dark:text-white/75">
+                  {t("providers.base_url")}
+                </p>
+                <TextInput
+                  value={keyDraft.baseUrl}
+                  onChange={(e) => {
+                    const val = e.currentTarget.value;
+                    setKeyDraft((prev) => ({ ...prev, baseUrl: val }));
+                  }}
+                  placeholder={
+                    editKeyType === "claude"
+                      ? t("providers.claude_base_url_placeholder")
+                      : t("providers.base_url_placeholder")
+                  }
+                />
+              </div>
+            )}
             <div className="space-y-2">
               <ProxyPoolSelect
                 value={keyDraft.proxyId}
@@ -381,7 +388,9 @@ export function ProviderKeyModal({
             </div>
           </div>
           <p className="mt-2 text-xs text-slate-500 dark:text-white/55">
-            {t("providers.connection_proxy_hint")}
+            {isOpenCodeGo
+              ? t("providers.opencode_go_connection_hint")
+              : t("providers.connection_proxy_hint")}
           </p>
         </div>
 
@@ -398,28 +407,30 @@ export function ProviderKeyModal({
           </p>
         </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
-          <ModelInputList
-            title={
-              editKeyType === "vertex"
-                ? t("providers.models_vertex_title")
-                : t("providers.models_optional_title")
-            }
-            entries={keyDraft.modelEntries}
-            onChange={(next) => setKeyDraft((prev) => ({ ...prev, modelEntries: next }))}
-            showPriority
-            showTestModel={false}
-          />
-          {editKeyType === "vertex" ? (
-            <p className="mt-2 text-xs text-slate-500 dark:text-white/55">
-              {t("providers.vertex_alias_hint")}
-            </p>
-          ) : (
-            <p className="mt-2 text-xs text-slate-500 dark:text-white/55">
-              {t("providers.models_default_hint")}
-            </p>
-          )}
-        </div>
+        {isOpenCodeGo ? null : (
+          <div className="rounded-2xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
+            <ModelInputList
+              title={
+                editKeyType === "vertex"
+                  ? t("providers.models_vertex_title")
+                  : t("providers.models_optional_title")
+              }
+              entries={keyDraft.modelEntries}
+              onChange={(next) => setKeyDraft((prev) => ({ ...prev, modelEntries: next }))}
+              showPriority
+              showTestModel={false}
+            />
+            {editKeyType === "vertex" ? (
+              <p className="mt-2 text-xs text-slate-500 dark:text-white/55">
+                {t("providers.vertex_alias_hint")}
+              </p>
+            ) : (
+              <p className="mt-2 text-xs text-slate-500 dark:text-white/55">
+                {t("providers.models_default_hint")}
+              </p>
+            )}
+          </div>
+        )}
 
         <div className="rounded-2xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
           <div className="flex flex-wrap items-center justify-between gap-2">

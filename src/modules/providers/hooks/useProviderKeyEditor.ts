@@ -15,17 +15,19 @@ import {
   type ProviderKeyDraft,
 } from "@/modules/providers/providers-helpers";
 
-export type ProviderKeyType = "gemini" | "claude" | "codex" | "vertex" | "bedrock";
+export type ProviderKeyType = "gemini" | "claude" | "codex" | "opencode-go" | "vertex" | "bedrock";
 
 interface UseProviderKeyEditorArgs {
   geminiKeys: ProviderSimpleConfig[];
   claudeKeys: ProviderSimpleConfig[];
   codexKeys: ProviderSimpleConfig[];
+  openCodeGoKeys: ProviderSimpleConfig[];
   vertexKeys: ProviderSimpleConfig[];
   bedrockKeys: BedrockProviderConfig[];
   setGeminiKeys: Dispatch<SetStateAction<ProviderSimpleConfig[]>>;
   setClaudeKeys: Dispatch<SetStateAction<ProviderSimpleConfig[]>>;
   setCodexKeys: Dispatch<SetStateAction<ProviderSimpleConfig[]>>;
+  setOpenCodeGoKeys: Dispatch<SetStateAction<ProviderSimpleConfig[]>>;
   setVertexKeys: Dispatch<SetStateAction<ProviderSimpleConfig[]>>;
   setBedrockKeys: Dispatch<SetStateAction<BedrockProviderConfig[]>>;
   refreshAll: () => Promise<void>;
@@ -37,11 +39,13 @@ export function useProviderKeyEditor({
   geminiKeys,
   claudeKeys,
   codexKeys,
+  openCodeGoKeys,
   vertexKeys,
   bedrockKeys,
   setGeminiKeys,
   setClaudeKeys,
   setCodexKeys,
+  setOpenCodeGoKeys,
   setVertexKeys,
   setBedrockKeys,
   refreshAll,
@@ -64,10 +68,12 @@ export function useProviderKeyEditor({
           ? claudeKeys
           : type === "codex"
             ? codexKeys
-            : type === "vertex"
-              ? vertexKeys
-              : bedrockKeys,
-    [bedrockKeys, claudeKeys, codexKeys, geminiKeys, vertexKeys],
+            : type === "opencode-go"
+              ? openCodeGoKeys
+              : type === "vertex"
+                ? vertexKeys
+                : bedrockKeys,
+    [bedrockKeys, claudeKeys, codexKeys, geminiKeys, openCodeGoKeys, vertexKeys],
   );
 
   const closeKeyEditor = useCallback(() => {
@@ -116,6 +122,7 @@ export function useProviderKeyEditor({
     const excludedModels = keyDraft.excludedModelsText.trim()
       ? excludedModelsFromText(keyDraft.excludedModelsText)
       : undefined;
+    const isOpenCodeGo = editKeyType === "opencode-go";
 
     const requireAlias = editKeyType === "vertex";
     const modelCommit = commitModelEntries(keyDraft.modelEntries, { requireAlias });
@@ -129,12 +136,12 @@ export function useProviderKeyEditor({
         editKeyType === "bedrock" && keyDraft.authMode === "sigv4" ? bedrockAccessKeyId : apiKey,
       name,
       ...(keyDraft.prefix.trim() ? { prefix: keyDraft.prefix.trim() } : {}),
-      ...(keyDraft.baseUrl.trim() ? { baseUrl: keyDraft.baseUrl.trim() } : {}),
+      ...(!isOpenCodeGo && keyDraft.baseUrl.trim() ? { baseUrl: keyDraft.baseUrl.trim() } : {}),
       ...(keyDraft.proxyUrl.trim() ? { proxyUrl: keyDraft.proxyUrl.trim() } : {}),
       ...(keyDraft.proxyId.trim() ? { proxyId: keyDraft.proxyId.trim() } : {}),
       ...(headers ? { headers } : {}),
       ...(excludedModels ? { excludedModels } : {}),
-      ...(modelCommit.models ? { models: modelCommit.models } : {}),
+      ...(!isOpenCodeGo && modelCommit.models ? { models: modelCommit.models } : {}),
       ...(editKeyType === "claude" && keyDraft.skipAnthropicProcessing
         ? { skipAnthropicProcessing: true }
         : {}),
@@ -184,6 +191,10 @@ export function useProviderKeyEditor({
         const next = apply(codexKeys);
         setCodexKeys(next);
         await providersApi.saveCodexConfigs(next);
+      } else if (type === "opencode-go") {
+        const next = apply(openCodeGoKeys);
+        setOpenCodeGoKeys(next);
+        await providersApi.saveOpenCodeGoConfigs(next);
       } else if (type === "vertex") {
         const next = apply(vertexKeys);
         setVertexKeys(next);
@@ -212,11 +223,13 @@ export function useProviderKeyEditor({
     editKeyType,
     geminiKeys,
     notify,
+    openCodeGoKeys,
     refreshAll,
     setClaudeKeys,
     setCodexKeys,
     setBedrockKeys,
     setGeminiKeys,
+    setOpenCodeGoKeys,
     setVertexKeys,
     startRefreshTransition,
     t,
@@ -239,6 +252,9 @@ export function useProviderKeyEditor({
         } else if (type === "codex") {
           await providersApi.deleteCodexConfig(entry.apiKey);
           setCodexKeys((prev) => prev.filter((_, itemIndex) => itemIndex !== index));
+        } else if (type === "opencode-go") {
+          await providersApi.deleteOpenCodeGoConfig(entry.apiKey);
+          setOpenCodeGoKeys((prev) => prev.filter((_, itemIndex) => itemIndex !== index));
         } else if (type === "vertex") {
           await providersApi.deleteVertexConfig(entry.apiKey);
           setVertexKeys((prev) => prev.filter((_, itemIndex) => itemIndex !== index));
@@ -261,13 +277,18 @@ export function useProviderKeyEditor({
       setClaudeKeys,
       setCodexKeys,
       setGeminiKeys,
+      setOpenCodeGoKeys,
       setVertexKeys,
       t,
     ],
   );
 
   const toggleKeyEnabled = useCallback(
-    async (type: "gemini" | "claude" | "codex" | "bedrock", index: number, enabled: boolean) => {
+    async (
+      type: "gemini" | "claude" | "codex" | "opencode-go" | "bedrock",
+      index: number,
+      enabled: boolean,
+    ) => {
       const list =
         type === "gemini"
           ? geminiKeys
@@ -275,7 +296,9 @@ export function useProviderKeyEditor({
             ? claudeKeys
             : type === "codex"
               ? codexKeys
-              : bedrockKeys;
+              : type === "opencode-go"
+                ? openCodeGoKeys
+                : bedrockKeys;
       const current = list[index];
       if (!current) return;
       const prev = list;
@@ -297,6 +320,9 @@ export function useProviderKeyEditor({
         } else if (type === "codex") {
           setCodexKeys(nextList);
           await providersApi.saveCodexConfigs(nextList);
+        } else if (type === "opencode-go") {
+          setOpenCodeGoKeys(nextList);
+          await providersApi.saveOpenCodeGoConfigs(nextList);
         } else {
           setBedrockKeys(nextList as BedrockProviderConfig[]);
           await providersApi.saveBedrockConfigs(nextList as BedrockProviderConfig[]);
@@ -310,6 +336,7 @@ export function useProviderKeyEditor({
         if (type === "gemini") setGeminiKeys(prev);
         else if (type === "claude") setClaudeKeys(prev);
         else if (type === "codex") setCodexKeys(prev);
+        else if (type === "opencode-go") setOpenCodeGoKeys(prev);
         else setBedrockKeys(prev as BedrockProviderConfig[]);
         notify({
           type: "error",
@@ -323,11 +350,13 @@ export function useProviderKeyEditor({
       codexKeys,
       geminiKeys,
       notify,
+      openCodeGoKeys,
       refreshAll,
       setClaudeKeys,
       setCodexKeys,
       setBedrockKeys,
       setGeminiKeys,
+      setOpenCodeGoKeys,
       startRefreshTransition,
       t,
     ],
@@ -340,9 +369,11 @@ export function useProviderKeyEditor({
         ? "Claude"
         : editKeyType === "codex"
           ? "Codex"
-          : editKeyType === "vertex"
-            ? "Vertex"
-            : "Bedrock";
+          : editKeyType === "opencode-go"
+            ? "OpenCode Go"
+            : editKeyType === "vertex"
+              ? "Vertex"
+              : "Bedrock";
 
   const editKeyEnabled = useMemo(() => {
     const list = excludedModelsFromText(keyDraft.excludedModelsText);

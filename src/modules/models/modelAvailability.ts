@@ -36,6 +36,7 @@ const PROVIDER_CHANNELS = [
   { key: "gemini", load: providersApi.getGeminiKeys },
   { key: "claude", load: providersApi.getClaudeConfigs },
   { key: "codex", load: providersApi.getCodexConfigs },
+  { key: "opencode-go", load: providersApi.getOpenCodeGoConfigs },
   { key: "vertex", load: providersApi.getVertexConfigs },
 ] as const;
 
