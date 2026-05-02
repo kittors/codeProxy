@@ -25,7 +25,10 @@ const isOauthBackedProviderRow = (item: Record<string, unknown>): boolean => {
   if (accountType === "oauth") return true;
 
   const runtimeOnly = item.runtime_only ?? item.runtimeOnly;
-  return runtimeOnly === true || (typeof runtimeOnly === "string" && runtimeOnly === "true");
+  return (
+    runtimeOnly === true ||
+    (typeof runtimeOnly === "string" && runtimeOnly.trim().toLowerCase() === "true")
+  );
 };
 
 export const providersApi = {
@@ -35,6 +38,7 @@ export const providersApi = {
     return list
       .map((item) => {
         if (!isRecord(item)) return null;
+        if (isOauthBackedProviderRow(item)) return null;
         const apiKey = normalizeString(item["api-key"] ?? item.apiKey) ?? "";
         if (!apiKey) return null;
         const name = normalizeString(item.name) ?? undefined;
@@ -75,6 +79,7 @@ export const providersApi = {
     return list
       .map((item) => {
         if (!isRecord(item)) return null;
+        if (isOauthBackedProviderRow(item)) return null;
         const apiKey = normalizeString(item["api-key"] ?? item.apiKey) ?? "";
         if (!apiKey) return null;
         const name = normalizeString(item.name) ?? undefined;
@@ -156,6 +161,7 @@ export const providersApi = {
     return list
       .map((item) => {
         if (!isRecord(item)) return null;
+        if (isOauthBackedProviderRow(item)) return null;
         const apiKey = normalizeString(item["api-key"] ?? item.apiKey) ?? "";
         if (!apiKey) return null;
         const name = normalizeString(item.name) ?? undefined;
@@ -201,6 +207,7 @@ export const providersApi = {
     return list
       .map((item) => {
         if (!isRecord(item)) return null;
+        if (isOauthBackedProviderRow(item)) return null;
         const rawMode = normalizeString(item["auth-mode"] ?? item.authMode) ?? "sigv4";
         const authMode: BedrockAuthMode =
           rawMode === "apikey" || rawMode === "api_key" || rawMode === "api-key"
@@ -262,6 +269,7 @@ export const providersApi = {
     return list
       .map((item) => {
         if (!isRecord(item)) return null;
+        if (isOauthBackedProviderRow(item)) return null;
         const apiKey = normalizeString(item["api-key"] ?? item.apiKey) ?? "";
         if (!apiKey) return null;
         const name = normalizeString(item.name) ?? undefined;
@@ -300,6 +308,7 @@ export const providersApi = {
     return list
       .map((item) => {
         if (!isRecord(item)) return null;
+        if (isOauthBackedProviderRow(item)) return null;
         const name = normalizeString(item.name) ?? "";
         if (!name) return null;
         const baseUrl = normalizeString(item["base-url"] ?? item.baseUrl) ?? undefined;
