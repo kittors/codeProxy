@@ -53,6 +53,31 @@ describe("providersApi OpenCode Go", () => {
     ]);
   });
 
+  test("ignores OAuth auth-file rows returned by the OpenCode Go config endpoint", async () => {
+    const { providersApi } = await import("@/lib/http/apis/providers");
+    getMock.mockResolvedValue({
+      "opencode-go-api-key": [
+        {
+          name: "OpenCode Go API key",
+          "api-key": "sk-go",
+        },
+        {
+          name: "user@example.com",
+          "api-key": "oauth-backed-token",
+          account_type: "oauth",
+          type: "opencode-go",
+        },
+      ],
+    });
+
+    await expect(providersApi.getOpenCodeGoConfigs()).resolves.toEqual([
+      {
+        name: "OpenCode Go API key",
+        apiKey: "sk-go",
+      },
+    ]);
+  });
+
   test("serializes and deletes OpenCode Go configs without Base URL or models", async () => {
     const { providersApi } = await import("@/lib/http/apis/providers");
     putMock.mockResolvedValue({ status: "ok" });

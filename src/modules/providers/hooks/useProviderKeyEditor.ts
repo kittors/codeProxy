@@ -181,28 +181,28 @@ export function useProviderKeyEditor({
     try {
       if (type === "gemini") {
         const next = apply(geminiKeys);
-        setGeminiKeys(next);
         await providersApi.saveGeminiKeys(next);
+        setGeminiKeys(next);
       } else if (type === "claude") {
         const next = apply(claudeKeys);
-        setClaudeKeys(next);
         await providersApi.saveClaudeConfigs(next);
+        setClaudeKeys(next);
       } else if (type === "codex") {
         const next = apply(codexKeys);
-        setCodexKeys(next);
         await providersApi.saveCodexConfigs(next);
+        setCodexKeys(next);
       } else if (type === "opencode-go") {
         const next = apply(openCodeGoKeys);
-        setOpenCodeGoKeys(next);
         await providersApi.saveOpenCodeGoConfigs(next);
+        setOpenCodeGoKeys(next);
       } else if (type === "vertex") {
         const next = apply(vertexKeys);
-        setVertexKeys(next);
         await providersApi.saveVertexConfigs(next);
+        setVertexKeys(next);
       } else {
         const next = apply(bedrockKeys) as BedrockProviderConfig[];
-        setBedrockKeys(next);
         await providersApi.saveBedrockConfigs(next);
+        setBedrockKeys(next);
       }
       notify({ type: "success", message: t("providers.saved") });
       closeKeyEditor();

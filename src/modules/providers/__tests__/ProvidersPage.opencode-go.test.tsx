@@ -12,7 +12,7 @@ const mocks = vi.hoisted(() => ({
   getCodexConfigs: vi.fn(async () => []),
   getVertexConfigs: vi.fn(async () => []),
   getBedrockConfigs: vi.fn(async () => []),
-  getOpenCodeGoConfigs: vi.fn(async () => []),
+  getOpenCodeGoConfigs: vi.fn(async (): Promise<any[]> => []),
   getOpenAIProviders: vi.fn(async () => []),
   saveOpenCodeGoConfigs: vi.fn(async (_configs: unknown[]) => ({})),
   apiCallRequest: vi.fn(async (_payload: unknown) => ({
@@ -140,6 +140,47 @@ describe("ProvidersPage OpenCode Go tab", () => {
       ]);
     });
     expect(mocks.saveOpenCodeGoConfigs.mock.calls[0][0][0]).not.toHaveProperty("baseUrl");
+  });
+
+  test("keeps failed OpenCode Go saves out of the rendered provider list", async () => {
+    const user = userEvent.setup();
+    mocks.getOpenCodeGoConfigs.mockImplementation(async () => [
+      {
+        name: "Existing OpenCode Go",
+        apiKey: "sk-existing-opencode-go",
+      },
+    ]);
+    mocks.saveOpenCodeGoConfigs.mockRejectedValue(new Error("channel name already used"));
+
+    render(
+      <MemoryRouter initialEntries={["/ai-providers/opencode-go/new"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("Existing OpenCode Go")).toBeInTheDocument();
+    const dialog = await screen.findByRole("dialog", { name: /Add OpenCode Go configuration/i });
+
+    await user.type(within(dialog).getByPlaceholderText("e.g. Gemini Primary"), "New OpenCode Go");
+    await user.type(within(dialog).getByPlaceholderText(/Paste API Key/i), "sk-new-opencode-go");
+    await user.click(within(dialog).getByRole("button", { name: /Save/ }));
+
+    await waitFor(() => {
+      expect(mocks.saveOpenCodeGoConfigs).toHaveBeenCalledWith([
+        expect.objectContaining({ name: "Existing OpenCode Go" }),
+        expect.objectContaining({ name: "New OpenCode Go" }),
+      ]);
+    });
+    expect(screen.queryByText("New OpenCode Go")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("dialog", { name: /Add OpenCode Go configuration/i }),
+    ).toBeInTheDocument();
   });
 
   test("uses fixed tabs and saves OpenCode Go model exclusions from fetched models", async () => {

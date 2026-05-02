@@ -143,6 +143,16 @@ describe("ModelsPage", () => {
     expect(screen.queryByText("seed-only-model")).not.toBeInTheDocument();
   });
 
+  test("renders active models as an availability list without deletion selection controls", async () => {
+    renderPage();
+
+    expect(await screen.findByText("gpt-image-2")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Select all visible models")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Select gpt-image-2")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Delete gpt-image-2" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Delete selected/ })).not.toBeInTheDocument();
+  });
+
   test("filters current models by auth-file model owner group mapping", async () => {
     window.localStorage.setItem(
       "authFilesPage.modelOwnerGroupMap.v1",
@@ -433,19 +443,20 @@ describe("ModelsPage", () => {
   test("deletes a model only after confirmation", async () => {
     renderPage();
 
-    expect(await screen.findByText("gpt-image-2")).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: /delete gpt-image-2/i }));
+    await userEvent.click(await screen.findByRole("tab", { name: /model library/i }));
+    expect(await screen.findByText("seed-only-model")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /delete seed-only-model/i }));
 
     const confirmDialog = await screen.findByRole("dialog", {
       name: /delete model configuration/i,
     });
-    expect(within(confirmDialog).getByText(/gpt-image-2/)).toBeInTheDocument();
+    expect(within(confirmDialog).getByText(/seed-only-model/)).toBeInTheDocument();
 
     await userEvent.click(within(confirmDialog).getByRole("button", { name: /^delete$/i }));
 
     await waitFor(() => {
-      expect(mocks.apiDelete).toHaveBeenCalledWith("/model-configs/gpt-image-2");
-      expect(screen.queryByText("gpt-image-2")).not.toBeInTheDocument();
+      expect(mocks.apiDelete).toHaveBeenCalledWith("/model-configs/seed-only-model");
+      expect(screen.queryByText("seed-only-model")).not.toBeInTheDocument();
     });
   });
 
