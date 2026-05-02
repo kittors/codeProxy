@@ -378,7 +378,7 @@ export function AuthFilesPage() {
     connectivityState,
     checkAuthFileConnectivity,
     quotaByFileName,
-    forceRefreshPage,
+    refreshQuota,
     openDetail: openDetailWithQuotaRefresh,
     downloadAuthFile,
     statusUpdating,
@@ -443,7 +443,7 @@ export function AuthFilesPage() {
             quotaByFileName={quotaByFileName}
             resolveQuotaProvider={resolveQuotaProvider}
             resolveQuotaCardSlots={resolveQuotaCardSlots}
-            forceRefreshPage={forceRefreshPage}
+            refreshQuota={refreshQuota}
             setFileEnabled={setFileEnabled}
             statusUpdating={statusUpdating}
             usageIndex={usageIndex}

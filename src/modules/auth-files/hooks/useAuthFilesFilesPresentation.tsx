@@ -27,7 +27,7 @@ import {
   resolveAuthFileSubscriptionStatus,
   resolveFileType,
 } from "@/modules/auth-files/helpers/authFilesPageUtils";
-import { resolveQuotaProvider } from "@/modules/quota/quota-fetch";
+import { resolveQuotaProvider, type QuotaProvider } from "@/modules/quota/quota-fetch";
 import { clampPercent, type QuotaItem, type QuotaState } from "@/modules/quota/quota-helpers";
 
 const KNOWN_QUOTA_TEXT_KEYS = new Set([
@@ -111,7 +111,7 @@ interface UseAuthFilesFilesPresentationOptions {
   connectivityState: Map<string, { loading: boolean; latencyMs: number | null; error: boolean }>;
   checkAuthFileConnectivity: (name: string) => Promise<void>;
   quotaByFileName: Record<string, QuotaState>;
-  forceRefreshPage: () => Promise<void>;
+  refreshQuota: (file: AuthFileItem, provider: QuotaProvider) => Promise<void>;
   openDetail: (file: AuthFileItem) => Promise<void>;
   downloadAuthFile: (file: AuthFileItem) => Promise<void>;
   statusUpdating: Record<string, boolean>;
@@ -134,7 +134,7 @@ export function useAuthFilesFilesPresentation({
   connectivityState,
   checkAuthFileConnectivity,
   quotaByFileName,
-  forceRefreshPage,
+  refreshQuota,
   openDetail,
   downloadAuthFile,
   statusUpdating,
@@ -682,7 +682,7 @@ export function useAuthFilesFilesPresentation({
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => void forceRefreshPage()}
+                    onClick={() => void refreshQuota(file, quotaProvider)}
                     title={t("common.refresh")}
                     aria-label={t("common.refresh")}
                   >
@@ -726,11 +726,11 @@ export function useAuthFilesFilesPresentation({
     downloadAuthFile,
     formatPlanTypeLabel,
     formatQuotaResetTextCompact,
-    forceRefreshPage,
     openDetail,
     quotaByFileName,
     quotaPreviewMode,
     quotaProgressCircle,
+    refreshQuota,
     renderSubscriptionBadge,
     selectCurrentPage,
     selectablePageNames.length,
