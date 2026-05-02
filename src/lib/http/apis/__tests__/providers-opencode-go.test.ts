@@ -115,4 +115,90 @@ describe("providersApi OpenCode Go", () => {
       params: { "api-key": "sk-go" },
     });
   });
+
+  test("ignores OAuth auth-file rows from every provider config endpoint", async () => {
+    const { providersApi } = await import("@/lib/http/apis/providers");
+    const oauthRow = {
+      name: "yuan364299311@gmail.com",
+      "api-key": "oauth-backed-token",
+      account_type: "oauth",
+      type: "claude",
+    };
+    const runtimeOnlyRow = {
+      name: "runtime-only-channel",
+      "api-key": "runtime-backed-token",
+      runtime_only: true,
+    };
+
+    getMock.mockImplementation(async (path: string) => {
+      if (path === "/gemini-api-key") {
+        return {
+          "gemini-api-key": [{ name: "Gemini API", "api-key": "sk-gemini" }, oauthRow],
+        };
+      }
+      if (path === "/codex-api-key") {
+        return {
+          "codex-api-key": [{ name: "Codex API", "api-key": "sk-codex" }, oauthRow],
+        };
+      }
+      if (path === "/claude-api-key") {
+        return {
+          "claude-api-key": [
+            { name: "Claude API", "api-key": "sk-claude" },
+            oauthRow,
+            runtimeOnlyRow,
+          ],
+        };
+      }
+      if (path === "/vertex-api-key") {
+        return {
+          "vertex-api-key": [{ name: "Vertex API", "api-key": "sk-vertex" }, oauthRow],
+        };
+      }
+      if (path === "/bedrock-api-key") {
+        return {
+          "bedrock-api-key": [
+            { name: "Bedrock API", "api-key": "sk-bedrock", "auth-mode": "api-key" },
+            oauthRow,
+          ],
+        };
+      }
+      if (path === "/openai-compatibility") {
+        return {
+          "openai-compatibility": [
+            {
+              name: "OpenAI compatible API",
+              "base-url": "https://example.com/v1",
+              "api-key-entries": [{ "api-key": "sk-openai" }],
+            },
+            oauthRow,
+          ],
+        };
+      }
+      return {};
+    });
+
+    await expect(providersApi.getGeminiKeys()).resolves.toEqual([
+      { name: "Gemini API", apiKey: "sk-gemini" },
+    ]);
+    await expect(providersApi.getCodexConfigs()).resolves.toEqual([
+      { name: "Codex API", apiKey: "sk-codex" },
+    ]);
+    await expect(providersApi.getClaudeConfigs()).resolves.toEqual([
+      { name: "Claude API", apiKey: "sk-claude" },
+    ]);
+    await expect(providersApi.getVertexConfigs()).resolves.toEqual([
+      { name: "Vertex API", apiKey: "sk-vertex" },
+    ]);
+    await expect(providersApi.getBedrockConfigs()).resolves.toEqual([
+      { name: "Bedrock API", apiKey: "sk-bedrock", authMode: "api-key" },
+    ]);
+    await expect(providersApi.getOpenAIProviders()).resolves.toEqual([
+      {
+        name: "OpenAI compatible API",
+        baseUrl: "https://example.com/v1",
+        apiKeyEntries: [{ apiKey: "sk-openai" }],
+      },
+    ]);
+  });
 });
