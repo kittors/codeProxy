@@ -37,6 +37,7 @@ import iconGlm from "@/assets/icons/glm.svg";
 import iconKiro from "@/assets/icons/kiro.svg";
 import iconVertex from "@/assets/icons/vertex.svg";
 import iconIflow from "@/assets/icons/iflow.svg";
+import iconMimo from "@/assets/icons/mimo.svg";
 
 /* ═══════════════════════════════════════════════════════════
    Helpers
@@ -148,6 +149,11 @@ const VENDOR_COLORS: Record<string, { bg: string; text: string; border: string }
     text: "text-amber-700 dark:text-amber-300",
     border: "border-amber-200/60 dark:border-amber-800/30",
   },
+  mimo: {
+    bg: "bg-purple-50 dark:bg-purple-950/20",
+    text: "text-purple-700 dark:text-purple-300",
+    border: "border-purple-200/60 dark:border-purple-800/30",
+  },
 };
 
 const DEFAULT_VENDOR = {
@@ -174,6 +180,7 @@ const VENDOR_ICONS: Record<string, { light: string; dark: string }> = {
   kiro: { light: iconKiro, dark: iconKiro },
   vertex: { light: iconVertex, dark: iconVertex },
   iflow: { light: iconIflow, dark: iconIflow },
+  mimo: { light: iconMimo, dark: iconMimo },
 };
 
 function getVendorColor(modelId: string) {
