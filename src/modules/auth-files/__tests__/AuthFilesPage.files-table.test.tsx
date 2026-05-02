@@ -1276,6 +1276,7 @@ describe("AuthFilesPage files table", () => {
           "codex.json": {
             status: "success",
             updatedAt: now,
+            planType: "free",
             items: [{ label: "m_quota.code_5h", percent: 20, resetAtMs: now + 30_000 }],
           },
         },
@@ -1303,6 +1304,64 @@ describe("AuthFilesPage files table", () => {
       (await screen.findAllByText((_, node) => node?.textContent?.includes("Plan Plus") ?? false))
         .length,
     ).toBeGreaterThan(0);
+
+    await waitFor(() => {
+      const raw = window.sessionStorage.getItem(AUTH_FILES_DATA_CACHE_KEY);
+      expect(raw).toContain('"planType":"plus"');
+    });
+  });
+
+  test("cards view uses cached quota plan badge instead of stale auth-file metadata", async () => {
+    const now = Date.now();
+    const staleFile = {
+      name: "codex.json",
+      label: "Codex Main",
+      account_type: "oauth",
+      type: "codex",
+      size: 1024,
+      modified: now,
+      disabled: false,
+      auth_index: "1",
+      plan_type: "plus",
+    } as any;
+
+    mocks.list.mockImplementation(async () => ({ files: [staleFile] }));
+    mocks.fetchQuota.mockImplementation(() => new Promise(() => {}));
+
+    window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
+    window.localStorage.setItem("authFilesPage.quotaAutoRefreshMs.v1", JSON.stringify(0));
+    window.sessionStorage.setItem(
+      AUTH_FILES_DATA_CACHE_KEY,
+      JSON.stringify({
+        savedAtMs: now,
+        files: [staleFile],
+        usageData: { source: [], auth_index: [] },
+        quotaByFileName: {
+          "codex.json": {
+            status: "success",
+            updatedAt: now,
+            planType: "pro",
+            items: [{ label: "m_quota.code_5h", percent: 20, resetAtMs: now + 30_000 }],
+          },
+        },
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("Codex Main")).toBeInTheDocument();
+    expect(screen.getByText("Plan Pro")).toBeInTheDocument();
+    expect(screen.queryByText("Plan Plus")).not.toBeInTheDocument();
   });
 
   test("cards view exposes quota refresh for Anthropic OAuth files", async () => {

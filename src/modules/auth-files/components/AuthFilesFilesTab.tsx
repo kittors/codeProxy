@@ -526,13 +526,13 @@ export function AuthFilesFilesTab({
                   const typeKey = resolveFileType(file);
                   const badgeClass = TYPE_BADGE_CLASSES[typeKey] ?? TYPE_BADGE_CLASSES.unknown;
                   const displayTitle = resolveAuthFileDisplayName(file) || String(file.name || "");
-                  const planType = resolveAuthFilePlanType(file);
+                  const provider = resolveQuotaProvider(file);
+                  const state = quotaByFileName[file.name] ?? { status: "idle", items: [] };
+                  const planType = resolveAuthFilePlanType(file, state);
                   const subscriptionBadge = renderSubscriptionBadge(file);
                   const stats = resolveAuthFileStats(file, usageIndex);
                   const totalCalls = stats.success + stats.failure;
 
-                  const provider = resolveQuotaProvider(file);
-                  const state = quotaByFileName[file.name] ?? { status: "idle", items: [] };
                   const items = Array.isArray(state.items) ? (state.items as QuotaItem[]) : [];
                   const slots = provider ? resolveQuotaCardSlots(provider, items) : [];
 

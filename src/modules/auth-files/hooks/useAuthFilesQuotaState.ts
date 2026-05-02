@@ -229,6 +229,7 @@ export function useAuthFilesQuotaState({
         [name]: {
           status: "loading",
           items: prev[name]?.items ?? [],
+          planType: prev[name]?.planType,
           error: prev[name]?.error,
           updatedAt: prev[name]?.updatedAt,
         },
@@ -285,7 +286,12 @@ export function useAuthFilesQuotaState({
         }
         setQuotaByFileName((prev) => ({
           ...prev,
-          [name]: { status: "success", items, updatedAt: Date.now() },
+          [name]: {
+            status: "success",
+            items,
+            planType: nextPlanType ?? prev[name]?.planType,
+            updatedAt: Date.now(),
+          },
         }));
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : t("auth_files.unknown_error");
@@ -294,6 +300,7 @@ export function useAuthFilesQuotaState({
           [name]: {
             status: "error",
             items: prev[name]?.items ?? [],
+            planType: prev[name]?.planType,
             error: message,
             updatedAt: Date.now(),
           },
@@ -420,6 +427,7 @@ export function useAuthFilesQuotaState({
         next[item.name] = {
           status: "loading",
           items: prev[item.name]?.items ?? [],
+          planType: prev[item.name]?.planType,
           error: prev[item.name]?.error,
           updatedAt: prev[item.name]?.updatedAt,
         };
@@ -470,6 +478,7 @@ export function useAuthFilesQuotaState({
         next[item.name] = {
           status: "loading",
           items: prev[item.name]?.items ?? [],
+          planType: prev[item.name]?.planType,
           error: prev[item.name]?.error,
           updatedAt: prev[item.name]?.updatedAt,
         };
@@ -499,6 +508,7 @@ export function useAuthFilesQuotaState({
         next[item.name] = {
           status: "loading",
           items: prev[item.name]?.items ?? [],
+          planType: prev[item.name]?.planType,
           error: prev[item.name]?.error,
           updatedAt: prev[item.name]?.updatedAt,
         };
