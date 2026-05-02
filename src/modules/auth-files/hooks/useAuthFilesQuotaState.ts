@@ -414,6 +414,19 @@ export function useAuthFilesQuotaState({
     const toFetch = collectQuotaFetchTargets(pageItems);
     if (!toFetch.length) return;
 
+    setQuotaByFileName((prev) => {
+      const next = { ...prev };
+      for (const item of pageItems) {
+        next[item.name] = {
+          status: "loading",
+          items: prev[item.name]?.items ?? [],
+          error: prev[item.name]?.error,
+          updatedAt: prev[item.name]?.updatedAt,
+        };
+      }
+      return next;
+    });
+
     let cancelled = false;
     void (async () => {
       if (!cancelled) {
@@ -451,8 +464,50 @@ export function useAuthFilesQuotaState({
     const candidates = collectQuotaFetchTargets(pageItems);
     if (!candidates.length) return;
 
+    setQuotaByFileName((prev) => {
+      const next = { ...prev };
+      for (const item of pageItems) {
+        next[item.name] = {
+          status: "loading",
+          items: prev[item.name]?.items ?? [],
+          error: prev[item.name]?.error,
+          updatedAt: prev[item.name]?.updatedAt,
+        };
+      }
+      return next;
+    });
+
     await runQuotaRefreshBatch(candidates, { markAsAutoRefreshing: true });
   }, [collectQuotaFetchTargets, loading, pageItems, runQuotaRefreshBatch, tab]);
+
+  const forceRefreshPage = useCallback(async () => {
+    if (tab !== "files") return;
+    if (loading) return;
+
+    const targets = pageItems
+      .map((file) => {
+        const provider = resolveQuotaProvider(file);
+        return provider ? { file, provider } : null;
+      })
+      .filter(Boolean) as { file: AuthFileItem; provider: QuotaProvider }[];
+
+    if (!targets.length) return;
+
+    setQuotaByFileName((prev) => {
+      const next = { ...prev };
+      for (const item of pageItems) {
+        next[item.name] = {
+          status: "loading",
+          items: prev[item.name]?.items ?? [],
+          error: prev[item.name]?.error,
+          updatedAt: prev[item.name]?.updatedAt,
+        };
+      }
+      return next;
+    });
+
+    await runQuotaRefreshBatch(targets, { markAsAutoRefreshing: true });
+  }, [loading, pageItems, runQuotaRefreshBatch, tab]);
 
   useInterval(
     () => {
@@ -476,6 +531,7 @@ export function useAuthFilesQuotaState({
     refreshQuota,
     checkAuthFileConnectivity,
     collectQuotaFetchTargets,
+    forceRefreshPage,
     runQuotaRefreshBatch,
     quotaLastUpdatedText,
   };

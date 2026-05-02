@@ -94,6 +94,7 @@ interface AuthFilesFilesTabProps {
   ) => { id: string; label: string; item: QuotaItem | null }[];
   quotaAutoRefreshingRef: RefObject<Set<string>>;
   refreshQuota: (file: AuthFileItem, provider: QuotaProvider) => Promise<void>;
+  forceRefreshPage: () => Promise<void>;
   setFileEnabled: (file: AuthFileItem, enabled: boolean) => Promise<void>;
   statusUpdating: Record<string, boolean>;
   usageIndex: UsageIndex;
@@ -163,6 +164,7 @@ export function AuthFilesFilesTab({
   resolveQuotaCardSlots,
   quotaAutoRefreshingRef,
   refreshQuota,
+  forceRefreshPage,
   setFileEnabled,
   statusUpdating,
   usageIndex,
@@ -660,7 +662,7 @@ export function AuthFilesFilesTab({
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => void refreshQuota(file, provider)}
+                                onClick={() => void forceRefreshPage()}
                                 title={t("common.refresh")}
                                 aria-label={t("common.refresh")}
                               >
