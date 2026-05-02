@@ -15,9 +15,21 @@ import {
   normalizeString,
   serializeGeminiKey,
   serializeBedrockKey,
+  serializeOpenCodeGoKey,
   serializeOpenAIProvider,
   serializeProviderKey,
 } from "@/lib/http/apis/helpers";
+
+const isOauthBackedProviderRow = (item: Record<string, unknown>): boolean => {
+  const accountType = normalizeString(item.account_type ?? item.accountType)?.toLowerCase();
+  if (accountType === "oauth") return true;
+
+  const runtimeOnly = item.runtime_only ?? item.runtimeOnly;
+  return (
+    runtimeOnly === true ||
+    (typeof runtimeOnly === "string" && runtimeOnly.trim().toLowerCase() === "true")
+  );
+};
 
 export const providersApi = {
   async getGeminiKeys(): Promise<ProviderSimpleConfig[]> {
@@ -26,6 +38,7 @@ export const providersApi = {
     return list
       .map((item) => {
         if (!isRecord(item)) return null;
+        if (isOauthBackedProviderRow(item)) return null;
         const apiKey = normalizeString(item["api-key"] ?? item.apiKey) ?? "";
         if (!apiKey) return null;
         const name = normalizeString(item.name) ?? undefined;
@@ -66,6 +79,7 @@ export const providersApi = {
     return list
       .map((item) => {
         if (!isRecord(item)) return null;
+        if (isOauthBackedProviderRow(item)) return null;
         const apiKey = normalizeString(item["api-key"] ?? item.apiKey) ?? "";
         if (!apiKey) return null;
         const name = normalizeString(item.name) ?? undefined;
@@ -102,12 +116,52 @@ export const providersApi = {
   deleteCodexConfig: (apiKey: string) =>
     apiClient.delete("/codex-api-key", undefined, { params: { "api-key": apiKey } }),
 
+  async getOpenCodeGoConfigs(): Promise<ProviderSimpleConfig[]> {
+    const data = await apiClient.get("/opencode-go-api-key");
+    const list = extractArrayPayload(data, "opencode-go-api-key");
+    return list
+      .map((item) => {
+        if (!isRecord(item)) return null;
+        if (isOauthBackedProviderRow(item)) return null;
+        const apiKey = normalizeString(item["api-key"] ?? item.apiKey) ?? "";
+        if (!apiKey) return null;
+        const name = normalizeString(item.name) ?? undefined;
+        const prefix = normalizeString(item.prefix) ?? undefined;
+        const proxyUrl = normalizeString(item["proxy-url"] ?? item.proxyUrl) ?? undefined;
+        const proxyId = normalizeString(item["proxy-id"] ?? item.proxyId) ?? undefined;
+        const headers = normalizeHeaders(item.headers);
+        const excludedModels = normalizeExcludedModels(
+          item["excluded-models"] ?? item.excludedModels,
+        );
+        return {
+          apiKey,
+          ...(name ? { name } : {}),
+          ...(prefix ? { prefix } : {}),
+          ...(proxyUrl ? { proxyUrl } : {}),
+          ...(proxyId ? { proxyId } : {}),
+          ...(headers ? { headers } : {}),
+          ...(excludedModels ? { excludedModels } : {}),
+        };
+      })
+      .filter(Boolean) as ProviderSimpleConfig[];
+  },
+
+  saveOpenCodeGoConfigs: (configs: ProviderSimpleConfig[]) =>
+    apiClient.put(
+      "/opencode-go-api-key",
+      configs.map((item) => serializeOpenCodeGoKey(item)),
+    ),
+
+  deleteOpenCodeGoConfig: (apiKey: string) =>
+    apiClient.delete("/opencode-go-api-key", undefined, { params: { "api-key": apiKey } }),
+
   async getClaudeConfigs(): Promise<ProviderSimpleConfig[]> {
     const data = await apiClient.get("/claude-api-key");
     const list = extractArrayPayload(data, "claude-api-key");
     return list
       .map((item) => {
         if (!isRecord(item)) return null;
+        if (isOauthBackedProviderRow(item)) return null;
         const apiKey = normalizeString(item["api-key"] ?? item.apiKey) ?? "";
         if (!apiKey) return null;
         const name = normalizeString(item.name) ?? undefined;
@@ -153,6 +207,7 @@ export const providersApi = {
     return list
       .map((item) => {
         if (!isRecord(item)) return null;
+        if (isOauthBackedProviderRow(item)) return null;
         const rawMode = normalizeString(item["auth-mode"] ?? item.authMode) ?? "sigv4";
         const authMode: BedrockAuthMode =
           rawMode === "apikey" || rawMode === "api_key" || rawMode === "api-key"
@@ -214,6 +269,7 @@ export const providersApi = {
     return list
       .map((item) => {
         if (!isRecord(item)) return null;
+        if (isOauthBackedProviderRow(item)) return null;
         const apiKey = normalizeString(item["api-key"] ?? item.apiKey) ?? "";
         if (!apiKey) return null;
         const name = normalizeString(item.name) ?? undefined;
@@ -252,6 +308,7 @@ export const providersApi = {
     return list
       .map((item) => {
         if (!isRecord(item)) return null;
+        if (isOauthBackedProviderRow(item)) return null;
         const name = normalizeString(item.name) ?? "";
         if (!name) return null;
         const baseUrl = normalizeString(item["base-url"] ?? item.baseUrl) ?? undefined;

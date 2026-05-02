@@ -8,6 +8,8 @@ import iconCodex from "@/assets/icons/codex.svg";
 import iconVertex from "@/assets/icons/vertex.svg";
 import iconAmp from "@/assets/icons/amp.svg";
 import iconOpenai from "@/assets/icons/openai.svg";
+import iconOpenCodeDark from "@/assets/icons/opencode-dark.svg";
+import iconOpenCodeLight from "@/assets/icons/opencode-light.svg";
 import { ampcodeApi, providersApi, usageApi } from "@/lib/http/apis";
 import { apiKeyEntriesApi, type ApiKeyEntry } from "@/lib/http/apis/api-keys";
 import { channelGroupsApi, type ChannelGroupItem } from "@/lib/http/apis/channel-groups";
@@ -44,13 +46,14 @@ export function ProvidersPage() {
   const { getEntry: getLatencyEntry, checkLatency } = useProviderLatency();
 
   const [tab, setTab] = useState<
-    "gemini" | "claude" | "codex" | "vertex" | "bedrock" | "openai" | "ampcode"
+    "gemini" | "claude" | "codex" | "opencode-go" | "vertex" | "bedrock" | "openai" | "ampcode"
   >("gemini");
   const [loading, setLoading] = useState(true);
 
   const [geminiKeys, setGeminiKeys] = useState<ProviderSimpleConfig[]>([]);
   const [claudeKeys, setClaudeKeys] = useState<ProviderSimpleConfig[]>([]);
   const [codexKeys, setCodexKeys] = useState<ProviderSimpleConfig[]>([]);
+  const [openCodeGoKeys, setOpenCodeGoKeys] = useState<ProviderSimpleConfig[]>([]);
   const [vertexKeys, setVertexKeys] = useState<ProviderSimpleConfig[]>([]);
   const [bedrockKeys, setBedrockKeys] = useState<BedrockProviderConfig[]>([]);
   const [openaiProviders, setOpenaiProviders] = useState<OpenAIProvider[]>([]);
@@ -70,7 +73,7 @@ export function ProvidersPage() {
     | null
     | {
         type: "deleteKey";
-        keyType: "gemini" | "claude" | "codex" | "vertex" | "bedrock";
+        keyType: "gemini" | "claude" | "codex" | "opencode-go" | "vertex" | "bedrock";
         index: number;
       }
     | { type: "deleteOpenAI"; index: number }
@@ -90,6 +93,9 @@ export function ProvidersPage() {
             break;
           case "codex":
             setCodexKeys(await providersApi.getCodexConfigs());
+            break;
+          case "opencode-go":
+            setOpenCodeGoKeys(await providersApi.getOpenCodeGoConfigs());
             break;
           case "vertex":
             setVertexKeys(await providersApi.getVertexConfigs());
@@ -251,11 +257,13 @@ export function ProvidersPage() {
     geminiKeys,
     claudeKeys,
     codexKeys,
+    openCodeGoKeys,
     vertexKeys,
     bedrockKeys,
     setGeminiKeys,
     setClaudeKeys,
     setCodexKeys,
+    setOpenCodeGoKeys,
     setVertexKeys,
     setBedrockKeys,
     refreshAll,
@@ -306,6 +314,7 @@ export function ProvidersPage() {
         provider === "gemini" ||
         provider === "claude" ||
         provider === "codex" ||
+        provider === "opencode-go" ||
         provider === "vertex" ||
         provider === "bedrock"
       ) {
@@ -439,6 +448,11 @@ export function ProvidersPage() {
             <img src={iconCodex} alt="" className="hidden size-4 dark:block" />
             Codex
           </TabsTrigger>
+          <TabsTrigger value="opencode-go">
+            <img src={iconOpenCodeLight} alt="" className="size-4 dark:hidden" />
+            <img src={iconOpenCodeDark} alt="" className="hidden size-4 dark:block" />
+            OpenCode Go
+          </TabsTrigger>
           <TabsTrigger value="vertex">
             <img src={iconVertex} alt="" className="size-4" />
             Vertex
@@ -509,6 +523,27 @@ export function ProvidersPage() {
             getAccessSummary={getProviderAccessSummary}
             getLatencyEntry={getLatencyEntry}
             checkLatency={checkLatency}
+          />
+        </TabsContent>
+
+        <TabsContent value="opencode-go" className="mt-6">
+          <ProviderKeyListCard
+            icon={FileKey}
+            iconSrc={iconOpenCodeLight}
+            iconDarkSrc={iconOpenCodeDark}
+            title={t("providers.opencode_go_keys")}
+            description={t("providers.opencode_go_desc")}
+            items={openCodeGoKeys}
+            onAdd={() => openKeyEditor("opencode-go", null)}
+            onEdit={(idx) => openKeyEditor("opencode-go", idx)}
+            onDelete={(idx) =>
+              setConfirm({ type: "deleteKey", keyType: "opencode-go", index: idx })
+            }
+            onToggleEnabled={(idx, enabled) => void toggleKeyEnabled("opencode-go", idx, enabled)}
+            getStats={getSimpleStats}
+            getStatusBar={getSimpleStatusBar}
+            getAccessSummary={getProviderAccessSummary}
+            showBaseUrl={false}
           />
         </TabsContent>
 

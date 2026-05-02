@@ -19,6 +19,9 @@ import { useTranslation } from "react-i18next";
 
 export function ProviderKeyListCard({
   icon: Icon,
+  iconSrc,
+  iconDarkSrc,
+  iconAlt = "",
   title,
   description,
   items,
@@ -32,8 +35,12 @@ export function ProviderKeyListCard({
   getAccessSummary,
   getLatencyEntry,
   checkLatency,
+  showBaseUrl = true,
 }: {
   icon: LucideIcon;
+  iconSrc?: string;
+  iconDarkSrc?: string;
+  iconAlt?: string;
   title: string;
   description: string;
   items: ProviderSimpleConfig[];
@@ -46,8 +53,21 @@ export function ProviderKeyListCard({
   getAccessSummary?: (item: ProviderSimpleConfig) => ProviderAccessSummary | null;
   getLatencyEntry?: (key: string) => { latencyMs: number | null; loading: boolean; error: boolean };
   checkLatency?: (key: string, baseUrl: string) => void;
+  showBaseUrl?: boolean;
 }) {
   const { t } = useTranslation();
+  const renderIcon = () =>
+    iconSrc ? (
+      <>
+        <img src={iconSrc} alt={iconAlt} className={`size-4 ${iconDarkSrc ? "dark:hidden" : ""}`} />
+        {iconDarkSrc ? (
+          <img src={iconDarkSrc} alt={iconAlt} className="hidden size-4 dark:block" />
+        ) : null}
+      </>
+    ) : (
+      <Icon size={16} className="text-slate-900 dark:text-white" />
+    );
+
   return (
     <Card
       title={title}
@@ -88,7 +108,7 @@ export function ProviderKeyListCard({
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-white">
-                      <Icon size={16} className="text-slate-900 dark:text-white" />
+                      {renderIcon()}
                       <span className="truncate">{item.name || maskApiKey(item.apiKey)}</span>
                       {disabled ? (
                         <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-semibold text-amber-700 dark:text-amber-200">
@@ -139,7 +159,9 @@ export function ProviderKeyListCard({
 
                     <div className="mt-1 space-y-1 text-xs text-slate-600 dark:text-white/65">
                       <p className="truncate font-mono">apiKey：{maskApiKey(item.apiKey)}</p>
-                      <p className="truncate font-mono">baseUrl：{item.baseUrl || "--"}</p>
+                      {showBaseUrl ? (
+                        <p className="truncate font-mono">baseUrl：{item.baseUrl || "--"}</p>
+                      ) : null}
                       {item.proxyUrl ? (
                         <p className="truncate font-mono">proxyUrl：{item.proxyUrl}</p>
                       ) : null}

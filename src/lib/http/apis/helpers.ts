@@ -129,6 +129,24 @@ export const serializeProviderKey = (config: ProviderSimpleConfig) => {
   return payload;
 };
 
+export const serializeOpenCodeGoKey = (config: ProviderSimpleConfig) => {
+  const payload: Record<string, unknown> = { "api-key": config.apiKey };
+  const name = normalizeString(config.name);
+  if (name) payload.name = name;
+  const prefix = normalizeString(config.prefix);
+  if (prefix) payload.prefix = prefix;
+  const proxyUrl = normalizeString(config.proxyUrl);
+  if (proxyUrl) payload["proxy-url"] = proxyUrl;
+  const proxyId = normalizeString(config.proxyId);
+  if (proxyId) payload["proxy-id"] = proxyId;
+  const headers = serializeHeaders(config.headers);
+  if (headers) payload.headers = headers;
+  if (config.excludedModels && config.excludedModels.length) {
+    payload["excluded-models"] = config.excludedModels;
+  }
+  return payload;
+};
+
 export const serializeGeminiKey = (config: ProviderSimpleConfig) => {
   const payload: Record<string, unknown> = { "api-key": config.apiKey };
   const name = normalizeString(config.name);
