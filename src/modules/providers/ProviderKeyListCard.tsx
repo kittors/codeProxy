@@ -19,6 +19,9 @@ import { useTranslation } from "react-i18next";
 
 export function ProviderKeyListCard({
   icon: Icon,
+  iconSrc,
+  iconDarkSrc,
+  iconAlt = "",
   title,
   description,
   items,
@@ -35,6 +38,9 @@ export function ProviderKeyListCard({
   showBaseUrl = true,
 }: {
   icon: LucideIcon;
+  iconSrc?: string;
+  iconDarkSrc?: string;
+  iconAlt?: string;
   title: string;
   description: string;
   items: ProviderSimpleConfig[];
@@ -50,6 +56,18 @@ export function ProviderKeyListCard({
   showBaseUrl?: boolean;
 }) {
   const { t } = useTranslation();
+  const renderIcon = () =>
+    iconSrc ? (
+      <>
+        <img src={iconSrc} alt={iconAlt} className={`size-4 ${iconDarkSrc ? "dark:hidden" : ""}`} />
+        {iconDarkSrc ? (
+          <img src={iconDarkSrc} alt={iconAlt} className="hidden size-4 dark:block" />
+        ) : null}
+      </>
+    ) : (
+      <Icon size={16} className="text-slate-900 dark:text-white" />
+    );
+
   return (
     <Card
       title={title}
@@ -90,7 +108,7 @@ export function ProviderKeyListCard({
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-white">
-                      <Icon size={16} className="text-slate-900 dark:text-white" />
+                      {renderIcon()}
                       <span className="truncate">{item.name || maskApiKey(item.apiKey)}</span>
                       {disabled ? (
                         <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-semibold text-amber-700 dark:text-amber-200">

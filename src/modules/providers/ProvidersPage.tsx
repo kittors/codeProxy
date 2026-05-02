@@ -8,6 +8,8 @@ import iconCodex from "@/assets/icons/codex.svg";
 import iconVertex from "@/assets/icons/vertex.svg";
 import iconAmp from "@/assets/icons/amp.svg";
 import iconOpenai from "@/assets/icons/openai.svg";
+import iconOpenCodeDark from "@/assets/icons/opencode-dark.svg";
+import iconOpenCodeLight from "@/assets/icons/opencode-light.svg";
 import { ampcodeApi, providersApi, usageApi } from "@/lib/http/apis";
 import { apiKeyEntriesApi, type ApiKeyEntry } from "@/lib/http/apis/api-keys";
 import { channelGroupsApi, type ChannelGroupItem } from "@/lib/http/apis/channel-groups";
@@ -447,7 +449,8 @@ export function ProvidersPage() {
             Codex
           </TabsTrigger>
           <TabsTrigger value="opencode-go">
-            <FileKey size={16} />
+            <img src={iconOpenCodeLight} alt="" className="size-4 dark:hidden" />
+            <img src={iconOpenCodeDark} alt="" className="hidden size-4 dark:block" />
             OpenCode Go
           </TabsTrigger>
           <TabsTrigger value="vertex">
@@ -526,6 +529,8 @@ export function ProvidersPage() {
         <TabsContent value="opencode-go" className="mt-6">
           <ProviderKeyListCard
             icon={FileKey}
+            iconSrc={iconOpenCodeLight}
+            iconDarkSrc={iconOpenCodeDark}
             title={t("providers.opencode_go_keys")}
             description={t("providers.opencode_go_desc")}
             items={openCodeGoKeys}
