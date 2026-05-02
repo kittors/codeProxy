@@ -101,6 +101,8 @@ describe("ProvidersPage Bedrock tab", () => {
     await user.type(screen.getByPlaceholderText("AKIA..."), "AKIATEST");
     await user.type(screen.getByPlaceholderText("AWS secret access key"), "SECRET");
     await user.type(screen.getByPlaceholderText("Optional AWS session token"), "SESSION");
+
+    await user.click(screen.getByRole("tab", { name: /Request/i }));
     await user.clear(screen.getByPlaceholderText("us-east-1"));
     await user.type(screen.getByPlaceholderText("us-east-1"), "eu-west-1");
 
