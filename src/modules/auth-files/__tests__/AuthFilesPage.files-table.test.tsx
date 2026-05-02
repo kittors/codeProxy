@@ -5,7 +5,10 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { ToastProvider } from "@/modules/ui/ToastProvider";
 import { ThemeProvider } from "@/modules/ui/ThemeProvider";
 import { AuthFilesPage } from "@/modules/auth-files/AuthFilesPage";
-import { AUTH_FILES_DATA_CACHE_KEY } from "@/modules/auth-files/helpers/authFilesPageUtils";
+import {
+  AUTH_FILES_DATA_CACHE_KEY,
+  AUTH_FILES_UI_STATE_KEY,
+} from "@/modules/auth-files/helpers/authFilesPageUtils";
 import i18n from "@/i18n";
 
 const mocks = vi.hoisted(() => ({
@@ -845,6 +848,90 @@ describe("AuthFilesPage files table", () => {
     await waitFor(() => expect(mocks.fetchQuota).toHaveBeenCalledTimes(1));
     expect(screen.getByText("22%")).toBeInTheDocument();
     expect(screen.getByText("44%")).toBeInTheDocument();
+  });
+
+  test("cards view does not spin card refresh actions for tab-switch background quota refresh", async () => {
+    const now = Date.now();
+    const files = [
+      {
+        name: "qwen.json",
+        type: "qwen",
+        size: 1024,
+        modified: now,
+        disabled: false,
+      },
+      {
+        name: "codex-a.json",
+        type: "codex",
+        size: 1024,
+        modified: now,
+        disabled: false,
+        auth_index: "1",
+      },
+      {
+        name: "codex-b.json",
+        type: "codex",
+        size: 1024,
+        modified: now,
+        disabled: false,
+        auth_index: "2",
+      },
+      {
+        name: "codex-c.json",
+        type: "codex",
+        size: 1024,
+        modified: now,
+        disabled: false,
+        auth_index: "3",
+      },
+    ] as any[];
+
+    mocks.list.mockImplementation(async () => ({ files }));
+    mocks.fetchQuota.mockImplementation(() => new Promise(() => {}));
+
+    window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
+    window.sessionStorage.setItem(
+      AUTH_FILES_UI_STATE_KEY,
+      JSON.stringify({ tab: "files", filter: "qwen", search: "", page: 1 }),
+    );
+    window.sessionStorage.setItem(
+      AUTH_FILES_DATA_CACHE_KEY,
+      JSON.stringify({
+        savedAtMs: now,
+        files,
+        usageData: { source: [], auth_index: [] },
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("qwen.json")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: /codex/i }));
+    expect(await screen.findByText("codex-a.json")).toBeInTheDocument();
+
+    await waitFor(() =>
+      expect(mocks.fetchQuota).toHaveBeenCalledWith(
+        "codex",
+        expect.objectContaining({ name: "codex-a.json" }),
+      ),
+    );
+
+    const cards = screen.getByTestId("auth-files-cards");
+    const cardRefreshButtons = within(cards).getAllByRole("button", { name: "Refresh" });
+    expect(cardRefreshButtons).toHaveLength(3);
+    cardRefreshButtons.forEach((button) => {
+      expect(button.querySelector("svg")).not.toHaveClass("animate-spin");
+    });
   });
 
   test("toolbar refresh immediately spins the visible card quota refresh action", async () => {

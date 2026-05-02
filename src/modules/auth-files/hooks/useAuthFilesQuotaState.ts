@@ -219,21 +219,23 @@ export function useAuthFilesQuotaState({
   );
 
   const refreshQuota = useCallback(
-    async (file: AuthFileItem, provider: QuotaProvider) => {
+    async (file: AuthFileItem, provider: QuotaProvider, options?: { showLoading?: boolean }) => {
       const name = file.name;
       if (quotaInFlightRef.current.has(name)) return;
       quotaInFlightRef.current.add(name);
 
-      setQuotaByFileName((prev) => ({
-        ...prev,
-        [name]: {
-          status: "loading",
-          items: prev[name]?.items ?? [],
-          planType: prev[name]?.planType,
-          error: prev[name]?.error,
-          updatedAt: prev[name]?.updatedAt,
-        },
-      }));
+      if (options?.showLoading !== false) {
+        setQuotaByFileName((prev) => ({
+          ...prev,
+          [name]: {
+            status: "loading",
+            items: prev[name]?.items ?? [],
+            planType: prev[name]?.planType,
+            error: prev[name]?.error,
+            updatedAt: prev[name]?.updatedAt,
+          },
+        }));
+      }
 
       try {
         const result = await fetchQuota(provider, file);
@@ -380,7 +382,7 @@ export function useAuthFilesQuotaState({
   const runQuotaRefreshBatch = useCallback(
     async (
       targets: { file: AuthFileItem; provider: QuotaProvider }[],
-      options?: { markAsAutoRefreshing?: boolean },
+      options?: { markAsAutoRefreshing?: boolean; showLoading?: boolean },
     ) => {
       if (!targets.length) return;
 
@@ -399,7 +401,9 @@ export function useAuthFilesQuotaState({
               quotaAutoRefreshingRef.current.add(current.file.name);
             }
             try {
-              await refreshQuota(current.file, current.provider);
+              await refreshQuota(current.file, current.provider, {
+                showLoading: options?.showLoading,
+              });
             } finally {
               if (markAsAutoRefreshing) {
                 quotaAutoRefreshingRef.current.delete(current.file.name);
@@ -421,24 +425,13 @@ export function useAuthFilesQuotaState({
     const toFetch = collectQuotaFetchTargets(pageItems);
     if (!toFetch.length) return;
 
-    setQuotaByFileName((prev) => {
-      const next = { ...prev };
-      for (const item of pageItems) {
-        next[item.name] = {
-          status: "loading",
-          items: prev[item.name]?.items ?? [],
-          planType: prev[item.name]?.planType,
-          error: prev[item.name]?.error,
-          updatedAt: prev[item.name]?.updatedAt,
-        };
-      }
-      return next;
-    });
-
     let cancelled = false;
     void (async () => {
       if (!cancelled) {
-        await runQuotaRefreshBatch(toFetch, { markAsAutoRefreshing: true });
+        await runQuotaRefreshBatch(toFetch, {
+          markAsAutoRefreshing: true,
+          showLoading: false,
+        });
       }
     })();
 
@@ -472,21 +465,10 @@ export function useAuthFilesQuotaState({
     const candidates = collectQuotaFetchTargets(pageItems);
     if (!candidates.length) return;
 
-    setQuotaByFileName((prev) => {
-      const next = { ...prev };
-      for (const item of pageItems) {
-        next[item.name] = {
-          status: "loading",
-          items: prev[item.name]?.items ?? [],
-          planType: prev[item.name]?.planType,
-          error: prev[item.name]?.error,
-          updatedAt: prev[item.name]?.updatedAt,
-        };
-      }
-      return next;
+    await runQuotaRefreshBatch(candidates, {
+      markAsAutoRefreshing: true,
+      showLoading: false,
     });
-
-    await runQuotaRefreshBatch(candidates, { markAsAutoRefreshing: true });
   }, [collectQuotaFetchTargets, loading, pageItems, runQuotaRefreshBatch, tab]);
 
   const forceRefreshPage = useCallback(async () => {
@@ -504,13 +486,13 @@ export function useAuthFilesQuotaState({
 
     setQuotaByFileName((prev) => {
       const next = { ...prev };
-      for (const item of pageItems) {
-        next[item.name] = {
+      for (const target of targets) {
+        next[target.file.name] = {
           status: "loading",
-          items: prev[item.name]?.items ?? [],
-          planType: prev[item.name]?.planType,
-          error: prev[item.name]?.error,
-          updatedAt: prev[item.name]?.updatedAt,
+          items: prev[target.file.name]?.items ?? [],
+          planType: prev[target.file.name]?.planType,
+          error: prev[target.file.name]?.error,
+          updatedAt: prev[target.file.name]?.updatedAt,
         };
       }
       return next;
