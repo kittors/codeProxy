@@ -45,13 +45,6 @@ export interface AntigravityQuotaInfo {
 
 export type AntigravityModelsPayload = Record<string, AntigravityQuotaInfo>;
 
-export interface AntigravityQuotaGroupDefinition {
-  id: string;
-  label: string;
-  identifiers: string[];
-  labelFromModel?: boolean;
-}
-
 export interface GeminiCliQuotaGroupDefinition {
   id: string;
   label: string;

@@ -4,17 +4,12 @@
 
 import type {
   AntigravityQuotaGroup,
-  AntigravityQuotaGroupDefinition,
   AntigravityQuotaInfo,
   AntigravityModelsPayload,
   GeminiCliParsedBucket,
   GeminiCliQuotaBucketState,
 } from "@/types";
-import {
-  ANTIGRAVITY_QUOTA_GROUPS,
-  GEMINI_CLI_GROUP_LOOKUP,
-  GEMINI_CLI_GROUP_ORDER,
-} from "./constants";
+import { GEMINI_CLI_GROUP_LOOKUP, GEMINI_CLI_GROUP_ORDER } from "./constants";
 import { normalizeQuotaFraction } from "./parsers";
 import { isIgnoredGeminiCliModel } from "./validators";
 
@@ -180,85 +175,19 @@ export function findAntigravityModel(
 export function buildAntigravityQuotaGroups(
   models: AntigravityModelsPayload,
 ): AntigravityQuotaGroup[] {
-  const groups: AntigravityQuotaGroup[] = [];
-  let geminiProResetTime: string | undefined;
-  const [claudeDef, geminiProDef, flashDef, flashLiteDef, cuDef, geminiFlashDef, imageDef] =
-    ANTIGRAVITY_QUOTA_GROUPS;
-
-  const buildGroup = (
-    def: AntigravityQuotaGroupDefinition,
-    overrideResetTime?: string,
-  ): AntigravityQuotaGroup | null => {
-    const matches = def.identifiers
-      .map((identifier) => findAntigravityModel(models, identifier))
-      .filter((entry): entry is { id: string; entry: AntigravityQuotaInfo } => Boolean(entry));
-
-    const quotaEntries = matches
-      .map(({ id, entry }) => {
-        const info = getAntigravityQuotaInfo(entry);
-        const remainingFraction = info.remainingFraction ?? (info.resetTime ? 0 : null);
-        if (remainingFraction === null) return null;
-        return {
-          id,
-          remainingFraction,
-          resetTime: info.resetTime,
-          displayName: info.displayName,
-        };
-      })
-      .filter((entry): entry is NonNullable<typeof entry> => entry !== null);
-
-    if (quotaEntries.length === 0) return null;
-
-    const remainingFraction = Math.min(...quotaEntries.map((entry) => entry.remainingFraction));
-    const resetTime =
-      overrideResetTime ?? quotaEntries.map((entry) => entry.resetTime).find(Boolean);
-    const displayName = quotaEntries.map((entry) => entry.displayName).find(Boolean);
-    const label = def.labelFromModel && displayName ? displayName : def.label;
-
-    return {
-      id: def.id,
-      label,
-      models: quotaEntries.map((entry) => entry.id),
-      remainingFraction,
-      resetTime,
-    };
-  };
-
-  const claudeGroup = buildGroup(claudeDef);
-  if (claudeGroup) {
-    groups.push(claudeGroup);
-  }
-
-  const geminiProGroup = buildGroup(geminiProDef);
-  if (geminiProGroup) {
-    geminiProResetTime = geminiProGroup.resetTime;
-    groups.push(geminiProGroup);
-  }
-
-  const flashGroup = buildGroup(flashDef);
-  if (flashGroup) {
-    groups.push(flashGroup);
-  }
-
-  const flashLiteGroup = buildGroup(flashLiteDef);
-  if (flashLiteGroup) {
-    groups.push(flashLiteGroup);
-  }
-
-  const cuGroup = buildGroup(cuDef);
-  if (cuGroup) {
-    groups.push(cuGroup);
-  }
-
-  const geminiFlashGroup = buildGroup(geminiFlashDef);
-  if (geminiFlashGroup) {
-    groups.push(geminiFlashGroup);
-  }
-
-  const imageGroup = buildGroup(imageDef, geminiProResetTime);
-  if (imageGroup) {
-    groups.push(imageGroup);
-  }
-
-  return groups;
+  return Object.entries(models).flatMap(([id, entry]) => {
+    const info = getAntigravityQuotaInfo(entry);
+    const remainingFraction = info.remainingFraction ?? (info.resetTime ? 0 : null);
+    if (remainingFraction === null) return [];
+    const label = info.displayName && info.displayName !== id ? `${info.displayName} [${id}]` : id;
+    return [
+      {
+        id: `model:${id}`,
+        label,
+        models: [id],
+        remainingFraction,
+        resetTime: info.resetTime,
+      },
+    ];
+  });
 }

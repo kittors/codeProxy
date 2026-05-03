@@ -797,6 +797,62 @@ describe("AuthFilesPage files table", () => {
     expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
   });
 
+  test("cards view shows all antigravity quota items instead of truncating to three", async () => {
+    const now = Date.now();
+    const file = {
+      name: "antigravity.json",
+      type: "antigravity",
+      size: 1024,
+      modified: now,
+      disabled: false,
+      auth_index: "ag",
+    } as any;
+
+    mocks.list.mockImplementation(async () => ({ files: [file] }));
+
+    window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
+    window.localStorage.setItem("authFilesPage.quotaAutoRefreshMs.v1", JSON.stringify(0));
+    window.sessionStorage.setItem(
+      AUTH_FILES_DATA_CACHE_KEY,
+      JSON.stringify({
+        savedAtMs: now,
+        files: [file],
+        quotaByFileName: {
+          "antigravity.json": {
+            status: "success",
+            updatedAt: now,
+            items: [
+              { key: "model:a", label: "Model A [a]", percent: 91 },
+              { key: "model:b", label: "Model B [b]", percent: 82 },
+              { key: "model:c", label: "Model C [c]", percent: 73 },
+              { key: "model:d", label: "Model D [d]", percent: 64 },
+            ],
+          },
+        },
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("antigravity.json")).toBeInTheDocument();
+    const cards = screen.getByTestId("auth-files-cards");
+
+    expect(within(cards).getByText("Model A [a]")).toBeInTheDocument();
+    expect(within(cards).getByText("Model B [b]")).toBeInTheDocument();
+    expect(within(cards).getByText("Model C [c]")).toBeInTheDocument();
+    expect(within(cards).getByText("Model D [d]")).toBeInTheDocument();
+  });
+
   test("cards view restores cached quota while refreshing in the background", async () => {
     const now = Date.now();
     const file = {
