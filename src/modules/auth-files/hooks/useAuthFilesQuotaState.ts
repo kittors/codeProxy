@@ -130,6 +130,14 @@ export function useAuthFilesQuotaState({
         }));
       }
 
+      if (provider === "antigravity") {
+        return items.map((item, index) => ({
+          id: item.key ?? item.label ?? `antigravity-${index + 1}`,
+          label: translateQuotaLabel(item.label),
+          item,
+        }));
+      }
+
       const supportsStableCodingSlots = provider === "codex" || provider === "kimi";
       if (!supportsStableCodingSlots) {
         return items.slice(0, 3).map((item) => ({
@@ -219,20 +227,23 @@ export function useAuthFilesQuotaState({
   );
 
   const refreshQuota = useCallback(
-    async (file: AuthFileItem, provider: QuotaProvider) => {
+    async (file: AuthFileItem, provider: QuotaProvider, options?: { showLoading?: boolean }) => {
       const name = file.name;
       if (quotaInFlightRef.current.has(name)) return;
       quotaInFlightRef.current.add(name);
 
-      setQuotaByFileName((prev) => ({
-        ...prev,
-        [name]: {
-          status: "loading",
-          items: prev[name]?.items ?? [],
-          error: prev[name]?.error,
-          updatedAt: prev[name]?.updatedAt,
-        },
-      }));
+      if (options?.showLoading !== false) {
+        setQuotaByFileName((prev) => ({
+          ...prev,
+          [name]: {
+            status: "loading",
+            items: prev[name]?.items ?? [],
+            planType: prev[name]?.planType,
+            error: prev[name]?.error,
+            updatedAt: prev[name]?.updatedAt,
+          },
+        }));
+      }
 
       try {
         const result = await fetchQuota(provider, file);
@@ -285,7 +296,12 @@ export function useAuthFilesQuotaState({
         }
         setQuotaByFileName((prev) => ({
           ...prev,
-          [name]: { status: "success", items, updatedAt: Date.now() },
+          [name]: {
+            status: "success",
+            items,
+            planType: nextPlanType ?? prev[name]?.planType,
+            updatedAt: Date.now(),
+          },
         }));
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : t("auth_files.unknown_error");
@@ -294,6 +310,7 @@ export function useAuthFilesQuotaState({
           [name]: {
             status: "error",
             items: prev[name]?.items ?? [],
+            planType: prev[name]?.planType,
             error: message,
             updatedAt: Date.now(),
           },
@@ -373,7 +390,7 @@ export function useAuthFilesQuotaState({
   const runQuotaRefreshBatch = useCallback(
     async (
       targets: { file: AuthFileItem; provider: QuotaProvider }[],
-      options?: { markAsAutoRefreshing?: boolean },
+      options?: { markAsAutoRefreshing?: boolean; showLoading?: boolean },
     ) => {
       if (!targets.length) return;
 
@@ -392,7 +409,9 @@ export function useAuthFilesQuotaState({
               quotaAutoRefreshingRef.current.add(current.file.name);
             }
             try {
-              await refreshQuota(current.file, current.provider);
+              await refreshQuota(current.file, current.provider, {
+                showLoading: options?.showLoading,
+              });
             } finally {
               if (markAsAutoRefreshing) {
                 quotaAutoRefreshingRef.current.delete(current.file.name);
@@ -417,7 +436,10 @@ export function useAuthFilesQuotaState({
     let cancelled = false;
     void (async () => {
       if (!cancelled) {
-        await runQuotaRefreshBatch(toFetch, { markAsAutoRefreshing: true });
+        await runQuotaRefreshBatch(toFetch, {
+          markAsAutoRefreshing: true,
+          showLoading: false,
+        });
       }
     })();
 
@@ -451,8 +473,41 @@ export function useAuthFilesQuotaState({
     const candidates = collectQuotaFetchTargets(pageItems);
     if (!candidates.length) return;
 
-    await runQuotaRefreshBatch(candidates, { markAsAutoRefreshing: true });
+    await runQuotaRefreshBatch(candidates, {
+      markAsAutoRefreshing: true,
+      showLoading: false,
+    });
   }, [collectQuotaFetchTargets, loading, pageItems, runQuotaRefreshBatch, tab]);
+
+  const forceRefreshPage = useCallback(async () => {
+    if (tab !== "files") return;
+    if (loading) return;
+
+    const targets = pageItems
+      .map((file) => {
+        const provider = resolveQuotaProvider(file);
+        return provider ? { file, provider } : null;
+      })
+      .filter(Boolean) as { file: AuthFileItem; provider: QuotaProvider }[];
+
+    if (!targets.length) return;
+
+    setQuotaByFileName((prev) => {
+      const next = { ...prev };
+      for (const target of targets) {
+        next[target.file.name] = {
+          status: "loading",
+          items: prev[target.file.name]?.items ?? [],
+          planType: prev[target.file.name]?.planType,
+          error: prev[target.file.name]?.error,
+          updatedAt: prev[target.file.name]?.updatedAt,
+        };
+      }
+      return next;
+    });
+
+    await runQuotaRefreshBatch(targets, { markAsAutoRefreshing: true });
+  }, [loading, pageItems, runQuotaRefreshBatch, tab]);
 
   useInterval(
     () => {
@@ -476,6 +531,7 @@ export function useAuthFilesQuotaState({
     refreshQuota,
     checkAuthFileConnectivity,
     collectQuotaFetchTargets,
+    forceRefreshPage,
     runQuotaRefreshBatch,
     quotaLastUpdatedText,
   };

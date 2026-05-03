@@ -154,6 +154,7 @@ describe("Auth Files helper coverage", () => {
         "codex.json": {
           status: "success",
           updatedAt: 456,
+          planType: "pro",
           items: [{ label: "m_quota.code_5h", percent: 42, resetAtMs: 789 }],
         },
       },
@@ -166,6 +167,7 @@ describe("Auth Files helper coverage", () => {
         "codex.json": {
           status: "success",
           updatedAt: 456,
+          planType: "pro",
           items: [{ label: "m_quota.code_5h", percent: 42, resetAtMs: 789 }],
         },
       },

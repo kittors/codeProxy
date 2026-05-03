@@ -273,7 +273,6 @@ export function AuthFilesPage() {
   const {
     connectivityState,
     quotaByFileName,
-    quotaAutoRefreshingRef,
     nowMs,
     quotaPreviewMode,
     setQuotaPreviewMode,
@@ -285,6 +284,7 @@ export function AuthFilesPage() {
     refreshQuota,
     checkAuthFileConnectivity,
     collectQuotaFetchTargets,
+    forceRefreshPage,
     runQuotaRefreshBatch,
     quotaLastUpdatedText,
   } = useAuthFilesQuotaState({
@@ -308,6 +308,12 @@ export function AuthFilesPage() {
     },
     [openDetail, refreshDetailTrend, refreshQuota],
   );
+
+  const refreshFilesAndQuota = useCallback(async () => {
+    const quotaRefreshPromise = forceRefreshPage();
+    const filesRefreshPromise = loadAll();
+    await Promise.all([filesRefreshPromise, quotaRefreshPromise]);
+  }, [forceRefreshPage, loadAll]);
 
   const {
     groupOverviewOpen,
@@ -372,7 +378,6 @@ export function AuthFilesPage() {
     connectivityState,
     checkAuthFileConnectivity,
     quotaByFileName,
-    quotaAutoRefreshingRef,
     refreshQuota,
     openDetail: openDetailWithQuotaRefresh,
     downloadAuthFile,
@@ -414,7 +419,7 @@ export function AuthFilesPage() {
             openGroupOverview={openGroupOverview}
             groupOverviewLoading={groupOverviewLoading}
             filteredFiles={filteredFiles}
-            loadAll={loadAll}
+            refreshFilesAndQuota={refreshFilesAndQuota}
             usageLoading={usageLoading}
             refreshingAll={refreshingAll}
             uploading={uploading}
@@ -438,7 +443,6 @@ export function AuthFilesPage() {
             quotaByFileName={quotaByFileName}
             resolveQuotaProvider={resolveQuotaProvider}
             resolveQuotaCardSlots={resolveQuotaCardSlots}
-            quotaAutoRefreshingRef={quotaAutoRefreshingRef}
             refreshQuota={refreshQuota}
             setFileEnabled={setFileEnabled}
             statusUpdating={statusUpdating}

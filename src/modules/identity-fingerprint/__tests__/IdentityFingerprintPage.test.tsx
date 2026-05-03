@@ -70,6 +70,18 @@ describe("IdentityFingerprintPage provider tabs", () => {
           "session-mode": "per-request",
           "custom-headers": {},
         },
+        claude: {
+          enabled: false,
+          "cli-version": "2.1.88",
+          entrypoint: "cli",
+          "user-agent": "claude-cli/2.1.88 (external, cli)",
+          "anthropic-beta": "oauth-2025-04-20,claude-code-20250219",
+          "stainless-package-version": "0.74.0",
+          "stainless-runtime-version": "v22.13.0",
+          "stainless-timeout": "600",
+          "session-mode": "per-request",
+          "custom-headers": {},
+        },
       },
       defaults: {
         codex: {
@@ -78,6 +90,18 @@ describe("IdentityFingerprintPage provider tabs", () => {
           version: "0.120.0",
           originator: "codex_cli_rs",
           "websocket-beta": "responses_websockets=default",
+          "session-mode": "per-request",
+          "custom-headers": {},
+        },
+        claude: {
+          enabled: false,
+          "cli-version": "2.1.88",
+          entrypoint: "cli",
+          "user-agent": "claude-cli/2.1.88 (external, cli)",
+          "anthropic-beta": "oauth-2025-04-20,claude-code-20250219",
+          "stainless-package-version": "0.74.0",
+          "stainless-runtime-version": "v22.13.0",
+          "stainless-timeout": "600",
           "session-mode": "per-request",
           "custom-headers": {},
         },
@@ -93,9 +117,10 @@ describe("IdentityFingerprintPage provider tabs", () => {
 
     await userEvent.click(await screen.findByRole("tab", { name: "Claude" }));
     expect(
-      await screen.findByRole("heading", { name: /Claude Header Defaults/i }),
+      await screen.findByRole("heading", { name: /Claude Code Fingerprint/i }),
     ).toBeInTheDocument();
-    expect(screen.getByDisplayValue("claude-cli/test")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("claude-cli/2.1.88 (external, cli)")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("0.74.0")).toBeInTheDocument();
     expect(screen.queryByText(/reserved/i)).not.toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("tab", { name: "Gemini" }));
@@ -151,5 +176,36 @@ describe("IdentityFingerprintPage provider tabs", () => {
     expect(geminiKeys.every((entry) => entry.headers?.["X-Test-Fingerprint"] === "enabled")).toBe(
       true,
     );
+  });
+
+  test("saves Claude fingerprint through the identity fingerprint API", async () => {
+    renderPage();
+
+    await userEvent.click(await screen.findByRole("tab", { name: "Claude" }));
+    await userEvent.click(await screen.findByRole("switch", { name: /Enable Claude/i }));
+    await userEvent.clear(screen.getByLabelText(/Claude CLI version/i));
+    await userEvent.type(screen.getByLabelText(/Claude CLI version/i), "2.2.0");
+    await userEvent.clear(screen.getByLabelText(/Entrypoint/i));
+    await userEvent.type(screen.getByLabelText(/Entrypoint/i), "sdk-cli");
+    await userEvent.click(screen.getByRole("button", { name: /Save Claude/i }));
+
+    await waitFor(() => {
+      expect(mocks.identityUpdate).toHaveBeenCalledTimes(1);
+    });
+
+    expect(mocks.identityUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        codex: expect.objectContaining({
+          "user-agent": "codex_cli_rs/test",
+        }),
+        claude: expect.objectContaining({
+          enabled: true,
+          "cli-version": "2.2.0",
+          entrypoint: "sdk-cli",
+          "stainless-package-version": "0.74.0",
+        }),
+      }),
+    );
+    expect(mocks.saveConfigYaml).not.toHaveBeenCalled();
   });
 });

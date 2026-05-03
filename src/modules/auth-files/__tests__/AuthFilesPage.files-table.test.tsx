@@ -5,7 +5,10 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { ToastProvider } from "@/modules/ui/ToastProvider";
 import { ThemeProvider } from "@/modules/ui/ThemeProvider";
 import { AuthFilesPage } from "@/modules/auth-files/AuthFilesPage";
-import { AUTH_FILES_DATA_CACHE_KEY } from "@/modules/auth-files/helpers/authFilesPageUtils";
+import {
+  AUTH_FILES_DATA_CACHE_KEY,
+  AUTH_FILES_UI_STATE_KEY,
+} from "@/modules/auth-files/helpers/authFilesPageUtils";
 import i18n from "@/i18n";
 
 const mocks = vi.hoisted(() => ({
@@ -794,6 +797,62 @@ describe("AuthFilesPage files table", () => {
     expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
   });
 
+  test("cards view shows all antigravity quota items instead of truncating to three", async () => {
+    const now = Date.now();
+    const file = {
+      name: "antigravity.json",
+      type: "antigravity",
+      size: 1024,
+      modified: now,
+      disabled: false,
+      auth_index: "ag",
+    } as any;
+
+    mocks.list.mockImplementation(async () => ({ files: [file] }));
+
+    window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
+    window.localStorage.setItem("authFilesPage.quotaAutoRefreshMs.v1", JSON.stringify(0));
+    window.sessionStorage.setItem(
+      AUTH_FILES_DATA_CACHE_KEY,
+      JSON.stringify({
+        savedAtMs: now,
+        files: [file],
+        quotaByFileName: {
+          "antigravity.json": {
+            status: "success",
+            updatedAt: now,
+            items: [
+              { key: "model:a", label: "Model A [a]", percent: 91 },
+              { key: "model:b", label: "Model B [b]", percent: 82 },
+              { key: "model:c", label: "Model C [c]", percent: 73 },
+              { key: "model:d", label: "Model D [d]", percent: 64 },
+            ],
+          },
+        },
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("antigravity.json")).toBeInTheDocument();
+    const cards = screen.getByTestId("auth-files-cards");
+
+    expect(within(cards).getByText("Model A [a]")).toBeInTheDocument();
+    expect(within(cards).getByText("Model B [b]")).toBeInTheDocument();
+    expect(within(cards).getByText("Model C [c]")).toBeInTheDocument();
+    expect(within(cards).getByText("Model D [d]")).toBeInTheDocument();
+  });
+
   test("cards view restores cached quota while refreshing in the background", async () => {
     const now = Date.now();
     const file = {
@@ -845,6 +904,349 @@ describe("AuthFilesPage files table", () => {
     await waitFor(() => expect(mocks.fetchQuota).toHaveBeenCalledTimes(1));
     expect(screen.getByText("22%")).toBeInTheDocument();
     expect(screen.getByText("44%")).toBeInTheDocument();
+  });
+
+  test("cards view does not spin card refresh actions for tab-switch background quota refresh", async () => {
+    const now = Date.now();
+    const files = [
+      {
+        name: "qwen.json",
+        type: "qwen",
+        size: 1024,
+        modified: now,
+        disabled: false,
+      },
+      {
+        name: "codex-a.json",
+        type: "codex",
+        size: 1024,
+        modified: now,
+        disabled: false,
+        auth_index: "1",
+      },
+      {
+        name: "codex-b.json",
+        type: "codex",
+        size: 1024,
+        modified: now,
+        disabled: false,
+        auth_index: "2",
+      },
+      {
+        name: "codex-c.json",
+        type: "codex",
+        size: 1024,
+        modified: now,
+        disabled: false,
+        auth_index: "3",
+      },
+    ] as any[];
+
+    mocks.list.mockImplementation(async () => ({ files }));
+    mocks.fetchQuota.mockImplementation(() => new Promise(() => {}));
+
+    window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
+    window.sessionStorage.setItem(
+      AUTH_FILES_UI_STATE_KEY,
+      JSON.stringify({ tab: "files", filter: "qwen", search: "", page: 1 }),
+    );
+    window.sessionStorage.setItem(
+      AUTH_FILES_DATA_CACHE_KEY,
+      JSON.stringify({
+        savedAtMs: now,
+        files,
+        usageData: { source: [], auth_index: [] },
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("qwen.json")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: /codex/i }));
+    expect(await screen.findByText("codex-a.json")).toBeInTheDocument();
+
+    await waitFor(() =>
+      expect(mocks.fetchQuota).toHaveBeenCalledWith(
+        "codex",
+        expect.objectContaining({ name: "codex-a.json" }),
+      ),
+    );
+
+    const cards = screen.getByTestId("auth-files-cards");
+    const cardRefreshButtons = within(cards).getAllByRole("button", { name: "Refresh" });
+    expect(cardRefreshButtons).toHaveLength(3);
+    cardRefreshButtons.forEach((button) => {
+      expect(button.querySelector("svg")).not.toHaveClass("animate-spin");
+    });
+  });
+
+  test("toolbar refresh immediately spins the visible card quota refresh action", async () => {
+    const now = Date.now();
+    const file = {
+      name: "codex.json",
+      type: "codex",
+      size: 1024,
+      modified: now,
+      disabled: false,
+      auth_index: "1",
+    } as any;
+
+    mocks.list.mockImplementation(async () => ({ files: [file] }));
+    mocks.fetchQuota.mockImplementation(() => new Promise(() => {}));
+
+    window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
+    window.localStorage.setItem("authFilesPage.quotaAutoRefreshMs.v1", JSON.stringify(0));
+    window.sessionStorage.setItem(
+      AUTH_FILES_DATA_CACHE_KEY,
+      JSON.stringify({
+        savedAtMs: now,
+        files: [file],
+        usageData: { source: [], auth_index: [] },
+        quotaByFileName: {
+          "codex.json": {
+            status: "success",
+            updatedAt: now,
+            items: [{ label: "m_quota.code_5h", percent: 22, resetAtMs: now + 60_000 }],
+          },
+        },
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    const cards = await screen.findByTestId("auth-files-cards");
+    const toolbarRefreshButton = screen.getAllByRole("button", { name: "Refresh" })[0];
+    await waitFor(() => expect(toolbarRefreshButton).toBeEnabled());
+
+    fireEvent.click(toolbarRefreshButton);
+
+    const cardRefreshButton = within(cards).getByRole("button", { name: "Refresh" });
+    await waitFor(() => expect(cardRefreshButton.querySelector("svg")).toHaveClass("animate-spin"));
+  });
+
+  test("toolbar refresh immediately spins the visible table quota refresh action", async () => {
+    const now = Date.now();
+    const file = {
+      name: "codex-table.json",
+      type: "codex",
+      size: 1024,
+      modified: now,
+      disabled: false,
+      auth_index: "3",
+    } as any;
+
+    mocks.list.mockImplementation(async () => ({ files: [file] }));
+    mocks.fetchQuota.mockImplementation(() => new Promise(() => {}));
+
+    window.localStorage.setItem("authFilesPage.quotaAutoRefreshMs.v1", JSON.stringify(0));
+    window.sessionStorage.setItem(
+      AUTH_FILES_DATA_CACHE_KEY,
+      JSON.stringify({
+        savedAtMs: now,
+        files: [file],
+        usageData: { source: [], auth_index: [] },
+        quotaByFileName: {
+          "codex-table.json": {
+            status: "success",
+            updatedAt: now,
+            items: [{ label: "m_quota.code_5h", percent: 64, resetAtMs: now + 60_000 }],
+          },
+        },
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("codex-table.json")).toBeInTheDocument();
+    const toolbarRefreshButton = screen.getAllByRole("button", { name: "Refresh" })[0];
+    await waitFor(() => expect(toolbarRefreshButton).toBeEnabled());
+
+    fireEvent.click(toolbarRefreshButton);
+
+    const row = screen.getByText("codex-table.json").closest("tr");
+    expect(row).not.toBeNull();
+    const rowRefreshButton = within(row as HTMLElement).getByRole("button", { name: "Refresh" });
+    await waitFor(() => expect(rowRefreshButton.querySelector("svg")).toHaveClass("animate-spin"));
+  });
+
+  test("cards view refresh action only refreshes the clicked auth file", async () => {
+    const now = Date.now();
+    const files = [
+      {
+        name: "codex-a.json",
+        type: "codex",
+        size: 1024,
+        modified: now,
+        disabled: false,
+        auth_index: "1",
+      },
+      {
+        name: "codex-b.json",
+        type: "codex",
+        size: 1024,
+        modified: now,
+        disabled: false,
+        auth_index: "2",
+      },
+    ] as any[];
+
+    mocks.list.mockImplementation(async () => ({ files }));
+    mocks.fetchQuota.mockResolvedValue({
+      items: [{ label: "m_quota.code_5h", percent: 12, resetAtMs: now + 60_000 }],
+    });
+
+    window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
+    window.localStorage.setItem("authFilesPage.quotaAutoRefreshMs.v1", JSON.stringify(0));
+    window.sessionStorage.setItem(
+      AUTH_FILES_DATA_CACHE_KEY,
+      JSON.stringify({
+        savedAtMs: now,
+        files,
+        usageData: { source: [], auth_index: [] },
+        quotaByFileName: {
+          "codex-a.json": {
+            status: "success",
+            updatedAt: now,
+            items: [{ label: "m_quota.code_5h", percent: 22, resetAtMs: now + 30_000 }],
+          },
+          "codex-b.json": {
+            status: "success",
+            updatedAt: now,
+            items: [{ label: "m_quota.code_5h", percent: 44, resetAtMs: now + 30_000 }],
+          },
+        },
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("codex-a.json")).toBeInTheDocument();
+    const cards = screen.getByTestId("auth-files-cards");
+    const firstCard = screen.getByText("codex-a.json").closest("section");
+    expect(firstCard).not.toBeNull();
+
+    fireEvent.click(within(firstCard as HTMLElement).getByRole("button", { name: "Refresh" }));
+
+    await waitFor(() => expect(mocks.fetchQuota).toHaveBeenCalledTimes(1));
+    expect(mocks.fetchQuota).toHaveBeenCalledWith(
+      "codex",
+      expect.objectContaining({ name: "codex-a.json" }),
+    );
+    expect(within(cards).getByText("codex-b.json")).toBeInTheDocument();
+  });
+
+  test("table refresh action only refreshes the clicked auth file", async () => {
+    const now = Date.now();
+    const files = [
+      {
+        name: "codex-a.json",
+        type: "codex",
+        size: 1024,
+        modified: now,
+        disabled: false,
+        auth_index: "1",
+      },
+      {
+        name: "codex-b.json",
+        type: "codex",
+        size: 1024,
+        modified: now,
+        disabled: false,
+        auth_index: "2",
+      },
+    ] as any[];
+
+    mocks.list.mockImplementation(async () => ({ files }));
+    mocks.fetchQuota.mockResolvedValue({
+      items: [{ label: "m_quota.code_5h", percent: 18, resetAtMs: now + 60_000 }],
+    });
+
+    window.localStorage.setItem("authFilesPage.quotaAutoRefreshMs.v1", JSON.stringify(0));
+    window.sessionStorage.setItem(
+      AUTH_FILES_DATA_CACHE_KEY,
+      JSON.stringify({
+        savedAtMs: now,
+        files,
+        usageData: { source: [], auth_index: [] },
+        quotaByFileName: {
+          "codex-a.json": {
+            status: "success",
+            updatedAt: now,
+            items: [{ label: "m_quota.code_5h", percent: 22, resetAtMs: now + 30_000 }],
+          },
+          "codex-b.json": {
+            status: "success",
+            updatedAt: now,
+            items: [{ label: "m_quota.code_5h", percent: 44, resetAtMs: now + 30_000 }],
+          },
+        },
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("codex-a.json")).toBeInTheDocument();
+    const row = screen.getByText("codex-a.json").closest("tr");
+    expect(row).not.toBeNull();
+
+    fireEvent.click(within(row as HTMLElement).getByRole("button", { name: "Refresh" }));
+
+    await waitFor(() => expect(mocks.fetchQuota).toHaveBeenCalledTimes(1));
+    expect(mocks.fetchQuota).toHaveBeenCalledWith(
+      "codex",
+      expect.objectContaining({ name: "codex-a.json" }),
+    );
+    expect(screen.getByText("codex-b.json")).toBeInTheDocument();
   });
 
   test("cards view includes returned codex review 5h and additional quota bars", async () => {
@@ -1167,6 +1569,7 @@ describe("AuthFilesPage files table", () => {
           "codex.json": {
             status: "success",
             updatedAt: now,
+            planType: "free",
             items: [{ label: "m_quota.code_5h", percent: 20, resetAtMs: now + 30_000 }],
           },
         },
@@ -1194,6 +1597,64 @@ describe("AuthFilesPage files table", () => {
       (await screen.findAllByText((_, node) => node?.textContent?.includes("Plan Plus") ?? false))
         .length,
     ).toBeGreaterThan(0);
+
+    await waitFor(() => {
+      const raw = window.sessionStorage.getItem(AUTH_FILES_DATA_CACHE_KEY);
+      expect(raw).toContain('"planType":"plus"');
+    });
+  });
+
+  test("cards view uses cached quota plan badge instead of stale auth-file metadata", async () => {
+    const now = Date.now();
+    const staleFile = {
+      name: "codex.json",
+      label: "Codex Main",
+      account_type: "oauth",
+      type: "codex",
+      size: 1024,
+      modified: now,
+      disabled: false,
+      auth_index: "1",
+      plan_type: "plus",
+    } as any;
+
+    mocks.list.mockImplementation(async () => ({ files: [staleFile] }));
+    mocks.fetchQuota.mockImplementation(() => new Promise(() => {}));
+
+    window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
+    window.localStorage.setItem("authFilesPage.quotaAutoRefreshMs.v1", JSON.stringify(0));
+    window.sessionStorage.setItem(
+      AUTH_FILES_DATA_CACHE_KEY,
+      JSON.stringify({
+        savedAtMs: now,
+        files: [staleFile],
+        usageData: { source: [], auth_index: [] },
+        quotaByFileName: {
+          "codex.json": {
+            status: "success",
+            updatedAt: now,
+            planType: "pro",
+            items: [{ label: "m_quota.code_5h", percent: 20, resetAtMs: now + 30_000 }],
+          },
+        },
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("Codex Main")).toBeInTheDocument();
+    expect(screen.getByText("Plan Pro")).toBeInTheDocument();
+    expect(screen.queryByText("Plan Plus")).not.toBeInTheDocument();
   });
 
   test("cards view exposes quota refresh for Anthropic OAuth files", async () => {

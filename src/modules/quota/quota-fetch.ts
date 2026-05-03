@@ -15,7 +15,7 @@ import {
   KIRO_QUOTA_URL,
   KIRO_REQUEST_BODY,
   KIRO_REQUEST_HEADERS,
-  buildAntigravityGroups,
+  buildAntigravityItems,
   buildClaudeItems,
   buildCodexItems,
   buildGeminiCliBuckets,
@@ -38,7 +38,6 @@ import {
   resolveAuthProvider,
   resolveCodexChatgptAccountId,
   resolveGeminiCliProjectId,
-  type AntigravityModelsPayload,
   type QuotaItem,
 } from "@/modules/quota/quota-helpers";
 
@@ -120,13 +119,8 @@ export const fetchQuota = async (
         const parsed = parseAntigravityPayload(result.body ?? result.bodyText);
         const models = parsed?.models;
         if (!models || !isRecord(models)) throw new Error("no_model_quota");
-        const groups = buildAntigravityGroups(models as AntigravityModelsPayload);
         return {
-          items: groups.map((g) => ({
-            label: g.label,
-            percent: Math.round(clampPercent(g.remainingFraction * 100)),
-            resetAtMs: parseResetTimeToMs(g.resetTime),
-          })),
+          items: buildAntigravityItems(parsed),
         };
       }
     }

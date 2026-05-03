@@ -1,4 +1,4 @@
-import { useCallback, useMemo, type ReactNode, type RefObject } from "react";
+import { useCallback, useMemo, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { CalendarClock, Download, Eye, Loader2, RefreshCw, Zap } from "lucide-react";
 import type { AuthFileItem } from "@/lib/http/types";
@@ -111,7 +111,6 @@ interface UseAuthFilesFilesPresentationOptions {
   connectivityState: Map<string, { loading: boolean; latencyMs: number | null; error: boolean }>;
   checkAuthFileConnectivity: (name: string) => Promise<void>;
   quotaByFileName: Record<string, QuotaState>;
-  quotaAutoRefreshingRef: RefObject<Set<string>>;
   refreshQuota: (file: AuthFileItem, provider: QuotaProvider) => Promise<void>;
   openDetail: (file: AuthFileItem) => Promise<void>;
   downloadAuthFile: (file: AuthFileItem) => Promise<void>;
@@ -135,7 +134,6 @@ export function useAuthFilesFilesPresentation({
   connectivityState,
   checkAuthFileConnectivity,
   quotaByFileName,
-  quotaAutoRefreshingRef,
   refreshQuota,
   openDetail,
   downloadAuthFile,
@@ -436,7 +434,7 @@ export function useAuthFilesFilesPresentation({
         render: (file) => {
           const typeKey = resolveFileType(file);
           const badgeClass = TYPE_BADGE_CLASSES[typeKey] ?? TYPE_BADGE_CLASSES.unknown;
-          const planType = resolveAuthFilePlanType(file);
+          const planType = resolveAuthFilePlanType(file, quotaByFileName[file.name]);
           const runtimeOnly = isRuntimeOnlyAuthFile(file);
 
           return (
@@ -676,7 +674,6 @@ export function useAuthFilesFilesPresentation({
           const quotaRefreshing = quotaProvider
             ? quotaByFileName[file.name]?.status === "loading"
             : false;
-          const quotaAutoRefreshing = quotaAutoRefreshingRef.current.has(file.name);
 
           return (
             <div className="inline-flex flex-wrap items-center justify-center gap-1">
@@ -688,12 +685,8 @@ export function useAuthFilesFilesPresentation({
                     onClick={() => void refreshQuota(file, quotaProvider)}
                     title={t("common.refresh")}
                     aria-label={t("common.refresh")}
-                    disabled={quotaRefreshing}
                   >
-                    <RefreshCw
-                      size={16}
-                      className={quotaRefreshing && !quotaAutoRefreshing ? "animate-spin" : ""}
-                    />
+                    <RefreshCw size={16} className={quotaRefreshing ? "animate-spin" : ""} />
                   </Button>
                 </HoverTooltip>
               ) : null}
@@ -734,7 +727,6 @@ export function useAuthFilesFilesPresentation({
     formatPlanTypeLabel,
     formatQuotaResetTextCompact,
     openDetail,
-    quotaAutoRefreshingRef,
     quotaByFileName,
     quotaPreviewMode,
     quotaProgressCircle,

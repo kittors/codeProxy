@@ -7,6 +7,7 @@ import type {
 import { normalizeUsageSourceId, type KeyStatBucket } from "@/modules/providers/provider-usage";
 import type { QuotaItem, QuotaState, QuotaStatus } from "@/modules/quota/quota-helpers";
 import { resolveCodexPlanType } from "@/utils/quota/resolvers";
+import { normalizePlanType } from "@/utils/quota/parsers";
 import type { StatusBarData, StatusBlockDetail, StatusBlockState } from "@/utils/usage";
 
 export type AuthFileModelItem = {
@@ -211,10 +212,12 @@ const sanitizeQuotaByFileNameForCache = (
       typeof state.updatedAt === "number" && Number.isFinite(state.updatedAt)
         ? state.updatedAt
         : undefined;
+    const planType = normalizePlanType(state.planType ?? state.plan_type);
     const error = typeof state.error === "string" ? state.error : undefined;
     output[fileName] = {
       status: status === "loading" ? "success" : (status as QuotaStatus),
       items,
+      planType: planType ?? undefined,
       updatedAt,
       error: status === "error" ? error : undefined,
     };
@@ -525,8 +528,10 @@ export const authFilesSortCollator = new Intl.Collator("zh-Hans-CN", {
   sensitivity: "base",
 });
 
-export const resolveAuthFilePlanType = (file: AuthFileItem): string | null =>
-  resolveCodexPlanType(file);
+export const resolveAuthFilePlanType = (
+  file: AuthFileItem,
+  quotaState?: QuotaState | null,
+): string | null => normalizePlanType(quotaState?.planType) ?? resolveCodexPlanType(file);
 
 export const isRuntimeOnlyAuthFile = (file: AuthFileItem): boolean => {
   const raw = (file.runtime_only ?? file.runtimeOnly) as unknown;

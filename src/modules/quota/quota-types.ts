@@ -12,6 +12,7 @@ export type QuotaItem = {
 export type QuotaState = {
   status: QuotaStatus;
   items: QuotaItem[];
+  planType?: string;
   error?: string;
   updatedAt?: number;
 };

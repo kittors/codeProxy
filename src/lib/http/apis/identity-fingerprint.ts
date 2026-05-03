@@ -11,8 +11,24 @@ export interface CodexIdentityFingerprint {
   "custom-headers"?: Record<string, string>;
 }
 
+export interface ClaudeIdentityFingerprint {
+  enabled?: boolean;
+  "cli-version"?: string;
+  entrypoint?: string;
+  "user-agent"?: string;
+  "anthropic-beta"?: string;
+  "stainless-package-version"?: string;
+  "stainless-runtime-version"?: string;
+  "stainless-timeout"?: string;
+  "session-mode"?: "server-stable" | "fixed" | "per-request";
+  "session-id"?: string;
+  "device-id"?: string;
+  "custom-headers"?: Record<string, string>;
+}
+
 export interface IdentityFingerprintConfig {
   codex?: CodexIdentityFingerprint;
+  claude?: ClaudeIdentityFingerprint;
 }
 
 export interface IdentityFingerprintResponse {

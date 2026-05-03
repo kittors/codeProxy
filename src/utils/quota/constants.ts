@@ -2,11 +2,7 @@
  * Quota constants for API URLs, headers, and theme colors.
  */
 
-import type {
-  AntigravityQuotaGroupDefinition,
-  GeminiCliQuotaGroupDefinition,
-  TypeColorSet,
-} from "@/types";
+import type { GeminiCliQuotaGroupDefinition, TypeColorSet } from "@/types";
 
 // Theme colors for type badges
 export const TYPE_COLORS: Record<string, TypeColorSet> = {
@@ -68,50 +64,6 @@ export const ANTIGRAVITY_REQUEST_HEADERS = {
   "Content-Type": "application/json",
   "User-Agent": "antigravity/1.11.5 windows/amd64",
 };
-
-export const ANTIGRAVITY_QUOTA_GROUPS: AntigravityQuotaGroupDefinition[] = [
-  {
-    id: "claude-gpt",
-    label: "Claude/GPT",
-    identifiers: [
-      "claude-sonnet-4-5-thinking",
-      "claude-opus-4-5-thinking",
-      "claude-sonnet-4-5",
-      "gpt-oss-120b-medium",
-    ],
-  },
-  {
-    id: "gemini-3-pro",
-    label: "Gemini 3 Pro",
-    identifiers: ["gemini-3-pro-high", "gemini-3-pro-low"],
-  },
-  {
-    id: "gemini-2-5-flash",
-    label: "Gemini 2.5 Flash",
-    identifiers: ["gemini-2.5-flash", "gemini-2.5-flash-thinking"],
-  },
-  {
-    id: "gemini-2-5-flash-lite",
-    label: "Gemini 2.5 Flash Lite",
-    identifiers: ["gemini-2.5-flash-lite"],
-  },
-  {
-    id: "gemini-2-5-cu",
-    label: "Gemini 2.5 CU",
-    identifiers: ["rev19-uic3-1p"],
-  },
-  {
-    id: "gemini-3-flash",
-    label: "Gemini 3 Flash",
-    identifiers: ["gemini-3-flash"],
-  },
-  {
-    id: "gemini-image",
-    label: "gemini-3-pro-image",
-    identifiers: ["gemini-3-pro-image"],
-    labelFromModel: true,
-  },
-];
 
 // Gemini CLI API configuration
 export const GEMINI_CLI_QUOTA_URL =

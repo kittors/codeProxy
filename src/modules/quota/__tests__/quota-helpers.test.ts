@@ -1,8 +1,10 @@
 import { describe, expect, test } from "vitest";
 import {
+  buildAntigravityItems,
   buildCodexItems,
   buildKimiItems,
   formatRelativeResetLabel,
+  parseAntigravityPayload,
   parseKimiUsagePayload,
 } from "@/modules/quota/quota-helpers";
 
@@ -121,6 +123,137 @@ describe("buildCodexItems", () => {
         expect.objectContaining({ label: "m_quota.review_weekly", percent: 90 }),
       ]),
     );
+  });
+});
+
+describe("buildAntigravityItems", () => {
+  test("builds dynamic quota items from fetchAvailableModels instead of static buckets", () => {
+    const payload = parseAntigravityPayload(
+      JSON.stringify({
+        models: {
+          tab_jump_flash_lite_preview: {
+            maxTokens: 16384,
+            maxOutputTokens: 4096,
+            quotaInfo: { remainingFraction: 1 },
+            model: "MODEL_PLACEHOLDER_M28",
+            apiProvider: "API_PROVIDER_GOOGLE_GEMINI",
+          },
+          "gemini-3.1-pro-high": {
+            displayName: "Gemini 3.1 Pro (High)",
+            supportsImages: true,
+            supportsThinking: true,
+            supportsVideo: true,
+            maxTokens: 1048576,
+            maxOutputTokens: 65535,
+            quotaInfo: {
+              remainingFraction: 0.75,
+              resetTime: "2026-05-09T15:50:29Z",
+            },
+            model: "MODEL_PLACEHOLDER_M37",
+            apiProvider: "API_PROVIDER_GOOGLE_GEMINI",
+            modelProvider: "MODEL_PROVIDER_GOOGLE",
+          },
+          "gemini-3.1-pro-low": {
+            displayName: "Gemini 3.1 Pro (Low)",
+            maxTokens: 1048576,
+            maxOutputTokens: 65535,
+            quotaInfo: { remainingFraction: 0.5 },
+            model: "MODEL_PLACEHOLDER_M36",
+          },
+          "gemini-3-flash-agent": {
+            displayName: "Gemini 3 Flash",
+            quotaInfo: { remainingFraction: 1 },
+            model: "MODEL_PLACEHOLDER_M84",
+          },
+          "claude-sonnet-4-6": {
+            displayName: "Claude Sonnet 4.6 (Thinking)",
+            quotaInfo: { remainingFraction: 0.9 },
+            apiProvider: "API_PROVIDER_ANTHROPIC_VERTEX",
+          },
+          "gpt-oss-120b-medium": {
+            displayName: "GPT-OSS 120B (Medium)",
+            quotaInfo: { remainingFraction: 0.8 },
+            apiProvider: "API_PROVIDER_OPENAI_VERTEX",
+          },
+          "gemini-3-flash": {
+            displayName: "Gemini 3 Flash",
+            quotaInfo: { remainingFraction: 0.7 },
+          },
+          chat_20706: {
+            quotaInfo: { remainingFraction: 1 },
+            isInternal: true,
+          },
+          "gemini-3.1-flash-image": {
+            displayName: "Gemini 3.1 Flash Image",
+            quotaInfo: { remainingFraction: 0.6 },
+          },
+          "gemini-3.1-flash-lite": {
+            displayName: "Gemini 3.1 Flash Lite",
+            quotaInfo: { remainingFraction: 0.95 },
+          },
+        },
+        defaultAgentModelId: "gemini-3.1-pro-high",
+        agentModelSorts: [
+          {
+            displayName: "Recommended",
+            groups: [
+              {
+                modelIds: [
+                  "gemini-3.1-pro-high",
+                  "gemini-3.1-pro-low",
+                  "gemini-3-flash-agent",
+                  "claude-sonnet-4-6",
+                  "gpt-oss-120b-medium",
+                ],
+              },
+            ],
+          },
+        ],
+        commandModelIds: ["gemini-3-flash"],
+        tabModelIds: ["chat_20706"],
+        imageGenerationModelIds: ["gemini-3.1-flash-image"],
+        mqueryModelIds: ["gemini-3.1-flash-lite"],
+        webSearchModelIds: ["gemini-3.1-flash-lite"],
+        commitMessageModelIds: ["gemini-3.1-flash-lite"],
+      }),
+    );
+
+    expect(payload).not.toBeNull();
+
+    const items = buildAntigravityItems(payload!);
+    const labels = items.map((item) => item.label);
+
+    expect(items.map((item) => item.key)).toEqual([
+      "model:gemini-3.1-pro-high",
+      "model:gemini-3.1-pro-low",
+      "model:gemini-3-flash-agent",
+      "model:claude-sonnet-4-6",
+      "model:gpt-oss-120b-medium",
+      "model:gemini-3-flash",
+      "model:chat_20706",
+      "model:gemini-3.1-flash-image",
+      "model:gemini-3.1-flash-lite",
+      "model:tab_jump_flash_lite_preview",
+    ]);
+    expect(labels).toContain("Gemini 3.1 Pro (High) [gemini-3.1-pro-high]");
+    expect(labels).toContain("chat_20706");
+    expect(labels).not.toContain("Claude/GPT");
+    expect(labels).not.toContain("Gemini 3 Pro");
+    expect(items[0]).toEqual(
+      expect.objectContaining({
+        percent: 75,
+        resetAtMs: Date.parse("2026-05-09T15:50:29Z"),
+        meta: expect.stringContaining("Default Agent"),
+      }),
+    );
+    expect(items[0].meta).toContain("Recommended");
+    expect(items[0].meta).toContain("maxTokens=1048576");
+    expect(items[0].meta).toContain("maxOutputTokens=65535");
+    expect(items[0].meta).toContain("apiProvider=API_PROVIDER_GOOGLE_GEMINI");
+    expect(items[0].meta).toContain("model=MODEL_PLACEHOLDER_M37");
+    expect(items[0].meta).toContain("thinking");
+    expect(items[0].meta).toContain("images");
+    expect(items[0].meta).toContain("video");
   });
 });
 
