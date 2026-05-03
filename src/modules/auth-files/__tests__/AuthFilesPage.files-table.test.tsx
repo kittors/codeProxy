@@ -156,6 +156,7 @@ describe("AuthFilesPage files table", () => {
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
     window.localStorage.clear();
     window.sessionStorage.clear();
   });
@@ -1072,6 +1073,78 @@ describe("AuthFilesPage files table", () => {
     expect(
       within(tooltip).queryByText(/modelProvider=MODEL_PROVIDER_GOOGLE/),
     ).not.toBeInTheDocument();
+  });
+
+  test("table quota hover opens only the quota details tooltip", async () => {
+    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(80);
+    vi.spyOn(HTMLElement.prototype, "scrollWidth", "get").mockReturnValue(320);
+
+    const now = Date.now();
+    const file = {
+      name: "antigravity.json",
+      type: "antigravity",
+      size: 1024,
+      modified: now,
+      disabled: false,
+      auth_index: "ag",
+    } as any;
+
+    mocks.list.mockImplementation(async () => ({ files: [file] }));
+
+    window.localStorage.setItem("authFilesPage.quotaAutoRefreshMs.v1", JSON.stringify(0));
+    window.sessionStorage.setItem(
+      AUTH_FILES_DATA_CACHE_KEY,
+      JSON.stringify({
+        savedAtMs: now,
+        files: [file],
+        quotaByFileName: {
+          "antigravity.json": {
+            status: "success",
+            updatedAt: now,
+            items: [
+              {
+                key: "model:gemini-3.1-pro-high",
+                label: "Gemini 3.1 Pro (High) [gemini-3.1-pro-high]",
+                percent: 100,
+                resetAtMs: Date.parse("2026-05-09T15:50:29Z"),
+              },
+              {
+                key: "model:claude-sonnet-4-6",
+                label: "Claude Sonnet 4.6 (Thinking) [claude-sonnet-4-6]",
+                percent: 100,
+                resetAtMs: Date.parse("2026-05-09T15:50:29Z"),
+              },
+            ],
+          },
+        },
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("antigravity.json")).toBeInTheDocument();
+
+    const row = screen.getByText("antigravity.json").closest("tr");
+    expect(row).not.toBeNull();
+    fireEvent.mouseEnter(
+      within(row as HTMLElement).getByText("Gemini 3.1 Pro (High) [gemini-3.1-pro-high]"),
+    );
+
+    const tooltips = await screen.findAllByRole("tooltip");
+    expect(tooltips).toHaveLength(1);
+    expect(
+      within(tooltips[0]).getByText("Claude Sonnet 4.6 (Thinking) [claude-sonnet-4-6]"),
+    ).toBeInTheDocument();
   });
 
   test("table quota preview and hover hide cached antigravity models skipped by the reference implementation", async () => {
