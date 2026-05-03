@@ -127,7 +127,7 @@ describe("buildCodexItems", () => {
 });
 
 describe("buildAntigravityItems", () => {
-  test("builds dynamic quota items from fetchAvailableModels instead of static buckets", () => {
+  test("builds dynamic quota items from fetchAvailableModels and skips reference internal models", () => {
     const payload = parseAntigravityPayload(
       JSON.stringify({
         models: {
@@ -136,6 +136,13 @@ describe("buildAntigravityItems", () => {
             maxOutputTokens: 4096,
             quotaInfo: { remainingFraction: 1 },
             model: "MODEL_PLACEHOLDER_M28",
+            apiProvider: "API_PROVIDER_GOOGLE_GEMINI",
+          },
+          tab_flash_lite_preview: {
+            maxTokens: 16384,
+            maxOutputTokens: 4096,
+            quotaInfo: { remainingFraction: 1 },
+            model: "MODEL_PLACEHOLDER_M19",
             apiProvider: "API_PROVIDER_GOOGLE_GEMINI",
           },
           "gemini-3.1-pro-high": {
@@ -183,6 +190,18 @@ describe("buildAntigravityItems", () => {
             quotaInfo: { remainingFraction: 1 },
             isInternal: true,
           },
+          chat_23310: {
+            quotaInfo: { remainingFraction: 1 },
+            isInternal: true,
+          },
+          "gemini-2.5-flash-thinking": {
+            displayName: "Gemini 3.1 Flash Lite",
+            quotaInfo: { remainingFraction: 1 },
+          },
+          "gemini-2.5-pro": {
+            displayName: "Gemini 2.5 Pro",
+            quotaInfo: { remainingFraction: 1 },
+          },
           "gemini-3.1-flash-image": {
             displayName: "Gemini 3.1 Flash Image",
             quotaInfo: { remainingFraction: 0.6 },
@@ -210,7 +229,7 @@ describe("buildAntigravityItems", () => {
           },
         ],
         commandModelIds: ["gemini-3-flash"],
-        tabModelIds: ["chat_20706"],
+        tabModelIds: ["chat_20706", "chat_23310"],
         imageGenerationModelIds: ["gemini-3.1-flash-image"],
         mqueryModelIds: ["gemini-3.1-flash-lite"],
         webSearchModelIds: ["gemini-3.1-flash-lite"],
@@ -230,13 +249,16 @@ describe("buildAntigravityItems", () => {
       "model:claude-sonnet-4-6",
       "model:gpt-oss-120b-medium",
       "model:gemini-3-flash",
-      "model:chat_20706",
       "model:gemini-3.1-flash-image",
       "model:gemini-3.1-flash-lite",
-      "model:tab_jump_flash_lite_preview",
     ]);
     expect(labels).toContain("Gemini 3.1 Pro (High) [gemini-3.1-pro-high]");
-    expect(labels).toContain("chat_20706");
+    expect(labels).not.toContain("chat_20706");
+    expect(labels).not.toContain("chat_23310");
+    expect(labels).not.toContain("tab_flash_lite_preview");
+    expect(labels).not.toContain("tab_jump_flash_lite_preview");
+    expect(labels).not.toContain("Gemini 3.1 Flash Lite [gemini-2.5-flash-thinking]");
+    expect(labels).not.toContain("Gemini 2.5 Pro [gemini-2.5-pro]");
     expect(labels).not.toContain("Claude/GPT");
     expect(labels).not.toContain("Gemini 3 Pro");
     expect(items[0]).toEqual(

@@ -36,10 +36,21 @@ const MODEL_ID_LISTS: Array<keyof AntigravityFetchAvailableModelsPayload> = [
   "commitMessageModelIds",
 ];
 
+const REFERENCE_SKIPPED_MODEL_IDS = new Set([
+  "chat_20706",
+  "chat_23310",
+  "tab_flash_lite_preview",
+  "tab_jump_flash_lite_preview",
+  "gemini-2.5-flash-thinking",
+  "gemini-2.5-pro",
+]);
+
 const normalizeModelId = (value: unknown): string | null => normalizeStringValue(value);
 
 const normalizeModelIdList = (value: unknown): string[] =>
   Array.isArray(value) ? value.map(normalizeModelId).filter((id): id is string => Boolean(id)) : [];
+
+const shouldSkipModel = (id: string): boolean => REFERENCE_SKIPPED_MODEL_IDS.has(id);
 
 const resolvePayloadAndModels = (
   input: AntigravityFetchAvailableModelsPayload | AntigravityModelsPayload,
@@ -71,6 +82,7 @@ const quotaInfo = (entry?: AntigravityQuotaInfo) => {
 
 const addModelToOrder = (id: string | null, order: string[]) => {
   if (!id) return;
+  if (shouldSkipModel(id)) return;
   if (!order.includes(id)) order.push(id);
 };
 
@@ -112,6 +124,7 @@ export const buildAntigravityItems = (
 
   Object.keys(models)
     .filter((id) => !orderedIds.has(id))
+    .filter((id) => !shouldSkipModel(id))
     .sort((a, b) => a.localeCompare(b))
     .forEach((id) => {
       order.push(id);
