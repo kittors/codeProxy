@@ -20,6 +20,7 @@ import {
   type TimeRange,
 } from "@/modules/monitor/requestLogsShared";
 type StatusFilter = "" | "success" | "failed";
+const DEFAULT_LOG_STATS = { total: 0, success_rate: 0, total_tokens: 0, total_cost: 0 };
 
 // ---------------------------------------------------------------------------
 // Main page
@@ -83,7 +84,8 @@ export function RequestLogsPage() {
     total: number;
     success_rate: number;
     total_tokens: number;
-  }>({ total: 0, success_rate: 0, total_tokens: 0 });
+    total_cost: number;
+  }>(DEFAULT_LOG_STATS);
 
   // Filters
   const [timeRange, setTimeRange] = useState<TimeRange>(7);
@@ -128,7 +130,10 @@ export function RequestLogsPage() {
           models: Array.isArray(filtersCandidate?.models) ? filtersCandidate.models : [],
           channels: Array.isArray(filtersCandidate?.channels) ? filtersCandidate.channels : [],
         });
-        setStats(resp.stats ?? { total: 0, success_rate: 0, total_tokens: 0 });
+        setStats({
+          ...DEFAULT_LOG_STATS,
+          ...(resp.stats ?? {}),
+        });
         setLastUpdatedAt(Date.now());
       } catch (err) {
         const message = err instanceof Error ? err.message : t("request_logs.refresh_failed");
@@ -296,6 +301,11 @@ export function RequestLogsPage() {
                 <span className="font-mono tabular-nums">
                   {stats.total_tokens.toLocaleString()}
                 </span>
+              </span>
+
+              <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+                {t("request_logs.col_cost")}
+                <span className="font-mono tabular-nums">${stats.total_cost.toFixed(4)}</span>
               </span>
 
               <span className="col-span-2 text-[11px] text-slate-400 dark:text-white/40 sm:col-span-1 sm:text-xs">

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Activity, RefreshCw, Sigma, Sparkles, TriangleAlert } from "lucide-react";
+import { Activity, DollarSign, RefreshCw, Sigma, Sparkles, TriangleAlert } from "lucide-react";
 import type { ECBasicOption } from "echarts/types/dist/shared";
 import {
   usageApi,
@@ -48,6 +48,7 @@ const throughputNumberFormatter = new Intl.NumberFormat(undefined, {
 const formatThroughputValue = (value: number) =>
   throughputNumberFormatter.format(Number.isFinite(value) ? value : 0);
 const formatRate = (rate: number) => `${rate.toFixed(2)}%`;
+const formatCurrency = (value: number) => `$${value.toFixed(4)}`;
 const PANEL_SURFACE =
   "rounded-[18px] border border-slate-200/85 bg-white shadow-[0_10px_26px_rgba(15,23,42,0.05)] dark:border-neutral-800 dark:bg-neutral-950/85 dark:shadow-[0_10px_26px_rgba(0,0,0,0.28)]";
 
@@ -418,6 +419,10 @@ export function DashboardPage() {
     () => createSparklineOption(trends?.total_tokens ?? [], "#7c3aed"),
     [trends?.total_tokens],
   );
+  const totalCostOption = useMemo(
+    () => createSparklineOption(trends?.total_cost ?? [], "#0891b2"),
+    [trends?.total_cost],
+  );
   const failedRequestOption = useMemo(
     () => createSparklineOption(trends?.failed_requests ?? [], "#ef4444"),
     [trends?.failed_requests],
@@ -476,7 +481,7 @@ export function DashboardPage() {
         />
       ) : null}
 
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
         <DashboardKpiCard
           title={t("dashboard.total_requests")}
           value={<AnimatedNumber value={kpi?.total_requests ?? 0} format={formatNumber} />}
@@ -518,6 +523,17 @@ export function DashboardPage() {
           accent={{
             iconWrap: "bg-violet-50 dark:bg-violet-500/12",
             iconColor: "text-violet-600 dark:text-violet-400",
+          }}
+        />
+        <DashboardKpiCard
+          title={t("dashboard.total_cost")}
+          value={<AnimatedNumber value={kpi?.total_cost ?? 0} format={formatCurrency} />}
+          hint={t("dashboard.total_cost_hint")}
+          icon={DollarSign}
+          option={totalCostOption}
+          accent={{
+            iconWrap: "bg-cyan-50 dark:bg-cyan-500/12",
+            iconColor: "text-cyan-600 dark:text-cyan-400",
           }}
         />
         <DashboardKpiCard

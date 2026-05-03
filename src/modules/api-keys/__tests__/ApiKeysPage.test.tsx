@@ -9,6 +9,7 @@ import { ToastProvider } from "@/modules/ui/ToastProvider";
 
 const state = vi.hoisted(() => ({
   entries: [] as any[],
+  channelGroups: [] as any[],
 }));
 
 const mocks = vi.hoisted(() => ({
@@ -32,7 +33,18 @@ const mocks = vi.hoisted(() => ({
   getCodexConfigs: vi.fn(async () => []),
   getVertexConfigs: vi.fn(async () => []),
   getOpenAIProviders: vi.fn(async () => []),
-  apiClientGet: vi.fn(async () => ({ data: [{ id: "gpt-4.1" }] })),
+  apiClientGet: vi.fn(async (url: string) => {
+    if (url === "/channel-groups") {
+      return { items: state.channelGroups };
+    }
+    if (url.includes("allowed_channel_groups=pro")) {
+      return { data: [{ id: "gpt-5.3-codex" }, { id: "gpt-5.4" }] };
+    }
+    if (url.includes("allowed_channel_groups=team-a")) {
+      return { data: [{ id: "claude-sonnet-4-5" }] };
+    }
+    return { data: [{ id: "gpt-4.1" }] };
+  }),
   handleViewUsage: vi.fn(),
   fetchUsageLogs: vi.fn(),
 }));
@@ -148,6 +160,7 @@ describe("ApiKeysPage", () => {
         "created-at": "2026-04-14T00:00:00.000Z",
       },
     ];
+    state.channelGroups = [];
     mocks.apiKeyEntriesList.mockClear();
     mocks.apiKeyEntriesReplace.mockClear();
     mocks.apiKeyEntriesUpdate.mockClear();
@@ -298,6 +311,75 @@ describe("ApiKeysPage", () => {
     const parsed = new URL(openedUrl);
     expect(parsed.searchParams.get("app")).toBe("codex");
     expect(parsed.searchParams.get("apiKey")).toBe("sk-existing-1234567890");
+
+    openSpy.mockRestore();
+  });
+
+  test("imports to CC Switch with a selected channel group route, provider name, enabled state, and model", async () => {
+    const openSpy = vi.spyOn(window, "open").mockReturnValue(null);
+    vi.spyOn(document, "hasFocus").mockReturnValue(false);
+    state.entries = [
+      {
+        key: "sk-group-1234567890",
+        name: "Group Key",
+        "allowed-channel-groups": ["pro", "team-a"],
+        "created-at": "2026-04-14T00:00:00.000Z",
+      },
+    ];
+    state.channelGroups = [
+      {
+        name: "pro",
+        description: "Pro route",
+        "path-routes": ["/pro"],
+      },
+      {
+        name: "team-a",
+        description: "Team A route",
+        "path-routes": ["/team-a"],
+      },
+    ];
+
+    render(
+      <MemoryRouter>
+        <ThemeProvider>
+          <ToastProvider>
+            <ApiKeysPage />
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("Group Key")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: /import to cc switch/i }));
+    await screen.findByRole("dialog", { name: /import to cc switch/i });
+
+    const providerNameInput = screen.getByRole("textbox", { name: /provider name/i });
+    await userEvent.clear(providerNameInput);
+    await userEvent.type(providerNameInput, "Work Codex");
+
+    await userEvent.click(screen.getByRole("checkbox", { name: /enabled by default/i }));
+
+    const modelSelect = await screen.findByRole("combobox", { name: /model/i });
+    await userEvent.click(modelSelect);
+    await userEvent.click(await screen.findByRole("option", { name: "gpt-5.4" }));
+
+    await userEvent.click(screen.getByRole("button", { name: /import codex/i }));
+
+    await waitFor(() => {
+      expect(openSpy).toHaveBeenCalledWith(
+        expect.stringContaining("ccswitch://v1/import?"),
+        "_self",
+      );
+    });
+
+    const openedUrl = String(openSpy.mock.calls.at(-1)?.[0] ?? "");
+    const parsed = new URL(openedUrl);
+    expect(parsed.searchParams.get("app")).toBe("codex");
+    expect(parsed.searchParams.get("name")).toBe("Work Codex");
+    expect(parsed.searchParams.get("endpoint")).toBe("http://localhost:3000/pro/v1");
+    expect(parsed.searchParams.get("model")).toBe("gpt-5.4");
+    expect(parsed.searchParams.get("enabled")).toBe("false");
 
     openSpy.mockRestore();
   });

@@ -117,7 +117,7 @@ export function VisualConfigEditor({
               <p className="text-sm text-indigo-800 dark:text-indigo-300">
                 {t("visual_config.api_migrated")}
                 <a
-                  href="#/api-keys"
+                  href="/manage/api-keys"
                   className="ml-1 font-semibold underline underline-offset-2 hover:text-indigo-600 dark:hover:text-indigo-200"
                 >
                   {t("visual_config.go_to_api_keys")}
