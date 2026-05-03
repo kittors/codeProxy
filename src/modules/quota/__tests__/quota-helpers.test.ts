@@ -243,17 +243,9 @@ describe("buildAntigravityItems", () => {
       expect.objectContaining({
         percent: 75,
         resetAtMs: Date.parse("2026-05-09T15:50:29Z"),
-        meta: expect.stringContaining("Default Agent"),
       }),
     );
-    expect(items[0].meta).toContain("Recommended");
-    expect(items[0].meta).toContain("maxTokens=1048576");
-    expect(items[0].meta).toContain("maxOutputTokens=65535");
-    expect(items[0].meta).toContain("apiProvider=API_PROVIDER_GOOGLE_GEMINI");
-    expect(items[0].meta).toContain("model=MODEL_PLACEHOLDER_M37");
-    expect(items[0].meta).toContain("thinking");
-    expect(items[0].meta).toContain("images");
-    expect(items[0].meta).toContain("video");
+    expect(items[0].meta).toBeUndefined();
   });
 });
 

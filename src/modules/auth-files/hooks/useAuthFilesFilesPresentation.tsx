@@ -281,7 +281,7 @@ export function useAuthFilesFilesPresentation({
   }, []);
 
   const renderQuotaHoverContent = useCallback(
-    (state: QuotaState) => {
+    (state: QuotaState, options?: { suppressItemMeta?: boolean }) => {
       const items = Array.isArray(state.items) ? (state.items as QuotaItem[]) : [];
       const hasError = state.status === "error";
 
@@ -300,6 +300,7 @@ export function useAuthFilesFilesPresentation({
                 const percentText =
                   tone.normalized === null ? "--" : `${Math.round(tone.normalized)}%`;
                 const resetText = formatQuotaResetTextCompact(item.resetAtMs);
+                const itemMeta = options?.suppressItemMeta ? undefined : item.meta;
                 return (
                   <div key={item.label} className="contents">
                     <span className="min-w-0 truncate text-[10px] font-semibold text-slate-600 dark:text-white/70">
@@ -318,9 +319,9 @@ export function useAuthFilesFilesPresentation({
                     <span className="min-w-0 truncate whitespace-nowrap text-[10px] tabular-nums text-slate-500 dark:text-white/40">
                       {resetText ?? "--"}
                     </span>
-                    {item.meta ? (
+                    {itemMeta ? (
                       <span className="col-span-4 truncate text-[10px] text-slate-500 dark:text-white/55">
-                        {item.meta}
+                        {itemMeta}
                       </span>
                     ) : null}
                   </div>
@@ -366,11 +367,6 @@ export function useAuthFilesFilesPresentation({
           <div className="truncate text-[10px] tabular-nums text-slate-500 dark:text-white/45">
             {resetText}
           </div>
-          {item?.meta ? (
-            <div className="break-words text-[10px] leading-snug text-slate-500 dark:text-white/55">
-              {item.meta}
-            </div>
-          ) : null}
         </div>
       );
     },
@@ -623,7 +619,9 @@ export function useAuthFilesFilesPresentation({
             <HoverTooltip
               disabled={!hasError && items.length === 0}
               className="w-full min-w-0"
-              content={renderQuotaHoverContent(state)}
+              content={renderQuotaHoverContent(state, {
+                suppressItemMeta: provider === "antigravity",
+              })}
             >
               <div className="w-full min-w-0">
                 {hasError && items.length === 0 ? (
