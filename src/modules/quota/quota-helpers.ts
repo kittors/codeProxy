@@ -4,7 +4,9 @@ export { type AntigravityModelsPayload } from "@/modules/quota/quota-antigravity
 export {
   buildAntigravityGroups,
   buildAntigravityItems,
+  filterAntigravityQuotaItems,
   parseAntigravityPayload,
+  shouldSkipAntigravityModelId,
 } from "@/modules/quota/quota-antigravity";
 export { type CodexUsagePayload } from "@/modules/quota/quota-codex";
 export {
