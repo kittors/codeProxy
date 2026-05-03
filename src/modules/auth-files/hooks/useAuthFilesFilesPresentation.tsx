@@ -366,6 +366,11 @@ export function useAuthFilesFilesPresentation({
           <div className="truncate text-[10px] tabular-nums text-slate-500 dark:text-white/45">
             {resetText}
           </div>
+          {item?.meta ? (
+            <div className="break-words text-[10px] leading-snug text-slate-500 dark:text-white/55">
+              {item.meta}
+            </div>
+          ) : null}
         </div>
       );
     },

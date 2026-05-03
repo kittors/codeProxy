@@ -853,6 +853,68 @@ describe("AuthFilesPage files table", () => {
     expect(within(cards).getByText("Model D [d]")).toBeInTheDocument();
   });
 
+  test("cards view shows antigravity model metadata from fetchAvailableModels", async () => {
+    const now = Date.now();
+    const file = {
+      name: "antigravity.json",
+      type: "antigravity",
+      size: 1024,
+      modified: now,
+      disabled: false,
+      auth_index: "ag",
+    } as any;
+
+    mocks.list.mockImplementation(async () => ({ files: [file] }));
+
+    window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
+    window.localStorage.setItem("authFilesPage.quotaAutoRefreshMs.v1", JSON.stringify(0));
+    window.sessionStorage.setItem(
+      AUTH_FILES_DATA_CACHE_KEY,
+      JSON.stringify({
+        savedAtMs: now,
+        files: [file],
+        quotaByFileName: {
+          "antigravity.json": {
+            status: "success",
+            updatedAt: now,
+            items: [
+              {
+                key: "model:gemini-3.1-pro-high",
+                label: "Gemini 3.1 Pro (High) [gemini-3.1-pro-high]",
+                percent: 91,
+                resetAtMs: Date.parse("2026-05-09T15:50:29Z"),
+                meta: "Default Agent · Recommended · maxTokens=1048576 · maxOutputTokens=65535 · apiProvider=API_PROVIDER_GOOGLE_GEMINI · model=MODEL_PLACEHOLDER_M37 · thinking · images · video",
+              },
+            ],
+          },
+        },
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("antigravity.json")).toBeInTheDocument();
+    const cards = screen.getByTestId("auth-files-cards");
+
+    expect(
+      within(cards).getByText("Gemini 3.1 Pro (High) [gemini-3.1-pro-high]"),
+    ).toBeInTheDocument();
+    expect(within(cards).getByText(/maxTokens=1048576/)).toBeInTheDocument();
+    expect(within(cards).getByText(/maxOutputTokens=65535/)).toBeInTheDocument();
+    expect(within(cards).getByText(/apiProvider=API_PROVIDER_GOOGLE_GEMINI/)).toBeInTheDocument();
+    expect(within(cards).getByText(/model=MODEL_PLACEHOLDER_M37/)).toBeInTheDocument();
+  });
+
   test("cards view restores cached quota while refreshing in the background", async () => {
     const now = Date.now();
     const file = {
