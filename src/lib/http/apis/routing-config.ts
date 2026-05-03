@@ -7,6 +7,7 @@ export interface RoutingConfigGroupItem {
     channels?: string[];
   };
   "channel-priorities"?: Record<string, number>;
+  "allowed-models"?: string[];
 }
 
 export interface RoutingConfigPathRouteItem {
