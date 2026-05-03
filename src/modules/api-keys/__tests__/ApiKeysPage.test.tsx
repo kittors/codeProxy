@@ -295,8 +295,9 @@ describe("ApiKeysPage", () => {
 
     const dialog = await screen.findByRole("dialog", { name: /import to cc switch/i });
     expect(dialog).toHaveTextContent(/claude code/i);
-    expect(dialog).toHaveTextContent(/codex/i);
-    expect(dialog).toHaveTextContent(/gemini cli/i);
+
+    await userEvent.click(screen.getByRole("combobox", { name: /client type/i }));
+    await userEvent.click(await screen.findByRole("option", { name: "Codex" }));
 
     await userEvent.click(screen.getByRole("button", { name: /import codex/i }));
 
@@ -315,7 +316,7 @@ describe("ApiKeysPage", () => {
     openSpy.mockRestore();
   });
 
-  test("imports to CC Switch with a selected channel group route, provider name, enabled state, and model", async () => {
+  test("imports a Codex CC Switch provider from the selected client-specific form", async () => {
     const openSpy = vi.spyOn(window, "open").mockReturnValue(null);
     vi.spyOn(document, "hasFocus").mockReturnValue(false);
     state.entries = [
@@ -354,9 +355,15 @@ describe("ApiKeysPage", () => {
     await userEvent.click(screen.getByRole("button", { name: /import to cc switch/i }));
     await screen.findByRole("dialog", { name: /import to cc switch/i });
 
+    const clientTypeSelect = screen.getByRole("combobox", { name: /client type/i });
+    await userEvent.click(clientTypeSelect);
+    await userEvent.click(await screen.findByRole("option", { name: "Codex" }));
+
+    expect(screen.queryByRole("combobox", { name: /claude code auth field/i })).toBeNull();
+
     const providerNameInput = screen.getByRole("textbox", { name: /provider name/i });
     await userEvent.clear(providerNameInput);
-    await userEvent.type(providerNameInput, "Work Codex");
+    await userEvent.type(providerNameInput, "Work");
 
     await userEvent.click(screen.getByRole("checkbox", { name: /enabled by default/i }));
 
@@ -376,10 +383,77 @@ describe("ApiKeysPage", () => {
     const openedUrl = String(openSpy.mock.calls.at(-1)?.[0] ?? "");
     const parsed = new URL(openedUrl);
     expect(parsed.searchParams.get("app")).toBe("codex");
-    expect(parsed.searchParams.get("name")).toBe("Work Codex");
+    expect(parsed.searchParams.get("name")).toBe("Work");
     expect(parsed.searchParams.get("endpoint")).toBe("http://localhost:3000/pro/v1");
     expect(parsed.searchParams.get("model")).toBe("gpt-5.4");
     expect(parsed.searchParams.get("enabled")).toBe("false");
+    expect(parsed.searchParams.has("apiKeyField")).toBe(false);
+
+    openSpy.mockRestore();
+  });
+
+  test("imports a Claude Code CC Switch provider with its auth field in the selected form", async () => {
+    const openSpy = vi.spyOn(window, "open").mockReturnValue(null);
+    vi.spyOn(document, "hasFocus").mockReturnValue(false);
+    state.entries = [
+      {
+        key: "sk-group-1234567890",
+        name: "Claude Key",
+        "allowed-channel-groups": ["team-a"],
+        "created-at": "2026-04-14T00:00:00.000Z",
+      },
+    ];
+    state.channelGroups = [
+      {
+        name: "team-a",
+        description: "Team A route",
+        "path-routes": ["/team-a"],
+      },
+    ];
+
+    render(
+      <MemoryRouter>
+        <ThemeProvider>
+          <ToastProvider>
+            <ApiKeysPage />
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("Claude Key")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: /import to cc switch/i }));
+    await screen.findByRole("dialog", { name: /import to cc switch/i });
+
+    const clientTypeSelect = screen.getByRole("combobox", { name: /client type/i });
+    await userEvent.click(clientTypeSelect);
+    await userEvent.click(await screen.findByRole("option", { name: "Claude Code" }));
+
+    expect(screen.getByRole("combobox", { name: /claude code auth field/i })).toHaveTextContent(
+      "ANTHROPIC_API_KEY",
+    );
+
+    const providerNameInput = screen.getByRole("textbox", { name: /provider name/i });
+    await userEvent.clear(providerNameInput);
+    await userEvent.type(providerNameInput, "Anthropic Work");
+
+    await userEvent.click(screen.getByRole("button", { name: /import claude code/i }));
+
+    await waitFor(() => {
+      expect(openSpy).toHaveBeenCalledWith(
+        expect.stringContaining("ccswitch://v1/import?"),
+        "_self",
+      );
+    });
+
+    const openedUrl = String(openSpy.mock.calls.at(-1)?.[0] ?? "");
+    const parsed = new URL(openedUrl);
+    expect(parsed.searchParams.get("app")).toBe("claude");
+    expect(parsed.searchParams.get("name")).toBe("Anthropic Work");
+    expect(parsed.searchParams.get("endpoint")).toBe("http://localhost:3000/team-a");
+    expect(parsed.searchParams.get("model")).toBe("claude-sonnet-4-5");
+    expect(parsed.searchParams.get("apiKeyField")).toBe("ANTHROPIC_API_KEY");
 
     openSpy.mockRestore();
   });

@@ -2506,6 +2506,7 @@
     "client_gemini_cli": "Gemini CLI",
     "client_gemini_cli_desc": "适用于 Gemini CLI 的 Gemini 兼容配置。",
     "model_hint": "模型：{{model}}",
+    "import_client_type": "类型",
     "import_provider_name": "供应商名称",
     "import_provider_name_placeholder": "CliProxy 供应商",
     "import_channel_group": "允许的渠道分组",

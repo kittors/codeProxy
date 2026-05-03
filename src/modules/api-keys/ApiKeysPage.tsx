@@ -33,10 +33,14 @@ import {
 } from "@/modules/ccswitch/CcSwitchImportModal";
 import {
   buildCcSwitchImportUrl,
-  buildCcSwitchProviderName,
   openCcSwitchImportUrl,
+  type CcSwitchClientType,
 } from "@/modules/ccswitch/ccswitchImport";
-import { readCcSwitchImportSettings } from "@/modules/ccswitch/ccswitchImportSettings";
+import {
+  normalizeCcSwitchClaudeAuthField,
+  readCcSwitchImportSettings,
+  type CcSwitchClaudeAuthField,
+} from "@/modules/ccswitch/ccswitchImportSettings";
 import { LogContentModal } from "@/modules/monitor/LogContentModal";
 import { ErrorDetailModal } from "@/modules/monitor/ErrorDetailModal";
 import type { ApiKeyFormValues } from "@/modules/api-keys/types";
@@ -69,7 +73,11 @@ export function ApiKeysPage() {
   const [deleteIndex, setDeleteIndex] = useState<number | null>(null);
   const [deleteLogsOnDelete, setDeleteLogsOnDelete] = useState(true);
   const [ccSwitchImportEntry, setCcSwitchImportEntry] = useState<ApiKeyEntry | null>(null);
+  const [ccSwitchImportClientType, setCcSwitchImportClientType] =
+    useState<CcSwitchClientType>("claude");
   const [ccSwitchImportGroup, setCcSwitchImportGroup] = useState("");
+  const [ccSwitchImportClaudeApiKeyField, setCcSwitchImportClaudeApiKeyField] =
+    useState<CcSwitchClaudeAuthField>("ANTHROPIC_API_KEY");
   const [ccSwitchImportProviderName, setCcSwitchImportProviderName] = useState("");
   const [ccSwitchImportEnabled, setCcSwitchImportEnabled] = useState(true);
   const [ccSwitchImportModel, setCcSwitchImportModel] = useState("");
@@ -640,7 +648,9 @@ export function ApiKeysPage() {
         .filter(Boolean);
       const initialGroup = entryGroups[0] ?? knownGroups[0] ?? "";
       setCcSwitchImportEntry(entry);
+      setCcSwitchImportClientType("claude");
       setCcSwitchImportGroup(initialGroup);
+      setCcSwitchImportClaudeApiKeyField("ANTHROPIC_API_KEY");
       setCcSwitchImportProviderName(entry.name || "CliProxy");
       setCcSwitchImportEnabled(true);
       setCcSwitchImportModel("");
@@ -663,18 +673,25 @@ export function ApiKeysPage() {
     (selection: CcSwitchImportSelection) => {
       if (!ccSwitchImportEntry) return;
       const settings = readCcSwitchImportSettings();
+      const importSettings =
+        selection.clientType === "claude"
+          ? {
+              ...settings,
+              claude: {
+                ...settings.claude,
+                apiKeyField: normalizeCcSwitchClaudeAuthField(selection.apiKeyField),
+              },
+            }
+          : settings;
       const url = buildCcSwitchImportUrl({
         apiKey: ccSwitchImportEntry.key,
         baseUrl: selection.baseUrl,
         clientType: selection.clientType,
         enabled: selection.enabled,
-        providerName: buildCcSwitchProviderName({
-          rawName: selection.providerName || ccSwitchImportEntry.name,
-          clientType: selection.clientType,
-        }),
+        providerName: selection.providerName || ccSwitchImportEntry.name || "CliProxy",
         model: selection.model,
         models: ccSwitchImportModels,
-        settings,
+        settings: importSettings,
       });
 
       openCcSwitchImportUrl(url, {
@@ -843,13 +860,17 @@ export function ApiKeysPage() {
         baseUrl={ccSwitchImportBaseUrl}
         channelGroup={ccSwitchImportGroup}
         channelGroupOptions={ccSwitchImportGroupOptions}
+        clientType={ccSwitchImportClientType}
+        claudeApiKeyField={ccSwitchImportClaudeApiKeyField}
         enabled={ccSwitchImportEnabled}
         model={ccSwitchImportModel}
         models={ccSwitchImportModels}
         modelsLoading={ccSwitchImportModelsLoading}
         providerName={ccSwitchImportProviderName}
         onChannelGroupChange={handleCcSwitchImportGroupChange}
+        onClientTypeChange={setCcSwitchImportClientType}
         onClose={() => setCcSwitchImportEntry(null)}
+        onClaudeApiKeyFieldChange={setCcSwitchImportClaudeApiKeyField}
         onEnabledChange={setCcSwitchImportEnabled}
         onModelChange={setCcSwitchImportModel}
         onProviderNameChange={setCcSwitchImportProviderName}
