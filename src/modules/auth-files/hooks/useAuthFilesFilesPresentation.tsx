@@ -299,7 +299,7 @@ export function useAuthFilesFilesPresentation({
           ) : null}
 
           {items.length > 0 ? (
-            <div className="grid w-[min(20rem,calc(100vw-2rem))] grid-cols-[minmax(0,1fr)_0.875rem_2.75rem_3.75rem] items-center gap-x-1.5 gap-y-1">
+            <div className="grid w-[min(34rem,calc(100vw-2rem))] grid-cols-[minmax(0,1fr)_0.875rem_max-content_max-content] items-center gap-x-2 gap-y-1">
               {items.map((item) => {
                 const tone = resolveQuotaVisualTone(item.percent);
                 const percentText =
@@ -316,13 +316,13 @@ export function useAuthFilesFilesPresentation({
                     </span>
                     <span
                       className={[
-                        "justify-self-end text-[10px] font-semibold tabular-nums",
+                        "justify-self-end whitespace-nowrap text-[10px] font-semibold tabular-nums",
                         tone.percentClass,
                       ].join(" ")}
                     >
                       {percentText}
                     </span>
-                    <span className="min-w-0 truncate whitespace-nowrap text-right text-[10px] tabular-nums text-slate-500 dark:text-white/40">
+                    <span className="whitespace-nowrap text-right text-[10px] tabular-nums text-slate-500 dark:text-white/40">
                       {resetText ?? "--"}
                     </span>
                     {itemMeta ? (
