@@ -66,11 +66,30 @@ describe("ccswitchImport", () => {
     expect(parsed.searchParams.get("usageEnabled")).toBe("true");
     expect(parsed.searchParams.get("usageBaseUrl")).toBe("https://relay.example.com");
     expect(parsed.searchParams.get("usageAutoInterval")).toBe("30");
+    expect(parsed.searchParams.get("enabled")).toBe("true");
 
     const usageScript = decodeUsageScript(url);
     expect(usageScript).toContain("{{baseUrl}}/v0/management/public/usage");
     expect(usageScript).toContain('method: "POST"');
     expect(usageScript).toContain('api_key: "{{apiKey}}"');
+  });
+
+  test("builds a provider deeplink for a selected channel group route and enabled state", () => {
+    const url = buildCcSwitchImportUrl({
+      apiKey: "sk-test-key",
+      baseUrl: "https://relay.example.com/team-a",
+      clientType: "codex",
+      providerName: "Team A Codex",
+      model: "gpt-5.4",
+      enabled: false,
+    });
+
+    const parsed = new URL(url);
+    expect(parsed.searchParams.get("homepage")).toBe("https://relay.example.com/team-a");
+    expect(parsed.searchParams.get("endpoint")).toBe("https://relay.example.com/team-a/v1");
+    expect(parsed.searchParams.get("name")).toBe("Team A Codex");
+    expect(parsed.searchParams.get("model")).toBe("gpt-5.4");
+    expect(parsed.searchParams.get("enabled")).toBe("false");
   });
 
   test("selects a client-specific default model from available models", () => {
