@@ -1145,6 +1145,11 @@ describe("AuthFilesPage files table", () => {
     expect(
       within(tooltips[0]).getByText("Claude Sonnet 4.6 (Thinking) [claude-sonnet-4-6]"),
     ).toBeInTheDocument();
+    const resetText = Array.from(tooltips[0].querySelectorAll("span")).find(
+      (element) => element.textContent?.includes("秒") && element.className.includes("tabular-nums"),
+    );
+    expect(resetText).toBeTruthy();
+    expect(resetText).not.toHaveClass("truncate");
   });
 
   test("table quota preview and hover hide cached antigravity models skipped by the reference implementation", async () => {
