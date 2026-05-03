@@ -2299,6 +2299,7 @@
     "client_gemini_cli": "Gemini CLI",
     "client_gemini_cli_desc": "Gemini-compatible provider for Gemini CLI.",
     "model_hint": "Model: {{model}}",
+    "import_client_type": "Client type",
     "import_provider_name": "Provider name",
     "import_provider_name_placeholder": "CliProxy provider",
     "import_channel_group": "Allowed channel group",
