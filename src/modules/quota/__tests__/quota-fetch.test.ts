@@ -55,7 +55,7 @@ describe("resolveQuotaProvider", () => {
 });
 
 describe("fetchQuota for antigravity", () => {
-  test("requests fetchAvailableModels with the auth project and returns dynamic model metrics", async () => {
+  test("requests fetchAvailableModels with the auth project and returns dynamic quota items", async () => {
     mocks.downloadText.mockResolvedValueOnce(
       JSON.stringify({ project_id: "bamboo-precept-lgxtn" }),
     );
@@ -155,13 +155,9 @@ describe("fetchQuota for antigravity", () => {
         label: "Gemini 3.1 Pro (High) [gemini-3.1-pro-high]",
         percent: 100,
         resetAtMs: Date.parse("2026-05-09T15:50:29Z"),
-        meta: expect.stringContaining("maxTokens=1048576"),
       }),
     );
-    expect(result.items[0].meta).toContain("Default Agent");
-    expect(result.items[0].meta).toContain("Recommended");
-    expect(result.items[0].meta).toContain("apiProvider=API_PROVIDER_GOOGLE_GEMINI");
-    expect(result.items[0].meta).toContain("model=MODEL_PLACEHOLDER_M37");
+    expect(result.items[0].meta).toBeUndefined();
   });
 });
 
