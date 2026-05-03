@@ -54,6 +54,7 @@ export type RoutingChannelGroupEntry = {
   name: string;
   description: string;
   channels: RoutingChannelGroupMemberEntry[];
+  allowedModels: string[];
 };
 
 export type RoutingPathRouteEntry = {

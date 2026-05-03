@@ -25,7 +25,13 @@ vi.mock("goey-toast", () => ({
   },
 }));
 
-function Harness({ initialValues }: { initialValues?: VisualConfigValues }) {
+function Harness({
+  initialValues,
+  loadModelsForChannels,
+}: {
+  initialValues?: VisualConfigValues;
+  loadModelsForChannels?: (channels: string[]) => Promise<string[]>;
+}) {
   const [values, setValues] = useState<VisualConfigValues>({
     ...DEFAULT_VISUAL_VALUES,
     routingChannelGroups: [],
@@ -39,6 +45,7 @@ function Harness({ initialValues }: { initialValues?: VisualConfigValues }) {
         <RoutingConfigEditor
           values={values}
           availableChannels={["Team A Claude", "Main Codex", "Backup Claude"]}
+          loadModelsForChannels={loadModelsForChannels}
           onChange={(patch) => setValues((prev) => ({ ...prev, ...patch }))}
         />
       </ToastProvider>
@@ -52,6 +59,9 @@ function Harness({ initialValues }: { initialValues?: VisualConfigValues }) {
         {values.routingChannelGroups[0]?.channels[0]?.priority ?? ""}
       </div>
       <div data-testid="route-path">{values.routingPathRoutes[0]?.path ?? ""}</div>
+      <div data-testid="allowed-models">
+        {values.routingChannelGroups[0]?.allowedModels?.join(",") ?? ""}
+      </div>
     </ThemeProvider>
   );
 }
@@ -85,6 +95,32 @@ describe("RoutingConfigEditor", () => {
     expect(screen.getByTestId("group-name")).toHaveTextContent("team-a");
     expect(screen.getByTestId("channel-name")).toHaveTextContent("Team A Claude");
     expect(screen.getByTestId("channel-priority")).toHaveTextContent("80");
+  });
+
+  test("saves selected models from the channel-scoped model tab", async () => {
+    await i18n.changeLanguage("zh-CN");
+    const user = userEvent.setup();
+    const loadModelsForChannels = vi.fn(async (channels: string[]) =>
+      channels.includes("Team A Claude") ? ["claude-sonnet-4-5", "claude-opus-4-5"] : [],
+    );
+
+    render(<Harness loadModelsForChannels={loadModelsForChannels} />);
+
+    await user.click(screen.getByRole("button", { name: "新增分组" }));
+    await user.type(screen.getByPlaceholderText("pro"), "team-models");
+    await user.type(screen.getByPlaceholderText("/pro"), "/team-models");
+    await user.click(screen.getByRole("combobox", { name: "选择渠道" }));
+    await user.click(screen.getByRole("option", { name: "Team A Claude" }));
+    await user.click(screen.getByRole("combobox", { name: "选择渠道" }));
+
+    await user.click(screen.getByRole("tab", { name: "模型列表" }));
+    expect(await screen.findByLabelText("claude-sonnet-4-5")).toBeInTheDocument();
+    expect(loadModelsForChannels).toHaveBeenCalledWith(["Team A Claude"]);
+
+    await user.click(screen.getByLabelText("claude-sonnet-4-5"));
+    await user.click(screen.getByRole("button", { name: "添加" }));
+
+    expect(screen.getByTestId("allowed-models")).toHaveTextContent("claude-sonnet-4-5");
   });
 
   test("sets path routes directly inside group editor", async () => {
@@ -196,6 +232,7 @@ describe("RoutingConfigEditor", () => {
               id: "group-stale",
               name: "legacy",
               description: "历史分组",
+              allowedModels: [],
               channels: [
                 { id: "channel-stale", name: "Legacy Claude", priority: "90" },
                 { id: "channel-valid", name: "Main Codex", priority: "" },

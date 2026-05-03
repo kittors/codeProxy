@@ -280,6 +280,13 @@ function parseRoutingChannelGroups(raw: unknown): RoutingChannelGroupEntry[] {
       name: typeof record.name === "string" ? record.name : "",
       description: typeof record.description === "string" ? record.description : "",
       channels: members,
+      allowedModels: Array.isArray(record["allowed-models"])
+        ? Array.from(
+            new Set(
+              record["allowed-models"].map((model) => String(model ?? "").trim()).filter(Boolean),
+            ),
+          )
+        : [],
     };
   });
 }
@@ -388,6 +395,12 @@ function serializeRoutingChannelGroupsForYaml(
       }, {});
       if (Object.keys(channelPriorities).length > 0) {
         item["channel-priorities"] = channelPriorities;
+      }
+      const allowedModels = Array.from(
+        new Set(group.allowedModels.map((model) => model.trim()).filter(Boolean)),
+      );
+      if (allowedModels.length > 0) {
+        item["allowed-models"] = allowedModels;
       }
 
       return item;

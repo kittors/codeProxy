@@ -1,5 +1,5 @@
-import { useCallback, useMemo, useState } from "react";
-import { Pencil, Plus, Trash2, TriangleAlert, X } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Check, Pencil, Plus, Trash2, TriangleAlert, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type {
   RoutingChannelGroupEntry,
@@ -9,17 +9,21 @@ import type {
 } from "@/modules/config/visual/types";
 import { makeClientId } from "@/modules/config/visual/types";
 import { Button } from "@/modules/ui/Button";
+import { Checkbox } from "@/modules/ui/Checkbox";
 import { TextInput } from "@/modules/ui/Input";
 import { Modal } from "@/modules/ui/Modal";
 import { SearchableCheckboxMultiSelect } from "@/modules/ui/SearchableCheckboxMultiSelect";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/modules/ui/Tabs";
 import { useToast } from "@/modules/ui/ToastProvider";
 import { HoverTooltip, OverflowTooltip } from "@/modules/ui/Tooltip";
 import { VirtualTable, type VirtualTableColumn } from "@/modules/ui/VirtualTable";
+import { VendorIcon } from "@/modules/api-keys/apiKeyPageUtils";
 
 type GroupDraft = {
   name: string;
   description: string;
   channels: RoutingChannelGroupMemberEntry[];
+  allowedModels: string[];
   routes: RoutingPathRouteEntry[];
 };
 
@@ -27,6 +31,7 @@ const createEmptyGroupDraft = (): GroupDraft => ({
   name: "",
   description: "",
   channels: [],
+  allowedModels: [],
   routes: [{ ...EMPTY_ROUTE_DRAFT() }],
 });
 
@@ -163,11 +168,13 @@ export function RoutingConfigEditor({
   values,
   disabled,
   availableChannels,
+  loadModelsForChannels,
   onChange,
 }: {
   values: VisualConfigValues;
   disabled?: boolean;
   availableChannels: string[];
+  loadModelsForChannels?: (channels: string[]) => Promise<string[]>;
   onChange: (values: Partial<VisualConfigValues>) => void;
 }) {
   const { t } = useTranslation();
@@ -175,6 +182,10 @@ export function RoutingConfigEditor({
   const [groupEditorOpen, setGroupEditorOpen] = useState(false);
   const [groupEditorId, setGroupEditorId] = useState<string | null>(null);
   const [groupDraft, setGroupDraft] = useState<GroupDraft>(() => createEmptyGroupDraft());
+  const [groupEditorTab, setGroupEditorTab] = useState<"basic" | "models">("basic");
+  const [modelOptions, setModelOptions] = useState<string[]>([]);
+  const [modelsLoading, setModelsLoading] = useState(false);
+  const [modelsError, setModelsError] = useState("");
 
   const update = useCallback(
     (patch: Partial<VisualConfigValues>) => {
@@ -231,6 +242,11 @@ export function RoutingConfigEditor({
   const selectedChannelValues = useMemo(
     () => groupDraft.channels.map((channel) => channel.name.trim()).filter(Boolean),
     [groupDraft.channels],
+  );
+
+  const selectedModelSet = useMemo(
+    () => new Set(groupDraft.allowedModels.map((model) => model.trim()).filter(Boolean)),
+    [groupDraft.allowedModels],
   );
 
   const primaryRoute = groupDraft.routes[0] ?? EMPTY_ROUTE_DRAFT();
@@ -292,6 +308,9 @@ export function RoutingConfigEditor({
   const openCreateGroup = useCallback(() => {
     setGroupEditorId(null);
     setGroupDraft(createEmptyGroupDraft());
+    setGroupEditorTab("basic");
+    setModelOptions([]);
+    setModelsError("");
     setGroupEditorOpen(true);
   }, []);
 
@@ -307,11 +326,15 @@ export function RoutingConfigEditor({
         name: group.name,
         description: group.description,
         channels: cloneMembers(group.channels),
+        allowedModels: group.allowedModels ?? [],
         routes:
           existingRoutes.length > 0
             ? existingRoutes
             : [{ ...EMPTY_ROUTE_DRAFT(), group: group.name.trim() }],
       });
+      setGroupEditorTab("basic");
+      setModelOptions([]);
+      setModelsError("");
       notifyStaleChannels(group.name.trim(), staleChannelsByGroup.get(group.id) ?? []);
       setGroupEditorOpen(true);
     },
@@ -322,6 +345,9 @@ export function RoutingConfigEditor({
     setGroupEditorOpen(false);
     setGroupEditorId(null);
     setGroupDraft(createEmptyGroupDraft());
+    setGroupEditorTab("basic");
+    setModelOptions([]);
+    setModelsError("");
   }, []);
 
   const updateDraftChannels = useCallback((selectedValues: string[]) => {
@@ -350,6 +376,35 @@ export function RoutingConfigEditor({
     }));
   }, []);
 
+  const toggleDraftModel = useCallback((modelId: string, checked: boolean) => {
+    const normalized = modelId.trim();
+    if (!normalized) return;
+    setGroupDraft((current) => {
+      const currentModels = current.allowedModels.map((model) => model.trim()).filter(Boolean);
+      if (checked) {
+        return {
+          ...current,
+          allowedModels: Array.from(new Set([...currentModels, normalized])),
+        };
+      }
+      return {
+        ...current,
+        allowedModels: currentModels.filter((model) => model !== normalized),
+      };
+    });
+  }, []);
+
+  const selectAllDraftModels = useCallback(() => {
+    setGroupDraft((current) => ({
+      ...current,
+      allowedModels: Array.from(new Set(modelOptions)),
+    }));
+  }, [modelOptions]);
+
+  const clearDraftModels = useCallback(() => {
+    setGroupDraft((current) => ({ ...current, allowedModels: [] }));
+  }, []);
+
   const updatePrimaryRoute = useCallback((patch: Partial<RoutingPathRouteEntry>) => {
     setGroupDraft((current) => {
       const currentRoute = current.routes[0] ?? {
@@ -370,6 +425,9 @@ export function RoutingConfigEditor({
       id: groupEditorId ?? makeClientId(),
       name: groupName,
       description: groupDraft.description.trim(),
+      allowedModels: Array.from(
+        new Set(groupDraft.allowedModels.map((model) => model.trim()).filter(Boolean)),
+      ),
       channels: groupDraft.channels
         .map((channel) => ({
           id: channel.id || makeClientId(),
@@ -479,6 +537,23 @@ export function RoutingConfigEditor({
             {group.channels.length}
           </span>
         ),
+      },
+      {
+        key: "modelCount",
+        label: t("channel_groups_page.table_model_count"),
+        width: "w-[104px] min-w-[104px]",
+        headerClassName: "text-center",
+        cellClassName: "whitespace-nowrap text-center",
+        render: (group) =>
+          group.allowedModels.length > 0 ? (
+            <span className="inline-flex h-5 min-w-[24px] items-center justify-center rounded-md bg-violet-50 px-1.5 text-xs font-semibold tabular-nums text-violet-700 dark:bg-violet-900/30 dark:text-violet-300">
+              {group.allowedModels.length}
+            </span>
+          ) : (
+            <span className="text-xs text-slate-400 dark:text-white/35">
+              {t("channel_groups_page.all_models")}
+            </span>
+          ),
       },
       {
         key: "status",
@@ -711,6 +786,46 @@ export function RoutingConfigEditor({
     [disabled, draftStaleChannelIds, removeDraftChannel, t, updateDraftChannel],
   );
 
+  useEffect(() => {
+    if (!groupEditorOpen || groupEditorTab !== "models") return;
+    if (selectedChannelValues.length === 0 || !loadModelsForChannels) {
+      setModelOptions([]);
+      setModelsError("");
+      return;
+    }
+
+    let cancelled = false;
+    setModelsLoading(true);
+    setModelsError("");
+    loadModelsForChannels(selectedChannelValues)
+      .then((models) => {
+        if (cancelled) return;
+        const normalized = Array.from(
+          new Set(models.map((model) => String(model ?? "").trim()).filter(Boolean)),
+        ).sort((a, b) => a.localeCompare(b));
+        setModelOptions(normalized);
+        const allowed = new Set(normalized);
+        setGroupDraft((current) => ({
+          ...current,
+          allowedModels: current.allowedModels.filter((model) => allowed.has(model)),
+        }));
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        const message =
+          err instanceof Error ? err.message : t("channel_groups_page.models_load_failed");
+        setModelOptions([]);
+        setModelsError(message);
+      })
+      .finally(() => {
+        if (!cancelled) setModelsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [groupEditorOpen, groupEditorTab, loadModelsForChannels, selectedChannelValues, t]);
+
   return (
     <>
       <div className="space-y-3">
@@ -736,7 +851,7 @@ export function RoutingConfigEditor({
           virtualize={false}
           rowHeight={44}
           height="h-auto max-h-[68vh]"
-          minWidth="min-w-[1540px]"
+          minWidth="min-w-[1660px]"
           caption={t("channel_groups_page.groups_table_title")}
           emptyText={t("channel_groups_page.empty_groups")}
           rowClassName={(group) =>
@@ -808,82 +923,166 @@ export function RoutingConfigEditor({
             </div>
           ) : null}
 
-          <div className="grid gap-4 md:grid-cols-2">
-            <Field label={t("channel_groups_page.group_name_label")}>
-              <TextInput
-                value={groupDraft.name}
-                onChange={(event) => {
-                  const value = event.currentTarget.value;
-                  setGroupDraft((current) => ({ ...current, name: value }));
-                }}
-                placeholder="pro"
-                disabled={disabled}
-              />
-            </Field>
-            <Field label={t("channel_groups_page.description_label")}>
-              <TextInput
-                value={groupDraft.description}
-                onChange={(event) => {
-                  const value = event.currentTarget.value;
-                  setGroupDraft((current) => ({ ...current, description: value }));
-                }}
-                placeholder={t("channel_groups_page.description_placeholder")}
-                disabled={disabled}
-              />
-            </Field>
-          </div>
+          <Tabs
+            value={groupEditorTab}
+            onValueChange={(value) => setGroupEditorTab(value as "basic" | "models")}
+          >
+            <TabsList>
+              <TabsTrigger value="basic">{t("channel_groups_page.basic_config_tab")}</TabsTrigger>
+              <TabsTrigger value="models">{t("channel_groups_page.models_tab")}</TabsTrigger>
+            </TabsList>
 
-          <div className="grid gap-4 md:grid-cols-1">
-            <Field
-              label={t("channel_groups_page.route_path_label")}
-              hint={t("channel_groups_page.route_path_hint")}
-            >
-              <TextInput
-                value={primaryRoute.path}
-                onChange={(event) => updatePrimaryRoute({ path: event.currentTarget.value })}
-                placeholder="/pro"
-                disabled={disabled}
-              />
-            </Field>
-          </div>
+            <TabsContent value="basic" className="mt-4 space-y-5">
+              <div className="grid gap-4 md:grid-cols-2">
+                <Field label={t("channel_groups_page.group_name_label")}>
+                  <TextInput
+                    value={groupDraft.name}
+                    onChange={(event) => {
+                      const value = event.currentTarget.value;
+                      setGroupDraft((current) => ({ ...current, name: value }));
+                    }}
+                    placeholder="pro"
+                    disabled={disabled}
+                  />
+                </Field>
+                <Field label={t("channel_groups_page.description_label")}>
+                  <TextInput
+                    value={groupDraft.description}
+                    onChange={(event) => {
+                      const value = event.currentTarget.value;
+                      setGroupDraft((current) => ({ ...current, description: value }));
+                    }}
+                    placeholder={t("channel_groups_page.description_placeholder")}
+                    disabled={disabled}
+                  />
+                </Field>
+              </div>
 
-          <div className="space-y-3">
-            <Field
-              label={t("channel_groups_page.select_channel_label")}
-              hint={t("channel_groups_page.select_channel_hint")}
-            >
-              <SearchableCheckboxMultiSelect
-                value={selectedChannelValues}
-                onChange={updateDraftChannels}
-                options={channelOptions}
-                placeholder={t("channel_groups_page.select_channel_placeholder")}
-                searchPlaceholder={t("channel_groups_page.search_channel_placeholder")}
-                selectFilteredLabel={t("channel_groups_page.select_filtered_channels")}
-                deselectFilteredLabel={t("channel_groups_page.deselect_filtered_channels")}
-                selectedCountLabel={(count) =>
-                  t("channel_groups_page.selected_channels_count", { count })
+              <div className="grid gap-4 md:grid-cols-1">
+                <Field
+                  label={t("channel_groups_page.route_path_label")}
+                  hint={t("channel_groups_page.route_path_hint")}
+                >
+                  <TextInput
+                    value={primaryRoute.path}
+                    onChange={(event) => updatePrimaryRoute({ path: event.currentTarget.value })}
+                    placeholder="/pro"
+                    disabled={disabled}
+                  />
+                </Field>
+              </div>
+
+              <div className="space-y-3">
+                <Field
+                  label={t("channel_groups_page.select_channel_label")}
+                  hint={t("channel_groups_page.select_channel_hint")}
+                >
+                  <SearchableCheckboxMultiSelect
+                    value={selectedChannelValues}
+                    onChange={updateDraftChannels}
+                    options={channelOptions}
+                    placeholder={t("channel_groups_page.select_channel_placeholder")}
+                    searchPlaceholder={t("channel_groups_page.search_channel_placeholder")}
+                    selectFilteredLabel={t("channel_groups_page.select_filtered_channels")}
+                    deselectFilteredLabel={t("channel_groups_page.deselect_filtered_channels")}
+                    selectedCountLabel={(count) =>
+                      t("channel_groups_page.selected_channels_count", { count })
+                    }
+                    noResultsLabel={t("channel_groups_page.no_search_results")}
+                    aria-label={t("channel_groups_page.select_channel_label")}
+                    disabled={disabled}
+                  />
+                </Field>
+              </div>
+
+              <VirtualTable<RoutingChannelGroupMemberEntry>
+                rows={groupDraft.channels}
+                columns={groupMemberColumns}
+                rowKey={(channel) => channel.id}
+                virtualize={false}
+                rowHeight={52}
+                height="h-[248px]"
+                minWidth="min-w-[640px]"
+                caption={t("channel_groups_page.select_channel_label")}
+                emptyText={t("channel_groups_page.empty_group_channels")}
+                rowClassName={(channel) =>
+                  draftStaleChannelIds.has(channel.id) ? "bg-rose-50/70 dark:bg-rose-500/10" : ""
                 }
-                noResultsLabel={t("channel_groups_page.no_search_results")}
-                aria-label={t("channel_groups_page.select_channel_label")}
-                disabled={disabled}
               />
-            </Field>
-          </div>
+            </TabsContent>
 
-          <VirtualTable<RoutingChannelGroupMemberEntry>
-            rows={groupDraft.channels}
-            columns={groupMemberColumns}
-            rowKey={(channel) => channel.id}
-            virtualize={false}
-            rowHeight={52}
-            height="h-[248px]"
-            minWidth="min-w-[640px]"
-            caption={t("channel_groups_page.select_channel_label")}
-            emptyText={t("channel_groups_page.empty_group_channels")}
-            rowClassName={(channel) =>
-              draftStaleChannelIds.has(channel.id) ? "bg-rose-50/70 dark:bg-rose-500/10" : ""
-            }
-          />
+            <TabsContent value="models" className="mt-4 space-y-3">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="space-y-1">
+                  <div className="text-sm font-semibold text-slate-900 dark:text-white">
+                    {t("channel_groups_page.allowed_models_label")}
+                  </div>
+                  <div className="text-xs text-slate-500 dark:text-white/55">
+                    {t("channel_groups_page.allowed_models_hint")}
+                  </div>
+                </div>
+                <div className="flex shrink-0 gap-2">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={selectAllDraftModels}
+                    disabled={disabled || modelOptions.length === 0}
+                  >
+                    <Check size={14} />
+                    {t("channel_groups_page.select_all_models")}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={clearDraftModels}
+                    disabled={disabled || groupDraft.allowedModels.length === 0}
+                  >
+                    <X size={14} />
+                    {t("channel_groups_page.clear_models")}
+                  </Button>
+                </div>
+              </div>
+
+              {selectedChannelValues.length === 0 ? (
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-6 text-sm text-slate-500 dark:border-neutral-800 dark:bg-neutral-900/60 dark:text-white/55">
+                  {t("channel_groups_page.models_need_channels")}
+                </div>
+              ) : modelsError ? (
+                <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-400/25 dark:bg-rose-500/10 dark:text-rose-200">
+                  {modelsError}
+                </div>
+              ) : modelsLoading ? (
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-6 text-sm text-slate-500 dark:border-neutral-800 dark:bg-neutral-900/60 dark:text-white/55">
+                  {t("common.loading")}
+                </div>
+              ) : modelOptions.length === 0 ? (
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-6 text-sm text-slate-500 dark:border-neutral-800 dark:bg-neutral-900/60 dark:text-white/55">
+                  {t("channel_groups_page.no_channel_models")}
+                </div>
+              ) : (
+                <div className="grid max-h-[360px] gap-2 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-3 dark:border-neutral-800 dark:bg-neutral-950 sm:grid-cols-2">
+                  {modelOptions.map((model) => {
+                    const checked = selectedModelSet.has(model);
+                    return (
+                      <label
+                        key={model}
+                        className="flex min-w-0 items-center gap-3 rounded-xl px-3 py-2 text-sm text-slate-800 transition-colors hover:bg-slate-50 dark:text-white/80 dark:hover:bg-white/[0.04]"
+                      >
+                        <Checkbox
+                          checked={checked}
+                          onCheckedChange={(next) => toggleDraftModel(model, next)}
+                          disabled={disabled}
+                          aria-label={model}
+                        />
+                        <VendorIcon modelId={model} size={14} />
+                        <span className="min-w-0 flex-1 truncate">{model}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
         </div>
       </Modal>
     </>
