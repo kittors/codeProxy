@@ -299,7 +299,7 @@ export function useAuthFilesFilesPresentation({
           ) : null}
 
           {items.length > 0 ? (
-            <div className="grid w-[min(34rem,calc(100vw-2rem))] grid-cols-[minmax(0,1fr)_0.875rem_max-content_max-content] items-center gap-x-2 gap-y-1">
+            <div className="quota-tooltip-grid grid w-[min(26rem,calc(100vw-2rem))] grid-cols-[minmax(0,1fr)_0.875rem_max-content_max-content] items-center gap-x-2 gap-y-1">
               {items.map((item) => {
                 const tone = resolveQuotaVisualTone(item.percent);
                 const percentText =
