@@ -130,6 +130,14 @@ export function useAuthFilesQuotaState({
         }));
       }
 
+      if (provider === "antigravity") {
+        return items.map((item, index) => ({
+          id: item.key ?? item.label ?? `antigravity-${index + 1}`,
+          label: translateQuotaLabel(item.label),
+          item,
+        }));
+      }
+
       const supportsStableCodingSlots = provider === "codex" || provider === "kimi";
       if (!supportsStableCodingSlots) {
         return items.slice(0, 3).map((item) => ({
