@@ -12,6 +12,7 @@ export function Modal({
   maxWidth = "max-w-3xl",
   panelClassName,
   bodyHeightClassName,
+  bodyOverflowClassName,
   bodyClassName,
   bodyTestId,
   hideHeader = false,
@@ -25,6 +26,7 @@ export function Modal({
   maxWidth?: string;
   panelClassName?: string;
   bodyHeightClassName?: string;
+  bodyOverflowClassName?: string;
   bodyClassName?: string;
   bodyTestId?: string;
   hideHeader?: boolean;
@@ -77,6 +79,7 @@ export function Modal({
   if (!mounted) return null;
 
   const bodyHeightCls = bodyHeightClassName ?? "max-h-[70vh]";
+  const bodyOverflowCls = bodyOverflowClassName ?? "overflow-y-auto";
 
   return createPortal(
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
@@ -140,7 +143,7 @@ export function Modal({
 
         <div
           data-testid={bodyTestId}
-          className={`${bodyHeightCls} overflow-y-auto overscroll-contain px-5 py-4 ${bodyClassName ?? ""}`}
+          className={`${bodyHeightCls} ${bodyOverflowCls} overscroll-contain px-5 py-4 ${bodyClassName ?? ""}`}
         >
           {children}
         </div>
