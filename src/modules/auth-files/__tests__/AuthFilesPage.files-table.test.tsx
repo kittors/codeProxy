@@ -853,6 +853,92 @@ describe("AuthFilesPage files table", () => {
     expect(within(cards).getByText("Model D [d]")).toBeInTheDocument();
   });
 
+  test("cards view hides cached antigravity models skipped by the reference implementation", async () => {
+    const now = Date.now();
+    const file = {
+      name: "antigravity.json",
+      type: "antigravity",
+      size: 1024,
+      modified: now,
+      disabled: false,
+      auth_index: "ag",
+    } as any;
+
+    mocks.list.mockImplementation(async () => ({ files: [file] }));
+
+    window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
+    window.localStorage.setItem("authFilesPage.quotaAutoRefreshMs.v1", JSON.stringify(0));
+    window.sessionStorage.setItem(
+      AUTH_FILES_DATA_CACHE_KEY,
+      JSON.stringify({
+        savedAtMs: now,
+        files: [file],
+        quotaByFileName: {
+          "antigravity.json": {
+            status: "success",
+            updatedAt: now,
+            items: [
+              {
+                key: "model:gemini-3.1-pro-high",
+                label: "Gemini 3.1 Pro (High) [gemini-3.1-pro-high]",
+                percent: 91,
+              },
+              { key: "model:chat_20706", label: "chat_20706", percent: 100 },
+              { key: "model:chat_23310", label: "chat_23310", percent: 100 },
+              {
+                key: "model:tab_flash_lite_preview",
+                label: "tab_flash_lite_preview",
+                percent: 100,
+              },
+              {
+                key: "model:tab_jump_flash_lite_preview",
+                label: "tab_jump_flash_lite_preview",
+                percent: 100,
+              },
+              {
+                key: "model:gemini-2.5-flash-thinking",
+                label: "Gemini 3.1 Flash Lite [gemini-2.5-flash-thinking]",
+                percent: 100,
+              },
+              {
+                key: "model:gemini-2.5-pro",
+                label: "Gemini 2.5 Pro [gemini-2.5-pro]",
+                percent: 100,
+              },
+            ],
+          },
+        },
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("antigravity.json")).toBeInTheDocument();
+    const cards = screen.getByTestId("auth-files-cards");
+
+    expect(
+      within(cards).getByText("Gemini 3.1 Pro (High) [gemini-3.1-pro-high]"),
+    ).toBeInTheDocument();
+    expect(within(cards).queryByText("chat_20706")).not.toBeInTheDocument();
+    expect(within(cards).queryByText("chat_23310")).not.toBeInTheDocument();
+    expect(within(cards).queryByText("tab_flash_lite_preview")).not.toBeInTheDocument();
+    expect(within(cards).queryByText("tab_jump_flash_lite_preview")).not.toBeInTheDocument();
+    expect(
+      within(cards).queryByText("Gemini 3.1 Flash Lite [gemini-2.5-flash-thinking]"),
+    ).not.toBeInTheDocument();
+    expect(within(cards).queryByText("Gemini 2.5 Pro [gemini-2.5-pro]")).not.toBeInTheDocument();
+  });
+
   test("cards view does not show verbose antigravity model metadata under quota bars", async () => {
     const now = Date.now();
     const file = {
@@ -986,6 +1072,73 @@ describe("AuthFilesPage files table", () => {
     expect(
       within(tooltip).queryByText(/modelProvider=MODEL_PROVIDER_GOOGLE/),
     ).not.toBeInTheDocument();
+  });
+
+  test("table quota preview and hover hide cached antigravity models skipped by the reference implementation", async () => {
+    const now = Date.now();
+    const file = {
+      name: "antigravity.json",
+      type: "antigravity",
+      size: 1024,
+      modified: now,
+      disabled: false,
+      auth_index: "ag",
+    } as any;
+
+    mocks.list.mockImplementation(async () => ({ files: [file] }));
+
+    window.localStorage.setItem("authFilesPage.quotaAutoRefreshMs.v1", JSON.stringify(0));
+    window.sessionStorage.setItem(
+      AUTH_FILES_DATA_CACHE_KEY,
+      JSON.stringify({
+        savedAtMs: now,
+        files: [file],
+        quotaByFileName: {
+          "antigravity.json": {
+            status: "success",
+            updatedAt: now,
+            items: [
+              { key: "model:chat_20706", label: "chat_20706", percent: 100 },
+              {
+                key: "model:gemini-3.1-pro-high",
+                label: "Gemini 3.1 Pro (High) [gemini-3.1-pro-high]",
+                percent: 91,
+              },
+            ],
+          },
+        },
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("antigravity.json")).toBeInTheDocument();
+
+    const row = screen.getByText("antigravity.json").closest("tr");
+    expect(row).not.toBeNull();
+    expect(within(row as HTMLElement).queryByText("chat_20706")).not.toBeInTheDocument();
+    const visibleModel = within(row as HTMLElement).getByText(
+      "Gemini 3.1 Pro (High) [gemini-3.1-pro-high]",
+    );
+    expect(visibleModel).toBeInTheDocument();
+
+    fireEvent.mouseEnter(visibleModel);
+
+    const tooltip = await screen.findByRole("tooltip");
+    expect(within(tooltip).queryByText("chat_20706")).not.toBeInTheDocument();
+    expect(
+      within(tooltip).getByText("Gemini 3.1 Pro (High) [gemini-3.1-pro-high]"),
+    ).toBeInTheDocument();
   });
 
   test("cards view restores cached quota while refreshing in the background", async () => {

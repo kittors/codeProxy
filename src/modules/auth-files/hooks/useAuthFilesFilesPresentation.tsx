@@ -28,7 +28,12 @@ import {
   resolveFileType,
 } from "@/modules/auth-files/helpers/authFilesPageUtils";
 import { resolveQuotaProvider, type QuotaProvider } from "@/modules/quota/quota-fetch";
-import { clampPercent, type QuotaItem, type QuotaState } from "@/modules/quota/quota-helpers";
+import {
+  clampPercent,
+  filterAntigravityQuotaItems,
+  type QuotaItem,
+  type QuotaState,
+} from "@/modules/quota/quota-helpers";
 
 const KNOWN_QUOTA_TEXT_KEYS = new Set([
   "missing_auth_index",
@@ -587,7 +592,10 @@ export function useAuthFilesFilesPresentation({
           }
 
           const state = quotaByFileName[file.name] ?? { status: "idle", items: [] };
-          const items = Array.isArray(state.items) ? (state.items as QuotaItem[]) : [];
+          const rawItems = Array.isArray(state.items) ? (state.items as QuotaItem[]) : [];
+          const items =
+            provider === "antigravity" ? filterAntigravityQuotaItems(rawItems) : rawItems;
+          const displayState = items === rawItems ? state : { ...state, items };
           const hasError = state.status === "error";
 
           const renderQuotaLinePreview = (item: QuotaItem) => {
@@ -619,7 +627,7 @@ export function useAuthFilesFilesPresentation({
             <HoverTooltip
               disabled={!hasError && items.length === 0}
               className="w-full min-w-0"
-              content={renderQuotaHoverContent(state, {
+              content={renderQuotaHoverContent(displayState, {
                 suppressItemMeta: provider === "antigravity",
               })}
             >

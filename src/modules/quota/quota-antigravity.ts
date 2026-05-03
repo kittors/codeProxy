@@ -50,7 +50,29 @@ const normalizeModelId = (value: unknown): string | null => normalizeStringValue
 const normalizeModelIdList = (value: unknown): string[] =>
   Array.isArray(value) ? value.map(normalizeModelId).filter((id): id is string => Boolean(id)) : [];
 
-const shouldSkipModel = (id: string): boolean => REFERENCE_SKIPPED_MODEL_IDS.has(id);
+export const shouldSkipAntigravityModelId = (id: string): boolean =>
+  REFERENCE_SKIPPED_MODEL_IDS.has(id);
+
+const ANTIGRAVITY_MODEL_KEY_PREFIX = "model:";
+
+const resolveAntigravityModelIdFromQuotaItem = (item: QuotaItem): string | null => {
+  const key = typeof item.key === "string" ? item.key.trim() : "";
+  if (key.startsWith(ANTIGRAVITY_MODEL_KEY_PREFIX)) {
+    return key.slice(ANTIGRAVITY_MODEL_KEY_PREFIX.length).trim() || null;
+  }
+  if (key && shouldSkipAntigravityModelId(key)) return key;
+
+  const label = String(item.label ?? "").trim();
+  const bracketModelId = label.match(/\[([^\]]+)\]\s*$/)?.[1]?.trim();
+  if (bracketModelId) return bracketModelId;
+  return label && shouldSkipAntigravityModelId(label) ? label : null;
+};
+
+export const filterAntigravityQuotaItems = (items: QuotaItem[]): QuotaItem[] =>
+  items.filter((item) => {
+    const modelId = resolveAntigravityModelIdFromQuotaItem(item);
+    return !modelId || !shouldSkipAntigravityModelId(modelId);
+  });
 
 const resolvePayloadAndModels = (
   input: AntigravityFetchAvailableModelsPayload | AntigravityModelsPayload,
@@ -82,7 +104,7 @@ const quotaInfo = (entry?: AntigravityQuotaInfo) => {
 
 const addModelToOrder = (id: string | null, order: string[]) => {
   if (!id) return;
-  if (shouldSkipModel(id)) return;
+  if (shouldSkipAntigravityModelId(id)) return;
   if (!order.includes(id)) order.push(id);
 };
 
@@ -124,7 +146,7 @@ export const buildAntigravityItems = (
 
   Object.keys(models)
     .filter((id) => !orderedIds.has(id))
-    .filter((id) => !shouldSkipModel(id))
+    .filter((id) => !shouldSkipAntigravityModelId(id))
     .sort((a, b) => a.localeCompare(b))
     .forEach((id) => {
       order.push(id);
