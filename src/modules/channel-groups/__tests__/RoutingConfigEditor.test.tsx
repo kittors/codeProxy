@@ -124,7 +124,7 @@ describe("RoutingConfigEditor", () => {
     );
   });
 
-  test("keeps tabs fixed while tab content and model list own scrolling", async () => {
+  test("keeps modal body and tabs fixed while tab content and model list own scrolling", async () => {
     await i18n.changeLanguage("zh-CN");
     const user = userEvent.setup();
     const loadModelsForChannels = vi.fn(async () => [
@@ -140,8 +140,17 @@ describe("RoutingConfigEditor", () => {
     await user.click(screen.getByRole("option", { name: "Team A Claude" }));
     await user.click(screen.getByRole("combobox", { name: "选择渠道" }));
 
+    const modalBody = screen.getByTestId("group-editor-modal-body");
+    expect(modalBody).toHaveClass("overflow-hidden");
+    expect(modalBody).toHaveClass("flex");
+    expect(modalBody).toHaveClass("flex-col");
+
+    const tabShell = screen.getByTestId("group-editor-tabs-shell");
+    expect(tabShell).toHaveClass("flex");
+    expect(tabShell).toHaveClass("flex-col");
+
     const tabViewport = screen.getByTestId("group-editor-tab-viewport");
-    expect(tabViewport).toHaveClass("h-[520px]");
+    expect(tabViewport).toHaveClass("flex-1");
     expect(tabViewport).toHaveClass("overflow-y-auto");
 
     await user.click(screen.getByRole("tab", { name: "模型列表" }));
