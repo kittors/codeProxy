@@ -2516,6 +2516,8 @@
     "import_model": "模型",
     "import_model_placeholder": "选择模型",
     "import_model_loading": "正在加载模型...",
+    "import_endpoint_root": "根路径",
+    "import_endpoint_path_hint": "Endpoint 路径：{{path}}",
     "settings_title": "CC Switch 导入配置",
     "settings_description": "维护一键导入使用的客户端默认值，包括 Endpoint 路径、默认模型和用量刷新间隔。",
     "settings_endpoint_path": "{{client}} Endpoint 路径",

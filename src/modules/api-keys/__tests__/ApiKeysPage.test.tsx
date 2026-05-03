@@ -392,6 +392,51 @@ describe("ApiKeysPage", () => {
     openSpy.mockRestore();
   });
 
+  test("keeps the CC Switch client-specific panel stable while switching client types", async () => {
+    state.entries = [
+      {
+        key: "sk-group-1234567890",
+        name: "Group Key",
+        "allowed-channel-groups": ["pro"],
+        "created-at": "2026-04-14T00:00:00.000Z",
+      },
+    ];
+    state.channelGroups = [
+      {
+        name: "pro",
+        description: "Pro route",
+        "path-routes": ["/pro"],
+      },
+    ];
+
+    render(
+      <MemoryRouter>
+        <ThemeProvider>
+          <ToastProvider>
+            <ApiKeysPage />
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("Group Key")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: /import to cc switch/i }));
+    await screen.findByRole("dialog", { name: /import to cc switch/i });
+
+    const detailsPanel = screen.getByTestId("ccswitch-client-specific-panel");
+    expect(detailsPanel).toHaveClass("min-h-[76px]");
+    expect(screen.getByRole("combobox", { name: /claude code auth field/i })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("combobox", { name: /client type/i }));
+    await userEvent.click(await screen.findByRole("option", { name: "Codex" }));
+
+    expect(screen.getByTestId("ccswitch-client-specific-panel")).toBe(detailsPanel);
+    expect(screen.queryByRole("combobox", { name: /claude code auth field/i })).toBeNull();
+    expect(detailsPanel).toHaveTextContent(/openai-compatible/i);
+    expect(detailsPanel).toHaveTextContent(/\/v1/i);
+  });
+
   test("imports a Claude Code CC Switch provider with its auth field in the selected form", async () => {
     const openSpy = vi.spyOn(window, "open").mockReturnValue(null);
     vi.spyOn(document, "hasFocus").mockReturnValue(false);
