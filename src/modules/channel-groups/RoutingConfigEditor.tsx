@@ -186,6 +186,7 @@ export function RoutingConfigEditor({
   const [modelOptions, setModelOptions] = useState<string[]>([]);
   const [modelsLoading, setModelsLoading] = useState(false);
   const [modelsError, setModelsError] = useState("");
+  const [modelsSelectionTouched, setModelsSelectionTouched] = useState(false);
 
   const update = useCallback(
     (patch: Partial<VisualConfigValues>) => {
@@ -311,6 +312,7 @@ export function RoutingConfigEditor({
     setGroupEditorTab("basic");
     setModelOptions([]);
     setModelsError("");
+    setModelsSelectionTouched(false);
     setGroupEditorOpen(true);
   }, []);
 
@@ -335,6 +337,7 @@ export function RoutingConfigEditor({
       setGroupEditorTab("basic");
       setModelOptions([]);
       setModelsError("");
+      setModelsSelectionTouched((group.allowedModels ?? []).length > 0);
       notifyStaleChannels(group.name.trim(), staleChannelsByGroup.get(group.id) ?? []);
       setGroupEditorOpen(true);
     },
@@ -348,6 +351,7 @@ export function RoutingConfigEditor({
     setGroupEditorTab("basic");
     setModelOptions([]);
     setModelsError("");
+    setModelsSelectionTouched(false);
   }, []);
 
   const updateDraftChannels = useCallback((selectedValues: string[]) => {
@@ -379,6 +383,7 @@ export function RoutingConfigEditor({
   const toggleDraftModel = useCallback((modelId: string, checked: boolean) => {
     const normalized = modelId.trim();
     if (!normalized) return;
+    setModelsSelectionTouched(true);
     setGroupDraft((current) => {
       const currentModels = current.allowedModels.map((model) => model.trim()).filter(Boolean);
       if (checked) {
@@ -395,6 +400,7 @@ export function RoutingConfigEditor({
   }, []);
 
   const selectAllDraftModels = useCallback(() => {
+    setModelsSelectionTouched(true);
     setGroupDraft((current) => ({
       ...current,
       allowedModels: Array.from(new Set(modelOptions)),
@@ -402,6 +408,7 @@ export function RoutingConfigEditor({
   }, [modelOptions]);
 
   const clearDraftModels = useCallback(() => {
+    setModelsSelectionTouched(true);
     setGroupDraft((current) => ({ ...current, allowedModels: [] }));
   }, []);
 
@@ -807,7 +814,9 @@ export function RoutingConfigEditor({
         const allowed = new Set(normalized);
         setGroupDraft((current) => ({
           ...current,
-          allowedModels: current.allowedModels.filter((model) => allowed.has(model)),
+          allowedModels: modelsSelectionTouched
+            ? current.allowedModels.filter((model) => allowed.has(model))
+            : normalized,
         }));
       })
       .catch((err: unknown) => {
@@ -824,7 +833,14 @@ export function RoutingConfigEditor({
     return () => {
       cancelled = true;
     };
-  }, [groupEditorOpen, groupEditorTab, loadModelsForChannels, selectedChannelValues, t]);
+  }, [
+    groupEditorOpen,
+    groupEditorTab,
+    loadModelsForChannels,
+    modelsSelectionTouched,
+    selectedChannelValues,
+    t,
+  ]);
 
   return (
     <>
@@ -932,156 +948,164 @@ export function RoutingConfigEditor({
               <TabsTrigger value="models">{t("channel_groups_page.models_tab")}</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="basic" className="mt-4 space-y-5">
-              <div className="grid gap-4 md:grid-cols-2">
-                <Field label={t("channel_groups_page.group_name_label")}>
-                  <TextInput
-                    value={groupDraft.name}
-                    onChange={(event) => {
-                      const value = event.currentTarget.value;
-                      setGroupDraft((current) => ({ ...current, name: value }));
-                    }}
-                    placeholder="pro"
-                    disabled={disabled}
-                  />
-                </Field>
-                <Field label={t("channel_groups_page.description_label")}>
-                  <TextInput
-                    value={groupDraft.description}
-                    onChange={(event) => {
-                      const value = event.currentTarget.value;
-                      setGroupDraft((current) => ({ ...current, description: value }));
-                    }}
-                    placeholder={t("channel_groups_page.description_placeholder")}
-                    disabled={disabled}
-                  />
-                </Field>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-1">
-                <Field
-                  label={t("channel_groups_page.route_path_label")}
-                  hint={t("channel_groups_page.route_path_hint")}
-                >
-                  <TextInput
-                    value={primaryRoute.path}
-                    onChange={(event) => updatePrimaryRoute({ path: event.currentTarget.value })}
-                    placeholder="/pro"
-                    disabled={disabled}
-                  />
-                </Field>
-              </div>
-
-              <div className="space-y-3">
-                <Field
-                  label={t("channel_groups_page.select_channel_label")}
-                  hint={t("channel_groups_page.select_channel_hint")}
-                >
-                  <SearchableCheckboxMultiSelect
-                    value={selectedChannelValues}
-                    onChange={updateDraftChannels}
-                    options={channelOptions}
-                    placeholder={t("channel_groups_page.select_channel_placeholder")}
-                    searchPlaceholder={t("channel_groups_page.search_channel_placeholder")}
-                    selectFilteredLabel={t("channel_groups_page.select_filtered_channels")}
-                    deselectFilteredLabel={t("channel_groups_page.deselect_filtered_channels")}
-                    selectedCountLabel={(count) =>
-                      t("channel_groups_page.selected_channels_count", { count })
-                    }
-                    noResultsLabel={t("channel_groups_page.no_search_results")}
-                    aria-label={t("channel_groups_page.select_channel_label")}
-                    disabled={disabled}
-                  />
-                </Field>
-              </div>
-
-              <VirtualTable<RoutingChannelGroupMemberEntry>
-                rows={groupDraft.channels}
-                columns={groupMemberColumns}
-                rowKey={(channel) => channel.id}
-                virtualize={false}
-                rowHeight={52}
-                height="h-[248px]"
-                minWidth="min-w-[640px]"
-                caption={t("channel_groups_page.select_channel_label")}
-                emptyText={t("channel_groups_page.empty_group_channels")}
-                rowClassName={(channel) =>
-                  draftStaleChannelIds.has(channel.id) ? "bg-rose-50/70 dark:bg-rose-500/10" : ""
-                }
-              />
-            </TabsContent>
-
-            <TabsContent value="models" className="mt-4 space-y-3">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="space-y-1">
-                  <div className="text-sm font-semibold text-slate-900 dark:text-white">
-                    {t("channel_groups_page.allowed_models_label")}
-                  </div>
-                  <div className="text-xs text-slate-500 dark:text-white/55">
-                    {t("channel_groups_page.allowed_models_hint")}
-                  </div>
+            <div
+              data-testid="group-editor-tab-viewport"
+              className="mt-4 h-[520px] min-h-0 overflow-y-auto pr-1"
+            >
+              <TabsContent value="basic" className="space-y-5">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <Field label={t("channel_groups_page.group_name_label")}>
+                    <TextInput
+                      value={groupDraft.name}
+                      onChange={(event) => {
+                        const value = event.currentTarget.value;
+                        setGroupDraft((current) => ({ ...current, name: value }));
+                      }}
+                      placeholder="pro"
+                      disabled={disabled}
+                    />
+                  </Field>
+                  <Field label={t("channel_groups_page.description_label")}>
+                    <TextInput
+                      value={groupDraft.description}
+                      onChange={(event) => {
+                        const value = event.currentTarget.value;
+                        setGroupDraft((current) => ({ ...current, description: value }));
+                      }}
+                      placeholder={t("channel_groups_page.description_placeholder")}
+                      disabled={disabled}
+                    />
+                  </Field>
                 </div>
-                <div className="flex shrink-0 gap-2">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={selectAllDraftModels}
-                    disabled={disabled || modelOptions.length === 0}
+
+                <div className="grid gap-4 md:grid-cols-1">
+                  <Field
+                    label={t("channel_groups_page.route_path_label")}
+                    hint={t("channel_groups_page.route_path_hint")}
                   >
-                    <Check size={14} />
-                    {t("channel_groups_page.select_all_models")}
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={clearDraftModels}
-                    disabled={disabled || groupDraft.allowedModels.length === 0}
-                  >
-                    <X size={14} />
-                    {t("channel_groups_page.clear_models")}
-                  </Button>
+                    <TextInput
+                      value={primaryRoute.path}
+                      onChange={(event) => updatePrimaryRoute({ path: event.currentTarget.value })}
+                      placeholder="/pro"
+                      disabled={disabled}
+                    />
+                  </Field>
                 </div>
-              </div>
 
-              {selectedChannelValues.length === 0 ? (
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-6 text-sm text-slate-500 dark:border-neutral-800 dark:bg-neutral-900/60 dark:text-white/55">
-                  {t("channel_groups_page.models_need_channels")}
+                <div className="space-y-3">
+                  <Field
+                    label={t("channel_groups_page.select_channel_label")}
+                    hint={t("channel_groups_page.select_channel_hint")}
+                  >
+                    <SearchableCheckboxMultiSelect
+                      value={selectedChannelValues}
+                      onChange={updateDraftChannels}
+                      options={channelOptions}
+                      placeholder={t("channel_groups_page.select_channel_placeholder")}
+                      searchPlaceholder={t("channel_groups_page.search_channel_placeholder")}
+                      selectFilteredLabel={t("channel_groups_page.select_filtered_channels")}
+                      deselectFilteredLabel={t("channel_groups_page.deselect_filtered_channels")}
+                      selectedCountLabel={(count) =>
+                        t("channel_groups_page.selected_channels_count", { count })
+                      }
+                      noResultsLabel={t("channel_groups_page.no_search_results")}
+                      aria-label={t("channel_groups_page.select_channel_label")}
+                      disabled={disabled}
+                    />
+                  </Field>
                 </div>
-              ) : modelsError ? (
-                <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-400/25 dark:bg-rose-500/10 dark:text-rose-200">
-                  {modelsError}
+
+                <VirtualTable<RoutingChannelGroupMemberEntry>
+                  rows={groupDraft.channels}
+                  columns={groupMemberColumns}
+                  rowKey={(channel) => channel.id}
+                  virtualize={false}
+                  rowHeight={52}
+                  height="h-[248px]"
+                  minWidth="min-w-[640px]"
+                  caption={t("channel_groups_page.select_channel_label")}
+                  emptyText={t("channel_groups_page.empty_group_channels")}
+                  rowClassName={(channel) =>
+                    draftStaleChannelIds.has(channel.id) ? "bg-rose-50/70 dark:bg-rose-500/10" : ""
+                  }
+                />
+              </TabsContent>
+
+              <TabsContent value="models" className="flex h-full min-h-0 flex-col gap-3">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="space-y-1">
+                    <div className="text-sm font-semibold text-slate-900 dark:text-white">
+                      {t("channel_groups_page.allowed_models_label")}
+                    </div>
+                    <div className="text-xs text-slate-500 dark:text-white/55">
+                      {t("channel_groups_page.allowed_models_hint")}
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 gap-2">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={selectAllDraftModels}
+                      disabled={disabled || modelOptions.length === 0}
+                    >
+                      <Check size={14} />
+                      {t("channel_groups_page.select_all_models")}
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={clearDraftModels}
+                      disabled={disabled || groupDraft.allowedModels.length === 0}
+                    >
+                      <X size={14} />
+                      {t("channel_groups_page.clear_models")}
+                    </Button>
+                  </div>
                 </div>
-              ) : modelsLoading ? (
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-6 text-sm text-slate-500 dark:border-neutral-800 dark:bg-neutral-900/60 dark:text-white/55">
-                  {t("common.loading")}
-                </div>
-              ) : modelOptions.length === 0 ? (
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-6 text-sm text-slate-500 dark:border-neutral-800 dark:bg-neutral-900/60 dark:text-white/55">
-                  {t("channel_groups_page.no_channel_models")}
-                </div>
-              ) : (
-                <div className="grid max-h-[360px] gap-2 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-3 dark:border-neutral-800 dark:bg-neutral-950 sm:grid-cols-2">
-                  {modelOptions.map((model) => {
-                    const checked = selectedModelSet.has(model);
-                    return (
-                      <label
-                        key={model}
-                        className="flex min-w-0 items-center gap-3 rounded-xl px-3 py-2 text-sm text-slate-800 transition-colors hover:bg-slate-50 dark:text-white/80 dark:hover:bg-white/[0.04]"
-                      >
-                        <Checkbox
-                          checked={checked}
-                          onCheckedChange={(next) => toggleDraftModel(model, next)}
-                          disabled={disabled}
-                          aria-label={model}
-                        />
-                        <VendorIcon modelId={model} size={14} />
-                        <span className="min-w-0 flex-1 truncate">{model}</span>
-                      </label>
-                    );
-                  })}
-                </div>
-              )}
-            </TabsContent>
+
+                {selectedChannelValues.length === 0 ? (
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-6 text-sm text-slate-500 dark:border-neutral-800 dark:bg-neutral-900/60 dark:text-white/55">
+                    {t("channel_groups_page.models_need_channels")}
+                  </div>
+                ) : modelsError ? (
+                  <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-400/25 dark:bg-rose-500/10 dark:text-rose-200">
+                    {modelsError}
+                  </div>
+                ) : modelsLoading ? (
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-6 text-sm text-slate-500 dark:border-neutral-800 dark:bg-neutral-900/60 dark:text-white/55">
+                    {t("common.loading")}
+                  </div>
+                ) : modelOptions.length === 0 ? (
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-6 text-sm text-slate-500 dark:border-neutral-800 dark:bg-neutral-900/60 dark:text-white/55">
+                    {t("channel_groups_page.no_channel_models")}
+                  </div>
+                ) : (
+                  <div
+                    data-testid="group-editor-model-list"
+                    className="grid min-h-0 flex-1 gap-2 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-3 dark:border-neutral-800 dark:bg-neutral-950 sm:grid-cols-2"
+                  >
+                    {modelOptions.map((model) => {
+                      const checked = selectedModelSet.has(model);
+                      return (
+                        <label
+                          key={model}
+                          className="flex min-w-0 items-center gap-3 rounded-xl px-3 py-2 text-sm text-slate-800 transition-colors hover:bg-slate-50 dark:text-white/80 dark:hover:bg-white/[0.04]"
+                        >
+                          <Checkbox
+                            checked={checked}
+                            onCheckedChange={(next) => toggleDraftModel(model, next)}
+                            disabled={disabled}
+                            aria-label={model}
+                          />
+                          <VendorIcon modelId={model} size={14} />
+                          <span className="min-w-0 flex-1 truncate">{model}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
+              </TabsContent>
+            </div>
           </Tabs>
         </div>
       </Modal>

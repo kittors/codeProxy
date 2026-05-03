@@ -97,7 +97,7 @@ describe("RoutingConfigEditor", () => {
     expect(screen.getByTestId("channel-priority")).toHaveTextContent("80");
   });
 
-  test("saves selected models from the channel-scoped model tab", async () => {
+  test("defaults model tab selections to every channel-scoped model", async () => {
     await i18n.changeLanguage("zh-CN");
     const user = userEvent.setup();
     const loadModelsForChannels = vi.fn(async (channels: string[]) =>
@@ -117,10 +117,36 @@ describe("RoutingConfigEditor", () => {
     expect(await screen.findByLabelText("claude-sonnet-4-5")).toBeInTheDocument();
     expect(loadModelsForChannels).toHaveBeenCalledWith(["Team A Claude"]);
 
-    await user.click(screen.getByLabelText("claude-sonnet-4-5"));
     await user.click(screen.getByRole("button", { name: "添加" }));
 
-    expect(screen.getByTestId("allowed-models")).toHaveTextContent("claude-sonnet-4-5");
+    expect(screen.getByTestId("allowed-models")).toHaveTextContent(
+      "claude-opus-4-5,claude-sonnet-4-5",
+    );
+  });
+
+  test("keeps tabs fixed while tab content and model list own scrolling", async () => {
+    await i18n.changeLanguage("zh-CN");
+    const user = userEvent.setup();
+    const loadModelsForChannels = vi.fn(async () => [
+      "claude-sonnet-4-5",
+      "claude-opus-4-5",
+      "gpt-5-codex",
+    ]);
+
+    render(<Harness loadModelsForChannels={loadModelsForChannels} />);
+
+    await user.click(screen.getByRole("button", { name: "新增分组" }));
+    await user.click(screen.getByRole("combobox", { name: "选择渠道" }));
+    await user.click(screen.getByRole("option", { name: "Team A Claude" }));
+    await user.click(screen.getByRole("combobox", { name: "选择渠道" }));
+
+    const tabViewport = screen.getByTestId("group-editor-tab-viewport");
+    expect(tabViewport).toHaveClass("h-[520px]");
+    expect(tabViewport).toHaveClass("overflow-y-auto");
+
+    await user.click(screen.getByRole("tab", { name: "模型列表" }));
+    expect(await screen.findByTestId("group-editor-model-list")).toHaveClass("overflow-y-auto");
+    expect(screen.getByRole("tablist")).toBeInTheDocument();
   });
 
   test("sets path routes directly inside group editor", async () => {
