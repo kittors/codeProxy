@@ -78,6 +78,8 @@
     "import_model": "Model",
     "import_model_placeholder": "Select a model",
     "import_model_loading": "Loading models...",
+    "import_endpoint_root": "root",
+    "import_endpoint_path_hint": "Endpoint path: {{path}}",
     "settings_title": "CC Switch import settings",
     "settings_description": "Maintain the client-specific defaults used by one-click imports, including endpoint path, default model, and usage refresh interval.",
     "settings_endpoint_path": "{{client}} endpoint path",

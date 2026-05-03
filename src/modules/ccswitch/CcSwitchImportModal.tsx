@@ -11,6 +11,7 @@ import {
 } from "@/modules/ccswitch/ccswitchImport";
 import {
   CC_SWITCH_CLAUDE_AUTH_FIELDS,
+  DEFAULT_CC_SWITCH_IMPORT_SETTINGS,
   type CcSwitchClaudeAuthField,
 } from "@/modules/ccswitch/ccswitchImportSettings";
 
@@ -30,6 +31,12 @@ export interface CcSwitchImportSelection {
   model: string;
   providerName: string;
 }
+
+const labelClassName =
+  "text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-white/45";
+const controlClassName =
+  "h-10 rounded-xl border border-slate-200/80 bg-white px-3 text-sm text-slate-900 shadow-none hover:border-slate-300 hover:bg-white focus-visible:ring-2 focus-visible:ring-slate-900/10 dark:border-neutral-800 dark:bg-neutral-900 dark:text-white dark:hover:border-neutral-700 dark:focus-visible:ring-white/15";
+const fieldClassName = "space-y-1.5";
 
 export function CcSwitchImportModal({
   t,
@@ -103,113 +110,23 @@ export function CcSwitchImportModal({
     ),
   }));
   const submitLabel = t("ccswitch.import_client", { client: clientLabel });
+  const endpointPath = DEFAULT_CC_SWITCH_IMPORT_SETTINGS[clientType].endpointPath;
+  const endpointHint = endpointPath || t("ccswitch.import_endpoint_root");
 
   return (
     <Modal
       open={open}
       title={t("ccswitch.import_to_ccswitch")}
       description={t("ccswitch.import_modal_desc")}
-      maxWidth="max-w-xl"
+      maxWidth="max-w-2xl"
       onClose={onClose}
       footer={
-        <Button variant="secondary" onClick={onClose}>
-          {t("common.cancel")}
-        </Button>
-      }
-    >
-      <div className="space-y-4">
-        <label className="space-y-1.5">
-          <span className="text-xs font-semibold text-slate-600 dark:text-white/55">
-            {t("ccswitch.import_client_type")}
-          </span>
-          <Select
-            value={clientType}
-            onChange={(value) => onClientTypeChange(value as CcSwitchClientType)}
-            options={clientOptions}
-            aria-label={t("ccswitch.import_client_type")}
-          />
-        </label>
-
-        <div className="grid gap-3 sm:grid-cols-2">
-          <label className="space-y-1.5">
-            <span className="text-xs font-semibold text-slate-600 dark:text-white/55">
-              {t("ccswitch.import_provider_name")}
-            </span>
-            <TextInput
-              value={providerName}
-              onChange={(event) => onProviderNameChange(event.currentTarget.value)}
-              placeholder={t("ccswitch.import_provider_name_placeholder")}
-              aria-label={t("ccswitch.import_provider_name")}
-            />
-          </label>
-
-          <label className="space-y-1.5">
-            <span className="text-xs font-semibold text-slate-600 dark:text-white/55">
-              {t("ccswitch.import_channel_group")}
-            </span>
-            <Select
-              value={channelGroup}
-              onChange={onChannelGroupChange}
-              options={groupOptions}
-              aria-label={t("ccswitch.import_channel_group")}
-            />
-          </label>
-        </div>
-
-        <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
-          <label className="space-y-1.5">
-            <span className="text-xs font-semibold text-slate-600 dark:text-white/55">
-              {t("ccswitch.import_model")}
-            </span>
-            <Select
-              value={model}
-              onChange={onModelChange}
-              options={modelOptions}
-              placeholder={
-                modelsLoading
-                  ? t("ccswitch.import_model_loading")
-                  : t("ccswitch.import_model_placeholder")
-              }
-              aria-label={t("ccswitch.import_model")}
-              className="w-full"
-            />
-          </label>
-
-          <label className="inline-flex h-10 items-center gap-2 text-sm font-medium text-slate-700 dark:text-white/70">
-            <Checkbox
-              checked={enabled}
-              onCheckedChange={onEnabledChange}
-              aria-label={t("ccswitch.import_enabled_default")}
-            />
-            {t("ccswitch.import_enabled_default")}
-          </label>
-        </div>
-
-        {clientType === "claude" ? (
-          <label className="space-y-1.5">
-            <span className="text-xs font-semibold text-slate-600 dark:text-white/55">
-              {t("ccswitch.settings_auth_field", { client: clientLabel })}
-            </span>
-            <Select
-              value={claudeApiKeyField}
-              onChange={(value) => onClaudeApiKeyFieldChange(value as CcSwitchClaudeAuthField)}
-              options={claudeApiKeyFieldOptions}
-              aria-label={t("ccswitch.settings_auth_field", { client: clientLabel })}
-            />
-          </label>
-        ) : null}
-
-        <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 dark:border-neutral-800 dark:bg-neutral-900/55">
-          <div className="text-xs font-semibold text-slate-500 dark:text-white/45">
-            {t("ccswitch.import_base_url")}
-          </div>
-          <div className="mt-1 truncate font-mono text-xs text-slate-700 dark:text-white/70">
-            {baseUrl || "--"}
-          </div>
-        </div>
-
-        <div className="flex justify-end">
+        <>
+          <Button variant="secondary" onClick={onClose}>
+            {t("common.cancel")}
+          </Button>
           <Button
+            variant="primary"
             onClick={() =>
               onSelect({
                 apiKeyField: clientType === "claude" ? claudeApiKeyField : undefined,
@@ -224,6 +141,113 @@ export function CcSwitchImportModal({
           >
             {submitLabel}
           </Button>
+        </>
+      }
+      bodyClassName="bg-slate-50/45 dark:bg-neutral-950/45"
+    >
+      <div className="space-y-3.5">
+        <section className="grid gap-3 rounded-2xl border border-slate-200/75 bg-white p-3 shadow-[0_1px_2px_rgb(15_23_42_/_0.035)] sm:grid-cols-[minmax(0,0.84fr)_minmax(0,1.16fr)] dark:border-neutral-800 dark:bg-neutral-950/70">
+          <label className={fieldClassName}>
+            <span className={labelClassName}>{t("ccswitch.import_client_type")}</span>
+            <Select
+              value={clientType}
+              onChange={(value) => onClientTypeChange(value as CcSwitchClientType)}
+              options={clientOptions}
+              aria-label={t("ccswitch.import_client_type")}
+              className={controlClassName}
+            />
+          </label>
+
+          <div
+            data-testid="ccswitch-client-specific-panel"
+            className="min-h-[76px] rounded-xl border border-slate-200/75 bg-slate-50/70 px-3 py-2.5 dark:border-neutral-800 dark:bg-neutral-900/60"
+          >
+            {clientType === "claude" ? (
+              <label className="block space-y-1.5">
+                <span className={labelClassName}>
+                  {t("ccswitch.settings_auth_field", { client: clientLabel })}
+                </span>
+                <Select
+                  value={claudeApiKeyField}
+                  onChange={(value) => onClaudeApiKeyFieldChange(value as CcSwitchClaudeAuthField)}
+                  options={claudeApiKeyFieldOptions}
+                  aria-label={t("ccswitch.settings_auth_field", { client: clientLabel })}
+                  className={controlClassName}
+                />
+              </label>
+            ) : (
+              <div className="flex h-full min-h-[54px] flex-col justify-center gap-1">
+                <div className="text-sm font-semibold text-slate-900 dark:text-white">
+                  {clientLabel}
+                </div>
+                <div className="text-xs leading-5 text-slate-500 dark:text-white/55">
+                  {t(client.descriptionKey)}
+                </div>
+                <div className="font-mono text-[11px] text-slate-500 dark:text-white/45">
+                  {t("ccswitch.import_endpoint_path_hint", { path: endpointHint })}
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className={fieldClassName}>
+            <span className={labelClassName}>{t("ccswitch.import_provider_name")}</span>
+            <TextInput
+              value={providerName}
+              onChange={(event) => onProviderNameChange(event.currentTarget.value)}
+              placeholder={t("ccswitch.import_provider_name_placeholder")}
+              aria-label={t("ccswitch.import_provider_name")}
+              className={controlClassName}
+            />
+          </label>
+
+          <label className={fieldClassName}>
+            <span className={labelClassName}>{t("ccswitch.import_channel_group")}</span>
+            <Select
+              value={channelGroup}
+              onChange={onChannelGroupChange}
+              options={groupOptions}
+              aria-label={t("ccswitch.import_channel_group")}
+              className={controlClassName}
+            />
+          </label>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+          <label className={fieldClassName}>
+            <span className={labelClassName}>{t("ccswitch.import_model")}</span>
+            <Select
+              value={model}
+              onChange={onModelChange}
+              options={modelOptions}
+              placeholder={
+                modelsLoading
+                  ? t("ccswitch.import_model_loading")
+                  : t("ccswitch.import_model_placeholder")
+              }
+              aria-label={t("ccswitch.import_model")}
+              className={`${controlClassName} w-full`}
+            />
+          </label>
+
+          <label className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200/75 bg-white px-3 text-sm font-semibold text-slate-700 shadow-none dark:border-neutral-800 dark:bg-neutral-900 dark:text-white/70">
+            <Checkbox
+              checked={enabled}
+              onCheckedChange={onEnabledChange}
+              aria-label={t("ccswitch.import_enabled_default")}
+              className="h-4 w-4"
+            />
+            {t("ccswitch.import_enabled_default")}
+          </label>
+        </div>
+
+        <div className="rounded-2xl border border-slate-200/75 bg-white px-3.5 py-3 shadow-[0_1px_2px_rgb(15_23_42_/_0.035)] dark:border-neutral-800 dark:bg-neutral-950/70">
+          <div className={labelClassName}>{t("ccswitch.import_base_url")}</div>
+          <div className="mt-1.5 truncate rounded-lg bg-slate-100/80 px-2.5 py-2 font-mono text-xs text-slate-700 dark:bg-neutral-900 dark:text-white/70">
+            {baseUrl || "--"}
+          </div>
         </div>
       </div>
     </Modal>
