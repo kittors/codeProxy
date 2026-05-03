@@ -1150,6 +1150,10 @@ describe("AuthFilesPage files table", () => {
     );
     expect(resetText).toBeTruthy();
     expect(resetText).not.toHaveClass("truncate");
+    expect(tooltips[0]).not.toHaveClass("sm:max-w-[34rem]");
+    expect(tooltips[0].querySelector(".quota-tooltip-grid")).toHaveClass(
+      "w-[min(26rem,calc(100vw-2rem))]",
+    );
   });
 
   test("table quota preview and hover hide cached antigravity models skipped by the reference implementation", async () => {
