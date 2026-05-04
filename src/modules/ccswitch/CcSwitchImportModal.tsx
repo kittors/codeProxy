@@ -4,6 +4,7 @@ import { Checkbox } from "@/modules/ui/Checkbox";
 import { TextInput } from "@/modules/ui/Input";
 import { Modal } from "@/modules/ui/Modal";
 import { Select } from "@/modules/ui/Select";
+import { Tabs, TabsList, TabsTrigger } from "@/modules/ui/Tabs";
 import iconClaude from "@/assets/icons/claude.svg";
 import iconCodex from "@/assets/icons/codex.svg";
 import iconGemini from "@/assets/icons/gemini.svg";
@@ -151,66 +152,34 @@ export function CcSwitchImportModal({
       bodyClassName="bg-slate-50/45 dark:bg-neutral-950/45"
     >
       <div className="space-y-3.5">
-        <div
-          role="tablist"
-          aria-label={t("ccswitch.import_client_type")}
-          className="sticky top-0 z-10 grid grid-cols-3 gap-1 rounded-2xl border border-slate-200/75 bg-white/95 p-1 shadow-[0_8px_24px_rgb(15_23_42_/_0.08)] backdrop-blur dark:border-neutral-800 dark:bg-neutral-950/95"
+        <Tabs
+          value={clientType}
+          onValueChange={(value) => onClientTypeChange(value as CcSwitchClientType)}
         >
-          {CC_SWITCH_CLIENTS.map((item) => {
-            const active = item.type === clientType;
-            const label = t(item.labelKey);
-            const endpoint = DEFAULT_CC_SWITCH_IMPORT_SETTINGS[item.type].endpointPath;
-            return (
-              <button
-                key={item.type}
-                type="button"
-                role="tab"
-                aria-selected={active}
-                aria-label={label}
-                onClick={() => onClientTypeChange(item.type)}
-                className={[
-                  "group flex min-w-0 items-center gap-2 rounded-xl px-2.5 py-2 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/10 dark:focus-visible:ring-white/15",
-                  active
-                    ? "bg-slate-950 text-white shadow-sm dark:bg-white dark:text-neutral-950"
-                    : "text-slate-600 hover:bg-slate-100/80 hover:text-slate-950 dark:text-white/60 dark:hover:bg-white/10 dark:hover:text-white",
-                ].join(" ")}
-              >
-                <span
-                  className={[
-                    "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border transition",
-                    active
-                      ? "border-white/15 bg-white dark:border-black/10 dark:bg-neutral-950"
-                      : "border-slate-200/70 bg-white group-hover:border-slate-300 dark:border-neutral-800 dark:bg-neutral-900 dark:group-hover:border-neutral-700",
-                  ].join(" ")}
-                >
+          <TabsList
+            aria-label={t("ccswitch.import_client_type")}
+            className="sticky top-0 z-10 shadow-sm shadow-slate-900/5"
+          >
+            {CC_SWITCH_CLIENTS.map((item) => {
+              const label = t(item.labelKey);
+              return (
+                <TabsTrigger key={item.type} value={item.type} aria-label={label}>
                   <img
                     src={iconByType[item.type]}
                     alt=""
                     data-testid={`ccswitch-client-tab-icon-${item.type}`}
-                    className="h-5 w-5"
+                    className="h-4 w-4"
                   />
-                </span>
-                <span className="min-w-0">
-                  <span className="block truncate text-sm font-semibold">{label}</span>
-                  <span
-                    className={[
-                      "mt-0.5 hidden truncate font-mono text-[10px] sm:block",
-                      active
-                        ? "text-white/65 dark:text-neutral-950/60"
-                        : "text-slate-400 dark:text-white/35",
-                    ].join(" ")}
-                  >
-                    {endpoint || t("ccswitch.import_endpoint_root")}
-                  </span>
-                </span>
-              </button>
-            );
-          })}
-        </div>
+                  {label}
+                </TabsTrigger>
+              );
+            })}
+          </TabsList>
+        </Tabs>
 
         <section
           data-testid="ccswitch-client-specific-panel"
-          className="min-h-[76px] rounded-2xl border border-slate-200/75 bg-white p-3 shadow-[0_1px_2px_rgb(15_23_42_/_0.035)] dark:border-neutral-800 dark:bg-neutral-950/70"
+          className="min-h-[76px] rounded-2xl border border-slate-200/75 bg-white p-3.5 shadow-[0_1px_2px_rgb(15_23_42_/_0.035)] dark:border-neutral-800 dark:bg-neutral-950/70"
         >
           {clientType === "claude" ? (
             <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(220px,0.9fr)] sm:items-center">
@@ -260,9 +229,18 @@ export function CcSwitchImportModal({
               </div>
             </div>
           )}
+          <div className="mt-3 rounded-xl border border-slate-200/70 bg-slate-50/70 px-3 py-2.5 dark:border-neutral-800 dark:bg-neutral-900/60">
+            <div className={labelClassName}>{t("ccswitch.import_base_url")}</div>
+            <div className="mt-1.5 truncate rounded-lg bg-white px-2.5 py-2 font-mono text-xs text-slate-700 dark:bg-neutral-950 dark:text-white/70">
+              {baseUrl || "--"}
+            </div>
+          </div>
         </section>
 
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div
+          data-testid="ccswitch-import-provider-row"
+          className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(220px,0.78fr)]"
+        >
           <label className={fieldClassName}>
             <span className={labelClassName}>{t("ccswitch.import_provider_name")}</span>
             <TextInput
@@ -281,7 +259,7 @@ export function CcSwitchImportModal({
               onChange={onChannelGroupChange}
               options={groupOptions}
               aria-label={t("ccswitch.import_channel_group")}
-              className={controlClassName}
+              className={`${controlClassName} w-full`}
             />
           </label>
         </div>
@@ -314,12 +292,6 @@ export function CcSwitchImportModal({
           </label>
         </div>
 
-        <div className="rounded-2xl border border-slate-200/75 bg-white px-3.5 py-3 shadow-[0_1px_2px_rgb(15_23_42_/_0.035)] dark:border-neutral-800 dark:bg-neutral-950/70">
-          <div className={labelClassName}>{t("ccswitch.import_base_url")}</div>
-          <div className="mt-1.5 truncate rounded-lg bg-slate-100/80 px-2.5 py-2 font-mono text-xs text-slate-700 dark:bg-neutral-900 dark:text-white/70">
-            {baseUrl || "--"}
-          </div>
-        </div>
       </div>
     </Modal>
   );

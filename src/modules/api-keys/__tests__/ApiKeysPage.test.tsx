@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, test, vi } from "vitest";
@@ -424,6 +424,10 @@ describe("ApiKeysPage", () => {
     const tabs = screen.getByRole("tablist", { name: /client type/i });
     expect(tabs).toHaveClass("sticky");
     expect(tabs).toHaveClass("top-0");
+    expect(tabs).toHaveClass("rounded-full");
+    expect(tabs).toHaveClass("bg-[#EBEBEC]");
+    expect(tabs).toHaveClass("h-9");
+    expect(tabs).not.toHaveClass("grid");
     expect(screen.queryByRole("combobox", { name: /client type/i })).toBeNull();
     expect(screen.getByTestId("ccswitch-client-tab-icon-claude")).toBeInTheDocument();
     expect(screen.getByTestId("ccswitch-client-tab-icon-codex")).toBeInTheDocument();
@@ -431,7 +435,11 @@ describe("ApiKeysPage", () => {
 
     const detailsPanel = screen.getByTestId("ccswitch-client-specific-panel");
     expect(detailsPanel).toHaveClass("min-h-[76px]");
+    expect(within(detailsPanel).getByText(/base url/i)).toBeInTheDocument();
     expect(screen.getByRole("combobox", { name: /claude code auth field/i })).toBeInTheDocument();
+
+    const providerRow = screen.getByTestId("ccswitch-import-provider-row");
+    expect(providerRow).toHaveClass("sm:grid-cols-[minmax(0,1fr)_minmax(220px,0.78fr)]");
 
     await userEvent.click(screen.getByRole("tab", { name: /codex/i }));
 
