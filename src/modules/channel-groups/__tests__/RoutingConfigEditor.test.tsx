@@ -176,6 +176,8 @@ describe("RoutingConfigEditor", () => {
     await user.click(screen.getByRole("combobox", { name: "选择渠道" }));
 
     const modalBody = screen.getByTestId("group-editor-modal-body");
+    expect(modalBody).toHaveClass("h-[560px]");
+    expect(modalBody).toHaveClass("max-h-[calc(100vh-8rem)]");
     expect(modalBody).toHaveClass("overflow-hidden");
     expect(modalBody).toHaveClass("flex");
     expect(modalBody).toHaveClass("flex-col");
@@ -192,6 +194,27 @@ describe("RoutingConfigEditor", () => {
     expect(await screen.findByTestId("group-editor-model-list")).toHaveClass("overflow-hidden");
     expect(screen.getByRole("table", { name: "允许模型" })).toBeInTheDocument();
     expect(screen.getByRole("tablist")).toBeInTheDocument();
+  });
+
+  test("keeps the model list table visible while channel models are loading", async () => {
+    await i18n.changeLanguage("zh-CN");
+    const user = userEvent.setup();
+    const loadModelsForChannels = vi.fn(
+      () => new Promise<Array<string | RoutingModelOption>>(() => {}),
+    );
+
+    render(<Harness loadModelsForChannels={loadModelsForChannels} />);
+
+    await user.click(screen.getByRole("button", { name: "新增分组" }));
+    await user.click(screen.getByRole("combobox", { name: "选择渠道" }));
+    await user.click(screen.getByRole("option", { name: "Team A Claude" }));
+    await user.click(screen.getByRole("combobox", { name: "选择渠道" }));
+    await user.click(screen.getByRole("tab", { name: "模型列表" }));
+
+    expect(screen.getByTestId("group-editor-model-list")).toHaveClass("overflow-hidden");
+    expect(screen.getByRole("table", { name: "允许模型" })).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("加载中");
+    expect(screen.getByRole("status")).toHaveClass("sr-only");
   });
 
   test("sets path routes directly inside group editor", async () => {

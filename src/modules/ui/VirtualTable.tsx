@@ -85,11 +85,7 @@ const DEFAULT_OVERSCAN = 12;
 const DEFAULT_SCROLL_THRESHOLD = 100;
 const DEFAULT_BOTTOM_DEBOUNCE_MS = 120;
 
-function resolveCellOverflowTooltip<T>(
-  column: VirtualTableColumn<T>,
-  row: T,
-  index: number,
-) {
+function resolveCellOverflowTooltip<T>(column: VirtualTableColumn<T>, row: T, index: number) {
   if (column.overflowTooltip === false) return false;
 
   if (typeof column.overflowTooltip === "function") {
@@ -546,6 +542,7 @@ export function VirtualTable<T>({
 
   return (
     <div
+      aria-busy={loading || loadingMore ? true : undefined}
       className={`${height} ${minHeight} group relative isolate grid min-w-0 grid-cols-[minmax(0,1fr)_0.75rem] overflow-hidden`}
     >
       <div
@@ -589,7 +586,34 @@ export function VirtualTable<T>({
 
           {/* ── Body ── */}
           <tbody className="text-slate-900 dark:text-white">
-            {!loading && rows.length === 0 ? (
+            {loading && rows.length === 0 ? (
+              <>
+                <tr>
+                  <td colSpan={colCount} className="p-0">
+                    <span role="status" className="sr-only">
+                      {t("common.loading")}
+                    </span>
+                  </td>
+                </tr>
+                {Array.from({ length: 5 }, (_, rowIndex) => (
+                  <tr key={`loading-${rowIndex}`} aria-hidden="true">
+                    {columns.map((col, colIndex) => (
+                      <td
+                        key={col.key}
+                        className={`px-4 py-3 align-middle ${col.cellClassName ?? ""}`}
+                      >
+                        <div
+                          className={[
+                            "h-3 animate-pulse rounded-full bg-slate-200 dark:bg-white/10",
+                            colIndex === 0 ? "w-2/3" : "w-4/5",
+                          ].join(" ")}
+                        />
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </>
+            ) : !loading && rows.length === 0 ? (
               <tr>
                 <td
                   colSpan={colCount}
