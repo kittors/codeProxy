@@ -7,12 +7,20 @@ import {
   type RoutingConfigItem,
   type RoutingConfigPathRouteItem,
 } from "@/lib/http/apis/routing-config";
-import { RoutingConfigEditor } from "@/modules/channel-groups/RoutingConfigEditor";
+import { apiClient } from "@/lib/http/client";
+import {
+  RoutingConfigEditor,
+  type RoutingModelOption,
+} from "@/modules/channel-groups/RoutingConfigEditor";
 import {
   DEFAULT_VISUAL_VALUES,
   makeClientId,
   type VisualConfigValues,
 } from "@/modules/config/visual/types";
+import {
+  filterByConfiguredModelAvailability,
+  loadConfiguredModelAvailability,
+} from "@/modules/models/modelAvailability";
 import { Card } from "@/modules/ui/Card";
 import { useToast } from "@/modules/ui/ToastProvider";
 
@@ -51,6 +59,15 @@ function hydrateRoutingValues(payload: RoutingConfigItem | undefined): VisualCon
           id: `routing-group-${index}-${makeClientId()}`,
           name: String(group?.name ?? ""),
           description: String(group?.description ?? ""),
+          allowedModels: Array.isArray(group?.["allowed-models"])
+            ? Array.from(
+                new Set(
+                  group["allowed-models"]
+                    .map((model) => String(model ?? "").trim())
+                    .filter(Boolean),
+                ),
+              )
+            : [],
           channels: mergedNames.map((name, channelIndex) => ({
             id: `routing-group-${index}-channel-${channelIndex}-${makeClientId()}`,
             name,
@@ -75,36 +92,41 @@ function hydrateRoutingValues(payload: RoutingConfigItem | undefined): VisualCon
 }
 
 function serializeRoutingValues(values: VisualConfigValues): RoutingConfigItem {
-  const groups: RoutingConfigGroupItem[] = values.routingChannelGroups.reduce<RoutingConfigGroupItem[]>(
-    (acc, group) => {
-      const name = group.name.trim();
-      if (!name) return acc;
+  const groups: RoutingConfigGroupItem[] = values.routingChannelGroups.reduce<
+    RoutingConfigGroupItem[]
+  >((acc, group) => {
+    const name = group.name.trim();
+    if (!name) return acc;
 
-      const channels = group.channels.map((channel) => channel.name.trim()).filter(Boolean);
-      const channelPriorities = group.channels.reduce<Record<string, number>>((map, channel) => {
-        const channelName = channel.name.trim();
-        const priority = parsePriorityText(channel.priority);
-        if (channelName && priority !== null) {
-          map[channelName] = priority;
-        }
-        return map;
-      }, {});
+    const channels = group.channels.map((channel) => channel.name.trim()).filter(Boolean);
+    const channelPriorities = group.channels.reduce<Record<string, number>>((map, channel) => {
+      const channelName = channel.name.trim();
+      const priority = parsePriorityText(channel.priority);
+      if (channelName && priority !== null) {
+        map[channelName] = priority;
+      }
+      return map;
+    }, {});
 
-      const item: RoutingConfigGroupItem = { name };
-      if (group.description.trim()) {
-        item.description = group.description.trim();
-      }
-      if (channels.length > 0) {
-        item.match = { channels: Array.from(new Set(channels)) };
-      }
-      if (Object.keys(channelPriorities).length > 0) {
-        item["channel-priorities"] = channelPriorities;
-      }
-      acc.push(item);
-      return acc;
-    },
-    [],
-  );
+    const item: RoutingConfigGroupItem = { name };
+    if (group.description.trim()) {
+      item.description = group.description.trim();
+    }
+    if (channels.length > 0) {
+      item.match = { channels: Array.from(new Set(channels)) };
+    }
+    if (Object.keys(channelPriorities).length > 0) {
+      item["channel-priorities"] = channelPriorities;
+    }
+    const allowedModels = Array.from(
+      new Set(group.allowedModels.map((model) => model.trim()).filter(Boolean)),
+    );
+    if (allowedModels.length > 0) {
+      item["allowed-models"] = allowedModels;
+    }
+    acc.push(item);
+    return acc;
+  }, []);
 
   const routes: RoutingConfigPathRouteItem[] = values.routingPathRoutes.reduce<
     RoutingConfigPathRouteItem[]
@@ -132,7 +154,9 @@ function serializeRoutingValues(values: VisualConfigValues): RoutingConfigItem {
 export function ChannelGroupsPage() {
   const { t } = useTranslation();
   const { notify } = useToast();
-  const [visualValues, setVisualValues] = useState<VisualConfigValues>(() => createEmptyRoutingValues());
+  const [visualValues, setVisualValues] = useState<VisualConfigValues>(() =>
+    createEmptyRoutingValues(),
+  );
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -148,6 +172,40 @@ export function ChannelGroupsPage() {
       }
     }
     return Array.from(known).sort((a, b) => a.localeCompare(b));
+  }, []);
+
+  const loadModelsForChannels = useCallback(async (channels: string[]) => {
+    const normalizedChannels = channels
+      .map((channel) => String(channel ?? "").trim())
+      .filter(Boolean);
+    if (normalizedChannels.length === 0) return [];
+    const params = new URLSearchParams();
+    params.set("allowed_channels", normalizedChannels.join(","));
+    const data = await apiClient.get<{ data?: Array<{ id?: string }> }>(
+      `/models?${params.toString()}`,
+    );
+    const ids = Array.isArray(data?.data)
+      ? data.data.map((model) => String(model.id ?? "").trim()).filter(Boolean)
+      : [];
+    const availability = await loadConfiguredModelAvailability();
+    const visibleModels = filterByConfiguredModelAvailability(
+      ids.map((id) => ({ id })),
+      availability,
+    );
+    const metadataById = new Map(
+      availability.items.map((model) => [model.id.toLowerCase(), model] as const),
+    );
+    return Array.from(new Set(visibleModels.map((model) => model.id)))
+      .sort((a, b) => a.localeCompare(b))
+      .map((id): RoutingModelOption => {
+        const metadata = metadataById.get(id.toLowerCase());
+        return {
+          id,
+          owned_by: metadata?.owned_by,
+          description: metadata?.description,
+          pricing: metadata?.pricing,
+        };
+      });
   }, []);
 
   const loadPage = useCallback(async () => {
@@ -174,37 +232,34 @@ export function ChannelGroupsPage() {
     void loadPage();
   }, [loadPage]);
 
-  const persistValues = useCallback(async (nextValues: VisualConfigValues) => {
-    setSaving(true);
-    setError("");
-    try {
-      await routingConfigApi.update(serializeRoutingValues(nextValues));
-      const [latest, channels] = await Promise.all([
-        routingConfigApi.get(),
-        loadAvailableChannels().catch(() => availableChannels),
-      ]);
-      const hydrated = hydrateRoutingValues(latest);
-      setVisualValues(hydrated);
-      setAvailableChannels(channels);
-      notify({ type: "success", message: t("channel_groups_page.saved") });
-    } catch (err: unknown) {
-      setVisualValues(visualValues);
-      const message = err instanceof Error ? err.message : t("channel_groups_page.save_failed");
-      setError(message);
-      notify({
-        type: "error",
-        message,
-      });
-    } finally {
-      setSaving(false);
-    }
-  }, [
-    availableChannels,
-    loadAvailableChannels,
-    notify,
-    t,
-    visualValues,
-  ]);
+  const persistValues = useCallback(
+    async (nextValues: VisualConfigValues) => {
+      setSaving(true);
+      setError("");
+      try {
+        await routingConfigApi.update(serializeRoutingValues(nextValues));
+        const [latest, channels] = await Promise.all([
+          routingConfigApi.get(),
+          loadAvailableChannels().catch(() => availableChannels),
+        ]);
+        const hydrated = hydrateRoutingValues(latest);
+        setVisualValues(hydrated);
+        setAvailableChannels(channels);
+        notify({ type: "success", message: t("channel_groups_page.saved") });
+      } catch (err: unknown) {
+        setVisualValues(visualValues);
+        const message = err instanceof Error ? err.message : t("channel_groups_page.save_failed");
+        setError(message);
+        notify({
+          type: "error",
+          message,
+        });
+      } finally {
+        setSaving(false);
+      }
+    },
+    [availableChannels, loadAvailableChannels, notify, t, visualValues],
+  );
 
   const handleEditorChange = useCallback(
     (patch: Partial<VisualConfigValues>) => {
@@ -237,6 +292,7 @@ export function ChannelGroupsPage() {
             values={visualValues}
             disabled={loading || saving}
             availableChannels={availableChannels}
+            loadModelsForChannels={loadModelsForChannels}
             onChange={handleEditorChange}
           />
         </div>

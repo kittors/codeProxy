@@ -7,6 +7,7 @@ export interface ChannelGroupItem {
   implicit?: boolean;
   prefixes?: string[];
   channels?: string[];
+  "allowed-models"?: string[];
   "path-routes"?: string[];
 }
 

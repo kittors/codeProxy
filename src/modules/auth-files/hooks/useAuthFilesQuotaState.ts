@@ -13,7 +13,11 @@ import type { AuthFileItem } from "@/lib/http/types";
 import { useInterval } from "@/hooks/useInterval";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { fetchQuota, resolveQuotaProvider, type QuotaProvider } from "@/modules/quota/quota-fetch";
-import { type QuotaItem, type QuotaState } from "@/modules/quota/quota-helpers";
+import {
+  filterAntigravityQuotaItems,
+  type QuotaItem,
+  type QuotaState,
+} from "@/modules/quota/quota-helpers";
 import {
   AUTH_FILES_FILES_VIEW_MODE_KEY,
   AUTH_FILES_QUOTA_AUTO_REFRESH_KEY,
@@ -131,7 +135,7 @@ export function useAuthFilesQuotaState({
       }
 
       if (provider === "antigravity") {
-        return items.map((item, index) => ({
+        return filterAntigravityQuotaItems(items).map((item, index) => ({
           id: item.key ?? item.label ?? `antigravity-${index + 1}`,
           label: translateQuotaLabel(item.label),
           item,

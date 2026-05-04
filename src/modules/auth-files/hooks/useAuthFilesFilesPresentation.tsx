@@ -28,7 +28,12 @@ import {
   resolveFileType,
 } from "@/modules/auth-files/helpers/authFilesPageUtils";
 import { resolveQuotaProvider, type QuotaProvider } from "@/modules/quota/quota-fetch";
-import { clampPercent, type QuotaItem, type QuotaState } from "@/modules/quota/quota-helpers";
+import {
+  clampPercent,
+  filterAntigravityQuotaItems,
+  type QuotaItem,
+  type QuotaState,
+} from "@/modules/quota/quota-helpers";
 
 const KNOWN_QUOTA_TEXT_KEYS = new Set([
   "missing_auth_index",
@@ -281,7 +286,7 @@ export function useAuthFilesFilesPresentation({
   }, []);
 
   const renderQuotaHoverContent = useCallback(
-    (state: QuotaState) => {
+    (state: QuotaState, options?: { suppressItemMeta?: boolean }) => {
       const items = Array.isArray(state.items) ? (state.items as QuotaItem[]) : [];
       const hasError = state.status === "error";
 
@@ -294,12 +299,13 @@ export function useAuthFilesFilesPresentation({
           ) : null}
 
           {items.length > 0 ? (
-            <div className="grid w-[min(22rem,calc(100vw-2rem))] grid-cols-[auto_0.875rem_2.5rem_1fr] items-center gap-x-1 gap-y-1">
+            <div className="quota-tooltip-grid grid w-[min(26rem,calc(100vw-2rem))] grid-cols-[minmax(0,1fr)_0.875rem_max-content_max-content] items-center gap-x-2 gap-y-1">
               {items.map((item) => {
                 const tone = resolveQuotaVisualTone(item.percent);
                 const percentText =
                   tone.normalized === null ? "--" : `${Math.round(tone.normalized)}%`;
                 const resetText = formatQuotaResetTextCompact(item.resetAtMs);
+                const itemMeta = options?.suppressItemMeta ? undefined : item.meta;
                 return (
                   <div key={item.label} className="contents">
                     <span className="min-w-0 truncate text-[10px] font-semibold text-slate-600 dark:text-white/70">
@@ -309,18 +315,19 @@ export function useAuthFilesFilesPresentation({
                       {quotaProgressCircle(item.percent)}
                     </span>
                     <span
-                      className={["text-[10px] font-semibold tabular-nums", tone.percentClass].join(
-                        " ",
-                      )}
+                      className={[
+                        "justify-self-end whitespace-nowrap text-[10px] font-semibold tabular-nums",
+                        tone.percentClass,
+                      ].join(" ")}
                     >
                       {percentText}
                     </span>
-                    <span className="min-w-0 truncate whitespace-nowrap text-[10px] tabular-nums text-slate-500 dark:text-white/40">
+                    <span className="whitespace-nowrap text-right text-[10px] tabular-nums text-slate-500 dark:text-white/40">
                       {resetText ?? "--"}
                     </span>
-                    {item.meta ? (
+                    {itemMeta ? (
                       <span className="col-span-4 truncate text-[10px] text-slate-500 dark:text-white/55">
-                        {item.meta}
+                        {itemMeta}
                       </span>
                     ) : null}
                   </div>
@@ -560,6 +567,7 @@ export function useAuthFilesFilesPresentation({
         key: "quota",
         label: t("auth_files.col_quota"),
         width: "w-64",
+        overflowTooltip: false,
         headerClassName: "text-center",
         headerRender: () => (
           <div className="flex items-center justify-center gap-2 normal-case">
@@ -586,7 +594,10 @@ export function useAuthFilesFilesPresentation({
           }
 
           const state = quotaByFileName[file.name] ?? { status: "idle", items: [] };
-          const items = Array.isArray(state.items) ? (state.items as QuotaItem[]) : [];
+          const rawItems = Array.isArray(state.items) ? (state.items as QuotaItem[]) : [];
+          const items =
+            provider === "antigravity" ? filterAntigravityQuotaItems(rawItems) : rawItems;
+          const displayState = items === rawItems ? state : { ...state, items };
           const hasError = state.status === "error";
 
           const renderQuotaLinePreview = (item: QuotaItem) => {
@@ -594,20 +605,23 @@ export function useAuthFilesFilesPresentation({
             const percentText = tone.normalized === null ? "--" : `${Math.round(tone.normalized)}%`;
             const resetText = formatQuotaResetTextCompact(item.resetAtMs) ?? "--";
             return (
-              <div key={item.label} className="flex min-w-0 items-center gap-1">
-                <span className="shrink-0 truncate text-[10px] font-semibold text-slate-600 dark:text-white/70">
+              <div
+                key={item.label}
+                className="grid w-full min-w-0 grid-cols-[minmax(0,1fr)_0.875rem_auto_3.25rem] items-center gap-1"
+              >
+                <span className="min-w-0 truncate text-[10px] font-semibold text-slate-600 dark:text-white/70">
                   {translateQuotaText(item.label)}
                 </span>
                 {quotaProgressCircle(item.percent)}
                 <span
                   className={[
-                    "inline-flex shrink-0 items-center gap-1 text-[10px] font-semibold tabular-nums",
+                    "justify-self-end text-[10px] font-semibold tabular-nums",
                     tone.percentClass,
                   ].join(" ")}
                 >
                   {percentText}
                 </span>
-                <span className="min-w-0 flex-1 truncate whitespace-nowrap text-[10px] tabular-nums text-slate-500 dark:text-white/40">
+                <span className="min-w-0 truncate whitespace-nowrap text-right text-[10px] tabular-nums text-slate-500 dark:text-white/40">
                   {resetText}
                 </span>
               </div>
@@ -618,7 +632,9 @@ export function useAuthFilesFilesPresentation({
             <HoverTooltip
               disabled={!hasError && items.length === 0}
               className="w-full min-w-0"
-              content={renderQuotaHoverContent(state)}
+              content={renderQuotaHoverContent(displayState, {
+                suppressItemMeta: provider === "antigravity",
+              })}
             >
               <div className="w-full min-w-0">
                 {hasError && items.length === 0 ? (

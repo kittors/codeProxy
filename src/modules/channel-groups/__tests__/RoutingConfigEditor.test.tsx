@@ -4,7 +4,10 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import i18n from "@/i18n";
 import { DEFAULT_VISUAL_VALUES, type VisualConfigValues } from "@/modules/config/visual/types";
-import { RoutingConfigEditor } from "@/modules/channel-groups/RoutingConfigEditor";
+import {
+  RoutingConfigEditor,
+  type RoutingModelOption,
+} from "@/modules/channel-groups/RoutingConfigEditor";
 import { ThemeProvider } from "@/modules/ui/ThemeProvider";
 import { ToastProvider } from "@/modules/ui/ToastProvider";
 
@@ -25,7 +28,13 @@ vi.mock("goey-toast", () => ({
   },
 }));
 
-function Harness({ initialValues }: { initialValues?: VisualConfigValues }) {
+function Harness({
+  initialValues,
+  loadModelsForChannels,
+}: {
+  initialValues?: VisualConfigValues;
+  loadModelsForChannels?: (channels: string[]) => Promise<Array<string | RoutingModelOption>>;
+}) {
   const [values, setValues] = useState<VisualConfigValues>({
     ...DEFAULT_VISUAL_VALUES,
     routingChannelGroups: [],
@@ -39,6 +48,7 @@ function Harness({ initialValues }: { initialValues?: VisualConfigValues }) {
         <RoutingConfigEditor
           values={values}
           availableChannels={["Team A Claude", "Main Codex", "Backup Claude"]}
+          loadModelsForChannels={loadModelsForChannels}
           onChange={(patch) => setValues((prev) => ({ ...prev, ...patch }))}
         />
       </ToastProvider>
@@ -52,6 +62,9 @@ function Harness({ initialValues }: { initialValues?: VisualConfigValues }) {
         {values.routingChannelGroups[0]?.channels[0]?.priority ?? ""}
       </div>
       <div data-testid="route-path">{values.routingPathRoutes[0]?.path ?? ""}</div>
+      <div data-testid="allowed-models">
+        {values.routingChannelGroups[0]?.allowedModels?.join(",") ?? ""}
+      </div>
     </ThemeProvider>
   );
 }
@@ -85,6 +98,123 @@ describe("RoutingConfigEditor", () => {
     expect(screen.getByTestId("group-name")).toHaveTextContent("team-a");
     expect(screen.getByTestId("channel-name")).toHaveTextContent("Team A Claude");
     expect(screen.getByTestId("channel-priority")).toHaveTextContent("80");
+  });
+
+  test("defaults model tab selections to every channel-scoped model", async () => {
+    await i18n.changeLanguage("zh-CN");
+    const user = userEvent.setup();
+    const loadModelsForChannels = vi.fn(async (channels: string[]) =>
+      channels.includes("Team A Claude") ? ["claude-sonnet-4-5", "claude-opus-4-5"] : [],
+    );
+
+    render(<Harness loadModelsForChannels={loadModelsForChannels} />);
+
+    await user.click(screen.getByRole("button", { name: "新增分组" }));
+    await user.type(screen.getByPlaceholderText("pro"), "team-models");
+    await user.type(screen.getByPlaceholderText("/pro"), "/team-models");
+    await user.click(screen.getByRole("combobox", { name: "选择渠道" }));
+    await user.click(screen.getByRole("option", { name: "Team A Claude" }));
+    await user.click(screen.getByRole("combobox", { name: "选择渠道" }));
+
+    await user.click(screen.getByRole("tab", { name: "模型列表" }));
+    expect(await screen.findByLabelText("claude-sonnet-4-5")).toBeInTheDocument();
+    expect(loadModelsForChannels).toHaveBeenCalledWith(["Team A Claude"]);
+
+    await user.click(screen.getByRole("button", { name: "添加" }));
+
+    expect(screen.getByTestId("allowed-models")).toHaveTextContent(
+      "claude-opus-4-5,claude-sonnet-4-5",
+    );
+  });
+
+  test("renders channel-scoped models as a checkbox table with descriptions and prices", async () => {
+    await i18n.changeLanguage("zh-CN");
+    const user = userEvent.setup();
+    const loadModelsForChannels = vi.fn(async () => [
+      {
+        id: "claude-sonnet-4-5",
+        owned_by: "anthropic",
+        description: "Fast Claude model",
+        pricing: {
+          mode: "token" as const,
+          inputPricePerMillion: 3,
+          outputPricePerMillion: 15,
+          cachedPricePerMillion: 0.3,
+          pricePerCall: 0,
+        },
+      },
+    ]);
+
+    render(<Harness loadModelsForChannels={loadModelsForChannels} />);
+
+    await user.click(screen.getByRole("button", { name: "新增分组" }));
+    await user.click(screen.getByRole("combobox", { name: "选择渠道" }));
+    await user.click(screen.getByRole("option", { name: "Team A Claude" }));
+    await user.click(screen.getByRole("combobox", { name: "选择渠道" }));
+    await user.click(screen.getByRole("tab", { name: "模型列表" }));
+
+    expect(await screen.findByRole("table", { name: "允许模型" })).toBeInTheDocument();
+    expect(screen.getByLabelText("claude-sonnet-4-5")).toBeChecked();
+    expect(screen.getByText("Fast Claude model")).toBeInTheDocument();
+    expect(screen.getByText("$3 / $15 / $0.3")).toBeInTheDocument();
+  });
+
+  test("keeps modal body and tabs fixed while tab content and model list own scrolling", async () => {
+    await i18n.changeLanguage("zh-CN");
+    const user = userEvent.setup();
+    const loadModelsForChannels = vi.fn(async () => [
+      "claude-sonnet-4-5",
+      "claude-opus-4-5",
+      "gpt-5-codex",
+    ]);
+
+    render(<Harness loadModelsForChannels={loadModelsForChannels} />);
+
+    await user.click(screen.getByRole("button", { name: "新增分组" }));
+    await user.click(screen.getByRole("combobox", { name: "选择渠道" }));
+    await user.click(screen.getByRole("option", { name: "Team A Claude" }));
+    await user.click(screen.getByRole("combobox", { name: "选择渠道" }));
+
+    const modalBody = screen.getByTestId("group-editor-modal-body");
+    expect(modalBody).toHaveClass("h-[560px]");
+    expect(modalBody).toHaveClass("max-h-[calc(100vh-8rem)]");
+    expect(modalBody).toHaveClass("overflow-hidden");
+    expect(modalBody).toHaveClass("flex");
+    expect(modalBody).toHaveClass("flex-col");
+
+    const tabShell = screen.getByTestId("group-editor-tabs-shell");
+    expect(tabShell).toHaveClass("flex");
+    expect(tabShell).toHaveClass("flex-col");
+
+    const tabViewport = screen.getByTestId("group-editor-tab-viewport");
+    expect(tabViewport).toHaveClass("flex-1");
+    expect(tabViewport).toHaveClass("overflow-y-auto");
+
+    await user.click(screen.getByRole("tab", { name: "模型列表" }));
+    expect(await screen.findByTestId("group-editor-model-list")).toHaveClass("overflow-hidden");
+    expect(screen.getByRole("table", { name: "允许模型" })).toBeInTheDocument();
+    expect(screen.getByRole("tablist")).toBeInTheDocument();
+  });
+
+  test("keeps the model list table visible while channel models are loading", async () => {
+    await i18n.changeLanguage("zh-CN");
+    const user = userEvent.setup();
+    const loadModelsForChannels = vi.fn(
+      () => new Promise<Array<string | RoutingModelOption>>(() => {}),
+    );
+
+    render(<Harness loadModelsForChannels={loadModelsForChannels} />);
+
+    await user.click(screen.getByRole("button", { name: "新增分组" }));
+    await user.click(screen.getByRole("combobox", { name: "选择渠道" }));
+    await user.click(screen.getByRole("option", { name: "Team A Claude" }));
+    await user.click(screen.getByRole("combobox", { name: "选择渠道" }));
+    await user.click(screen.getByRole("tab", { name: "模型列表" }));
+
+    expect(screen.getByTestId("group-editor-model-list")).toHaveClass("overflow-hidden");
+    expect(screen.getByRole("table", { name: "允许模型" })).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("加载中");
+    expect(screen.getByRole("status")).toHaveClass("sr-only");
   });
 
   test("sets path routes directly inside group editor", async () => {
@@ -196,6 +326,7 @@ describe("RoutingConfigEditor", () => {
               id: "group-stale",
               name: "legacy",
               description: "历史分组",
+              allowedModels: [],
               channels: [
                 { id: "channel-stale", name: "Legacy Claude", priority: "90" },
                 { id: "channel-valid", name: "Main Codex", priority: "" },
