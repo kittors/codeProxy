@@ -926,6 +926,7 @@ export function RoutingConfigEditor({
     let cancelled = false;
     setModelsLoading(true);
     setModelsError("");
+    setModelOptions([]);
     loadModelsForChannels(selectedChannelValues)
       .then((models) => {
         if (cancelled) return;
@@ -1014,7 +1015,7 @@ export function RoutingConfigEditor({
         onClose={closeGroupEditor}
         maxWidth="max-w-4xl"
         bodyTestId="group-editor-modal-body"
-        bodyHeightClassName="h-[680px] max-h-[calc(100vh-10rem)]"
+        bodyHeightClassName="h-[560px] max-h-[calc(100vh-8rem)]"
         bodyOverflowClassName="overflow-hidden"
         bodyClassName="flex flex-col"
         footer={
@@ -1211,14 +1212,6 @@ export function RoutingConfigEditor({
                     <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-400/25 dark:bg-rose-500/10 dark:text-rose-200">
                       {modelsError}
                     </div>
-                  ) : modelsLoading ? (
-                    <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-6 text-sm text-slate-500 dark:border-neutral-800 dark:bg-neutral-900/60 dark:text-white/55">
-                      {t("common.loading")}
-                    </div>
-                  ) : modelOptions.length === 0 ? (
-                    <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-6 text-sm text-slate-500 dark:border-neutral-800 dark:bg-neutral-900/60 dark:text-white/55">
-                      {t("channel_groups_page.no_channel_models")}
-                    </div>
                   ) : (
                     <div
                       data-testid="group-editor-model-list"
@@ -1228,6 +1221,7 @@ export function RoutingConfigEditor({
                         rows={modelOptions}
                         columns={modelColumns}
                         rowKey={(model) => model.id}
+                        loading={modelsLoading}
                         virtualize={false}
                         rowHeight={58}
                         height="h-full"

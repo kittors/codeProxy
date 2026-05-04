@@ -202,6 +202,24 @@ describe("VirtualTable scrollbar wrapper", () => {
     expect(root).toHaveClass("min-h-0");
   });
 
+  test("renders an in-table initial loading state", () => {
+    render(
+      <VirtualTable
+        rows={[]}
+        columns={columns}
+        rowKey={(row) => row.id}
+        caption="Demo table"
+        emptyText="No data"
+        loading
+      />,
+    );
+
+    const table = screen.getByRole("table", { name: "Demo table" });
+    expect(table.closest("[aria-busy='true']")).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("Loading");
+    expect(screen.queryByText("No data")).not.toBeInTheDocument();
+  });
+
   test("renders DOM scrollbars only when overflow exists", async () => {
     const { container } = render(
       <VirtualTable
