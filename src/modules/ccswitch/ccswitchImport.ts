@@ -185,6 +185,7 @@ export function buildCcSwitchImportUrl(input: {
   apiKey: string;
   baseUrl: string;
   clientType: CcSwitchClientType;
+  enabled?: boolean;
   providerName: string;
   model?: string;
   models?: readonly string[];
@@ -209,6 +210,7 @@ export function buildCcSwitchImportUrl(input: {
     apiKey: input.apiKey.trim(),
     icon: client.icon,
     configFormat: "json",
+    enabled: String(input.enabled ?? true),
     usageEnabled: "true",
     usageBaseUrl: importConfig.usageBaseUrl,
     usageScript: encodeBase64(buildCcSwitchUsageScript()),

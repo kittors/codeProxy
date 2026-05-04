@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, test, vi } from "vitest";
@@ -9,6 +9,7 @@ import { ToastProvider } from "@/modules/ui/ToastProvider";
 
 const state = vi.hoisted(() => ({
   entries: [] as any[],
+  channelGroups: [] as any[],
 }));
 
 const mocks = vi.hoisted(() => ({
@@ -32,7 +33,18 @@ const mocks = vi.hoisted(() => ({
   getCodexConfigs: vi.fn(async () => []),
   getVertexConfigs: vi.fn(async () => []),
   getOpenAIProviders: vi.fn(async () => []),
-  apiClientGet: vi.fn(async () => ({ data: [{ id: "gpt-4.1" }] })),
+  apiClientGet: vi.fn(async (url: string) => {
+    if (url === "/channel-groups") {
+      return { items: state.channelGroups };
+    }
+    if (url.includes("allowed_channel_groups=pro")) {
+      return { data: [{ id: "gpt-5.3-codex" }, { id: "gpt-5.4" }] };
+    }
+    if (url.includes("allowed_channel_groups=team-a")) {
+      return { data: [{ id: "claude-sonnet-4-5" }] };
+    }
+    return { data: [{ id: "gpt-4.1" }] };
+  }),
   handleViewUsage: vi.fn(),
   fetchUsageLogs: vi.fn(),
 }));
@@ -148,6 +160,7 @@ describe("ApiKeysPage", () => {
         "created-at": "2026-04-14T00:00:00.000Z",
       },
     ];
+    state.channelGroups = [];
     mocks.apiKeyEntriesList.mockClear();
     mocks.apiKeyEntriesReplace.mockClear();
     mocks.apiKeyEntriesUpdate.mockClear();
@@ -282,8 +295,8 @@ describe("ApiKeysPage", () => {
 
     const dialog = await screen.findByRole("dialog", { name: /import to cc switch/i });
     expect(dialog).toHaveTextContent(/claude code/i);
-    expect(dialog).toHaveTextContent(/codex/i);
-    expect(dialog).toHaveTextContent(/gemini cli/i);
+
+    await userEvent.click(screen.getByRole("tab", { name: /codex/i }));
 
     await userEvent.click(screen.getByRole("button", { name: /import codex/i }));
 
@@ -298,6 +311,204 @@ describe("ApiKeysPage", () => {
     const parsed = new URL(openedUrl);
     expect(parsed.searchParams.get("app")).toBe("codex");
     expect(parsed.searchParams.get("apiKey")).toBe("sk-existing-1234567890");
+
+    openSpy.mockRestore();
+  });
+
+  test("imports a Codex CC Switch provider from the selected client-specific form", async () => {
+    const openSpy = vi.spyOn(window, "open").mockReturnValue(null);
+    vi.spyOn(document, "hasFocus").mockReturnValue(false);
+    state.entries = [
+      {
+        key: "sk-group-1234567890",
+        name: "Group Key",
+        "allowed-channel-groups": ["pro", "team-a"],
+        "created-at": "2026-04-14T00:00:00.000Z",
+      },
+    ];
+    state.channelGroups = [
+      {
+        name: "pro",
+        description: "Pro route",
+        "path-routes": ["/pro"],
+      },
+      {
+        name: "team-a",
+        description: "Team A route",
+        "path-routes": ["/team-a"],
+      },
+    ];
+
+    render(
+      <MemoryRouter>
+        <ThemeProvider>
+          <ToastProvider>
+            <ApiKeysPage />
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("Group Key")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: /import to cc switch/i }));
+    await screen.findByRole("dialog", { name: /import to cc switch/i });
+
+    await userEvent.click(screen.getByRole("tab", { name: /codex/i }));
+
+    expect(screen.queryByRole("combobox", { name: /claude code auth field/i })).toBeNull();
+
+    const providerNameInput = screen.getByRole("textbox", { name: /provider name/i });
+    await userEvent.clear(providerNameInput);
+    await userEvent.type(providerNameInput, "Work");
+
+    await userEvent.click(screen.getByRole("checkbox", { name: /enabled by default/i }));
+
+    const modelSelect = await screen.findByRole("combobox", { name: /model/i });
+    await userEvent.click(modelSelect);
+    await userEvent.click(await screen.findByRole("option", { name: "gpt-5.4" }));
+
+    await userEvent.click(screen.getByRole("button", { name: /import codex/i }));
+
+    await waitFor(() => {
+      expect(openSpy).toHaveBeenCalledWith(
+        expect.stringContaining("ccswitch://v1/import?"),
+        "_self",
+      );
+    });
+
+    const openedUrl = String(openSpy.mock.calls.at(-1)?.[0] ?? "");
+    const parsed = new URL(openedUrl);
+    expect(parsed.searchParams.get("app")).toBe("codex");
+    expect(parsed.searchParams.get("name")).toBe("Work");
+    expect(parsed.searchParams.get("endpoint")).toBe("http://localhost:3000/pro/v1");
+    expect(parsed.searchParams.get("model")).toBe("gpt-5.4");
+    expect(parsed.searchParams.get("enabled")).toBe("false");
+    expect(parsed.searchParams.has("apiKeyField")).toBe(false);
+
+    openSpy.mockRestore();
+  });
+
+  test("keeps the CC Switch client-specific panel stable while switching client types", async () => {
+    state.entries = [
+      {
+        key: "sk-group-1234567890",
+        name: "Group Key",
+        "allowed-channel-groups": ["pro"],
+        "created-at": "2026-04-14T00:00:00.000Z",
+      },
+    ];
+    state.channelGroups = [
+      {
+        name: "pro",
+        description: "Pro route",
+        "path-routes": ["/pro"],
+      },
+    ];
+
+    render(
+      <MemoryRouter>
+        <ThemeProvider>
+          <ToastProvider>
+            <ApiKeysPage />
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("Group Key")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: /import to cc switch/i }));
+    await screen.findByRole("dialog", { name: /import to cc switch/i });
+
+    const tabs = screen.getByRole("tablist", { name: /client type/i });
+    expect(tabs).toHaveClass("sticky");
+    expect(tabs).toHaveClass("top-0");
+    expect(tabs).toHaveClass("rounded-full");
+    expect(tabs).toHaveClass("bg-[#EBEBEC]");
+    expect(tabs).toHaveClass("h-9");
+    expect(tabs).not.toHaveClass("grid");
+    expect(screen.queryByRole("combobox", { name: /client type/i })).toBeNull();
+    expect(screen.getByTestId("ccswitch-client-tab-icon-claude")).toBeInTheDocument();
+    expect(screen.getByTestId("ccswitch-client-tab-icon-codex")).toBeInTheDocument();
+    expect(screen.getByTestId("ccswitch-client-tab-icon-gemini")).toBeInTheDocument();
+
+    const detailsPanel = screen.getByTestId("ccswitch-client-specific-panel");
+    expect(detailsPanel).toHaveClass("min-h-[76px]");
+    expect(within(detailsPanel).getByText(/base url/i)).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: /claude code auth field/i })).toBeInTheDocument();
+
+    const providerRow = screen.getByTestId("ccswitch-import-provider-row");
+    expect(providerRow).toHaveClass("sm:grid-cols-[minmax(0,1fr)_minmax(220px,0.78fr)]");
+
+    await userEvent.click(screen.getByRole("tab", { name: /codex/i }));
+
+    expect(screen.getByTestId("ccswitch-client-specific-panel")).toBe(detailsPanel);
+    expect(screen.queryByRole("combobox", { name: /claude code auth field/i })).toBeNull();
+    expect(detailsPanel).toHaveTextContent(/openai-compatible/i);
+    expect(detailsPanel).toHaveTextContent(/\/v1/i);
+  });
+
+  test("imports a Claude Code CC Switch provider with its auth field in the selected form", async () => {
+    const openSpy = vi.spyOn(window, "open").mockReturnValue(null);
+    vi.spyOn(document, "hasFocus").mockReturnValue(false);
+    state.entries = [
+      {
+        key: "sk-group-1234567890",
+        name: "Claude Key",
+        "allowed-channel-groups": ["team-a"],
+        "created-at": "2026-04-14T00:00:00.000Z",
+      },
+    ];
+    state.channelGroups = [
+      {
+        name: "team-a",
+        description: "Team A route",
+        "path-routes": ["/team-a"],
+      },
+    ];
+
+    render(
+      <MemoryRouter>
+        <ThemeProvider>
+          <ToastProvider>
+            <ApiKeysPage />
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("Claude Key")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: /import to cc switch/i }));
+    await screen.findByRole("dialog", { name: /import to cc switch/i });
+
+    await userEvent.click(screen.getByRole("tab", { name: /claude code/i }));
+
+    expect(screen.getByRole("combobox", { name: /claude code auth field/i })).toHaveTextContent(
+      "ANTHROPIC_API_KEY",
+    );
+
+    const providerNameInput = screen.getByRole("textbox", { name: /provider name/i });
+    await userEvent.clear(providerNameInput);
+    await userEvent.type(providerNameInput, "Anthropic Work");
+
+    await userEvent.click(screen.getByRole("button", { name: /import claude code/i }));
+
+    await waitFor(() => {
+      expect(openSpy).toHaveBeenCalledWith(
+        expect.stringContaining("ccswitch://v1/import?"),
+        "_self",
+      );
+    });
+
+    const openedUrl = String(openSpy.mock.calls.at(-1)?.[0] ?? "");
+    const parsed = new URL(openedUrl);
+    expect(parsed.searchParams.get("app")).toBe("claude");
+    expect(parsed.searchParams.get("name")).toBe("Anthropic Work");
+    expect(parsed.searchParams.get("endpoint")).toBe("http://localhost:3000/team-a");
+    expect(parsed.searchParams.get("model")).toBe("claude-sonnet-4-5");
+    expect(parsed.searchParams.get("apiKeyField")).toBe("ANTHROPIC_API_KEY");
 
     openSpy.mockRestore();
   });

@@ -230,6 +230,7 @@ export const usageApi = {
         total: resp?.stats?.total ?? 0,
         success_rate: resp?.stats?.success_rate ?? 0,
         total_tokens: resp?.stats?.total_tokens ?? 0,
+        total_cost: resp?.stats?.total_cost ?? 0,
       },
     };
   },
@@ -302,11 +303,13 @@ export interface DashboardSummary {
     reasoning_tokens: number;
     cached_tokens: number;
     total_tokens: number;
+    total_cost: number;
   };
   trends?: {
     request_volume?: DashboardTrendPoint[];
     success_rate?: DashboardTrendPoint[];
     total_tokens?: DashboardTrendPoint[];
+    total_cost?: DashboardTrendPoint[];
     failed_requests?: DashboardTrendPoint[];
     throughput_series?: DashboardThroughputPoint[];
   };
@@ -373,6 +376,7 @@ export interface UsageLogsResponse {
     total: number;
     success_rate: number;
     total_tokens: number;
+    total_cost: number;
   };
 }
 

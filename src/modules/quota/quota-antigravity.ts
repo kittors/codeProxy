@@ -1,7 +1,6 @@
 import {
   clampPercent,
   isRecord,
-  normalizeNumberValue,
   normalizeQuotaFraction,
   normalizeStringValue,
   parseResetTimeToMs,
@@ -12,20 +11,6 @@ type AntigravityQuotaInfo = {
   displayName?: string;
   quotaInfo?: Record<string, unknown>;
   quota_info?: Record<string, unknown>;
-  maxTokens?: unknown;
-  maxOutputTokens?: unknown;
-  tokenizerType?: unknown;
-  apiProvider?: unknown;
-  modelProvider?: unknown;
-  model?: unknown;
-  supportsImages?: unknown;
-  supportsThinking?: unknown;
-  supportsVideo?: unknown;
-  recommended?: unknown;
-  isInternal?: unknown;
-  tagTitle?: unknown;
-  thinkingBudget?: unknown;
-  minThinkingBudget?: unknown;
 };
 
 export type AntigravityModelsPayload = Record<string, AntigravityQuotaInfo>;
@@ -42,19 +27,52 @@ export type AntigravityFetchAvailableModelsPayload = {
   commitMessageModelIds?: unknown;
 };
 
-const MODEL_ID_LISTS: Array<[keyof AntigravityFetchAvailableModelsPayload, string]> = [
-  ["commandModelIds", "Command"],
-  ["tabModelIds", "Tab"],
-  ["imageGenerationModelIds", "Image Generation"],
-  ["mqueryModelIds", "MQuery"],
-  ["webSearchModelIds", "Web Search"],
-  ["commitMessageModelIds", "Commit Message"],
+const MODEL_ID_LISTS: Array<keyof AntigravityFetchAvailableModelsPayload> = [
+  "commandModelIds",
+  "tabModelIds",
+  "imageGenerationModelIds",
+  "mqueryModelIds",
+  "webSearchModelIds",
+  "commitMessageModelIds",
 ];
+
+const REFERENCE_SKIPPED_MODEL_IDS = new Set([
+  "chat_20706",
+  "chat_23310",
+  "tab_flash_lite_preview",
+  "tab_jump_flash_lite_preview",
+  "gemini-2.5-flash-thinking",
+  "gemini-2.5-pro",
+]);
 
 const normalizeModelId = (value: unknown): string | null => normalizeStringValue(value);
 
 const normalizeModelIdList = (value: unknown): string[] =>
   Array.isArray(value) ? value.map(normalizeModelId).filter((id): id is string => Boolean(id)) : [];
+
+export const shouldSkipAntigravityModelId = (id: string): boolean =>
+  REFERENCE_SKIPPED_MODEL_IDS.has(id);
+
+const ANTIGRAVITY_MODEL_KEY_PREFIX = "model:";
+
+const resolveAntigravityModelIdFromQuotaItem = (item: QuotaItem): string | null => {
+  const key = typeof item.key === "string" ? item.key.trim() : "";
+  if (key.startsWith(ANTIGRAVITY_MODEL_KEY_PREFIX)) {
+    return key.slice(ANTIGRAVITY_MODEL_KEY_PREFIX.length).trim() || null;
+  }
+  if (key && shouldSkipAntigravityModelId(key)) return key;
+
+  const label = String(item.label ?? "").trim();
+  const bracketModelId = label.match(/\[([^\]]+)\]\s*$/)?.[1]?.trim();
+  if (bracketModelId) return bracketModelId;
+  return label && shouldSkipAntigravityModelId(label) ? label : null;
+};
+
+export const filterAntigravityQuotaItems = (items: QuotaItem[]): QuotaItem[] =>
+  items.filter((item) => {
+    const modelId = resolveAntigravityModelIdFromQuotaItem(item);
+    return !modelId || !shouldSkipAntigravityModelId(modelId);
+  });
 
 const resolvePayloadAndModels = (
   input: AntigravityFetchAvailableModelsPayload | AntigravityModelsPayload,
@@ -84,45 +102,33 @@ const quotaInfo = (entry?: AntigravityQuotaInfo) => {
   };
 };
 
-const addModelRole = (
-  id: string | null,
-  role: string,
-  order: string[],
-  rolesByModel: Map<string, Set<string>>,
-) => {
+const addModelToOrder = (id: string | null, order: string[]) => {
   if (!id) return;
-  if (!rolesByModel.has(id)) rolesByModel.set(id, new Set());
-  rolesByModel.get(id)?.add(role);
+  if (shouldSkipAntigravityModelId(id)) return;
   if (!order.includes(id)) order.push(id);
 };
 
 const collectPayloadModelOrder = (payload: AntigravityFetchAvailableModelsPayload) => {
   const order: string[] = [];
-  const rolesByModel = new Map<string, Set<string>>();
 
-  addModelRole(normalizeModelId(payload.defaultAgentModelId), "Default Agent", order, rolesByModel);
+  addModelToOrder(normalizeModelId(payload.defaultAgentModelId), order);
 
   if (Array.isArray(payload.agentModelSorts)) {
     payload.agentModelSorts.forEach((sort) => {
       if (!isRecord(sort)) return;
-      const sortLabel = normalizeStringValue(sort.displayName) ?? "Agent Models";
       const groups = Array.isArray(sort.groups) ? sort.groups : [];
       groups.forEach((group) => {
         if (!isRecord(group)) return;
-        normalizeModelIdList(group.modelIds).forEach((id) =>
-          addModelRole(id, sortLabel, order, rolesByModel),
-        );
+        normalizeModelIdList(group.modelIds).forEach((id) => addModelToOrder(id, order));
       });
     });
   }
 
-  MODEL_ID_LISTS.forEach(([key, label]) => {
-    normalizeModelIdList(payload[key]).forEach((id) =>
-      addModelRole(id, label, order, rolesByModel),
-    );
+  MODEL_ID_LISTS.forEach((key) => {
+    normalizeModelIdList(payload[key]).forEach((id) => addModelToOrder(id, order));
   });
 
-  return { order, rolesByModel };
+  return order;
 };
 
 const buildModelLabel = (id: string, entry: AntigravityQuotaInfo): string => {
@@ -131,48 +137,16 @@ const buildModelLabel = (id: string, entry: AntigravityQuotaInfo): string => {
   return `${displayName} [${id}]`;
 };
 
-const appendStringMeta = (parts: string[], label: string, value: unknown) => {
-  const normalized = normalizeStringValue(value);
-  if (normalized) parts.push(`${label}=${normalized}`);
-};
-
-const appendNumberMeta = (parts: string[], label: string, value: unknown) => {
-  const normalized = normalizeNumberValue(value);
-  if (normalized !== null) parts.push(`${label}=${normalized}`);
-};
-
-const buildModelMeta = (entry: AntigravityQuotaInfo, roles?: Set<string>): string | undefined => {
-  const parts: string[] = [];
-  if (roles) parts.push(...Array.from(roles));
-  appendNumberMeta(parts, "maxTokens", entry.maxTokens);
-  appendNumberMeta(parts, "maxOutputTokens", entry.maxOutputTokens);
-  appendStringMeta(parts, "apiProvider", entry.apiProvider);
-  appendStringMeta(parts, "modelProvider", entry.modelProvider);
-  appendStringMeta(parts, "model", entry.model);
-  appendStringMeta(parts, "tokenizer", entry.tokenizerType);
-  appendStringMeta(parts, "tag", entry.tagTitle);
-  appendNumberMeta(parts, "thinkingBudget", entry.thinkingBudget);
-  appendNumberMeta(parts, "minThinkingBudget", entry.minThinkingBudget);
-
-  if (entry.supportsThinking === true) parts.push("thinking");
-  if (entry.supportsImages === true) parts.push("images");
-  if (entry.supportsVideo === true) parts.push("video");
-  if (entry.recommended === true) parts.push("recommended");
-  if (entry.isInternal === true) parts.push("internal");
-
-  const uniqueParts = parts.filter((part, index, all) => all.indexOf(part) === index);
-  return uniqueParts.length > 0 ? uniqueParts.join(" · ") : undefined;
-};
-
 export const buildAntigravityItems = (
   input: AntigravityFetchAvailableModelsPayload | AntigravityModelsPayload,
 ): QuotaItem[] => {
   const { payload, models } = resolvePayloadAndModels(input);
-  const { order, rolesByModel } = collectPayloadModelOrder(payload);
+  const order = collectPayloadModelOrder(payload);
   const orderedIds = new Set(order);
 
   Object.keys(models)
     .filter((id) => !orderedIds.has(id))
+    .filter((id) => !shouldSkipAntigravityModelId(id))
     .sort((a, b) => a.localeCompare(b))
     .forEach((id) => {
       order.push(id);
@@ -195,7 +169,6 @@ export const buildAntigravityItems = (
         label: buildModelLabel(id, entry),
         percent,
         resetAtMs: parseResetTimeToMs(info.resetTime),
-        meta: buildModelMeta(entry, rolesByModel.get(id)),
       },
     ];
   });
