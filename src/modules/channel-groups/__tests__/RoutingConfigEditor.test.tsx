@@ -4,7 +4,10 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import i18n from "@/i18n";
 import { DEFAULT_VISUAL_VALUES, type VisualConfigValues } from "@/modules/config/visual/types";
-import { RoutingConfigEditor } from "@/modules/channel-groups/RoutingConfigEditor";
+import {
+  RoutingConfigEditor,
+  type RoutingModelOption,
+} from "@/modules/channel-groups/RoutingConfigEditor";
 import { ThemeProvider } from "@/modules/ui/ThemeProvider";
 import { ToastProvider } from "@/modules/ui/ToastProvider";
 
@@ -30,7 +33,7 @@ function Harness({
   loadModelsForChannels,
 }: {
   initialValues?: VisualConfigValues;
-  loadModelsForChannels?: (channels: string[]) => Promise<string[]>;
+  loadModelsForChannels?: (channels: string[]) => Promise<Array<string | RoutingModelOption>>;
 }) {
   const [values, setValues] = useState<VisualConfigValues>({
     ...DEFAULT_VISUAL_VALUES,
@@ -124,6 +127,38 @@ describe("RoutingConfigEditor", () => {
     );
   });
 
+  test("renders channel-scoped models as a checkbox table with descriptions and prices", async () => {
+    await i18n.changeLanguage("zh-CN");
+    const user = userEvent.setup();
+    const loadModelsForChannels = vi.fn(async () => [
+      {
+        id: "claude-sonnet-4-5",
+        owned_by: "anthropic",
+        description: "Fast Claude model",
+        pricing: {
+          mode: "token" as const,
+          inputPricePerMillion: 3,
+          outputPricePerMillion: 15,
+          cachedPricePerMillion: 0.3,
+          pricePerCall: 0,
+        },
+      },
+    ]);
+
+    render(<Harness loadModelsForChannels={loadModelsForChannels} />);
+
+    await user.click(screen.getByRole("button", { name: "新增分组" }));
+    await user.click(screen.getByRole("combobox", { name: "选择渠道" }));
+    await user.click(screen.getByRole("option", { name: "Team A Claude" }));
+    await user.click(screen.getByRole("combobox", { name: "选择渠道" }));
+    await user.click(screen.getByRole("tab", { name: "模型列表" }));
+
+    expect(await screen.findByRole("table", { name: "允许模型" })).toBeInTheDocument();
+    expect(screen.getByLabelText("claude-sonnet-4-5")).toBeChecked();
+    expect(screen.getByText("Fast Claude model")).toBeInTheDocument();
+    expect(screen.getByText("$3 / $15 / $0.3")).toBeInTheDocument();
+  });
+
   test("keeps modal body and tabs fixed while tab content and model list own scrolling", async () => {
     await i18n.changeLanguage("zh-CN");
     const user = userEvent.setup();
@@ -154,7 +189,8 @@ describe("RoutingConfigEditor", () => {
     expect(tabViewport).toHaveClass("overflow-y-auto");
 
     await user.click(screen.getByRole("tab", { name: "模型列表" }));
-    expect(await screen.findByTestId("group-editor-model-list")).toHaveClass("overflow-y-auto");
+    expect(await screen.findByTestId("group-editor-model-list")).toHaveClass("overflow-hidden");
+    expect(screen.getByRole("table", { name: "允许模型" })).toBeInTheDocument();
     expect(screen.getByRole("tablist")).toBeInTheDocument();
   });
 

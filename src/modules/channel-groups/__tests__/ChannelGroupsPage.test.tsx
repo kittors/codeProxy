@@ -83,6 +83,12 @@ describe("ChannelGroupsPage", () => {
               id: "claude-3-7-sonnet-latest",
               owned_by: "anthropic",
               description: "Mapped Claude model",
+              pricing: {
+                mode: "token",
+                input_price_per_million: 3,
+                output_price_per_million: 15,
+                cached_price_per_million: 0.3,
+              },
             },
             {
               id: "gpt-should-not-leak",
@@ -124,7 +130,10 @@ describe("ChannelGroupsPage", () => {
 
     await user.click(screen.getByRole("tab", { name: "模型列表" }));
 
+    expect(await screen.findByRole("table", { name: "允许模型" })).toBeInTheDocument();
     expect(await screen.findByLabelText("claude-3-7-sonnet-latest")).toBeInTheDocument();
+    expect(screen.getByText("Mapped Claude model")).toBeInTheDocument();
+    expect(screen.getByText("$3 / $15 / $0.3")).toBeInTheDocument();
     expect(screen.queryByLabelText("gpt-should-not-leak")).not.toBeInTheDocument();
   });
 });

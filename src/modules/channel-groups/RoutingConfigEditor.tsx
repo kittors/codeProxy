@@ -18,6 +18,11 @@ import { useToast } from "@/modules/ui/ToastProvider";
 import { HoverTooltip, OverflowTooltip } from "@/modules/ui/Tooltip";
 import { VirtualTable, type VirtualTableColumn } from "@/modules/ui/VirtualTable";
 import { VendorIcon } from "@/modules/api-keys/apiKeyPageUtils";
+import {
+  emptyModelPricing,
+  formatModelPrice,
+  type ModelPricing,
+} from "@/modules/models/modelAvailability";
 
 type GroupDraft = {
   name: string;
@@ -26,6 +31,15 @@ type GroupDraft = {
   allowedModels: string[];
   routes: RoutingPathRouteEntry[];
 };
+
+export type RoutingModelOption = {
+  id: string;
+  owned_by?: string;
+  description?: string;
+  pricing?: ModelPricing;
+};
+
+type RoutingModelLoadResult = string | RoutingModelOption;
 
 const createEmptyGroupDraft = (): GroupDraft => ({
   name: "",
@@ -164,6 +178,21 @@ function normalizeChannelName(value: string): string {
   return value.trim().toLowerCase();
 }
 
+function normalizeRoutingModelOption(model: RoutingModelLoadResult): RoutingModelOption | null {
+  if (typeof model === "string") {
+    const id = model.trim();
+    return id ? { id } : null;
+  }
+  const id = String(model.id ?? "").trim();
+  if (!id) return null;
+  return {
+    id,
+    owned_by: model.owned_by,
+    description: model.description,
+    pricing: model.pricing,
+  };
+}
+
 export function RoutingConfigEditor({
   values,
   disabled,
@@ -174,7 +203,7 @@ export function RoutingConfigEditor({
   values: VisualConfigValues;
   disabled?: boolean;
   availableChannels: string[];
-  loadModelsForChannels?: (channels: string[]) => Promise<string[]>;
+  loadModelsForChannels?: (channels: string[]) => Promise<RoutingModelLoadResult[]>;
   onChange: (values: Partial<VisualConfigValues>) => void;
 }) {
   const { t } = useTranslation();
@@ -183,7 +212,7 @@ export function RoutingConfigEditor({
   const [groupEditorId, setGroupEditorId] = useState<string | null>(null);
   const [groupDraft, setGroupDraft] = useState<GroupDraft>(() => createEmptyGroupDraft());
   const [groupEditorTab, setGroupEditorTab] = useState<"basic" | "models">("basic");
-  const [modelOptions, setModelOptions] = useState<string[]>([]);
+  const [modelOptions, setModelOptions] = useState<RoutingModelOption[]>([]);
   const [modelsLoading, setModelsLoading] = useState(false);
   const [modelsError, setModelsError] = useState("");
   const [modelsSelectionTouched, setModelsSelectionTouched] = useState(false);
@@ -249,6 +278,16 @@ export function RoutingConfigEditor({
     () => new Set(groupDraft.allowedModels.map((model) => model.trim()).filter(Boolean)),
     [groupDraft.allowedModels],
   );
+
+  const modelOptionIds = useMemo(() => modelOptions.map((model) => model.id), [modelOptions]);
+  const selectedVisibleModelCount = useMemo(
+    () => modelOptionIds.filter((model) => selectedModelSet.has(model)).length,
+    [modelOptionIds, selectedModelSet],
+  );
+  const allVisibleModelsSelected =
+    modelOptionIds.length > 0 && selectedVisibleModelCount === modelOptionIds.length;
+  const someVisibleModelsSelected =
+    selectedVisibleModelCount > 0 && selectedVisibleModelCount < modelOptionIds.length;
 
   const primaryRoute = groupDraft.routes[0] ?? EMPTY_ROUTE_DRAFT();
   const normalizedPrimaryRoutePath = useMemo(
@@ -403,9 +442,9 @@ export function RoutingConfigEditor({
     setModelsSelectionTouched(true);
     setGroupDraft((current) => ({
       ...current,
-      allowedModels: Array.from(new Set(modelOptions)),
+      allowedModels: Array.from(new Set(modelOptionIds)),
     }));
-  }, [modelOptions]);
+  }, [modelOptionIds]);
 
   const clearDraftModels = useCallback(() => {
     setModelsSelectionTouched(true);
@@ -793,6 +832,89 @@ export function RoutingConfigEditor({
     [disabled, draftStaleChannelIds, removeDraftChannel, t, updateDraftChannel],
   );
 
+  const modelColumns = useMemo<VirtualTableColumn<RoutingModelOption>[]>(
+    () => [
+      {
+        key: "select",
+        label: "",
+        width: "w-12",
+        headerClassName: "text-center",
+        cellClassName: "text-center",
+        headerRender: () => (
+          <Checkbox
+            checked={allVisibleModelsSelected}
+            indeterminate={someVisibleModelsSelected}
+            disabled={disabled || modelOptions.length === 0}
+            onCheckedChange={(checked) => {
+              if (checked) selectAllDraftModels();
+              else clearDraftModels();
+            }}
+            aria-label={t("channel_groups_page.allowed_models_label")}
+          />
+        ),
+        render: (model) => (
+          <Checkbox
+            checked={selectedModelSet.has(model.id)}
+            onCheckedChange={(checked) => toggleDraftModel(model.id, checked)}
+            disabled={disabled}
+            aria-label={model.id}
+          />
+        ),
+      },
+      {
+        key: "model",
+        label: t("models_page.col_model"),
+        width: "w-[28rem]",
+        cellClassName: "min-w-0",
+        render: (model) => (
+          <div className="flex min-w-0 items-center gap-2">
+            <VendorIcon modelId={model.id} size={16} />
+            <div className="min-w-0">
+              <OverflowTooltip content={model.id} className="block min-w-0">
+                <span className="block min-w-0 truncate font-medium">{model.id}</span>
+              </OverflowTooltip>
+              {model.description ? (
+                <OverflowTooltip content={model.description} className="block min-w-0">
+                  <span className="block min-w-0 truncate text-[11px] text-slate-500 dark:text-white/45">
+                    {model.description}
+                  </span>
+                </OverflowTooltip>
+              ) : null}
+            </div>
+          </div>
+        ),
+      },
+      {
+        key: "owner",
+        label: t("models_page.col_owner"),
+        width: "w-36",
+        cellClassName: "min-w-0 whitespace-nowrap text-slate-600 dark:text-white/60",
+        render: (model) => model.owned_by || "-",
+        overflowTooltip: (model) => model.owned_by || "-",
+      },
+      {
+        key: "price",
+        label: t("models_page.col_price"),
+        width: "w-56",
+        cellClassName:
+          "whitespace-nowrap font-mono text-xs tabular-nums text-slate-700 dark:text-slate-200",
+        render: (model) =>
+          formatModelPrice(model.pricing ?? emptyModelPricing(), t("models_page.not_priced")),
+      },
+    ],
+    [
+      allVisibleModelsSelected,
+      clearDraftModels,
+      disabled,
+      modelOptions.length,
+      selectAllDraftModels,
+      selectedModelSet,
+      someVisibleModelsSelected,
+      t,
+      toggleDraftModel,
+    ],
+  );
+
   useEffect(() => {
     if (!groupEditorOpen || groupEditorTab !== "models") return;
     if (selectedChannelValues.length === 0 || !loadModelsForChannels) {
@@ -807,16 +929,21 @@ export function RoutingConfigEditor({
     loadModelsForChannels(selectedChannelValues)
       .then((models) => {
         if (cancelled) return;
-        const normalized = Array.from(
-          new Set(models.map((model) => String(model ?? "").trim()).filter(Boolean)),
-        ).sort((a, b) => a.localeCompare(b));
+        const optionMap = new Map<string, RoutingModelOption>();
+        for (const model of models) {
+          const option = normalizeRoutingModelOption(model);
+          if (!option) continue;
+          const key = option.id.toLowerCase();
+          if (!optionMap.has(key)) optionMap.set(key, option);
+        }
+        const normalized = Array.from(optionMap.values()).sort((a, b) => a.id.localeCompare(b.id));
         setModelOptions(normalized);
-        const allowed = new Set(normalized);
+        const allowed = new Set(normalized.map((model) => model.id));
         setGroupDraft((current) => ({
           ...current,
           allowedModels: modelsSelectionTouched
             ? current.allowedModels.filter((model) => allowed.has(model))
-            : normalized,
+            : normalized.map((model) => model.id),
         }));
       })
       .catch((err: unknown) => {
@@ -1095,26 +1222,21 @@ export function RoutingConfigEditor({
                   ) : (
                     <div
                       data-testid="group-editor-model-list"
-                      className="grid min-h-0 flex-1 gap-2 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-3 dark:border-neutral-800 dark:bg-neutral-950 sm:grid-cols-2"
+                      className="min-h-0 flex-1 overflow-hidden"
                     >
-                      {modelOptions.map((model) => {
-                        const checked = selectedModelSet.has(model);
-                        return (
-                          <label
-                            key={model}
-                            className="flex min-w-0 items-center gap-3 rounded-xl px-3 py-2 text-sm text-slate-800 transition-colors hover:bg-slate-50 dark:text-white/80 dark:hover:bg-white/[0.04]"
-                          >
-                            <Checkbox
-                              checked={checked}
-                              onCheckedChange={(next) => toggleDraftModel(model, next)}
-                              disabled={disabled}
-                              aria-label={model}
-                            />
-                            <VendorIcon modelId={model} size={14} />
-                            <span className="min-w-0 flex-1 truncate">{model}</span>
-                          </label>
-                        );
-                      })}
+                      <VirtualTable<RoutingModelOption>
+                        rows={modelOptions}
+                        columns={modelColumns}
+                        rowKey={(model) => model.id}
+                        virtualize={false}
+                        rowHeight={58}
+                        height="h-full"
+                        minHeight="min-h-[360px]"
+                        minWidth="min-w-[760px]"
+                        caption={t("channel_groups_page.allowed_models_label")}
+                        emptyText={t("channel_groups_page.no_channel_models")}
+                        showAllLoadedMessage={false}
+                      />
                     </div>
                   )}
                 </TabsContent>
