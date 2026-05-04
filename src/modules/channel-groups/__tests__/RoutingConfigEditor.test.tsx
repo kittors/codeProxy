@@ -313,6 +313,55 @@ describe("RoutingConfigEditor", () => {
     expect(screen.getByRole("button", { name: "添加" })).toBeDisabled();
   });
 
+  test("requires confirmation before deleting a channel group and its routes", async () => {
+    await i18n.changeLanguage("zh-CN");
+    const user = userEvent.setup();
+
+    render(
+      <Harness
+        initialValues={{
+          ...DEFAULT_VISUAL_VALUES,
+          routingChannelGroups: [
+            {
+              id: "group-team-a",
+              name: "team-a",
+              description: "Team A group",
+              allowedModels: [],
+              channels: [{ id: "channel-main-codex", name: "Main Codex", priority: "" }],
+            },
+          ],
+          routingPathRoutes: [
+            {
+              id: "route-team-a",
+              path: "/team-a",
+              group: "team-a",
+              stripPrefix: true,
+              fallback: "none",
+            },
+          ],
+        }}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "删除分组" }));
+
+    expect(screen.getByRole("dialog", { name: "删除渠道分组" })).toBeInTheDocument();
+    expect(screen.getByText(/删除渠道分组 team-a/)).toBeInTheDocument();
+    expect(screen.getByTestId("group-count")).toHaveTextContent("1");
+    expect(screen.getByTestId("route-count")).toHaveTextContent("1");
+
+    await user.click(screen.getByRole("button", { name: "取消" }));
+
+    expect(screen.getByTestId("group-count")).toHaveTextContent("1");
+    expect(screen.getByTestId("route-count")).toHaveTextContent("1");
+
+    await user.click(screen.getByRole("button", { name: "删除分组" }));
+    await user.click(screen.getByRole("button", { name: "确认删除" }));
+
+    expect(screen.getByTestId("group-count")).toHaveTextContent("0");
+    expect(screen.getByTestId("route-count")).toHaveTextContent("0");
+  });
+
   test("shows stale channel status and details for groups that reference deleted channels", async () => {
     await i18n.changeLanguage("zh-CN");
     const user = userEvent.setup();

@@ -10,6 +10,7 @@ import type {
 import { makeClientId } from "@/modules/config/visual/types";
 import { Button } from "@/modules/ui/Button";
 import { Checkbox } from "@/modules/ui/Checkbox";
+import { ConfirmModal } from "@/modules/ui/ConfirmModal";
 import { TextInput } from "@/modules/ui/Input";
 import { Modal } from "@/modules/ui/Modal";
 import { SearchableCheckboxMultiSelect } from "@/modules/ui/SearchableCheckboxMultiSelect";
@@ -210,6 +211,7 @@ export function RoutingConfigEditor({
   const { notify } = useToast();
   const [groupEditorOpen, setGroupEditorOpen] = useState(false);
   const [groupEditorId, setGroupEditorId] = useState<string | null>(null);
+  const [deleteGroupTarget, setDeleteGroupTarget] = useState<RoutingChannelGroupEntry | null>(null);
   const [groupDraft, setGroupDraft] = useState<GroupDraft>(() => createEmptyGroupDraft());
   const [groupEditorTab, setGroupEditorTab] = useState<"basic" | "models">("basic");
   const [modelOptions, setModelOptions] = useState<RoutingModelOption[]>([]);
@@ -542,6 +544,12 @@ export function RoutingConfigEditor({
     [update, values.routingChannelGroups, values.routingPathRoutes],
   );
 
+  const confirmRemoveRoutingGroup = useCallback(() => {
+    if (!deleteGroupTarget) return;
+    removeRoutingGroup(deleteGroupTarget.id);
+    setDeleteGroupTarget(null);
+  }, [deleteGroupTarget, removeRoutingGroup]);
+
   const groupColumns = useMemo<VirtualTableColumn<RoutingChannelGroupEntry>[]>(
     () => [
       {
@@ -748,7 +756,7 @@ export function RoutingConfigEditor({
             </button>
             <button
               type="button"
-              onClick={() => removeRoutingGroup(group.id)}
+              onClick={() => setDeleteGroupTarget(group)}
               disabled={disabled}
               className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-red-50 hover:text-red-600 disabled:opacity-40 dark:text-white/50 dark:hover:bg-red-900/20 dark:hover:text-red-400"
               title={t("visual_config.delete_group")}
@@ -760,7 +768,7 @@ export function RoutingConfigEditor({
         ),
       },
     ],
-    [disabled, openEditGroup, removeRoutingGroup, routesByGroup, staleChannelsByGroup, t],
+    [disabled, openEditGroup, routesByGroup, staleChannelsByGroup, t],
   );
 
   const groupMemberColumns = useMemo<VirtualTableColumn<RoutingChannelGroupMemberEntry>[]>(
@@ -1239,6 +1247,21 @@ export function RoutingConfigEditor({
           </Tabs>
         </div>
       </Modal>
+
+      <ConfirmModal
+        open={deleteGroupTarget !== null}
+        title={t("channel_groups_page.delete_group_title")}
+        description={t("channel_groups_page.delete_group_desc", {
+          group: deleteGroupTarget?.name.trim() || t("channel_groups_page.unnamed_group"),
+          count:
+            deleteGroupTarget === null
+              ? 0
+              : (routesByGroup.get(deleteGroupTarget.name.trim().toLowerCase()) ?? []).length,
+        })}
+        confirmText={t("channel_groups_page.delete_group_confirm")}
+        onClose={() => setDeleteGroupTarget(null)}
+        onConfirm={confirmRemoveRoutingGroup}
+      />
     </>
   );
 }
