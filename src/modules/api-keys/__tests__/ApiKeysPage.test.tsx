@@ -296,8 +296,7 @@ describe("ApiKeysPage", () => {
     const dialog = await screen.findByRole("dialog", { name: /import to cc switch/i });
     expect(dialog).toHaveTextContent(/claude code/i);
 
-    await userEvent.click(screen.getByRole("combobox", { name: /client type/i }));
-    await userEvent.click(await screen.findByRole("option", { name: "Codex" }));
+    await userEvent.click(screen.getByRole("tab", { name: /codex/i }));
 
     await userEvent.click(screen.getByRole("button", { name: /import codex/i }));
 
@@ -355,9 +354,7 @@ describe("ApiKeysPage", () => {
     await userEvent.click(screen.getByRole("button", { name: /import to cc switch/i }));
     await screen.findByRole("dialog", { name: /import to cc switch/i });
 
-    const clientTypeSelect = screen.getByRole("combobox", { name: /client type/i });
-    await userEvent.click(clientTypeSelect);
-    await userEvent.click(await screen.findByRole("option", { name: "Codex" }));
+    await userEvent.click(screen.getByRole("tab", { name: /codex/i }));
 
     expect(screen.queryByRole("combobox", { name: /claude code auth field/i })).toBeNull();
 
@@ -424,12 +421,19 @@ describe("ApiKeysPage", () => {
     await userEvent.click(screen.getByRole("button", { name: /import to cc switch/i }));
     await screen.findByRole("dialog", { name: /import to cc switch/i });
 
+    const tabs = screen.getByRole("tablist", { name: /client type/i });
+    expect(tabs).toHaveClass("sticky");
+    expect(tabs).toHaveClass("top-0");
+    expect(screen.queryByRole("combobox", { name: /client type/i })).toBeNull();
+    expect(screen.getByTestId("ccswitch-client-tab-icon-claude")).toBeInTheDocument();
+    expect(screen.getByTestId("ccswitch-client-tab-icon-codex")).toBeInTheDocument();
+    expect(screen.getByTestId("ccswitch-client-tab-icon-gemini")).toBeInTheDocument();
+
     const detailsPanel = screen.getByTestId("ccswitch-client-specific-panel");
     expect(detailsPanel).toHaveClass("min-h-[76px]");
     expect(screen.getByRole("combobox", { name: /claude code auth field/i })).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("combobox", { name: /client type/i }));
-    await userEvent.click(await screen.findByRole("option", { name: "Codex" }));
+    await userEvent.click(screen.getByRole("tab", { name: /codex/i }));
 
     expect(screen.getByTestId("ccswitch-client-specific-panel")).toBe(detailsPanel);
     expect(screen.queryByRole("combobox", { name: /claude code auth field/i })).toBeNull();
@@ -471,9 +475,7 @@ describe("ApiKeysPage", () => {
     await userEvent.click(screen.getByRole("button", { name: /import to cc switch/i }));
     await screen.findByRole("dialog", { name: /import to cc switch/i });
 
-    const clientTypeSelect = screen.getByRole("combobox", { name: /client type/i });
-    await userEvent.click(clientTypeSelect);
-    await userEvent.click(await screen.findByRole("option", { name: "Claude Code" }));
+    await userEvent.click(screen.getByRole("tab", { name: /claude code/i }));
 
     expect(screen.getByRole("combobox", { name: /claude code auth field/i })).toHaveTextContent(
       "ANTHROPIC_API_KEY",

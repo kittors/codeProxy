@@ -4,6 +4,9 @@ import { Checkbox } from "@/modules/ui/Checkbox";
 import { TextInput } from "@/modules/ui/Input";
 import { Modal } from "@/modules/ui/Modal";
 import { Select } from "@/modules/ui/Select";
+import iconClaude from "@/assets/icons/claude.svg";
+import iconCodex from "@/assets/icons/codex.svg";
+import iconGemini from "@/assets/icons/gemini.svg";
 import {
   CC_SWITCH_CLIENTS,
   getCcSwitchClientConfig,
@@ -37,6 +40,12 @@ const labelClassName =
 const controlClassName =
   "h-10 rounded-xl border border-slate-200/80 bg-white px-3 text-sm text-slate-900 shadow-none hover:border-slate-300 hover:bg-white focus-visible:ring-2 focus-visible:ring-slate-900/10 dark:border-neutral-800 dark:bg-neutral-900 dark:text-white dark:hover:border-neutral-700 dark:focus-visible:ring-white/15";
 const fieldClassName = "space-y-1.5";
+
+const iconByType: Record<CcSwitchClientType, string> = {
+  claude: iconClaude,
+  codex: iconCodex,
+  gemini: iconGemini,
+};
 
 export function CcSwitchImportModal({
   t,
@@ -83,10 +92,6 @@ export function CcSwitchImportModal({
 }) {
   const client = getCcSwitchClientConfig(clientType);
   const clientLabel = t(client.labelKey);
-  const clientOptions = CC_SWITCH_CLIENTS.map((item) => ({
-    value: item.type,
-    label: t(item.labelKey),
-  }));
   const groupOptions =
     channelGroupOptions.length > 0
       ? channelGroupOptions.map((option) => ({
@@ -146,23 +151,84 @@ export function CcSwitchImportModal({
       bodyClassName="bg-slate-50/45 dark:bg-neutral-950/45"
     >
       <div className="space-y-3.5">
-        <section className="grid gap-3 rounded-2xl border border-slate-200/75 bg-white p-3 shadow-[0_1px_2px_rgb(15_23_42_/_0.035)] sm:grid-cols-[minmax(0,0.84fr)_minmax(0,1.16fr)] dark:border-neutral-800 dark:bg-neutral-950/70">
-          <label className={fieldClassName}>
-            <span className={labelClassName}>{t("ccswitch.import_client_type")}</span>
-            <Select
-              value={clientType}
-              onChange={(value) => onClientTypeChange(value as CcSwitchClientType)}
-              options={clientOptions}
-              aria-label={t("ccswitch.import_client_type")}
-              className={controlClassName}
-            />
-          </label>
+        <div
+          role="tablist"
+          aria-label={t("ccswitch.import_client_type")}
+          className="sticky top-0 z-10 grid grid-cols-3 gap-1 rounded-2xl border border-slate-200/75 bg-white/95 p-1 shadow-[0_8px_24px_rgb(15_23_42_/_0.08)] backdrop-blur dark:border-neutral-800 dark:bg-neutral-950/95"
+        >
+          {CC_SWITCH_CLIENTS.map((item) => {
+            const active = item.type === clientType;
+            const label = t(item.labelKey);
+            const endpoint = DEFAULT_CC_SWITCH_IMPORT_SETTINGS[item.type].endpointPath;
+            return (
+              <button
+                key={item.type}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                aria-label={label}
+                onClick={() => onClientTypeChange(item.type)}
+                className={[
+                  "group flex min-w-0 items-center gap-2 rounded-xl px-2.5 py-2 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/10 dark:focus-visible:ring-white/15",
+                  active
+                    ? "bg-slate-950 text-white shadow-sm dark:bg-white dark:text-neutral-950"
+                    : "text-slate-600 hover:bg-slate-100/80 hover:text-slate-950 dark:text-white/60 dark:hover:bg-white/10 dark:hover:text-white",
+                ].join(" ")}
+              >
+                <span
+                  className={[
+                    "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border transition",
+                    active
+                      ? "border-white/15 bg-white dark:border-black/10 dark:bg-neutral-950"
+                      : "border-slate-200/70 bg-white group-hover:border-slate-300 dark:border-neutral-800 dark:bg-neutral-900 dark:group-hover:border-neutral-700",
+                  ].join(" ")}
+                >
+                  <img
+                    src={iconByType[item.type]}
+                    alt=""
+                    data-testid={`ccswitch-client-tab-icon-${item.type}`}
+                    className="h-5 w-5"
+                  />
+                </span>
+                <span className="min-w-0">
+                  <span className="block truncate text-sm font-semibold">{label}</span>
+                  <span
+                    className={[
+                      "mt-0.5 hidden truncate font-mono text-[10px] sm:block",
+                      active
+                        ? "text-white/65 dark:text-neutral-950/60"
+                        : "text-slate-400 dark:text-white/35",
+                    ].join(" ")}
+                  >
+                    {endpoint || t("ccswitch.import_endpoint_root")}
+                  </span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
 
-          <div
-            data-testid="ccswitch-client-specific-panel"
-            className="min-h-[76px] rounded-xl border border-slate-200/75 bg-slate-50/70 px-3 py-2.5 dark:border-neutral-800 dark:bg-neutral-900/60"
-          >
-            {clientType === "claude" ? (
+        <section
+          data-testid="ccswitch-client-specific-panel"
+          className="min-h-[76px] rounded-2xl border border-slate-200/75 bg-white p-3 shadow-[0_1px_2px_rgb(15_23_42_/_0.035)] dark:border-neutral-800 dark:bg-neutral-950/70"
+        >
+          {clientType === "claude" ? (
+            <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(220px,0.9fr)] sm:items-center">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200/75 bg-slate-50 dark:border-neutral-800 dark:bg-neutral-900">
+                    <img src={iconByType.claude} alt="" className="h-5 w-5" />
+                  </span>
+                  <div className="min-w-0">
+                    <div className="truncate text-sm font-semibold text-slate-900 dark:text-white">
+                      {clientLabel}
+                    </div>
+                    <div className="truncate text-xs text-slate-500 dark:text-white/55">
+                      {t(client.descriptionKey)}
+                    </div>
+                  </div>
+                </div>
+              </div>
               <label className="block space-y-1.5">
                 <span className={labelClassName}>
                   {t("ccswitch.settings_auth_field", { client: clientLabel })}
@@ -175,20 +241,25 @@ export function CcSwitchImportModal({
                   className={controlClassName}
                 />
               </label>
-            ) : (
-              <div className="flex h-full min-h-[54px] flex-col justify-center gap-1">
+            </div>
+          ) : (
+            <div className="flex min-h-[54px] items-center gap-3">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-200/75 bg-slate-50 dark:border-neutral-800 dark:bg-neutral-900">
+                <img src={iconByType[clientType]} alt="" className="h-6 w-6" />
+              </span>
+              <div className="min-w-0 flex-1">
                 <div className="text-sm font-semibold text-slate-900 dark:text-white">
                   {clientLabel}
                 </div>
-                <div className="text-xs leading-5 text-slate-500 dark:text-white/55">
+                <div className="mt-0.5 text-xs leading-5 text-slate-500 dark:text-white/55">
                   {t(client.descriptionKey)}
                 </div>
-                <div className="font-mono text-[11px] text-slate-500 dark:text-white/45">
+                <div className="mt-1 font-mono text-[11px] text-slate-500 dark:text-white/45">
                   {t("ccswitch.import_endpoint_path_hint", { path: endpointHint })}
                 </div>
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </section>
 
         <div className="grid gap-3 sm:grid-cols-2">
