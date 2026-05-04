@@ -14,6 +14,10 @@ import {
   makeClientId,
   type VisualConfigValues,
 } from "@/modules/config/visual/types";
+import {
+  filterByConfiguredModelAvailability,
+  loadConfiguredModelAvailability,
+} from "@/modules/models/modelAvailability";
 import { Card } from "@/modules/ui/Card";
 import { useToast } from "@/modules/ui/ToastProvider";
 
@@ -180,7 +184,14 @@ export function ChannelGroupsPage() {
     const ids = Array.isArray(data?.data)
       ? data.data.map((model) => String(model.id ?? "").trim()).filter(Boolean)
       : [];
-    return Array.from(new Set(ids)).sort((a, b) => a.localeCompare(b));
+    const availability = await loadConfiguredModelAvailability();
+    const visibleModels = filterByConfiguredModelAvailability(
+      ids.map((id) => ({ id })),
+      availability,
+    );
+    return Array.from(new Set(visibleModels.map((model) => model.id))).sort((a, b) =>
+      a.localeCompare(b),
+    );
   }, []);
 
   const loadPage = useCallback(async () => {
