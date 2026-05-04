@@ -29,24 +29,22 @@ import iconMinimax from "@/assets/icons/minimax.svg";
 import iconOpenai from "@/assets/icons/openai.svg";
 import iconQwen from "@/assets/icons/qwen.svg";
 import {
+  emptyModelPricing,
   filterByConfiguredModelAvailability,
+  formatModelPrice,
+  hasModelPricing,
   loadConfiguredModelAvailability,
   type ConfiguredModelAvailability,
   type ModelAvailabilityItem,
+  type ModelConfigMetadataItem,
+  type ModelPricing,
+  type ModelPricingMode,
+  normalizeModelConfigMetadataRows,
 } from "@/modules/models/modelAvailability";
 import iconVertex from "@/assets/icons/vertex.svg";
 
-type PricingMode = "token" | "call";
 type ModelScope = "active" | "library";
 type ModelPageTab = ModelScope;
-
-interface ModelPricing {
-  mode: PricingMode;
-  inputPricePerMillion: number;
-  outputPricePerMillion: number;
-  cachedPricePerMillion: number;
-  pricePerCall: number;
-}
 
 interface ModelItem {
   id: string;
@@ -71,7 +69,7 @@ interface ModelFormState {
   ownedBy: string;
   description: string;
   enabled: boolean;
-  mode: PricingMode;
+  mode: ModelPricingMode;
   inputPrice: string;
   outputPrice: string;
   cachedPrice: string;
@@ -123,14 +121,6 @@ const VENDOR_ICONS: Record<string, { light: string; dark: string }> = {
   o4: { light: iconOpenai, dark: iconOpenai },
   qwen: { light: iconQwen, dark: iconQwen },
   vertex: { light: iconVertex, dark: iconVertex },
-};
-
-const emptyPricing: ModelPricing = {
-  mode: "token",
-  inputPricePerMillion: 0,
-  outputPricePerMillion: 0,
-  cachedPricePerMillion: 0,
-  pricePerCall: 0,
 };
 
 const emptyForm: ModelFormState = {
@@ -187,63 +177,29 @@ function VendorIcon({ modelId, size = 14 }: { modelId: string; size?: number }) 
   );
 }
 
-function asNumber(value: unknown): number {
-  const num = Number(value);
-  return Number.isFinite(num) && num >= 0 ? num : 0;
-}
-
 function parsePriceInput(value: string): number {
   const parsed = Number.parseFloat(value);
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
 }
 
-function normalizeModelConfig(raw: Record<string, unknown>): ModelItem | null {
-  const id = String(raw.id ?? raw.model_id ?? raw.name ?? "").trim();
-  if (!id) return null;
+function asNumber(value: unknown): number {
+  const num = Number(value);
+  return Number.isFinite(num) && num >= 0 ? num : 0;
+}
 
-  const pricing = raw.pricing && typeof raw.pricing === "object" ? raw.pricing : {};
-  const pricingRecord = pricing as Record<string, unknown>;
-  const mode: PricingMode =
-    pricingRecord.mode === "call" || raw.pricing_mode === "call" ? "call" : "token";
-
+function metadataToModel(item: ModelConfigMetadataItem): ModelItem {
   return {
-    id,
-    owned_by: String(raw.owned_by ?? raw.owner ?? ""),
-    description: String(raw.description ?? ""),
-    enabled: raw.enabled === false ? false : true,
-    source: String(raw.source ?? ""),
-    pricing: {
-      mode,
-      inputPricePerMillion: asNumber(pricingRecord.input_price_per_million ?? pricingRecord.prompt),
-      outputPricePerMillion: asNumber(
-        pricingRecord.output_price_per_million ?? pricingRecord.completion,
-      ),
-      cachedPricePerMillion: asNumber(
-        pricingRecord.cached_price_per_million ?? pricingRecord.cache,
-      ),
-      pricePerCall: asNumber(pricingRecord.price_per_call ?? pricingRecord.perCall),
-    },
+    id: item.id,
+    owned_by: item.owned_by,
+    description: item.description,
+    enabled: item.enabled,
+    source: item.source,
+    pricing: item.pricing,
   };
 }
 
 function normalizeModelConfigResponse(payload: unknown): ModelItem[] {
-  const record = payload && typeof payload === "object" ? (payload as Record<string, unknown>) : {};
-  const rawList = Array.isArray(record.data)
-    ? record.data
-    : Array.isArray(record.models)
-      ? record.models
-      : Array.isArray(payload)
-        ? payload
-        : [];
-
-  return rawList
-    .map((item) =>
-      item && typeof item === "object"
-        ? normalizeModelConfig(item as Record<string, unknown>)
-        : null,
-    )
-    .filter((item): item is ModelItem => Boolean(item))
-    .sort((a, b) => a.id.localeCompare(b.id));
+  return normalizeModelConfigMetadataRows(payload).map(metadataToModel);
 }
 
 function normalizeOwnerPreset(raw: Record<string, unknown>): ModelOwnerPreset | null {
@@ -300,7 +256,7 @@ function availabilityItemToModel(item: ModelAvailabilityItem): ModelItem {
     description: item.description ?? "",
     enabled: true,
     source: item.source ?? "configured",
-    pricing: { ...emptyPricing },
+    pricing: item.pricing ?? emptyModelPricing(),
   };
 }
 
@@ -374,7 +330,7 @@ function payloadToModel(payload: ReturnType<typeof buildModelPayload>, source: s
   const pricing =
     payload.pricing.mode === "call"
       ? {
-          ...emptyPricing,
+          ...emptyModelPricing(),
           mode: "call" as const,
           pricePerCall: payload.pricing.price_per_call,
         }
@@ -420,34 +376,12 @@ async function saveModelConfig(form: ModelFormState, scope: ModelScope) {
   return payloadToModel(payload, scope === "library" ? "seed" : "user");
 }
 
-function hasPricing(model: ModelItem): boolean {
-  if (model.pricing.mode === "call") return model.pricing.pricePerCall > 0;
-  return (
-    model.pricing.inputPricePerMillion > 0 ||
-    model.pricing.outputPricePerMillion > 0 ||
-    model.pricing.cachedPricePerMillion > 0
-  );
-}
-
 function formatPrice(model: ModelItem, notPricedLabel: string): string {
-  if (model.pricing.mode === "call") {
-    return model.pricing.pricePerCall > 0
-      ? `$${formatPriceAmount(model.pricing.pricePerCall)} / call`
-      : notPricedLabel;
-  }
-
-  if (!hasPricing(model)) return notPricedLabel;
-  return `$${formatPriceAmount(model.pricing.inputPricePerMillion)} / $${formatPriceAmount(model.pricing.outputPricePerMillion)} / $${formatPriceAmount(model.pricing.cachedPricePerMillion)}`;
+  return formatModelPrice(model.pricing, notPricedLabel);
 }
 
-function formatPriceAmount(value: number): string {
-  if (!Number.isFinite(value) || value <= 0) return "0";
-  const rounded = Math.round((value + Number.EPSILON) * 1_000_000) / 1_000_000;
-  return new Intl.NumberFormat("en-US", {
-    maximumFractionDigits: 6,
-    minimumFractionDigits: 0,
-    useGrouping: false,
-  }).format(rounded);
+function hasPricing(model: ModelItem): boolean {
+  return hasModelPricing(model.pricing);
 }
 
 function normalizeOwnerValue(value: string): string {
@@ -1731,7 +1665,7 @@ export function ModelsPage() {
               </label>
               <Select
                 value={form.mode}
-                onChange={(mode) => updateForm({ mode: mode as PricingMode })}
+                onChange={(mode) => updateForm({ mode: mode as ModelPricingMode })}
                 aria-label={t("models_page.pricing_mode")}
                 options={[
                   { value: "token", label: t("models_page.mode_token") },

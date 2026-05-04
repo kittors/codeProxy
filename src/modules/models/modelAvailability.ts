@@ -18,6 +18,8 @@ export type ModelAvailabilityItem = {
   owned_by?: string;
   description?: string;
   source?: string;
+  enabled?: boolean;
+  pricing?: ModelPricing;
 };
 
 export type ConfiguredModelAvailability = {
@@ -25,6 +27,25 @@ export type ConfiguredModelAvailability = {
   items: ModelAvailabilityItem[];
   idSet: Set<string>;
 };
+
+export type ModelPricingMode = "token" | "call";
+
+export interface ModelPricing {
+  mode: ModelPricingMode;
+  inputPricePerMillion: number;
+  outputPricePerMillion: number;
+  cachedPricePerMillion: number;
+  pricePerCall: number;
+}
+
+export interface ModelConfigMetadataItem {
+  id: string;
+  owned_by: string;
+  description: string;
+  enabled: boolean;
+  source: string;
+  pricing: ModelPricing;
+}
 
 type ModelDefinition = {
   id: string;
@@ -46,13 +67,54 @@ const emptyAvailability = (): ConfiguredModelAvailability => ({
   idSet: new Set(),
 });
 
+export const emptyModelPricing = (): ModelPricing => ({
+  mode: "token",
+  inputPricePerMillion: 0,
+  outputPricePerMillion: 0,
+  cachedPricePerMillion: 0,
+  pricePerCall: 0,
+});
+
 const normalizeOwnerValue = (value: string): string =>
   value.trim().replace(/\s+/g, "-").toLowerCase();
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === "object" && !Array.isArray(value);
 
-const normalizeModelConfigRows = (payload: unknown): ModelAvailabilityItem[] => {
+const asNumber = (value: unknown): number => {
+  const num = Number(value);
+  return Number.isFinite(num) && num >= 0 ? num : 0;
+};
+
+export const normalizeModelPricing = (raw: Record<string, unknown>): ModelPricing => {
+  const pricing = isRecord(raw.pricing) ? raw.pricing : {};
+  const mode: ModelPricingMode =
+    pricing.mode === "call" || raw.pricing_mode === "call" ? "call" : "token";
+
+  return {
+    mode,
+    inputPricePerMillion: asNumber(pricing.input_price_per_million ?? pricing.prompt),
+    outputPricePerMillion: asNumber(pricing.output_price_per_million ?? pricing.completion),
+    cachedPricePerMillion: asNumber(pricing.cached_price_per_million ?? pricing.cache),
+    pricePerCall: asNumber(pricing.price_per_call ?? pricing.perCall),
+  };
+};
+
+export const normalizeModelConfigMetadata = (item: unknown): ModelConfigMetadataItem | null => {
+  if (!isRecord(item)) return null;
+  const id = String(item.id ?? item.model_id ?? item.name ?? "").trim();
+  if (!id) return null;
+  return {
+    id,
+    owned_by: String(item.owned_by ?? item.owner ?? ""),
+    description: String(item.description ?? item.display_name ?? ""),
+    enabled: item.enabled === false ? false : true,
+    source: String(item.source ?? ""),
+    pricing: normalizeModelPricing(item),
+  };
+};
+
+export const normalizeModelConfigMetadataRows = (payload: unknown): ModelConfigMetadataItem[] => {
   const record = isRecord(payload) ? payload : {};
   const rawList = Array.isArray(record.data)
     ? record.data
@@ -63,22 +125,13 @@ const normalizeModelConfigRows = (payload: unknown): ModelAvailabilityItem[] => 
         : [];
 
   return rawList
-    .map((item) => {
-      if (!isRecord(item)) return null;
-      const id = String(item.id ?? item.model_id ?? item.name ?? "").trim();
-      if (!id) return null;
-      const ownedBy = String(item.owned_by ?? item.owner ?? "").trim();
-      const description = String(item.description ?? item.display_name ?? "").trim();
-      const source = String(item.source ?? "").trim();
-      return {
-        id,
-        ...(ownedBy ? { owned_by: ownedBy } : {}),
-        ...(description ? { description } : {}),
-        ...(source ? { source } : {}),
-      } satisfies ModelAvailabilityItem;
-    })
-    .filter((item): item is ModelAvailabilityItem => Boolean(item));
+    .map((item) => normalizeModelConfigMetadata(item))
+    .filter((item): item is ModelConfigMetadataItem => Boolean(item))
+    .sort((a, b) => a.id.localeCompare(b.id));
 };
+
+const normalizeModelConfigRows = (payload: unknown): ModelAvailabilityItem[] =>
+  normalizeModelConfigMetadataRows(payload);
 
 const addModel = (
   map: Map<string, ModelAvailabilityItem>,
@@ -303,4 +356,34 @@ export const filterByConfiguredModelAvailability = <T extends { id: string }>(
 ): T[] => {
   if (!availability.scoped) return models;
   return models.filter((model) => availability.idSet.has(model.id.toLowerCase()));
+};
+
+export const hasModelPricing = (pricing: ModelPricing): boolean => {
+  if (pricing.mode === "call") return pricing.pricePerCall > 0;
+  return (
+    pricing.inputPricePerMillion > 0 ||
+    pricing.outputPricePerMillion > 0 ||
+    pricing.cachedPricePerMillion > 0
+  );
+};
+
+export const formatModelPriceAmount = (value: number): string => {
+  if (!Number.isFinite(value) || value <= 0) return "0";
+  const rounded = Math.round((value + Number.EPSILON) * 1_000_000) / 1_000_000;
+  return new Intl.NumberFormat("en-US", {
+    maximumFractionDigits: 6,
+    minimumFractionDigits: 0,
+    useGrouping: false,
+  }).format(rounded);
+};
+
+export const formatModelPrice = (pricing: ModelPricing, notPricedLabel: string): string => {
+  if (pricing.mode === "call") {
+    return pricing.pricePerCall > 0
+      ? `$${formatModelPriceAmount(pricing.pricePerCall)} / call`
+      : notPricedLabel;
+  }
+
+  if (!hasModelPricing(pricing)) return notPricedLabel;
+  return `$${formatModelPriceAmount(pricing.inputPricePerMillion)} / $${formatModelPriceAmount(pricing.outputPricePerMillion)} / $${formatModelPriceAmount(pricing.cachedPricePerMillion)}`;
 };

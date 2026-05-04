@@ -8,7 +8,10 @@ import {
   type RoutingConfigPathRouteItem,
 } from "@/lib/http/apis/routing-config";
 import { apiClient } from "@/lib/http/client";
-import { RoutingConfigEditor } from "@/modules/channel-groups/RoutingConfigEditor";
+import {
+  RoutingConfigEditor,
+  type RoutingModelOption,
+} from "@/modules/channel-groups/RoutingConfigEditor";
 import {
   DEFAULT_VISUAL_VALUES,
   makeClientId,
@@ -189,9 +192,20 @@ export function ChannelGroupsPage() {
       ids.map((id) => ({ id })),
       availability,
     );
-    return Array.from(new Set(visibleModels.map((model) => model.id))).sort((a, b) =>
-      a.localeCompare(b),
+    const metadataById = new Map(
+      availability.items.map((model) => [model.id.toLowerCase(), model] as const),
     );
+    return Array.from(new Set(visibleModels.map((model) => model.id)))
+      .sort((a, b) => a.localeCompare(b))
+      .map((id): RoutingModelOption => {
+        const metadata = metadataById.get(id.toLowerCase());
+        return {
+          id,
+          owned_by: metadata?.owned_by,
+          description: metadata?.description,
+          pricing: metadata?.pricing,
+        };
+      });
   }, []);
 
   const loadPage = useCallback(async () => {
