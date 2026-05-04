@@ -8,6 +8,7 @@ import {
   useRef,
   useState,
   type ButtonHTMLAttributes,
+  type HTMLAttributes,
   type PropsWithChildren,
 } from "react";
 import { motion } from "framer-motion";
@@ -64,7 +65,11 @@ export function Tabs({
   return <TabsContext value={valueObj}>{children}</TabsContext>;
 }
 
-export function TabsList({ children }: PropsWithChildren) {
+export function TabsList({
+  children,
+  className,
+  ...divProps
+}: PropsWithChildren<HTMLAttributes<HTMLDivElement>>) {
   const { size, value } = useTabs();
   const containerRef = useRef<HTMLDivElement>(null);
   const [indicator, setIndicator] = useState<{ x: number; width: number } | null>(null);
@@ -103,10 +108,12 @@ export function TabsList({ children }: PropsWithChildren) {
   return (
     <div
       ref={containerRef}
+      {...divProps}
       role="tablist"
       className={[
         "scrollbar-hidden relative inline-flex max-w-full gap-0.5 overflow-x-auto whitespace-nowrap rounded-full bg-[#EBEBEC] p-0.5 dark:bg-[#27272A]",
         tabsListHeightBySize[size],
+        className,
       ].join(" ")}
     >
       {indicator ? (
