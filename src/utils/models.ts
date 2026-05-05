@@ -90,6 +90,129 @@ export interface ModelGroup {
   items: ModelInfo[];
 }
 
+/** 预定义模型分组 — 用于供应商配置的快速加载 */
+export const PREDEFINED_MODEL_GROUPS: ModelGroup[] = [
+  {
+    id: "gpt",
+    label: "OpenAI / GPT",
+    items: [
+      { name: "gpt-4o", alias: "GPT-4o" },
+      { name: "gpt-4o-mini", alias: "GPT-4o Mini" },
+      { name: "gpt-4-turbo", alias: "GPT-4 Turbo" },
+      { name: "gpt-4", alias: "GPT-4" },
+      { name: "gpt-3.5-turbo", alias: "GPT-3.5 Turbo" },
+      { name: "o1", alias: "o1" },
+      { name: "o1-mini", alias: "o1 Mini" },
+      { name: "o3-mini", alias: "o3 Mini" },
+      { name: "chatgpt-4o-latest", alias: "ChatGPT-4o Latest" },
+    ],
+  },
+  {
+    id: "claude",
+    label: "Anthropic / Claude",
+    items: [
+      { name: "claude-3-5-sonnet-20241022", alias: "Claude 3.5 Sonnet" },
+      { name: "claude-3-5-sonnet-latest", alias: "Claude 3.5 Sonnet (Latest)" },
+      { name: "claude-3-opus-20240229", alias: "Claude 3 Opus" },
+      { name: "claude-3-sonnet-20240229", alias: "Claude 3 Sonnet" },
+      { name: "claude-3-haiku-20240307", alias: "Claude 3 Haiku" },
+      { name: "claude-3-5-haiku-20241022", alias: "Claude 3.5 Haiku" },
+      { name: "claude-2.1", alias: "Claude 2.1" },
+      { name: "claude-2.0", alias: "Claude 2.0" },
+    ],
+  },
+  {
+    id: "gemini",
+    label: "Google / Gemini",
+    items: [
+      { name: "gemini-2.5-pro-exp-03-25", alias: "Gemini 2.5 Pro" },
+      { name: "gemini-2.0-flash", alias: "Gemini 2.0 Flash" },
+      { name: "gemini-2.0-flash-thinking-exp-01-21", alias: "Gemini 2.0 Flash Thinking" },
+      { name: "gemini-2.0-pro-exp-02-05", alias: "Gemini 2.0 Pro" },
+      { name: "gemini-1.5-pro", alias: "Gemini 1.5 Pro" },
+      { name: "gemini-1.5-pro-latest", alias: "Gemini 1.5 Pro Latest" },
+      { name: "gemini-1.5-flash", alias: "Gemini 1.5 Flash" },
+      { name: "gemini-1.5-flash-latest", alias: "Gemini 1.5 Flash Latest" },
+    ],
+  },
+  {
+    id: "kimi",
+    label: "Moonshot / Kimi",
+    items: [
+      { name: "kimi-k1.5", alias: "Kimi K1.5" },
+      { name: "kimi-k2", alias: "Kimi K2" },
+      { name: "kimi-moonshot", alias: "Kimi Moonshot" },
+    ],
+  },
+  {
+    id: "qwen",
+    label: "Alibaba / Qwen",
+    items: [
+      { name: "qwen-turbo", alias: "Qwen Turbo" },
+      { name: "qwen-plus", alias: "Qwen Plus" },
+      { name: "qwen-max", alias: "Qwen Max" },
+      { name: "qwen-coder-plus", alias: "Qwen Coder Plus" },
+      { name: "qwen-coder-plus-latest", alias: "Qwen Coder Plus Latest" },
+      { name: "qwen2.5-72b-instruct", alias: "Qwen 2.5 72B" },
+    ],
+  },
+  {
+    id: "glm",
+    label: "Zhipu / GLM",
+    items: [
+      { name: "glm-4", alias: "GLM-4" },
+      { name: "glm-4-plus", alias: "GLM-4 Plus" },
+      { name: "glm-4-flash", alias: "GLM-4 Flash" },
+      { name: "glm-4-air", alias: "GLM-4 Air" },
+      { name: "glm-4-airx", alias: "GLM-4 AirX" },
+      { name: "chatglm-turbo", alias: "ChatGLM Turbo" },
+    ],
+  },
+  {
+    id: "grok",
+    label: "xAI / Grok",
+    items: [
+      { name: "grok-2", alias: "Grok 2" },
+      { name: "grok-2-vision", alias: "Grok 2 Vision" },
+      { name: "grok-2-vision-latest", alias: "Grok 2 Vision Latest" },
+      { name: "grok-beta", alias: "Grok Beta" },
+      { name: "grok-vision-beta", alias: "Grok Vision Beta" },
+    ],
+  },
+  {
+    id: "deepseek",
+    label: "DeepSeek",
+    items: [
+      { name: "deepseek-chat", alias: "DeepSeek Chat" },
+      { name: "deepseek-coder", alias: "DeepSeek Coder" },
+      { name: "deepseek-reasoner", alias: "DeepSeek Reasoner" },
+      { name: "deepseek-v3", alias: "DeepSeek V3" },
+      { name: "deepseek-r1", alias: "DeepSeek R1" },
+    ],
+  },
+  {
+    id: "minimax",
+    label: "MiniMax",
+    items: [
+      { name: "minimax-text-01", alias: "MiniMax Text 01" },
+      { name: "abab6.5", alias: "Abab 6.5" },
+      { name: "abab6.5s", alias: "Abab 6.5s" },
+      { name: "abab5.5", alias: "Abab 5.5" },
+    ],
+  },
+];
+
+/** 根据分组 ID 获取预定义模型列表 */
+export function getPredefinedModelsByGroup(groupId: string): ModelInfo[] {
+  const group = PREDEFINED_MODEL_GROUPS.find((g) => g.id === groupId);
+  return group ? [...group.items] : [];
+}
+
+/** 获取所有预定义模型分组选项（用于下拉选择） */
+export function getPredefinedModelGroupOptions(): { value: string; label: string }[] {
+  return PREDEFINED_MODEL_GROUPS.map((g) => ({ value: g.id, label: g.label }));
+}
+
 export function classifyModels(
   models: ModelInfo[] = [],
   { otherLabel = "Other" } = {},
