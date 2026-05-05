@@ -2863,6 +2863,7 @@
     "models_default_hint": "Leave empty to use default routing; fill in values to enable aliases, priorities, and more.",
     "model_group_label": "Model Category",
     "model_group_placeholder": "Select model category...",
+    "model_group_search_placeholder": "Search model category...",
     "load_models": "Load Models",
     "model_group_hint": "Select a model category and click Load to quickly import common models from that vendor. Existing models will not be duplicated.",
     "excluded_models_label": "Excluded models (optional)",

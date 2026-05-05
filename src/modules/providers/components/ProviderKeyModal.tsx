@@ -14,6 +14,7 @@ import { Button } from "@/modules/ui/Button";
 import { Checkbox } from "@/modules/ui/Checkbox";
 import { TextInput } from "@/modules/ui/Input";
 import { Modal } from "@/modules/ui/Modal";
+import { SearchableSelect } from "@/modules/ui/SearchableSelect";
 import { Select } from "@/modules/ui/Select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/modules/ui/Tabs";
 import { ToggleSwitch } from "@/modules/ui/ToggleSwitch";
@@ -809,10 +810,12 @@ export function ProviderKeyModal({
                         {t("providers.model_group_label")}
                       </p>
                       <div className="mt-2">
-                        <Select
+                        <SearchableSelect
                           value={selectedModelGroup}
                           onChange={(value) => setSelectedModelGroup(value)}
                           options={modelGroupOptions}
+                          placeholder={t("providers.model_group_placeholder")}
+                          searchPlaceholder={t("providers.model_group_search_placeholder")}
                           aria-label={t("providers.model_group_label")}
                         />
                       </div>

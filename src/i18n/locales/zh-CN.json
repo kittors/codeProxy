@@ -2372,6 +2372,7 @@
     "models_default_hint": "留空使用默认路由；填写可启用模型别名、优先级等。",
     "model_group_label": "模型归属分组",
     "model_group_placeholder": "选择模型分组...",
+    "model_group_search_placeholder": "搜索模型归属...",
     "load_models": "加载模型",
     "model_group_hint": "选择模型分组后点击加载，可快速导入该厂商的常用模型列表。已存在的模型不会重复添加。",
     "excluded_models_label": "排除模型（可选）",
