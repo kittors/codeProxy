@@ -97,6 +97,16 @@ const toDateTimeLocalInput = (date: Date): string =>
     padDatePart(date.getMinutes()),
   ].join("");
 
+function createDeferred<T>() {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+}
+
 describe("AuthFilesPage files table", () => {
   beforeEach(async () => {
     await i18n.changeLanguage("en");
@@ -1146,7 +1156,8 @@ describe("AuthFilesPage files table", () => {
       within(tooltips[0]).getByText("Claude Sonnet 4.6 (Thinking) [claude-sonnet-4-6]"),
     ).toBeInTheDocument();
     const resetText = Array.from(tooltips[0].querySelectorAll("span")).find(
-      (element) => element.textContent?.includes("秒") && element.className.includes("tabular-nums"),
+      (element) =>
+        element.textContent?.includes("秒") && element.className.includes("tabular-nums"),
     );
     expect(resetText).toBeTruthy();
     expect(resetText).not.toHaveClass("truncate");
@@ -1276,7 +1287,7 @@ describe("AuthFilesPage files table", () => {
     expect(screen.getByText("44%")).toBeInTheDocument();
   });
 
-  test("cards view does not spin card refresh actions for tab-switch background quota refresh", async () => {
+  test("cards view spins current-page refresh actions when switching provider tabs and clears them per card", async () => {
     const now = Date.now();
     const files = [
       {
@@ -1312,8 +1323,26 @@ describe("AuthFilesPage files table", () => {
       },
     ] as any[];
 
+    const codexDeferreds = {
+      "codex-a.json": createDeferred<{
+        items: { label: string; percent: number; resetAtMs: number }[];
+      }>(),
+      "codex-b.json": createDeferred<{
+        items: { label: string; percent: number; resetAtMs: number }[];
+      }>(),
+      "codex-c.json": createDeferred<{
+        items: { label: string; percent: number; resetAtMs: number }[];
+      }>(),
+    };
+
     mocks.list.mockImplementation(async () => ({ files }));
-    mocks.fetchQuota.mockImplementation(() => new Promise(() => {}));
+    mocks.fetchQuota.mockImplementation((_provider, file) => {
+      const target = codexDeferreds[file?.name as keyof typeof codexDeferreds];
+      if (target) return target.promise;
+      return Promise.resolve({
+        items: [{ label: "m_quota.code_5h", percent: 88, resetAtMs: now + 60_000 }],
+      });
+    });
 
     window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
     window.sessionStorage.setItem(
@@ -1346,17 +1375,69 @@ describe("AuthFilesPage files table", () => {
     expect(await screen.findByText("codex-a.json")).toBeInTheDocument();
 
     await waitFor(() =>
-      expect(mocks.fetchQuota).toHaveBeenCalledWith(
-        "codex",
-        expect.objectContaining({ name: "codex-a.json" }),
-      ),
+      expect(
+        mocks.fetchQuota.mock.calls
+          .filter(([, file]) =>
+            String((file as { name?: string } | undefined)?.name).startsWith("codex-"),
+          )
+          .map(([, file]) => (file as { name: string }).name),
+      ).toEqual(["codex-a.json", "codex-b.json", "codex-c.json"]),
     );
 
     const cards = screen.getByTestId("auth-files-cards");
-    const cardRefreshButtons = within(cards).getAllByRole("button", { name: "Refresh" });
-    expect(cardRefreshButtons).toHaveLength(3);
-    cardRefreshButtons.forEach((button) => {
-      expect(button.querySelector("svg")).not.toHaveClass("animate-spin");
+    expect(
+      within(cards)
+        .getAllByText(/^codex-[abc]\.json$/)
+        .map((node) => node.textContent),
+    ).toEqual(["codex-a.json", "codex-b.json", "codex-c.json"]);
+
+    const cardA = screen.getByText("codex-a.json").closest("section");
+    const cardB = screen.getByText("codex-b.json").closest("section");
+    const cardC = screen.getByText("codex-c.json").closest("section");
+    expect(cardA).not.toBeNull();
+    expect(cardB).not.toBeNull();
+    expect(cardC).not.toBeNull();
+
+    const refreshButtonA = within(cardA as HTMLElement).getByRole("button", { name: "Refresh" });
+    const refreshButtonB = within(cardB as HTMLElement).getByRole("button", { name: "Refresh" });
+    const refreshButtonC = within(cardC as HTMLElement).getByRole("button", { name: "Refresh" });
+
+    await waitFor(() => {
+      expect(refreshButtonA.querySelector("svg")).toHaveClass("animate-spin");
+      expect(refreshButtonB.querySelector("svg")).toHaveClass("animate-spin");
+      expect(refreshButtonC.querySelector("svg")).toHaveClass("animate-spin");
+    });
+
+    await act(async () => {
+      codexDeferreds["codex-a.json"].resolve({
+        items: [{ label: "m_quota.code_5h", percent: 12, resetAtMs: now + 60_000 }],
+      });
+      await codexDeferreds["codex-a.json"].promise;
+    });
+
+    await waitFor(() =>
+      expect(refreshButtonA.querySelector("svg")).not.toHaveClass("animate-spin"),
+    );
+    expect(refreshButtonB.querySelector("svg")).toHaveClass("animate-spin");
+    expect(refreshButtonC.querySelector("svg")).toHaveClass("animate-spin");
+
+    await act(async () => {
+      codexDeferreds["codex-b.json"].resolve({
+        items: [{ label: "m_quota.code_5h", percent: 34, resetAtMs: now + 60_000 }],
+      });
+      codexDeferreds["codex-c.json"].resolve({
+        items: [{ label: "m_quota.code_5h", percent: 56, resetAtMs: now + 60_000 }],
+      });
+      await Promise.all([
+        codexDeferreds["codex-b.json"].promise,
+        codexDeferreds["codex-c.json"].promise,
+      ]);
+    });
+
+    await waitFor(() => {
+      expect(refreshButtonA.querySelector("svg")).not.toHaveClass("animate-spin");
+      expect(refreshButtonB.querySelector("svg")).not.toHaveClass("animate-spin");
+      expect(refreshButtonC.querySelector("svg")).not.toHaveClass("animate-spin");
     });
   });
 
