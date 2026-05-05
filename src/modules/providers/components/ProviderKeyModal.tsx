@@ -27,10 +27,7 @@ import {
   normalizeDiscoveredModels,
   stripDisableAllModelsRule,
 } from "@/modules/providers/providers-helpers";
-import {
-  getPredefinedModelGroupOptions,
-  getPredefinedModelsByGroup,
-} from "@/utils/models";
+import { modelsApi } from "@/lib/http/apis";
 import type { ModelEntryDraft } from "@/modules/providers/ModelInputList";
 import { createEmptyModelEntry } from "@/modules/providers/ModelInputList";
 
@@ -109,16 +106,24 @@ export function ProviderKeyModal({
   const isBedrockSigV4 = isBedrock && keyDraft.authMode === "sigv4";
   const isOpenCodeGo = editKeyType === "opencode-go";
 
-  /** 模型归属分组选择（用于快速加载预定义模型列表） */
+  /** 从 /model-configs API 动态获取模型列表，按 owned_by 分组 */
+  const [modelConfigs, setModelConfigs] = useState<{ id: string; owned_by: string }[]>([]);
+  const [modelConfigsLoading, setModelConfigsLoading] = useState(false);
   const [selectedModelGroup, setSelectedModelGroup] = useState("");
-  const predefinedModelGroupOptions = useMemo(() => {
-    const options = getPredefinedModelGroupOptions();
-    return [{ value: "", label: t("providers.model_group_placeholder") }, ...options];
-  }, [t]);
+
+  const modelGroupOptions = useMemo(() => {
+    const uniqueOwners = Array.from(
+      new Set(modelConfigs.map((m) => m.owned_by).filter(Boolean)),
+    ).sort((a, b) => a.localeCompare(b));
+    return [
+      { value: "", label: t("providers.model_group_placeholder") },
+      ...uniqueOwners.map((owner) => ({ value: owner, label: owner })),
+    ];
+  }, [modelConfigs, t]);
 
   const loadModelsFromGroup = useCallback(() => {
     if (!selectedModelGroup) return;
-    const models = getPredefinedModelsByGroup(selectedModelGroup);
+    const models = modelConfigs.filter((m) => m.owned_by === selectedModelGroup);
     if (!models.length) return;
 
     const existingNames = new Set(
@@ -127,13 +132,13 @@ export function ProviderKeyModal({
 
     const newEntries: ModelEntryDraft[] = [];
     for (const model of models) {
-      const name = model.name.trim();
+      const name = model.id.trim();
       if (!name || existingNames.has(name.toLowerCase())) continue;
       existingNames.add(name.toLowerCase());
       newEntries.push({
         id: `model-${Date.now()}-${Math.random().toString(16).slice(2)}-${name}`,
         name,
-        alias: model.alias ?? "",
+        alias: "",
         priorityText: "",
         testModel: "",
       });
@@ -145,7 +150,7 @@ export function ProviderKeyModal({
       ...prev,
       modelEntries: [...prev.modelEntries, ...newEntries],
     }));
-  }, [selectedModelGroup, keyDraft.modelEntries, setKeyDraft]);
+  }, [selectedModelGroup, modelConfigs, keyDraft.modelEntries, setKeyDraft]);
 
   useEffect(() => {
     if (!open) return;
@@ -153,6 +158,28 @@ export function ProviderKeyModal({
     setOpenCodeModelQuery("");
     setSelectedModelGroup("");
   }, [editKeyIndex, editKeyType, open]);
+
+  useEffect(() => {
+    if (!open || isOpenCodeGo) return;
+    let cancelled = false;
+    setModelConfigsLoading(true);
+    modelsApi
+      .getModelConfigs("library")
+      .then((items) => {
+        if (cancelled) return;
+        setModelConfigs(items.map((item) => ({ id: item.id, owned_by: item.owned_by })));
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setModelConfigs([]);
+      })
+      .finally(() => {
+        if (!cancelled) setModelConfigsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, isOpenCodeGo]);
 
   const fetchOpenCodeModels = useCallback(async () => {
     if (!isOpenCodeGo) return;
@@ -785,7 +812,7 @@ export function ProviderKeyModal({
                         <Select
                           value={selectedModelGroup}
                           onChange={(value) => setSelectedModelGroup(value)}
-                          options={predefinedModelGroupOptions}
+                          options={modelGroupOptions}
                           aria-label={t("providers.model_group_label")}
                         />
                       </div>
@@ -794,7 +821,7 @@ export function ProviderKeyModal({
                       variant="secondary"
                       size="sm"
                       onClick={loadModelsFromGroup}
-                      disabled={!selectedModelGroup}
+                      disabled={!selectedModelGroup || modelConfigsLoading}
                     >
                       {t("providers.load_models")}
                     </Button>
