@@ -59,6 +59,7 @@ export function useAuthFilesQuotaState({
   const quotaAutoRefreshingRef = useRef<Set<string>>(new Set());
   const quotaByFileNameRef = useRef<Record<string, QuotaState>>(quotaByFileName);
   const quotaWarmupAttemptRef = useRef<Map<string, number>>(new Map());
+  const visiblePageSignatureRef = useRef<string | null>(null);
   const [nowMs, setNowMs] = useState(() => Date.now());
 
   const [quotaPreviewMode, setQuotaPreviewMode] = useLocalStorage<QuotaPreviewMode>(
@@ -362,33 +363,56 @@ export function useAuthFilesQuotaState({
     [connectivityState],
   );
 
+  const resolveQuotaTargets = useCallback((targetFiles: AuthFileItem[]) => {
+    return targetFiles
+      .map((file) => {
+        const provider = resolveQuotaProvider(file);
+        return provider ? { file, provider } : null;
+      })
+      .filter(Boolean) as { file: AuthFileItem; provider: QuotaProvider }[];
+  }, []);
+
+  const markQuotaTargetsLoading = useCallback(
+    (targets: { file: AuthFileItem; provider: QuotaProvider }[]) => {
+      if (!targets.length) return;
+      setQuotaByFileName((prev) => {
+        const next = { ...prev };
+        for (const target of targets) {
+          next[target.file.name] = {
+            status: "loading",
+            items: prev[target.file.name]?.items ?? [],
+            planType: prev[target.file.name]?.planType,
+            error: prev[target.file.name]?.error,
+            updatedAt: prev[target.file.name]?.updatedAt,
+          };
+        }
+        return next;
+      });
+    },
+    [],
+  );
+
   const collectQuotaFetchTargets = useCallback(
     (targetFiles: AuthFileItem[]) => {
       const staleMs = Math.max(15_000, quotaAutoRefreshMs || 30_000);
       const now = Date.now();
 
-      return targetFiles
-        .map((file) => {
-          const provider = resolveQuotaProvider(file);
-          return provider ? { file, provider } : null;
-        })
-        .filter(Boolean)
-        .filter((candidate) => {
-          const current = candidate as { file: AuthFileItem; provider: QuotaProvider };
-          if (quotaInFlightRef.current.has(current.file.name)) return false;
-          const state = quotaByFileNameRef.current[current.file.name];
-          const items = Array.isArray(state?.items) ? state.items : [];
-          const updatedAt = state?.updatedAt ?? 0;
-          const isStale =
-            typeof updatedAt === "number" && updatedAt > 0 ? now - updatedAt > staleMs : true;
-          const needs = !state || state.status === "error" || items.length === 0 || isStale;
-          if (!needs) return false;
+      return resolveQuotaTargets(targetFiles).filter((candidate) => {
+        const current = candidate as { file: AuthFileItem; provider: QuotaProvider };
+        if (quotaInFlightRef.current.has(current.file.name)) return false;
+        const state = quotaByFileNameRef.current[current.file.name];
+        const items = Array.isArray(state?.items) ? state.items : [];
+        const updatedAt = state?.updatedAt ?? 0;
+        const isStale =
+          typeof updatedAt === "number" && updatedAt > 0 ? now - updatedAt > staleMs : true;
+        const needs = !state || state.status === "error" || items.length === 0 || isStale;
+        if (!needs) return false;
 
-          const lastAttempt = quotaWarmupAttemptRef.current.get(current.file.name) ?? 0;
-          return now - lastAttempt >= 5_000;
-        }) as { file: AuthFileItem; provider: QuotaProvider }[];
+        const lastAttempt = quotaWarmupAttemptRef.current.get(current.file.name) ?? 0;
+        return now - lastAttempt >= 5_000;
+      }) as { file: AuthFileItem; provider: QuotaProvider }[];
     },
-    [quotaAutoRefreshMs],
+    [quotaAutoRefreshMs, resolveQuotaTargets],
   );
 
   const runQuotaRefreshBatch = useCallback(
@@ -434,15 +458,27 @@ export function useAuthFilesQuotaState({
     if (tab !== "files") return;
     if (loading) return;
 
-    const toFetch = collectQuotaFetchTargets(pageItems);
+    const visibleSignature = pageItems.map((file) => file.name).join("\n");
+    const previousVisibleSignature = visiblePageSignatureRef.current;
+    visiblePageSignatureRef.current = visibleSignature;
+
+    const switchedVisiblePage =
+      previousVisibleSignature !== null && previousVisibleSignature !== visibleSignature;
+    const toFetch = switchedVisiblePage
+      ? resolveQuotaTargets(pageItems)
+      : collectQuotaFetchTargets(pageItems);
     if (!toFetch.length) return;
+
+    if (switchedVisiblePage) {
+      markQuotaTargetsLoading(toFetch);
+    }
 
     let cancelled = false;
     void (async () => {
       if (!cancelled) {
         await runQuotaRefreshBatch(toFetch, {
           markAsAutoRefreshing: true,
-          showLoading: false,
+          showLoading: switchedVisiblePage,
         });
       }
     })();
@@ -450,7 +486,15 @@ export function useAuthFilesQuotaState({
     return () => {
       cancelled = true;
     };
-  }, [collectQuotaFetchTargets, loading, pageItems, runQuotaRefreshBatch, tab]);
+  }, [
+    collectQuotaFetchTargets,
+    loading,
+    markQuotaTargetsLoading,
+    pageItems,
+    resolveQuotaTargets,
+    runQuotaRefreshBatch,
+    tab,
+  ]);
 
   const quotaLastUpdatedAtMs = useMemo(() => {
     let latest = 0;
@@ -487,31 +531,13 @@ export function useAuthFilesQuotaState({
     if (tab !== "files") return;
     if (loading) return;
 
-    const targets = pageItems
-      .map((file) => {
-        const provider = resolveQuotaProvider(file);
-        return provider ? { file, provider } : null;
-      })
-      .filter(Boolean) as { file: AuthFileItem; provider: QuotaProvider }[];
-
+    const targets = resolveQuotaTargets(pageItems);
     if (!targets.length) return;
 
-    setQuotaByFileName((prev) => {
-      const next = { ...prev };
-      for (const target of targets) {
-        next[target.file.name] = {
-          status: "loading",
-          items: prev[target.file.name]?.items ?? [],
-          planType: prev[target.file.name]?.planType,
-          error: prev[target.file.name]?.error,
-          updatedAt: prev[target.file.name]?.updatedAt,
-        };
-      }
-      return next;
-    });
+    markQuotaTargetsLoading(targets);
 
     await runQuotaRefreshBatch(targets, { markAsAutoRefreshing: true });
-  }, [loading, pageItems, runQuotaRefreshBatch, tab]);
+  }, [loading, markQuotaTargetsLoading, pageItems, resolveQuotaTargets, runQuotaRefreshBatch, tab]);
 
   useInterval(
     () => {
