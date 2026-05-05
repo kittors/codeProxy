@@ -27,6 +27,12 @@ import {
   normalizeDiscoveredModels,
   stripDisableAllModelsRule,
 } from "@/modules/providers/providers-helpers";
+import {
+  getPredefinedModelGroupOptions,
+  getPredefinedModelsByGroup,
+} from "@/utils/models";
+import type { ModelEntryDraft } from "@/modules/providers/ModelInputList";
+import { createEmptyModelEntry } from "@/modules/providers/ModelInputList";
 
 const OPENCODE_GO_MODELS_URL = "https://opencode.ai/zen/go/v1/models";
 const OPENCODE_GO_CHAT_URL = "https://opencode.ai/zen/go/v1/chat/completions";
@@ -103,10 +109,49 @@ export function ProviderKeyModal({
   const isBedrockSigV4 = isBedrock && keyDraft.authMode === "sigv4";
   const isOpenCodeGo = editKeyType === "opencode-go";
 
+  /** 模型归属分组选择（用于快速加载预定义模型列表） */
+  const [selectedModelGroup, setSelectedModelGroup] = useState("");
+  const predefinedModelGroupOptions = useMemo(() => {
+    const options = getPredefinedModelGroupOptions();
+    return [{ value: "", label: t("providers.model_group_placeholder") }, ...options];
+  }, [t]);
+
+  const loadModelsFromGroup = useCallback(() => {
+    if (!selectedModelGroup) return;
+    const models = getPredefinedModelsByGroup(selectedModelGroup);
+    if (!models.length) return;
+
+    const existingNames = new Set(
+      keyDraft.modelEntries.map((e) => e.name.trim().toLowerCase()).filter(Boolean),
+    );
+
+    const newEntries: ModelEntryDraft[] = [];
+    for (const model of models) {
+      const name = model.name.trim();
+      if (!name || existingNames.has(name.toLowerCase())) continue;
+      existingNames.add(name.toLowerCase());
+      newEntries.push({
+        id: `model-${Date.now()}-${Math.random().toString(16).slice(2)}-${name}`,
+        name,
+        alias: model.alias ?? "",
+        priorityText: "",
+        testModel: "",
+      });
+    }
+
+    if (newEntries.length === 0) return;
+
+    setKeyDraft((prev) => ({
+      ...prev,
+      modelEntries: [...prev.modelEntries, ...newEntries],
+    }));
+  }, [selectedModelGroup, keyDraft.modelEntries, setKeyDraft]);
+
   useEffect(() => {
     if (!open) return;
     setModalTab("basic");
     setOpenCodeModelQuery("");
+    setSelectedModelGroup("");
   }, [editKeyIndex, editKeyType, open]);
 
   const fetchOpenCodeModels = useCallback(async () => {
@@ -730,6 +775,35 @@ export function ProviderKeyModal({
               </SectionCard>
             ) : (
               <>
+                <SectionCard>
+                  <div className="flex flex-wrap items-end gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                        {t("providers.model_group_label")}
+                      </p>
+                      <div className="mt-2">
+                        <Select
+                          value={selectedModelGroup}
+                          onChange={(value) => setSelectedModelGroup(value)}
+                          options={predefinedModelGroupOptions}
+                          aria-label={t("providers.model_group_label")}
+                        />
+                      </div>
+                    </div>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={loadModelsFromGroup}
+                      disabled={!selectedModelGroup}
+                    >
+                      {t("providers.load_models")}
+                    </Button>
+                  </div>
+                  <p className="mt-2 text-xs text-slate-500 dark:text-white/55">
+                    {t("providers.model_group_hint")}
+                  </p>
+                </SectionCard>
+
                 <SectionCard>
                   <ModelInputList
                     title={
