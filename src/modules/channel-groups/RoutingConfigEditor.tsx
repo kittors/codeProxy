@@ -890,7 +890,14 @@ export function RoutingConfigEditor({
         ),
       },
     ],
-    [availableChannelDetails, disabled, draftStaleChannelIds, removeDraftChannel, t, updateDraftChannel],
+    [
+      availableChannelDetails,
+      disabled,
+      draftStaleChannelIds,
+      removeDraftChannel,
+      t,
+      updateDraftChannel,
+    ],
   );
 
   const modelColumns = useMemo<VirtualTableColumn<RoutingModelOption>[]>(

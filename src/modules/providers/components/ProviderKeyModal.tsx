@@ -30,7 +30,6 @@ import {
 } from "@/modules/providers/providers-helpers";
 import { modelsApi } from "@/lib/http/apis";
 import type { ModelEntryDraft } from "@/modules/providers/ModelInputList";
-import { createEmptyModelEntry } from "@/modules/providers/ModelInputList";
 
 const OPENCODE_GO_MODELS_URL = "https://opencode.ai/zen/go/v1/models";
 const OPENCODE_GO_CHAT_URL = "https://opencode.ai/zen/go/v1/chat/completions";
