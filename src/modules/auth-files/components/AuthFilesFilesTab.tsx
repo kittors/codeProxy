@@ -37,8 +37,8 @@ import {
   isRuntimeOnlyAuthFile,
   normalizeProviderKey,
   resolveAuthFileDisplayName,
-  resolveAuthFileDisplayTags,
   resolveAuthFilePlanType,
+  resolveAuthFileSupplementalTags,
   resolveFileType,
 } from "@/modules/auth-files/helpers/authFilesPageUtils";
 import type { QuotaItem, QuotaState } from "@/modules/quota/quota-helpers";
@@ -533,7 +533,7 @@ export function AuthFilesFilesTab({
                   const provider = resolveQuotaProvider(file);
                   const state = quotaByFileName[file.name] ?? { status: "idle", items: [] };
                   const planType = resolveAuthFilePlanType(file, state);
-                  const displayTags = resolveAuthFileDisplayTags(file);
+                  const displayTags = resolveAuthFileSupplementalTags(file, state);
                   const subscriptionBadge = renderSubscriptionBadge(file);
                   const stats = resolveAuthFileStats(file, usageIndex);
                   const totalCalls = stats.success + stats.failure;

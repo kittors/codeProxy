@@ -335,7 +335,7 @@ describe("AuthFilesPage files table", () => {
     expect(screen.queryByText("Code: 5h")).not.toBeInTheDocument();
   });
 
-  test("renders returned auth-file display tags in cards view", async () => {
+  test("cards view only shows non-duplicated auth-file tags", async () => {
     window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
     mocks.list.mockImplementation(async () => ({
       files: [
@@ -344,6 +344,7 @@ describe("AuthFilesPage files table", () => {
           label: "A_GptPro",
           account_type: "oauth",
           type: "codex",
+          plan_type: "pro",
           size: 1024,
           modified: Date.now(),
           disabled: false,
@@ -367,8 +368,12 @@ describe("AuthFilesPage files table", () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByText("A_GptPro")).toBeInTheDocument();
-    expect(screen.getByTestId("auth-files-cards")).toHaveTextContent("vip-team");
+    const title = await screen.findByText("A_GptPro");
+    const card = title.closest("section");
+    expect(card).not.toBeNull();
+    expect(within(card as HTMLElement).getByText("vip-team")).toBeInTheDocument();
+    expect(within(card as HTMLElement).getAllByText(/^codex$/i)).toHaveLength(1);
+    expect(within(card as HTMLElement).queryByText(/^pro$/i)).not.toBeInTheDocument();
   });
 
   test("saves auth-file custom tags and hidden default tags from the tags modal", async () => {

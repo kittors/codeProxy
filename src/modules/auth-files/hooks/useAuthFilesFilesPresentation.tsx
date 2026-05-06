@@ -21,8 +21,8 @@ import {
   isRuntimeOnlyAuthFile,
   parseAdditionalQuotaWindowLabel,
   resolveAuthFileDisplayName,
-  resolveAuthFileDisplayTags,
   resolveAuthFilePlanType,
+  resolveAuthFileSupplementalTags,
   resolveAuthFileStats,
   resolveAuthFileStatusBar,
   resolveAuthFileSubscriptionStatus,
@@ -434,9 +434,9 @@ export function useAuthFilesFilesPresentation({
             <p className="truncate font-mono text-xs text-slate-900 dark:text-white">
               {resolveAuthFileDisplayName(file) || "--"}
             </p>
-            {resolveAuthFileDisplayTags(file).length > 0 ? (
+            {resolveAuthFileSupplementalTags(file, quotaByFileName[file.name]).length > 0 ? (
               <div className="mt-1 flex flex-wrap gap-1">
-                {resolveAuthFileDisplayTags(file).map((tag) => (
+                {resolveAuthFileSupplementalTags(file, quotaByFileName[file.name]).map((tag) => (
                   <span
                     key={tag}
                     className="inline-flex items-center rounded-full bg-sky-50 px-2 py-0.5 text-[10px] font-semibold text-sky-700 dark:bg-sky-500/15 dark:text-sky-200"
