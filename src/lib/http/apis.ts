@@ -9,6 +9,7 @@ export { apiCallApi, getApiCallErrorMessage } from "./apis/api-call";
 export { ampcodeApi } from "./apis/ampcode";
 export { vertexApi } from "./apis/vertex";
 export { apiKeysApi } from "./apis/api-keys";
+export { apiKeyPermissionProfilesApi } from "./apis/api-key-permission-profiles";
 export { modelsApi } from "./apis/models";
 export { versionApi } from "./apis/version";
 export { quotaApi } from "./apis/quota";

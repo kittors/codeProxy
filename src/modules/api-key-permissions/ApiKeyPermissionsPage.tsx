@@ -1,48 +1,107 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { RefreshCw, ShieldCheck } from "lucide-react";
+import { Pencil, Plus, RefreshCw, ShieldCheck, Trash2 } from "lucide-react";
 import { apiKeyEntriesApi, type ApiKeyEntry } from "@/lib/http/apis/api-keys";
-import { maskApiKey } from "@/modules/api-keys/apiKeyPageUtils";
+import {
+  applyApiKeyPermissionProfile,
+  apiKeyPermissionProfilesApi,
+  makePermissionProfileId,
+  type ApiKeyPermissionProfile,
+} from "@/lib/http/apis/api-key-permission-profiles";
 import { RestrictionMultiSelect } from "@/modules/api-keys/RestrictionMultiSelect";
 import { useApiKeyPermissionOptions } from "@/modules/api-keys/hooks/useApiKeyPermissionOptions";
 import { Button } from "@/modules/ui/Button";
 import { Card } from "@/modules/ui/Card";
-import { Checkbox } from "@/modules/ui/Checkbox";
+import { ConfirmModal } from "@/modules/ui/ConfirmModal";
 import { EmptyState } from "@/modules/ui/EmptyState";
+import { TextInput } from "@/modules/ui/Input";
+import { Modal } from "@/modules/ui/Modal";
 import { ToggleSwitch } from "@/modules/ui/ToggleSwitch";
 import { useToast } from "@/modules/ui/ToastProvider";
+import { VirtualTable, type VirtualTableColumn } from "@/modules/ui/VirtualTable";
 
-type PermissionDraft = {
+type ProfileDraft = {
+  id: string;
+  name: string;
+  dailyLimit: string;
+  totalQuota: string;
+  concurrencyLimit: string;
+  rpmLimit: string;
+  tpmLimit: string;
   allowedModels: string[];
   allowedChannels: string[];
   allowedChannelGroups: string[];
   useExactChannelRestrictions: boolean;
+  systemPrompt: string;
 };
 
-const emptyPermissionDraft = (): PermissionDraft => ({
+const emptyDraft = (): ProfileDraft => ({
+  id: "",
+  name: "",
+  dailyLimit: "",
+  totalQuota: "",
+  concurrencyLimit: "",
+  rpmLimit: "",
+  tpmLimit: "",
   allowedModels: [],
   allowedChannels: [],
   allowedChannelGroups: [],
   useExactChannelRestrictions: false,
+  systemPrompt: "",
 });
 
-const readDraftFromEntry = (entry: ApiKeyEntry): PermissionDraft => ({
-  allowedModels: entry["allowed-models"] ?? [],
-  allowedChannels: entry["allowed-channels"] ?? [],
-  allowedChannelGroups: entry["allowed-channel-groups"] ?? [],
-  useExactChannelRestrictions: (entry["allowed-channels"] ?? []).length > 0,
+const limitToText = (value: number | undefined) => (value && value > 0 ? String(value) : "");
+
+const limitFromText = (value: string) => {
+  const parsed = Number.parseInt(value.trim(), 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+};
+
+const readDraft = (profile: ApiKeyPermissionProfile): ProfileDraft => ({
+  id: profile.id,
+  name: profile.name,
+  dailyLimit: limitToText(profile["daily-limit"]),
+  totalQuota: limitToText(profile["total-quota"]),
+  concurrencyLimit: limitToText(profile["concurrency-limit"]),
+  rpmLimit: limitToText(profile["rpm-limit"]),
+  tpmLimit: limitToText(profile["tpm-limit"]),
+  allowedModels: [...profile["allowed-models"]],
+  allowedChannels: [...profile["allowed-channels"]],
+  allowedChannelGroups: [...profile["allowed-channel-groups"]],
+  useExactChannelRestrictions: profile["allowed-channels"].length > 0,
+  systemPrompt: profile["system-prompt"],
 });
 
-const readEntryName = (entry: ApiKeyEntry) => entry.name?.trim() || maskApiKey(entry.key);
+const draftToProfile = (draft: ProfileDraft): ApiKeyPermissionProfile => ({
+  id: draft.id || makePermissionProfileId(draft.name),
+  name: draft.name.trim(),
+  "daily-limit": limitFromText(draft.dailyLimit),
+  "total-quota": limitFromText(draft.totalQuota),
+  "concurrency-limit": limitFromText(draft.concurrencyLimit),
+  "rpm-limit": limitFromText(draft.rpmLimit),
+  "tpm-limit": limitFromText(draft.tpmLimit),
+  "allowed-channel-groups": draft.allowedChannelGroups,
+  "allowed-channels": draft.useExactChannelRestrictions ? draft.allowedChannels : [],
+  "allowed-models": draft.allowedModels,
+  "system-prompt": draft.systemPrompt.trim(),
+});
+
+const formatLimit = (value: number, unlimited: string) =>
+  value > 0 ? value.toLocaleString() : unlimited;
+
+const boundProfileCount = (profile: ApiKeyPermissionProfile, entries: ApiKeyEntry[]) =>
+  entries.filter((entry) => entry["permission-profile-id"] === profile.id).length;
 
 export function ApiKeyPermissionsPage() {
   const { t } = useTranslation();
   const { notify } = useToast();
+  const [profiles, setProfiles] = useState<ApiKeyPermissionProfile[]>([]);
   const [entries, setEntries] = useState<ApiKeyEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
-  const [draft, setDraft] = useState<PermissionDraft>(() => emptyPermissionDraft());
+  const [draft, setDraft] = useState<ProfileDraft>(() => emptyDraft());
+  const [modalOpen, setModalOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<ApiKeyPermissionProfile | null>(null);
   const {
     availableModels,
     availableChannels,
@@ -52,18 +111,16 @@ export function ApiKeyPermissionsPage() {
     refreshPermissionOptions,
   } = useApiKeyPermissionOptions();
 
-  const selectedKeySet = useMemo(() => new Set(selectedKeys), [selectedKeys]);
-  const selectedEntries = useMemo(
-    () => entries.filter((entry) => selectedKeySet.has(entry.key)),
-    [entries, selectedKeySet],
-  );
-
   const loadPage = useCallback(async () => {
     setLoading(true);
     try {
-      const nextEntries = await apiKeyEntriesApi.list();
+      const [nextProfiles, nextEntries] = await Promise.all([
+        apiKeyPermissionProfilesApi.list(),
+        apiKeyEntriesApi.list().catch(() => [] as ApiKeyEntry[]),
+        refreshPermissionOptions(),
+      ]);
+      setProfiles(nextProfiles);
       setEntries(nextEntries);
-      await refreshPermissionOptions();
     } catch (err: unknown) {
       notify({
         type: "error",
@@ -77,14 +134,6 @@ export function ApiKeyPermissionsPage() {
   useEffect(() => {
     void loadPage();
   }, [loadPage]);
-
-  useEffect(() => {
-    if (selectedEntries.length === 1) {
-      setDraft(readDraftFromEntry(selectedEntries[0]));
-      return;
-    }
-    setDraft(emptyPermissionDraft());
-  }, [selectedEntries]);
 
   useEffect(() => {
     void loadModels(
@@ -119,12 +168,12 @@ export function ApiKeyPermissionsPage() {
     if (filteredAvailableChannels.length === 0) return;
     const allowedChannelSet = new Set(filteredAvailableChannels.map((option) => option.value));
     setDraft((prev) => {
-      const nextAllowedChannels = prev.allowedChannels.filter((channel) =>
+      const allowedChannels = prev.allowedChannels.filter((channel) =>
         allowedChannelSet.has(channel),
       );
-      return nextAllowedChannels.length === prev.allowedChannels.length
+      return allowedChannels.length === prev.allowedChannels.length
         ? prev
-        : { ...prev, allowedChannels: nextAllowedChannels };
+        : { ...prev, allowedChannels };
     });
   }, [
     draft.allowedChannelGroups.length,
@@ -132,40 +181,47 @@ export function ApiKeyPermissionsPage() {
     filteredAvailableChannels,
   ]);
 
-  const toggleSelection = (entry: ApiKeyEntry, checked: boolean) => {
-    setSelectedKeys((prev) => {
-      if (checked) {
-        return prev.includes(entry.key) ? prev : [...prev, entry.key];
-      }
-      return prev.filter((key) => key !== entry.key);
-    });
+  const openCreateModal = () => {
+    setDraft(emptyDraft());
+    setModalOpen(true);
   };
 
-  const handleSave = async () => {
-    if (selectedKeys.length === 0) {
-      notify({ type: "info", message: t("api_key_permissions_page.select_first") });
+  const openEditModal = (profile: ApiKeyPermissionProfile) => {
+    setDraft(readDraft(profile));
+    setModalOpen(true);
+  };
+
+  const handleSaveProfile = async () => {
+    const profile = draftToProfile(draft);
+    if (!profile.name) {
+      notify({ type: "error", message: t("api_key_permissions_page.name_required") });
       return;
     }
+
     setSaving(true);
     try {
-      const nextEntries = entries.map((entry) => {
-        if (!selectedKeySet.has(entry.key)) return entry;
-        return {
-          ...entry,
-          "allowed-channel-groups": draft.allowedChannelGroups,
-          "allowed-channels":
-            draft.useExactChannelRestrictions && draft.allowedChannels.length > 0
-              ? draft.allowedChannels
-              : [],
-          "allowed-models": draft.allowedModels,
-        };
-      });
-      await apiKeyEntriesApi.replace(nextEntries);
+      const isEdit = profiles.some((item) => item.id === profile.id);
+      const nextProfiles = isEdit
+        ? profiles.map((item) => (item.id === profile.id ? profile : item))
+        : [...profiles, profile];
+      await apiKeyPermissionProfilesApi.replace(nextProfiles);
+
+      let nextEntries = entries;
+      if (isEdit) {
+        nextEntries = entries.map((entry) =>
+          entry["permission-profile-id"] === profile.id
+            ? applyApiKeyPermissionProfile(entry, profile)
+            : entry,
+        );
+        if (JSON.stringify(nextEntries) !== JSON.stringify(entries)) {
+          await apiKeyEntriesApi.replace(nextEntries);
+        }
+      }
+
+      setProfiles(nextProfiles);
       setEntries(nextEntries);
-      notify({
-        type: "success",
-        message: t("api_key_permissions_page.saved", { count: selectedKeys.length }),
-      });
+      setModalOpen(false);
+      notify({ type: "success", message: t("api_key_permissions_page.profile_saved") });
     } catch (err: unknown) {
       notify({
         type: "error",
@@ -176,210 +232,354 @@ export function ApiKeyPermissionsPage() {
     }
   };
 
+  const handleDeleteProfile = async () => {
+    if (!deleteTarget) return;
+    setSaving(true);
+    try {
+      const nextProfiles = profiles.filter((profile) => profile.id !== deleteTarget.id);
+      await apiKeyPermissionProfilesApi.replace(nextProfiles);
+      const nextEntries = entries.map((entry) =>
+        entry["permission-profile-id"] === deleteTarget.id
+          ? { ...entry, "permission-profile-id": "" }
+          : entry,
+      );
+      if (JSON.stringify(nextEntries) !== JSON.stringify(entries)) {
+        await apiKeyEntriesApi.replace(nextEntries);
+      }
+      setProfiles(nextProfiles);
+      setEntries(nextEntries);
+      setDeleteTarget(null);
+      notify({ type: "success", message: t("api_key_permissions_page.profile_deleted") });
+    } catch (err: unknown) {
+      notify({
+        type: "error",
+        message: err instanceof Error ? err.message : t("api_key_permissions_page.delete_failed"),
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const columns = useMemo<VirtualTableColumn<ApiKeyPermissionProfile>[]>(
+    () => [
+      {
+        key: "name",
+        label: t("api_key_permissions_page.col_name"),
+        width: "w-[180px] min-w-[180px]",
+        cellClassName: "font-medium text-slate-900 dark:text-white",
+        render: (profile) => profile.name,
+      },
+      {
+        key: "limits",
+        label: t("api_key_permissions_page.col_limits"),
+        width: "w-[220px] min-w-[220px]",
+        render: (profile) => (
+          <div className="space-y-1 text-xs text-slate-600 dark:text-white/60">
+            <div>
+              {t("api_key_permissions_page.limit_daily", {
+                value: formatLimit(profile["daily-limit"], t("api_keys_page.unlimited")),
+              })}
+            </div>
+            <div>
+              {t("api_key_permissions_page.limit_total", {
+                value: formatLimit(profile["total-quota"], t("api_keys_page.unlimited")),
+              })}
+            </div>
+            <div>
+              {t("api_key_permissions_page.limit_rpm_tpm", {
+                rpm: formatLimit(profile["rpm-limit"], t("api_keys_page.unlimited")),
+                tpm: formatLimit(profile["tpm-limit"], t("api_keys_page.unlimited")),
+              })}
+            </div>
+          </div>
+        ),
+      },
+      {
+        key: "permissions",
+        label: t("api_key_permissions_page.col_permissions"),
+        width: "w-[220px] min-w-[220px]",
+        render: (profile) =>
+          t("api_key_permissions_page.permission_summary", {
+            groups: profile["allowed-channel-groups"].length,
+            channels: profile["allowed-channels"].length,
+            models: profile["allowed-models"].length,
+          }),
+      },
+      {
+        key: "prompt",
+        label: t("api_key_permissions_page.col_system_prompt"),
+        width: "w-[260px] min-w-[260px]",
+        cellClassName: "min-w-0 text-slate-600 dark:text-white/60",
+        render: (profile) =>
+          profile["system-prompt"] ? (
+            <span className="block truncate">{profile["system-prompt"]}</span>
+          ) : (
+            <span className="text-slate-400 dark:text-white/40">
+              {t("api_key_permissions_page.no_system_prompt")}
+            </span>
+          ),
+      },
+      {
+        key: "bound",
+        label: t("api_key_permissions_page.col_bound_keys"),
+        width: "w-[120px] min-w-[120px]",
+        render: (profile) =>
+          t("api_key_permissions_page.bound_count", {
+            count: boundProfileCount(profile, entries),
+          }),
+      },
+      {
+        key: "actions",
+        label: t("api_key_permissions_page.col_actions"),
+        width: "w-[120px] min-w-[120px]",
+        render: (profile) => (
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => openEditModal(profile)}
+              className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-amber-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-amber-400"
+              aria-label={t("common.edit")}
+            >
+              <Pencil size={15} />
+            </button>
+            <button
+              type="button"
+              onClick={() => setDeleteTarget(profile)}
+              className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-red-50 hover:text-red-600 dark:text-white/50 dark:hover:bg-red-900/20 dark:hover:text-red-400"
+              aria-label={t("common.delete")}
+            >
+              <Trash2 size={15} />
+            </button>
+          </div>
+        ),
+      },
+    ],
+    [entries, t],
+  );
+
   return (
     <div className="space-y-6">
       <Card
         title={t("api_key_permissions_page.title")}
         description={t("api_key_permissions_page.description")}
         actions={
-          <Button variant="secondary" size="sm" onClick={() => void loadPage()} disabled={loading}>
-            <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
-            {t("api_key_permissions_page.refresh")}
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => void loadPage()}
+              disabled={loading}
+            >
+              <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+              {t("api_key_permissions_page.refresh")}
+            </Button>
+            <Button variant="primary" size="sm" onClick={openCreateModal}>
+              <Plus size={14} />
+              {t("api_key_permissions_page.create")}
+            </Button>
+          </div>
         }
         loading={loading}
       >
-        {entries.length === 0 ? (
+        {profiles.length === 0 ? (
           <EmptyState
             title={t("api_key_permissions_page.empty_title")}
             description={t("api_key_permissions_page.empty_desc")}
             icon={<ShieldCheck size={32} />}
           />
         ) : (
-          <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(360px,0.9fr)]">
-            <section className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 dark:border-neutral-800">
-              <div className="border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold text-slate-500 dark:border-neutral-800 dark:bg-neutral-900/70 dark:text-white/50">
-                {t("api_key_permissions_page.selected_count", { count: selectedKeys.length })}
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[560px] text-sm">
-                  <thead className="bg-white text-xs text-slate-500 dark:bg-neutral-950 dark:text-white/45">
-                    <tr>
-                      <th className="w-12 px-4 py-3 text-left">
-                        <span className="sr-only">{t("api_key_permissions_page.selection")}</span>
-                      </th>
-                      <th className="px-4 py-3 text-left">
-                        {t("api_key_permissions_page.col_name")}
-                      </th>
-                      <th className="px-4 py-3 text-left">
-                        {t("api_key_permissions_page.col_key")}
-                      </th>
-                      <th className="px-4 py-3 text-left">
-                        {t("api_key_permissions_page.col_permissions")}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-neutral-800">
-                    {entries.map((entry) => {
-                      const name = readEntryName(entry);
-                      return (
-                        <tr key={entry.key} className="bg-white dark:bg-neutral-950/60">
-                          <td className="px-4 py-3">
-                            <Checkbox
-                              checked={selectedKeySet.has(entry.key)}
-                              aria-label={t("api_key_permissions_page.select_key", { name })}
-                              onCheckedChange={(checked) => toggleSelection(entry, checked)}
-                            />
-                          </td>
-                          <td className="px-4 py-3 font-medium text-slate-900 dark:text-white">
-                            {name}
-                          </td>
-                          <td className="px-4 py-3">
-                            <code className="rounded-md bg-slate-100 px-2 py-0.5 font-mono text-xs text-slate-700 dark:bg-neutral-800 dark:text-white/70">
-                              {maskApiKey(entry.key)}
-                            </code>
-                          </td>
-                          <td className="px-4 py-3 text-xs text-slate-500 dark:text-white/50">
-                            {t("api_key_permissions_page.permission_summary", {
-                              groups: entry["allowed-channel-groups"]?.length ?? 0,
-                              channels: entry["allowed-channels"]?.length ?? 0,
-                              models: entry["allowed-models"]?.length ?? 0,
-                            })}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </section>
-
-            <section
-              className="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-950/60"
-              aria-label={t("api_key_permissions_page.editor_label")}
-            >
-              <div className="mb-4 flex items-start justify-between gap-3">
-                <div>
-                  <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
-                    {t("api_key_permissions_page.editor_title")}
-                  </h3>
-                  <p className="mt-1 text-xs text-slate-500 dark:text-white/55">
-                    {t("api_key_permissions_page.editor_desc", { count: selectedKeys.length })}
-                  </p>
-                </div>
-                <Button
-                  variant="primary"
-                  size="sm"
-                  onClick={() => void handleSave()}
-                  disabled={saving || selectedKeys.length === 0}
-                >
-                  {saving
-                    ? t("api_key_permissions_page.saving")
-                    : t("api_key_permissions_page.save")}
-                </Button>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
-                    {t("api_keys_page.form_allowed_channel_groups")}
-                  </label>
-                  <RestrictionMultiSelect
-                    options={availableChannelGroups}
-                    value={draft.allowedChannelGroups}
-                    onChange={(selected) =>
-                      setDraft((prev) => ({ ...prev, allowedChannelGroups: selected }))
-                    }
-                    placeholder={t("api_keys_page.select_channel_groups")}
-                    unrestrictedLabel={t("api_keys_page.form_all_channel_groups")}
-                    selectedCountLabel={(count) =>
-                      t("api_keys_page.selected_channel_groups_count", { count })
-                    }
-                    searchPlaceholder={t("api_keys_page.search_channel_groups")}
-                    selectFilteredLabel={t("api_keys_page.select_filtered")}
-                    clearRestrictionLabel={t("api_keys_page.clear_restriction")}
-                    noResultsLabel={t("api_keys_page.no_results")}
-                  />
-                </div>
-
-                <div>
-                  <div className="mb-2 flex items-start justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50/70 px-3 py-2 dark:border-amber-500/25 dark:bg-amber-500/10">
-                    <div className="min-w-0">
-                      <div className="text-sm font-medium text-slate-800 dark:text-white/85">
-                        {t("api_keys_page.form_exact_channels")}
-                      </div>
-                      <p className="mt-0.5 text-xs text-amber-800 dark:text-amber-100/75">
-                        {t("api_keys_page.form_exact_channels_desc")}
-                      </p>
-                    </div>
-                    <ToggleSwitch
-                      checked={draft.useExactChannelRestrictions}
-                      ariaLabel={t("api_keys_page.form_exact_channels")}
-                      onCheckedChange={(checked) =>
-                        setDraft((prev) => ({
-                          ...prev,
-                          useExactChannelRestrictions: checked,
-                          allowedChannels: checked ? prev.allowedChannels : [],
-                        }))
-                      }
-                    />
-                  </div>
-                  {draft.useExactChannelRestrictions ? (
-                    <>
-                      <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
-                        {t("api_keys_page.form_allowed_channels")}
-                      </label>
-                      <RestrictionMultiSelect
-                        options={filteredAvailableChannels}
-                        value={draft.allowedChannels}
-                        onChange={(selected) =>
-                          setDraft((prev) => ({ ...prev, allowedChannels: selected }))
-                        }
-                        placeholder={t("api_keys_page.select_channels")}
-                        unrestrictedLabel={t("api_keys_page.form_all_channels")}
-                        selectedCountLabel={(count) =>
-                          t("api_keys_page.selected_channels_count", { count })
-                        }
-                        searchPlaceholder={t("api_keys_page.search_channels")}
-                        selectFilteredLabel={t("api_keys_page.select_filtered")}
-                        clearRestrictionLabel={t("api_keys_page.clear_restriction")}
-                        noResultsLabel={t("api_keys_page.no_results")}
-                      />
-                      {draft.allowedChannelGroups.length > 0 ? (
-                        <p className="mt-1 text-xs text-amber-700 dark:text-amber-200">
-                          {t("api_keys_page.form_exact_channels_intersection_warning")}
-                        </p>
-                      ) : null}
-                    </>
-                  ) : null}
-                </div>
-
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
-                    {t("api_keys_page.form_allowed_models")}
-                  </label>
-                  <RestrictionMultiSelect
-                    options={availableModels}
-                    value={draft.allowedModels}
-                    onChange={(selected) =>
-                      setDraft((prev) => ({ ...prev, allowedModels: selected }))
-                    }
-                    placeholder={t("api_keys_page.select_models")}
-                    unrestrictedLabel={t("api_keys_page.form_all_models")}
-                    selectedCountLabel={(count) =>
-                      t("api_keys_page.selected_models_count", { count })
-                    }
-                    searchPlaceholder={t("api_keys_page.search_models")}
-                    selectFilteredLabel={t("api_keys_page.select_filtered")}
-                    clearRestrictionLabel={t("api_keys_page.clear_restriction")}
-                    noResultsLabel={t("api_keys_page.no_results")}
-                  />
-                </div>
-              </div>
-            </section>
-          </div>
+          <VirtualTable<ApiKeyPermissionProfile>
+            rows={profiles}
+            columns={columns}
+            rowKey={(profile) => profile.id}
+            loading={loading}
+            virtualize={false}
+            minWidth="min-w-[1120px]"
+            height="h-auto max-h-[calc(100dvh-280px)]"
+            emptyText={t("api_key_permissions_page.empty_title")}
+            caption={t("api_key_permissions_page.table_caption")}
+            showAllLoadedMessage={false}
+          />
         )}
       </Card>
+
+      <Modal
+        open={modalOpen}
+        title={
+          draft.id
+            ? t("api_key_permissions_page.edit_config")
+            : t("api_key_permissions_page.create_config")
+        }
+        description={t("api_key_permissions_page.config_modal_desc")}
+        onClose={() => setModalOpen(false)}
+        maxWidth="max-w-4xl"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setModalOpen(false)} disabled={saving}>
+              {t("common.cancel")}
+            </Button>
+            <Button variant="primary" onClick={() => void handleSaveProfile()} disabled={saving}>
+              {saving
+                ? t("api_key_permissions_page.saving")
+                : t("api_key_permissions_page.save_config")}
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
+              {t("api_key_permissions_page.form_name")}
+            </label>
+            <TextInput
+              type="text"
+              value={draft.name}
+              aria-label={t("api_key_permissions_page.form_name")}
+              onChange={(event) => setDraft((prev) => ({ ...prev, name: event.target.value }))}
+              placeholder={t("api_key_permissions_page.form_name_placeholder")}
+            />
+          </div>
+
+          <div className="grid gap-4 lg:grid-cols-3">
+            {[
+              ["dailyLimit", "form_daily_limit"],
+              ["totalQuota", "form_total_quota"],
+              ["concurrencyLimit", "form_concurrency_limit"],
+              ["rpmLimit", "form_rpm_limit"],
+              ["tpmLimit", "form_tpm_limit"],
+            ].map(([key, labelKey]) => (
+              <div key={key}>
+                <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
+                  {t(`api_key_permissions_page.${labelKey}`)}
+                </label>
+                <TextInput
+                  type="number"
+                  min={0}
+                  value={draft[key as keyof ProfileDraft] as string}
+                  aria-label={t(`api_key_permissions_page.${labelKey}`)}
+                  placeholder={t("api_key_permissions_page.form_unlimited_hint")}
+                  onChange={(event) => setDraft((prev) => ({ ...prev, [key]: event.target.value }))}
+                />
+              </div>
+            ))}
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
+              {t("api_keys_page.form_allowed_channel_groups")}
+            </label>
+            <RestrictionMultiSelect
+              options={availableChannelGroups}
+              value={draft.allowedChannelGroups}
+              onChange={(selected) =>
+                setDraft((prev) => ({ ...prev, allowedChannelGroups: selected }))
+              }
+              placeholder={t("api_keys_page.select_channel_groups")}
+              unrestrictedLabel={t("api_keys_page.form_all_channel_groups")}
+              selectedCountLabel={(count) =>
+                t("api_keys_page.selected_channel_groups_count", { count })
+              }
+              searchPlaceholder={t("api_keys_page.search_channel_groups")}
+              selectFilteredLabel={t("api_keys_page.select_filtered")}
+              clearRestrictionLabel={t("api_keys_page.clear_restriction")}
+              noResultsLabel={t("api_keys_page.no_results")}
+            />
+          </div>
+
+          <div>
+            <div className="mb-2 flex items-start justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50/70 px-3 py-2 dark:border-amber-500/25 dark:bg-amber-500/10">
+              <div className="min-w-0">
+                <div className="text-sm font-medium text-slate-800 dark:text-white/85">
+                  {t("api_keys_page.form_exact_channels")}
+                </div>
+                <p className="mt-0.5 text-xs text-amber-800 dark:text-amber-100/75">
+                  {t("api_keys_page.form_exact_channels_desc")}
+                </p>
+              </div>
+              <ToggleSwitch
+                checked={draft.useExactChannelRestrictions}
+                ariaLabel={t("api_keys_page.form_exact_channels")}
+                onCheckedChange={(checked) =>
+                  setDraft((prev) => ({
+                    ...prev,
+                    useExactChannelRestrictions: checked,
+                    allowedChannels: checked ? prev.allowedChannels : [],
+                  }))
+                }
+              />
+            </div>
+            {draft.useExactChannelRestrictions ? (
+              <>
+                <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
+                  {t("api_keys_page.form_allowed_channels")}
+                </label>
+                <RestrictionMultiSelect
+                  options={filteredAvailableChannels}
+                  value={draft.allowedChannels}
+                  onChange={(selected) =>
+                    setDraft((prev) => ({ ...prev, allowedChannels: selected }))
+                  }
+                  placeholder={t("api_keys_page.select_channels")}
+                  unrestrictedLabel={t("api_keys_page.form_all_channels")}
+                  selectedCountLabel={(count) =>
+                    t("api_keys_page.selected_channels_count", { count })
+                  }
+                  searchPlaceholder={t("api_keys_page.search_channels")}
+                  selectFilteredLabel={t("api_keys_page.select_filtered")}
+                  clearRestrictionLabel={t("api_keys_page.clear_restriction")}
+                  noResultsLabel={t("api_keys_page.no_results")}
+                />
+              </>
+            ) : null}
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
+              {t("api_keys_page.form_allowed_models")}
+            </label>
+            <RestrictionMultiSelect
+              options={availableModels}
+              value={draft.allowedModels}
+              onChange={(selected) => setDraft((prev) => ({ ...prev, allowedModels: selected }))}
+              placeholder={t("api_keys_page.select_models")}
+              unrestrictedLabel={t("api_keys_page.form_all_models")}
+              selectedCountLabel={(count) => t("api_keys_page.selected_models_count", { count })}
+              searchPlaceholder={t("api_keys_page.search_models")}
+              selectFilteredLabel={t("api_keys_page.select_filtered")}
+              clearRestrictionLabel={t("api_keys_page.clear_restriction")}
+              noResultsLabel={t("api_keys_page.no_results")}
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
+              {t("api_key_permissions_page.form_system_prompt")}
+            </label>
+            <textarea
+              value={draft.systemPrompt}
+              aria-label={t("api_key_permissions_page.form_system_prompt")}
+              onChange={(event) =>
+                setDraft((prev) => ({ ...prev, systemPrompt: event.target.value }))
+              }
+              placeholder={t("api_keys_page.system_prompt_hint")}
+              rows={3}
+              className="w-full resize-y rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition-all focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white dark:focus:border-indigo-500"
+            />
+          </div>
+        </div>
+      </Modal>
+
+      <ConfirmModal
+        open={deleteTarget !== null}
+        title={t("api_key_permissions_page.delete_title")}
+        description={t("api_key_permissions_page.delete_desc", {
+          name: deleteTarget?.name ?? "",
+        })}
+        confirmText={t("common.delete")}
+        busy={saving}
+        onConfirm={() => void handleDeleteProfile()}
+        onClose={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

@@ -10,6 +10,7 @@ import { ToastProvider } from "@/modules/ui/ToastProvider";
 const state = vi.hoisted(() => ({
   entries: [] as any[],
   channelGroups: [] as any[],
+  configYaml: "",
 }));
 
 const mocks = vi.hoisted(() => ({
@@ -27,6 +28,11 @@ const mocks = vi.hoisted(() => ({
     return { logs_deleted: 0 };
   }),
   apiKeysList: vi.fn(async () => [] as string[]),
+  fetchConfigYaml: vi.fn(async () => state.configYaml),
+  saveConfigYaml: vi.fn(async (content: string) => {
+    state.configYaml = content;
+    return {};
+  }),
   authFilesList: vi.fn(async () => ({ files: [] })),
   getGeminiKeys: vi.fn(async () => []),
   getClaudeConfigs: vi.fn(async () => []),
@@ -58,6 +64,13 @@ vi.mock("@/lib/http/apis/api-keys", () => ({
     replace: mocks.apiKeyEntriesReplace,
     update: mocks.apiKeyEntriesUpdate,
     delete: mocks.apiKeyEntriesDelete,
+  },
+}));
+
+vi.mock("@/lib/http/apis/config-file", () => ({
+  configFileApi: {
+    fetchConfigYaml: mocks.fetchConfigYaml,
+    saveConfigYaml: mocks.saveConfigYaml,
   },
 }));
 
@@ -161,11 +174,14 @@ describe("ApiKeysPage", () => {
       },
     ];
     state.channelGroups = [];
+    state.configYaml = "";
     mocks.apiKeyEntriesList.mockClear();
     mocks.apiKeyEntriesReplace.mockClear();
     mocks.apiKeyEntriesUpdate.mockClear();
     mocks.apiKeyEntriesDelete.mockClear();
     mocks.apiKeysList.mockClear();
+    mocks.fetchConfigYaml.mockClear();
+    mocks.saveConfigYaml.mockClear();
     mocks.authFilesList.mockClear();
     mocks.getGeminiKeys.mockClear();
     mocks.getClaudeConfigs.mockClear();
@@ -245,6 +261,8 @@ describe("ApiKeysPage", () => {
     expect(screen.queryByText(/Allowed channel groups/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Allowed channels/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Allowed models/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Daily request limit/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/System prompt/i)).not.toBeInTheDocument();
     expect(screen.queryByRole("switch", { name: /exact channel override/i })).toBeNull();
 
     await userEvent.click(screen.getByRole("button", { name: /save/i }));
@@ -263,6 +281,69 @@ describe("ApiKeysPage", () => {
         }),
       }),
     );
+  });
+
+  test("applies the selected permission config when creating an API key", async () => {
+    state.configYaml = `
+api-key-permission-profiles:
+  - id: standard
+    name: Standard
+    daily-limit: 15000
+    total-quota: 0
+    concurrency-limit: 0
+    rpm-limit: 0
+    tpm-limit: 0
+    allowed-channel-groups:
+      - pro
+    allowed-models:
+      - gpt-5.4
+    system-prompt: Use the standard workspace prompt.
+`;
+
+    render(
+      <MemoryRouter>
+        <ThemeProvider>
+          <ToastProvider>
+            <ApiKeysPage />
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("Existing Key")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: /create key/i }));
+    await userEvent.type(screen.getAllByPlaceholderText(/team-a/i).at(-1)!, "Profile Key");
+
+    const profileSelect = screen.getByRole("combobox", { name: /permission config/i });
+    await userEvent.click(profileSelect);
+    await userEvent.click(await screen.findByRole("option", { name: /standard/i }));
+
+    expect(screen.queryByText(/Daily request limit/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/System prompt/i)).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: /^Create$/i }));
+
+    await waitFor(() => {
+      expect(mocks.apiKeyEntriesReplace).toHaveBeenCalled();
+    });
+
+    expect(mocks.apiKeyEntriesReplace).toHaveBeenLastCalledWith([
+      expect.objectContaining({ name: "Existing Key" }),
+      expect.objectContaining({
+        name: "Profile Key",
+        "permission-profile-id": "standard",
+        "daily-limit": 15000,
+        "total-quota": 0,
+        "concurrency-limit": 0,
+        "rpm-limit": 0,
+        "tpm-limit": 0,
+        "allowed-channel-groups": ["pro"],
+        "allowed-channels": [],
+        "allowed-models": ["gpt-5.4"],
+        "system-prompt": "Use the standard workspace prompt.",
+      }),
+    ]);
   });
 
   test("shows operation column icon tooltips without relying on the app-level tooltip listener", async () => {

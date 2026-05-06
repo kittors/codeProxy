@@ -1,7 +1,7 @@
-import { Info, RefreshCw } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import { Button } from "@/modules/ui/Button";
 import { TextInput } from "@/modules/ui/Input";
-import { HoverTooltip } from "@/modules/ui/Tooltip";
+import { Select, type SelectOption } from "@/modules/ui/Select";
 import type { ApiKeyFormValues } from "@/modules/api-keys/types";
 
 export function ApiKeyFormFields({
@@ -9,12 +9,14 @@ export function ApiKeyFormFields({
   form,
   setForm,
   editMode,
+  permissionProfileOptions,
   regenerateKey,
 }: {
   t: (key: string, options?: Record<string, unknown>) => string;
   form: ApiKeyFormValues;
   setForm: React.Dispatch<React.SetStateAction<ApiKeyFormValues>>;
   editMode: boolean;
+  permissionProfileOptions: SelectOption[];
   regenerateKey: () => void;
 }) {
   return (
@@ -51,97 +53,19 @@ export function ApiKeyFormFields({
         </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
-            {t("api_keys_page.form_daily_limit")}
-          </label>
-          <TextInput
-            type="number"
-            value={form.dailyLimit}
-            onChange={(e) => setForm((prev) => ({ ...prev, dailyLimit: e.target.value }))}
-            placeholder={t("api_keys_page.form_unlimited_hint")}
-            min={0}
-          />
-        </div>
-        <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
-            {t("api_keys_page.form_total_quota")}
-          </label>
-          <TextInput
-            type="number"
-            value={form.totalQuota}
-            onChange={(e) => setForm((prev) => ({ ...prev, totalQuota: e.target.value }))}
-            placeholder={t("api_keys_page.form_unlimited_hint")}
-            min={0}
-          />
-        </div>
-        <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
-            {t("api_keys_page.form_concurrency_limit")}
-          </label>
-          <TextInput
-            type="number"
-            value={form.concurrencyLimit}
-            onChange={(e) => setForm((prev) => ({ ...prev, concurrencyLimit: e.target.value }))}
-            placeholder={t("api_keys_page.form_unlimited_hint")}
-            min={0}
-          />
-        </div>
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-2">
-        <div>
-          <HoverTooltip
-            content={t("api_keys.rpm_full")}
-            className="mb-1 inline-flex items-center gap-1"
-          >
-            <label className="text-sm font-medium text-slate-700 dark:text-white/80">
-              {t("api_keys_page.form_rpm_limit")}
-            </label>
-            <Info size={14} className="text-slate-400 dark:text-white/40" />
-          </HoverTooltip>
-          <TextInput
-            type="number"
-            value={form.rpmLimit}
-            onChange={(e) => setForm((prev) => ({ ...prev, rpmLimit: e.target.value }))}
-            placeholder={t("api_keys_page.form_unlimited_hint")}
-            min={0}
-          />
-        </div>
-        <div>
-          <HoverTooltip
-            content={t("api_keys.tpm_full")}
-            className="mb-1 inline-flex items-center gap-1"
-          >
-            <label className="text-sm font-medium text-slate-700 dark:text-white/80">
-              {t("api_keys_page.form_tpm_limit")}
-            </label>
-            <Info size={14} className="text-slate-400 dark:text-white/40" />
-          </HoverTooltip>
-          <TextInput
-            type="number"
-            value={form.tpmLimit}
-            onChange={(e) => setForm((prev) => ({ ...prev, tpmLimit: e.target.value }))}
-            placeholder={t("api_keys_page.form_unlimited_hint")}
-            min={0}
-          />
-        </div>
-      </div>
-
       <div>
         <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
-          {t("api_keys_page.form_system_prompt")}
+          {t("api_keys_page.form_permission_profile")}
         </label>
-        <textarea
-          value={form.systemPrompt}
-          onChange={(e) => setForm((prev) => ({ ...prev, systemPrompt: e.target.value }))}
-          placeholder={t("api_keys_page.system_prompt_hint")}
-          rows={3}
-          className="w-full resize-y rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition-all focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white dark:focus:border-indigo-500"
+        <Select
+          value={form.permissionProfileId}
+          onChange={(value) => setForm((prev) => ({ ...prev, permissionProfileId: value }))}
+          options={permissionProfileOptions}
+          aria-label={t("api_keys_page.form_permission_profile")}
+          placeholder={t("api_keys_page.form_permission_profile_placeholder")}
         />
         <p className="mt-1 text-xs text-slate-400 dark:text-white/40">
-          {t("api_keys_page.form_system_prompt_desc")}
+          {t("api_keys_page.form_permission_profile_desc")}
         </p>
       </div>
     </div>

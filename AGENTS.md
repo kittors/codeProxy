@@ -92,7 +92,7 @@
 - 自动更新提示：`src/modules/update/AutoUpdatePrompt.tsx`
 - 模型配置管理：`src/modules/models/ModelsPage.tsx`（`/manage/models`，数据库模型配置与计价规则）
 - 代理池管理：`src/modules/proxies/ProxiesPage.tsx`（`/proxies`，集中维护可复用出站代理）
-- API Key 权限配置：`src/modules/api-key-permissions/ApiKeyPermissionsPage.tsx`（`/api-key-permissions`，批量维护 API Key 的渠道分组、精确渠道与模型权限）
+- API Key 权限配置：`src/modules/api-key-permissions/ApiKeyPermissionsPage.tsx`（`/api-key-permissions`，维护可复用权限配置，供 API Key 弹窗选择）
 - 关键配置文件：`package.json`, `tsconfig.json`, `vite.config.ts`
 - 入口文件：`index.html`（默认构建）
 
