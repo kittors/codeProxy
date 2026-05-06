@@ -10,6 +10,7 @@ import { AuthFileDetailModal } from "@/modules/auth-files/components/AuthFileDet
 import { AuthFilesExcludedTab } from "@/modules/auth-files/components/AuthFilesExcludedTab";
 import { AuthFilesAliasTab } from "@/modules/auth-files/components/AuthFilesAliasTab";
 import { AuthFilesFilesTab } from "@/modules/auth-files/components/AuthFilesFilesTab";
+import { AuthFileTagsModal } from "@/modules/auth-files/components/AuthFileTagsModal";
 import { ImportModelsModal } from "@/modules/auth-files/components/ImportModelsModal";
 import { GroupOverviewModal } from "@/modules/auth-files/components/GroupOverviewModal";
 import { useAuthFilesDataState } from "@/modules/auth-files/hooks/useAuthFilesDataState";
@@ -118,6 +119,7 @@ export function AuthFilesPage() {
   const [page, setPage] = useState(1);
   const [selectedFileNames, setSelectedFileNames] = useState<string[]>([]);
   const [proxyPoolEntries, setProxyPoolEntries] = useState<ProxyPoolEntry[]>([]);
+  const [tagsEditorFileName, setTagsEditorFileName] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const filesRef = useRef<AuthFileItem[]>(files);
@@ -196,10 +198,12 @@ export function AuthFilesPage() {
     uploading,
     deletingAll,
     statusUpdating,
+    tagSavingByName,
     downloadAuthFile,
     handleUpload,
     handleDeleteSelection,
     setFileEnabled,
+    saveAuthFileTags,
   } = useAuthFilesFileActions({
     loadAll,
     fileInputRef,
@@ -347,6 +351,10 @@ export function AuthFilesPage() {
   });
 
   const filterChips = useMemo(() => ["all", ...providerOptions], [providerOptions]);
+  const tagsEditorFile = useMemo(
+    () => files.find((file) => file.name === tagsEditorFileName) ?? null,
+    [files, tagsEditorFileName],
+  );
   const normalizedFilter = useMemo(() => normalizeProviderKey(filter), [filter]);
   const selectedModelOwner =
     normalizedFilter === "all" ? "" : (modelOwnerByAuthGroup[normalizedFilter] ?? "");
@@ -381,6 +389,7 @@ export function AuthFilesPage() {
     refreshQuota,
     openDetail: openDetailWithQuotaRefresh,
     downloadAuthFile,
+    openTagsEditor: (file) => setTagsEditorFileName(file.name),
     statusUpdating,
     setFileEnabled,
     usageIndex,
@@ -453,6 +462,7 @@ export function AuthFilesPage() {
             translateQuotaText={translateQuotaText}
             renderSubscriptionBadge={renderSubscriptionBadge}
             renderQuotaBar={renderQuotaBar}
+            openTagsEditor={(file) => setTagsEditorFileName(file.name)}
             openDetail={openDetailWithQuotaRefresh}
             downloadAuthFile={downloadAuthFile}
             safePage={safePage}
@@ -543,6 +553,14 @@ export function AuthFilesPage() {
         setImportSelected={setImportSelected}
         setImportOpen={setImportOpen}
         applyImport={applyImport}
+      />
+
+      <AuthFileTagsModal
+        open={tagsEditorFile !== null}
+        file={tagsEditorFile}
+        saving={Boolean(tagsEditorFile && tagSavingByName[tagsEditorFile.name])}
+        onClose={() => setTagsEditorFileName(null)}
+        onSave={saveAuthFileTags}
       />
 
       <OAuthLoginDialog

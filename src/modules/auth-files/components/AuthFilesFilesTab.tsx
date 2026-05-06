@@ -9,6 +9,7 @@ import {
   RefreshCw,
   Search,
   Settings2,
+  Tags,
   Upload,
 } from "lucide-react";
 import type { AuthFileItem } from "@/lib/http/types";
@@ -36,6 +37,7 @@ import {
   isRuntimeOnlyAuthFile,
   normalizeProviderKey,
   resolveAuthFileDisplayName,
+  resolveAuthFileDisplayTags,
   resolveAuthFilePlanType,
   resolveFileType,
 } from "@/modules/auth-files/helpers/authFilesPageUtils";
@@ -105,6 +107,7 @@ interface AuthFilesFilesTabProps {
   translateQuotaText: (text: string) => string;
   renderSubscriptionBadge: (file: AuthFileItem) => ReactNode | null;
   renderQuotaBar: (label: string, item: QuotaItem | null) => ReactNode;
+  openTagsEditor: (file: AuthFileItem) => void;
   openDetail: (file: AuthFileItem) => Promise<void>;
   downloadAuthFile: (file: AuthFileItem) => Promise<void>;
   safePage: number;
@@ -170,6 +173,7 @@ export function AuthFilesFilesTab({
   translateQuotaText,
   renderSubscriptionBadge,
   renderQuotaBar,
+  openTagsEditor,
   openDetail,
   downloadAuthFile,
   safePage,
@@ -529,6 +533,7 @@ export function AuthFilesFilesTab({
                   const provider = resolveQuotaProvider(file);
                   const state = quotaByFileName[file.name] ?? { status: "idle", items: [] };
                   const planType = resolveAuthFilePlanType(file, state);
+                  const displayTags = resolveAuthFileDisplayTags(file);
                   const subscriptionBadge = renderSubscriptionBadge(file);
                   const stats = resolveAuthFileStats(file, usageIndex);
                   const totalCalls = stats.success + stats.failure;
@@ -625,6 +630,18 @@ export function AuthFilesFilesTab({
                             </span>
                           ) : null}
                         </div>
+                        {displayTags.length > 0 ? (
+                          <div className="min-w-0 flex flex-wrap gap-1.5">
+                            {displayTags.map((tag) => (
+                              <span
+                                key={tag}
+                                className="inline-flex items-center rounded-full bg-sky-50 px-2 py-0.5 text-[10px] font-semibold text-sky-700 dark:bg-sky-500/15 dark:text-sky-200"
+                              >
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        ) : null}
                         <p className="truncate text-[11px] text-slate-500 dark:text-white/45">
                           {formatModified(file)}
                         </p>
@@ -669,6 +686,18 @@ export function AuthFilesFilesTab({
                               </Button>
                             </HoverTooltip>
                           ) : null}
+
+                          <HoverTooltip content={t("auth_files.edit_tags")}>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => openTagsEditor(file)}
+                              title={t("auth_files.edit_tags")}
+                              aria-label={t("auth_files.edit_tags")}
+                            >
+                              <Tags size={16} />
+                            </Button>
+                          </HoverTooltip>
 
                           <HoverTooltip content={t("auth_files.view")}>
                             <Button

@@ -609,6 +609,7 @@
     "channel_name_hint": "This name appears in the API key allowed-channels selector and must be globally unique.",
     "channel_name_required": "Please enter a channel name",
     "download": "Download",
+    "edit_tags": "Edit Tags",
     "add": "Add",
     "add_row": "Add Row",
     "save": "Save",
@@ -753,7 +754,18 @@
     "group_overview_no_quota": "No aggregatable quota in current results",
     "quota_auto_refresh": "Auto refresh",
     "quota_refresh_off": "Off",
-    "quota_updated_at": "Updated"
+    "quota_updated_at": "Updated",
+    "tags_modal_title": "Auth File Tags",
+    "custom_tag_label": "Custom tag",
+    "custom_tag_placeholder": "e.g. vip",
+    "custom_tag_add": "Add tag",
+    "custom_tag_limit": "Up to {{count}} custom tags",
+    "default_tags_label": "Default tags",
+    "display_tags_label": "Display tags",
+    "no_tags": "No tags",
+    "hide_tag": "Hide {{tag}}",
+    "restore_tag": "Restore {{tag}}",
+    "remove_custom_tag": "Remove {{tag}}"
   },
   "antigravity_quota": {
     "title": "Antigravity Quota",

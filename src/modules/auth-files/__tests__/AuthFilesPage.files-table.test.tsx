@@ -33,6 +33,7 @@ const mocks = vi.hoisted(() => ({
   fetchQuota: vi.fn((_provider?: unknown, _file?: { name?: string }) => new Promise(() => {})),
   deleteFile: vi.fn(async () => ({})),
   downloadText: vi.fn(async () => "{}"),
+  patchFields: vi.fn(async () => ({})),
   getModelsForAuthFile: vi.fn(async () => [{ id: "live-only", owned_by: "runtime" }]),
   getModelConfigs: vi.fn(async () => [
     { id: "gpt-4.1", owned_by: "openai" },
@@ -55,6 +56,7 @@ vi.mock("@/lib/http/apis", async (importOriginal) => {
       list: mocks.list,
       deleteFile: mocks.deleteFile,
       downloadText: mocks.downloadText,
+      patchFields: mocks.patchFields,
       getModelsForAuthFile: mocks.getModelsForAuthFile,
       upload: mocks.upload,
     },
@@ -145,6 +147,8 @@ describe("AuthFilesPage files table", () => {
     mocks.deleteFile.mockImplementation(async () => ({}));
     mocks.downloadText.mockReset();
     mocks.downloadText.mockImplementation(async () => "{}");
+    mocks.patchFields.mockReset();
+    mocks.patchFields.mockImplementation(async () => ({}));
     mocks.getModelsForAuthFile.mockReset();
     mocks.getModelsForAuthFile.mockImplementation(async () => [
       { id: "live-only", owned_by: "runtime" },
@@ -329,6 +333,92 @@ describe("AuthFilesPage files table", () => {
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
     // non-quota providers should not show Codex-specific quota labels
     expect(screen.queryByText("Code: 5h")).not.toBeInTheDocument();
+  });
+
+  test("renders returned auth-file display tags in cards view", async () => {
+    window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
+    mocks.list.mockImplementation(async () => ({
+      files: [
+        {
+          name: "codex-pro.json",
+          label: "A_GptPro",
+          account_type: "oauth",
+          type: "codex",
+          size: 1024,
+          modified: Date.now(),
+          disabled: false,
+          default_tags: ["codex", "pro"],
+          custom_tags: ["vip-team"],
+          hidden_default_tags: [],
+          display_tags: ["codex", "pro", "vip-team"],
+        },
+      ],
+    }));
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("A_GptPro")).toBeInTheDocument();
+    expect(screen.getByTestId("auth-files-cards")).toHaveTextContent("vip-team");
+  });
+
+  test("saves auth-file custom tags and hidden default tags from the tags modal", async () => {
+    window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
+    mocks.list.mockImplementation(async () => ({
+      files: [
+        {
+          name: "codex-pro.json",
+          label: "A_GptPro",
+          account_type: "oauth",
+          type: "codex",
+          size: 1024,
+          modified: Date.now(),
+          disabled: false,
+          default_tags: ["codex", "pro"],
+          custom_tags: [],
+          hidden_default_tags: [],
+          display_tags: ["codex", "pro"],
+        },
+      ],
+    }));
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("A_GptPro")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Edit Tags" }));
+
+    const dialog = await screen.findByRole("dialog", { name: "Auth File Tags" });
+    fireEvent.change(within(dialog).getByLabelText("Custom tag"), { target: { value: "vip" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Add tag" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Hide pro" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+
+    await waitFor(() =>
+      expect(mocks.patchFields).toHaveBeenCalledWith({
+        name: "codex-pro.json",
+        custom_tags: ["vip"],
+        hidden_default_tags: ["pro"],
+      }),
+    );
   });
 
   test("uses channel name as display name and sorts by channel name", async () => {
