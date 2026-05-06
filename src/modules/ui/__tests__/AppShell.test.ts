@@ -50,8 +50,17 @@ describe("AppShell", () => {
     expect(navBlock).toContain('to: "/identity-fingerprint"');
     expect(navBlock).toContain('to: "/models"');
     expect(navBlock).toContain('to: "/proxies"');
+    expect(navBlock).toContain('to: "/api-key-permissions"');
+    expect(navBlock).toContain('i18nKey: "shell.nav_api_key_permissions"');
     expect(navBlock).not.toContain('to: "/manage/identity-fingerprint"');
     expect(navBlock).not.toContain('to: "/manage/models"');
+  });
+
+  test("resolves the API key permissions page title from its dedicated route", () => {
+    const source = readModule("modules/ui/AppShell.tsx");
+
+    expect(source).toContain('pathname.startsWith("/api-key-permissions")');
+    expect(source).toContain('"shell.page_api_key_permissions"');
   });
 
   test("uses an icon-based account section without bordered card chrome", () => {

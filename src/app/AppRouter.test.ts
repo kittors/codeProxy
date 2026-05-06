@@ -30,5 +30,13 @@ describe("AppRouter", () => {
     expect(source).toMatch(
       /path="\/manage\/ccswitch-import-settings"[\s\S]*?element=\{<Navigate to="\/ccswitch-import-settings" replace \/>\}/,
     );
+
+    expect(source).toContain("ApiKeyPermissionsPage");
+    expect(source).toMatch(
+      /<Route\s+path="\/api-key-permissions"\s+element=\{<ApiKeyPermissionsPage \/>\}\s*\/>/s,
+    );
+    expect(source).toMatch(
+      /path="\/manage\/api-key-permissions"[\s\S]*?element=\{<Navigate to="\/api-key-permissions" replace \/>\}/,
+    );
   });
 });

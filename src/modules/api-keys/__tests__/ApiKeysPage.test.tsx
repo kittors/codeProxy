@@ -216,13 +216,14 @@ describe("ApiKeysPage", () => {
     expect(screen.queryByText("Renamed Key")).not.toBeInTheDocument();
   });
 
-  test("clears exact channel restrictions when the advanced override is turned off", async () => {
+  test("keeps permissions out of the edit modal and preserves them while saving basics", async () => {
     state.entries = [
       {
         key: "sk-existing-1234567890",
         name: "Pinned Key",
         "allowed-channels": ["Kimi渠道"],
         "allowed-channel-groups": ["kimi-pool"],
+        "allowed-models": ["kimi-k2"],
         "created-at": "2026-04-14T00:00:00.000Z",
       },
     ];
@@ -240,7 +241,12 @@ describe("ApiKeysPage", () => {
     expect(await screen.findByText("Pinned Key")).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: "Edit" }));
-    await userEvent.click(screen.getByRole("switch", { name: /exact channel override/i }));
+
+    expect(screen.queryByText(/Allowed channel groups/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Allowed channels/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Allowed models/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole("switch", { name: /exact channel override/i })).toBeNull();
+
     await userEvent.click(screen.getByRole("button", { name: /save/i }));
 
     await waitFor(() => {
@@ -250,8 +256,10 @@ describe("ApiKeysPage", () => {
     expect(mocks.apiKeyEntriesUpdate).toHaveBeenLastCalledWith(
       expect.objectContaining({
         value: expect.objectContaining({
-          "allowed-channels": [],
+          name: "Pinned Key",
+          "allowed-channels": ["Kimi渠道"],
           "allowed-channel-groups": ["kimi-pool"],
+          "allowed-models": ["kimi-k2"],
         }),
       }),
     );

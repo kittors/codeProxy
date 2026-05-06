@@ -38,6 +38,11 @@ const SystemPage = lazy(() =>
 const ApiKeysPage = lazy(() =>
   import("@/modules/api-keys/ApiKeysPage").then((m) => ({ default: m.ApiKeysPage })),
 );
+const ApiKeyPermissionsPage = lazy(() =>
+  import("@/modules/api-key-permissions/ApiKeyPermissionsPage").then((m) => ({
+    default: m.ApiKeyPermissionsPage,
+  })),
+);
 const CcSwitchImportSettingsPage = lazy(() =>
   import("@/modules/ccswitch/CcSwitchImportSettingsPage").then((m) => ({
     default: m.CcSwitchImportSettingsPage,
@@ -109,6 +114,14 @@ export function AppRouter() {
                             <Route path="/system" element={<SystemPage />} />
                             <Route path="/settings" element={<Navigate to="/config" replace />} />
                             <Route path="/api-keys" element={<ApiKeysPage />} />
+                            <Route
+                              path="/api-key-permissions"
+                              element={<ApiKeyPermissionsPage />}
+                            />
+                            <Route
+                              path="/manage/api-key-permissions"
+                              element={<Navigate to="/api-key-permissions" replace />}
+                            />
                             <Route
                               path="/ccswitch-import-settings"
                               element={<CcSwitchImportSettingsPage />}

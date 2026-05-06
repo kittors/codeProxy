@@ -55,6 +55,7 @@ const NAV_ITEMS = [
   { to: "/ai-providers", i18nKey: "shell.nav_ai_providers", icon: Bot },
   { to: "/auth-files", i18nKey: "shell.nav_auth_files", icon: FileKey },
   { to: "/api-keys", i18nKey: "shell.nav_api_keys", icon: Sparkles },
+  { to: "/api-key-permissions", i18nKey: "shell.nav_api_key_permissions", icon: ShieldCheck },
   {
     to: "/ccswitch-import-settings",
     i18nKey: "shell.nav_ccswitch_import_settings",
@@ -81,6 +82,11 @@ const getPageTitleKey = (pathname: string): string => {
   if (pathname.startsWith("/ai-providers")) return "shell.nav_ai_providers";
   if (pathname.startsWith("/auth-files")) return "shell.nav_auth_files";
   if (pathname.startsWith("/api-keys")) return "shell.page_api_keys";
+  if (
+    pathname.startsWith("/api-key-permissions") ||
+    pathname.startsWith("/manage/api-key-permissions")
+  )
+    return "shell.page_api_key_permissions";
   if (
     pathname.startsWith("/ccswitch-import-settings") ||
     pathname.startsWith("/manage/ccswitch-import-settings")
