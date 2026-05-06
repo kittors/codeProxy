@@ -235,11 +235,6 @@ export function openCcSwitchImportUrl(
 ): void {
   try {
     window.open(url, "_self");
-    window.setTimeout(() => {
-      if (document.hasFocus()) {
-        options.onProtocolUnavailable?.();
-      }
-    }, 100);
   } catch {
     options.onProtocolUnavailable?.();
   }
