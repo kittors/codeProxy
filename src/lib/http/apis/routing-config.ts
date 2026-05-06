@@ -3,6 +3,7 @@ import { apiClient } from "@/lib/http/client";
 export interface RoutingConfigGroupItem {
   name?: string;
   description?: string;
+  strategy?: "round-robin" | "fill-first";
   match?: {
     channels?: string[];
   };

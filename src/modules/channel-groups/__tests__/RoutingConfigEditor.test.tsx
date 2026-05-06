@@ -55,6 +55,7 @@ function Harness({
       <div data-testid="group-count">{values.routingChannelGroups.length}</div>
       <div data-testid="route-count">{values.routingPathRoutes.length}</div>
       <div data-testid="group-name">{values.routingChannelGroups[0]?.name ?? ""}</div>
+      <div data-testid="group-strategy">{values.routingChannelGroups[0]?.strategy ?? ""}</div>
       <div data-testid="channel-name">
         {values.routingChannelGroups[0]?.channels[0]?.name ?? ""}
       </div>
@@ -98,6 +99,24 @@ describe("RoutingConfigEditor", () => {
     expect(screen.getByTestId("group-name")).toHaveTextContent("team-a");
     expect(screen.getByTestId("channel-name")).toHaveTextContent("Team A Claude");
     expect(screen.getByTestId("channel-priority")).toHaveTextContent("80");
+  });
+
+  test("stores the group-scoped routing strategy from the editor modal", async () => {
+    await i18n.changeLanguage("zh-CN");
+    const user = userEvent.setup();
+
+    render(<Harness />);
+
+    await user.click(screen.getByRole("button", { name: "新增分组" }));
+    await user.selectOptions(screen.getByTestId("routing-strategy-select"), "fill-first");
+    await user.type(screen.getByPlaceholderText("pro"), "team-fill-first");
+    await user.type(screen.getByPlaceholderText("/pro"), "/team-fill-first");
+    await user.click(screen.getByRole("combobox", { name: "选择渠道" }));
+    await user.click(screen.getByRole("option", { name: "Main Codex" }));
+    await user.click(screen.getByRole("combobox", { name: "选择渠道" }));
+    await user.click(screen.getByRole("button", { name: "添加" }));
+
+    expect(screen.getByTestId("group-strategy")).toHaveTextContent("fill-first");
   });
 
   test("defaults model tab selections to every channel-scoped model", async () => {
@@ -326,6 +345,7 @@ describe("RoutingConfigEditor", () => {
               id: "group-team-a",
               name: "team-a",
               description: "Team A group",
+              strategy: "round-robin",
               allowedModels: [],
               channels: [{ id: "channel-main-codex", name: "Main Codex", priority: "" }],
             },
@@ -375,6 +395,7 @@ describe("RoutingConfigEditor", () => {
               id: "group-stale",
               name: "legacy",
               description: "历史分组",
+              strategy: "round-robin",
               allowedModels: [],
               channels: [
                 { id: "channel-stale", name: "Legacy Claude", priority: "90" },

@@ -63,6 +63,30 @@ function appendRoutePath(baseUrl: string, path: string): string {
   return `${normalizedBase}${normalizedPath}`;
 }
 
+async function copyTextToClipboard(text: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.setAttribute("readonly", "");
+    textarea.style.opacity = "0";
+    textarea.style.position = "fixed";
+    textarea.style.top = "-1000px";
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+    try {
+      return document.execCommand("copy");
+    } catch {
+      return false;
+    } finally {
+      document.body.removeChild(textarea);
+    }
+  }
+}
+
 export function ApiKeysPage() {
   const { t } = useTranslation();
   const { notify } = useToast();
@@ -287,6 +311,7 @@ export function ApiKeysPage() {
       permissionProfileId: resolveEntryPermissionProfileId(entry, permissionProfiles),
       dailyLimit: entry["daily-limit"]?.toString() || "",
       totalQuota: entry["total-quota"]?.toString() || "",
+      spendingLimit: entry["spending-limit"]?.toString() || "",
       concurrencyLimit: entry["concurrency-limit"]?.toString() || "",
       rpmLimit: entry["rpm-limit"]?.toString() || "",
       tpmLimit: entry["tpm-limit"]?.toString() || "",
@@ -320,6 +345,7 @@ export function ApiKeysPage() {
                 "permission-profile-id": entries[editIndex]["permission-profile-id"] ?? "",
                 "daily-limit": entries[editIndex]["daily-limit"] ?? 0,
                 "total-quota": entries[editIndex]["total-quota"] ?? 0,
+                "spending-limit": entries[editIndex]["spending-limit"] ?? 0,
                 "concurrency-limit": entries[editIndex]["concurrency-limit"] ?? 0,
                 "rpm-limit": entries[editIndex]["rpm-limit"] ?? 0,
                 "tpm-limit": entries[editIndex]["tpm-limit"] ?? 0,
@@ -387,12 +413,11 @@ export function ApiKeysPage() {
   /* ─── copy ─── */
 
   const handleCopy = async (key: string) => {
-    try {
-      await navigator.clipboard.writeText(key);
+    if (await copyTextToClipboard(key)) {
       notify({ type: "success", message: t("api_keys_page.copied_toast") });
-    } catch {
-      notify({ type: "error", message: t("api_keys_page.copy_failed") });
+      return;
     }
+    notify({ type: "error", message: t("api_keys_page.copy_failed") });
   };
 
   const ccSwitchImportBaseApiUrl = useMemo(
