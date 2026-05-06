@@ -376,7 +376,7 @@ describe("AuthFilesPage files table", () => {
     expect(within(card as HTMLElement).queryByText(/^pro$/i)).not.toBeInTheDocument();
   });
 
-  test("saves auth-file custom tags and hidden default tags from the tags modal", async () => {
+  test("saves auth-file tag visibility and custom tags from the tags modal", async () => {
     window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
     mocks.list.mockImplementation(async () => ({
       files: [
@@ -414,7 +414,7 @@ describe("AuthFilesPage files table", () => {
     const dialog = await screen.findByRole("dialog", { name: "Auth File Tags" });
     fireEvent.change(within(dialog).getByLabelText("Custom tag"), { target: { value: "vip" } });
     fireEvent.click(within(dialog).getByRole("button", { name: "Add tag" }));
-    fireEvent.click(within(dialog).getByRole("button", { name: "Hide pro" }));
+    fireEvent.click(within(dialog).getByRole("checkbox", { name: "pro" }));
     fireEvent.click(within(dialog).getByRole("button", { name: "Save" }));
 
     await waitFor(() =>
@@ -422,6 +422,7 @@ describe("AuthFilesPage files table", () => {
         name: "codex-pro.json",
         custom_tags: ["vip"],
         hidden_default_tags: ["pro"],
+        display_tags: ["codex", "vip"],
       }),
     );
   });

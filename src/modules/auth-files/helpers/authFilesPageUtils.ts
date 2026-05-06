@@ -166,7 +166,9 @@ export const sanitizeAuthFilesForCache = (files: AuthFileItem[]): AuthFileItem[]
     default_tags: normalizeTagList(file.default_tags),
     custom_tags: normalizeTagList(file.custom_tags),
     hidden_default_tags: normalizeTagList(file.hidden_default_tags),
-    display_tags: normalizeTagList(file.display_tags),
+    display_tags: Array.isArray(file.display_tags)
+      ? normalizeTagList(file.display_tags)
+      : undefined,
     id_token: sanitizeDecodedIdToken(file.id_token),
   }));
 
@@ -571,9 +573,15 @@ export const readAuthFileCustomTags = (file: AuthFileItem): string[] =>
 export const readAuthFileHiddenDefaultTags = (file: AuthFileItem): string[] =>
   normalizeTagList(file.hidden_default_tags);
 
+export const readAuthFileTagCandidates = (file: AuthFileItem): string[] =>
+  normalizeTagList([
+    ...readAuthFileDefaultTags(file),
+    ...readAuthFileCustomTags(file),
+    ...(Array.isArray(file.display_tags) ? normalizeTagList(file.display_tags) : []),
+  ]);
+
 export const resolveAuthFileDisplayTags = (file: AuthFileItem): string[] => {
-  const displayTags = normalizeTagList(file.display_tags);
-  if (displayTags.length > 0) return displayTags;
+  if (Array.isArray(file.display_tags)) return normalizeTagList(file.display_tags);
   return buildAuthFileDisplayTags(
     readAuthFileDefaultTags(file),
     readAuthFileCustomTags(file),

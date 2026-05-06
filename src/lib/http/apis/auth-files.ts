@@ -32,6 +32,7 @@ export const authFilesApi = {
     subscription_expires_at?: string;
     custom_tags?: string[];
     hidden_default_tags?: string[];
+    display_tags?: string[];
   }) => apiClient.patch("/auth-files/fields", payload),
 
   getOauthExcludedModels: async (): Promise<Record<string, string[]>> => {

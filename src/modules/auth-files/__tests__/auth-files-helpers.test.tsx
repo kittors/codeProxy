@@ -9,6 +9,7 @@ import {
   pickQuotaPreviewItem,
   readAuthFilesDataCache,
   readAuthFilesUiState,
+  resolveAuthFileDisplayTags,
   resolveAuthFileSubscriptionStatus,
   resolveAuthFileStats,
   sanitizeAuthFilesForCache,
@@ -159,7 +160,7 @@ describe("Auth Files helper coverage", () => {
         default_tags: [],
         custom_tags: [],
         hidden_default_tags: [],
-        display_tags: [],
+        display_tags: undefined,
         id_token: {
           chatgpt_account_id: "acct-1",
           plan_type: "pro",
@@ -192,6 +193,24 @@ describe("Auth Files helper coverage", () => {
         },
       },
     });
+  });
+
+  test("treats an explicit empty display tag list as hiding every tag", () => {
+    const file = {
+      name: "codex.json",
+      default_tags: ["codex", "pro"],
+      custom_tags: ["vip"],
+      display_tags: [],
+    } satisfies AuthFileItem;
+
+    expect(resolveAuthFileDisplayTags(file)).toEqual([]);
+    expect(
+      resolveAuthFileDisplayTags({
+        name: "codex.json",
+        default_tags: ["codex", "pro"],
+        custom_tags: ["vip"],
+      }),
+    ).toEqual(["codex", "pro", "vip"]);
   });
 
   test("aggregates auth file usage and picks quota preview entries", () => {
