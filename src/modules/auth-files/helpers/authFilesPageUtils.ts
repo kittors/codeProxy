@@ -589,6 +589,17 @@ export const resolveAuthFileDisplayTags = (file: AuthFileItem): string[] => {
   );
 };
 
+export const shouldShowAuthFileDisplayTag = (file: AuthFileItem, tag: unknown): boolean => {
+  const normalizedTag = normalizeTagValue(tag);
+  if (!normalizedTag) return false;
+
+  if (Array.isArray(file.display_tags)) {
+    return normalizeTagList(file.display_tags).includes(normalizedTag);
+  }
+
+  return !readAuthFileHiddenDefaultTags(file).includes(normalizedTag);
+};
+
 export const resolveAuthFilePlanType = (
   file: AuthFileItem,
   quotaState?: QuotaState | null,
