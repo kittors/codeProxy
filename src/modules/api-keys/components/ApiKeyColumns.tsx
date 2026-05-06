@@ -82,7 +82,7 @@ export const createApiKeyColumns = ({
   {
     key: "key",
     label: t("api_keys_page.col_key"),
-    width: "w-[240px] min-w-[240px]",
+    width: "w-[320px] min-w-[320px]",
     cellClassName: "whitespace-nowrap",
     render: (row) => (
       <code className="rounded-md bg-slate-100 px-2 py-0.5 font-mono text-xs text-slate-700 dark:bg-neutral-800 dark:text-white/70">

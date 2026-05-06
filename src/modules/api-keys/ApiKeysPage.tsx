@@ -611,7 +611,7 @@ export function ApiKeysPage() {
             rowHeight={44}
             height="h-[calc(100dvh-260px)] max-h-[70vh]"
             minHeight="min-h-[320px]"
-            minWidth="min-w-[1740px]"
+            minWidth="min-w-[1820px]"
             caption={t("api_keys_page.table_caption")}
             emptyText={t("api_keys_page.no_api_keys")}
             rowClassName={(row) => (row.disabled ? "opacity-50" : "")}
