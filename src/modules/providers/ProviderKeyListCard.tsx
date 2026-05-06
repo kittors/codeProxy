@@ -165,6 +165,9 @@ export function ProviderKeyListCard({
                       {item.proxyUrl ? (
                         <p className="truncate font-mono">proxyUrl：{item.proxyUrl}</p>
                       ) : null}
+                      {typeof item.priority === "number" ? (
+                        <p className="truncate font-mono">priority：{item.priority}</p>
+                      ) : null}
                       <p className="tabular-nums">
                         {t("providers.models_label")}: {models.length} ·{" "}
                         {t("providers.excluded_models_label")}: {excludedModels.length} ·{" "}

@@ -5,7 +5,10 @@ import {
   maskApiKey,
   normalizeDiscoveredModels,
 } from "@/modules/providers/providers-helpers";
-import { buildCandidateUsageSourceIds, normalizeUsageSourceId } from "@/modules/providers/provider-usage";
+import {
+  buildCandidateUsageSourceIds,
+  normalizeUsageSourceId,
+} from "@/modules/providers/provider-usage";
 
 describe("providers helpers", () => {
   test("masks api keys consistently for provider cards", () => {
@@ -22,6 +25,7 @@ describe("providers helpers", () => {
       baseUrl: "https://claude.example.com",
       proxyUrl: "https://proxy.example.com",
       proxyId: "hk",
+      priority: -7,
       excludedModels: ["claude-3-opus", "claude-3-haiku"],
       headers: { "x-test": "1" },
       models: [{ name: "claude-3-opus", alias: "opus", priority: 10, testModel: "probe-model" }],
@@ -31,6 +35,7 @@ describe("providers helpers", () => {
     expect(draft.name).toBe("Claude Main");
     expect(draft.apiKey).toBe("sk-ant-123456");
     expect(draft.proxyId).toBe("hk");
+    expect(draft.priorityText).toBe("-7");
     expect(draft.excludedModelsText).toBe("claude-3-opus\nclaude-3-haiku");
     expect(draft.headersEntries).toEqual([{ id: expect.any(String), key: "x-test", value: "1" }]);
     expect(draft.modelEntries).toEqual([
@@ -92,10 +97,7 @@ describe("providers helpers", () => {
           null,
         ],
       }),
-    ).toEqual([
-      { id: "gpt-4.1", owned_by: "openai" },
-      { id: "gpt-4o-mini" },
-    ]);
+    ).toEqual([{ id: "gpt-4.1", owned_by: "openai" }, { id: "gpt-4o-mini" }]);
   });
 
   test("normalizes usage sources and matches raw plus masked api key candidates", () => {

@@ -71,7 +71,7 @@ export function useOpenAIProviderEditor({
     const headers = keyValueEntriesToRecord(openaiDraft.headersEntries);
     const priorityText = openaiDraft.priorityText.trim();
     const priority = priorityText !== "" ? Number(priorityText) : undefined;
-    if (priority !== undefined && !Number.isFinite(priority)) {
+    if (priority !== undefined && (!Number.isFinite(priority) || !Number.isInteger(priority))) {
       setOpenaiDraftError(t("providers.priority_error"));
       return null;
     }

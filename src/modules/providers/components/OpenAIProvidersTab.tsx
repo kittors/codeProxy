@@ -76,6 +76,11 @@ export function OpenAIProvidersTab({
                     <p className="mt-1 truncate font-mono text-xs text-slate-700 dark:text-slate-200">
                       baseUrl: {provider.baseUrl || "--"}
                     </p>
+                    {typeof provider.priority === "number" ? (
+                      <p className="mt-1 truncate font-mono text-xs text-slate-700 dark:text-slate-200">
+                        priority: {provider.priority}
+                      </p>
+                    ) : null}
 
                     {headerEntries.length ? (
                       <div className="mt-2 flex flex-wrap gap-1">
@@ -132,6 +137,12 @@ export function OpenAIProvidersTab({
                       <span>
                         {t("providers.models_label")}: {provider.models?.length ?? 0}
                       </span>
+                      {typeof provider.priority === "number" ? (
+                        <>
+                          <span>·</span>
+                          <span>priority: {provider.priority}</span>
+                        </>
+                      ) : null}
                       <span>·</span>
                       <span>{t("providers.success_stats", { count: stats.success })}</span>
                       <span>·</span>

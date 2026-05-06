@@ -116,6 +116,9 @@ export const serializeProviderKey = (config: ProviderSimpleConfig) => {
   if (proxyUrl) payload["proxy-url"] = proxyUrl;
   const proxyId = normalizeString(config.proxyId);
   if (proxyId) payload["proxy-id"] = proxyId;
+  if (typeof config.priority === "number" && Number.isFinite(config.priority)) {
+    payload.priority = config.priority;
+  }
   const headers = serializeHeaders(config.headers);
   if (headers) payload.headers = headers;
   const models = serializeModels(config.models);
@@ -157,6 +160,9 @@ export const serializeGeminiKey = (config: ProviderSimpleConfig) => {
   if (baseUrl) payload["base-url"] = baseUrl;
   const proxyId = normalizeString(config.proxyId);
   if (proxyId) payload["proxy-id"] = proxyId;
+  if (typeof config.priority === "number" && Number.isFinite(config.priority)) {
+    payload.priority = config.priority;
+  }
   const headers = serializeHeaders(config.headers);
   if (headers) payload.headers = headers;
   const models = serializeModels(config.models);
@@ -183,6 +189,9 @@ export const serializeBedrockKey = (config: BedrockProviderConfig) => {
   if (proxyUrl) payload["proxy-url"] = proxyUrl;
   const proxyId = normalizeString(config.proxyId);
   if (proxyId) payload["proxy-id"] = proxyId;
+  if (typeof config.priority === "number" && Number.isFinite(config.priority)) {
+    payload.priority = config.priority;
+  }
   const headers = serializeHeaders(config.headers);
   if (headers) payload.headers = headers;
   const models = serializeModels(config.models);
