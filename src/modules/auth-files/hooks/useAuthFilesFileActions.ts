@@ -4,7 +4,6 @@ import { authFilesApi } from "@/lib/http/apis";
 import type { AuthFileItem } from "@/lib/http/types";
 import { useToast } from "@/modules/ui/ToastProvider";
 import {
-  buildAuthFileDisplayTags,
   formatFileSize,
   MAX_AUTH_FILE_SIZE,
   readAuthFileDefaultTags,
@@ -221,17 +220,19 @@ export function useAuthFilesFileActions({
   );
 
   const saveAuthFileTags = useCallback(
-    async (file: AuthFileItem, customTags: string[], hiddenDefaultTags: string[]) => {
+    async (file: AuthFileItem, customTags: string[], displayTags: string[]) => {
       const name = file.name;
       setTagSavingByName((prev) => ({ ...prev, [name]: true }));
       try {
+        const defaultTags = readAuthFileDefaultTags(file);
+        const displayTagSet = new Set(displayTags);
+        const hiddenDefaultTags = defaultTags.filter((tag) => !displayTagSet.has(tag));
         await authFilesApi.patchFields({
           name,
           custom_tags: customTags,
           hidden_default_tags: hiddenDefaultTags,
+          display_tags: displayTags,
         });
-        const defaultTags = readAuthFileDefaultTags(file);
-        const displayTags = buildAuthFileDisplayTags(defaultTags, customTags, hiddenDefaultTags);
         const applyPatch = (item: AuthFileItem): AuthFileItem =>
           item.name === name
             ? {
