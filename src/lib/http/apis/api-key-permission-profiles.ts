@@ -1,8 +1,5 @@
-import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
-import { configFileApi } from "@/lib/http/apis/config-file";
 import type { ApiKeyEntry } from "@/lib/http/apis/api-keys";
-
-const CONFIG_KEY = "api-key-permission-profiles";
+import { apiClient } from "@/lib/http/client";
 
 export const CUSTOM_PERMISSION_PROFILE_ID = "__custom__";
 
@@ -185,26 +182,18 @@ export function resolveEntryPermissionProfileId(
   return hasApiKeyPermissionSettings(entry) ? CUSTOM_PERMISSION_PROFILE_ID : "";
 }
 
-function parseProfilesFromYaml(yamlContent: string): ApiKeyPermissionProfile[] {
-  const parsed = asRecord(parseYaml(yamlContent) || {}) ?? {};
-  return normalizeApiKeyPermissionProfiles(parsed[CONFIG_KEY]);
-}
-
 export const apiKeyPermissionProfilesApi = {
   async list(): Promise<ApiKeyPermissionProfile[]> {
-    const yaml = await configFileApi.fetchConfigYaml();
-    return parseProfilesFromYaml(yaml);
+    const data = await apiClient.get<Record<string, unknown>>("/api-key-permission-profiles");
+    return normalizeApiKeyPermissionProfiles(
+      data["api-key-permission-profiles"] ?? data.items ?? data,
+    );
   },
 
   async replace(profiles: ApiKeyPermissionProfile[]): Promise<void> {
-    const yaml = await configFileApi.fetchConfigYaml();
-    const parsed = asRecord(parseYaml(yaml) || {}) ?? {};
-    const serialized = profiles.map(serializeApiKeyPermissionProfile);
-    if (serialized.length > 0) {
-      parsed[CONFIG_KEY] = serialized;
-    } else {
-      delete parsed[CONFIG_KEY];
-    }
-    await configFileApi.saveConfigYaml(stringifyYaml(parsed));
+    await apiClient.put(
+      "/api-key-permission-profiles",
+      profiles.map(serializeApiKeyPermissionProfile),
+    );
   },
 };
