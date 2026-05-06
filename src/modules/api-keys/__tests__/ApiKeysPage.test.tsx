@@ -11,6 +11,7 @@ const state = vi.hoisted(() => ({
   entries: [] as any[],
   channelGroups: [] as any[],
   configYaml: "",
+  permissionProfiles: [] as any[],
 }));
 
 const mocks = vi.hoisted(() => ({
@@ -33,6 +34,12 @@ const mocks = vi.hoisted(() => ({
     state.configYaml = content;
     return {};
   }),
+  apiClientPut: vi.fn(async (url: string, body: any) => {
+    if (url === "/api-key-permission-profiles") {
+      state.permissionProfiles = body;
+    }
+    return {};
+  }),
   authFilesList: vi.fn(async () => ({ files: [] })),
   getGeminiKeys: vi.fn(async () => []),
   getClaudeConfigs: vi.fn(async () => []),
@@ -40,6 +47,9 @@ const mocks = vi.hoisted(() => ({
   getVertexConfigs: vi.fn(async () => []),
   getOpenAIProviders: vi.fn(async () => []),
   apiClientGet: vi.fn(async (url: string) => {
+    if (url === "/api-key-permission-profiles") {
+      return { "api-key-permission-profiles": state.permissionProfiles };
+    }
     if (url === "/channel-groups") {
       return { items: state.channelGroups };
     }
@@ -96,6 +106,7 @@ vi.mock("@/lib/http/apis", async (importOriginal) => {
 vi.mock("@/lib/http/client", () => ({
   apiClient: {
     get: mocks.apiClientGet,
+    put: mocks.apiClientPut,
   },
 }));
 
@@ -175,6 +186,7 @@ describe("ApiKeysPage", () => {
     ];
     state.channelGroups = [];
     state.configYaml = "";
+    state.permissionProfiles = [];
     mocks.apiKeyEntriesList.mockClear();
     mocks.apiKeyEntriesReplace.mockClear();
     mocks.apiKeyEntriesUpdate.mockClear();
@@ -182,6 +194,7 @@ describe("ApiKeysPage", () => {
     mocks.apiKeysList.mockClear();
     mocks.fetchConfigYaml.mockClear();
     mocks.saveConfigYaml.mockClear();
+    mocks.apiClientPut.mockClear();
     mocks.authFilesList.mockClear();
     mocks.getGeminiKeys.mockClear();
     mocks.getClaudeConfigs.mockClear();
@@ -284,21 +297,21 @@ describe("ApiKeysPage", () => {
   });
 
   test("applies the selected permission config when creating an API key", async () => {
-    state.configYaml = `
-api-key-permission-profiles:
-  - id: standard
-    name: Standard
-    daily-limit: 15000
-    total-quota: 0
-    concurrency-limit: 0
-    rpm-limit: 0
-    tpm-limit: 0
-    allowed-channel-groups:
-      - pro
-    allowed-models:
-      - gpt-5.4
-    system-prompt: Use the standard workspace prompt.
-`;
+    state.permissionProfiles = [
+      {
+        id: "standard",
+        name: "Standard",
+        "daily-limit": 15000,
+        "total-quota": 0,
+        "concurrency-limit": 0,
+        "rpm-limit": 0,
+        "tpm-limit": 0,
+        "allowed-channel-groups": ["pro"],
+        "allowed-channels": [],
+        "allowed-models": ["gpt-5.4"],
+        "system-prompt": "Use the standard workspace prompt.",
+      },
+    ];
 
     render(
       <MemoryRouter>
@@ -344,6 +357,8 @@ api-key-permission-profiles:
         "system-prompt": "Use the standard workspace prompt.",
       }),
     ]);
+    expect(mocks.fetchConfigYaml).not.toHaveBeenCalled();
+    expect(mocks.saveConfigYaml).not.toHaveBeenCalled();
   });
 
   test("shows operation column icon tooltips without relying on the app-level tooltip listener", async () => {

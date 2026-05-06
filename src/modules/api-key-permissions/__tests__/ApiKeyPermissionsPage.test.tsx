@@ -10,6 +10,7 @@ const state = vi.hoisted(() => ({
   entries: [] as any[],
   channelGroups: [] as any[],
   configYaml: "",
+  permissionProfiles: [] as any[],
 }));
 
 const mocks = vi.hoisted(() => ({
@@ -23,6 +24,12 @@ const mocks = vi.hoisted(() => ({
     state.configYaml = content;
     return {};
   }),
+  apiClientPut: vi.fn(async (url: string, body: any) => {
+    if (url === "/api-key-permission-profiles") {
+      state.permissionProfiles = body;
+    }
+    return {};
+  }),
   authFilesList: vi.fn(async () => ({ files: [] })),
   getGeminiKeys: vi.fn(async () => []),
   getClaudeConfigs: vi.fn(async () => []),
@@ -30,6 +37,9 @@ const mocks = vi.hoisted(() => ({
   getVertexConfigs: vi.fn(async () => []),
   getOpenAIProviders: vi.fn(async () => []),
   apiClientGet: vi.fn(async (url: string) => {
+    if (url === "/api-key-permission-profiles") {
+      return { "api-key-permission-profiles": state.permissionProfiles };
+    }
     if (url === "/channel-groups") {
       return { items: state.channelGroups };
     }
@@ -82,6 +92,7 @@ vi.mock("@/lib/http/apis", async (importOriginal) => {
 vi.mock("@/lib/http/client", () => ({
   apiClient: {
     get: mocks.apiClientGet,
+    put: mocks.apiClientPut,
   },
 }));
 
@@ -115,21 +126,22 @@ describe("ApiKeyPermissionsPage", () => {
         "created-at": "2026-05-02T00:00:00.000Z",
       },
     ];
-    state.configYaml = `
-api-key-permission-profiles:
-  - id: standard
-    name: 标准配置
-    daily-limit: 15000
-    total-quota: 0
-    concurrency-limit: 0
-    rpm-limit: 0
-    tpm-limit: 0
-    allowed-channel-groups:
-      - legacy
-    allowed-channels: []
-    allowed-models: []
-    system-prompt: 标准系统提示词
-`;
+    state.configYaml = "";
+    state.permissionProfiles = [
+      {
+        id: "standard",
+        name: "标准配置",
+        "daily-limit": 15000,
+        "total-quota": 0,
+        "concurrency-limit": 0,
+        "rpm-limit": 0,
+        "tpm-limit": 0,
+        "allowed-channel-groups": ["legacy"],
+        "allowed-channels": [],
+        "allowed-models": [],
+        "system-prompt": "标准系统提示词",
+      },
+    ];
     state.channelGroups = [
       {
         name: "pro",
@@ -146,6 +158,7 @@ api-key-permission-profiles:
     mocks.apiKeyEntriesReplace.mockClear();
     mocks.fetchConfigYaml.mockClear();
     mocks.saveConfigYaml.mockClear();
+    mocks.apiClientPut.mockClear();
     mocks.authFilesList.mockClear();
     mocks.getGeminiKeys.mockResolvedValue([]);
     mocks.getClaudeConfigs.mockResolvedValue([
@@ -182,19 +195,25 @@ api-key-permission-profiles:
     await userEvent.click(within(dialog).getByRole("button", { name: "保存配置" }));
 
     await waitFor(() => {
-      expect(mocks.saveConfigYaml).toHaveBeenCalled();
+      expect(mocks.apiClientPut).toHaveBeenCalledWith(
+        "/api-key-permission-profiles",
+        expect.arrayContaining([
+          expect.objectContaining({
+            name: "专业配置",
+            "daily-limit": 15000,
+            "total-quota": 0,
+            "concurrency-limit": 0,
+            "rpm-limit": 0,
+            "tpm-limit": 0,
+            "allowed-channel-groups": ["pro"],
+            "allowed-channels": [],
+            "allowed-models": [],
+            "system-prompt": "专业系统提示词",
+          }),
+        ]),
+      );
     });
-
-    const savedYaml = String(mocks.saveConfigYaml.mock.calls.at(-1)?.[0] ?? "");
-    expect(savedYaml).toContain("api-key-permission-profiles:");
-    expect(savedYaml).toContain("name: 专业配置");
-    expect(savedYaml).toContain("daily-limit: 15000");
-    expect(savedYaml).toContain("total-quota: 0");
-    expect(savedYaml).toContain("concurrency-limit: 0");
-    expect(savedYaml).toContain("rpm-limit: 0");
-    expect(savedYaml).toContain("tpm-limit: 0");
-    expect(savedYaml).toContain("allowed-channel-groups:");
-    expect(savedYaml).toContain("- pro");
-    expect(savedYaml).toContain("system-prompt: 专业系统提示词");
+    expect(mocks.fetchConfigYaml).not.toHaveBeenCalled();
+    expect(mocks.saveConfigYaml).not.toHaveBeenCalled();
   });
 });
