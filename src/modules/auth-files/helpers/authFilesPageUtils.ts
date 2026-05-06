@@ -586,6 +586,20 @@ export const resolveAuthFilePlanType = (
   quotaState?: QuotaState | null,
 ): string | null => normalizePlanType(quotaState?.planType) ?? resolveCodexPlanType(file);
 
+export const resolveAuthFileSupplementalTags = (
+  file: AuthFileItem,
+  quotaState?: QuotaState | null,
+): string[] => {
+  const hiddenByPrimaryBadges = new Set<string>();
+  const typeTag = normalizeTagValue(resolveFileType(file));
+  if (typeTag) hiddenByPrimaryBadges.add(typeTag);
+  const planTag = normalizeTagValue(resolveAuthFilePlanType(file, quotaState) ?? "");
+  if (planTag) hiddenByPrimaryBadges.add(planTag);
+  return resolveAuthFileDisplayTags(file).filter(
+    (tag) => !hiddenByPrimaryBadges.has(normalizeTagValue(tag)),
+  );
+};
+
 export const isRuntimeOnlyAuthFile = (file: AuthFileItem): boolean => {
   const raw = (file.runtime_only ?? file.runtimeOnly) as unknown;
   if (typeof raw === "boolean") return raw;
