@@ -1,6 +1,6 @@
 import { useCallback, useMemo, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { CalendarClock, Download, Eye, Loader2, RefreshCw, Zap } from "lucide-react";
+import { CalendarClock, Download, Eye, Loader2, RefreshCw, Tags, Zap } from "lucide-react";
 import type { AuthFileItem } from "@/lib/http/types";
 import { formatLatency } from "@/modules/providers/hooks/useProviderLatency";
 import { ProviderStatusBar } from "@/modules/providers/ProviderStatusBar";
@@ -21,6 +21,7 @@ import {
   isRuntimeOnlyAuthFile,
   parseAdditionalQuotaWindowLabel,
   resolveAuthFileDisplayName,
+  resolveAuthFileDisplayTags,
   resolveAuthFilePlanType,
   resolveAuthFileStats,
   resolveAuthFileStatusBar,
@@ -119,6 +120,7 @@ interface UseAuthFilesFilesPresentationOptions {
   refreshQuota: (file: AuthFileItem, provider: QuotaProvider) => Promise<void>;
   openDetail: (file: AuthFileItem) => Promise<void>;
   downloadAuthFile: (file: AuthFileItem) => Promise<void>;
+  openTagsEditor: (file: AuthFileItem) => void;
   statusUpdating: Record<string, boolean>;
   setFileEnabled: (file: AuthFileItem, enabled: boolean) => Promise<void>;
   usageIndex: UsageIndex;
@@ -142,6 +144,7 @@ export function useAuthFilesFilesPresentation({
   refreshQuota,
   openDetail,
   downloadAuthFile,
+  openTagsEditor,
   statusUpdating,
   setFileEnabled,
   usageIndex,
@@ -431,6 +434,18 @@ export function useAuthFilesFilesPresentation({
             <p className="truncate font-mono text-xs text-slate-900 dark:text-white">
               {resolveAuthFileDisplayName(file) || "--"}
             </p>
+            {resolveAuthFileDisplayTags(file).length > 0 ? (
+              <div className="mt-1 flex flex-wrap gap-1">
+                {resolveAuthFileDisplayTags(file).map((tag) => (
+                  <span
+                    key={tag}
+                    className="inline-flex items-center rounded-full bg-sky-50 px-2 py-0.5 text-[10px] font-semibold text-sky-700 dark:bg-sky-500/15 dark:text-sky-200"
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            ) : null}
           </div>
         ),
       },
@@ -707,6 +722,18 @@ export function useAuthFilesFilesPresentation({
                 </HoverTooltip>
               ) : null}
 
+              <HoverTooltip content={t("auth_files.edit_tags")}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => openTagsEditor(file)}
+                  title={t("auth_files.edit_tags")}
+                  aria-label={t("auth_files.edit_tags")}
+                >
+                  <Tags size={16} />
+                </Button>
+              </HoverTooltip>
+
               <HoverTooltip content={t("auth_files.view")}>
                 <Button
                   variant="ghost"
@@ -743,6 +770,7 @@ export function useAuthFilesFilesPresentation({
     formatPlanTypeLabel,
     formatQuotaResetTextCompact,
     openDetail,
+    openTagsEditor,
     quotaByFileName,
     quotaPreviewMode,
     quotaProgressCircle,

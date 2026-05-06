@@ -4,8 +4,10 @@ import { authFilesApi } from "@/lib/http/apis";
 import type { AuthFileItem } from "@/lib/http/types";
 import { useToast } from "@/modules/ui/ToastProvider";
 import {
+  buildAuthFileDisplayTags,
   formatFileSize,
   MAX_AUTH_FILE_SIZE,
+  readAuthFileDefaultTags,
 } from "@/modules/auth-files/helpers/authFilesPageUtils";
 
 interface UseAuthFilesFileActionsOptions {
@@ -33,6 +35,7 @@ export function useAuthFilesFileActions({
   const [uploading, setUploading] = useState(false);
   const [deletingAll, setDeletingAll] = useState(false);
   const [statusUpdating, setStatusUpdating] = useState<Record<string, boolean>>({});
+  const [tagSavingByName, setTagSavingByName] = useState<Record<string, boolean>>({});
 
   const downloadAuthFile = useCallback(
     async (file: AuthFileItem) => {
@@ -217,13 +220,61 @@ export function useAuthFilesFileActions({
     [notify, setFiles, t],
   );
 
+  const saveAuthFileTags = useCallback(
+    async (file: AuthFileItem, customTags: string[], hiddenDefaultTags: string[]) => {
+      const name = file.name;
+      setTagSavingByName((prev) => ({ ...prev, [name]: true }));
+      try {
+        await authFilesApi.patchFields({
+          name,
+          custom_tags: customTags,
+          hidden_default_tags: hiddenDefaultTags,
+        });
+        const defaultTags = readAuthFileDefaultTags(file);
+        const displayTags = buildAuthFileDisplayTags(defaultTags, customTags, hiddenDefaultTags);
+        const applyPatch = (item: AuthFileItem): AuthFileItem =>
+          item.name === name
+            ? {
+                ...item,
+                default_tags: defaultTags,
+                custom_tags: customTags,
+                hidden_default_tags: hiddenDefaultTags,
+                display_tags: displayTags,
+              }
+            : item;
+        setFiles((prev) => prev.map(applyPatch));
+        setDetailFile((prev) => (prev && prev.name === name ? applyPatch(prev) : prev));
+        notify({
+          type: "success",
+          message: t("auth_files.prefix_proxy_saved_success", { name }),
+        });
+        return true;
+      } catch (err: unknown) {
+        notify({
+          type: "error",
+          message: err instanceof Error ? err.message : t("auth_files.save_failed"),
+        });
+        return false;
+      } finally {
+        setTagSavingByName((prev) => {
+          const next = { ...prev };
+          delete next[name];
+          return next;
+        });
+      }
+    },
+    [notify, setDetailFile, setFiles, t],
+  );
+
   return {
     uploading,
     deletingAll,
     statusUpdating,
+    tagSavingByName,
     downloadAuthFile,
     handleUpload,
     handleDeleteSelection,
     setFileEnabled,
+    saveAuthFileTags,
   };
 }

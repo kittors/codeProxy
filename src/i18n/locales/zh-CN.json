@@ -623,6 +623,7 @@
     "channel_name_hint": "该名称会出现在 API Key 的“允许渠道”选项中，且必须全局唯一。",
     "channel_name_required": "请填写渠道名称",
     "download": "下载",
+    "edit_tags": "编辑标签",
     "add": "添加",
     "add_row": "添加一行",
     "save": "保存",
@@ -761,7 +762,18 @@
     "group_overview_no_quota": "当前结果暂无可聚合配额",
     "quota_auto_refresh": "自动刷新",
     "quota_refresh_off": "关闭",
-    "quota_updated_at": "更新于"
+    "quota_updated_at": "更新于",
+    "tags_modal_title": "认证文件标签",
+    "custom_tag_label": "自定义标签",
+    "custom_tag_placeholder": "例如 vip",
+    "custom_tag_add": "添加标签",
+    "custom_tag_limit": "最多 {{count}} 个自定义标签",
+    "default_tags_label": "默认标签",
+    "display_tags_label": "最终显示标签",
+    "no_tags": "暂无标签",
+    "hide_tag": "隐藏 {{tag}}",
+    "restore_tag": "恢复 {{tag}}",
+    "remove_custom_tag": "移除 {{tag}}"
   },
   "antigravity_quota": {
     "title": "Antigravity 额度",

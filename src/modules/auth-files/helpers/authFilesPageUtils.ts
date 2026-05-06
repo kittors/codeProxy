@@ -163,6 +163,10 @@ export const sanitizeAuthFilesForCache = (files: AuthFileItem[]): AuthFileItem[]
     subscriptionRemainingMinutes: file.subscriptionRemainingMinutes,
     subscription_expired: file.subscription_expired,
     subscriptionExpired: file.subscriptionExpired,
+    default_tags: normalizeTagList(file.default_tags),
+    custom_tags: normalizeTagList(file.custom_tags),
+    hidden_default_tags: normalizeTagList(file.hidden_default_tags),
+    display_tags: normalizeTagList(file.display_tags),
     id_token: sanitizeDecodedIdToken(file.id_token),
   }));
 
@@ -426,6 +430,36 @@ export const dateTimeLocalInputToIso = (value: string): string | null => {
 
 export const normalizeProviderKey = (value: string): string => value.trim().toLowerCase();
 
+export const normalizeTagValue = (value: unknown): string => {
+  if (typeof value !== "string") return "";
+  return value.trim().replace(/\s+/g, "-").toLowerCase();
+};
+
+export const normalizeTagList = (value: unknown): string[] => {
+  if (!Array.isArray(value)) return [];
+  const seen = new Set<string>();
+  const tags: string[] = [];
+  value.forEach((entry) => {
+    const normalized = normalizeTagValue(entry);
+    if (!normalized || seen.has(normalized)) return;
+    seen.add(normalized);
+    tags.push(normalized);
+  });
+  return tags;
+};
+
+export const buildAuthFileDisplayTags = (
+  defaultTags: string[],
+  customTags: string[],
+  hiddenDefaultTags: string[],
+): string[] => {
+  const hiddenSet = new Set(normalizeTagList(hiddenDefaultTags));
+  return normalizeTagList([
+    ...normalizeTagList(defaultTags).filter((tag) => !hiddenSet.has(tag)),
+    ...normalizeTagList(customTags),
+  ]);
+};
+
 export const escapeRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 export const matchesModelPattern = (modelId: string, pattern: string): boolean => {
@@ -527,6 +561,25 @@ export const authFilesSortCollator = new Intl.Collator("zh-Hans-CN", {
   numeric: true,
   sensitivity: "base",
 });
+
+export const readAuthFileDefaultTags = (file: AuthFileItem): string[] =>
+  normalizeTagList(file.default_tags);
+
+export const readAuthFileCustomTags = (file: AuthFileItem): string[] =>
+  normalizeTagList(file.custom_tags);
+
+export const readAuthFileHiddenDefaultTags = (file: AuthFileItem): string[] =>
+  normalizeTagList(file.hidden_default_tags);
+
+export const resolveAuthFileDisplayTags = (file: AuthFileItem): string[] => {
+  const displayTags = normalizeTagList(file.display_tags);
+  if (displayTags.length > 0) return displayTags;
+  return buildAuthFileDisplayTags(
+    readAuthFileDefaultTags(file),
+    readAuthFileCustomTags(file),
+    readAuthFileHiddenDefaultTags(file),
+  );
+};
 
 export const resolveAuthFilePlanType = (
   file: AuthFileItem,

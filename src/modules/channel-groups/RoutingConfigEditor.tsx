@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Check, Pencil, Plus, Trash2, TriangleAlert, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import type { ChannelGroupChannelDetail } from "@/lib/http/apis/channel-groups";
 import type {
   RoutingChannelGroupEntry,
   RoutingChannelGroupMemberEntry,
@@ -194,16 +195,41 @@ function normalizeRoutingModelOption(model: RoutingModelLoadResult): RoutingMode
   };
 }
 
+function readChannelDisplayTags(detail?: ChannelGroupChannelDetail | null): string[] {
+  if (!detail?.display_tags || !Array.isArray(detail.display_tags)) return [];
+  return detail.display_tags
+    .map((tag) => (typeof tag === "string" ? tag.trim() : ""))
+    .filter((tag, index, list) => Boolean(tag) && list.indexOf(tag) === index);
+}
+
+function renderChannelTags(tags: string[]) {
+  if (tags.length === 0) return null;
+  return (
+    <span aria-hidden="true" className="flex shrink-0 flex-wrap gap-1">
+      {tags.map((tag) => (
+        <span
+          key={tag}
+          className="inline-flex items-center rounded-full bg-sky-50 px-2 py-0.5 text-[10px] font-semibold text-sky-700 dark:bg-sky-500/15 dark:text-sky-200"
+        >
+          {tag}
+        </span>
+      ))}
+    </span>
+  );
+}
+
 export function RoutingConfigEditor({
   values,
   disabled,
   availableChannels,
+  availableChannelDetails = {},
   loadModelsForChannels,
   onChange,
 }: {
   values: VisualConfigValues;
   disabled?: boolean;
   availableChannels: string[];
+  availableChannelDetails?: Record<string, ChannelGroupChannelDetail>;
   loadModelsForChannels?: (channels: string[]) => Promise<RoutingModelLoadResult[]>;
   onChange: (values: Partial<VisualConfigValues>) => void;
 }) {
@@ -243,10 +269,17 @@ export function RoutingConfigEditor({
       .filter((channel, index, list) => list.indexOf(channel) === index)
       .map((channel) => ({
         value: channel,
-        label: channel,
+        label: (
+          <span className="flex min-w-0 items-center justify-between gap-2">
+            <span className="truncate">{channel}</span>
+            {renderChannelTags(
+              readChannelDisplayTags(availableChannelDetails[normalizeChannelName(channel)]),
+            )}
+          </span>
+        ),
         searchText: channel,
       }));
-  }, [availableChannels]);
+  }, [availableChannelDetails, availableChannels]);
 
   const availableChannelSet = useMemo(() => {
     return new Set(
@@ -779,17 +812,34 @@ export function RoutingConfigEditor({
         cellClassName: "min-w-0 whitespace-nowrap",
         render: (channel) => (
           <OverflowTooltip content={channel.name} className="block min-w-0">
-            <span
-              className={`flex min-w-0 items-center gap-2 truncate text-sm ${
-                draftStaleChannelIds.has(channel.id)
-                  ? "text-rose-700 dark:text-rose-200"
-                  : "text-slate-900 dark:text-white"
-              }`}
-            >
-              <span className="truncate">{channel.name}</span>
-              {draftStaleChannelIds.has(channel.id) ? (
-                <span className="inline-flex shrink-0 items-center rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-700 dark:bg-rose-500/15 dark:text-rose-200">
-                  {t("channel_groups_page.deleted_badge")}
+            <span className="block min-w-0">
+              <span
+                className={`flex min-w-0 items-center gap-2 truncate text-sm ${
+                  draftStaleChannelIds.has(channel.id)
+                    ? "text-rose-700 dark:text-rose-200"
+                    : "text-slate-900 dark:text-white"
+                }`}
+              >
+                <span className="truncate">{channel.name}</span>
+                {draftStaleChannelIds.has(channel.id) ? (
+                  <span className="inline-flex shrink-0 items-center rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-700 dark:bg-rose-500/15 dark:text-rose-200">
+                    {t("channel_groups_page.deleted_badge")}
+                  </span>
+                ) : null}
+              </span>
+              {readChannelDisplayTags(availableChannelDetails[normalizeChannelName(channel.name)])
+                .length > 0 ? (
+                <span className="mt-1 flex flex-wrap gap-1">
+                  {readChannelDisplayTags(
+                    availableChannelDetails[normalizeChannelName(channel.name)],
+                  ).map((tag) => (
+                    <span
+                      key={tag}
+                      className="inline-flex items-center rounded-full bg-sky-50 px-2 py-0.5 text-[10px] font-semibold text-sky-700 dark:bg-sky-500/15 dark:text-sky-200"
+                    >
+                      {tag}
+                    </span>
+                  ))}
                 </span>
               ) : null}
             </span>
@@ -837,7 +887,7 @@ export function RoutingConfigEditor({
         ),
       },
     ],
-    [disabled, draftStaleChannelIds, removeDraftChannel, t, updateDraftChannel],
+    [availableChannelDetails, disabled, draftStaleChannelIds, removeDraftChannel, t, updateDraftChannel],
   );
 
   const modelColumns = useMemo<VirtualTableColumn<RoutingModelOption>[]>(
