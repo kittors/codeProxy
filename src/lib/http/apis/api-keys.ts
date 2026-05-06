@@ -12,6 +12,7 @@ export interface ApiKeyEntry {
   "allowed-models"?: string[];
   "allowed-channels"?: string[];
   "allowed-channel-groups"?: string[];
+  "permission-profile-id"?: string;
   "system-prompt"?: string;
   "created-at"?: string;
 }

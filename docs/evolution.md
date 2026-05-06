@@ -37,28 +37,29 @@
 
 ### 背景
 
-API Key 数量较多时，原先只能在每个 API Key 的编辑弹窗里逐个设置渠道分组、精确渠道和模型权限，重复操作成本高，也让编辑弹窗承载过多职责。
+API Key 数量较多时，原先只能在每个 API Key 的编辑弹窗里逐个设置渠道分组、精确渠道、模型权限、限额和系统提示词。重复配置成本高，也让编辑弹窗承载过多职责。
 
 ### 选项（可选）
 
-- 方案 A：继续在 API Keys 表格页加入批量工具栏，改动较小，但会让原页面继续变重。
-- 方案 B：新增独立「权限配置」页面，集中处理批量权限编辑，同时让 API Key 编辑弹窗回到基础信息和限额配置。
+- 方案 A：在 API Keys 表格页加入批量工具栏，改动较小，但会让原页面继续变重。
+- 方案 B：新增独立「权限配置」页面维护可复用配置列表，API Key 弹窗只选择配置。
 
 ### 结论
 
-采用方案 B。新增 `src/modules/api-key-permissions/ApiKeyPermissionsPage.tsx` 和 `/api-key-permissions` 路由，侧边栏菜单命名为「权限配置」。API Key 编辑弹窗不再展示权限选择项，权限字段统一在新页面批量配置。
+采用方案 B。新增 `src/modules/api-key-permissions/ApiKeyPermissionsPage.tsx` 和 `/api-key-permissions` 路由，侧边栏菜单命名为「权限配置」。页面维护 `api-key-permission-profiles` 配置列表，每条配置包含渠道分组、精确渠道、模型、每日请求限额、总请求配额、并发、RPM、TPM 和系统提示词。API Key 新建/编辑弹窗只选择对应配置；未选择配置时默认不限制。
 
 ### 影响范围
 
-- 新增 API Key 权限配置页面模块与测试。
+- 新增 API Key 权限配置列表页面模块与测试。
 - `AppRouter` 新增 `/api-key-permissions` 路由和 `/manage/api-key-permissions` 兼容跳转。
 - `AppShell` 侧边栏新增「权限配置」菜单和页面标题映射。
-- API Keys 页面抽出权限选项加载 hook，并简化编辑弹窗。
+- API Keys 页面抽出权限选项加载 hook，并将编辑弹窗简化为基础信息 + 权限配置选择。
+- 新增 `api-key-permission-profiles` YAML 持久化读写封装。
 - 中英文 i18n 新增 `api_key_permissions_page` 与对应 shell 文案。
 
 ### 回滚策略（如适用）
 
-移除 `/api-key-permissions` 路由、侧边栏菜单、新页面模块和新增 i18n；将权限选择器重新放回 `ApiKeyFormFields`；恢复 API Keys 页面内的权限选项加载逻辑。
+移除 `/api-key-permissions` 路由、侧边栏菜单、新页面模块和新增 i18n；移除 `api-key-permission-profiles` 读写封装；将限额、系统提示词和权限选择器重新放回 `ApiKeyFormFields`；恢复 API Keys 页面内的权限选项加载逻辑。
 
 ## 2026-04-16 · Docker 自动更新提示与确认流程
 

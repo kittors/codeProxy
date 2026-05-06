@@ -9,12 +9,18 @@ import { ToastProvider } from "@/modules/ui/ToastProvider";
 const state = vi.hoisted(() => ({
   entries: [] as any[],
   channelGroups: [] as any[],
+  configYaml: "",
 }));
 
 const mocks = vi.hoisted(() => ({
   apiKeyEntriesList: vi.fn(async () => state.entries),
   apiKeyEntriesReplace: vi.fn(async (entries: any[]) => {
     state.entries = entries;
+    return {};
+  }),
+  fetchConfigYaml: vi.fn(async () => state.configYaml),
+  saveConfigYaml: vi.fn(async (content: string) => {
+    state.configYaml = content;
     return {};
   }),
   authFilesList: vi.fn(async () => ({ files: [] })),
@@ -38,6 +44,13 @@ vi.mock("@/lib/http/apis/api-keys", () => ({
   apiKeyEntriesApi: {
     list: mocks.apiKeyEntriesList,
     replace: mocks.apiKeyEntriesReplace,
+  },
+}));
+
+vi.mock("@/lib/http/apis/config-file", () => ({
+  configFileApi: {
+    fetchConfigYaml: mocks.fetchConfigYaml,
+    saveConfigYaml: mocks.saveConfigYaml,
   },
 }));
 
@@ -91,6 +104,7 @@ describe("ApiKeyPermissionsPage", () => {
         name: "Team A",
         "daily-limit": 100,
         "allowed-channel-groups": ["legacy"],
+        "permission-profile-id": "standard",
         "created-at": "2026-05-01T00:00:00.000Z",
       },
       {
@@ -101,6 +115,21 @@ describe("ApiKeyPermissionsPage", () => {
         "created-at": "2026-05-02T00:00:00.000Z",
       },
     ];
+    state.configYaml = `
+api-key-permission-profiles:
+  - id: standard
+    name: 标准配置
+    daily-limit: 15000
+    total-quota: 0
+    concurrency-limit: 0
+    rpm-limit: 0
+    tpm-limit: 0
+    allowed-channel-groups:
+      - legacy
+    allowed-channels: []
+    allowed-models: []
+    system-prompt: 标准系统提示词
+`;
     state.channelGroups = [
       {
         name: "pro",
@@ -115,6 +144,8 @@ describe("ApiKeyPermissionsPage", () => {
     ];
     mocks.apiKeyEntriesList.mockClear();
     mocks.apiKeyEntriesReplace.mockClear();
+    mocks.fetchConfigYaml.mockClear();
+    mocks.saveConfigYaml.mockClear();
     mocks.authFilesList.mockClear();
     mocks.getGeminiKeys.mockResolvedValue([]);
     mocks.getClaudeConfigs.mockResolvedValue([
@@ -127,55 +158,43 @@ describe("ApiKeyPermissionsPage", () => {
     mocks.apiClientGet.mockClear();
   });
 
-  test("bulk updates selected API key permission fields without changing limits", async () => {
+  test("manages permission configs as a reusable profile list", async () => {
     renderPage();
 
-    expect(await screen.findByText("API Key 权限配置")).toBeInTheDocument();
-    expect(screen.getByText("Team A")).toBeInTheDocument();
-    expect(screen.getByText("Team B")).toBeInTheDocument();
+    expect(await screen.findByText("标准配置")).toBeInTheDocument();
+    expect(screen.queryByText("Team A")).not.toBeInTheDocument();
+    expect(screen.getByText("每日 15,000")).toBeInTheDocument();
+    expect(screen.getByText("标准系统提示词")).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("checkbox", { name: "选择 Team A" }));
-    await userEvent.click(screen.getByRole("checkbox", { name: "选择 Team B" }));
+    await userEvent.click(screen.getByRole("button", { name: "新增配置" }));
+    const dialog = await screen.findByRole("dialog", { name: "新增权限配置" });
 
-    const editor = screen.getByRole("region", { name: "权限编辑器" });
+    await userEvent.type(within(dialog).getByRole("textbox", { name: "配置名称" }), "专业配置");
+    await userEvent.type(within(dialog).getByRole("spinbutton", { name: "每日请求限额" }), "15000");
+    await userEvent.type(
+      within(dialog).getByRole("textbox", { name: "系统提示词" }),
+      "专业系统提示词",
+    );
 
-    await userEvent.click(within(editor).getByRole("button", { name: /全部渠道分组/i }));
+    await userEvent.click(within(dialog).getByRole("button", { name: /全部渠道分组/i }));
     await userEvent.click(await screen.findByRole("button", { name: /pro/i }));
 
-    await userEvent.click(within(editor).getByRole("switch", { name: /精确渠道覆盖/i }));
-    await userEvent.click(within(editor).getByRole("button", { name: /全部渠道/i }));
-    await userEvent.click(await screen.findByRole("button", { name: /Claude渠道/i }));
+    await userEvent.click(within(dialog).getByRole("button", { name: "保存配置" }));
 
     await waitFor(() => {
-      expect(mocks.apiClientGet).toHaveBeenCalledWith(
-        expect.stringContaining("allowed_channel_groups=pro"),
-      );
+      expect(mocks.saveConfigYaml).toHaveBeenCalled();
     });
 
-    await userEvent.click(within(editor).getByRole("button", { name: /全部模型/i }));
-    await userEvent.click(await screen.findByRole("button", { name: /claude-sonnet-4-5/i }));
-
-    await userEvent.click(screen.getByRole("button", { name: /保存权限/i }));
-
-    await waitFor(() => {
-      expect(mocks.apiKeyEntriesReplace).toHaveBeenCalled();
-    });
-
-    expect(mocks.apiKeyEntriesReplace).toHaveBeenLastCalledWith([
-      expect.objectContaining({
-        name: "Team A",
-        "daily-limit": 100,
-        "allowed-channel-groups": ["pro"],
-        "allowed-channels": ["Claude渠道"],
-        "allowed-models": ["claude-sonnet-4-5"],
-      }),
-      expect.objectContaining({
-        name: "Team B",
-        "total-quota": 200,
-        "allowed-channel-groups": ["pro"],
-        "allowed-channels": ["Claude渠道"],
-        "allowed-models": ["claude-sonnet-4-5"],
-      }),
-    ]);
+    const savedYaml = String(mocks.saveConfigYaml.mock.calls.at(-1)?.[0] ?? "");
+    expect(savedYaml).toContain("api-key-permission-profiles:");
+    expect(savedYaml).toContain("name: 专业配置");
+    expect(savedYaml).toContain("daily-limit: 15000");
+    expect(savedYaml).toContain("total-quota: 0");
+    expect(savedYaml).toContain("concurrency-limit: 0");
+    expect(savedYaml).toContain("rpm-limit: 0");
+    expect(savedYaml).toContain("tpm-limit: 0");
+    expect(savedYaml).toContain("allowed-channel-groups:");
+    expect(savedYaml).toContain("- pro");
+    expect(savedYaml).toContain("system-prompt: 专业系统提示词");
   });
 });

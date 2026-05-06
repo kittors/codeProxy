@@ -1,6 +1,7 @@
 export interface ApiKeyFormValues {
   name: string;
   key: string;
+  permissionProfileId: string;
   dailyLimit: string;
   totalQuota: string;
   concurrencyLimit: string;

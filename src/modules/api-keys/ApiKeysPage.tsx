@@ -2,6 +2,13 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Plus, KeyRound, RefreshCw } from "lucide-react";
 import { apiKeyEntriesApi, apiKeysApi, type ApiKeyEntry } from "@/lib/http/apis/api-keys";
+import {
+  applyApiKeyPermissionProfile,
+  apiKeyPermissionProfilesApi,
+  CUSTOM_PERMISSION_PROFILE_ID,
+  resolveEntryPermissionProfileId,
+  type ApiKeyPermissionProfile,
+} from "@/lib/http/apis/api-key-permission-profiles";
 import type { ChannelGroupItem } from "@/lib/http/apis/channel-groups";
 import { detectApiBaseFromLocation } from "@/lib/connection";
 import { useOptionalAuth } from "@/modules/auth/AuthProvider";
@@ -79,6 +86,7 @@ export function ApiKeysPage() {
   const [ccSwitchImportModels, setCcSwitchImportModels] = useState<string[]>([]);
   const [ccSwitchImportModelsLoading, setCcSwitchImportModelsLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [permissionProfiles, setPermissionProfiles] = useState<ApiKeyPermissionProfile[]>([]);
   const [form, setForm] = useState<ApiKeyFormValues>(() => makeEmptyApiKeyForm());
   const { channelGroupItems, channelGroupByName, fetchModelOptions, refreshPermissionOptions } =
     useApiKeyPermissionOptions();
@@ -125,10 +133,12 @@ export function ApiKeysPage() {
   const loadEntries = useCallback(async () => {
     setLoading(true);
     try {
-      const [entriesData, legacyKeys] = await Promise.all([
+      const [entriesData, legacyKeys, profilesData] = await Promise.all([
         apiKeyEntriesApi.list(),
         apiKeysApi.list().catch(() => [] as string[]),
+        apiKeyPermissionProfilesApi.list().catch(() => [] as ApiKeyPermissionProfile[]),
       ]);
+      setPermissionProfiles(profilesData);
 
       // Auto-migrate: old api-keys not in api-key-entries get added as unnamed entries
       const entryKeySet = new Set(entriesData.map((e) => e.key));
@@ -168,6 +178,37 @@ export function ApiKeysPage() {
   useEffect(() => {
     void loadEntries();
   }, [loadEntries]);
+
+  const permissionProfileById = useMemo(
+    () => new Map(permissionProfiles.map((profile) => [profile.id, profile])),
+    [permissionProfiles],
+  );
+
+  const permissionProfileOptions = useMemo(() => {
+    const options = [
+      {
+        value: "",
+        label: t("api_keys_page.permission_profile_unrestricted"),
+      },
+      ...permissionProfiles.map((profile) => ({
+        value: profile.id,
+        label: profile.name,
+      })),
+    ];
+    if (
+      form.permissionProfileId === CUSTOM_PERMISSION_PROFILE_ID &&
+      !options.some((option) => option.value === CUSTOM_PERMISSION_PROFILE_ID)
+    ) {
+      options.push({
+        value: CUSTOM_PERMISSION_PROFILE_ID,
+        label: t("api_keys_page.permission_profile_custom_keep"),
+      });
+    }
+    return options;
+  }, [form.permissionProfileId, permissionProfiles, t]);
+
+  const selectedPermissionProfile = (profileId: string) =>
+    profileId ? (permissionProfileById.get(profileId) ?? null) : null;
 
   /* ─── toggle disable ─── */
 
@@ -216,24 +257,13 @@ export function ApiKeysPage() {
       const newEntry: ApiKeyEntry = {
         key: form.key.trim(),
         name: form.name.trim(),
-        "daily-limit": form.dailyLimit ? parseInt(form.dailyLimit, 10) || 0 : undefined,
-        "total-quota": form.totalQuota ? parseInt(form.totalQuota, 10) || 0 : undefined,
-        "concurrency-limit": form.concurrencyLimit
-          ? parseInt(form.concurrencyLimit, 10) || 0
-          : undefined,
-        "rpm-limit": form.rpmLimit ? parseInt(form.rpmLimit, 10) || 0 : undefined,
-        "tpm-limit": form.tpmLimit ? parseInt(form.tpmLimit, 10) || 0 : undefined,
-        "allowed-models": form.allowedModels.length > 0 ? form.allowedModels : undefined,
-        "allowed-channels":
-          form.useExactChannelRestrictions && form.allowedChannels.length > 0
-            ? form.allowedChannels
-            : undefined,
-        "allowed-channel-groups":
-          form.allowedChannelGroups.length > 0 ? form.allowedChannelGroups : undefined,
-        "system-prompt": form.systemPrompt.trim() || undefined,
         "created-at": new Date().toISOString(),
       };
-      await apiKeyEntriesApi.replace([...entries, newEntry]);
+      const profiledEntry = applyApiKeyPermissionProfile(
+        newEntry,
+        selectedPermissionProfile(form.permissionProfileId),
+      );
+      await apiKeyEntriesApi.replace([...entries, profiledEntry]);
       notify({ type: "success", message: t("api_keys_page.created_success") });
       setShowCreate(false);
       await loadEntries();
@@ -254,6 +284,7 @@ export function ApiKeysPage() {
     const next = {
       name: entry.name || "",
       key: entry.key,
+      permissionProfileId: resolveEntryPermissionProfileId(entry, permissionProfiles),
       dailyLimit: entry["daily-limit"]?.toString() || "",
       totalQuota: entry["total-quota"]?.toString() || "",
       concurrencyLimit: entry["concurrency-limit"]?.toString() || "",
@@ -284,19 +315,23 @@ export function ApiKeysPage() {
         value: {
           ...(newKey !== originalKey ? { key: newKey } : {}),
           name: form.name.trim(),
-          "daily-limit": form.dailyLimit ? parseInt(form.dailyLimit, 10) || 0 : 0,
-          "total-quota": form.totalQuota ? parseInt(form.totalQuota, 10) || 0 : 0,
-          "concurrency-limit": form.concurrencyLimit ? parseInt(form.concurrencyLimit, 10) || 0 : 0,
-          "rpm-limit": form.rpmLimit ? parseInt(form.rpmLimit, 10) || 0 : 0,
-          "tpm-limit": form.tpmLimit ? parseInt(form.tpmLimit, 10) || 0 : 0,
-          "allowed-models": form.allowedModels.length > 0 ? form.allowedModels : [],
-          "allowed-channels":
-            form.useExactChannelRestrictions && form.allowedChannels.length > 0
-              ? form.allowedChannels
-              : [],
-          "allowed-channel-groups":
-            form.allowedChannelGroups.length > 0 ? form.allowedChannelGroups : [],
-          "system-prompt": form.systemPrompt.trim(),
+          ...(form.permissionProfileId === CUSTOM_PERMISSION_PROFILE_ID
+            ? {
+                "permission-profile-id": entries[editIndex]["permission-profile-id"] ?? "",
+                "daily-limit": entries[editIndex]["daily-limit"] ?? 0,
+                "total-quota": entries[editIndex]["total-quota"] ?? 0,
+                "concurrency-limit": entries[editIndex]["concurrency-limit"] ?? 0,
+                "rpm-limit": entries[editIndex]["rpm-limit"] ?? 0,
+                "tpm-limit": entries[editIndex]["tpm-limit"] ?? 0,
+                "allowed-models": entries[editIndex]["allowed-models"] ?? [],
+                "allowed-channels": entries[editIndex]["allowed-channels"] ?? [],
+                "allowed-channel-groups": entries[editIndex]["allowed-channel-groups"] ?? [],
+                "system-prompt": entries[editIndex]["system-prompt"] ?? "",
+              }
+            : applyApiKeyPermissionProfile(
+                {} as ApiKeyEntry,
+                selectedPermissionProfile(form.permissionProfileId),
+              )),
         },
       });
       notify({ type: "success", message: t("api_keys_page.updated_success") });
@@ -591,6 +626,7 @@ export function ApiKeysPage() {
         saving={saving}
         form={form}
         setForm={setForm}
+        permissionProfileOptions={permissionProfileOptions}
         onClose={() => setShowCreate(false)}
         onSubmit={handleCreate}
         regenerateKey={() => setForm((prev) => ({ ...prev, key: generateApiKey() }))}
@@ -603,6 +639,7 @@ export function ApiKeysPage() {
         saving={saving}
         form={form}
         setForm={setForm}
+        permissionProfileOptions={permissionProfileOptions}
         onClose={() => setEditIndex(null)}
         onSubmit={handleEdit}
         regenerateKey={() => setForm((prev) => ({ ...prev, key: generateApiKey() }))}
