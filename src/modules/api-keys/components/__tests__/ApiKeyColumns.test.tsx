@@ -81,4 +81,19 @@ describe("ApiKeyColumns", () => {
     expect(screen.getByRole("tooltip")).toHaveTextContent("View usage");
     expect(screen.getByRole("tooltip")).toHaveStyle({ left: "76px", top: "140px" });
   });
+
+  test("keeps the API key column at the wider fixed width", () => {
+    const columns = createApiKeyColumns({
+      t,
+      onCopy: vi.fn(),
+      onDelete: vi.fn(),
+      onEdit: vi.fn(),
+      onImportToCcSwitch: vi.fn(),
+      onToggleDisable: vi.fn(),
+      onViewUsage: vi.fn(),
+    });
+    const keyColumn = columns.find((column) => column.key === "key");
+
+    expect(keyColumn?.width).toBe("w-[320px] min-w-[320px]");
+  });
 });

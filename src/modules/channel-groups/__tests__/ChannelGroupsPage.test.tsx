@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import i18n from "@/i18n";
@@ -135,5 +135,75 @@ describe("ChannelGroupsPage", () => {
     expect(screen.getByText("Mapped Claude model")).toBeInTheDocument();
     expect(screen.getByText("$3 / $15 / $0.3")).toBeInTheDocument();
     expect(screen.queryByLabelText("gpt-should-not-leak")).not.toBeInTheDocument();
+  });
+
+  test("shows channel tags in the selector options and selected rows", async () => {
+    mockedApiGet.mockImplementation((path: string) => {
+      if (path === "/routing-config") {
+        return Promise.resolve({
+          strategy: "round-robin",
+          "include-default-group": true,
+          "channel-groups": [],
+          "path-routes": [],
+        });
+      }
+      if (path === "/channel-groups") {
+        return Promise.resolve({
+          items: [
+            {
+              name: "Codex Pool",
+              channels: ["A_GptPro"],
+              "channel-details": [
+                {
+                  name: "A_GptPro",
+                  source: "auth-file",
+                  default_tags: ["codex", "pro"],
+                  custom_tags: ["vip"],
+                  hidden_default_tags: [],
+                  display_tags: ["codex", "pro", "vip"],
+                },
+              ],
+            },
+          ],
+        });
+      }
+      if (path.startsWith("/models?")) {
+        return Promise.resolve({ data: [] });
+      }
+      if (
+        path === "/auth-files" ||
+        path === "/model-configs?scope=library" ||
+        path === "/gemini-api-key" ||
+        path === "/claude-api-key" ||
+        path === "/codex-api-key" ||
+        path === "/opencode-go-api-key" ||
+        path === "/vertex-api-key" ||
+        path === "/openai-compatibility"
+      ) {
+        return Promise.resolve({ files: [], data: [] });
+      }
+      return Promise.resolve({});
+    });
+
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(await screen.findByRole("button", { name: "新增分组" }));
+    await user.click(screen.getByRole("combobox", { name: "选择渠道" }));
+
+    const option = await screen.findByRole("option", { name: "A_GptPro" });
+    expect(option).toHaveTextContent("codex");
+    expect(option).toHaveTextContent("pro");
+    expect(option).toHaveTextContent("vip");
+
+    await user.click(option);
+
+    const selectedChannelsTable = screen.getByRole("table", { name: "选择渠道" });
+    const rowText = within(selectedChannelsTable).getByText("A_GptPro");
+    const row = rowText.closest("tr");
+    expect(row).not.toBeNull();
+    expect(within(row as HTMLTableRowElement).getByText("codex")).toBeInTheDocument();
+    expect(within(row as HTMLTableRowElement).getByText("pro")).toBeInTheDocument();
+    expect(within(row as HTMLTableRowElement).getByText("vip")).toBeInTheDocument();
   });
 });

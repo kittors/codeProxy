@@ -10,6 +10,8 @@ import { ToastProvider } from "@/modules/ui/ToastProvider";
 const state = vi.hoisted(() => ({
   entries: [] as any[],
   channelGroups: [] as any[],
+  configYaml: "",
+  permissionProfiles: [] as any[],
 }));
 
 const mocks = vi.hoisted(() => ({
@@ -27,6 +29,17 @@ const mocks = vi.hoisted(() => ({
     return { logs_deleted: 0 };
   }),
   apiKeysList: vi.fn(async () => [] as string[]),
+  fetchConfigYaml: vi.fn(async () => state.configYaml),
+  saveConfigYaml: vi.fn(async (content: string) => {
+    state.configYaml = content;
+    return {};
+  }),
+  apiClientPut: vi.fn(async (url: string, body: any) => {
+    if (url === "/api-key-permission-profiles") {
+      state.permissionProfiles = body;
+    }
+    return {};
+  }),
   authFilesList: vi.fn(async () => ({ files: [] })),
   getGeminiKeys: vi.fn(async () => []),
   getClaudeConfigs: vi.fn(async () => []),
@@ -34,6 +47,9 @@ const mocks = vi.hoisted(() => ({
   getVertexConfigs: vi.fn(async () => []),
   getOpenAIProviders: vi.fn(async () => []),
   apiClientGet: vi.fn(async (url: string) => {
+    if (url === "/api-key-permission-profiles") {
+      return { "api-key-permission-profiles": state.permissionProfiles };
+    }
     if (url === "/channel-groups") {
       return { items: state.channelGroups };
     }
@@ -61,6 +77,13 @@ vi.mock("@/lib/http/apis/api-keys", () => ({
   },
 }));
 
+vi.mock("@/lib/http/apis/config-file", () => ({
+  configFileApi: {
+    fetchConfigYaml: mocks.fetchConfigYaml,
+    saveConfigYaml: mocks.saveConfigYaml,
+  },
+}));
+
 vi.mock("@/lib/http/apis", async (importOriginal) => {
   const mod = await importOriginal<typeof import("@/lib/http/apis")>();
   return {
@@ -83,6 +106,7 @@ vi.mock("@/lib/http/apis", async (importOriginal) => {
 vi.mock("@/lib/http/client", () => ({
   apiClient: {
     get: mocks.apiClientGet,
+    put: mocks.apiClientPut,
   },
 }));
 
@@ -161,11 +185,16 @@ describe("ApiKeysPage", () => {
       },
     ];
     state.channelGroups = [];
+    state.configYaml = "";
+    state.permissionProfiles = [];
     mocks.apiKeyEntriesList.mockClear();
     mocks.apiKeyEntriesReplace.mockClear();
     mocks.apiKeyEntriesUpdate.mockClear();
     mocks.apiKeyEntriesDelete.mockClear();
     mocks.apiKeysList.mockClear();
+    mocks.fetchConfigYaml.mockClear();
+    mocks.saveConfigYaml.mockClear();
+    mocks.apiClientPut.mockClear();
     mocks.authFilesList.mockClear();
     mocks.getGeminiKeys.mockClear();
     mocks.getClaudeConfigs.mockClear();
@@ -216,13 +245,14 @@ describe("ApiKeysPage", () => {
     expect(screen.queryByText("Renamed Key")).not.toBeInTheDocument();
   });
 
-  test("clears exact channel restrictions when the advanced override is turned off", async () => {
+  test("keeps permissions out of the edit modal and preserves them while saving basics", async () => {
     state.entries = [
       {
         key: "sk-existing-1234567890",
         name: "Pinned Key",
         "allowed-channels": ["Kimi渠道"],
         "allowed-channel-groups": ["kimi-pool"],
+        "allowed-models": ["kimi-k2"],
         "created-at": "2026-04-14T00:00:00.000Z",
       },
     ];
@@ -240,7 +270,14 @@ describe("ApiKeysPage", () => {
     expect(await screen.findByText("Pinned Key")).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: "Edit" }));
-    await userEvent.click(screen.getByRole("switch", { name: /exact channel override/i }));
+
+    expect(screen.queryByText(/Allowed channel groups/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Allowed channels/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Allowed models/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Daily request limit/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/System prompt/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole("switch", { name: /exact channel override/i })).toBeNull();
+
     await userEvent.click(screen.getByRole("button", { name: /save/i }));
 
     await waitFor(() => {
@@ -250,11 +287,78 @@ describe("ApiKeysPage", () => {
     expect(mocks.apiKeyEntriesUpdate).toHaveBeenLastCalledWith(
       expect.objectContaining({
         value: expect.objectContaining({
-          "allowed-channels": [],
+          name: "Pinned Key",
+          "allowed-channels": ["Kimi渠道"],
           "allowed-channel-groups": ["kimi-pool"],
+          "allowed-models": ["kimi-k2"],
         }),
       }),
     );
+  });
+
+  test("applies the selected permission config when creating an API key", async () => {
+    state.permissionProfiles = [
+      {
+        id: "standard",
+        name: "Standard",
+        "daily-limit": 15000,
+        "total-quota": 0,
+        "concurrency-limit": 0,
+        "rpm-limit": 0,
+        "tpm-limit": 0,
+        "allowed-channel-groups": ["pro"],
+        "allowed-channels": [],
+        "allowed-models": ["gpt-5.4"],
+        "system-prompt": "Use the standard workspace prompt.",
+      },
+    ];
+
+    render(
+      <MemoryRouter>
+        <ThemeProvider>
+          <ToastProvider>
+            <ApiKeysPage />
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("Existing Key")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: /create key/i }));
+    await userEvent.type(screen.getAllByPlaceholderText(/team-a/i).at(-1)!, "Profile Key");
+
+    const profileSelect = screen.getByRole("combobox", { name: /permission config/i });
+    await userEvent.click(profileSelect);
+    await userEvent.click(await screen.findByRole("option", { name: /standard/i }));
+
+    expect(screen.queryByText(/Daily request limit/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/System prompt/i)).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: /^Create$/i }));
+
+    await waitFor(() => {
+      expect(mocks.apiKeyEntriesReplace).toHaveBeenCalled();
+    });
+
+    expect(mocks.apiKeyEntriesReplace).toHaveBeenLastCalledWith([
+      expect.objectContaining({ name: "Existing Key" }),
+      expect.objectContaining({
+        name: "Profile Key",
+        "permission-profile-id": "standard",
+        "daily-limit": 15000,
+        "total-quota": 0,
+        "concurrency-limit": 0,
+        "rpm-limit": 0,
+        "tpm-limit": 0,
+        "allowed-channel-groups": ["pro"],
+        "allowed-channels": [],
+        "allowed-models": ["gpt-5.4"],
+        "system-prompt": "Use the standard workspace prompt.",
+      }),
+    ]);
+    expect(mocks.fetchConfigYaml).not.toHaveBeenCalled();
+    expect(mocks.saveConfigYaml).not.toHaveBeenCalled();
   });
 
   test("shows operation column icon tooltips without relying on the app-level tooltip listener", async () => {

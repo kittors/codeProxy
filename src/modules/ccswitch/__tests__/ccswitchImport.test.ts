@@ -1,6 +1,7 @@
-import { describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 import {
   buildCcSwitchImportUrl,
+  openCcSwitchImportUrl,
   pickCcSwitchDefaultModel,
   resolveCcSwitchImportConfig,
 } from "@/modules/ccswitch/ccswitchImport";
@@ -12,6 +13,11 @@ const decodeUsageScript = (url: string) => {
 };
 
 describe("ccswitchImport", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
   test("builds a Claude provider deeplink with the Anthropic API key auth field", () => {
     const url = buildCcSwitchImportUrl({
       apiKey: "sk-ant-test-key",
@@ -113,5 +119,18 @@ describe("ccswitchImport", () => {
     expect(config.homepage).toBe("https://relay.example.com/api");
     expect(config.endpoint).toBe("https://relay.example.com/api/openai/v1");
     expect(config.model).toBe("gpt-5.6");
+  });
+
+  test("does not report the protocol unavailable from retained browser focus alone", () => {
+    vi.useFakeTimers();
+    const openSpy = vi.spyOn(window, "open").mockReturnValue(null);
+    vi.spyOn(document, "hasFocus").mockReturnValue(true);
+    const onProtocolUnavailable = vi.fn();
+
+    openCcSwitchImportUrl("ccswitch://v1/import?resource=provider", { onProtocolUnavailable });
+    vi.advanceTimersByTime(10_000);
+
+    expect(openSpy).toHaveBeenCalledWith("ccswitch://v1/import?resource=provider", "_self");
+    expect(onProtocolUnavailable).not.toHaveBeenCalled();
   });
 });

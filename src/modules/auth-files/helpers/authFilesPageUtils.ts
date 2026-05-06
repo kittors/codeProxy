@@ -163,6 +163,12 @@ export const sanitizeAuthFilesForCache = (files: AuthFileItem[]): AuthFileItem[]
     subscriptionRemainingMinutes: file.subscriptionRemainingMinutes,
     subscription_expired: file.subscription_expired,
     subscriptionExpired: file.subscriptionExpired,
+    default_tags: normalizeTagList(file.default_tags),
+    custom_tags: normalizeTagList(file.custom_tags),
+    hidden_default_tags: normalizeTagList(file.hidden_default_tags),
+    display_tags: Array.isArray(file.display_tags)
+      ? normalizeTagList(file.display_tags)
+      : undefined,
     id_token: sanitizeDecodedIdToken(file.id_token),
   }));
 
@@ -426,6 +432,36 @@ export const dateTimeLocalInputToIso = (value: string): string | null => {
 
 export const normalizeProviderKey = (value: string): string => value.trim().toLowerCase();
 
+export const normalizeTagValue = (value: unknown): string => {
+  if (typeof value !== "string") return "";
+  return value.trim().replace(/\s+/g, "-").toLowerCase();
+};
+
+export const normalizeTagList = (value: unknown): string[] => {
+  if (!Array.isArray(value)) return [];
+  const seen = new Set<string>();
+  const tags: string[] = [];
+  value.forEach((entry) => {
+    const normalized = normalizeTagValue(entry);
+    if (!normalized || seen.has(normalized)) return;
+    seen.add(normalized);
+    tags.push(normalized);
+  });
+  return tags;
+};
+
+export const buildAuthFileDisplayTags = (
+  defaultTags: string[],
+  customTags: string[],
+  hiddenDefaultTags: string[],
+): string[] => {
+  const hiddenSet = new Set(normalizeTagList(hiddenDefaultTags));
+  return normalizeTagList([
+    ...normalizeTagList(defaultTags).filter((tag) => !hiddenSet.has(tag)),
+    ...normalizeTagList(customTags),
+  ]);
+};
+
 export const escapeRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 export const matchesModelPattern = (modelId: string, pattern: string): boolean => {
@@ -528,10 +564,60 @@ export const authFilesSortCollator = new Intl.Collator("zh-Hans-CN", {
   sensitivity: "base",
 });
 
+export const readAuthFileDefaultTags = (file: AuthFileItem): string[] =>
+  normalizeTagList(file.default_tags);
+
+export const readAuthFileCustomTags = (file: AuthFileItem): string[] =>
+  normalizeTagList(file.custom_tags);
+
+export const readAuthFileHiddenDefaultTags = (file: AuthFileItem): string[] =>
+  normalizeTagList(file.hidden_default_tags);
+
+export const readAuthFileTagCandidates = (file: AuthFileItem): string[] =>
+  normalizeTagList([
+    ...readAuthFileDefaultTags(file),
+    ...readAuthFileCustomTags(file),
+    ...(Array.isArray(file.display_tags) ? normalizeTagList(file.display_tags) : []),
+  ]);
+
+export const resolveAuthFileDisplayTags = (file: AuthFileItem): string[] => {
+  if (Array.isArray(file.display_tags)) return normalizeTagList(file.display_tags);
+  return buildAuthFileDisplayTags(
+    readAuthFileDefaultTags(file),
+    readAuthFileCustomTags(file),
+    readAuthFileHiddenDefaultTags(file),
+  );
+};
+
+export const shouldShowAuthFileDisplayTag = (file: AuthFileItem, tag: unknown): boolean => {
+  const normalizedTag = normalizeTagValue(tag);
+  if (!normalizedTag) return false;
+
+  if (Array.isArray(file.display_tags)) {
+    return normalizeTagList(file.display_tags).includes(normalizedTag);
+  }
+
+  return !readAuthFileHiddenDefaultTags(file).includes(normalizedTag);
+};
+
 export const resolveAuthFilePlanType = (
   file: AuthFileItem,
   quotaState?: QuotaState | null,
 ): string | null => normalizePlanType(quotaState?.planType) ?? resolveCodexPlanType(file);
+
+export const resolveAuthFileSupplementalTags = (
+  file: AuthFileItem,
+  quotaState?: QuotaState | null,
+): string[] => {
+  const hiddenByPrimaryBadges = new Set<string>();
+  const typeTag = normalizeTagValue(resolveFileType(file));
+  if (typeTag) hiddenByPrimaryBadges.add(typeTag);
+  const planTag = normalizeTagValue(resolveAuthFilePlanType(file, quotaState) ?? "");
+  if (planTag) hiddenByPrimaryBadges.add(planTag);
+  return resolveAuthFileDisplayTags(file).filter(
+    (tag) => !hiddenByPrimaryBadges.has(normalizeTagValue(tag)),
+  );
+};
 
 export const isRuntimeOnlyAuthFile = (file: AuthFileItem): boolean => {
   const raw = (file.runtime_only ?? file.runtimeOnly) as unknown;

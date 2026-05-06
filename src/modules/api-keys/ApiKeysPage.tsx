@@ -2,18 +2,20 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Plus, KeyRound, RefreshCw } from "lucide-react";
 import { apiKeyEntriesApi, apiKeysApi, type ApiKeyEntry } from "@/lib/http/apis/api-keys";
-import { channelGroupsApi, type ChannelGroupItem } from "@/lib/http/apis/channel-groups";
-import { authFilesApi, providersApi } from "@/lib/http/apis";
-import { apiClient } from "@/lib/http/client";
+import {
+  applyApiKeyPermissionProfile,
+  apiKeyPermissionProfilesApi,
+  CUSTOM_PERMISSION_PROFILE_ID,
+  resolveEntryPermissionProfileId,
+  type ApiKeyPermissionProfile,
+} from "@/lib/http/apis/api-key-permission-profiles";
+import type { ChannelGroupItem } from "@/lib/http/apis/channel-groups";
 import { detectApiBaseFromLocation } from "@/lib/connection";
 import { useOptionalAuth } from "@/modules/auth/AuthProvider";
 import {
   generateApiKey,
   makeEmptyApiKeyForm,
-  normalizeChannelKey,
-  readAuthFileChannelName,
   maskApiKey,
-  VendorIcon,
 } from "@/modules/api-keys/apiKeyPageUtils";
 import { createApiKeyColumns } from "@/modules/api-keys/components/ApiKeyColumns";
 import { DeleteApiKeyModal } from "@/modules/api-keys/components/DeleteApiKeyModal";
@@ -21,10 +23,10 @@ import { Card } from "@/modules/ui/Card";
 import { Button } from "@/modules/ui/Button";
 import { EmptyState } from "@/modules/ui/EmptyState";
 import { useToast } from "@/modules/ui/ToastProvider";
-import type { MultiSelectOption } from "@/modules/ui/MultiSelect";
 import { VirtualTable } from "@/modules/ui/VirtualTable";
 import { ApiKeyFormModal } from "@/modules/api-keys/components/ApiKeyFormModal";
 import { ApiKeyUsageModal } from "@/modules/api-keys/components/ApiKeyUsageModal";
+import { useApiKeyPermissionOptions } from "@/modules/api-keys/hooks/useApiKeyPermissionOptions";
 import { useApiKeyUsageView } from "@/modules/api-keys/hooks/useApiKeyUsageView";
 import {
   CcSwitchImportModal,
@@ -84,15 +86,10 @@ export function ApiKeysPage() {
   const [ccSwitchImportModels, setCcSwitchImportModels] = useState<string[]>([]);
   const [ccSwitchImportModelsLoading, setCcSwitchImportModelsLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [availableModels, setAvailableModels] = useState<MultiSelectOption[]>([]);
-  const [availableChannels, setAvailableChannels] = useState<MultiSelectOption[]>([]);
-  const [availableChannelGroups, setAvailableChannelGroups] = useState<MultiSelectOption[]>([]);
-  const [channelGroupItems, setChannelGroupItems] = useState<ChannelGroupItem[]>([]);
-  const [channelRouteGroupsByName, setChannelRouteGroupsByName] = useState<
-    Record<string, string[]>
-  >({});
-  const [channelGroupByName, setChannelGroupByName] = useState<Record<string, string>>({});
+  const [permissionProfiles, setPermissionProfiles] = useState<ApiKeyPermissionProfile[]>([]);
   const [form, setForm] = useState<ApiKeyFormValues>(() => makeEmptyApiKeyForm());
+  const { channelGroupItems, channelGroupByName, fetchModelOptions, refreshPermissionOptions } =
+    useApiKeyPermissionOptions();
   const {
     usageViewKey,
     usageViewName,
@@ -131,173 +128,17 @@ export function ApiKeysPage() {
     closeUsageModal,
   } = useApiKeyUsageView({ channelGroupByName });
 
-  /* ─── load models ─── */
-
-  const fetchModelOptions = useCallback(async (channels?: string[], groups?: string[]) => {
-    try {
-      const normalizedChannels = (Array.isArray(channels) ? channels : [])
-        .map((c) => String(c ?? "").trim())
-        .filter(Boolean);
-      const normalizedGroups = (Array.isArray(groups) ? groups : [])
-        .map((group) =>
-          String(group ?? "")
-            .trim()
-            .toLowerCase(),
-        )
-        .filter(Boolean);
-      const params = new URLSearchParams();
-      if (normalizedChannels.length > 0) {
-        params.set("allowed_channels", normalizedChannels.join(","));
-      }
-      if (normalizedGroups.length > 0) {
-        params.set("allowed_channel_groups", normalizedGroups.join(","));
-      }
-      const qs = params.toString() ? `?${params.toString()}` : "";
-      const data = await apiClient.get<{ data?: Array<{ id?: string }> }>(`/models${qs}`);
-      if (data?.data) {
-        return data.data
-          .filter((m) => m.id)
-          .map((m) => ({
-            value: m.id!,
-            label: m.id!,
-            icon: <VendorIcon modelId={m.id!} size={14} />,
-          }))
-          .sort((a, b) => a.label.localeCompare(b.label));
-      }
-    } catch {
-      // silent — models list is supplementary
-    }
-    return [] as MultiSelectOption[];
-  }, []);
-
-  const loadModels = useCallback(
-    async (channels?: string[], groups?: string[]) => {
-      const opts = await fetchModelOptions(channels, groups);
-      if (opts.length > 0) {
-        setAvailableModels(opts);
-        const allowedSet = new Set(opts.map((o) => o.value));
-        setForm((p) => ({
-          ...p,
-          allowedModels: p.allowedModels.filter((m) => allowedSet.has(m)),
-        }));
-      }
-    },
-    [fetchModelOptions],
-  );
-
-  const loadChannelGroups = useCallback(async () => {
-    try {
-      const groups = await channelGroupsApi.list();
-      setChannelGroupItems(groups);
-      const options: MultiSelectOption[] = groups
-        .map((group) => ({
-          value: String(group.name ?? "")
-            .trim()
-            .toLowerCase(),
-          label: String(group.name ?? "")
-            .trim()
-            .toLowerCase(),
-          description:
-            typeof group.description === "string" && group.description.trim()
-              ? group.description.trim()
-              : undefined,
-        }))
-        .filter((option) => option.value)
-        .sort((a, b) => a.label.localeCompare(b.label));
-      setAvailableChannelGroups(options);
-
-      const nextMembership: Record<string, string[]> = {};
-      groups.forEach((group: ChannelGroupItem) => {
-        const groupName = String(group.name ?? "")
-          .trim()
-          .toLowerCase();
-        if (!groupName) return;
-        const channels = Array.isArray(group.channels) ? group.channels : [];
-        channels.forEach((channel) => {
-          const name = String(channel ?? "").trim();
-          if (!name) return;
-          const existing = nextMembership[name] ?? [];
-          if (!existing.includes(groupName)) {
-            nextMembership[name] = [...existing, groupName];
-          }
-        });
-      });
-      Object.keys(nextMembership).forEach((name) => {
-        nextMembership[name] = [...nextMembership[name]].sort((a, b) => a.localeCompare(b));
-      });
-      setChannelRouteGroupsByName(nextMembership);
-    } catch {
-      // silent — routing group list is supplementary
-    }
-  }, []);
-
-  const loadChannels = useCallback(async () => {
-    try {
-      const [geminiKeys, claudeKeys, codexKeys, vertexKeys, openaiProviders, authFiles] =
-        await Promise.all([
-          providersApi.getGeminiKeys().catch(() => []),
-          providersApi.getClaudeConfigs().catch(() => []),
-          providersApi.getCodexConfigs().catch(() => []),
-          providersApi.getVertexConfigs().catch(() => []),
-          providersApi.getOpenAIProviders().catch(() => []),
-          authFilesApi.list().catch(() => ({ files: [] })),
-        ]);
-
-      const seen = new Set<string>();
-      const options: MultiSelectOption[] = [];
-      const nextGroupByName: Record<string, string> = {};
-      const push = (rawName: string, source: string, groupKey: string) => {
-        const name = String(rawName ?? "").trim();
-        const key = normalizeChannelKey(name);
-        if (!key || seen.has(key)) return;
-        seen.add(key);
-        nextGroupByName[name] = groupKey;
-        options.push({
-          value: name,
-          label: name,
-          icon: (
-            <span className="inline-flex rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-600 dark:bg-neutral-800 dark:text-white/60">
-              {source}
-            </span>
-          ),
-        });
-      };
-
-      geminiKeys.forEach((item) => push(item.name || "", "API", "gemini"));
-      claudeKeys.forEach((item) => push(item.name || "", "API", "claude"));
-      codexKeys.forEach((item) => push(item.name || "", "API", "codex"));
-      vertexKeys.forEach((item) => push(item.name || "", "API", "vertex"));
-      openaiProviders.forEach((item) => push(item.name || "", "API", "openai"));
-      (authFiles.files || []).forEach((file) => {
-        if (
-          String(file.account_type || "")
-            .trim()
-            .toLowerCase() !== "oauth"
-        )
-          return;
-        const groupKey = String(file.type || file.provider || "")
-          .trim()
-          .toLowerCase();
-        push(readAuthFileChannelName(file), "OAuth", groupKey);
-      });
-
-      options.sort((a, b) => a.label.localeCompare(b.label));
-      setAvailableChannels(options);
-      setChannelGroupByName(nextGroupByName);
-    } catch {
-      // silent — channel list is supplementary
-    }
-  }, []);
-
   /* ─── load ─── */
 
   const loadEntries = useCallback(async () => {
     setLoading(true);
     try {
-      const [entriesData, legacyKeys] = await Promise.all([
+      const [entriesData, legacyKeys, profilesData] = await Promise.all([
         apiKeyEntriesApi.list(),
         apiKeysApi.list().catch(() => [] as string[]),
+        apiKeyPermissionProfilesApi.list().catch(() => [] as ApiKeyPermissionProfile[]),
       ]);
+      setPermissionProfiles(profilesData);
 
       // Auto-migrate: old api-keys not in api-key-entries get added as unnamed entries
       const entryKeySet = new Set(entriesData.map((e) => e.key));
@@ -323,9 +164,7 @@ export function ApiKeysPage() {
       }
       setEntries(finalEntries);
       // Load models after entries are available (needs a valid API key)
-      void loadModels();
-      void loadChannels();
-      void loadChannelGroups();
+      void refreshPermissionOptions();
     } catch (err: unknown) {
       notify({
         type: "error",
@@ -334,26 +173,42 @@ export function ApiKeysPage() {
     } finally {
       setLoading(false);
     }
-  }, [notify, loadChannelGroups, loadChannels, loadModels]);
+  }, [notify, refreshPermissionOptions, t]);
 
   useEffect(() => {
     void loadEntries();
   }, [loadEntries]);
 
-  useEffect(() => {
-    if (!showCreate && editIndex === null) return;
-    void loadModels(
-      form.useExactChannelRestrictions ? form.allowedChannels : [],
-      form.allowedChannelGroups,
-    );
-  }, [
-    editIndex,
-    form.allowedChannelGroups,
-    form.allowedChannels,
-    form.useExactChannelRestrictions,
-    loadModels,
-    showCreate,
-  ]);
+  const permissionProfileById = useMemo(
+    () => new Map(permissionProfiles.map((profile) => [profile.id, profile])),
+    [permissionProfiles],
+  );
+
+  const permissionProfileOptions = useMemo(() => {
+    const options = [
+      {
+        value: "",
+        label: t("api_keys_page.permission_profile_unrestricted"),
+      },
+      ...permissionProfiles.map((profile) => ({
+        value: profile.id,
+        label: profile.name,
+      })),
+    ];
+    if (
+      form.permissionProfileId === CUSTOM_PERMISSION_PROFILE_ID &&
+      !options.some((option) => option.value === CUSTOM_PERMISSION_PROFILE_ID)
+    ) {
+      options.push({
+        value: CUSTOM_PERMISSION_PROFILE_ID,
+        label: t("api_keys_page.permission_profile_custom_keep"),
+      });
+    }
+    return options;
+  }, [form.permissionProfileId, permissionProfiles, t]);
+
+  const selectedPermissionProfile = (profileId: string) =>
+    profileId ? (permissionProfileById.get(profileId) ?? null) : null;
 
   /* ─── toggle disable ─── */
 
@@ -385,7 +240,6 @@ export function ApiKeysPage() {
   const handleOpenCreate = () => {
     const next = makeEmptyApiKeyForm(generateApiKey());
     setForm(next);
-    void loadModels([], next.allowedChannelGroups);
     setShowCreate(true);
   };
 
@@ -403,24 +257,13 @@ export function ApiKeysPage() {
       const newEntry: ApiKeyEntry = {
         key: form.key.trim(),
         name: form.name.trim(),
-        "daily-limit": form.dailyLimit ? parseInt(form.dailyLimit, 10) || 0 : undefined,
-        "total-quota": form.totalQuota ? parseInt(form.totalQuota, 10) || 0 : undefined,
-        "concurrency-limit": form.concurrencyLimit
-          ? parseInt(form.concurrencyLimit, 10) || 0
-          : undefined,
-        "rpm-limit": form.rpmLimit ? parseInt(form.rpmLimit, 10) || 0 : undefined,
-        "tpm-limit": form.tpmLimit ? parseInt(form.tpmLimit, 10) || 0 : undefined,
-        "allowed-models": form.allowedModels.length > 0 ? form.allowedModels : undefined,
-        "allowed-channels":
-          form.useExactChannelRestrictions && form.allowedChannels.length > 0
-            ? form.allowedChannels
-            : undefined,
-        "allowed-channel-groups":
-          form.allowedChannelGroups.length > 0 ? form.allowedChannelGroups : undefined,
-        "system-prompt": form.systemPrompt.trim() || undefined,
         "created-at": new Date().toISOString(),
       };
-      await apiKeyEntriesApi.replace([...entries, newEntry]);
+      const profiledEntry = applyApiKeyPermissionProfile(
+        newEntry,
+        selectedPermissionProfile(form.permissionProfileId),
+      );
+      await apiKeyEntriesApi.replace([...entries, profiledEntry]);
       notify({ type: "success", message: t("api_keys_page.created_success") });
       setShowCreate(false);
       await loadEntries();
@@ -441,6 +284,7 @@ export function ApiKeysPage() {
     const next = {
       name: entry.name || "",
       key: entry.key,
+      permissionProfileId: resolveEntryPermissionProfileId(entry, permissionProfiles),
       dailyLimit: entry["daily-limit"]?.toString() || "",
       totalQuota: entry["total-quota"]?.toString() || "",
       concurrencyLimit: entry["concurrency-limit"]?.toString() || "",
@@ -453,10 +297,6 @@ export function ApiKeysPage() {
       systemPrompt: entry["system-prompt"] || "",
     };
     setForm(next);
-    void loadModels(
-      next.useExactChannelRestrictions ? next.allowedChannels : [],
-      next.allowedChannelGroups,
-    );
     setEditIndex(index);
   };
 
@@ -475,19 +315,23 @@ export function ApiKeysPage() {
         value: {
           ...(newKey !== originalKey ? { key: newKey } : {}),
           name: form.name.trim(),
-          "daily-limit": form.dailyLimit ? parseInt(form.dailyLimit, 10) || 0 : 0,
-          "total-quota": form.totalQuota ? parseInt(form.totalQuota, 10) || 0 : 0,
-          "concurrency-limit": form.concurrencyLimit ? parseInt(form.concurrencyLimit, 10) || 0 : 0,
-          "rpm-limit": form.rpmLimit ? parseInt(form.rpmLimit, 10) || 0 : 0,
-          "tpm-limit": form.tpmLimit ? parseInt(form.tpmLimit, 10) || 0 : 0,
-          "allowed-models": form.allowedModels.length > 0 ? form.allowedModels : [],
-          "allowed-channels":
-            form.useExactChannelRestrictions && form.allowedChannels.length > 0
-              ? form.allowedChannels
-              : [],
-          "allowed-channel-groups":
-            form.allowedChannelGroups.length > 0 ? form.allowedChannelGroups : [],
-          "system-prompt": form.systemPrompt.trim(),
+          ...(form.permissionProfileId === CUSTOM_PERMISSION_PROFILE_ID
+            ? {
+                "permission-profile-id": entries[editIndex]["permission-profile-id"] ?? "",
+                "daily-limit": entries[editIndex]["daily-limit"] ?? 0,
+                "total-quota": entries[editIndex]["total-quota"] ?? 0,
+                "concurrency-limit": entries[editIndex]["concurrency-limit"] ?? 0,
+                "rpm-limit": entries[editIndex]["rpm-limit"] ?? 0,
+                "tpm-limit": entries[editIndex]["tpm-limit"] ?? 0,
+                "allowed-models": entries[editIndex]["allowed-models"] ?? [],
+                "allowed-channels": entries[editIndex]["allowed-channels"] ?? [],
+                "allowed-channel-groups": entries[editIndex]["allowed-channel-groups"] ?? [],
+                "system-prompt": entries[editIndex]["system-prompt"] ?? "",
+              }
+            : applyApiKeyPermissionProfile(
+                {} as ApiKeyEntry,
+                selectedPermissionProfile(form.permissionProfileId),
+              )),
         },
       });
       notify({ type: "success", message: t("api_keys_page.updated_success") });
@@ -727,41 +571,6 @@ export function ApiKeysPage() {
     ],
   );
 
-  const filteredAvailableChannels = useMemo(() => {
-    if (!form.useExactChannelRestrictions || form.allowedChannelGroups.length === 0) {
-      return availableChannels;
-    }
-    const allowedGroups = new Set(form.allowedChannelGroups.map((group) => group.toLowerCase()));
-    return availableChannels.filter((option) => {
-      const groups = channelRouteGroupsByName[option.value] ?? [];
-      return groups.some((group) => allowedGroups.has(group));
-    });
-  }, [
-    availableChannels,
-    channelRouteGroupsByName,
-    form.allowedChannelGroups,
-    form.useExactChannelRestrictions,
-  ]);
-
-  useEffect(() => {
-    if (!form.useExactChannelRestrictions || form.allowedChannelGroups.length === 0) {
-      return;
-    }
-    const allowedChannelSet = new Set(filteredAvailableChannels.map((option) => option.value));
-    setForm((prev) => {
-      const nextAllowedChannels = prev.allowedChannels.filter((channel) =>
-        allowedChannelSet.has(channel),
-      );
-      return nextAllowedChannels.length === prev.allowedChannels.length
-        ? prev
-        : { ...prev, allowedChannels: nextAllowedChannels };
-    });
-  }, [
-    filteredAvailableChannels,
-    form.allowedChannelGroups.length,
-    form.useExactChannelRestrictions,
-  ]);
-
   /* ─── main render ─── */
 
   return (
@@ -802,7 +611,7 @@ export function ApiKeysPage() {
             rowHeight={44}
             height="h-[calc(100dvh-260px)] max-h-[70vh]"
             minHeight="min-h-[320px]"
-            minWidth="min-w-[1740px]"
+            minWidth="min-w-[1820px]"
             caption={t("api_keys_page.table_caption")}
             emptyText={t("api_keys_page.no_api_keys")}
             rowClassName={(row) => (row.disabled ? "opacity-50" : "")}
@@ -817,9 +626,7 @@ export function ApiKeysPage() {
         saving={saving}
         form={form}
         setForm={setForm}
-        availableChannels={filteredAvailableChannels}
-        availableChannelGroups={availableChannelGroups}
-        availableModels={availableModels}
+        permissionProfileOptions={permissionProfileOptions}
         onClose={() => setShowCreate(false)}
         onSubmit={handleCreate}
         regenerateKey={() => setForm((prev) => ({ ...prev, key: generateApiKey() }))}
@@ -832,9 +639,7 @@ export function ApiKeysPage() {
         saving={saving}
         form={form}
         setForm={setForm}
-        availableChannels={filteredAvailableChannels}
-        availableChannelGroups={availableChannelGroups}
-        availableModels={availableModels}
+        permissionProfileOptions={permissionProfileOptions}
         onClose={() => setEditIndex(null)}
         onSubmit={handleEdit}
         regenerateKey={() => setForm((prev) => ({ ...prev, key: generateApiKey() }))}

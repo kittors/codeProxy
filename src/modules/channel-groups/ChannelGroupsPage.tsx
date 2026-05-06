@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { channelGroupsApi } from "@/lib/http/apis/channel-groups";
+import {
+  channelGroupsApi,
+  type ChannelGroupChannelDetail,
+} from "@/lib/http/apis/channel-groups";
 import {
   routingConfigApi,
   type RoutingConfigGroupItem,
@@ -161,17 +164,30 @@ export function ChannelGroupsPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [availableChannels, setAvailableChannels] = useState<string[]>([]);
+  const [availableChannelDetails, setAvailableChannelDetails] = useState<
+    Record<string, ChannelGroupChannelDetail>
+  >({});
 
   const loadAvailableChannels = useCallback(async () => {
     const items = await channelGroupsApi.list();
     const known = new Set<string>();
+    const detailsByName: Record<string, ChannelGroupChannelDetail> = {};
     for (const item of items) {
       for (const channel of item.channels ?? []) {
         const name = String(channel ?? "").trim();
         if (name) known.add(name);
       }
+      for (const detail of item.channelDetails ?? []) {
+        const name = String(detail.name ?? "").trim();
+        if (!name) continue;
+        known.add(name);
+        detailsByName[name.trim().toLowerCase()] = detail;
+      }
     }
-    return Array.from(known).sort((a, b) => a.localeCompare(b));
+    return {
+      names: Array.from(known).sort((a, b) => a.localeCompare(b)),
+      detailsByName,
+    };
   }, []);
 
   const loadModelsForChannels = useCallback(async (channels: string[]) => {
@@ -214,11 +230,12 @@ export function ChannelGroupsPage() {
     try {
       const [routing, channels] = await Promise.all([
         routingConfigApi.get(),
-        loadAvailableChannels().catch(() => []),
+        loadAvailableChannels().catch(() => ({ names: [], detailsByName: {} })),
       ]);
       const nextValues = hydrateRoutingValues(routing);
       setVisualValues(nextValues);
-      setAvailableChannels(channels);
+      setAvailableChannels(channels.names);
+      setAvailableChannelDetails(channels.detailsByName);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : t("channel_groups_page.load_failed");
       setError(message);
@@ -240,11 +257,15 @@ export function ChannelGroupsPage() {
         await routingConfigApi.update(serializeRoutingValues(nextValues));
         const [latest, channels] = await Promise.all([
           routingConfigApi.get(),
-          loadAvailableChannels().catch(() => availableChannels),
+          loadAvailableChannels().catch(() => ({
+            names: availableChannels,
+            detailsByName: availableChannelDetails,
+          })),
         ]);
         const hydrated = hydrateRoutingValues(latest);
         setVisualValues(hydrated);
-        setAvailableChannels(channels);
+        setAvailableChannels(channels.names);
+        setAvailableChannelDetails(channels.detailsByName);
         notify({ type: "success", message: t("channel_groups_page.saved") });
       } catch (err: unknown) {
         setVisualValues(visualValues);
@@ -258,7 +279,7 @@ export function ChannelGroupsPage() {
         setSaving(false);
       }
     },
-    [availableChannels, loadAvailableChannels, notify, t, visualValues],
+    [availableChannelDetails, availableChannels, loadAvailableChannels, notify, t, visualValues],
   );
 
   const handleEditorChange = useCallback(
@@ -292,6 +313,7 @@ export function ChannelGroupsPage() {
             values={visualValues}
             disabled={loading || saving}
             availableChannels={availableChannels}
+            availableChannelDetails={availableChannelDetails}
             loadModelsForChannels={loadModelsForChannels}
             onChange={handleEditorChange}
           />

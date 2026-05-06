@@ -1,6 +1,6 @@
 import { useCallback, useMemo, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { CalendarClock, Download, Eye, Loader2, RefreshCw, Zap } from "lucide-react";
+import { CalendarClock, Download, Eye, Loader2, RefreshCw, Tags, Zap } from "lucide-react";
 import type { AuthFileItem } from "@/lib/http/types";
 import { formatLatency } from "@/modules/providers/hooks/useProviderLatency";
 import { ProviderStatusBar } from "@/modules/providers/ProviderStatusBar";
@@ -22,10 +22,12 @@ import {
   parseAdditionalQuotaWindowLabel,
   resolveAuthFileDisplayName,
   resolveAuthFilePlanType,
+  resolveAuthFileSupplementalTags,
   resolveAuthFileStats,
   resolveAuthFileStatusBar,
   resolveAuthFileSubscriptionStatus,
   resolveFileType,
+  shouldShowAuthFileDisplayTag,
 } from "@/modules/auth-files/helpers/authFilesPageUtils";
 import { resolveQuotaProvider, type QuotaProvider } from "@/modules/quota/quota-fetch";
 import {
@@ -119,6 +121,7 @@ interface UseAuthFilesFilesPresentationOptions {
   refreshQuota: (file: AuthFileItem, provider: QuotaProvider) => Promise<void>;
   openDetail: (file: AuthFileItem) => Promise<void>;
   downloadAuthFile: (file: AuthFileItem) => Promise<void>;
+  openTagsEditor: (file: AuthFileItem) => void;
   statusUpdating: Record<string, boolean>;
   setFileEnabled: (file: AuthFileItem, enabled: boolean) => Promise<void>;
   usageIndex: UsageIndex;
@@ -142,6 +145,7 @@ export function useAuthFilesFilesPresentation({
   refreshQuota,
   openDetail,
   downloadAuthFile,
+  openTagsEditor,
   statusUpdating,
   setFileEnabled,
   usageIndex,
@@ -431,6 +435,18 @@ export function useAuthFilesFilesPresentation({
             <p className="truncate font-mono text-xs text-slate-900 dark:text-white">
               {resolveAuthFileDisplayName(file) || "--"}
             </p>
+            {resolveAuthFileSupplementalTags(file, quotaByFileName[file.name]).length > 0 ? (
+              <div className="mt-1 flex flex-wrap gap-1">
+                {resolveAuthFileSupplementalTags(file, quotaByFileName[file.name]).map((tag) => (
+                  <span
+                    key={tag}
+                    className="inline-flex items-center rounded-full bg-sky-50 px-2 py-0.5 text-[10px] font-semibold text-sky-700 dark:bg-sky-500/15 dark:text-sky-200"
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            ) : null}
           </div>
         ),
       },
@@ -443,16 +459,20 @@ export function useAuthFilesFilesPresentation({
           const badgeClass = TYPE_BADGE_CLASSES[typeKey] ?? TYPE_BADGE_CLASSES.unknown;
           const planType = resolveAuthFilePlanType(file, quotaByFileName[file.name]);
           const runtimeOnly = isRuntimeOnlyAuthFile(file);
+          const showTypeBadge = shouldShowAuthFileDisplayTag(file, typeKey);
+          const showPlanBadge = planType ? shouldShowAuthFileDisplayTag(file, planType) : false;
 
           return (
             <div className="flex flex-col gap-1">
               <div className="flex flex-wrap items-center gap-2">
-                <span
-                  className={`inline-flex rounded-lg px-2 py-1 text-xs font-semibold ${badgeClass}`}
-                >
-                  {typeKey}
-                </span>
-                {planType ? (
+                {showTypeBadge ? (
+                  <span
+                    className={`inline-flex rounded-lg px-2 py-1 text-xs font-semibold ${badgeClass}`}
+                  >
+                    {typeKey}
+                  </span>
+                ) : null}
+                {showPlanBadge && planType ? (
                   <span className="inline-flex rounded-lg bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-800 dark:bg-amber-500/15 dark:text-amber-200">
                     {t("codex_quota.plan_label")} {formatPlanTypeLabel(planType)}
                   </span>
@@ -707,6 +727,18 @@ export function useAuthFilesFilesPresentation({
                 </HoverTooltip>
               ) : null}
 
+              <HoverTooltip content={t("auth_files.edit_tags")}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => openTagsEditor(file)}
+                  title={t("auth_files.edit_tags")}
+                  aria-label={t("auth_files.edit_tags")}
+                >
+                  <Tags size={16} />
+                </Button>
+              </HoverTooltip>
+
               <HoverTooltip content={t("auth_files.view")}>
                 <Button
                   variant="ghost"
@@ -743,6 +775,7 @@ export function useAuthFilesFilesPresentation({
     formatPlanTypeLabel,
     formatQuotaResetTextCompact,
     openDetail,
+    openTagsEditor,
     quotaByFileName,
     quotaPreviewMode,
     quotaProgressCircle,

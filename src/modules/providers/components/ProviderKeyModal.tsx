@@ -14,6 +14,7 @@ import { Button } from "@/modules/ui/Button";
 import { Checkbox } from "@/modules/ui/Checkbox";
 import { TextInput } from "@/modules/ui/Input";
 import { Modal } from "@/modules/ui/Modal";
+import { SearchableSelect } from "@/modules/ui/SearchableSelect";
 import { Select } from "@/modules/ui/Select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/modules/ui/Tabs";
 import { ToggleSwitch } from "@/modules/ui/ToggleSwitch";
@@ -27,6 +28,9 @@ import {
   normalizeDiscoveredModels,
   stripDisableAllModelsRule,
 } from "@/modules/providers/providers-helpers";
+import { modelsApi } from "@/lib/http/apis";
+import type { ModelEntryDraft } from "@/modules/providers/ModelInputList";
+import { createEmptyModelEntry } from "@/modules/providers/ModelInputList";
 
 const OPENCODE_GO_MODELS_URL = "https://opencode.ai/zen/go/v1/models";
 const OPENCODE_GO_CHAT_URL = "https://opencode.ai/zen/go/v1/chat/completions";
@@ -103,11 +107,80 @@ export function ProviderKeyModal({
   const isBedrockSigV4 = isBedrock && keyDraft.authMode === "sigv4";
   const isOpenCodeGo = editKeyType === "opencode-go";
 
+  /** 从 /model-configs API 动态获取模型列表，按 owned_by 分组 */
+  const [modelConfigs, setModelConfigs] = useState<{ id: string; owned_by: string }[]>([]);
+  const [modelConfigsLoading, setModelConfigsLoading] = useState(false);
+  const [selectedModelGroup, setSelectedModelGroup] = useState("");
+
+  const modelGroupOptions = useMemo(() => {
+    const uniqueOwners = Array.from(
+      new Set(modelConfigs.map((m) => m.owned_by).filter(Boolean)),
+    ).sort((a, b) => a.localeCompare(b));
+    return [
+      { value: "", label: t("providers.model_group_placeholder") },
+      ...uniqueOwners.map((owner) => ({ value: owner, label: owner })),
+    ];
+  }, [modelConfigs, t]);
+
+  const loadModelsFromGroup = useCallback(() => {
+    if (!selectedModelGroup) return;
+    const models = modelConfigs.filter((m) => m.owned_by === selectedModelGroup);
+    if (!models.length) return;
+
+    const existingNames = new Set(
+      keyDraft.modelEntries.map((e) => e.name.trim().toLowerCase()).filter(Boolean),
+    );
+
+    const newEntries: ModelEntryDraft[] = [];
+    for (const model of models) {
+      const name = model.id.trim();
+      if (!name || existingNames.has(name.toLowerCase())) continue;
+      existingNames.add(name.toLowerCase());
+      newEntries.push({
+        id: `model-${Date.now()}-${Math.random().toString(16).slice(2)}-${name}`,
+        name,
+        alias: "",
+        priorityText: "",
+        testModel: "",
+      });
+    }
+
+    if (newEntries.length === 0) return;
+
+    setKeyDraft((prev) => ({
+      ...prev,
+      modelEntries: [...prev.modelEntries, ...newEntries],
+    }));
+  }, [selectedModelGroup, modelConfigs, keyDraft.modelEntries, setKeyDraft]);
+
   useEffect(() => {
     if (!open) return;
     setModalTab("basic");
     setOpenCodeModelQuery("");
+    setSelectedModelGroup("");
   }, [editKeyIndex, editKeyType, open]);
+
+  useEffect(() => {
+    if (!open || isOpenCodeGo) return;
+    let cancelled = false;
+    setModelConfigsLoading(true);
+    modelsApi
+      .getModelConfigs("library")
+      .then((items) => {
+        if (cancelled) return;
+        setModelConfigs(items.map((item) => ({ id: item.id, owned_by: item.owned_by })));
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setModelConfigs([]);
+      })
+      .finally(() => {
+        if (!cancelled) setModelConfigsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, isOpenCodeGo]);
 
   const fetchOpenCodeModels = useCallback(async () => {
     if (!isOpenCodeGo) return;
@@ -730,6 +803,37 @@ export function ProviderKeyModal({
               </SectionCard>
             ) : (
               <>
+                <SectionCard>
+                  <div className="flex flex-wrap items-end gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                        {t("providers.model_group_label")}
+                      </p>
+                      <div className="mt-2">
+                        <SearchableSelect
+                          value={selectedModelGroup}
+                          onChange={(value) => setSelectedModelGroup(value)}
+                          options={modelGroupOptions}
+                          placeholder={t("providers.model_group_placeholder")}
+                          searchPlaceholder={t("providers.model_group_search_placeholder")}
+                          aria-label={t("providers.model_group_label")}
+                        />
+                      </div>
+                    </div>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={loadModelsFromGroup}
+                      disabled={!selectedModelGroup || modelConfigsLoading}
+                    >
+                      {t("providers.load_models")}
+                    </Button>
+                  </div>
+                  <p className="mt-2 text-xs text-slate-500 dark:text-white/55">
+                    {t("providers.model_group_hint")}
+                  </p>
+                </SectionCard>
+
                 <SectionCard>
                   <ModelInputList
                     title={

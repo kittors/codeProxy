@@ -20,7 +20,14 @@ export type AuthFileType =
 
 export type AuthFileSubscriptionPeriod = "monthly" | "yearly";
 
-export interface AuthFileItem {
+export interface TagDisplayFields {
+  default_tags?: string[];
+  custom_tags?: string[];
+  hidden_default_tags?: string[];
+  display_tags?: string[];
+}
+
+export interface AuthFileItem extends TagDisplayFields {
   name: string;
   type?: AuthFileType | string;
   provider?: string;

@@ -56,6 +56,7 @@ export function VendorIcon({ modelId, size = 14 }: { modelId: string; size?: num
 export const makeEmptyApiKeyForm = (key = ""): ApiKeyFormValues => ({
   name: "",
   key,
+  permissionProfileId: "",
   dailyLimit: "",
   totalQuota: "",
   concurrencyLimit: "",

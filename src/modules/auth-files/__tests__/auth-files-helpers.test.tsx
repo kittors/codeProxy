@@ -9,9 +9,11 @@ import {
   pickQuotaPreviewItem,
   readAuthFilesDataCache,
   readAuthFilesUiState,
+  resolveAuthFileDisplayTags,
   resolveAuthFileSubscriptionStatus,
   resolveAuthFileStats,
   sanitizeAuthFilesForCache,
+  shouldShowAuthFileDisplayTag,
   writeAuthFilesDataCache,
   writeAuthFilesUiState,
 } from "@/modules/auth-files/helpers/authFilesPageUtils";
@@ -140,6 +142,26 @@ describe("Auth Files helper coverage", () => {
         runtime_only: undefined,
         plan_type: undefined,
         planType: "pro",
+        subscription_started_at: undefined,
+        subscriptionStartedAt: undefined,
+        subscription_start_at: undefined,
+        subscriptionStartAt: undefined,
+        subscription_started_at_ms: undefined,
+        subscriptionStartedAtMs: undefined,
+        subscription_period: undefined,
+        subscriptionPeriod: undefined,
+        subscription_expires_at: undefined,
+        subscriptionExpiresAt: undefined,
+        subscription_expires_at_ms: undefined,
+        subscriptionExpiresAtMs: undefined,
+        subscription_remaining_minutes: undefined,
+        subscriptionRemainingMinutes: undefined,
+        subscription_expired: undefined,
+        subscriptionExpired: undefined,
+        default_tags: [],
+        custom_tags: [],
+        hidden_default_tags: [],
+        display_tags: undefined,
         id_token: {
           chatgpt_account_id: "acct-1",
           plan_type: "pro",
@@ -172,6 +194,56 @@ describe("Auth Files helper coverage", () => {
         },
       },
     });
+  });
+
+  test("treats an explicit empty display tag list as hiding every tag", () => {
+    const file = {
+      name: "codex.json",
+      default_tags: ["codex", "pro"],
+      custom_tags: ["vip"],
+      display_tags: [],
+    } satisfies AuthFileItem;
+
+    expect(resolveAuthFileDisplayTags(file)).toEqual([]);
+    expect(
+      resolveAuthFileDisplayTags({
+        name: "codex.json",
+        default_tags: ["codex", "pro"],
+        custom_tags: ["vip"],
+      }),
+    ).toEqual(["codex", "pro", "vip"]);
+  });
+
+  test("checks default badge visibility from explicit display tags or hidden defaults", () => {
+    expect(
+      shouldShowAuthFileDisplayTag(
+        {
+          name: "codex.json",
+          default_tags: ["codex", "pro"],
+          hidden_default_tags: [],
+          display_tags: ["codex"],
+        } as AuthFileItem,
+        "pro",
+      ),
+    ).toBe(false);
+    expect(
+      shouldShowAuthFileDisplayTag(
+        {
+          name: "codex.json",
+          default_tags: ["codex", "pro"],
+          hidden_default_tags: ["pro"],
+        } as AuthFileItem,
+        "pro",
+      ),
+    ).toBe(false);
+    expect(
+      shouldShowAuthFileDisplayTag(
+        {
+          name: "legacy.json",
+        } as AuthFileItem,
+        "codex",
+      ),
+    ).toBe(true);
   });
 
   test("aggregates auth file usage and picks quota preview entries", () => {
