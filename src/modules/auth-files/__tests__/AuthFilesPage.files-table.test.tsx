@@ -199,6 +199,51 @@ describe("AuthFilesPage files table", () => {
     expect(screen.getByRole("switch", { name: "Enable/Disable" })).toBeInTheDocument();
   });
 
+  test("shows active restriction badge with reason and recovery tooltip", async () => {
+    const now = Date.now();
+    mocks.list.mockImplementationOnce(async () => ({
+      files: [
+        {
+          name: "codex.json",
+          type: "codex",
+          size: 1024,
+          modified: now,
+          disabled: false,
+          restrictions: [
+            {
+              scope: "model",
+              model: "gpt-5",
+              http_status: 401,
+              status_message: "unauthorized",
+              next_retry_after: new Date(now + 34 * 60_000 + 50_000).toISOString(),
+            },
+          ],
+        },
+      ],
+    }));
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    const badge = await screen.findByText("401 Error");
+    const tooltipTrigger = badge.closest("[aria-describedby]") ?? badge;
+    fireEvent.mouseEnter(tooltipTrigger);
+
+    const tooltip = await screen.findByRole("tooltip");
+    expect(tooltip).toHaveTextContent("gpt-5");
+    expect(tooltip).toHaveTextContent("unauthorized");
+    expect(tooltip).toHaveTextContent("Auto recovery in");
+  });
+
   test("supports multi-select delete from the toolbar", async () => {
     render(
       <MemoryRouter initialEntries={["/auth-files"]}>

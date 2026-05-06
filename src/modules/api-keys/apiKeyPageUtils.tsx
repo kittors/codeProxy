@@ -59,6 +59,7 @@ export const makeEmptyApiKeyForm = (key = ""): ApiKeyFormValues => ({
   permissionProfileId: "",
   dailyLimit: "",
   totalQuota: "",
+  spendingLimit: "",
   concurrencyLimit: "",
   rpmLimit: "",
   tpmLimit: "",
@@ -101,6 +102,16 @@ export const formatApiKeyDate = (iso: string | undefined) => {
 export const formatApiKeyLimit = (limit: number | undefined) => {
   if (!limit || limit <= 0) return null;
   return limit.toLocaleString();
+};
+
+export const formatApiKeySpendingLimit = (limit: number | undefined) => {
+  if (!limit || limit <= 0 || !Number.isFinite(limit)) return null;
+  return new Intl.NumberFormat("en-US", {
+    currency: "USD",
+    maximumFractionDigits: 4,
+    minimumFractionDigits: 2,
+    style: "currency",
+  }).format(limit);
 };
 
 export const normalizeChannelKey = (value: string) => value.trim().toLowerCase();

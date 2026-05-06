@@ -1,5 +1,6 @@
 import type {
   AuthFileItem,
+  AuthFileRestriction,
   AuthFileSubscriptionPeriod,
   EntityStatsResponse,
   OAuthModelAliasEntry,
@@ -66,6 +67,49 @@ export type AuthFilesDataCache = {
 const sanitizeDecodedIdToken = (value: unknown): unknown => {
   if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
   return value;
+};
+
+const sanitizeAuthFileRestrictionsForCache = (
+  value: unknown,
+): AuthFileRestriction[] | undefined => {
+  if (!Array.isArray(value)) return undefined;
+  const restrictions = value
+    .map((entry): AuthFileRestriction | null => {
+      if (!entry || typeof entry !== "object" || Array.isArray(entry)) return null;
+      const record = entry as Record<string, unknown>;
+      const scope = typeof record.scope === "string" ? record.scope : undefined;
+      const model = typeof record.model === "string" ? record.model : undefined;
+      const status = typeof record.status === "string" ? record.status : undefined;
+      const statusMessage =
+        typeof record.status_message === "string" ? record.status_message : undefined;
+      const httpStatus = Number(record.http_status);
+      const code = typeof record.code === "string" ? record.code : undefined;
+      const reason = typeof record.reason === "string" ? record.reason : undefined;
+      const nextRetryAfter =
+        typeof record.next_retry_after === "string" || typeof record.next_retry_after === "number"
+          ? record.next_retry_after
+          : undefined;
+      const nextRecoverAt =
+        typeof record.next_recover_at === "string" || typeof record.next_recover_at === "number"
+          ? record.next_recover_at
+          : undefined;
+      return {
+        ...(scope ? { scope } : {}),
+        ...(model ? { model } : {}),
+        ...(status ? { status } : {}),
+        ...(statusMessage ? { status_message: statusMessage } : {}),
+        ...(Number.isFinite(httpStatus) && httpStatus > 0 ? { http_status: httpStatus } : {}),
+        ...(code ? { code } : {}),
+        ...(reason ? { reason } : {}),
+        ...(record.unavailable === true ? { unavailable: true } : {}),
+        ...(record.quota_exceeded === true ? { quota_exceeded: true } : {}),
+        ...(record.retryable === true ? { retryable: true } : {}),
+        ...(nextRetryAfter !== undefined ? { next_retry_after: nextRetryAfter } : {}),
+        ...(nextRecoverAt !== undefined ? { next_recover_at: nextRecoverAt } : {}),
+      };
+    })
+    .filter((entry): entry is AuthFileRestriction => Boolean(entry));
+  return restrictions.length > 0 ? restrictions : undefined;
 };
 
 export const readAuthFilesUiState = (): AuthFilesUiState | null => {
@@ -140,6 +184,11 @@ export const sanitizeAuthFilesForCache = (files: AuthFileItem[]): AuthFileItem[]
     auth_index: file.auth_index,
     authIndex: file.authIndex,
     disabled: file.disabled,
+    status: file.status,
+    status_message: file.status_message,
+    unavailable: file.unavailable,
+    next_retry_after: file.next_retry_after,
+    restrictions: sanitizeAuthFileRestrictionsForCache(file.restrictions),
     modified: file.modified,
     modtime: file.modtime,
     size: file.size,
@@ -319,6 +368,126 @@ const parseDateLikeMs = (value: unknown): number | null => {
     return Number.isNaN(parsed) ? null : parsed;
   }
   return null;
+};
+
+export type AuthFileRestrictionBadge = {
+  key: string;
+  label: string;
+  model?: string;
+  reason?: string;
+  recoverAtMs?: number;
+  remainingText?: string;
+  tone: "danger" | "warning" | "neutral";
+};
+
+const readRestrictionDateMs = (restriction: AuthFileRestriction): number | null =>
+  parseDateLikeMs(restriction.next_retry_after) ?? parseDateLikeMs(restriction.next_recover_at);
+
+export const formatAuthFileRestrictionRemaining = (
+  recoverAtMs: number,
+  nowMs = Date.now(),
+  labels: { day: string; hour: string; minute: string; second: string } = {
+    day: "d",
+    hour: "h",
+    minute: "m",
+    second: "s",
+  },
+): string => {
+  let seconds = Math.max(0, Math.ceil((recoverAtMs - nowMs) / 1000));
+  const days = Math.floor(seconds / 86400);
+  seconds -= days * 86400;
+  const hours = Math.floor(seconds / 3600);
+  seconds -= hours * 3600;
+  const minutes = Math.floor(seconds / 60);
+  seconds -= minutes * 60;
+
+  const parts: string[] = [];
+  if (days) parts.push(`${days}${labels.day}`);
+  if (hours) parts.push(`${hours}${labels.hour}`);
+  if (minutes) parts.push(`${minutes}${labels.minute}`);
+  parts.push(`${seconds || 1}${labels.second}`);
+  return parts.join(" ");
+};
+
+const resolveRestrictionLabel = (restriction: AuthFileRestriction): string => {
+  const status = Number(restriction.http_status);
+  if (Number.isFinite(status) && status > 0) return `${Math.round(status)} Error`;
+  if (restriction.quota_exceeded || restriction.reason === "quota") return "Quota Limited";
+  if (restriction.status_message) return restriction.status_message;
+  if (restriction.reason) return restriction.reason;
+  return "Restricted";
+};
+
+const resolveRestrictionTone = (
+  restriction: AuthFileRestriction,
+): AuthFileRestrictionBadge["tone"] => {
+  const status = Number(restriction.http_status);
+  if (status === 401 || status === 403 || status === 429 || restriction.quota_exceeded) {
+    return "danger";
+  }
+  if (status >= 500 || restriction.retryable) return "warning";
+  return "neutral";
+};
+
+export const resolveAuthFileRestrictionBadges = (
+  file: AuthFileItem,
+  nowMs = Date.now(),
+): AuthFileRestrictionBadge[] => {
+  const rawRestrictions = Array.isArray(file.restrictions) ? file.restrictions : [];
+  const restrictions =
+    rawRestrictions.length > 0
+      ? rawRestrictions
+      : file.status || file.status_message || file.unavailable || file.next_retry_after
+        ? [
+            {
+              scope: "auth",
+              status: file.status,
+              status_message: file.status_message,
+              unavailable: file.unavailable,
+              next_retry_after: file.next_retry_after,
+            },
+          ]
+        : [];
+
+  return restrictions
+    .map((restriction): AuthFileRestrictionBadge | null => {
+      const recoverAtMs = readRestrictionDateMs(restriction);
+      if (recoverAtMs !== null && recoverAtMs <= nowMs) return null;
+      const model = typeof restriction.model === "string" ? restriction.model.trim() : "";
+      const reason = String(
+        restriction.status_message || restriction.reason || restriction.code || "",
+      ).trim();
+      const dateKey =
+        typeof restriction.next_retry_after === "string" ||
+        typeof restriction.next_retry_after === "number"
+          ? String(restriction.next_retry_after)
+          : typeof restriction.next_recover_at === "string" ||
+              typeof restriction.next_recover_at === "number"
+            ? String(restriction.next_recover_at)
+            : "";
+      const status = Number(restriction.http_status);
+      const statusKey = Number.isFinite(status) && status > 0 ? String(Math.round(status)) : "";
+      const key = [
+        restriction.scope || "auth",
+        model,
+        statusKey || restriction.reason || restriction.status || "restricted",
+        dateKey,
+      ].join(":");
+      return {
+        key,
+        label: resolveRestrictionLabel(restriction),
+        ...(model ? { model } : {}),
+        ...(reason ? { reason } : {}),
+        ...(recoverAtMs !== null
+          ? {
+              recoverAtMs,
+              remainingText: formatAuthFileRestrictionRemaining(recoverAtMs, nowMs),
+            }
+          : {}),
+        tone: resolveRestrictionTone(restriction),
+      };
+    })
+    .filter((badge): badge is AuthFileRestrictionBadge => Boolean(badge));
 };
 
 export type AuthFileSubscriptionStatus = {

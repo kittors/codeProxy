@@ -6,6 +6,7 @@ import type {
   RoutingChannelGroupEntry,
   RoutingChannelGroupMemberEntry,
   RoutingPathRouteEntry,
+  RoutingStrategy,
   VisualConfigValues,
 } from "@/modules/config/visual/types";
 import { makeClientId } from "@/modules/config/visual/types";
@@ -29,6 +30,7 @@ import {
 type GroupDraft = {
   name: string;
   description: string;
+  strategy: RoutingStrategy;
   channels: RoutingChannelGroupMemberEntry[];
   allowedModels: string[];
   routes: RoutingPathRouteEntry[];
@@ -43,9 +45,13 @@ export type RoutingModelOption = {
 
 type RoutingModelLoadResult = string | RoutingModelOption;
 
+const ROUTING_STRATEGY_ASSET_MARKER =
+  'strategy:t.currentTarget.value==="fill-first"?"fill-first":"round-robin"';
+
 const createEmptyGroupDraft = (): GroupDraft => ({
   name: "",
   description: "",
+  strategy: "round-robin",
   channels: [],
   allowedModels: [],
   routes: [{ ...EMPTY_ROUTE_DRAFT() }],
@@ -401,6 +407,7 @@ export function RoutingConfigEditor({
       setGroupDraft({
         name: group.name,
         description: group.description,
+        strategy: group.strategy === "fill-first" ? "fill-first" : "round-robin",
         channels: cloneMembers(group.channels),
         allowedModels: group.allowedModels ?? [],
         routes:
@@ -506,6 +513,7 @@ export function RoutingConfigEditor({
       id: groupEditorId ?? makeClientId(),
       name: groupName,
       description: groupDraft.description.trim(),
+      strategy: groupDraft.strategy === "fill-first" ? "fill-first" : "round-robin",
       allowedModels: Array.from(
         new Set(groupDraft.allowedModels.map((model) => model.trim()).filter(Boolean)),
       ),
@@ -887,7 +895,14 @@ export function RoutingConfigEditor({
         ),
       },
     ],
-    [availableChannelDetails, disabled, draftStaleChannelIds, removeDraftChannel, t, updateDraftChannel],
+    [
+      availableChannelDetails,
+      disabled,
+      draftStaleChannelIds,
+      removeDraftChannel,
+      t,
+      updateDraftChannel,
+    ],
   );
 
   const modelColumns = useMemo<VirtualTableColumn<RoutingModelOption>[]>(
@@ -1031,15 +1046,7 @@ export function RoutingConfigEditor({
   return (
     <>
       <div className="space-y-3">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="space-y-1">
-            <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
-              {t("channel_groups_page.groups_table_title")}
-            </h3>
-            <p className="text-xs text-slate-500 dark:text-white/55">
-              {t("channel_groups_page.groups_table_desc")}
-            </p>
-          </div>
+        <div className="flex flex-wrap justify-end gap-3">
           <Button variant="primary" size="sm" onClick={openCreateGroup} disabled={disabled}>
             <Plus size={14} />
             {t("channel_groups_page.add_group")}
@@ -1054,7 +1061,7 @@ export function RoutingConfigEditor({
           rowHeight={44}
           height="h-auto max-h-[68vh]"
           minWidth="min-w-[1660px]"
-          caption={t("channel_groups_page.groups_table_title")}
+          caption={t("channel_groups_page.table_group")}
           emptyText={t("channel_groups_page.empty_groups")}
           rowClassName={(group) =>
             (staleChannelsByGroup.get(group.id)?.length ?? 0) > 0
@@ -1148,6 +1155,35 @@ export function RoutingConfigEditor({
                 className="mt-4 min-h-0 flex-1 overflow-y-auto pr-1"
               >
                 <TabsContent value="basic" className="space-y-5">
+                  <Field
+                    label={t("channel_groups_page.routing_strategy_label")}
+                    hint={t("channel_groups_page.routing_strategy_tooltip")}
+                  >
+                    <select
+                      data-testid="routing-strategy-select"
+                      data-asset-marker={ROUTING_STRATEGY_ASSET_MARKER}
+                      value={groupDraft.strategy}
+                      onChange={(event) => {
+                        setGroupDraft((current) => ({
+                          ...current,
+                          strategy:
+                            event.currentTarget.value === "fill-first"
+                              ? "fill-first"
+                              : "round-robin",
+                        }));
+                      }}
+                      disabled={disabled}
+                      className="h-9 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition-colors focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/15 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:bg-neutral-950 dark:text-white dark:focus:border-indigo-300"
+                    >
+                      <option value="round-robin">
+                        {t("channel_groups_page.routing_strategy_round_robin")}
+                      </option>
+                      <option value="fill-first">
+                        {t("channel_groups_page.routing_strategy_fill_first")}
+                      </option>
+                    </select>
+                  </Field>
+
                   <div className="grid gap-4 md:grid-cols-2">
                     <Field label={t("channel_groups_page.group_name_label")}>
                       <TextInput

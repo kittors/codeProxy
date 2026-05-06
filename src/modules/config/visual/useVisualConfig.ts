@@ -9,6 +9,7 @@ import type {
   RoutingChannelGroupMemberEntry,
   RoutingFallback,
   RoutingPathRouteEntry,
+  RoutingStrategy,
   VisualConfigValues,
 } from "@/modules/config/visual/types";
 import { DEFAULT_VISUAL_VALUES, makeClientId } from "@/modules/config/visual/types";
@@ -234,6 +235,10 @@ function parseRoutingFallback(raw: unknown): RoutingFallback {
   return raw === "default" ? "default" : "none";
 }
 
+function parseRoutingStrategy(raw: unknown): RoutingStrategy {
+  return raw === "fill-first" ? "fill-first" : "round-robin";
+}
+
 function parseRoutingPriorityText(value: string): number | null {
   const trimmed = value.trim();
   if (!/^\d+$/.test(trimmed)) return null;
@@ -279,6 +284,7 @@ function parseRoutingChannelGroups(raw: unknown): RoutingChannelGroupEntry[] {
       id: `routing-group-${index}-${makeClientId()}`,
       name: typeof record.name === "string" ? record.name : "",
       description: typeof record.description === "string" ? record.description : "",
+      strategy: parseRoutingStrategy(record.strategy),
       channels: members,
       allowedModels: Array.isArray(record["allowed-models"])
         ? Array.from(
@@ -375,6 +381,7 @@ function serializeRoutingChannelGroupsForYaml(
       if (group.description.trim()) {
         item.description = group.description.trim();
       }
+      item.strategy = group.strategy === "fill-first" ? "fill-first" : "round-robin";
 
       const match: Record<string, unknown> = {};
       const channels = group.channels.map((channel) => channel.name.trim()).filter(Boolean);

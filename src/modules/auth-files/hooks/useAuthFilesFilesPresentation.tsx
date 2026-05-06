@@ -1,6 +1,15 @@
 import { useCallback, useMemo, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { CalendarClock, Download, Eye, Loader2, RefreshCw, Tags, Zap } from "lucide-react";
+import {
+  AlertTriangle,
+  CalendarClock,
+  Download,
+  Eye,
+  Loader2,
+  RefreshCw,
+  Tags,
+  Zap,
+} from "lucide-react";
 import type { AuthFileItem } from "@/lib/http/types";
 import { formatLatency } from "@/modules/providers/hooks/useProviderLatency";
 import { ProviderStatusBar } from "@/modules/providers/ProviderStatusBar";
@@ -16,12 +25,14 @@ import {
   type QuotaPreviewMode,
   type UsageIndex,
   TYPE_BADGE_CLASSES,
+  formatAuthFileRestrictionRemaining,
   formatFileSize,
   formatModified,
   isRuntimeOnlyAuthFile,
   parseAdditionalQuotaWindowLabel,
   resolveAuthFileDisplayName,
   resolveAuthFilePlanType,
+  resolveAuthFileRestrictionBadges,
   resolveAuthFileSupplementalTags,
   resolveAuthFileStats,
   resolveAuthFileStatusBar,
@@ -56,6 +67,15 @@ const SUBSCRIPTION_TONE_CLASSES = {
     "border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-500/20 dark:bg-rose-500/15 dark:text-rose-200",
   expired:
     "border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-500/20 dark:bg-rose-500/15 dark:text-rose-200",
+} as const;
+
+const RESTRICTION_TONE_CLASSES = {
+  danger:
+    "border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-500/20 dark:bg-rose-500/15 dark:text-rose-200",
+  warning:
+    "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/15 dark:text-amber-200",
+  neutral:
+    "border-slate-200 bg-slate-50 text-slate-700 dark:border-white/10 dark:bg-white/[0.08] dark:text-white/70",
 } as const;
 
 type QuotaVisualTone = {
@@ -179,6 +199,73 @@ export function useAuthFilesFilesPresentation({
       return normalized.charAt(0).toUpperCase() + normalized.slice(1);
     },
     [t],
+  );
+
+  const restrictionUnitLabels = useMemo(
+    () => ({
+      day: t("auth_files.restriction_duration_day"),
+      hour: t("auth_files.restriction_duration_hour"),
+      minute: t("auth_files.restriction_duration_minute"),
+      second: t("auth_files.restriction_duration_second"),
+    }),
+    [t],
+  );
+
+  const formatRestrictionBadgeLabel = useCallback(
+    (label: string) => {
+      const status = label.match(/^(\d+)\s+Error$/i)?.[1];
+      if (status) return t("auth_files.restriction_http_label", { status });
+      if (label === "Quota Limited") return t("auth_files.restriction_quota_label");
+      if (label === "Restricted") return t("auth_files.restriction_generic_label");
+      return label;
+    },
+    [t],
+  );
+
+  const formatRestrictionTooltip = useCallback(
+    (badge: ReturnType<typeof resolveAuthFileRestrictionBadges>[number]) => {
+      const parts = [
+        badge.model ? t("auth_files.restriction_model", { model: badge.model }) : "",
+        badge.reason ? t("auth_files.restriction_reason", { reason: badge.reason }) : "",
+      ].filter(Boolean);
+      if (badge.recoverAtMs) {
+        const remaining = formatAuthFileRestrictionRemaining(
+          badge.recoverAtMs,
+          nowMs,
+          restrictionUnitLabels,
+        );
+        parts.push(t("auth_files.restriction_recovery_in", { time: remaining }));
+      } else {
+        parts.push(t("auth_files.restriction_recovery_unknown"));
+      }
+      return parts.join(" · ");
+    },
+    [nowMs, restrictionUnitLabels, t],
+  );
+
+  const renderRestrictionBadges = useCallback(
+    (file: AuthFileItem): ReactNode | null => {
+      const badges = resolveAuthFileRestrictionBadges(file, nowMs);
+      if (badges.length === 0) return null;
+      return (
+        <div className="flex min-w-0 flex-wrap gap-1.5">
+          {badges.map((badge) => (
+            <HoverTooltip key={badge.key} content={formatRestrictionTooltip(badge)} placement="top">
+              <span
+                className={[
+                  "inline-flex max-w-full items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold tabular-nums",
+                  RESTRICTION_TONE_CLASSES[badge.tone],
+                ].join(" ")}
+              >
+                <AlertTriangle size={11} className="shrink-0" />
+                <span className="min-w-0 truncate">{formatRestrictionBadgeLabel(badge.label)}</span>
+              </span>
+            </HoverTooltip>
+          ))}
+        </div>
+      );
+    },
+    [formatRestrictionBadgeLabel, formatRestrictionTooltip, nowMs],
   );
 
   const renderSubscriptionBadge = useCallback(
@@ -446,6 +533,9 @@ export function useAuthFilesFilesPresentation({
                   </span>
                 ))}
               </div>
+            ) : null}
+            {renderRestrictionBadges(file) ? (
+              <div className="mt-1">{renderRestrictionBadges(file)}</div>
             ) : null}
           </div>
         ),
@@ -780,6 +870,7 @@ export function useAuthFilesFilesPresentation({
     quotaPreviewMode,
     quotaProgressCircle,
     refreshQuota,
+    renderRestrictionBadges,
     renderSubscriptionBadge,
     selectCurrentPage,
     selectablePageNames.length,
@@ -797,6 +888,7 @@ export function useAuthFilesFilesPresentation({
   return {
     translateQuotaText,
     formatPlanTypeLabel,
+    renderRestrictionBadges,
     renderSubscriptionBadge,
     renderQuotaBar,
     renderFilesViewModeTabs,
