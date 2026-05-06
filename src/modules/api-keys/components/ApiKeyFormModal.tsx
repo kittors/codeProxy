@@ -1,7 +1,6 @@
 import { Button } from "@/modules/ui/Button";
 import { Modal } from "@/modules/ui/Modal";
 import { ApiKeyFormFields } from "@/modules/api-keys/components/ApiKeyFormFields";
-import type { MultiSelectOption } from "@/modules/ui/MultiSelect";
 import type { ApiKeyFormValues } from "@/modules/api-keys/types";
 
 export function ApiKeyFormModal({
@@ -11,9 +10,6 @@ export function ApiKeyFormModal({
   saving,
   form,
   setForm,
-  availableChannels,
-  availableChannelGroups,
-  availableModels,
   onClose,
   onSubmit,
   regenerateKey,
@@ -24,9 +20,6 @@ export function ApiKeyFormModal({
   saving: boolean;
   form: ApiKeyFormValues;
   setForm: React.Dispatch<React.SetStateAction<ApiKeyFormValues>>;
-  availableChannels: MultiSelectOption[];
-  availableChannelGroups: MultiSelectOption[];
-  availableModels: MultiSelectOption[];
   onClose: () => void;
   onSubmit: () => Promise<void>;
   regenerateKey: () => void;
@@ -58,9 +51,6 @@ export function ApiKeyFormModal({
         t={t}
         form={form}
         setForm={setForm}
-        availableChannels={availableChannels}
-        availableChannelGroups={availableChannelGroups}
-        availableModels={availableModels}
         editMode={editMode}
         regenerateKey={regenerateKey}
       />
