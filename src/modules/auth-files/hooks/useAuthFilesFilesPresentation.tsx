@@ -27,6 +27,7 @@ import {
   resolveAuthFileStatusBar,
   resolveAuthFileSubscriptionStatus,
   resolveFileType,
+  shouldShowAuthFileDisplayTag,
 } from "@/modules/auth-files/helpers/authFilesPageUtils";
 import { resolveQuotaProvider, type QuotaProvider } from "@/modules/quota/quota-fetch";
 import {
@@ -458,16 +459,20 @@ export function useAuthFilesFilesPresentation({
           const badgeClass = TYPE_BADGE_CLASSES[typeKey] ?? TYPE_BADGE_CLASSES.unknown;
           const planType = resolveAuthFilePlanType(file, quotaByFileName[file.name]);
           const runtimeOnly = isRuntimeOnlyAuthFile(file);
+          const showTypeBadge = shouldShowAuthFileDisplayTag(file, typeKey);
+          const showPlanBadge = planType ? shouldShowAuthFileDisplayTag(file, planType) : false;
 
           return (
             <div className="flex flex-col gap-1">
               <div className="flex flex-wrap items-center gap-2">
-                <span
-                  className={`inline-flex rounded-lg px-2 py-1 text-xs font-semibold ${badgeClass}`}
-                >
-                  {typeKey}
-                </span>
-                {planType ? (
+                {showTypeBadge ? (
+                  <span
+                    className={`inline-flex rounded-lg px-2 py-1 text-xs font-semibold ${badgeClass}`}
+                  >
+                    {typeKey}
+                  </span>
+                ) : null}
+                {showPlanBadge && planType ? (
                   <span className="inline-flex rounded-lg bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-800 dark:bg-amber-500/15 dark:text-amber-200">
                     {t("codex_quota.plan_label")} {formatPlanTypeLabel(planType)}
                   </span>

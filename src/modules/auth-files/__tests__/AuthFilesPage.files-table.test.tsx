@@ -376,6 +376,86 @@ describe("AuthFilesPage files table", () => {
     expect(within(card as HTMLElement).queryByText(/^pro$/i)).not.toBeInTheDocument();
   });
 
+  test("cards view hides default auth-file badges when display tags are empty", async () => {
+    window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
+    mocks.list.mockImplementation(async () => ({
+      files: [
+        {
+          name: "codex-pro.json",
+          label: "A_GptPro",
+          account_type: "oauth",
+          type: "codex",
+          plan_type: "pro",
+          size: 1024,
+          modified: Date.now(),
+          disabled: false,
+          default_tags: ["codex", "pro"],
+          custom_tags: [],
+          hidden_default_tags: ["codex", "pro"],
+          display_tags: [],
+        },
+      ],
+    }));
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    const title = await screen.findByText("A_GptPro");
+    const card = title.closest("section");
+    expect(card).not.toBeNull();
+    expect(within(card as HTMLElement).queryByText(/^codex$/i)).not.toBeInTheDocument();
+    expect(within(card as HTMLElement).queryByText("Plan Pro")).not.toBeInTheDocument();
+    expect(within(card as HTMLElement).getByText("0 calls")).toBeInTheDocument();
+  });
+
+  test("table view hides default auth-file badges when display tags are empty", async () => {
+    mocks.list.mockImplementation(async () => ({
+      files: [
+        {
+          name: "codex-pro.json",
+          label: "A_GptPro",
+          account_type: "oauth",
+          type: "codex",
+          plan_type: "pro",
+          size: 1024,
+          modified: Date.now(),
+          disabled: false,
+          default_tags: ["codex", "pro"],
+          custom_tags: [],
+          hidden_default_tags: ["codex", "pro"],
+          display_tags: [],
+        },
+      ],
+    }));
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    const title = await screen.findByText("A_GptPro");
+    const row = title.closest("tr");
+    expect(row).not.toBeNull();
+    expect(within(row as HTMLElement).queryByText(/^codex$/i)).not.toBeInTheDocument();
+    expect(within(row as HTMLElement).queryByText("Plan Pro")).not.toBeInTheDocument();
+  });
+
   test("saves auth-file tag visibility and custom tags from the tags modal", async () => {
     window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
     mocks.list.mockImplementation(async () => ({

@@ -13,6 +13,7 @@ import {
   resolveAuthFileSubscriptionStatus,
   resolveAuthFileStats,
   sanitizeAuthFilesForCache,
+  shouldShowAuthFileDisplayTag,
   writeAuthFilesDataCache,
   writeAuthFilesUiState,
 } from "@/modules/auth-files/helpers/authFilesPageUtils";
@@ -211,6 +212,38 @@ describe("Auth Files helper coverage", () => {
         custom_tags: ["vip"],
       }),
     ).toEqual(["codex", "pro", "vip"]);
+  });
+
+  test("checks default badge visibility from explicit display tags or hidden defaults", () => {
+    expect(
+      shouldShowAuthFileDisplayTag(
+        {
+          name: "codex.json",
+          default_tags: ["codex", "pro"],
+          hidden_default_tags: [],
+          display_tags: ["codex"],
+        } as AuthFileItem,
+        "pro",
+      ),
+    ).toBe(false);
+    expect(
+      shouldShowAuthFileDisplayTag(
+        {
+          name: "codex.json",
+          default_tags: ["codex", "pro"],
+          hidden_default_tags: ["pro"],
+        } as AuthFileItem,
+        "pro",
+      ),
+    ).toBe(false);
+    expect(
+      shouldShowAuthFileDisplayTag(
+        {
+          name: "legacy.json",
+        } as AuthFileItem,
+        "codex",
+      ),
+    ).toBe(true);
   });
 
   test("aggregates auth file usage and picks quota preview entries", () => {

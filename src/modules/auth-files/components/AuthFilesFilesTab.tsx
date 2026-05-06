@@ -40,6 +40,7 @@ import {
   resolveAuthFilePlanType,
   resolveAuthFileSupplementalTags,
   resolveFileType,
+  shouldShowAuthFileDisplayTag,
 } from "@/modules/auth-files/helpers/authFilesPageUtils";
 import type { QuotaItem, QuotaState } from "@/modules/quota/quota-helpers";
 import type { QuotaProvider } from "@/modules/quota/quota-fetch";
@@ -534,6 +535,10 @@ export function AuthFilesFilesTab({
                   const state = quotaByFileName[file.name] ?? { status: "idle", items: [] };
                   const planType = resolveAuthFilePlanType(file, state);
                   const displayTags = resolveAuthFileSupplementalTags(file, state);
+                  const showTypeBadge = shouldShowAuthFileDisplayTag(file, typeKey);
+                  const showPlanBadge = planType
+                    ? shouldShowAuthFileDisplayTag(file, planType)
+                    : false;
                   const subscriptionBadge = renderSubscriptionBadge(file);
                   const stats = resolveAuthFileStats(file, usageIndex);
                   const totalCalls = stats.success + stats.failure;
@@ -607,15 +612,17 @@ export function AuthFilesFilesTab({
                         </div>
 
                         <div className="min-w-0 flex flex-wrap items-center gap-2">
-                          <span
-                            className={[
-                              "inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[10px] font-semibold",
-                              badgeClass,
-                            ].join(" ")}
-                          >
-                            {typeKey}
-                          </span>
-                          {planType ? (
+                          {showTypeBadge ? (
+                            <span
+                              className={[
+                                "inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[10px] font-semibold",
+                                badgeClass,
+                              ].join(" ")}
+                            >
+                              {typeKey}
+                            </span>
+                          ) : null}
+                          {showPlanBadge && planType ? (
                             <span className="inline-flex shrink-0 items-center rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-800 dark:bg-amber-500/15 dark:text-amber-200">
                               {t("codex_quota.plan_label")} {formatPlanTypeLabel(planType)}
                             </span>
