@@ -9,6 +9,7 @@ export interface ChannelGroupChannelDetail extends TagDisplayFields {
 export interface ChannelGroupItem {
   name: string;
   description?: string;
+  strategy?: "round-robin" | "fill-first";
   priority?: number;
   implicit?: boolean;
   prefixes?: string[];
@@ -60,6 +61,7 @@ export const channelGroupsApi = {
         return {
           name,
           description: typeof item.description === "string" ? item.description.trim() : undefined,
+          strategy: item.strategy === "fill-first" ? "fill-first" : "round-robin",
           priority:
             typeof item.priority === "number" && Number.isFinite(item.priority)
               ? item.priority

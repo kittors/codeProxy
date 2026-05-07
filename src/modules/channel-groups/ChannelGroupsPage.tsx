@@ -1,9 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  channelGroupsApi,
-  type ChannelGroupChannelDetail,
-} from "@/lib/http/apis/channel-groups";
+import { channelGroupsApi, type ChannelGroupChannelDetail } from "@/lib/http/apis/channel-groups";
 import {
   routingConfigApi,
   type RoutingConfigGroupItem,
@@ -62,6 +59,7 @@ function hydrateRoutingValues(payload: RoutingConfigItem | undefined): VisualCon
           id: `routing-group-${index}-${makeClientId()}`,
           name: String(group?.name ?? ""),
           description: String(group?.description ?? ""),
+          strategy: group?.strategy === "fill-first" ? "fill-first" : "round-robin",
           allowedModels: Array.isArray(group?.["allowed-models"])
             ? Array.from(
                 new Set(
@@ -115,6 +113,7 @@ function serializeRoutingValues(values: VisualConfigValues): RoutingConfigItem {
     if (group.description.trim()) {
       item.description = group.description.trim();
     }
+    item.strategy = group.strategy === "fill-first" ? "fill-first" : "round-robin";
     if (channels.length > 0) {
       item.match = { channels: Array.from(new Set(channels)) };
     }
@@ -293,11 +292,7 @@ export function ChannelGroupsPage() {
 
   return (
     <div className="space-y-4 overflow-x-hidden">
-      <Card
-        title={t("channel_groups_page.title")}
-        description={t("channel_groups_page.description")}
-        loading={loading}
-      >
+      <Card title={t("channel_groups_page.title")} loading={loading}>
         {error ? (
           <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900 dark:border-rose-400/25 dark:bg-rose-500/15 dark:text-white">
             {error}
@@ -305,10 +300,6 @@ export function ChannelGroupsPage() {
         ) : null}
 
         <div className={error ? "mt-4 space-y-4" : "space-y-4"}>
-          <div className="text-sm text-slate-500 dark:text-white/55">
-            {t("channel_groups_page.editor_hint")}
-          </div>
-
           <RoutingConfigEditor
             values={visualValues}
             disabled={loading || saving}

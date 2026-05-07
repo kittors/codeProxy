@@ -29,6 +29,11 @@ const normalizeLimit = (value: unknown): number => {
   return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : 0;
 };
 
+const normalizeSpendingLimit = (value: unknown): number => {
+  const parsed = typeof value === "number" ? value : Number.parseFloat(String(value ?? ""));
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+};
+
 const normalizeStringList = (value: unknown): string[] => {
   if (!Array.isArray(value)) return [];
   const seen = new Set<string>();
@@ -106,6 +111,7 @@ export function applyApiKeyPermissionProfile(
       "permission-profile-id": "",
       "daily-limit": 0,
       "total-quota": 0,
+      "spending-limit": 0,
       "concurrency-limit": 0,
       "rpm-limit": 0,
       "tpm-limit": 0,
@@ -121,6 +127,7 @@ export function applyApiKeyPermissionProfile(
     "permission-profile-id": profile.id,
     "daily-limit": profile["daily-limit"],
     "total-quota": profile["total-quota"],
+    "spending-limit": 0,
     "concurrency-limit": profile["concurrency-limit"],
     "rpm-limit": profile["rpm-limit"],
     "tpm-limit": profile["tpm-limit"],
@@ -135,6 +142,7 @@ export function hasApiKeyPermissionSettings(entry: ApiKeyEntry): boolean {
   return Boolean(
     (entry["daily-limit"] ?? 0) > 0 ||
     (entry["total-quota"] ?? 0) > 0 ||
+    normalizeSpendingLimit(entry["spending-limit"]) > 0 ||
     (entry["concurrency-limit"] ?? 0) > 0 ||
     (entry["rpm-limit"] ?? 0) > 0 ||
     (entry["tpm-limit"] ?? 0) > 0 ||
@@ -160,6 +168,7 @@ export function findMatchingPermissionProfile(
       (profile) =>
         normalizeLimit(entry["daily-limit"]) === profile["daily-limit"] &&
         normalizeLimit(entry["total-quota"]) === profile["total-quota"] &&
+        normalizeSpendingLimit(entry["spending-limit"]) === 0 &&
         normalizeLimit(entry["concurrency-limit"]) === profile["concurrency-limit"] &&
         normalizeLimit(entry["rpm-limit"]) === profile["rpm-limit"] &&
         normalizeLimit(entry["tpm-limit"]) === profile["tpm-limit"] &&

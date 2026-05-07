@@ -6,6 +6,7 @@ export interface ApiKeyEntry {
   disabled?: boolean;
   "daily-limit"?: number;
   "total-quota"?: number;
+  "spending-limit"?: number;
   "concurrency-limit"?: number;
   "rpm-limit"?: number;
   "tpm-limit"?: number;

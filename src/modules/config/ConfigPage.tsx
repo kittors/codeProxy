@@ -1,14 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  ChevronDown,
-  ChevronUp,
-  Code2,
-  Eye,
-  Layers,
-  Search,
-  Settings,
-} from "lucide-react";
-import { Link } from "react-router-dom";
+import { ChevronDown, ChevronUp, Code2, Eye, Search, Settings } from "lucide-react";
 import { parse as parseYaml } from "yaml";
 import { configFileApi } from "@/lib/http/apis";
 import { FloatingSaveBar } from "@/modules/config/FloatingSaveBar";
@@ -61,7 +52,6 @@ function useStickyTab(): [ConfigTab, (next: ConfigTab) => void] {
 
   return [tab, update];
 }
-
 
 export function ConfigPage() {
   const { t } = useTranslation();
@@ -342,19 +332,6 @@ export function ConfigPage() {
                   ) : null}
 
                   <div className={error ? "mt-4" : ""}>
-                    <div className="mb-4 rounded-2xl border border-sky-200 bg-sky-50/80 px-4 py-3 text-sm text-sky-900 dark:border-sky-400/20 dark:bg-sky-500/10 dark:text-sky-100">
-                      <div className="flex items-center gap-2">
-                        <Layers size={16} className="shrink-0" />
-                        <span>{t("config_page.channel_groups_moved")}</span>
-                        <Link
-                          to="/channel-groups"
-                          viewTransition
-                          className="font-semibold underline underline-offset-2"
-                        >
-                          {t("config_page.open_channel_groups")}
-                        </Link>
-                      </div>
-                    </div>
                     <VisualConfigEditor
                       values={visualValues}
                       disabled={disableControls || loading || saving}
