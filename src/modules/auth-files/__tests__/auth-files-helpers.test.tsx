@@ -9,7 +9,10 @@ import {
   pickQuotaPreviewItem,
   readAuthFilesDataCache,
   readAuthFilesUiState,
+  resolveAuthFileRestrictionBadges,
   resolveAuthFileDisplayTags,
+  resolveAuthFilePlanType,
+  resolveAuthFileSupplementalTags,
   resolveAuthFileSubscriptionStatus,
   resolveAuthFileStats,
   sanitizeAuthFilesForCache,
@@ -109,6 +112,11 @@ describe("Auth Files helper coverage", () => {
         auth_index: "auth-1",
         authIndex: "auth-1",
         disabled: false,
+        status: undefined,
+        status_message: undefined,
+        unavailable: undefined,
+        next_retry_after: undefined,
+        restrictions: undefined,
         modified: 123456,
         size: 2048,
         runtimeOnly: true,
@@ -244,6 +252,87 @@ describe("Auth Files helper coverage", () => {
         "codex",
       ),
     ).toBe(true);
+  });
+
+  test("drops stale display tags that no longer match current default or custom tags", () => {
+    const file = {
+      name: "codex.json",
+      plan_type: "free",
+      default_tags: ["codex", "free"],
+      custom_tags: ["vip"],
+      display_tags: ["codex", "plus", "vip"],
+    } satisfies AuthFileItem;
+
+    expect(resolveAuthFileDisplayTags(file)).toEqual(["codex", "vip"]);
+    expect(resolveAuthFileSupplementalTags(file)).toEqual(["vip"]);
+  });
+
+  test("derives active restriction badges with exact remaining time", () => {
+    const nowMs = Date.parse("2026-05-06T08:00:00.000Z");
+    const file = {
+      name: "codex.json",
+      restrictions: [
+        {
+          scope: "model",
+          model: "gpt-5",
+          http_status: 401,
+          status_message: "unauthorized",
+          next_retry_after: "2026-05-06T09:04:52.000Z",
+        },
+      ],
+    } as AuthFileItem;
+
+    expect(resolveAuthFileRestrictionBadges(file, nowMs)).toEqual([
+      {
+        key: "model:gpt-5:401:2026-05-06T09:04:52.000Z",
+        label: "401 Error",
+        model: "gpt-5",
+        reason: "unauthorized",
+        recoverAtMs: Date.parse("2026-05-06T09:04:52.000Z"),
+        remainingText: "1h 4m 52s",
+        tone: "danger",
+      },
+    ]);
+  });
+
+  test("does not derive restriction badges from normal auth status", () => {
+    expect(
+      resolveAuthFileRestrictionBadges({
+        name: "codex.json",
+        status: "active",
+        unavailable: false,
+      } as AuthFileItem),
+    ).toEqual([]);
+  });
+
+  test("prefers current auth-file plan metadata over cached quota plan", () => {
+    expect(
+      resolveAuthFilePlanType(
+        {
+          name: "codex.json",
+          plan_type: "free",
+        } as AuthFileItem,
+        {
+          status: "success",
+          planType: "plus",
+          items: [],
+          updatedAt: Date.now(),
+        },
+      ),
+    ).toBe("free");
+    expect(
+      resolveAuthFilePlanType(
+        {
+          name: "codex.json",
+        } as AuthFileItem,
+        {
+          status: "success",
+          planType: "plus",
+          items: [],
+          updatedAt: Date.now(),
+        },
+      ),
+    ).toBe("plus");
   });
 
   test("aggregates auth file usage and picks quota preview entries", () => {

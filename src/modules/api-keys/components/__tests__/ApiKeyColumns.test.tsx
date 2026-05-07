@@ -9,6 +9,10 @@ import { GlobalIconButtonTooltip } from "@/modules/ui/Tooltip";
 const t = ((key: string) => {
   const labels: Record<string, string> = {
     "api_keys_page.col_actions": "Actions",
+    "api_keys_page.col_spending_limit": "Spending limit",
+    "api_keys_page.spending_limit_help":
+      "Maximum cumulative API key cost in USD. Empty means unlimited.",
+    "api_keys_page.unlimited": "Unlimited",
     "api_keys_page.view_usage": "View usage",
     "api_keys_page.copy_key": "Copy key",
     "ccswitch.import_to_ccswitch": "Import to CC Switch",
@@ -95,5 +99,39 @@ describe("ApiKeyColumns", () => {
     const keyColumn = columns.find((column) => column.key === "key");
 
     expect(keyColumn?.width).toBe("w-[320px] min-w-[320px]");
+  });
+
+  test("shows API key spending limits as a dedicated cost column", async () => {
+    const row: ApiKeyEntry = {
+      key: "sk-test",
+      name: "Test key",
+      "spending-limit": 12.5,
+      "created-at": "2026-04-28T00:00:00Z",
+    };
+    const columns = createApiKeyColumns({
+      t,
+      onCopy: vi.fn(),
+      onDelete: vi.fn(),
+      onEdit: vi.fn(),
+      onImportToCcSwitch: vi.fn(),
+      onToggleDisable: vi.fn(),
+      onViewUsage: vi.fn(),
+    });
+    const spendingColumn = columns.find((column) => column.key === "spendingLimit");
+
+    expect(spendingColumn?.label).toBe("Spending limit");
+
+    render(
+      <>
+        <div>{spendingColumn?.headerRender?.()}</div>
+        <div>{spendingColumn?.render(row, 0)}</div>
+      </>,
+    );
+
+    expect(screen.getByText("$12.50")).toBeInTheDocument();
+
+    await userEvent.hover(screen.getByText("Spending limit"));
+
+    expect(screen.getByRole("tooltip")).toHaveTextContent("Maximum cumulative API key cost");
   });
 });

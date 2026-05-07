@@ -27,6 +27,21 @@ export interface TagDisplayFields {
   display_tags?: string[];
 }
 
+export interface AuthFileRestriction {
+  scope?: "auth" | "model" | string;
+  model?: string;
+  status?: string;
+  status_message?: string;
+  unavailable?: boolean;
+  http_status?: number;
+  code?: string;
+  reason?: string;
+  quota_exceeded?: boolean;
+  retryable?: boolean;
+  next_retry_after?: string | number;
+  next_recover_at?: string | number;
+}
+
 export interface AuthFileItem extends TagDisplayFields {
   name: string;
   type?: AuthFileType | string;
@@ -43,6 +58,11 @@ export interface AuthFileItem extends TagDisplayFields {
   runtimeOnly?: boolean | string;
   runtime_only?: boolean | string;
   disabled?: boolean;
+  status?: string;
+  status_message?: string;
+  unavailable?: boolean;
+  next_retry_after?: string | number;
+  restrictions?: AuthFileRestriction[];
   modified?: number;
   modtime?: number;
   subscription_started_at?: string;

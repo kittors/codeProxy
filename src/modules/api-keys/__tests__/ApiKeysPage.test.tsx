@@ -253,6 +253,7 @@ describe("ApiKeysPage", () => {
         "allowed-channels": ["Kimi渠道"],
         "allowed-channel-groups": ["kimi-pool"],
         "allowed-models": ["kimi-k2"],
+        "spending-limit": 7.5,
         "created-at": "2026-04-14T00:00:00.000Z",
       },
     ];
@@ -291,6 +292,7 @@ describe("ApiKeysPage", () => {
           "allowed-channels": ["Kimi渠道"],
           "allowed-channel-groups": ["kimi-pool"],
           "allowed-models": ["kimi-k2"],
+          "spending-limit": 7.5,
         }),
       }),
     );
@@ -377,6 +379,53 @@ describe("ApiKeysPage", () => {
     await userEvent.hover(screen.getByRole("button", { name: /copy key/i }));
 
     expect(screen.getByRole("tooltip")).toHaveTextContent(/copy key/i);
+  });
+
+  test("falls back to execCommand when async clipboard copy is blocked", async () => {
+    const originalClipboard = navigator.clipboard;
+    const originalExecCommand = document.execCommand;
+    const writeText = vi.fn(async () => {
+      throw new Error("clipboard blocked");
+    });
+    const execCommand = vi.fn(() => true);
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText },
+    });
+    Object.defineProperty(document, "execCommand", {
+      configurable: true,
+      value: execCommand,
+    });
+
+    try {
+      render(
+        <MemoryRouter>
+          <ThemeProvider>
+            <ToastProvider>
+              <ApiKeysPage />
+            </ToastProvider>
+          </ThemeProvider>
+        </MemoryRouter>,
+      );
+
+      expect(await screen.findByText("Existing Key")).toBeInTheDocument();
+
+      await userEvent.click(screen.getByRole("button", { name: /copy key/i }));
+
+      await waitFor(() => {
+        expect(writeText).toHaveBeenCalledWith("sk-existing-1234567890");
+        expect(execCommand).toHaveBeenCalledWith("copy");
+      });
+    } finally {
+      Object.defineProperty(navigator, "clipboard", {
+        configurable: true,
+        value: originalClipboard,
+      });
+      Object.defineProperty(document, "execCommand", {
+        configurable: true,
+        value: originalExecCommand,
+      });
+    }
   });
 
   test("opens CC Switch import modal and launches selected client deeplink", async () => {

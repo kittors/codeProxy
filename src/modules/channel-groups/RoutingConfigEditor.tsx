@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Check, Pencil, Plus, Trash2, TriangleAlert, X } from "lucide-react";
+import { Check, CircleAlert, Pencil, Plus, Trash2, TriangleAlert, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { ChannelGroupChannelDetail } from "@/lib/http/apis/channel-groups";
 import type {
   RoutingChannelGroupEntry,
   RoutingChannelGroupMemberEntry,
   RoutingPathRouteEntry,
+  RoutingStrategy,
   VisualConfigValues,
 } from "@/modules/config/visual/types";
 import { makeClientId } from "@/modules/config/visual/types";
@@ -15,6 +16,7 @@ import { ConfirmModal } from "@/modules/ui/ConfirmModal";
 import { TextInput } from "@/modules/ui/Input";
 import { Modal } from "@/modules/ui/Modal";
 import { SearchableCheckboxMultiSelect } from "@/modules/ui/SearchableCheckboxMultiSelect";
+import { Select } from "@/modules/ui/Select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/modules/ui/Tabs";
 import { useToast } from "@/modules/ui/ToastProvider";
 import { HoverTooltip, OverflowTooltip } from "@/modules/ui/Tooltip";
@@ -29,6 +31,7 @@ import {
 type GroupDraft = {
   name: string;
   description: string;
+  strategy: RoutingStrategy;
   channels: RoutingChannelGroupMemberEntry[];
   allowedModels: string[];
   routes: RoutingPathRouteEntry[];
@@ -46,6 +49,7 @@ type RoutingModelLoadResult = string | RoutingModelOption;
 const createEmptyGroupDraft = (): GroupDraft => ({
   name: "",
   description: "",
+  strategy: "round-robin",
   channels: [],
   allowedModels: [],
   routes: [{ ...EMPTY_ROUTE_DRAFT() }],
@@ -62,15 +66,26 @@ const EMPTY_ROUTE_DRAFT = (): RoutingPathRouteEntry => ({
 function Field({
   label,
   hint,
+  tooltip,
   children,
 }: {
   label: string;
   hint?: string;
+  tooltip?: string;
   children: React.ReactNode;
 }) {
   return (
     <div className="space-y-2">
-      <div className="text-sm font-semibold text-slate-900 dark:text-white">{label}</div>
+      <div className="flex items-center gap-2">
+        <div className="text-sm font-semibold text-slate-900 dark:text-white">{label}</div>
+        {tooltip ? (
+          <HoverTooltip content={tooltip} placement="bottom">
+            <span className="inline-flex h-6 w-6 items-center justify-center text-slate-400 dark:text-white/45">
+              <CircleAlert size={16} aria-hidden="true" />
+            </span>
+          </HoverTooltip>
+        ) : null}
+      </div>
       {hint ? <div className="text-xs text-slate-500 dark:text-white/55">{hint}</div> : null}
       {children}
     </div>
@@ -401,6 +416,7 @@ export function RoutingConfigEditor({
       setGroupDraft({
         name: group.name,
         description: group.description,
+        strategy: group.strategy === "fill-first" ? "fill-first" : "round-robin",
         channels: cloneMembers(group.channels),
         allowedModels: group.allowedModels ?? [],
         routes:
@@ -506,6 +522,7 @@ export function RoutingConfigEditor({
       id: groupEditorId ?? makeClientId(),
       name: groupName,
       description: groupDraft.description.trim(),
+      strategy: groupDraft.strategy === "fill-first" ? "fill-first" : "round-robin",
       allowedModels: Array.from(
         new Set(groupDraft.allowedModels.map((model) => model.trim()).filter(Boolean)),
       ),
@@ -887,7 +904,14 @@ export function RoutingConfigEditor({
         ),
       },
     ],
-    [availableChannelDetails, disabled, draftStaleChannelIds, removeDraftChannel, t, updateDraftChannel],
+    [
+      availableChannelDetails,
+      disabled,
+      draftStaleChannelIds,
+      removeDraftChannel,
+      t,
+      updateDraftChannel,
+    ],
   );
 
   const modelColumns = useMemo<VirtualTableColumn<RoutingModelOption>[]>(
@@ -1031,15 +1055,7 @@ export function RoutingConfigEditor({
   return (
     <>
       <div className="space-y-3">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="space-y-1">
-            <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
-              {t("channel_groups_page.groups_table_title")}
-            </h3>
-            <p className="text-xs text-slate-500 dark:text-white/55">
-              {t("channel_groups_page.groups_table_desc")}
-            </p>
-          </div>
+        <div className="flex flex-wrap justify-end gap-3">
           <Button variant="primary" size="sm" onClick={openCreateGroup} disabled={disabled}>
             <Plus size={14} />
             {t("channel_groups_page.add_group")}
@@ -1054,7 +1070,7 @@ export function RoutingConfigEditor({
           rowHeight={44}
           height="h-auto max-h-[68vh]"
           minWidth="min-w-[1660px]"
-          caption={t("channel_groups_page.groups_table_title")}
+          caption={t("channel_groups_page.table_group")}
           emptyText={t("channel_groups_page.empty_groups")}
           rowClassName={(group) =>
             (staleChannelsByGroup.get(group.id)?.length ?? 0) > 0
@@ -1148,6 +1164,34 @@ export function RoutingConfigEditor({
                 className="mt-4 min-h-0 flex-1 overflow-y-auto pr-1"
               >
                 <TabsContent value="basic" className="space-y-5">
+                  <Field
+                    label={t("channel_groups_page.routing_strategy_label")}
+                    tooltip={t("channel_groups_page.routing_strategy_tooltip")}
+                  >
+                    <Select
+                      aria-label={t("channel_groups_page.routing_strategy_label")}
+                      value={groupDraft.strategy}
+                      disabled={disabled}
+                      className="w-full"
+                      options={[
+                        {
+                          value: "round-robin",
+                          label: t("channel_groups_page.routing_strategy_round_robin"),
+                        },
+                        {
+                          value: "fill-first",
+                          label: t("channel_groups_page.routing_strategy_fill_first"),
+                        },
+                      ]}
+                      onChange={(value) => {
+                        setGroupDraft((current) => ({
+                          ...current,
+                          strategy: value === "fill-first" ? "fill-first" : "round-robin",
+                        }));
+                      }}
+                    />
+                  </Field>
+
                   <div className="grid gap-4 md:grid-cols-2">
                     <Field label={t("channel_groups_page.group_name_label")}>
                       <TextInput

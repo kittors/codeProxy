@@ -199,6 +199,51 @@ describe("AuthFilesPage files table", () => {
     expect(screen.getByRole("switch", { name: "Enable/Disable" })).toBeInTheDocument();
   });
 
+  test("shows active restriction badge with reason and recovery tooltip", async () => {
+    const now = Date.now();
+    mocks.list.mockImplementationOnce(async () => ({
+      files: [
+        {
+          name: "codex.json",
+          type: "codex",
+          size: 1024,
+          modified: now,
+          disabled: false,
+          restrictions: [
+            {
+              scope: "model",
+              model: "gpt-5",
+              http_status: 401,
+              status_message: "unauthorized",
+              next_retry_after: new Date(now + 34 * 60_000 + 50_000).toISOString(),
+            },
+          ],
+        },
+      ],
+    }));
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    const badge = await screen.findByText("401 Error");
+    const tooltipTrigger = badge.closest("[aria-describedby]") ?? badge;
+    fireEvent.mouseEnter(tooltipTrigger);
+
+    const tooltip = await screen.findByRole("tooltip");
+    expect(tooltip).toHaveTextContent("gpt-5");
+    expect(tooltip).toHaveTextContent("unauthorized");
+    expect(tooltip).toHaveTextContent("Auto recovery in");
+  });
+
   test("supports multi-select delete from the toolbar", async () => {
     render(
       <MemoryRouter initialEntries={["/auth-files"]}>
@@ -2231,9 +2276,9 @@ describe("AuthFilesPage files table", () => {
     });
   });
 
-  test("cards view uses cached quota plan badge instead of stale auth-file metadata", async () => {
+  test("cards view uses current auth-file plan badge instead of stale cached quota plan", async () => {
     const now = Date.now();
-    const staleFile = {
+    const currentFile = {
       name: "codex.json",
       label: "Codex Main",
       account_type: "oauth",
@@ -2242,10 +2287,10 @@ describe("AuthFilesPage files table", () => {
       modified: now,
       disabled: false,
       auth_index: "1",
-      plan_type: "plus",
+      plan_type: "free",
     } as any;
 
-    mocks.list.mockImplementation(async () => ({ files: [staleFile] }));
+    mocks.list.mockImplementation(async () => ({ files: [currentFile] }));
     mocks.fetchQuota.mockImplementation(() => new Promise(() => {}));
 
     window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
@@ -2254,13 +2299,13 @@ describe("AuthFilesPage files table", () => {
       AUTH_FILES_DATA_CACHE_KEY,
       JSON.stringify({
         savedAtMs: now,
-        files: [staleFile],
+        files: [currentFile],
         usageData: { source: [], auth_index: [] },
         quotaByFileName: {
           "codex.json": {
             status: "success",
             updatedAt: now,
-            planType: "pro",
+            planType: "plus",
             items: [{ label: "m_quota.code_5h", percent: 20, resetAtMs: now + 30_000 }],
           },
         },
@@ -2280,7 +2325,7 @@ describe("AuthFilesPage files table", () => {
     );
 
     expect(await screen.findByText("Codex Main")).toBeInTheDocument();
-    expect(screen.getByText("Plan Pro")).toBeInTheDocument();
+    expect(screen.getByText("Plan Free")).toBeInTheDocument();
     expect(screen.queryByText("Plan Plus")).not.toBeInTheDocument();
   });
 
