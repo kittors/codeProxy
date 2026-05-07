@@ -383,6 +383,13 @@ export type AuthFileRestrictionBadge = {
 const readRestrictionDateMs = (restriction: AuthFileRestriction): number | null =>
   parseDateLikeMs(restriction.next_retry_after) ?? parseDateLikeMs(restriction.next_recover_at);
 
+const isLegacyAuthRestrictionActive = (file: AuthFileItem): boolean => {
+  if (file.unavailable === true) return true;
+  const status = normalizeTagValue(file.status);
+  if (status === "error") return true;
+  return parseDateLikeMs(file.next_retry_after) !== null;
+};
+
 export const formatAuthFileRestrictionRemaining = (
   recoverAtMs: number,
   nowMs = Date.now(),
@@ -437,7 +444,7 @@ export const resolveAuthFileRestrictionBadges = (
   const restrictions =
     rawRestrictions.length > 0
       ? rawRestrictions
-      : file.status || file.status_message || file.unavailable || file.next_retry_after
+      : isLegacyAuthRestrictionActive(file)
         ? [
             {
               scope: "auth",
@@ -746,11 +753,20 @@ export const readAuthFileTagCandidates = (file: AuthFileItem): string[] =>
   normalizeTagList([
     ...readAuthFileDefaultTags(file),
     ...readAuthFileCustomTags(file),
-    ...(Array.isArray(file.display_tags) ? normalizeTagList(file.display_tags) : []),
+    ...resolveAuthFileDisplayTags(file),
   ]);
 
 export const resolveAuthFileDisplayTags = (file: AuthFileItem): string[] => {
-  if (Array.isArray(file.display_tags)) return normalizeTagList(file.display_tags);
+  if (Array.isArray(file.display_tags)) {
+    const displayTags = normalizeTagList(file.display_tags);
+    const candidates = normalizeTagList([
+      ...readAuthFileDefaultTags(file),
+      ...readAuthFileCustomTags(file),
+    ]);
+    if (candidates.length === 0) return displayTags;
+    const candidateSet = new Set(candidates);
+    return displayTags.filter((tag) => candidateSet.has(normalizeTagValue(tag)));
+  }
   return buildAuthFileDisplayTags(
     readAuthFileDefaultTags(file),
     readAuthFileCustomTags(file),
@@ -763,7 +779,7 @@ export const shouldShowAuthFileDisplayTag = (file: AuthFileItem, tag: unknown): 
   if (!normalizedTag) return false;
 
   if (Array.isArray(file.display_tags)) {
-    return normalizeTagList(file.display_tags).includes(normalizedTag);
+    return resolveAuthFileDisplayTags(file).includes(normalizedTag);
   }
 
   return !readAuthFileHiddenDefaultTags(file).includes(normalizedTag);
@@ -772,7 +788,7 @@ export const shouldShowAuthFileDisplayTag = (file: AuthFileItem, tag: unknown): 
 export const resolveAuthFilePlanType = (
   file: AuthFileItem,
   quotaState?: QuotaState | null,
-): string | null => normalizePlanType(quotaState?.planType) ?? resolveCodexPlanType(file);
+): string | null => resolveCodexPlanType(file) ?? normalizePlanType(quotaState?.planType);
 
 export const resolveAuthFileSupplementalTags = (
   file: AuthFileItem,

@@ -11,6 +11,8 @@ import {
   readAuthFilesUiState,
   resolveAuthFileRestrictionBadges,
   resolveAuthFileDisplayTags,
+  resolveAuthFilePlanType,
+  resolveAuthFileSupplementalTags,
   resolveAuthFileSubscriptionStatus,
   resolveAuthFileStats,
   sanitizeAuthFilesForCache,
@@ -252,6 +254,19 @@ describe("Auth Files helper coverage", () => {
     ).toBe(true);
   });
 
+  test("drops stale display tags that no longer match current default or custom tags", () => {
+    const file = {
+      name: "codex.json",
+      plan_type: "free",
+      default_tags: ["codex", "free"],
+      custom_tags: ["vip"],
+      display_tags: ["codex", "plus", "vip"],
+    } satisfies AuthFileItem;
+
+    expect(resolveAuthFileDisplayTags(file)).toEqual(["codex", "vip"]);
+    expect(resolveAuthFileSupplementalTags(file)).toEqual(["vip"]);
+  });
+
   test("derives active restriction badges with exact remaining time", () => {
     const nowMs = Date.parse("2026-05-06T08:00:00.000Z");
     const file = {
@@ -278,6 +293,46 @@ describe("Auth Files helper coverage", () => {
         tone: "danger",
       },
     ]);
+  });
+
+  test("does not derive restriction badges from normal auth status", () => {
+    expect(
+      resolveAuthFileRestrictionBadges({
+        name: "codex.json",
+        status: "active",
+        unavailable: false,
+      } as AuthFileItem),
+    ).toEqual([]);
+  });
+
+  test("prefers current auth-file plan metadata over cached quota plan", () => {
+    expect(
+      resolveAuthFilePlanType(
+        {
+          name: "codex.json",
+          plan_type: "free",
+        } as AuthFileItem,
+        {
+          status: "success",
+          planType: "plus",
+          items: [],
+          updatedAt: Date.now(),
+        },
+      ),
+    ).toBe("free");
+    expect(
+      resolveAuthFilePlanType(
+        {
+          name: "codex.json",
+        } as AuthFileItem,
+        {
+          status: "success",
+          planType: "plus",
+          items: [],
+          updatedAt: Date.now(),
+        },
+      ),
+    ).toBe("plus");
   });
 
   test("aggregates auth file usage and picks quota preview entries", () => {
