@@ -295,6 +295,28 @@ describe("Auth Files helper coverage", () => {
     ]);
   });
 
+  test("keeps verbose transport errors out of restriction badge labels", () => {
+    const rawError =
+      'Post "https://chatgpt.com/backend-api/codex/responses": read tcp [2607:8700:5500:8131::2]:44434->[2a06:98c1:310b::ac40:9bd1]:443: read: connection reset by peer';
+    const file = {
+      name: "codex.json",
+      restrictions: [
+        {
+          scope: "model",
+          model: "gpt-5.4",
+          status: "error",
+          status_message: rawError,
+        },
+      ],
+    } as AuthFileItem;
+
+    expect(resolveAuthFileRestrictionBadges(file, Date.now())[0]).toMatchObject({
+      label: "Restricted",
+      model: "gpt-5.4",
+      reason: rawError,
+    });
+  });
+
   test("does not derive restriction badges from normal auth status", () => {
     expect(
       resolveAuthFileRestrictionBadges({

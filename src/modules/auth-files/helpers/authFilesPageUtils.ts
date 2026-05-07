@@ -420,8 +420,6 @@ const resolveRestrictionLabel = (restriction: AuthFileRestriction): string => {
   const status = Number(restriction.http_status);
   if (Number.isFinite(status) && status > 0) return `${Math.round(status)} Error`;
   if (restriction.quota_exceeded || restriction.reason === "quota") return "Quota Limited";
-  if (restriction.status_message) return restriction.status_message;
-  if (restriction.reason) return restriction.reason;
   return "Restricted";
 };
 

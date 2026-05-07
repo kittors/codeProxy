@@ -1,5 +1,5 @@
 import { isValidElement, type ReactNode } from "react";
-import { OverflowTooltip } from "@/modules/ui/Tooltip";
+import { HoverTooltip, OverflowTooltip } from "@/modules/ui/Tooltip";
 
 function normalizeTooltipText(parts: string[]) {
   const text = parts.join(" ").replace(/\s+/g, " ").trim();
@@ -32,7 +32,7 @@ function containsManagedTooltip(node: ReactNode): boolean {
 
   if (!isValidElement(node)) return false;
 
-  if (node.type === OverflowTooltip) return true;
+  if (node.type === HoverTooltip || node.type === OverflowTooltip) return true;
 
   const props = node.props as {
     children?: ReactNode;
