@@ -2276,9 +2276,9 @@ describe("AuthFilesPage files table", () => {
     });
   });
 
-  test("cards view uses cached quota plan badge instead of stale auth-file metadata", async () => {
+  test("cards view uses current auth-file plan badge instead of stale cached quota plan", async () => {
     const now = Date.now();
-    const staleFile = {
+    const currentFile = {
       name: "codex.json",
       label: "Codex Main",
       account_type: "oauth",
@@ -2287,10 +2287,10 @@ describe("AuthFilesPage files table", () => {
       modified: now,
       disabled: false,
       auth_index: "1",
-      plan_type: "plus",
+      plan_type: "free",
     } as any;
 
-    mocks.list.mockImplementation(async () => ({ files: [staleFile] }));
+    mocks.list.mockImplementation(async () => ({ files: [currentFile] }));
     mocks.fetchQuota.mockImplementation(() => new Promise(() => {}));
 
     window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
@@ -2299,13 +2299,13 @@ describe("AuthFilesPage files table", () => {
       AUTH_FILES_DATA_CACHE_KEY,
       JSON.stringify({
         savedAtMs: now,
-        files: [staleFile],
+        files: [currentFile],
         usageData: { source: [], auth_index: [] },
         quotaByFileName: {
           "codex.json": {
             status: "success",
             updatedAt: now,
-            planType: "pro",
+            planType: "plus",
             items: [{ label: "m_quota.code_5h", percent: 20, resetAtMs: now + 30_000 }],
           },
         },
@@ -2325,7 +2325,7 @@ describe("AuthFilesPage files table", () => {
     );
 
     expect(await screen.findByText("Codex Main")).toBeInTheDocument();
-    expect(screen.getByText("Plan Pro")).toBeInTheDocument();
+    expect(screen.getByText("Plan Free")).toBeInTheDocument();
     expect(screen.queryByText("Plan Plus")).not.toBeInTheDocument();
   });
 
