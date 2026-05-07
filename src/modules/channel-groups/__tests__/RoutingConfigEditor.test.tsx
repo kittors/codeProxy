@@ -108,7 +108,8 @@ describe("RoutingConfigEditor", () => {
     render(<Harness />);
 
     await user.click(screen.getByRole("button", { name: "新增分组" }));
-    await user.selectOptions(screen.getByTestId("routing-strategy-select"), "fill-first");
+    await user.click(screen.getByRole("combobox", { name: "分组内调度策略" }));
+    await user.click(screen.getByRole("option", { name: "优先首个可用渠道" }));
     await user.type(screen.getByPlaceholderText("pro"), "team-fill-first");
     await user.type(screen.getByPlaceholderText("/pro"), "/team-fill-first");
     await user.click(screen.getByRole("combobox", { name: "选择渠道" }));

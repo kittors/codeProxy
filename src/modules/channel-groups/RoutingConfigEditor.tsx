@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Check, Pencil, Plus, Trash2, TriangleAlert, X } from "lucide-react";
+import { Check, CircleAlert, Pencil, Plus, Trash2, TriangleAlert, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { ChannelGroupChannelDetail } from "@/lib/http/apis/channel-groups";
 import type {
@@ -16,6 +16,7 @@ import { ConfirmModal } from "@/modules/ui/ConfirmModal";
 import { TextInput } from "@/modules/ui/Input";
 import { Modal } from "@/modules/ui/Modal";
 import { SearchableCheckboxMultiSelect } from "@/modules/ui/SearchableCheckboxMultiSelect";
+import { Select } from "@/modules/ui/Select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/modules/ui/Tabs";
 import { useToast } from "@/modules/ui/ToastProvider";
 import { HoverTooltip, OverflowTooltip } from "@/modules/ui/Tooltip";
@@ -45,9 +46,6 @@ export type RoutingModelOption = {
 
 type RoutingModelLoadResult = string | RoutingModelOption;
 
-const ROUTING_STRATEGY_ASSET_MARKER =
-  'strategy:t.currentTarget.value==="fill-first"?"fill-first":"round-robin"';
-
 const createEmptyGroupDraft = (): GroupDraft => ({
   name: "",
   description: "",
@@ -68,15 +66,26 @@ const EMPTY_ROUTE_DRAFT = (): RoutingPathRouteEntry => ({
 function Field({
   label,
   hint,
+  tooltip,
   children,
 }: {
   label: string;
   hint?: string;
+  tooltip?: string;
   children: React.ReactNode;
 }) {
   return (
     <div className="space-y-2">
-      <div className="text-sm font-semibold text-slate-900 dark:text-white">{label}</div>
+      <div className="flex items-center gap-2">
+        <div className="text-sm font-semibold text-slate-900 dark:text-white">{label}</div>
+        {tooltip ? (
+          <HoverTooltip content={tooltip} placement="bottom">
+            <span className="inline-flex h-6 w-6 items-center justify-center text-slate-400 dark:text-white/45">
+              <CircleAlert size={16} aria-hidden="true" />
+            </span>
+          </HoverTooltip>
+        ) : null}
+      </div>
       {hint ? <div className="text-xs text-slate-500 dark:text-white/55">{hint}</div> : null}
       {children}
     </div>
@@ -1157,31 +1166,30 @@ export function RoutingConfigEditor({
                 <TabsContent value="basic" className="space-y-5">
                   <Field
                     label={t("channel_groups_page.routing_strategy_label")}
-                    hint={t("channel_groups_page.routing_strategy_tooltip")}
+                    tooltip={t("channel_groups_page.routing_strategy_tooltip")}
                   >
-                    <select
-                      data-testid="routing-strategy-select"
-                      data-asset-marker={ROUTING_STRATEGY_ASSET_MARKER}
+                    <Select
+                      aria-label={t("channel_groups_page.routing_strategy_label")}
                       value={groupDraft.strategy}
-                      onChange={(event) => {
+                      disabled={disabled}
+                      className="w-full"
+                      options={[
+                        {
+                          value: "round-robin",
+                          label: t("channel_groups_page.routing_strategy_round_robin"),
+                        },
+                        {
+                          value: "fill-first",
+                          label: t("channel_groups_page.routing_strategy_fill_first"),
+                        },
+                      ]}
+                      onChange={(value) => {
                         setGroupDraft((current) => ({
                           ...current,
-                          strategy:
-                            event.currentTarget.value === "fill-first"
-                              ? "fill-first"
-                              : "round-robin",
+                          strategy: value === "fill-first" ? "fill-first" : "round-robin",
                         }));
                       }}
-                      disabled={disabled}
-                      className="h-9 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition-colors focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/15 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:bg-neutral-950 dark:text-white dark:focus:border-indigo-300"
-                    >
-                      <option value="round-robin">
-                        {t("channel_groups_page.routing_strategy_round_robin")}
-                      </option>
-                      <option value="fill-first">
-                        {t("channel_groups_page.routing_strategy_fill_first")}
-                      </option>
-                    </select>
+                    />
                   </Field>
 
                   <div className="grid gap-4 md:grid-cols-2">
