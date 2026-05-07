@@ -21,6 +21,7 @@ import {
   selectOptionSelected,
   selectPanel,
   selectTriggerChip,
+  selectTriggerDisabled,
   selectTriggerOpen,
 } from "./selectStyles";
 import type { ControlSize } from "@/modules/ui/controlStyles";
@@ -50,6 +51,8 @@ export interface SelectProps {
   name?: string;
   /** Extra className on the trigger button */
   className?: string;
+  /** Disable interactions */
+  disabled?: boolean;
   /** Visual style variant */
   variant?: "default" | "chip";
   /** Shared control size */
@@ -68,6 +71,7 @@ export function Select({
   "aria-label": ariaLabel,
   name,
   className,
+  disabled = false,
   variant = "default",
   size = "default",
 }: SelectProps) {
@@ -160,10 +164,12 @@ export function Select({
         aria-expanded={open}
         aria-haspopup="listbox"
         aria-label={ariaLabel}
+        disabled={disabled}
         onClick={() => setOpen((prev) => !prev)}
         className={cn(
           variant === "chip" ? selectTriggerChip : getSelectTriggerBase(size),
           open && selectTriggerOpen,
+          disabled && selectTriggerDisabled,
           className,
         )}
       >
@@ -178,7 +184,7 @@ export function Select({
       {/* Dropdown (portal) */}
       {createPortal(
         <AnimatePresence>
-          {open ? (
+          {open && !disabled ? (
             <motion.div
               ref={listRef}
               role="listbox"
