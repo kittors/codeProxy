@@ -244,6 +244,109 @@ describe("AuthFilesPage files table", () => {
     expect(tooltip).toHaveTextContent("Auto recovery in");
   });
 
+  test("keeps verbose restriction errors out of table badges and opens one tooltip", async () => {
+    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(80);
+    vi.spyOn(HTMLElement.prototype, "scrollWidth", "get").mockReturnValue(640);
+
+    const now = Date.now();
+    const rawError =
+      'Post "https://chatgpt.com/backend-api/codex/responses": read tcp [2607:8700:5500:8131::2]:44434->[2a06:98c1:310b::ac40:9bd1]:443: read: connection reset by peer';
+    mocks.list.mockImplementation(async () => ({
+      files: [
+        {
+          name: "codex-pro.json",
+          label: "A_GptPro",
+          account_type: "oauth",
+          type: "codex",
+          plan_type: "free",
+          size: 1024,
+          modified: now,
+          disabled: false,
+          restrictions: [
+            {
+              scope: "model",
+              model: "gpt-5.4",
+              status: "error",
+              status_message: rawError,
+            },
+          ],
+        },
+      ],
+    }));
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    const title = await screen.findByText("A_GptPro");
+    const row = title.closest("tr");
+    expect(row).not.toBeNull();
+    expect(within(row as HTMLElement).getByText("Restricted")).toBeInTheDocument();
+    expect(within(row as HTMLElement).queryByText(rawError)).not.toBeInTheDocument();
+
+    fireEvent.mouseEnter(within(row as HTMLElement).getByText("Restricted"));
+
+    const tooltips = await screen.findAllByRole("tooltip");
+    expect(tooltips).toHaveLength(1);
+    expect(tooltips[0]).toHaveTextContent("gpt-5.4");
+    expect(tooltips[0]).toHaveTextContent(rawError);
+    expect(tooltips[0]).not.toHaveTextContent("A_GptPro");
+  });
+
+  test("cards view keeps verbose restriction errors out of badge rows", async () => {
+    const now = Date.now();
+    const rawError = "context canceled";
+    window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
+    mocks.list.mockImplementation(async () => ({
+      files: [
+        {
+          name: "codex-pro.json",
+          label: "A_GptPro",
+          account_type: "oauth",
+          type: "codex",
+          plan_type: "free",
+          size: 1024,
+          modified: now,
+          disabled: false,
+          restrictions: [
+            {
+              scope: "model",
+              model: "gpt-5.4",
+              status: "error",
+              status_message: rawError,
+            },
+          ],
+        },
+      ],
+    }));
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    const title = await screen.findByText("A_GptPro");
+    const card = title.closest("section");
+    expect(card).not.toBeNull();
+    expect(within(card as HTMLElement).getByText("Restricted")).toBeInTheDocument();
+    expect(within(card as HTMLElement).queryByText(rawError)).not.toBeInTheDocument();
+  });
+
   test("supports multi-select delete from the toolbar", async () => {
     render(
       <MemoryRouter initialEntries={["/auth-files"]}>
