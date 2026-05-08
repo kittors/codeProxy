@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Bot, Cloud, Database, Download, FileKey, Globe, RefreshCw, Upload } from "lucide-react";
@@ -45,6 +45,28 @@ import {
 } from "@/modules/providers/provider-import-export";
 import { summarizeProviderAccess } from "@/modules/providers/provider-access";
 
+type ProviderTab =
+  | "gemini"
+  | "claude"
+  | "codex"
+  | "opencode-go"
+  | "vertex"
+  | "bedrock"
+  | "openai"
+  | "ampcode";
+
+const getProviderSelectionKey = (
+  kind: ProviderImportKind,
+  item: ProviderSimpleConfig | BedrockProviderConfig | OpenAIProvider,
+) =>
+  kind === "openai"
+    ? String((item as OpenAIProvider).name ?? "")
+        .trim()
+        .toLowerCase()
+    : String((item as ProviderSimpleConfig).apiKey ?? "")
+        .trim()
+        .toLowerCase();
+
 export function ProvidersPage() {
   const { t } = useTranslation();
   const { notify } = useToast();
@@ -53,9 +75,7 @@ export function ProvidersPage() {
   const navigate = useNavigate();
   const { getEntry: getLatencyEntry, checkLatency } = useProviderLatency();
 
-  const [tab, setTab] = useState<
-    "gemini" | "claude" | "codex" | "opencode-go" | "vertex" | "bedrock" | "openai" | "ampcode"
-  >("gemini");
+  const [tab, setTab] = useState<ProviderTab>("gemini");
   const [loading, setLoading] = useState(true);
 
   const [geminiKeys, setGeminiKeys] = useState<ProviderSimpleConfig[]>([]);
@@ -95,6 +115,7 @@ export function ProvidersPage() {
     filename: string;
   } | null>(null);
   const [importing, setImporting] = useState(false);
+  const [selectedExportKeys, setSelectedExportKeys] = useState<string[]>([]);
 
   const refreshTab = useCallback(
     async (tabId: typeof tab) => {
@@ -455,6 +476,29 @@ export function ProvidersPage() {
     ],
   );
 
+  const currentImportKind = getImportKind();
+  const currentTabItems = useMemo(
+    () => (currentImportKind ? getCurrentItems(currentImportKind) : []),
+    [currentImportKind, getCurrentItems],
+  );
+  const currentSelectableKeys = useMemo(
+    () =>
+      currentImportKind
+        ? currentTabItems.map((item) =>
+            getProviderSelectionKey(
+              currentImportKind,
+              item as ProviderSimpleConfig | BedrockProviderConfig | OpenAIProvider,
+            ),
+          )
+        : [],
+    [currentImportKind, currentTabItems],
+  );
+  const selectedExportKeySet = useMemo(() => new Set(selectedExportKeys), [selectedExportKeys]);
+  const selectedExportCount = selectedExportKeys.length;
+  const allCurrentSelected =
+    currentSelectableKeys.length > 0 &&
+    currentSelectableKeys.every((key) => selectedExportKeySet.has(key));
+
   const saveImportedItems = useCallback(
     async (
       kind: ProviderImportKind,
@@ -487,18 +531,64 @@ export function ProvidersPage() {
     [],
   );
 
+  useEffect(() => {
+    setSelectedExportKeys([]);
+  }, [tab]);
+
+  useEffect(() => {
+    const selectableKeySet = new Set(currentSelectableKeys);
+    setSelectedExportKeys((prev) => prev.filter((key) => selectableKeySet.has(key)));
+  }, [currentSelectableKeys]);
+
+  const toggleExportSelection = useCallback((key: string, checked: boolean) => {
+    setSelectedExportKeys((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(key);
+      else next.delete(key);
+      return Array.from(next);
+    });
+  }, []);
+
+  const selectAllCurrentItems = useCallback(
+    (checked: boolean) => {
+      if (!checked) {
+        setSelectedExportKeys([]);
+        return;
+      }
+      setSelectedExportKeys(currentSelectableKeys);
+    },
+    [currentSelectableKeys],
+  );
+
   const handleExport = useCallback(() => {
-    const kind = getImportKind();
+    const kind = currentImportKind;
     if (!kind) return;
     downloadTextAsFile(
       createProviderExportText(kind, getCurrentItems(kind) as never),
       `${kind}-providers.json`,
     );
-  }, [getCurrentItems, getImportKind]);
+  }, [currentImportKind, getCurrentItems]);
+
+  const handleExportSelected = useCallback(() => {
+    const kind = currentImportKind;
+    if (!kind || selectedExportCount === 0) return;
+    const selectedItems = currentTabItems.filter((item) =>
+      selectedExportKeySet.has(
+        getProviderSelectionKey(
+          kind,
+          item as ProviderSimpleConfig | BedrockProviderConfig | OpenAIProvider,
+        ),
+      ),
+    );
+    downloadTextAsFile(
+      createProviderExportText(kind, selectedItems as never),
+      `${kind}-providers-selected.json`,
+    );
+  }, [currentImportKind, currentTabItems, selectedExportCount, selectedExportKeySet]);
 
   const handleImportFile = useCallback(
     async (file: File | null) => {
-      const kind = getImportKind();
+      const kind = currentImportKind;
       if (!kind || !file) return;
       if (!file.name.toLowerCase().endsWith(".json") && file.type !== "application/json") {
         notify({ type: "error", message: t("upload_error_json") });
@@ -523,7 +613,7 @@ export function ProvidersPage() {
         });
       }
     },
-    [getCurrentItems, getImportKind, notify, t],
+    [currentImportKind, getCurrentItems, notify, t],
   );
 
   const confirmImport = useCallback(async () => {
@@ -559,7 +649,7 @@ export function ProvidersPage() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {getImportKind() ? (
+          {currentImportKind ? (
             <>
               <input
                 ref={importInputRef}
@@ -599,6 +689,43 @@ export function ProvidersPage() {
           </Button>
         </div>
       </div>
+
+      {currentImportKind && (currentTabItems.length > 0 || selectedExportCount > 0) ? (
+        <div className="flex flex-wrap items-center gap-1.5 rounded-2xl bg-slate-50/80 px-2 py-1.5 transition-colors duration-200 ease-out dark:bg-white/[0.03]">
+          <Button
+            variant="secondary"
+            size="sm"
+            className="!h-8 px-2 text-xs"
+            onClick={() => selectAllCurrentItems(!allCurrentSelected)}
+            disabled={currentSelectableKeys.length === 0}
+          >
+            {allCurrentSelected
+              ? t("providers.batch_deselect_all")
+              : t("providers.batch_select_all")}
+          </Button>
+          <span className="ml-1 text-xs font-medium text-slate-600 dark:text-white/65">
+            {t("providers.batch_selected", { count: selectedExportCount })}
+          </span>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="!h-8 px-2 text-xs"
+            onClick={() => setSelectedExportKeys([])}
+            disabled={selectedExportCount === 0}
+          >
+            {t("providers.batch_clear")}
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            className="!h-8 px-2 text-xs"
+            onClick={handleExportSelected}
+            disabled={selectedExportCount === 0}
+          >
+            {t("providers.export_selected_json")}
+          </Button>
+        </div>
+      ) : null}
 
       <Tabs
         value={tab}
@@ -661,6 +788,8 @@ export function ProvidersPage() {
             getAccessSummary={getProviderAccessSummary}
             getLatencyEntry={getLatencyEntry}
             checkLatency={checkLatency}
+            selectedKeys={selectedExportKeySet}
+            onToggleSelected={toggleExportSelection}
           />
         </TabsContent>
 
@@ -679,6 +808,8 @@ export function ProvidersPage() {
             getAccessSummary={getProviderAccessSummary}
             getLatencyEntry={getLatencyEntry}
             checkLatency={checkLatency}
+            selectedKeys={selectedExportKeySet}
+            onToggleSelected={toggleExportSelection}
           />
         </TabsContent>
 
@@ -697,6 +828,8 @@ export function ProvidersPage() {
             getAccessSummary={getProviderAccessSummary}
             getLatencyEntry={getLatencyEntry}
             checkLatency={checkLatency}
+            selectedKeys={selectedExportKeySet}
+            onToggleSelected={toggleExportSelection}
           />
         </TabsContent>
 
@@ -718,6 +851,8 @@ export function ProvidersPage() {
             getStatusBar={getSimpleStatusBar}
             getAccessSummary={getProviderAccessSummary}
             showBaseUrl={false}
+            selectedKeys={selectedExportKeySet}
+            onToggleSelected={toggleExportSelection}
           />
         </TabsContent>
 
@@ -735,6 +870,8 @@ export function ProvidersPage() {
             getAccessSummary={getProviderAccessSummary}
             getLatencyEntry={getLatencyEntry}
             checkLatency={checkLatency}
+            selectedKeys={selectedExportKeySet}
+            onToggleSelected={toggleExportSelection}
           />
         </TabsContent>
 
@@ -753,6 +890,8 @@ export function ProvidersPage() {
             getAccessSummary={getProviderAccessSummary}
             getLatencyEntry={getLatencyEntry}
             checkLatency={checkLatency}
+            selectedKeys={selectedExportKeySet}
+            onToggleSelected={toggleExportSelection}
           />
         </TabsContent>
 
@@ -765,6 +904,8 @@ export function ProvidersPage() {
             getKeyEntryStats={getOpenAIKeyEntryStats}
             getProviderStats={getOpenAIProviderStats}
             getProviderStatusBar={getOpenAIProviderStatusBar}
+            selectedKeys={selectedExportKeySet}
+            onToggleSelected={toggleExportSelection}
           />
         </TabsContent>
 

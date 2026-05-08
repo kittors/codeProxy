@@ -36,6 +36,8 @@ export function ProviderKeyListCard({
   getLatencyEntry,
   checkLatency,
   showBaseUrl = true,
+  selectedKeys,
+  onToggleSelected,
 }: {
   icon: LucideIcon;
   iconSrc?: string;
@@ -54,6 +56,8 @@ export function ProviderKeyListCard({
   getLatencyEntry?: (key: string) => { latencyMs: number | null; loading: boolean; error: boolean };
   checkLatency?: (key: string, baseUrl: string) => void;
   showBaseUrl?: boolean;
+  selectedKeys?: Set<string>;
+  onToggleSelected?: (key: string, checked: boolean) => void;
 }) {
   const { t } = useTranslation();
   const renderIcon = () =>
@@ -84,6 +88,8 @@ export function ProviderKeyListCard({
       ) : (
         <div className="space-y-3">
           {items.map((item, idx) => {
+            const selectionKey = item.apiKey.trim().toLowerCase();
+            const selected = selectedKeys?.has(selectionKey) ?? false;
             const disabled = hasDisableAllModelsRule(item.excludedModels);
             const headerEntries = Object.entries(item.headers || {});
             const excludedModels = stripDisableAllModelsRule(item.excludedModels);
@@ -103,7 +109,14 @@ export function ProviderKeyListCard({
             return (
               <div
                 key={`${item.apiKey}:${idx}`}
-                className="rounded-2xl border border-slate-200 bg-white/70 px-4 py-3 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60"
+                className={[
+                  "group rounded-2xl border border-slate-200 bg-white/70 px-4 py-3 shadow-sm transition-colors duration-200 ease-out hover:border-slate-300 hover:bg-white dark:border-neutral-800 dark:bg-neutral-950/60 dark:hover:border-neutral-700 dark:hover:bg-neutral-950/70",
+                  selected
+                    ? "border-slate-900 ring-1 ring-slate-300 dark:border-white dark:ring-white/20"
+                    : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
               >
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0">
@@ -250,6 +263,28 @@ export function ProviderKeyListCard({
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2">
+                    {onToggleSelected ? (
+                      <div
+                        className={[
+                          "flex h-8 items-center justify-center px-1 transition-opacity",
+                          selected
+                            ? "pointer-events-auto opacity-100"
+                            : "pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100",
+                        ].join(" ")}
+                      >
+                        <input
+                          type="checkbox"
+                          aria-label={t("providers.select_provider", {
+                            name: item.name || maskApiKey(item.apiKey),
+                          })}
+                          checked={selected}
+                          onChange={(event) =>
+                            onToggleSelected(selectionKey, event.currentTarget.checked)
+                          }
+                          className="h-4 w-4 rounded border-slate-300 text-slate-900 accent-slate-900 focus-visible:ring-2 focus-visible:ring-slate-400/35 dark:border-neutral-700 dark:bg-neutral-950 dark:text-white dark:accent-white dark:focus-visible:ring-white/15"
+                        />
+                      </div>
+                    ) : null}
                     {onToggleEnabled ? (
                       <div className="inline-flex items-center gap-2">
                         <span className="text-sm font-semibold leading-none text-slate-900 dark:text-white">

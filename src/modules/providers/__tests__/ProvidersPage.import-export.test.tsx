@@ -127,6 +127,62 @@ describe("ProvidersPage import/export", () => {
     expect(clickSpy).toHaveBeenCalled();
   });
 
+  test("exports only the selected provider cards as JSON", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter initialEntries={["/ai-providers"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    await user.click(await screen.findByRole("tab", { name: /Codex/ }));
+    expect(await screen.findByText("Codex Main")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("checkbox", { name: /Select Codex Main/i }));
+    await user.click(screen.getByRole("button", { name: /Export Selected JSON/i }));
+
+    expect(createObjectURL).toHaveBeenCalledTimes(1);
+    const blob = (createObjectURL as any).mock.calls[0][0] as Blob;
+    await expect(blob.text()).resolves.toContain('"name": "Codex Main"');
+    await expect(blob.text()).resolves.not.toContain('"name": "Legacy"');
+  });
+
+  test("selects all provider cards in the active tab for export", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter initialEntries={["/ai-providers"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    await user.click(await screen.findByRole("tab", { name: /Codex/ }));
+    expect(await screen.findByText("Codex Main")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /Select All/i }));
+    expect(screen.getByText(/2 selected/i)).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /Export Selected JSON/i }));
+
+    expect(createObjectURL).toHaveBeenCalledTimes(1);
+    const blob = (createObjectURL as any).mock.calls[0][0] as Blob;
+    await expect(blob.text()).resolves.toContain('"name": "Legacy"');
+    await expect(blob.text()).resolves.toContain('"name": "Codex Main"');
+  });
+
   test("shows diff preview before import and saves the normalized configs after confirmation", async () => {
     const user = userEvent.setup();
 
