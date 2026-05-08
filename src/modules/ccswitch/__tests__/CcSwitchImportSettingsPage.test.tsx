@@ -3,18 +3,24 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import i18n from "@/i18n";
 import { CcSwitchImportSettingsPage } from "@/modules/ccswitch/CcSwitchImportSettingsPage";
-import {
-  CC_SWITCH_IMPORT_CONFIG_LIST_STORAGE_KEY,
-  type CcSwitchImportConfigListItem,
-} from "@/modules/ccswitch/ccswitchImportConfigList";
 import { ThemeProvider } from "@/modules/ui/ThemeProvider";
 import { ToastProvider } from "@/modules/ui/ToastProvider";
+import type { CcSwitchImportConfigListItem } from "@/modules/ccswitch/ccswitchImportConfigList";
 
 const listChannelGroups = vi.fn();
+const listConfigs = vi.fn();
+const replaceConfigs = vi.fn();
 
 vi.mock("@/lib/http/apis/channel-groups", () => ({
   channelGroupsApi: {
     list: () => listChannelGroups(),
+  },
+}));
+
+vi.mock("@/lib/http/apis/ccswitch-import-configs", () => ({
+  ccSwitchImportConfigsApi: {
+    list: () => listConfigs(),
+    replace: (configs: CcSwitchImportConfigListItem[]) => replaceConfigs(configs),
   },
 }));
 
@@ -28,24 +34,52 @@ function renderPage() {
   );
 }
 
-function readStoredConfigs(): CcSwitchImportConfigListItem[] {
-  const raw = window.localStorage.getItem(CC_SWITCH_IMPORT_CONFIG_LIST_STORAGE_KEY);
-  expect(raw).toBeTruthy();
-  return JSON.parse(raw!).configs as CcSwitchImportConfigListItem[];
-}
-
 describe("CcSwitchImportSettingsPage", () => {
   beforeEach(async () => {
     await i18n.changeLanguage("en");
     window.localStorage.clear();
     listChannelGroups.mockReset();
+    listConfigs.mockReset();
+    replaceConfigs.mockReset();
     listChannelGroups.mockResolvedValue([
       { name: "team-a", description: "Team A route" },
       { name: "team-b", description: "Team B route" },
     ]);
+    listConfigs.mockResolvedValue([]);
+    replaceConfigs.mockResolvedValue(undefined);
   });
 
-  test("creates a new Claude Code config row and persists the config list", async () => {
+  test("starts empty from the API even when legacy local storage exists", async () => {
+    window.localStorage.setItem(
+      "ccswitch.importSettings.v1",
+      JSON.stringify({
+        claude: {
+          endpointPath: "",
+          defaultModel: "claude-sonnet-4-5",
+          usageAutoInterval: 30,
+          apiKeyField: "ANTHROPIC_AUTH_TOKEN",
+        },
+        codex: {
+          endpointPath: "/openai/v1",
+          defaultModel: "gpt-5.6",
+          usageAutoInterval: 45,
+        },
+        gemini: {
+          endpointPath: "",
+          defaultModel: "gemini-2.5-pro",
+          usageAutoInterval: 30,
+        },
+      }),
+    );
+
+    renderPage();
+
+    expect(await screen.findByText(/no cc switch configs yet/i)).toBeInTheDocument();
+    expect(screen.queryByText("CliProxy Codex")).not.toBeInTheDocument();
+    expect(listConfigs).toHaveBeenCalledTimes(1);
+  });
+
+  test("creates a new Claude Code config row and persists it through the API", async () => {
     renderPage();
     const user = userEvent.setup();
 
@@ -69,7 +103,7 @@ describe("CcSwitchImportSettingsPage", () => {
     await user.click(within(dialog).getByRole("button", { name: /^save$/i }));
 
     await waitFor(() =>
-      expect(readStoredConfigs()).toEqual([
+      expect(replaceConfigs).toHaveBeenCalledWith([
         expect.objectContaining({
           clientType: "claude",
           providerName: "Relay Claude",
@@ -103,56 +137,19 @@ describe("CcSwitchImportSettingsPage", () => {
     expect(endpointPreview).toHaveTextContent(`${origin}/openai/v1`);
   });
 
-  test("renders legacy client defaults as migrated list rows", async () => {
-    window.localStorage.setItem(
-      "ccswitch.importSettings.v1",
-      JSON.stringify({
-        claude: {
-          endpointPath: "",
-          defaultModel: "claude-sonnet-4-5",
-          usageAutoInterval: 30,
-          apiKeyField: "ANTHROPIC_AUTH_TOKEN",
-        },
-        codex: {
-          endpointPath: "/openai/v1",
-          defaultModel: "gpt-5.6",
-          usageAutoInterval: 45,
-        },
-        gemini: {
-          endpointPath: "",
-          defaultModel: "gemini-2.5-pro",
-          usageAutoInterval: 30,
-        },
-      }),
-    );
-
-    renderPage();
-
-    expect(await screen.findByText("CliProxy Codex")).toBeInTheDocument();
-    expect(screen.getByText("gpt-5.6")).toBeInTheDocument();
-    expect(screen.getByText("/openai/v1")).toBeInTheDocument();
-    expect(screen.getByText("ANTHROPIC_AUTH_TOKEN")).toBeInTheDocument();
-  });
-
-  test("deletes a saved config row and removes it from storage", async () => {
-    window.localStorage.setItem(
-      CC_SWITCH_IMPORT_CONFIG_LIST_STORAGE_KEY,
-      JSON.stringify({
-        version: 1,
-        configs: [
-          {
-            id: "cfg-1",
-            clientType: "codex",
-            providerName: "Relay Codex",
-            note: "Delete me",
-            defaultModel: "gpt-5.5",
-            allowedChannelGroups: ["team-a"],
-            endpointPath: "/v1",
-            usageAutoInterval: 30,
-          },
-        ],
-      }),
-    );
+  test("deletes a saved config row through the API", async () => {
+    listConfigs.mockResolvedValue([
+      {
+        id: "cfg-1",
+        clientType: "codex",
+        providerName: "Relay Codex",
+        note: "Delete me",
+        defaultModel: "gpt-5.5",
+        allowedChannelGroups: ["team-a"],
+        endpointPath: "/v1",
+        usageAutoInterval: 30,
+      },
+    ]);
 
     renderPage();
     const user = userEvent.setup();
@@ -163,8 +160,6 @@ describe("CcSwitchImportSettingsPage", () => {
     const dialog = await screen.findByRole("dialog", { name: /delete cc switch config/i });
     await user.click(within(dialog).getByRole("button", { name: /^delete$/i }));
 
-    await waitFor(() => {
-      expect(readStoredConfigs()).toEqual([]);
-    });
+    await waitFor(() => expect(replaceConfigs).toHaveBeenCalledWith([]));
   });
 });

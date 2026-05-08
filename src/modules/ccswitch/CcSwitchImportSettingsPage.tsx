@@ -7,6 +7,7 @@ import iconGemini from "@/assets/icons/gemini.svg";
 import { detectApiBaseFromLocation } from "@/lib/connection";
 import { channelGroupsApi } from "@/lib/http/apis/channel-groups";
 import { useOptionalAuth } from "@/modules/auth/AuthProvider";
+import { ccSwitchImportConfigsApi } from "@/lib/http/apis/ccswitch-import-configs";
 import { Button } from "@/modules/ui/Button";
 import { Card } from "@/modules/ui/Card";
 import { ConfirmModal } from "@/modules/ui/ConfirmModal";
@@ -15,8 +16,7 @@ import { VirtualTable, type VirtualTableColumn } from "@/modules/ui/VirtualTable
 import { CcSwitchImportConfigModal } from "@/modules/ccswitch/CcSwitchImportConfigModal";
 import {
   createCcSwitchImportConfig,
-  readCcSwitchImportConfigList,
-  writeCcSwitchImportConfigList,
+  normalizeCcSwitchImportConfigList,
   type CcSwitchImportConfigListItem,
 } from "@/modules/ccswitch/ccswitchImportConfigList";
 import {
@@ -41,9 +41,7 @@ export function CcSwitchImportSettingsPage() {
   const { t } = useTranslation();
   const auth = useOptionalAuth();
   const { notify } = useToast();
-  const [configs, setConfigs] = useState<CcSwitchImportConfigListItem[]>(() =>
-    readCcSwitchImportConfigList(),
-  );
+  const [configs, setConfigs] = useState<CcSwitchImportConfigListItem[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<"create" | "edit">("create");
   const [draft, setDraft] = useState<CcSwitchImportConfigListItem>(() => createDraft());
@@ -86,6 +84,29 @@ export function CcSwitchImportSettingsPage() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    ccSwitchImportConfigsApi
+      .list()
+      .then((items) => {
+        if (cancelled) return;
+        setConfigs(items);
+      })
+      .catch((error: unknown) => {
+        if (cancelled) return;
+        notify({
+          type: "error",
+          message: error instanceof Error ? error.message : t("common.load_failed"),
+        });
+        setConfigs([]);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [notify, t]);
 
   const columns = useMemo<VirtualTableColumn<CcSwitchImportConfigListItem>[]>(
     () => [
@@ -210,8 +231,9 @@ export function CcSwitchImportSettingsPage() {
     [t],
   );
 
-  const persistConfigs = (next: CcSwitchImportConfigListItem[]) => {
-    const normalized = writeCcSwitchImportConfigList(next);
+  const persistConfigs = async (next: CcSwitchImportConfigListItem[]) => {
+    const normalized = normalizeCcSwitchImportConfigList(next);
+    await ccSwitchImportConfigsApi.replace(normalized);
     setConfigs(normalized);
   };
   const importBaseUrl = auth?.state.apiBase || detectApiBaseFromLocation();
@@ -269,19 +291,26 @@ export function CcSwitchImportSettingsPage() {
         channelGroupOptions={channelGroupOptions}
         channelGroupsLoading={channelGroupsLoading}
         onClose={() => setModalOpen(false)}
-        onSave={(value) => {
+        onSave={async (value) => {
           const next =
             modalMode === "edit"
               ? configs.map((item) => (item.id === value.id ? value : item))
               : [value, ...configs];
-          persistConfigs(next);
-          setModalOpen(false);
-          notify({
-            type: "success",
-            message: t(
-              modalMode === "edit" ? "ccswitch.config_updated" : "ccswitch.config_created",
-            ),
-          });
+          try {
+            await persistConfigs(next);
+            setModalOpen(false);
+            notify({
+              type: "success",
+              message: t(
+                modalMode === "edit" ? "ccswitch.config_updated" : "ccswitch.config_created",
+              ),
+            });
+          } catch (error: unknown) {
+            notify({
+              type: "error",
+              message: error instanceof Error ? error.message : t("common.save_failed"),
+            });
+          }
         }}
       />
 
@@ -293,11 +322,18 @@ export function CcSwitchImportSettingsPage() {
         })}
         confirmText={t("ccswitch.config_delete_confirm")}
         onClose={() => setPendingDelete(null)}
-        onConfirm={() => {
+        onConfirm={async () => {
           if (!pendingDelete) return;
-          persistConfigs(configs.filter((item) => item.id !== pendingDelete.id));
-          setPendingDelete(null);
-          notify({ type: "success", message: t("ccswitch.config_deleted") });
+          try {
+            await persistConfigs(configs.filter((item) => item.id !== pendingDelete.id));
+            setPendingDelete(null);
+            notify({ type: "success", message: t("ccswitch.config_deleted") });
+          } catch (error: unknown) {
+            notify({
+              type: "error",
+              message: error instanceof Error ? error.message : t("common.save_failed"),
+            });
+          }
         }}
       />
     </div>

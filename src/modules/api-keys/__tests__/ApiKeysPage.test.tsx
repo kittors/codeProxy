@@ -10,6 +10,7 @@ import { ToastProvider } from "@/modules/ui/ToastProvider";
 const state = vi.hoisted(() => ({
   entries: [] as any[],
   channelGroups: [] as any[],
+  ccSwitchImportConfigs: [] as any[],
   configYaml: "",
   permissionProfiles: [] as any[],
 }));
@@ -38,6 +39,9 @@ const mocks = vi.hoisted(() => ({
     if (url === "/api-key-permission-profiles") {
       state.permissionProfiles = body;
     }
+    if (url === "/ccswitch-import-configs") {
+      state.ccSwitchImportConfigs = body;
+    }
     return {};
   }),
   authFilesList: vi.fn(async () => ({ files: [] })),
@@ -49,6 +53,9 @@ const mocks = vi.hoisted(() => ({
   apiClientGet: vi.fn(async (url: string) => {
     if (url === "/api-key-permission-profiles") {
       return { "api-key-permission-profiles": state.permissionProfiles };
+    }
+    if (url === "/ccswitch-import-configs") {
+      return { "ccswitch-import-configs": state.ccSwitchImportConfigs };
     }
     if (url === "/channel-groups") {
       return { items: state.channelGroups };
@@ -186,6 +193,7 @@ describe("ApiKeysPage", () => {
       },
     ];
     state.channelGroups = [];
+    state.ccSwitchImportConfigs = [];
     state.configYaml = "";
     state.permissionProfiles = [];
     mocks.apiKeyEntriesList.mockClear();
@@ -690,34 +698,28 @@ describe("ApiKeysPage", () => {
         "path-routes": ["/pro"],
       },
     ];
-    window.localStorage.setItem(
-      "ccswitch.importConfigList.v1",
-      JSON.stringify({
-        version: 1,
-        configs: [
-          {
-            id: "preset-codex-primary",
-            clientType: "codex",
-            providerName: "Primary Codex",
-            note: "Fallback route",
-            defaultModel: "gpt-5.5",
-            allowedChannelGroups: ["team-a"],
-            endpointPath: "/v1",
-            usageAutoInterval: 30,
-          },
-          {
-            id: "preset-codex",
-            clientType: "codex",
-            providerName: "Preset Codex",
-            note: "Primary route",
-            defaultModel: "gpt-5.4",
-            allowedChannelGroups: ["pro", "team-a"],
-            endpointPath: "/openai/v2",
-            usageAutoInterval: 45,
-          },
-        ],
-      }),
-    );
+    state.ccSwitchImportConfigs = [
+      {
+        id: "preset-codex-primary",
+        "client-type": "codex",
+        "provider-name": "Primary Codex",
+        note: "Fallback route",
+        "default-model": "gpt-5.5",
+        "allowed-channel-groups": ["team-a"],
+        "endpoint-path": "/v1",
+        "usage-auto-interval": 30,
+      },
+      {
+        id: "preset-codex",
+        "client-type": "codex",
+        "provider-name": "Preset Codex",
+        note: "Primary route",
+        "default-model": "gpt-5.4",
+        "allowed-channel-groups": ["pro", "team-a"],
+        "endpoint-path": "/openai/v2",
+        "usage-auto-interval": 45,
+      },
+    ];
 
     render(
       <MemoryRouter>

@@ -9,6 +9,7 @@ import {
   resolveEntryPermissionProfileId,
   type ApiKeyPermissionProfile,
 } from "@/lib/http/apis/api-key-permission-profiles";
+import { ccSwitchImportConfigsApi } from "@/lib/http/apis/ccswitch-import-configs";
 import type { ChannelGroupItem } from "@/lib/http/apis/channel-groups";
 import { detectApiBaseFromLocation } from "@/lib/connection";
 import { useOptionalAuth } from "@/modules/auth/AuthProvider";
@@ -41,11 +42,11 @@ import {
 } from "@/modules/ccswitch/ccswitchImport";
 import {
   normalizeCcSwitchClaudeAuthField,
-  readCcSwitchImportSettings,
+  normalizeCcSwitchImportSettings,
   type CcSwitchClaudeAuthField,
 } from "@/modules/ccswitch/ccswitchImportSettings";
 import {
-  readCcSwitchImportConfigList,
+  deriveCcSwitchImportSettingsFromConfigList,
   type CcSwitchImportConfigListItem,
 } from "@/modules/ccswitch/ccswitchImportConfigList";
 import { LogContentModal } from "@/modules/monitor/LogContentModal";
@@ -115,6 +116,9 @@ export function ApiKeysPage() {
   const [ccSwitchImportModels, setCcSwitchImportModels] = useState<string[]>([]);
   const [ccSwitchImportModelsLoading, setCcSwitchImportModelsLoading] = useState(false);
   const [ccSwitchImportConfigId, setCcSwitchImportConfigId] = useState("");
+  const [ccSwitchImportConfigs, setCcSwitchImportConfigs] = useState<
+    CcSwitchImportConfigListItem[]
+  >([]);
   const [saving, setSaving] = useState(false);
   const [permissionProfiles, setPermissionProfiles] = useState<ApiKeyPermissionProfile[]>([]);
   const [form, setForm] = useState<ApiKeyFormValues>(() => makeEmptyApiKeyForm());
@@ -163,12 +167,14 @@ export function ApiKeysPage() {
   const loadEntries = useCallback(async () => {
     setLoading(true);
     try {
-      const [entriesData, legacyKeys, profilesData] = await Promise.all([
+      const [entriesData, legacyKeys, profilesData, configsData] = await Promise.all([
         apiKeyEntriesApi.list(),
         apiKeysApi.list().catch(() => [] as string[]),
         apiKeyPermissionProfilesApi.list().catch(() => [] as ApiKeyPermissionProfile[]),
+        ccSwitchImportConfigsApi.list().catch(() => [] as CcSwitchImportConfigListItem[]),
       ]);
       setPermissionProfiles(profilesData);
+      setCcSwitchImportConfigs(configsData);
 
       // Auto-migrate: old api-keys not in api-key-entries get added as unnamed entries
       const entryKeySet = new Set(entriesData.map((e) => e.key));
@@ -430,7 +436,6 @@ export function ApiKeysPage() {
     () => auth?.state.apiBase || detectApiBaseFromLocation(),
     [auth?.state.apiBase],
   );
-  const ccSwitchImportConfigs = useMemo(() => readCcSwitchImportConfigList(), [ccSwitchImportEntry]);
   const ccSwitchImportConfigsForClient = useMemo(
     () => ccSwitchImportConfigs.filter((config) => config.clientType === ccSwitchImportClientType),
     [ccSwitchImportClientType, ccSwitchImportConfigs],
@@ -523,9 +528,7 @@ export function ApiKeysPage() {
       }
 
       const nextGroup =
-        config.allowedChannelGroups.find((group) =>
-          ccSwitchImportAllowedGroups.includes(group),
-        ) ??
+        config.allowedChannelGroups.find((group) => ccSwitchImportAllowedGroups.includes(group)) ??
         config.allowedChannelGroups[0] ??
         fallbackGroup;
 
@@ -543,7 +546,8 @@ export function ApiKeysPage() {
   const handleCcSwitchImportClientTypeChange = useCallback(
     (clientType: CcSwitchClientType) => {
       setCcSwitchImportClientType(clientType);
-      const preset = ccSwitchImportConfigs.find((config) => config.clientType === clientType) ?? null;
+      const preset =
+        ccSwitchImportConfigs.find((config) => config.clientType === clientType) ?? null;
       if (!preset) {
         setCcSwitchImportConfigId("");
         setCcSwitchImportClaudeApiKeyField("ANTHROPIC_API_KEY");
@@ -615,8 +619,7 @@ export function ApiKeysPage() {
         setCcSwitchImportConfigId("");
         return;
       }
-      const config =
-        ccSwitchImportConfigsForClient.find((item) => item.id === configId) ?? null;
+      const config = ccSwitchImportConfigsForClient.find((item) => item.id === configId) ?? null;
       applyCcSwitchImportConfig(config, ccSwitchImportGroup);
     },
     [applyCcSwitchImportConfig, ccSwitchImportConfigsForClient, ccSwitchImportGroup],
@@ -632,9 +635,7 @@ export function ApiKeysPage() {
             },
             ...ccSwitchImportConfigsForClient.map((config) => ({
               value: config.id,
-              label: config.note
-                ? `${config.providerName} · ${config.note}`
-                : config.providerName,
+              label: config.note ? `${config.providerName} · ${config.note}` : config.providerName,
             })),
           ]
         : [],
@@ -644,10 +645,14 @@ export function ApiKeysPage() {
   const handleImportToCcSwitch = useCallback(
     (selection: CcSwitchImportSelection) => {
       if (!ccSwitchImportEntry) return;
-      const settings = readCcSwitchImportSettings();
+      const settings =
+        ccSwitchImportConfigs.length > 0
+          ? deriveCcSwitchImportSettingsFromConfigList(ccSwitchImportConfigs)
+          : normalizeCcSwitchImportSettings();
       const selectedPreset =
         ccSwitchImportConfigId && ccSwitchImportConfigsForClient.length > 0
-          ? (ccSwitchImportConfigsForClient.find((item) => item.id === ccSwitchImportConfigId) ?? null)
+          ? (ccSwitchImportConfigsForClient.find((item) => item.id === ccSwitchImportConfigId) ??
+            null)
           : null;
       const clientSettings = {
         ...settings[selection.clientType],
@@ -690,6 +695,7 @@ export function ApiKeysPage() {
     },
     [
       ccSwitchImportConfigId,
+      ccSwitchImportConfigs,
       ccSwitchImportConfigsForClient,
       ccSwitchImportEntry,
       ccSwitchImportModels,

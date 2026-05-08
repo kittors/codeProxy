@@ -1,7 +1,8 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Check, Layers, RefreshCw, Search } from "lucide-react";
 import { detectApiBaseFromLocation } from "@/lib/connection";
+import { ccSwitchImportConfigsApi } from "@/lib/http/apis/ccswitch-import-configs";
 import { CcSwitchImportOptions } from "@/modules/ccswitch/CcSwitchImportOptions";
 import {
   buildCcSwitchImportUrl,
@@ -9,7 +10,7 @@ import {
   openCcSwitchImportUrl,
   type CcSwitchClientType,
 } from "@/modules/ccswitch/ccswitchImport";
-import { readCcSwitchImportSettings } from "@/modules/ccswitch/ccswitchImportSettings";
+import { deriveCcSwitchImportSettingsFromConfigList } from "@/modules/ccswitch/ccswitchImportConfigList";
 import { Card } from "@/modules/ui/Card";
 import { TextInput } from "@/modules/ui/Input";
 import { useToast } from "@/modules/ui/ToastProvider";
@@ -206,6 +207,28 @@ export function ModelsTabContent({
 }) {
   const { t } = useTranslation();
   const { notify } = useToast();
+  const [ccSwitchImportSettings, setCcSwitchImportSettings] = useState(() =>
+    deriveCcSwitchImportSettingsFromConfigList([]),
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+
+    ccSwitchImportConfigsApi
+      .list()
+      .then((configs) => {
+        if (cancelled) return;
+        setCcSwitchImportSettings(deriveCcSwitchImportSettingsFromConfigList(configs));
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setCcSwitchImportSettings(deriveCcSwitchImportSettingsFromConfigList([]));
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const filteredModels = useMemo(() => {
     const needle = searchFilter.trim().toLowerCase();
@@ -239,7 +262,7 @@ export function ModelsTabContent({
       clientType,
       providerName: buildCcSwitchProviderName({ clientType }),
       models,
-      settings: readCcSwitchImportSettings(),
+      settings: ccSwitchImportSettings,
     });
 
     openCcSwitchImportUrl(url, {
@@ -268,6 +291,7 @@ export function ModelsTabContent({
             <CcSwitchImportOptions
               t={t}
               models={models}
+              settings={ccSwitchImportSettings}
               compact
               onSelect={handleImportToCcSwitch}
             />

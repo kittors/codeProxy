@@ -1,5 +1,5 @@
 import type { TFunction } from "i18next";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   CC_SWITCH_CLIENTS,
   pickCcSwitchDefaultModel,
@@ -10,8 +10,6 @@ import {
   CC_SWITCH_CLAUDE_AUTH_FIELDS,
   normalizeCcSwitchClaudeAuthField,
   normalizeCcSwitchImportSettings,
-  readCcSwitchImportSettings,
-  writeCcSwitchImportSettings,
   type CcSwitchImportSettings,
   type CcSwitchImportSettingsInput,
 } from "@/modules/ccswitch/ccswitchImportSettings";
@@ -162,22 +160,23 @@ export function CcSwitchImportOptions({
   onSelect: (clientType: CcSwitchClientType) => void;
 }) {
   const [resolvedSettings, setResolvedSettings] = useState<CcSwitchImportSettings>(() =>
-    normalizeCcSwitchImportSettings(settings ?? readCcSwitchImportSettings()),
+    normalizeCcSwitchImportSettings(settings),
   );
-  const handleClaudeAuthFieldChange = useCallback(
-    (value: string) => {
-      const normalizedValue = normalizeCcSwitchClaudeAuthField(value);
-      const nextSettings = writeCcSwitchImportSettings({
-        ...resolvedSettings,
+  useEffect(() => {
+    setResolvedSettings(normalizeCcSwitchImportSettings(settings));
+  }, [settings]);
+  const handleClaudeAuthFieldChange = useCallback((value: string) => {
+    const normalizedValue = normalizeCcSwitchClaudeAuthField(value);
+    setResolvedSettings((current) =>
+      normalizeCcSwitchImportSettings({
+        ...current,
         claude: {
-          ...resolvedSettings.claude,
+          ...current.claude,
           apiKeyField: normalizedValue,
         },
-      });
-      setResolvedSettings(nextSettings);
-    },
-    [resolvedSettings],
-  );
+      }),
+    );
+  }, []);
 
   const buttons = CC_SWITCH_CLIENTS.map((client) => (
     <ImportOptionButton

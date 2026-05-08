@@ -3,15 +3,12 @@ import {
   type CcSwitchClientType,
 } from "@/modules/ccswitch/ccswitchImport";
 import {
-  CC_SWITCH_IMPORT_SETTINGS_STORAGE_KEY,
   DEFAULT_CC_SWITCH_IMPORT_SETTINGS,
   normalizeCcSwitchClaudeAuthField,
   normalizeCcSwitchEndpointPath,
   normalizeCcSwitchImportSettings,
   type CcSwitchClaudeAuthField,
 } from "@/modules/ccswitch/ccswitchImportSettings";
-
-export const CC_SWITCH_IMPORT_CONFIG_LIST_STORAGE_KEY = "ccswitch.importConfigList.v1";
 
 export interface CcSwitchImportConfigListItem {
   id: string;
@@ -23,11 +20,6 @@ export interface CcSwitchImportConfigListItem {
   endpointPath: string;
   usageAutoInterval: number;
   apiKeyField?: CcSwitchClaudeAuthField;
-}
-
-interface CcSwitchImportConfigListPayload {
-  version: 1;
-  configs: CcSwitchImportConfigListItem[];
 }
 
 const CLIENT_TYPES: CcSwitchClientType[] = ["claude", "codex", "gemini"];
@@ -128,23 +120,17 @@ export function createCcSwitchImportConfig(
     ),
     ...(input.clientType === "claude"
       ? {
-          apiKeyField: normalizeCcSwitchClaudeAuthField(
-            input.apiKeyField ?? defaults.apiKeyField,
-          ),
+          apiKeyField: normalizeCcSwitchClaudeAuthField(input.apiKeyField ?? defaults.apiKeyField),
         }
       : {}),
   };
 }
 
-function normalizePayload(value: unknown): CcSwitchImportConfigListItem[] {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return [];
-  const rawConfigs = (value as { configs?: unknown }).configs;
-  if (!Array.isArray(rawConfigs)) return [];
-
-  return rawConfigs
-    .map((entry) => {
-      if (!entry || typeof entry !== "object" || Array.isArray(entry)) return null;
-      const item = entry as Partial<CcSwitchImportConfigListItem>;
+export function normalizeCcSwitchImportConfigList(
+  configs: readonly Partial<CcSwitchImportConfigListItem>[],
+): CcSwitchImportConfigListItem[] {
+  return configs
+    .map((item) => {
       const clientType = item.clientType;
       if (!clientType || !CLIENT_TYPES.includes(clientType)) return null;
       return createCcSwitchImportConfig({
@@ -153,74 +139,4 @@ function normalizePayload(value: unknown): CcSwitchImportConfigListItem[] {
       });
     })
     .filter((item): item is CcSwitchImportConfigListItem => Boolean(item));
-}
-
-function migrateLegacySettings(): CcSwitchImportConfigListItem[] {
-  if (typeof window === "undefined") return [];
-  const raw = window.localStorage.getItem(CC_SWITCH_IMPORT_SETTINGS_STORAGE_KEY);
-  if (!raw) return [];
-
-  try {
-    const parsed = JSON.parse(raw) as Record<string, unknown>;
-    const normalized = normalizeCcSwitchImportSettings(parsed);
-    return CLIENT_TYPES.map((clientType) =>
-      createCcSwitchImportConfig({
-        clientType,
-        providerName: defaultProviderName(clientType),
-        defaultModel: normalized[clientType].defaultModel,
-        endpointPath: normalized[clientType].endpointPath,
-        usageAutoInterval: normalized[clientType].usageAutoInterval,
-        ...(clientType === "claude"
-          ? {
-              apiKeyField: normalized.claude.apiKeyField,
-            }
-          : {}),
-      }),
-    );
-  } catch {
-    return [];
-  }
-}
-
-export function readCcSwitchImportConfigList(): CcSwitchImportConfigListItem[] {
-  try {
-    if (typeof window === "undefined") return [];
-
-    const raw = window.localStorage.getItem(CC_SWITCH_IMPORT_CONFIG_LIST_STORAGE_KEY);
-    if (raw) {
-      return normalizePayload(JSON.parse(raw));
-    }
-
-    const migrated = migrateLegacySettings();
-    if (migrated.length > 0) {
-      writeCcSwitchImportConfigList(migrated);
-    }
-    return migrated;
-  } catch {
-    return [];
-  }
-}
-
-export function writeCcSwitchImportConfigList(
-  configs: readonly CcSwitchImportConfigListItem[],
-): CcSwitchImportConfigListItem[] {
-  const normalized = configs.map((item) => createCcSwitchImportConfig(item));
-  const payload: CcSwitchImportConfigListPayload = {
-    version: 1,
-    configs: normalized,
-  };
-
-  try {
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem(CC_SWITCH_IMPORT_CONFIG_LIST_STORAGE_KEY, JSON.stringify(payload));
-      window.localStorage.setItem(
-        CC_SWITCH_IMPORT_SETTINGS_STORAGE_KEY,
-        JSON.stringify(deriveCcSwitchImportSettingsFromConfigList(normalized)),
-      );
-    }
-  } catch {
-    // ignore storage failures
-  }
-
-  return normalized;
 }

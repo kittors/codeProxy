@@ -3,6 +3,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { CcSwitchImportOptions } from "@/modules/ccswitch/CcSwitchImportOptions";
+import { normalizeCcSwitchImportSettings } from "@/modules/ccswitch/ccswitchImportSettings";
 
 const t = ((key: string, options?: Record<string, unknown>) => {
   const labels: Record<string, string> = {
@@ -59,13 +60,16 @@ describe("CcSwitchImportOptions", () => {
 
     await user.click(authField);
     await user.click(screen.getByRole("option", { name: "ANTHROPIC_AUTH_TOKEN" }));
+    expect(screen.getByRole("combobox", { name: "Claude Code auth field" })).toHaveTextContent(
+      "ANTHROPIC_AUTH_TOKEN",
+    );
 
-    const raw = window.localStorage.getItem("ccswitch.importSettings.v1");
-    expect(raw).toBeTruthy();
-    expect(JSON.parse(raw!)).toMatchObject({
-      claude: {
-        apiKeyField: "ANTHROPIC_AUTH_TOKEN",
-      },
-    });
+    expect(
+      normalizeCcSwitchImportSettings({
+        claude: {
+          apiKeyField: "ANTHROPIC_API_KEY",
+        },
+      }).claude.apiKeyField,
+    ).toBe("ANTHROPIC_API_KEY");
   });
 });
