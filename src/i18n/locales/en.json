@@ -2362,7 +2362,6 @@
     "config_table_provider": "Provider",
     "config_table_model": "Model",
     "config_table_groups": "Allowed channel groups",
-    "config_table_auth_field": "Claude auth field",
     "config_table_actions": "Actions",
     "config_modal_create": "New CC Switch config",
     "config_modal_edit": "Edit CC Switch config",

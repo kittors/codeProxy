@@ -2574,7 +2574,6 @@
     "config_table_provider": "供应商",
     "config_table_model": "模型",
     "config_table_groups": "允许的渠道分组",
-    "config_table_auth_field": "Claude 认证字段",
     "config_table_actions": "操作",
     "config_modal_create": "新建 CC Switch 配置",
     "config_modal_edit": "编辑 CC Switch 配置",
