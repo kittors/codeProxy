@@ -1265,7 +1265,8 @@ export function RoutingConfigEditor({
                     rowKey={(channel) => channel.id}
                     virtualize={false}
                     rowHeight={52}
-                    height="h-[248px]"
+                    height="h-auto"
+                    minHeight="min-h-0"
                     minWidth="min-w-[640px]"
                     caption={t("channel_groups_page.select_channel_label")}
                     emptyText={t("channel_groups_page.empty_group_channels")}

@@ -253,6 +253,28 @@ describe("RoutingConfigEditor", () => {
     expect(preventDefault).not.toHaveBeenCalled();
   });
 
+  test("renders the basic tab channel table without a nested vertical scroll region", async () => {
+    await i18n.changeLanguage("zh-CN");
+    const user = userEvent.setup();
+
+    render(<Harness />);
+
+    await user.click(screen.getByRole("button", { name: "新增分组" }));
+    await user.click(screen.getByRole("combobox", { name: "选择渠道" }));
+    await user.click(screen.getByRole("option", { name: "Team A Claude" }));
+    await user.click(screen.getByRole("option", { name: "Main Codex" }));
+    await user.click(screen.getByRole("combobox", { name: "选择渠道" }));
+
+    const channelTable = screen.getByRole("table", { name: "选择渠道" });
+    const scrollContainer = channelTable.closest(".table-scrollbar") as HTMLDivElement | null;
+    const tableShell = scrollContainer?.parentElement as HTMLDivElement | null;
+
+    expect(tableShell).not.toBeNull();
+    expect(tableShell).toHaveClass("h-auto");
+    expect(tableShell).toHaveClass("min-h-0");
+    expect(tableShell).not.toHaveClass("h-[248px]");
+  });
+
   test("keeps the model list table visible while channel models are loading", async () => {
     await i18n.changeLanguage("zh-CN");
     const user = userEvent.setup();
