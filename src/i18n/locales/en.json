@@ -2353,6 +2353,8 @@
     "settings_saved": "CC Switch import settings saved",
     "settings_reset": "CC Switch import settings restored to defaults",
     "protocol_unavailable": "CC Switch is not installed or the protocol handler is unavailable.",
+    "import_card_list_desc": "Select a CC Switch preset to import",
+    "import_no_compatible_configs": "No compatible CC Switch configs found. Create one in CC Switch import settings first.",
     "config_new": "New config",
     "config_table_title": "Config list",
     "config_table_description": "{{count}} saved preset(s) for CC Switch imports.",

@@ -29,21 +29,14 @@ import { ApiKeyFormModal } from "@/modules/api-keys/components/ApiKeyFormModal";
 import { ApiKeyUsageModal } from "@/modules/api-keys/components/ApiKeyUsageModal";
 import { useApiKeyPermissionOptions } from "@/modules/api-keys/hooks/useApiKeyPermissionOptions";
 import { useApiKeyUsageView } from "@/modules/api-keys/hooks/useApiKeyUsageView";
-import {
-  CcSwitchImportModal,
-  type CcSwitchImportConfigOption,
-  type CcSwitchImportGroupOption,
-  type CcSwitchImportSelection,
-} from "@/modules/ccswitch/CcSwitchImportModal";
+import { CcSwitchImportCardList } from "@/modules/api-keys/components/CcSwitchImportCardList";
 import {
   buildCcSwitchImportUrl,
   openCcSwitchImportUrl,
-  type CcSwitchClientType,
 } from "@/modules/ccswitch/ccswitchImport";
 import {
   normalizeCcSwitchClaudeAuthField,
   normalizeCcSwitchImportSettings,
-  type CcSwitchClaudeAuthField,
 } from "@/modules/ccswitch/ccswitchImportSettings";
 import {
   deriveCcSwitchImportSettingsFromConfigList,
@@ -105,17 +98,6 @@ export function ApiKeysPage() {
   const [deleteIndex, setDeleteIndex] = useState<number | null>(null);
   const [deleteLogsOnDelete, setDeleteLogsOnDelete] = useState(true);
   const [ccSwitchImportEntry, setCcSwitchImportEntry] = useState<ApiKeyEntry | null>(null);
-  const [ccSwitchImportClientType, setCcSwitchImportClientType] =
-    useState<CcSwitchClientType>("claude");
-  const [ccSwitchImportGroup, setCcSwitchImportGroup] = useState("");
-  const [ccSwitchImportClaudeApiKeyField, setCcSwitchImportClaudeApiKeyField] =
-    useState<CcSwitchClaudeAuthField>("ANTHROPIC_API_KEY");
-  const [ccSwitchImportProviderName, setCcSwitchImportProviderName] = useState("");
-  const [ccSwitchImportEnabled, setCcSwitchImportEnabled] = useState(true);
-  const [ccSwitchImportModel, setCcSwitchImportModel] = useState("");
-  const [ccSwitchImportModels, setCcSwitchImportModels] = useState<string[]>([]);
-  const [ccSwitchImportModelsLoading, setCcSwitchImportModelsLoading] = useState(false);
-  const [ccSwitchImportConfigId, setCcSwitchImportConfigId] = useState("");
   const [ccSwitchImportConfigs, setCcSwitchImportConfigs] = useState<
     CcSwitchImportConfigListItem[]
   >([]);
@@ -432,259 +414,86 @@ export function ApiKeysPage() {
     notify({ type: "error", message: t("api_keys_page.copy_failed") });
   };
 
-  const ccSwitchImportBaseApiUrl = useMemo(
-    () => auth?.state.apiBase || detectApiBaseFromLocation(),
-    [auth?.state.apiBase],
-  );
-  const ccSwitchImportConfigsForClient = useMemo(
-    () => ccSwitchImportConfigs.filter((config) => config.clientType === ccSwitchImportClientType),
-    [ccSwitchImportClientType, ccSwitchImportConfigs],
-  );
-
-  const ccSwitchImportAllowedGroups = useMemo(() => {
-    const entryGroups = (ccSwitchImportEntry?.["allowed-channel-groups"] ?? [])
-      .map((group) =>
-        String(group ?? "")
+  const compatibleConfigs = useMemo(() => {
+    if (!ccSwitchImportEntry) return [];
+    const entryGroups = (ccSwitchImportEntry["allowed-channel-groups"] ?? [])
+      .map((g) =>
+        String(g ?? "")
           .trim()
           .toLowerCase(),
       )
       .filter(Boolean);
-    if (entryGroups.length > 0) {
-      return Array.from(new Set(entryGroups));
-    }
-    return Array.from(
-      new Set(
-        channelGroupItems
-          .map((group) =>
-            String(group.name ?? "")
-              .trim()
-              .toLowerCase(),
-          )
-          .filter(Boolean),
-      ),
-    );
-  }, [ccSwitchImportEntry, channelGroupItems]);
-
-  const ccSwitchImportGroupOptions = useMemo<CcSwitchImportGroupOption[]>(() => {
-    const groupByName = new Map(
-      channelGroupItems
-        .map((group) => {
-          const name = String(group.name ?? "")
-            .trim()
-            .toLowerCase();
-          return name ? ([name, group] as const) : null;
-        })
-        .filter((item): item is readonly [string, ChannelGroupItem] => Boolean(item)),
-    );
-    return ccSwitchImportAllowedGroups.map((groupName) => {
-      const group = groupByName.get(groupName);
-      const routePath = Array.isArray(group?.["path-routes"]) ? group["path-routes"][0] : "";
-      return {
-        value: groupName,
-        label: groupName,
-        baseUrl: appendRoutePath(ccSwitchImportBaseApiUrl, routePath || ""),
-        description:
-          typeof group?.description === "string" && group.description.trim()
-            ? group.description.trim()
-            : undefined,
-      };
+    return ccSwitchImportConfigs.filter((config) => {
+      if (entryGroups.length === 0) return true;
+      return config.allowedChannelGroups.some((g) => entryGroups.includes(g));
     });
-  }, [ccSwitchImportAllowedGroups, ccSwitchImportBaseApiUrl, channelGroupItems]);
+  }, [ccSwitchImportEntry, ccSwitchImportConfigs]);
 
-  const ccSwitchImportBaseUrl = useMemo(() => {
-    return (
-      ccSwitchImportGroupOptions.find((option) => option.value === ccSwitchImportGroup)?.baseUrl ??
-      ccSwitchImportBaseApiUrl
-    );
-  }, [ccSwitchImportBaseApiUrl, ccSwitchImportGroup, ccSwitchImportGroupOptions]);
+  const handleOpenCcSwitchImport = useCallback((entry: ApiKeyEntry) => {
+    setCcSwitchImportEntry(entry);
+  }, []);
 
-  const loadCcSwitchImportModels = useCallback(
-    async (groupName: string, preferredModel?: string) => {
-      setCcSwitchImportModelsLoading(true);
-      try {
-        const opts = await fetchModelOptions([], groupName ? [groupName] : []);
-        const nextModels = opts.map((option) => option.value);
-        setCcSwitchImportModels(nextModels);
-        setCcSwitchImportModel((current) =>
-          preferredModel?.trim()
-            ? preferredModel.trim()
-            : current && nextModels.includes(current)
-              ? current
-              : (nextModels[0] ?? ""),
-        );
-      } finally {
-        setCcSwitchImportModelsLoading(false);
-      }
-    },
-    [fetchModelOptions],
-  );
-
-  const applyCcSwitchImportConfig = useCallback(
-    (config: CcSwitchImportConfigListItem | null, fallbackGroup = "") => {
-      if (!config) {
-        setCcSwitchImportConfigId("");
-        setCcSwitchImportClaudeApiKeyField("ANTHROPIC_API_KEY");
-        return fallbackGroup;
-      }
-
-      const nextGroup =
-        config.allowedChannelGroups.find((group) => ccSwitchImportAllowedGroups.includes(group)) ??
-        config.allowedChannelGroups[0] ??
-        fallbackGroup;
-
-      setCcSwitchImportConfigId(config.id);
-      setCcSwitchImportClaudeApiKeyField(config.apiKeyField ?? "ANTHROPIC_API_KEY");
-      setCcSwitchImportProviderName(config.providerName || "CliProxy");
-      setCcSwitchImportModel(config.defaultModel);
-      setCcSwitchImportGroup(nextGroup);
-      void loadCcSwitchImportModels(nextGroup, config.defaultModel);
-      return nextGroup;
-    },
-    [ccSwitchImportAllowedGroups, loadCcSwitchImportModels],
-  );
-
-  const handleCcSwitchImportClientTypeChange = useCallback(
-    (clientType: CcSwitchClientType) => {
-      setCcSwitchImportClientType(clientType);
-      const preset =
-        ccSwitchImportConfigs.find((config) => config.clientType === clientType) ?? null;
-      if (!preset) {
-        setCcSwitchImportConfigId("");
-        setCcSwitchImportClaudeApiKeyField("ANTHROPIC_API_KEY");
-        setCcSwitchImportProviderName(ccSwitchImportEntry?.name || "CliProxy");
-        setCcSwitchImportModel("");
-        void loadCcSwitchImportModels(ccSwitchImportGroup);
-        return;
-      }
-      applyCcSwitchImportConfig(preset, ccSwitchImportGroup);
-    },
-    [
-      applyCcSwitchImportConfig,
-      ccSwitchImportConfigs,
-      ccSwitchImportEntry?.name,
-      ccSwitchImportGroup,
-      loadCcSwitchImportModels,
-    ],
-  );
-
-  const handleOpenCcSwitchImport = useCallback(
-    (entry: ApiKeyEntry) => {
-      const entryGroups = (entry["allowed-channel-groups"] ?? [])
-        .map((group) =>
-          String(group ?? "")
-            .trim()
-            .toLowerCase(),
-        )
-        .filter(Boolean);
-      const knownGroups = channelGroupItems
-        .map((group) =>
-          String(group.name ?? "")
-            .trim()
-            .toLowerCase(),
-        )
-        .filter(Boolean);
-      const initialGroup = entryGroups[0] ?? knownGroups[0] ?? "";
-      setCcSwitchImportEntry(entry);
-      setCcSwitchImportClientType("claude");
-      setCcSwitchImportEnabled(true);
-      setCcSwitchImportModels([]);
-      const initialPreset =
-        ccSwitchImportConfigs.find((config) => config.clientType === "claude") ?? null;
-      if (initialPreset) {
-        applyCcSwitchImportConfig(initialPreset, initialGroup);
-      } else {
-        setCcSwitchImportConfigId("");
-        setCcSwitchImportGroup(initialGroup);
-        setCcSwitchImportClaudeApiKeyField("ANTHROPIC_API_KEY");
-        setCcSwitchImportProviderName(entry.name || "CliProxy");
-        setCcSwitchImportModel("");
-        void loadCcSwitchImportModels(initialGroup);
-      }
-    },
-    [applyCcSwitchImportConfig, ccSwitchImportConfigs, channelGroupItems, loadCcSwitchImportModels],
-  );
-
-  const handleCcSwitchImportGroupChange = useCallback(
-    (groupName: string) => {
-      setCcSwitchImportGroup(groupName);
-      setCcSwitchImportModel((current) => current);
-      void loadCcSwitchImportModels(groupName);
-    },
-    [loadCcSwitchImportModels],
-  );
-
-  const handleCcSwitchImportConfigChange = useCallback(
-    (configId: string) => {
-      if (!configId) {
-        setCcSwitchImportConfigId("");
-        return;
-      }
-      const config = ccSwitchImportConfigsForClient.find((item) => item.id === configId) ?? null;
-      applyCcSwitchImportConfig(config, ccSwitchImportGroup);
-    },
-    [applyCcSwitchImportConfig, ccSwitchImportConfigsForClient, ccSwitchImportGroup],
-  );
-
-  const ccSwitchImportConfigOptions = useMemo<CcSwitchImportConfigOption[]>(
-    () =>
-      ccSwitchImportConfigsForClient.length > 0
-        ? [
-            {
-              value: "",
-              label: t("ccswitch.import_saved_config_none"),
-            },
-            ...ccSwitchImportConfigsForClient.map((config) => ({
-              value: config.id,
-              label: config.note ? `${config.providerName} · ${config.note}` : config.providerName,
-            })),
-          ]
-        : [],
-    [ccSwitchImportConfigsForClient, t],
-  );
-
-  const handleImportToCcSwitch = useCallback(
-    (selection: CcSwitchImportSelection) => {
+  const handleImportWithConfig = useCallback(
+    (config: CcSwitchImportConfigListItem) => {
       if (!ccSwitchImportEntry) return;
+
+      const entryGroups = (ccSwitchImportEntry["allowed-channel-groups"] ?? [])
+        .map((g) =>
+          String(g ?? "")
+            .trim()
+            .toLowerCase(),
+        )
+        .filter(Boolean);
+      const matchingGroup =
+        config.allowedChannelGroups.find((g) => entryGroups.includes(g)) ??
+        config.allowedChannelGroups[0] ??
+        "";
+      const groupItem = channelGroupItems.find(
+        (g) =>
+          String(g.name ?? "")
+            .trim()
+            .toLowerCase() === matchingGroup,
+      );
+      const routePath = Array.isArray(groupItem?.["path-routes"])
+        ? groupItem["path-routes"][0]
+        : "";
+      const baseApiUrl = auth?.state.apiBase || detectApiBaseFromLocation();
+      const baseUrl = appendRoutePath(baseApiUrl, routePath || "");
+
       const settings =
         ccSwitchImportConfigs.length > 0
           ? deriveCcSwitchImportSettingsFromConfigList(ccSwitchImportConfigs)
           : normalizeCcSwitchImportSettings();
-      const selectedPreset =
-        ccSwitchImportConfigId && ccSwitchImportConfigsForClient.length > 0
-          ? (ccSwitchImportConfigsForClient.find((item) => item.id === ccSwitchImportConfigId) ??
-            null)
-          : null;
       const clientSettings = {
-        ...settings[selection.clientType],
-        endpointPath: selectedPreset?.endpointPath ?? settings[selection.clientType].endpointPath,
+        ...settings[config.clientType],
+        endpointPath: config.endpointPath ?? settings[config.clientType].endpointPath,
         usageAutoInterval:
-          selectedPreset?.usageAutoInterval ?? settings[selection.clientType].usageAutoInterval,
-        defaultModel: selectedPreset?.defaultModel ?? settings[selection.clientType].defaultModel,
+          config.usageAutoInterval ?? settings[config.clientType].usageAutoInterval,
+        defaultModel: config.defaultModel ?? settings[config.clientType].defaultModel,
       };
       const importSettings =
-        selection.clientType === "claude"
+        config.clientType === "claude"
           ? {
               ...settings,
               claude: {
                 ...clientSettings,
-                apiKeyField: normalizeCcSwitchClaudeAuthField(
-                  selection.apiKeyField ?? selectedPreset?.apiKeyField,
-                ),
+                apiKeyField: normalizeCcSwitchClaudeAuthField(config.apiKeyField),
               },
             }
           : {
               ...settings,
-              [selection.clientType]: clientSettings,
+              [config.clientType]: clientSettings,
             };
+
       const url = buildCcSwitchImportUrl({
         apiKey: ccSwitchImportEntry.key,
-        baseUrl: selection.baseUrl,
-        clientType: selection.clientType,
-        enabled: selection.enabled,
-        providerName: selection.providerName || ccSwitchImportEntry.name || "CliProxy",
-        model: selection.model,
-        modelMappings: selectedPreset?.modelMappings,
-        models: ccSwitchImportModels,
+        baseUrl,
+        clientType: config.clientType,
+        enabled: true,
+        providerName: config.providerName || ccSwitchImportEntry.name || "CliProxy",
+        model: config.defaultModel,
+        modelMappings: config.modelMappings,
+        models: [],
         settings: importSettings,
       });
 
@@ -694,15 +503,7 @@ export function ApiKeysPage() {
       });
       setCcSwitchImportEntry(null);
     },
-    [
-      ccSwitchImportConfigId,
-      ccSwitchImportConfigs,
-      ccSwitchImportConfigsForClient,
-      ccSwitchImportEntry,
-      ccSwitchImportModels,
-      notify,
-      t,
-    ],
+    [ccSwitchImportEntry, ccSwitchImportConfigs, channelGroupItems, auth, notify, t],
   );
 
   /* ─── column definitions ─── */
@@ -817,30 +618,11 @@ export function ApiKeysPage() {
         onConfirm={handleDelete}
       />
 
-      <CcSwitchImportModal
-        t={t}
+      <CcSwitchImportCardList
         open={ccSwitchImportEntry !== null}
-        baseUrl={ccSwitchImportBaseUrl}
-        channelGroup={ccSwitchImportGroup}
-        channelGroupOptions={ccSwitchImportGroupOptions}
-        configOptions={ccSwitchImportConfigOptions}
-        clientType={ccSwitchImportClientType}
-        claudeApiKeyField={ccSwitchImportClaudeApiKeyField}
-        enabled={ccSwitchImportEnabled}
-        model={ccSwitchImportModel}
-        models={ccSwitchImportModels}
-        modelsLoading={ccSwitchImportModelsLoading}
-        providerName={ccSwitchImportProviderName}
-        selectedConfigId={ccSwitchImportConfigId}
-        onChannelGroupChange={handleCcSwitchImportGroupChange}
-        onConfigChange={handleCcSwitchImportConfigChange}
-        onClientTypeChange={handleCcSwitchImportClientTypeChange}
+        configs={compatibleConfigs}
+        onSelect={handleImportWithConfig}
         onClose={() => setCcSwitchImportEntry(null)}
-        onClaudeApiKeyFieldChange={setCcSwitchImportClaudeApiKeyField}
-        onEnabledChange={setCcSwitchImportEnabled}
-        onModelChange={setCcSwitchImportModel}
-        onProviderNameChange={setCcSwitchImportProviderName}
-        onSelect={handleImportToCcSwitch}
       />
 
       <ApiKeyUsageModal

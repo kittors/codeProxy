@@ -97,6 +97,8 @@
     "settings_saved": "CC Switch import settings saved",
     "settings_reset": "CC Switch import settings restored to defaults",
     "protocol_unavailable": "CC Switch не установлен или обработчик протокола недоступен.",
+    "import_card_list_desc": "Выберите пресет CC Switch для импорта",
+    "import_no_compatible_configs": "Нет совместимых конфигураций CC Switch. Сначала создайте пресет в настройках импорта CC Switch.",
     "config_new": "New config",
     "config_table_title": "Config list",
     "config_table_description": "{{count}} saved preset(s) for CC Switch imports.",

@@ -2565,6 +2565,8 @@
     "settings_saved": "CC Switch 导入配置已保存",
     "settings_reset": "CC Switch 导入配置已恢复默认",
     "protocol_unavailable": "未检测到 CC Switch 或协议处理程序不可用。",
+    "import_card_list_desc": "选择要导入的 CC Switch 配置预设",
+    "import_no_compatible_configs": "没有可用的 CC Switch 配置，请先在 CC Switch 导入设置中创建预设。",
     "config_new": "新建配置",
     "config_table_title": "配置列表",
     "config_table_description": "当前共有 {{count}} 条可复用的 CC Switch 导入预设。",
