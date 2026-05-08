@@ -74,6 +74,7 @@ export function CcSwitchImportSettingsPage() {
                   : undefined,
               routePath: Array.isArray(item["path-routes"]) ? item["path-routes"][0] : "",
               allowedModels: Array.isArray(item["allowed-models"]) ? item["allowed-models"] : [],
+              channels: Array.isArray(item.channels) ? item.channels : [],
             }))
             .filter((item) => item.value)
             .sort((left, right) => left.label.localeCompare(right.label)),

@@ -11,6 +11,8 @@ const listChannelGroups = vi.fn();
 const listAvailableModels = vi.fn();
 const listConfigs = vi.fn();
 const replaceConfigs = vi.fn();
+const loadConfiguredModelAvailability = vi.fn();
+const filterByConfiguredModelAvailability = vi.fn();
 
 vi.mock("@/lib/http/apis/channel-groups", () => ({
   channelGroupsApi: {
@@ -27,9 +29,19 @@ vi.mock("@/lib/http/apis/ccswitch-import-configs", () => ({
 
 vi.mock("@/lib/http/apis/models", () => ({
   modelsApi: {
-    listAvailableModels: (params: { allowedChannelGroups?: string[] }) =>
-      listAvailableModels(params),
+    listAvailableModels: (params: {
+      allowedChannelGroups?: string[];
+      allowedChannels?: string[];
+    }) => listAvailableModels(params),
   },
+}));
+
+vi.mock("@/modules/models/modelAvailability", () => ({
+  loadConfiguredModelAvailability: () => loadConfiguredModelAvailability(),
+  filterByConfiguredModelAvailability: <T extends { id: string }>(
+    models: T[],
+    availability: { scoped: boolean; idSet: Set<string> },
+  ) => filterByConfiguredModelAvailability(models, availability),
 }));
 
 function renderPage() {
@@ -50,6 +62,22 @@ describe("CcSwitchImportSettingsPage", () => {
     listAvailableModels.mockReset();
     listConfigs.mockReset();
     replaceConfigs.mockReset();
+    loadConfiguredModelAvailability.mockReset();
+    filterByConfiguredModelAvailability.mockReset();
+    loadConfiguredModelAvailability.mockResolvedValue({
+      scoped: false,
+      items: [],
+      idSet: new Set<string>(),
+    });
+    filterByConfiguredModelAvailability.mockImplementation(
+      <T extends { id: string }>(
+        models: T[],
+        availability: { scoped: boolean; idSet: Set<string> },
+      ) =>
+        availability.scoped
+          ? models.filter((model) => availability.idSet.has(model.id.toLowerCase()))
+          : models,
+    );
     listChannelGroups.mockResolvedValue([
       { name: "pro", description: "Pro route", "path-routes": ["/pro"] },
       { name: "team-a", description: "Team A route", "path-routes": ["/team-a"] },
@@ -207,11 +235,56 @@ describe("CcSwitchImportSettingsPage", () => {
     expect(groupSelect).toHaveTextContent("/openai/pro");
     expect(within(dialog).queryByText(/path address/i)).not.toBeInTheDocument();
 
-    expect(await within(dialog).findByLabelText(/cc switch request model for gpt-5\.5/i)).toBeInTheDocument();
+    expect(
+      await within(dialog).findByLabelText(/cc switch request model for gpt-5\.5/i),
+    ).toBeInTheDocument();
     expect(
       within(dialog).queryByLabelText(/cc switch request model for unexpected-extra-model/i),
     ).not.toBeInTheDocument();
     expect(listAvailableModels).not.toHaveBeenCalled();
+  });
+
+  test("filters fallback channel group models by configured model availability", async () => {
+    listChannelGroups.mockResolvedValue([
+      {
+        name: "chatgpt-pro",
+        description: "ChatGPT Pro route",
+        channels: ["A_GptPro"],
+        "path-routes": ["/openai/pro"],
+      },
+    ]);
+    listAvailableModels.mockResolvedValue([
+      { id: "codex-auto-review" },
+      { id: "gpt-5" },
+      { id: "gpt-5-codex" },
+      { id: "gpt-5.1" },
+      { id: "gpt-5.1-codex" },
+      { id: "gpt-5.3-codex" },
+      { id: "gpt-5.5" },
+      { id: "gpt-image-2" },
+    ]);
+    loadConfiguredModelAvailability.mockResolvedValue({
+      scoped: true,
+      items: [],
+      idSet: new Set(["codex-auto-review", "gpt-5", "gpt-5.3-codex", "gpt-5.5"]),
+    });
+    renderPage();
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole("button", { name: /new config/i }));
+
+    const dialog = await screen.findByRole("dialog", { name: /new cc switch config/i });
+    await user.click(within(dialog).getByRole("combobox", { name: /select channel group/i }));
+    await user.click(await screen.findByRole("option", { name: /chatgpt-pro.*\/openai\/pro/i }));
+
+    expect(await within(dialog).findByLabelText(/cc switch request model for gpt-5\.5/i)).toBeInTheDocument();
+    expect(
+      within(dialog).queryByLabelText(/cc switch request model for gpt-5\.1-codex/i),
+    ).not.toBeInTheDocument();
+    expect(listAvailableModels).toHaveBeenCalledWith({
+      allowedChannels: ["A_GptPro"],
+    });
+    expect(loadConfiguredModelAvailability).toHaveBeenCalledTimes(1);
   });
 
   test("previews the full BaseURL request address from the selected channel group path", async () => {

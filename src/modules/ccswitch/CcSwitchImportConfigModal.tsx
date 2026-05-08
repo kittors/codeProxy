@@ -16,6 +16,10 @@ import {
   type CcSwitchClientType,
 } from "@/modules/ccswitch/ccswitchImport";
 import {
+  filterByConfiguredModelAvailability,
+  loadConfiguredModelAvailability,
+} from "@/modules/models/modelAvailability";
+import {
   CC_SWITCH_CLAUDE_AUTH_FIELDS,
   DEFAULT_CC_SWITCH_IMPORT_SETTINGS,
   normalizeCcSwitchClaudeAuthField,
@@ -33,6 +37,7 @@ export interface CcSwitchChannelGroupOption {
   description?: string;
   routePath?: string;
   allowedModels?: string[];
+  channels?: string[];
 }
 
 const iconByType: Record<CcSwitchClientType, string> = {
@@ -262,12 +267,21 @@ export function CcSwitchImportConfigModal({
       return;
     }
 
+    const lookupChannels = dedupeModels(selectedGroupOption?.channels ?? []);
+    const lookupParams =
+      lookupChannels.length > 0
+        ? { allowedChannels: lookupChannels }
+        : { allowedChannelGroups: [selectedGroup] };
+
     setModelsLoading(true);
     modelsApi
-      .listAvailableModels({ allowedChannelGroups: [selectedGroup] })
-      .then((models) => {
+      .listAvailableModels(lookupParams)
+      .then(async (models) => {
         if (cancelled) return;
-        const modelIds = models.map((model) => model.id);
+        const availability = await loadConfiguredModelAvailability();
+        if (cancelled) return;
+        const visibleModels = filterByConfiguredModelAvailability(models, availability);
+        const modelIds = visibleModels.map((model) => model.id);
         setAvailableModels(dedupeModels(modelIds));
       })
       .catch(() => {
