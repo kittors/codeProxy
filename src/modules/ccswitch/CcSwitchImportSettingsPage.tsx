@@ -220,17 +220,6 @@ export function CcSwitchImportSettingsPage() {
           ),
       },
       {
-        key: "authField",
-        label: t("ccswitch.config_table_auth_field"),
-        width: "w-52",
-        overflowTooltip: true,
-        render: (row) => (
-          <span className="font-mono text-xs text-slate-600 dark:text-white/65">
-            {row.clientType === "claude" ? row.apiKeyField : "--"}
-          </span>
-        ),
-      },
-      {
         key: "actions",
         label: t("ccswitch.config_table_actions"),
         width: "w-28",
