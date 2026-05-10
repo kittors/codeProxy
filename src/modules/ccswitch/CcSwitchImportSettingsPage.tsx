@@ -9,6 +9,10 @@ import {
   channelGroupsApi,
   type ChannelGroupChannelDetail,
 } from "@/lib/http/apis/channel-groups";
+import {
+  normalizeProviderKey,
+  readAuthFilesModelOwnerGroupMap,
+} from "@/modules/auth-files/helpers/authFilesPageUtils";
 import { useOptionalAuth } from "@/modules/auth/AuthProvider";
 import { ccSwitchImportConfigsApi } from "@/lib/http/apis/ccswitch-import-configs";
 import { Button } from "@/modules/ui/Button";
@@ -65,6 +69,28 @@ const getChannelGroupModelOwnerKeys = (
   return Array.from(keys);
 };
 
+const getChannelGroupMappedModelOwnerKeys = (
+  details: readonly ChannelGroupChannelDetail[] | undefined,
+): string[] => {
+  const ownerByAuthGroup = readAuthFilesModelOwnerGroupMap();
+  const keys = new Set<string>();
+  for (const detail of details ?? []) {
+    const values = [
+      detail.source,
+      detail.name,
+      ...(detail.default_tags ?? []),
+      ...(detail.custom_tags ?? []),
+      ...(detail.display_tags ?? []),
+    ];
+    for (const value of values) {
+      const authGroup = normalizeProviderKey(String(value ?? ""));
+      const owner = normalizeModelOwnerKey(ownerByAuthGroup[authGroup] ?? "");
+      if (owner) keys.add(owner);
+    }
+  }
+  return Array.from(keys);
+};
+
 export function CcSwitchImportSettingsPage() {
   const { t } = useTranslation();
   const auth = useOptionalAuth();
@@ -101,6 +127,7 @@ export function CcSwitchImportSettingsPage() {
               allowedModels: Array.isArray(item["allowed-models"]) ? item["allowed-models"] : [],
               channels: Array.isArray(item.channels) ? item.channels : [],
               modelOwnerKeys: getChannelGroupModelOwnerKeys(item.channelDetails),
+              authoritativeModelOwnerKeys: getChannelGroupMappedModelOwnerKeys(item.channelDetails),
             }))
             .filter((item) => item.value)
             .sort((left, right) => left.label.localeCompare(right.label)),

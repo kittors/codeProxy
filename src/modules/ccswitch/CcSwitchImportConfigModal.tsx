@@ -39,6 +39,7 @@ export interface CcSwitchChannelGroupOption {
   allowedModels?: string[];
   channels?: string[];
   modelOwnerKeys?: string[];
+  authoritativeModelOwnerKeys?: string[];
 }
 
 const iconByType: Record<CcSwitchClientType, string> = {
@@ -258,6 +259,10 @@ export function CcSwitchImportConfigModal({
   const selectedGroup = draft.allowedChannelGroups[0] ?? "";
   const selectedGroupOption = channelGroupOptions.find((option) => option.value === selectedGroup);
   const selectedGroupAllowedModelsKey = (selectedGroupOption?.allowedModels ?? []).join("\n");
+  const selectedGroupAuthoritativeOwnerKey = (
+    selectedGroupOption?.authoritativeModelOwnerKeys ?? []
+  ).join("\n");
+  const selectedGroupOwnerKey = (selectedGroupOption?.modelOwnerKeys ?? []).join("\n");
 
   useEffect(() => {
     if (!open || !selectedGroup) {
@@ -272,6 +277,37 @@ export function CcSwitchImportConfigModal({
       setAvailableModels(groupAllowedModels);
       setModelsLoading(false);
       return;
+    }
+
+    const authoritativeModelOwnerKeys = new Set(
+      (selectedGroupOption?.authoritativeModelOwnerKeys ?? [])
+        .map(normalizeModelOwnerKey)
+        .filter(Boolean),
+    );
+    if (authoritativeModelOwnerKeys.size > 0) {
+      setModelsLoading(true);
+      modelsApi
+        .getModelConfigs("active")
+        .then((modelConfigs) => {
+          if (cancelled) return;
+          const modelIds = modelConfigs
+            .filter(
+              (model) =>
+                authoritativeModelOwnerKeys.has(normalizeModelOwnerKey(model.owned_by)) ||
+                authoritativeModelOwnerKeys.has(normalizeModelOwnerKey(model.source)),
+            )
+            .map((model) => model.id);
+          setAvailableModels(dedupeModels(modelIds));
+        })
+        .catch(() => {
+          if (!cancelled) setAvailableModels([]);
+        })
+        .finally(() => {
+          if (!cancelled) setModelsLoading(false);
+        });
+      return () => {
+        cancelled = true;
+      };
     }
 
     const lookupChannels = dedupeModels(selectedGroupOption?.channels ?? []);
@@ -322,7 +358,13 @@ export function CcSwitchImportConfigModal({
     return () => {
       cancelled = true;
     };
-  }, [open, selectedGroup, selectedGroupAllowedModelsKey]);
+  }, [
+    open,
+    selectedGroup,
+    selectedGroupAllowedModelsKey,
+    selectedGroupAuthoritativeOwnerKey,
+    selectedGroupOwnerKey,
+  ]);
 
   const availableModelsKey = availableModels.join("\n");
   useEffect(() => {

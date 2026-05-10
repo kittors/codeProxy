@@ -320,6 +320,63 @@ describe("CcSwitchImportSettingsPage", () => {
     expect(getModelConfigs).toHaveBeenCalledWith("active");
   });
 
+  test("uses the auth-file owner model group as the CC Switch actual model source", async () => {
+    window.localStorage.setItem(
+      "authFilesPage.modelOwnerGroupMap.v1",
+      JSON.stringify({ kimi: "kimi-code" }),
+    );
+    listChannelGroups.mockResolvedValue([
+      {
+        name: "kimicode",
+        description: "Kimi Code route",
+        channels: ["kimi"],
+        channelDetails: [
+          {
+            name: "kimi",
+            source: "kimi",
+            default_tags: ["kimi"],
+            custom_tags: [],
+            hidden_default_tags: [],
+            display_tags: ["kimi"],
+          },
+        ],
+        "path-routes": ["/kimicode"],
+      },
+    ]);
+    listAvailableModels.mockResolvedValue([
+      { id: "kimi-k2" },
+      { id: "kimi-k2-thinking" },
+      { id: "kimi-k2.5" },
+    ]);
+    loadConfiguredModelAvailability.mockResolvedValue({
+      scoped: true,
+      items: [],
+      idSet: new Set(["kimi-k2.5", "kimi-k2.6"]),
+    });
+    getModelConfigs.mockResolvedValue([
+      { id: "kimi-k2.5", owned_by: "kimi-code" },
+      { id: "kimi-k2.6", owned_by: "kimi-code" },
+      { id: "kimi-k2", owned_by: "moonshot" },
+    ]);
+    renderPage();
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole("button", { name: /new config/i }));
+
+    const dialog = await screen.findByRole("dialog", { name: /new cc switch config/i });
+    await user.click(within(dialog).getByRole("tab", { name: /claude code/i }));
+    await user.click(within(dialog).getByRole("combobox", { name: /select channel group/i }));
+    await user.click(await screen.findByRole("option", { name: /kimicode.*\/kimicode/i }));
+
+    expect(await within(dialog).findAllByDisplayValue("kimi-k2.5")).toHaveLength(4);
+    await user.click(within(dialog).getByRole("combobox", { name: /^main model$/i }));
+
+    expect(await screen.findByRole("option", { name: "kimi-k2.6" })).toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: "kimi-k2" })).not.toBeInTheDocument();
+    expect(listAvailableModels).not.toHaveBeenCalled();
+    expect(getModelConfigs).toHaveBeenCalledWith("active");
+  });
+
   test("previews the full BaseURL request address from the selected channel group path", async () => {
     renderPage();
     const user = userEvent.setup();
