@@ -15,8 +15,8 @@ import { EChart } from "@/modules/ui/charts/EChart";
 import { ProxyPoolSelect } from "@/modules/proxies/ProxyPoolSelect";
 import { useProxyPoolChecks } from "@/modules/proxies/useProxyPoolChecks";
 import {
+  canRenameAuthFileChannel,
   downloadTextAsFile,
-  isOauthAuthFile,
   matchesModelPattern,
   normalizeProviderKey,
   parseAdditionalQuotaWindowLabel,
@@ -124,15 +124,15 @@ export function AuthFileDetailModal({
   const detailProviderKey = detailFile ? normalizeProviderKey(resolveFileType(detailFile)) : "";
   const supportsUsageTrend = detailProviderKey === "kimi" || detailProviderKey === "codex";
   const excludedModels = excluded[providerKey] ?? [];
-  const isOauthDetailFile = detailFile ? isOauthAuthFile(detailFile) : false;
+  const canRenameChannel = detailFile ? canRenameAuthFileChannel(detailFile) : false;
   const channelBaseline = detailFile ? readAuthFileChannelName(detailFile) : "";
   const channelEditorMatchesFile = Boolean(
     detailFile && channelEditor.fileName === detailFile.name,
   );
   const channelLabelValue =
-    isOauthDetailFile && channelEditorMatchesFile ? channelEditor.label : channelBaseline;
+    canRenameChannel && channelEditorMatchesFile ? channelEditor.label : channelBaseline;
   const channelDirty =
-    isOauthDetailFile && channelEditorMatchesFile && channelEditor.label.trim() !== channelBaseline;
+    canRenameChannel && channelEditorMatchesFile && channelEditor.label.trim() !== channelBaseline;
   const saveFieldsDisabled =
     prefixProxyEditor.loading ||
     prefixProxyEditor.saving ||
@@ -455,7 +455,7 @@ export function AuthFileDetailModal({
                   </div>
                 ) : (
                   <div className="max-w-3xl space-y-5" data-testid="auth-file-fields-grid">
-                    {isOauthDetailFile ? (
+                    {canRenameChannel ? (
                       <div className="grid gap-2">
                         <p className="text-xs font-semibold text-slate-700 dark:text-white/75">
                           {t("auth_files.channel_name_label")}

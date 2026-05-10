@@ -721,9 +721,12 @@ export const isOauthAuthFile = (file: AuthFileItem): boolean =>
     .trim()
     .toLowerCase() === "oauth";
 
+export const canRenameAuthFileChannel = (file: AuthFileItem): boolean =>
+  isOauthAuthFile(file) || normalizeProviderKey(resolveFileType(file)) === "kimi";
+
 export const resolveAuthFileDisplayName = (file: AuthFileItem): string => {
   const channelName = readAuthFileChannelName(file);
-  if (isOauthAuthFile(file) && channelName) return channelName;
+  if (canRenameAuthFileChannel(file) && channelName) return channelName;
   return String(file.name || "");
 };
 

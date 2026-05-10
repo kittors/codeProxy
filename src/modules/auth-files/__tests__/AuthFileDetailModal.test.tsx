@@ -270,4 +270,35 @@ describe("AuthFileDetailModal", () => {
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
     expect(saveChannelEditor).toHaveBeenCalled();
   });
+
+  test("shows the channel alias editor for Kimi auth files without account_type metadata", () => {
+    renderDetailModal({
+      detailTab: "fields",
+      detailFile: {
+        name: "kimi-1770000000000.json",
+        label: "Kimi Team A",
+        type: "kimi",
+        provider: "kimi",
+        size: 256,
+      },
+      prefixProxyEditor: {
+        ...basePrefixProxyEditor,
+        fileName: "kimi-1770000000000.json",
+        json: { type: "kimi", refresh_token: "kimi-refresh-token" },
+        prefix: "",
+        proxyUrl: "",
+        proxyId: "",
+      },
+      channelEditor: {
+        open: true,
+        fileName: "kimi-1770000000000.json",
+        label: "Kimi Team A",
+        saving: false,
+        error: null,
+      },
+    });
+
+    expect(screen.getByText("Channel name")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("e.g. Gemini Primary")).toHaveValue("Kimi Team A");
+  });
 });

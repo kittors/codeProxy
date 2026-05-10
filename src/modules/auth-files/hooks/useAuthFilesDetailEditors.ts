@@ -17,7 +17,7 @@ import {
   dateTimeLocalInputToIso,
   formatFileSize,
   MAX_AUTH_FILE_SIZE,
-  isOauthAuthFile,
+  canRenameAuthFileChannel,
   normalizeAuthIndexValue,
   normalizeProviderKey,
   normalizeAuthFileSubscriptionPeriod,
@@ -410,7 +410,7 @@ export function useAuthFilesDetailEditors(
       if (prefixProxyEditor.fileName !== detailFile.name) {
         void openPrefixProxyEditor(detailFile);
       }
-      if (isOauthAuthFile(detailFile) && channelEditor.fileName !== detailFile.name) {
+      if (canRenameAuthFileChannel(detailFile) && channelEditor.fileName !== detailFile.name) {
         openChannelEditor(detailFile);
       }
       return;
