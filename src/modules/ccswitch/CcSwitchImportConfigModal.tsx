@@ -125,13 +125,12 @@ function reconcileGenericMappings(
   const currentByTarget = new Map(
     currentMappings
       .filter((mapping) => !mapping.role)
-      .map((mapping) => [mapping.targetModel.toLowerCase(), mapping]),
+      .map((mapping) => [mapping.targetModel.trim().toLowerCase(), mapping]),
   );
-  const targets = dedupeModels(
-    models.length > 0
-      ? models
-      : currentMappings.map((mapping) => mapping.targetModel).filter(Boolean),
-  );
+  const currentTargets = currentMappings
+    .filter((mapping) => !mapping.role)
+    .map((mapping) => mapping.targetModel);
+  const targets = dedupeModels(models.length > 0 ? [...currentTargets, ...models] : currentTargets);
   const resolvedTargets = targets.length > 0 ? targets : dedupeModels([fallbackModel]);
 
   return resolvedTargets.map((targetModel) => {
@@ -170,6 +169,25 @@ function reconcileClaudeMappings(
   });
 }
 
+function resolveGenericDefaultModel(
+  modelMappings: readonly CcSwitchModelMapping[],
+  fallbackModel: string,
+): string {
+  const normalizedFallback = fallbackModel.trim();
+  if (
+    normalizedFallback &&
+    modelMappings.some(
+      (mapping) =>
+        !mapping.role &&
+        mapping.requestModel.trim().toLowerCase() === normalizedFallback.toLowerCase(),
+    )
+  ) {
+    return normalizedFallback;
+  }
+  return modelMappings.find((mapping) => !mapping.role && mapping.requestModel.trim())
+    ?.requestModel.trim() || "";
+}
+
 function reconcileModelMappings(draft: ConfigDraft, models: readonly string[]): ConfigDraft {
   const modelMappings =
     draft.clientType === "claude"
@@ -178,7 +196,7 @@ function reconcileModelMappings(draft: ConfigDraft, models: readonly string[]): 
   const defaultModel =
     draft.clientType === "claude"
       ? modelMappings.find((mapping) => mapping.role === "main")?.targetModel || ""
-      : modelMappings.find((mapping) => mapping.requestModel.trim())?.requestModel.trim() || "";
+      : resolveGenericDefaultModel(modelMappings, draft.defaultModel);
 
   return {
     ...draft,
@@ -212,7 +230,7 @@ function prepareDraftForSave(draft: ConfigDraft): ConfigDraft {
   const defaultModel =
     draft.clientType === "claude"
       ? normalizedMappings.find((mapping) => mapping.role === "main")?.targetModel || ""
-      : normalizedMappings.find((mapping) => mapping.requestModel)?.requestModel || "";
+      : resolveGenericDefaultModel(normalizedMappings, draft.defaultModel);
 
   return {
     ...draft,
@@ -369,15 +387,16 @@ export function CcSwitchImportConfigModal({
   const availableModelsKey = availableModels.join("\n");
   useEffect(() => {
     if (!open) return;
-    setDraft((current) =>
-      selectedGroup
+    setDraft((current) => {
+      const currentSelectedGroup = current.allowedChannelGroups[0] ?? "";
+      return currentSelectedGroup
         ? reconcileModelMappings(current, availableModels)
         : {
             ...current,
             defaultModel: "",
             modelMappings: [],
-          },
-    );
+          };
+    });
   }, [availableModelsKey, open, selectedGroup]);
 
   const authFieldOptions = useMemo(

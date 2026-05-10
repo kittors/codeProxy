@@ -377,6 +377,66 @@ describe("CcSwitchImportSettingsPage", () => {
     expect(getModelConfigs).toHaveBeenCalledWith("active");
   });
 
+  test("preserves saved generic model mappings when reopening an edited config", async () => {
+    listChannelGroups.mockResolvedValue([
+      {
+        name: "kimicode",
+        description: "Kimi Code route",
+        "path-routes": ["/kimicode"],
+        "allowed-models": ["kimi-k2.5"],
+      },
+    ]);
+    listConfigs.mockResolvedValue([
+      {
+        id: "cfg-kimi",
+        clientType: "codex",
+        providerName: "Relay Kimi",
+        note: "saved mapping",
+        defaultModel: "gpt-5.5",
+        allowedChannelGroups: ["kimicode"],
+        endpointPath: "/v1",
+        usageAutoInterval: 30,
+        modelMappings: [
+          {
+            requestModel: "gpt-5.5",
+            targetModel: "moonshot-v1-128k",
+          },
+        ],
+      },
+    ]);
+    renderPage();
+    const user = userEvent.setup();
+
+    expect(await screen.findByText("Relay Kimi")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /edit config/i }));
+
+    const dialog = await screen.findByRole("dialog", { name: /edit cc switch config/i });
+    expect(
+      await within(dialog).findByLabelText(/cc switch request model for kimi-k2\.5/i),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByLabelText(/cc switch request model for moonshot-v1-128k/i),
+    ).toHaveValue("gpt-5.5");
+
+    await user.click(within(dialog).getByRole("button", { name: /^save$/i }));
+
+    await waitFor(() =>
+      expect(replaceConfigs).toHaveBeenCalledWith([
+        expect.objectContaining({
+          id: "cfg-kimi",
+          defaultModel: "gpt-5.5",
+          allowedChannelGroups: ["kimicode"],
+          modelMappings: expect.arrayContaining([
+            {
+              requestModel: "gpt-5.5",
+              targetModel: "moonshot-v1-128k",
+            },
+          ]),
+        }),
+      ]),
+    );
+  });
+
   test("previews the full BaseURL request address from the selected channel group path", async () => {
     renderPage();
     const user = userEvent.setup();
