@@ -189,6 +189,12 @@ export function ChannelGroupsPage() {
     };
   }, []);
 
+  const refreshAvailableChannels = useCallback(async () => {
+    const channels = await loadAvailableChannels();
+    setAvailableChannels(channels.names);
+    setAvailableChannelDetails(channels.detailsByName);
+  }, [loadAvailableChannels]);
+
   const loadModelsForChannels = useCallback(async (channels: string[]) => {
     const normalizedChannels = channels
       .map((channel) => String(channel ?? "").trim())
@@ -305,6 +311,7 @@ export function ChannelGroupsPage() {
             disabled={loading || saving}
             availableChannels={availableChannels}
             availableChannelDetails={availableChannelDetails}
+            onRefreshAvailableChannels={refreshAvailableChannels}
             loadModelsForChannels={loadModelsForChannels}
             onChange={handleEditorChange}
           />

@@ -206,4 +206,50 @@ describe("ChannelGroupsPage", () => {
     expect(within(row as HTMLTableRowElement).getByText("pro")).toBeInTheDocument();
     expect(within(row as HTMLTableRowElement).getByText("vip")).toBeInTheDocument();
   });
+
+  test("refreshes channel options when opening the new group editor", async () => {
+    let channelGroupsCalls = 0;
+    mockedApiGet.mockImplementation((path: string) => {
+      if (path === "/routing-config") {
+        return Promise.resolve({
+          strategy: "round-robin",
+          "include-default-group": true,
+          "channel-groups": [],
+          "path-routes": [],
+        });
+      }
+      if (path === "/channel-groups") {
+        channelGroupsCalls += 1;
+        return Promise.resolve({
+          items:
+            channelGroupsCalls === 1 ? [] : [{ name: "Claude Pool", channels: ["Fresh Claude"] }],
+        });
+      }
+      if (path.startsWith("/models?")) {
+        return Promise.resolve({ data: [] });
+      }
+      if (
+        path === "/auth-files" ||
+        path === "/model-configs?scope=library" ||
+        path === "/gemini-api-key" ||
+        path === "/claude-api-key" ||
+        path === "/codex-api-key" ||
+        path === "/opencode-go-api-key" ||
+        path === "/vertex-api-key" ||
+        path === "/openai-compatibility"
+      ) {
+        return Promise.resolve({ files: [], data: [] });
+      }
+      return Promise.resolve({});
+    });
+
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(await screen.findByRole("button", { name: "新增分组" }));
+    await user.click(screen.getByRole("combobox", { name: "选择渠道" }));
+
+    expect(await screen.findByRole("option", { name: "Fresh Claude" })).toBeInTheDocument();
+    expect(channelGroupsCalls).toBeGreaterThanOrEqual(2);
+  });
 });

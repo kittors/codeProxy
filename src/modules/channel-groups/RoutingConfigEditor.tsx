@@ -238,6 +238,7 @@ export function RoutingConfigEditor({
   disabled,
   availableChannels,
   availableChannelDetails = {},
+  onRefreshAvailableChannels,
   loadModelsForChannels,
   onChange,
 }: {
@@ -245,6 +246,7 @@ export function RoutingConfigEditor({
   disabled?: boolean;
   availableChannels: string[];
   availableChannelDetails?: Record<string, ChannelGroupChannelDetail>;
+  onRefreshAvailableChannels?: () => Promise<void> | void;
   loadModelsForChannels?: (channels: string[]) => Promise<RoutingModelLoadResult[]>;
   onChange: (values: Partial<VisualConfigValues>) => void;
 }) {
@@ -396,6 +398,7 @@ export function RoutingConfigEditor({
   ]);
 
   const openCreateGroup = useCallback(() => {
+    void Promise.resolve(onRefreshAvailableChannels?.()).catch(() => undefined);
     setGroupEditorId(null);
     setGroupDraft(createEmptyGroupDraft());
     setGroupEditorTab("basic");
@@ -403,10 +406,11 @@ export function RoutingConfigEditor({
     setModelsError("");
     setModelsSelectionTouched(false);
     setGroupEditorOpen(true);
-  }, []);
+  }, [onRefreshAvailableChannels]);
 
   const openEditGroup = useCallback(
     (group: RoutingChannelGroupEntry) => {
+      void Promise.resolve(onRefreshAvailableChannels?.()).catch(() => undefined);
       const groupName = group.name.trim().toLowerCase();
       const existingRoutes = values.routingPathRoutes
         .filter((route) => route.group.trim().toLowerCase() === groupName)
@@ -431,7 +435,12 @@ export function RoutingConfigEditor({
       notifyStaleChannels(group.name.trim(), staleChannelsByGroup.get(group.id) ?? []);
       setGroupEditorOpen(true);
     },
-    [notifyStaleChannels, staleChannelsByGroup, values.routingPathRoutes],
+    [
+      notifyStaleChannels,
+      onRefreshAvailableChannels,
+      staleChannelsByGroup,
+      values.routingPathRoutes,
+    ],
   );
 
   const closeGroupEditor = useCallback(() => {
@@ -1279,7 +1288,10 @@ export function RoutingConfigEditor({
                   />
                 </TabsContent>
 
-                <TabsContent value="models" className="flex h-full min-h-0 flex-col gap-3 overflow-hidden">
+                <TabsContent
+                  value="models"
+                  className="flex h-full min-h-0 flex-col gap-3 overflow-hidden"
+                >
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="space-y-1">
                       <div className="text-sm font-semibold text-slate-900 dark:text-white">
