@@ -1,12 +1,8 @@
 import { useTranslation } from "react-i18next";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Filter, RefreshCw, ScrollText } from "lucide-react";
+import { Filter, LoaderCircle, RefreshCw, ScrollText } from "lucide-react";
 import { usageApi } from "@/lib/http/apis";
-import type {
-  ClearUsageLogsPayload,
-  UsageLogItem,
-  UsageLogsResponse,
-} from "@/lib/http/apis/usage";
+import type { ClearUsageLogsPayload, UsageLogItem, UsageLogsResponse } from "@/lib/http/apis/usage";
 import { Button } from "@/modules/ui/Button";
 import { Checkbox } from "@/modules/ui/Checkbox";
 import { Modal } from "@/modules/ui/Modal";
@@ -147,7 +143,7 @@ export function RequestLogsPage() {
         });
         setStats({
           ...DEFAULT_LOG_STATS,
-          ...(resp.stats ?? {}),
+          ...resp.stats,
         });
         setLastUpdatedAt(Date.now());
       } catch (err) {
@@ -274,6 +270,7 @@ export function RequestLogsPage() {
         type: "success",
         message: successMessage,
       });
+      setConfirmClearOpen(false);
     } catch (err) {
       const message =
         err instanceof Error ? err.message : t("request_logs.clear_database_logs_failed");
@@ -461,20 +458,31 @@ export function RequestLogsPage() {
         title={t("request_logs.clear_database_logs")}
         description={t("request_logs.clear_database_logs_modal_desc")}
         maxWidth="max-w-xl"
-        onClose={() => setConfirmClearOpen(false)}
+        onClose={() => {
+          if (!clearingLogs) setConfirmClearOpen(false);
+        }}
         footer={
           <>
-            <Button variant="secondary" onClick={() => setConfirmClearOpen(false)} disabled={clearingLogs}>
+            <Button
+              variant="secondary"
+              onClick={() => setConfirmClearOpen(false)}
+              disabled={clearingLogs}
+            >
               {t("common.cancel")}
             </Button>
             <Button
               variant="danger"
-              onClick={() => {
-                setConfirmClearOpen(false);
-                void handleClearDatabaseLogs();
-              }}
+              onClick={() => void handleClearDatabaseLogs()}
               disabled={clearingLogs || !canSubmitCleanup}
+              aria-busy={clearingLogs}
             >
+              {clearingLogs ? (
+                <LoaderCircle
+                  size={14}
+                  className="motion-reduce:animate-none motion-safe:animate-spin"
+                  aria-hidden="true"
+                />
+              ) : null}
               {t("request_logs.clear_database_logs_confirm_button")}
             </Button>
           </>
@@ -489,7 +497,7 @@ export function RequestLogsPage() {
             <Checkbox
               checked={clearOptions.clear_body_content}
               onCheckedChange={handleClearBodyContentChange}
-              disabled={clearOptions.clear_request_records}
+              disabled={clearingLogs || clearOptions.clear_request_records}
               aria-label={t("request_logs.clear_option_body")}
             />
             <span className="min-w-0">
@@ -506,7 +514,7 @@ export function RequestLogsPage() {
             <Checkbox
               checked={clearOptions.clear_detail_content}
               onCheckedChange={handleClearDetailContentChange}
-              disabled={clearOptions.clear_request_records}
+              disabled={clearingLogs || clearOptions.clear_request_records}
               aria-label={t("request_logs.clear_option_details")}
             />
             <span className="min-w-0">
@@ -523,6 +531,7 @@ export function RequestLogsPage() {
             <Checkbox
               checked={clearOptions.clear_request_records}
               onCheckedChange={handleClearRequestRecordsChange}
+              disabled={clearingLogs}
               aria-label={t("request_logs.clear_option_records")}
             />
             <span className="min-w-0">

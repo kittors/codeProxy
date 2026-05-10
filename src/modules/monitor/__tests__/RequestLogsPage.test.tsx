@@ -6,6 +6,35 @@ import { RequestLogsPage } from "@/modules/monitor/RequestLogsPage";
 import { ThemeProvider } from "@/modules/ui/ThemeProvider";
 import { ToastProvider } from "@/modules/ui/ToastProvider";
 
+function deferred<T>() {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+}
+
+const emptyLogsResponse = {
+  items: [],
+  total: 0,
+  page: 1,
+  size: 50,
+  filters: {
+    api_keys: [],
+    api_key_names: {},
+    models: [],
+    channels: [],
+  },
+  stats: {
+    total: 0,
+    success_rate: 0,
+    total_tokens: 0,
+    total_cost: 0,
+  },
+};
+
 const mocks = vi.hoisted(() => ({
   getUsageLogs: vi.fn(),
   getLogContent: vi.fn(),
@@ -279,5 +308,42 @@ describe("RequestLogsPage", () => {
       clear_request_records: false,
     });
     expect(await screen.findByText("Primary")).toBeInTheDocument();
+  });
+
+  test("keeps the clear dialog open until cleanup and refresh both finish", async () => {
+    await i18n.changeLanguage("en");
+    const user = userEvent.setup();
+    const cleanup = deferred<{ deleted_logs: number; deleted_contents: number }>();
+    const refresh = deferred<typeof emptyLogsResponse>();
+
+    mocks.getUsageLogs
+      .mockResolvedValueOnce(emptyLogsResponse)
+      .mockImplementationOnce(() => refresh.promise);
+    mocks.clearUsageLogs.mockImplementationOnce(() => cleanup.promise);
+
+    render(
+      <ThemeProvider>
+        <ToastProvider>
+          <RequestLogsPage />
+        </ToastProvider>
+      </ThemeProvider>,
+    );
+
+    await user.click(await screen.findByRole("button", { name: "Clear Database Logs" }));
+    await user.click(await screen.findByRole("button", { name: "Clear Selected Data" }));
+
+    cleanup.resolve({ deleted_logs: 0, deleted_contents: 1 });
+    await waitFor(() => expect(mocks.getUsageLogs).toHaveBeenCalledTimes(2));
+
+    await new Promise((resolve) => window.setTimeout(resolve, 220));
+
+    expect(screen.getByRole("dialog", { name: "Clear Database Logs" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Clear Selected Data" })).toBeDisabled();
+
+    refresh.resolve(emptyLogsResponse);
+
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog", { name: "Clear Database Logs" })).not.toBeInTheDocument(),
+    );
   });
 });
