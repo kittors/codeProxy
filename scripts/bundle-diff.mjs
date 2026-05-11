@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { gzipSync } from "node:zlib";
-import { readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
-import { basename, join, resolve } from "node:path";
+import { mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { basename, dirname, join, resolve } from "node:path";
 
 const root = resolve(import.meta.dirname, "..");
 const distAssetsDir = join(root, "dist", "assets");
@@ -124,6 +124,7 @@ const markdown = [
   "",
 ].join("\n");
 
+mkdirSync(dirname(outputPath), { recursive: true });
 writeFileSync(outputPath, markdown);
 console.log(`Bundle diff written to ${outputPath}`);
 if (failures.length) {
