@@ -79,14 +79,39 @@ export function SearchableSelect({
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const listRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
-  const [pos, setPos] = useState({ top: 0, left: 0, width: 0 });
+  const [pos, setPos] = useState({
+    top: 0,
+    left: 0,
+    width: 0,
+    placement: "bottom" as "bottom" | "top",
+    maxHeight: 320,
+  });
 
   const reposition = useCallback(() => {
     const el = triggerRef.current;
     if (!el) return;
     const rect = el.getBoundingClientRect();
-    setPos({ top: rect.bottom + 6, left: rect.left, width: Math.max(rect.width, 200) });
-  }, []);
+    const gap = 6;
+    const maxPanelHeight = 320;
+    const minPanelHeight = 160;
+    const estimatedHeight = Math.min(options.length * 36 + 48, maxPanelHeight);
+    const spaceBelow = window.innerHeight - rect.bottom - gap;
+    const spaceAbove = rect.top - gap;
+    const openAbove = spaceBelow < estimatedHeight && spaceAbove > spaceBelow;
+    const availableSpace = Math.max(openAbove ? spaceAbove : spaceBelow, 0);
+    const maxHeight = Math.min(
+      maxPanelHeight,
+      Math.max(Math.min(minPanelHeight, maxPanelHeight), availableSpace),
+    );
+    const panelHeight = Math.min(estimatedHeight, maxHeight);
+    setPos({
+      top: openAbove ? Math.max(gap, rect.top - gap - panelHeight) : rect.bottom + gap,
+      left: rect.left,
+      width: Math.max(rect.width, 200),
+      placement: openAbove ? "top" : "bottom",
+      maxHeight,
+    });
+  }, [options.length]);
 
   useLayoutEffect(() => {
     if (!open) return;
@@ -204,14 +229,14 @@ export function SearchableSelect({
               role="listbox"
               aria-label={ariaLabel}
               className={searchableSelectPanel}
-              {...getSelectDropdownMotion()}
+              {...getSelectDropdownMotion(pos.placement)}
               transition={selectDropdownTransition}
               style={{
                 top: pos.top,
                 left: pos.left,
                 minWidth: pos.width,
                 maxWidth: "min(500px, 90vw)",
-                maxHeight: 320,
+                maxHeight: pos.maxHeight,
               }}
             >
               {/* Search input */}

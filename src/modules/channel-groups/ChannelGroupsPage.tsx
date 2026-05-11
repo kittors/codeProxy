@@ -238,23 +238,6 @@ export function ChannelGroupsPage() {
       normalizedChannels,
       availableChannelDetails,
     );
-    if (selectedOwnerKeys.length > 0) {
-      const selectedOwnerSet = new Set(selectedOwnerKeys);
-      const optionMap = new Map<string, RoutingModelOption>();
-      for (const model of availability.items) {
-        if (!selectedOwnerSet.has(normalizeOwnerValue(model.owned_by ?? ""))) continue;
-        const key = model.id.toLowerCase();
-        if (!optionMap.has(key)) {
-          optionMap.set(key, {
-            id: model.id,
-            owned_by: model.owned_by,
-            description: model.description,
-            pricing: model.pricing,
-          });
-        }
-      }
-      return Array.from(optionMap.values()).sort((a, b) => a.id.localeCompare(b.id));
-    }
     const visibleModels = filterByConfiguredModelAvailability(
       ids.map((id) => ({ id })),
       availability,
@@ -262,17 +245,33 @@ export function ChannelGroupsPage() {
     const metadataById = new Map(
       availability.items.map((model) => [model.id.toLowerCase(), model] as const),
     );
-    return Array.from(new Set(visibleModels.map((model) => model.id)))
-      .sort((a, b) => a.localeCompare(b))
-      .map((id): RoutingModelOption => {
-        const metadata = metadataById.get(id.toLowerCase());
-        return {
-          id,
-          owned_by: metadata?.owned_by,
-          description: metadata?.description,
-          pricing: metadata?.pricing,
-        };
+    const optionMap = new Map<string, RoutingModelOption>();
+    const addModelOption = (id: string, metadata = metadataById.get(id.toLowerCase())) => {
+      const normalized = id.trim();
+      if (!normalized) return;
+      const key = normalized.toLowerCase();
+      if (optionMap.has(key)) return;
+      optionMap.set(key, {
+        id: normalized,
+        owned_by: metadata?.owned_by,
+        description: metadata?.description,
+        pricing: metadata?.pricing,
       });
+    };
+
+    for (const model of visibleModels) addModelOption(model.id);
+
+    if (selectedOwnerKeys.length > 0) {
+      const selectedOwnerSet = new Set(selectedOwnerKeys);
+      for (const model of availability.items) {
+        const owner = normalizeOwnerValue(model.owned_by ?? "");
+        const source = normalizeOwnerValue(model.source ?? "");
+        if (!selectedOwnerSet.has(owner) && !selectedOwnerSet.has(source)) continue;
+        addModelOption(model.id, model);
+      }
+    }
+
+    return Array.from(optionMap.values()).sort((a, b) => a.id.localeCompare(b.id));
   }, [availableChannelDetails]);
 
   const loadPage = useCallback(async () => {

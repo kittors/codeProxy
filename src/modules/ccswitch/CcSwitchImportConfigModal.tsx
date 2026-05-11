@@ -284,6 +284,7 @@ export function CcSwitchImportConfigModal({
   const selectedGroup = draft.allowedChannelGroups[0] ?? "";
   const selectedGroupOption = channelGroupOptions.find((option) => option.value === selectedGroup);
   const selectedGroupAllowedModelsKey = (selectedGroupOption?.allowedModels ?? []).join("\n");
+  const selectedGroupChannelsKey = (selectedGroupOption?.channels ?? []).join("\n");
   const selectedGroupAuthoritativeOwnerKey = (
     selectedGroupOption?.authoritativeModelOwnerKeys ?? []
   ).join("\n");
@@ -309,32 +310,6 @@ export function CcSwitchImportConfigModal({
         .map(normalizeModelOwnerKey)
         .filter(Boolean),
     );
-    if (authoritativeModelOwnerKeys.size > 0) {
-      setModelsLoading(true);
-      modelsApi
-        .getModelConfigs("active")
-        .then((modelConfigs) => {
-          if (cancelled) return;
-          const modelIds = modelConfigs
-            .filter(
-              (model) =>
-                authoritativeModelOwnerKeys.has(normalizeModelOwnerKey(model.owned_by)) ||
-                authoritativeModelOwnerKeys.has(normalizeModelOwnerKey(model.source)),
-            )
-            .map((model) => model.id);
-          setAvailableModels(dedupeModels(modelIds));
-        })
-        .catch(() => {
-          if (!cancelled) setAvailableModels([]);
-        })
-        .finally(() => {
-          if (!cancelled) setModelsLoading(false);
-        });
-      return () => {
-        cancelled = true;
-      };
-    }
-
     const lookupChannels = dedupeModels(selectedGroupOption?.channels ?? []);
     const modelOwnerKeys = new Set(
       (selectedGroupOption?.modelOwnerKeys ?? []).map(normalizeModelOwnerKey).filter(Boolean),
@@ -352,26 +327,46 @@ export function CcSwitchImportConfigModal({
         const availability = await loadConfiguredModelAvailability();
         if (cancelled) return;
         let visibleModels = filterByConfiguredModelAvailability(models, availability);
-        if (modelOwnerKeys.size > 0) {
+        const optionMap = new Map<string, string>();
+        const addModelId = (id: string) => {
+          const normalized = String(id ?? "").trim();
+          if (!normalized) return;
+          const key = normalized.toLowerCase();
+          if (!optionMap.has(key)) optionMap.set(key, normalized);
+        };
+        const needsModelConfigs = authoritativeModelOwnerKeys.size > 0 || modelOwnerKeys.size > 0;
+        if (needsModelConfigs) {
           const modelConfigs = await modelsApi.getModelConfigs("active").catch(() => []);
           if (cancelled) return;
-          const allowedModelIds = new Set(
-            modelConfigs
-              .filter(
-                (model) =>
-                  modelOwnerKeys.has(normalizeModelOwnerKey(model.owned_by)) ||
-                  modelOwnerKeys.has(normalizeModelOwnerKey(model.source)),
-              )
-              .map((model) => model.id.toLowerCase()),
-          );
-          if (allowedModelIds.size > 0) {
-            visibleModels = visibleModels.filter((model) =>
-              allowedModelIds.has(model.id.toLowerCase()),
+          if (modelOwnerKeys.size > 0 && authoritativeModelOwnerKeys.size === 0) {
+            const allowedModelIds = new Set(
+              modelConfigs
+                .filter(
+                  (model) =>
+                    modelOwnerKeys.has(normalizeModelOwnerKey(model.owned_by)) ||
+                    modelOwnerKeys.has(normalizeModelOwnerKey(model.source)),
+                )
+                .map((model) => model.id.toLowerCase()),
             );
+            if (allowedModelIds.size > 0) {
+              visibleModels = visibleModels.filter((model) =>
+                allowedModelIds.has(model.id.toLowerCase()),
+              );
+            }
+          }
+          if (authoritativeModelOwnerKeys.size > 0) {
+            for (const model of modelConfigs) {
+              if (
+                authoritativeModelOwnerKeys.has(normalizeModelOwnerKey(model.owned_by)) ||
+                authoritativeModelOwnerKeys.has(normalizeModelOwnerKey(model.source))
+              ) {
+                addModelId(model.id);
+              }
+            }
           }
         }
-        const modelIds = visibleModels.map((model) => model.id);
-        setAvailableModels(dedupeModels(modelIds));
+        for (const model of visibleModels) addModelId(model.id);
+        setAvailableModels(dedupeModels(Array.from(optionMap.values())));
       })
       .catch(() => {
         if (!cancelled) setAvailableModels([]);
@@ -387,6 +382,7 @@ export function CcSwitchImportConfigModal({
     open,
     selectedGroup,
     selectedGroupAllowedModelsKey,
+    selectedGroupChannelsKey,
     selectedGroupAuthoritativeOwnerKey,
     selectedGroupOwnerKey,
   ]);

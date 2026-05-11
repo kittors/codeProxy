@@ -234,6 +234,109 @@ describe("ChannelGroupsPage", () => {
     expect(within(table).queryByLabelText("kimi-k2-thinking")).not.toBeInTheDocument();
   });
 
+  test("merges mapped owner models with OpenCode Go live models for mixed channel groups", async () => {
+    window.localStorage.setItem(
+      "authFilesPage.modelOwnerGroupMap.v1",
+      JSON.stringify({ codex: "codex" }),
+    );
+    mockedApiGet.mockImplementation((path: string) => {
+      if (path === "/routing-config") {
+        return Promise.resolve({
+          strategy: "round-robin",
+          "include-default-group": true,
+          "channel-groups": [],
+          "path-routes": [],
+        });
+      }
+      if (path === "/channel-groups") {
+        return Promise.resolve({
+          items: [
+            {
+              name: "opencodego+gpt",
+              channels: ["A_GptPro", "opencode go"],
+              "channel-details": [
+                {
+                  name: "A_GptPro",
+                  source: "codex",
+                  display_tags: ["codex", "pro", "20x"],
+                },
+                {
+                  name: "opencode go",
+                  source: "opencode-go",
+                  display_tags: ["opencode-go"],
+                },
+              ],
+            },
+          ],
+        });
+      }
+      if (path.startsWith("/models?")) {
+        return Promise.resolve({
+          data: [
+            { id: "gpt-5.5" },
+            { id: "gpt-5.3-codex" },
+            { id: "minimax-m2.7" },
+            { id: "kimi-k2.6" },
+          ],
+        });
+      }
+      if (path === "/auth-files") {
+        return Promise.resolve({
+          files: [{ name: "codex.json", type: "codex", disabled: false }],
+        });
+      }
+      if (path === "/model-configs?scope=library") {
+        return Promise.resolve({
+          data: [
+            { id: "gpt-5.5", owned_by: "codex", description: "GPT Pro" },
+            { id: "gpt-5.3-codex", owned_by: "codex", description: "Codex" },
+          ],
+        });
+      }
+      if (path === "/opencode-go-api-key") {
+        return Promise.resolve({
+          "opencode-go-api-key": [{ name: "opencode go", "api-key": "sk-opencode-go" }],
+        });
+      }
+      if (path === "/model-definitions/opencode-go") {
+        return Promise.resolve({
+          models: [
+            { id: "minimax-m2.7", display_name: "MiniMax M2.7", owned_by: "opencode" },
+            { id: "kimi-k2.6", display_name: "Kimi K2.6", owned_by: "opencode" },
+          ],
+        });
+      }
+      if (
+        path === "/gemini-api-key" ||
+        path === "/claude-api-key" ||
+        path === "/codex-api-key" ||
+        path === "/vertex-api-key" ||
+        path === "/openai-compatibility"
+      ) {
+        return Promise.resolve([]);
+      }
+      return Promise.resolve({});
+    });
+    const user = userEvent.setup();
+
+    renderPage();
+
+    await user.click(await screen.findByRole("button", { name: "新增分组" }));
+    await user.type(screen.getByPlaceholderText("pro"), "opencodego+gpt");
+    await user.type(screen.getByPlaceholderText("/pro"), "/codexdeepseek");
+    await user.click(screen.getByRole("combobox", { name: "选择渠道" }));
+    await user.click(await screen.findByRole("option", { name: /A_GptPro/ }));
+    await user.click(await screen.findByRole("option", { name: /opencode go/ }));
+    await user.click(screen.getByRole("combobox", { name: "选择渠道" }));
+    await user.click(screen.getByRole("tab", { name: "模型列表" }));
+
+    const table = await screen.findByRole("table", { name: "允许模型" });
+    expect(await within(table).findByLabelText("gpt-5.5")).toBeInTheDocument();
+    expect(within(table).getByLabelText("gpt-5.3-codex")).toBeInTheDocument();
+    expect(within(table).getByLabelText("minimax-m2.7")).toBeInTheDocument();
+    expect(within(table).getByLabelText("kimi-k2.6")).toBeInTheDocument();
+  });
+
   test("keeps live model owner metadata when no auth-file model owner group is configured", async () => {
     mockedApiGet.mockImplementation((path: string) => {
       if (path === "/routing-config") {

@@ -322,6 +322,75 @@ describe("CcSwitchImportSettingsPage", () => {
     expect(getModelConfigs).toHaveBeenCalledWith("active");
   });
 
+  test("merges mapped Codex owner models with OpenCode Go channel models in CC Switch presets", async () => {
+    window.localStorage.setItem(
+      "authFilesPage.modelOwnerGroupMap.v1",
+      JSON.stringify({ codex: "codex" }),
+    );
+    listChannelGroups.mockResolvedValue([
+      {
+        name: "opencodego+gpt",
+        description: "OpenCode Go and GPT route",
+        channels: ["A_GptPro", "opencode go"],
+        channelDetails: [
+          {
+            name: "A_GptPro",
+            source: "codex",
+            default_tags: ["codex", "pro"],
+            custom_tags: ["20x"],
+            display_tags: ["codex", "pro", "20x"],
+          },
+          {
+            name: "opencode go",
+            source: "opencode-go",
+            default_tags: ["opencode-go"],
+            custom_tags: [],
+            display_tags: ["opencode-go"],
+          },
+        ],
+        "path-routes": ["/codexdeepseek"],
+      },
+    ]);
+    listAvailableModels.mockResolvedValue([
+      { id: "gpt-5.5" },
+      { id: "gpt-5.3-codex" },
+      { id: "minimax-m2.7" },
+      { id: "kimi-k2.6" },
+    ]);
+    loadConfiguredModelAvailability.mockResolvedValue({
+      scoped: true,
+      items: [],
+      idSet: new Set(["gpt-5.5", "gpt-5.3-codex", "minimax-m2.7", "kimi-k2.6"]),
+    });
+    getModelConfigs.mockResolvedValue([
+      { id: "gpt-5.5", owned_by: "codex" },
+      { id: "gpt-5.3-codex", owned_by: "codex" },
+    ]);
+    renderPage();
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole("button", { name: /new config/i }));
+
+    const dialog = await screen.findByRole("dialog", { name: /new cc switch config/i });
+    await user.click(within(dialog).getByRole("combobox", { name: /select channel group/i }));
+    await user.click(
+      await screen.findByRole("option", { name: /opencodego\+gpt.*\/codexdeepseek/i }),
+    );
+
+    expect(
+      await within(dialog).findByLabelText(/cc switch request model for gpt-5\.5/i),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByLabelText(/cc switch request model for minimax-m2\.7/i),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByLabelText(/cc switch request model for kimi-k2\.6/i),
+    ).toBeInTheDocument();
+    expect(listAvailableModels).toHaveBeenCalledWith({
+      allowedChannels: ["A_GptPro", "opencode go"],
+    });
+  });
+
   test("uses the auth-file owner model group as the CC Switch actual model source", async () => {
     window.localStorage.setItem(
       "authFilesPage.modelOwnerGroupMap.v1",
@@ -375,7 +444,9 @@ describe("CcSwitchImportSettingsPage", () => {
 
     expect(await screen.findByRole("option", { name: "kimi-k2.6" })).toBeInTheDocument();
     expect(screen.queryByRole("option", { name: "kimi-k2" })).not.toBeInTheDocument();
-    expect(listAvailableModels).not.toHaveBeenCalled();
+    expect(listAvailableModels).toHaveBeenCalledWith({
+      allowedChannels: ["kimi"],
+    });
     expect(getModelConfigs).toHaveBeenCalledWith("active");
   });
 
