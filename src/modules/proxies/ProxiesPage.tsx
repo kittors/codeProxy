@@ -4,6 +4,7 @@ import { CheckCircle2, Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { proxiesApi, type ProxyCheckResult, type ProxyPoolEntry } from "@/lib/http/apis/proxies";
 import { Button } from "@/modules/ui/Button";
 import { Card } from "@/modules/ui/Card";
+import { ConfirmModal } from "@/modules/ui/ConfirmModal";
 import { TextInput } from "@/modules/ui/Input";
 import { Modal } from "@/modules/ui/Modal";
 import { ToggleSwitch } from "@/modules/ui/ToggleSwitch";
@@ -36,8 +37,10 @@ export function ProxiesPage() {
   const [entries, setEntries] = useState<ProxyPoolEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [draft, setDraft] = useState<ProxyPoolEntry>(() => emptyProxyDraft());
   const [editingID, setEditingID] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<ProxyPoolEntry | null>(null);
   const [checkState, setCheckState] = useState<ProxyCheckState>(() => readCachedProxyCheckState());
 
   const sortedEntries = useMemo(
@@ -164,6 +167,7 @@ export function ProxiesPage() {
   const deleteEntry = useCallback(
     async (id: string) => {
       const nextEntries = entries.filter((entry) => entry.id !== id);
+      setDeleting(true);
       try {
         await proxiesApi.saveAll(nextEntries);
         setEntries(nextEntries);
@@ -173,12 +177,15 @@ export function ProxiesPage() {
           writeCachedProxyCheckState(next);
           return next;
         });
+        setDeleteTarget(null);
         notify({ type: "success", message: t("proxies.deleted") });
       } catch (error) {
         notify({
           type: "error",
           message: error instanceof Error ? error.message : t("common.error"),
         });
+      } finally {
+        setDeleting(false);
       }
     },
     [entries, notify, t],
@@ -303,7 +310,7 @@ export function ProxiesPage() {
               <Button
                 aria-label={t("proxies.delete_label", { name: entry.name })}
                 title={t("proxies.delete_label", { name: entry.name })}
-                onClick={() => void deleteEntry(entry.id)}
+                onClick={() => setDeleteTarget(entry)}
                 variant="ghost"
                 size="xs"
               >
@@ -411,6 +418,19 @@ export function ProxiesPage() {
           />
         </div>
       </Modal>
+
+      <ConfirmModal
+        open={deleteTarget !== null}
+        title={t("proxies.delete_title")}
+        description={t("proxies.delete_description", { name: deleteTarget?.name ?? "" })}
+        confirmText={t("proxies.delete_confirm")}
+        busy={deleting}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={() => {
+          if (!deleteTarget) return;
+          void deleteEntry(deleteTarget.id);
+        }}
+      />
     </div>
   );
 }

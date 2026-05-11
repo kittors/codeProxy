@@ -202,6 +202,22 @@ describe("ProxiesPage", () => {
     });
   });
 
+  test("deletes a proxy only after confirmation", async () => {
+    renderPage();
+
+    await userEvent.click(await screen.findByRole("button", { name: /delete hk proxy/i }));
+
+    const dialog = await screen.findByRole("dialog", { name: /delete proxy/i });
+    expect(within(dialog).getByText(/HK Proxy/)).toBeInTheDocument();
+    expect(mocks.apiPut).not.toHaveBeenCalled();
+
+    await userEvent.click(within(dialog).getByRole("button", { name: /^delete$/i }));
+
+    await waitFor(() => {
+      expect(mocks.apiPut).toHaveBeenCalledWith("/proxy-pool", { items: [] });
+    });
+  });
+
   test("checks a proxy and renders the last check result", async () => {
     renderPage();
 
