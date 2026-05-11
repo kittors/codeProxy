@@ -15,6 +15,16 @@ const replaceConfigs = vi.fn();
 const loadConfiguredModelAvailability = vi.fn();
 const filterByConfiguredModelAvailability = vi.fn();
 
+function createDeferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((promiseResolve, promiseReject) => {
+    resolve = promiseResolve;
+    reject = promiseReject;
+  });
+  return { promise, resolve, reject };
+}
+
 vi.mock("@/lib/http/apis/channel-groups", () => ({
   channelGroupsApi: {
     list: () => listChannelGroups(),
@@ -508,6 +518,59 @@ describe("CcSwitchImportSettingsPage", () => {
         }),
       ]),
     );
+  });
+
+  test("shows a compact model mapping loading state while edited config models load", async () => {
+    const modelsDeferred = createDeferred<{ id: string }[]>();
+    listChannelGroups.mockResolvedValue([
+      {
+        name: "kimicode",
+        description: "Kimi Code route",
+        "path-routes": ["/kimicode"],
+      },
+    ]);
+    listAvailableModels.mockReturnValue(modelsDeferred.promise);
+    listConfigs.mockResolvedValue([
+      {
+        id: "cfg-kimi",
+        clientType: "codex",
+        providerName: "Relay Kimi",
+        note: "saved mapping",
+        defaultModel: "gpt-5.5",
+        allowedChannelGroups: ["kimicode"],
+        endpointPath: "/v1",
+        usageAutoInterval: 30,
+        modelMappings: [
+          {
+            requestModel: "gpt-5.5",
+            targetModel: "moonshot-v1-128k",
+          },
+        ],
+      },
+    ]);
+    renderPage();
+    const user = userEvent.setup();
+
+    expect(await screen.findByText("Relay Kimi")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /edit config/i }));
+
+    const dialog = await screen.findByRole("dialog", { name: /edit cc switch config/i });
+    const mappingStatus = await within(dialog).findByTestId("ccswitch-model-mapping-loading");
+
+    expect(mappingStatus).toHaveTextContent(/loading model mapping/i);
+    expect(
+      within(dialog).queryByText(/no models are available for this channel group/i),
+    ).not.toBeInTheDocument();
+    expect(
+      within(dialog).queryByLabelText(/cc switch request model for moonshot-v1-128k/i),
+    ).not.toBeInTheDocument();
+
+    modelsDeferred.resolve([{ id: "kimi-k2.5" }]);
+
+    expect(
+      await within(dialog).findByLabelText(/cc switch request model for kimi-k2\.5/i),
+    ).toBeInTheDocument();
+    expect(within(dialog).queryByTestId("ccswitch-model-mapping-loading")).toBeNull();
   });
 
   test("previews the full BaseURL request address from the selected channel group path", async () => {

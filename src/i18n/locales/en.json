@@ -2413,6 +2413,8 @@
     "config_model_mapping_title": "Model mapping",
     "config_model_mapping_hint": "Expose the request model name CC Switch should send, then route it to the actual model available in this channel group.",
     "config_claude_model_mapping_hint": "Set Claude Code's main, Haiku, Sonnet, and Opus defaults, with editable request names.",
+    "config_model_mapping_loading": "Loading model mapping",
+    "config_model_mapping_loading_hint": "Fetching the channel models before updating the mapping table.",
     "config_model_mapping_empty": "No models are available for this channel group.",
     "config_model_mapping_select_group_first": "Select a channel group to load available models.",
     "config_actual_channel_model": "Actual channel model",

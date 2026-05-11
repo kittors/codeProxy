@@ -2648,6 +2648,8 @@
     "config_model_mapping_title": "模型映射",
     "config_model_mapping_hint": "设置 CC Switch 对外请求的模型名，并映射到当前渠道分组实际可用的模型。",
     "config_claude_model_mapping_hint": "设置 Claude Code 的主模型、Haiku、Sonnet、Opus 默认模型，并可分别改写请求名。",
+    "config_model_mapping_loading": "正在加载模型映射",
+    "config_model_mapping_loading_hint": "正在获取当前渠道模型，稍后刷新映射表。",
     "config_model_mapping_empty": "当前渠道分组暂无可用模型。",
     "config_model_mapping_select_group_first": "先选择一个渠道分组以加载可用模型。",
     "config_actual_channel_model": "实际渠道模型",
