@@ -199,6 +199,51 @@ describe("AuthFilesPage files table", () => {
     expect(screen.getByRole("switch", { name: "Enable/Disable" })).toBeInTheDocument();
   });
 
+  test("loads initial usage stats only for listed auth files", async () => {
+    const now = Date.now();
+    mocks.list.mockImplementationOnce(async () => ({
+      files: [
+        {
+          name: "codex-pro.json",
+          type: "codex",
+          size: 1024,
+          modified: now,
+          disabled: false,
+          auth_index: "auth-codex",
+        },
+        {
+          name: "kimi-a.json",
+          type: "kimi",
+          size: 1024,
+          modified: now,
+          disabled: false,
+          auth_index: "auth-kimi",
+        },
+      ],
+    }));
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("codex-pro.json")).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(mocks.getEntityStats).toHaveBeenCalledWith(30, "all", {
+        authIndexes: ["auth-codex", "auth-kimi"],
+        sources: ["t:codex-pro.json", "t:codex-pro", "t:kimi-a.json", "t:kimi-a"],
+      });
+    });
+  });
+
   test("shows active restriction badge with reason and recovery tooltip", async () => {
     const now = Date.now();
     mocks.list.mockImplementationOnce(async () => ({
