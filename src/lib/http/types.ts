@@ -185,7 +185,6 @@ export interface OpenAIProvider {
   disabled?: boolean;
   baseUrl?: string;
   prefix?: string;
-  disabled?: boolean;
   headers?: Record<string, string>;
   models?: ProviderModel[];
   apiKeyEntries?: ProviderApiKeyEntry[];

@@ -321,13 +321,11 @@ export const providersApi = {
         const priority =
           typeof priorityRaw === "number" && Number.isFinite(priorityRaw) ? priorityRaw : undefined;
         const testModel = normalizeString(item["test-model"] ?? item.testModel) ?? undefined;
-        const disabled = item.disabled === true ? true : undefined;
         return {
           name,
           ...(disabled ? { disabled } : {}),
           ...(baseUrl ? { baseUrl } : {}),
           ...(prefix ? { prefix } : {}),
-          ...(disabled !== undefined ? { disabled } : {}),
           ...(headers ? { headers } : {}),
           ...(models ? { models } : {}),
           ...(apiKeyEntries ? { apiKeyEntries } : {}),

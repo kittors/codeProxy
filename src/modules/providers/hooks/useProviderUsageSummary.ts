@@ -13,7 +13,7 @@ type StatusBlockDetail = import("@/utils/usage").StatusBlockDetail;
 function buildStatusBarData(stats: KeyStatBucket): StatusBarData {
   if (stats.success === 0 && stats.failure === 0) {
     return {
-      blocks: [],
+      blocks: Array.from({ length: 20 }, () => "idle" as const),
       blockDetails: [],
       successRate: 100,
       totalSuccess: 0,

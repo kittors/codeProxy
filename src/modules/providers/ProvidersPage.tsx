@@ -105,14 +105,11 @@ function saveGridColumns(cols: number): void {
 const getProviderSelectionKey = (
   kind: ProviderImportKind,
   item: ProviderSimpleConfig | BedrockProviderConfig | OpenAIProvider,
+  index: number,
 ) =>
   kind === "openai"
-    ? String((item as OpenAIProvider).name ?? "")
-        .trim()
-        .toLowerCase()
-    : String((item as ProviderSimpleConfig).apiKey ?? "")
-        .trim()
-        .toLowerCase();
+    ? `${String((item as OpenAIProvider).name ?? "").trim().toLowerCase()}:${index}`
+    : `${String((item as ProviderSimpleConfig).apiKey ?? "").trim().toLowerCase()}:${index}`;
 
 export function ProvidersPage() {
   const { t } = useTranslation();
@@ -380,7 +377,6 @@ export function ProvidersPage() {
     deleteOpenAIProvider,
     toggleOpenAIProviderEnabled,
     toggleOpenAIKeyEntryEnabled,
-    toggleOpenAIProviderEnabled,
     discoverModels,
     applyDiscoveredModels,
   } = useOpenAIProviderEditor({
@@ -542,10 +538,11 @@ export function ProvidersPage() {
   const currentSelectableKeys = useMemo(
     () =>
       currentImportKind
-        ? currentTabItems.map((item) =>
+        ? currentTabItems.map((item, index) =>
             getProviderSelectionKey(
               currentImportKind,
               item as ProviderSimpleConfig | BedrockProviderConfig | OpenAIProvider,
+              index,
             ),
           )
         : [],
@@ -630,11 +627,12 @@ export function ProvidersPage() {
   const handleExportSelected = useCallback(() => {
     const kind = currentImportKind;
     if (!kind || selectedExportCount === 0) return;
-    const selectedItems = currentTabItems.filter((item) =>
+    const selectedItems = currentTabItems.filter((item, index) =>
       selectedExportKeySet.has(
         getProviderSelectionKey(
           kind,
           item as ProviderSimpleConfig | BedrockProviderConfig | OpenAIProvider,
+          index,
         ),
       ),
     );
