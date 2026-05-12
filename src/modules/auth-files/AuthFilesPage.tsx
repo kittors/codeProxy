@@ -134,6 +134,7 @@ export function AuthFilesPage() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const filesRef = useRef<AuthFileItem[]>(files);
   const oauthBaselineSignatureRef = useRef("");
+  const previousTabRef = useRef<"files" | "excluded" | "alias" | null>(null);
 
   useEffect(() => {
     filesRef.current = files;
@@ -340,6 +341,17 @@ export function AuthFilesPage() {
     const filesRefreshPromise = refreshFilesForItems(currentPageItems);
     await Promise.all([filesRefreshPromise, quotaRefreshPromise]);
   }, [forceRefreshPage, pageItems, refreshFilesForItems]);
+
+  useEffect(() => {
+    const previousTab = previousTabRef.current;
+    previousTabRef.current = tab;
+    if (previousTab === null || previousTab === tab || tab !== "files") return;
+
+    void (async () => {
+      await loadAll();
+      await forceRefreshPage();
+    })();
+  }, [forceRefreshPage, loadAll, tab]);
 
   const {
     groupOverviewOpen,

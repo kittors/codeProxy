@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useTranslation } from "react-i18next";
 import { authFilesApi } from "@/lib/http/apis";
 import { useToast } from "@/modules/ui/ToastProvider";
@@ -7,7 +7,6 @@ import {
   buildAliasRows,
   normalizeProviderKey,
 } from "@/modules/auth-files/helpers/authFilesPageUtils";
-import type { OAuthModelAliasEntry } from "@/lib/http/types";
 
 export function useAuthFilesOAuthConfig(tab: "files" | "excluded" | "alias") {
   const { t } = useTranslation();
@@ -19,14 +18,11 @@ export function useAuthFilesOAuthConfig(tab: "files" | "excluded" | "alias") {
   const [excludedDraft, setExcludedDraft] = useState<Record<string, string>>({});
   const [excludedNewProvider, setExcludedNewProvider] = useState("");
   const [excludedUnsupported, setExcludedUnsupported] = useState(false);
-  const [excludedLoadAttempted, setExcludedLoadAttempted] = useState(false);
 
   const [aliasLoading, setAliasLoading] = useState(false);
-  const [aliasMap, setAliasMap] = useState<Record<string, OAuthModelAliasEntry[]>>({});
   const [aliasEditing, setAliasEditing] = useState<Record<string, AliasRow[]>>({});
   const [aliasNewChannel, setAliasNewChannel] = useState("");
   const [aliasUnsupported, setAliasUnsupported] = useState(false);
-  const [aliasLoadAttempted, setAliasLoadAttempted] = useState(false);
 
   const [importOpen, setImportOpen] = useState(false);
   const [importChannel, setImportChannel] = useState("");
@@ -34,9 +30,9 @@ export function useAuthFilesOAuthConfig(tab: "files" | "excluded" | "alias") {
   const [importModels, setImportModels] = useState<AuthFileModelItem[]>([]);
   const [importSearch, setImportSearch] = useState("");
   const [importSelected, setImportSelected] = useState<Set<string>>(new Set());
+  const previousTabRef = useRef<"files" | "excluded" | "alias" | null>(null);
 
   const refreshExcluded = useCallback(async () => {
-    setExcludedLoadAttempted(true);
     setExcludedLoading(true);
     try {
       const map = await authFilesApi.getOauthExcludedModels();
@@ -65,12 +61,10 @@ export function useAuthFilesOAuthConfig(tab: "files" | "excluded" | "alias") {
   }, [notify, t]);
 
   const refreshAlias = useCallback(async () => {
-    setAliasLoadAttempted(true);
     setAliasLoading(true);
     try {
       const map = await authFilesApi.getOauthModelAlias();
       setAliasUnsupported(false);
-      setAliasMap(map);
       setAliasEditing(
         Object.fromEntries(Object.entries(map).map(([key, value]) => [key, buildAliasRows(value)])),
       );
@@ -78,7 +72,6 @@ export function useAuthFilesOAuthConfig(tab: "files" | "excluded" | "alias") {
       const message = err instanceof Error ? err.message : "";
       if (/404|not found/i.test(message)) {
         setAliasUnsupported(true);
-        setAliasMap({});
         setAliasEditing({});
         return;
       }
@@ -89,37 +82,17 @@ export function useAuthFilesOAuthConfig(tab: "files" | "excluded" | "alias") {
   }, [notify, t]);
 
   useEffect(() => {
-    if (
-      tab === "excluded" &&
-      !excludedLoadAttempted &&
-      !excludedLoading &&
-      !excludedUnsupported &&
-      Object.keys(excluded).length === 0
-    ) {
+    const previousTab = previousTabRef.current;
+    previousTabRef.current = tab;
+    if (previousTab === tab) return;
+
+    if (tab === "excluded") {
       void refreshExcluded();
     }
-    if (
-      tab === "alias" &&
-      !aliasLoadAttempted &&
-      !aliasLoading &&
-      !aliasUnsupported &&
-      Object.keys(aliasMap).length === 0
-    ) {
+    if (tab === "alias") {
       void refreshAlias();
     }
-  }, [
-    aliasLoading,
-    aliasMap,
-    aliasUnsupported,
-    aliasLoadAttempted,
-    excluded,
-    excludedLoading,
-    excludedUnsupported,
-    excludedLoadAttempted,
-    refreshAlias,
-    refreshExcluded,
-    tab,
-  ]);
+  }, [refreshAlias, refreshExcluded, tab]);
 
   const saveExcludedProvider = useCallback(
     async (provider: string, text: string) => {
@@ -191,7 +164,6 @@ export function useAuthFilesOAuthConfig(tab: "files" | "excluded" | "alias") {
       notify({ type: "info", message: t("auth_files.please_enter_channel") });
       return;
     }
-    setAliasMap((prev) => (prev[key] ? prev : { ...prev, [key]: [] }));
     setAliasEditing((prev) => (prev[key] ? prev : { ...prev, [key]: buildAliasRows([]) }));
     setAliasNewChannel("");
   }, [aliasNewChannel, notify, t]);
