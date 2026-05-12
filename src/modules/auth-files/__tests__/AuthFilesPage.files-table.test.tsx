@@ -614,10 +614,89 @@ describe("AuthFilesPage files table", () => {
     await waitFor(() => {
       expect(mocks.fetchQuota).toHaveBeenCalledTimes(1);
       expect(mocks.getEntityStats).toHaveBeenCalledTimes(2);
+      expect(mocks.getEntityStats).toHaveBeenLastCalledWith(30, "all", {
+        authIndexes: ["77"],
+        sources: ["t:codex-pro-a.json", "t:codex-pro-a"],
+      });
       expect(within(card as HTMLElement).getByText("4 calls")).toBeInTheDocument();
       expect(within(otherCard as HTMLElement).getByText("10 calls")).toBeInTheDocument();
       expect(within(otherCard as HTMLElement).queryByText("99 calls")).not.toBeInTheDocument();
     });
+  });
+
+  test("switching to all refreshes the visible page even when file names stay the same", async () => {
+    const now = Date.now();
+    const codexFiles = Array.from({ length: 10 }, (_, index) => ({
+      name: `codex-${index + 1}.json`,
+      type: "codex",
+      size: 1024,
+      modified: now,
+      disabled: false,
+      auth_index: String(index + 1),
+    }));
+    const files = [
+      ...codexFiles,
+      {
+        name: "qwen.json",
+        type: "qwen",
+        size: 1024,
+        modified: now,
+        disabled: false,
+      },
+    ] as any[];
+
+    mocks.list.mockImplementation(async () => ({ files }));
+    mocks.fetchQuota.mockResolvedValue({
+      items: [{ label: "m_quota.code_5h", percent: 66, resetAtMs: now + 60_000 }],
+    });
+
+    window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
+    window.localStorage.setItem("authFilesPage.quotaAutoRefreshMs.v1", JSON.stringify(10000));
+    window.sessionStorage.setItem(
+      AUTH_FILES_UI_STATE_KEY,
+      JSON.stringify({ tab: "files", filter: "codex", search: "", page: 1 }),
+    );
+    window.sessionStorage.setItem(
+      AUTH_FILES_DATA_CACHE_KEY,
+      JSON.stringify({
+        savedAtMs: now,
+        files,
+        usageData: { source: [], auth_index: [] },
+        quotaByFileName: Object.fromEntries(
+          codexFiles.map((file) => [
+            file.name,
+            {
+              status: "success",
+              updatedAt: now,
+              items: [{ label: "m_quota.code_5h", percent: 22, resetAtMs: now + 60_000 }],
+            },
+          ]),
+        ),
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("codex-1.json")).toBeInTheDocument();
+    await waitFor(() => expect(mocks.fetchQuota).toHaveBeenCalledTimes(9));
+    mocks.fetchQuota.mockClear();
+
+    fireEvent.click(screen.getByRole("tab", { name: /^All/i }));
+
+    await waitFor(() => expect(mocks.fetchQuota).toHaveBeenCalledTimes(9));
+    expect(mocks.fetchQuota.mock.calls.map(([, file]) => (file as { name: string }).name)).toEqual(
+      codexFiles.slice(0, 9).map((file) => file.name),
+    );
   });
 
   test("cards view hides default auth-file badges when display tags are empty", async () => {

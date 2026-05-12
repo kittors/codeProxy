@@ -34,6 +34,7 @@ import {
 interface UseAuthFilesQuotaStateOptions {
   tab: "files" | "excluded" | "alias";
   pageItems: AuthFileItem[];
+  visibleScopeKey: string;
   loading: boolean;
   setFiles: Dispatch<SetStateAction<AuthFileItem[]>>;
   setDetailFile: Dispatch<SetStateAction<AuthFileItem | null>>;
@@ -43,6 +44,7 @@ interface UseAuthFilesQuotaStateOptions {
 export function useAuthFilesQuotaState({
   tab,
   pageItems,
+  visibleScopeKey,
   loading,
   setFiles,
   setDetailFile,
@@ -478,7 +480,7 @@ export function useAuthFilesQuotaState({
     if (loading) return;
     if (quotaAutoRefreshMs <= 0) return;
 
-    const visibleSignature = pageItems.map((file) => file.name).join("\n");
+    const visibleSignature = [visibleScopeKey, ...pageItems.map((file) => file.name)].join("\n");
     const previousVisibleSignature = visiblePageSignatureRef.current;
     visiblePageSignatureRef.current = visibleSignature;
 
@@ -515,6 +517,7 @@ export function useAuthFilesQuotaState({
     resolveQuotaTargets,
     runQuotaRefreshBatch,
     tab,
+    visibleScopeKey,
   ]);
 
   const quotaLastUpdatedAtMs = useMemo(() => {

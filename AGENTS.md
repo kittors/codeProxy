@@ -46,7 +46,8 @@
 
 - 页面/组件/布局/样式：`shrimp-rules.md`、`rules/base.md`、`rules/frontend.md`、`rules/quality.md`、`rules/workflow.md`、`rules/tooling.md`
 - 目录结构/模块重构：上述规则 + `rules/project-structure.md`、`rules/naming.md`
-- 后端/API/数据：`shrimp-rules.md`、`rules/base.md`、`rules/quality.md`、`rules/workflow.md`、`rules/tooling.md`
+- 后端/API/数据：`shrimp-rules.md`、`rules/base.md`、`rules/quality.md`、`rules/api-refresh-contracts.md`、`rules/workflow.md`、`rules/tooling.md`
+- 页面刷新/统计/局部数据更新：`shrimp-rules.md`、`rules/base.md`、`rules/frontend.md`、`rules/quality.md`、`rules/api-refresh-contracts.md`、`rules/workflow.md`、`rules/tooling.md`
 - 嵌入式/固件：`shrimp-rules.md`、`rules/base.md`、`rules/embedded.md`、`rules/project-structure.md`、`rules/quality.md`、`rules/workflow.md`、`rules/tooling.md`
 - Agent/技能开发：`shrimp-rules.md`、`rules/base.md`、`rules/agent.md`、`rules/rules-authoring.md`、`rules/workflow.md`
 - 依赖升级/版本固定：`shrimp-rules.md`、`rules/base.md`、`rules/quality.md`、`rules/tooling.md`（必要时用 Context7 核对，不要猜）
@@ -61,6 +62,7 @@
 - `rules/tooling.md`：常用命令、构建校验、升级与验证约定
 - `rules/naming.md`：命名规范（文件/组件/hook/常量）
 - `rules/frontend.md`：前端样式与组件约定（无前端则忽略）
+- `rules/api-refresh-contracts.md`：页面刷新、统计接口与局部数据更新契约
 - `rules/embedded.md`：嵌入式/固件项目约定（无嵌入式则忽略）
 - `rules/agent.md`：Agent/技能开发约定（无此类需求则忽略）
 - `rules/rules-authoring.md`：规范写作与演进方式

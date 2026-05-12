@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { authFilesApi, usageApi } from "@/lib/http/apis";
+import type { EntityStatsScope } from "@/lib/http/apis/usage";
 import type { AuthFileItem, EntityStatsResponse } from "@/lib/http/types";
 import { useToast } from "@/modules/ui/ToastProvider";
 import {
@@ -48,6 +49,20 @@ const mergeTargetUsageData = (
       ...nextSource.filter((point) => isTargetSource(point.entity_name)),
     ],
   };
+};
+
+const buildEntityStatsScopeForFiles = (targetFiles: AuthFileItem[]): EntityStatsScope => {
+  const authIndexes = Array.from(
+    new Set(
+      targetFiles
+        .map((file) => normalizeAuthIndexValue(file.auth_index ?? file.authIndex))
+        .filter((value): value is string => Boolean(value)),
+    ),
+  );
+  const sources = Array.from(
+    new Set(targetFiles.flatMap((file) => buildAuthFileSourceCandidates(file))),
+  );
+  return { authIndexes, sources };
 };
 
 export function useAuthFilesDataState() {
@@ -134,7 +149,11 @@ export function useAuthFilesDataState() {
       if (targetFiles.length === 0) return usageDataRef.current;
 
       try {
-        const nextUsageData = await usageApi.getEntityStats(30, "all");
+        const nextUsageData = await usageApi.getEntityStats(
+          30,
+          "all",
+          buildEntityStatsScopeForFiles(targetFiles),
+        );
         const mergedUsageData = mergeTargetUsageData(
           usageDataRef.current,
           nextUsageData,

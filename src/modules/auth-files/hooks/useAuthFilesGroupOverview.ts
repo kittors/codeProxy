@@ -22,17 +22,19 @@ interface UseAuthFilesGroupOverviewArgs {
   quotaByFileName: Record<string, QuotaState>;
   usageIndex: UsageIndex;
   tab: "files" | "excluded" | "alias";
-  collectQuotaFetchTargets: (items: AuthFileItem[]) => { file: AuthFileItem; provider: QuotaProvider }[];
   runQuotaRefreshBatch: (
     targets: { file: AuthFileItem; provider: QuotaProvider }[],
-    options?: { markAsAutoRefreshing?: boolean },
+    options?: { markAsAutoRefreshing?: boolean; showLoading?: boolean },
   ) => Promise<void>;
   resolveQuotaProvider: (file: AuthFileItem) => QuotaProvider | null;
   resolveQuotaCardSlots: (
     provider: QuotaProvider,
     items: QuotaItem[],
   ) => { id: string; label: string; item: QuotaItem | null }[];
-  resolveAuthFileStats: (file: AuthFileItem, index: UsageIndex) => { success: number; failure: number };
+  resolveAuthFileStats: (
+    file: AuthFileItem,
+    index: UsageIndex,
+  ) => { success: number; failure: number };
   resolveProviderLabel: (providerKey: string) => string;
 }
 
@@ -43,7 +45,6 @@ export function useAuthFilesGroupOverview({
   quotaByFileName,
   usageIndex,
   tab,
-  collectQuotaFetchTargets,
   runQuotaRefreshBatch,
   resolveQuotaProvider,
   resolveQuotaCardSlots,
@@ -86,7 +87,8 @@ export function useAuthFilesGroupOverview({
         const fiveHour = slots.find((slot) => slot.id === "code_5h")?.item?.percent;
         const weekly = slots.find((slot) => slot.id === "code_week")?.item?.percent;
 
-        if (typeof fiveHour === "number" && Number.isFinite(fiveHour)) fiveHourValues.push(fiveHour);
+        if (typeof fiveHour === "number" && Number.isFinite(fiveHour))
+          fiveHourValues.push(fiveHour);
         if (typeof weekly === "number" && Number.isFinite(weekly)) weeklyValues.push(weekly);
       });
 
@@ -102,7 +104,13 @@ export function useAuthFilesGroupOverview({
         quotaSampleCount: Math.max(fiveHourValues.length, weeklyValues.length),
       };
     },
-    [quotaByFileName, resolveAuthFileStats, resolveQuotaCardSlots, resolveQuotaProvider, usageIndex],
+    [
+      quotaByFileName,
+      resolveAuthFileStats,
+      resolveQuotaCardSlots,
+      resolveQuotaProvider,
+      usageIndex,
+    ],
   );
 
   const groupOverviewByTab = useMemo<Record<string, AuthFilesGroupOverview>>(() => {
@@ -134,8 +142,7 @@ export function useAuthFilesGroupOverview({
             totalCalls: stats.success + stats.failure,
             averageFiveHour:
               typeof fiveHour === "number" && Number.isFinite(fiveHour) ? fiveHour : null,
-            averageWeekly:
-              typeof weekly === "number" && Number.isFinite(weekly) ? weekly : null,
+            averageWeekly: typeof weekly === "number" && Number.isFinite(weekly) ? weekly : null,
             hasQuota: items.length > 0,
           };
         })
@@ -162,7 +169,9 @@ export function useAuthFilesGroupOverview({
   ]);
 
   const activeGroupOverview = useMemo<AuthFilesGroupOverview>(() => {
-    return groupOverviewByTab[groupOverviewTab] ?? groupOverviewByTab.all ?? computeGroupOverview([]);
+    return (
+      groupOverviewByTab[groupOverviewTab] ?? groupOverviewByTab.all ?? computeGroupOverview([])
+    );
   }, [computeGroupOverview, groupOverviewByTab, groupOverviewTab]);
 
   const activeGroupRows = useMemo<AuthFilesGroupOverviewRow[]>(() => {
@@ -267,13 +276,18 @@ export function useAuthFilesGroupOverview({
             : filteredFiles.filter(
                 (file) => normalizeProviderKey(resolveFileType(file)) === targetGroup,
               );
-        const targets = collectQuotaFetchTargets(scopedFiles);
-        await runQuotaRefreshBatch(targets, { markAsAutoRefreshing: true });
+        const targets = scopedFiles
+          .map((file) => {
+            const provider = resolveQuotaProvider(file);
+            return provider ? { file, provider } : null;
+          })
+          .filter(Boolean) as { file: AuthFileItem; provider: QuotaProvider }[];
+        await runQuotaRefreshBatch(targets, { markAsAutoRefreshing: true, showLoading: true });
       } finally {
         setGroupOverviewLoading(false);
       }
     },
-    [collectQuotaFetchTargets, filteredFiles, groupOverviewTab, runQuotaRefreshBatch, tab],
+    [filteredFiles, groupOverviewTab, resolveQuotaProvider, runQuotaRefreshBatch, tab],
   );
 
   const refreshGroupTrend = useCallback(

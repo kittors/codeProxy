@@ -45,6 +45,25 @@ describe("usage auth file trend api", () => {
     expect(result.quota_series[0]?.quota_key).toBe("code_week");
   });
 
+  test("fetches entity stats with scoped auth indexes and sources", async () => {
+    const { usageApi } = await import("@/lib/http/apis/usage");
+    getMock.mockResolvedValue({
+      source: [{ entity_name: "t:codex-a", requests: 1, failed: 0 }],
+      auth_index: [{ entity_name: "auth-a", requests: 2, failed: 1 }],
+    });
+
+    const result = await usageApi.getEntityStats(30, "all", {
+      authIndexes: ["auth-a", "auth-b"],
+      sources: ["t:codex-a", "t:codex-a.json"],
+    });
+
+    expect(getMock).toHaveBeenCalledWith(
+      "/usage/entity-stats?days=30&auth_index=auth-a&auth_index=auth-b&source=t%3Acodex-a&source=t%3Acodex-a.json",
+    );
+    expect(result.auth_index).toHaveLength(1);
+    expect(result.source).toHaveLength(1);
+  });
+
   test("records fine-grained quota points with daily quota values", async () => {
     const { usageApi } = await import("@/lib/http/apis/usage");
     postMock.mockResolvedValue({ status: "ok" });

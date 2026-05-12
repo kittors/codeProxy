@@ -94,6 +94,21 @@ export interface AuthFileQuotaSnapshotPayload {
   quota_points?: AuthFileQuotaSnapshotPointPayload[];
 }
 
+export interface EntityStatsScope {
+  authIndexes?: string[];
+  sources?: string[];
+}
+
+const appendUniqueParams = (qs: URLSearchParams, key: string, values?: string[]) => {
+  const seen = new Set<string>();
+  (values ?? []).forEach((value) => {
+    const trimmed = String(value ?? "").trim();
+    if (!trimmed || seen.has(trimmed)) return;
+    seen.add(trimmed);
+    qs.append(key, trimmed);
+  });
+};
+
 export const usageApi = {
   async getUsage(): Promise<UsageData> {
     const response = await apiClient.get<Record<string, unknown>>("/usage");
@@ -156,9 +171,15 @@ export const usageApi = {
     };
   },
 
-  async getEntityStats(days = 7, apiKey = ""): Promise<EntityStatsResponse> {
+  async getEntityStats(
+    days = 7,
+    apiKey = "",
+    scope?: EntityStatsScope,
+  ): Promise<EntityStatsResponse> {
     const qs = new URLSearchParams({ days: String(days) });
     if (apiKey && apiKey !== "all") qs.set("api_key", apiKey);
+    appendUniqueParams(qs, "auth_index", scope?.authIndexes);
+    appendUniqueParams(qs, "source", scope?.sources);
     const resp = await apiClient.get<EntityStatsResponse>(`/usage/entity-stats?${qs.toString()}`);
     return {
       source: Array.isArray(resp?.source) ? resp.source : [],

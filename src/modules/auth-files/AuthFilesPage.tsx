@@ -257,6 +257,16 @@ export function AuthFilesPage() {
     void loadModelOwnerGroups();
   }, [loadModelOwnerGroups, tab]);
 
+  const updateFilter = useCallback((value: string) => {
+    setFilter(value);
+    setPage(1);
+  }, []);
+
+  const updateSearch = useCallback((value: string) => {
+    setSearch(value);
+    setPage(1);
+  }, []);
+
   const {
     providerOptions,
     filterCounts,
@@ -297,13 +307,13 @@ export function AuthFilesPage() {
     resolveQuotaCardSlots,
     refreshQuota,
     checkAuthFileConnectivity,
-    collectQuotaFetchTargets,
     forceRefreshPage,
     runQuotaRefreshBatch,
     quotaLastUpdatedText,
   } = useAuthFilesQuotaState({
     tab,
     pageItems,
+    visibleScopeKey: `${filter}\n${search}\n${safePage}`,
     loading,
     setFiles,
     setDetailFile,
@@ -354,7 +364,6 @@ export function AuthFilesPage() {
     quotaByFileName,
     usageIndex,
     tab,
-    collectQuotaFetchTargets,
     runQuotaRefreshBatch,
     resolveQuotaProvider,
     resolveQuotaCardSlots,
@@ -423,14 +432,14 @@ export function AuthFilesPage() {
             handleUpload={handleUpload}
             filterChips={filterChips}
             filter={filter}
-            setFilter={setFilter}
+            setFilter={updateFilter}
             filterCounts={filterCounts}
             modelOwnerGroupsLoading={modelOwnerGroupsLoading}
             modelOwnerGroups={modelOwnerGroups}
             selectedModelOwner={selectedModelOwner}
             setSelectedModelOwner={(owner) => setModelOwnerForAuthGroup(filter, owner)}
             search={search}
-            setSearch={setSearch}
+            setSearch={updateSearch}
             quotaLastUpdatedText={quotaLastUpdatedText}
             loading={loading}
             filesLength={files.length}
