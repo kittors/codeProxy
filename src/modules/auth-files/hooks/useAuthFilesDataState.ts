@@ -88,12 +88,18 @@ export function useAuthFilesDataState() {
     else setLoading(true);
     if (!hasExisting) setUsageLoading(true);
     try {
-      const [filesRes, usageRes] = await Promise.all([
-        authFilesApi.list(),
-        usageApi.getEntityStats(30, "all").catch(() => null),
-      ]);
+      const filesRes = await authFilesApi.list();
       const list = Array.isArray(filesRes?.files) ? filesRes.files : [];
+      filesRef.current = list;
       setFiles(list);
+
+      const scope = buildEntityStatsScopeForFiles(list);
+      const hasUsageScope =
+        (scope.authIndexes?.length ?? 0) > 0 || (scope.sources?.length ?? 0) > 0;
+      const usageRes = hasUsageScope
+        ? await usageApi.getEntityStats(30, "all", scope).catch(() => null)
+        : ({ source: [], auth_index: [] } satisfies EntityStatsResponse);
+
       setUsageData((prev) => usageRes ?? prev);
       return list;
     } catch (err: unknown) {
