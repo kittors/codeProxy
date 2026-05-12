@@ -115,7 +115,8 @@ export function AuthFilesPage() {
     usageData,
     usageIndex,
     loadAll,
-    refreshUsageData,
+    refreshFilesForItems,
+    refreshUsageDataForFiles,
   } = useAuthFilesDataState();
 
   const [confirm, setConfirm] = useState<null | { type: "deleteSelection"; names: string[] }>(null);
@@ -306,7 +307,7 @@ export function AuthFilesPage() {
     loading,
     setFiles,
     setDetailFile,
-    refreshUsageData,
+    refreshUsageDataForFiles,
   });
 
   const openDetailWithQuotaRefresh = useCallback(
@@ -324,10 +325,11 @@ export function AuthFilesPage() {
   );
 
   const refreshFilesAndQuota = useCallback(async () => {
+    const currentPageItems = pageItems;
     const quotaRefreshPromise = forceRefreshPage();
-    const filesRefreshPromise = loadAll();
+    const filesRefreshPromise = refreshFilesForItems(currentPageItems);
     await Promise.all([filesRefreshPromise, quotaRefreshPromise]);
-  }, [forceRefreshPage, loadAll]);
+  }, [forceRefreshPage, pageItems, refreshFilesForItems]);
 
   const {
     groupOverviewOpen,
