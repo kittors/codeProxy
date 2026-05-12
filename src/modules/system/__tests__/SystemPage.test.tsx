@@ -180,6 +180,48 @@ describe("SystemPage", () => {
     expect(mocks.apiGet).toHaveBeenCalledWith("/model-path-availability");
   });
 
+  test("marks alias-aware root models and shows possible original models on hover", async () => {
+    mocks.apiGet.mockImplementation((path: string) => {
+      if (path === "/model-path-availability") {
+        return Promise.resolve({
+          data: [
+            {
+              id: "claude-opus-4-6",
+              alias: true,
+              originals: [
+                { id: "mimo-v2.5-pro", provider: "claude", alias: true },
+                { id: "claude-opus-4-6", provider: "claude", alias: false },
+              ],
+              paths: [{ scope: "root", method: "GET", path: "/v1/models" }],
+            },
+          ],
+        });
+      }
+      if (path === "/system-stats") return Promise.resolve({ uptime: 10 });
+      if (
+        path === "/gemini-api-key" ||
+        path === "/claude-api-key" ||
+        path === "/codex-api-key" ||
+        path === "/vertex-api-key" ||
+        path === "/openai-compatibility"
+      ) {
+        return Promise.resolve([]);
+      }
+      return Promise.resolve({});
+    });
+
+    renderPage();
+
+    const model = await screen.findByRole("button", { name: /claude-opus-4-6/i });
+    expect(within(model).getByText("Alias")).toBeInTheDocument();
+
+    await userEvent.hover(model);
+
+    expect(await screen.findByText("mimo-v2.5-pro")).toBeInTheDocument();
+    expect(screen.getAllByText("claude-opus-4-6").length).toBeGreaterThan(1);
+    expect(screen.getByText(/Actual upstream depends on the selected route/i)).toBeInTheDocument();
+  });
+
   test("rechecks the target version before treating the update as successful", async () => {
     mocks.check.mockResolvedValueOnce({
       enabled: true,

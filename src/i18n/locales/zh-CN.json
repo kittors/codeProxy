@@ -3489,7 +3489,11 @@
   "system_page": {
     "title": "系统信息",
     "available_models": "可用模型",
-    "available_models_tooltip": "这里只展示默认根路径 GET /v1/models 返回的模型；自定义路径、渠道分组、别名与其他协议路径的模型请到“模型”页面查看。",
+    "available_models_tooltip": "这里展示默认根路径 GET /v1/models 返回的客户端可请求模型名。配置了别名或模型映射时，列表中的同一个名称可能对应多个可能的上游原始模型。",
+    "alias_badge": "别名",
+    "request_model": "请求模型",
+    "possible_original_models": "可能的原始模型",
+    "alias_tooltip_note": "实际上游会在请求时由路由、渠道、密钥和模型映射共同决定。",
     "subtitle": "服务、版本和模型",
     "api_base": "API 地址",
     "api_key_lookup": "API 密钥查询",

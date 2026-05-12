@@ -3343,7 +3343,11 @@
   "system_page": {
     "title": "System Info",
     "available_models": "Available Models",
-    "available_models_tooltip": "This only shows models returned by the default root GET /v1/models endpoint. Use Models to view custom paths, channel groups, aliases, and other protocol paths.",
+    "available_models_tooltip": "This shows client-requestable model names from the default root GET /v1/models endpoint. When aliases or model mappings are configured, a listed name may map to one of several possible upstream originals.",
+    "alias_badge": "Alias",
+    "request_model": "Request model",
+    "possible_original_models": "Possible original models",
+    "alias_tooltip_note": "Actual upstream depends on the selected route, channel, key, and model mapping at request time.",
     "subtitle": "Service, version & models",
     "api_base": "API Base",
     "api_key_lookup": "API Key Lookup",

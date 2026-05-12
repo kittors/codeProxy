@@ -55,11 +55,19 @@ export interface ModelPathItem {
   family: string;
 }
 
+export interface ModelPathOriginal {
+  id: string;
+  provider: string;
+  alias: boolean;
+  count: number;
+}
+
 export interface ModelPathAvailabilityItem {
   id: string;
   owned_by?: string;
   kind: string;
   alias: boolean;
+  originals: ModelPathOriginal[];
   paths: ModelPathItem[];
 }
 
@@ -184,6 +192,19 @@ const normalizeModelPath = (item: unknown): ModelPathItem | null => {
   };
 };
 
+const normalizeModelPathOriginal = (item: unknown): ModelPathOriginal | null => {
+  if (!isRecord(item)) return null;
+  const id = String(item.id ?? item.name ?? "").trim();
+  if (!id) return null;
+  const rawCount = Number(item.count);
+  return {
+    id,
+    provider: String(item.provider ?? "").trim(),
+    alias: item.alias === true,
+    count: Number.isFinite(rawCount) && rawCount > 0 ? rawCount : 0,
+  };
+};
+
 const normalizeModelPathCapability = (item: unknown): ModelPathRouteCapability | null => {
   const normalized = normalizeModelPath(item);
   if (!normalized) return null;
@@ -204,11 +225,17 @@ const normalizeModelPathAvailabilityItem = (item: unknown): ModelPathAvailabilit
         .map((path) => normalizeModelPath(path))
         .filter((path): path is ModelPathItem => Boolean(path))
     : [];
+  const originals = Array.isArray(item.originals)
+    ? item.originals
+        .map((origin) => normalizeModelPathOriginal(origin))
+        .filter((origin): origin is ModelPathOriginal => Boolean(origin))
+    : [];
   return {
     id,
     owned_by: String(item.owned_by ?? ""),
     kind: String(item.kind ?? "canonical"),
     alias: item.alias === true,
+    originals,
     paths,
   };
 };

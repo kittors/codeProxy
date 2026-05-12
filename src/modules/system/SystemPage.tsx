@@ -21,7 +21,11 @@ import { Card } from "@/modules/ui/Card";
 import { TextInput } from "@/modules/ui/Input";
 import { useToast } from "@/modules/ui/ToastProvider";
 import { UpdateDetailsCard } from "@/modules/update/UpdateDetailsCard";
-import { loadModelPathAvailability } from "@/modules/models/modelAvailability";
+import {
+  loadModelPathAvailability,
+  type ModelPathAvailabilityItem,
+  type ModelPathOriginal,
+} from "@/modules/models/modelAvailability";
 import { HoverTooltip } from "@/modules/ui/Tooltip";
 
 // Vendor SVG icons
@@ -279,11 +283,61 @@ function InfoCard({
    ModelTag — tag-style model badge
    ═══════════════════════════════════════════════════════════ */
 
-function ModelTag({ id }: { id: string }) {
+function uniqueOriginals(origins: ModelPathOriginal[]): ModelPathOriginal[] {
+  const seen = new Set<string>();
+  const out: ModelPathOriginal[] = [];
+  for (const origin of origins) {
+    const id = String(origin.id ?? "").trim();
+    if (!id) continue;
+    const key = id.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({ ...origin, id });
+  }
+  return out;
+}
+
+function ModelAliasTooltip({ id, originals }: { id: string; originals: ModelPathOriginal[] }) {
+  const { t } = useTranslation();
+  const possibleOriginals = uniqueOriginals(originals);
+
+  return (
+    <span className="block max-w-sm space-y-2 text-left">
+      <span className="block text-[11px] font-semibold uppercase text-slate-500 dark:text-white/45">
+        {t("system_page.request_model")}
+      </span>
+      <code className="block rounded-md bg-slate-100 px-2 py-1 font-mono text-[11px] text-slate-800 dark:bg-neutral-900 dark:text-white">
+        {id}
+      </code>
+      <span className="block text-[11px] font-semibold uppercase text-slate-500 dark:text-white/45">
+        {t("system_page.possible_original_models")}
+      </span>
+      <span className="flex flex-wrap gap-1.5">
+        {possibleOriginals.map((origin) => (
+          <code
+            key={origin.id}
+            className="rounded-md border border-slate-200 bg-white px-1.5 py-0.5 font-mono text-[11px] text-slate-800 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white"
+          >
+            {origin.id}
+          </code>
+        ))}
+      </span>
+      <span className="block text-[11px] leading-relaxed text-slate-500 dark:text-white/55">
+        {t("system_page.alias_tooltip_note")}
+      </span>
+    </span>
+  );
+}
+
+function ModelTag({ item }: { item: ModelPathAvailabilityItem }) {
   const { t } = useTranslation();
   const { notify } = useToast();
   const [copied, setCopied] = useState(false);
+  const id = item.id;
   const vc = getVendorColor(id);
+  const originals =
+    item.originals.length > 0 ? item.originals : [{ id, provider: "", alias: false, count: 0 }];
+  const hasAlias = item.alias && originals.some((origin) => origin.alias);
 
   const handleClick = () => {
     void navigator.clipboard.writeText(id);
@@ -292,11 +346,11 @@ function ModelTag({ id }: { id: string }) {
     notify({ type: "success", message: t("system_page.copied"), duration: 1200 });
   };
 
-  return (
+  const button = (
     <button
       type="button"
       onClick={handleClick}
-      title={t("system_page.click_copy")}
+      aria-label={`${id} ${t("system_page.click_copy")}`}
       className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 font-mono text-xs transition hover:shadow-sm active:scale-95 ${vc.bg} ${vc.text} ${vc.border}`}
     >
       {copied ? (
@@ -308,9 +362,26 @@ function ModelTag({ id }: { id: string }) {
         <>
           <VendorIcon modelId={id} size={14} />
           {id}
+          {hasAlias ? (
+            <span className="rounded border border-current/20 bg-white/55 px-1 py-0 text-[10px] font-bold uppercase tracking-normal dark:bg-black/20">
+              {t("system_page.alias_badge")}
+            </span>
+          ) : null}
         </>
       )}
     </button>
+  );
+
+  if (!hasAlias) return button;
+
+  return (
+    <HoverTooltip
+      content={<ModelAliasTooltip id={id} originals={originals} />}
+      placement="top"
+      className="inline-flex"
+    >
+      {button}
+    </HoverTooltip>
   );
 }
 
@@ -332,7 +403,7 @@ export function SystemPage({
 
   const [modelsLoading, setModelsLoading] = useState(false);
   const [modelsError, setModelsError] = useState<string | null>(null);
-  const [models, setModels] = useState<string[]>([]);
+  const [models, setModels] = useState<ModelPathAvailabilityItem[]>([]);
   const [modelFilter, setModelFilter] = useState("");
 
   const loadModels = useCallback(async () => {
@@ -340,14 +411,17 @@ export function SystemPage({
     setModelsError(null);
     try {
       const availability = await loadModelPathAvailability();
-      const rootV1ModelIds = availability.items
-        .filter((item) =>
-          item.paths.some(
-            (path) => path.scope === "root" && path.method === "GET" && path.path === "/v1/models",
-          ),
-        )
-        .map((item) => item.id);
-      setModels(Array.from(new Set(rootV1ModelIds)).sort((a, b) => a.localeCompare(b)));
+      const rootV1Models = availability.items.filter((item) =>
+        item.paths.some(
+          (path) => path.scope === "root" && path.method === "GET" && path.path === "/v1/models",
+        ),
+      );
+      const deduped = new Map<string, ModelPathAvailabilityItem>();
+      for (const item of rootV1Models) {
+        const key = item.id.toLowerCase();
+        if (!deduped.has(key)) deduped.set(key, item);
+      }
+      setModels(Array.from(deduped.values()).sort((a, b) => a.id.localeCompare(b.id)));
     } catch (err: unknown) {
       setModelsError(err instanceof Error ? err.message : t("system_page.load_failed"));
     } finally {
@@ -362,14 +436,17 @@ export function SystemPage({
   const filteredModels = useMemo(() => {
     const needle = modelFilter.trim().toLowerCase();
     if (!needle) return models;
-    return models.filter((id) => id.toLowerCase().includes(needle));
+    return models.filter((item) => {
+      if (item.id.toLowerCase().includes(needle)) return true;
+      return item.originals.some((origin) => origin.id.toLowerCase().includes(needle));
+    });
   }, [modelFilter, models]);
 
   // Group models by vendor prefix for stats
   const vendorStats = useMemo(() => {
     const map = new Map<string, number>();
-    for (const id of models) {
-      const lower = id.toLowerCase();
+    for (const item of models) {
+      const lower = item.id.toLowerCase();
       let vendor = "Other";
       for (const prefix of Object.keys(VENDOR_COLORS)) {
         if (lower.startsWith(prefix)) {
@@ -528,8 +605,8 @@ export function SystemPage({
             </div>
           ) : filteredModels.length > 0 ? (
             <div className="flex flex-wrap gap-2">
-              {filteredModels.map((id) => (
-                <ModelTag key={id} id={id} />
+              {filteredModels.map((item) => (
+                <ModelTag key={item.id} item={item} />
               ))}
             </div>
           ) : (
