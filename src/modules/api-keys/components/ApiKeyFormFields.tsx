@@ -44,7 +44,6 @@ export function ApiKeyFormFields({
             onChange={(e) => setForm((prev) => ({ ...prev, key: e.target.value }))}
             placeholder={t("api_keys_page.form_key_placeholder")}
             className="flex-1 font-mono"
-            readOnly
           />
           <Button variant="secondary" size="sm" onClick={regenerateKey}>
             <RefreshCw size={14} />

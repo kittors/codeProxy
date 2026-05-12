@@ -323,6 +323,10 @@ export function ApiKeysPage() {
     }
     const originalKey = entries[editIndex].key;
     const newKey = form.key.trim();
+    if (!newKey) {
+      notify({ type: "error", message: t("api_keys_page.key_empty") });
+      return;
+    }
     setSaving(true);
     try {
       await apiKeyEntriesApi.update({

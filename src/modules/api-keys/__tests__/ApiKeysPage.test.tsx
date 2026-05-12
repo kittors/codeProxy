@@ -254,6 +254,72 @@ describe("ApiKeysPage", () => {
     expect(screen.queryByText("Renamed Key")).not.toBeInTheDocument();
   });
 
+  test("allows manually entering an API key when creating an entry", async () => {
+    render(
+      <MemoryRouter>
+        <ThemeProvider>
+          <ToastProvider>
+            <ApiKeysPage />
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("Existing Key")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: /create key/i }));
+    await userEvent.type(screen.getAllByPlaceholderText(/team-a/i).at(-1)!, "Manual Key");
+
+    const keyInput = screen.getByPlaceholderText(/enter api key/i);
+    await userEvent.clear(keyInput);
+    await userEvent.type(keyInput, "sk-team-a-manual-key");
+
+    await userEvent.click(screen.getByRole("button", { name: /^Create$/i }));
+
+    await waitFor(() => {
+      expect(mocks.apiKeyEntriesReplace).toHaveBeenCalled();
+    });
+    expect(mocks.apiKeyEntriesReplace).toHaveBeenLastCalledWith([
+      expect.objectContaining({ key: "sk-existing-1234567890" }),
+      expect.objectContaining({ key: "sk-team-a-manual-key", name: "Manual Key" }),
+    ]);
+  });
+
+  test("allows changing an existing API key value", async () => {
+    render(
+      <MemoryRouter>
+        <ThemeProvider>
+          <ToastProvider>
+            <ApiKeysPage />
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("Existing Key")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Edit" }));
+
+    const keyInput = screen.getByDisplayValue("sk-existing-1234567890");
+    await userEvent.clear(keyInput);
+    await userEvent.type(keyInput, "sk-restored-same-downstream-key");
+
+    await userEvent.click(screen.getByRole("button", { name: /save/i }));
+
+    await waitFor(() => {
+      expect(mocks.apiKeyEntriesUpdate).toHaveBeenCalled();
+    });
+    expect(mocks.apiKeyEntriesUpdate).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        index: 0,
+        value: expect.objectContaining({
+          key: "sk-restored-same-downstream-key",
+          name: "Existing Key",
+        }),
+      }),
+    );
+  });
+
   test("keeps permissions out of the edit modal and preserves them while saving basics", async () => {
     state.entries = [
       {
