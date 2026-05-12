@@ -85,6 +85,9 @@ const sanitizeAuthFileRestrictionsForCache = (
       const httpStatus = Number(record.http_status);
       const code = typeof record.code === "string" ? record.code : undefined;
       const reason = typeof record.reason === "string" ? record.reason : undefined;
+      const quotaWindow =
+        typeof record.quota_window === "string" ? record.quota_window : undefined;
+      const quotaWindowMinutes = Number(record.quota_window_minutes);
       const nextRetryAfter =
         typeof record.next_retry_after === "string" || typeof record.next_retry_after === "number"
           ? record.next_retry_after
@@ -101,6 +104,10 @@ const sanitizeAuthFileRestrictionsForCache = (
         ...(Number.isFinite(httpStatus) && httpStatus > 0 ? { http_status: httpStatus } : {}),
         ...(code ? { code } : {}),
         ...(reason ? { reason } : {}),
+        ...(quotaWindow ? { quota_window: quotaWindow } : {}),
+        ...(Number.isFinite(quotaWindowMinutes) && quotaWindowMinutes > 0
+          ? { quota_window_minutes: quotaWindowMinutes }
+          : {}),
         ...(record.unavailable === true ? { unavailable: true } : {}),
         ...(record.quota_exceeded === true ? { quota_exceeded: true } : {}),
         ...(record.retryable === true ? { retryable: true } : {}),
@@ -375,6 +382,9 @@ export type AuthFileRestrictionBadge = {
   label: string;
   model?: string;
   reason?: string;
+  quotaWindow?: string;
+  quotaWindowMinutes?: number;
+  quotaLimited?: boolean;
   recoverAtMs?: number;
   remainingText?: string;
   tone: "danger" | "warning" | "neutral";
@@ -434,6 +444,51 @@ const resolveRestrictionTone = (
   return "neutral";
 };
 
+const isQuotaRestriction = (restriction: AuthFileRestriction): boolean => {
+  const status = Number(restriction.http_status);
+  if (status === 429) return true;
+  if (restriction.quota_exceeded || normalizeTagValue(restriction.reason) === "quota") return true;
+  const message = String(restriction.status_message ?? "").toLowerCase();
+  return message.includes("usage_limit") || message.includes("usage limit");
+};
+
+const normalizeRestrictionQuotaWindow = (restriction: AuthFileRestriction): string => {
+  const raw = normalizeTagValue(restriction.quota_window);
+  if (raw === "5h" || raw === "five_hour" || raw === "five-hour" || raw === "primary") {
+    return "5h";
+  }
+  if (raw === "week" || raw === "weekly" || raw === "7d" || raw === "secondary") {
+    return "week";
+  }
+  const minutes = Number(restriction.quota_window_minutes);
+  if (minutes === 300) return "5h";
+  if (minutes === 10080) return "week";
+  return raw;
+};
+
+const resolveRestrictionReason = (restriction: AuthFileRestriction): string => {
+  const rawMessage = String(restriction.status_message || "").trim();
+  if (rawMessage) {
+    try {
+      const parsed = JSON.parse(rawMessage) as unknown;
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        const record = parsed as Record<string, unknown>;
+        const error = record.error;
+        if (error && typeof error === "object" && !Array.isArray(error)) {
+          const errorRecord = error as Record<string, unknown>;
+          const message = String(errorRecord.message ?? "").trim();
+          if (message) return message;
+          const type = String(errorRecord.type ?? "").trim();
+          if (type && type !== "usage_limit_reached") return type;
+        }
+      }
+    } catch {
+      return rawMessage;
+    }
+  }
+  return String(restriction.reason || restriction.code || "").trim();
+};
+
 export const resolveAuthFileRestrictionBadges = (
   file: AuthFileItem,
   nowMs = Date.now(),
@@ -443,10 +498,7 @@ export const resolveAuthFileRestrictionBadges = (
     const scope = normalizeTagValue(restriction.scope);
     if (scope === "model") return false;
     const status = Number(restriction.http_status);
-    if (status === 429 || status >= 500) return false;
-    if (restriction.quota_exceeded || restriction.reason === "quota") return false;
-    const message = String(restriction.status_message ?? "").toLowerCase();
-    if (message.includes("usage_limit") || message.includes("usage limit")) return false;
+    if (status >= 500) return false;
     return true;
   });
   const restrictions =
@@ -469,9 +521,7 @@ export const resolveAuthFileRestrictionBadges = (
       const recoverAtMs = readRestrictionDateMs(restriction);
       if (recoverAtMs !== null && recoverAtMs <= nowMs) return null;
       const model = typeof restriction.model === "string" ? restriction.model.trim() : "";
-      const reason = String(
-        restriction.status_message || restriction.reason || restriction.code || "",
-      ).trim();
+      const reason = resolveRestrictionReason(restriction);
       const dateKey =
         typeof restriction.next_retry_after === "string" ||
         typeof restriction.next_retry_after === "number"
@@ -482,6 +532,9 @@ export const resolveAuthFileRestrictionBadges = (
             : "";
       const status = Number(restriction.http_status);
       const statusKey = Number.isFinite(status) && status > 0 ? String(Math.round(status)) : "";
+      const quotaWindow = normalizeRestrictionQuotaWindow(restriction);
+      const quotaWindowMinutes = Number(restriction.quota_window_minutes);
+      const quotaLimited = isQuotaRestriction(restriction);
       const key = [
         restriction.scope || "auth",
         model,
@@ -493,6 +546,11 @@ export const resolveAuthFileRestrictionBadges = (
         label: resolveRestrictionLabel(restriction),
         ...(model ? { model } : {}),
         ...(reason ? { reason } : {}),
+        ...(quotaWindow ? { quotaWindow } : {}),
+        ...(Number.isFinite(quotaWindowMinutes) && quotaWindowMinutes > 0
+          ? { quotaWindowMinutes }
+          : {}),
+        ...(quotaLimited ? { quotaLimited: true } : {}),
         ...(recoverAtMs !== null
           ? {
               recoverAtMs,

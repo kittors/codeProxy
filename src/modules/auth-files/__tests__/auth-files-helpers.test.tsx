@@ -331,7 +331,7 @@ describe("Auth Files helper coverage", () => {
     ).toEqual([]);
   });
 
-  test("ignores auth-level quota recovery records as auth-file restriction badges", () => {
+  test("shows auth-level quota recovery records as 429 restriction badges", () => {
     const file = {
       name: "codex.json",
       restrictions: [
@@ -340,6 +340,8 @@ describe("Auth Files helper coverage", () => {
           http_status: 429,
           quota_exceeded: true,
           reason: "quota",
+          quota_window: "5h",
+          quota_window_minutes: 300,
           status: "error",
           status_message: '{"error":{"type":"usage_limit_reached","message":"usage limit"}}',
           unavailable: true,
@@ -348,9 +350,41 @@ describe("Auth Files helper coverage", () => {
       ],
     } as AuthFileItem;
 
-    expect(
-      resolveAuthFileRestrictionBadges(file, Date.parse("2026-05-06T08:00:00.000Z")),
-    ).toEqual([]);
+    expect(resolveAuthFileRestrictionBadges(file, Date.parse("2026-05-06T08:00:00.000Z"))).toEqual([
+      expect.objectContaining({
+        label: "429 Error",
+        quotaWindow: "5h",
+        quotaWindowMinutes: 300,
+        reason: "usage limit",
+        recoverAtMs: Date.parse("2026-05-06T13:00:00.000Z"),
+      }),
+    ]);
+  });
+
+  test("keeps weekly auth-level quota windows distinct from five-hour windows", () => {
+    const file = {
+      name: "codex.json",
+      restrictions: [
+        {
+          scope: "auth",
+          http_status: 429,
+          quota_exceeded: true,
+          reason: "quota",
+          quota_window: "week",
+          quota_window_minutes: 10080,
+          status_message: '{"error":{"type":"usage_limit_reached","message":"usage limit"}}',
+          next_retry_after: "2026-05-13T08:00:00.000Z",
+        },
+      ],
+    } as AuthFileItem;
+
+    expect(resolveAuthFileRestrictionBadges(file, Date.parse("2026-05-06T08:00:00.000Z"))).toEqual([
+      expect.objectContaining({
+        label: "429 Error",
+        quotaWindow: "week",
+        quotaWindowMinutes: 10080,
+      }),
+    ]);
   });
 
   test("does not derive restriction badges from normal auth status", () => {

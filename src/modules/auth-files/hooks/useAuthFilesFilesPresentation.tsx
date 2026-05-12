@@ -222,11 +222,29 @@ export function useAuthFilesFilesPresentation({
     [t],
   );
 
+  const formatRestrictionQuotaWindowLabel = useCallback(
+    (badge: ReturnType<typeof resolveAuthFileRestrictionBadges>[number]) => {
+      if (badge.quotaWindow === "5h") return t("auth_files.restriction_window_5h");
+      if (badge.quotaWindow === "week") return t("auth_files.restriction_window_week");
+      if (badge.quotaWindow) return badge.quotaWindow;
+      if (badge.quotaWindowMinutes) {
+        return t("auth_files.restriction_window_minutes", { minutes: badge.quotaWindowMinutes });
+      }
+      return "";
+    },
+    [t],
+  );
+
   const formatRestrictionTooltip = useCallback(
     (badge: ReturnType<typeof resolveAuthFileRestrictionBadges>[number]) => {
+      const quotaWindow = formatRestrictionQuotaWindowLabel(badge);
       const parts = [
+        badge.quotaLimited ? t("auth_files.restriction_limited") : "",
+        quotaWindow ? t("auth_files.restriction_window", { window: quotaWindow }) : "",
         badge.model ? t("auth_files.restriction_model", { model: badge.model }) : "",
-        badge.reason ? t("auth_files.restriction_reason", { reason: badge.reason }) : "",
+        badge.reason && !badge.quotaLimited
+          ? t("auth_files.restriction_reason", { reason: badge.reason })
+          : "",
       ].filter(Boolean);
       if (badge.recoverAtMs) {
         const remaining = formatAuthFileRestrictionRemaining(
@@ -234,13 +252,18 @@ export function useAuthFilesFilesPresentation({
           nowMs,
           restrictionUnitLabels,
         );
+        parts.push(
+          t("auth_files.restriction_resets_at", {
+            time: new Date(badge.recoverAtMs).toLocaleString(),
+          }),
+        );
         parts.push(t("auth_files.restriction_recovery_in", { time: remaining }));
       } else {
         parts.push(t("auth_files.restriction_recovery_unknown"));
       }
       return parts.join(" · ");
     },
-    [nowMs, restrictionUnitLabels, t],
+    [formatRestrictionQuotaWindowLabel, nowMs, restrictionUnitLabels, t],
   );
 
   const renderRestrictionBadges = useCallback(

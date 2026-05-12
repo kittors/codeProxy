@@ -36,6 +36,8 @@ export interface AuthFileRestriction {
   http_status?: number;
   code?: string;
   reason?: string;
+  quota_window?: string;
+  quota_window_minutes?: number;
   quota_exceeded?: boolean;
   retryable?: boolean;
   next_retry_after?: string | number;
