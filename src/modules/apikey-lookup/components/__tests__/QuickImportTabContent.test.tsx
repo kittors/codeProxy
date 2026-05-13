@@ -114,4 +114,26 @@ describe("QuickImportTabContent", () => {
     expect(parsed.searchParams.get("apiKey")).toBe("sk-lookup-key");
     expect(parsed.searchParams.get("endpoint")).toMatch(/\/pro\/cs_codex\/v1$/);
   });
+
+  test("hides quick import groups that do not have presets", async () => {
+    vi.mocked(globalThis.fetch).mockResolvedValue(
+      new Response(JSON.stringify({ "ccswitch-import-configs": [quickImportConfigs[0]] }), {
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    render(
+      <ThemeProvider>
+        <ToastProvider>
+          <QuickImportTabContent apiKey="sk-lookup-key" />
+        </ToastProvider>
+      </ThemeProvider>,
+    );
+
+    const codexSection = await screen.findByRole("region", { name: /codex quick imports/i });
+
+    expect(within(codexSection).getByRole("button", { name: /team codex/i })).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: /claude quick imports/i })).not.toBeInTheDocument();
+    expect(screen.queryByText(/no claude presets yet/i)).not.toBeInTheDocument();
+  });
 });

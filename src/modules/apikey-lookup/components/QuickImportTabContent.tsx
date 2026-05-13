@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Download, ExternalLink, Zap } from "lucide-react";
+import { Download, ExternalLink } from "lucide-react";
 import iconClaude from "@/assets/icons/claude.svg";
 import iconCodex from "@/assets/icons/codex.svg";
 import { AUTH_STORAGE_KEY, MANAGEMENT_API_PREFIX } from "@/lib/constants";
@@ -289,6 +289,8 @@ export function QuickImportTabContent({
             const items = groupedConfigs[typedClient];
             const label = t(clientLabelKey[typedClient]);
 
+            if (items.length === 0) return null;
+
             return (
               <section
                 key={typedClient}
@@ -302,18 +304,11 @@ export function QuickImportTabContent({
                     {items.length}
                   </span>
                 </div>
-                {items.length > 0 ? (
-                  <div className="grid gap-3 md:grid-cols-2">
-                    {items.map((config) => (
-                      <QuickImportCard key={config.id} config={config} onSelect={handleImport} />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2 rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 px-4 py-5 text-sm text-slate-500 dark:border-neutral-800 dark:bg-neutral-900/40 dark:text-white/45">
-                    <Zap size={15} />
-                    {t("apikey_lookup.quick_import_empty_group", { client: label })}
-                  </div>
-                )}
+                <div className="grid gap-3 md:grid-cols-2">
+                  {items.map((config) => (
+                    <QuickImportCard key={config.id} config={config} onSelect={handleImport} />
+                  ))}
+                </div>
               </section>
             );
           })}
