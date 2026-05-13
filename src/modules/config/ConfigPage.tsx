@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, ChevronUp, Code2, Eye, Search, Settings } from "lucide-react";
 import { parse as parseYaml } from "yaml";
-import { configFileApi } from "@/lib/http/apis";
+import { configApi, configFileApi } from "@/lib/http/apis";
 import { FloatingSaveBar } from "@/modules/config/FloatingSaveBar";
 import { RuntimeConfigPanel } from "@/modules/config/RuntimeConfigPanel";
 import { VisualConfigEditor } from "@/modules/config/visual/VisualConfigEditor";
@@ -89,13 +89,16 @@ export function ConfigPage() {
     setLoading(true);
     setError("");
     try {
-      const text = await configFileApi.fetchConfigYaml();
+      const [text, runtimeConfig] = await Promise.all([
+        configFileApi.fetchConfigYaml(),
+        configApi.getConfig().catch(() => undefined),
+      ]);
       setYamlText(text);
       setYamlDirty(false);
       setSearchPositions([]);
       setSearchIndex(0);
       setLastSearchedQuery("");
-      loadVisualValuesFromYaml(text);
+      loadVisualValuesFromYaml(text, runtimeConfig);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : t("config_page.toast_load_failed");
       setError(message);
@@ -128,10 +131,13 @@ export function ConfigPage() {
       const commercialModeChanged = previousCommercialMode !== nextCommercialMode;
 
       await configFileApi.saveConfigYaml(nextYaml);
-      const latest = await configFileApi.fetchConfigYaml();
+      const [latest, runtimeConfig] = await Promise.all([
+        configFileApi.fetchConfigYaml(),
+        configApi.getConfig().catch(() => undefined),
+      ]);
       setYamlText(latest);
       setYamlDirty(false);
-      loadVisualValuesFromYaml(latest);
+      loadVisualValuesFromYaml(latest, runtimeConfig);
       notify({ type: "success", message: t("config_page.toast_saved") });
       if (commercialModeChanged) {
         notify({ type: "info", message: t("config_page.toast_commercial_changed") });
