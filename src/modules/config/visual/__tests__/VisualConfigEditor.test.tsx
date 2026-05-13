@@ -142,4 +142,64 @@ describe("VisualConfigEditor auto update config", () => {
       expect(nextYaml.match(/https:\/\/plugin\.example/g)).toHaveLength(1);
     });
   });
+
+  test("loads payload rules from runtime config when YAML was cleaned after DB migration", async () => {
+    const { result } = renderHook(() => useVisualConfig());
+
+    act(() => {
+      result.current.loadVisualValuesFromYaml("port: 8318\nlogging-to-file: true\n", {
+        payload: {
+          override: [
+            {
+              models: [{ name: "gpt-5.4", protocol: "codex" }],
+              params: { service_tier: "priority" },
+            },
+          ],
+        },
+      });
+    });
+
+    await waitFor(() => {
+      expect(result.current.visualValues.payloadOverrideRules).toHaveLength(1);
+      expect(result.current.visualValues.payloadOverrideRules[0]?.models[0]).toMatchObject({
+        name: "gpt-5.4",
+        protocol: "codex",
+      });
+      expect(result.current.visualValues.payloadOverrideRules[0]?.params[0]).toMatchObject({
+        path: "service_tier",
+        value: "priority",
+      });
+    });
+  });
+
+  test("writes empty payload marker when DB-backed payload rules are cleared visually", async () => {
+    const { result } = renderHook(() => useVisualConfig());
+
+    act(() => {
+      result.current.loadVisualValuesFromYaml("port: 8318\n", {
+        payload: {
+          override: [
+            {
+              models: [{ name: "gpt-5.4", protocol: "codex" }],
+              params: { service_tier: "priority" },
+            },
+          ],
+        },
+      });
+    });
+
+    await waitFor(() => {
+      expect(result.current.visualValues.payloadOverrideRules).toHaveLength(1);
+    });
+
+    act(() => {
+      result.current.setVisualValues({ payloadOverrideRules: [] });
+    });
+
+    await waitFor(() => {
+      const nextYaml = result.current.applyVisualChangesToYaml("port: 8318\n");
+      expect(nextYaml).toContain("payload: {}\n");
+      expect(nextYaml).not.toContain("service_tier");
+    });
+  });
 });

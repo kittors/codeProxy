@@ -92,6 +92,21 @@ function deleteIfEmpty(parent: Record<string, unknown>, key: string): void {
   if (Object.keys(value).length === 0) delete parent[key];
 }
 
+function hasPayloadRuleSections(payload: Record<string, unknown> | null): payload is Record<string, unknown> {
+  return Boolean(
+    payload &&
+      (hasOwn(payload, "default") || hasOwn(payload, "override") || hasOwn(payload, "filter")),
+  );
+}
+
+function hasVisualPayloadRules(values: VisualConfigValues): boolean {
+  return (
+    values.payloadDefaultRules.length > 0 ||
+    values.payloadOverrideRules.length > 0 ||
+    values.payloadFilterRules.length > 0
+  );
+}
+
 function setBoolean(obj: Record<string, unknown>, key: string, value: boolean): void {
   if (value) {
     obj[key] = true;
@@ -451,7 +466,7 @@ export function useVisualConfig() {
     return JSON.stringify(visualValues) !== JSON.stringify(baselineValues);
   }, [baselineValues, visualValues]);
 
-  const loadVisualValuesFromYaml = useCallback((yamlContent: string) => {
+  const loadVisualValuesFromYaml = useCallback((yamlContent: string, runtimeConfig?: Record<string, unknown>) => {
     try {
       const parsedRaw: unknown = parseYaml(yamlContent) || {};
       const parsed = asRecord(parsedRaw) ?? {};
@@ -459,7 +474,9 @@ export function useVisualConfig() {
       const remoteManagement = asRecord(parsed["remote-management"]);
       const quotaExceeded = asRecord(parsed["quota-exceeded"]);
       const routing = asRecord(parsed.routing);
-      const payload = asRecord(parsed.payload);
+      const yamlPayload = asRecord(parsed.payload);
+      const runtimePayload = asRecord(runtimeConfig?.payload);
+      const payload = hasPayloadRuleSections(runtimePayload) ? runtimePayload : yamlPayload;
       const streaming = asRecord(parsed.streaming);
       const autoUpdate = asRecord(parsed["auto-update"]);
 
@@ -730,12 +747,10 @@ export function useVisualConfig() {
           }
         }
 
-        if (
-          hasOwn(parsed, "payload") ||
-          values.payloadDefaultRules.length > 0 ||
-          values.payloadOverrideRules.length > 0 ||
-          values.payloadFilterRules.length > 0
-        ) {
+        const currentHasPayloadRules = hasVisualPayloadRules(values);
+        const baselineHadPayloadRules = hasVisualPayloadRules(baselineValues);
+
+        if (hasOwn(parsed, "payload") || currentHasPayloadRules || baselineHadPayloadRules) {
           const payload = ensureRecord(parsed, "payload");
           if (values.payloadDefaultRules.length > 0) {
             payload.default = serializePayloadRulesForYaml(values.payloadDefaultRules);
@@ -752,7 +767,13 @@ export function useVisualConfig() {
           } else if (hasOwn(payload, "filter")) {
             delete payload.filter;
           }
-          deleteIfEmpty(parsed, "payload");
+          if (Object.keys(payload).length === 0) {
+            if (baselineHadPayloadRules && !currentHasPayloadRules) {
+              parsed.payload = {};
+            } else {
+              delete parsed.payload;
+            }
+          }
         }
 
         return stringifyYaml(parsed, { indent: 2, lineWidth: 120, minContentWidth: 0 });
@@ -760,7 +781,7 @@ export function useVisualConfig() {
         return currentYaml;
       }
     },
-    [visualValues],
+    [baselineValues, visualValues],
   );
 
   const setVisualValues = useCallback((newValues: Partial<VisualConfigValues>) => {
