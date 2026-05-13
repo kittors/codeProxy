@@ -13,6 +13,7 @@ import {
   ccSwitchImportConfigsApi,
   normalizeCcSwitchImportConfigs,
 } from "@/lib/http/apis/ccswitch-import-configs";
+import type { ApiKeyEntry } from "@/lib/http/apis/api-keys";
 import {
   buildCcSwitchImportUrl,
   openCcSwitchImportUrl,
@@ -22,6 +23,7 @@ import {
   deriveCcSwitchImportSettingsFromConfigList,
   type CcSwitchImportConfigListItem,
 } from "@/modules/ccswitch/ccswitchImportConfigList";
+import { ccSwitchConfigMatchesApiKeyPermissions } from "@/modules/ccswitch/ccswitchImportCompatibility";
 import { normalizeCcSwitchClaudeAuthField } from "@/modules/ccswitch/ccswitchImportSettings";
 import { Card } from "@/modules/ui/Card";
 import { useToast } from "@/modules/ui/ToastProvider";
@@ -76,6 +78,40 @@ async function fetchQuickImportConfigs(): Promise<CcSwitchImportConfigListItem[]
   } catch (err) {
     if (auth) throw err;
     return ccSwitchImportConfigsApi.list();
+  }
+}
+
+function normalizeApiKeyEntries(raw: unknown): ApiKeyEntry[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.filter(
+    (entry): entry is ApiKeyEntry =>
+      entry !== null &&
+      typeof entry === "object" &&
+      !Array.isArray(entry) &&
+      typeof (entry as { key?: unknown }).key === "string",
+  );
+}
+
+async function fetchQuickImportApiKeyEntry(apiKey: string): Promise<ApiKeyEntry | null> {
+  const auth = readStoredManagementAuth();
+  if (!auth) return null;
+
+  const key = apiKey.trim();
+  if (!key) return null;
+
+  const managementBase = computeManagementApiBase(auth.apiBase);
+  try {
+    const response = await fetch(`${managementBase}/api-key-entries`, {
+      headers: {
+        Authorization: `Bearer ${auth.managementKey}`,
+      },
+    });
+    if (!response.ok) return null;
+    const data = (await response.json()) as Record<string, unknown>;
+    const entries = normalizeApiKeyEntries(data["api-key-entries"] ?? data.items ?? data);
+    return entries.find((entry) => entry.key === key) ?? null;
+  } catch {
+    return null;
   }
 }
 
@@ -181,6 +217,7 @@ export function QuickImportTabContent({
   const { t } = useTranslation();
   const { notify } = useToast();
   const [configs, setConfigs] = useState<CcSwitchImportConfigListItem[]>([]);
+  const [apiKeyEntry, setApiKeyEntry] = useState<ApiKeyEntry | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -189,14 +226,16 @@ export function QuickImportTabContent({
     setLoading(true);
     setError(null);
 
-    fetchQuickImportConfigs()
-      .then((items) => {
+    Promise.all([fetchQuickImportConfigs(), fetchQuickImportApiKeyEntry(apiKey)])
+      .then(([items, entry]) => {
         if (cancelled) return;
         setConfigs(items.filter((item) => QUICK_IMPORT_CLIENTS.includes(item.clientType)));
+        setApiKeyEntry(entry);
       })
       .catch((err: unknown) => {
         if (cancelled) return;
         setConfigs([]);
+        setApiKeyEntry(null);
         setError(err instanceof Error ? err.message : t("apikey_lookup.quick_import_load_failed"));
       })
       .finally(() => {
@@ -207,14 +246,22 @@ export function QuickImportTabContent({
     return () => {
       cancelled = true;
     };
-  }, [reloadToken, t]);
+  }, [apiKey, reloadToken, t]);
 
   const groupedConfigs = useMemo(
     () => ({
-      codex: configs.filter((config) => config.clientType === "codex"),
-      claude: configs.filter((config) => config.clientType === "claude"),
+      codex: configs.filter(
+        (config) =>
+          config.clientType === "codex" &&
+          ccSwitchConfigMatchesApiKeyPermissions(config, apiKeyEntry),
+      ),
+      claude: configs.filter(
+        (config) =>
+          config.clientType === "claude" &&
+          ccSwitchConfigMatchesApiKeyPermissions(config, apiKeyEntry),
+      ),
     }),
-    [configs],
+    [apiKeyEntry, configs],
   );
 
   const handleImport = useCallback(
@@ -276,7 +323,6 @@ export function QuickImportTabContent({
         padding="none"
         className="overflow-hidden"
         loading={loading}
-        title={t("apikey_lookup.quick_import_cards_title")}
       >
         {error ? (
           <div className="border-b border-rose-100 bg-rose-50 px-5 py-2.5 text-sm text-rose-700 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-200">

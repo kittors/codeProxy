@@ -2985,7 +2985,6 @@
     "quick_import_setup_title": "请先安装 CC Switch",
     "quick_import_setup_desc": "请前往 CC Switch 仓库下载并安装最新版本的 CC Switch。安装完成后，点击下方配置卡片，即可把当前 API Key 导入到对应的 CC Switch 供应商预设。",
     "quick_import_download_latest": "下载最新 CC Switch",
-    "quick_import_cards_title": "CC Switch 卡片配置",
     "quick_import_codex": "Codex",
     "quick_import_claude": "Claude",
     "quick_import_load_failed": "加载 CC Switch 导入预设失败",

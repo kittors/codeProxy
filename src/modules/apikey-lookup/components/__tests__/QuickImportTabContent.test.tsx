@@ -60,6 +60,7 @@ const quickImportConfigs = [
 describe("QuickImportTabContent", () => {
   beforeEach(async () => {
     await i18n.changeLanguage("en");
+    window.localStorage.clear();
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(JSON.stringify({ "ccswitch-import-configs": quickImportConfigs }), {
         headers: { "Content-Type": "application/json" },
@@ -90,7 +91,7 @@ describe("QuickImportTabContent", () => {
     const codexSection = await screen.findByRole("region", { name: /codex quick imports/i });
     const claudeSection = await screen.findByRole("region", { name: /claude quick imports/i });
 
-    expect(screen.getByRole("heading", { name: /cc switch card presets/i })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: /cc switch card presets/i })).toBeNull();
     expect(
       screen.queryByText(/only codex and claude presets are shown here for now/i),
     ).not.toBeInTheDocument();
@@ -135,5 +136,67 @@ describe("QuickImportTabContent", () => {
     expect(within(codexSection).getByRole("button", { name: /team codex/i })).toBeInTheDocument();
     expect(screen.queryByRole("region", { name: /claude quick imports/i })).not.toBeInTheDocument();
     expect(screen.queryByText(/no claude presets yet/i)).not.toBeInTheDocument();
+  });
+
+  test("filters quick import cards by the looked up API key permissions", async () => {
+    window.localStorage.setItem(
+      "code-proxy-admin-auth",
+      JSON.stringify({ apiBase: "http://localhost:3000", managementKey: "mgmt-test" }),
+    );
+    vi.mocked(globalThis.fetch).mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.endsWith("/ccswitch-import-configs")) {
+        return new Response(
+          JSON.stringify({
+            "ccswitch-import-configs": [
+              quickImportConfigs[0],
+              {
+                ...quickImportConfigs[0],
+                id: "codex-blocked-model",
+                "provider-name": "Blocked Codex",
+                "default-model": "gpt-5.5",
+                "model-mappings": [
+                  {
+                    "request-model": "gpt-5.5",
+                    "target-model": "gpt-5.5",
+                  },
+                ],
+              },
+              quickImportConfigs[1],
+            ],
+          }),
+          { headers: { "Content-Type": "application/json" } },
+        );
+      }
+      if (url.endsWith("/api-key-entries")) {
+        return new Response(
+          JSON.stringify({
+            "api-key-entries": [
+              {
+                key: "sk-lookup-key",
+                "allowed-channel-groups": ["pro"],
+                "allowed-models": ["gpt-5.3-codex"],
+              },
+            ],
+          }),
+          { headers: { "Content-Type": "application/json" } },
+        );
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    });
+
+    render(
+      <ThemeProvider>
+        <ToastProvider>
+          <QuickImportTabContent apiKey="sk-lookup-key" />
+        </ToastProvider>
+      </ThemeProvider>,
+    );
+
+    const codexSection = await screen.findByRole("region", { name: /codex quick imports/i });
+
+    expect(within(codexSection).getByRole("button", { name: /team codex/i })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /blocked codex/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: /claude quick imports/i })).not.toBeInTheDocument();
   });
 });

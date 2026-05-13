@@ -38,6 +38,7 @@ import {
   deriveCcSwitchImportSettingsFromConfigList,
   type CcSwitchImportConfigListItem,
 } from "@/modules/ccswitch/ccswitchImportConfigList";
+import { ccSwitchConfigMatchesApiKeyPermissions } from "@/modules/ccswitch/ccswitchImportCompatibility";
 import { LogContentModal } from "@/modules/monitor/LogContentModal";
 import { ErrorDetailModal } from "@/modules/monitor/ErrorDetailModal";
 import type { ApiKeyFormValues } from "@/modules/api-keys/types";
@@ -56,40 +57,6 @@ function appendRoutePath(baseUrl: string, path: string): string {
     return normalizedBase;
   }
   return `${normalizedBase}${normalizedPath}`;
-}
-
-function normalizeModelList(models: readonly unknown[] | undefined): string[] {
-  if (!Array.isArray(models)) return [];
-  const seen = new Set<string>();
-  const normalized: string[] = [];
-
-  models.forEach((model) => {
-    const value = String(model ?? "").trim();
-    if (!value || seen.has(value)) return;
-    seen.add(value);
-    normalized.push(value);
-  });
-
-  return normalized;
-}
-
-function getCcSwitchImportTargetModels(config: CcSwitchImportConfigListItem): string[] {
-  const mappedTargets = normalizeModelList(
-    config.modelMappings.map((mapping) => mapping.targetModel),
-  );
-  if (mappedTargets.length > 0) return mappedTargets;
-  return normalizeModelList([config.defaultModel]);
-}
-
-function ccSwitchConfigMatchesAllowedModels(
-  config: CcSwitchImportConfigListItem,
-  allowedModels: readonly string[],
-): boolean {
-  if (allowedModels.length === 0) return true;
-  const allowed = new Set(allowedModels);
-  const targetModels = getCcSwitchImportTargetModels(config);
-  if (targetModels.length === 0) return true;
-  return targetModels.every((model) => allowed.has(model));
 }
 
 async function copyTextToClipboard(text: string): Promise<boolean> {
@@ -450,20 +417,9 @@ export function ApiKeysPage() {
 
   const compatibleConfigs = useMemo(() => {
     if (!ccSwitchImportEntry) return [];
-    const entryGroups = (ccSwitchImportEntry["allowed-channel-groups"] ?? [])
-      .map((g) =>
-        String(g ?? "")
-          .trim()
-          .toLowerCase(),
-      )
-      .filter(Boolean);
-    const entryModels = normalizeModelList(ccSwitchImportEntry["allowed-models"]);
-    return ccSwitchImportConfigs.filter((config) => {
-      const matchesGroups =
-        entryGroups.length === 0 ||
-        config.allowedChannelGroups.some((g) => entryGroups.includes(g));
-      return matchesGroups && ccSwitchConfigMatchesAllowedModels(config, entryModels);
-    });
+    return ccSwitchImportConfigs.filter((config) =>
+      ccSwitchConfigMatchesApiKeyPermissions(config, ccSwitchImportEntry),
+    );
   }, [ccSwitchImportEntry, ccSwitchImportConfigs]);
 
   const handleOpenCcSwitchImport = useCallback((entry: ApiKeyEntry) => {

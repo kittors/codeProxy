@@ -2749,7 +2749,6 @@
     "quick_import_setup_title": "Install CC Switch first",
     "quick_import_setup_desc": "Go to the CC Switch repository and download the latest CC Switch release. After the app is installed, choose one of the cards below to import this API key into the matching CC Switch provider preset.",
     "quick_import_download_latest": "Download the latest CC Switch",
-    "quick_import_cards_title": "CC Switch card presets",
     "quick_import_codex": "Codex",
     "quick_import_claude": "Claude",
     "quick_import_load_failed": "Failed to load CC Switch import presets",
