@@ -212,6 +212,7 @@ export const serializeOpenAIProvider = (provider: OpenAIProvider) => {
   if (baseUrl) payload["base-url"] = baseUrl;
   const prefix = normalizeString(provider.prefix);
   if (prefix) payload.prefix = prefix;
+  if (provider.disabled === true) payload.disabled = true;
   const headers = serializeHeaders(provider.headers);
   if (headers) payload.headers = headers;
   const models = serializeModels(provider.models);

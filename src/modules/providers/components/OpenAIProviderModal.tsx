@@ -53,6 +53,13 @@ export function OpenAIProviderModal({
   const { t } = useTranslation();
   const [discoverQuery, setDiscoverQuery] = useState("");
   const discoveredListRef = useRef<HTMLDivElement | null>(null);
+  const discoveredSectionRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (discoveredModels.length > 0 && discoveredSectionRef.current) {
+      discoveredSectionRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [discoveredModels.length]);
 
   useEffect(() => {
     if (!open) {
@@ -367,27 +374,6 @@ export function OpenAIProviderModal({
         </section>
 
         <section className="space-y-3 border-t border-slate-200/60 pt-5 dark:border-neutral-800/60">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-sm font-semibold text-slate-900 dark:text-white">
-              {t("providers.models_label")}
-            </p>
-            <div className="flex items-center gap-2">
-              <Button variant="secondary" size="sm" onClick={() => void discoverModels()} disabled={discovering}>
-                <RefreshCw size={14} className={discovering ? "animate-spin" : ""} />
-                {t("providers.fetch_models")}
-              </Button>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={applyDiscoveredModels}
-                disabled={discoveredModels.length === 0}
-              >
-                <Check size={14} />
-                {t("providers.merge_selected")}
-              </Button>
-            </div>
-          </div>
-
           <ModelInputList
             title={t("providers.models_optional")}
             entries={openaiDraft.modelEntries}
@@ -396,8 +382,21 @@ export function OpenAIProviderModal({
             showTestModel
           />
 
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm font-semibold text-slate-900 dark:text-white">
+              {t("providers.fetch_models")}
+            </p>
+            <Button variant="secondary" size="sm" onClick={() => void discoverModels()} disabled={discovering}>
+              <RefreshCw size={14} className={discovering ? "animate-spin" : ""} />
+              {t("providers.fetch_models")}
+            </Button>
+          </div>
+
           {discoveredModels.length ? (
-            <div className="rounded-2xl border border-slate-200 bg-slate-50/50 p-4 dark:border-neutral-800 dark:bg-neutral-900/40">
+            <div
+              ref={discoveredSectionRef}
+              className="rounded-2xl border border-slate-200 bg-slate-50/50 p-4 dark:border-neutral-800 dark:bg-neutral-900/40"
+            >
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="text-xs font-medium text-slate-700 dark:text-white/70">
                   {t("providers.found_models", { count: discoveredModels.length })}
@@ -419,6 +418,15 @@ export function OpenAIProviderModal({
                 </Button>
                 <Button variant="secondary" size="sm" onClick={deselectAllDiscovered}>
                   {t("providers.models_select_none")}
+                </Button>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={applyDiscoveredModels}
+                  disabled={discoverSelected.size === 0}
+                >
+                  <Check size={14} />
+                  {t("providers.merge_selected")}
                 </Button>
                 {discoverQuery.trim() ? (
                   <span className="text-xs text-slate-500 dark:text-white/55">

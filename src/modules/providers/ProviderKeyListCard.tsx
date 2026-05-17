@@ -1,10 +1,11 @@
+import type { ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
-import { Loader2, Plus, Settings2, Trash2, Zap } from "lucide-react";
+import { Loader2, Plus, Zap } from "lucide-react";
 import type { ProviderSimpleConfig } from "@/lib/http/types";
 import { Button } from "@/modules/ui/Button";
 import { Card } from "@/modules/ui/Card";
+import { ProviderCard } from "@/modules/providers/ProviderCard";
 import { EmptyState } from "@/modules/ui/EmptyState";
-import { ToggleSwitch } from "@/modules/ui/ToggleSwitch";
 import { ProviderStatusBar } from "@/modules/providers/ProviderStatusBar";
 import type { KeyStatBucket, StatusBarData } from "@/modules/providers/provider-usage";
 import {
@@ -30,6 +31,8 @@ export function ProviderKeyListCard({
   onEdit,
   onDelete,
   onToggleEnabled,
+  gridColumns = 2,
+  renderExtra,
 
   getStats,
   getStatusBar,
@@ -52,6 +55,8 @@ export function ProviderKeyListCard({
   onEdit: (index: number) => void;
   onDelete: (index: number) => void;
   onToggleEnabled?: (index: number, enabled: boolean) => void;
+  gridColumns?: number;
+  renderExtra?: (item: ProviderSimpleConfig, index: number) => ReactNode;
   getStats: (item: ProviderSimpleConfig) => KeyStatBucket;
   getStatusBar: (item: ProviderSimpleConfig) => StatusBarData;
   getAccessSummary?: (item: ProviderSimpleConfig) => ProviderAccessSummary | null;
@@ -93,10 +98,16 @@ export function ProviderKeyListCard({
       ) : (
         <div
           data-testid="providers-tab-scroll"
-          className="min-h-0 flex-1 space-y-3 overflow-y-auto pr-1"
+          className={[
+            "min-h-0 flex-1 pr-1",
+            gridColumns > 1
+              ? "grid gap-3"
+              : "space-y-3",
+          ].join(" ")}
+          style={gridColumns > 1 ? { gridTemplateColumns: `repeat(${gridColumns}, minmax(0, 1fr))` } : undefined}
         >
           {items.map((item, idx) => {
-            const selectionKey = item.apiKey.trim().toLowerCase();
+            const selectionKey = `${item.apiKey.trim().toLowerCase()}:${idx}`;
             const selected = selectedKeys?.has(selectionKey) ?? false;
             const disabled = hasDisableAllModelsRule(item.excludedModels);
             const headerEntries = Object.entries(item.headers || {});
@@ -115,207 +126,157 @@ export function ProviderKeyListCard({
                     : "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-100";
 
             return (
-              <div
+              <ProviderCard
                 key={`${item.apiKey}:${idx}`}
-                className={[
-                  "group rounded-2xl border border-slate-200 bg-white/70 px-4 py-3 shadow-sm transition-colors duration-200 ease-out hover:border-slate-300 hover:bg-white dark:border-neutral-800 dark:bg-neutral-950/60 dark:hover:border-neutral-700 dark:hover:bg-neutral-950/70",
-                  selected
-                    ? "border-slate-900 ring-1 ring-slate-300 dark:border-white dark:ring-white/20"
-                    : "",
-                ]
-                  .filter(Boolean)
-                  .join(" ")}
-              >
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-white">
-                      {renderIcon()}
-                      <span className="truncate">{item.name || maskApiKey(item.apiKey)}</span>
-                      {disabled ? (
-                        <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-semibold text-amber-700 dark:text-amber-200">
-                          {t("providers.disabled")}
-                        </span>
-                      ) : (
-                        <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:text-emerald-200">
-                          {t("providers.enabled")}
-                        </span>
-                      )}
-                      {checkLatency &&
-                        (() => {
-                          const latencyKey = item.apiKey;
-                          const entry = getLatencyEntry?.(latencyKey) ?? {
-                            latencyMs: null,
-                            loading: false,
-                            error: false,
-                          };
-                          const providerBaseUrl = item.baseUrl || "";
-                          return (
-                            <span
-                              className="inline-flex cursor-pointer items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[11px] tabular-nums text-slate-600 transition-colors hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white/60 dark:hover:border-blue-600 dark:hover:bg-blue-950 dark:hover:text-blue-300"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (providerBaseUrl) checkLatency(latencyKey, providerBaseUrl);
-                              }}
-                              title={
-                                providerBaseUrl
-                                  ? `Check latency: ${providerBaseUrl}`
-                                  : "No base URL configured"
-                              }
-                            >
-                              {entry.loading ? (
-                                <Loader2 size={10} className="animate-spin" />
-                              ) : entry.error ? (
-                                <span className="text-rose-500">×</span>
-                              ) : entry.latencyMs !== null ? (
-                                <span className="font-medium">
-                                  {formatLatency(entry.latencyMs)}
-                                </span>
-                              ) : (
-                                <Zap size={10} />
-                              )}
-                            </span>
-                          );
-                        })()}
-                    </p>
-
-                    <div className="mt-1 space-y-1 text-xs text-slate-600 dark:text-white/65">
-                      <p className="truncate font-mono">apiKey：{maskApiKey(item.apiKey)}</p>
-                      {showBaseUrl ? (
-                        <p className="truncate font-mono">baseUrl：{item.baseUrl || "--"}</p>
-                      ) : null}
-                      {item.proxyUrl ? (
-                        <p className="truncate font-mono">proxyUrl：{item.proxyUrl}</p>
-                      ) : null}
-                      <p className="tabular-nums">
-                        {t("providers.models_label")}: {models.length} ·{" "}
-                        {t("providers.excluded_models_label")}: {excludedModels.length} ·{" "}
-                        {t("providers.headers_optional")}: {headerEntries.length} ·{" "}
-                        {t("providers.success_stats", { count: stats.success })} ·{" "}
-                        {t("providers.failed_stats", { count: stats.failure })}
-                      </p>
-                    </div>
-
-                    {accessSummary ? (
-                      <div className="mt-2 flex flex-wrap gap-1.5 text-[11px]">
-                        <span
-                          className={`rounded-full border px-2 py-0.5 font-medium ${accessTone}`}
-                        >
-                          {accessSummary.totalKeys === 0
-                            ? t("providers.access_no_keys")
-                            : accessSummary.reachableKeys === 0
-                              ? t("providers.access_none")
-                              : accessSummary.reachableKeys < accessSummary.totalKeys
-                                ? t("providers.access_limited", {
-                                    reachable: accessSummary.reachableKeys,
-                                    total: accessSummary.totalKeys,
-                                  })
-                                : t("providers.access_all", { total: accessSummary.totalKeys })}
-                        </span>
-                        {accessSummary.exactOverrideKeys > 0 ? (
-                          <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100">
-                            {t("providers.access_exact_overrides", {
-                              count: accessSummary.exactOverrideKeys,
-                            })}
-                          </span>
-                        ) : null}
-                      </div>
-                    ) : null}
-
-                    {headerEntries.length ? (
-                      <div className="mt-2 flex flex-wrap gap-1">
-                        {headerEntries.map(([k, v]) => (
+                title={item.name || maskApiKey(item.apiKey)}
+                selected={selected}
+                enabled={!disabled}
+                dimmed={disabled}
+                onToggleSelected={
+                  onToggleSelected
+                    ? (checked) => onToggleSelected(selectionKey, checked)
+                    : undefined
+                }
+                onToggleEnabled={
+                  onToggleEnabled
+                    ? (enabled) => onToggleEnabled(idx, enabled)
+                    : undefined
+                }
+                onEdit={() => onEdit(idx)}
+                onDelete={() => onDelete(idx)}
+                headerExtra={
+                  checkLatency
+                    ? (() => {
+                        const latencyKey = item.apiKey;
+                        const entry = getLatencyEntry?.(latencyKey) ?? {
+                          latencyMs: null,
+                          loading: false,
+                          error: false,
+                        };
+                        const providerBaseUrl = item.baseUrl || "";
+                        return (
                           <span
-                            key={k}
-                            className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[11px] text-slate-700 dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-white/75"
-                          >
-                            <span className="font-semibold">{k}:</span> {String(v)}
-                          </span>
-                        ))}
-                      </div>
-                    ) : null}
-
-                    {models.length ? (
-                      <div className="mt-2 flex flex-wrap gap-1">
-                        {models.map((model) => (
-                          <span
-                            key={model.name}
-                            className="rounded-full bg-slate-900 px-2 py-0.5 text-[11px] text-white dark:bg-white dark:text-neutral-950"
+                            className="inline-flex cursor-pointer items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[11px] tabular-nums text-slate-600 transition-colors hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white/60 dark:hover:border-blue-600 dark:hover:bg-blue-950 dark:hover:text-blue-300"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (providerBaseUrl) checkLatency(latencyKey, providerBaseUrl);
+                            }}
                             title={
-                              model.alias && model.alias !== model.name
-                                ? `${model.name} => ${model.alias}`
-                                : model.name
+                              providerBaseUrl
+                                ? `Check latency: ${providerBaseUrl}`
+                                : "No base URL configured"
                             }
                           >
-                            {model.alias && model.alias !== model.name
-                              ? `${model.name} → ${model.alias}`
-                              : model.name}
+                            {entry.loading ? (
+                              <Loader2 size={10} className="animate-spin" />
+                            ) : entry.error ? (
+                              <span className="text-rose-500">×</span>
+                            ) : entry.latencyMs !== null ? (
+                              <span className="font-medium">
+                                {formatLatency(entry.latencyMs)}
+                              </span>
+                            ) : (
+                              <Zap size={10} />
+                            )}
                           </span>
-                        ))}
-                      </div>
-                    ) : null}
-
-                    {excludedModels.length ? (
-                      <div className="mt-2 flex flex-wrap gap-1">
-                        {excludedModels.map((model) => (
-                          <span
-                            key={model}
-                            className="rounded-full bg-rose-600/10 px-2 py-0.5 text-[11px] text-rose-700 dark:bg-rose-500/15 dark:text-rose-200"
-                          >
-                            {model}
-                          </span>
-                        ))}
-                      </div>
-                    ) : null}
-
-                    <ProviderStatusBar data={statusData} />
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-2">
-                    {onToggleSelected ? (
-                      <div
-                        className={[
-                          "flex h-8 items-center justify-center px-1 transition-opacity",
-                          selected
-                            ? "pointer-events-auto opacity-100"
-                            : "pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100",
-                        ].join(" ")}
-                      >
-                        <input
-                          type="checkbox"
-                          aria-label={t("providers.select_provider", {
-                            name: item.name || maskApiKey(item.apiKey),
-                          })}
-                          checked={selected}
-                          onChange={(event) =>
-                            onToggleSelected(selectionKey, event.currentTarget.checked)
-                          }
-                          className="h-4 w-4 rounded border-slate-300 text-slate-900 accent-slate-900 focus-visible:ring-2 focus-visible:ring-slate-400/35 dark:border-neutral-700 dark:bg-neutral-950 dark:text-white dark:accent-white dark:focus-visible:ring-white/15"
-                        />
-                      </div>
-                    ) : null}
-                    {onToggleEnabled ? (
-                      <div className="inline-flex items-center gap-2">
-                        <span className="text-sm font-semibold leading-none text-slate-900 dark:text-white">
-                          {t("providers.enable")}
-                        </span>
-                        <ToggleSwitch
-                          checked={!disabled}
-                          ariaLabel={t("providers.enable")}
-                          onCheckedChange={(enabled) => onToggleEnabled(idx, enabled)}
-                        />
-                      </div>
-                    ) : null}
-                    <Button variant="secondary" size="sm" onClick={() => onEdit(idx)}>
-                      <Settings2 size={14} />
-                      {t("providers.edit")}
-                    </Button>
-                    <Button variant="danger" size="sm" onClick={() => onDelete(idx)}>
-                      <Trash2 size={14} />
-                      {t("providers.delete")}
-                    </Button>
-                  </div>
+                        );
+                      })()
+                    : undefined
+                }
+              >
+                <div className="space-y-1 text-xs text-slate-600 dark:text-white/65">
+                  <p className="truncate font-mono">apiKey：{maskApiKey(item.apiKey)}</p>
+                  {showBaseUrl ? (
+                    <p className="truncate font-mono">baseUrl：{item.baseUrl || "--"}</p>
+                  ) : null}
+                  {item.proxyUrl ? (
+                    <p className="truncate font-mono">proxyUrl：{item.proxyUrl}</p>
+                  ) : null}
+                  <p className="tabular-nums">
+                    {t("providers.models_label")}: {models.length} ·{" "}
+                    {t("providers.excluded_models_label")}: {excludedModels.length} ·{" "}
+                    {t("providers.headers_optional")}: {headerEntries.length} ·{" "}
+                    {t("providers.success_stats", { count: stats.success })} ·{" "}
+                    {t("providers.failed_stats", { count: stats.failure })}
+                  </p>
                 </div>
-              </div>
+
+                {accessSummary ? (
+                  <div className="mt-2 flex flex-wrap gap-1.5 text-[11px]">
+                    <span
+                      className={`rounded-full border px-2 py-0.5 font-medium ${accessTone}`}
+                    >
+                      {accessSummary.totalKeys === 0
+                        ? t("providers.access_no_keys")
+                        : accessSummary.reachableKeys === 0
+                          ? t("providers.access_none")
+                          : accessSummary.reachableKeys < accessSummary.totalKeys
+                            ? t("providers.access_limited", {
+                                reachable: accessSummary.reachableKeys,
+                                total: accessSummary.totalKeys,
+                              })
+                            : t("providers.access_all", { total: accessSummary.totalKeys })}
+                    </span>
+                    {accessSummary.exactOverrideKeys > 0 ? (
+                      <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100">
+                        {t("providers.access_exact_overrides", {
+                          count: accessSummary.exactOverrideKeys,
+                        })}
+                      </span>
+                    ) : null}
+                  </div>
+                ) : null}
+
+                {headerEntries.length ? (
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {headerEntries.map(([k, v]) => (
+                      <span
+                        key={k}
+                        className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[11px] text-slate-700 dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-white/75"
+                      >
+                        <span className="font-semibold">{k}:</span> {String(v)}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
+
+                {models.length ? (
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {models.map((model) => (
+                      <span
+                        key={model.name}
+                        className="rounded-full bg-slate-900 px-2 py-0.5 text-[11px] text-white dark:bg-white dark:text-neutral-950"
+                        title={
+                          model.alias && model.alias !== model.name
+                            ? `${model.name} => ${model.alias}`
+                            : model.name
+                        }
+                      >
+                        {model.alias && model.alias !== model.name
+                          ? `${model.name} → ${model.alias}`
+                          : model.name}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
+
+                {excludedModels.length ? (
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {excludedModels.map((model) => (
+                      <span
+                        key={model}
+                        className="rounded-full bg-rose-600/10 px-2 py-0.5 text-[11px] text-rose-700 dark:bg-rose-500/15 dark:text-rose-200"
+                      >
+                        {model}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
+
+                {renderExtra ? renderExtra(item, idx) : null}
+
+                <ProviderStatusBar data={statusData} />
+              </ProviderCard>
             );
           })}
         </div>

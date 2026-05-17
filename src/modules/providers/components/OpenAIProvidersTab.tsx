@@ -1,9 +1,10 @@
 import { useTranslation } from "react-i18next";
-import { Plus, Settings2, Trash2 } from "lucide-react";
+import { Plus } from "lucide-react";
 import type { OpenAIProvider } from "@/lib/http/types";
 import { Button } from "@/modules/ui/Button";
 import { Card } from "@/modules/ui/Card";
 import { EmptyState } from "@/modules/ui/EmptyState";
+import { ProviderCard } from "@/modules/providers/ProviderCard";
 import { ProviderStatusBar } from "@/modules/providers/ProviderStatusBar";
 import { ToggleSwitch } from "@/modules/ui/ToggleSwitch";
 
@@ -26,6 +27,7 @@ interface OpenAIProvidersTabProps {
   };
   onToggleProviderEnabled?: (providerIndex: number, enabled: boolean) => void;
   onToggleKeyEntryEnabled?: (providerIndex: number, entryIndex: number, enabled: boolean) => void;
+  gridColumns?: number;
   selectedKeys?: Set<string>;
   onToggleSelected?: (key: string, checked: boolean) => void;
 }
@@ -41,6 +43,7 @@ export function OpenAIProvidersTab({
   getProviderStatusBar,
   onToggleProviderEnabled,
   onToggleKeyEntryEnabled,
+  gridColumns = 2,
   selectedKeys,
   onToggleSelected,
 }: OpenAIProvidersTabProps) {
@@ -68,205 +71,161 @@ export function OpenAIProvidersTab({
       ) : (
         <div
           data-testid="providers-tab-scroll"
-          className="min-h-0 flex-1 space-y-3 overflow-y-auto pr-1"
+          className={[
+            "pr-1",
+            gridColumns > 1
+              ? "grid gap-3"
+              : "space-y-3",
+          ].join(" ")}
+          style={gridColumns > 1 ? { gridTemplateColumns: `repeat(${gridColumns}, minmax(0, 1fr))` } : undefined}
         >
           {providers.map((provider, idx) => {
-            const selectionKey = provider.name.trim().toLowerCase();
+            const selectionKey = `${provider.name.trim().toLowerCase()}:${idx}`;
             const selected = selectedKeys?.has(selectionKey) ?? false;
             const headerEntries = Object.entries(provider.headers || {});
             const stats = getProviderStats(provider);
             const statusData = getProviderStatusBar(provider);
-            const providerEnabled = provider.disabled !== true;
 
             return (
-              <div
+              <ProviderCard
                 key={`${provider.name}:${idx}`}
-                className={[
-                  "group rounded-2xl border border-slate-200 bg-white/70 px-4 py-3 shadow-sm transition-colors duration-200 ease-out hover:border-slate-300 hover:bg-white dark:border-neutral-800 dark:bg-neutral-950/60 dark:hover:border-neutral-700 dark:hover:bg-neutral-950/70",
-                  selected
-                    ? "border-slate-900 ring-1 ring-slate-300 dark:border-white dark:ring-white/20"
-                    : "",
-                  providerEnabled ? "" : "opacity-70",
-                ]
-                  .filter(Boolean)
-                  .join(" ")}
+                title={provider.name}
+                selected={selected}
+                enabled={provider.disabled !== true}
+                dimmed={provider.disabled === true}
+                onToggleSelected={
+                  onToggleSelected
+                    ? (checked) => onToggleSelected(selectionKey, checked)
+                    : undefined
+                }
+                onToggleEnabled={
+                  onToggleProviderEnabled
+                    ? (enabled) => onToggleProviderEnabled(idx, enabled)
+                    : undefined
+                }
+                onEdit={() => openOpenAIEditor(idx)}
+                onDelete={() => confirmDelete(idx)}
               >
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="flex min-w-0 flex-wrap items-center gap-2">
-                      <p className="truncate text-sm font-semibold text-slate-900 dark:text-white">
-                        {provider.name}
-                      </p>
+                {provider.prefix ? (
+                  <p className="mt-1 truncate font-mono text-xs text-slate-700 dark:text-slate-200">
+                    prefix: {provider.prefix}
+                  </p>
+                ) : null}
+                <p className="mt-1 truncate font-mono text-xs text-slate-700 dark:text-slate-200">
+                  baseUrl: {provider.baseUrl || "--"}
+                </p>
+
+                {headerEntries.length ? (
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {headerEntries.map(([key, value]) => (
                       <span
-                        className={[
-                          "rounded-full px-2 py-0.5 text-[11px] font-semibold",
-                          providerEnabled
-                            ? "bg-emerald-600/10 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200"
-                            : "bg-amber-500/15 text-amber-700 dark:text-amber-200",
-                        ].join(" ")}
+                        key={key}
+                        className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[11px] text-slate-700 dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-white/75"
                       >
-                        {providerEnabled ? t("providers.enabled") : t("providers.disabled")}
+                        <span className="font-semibold">{key}:</span> {String(value)}
                       </span>
-                    </div>
-                    {provider.prefix ? (
-                      <p className="mt-1 truncate font-mono text-xs text-slate-700 dark:text-slate-200">
-                        prefix: {provider.prefix}
-                      </p>
-                    ) : null}
-                    <p className="mt-1 truncate font-mono text-xs text-slate-700 dark:text-slate-200">
-                      baseUrl: {provider.baseUrl || "--"}
+                    ))}
+                  </div>
+                ) : null}
+
+                {provider.apiKeyEntries?.length ? (
+                  <div className="mt-2 space-y-1">
+                    <p className="text-xs font-semibold text-slate-700 dark:text-white/75">
+                      Keys: {provider.apiKeyEntries.length}
                     </p>
-
-                    {headerEntries.length ? (
-                      <div className="mt-2 flex flex-wrap gap-1">
-                        {headerEntries.map(([key, value]) => (
-                          <span
-                            key={key}
-                            className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[11px] text-slate-700 dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-white/75"
+                    <div className="space-y-1">
+                      {provider.apiKeyEntries.map((entry, entryIndex) => {
+                        const entryStats = getKeyEntryStats(entry);
+                        const entryEnabled = entry.disabled !== true;
+                        return (
+                          <div
+                            key={`${entry.apiKey}:${entryIndex}`}
+                            className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-xs dark:border-neutral-800 dark:bg-neutral-950/60"
                           >
-                            <span className="font-semibold">{key}:</span> {String(value)}
-                          </span>
-                        ))}
-                      </div>
-                    ) : null}
-
-                    {provider.apiKeyEntries?.length ? (
-                      <div className="mt-2 space-y-1">
-                        <p className="text-xs font-semibold text-slate-700 dark:text-white/75">
-                          Keys: {provider.apiKeyEntries.length}
-                        </p>
-                        <div className="space-y-1">
-                          {provider.apiKeyEntries.map((entry, entryIndex) => {
-                            const entryStats = getKeyEntryStats(entry);
-                            const entryEnabled = entry.disabled !== true;
-                            return (
-                              <div
-                                key={`${entry.apiKey}:${entryIndex}`}
-                                className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-xs dark:border-neutral-800 dark:bg-neutral-950/60"
+                            <div className="min-w-0">
+                              <p className="truncate font-mono text-slate-900 dark:text-white">
+                                {entryIndex + 1}. {maskApiKey(entry.apiKey)}
+                              </p>
+                              {entry.proxyUrl ? (
+                                <p className="mt-0.5 truncate font-mono text-slate-600 dark:text-white/55">
+                                  proxy: {entry.proxyUrl}
+                                </p>
+                              ) : null}
+                            </div>
+                            <div className="flex flex-wrap items-center gap-2 tabular-nums">
+                              <span
+                                className={[
+                                  "rounded-full px-2 py-0.5 font-semibold",
+                                  entryEnabled
+                                    ? "bg-emerald-600/10 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200"
+                                    : "bg-amber-500/15 text-amber-700 dark:text-amber-200",
+                                ].join(" ")}
                               >
-                                <div className="min-w-0">
-                                  <p className="truncate font-mono text-slate-900 dark:text-white">
-                                    {entryIndex + 1}. {maskApiKey(entry.apiKey)}
-                                  </p>
-                                  {entry.proxyUrl ? (
-                                    <p className="mt-0.5 truncate font-mono text-slate-600 dark:text-white/55">
-                                      proxy: {entry.proxyUrl}
-                                    </p>
-                                  ) : null}
-                                </div>
-                                <div className="flex flex-wrap items-center gap-2 tabular-nums">
-                                  <span
-                                    className={[
-                                      "rounded-full px-2 py-0.5 font-semibold",
-                                      entryEnabled
-                                        ? "bg-emerald-600/10 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200"
-                                        : "bg-amber-500/15 text-amber-700 dark:text-amber-200",
-                                    ].join(" ")}
-                                  >
-                                    {entryEnabled
-                                      ? t("providers.enabled")
-                                      : t("providers.disabled")}
-                                  </span>
-                                  <span className="rounded-full bg-emerald-600/10 px-2 py-0.5 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200">
-                                    {t("providers.success_stats", { count: entryStats.success })}
-                                  </span>
-                                  <span className="rounded-full bg-rose-600/10 px-2 py-0.5 text-rose-700 dark:bg-rose-500/15 dark:text-rose-200">
-                                    {t("providers.failed_stats", { count: entryStats.failure })}
-                                  </span>
-                                  {onToggleKeyEntryEnabled ? (
-                                    <ToggleSwitch
-                                      checked={entryEnabled}
-                                      ariaLabel={`${t("providers.enable_key_entry")} ${entryIndex + 1}`}
-                                      onCheckedChange={(enabled) =>
-                                        onToggleKeyEntryEnabled(idx, entryIndex, enabled)
-                                      }
-                                    />
-                                  ) : null}
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    ) : null}
-
-                    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-600 dark:text-white/65 tabular-nums">
-                      <span>
-                        {t("providers.models_label")}: {provider.models?.length ?? 0}
-                      </span>
-                      <span>·</span>
-                      <span>{t("providers.success_stats", { count: stats.success })}</span>
-                      <span>·</span>
-                      <span>{t("providers.failed_stats", { count: stats.failure })}</span>
-                      {provider.testModel ? (
-                        <>
-                          <span>·</span>
-                          <span className="truncate">testModel: {provider.testModel}</span>
-                        </>
-                      ) : null}
+                                {entryEnabled
+                                  ? t("providers.enabled")
+                                  : t("providers.disabled")}
+                              </span>
+                              <span className="rounded-full bg-emerald-600/10 px-2 py-0.5 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200">
+                                {t("providers.success_stats", { count: entryStats.success })}
+                              </span>
+                              <span className="rounded-full bg-rose-600/10 px-2 py-0.5 text-rose-700 dark:bg-rose-500/15 dark:text-rose-200">
+                                {t("providers.failed_stats", { count: entryStats.failure })}
+                              </span>
+                              {onToggleKeyEntryEnabled ? (
+                                <ToggleSwitch
+                                  checked={entryEnabled}
+                                  ariaLabel={`${t("providers.enable_key_entry")} ${entryIndex + 1}`}
+                                  onCheckedChange={(enabled) =>
+                                    onToggleKeyEntryEnabled(idx, entryIndex, enabled)
+                                  }
+                                />
+                              ) : null}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
-
-                    {provider.models?.length ? (
-                      <div className="mt-2 flex flex-wrap gap-1">
-                        {provider.models.map((model) => (
-                          <span
-                            key={model.name}
-                            className="rounded-full bg-slate-900 px-2 py-0.5 text-[11px] text-white dark:bg-white dark:text-neutral-950"
-                            title={
-                              model.alias && model.alias !== model.name
-                                ? `${model.name} => ${model.alias}`
-                                : model.name
-                            }
-                          >
-                            {model.alias && model.alias !== model.name
-                              ? `${model.name} → ${model.alias}`
-                              : model.name}
-                          </span>
-                        ))}
-                      </div>
-                    ) : null}
-
-                    <ProviderStatusBar data={statusData} />
                   </div>
-                  <div className="flex items-center gap-2">
-                    {onToggleProviderEnabled ? (
-                      <ToggleSwitch
-                        checked={providerEnabled}
-                        ariaLabel={`${t("providers.enable_provider")} ${provider.name}`}
-                        onCheckedChange={(enabled) => onToggleProviderEnabled(idx, enabled)}
-                      />
-                    ) : null}
-                    {onToggleSelected ? (
-                      <div
-                        className={[
-                          "flex h-8 items-center justify-center px-1 transition-opacity",
-                          selected
-                            ? "pointer-events-auto opacity-100"
-                            : "pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100",
-                        ].join(" ")}
-                      >
-                        <input
-                          type="checkbox"
-                          aria-label={t("providers.select_provider", { name: provider.name })}
-                          checked={selected}
-                          onChange={(event) =>
-                            onToggleSelected(selectionKey, event.currentTarget.checked)
-                          }
-                          className="h-4 w-4 rounded border-slate-300 text-slate-900 accent-slate-900 focus-visible:ring-2 focus-visible:ring-slate-400/35 dark:border-neutral-700 dark:bg-neutral-950 dark:text-white dark:accent-white dark:focus-visible:ring-white/15"
-                        />
-                      </div>
-                    ) : null}
-                    <Button variant="secondary" size="sm" onClick={() => openOpenAIEditor(idx)}>
-                      <Settings2 size={14} />
-                      {t("providers.edit")}
-                    </Button>
-                    <Button variant="danger" size="sm" onClick={() => confirmDelete(idx)}>
-                      <Trash2 size={14} />
-                      {t("providers.delete")}
-                    </Button>
-                  </div>
+                ) : null}
+
+                <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-600 dark:text-white/65 tabular-nums">
+                  <span>
+                    {t("providers.models_label")}: {provider.models?.length ?? 0}
+                  </span>
+                  <span>·</span>
+                  <span>{t("providers.success_stats", { count: stats.success })}</span>
+                  <span>·</span>
+                  <span>{t("providers.failed_stats", { count: stats.failure })}</span>
+                  {provider.testModel ? (
+                    <>
+                      <span>·</span>
+                      <span className="truncate">testModel: {provider.testModel}</span>
+                    </>
+                  ) : null}
                 </div>
-              </div>
+
+                {provider.models?.length ? (
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {provider.models.map((model) => (
+                      <span
+                        key={model.name}
+                        className="rounded-full bg-slate-900 px-2 py-0.5 text-[11px] text-white dark:bg-white dark:text-neutral-950"
+                        title={
+                          model.alias && model.alias !== model.name
+                            ? `${model.name} => ${model.alias}`
+                            : model.name
+                        }
+                      >
+                        {model.alias && model.alias !== model.name
+                          ? `${model.name} → ${model.alias}`
+                          : model.name}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
+
+                <ProviderStatusBar data={statusData} />
+              </ProviderCard>
             );
           })}
         </div>

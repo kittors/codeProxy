@@ -206,37 +206,6 @@ export function useOpenAIProviderEditor({
     [notify, openaiProviders, refreshAll, setOpenaiProviders, startRefreshTransition, t],
   );
 
-  const toggleOpenAIProviderEnabled = useCallback(
-    async (providerIndex: number, enabled: boolean) => {
-      const provider = openaiProviders[providerIndex];
-      if (!provider) return;
-
-      const prev = openaiProviders;
-      const next = prev.map((item, itemIndex) =>
-        itemIndex === providerIndex
-          ? { ...item, ...(enabled ? { disabled: undefined } : { disabled: true }) }
-          : item,
-      );
-
-      setOpenaiProviders(next);
-      try {
-        await providersApi.saveOpenAIProviders(next);
-        notify({
-          type: "success",
-          message: enabled ? t("providers.toggle_enabled") : t("providers.toggle_disabled"),
-        });
-        startRefreshTransition(() => void refreshAll());
-      } catch (err: unknown) {
-        setOpenaiProviders(prev);
-        notify({
-          type: "error",
-          message: err instanceof Error ? err.message : t("providers.update_failed"),
-        });
-      }
-    },
-    [notify, openaiProviders, refreshAll, setOpenaiProviders, startRefreshTransition, t],
-  );
-
   const discoverModels = useCallback(async () => {
     const baseUrl = openaiDraft.baseUrl.trim();
     if (!baseUrl) {
@@ -304,6 +273,30 @@ export function useOpenAIProviderEditor({
     setOpenaiDraft((prev) => ({ ...prev, modelEntries: merged }));
     notify({ type: "success", message: t("providers.models_merged") });
   }, [discoverSelected, discoveredModels, notify, openaiDraft.modelEntries, t]);
+
+  const toggleOpenAIProviderEnabled = useCallback(
+    async (providerIndex: number, enabled: boolean) => {
+      const provider = openaiProviders[providerIndex];
+      if (!provider) return;
+
+      try {
+        await providersApi.patchOpenAIProviderDisabled(providerIndex, !enabled);
+        // Re-fetch from server to get authoritative state
+        const latest = await providersApi.getOpenAIProviders();
+        setOpenaiProviders(latest);
+        notify({
+          type: "success",
+          message: enabled ? t("providers.toggle_enabled") : t("providers.toggle_disabled"),
+        });
+      } catch (err: unknown) {
+        notify({
+          type: "error",
+          message: err instanceof Error ? err.message : t("providers.update_failed"),
+        });
+      }
+    },
+    [notify, openaiProviders, setOpenaiProviders, t],
+  );
 
   return {
     editOpenAIOpen,

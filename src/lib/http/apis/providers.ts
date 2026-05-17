@@ -344,4 +344,7 @@ export const providersApi = {
 
   deleteOpenAIProvider: (name: string) =>
     apiClient.delete("/openai-compatibility", undefined, { params: { name } }),
+
+  patchOpenAIProviderDisabled: (index: number, disabled: boolean) =>
+    apiClient.patch("/openai-compatibility", { index, value: { disabled } }),
 };

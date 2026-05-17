@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Bot, Cloud, Database, Download, FileKey, Globe, RefreshCw, Upload } from "lucide-react";
+import { Bot, Cloud, Database, Download, FileKey, Globe, LayoutGrid, RefreshCw, Upload } from "lucide-react";
 import iconGemini from "@/assets/icons/gemini.svg";
 import iconClaude from "@/assets/icons/claude.svg";
 import iconCodex from "@/assets/icons/codex.svg";
@@ -18,6 +18,7 @@ import type { BedrockProviderConfig, OpenAIProvider, ProviderSimpleConfig } from
 import { Button } from "@/modules/ui/Button";
 import { ConfirmModal } from "@/modules/ui/ConfirmModal";
 import { Modal } from "@/modules/ui/Modal";
+import { Select } from "@/modules/ui/Select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/modules/ui/Tabs";
 import { useToast } from "@/modules/ui/ToastProvider";
 import { downloadTextAsFile } from "@/modules/auth-files/helpers/authFilesPageUtils";
@@ -55,17 +56,60 @@ type ProviderTab =
   | "openai"
   | "ampcode";
 
+const PROVIDER_TAB_STORAGE_KEY = "providers-page:tab";
+const PROVIDER_TAB_VALUES: ProviderTab[] = [
+  "gemini", "claude", "codex", "opencode-go", "vertex", "bedrock", "openai", "ampcode",
+];
+
+function readSavedProviderTab(): ProviderTab {
+  try {
+    const saved = localStorage.getItem(PROVIDER_TAB_STORAGE_KEY);
+    if (saved && PROVIDER_TAB_VALUES.includes(saved as ProviderTab)) return saved as ProviderTab;
+  } catch {
+    // ignore
+  }
+  return "gemini";
+}
+
+function saveProviderTab(tab: ProviderTab): void {
+  try {
+    localStorage.setItem(PROVIDER_TAB_STORAGE_KEY, tab);
+  } catch {
+    // ignore
+  }
+}
+
+const GRID_COLUMNS_STORAGE_KEY = "providers-page:gridColumns";
+
+function readSavedGridColumns(): number {
+  try {
+    const saved = localStorage.getItem(GRID_COLUMNS_STORAGE_KEY);
+    if (saved) {
+      const num = Number(saved);
+      if (num >= 1 && num <= 4) return num;
+    }
+  } catch {
+    // ignore
+  }
+  return 2;
+}
+
+function saveGridColumns(cols: number): void {
+  try {
+    localStorage.setItem(GRID_COLUMNS_STORAGE_KEY, String(cols));
+  } catch {
+    // ignore
+  }
+}
+
 const getProviderSelectionKey = (
   kind: ProviderImportKind,
   item: ProviderSimpleConfig | BedrockProviderConfig | OpenAIProvider,
+  index: number,
 ) =>
   kind === "openai"
-    ? String((item as OpenAIProvider).name ?? "")
-        .trim()
-        .toLowerCase()
-    : String((item as ProviderSimpleConfig).apiKey ?? "")
-        .trim()
-        .toLowerCase();
+    ? `${String((item as OpenAIProvider).name ?? "").trim().toLowerCase()}:${index}`
+    : `${String((item as ProviderSimpleConfig).apiKey ?? "").trim().toLowerCase()}:${index}`;
 
 export function ProvidersPage() {
   const { t } = useTranslation();
@@ -75,8 +119,18 @@ export function ProvidersPage() {
   const navigate = useNavigate();
   const { getEntry: getLatencyEntry, checkLatency } = useProviderLatency();
 
-  const [tab, setTab] = useState<ProviderTab>("gemini");
+  const [tab, setTabState] = useState<ProviderTab>(readSavedProviderTab);
+  const setTab = useCallback((next: ProviderTab) => {
+    setTabState(next);
+    saveProviderTab(next);
+  }, []);
   const [loading, setLoading] = useState(true);
+
+  const [gridColumns, setGridColumnsState] = useState(readSavedGridColumns);
+  const setGridColumns = useCallback((cols: number) => {
+    setGridColumnsState(cols);
+    saveGridColumns(cols);
+  }, []);
 
   const [geminiKeys, setGeminiKeys] = useState<ProviderSimpleConfig[]>([]);
   const [claudeKeys, setClaudeKeys] = useState<ProviderSimpleConfig[]>([]);
@@ -484,10 +538,11 @@ export function ProvidersPage() {
   const currentSelectableKeys = useMemo(
     () =>
       currentImportKind
-        ? currentTabItems.map((item) =>
+        ? currentTabItems.map((item, index) =>
             getProviderSelectionKey(
               currentImportKind,
               item as ProviderSimpleConfig | BedrockProviderConfig | OpenAIProvider,
+              index,
             ),
           )
         : [],
@@ -572,11 +627,12 @@ export function ProvidersPage() {
   const handleExportSelected = useCallback(() => {
     const kind = currentImportKind;
     if (!kind || selectedExportCount === 0) return;
-    const selectedItems = currentTabItems.filter((item) =>
+    const selectedItems = currentTabItems.filter((item, index) =>
       selectedExportKeySet.has(
         getProviderSelectionKey(
           kind,
           item as ProviderSimpleConfig | BedrockProviderConfig | OpenAIProvider,
+          index,
         ),
       ),
     );
@@ -644,7 +700,7 @@ export function ProvidersPage() {
   return (
     <div
       data-testid="providers-page-shell"
-      className="flex h-[calc(100dvh-112px)] min-h-0 flex-col gap-6 overflow-hidden"
+      className="flex min-h-0 flex-col gap-6"
     >
       <div className="flex flex-wrap items-center gap-3">
         <div className="space-y-0.5">
@@ -738,6 +794,21 @@ export function ProvidersPage() {
           <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
           {t("providers.refresh")}
         </Button>
+        <div className="ml-auto flex items-center gap-1.5">
+          <LayoutGrid size={14} className="text-slate-500 dark:text-white/50" />
+          <Select
+            value={String(gridColumns)}
+            onChange={(v) => setGridColumns(Number(v))}
+            options={[
+              { value: "1", label: "1 col" },
+              { value: "2", label: "2 cols" },
+              { value: "3", label: "3 cols" },
+              { value: "4", label: "4 cols" },
+            ]}
+            size="sm"
+            aria-label="Grid columns"
+          />
+        </div>
       </div>
 
       <Tabs
@@ -750,7 +821,7 @@ export function ProvidersPage() {
           void refreshTab(nextTab);
         }}
       >
-        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
+        <div className="flex flex-col gap-4">
           <div className="flex shrink-0">
             <TabsList>
               <TabsTrigger value="gemini">
@@ -790,7 +861,7 @@ export function ProvidersPage() {
               </TabsTrigger>
             </TabsList>
           </div>
-          <TabsContent value="gemini" className="flex min-h-0 flex-1 flex-col">
+          <TabsContent value="gemini" className="flex flex-col">
             <ProviderKeyListCard
               icon={Globe}
               title={t("providers.gemini_keys")}
@@ -806,12 +877,13 @@ export function ProvidersPage() {
               getAccessSummary={getProviderAccessSummary}
               getLatencyEntry={getLatencyEntry}
               checkLatency={checkLatency}
+              gridColumns={gridColumns}
               selectedKeys={selectedExportKeySet}
               onToggleSelected={toggleExportSelection}
             />
           </TabsContent>
 
-          <TabsContent value="claude" className="flex min-h-0 flex-1 flex-col">
+          <TabsContent value="claude" className="flex flex-col">
             <ProviderKeyListCard
               icon={Bot}
               title={t("providers.claude_keys")}
@@ -827,12 +899,13 @@ export function ProvidersPage() {
               getAccessSummary={getProviderAccessSummary}
               getLatencyEntry={getLatencyEntry}
               checkLatency={checkLatency}
+              gridColumns={gridColumns}
               selectedKeys={selectedExportKeySet}
               onToggleSelected={toggleExportSelection}
             />
           </TabsContent>
 
-          <TabsContent value="codex" className="flex min-h-0 flex-1 flex-col">
+          <TabsContent value="codex" className="flex flex-col">
             <ProviderKeyListCard
               icon={FileKey}
               title={t("providers.codex_keys")}
@@ -848,12 +921,13 @@ export function ProvidersPage() {
               getAccessSummary={getProviderAccessSummary}
               getLatencyEntry={getLatencyEntry}
               checkLatency={checkLatency}
+              gridColumns={gridColumns}
               selectedKeys={selectedExportKeySet}
               onToggleSelected={toggleExportSelection}
             />
           </TabsContent>
 
-          <TabsContent value="opencode-go" className="flex min-h-0 flex-1 flex-col">
+          <TabsContent value="opencode-go" className="flex flex-col">
             <ProviderKeyListCard
               icon={FileKey}
               iconSrc={iconOpenCodeLight}
@@ -872,12 +946,13 @@ export function ProvidersPage() {
               getStatusBar={getSimpleStatusBar}
               getAccessSummary={getProviderAccessSummary}
               showBaseUrl={false}
+              gridColumns={gridColumns}
               selectedKeys={selectedExportKeySet}
               onToggleSelected={toggleExportSelection}
             />
           </TabsContent>
 
-          <TabsContent value="vertex" className="flex min-h-0 flex-1 flex-col">
+          <TabsContent value="vertex" className="flex flex-col">
             <ProviderKeyListCard
               icon={Database}
               title={t("providers.vertex_keys")}
@@ -892,12 +967,13 @@ export function ProvidersPage() {
               getAccessSummary={getProviderAccessSummary}
               getLatencyEntry={getLatencyEntry}
               checkLatency={checkLatency}
+              gridColumns={gridColumns}
               selectedKeys={selectedExportKeySet}
               onToggleSelected={toggleExportSelection}
             />
           </TabsContent>
 
-          <TabsContent value="bedrock" className="flex min-h-0 flex-1 flex-col">
+          <TabsContent value="bedrock" className="flex flex-col">
             <ProviderKeyListCard
               icon={Cloud}
               title={t("providers.bedrock_keys")}
@@ -913,12 +989,13 @@ export function ProvidersPage() {
               getAccessSummary={getProviderAccessSummary}
               getLatencyEntry={getLatencyEntry}
               checkLatency={checkLatency}
+              gridColumns={gridColumns}
               selectedKeys={selectedExportKeySet}
               onToggleSelected={toggleExportSelection}
             />
           </TabsContent>
 
-          <TabsContent value="openai" className="flex min-h-0 flex-1 flex-col">
+          <TabsContent value="openai" className="flex flex-col">
             <OpenAIProvidersTab
               providers={openaiProviders}
               loading={isActiveTabListLoading("openai")}
@@ -934,12 +1011,13 @@ export function ProvidersPage() {
               onToggleKeyEntryEnabled={(providerIndex, entryIndex, enabled) =>
                 void toggleOpenAIKeyEntryEnabled(providerIndex, entryIndex, enabled)
               }
+              gridColumns={gridColumns}
               selectedKeys={selectedExportKeySet}
               onToggleSelected={toggleExportSelection}
             />
           </TabsContent>
 
-          <TabsContent value="ampcode" className="flex min-h-0 flex-1 flex-col">
+          <TabsContent value="ampcode" className="flex flex-col">
             <AmpcodePanel
               loading={loading}
               isPending={isPending}
