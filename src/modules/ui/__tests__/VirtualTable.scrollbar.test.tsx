@@ -461,6 +461,28 @@ describe("VirtualTable scrollbar wrapper", () => {
     expect(preventDefault).toHaveBeenCalled();
   });
 
+  test("registers wheel interception as a non-passive native listener", () => {
+    const addEventListener = vi.spyOn(HTMLDivElement.prototype, "addEventListener");
+
+    render(
+      <VirtualTable
+        rows={Array.from({ length: 60 }, (_, i) => ({ id: String(i), name: `Row ${i}` }))}
+        columns={columns}
+        rowKey={(row) => row.id}
+        height="h-[160px]"
+        minHeight="min-h-0"
+        virtualize={false}
+      />,
+    );
+
+    expect(addEventListener).toHaveBeenCalledWith("wheel", expect.any(Function), {
+      capture: true,
+      passive: false,
+    });
+
+    addEventListener.mockRestore();
+  });
+
   test("shows vertical scrollbar after data change without requiring a user scroll", async () => {
     const { container, rerender } = render(
       <VirtualTable
