@@ -596,6 +596,12 @@ describe("ChannelGroupsPage", () => {
     expect(within(matchedChannelsTable).getByText("Team A Codex")).toBeInTheDocument();
     expect(within(matchedChannelsTable).getByText("Pro Codex")).toBeInTheDocument();
     expect(within(matchedChannelsTable).queryByText("Free Codex")).not.toBeInTheDocument();
+    expect(within(matchedChannelsTable).queryByRole("columnheader", { name: "操作" })).not.toBeInTheDocument();
+    expect(within(matchedChannelsTable).queryByText("标签匹配")).not.toBeInTheDocument();
+
+    const teamCodexRow = within(matchedChannelsTable).getByRole("row", { name: /Team A Codex/ });
+    const priorityInput = within(teamCodexRow).getByPlaceholderText("1");
+    await user.type(priorityInput, "80");
 
     await user.click(screen.getByRole("button", { name: "添加" }));
 
@@ -607,6 +613,9 @@ describe("ChannelGroupsPage", () => {
           expect.objectContaining({
             name: "tag-pool",
             match: { tags: ["team-a", "pro"] },
+            "channel-priorities": {
+              "Team A Codex": 80,
+            },
           }),
         ],
       }),

@@ -153,21 +153,21 @@ function serializeRoutingValues(values: VisualConfigValues): RoutingConfigItem {
       }
     } else {
       const channels = group.channels.map((channel) => channel.name.trim()).filter(Boolean);
-      const channelPriorities = group.channels.reduce<Record<string, number>>((map, channel) => {
-        const channelName = channel.name.trim();
-        const priority = parsePriorityText(channel.priority);
-        if (channelName && priority !== null) {
-          map[channelName] = priority;
-        }
-        return map;
-      }, {});
 
       if (channels.length > 0) {
         item.match = { channels: Array.from(new Set(channels)) };
       }
-      if (Object.keys(channelPriorities).length > 0) {
-        item["channel-priorities"] = channelPriorities;
+    }
+    const channelPriorities = group.channels.reduce<Record<string, number>>((map, channel) => {
+      const channelName = channel.name.trim();
+      const priority = parsePriorityText(channel.priority);
+      if (channelName && priority !== null) {
+        map[channelName] = priority;
       }
+      return map;
+    }, {});
+    if (Object.keys(channelPriorities).length > 0) {
+      item["channel-priorities"] = channelPriorities;
     }
     const allowedModels = Array.from(
       new Set(group.allowedModels.map((model) => model.trim()).filter(Boolean)),
