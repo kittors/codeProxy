@@ -14,6 +14,7 @@ export interface ChannelGroupItem {
   priority?: number;
   implicit?: boolean;
   prefixes?: string[];
+  tags?: string[];
   channels?: string[];
   "allowed-models"?: string[];
   "path-routes"?: string[];
@@ -70,6 +71,7 @@ export const channelGroupsApi = {
               : undefined,
           implicit: item.implicit === true,
           prefixes: normalizeStringList(item.prefixes),
+          tags: normalizeStringList(item.tags),
           channels: normalizeStringList(item.channels),
           "allowed-models": normalizeStringList(item["allowed-models"]),
           "path-routes": normalizeStringList(item["path-routes"]),

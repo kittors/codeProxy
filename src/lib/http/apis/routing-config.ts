@@ -6,6 +6,7 @@ export interface RoutingConfigGroupItem {
   strategy?: "round-robin" | "fill-first";
   match?: {
     channels?: string[];
+    tags?: string[];
   };
   "channel-priorities"?: Record<string, number>;
   "allowed-models"?: string[];

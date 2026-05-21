@@ -43,6 +43,8 @@ export type RoutingStrategy = "round-robin" | "fill-first";
 
 export type RoutingFallback = "none" | "default";
 
+export type RoutingChannelGroupMatchMode = "channels" | "tags";
+
 export type RoutingChannelGroupMemberEntry = {
   id: string;
   name: string;
@@ -54,7 +56,9 @@ export type RoutingChannelGroupEntry = {
   name: string;
   description: string;
   strategy: RoutingStrategy;
+  matchMode?: RoutingChannelGroupMatchMode;
   channels: RoutingChannelGroupMemberEntry[];
+  tags?: string[];
   allowedModels: string[];
   system?: boolean;
 };

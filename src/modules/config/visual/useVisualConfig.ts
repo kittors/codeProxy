@@ -254,6 +254,17 @@ function parseRoutingStrategy(raw: unknown): RoutingStrategy {
   return raw === "fill-first" ? "fill-first" : "round-robin";
 }
 
+function parseRoutingTags(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+  return Array.from(
+    new Set(
+      raw
+        .map((value) => String(value ?? "").trim().replace(/\s+/g, "-").toLowerCase())
+        .filter(Boolean),
+    ),
+  );
+}
+
 function parseRoutingPriorityText(value: string): number | null {
   const trimmed = value.trim();
   if (!/^\d+$/.test(trimmed)) return null;
@@ -271,6 +282,7 @@ function parseRoutingChannelGroups(raw: unknown): RoutingChannelGroupEntry[] {
     const channels = Array.isArray(match?.channels)
       ? match.channels.map((value) => String(value ?? "").trim()).filter(Boolean)
       : [];
+    const tags = parseRoutingTags(match?.tags);
     const priorityNames = priorityRecord
       ? Object.keys(priorityRecord)
           .map((value) => String(value ?? "").trim())
@@ -300,7 +312,9 @@ function parseRoutingChannelGroups(raw: unknown): RoutingChannelGroupEntry[] {
       name: typeof record.name === "string" ? record.name : "",
       description: typeof record.description === "string" ? record.description : "",
       strategy: parseRoutingStrategy(record.strategy),
+      matchMode: tags.length > 0 ? "tags" : "channels",
       channels: members,
+      tags,
       allowedModels: Array.isArray(record["allowed-models"])
         ? Array.from(
             new Set(
@@ -399,24 +413,33 @@ function serializeRoutingChannelGroupsForYaml(
       item.strategy = group.strategy === "fill-first" ? "fill-first" : "round-robin";
 
       const match: Record<string, unknown> = {};
-      const channels = group.channels.map((channel) => channel.name.trim()).filter(Boolean);
-      if (channels.length > 0) {
-        match.channels = Array.from(new Set(channels));
+      if (group.matchMode === "tags") {
+        const tags = parseRoutingTags(group.tags);
+        if (tags.length > 0) {
+          match.tags = tags;
+        }
+      } else {
+        const channels = group.channels.map((channel) => channel.name.trim()).filter(Boolean);
+        if (channels.length > 0) {
+          match.channels = Array.from(new Set(channels));
+        }
       }
       if (Object.keys(match).length > 0) {
         item.match = match;
       }
 
-      const channelPriorities = group.channels.reduce<Record<string, number>>((acc, channel) => {
-        const channelName = channel.name.trim();
-        const priority = parseRoutingPriorityText(channel.priority);
-        if (channelName && priority !== null) {
-          acc[channelName] = priority;
+      if (group.matchMode !== "tags") {
+        const channelPriorities = group.channels.reduce<Record<string, number>>((acc, channel) => {
+          const channelName = channel.name.trim();
+          const priority = parseRoutingPriorityText(channel.priority);
+          if (channelName && priority !== null) {
+            acc[channelName] = priority;
+          }
+          return acc;
+        }, {});
+        if (Object.keys(channelPriorities).length > 0) {
+          item["channel-priorities"] = channelPriorities;
         }
-        return acc;
-      }, {});
-      if (Object.keys(channelPriorities).length > 0) {
-        item["channel-priorities"] = channelPriorities;
       }
       const allowedModels = Array.from(
         new Set(group.allowedModels.map((model) => model.trim()).filter(Boolean)),

@@ -14,6 +14,7 @@ import {
 } from "@/modules/channel-groups/RoutingConfigEditor";
 import {
   normalizeProviderKey,
+  normalizeTagValue,
   readAuthFilesModelOwnerGroupMap,
 } from "@/modules/auth-files/helpers/authFilesPageUtils";
 import {
@@ -46,6 +47,19 @@ function parsePriorityText(value: string): number | null {
 const normalizeOwnerValue = (value: string): string =>
   value.trim().replace(/\s+/g, "-").toLowerCase();
 
+const normalizeRoutingTags = (values: unknown): string[] => {
+  if (!Array.isArray(values)) return [];
+  const seen = new Set<string>();
+  const tags: string[] = [];
+  values.forEach((value) => {
+    const tag = normalizeTagValue(value);
+    if (!tag || seen.has(tag)) return;
+    seen.add(tag);
+    tags.push(tag);
+  });
+  return tags;
+};
+
 const collectMappedOwnersForChannels = (
   channels: string[],
   detailsByName: Record<string, ChannelGroupChannelDetail>,
@@ -72,6 +86,7 @@ function hydrateRoutingValues(payload: RoutingConfigItem | undefined): VisualCon
     ? payload["channel-groups"].map((group, index) => {
         const priorityMap = group?.["channel-priorities"] ?? {};
         const channelNames = Array.isArray(group?.match?.channels) ? group.match.channels : [];
+        const tags = normalizeRoutingTags(group?.match?.tags);
         const mergedNames = Array.from(
           new Set(
             [
@@ -85,6 +100,8 @@ function hydrateRoutingValues(payload: RoutingConfigItem | undefined): VisualCon
           name: String(group?.name ?? ""),
           description: String(group?.description ?? ""),
           strategy: group?.strategy === "fill-first" ? "fill-first" : "round-robin",
+          matchMode: tags.length > 0 ? "tags" : "channels",
+          tags,
           allowedModels: Array.isArray(group?.["allowed-models"])
             ? Array.from(
                 new Set(
@@ -124,26 +141,33 @@ function serializeRoutingValues(values: VisualConfigValues): RoutingConfigItem {
     const name = group.name.trim();
     if (!name) return acc;
 
-    const channels = group.channels.map((channel) => channel.name.trim()).filter(Boolean);
-    const channelPriorities = group.channels.reduce<Record<string, number>>((map, channel) => {
-      const channelName = channel.name.trim();
-      const priority = parsePriorityText(channel.priority);
-      if (channelName && priority !== null) {
-        map[channelName] = priority;
-      }
-      return map;
-    }, {});
-
     const item: RoutingConfigGroupItem = { name };
     if (group.description.trim()) {
       item.description = group.description.trim();
     }
     item.strategy = group.strategy === "fill-first" ? "fill-first" : "round-robin";
-    if (channels.length > 0) {
-      item.match = { channels: Array.from(new Set(channels)) };
-    }
-    if (Object.keys(channelPriorities).length > 0) {
-      item["channel-priorities"] = channelPriorities;
+    if (group.matchMode === "tags") {
+      const tags = normalizeRoutingTags(group.tags);
+      if (tags.length > 0) {
+        item.match = { tags };
+      }
+    } else {
+      const channels = group.channels.map((channel) => channel.name.trim()).filter(Boolean);
+      const channelPriorities = group.channels.reduce<Record<string, number>>((map, channel) => {
+        const channelName = channel.name.trim();
+        const priority = parsePriorityText(channel.priority);
+        if (channelName && priority !== null) {
+          map[channelName] = priority;
+        }
+        return map;
+      }, {});
+
+      if (channels.length > 0) {
+        item.match = { channels: Array.from(new Set(channels)) };
+      }
+      if (Object.keys(channelPriorities).length > 0) {
+        item["channel-priorities"] = channelPriorities;
+      }
     }
     const allowedModels = Array.from(
       new Set(group.allowedModels.map((model) => model.trim()).filter(Boolean)),

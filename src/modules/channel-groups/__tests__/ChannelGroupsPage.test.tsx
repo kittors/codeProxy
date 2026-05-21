@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import i18n from "@/i18n";
@@ -32,6 +32,7 @@ vi.mock("@/lib/http/client", () => ({
 }));
 
 const mockedApiGet = vi.mocked(apiClient.get);
+const mockedApiPut = vi.mocked(apiClient.put);
 
 function renderPage() {
   return render(
@@ -52,6 +53,8 @@ describe("ChannelGroupsPage", () => {
     toastMocks.warning.mockReset();
     toastMocks.error.mockReset();
     mockedApiGet.mockReset();
+    mockedApiPut.mockReset();
+    mockedApiPut.mockResolvedValue({ status: "ok" });
     mockedApiGet.mockImplementation((path: string) => {
       if (path === "/routing-config") {
         return Promise.resolve({
@@ -519,5 +522,94 @@ describe("ChannelGroupsPage", () => {
 
     expect(await screen.findByRole("option", { name: "Fresh Claude" })).toBeInTheDocument();
     expect(channelGroupsCalls).toBeGreaterThanOrEqual(2);
+  });
+
+  test("saves tag-match strategy and previews channels matching any selected tag", async () => {
+    mockedApiGet.mockImplementation((path: string) => {
+      if (path === "/routing-config") {
+        return Promise.resolve({
+          strategy: "round-robin",
+          "include-default-group": true,
+          "channel-groups": [],
+          "path-routes": [],
+        });
+      }
+      if (path === "/channel-groups") {
+        return Promise.resolve({
+          items: [
+            {
+              name: "default",
+              channels: ["Team A Codex", "Pro Codex", "Free Codex"],
+              "channel-details": [
+                {
+                  name: "Team A Codex",
+                  source: "codex",
+                  display_tags: ["codex", "team-a"],
+                },
+                {
+                  name: "Pro Codex",
+                  source: "codex",
+                  display_tags: ["codex", "pro"],
+                },
+                {
+                  name: "Free Codex",
+                  source: "codex",
+                  display_tags: ["codex", "free"],
+                },
+              ],
+            },
+          ],
+        });
+      }
+      if (path.startsWith("/models?")) {
+        return Promise.resolve({ data: [] });
+      }
+      if (
+        path === "/auth-files" ||
+        path === "/model-configs?scope=library" ||
+        path === "/gemini-api-key" ||
+        path === "/claude-api-key" ||
+        path === "/codex-api-key" ||
+        path === "/opencode-go-api-key" ||
+        path === "/vertex-api-key" ||
+        path === "/openai-compatibility"
+      ) {
+        return Promise.resolve({ files: [], data: [] });
+      }
+      return Promise.resolve({});
+    });
+
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(await screen.findByRole("button", { name: "新增分组" }));
+    await user.type(screen.getByPlaceholderText("pro"), "tag-pool");
+    await user.type(screen.getByPlaceholderText("/pro"), "/tag-pool");
+    await user.click(screen.getByRole("combobox", { name: "匹配策略" }));
+    await user.click(await screen.findByRole("option", { name: "标签匹配" }));
+    await user.click(screen.getByRole("combobox", { name: "选择标签" }));
+    await user.click(await screen.findByRole("option", { name: "team-a" }));
+    await user.click(await screen.findByRole("option", { name: "pro" }));
+    await user.click(screen.getByRole("combobox", { name: "选择标签" }));
+
+    const matchedChannelsTable = screen.getByRole("table", { name: "匹配渠道" });
+    expect(within(matchedChannelsTable).getByText("Team A Codex")).toBeInTheDocument();
+    expect(within(matchedChannelsTable).getByText("Pro Codex")).toBeInTheDocument();
+    expect(within(matchedChannelsTable).queryByText("Free Codex")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "添加" }));
+
+    await waitFor(() => expect(mockedApiPut).toHaveBeenCalled());
+    expect(mockedApiPut).toHaveBeenCalledWith(
+      "/routing-config",
+      expect.objectContaining({
+        "channel-groups": [
+          expect.objectContaining({
+            name: "tag-pool",
+            match: { tags: ["team-a", "pro"] },
+          }),
+        ],
+      }),
+    );
   });
 });

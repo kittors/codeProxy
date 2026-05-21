@@ -20,6 +20,7 @@ export interface KimiHeaderDefaults {
 export interface RoutingChannelGroupMatch {
   prefixes?: string[];
   channels?: string[];
+  tags?: string[];
 }
 
 export interface RoutingChannelGroupConfig {
