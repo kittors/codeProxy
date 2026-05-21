@@ -19,6 +19,11 @@ interface UseAuthFilesFileActionsOptions {
   setSelectedFileNames: Dispatch<SetStateAction<string[]>>;
 }
 
+export type AuthFilesUploadResult = {
+  files: AuthFileItem[];
+  uploadedNames: string[];
+};
+
 export function useAuthFilesFileActions({
   loadAll,
   fileInputRef,
@@ -59,10 +64,10 @@ export function useAuthFilesFileActions({
   );
 
   const handleUpload = useCallback(
-    async (input: FileList | File[] | null) => {
+    async (input: FileList | File[] | null): Promise<AuthFilesUploadResult | null> => {
       const list = Array.isArray(input) ? input : input ? Array.from(input) : [];
       const files = list.filter(Boolean);
-      if (files.length === 0) return;
+      if (files.length === 0) return null;
 
       const tooLarge: File[] = [];
       const valid: File[] = [];
@@ -85,18 +90,20 @@ export function useAuthFilesFileActions({
             maxSize: formatFileSize(MAX_AUTH_FILE_SIZE),
           }),
         });
-        return;
+        return null;
       }
 
       setUploading(true);
       try {
         let success = 0;
         let failed = 0;
+        const uploadedNames: string[] = [];
 
         for (const file of valid) {
           try {
             await authFilesApi.upload(file);
             success += 1;
+            uploadedNames.push(file.name);
           } catch {
             failed += 1;
           }
@@ -111,12 +118,14 @@ export function useAuthFilesFileActions({
           });
         }
 
-        await loadAll();
+        const nextFiles = await loadAll();
+        return success > 0 ? { files: nextFiles, uploadedNames } : null;
       } catch (err: unknown) {
         notify({
           type: "error",
           message: err instanceof Error ? err.message : t("auth_files.upload_failed"),
         });
+        return null;
       } finally {
         setUploading(false);
         if (fileInputRef.current) {

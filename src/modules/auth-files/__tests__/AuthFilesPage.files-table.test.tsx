@@ -8,6 +8,7 @@ import { ThemeProvider } from "@/modules/ui/ThemeProvider";
 import { AuthFilesPage } from "@/modules/auth-files/AuthFilesPage";
 import {
   AUTH_FILES_DATA_CACHE_KEY,
+  AUTH_FILES_QUOTA_AUTO_REFRESH_KEY,
   AUTH_FILES_UI_STATE_KEY,
 } from "@/modules/auth-files/helpers/authFilesPageUtils";
 import i18n from "@/i18n";
@@ -243,6 +244,72 @@ describe("AuthFilesPage files table", () => {
     ]);
     await waitFor(() =>
       expect(screen.queryByRole("dialog", { name: "Paste Auth JSON" })).not.toBeInTheDocument(),
+    );
+  });
+
+  test("refreshes pasted auth files and quotas from the latest uploaded list", async () => {
+    window.localStorage.setItem(AUTH_FILES_QUOTA_AUTO_REFRESH_KEY, JSON.stringify(0));
+    const now = Date.now();
+    const initialFile = {
+      name: "qwen.json",
+      type: "qwen",
+      size: 1024,
+      modified: now,
+      disabled: false,
+    };
+    const uploadedFile = {
+      name: "auth-server-renamed.json",
+      type: "codex",
+      provider: "codex",
+      account_type: "oauth",
+      auth_index: "auth-codex",
+      chatgpt_account_id: "acct-123",
+      size: 2048,
+      modified: now + 1,
+      disabled: false,
+    };
+    mocks.list
+      .mockImplementationOnce(async () => ({ files: [initialFile] }))
+      .mockImplementationOnce(async () => ({ files: [initialFile, uploadedFile] }));
+    mocks.fetchQuota.mockImplementation(async () => ({ items: [] }));
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("qwen.json")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Paste JSON" }));
+
+    const dialog = await screen.findByRole("dialog", { name: "Paste Auth JSON" });
+    fireEvent.change(within(dialog).getByLabelText("Auth file JSON"), {
+      target: {
+        value: JSON.stringify({
+          chatgpt_account_id: "acct-123",
+          client_id: "app_test",
+          access_token: "token",
+          id_token: "id-token",
+        }),
+      },
+    });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Upload JSON" }));
+
+    expect(await screen.findByText("auth-server-renamed.json")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(mocks.fetchQuota).toHaveBeenCalledWith(
+        "codex",
+        expect.objectContaining({
+          name: "auth-server-renamed.json",
+          chatgpt_account_id: "acct-123",
+        }),
+      ),
     );
   });
 

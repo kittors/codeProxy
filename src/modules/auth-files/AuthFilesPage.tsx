@@ -15,7 +15,10 @@ import { ImportModelsModal } from "@/modules/auth-files/components/ImportModelsM
 import { GroupOverviewModal } from "@/modules/auth-files/components/GroupOverviewModal";
 import { useAuthFilesDataState } from "@/modules/auth-files/hooks/useAuthFilesDataState";
 import { useAuthFilesDetailEditors } from "@/modules/auth-files/hooks/useAuthFilesDetailEditors";
-import { useAuthFilesFileActions } from "@/modules/auth-files/hooks/useAuthFilesFileActions";
+import {
+  useAuthFilesFileActions,
+  type AuthFilesUploadResult,
+} from "@/modules/auth-files/hooks/useAuthFilesFileActions";
 import { useAuthFilesFilesPresentation } from "@/modules/auth-files/hooks/useAuthFilesFilesPresentation";
 import { useAuthFilesListState } from "@/modules/auth-files/hooks/useAuthFilesListState";
 import { useAuthFilesModelOwnerGroups } from "@/modules/auth-files/hooks/useAuthFilesModelOwnerGroups";
@@ -330,6 +333,30 @@ export function AuthFilesPage() {
     refreshUsageDataForFiles,
   });
 
+  const refreshQuotaForUploadedFiles = useCallback(
+    async (result: AuthFilesUploadResult | null, previousNames: Set<string>) => {
+      if (!result || tab !== "files") return;
+      const uploadedNames = new Set(result.uploadedNames);
+      const targets = result.files.flatMap((file) => {
+        if (!uploadedNames.has(file.name) && previousNames.has(file.name)) return [];
+        const provider = resolveQuotaProvider(file);
+        return provider ? [{ file, provider }] : [];
+      });
+      if (!targets.length) return;
+      await runQuotaRefreshBatch(targets, { markAsAutoRefreshing: true, showLoading: true });
+    },
+    [runQuotaRefreshBatch, tab],
+  );
+
+  const handleUploadAndRefreshQuota = useCallback(
+    async (input: FileList | File[] | null) => {
+      const previousNames = new Set(filesRef.current.map((file) => file.name));
+      const result = await handleUpload(input);
+      void refreshQuotaForUploadedFiles(result, previousNames);
+    },
+    [handleUpload, refreshQuotaForUploadedFiles],
+  );
+
   const openDetailWithQuotaRefresh = useCallback(
     (file: Parameters<typeof openDetail>[0]) => {
       const openPromise = openDetail(file);
@@ -450,7 +477,7 @@ export function AuthFilesPage() {
         <TabsContent value="files">
           <AuthFilesFilesTab
             fileInputRef={fileInputRef}
-            handleUpload={handleUpload}
+            handleUpload={handleUploadAndRefreshQuota}
             filterChips={filterChips}
             filter={filter}
             setFilter={updateFilter}
