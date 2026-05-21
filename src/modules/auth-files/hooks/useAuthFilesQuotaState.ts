@@ -35,6 +35,7 @@ interface UseAuthFilesQuotaStateOptions {
   tab: "files" | "excluded" | "alias";
   pageItems: AuthFileItem[];
   visibleScopeKey: string;
+  navigationType: "POP" | "PUSH" | "REPLACE";
   loading: boolean;
   setFiles: Dispatch<SetStateAction<AuthFileItem[]>>;
   setDetailFile: Dispatch<SetStateAction<AuthFileItem | null>>;
@@ -45,6 +46,7 @@ export function useAuthFilesQuotaState({
   tab,
   pageItems,
   visibleScopeKey,
+  navigationType,
   loading,
   setFiles,
   setDetailFile,
@@ -448,7 +450,7 @@ export function useAuthFilesQuotaState({
   const runQuotaRefreshBatch = useCallback(
     async (
       targets: { file: AuthFileItem; provider: QuotaProvider }[],
-      options?: { markAsAutoRefreshing?: boolean; showLoading?: boolean },
+      options?: { markAsAutoRefreshing?: boolean; showLoading?: boolean; refreshUsage?: boolean },
     ) => {
       if (!targets.length) return;
 
@@ -481,7 +483,9 @@ export function useAuthFilesQuotaState({
       );
 
       await Promise.allSettled(workers);
-      await refreshUsageDataAfterQuota(targets.map((target) => target.file));
+      if (options?.refreshUsage !== false) {
+        await refreshUsageDataAfterQuota(targets.map((target) => target.file));
+      }
     },
     [refreshQuota, refreshUsageDataAfterQuota],
   );
@@ -493,16 +497,18 @@ export function useAuthFilesQuotaState({
     const previousVisibleScopeKey = visibleScopeKeyRef.current;
     visibleScopeKeyRef.current = visibleScopeKey;
 
-    const switchedVisibleScope =
-      previousVisibleScopeKey !== null && previousVisibleScopeKey !== visibleScopeKey;
-    if (!switchedVisibleScope && quotaAutoRefreshMs <= 0) return;
+    const firstVisibleScope = previousVisibleScopeKey === null;
+    const initialVisibleScope = firstVisibleScope && navigationType !== "POP";
+    const switchedVisibleScope = !firstVisibleScope && previousVisibleScopeKey !== visibleScopeKey;
+    if (!initialVisibleScope && !switchedVisibleScope && quotaAutoRefreshMs <= 0) return;
 
-    const toFetch = switchedVisibleScope
+    const toFetch =
+      initialVisibleScope || switchedVisibleScope
       ? resolveQuotaTargets(pageItems)
       : collectQuotaFetchTargets(pageItems);
     if (!toFetch.length) return;
 
-    if (switchedVisibleScope) {
+    if (initialVisibleScope || switchedVisibleScope) {
       markQuotaTargetsLoading(toFetch);
     }
 
@@ -511,7 +517,8 @@ export function useAuthFilesQuotaState({
       if (!cancelled) {
         await runQuotaRefreshBatch(toFetch, {
           markAsAutoRefreshing: true,
-          showLoading: switchedVisibleScope,
+          showLoading: initialVisibleScope || switchedVisibleScope,
+          refreshUsage: false,
         });
       }
     })();
@@ -524,6 +531,7 @@ export function useAuthFilesQuotaState({
     loading,
     markQuotaTargetsLoading,
     pageItems,
+    navigationType,
     quotaAutoRefreshMs,
     resolveQuotaTargets,
     runQuotaRefreshBatch,

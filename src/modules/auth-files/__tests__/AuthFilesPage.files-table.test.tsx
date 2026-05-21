@@ -46,6 +46,9 @@ const mocks = vi.hoisted(() => ({
     { value: "anthropic", label: "Anthropic", description: "Anthropic models", enabled: true },
   ]),
   upload: vi.fn(async () => ({})),
+  submitCallback: vi.fn(async () => ({})),
+  getAuthStatus: vi.fn(async () => ({ status: "pending" })),
+  startAuth: vi.fn(async () => ({ url: "https://example.test/oauth", state: "state-1" })),
   reconcile: vi.fn(async () => ({})),
 }));
 
@@ -61,6 +64,12 @@ vi.mock("@/lib/http/apis", async (importOriginal) => {
       patchFields: mocks.patchFields,
       getModelsForAuthFile: mocks.getModelsForAuthFile,
       upload: mocks.upload,
+    },
+    oauthApi: {
+      ...mod.oauthApi,
+      submitCallback: mocks.submitCallback,
+      getAuthStatus: mocks.getAuthStatus,
+      startAuth: mocks.startAuth,
     },
     modelsApi: {
       ...mod.modelsApi,
@@ -167,6 +176,15 @@ describe("AuthFilesPage files table", () => {
     ]);
     mocks.upload.mockReset();
     mocks.upload.mockImplementation(async () => ({}));
+    mocks.submitCallback.mockReset();
+    mocks.submitCallback.mockImplementation(async () => ({}));
+    mocks.getAuthStatus.mockReset();
+    mocks.getAuthStatus.mockImplementation(async () => ({ status: "pending" }));
+    mocks.startAuth.mockReset();
+    mocks.startAuth.mockImplementation(async () => ({
+      url: "https://example.test/oauth",
+      state: "state-1",
+    }));
     mocks.reconcile.mockReset();
     mocks.reconcile.mockImplementation(async () => ({}));
   });
@@ -718,6 +736,124 @@ describe("AuthFilesPage files table", () => {
 
     // Should render immediately from sessionStorage cache (no blank state)
     expect(screen.getByText("qwen.json")).toBeInTheDocument();
+  });
+
+  test("refreshes visible quota when entering auth files from another route with auto-refresh off", async () => {
+    const now = Date.now();
+    const file = {
+      name: "codex-visible.json",
+      type: "codex",
+      provider: "codex",
+      account_type: "oauth",
+      auth_index: "auth-codex-visible",
+      chatgpt_account_id: "acct-visible",
+      size: 1024,
+      modified: now,
+      disabled: false,
+    };
+
+    mocks.list.mockImplementation(async () => ({ files: [file] }));
+    mocks.fetchQuota.mockResolvedValue({
+      items: [{ key: "code_5h", label: "m_quota.code_5h", percent: 88 }],
+    });
+    window.localStorage.setItem(AUTH_FILES_QUOTA_AUTO_REFRESH_KEY, JSON.stringify(0));
+    window.sessionStorage.setItem(
+      AUTH_FILES_DATA_CACHE_KEY,
+      JSON.stringify({
+        savedAtMs: now,
+        files: [file],
+        usageData: { source: [], auth_index: [] },
+        quotaByFileName: {
+          "codex-visible.json": {
+            status: "success",
+            updatedAt: now,
+            items: [{ key: "code_5h", label: "m_quota.code_5h", percent: 22 }],
+          },
+        },
+      }),
+    );
+
+    const wrap = (node: ReactNode) => (
+      <ThemeProvider>
+        <ToastProvider>{node}</ToastProvider>
+      </ThemeProvider>
+    );
+    const router = createMemoryRouter(
+      [
+        { path: "/auth-files", element: wrap(<AuthFilesPage />) },
+        { path: "/api-keys", element: wrap(<div>api keys</div>) },
+      ],
+      { initialEntries: ["/api-keys"] },
+    );
+
+    render(<RouterProvider router={router} />);
+
+    expect(await screen.findByText("api keys")).toBeInTheDocument();
+    await act(async () => {
+      await router.navigate("/auth-files");
+    });
+
+    expect(await screen.findByText("codex-visible.json")).toBeInTheDocument();
+    await waitFor(() => expect(mocks.fetchQuota).toHaveBeenCalledTimes(1));
+    expect(mocks.fetchQuota).toHaveBeenCalledWith("codex", expect.objectContaining({ name: file.name }));
+  });
+
+  test("refreshes quota for a newly authorized auth file", async () => {
+    const now = Date.now();
+    const initialFile = {
+      name: "qwen.json",
+      type: "qwen",
+      size: 1024,
+      modified: now,
+      disabled: false,
+    };
+    const authorizedFile = {
+      name: "codex-authorized.json",
+      type: "codex",
+      provider: "codex",
+      account_type: "oauth",
+      auth_index: "auth-codex-authorized",
+      chatgpt_account_id: "acct-authorized",
+      size: 2048,
+      modified: now + 1,
+      disabled: false,
+    };
+
+    window.localStorage.setItem(AUTH_FILES_QUOTA_AUTO_REFRESH_KEY, JSON.stringify(0));
+    mocks.list
+      .mockImplementationOnce(async () => ({ files: [initialFile] }))
+      .mockImplementation(async () => ({ files: [initialFile, authorizedFile] }));
+    mocks.fetchQuota.mockResolvedValue({
+      items: [{ key: "code_5h", label: "m_quota.code_5h", percent: 91 }],
+    });
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("qwen.json")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Add OAuth Login" }));
+
+    const dialog = await screen.findByRole("dialog", { name: "Add OAuth Login" });
+    fireEvent.change(within(dialog).getByPlaceholderText("Paste the full callback URL from browser"), {
+      target: { value: "http://localhost:1455/auth/callback?code=ok" },
+    });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Submit callback" }));
+
+    expect(await screen.findByText("codex-authorized.json")).toBeInTheDocument();
+    await waitFor(() => expect(mocks.fetchQuota).toHaveBeenCalledTimes(1));
+    expect(mocks.fetchQuota).toHaveBeenCalledWith(
+      "codex",
+      expect.objectContaining({ name: "codex-authorized.json" }),
+    );
   });
 
   test("reads quota preview setting from localStorage", async () => {

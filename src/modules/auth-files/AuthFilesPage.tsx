@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useSearchParams } from "react-router-dom";
+import { useNavigationType, useSearchParams } from "react-router-dom";
 import { ConfirmModal } from "@/modules/ui/ConfirmModal";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/modules/ui/Tabs";
 import type { AuthFileItem } from "@/lib/http/types";
@@ -70,6 +70,7 @@ const buildAuthFilesSignature = (items: AuthFileItem[]): string =>
 export function AuthFilesPage() {
   const { t } = useTranslation();
   const [searchParams] = useSearchParams();
+  const navigationType = useNavigationType();
 
   const [tab, setTab] = useState<"files" | "excluded" | "alias">("files");
   const {
@@ -151,21 +152,24 @@ export function AuthFilesPage() {
     setOauthDialogOpen(open);
   }, []);
 
-  const refreshAfterOAuthAuthorized = useCallback(async () => {
+  const waitForAuthFilesChanged = useCallback(async (): Promise<{
+    files: AuthFileItem[];
+    changed: boolean;
+  }> => {
     const previousSignature =
       oauthBaselineSignatureRef.current || buildAuthFilesSignature(filesRef.current);
     const deadline = Date.now() + OAUTH_AUTH_FILES_REFRESH_TIMEOUT_MS;
 
     while (true) {
       if (buildAuthFilesSignature(filesRef.current) !== previousSignature) {
-        return;
+        return { files: filesRef.current, changed: true };
       }
       const nextFiles = await loadAll();
       if (buildAuthFilesSignature(nextFiles) !== previousSignature) {
-        return;
+        return { files: nextFiles, changed: true };
       }
       if (Date.now() >= deadline) {
-        return;
+        return { files: nextFiles, changed: false };
       }
       await wait(OAUTH_AUTH_FILES_REFRESH_INTERVAL_MS);
     }
@@ -326,19 +330,20 @@ export function AuthFilesPage() {
   } = useAuthFilesQuotaState({
     tab,
     pageItems,
-    visibleScopeKey: `${filter}\n${search}`,
+    visibleScopeKey: [filter, tagFilter, search, safePage, ...pageItems.map((file) => file.name)].join(
+      "\n",
+    ),
+    navigationType,
     loading,
     setFiles,
     setDetailFile,
     refreshUsageDataForFiles,
   });
 
-  const refreshQuotaForUploadedFiles = useCallback(
-    async (result: AuthFilesUploadResult | null, previousNames: Set<string>) => {
-      if (!result || tab !== "files") return;
-      const uploadedNames = new Set(result.uploadedNames);
-      const targets = result.files.flatMap((file) => {
-        if (!uploadedNames.has(file.name) && previousNames.has(file.name)) return [];
+  const refreshQuotaForFiles = useCallback(
+    async (targetFiles: AuthFileItem[]) => {
+      if (tab !== "files") return;
+      const targets = targetFiles.flatMap((file) => {
         const provider = resolveQuotaProvider(file);
         return provider ? [{ file, provider }] : [];
       });
@@ -347,6 +352,22 @@ export function AuthFilesPage() {
     },
     [runQuotaRefreshBatch, tab],
   );
+
+  const refreshQuotaForUploadedFiles = useCallback(
+    async (result: AuthFilesUploadResult | null, previousNames: Set<string>) => {
+      if (!result || tab !== "files") return;
+      const uploadedNames = new Set(result.uploadedNames);
+      const targetFiles = result.files.filter(
+        (file) => uploadedNames.has(file.name) || !previousNames.has(file.name),
+      );
+      await refreshQuotaForFiles(targetFiles);
+    },
+    [refreshQuotaForFiles, tab],
+  );
+
+  const refreshAfterOAuthAuthorized = useCallback(async () => {
+    await waitForAuthFilesChanged();
+  }, [waitForAuthFilesChanged]);
 
   const handleUploadAndRefreshQuota = useCallback(
     async (input: FileList | File[] | null) => {

@@ -24,7 +24,7 @@ interface UseAuthFilesGroupOverviewArgs {
   tab: "files" | "excluded" | "alias";
   runQuotaRefreshBatch: (
     targets: { file: AuthFileItem; provider: QuotaProvider }[],
-    options?: { markAsAutoRefreshing?: boolean; showLoading?: boolean },
+    options?: { markAsAutoRefreshing?: boolean; showLoading?: boolean; refreshUsage?: boolean },
   ) => Promise<void>;
   resolveQuotaProvider: (file: AuthFileItem) => QuotaProvider | null;
   resolveQuotaCardSlots: (
