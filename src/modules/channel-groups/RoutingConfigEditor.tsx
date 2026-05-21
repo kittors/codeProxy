@@ -433,13 +433,19 @@ export function RoutingConfigEditor({
   const resolveGroupChannels = useCallback(
     (group: Pick<RoutingChannelGroupEntry, "channels" | "matchMode" | "tags">) => {
       if (group.matchMode !== "tags") return group.channels;
+      const priorityByChannel = new Map(
+        group.channels.map((channel) => [normalizeChannelName(channel.name), channel]),
+      );
       return availableChannels
         .filter((channel) => channelMatchesTags(channel, group.tags ?? [], availableChannelDetails))
-        .map((channel) => ({
-          id: `tag-match-${normalizeChannelName(channel)}`,
-          name: channel,
-          priority: "",
-        }));
+        .map((channel) => {
+          const configured = priorityByChannel.get(normalizeChannelName(channel));
+          return {
+            id: configured?.id ?? `tag-match-${normalizeChannelName(channel)}`,
+            name: channel,
+            priority: configured?.priority ?? "",
+          };
+        });
     },
     [availableChannelDetails, availableChannels],
   );
@@ -667,13 +673,36 @@ export function RoutingConfigEditor({
     }));
   }, []);
 
-  const updateDraftChannel = useCallback(
-    (channelId: string, patch: Partial<RoutingChannelGroupMemberEntry>) => {
+  const updateDraftChannelPriority = useCallback(
+    (target: RoutingChannelGroupMemberEntry, priority: string) => {
       setGroupDraft((current) => ({
         ...current,
-        channels: current.channels.map((channel) =>
-          channel.id === channelId ? { ...channel, ...patch } : channel,
-        ),
+        channels:
+          current.matchMode === "tags"
+            ? (() => {
+                const targetName = target.name.trim();
+                const normalizedTarget = normalizeChannelName(targetName);
+                if (!normalizedTarget) return current.channels;
+                const existingIndex = current.channels.findIndex(
+                  (channel) => normalizeChannelName(channel.name) === normalizedTarget,
+                );
+                if (existingIndex >= 0) {
+                  return current.channels.map((channel, index) =>
+                    index === existingIndex ? { ...channel, name: targetName, priority } : channel,
+                  );
+                }
+                return [
+                  ...current.channels,
+                  {
+                    id: target.id || makeClientId(),
+                    name: targetName,
+                    priority,
+                  },
+                ];
+              })()
+            : current.channels.map((channel) =>
+                channel.id === target.id ? { ...channel, priority } : channel,
+              ),
       }));
     },
     [],
@@ -780,16 +809,13 @@ export function RoutingConfigEditor({
       allowedModels: Array.from(
         new Set(groupDraft.allowedModels.map((model) => model.trim()).filter(Boolean)),
       ),
-      channels:
-        groupDraft.matchMode === "tags"
-          ? []
-          : groupDraft.channels
-              .map((channel) => ({
-                id: channel.id || makeClientId(),
-                name: channel.name.trim(),
-                priority: channel.priority.trim(),
-              }))
-              .filter((channel) => channel.name),
+      channels: (groupDraft.matchMode === "tags" ? resolvedDraftChannels : groupDraft.channels)
+        .map((channel) => ({
+          id: channel.id || makeClientId(),
+          name: channel.name.trim(),
+          priority: channel.priority.trim(),
+        }))
+        .filter((channel) => channel.name && (groupDraft.matchMode !== "tags" || channel.priority)),
     };
     const normalizedRoute = {
       ...primaryRoute,
@@ -833,6 +859,7 @@ export function RoutingConfigEditor({
     groupEditorId,
     normalizedPrimaryRoutePath,
     primaryRoute,
+    resolvedDraftChannels,
     update,
     values.routingChannelGroups,
     values.routingPathRoutes,
@@ -1140,49 +1167,45 @@ export function RoutingConfigEditor({
         label: t("channel_groups_page.channel_priority_label"),
         width: "w-[156px] min-w-[156px]",
         cellClassName: "whitespace-nowrap",
-        render: (channel) =>
-          groupDraft.matchMode === "tags" ? (
-            <span className="text-slate-400 dark:text-white/35">
-              {t("channel_groups_page.tag_match_badge")}
-            </span>
-          ) : (
-            <TextInput
-              value={channel.priority}
-              onChange={(event) => {
-                const value = event.currentTarget.value;
-                if (!/^\d*$/.test(value)) return;
-                updateDraftChannel(channel.id, { priority: value });
-              }}
-              placeholder="1"
-              inputMode="numeric"
-              pattern="[0-9]*"
-              disabled={disabled}
-            />
-          ),
+        render: (channel) => (
+          <TextInput
+            value={channel.priority}
+            onChange={(event) => {
+              const value = event.currentTarget.value;
+              if (!/^\d*$/.test(value)) return;
+              updateDraftChannelPriority(channel, value);
+            }}
+            placeholder="1"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            disabled={disabled}
+          />
+        ),
       },
-      {
-        key: "actions",
-        label: t("common.action"),
-        width: "w-[72px] min-w-[72px]",
-        headerClassName: "text-right",
-        cellClassName: "whitespace-nowrap text-right",
-        render: (channel) =>
-          groupDraft.matchMode === "tags" ? (
-            <span className="text-slate-400 dark:text-white/35">-</span>
-          ) : (
-            <div className="flex justify-end">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => removeDraftChannel(channel.id)}
-                disabled={disabled}
-                aria-label={t("channel_groups_page.remove_channel")}
-              >
-                <X size={14} />
-              </Button>
-            </div>
-          ),
-      },
+      ...(groupDraft.matchMode === "tags"
+        ? []
+        : [
+            {
+              key: "actions",
+              label: t("common.action"),
+              width: "w-[72px] min-w-[72px]",
+              headerClassName: "text-right",
+              cellClassName: "whitespace-nowrap text-right",
+              render: (channel) => (
+                <div className="flex justify-end">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => removeDraftChannel(channel.id)}
+                    disabled={disabled}
+                    aria-label={t("channel_groups_page.remove_channel")}
+                  >
+                    <X size={14} />
+                  </Button>
+                </div>
+              ),
+            } satisfies VirtualTableColumn<RoutingChannelGroupMemberEntry>,
+          ]),
     ],
     [
       availableChannelDetails,
@@ -1191,7 +1214,7 @@ export function RoutingConfigEditor({
       groupDraft.matchMode,
       removeDraftChannel,
       t,
-      updateDraftChannel,
+      updateDraftChannelPriority,
     ],
   );
 

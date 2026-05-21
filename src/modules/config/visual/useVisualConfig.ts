@@ -428,18 +428,16 @@ function serializeRoutingChannelGroupsForYaml(
         item.match = match;
       }
 
-      if (group.matchMode !== "tags") {
-        const channelPriorities = group.channels.reduce<Record<string, number>>((acc, channel) => {
-          const channelName = channel.name.trim();
-          const priority = parseRoutingPriorityText(channel.priority);
-          if (channelName && priority !== null) {
-            acc[channelName] = priority;
-          }
-          return acc;
-        }, {});
-        if (Object.keys(channelPriorities).length > 0) {
-          item["channel-priorities"] = channelPriorities;
+      const channelPriorities = group.channels.reduce<Record<string, number>>((acc, channel) => {
+        const channelName = channel.name.trim();
+        const priority = parseRoutingPriorityText(channel.priority);
+        if (channelName && priority !== null) {
+          acc[channelName] = priority;
         }
+        return acc;
+      }, {});
+      if (Object.keys(channelPriorities).length > 0) {
+        item["channel-priorities"] = channelPriorities;
       }
       const allowedModels = Array.from(
         new Set(group.allowedModels.map((model) => model.trim()).filter(Boolean)),
