@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useMemo, useState, type RefObject, type ReactNode } from "react";
+import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { useTranslation } from "react-i18next";
 import {
   BarChart3,
   CircleHelp,
   ClipboardPaste,
   Download,
+  Ellipsis,
   Eye,
+  ListChecks,
   Plus,
   RefreshCw,
   Search,
@@ -14,7 +17,7 @@ import {
   Upload,
 } from "lucide-react";
 import type { AuthFileItem } from "@/lib/http/types";
-import { Button } from "@/modules/ui/Button";
+import { Button, buttonClassName } from "@/modules/ui/Button";
 import { Card } from "@/modules/ui/Card";
 import { EmptyState } from "@/modules/ui/EmptyState";
 import { TextInput } from "@/modules/ui/Input";
@@ -46,6 +49,10 @@ import type { QuotaItem, QuotaState } from "@/modules/quota/quota-helpers";
 import type { QuotaProvider } from "@/modules/quota/quota-fetch";
 
 const MAX_FILENAME_PART_LENGTH = 72;
+const ACTION_MENU_CONTENT_CLASS =
+  "z-[220] min-w-44 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-xl shadow-slate-900/10 dark:border-neutral-800 dark:bg-neutral-950 dark:shadow-black/35";
+const ACTION_MENU_ITEM_CLASS =
+  "flex w-full cursor-default select-none items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 outline-none transition-colors focus:bg-slate-100 data-[highlighted]:bg-slate-100 data-[disabled]:pointer-events-none data-[disabled]:opacity-45 dark:text-white/75 dark:focus:bg-white/10 dark:data-[highlighted]:bg-white/10";
 
 const isPlainObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -637,51 +644,82 @@ export function AuthFilesFilesTab({
 
             {selectableFilteredFiles.length > 0 || selectedCount > 0 ? (
               <div className="flex flex-wrap items-center gap-1.5 rounded-2xl bg-slate-50/80 px-2 py-1.5 transition-colors duration-200 ease-out dark:bg-white/[0.03]">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  className="!h-8 px-2 text-xs"
-                  onClick={() => selectCurrentPage(!allPageSelected)}
-                  disabled={selectablePageNames.length === 0}
-                >
-                  {allPageSelected
-                    ? t("auth_files.batch_deselect_page")
-                    : t("auth_files.batch_select_page")}
-                </Button>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  className="!h-8 px-2 text-xs"
-                  onClick={() => selectFilteredFiles(!allFilteredSelected)}
-                  disabled={selectableFilteredFiles.length === 0}
-                >
-                  {allFilteredSelected
-                    ? t("auth_files.batch_deselect_filtered")
-                    : t("auth_files.batch_select_filtered")}
-                </Button>
-                <span className="ml-1 text-xs font-medium text-slate-600 dark:text-white/65">
-                  {t("auth_files.batch_selected", { count: selectedCount })}
-                </span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="!h-8 px-2 text-xs"
-                  onClick={() => setSelectedFileNames([])}
-                  disabled={selectedCount === 0}
-                >
-                  {t("auth_files.batch_clear")}
-                </Button>
-                <Button
-                  variant="danger"
-                  size="sm"
-                  className="!h-8 px-2 text-xs"
-                  onClick={() =>
-                    setConfirm({ type: "deleteSelection", names: [...selectedFileNames] })
-                  }
-                  disabled={selectedCount === 0 || deletingAll}
-                >
-                  {t("auth_files.batch_delete_action", { count: selectedCount })}
-                </Button>
+                <DropdownMenu.Root>
+                  <DropdownMenu.Trigger asChild>
+                    <button
+                      type="button"
+                      className={buttonClassName({
+                        variant: "secondary",
+                        size: "sm",
+                        iconOnly: true,
+                        className: "!h-8 !w-8",
+                      })}
+                      aria-label={t("auth_files.selection_actions")}
+                      title={t("auth_files.selection_actions")}
+                      data-tooltip-placement="top"
+                    >
+                      <ListChecks size={15} />
+                    </button>
+                  </DropdownMenu.Trigger>
+                  <DropdownMenu.Portal>
+                    <DropdownMenu.Content
+                      align="end"
+                      sideOffset={8}
+                      className={ACTION_MENU_CONTENT_CLASS}
+                    >
+                      <DropdownMenu.Item
+                        className={ACTION_MENU_ITEM_CLASS}
+                        disabled={selectablePageNames.length === 0}
+                        onSelect={() => selectCurrentPage(!allPageSelected)}
+                      >
+                        <ListChecks size={15} />
+                        <span>
+                          {allPageSelected
+                            ? t("auth_files.batch_deselect_page")
+                            : t("auth_files.batch_select_page")}
+                        </span>
+                      </DropdownMenu.Item>
+                      <DropdownMenu.Item
+                        className={ACTION_MENU_ITEM_CLASS}
+                        disabled={selectableFilteredFiles.length === 0}
+                        onSelect={() => selectFilteredFiles(!allFilteredSelected)}
+                      >
+                        <ListChecks size={15} />
+                        <span>
+                          {allFilteredSelected
+                            ? t("auth_files.batch_deselect_filtered")
+                            : t("auth_files.batch_select_filtered")}
+                        </span>
+                      </DropdownMenu.Item>
+                    </DropdownMenu.Content>
+                  </DropdownMenu.Portal>
+                </DropdownMenu.Root>
+                {selectedCount > 0 ? (
+                  <>
+                    <span className="ml-1 text-xs font-medium text-slate-600 dark:text-white/65">
+                      {t("auth_files.batch_selected", { count: selectedCount })}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="!h-8 px-2 text-xs"
+                      onClick={() => setSelectedFileNames([])}
+                    >
+                      {t("auth_files.batch_clear")}
+                    </Button>
+                    <Button
+                      variant="danger"
+                      size="sm"
+                      className="!h-8 px-2 text-xs"
+                      onClick={() =>
+                        setConfirm({ type: "deleteSelection", names: [...selectedFileNames] })
+                      }
+                      disabled={deletingAll}
+                    >
+                      {t("auth_files.batch_delete_action", { count: selectedCount })}
+                    </Button>
+                  </>
+                ) : null}
               </div>
             ) : null}
           </div>
@@ -926,18 +964,6 @@ export function AuthFilesFilesTab({
                             </HoverTooltip>
                           ) : null}
 
-                          <HoverTooltip content={t("auth_files.edit_tags")}>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => openTagsEditor(file)}
-                              title={t("auth_files.edit_tags")}
-                              aria-label={t("auth_files.edit_tags")}
-                            >
-                              <Tags size={16} />
-                            </Button>
-                          </HoverTooltip>
-
                           <HoverTooltip content={t("auth_files.view")}>
                             <Button
                               variant="ghost"
@@ -950,17 +976,45 @@ export function AuthFilesFilesTab({
                             </Button>
                           </HoverTooltip>
 
-                          <HoverTooltip content={t("auth_files.download")}>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => void downloadAuthFile(file)}
-                              title={t("auth_files.download")}
-                              aria-label={t("auth_files.download")}
-                            >
-                              <Download size={16} />
-                            </Button>
-                          </HoverTooltip>
+                          <DropdownMenu.Root>
+                            <DropdownMenu.Trigger asChild>
+                              <button
+                                type="button"
+                                className={buttonClassName({
+                                  variant: "ghost",
+                                  size: "sm",
+                                  iconOnly: true,
+                                })}
+                                aria-label={t("auth_files.more_actions")}
+                                title={t("auth_files.more_actions")}
+                                data-tooltip-placement="top"
+                              >
+                                <Ellipsis size={16} />
+                              </button>
+                            </DropdownMenu.Trigger>
+                            <DropdownMenu.Portal>
+                              <DropdownMenu.Content
+                                align="end"
+                                sideOffset={8}
+                                className={ACTION_MENU_CONTENT_CLASS}
+                              >
+                                <DropdownMenu.Item
+                                  className={ACTION_MENU_ITEM_CLASS}
+                                  onSelect={() => openTagsEditor(file)}
+                                >
+                                  <Tags size={15} />
+                                  <span>{t("auth_files.edit_tags")}</span>
+                                </DropdownMenu.Item>
+                                <DropdownMenu.Item
+                                  className={ACTION_MENU_ITEM_CLASS}
+                                  onSelect={() => void downloadAuthFile(file)}
+                                >
+                                  <Download size={15} />
+                                  <span>{t("auth_files.download")}</span>
+                                </DropdownMenu.Item>
+                              </DropdownMenu.Content>
+                            </DropdownMenu.Portal>
+                          </DropdownMenu.Root>
                         </div>
                       </div>
                     </Card>

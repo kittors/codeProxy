@@ -543,6 +543,8 @@
     "batch_deselect_filtered": "取消全部筛选结果",
     "batch_clear": "清空选择",
     "batch_delete_action": "删除所选（{{count}}）",
+    "selection_actions": "选择批量操作",
+    "more_actions": "更多操作",
     "batch_deleted_selected": "已删除 {{count}} 个认证文件",
     "batch_delete_partial": "批量删除完成，成功 {{success}} 个，失败 {{failed}} 个",
     "batch_enable": "启用",

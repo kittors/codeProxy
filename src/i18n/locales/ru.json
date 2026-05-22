@@ -622,6 +622,8 @@
     "batch_deselect_filtered": "Снять выбор результатов фильтра",
     "batch_clear": "Очистить выбор",
     "batch_delete_action": "Удалить выбранные ({{count}})",
+    "selection_actions": "Действия выбора",
+    "more_actions": "Ещё действия",
     "batch_deleted_selected": "Удалено файлов авторизации: {{count}}",
     "batch_delete_partial": "Пакетное удаление завершено: успешных {{success}}, ошибок {{failed}}",
     "batch_enable": "Включить",

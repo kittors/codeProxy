@@ -535,6 +535,8 @@
     "batch_deselect_filtered": "Clear filtered results",
     "batch_clear": "Clear selection",
     "batch_delete_action": "Delete selected ({{count}})",
+    "selection_actions": "Selection actions",
+    "more_actions": "More actions",
     "batch_deleted_selected": "Deleted {{count}} auth files",
     "batch_delete_partial": "Bulk delete finished: {{success}} succeeded, {{failed}} failed",
     "batch_enable": "Enable",

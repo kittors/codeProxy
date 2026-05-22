@@ -215,9 +215,35 @@ describe("AuthFilesPage files table", () => {
     expect(screen.getByRole("combobox", { name: "Quota" })).toBeInTheDocument();
     expect(screen.getByText("5h")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Add OAuth Login" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Select current page" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Selection actions" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Select current page" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Delete All" })).not.toBeInTheDocument();
     expect(screen.getByRole("switch", { name: "Enable/Disable" })).toBeInTheDocument();
+  });
+
+  test("keeps bulk selection collapsed until files are selected", async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("qwen.json")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Selection actions" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Select current page" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Clear selection" })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Selection actions" }));
+
+    expect(screen.getByRole("menuitem", { name: "Select current page" })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Select filtered results" })).toBeInTheDocument();
   });
 
   test("uploads multiple auth files from pasted JSON objects", async () => {
@@ -795,7 +821,10 @@ describe("AuthFilesPage files table", () => {
 
     expect(await screen.findByText("codex-visible.json")).toBeInTheDocument();
     await waitFor(() => expect(mocks.fetchQuota).toHaveBeenCalledTimes(1));
-    expect(mocks.fetchQuota).toHaveBeenCalledWith("codex", expect.objectContaining({ name: file.name }));
+    expect(mocks.fetchQuota).toHaveBeenCalledWith(
+      "codex",
+      expect.objectContaining({ name: file.name }),
+    );
   });
 
   test("refreshes quota for a newly authorized auth file", async () => {
@@ -843,9 +872,12 @@ describe("AuthFilesPage files table", () => {
     fireEvent.click(screen.getByRole("button", { name: "Add OAuth Login" }));
 
     const dialog = await screen.findByRole("dialog", { name: "Add OAuth Login" });
-    fireEvent.change(within(dialog).getByPlaceholderText("Paste the full callback URL from browser"), {
-      target: { value: "http://localhost:1455/auth/callback?code=ok" },
-    });
+    fireEvent.change(
+      within(dialog).getByPlaceholderText("Paste the full callback URL from browser"),
+      {
+        target: { value: "http://localhost:1455/auth/callback?code=ok" },
+      },
+    );
     fireEvent.click(within(dialog).getByRole("button", { name: "Submit callback" }));
 
     expect(await screen.findByText("codex-authorized.json")).toBeInTheDocument();
@@ -1405,8 +1437,10 @@ describe("AuthFilesPage files table", () => {
       </MemoryRouter>,
     );
 
+    const user = userEvent.setup();
     expect(await screen.findByText("A_GptPro")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Edit Tags" }));
+    await user.click(screen.getByRole("button", { name: "More actions" }));
+    await user.click(screen.getByRole("menuitem", { name: "Edit Tags" }));
 
     const dialog = await screen.findByRole("dialog", { name: "Auth File Tags" });
     fireEvent.change(within(dialog).getByLabelText("Custom tag"), { target: { value: "vip" } });
@@ -3132,6 +3166,57 @@ describe("AuthFilesPage files table", () => {
     const actions = quota.nextElementSibling;
     expect(actions).not.toBeNull();
     expect(actions).toHaveClass("mt-auto");
+  });
+
+  test("cards keep secondary actions inside a more actions menu", async () => {
+    const user = userEvent.setup();
+    const now = Date.now();
+    const file = {
+      name: "codex.json",
+      type: "codex",
+      size: 1024,
+      modified: now,
+      disabled: false,
+      auth_index: "1",
+    } as any;
+
+    mocks.list.mockImplementation(async () => ({ files: [file] }));
+    window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
+    window.sessionStorage.setItem(
+      AUTH_FILES_DATA_CACHE_KEY,
+      JSON.stringify({
+        savedAtMs: now,
+        files: [file],
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    const cards = await screen.findByTestId("auth-files-cards");
+    const card = within(cards).getByText("codex.json").closest("section");
+    expect(card).not.toBeNull();
+    const cardView = within(card as HTMLElement);
+
+    expect(cardView.getByRole("button", { name: "Refresh" })).toBeInTheDocument();
+    expect(cardView.getByRole("button", { name: "View" })).toBeInTheDocument();
+    expect(cardView.getByRole("button", { name: "More actions" })).toBeInTheDocument();
+    expect(cardView.queryByRole("button", { name: "Edit Tags" })).not.toBeInTheDocument();
+    expect(cardView.queryByRole("button", { name: "Download" })).not.toBeInTheDocument();
+
+    await user.click(cardView.getByRole("button", { name: "More actions" }));
+
+    expect(screen.getByRole("menuitem", { name: "Edit Tags" })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Download" })).toBeInTheDocument();
   });
 
   test("cards localize codex additional quota window labels in Chinese", async () => {
