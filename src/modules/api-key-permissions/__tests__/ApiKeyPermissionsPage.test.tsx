@@ -256,4 +256,88 @@ describe("ApiKeyPermissionsPage", () => {
       );
     });
   });
+
+  test("refreshes stale API key entries before applying edited profile channels", async () => {
+    const staleEntries = [
+      {
+        key: "sk-bound-1234567890",
+        name: "Bound Key",
+        "daily-limit": 15000,
+        "permission-profile-id": "standard",
+        "created-at": "2026-05-04T00:00:00.000Z",
+      },
+      {
+        key: "sk-unbound-1234567890",
+        name: "Unbound Key",
+        "allowed-channels": ["kimi-A"],
+        "created-at": "2026-05-05T00:00:00.000Z",
+      },
+    ];
+    const freshEntries = [
+      {
+        ...staleEntries[0],
+      },
+      {
+        ...staleEntries[1],
+        "allowed-channels": [],
+      },
+    ];
+    state.entries = staleEntries;
+    state.permissionProfiles = [
+      {
+        id: "standard",
+        name: "标准配置",
+        "daily-limit": 15000,
+        "total-quota": 0,
+        "concurrency-limit": 0,
+        "rpm-limit": 0,
+        "tpm-limit": 0,
+        "allowed-channel-groups": [],
+        "allowed-channels": [],
+        "allowed-models": [],
+        "system-prompt": "",
+      },
+    ];
+    mocks.apiKeyEntriesList
+      .mockResolvedValueOnce(staleEntries)
+      .mockResolvedValueOnce(freshEntries);
+
+    renderPage();
+
+    expect(await screen.findByText("标准配置")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "编辑" }));
+    const dialog = await screen.findByRole("dialog", { name: "编辑权限配置" });
+    const dailyLimit = within(dialog).getByRole("spinbutton", { name: "每日请求限额" });
+    await userEvent.clear(dailyLimit);
+    await userEvent.type(dailyLimit, "16000");
+    await userEvent.click(within(dialog).getByRole("button", { name: "保存配置" }));
+
+    await waitFor(() => {
+      expect(mocks.apiKeyEntriesList).toHaveBeenCalledTimes(2);
+      expect(mocks.apiClientPut).toHaveBeenCalledWith(
+        "/api-key-permission-profiles",
+        expect.arrayContaining([
+          expect.objectContaining({
+            id: "standard",
+            "allowed-channels": [],
+          }),
+        ]),
+      );
+      expect(mocks.apiKeyEntriesReplace).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({
+            name: "Bound Key",
+            "permission-profile-id": "standard",
+            "daily-limit": 16000,
+          }),
+          expect.objectContaining({
+            name: "Unbound Key",
+            "allowed-channels": [],
+          }),
+        ]),
+      );
+      expect(JSON.stringify(mocks.apiKeyEntriesReplace.mock.calls[0][0])).not.toContain("kimi-A");
+    });
+  });
 });

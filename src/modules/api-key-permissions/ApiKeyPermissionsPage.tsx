@@ -212,16 +212,17 @@ export function ApiKeyPermissionsPage() {
         : [...profiles, profile];
       await apiKeyPermissionProfilesApi.replace(nextProfiles);
 
-      let nextEntries = entries;
+      const latestEntries = isEdit ? await apiKeyEntriesApi.list().catch(() => entries) : entries;
+      let nextEntries = latestEntries;
       if (isEdit) {
-        nextEntries = entries.map((entry) => {
+        nextEntries = latestEntries.map((entry) => {
           const wasBound =
             entry["permission-profile-id"] === profile.id ||
             (previousProfile !== null &&
               resolveEntryPermissionProfileId(entry, [previousProfile]) === previousProfile.id);
           return wasBound ? applyApiKeyPermissionProfile(entry, profile) : entry;
         });
-        if (JSON.stringify(nextEntries) !== JSON.stringify(entries)) {
+        if (JSON.stringify(nextEntries) !== JSON.stringify(latestEntries)) {
           await apiKeyEntriesApi.replace(nextEntries);
         }
       }
