@@ -63,13 +63,14 @@ export function ProxyPoolSelect({
           ? `${result.latencyMs} ms`
           : result?.checking
             ? t("common.loading_ellipsis")
-            : t("proxies.latency_unknown");
+            : "";
       const statusText =
         typeof result?.ok === "boolean"
           ? result.ok
             ? t("proxies.check_ok")
             : t("proxies.check_failed")
           : t("proxies.check_pending");
+      const checkSummary = latencyText ? `${statusText} · ${latencyText}` : statusText;
       base.push({
         value: id,
         triggerLabel: showDetails ? (
@@ -111,7 +112,7 @@ export function ProxyPoolSelect({
                 ].join(" ")}
                 title={result?.message}
               >
-                {statusText} · {latencyText}
+                {checkSummary}
               </span>
             ) : null}
             {!entry.enabled ? (

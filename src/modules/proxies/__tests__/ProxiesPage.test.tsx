@@ -62,7 +62,7 @@ describe("ProxiesPage", () => {
     expect(screen.getByRole("columnheader", { name: /name/i })).toBeInTheDocument();
     expect(screen.queryByRole("columnheader", { name: /proxy url/i })).not.toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: /protocol.*ip/i })).toBeInTheDocument();
-    expect(screen.getByRole("columnheader", { name: /status/i })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: /health check/i })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: /remark/i })).toBeInTheDocument();
 
     expect(await screen.findByText("HK Proxy")).toBeInTheDocument();
@@ -250,7 +250,7 @@ describe("ProxiesPage", () => {
 
     await userEvent.click(await screen.findByRole("button", { name: /check hk proxy/i }));
 
-    expect(await screen.findByText(/available/i)).toBeInTheDocument();
+    expect(await screen.findByText(/health check · 31 ms/i)).toBeInTheDocument();
     const latency = screen.getByText(/31 ms/i);
     expect(latency).toBeInTheDocument();
     expect(latency.closest("[data-latency-tone]")).toHaveAttribute("data-latency-tone", "fast");
@@ -262,7 +262,7 @@ describe("ProxiesPage", () => {
     );
   });
 
-  test("uses a different latency tone for slow available checks", async () => {
+  test("uses a different latency tone for slow health checks", async () => {
     mocks.apiPost.mockResolvedValue({ ok: true, latency_ms: 1800 });
 
     renderPage();
@@ -284,7 +284,7 @@ describe("ProxiesPage", () => {
 
     await userEvent.click(await screen.findByRole("button", { name: /check hk proxy/i }));
 
-    expect(await screen.findByText(/unavailable/i)).toBeInTheDocument();
+    expect(await screen.findByText(/health check failed/i)).toBeInTheDocument();
     expect(screen.getByText(/proxy dial timeout/i)).toBeInTheDocument();
   });
 });
