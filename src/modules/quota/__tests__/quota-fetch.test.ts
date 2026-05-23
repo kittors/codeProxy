@@ -27,6 +27,26 @@ beforeEach(() => {
   mocks.downloadText.mockReset();
 });
 
+const encodeBase64UrlJson = (value: unknown): string =>
+  Buffer.from(JSON.stringify(value), "utf8").toString("base64url");
+
+const buildSyntheticCodexIdToken = (accountId: string): string =>
+  [
+    encodeBase64UrlJson({ alg: "none", typ: "JWT", cpa_synthetic: true }),
+    encodeBase64UrlJson({
+      iat: 1779509287,
+      exp: 1780333688,
+      email: "alpha@example.test",
+      "https://api.openai.com/auth": {
+        chatgpt_account_id: accountId,
+        chatgpt_plan_type: "plus",
+        chatgpt_user_id: "user-111",
+        user_id: "user-111",
+      },
+    }),
+    "synthetic",
+  ].join(".");
+
 describe("resolveQuotaProvider", () => {
   test("supports kimi auth files", () => {
     expect(resolveQuotaProvider({ name: "kimi.json", provider: "kimi" } as any)).toBe("kimi");
@@ -51,6 +71,39 @@ describe("resolveQuotaProvider", () => {
         account_type: "api-key",
       } as any),
     ).toBeNull();
+  });
+});
+
+describe("fetchQuota for codex", () => {
+  test("uses the ChatGPT account id from nested synthetic token claims", async () => {
+    mocks.request.mockResolvedValueOnce({
+      statusCode: 200,
+      header: {},
+      bodyText: "",
+      body: JSON.stringify({
+        plan_type: "plus",
+        rate_limit: null,
+        code_review_rate_limit: null,
+      }),
+    });
+
+    await fetchQuota("codex", {
+      name: "codex-alpha@example.test-plus.json",
+      type: "codex",
+      provider: "codex",
+      auth_index: "auth-codex-alpha",
+      id_token: buildSyntheticCodexIdToken("acct-111"),
+    } as any);
+
+    expect(mocks.request).toHaveBeenCalledWith(
+      expect.objectContaining({
+        authIndex: "auth-codex-alpha",
+        method: "GET",
+        header: expect.objectContaining({
+          "Chatgpt-Account-Id": "acct-111",
+        }),
+      }),
+    );
   });
 });
 

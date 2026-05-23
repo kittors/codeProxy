@@ -8,7 +8,21 @@ import { normalizeStringValue, normalizePlanType, parseIdTokenPayload } from "./
 export function extractCodexChatgptAccountId(value: unknown): string | null {
   const payload = parseIdTokenPayload(value);
   if (!payload) return null;
-  return normalizeStringValue(payload.chatgpt_account_id ?? payload.chatgptAccountId);
+  const directId = normalizeStringValue(
+    payload.chatgpt_account_id ??
+      payload.chatgptAccountId ??
+      payload.account_id ??
+      payload.accountId,
+  );
+  if (directId) return directId;
+  const nested = payload["https://api.openai.com/auth"];
+  if (!nested || typeof nested !== "object" || Array.isArray(nested)) return null;
+  return normalizeStringValue(
+    (nested as Record<string, unknown>).chatgpt_account_id ??
+      (nested as Record<string, unknown>).chatgptAccountId ??
+      (nested as Record<string, unknown>).account_id ??
+      (nested as Record<string, unknown>).accountId,
+  );
 }
 
 export function resolveCodexChatgptAccountId(file: AuthFileItem): string | null {
@@ -21,11 +35,49 @@ export function resolveCodexChatgptAccountId(file: AuthFileItem): string | null 
       ? (file.attributes as Record<string, unknown>)
       : null;
 
+  const directCandidates = [
+    file.chatgpt_account_id,
+    file.chatgptAccountId,
+    file.account_id,
+    file.accountId,
+    metadata?.chatgpt_account_id,
+    metadata?.chatgptAccountId,
+    metadata?.account_id,
+    metadata?.accountId,
+    attributes?.chatgpt_account_id,
+    attributes?.chatgptAccountId,
+    attributes?.account_id,
+    attributes?.accountId,
+  ];
+
+  for (const candidate of directCandidates) {
+    const id = normalizeStringValue(candidate);
+    if (id) return id;
+  }
+
   const candidates = [file.id_token, metadata?.id_token, attributes?.id_token];
 
   for (const candidate of candidates) {
-    const id = extractCodexChatgptAccountId(candidate);
-    if (id) return id;
+    const payload = parseIdTokenPayload(candidate);
+    if (!payload) continue;
+    const directId = normalizeStringValue(
+      payload.chatgpt_account_id ??
+        payload.chatgptAccountId ??
+        payload.account_id ??
+        payload.accountId,
+    );
+    if (directId) return directId;
+    const nested = payload["https://api.openai.com/auth"];
+    const nestedId =
+      nested && typeof nested === "object" && !Array.isArray(nested)
+        ? normalizeStringValue(
+            (nested as Record<string, unknown>).chatgpt_account_id ??
+              (nested as Record<string, unknown>).chatgptAccountId ??
+              (nested as Record<string, unknown>).account_id ??
+              (nested as Record<string, unknown>).accountId,
+          )
+        : null;
+    if (nestedId) return nestedId;
   }
 
   return null;

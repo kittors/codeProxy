@@ -557,6 +557,7 @@ export function AuthFilesPage() {
             setSearch={updateSearch}
             quotaLastUpdatedText={quotaLastUpdatedText}
             loading={loading}
+            files={files}
             filesLength={files.length}
             renderFilesViewModeTabs={renderFilesViewModeTabs}
             quotaAutoRefreshMs={quotaAutoRefreshMs}

@@ -9,6 +9,7 @@ import {
   pickQuotaPreviewItem,
   readAuthFilesDataCache,
   readAuthFilesUiState,
+  resolveAuthFileDisplayName,
   resolveAuthFileRestrictionBadges,
   resolveAuthFileDisplayTags,
   resolveAuthFilePlanType,
@@ -202,6 +203,18 @@ describe("Auth Files helper coverage", () => {
         },
       },
     });
+  });
+
+  test("shows codex channel emails as the display name without requiring oauth account type", () => {
+    const file = {
+      name: "codex-alpha@example.test-plus.json",
+      type: "codex",
+      provider: "codex",
+      email: "alpha@example.test",
+      label: "",
+    } satisfies AuthFileItem;
+
+    expect(resolveAuthFileDisplayName(file)).toBe("alpha@example.test");
   });
 
   test("treats an explicit empty display tag list as hiding every tag", () => {

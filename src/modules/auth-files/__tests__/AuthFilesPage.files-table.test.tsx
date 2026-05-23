@@ -112,6 +112,9 @@ const toDateTimeLocalInput = (date: Date): string =>
     padDatePart(date.getMinutes()),
   ].join("");
 
+const decodeBase64UrlJson = (part: string): Record<string, unknown> =>
+  JSON.parse(Buffer.from(part, "base64url").toString("utf8")) as Record<string, unknown>;
+
 function createDeferred<T>() {
   let resolve!: (value: T | PromiseLike<T>) => void;
   let reject!: (reason?: unknown) => void;
@@ -405,6 +408,264 @@ describe("AuthFilesPage files table", () => {
     await waitFor(() =>
       expect(screen.queryByRole("dialog", { name: "Paste Auth JSON" })).not.toBeInTheDocument(),
     );
+  });
+
+  test("expands pasted codex export bundles into synthesized auth files", async () => {
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("qwen.json")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Paste JSON" }));
+
+    const dialog = await screen.findByRole("dialog", { name: "Paste Auth JSON" });
+    fireEvent.change(within(dialog).getByLabelText("Auth file JSON"), {
+      target: {
+        value: [
+          "=== 卡密内容 ===",
+          JSON.stringify({
+            exported_at: "2026-05-22T19:59:51.483Z",
+            proxies: [],
+            accounts: [
+              {
+                name: "alpha@example.test",
+                platform: "openai",
+                type: "oauth",
+                credentials: {
+                  access_token: "access-token-one",
+                  chatgpt_account_id: "acct-111",
+                  chatgpt_user_id: "user-111",
+                  email: "alpha@example.test",
+                  expires_at: "2026-06-01T17:08:08.000Z",
+                  plan_type: "plus",
+                },
+                extra: {
+                  email: "alpha@example.test",
+                  last_refresh: "2026-05-22T19:59:51.483Z",
+                },
+              },
+            ],
+          }),
+          JSON.stringify({
+            exported_at: "2026-05-22T20:02:43.650Z",
+            proxies: [],
+            accounts: [
+              {
+                name: "beta@example.test",
+                platform: "openai",
+                type: "oauth",
+                credentials: {
+                  access_token: "access-token-two",
+                  chatgpt_account_id: "acct-222",
+                  chatgpt_user_id: "user-222",
+                  email: "beta@example.test",
+                  expires_at: "2026-06-01T17:08:08.000Z",
+                  plan_type: "plus",
+                },
+                extra: {
+                  email: "beta@example.test",
+                  last_refresh: "2026-05-22T20:02:43.650Z",
+                },
+              },
+            ],
+          }),
+        ].join("\n"),
+      },
+    });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Upload JSON" }));
+
+    await waitFor(() => expect(mocks.upload).toHaveBeenCalledTimes(2));
+    const uploadCalls = mocks.upload.mock.calls as unknown as [[File], [File]];
+    expect(uploadCalls.map(([file]) => file.name)).toEqual([
+      "codex-alpha@example.test-plus.json",
+      "codex-beta@example.test-plus.json",
+    ]);
+
+    const uploadedJson = await Promise.all(
+      uploadCalls.map(async ([file]) => JSON.parse(await file.text()) as Record<string, unknown>),
+    );
+    const firstLastRefresh = String(uploadedJson[0]?.last_refresh ?? "");
+    const secondLastRefresh = String(uploadedJson[1]?.last_refresh ?? "");
+    expect(firstLastRefresh).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/u);
+    expect(secondLastRefresh).toBe(firstLastRefresh);
+
+    expect(uploadedJson).toEqual([
+      expect.objectContaining({
+        type: "codex",
+        account_id: "acct-111",
+        chatgpt_account_id: "acct-111",
+        email: "alpha@example.test",
+        name: "alpha@example.test",
+        plan_type: "plus",
+        chatgpt_plan_type: "plus",
+        id_token_synthetic: true,
+        access_token: "access-token-one",
+        refresh_token: "",
+        last_refresh: firstLastRefresh,
+        expired: "2026-06-01T17:08:08.000Z",
+      }),
+      expect.objectContaining({
+        type: "codex",
+        account_id: "acct-222",
+        chatgpt_account_id: "acct-222",
+        email: "beta@example.test",
+        name: "beta@example.test",
+        plan_type: "plus",
+        chatgpt_plan_type: "plus",
+        id_token_synthetic: true,
+        access_token: "access-token-two",
+        refresh_token: "",
+        last_refresh: firstLastRefresh,
+        expired: "2026-06-01T17:08:08.000Z",
+      }),
+    ]);
+
+    const firstToken = String(uploadedJson[0]?.id_token ?? "");
+    const [firstHeaderPart, firstPayloadPart, firstSignaturePart] = firstToken.split(".");
+    expect(firstSignaturePart).toBe("synthetic");
+    expect(decodeBase64UrlJson(firstHeaderPart)).toMatchObject({
+      alg: "none",
+      typ: "JWT",
+      cpa_synthetic: true,
+    });
+    expect(decodeBase64UrlJson(firstPayloadPart)).toMatchObject({
+      iat: Math.floor(Date.parse(firstLastRefresh) / 1000),
+      exp: Math.floor(Date.parse("2026-06-01T17:08:08.000Z") / 1000),
+      email: "alpha@example.test",
+      "https://api.openai.com/auth": {
+        chatgpt_account_id: "acct-111",
+        chatgpt_plan_type: "plus",
+        chatgpt_user_id: "user-111",
+        user_id: "user-111",
+      },
+    });
+
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog", { name: "Paste Auth JSON" })).not.toBeInTheDocument(),
+    );
+  });
+
+  test("skips duplicate codex accounts that are already in the list or repeated in the pasted bundle", async () => {
+    const existingAlpha = {
+      name: "codex-alpha@example.test-plus.json",
+      type: "codex",
+      provider: "codex",
+      account_type: "oauth",
+      email: "alpha@example.test",
+      label: "alpha@example.test",
+      account_id: "acct-111",
+      chatgpt_account_id: "acct-111",
+      auth_index: "auth-alpha",
+      size: 1024,
+      modified: Date.now(),
+      disabled: false,
+    };
+    mocks.list.mockImplementation(async () => ({
+      files: [
+        {
+          name: "qwen.json",
+          type: "qwen",
+          size: 1024,
+          modified: Date.now(),
+          disabled: false,
+        },
+        existingAlpha,
+      ],
+    }));
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("qwen.json")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Paste JSON" }));
+
+    const dialog = await screen.findByRole("dialog", { name: "Paste Auth JSON" });
+    fireEvent.change(within(dialog).getByLabelText("Auth file JSON"), {
+      target: {
+        value: [
+          "=== 卡密内容 ===",
+          JSON.stringify({
+            exported_at: "2026-05-22T20:11:27.181Z",
+            proxies: [],
+            accounts: [
+              {
+                name: "alpha@example.test",
+                platform: "openai",
+                type: "oauth",
+                credentials: {
+                  access_token: "access-token-one",
+                  chatgpt_account_id: "acct-111",
+                  chatgpt_user_id: "user-111",
+                  email: "alpha@example.test",
+                  expires_at: "2026-06-01T17:08:08.000Z",
+                  plan_type: "plus",
+                },
+                extra: {
+                  email: "alpha@example.test",
+                  last_refresh: "2026-05-22T20:11:27.181Z",
+                },
+              },
+              {
+                name: "beta@example.test",
+                platform: "openai",
+                type: "oauth",
+                credentials: {
+                  access_token: "access-token-two",
+                  chatgpt_account_id: "acct-222",
+                  chatgpt_user_id: "user-222",
+                  email: "beta@example.test",
+                  expires_at: "2026-06-01T17:08:08.000Z",
+                  plan_type: "plus",
+                },
+                extra: {
+                  email: "beta@example.test",
+                  last_refresh: "2026-05-22T20:11:27.181Z",
+                },
+              },
+              {
+                name: "alpha@example.test",
+                platform: "openai",
+                type: "oauth",
+                credentials: {
+                  access_token: "access-token-three",
+                  chatgpt_account_id: "acct-111",
+                  chatgpt_user_id: "user-111",
+                  email: "alpha@example.test",
+                  expires_at: "2026-06-01T17:08:08.000Z",
+                  plan_type: "plus",
+                },
+                extra: {
+                  email: "alpha@example.test",
+                  last_refresh: "2026-05-22T20:11:27.181Z",
+                },
+              },
+            ],
+          }),
+        ].join("\n"),
+      },
+    });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Upload JSON" }));
+
+    await waitFor(() => expect(mocks.upload).toHaveBeenCalledTimes(1));
+    const uploadCalls = mocks.upload.mock.calls as unknown as [[File]];
+    expect(uploadCalls.map(([file]) => file.name)).toEqual(["codex-beta@example.test-plus.json"]);
   });
 
   test("refreshes pasted auth files and quotas from the latest uploaded list", async () => {

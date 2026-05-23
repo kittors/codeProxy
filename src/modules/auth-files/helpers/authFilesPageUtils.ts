@@ -849,10 +849,48 @@ export const buildLast7DayAxis = () => {
   return result;
 };
 
+const codexFilenamePlanSuffixes = new Set([
+  "plus",
+  "pro",
+  "free",
+  "team",
+  "premium",
+  "business",
+  "enterprise",
+]);
+
+const readCodexFilenameChannelName = (fileName: string): string => {
+  const normalized = String(fileName ?? "")
+    .trim()
+    .toLowerCase();
+  const base = normalized.replace(/\.json$/u, "");
+  if (!base.startsWith("codex-")) return "";
+  const rest = base.slice("codex-".length);
+  if (!rest) return "";
+  const parts = rest.split("-").filter(Boolean);
+  if (parts.length === 0) return "";
+
+  const emailIndex = parts.findIndex((part) => part.includes("@"));
+  if (emailIndex >= 0) {
+    return parts[emailIndex] ?? "";
+  }
+
+  const lastPart = parts.at(-1) ?? "";
+  if (codexFilenamePlanSuffixes.has(lastPart) && parts.length > 1) {
+    return parts.slice(0, -1).join("-");
+  }
+
+  return "";
+};
+
 export const readAuthFileChannelName = (file: AuthFileItem): string => {
   const candidates = [file.label, file.email];
   for (const candidate of candidates) {
     if (typeof candidate === "string" && candidate.trim()) return candidate.trim();
+  }
+  if (normalizeProviderKey(resolveFileType(file)) === "codex") {
+    const fromName = readCodexFilenameChannelName(String(file.name || ""));
+    if (fromName) return fromName;
   }
   return "";
 };
@@ -863,7 +901,9 @@ export const isOauthAuthFile = (file: AuthFileItem): boolean =>
     .toLowerCase() === "oauth";
 
 export const canRenameAuthFileChannel = (file: AuthFileItem): boolean =>
-  isOauthAuthFile(file) || normalizeProviderKey(resolveFileType(file)) === "kimi";
+  isOauthAuthFile(file) ||
+  normalizeProviderKey(resolveFileType(file)) === "kimi" ||
+  normalizeProviderKey(resolveFileType(file)) === "codex";
 
 export const resolveAuthFileDisplayName = (file: AuthFileItem): string => {
   const channelName = readAuthFileChannelName(file);
