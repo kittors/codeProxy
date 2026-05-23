@@ -13,6 +13,7 @@ import {
   RefreshCw,
   Search,
   Settings2,
+  SlidersHorizontal,
   Tags,
   Upload,
 } from "lucide-react";
@@ -347,8 +348,16 @@ export function AuthFilesFilesTab({
   const [jsonImportOpen, setJsonImportOpen] = useState(false);
   const [jsonImportText, setJsonImportText] = useState("");
   const [jsonImportError, setJsonImportError] = useState("");
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const normalizedFilter = normalizeProviderKey(filter);
   const canSetModelOwnerGroup = normalizedFilter !== "all";
+  const activeFilterCount = [
+    normalizedFilter !== "all",
+    customTagOptions.length > 0 && tagFilter.trim() !== "",
+    statusFilter !== "all",
+    search.trim() !== "",
+    canSetModelOwnerGroup && selectedModelOwner.trim() !== "",
+  ].filter(Boolean).length;
   const draftModelOwnerGroup =
     draftModelOwner === ""
       ? null
@@ -452,8 +461,37 @@ export function AuthFilesFilesTab({
 
       <Card padding="compact">
         <div className="flex flex-col gap-3">
-          <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-start">
-            <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+          <div className="flex items-center justify-between gap-2 md:hidden">
+            <Button
+              variant="secondary"
+              size="sm"
+              className="w-full justify-between px-3"
+              aria-controls="auth-files-mobile-filter-panel"
+              aria-expanded={mobileFiltersOpen}
+              data-testid="auth-files-mobile-filter-toggle"
+              onClick={() => setMobileFiltersOpen((open) => !open)}
+            >
+              <span className="inline-flex min-w-0 items-center gap-2">
+                <SlidersHorizontal size={15} />
+                <span className="truncate">{t("auth_files.filters")}</span>
+              </span>
+              {activeFilterCount > 0 ? (
+                <span className="inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-slate-900 px-1.5 text-[10px] font-semibold tabular-nums text-white dark:bg-white dark:text-neutral-950">
+                  {activeFilterCount}
+                </span>
+              ) : null}
+            </Button>
+          </div>
+
+          <div
+            id="auth-files-mobile-filter-panel"
+            data-testid="auth-files-mobile-filter-panel"
+            className={[
+              mobileFiltersOpen ? "grid" : "hidden",
+              "gap-3 md:grid xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] xl:items-start",
+            ].join(" ")}
+          >
+            <div className="grid min-w-0 gap-2 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
               <div className="min-w-0 space-y-1.5">
                 <div className="flex items-center gap-2">
                   <p className="text-[11px] font-semibold text-slate-600 dark:text-white/65">
@@ -525,7 +563,15 @@ export function AuthFilesFilesTab({
               ) : null}
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-[minmax(0,220px)_minmax(0,180px)] xl:grid-cols-[minmax(0,220px)_minmax(0,180px)_minmax(0,1fr)] xl:items-end">
+            <div
+              className={[
+                "grid min-w-0 gap-3",
+                customTagOptions.length > 0
+                  ? "sm:grid-cols-2 xl:grid-cols-[minmax(0,180px)_minmax(0,170px)_minmax(0,1fr)]"
+                  : "sm:grid-cols-[minmax(0,180px)_minmax(0,1fr)]",
+                "xl:items-end",
+              ].join(" ")}
+            >
               {customTagOptions.length > 0 ? (
                 <div className="min-w-0 space-y-1.5">
                   <p className="text-[11px] font-semibold text-slate-600 dark:text-white/65">
@@ -557,7 +603,7 @@ export function AuthFilesFilesTab({
                 />
               </div>
 
-              <div className="min-w-0 space-y-1.5 xl:min-w-[18rem]">
+              <div className="min-w-0 space-y-1.5">
                 <p className="text-[11px] font-semibold text-slate-600 dark:text-white/65">
                   {t("auth_files.search")}
                 </p>
@@ -691,87 +737,87 @@ export function AuthFilesFilesTab({
             </div>
           </div>
 
-            {selectableFilteredFiles.length > 0 || selectedCount > 0 ? (
-              <div className="flex flex-wrap items-center gap-1.5 rounded-2xl bg-slate-50/80 px-2 py-1.5 transition-colors duration-200 ease-out dark:bg-white/[0.03]">
-                <DropdownMenu.Root>
-                  <DropdownMenu.Trigger asChild>
-                    <button
-                      type="button"
-                      className={buttonClassName({
-                        variant: "secondary",
-                        size: "sm",
-                        iconOnly: true,
-                        className: "!h-8 !w-8",
-                      })}
-                      aria-label={t("auth_files.selection_actions")}
-                      title={t("auth_files.selection_actions")}
-                      data-tooltip-placement="top"
+          {selectableFilteredFiles.length > 0 || selectedCount > 0 ? (
+            <div className="flex flex-wrap items-center gap-1.5 rounded-2xl bg-slate-50/80 px-2 py-1.5 transition-colors duration-200 ease-out dark:bg-white/[0.03]">
+              <DropdownMenu.Root>
+                <DropdownMenu.Trigger asChild>
+                  <button
+                    type="button"
+                    className={buttonClassName({
+                      variant: "secondary",
+                      size: "sm",
+                      iconOnly: true,
+                      className: "!h-8 !w-8",
+                    })}
+                    aria-label={t("auth_files.selection_actions")}
+                    title={t("auth_files.selection_actions")}
+                    data-tooltip-placement="top"
+                  >
+                    <ListChecks size={15} />
+                  </button>
+                </DropdownMenu.Trigger>
+                <DropdownMenu.Portal>
+                  <DropdownMenu.Content
+                    align="end"
+                    sideOffset={8}
+                    className={ACTION_MENU_CONTENT_CLASS}
+                  >
+                    <DropdownMenu.Item
+                      className={ACTION_MENU_ITEM_CLASS}
+                      disabled={selectablePageNames.length === 0}
+                      onSelect={() => selectCurrentPage(!allPageSelected)}
                     >
                       <ListChecks size={15} />
-                    </button>
-                  </DropdownMenu.Trigger>
-                  <DropdownMenu.Portal>
-                    <DropdownMenu.Content
-                      align="end"
-                      sideOffset={8}
-                      className={ACTION_MENU_CONTENT_CLASS}
+                      <span>
+                        {allPageSelected
+                          ? t("auth_files.batch_deselect_page")
+                          : t("auth_files.batch_select_page")}
+                      </span>
+                    </DropdownMenu.Item>
+                    <DropdownMenu.Item
+                      className={ACTION_MENU_ITEM_CLASS}
+                      disabled={selectableFilteredFiles.length === 0}
+                      onSelect={() => selectFilteredFiles(!allFilteredSelected)}
                     >
-                      <DropdownMenu.Item
-                        className={ACTION_MENU_ITEM_CLASS}
-                        disabled={selectablePageNames.length === 0}
-                        onSelect={() => selectCurrentPage(!allPageSelected)}
-                      >
-                        <ListChecks size={15} />
-                        <span>
-                          {allPageSelected
-                            ? t("auth_files.batch_deselect_page")
-                            : t("auth_files.batch_select_page")}
-                        </span>
-                      </DropdownMenu.Item>
-                      <DropdownMenu.Item
-                        className={ACTION_MENU_ITEM_CLASS}
-                        disabled={selectableFilteredFiles.length === 0}
-                        onSelect={() => selectFilteredFiles(!allFilteredSelected)}
-                      >
-                        <ListChecks size={15} />
-                        <span>
-                          {allFilteredSelected
-                            ? t("auth_files.batch_deselect_filtered")
-                            : t("auth_files.batch_select_filtered")}
-                        </span>
-                      </DropdownMenu.Item>
-                    </DropdownMenu.Content>
-                  </DropdownMenu.Portal>
-                </DropdownMenu.Root>
-                {selectedCount > 0 ? (
-                  <>
-                    <span className="ml-1 text-xs font-medium text-slate-600 dark:text-white/65">
-                      {t("auth_files.batch_selected", { count: selectedCount })}
-                    </span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="!h-8 px-2 text-xs"
-                      onClick={() => setSelectedFileNames([])}
-                    >
-                      {t("auth_files.batch_clear")}
-                    </Button>
-                    <Button
-                      variant="danger"
-                      size="sm"
-                      className="!h-8 px-2 text-xs"
-                      onClick={() =>
-                        setConfirm({ type: "deleteSelection", names: [...selectedFileNames] })
-                      }
-                      disabled={deletingAll}
-                    >
-                      {t("auth_files.batch_delete_action", { count: selectedCount })}
-                    </Button>
-                  </>
-                ) : null}
-              </div>
-            ) : null}
-          </div>
+                      <ListChecks size={15} />
+                      <span>
+                        {allFilteredSelected
+                          ? t("auth_files.batch_deselect_filtered")
+                          : t("auth_files.batch_select_filtered")}
+                      </span>
+                    </DropdownMenu.Item>
+                  </DropdownMenu.Content>
+                </DropdownMenu.Portal>
+              </DropdownMenu.Root>
+              {selectedCount > 0 ? (
+                <>
+                  <span className="ml-1 text-xs font-medium text-slate-600 dark:text-white/65">
+                    {t("auth_files.batch_selected", { count: selectedCount })}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="!h-8 px-2 text-xs"
+                    onClick={() => setSelectedFileNames([])}
+                  >
+                    {t("auth_files.batch_clear")}
+                  </Button>
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    className="!h-8 px-2 text-xs"
+                    onClick={() =>
+                      setConfirm({ type: "deleteSelection", names: [...selectedFileNames] })
+                    }
+                    disabled={deletingAll}
+                  >
+                    {t("auth_files.batch_delete_action", { count: selectedCount })}
+                  </Button>
+                </>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
       </Card>
 
       {loading && filesLength === 0 ? (

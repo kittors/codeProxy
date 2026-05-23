@@ -698,6 +698,7 @@
     "trend_reset_at": "сброс {{time}}",
     "trend_refresh": "Обновить тренд",
     "detail_models_refresh": "Обновить модели",
+    "filters": "Фильтры",
     "failed_get_model_owners": "Не удалось получить группы владельцев моделей",
     "model_owner_group": "Группа владельца моделей",
     "auth_file_models_option": "Не задано",

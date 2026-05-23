@@ -655,6 +655,7 @@
     "prev": "Prev",
     "next": "Next",
     "apply": "Apply",
+    "filters": "Filters",
     "type_filter": "Type Filter",
     "tag_filter": "Custom tag",
     "all_tags": "All tags",

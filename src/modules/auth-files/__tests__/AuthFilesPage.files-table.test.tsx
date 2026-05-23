@@ -228,6 +228,33 @@ describe("AuthFilesPage files table", () => {
     expect(screen.getByRole("switch", { name: "Enable/Disable" })).toBeInTheDocument();
   });
 
+  test("collapses filters behind a single mobile filter control", async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("qwen.json")).toBeInTheDocument();
+
+    const mobileToggle = screen.getByTestId("auth-files-mobile-filter-toggle");
+    const mobilePanel = screen.getByTestId("auth-files-mobile-filter-panel");
+    expect(mobileToggle).toHaveAttribute("aria-expanded", "false");
+    expect(mobilePanel).toHaveClass("hidden");
+
+    await user.click(mobileToggle);
+
+    expect(mobileToggle).toHaveAttribute("aria-expanded", "true");
+    expect(mobilePanel).not.toHaveClass("hidden");
+  });
+
   test("filters auth file cards by status buckets", async () => {
     const user = userEvent.setup();
     const now = Date.now();

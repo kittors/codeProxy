@@ -669,6 +669,7 @@
     "prev": "上一页",
     "next": "下一页",
     "apply": "应用",
+    "filters": "筛选",
     "type_filter": "类型筛选",
     "tag_filter": "自定义标签",
     "all_tags": "全部标签",
