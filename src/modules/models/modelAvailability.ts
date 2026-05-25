@@ -20,6 +20,9 @@ export type ModelAvailabilityItem = {
   source?: string;
   enabled?: boolean;
   pricing?: ModelPricing;
+  inputModalities?: string[];
+  outputModalities?: string[];
+  supportsVision?: boolean;
 };
 
 export type ConfiguredModelAvailability = {
@@ -45,6 +48,9 @@ export interface ModelConfigMetadataItem {
   enabled: boolean;
   source: string;
   pricing: ModelPricing;
+  inputModalities: string[];
+  outputModalities: string[];
+  supportsVision: boolean;
 }
 
 export interface ModelPathItem {
@@ -138,10 +144,59 @@ export const normalizeModelPricing = (raw: Record<string, unknown>): ModelPricin
   };
 };
 
+export const normalizeModelModalities = (raw: unknown): string[] => {
+  let values: unknown[] = [];
+  if (Array.isArray(raw)) {
+    values = raw;
+  } else if (typeof raw === "string") {
+    const trimmed = raw.trim();
+    if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        values = Array.isArray(parsed) ? parsed : [];
+      } catch {
+        values = [];
+      }
+    } else {
+      values = trimmed.split(/[,+|/\s]+/);
+    }
+  }
+
+  const seen = new Set<string>();
+  const normalized: string[] = [];
+  for (const value of values) {
+    const modality = String(value ?? "")
+      .trim()
+      .toLowerCase();
+    if (!modality || seen.has(modality)) continue;
+    seen.add(modality);
+    normalized.push(modality);
+  }
+  return normalized;
+};
+
+const normalizeModelSupportsVision = (
+  raw: Record<string, unknown>,
+  inputModalities: string[],
+): boolean => {
+  const explicit = raw.supports_vision ?? raw.supportsVision;
+  if (typeof explicit === "boolean") return explicit;
+  if (typeof explicit === "string") {
+    const value = explicit.trim().toLowerCase();
+    if (["true", "1", "yes"].includes(value)) return true;
+    if (["false", "0", "no"].includes(value)) return false;
+  }
+  return inputModalities.includes("image");
+};
+
 export const normalizeModelConfigMetadata = (item: unknown): ModelConfigMetadataItem | null => {
   if (!isRecord(item)) return null;
   const id = String(item.id ?? item.model_id ?? item.name ?? "").trim();
   if (!id) return null;
+  const inputModalities = normalizeModelModalities(item.input_modalities ?? item.inputModalities);
+  const outputModalities = normalizeModelModalities(
+    item.output_modalities ?? item.outputModalities,
+  );
   return {
     id,
     owned_by: String(item.owned_by ?? item.owner ?? ""),
@@ -149,6 +204,9 @@ export const normalizeModelConfigMetadata = (item: unknown): ModelConfigMetadata
     enabled: item.enabled === false ? false : true,
     source: String(item.source ?? ""),
     pricing: normalizeModelPricing(item),
+    inputModalities,
+    outputModalities,
+    supportsVision: normalizeModelSupportsVision(item, inputModalities),
   };
 };
 
@@ -264,6 +322,29 @@ const addModel = (
   const key = id.toLowerCase();
   if (map.has(key)) return;
   map.set(key, { ...item, id });
+};
+
+const buildLibraryModelIndex = (
+  models: ModelAvailabilityItem[],
+): Map<string, ModelAvailabilityItem> =>
+  new Map(models.map((model) => [model.id.toLowerCase(), model]));
+
+const withLibraryModelMetadata = (
+  item: ModelAvailabilityItem,
+  libraryIndex: Map<string, ModelAvailabilityItem>,
+): ModelAvailabilityItem => {
+  const libraryModel = libraryIndex.get(item.id.toLowerCase());
+  if (!libraryModel) return item;
+  return {
+    ...libraryModel,
+    ...item,
+    owned_by: item.owned_by || libraryModel.owned_by,
+    description: item.description || libraryModel.description,
+    pricing: item.pricing ?? libraryModel.pricing,
+    inputModalities: item.inputModalities ?? libraryModel.inputModalities,
+    outputModalities: item.outputModalities ?? libraryModel.outputModalities,
+    supportsVision: item.supportsVision ?? libraryModel.supportsVision,
+  };
 };
 
 const withOptionalPrefix = (id: string, prefix?: string): string[] => {
@@ -402,6 +483,7 @@ const loadAuthFileModelItems = async (
   libraryModels: ModelAvailabilityItem[],
 ): Promise<{ items: ModelAvailabilityItem[]; scoped: boolean }> => {
   const map = new Map<string, ModelAvailabilityItem>();
+  const libraryIndex = buildLibraryModelIndex(libraryModels);
   const ownerByAuthGroup = readAuthFilesModelOwnerGroupMap();
   const modelsByOwner = new Map<string, ModelAvailabilityItem[]>();
   const activeAuthFiles = authFiles.filter((file) => !authFileDisabled(file));
@@ -431,12 +513,18 @@ const loadAuthFileModelItems = async (
         const liveModels = await authFilesApi.getModelsForAuthFile(file.name);
         scoped = true;
         for (const model of liveModels) {
-          addModel(map, {
-            id: model.id,
-            owned_by: model.owned_by,
-            description: model.display_name,
-            source: "auth-file",
-          });
+          addModel(
+            map,
+            withLibraryModelMetadata(
+              {
+                id: model.id,
+                owned_by: model.owned_by,
+                description: model.display_name,
+                source: "auth-file",
+              },
+              libraryIndex,
+            ),
+          );
         }
       } catch {
         // Older backends may not expose per-file model lookup. Keep the caller on its fallback path.
@@ -455,10 +543,11 @@ export const loadConfiguredModelAvailability = async (): Promise<ConfiguredModel
   ]);
   const libraryModels = normalizeModelConfigRows(libraryPayload);
   const authFileAvailability = await loadAuthFileModelItems(authFiles, libraryModels);
+  const libraryIndex = buildLibraryModelIndex(libraryModels);
 
   const map = new Map<string, ModelAvailabilityItem>();
   for (const item of authFileAvailability.items) addModel(map, item);
-  for (const item of providerItems) addModel(map, item);
+  for (const item of providerItems) addModel(map, withLibraryModelMetadata(item, libraryIndex));
 
   if (!authFileAvailability.scoped && providerItems.length === 0) {
     return emptyAvailability();

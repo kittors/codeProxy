@@ -61,9 +61,26 @@ describe("ModelsPage", () => {
               owned_by: "openai",
               description: "Image generation model billed per invocation",
               enabled: true,
+              input_modalities: ["text"],
+              output_modalities: ["image"],
+              supports_vision: false,
               pricing: {
                 mode: "call",
                 price_per_call: 0.04,
+              },
+            },
+            {
+              id: "qwen3.5-plus",
+              owned_by: "qwen",
+              description: "Vision capable model",
+              enabled: true,
+              input_modalities: ["text", "image"],
+              output_modalities: ["text"],
+              supports_vision: true,
+              pricing: {
+                mode: "token",
+                input_price_per_million: 1,
+                output_price_per_million: 3,
               },
             },
           ],
@@ -78,6 +95,9 @@ describe("ModelsPage", () => {
               description: "Seeded model library entry",
               enabled: true,
               source: "seed",
+              input_modalities: ["text"],
+              output_modalities: ["text"],
+              supports_vision: false,
               pricing: {
                 mode: "token",
                 input_price_per_million: 1,
@@ -148,6 +168,20 @@ describe("ModelsPage", () => {
 
     expect(await screen.findByText("gpt-image-2")).toBeInTheDocument();
     expect(screen.queryByRole("columnheader", { name: "Paths" })).not.toBeInTheDocument();
+  });
+
+  test("renders model capability badges from modality metadata", async () => {
+    renderPage();
+
+    expect(await screen.findByText("qwen3.5-plus")).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Capabilities" })).toBeInTheDocument();
+    expect(screen.getByText("Vision")).toBeInTheDocument();
+    expect(screen.getByText("Image output")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("tab", { name: /model library/i }));
+
+    expect(await screen.findByText("seed-only-model")).toBeInTheDocument();
+    expect(screen.getByText("Text")).toBeInTheDocument();
   });
 
   test("renders active models as an availability list without deletion selection controls", async () => {

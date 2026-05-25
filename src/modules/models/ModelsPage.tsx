@@ -55,6 +55,9 @@ interface ModelItem {
   enabled: boolean;
   source: string;
   pricing: ModelPricing;
+  inputModalities: string[];
+  outputModalities: string[];
+  supportsVision: boolean;
 }
 
 interface ModelOwnerPreset {
@@ -197,6 +200,9 @@ function metadataToModel(item: ModelConfigMetadataItem): ModelItem {
     enabled: item.enabled,
     source: item.source,
     pricing: item.pricing,
+    inputModalities: item.inputModalities,
+    outputModalities: item.outputModalities,
+    supportsVision: item.supportsVision,
   };
 }
 
@@ -259,6 +265,9 @@ function availabilityItemToModel(item: ModelAvailabilityItem): ModelItem {
     enabled: true,
     source: item.source ?? "configured",
     pricing: item.pricing ?? emptyModelPricing(),
+    inputModalities: item.inputModalities ?? [],
+    outputModalities: item.outputModalities ?? [],
+    supportsVision: item.supportsVision ?? item.inputModalities?.includes("image") ?? false,
   };
 }
 
@@ -365,7 +374,65 @@ function payloadToModel(payload: ReturnType<typeof buildModelPayload>, source: s
     enabled: payload.enabled,
     source,
     pricing,
+    inputModalities: [],
+    outputModalities: [],
+    supportsVision: false,
   };
+}
+
+function modelHasTextCapability(model: ModelItem): boolean {
+  if (model.inputModalities.includes("text") || model.outputModalities.includes("text")) {
+    return true;
+  }
+  return model.inputModalities.length === 0 && model.outputModalities.length === 0;
+}
+
+function ModelCapabilityBadges({ model }: { model: ModelItem }) {
+  const { t } = useTranslation();
+  const badges: Array<{ key: string; label: string; className: string }> = [];
+
+  if (modelHasTextCapability(model)) {
+    badges.push({
+      key: "text",
+      label: t("models_page.capability_text"),
+      className: "bg-slate-100 text-slate-600 dark:bg-white/[0.08] dark:text-white/60",
+    });
+  }
+  if (model.supportsVision || model.inputModalities.includes("image")) {
+    badges.push({
+      key: "vision",
+      label: t("models_page.capability_vision"),
+      className: "bg-sky-50 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300",
+    });
+  }
+  if (model.outputModalities.includes("image")) {
+    badges.push({
+      key: "image-output",
+      label: t("models_page.capability_image_output"),
+      className: "bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300",
+    });
+  }
+
+  if (badges.length === 0) {
+    badges.push({
+      key: "unknown",
+      label: t("models_page.capability_unknown"),
+      className: "bg-slate-100 text-slate-500 dark:bg-white/[0.06] dark:text-white/45",
+    });
+  }
+
+  return (
+    <div className="flex min-w-0 flex-wrap gap-1.5">
+      {badges.map((badge) => (
+        <span
+          key={badge.key}
+          className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${badge.className}`}
+        >
+          {badge.label}
+        </span>
+      ))}
+    </div>
+  );
 }
 
 function modelConfigCollectionPath(scope: ModelScope): string {
@@ -762,8 +829,17 @@ export function ModelsPage() {
     try {
       const saved = await saveModelConfig(form, modelScope);
       setModels((prev) => {
+        const existing = prev.find((model) => model.id === (form.originalId ?? saved.id));
+        const savedWithCapabilities = existing
+          ? {
+              ...saved,
+              inputModalities: existing.inputModalities,
+              outputModalities: existing.outputModalities,
+              supportsVision: existing.supportsVision,
+            }
+          : saved;
         const withoutOriginal = prev.filter((model) => model.id !== (form.originalId ?? saved.id));
-        return [...withoutOriginal, saved].sort((a, b) => a.id.localeCompare(b.id));
+        return [...withoutOriginal, savedWithCapabilities].sort((a, b) => a.id.localeCompare(b.id));
       });
       setOwnerPresets((prev) => buildOwnerPresetDrafts([saved], prev));
       setForm(null);
@@ -1042,6 +1118,12 @@ export function ModelsPage() {
         label: t("models_page.col_owner"),
         width: "w-32",
         render: (row) => row.owned_by || "-",
+      },
+      {
+        key: "capabilities",
+        label: t("models_page.col_capabilities"),
+        width: "w-40",
+        render: (row) => <ModelCapabilityBadges model={row} />,
       },
       {
         key: "mode",
