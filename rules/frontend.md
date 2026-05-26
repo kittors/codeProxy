@@ -25,7 +25,7 @@ summary: 前端样式与组件一致性（无前端则忽略）
   - 格式化检查：`bunx oxfmt . --check`
   - 构建：`bun run build`
   - （可选）测试：暂无（当前仓库未配置测试脚本/用例）
-- 对用户可见的 UI 改动，真实界面验收是交付门槛，细则见 `rules/workflow.md`；Playwright 只在用户明确要求或 `computer-use` 不可用时才作为替代。
+- 对用户可见的 UI 改动，真实界面验收是交付门槛，细则见 `rules/workflow.md`；默认依赖 `chrome:Chrome` 做真实 Chrome 页面检查，`computer-use` 或 Playwright 只在用户明确要求，或 Chrome 插件不可用/不可达时才作为替代。
   <!-- AI-KIT:END -->
 
 <!-- PROJECT-OVERRIDES:START -->
