@@ -100,6 +100,11 @@ function hydrateRoutingValues(payload: RoutingConfigItem | undefined): VisualCon
           name: String(group?.name ?? ""),
           description: String(group?.description ?? ""),
           strategy: group?.strategy === "fill-first" ? "fill-first" : "round-robin",
+          excludeFromDefault:
+            group?.["exclude-from-default"] === true &&
+            String(group?.name ?? "")
+              .trim()
+              .toLowerCase() !== "default",
           matchMode: tags.length > 0 ? "tags" : "channels",
           tags,
           allowedModels: Array.isArray(group?.["allowed-models"])
@@ -146,6 +151,9 @@ function serializeRoutingValues(values: VisualConfigValues): RoutingConfigItem {
       item.description = group.description.trim();
     }
     item.strategy = group.strategy === "fill-first" ? "fill-first" : "round-robin";
+    if (group.excludeFromDefault && name.toLowerCase() !== "default") {
+      item["exclude-from-default"] = true;
+    }
     if (group.matchMode === "tags") {
       const tags = normalizeRoutingTags(group.tags);
       if (tags.length > 0) {

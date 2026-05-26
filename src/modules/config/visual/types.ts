@@ -56,6 +56,7 @@ export type RoutingChannelGroupEntry = {
   name: string;
   description: string;
   strategy: RoutingStrategy;
+  excludeFromDefault?: boolean;
   matchMode?: RoutingChannelGroupMatchMode;
   channels: RoutingChannelGroupMemberEntry[];
   tags?: string[];

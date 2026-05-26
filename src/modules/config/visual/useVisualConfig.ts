@@ -92,10 +92,12 @@ function deleteIfEmpty(parent: Record<string, unknown>, key: string): void {
   if (Object.keys(value).length === 0) delete parent[key];
 }
 
-function hasPayloadRuleSections(payload: Record<string, unknown> | null): payload is Record<string, unknown> {
+function hasPayloadRuleSections(
+  payload: Record<string, unknown> | null,
+): payload is Record<string, unknown> {
   return Boolean(
     payload &&
-      (hasOwn(payload, "default") || hasOwn(payload, "override") || hasOwn(payload, "filter")),
+    (hasOwn(payload, "default") || hasOwn(payload, "override") || hasOwn(payload, "filter")),
   );
 }
 
@@ -259,7 +261,12 @@ function parseRoutingTags(raw: unknown): string[] {
   return Array.from(
     new Set(
       raw
-        .map((value) => String(value ?? "").trim().replace(/\s+/g, "-").toLowerCase())
+        .map((value) =>
+          String(value ?? "")
+            .trim()
+            .replace(/\s+/g, "-")
+            .toLowerCase(),
+        )
         .filter(Boolean),
     ),
   );
@@ -312,6 +319,11 @@ function parseRoutingChannelGroups(raw: unknown): RoutingChannelGroupEntry[] {
       name: typeof record.name === "string" ? record.name : "",
       description: typeof record.description === "string" ? record.description : "",
       strategy: parseRoutingStrategy(record.strategy),
+      excludeFromDefault:
+        record["exclude-from-default"] === true &&
+        String(record.name ?? "")
+          .trim()
+          .toLowerCase() !== "default",
       matchMode: tags.length > 0 ? "tags" : "channels",
       channels: members,
       tags,
@@ -411,6 +423,9 @@ function serializeRoutingChannelGroupsForYaml(
         item.description = group.description.trim();
       }
       item.strategy = group.strategy === "fill-first" ? "fill-first" : "round-robin";
+      if (group.excludeFromDefault && name.trim().toLowerCase() !== "default") {
+        item["exclude-from-default"] = true;
+      }
 
       const match: Record<string, unknown> = {};
       if (group.matchMode === "tags") {
@@ -487,96 +502,99 @@ export function useVisualConfig() {
     return JSON.stringify(visualValues) !== JSON.stringify(baselineValues);
   }, [baselineValues, visualValues]);
 
-  const loadVisualValuesFromYaml = useCallback((yamlContent: string, runtimeConfig?: Record<string, unknown>) => {
-    try {
-      const parsedRaw: unknown = parseYaml(yamlContent) || {};
-      const parsed = asRecord(parsedRaw) ?? {};
-      const tls = asRecord(parsed.tls);
-      const remoteManagement = asRecord(parsed["remote-management"]);
-      const quotaExceeded = asRecord(parsed["quota-exceeded"]);
-      const routing = asRecord(parsed.routing);
-      const yamlPayload = asRecord(parsed.payload);
-      const runtimePayload = asRecord(runtimeConfig?.payload);
-      const payload = hasPayloadRuleSections(runtimePayload) ? runtimePayload : yamlPayload;
-      const streaming = asRecord(parsed.streaming);
-      const autoUpdate = asRecord(parsed["auto-update"]);
+  const loadVisualValuesFromYaml = useCallback(
+    (yamlContent: string, runtimeConfig?: Record<string, unknown>) => {
+      try {
+        const parsedRaw: unknown = parseYaml(yamlContent) || {};
+        const parsed = asRecord(parsedRaw) ?? {};
+        const tls = asRecord(parsed.tls);
+        const remoteManagement = asRecord(parsed["remote-management"]);
+        const quotaExceeded = asRecord(parsed["quota-exceeded"]);
+        const routing = asRecord(parsed.routing);
+        const yamlPayload = asRecord(parsed.payload);
+        const runtimePayload = asRecord(runtimeConfig?.payload);
+        const payload = hasPayloadRuleSections(runtimePayload) ? runtimePayload : yamlPayload;
+        const streaming = asRecord(parsed.streaming);
+        const autoUpdate = asRecord(parsed["auto-update"]);
 
-      const newValues: VisualConfigValues = {
-        host: typeof parsed.host === "string" ? parsed.host : "",
-        port: String(parsed.port ?? ""),
+        const newValues: VisualConfigValues = {
+          host: typeof parsed.host === "string" ? parsed.host : "",
+          port: String(parsed.port ?? ""),
 
-        tlsEnable: Boolean(tls?.enable),
-        tlsCert: typeof tls?.cert === "string" ? tls.cert : "",
-        tlsKey: typeof tls?.key === "string" ? tls.key : "",
+          tlsEnable: Boolean(tls?.enable),
+          tlsCert: typeof tls?.cert === "string" ? tls.cert : "",
+          tlsKey: typeof tls?.key === "string" ? tls.key : "",
 
-        rmAllowRemote: Boolean(remoteManagement?.["allow-remote"]),
-        rmSecretKey:
-          typeof remoteManagement?.["secret-key"] === "string"
-            ? remoteManagement["secret-key"]
-            : "",
-        rmDisableControlPanel: Boolean(remoteManagement?.["disable-control-panel"]),
-        rmPanelRepo:
-          typeof remoteManagement?.["panel-github-repository"] === "string"
-            ? remoteManagement["panel-github-repository"]
-            : typeof remoteManagement?.["panel-repo"] === "string"
-              ? remoteManagement["panel-repo"]
+          rmAllowRemote: Boolean(remoteManagement?.["allow-remote"]),
+          rmSecretKey:
+            typeof remoteManagement?.["secret-key"] === "string"
+              ? remoteManagement["secret-key"]
               : "",
+          rmDisableControlPanel: Boolean(remoteManagement?.["disable-control-panel"]),
+          rmPanelRepo:
+            typeof remoteManagement?.["panel-github-repository"] === "string"
+              ? remoteManagement["panel-github-repository"]
+              : typeof remoteManagement?.["panel-repo"] === "string"
+                ? remoteManagement["panel-repo"]
+                : "",
 
-        authDir: typeof parsed["auth-dir"] === "string" ? parsed["auth-dir"] : "",
-        apiKeysText: parseApiKeysText(parsed["api-keys"]),
-        corsAllowOriginsText: parseStringListText(parsed["cors-allow-origins"]),
+          authDir: typeof parsed["auth-dir"] === "string" ? parsed["auth-dir"] : "",
+          apiKeysText: parseApiKeysText(parsed["api-keys"]),
+          corsAllowOriginsText: parseStringListText(parsed["cors-allow-origins"]),
 
-        debug: Boolean(parsed.debug),
-        commercialMode: Boolean(parsed["commercial-mode"]),
-        loggingToFile: Boolean(parsed["logging-to-file"]),
-        logsMaxTotalSizeMb: String(parsed["logs-max-total-size-mb"] ?? ""),
-        usageStatisticsEnabled: Boolean(parsed["usage-statistics-enabled"]),
-        autoUpdateEnabled: Boolean(autoUpdate?.enabled ?? true),
-        autoUpdateChannel: normalizeAutoUpdateChannel(autoUpdate?.channel),
-        autoUpdateDockerImage:
-          typeof autoUpdate?.["docker-image"] === "string" && autoUpdate["docker-image"].trim()
-            ? autoUpdate["docker-image"]
-            : DEFAULT_VISUAL_VALUES.autoUpdateDockerImage,
+          debug: Boolean(parsed.debug),
+          commercialMode: Boolean(parsed["commercial-mode"]),
+          loggingToFile: Boolean(parsed["logging-to-file"]),
+          logsMaxTotalSizeMb: String(parsed["logs-max-total-size-mb"] ?? ""),
+          usageStatisticsEnabled: Boolean(parsed["usage-statistics-enabled"]),
+          autoUpdateEnabled: Boolean(autoUpdate?.enabled ?? true),
+          autoUpdateChannel: normalizeAutoUpdateChannel(autoUpdate?.channel),
+          autoUpdateDockerImage:
+            typeof autoUpdate?.["docker-image"] === "string" && autoUpdate["docker-image"].trim()
+              ? autoUpdate["docker-image"]
+              : DEFAULT_VISUAL_VALUES.autoUpdateDockerImage,
 
-        proxyUrl: typeof parsed["proxy-url"] === "string" ? parsed["proxy-url"] : "",
-        preferIPv4: Boolean(parsed["prefer-ipv4"]),
-        forceModelPrefix: Boolean(parsed["force-model-prefix"]),
-        requestRetry: String(parsed["request-retry"] ?? ""),
-        maxRetryInterval: String(parsed["max-retry-interval"] ?? ""),
-        wsAuth: Boolean(parsed["ws-auth"]),
+          proxyUrl: typeof parsed["proxy-url"] === "string" ? parsed["proxy-url"] : "",
+          preferIPv4: Boolean(parsed["prefer-ipv4"]),
+          forceModelPrefix: Boolean(parsed["force-model-prefix"]),
+          requestRetry: String(parsed["request-retry"] ?? ""),
+          maxRetryInterval: String(parsed["max-retry-interval"] ?? ""),
+          wsAuth: Boolean(parsed["ws-auth"]),
 
-        quotaSwitchProject: Boolean(quotaExceeded?.["switch-project"] ?? true),
-        quotaSwitchPreviewModel: Boolean(quotaExceeded?.["switch-preview-model"] ?? true),
+          quotaSwitchProject: Boolean(quotaExceeded?.["switch-project"] ?? true),
+          quotaSwitchPreviewModel: Boolean(quotaExceeded?.["switch-preview-model"] ?? true),
 
-        routingStrategy: routing?.strategy === "fill-first" ? "fill-first" : "round-robin",
-        routingIncludeDefaultGroup: routing?.["include-default-group"] !== false,
-        routingChannelGroups: parseRoutingChannelGroups(routing?.["channel-groups"]),
-        routingPathRoutes: parseRoutingPathRoutes(routing?.["path-routes"]),
+          routingStrategy: routing?.strategy === "fill-first" ? "fill-first" : "round-robin",
+          routingIncludeDefaultGroup: routing?.["include-default-group"] !== false,
+          routingChannelGroups: parseRoutingChannelGroups(routing?.["channel-groups"]),
+          routingPathRoutes: parseRoutingPathRoutes(routing?.["path-routes"]),
 
-        payloadDefaultRules: parsePayloadRules(payload?.default),
-        payloadOverrideRules: parsePayloadRules(payload?.override),
-        payloadFilterRules: parsePayloadFilterRules(payload?.filter),
+          payloadDefaultRules: parsePayloadRules(payload?.default),
+          payloadOverrideRules: parsePayloadRules(payload?.override),
+          payloadFilterRules: parsePayloadFilterRules(payload?.filter),
 
-        streaming: {
-          keepaliveSeconds: String(streaming?.["keepalive-seconds"] ?? ""),
-          bootstrapRetries: String(streaming?.["bootstrap-retries"] ?? ""),
-          nonstreamKeepaliveInterval: String(parsed["nonstream-keepalive-interval"] ?? ""),
-        },
+          streaming: {
+            keepaliveSeconds: String(streaming?.["keepalive-seconds"] ?? ""),
+            bootstrapRetries: String(streaming?.["bootstrap-retries"] ?? ""),
+            nonstreamKeepaliveInterval: String(parsed["nonstream-keepalive-interval"] ?? ""),
+          },
 
-        kimiHeaderDefaults: {
-          userAgent: String(asRecord(parsed["kimi-header-defaults"])?.["user-agent"] ?? ""),
-          platform: String(asRecord(parsed["kimi-header-defaults"])?.["platform"] ?? ""),
-          version: String(asRecord(parsed["kimi-header-defaults"])?.["version"] ?? ""),
-        },
-      };
+          kimiHeaderDefaults: {
+            userAgent: String(asRecord(parsed["kimi-header-defaults"])?.["user-agent"] ?? ""),
+            platform: String(asRecord(parsed["kimi-header-defaults"])?.["platform"] ?? ""),
+            version: String(asRecord(parsed["kimi-header-defaults"])?.["version"] ?? ""),
+          },
+        };
 
-      setVisualValuesState(newValues);
-      setBaselineValues(deepClone(newValues));
-    } catch {
-      setVisualValuesState({ ...DEFAULT_VISUAL_VALUES });
-      setBaselineValues(deepClone(DEFAULT_VISUAL_VALUES));
-    }
-  }, []);
+        setVisualValuesState(newValues);
+        setBaselineValues(deepClone(newValues));
+      } catch {
+        setVisualValuesState({ ...DEFAULT_VISUAL_VALUES });
+        setBaselineValues(deepClone(DEFAULT_VISUAL_VALUES));
+      }
+    },
+    [],
+  );
 
   const applyVisualChangesToYaml = useCallback(
     (currentYaml: string): string => {

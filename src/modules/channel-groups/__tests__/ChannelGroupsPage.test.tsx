@@ -596,7 +596,9 @@ describe("ChannelGroupsPage", () => {
     expect(within(matchedChannelsTable).getByText("Team A Codex")).toBeInTheDocument();
     expect(within(matchedChannelsTable).getByText("Pro Codex")).toBeInTheDocument();
     expect(within(matchedChannelsTable).queryByText("Free Codex")).not.toBeInTheDocument();
-    expect(within(matchedChannelsTable).queryByRole("columnheader", { name: "操作" })).not.toBeInTheDocument();
+    expect(
+      within(matchedChannelsTable).queryByRole("columnheader", { name: "操作" }),
+    ).not.toBeInTheDocument();
     expect(within(matchedChannelsTable).queryByText("标签匹配")).not.toBeInTheDocument();
 
     const teamCodexRow = within(matchedChannelsTable).getByRole("row", { name: /Team A Codex/ });
@@ -616,6 +618,33 @@ describe("ChannelGroupsPage", () => {
             "channel-priorities": {
               "Team A Codex": 80,
             },
+          }),
+        ],
+      }),
+    );
+  });
+
+  test("saves the default-route isolation flag for a channel group", async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(await screen.findByRole("button", { name: "新增分组" }));
+    await user.click(screen.getByRole("checkbox", { name: "从系统默认路径隔离" }));
+    await user.type(screen.getByPlaceholderText("pro"), "kimi-code");
+    await user.type(screen.getByPlaceholderText("/pro"), "/kimicode");
+    await user.click(screen.getByRole("combobox", { name: "选择渠道" }));
+    await user.click(await screen.findByRole("option", { name: "Team A Claude" }));
+    await user.click(screen.getByRole("combobox", { name: "选择渠道" }));
+    await user.click(screen.getByRole("button", { name: "添加" }));
+
+    await waitFor(() => expect(mockedApiPut).toHaveBeenCalled());
+    expect(mockedApiPut).toHaveBeenCalledWith(
+      "/routing-config",
+      expect.objectContaining({
+        "channel-groups": [
+          expect.objectContaining({
+            name: "kimi-code",
+            "exclude-from-default": true,
           }),
         ],
       }),

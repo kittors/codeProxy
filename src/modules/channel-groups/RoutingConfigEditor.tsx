@@ -36,6 +36,7 @@ type GroupDraft = {
   name: string;
   description: string;
   strategy: RoutingStrategy;
+  excludeFromDefault: boolean;
   matchMode: RoutingChannelGroupMatchMode;
   channels: RoutingChannelGroupMemberEntry[];
   tags: string[];
@@ -67,6 +68,7 @@ const createEmptyGroupDraft = (): GroupDraft => ({
   name: "",
   description: "",
   strategy: "round-robin",
+  excludeFromDefault: false,
   matchMode: "channels",
   channels: [],
   tags: [],
@@ -377,6 +379,7 @@ export function RoutingConfigEditor({
         name: SYSTEM_DEFAULT_GROUP_NAME,
         description: "",
         strategy: "round-robin",
+        excludeFromDefault: false,
         matchMode: "channels",
         channels: [],
         tags: [],
@@ -417,11 +420,13 @@ export function RoutingConfigEditor({
         tags.push(normalized);
       });
     });
-    return tags.sort((a, b) => a.localeCompare(b)).map((tag) => ({
-      value: tag,
-      label: tag,
-      searchText: tag,
-    }));
+    return tags
+      .sort((a, b) => a.localeCompare(b))
+      .map((tag) => ({
+        value: tag,
+        label: tag,
+        searchText: tag,
+      }));
   }, [availableChannelDetails]);
 
   const availableChannelSet = useMemo(() => {
@@ -622,6 +627,7 @@ export function RoutingConfigEditor({
         name: group.name,
         description: group.description,
         strategy: group.strategy === "fill-first" ? "fill-first" : "round-robin",
+        excludeFromDefault: isSystemDefault ? false : group.excludeFromDefault === true,
         matchMode: isSystemDefault ? "channels" : (group.matchMode ?? "channels"),
         channels: cloneMembers(group.channels),
         tags: isSystemDefault ? [] : syncDraftTags(group.tags ?? []),
@@ -774,6 +780,7 @@ export function RoutingConfigEditor({
         name: SYSTEM_DEFAULT_GROUP_NAME,
         description: existingDefault?.description ?? "",
         strategy: existingDefault?.strategy === "fill-first" ? "fill-first" : "round-robin",
+        excludeFromDefault: false,
         matchMode: "channels",
         channels: existingDefault ? cloneMembers(existingDefault.channels) : [],
         tags: [],
@@ -804,6 +811,8 @@ export function RoutingConfigEditor({
       name: groupName,
       description: groupDraft.description.trim(),
       strategy: groupDraft.strategy === "fill-first" ? "fill-first" : "round-robin",
+      excludeFromDefault:
+        groupDraft.excludeFromDefault && groupName.toLowerCase() !== SYSTEM_DEFAULT_GROUP_NAME,
       matchMode: groupDraft.matchMode,
       tags: groupDraft.matchMode === "tags" ? syncDraftTags(groupDraft.tags) : [],
       allowedModels: Array.from(
@@ -959,6 +968,30 @@ export function RoutingConfigEditor({
               <TriangleAlert size={13} />
               <span>{t("channel_groups_page.status_invalid")}</span>
             </button>
+          );
+        },
+      },
+      {
+        key: "defaultScope",
+        label: t("channel_groups_page.table_default_scope"),
+        width: "w-[128px] min-w-[128px]",
+        cellClassName: "whitespace-nowrap",
+        render: (group) => {
+          if (group.system) {
+            return (
+              <span className="text-slate-400 dark:text-white/35">
+                {t("channel_groups_page.none")}
+              </span>
+            );
+          }
+          return group.excludeFromDefault ? (
+            <span className="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:bg-amber-500/15 dark:text-amber-200">
+              {t("channel_groups_page.default_scope_isolated")}
+            </span>
+          ) : (
+            <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600 dark:bg-neutral-800 dark:text-white/60">
+              {t("channel_groups_page.default_scope_included")}
+            </span>
           );
         },
       },
@@ -1598,6 +1631,29 @@ export function RoutingConfigEditor({
                     />
                   </Field>
 
+                  <label className="flex items-start gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 text-sm dark:border-neutral-800 dark:bg-neutral-900/60">
+                    <Checkbox
+                      checked={groupDraft.excludeFromDefault}
+                      onCheckedChange={(checked) =>
+                        setGroupDraft((current) => ({
+                          ...current,
+                          excludeFromDefault: checked,
+                        }))
+                      }
+                      disabled={disabled}
+                      aria-label={t("channel_groups_page.exclude_from_default_label")}
+                      className="mt-0.5"
+                    />
+                    <span className="min-w-0">
+                      <span className="block font-semibold text-slate-900 dark:text-white">
+                        {t("channel_groups_page.exclude_from_default_label")}
+                      </span>
+                      <span className="mt-1 block text-xs leading-5 text-slate-500 dark:text-white/55">
+                        {t("channel_groups_page.exclude_from_default_hint")}
+                      </span>
+                    </span>
+                  </label>
+
                   <div className="grid gap-4 md:grid-cols-2">
                     <Field label={t("channel_groups_page.group_name_label")}>
                       <TextInput
@@ -1702,7 +1758,9 @@ export function RoutingConfigEditor({
                           placeholder={t("channel_groups_page.select_channel_placeholder")}
                           searchPlaceholder={t("channel_groups_page.search_channel_placeholder")}
                           selectFilteredLabel={t("channel_groups_page.select_filtered_channels")}
-                          deselectFilteredLabel={t("channel_groups_page.deselect_filtered_channels")}
+                          deselectFilteredLabel={t(
+                            "channel_groups_page.deselect_filtered_channels",
+                          )}
                           selectedCountLabel={(count) =>
                             t("channel_groups_page.selected_channels_count", { count })
                           }
