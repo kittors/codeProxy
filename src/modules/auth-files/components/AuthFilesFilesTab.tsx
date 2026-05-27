@@ -633,6 +633,11 @@ export function AuthFilesFilesTab({
     draftModelOwner === ""
       ? null
       : (modelOwnerGroups.find((group) => group.value === draftModelOwner) ?? null);
+  const selectedModelOwnerGroup =
+    selectedModelOwner === ""
+      ? null
+      : (modelOwnerGroups.find((group) => group.value === selectedModelOwner) ?? null);
+  const showSelectionActions = selectableFilteredFiles.length > 0 || selectedCount > 0;
   const modelOwnerOptions = useMemo<SearchableSelectOption[]>(
     () => [
       {
@@ -719,6 +724,54 @@ export function AuthFilesFilesTab({
     setJsonImportOpen(false);
   }, [files, handleUpload, jsonImportText, t]);
 
+  const selectionActionsMenu = showSelectionActions ? (
+    <DropdownMenu.Root>
+      <DropdownMenu.Trigger asChild>
+        <button
+          type="button"
+          className={buttonClassName({
+            variant: "secondary",
+            size: "sm",
+            iconOnly: true,
+          })}
+          aria-label={t("auth_files.selection_actions")}
+          title={t("auth_files.selection_actions")}
+          data-tooltip-placement="top"
+        >
+          <ListChecks size={15} />
+        </button>
+      </DropdownMenu.Trigger>
+      <DropdownMenu.Portal>
+        <DropdownMenu.Content align="end" sideOffset={8} className={ACTION_MENU_CONTENT_CLASS}>
+          <DropdownMenu.Item
+            className={ACTION_MENU_ITEM_CLASS}
+            disabled={selectablePageNames.length === 0}
+            onSelect={() => selectCurrentPage(!allPageSelected)}
+          >
+            <ListChecks size={15} />
+            <span>
+              {allPageSelected
+                ? t("auth_files.batch_deselect_page")
+                : t("auth_files.batch_select_page")}
+            </span>
+          </DropdownMenu.Item>
+          <DropdownMenu.Item
+            className={ACTION_MENU_ITEM_CLASS}
+            disabled={selectableFilteredFiles.length === 0}
+            onSelect={() => selectFilteredFiles(!allFilteredSelected)}
+          >
+            <ListChecks size={15} />
+            <span>
+              {allFilteredSelected
+                ? t("auth_files.batch_deselect_filtered")
+                : t("auth_files.batch_select_filtered")}
+            </span>
+          </DropdownMenu.Item>
+        </DropdownMenu.Content>
+      </DropdownMenu.Portal>
+    </DropdownMenu.Root>
+  ) : null;
+
   return (
     <div className="mt-3 space-y-3">
       <input
@@ -759,13 +812,13 @@ export function AuthFilesFilesTab({
             data-testid="auth-files-mobile-filter-panel"
             className={[
               mobileFiltersOpen ? "grid" : "hidden",
-              "gap-3 md:grid xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] xl:items-start",
+              "gap-3 md:grid xl:grid-cols-[minmax(360px,1fr)_minmax(420px,auto)] xl:items-stretch",
             ].join(" ")}
           >
-            <div className="grid min-w-0 gap-2 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
-              <div className="min-w-0 space-y-1.5">
-                <div className="flex items-center gap-2">
-                  <p className="text-[11px] font-semibold text-slate-600 dark:text-white/65">
+            <div className="min-w-0 rounded-2xl bg-slate-50/80 px-3 py-2.5 transition-colors duration-200 ease-out dark:bg-white/[0.03]">
+              <div className="mb-2 flex min-w-0 items-center justify-between gap-2">
+                <div className="flex min-w-0 items-center gap-2">
+                  <p className="truncate text-[11px] font-semibold text-slate-600 dark:text-white/65">
                     {t("auth_files.type_filter")}
                   </p>
                   <HoverTooltip content={t("auth_files.count_hint")} placement="top">
@@ -777,75 +830,97 @@ export function AuthFilesFilesTab({
                     </span>
                   </HoverTooltip>
                 </div>
-                <Tabs value={filter} onValueChange={setFilter}>
-                  <TabsList>
-                    {filterChips.map((key) => {
-                      const active = filter === key;
-                      const normalizedKey = normalizeProviderKey(key);
-                      const count =
-                        key === "all"
-                          ? filterCounts.total
-                          : (filterCounts.counts[normalizedKey] ?? 0);
-                      const label = key === "all" ? t("auth_files.all") : key;
-                      const countClass = active
-                        ? "bg-black/[0.06] text-[#18181B] dark:bg-white/12 dark:text-white"
-                        : "bg-slate-100 text-slate-700 dark:bg-white/10 dark:text-white/70";
-                      return (
-                        <TabsTrigger key={key} value={key}>
-                          {label}
-                          <span
-                            className={[
-                              "ml-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-semibold tabular-nums",
-                              countClass,
-                            ].join(" ")}
-                          >
-                            {count}
-                          </span>
-                        </TabsTrigger>
-                      );
-                    })}
-                  </TabsList>
-                </Tabs>
+                {activeFilterCount > 0 ? (
+                  <span className="inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-slate-900 px-1.5 text-[10px] font-semibold tabular-nums text-white dark:bg-white dark:text-neutral-950">
+                    {activeFilterCount}
+                  </span>
+                ) : null}
               </div>
 
+              <Tabs value={filter} onValueChange={setFilter} size="sm">
+                <TabsList className="max-w-full">
+                  {filterChips.map((key) => {
+                    const active = filter === key;
+                    const normalizedKey = normalizeProviderKey(key);
+                    const count =
+                      key === "all"
+                        ? filterCounts.total
+                        : (filterCounts.counts[normalizedKey] ?? 0);
+                    const label = key === "all" ? t("auth_files.all") : key;
+                    const countClass = active
+                      ? "bg-black/[0.06] text-[#18181B] dark:bg-white/12 dark:text-white"
+                      : "bg-slate-100 text-slate-700 dark:bg-white/10 dark:text-white/70";
+                    return (
+                      <TabsTrigger key={key} value={key}>
+                        {label}
+                        <span
+                          className={[
+                            "ml-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-semibold tabular-nums",
+                            countClass,
+                          ].join(" ")}
+                        >
+                          {count}
+                        </span>
+                      </TabsTrigger>
+                    );
+                  })}
+                </TabsList>
+              </Tabs>
+            </div>
+
+            <div
+              className={[
+                "grid min-w-0 gap-2 sm:grid-cols-2",
+                canSetModelOwnerGroup && customTagOptions.length > 0
+                  ? "xl:grid-cols-[minmax(0,150px)_minmax(0,160px)_minmax(0,170px)_minmax(240px,280px)]"
+                  : canSetModelOwnerGroup
+                    ? "xl:grid-cols-[minmax(0,150px)_minmax(0,170px)_minmax(260px,320px)]"
+                    : customTagOptions.length > 0
+                      ? "xl:grid-cols-[minmax(0,170px)_minmax(0,180px)_minmax(260px,320px)]"
+                      : "xl:grid-cols-[minmax(0,180px)_minmax(280px,340px)]",
+                "xl:items-end",
+              ].join(" ")}
+            >
               {canSetModelOwnerGroup ? (
-                <div className="flex items-end">
+                <div className="min-w-0 space-y-1.5">
+                  <p className="truncate text-[11px] font-semibold text-slate-600 dark:text-white/65">
+                    {t("auth_files.model_owner_group")}
+                  </p>
                   <HoverTooltip content={t("auth_files.model_owner_group")} placement="top">
                     <Button
                       variant="secondary"
                       size="sm"
-                      className="relative !h-9 !w-9 px-0"
+                      className={[
+                        "relative !h-9 w-full justify-start px-3 text-xs",
+                        selectedModelOwner
+                          ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-400/10 dark:text-emerald-100 dark:hover:bg-emerald-400/15"
+                          : "bg-[#EBEBEC] text-[#3F3F46] hover:bg-[#E4E4E7] dark:bg-[#27272A] dark:text-white/75 dark:hover:bg-[#303036]",
+                      ].join(" ")}
                       onClick={() => {
                         setDraftModelOwner(selectedModelOwner);
                         setModelOwnerDialogOpen(true);
                       }}
                       aria-label={t("auth_files.model_owner_group")}
                     >
-                      <Settings2 size={15} />
+                      <Settings2 size={15} className="shrink-0" />
+                      <span className="min-w-0 flex-1 truncate text-left">
+                        {selectedModelOwnerGroup?.label ??
+                          (selectedModelOwner || t("auth_files.auth_file_models_option"))}
+                      </span>
                       {selectedModelOwner ? (
                         <span
                           aria-hidden="true"
-                          className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-neutral-900"
+                          className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500"
                         />
                       ) : null}
                     </Button>
                   </HoverTooltip>
                 </div>
               ) : null}
-            </div>
 
-            <div
-              className={[
-                "grid min-w-0 gap-3",
-                customTagOptions.length > 0
-                  ? "sm:grid-cols-2 xl:grid-cols-[minmax(0,180px)_minmax(0,170px)_minmax(0,1fr)]"
-                  : "sm:grid-cols-[minmax(0,180px)_minmax(0,1fr)]",
-                "xl:items-end",
-              ].join(" ")}
-            >
               {customTagOptions.length > 0 ? (
                 <div className="min-w-0 space-y-1.5">
-                  <p className="text-[11px] font-semibold text-slate-600 dark:text-white/65">
+                  <p className="truncate text-[11px] font-semibold text-slate-600 dark:text-white/65">
                     {t("auth_files.tag_filter")}
                   </p>
                   <SearchableSelect
@@ -860,7 +935,7 @@ export function AuthFilesFilesTab({
               ) : null}
 
               <div className="min-w-0 space-y-1.5">
-                <p className="text-[11px] font-semibold text-slate-600 dark:text-white/65">
+                <p className="truncate text-[11px] font-semibold text-slate-600 dark:text-white/65">
                   {t("auth_files.status_filter")}
                 </p>
                 <Select
@@ -875,13 +950,14 @@ export function AuthFilesFilesTab({
               </div>
 
               <div className="min-w-0 space-y-1.5">
-                <p className="text-[11px] font-semibold text-slate-600 dark:text-white/65">
+                <p className="truncate text-[11px] font-semibold text-slate-600 dark:text-white/65">
                   {t("auth_files.search")}
                 </p>
                 <TextInput
                   value={search}
                   onChange={(e) => setSearch(e.currentTarget.value)}
                   placeholder={t("auth_files_page.filename_hint")}
+                  aria-label={t("auth_files.search")}
                   endAdornment={<Search size={16} className="text-slate-400" />}
                 />
               </div>
@@ -929,6 +1005,7 @@ export function AuthFilesFilesTab({
             </div>
 
             <div className="flex flex-wrap items-center gap-1.5 lg:justify-end">
+              {selectedCount === 0 ? selectionActionsMenu : null}
               <Button
                 variant="secondary"
                 size="sm"
@@ -1008,84 +1085,31 @@ export function AuthFilesFilesTab({
             </div>
           </div>
 
-          {selectableFilteredFiles.length > 0 || selectedCount > 0 ? (
+          {selectedCount > 0 ? (
             <div className="flex flex-wrap items-center gap-1.5 rounded-2xl bg-slate-50/80 px-2 py-1.5 transition-colors duration-200 ease-out dark:bg-white/[0.03]">
-              <DropdownMenu.Root>
-                <DropdownMenu.Trigger asChild>
-                  <button
-                    type="button"
-                    className={buttonClassName({
-                      variant: "secondary",
-                      size: "sm",
-                      iconOnly: true,
-                      className: "!h-8 !w-8",
-                    })}
-                    aria-label={t("auth_files.selection_actions")}
-                    title={t("auth_files.selection_actions")}
-                    data-tooltip-placement="top"
-                  >
-                    <ListChecks size={15} />
-                  </button>
-                </DropdownMenu.Trigger>
-                <DropdownMenu.Portal>
-                  <DropdownMenu.Content
-                    align="end"
-                    sideOffset={8}
-                    className={ACTION_MENU_CONTENT_CLASS}
-                  >
-                    <DropdownMenu.Item
-                      className={ACTION_MENU_ITEM_CLASS}
-                      disabled={selectablePageNames.length === 0}
-                      onSelect={() => selectCurrentPage(!allPageSelected)}
-                    >
-                      <ListChecks size={15} />
-                      <span>
-                        {allPageSelected
-                          ? t("auth_files.batch_deselect_page")
-                          : t("auth_files.batch_select_page")}
-                      </span>
-                    </DropdownMenu.Item>
-                    <DropdownMenu.Item
-                      className={ACTION_MENU_ITEM_CLASS}
-                      disabled={selectableFilteredFiles.length === 0}
-                      onSelect={() => selectFilteredFiles(!allFilteredSelected)}
-                    >
-                      <ListChecks size={15} />
-                      <span>
-                        {allFilteredSelected
-                          ? t("auth_files.batch_deselect_filtered")
-                          : t("auth_files.batch_select_filtered")}
-                      </span>
-                    </DropdownMenu.Item>
-                  </DropdownMenu.Content>
-                </DropdownMenu.Portal>
-              </DropdownMenu.Root>
-              {selectedCount > 0 ? (
-                <>
-                  <span className="ml-1 text-xs font-medium text-slate-600 dark:text-white/65">
-                    {t("auth_files.batch_selected", { count: selectedCount })}
-                  </span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="!h-8 px-2 text-xs"
-                    onClick={() => setSelectedFileNames([])}
-                  >
-                    {t("auth_files.batch_clear")}
-                  </Button>
-                  <Button
-                    variant="danger"
-                    size="sm"
-                    className="!h-8 px-2 text-xs"
-                    onClick={() =>
-                      setConfirm({ type: "deleteSelection", names: [...selectedFileNames] })
-                    }
-                    disabled={deletingAll}
-                  >
-                    {t("auth_files.batch_delete_action", { count: selectedCount })}
-                  </Button>
-                </>
-              ) : null}
+              {selectionActionsMenu}
+              <span className="ml-1 text-xs font-medium text-slate-600 dark:text-white/65">
+                {t("auth_files.batch_selected", { count: selectedCount })}
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="!h-8 px-2 text-xs"
+                onClick={() => setSelectedFileNames([])}
+              >
+                {t("auth_files.batch_clear")}
+              </Button>
+              <Button
+                variant="danger"
+                size="sm"
+                className="!h-8 px-2 text-xs"
+                onClick={() =>
+                  setConfirm({ type: "deleteSelection", names: [...selectedFileNames] })
+                }
+                disabled={deletingAll}
+              >
+                {t("auth_files.batch_delete_action", { count: selectedCount })}
+              </Button>
             </div>
           ) : null}
         </div>

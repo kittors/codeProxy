@@ -29,7 +29,7 @@ export interface ProviderCardProps {
   onEdit?: () => void;
   /** Callback when delete button is clicked */
   onDelete?: () => void;
-  /** Extra elements rendered in the header actions area (between toggle and edit) */
+  /** Extra elements rendered below the title row */
   headerExtra?: ReactNode;
   /** Card body content */
   children?: ReactNode;
@@ -50,6 +50,7 @@ export function ProviderCard({
   const { t } = useTranslation();
   const [menuOpen, setMenuOpen] = useState(false);
   const hasActionMenu = Boolean(onEdit || onDelete);
+  const hasHeaderExtra = Boolean(headerExtra);
 
   return (
     <div
@@ -112,38 +113,42 @@ export function ProviderCard({
       ) : null}
 
       {/* Header */}
-      <div className="flex flex-wrap items-center gap-2">
-        {onToggleSelected ? (
-          <div
-            className={[
-              "flex items-center justify-center overflow-hidden transition-all duration-200 ease-out",
-              selected
-                ? "w-8 opacity-100"
-                : "w-0 opacity-0 group-hover:w-8 group-hover:opacity-100",
-            ].join(" ")}
-          >
-            <input
-              type="checkbox"
-              aria-label={t("providers.select_provider", { name: title })}
-              checked={selected}
-              onChange={(e) => onToggleSelected(e.currentTarget.checked)}
-              className="h-4 w-4 rounded border-slate-300 text-slate-900 accent-slate-900 focus-visible:ring-2 focus-visible:ring-slate-400/35 dark:border-neutral-700 dark:bg-neutral-950 dark:text-white dark:accent-white dark:focus-visible:ring-white/15"
-            />
-          </div>
-        ) : null}
-        <p className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-900 dark:text-white">
-          {title}
-        </p>
-        <div className="ml-auto flex items-center gap-2">
-          {headerExtra}
+      <div className="grid gap-2">
+        <div className="flex min-w-0 items-center gap-2">
+          {onToggleSelected ? (
+            <div
+              className={[
+                "flex items-center justify-center overflow-hidden transition-[width,opacity] duration-200 ease-out",
+                selected
+                  ? "w-7 opacity-100"
+                  : "w-0 opacity-0 group-hover:w-7 group-hover:opacity-100",
+              ].join(" ")}
+            >
+              <input
+                type="checkbox"
+                aria-label={t("providers.select_provider", { name: title })}
+                checked={selected}
+                onChange={(e) => onToggleSelected(e.currentTarget.checked)}
+                className="h-4 w-4 rounded border-slate-300 text-slate-900 accent-slate-900 focus-visible:ring-2 focus-visible:ring-slate-400/35 dark:border-neutral-700 dark:bg-neutral-950 dark:text-white dark:accent-white dark:focus-visible:ring-white/15"
+              />
+            </div>
+          ) : null}
+          <p className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-900 dark:text-white">
+            {title}
+          </p>
           {onToggleEnabled ? (
-            <ToggleSwitch
-              checked={enabled}
-              ariaLabel={`${t("providers.enable_provider")} ${title}`}
-              onCheckedChange={onToggleEnabled}
-            />
+            <div className="shrink-0">
+              <ToggleSwitch
+                checked={enabled}
+                ariaLabel={`${t("providers.enable_provider")} ${title}`}
+                onCheckedChange={onToggleEnabled}
+              />
+            </div>
           ) : null}
         </div>
+        {hasHeaderExtra ? (
+          <div className="flex flex-wrap items-center justify-end gap-2">{headerExtra}</div>
+        ) : null}
       </div>
 
       {/* Content */}
