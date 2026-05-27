@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Download, ExternalLink } from "lucide-react";
+import { Copy, Download, ExternalLink } from "lucide-react";
 import iconClaude from "@/assets/icons/claude.svg";
 import iconCodex from "@/assets/icons/codex.svg";
+import { copyTextToClipboard } from "@/lib/clipboard";
 import { AUTH_STORAGE_KEY, MANAGEMENT_API_PREFIX } from "@/lib/constants";
 import {
   computeManagementApiBase,
@@ -15,16 +16,16 @@ import {
 } from "@/lib/http/apis/ccswitch-import-configs";
 import type { ApiKeyEntry } from "@/lib/http/apis/api-keys";
 import {
-  buildCcSwitchImportUrl,
   openCcSwitchImportUrl,
   type CcSwitchClientType,
 } from "@/modules/ccswitch/ccswitchImport";
 import {
-  deriveCcSwitchImportSettingsFromConfigList,
-  type CcSwitchImportConfigListItem,
-} from "@/modules/ccswitch/ccswitchImportConfigList";
+  appendCcSwitchRoutePath,
+  buildCcSwitchImportUrlForConfig,
+} from "@/modules/ccswitch/ccswitchImportLinks";
+import type { CcSwitchImportConfigListItem } from "@/modules/ccswitch/ccswitchImportConfigList";
 import { ccSwitchConfigMatchesApiKeyPermissions } from "@/modules/ccswitch/ccswitchImportCompatibility";
-import { normalizeCcSwitchClaudeAuthField } from "@/modules/ccswitch/ccswitchImportSettings";
+import { Button } from "@/modules/ui/Button";
 import { Card } from "@/modules/ui/Card";
 import { useToast } from "@/modules/ui/ToastProvider";
 
@@ -115,95 +116,68 @@ async function fetchQuickImportApiKeyEntry(apiKey: string): Promise<ApiKeyEntry 
   }
 }
 
-function normalizeRoutePath(path: string): string {
-  const trimmed = String(path ?? "").trim();
-  if (!trimmed || trimmed === "/") return "";
-  return `/${trimmed.replace(/^\/+|\/+$/g, "")}`;
-}
-
-function appendRoutePath(baseUrl: string, path: string): string {
-  const normalizedBase = baseUrl.replace(/\/+$/, "");
-  const normalizedPath = normalizeRoutePath(path);
-  if (!normalizedPath) return normalizedBase;
-  if (normalizedBase.toLowerCase().endsWith(normalizedPath.toLowerCase())) {
-    return normalizedBase;
-  }
-  return `${normalizedBase}${normalizedPath}`;
-}
-
-function buildSettingsForConfig(
-  config: CcSwitchImportConfigListItem,
-  configs: readonly CcSwitchImportConfigListItem[],
-) {
-  const settings = deriveCcSwitchImportSettingsFromConfigList(configs);
-  const clientSettings = {
-    ...settings[config.clientType],
-    endpointPath: config.endpointPath ?? settings[config.clientType].endpointPath,
-    usageAutoInterval: config.usageAutoInterval ?? settings[config.clientType].usageAutoInterval,
-    defaultModel: config.defaultModel ?? settings[config.clientType].defaultModel,
-  };
-
-  if (config.clientType === "claude") {
-    return {
-      ...settings,
-      claude: {
-        ...clientSettings,
-        apiKeyField: normalizeCcSwitchClaudeAuthField(config.apiKeyField),
-      },
-    };
-  }
-
-  return {
-    ...settings,
-    [config.clientType]: clientSettings,
-  };
-}
-
 function QuickImportCard({
   config,
+  onCopyLink,
   onSelect,
 }: {
   config: CcSwitchImportConfigListItem;
+  onCopyLink: (config: CcSwitchImportConfigListItem) => void;
   onSelect: (config: CcSwitchImportConfigListItem) => void;
 }) {
   const { t } = useTranslation();
   const clientType = config.clientType as "codex" | "claude";
 
   return (
-    <button
-      type="button"
-      onClick={() => onSelect(config)}
-      className="group flex min-h-[116px] w-full items-start gap-4 rounded-2xl border border-black/[0.06] bg-white p-4 text-left shadow-[0_1px_2px_rgb(15_23_42_/_0.035)] transition hover:border-slate-200 hover:shadow-sm active:translate-y-px dark:border-white/[0.06] dark:bg-neutral-900 dark:hover:border-neutral-700"
+    <div
+      className="grid min-h-[116px] w-full grid-cols-[minmax(0,1fr)_auto] rounded-2xl border border-black/[0.06] bg-white shadow-[0_1px_2px_rgb(15_23_42_/_0.035)] transition hover:border-slate-200 hover:shadow-sm dark:border-white/[0.06] dark:bg-neutral-900 dark:hover:border-neutral-700"
     >
-      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200/70 bg-white shadow-xs dark:border-neutral-800 dark:bg-neutral-950">
-        <img src={iconByType[clientType]} alt="" className="h-5 w-5" />
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className="flex flex-wrap items-center gap-2">
-          <span className="truncate text-sm font-semibold text-slate-900 dark:text-white">
-            {config.providerName}
-          </span>
-          <span className="rounded-md border border-slate-200/70 bg-slate-50 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500 dark:border-neutral-800 dark:bg-neutral-950 dark:text-white/45">
-            {t(clientLabelKey[clientType])}
-          </span>
+      <button
+        type="button"
+        onClick={() => onSelect(config)}
+        className="flex min-w-0 items-start gap-4 rounded-l-2xl p-4 text-left transition active:translate-y-px"
+      >
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200/70 bg-white shadow-xs dark:border-neutral-800 dark:bg-neutral-950">
+          <img src={iconByType[clientType]} alt="" className="h-5 w-5" />
         </span>
-        {config.note ? (
-          <span className="mt-1 block truncate text-xs text-slate-500 dark:text-white/55">
-            {config.note}
+        <span className="min-w-0 flex-1">
+          <span className="flex flex-wrap items-center gap-2">
+            <span className="truncate text-sm font-semibold text-slate-900 dark:text-white">
+              {config.providerName}
+            </span>
+            <span className="rounded-md border border-slate-200/70 bg-slate-50 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500 dark:border-neutral-800 dark:bg-neutral-950 dark:text-white/45">
+              {t(clientLabelKey[clientType])}
+            </span>
           </span>
-        ) : null}
-        <span className="mt-3 flex flex-wrap items-center gap-2">
-          <span className="inline-flex max-w-full overflow-hidden text-ellipsis whitespace-nowrap rounded-md border border-slate-200/70 bg-white px-1.5 py-0.5 font-mono text-[10px] text-slate-500 dark:border-neutral-800 dark:bg-neutral-950 dark:text-white/45">
-            {config.defaultModel || t("common.no_model_data")}
-          </span>
-          {config.allowedChannelGroups.length > 0 ? (
-            <span className="truncate text-[10px] text-slate-400 dark:text-white/35">
-              {config.allowedChannelGroups.join(", ")}
+          {config.note ? (
+            <span className="mt-1 block truncate text-xs text-slate-500 dark:text-white/55">
+              {config.note}
             </span>
           ) : null}
+          <span className="mt-3 flex flex-wrap items-center gap-2">
+            <span className="inline-flex max-w-full overflow-hidden text-ellipsis whitespace-nowrap rounded-md border border-slate-200/70 bg-white px-1.5 py-0.5 font-mono text-[10px] text-slate-500 dark:border-neutral-800 dark:bg-neutral-950 dark:text-white/45">
+              {config.defaultModel || t("common.no_model_data")}
+            </span>
+            {config.allowedChannelGroups.length > 0 ? (
+              <span className="truncate text-[10px] text-slate-400 dark:text-white/35">
+                {config.allowedChannelGroups.join(", ")}
+              </span>
+            ) : null}
+          </span>
         </span>
-      </span>
-    </button>
+      </button>
+      <div className="flex items-start p-3 pl-0">
+        <Button
+          variant="ghost"
+          size="xs"
+          title={t("ccswitch.copy_import_link")}
+          onClick={() => onCopyLink(config)}
+          className="rounded-lg border border-slate-200/70 bg-white text-slate-500 hover:text-slate-900 dark:border-neutral-800 dark:bg-neutral-950 dark:text-white/55 dark:hover:text-white"
+        >
+          <Copy size={14} />
+        </Button>
+      </div>
+    </div>
   );
 }
 
@@ -310,30 +284,47 @@ export function QuickImportTabContent({
     [apiKeyEntry, configs],
   );
 
-  const handleImport = useCallback(
+  const buildImportUrl = useCallback(
     (config: CcSwitchImportConfigListItem) => {
       const key = apiKey.trim();
-      if (!key) return;
+      if (!key) return "";
 
-      const baseUrl = appendRoutePath(detectApiBaseFromLocation(), config.routePath);
-      const url = buildCcSwitchImportUrl({
+      const baseUrl = appendCcSwitchRoutePath(detectApiBaseFromLocation(), config.routePath);
+      return buildCcSwitchImportUrlForConfig({
         apiKey: key,
         baseUrl,
-        clientType: config.clientType,
-        enabled: true,
-        providerName: config.providerName || "CliProxy",
-        model: config.defaultModel,
-        modelMappings: config.modelMappings,
-        models: [],
-        settings: buildSettingsForConfig(config, configs),
+        config,
+        configs,
       });
+    },
+    [apiKey, configs],
+  );
+
+  const handleImport = useCallback(
+    (config: CcSwitchImportConfigListItem) => {
+      const url = buildImportUrl(config);
+      if (!url) return;
 
       openCcSwitchImportUrl(url, {
         onProtocolUnavailable: () =>
           notify({ type: "error", message: t("ccswitch.protocol_unavailable") }),
       });
     },
-    [apiKey, configs, notify, t],
+    [buildImportUrl, notify, t],
+  );
+
+  const handleCopyImportLink = useCallback(
+    async (config: CcSwitchImportConfigListItem) => {
+      const url = buildImportUrl(config);
+      if (!url) return;
+
+      if (await copyTextToClipboard(url)) {
+        notify({ type: "success", message: t("ccswitch.copy_import_link_success") });
+        return;
+      }
+      notify({ type: "error", message: t("ccswitch.copy_import_link_failed") });
+    },
+    [buildImportUrl, notify, t],
   );
 
   return (
@@ -399,7 +390,12 @@ export function QuickImportTabContent({
                   </div>
                   <div className="grid gap-3 md:grid-cols-2">
                     {items.map((config) => (
-                      <QuickImportCard key={config.id} config={config} onSelect={handleImport} />
+                      <QuickImportCard
+                        key={config.id}
+                        config={config}
+                        onCopyLink={(item) => void handleCopyImportLink(item)}
+                        onSelect={handleImport}
+                      />
                     ))}
                   </div>
                 </section>

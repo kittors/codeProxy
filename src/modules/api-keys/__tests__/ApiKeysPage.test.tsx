@@ -597,6 +597,83 @@ describe("ApiKeysPage", () => {
     openSpy.mockRestore();
   });
 
+  test("copies a compatible CC Switch preset link from the card list", async () => {
+    const originalClipboard = navigator.clipboard;
+    const openSpy = vi.spyOn(window, "open").mockReturnValue(null);
+    const writeText = vi.fn(async (_text: string) => undefined);
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText },
+    });
+    state.entries = [
+      {
+        key: "sk-group-1234567890",
+        name: "Group Key",
+        "allowed-channel-groups": ["pro"],
+        "created-at": "2026-04-14T00:00:00.000Z",
+      },
+    ];
+    state.channelGroups = [
+      {
+        name: "pro",
+        description: "Pro route",
+        "path-routes": ["/pro"],
+      },
+    ];
+    state.ccSwitchImportConfigs = [
+      {
+        id: "preset-codex",
+        "client-type": "codex",
+        "provider-name": "Preset Codex",
+        note: "Primary route",
+        "default-model": "gpt-5.4",
+        "allowed-channel-groups": ["pro"],
+        "route-path": "/pro/cs_codex",
+        "endpoint-path": "/openai/v2",
+        "usage-auto-interval": 45,
+      },
+    ];
+
+    try {
+      render(
+        <MemoryRouter>
+          <ThemeProvider>
+            <ToastProvider>
+              <ApiKeysPage />
+            </ToastProvider>
+          </ThemeProvider>
+        </MemoryRouter>,
+      );
+
+      expect(await screen.findByText("Group Key")).toBeInTheDocument();
+
+      await userEvent.click(screen.getByRole("button", { name: /import to cc switch/i }));
+      await screen.findByRole("dialog", { name: /import to cc switch/i });
+
+      await userEvent.click(screen.getByRole("button", { name: /copy import link/i }));
+
+      await waitFor(() => {
+        expect(writeText).toHaveBeenCalledWith(expect.stringContaining("ccswitch://v1/import?"));
+      });
+      expect(openSpy).not.toHaveBeenCalled();
+
+      const copiedUrl = String(writeText.mock.calls.at(-1)?.[0] ?? "");
+      const parsed = new URL(copiedUrl);
+      expect(parsed.searchParams.get("app")).toBe("codex");
+      expect(parsed.searchParams.get("apiKey")).toBe("sk-group-1234567890");
+      expect(parsed.searchParams.get("name")).toBe("Preset Codex");
+      expect(parsed.searchParams.get("endpoint")).toBe(
+        "http://localhost:3000/pro/cs_codex/openai/v2",
+      );
+      expect(parsed.searchParams.get("model")).toBe("gpt-5.4");
+    } finally {
+      Object.defineProperty(navigator, "clipboard", {
+        configurable: true,
+        value: originalClipboard,
+      });
+    }
+  });
+
   test("imports a saved Claude Code preset with auth field and model mappings", async () => {
     const openSpy = vi.spyOn(window, "open").mockReturnValue(null);
     vi.spyOn(document, "hasFocus").mockReturnValue(false);

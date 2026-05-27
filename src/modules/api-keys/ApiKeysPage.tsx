@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Plus, KeyRound, RefreshCw } from "lucide-react";
+import { copyTextToClipboard } from "@/lib/clipboard";
 import { apiKeyEntriesApi, apiKeysApi, type ApiKeyEntry } from "@/lib/http/apis/api-keys";
 import {
   applyApiKeyPermissionProfile,
@@ -29,59 +30,16 @@ import { ApiKeyUsageModal } from "@/modules/api-keys/components/ApiKeyUsageModal
 import { useApiKeyPermissionOptions } from "@/modules/api-keys/hooks/useApiKeyPermissionOptions";
 import { useApiKeyUsageView } from "@/modules/api-keys/hooks/useApiKeyUsageView";
 import { CcSwitchImportCardList } from "@/modules/api-keys/components/CcSwitchImportCardList";
-import { buildCcSwitchImportUrl, openCcSwitchImportUrl } from "@/modules/ccswitch/ccswitchImport";
+import { openCcSwitchImportUrl } from "@/modules/ccswitch/ccswitchImport";
 import {
-  normalizeCcSwitchClaudeAuthField,
-  normalizeCcSwitchImportSettings,
-} from "@/modules/ccswitch/ccswitchImportSettings";
-import {
-  deriveCcSwitchImportSettingsFromConfigList,
-  type CcSwitchImportConfigListItem,
-} from "@/modules/ccswitch/ccswitchImportConfigList";
+  appendCcSwitchRoutePath,
+  buildCcSwitchImportUrlForConfig,
+} from "@/modules/ccswitch/ccswitchImportLinks";
+import type { CcSwitchImportConfigListItem } from "@/modules/ccswitch/ccswitchImportConfigList";
 import { ccSwitchConfigMatchesApiKeyPermissions } from "@/modules/ccswitch/ccswitchImportCompatibility";
 import { LogContentModal } from "@/modules/monitor/LogContentModal";
 import { ErrorDetailModal } from "@/modules/monitor/ErrorDetailModal";
 import type { ApiKeyFormValues } from "@/modules/api-keys/types";
-
-function normalizeRoutePath(path: string): string {
-  const trimmed = String(path ?? "").trim();
-  if (!trimmed || trimmed === "/") return "";
-  return `/${trimmed.replace(/^\/+|\/+$/g, "")}`;
-}
-
-function appendRoutePath(baseUrl: string, path: string): string {
-  const normalizedBase = baseUrl.replace(/\/+$/, "");
-  const normalizedPath = normalizeRoutePath(path);
-  if (!normalizedPath) return normalizedBase;
-  if (normalizedBase.toLowerCase().endsWith(normalizedPath.toLowerCase())) {
-    return normalizedBase;
-  }
-  return `${normalizedBase}${normalizedPath}`;
-}
-
-async function copyTextToClipboard(text: string): Promise<boolean> {
-  try {
-    await navigator.clipboard.writeText(text);
-    return true;
-  } catch {
-    const textarea = document.createElement("textarea");
-    textarea.value = text;
-    textarea.setAttribute("readonly", "");
-    textarea.style.opacity = "0";
-    textarea.style.position = "fixed";
-    textarea.style.top = "-1000px";
-    document.body.appendChild(textarea);
-    textarea.focus();
-    textarea.select();
-    try {
-      return document.execCommand("copy");
-    } catch {
-      return false;
-    } finally {
-      document.body.removeChild(textarea);
-    }
-  }
-}
 
 export function ApiKeysPage() {
   const { t } = useTranslation();
@@ -426,9 +384,9 @@ export function ApiKeysPage() {
     setCcSwitchImportEntry(entry);
   }, []);
 
-  const handleImportWithConfig = useCallback(
+  const buildImportUrlWithConfig = useCallback(
     (config: CcSwitchImportConfigListItem) => {
-      if (!ccSwitchImportEntry) return;
+      if (!ccSwitchImportEntry) return "";
 
       const entryGroups = (ccSwitchImportEntry["allowed-channel-groups"] ?? [])
         .map((g) =>
@@ -451,44 +409,23 @@ export function ApiKeysPage() {
         ? groupItem["path-routes"][0]
         : "";
       const baseApiUrl = auth?.state.apiBase || detectApiBaseFromLocation();
-      const baseUrl = appendRoutePath(baseApiUrl, config.routePath || routePath || "");
+      const baseUrl = appendCcSwitchRoutePath(baseApiUrl, config.routePath || routePath || "");
 
-      const settings =
-        ccSwitchImportConfigs.length > 0
-          ? deriveCcSwitchImportSettingsFromConfigList(ccSwitchImportConfigs)
-          : normalizeCcSwitchImportSettings();
-      const clientSettings = {
-        ...settings[config.clientType],
-        endpointPath: config.endpointPath ?? settings[config.clientType].endpointPath,
-        usageAutoInterval:
-          config.usageAutoInterval ?? settings[config.clientType].usageAutoInterval,
-        defaultModel: config.defaultModel ?? settings[config.clientType].defaultModel,
-      };
-      const importSettings =
-        config.clientType === "claude"
-          ? {
-              ...settings,
-              claude: {
-                ...clientSettings,
-                apiKeyField: normalizeCcSwitchClaudeAuthField(config.apiKeyField),
-              },
-            }
-          : {
-              ...settings,
-              [config.clientType]: clientSettings,
-            };
-
-      const url = buildCcSwitchImportUrl({
+      return buildCcSwitchImportUrlForConfig({
         apiKey: ccSwitchImportEntry.key,
         baseUrl,
-        clientType: config.clientType,
-        enabled: true,
-        providerName: config.providerName || ccSwitchImportEntry.name || "CliProxy",
-        model: config.defaultModel,
-        modelMappings: config.modelMappings,
-        models: [],
-        settings: importSettings,
+        config,
+        configs: ccSwitchImportConfigs,
+        providerName: ccSwitchImportEntry.name,
       });
+    },
+    [ccSwitchImportEntry, ccSwitchImportConfigs, channelGroupItems, auth],
+  );
+
+  const handleImportWithConfig = useCallback(
+    (config: CcSwitchImportConfigListItem) => {
+      const url = buildImportUrlWithConfig(config);
+      if (!url) return;
 
       openCcSwitchImportUrl(url, {
         onProtocolUnavailable: () =>
@@ -496,7 +433,21 @@ export function ApiKeysPage() {
       });
       setCcSwitchImportEntry(null);
     },
-    [ccSwitchImportEntry, ccSwitchImportConfigs, channelGroupItems, auth, notify, t],
+    [buildImportUrlWithConfig, notify, t],
+  );
+
+  const handleCopyCcSwitchImportLink = useCallback(
+    async (config: CcSwitchImportConfigListItem) => {
+      const url = buildImportUrlWithConfig(config);
+      if (!url) return;
+
+      if (await copyTextToClipboard(url)) {
+        notify({ type: "success", message: t("ccswitch.copy_import_link_success") });
+        return;
+      }
+      notify({ type: "error", message: t("ccswitch.copy_import_link_failed") });
+    },
+    [buildImportUrlWithConfig, notify, t],
   );
 
   /* ─── column definitions ─── */
@@ -614,6 +565,7 @@ export function ApiKeysPage() {
       <CcSwitchImportCardList
         open={ccSwitchImportEntry !== null}
         configs={compatibleConfigs}
+        onCopyLink={(config) => void handleCopyCcSwitchImportLink(config)}
         onSelect={handleImportWithConfig}
         onClose={() => setCcSwitchImportEntry(null)}
       />

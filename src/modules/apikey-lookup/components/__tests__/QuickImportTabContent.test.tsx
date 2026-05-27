@@ -116,6 +116,49 @@ describe("QuickImportTabContent", () => {
     expect(parsed.searchParams.get("endpoint")).toMatch(/\/pro\/cs_codex\/v1$/);
   });
 
+  test("copies the selected quick import link without launching CC Switch", async () => {
+    const originalClipboard = navigator.clipboard;
+    const openSpy = vi.spyOn(window, "open").mockReturnValue(null);
+    const writeText = vi.fn(async (_text: string) => undefined);
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText },
+    });
+
+    try {
+      render(
+        <ThemeProvider>
+          <ToastProvider>
+            <QuickImportTabContent apiKey="sk-lookup-key" />
+          </ToastProvider>
+        </ThemeProvider>,
+      );
+
+      const codexSection = await screen.findByRole("region", { name: /codex quick imports/i });
+
+      await userEvent.click(
+        within(codexSection).getByRole("button", { name: /copy import link/i }),
+      );
+
+      await waitFor(() => {
+        expect(writeText).toHaveBeenCalledWith(expect.stringContaining("ccswitch://v1/import?"));
+      });
+      expect(openSpy).not.toHaveBeenCalled();
+
+      const copiedUrl = String(writeText.mock.calls.at(-1)?.[0] ?? "");
+      const parsed = new URL(copiedUrl);
+      expect(parsed.searchParams.get("app")).toBe("codex");
+      expect(parsed.searchParams.get("name")).toBe("Team Codex");
+      expect(parsed.searchParams.get("apiKey")).toBe("sk-lookup-key");
+      expect(parsed.searchParams.get("endpoint")).toMatch(/\/pro\/cs_codex\/v1$/);
+    } finally {
+      Object.defineProperty(navigator, "clipboard", {
+        configurable: true,
+        value: originalClipboard,
+      });
+    }
+  });
+
   test("hides quick import groups that do not have presets", async () => {
     vi.mocked(globalThis.fetch).mockResolvedValue(
       new Response(JSON.stringify({ "ccswitch-import-configs": [quickImportConfigs[0]] }), {
