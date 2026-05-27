@@ -256,7 +256,7 @@ describe("ProvidersPage import/export", () => {
     ).toBeInTheDocument();
   });
 
-  test("lets the provider page grow so the app shell can scroll", async () => {
+  test("keeps provider scrolling inside the card list area", async () => {
     const user = userEvent.setup();
 
     render(
@@ -275,9 +275,10 @@ describe("ProvidersPage import/export", () => {
     expect(await screen.findByText("Codex Main")).toBeInTheDocument();
 
     expect(screen.getByTestId("providers-page-shell")).toHaveClass(
-      "min-h-[calc(100dvh-112px)]",
+      "h-[calc(100dvh-97px)]",
+      "sm:h-[calc(100dvh-113px)]",
+      "overflow-hidden",
     );
-    expect(screen.getByTestId("providers-page-shell")).not.toHaveClass("overflow-hidden");
     expect(screen.getByTestId("providers-tab-scroll")).toHaveClass("overflow-y-auto");
   });
 
