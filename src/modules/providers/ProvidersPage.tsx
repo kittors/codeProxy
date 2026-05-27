@@ -711,7 +711,7 @@ export function ProvidersPage() {
   return (
     <div
       data-testid="providers-page-shell"
-      className="flex min-h-[calc(100dvh-112px)] flex-col gap-6"
+      className="flex h-[calc(100dvh-97px)] min-h-0 flex-col gap-6 overflow-hidden sm:h-[calc(100dvh-113px)]"
     >
       <div className="flex flex-wrap items-center gap-3">
         <div className="space-y-0.5">
@@ -832,7 +832,7 @@ export function ProvidersPage() {
           void refreshTab(nextTab);
         }}
       >
-        <div className="flex flex-col gap-4">
+        <div className="flex min-h-0 flex-1 flex-col gap-4">
           <div className="flex shrink-0">
             <TabsList>
               <TabsTrigger value="gemini">
@@ -872,7 +872,7 @@ export function ProvidersPage() {
               </TabsTrigger>
             </TabsList>
           </div>
-          <TabsContent value="gemini" className="flex flex-col">
+          <TabsContent value="gemini" className="min-h-0 flex flex-1 flex-col">
             <ProviderKeyListCard
               title={t("providers.gemini_keys")}
               description={t("providers.openai_desc")}
@@ -893,7 +893,7 @@ export function ProvidersPage() {
             />
           </TabsContent>
 
-          <TabsContent value="claude" className="flex flex-col">
+          <TabsContent value="claude" className="min-h-0 flex flex-1 flex-col">
             <ProviderKeyListCard
               title={t("providers.claude_keys")}
               description={t("providers.codex_desc")}
@@ -914,7 +914,7 @@ export function ProvidersPage() {
             />
           </TabsContent>
 
-          <TabsContent value="codex" className="flex flex-col">
+          <TabsContent value="codex" className="min-h-0 flex flex-1 flex-col">
             <ProviderKeyListCard
               title={t("providers.codex_keys")}
               description={t("providers.gemini_desc")}
@@ -935,7 +935,7 @@ export function ProvidersPage() {
             />
           </TabsContent>
 
-          <TabsContent value="opencode-go" className="flex flex-col">
+          <TabsContent value="opencode-go" className="min-h-0 flex flex-1 flex-col">
             <ProviderKeyListCard
               title={t("providers.opencode_go_keys")}
               description={t("providers.opencode_go_desc")}
@@ -957,7 +957,7 @@ export function ProvidersPage() {
             />
           </TabsContent>
 
-          <TabsContent value="vertex" className="flex flex-col">
+          <TabsContent value="vertex" className="min-h-0 flex flex-1 flex-col">
             <ProviderKeyListCard
               title={t("providers.vertex_keys")}
               description={t("providers.vertex_desc")}
@@ -977,7 +977,7 @@ export function ProvidersPage() {
             />
           </TabsContent>
 
-          <TabsContent value="bedrock" className="flex flex-col">
+          <TabsContent value="bedrock" className="min-h-0 flex flex-1 flex-col">
             <ProviderKeyListCard
               title={t("providers.bedrock_keys")}
               description={t("providers.bedrock_desc")}
@@ -998,7 +998,7 @@ export function ProvidersPage() {
             />
           </TabsContent>
 
-          <TabsContent value="openai" className="flex flex-col">
+          <TabsContent value="openai" className="min-h-0 flex flex-1 flex-col">
             <OpenAIProvidersTab
               providers={openaiProviders}
               loading={isActiveTabListLoading("openai")}
@@ -1020,7 +1020,7 @@ export function ProvidersPage() {
             />
           </TabsContent>
 
-          <TabsContent value="ampcode" className="flex flex-col">
+          <TabsContent value="ampcode" className="min-h-0 flex flex-1 flex-col">
             <AmpcodePanel
               loading={loading}
               isPending={isPending}

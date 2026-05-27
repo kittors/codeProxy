@@ -2,7 +2,6 @@ import { useState, type ReactNode } from "react";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { EllipsisVertical, Settings2, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { buttonClassName } from "@/modules/ui/Button";
 import { ToggleSwitch } from "@/modules/ui/ToggleSwitch";
 
 const ACTION_MENU_CONTENT_CLASS =
@@ -56,7 +55,6 @@ export function ProviderCard({
     <div
       className={[
         "group relative rounded-2xl border px-4 py-3 shadow-sm transition-all duration-200 ease-out",
-        hasActionMenu ? "pr-11" : "",
         selected
           ? "border-blue-400 bg-blue-50/50 ring-1 ring-blue-200 dark:border-blue-500/50 dark:bg-blue-950/20 dark:ring-blue-500/20"
           : "border-slate-200 bg-white/70 hover:border-slate-300 hover:bg-white hover:shadow-md dark:border-neutral-800 dark:bg-neutral-950/60 dark:hover:border-neutral-700 dark:hover:bg-neutral-950/80 dark:hover:shadow-lg dark:hover:shadow-black/20",
@@ -65,53 +63,6 @@ export function ProviderCard({
         .filter(Boolean)
         .join(" ")}
     >
-      {hasActionMenu ? (
-        <DropdownMenu.Root open={menuOpen} onOpenChange={setMenuOpen}>
-          <DropdownMenu.Trigger asChild>
-            <button
-              type="button"
-              className={[
-                buttonClassName({
-                  variant: "ghost",
-                  size: "xs",
-                  iconOnly: true,
-                  className:
-                    "!h-7 !w-7 bg-white/85 text-slate-500 shadow-sm ring-1 ring-slate-200/80 hover:text-slate-950 dark:bg-neutral-950/85 dark:text-white/55 dark:ring-neutral-800 dark:hover:text-white",
-                }),
-                "absolute right-2 top-2 z-10 transition-opacity duration-150 ease-out",
-                menuOpen
-                  ? "pointer-events-auto opacity-100"
-                  : "pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100 focus-within:pointer-events-auto focus-within:opacity-100",
-              ].join(" ")}
-              aria-label={t("providers.more_actions")}
-              title={t("providers.more_actions")}
-              data-tooltip-placement="left"
-            >
-              <EllipsisVertical size={14} />
-            </button>
-          </DropdownMenu.Trigger>
-          <DropdownMenu.Portal>
-            <DropdownMenu.Content align="end" sideOffset={8} className={ACTION_MENU_CONTENT_CLASS}>
-              {onEdit ? (
-                <DropdownMenu.Item className={ACTION_MENU_ITEM_CLASS} onSelect={() => onEdit()}>
-                  <Settings2 size={15} />
-                  <span>{t("providers.edit")}</span>
-                </DropdownMenu.Item>
-              ) : null}
-              {onDelete ? (
-                <DropdownMenu.Item
-                  className={ACTION_MENU_DANGER_ITEM_CLASS}
-                  onSelect={() => onDelete()}
-                >
-                  <Trash2 size={15} />
-                  <span>{t("providers.delete")}</span>
-                </DropdownMenu.Item>
-              ) : null}
-            </DropdownMenu.Content>
-          </DropdownMenu.Portal>
-        </DropdownMenu.Root>
-      ) : null}
-
       {/* Header */}
       <div className="grid gap-2">
         <div className="flex min-w-0 items-center gap-2">
@@ -144,6 +95,49 @@ export function ProviderCard({
                 onCheckedChange={onToggleEnabled}
               />
             </div>
+          ) : null}
+          {hasActionMenu ? (
+            <DropdownMenu.Root open={menuOpen} onOpenChange={setMenuOpen}>
+              <DropdownMenu.Trigger asChild>
+                <button
+                  type="button"
+                  className={[
+                    "inline-flex h-5 w-5 flex-none items-center justify-center rounded-full border-0 bg-transparent p-0 text-slate-500 shadow-none outline-none ring-0 transition-[color,opacity] duration-150 ease-out hover:bg-transparent hover:text-slate-950 focus-visible:ring-2 focus-visible:ring-slate-400/35 active:bg-transparent dark:text-white/55 dark:hover:bg-transparent dark:hover:text-white dark:focus-visible:ring-white/15",
+                    menuOpen
+                      ? "pointer-events-auto opacity-100"
+                      : "pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100",
+                  ].join(" ")}
+                  aria-label={t("providers.more_actions")}
+                  title={t("providers.more_actions")}
+                  data-tooltip-placement="left"
+                >
+                  <EllipsisVertical size={13} />
+                </button>
+              </DropdownMenu.Trigger>
+              <DropdownMenu.Portal>
+                <DropdownMenu.Content
+                  align="end"
+                  sideOffset={8}
+                  className={ACTION_MENU_CONTENT_CLASS}
+                >
+                  {onEdit ? (
+                    <DropdownMenu.Item className={ACTION_MENU_ITEM_CLASS} onSelect={() => onEdit()}>
+                      <Settings2 size={15} />
+                      <span>{t("providers.edit")}</span>
+                    </DropdownMenu.Item>
+                  ) : null}
+                  {onDelete ? (
+                    <DropdownMenu.Item
+                      className={ACTION_MENU_DANGER_ITEM_CLASS}
+                      onSelect={() => onDelete()}
+                    >
+                      <Trash2 size={15} />
+                      <span>{t("providers.delete")}</span>
+                    </DropdownMenu.Item>
+                  ) : null}
+                </DropdownMenu.Content>
+              </DropdownMenu.Portal>
+            </DropdownMenu.Root>
           ) : null}
         </div>
         {hasHeaderExtra ? (
