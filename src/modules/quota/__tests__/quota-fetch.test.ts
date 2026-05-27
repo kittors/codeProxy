@@ -214,6 +214,68 @@ describe("fetchQuota for antigravity", () => {
   });
 });
 
+describe("fetchQuota for codex", () => {
+  test("requests Codex usage without Chatgpt-Account-Id when the auth file does not include one", async () => {
+    mocks.request.mockResolvedValueOnce({
+      statusCode: 200,
+      header: {},
+      bodyText: "",
+      body: {
+        plan_type: "plus",
+        rate_limit: {
+          primary_window: {
+            used_percent: 25,
+            limit_window_seconds: 18000,
+            reset_after_seconds: 60,
+          },
+          secondary_window: {
+            used_percent: 50,
+            limit_window_seconds: 604800,
+            reset_after_seconds: 120,
+          },
+        },
+      },
+    });
+
+    const result = await fetchQuota("codex", {
+      name: "codex.json",
+      provider: "codex",
+      auth_index: "codex-1",
+      id_token: "",
+    } as any);
+
+    expect(mocks.request).toHaveBeenCalledTimes(1);
+    const requestArgs = mocks.request.mock.calls[0]?.[0];
+    expect(requestArgs).toEqual(
+      expect.objectContaining({
+        authIndex: "codex-1",
+        method: "GET",
+        url: "https://chatgpt.com/backend-api/wham/usage",
+      }),
+    );
+    expect(requestArgs?.header).toEqual(
+      expect.objectContaining({
+        Authorization: "Bearer $TOKEN$",
+        "Content-Type": "application/json",
+      }),
+    );
+    expect(requestArgs?.header?.["Chatgpt-Account-Id"]).toBeUndefined();
+    expect(result.planType).toBe("plus");
+    expect(result.items).toEqual([
+      expect.objectContaining({
+        key: "code_5h",
+        percent: 75,
+        windowSeconds: 18000,
+      }),
+      expect.objectContaining({
+        key: "code_week",
+        percent: 50,
+        windowSeconds: 604800,
+      }),
+    ]);
+  });
+});
+
 describe("fetchQuota for claude", () => {
   test("requests Anthropic OAuth usage endpoint and maps remaining percentages", async () => {
     mocks.request.mockResolvedValueOnce({

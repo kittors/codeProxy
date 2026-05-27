@@ -130,12 +130,17 @@ export const fetchQuota = async (
 
   if (type === "codex") {
     const accountId = resolveCodexChatgptAccountId(file);
-    if (!accountId) throw new Error("missing_account_id");
+    const requestHeader: Record<string, string> = {
+      ...CODEX_REQUEST_HEADERS,
+    };
+    if (accountId) {
+      requestHeader["Chatgpt-Account-Id"] = accountId;
+    }
     const result = await apiCallApi.request({
       authIndex,
       method: "GET",
       url: CODEX_USAGE_URL,
-      header: { ...CODEX_REQUEST_HEADERS, "Chatgpt-Account-Id": accountId },
+      header: requestHeader,
     });
     if (result.statusCode < 200 || result.statusCode >= 300)
       throw new Error(getApiCallErrorMessage(result));
