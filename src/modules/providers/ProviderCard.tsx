@@ -81,7 +81,7 @@ export function ProviderCard({
           {onToggleEnabled ? (
             <ToggleSwitch
               checked={enabled}
-              ariaLabel={t("providers.enable")}
+              ariaLabel={`${t("providers.enable_provider")} ${title}`}
               onCheckedChange={onToggleEnabled}
             />
           ) : null}

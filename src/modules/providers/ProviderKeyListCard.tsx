@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import type { LucideIcon } from "lucide-react";
 import { Loader2, Plus, Zap } from "lucide-react";
 import type { ProviderSimpleConfig } from "@/lib/http/types";
 import { Button } from "@/modules/ui/Button";
@@ -19,10 +18,6 @@ import type { ProviderAccessSummary } from "@/modules/providers/provider-access"
 import { useTranslation } from "react-i18next";
 
 export function ProviderKeyListCard({
-  icon: Icon,
-  iconSrc,
-  iconDarkSrc,
-  iconAlt = "",
   title,
   description,
   items,
@@ -43,10 +38,6 @@ export function ProviderKeyListCard({
   selectedKeys,
   onToggleSelected,
 }: {
-  icon: LucideIcon;
-  iconSrc?: string;
-  iconDarkSrc?: string;
-  iconAlt?: string;
   title: string;
   description: string;
   items: ProviderSimpleConfig[];
@@ -67,17 +58,6 @@ export function ProviderKeyListCard({
   onToggleSelected?: (key: string, checked: boolean) => void;
 }) {
   const { t } = useTranslation();
-  const renderIcon = () =>
-    iconSrc ? (
-      <>
-        <img src={iconSrc} alt={iconAlt} className={`size-4 ${iconDarkSrc ? "dark:hidden" : ""}`} />
-        {iconDarkSrc ? (
-          <img src={iconDarkSrc} alt={iconAlt} className="hidden size-4 dark:block" />
-        ) : null}
-      </>
-    ) : (
-      <Icon size={16} className="text-slate-900 dark:text-white" />
-    );
 
   return (
     <Card
@@ -99,12 +79,14 @@ export function ProviderKeyListCard({
         <div
           data-testid="providers-tab-scroll"
           className={[
-            "min-h-0 flex-1 pr-1",
-            gridColumns > 1
-              ? "grid gap-3"
-              : "space-y-3",
+            "min-h-0 flex-1 overflow-y-auto pr-1",
+            gridColumns > 1 ? "grid gap-3" : "space-y-3",
           ].join(" ")}
-          style={gridColumns > 1 ? { gridTemplateColumns: `repeat(${gridColumns}, minmax(0, 1fr))` } : undefined}
+          style={
+            gridColumns > 1
+              ? { gridTemplateColumns: `repeat(${gridColumns}, minmax(0, 1fr))` }
+              : undefined
+          }
         >
           {items.map((item, idx) => {
             const selectionKey = `${item.apiKey.trim().toLowerCase()}:${idx}`;
@@ -138,9 +120,7 @@ export function ProviderKeyListCard({
                     : undefined
                 }
                 onToggleEnabled={
-                  onToggleEnabled
-                    ? (enabled) => onToggleEnabled(idx, enabled)
-                    : undefined
+                  onToggleEnabled ? (enabled) => onToggleEnabled(idx, enabled) : undefined
                 }
                 onEdit={() => onEdit(idx)}
                 onDelete={() => onDelete(idx)}
@@ -172,9 +152,7 @@ export function ProviderKeyListCard({
                             ) : entry.error ? (
                               <span className="text-rose-500">×</span>
                             ) : entry.latencyMs !== null ? (
-                              <span className="font-medium">
-                                {formatLatency(entry.latencyMs)}
-                              </span>
+                              <span className="font-medium">{formatLatency(entry.latencyMs)}</span>
                             ) : (
                               <Zap size={10} />
                             )}
@@ -203,9 +181,7 @@ export function ProviderKeyListCard({
 
                 {accessSummary ? (
                   <div className="mt-2 flex flex-wrap gap-1.5 text-[11px]">
-                    <span
-                      className={`rounded-full border px-2 py-0.5 font-medium ${accessTone}`}
-                    >
+                    <span className={`rounded-full border px-2 py-0.5 font-medium ${accessTone}`}>
                       {accessSummary.totalKeys === 0
                         ? t("providers.access_no_keys")
                         : accessSummary.reachableKeys === 0

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Bot, Cloud, Database, Download, FileKey, Globe, LayoutGrid, RefreshCw, Upload } from "lucide-react";
+import { Cloud, Download, LayoutGrid, RefreshCw, Upload } from "lucide-react";
 import iconGemini from "@/assets/icons/gemini.svg";
 import iconClaude from "@/assets/icons/claude.svg";
 import iconCodex from "@/assets/icons/codex.svg";
@@ -58,7 +58,14 @@ type ProviderTab =
 
 const PROVIDER_TAB_STORAGE_KEY = "providers-page:tab";
 const PROVIDER_TAB_VALUES: ProviderTab[] = [
-  "gemini", "claude", "codex", "opencode-go", "vertex", "bedrock", "openai", "ampcode",
+  "gemini",
+  "claude",
+  "codex",
+  "opencode-go",
+  "vertex",
+  "bedrock",
+  "openai",
+  "ampcode",
 ];
 
 function readSavedProviderTab(): ProviderTab {
@@ -108,8 +115,12 @@ const getProviderSelectionKey = (
   index: number,
 ) =>
   kind === "openai"
-    ? `${String((item as OpenAIProvider).name ?? "").trim().toLowerCase()}:${index}`
-    : `${String((item as ProviderSimpleConfig).apiKey ?? "").trim().toLowerCase()}:${index}`;
+    ? `${String((item as OpenAIProvider).name ?? "")
+        .trim()
+        .toLowerCase()}:${index}`
+    : `${String((item as ProviderSimpleConfig).apiKey ?? "")
+        .trim()
+        .toLowerCase()}:${index}`;
 
 export function ProvidersPage() {
   const { t } = useTranslation();
@@ -700,7 +711,7 @@ export function ProvidersPage() {
   return (
     <div
       data-testid="providers-page-shell"
-      className="flex min-h-0 flex-col gap-6"
+      className="flex h-[calc(100dvh-112px)] min-h-0 flex-col gap-6 overflow-hidden"
     >
       <div className="flex flex-wrap items-center gap-3">
         <div className="space-y-0.5">
@@ -863,7 +874,6 @@ export function ProvidersPage() {
           </div>
           <TabsContent value="gemini" className="flex flex-col">
             <ProviderKeyListCard
-              icon={Globe}
               title={t("providers.gemini_keys")}
               description={t("providers.openai_desc")}
               items={geminiKeys}
@@ -885,7 +895,6 @@ export function ProvidersPage() {
 
           <TabsContent value="claude" className="flex flex-col">
             <ProviderKeyListCard
-              icon={Bot}
               title={t("providers.claude_keys")}
               description={t("providers.codex_desc")}
               items={claudeKeys}
@@ -907,7 +916,6 @@ export function ProvidersPage() {
 
           <TabsContent value="codex" className="flex flex-col">
             <ProviderKeyListCard
-              icon={FileKey}
               title={t("providers.codex_keys")}
               description={t("providers.gemini_desc")}
               items={codexKeys}
@@ -929,9 +937,6 @@ export function ProvidersPage() {
 
           <TabsContent value="opencode-go" className="flex flex-col">
             <ProviderKeyListCard
-              icon={FileKey}
-              iconSrc={iconOpenCodeLight}
-              iconDarkSrc={iconOpenCodeDark}
               title={t("providers.opencode_go_keys")}
               description={t("providers.opencode_go_desc")}
               items={openCodeGoKeys}
@@ -954,7 +959,6 @@ export function ProvidersPage() {
 
           <TabsContent value="vertex" className="flex flex-col">
             <ProviderKeyListCard
-              icon={Database}
               title={t("providers.vertex_keys")}
               description={t("providers.vertex_desc")}
               items={vertexKeys}
@@ -975,7 +979,6 @@ export function ProvidersPage() {
 
           <TabsContent value="bedrock" className="flex flex-col">
             <ProviderKeyListCard
-              icon={Cloud}
               title={t("providers.bedrock_keys")}
               description={t("providers.bedrock_desc")}
               items={bedrockKeys}

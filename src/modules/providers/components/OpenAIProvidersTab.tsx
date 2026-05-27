@@ -72,12 +72,14 @@ export function OpenAIProvidersTab({
         <div
           data-testid="providers-tab-scroll"
           className={[
-            "pr-1",
-            gridColumns > 1
-              ? "grid gap-3"
-              : "space-y-3",
+            "min-h-0 flex-1 overflow-y-auto pr-1",
+            gridColumns > 1 ? "grid gap-3" : "space-y-3",
           ].join(" ")}
-          style={gridColumns > 1 ? { gridTemplateColumns: `repeat(${gridColumns}, minmax(0, 1fr))` } : undefined}
+          style={
+            gridColumns > 1
+              ? { gridTemplateColumns: `repeat(${gridColumns}, minmax(0, 1fr))` }
+              : undefined
+          }
         >
           {providers.map((provider, idx) => {
             const selectionKey = `${provider.name.trim().toLowerCase()}:${idx}`;
@@ -161,9 +163,7 @@ export function OpenAIProvidersTab({
                                     : "bg-amber-500/15 text-amber-700 dark:text-amber-200",
                                 ].join(" ")}
                               >
-                                {entryEnabled
-                                  ? t("providers.enabled")
-                                  : t("providers.disabled")}
+                                {entryEnabled ? t("providers.enabled") : t("providers.disabled")}
                               </span>
                               <span className="rounded-full bg-emerald-600/10 px-2 py-0.5 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200">
                                 {t("providers.success_stats", { count: entryStats.success })}

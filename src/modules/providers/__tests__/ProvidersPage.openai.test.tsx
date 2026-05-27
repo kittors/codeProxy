@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
   getOpenAIProviders: vi.fn(async () => []),
   saveCodexConfigs: vi.fn(async (_configs: unknown[]) => ({})),
   saveOpenAIProviders: vi.fn(async (_configs: unknown[]) => ({})),
+  patchOpenAIProviderDisabled: vi.fn(async (_index: number, _disabled: boolean) => ({})),
   getEntityStats: vi.fn(async () => ({ source: [] })),
   apiKeyEntriesList: vi.fn(async () => []),
   channelGroupsList: vi.fn(async () => []),
@@ -33,6 +34,7 @@ vi.mock("@/lib/http/apis", async (importOriginal) => {
       getOpenAIProviders: mocks.getOpenAIProviders,
       saveCodexConfigs: mocks.saveCodexConfigs,
       saveOpenAIProviders: mocks.saveOpenAIProviders,
+      patchOpenAIProviderDisabled: mocks.patchOpenAIProviderDisabled,
     },
     usageApi: {
       ...mod.usageApi,
@@ -72,6 +74,7 @@ describe("ProvidersPage openai tab", () => {
     mocks.getOpenAIProviders.mockReset();
     mocks.saveCodexConfigs.mockReset();
     mocks.saveOpenAIProviders.mockReset();
+    mocks.patchOpenAIProviderDisabled.mockReset();
     mocks.getEntityStats.mockReset();
     mocks.apiKeyEntriesList.mockReset();
     mocks.channelGroupsList.mockReset();
@@ -83,6 +86,7 @@ describe("ProvidersPage openai tab", () => {
     mocks.getVertexConfigs.mockImplementation(async () => []);
     mocks.saveCodexConfigs.mockImplementation(async () => ({}));
     mocks.saveOpenAIProviders.mockImplementation(async () => ({}));
+    mocks.patchOpenAIProviderDisabled.mockImplementation(async () => ({}));
     mocks.apiKeyEntriesList.mockImplementation(async () => []);
     mocks.channelGroupsList.mockImplementation(async () => []);
     mocks.proxiesList.mockImplementation(async () => [
@@ -286,9 +290,7 @@ describe("ProvidersPage openai tab", () => {
         }),
       ]);
     });
-    expect(mocks.saveOpenAIProviders.mock.calls[0]?.[0]?.[0]).not.toHaveProperty(
-      "apiKeyEntries",
-    );
+    expect(mocks.saveOpenAIProviders.mock.calls[0]?.[0]?.[0]).not.toHaveProperty("apiKeyEntries");
   });
 
   test("toggles an OpenAI Compatible provider without removing keys", async () => {
@@ -325,21 +327,8 @@ describe("ProvidersPage openai tab", () => {
     await user.click(providerSwitch);
 
     await waitFor(() => {
-      expect(mocks.saveOpenAIProviders).toHaveBeenCalledWith([
-        expect.objectContaining({
-          name: "OpenAI Main",
-          disabled: true,
-          apiKeyEntries: [
-            expect.objectContaining({
-              apiKey: "sk-openai-enabled-1234567890",
-            }),
-            expect.objectContaining({
-              apiKey: "sk-openai-disabled-1234567890",
-              disabled: true,
-            }),
-          ],
-        }),
-      ]);
+      expect(mocks.patchOpenAIProviderDisabled).toHaveBeenCalledWith(0, true);
     });
+    expect(mocks.saveOpenAIProviders).not.toHaveBeenCalled();
   });
 });
