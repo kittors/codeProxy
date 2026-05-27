@@ -48,14 +48,14 @@ export function OpenAIProvidersTab({
   onToggleSelected,
 }: OpenAIProvidersTabProps) {
   const { t } = useTranslation();
-  const gridStyle =
-    gridColumns > 1
-      ? {
-          gridTemplateColumns: `repeat(auto-fit, minmax(min(100%, max(20rem, calc((100% - ${
-            (gridColumns - 1) * 0.75
-          }rem) / ${gridColumns}))), 1fr))`,
-        }
-      : undefined;
+  const gridColumnsClass =
+    gridColumns === 4
+      ? "grid-cols-1 sm:grid-cols-4"
+      : gridColumns === 3
+        ? "grid-cols-1 sm:grid-cols-3"
+        : gridColumns === 2
+          ? "grid-cols-1 sm:grid-cols-2"
+          : "grid-cols-1";
 
   return (
     <Card
@@ -81,9 +81,10 @@ export function OpenAIProvidersTab({
           data-testid="providers-tab-scroll"
           className={[
             "min-h-0 flex-1 overflow-y-auto pr-1",
-            gridColumns > 1 ? "grid gap-3" : "space-y-3",
+            gridColumns > 1
+              ? ["grid gap-3 items-start content-start", gridColumnsClass].join(" ")
+              : "space-y-3",
           ].join(" ")}
-          style={gridStyle}
         >
           {providers.map((provider, idx) => {
             const selectionKey = `${provider.name.trim().toLowerCase()}:${idx}`;

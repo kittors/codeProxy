@@ -811,13 +811,13 @@ export function ProvidersPage() {
             value={String(gridColumns)}
             onChange={(v) => setGridColumns(Number(v))}
             options={[
-              { value: "1", label: "1 col" },
-              { value: "2", label: "2 cols" },
-              { value: "3", label: "3 cols" },
-              { value: "4", label: "4 cols" },
+              { value: "1", label: t("providers.grid_cols_1") },
+              { value: "2", label: t("providers.grid_cols_2") },
+              { value: "3", label: t("providers.grid_cols_3") },
+              { value: "4", label: t("providers.grid_cols_4") },
             ]}
             size="sm"
-            aria-label="Grid columns"
+            aria-label={t("providers.grid_columns_aria")}
           />
         </div>
       </div>
