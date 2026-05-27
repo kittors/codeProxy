@@ -56,19 +56,44 @@ function readStoredManagementAuth(): { apiBase: string; managementKey: string } 
   }
 }
 
-async function fetchQuickImportConfigs(): Promise<CcSwitchImportConfigListItem[]> {
+async function fetchPublicQuickImportConfigs(apiKey: string): Promise<CcSwitchImportConfigListItem[]> {
+  const key = apiKey.trim();
+  if (!key) return [];
+
+  const base = detectApiBaseFromLocation();
+  const resp = await fetch(`${base}${MANAGEMENT_API_PREFIX}/public/ccswitch-import-configs`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ api_key: key }),
+  });
+  if (!resp.ok) {
+    const text = await resp.text().catch(() => "");
+    throw new Error(text || `Request failed (${resp.status})`);
+  }
+  const data = (await resp.json()) as Record<string, unknown>;
+  return normalizeCcSwitchImportConfigs(data["ccswitch-import-configs"] ?? data.items ?? data);
+}
+
+async function fetchQuickImportConfigs(apiKey: string): Promise<CcSwitchImportConfigListItem[]> {
   const auth = readStoredManagementAuth();
-  const managementBase = auth
-    ? computeManagementApiBase(auth.apiBase)
-    : `${detectApiBaseFromLocation()}${MANAGEMENT_API_PREFIX}`;
+  if (!auth) {
+    try {
+      return await fetchPublicQuickImportConfigs(apiKey);
+    } catch {
+      // Backward compatible fallback for older servers that don't have the public endpoint yet.
+      return ccSwitchImportConfigsApi.list();
+    }
+  }
+
+  const managementBase = computeManagementApiBase(auth.apiBase);
 
   try {
     const response = await fetch(`${managementBase}/ccswitch-import-configs`, {
-      headers: auth
-        ? {
-            Authorization: `Bearer ${auth.managementKey}`,
-          }
-        : undefined,
+      headers: {
+        Authorization: `Bearer ${auth.managementKey}`,
+      },
     });
     if (!response.ok) {
       const text = await response.text().catch(() => "");
@@ -77,8 +102,7 @@ async function fetchQuickImportConfigs(): Promise<CcSwitchImportConfigListItem[]
     const data = (await response.json()) as Record<string, unknown>;
     return normalizeCcSwitchImportConfigs(data["ccswitch-import-configs"] ?? data.items ?? data);
   } catch (err) {
-    if (auth) throw err;
-    return ccSwitchImportConfigsApi.list();
+    throw err;
   }
 }
 
@@ -272,7 +296,7 @@ export function QuickImportTabContent({
     setLoading(true);
     setError(null);
 
-    Promise.all([fetchQuickImportConfigs(), fetchQuickImportApiKeyEntry(apiKey)])
+    Promise.all([fetchQuickImportConfigs(apiKey), fetchQuickImportApiKeyEntry(apiKey)])
       .then(([items, entry]) => {
         if (cancelled) return;
         setConfigs(items.filter((item) => QUICK_IMPORT_CLIENTS.includes(item.clientType)));

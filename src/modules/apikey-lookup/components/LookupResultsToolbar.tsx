@@ -3,7 +3,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/modules/ui/Tabs";
 import { TimeRangeSelector } from "@/modules/monitor/MonitorPagePieces";
 import type { TimeRange } from "@/modules/monitor/monitor-constants";
 
-export type ApiKeyLookupTab = "usage" | "logs" | "models";
+export type ApiKeyLookupTab = "usage" | "logs" | "models" | "quickImport";
 
 export function LookupResultsToolbar({
   t,
@@ -34,6 +34,7 @@ export function LookupResultsToolbar({
             <TabsTrigger value="usage">{t("apikey_lookup.usage_stats")}</TabsTrigger>
             <TabsTrigger value="logs">{t("apikey_lookup.request_logs")}</TabsTrigger>
             <TabsTrigger value="models">{t("apikey_lookup.available_models")}</TabsTrigger>
+            <TabsTrigger value="quickImport">{t("apikey_lookup.quick_import")}</TabsTrigger>
           </TabsList>
         </Tabs>
         {activeTab === "usage" || activeTab === "logs" ? (

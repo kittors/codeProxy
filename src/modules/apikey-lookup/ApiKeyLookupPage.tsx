@@ -25,6 +25,7 @@ import {
   buildLogColumns,
   PublicLogsSection,
 } from "@/modules/apikey-lookup/components/PublicLogsSection";
+import { QuickImportTabContent } from "@/modules/apikey-lookup/components/QuickImportTabContent";
 import { UsageTabSection } from "@/modules/apikey-lookup/components/UsageTabSection";
 import { useApiKeyLookupCharts } from "@/modules/apikey-lookup/hooks/useApiKeyLookupCharts";
 import type { ChartDataResponse, LogRow, PublicLogItem } from "@/modules/apikey-lookup/types";
@@ -184,6 +185,7 @@ export function ApiKeyLookupPage() {
 
   // ── Tab state ──
   const [activeTab, setActiveTab] = useState<ApiKeyLookupTab>("usage");
+  const [quickImportReloadToken, setQuickImportReloadToken] = useState(0);
 
   // ── Logs state (server-side pagination) ──
   const [rawItems, setRawItems] = useState<PublicLogItem[]>([]);
@@ -457,6 +459,8 @@ export function ApiKeyLookupPage() {
         void fetchChartDataFn(queriedKey, timeRange);
       } else if (activeTab === "models") {
         void fetchModelsFn(queriedKey);
+      } else if (activeTab === "quickImport") {
+        setQuickImportReloadToken((value) => value + 1);
       } else {
         fetchLogs(queriedKey, 1);
       }
@@ -629,6 +633,12 @@ export function ApiKeyLookupPage() {
                   searchFilter={modelsSearchFilter}
                   onSearchChange={setModelsSearchFilter}
                 />
+              </Reveal>
+            ) : null}
+
+            {activeTab === "quickImport" ? (
+              <Reveal>
+                <QuickImportTabContent apiKey={queriedKey} reloadToken={quickImportReloadToken} />
               </Reveal>
             ) : null}
           </>
