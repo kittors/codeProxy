@@ -711,7 +711,7 @@ export function ProvidersPage() {
   return (
     <div
       data-testid="providers-page-shell"
-      className="flex h-[calc(100dvh-112px)] min-h-0 flex-col gap-6 overflow-hidden"
+      className="flex min-h-[calc(100dvh-112px)] flex-col gap-6"
     >
       <div className="flex flex-wrap items-center gap-3">
         <div className="space-y-0.5">

@@ -256,7 +256,7 @@ describe("ProvidersPage import/export", () => {
     ).toBeInTheDocument();
   });
 
-  test("locks the page shell height and uses a dedicated scroll area for the active tab content", async () => {
+  test("lets the provider page grow so the app shell can scroll", async () => {
     const user = userEvent.setup();
 
     render(
@@ -274,7 +274,10 @@ describe("ProvidersPage import/export", () => {
     await user.click(await screen.findByRole("tab", { name: /Codex/ }));
     expect(await screen.findByText("Codex Main")).toBeInTheDocument();
 
-    expect(screen.getByTestId("providers-page-shell")).toHaveClass("h-[calc(100dvh-112px)]");
+    expect(screen.getByTestId("providers-page-shell")).toHaveClass(
+      "min-h-[calc(100dvh-112px)]",
+    );
+    expect(screen.getByTestId("providers-page-shell")).not.toHaveClass("overflow-hidden");
     expect(screen.getByTestId("providers-tab-scroll")).toHaveClass("overflow-y-auto");
   });
 

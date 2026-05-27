@@ -2369,6 +2369,7 @@
     "batch_deselect_all": "取消全选",
     "batch_clear": "清空",
     "select_provider": "选择 {{name}}",
+    "more_actions": "更多操作",
     "import_preview_title": "导入预览",
     "import_preview_desc": "先查看 {{filename}} 规范化后的 diff，再决定是否替换当前供应商配置。",
     "confirm_import": "确认导入",

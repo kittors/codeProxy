@@ -3034,6 +3034,7 @@
     "batch_deselect_all": "Deselect All",
     "batch_clear": "Clear",
     "select_provider": "Select {{name}}",
+    "more_actions": "More actions",
     "import_preview_title": "Import preview",
     "import_preview_desc": "Review the normalized diff for {{filename}} before replacing the current provider configuration.",
     "confirm_import": "Confirm import",

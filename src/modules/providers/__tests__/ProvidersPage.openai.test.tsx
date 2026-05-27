@@ -178,7 +178,8 @@ describe("ProvidersPage openai tab", () => {
 
     await user.click(await screen.findByRole("tab", { name: /Codex/ }));
     expect(await screen.findByText("Codex Main")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: /Edit/ }));
+    await user.click(screen.getByRole("button", { name: /More actions/i }));
+    await user.click(await screen.findByRole("menuitem", { name: /Edit/i }));
 
     expect(await screen.findByText("Edit Codex configuration")).toBeInTheDocument();
 
@@ -276,7 +277,8 @@ describe("ProvidersPage openai tab", () => {
     );
 
     expect(await screen.findByText("Keyless OpenAI")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: /Edit/ }));
+    await user.click(screen.getByRole("button", { name: /More actions/i }));
+    await user.click(await screen.findByRole("menuitem", { name: /Edit/i }));
     expect(await screen.findByText("Edit OpenAI-compatible provider")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: /Save/ }));
