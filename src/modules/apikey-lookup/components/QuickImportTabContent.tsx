@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Copy, Download, ExternalLink } from "lucide-react";
+import { Check, Copy, Download, ExternalLink } from "lucide-react";
 import iconClaude from "@/assets/icons/claude.svg";
 import iconCodex from "@/assets/icons/codex.svg";
 import { copyTextToClipboard } from "@/lib/clipboard";
@@ -118,10 +118,12 @@ async function fetchQuickImportApiKeyEntry(apiKey: string): Promise<ApiKeyEntry 
 
 function QuickImportCard({
   config,
+  copied,
   onCopyLink,
   onSelect,
 }: {
   config: CcSwitchImportConfigListItem;
+  copied: boolean;
   onCopyLink: (config: CcSwitchImportConfigListItem) => void;
   onSelect: (config: CcSwitchImportConfigListItem) => void;
 }) {
@@ -170,11 +172,13 @@ function QuickImportCard({
         <Button
           variant="ghost"
           size="xs"
-          title={t("ccswitch.copy_import_link")}
+          title={
+            copied ? t("ccswitch.copy_import_link_copied") : t("ccswitch.copy_import_link")
+          }
           onClick={() => onCopyLink(config)}
           className="rounded-lg border border-slate-200/70 bg-white text-slate-500 hover:text-slate-900 dark:border-neutral-800 dark:bg-neutral-950 dark:text-white/55 dark:hover:text-white"
         >
-          <Copy size={14} />
+          {copied ? <Check size={14} /> : <Copy size={14} />}
         </Button>
       </div>
     </div>
@@ -240,6 +244,28 @@ export function QuickImportTabContent({
   const [apiKeyEntry, setApiKeyEntry] = useState<ApiKeyEntry | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [copiedImportConfigId, setCopiedImportConfigId] = useState<string | null>(null);
+  const copiedImportTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showCopiedImportState = useCallback((configId: string) => {
+    setCopiedImportConfigId(configId);
+    if (copiedImportTimerRef.current) {
+      clearTimeout(copiedImportTimerRef.current);
+    }
+    copiedImportTimerRef.current = setTimeout(() => {
+      setCopiedImportConfigId(null);
+      copiedImportTimerRef.current = null;
+    }, 1800);
+  }, []);
+
+  useEffect(
+    () => () => {
+      if (copiedImportTimerRef.current) {
+        clearTimeout(copiedImportTimerRef.current);
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -319,12 +345,13 @@ export function QuickImportTabContent({
       if (!url) return;
 
       if (await copyTextToClipboard(url)) {
+        showCopiedImportState(config.id);
         notify({ type: "success", message: t("ccswitch.copy_import_link_success") });
         return;
       }
       notify({ type: "error", message: t("ccswitch.copy_import_link_failed") });
     },
-    [buildImportUrl, notify, t],
+    [buildImportUrl, notify, showCopiedImportState, t],
   );
 
   return (
@@ -393,6 +420,7 @@ export function QuickImportTabContent({
                       <QuickImportCard
                         key={config.id}
                         config={config}
+                        copied={copiedImportConfigId === config.id}
                         onCopyLink={(item) => void handleCopyImportLink(item)}
                         onSelect={handleImport}
                       />

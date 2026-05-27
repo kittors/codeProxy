@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { Copy } from "lucide-react";
+import { Check, Copy } from "lucide-react";
 import iconClaude from "@/assets/icons/claude.svg";
 import iconCodex from "@/assets/icons/codex.svg";
 import iconGemini from "@/assets/icons/gemini.svg";
@@ -17,6 +17,7 @@ const iconByType: Record<CcSwitchClientType, string> = {
 export interface CcSwitchImportCardListProps {
   open: boolean;
   configs: CcSwitchImportConfigListItem[];
+  copiedConfigId: string | null;
   onCopyLink: (config: CcSwitchImportConfigListItem) => void;
   onSelect: (config: CcSwitchImportConfigListItem) => void;
   onClose: () => void;
@@ -25,6 +26,7 @@ export interface CcSwitchImportCardListProps {
 export function CcSwitchImportCardList({
   open,
   configs,
+  copiedConfigId,
   onCopyLink,
   onSelect,
   onClose,
@@ -46,60 +48,68 @@ export function CcSwitchImportCardList({
             {t("ccswitch.import_no_compatible_configs")}
           </p>
         ) : (
-          configs.map((config) => (
-            <div
-              key={config.id}
-              className="grid w-full grid-cols-[minmax(0,1fr)_auto] rounded-2xl border border-black/[0.06] bg-white shadow-[0_1px_2px_rgb(15_23_42_/_0.035)] transition hover:border-slate-200 hover:shadow-sm dark:border-white/[0.06] dark:bg-neutral-900 dark:hover:border-neutral-700"
-            >
-              <button
-                type="button"
-                onClick={() => onSelect(config)}
-                className="flex min-w-0 items-start gap-4 rounded-l-2xl p-4 text-left transition active:translate-y-px"
+          configs.map((config) => {
+            const isCopied = copiedConfigId === config.id;
+
+            return (
+              <div
+                key={config.id}
+                className="grid w-full grid-cols-[minmax(0,1fr)_auto] rounded-2xl border border-black/[0.06] bg-white shadow-[0_1px_2px_rgb(15_23_42_/_0.035)] transition hover:border-slate-200 hover:shadow-sm dark:border-white/[0.06] dark:bg-neutral-900 dark:hover:border-neutral-700"
               >
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200/70 bg-white shadow-xs dark:border-neutral-800 dark:bg-neutral-950">
-                  <img src={iconByType[config.clientType]} alt="" className="h-5 w-5" />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="truncate text-sm font-semibold text-slate-900 dark:text-white">
-                      {config.providerName}
-                    </span>
-                    {config.clientType === "claude" && config.apiKeyField ? (
-                      <span className="shrink-0 rounded-md border border-slate-200/70 bg-slate-50 px-1.5 py-0.5 font-mono text-[10px] text-slate-500 dark:border-neutral-800 dark:bg-neutral-950 dark:text-white/45">
-                        {config.apiKeyField}
-                      </span>
-                    ) : null}
-                  </div>
-                  {config.note ? (
-                    <p className="mt-0.5 truncate text-xs text-slate-500 dark:text-white/55">
-                      {config.note}
-                    </p>
-                  ) : null}
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
-                    <span className="inline-flex max-w-full overflow-hidden text-ellipsis whitespace-nowrap rounded-md border border-slate-200/70 bg-white px-1.5 py-0.5 font-mono text-[10px] text-slate-500 dark:border-neutral-800 dark:bg-neutral-950 dark:text-white/45">
-                      {config.defaultModel}
-                    </span>
-                    {config.allowedChannelGroups.length > 0 ? (
-                      <span className="truncate text-[10px] text-slate-400 dark:text-white/35">
-                        {config.allowedChannelGroups.join(", ")}
-                      </span>
-                    ) : null}
-                  </div>
-                </div>
-              </button>
-              <div className="flex items-start p-3 pl-0">
-                <Button
-                  variant="ghost"
-                  size="xs"
-                  title={t("ccswitch.copy_import_link")}
-                  onClick={() => onCopyLink(config)}
-                  className="rounded-lg border border-slate-200/70 bg-white text-slate-500 hover:text-slate-900 dark:border-neutral-800 dark:bg-neutral-950 dark:text-white/55 dark:hover:text-white"
+                <button
+                  type="button"
+                  onClick={() => onSelect(config)}
+                  className="flex min-w-0 items-start gap-4 rounded-l-2xl p-4 text-left transition active:translate-y-px"
                 >
-                  <Copy size={14} />
-                </Button>
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200/70 bg-white shadow-xs dark:border-neutral-800 dark:bg-neutral-950">
+                    <img src={iconByType[config.clientType]} alt="" className="h-5 w-5" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="truncate text-sm font-semibold text-slate-900 dark:text-white">
+                        {config.providerName}
+                      </span>
+                      {config.clientType === "claude" && config.apiKeyField ? (
+                        <span className="shrink-0 rounded-md border border-slate-200/70 bg-slate-50 px-1.5 py-0.5 font-mono text-[10px] text-slate-500 dark:border-neutral-800 dark:bg-neutral-950 dark:text-white/45">
+                          {config.apiKeyField}
+                        </span>
+                      ) : null}
+                    </div>
+                    {config.note ? (
+                      <p className="mt-0.5 truncate text-xs text-slate-500 dark:text-white/55">
+                        {config.note}
+                      </p>
+                    ) : null}
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <span className="inline-flex max-w-full overflow-hidden text-ellipsis whitespace-nowrap rounded-md border border-slate-200/70 bg-white px-1.5 py-0.5 font-mono text-[10px] text-slate-500 dark:border-neutral-800 dark:bg-neutral-950 dark:text-white/45">
+                        {config.defaultModel}
+                      </span>
+                      {config.allowedChannelGroups.length > 0 ? (
+                        <span className="truncate text-[10px] text-slate-400 dark:text-white/35">
+                          {config.allowedChannelGroups.join(", ")}
+                        </span>
+                      ) : null}
+                    </div>
+                  </div>
+                </button>
+                <div className="flex items-start p-3 pl-0">
+                  <Button
+                    variant="ghost"
+                    size="xs"
+                    title={
+                      isCopied
+                        ? t("ccswitch.copy_import_link_copied")
+                        : t("ccswitch.copy_import_link")
+                    }
+                    onClick={() => onCopyLink(config)}
+                    className="rounded-lg border border-slate-200/70 bg-white text-slate-500 hover:text-slate-900 dark:border-neutral-800 dark:bg-neutral-950 dark:text-white/55 dark:hover:text-white"
+                  >
+                    {isCopied ? <Check size={14} /> : <Copy size={14} />}
+                  </Button>
+                </div>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
     </Modal>

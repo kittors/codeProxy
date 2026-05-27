@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Plus, KeyRound, RefreshCw } from "lucide-react";
 import { copyTextToClipboard } from "@/lib/clipboard";
@@ -56,6 +56,10 @@ export function ApiKeysPage() {
   const [ccSwitchImportConfigs, setCcSwitchImportConfigs] = useState<
     CcSwitchImportConfigListItem[]
   >([]);
+  const [copiedCcSwitchImportConfigId, setCopiedCcSwitchImportConfigId] = useState<string | null>(
+    null,
+  );
+  const copiedCcSwitchImportTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [saving, setSaving] = useState(false);
   const [permissionProfiles, setPermissionProfiles] = useState<ApiKeyPermissionProfile[]>([]);
   const [form, setForm] = useState<ApiKeyFormValues>(() => makeEmptyApiKeyForm());
@@ -151,6 +155,26 @@ export function ApiKeysPage() {
   useEffect(() => {
     void loadEntries();
   }, [loadEntries]);
+
+  useEffect(
+    () => () => {
+      if (copiedCcSwitchImportTimerRef.current) {
+        clearTimeout(copiedCcSwitchImportTimerRef.current);
+      }
+    },
+    [],
+  );
+
+  const showCopiedCcSwitchImportState = useCallback((configId: string) => {
+    setCopiedCcSwitchImportConfigId(configId);
+    if (copiedCcSwitchImportTimerRef.current) {
+      clearTimeout(copiedCcSwitchImportTimerRef.current);
+    }
+    copiedCcSwitchImportTimerRef.current = setTimeout(() => {
+      setCopiedCcSwitchImportConfigId(null);
+      copiedCcSwitchImportTimerRef.current = null;
+    }, 1800);
+  }, []);
 
   const permissionProfileById = useMemo(
     () => new Map(permissionProfiles.map((profile) => [profile.id, profile])),
@@ -381,6 +405,7 @@ export function ApiKeysPage() {
   }, [ccSwitchImportEntry, ccSwitchImportConfigs]);
 
   const handleOpenCcSwitchImport = useCallback((entry: ApiKeyEntry) => {
+    setCopiedCcSwitchImportConfigId(null);
     setCcSwitchImportEntry(entry);
   }, []);
 
@@ -442,12 +467,13 @@ export function ApiKeysPage() {
       if (!url) return;
 
       if (await copyTextToClipboard(url)) {
+        showCopiedCcSwitchImportState(config.id);
         notify({ type: "success", message: t("ccswitch.copy_import_link_success") });
         return;
       }
       notify({ type: "error", message: t("ccswitch.copy_import_link_failed") });
     },
-    [buildImportUrlWithConfig, notify, t],
+    [buildImportUrlWithConfig, notify, showCopiedCcSwitchImportState, t],
   );
 
   /* ─── column definitions ─── */
@@ -565,9 +591,13 @@ export function ApiKeysPage() {
       <CcSwitchImportCardList
         open={ccSwitchImportEntry !== null}
         configs={compatibleConfigs}
+        copiedConfigId={copiedCcSwitchImportConfigId}
         onCopyLink={(config) => void handleCopyCcSwitchImportLink(config)}
         onSelect={handleImportWithConfig}
-        onClose={() => setCcSwitchImportEntry(null)}
+        onClose={() => {
+          setCcSwitchImportEntry(null);
+          setCopiedCcSwitchImportConfigId(null);
+        }}
       />
 
       <ApiKeyUsageModal

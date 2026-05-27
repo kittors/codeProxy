@@ -655,6 +655,9 @@ describe("ApiKeysPage", () => {
       await waitFor(() => {
         expect(writeText).toHaveBeenCalledWith(expect.stringContaining("ccswitch://v1/import?"));
       });
+      expect(
+        screen.getByRole("button", { name: /import link copied/i }),
+      ).toBeInTheDocument();
       expect(openSpy).not.toHaveBeenCalled();
 
       const copiedUrl = String(writeText.mock.calls.at(-1)?.[0] ?? "");

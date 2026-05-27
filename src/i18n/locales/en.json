@@ -2399,6 +2399,7 @@
     "protocol_unavailable": "CC Switch is not installed or the protocol handler is unavailable.",
     "import_card_list_desc": "Select a CC Switch preset to import",
     "copy_import_link": "Copy import link",
+    "copy_import_link_copied": "Import link copied",
     "copy_import_link_success": "Import link copied",
     "copy_import_link_failed": "Failed to copy import link",
     "import_no_compatible_configs": "No compatible CC Switch configs found. Create one in CC Switch import settings first.",

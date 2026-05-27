@@ -2639,6 +2639,7 @@
     "protocol_unavailable": "未检测到 CC Switch 或协议处理程序不可用。",
     "import_card_list_desc": "选择要导入的 CC Switch 配置预设",
     "copy_import_link": "复制导入链接",
+    "copy_import_link_copied": "导入链接已复制",
     "copy_import_link_success": "导入链接已复制",
     "copy_import_link_failed": "复制导入链接失败",
     "import_no_compatible_configs": "没有可用的 CC Switch 配置，请先在 CC Switch 导入设置中创建预设。",
