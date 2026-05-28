@@ -282,9 +282,9 @@ function resolveColumnOrderLock<T>(column: DataTableColumn<T>) {
 }
 
 function shouldAllowColumnReorder<T>(column: DataTableColumn<T>) {
+  if (resolveColumnOrderLock(column) !== null) return false;
   if (column.reorderable !== undefined) return column.reorderable;
   if (NON_REORDERABLE_COLUMN_KEYS.has(column.key)) return false;
-  if (resolveColumnOrderLock(column) !== null) return false;
   return true;
 }
 
@@ -394,7 +394,9 @@ export function DataTable<T>({
   const canPersistColumnOrder = canUseColumnOrder && persistColumnOrder;
 
   const [columnOrder, setColumnOrder] = useState<ColumnOrder>(() =>
-    canPersistColumnOrder ? normalizeColumnOrder(columns, readStoredColumnOrder(tableId)) : [],
+    canUseColumnOrder
+      ? normalizeColumnOrder(columns, canPersistColumnOrder ? readStoredColumnOrder(tableId) : [])
+      : [],
   );
   const columnOrderRef = useRef<ColumnOrder>(columnOrder);
   const [reorderPreview, setReorderPreview] = useState<ColumnReorderPreview | null>(null);
@@ -413,10 +415,10 @@ export function DataTable<T>({
 
   useEffect(() => {
     setColumnWidths(readStoredColumnWidths(tableId));
-    if (canPersistColumnOrder) {
-      setColumnOrder(normalizeColumnOrder(columns, readStoredColumnOrder(tableId)));
+    if (canUseColumnOrder) {
+      setColumnOrder(normalizeColumnOrder(columns, canPersistColumnOrder ? readStoredColumnOrder(tableId) : []));
     }
-  }, [tableId, canPersistColumnOrder, columns]);
+  }, [tableId, canUseColumnOrder, canPersistColumnOrder, columns]);
 
   useEffect(() => {
     columnWidthsRef.current = columnWidths;
