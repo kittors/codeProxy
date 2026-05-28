@@ -1150,9 +1150,10 @@ describe("DataTable column reorder", () => {
 
   test("persistColumnOrder=false ignores cache but reorder still works in-session", async () => {
     window.localStorage.clear();
+    const SENTINEL = ["STALE_CACHE_MARKER"];
     window.localStorage.setItem(
       "codeProxy.dataTable.columnOrder.v1.test-persist-off",
-      JSON.stringify(["id", "name"]),
+      JSON.stringify(SENTINEL),
     );
 
     const { container } = render(
@@ -1201,10 +1202,12 @@ describe("DataTable column reorder", () => {
       expect(updatedHeaders[1]).toHaveTextContent("Name");
     });
 
-    // Verify localStorage was NOT written (persistColumnOrder=false)
+    // Verify localStorage was NOT written (persistColumnOrder=false).
+    // Sentinel value ensures the assertion catches false writes, even if
+    // the written value happens to match the drag result.
     expect(
       window.localStorage.getItem("codeProxy.dataTable.columnOrder.v1.test-persist-off"),
-    ).toBe(JSON.stringify(["id", "name"]));
+    ).toBe(JSON.stringify(SENTINEL));
   });
 
   test("does not render reorder handles for columns with custom lockOrder", () => {
@@ -1336,5 +1339,70 @@ describe("DataTable column reorder", () => {
       expect(headers[1]).toHaveTextContent("Name");
       expect(headers[2]).toHaveTextContent("Actions");
     });
+  });
+
+  test("persistColumnOrder=false preserves reorder across columns array identity change", async () => {
+    window.localStorage.clear();
+    const baseColumns: DataTableColumn<DemoRow>[] = [
+      { key: "name", label: "Name", width: "w-40", render: (row) => row.name },
+      { key: "id", label: "ID", width: "w-24", render: (row) => row.id },
+    ];
+
+    const { container, rerender } = render(
+      <DataTable
+        tableId="test-identity-preserve"
+        rows={[{ id: "1", name: "Row 1" }]}
+        columns={baseColumns}
+        rowKey={(row) => row.id}
+        height="h-[160px]"
+        minHeight="min-h-0"
+        virtualize={false}
+        persistColumnOrder={false}
+      />,
+    );
+
+    const nameHeader = screen.getByRole("columnheader", { name: /Name/ });
+    const idHeader = screen.getByRole("columnheader", { name: /ID/ });
+    Object.defineProperty(nameHeader, "getBoundingClientRect", {
+      configurable: true,
+      value: () =>
+        ({ left: 0, width: 160, top: 0, height: 40, right: 160 }) as DOMRect,
+    });
+    Object.defineProperty(idHeader, "getBoundingClientRect", {
+      configurable: true,
+      value: () =>
+        ({ left: 160, width: 96, top: 0, height: 40, right: 256 }) as DOMRect,
+    });
+
+    // Reorder: drag Name right past ID
+    const handle = container.querySelector("[data-vt-column-reorder-handle]") as HTMLButtonElement;
+    fireEvent.pointerDown(handle, { button: 0, pointerId: 1, clientX: 10, clientY: 10 });
+    window.dispatchEvent(new PointerEvent("pointermove", { pointerId: 1, clientX: 220, clientY: 10 }));
+    window.dispatchEvent(new PointerEvent("pointerup", { pointerId: 1, clientX: 220, clientY: 10 }));
+
+    await waitFor(() => {
+      const updatedHeaders = container.querySelectorAll("thead th");
+      expect(updatedHeaders[0]).toHaveTextContent("ID");
+      expect(updatedHeaders[1]).toHaveTextContent("Name");
+    });
+
+    // Rerender with new columns array reference (same keys)
+    rerender(
+      <DataTable
+        tableId="test-identity-preserve"
+        rows={[{ id: "1", name: "Row 1" }]}
+        columns={[...baseColumns]}
+        rowKey={(row) => row.id}
+        height="h-[160px]"
+        minHeight="min-h-0"
+        virtualize={false}
+        persistColumnOrder={false}
+      />,
+    );
+
+    // In-session reorder should survive the columns identity change
+    const finalHeaders = container.querySelectorAll("thead th");
+    expect(finalHeaders[0]).toHaveTextContent("ID");
+    expect(finalHeaders[1]).toHaveTextContent("Name");
   });
 });

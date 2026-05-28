@@ -418,7 +418,16 @@ export function DataTable<T>({
     if (canUseColumnOrder) {
       setColumnOrder(normalizeColumnOrder(columns, canPersistColumnOrder ? readStoredColumnOrder(tableId) : []));
     }
-  }, [tableId, canUseColumnOrder, canPersistColumnOrder, columns]);
+  // Only re-initialize when switching tables; columns identity changes should
+  // preserve the user's current order and just normalize for new/removed keys.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tableId, canUseColumnOrder, canPersistColumnOrder]);
+
+  useEffect(() => {
+    if (canUseColumnOrder) {
+      setColumnOrder((prev) => normalizeColumnOrder(columns, prev));
+    }
+  }, [canUseColumnOrder, columns]);
 
   useEffect(() => {
     columnWidthsRef.current = columnWidths;
