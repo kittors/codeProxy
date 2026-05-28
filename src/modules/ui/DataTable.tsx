@@ -99,6 +99,7 @@ const DEFAULT_BOTTOM_DEBOUNCE_MS = 120;
 const COLUMN_WIDTH_STORAGE_PREFIX = "codeProxy.dataTable.columnWidths.v1";
 const DEFAULT_MIN_COLUMN_WIDTH = 72;
 const DEFAULT_MAX_COLUMN_WIDTH = 640;
+const COLUMN_RESIZE_PREVIEW_LINE_WIDTH = 2;
 const NON_RESIZABLE_COLUMN_KEYS = new Set(["select", "action", "actions"]);
 
 type ColumnWidthMap = Record<string, number>;
@@ -107,7 +108,7 @@ interface ColumnResizeState {
   pointerId: number;
   columnKey: string;
   startClientX: number;
-  startEdgeClientX: number;
+  startLineCenterClientX: number;
   startWidth: number;
   minWidth: number;
   maxWidth: number;
@@ -558,7 +559,7 @@ export function DataTable<T>({
       const hasHorizontalOverflow = scroller
         ? scroller.scrollWidth > scroller.clientWidth + 1
         : false;
-      const edgeClientX = active.startEdgeClientX + width - active.startWidth;
+      const lineCenterClientX = active.startLineCenterClientX + width - active.startWidth;
       const top = Math.max(0, containerRect.top - rootRect.top);
       const bottomInset = hasHorizontalOverflow ? 14 : 0;
       const bottom = Math.min(rootRect.height, containerRect.bottom - rootRect.top - bottomInset);
@@ -570,7 +571,7 @@ export function DataTable<T>({
 
       return {
         width,
-        left: edgeClientX - rootRect.left,
+        left: lineCenterClientX - rootRect.left - COLUMN_RESIZE_PREVIEW_LINE_WIDTH / 2,
         top,
         height,
         tooltipTop,
@@ -616,7 +617,8 @@ export function DataTable<T>({
         pointerId: e.pointerId,
         columnKey: column.key,
         startClientX: e.clientX,
-        startEdgeClientX: rect.right,
+        startLineCenterClientX:
+          e.currentTarget.getBoundingClientRect().left + e.currentTarget.offsetWidth / 2,
         startWidth: nextStartWidth,
         minWidth,
         maxWidth,
