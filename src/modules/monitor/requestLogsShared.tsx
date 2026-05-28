@@ -78,24 +78,24 @@ const resolveLatencyToneClasses = (latencyText: string): string => {
   return "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-200";
 };
 
-function RequestLogMetricBadge({
-  label,
+function RequestLogMetricChip({
+  ariaLabel,
   value,
   className,
 }: {
-  label: string;
+  ariaLabel: string;
   value: string;
   className: string;
 }) {
   return (
     <span
-      className={["inline-flex items-center gap-1 rounded-full border px-2 py-0.5", className].join(
-        " ",
-      )}
-      aria-label={`${label}: ${value}`}
+      className={[
+        "inline-flex items-center rounded-full border px-1.5 py-0.5 font-mono text-[11px] font-semibold tabular-nums whitespace-nowrap",
+        className,
+      ].join(" ")}
+      aria-label={ariaLabel}
     >
-      <span className="text-[10px] font-semibold opacity-80">{label}</span>
-      <span className="font-mono text-[11px] font-semibold tabular-nums">{value}</span>
+      {value}
     </span>
   );
 }
@@ -309,7 +309,7 @@ export function buildRequestLogsColumns(
       label: t("request_logs.col_duration"),
       width: "w-44",
       headerClassName: "text-right",
-      cellClassName: "text-right text-xs tabular-nums text-slate-700 dark:text-slate-200",
+      cellClassName: "text-right text-xs tabular-nums text-slate-700 dark:text-slate-200 pr-6",
       render: (row) => {
         const tps = computeOutputTokensPerSecond(row);
         const tpsText = formatTokensPerSecond(tps);
@@ -320,14 +320,14 @@ export function buildRequestLogsColumns(
 
         return (
           <HoverTooltip content={tooltip} placement="bottom">
-            <div className="ml-auto inline-flex max-w-full items-center justify-end gap-1.5">
-              <RequestLogMetricBadge
-                label={t("request_logs.col_duration")}
+            <div className="ml-auto inline-flex max-w-full items-center justify-end gap-1.5 whitespace-nowrap">
+              <RequestLogMetricChip
+                ariaLabel={`${t("request_logs.col_duration")}: ${row.latencyText}`}
                 value={row.latencyText}
                 className={resolveLatencyToneClasses(row.latencyText)}
               />
-              <RequestLogMetricBadge
-                label={t("request_logs.col_first_token")}
+              <RequestLogMetricChip
+                ariaLabel={`${t("request_logs.col_first_token")}: ${row.firstTokenText}`}
                 value={row.firstTokenText}
                 className={
                   row.firstTokenText === "--"
@@ -335,7 +335,7 @@ export function buildRequestLogsColumns(
                     : "border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-500/20 dark:bg-sky-500/10 dark:text-sky-200"
                 }
               />
-              <span className="font-mono text-[11px] tabular-nums text-slate-400 dark:text-white/35">
+              <span className="font-mono text-[11px] tabular-nums text-slate-400 dark:text-white/35 whitespace-nowrap">
                 {tpsText}
               </span>
             </div>
@@ -348,7 +348,8 @@ export function buildRequestLogsColumns(
       label: t("request_logs.col_input"),
       width: "w-24",
       headerClassName: "text-right",
-      cellClassName: "text-right font-mono text-xs tabular-nums text-slate-700 dark:text-slate-200",
+      cellClassName:
+        "text-right font-mono text-xs tabular-nums text-slate-700 dark:text-slate-200 pl-6",
       render: (row) =>
         row.hasContent && onContentClick ? (
           <button
