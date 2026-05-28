@@ -284,6 +284,7 @@ function resolveColumnOrderLock<T>(column: DataTableColumn<T>) {
 function shouldAllowColumnReorder<T>(column: DataTableColumn<T>) {
   if (column.reorderable !== undefined) return column.reorderable;
   if (NON_REORDERABLE_COLUMN_KEYS.has(column.key)) return false;
+  if (resolveColumnOrderLock(column) !== null) return false;
   return true;
 }
 
@@ -390,9 +391,10 @@ export function DataTable<T>({
   }, [columns]);
 
   const canUseColumnOrder = Boolean(tableId && columnReorderable);
+  const canPersistColumnOrder = canUseColumnOrder && persistColumnOrder;
 
   const [columnOrder, setColumnOrder] = useState<ColumnOrder>(() =>
-    canUseColumnOrder ? normalizeColumnOrder(columns, readStoredColumnOrder(tableId)) : [],
+    canPersistColumnOrder ? normalizeColumnOrder(columns, readStoredColumnOrder(tableId)) : [],
   );
   const columnOrderRef = useRef<ColumnOrder>(columnOrder);
   const [reorderPreview, setReorderPreview] = useState<ColumnReorderPreview | null>(null);
@@ -411,10 +413,10 @@ export function DataTable<T>({
 
   useEffect(() => {
     setColumnWidths(readStoredColumnWidths(tableId));
-    if (canUseColumnOrder) {
+    if (canPersistColumnOrder) {
       setColumnOrder(normalizeColumnOrder(columns, readStoredColumnOrder(tableId)));
     }
-  }, [tableId, canUseColumnOrder, columns]);
+  }, [tableId, canPersistColumnOrder, columns]);
 
   useEffect(() => {
     columnWidthsRef.current = columnWidths;
@@ -840,13 +842,21 @@ export function DataTable<T>({
       const currentColumns = orderedColumnsRef.current;
       if (!rootRect || !containerRect) return null;
 
-      const targetKey = currentColumns[Math.min(toIndex, currentColumns.length - 1)]?.key;
+      // When dragging right (fromIndex < toIndex), the dragged item is inserted
+      // before column toIndex after the removal shift, so the preview line sits
+      // at the RIGHT edge of the column at toIndex - 1.
+      // When dragging left (fromIndex >= toIndex), the line sits at the LEFT
+      // edge of the column at toIndex.
+      const usePrev = toIndex > fromIndex;
+      const elemIdx = usePrev
+        ? Math.min(toIndex - 1, currentColumns.length - 1)
+        : Math.min(toIndex, currentColumns.length - 1);
+      const targetKey = currentColumns[elemIdx]?.key;
       const headerCell = targetKey ? headerCellsRef.current[targetKey] : null;
       if (!headerCell) return null;
 
       const cellRect = headerCell.getBoundingClientRect();
-      const startOfColumn = toIndex <= fromIndex;
-      const left = startOfColumn ? cellRect.left : cellRect.right;
+      const left = usePrev ? cellRect.right : cellRect.left;
 
       return {
         fromIndex,
@@ -901,13 +911,13 @@ export function DataTable<T>({
       const fromIndex = normalizedPrev.indexOf(active.columnKey);
       if (fromIndex < 0) return prev;
       const next = moveColumnKey(normalizedPrev, fromIndex, preview.toIndex);
-      if (next.join(" ") === normalizedPrev.join(" ")) return prev;
-      if (canUseColumnOrder && persistColumnOrder) {
+      if (next.length === normalizedPrev.length && next.every((v, i) => v === normalizedPrev[i])) return prev;
+      if (canPersistColumnOrder) {
         writeStoredColumnOrder(tableId, next);
       }
       return next;
     });
-  }, [canUseColumnOrder, persistColumnOrder, tableId]);
+  }, [canPersistColumnOrder, tableId]);
 
   const handleColumnReorderPointerDown = useCallback(
     (column: DataTableColumn<T>, e: ReactPointerEvent<HTMLButtonElement>) => {
@@ -1262,22 +1272,20 @@ export function DataTable<T>({
                     style={resolveColumnStyle(col)}
                     className={`group/column relative whitespace-nowrap px-4 py-3 ${col.width ?? ""} ${col.headerClassName ?? ""}`}
                   >
-                    <div className="flex min-w-0 items-center gap-1">
-                      {canReorder ? (
-                        <button
-                          type="button"
-                          data-vt-column-reorder-handle
-                          aria-label={t("common.reorder_column", { column: col.label })}
-                          title={t("common.reorder_column", { column: col.label })}
-                          className="inline-flex h-5 w-5 shrink-0 cursor-grab touch-none items-center justify-center rounded-md text-slate-400/55 opacity-0 transition-opacity hover:bg-slate-200/60 hover:text-slate-600 group-hover/column:opacity-100 focus-visible:opacity-100 active:cursor-grabbing dark:text-white/30 dark:hover:bg-white/10 dark:hover:text-white/65"
-                          onPointerDown={(event) => handleColumnReorderPointerDown(col, event)}
-                        >
-                          <GripVertical size={13} aria-hidden="true" />
-                        </button>
-                      ) : null}
-                      <div className="min-w-0 flex-1 truncate">
-                        {col.headerRender ? col.headerRender() : col.label}
-                      </div>
+                    {canReorder ? (
+                      <button
+                        type="button"
+                        data-vt-column-reorder-handle
+                        aria-label={t("common.reorder_column", { column: col.label })}
+                        title={t("common.reorder_column", { column: col.label })}
+                        className="absolute left-1 top-1/2 z-10 -translate-y-1/2 inline-flex h-5 w-5 items-center justify-center rounded-md cursor-grab touch-none text-slate-400/55 opacity-0 transition-opacity hover:bg-slate-200/60 hover:text-slate-600 group-hover/column:opacity-100 focus-visible:opacity-100 active:cursor-grabbing dark:text-white/30 dark:hover:bg-white/10 dark:hover:text-white/65"
+                        onPointerDown={(event) => handleColumnReorderPointerDown(col, event)}
+                      >
+                        <GripVertical size={13} aria-hidden="true" />
+                      </button>
+                    ) : null}
+                    <div className="min-w-0 truncate">
+                      {col.headerRender ? col.headerRender() : col.label}
                     </div>
                     {canResize ? (
                       <button
