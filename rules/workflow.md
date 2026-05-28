@@ -155,6 +155,12 @@ summary: 执行流程、交付自检清单与风险操作确认
 
 <!-- PROJECT-OVERRIDES:START -->
 
+### 本项目约定：纯文档/规范类使用 docs/ 分支前缀
+
+- 纯文档、规范、工作流类变更（不修改代码，只修改 `AGENTS.md`、`CLAUDE.md`、`docs/`、`rules/` 等规范文件）应使用 `docs/*` 分支前缀，以区别于代码功能分支的 `feature/*` 和 `fix/*` 前缀。
+- 文档分支同样基于最新 `origin/dev` 创建，走 PR 合并到 `dev`。
+- 文档分支的 CI 负载可以轻量化（无需全量构建和测试），但仍需完成提交前 diff review 和敏感信息自查。
+
 ### 本项目约定：复杂任务必须维护 Todolist
 
 - 当任务属于“对齐/迁移/重构/多步骤交付”（通常需要多文件联动或多轮验证）时，必须在 `.helloagents/plan/` 下创建本次任务目录，并维护 `tasks.md` 作为 todolist。
