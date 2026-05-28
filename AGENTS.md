@@ -7,6 +7,10 @@
 
 ## 项目概览（自动识别）
 
+> **注意**：本项目（codeProxy）是 **CliProxy** 项目的 React 前端管理面板。CliProxy 还包含一个 Go 后端代理服务器 **CliRelay**（在 `CliRelay/` 目录下，独立的 git 仓库）。
+> - 项目整体规范请阅读 `CLAUDE.md`（本仓库根目录）
+> - CliRelay 仓库有其独立的 `AGENTS.md` 规范
+
 - 技术栈：React 19.2 + Vite + Bun + Tailwind CSS v4 + oxlint + oxfmt
 - 关键模块：
 - `src/app/`：路由与守卫
