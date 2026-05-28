@@ -75,7 +75,9 @@
     "rotate_right": "Rotate right",
     "reset_image": "Reset image",
     "resize_column": "Drag to resize {{column}} column",
-    "column_width_px": "Width: {{width}} px"
+    "column_width_px": "Width: {{width}} px",
+    "reorder_column": "Drag to reorder {{column}} column",
+    "column_reorder_target": "Move to column {{index}}"
   },
   "title": {
     "main": "Code Proxy Admin Dashboard",

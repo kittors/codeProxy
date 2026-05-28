@@ -1,5 +1,5 @@
 import { createEvent, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { describe, expect, test, vi } from "vitest";
+import { describe, expect, test, vi, beforeEach } from "vitest";
 import { DataTable, type DataTableColumn } from "@/modules/ui/DataTable";
 
 interface DemoRow {
@@ -904,5 +904,237 @@ describe("DataTable scrollbar wrapper", () => {
       expect(track).not.toBeNull();
       expect(track!.style.top).toBe("48px"); // header 40 + inset 8
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Column reorder tests
+// ---------------------------------------------------------------------------
+describe("DataTable column reorder", () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+  });
+
+  test("renders reorder handles only for movable columns", () => {
+    const threeColumns: DataTableColumn<DemoRow>[] = [
+      { key: "select", label: "Select", width: "w-12", render: () => "x" },
+      { key: "name", label: "Name", width: "w-40", render: (row) => row.name },
+      { key: "actions", label: "Actions", width: "w-24", render: () => "..." },
+    ];
+
+    const { container } = render(
+      <DataTable
+        tableId="test-reorder-handles"
+        rows={[{ id: "1", name: "Row 1" }]}
+        columns={threeColumns}
+        rowKey={(row) => row.id}
+        height="h-[160px]"
+        minHeight="min-h-0"
+        virtualize={false}
+      />,
+    );
+
+    const handles = container.querySelectorAll("[data-vt-column-reorder-handle]");
+    expect(handles).toHaveLength(1);
+    expect(handles[0]).toHaveAttribute("title", "Drag to reorder Name column");
+  });
+
+  test("does not render reorder handles for select and actions columns", () => {
+    const twoColumns: DataTableColumn<DemoRow>[] = [
+      { key: "select", label: "Select", width: "w-12", render: () => "x" },
+      { key: "actions", label: "Actions", width: "w-24", render: () => "..." },
+    ];
+
+    const { container } = render(
+      <DataTable
+        tableId="test-no-reorder-handles"
+        rows={[{ id: "1", name: "Row 1" }]}
+        columns={twoColumns}
+        rowKey={(row) => row.id}
+        height="h-[160px]"
+        minHeight="min-h-0"
+        virtualize={false}
+      />,
+    );
+
+    expect(container.querySelectorAll("[data-vt-column-reorder-handle]")).toHaveLength(0);
+  });
+
+  test("does not render reorder handles when tableId is missing", () => {
+    const twoColumns: DataTableColumn<DemoRow>[] = [
+      { key: "name", label: "Name", width: "w-40", render: (row) => row.name },
+      { key: "id", label: "ID", width: "w-24", render: (row) => row.id },
+    ];
+
+    const { container } = render(
+      <DataTable
+        rows={[{ id: "1", name: "Row 1" }]}
+        columns={twoColumns}
+        rowKey={(row) => row.id}
+        height="h-[160px]"
+        minHeight="min-h-0"
+        virtualize={false}
+      />,
+    );
+
+    expect(container.querySelectorAll("[data-vt-column-reorder-handle]")).toHaveLength(0);
+  });
+
+  test("reorders header and body cells after dragging a column handle", async () => {
+    window.localStorage.clear();
+    const columns: DataTableColumn<DemoRow>[] = [
+      { key: "name", label: "Name", width: "w-40", render: (row) => row.name },
+      { key: "id", label: "ID", width: "w-24", render: (row) => row.id },
+    ];
+
+    const { container } = render(
+      <DataTable
+        tableId="test-column-reorder"
+        rows={[{ id: "1", name: "Row 1" }]}
+        columns={columns}
+        rowKey={(row) => row.id}
+        height="h-[160px]"
+        minHeight="min-h-0"
+        virtualize={false}
+      />,
+    );
+
+    const nameHeader = screen.getByRole("columnheader", { name: /Name/ });
+    const idHeader = screen.getByRole("columnheader", { name: /ID/ });
+    Object.defineProperty(nameHeader, "getBoundingClientRect", {
+      configurable: true,
+      value: () =>
+        ({ left: 0, width: 160, top: 0, height: 40, right: 160 }) as DOMRect,
+    });
+    Object.defineProperty(idHeader, "getBoundingClientRect", {
+      configurable: true,
+      value: () =>
+        ({ left: 160, width: 96, top: 0, height: 40, right: 256 }) as DOMRect,
+    });
+
+    const handle = container.querySelector("[data-vt-column-reorder-handle]") as HTMLButtonElement;
+    fireEvent.pointerDown(handle, { button: 0, pointerId: 1, clientX: 20, clientY: 20 });
+    window.dispatchEvent(new PointerEvent("pointermove", { pointerId: 1, clientX: 220, clientY: 20 }));
+    window.dispatchEvent(new PointerEvent("pointerup", { pointerId: 1, clientX: 220, clientY: 20 }));
+
+    await waitFor(() => {
+      const headers = screen.getAllByRole("columnheader").map((node) => node.textContent);
+      expect(headers.join("|")).toContain("ID|Name");
+    });
+
+    expect(
+      window.localStorage.getItem("codeProxy.dataTable.columnOrder.v1.test-column-reorder"),
+    ).toBe(JSON.stringify(["id", "name"]));
+  });
+
+  test("normalizes stale column order cache against current columns", () => {
+    window.localStorage.setItem(
+      "codeProxy.dataTable.columnOrder.v1.test-column-order-normalize",
+      JSON.stringify(["stale", "id"]),
+    );
+
+    const { container } = render(
+      <DataTable
+        tableId="test-column-order-normalize"
+        rows={[{ id: "1", name: "Row 1" }]}
+        columns={[
+          { key: "name", label: "Name", width: "w-40", render: (row) => row.name },
+          { key: "id", label: "ID", width: "w-24", render: (row) => row.id },
+        ]}
+        rowKey={(row) => row.id}
+        height="h-[160px]"
+        minHeight="min-h-0"
+        virtualize={false}
+      />,
+    );
+
+    const colElements = container.querySelectorAll("col");
+    expect(colElements).toHaveLength(2);
+    expect(
+      screen
+        .getAllByRole("columnheader")
+        .map((node) => node.textContent)
+        .join("|"),
+    ).toContain("ID|Name");
+  });
+
+  test("keeps column order caches isolated between table ids", () => {
+    window.localStorage.setItem(
+      "codeProxy.dataTable.columnOrder.v1.first-table",
+      JSON.stringify(["id", "name"]),
+    );
+    window.localStorage.setItem(
+      "codeProxy.dataTable.columnOrder.v1.second-table",
+      JSON.stringify(["name", "id"]),
+    );
+
+    const { container } = render(
+      <DataTable
+        tableId="second-table"
+        rows={[{ id: "1", name: "Row 1" }]}
+        columns={[
+          { key: "name", label: "Name", width: "w-40", render: (row) => row.name },
+          { key: "id", label: "ID", width: "w-24", render: (row) => row.id },
+        ]}
+        rowKey={(row) => row.id}
+        height="h-[160px]"
+        minHeight="min-h-0"
+        virtualize={false}
+      />,
+    );
+
+    const headers = container.querySelectorAll("thead th");
+    expect(headers).toHaveLength(2);
+    expect(headers[0]).toHaveTextContent("Name");
+    expect(headers[1]).toHaveTextContent("ID");
+  });
+
+  test("suppresses reorder handles when columnReorderable is false", () => {
+    const twoColumns: DataTableColumn<DemoRow>[] = [
+      { key: "name", label: "Name", width: "w-40", render: (row) => row.name },
+      { key: "id", label: "ID", width: "w-24", render: (row) => row.id },
+    ];
+
+    const { container } = render(
+      <DataTable
+        tableId="test-no-reorder"
+        rows={[{ id: "1", name: "Row 1" }]}
+        columns={twoColumns}
+        rowKey={(row) => row.id}
+        height="h-[160px]"
+        minHeight="min-h-0"
+        virtualize={false}
+        columnReorderable={false}
+      />,
+    );
+
+    expect(container.querySelectorAll("[data-vt-column-reorder-handle]")).toHaveLength(0);
+  });
+
+  test("restores persisted column order on re-mount", () => {
+    window.localStorage.setItem(
+      "codeProxy.dataTable.columnOrder.v1.test-restore",
+      JSON.stringify(["id", "name"]),
+    );
+
+    const { container } = render(
+      <DataTable
+        tableId="test-restore"
+        rows={[{ id: "1", name: "Row 1" }]}
+        columns={[
+          { key: "name", label: "Name", width: "w-40", render: (row) => row.name },
+          { key: "id", label: "ID", width: "w-24", render: (row) => row.id },
+        ]}
+        rowKey={(row) => row.id}
+        height="h-[160px]"
+        minHeight="min-h-0"
+        virtualize={false}
+      />,
+    );
+
+    const headers = container.querySelectorAll("thead th");
+    expect(headers).toHaveLength(2);
+    expect(headers[0]).toHaveTextContent("ID");
+    expect(headers[1]).toHaveTextContent("Name");
   });
 });

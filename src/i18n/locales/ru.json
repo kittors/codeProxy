@@ -57,7 +57,9 @@
     "rotate_right": "Повернуть вправо",
     "reset_image": "Сбросить изображение",
     "resize_column": "Перетащите, чтобы изменить ширину столбца {{column}}",
-    "column_width_px": "Ширина: {{width}} px"
+    "column_width_px": "Ширина: {{width}} px",
+    "reorder_column": "Перетащите, чтобы изменить порядок столбца {{column}}",
+    "column_reorder_target": "Переместить в столбец {{index}}"
   },
   "ccswitch": {
     "import_to_ccswitch": "Импорт в CC Switch",

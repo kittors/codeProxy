@@ -77,7 +77,9 @@
     "rotate_right": "向右旋转",
     "reset_image": "还原图片",
     "resize_column": "拖拽调整 {{column}} 列宽",
-    "column_width_px": "宽：{{width}} 像素"
+    "column_width_px": "宽：{{width}} 像素",
+    "reorder_column": "拖拽调整 {{column}} 列位置",
+    "column_reorder_target": "移动到第 {{index}} 列"
   },
   "title": {
     "main": "Code Proxy 管理后台",
