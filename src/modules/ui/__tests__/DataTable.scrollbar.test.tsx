@@ -1148,7 +1148,8 @@ describe("DataTable column reorder", () => {
     expect(headers[1]).toHaveTextContent("Name");
   });
 
-  test("does NOT read localStorage when persistColumnOrder is false", () => {
+  test("persistColumnOrder=false ignores cache but reorder still works in-session", async () => {
+    window.localStorage.clear();
     window.localStorage.setItem(
       "codeProxy.dataTable.columnOrder.v1.test-persist-off",
       JSON.stringify(["id", "name"]),
@@ -1174,6 +1175,36 @@ describe("DataTable column reorder", () => {
     const headers = container.querySelectorAll("thead th");
     expect(headers[0]).toHaveTextContent("Name");
     expect(headers[1]).toHaveTextContent("ID");
+
+    // Drag Name column past ID to verify in-session reorder still works
+    const nameHeader = screen.getByRole("columnheader", { name: /Name/ });
+    const idHeader = screen.getByRole("columnheader", { name: /ID/ });
+    Object.defineProperty(nameHeader, "getBoundingClientRect", {
+      configurable: true,
+      value: () =>
+        ({ left: 0, width: 160, top: 0, height: 40, right: 160 }) as DOMRect,
+    });
+    Object.defineProperty(idHeader, "getBoundingClientRect", {
+      configurable: true,
+      value: () =>
+        ({ left: 160, width: 96, top: 0, height: 40, right: 256 }) as DOMRect,
+    });
+
+    const handle = container.querySelector("[data-vt-column-reorder-handle]") as HTMLButtonElement;
+    fireEvent.pointerDown(handle, { button: 0, pointerId: 1, clientX: 10, clientY: 10 });
+    window.dispatchEvent(new PointerEvent("pointermove", { pointerId: 1, clientX: 220, clientY: 10 }));
+    window.dispatchEvent(new PointerEvent("pointerup", { pointerId: 1, clientX: 220, clientY: 10 }));
+
+    await waitFor(() => {
+      const updatedHeaders = container.querySelectorAll("thead th");
+      expect(updatedHeaders[0]).toHaveTextContent("ID");
+      expect(updatedHeaders[1]).toHaveTextContent("Name");
+    });
+
+    // Verify localStorage was NOT written (persistColumnOrder=false)
+    expect(
+      window.localStorage.getItem("codeProxy.dataTable.columnOrder.v1.test-persist-off"),
+    ).toBe(JSON.stringify(["id", "name"]));
   });
 
   test("does not render reorder handles for columns with custom lockOrder", () => {
