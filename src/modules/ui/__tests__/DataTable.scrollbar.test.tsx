@@ -188,7 +188,9 @@ describe("DataTable scrollbar wrapper", () => {
     const root = container.firstElementChild as HTMLDivElement;
     const scrollContainer = container.querySelector(".table-scrollbar") as HTMLDivElement | null;
     const nameHeader = screen.getByRole("columnheader", { name: /Name/ });
+    const resizer = container.querySelector("[data-vt-column-resizer]") as HTMLButtonElement | null;
     expect(scrollContainer).not.toBeNull();
+    expect(resizer).not.toBeNull();
 
     Object.defineProperty(root, "getBoundingClientRect", {
       configurable: true,
@@ -235,15 +237,30 @@ describe("DataTable scrollbar wrapper", () => {
           toJSON: () => ({}),
         }) as DOMRect,
     });
+    Object.defineProperties(resizer!, {
+      getBoundingClientRect: {
+        configurable: true,
+        value: () =>
+          ({
+            x: 196,
+            y: 100,
+            top: 100,
+            left: 196,
+            right: 212,
+            bottom: 140,
+            width: 16,
+            height: 40,
+            toJSON: () => ({}),
+          }) as DOMRect,
+      },
+      offsetWidth: { configurable: true, value: 16 },
+    });
     setScrollMetrics(scrollContainer!, {
       clientHeight: 220,
       scrollHeight: 560,
       clientWidth: 580,
       scrollWidth: 900,
     });
-
-    const resizer = container.querySelector("[data-vt-column-resizer]") as HTMLButtonElement | null;
-    expect(resizer).not.toBeNull();
 
     fireEvent.pointerDown(resizer!, { button: 0, pointerId: 2, clientX: 200, clientY: 120 });
     window.dispatchEvent(
@@ -253,7 +270,7 @@ describe("DataTable scrollbar wrapper", () => {
     const status = await screen.findByRole("status");
     const previewLine = status.previousElementSibling as HTMLDivElement | null;
     expect(previewLine).not.toBeNull();
-    expect(previewLine!.style.left).toBe("220px");
+    expect(previewLine!.style.left).toBe("223px");
     expect(previewLine!.style.top).toBe("20px");
     expect(previewLine!.style.height).toBe("206px");
     expect(status).toHaveTextContent("Width: 200 px");
