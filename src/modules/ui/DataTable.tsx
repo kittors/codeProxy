@@ -1295,7 +1295,7 @@ export function DataTable<T>({
                         <GripVertical size={13} aria-hidden="true" />
                       </button>
                     ) : null}
-                    <div className="min-w-0 truncate">
+                    <div className={`min-w-0 truncate ${canReorder ? "pl-7" : ""}`}>
                       {col.headerRender ? col.headerRender() : col.label}
                     </div>
                     {canResize ? (
