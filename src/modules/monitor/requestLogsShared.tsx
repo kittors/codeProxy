@@ -308,8 +308,8 @@ export function buildRequestLogsColumns(
       key: "latency",
       label: t("request_logs.col_duration"),
       width: "w-44",
-      headerClassName: "text-right",
-      cellClassName: "text-right text-xs tabular-nums text-slate-700 dark:text-slate-200 pr-6",
+      headerClassName: "text-center",
+      cellClassName: "text-center text-xs tabular-nums text-slate-700 dark:text-slate-200 pr-6",
       render: (row) => {
         const tps = computeOutputTokensPerSecond(row);
         const tpsText = formatTokensPerSecond(tps);
@@ -320,7 +320,7 @@ export function buildRequestLogsColumns(
 
         return (
           <HoverTooltip content={tooltip} placement="bottom">
-            <div className="ml-auto inline-flex max-w-full items-center justify-end gap-1.5 whitespace-nowrap">
+            <div className="inline-flex max-w-full items-center justify-center gap-1.5 whitespace-nowrap">
               <RequestLogMetricChip
                 ariaLabel={`${t("request_logs.col_duration")}: ${row.latencyText}`}
                 value={row.latencyText}
@@ -346,7 +346,7 @@ export function buildRequestLogsColumns(
     {
       key: "inputTokens",
       label: t("request_logs.col_input"),
-      width: "w-24",
+      width: "w-32",
       headerClassName: "text-right",
       cellClassName:
         "text-right font-mono text-xs tabular-nums text-slate-700 dark:text-slate-200 pl-6",
