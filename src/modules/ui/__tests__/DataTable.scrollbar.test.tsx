@@ -165,6 +165,100 @@ describe("DataTable scrollbar wrapper", () => {
     expect(storedCol!.style.width).toBe("212px");
   });
 
+  test("bounds the resize preview to the table scroll area", async () => {
+    window.localStorage.clear();
+    const twoColumns: DataTableColumn<DemoRow>[] = [
+      { key: "name", label: "Name", width: "w-40", render: (row) => row.name },
+      { key: "id", label: "ID", width: "w-24", render: (row) => row.id },
+    ];
+
+    const { container } = render(
+      <DataTable
+        tableId="test-resize-preview-bounds"
+        rows={[{ id: "1", name: "Row 1" }]}
+        columns={twoColumns}
+        rowKey={(row) => row.id}
+        height="h-[220px]"
+        minHeight="min-h-0"
+        minWidth="min-w-[900px]"
+        virtualize={false}
+      />,
+    );
+
+    const root = container.firstElementChild as HTMLDivElement;
+    const scrollContainer = container.querySelector(".table-scrollbar") as HTMLDivElement | null;
+    const nameHeader = screen.getByRole("columnheader", { name: /Name/ });
+    expect(scrollContainer).not.toBeNull();
+
+    Object.defineProperty(root, "getBoundingClientRect", {
+      configurable: true,
+      value: () =>
+        ({
+          x: 20,
+          y: 80,
+          top: 80,
+          left: 20,
+          right: 620,
+          bottom: 340,
+          width: 600,
+          height: 260,
+          toJSON: () => ({}),
+        }) as DOMRect,
+    });
+    Object.defineProperty(scrollContainer!, "getBoundingClientRect", {
+      configurable: true,
+      value: () =>
+        ({
+          x: 20,
+          y: 100,
+          top: 100,
+          left: 20,
+          right: 600,
+          bottom: 320,
+          width: 580,
+          height: 220,
+          toJSON: () => ({}),
+        }) as DOMRect,
+    });
+    Object.defineProperty(nameHeader, "getBoundingClientRect", {
+      configurable: true,
+      value: () =>
+        ({
+          x: 40,
+          y: 100,
+          top: 100,
+          left: 40,
+          right: 200,
+          bottom: 140,
+          width: 160,
+          height: 40,
+          toJSON: () => ({}),
+        }) as DOMRect,
+    });
+    setScrollMetrics(scrollContainer!, {
+      clientHeight: 220,
+      scrollHeight: 560,
+      clientWidth: 580,
+      scrollWidth: 900,
+    });
+
+    const resizer = container.querySelector("[data-vt-column-resizer]") as HTMLButtonElement | null;
+    expect(resizer).not.toBeNull();
+
+    fireEvent.pointerDown(resizer!, { button: 0, pointerId: 2, clientX: 200, clientY: 120 });
+    window.dispatchEvent(
+      new PointerEvent("pointermove", { pointerId: 2, clientX: 240, clientY: 250 }),
+    );
+
+    const status = await screen.findByRole("status");
+    const previewLine = status.previousElementSibling as HTMLDivElement | null;
+    expect(previewLine).not.toBeNull();
+    expect(previewLine!.style.left).toBe("220px");
+    expect(previewLine!.style.top).toBe("20px");
+    expect(previewLine!.style.height).toBe("206px");
+    expect(status).toHaveTextContent("Width: 200 px");
+  });
+
   test("keeps column width caches isolated between table ids", () => {
     window.localStorage.clear();
     window.localStorage.setItem(

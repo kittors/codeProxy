@@ -103,6 +103,24 @@ const NON_RESIZABLE_COLUMN_KEYS = new Set(["select", "action", "actions"]);
 
 type ColumnWidthMap = Record<string, number>;
 
+interface ColumnResizeState {
+  pointerId: number;
+  columnKey: string;
+  startClientX: number;
+  startEdgeClientX: number;
+  startWidth: number;
+  minWidth: number;
+  maxWidth: number;
+}
+
+interface ColumnResizePreview {
+  width: number;
+  left: number;
+  top: number;
+  height: number;
+  tooltipTop: number;
+}
+
 function clampColumnWidth<T>(column: DataTableColumn<T>, width: number) {
   const minWidth = column.minWidthPx ?? DEFAULT_MIN_COLUMN_WIDTH;
   const maxWidth = column.maxWidthPx ?? DEFAULT_MAX_COLUMN_WIDTH;
@@ -169,6 +187,16 @@ function resolveCellOverflowTooltip<T>(column: DataTableColumn<T>, row: T, index
   return undefined;
 }
 
+function safeSetPointerCapture(element: Element, pointerId: number) {
+  try {
+    if ("setPointerCapture" in element) {
+      element.setPointerCapture(pointerId);
+    }
+  } catch {
+    // Synthetic pointer events in automated checks may not create an active browser pointer.
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -207,12 +235,7 @@ export function DataTable<T>({
     readStoredColumnWidths(tableId),
   );
   const columnWidthsRef = useRef<ColumnWidthMap>(columnWidths);
-  const [resizePreview, setResizePreview] = useState<null | {
-    width: number;
-    clientX: number;
-    rootTop: number;
-    rootBottom: number;
-  }>(null);
+  const [resizePreview, setResizePreview] = useState<ColumnResizePreview | null>(null);
   const [headerHeight, setHeaderHeight] = useState(0);
   const [scrollTop, setScrollTop] = useState(0);
   const [viewportHeight, setViewportHeight] = useState(480);
@@ -434,7 +457,7 @@ export function DataTable<T>({
       if (!el) return;
 
       const pointerId = e.pointerId;
-      e.currentTarget.setPointerCapture?.(pointerId);
+      safeSetPointerCapture(e.currentTarget, pointerId);
 
       if (axis === "y") {
         const headerH = headerHeightRef.current;
@@ -519,14 +542,42 @@ export function DataTable<T>({
     dragRef.current = null;
   }, []);
 
-  const columnResizeRef = useRef<null | {
-    pointerId: number;
-    columnKey: string;
-    startClientX: number;
-    startWidth: number;
-    minWidth: number;
-    maxWidth: number;
-  }>(null);
+  const columnResizeRef = useRef<ColumnResizeState | null>(null);
+
+  const buildColumnResizePreview = useCallback(
+    (
+      active: ColumnResizeState,
+      width: number,
+      pointerClientY: number,
+    ): ColumnResizePreview | null => {
+      const rootRect = rootRef.current?.getBoundingClientRect();
+      const containerRect = containerRef.current?.getBoundingClientRect();
+      if (!rootRect || !containerRect) return null;
+
+      const scroller = containerRef.current;
+      const hasHorizontalOverflow = scroller
+        ? scroller.scrollWidth > scroller.clientWidth + 1
+        : false;
+      const edgeClientX = active.startEdgeClientX + width - active.startWidth;
+      const top = Math.max(0, containerRect.top - rootRect.top);
+      const bottomInset = hasHorizontalOverflow ? 14 : 0;
+      const bottom = Math.min(rootRect.height, containerRect.bottom - rootRect.top - bottomInset);
+      const height = Math.max(0, bottom - top);
+      const tooltipTop = Math.max(
+        top + 8,
+        Math.min(top + Math.max(0, height - 32), pointerClientY - rootRect.top + 10),
+      );
+
+      return {
+        width,
+        left: edgeClientX - rootRect.left,
+        top,
+        height,
+        tooltipTop,
+      };
+    },
+    [],
+  );
 
   const finishColumnResize = useCallback(() => {
     const active = columnResizeRef.current;
@@ -536,6 +587,7 @@ export function DataTable<T>({
     setResizePreview(null);
     document.body.style.cursor = "";
     document.body.style.userSelect = "";
+    document.documentElement.style.cursor = "";
     const latestWidths = columnWidthsRef.current;
     writeStoredColumnWidths(tableId, {
       ...latestWidths,
@@ -551,7 +603,6 @@ export function DataTable<T>({
       if (!headerCell) return;
 
       const rect = headerCell.getBoundingClientRect();
-      const rootRect = rootRef.current?.getBoundingClientRect();
       const startWidth = columnWidths[column.key] ?? rect.width;
       const minWidth = column.minWidthPx ?? DEFAULT_MIN_COLUMN_WIDTH;
       const maxWidth = column.maxWidthPx ?? DEFAULT_MAX_COLUMN_WIDTH;
@@ -559,27 +610,25 @@ export function DataTable<T>({
 
       e.preventDefault();
       e.stopPropagation();
-      e.currentTarget.setPointerCapture?.(e.pointerId);
+      safeSetPointerCapture(e.currentTarget, e.pointerId);
 
-      columnResizeRef.current = {
+      const resizeState = {
         pointerId: e.pointerId,
         columnKey: column.key,
         startClientX: e.clientX,
+        startEdgeClientX: rect.right,
         startWidth: nextStartWidth,
         minWidth,
         maxWidth,
       };
+      columnResizeRef.current = resizeState;
       document.body.style.cursor = "col-resize";
+      document.documentElement.style.cursor = "col-resize";
       document.body.style.userSelect = "none";
       setColumnWidths((prev) => ({ ...prev, [column.key]: nextStartWidth }));
-      setResizePreview({
-        width: nextStartWidth,
-        clientX: e.clientX,
-        rootTop: rootRect?.top ?? 0,
-        rootBottom: rootRect?.bottom ?? window.innerHeight,
-      });
+      setResizePreview(buildColumnResizePreview(resizeState, nextStartWidth, e.clientY));
     },
-    [columnWidths],
+    [buildColumnResizePreview, columnWidths],
   );
 
   useEffect(() => {
@@ -588,7 +637,6 @@ export function DataTable<T>({
       if (!active) return;
 
       event.preventDefault();
-      const rootRect = rootRef.current?.getBoundingClientRect();
       const nextWidth = Math.max(
         active.minWidth,
         Math.min(active.maxWidth, active.startWidth + event.clientX - active.startClientX),
@@ -597,12 +645,7 @@ export function DataTable<T>({
 
       columnWidthsRef.current = { ...columnWidthsRef.current, [active.columnKey]: roundedWidth };
       setColumnWidths((prev) => ({ ...prev, [active.columnKey]: roundedWidth }));
-      setResizePreview({
-        width: roundedWidth,
-        clientX: event.clientX,
-        rootTop: rootRect?.top ?? 0,
-        rootBottom: rootRect?.bottom ?? window.innerHeight,
-      });
+      setResizePreview(buildColumnResizePreview(active, roundedWidth, event.clientY));
     };
 
     const handlePointerUp = () => finishColumnResize();
@@ -619,12 +662,13 @@ export function DataTable<T>({
       window.removeEventListener("pointercancel", handlePointerUp);
       window.removeEventListener("blur", handleWindowBlur);
     };
-  }, [finishColumnResize]);
+  }, [buildColumnResizePreview, finishColumnResize]);
 
   useEffect(() => {
     return () => {
       document.body.style.cursor = "";
       document.body.style.userSelect = "";
+      document.documentElement.style.cursor = "";
     };
   }, []);
 
@@ -858,12 +902,13 @@ export function DataTable<T>({
                         data-vt-column-resizer
                         aria-label={t("common.resize_column", { column: col.label })}
                         title={t("common.resize_column", { column: col.label })}
-                        className="absolute -right-1 top-1/2 z-30 h-6 w-2.5 -translate-y-1/2 cursor-col-resize touch-none rounded-full outline-none transition-colors hover:bg-blue-500/10 focus-visible:bg-blue-500/15"
+                        className="group/resize absolute -right-2 top-0 z-30 h-full w-4 cursor-col-resize touch-none bg-transparent outline-none"
+                        style={{ cursor: "col-resize" }}
                         onPointerDown={(event) => handleColumnResizePointerDown(col, event)}
                       >
                         <span
                           aria-hidden="true"
-                          className="mx-auto block h-full w-px rounded-full bg-slate-300 opacity-45 transition-all group-hover/column:bg-blue-500 group-hover/column:opacity-80 dark:bg-white/25 dark:group-hover/column:bg-blue-400"
+                          className="mx-auto block h-6 w-px rounded-full bg-slate-300/80 opacity-70 transition-[width,background-color,opacity] group-hover/resize:w-0.5 group-hover/resize:bg-slate-500 group-hover/resize:opacity-100 group-focus-visible/resize:w-0.5 group-focus-visible/resize:bg-slate-500 group-focus-visible/resize:opacity-100 dark:bg-white/25 dark:group-hover/resize:bg-white/55 dark:group-focus-visible/resize:bg-white/55"
                         />
                       </button>
                     ) : null}
@@ -1042,19 +1087,19 @@ export function DataTable<T>({
         <>
           <div
             aria-hidden="true"
-            className="pointer-events-none fixed z-50 w-px bg-blue-500/80 shadow-[0_0_0_1px_rgba(59,130,246,0.18)]"
+            className="pointer-events-none absolute z-20 w-0.5 bg-slate-500/70"
             style={{
-              left: resizePreview.clientX,
-              top: resizePreview.rootTop,
-              height: Math.max(0, resizePreview.rootBottom - resizePreview.rootTop),
+              left: resizePreview.left,
+              top: resizePreview.top,
+              height: resizePreview.height,
             }}
           />
           <div
             role="status"
-            className="pointer-events-none fixed z-50 rounded-md bg-blue-600 px-2 py-1 text-xs font-medium text-white shadow-lg"
+            className="pointer-events-none absolute z-40 rounded-md bg-slate-900 px-2 py-1 text-xs font-medium text-white shadow-lg dark:bg-white dark:text-neutral-950"
             style={{
-              left: resizePreview.clientX + 10,
-              top: Math.max(8, resizePreview.rootTop + 16),
+              left: resizePreview.left + 10,
+              top: resizePreview.tooltipTop,
             }}
           >
             {t("common.column_width_px", { width: resizePreview.width })}
