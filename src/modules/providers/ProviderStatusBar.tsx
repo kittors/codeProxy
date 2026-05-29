@@ -5,7 +5,7 @@ const blockClass = (state: StatusBarData["blocks"][number]) => {
   if (state === "success") return "bg-emerald-500";
   if (state === "failure") return "bg-rose-500";
   if (state === "mixed") return "bg-amber-500";
-  return "bg-slate-200 dark:bg-white/10";
+  return "bg-slate-200 dark:bg-neutral-700";
 };
 
 export function ProviderStatusBar({
@@ -29,13 +29,16 @@ export function ProviderStatusBar({
         ? "text-amber-600 dark:text-amber-300"
         : "text-rose-600 dark:text-rose-300";
 
-  const barHeight = compact ? "h-1.5" : "h-2";
-  const containerCls = compact ? "flex items-center gap-2" : "mt-3 flex items-center gap-2";
-  const rateWidth = compact ? "w-12" : "w-14";
+  const containerCls = compact
+    ? "flex items-center gap-2 rounded-lg border border-slate-200 dark:border-neutral-700 bg-white dark:bg-neutral-950 px-3 py-1.5"
+    : "flex items-center gap-2 rounded-lg border border-slate-200 dark:border-neutral-700 bg-white dark:bg-neutral-950 px-3 py-2";
 
   const ariaLabel = hasData
     ? `${t("common.success_rate")} ${rateText}, ${t("providers.success_stats", { count: data.totalSuccess })}, ${t("providers.failed_stats", { count: data.totalFailure })}`
     : `${t("common.success_rate")} --`;
+
+  const barHeight = compact ? "h-1.5" : "h-2";
+  const rateWidth = compact ? "w-12" : "w-14";
 
   return (
     <div
@@ -48,7 +51,7 @@ export function ProviderStatusBar({
           <div
             key={idx}
             className={
-              barHeight + " w-full rounded-sm " + blockClass(state) + " opacity-90 dark:opacity-95"
+              barHeight + " w-full rounded-[1px] " + blockClass(state)
             }
             aria-hidden="true"
           />
