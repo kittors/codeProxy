@@ -92,7 +92,7 @@ export function ProviderCard({
             {title}
           </p>
           {hasHeaderExtra ? (
-            <div className="flex shrink-0 items-center gap-1">{headerExtra}</div>
+            <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity duration-150 group-hover:opacity-100">{headerExtra}</div>
           ) : null}
           {hasActionMenu ? (
             <DropdownMenu.Root open={menuOpen} onOpenChange={setMenuOpen}>

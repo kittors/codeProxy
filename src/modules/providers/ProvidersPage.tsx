@@ -22,6 +22,7 @@ import { useProviderKeyEditor } from "@/modules/providers/hooks/useProviderKeyEd
 import { useProviderLatency } from "@/modules/providers/hooks/useProviderLatency";
 import { useProviderUsageSummary } from "@/modules/providers/hooks/useProviderUsageSummary";
 import { normalizeUsageSourceId, type KeyStatBucket } from "@/modules/providers/provider-usage";
+import { getCachedData, setCachedData } from "@/modules/providers/provider-cache";
 import {
   maskApiKey,
   readBool,
@@ -37,7 +38,6 @@ import {
   type ProviderImportDiff,
   type ProviderImportKind,
 } from "@/modules/providers/provider-import-export";
-import { ProvidersPageHeader } from "@/modules/providers/components/ProvidersPageHeader";
 import { ProvidersToolbar } from "@/modules/providers/components/ProvidersToolbar";
 import { ProviderTabsWithCounts } from "@/modules/providers/components/ProviderTabsWithCounts";
 import type { ProviderTabId } from "@/modules/providers/components/ProviderTabsWithCounts";
@@ -174,27 +174,62 @@ export function ProvidersPage() {
       setLoading(true);
       try {
         switch (tabId) {
-          case "gemini":
-            setGeminiKeys(await providersApi.getGeminiKeys());
+          case "gemini": {
+            const cachedG = getCachedData<ProviderSimpleConfig[]>("gemini");
+            if (cachedG) setGeminiKeys(cachedG);
+            const freshG = await providersApi.getGeminiKeys();
+            setGeminiKeys(freshG);
+            setCachedData("gemini", freshG);
             break;
-          case "claude":
-            setClaudeKeys(await providersApi.getClaudeConfigs());
+          }
+          case "claude": {
+            const cachedC = getCachedData<ProviderSimpleConfig[]>("claude");
+            if (cachedC) setClaudeKeys(cachedC);
+            const freshC = await providersApi.getClaudeConfigs();
+            setClaudeKeys(freshC);
+            setCachedData("claude", freshC);
             break;
-          case "codex":
-            setCodexKeys(await providersApi.getCodexConfigs());
+          }
+          case "codex": {
+            const cachedX = getCachedData<ProviderSimpleConfig[]>("codex");
+            if (cachedX) setCodexKeys(cachedX);
+            const freshX = await providersApi.getCodexConfigs();
+            setCodexKeys(freshX);
+            setCachedData("codex", freshX);
             break;
-          case "opencode-go":
-            setOpenCodeGoKeys(await providersApi.getOpenCodeGoConfigs());
+          }
+          case "opencode-go": {
+            const cachedO = getCachedData<ProviderSimpleConfig[]>("opencode-go");
+            if (cachedO) setOpenCodeGoKeys(cachedO);
+            const freshO = await providersApi.getOpenCodeGoConfigs();
+            setOpenCodeGoKeys(freshO);
+            setCachedData("opencode-go", freshO);
             break;
-          case "vertex":
-            setVertexKeys(await providersApi.getVertexConfigs());
+          }
+          case "vertex": {
+            const cachedV = getCachedData<ProviderSimpleConfig[]>("vertex");
+            if (cachedV) setVertexKeys(cachedV);
+            const freshV = await providersApi.getVertexConfigs();
+            setVertexKeys(freshV);
+            setCachedData("vertex", freshV);
             break;
-          case "bedrock":
-            setBedrockKeys(await providersApi.getBedrockConfigs());
+          }
+          case "bedrock": {
+            const cachedB = getCachedData<BedrockProviderConfig[]>("bedrock");
+            if (cachedB) setBedrockKeys(cachedB);
+            const freshB = await providersApi.getBedrockConfigs();
+            setBedrockKeys(freshB);
+            setCachedData("bedrock", freshB);
             break;
-          case "openai":
-            setOpenaiProviders(await providersApi.getOpenAIProviders());
+          }
+          case "openai": {
+            const cachedA = getCachedData<OpenAIProvider[]>("openai");
+            if (cachedA) setOpenaiProviders(cachedA);
+            const freshA = await providersApi.getOpenAIProviders();
+            setOpenaiProviders(freshA);
+            setCachedData("openai", freshA);
             break;
+          }
           case "ampcode": {
             const [amp, ampMap] = await Promise.all([
               ampcodeApi.getAmpcode(),
@@ -741,13 +776,6 @@ export function ProvidersPage() {
       data-testid="providers-page-shell"
       className="flex h-[calc(100dvh-97px)] min-h-0 flex-col gap-6 overflow-hidden sm:h-[calc(100dvh-113px)]"
     >
-      <ProvidersPageHeader
-        totalProviders={pageSummary.total}
-        enabledProviders={pageSummary.enabled}
-        disabledProviders={pageSummary.disabled}
-        loading={loading}
-      />
-
       <input
         ref={importInputRef}
         type="file"
