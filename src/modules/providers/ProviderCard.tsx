@@ -27,8 +27,10 @@ export interface ProviderCardProps {
   onEdit?: () => void;
   /** Callback when delete button is clicked */
   onDelete?: () => void;
-  /** Extra elements rendered below the title row */
+  /** Extra elements rendered in the header row, after title */
   headerExtra?: ReactNode;
+  /** Footer content fixed at card bottom (e.g. status bar) */
+  footer?: ReactNode;
   /** Card body content */
   children?: ReactNode;
 }
@@ -43,6 +45,7 @@ export function ProviderCard({
   onEdit,
   onDelete,
   headerExtra,
+  footer,
   children,
 }: ProviderCardProps) {
   const { t } = useTranslation();
@@ -53,7 +56,7 @@ export function ProviderCard({
   return (
     <div
       className={[
-        "group relative rounded-xl border px-4 py-3 shadow-sm transition-all duration-200 ease-out min-h-[220px]",
+        "group relative flex flex-col rounded-xl border px-4 py-3 shadow-sm transition-all duration-200 ease-out min-h-[220px]",
         selected
           ? "border-blue-400 bg-blue-50/50 ring-1 ring-blue-200 dark:border-blue-500/50 dark:bg-blue-950/20 dark:ring-blue-500/20"
           : "border-slate-200 bg-white/70 hover:border-slate-300 hover:bg-white hover:shadow-md dark:border-neutral-800 dark:bg-neutral-950/60 dark:hover:border-neutral-700 dark:hover:bg-neutral-950/80 dark:hover:shadow-lg dark:hover:shadow-black/20",
@@ -82,15 +85,15 @@ export function ProviderCard({
               />
             </div>
           ) : null}
-          {hasHeaderExtra ? (
-            <div className="shrink-0">{headerExtra}</div>
-          ) : null}
           <p
             className="min-w-0 max-w-[180px] flex-1 truncate text-sm font-semibold text-slate-900 dark:text-white"
             title={title}
           >
             {title}
           </p>
+          {hasHeaderExtra ? (
+            <div className="flex shrink-0 items-center gap-1">{headerExtra}</div>
+          ) : null}
           {hasActionMenu ? (
             <DropdownMenu.Root open={menuOpen} onOpenChange={setMenuOpen}>
               <DropdownMenu.Trigger asChild>
@@ -148,7 +151,8 @@ export function ProviderCard({
         </div>
 
       {/* Content */}
-      {children ? <div className="mt-2 min-w-0">{children}</div> : null}
+      {children ? <div className="mt-2 min-w-0 flex-1">{children}</div> : null}
+      {footer ? <div className="mt-auto pt-3">{footer}</div> : null}
     </div>
   );
 }

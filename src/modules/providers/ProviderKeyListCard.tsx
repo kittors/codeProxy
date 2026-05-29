@@ -130,10 +130,19 @@ export function ProviderKeyListCard({
                           error: false,
                         };
                         const providerBaseUrl = item.baseUrl || "";
+                        const latencyMs = entry.latencyMs;
+                        const latencyColor =
+                          latencyMs === null
+                            ? "text-slate-400 dark:text-white/40"
+                            : latencyMs < 200
+                              ? "text-emerald-600 dark:text-emerald-400"
+                              : latencyMs < 500
+                                ? "text-amber-600 dark:text-amber-400"
+                                : "text-rose-600 dark:text-rose-400";
                         return (
                           <button
                             type="button"
-                            className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[11px] tabular-nums text-slate-600 transition-colors hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/25 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white/60 dark:hover:border-blue-600 dark:hover:bg-blue-950 dark:hover:text-blue-300 dark:focus-visible:ring-blue-300/20"
+                            className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] tabular-nums font-medium transition-colors hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/25 dark:hover:bg-white/10 dark:focus-visible:ring-white/20 ${entry.loading ? "text-slate-500" : entry.error ? "text-rose-500" : latencyColor}`}
                             onClick={(e) => {
                               e.stopPropagation();
                               if (providerBaseUrl) checkLatency(latencyKey, providerBaseUrl);
@@ -152,9 +161,9 @@ export function ProviderKeyListCard({
                             {entry.loading ? (
                               <Loader2 size={10} className="animate-spin" />
                             ) : entry.error ? (
-                              <span className="text-rose-500">×</span>
-                            ) : entry.latencyMs !== null ? (
-                              <span className="font-medium">{formatLatency(entry.latencyMs)}</span>
+                              <span>×</span>
+                            ) : latencyMs !== null ? (
+                              <span>{formatLatency(latencyMs)}</span>
                             ) : (
                               <Zap size={10} />
                             )}
@@ -163,6 +172,7 @@ export function ProviderKeyListCard({
                       })()
                     : undefined
                 }
+                footer={<ProviderStatusBar data={statusData} />}
               >
                 <ProviderConnectionRows
                   apiKey={item.apiKey}
@@ -240,8 +250,6 @@ export function ProviderKeyListCard({
                 ) : null}
 
                 {renderExtra ? renderExtra(item, idx) : null}
-
-                <ProviderStatusBar data={statusData} />
               </ProviderCard>
             );
           })}
