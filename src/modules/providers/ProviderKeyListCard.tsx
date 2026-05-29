@@ -208,7 +208,9 @@ export function ProviderKeyListCard({
                   />
                 </div>
 
-                <ProviderAccessChips accessSummary={accessSummary} />
+                <div className="mt-2">
+                  <ProviderAccessChips accessSummary={accessSummary} />
+                </div>
 
                 {headerEntries.length ? (
                   <div className="mt-2 flex flex-wrap gap-1">
