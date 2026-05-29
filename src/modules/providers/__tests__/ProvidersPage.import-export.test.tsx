@@ -118,7 +118,8 @@ describe("ProvidersPage import/export", () => {
     await user.click(await screen.findByRole("tab", { name: /Codex/ }));
     expect(await screen.findByText("Codex Main")).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: /Export JSON/i }));
+    await user.click(screen.getByRole("button", { name: /^Export JSON$/i }));
+    await user.click(await screen.findByRole("menuitem", { name: /^Export JSON$/i }));
 
     expect(createObjectURL).toHaveBeenCalledTimes(1);
     const blob = (createObjectURL as any).mock.calls[0][0] as Blob;
@@ -301,7 +302,8 @@ describe("ProvidersPage import/export", () => {
     expect(await screen.findByText("Codex Main")).toBeInTheDocument();
 
     await user.click(screen.getByRole("checkbox", { name: /Select Codex Main/i }));
-    await user.click(screen.getByRole("button", { name: /Export Selected JSON/i }));
+    await user.click(screen.getByRole("button", { name: /^Export JSON$/i }));
+    await user.click(await screen.findByRole("menuitem", { name: /Export Selected JSON/i }));
 
     expect(createObjectURL).toHaveBeenCalledTimes(1);
     const blob = (createObjectURL as any).mock.calls[0][0] as Blob;
@@ -327,11 +329,9 @@ describe("ProvidersPage import/export", () => {
     await user.click(await screen.findByRole("tab", { name: /Codex/ }));
     expect(await screen.findByText("Codex Main")).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: /Select All/i }));
-    expect(screen.getByText(/2 selected/i)).toBeInTheDocument();
-
-    await user.click(screen.getByRole("button", { name: /Export Selected JSON/i }));
-
+    await user.click(screen.getByRole("checkbox", { name: /Select All/i }));
+    await user.click(screen.getByRole("button", { name: /^Export JSON$/i }));
+    await user.click(await screen.findByRole("menuitem", { name: /Export Selected JSON/i }));
     expect(createObjectURL).toHaveBeenCalledTimes(1);
     const blob = (createObjectURL as any).mock.calls[0][0] as Blob;
     await expect(blob.text()).resolves.toContain('"name": "Legacy"');
