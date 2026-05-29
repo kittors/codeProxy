@@ -329,7 +329,7 @@ describe("ProvidersPage import/export", () => {
     await user.click(await screen.findByRole("tab", { name: /Codex/ }));
     expect(await screen.findByText("Codex Main")).toBeInTheDocument();
 
-    await user.click(screen.getByRole("checkbox", { name: /Select All/i }));
+    await user.click(screen.getByRole("button", { name: /Select All/i }));
     await user.click(screen.getByRole("button", { name: /^Export JSON$/i }));
     await user.click(await screen.findByRole("menuitem", { name: /Export Selected JSON/i }));
     expect(createObjectURL).toHaveBeenCalledTimes(1);

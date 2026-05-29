@@ -1,6 +1,6 @@
 import { type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Download, LayoutGrid, RefreshCw, Upload } from "lucide-react";
+import { CheckSquare, Download, LayoutGrid, RefreshCw, Upload } from "lucide-react";
 import { Button } from "@/modules/ui/Button";
 import { Select } from "@/modules/ui/Select";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
@@ -94,14 +94,18 @@ export function ProvidersToolbar({
           </DropdownMenu.Root>
 
           <div className="flex items-center gap-1">
-            <input
-              type="checkbox"
-              aria-label={t("providers.batch_select_all")}
-              checked={allCurrentSelected}
-              onChange={(e) => onSelectAll(e.currentTarget.checked)}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8! px-2 text-xs"
+              onClick={() => onSelectAll(!allCurrentSelected)}
               disabled={currentTabItemsCount === 0}
-              className="h-3.5 w-3.5 rounded border-slate-300 text-blue-600 focus-visible:ring-2 focus-visible:ring-blue-400/35 dark:border-neutral-600 dark:bg-neutral-900 dark:text-blue-400 dark:focus-visible:ring-blue-400/20"
-            />
+            >
+              <CheckSquare size={14} />
+              {allCurrentSelected
+                ? t("providers.batch_deselect_all")
+                : t("providers.batch_select_all")}
+            </Button>
             {hasSelection ? (
               <>
                 <span className="text-xs tabular-nums text-slate-500 dark:text-white/55">

@@ -20,8 +20,6 @@ import { ProviderModelChips } from "@/modules/providers/components/ProviderModel
 import { useTranslation } from "react-i18next";
 
 export function ProviderKeyListCard({
-  title,
-  description,
   items,
   loading = false,
   onAdd,
@@ -39,8 +37,6 @@ export function ProviderKeyListCard({
   selectedKeys,
   onToggleSelected,
 }: {
-  title: string;
-  description: string;
   items: ProviderSimpleConfig[];
   loading?: boolean;
   onAdd: () => void;
@@ -69,8 +65,6 @@ export function ProviderKeyListCard({
 
   return (
     <Card
-      title={title}
-      description={description}
       className="flex h-full min-h-0 flex-col"
       bodyClassName="min-h-0 flex flex-1 flex-col"
       loading={loading}

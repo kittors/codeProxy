@@ -837,8 +837,6 @@ export function ProvidersPage() {
         <div className="flex min-h-0 flex-1 flex-col gap-4">
           <TabsContent value="gemini" className="min-h-0 flex flex-1 flex-col">
             <ProviderKeyListCard
-              title={t("providers.gemini_keys")}
-              description={t("providers.gemini_desc")}
               items={geminiKeys}
               loading={isActiveTabListLoading("gemini")}
               onAdd={() => openKeyEditor("gemini", null)}
@@ -857,8 +855,6 @@ export function ProvidersPage() {
 
           <TabsContent value="claude" className="min-h-0 flex flex-1 flex-col">
             <ProviderKeyListCard
-              title={t("providers.claude_keys")}
-              description={t("providers.claude_desc")}
               items={claudeKeys}
               loading={isActiveTabListLoading("claude")}
               onAdd={() => openKeyEditor("claude", null)}
@@ -877,8 +873,6 @@ export function ProvidersPage() {
 
           <TabsContent value="codex" className="min-h-0 flex flex-1 flex-col">
             <ProviderKeyListCard
-              title={t("providers.codex_keys")}
-              description={t("providers.codex_desc")}
               items={codexKeys}
               loading={isActiveTabListLoading("codex")}
               onAdd={() => openKeyEditor("codex", null)}
@@ -897,8 +891,6 @@ export function ProvidersPage() {
 
           <TabsContent value="opencode-go" className="min-h-0 flex flex-1 flex-col">
             <ProviderKeyListCard
-              title={t("providers.opencode_go_keys")}
-              description={t("providers.opencode_go_desc")}
               items={openCodeGoKeys}
               loading={isActiveTabListLoading("opencode-go")}
               onAdd={() => openKeyEditor("opencode-go", null)}
@@ -918,8 +910,6 @@ export function ProvidersPage() {
 
           <TabsContent value="vertex" className="min-h-0 flex flex-1 flex-col">
             <ProviderKeyListCard
-              title={t("providers.vertex_keys")}
-              description={t("providers.vertex_desc")}
               items={vertexKeys}
               loading={isActiveTabListLoading("vertex")}
               onAdd={() => openKeyEditor("vertex", null)}
@@ -937,8 +927,6 @@ export function ProvidersPage() {
 
           <TabsContent value="bedrock" className="min-h-0 flex flex-1 flex-col">
             <ProviderKeyListCard
-              title={t("providers.bedrock_keys")}
-              description={t("providers.bedrock_desc")}
               items={bedrockKeys}
               loading={isActiveTabListLoading("bedrock")}
               onAdd={() => openKeyEditor("bedrock", null)}
