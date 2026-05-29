@@ -30,8 +30,8 @@ export function ProviderStatusBar({
         : "text-rose-600 dark:text-rose-300";
 
   const containerCls = compact
-    ? "flex items-center gap-2 rounded-lg border border-slate-200 dark:border-neutral-700 bg-white dark:bg-neutral-950 px-3 py-1.5"
-    : "flex items-center gap-2 rounded-lg border border-slate-200 dark:border-neutral-700 bg-white dark:bg-neutral-950 px-3 py-2";
+    ? "flex items-center gap-2 rounded-lg bg-white dark:bg-neutral-950 px-2 py-1"
+    : "flex items-center gap-2 rounded-lg bg-white dark:bg-neutral-950 px-2.5 py-1.5";
 
   const ariaLabel = hasData
     ? `${t("common.success_rate")} ${rateText}, ${t("providers.success_stats", { count: data.totalSuccess })}, ${t("providers.failed_stats", { count: data.totalFailure })}`
@@ -46,7 +46,7 @@ export function ProviderStatusBar({
       role="status"
       aria-label={ariaLabel}
     >
-      <div className="flex flex-1 items-center gap-0.5">
+      <div className="flex flex-1 items-center gap-px">
         {data.blocks.map((state, idx) => (
           <div
             key={idx}
