@@ -160,7 +160,6 @@ export function EChartRenderer({
           const width = container.clientWidth;
           const height = container.clientHeight;
           if (width > 0 && height > 0) {
-            requestResize(width, height);
             window.setTimeout(() => {
               requestResize(container.clientWidth, container.clientHeight);
             }, 60);

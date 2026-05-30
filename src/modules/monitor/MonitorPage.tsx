@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { usageApi } from "@/lib/http/apis";
 import { useTheme } from "@/modules/ui/ThemeProvider";
 import { CHART_COLOR_CLASSES, HOURLY_MODEL_COLORS } from "@/modules/monitor/monitor-constants";
@@ -90,16 +90,13 @@ export function MonitorPage() {
   >({});
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(true);
-  const [isPending, startTransition] = useTransition();
 
   const refreshData = useCallback(async () => {
     setIsRefreshing(true);
     setError(null);
     try {
       const chartResp = await usageApi.getChartData(timeRange, apiFilter);
-      startTransition(() => {
-        setChartData(chartResp);
-      });
+      setChartData(chartResp);
     } catch (requestError) {
       const message =
         requestError instanceof Error ? requestError.message : t("monitor.failed_fetch");
@@ -158,7 +155,7 @@ export function MonitorPage() {
   }, []);
 
   const hasData = metrics.totalRequests > 0;
-  const isLoading = isRefreshing || isPending;
+  const isLoading = isRefreshing;
 
   useEffect(() => {
     void refreshData();
@@ -601,51 +598,47 @@ export function MonitorPage() {
         refreshData={refreshData}
       />
 
-      {hasData ? (
-        <>
-          <MonitorDistributionSections
-            t={t}
-            timeRange={timeRange}
-            modelMetric={modelMetric}
-            setModelMetric={setModelMetric}
-            modelDistributionOption={modelDistributionOption}
-            modelDistributionLegend={modelDistributionLegend}
-            toggleModelDistributionLegend={toggleModelDistributionLegend}
-            dailyTrendOption={dailyTrendOption}
-            dailyLegendAvailability={dailyLegendAvailability}
-            dailyLegendSelected={dailyLegendSelected}
-            toggleDailyLegend={toggleDailyLegend}
-            apikeyDistributionData={apikeyDistributionData}
-            apikeyMetric={apikeyMetric}
-            setApikeyMetric={setApikeyMetric}
-            apikeyDistributionOption={apikeyDistributionOption}
-            apikeyDistributionLegend={apikeyDistributionLegend}
-            toggleApikeyDistributionLegend={toggleApikeyDistributionLegend}
-            isRefreshing={isRefreshing}
-          />
+      <MonitorDistributionSections
+        t={t}
+        timeRange={timeRange}
+        modelMetric={modelMetric}
+        setModelMetric={setModelMetric}
+        modelDistributionOption={modelDistributionOption}
+        modelDistributionLegend={modelDistributionLegend}
+        toggleModelDistributionLegend={toggleModelDistributionLegend}
+        dailyTrendOption={dailyTrendOption}
+        dailyLegendAvailability={dailyLegendAvailability}
+        dailyLegendSelected={dailyLegendSelected}
+        toggleDailyLegend={toggleDailyLegend}
+        apikeyDistributionData={apikeyDistributionData}
+        apikeyMetric={apikeyMetric}
+        setApikeyMetric={setApikeyMetric}
+        apikeyDistributionOption={apikeyDistributionOption}
+        apikeyDistributionLegend={apikeyDistributionLegend}
+        toggleApikeyDistributionLegend={toggleApikeyDistributionLegend}
+        isRefreshing={isRefreshing}
+      />
 
-          <MonitorHourlySections
-            t={t}
-            isRefreshing={isRefreshing}
-            modelHourWindow={modelHourWindow}
-            setModelHourWindow={setModelHourWindow}
-            hourlyModelLegendKeys={hourlyModelLegendKeys}
-            hourlyModelOption={hourlyModelOption}
-            hourlySeries={hourlySeries}
-            getHourlyModelSeriesLabel={getHourlyModelSeriesLabel}
-            hourlyModelPalette={hourlyModelPalette}
-            hourlyModelSelected={hourlyModelSelected}
-            toggleHourlyModelLegend={toggleHourlyModelLegend}
-            tokenHourWindow={tokenHourWindow}
-            setTokenHourWindow={setTokenHourWindow}
-            hourlyTokenOption={hourlyTokenOption}
-            hourlyTokenLabels={hourlyTokenLabels}
-            hourlyTokenPalette={hourlyTokenPalette}
-            hourlyTokenSelected={hourlyTokenSelected}
-            toggleHourlyTokenLegend={toggleHourlyTokenLegend}
-          />
-        </>
-      ) : null}
+      <MonitorHourlySections
+        t={t}
+        isRefreshing={isRefreshing}
+        modelHourWindow={modelHourWindow}
+        setModelHourWindow={setModelHourWindow}
+        hourlyModelLegendKeys={hourlyModelLegendKeys}
+        hourlyModelOption={hourlyModelOption}
+        hourlySeries={hourlySeries}
+        getHourlyModelSeriesLabel={getHourlyModelSeriesLabel}
+        hourlyModelPalette={hourlyModelPalette}
+        hourlyModelSelected={hourlyModelSelected}
+        toggleHourlyModelLegend={toggleHourlyModelLegend}
+        tokenHourWindow={tokenHourWindow}
+        setTokenHourWindow={setTokenHourWindow}
+        hourlyTokenOption={hourlyTokenOption}
+        hourlyTokenLabels={hourlyTokenLabels}
+        hourlyTokenPalette={hourlyTokenPalette}
+        hourlyTokenSelected={hourlyTokenSelected}
+        toggleHourlyTokenLegend={toggleHourlyTokenLegend}
+      />
     </div>
   );
 }

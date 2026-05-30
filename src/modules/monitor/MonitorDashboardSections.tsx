@@ -171,8 +171,7 @@ export function MonitorDistributionSections({
 
   return (
     <>
-      <Reveal>
-        <section className="grid gap-4 lg:grid-cols-[minmax(0,560px)_minmax(0,1fr)]">
+      <section className="grid gap-4 lg:grid-cols-[minmax(0,560px)_minmax(0,1fr)]">
           <Card
             title={t("monitor.model_distribution")}
             description={t("monitor.last_days_desc", {
@@ -270,11 +269,9 @@ export function MonitorDistributionSections({
             </div>
           </Card>
         </section>
-      </Reveal>
 
       {apikeyDistributionData.length > 0 ? (
-        <Reveal>
-          <Card
+        <Card
             title={t("monitor.apikey_distribution")}
             description={t("monitor.apikey_distribution_desc", {
               days: timeRange,
@@ -318,8 +315,7 @@ export function MonitorDistributionSections({
               </div>
             </div>
           </Card>
-        </Reveal>
-      ) : null}
+        ) : null}
     </>
   );
 }
@@ -368,8 +364,7 @@ export function MonitorHourlySections({
 }) {
   return (
     <>
-      <Reveal>
-        <Card
+      <Card
           title={t("monitor.hourly_model.title")}
           description={t("monitor.hourly_model_desc")}
           actions={
@@ -389,10 +384,8 @@ export function MonitorHourlySections({
             }))}
           />
         </Card>
-      </Reveal>
 
-      <Reveal>
-        <Card
+      <Card
           title={t("monitor.hourly_token.title")}
           description={t("monitor.hourly_token_desc")}
           actions={
@@ -412,7 +405,6 @@ export function MonitorHourlySections({
             }))}
           />
         </Card>
-      </Reveal>
     </>
   );
 }
