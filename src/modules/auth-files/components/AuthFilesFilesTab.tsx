@@ -919,22 +919,6 @@ export function AuthFilesFilesTab({
                   </div>
                 </div>
 
-                <div className="min-w-0 flex-1 basis-[240px]">
-                  <div className="space-y-1.5">
-                    <p className="truncate text-[11px] font-semibold text-slate-600 dark:text-white/65">
-                      {t("auth_files.search")}
-                    </p>
-                    <TextInput
-                      value={search}
-                      onChange={(e) => setSearch(e.currentTarget.value)}
-                      placeholder={t("auth_files_page.filename_hint")}
-                      aria-label={t("auth_files.search")}
-                      endAdornment={<Search size={16} className="text-slate-400" />}
-                      size="sm"
-                    />
-                  </div>
-                </div>
-
                 <div className="min-w-0 basis-[120px]">
                   <div className="space-y-1.5">
                     <p className="truncate text-[11px] font-semibold text-slate-600 dark:text-white/65">
@@ -963,15 +947,29 @@ export function AuthFilesFilesTab({
                     </div>
                   </div>
                 </div>
+
+                <div className="min-w-0 basis-[180px]">
+                  <div className="space-y-1.5">
+                    <p className="truncate text-[11px] font-semibold text-slate-600 dark:text-white/65">
+                      {t("auth_files.search")}
+                    </p>
+                    <TextInput
+                      value={search}
+                      onChange={(e) => setSearch(e.currentTarget.value)}
+                      placeholder={t("auth_files_page.filename_hint")}
+                      aria-label={t("auth_files.search")}
+                      endAdornment={<Search size={16} className="text-slate-400" />}
+                      size="sm"
+                    />
+                  </div>
+                </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-center gap-1.5">
                 <div className={loading && filesLength === 0 ? "pointer-events-none opacity-60" : ""}>
                   {renderFilesViewModeTabs}
                 </div>
-
-                <div className="flex flex-1 flex-wrap items-center gap-1.5 lg:justify-end">
-                  {selectedCount === 0 ? selectionActionsMenu : null}
+                {selectedCount === 0 ? selectionActionsMenu : null}
                   <Button
                     variant="secondary"
                     size="sm"
@@ -1048,7 +1046,6 @@ export function AuthFilesFilesTab({
                       <Plus size={15} />
                     </Button>
                   </HoverTooltip>
-                </div>
               </div>
             </div>
           </div>
