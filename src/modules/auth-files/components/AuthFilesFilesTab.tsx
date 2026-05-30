@@ -844,8 +844,8 @@ export function AuthFilesFilesTab({
               "gap-3 md:grid",
             ].join(" ")}
           >
-            <div className="grid gap-2 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
-              <div className="flex min-w-0 flex-wrap items-end gap-3">
+            <div className="flex flex-col gap-2">
+              <div className="flex min-w-0 flex-wrap items-start gap-3">
                 {canSetModelOwnerGroup ? (
                   <div className="min-w-0 flex-1 basis-[140px]">
                     <div className="space-y-1.5">
@@ -935,117 +935,119 @@ export function AuthFilesFilesTab({
                   </div>
                 </div>
 
-                <div className="flex shrink-0 items-end pb-1.5">
-                  <div className={loading && filesLength === 0 ? "pointer-events-none opacity-60" : ""}>
-                    {renderFilesViewModeTabs}
-                  </div>
-                </div>
-
-                <div className="flex shrink-0 items-end gap-1.5 pb-1.5">
-                  <span className="text-xs font-medium text-slate-500 dark:text-white/45">
-                    {t("auth_files.quota_auto_refresh")}
-                  </span>
-                  <div
-                    className={loading && filesLength === 0 ? "pointer-events-none opacity-60" : ""}
-                  >
-                    <Select
-                      value={String(quotaAutoRefreshMs)}
-                      onChange={(value) =>
-                        setQuotaAutoRefreshMsRaw(normalizeQuotaAutoRefreshMs(value))
-                      }
-                      options={[
-                        { value: "0", label: t("auth_files.quota_refresh_off") },
-                        { value: "5000", label: "5s" },
-                        { value: "10000", label: "10s" },
-                        { value: "30000", label: "30s" },
-                        { value: "60000", label: "60s" },
-                      ]}
-                      aria-label={t("auth_files.quota_auto_refresh")}
-                      variant="chip"
-                      className="w-[88px]"
-                    />
+                <div className="min-w-0 flex-1 basis-[120px]">
+                  <div className="space-y-1.5">
+                    <p className="truncate text-[11px] font-semibold text-slate-600 dark:text-white/65">
+                      {t("auth_files.quota_auto_refresh")}
+                    </p>
+                    <div
+                      className={loading && filesLength === 0 ? "pointer-events-none opacity-60" : ""}
+                    >
+                      <Select
+                        value={String(quotaAutoRefreshMs)}
+                        onChange={(value) =>
+                          setQuotaAutoRefreshMsRaw(normalizeQuotaAutoRefreshMs(value))
+                        }
+                        options={[
+                          { value: "0", label: t("auth_files.quota_refresh_off") },
+                          { value: "5000", label: "5s" },
+                          { value: "10000", label: "10s" },
+                          { value: "30000", label: "30s" },
+                          { value: "60000", label: "60s" },
+                        ]}
+                        aria-label={t("auth_files.quota_auto_refresh")}
+                        variant="chip"
+                        className="w-full"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-1.5 lg:justify-end">
-                {selectedCount === 0 ? selectionActionsMenu : null}
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  className="!h-8 px-2 text-xs"
-                  onClick={openGroupOverview}
-                  disabled={loading || groupOverviewLoading || filteredFiles.length === 0}
-                >
-                  <BarChart3 size={14} className={groupOverviewLoading ? "animate-pulse" : ""} />
-                  {t("auth_files.group_overview_button")}
-                </Button>
-                <HoverTooltip content={t("auth_files.refresh")}>
+              <div className="flex flex-wrap items-center gap-2">
+                <div className={loading && filesLength === 0 ? "pointer-events-none opacity-60" : ""}>
+                  {renderFilesViewModeTabs}
+                </div>
+
+                <div className="flex flex-1 flex-wrap items-center gap-1.5 lg:justify-end">
+                  {selectedCount === 0 ? selectionActionsMenu : null}
                   <Button
                     variant="secondary"
                     size="sm"
-                    onClick={() => void refreshFilesAndQuota()}
-                    disabled={loading || usageLoading || refreshingAll}
-                    aria-label={t("auth_files.refresh")}
-                    title={t("auth_files.refresh")}
+                    className="!h-8 px-2 text-xs"
+                    onClick={openGroupOverview}
+                    disabled={loading || groupOverviewLoading || filteredFiles.length === 0}
                   >
-                    <RefreshCw
-                      size={15}
-                      className={loading || usageLoading || refreshingAll ? "animate-spin" : ""}
-                    />
+                    <BarChart3 size={14} className={groupOverviewLoading ? "animate-pulse" : ""} />
+                    {t("auth_files.group_overview_button")}
                   </Button>
-                </HoverTooltip>
-                <HoverTooltip content={t("auth_files.upload")}>
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={uploading}
-                    aria-label={t("auth_files.upload")}
-                    title={t("auth_files.upload")}
-                  >
-                    <Upload size={15} />
-                  </Button>
-                </HoverTooltip>
-                <HoverTooltip content={t("auth_files.paste_json")}>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => {
-                      setJsonImportError("");
-                      setJsonImportOpen(true);
-                    }}
-                    disabled={uploading}
-                    aria-label={t("auth_files.paste_json")}
-                    title={t("auth_files.paste_json")}
-                  >
-                    <ClipboardPaste size={15} />
-                  </Button>
-                </HoverTooltip>
-                <HoverTooltip content={t("auth_files_page.add_oauth")}>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => {
-                      const normalized = normalizeProviderKey(filter);
-                      const oauthTab =
-                        normalized === "codex" ||
-                        normalized === "anthropic" ||
-                        normalized === "antigravity" ||
-                        normalized === "gemini-cli" ||
-                        normalized === "kimi" ||
-                        normalized === "qwen"
-                          ? (normalized as OAuthDialogTab)
-                          : "codex";
-                      setOauthDialogDefaultTab(oauthTab);
-                      setOauthDialogOpen(true);
-                    }}
-                    aria-label={t("auth_files_page.add_oauth")}
-                    title={t("auth_files_page.add_oauth")}
-                  >
-                    <Plus size={15} />
-                  </Button>
-                </HoverTooltip>
+                  <HoverTooltip content={t("auth_files.refresh")}>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => void refreshFilesAndQuota()}
+                      disabled={loading || usageLoading || refreshingAll}
+                      aria-label={t("auth_files.refresh")}
+                      title={t("auth_files.refresh")}
+                    >
+                      <RefreshCw
+                        size={15}
+                        className={loading || usageLoading || refreshingAll ? "animate-spin" : ""}
+                      />
+                    </Button>
+                  </HoverTooltip>
+                  <HoverTooltip content={t("auth_files.upload")}>
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploading}
+                      aria-label={t("auth_files.upload")}
+                      title={t("auth_files.upload")}
+                    >
+                      <Upload size={15} />
+                    </Button>
+                  </HoverTooltip>
+                  <HoverTooltip content={t("auth_files.paste_json")}>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => {
+                        setJsonImportError("");
+                        setJsonImportOpen(true);
+                      }}
+                      disabled={uploading}
+                      aria-label={t("auth_files.paste_json")}
+                      title={t("auth_files.paste_json")}
+                    >
+                      <ClipboardPaste size={15} />
+                    </Button>
+                  </HoverTooltip>
+                  <HoverTooltip content={t("auth_files_page.add_oauth")}>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => {
+                        const normalized = normalizeProviderKey(filter);
+                        const oauthTab =
+                          normalized === "codex" ||
+                          normalized === "anthropic" ||
+                          normalized === "antigravity" ||
+                          normalized === "gemini-cli" ||
+                          normalized === "kimi" ||
+                          normalized === "qwen"
+                            ? (normalized as OAuthDialogTab)
+                            : "codex";
+                        setOauthDialogDefaultTab(oauthTab);
+                        setOauthDialogOpen(true);
+                      }}
+                      aria-label={t("auth_files_page.add_oauth")}
+                      title={t("auth_files_page.add_oauth")}
+                    >
+                      <Plus size={15} />
+                    </Button>
+                  </HoverTooltip>
+                </div>
               </div>
             </div>
           </div>
