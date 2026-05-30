@@ -2340,7 +2340,6 @@
     "refreshing": "Refreshing…",
     "not_refreshed": "Not yet refreshed",
     "clear_database_logs": "Clear Database Logs",
-    "clear_database_logs_modal_desc": "Choose which request-log data to remove. You can clear large stored content while keeping request rows and statistics.",
     "clear_database_logs_keep_records_hint": "Recommended default: clear stored bodies and request details while keeping request records, Token totals, cost stats, and the request log table itself.",
     "clear_database_logs_confirm_button": "Clear Selected Data",
     "clear_database_logs_success_content": "Cleared stored request-log content while keeping request records",

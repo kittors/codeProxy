@@ -2593,7 +2593,6 @@
     "refreshing": "刷新中…",
     "not_refreshed": "尚未刷新",
     "clear_database_logs": "清空数据库日志",
-    "clear_database_logs_modal_desc": "选择要清理的请求日志数据。你可以只清理占空间最大的正文内容，同时保留请求记录与统计。",
     "clear_database_logs_keep_records_hint": "推荐默认项：清理正文和请求详情，但保留请求记录、Token/费用统计，以及请求日志列表本身。",
     "clear_database_logs_confirm_button": "清理所选数据",
     "clear_database_logs_success_content": "已清理请求日志正文内容，并保留请求记录",

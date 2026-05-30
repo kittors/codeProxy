@@ -451,7 +451,6 @@ export function RequestLogsPage() {
       <Modal
         open={confirmClearOpen}
         title={t("request_logs.clear_database_logs")}
-        description={t("request_logs.clear_database_logs_modal_desc")}
         maxWidth="max-w-xl"
         onClose={() => {
           if (!clearingLogs) setConfirmClearOpen(false);
