@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Activity, DollarSign, RefreshCw, Sigma, Sparkles, TriangleAlert } from "lucide-react";
+import { Activity, Database, DollarSign, RefreshCw, Sigma, Sparkles, TriangleAlert } from "lucide-react";
 import type { ECBasicOption } from "echarts/types/dist/shared";
 import {
   usageApi,
@@ -427,6 +427,10 @@ export function DashboardPage() {
     () => createSparklineOption(trends?.failed_requests ?? [], "#ef4444"),
     [trends?.failed_requests],
   );
+  const cacheRateOption = useMemo(
+    () => createSparklineOption([], "#f59e0b"),
+    [],
+  );
 
   return (
     <div className="space-y-4">
@@ -545,6 +549,20 @@ export function DashboardPage() {
           accent={{
             iconWrap: "bg-rose-50 dark:bg-rose-500/12",
             iconColor: "text-rose-600 dark:text-rose-400",
+          }}
+        />
+        <DashboardKpiCard
+          title={t("dashboard.cache_rate")}
+          value={<AnimatedNumber value={kpi?.cache_rate ?? 0} format={formatRate} />}
+          hint={t("dashboard.cache_hint", {
+            cached: formatNumber(kpi?.cached_tokens ?? 0),
+            input: formatNumber(kpi?.input_tokens ?? 0),
+          })}
+          icon={Database}
+          option={cacheRateOption}
+          accent={{
+            iconWrap: "bg-amber-50 dark:bg-amber-500/12",
+            iconColor: "text-amber-600 dark:text-amber-400",
           }}
         />
       </div>

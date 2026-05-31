@@ -56,6 +56,8 @@
     "clear_action": "Clear",
     "chart_legend": "Chart legend",
     "success_rate": "Success Rate",
+    "cache_rate": "Cache Hit Rate",
+    "cache_hint": "Cached {{cached}} · Input {{input}}",
     "restoring_session": "Restoring session...",
     "loading_ellipsis": "Loading…",
     "loading_more": "Loading more…",
@@ -181,6 +183,7 @@
     "failed_hint": "Failed requests (for provider/key quality analysis)",
     "load_failed": "Load failed",
     "success_rate": "Success Rate",
+    "cache_hint": "Cached {{cached}} · Input {{input}}",
     "heading": "Dashboard",
     "hero_badge": "Operations Overview",
     "hero_subtitle": "Track runtime health, key metrics, and system resources in one place",
@@ -201,7 +204,8 @@
     "summary_api_keys": "API Keys",
     "summary_providers": "Providers",
     "summary_auth_files": "Auth Files",
-    "updated_fallback": "Just now"
+    "updated_fallback": "Just now",
+    "cache_rate": "Cache Hit Rate"
   },
   "basic_settings": {
     "title": "Basic Settings",
@@ -1202,6 +1206,7 @@
     "tokens_count": "Token Count",
     "models": "Model Statistics",
     "success_rate": "Success Rate",
+    "cache_hint": "Cached {{cached}} · Input {{input}}",
     "total_cost": "Total Cost",
     "total_cost_hint": "Based on configured model pricing",
     "model_price_title": "Model Pricing",
@@ -1780,6 +1785,7 @@
     },
     "total_requests": "Total Requests",
     "success_rate": "Success Rate",
+    "cache_hint": "Cached {{cached}} · Input {{input}}",
     "total_token": "Total Token",
     "output_token": "Output Token",
     "filtered_by_time": "Filtered by time range",
@@ -2368,7 +2374,8 @@
     "clear_key_filter": "Clear key filter",
     "clear_model_filter": "Clear model filter",
     "clear_channel_filter": "Clear channel filter",
-    "clear_status_filter": "Clear status filter"
+    "clear_status_filter": "Clear status filter",
+    "cache_rate": "Cache Hit Rate"
   },
   "ccswitch": {
     "import_to_ccswitch": "Import to CC Switch",

@@ -276,6 +276,7 @@ export const usageApi = {
         success_rate: resp?.stats?.success_rate ?? 0,
         total_tokens: resp?.stats?.total_tokens ?? 0,
         total_cost: resp?.stats?.total_cost ?? 0,
+        cache_rate: resp?.stats?.cache_rate ?? 0,
       },
     };
   },
@@ -353,6 +354,7 @@ export interface DashboardSummary {
     cached_tokens: number;
     total_tokens: number;
     total_cost: number;
+    cache_rate: number;
   };
   trends?: {
     request_volume?: DashboardTrendPoint[];
@@ -426,6 +428,7 @@ export interface UsageLogsResponse {
     success_rate: number;
     total_tokens: number;
     total_cost: number;
+    cache_rate: number;
   };
 }
 

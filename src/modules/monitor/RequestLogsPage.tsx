@@ -23,7 +23,7 @@ import {
   type TimeRange,
 } from "@/modules/monitor/requestLogsShared";
 type StatusFilterValue = "success" | "failed";
-const DEFAULT_LOG_STATS = { total: 0, success_rate: 0, total_tokens: 0, total_cost: 0 };
+const DEFAULT_LOG_STATS = { total: 0, success_rate: 0, total_tokens: 0, total_cost: 0, cache_rate: 0 };
 const DEFAULT_CLEAR_OPTIONS: ClearUsageLogsPayload = {
   clear_body_content: true,
   clear_detail_content: true,
@@ -93,6 +93,7 @@ export function RequestLogsPage() {
     success_rate: number;
     total_tokens: number;
     total_cost: number;
+    cache_rate: number;
   }>(DEFAULT_LOG_STATS);
 
   // Multi-value filters
@@ -338,6 +339,11 @@ export function RequestLogsPage() {
               <span>
                 {t("request_logs.col_cost")}{" "}
                 <span className="font-mono tabular-nums text-emerald-700 dark:text-emerald-400">${stats.total_cost.toFixed(4)}</span>
+              </span>
+              <span className="text-slate-300 dark:text-white/15">|</span>
+              <span>
+                {t("request_logs.cache_rate")}{" "}
+                <span className="font-mono tabular-nums text-amber-600 dark:text-amber-400">{stats.cache_rate.toFixed(1)}%</span>
               </span>
               <span className="text-slate-300 dark:text-white/15">|</span>
               <span className="text-slate-400 dark:text-white/40">
