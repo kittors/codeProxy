@@ -222,7 +222,7 @@ describe("CcSwitchImportSettingsPage", () => {
     expect(within(dialog).queryByRole("tab", { name: /gemini cli/i })).not.toBeInTheDocument();
   });
 
-  test("manually adds and deletes Codex model mappings while validating duplicate actual models", async () => {
+  test("manually adds and deletes Codex model mappings while validating duplicate request models", async () => {
     listChannelGroups.mockResolvedValue([
       {
         name: "pro",
@@ -242,10 +242,11 @@ describe("CcSwitchImportSettingsPage", () => {
 
     expect(await within(dialog).findByText(/add a model mapping/i)).toBeInTheDocument();
     expect(
-      within(dialog).queryByLabelText(/cc switch request model for deepseek-v4-flash/i),
+      within(dialog).queryByLabelText(/cc switch request model for mapping 1/i),
     ).not.toBeInTheDocument();
     expect(within(dialog).getByRole("button", { name: /^save$/i })).toBeDisabled();
 
+    // Add mapping 1: targetModel=deepseek-v4-flash, requestModel=gpt-5.5
     await user.click(within(dialog).getByRole("button", { name: /add model mapping/i }));
     await user.click(within(dialog).getByRole("combobox", { name: /actual channel model 1/i }));
     await user.click(await screen.findByRole("option", { name: "deepseek-v4-flash" }));
@@ -254,22 +255,24 @@ describe("CcSwitchImportSettingsPage", () => {
       "gpt-5.5",
     );
 
+    // Add mapping 2: targetModel=kimi-k2, requestModel=gpt-5.5 (duplicate request model)
     await user.click(within(dialog).getByRole("button", { name: /add model mapping/i }));
     await user.click(within(dialog).getByRole("combobox", { name: /actual channel model 2/i }));
-    await user.click(await screen.findByRole("option", { name: "deepseek-v4-flash" }));
+    await user.click(await screen.findByRole("option", { name: "kimi-k2" }));
     await user.type(
       within(dialog).getByLabelText(/cc switch request model for mapping 2/i),
-      "gpt-5.4",
+      "gpt-5.5",
     );
 
     expect(
-      await within(dialog).findByText(/actual channel model cannot be repeated/i),
+      await within(dialog).findByText(/cc switch request model cannot be repeated/i),
     ).toBeInTheDocument();
     expect(within(dialog).getByRole("button", { name: /^save$/i })).toBeDisabled();
 
+    // Delete mapping 2 — error should go away
     await user.click(within(dialog).getByRole("button", { name: /delete model mapping 2/i }));
     expect(
-      within(dialog).queryByText(/actual channel model cannot be repeated/i),
+      within(dialog).queryByText(/cc switch request model cannot be repeated/i),
     ).not.toBeInTheDocument();
 
     await user.type(within(dialog).getByLabelText(/provider name/i), "Relay Codex");

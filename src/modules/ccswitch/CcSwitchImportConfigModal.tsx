@@ -229,15 +229,15 @@ function modelOptions(models: readonly string[]): SearchableSelectOption[] {
   }));
 }
 
-function getDuplicateGenericTargetModels(modelMappings: readonly CcSwitchModelMapping[]): string[] {
+function getDuplicateGenericRequestModels(modelMappings: readonly CcSwitchModelMapping[]): string[] {
   const counts = new Map<string, { label: string; count: number }>();
   for (const mapping of modelMappings) {
     if (mapping.role) continue;
-    const targetModel = mapping.targetModel.trim();
-    if (!targetModel) continue;
-    const key = targetModel.toLowerCase();
+    const requestModel = mapping.requestModel.trim();
+    if (!requestModel) continue;
+    const key = requestModel.toLowerCase();
     const current = counts.get(key);
-    counts.set(key, { label: current?.label ?? targetModel, count: (current?.count ?? 0) + 1 });
+    counts.set(key, { label: current?.label ?? requestModel, count: (current?.count ?? 0) + 1 });
   }
   return Array.from(counts.values())
     .filter((item) => item.count > 1)
@@ -493,13 +493,13 @@ export function CcSwitchImportConfigModal({
   );
   const preparedDraft = prepareDraftForSave(draft);
   const modelMappingsLoading = Boolean(selectedGroup && modelsLoading);
-  const duplicateActualModels = getDuplicateGenericTargetModels(draft.modelMappings);
+  const duplicateRequestModels = getDuplicateGenericRequestModels(draft.modelMappings);
   const isSaveDisabled =
     !preparedDraft.providerName.trim() ||
     !selectedGroup ||
     !preparedDraft.defaultModel.trim() ||
     preparedDraft.modelMappings.length === 0 ||
-    duplicateActualModels.length > 0 ||
+    duplicateRequestModels.length > 0 ||
     modelMappingsLoading;
 
   const setClientType = (clientType: CcSwitchClientType) => {
@@ -959,10 +959,10 @@ export function CcSwitchImportConfigModal({
                   </tbody>
                 </table>
               )}
-              {duplicateActualModels.length > 0 ? (
+              {duplicateRequestModels.length > 0 ? (
                 <div className="border-t border-rose-100 bg-rose-50 px-4 py-2 text-xs font-medium text-rose-700 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-200">
-                  {t("ccswitch.config_actual_model_duplicate", {
-                    model: duplicateActualModels.join(", "),
+                  {t("ccswitch.config_request_model_duplicate", {
+                    model: duplicateRequestModels.join(", "),
                   })}
                 </div>
               ) : null}

@@ -2729,7 +2729,7 @@
     "config_delete_model_mapping": "删除第 {{index}} 条模型映射",
     "config_actual_channel_model": "实际渠道模型",
     "config_actual_channel_model_for_mapping": "第 {{index}} 条实际渠道模型",
-    "config_actual_model_duplicate": "实际渠道模型不能重复：{{model}}",
+    "config_request_model_duplicate": "CC Switch 请求模型不能重复：{{model}}",
     "config_request_model_name": "CC Switch 请求模型",
     "config_request_model_for": "{{model}} 对应的 CC Switch 请求模型",
     "config_request_model_for_mapping": "第 {{index}} 条 CC Switch 请求模型",

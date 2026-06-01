@@ -2474,7 +2474,7 @@
     "config_delete_model_mapping": "Delete model mapping {{index}}",
     "config_actual_channel_model": "Actual channel model",
     "config_actual_channel_model_for_mapping": "Actual channel model {{index}}",
-    "config_actual_model_duplicate": "Actual channel model cannot be repeated: {{model}}",
+    "config_request_model_duplicate": "CC Switch request model cannot be repeated: {{model}}",
     "config_request_model_name": "CC Switch request model",
     "config_request_model_for": "CC Switch request model for {{model}}",
     "config_request_model_for_mapping": "CC Switch request model for mapping {{index}}",
