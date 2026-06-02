@@ -39,6 +39,7 @@ export function ProviderKeyListCard({
   naturalHeight = false,
   showConnectionRows = true,
   showModelMetric = true,
+  renderMetricsExtra,
 }: {
   items: ProviderSimpleConfig[];
   loading?: boolean;
@@ -48,6 +49,7 @@ export function ProviderKeyListCard({
   onToggleEnabled?: (index: number, enabled: boolean) => void;
   gridColumns?: number;
   renderExtra?: (item: ProviderSimpleConfig, index: number) => ReactNode;
+  renderMetricsExtra?: (item: ProviderSimpleConfig, index: number, stats: KeyStatBucket) => ReactNode;
   getStats: (item: ProviderSimpleConfig) => KeyStatBucket;
   getStatusBar: (item: ProviderSimpleConfig) => StatusBarData;
   getLatencyEntry?: (key: string) => { latencyMs: number | null; loading: boolean; error: boolean };
@@ -185,7 +187,7 @@ export function ProviderKeyListCard({
                   />
                 ) : null}
 
-                <div className="mt-2 flex flex-wrap gap-1.5">
+                <div className="mt-2 flex flex-wrap items-center gap-1.5">
                   {showModelMetric ? (
                     <ProviderMetricChip
                       tone="blue"
@@ -216,6 +218,9 @@ export function ProviderKeyListCard({
                     tone={stats.failure > 0 ? "rose" : "slate"}
                     label={t("providers.failed_stats", { count: stats.failure })}
                   />
+                  {renderMetricsExtra ? (
+                    <div className="ml-auto">{renderMetricsExtra(item, idx, stats)}</div>
+                  ) : null}
                 </div>
 
                 {headerEntries.length ? (

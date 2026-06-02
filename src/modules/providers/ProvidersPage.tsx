@@ -1041,6 +1041,48 @@ export function ProvidersPage() {
                   onRefresh={() => void refreshOpenCodeGoUsage(item, idx)}
                 />
               )}
+              renderMetricsExtra={(item, idx) => {
+                const cacheKey = getOpenCodeGoUsageCacheKey(item, idx);
+                const loading = openCodeGoUsageLoadingState[cacheKey] ?? false;
+                const hasError = Boolean(openCodeGoUsageState[cacheKey]?.error);
+                return (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      void refreshOpenCodeGoUsage(item, idx);
+                    }}
+                    disabled={loading}
+                    className={[
+                      "inline-flex h-6 w-6 items-center justify-center rounded-lg transition-all duration-150",
+                      "text-slate-400 hover:bg-slate-200/60 hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/25",
+                      "dark:text-white/40 dark:hover:bg-white/10 dark:hover:text-white/60 dark:focus-visible:ring-white/20",
+                      loading || hasError
+                        ? "opacity-100"
+                        : "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100",
+                    ].join(" ")}
+                    aria-label="Refresh usage"
+                    title="Refresh usage"
+                  >
+                    <svg
+                      width="13"
+                      height="13"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className={loading ? "animate-spin" : ""}
+                    >
+                      <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+                      <path d="M21 3v5h-5" />
+                      <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
+                      <path d="M3 21v-5h5" />
+                    </svg>
+                  </button>
+                );
+              }}
               gridColumns={gridColumns}
               selectedKeys={selectedExportKeySet}
               onToggleSelected={toggleExportSelection}

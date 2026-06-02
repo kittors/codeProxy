@@ -1,5 +1,4 @@
 import { useTranslation } from "react-i18next";
-import { RefreshCw } from "lucide-react";
 import type { OpenCodeGoUsageItem } from "@/lib/http/types";
 
 export interface OpenCodeGoUsageCacheEntry {
@@ -97,11 +96,9 @@ export function OpenCodeGoUsageCardSection({
   );
 
   const hasUsage = Boolean(usageEntry && usageEntry.usage.length > 0);
-  const showError = Boolean(usageEntry?.error);
-  const showRefreshButton = loading || showError;
 
   return (
-    <div className="group/usage relative mt-3">
+    <div className="mt-3">
       {loading && !hasUsage ? (
         <div className="space-y-2">
           {TYPE_LABELS.map((type) => (
@@ -169,27 +166,6 @@ export function OpenCodeGoUsageCardSection({
             : usageEntry.error}
         </p>
       ) : null}
-
-      <button
-        type="button"
-        onClick={(e) => {
-          e.stopPropagation();
-          onRefresh();
-        }}
-        disabled={loading}
-        className={[
-          "absolute right-0 top-0 inline-flex items-center justify-center rounded-lg p-1 transition-all duration-150",
-          "text-slate-400 hover:bg-slate-200/60 hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/25",
-          "dark:text-white/40 dark:hover:bg-white/10 dark:hover:text-white/60 dark:focus-visible:ring-white/20",
-          showRefreshButton
-            ? "opacity-100 pointer-events-auto"
-            : "opacity-0 pointer-events-none group-hover/usage:opacity-100 group-focus-within/usage:opacity-100 group-hover/usage:pointer-events-auto group-focus-within/usage:pointer-events-auto",
-        ].join(" ")}
-        aria-label={t("providers.opencode_go_usage_refresh")}
-        title={t("providers.opencode_go_usage_refresh")}
-      >
-        <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
-      </button>
     </div>
   );
 }
