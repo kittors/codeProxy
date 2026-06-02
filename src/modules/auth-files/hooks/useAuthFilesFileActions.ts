@@ -2,6 +2,7 @@ import { useCallback, useState, type Dispatch, type RefObject, type SetStateActi
 import { useTranslation } from "react-i18next";
 import { authFilesApi } from "@/lib/http/apis";
 import type { AuthFileItem } from "@/lib/http/types";
+import { invalidateConfiguredModelAvailability } from "@/modules/models/configuredAvailabilityCache";
 import { useToast } from "@/modules/ui/ToastProvider";
 import {
   formatFileSize,
@@ -109,6 +110,8 @@ export function useAuthFilesFileActions({
           }
         }
 
+        if (success > 0) invalidateConfiguredModelAvailability();
+
         if (failed === 0 && tooLarge.length === 0) {
           notify({ type: "success", message: t("auth_files.upload_success", { count: success }) });
         } else {
@@ -158,6 +161,7 @@ export function useAuthFilesFileActions({
         }
 
         if (deletedNames.length > 0) {
+          invalidateConfiguredModelAvailability();
           setFiles((prev) => prev.filter((file) => !deletedNames.includes(file.name)));
           setSelectedFileNames((prev) => prev.filter((name) => !deletedNames.includes(name)));
           setDetailFile((prev) => (prev && deletedNames.includes(prev.name) ? null : prev));
@@ -202,6 +206,7 @@ export function useAuthFilesFileActions({
 
       try {
         const res = await authFilesApi.setStatus(name, nextDisabled);
+        invalidateConfiguredModelAvailability();
         setFiles((prev) =>
           prev.map((item) => (item.name === name ? { ...item, disabled: res.disabled } : item)),
         );

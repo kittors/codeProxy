@@ -603,7 +603,7 @@ describe("CcSwitchImportSettingsPage", () => {
     );
   });
 
-  test("shows a compact model mapping loading state while edited config models load", async () => {
+  test("shows saved model mappings immediately while edited config models refresh", async () => {
     const modelsDeferred = createDeferred<{ id: string }[]>();
     listChannelGroups.mockResolvedValue([
       {
@@ -638,22 +638,27 @@ describe("CcSwitchImportSettingsPage", () => {
     await user.click(screen.getByRole("button", { name: /edit config/i }));
 
     const dialog = await screen.findByRole("dialog", { name: /edit cc switch config/i });
-    const mappingStatus = await within(dialog).findByTestId("ccswitch-model-mapping-loading");
 
-    expect(mappingStatus).toHaveTextContent(/loading model mapping/i);
+    expect(within(dialog).queryByTestId("ccswitch-model-mapping-loading")).toBeNull();
     expect(
       within(dialog).queryByText(/no models are available for this channel group/i),
     ).not.toBeInTheDocument();
     expect(
-      within(dialog).queryByLabelText(/cc switch request model for mapping 1/i),
-    ).not.toBeInTheDocument();
+      within(dialog).getByLabelText(/cc switch request model for mapping 1/i),
+    ).toHaveValue("gpt-5.5");
+    expect(
+      within(dialog).getByRole("combobox", { name: /actual channel model 1/i }),
+    ).toHaveTextContent("moonshot-v1-128k");
+    expect(within(dialog).getByRole("button", { name: /^save$/i })).not.toBeDisabled();
 
     modelsDeferred.resolve([{ id: "kimi-k2.5" }]);
 
-    expect(
-      await within(dialog).findByLabelText(/cc switch request model for mapping 1/i),
-    ).toHaveValue("gpt-5.5");
-    expect(within(dialog).queryByTestId("ccswitch-model-mapping-loading")).toBeNull();
+    await waitFor(() =>
+      expect(within(dialog).queryByTestId("ccswitch-model-mapping-loading")).toBeNull(),
+    );
+    expect(within(dialog).getByLabelText(/cc switch request model for mapping 1/i)).toHaveValue(
+      "gpt-5.5",
+    );
   });
 
   test("previews the full BaseURL request address from the selected channel group path", async () => {

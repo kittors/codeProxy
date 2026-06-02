@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { apiCallApi, getApiCallErrorMessage, providersApi } from "@/lib/http/apis";
 import type { ApiCallResult, OpenAIProvider } from "@/lib/http/types";
 import { useToast } from "@/modules/ui/ToastProvider";
+import { invalidateConfiguredModelAvailability } from "@/modules/models/configuredAvailabilityCache";
 import { keyValueEntriesToRecord } from "@/modules/providers/KeyValueInputList";
 import { createEmptyModelEntry } from "@/modules/providers/ModelInputList";
 import {
@@ -129,6 +130,7 @@ export function useOpenAIProviderEditor({
 
       setOpenaiProviders(next);
       await providersApi.saveOpenAIProviders(next);
+      invalidateConfiguredModelAvailability();
       notify({ type: "success", message: t("providers.saved") });
       closeOpenAIEditor();
       startRefreshTransition(() => void refreshAll());
@@ -156,6 +158,7 @@ export function useOpenAIProviderEditor({
       if (!entry) return;
       try {
         await providersApi.deleteOpenAIProvider(entry.name);
+        invalidateConfiguredModelAvailability();
         setOpenaiProviders((prev) => prev.filter((_, itemIndex) => itemIndex !== index));
         notify({ type: "success", message: t("providers.deleted") });
       } catch (err: unknown) {
@@ -190,6 +193,7 @@ export function useOpenAIProviderEditor({
       setOpenaiProviders(next);
       try {
         await providersApi.saveOpenAIProviders(next);
+        invalidateConfiguredModelAvailability();
         notify({
           type: "success",
           message: enabled ? t("providers.toggle_enabled") : t("providers.toggle_disabled"),
@@ -283,6 +287,7 @@ export function useOpenAIProviderEditor({
         await providersApi.patchOpenAIProviderDisabled(providerIndex, !enabled);
         // Re-fetch from server to get authoritative state
         const latest = await providersApi.getOpenAIProviders();
+        invalidateConfiguredModelAvailability();
         setOpenaiProviders(latest);
         notify({
           type: "success",
