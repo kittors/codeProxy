@@ -442,6 +442,7 @@ export function ApiKeysPage() {
         config,
         configs: ccSwitchImportConfigs,
         providerName: ccSwitchImportEntry.name,
+        usageBaseUrl: baseApiUrl,
       });
     },
     [ccSwitchImportEntry, ccSwitchImportConfigs, channelGroupItems, auth],
