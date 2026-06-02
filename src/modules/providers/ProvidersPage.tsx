@@ -995,6 +995,9 @@ export function ProvidersPage() {
               getStats={getSimpleStats}
               getStatusBar={getSimpleStatusBar}
               showBaseUrl={false}
+              naturalHeight
+              showConnectionRows={false}
+              showModelMetric={false}
               renderExtra={(item, idx) => (
                 <OpenCodeGoUsageCardSection
                   usageEntry={openCodeGoUsageState[getOpenCodeGoUsageCacheKey(item, idx)]}

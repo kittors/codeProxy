@@ -36,6 +36,9 @@ export function ProviderKeyListCard({
   showBaseUrl = true,
   selectedKeys,
   onToggleSelected,
+  naturalHeight = false,
+  showConnectionRows = true,
+  showModelMetric = true,
 }: {
   items: ProviderSimpleConfig[];
   loading?: boolean;
@@ -52,6 +55,9 @@ export function ProviderKeyListCard({
   showBaseUrl?: boolean;
   selectedKeys?: Set<string>;
   onToggleSelected?: (key: string, checked: boolean) => void;
+  naturalHeight?: boolean;
+  showConnectionRows?: boolean;
+  showModelMetric?: boolean;
 }) {
   const { t } = useTranslation();
   const gridColumnsClass =
@@ -104,6 +110,7 @@ export function ProviderKeyListCard({
                 selected={selected}
                 enabled={!disabled}
                 dimmed={disabled}
+                naturalHeight={naturalHeight}
                 onToggleSelected={
                   onToggleSelected
                     ? (checked) => onToggleSelected(selectionKey, checked)
@@ -168,20 +175,24 @@ export function ProviderKeyListCard({
                 }
                 footer={<ProviderStatusBar data={statusData} />}
               >
-                <ProviderConnectionRows
-                  apiKey={item.apiKey}
-                  baseUrl={item.baseUrl}
-                  proxyUrl={item.proxyUrl}
-                  maskApiKey={maskApiKey}
-                  showBaseUrl={showBaseUrl}
-                />
+                {showConnectionRows ? (
+                  <ProviderConnectionRows
+                    apiKey={item.apiKey}
+                    baseUrl={item.baseUrl}
+                    proxyUrl={item.proxyUrl}
+                    maskApiKey={maskApiKey}
+                    showBaseUrl={showBaseUrl}
+                  />
+                ) : null}
 
                 <div className="mt-2 flex flex-wrap gap-1.5">
-                  <ProviderMetricChip
-                    tone="blue"
-                    label={t("providers.models_label")}
-                    value={models.length}
-                  />
+                  {showModelMetric ? (
+                    <ProviderMetricChip
+                      tone="blue"
+                      label={t("providers.models_label")}
+                      value={models.length}
+                    />
+                  ) : null}
                   {excludedModels.length ? (
                     <ProviderMetricChip
                       tone="rose"

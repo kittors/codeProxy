@@ -38,19 +38,29 @@ export function mergeOpenCodeGoUsage(
   return result;
 }
 
-const resolveUsageTone = (
-  value: number,
-): { fillClass: string; percentClass: string } => {
-  const normalized = clampPercent(value);
+const resolveRemainingPercent = (usagePercentage: number | undefined): number | null => {
+  if (typeof usagePercentage !== "number" || !Number.isFinite(usagePercentage)) return null;
+  return clampPercent(100 - clampPercent(usagePercentage));
+};
 
-  if (normalized >= 60) {
+const resolveRemainingTone = (
+  remaining: number | null,
+): { fillClass: string; percentClass: string } => {
+  if (remaining === null) {
+    return {
+      fillClass: "bg-slate-300/50 dark:bg-white/10",
+      percentClass: "text-slate-600 dark:text-white/65",
+    };
+  }
+
+  if (remaining >= 60) {
     return {
       fillClass: "bg-emerald-500",
       percentClass: "text-emerald-700 dark:text-emerald-200",
     };
   }
 
-  if (normalized >= 20) {
+  if (remaining >= 20) {
     return {
       fillClass: "bg-amber-500",
       percentClass: "text-amber-700 dark:text-amber-200",
@@ -62,6 +72,8 @@ const resolveUsageTone = (
     percentClass: "text-rose-700 dark:text-rose-200",
   };
 };
+
+const TYPE_LABELS = ["rolling", "weekly", "monthly"] as const;
 
 export function OpenCodeGoUsageCardSection({
   usageEntry,
@@ -78,77 +90,72 @@ export function OpenCodeGoUsageCardSection({
     (usageEntry?.usage ?? []).map((item) => [item.type.toLowerCase(), item]),
   );
 
-  return (
-    <div className="mt-3 rounded-2xl bg-slate-50/85 px-3 py-3 transition-colors duration-200 ease-out dark:bg-white/[0.03]">
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-[11px] font-semibold text-slate-700 dark:text-white/80">
-          {t("providers.opencode_go_usage_title")}
-        </span>
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onRefresh();
-          }}
-          disabled={loading}
-          className="inline-flex items-center gap-1 rounded-lg px-1.5 py-0.5 text-[11px] font-medium text-slate-500 transition-colors hover:bg-slate-200/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/25 disabled:opacity-50 dark:text-white/55 dark:hover:bg-white/10 dark:focus-visible:ring-white/20"
-          aria-label={t("providers.opencode_go_usage_refresh")}
-          title={t("providers.opencode_go_usage_refresh")}
-        >
-          <RefreshCw size={12} className={loading ? "animate-spin" : ""} />
-        </button>
-      </div>
+  const hasUsage = Boolean(usageEntry && usageEntry.usage.length > 0);
 
-      {usageEntry ? (
-        <>
-          <div className="mt-2 space-y-2.5">
-            {(["rolling", "weekly", "monthly"] as const).map((type) => {
+  return (
+    <div className="mt-3 flex items-start justify-between gap-2">
+      <div className="min-w-0 flex-1">
+        {hasUsage ? (
+          <div className="space-y-1.5">
+            {TYPE_LABELS.map((type) => {
               const item = usageByType.get(type);
-              const value = item?.percentage ?? 0;
-              const tone = resolveUsageTone(value);
+              const remaining = resolveRemainingPercent(item?.percentage);
+              const tone = resolveRemainingTone(remaining);
+              const remainingText = remaining === null ? "--" : `${remaining}%`;
 
               return (
-                <div key={type} className="space-y-1">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="min-w-0 truncate text-[11px] font-semibold text-slate-700 dark:text-white/80">
-                      {t(`providers.opencode_go_usage_${type}`)}
-                    </span>
-                    <span
-                      className={[
-                        "shrink-0 text-[11px] font-semibold tabular-nums",
-                        tone.percentClass,
-                      ].join(" ")}
-                    >
-                      {value}%
-                    </span>
-                  </div>
+                <div
+                  key={type}
+                  className="grid grid-cols-[2.5rem_minmax(0,1fr)_4.5rem] items-center gap-2"
+                >
+                  <span className="truncate text-[11px] font-semibold text-slate-600 dark:text-white/65">
+                    {t(`providers.opencode_go_usage_${type}`)}
+                  </span>
                   <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200/80 dark:bg-white/10">
                     <div
                       className={["h-full rounded-full", tone.fillClass].join(" ")}
-                      style={{ width: `${clampPercent(value)}%` }}
+                      style={{ width: `${remaining ?? 0}%` }}
                       aria-hidden="true"
                     />
                   </div>
-                  <div className="truncate text-[10px] tabular-nums text-slate-500 dark:text-white/45">
-                    {item && item.resets_in
-                      ? t("providers.opencode_go_usage_resets_in", { time: item.resets_in })
-                      : t("providers.opencode_go_usage_no_data")}
-                  </div>
+                  <span
+                    className={[
+                      "truncate text-right text-[11px] font-semibold tabular-nums",
+                      tone.percentClass,
+                    ].join(" ")}
+                  >
+                    {remainingText}
+                  </span>
                 </div>
               );
             })}
           </div>
-          {usageEntry.error ? (
-            <p className="mt-2 text-[11px] font-semibold text-rose-700 dark:text-rose-200">
-              {usageEntry.error}
-            </p>
-          ) : null}
-        </>
-      ) : !loading ? (
-        <p className="mt-2 text-xs text-slate-400 dark:text-white/45">
-          {t("providers.opencode_go_usage_not_queried")}
-        </p>
-      ) : null}
+        ) : !loading ? (
+          <p className="text-xs text-slate-400 dark:text-white/45">
+            {t("providers.opencode_go_usage_not_queried")}
+          </p>
+        ) : null}
+
+        {usageEntry?.error ? (
+          <p className="mt-1 text-[11px] font-semibold text-rose-700 dark:text-rose-200">
+            {usageEntry.error}
+          </p>
+        ) : null}
+      </div>
+
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onRefresh();
+        }}
+        disabled={loading}
+        className="mt-0.5 inline-flex shrink-0 items-center justify-center rounded-lg p-1 text-slate-400 transition-colors hover:bg-slate-200/60 hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/25 disabled:opacity-50 dark:text-white/40 dark:hover:bg-white/10 dark:hover:text-white/60 dark:focus-visible:ring-white/20"
+        aria-label={t("providers.opencode_go_usage_refresh")}
+        title={t("providers.opencode_go_usage_refresh")}
+      >
+        <RefreshCw size={12} className={loading ? "animate-spin" : ""} />
+      </button>
     </div>
   );
 }
