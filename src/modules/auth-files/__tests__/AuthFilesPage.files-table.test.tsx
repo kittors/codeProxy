@@ -1139,7 +1139,7 @@ describe("AuthFilesPage files table", () => {
       await router.navigate("/auth-files");
     });
 
-    // Should render immediately from sessionStorage cache (no blank state)
+    // Should render immediately from localStorage cache (no blank state)
     expect(screen.getByText("qwen.json")).toBeInTheDocument();
   });
 
@@ -1162,7 +1162,7 @@ describe("AuthFilesPage files table", () => {
       items: [{ key: "code_5h", label: "m_quota.code_5h", percent: 88 }],
     });
     window.localStorage.setItem(AUTH_FILES_QUOTA_AUTO_REFRESH_KEY, JSON.stringify(0));
-    window.sessionStorage.setItem(
+    window.localStorage.setItem(
       AUTH_FILES_DATA_CACHE_KEY,
       JSON.stringify({
         savedAtMs: now,
@@ -1582,7 +1582,7 @@ describe("AuthFilesPage files table", () => {
       },
     ] as any[];
     window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
-    window.sessionStorage.setItem(
+    window.localStorage.setItem(
       AUTH_FILES_DATA_CACHE_KEY,
       JSON.stringify({
         savedAtMs: now,
@@ -1642,6 +1642,9 @@ describe("AuthFilesPage files table", () => {
     expect(await within(card as HTMLElement).findByText("1 calls")).toBeInTheDocument();
     expect(await within(otherCard as HTMLElement).findByText("10 calls")).toBeInTheDocument();
 
+    await waitFor(() => expect(mocks.fetchQuota).toHaveBeenCalledTimes(2));
+    mocks.fetchQuota.mockClear();
+
     fireEvent.click(within(card as HTMLElement).getByRole("button", { name: "Refresh" }));
 
     await waitFor(() => {
@@ -1674,7 +1677,7 @@ describe("AuthFilesPage files table", () => {
       resolve: (value: { items: Array<{ label: string; percent: number }> }) => void;
       reject: (reason?: unknown) => void;
     };
-    const deferredQueue = Array.from({ length: files.length }, () =>
+    const deferredQueue = Array.from({ length: files.length * 2 }, () =>
       createDeferred<{ items: Array<{ label: string; percent: number }> }>(),
     );
     const startedDeferreds: QuotaRefreshDeferred[] = [];
@@ -1682,7 +1685,7 @@ describe("AuthFilesPage files table", () => {
     let maxActiveFetches = 0;
 
     window.localStorage.setItem(AUTH_FILES_QUOTA_AUTO_REFRESH_KEY, JSON.stringify(0));
-    window.sessionStorage.setItem(
+    window.localStorage.setItem(
       AUTH_FILES_DATA_CACHE_KEY,
       JSON.stringify({
         savedAtMs: now,
@@ -1726,6 +1729,21 @@ describe("AuthFilesPage files table", () => {
     );
 
     expect(await screen.findByText("codex-1.json")).toBeInTheDocument();
+    for (let index = 0; index < files.length; index += 2) {
+      await waitFor(() =>
+        expect(mocks.fetchQuota).toHaveBeenCalledTimes(Math.min(files.length, index + 2)),
+      );
+      const warmupDeferreds = startedDeferreds.splice(0);
+      await act(async () => {
+        warmupDeferreds.forEach((deferred) =>
+          deferred.resolve({ items: [{ label: "m_quota.code_5h", percent: 60 }] }),
+        );
+      });
+    }
+    await waitFor(() => expect(activeFetches).toBe(0));
+    mocks.fetchQuota.mockClear();
+    maxActiveFetches = 0;
+
     const refreshButton = screen.getAllByRole("button", { name: "Refresh" })[0];
     expect(refreshButton).toBeEnabled();
 
@@ -1780,11 +1798,11 @@ describe("AuthFilesPage files table", () => {
 
     window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
     window.localStorage.setItem("authFilesPage.quotaAutoRefreshMs.v1", JSON.stringify(10000));
-    window.sessionStorage.setItem(
+    window.localStorage.setItem(
       AUTH_FILES_UI_STATE_KEY,
       JSON.stringify({ tab: "files", filter: "codex", search: "", page: 1 }),
     );
-    window.sessionStorage.setItem(
+    window.localStorage.setItem(
       AUTH_FILES_DATA_CACHE_KEY,
       JSON.stringify({
         savedAtMs: now,
@@ -1854,11 +1872,11 @@ describe("AuthFilesPage files table", () => {
 
     window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
     window.localStorage.setItem("authFilesPage.quotaAutoRefreshMs.v1", JSON.stringify(0));
-    window.sessionStorage.setItem(
+    window.localStorage.setItem(
       AUTH_FILES_UI_STATE_KEY,
       JSON.stringify({ tab: "files", filter: "qwen", search: "", page: 1 }),
     );
-    window.sessionStorage.setItem(
+    window.localStorage.setItem(
       AUTH_FILES_DATA_CACHE_KEY,
       JSON.stringify({
         savedAtMs: now,
@@ -2486,7 +2504,7 @@ describe("AuthFilesPage files table", () => {
     });
 
     window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
-    window.sessionStorage.setItem(
+    window.localStorage.setItem(
       AUTH_FILES_DATA_CACHE_KEY,
       JSON.stringify({
         savedAtMs: now,
@@ -2541,7 +2559,7 @@ describe("AuthFilesPage files table", () => {
 
     window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
     window.localStorage.setItem("authFilesPage.quotaAutoRefreshMs.v1", JSON.stringify(0));
-    window.sessionStorage.setItem(
+    window.localStorage.setItem(
       AUTH_FILES_DATA_CACHE_KEY,
       JSON.stringify({
         savedAtMs: now,
@@ -2591,7 +2609,7 @@ describe("AuthFilesPage files table", () => {
 
     window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
     window.localStorage.setItem("authFilesPage.quotaAutoRefreshMs.v1", JSON.stringify(0));
-    window.sessionStorage.setItem(
+    window.localStorage.setItem(
       AUTH_FILES_DATA_CACHE_KEY,
       JSON.stringify({
         savedAtMs: now,
@@ -2656,7 +2674,7 @@ describe("AuthFilesPage files table", () => {
 
     window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
     window.localStorage.setItem("authFilesPage.quotaAutoRefreshMs.v1", JSON.stringify(0));
-    window.sessionStorage.setItem(
+    window.localStorage.setItem(
       AUTH_FILES_DATA_CACHE_KEY,
       JSON.stringify({
         savedAtMs: now,
@@ -2712,7 +2730,7 @@ describe("AuthFilesPage files table", () => {
 
     window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
     window.localStorage.setItem("authFilesPage.quotaAutoRefreshMs.v1", JSON.stringify(0));
-    window.sessionStorage.setItem(
+    window.localStorage.setItem(
       AUTH_FILES_DATA_CACHE_KEY,
       JSON.stringify({
         savedAtMs: now,
@@ -2798,7 +2816,7 @@ describe("AuthFilesPage files table", () => {
 
     window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
     window.localStorage.setItem("authFilesPage.quotaAutoRefreshMs.v1", JSON.stringify(0));
-    window.sessionStorage.setItem(
+    window.localStorage.setItem(
       AUTH_FILES_DATA_CACHE_KEY,
       JSON.stringify({
         savedAtMs: now,
@@ -2863,7 +2881,7 @@ describe("AuthFilesPage files table", () => {
     mocks.list.mockImplementation(async () => ({ files: [file] }));
 
     window.localStorage.setItem("authFilesPage.quotaAutoRefreshMs.v1", JSON.stringify(0));
-    window.sessionStorage.setItem(
+    window.localStorage.setItem(
       AUTH_FILES_DATA_CACHE_KEY,
       JSON.stringify({
         savedAtMs: now,
@@ -2937,7 +2955,7 @@ describe("AuthFilesPage files table", () => {
     mocks.list.mockImplementation(async () => ({ files: [file] }));
 
     window.localStorage.setItem("authFilesPage.quotaAutoRefreshMs.v1", JSON.stringify(0));
-    window.sessionStorage.setItem(
+    window.localStorage.setItem(
       AUTH_FILES_DATA_CACHE_KEY,
       JSON.stringify({
         savedAtMs: now,
@@ -3018,7 +3036,7 @@ describe("AuthFilesPage files table", () => {
     mocks.list.mockImplementation(async () => ({ files: [file] }));
 
     window.localStorage.setItem("authFilesPage.quotaAutoRefreshMs.v1", JSON.stringify(0));
-    window.sessionStorage.setItem(
+    window.localStorage.setItem(
       AUTH_FILES_DATA_CACHE_KEY,
       JSON.stringify({
         savedAtMs: now,
@@ -3086,7 +3104,7 @@ describe("AuthFilesPage files table", () => {
     mocks.fetchQuota.mockImplementation(() => new Promise(() => {}));
 
     window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
-    window.sessionStorage.setItem(
+    window.localStorage.setItem(
       AUTH_FILES_DATA_CACHE_KEY,
       JSON.stringify({
         savedAtMs: now,
@@ -3182,11 +3200,11 @@ describe("AuthFilesPage files table", () => {
     });
 
     window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
-    window.sessionStorage.setItem(
+    window.localStorage.setItem(
       AUTH_FILES_UI_STATE_KEY,
       JSON.stringify({ tab: "files", filter: "qwen", search: "", page: 1 }),
     );
-    window.sessionStorage.setItem(
+    window.localStorage.setItem(
       AUTH_FILES_DATA_CACHE_KEY,
       JSON.stringify({
         savedAtMs: now,
@@ -3294,7 +3312,7 @@ describe("AuthFilesPage files table", () => {
 
     window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
     window.localStorage.setItem("authFilesPage.quotaAutoRefreshMs.v1", JSON.stringify(0));
-    window.sessionStorage.setItem(
+    window.localStorage.setItem(
       AUTH_FILES_DATA_CACHE_KEY,
       JSON.stringify({
         savedAtMs: now,
@@ -3348,7 +3366,7 @@ describe("AuthFilesPage files table", () => {
     mocks.fetchQuota.mockImplementation(() => new Promise(() => {}));
 
     window.localStorage.setItem("authFilesPage.quotaAutoRefreshMs.v1", JSON.stringify(0));
-    window.sessionStorage.setItem(
+    window.localStorage.setItem(
       AUTH_FILES_DATA_CACHE_KEY,
       JSON.stringify({
         savedAtMs: now,
@@ -3427,7 +3445,7 @@ describe("AuthFilesPage files table", () => {
 
     window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
     window.localStorage.setItem("authFilesPage.quotaAutoRefreshMs.v1", JSON.stringify(0));
-    window.sessionStorage.setItem(
+    window.localStorage.setItem(
       AUTH_FILES_DATA_CACHE_KEY,
       JSON.stringify({
         savedAtMs: now,
@@ -3462,6 +3480,9 @@ describe("AuthFilesPage files table", () => {
     const firstCard = firstTitle.closest("section");
     expect(firstCard).not.toBeNull();
     expect(within(firstCard as HTMLElement).getByText("1 calls")).toBeInTheDocument();
+
+    await waitFor(() => expect(mocks.fetchQuota).toHaveBeenCalledTimes(9));
+    mocks.fetchQuota.mockClear();
 
     const toolbarRefreshButton = screen.getAllByRole("button", { name: "Refresh" })[0];
     await waitFor(() => expect(toolbarRefreshButton).toBeEnabled());
@@ -3509,7 +3530,7 @@ describe("AuthFilesPage files table", () => {
 
     window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
     window.localStorage.setItem("authFilesPage.quotaAutoRefreshMs.v1", JSON.stringify(0));
-    window.sessionStorage.setItem(
+    window.localStorage.setItem(
       AUTH_FILES_DATA_CACHE_KEY,
       JSON.stringify({
         savedAtMs: now,
@@ -3546,6 +3567,9 @@ describe("AuthFilesPage files table", () => {
     const cards = screen.getByTestId("auth-files-cards");
     const firstCard = screen.getByText("codex-a.json").closest("section");
     expect(firstCard).not.toBeNull();
+
+    await waitFor(() => expect(mocks.fetchQuota).toHaveBeenCalledTimes(2));
+    mocks.fetchQuota.mockClear();
 
     fireEvent.click(within(firstCard as HTMLElement).getByRole("button", { name: "Refresh" }));
 
@@ -3585,7 +3609,7 @@ describe("AuthFilesPage files table", () => {
     });
 
     window.localStorage.setItem("authFilesPage.quotaAutoRefreshMs.v1", JSON.stringify(0));
-    window.sessionStorage.setItem(
+    window.localStorage.setItem(
       AUTH_FILES_DATA_CACHE_KEY,
       JSON.stringify({
         savedAtMs: now,
@@ -3622,6 +3646,9 @@ describe("AuthFilesPage files table", () => {
     const row = screen.getByText("codex-a.json").closest("tr");
     expect(row).not.toBeNull();
 
+    await waitFor(() => expect(mocks.fetchQuota).toHaveBeenCalledTimes(2));
+    mocks.fetchQuota.mockClear();
+
     fireEvent.click(within(row as HTMLElement).getByRole("button", { name: "Refresh" }));
 
     await waitFor(() => expect(mocks.fetchQuota).toHaveBeenCalledTimes(1));
@@ -3656,7 +3683,7 @@ describe("AuthFilesPage files table", () => {
     });
 
     window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
-    window.sessionStorage.setItem(
+    window.localStorage.setItem(
       AUTH_FILES_DATA_CACHE_KEY,
       JSON.stringify({
         savedAtMs: now,
@@ -3725,7 +3752,7 @@ describe("AuthFilesPage files table", () => {
     }));
 
     window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
-    window.sessionStorage.setItem(
+    window.localStorage.setItem(
       AUTH_FILES_DATA_CACHE_KEY,
       JSON.stringify({
         savedAtMs: now,
@@ -3777,7 +3804,7 @@ describe("AuthFilesPage files table", () => {
 
     mocks.list.mockImplementation(async () => ({ files: [file] }));
     window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
-    window.sessionStorage.setItem(
+    window.localStorage.setItem(
       AUTH_FILES_DATA_CACHE_KEY,
       JSON.stringify({
         savedAtMs: now,
@@ -3838,7 +3865,7 @@ describe("AuthFilesPage files table", () => {
     });
 
     window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
-    window.sessionStorage.setItem(
+    window.localStorage.setItem(
       AUTH_FILES_DATA_CACHE_KEY,
       JSON.stringify({
         savedAtMs: now,
@@ -3890,7 +3917,7 @@ describe("AuthFilesPage files table", () => {
     });
 
     window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
-    window.sessionStorage.setItem(
+    window.localStorage.setItem(
       AUTH_FILES_DATA_CACHE_KEY,
       JSON.stringify({
         savedAtMs: now,
@@ -3994,7 +4021,7 @@ describe("AuthFilesPage files table", () => {
     });
 
     window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
-    window.sessionStorage.setItem(
+    window.localStorage.setItem(
       AUTH_FILES_DATA_CACHE_KEY,
       JSON.stringify({
         savedAtMs: now,
@@ -4034,7 +4061,7 @@ describe("AuthFilesPage files table", () => {
     ).toBeGreaterThan(0);
 
     await waitFor(() => {
-      const raw = window.sessionStorage.getItem(AUTH_FILES_DATA_CACHE_KEY);
+      const raw = window.localStorage.getItem(AUTH_FILES_DATA_CACHE_KEY);
       expect(raw).toContain('"planType":"plus"');
     });
   });
@@ -4058,7 +4085,7 @@ describe("AuthFilesPage files table", () => {
 
     window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
     window.localStorage.setItem("authFilesPage.quotaAutoRefreshMs.v1", JSON.stringify(0));
-    window.sessionStorage.setItem(
+    window.localStorage.setItem(
       AUTH_FILES_DATA_CACHE_KEY,
       JSON.stringify({
         savedAtMs: now,
@@ -4112,7 +4139,7 @@ describe("AuthFilesPage files table", () => {
     });
 
     window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
-    window.sessionStorage.setItem(
+    window.localStorage.setItem(
       AUTH_FILES_DATA_CACHE_KEY,
       JSON.stringify({
         savedAtMs: now,
@@ -4169,7 +4196,7 @@ describe("AuthFilesPage files table", () => {
     mocks.fetchQuota.mockRejectedValue(new Error("request_failed"));
 
     window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
-    window.sessionStorage.setItem(
+    window.localStorage.setItem(
       AUTH_FILES_DATA_CACHE_KEY,
       JSON.stringify({
         savedAtMs: now,
@@ -4220,7 +4247,7 @@ describe("AuthFilesPage files table", () => {
     );
 
     window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
-    window.sessionStorage.setItem(
+    window.localStorage.setItem(
       AUTH_FILES_DATA_CACHE_KEY,
       JSON.stringify({
         savedAtMs: now,

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useTranslation } from "react-i18next";
 import { authFilesApi } from "@/lib/http/apis";
+import { invalidateConfiguredModelAvailability } from "@/modules/models/configuredAvailabilityCache";
 import { useToast } from "@/modules/ui/ToastProvider";
 import type { AuthFileModelItem, AliasRow } from "@/modules/auth-files/helpers/authFilesPageUtils";
 import {
@@ -110,6 +111,7 @@ export function useAuthFilesOAuthConfig(tab: "files" | "excluded" | "alias") {
         .filter(Boolean);
       try {
         await authFilesApi.saveOauthExcludedModels(key, models);
+        invalidateConfiguredModelAvailability();
         notify({ type: "success", message: t("auth_files.saved") });
         startTransition(() => void refreshExcluded());
       } catch (err: unknown) {
@@ -135,6 +137,7 @@ export function useAuthFilesOAuthConfig(tab: "files" | "excluded" | "alias") {
       const key = normalizeProviderKey(provider);
       try {
         await authFilesApi.deleteOauthExcludedEntry(key);
+        invalidateConfiguredModelAvailability();
         notify({ type: "success", message: t("auth_files.deleted") });
         startTransition(() => void refreshExcluded());
       } catch (err: unknown) {
@@ -189,6 +192,7 @@ export function useAuthFilesOAuthConfig(tab: "files" | "excluded" | "alias") {
 
       try {
         await authFilesApi.saveOauthModelAlias(key, next);
+        invalidateConfiguredModelAvailability();
         notify({ type: "success", message: t("auth_files.saved") });
         startTransition(() => void refreshAlias());
       } catch (err: unknown) {
@@ -213,6 +217,7 @@ export function useAuthFilesOAuthConfig(tab: "files" | "excluded" | "alias") {
       const key = normalizeProviderKey(channel);
       try {
         await authFilesApi.deleteOauthModelAlias(key);
+        invalidateConfiguredModelAvailability();
         notify({ type: "success", message: t("auth_files.deleted") });
         startTransition(() => void refreshAlias());
       } catch (err: unknown) {

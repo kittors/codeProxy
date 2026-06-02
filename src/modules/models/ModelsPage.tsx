@@ -33,6 +33,7 @@ import {
   filterByConfiguredModelAvailability,
   formatModelPrice,
   hasModelPricing,
+  invalidateConfiguredModelAvailability,
   loadConfiguredModelAvailability,
   loadModelPathAvailability,
   type ConfiguredModelAvailability,
@@ -455,6 +456,7 @@ async function saveModelConfig(form: ModelFormState, scope: ModelScope) {
   } else {
     await apiClient.post(modelConfigCollectionPath(scope), payload);
   }
+  invalidateConfiguredModelAvailability();
 
   return payloadToModel(payload, scope === "library" ? "seed" : "user");
 }
@@ -859,6 +861,7 @@ export function ModelsPage() {
     setDeleting(true);
     try {
       await apiClient.delete(`/model-configs/${encodeURIComponent(deleteTarget.id)}`);
+      invalidateConfiguredModelAvailability();
       setModels((prev) => prev.filter((model) => model.id !== deleteTarget.id));
       setSelectedModelIds((prev) => {
         if (!prev.has(deleteTarget.id)) return prev;
@@ -915,6 +918,7 @@ export function ModelsPage() {
       for (const modelId of ids) {
         await apiClient.delete(`/model-configs/${encodeURIComponent(modelId)}`);
       }
+      invalidateConfiguredModelAvailability();
       const deletedIds = new Set(ids);
       setModels((prev) => prev.filter((model) => !deletedIds.has(model.id)));
       setSelectedModelIds((current) => {

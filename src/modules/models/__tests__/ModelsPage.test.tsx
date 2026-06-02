@@ -2,6 +2,7 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import i18n from "@/i18n";
+import { invalidateConfiguredModelAvailability } from "@/modules/models/modelAvailability";
 import { ModelsPage } from "@/modules/models/ModelsPage";
 import { ThemeProvider } from "@/modules/ui/ThemeProvider";
 import { ToastProvider } from "@/modules/ui/ToastProvider";
@@ -52,7 +53,71 @@ describe("ModelsPage", () => {
     mocks.apiPost.mockReset();
     mocks.apiPut.mockReset();
     mocks.apiDelete.mockReset();
+    invalidateConfiguredModelAvailability();
     mocks.apiGet.mockImplementation((path: string) => {
+      if (path === "/models/configured-availability") {
+        return Promise.resolve({
+          scoped: true,
+          data: [
+            {
+              id: "gpt-image-2",
+              owned_by: "openai",
+              description: "Image generation model billed per invocation",
+              enabled: true,
+              input_modalities: ["text"],
+              output_modalities: ["image"],
+              supports_vision: false,
+              pricing: {
+                mode: "call",
+                price_per_call: 0.04,
+              },
+            },
+            {
+              id: "qwen3.5-plus",
+              owned_by: "qwen",
+              description: "Vision capable model",
+              enabled: true,
+              input_modalities: ["text", "image"],
+              output_modalities: ["text"],
+              supports_vision: true,
+              pricing: {
+                mode: "token",
+                input_price_per_million: 1,
+                output_price_per_million: 3,
+              },
+            },
+          ],
+          active_metadata: [
+            {
+              id: "gpt-image-2",
+              owned_by: "openai",
+              description: "Image generation model billed per invocation",
+              enabled: true,
+              input_modalities: ["text"],
+              output_modalities: ["image"],
+              supports_vision: false,
+              pricing: {
+                mode: "call",
+                price_per_call: 0.04,
+              },
+            },
+            {
+              id: "qwen3.5-plus",
+              owned_by: "qwen",
+              description: "Vision capable model",
+              enabled: true,
+              input_modalities: ["text", "image"],
+              output_modalities: ["text"],
+              supports_vision: true,
+              pricing: {
+                mode: "token",
+                input_price_per_million: 1,
+                output_price_per_million: 3,
+              },
+            },
+          ],
+        });
+      }
       if (path === "/model-configs?scope=active" || path === "/model-configs") {
         return Promise.resolve({
           data: [
@@ -200,6 +265,9 @@ describe("ModelsPage", () => {
       JSON.stringify({ claude: "anthropic" }),
     );
     mocks.apiGet.mockImplementation((path: string) => {
+      if (path === "/models/configured-availability") {
+        return Promise.reject(new Error("configured availability unavailable"));
+      }
       if (path === "/model-configs?scope=active" || path === "/model-configs") {
         return Promise.resolve({
           data: [
@@ -275,6 +343,9 @@ describe("ModelsPage", () => {
 
   test("adds configured ai-provider models missing from active model configs", async () => {
     mocks.apiGet.mockImplementation((path: string) => {
+      if (path === "/models/configured-availability") {
+        return Promise.reject(new Error("configured availability unavailable"));
+      }
       if (path === "/model-configs?scope=active" || path === "/model-configs") {
         return Promise.resolve({
           data: [

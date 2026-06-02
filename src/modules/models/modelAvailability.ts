@@ -12,6 +12,10 @@ import {
   readAuthFilesModelOwnerGroupMap,
   resolveFileType,
 } from "@/modules/auth-files/helpers/authFilesPageUtils";
+import {
+  getConfiguredAvailabilityCacheVersion,
+  invalidateConfiguredModelAvailability,
+} from "@/modules/models/configuredAvailabilityCache";
 
 export type ModelAvailabilityItem = {
   id: string;
@@ -591,7 +595,7 @@ export const normalizeConfiguredModelAvailability = (payload: unknown): Configur
     .sort((a, b) => a!.id.localeCompare(b!.id));
 
   return {
-    scoped: record.scoped === false ? false : items.length > 0,
+    scoped: typeof record.scoped === "boolean" ? record.scoped : items.length > 0,
     items,
     metadataItems,
     idSet: new Set(items.map((item) => item.id.toLowerCase())),
@@ -602,40 +606,55 @@ export const normalizeConfiguredModelAvailability = (payload: unknown): Configur
 
 const CONFIGURED_AVAILABILITY_TTL_MS = 15_000;
 let configuredAvailabilityCache:
-  | { expiresAt: number; value: ConfiguredModelAvailability }
+  | { expiresAt: number; version: number; value: ConfiguredModelAvailability }
   | null = null;
-let configuredAvailabilityInFlight: Promise<ConfiguredModelAvailability> | null = null;
+let configuredAvailabilityInFlight:
+  | { version: number; promise: Promise<ConfiguredModelAvailability> }
+  | null = null;
 
-export const invalidateConfiguredModelAvailability = () => {
-  configuredAvailabilityCache = null;
-};
+export { invalidateConfiguredModelAvailability };
 
 export const loadConfiguredModelAvailability = async (): Promise<ConfiguredModelAvailability> => {
   const now = Date.now();
-  if (configuredAvailabilityCache && now < configuredAvailabilityCache.expiresAt) {
+  const cacheVersion = getConfiguredAvailabilityCacheVersion();
+  if (
+    configuredAvailabilityCache &&
+    configuredAvailabilityCache.version === cacheVersion &&
+    now < configuredAvailabilityCache.expiresAt
+  ) {
     return configuredAvailabilityCache.value;
   }
-  if (configuredAvailabilityInFlight) {
-    return configuredAvailabilityInFlight;
+  if (
+    configuredAvailabilityInFlight &&
+    configuredAvailabilityInFlight.version === cacheVersion
+  ) {
+    return configuredAvailabilityInFlight.promise;
   }
 
-  configuredAvailabilityInFlight = (async (): Promise<ConfiguredModelAvailability> => {
+  const promise = (async (): Promise<ConfiguredModelAvailability> => {
     try {
       const result = normalizeConfiguredModelAvailability(
         await apiClient.get("/models/configured-availability"),
       );
-      configuredAvailabilityCache = { expiresAt: now + CONFIGURED_AVAILABILITY_TTL_MS, value: result };
+      configuredAvailabilityCache = {
+        expiresAt: now + CONFIGURED_AVAILABILITY_TTL_MS,
+        version: cacheVersion,
+        value: result,
+      };
       return result;
     } catch {
       // Fallback to old multi-API aggregation for backward compatibility.
       return loadConfiguredModelAvailabilityFallback();
     }
   })();
+  configuredAvailabilityInFlight = { version: cacheVersion, promise };
 
   try {
-    return await configuredAvailabilityInFlight;
+    return await promise;
   } finally {
-    configuredAvailabilityInFlight = null;
+    if (configuredAvailabilityInFlight?.promise === promise) {
+      configuredAvailabilityInFlight = null;
+    }
   }
 };
 

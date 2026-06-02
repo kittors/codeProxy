@@ -92,7 +92,7 @@ describe("Auth Files helper coverage", () => {
       search: "oauth",
       page: 3,
     });
-    expect(window.sessionStorage.getItem(AUTH_FILES_UI_STATE_KEY)).toContain('"filter":"codex"');
+    expect(window.localStorage.getItem(AUTH_FILES_UI_STATE_KEY)).toContain('"filter":"codex"');
     expect(readAuthFilesUiState()).toEqual({
       tab: "files",
       filter: "codex",
@@ -190,7 +190,7 @@ describe("Auth Files helper coverage", () => {
         },
       },
     });
-    expect(window.sessionStorage.getItem(AUTH_FILES_DATA_CACHE_KEY)).toContain('"savedAtMs":123');
+    expect(window.localStorage.getItem(AUTH_FILES_DATA_CACHE_KEY)).toContain('"savedAtMs":123');
     expect(readAuthFilesDataCache()).toEqual({
       savedAtMs: 123,
       files: sanitized,

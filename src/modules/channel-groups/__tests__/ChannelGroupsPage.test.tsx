@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import i18n from "@/i18n";
 import { apiClient } from "@/lib/http/client";
 import { ChannelGroupsPage } from "@/modules/channel-groups/ChannelGroupsPage";
+import { invalidateConfiguredModelAvailability } from "@/modules/models/modelAvailability";
 import { ThemeProvider } from "@/modules/ui/ThemeProvider";
 import { ToastProvider } from "@/modules/ui/ToastProvider";
 
@@ -55,7 +56,31 @@ describe("ChannelGroupsPage", () => {
     mockedApiGet.mockReset();
     mockedApiPut.mockReset();
     mockedApiPut.mockResolvedValue({ status: "ok" });
+    invalidateConfiguredModelAvailability();
     mockedApiGet.mockImplementation((path: string) => {
+      if (path === "/models/configured-availability") {
+        return Promise.resolve({
+          scoped: true,
+          data: [
+            {
+              id: "claude-3-7-sonnet-latest",
+              owned_by: "anthropic",
+              description: "Mapped Claude model",
+              pricing: {
+                mode: "token",
+                input_price_per_million: 3,
+                output_price_per_million: 15,
+                cached_price_per_million: 0.3,
+              },
+            },
+            {
+              id: "gpt-should-not-leak",
+              owned_by: "openai",
+              description: "Unmapped OpenAI model",
+            },
+          ],
+        });
+      }
       if (path === "/routing-config") {
         return Promise.resolve({
           strategy: "round-robin",
@@ -66,7 +91,13 @@ describe("ChannelGroupsPage", () => {
       }
       if (path === "/channel-groups") {
         return Promise.resolve({
-          items: [{ name: "Claude Pool", channels: ["Team A Claude"] }],
+          items: [
+            {
+              name: "Claude Pool",
+              channels: ["Team A Claude"],
+              "channel-details": [{ name: "Team A Claude", source: "claude" }],
+            },
+          ],
         });
       }
       if (path.startsWith("/models?")) {
@@ -146,6 +177,23 @@ describe("ChannelGroupsPage", () => {
       JSON.stringify({ kimi: "kimi-code" }),
     );
     mockedApiGet.mockImplementation((path: string) => {
+      if (path === "/models/configured-availability") {
+        return Promise.resolve({
+          scoped: true,
+          data: [
+            {
+              id: "kimi-k2.5",
+              owned_by: "kimi-code",
+              description: "Kimi K2.5",
+            },
+            {
+              id: "kimi-k2.6",
+              owned_by: "kimi-code",
+              description: "Kimi K2.6",
+            },
+          ],
+        });
+      }
       if (path === "/routing-config") {
         return Promise.resolve({
           strategy: "round-robin",
@@ -342,6 +390,12 @@ describe("ChannelGroupsPage", () => {
 
   test("keeps live model owner metadata when no auth-file model owner group is configured", async () => {
     mockedApiGet.mockImplementation((path: string) => {
+      if (path === "/models/configured-availability") {
+        return Promise.resolve({
+          scoped: true,
+          data: [{ id: "kimi-k2", owned_by: "moonshot", description: "Kimi K2" }],
+        });
+      }
       if (path === "/routing-config") {
         return Promise.resolve({
           strategy: "round-robin",

@@ -60,7 +60,7 @@ export function RequestLogsFilters({
               selectFilteredLabel={t("request_logs.select_filtered")}
               deselectFilteredLabel={t("request_logs.deselect_filtered")}
               selectedCountLabel={(count: number) =>
-                t("request_logs.selected_count", { count: String(count) })
+                t("request_logs.selected_count", { count })
               }
               noResultsLabel={t("request_logs.no_filter_results")}
               aria-label={t("request_logs.filter_key")}
@@ -79,7 +79,7 @@ export function RequestLogsFilters({
               selectFilteredLabel={t("request_logs.select_filtered")}
               deselectFilteredLabel={t("request_logs.deselect_filtered")}
               selectedCountLabel={(count: number) =>
-                t("request_logs.selected_count", { count: String(count) })
+                t("request_logs.selected_count", { count })
               }
               noResultsLabel={t("request_logs.no_filter_results")}
               aria-label={t("request_logs.filter_model")}
@@ -98,7 +98,7 @@ export function RequestLogsFilters({
               selectFilteredLabel={t("request_logs.select_filtered")}
               deselectFilteredLabel={t("request_logs.deselect_filtered")}
               selectedCountLabel={(count: number) =>
-                t("request_logs.selected_count", { count: String(count) })
+                t("request_logs.selected_count", { count })
               }
               noResultsLabel={t("request_logs.no_filter_results")}
               aria-label={t("request_logs.filter_channel")}
