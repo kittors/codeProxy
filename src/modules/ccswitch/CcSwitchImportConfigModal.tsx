@@ -305,7 +305,9 @@ export function CcSwitchImportConfigModal({
       endpointPath:
         value.endpointPath || DEFAULT_CC_SWITCH_IMPORT_SETTINGS[value.clientType].endpointPath,
     });
-    setAvailableModels([]);
+    setAvailableModels(
+      dedupeModels(value.modelMappings.map((mapping) => mapping.targetModel).filter(Boolean)),
+    );
   }, [open, value]);
 
   const selectedGroup = draft.allowedChannelGroups[0] ?? "";
@@ -363,7 +365,10 @@ export function CcSwitchImportConfigModal({
         };
         const needsModelConfigs = authoritativeModelOwnerKeys.size > 0 || modelOwnerKeys.size > 0;
         if (needsModelConfigs) {
-          const modelConfigs = await modelsApi.getModelConfigs("active").catch(() => []);
+          const modelConfigs =
+            availability.metadataItems && availability.metadataItems.length > 0
+              ? availability.metadataItems
+              : await modelsApi.getModelConfigs("active").catch(() => []);
           if (cancelled) return;
           if (modelOwnerKeys.size > 0 && authoritativeModelOwnerKeys.size === 0) {
             const allowedModelIds = new Set(
@@ -419,15 +424,15 @@ export function CcSwitchImportConfigModal({
     if (!open) return;
     setDraft((current) => {
       const currentSelectedGroup = current.allowedChannelGroups[0] ?? "";
-      return currentSelectedGroup
-        ? reconcileModelMappings(current, availableModels)
-        : {
-            ...current,
-            defaultModel: "",
-            modelMappings: [],
-          };
+      if (!currentSelectedGroup) {
+        return { ...current, defaultModel: "", modelMappings: [] };
+      }
+      if (modelsLoading && availableModels.length === 0 && current.modelMappings.length > 0) {
+        return current;
+      }
+      return reconcileModelMappings(current, availableModels);
     });
-  }, [availableModelsKey, open, selectedGroup]);
+  }, [availableModelsKey, open, selectedGroup, modelsLoading, availableModels.length]);
 
   const authFieldOptions = useMemo(
     () =>
@@ -492,15 +497,15 @@ export function CcSwitchImportConfigModal({
     [availableModels, draft.modelMappings],
   );
   const preparedDraft = prepareDraftForSave(draft);
-  const modelMappingsLoading = Boolean(selectedGroup && modelsLoading);
+  const hasRenderableMappings = draft.modelMappings.length > 0;
+  const modelMappingsLoading = Boolean(selectedGroup && modelsLoading && !hasRenderableMappings);
   const duplicateRequestModels = getDuplicateGenericRequestModels(draft.modelMappings);
   const isSaveDisabled =
     !preparedDraft.providerName.trim() ||
     !selectedGroup ||
     !preparedDraft.defaultModel.trim() ||
     preparedDraft.modelMappings.length === 0 ||
-    duplicateRequestModels.length > 0 ||
-    modelMappingsLoading;
+    duplicateRequestModels.length > 0;
 
   const setClientType = (clientType: CcSwitchClientType) => {
     const defaults = DEFAULT_CC_SWITCH_IMPORT_SETTINGS[clientType];

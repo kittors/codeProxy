@@ -29,6 +29,7 @@ export type ConfiguredModelAvailability = {
   scoped: boolean;
   items: ModelAvailabilityItem[];
   idSet: Set<string>;
+  metadataItems?: ModelAvailabilityItem[];
 };
 
 export type ModelPricingMode = "token" | "call";
@@ -535,7 +536,110 @@ const loadAuthFileModelItems = async (
   return { items: Array.from(map.values()), scoped };
 };
 
+/* ── New backend aggregation endpoint support ── */
+
+const normalizeAvailabilityItem = (raw: unknown): ModelAvailabilityItem | null => {
+  if (!raw || typeof raw !== "object") return null;
+  const record = raw as Record<string, unknown>;
+  const id = String(record.id ?? "").trim();
+  if (!id) return null;
+
+  const pricingRecord = record.pricing && typeof record.pricing === "object" ? (record.pricing as Record<string, unknown>) : {};
+  const pricing: ModelPricing = {
+    mode: String(pricingRecord.mode ?? "token") === "call" ? "call" : "token",
+    inputPricePerMillion: asNumber(pricingRecord.input_price_per_million ?? pricingRecord.inputPricePerMillion),
+    outputPricePerMillion: asNumber(pricingRecord.output_price_per_million ?? pricingRecord.outputPricePerMillion),
+    cachedPricePerMillion: asNumber(pricingRecord.cached_price_per_million ?? pricingRecord.cachedPricePerMillion),
+    pricePerCall: asNumber(pricingRecord.price_per_call ?? pricingRecord.pricePerCall),
+  };
+
+  const inputModalities = Array.isArray(record.input_modalities) ? (record.input_modalities as string[]) : [];
+  const outputModalities = Array.isArray(record.output_modalities) ? (record.output_modalities as string[]) : [];
+  const supportsVision = record.supports_vision === true || inputModalities.some((m: string) => ["image", "vision"].includes(m.toLowerCase()));
+
+  return {
+    id,
+    owned_by: String(record.owned_by ?? ""),
+    description: String(record.description ?? ""),
+    source: String(record.source ?? record.metadata_source ?? ""),
+    enabled: record.enabled !== false,
+    pricing,
+    inputModalities,
+    outputModalities,
+    supportsVision,
+  };
+};
+
+export const normalizeConfiguredModelAvailability = (payload: unknown): ConfiguredModelAvailability => {
+  const record = isRecord(payload) ? payload : {};
+  const rawItems = Array.isArray(record.data)
+    ? record.data
+    : Array.isArray(record.models)
+      ? record.models
+      : Array.isArray(record.items)
+        ? record.items
+        : [];
+  const items = rawItems
+    .map((item) => normalizeAvailabilityItem(item))
+    .filter((item): item is NonNullable<typeof item> => item !== null)
+    .sort((a, b) => a!.id.localeCompare(b!.id));
+
+  const rawMetadata = Array.isArray(record.active_metadata) ? record.active_metadata : [];
+  const metadataItems = rawMetadata
+    .map((item) => normalizeAvailabilityItem(item))
+    .filter((item): item is NonNullable<typeof item> => item !== null)
+    .sort((a, b) => a!.id.localeCompare(b!.id));
+
+  return {
+    scoped: record.scoped === false ? false : items.length > 0,
+    items,
+    metadataItems,
+    idSet: new Set(items.map((item) => item.id.toLowerCase())),
+  };
+};
+
+/* ── In-flight/TTL cache ── */
+
+const CONFIGURED_AVAILABILITY_TTL_MS = 15_000;
+let configuredAvailabilityCache:
+  | { expiresAt: number; value: ConfiguredModelAvailability }
+  | null = null;
+let configuredAvailabilityInFlight: Promise<ConfiguredModelAvailability> | null = null;
+
+export const invalidateConfiguredModelAvailability = () => {
+  configuredAvailabilityCache = null;
+};
+
 export const loadConfiguredModelAvailability = async (): Promise<ConfiguredModelAvailability> => {
+  const now = Date.now();
+  if (configuredAvailabilityCache && now < configuredAvailabilityCache.expiresAt) {
+    return configuredAvailabilityCache.value;
+  }
+  if (configuredAvailabilityInFlight) {
+    return configuredAvailabilityInFlight;
+  }
+
+  configuredAvailabilityInFlight = (async (): Promise<ConfiguredModelAvailability> => {
+    try {
+      const result = normalizeConfiguredModelAvailability(
+        await apiClient.get("/models/configured-availability"),
+      );
+      configuredAvailabilityCache = { expiresAt: now + CONFIGURED_AVAILABILITY_TTL_MS, value: result };
+      return result;
+    } catch {
+      // Fallback to old multi-API aggregation for backward compatibility.
+      return loadConfiguredModelAvailabilityFallback();
+    }
+  })();
+
+  try {
+    return await configuredAvailabilityInFlight;
+  } finally {
+    configuredAvailabilityInFlight = null;
+  }
+};
+
+const loadConfiguredModelAvailabilityFallback = async (): Promise<ConfiguredModelAvailability> => {
   const [authFiles, libraryPayload, providerItems] = await Promise.all([
     loadAuthFiles(),
     apiClient.get("/model-configs?scope=library").catch(() => null),
