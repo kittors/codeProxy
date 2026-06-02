@@ -206,6 +206,42 @@ export function ProvidersPage() {
   const [vertexKeys, setVertexKeys] = useState<ProviderSimpleConfig[]>([]);
   const [bedrockKeys, setBedrockKeys] = useState<BedrockProviderConfig[]>([]);
   const [openaiProviders, setOpenaiProviders] = useState<OpenAIProvider[]>([]);
+
+  // Auto-refresh OpenCode Go usage when tab switches to opencode-go and cache is stale
+  const OPEN_CODE_GO_USAGE_STALE_MS = 5 * 60 * 1000;
+  const autoRefreshOpenCodeGoInFlightRef = useRef(false);
+
+  useEffect(() => {
+    if (tab !== "opencode-go") return;
+    if (loading) return;
+    if (openCodeGoKeys.length === 0) return;
+    if (autoRefreshOpenCodeGoInFlightRef.current) return;
+
+    const staleKeys = openCodeGoKeys
+      .map((item, idx) => ({ item, idx, key: getOpenCodeGoUsageCacheKey(item, idx) }))
+      .filter(({ key }) => {
+        if (openCodeGoUsageLoadingState[key]) return false;
+        const entry = openCodeGoUsageState[key];
+        return !entry || Date.now() - entry.updatedAt > OPEN_CODE_GO_USAGE_STALE_MS;
+      });
+
+    if (staleKeys.length === 0) return;
+
+    autoRefreshOpenCodeGoInFlightRef.current = true;
+
+    const refreshBatch = async () => {
+      for (let i = 0; i < staleKeys.length; i += 2) {
+        const batch = staleKeys.slice(i, i + 2);
+        await Promise.allSettled(
+          batch.map(({ item, idx }) => refreshOpenCodeGoUsage(item, idx)),
+        );
+      }
+      autoRefreshOpenCodeGoInFlightRef.current = false;
+    };
+
+    void refreshBatch();
+  }, [tab, loading, openCodeGoKeys, openCodeGoUsageState, openCodeGoUsageLoadingState, refreshOpenCodeGoUsage]);
+
   const [apiKeyEntries, setApiKeyEntries] = useState<ApiKeyEntry[]>([]);
   const [channelGroups, setChannelGroups] = useState<ChannelGroupItem[]>([]);
   const [proxyPoolEntries, setProxyPoolEntries] = useState<ProxyPoolEntry[]>([]);

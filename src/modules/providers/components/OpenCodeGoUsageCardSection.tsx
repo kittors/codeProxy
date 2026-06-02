@@ -97,10 +97,31 @@ export function OpenCodeGoUsageCardSection({
   );
 
   const hasUsage = Boolean(usageEntry && usageEntry.usage.length > 0);
+  const showError = Boolean(usageEntry?.error);
+  const showRefreshButton = loading || showError;
 
   return (
-    <div className="relative mt-3 pr-6">
-      {hasUsage ? (
+    <div className="group/usage relative mt-3">
+      {loading && !hasUsage ? (
+        <div className="space-y-2">
+          {TYPE_LABELS.map((type) => (
+            <div
+              key={type}
+              className="grid grid-cols-[2rem_minmax(0,1fr)_5.25rem] items-center gap-2"
+            >
+              <span className="truncate text-[11px] font-semibold text-slate-400 dark:text-white/45">
+                {TYPE_COMPACT_LABELS[type]}
+              </span>
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200/60 dark:bg-white/8">
+                <div className="h-full w-1/3 animate-pulse rounded-full bg-slate-300/50 dark:bg-white/15" />
+              </div>
+              <span className="text-right text-[11px] tabular-nums text-slate-400 dark:text-white/45">
+                剩余 --
+              </span>
+            </div>
+          ))}
+        </div>
+      ) : hasUsage ? (
         <div className="space-y-1.5">
           {TYPE_LABELS.map((type) => {
             const item = usageByType.get(type);
@@ -143,7 +164,9 @@ export function OpenCodeGoUsageCardSection({
 
       {usageEntry?.error ? (
         <p className="mt-1 text-[11px] font-semibold text-rose-700 dark:text-rose-200">
-          {usageEntry.error}
+          {usageEntry.error?.length > 60
+            ? t("providers.opencode_go_usage_query_failed")
+            : usageEntry.error}
         </p>
       ) : null}
 
@@ -154,11 +177,18 @@ export function OpenCodeGoUsageCardSection({
           onRefresh();
         }}
         disabled={loading}
-        className="absolute right-0 top-0 inline-flex items-center justify-center rounded-lg p-1 text-slate-400 transition-colors hover:bg-slate-200/60 hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/25 disabled:opacity-50 dark:text-white/40 dark:hover:bg-white/10 dark:hover:text-white/60 dark:focus-visible:ring-white/20"
+        className={[
+          "absolute -right-1 top-1/2 -translate-y-1/2 inline-flex items-center justify-center rounded-lg p-1 transition-all duration-150",
+          "text-slate-400 hover:bg-slate-200/60 hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/25",
+          "dark:text-white/40 dark:hover:bg-white/10 dark:hover:text-white/60 dark:focus-visible:ring-white/20",
+          showRefreshButton
+            ? "opacity-100 pointer-events-auto"
+            : "opacity-0 pointer-events-none group-hover/usage:opacity-100 group-focus-within/usage:opacity-100 group-hover/usage:pointer-events-auto group-focus-within/usage:pointer-events-auto",
+        ].join(" ")}
         aria-label={t("providers.opencode_go_usage_refresh")}
         title={t("providers.opencode_go_usage_refresh")}
       >
-        <RefreshCw size={12} className={loading ? "animate-spin" : ""} />
+        <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
       </button>
     </div>
   );
