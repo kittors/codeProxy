@@ -78,8 +78,8 @@ export function ProviderKeyListCard({
       ) : (
         <div
           data-testid="providers-tab-scroll"
-          className="min-h-0 flex-1 overflow-y-auto pr-1 grid gap-3 items-start content-start"
-          style={{ gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))" }}
+          className="min-h-0 flex-1 overflow-y-auto pr-1 grid gap-3 items-start content-start justify-start"
+          style={{ gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 18rem), 22rem))" }}
         >
           {items.map((item, idx) => {
             const selectionKey = `${item.apiKey.trim().toLowerCase()}:${idx}`;
