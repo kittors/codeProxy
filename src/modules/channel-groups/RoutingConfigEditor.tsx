@@ -1413,10 +1413,11 @@ export function RoutingConfigEditor({
           rowKey={(group) => group.id}
           virtualize={false}
           rowHeight={44}
-          height="h-auto max-h-[68vh]"
+          height="h-[calc(100dvh-200px)]"
           minWidth="min-w-[1360px]"
           caption={t("channel_groups_page.table_group")}
           emptyText={t("channel_groups_page.empty_groups")}
+          allowWheelPropagationAtBoundary
           rowClassName={(group) =>
             group.system
               ? "bg-slate-50/55 dark:bg-neutral-900/45"
