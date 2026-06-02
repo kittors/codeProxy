@@ -125,7 +125,8 @@ describe("ccswitchImport", () => {
     expect(usageScript).toContain("total_calls");
     expect(usageScript).toContain("quota_cost");
     expect(usageScript).toContain("今日用量");
-    expect(usageScript).toContain("今日消耗");
+    expect(usageScript).toContain('extra: "今日消耗 " + cost.toFixed(4) + " $"');
+    expect(usageScript).not.toContain("额度");
   });
 
   test("builds a provider deeplink for a selected channel group route and enabled state", () => {

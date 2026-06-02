@@ -96,11 +96,14 @@ const encodeBase64 = (value: string): string => {
     const bytes = buffer.from(value, "utf-8") as { toString: (encoding: string) => string };
     return bytes.toString("base64");
   }
-  if (typeof btoa === "function") {
-    const utf8Bytes = new (globalThis as { TextEncoder?: new () => { encode: (input: string) => Uint8Array } }).TextEncoder().encode(value);
+  const TextEncoderCtor = (
+    globalThis as { TextEncoder?: new () => { encode: (input: string) => Uint8Array } }
+  ).TextEncoder;
+  if (typeof btoa === "function" && TextEncoderCtor) {
+    const utf8Bytes = new TextEncoderCtor().encode(value);
     let binary = "";
-    for (let i = 0; i < utf8Bytes.length; i++) {
-      binary += String.fromCharCode(utf8Bytes[i]);
+    for (const byte of utf8Bytes) {
+      binary += String.fromCharCode(byte);
     }
     return btoa(binary);
   }
@@ -179,7 +182,7 @@ export function buildCcSwitchUsageScript(): string {
       used: calls,
       remaining: null,
       unit: "次",
-      extra: "今日消耗 " + cost.toFixed(4) + " 额度"
+      extra: "今日消耗 " + cost.toFixed(4) + " $"
     };
   }
 })`;
