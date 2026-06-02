@@ -18,6 +18,10 @@ import { OpenAIProvidersTab } from "@/modules/providers/components/OpenAIProvide
 import { ProviderKeyModal } from "@/modules/providers/components/ProviderKeyModal";
 import { useOpenAIProviderEditor } from "@/modules/providers/hooks/useOpenAIProviderEditor";
 import { ProviderKeyListCard } from "@/modules/providers/ProviderKeyListCard";
+import {
+  OpenCodeGoUsageCardSection,
+  type OpenCodeGoUsageCacheEntry,
+} from "@/modules/providers/components/OpenCodeGoUsageCardSection";
 import { useProviderKeyEditor } from "@/modules/providers/hooks/useProviderKeyEditor";
 import { useProviderLatency } from "@/modules/providers/hooks/useProviderLatency";
 import { useProviderUsageSummary } from "@/modules/providers/hooks/useProviderUsageSummary";
@@ -110,6 +114,12 @@ const getProviderSelectionKey = (
         .trim()
         .toLowerCase()}:${index}`;
 
+const getOpenCodeGoUsageCacheKey = (item: ProviderSimpleConfig, index: number) =>
+  [item.workspaceId?.trim() || "no-workspace", item.name?.trim() || `item-${index}`, index].join(":");
+
+type OpenCodeGoUsageState = Record<string, OpenCodeGoUsageCacheEntry>;
+type OpenCodeGoUsageLoadingState = Record<string, boolean>;
+
 export function ProvidersPage() {
   const { t } = useTranslation();
   const { notify } = useToast();
@@ -130,6 +140,58 @@ export function ProvidersPage() {
     setGridColumnsState(cols);
     saveGridColumns(cols);
   }, []);
+
+  const cachedUsageState = getCachedData<OpenCodeGoUsageState>("opencode-go-usage");
+  const [openCodeGoUsageState, setOpenCodeGoUsageState] = useState<OpenCodeGoUsageState>(
+    cachedUsageState ?? {},
+  );
+  const [openCodeGoUsageLoadingState, setOpenCodeGoUsageLoadingState] =
+    useState<OpenCodeGoUsageLoadingState>({});
+
+  const refreshOpenCodeGoUsage = useCallback(
+    async (item: ProviderSimpleConfig, index: number) => {
+      const cacheKey = getOpenCodeGoUsageCacheKey(item, index);
+      setOpenCodeGoUsageLoadingState((prev) => ({ ...prev, [cacheKey]: true }));
+      try {
+        const result = await providersApi.queryOpenCodeGoUsage({
+          "workspace-id": item.workspaceId?.trim(),
+          "auth-cookie": item.authCookie?.trim(),
+          "proxy-id": item.proxyId?.trim(),
+          "proxy-url": item.proxyUrl?.trim(),
+          name: item.name?.trim(),
+          "api-key": item.apiKey?.trim(),
+          index,
+        });
+        const entry: OpenCodeGoUsageCacheEntry = {
+          workspaceId: result.workspace_id,
+          usage: result.usage,
+          updatedAt: Date.now(),
+        };
+        setOpenCodeGoUsageState((prev) => {
+          const next = { ...prev, [cacheKey]: entry };
+          setCachedData("opencode-go-usage", next);
+          return next;
+        });
+        setOpenCodeGoUsageLoadingState((prev) => ({ ...prev, [cacheKey]: false }));
+      } catch (err: unknown) {
+        setOpenCodeGoUsageState((prev) => {
+          const existing = prev[cacheKey];
+          const entry: OpenCodeGoUsageCacheEntry = {
+            workspaceId: existing?.workspaceId,
+            usage: existing?.usage ?? [],
+            updatedAt: Date.now(),
+            error:
+              err instanceof Error ? err.message : t("providers.opencode_go_usage_query_failed"),
+          };
+          const next = { ...prev, [cacheKey]: entry };
+          setCachedData("opencode-go-usage", next);
+          return next;
+        });
+        setOpenCodeGoUsageLoadingState((prev) => ({ ...prev, [cacheKey]: false }));
+      }
+    },
+    [t],
+  );
 
   const [geminiKeys, setGeminiKeys] = useState<ProviderSimpleConfig[]>([]);
   const [claudeKeys, setClaudeKeys] = useState<ProviderSimpleConfig[]>([]);
@@ -169,6 +231,22 @@ export function ProvidersPage() {
   } | null>(null);
   const [importing, setImporting] = useState(false);
   const [selectedExportKeys, setSelectedExportKeys] = useState<string[]>([]);
+
+  // Clean up stale usage cache entries when config list changes
+  useEffect(() => {
+    setOpenCodeGoUsageState((prev) => {
+      const validKeys = new Set(
+        openCodeGoKeys.map((item, idx) => getOpenCodeGoUsageCacheKey(item, idx)),
+      );
+      const staleKeys = Object.keys(prev).filter((k) => !validKeys.has(k));
+      if (staleKeys.length === 0) return prev;
+      const next = { ...prev };
+      staleKeys.forEach((k) => delete next[k]);
+      setCachedData("opencode-go-usage", next);
+      return next;
+    });
+  }, [openCodeGoKeys]);
+
   const refreshTab = useCallback(
     async (tabId: typeof tab) => {
       setLoading(true);
@@ -911,6 +989,13 @@ export function ProvidersPage() {
               getStats={getSimpleStats}
               getStatusBar={getSimpleStatusBar}
               showBaseUrl={false}
+              renderExtra={(item, idx) => (
+                <OpenCodeGoUsageCardSection
+                  usageEntry={openCodeGoUsageState[getOpenCodeGoUsageCacheKey(item, idx)]}
+                  loading={openCodeGoUsageLoadingState[getOpenCodeGoUsageCacheKey(item, idx)] ?? false}
+                  onRefresh={() => void refreshOpenCodeGoUsage(item, idx)}
+                />
+              )}
               gridColumns={gridColumns}
               selectedKeys={selectedExportKeySet}
               onToggleSelected={toggleExportSelection}

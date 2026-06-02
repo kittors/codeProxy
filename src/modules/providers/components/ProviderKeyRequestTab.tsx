@@ -1,13 +1,9 @@
-import { useMemo, useState, type Dispatch, type SetStateAction } from "react";
+import { type Dispatch, type SetStateAction } from "react";
 import { useTranslation } from "react-i18next";
-import { RefreshCw } from "lucide-react";
 import { TextInput } from "@/modules/ui/Input";
 import { Select } from "@/modules/ui/Select";
 import { ToggleSwitch } from "@/modules/ui/ToggleSwitch";
 import type { ProxyPoolEntry } from "@/lib/http/apis/proxies";
-import { providersApi } from "@/lib/http/apis";
-import type { OpenCodeGoUsageItem } from "@/lib/http/types";
-import { Button } from "@/modules/ui/Button";
 import { ProxyPoolSelect } from "@/modules/proxies/ProxyPoolSelect";
 import { KeyValueInputList } from "@/modules/providers/KeyValueInputList";
 import type { ProviderKeyDraft } from "@/modules/providers/providers-helpers";
@@ -28,13 +24,6 @@ const SectionCard = ({ children, className }: { children: React.ReactNode; class
 const OPENCODE_GO_MODELS_URL = "https://opencode.ai/zen/go/v1/models";
 const OPENCODE_GO_CHAT_URL = "https://opencode.ai/zen/go/v1/chat/completions";
 const OPENCODE_GO_MESSAGES_URL = "https://opencode.ai/zen/go/v1/messages";
-const OPENCODE_GO_SERVER_ID_PATTERN = /^[a-f0-9]{64}$/i;
-
-const isLikelyInvalidOpenCodeGoWorkspaceInput = (value: string): boolean => {
-  const trimmed = value.trim();
-  return trimmed.toLowerCase() === "default" || OPENCODE_GO_SERVER_ID_PATTERN.test(trimmed);
-};
-
 interface ProviderKeyRequestTabProps {
   keyDraft: ProviderKeyDraft;
   setKeyDraft: Dispatch<SetStateAction<ProviderKeyDraft>>;
@@ -56,51 +45,6 @@ export function ProviderKeyRequestTab({
 }: ProviderKeyRequestTabProps) {
   const { t } = useTranslation();
   const isBedrock = editKeyType === "bedrock";
-  const [openCodeUsage, setOpenCodeUsage] = useState<OpenCodeGoUsageItem[] | null>(null);
-  const [openCodeUsageLoading, setOpenCodeUsageLoading] = useState(false);
-  const [openCodeUsageError, setOpenCodeUsageError] = useState<string | null>(null);
-
-  const openCodeUsageByType = useMemo(() => {
-    const map = new Map<string, OpenCodeGoUsageItem>();
-    for (const item of openCodeUsage ?? []) {
-      map.set(item.type.toLowerCase(), item);
-    }
-    return map;
-  }, [openCodeUsage]);
-
-  const queryOpenCodeUsage = async () => {
-    if (!isOpenCodeGo) return;
-    if (isLikelyInvalidOpenCodeGoWorkspaceInput(keyDraft.workspaceId)) {
-      setOpenCodeUsage(null);
-      setOpenCodeUsageError(t("providers.opencode_go_workspace_id_invalid"));
-      return;
-    }
-    setOpenCodeUsageLoading(true);
-    setOpenCodeUsageError(null);
-    try {
-      const result = await providersApi.queryOpenCodeGoUsage({
-        "workspace-id": keyDraft.workspaceId.trim(),
-        "auth-cookie": keyDraft.authCookie.trim(),
-        "proxy-id": keyDraft.proxyId.trim(),
-        "proxy-url": keyDraft.proxyUrl.trim(),
-        name: keyDraft.name.trim(),
-        "api-key": keyDraft.apiKey.trim(),
-      });
-      setOpenCodeUsage(result.usage);
-      setKeyDraft((prev) =>
-        result.workspace_id && result.workspace_id !== prev.workspaceId
-          ? { ...prev, workspaceId: result.workspace_id }
-          : prev,
-      );
-    } catch (err: unknown) {
-      setOpenCodeUsage(null);
-      setOpenCodeUsageError(
-        err instanceof Error ? err.message : t("providers.opencode_go_usage_query_failed"),
-      );
-    } finally {
-      setOpenCodeUsageLoading(false);
-    }
-  };
 
   return (
     <div className="space-y-4">
@@ -122,28 +66,12 @@ export function ProviderKeyRequestTab({
 
       {isOpenCodeGo ? (
         <SectionCard>
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <p className="text-sm font-semibold text-slate-900 dark:text-white">
-                {t("providers.opencode_go_usage_title")}
-              </p>
-              <p className="mt-1 text-xs text-slate-500 dark:text-white/55">
-                {t("providers.opencode_go_usage_hint")}
-              </p>
-            </div>
-            <Button
-              variant="secondary"
-              onClick={() => void queryOpenCodeUsage()}
-              disabled={
-                openCodeUsageLoading || !keyDraft.workspaceId.trim() || !keyDraft.authCookie.trim()
-              }
-            >
-              <RefreshCw size={14} className={openCodeUsageLoading ? "animate-spin" : ""} />
-              {openCodeUsageLoading
-                ? t("providers.opencode_go_usage_querying")
-                : t("providers.opencode_go_usage_query")}
-            </Button>
-          </div>
+          <p className="text-sm font-semibold text-slate-900 dark:text-white">
+            {t("providers.opencode_go_usage_title")}
+          </p>
+          <p className="mt-1 text-xs text-slate-500 dark:text-white/55">
+            {t("providers.opencode_go_usage_config_hint")}
+          </p>
 
           <div className="mt-3 grid gap-3 md:grid-cols-2">
             <div className="space-y-2">
@@ -177,49 +105,6 @@ export function ProviderKeyRequestTab({
               />
             </div>
           </div>
-
-          {openCodeUsageError ? (
-            <p className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/30 dark:text-rose-200">
-              {openCodeUsageError}
-            </p>
-          ) : null}
-
-          {openCodeUsage ? (
-            <div className="mt-4 grid gap-3 md:grid-cols-3">
-              {(["rolling", "weekly", "monthly"] as const).map((type) => {
-                const item = openCodeUsageByType.get(type);
-                const value = item?.percentage ?? 0;
-                return (
-                  <div
-                    key={type}
-                    className="rounded-lg border border-slate-200 bg-slate-50/80 p-3 dark:border-neutral-800 dark:bg-neutral-900/50"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-xs font-semibold text-slate-800 dark:text-white/85">
-                        {t(`providers.opencode_go_usage_${type}`)}
-                      </span>
-                      <span className="text-xs font-semibold text-slate-600 dark:text-white/65">
-                        {value}%
-                      </span>
-                    </div>
-                    <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-neutral-800">
-                      <div
-                        className="h-full rounded-full bg-sky-500"
-                        style={{ width: `${Math.min(100, Math.max(0, value))}%` }}
-                      />
-                    </div>
-                    <p className="mt-2 text-xs text-slate-500 dark:text-white/55">
-                      {item
-                        ? t("providers.opencode_go_usage_resets_in", {
-                            time: item.resets_in,
-                          })
-                        : t("providers.opencode_go_usage_no_data")}
-                    </p>
-                  </div>
-                );
-              })}
-            </div>
-          ) : null}
         </SectionCard>
       ) : null}
 
