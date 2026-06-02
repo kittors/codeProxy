@@ -112,8 +112,8 @@ export function OpenCodeGoUsageCardSection({
               <span className="truncate text-[11px] font-semibold text-slate-400 dark:text-white/45">
                 {TYPE_COMPACT_LABELS[type]}
               </span>
-              <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200/60 dark:bg-white/8">
-                <div className="h-full w-1/3 animate-pulse rounded-full bg-slate-300/50 dark:bg-white/15" />
+              <div className="relative h-1.5 overflow-hidden rounded-full bg-slate-200/70 dark:bg-white/8">
+                <div className="absolute inset-y-0 -left-full w-1/2 animate-pulse rounded-full bg-slate-300/50 dark:bg-white/20" />
               </div>
               <span className="text-right text-[11px] tabular-nums text-slate-400 dark:text-white/45">
                 剩余 --
@@ -122,7 +122,7 @@ export function OpenCodeGoUsageCardSection({
           ))}
         </div>
       ) : hasUsage ? (
-        <div className="space-y-1.5">
+        <div className="mx-auto w-full max-w-[20rem] space-y-1.5">
           {TYPE_LABELS.map((type) => {
             const item = usageByType.get(type);
             const remaining = resolveRemainingPercent(item?.percentage);
@@ -178,7 +178,7 @@ export function OpenCodeGoUsageCardSection({
         }}
         disabled={loading}
         className={[
-          "absolute -right-1 top-1/2 -translate-y-1/2 inline-flex items-center justify-center rounded-lg p-1 transition-all duration-150",
+          "absolute right-0 top-0 inline-flex items-center justify-center rounded-lg p-1 transition-all duration-150",
           "text-slate-400 hover:bg-slate-200/60 hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/25",
           "dark:text-white/40 dark:hover:bg-white/10 dark:hover:text-white/60 dark:focus-visible:ring-white/20",
           showRefreshButton
