@@ -60,22 +60,32 @@ const normalizeRoutingTags = (values: unknown): string[] => {
   return tags;
 };
 
+type MappedOwnerSelection = {
+  owners: string[];
+  hasUnmappedChannels: boolean;
+};
+
 const collectMappedOwnersForChannels = (
   channels: string[],
   detailsByName: Record<string, ChannelGroupChannelDetail>,
-): string[] => {
+): MappedOwnerSelection => {
   const ownerByAuthGroup = readAuthFilesModelOwnerGroupMap();
   const owners = new Set<string>();
+  let hasUnmappedChannels = false;
   for (const channel of channels) {
     const detail = detailsByName[channel.trim().toLowerCase()];
     const candidates = [detail?.source, detail?.name, channel];
+    let matched = false;
     for (const candidate of candidates) {
       const key = normalizeProviderKey(String(candidate ?? ""));
       const owner = normalizeOwnerValue(ownerByAuthGroup[key] ?? "");
-      if (owner) owners.add(owner);
+      if (!owner) continue;
+      owners.add(owner);
+      matched = true;
     }
+    if (!matched) hasUnmappedChannels = true;
   }
-  return Array.from(owners);
+  return { owners: Array.from(owners), hasUnmappedChannels };
 };
 
 function hydrateRoutingValues(payload: RoutingConfigItem | undefined): VisualConfigValues {
@@ -273,17 +283,26 @@ export function ChannelGroupsPage() {
         ? data.data.map((model) => String(model.id ?? "").trim()).filter(Boolean)
         : [];
       const availability = await loadConfiguredModelAvailability();
-      const selectedOwnerKeys = collectMappedOwnersForChannels(
+      const ownerSelection = collectMappedOwnersForChannels(
         normalizedChannels,
         availableChannelDetails,
       );
-      const visibleModels = filterByConfiguredModelAvailability(
+      let visibleModels = filterByConfiguredModelAvailability(
         ids.map((id) => ({ id })),
         availability,
       );
       const metadataById = new Map(
         availability.items.map((model) => [model.id.toLowerCase(), model] as const),
       );
+      if (ownerSelection.owners.length > 0 && !ownerSelection.hasUnmappedChannels) {
+        const selectedOwnerSet = new Set(ownerSelection.owners);
+        visibleModels = visibleModels.filter((model) => {
+          const metadata = metadataById.get(model.id.toLowerCase());
+          const owner = normalizeOwnerValue(metadata?.owned_by ?? "");
+          const source = normalizeOwnerValue(metadata?.source ?? "");
+          return selectedOwnerSet.has(owner) || selectedOwnerSet.has(source);
+        });
+      }
       const optionMap = new Map<string, RoutingModelOption>();
       const addModelOption = (id: string, metadata = metadataById.get(id.toLowerCase())) => {
         const normalized = id.trim();
@@ -300,8 +319,8 @@ export function ChannelGroupsPage() {
 
       for (const model of visibleModels) addModelOption(model.id);
 
-      if (selectedOwnerKeys.length > 0) {
-        const selectedOwnerSet = new Set(selectedOwnerKeys);
+      if (ownerSelection.owners.length > 0) {
+        const selectedOwnerSet = new Set(ownerSelection.owners);
         for (const model of availability.items) {
           const owner = normalizeOwnerValue(model.owned_by ?? "");
           const source = normalizeOwnerValue(model.source ?? "");
