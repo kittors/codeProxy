@@ -89,7 +89,7 @@ export function ProviderKeyListCard({
           className={[
             "min-h-0 flex-1 overflow-y-auto pr-1",
             gridColumns > 1
-              ? ["grid gap-3", gridColumnsClass].join(" ")
+              ? ["grid gap-3", gridColumnsClass, naturalHeight ? "items-start content-start" : ""].filter(Boolean).join(" ")
               : "space-y-3",
           ].join(" ")}
         >

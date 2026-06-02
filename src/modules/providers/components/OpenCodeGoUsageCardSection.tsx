@@ -75,6 +75,12 @@ const resolveRemainingTone = (
 
 const TYPE_LABELS = ["rolling", "weekly", "monthly"] as const;
 
+const TYPE_COMPACT_LABELS: Record<string, string> = {
+  rolling: "滚动",
+  weekly: "每周",
+  monthly: "每月",
+};
+
 export function OpenCodeGoUsageCardSection({
   usageEntry,
   loading,
@@ -93,55 +99,53 @@ export function OpenCodeGoUsageCardSection({
   const hasUsage = Boolean(usageEntry && usageEntry.usage.length > 0);
 
   return (
-    <div className="mt-3 flex items-start justify-between gap-2">
-      <div className="min-w-0 flex-1">
-        {hasUsage ? (
-          <div className="space-y-1.5">
-            {TYPE_LABELS.map((type) => {
-              const item = usageByType.get(type);
-              const remaining = resolveRemainingPercent(item?.percentage);
-              const tone = resolveRemainingTone(remaining);
-              const remainingText = remaining === null ? "--" : `${remaining}%`;
+    <div className="relative mt-3 pr-6">
+      {hasUsage ? (
+        <div className="space-y-1.5">
+          {TYPE_LABELS.map((type) => {
+            const item = usageByType.get(type);
+            const remaining = resolveRemainingPercent(item?.percentage);
+            const tone = resolveRemainingTone(remaining);
+            const remainingText = remaining === null ? "剩余 --" : `剩余 ${remaining}%`;
 
-              return (
-                <div
-                  key={type}
-                  className="grid grid-cols-[2.5rem_minmax(0,1fr)_4.5rem] items-center gap-2"
-                >
-                  <span className="truncate text-[11px] font-semibold text-slate-600 dark:text-white/65">
-                    {t(`providers.opencode_go_usage_${type}`)}
-                  </span>
-                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200/80 dark:bg-white/10">
-                    <div
-                      className={["h-full rounded-full", tone.fillClass].join(" ")}
-                      style={{ width: `${remaining ?? 0}%` }}
-                      aria-hidden="true"
-                    />
-                  </div>
-                  <span
-                    className={[
-                      "truncate text-right text-[11px] font-semibold tabular-nums",
-                      tone.percentClass,
-                    ].join(" ")}
-                  >
-                    {remainingText}
-                  </span>
+            return (
+              <div
+                key={type}
+                className="grid grid-cols-[2rem_minmax(0,1fr)_5.25rem] items-center gap-2"
+              >
+                <span className="truncate text-[11px] font-semibold text-slate-600 dark:text-white/65">
+                  {TYPE_COMPACT_LABELS[type]}
+                </span>
+                <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200/80 dark:bg-white/10">
+                  <div
+                    className={["h-full rounded-full", tone.fillClass].join(" ")}
+                    style={{ width: `${remaining ?? 0}%` }}
+                    aria-hidden="true"
+                  />
                 </div>
-              );
-            })}
-          </div>
-        ) : !loading ? (
-          <p className="text-xs text-slate-400 dark:text-white/45">
-            {t("providers.opencode_go_usage_not_queried")}
-          </p>
-        ) : null}
+                <span
+                  className={[
+                    "truncate text-right text-[11px] font-semibold tabular-nums",
+                    tone.percentClass,
+                  ].join(" ")}
+                >
+                  {remainingText}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      ) : !loading ? (
+        <p className="text-xs text-slate-400 dark:text-white/45">
+          {t("providers.opencode_go_usage_not_queried")}
+        </p>
+      ) : null}
 
-        {usageEntry?.error ? (
-          <p className="mt-1 text-[11px] font-semibold text-rose-700 dark:text-rose-200">
-            {usageEntry.error}
-          </p>
-        ) : null}
-      </div>
+      {usageEntry?.error ? (
+        <p className="mt-1 text-[11px] font-semibold text-rose-700 dark:text-rose-200">
+          {usageEntry.error}
+        </p>
+      ) : null}
 
       <button
         type="button"
@@ -150,7 +154,7 @@ export function OpenCodeGoUsageCardSection({
           onRefresh();
         }}
         disabled={loading}
-        className="mt-0.5 inline-flex shrink-0 items-center justify-center rounded-lg p-1 text-slate-400 transition-colors hover:bg-slate-200/60 hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/25 disabled:opacity-50 dark:text-white/40 dark:hover:bg-white/10 dark:hover:text-white/60 dark:focus-visible:ring-white/20"
+        className="absolute right-0 top-0 inline-flex items-center justify-center rounded-lg p-1 text-slate-400 transition-colors hover:bg-slate-200/60 hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/25 disabled:opacity-50 dark:text-white/40 dark:hover:bg-white/10 dark:hover:text-white/60 dark:focus-visible:ring-white/20"
         aria-label={t("providers.opencode_go_usage_refresh")}
         title={t("providers.opencode_go_usage_refresh")}
       >
