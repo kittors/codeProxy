@@ -20,6 +20,7 @@ import { useOpenAIProviderEditor } from "@/modules/providers/hooks/useOpenAIProv
 import { ProviderKeyListCard } from "@/modules/providers/ProviderKeyListCard";
 import {
   OpenCodeGoUsageCardSection,
+  mergeOpenCodeGoUsage,
   type OpenCodeGoUsageCacheEntry,
 } from "@/modules/providers/components/OpenCodeGoUsageCardSection";
 import { useProviderKeyEditor } from "@/modules/providers/hooks/useProviderKeyEditor";
@@ -168,7 +169,12 @@ export function ProvidersPage() {
           updatedAt: Date.now(),
         };
         setOpenCodeGoUsageState((prev) => {
-          const next = { ...prev, [cacheKey]: entry };
+          const existing = prev[cacheKey];
+          const merged = mergeOpenCodeGoUsage(existing?.usage ?? [], entry.usage);
+          const next = {
+            ...prev,
+            [cacheKey]: { ...entry, usage: merged, workspaceId: entry.workspaceId ?? existing?.workspaceId },
+          };
           setCachedData("opencode-go-usage", next);
           return next;
         });

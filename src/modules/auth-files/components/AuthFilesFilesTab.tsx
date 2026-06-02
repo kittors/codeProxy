@@ -1203,7 +1203,7 @@ export function AuthFilesFilesTab({
                                   "flex h-8 items-center justify-center px-1 transition-opacity",
                                   showSelectionControl
                                     ? "opacity-100 pointer-events-auto"
-                                    : "opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto",
+                                    : "opacity-0 pointer-events-none group-hover:opacity-100 group-focus-within:opacity-100 group-hover:pointer-events-auto group-focus-within:pointer-events-auto",
                                 ].join(" ")}
                               >
                                 <input
@@ -1222,12 +1222,19 @@ export function AuthFilesFilesTab({
                             {runtimeOnly ? (
                               <span className="text-xs text-slate-400 dark:text-white/40">--</span>
                             ) : (
-                              <ToggleSwitch
-                                ariaLabel={t("auth_files.enable_disable")}
-                                checked={!fileDisabled}
-                                onCheckedChange={(enabled) => void setFileEnabled(file, enabled)}
-                                disabled={Boolean(statusUpdating[file.name])}
-                              />
+                              <div
+                                className={[
+                                  "flex h-8 items-center justify-center transition-opacity",
+                                  "opacity-0 pointer-events-none group-hover:opacity-100 group-focus-within:opacity-100 group-hover:pointer-events-auto group-focus-within:pointer-events-auto",
+                                ].join(" ")}
+                              >
+                                <ToggleSwitch
+                                  ariaLabel={t("auth_files.enable_disable")}
+                                  checked={!fileDisabled}
+                                  onCheckedChange={(enabled) => void setFileEnabled(file, enabled)}
+                                  disabled={Boolean(statusUpdating[file.name])}
+                                />
+                              </div>
                             )}
                           </div>
                         </div>

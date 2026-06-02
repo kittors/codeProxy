@@ -9,6 +9,60 @@ export interface OpenCodeGoUsageCacheEntry {
   error?: string;
 }
 
+const clampPercent = (value: number): number => Math.max(0, Math.min(100, value));
+
+export function mergeOpenCodeGoUsage(
+  existing: OpenCodeGoUsageItem[],
+  incoming: OpenCodeGoUsageItem[],
+): OpenCodeGoUsageItem[] {
+  if (!existing.length) return incoming;
+  if (!incoming.length) return existing;
+
+  const seen = new Set<string>();
+  const result: OpenCodeGoUsageItem[] = [];
+
+  for (const item of incoming) {
+    const key = item.type.toLowerCase();
+    seen.add(key);
+    result.push(item);
+  }
+
+  for (const item of existing) {
+    const key = item.type.toLowerCase();
+    if (!seen.has(key)) {
+      result.push(item);
+      seen.add(key);
+    }
+  }
+
+  return result;
+}
+
+const resolveUsageTone = (
+  value: number,
+): { fillClass: string; percentClass: string } => {
+  const normalized = clampPercent(value);
+
+  if (normalized >= 60) {
+    return {
+      fillClass: "bg-emerald-500",
+      percentClass: "text-emerald-700 dark:text-emerald-200",
+    };
+  }
+
+  if (normalized >= 20) {
+    return {
+      fillClass: "bg-amber-500",
+      percentClass: "text-amber-700 dark:text-amber-200",
+    };
+  }
+
+  return {
+    fillClass: "bg-rose-500",
+    percentClass: "text-rose-700 dark:text-rose-200",
+  };
+};
+
 export function OpenCodeGoUsageCardSection({
   usageEntry,
   loading,
@@ -25,9 +79,9 @@ export function OpenCodeGoUsageCardSection({
   );
 
   return (
-    <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50/60 p-3 dark:border-neutral-800 dark:bg-neutral-900/40">
+    <div className="mt-3 rounded-2xl bg-slate-50/85 px-3 py-3 transition-colors duration-200 ease-out dark:bg-white/[0.03]">
       <div className="flex items-center justify-between gap-2">
-        <span className="text-xs font-semibold text-slate-700 dark:text-white/75">
+        <span className="text-[11px] font-semibold text-slate-700 dark:text-white/80">
           {t("providers.opencode_go_usage_title")}
         </span>
         <button
@@ -37,7 +91,7 @@ export function OpenCodeGoUsageCardSection({
             onRefresh();
           }}
           disabled={loading}
-          className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium text-slate-500 transition-colors hover:bg-slate-200/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/25 disabled:opacity-50 dark:text-white/55 dark:hover:bg-white/10 dark:focus-visible:ring-white/20"
+          className="inline-flex items-center gap-1 rounded-lg px-1.5 py-0.5 text-[11px] font-medium text-slate-500 transition-colors hover:bg-slate-200/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/25 disabled:opacity-50 dark:text-white/55 dark:hover:bg-white/10 dark:focus-visible:ring-white/20"
           aria-label={t("providers.opencode_go_usage_refresh")}
           title={t("providers.opencode_go_usage_refresh")}
         >
@@ -47,37 +101,45 @@ export function OpenCodeGoUsageCardSection({
 
       {usageEntry ? (
         <>
-          <div className="mt-2 grid gap-2">
+          <div className="mt-2 space-y-2.5">
             {(["rolling", "weekly", "monthly"] as const).map((type) => {
               const item = usageByType.get(type);
               const value = item?.percentage ?? 0;
+              const tone = resolveUsageTone(value);
+
               return (
-                <div key={type}>
+                <div key={type} className="space-y-1">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs text-slate-600 dark:text-white/65">
+                    <span className="min-w-0 truncate text-[11px] font-semibold text-slate-700 dark:text-white/80">
                       {t(`providers.opencode_go_usage_${type}`)}
                     </span>
-                    <span className="text-xs font-semibold tabular-nums text-slate-700 dark:text-white/80">
+                    <span
+                      className={[
+                        "shrink-0 text-[11px] font-semibold tabular-nums",
+                        tone.percentClass,
+                      ].join(" ")}
+                    >
                       {value}%
                     </span>
                   </div>
-                  <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-slate-200 dark:bg-neutral-800">
+                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200/80 dark:bg-white/10">
                     <div
-                      className="h-full rounded-full bg-sky-500"
-                      style={{ width: `${Math.min(100, Math.max(0, value))}%` }}
+                      className={["h-full rounded-full", tone.fillClass].join(" ")}
+                      style={{ width: `${clampPercent(value)}%` }}
+                      aria-hidden="true"
                     />
                   </div>
-                  <p className="mt-0.5 text-[11px] text-slate-400 dark:text-white/45">
+                  <div className="truncate text-[10px] tabular-nums text-slate-500 dark:text-white/45">
                     {item && item.resets_in
                       ? t("providers.opencode_go_usage_resets_in", { time: item.resets_in })
                       : t("providers.opencode_go_usage_no_data")}
-                  </p>
+                  </div>
                 </div>
               );
             })}
           </div>
           {usageEntry.error ? (
-            <p className="mt-2 text-[11px] text-rose-600 dark:text-rose-400">
+            <p className="mt-2 text-[11px] font-semibold text-rose-700 dark:text-rose-200">
               {usageEntry.error}
             </p>
           ) : null}

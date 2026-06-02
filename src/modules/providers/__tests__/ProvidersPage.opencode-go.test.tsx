@@ -310,3 +310,76 @@ describe("ProvidersPage OpenCode Go tab", () => {
     });
   });
 });
+
+describe("mergeOpenCodeGoUsage", () => {
+  test("returns incoming when existing is empty", async () => {
+    const { mergeOpenCodeGoUsage } = await import(
+      "@/modules/providers/components/OpenCodeGoUsageCardSection"
+    );
+    const incoming = [{ type: "rolling", label: "Rolling", percentage: 50, resets_in: "30m" }];
+    expect(mergeOpenCodeGoUsage([], incoming)).toEqual(incoming);
+  });
+
+  test("returns existing when incoming is empty", async () => {
+    const { mergeOpenCodeGoUsage } = await import(
+      "@/modules/providers/components/OpenCodeGoUsageCardSection"
+    );
+    const existing = [{ type: "weekly", label: "Weekly", percentage: 30, resets_in: "3d" }];
+    expect(mergeOpenCodeGoUsage(existing, [])).toEqual(existing);
+  });
+
+  test("overwrites matching types and preserves non-matching types", async () => {
+    const { mergeOpenCodeGoUsage } = await import(
+      "@/modules/providers/components/OpenCodeGoUsageCardSection"
+    );
+    const existing = [
+      { type: "rolling", label: "Rolling", percentage: 50, resets_in: "30m" },
+      { type: "weekly", label: "Weekly", percentage: 30, resets_in: "3d" },
+      { type: "monthly", label: "Monthly", percentage: 10, resets_in: "20d" },
+    ];
+    const incoming = [
+      { type: "rolling", label: "Rolling", percentage: 80, resets_in: "25m" },
+    ];
+    const result = mergeOpenCodeGoUsage(existing, incoming);
+
+    expect(result).toHaveLength(3);
+    expect(result.find((i) => i.type === "rolling")?.percentage).toBe(80);
+    expect(result.find((i) => i.type === "weekly")?.percentage).toBe(30);
+    expect(result.find((i) => i.type === "monthly")?.percentage).toBe(10);
+  });
+
+  test("handles case-insensitive type matching", async () => {
+    const { mergeOpenCodeGoUsage } = await import(
+      "@/modules/providers/components/OpenCodeGoUsageCardSection"
+    );
+    const existing = [
+      { type: "Rolling", label: "Rolling", percentage: 50, resets_in: "30m" },
+    ];
+    const incoming = [
+      { type: "rolling", label: "Rolling", percentage: 75, resets_in: "25m" },
+    ];
+    const result = mergeOpenCodeGoUsage(existing, incoming);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].percentage).toBe(75);
+  });
+
+  test("preserves incoming order with appended preserved items", async () => {
+    const { mergeOpenCodeGoUsage } = await import(
+      "@/modules/providers/components/OpenCodeGoUsageCardSection"
+    );
+    const existing = [
+      { type: "monthly", label: "Monthly", percentage: 10, resets_in: "20d" },
+      { type: "weekly", label: "Weekly", percentage: 30, resets_in: "3d" },
+    ];
+    const incoming = [
+      { type: "rolling", label: "Rolling", percentage: 80, resets_in: "25m" },
+    ];
+    const result = mergeOpenCodeGoUsage(existing, incoming);
+
+    expect(result).toHaveLength(3);
+    expect(result[0].type).toBe("rolling");
+    expect(result[1].type).toBe("monthly");
+    expect(result[2].type).toBe("weekly");
+  });
+});
