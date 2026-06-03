@@ -125,11 +125,11 @@ describe("ccswitchImport", () => {
     expect(usageScript).toContain("days: 1");
     expect(usageScript).toContain("total_calls");
     expect(usageScript).toContain("quota_cost");
-    expect(usageScript).toContain("今日用量");
+    expect(usageScript).toContain("今日已经使用");
     expect(usageScript).toContain("used: undefined");
     expect(usageScript).toContain("remaining: calls");
     expect(usageScript).toContain('unit: "次"');
-    expect(usageScript).toContain('extra: "今日消耗： " + cost.toFixed(4) + "$"');
+    expect(usageScript).toContain('extra: "今日消耗：" + cost.toFixed(4) + "$"');
     expect(usageScript).not.toContain("额度");
   });
 
@@ -144,10 +144,10 @@ describe("ccswitchImport", () => {
     });
 
     const usageScript = decodeUsageScript(url);
-    expect(usageScript).toContain("Today's usage");
+    expect(usageScript).toContain("Used today");
     expect(usageScript).toContain("API Key not found");
     expect(usageScript).toContain('unit: "times"');
-    expect(usageScript).toContain('extra: "Today\'s cost: " + cost.toFixed(4) + "$"');
+    expect(usageScript).toContain('extra: "Today\'s cost:" + cost.toFixed(4) + "$"');
     expect(usageScript).not.toContain("今日用量");
     expect(usageScript).not.toContain("今日消耗");
   });
@@ -187,7 +187,7 @@ describe("ccswitchImport", () => {
 
     const parsed = new URL(url);
     expect(parsed.searchParams.get("notes")).toBe("Pro pool remark");
-    expect(decodeUsageScript(url)).toContain("Today's usage");
+    expect(decodeUsageScript(url)).toContain("Used today");
   });
 
   test("builds a provider deeplink for a selected channel group route and enabled state", () => {

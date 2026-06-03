@@ -177,16 +177,16 @@ export function buildCcSwitchUsageScript(language?: string): string {
   const labels =
     normalizeUsageScriptLanguage(language) === "en"
       ? {
-          planName: "Today's usage",
+          planName: "Used today",
           invalidMessage: "API Key not found",
           unit: "times",
-          costPrefix: "Today's cost: ",
+          costPrefix: "Today's cost:",
         }
       : {
-          planName: "今日用量",
+          planName: "今日已经使用",
           invalidMessage: "API Key 未找到",
           unit: "次",
-          costPrefix: "今日消耗： ",
+          costPrefix: "今日消耗：",
         };
 
   return `({
