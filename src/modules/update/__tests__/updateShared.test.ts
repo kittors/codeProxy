@@ -64,7 +64,7 @@ describe("applyUpdateFlow", () => {
     });
   });
 
-  test("treats completed frontend-only updates as successful before the page reload sees the new UI commit", async () => {
+  test("reports timeout when frontend-only update completes but UI commit does not change (backend need not restart)", async () => {
     const notify = vi.fn();
     const onSuccess = vi.fn();
 
@@ -92,11 +92,11 @@ describe("applyUpdateFlow", () => {
       t: ((key: string) => key) as never,
     });
 
-    expect(result).toBe(true);
+    expect(result).toBe(false);
     expect(notify).toHaveBeenCalledWith({
-      type: "success",
-      message: "auto_update.success",
+      type: "warning",
+      message: "update completed",
     });
-    expect(onSuccess).toHaveBeenCalledTimes(1);
+    expect(onSuccess).not.toHaveBeenCalled();
   });
 });
