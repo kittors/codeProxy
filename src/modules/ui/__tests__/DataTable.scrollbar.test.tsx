@@ -855,8 +855,8 @@ describe("DataTable scrollbar wrapper", () => {
         "sticky",
         "left-0",
         "top-0",
-        "z-10",
-        "rounded-l-xl",
+        "z-40",
+        "rounded-xl",
         "bg-slate-100",
       );
       expect(gutter).toContainElement(y);
@@ -887,16 +887,28 @@ describe("DataTable scrollbar wrapper", () => {
 
     const header = container.querySelector("thead") as HTMLTableSectionElement | null;
     const firstHeader = container.querySelector("th") as HTMLTableCellElement | null;
+    const lastHeader = container.querySelectorAll("th").item(1) as HTMLTableCellElement | null;
     const headerOverlay = container.querySelector(
       "[data-vt-header-overlay]",
     ) as HTMLDivElement | null;
     expect(header).not.toBeNull();
     expect(firstHeader).not.toBeNull();
+    expect(lastHeader).not.toBeNull();
     expect(headerOverlay).not.toBeNull();
-    expect(header).toHaveClass("sticky", "top-0", "z-40", "bg-slate-100", "dark:bg-neutral-800");
-    expect(firstHeader!.className).not.toContain("rounded-l-xl");
-    expect(firstHeader).toHaveClass("bg-slate-100", "dark:bg-neutral-800");
-    expect(headerOverlay).toHaveClass("bg-slate-100", "dark:bg-neutral-800");
+    expect(header).toHaveClass("sticky", "top-0", "z-50");
+    expect(header).not.toHaveClass("bg-slate-100");
+    expect(firstHeader).not.toHaveClass("rounded-l-xl");
+    expect(lastHeader).not.toHaveClass("rounded-r-xl");
+    expect(firstHeader).not.toHaveClass("bg-slate-100");
+    expect(headerOverlay).toHaveClass(
+      "sticky",
+      "left-0",
+      "top-0",
+      "z-40",
+      "rounded-xl",
+      "bg-slate-100",
+      "dark:bg-neutral-800",
+    );
   });
 
   test("prevents vertical wheel bounce when already at a scroll boundary", () => {

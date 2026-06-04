@@ -423,8 +423,15 @@ export function DataTable<T>({
   );
   const columnOrderRef = useRef<ColumnOrder>(columnOrder);
   const [reorderPreview, setReorderPreview] = useState<ColumnReorderPreview | null>(null);
+  const [rowHoverOverlay, setRowHoverOverlay] = useState<{
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+  } | null>(null);
   const columnReorderRef = useRef<ColumnReorderState | null>(null);
   const reorderPreviewRef = useRef<ColumnReorderPreview | null>(null);
+  const hoveredRowRef = useRef<HTMLTableRowElement | null>(null);
 
   const orderedColumns = useMemo(() => {
     if (!canUseColumnOrder) return columns;
@@ -555,6 +562,16 @@ export function DataTable<T>({
     if (!el) return;
     const next = el.scrollTop;
     updateScrollMetrics();
+    if (hoveredRowRef.current) {
+      const rowRect = hoveredRowRef.current.getBoundingClientRect();
+      const containerRect = el.getBoundingClientRect();
+      setRowHoverOverlay({
+        left: el.scrollLeft,
+        top: rowRect.top - containerRect.top + el.scrollTop,
+        width: el.clientWidth,
+        height: rowRect.height,
+      });
+    }
 
     const scrollBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
     const {
@@ -597,6 +614,23 @@ export function DataTable<T>({
       });
     }
   }, [updateScrollMetrics]);
+
+  const updateRowHoverOverlay = useCallback((row: HTMLTableRowElement | null) => {
+    hoveredRowRef.current = row;
+    const el = containerRef.current;
+    if (!row || !el) {
+      setRowHoverOverlay(null);
+      return;
+    }
+    const rowRect = row.getBoundingClientRect();
+    const containerRect = el.getBoundingClientRect();
+    setRowHoverOverlay({
+      left: el.scrollLeft,
+      top: rowRect.top - containerRect.top + el.scrollTop,
+      width: el.clientWidth,
+      height: rowRect.height,
+    });
+  }, []);
 
   const handleWheel = useCallback(
     (e: WheelEvent) => {
@@ -1431,17 +1465,33 @@ export function DataTable<T>({
       >
         <div
           data-vt-scroll-content
-          className={scrollContentClassName ?? ""}
+          className={`relative ${scrollContentClassName ?? ""}`}
         >
+        {!naturalFlow && rowHoverOverlay ? (
+          <div
+            data-vt-row-hover-overlay
+            aria-hidden="true"
+            className="pointer-events-none absolute z-0 rounded-lg bg-slate-50 dark:bg-white/[0.04]"
+            style={{
+              transform: `translate(${rowHoverOverlay.left}px, ${rowHoverOverlay.top}px)`,
+              width: rowHoverOverlay.width,
+              height: rowHoverOverlay.height,
+            }}
+          />
+        ) : null}
         {naturalFlow ? null : (
           <div
             data-vt-header-overlay
-            className={`pointer-events-none sticky left-0 top-0 z-10 w-full ${vThumb ? "rounded-l-xl" : "rounded-xl"} bg-slate-100 dark:bg-neutral-800`}
-            style={{ height: headerHeight, marginBottom: -headerHeight }}
+            className="pointer-events-none sticky left-0 top-0 z-40 rounded-xl bg-slate-100 dark:bg-neutral-800"
+            style={{
+              height: headerHeight,
+              marginBottom: -headerHeight,
+              width: scrollMetrics.clientWidth || "100%",
+            }}
           />
         )}
         <table
-          className={`w-full ${minWidth} table-fixed border-separate border-spacing-0 text-sm`}
+          className={`relative w-full ${minWidth} table-fixed border-separate border-spacing-0 text-sm`}
         >
           <caption className="sr-only">{caption}</caption>
           <colgroup>
@@ -1462,7 +1512,7 @@ export function DataTable<T>({
             className={
               naturalFlow
                 ? "bg-slate-100 dark:bg-neutral-800"
-                : "sticky top-0 z-40 bg-slate-100 dark:bg-neutral-800"
+                : "sticky top-0 z-50"
             }
           >
             <tr className="text-left text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-white/55">
@@ -1470,6 +1520,13 @@ export function DataTable<T>({
                 const canResize = shouldAllowColumnResize(col, colIndex, orderedColumns);
                 const canReorder = canUseColumnOrder && shouldAllowColumnReorder(col);
                 const isResizingColumns = activeResizeColumnKey !== null;
+                const headerChromeClass = naturalFlow ? "bg-slate-100 dark:bg-neutral-800" : "";
+                const headerCornerClass = [
+                  naturalFlow && colIndex === 0 ? "rounded-l-xl" : "",
+                  naturalFlow && colIndex === orderedColumns.length - 1 ? "rounded-r-xl" : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ");
                 return (
                   <th
                     key={col.key}
@@ -1478,7 +1535,7 @@ export function DataTable<T>({
                       headerCellsRef.current[col.key] = node;
                     }}
                     style={resolveColumnStyle(col)}
-                    className={`group/column relative bg-slate-100 px-4 py-3 whitespace-nowrap dark:bg-neutral-800 ${col.width ?? ""} ${col.headerClassName ?? ""}`}
+                    className={`group/column relative z-50 px-4 py-3 whitespace-nowrap ${headerChromeClass} ${headerCornerClass} ${col.width ?? ""} ${col.headerClassName ?? ""}`}
                   >
                     {canReorder ? (
                       <button
@@ -1581,8 +1638,14 @@ export function DataTable<T>({
                   return (
                     <tr
                       key={key}
-                      className={`text-sm transition-colors hover:bg-slate-50 dark:hover:bg-white/[0.04] ${extraCls}`}
+                      className={`text-sm transition-colors ${
+                        naturalFlow ? "hover:bg-slate-50 dark:hover:bg-white/[0.04]" : ""
+                      } ${extraCls}`}
                       style={virtualize ? { height: rowHeight } : undefined}
+                      onMouseEnter={
+                        naturalFlow ? undefined : (event) => updateRowHoverOverlay(event.currentTarget)
+                      }
+                      onMouseLeave={naturalFlow ? undefined : () => updateRowHoverOverlay(null)}
                     >
                       {orderedColumns.map((col, colIdx) => {
                         const isFirst = colIdx === 0;
