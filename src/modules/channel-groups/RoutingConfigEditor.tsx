@@ -1612,7 +1612,7 @@ export function RoutingConfigEditor({
               >
                 <TabsContent
                   value="basic"
-                  className="h-full min-h-0 overflow-y-auto space-y-5 scrollbar-hidden"
+                  className="h-full min-h-0 overflow-y-auto space-y-5 pr-1"
                 >
                   <Field
                     label={t("channel_groups_page.routing_strategy_label")}
