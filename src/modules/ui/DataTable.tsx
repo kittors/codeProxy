@@ -155,6 +155,8 @@ interface ColumnResizeState {
   pointerBoundaryOffsetClientX: number;
   minWidth: number;
   maxWidth: number;
+  previewTop: number;
+  previewBottom: number;
   currentWidth: number;
   lastDebugAtMs: number;
   debugEnabled: boolean;
@@ -166,6 +168,65 @@ interface ColumnResizePreview {
   top: number;
   height: number;
   tooltipTop: number;
+}
+
+interface ScrollMetrics {
+  scrollTop: number;
+  scrollLeft: number;
+  scrollHeight: number;
+  scrollWidth: number;
+  clientHeight: number;
+  clientWidth: number;
+}
+
+function hasHorizontalOverflow(metrics: ScrollMetrics) {
+  return metrics.scrollWidth > metrics.clientWidth + 1;
+}
+
+function hasVerticalOverflow(metrics: ScrollMetrics, headerHeight: number) {
+  const effectiveViewportY = Math.max(0, metrics.clientHeight - headerHeight);
+  const effectiveContentY = Math.max(effectiveViewportY, metrics.scrollHeight - headerHeight);
+  return effectiveContentY > effectiveViewportY + 1;
+}
+
+function calculateScrollbarThumbs(scrollMetrics: ScrollMetrics, headerHeight: number) {
+  const trackInset = 8; // matches `inset-y-2` / `inset-x-2` (8px)
+  const effectiveViewportY = Math.max(0, scrollMetrics.clientHeight - headerHeight);
+  const effectiveContentY = Math.max(effectiveViewportY, scrollMetrics.scrollHeight - headerHeight);
+  const hasV = hasVerticalOverflow(scrollMetrics, headerHeight);
+  const hasH = hasHorizontalOverflow(scrollMetrics);
+
+  const v = (() => {
+    if (!hasV) return null;
+    const trackLength = Math.max(0, scrollMetrics.clientHeight - headerHeight - trackInset * 2);
+    const viewport = Math.max(1, effectiveViewportY);
+    const content = Math.max(viewport, effectiveContentY);
+    const thumbLength = Math.max(28, Math.round((viewport / content) * trackLength));
+    const maxThumbOffset = Math.max(0, trackLength - thumbLength);
+    const scrollRange = Math.max(1, scrollMetrics.scrollHeight - scrollMetrics.clientHeight);
+    const offset = Math.min(
+      maxThumbOffset,
+      Math.max(0, Math.round((scrollMetrics.scrollTop / scrollRange) * maxThumbOffset)),
+    );
+    return { top: offset, height: thumbLength };
+  })();
+
+  const h = (() => {
+    if (!hasH) return null;
+    const trackLength = Math.max(0, scrollMetrics.clientWidth - trackInset * 2);
+    const viewport = scrollMetrics.clientWidth;
+    const content = scrollMetrics.scrollWidth;
+    const thumbLength = Math.max(28, Math.round((viewport / content) * trackLength));
+    const maxThumbOffset = Math.max(0, trackLength - thumbLength);
+    const scrollRange = Math.max(1, content - viewport);
+    const offset = Math.min(
+      maxThumbOffset,
+      Math.max(0, Math.round((scrollMetrics.scrollLeft / scrollRange) * maxThumbOffset)),
+    );
+    return { left: offset, width: thumbLength };
+  })();
+
+  return { vThumb: v, hThumb: h };
 }
 
 function clampColumnWidth<T>(column: DataTableColumn<T>, width: number) {
@@ -388,7 +449,7 @@ export function DataTable<T>({
   const [headerHeight, setHeaderHeight] = useState(0);
   const [scrollTop, setScrollTop] = useState(0);
   const [viewportHeight, setViewportHeight] = useState(480);
-  const [scrollMetrics, setScrollMetrics] = useState(() => ({
+  const [scrollMetrics, setScrollMetrics] = useState<ScrollMetrics>(() => ({
     scrollTop: 0,
     scrollLeft: 0,
     scrollHeight: 0,
@@ -398,6 +459,11 @@ export function DataTable<T>({
   }));
   const scrollMetricsRef = useRef(scrollMetrics);
   const rafRef = useRef<number | null>(null);
+  const metricsRafRef = useRef<number | null>(null);
+  const verticalThumbRef = useRef<HTMLDivElement | null>(null);
+  const horizontalThumbRef = useRef<HTMLDivElement | null>(null);
+  const columnResizeRafRef = useRef<number | null>(null);
+  const pendingColumnResizePointerRef = useRef<{ clientX: number; clientY: number } | null>(null);
   const bottomTimeoutRef = useRef<number | null>(null);
   const bottomPendingRef = useRef(false);
   const prevLoadingMoreRef = useRef(loadingMore);
@@ -499,7 +565,26 @@ export function DataTable<T>({
     });
   }, [columns]);
 
-  const updateScrollMetrics = useCallback(() => {
+  const syncScrollbarThumbs = useCallback((metrics: ScrollMetrics, measuredHeaderHeight = headerHeightRef.current) => {
+    const { vThumb: nextVThumb, hThumb: nextHThumb } = calculateScrollbarThumbs(
+      metrics,
+      measuredHeaderHeight,
+    );
+
+    const verticalThumb = verticalThumbRef.current;
+    if (verticalThumb && nextVThumb) {
+      verticalThumb.style.top = `${nextVThumb.top}px`;
+      verticalThumb.style.height = `${nextVThumb.height}px`;
+    }
+
+    const horizontalThumb = horizontalThumbRef.current;
+    if (horizontalThumb && nextHThumb) {
+      horizontalThumb.style.left = `${nextHThumb.left}px`;
+      horizontalThumb.style.width = `${nextHThumb.width}px`;
+    }
+  }, []);
+
+  const updateScrollMetrics = useCallback((options?: { forceState?: boolean }) => {
     const el = containerRef.current;
     if (!el) return;
 
@@ -517,20 +602,38 @@ export function DataTable<T>({
       clientWidth: el.clientWidth,
     };
 
+    syncScrollbarThumbs(next);
+    scrollMetricsRef.current = next;
+
     setScrollMetrics((prev) => {
+      const measuredHeaderHeight = headerHeightRef.current;
+      const overflowChanged =
+        hasHorizontalOverflow(prev) !== hasHorizontalOverflow(next) ||
+        hasVerticalOverflow(prev, measuredHeaderHeight) !== hasVerticalOverflow(next, measuredHeaderHeight);
+      const viewportChanged =
+        prev.clientHeight !== next.clientHeight ||
+        prev.clientWidth !== next.clientWidth;
       if (
+        !options?.forceState &&
+        !overflowChanged &&
+        !viewportChanged &&
         prev.scrollTop === next.scrollTop &&
-        prev.scrollLeft === next.scrollLeft &&
-        prev.scrollHeight === next.scrollHeight &&
-        prev.scrollWidth === next.scrollWidth &&
-        prev.clientHeight === next.clientHeight &&
-        prev.clientWidth === next.clientWidth
+        prev.scrollLeft === next.scrollLeft
       ) {
         return prev;
       }
+      if (!options?.forceState && !overflowChanged && !viewportChanged) return prev;
       return next;
     });
-  }, []);
+  }, [syncScrollbarThumbs]);
+
+  const scheduleScrollMetricsUpdate = useCallback(() => {
+    if (metricsRafRef.current !== null) return;
+    metricsRafRef.current = window.requestAnimationFrame(() => {
+      metricsRafRef.current = null;
+      updateScrollMetrics();
+    });
+  }, [updateScrollMetrics]);
 
   // Keep latest props for timeout callbacks (avoid stale closures)
   useEffect(() => {
@@ -610,10 +713,10 @@ export function DataTable<T>({
     if (!rafRef.current) {
       rafRef.current = window.requestAnimationFrame(() => {
         rafRef.current = null;
-        setScrollTop(next);
+        if (virtualize) setScrollTop(next);
       });
     }
-  }, [updateScrollMetrics]);
+  }, [updateScrollMetrics, virtualize]);
 
   const updateRowHoverOverlay = useCallback((row: HTMLTableRowElement | null) => {
     hoveredRowRef.current = row;
@@ -793,13 +896,6 @@ export function DataTable<T>({
       pointerClientX: number,
       pointerClientY: number,
     ): ColumnResizePreview | null => {
-      const containerRect = containerRef.current?.getBoundingClientRect();
-      if (!containerRect) return null;
-
-      const scroller = containerRef.current;
-      const hasHorizontalOverflow = scroller
-        ? scroller.scrollWidth > scroller.clientWidth + 1
-        : false;
       const minBoundaryClientX = active.startLeftClientX + active.minWidth;
       const maxBoundaryClientX = active.startLeftClientX + active.maxWidth;
       const rawBoundaryClientX = pointerClientX + active.pointerBoundaryOffsetClientX;
@@ -808,9 +904,9 @@ export function DataTable<T>({
         Math.min(maxBoundaryClientX, rawBoundaryClientX),
       );
       const width = Math.round(lineCenterClientX - active.startLeftClientX);
-      const top = Math.max(0, containerRect.top);
-      const bottomInset = hasHorizontalOverflow ? 14 : 0;
-      const bottom = Math.max(top, containerRect.bottom - bottomInset);
+      const top = active.previewTop;
+      const bottomInset = hasHorizontalOverflow(scrollMetricsRef.current) ? 14 : 0;
+      const bottom = Math.max(top, active.previewBottom - bottomInset);
       const height = Math.max(0, bottom - top);
       const tooltipTop = Math.max(
         top + 8,
@@ -856,20 +952,85 @@ export function DataTable<T>({
     col.style.maxWidth = widthPx;
   }, []);
 
-  const updateScrollMetricsWhenHorizontalOverflowChanges = useCallback(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const prev = scrollMetricsRef.current;
-    const prevHasH = prev.scrollWidth > prev.clientWidth + 1;
-    const nextHasH = el.scrollWidth > el.clientWidth + 1;
-    if (prevHasH !== nextHasH) {
-      updateScrollMetrics();
+  const applyPendingColumnResize = useCallback(() => {
+    columnResizeRafRef.current = null;
+    const active = columnResizeRef.current;
+    const pointer = pendingColumnResizePointerRef.current;
+    if (!active || !pointer) return;
+
+    pendingColumnResizePointerRef.current = null;
+
+    const minBoundaryClientX = active.startLeftClientX + active.minWidth;
+    const maxBoundaryClientX = active.startLeftClientX + active.maxWidth;
+    const lineCenterClientX = Math.max(
+      minBoundaryClientX,
+      Math.min(maxBoundaryClientX, pointer.clientX + active.pointerBoundaryOffsetClientX),
+    );
+    const roundedWidth = Math.round(lineCenterClientX - active.startLeftClientX);
+
+    active.currentWidth = roundedWidth;
+    applyColumnWidthToDom(active.columnKey, roundedWidth);
+    const preview = {
+      ...(buildColumnResizePreview(active, pointer.clientX, pointer.clientY) ?? {
+        width: roundedWidth,
+        left: lineCenterClientX - COLUMN_RESIZE_PREVIEW_LINE_WIDTH / 2,
+        top: active.previewTop,
+        height: Math.max(0, active.previewBottom - active.previewTop),
+        tooltipTop: active.previewTop,
+      }),
+      width: roundedWidth,
+    };
+    applyColumnResizePreview(preview);
+    scheduleScrollMetricsUpdate();
+    if (active.debugEnabled) {
+      const now = performance.now();
+      if (now - active.lastDebugAtMs >= 125) {
+        active.lastDebugAtMs = now;
+        const headerCell = headerCellsRef.current[active.columnKey];
+        const headerRect = headerCell?.getBoundingClientRect();
+        logColumnResizeDebug("move", {
+          tableId,
+          columnKey: active.columnKey,
+          pointerX: Math.round(pointer.clientX),
+          previewCenterX: Math.round(preview.left + COLUMN_RESIZE_PREVIEW_LINE_WIDTH / 2),
+          renderedHeaderRight: headerRect ? Math.round(headerRect.right) : null,
+          renderedHeaderWidth: headerRect ? Math.round(headerRect.width) : null,
+          width: roundedWidth,
+          deltaPreviewToPointer: Math.round(
+            preview.left + COLUMN_RESIZE_PREVIEW_LINE_WIDTH / 2 - pointer.clientX,
+          ),
+          deltaPreviewToRenderedHeader: headerRect
+            ? Math.round(preview.left + COLUMN_RESIZE_PREVIEW_LINE_WIDTH / 2 - headerRect.right)
+            : null,
+        });
+      }
     }
-  }, [updateScrollMetrics]);
+  }, [
+    applyColumnResizePreview,
+    applyColumnWidthToDom,
+    buildColumnResizePreview,
+    scheduleScrollMetricsUpdate,
+    tableId,
+  ]);
+
+  const scheduleColumnResizeFrame = useCallback(() => {
+    if (columnResizeRafRef.current !== null) return;
+    columnResizeRafRef.current = window.requestAnimationFrame(applyPendingColumnResize);
+  }, [applyPendingColumnResize]);
+
+  const flushPendingColumnResize = useCallback(() => {
+    if (columnResizeRafRef.current !== null) {
+      window.cancelAnimationFrame(columnResizeRafRef.current);
+      columnResizeRafRef.current = null;
+    }
+    applyPendingColumnResize();
+  }, [applyPendingColumnResize]);
 
   const finishColumnResize = useCallback(() => {
     const active = columnResizeRef.current;
     if (!active) return;
+
+    flushPendingColumnResize();
 
     const nextWidths = {
       ...columnWidthsRef.current,
@@ -881,12 +1042,13 @@ export function DataTable<T>({
     updateScrollMetrics();
 
     columnResizeRef.current = null;
+    pendingColumnResizePointerRef.current = null;
     setResizePreview(null);
     setActiveResizeColumnKey(null);
     document.body.style.cursor = "";
     document.body.style.userSelect = "";
     document.documentElement.style.cursor = "";
-  }, [tableId, updateScrollMetrics]);
+  }, [flushPendingColumnResize, tableId, updateScrollMetrics]);
 
   const handleColumnResizePointerDown = useCallback(
     (column: DataTableColumn<T>, e: ReactPointerEvent<HTMLButtonElement>) => {
@@ -896,6 +1058,7 @@ export function DataTable<T>({
       if (!headerCell) return;
 
       const rect = headerCell.getBoundingClientRect();
+      const containerRect = containerRef.current?.getBoundingClientRect();
       const startWidth = rect.width;
       const minWidth = column.minWidthPx ?? DEFAULT_MIN_COLUMN_WIDTH;
       const maxWidth = column.maxWidthPx ?? DEFAULT_MAX_COLUMN_WIDTH;
@@ -912,6 +1075,8 @@ export function DataTable<T>({
         pointerBoundaryOffsetClientX: rect.right - e.clientX,
         minWidth,
         maxWidth,
+        previewTop: Math.max(0, containerRect?.top ?? rect.top),
+        previewBottom: Math.max(0, containerRect?.bottom ?? rect.bottom),
         currentWidth: nextStartWidth,
         lastDebugAtMs: 0,
         debugEnabled: shouldDebugColumnResize(),
@@ -922,6 +1087,7 @@ export function DataTable<T>({
       document.body.style.userSelect = "none";
       setActiveResizeColumnKey(column.key);
       applyColumnWidthToDom(column.key, nextStartWidth);
+      pendingColumnResizePointerRef.current = null;
       const preview = buildColumnResizePreview(resizeState, e.clientX, e.clientY);
       setResizePreview(preview);
       if (resizeState.debugEnabled) {
@@ -1155,53 +1321,14 @@ export function DataTable<T>({
     const handlePointerMove = (event: PointerEvent) => {
       const active = columnResizeRef.current;
       if (!active) return;
+      if (active.pointerId !== event.pointerId) return;
 
       event.preventDefault();
-      const minBoundaryClientX = active.startLeftClientX + active.minWidth;
-      const maxBoundaryClientX = active.startLeftClientX + active.maxWidth;
-      const lineCenterClientX = Math.max(
-        minBoundaryClientX,
-        Math.min(maxBoundaryClientX, event.clientX + active.pointerBoundaryOffsetClientX),
-      );
-      const roundedWidth = Math.round(lineCenterClientX - active.startLeftClientX);
-
-      active.currentWidth = roundedWidth;
-      applyColumnWidthToDom(active.columnKey, roundedWidth);
-      const preview = {
-        ...(buildColumnResizePreview(active, event.clientX, event.clientY) ?? {
-          width: roundedWidth,
-          left: lineCenterClientX - COLUMN_RESIZE_PREVIEW_LINE_WIDTH / 2,
-          top: 0,
-          height: 0,
-          tooltipTop: 0,
-        }),
-        width: roundedWidth,
+      pendingColumnResizePointerRef.current = {
+        clientX: event.clientX,
+        clientY: event.clientY,
       };
-      applyColumnResizePreview(preview);
-      updateScrollMetricsWhenHorizontalOverflowChanges();
-      if (active.debugEnabled) {
-        const now = performance.now();
-        if (now - active.lastDebugAtMs >= 125) {
-          active.lastDebugAtMs = now;
-          const headerCell = headerCellsRef.current[active.columnKey];
-          const headerRect = headerCell?.getBoundingClientRect();
-          logColumnResizeDebug("move", {
-            tableId,
-            columnKey: active.columnKey,
-            pointerX: Math.round(event.clientX),
-            previewCenterX: Math.round(preview.left + COLUMN_RESIZE_PREVIEW_LINE_WIDTH / 2),
-            renderedHeaderRight: headerRect ? Math.round(headerRect.right) : null,
-            renderedHeaderWidth: headerRect ? Math.round(headerRect.width) : null,
-            width: roundedWidth,
-            deltaPreviewToPointer: Math.round(
-              preview.left + COLUMN_RESIZE_PREVIEW_LINE_WIDTH / 2 - event.clientX,
-            ),
-            deltaPreviewToRenderedHeader: headerRect
-              ? Math.round(preview.left + COLUMN_RESIZE_PREVIEW_LINE_WIDTH / 2 - headerRect.right)
-              : null,
-          });
-        }
-      }
+      scheduleColumnResizeFrame();
     };
 
     const handlePointerUp = () => finishColumnResize();
@@ -1219,12 +1346,8 @@ export function DataTable<T>({
       window.removeEventListener("blur", handleWindowBlur);
     };
   }, [
-    applyColumnResizePreview,
-    applyColumnWidthToDom,
-    buildColumnResizePreview,
     finishColumnResize,
-    tableId,
-    updateScrollMetricsWhenHorizontalOverflowChanges,
+    scheduleColumnResizeFrame,
   ]);
 
   useEffect(() => {
@@ -1300,7 +1423,7 @@ export function DataTable<T>({
 
   // Cleanup rAF
   useEffect(() => {
-    return () => {
+      return () => {
       if (bottomTimeoutRef.current) {
         window.clearTimeout(bottomTimeoutRef.current);
         bottomTimeoutRef.current = null;
@@ -1309,6 +1432,15 @@ export function DataTable<T>({
         window.cancelAnimationFrame(rafRef.current);
         rafRef.current = null;
       }
+      if (metricsRafRef.current) {
+        window.cancelAnimationFrame(metricsRafRef.current);
+        metricsRafRef.current = null;
+      }
+      if (columnResizeRafRef.current) {
+        window.cancelAnimationFrame(columnResizeRafRef.current);
+        columnResizeRafRef.current = null;
+      }
+      pendingColumnResizePointerRef.current = null;
     };
   }, []);
 
@@ -1352,47 +1484,7 @@ export function DataTable<T>({
   );
 
   const { vThumb, hThumb } = useMemo(() => {
-    const trackInset = 8; // matches `inset-y-2` / `inset-x-2` (8px)
-    const effectiveViewportY = Math.max(0, scrollMetrics.clientHeight - headerHeight);
-    const effectiveContentY = Math.max(
-      effectiveViewportY,
-      scrollMetrics.scrollHeight - headerHeight,
-    );
-    const hasV = effectiveContentY > effectiveViewportY + 1;
-    const hasH = scrollMetrics.scrollWidth > scrollMetrics.clientWidth + 1;
-
-    const v = (() => {
-      if (!hasV) return null;
-      const trackLength = Math.max(0, scrollMetrics.clientHeight - headerHeight - trackInset * 2);
-      const viewport = Math.max(1, effectiveViewportY);
-      const content = Math.max(viewport, effectiveContentY);
-      const thumbLength = Math.max(28, Math.round((viewport / content) * trackLength));
-      const maxThumbOffset = Math.max(0, trackLength - thumbLength);
-      const scrollRange = Math.max(1, scrollMetrics.scrollHeight - scrollMetrics.clientHeight);
-      const offset = Math.min(
-        maxThumbOffset,
-        Math.max(0, Math.round((scrollMetrics.scrollTop / scrollRange) * maxThumbOffset)),
-      );
-      // NOTE: thumb is positioned *inside* the track element, so offset is relative to track's top.
-      return { top: offset, height: thumbLength };
-    })();
-
-    const h = (() => {
-      if (!hasH) return null;
-      const trackLength = Math.max(0, scrollMetrics.clientWidth - trackInset * 2);
-      const viewport = scrollMetrics.clientWidth;
-      const content = scrollMetrics.scrollWidth;
-      const thumbLength = Math.max(28, Math.round((viewport / content) * trackLength));
-      const maxThumbOffset = Math.max(0, trackLength - thumbLength);
-      const scrollRange = Math.max(1, content - viewport);
-      const offset = Math.min(
-        maxThumbOffset,
-        Math.max(0, Math.round((scrollMetrics.scrollLeft / scrollRange) * maxThumbOffset)),
-      );
-      return { left: offset, width: thumbLength };
-    })();
-
-    return { vThumb: v, hThumb: h };
+    return calculateScrollbarThumbs(scrollMetrics, headerHeight);
   }, [headerHeight, scrollMetrics]);
 
   const resolveColumnStyle = useCallback(
@@ -1442,14 +1534,20 @@ export function DataTable<T>({
       className={
         naturalFlow
           ? `${height} ${minHeight} relative min-w-0 overflow-visible`
-          : `${height} ${minHeight} group relative isolate grid min-w-0 ${vThumb ? "grid-cols-[minmax(0,1fr)_0.75rem]" : "grid-cols-1"} overflow-hidden`
+          : `${height} ${minHeight} group relative isolate grid min-w-0 overflow-hidden rounded-xl ${vThumb ? "grid-cols-[minmax(0,1fr)_0.75rem]" : "grid-cols-1"}`
       }
     >
       {naturalFlow ? null : (
         <div
-          data-vt-header-backdrop
-          className="pointer-events-none absolute inset-x-0 top-0 z-0 rounded-xl bg-slate-100 dark:bg-neutral-800"
-          style={{ height: headerHeight }}
+          data-vt-header-chrome
+          aria-hidden="true"
+          className={`pointer-events-none absolute left-0 top-0 z-40 ${
+            vThumb ? "rounded-l-xl" : "rounded-xl"
+          } bg-slate-100 dark:bg-neutral-800`}
+          style={{
+            width: scrollMetrics.clientWidth || "100%",
+            height: headerHeight,
+          }}
         />
       )}
       <div
@@ -1460,7 +1558,7 @@ export function DataTable<T>({
         className={
           naturalFlow
             ? "relative z-10 min-h-0 overflow-visible rounded-xl"
-            : "relative z-10 col-start-1 row-start-1 h-full min-h-0 table-scrollbar overflow-auto overscroll-x-none overscroll-y-none rounded-tl-xl"
+            : "relative col-start-1 row-start-1 h-full min-h-0 table-scrollbar overflow-auto overscroll-x-none overscroll-y-none"
         }
       >
         <div
@@ -1479,17 +1577,6 @@ export function DataTable<T>({
             }}
           />
         ) : null}
-        {naturalFlow ? null : (
-          <div
-            data-vt-header-overlay
-            className="pointer-events-none sticky left-0 top-0 z-40 rounded-xl bg-slate-100 dark:bg-neutral-800"
-            style={{
-              height: headerHeight,
-              marginBottom: -headerHeight,
-              width: scrollMetrics.clientWidth || "100%",
-            }}
-          />
-        )}
         <table
           className={`relative w-full ${minWidth} table-fixed border-separate border-spacing-0 text-sm`}
         >
@@ -1519,7 +1606,7 @@ export function DataTable<T>({
               {orderedColumns.map((col, colIndex) => {
                 const canResize = shouldAllowColumnResize(col, colIndex, orderedColumns);
                 const canReorder = canUseColumnOrder && shouldAllowColumnReorder(col);
-                const isResizingColumns = activeResizeColumnKey !== null;
+                const isResizingThisColumn = activeResizeColumnKey === col.key;
                 const headerChromeClass = naturalFlow ? "bg-slate-100 dark:bg-neutral-800" : "";
                 const headerCornerClass = [
                   naturalFlow && colIndex === 0 ? "rounded-l-xl" : "",
@@ -1544,7 +1631,7 @@ export function DataTable<T>({
                         aria-label={t("common.reorder_column", { column: col.label })}
                         title={t("common.reorder_column", { column: col.label })}
                         className={`absolute left-1 top-1/2 z-10 -translate-y-1/2 inline-flex h-5 w-5 items-center justify-center rounded-md cursor-grab touch-none text-slate-400/55 opacity-0 transition-opacity hover:bg-slate-200/60 hover:text-slate-600 focus-visible:opacity-100 active:cursor-grabbing dark:text-white/30 dark:hover:bg-white/10 dark:hover:text-white/65 ${
-                          isResizingColumns ? "pointer-events-none" : "group-hover/column:opacity-100"
+                          activeResizeColumnKey !== null ? "pointer-events-none" : "group-hover/column:opacity-100"
                         }`}
                         onPointerDown={(event) => handleColumnReorderPointerDown(col, event)}
                       >
@@ -1570,7 +1657,7 @@ export function DataTable<T>({
                         <span
                           aria-hidden="true"
                           className={`mx-auto block h-6 w-px rounded-full bg-slate-300/80 transition-[width,background-color,opacity] dark:bg-white/25 ${
-                            isResizingColumns
+                            isResizingThisColumn
                               ? "opacity-0"
                               : "opacity-70 group-hover/resize:w-0.5 group-hover/resize:bg-slate-500 group-hover/resize:opacity-100 group-focus-visible/resize:w-0.5 group-focus-visible/resize:bg-slate-500 group-focus-visible/resize:opacity-100 dark:group-hover/resize:bg-white/55 dark:group-focus-visible/resize:bg-white/55"
                           }`}
@@ -1584,7 +1671,7 @@ export function DataTable<T>({
           </thead>
 
           {/* ── Body ── */}
-          <tbody className="text-slate-900 dark:text-white">
+          <tbody className="relative z-0 text-slate-900 dark:text-white">
             {loading && rows.length === 0 ? (
               <>
                 <tr>
@@ -1638,7 +1725,7 @@ export function DataTable<T>({
                   return (
                     <tr
                       key={key}
-                      className={`text-sm transition-colors ${
+                      className={`group/row relative z-0 text-sm transition-colors ${
                         naturalFlow ? "hover:bg-slate-50 dark:hover:bg-white/[0.04]" : ""
                       } ${extraCls}`}
                       style={virtualize ? { height: rowHeight } : undefined}
@@ -1662,7 +1749,11 @@ export function DataTable<T>({
                           <td
                             key={col.key}
                             style={resolveColumnStyle(col)}
-                            className={`px-4 py-2.5 align-middle ${col.cellClassName ?? ""} ${roundCls}`}
+                            className={`px-4 py-2.5 align-middle ${
+                              naturalFlow
+                                ? ""
+                                : "group-hover/row:bg-slate-50 dark:group-hover/row:bg-white/[0.04]"
+                            } ${col.cellClassName ?? ""} ${roundCls}`}
                           >
                             <TableCellOverflowTooltip
                               tooltipContent={overflowTooltip}
@@ -1725,6 +1816,7 @@ export function DataTable<T>({
           >
             <div className="absolute inset-0 rounded-full bg-slate-200/40 dark:bg-white/10" />
             <div
+              ref={verticalThumbRef}
               role="presentation"
               className="pointer-events-auto absolute left-0 right-0 cursor-pointer rounded-full bg-slate-500/40 transition-colors hover:bg-slate-500/70 dark:bg-white/25 dark:hover:bg-white/50"
               style={{ top: vThumb.top, height: vThumb.height }}
@@ -1740,10 +1832,11 @@ export function DataTable<T>({
       {!naturalFlow && hThumb ? (
         <div
           data-vt-scrollbar="x"
-          className="pointer-events-auto absolute bottom-1 left-2 right-5 z-30 h-2 opacity-0 transition-opacity hover:opacity-100 group-hover:opacity-100 group-focus-within:opacity-100"
+          className={`pointer-events-auto absolute bottom-1 left-2 ${vThumb ? "right-5" : "right-2"} z-30 h-2 opacity-0 transition-opacity hover:opacity-100 group-hover:opacity-100 group-focus-within:opacity-100`}
         >
           <div className="absolute inset-0 rounded-full bg-slate-200/40 dark:bg-white/10" />
           <div
+            ref={horizontalThumbRef}
             role="presentation"
             className="pointer-events-auto absolute top-0 bottom-0 cursor-pointer rounded-full bg-slate-500/40 transition-colors hover:bg-slate-500/70 dark:bg-white/25 dark:hover:bg-white/50"
             style={{ left: hThumb.left, width: hThumb.width }}

@@ -92,6 +92,60 @@ describe("DataTable scrollbar wrapper", () => {
     expect(container.querySelector("[title='Drag to resize Select column']")).toBeNull();
   });
 
+  test("keeps inactive column separators visible while resizing another column", async () => {
+    const threeColumns: DataTableColumn<DemoRow>[] = [
+      { key: "name", label: "Name", width: "w-40", render: (row) => row.name },
+      { key: "id", label: "ID", width: "w-24", render: (row) => row.id },
+      { key: "email", label: "Email", width: "w-52", render: () => "a@b.com" },
+    ];
+
+    const { container } = render(
+      <DataTable
+        tableId="test-resizer-separators-during-drag"
+        rows={[{ id: "1", name: "Row 1" }]}
+        columns={threeColumns}
+        rowKey={(row) => row.id}
+        height="h-[160px]"
+        minHeight="min-h-0"
+        virtualize={false}
+      />,
+    );
+
+    const nameHeader = screen.getByRole("columnheader", { name: /Name/ });
+    Object.defineProperty(nameHeader, "getBoundingClientRect", {
+      configurable: true,
+      value: () =>
+        ({
+          x: 0,
+          y: 0,
+          top: 0,
+          left: 0,
+          right: 160,
+          bottom: 40,
+          width: 160,
+          height: 40,
+          toJSON: () => ({}),
+        }) as DOMRect,
+    });
+
+    const resizers = Array.from(
+      container.querySelectorAll("[data-vt-column-resizer]"),
+    ) as HTMLButtonElement[];
+    expect(resizers).toHaveLength(2);
+
+    fireEvent.pointerDown(resizers[0], { button: 0, pointerId: 11, clientX: 160 });
+
+    await waitFor(() => {
+      const activeSeparator = resizers[0].querySelector("span");
+      const inactiveSeparator = resizers[1].querySelector("span");
+      expect(activeSeparator).toHaveClass("opacity-0");
+      expect(inactiveSeparator).not.toHaveClass("opacity-0");
+      expect(inactiveSeparator).toHaveClass("opacity-70");
+    });
+
+    window.dispatchEvent(new PointerEvent("pointerup", { pointerId: 11, clientX: 160 }));
+  });
+
   test("persists resized column widths by table id", async () => {
     window.localStorage.clear();
     const twoColumns: DataTableColumn<DemoRow>[] = [
@@ -798,14 +852,13 @@ describe("DataTable scrollbar wrapper", () => {
       const xTrack = container.querySelector('[data-vt-scrollbar="x"]') as HTMLDivElement | null;
 
       expect(root).toHaveClass("isolate");
-      expect(scrollContainer).toHaveClass("z-10");
       expect(gutter).toHaveClass("z-30");
       expect(yTrack).toHaveClass("z-30");
       expect(xTrack).toHaveClass("z-30");
     });
   });
 
-  test("keeps the vertical scrollbar in a gutter outside the table viewport", async () => {
+  test("keeps the vertical scrollbar in a gutter while the viewport owns rounded clipping", async () => {
     const { container } = render(
       <DataTable
         rows={Array.from({ length: 60 }, (_, i) => ({ id: String(i), name: `Row ${i}` }))}
@@ -830,44 +883,39 @@ describe("DataTable scrollbar wrapper", () => {
     window.dispatchEvent(new Event("resize"));
 
     await waitFor(() => {
+      const root = scrollContainer!.parentElement as HTMLDivElement | null;
       const gutter = container.querySelector("[data-vt-scrollbar-gutter]") as HTMLDivElement | null;
-      const headerBackdrop = container.querySelector(
-        "[data-vt-header-backdrop]",
-      ) as HTMLDivElement | null;
-      const headerOverlay = container.querySelector(
-        "[data-vt-header-overlay]",
-      ) as HTMLDivElement | null;
+      const headerChrome = container.querySelector("[data-vt-header-chrome]") as HTMLDivElement | null;
       const headerGutter = container.querySelector(
         "[data-vt-header-gutter]",
       ) as HTMLDivElement | null;
+      const firstHeaderCell = container.querySelector("thead th") as HTMLTableCellElement | null;
       const y = container.querySelector('[data-vt-scrollbar="y"]') as HTMLDivElement | null;
 
+      expect(root).not.toBeNull();
+      expect(root).toHaveClass("rounded-xl", "overflow-hidden");
       expect(gutter).not.toBeNull();
       expect(scrollContainer).toHaveClass("overscroll-x-none");
       expect(scrollContainer).toHaveClass("overscroll-y-none");
-      expect(scrollContainer).toHaveClass("rounded-tl-xl");
-      expect(headerBackdrop).not.toBeNull();
-      expect(scrollContainer!.parentElement).toContainElement(headerBackdrop);
-      expect(headerBackdrop).toHaveClass("rounded-xl", "bg-slate-100");
-      expect(headerOverlay).not.toBeNull();
-      expect(scrollContainer).toContainElement(headerOverlay);
-      expect(headerOverlay).toHaveClass(
-        "sticky",
-        "left-0",
-        "top-0",
-        "z-40",
-        "rounded-xl",
-        "bg-slate-100",
-      );
+      expect(scrollContainer).not.toHaveClass("rounded-tl-xl");
+      expect(container.querySelector("[data-vt-header-backdrop]")).toBeNull();
+      expect(container.querySelector("[data-vt-header-overlay]")).toBeNull();
+      expect(headerChrome).not.toBeNull();
+      expect(headerChrome).toHaveClass("rounded-l-xl", "bg-slate-100", "z-40");
+      expect(firstHeaderCell).not.toBeNull();
+      expect(firstHeaderCell).toHaveClass("relative", "z-50");
+      expect(firstHeaderCell).not.toHaveClass("bg-slate-100");
+      expect(root).toContainElement(headerChrome);
+      expect(scrollContainer).not.toContainElement(headerChrome);
       expect(gutter).toContainElement(y);
       expect(gutter).toContainElement(headerGutter);
       expect(headerGutter).toHaveClass("rounded-r-xl", "bg-slate-100");
       expect(scrollContainer).not.toHaveClass("pr-4");
-      expect(scrollContainer!.parentElement).toHaveClass("grid-cols-[minmax(0,1fr)_0.75rem]");
+      expect(root).toHaveClass("grid-cols-[minmax(0,1fr)_0.75rem]");
     });
   });
 
-  test("keeps the sticky header opaque above scrolling body cells", () => {
+  test("keeps the real sticky header opaque above scrolling body cells", () => {
     const wideColumns: DataTableColumn<DemoRow>[] = [
       { key: "name", label: "Name", width: "w-40", render: (row) => row.name },
       { key: "id", label: "ID", width: "w-40", render: (row) => row.id },
@@ -887,28 +935,77 @@ describe("DataTable scrollbar wrapper", () => {
 
     const header = container.querySelector("thead") as HTMLTableSectionElement | null;
     const firstHeader = container.querySelector("th") as HTMLTableCellElement | null;
-    const lastHeader = container.querySelectorAll("th").item(1) as HTMLTableCellElement | null;
-    const headerOverlay = container.querySelector(
-      "[data-vt-header-overlay]",
-    ) as HTMLDivElement | null;
+    const headerChrome = container.querySelector("[data-vt-header-chrome]") as HTMLDivElement | null;
+    const body = container.querySelector("tbody") as HTMLTableSectionElement | null;
+    const firstBodyCell = container.querySelector("tbody td") as HTMLTableCellElement | null;
     expect(header).not.toBeNull();
     expect(firstHeader).not.toBeNull();
-    expect(lastHeader).not.toBeNull();
-    expect(headerOverlay).not.toBeNull();
+    expect(body).not.toBeNull();
+    expect(firstBodyCell).not.toBeNull();
+    expect(container.querySelector("[data-vt-header-overlay]")).toBeNull();
+    expect(headerChrome).not.toBeNull();
+    expect(headerChrome).toHaveClass("z-40", "rounded-xl", "bg-slate-100", "dark:bg-neutral-800");
     expect(header).toHaveClass("sticky", "top-0", "z-50");
     expect(header).not.toHaveClass("bg-slate-100");
-    expect(firstHeader).not.toHaveClass("rounded-l-xl");
-    expect(lastHeader).not.toHaveClass("rounded-r-xl");
+    expect(firstHeader!.className).not.toContain("rounded-l-xl");
+    expect(firstHeader).toHaveClass("relative", "z-50");
     expect(firstHeader).not.toHaveClass("bg-slate-100");
-    expect(headerOverlay).toHaveClass(
-      "sticky",
-      "left-0",
-      "top-0",
-      "z-40",
-      "rounded-xl",
-      "bg-slate-100",
-      "dark:bg-neutral-800",
+    expect(body).toHaveClass("relative", "z-0");
+    expect(firstBodyCell).toHaveClass("group-hover/row:bg-slate-50");
+  });
+
+  test("uses one real table width for header, body, and colgroup", () => {
+    const wideColumns: DataTableColumn<DemoRow>[] = [
+      { key: "name", label: "Name", width: "w-40", render: (row) => row.name },
+      { key: "id", label: "ID", width: "w-40", render: (row) => row.id },
+    ];
+
+    const { container } = render(
+      <DataTable
+        rows={[{ id: "1", name: "Row 1" }]}
+        columns={wideColumns}
+        rowKey={(row) => row.id}
+        height="h-[160px]"
+        minHeight="min-h-0"
+        minWidth="min-w-[760px]"
+        virtualize={false}
+      />,
     );
+
+    const table = screen.getByRole("table") as HTMLTableElement;
+    const thead = container.querySelector("thead") as HTMLTableSectionElement | null;
+    const tbody = container.querySelector("tbody") as HTMLTableSectionElement | null;
+    const colgroup = container.querySelector("colgroup") as HTMLTableColElement | null;
+
+    expect(table).toHaveClass("w-full", "min-w-[760px]", "table-fixed");
+    expect(thead?.closest("table")).toBe(table);
+    expect(tbody?.closest("table")).toBe(table);
+    expect(colgroup?.closest("table")).toBe(table);
+    expect(container.querySelector("[data-vt-header-overlay]")).toBeNull();
+    expect(container.querySelector("[data-vt-header-backdrop]")).toBeNull();
+  });
+
+  test("uses cell hover backgrounds without rendering a covering overlay", () => {
+    const { container } = render(
+      <DataTable
+        rows={[{ id: "1", name: "Row 1" }]}
+        columns={columns}
+        rowKey={(row) => row.id}
+        height="h-[160px]"
+        minHeight="min-h-0"
+        minWidth="min-w-[760px]"
+        virtualize={false}
+      />,
+    );
+
+    const row = container.querySelector("tbody tr") as HTMLTableRowElement | null;
+    const cell = container.querySelector("tbody td") as HTMLTableCellElement | null;
+    expect(row).not.toBeNull();
+    expect(cell).not.toBeNull();
+    expect(row!.className).not.toContain("hover:bg-slate-50");
+    expect(cell).toHaveClass("group-hover/row:bg-slate-50");
+    expect(container.querySelector("[data-vt-row-hover-overlay]")).toBeNull();
+    expect(container.querySelector("[data-vt-row-hover-anchor]")).toBeNull();
   });
 
   test("prevents vertical wheel bounce when already at a scroll boundary", () => {
