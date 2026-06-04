@@ -5,11 +5,17 @@ import {
   pickCcSwitchDefaultModel,
   resolveCcSwitchImportConfig,
 } from "@/modules/ccswitch/ccswitchImport";
+import { buildCcSwitchImportUrlForConfig } from "@/modules/ccswitch/ccswitchImportLinks";
 
 const decodeUsageScript = (url: string) => {
   const encoded = new URL(url).searchParams.get("usageScript");
   expect(encoded).toBeTruthy();
-  return atob(encoded!);
+  const binary = atob(encoded!);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return new TextDecoder().decode(bytes);
 };
 
 describe("ccswitchImport", () => {
@@ -113,9 +119,75 @@ describe("ccswitchImport", () => {
     expect(parsed.searchParams.get("enabled")).toBe("true");
 
     const usageScript = decodeUsageScript(url);
-    expect(usageScript).toContain("{{baseUrl}}/v0/management/public/usage");
+    expect(usageScript).toContain("{{baseUrl}}/v0/management/public/usage/summary");
     expect(usageScript).toContain('method: "POST"');
     expect(usageScript).toContain('api_key: "{{apiKey}}"');
+    expect(usageScript).toContain("days: 1");
+    expect(usageScript).toContain("total_calls");
+    expect(usageScript).toContain("quota_cost");
+    expect(usageScript).toContain("今日用量");
+    expect(usageScript).toContain("used: calls");
+    expect(usageScript).toContain("remaining: null");
+    expect(usageScript).toContain('unit: "次"');
+    expect(usageScript).toContain('extra: "今日消耗：" + cost.toFixed(4) + "$"');
+    expect(usageScript).not.toContain("额度");
+  });
+
+  test("builds an English usage script when the management UI language is English", () => {
+    const url = buildCcSwitchImportUrl({
+      apiKey: "sk-test-key",
+      baseUrl: "https://relay.example.com/",
+      clientType: "codex",
+      providerName: "Relay Provider",
+      model: "gpt-5.5",
+      usageLanguage: "en",
+    });
+
+    const usageScript = decodeUsageScript(url);
+    expect(usageScript).toContain("Today's usage");
+    expect(usageScript).toContain("API Key not found");
+    expect(usageScript).toContain('unit: "times"');
+    expect(usageScript).toContain('extra: "Today\'s cost:" + cost.toFixed(4) + "$"');
+    expect(usageScript).not.toContain("今日用量");
+    expect(usageScript).not.toContain("今日消耗");
+  });
+
+  test("passes provider notes in CC Switch deeplinks", () => {
+    const url = buildCcSwitchImportUrl({
+      apiKey: "sk-test-key",
+      baseUrl: "https://relay.example.com/",
+      clientType: "codex",
+      providerName: "Relay Provider",
+      note: "Pro pool remark",
+      model: "gpt-5.5",
+    });
+
+    expect(new URL(url).searchParams.get("notes")).toBe("Pro pool remark");
+  });
+
+  test("passes CC Switch import config remarks as provider notes", () => {
+    const url = buildCcSwitchImportUrlForConfig({
+      apiKey: "sk-test-key",
+      baseUrl: "https://relay.example.com/",
+      config: {
+        id: "codex-pro",
+        clientType: "codex",
+        providerName: "Relay Pro",
+        note: "Pro pool remark",
+        defaultModel: "gpt-5.5",
+        modelMappings: [],
+        allowedChannelGroups: ["pro"],
+        routePath: "/pro/cs_test",
+        endpointPath: "/v1",
+        usageAutoInterval: 30,
+      },
+      configs: [],
+      usageLanguage: "en",
+    });
+
+    const parsed = new URL(url);
+    expect(parsed.searchParams.get("notes")).toBe("Pro pool remark");
+    expect(decodeUsageScript(url)).toContain("Today's usage");
   });
 
   test("builds a provider deeplink for a selected channel group route and enabled state", () => {
@@ -134,6 +206,25 @@ describe("ccswitchImport", () => {
     expect(parsed.searchParams.get("name")).toBe("Team A Codex");
     expect(parsed.searchParams.get("model")).toBe("gpt-5.4");
     expect(parsed.searchParams.get("enabled")).toBe("false");
+  });
+
+  test("uses separate usageBaseUrl when explicitly provided with a routePath baseUrl", () => {
+    const url = buildCcSwitchImportUrl({
+      apiKey: "sk-test-key",
+      baseUrl: "https://relay.example.com/team-a",
+      usageBaseUrl: "https://relay.example.com",
+      clientType: "codex",
+      providerName: "Separated Usage",
+      model: "gpt-5.4",
+    });
+
+    const parsed = new URL(url);
+    expect(parsed.searchParams.get("homepage")).toBe("https://relay.example.com/team-a");
+    expect(parsed.searchParams.get("endpoint")).toBe("https://relay.example.com/team-a/v1");
+    expect(parsed.searchParams.get("usageBaseUrl")).toBe("https://relay.example.com");
+
+    const usageScript = decodeUsageScript(url);
+    expect(usageScript).toContain("{{baseUrl}}/v0/management/public/usage/summary");
   });
 
   test("uses the request model name from generic model mappings as the provider default", () => {

@@ -24,6 +24,8 @@ export interface CcSwitchClientConfig {
   fallbackLabel: string;
 }
 
+type CcSwitchUsageScriptLanguage = "zh-CN" | "en";
+
 export const CC_SWITCH_CLIENTS: CcSwitchClientConfig[] = [
   {
     type: "claude",
@@ -90,12 +92,22 @@ function joinCcSwitchEndpoint(baseUrl: string, endpointPath: string): string {
 }
 
 const encodeBase64 = (value: string): string => {
-  if (typeof btoa === "function") return btoa(value);
   const buffer = (globalThis as { Buffer?: { from: (input: string, encoding: string) => unknown } })
     .Buffer;
   if (buffer?.from) {
     const bytes = buffer.from(value, "utf-8") as { toString: (encoding: string) => string };
     return bytes.toString("base64");
+  }
+  const TextEncoderCtor = (
+    globalThis as { TextEncoder?: new () => { encode: (input: string) => Uint8Array } }
+  ).TextEncoder;
+  if (typeof btoa === "function" && TextEncoderCtor) {
+    const utf8Bytes = new TextEncoderCtor().encode(value);
+    let binary = "";
+    for (const byte of utf8Bytes) {
+      binary += String.fromCharCode(byte);
+    }
+    return btoa(binary);
   }
   throw new Error("Base64 encoder is unavailable");
 };
@@ -153,28 +165,49 @@ const getGenericRequestModel = (
   return (exactMatch ?? genericMappings[0])?.requestModel.trim() ?? "";
 };
 
-export function buildCcSwitchUsageScript(): string {
+const normalizeUsageScriptLanguage = (language: string | undefined): CcSwitchUsageScriptLanguage =>
+  String(language ?? "")
+    .trim()
+    .toLowerCase()
+    .startsWith("en")
+    ? "en"
+    : "zh-CN";
+
+export function buildCcSwitchUsageScript(language?: string): string {
+  const labels =
+    normalizeUsageScriptLanguage(language) === "en"
+      ? {
+          planName: "Today's usage",
+          invalidMessage: "API Key not found",
+          unit: "times",
+          costPrefix: "Today's cost:",
+        }
+      : {
+          planName: "今日用量",
+          invalidMessage: "API Key 未找到",
+          unit: "次",
+          costPrefix: "今日消耗：",
+        };
+
   return `({
   request: {
-    url: "{{baseUrl}}/v0/management/public/usage",
+    url: "{{baseUrl}}/v0/management/public/usage/summary",
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ api_key: "{{apiKey}}" })
+    body: JSON.stringify({ api_key: "{{apiKey}}", days: 1 })
   },
   extractor: function(response) {
-    var usage = response && response.usage ? response.usage : {};
-    var apis = usage.apis || {};
-    var keys = Object.keys(apis);
-    var item = keys.length > 0 ? apis[keys[0]] || {} : {};
-    var requests = Number(item.total_requests || usage.total_requests || 0) || 0;
-    var tokens = Number(item.total_tokens || usage.total_tokens || 0) || 0;
+    var stats = response && response.stats ? response.stats : {};
+    var calls = Number(stats.total_calls || 0) || 0;
+    var cost = Number(stats.quota_cost || 0) || 0;
     return {
-      planName: "CliProxy",
+      planName: "${labels.planName}",
       isValid: response && response.found === false ? false : true,
-      used: requests,
+      invalidMessage: response && response.found === false ? "${labels.invalidMessage}" : null,
+      used: calls,
       remaining: null,
-      unit: "requests",
-      extra: String(tokens) + " tokens"
+      unit: "${labels.unit}",
+      extra: "${labels.costPrefix}" + cost.toFixed(4) + "$"
     };
   }
 })`;
@@ -207,6 +240,7 @@ export function resolveCcSwitchImportConfig(input: {
   clientType: CcSwitchClientType;
   models?: readonly string[];
   settings?: CcSwitchImportSettingsInput;
+  usageBaseUrl?: string;
 }): {
   homepage: string;
   endpoint: string;
@@ -224,7 +258,7 @@ export function resolveCcSwitchImportConfig(input: {
   return {
     homepage,
     endpoint,
-    usageBaseUrl: homepage,
+    usageBaseUrl: input.usageBaseUrl ? normalizeCcSwitchBaseUrl(input.usageBaseUrl) : homepage,
     usageAutoInterval: clientSettings.usageAutoInterval,
     model: pickCcSwitchDefaultModel(input.clientType, input.models ?? [], settings),
   };
@@ -246,11 +280,14 @@ export function buildCcSwitchImportUrl(input: {
   baseUrl: string;
   clientType: CcSwitchClientType;
   enabled?: boolean;
+  note?: string;
   providerName: string;
   model?: string;
   modelMappings?: readonly CcSwitchModelMappingInput[];
   models?: readonly string[];
   settings?: CcSwitchImportSettingsInput;
+  usageBaseUrl?: string;
+  usageLanguage?: string;
 }): string {
   const client = getCcSwitchClientConfig(input.clientType);
   const settings = normalizeCcSwitchImportSettings(
@@ -261,6 +298,7 @@ export function buildCcSwitchImportUrl(input: {
     clientType: input.clientType,
     models: input.models,
     settings,
+    usageBaseUrl: input.usageBaseUrl,
   });
   const params = new URLSearchParams({
     resource: "provider",
@@ -274,9 +312,13 @@ export function buildCcSwitchImportUrl(input: {
     enabled: String(input.enabled ?? true),
     usageEnabled: "true",
     usageBaseUrl: importConfig.usageBaseUrl,
-    usageScript: encodeBase64(buildCcSwitchUsageScript()),
+    usageScript: encodeBase64(buildCcSwitchUsageScript(input.usageLanguage)),
     usageAutoInterval: String(importConfig.usageAutoInterval),
   });
+  const note = String(input.note ?? "").trim();
+  if (note) {
+    params.set("notes", note);
+  }
 
   const modelMappings = normalizeModelMappings(input.modelMappings);
   const genericMappedModel =

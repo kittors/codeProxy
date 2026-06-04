@@ -95,6 +95,9 @@ const getProviderSelectionKey = (
 const getOpenCodeGoUsageCacheKey = (item: ProviderSimpleConfig, index: number) =>
   [item.workspaceId?.trim() || "no-workspace", item.name?.trim() || `item-${index}`, index].join(":");
 
+const hasOpenCodeGoUsageQuery = (item: ProviderSimpleConfig) =>
+  Boolean(item.workspaceId?.trim() && item.authCookie?.trim());
+
 type OpenCodeGoUsageState = Record<string, OpenCodeGoUsageCacheEntry>;
 type OpenCodeGoUsageLoadingState = Record<string, boolean>;
 
@@ -1005,15 +1008,17 @@ export function ProvidersPage() {
               showConnectionRows={false}
               showModelMetric={false}
               showExcludedModels={false}
-              renderExtra={(item, idx) =>
-                item.workspaceId?.trim() && item.authCookie?.trim() ? (
+              renderExtra={(item, idx) => {
+                const queryReady = hasOpenCodeGoUsageQuery(item);
+                const cacheKey = getOpenCodeGoUsageCacheKey(item, idx);
+                return (
                   <OpenCodeGoUsageCardSection
-                    usageEntry={openCodeGoUsageState[getOpenCodeGoUsageCacheKey(item, idx)]}
-                    loading={openCodeGoUsageLoadingState[getOpenCodeGoUsageCacheKey(item, idx)] ?? false}
-                    onRefresh={() => void refreshOpenCodeGoUsage(item, idx)}
+                    queryReady={queryReady}
+                    usageEntry={queryReady ? openCodeGoUsageState[cacheKey] : undefined}
+                    loading={queryReady ? (openCodeGoUsageLoadingState[cacheKey] ?? false) : false}
                   />
-                ) : null
-              }
+                );
+              }}
               renderMetricsExtra={(item, idx) => {
                 if (!(item.workspaceId?.trim() && item.authCookie?.trim())) return null;
                 const cacheKey = getOpenCodeGoUsageCacheKey(item, idx);

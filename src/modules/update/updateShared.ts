@@ -94,9 +94,6 @@ const targetNeedsUiChange = (target?: UpdateCheckResponse | null) =>
   Boolean(target?.latest_ui_commit?.trim()) &&
   !sameCommit(target?.current_ui_commit, target?.latest_ui_commit);
 
-const isFrontendOnlyUpdateTarget = (target?: UpdateCheckResponse | null) =>
-  Boolean(target) && !targetNeedsBackendChange(target) && targetNeedsUiChange(target);
-
 export const matchesAppliedTarget = (
   info: UpdateCheckResponse,
   target?: UpdateCheckResponse | null,
@@ -153,9 +150,6 @@ const waitForAppliedTarget = async ({
     const progress = await pollProgress();
     if (progress?.status === "failed") {
       return { ok: false as const, latest: lastCheck, progress, failed: true as const };
-    }
-    if (progress?.status === "completed" && isFrontendOnlyUpdateTarget(target)) {
-      return { ok: true as const, latest: lastCheck, progress };
     }
     try {
       await apiClient.get("/system-stats", {

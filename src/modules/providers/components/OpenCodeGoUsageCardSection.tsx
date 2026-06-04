@@ -83,11 +83,11 @@ const TYPE_COMPACT_LABELS: Record<string, string> = {
 export function OpenCodeGoUsageCardSection({
   usageEntry,
   loading,
-  onRefresh,
+  queryReady,
 }: {
   usageEntry?: OpenCodeGoUsageCacheEntry;
   loading: boolean;
-  onRefresh: () => void;
+  queryReady: boolean;
 }) {
   const { t } = useTranslation();
 
@@ -96,6 +96,31 @@ export function OpenCodeGoUsageCardSection({
   );
 
   const hasUsage = Boolean(usageEntry && usageEntry.usage.length > 0);
+
+  if (!queryReady) {
+    return (
+      <div
+        className="mt-3 min-h-[3.375rem]"
+        data-testid="opencode-go-usage-footprint"
+        aria-hidden="true"
+      >
+        <div className="invisible mx-auto w-full max-w-[20rem] space-y-1.5">
+          {TYPE_LABELS.map((type) => (
+            <div
+              key={type}
+              className="grid grid-cols-[2rem_minmax(0,1fr)_5.25rem] items-center gap-2"
+            >
+              <span className="truncate text-[11px] font-semibold">
+                {TYPE_COMPACT_LABELS[type]}
+              </span>
+              <div className="h-1.5 rounded-full bg-slate-200/70 dark:bg-white/8" />
+              <span className="text-right text-[11px] tabular-nums">剩余 --</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mt-3">

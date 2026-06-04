@@ -1,7 +1,4 @@
-import {
-  buildCcSwitchImportUrl,
-  type CcSwitchClientType,
-} from "@/modules/ccswitch/ccswitchImport";
+import { buildCcSwitchImportUrl, type CcSwitchClientType } from "@/modules/ccswitch/ccswitchImport";
 import {
   normalizeCcSwitchClaudeAuthField,
   normalizeCcSwitchImportSettings,
@@ -65,22 +62,29 @@ export function buildCcSwitchImportUrlForConfig({
   config,
   configs,
   providerName,
+  usageBaseUrl,
+  usageLanguage,
 }: {
   apiKey: string;
   baseUrl: string;
   config: CcSwitchImportConfigListItem;
   configs: readonly CcSwitchImportConfigListItem[];
   providerName?: string;
+  usageBaseUrl?: string;
+  usageLanguage?: string;
 }): string {
   return buildCcSwitchImportUrl({
     apiKey,
     baseUrl,
     clientType: config.clientType,
     enabled: true,
+    note: config.note,
     providerName: config.providerName || providerName || "CliProxy",
     model: config.defaultModel,
     modelMappings: config.modelMappings,
     models: [],
     settings: buildCcSwitchSettingsForConfig(config, configs),
+    usageBaseUrl,
+    usageLanguage,
   });
 }

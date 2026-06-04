@@ -15,10 +15,7 @@ import {
   normalizeCcSwitchImportConfigs,
 } from "@/lib/http/apis/ccswitch-import-configs";
 import type { ApiKeyEntry } from "@/lib/http/apis/api-keys";
-import {
-  openCcSwitchImportUrl,
-  type CcSwitchClientType,
-} from "@/modules/ccswitch/ccswitchImport";
+import { openCcSwitchImportUrl, type CcSwitchClientType } from "@/modules/ccswitch/ccswitchImport";
 import {
   appendCcSwitchRoutePath,
   buildCcSwitchImportUrlForConfig,
@@ -56,7 +53,9 @@ function readStoredManagementAuth(): { apiBase: string; managementKey: string } 
   }
 }
 
-async function fetchPublicQuickImportConfigs(apiKey: string): Promise<CcSwitchImportConfigListItem[]> {
+async function fetchPublicQuickImportConfigs(
+  apiKey: string,
+): Promise<CcSwitchImportConfigListItem[]> {
   const key = apiKey.trim();
   if (!key) return [];
 
@@ -155,9 +154,7 @@ function QuickImportCard({
   const clientType = config.clientType as "codex" | "claude";
 
   return (
-    <div
-      className="grid min-h-[116px] w-full grid-cols-[minmax(0,1fr)_auto] rounded-2xl border border-black/[0.06] bg-white shadow-[0_1px_2px_rgb(15_23_42_/_0.035)] transition hover:border-slate-200 hover:shadow-sm dark:border-white/[0.06] dark:bg-neutral-900 dark:hover:border-neutral-700"
-    >
+    <div className="grid min-h-[116px] w-full grid-cols-[minmax(0,1fr)_auto] rounded-2xl border border-black/[0.06] bg-white shadow-[0_1px_2px_rgb(15_23_42_/_0.035)] transition hover:border-slate-200 hover:shadow-sm dark:border-white/[0.06] dark:bg-neutral-900 dark:hover:border-neutral-700">
       <button
         type="button"
         onClick={() => onSelect(config)}
@@ -196,9 +193,7 @@ function QuickImportCard({
         <Button
           variant="ghost"
           size="xs"
-          title={
-            copied ? t("ccswitch.copy_import_link_copied") : t("ccswitch.copy_import_link")
-          }
+          title={copied ? t("ccswitch.copy_import_link_copied") : t("ccswitch.copy_import_link")}
           onClick={() => onCopyLink(config)}
           className="rounded-lg border border-slate-200/70 bg-white text-slate-500 hover:text-slate-900 dark:border-neutral-800 dark:bg-neutral-950 dark:text-white/55 dark:hover:text-white"
         >
@@ -262,7 +257,7 @@ export function QuickImportTabContent({
   apiKey: string;
   reloadToken?: number;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { notify } = useToast();
   const [configs, setConfigs] = useState<CcSwitchImportConfigListItem[]>([]);
   const [apiKeyEntry, setApiKeyEntry] = useState<ApiKeyEntry | null>(null);
@@ -340,14 +335,19 @@ export function QuickImportTabContent({
       if (!key) return "";
 
       const baseUrl = appendCcSwitchRoutePath(detectApiBaseFromLocation(), config.routePath);
+      // Use root base URL for usage queries so that usage/summary is not
+      // routed through the CC Switch routePath (which the server does not rewrite for /v0/management/* paths).
+      const usageBaseUrl = detectApiBaseFromLocation();
       return buildCcSwitchImportUrlForConfig({
         apiKey: key,
         baseUrl,
         config,
         configs,
+        usageBaseUrl,
+        usageLanguage: i18n.language,
       });
     },
-    [apiKey, configs],
+    [apiKey, configs, i18n.language],
   );
 
   const handleImport = useCallback(
