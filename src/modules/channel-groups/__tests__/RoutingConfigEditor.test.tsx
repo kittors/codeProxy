@@ -251,8 +251,19 @@ describe("RoutingConfigEditor", () => {
     expect(tabViewport).not.toHaveClass("overflow-hidden");
     expect(screen.getByText("分组内调度策略")).toBeInTheDocument();
 
+    const basicScrollArea = screen.getByTestId("group-editor-basic-scroll-area");
+    const basicScrollViewport = basicScrollArea.querySelector("[data-scroll-area-viewport]");
+    const basicScrollContent = basicScrollArea.querySelector("[data-scroll-area-content]");
+    expect(basicScrollArea).toHaveClass("-mr-5");
+    expect(basicScrollViewport).not.toBeNull();
+    expect(basicScrollContent).not.toBeNull();
+    expect(basicScrollViewport!).toHaveClass("table-scrollbar");
+    expect(basicScrollViewport!).toHaveAttribute("data-scrollbar-visibility", "always");
+    expect(basicScrollContent!).toHaveClass("space-y-5", "pr-5");
+
     await user.click(screen.getByRole("tab", { name: "模型列表" }));
     expect(await screen.findByTestId("group-editor-model-list")).toHaveClass("-mx-5");
+    expect(screen.getByTestId("group-editor-model-list-content")).toHaveClass("pl-5");
     expect(screen.getByRole("table", { name: "允许模型" })).toBeInTheDocument();
     expect(screen.getByRole("tablist")).toBeInTheDocument();
   });
@@ -276,7 +287,7 @@ describe("RoutingConfigEditor", () => {
     expect(tableShell).toHaveClass("h-auto");
     expect(tableShell).toHaveClass("min-h-0");
     expect(tableShell).not.toHaveClass("h-[248px]");
-    expect(channelTable.closest(".table-scrollbar")).toBeNull();
+    expect(tableShell!.querySelector(".table-scrollbar")).toBeNull();
     expect(tableShell!.querySelector("[data-vt-scrollbar]")).toBeNull();
   });
 
@@ -296,6 +307,7 @@ describe("RoutingConfigEditor", () => {
     await user.click(screen.getByRole("tab", { name: "模型列表" }));
 
     expect(screen.getByTestId("group-editor-model-list")).toHaveClass("-mx-5");
+    expect(screen.getByTestId("group-editor-model-list-content")).toHaveClass("pl-5");
     expect(screen.getByRole("table", { name: "允许模型" })).toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveTextContent("加载中");
     expect(screen.getByRole("status")).toHaveClass("sr-only");
