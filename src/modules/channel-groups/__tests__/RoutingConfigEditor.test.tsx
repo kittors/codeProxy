@@ -418,8 +418,7 @@ describe("RoutingConfigEditor", () => {
     await user.click(within(row).getByRole("button", { name: "编辑分组" }));
 
     expect(await screen.findByLabelText("gpt-root-allowed")).toBeChecked();
-    await user.click(screen.getByLabelText("gpt-root-allowed"));
-    await user.click(screen.getByLabelText("gpt-root-allowed"));
+    await user.click(screen.getByLabelText("gpt-root-hidden"));
     await user.click(screen.getByRole("button", { name: "保存" }));
 
     expect(loadModelsForChannels).toHaveBeenCalledWith([], "default");

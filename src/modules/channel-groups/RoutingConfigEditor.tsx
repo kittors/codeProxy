@@ -734,6 +734,20 @@ export function RoutingConfigEditor({
     setModelsSelectionTouched(true);
     setGroupDraft((current) => {
       const currentModels = current.allowedModels.map((model) => model.trim()).filter(Boolean);
+      // Implicit select-all state: empty + untouched = "all models allowed"
+      if (!modelsSelectionTouched && currentModels.length === 0) {
+        if (!checked) {
+          // User unchecks one model from implicit select-all → exclude that one
+          const initial = new Set(modelOptionIds);
+          initial.delete(normalized);
+          return { ...current, allowedModels: Array.from(initial) };
+        }
+        // checked === true: user explicitly adds one model from empty
+        return {
+          ...current,
+          allowedModels: [normalized],
+        };
+      }
       if (checked) {
         return {
           ...current,
@@ -745,7 +759,7 @@ export function RoutingConfigEditor({
         allowedModels: currentModels.filter((model) => model !== normalized),
       };
     });
-  }, []);
+  }, [modelOptionIds, modelsSelectionTouched]);
 
   const selectAllDraftModels = useCallback(() => {
     setModelsSelectionTouched(true);
