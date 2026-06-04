@@ -270,10 +270,119 @@ describe("DataTable scrollbar wrapper", () => {
     const status = await screen.findByRole("status");
     const previewLine = status.previousElementSibling as HTMLDivElement | null;
     expect(previewLine).not.toBeNull();
-    expect(previewLine!.style.left).toBe("223px");
-    expect(previewLine!.style.top).toBe("20px");
+    expect(previewLine!.style.left).toBe("239px");
+    expect(previewLine!.style.top).toBe("100px");
     expect(previewLine!.style.height).toBe("206px");
     expect(status).toHaveTextContent("Width: 200 px");
+  });
+
+  test("keeps the resize preview aligned to the live pointer instead of stale table layout", async () => {
+    window.localStorage.clear();
+    const twoColumns: DataTableColumn<DemoRow>[] = [
+      { key: "name", label: "Name", width: "w-40", minWidthPx: 80, render: (row) => row.name },
+      { key: "id", label: "ID", width: "w-24", render: (row) => row.id },
+    ];
+
+    const { container } = render(
+      <DataTable
+        tableId="test-resize-preview-live-pointer"
+        rows={[{ id: "1", name: "Row 1" }]}
+        columns={twoColumns}
+        rowKey={(row) => row.id}
+        height="h-[180px]"
+        minHeight="min-h-0"
+        minWidth="min-w-[760px]"
+        virtualize={false}
+      />,
+    );
+
+    const root = container.firstElementChild as HTMLDivElement;
+    const scrollContainer = container.querySelector(".table-scrollbar") as HTMLDivElement | null;
+    const nameHeader = screen.getByRole("columnheader", { name: /Name/ });
+    const resizer = container.querySelector("[data-vt-column-resizer]") as HTMLButtonElement | null;
+    expect(scrollContainer).not.toBeNull();
+    expect(resizer).not.toBeNull();
+
+    Object.defineProperty(root, "getBoundingClientRect", {
+      configurable: true,
+      value: () =>
+        ({
+          x: 100,
+          y: 40,
+          top: 40,
+          left: 100,
+          right: 700,
+          bottom: 260,
+          width: 600,
+          height: 220,
+          toJSON: () => ({}),
+        }) as DOMRect,
+    });
+    Object.defineProperty(scrollContainer!, "getBoundingClientRect", {
+      configurable: true,
+      value: () =>
+        ({
+          x: 100,
+          y: 40,
+          top: 40,
+          left: 100,
+          right: 700,
+          bottom: 220,
+          width: 600,
+          height: 180,
+          toJSON: () => ({}),
+        }) as DOMRect,
+    });
+    Object.defineProperty(nameHeader, "getBoundingClientRect", {
+      configurable: true,
+      value: () =>
+        ({
+          x: 120,
+          y: 40,
+          top: 40,
+          left: 120,
+          right: 280,
+          bottom: 80,
+          width: 160,
+          height: 40,
+          toJSON: () => ({}),
+        }) as DOMRect,
+    });
+    Object.defineProperties(resizer!, {
+      getBoundingClientRect: {
+        configurable: true,
+        value: () =>
+          ({
+            x: 500,
+            y: 40,
+            top: 40,
+            left: 500,
+            right: 516,
+            bottom: 80,
+            width: 16,
+            height: 40,
+            toJSON: () => ({}),
+          }) as DOMRect,
+      },
+      offsetWidth: { configurable: true, value: 16 },
+    });
+    setScrollMetrics(scrollContainer!, {
+      clientHeight: 180,
+      scrollHeight: 320,
+      clientWidth: 600,
+      scrollWidth: 760,
+    });
+
+    fireEvent.pointerDown(resizer!, { button: 0, pointerId: 8, clientX: 280, clientY: 60 });
+    window.dispatchEvent(
+      new PointerEvent("pointermove", { pointerId: 8, clientX: 360, clientY: 100 }),
+    );
+
+    const status = await screen.findByRole("status");
+    const previewLine = status.previousElementSibling as HTMLDivElement | null;
+    expect(previewLine).not.toBeNull();
+    expect(previewLine!.style.left).toBe("359px");
+    expect(status).toHaveTextContent("Width: 240 px");
   });
 
   test("keeps column width caches isolated between table ids", () => {
@@ -305,6 +414,108 @@ describe("DataTable scrollbar wrapper", () => {
     const firstCol = container.querySelector("col") as HTMLTableColElement | null;
     expect(firstCol).not.toBeNull();
     expect(firstCol!.style.width).toBe("120px");
+  });
+
+  test("updates horizontal scrollbar immediately as resized columns cross overflow boundary", async () => {
+    window.localStorage.clear();
+    const twoColumns: DataTableColumn<DemoRow>[] = [
+      { key: "name", label: "Name", width: "w-40", minWidthPx: 80, render: (row) => row.name },
+      { key: "id", label: "ID", width: "w-24", render: (row) => row.id },
+    ];
+
+    const { container } = render(
+      <DataTable
+        tableId="test-column-width-scroll-metrics"
+        rows={[{ id: "1", name: "Row 1" }]}
+        columns={twoColumns}
+        rowKey={(row) => row.id}
+        height="h-[160px]"
+        minHeight="min-h-0"
+        minWidth="min-w-[240px]"
+        virtualize={false}
+      />,
+    );
+
+    const scrollContainer = container.querySelector(".table-scrollbar") as HTMLDivElement | null;
+    const nameHeader = screen.getByRole("columnheader", { name: /Name/ });
+    const resizer = container.querySelector("[data-vt-column-resizer]") as HTMLButtonElement | null;
+    expect(scrollContainer).not.toBeNull();
+    expect(resizer).not.toBeNull();
+
+    Object.defineProperty(nameHeader, "getBoundingClientRect", {
+      configurable: true,
+      value: () =>
+        ({
+          x: 0,
+          y: 0,
+          top: 0,
+          left: 0,
+          right: 160,
+          bottom: 40,
+          width: 160,
+          height: 40,
+          toJSON: () => ({}),
+        }) as DOMRect,
+    });
+    Object.defineProperties(resizer!, {
+      getBoundingClientRect: {
+        configurable: true,
+        value: () =>
+          ({
+            x: 156,
+            y: 0,
+            top: 0,
+            left: 156,
+            right: 172,
+            bottom: 40,
+            width: 16,
+            height: 40,
+            toJSON: () => ({}),
+          }) as DOMRect,
+      },
+      offsetWidth: { configurable: true, value: 16 },
+    });
+
+    setScrollMetrics(scrollContainer!, {
+      clientHeight: 160,
+      scrollHeight: 160,
+      clientWidth: 300,
+      scrollWidth: 300,
+    });
+    window.dispatchEvent(new Event("resize"));
+
+    await waitFor(() => {
+      expect(container.querySelector('[data-vt-scrollbar="x"]')).toBeNull();
+    });
+
+    fireEvent.pointerDown(resizer!, { button: 0, pointerId: 7, clientX: 160, clientY: 20 });
+    setScrollMetrics(scrollContainer!, {
+      clientHeight: 160,
+      scrollHeight: 160,
+      clientWidth: 300,
+      scrollWidth: 380,
+    });
+    window.dispatchEvent(new PointerEvent("pointermove", { pointerId: 7, clientX: 240 }));
+
+    await waitFor(() => {
+      expect(container.querySelector('[data-vt-scrollbar="x"]')).not.toBeNull();
+    });
+
+    setScrollMetrics(scrollContainer!, {
+      clientHeight: 160,
+      scrollHeight: 160,
+      clientWidth: 300,
+      scrollWidth: 300,
+      scrollLeft: 80,
+    });
+    window.dispatchEvent(new PointerEvent("pointermove", { pointerId: 7, clientX: 100 }));
+
+    await waitFor(() => {
+      expect(scrollContainer!.scrollLeft).toBe(0);
+      expect(container.querySelector('[data-vt-scrollbar="x"]')).toBeNull();
+    });
+
+    window.dispatchEvent(new PointerEvent("pointerup", { pointerId: 7, clientX: 100 }));
   });
 
   test("truncates primitive cell content and shows the full value on overflow hover", () => {
@@ -656,7 +867,7 @@ describe("DataTable scrollbar wrapper", () => {
     });
   });
 
-  test("keeps the header corner fixed to the viewport instead of scrolling cells", () => {
+  test("keeps the sticky header opaque above scrolling body cells", () => {
     const wideColumns: DataTableColumn<DemoRow>[] = [
       { key: "name", label: "Name", width: "w-40", render: (row) => row.name },
       { key: "id", label: "ID", width: "w-40", render: (row) => row.id },
@@ -674,15 +885,17 @@ describe("DataTable scrollbar wrapper", () => {
       />,
     );
 
+    const header = container.querySelector("thead") as HTMLTableSectionElement | null;
     const firstHeader = container.querySelector("th") as HTMLTableCellElement | null;
     const headerOverlay = container.querySelector(
       "[data-vt-header-overlay]",
     ) as HTMLDivElement | null;
+    expect(header).not.toBeNull();
     expect(firstHeader).not.toBeNull();
     expect(headerOverlay).not.toBeNull();
+    expect(header).toHaveClass("sticky", "top-0", "z-40", "bg-slate-100", "dark:bg-neutral-800");
     expect(firstHeader!.className).not.toContain("rounded-l-xl");
-    expect(firstHeader!.className).not.toContain("bg-slate-100");
-    expect(firstHeader!.className).not.toContain("dark:bg-neutral-800");
+    expect(firstHeader).toHaveClass("bg-slate-100", "dark:bg-neutral-800");
     expect(headerOverlay).toHaveClass("bg-slate-100", "dark:bg-neutral-800");
   });
 
@@ -937,6 +1150,30 @@ describe("DataTable column reorder", () => {
     const handles = container.querySelectorAll("[data-vt-column-reorder-handle]");
     expect(handles).toHaveLength(1);
     expect(handles[0]).toHaveAttribute("title", "Drag to reorder Name column");
+  });
+
+  test("reserves header label space for the reorder handle", () => {
+    const twoColumns: DataTableColumn<DemoRow>[] = [
+      { key: "name", label: "Name", width: "w-40", render: (row) => row.name },
+      { key: "id", label: "ID", width: "w-24", render: (row) => row.id },
+    ];
+
+    render(
+      <DataTable
+        tableId="test-reorder-header-padding"
+        rows={[{ id: "1", name: "Row 1" }]}
+        columns={twoColumns}
+        rowKey={(row) => row.id}
+        height="h-[160px]"
+        minHeight="min-h-0"
+        virtualize={false}
+      />,
+    );
+
+    const nameHeader = screen.getByRole("columnheader", { name: /Name/ });
+    const headerContent = nameHeader.querySelector("[data-vt-column-header-content]");
+    expect(nameHeader.querySelector("[data-vt-column-reorder-handle]")).not.toBeNull();
+    expect(headerContent).toHaveClass("pl-5");
   });
 
   test("does not render reorder handles for select and actions columns", () => {

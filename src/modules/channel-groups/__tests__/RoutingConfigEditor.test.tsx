@@ -263,7 +263,10 @@ describe("RoutingConfigEditor", () => {
 
     await user.click(screen.getByRole("tab", { name: "模型列表" }));
     expect(await screen.findByTestId("group-editor-model-list")).toHaveClass("-mx-5");
-    expect(screen.getByTestId("group-editor-model-list-content")).toHaveClass("pl-5");
+    expect(screen.getByTestId("group-editor-model-list-content")).toHaveClass("px-5");
+    expect(screen.getByRole("table", { name: "允许模型" }).closest("[data-vt-scroll-content]")).not.toHaveClass(
+      "pr-5",
+    );
     expect(screen.getByRole("table", { name: "允许模型" })).toBeInTheDocument();
     expect(screen.getByRole("tablist")).toBeInTheDocument();
   });
@@ -307,7 +310,7 @@ describe("RoutingConfigEditor", () => {
     await user.click(screen.getByRole("tab", { name: "模型列表" }));
 
     expect(screen.getByTestId("group-editor-model-list")).toHaveClass("-mx-5");
-    expect(screen.getByTestId("group-editor-model-list-content")).toHaveClass("pl-5");
+    expect(screen.getByTestId("group-editor-model-list-content")).toHaveClass("px-5");
     expect(screen.getByRole("table", { name: "允许模型" })).toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveTextContent("加载中");
     expect(screen.getByRole("status")).toHaveClass("sr-only");

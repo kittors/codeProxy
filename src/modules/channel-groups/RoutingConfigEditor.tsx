@@ -1306,6 +1306,8 @@ export function RoutingConfigEditor({
         key: "model",
         label: t("models_page.col_model"),
         width: "w-[28rem]",
+        minWidthPx: 220,
+        maxWidthPx: 640,
         cellClassName: "min-w-0",
         render: (model) => (
           <div className="flex min-w-0 items-center gap-2">
@@ -1329,6 +1331,8 @@ export function RoutingConfigEditor({
         key: "owner",
         label: t("models_page.col_owner"),
         width: "w-36",
+        minWidthPx: 120,
+        maxWidthPx: 360,
         cellClassName: "min-w-0 whitespace-nowrap text-slate-600 dark:text-white/60",
         render: (model) => model.owned_by || "-",
         overflowTooltip: (model) => model.owned_by || "-",
@@ -1337,6 +1341,8 @@ export function RoutingConfigEditor({
         key: "price",
         label: t("models_page.col_price"),
         width: "w-56",
+        minWidthPx: 180,
+        maxWidthPx: 420,
         cellClassName:
           "whitespace-nowrap font-mono text-xs tabular-nums text-slate-700 dark:text-slate-200",
         render: (model) =>
@@ -1852,10 +1858,10 @@ export function RoutingConfigEditor({
                     <div data-testid="group-editor-model-list" className="min-h-0 flex-1 -mx-5">
                       <div
                         data-testid="group-editor-model-list-content"
-                        className="h-full min-h-0 pl-5"
+                        className="h-full min-h-0 px-5"
                       >
                         <DataTable<RoutingModelOption>
-                          tableId="routing-model-options"
+                          tableId="routing-model-options-v2"
                           rows={modelOptions}
                           columns={modelColumns}
                           rowKey={(model) => model.id}
@@ -1868,7 +1874,6 @@ export function RoutingConfigEditor({
                           caption={t("channel_groups_page.allowed_models_label")}
                           emptyText={t("channel_groups_page.no_channel_models")}
                           showAllLoadedMessage={false}
-                          scrollContentClassName="pr-5"
                         />
                       </div>
                     </div>

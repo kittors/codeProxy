@@ -9,6 +9,7 @@ import {
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from "react";
+import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { GripVertical } from "lucide-react";
 import { TableCellOverflowTooltip } from "@/modules/ui/TableCellOverflowTooltip";
@@ -108,6 +109,7 @@ const DEFAULT_OVERSCAN = 12;
 const DEFAULT_SCROLL_THRESHOLD = 100;
 const DEFAULT_BOTTOM_DEBOUNCE_MS = 120;
 const COLUMN_WIDTH_STORAGE_PREFIX = "codeProxy.dataTable.columnWidths.v1";
+const COLUMN_RESIZE_DEBUG_STORAGE_KEY = "codeProxy.dataTable.debugResize";
 const DEFAULT_MIN_COLUMN_WIDTH = 72;
 const DEFAULT_MAX_COLUMN_WIDTH = 640;
 const COLUMN_RESIZE_PREVIEW_LINE_WIDTH = 2;
@@ -149,11 +151,13 @@ type ColumnWidthMap = Record<string, number>;
 interface ColumnResizeState {
   pointerId: number;
   columnKey: string;
-  startClientX: number;
-  startLineCenterClientX: number;
-  startWidth: number;
+  startLeftClientX: number;
+  pointerBoundaryOffsetClientX: number;
   minWidth: number;
   maxWidth: number;
+  currentWidth: number;
+  lastDebugAtMs: number;
+  debugEnabled: boolean;
 }
 
 interface ColumnResizePreview {
@@ -207,6 +211,17 @@ function writeStoredColumnWidths(tableId: string | undefined, widths: ColumnWidt
   } catch {
     // localStorage can be unavailable in private browsing or embedded contexts.
   }
+}
+
+function shouldDebugColumnResize() {
+  if (typeof window === "undefined") return false;
+  return window.localStorage.getItem(COLUMN_RESIZE_DEBUG_STORAGE_KEY) === "1";
+}
+
+function logColumnResizeDebug(event: string, payload: Record<string, unknown>) {
+  if (!shouldDebugColumnResize()) return;
+  // eslint-disable-next-line no-console
+  console.debug("[DataTable resize]", event, payload);
 }
 
 function shouldAllowColumnResize<T>(
@@ -360,12 +375,16 @@ export function DataTable<T>({
   const rootRef = useRef<HTMLDivElement | null>(null);
   const headerRef = useRef<HTMLTableSectionElement | null>(null);
   const headerCellsRef = useRef<Record<string, HTMLTableCellElement | null>>({});
+  const columnElementsRef = useRef<Record<string, HTMLTableColElement | null>>({});
   const headerHeightRef = useRef(0);
   const [columnWidths, setColumnWidths] = useState<ColumnWidthMap>(() =>
     readStoredColumnWidths(tableId),
   );
   const columnWidthsRef = useRef<ColumnWidthMap>(columnWidths);
   const [resizePreview, setResizePreview] = useState<ColumnResizePreview | null>(null);
+  const [activeResizeColumnKey, setActiveResizeColumnKey] = useState<string | null>(null);
+  const resizePreviewLineRef = useRef<HTMLDivElement | null>(null);
+  const resizePreviewTooltipRef = useRef<HTMLDivElement | null>(null);
   const [headerHeight, setHeaderHeight] = useState(0);
   const [scrollTop, setScrollTop] = useState(0);
   const [viewportHeight, setViewportHeight] = useState(480);
@@ -377,6 +396,7 @@ export function DataTable<T>({
     clientHeight: 0,
     clientWidth: 0,
   }));
+  const scrollMetricsRef = useRef(scrollMetrics);
   const rafRef = useRef<number | null>(null);
   const bottomTimeoutRef = useRef<number | null>(null);
   const bottomPendingRef = useRef(false);
@@ -437,6 +457,10 @@ export function DataTable<T>({
   }, [columnWidths]);
 
   useEffect(() => {
+    scrollMetricsRef.current = scrollMetrics;
+  }, [scrollMetrics]);
+
+  useEffect(() => {
     columnOrderRef.current = columnOrder;
   }, [columnOrder]);
 
@@ -471,6 +495,11 @@ export function DataTable<T>({
   const updateScrollMetrics = useCallback(() => {
     const el = containerRef.current;
     if (!el) return;
+
+    const maxScrollTop = Math.max(0, el.scrollHeight - el.clientHeight);
+    const maxScrollLeft = Math.max(0, el.scrollWidth - el.clientWidth);
+    if (el.scrollTop > maxScrollTop) el.scrollTop = maxScrollTop;
+    if (el.scrollLeft > maxScrollLeft) el.scrollLeft = maxScrollLeft;
 
     const next = {
       scrollTop: el.scrollTop,
@@ -727,30 +756,36 @@ export function DataTable<T>({
   const buildColumnResizePreview = useCallback(
     (
       active: ColumnResizeState,
-      width: number,
+      pointerClientX: number,
       pointerClientY: number,
     ): ColumnResizePreview | null => {
-      const rootRect = rootRef.current?.getBoundingClientRect();
       const containerRect = containerRef.current?.getBoundingClientRect();
-      if (!rootRect || !containerRect) return null;
+      if (!containerRect) return null;
 
       const scroller = containerRef.current;
       const hasHorizontalOverflow = scroller
         ? scroller.scrollWidth > scroller.clientWidth + 1
         : false;
-      const lineCenterClientX = active.startLineCenterClientX + width - active.startWidth;
-      const top = Math.max(0, containerRect.top - rootRect.top);
+      const minBoundaryClientX = active.startLeftClientX + active.minWidth;
+      const maxBoundaryClientX = active.startLeftClientX + active.maxWidth;
+      const rawBoundaryClientX = pointerClientX + active.pointerBoundaryOffsetClientX;
+      const lineCenterClientX = Math.max(
+        minBoundaryClientX,
+        Math.min(maxBoundaryClientX, rawBoundaryClientX),
+      );
+      const width = Math.round(lineCenterClientX - active.startLeftClientX);
+      const top = Math.max(0, containerRect.top);
       const bottomInset = hasHorizontalOverflow ? 14 : 0;
-      const bottom = Math.min(rootRect.height, containerRect.bottom - rootRect.top - bottomInset);
+      const bottom = Math.max(top, containerRect.bottom - bottomInset);
       const height = Math.max(0, bottom - top);
       const tooltipTop = Math.max(
         top + 8,
-        Math.min(top + Math.max(0, height - 32), pointerClientY - rootRect.top + 10),
+        Math.min(top + Math.max(0, height - 32), pointerClientY + 10),
       );
 
       return {
         width,
-        left: lineCenterClientX - rootRect.left - COLUMN_RESIZE_PREVIEW_LINE_WIDTH / 2,
+        left: lineCenterClientX - COLUMN_RESIZE_PREVIEW_LINE_WIDTH / 2,
         top,
         height,
         tooltipTop,
@@ -759,21 +794,65 @@ export function DataTable<T>({
     [],
   );
 
+  const applyColumnResizePreview = useCallback(
+    (preview: ColumnResizePreview) => {
+      const line = resizePreviewLineRef.current;
+      if (line) {
+        line.style.left = `${preview.left}px`;
+        line.style.top = `${preview.top}px`;
+        line.style.height = `${preview.height}px`;
+      }
+
+      const tooltip = resizePreviewTooltipRef.current;
+      if (tooltip) {
+        tooltip.style.left = `${preview.left + 10}px`;
+        tooltip.style.top = `${preview.tooltipTop}px`;
+        tooltip.textContent = t("common.column_width_px", { width: preview.width });
+      }
+    },
+    [t],
+  );
+
+  const applyColumnWidthToDom = useCallback((columnKey: string, width: number) => {
+    const col = columnElementsRef.current[columnKey];
+    if (!col) return;
+    const widthPx = `${width}px`;
+    col.style.width = widthPx;
+    col.style.minWidth = widthPx;
+    col.style.maxWidth = widthPx;
+  }, []);
+
+  const updateScrollMetricsWhenHorizontalOverflowChanges = useCallback(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const prev = scrollMetricsRef.current;
+    const prevHasH = prev.scrollWidth > prev.clientWidth + 1;
+    const nextHasH = el.scrollWidth > el.clientWidth + 1;
+    if (prevHasH !== nextHasH) {
+      updateScrollMetrics();
+    }
+  }, [updateScrollMetrics]);
+
   const finishColumnResize = useCallback(() => {
     const active = columnResizeRef.current;
     if (!active) return;
 
+    const nextWidths = {
+      ...columnWidthsRef.current,
+      [active.columnKey]: active.currentWidth,
+    };
+    columnWidthsRef.current = nextWidths;
+    setColumnWidths(nextWidths);
+    writeStoredColumnWidths(tableId, nextWidths);
+    updateScrollMetrics();
+
     columnResizeRef.current = null;
     setResizePreview(null);
+    setActiveResizeColumnKey(null);
     document.body.style.cursor = "";
     document.body.style.userSelect = "";
     document.documentElement.style.cursor = "";
-    const latestWidths = columnWidthsRef.current;
-    writeStoredColumnWidths(tableId, {
-      ...latestWidths,
-      [active.columnKey]: latestWidths[active.columnKey] ?? active.startWidth,
-    });
-  }, [tableId]);
+  }, [tableId, updateScrollMetrics]);
 
   const handleColumnResizePointerDown = useCallback(
     (column: DataTableColumn<T>, e: ReactPointerEvent<HTMLButtonElement>) => {
@@ -783,7 +862,7 @@ export function DataTable<T>({
       if (!headerCell) return;
 
       const rect = headerCell.getBoundingClientRect();
-      const startWidth = columnWidths[column.key] ?? rect.width;
+      const startWidth = rect.width;
       const minWidth = column.minWidthPx ?? DEFAULT_MIN_COLUMN_WIDTH;
       const maxWidth = column.maxWidthPx ?? DEFAULT_MAX_COLUMN_WIDTH;
       const nextStartWidth = Math.max(minWidth, Math.min(maxWidth, startWidth));
@@ -795,21 +874,38 @@ export function DataTable<T>({
       const resizeState = {
         pointerId: e.pointerId,
         columnKey: column.key,
-        startClientX: e.clientX,
-        startLineCenterClientX:
-          e.currentTarget.getBoundingClientRect().left + e.currentTarget.offsetWidth / 2,
-        startWidth: nextStartWidth,
+        startLeftClientX: rect.left,
+        pointerBoundaryOffsetClientX: rect.right - e.clientX,
         minWidth,
         maxWidth,
+        currentWidth: nextStartWidth,
+        lastDebugAtMs: 0,
+        debugEnabled: shouldDebugColumnResize(),
       };
       columnResizeRef.current = resizeState;
       document.body.style.cursor = "col-resize";
       document.documentElement.style.cursor = "col-resize";
       document.body.style.userSelect = "none";
-      setColumnWidths((prev) => ({ ...prev, [column.key]: nextStartWidth }));
-      setResizePreview(buildColumnResizePreview(resizeState, nextStartWidth, e.clientY));
+      setActiveResizeColumnKey(column.key);
+      applyColumnWidthToDom(column.key, nextStartWidth);
+      const preview = buildColumnResizePreview(resizeState, e.clientX, e.clientY);
+      setResizePreview(preview);
+      if (resizeState.debugEnabled) {
+        logColumnResizeDebug("start", {
+          tableId,
+          columnKey: column.key,
+          pointerX: Math.round(e.clientX),
+          headerLeft: Math.round(rect.left),
+          headerRight: Math.round(rect.right),
+          headerWidth: Math.round(rect.width),
+          previewCenterX: preview
+            ? Math.round(preview.left + COLUMN_RESIZE_PREVIEW_LINE_WIDTH / 2)
+            : null,
+          width: preview?.width ?? nextStartWidth,
+        });
+      }
     },
-    [buildColumnResizePreview, columnWidths],
+    [applyColumnWidthToDom, buildColumnResizePreview, tableId],
   );
 
   // ---------------------------------------------------------------------------
@@ -1027,15 +1123,51 @@ export function DataTable<T>({
       if (!active) return;
 
       event.preventDefault();
-      const nextWidth = Math.max(
-        active.minWidth,
-        Math.min(active.maxWidth, active.startWidth + event.clientX - active.startClientX),
+      const minBoundaryClientX = active.startLeftClientX + active.minWidth;
+      const maxBoundaryClientX = active.startLeftClientX + active.maxWidth;
+      const lineCenterClientX = Math.max(
+        minBoundaryClientX,
+        Math.min(maxBoundaryClientX, event.clientX + active.pointerBoundaryOffsetClientX),
       );
-      const roundedWidth = Math.round(nextWidth);
+      const roundedWidth = Math.round(lineCenterClientX - active.startLeftClientX);
 
-      columnWidthsRef.current = { ...columnWidthsRef.current, [active.columnKey]: roundedWidth };
-      setColumnWidths((prev) => ({ ...prev, [active.columnKey]: roundedWidth }));
-      setResizePreview(buildColumnResizePreview(active, roundedWidth, event.clientY));
+      active.currentWidth = roundedWidth;
+      applyColumnWidthToDom(active.columnKey, roundedWidth);
+      const preview = {
+        ...(buildColumnResizePreview(active, event.clientX, event.clientY) ?? {
+          width: roundedWidth,
+          left: lineCenterClientX - COLUMN_RESIZE_PREVIEW_LINE_WIDTH / 2,
+          top: 0,
+          height: 0,
+          tooltipTop: 0,
+        }),
+        width: roundedWidth,
+      };
+      applyColumnResizePreview(preview);
+      updateScrollMetricsWhenHorizontalOverflowChanges();
+      if (active.debugEnabled) {
+        const now = performance.now();
+        if (now - active.lastDebugAtMs >= 125) {
+          active.lastDebugAtMs = now;
+          const headerCell = headerCellsRef.current[active.columnKey];
+          const headerRect = headerCell?.getBoundingClientRect();
+          logColumnResizeDebug("move", {
+            tableId,
+            columnKey: active.columnKey,
+            pointerX: Math.round(event.clientX),
+            previewCenterX: Math.round(preview.left + COLUMN_RESIZE_PREVIEW_LINE_WIDTH / 2),
+            renderedHeaderRight: headerRect ? Math.round(headerRect.right) : null,
+            renderedHeaderWidth: headerRect ? Math.round(headerRect.width) : null,
+            width: roundedWidth,
+            deltaPreviewToPointer: Math.round(
+              preview.left + COLUMN_RESIZE_PREVIEW_LINE_WIDTH / 2 - event.clientX,
+            ),
+            deltaPreviewToRenderedHeader: headerRect
+              ? Math.round(preview.left + COLUMN_RESIZE_PREVIEW_LINE_WIDTH / 2 - headerRect.right)
+              : null,
+          });
+        }
+      }
     };
 
     const handlePointerUp = () => finishColumnResize();
@@ -1052,7 +1184,14 @@ export function DataTable<T>({
       window.removeEventListener("pointercancel", handlePointerUp);
       window.removeEventListener("blur", handleWindowBlur);
     };
-  }, [buildColumnResizePreview, finishColumnResize]);
+  }, [
+    applyColumnResizePreview,
+    applyColumnWidthToDom,
+    buildColumnResizePreview,
+    finishColumnResize,
+    tableId,
+    updateScrollMetricsWhenHorizontalOverflowChanges,
+  ]);
 
   useEffect(() => {
     return () => {
@@ -1094,6 +1233,11 @@ export function DataTable<T>({
     };
   }, [measureHeaderHeight, updateScrollMetrics]);
 
+  useLayoutEffect(() => {
+    measureHeaderHeight();
+    updateScrollMetrics();
+  }, [columnWidths, measureHeaderHeight, minWidth, orderedColumns, updateScrollMetrics]);
+
   // Content size can change without the scroll container's box size changing (e.g. rows loaded after refresh).
   // ResizeObserver won't fire for scrollHeight/scrollWidth changes, so re-measure on data/structure changes.
   useEffect(() => {
@@ -1116,6 +1260,8 @@ export function DataTable<T>({
     virtualize,
     rowHeight,
     minWidth,
+    columnWidths,
+    orderedColumns,
   ]);
 
   // Cleanup rAF
@@ -1224,6 +1370,36 @@ export function DataTable<T>({
     [columnWidths],
   );
 
+  const resizePreviewOverlay =
+    resizePreview && typeof document !== "undefined"
+      ? createPortal(
+          <>
+            <div
+              ref={resizePreviewLineRef}
+              aria-hidden="true"
+              className="pointer-events-none fixed z-[1000] w-0.5 bg-slate-500/70"
+              style={{
+                left: resizePreview.left,
+                top: resizePreview.top,
+                height: resizePreview.height,
+              }}
+            />
+            <div
+              ref={resizePreviewTooltipRef}
+              role="status"
+              className="pointer-events-none fixed z-[1001] rounded-md bg-slate-900 px-2 py-1 text-xs font-medium text-white shadow-lg dark:bg-white dark:text-neutral-950"
+              style={{
+                left: resizePreview.left + 10,
+                top: resizePreview.tooltipTop,
+              }}
+            >
+              {t("common.column_width_px", { width: resizePreview.width })}
+            </div>
+          </>,
+          document.body,
+        )
+      : null;
+
   return (
     <div
       ref={rootRef}
@@ -1270,16 +1446,30 @@ export function DataTable<T>({
           <caption className="sr-only">{caption}</caption>
           <colgroup>
             {orderedColumns.map((col) => (
-              <col key={col.key} style={resolveColumnStyle(col)} />
+              <col
+                key={col.key}
+                ref={(node) => {
+                  columnElementsRef.current[col.key] = node;
+                }}
+                style={resolveColumnStyle(col)}
+              />
             ))}
           </colgroup>
 
           {/* ── HeroUI-styled header ── */}
-          <thead ref={headerRef} className={naturalFlow ? undefined : "sticky top-0 z-20"}>
+          <thead
+            ref={headerRef}
+            className={
+              naturalFlow
+                ? "bg-slate-100 dark:bg-neutral-800"
+                : "sticky top-0 z-40 bg-slate-100 dark:bg-neutral-800"
+            }
+          >
             <tr className="text-left text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-white/55">
               {orderedColumns.map((col, colIndex) => {
                 const canResize = shouldAllowColumnResize(col, colIndex, orderedColumns);
                 const canReorder = canUseColumnOrder && shouldAllowColumnReorder(col);
+                const isResizingColumns = activeResizeColumnKey !== null;
                 return (
                   <th
                     key={col.key}
@@ -1288,7 +1478,7 @@ export function DataTable<T>({
                       headerCellsRef.current[col.key] = node;
                     }}
                     style={resolveColumnStyle(col)}
-                    className={`group/column relative whitespace-nowrap px-4 py-3 ${col.width ?? ""} ${col.headerClassName ?? ""}`}
+                    className={`group/column relative bg-slate-100 px-4 py-3 whitespace-nowrap dark:bg-neutral-800 ${col.width ?? ""} ${col.headerClassName ?? ""}`}
                   >
                     {canReorder ? (
                       <button
@@ -1296,13 +1486,18 @@ export function DataTable<T>({
                         data-vt-column-reorder-handle
                         aria-label={t("common.reorder_column", { column: col.label })}
                         title={t("common.reorder_column", { column: col.label })}
-                        className="absolute left-1 top-1/2 z-10 -translate-y-1/2 inline-flex h-5 w-5 items-center justify-center rounded-md cursor-grab touch-none text-slate-400/55 opacity-0 transition-opacity hover:bg-slate-200/60 hover:text-slate-600 group-hover/column:opacity-100 focus-visible:opacity-100 active:cursor-grabbing dark:text-white/30 dark:hover:bg-white/10 dark:hover:text-white/65"
+                        className={`absolute left-1 top-1/2 z-10 -translate-y-1/2 inline-flex h-5 w-5 items-center justify-center rounded-md cursor-grab touch-none text-slate-400/55 opacity-0 transition-opacity hover:bg-slate-200/60 hover:text-slate-600 focus-visible:opacity-100 active:cursor-grabbing dark:text-white/30 dark:hover:bg-white/10 dark:hover:text-white/65 ${
+                          isResizingColumns ? "pointer-events-none" : "group-hover/column:opacity-100"
+                        }`}
                         onPointerDown={(event) => handleColumnReorderPointerDown(col, event)}
                       >
                         <GripVertical size={13} aria-hidden="true" />
                       </button>
                     ) : null}
-                    <div className="min-w-0 truncate">
+                    <div
+                      data-vt-column-header-content
+                      className={`min-w-0 truncate ${canReorder ? "pl-5" : ""}`}
+                    >
                       {col.headerRender ? col.headerRender() : col.label}
                     </div>
                     {canResize ? (
@@ -1317,7 +1512,11 @@ export function DataTable<T>({
                       >
                         <span
                           aria-hidden="true"
-                          className="mx-auto block h-6 w-px rounded-full bg-slate-300/80 opacity-70 transition-[width,background-color,opacity] group-hover/resize:w-0.5 group-hover/resize:bg-slate-500 group-hover/resize:opacity-100 group-focus-visible/resize:w-0.5 group-focus-visible/resize:bg-slate-500 group-focus-visible/resize:opacity-100 dark:bg-white/25 dark:group-hover/resize:bg-white/55 dark:group-focus-visible/resize:bg-white/55"
+                          className={`mx-auto block h-6 w-px rounded-full bg-slate-300/80 transition-[width,background-color,opacity] dark:bg-white/25 ${
+                            isResizingColumns
+                              ? "opacity-0"
+                              : "opacity-70 group-hover/resize:w-0.5 group-hover/resize:bg-slate-500 group-hover/resize:opacity-100 group-focus-visible/resize:w-0.5 group-focus-visible/resize:bg-slate-500 group-focus-visible/resize:opacity-100 dark:group-hover/resize:bg-white/55 dark:group-focus-visible/resize:bg-white/55"
+                          }`}
                         />
                       </button>
                     ) : null}
@@ -1493,29 +1692,7 @@ export function DataTable<T>({
         </div>
       ) : null}
 
-      {resizePreview ? (
-        <>
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute z-20 w-0.5 bg-slate-500/70"
-            style={{
-              left: resizePreview.left,
-              top: resizePreview.top,
-              height: resizePreview.height,
-            }}
-          />
-          <div
-            role="status"
-            className="pointer-events-none absolute z-40 rounded-md bg-slate-900 px-2 py-1 text-xs font-medium text-white shadow-lg dark:bg-white dark:text-neutral-950"
-            style={{
-              left: resizePreview.left + 10,
-              top: resizePreview.tooltipTop,
-            }}
-          >
-            {t("common.column_width_px", { width: resizePreview.width })}
-          </div>
-        </>
-      ) : null}
+      {resizePreviewOverlay}
 
       {/* ── Column Reorder Preview Line ── */}
       {reorderPreview ? (
