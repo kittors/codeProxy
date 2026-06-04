@@ -348,6 +348,8 @@ function buildModelPayload(form: ModelFormState) {
       input_price_per_million: parsePriceInput(form.inputPrice),
       output_price_per_million: parsePriceInput(form.outputPrice),
       cached_price_per_million: parsePriceInput(form.cachedPrice),
+      cache_read_price_per_million: 0,
+      cache_write_price_per_million: 0,
     },
   };
 }
@@ -365,6 +367,8 @@ function payloadToModel(payload: ReturnType<typeof buildModelPayload>, source: s
           inputPricePerMillion: payload.pricing.input_price_per_million,
           outputPricePerMillion: payload.pricing.output_price_per_million,
           cachedPricePerMillion: payload.pricing.cached_price_per_million,
+          cacheReadPricePerMillion: payload.pricing.cache_read_price_per_million ?? 0,
+          cacheWritePricePerMillion: payload.pricing.cache_write_price_per_million ?? 0,
           pricePerCall: 0,
         };
 

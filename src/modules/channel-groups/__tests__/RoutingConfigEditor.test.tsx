@@ -200,6 +200,8 @@ describe("RoutingConfigEditor", () => {
           inputPricePerMillion: 3,
           outputPricePerMillion: 15,
           cachedPricePerMillion: 0.3,
+          cacheReadPricePerMillion: 0,
+          cacheWritePricePerMillion: 0,
           pricePerCall: 0,
         },
       },

@@ -43,6 +43,8 @@ export interface ModelPricing {
   inputPricePerMillion: number;
   outputPricePerMillion: number;
   cachedPricePerMillion: number;
+  cacheReadPricePerMillion: number;
+  cacheWritePricePerMillion: number;
   pricePerCall: number;
 }
 
@@ -121,6 +123,8 @@ export const emptyModelPricing = (): ModelPricing => ({
   inputPricePerMillion: 0,
   outputPricePerMillion: 0,
   cachedPricePerMillion: 0,
+  cacheReadPricePerMillion: 0,
+  cacheWritePricePerMillion: 0,
   pricePerCall: 0,
 });
 
@@ -145,6 +149,8 @@ export const normalizeModelPricing = (raw: Record<string, unknown>): ModelPricin
     inputPricePerMillion: asNumber(pricing.input_price_per_million ?? pricing.prompt),
     outputPricePerMillion: asNumber(pricing.output_price_per_million ?? pricing.completion),
     cachedPricePerMillion: asNumber(pricing.cached_price_per_million ?? pricing.cache),
+    cacheReadPricePerMillion: asNumber(pricing.cache_read_price_per_million ?? pricing.cacheRead),
+    cacheWritePricePerMillion: asNumber(pricing.cache_write_price_per_million ?? pricing.cacheWrite),
     pricePerCall: asNumber(pricing.price_per_call ?? pricing.perCall),
   };
 };
@@ -554,6 +560,8 @@ const normalizeAvailabilityItem = (raw: unknown): ModelAvailabilityItem | null =
     inputPricePerMillion: asNumber(pricingRecord.input_price_per_million ?? pricingRecord.inputPricePerMillion),
     outputPricePerMillion: asNumber(pricingRecord.output_price_per_million ?? pricingRecord.outputPricePerMillion),
     cachedPricePerMillion: asNumber(pricingRecord.cached_price_per_million ?? pricingRecord.cachedPricePerMillion),
+    cacheReadPricePerMillion: asNumber(pricingRecord.cache_read_price_per_million ?? pricingRecord.cacheReadPricePerMillion),
+    cacheWritePricePerMillion: asNumber(pricingRecord.cache_write_price_per_million ?? pricingRecord.cacheWritePricePerMillion),
     pricePerCall: asNumber(pricingRecord.price_per_call ?? pricingRecord.pricePerCall),
   };
 
@@ -744,7 +752,9 @@ export const hasModelPricing = (pricing: ModelPricing): boolean => {
   return (
     pricing.inputPricePerMillion > 0 ||
     pricing.outputPricePerMillion > 0 ||
-    pricing.cachedPricePerMillion > 0
+    pricing.cachedPricePerMillion > 0 ||
+    pricing.cacheReadPricePerMillion > 0 ||
+    pricing.cacheWritePricePerMillion > 0
   );
 };
 
@@ -766,5 +776,16 @@ export const formatModelPrice = (pricing: ModelPricing, notPricedLabel: string):
   }
 
   if (!hasModelPricing(pricing)) return notPricedLabel;
-  return `$${formatModelPriceAmount(pricing.inputPricePerMillion)} / $${formatModelPriceAmount(pricing.outputPricePerMillion)} / $${formatModelPriceAmount(pricing.cachedPricePerMillion)}`;
+  const parts = [
+    `$${formatModelPriceAmount(pricing.inputPricePerMillion)}`,
+    `$${formatModelPriceAmount(pricing.outputPricePerMillion)}`,
+  ];
+  if (pricing.cacheReadPricePerMillion > 0 || pricing.cachedPricePerMillion > 0) {
+    const readPrice = pricing.cacheReadPricePerMillion > 0 ? pricing.cacheReadPricePerMillion : pricing.cachedPricePerMillion;
+    parts.push(`Read $${formatModelPriceAmount(readPrice)}`);
+  }
+  if (pricing.cacheWritePricePerMillion > 0) {
+    parts.push(`Write $${formatModelPriceAmount(pricing.cacheWritePricePerMillion)}`);
+  }
+  return parts.join(" / ");
 };
