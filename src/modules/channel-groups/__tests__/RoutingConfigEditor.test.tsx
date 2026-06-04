@@ -248,11 +248,11 @@ describe("RoutingConfigEditor", () => {
 
     const tabViewport = screen.getByTestId("group-editor-tab-viewport");
     expect(tabViewport).toHaveClass("flex-1");
-    expect(tabViewport).toHaveClass("overflow-hidden");
+    expect(tabViewport).not.toHaveClass("overflow-hidden");
     expect(screen.getByText("分组内调度策略")).toBeInTheDocument();
 
     await user.click(screen.getByRole("tab", { name: "模型列表" }));
-    expect(await screen.findByTestId("group-editor-model-list")).not.toHaveClass("overflow-hidden");
+    expect(await screen.findByTestId("group-editor-model-list")).toHaveClass("-mx-5");
     expect(screen.getByRole("table", { name: "允许模型" })).toBeInTheDocument();
     expect(screen.getByRole("tablist")).toBeInTheDocument();
   });
@@ -295,7 +295,7 @@ describe("RoutingConfigEditor", () => {
     await user.click(screen.getByRole("combobox", { name: "选择渠道" }));
     await user.click(screen.getByRole("tab", { name: "模型列表" }));
 
-    expect(screen.getByTestId("group-editor-model-list")).not.toHaveClass("overflow-hidden");
+    expect(screen.getByTestId("group-editor-model-list")).toHaveClass("-mx-5");
     expect(screen.getByRole("table", { name: "允许模型" })).toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveTextContent("加载中");
     expect(screen.getByRole("status")).toHaveClass("sr-only");
