@@ -92,6 +92,8 @@ export interface DataTableProps<T> {
   allowWheelPropagationAtBoundary?: boolean;
   /** Render the table in normal document flow without any internal table scrollbars. */
   naturalFlow?: boolean;
+  /** Extra class for the content wrapper inside the scroll viewport (e.g. "pr-5" for right padding). */
+  scrollContentClassName?: string;
   /** Whether column reorder by dragging the header handle is allowed (default true when tableId is set). */
   columnReorderable?: boolean;
   /** Whether column order is persisted to localStorage (default true). */
@@ -349,6 +351,7 @@ export function DataTable<T>({
   rowClassName,
   allowWheelPropagationAtBoundary = false,
   naturalFlow = false,
+  scrollContentClassName,
   columnReorderable = true,
   persistColumnOrder = true,
 }: DataTableProps<T>) {
@@ -1250,6 +1253,10 @@ export function DataTable<T>({
             : "relative z-10 col-start-1 row-start-1 h-full min-h-0 table-scrollbar overflow-auto overscroll-x-none overscroll-y-none rounded-tl-xl"
         }
       >
+        <div
+          data-vt-scroll-content
+          className={scrollContentClassName ?? ""}
+        >
         {naturalFlow ? null : (
           <div
             data-vt-header-overlay
@@ -1436,6 +1443,7 @@ export function DataTable<T>({
             {t("common.all_records_loaded", { count: rows.length })}
           </div>
         )}
+        </div>
       </div>
 
       {!naturalFlow && vThumb ? (

@@ -1868,6 +1868,7 @@ export function RoutingConfigEditor({
                           caption={t("channel_groups_page.allowed_models_label")}
                           emptyText={t("channel_groups_page.no_channel_models")}
                           showAllLoadedMessage={false}
+                          scrollContentClassName="pr-5"
                         />
                       </div>
                     </div>
