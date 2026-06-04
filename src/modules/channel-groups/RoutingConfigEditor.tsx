@@ -1612,7 +1612,7 @@ export function RoutingConfigEditor({
               >
                 <TabsContent
                   value="basic"
-                  className="h-full min-h-0 overflow-y-auto pr-1 space-y-5"
+                  className="h-full min-h-0 overflow-y-auto space-y-5 scrollbar-hidden"
                 >
                   <Field
                     label={t("channel_groups_page.routing_strategy_label")}
@@ -1814,7 +1814,7 @@ export function RoutingConfigEditor({
 
                 <TabsContent
                   value="models"
-                  className="flex h-full min-h-0 flex-col gap-3"
+                  className="flex h-full min-h-0 flex-col gap-3 overflow-hidden"
                 >
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="space-y-1">
@@ -1838,7 +1838,7 @@ export function RoutingConfigEditor({
                   ) : (
                     <div
                       data-testid="group-editor-model-list"
-                      className="min-h-0 flex-1 -mx-5"
+                      className="min-h-0 flex-1 overflow-hidden"
                     >
                       <DataTable<RoutingModelOption>
                         tableId="routing-model-options"

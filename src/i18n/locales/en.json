@@ -56,7 +56,7 @@
     "clear_action": "Clear",
     "chart_legend": "Chart legend",
     "success_rate": "Success Rate",
-    "cache_rate": "Cache Hit Rate",
+    "cache_rate": "Cache Token Ratio",
     "cache_hint": "Cached {{cached}} · Input {{input}}",
     "restoring_session": "Restoring session...",
     "loading_ellipsis": "Loading…",
@@ -205,7 +205,7 @@
     "summary_providers": "Providers",
     "summary_auth_files": "Auth Files",
     "updated_fallback": "Just now",
-    "cache_rate": "Cache Hit Rate"
+    "cache_rate": "Cache Token Ratio"
   },
   "basic_settings": {
     "title": "Basic Settings",
@@ -2375,7 +2375,7 @@
     "clear_model_filter": "Clear model filter",
     "clear_channel_filter": "Clear channel filter",
     "clear_status_filter": "Clear status filter",
-    "cache_rate": "Cache Hit Rate"
+    "cache_rate": "Cache Token Ratio"
   },
   "ccswitch": {
     "import_to_ccswitch": "Import to CC Switch",
