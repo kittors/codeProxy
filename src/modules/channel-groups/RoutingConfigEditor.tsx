@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Check, CircleAlert, Pencil, Plus, Trash2, TriangleAlert, X } from "lucide-react";
+import { CircleAlert, Pencil, Plus, Trash2, TriangleAlert, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { ChannelGroupChannelDetail } from "@/lib/http/apis/channel-groups";
 import type {
@@ -734,13 +734,6 @@ export function RoutingConfigEditor({
     setModelsSelectionTouched(true);
     setGroupDraft((current) => {
       const currentModels = current.allowedModels.map((model) => model.trim()).filter(Boolean);
-      // First interaction from "no restriction" empty state: initialize with full visible set
-      if (currentModels.length === 0 && modelOptionIds.length > 0) {
-        const initial = new Set(modelOptionIds);
-        if (checked) initial.add(normalized);
-        else initial.delete(normalized);
-        return { ...current, allowedModels: Array.from(initial) };
-      }
       if (checked) {
         return {
           ...current,
@@ -752,7 +745,7 @@ export function RoutingConfigEditor({
         allowedModels: currentModels.filter((model) => model !== normalized),
       };
     });
-  }, [modelOptionIds]);
+  }, []);
 
   const selectAllDraftModels = useCallback(() => {
     setModelsSelectionTouched(true);
@@ -1821,7 +1814,7 @@ export function RoutingConfigEditor({
 
                 <TabsContent
                   value="models"
-                  className="flex h-full min-h-0 flex-col gap-3 overflow-hidden"
+                  className="flex h-full min-h-0 flex-col gap-3"
                 >
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="space-y-1">
@@ -1831,26 +1824,6 @@ export function RoutingConfigEditor({
                       <div className="text-xs text-slate-500 dark:text-white/55">
                         {t("channel_groups_page.allowed_models_hint")}
                       </div>
-                    </div>
-                    <div className="flex shrink-0 gap-2">
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={selectAllDraftModels}
-                        disabled={disabled || modelOptions.length === 0}
-                      >
-                        <Check size={14} />
-                        {t("channel_groups_page.select_all_models")}
-                      </Button>
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={clearDraftModels}
-                        disabled={disabled || groupDraft.allowedModels.length === 0}
-                      >
-                        <X size={14} />
-                        {t("channel_groups_page.clear_models")}
-                      </Button>
                     </div>
                   </div>
 
@@ -1865,7 +1838,7 @@ export function RoutingConfigEditor({
                   ) : (
                     <div
                       data-testid="group-editor-model-list"
-                      className="min-h-0 flex-1 overflow-hidden"
+                      className="min-h-0 flex-1 -mx-5"
                     >
                       <DataTable<RoutingModelOption>
                         tableId="routing-model-options"
