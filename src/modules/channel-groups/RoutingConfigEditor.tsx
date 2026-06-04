@@ -1838,7 +1838,7 @@ export function RoutingConfigEditor({
                   ) : (
                     <div
                       data-testid="group-editor-model-list"
-                      className="min-h-0 flex-1 overflow-hidden"
+                      className="min-h-0 flex-1"
                     >
                       <DataTable<RoutingModelOption>
                         tableId="routing-model-options"
