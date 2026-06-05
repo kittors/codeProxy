@@ -9,14 +9,30 @@ export const normalizeApiBase = (input: string): string => {
   let base = input.trim();
   if (!base) return "";
 
-  base = base.replace(/\/?v0\/management\/?$/i, "");
-  base = base.replace(/\/+$/, "");
-
   if (!/^https?:\/\//i.test(base)) {
     base = `http://${base}`;
   }
 
-  return base;
+  try {
+    const url = new URL(base);
+    url.hash = "";
+    url.search = "";
+
+    const normalizedPath = url.pathname.replace(/\/+$/, "");
+    const lowerPath = normalizedPath.toLowerCase();
+    const managementIndex = lowerPath.search(/\/v0\/management(?:\/|$)/);
+    const manageIndex = lowerPath.search(/\/manage(?:\/|$)/);
+
+    if (managementIndex >= 0) {
+      url.pathname = normalizedPath.slice(0, managementIndex) || "/";
+    } else if (manageIndex >= 0) {
+      url.pathname = normalizedPath.slice(0, manageIndex) || "/";
+    }
+
+    return url.toString().replace(/\/+$/, "");
+  } catch {
+    return base.replace(/\/?v0\/management\/?$/i, "").replace(/\/+$/, "");
+  }
 };
 
 export const computeManagementApiBase = (base: string): string => {

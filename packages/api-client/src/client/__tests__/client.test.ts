@@ -1,5 +1,29 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { ApiClient } from "@code-proxy/api-client";
+import { computeManagementApiBase, normalizeApiBase } from "../constants";
+
+describe("API base normalization", () => {
+  test("normalizes full management panel URLs back to the service root", () => {
+    expect(normalizeApiBase("https://relay.example.com/manage/ccswitch-import-settings")).toBe(
+      "https://relay.example.com",
+    );
+    expect(normalizeApiBase("https://relay.example.com/manage/login?next=/config#section")).toBe(
+      "https://relay.example.com",
+    );
+    expect(computeManagementApiBase("https://relay.example.com/manage")).toBe(
+      "https://relay.example.com/v0/management",
+    );
+  });
+
+  test("preserves deployment prefixes before the management panel path", () => {
+    expect(normalizeApiBase("https://example.com/relay/manage/ccswitch-import-settings")).toBe(
+      "https://example.com/relay",
+    );
+    expect(computeManagementApiBase("https://example.com/relay/v0/management/config")).toBe(
+      "https://example.com/relay/v0/management",
+    );
+  });
+});
 
 describe("ApiClient authentication failure handling", () => {
   const originalFetch = globalThis.fetch;
@@ -87,5 +111,23 @@ describe("ApiClient authentication failure handling", () => {
 
     await expect(client.get("/config")).resolves.toEqual({ ok: true });
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  test("rejects management panel HTML returned from a misconfigured API base", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response("<!doctype html><html><body>panel</body></html>", {
+        status: 200,
+        headers: { "Content-Type": "text/html; charset=utf-8" },
+      }),
+    );
+    globalThis.fetch = fetchMock;
+
+    const client = new ApiClient();
+    client.setConfig({
+      apiBase: "http://localhost:8317",
+      managementKey: "test-key",
+    });
+
+    await expect(client.get("/config")).rejects.toThrow("web panel HTML instead of JSON");
   });
 });

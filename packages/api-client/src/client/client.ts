@@ -261,6 +261,16 @@ export class ApiClient {
         return undefined as T;
       }
 
+      const contentType = response.headers.get("Content-Type") ?? "";
+      if (
+        contentType.toLowerCase().includes("text/html") &&
+        /^<!doctype html|^<html[\s>]/i.test(trimmed)
+      ) {
+        throw new Error(
+          "Management API returned the web panel HTML instead of JSON. Check the API base URL.",
+        );
+      }
+
       try {
         return JSON.parse(trimmed) as T;
       } catch {
