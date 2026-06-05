@@ -1,0 +1,12 @@
+{
+  "name": "@code-proxy/i18n",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "dependencies": {
+    "i18next": "^25.7.1",
+    "react-i18next": "^16.4.0"
+  }
+}

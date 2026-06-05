@@ -35,6 +35,6 @@
 
 ## 开发规则
 
-- API 层统一使用 `src/lib/http/*`。
+- API 层统一使用 `packages/api-client` 与 `@code-proxy/api-client`。
 - 高敏数据的读取、写入、脱敏逻辑必须集中，不允许页面各自实现。
 - 任何新增高敏存储行为，都必须在 PR 说明里写清用途、生命周期、清理方式和风险。

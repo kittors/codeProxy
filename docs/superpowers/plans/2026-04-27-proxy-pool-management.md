@@ -21,6 +21,7 @@
 ### Task 1: Backend Proxy Pool Model
 
 **Files:**
+
 - Create: `internal/config/proxy_pool.go`
 - Modify: `internal/config/config.go`
 - Test: `internal/config/proxy_pool_test.go`
@@ -34,6 +35,7 @@
 ### Task 2: Backend Management API
 
 **Files:**
+
 - Create: `internal/api/handlers/management/proxy_pool.go`
 - Modify: `internal/api/server.go`, `internal/api/handlers/management/config_basic.go`
 - Test: `internal/api/handlers/management/proxy_pool_test.go`
@@ -48,6 +50,7 @@
 ### Task 3: Backend Proxy-ID Runtime Resolution
 
 **Files:**
+
 - Modify: provider config structs in `internal/config/config.go` and `internal/config/vertex_compat.go`
 - Modify: `sdk/cliproxy/auth/types.go`, watcher synthesizer, runtime executor proxy helpers, API tool transport helper
 - Test: `internal/runtime/executor/proxy_helpers_test.go`, `internal/watcher/synthesizer/*_test.go`, `sdk/cliproxy/auth/*_test.go`
@@ -62,6 +65,7 @@
 ### Task 4: Frontend API and Proxy Management Page
 
 **Files:**
+
 - Create: `src/lib/http/apis/proxies.ts`
 - Create: `src/modules/proxies/ProxiesPage.tsx`
 - Create: `src/modules/proxies/proxy-utils.ts`
@@ -77,6 +81,7 @@
 ### Task 5: Frontend Binding Controls
 
 **Files:**
+
 - Modify: provider modal/helper files under `src/modules/providers/`
 - Modify: auth-files field editor files under `src/modules/auth-files/`
 - Modify: shared HTTP types and i18n files
@@ -91,6 +96,7 @@
 ### Task 6: Documentation, Validation, and Merge Prep
 
 **Files:**
+
 - Modify: `AGENTS.md`, `.helloagents/plan/2026-04-27--proxy-pool/tasks.md`
 
 - [ ] Update `AGENTS.md` key path index with the new proxy management module.
@@ -98,4 +104,3 @@
 - [ ] Run frontend `bun run lint`, `bun run test`, `bun run build`.
 - [ ] Run backend `go test ./...`.
 - [ ] Review git diffs for unrelated changes before commit.
-

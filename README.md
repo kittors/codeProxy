@@ -265,28 +265,18 @@ Pull requests to `dev` and `main` run lint, low-concurrency Vitest, build, and b
 ## 📁 Project Structure
 
 ```
-src/
-├── app/                 # Routing & auth guards
-├── assets/icons/        # Vendor SVG icons (Claude, OpenAI, Gemini, etc.)
-├── components/ui/       # Inline SVG icon components
-├── i18n/                # i18next locales (en, zh-CN)
-├── lib/
-│   ├── constants/       # App-wide constants
-│   └── http/            # Axios client, API layer, WebSocket
-├── modules/
-│   ├── auth/            # Authentication provider & session
-│   ├── apikey-lookup/   # Public API Key usage lookup
-│   ├── ccswitch/        # CC Switch deeplink import helpers
-│   ├── config/          # Visual config editor (YAML)
-│   ├── dashboard/       # Dashboard overview + system monitor
-│   ├── login/           # Login page
-│   ├── monitor/         # Monitoring center (charts, logs, modals)
-│   ├── oauth/           # OAuth management
-│   ├── providers/       # AI provider channel management
-│   ├── system/          # System info + model listing
-│   ├── ui/              # Shared UI (AppShell, Button, Table, Tabs, etc.)
-│   └── usage/           # Usage statistics & snapshot import/export
-└── styles/              # Global styles & theme tokens
+apps/admin-panel/       # Vite application shell, routes, guards, stores, global styles
+pages/                  # Route-level screens and page-private components/hooks
+features/               # Cross-page UI workflows such as log viewer, OAuth, routing editor
+packages/
+├── api-client/         # Management API client, endpoint DTOs, request helpers
+├── assets/             # Vendor icons and shared static assets
+├── domain/             # Pure business logic, normalizers, formatters, pricing/quota helpers
+├── i18n/               # i18next setup and locale resources
+├── test-utils/         # Shared test utilities
+└── ui/                 # Shared UI primitives, overlays, DataTable, charts, theme
+tooling/                # Vite plugins and build-time helpers
+scripts/                # Repository checks, including import boundary validation
 ```
 
 ## 🔌 API Integration

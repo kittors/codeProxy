@@ -77,38 +77,39 @@ go test ./internal/... # 运行单元测试
 
 由 codeProxy 消费的 `/v0/management/*` 端点（Handler 在 `internal/api/handlers/management/`）：
 
-| 端点 | 用途 |
-|------|------|
-| `/v0/management/config` | 获取/验证配置 |
-| `/v0/management/usage` | 使用量统计 |
-| `/v0/management/usage/logs` | 分页请求日志 |
-| `/v0/management/usage/log-content` | 完整消息内容 |
-| `/v0/management/usage/dashboard-summary` | 仪表盘 KPI |
-| `/v0/management/usage/model-distribution` | 模型分布 |
-| `/v0/management/usage/daily-trends` | 每日趋势 |
-| `/v0/management/usage/hourly-model` | 每小时模型数据 |
-| `/v0/management/openai-compatibility` | OpenAI 渠道 CRUD |
-| `/v0/management/gemini-api-key` | Gemini 渠道 CRUD |
-| `/v0/management/claude-api-key` | Claude 渠道 CRUD |
-| `/v0/management/codex-api-key` | Codex 渠道 CRUD |
-| `/v0/management/vertex-api-key` | Vertex 渠道 CRUD |
-| `/v0/management/system-stats` | WebSocket 实时监控 |
-| `/v0/management/auth-files` | Auth 文件管理 |
-| `/v0/management/oauth-sessions` | OAuth 会话管理 |
-| `/v0/management/oauth-callback` | OAuth 回调 |
-| `/v0/management/quota` | 配额管理 |
-| `/v0/management/models` | 模型定义 |
-| `/v0/management/routing-config` | 路由配置 |
-| `/v0/management/image-generation` | 图片生成 |
-| `/v0/management/api-tools` | API 工具 |
-| `/v0/management/identity-fingerprint` | 身份指纹 |
-| `/v0/management/channel-groups` | 渠道分组 |
-| `/v0/management/public-lookup` | 公开查询 |
-| `/v0/management/update` | 更新检查 |
+| 端点                                      | 用途               |
+| ----------------------------------------- | ------------------ |
+| `/v0/management/config`                   | 获取/验证配置      |
+| `/v0/management/usage`                    | 使用量统计         |
+| `/v0/management/usage/logs`               | 分页请求日志       |
+| `/v0/management/usage/log-content`        | 完整消息内容       |
+| `/v0/management/usage/dashboard-summary`  | 仪表盘 KPI         |
+| `/v0/management/usage/model-distribution` | 模型分布           |
+| `/v0/management/usage/daily-trends`       | 每日趋势           |
+| `/v0/management/usage/hourly-model`       | 每小时模型数据     |
+| `/v0/management/openai-compatibility`     | OpenAI 渠道 CRUD   |
+| `/v0/management/gemini-api-key`           | Gemini 渠道 CRUD   |
+| `/v0/management/claude-api-key`           | Claude 渠道 CRUD   |
+| `/v0/management/codex-api-key`            | Codex 渠道 CRUD    |
+| `/v0/management/vertex-api-key`           | Vertex 渠道 CRUD   |
+| `/v0/management/system-stats`             | WebSocket 实时监控 |
+| `/v0/management/auth-files`               | Auth 文件管理      |
+| `/v0/management/oauth-sessions`           | OAuth 会话管理     |
+| `/v0/management/oauth-callback`           | OAuth 回调         |
+| `/v0/management/quota`                    | 配额管理           |
+| `/v0/management/models`                   | 模型定义           |
+| `/v0/management/routing-config`           | 路由配置           |
+| `/v0/management/image-generation`         | 图片生成           |
+| `/v0/management/api-tools`                | API 工具           |
+| `/v0/management/identity-fingerprint`     | 身份指纹           |
+| `/v0/management/channel-groups`           | 渠道分组           |
+| `/v0/management/public-lookup`            | 公开查询           |
+| `/v0/management/update`                   | 更新检查           |
 
 ### 配置
 
 通过 YAML 配置文件 (`config.yaml`)，支持：
+
 - 提供商凭证配置
 - 代理/路由规则
 - 存储后端选择 (SQLite / PostgreSQL)
@@ -142,46 +143,43 @@ go test ./internal/... # 运行单元测试
 ### 目录结构
 
 ```
-codeProxy/src/
-├── app/                    # 路由定义 & 认证守卫
-├── assets/icons/           # 厂商 SVG 图标 (~15 家)
-├── build/                  # Vite 插件 (panelMetadata)
-├── hooks/                  # 共享 React Hooks
-├── i18n/                   # 国际化资源 (en, zh-CN)
-├── lib/
-│   ├── constants/          # 全局常量
-│   └── http/               # Axios 客户端, API 层, WebSocket
-├── modules/                # 功能模块 (见下方)
-├── stores/                 # Zustand Store (theme, language, notification, quota, disabledModels)
-├── styles/                 # 全局样式, SCSS 变量, Tailwind
-├── test/                   # 测试工具 & setup
-├── types/                  # TypeScript 类型定义
-└── utils/                  # 工具函数
+codeProxy/
+├── apps/admin-panel/        # Vite 应用壳、入口、路由、守卫、stores、全局样式
+├── pages/                   # 路由级页面与页面私有 components/hooks/domain/types/route.tsx
+├── features/                # 跨页面 UI/流程能力，例如日志查看、OAuth、路由配置编辑器
+├── packages/
+│   ├── api-client/          # Management API client、endpoint DTO、请求辅助
+│   ├── assets/              # 厂商 SVG 图标与共享静态资源
+│   ├── domain/              # 纯业务 normalize/format/pricing/quota/helper
+│   ├── i18n/                # i18next 初始化与 locale 资源
+│   ├── test-utils/          # 共享测试工具
+│   └── ui/                  # 共享 UI primitives、overlays、DataTable、charts、theme
+├── tooling/                 # Vite 插件与构建期工具
+├── scripts/                 # 仓库检查脚本，包括 import boundary
+└── dist/                    # 生产构建输出
 ```
 
-### 功能模块 (src/modules/)
+### 页面与功能分层
 
-| 模块 | 功能 |
-|------|------|
-| `auth/` | 认证登录 & Session 管理 |
-| `dashboard/` | KPI 卡片、健康评分、系统监控、渠道延迟 |
-| `monitor/` | 监控中心 (图表、模型分布、趋势、热力图) |
-| `logs/` | 请求日志、消息查看器、错误弹窗 |
-| `providers/` | AI 提供商管理 CRUD |
-| `models/` | 模型定价表、成本核算 |
-| `config/` | YAML 配置编辑器 |
-| `system/` | 系统信息、模型列表 (厂商彩色标签) |
-| `api-keys/` | API Key CRUD、配额、速率限制 |
-| `auth-files/` | Auth 文件管理 |
-| `oauth/` | OAuth 登录管理 |
-| `quota/` | 配额跟踪 |
-| `apikey-lookup/` | API Key 公开查询页面 |
-| `ui/` | 共享 UI 组件库 |
-| `update/` | 更新信息卡片 |
-| `usage/` | 使用量统计 & 快照导入导出 |
-| `image-generation/` | 图片生成工具 |
-| `channel-groups/` | 渠道分组管理 |
-| `identity-fingerprint/` | 身份指纹设置 |
+| 层级/目录                      | 功能                                                              |
+| ------------------------------ | ----------------------------------------------------------------- |
+| `apps/admin-panel/src/app/`    | 应用 providers、路由组装、鉴权守卫、后台 layout、更新提示         |
+| `pages/dashboard/`             | KPI 卡片、健康评分、系统监控、渠道延迟                            |
+| `pages/monitor/`               | 监控中心图表与统计                                                |
+| `pages/request-logs/`          | 请求日志表格                                                      |
+| `pages/providers/`             | AI 提供商管理 CRUD                                                |
+| `pages/models/`                | 模型定价表、模型库与成本核算                                      |
+| `pages/config/`                | YAML/可视化配置编辑器                                             |
+| `pages/system/`                | 系统信息、模型列表                                                |
+| `pages/api-keys/`              | API Key CRUD、配额、速率限制                                      |
+| `pages/auth-files/`            | Auth 文件管理                                                     |
+| `pages/oauth/`                 | OAuth 登录管理                                                    |
+| `pages/api-key-lookup/`        | API Key 公开查询页面                                              |
+| `pages/image-generation/`      | 图片生成工具                                                      |
+| `pages/channel-groups/`        | 渠道分组管理，路由配置编辑器来自 `features/routing-config-editor` |
+| `features/log-content-viewer/` | 请求/错误详情弹窗与内容解析渲染                                   |
+| `features/ccswitch-import/`    | CC Switch deeplink 导入能力                                       |
+| `packages/ui/`                 | 共享 UI 组件库                                                    |
 
 ### 常用命令
 
@@ -201,15 +199,17 @@ bun run e2e              # playwright E2E 测试
 
 ### 关键模式
 
-- **厂商图标系统**: `src/assets/icons/*.svg` — 单一颜色 `fill="currentColor"` SVG，通过 `VENDOR_ICONS` / `VENDOR_COLORS` 在 `SystemPage.tsx` 中映射
-- **路径别名**: `@/` → `src/`
-- **多入口构建**: `index.html` + `manage.html`，通过 Vite rollupOptions 手动分包
+- **厂商图标系统**: `packages/assets/src/icons/*.svg` — 单一颜色 SVG，通过 `@code-proxy/assets` 暴露
+- **路径别名**: `@/` → `apps/admin-panel/src/`，`@pages/*`、`@features/*` 与 `@code-proxy/*` 指向 monorepo 边界
+- **多入口构建**: `apps/admin-panel/index.html` + `apps/admin-panel/manage.html`，输出到根 `dist/`
 - **CSS**: Tailwind CSS v4 为主 + SCSS Modules (localsConvention: camelCase)
 - **开发代理**: Vite server proxy `/v0`, `/v1`, `/v1beta` → `localhost:8317` (后端)
+- **依赖边界**: `scripts/check-import-boundaries.mjs` 禁止旧 `@/modules/*`、旧 `@/lib/http/*` 和共享层反向依赖
 
 ### 状态管理
 
-Zustand Store (`src/stores/`)：
+Zustand Store (`apps/admin-panel/src/stores/`)：
+
 - `useThemeStore` — 主题 (亮/暗)
 - `useLanguageStore` — 语言
 - `useNotificationStore` — 通知

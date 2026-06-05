@@ -1,0 +1,248 @@
+import { formatNumber } from "../monitor-utils";
+import type { DailySeriesPoint } from "./types";
+
+export const createDailyTrendOption = (input: {
+  dailySeries: DailySeriesPoint[];
+  dailyLegendSelected: Record<string, boolean>;
+  legendKeys: {
+    input: string;
+    output: string;
+    requests: string;
+  };
+  labels: {
+    input: string;
+    output: string;
+    requests: string;
+    tokenAxis: string;
+    requestAxis: string;
+  };
+  isDark: boolean;
+  compact?: boolean;
+}): Record<string, unknown> => {
+  const points = input.dailySeries.filter(
+    (item) => item.requests > 0 || item.inputTokens > 0 || item.outputTokens > 0,
+  );
+  const visiblePoints = points.length > 0 ? points : input.dailySeries;
+
+  const x = visiblePoints.map((item) => item.label);
+  const requestY = visiblePoints.map((item) => item.requests);
+  const inputY = visiblePoints.map((item) => item.inputTokens);
+  const outputY = visiblePoints.map((item) => item.outputTokens);
+  const tokenTotals = visiblePoints.map((item) => item.inputTokens + item.outputTokens);
+
+  const formatTokenCompact = (value: number) => {
+    const abs = Math.abs(value);
+    if (abs >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
+    if (abs >= 1_000) return `${(value / 1_000).toFixed(1)}K`;
+    return String(Math.round(value));
+  };
+
+  const visibleCount = visiblePoints.length;
+  const barMaxWidth =
+    visibleCount <= 1
+      ? 56
+      : visibleCount <= 3
+        ? 44
+        : visibleCount <= 7
+          ? 36
+          : visibleCount <= 14
+            ? 28
+            : 18;
+
+  const hasInput = inputY.some((value) => value > 0);
+  const hasOutput = outputY.some((value) => value > 0);
+  const hasRequests = requestY.some((value) => value > 0);
+
+  const showInput = hasInput && (input.dailyLegendSelected[input.legendKeys.input] ?? true);
+  const showOutput = hasOutput && (input.dailyLegendSelected[input.legendKeys.output] ?? true);
+  const showRequests =
+    hasRequests && (input.dailyLegendSelected[input.legendKeys.requests] ?? true);
+
+  const tokenAxisAnchor =
+    showInput || showOutput
+      ? visiblePoints.map((item) => {
+          const candidates: number[] = [];
+          if (showInput) candidates.push(item.inputTokens);
+          if (showOutput) candidates.push(item.outputTokens);
+          return candidates.length > 0 ? Math.max(...candidates) : 0;
+        })
+      : tokenTotals;
+
+  const requestAxisAnchor = showRequests ? requestY : requestY.map(() => 0);
+
+  const tokenAxisMaxRaw = tokenAxisAnchor.reduce((acc, value) => Math.max(acc, value), 0);
+  const requestAxisMaxRaw = requestAxisAnchor.reduce((acc, value) => Math.max(acc, value), 0);
+  const tokenAxisMax = Math.max(1, Math.ceil(tokenAxisMaxRaw * 1.1));
+  const requestAxisMax = Math.max(1, Math.ceil(requestAxisMaxRaw * 1.1));
+
+  const series: Array<Record<string, unknown>> = [];
+  const inputSeries = showInput
+    ? {
+        name: input.labels.input,
+        type: "bar",
+        yAxisIndex: 0,
+        barMaxWidth,
+        itemStyle: { borderRadius: 0, color: "rgba(196,181,253,0.88)" },
+        emphasis: { focus: "series" },
+        data: inputY,
+      }
+    : null;
+
+  const outputSeries = showOutput
+    ? {
+        name: input.labels.output,
+        type: "bar",
+        yAxisIndex: 0,
+        barMaxWidth,
+        itemStyle: { borderRadius: [4, 4, 0, 0], color: "rgba(110,231,183,0.88)" },
+        emphasis: { focus: "series" },
+        data: outputY,
+      }
+    : null;
+
+  if (inputSeries && outputSeries) {
+    const inputMax = inputY.reduce((acc, value) => Math.max(acc, value), 0);
+    const outputMax = outputY.reduce((acc, value) => Math.max(acc, value), 0);
+    const inputSum = inputY.reduce((acc, value) => acc + value, 0);
+    const outputSum = outputY.reduce((acc, value) => acc + value, 0);
+    const inputSmaller = inputMax === outputMax ? inputSum <= outputSum : inputMax <= outputMax;
+    const front = inputSmaller ? inputSeries : outputSeries;
+    const back = inputSmaller ? outputSeries : inputSeries;
+    series.push({ ...back, z: 2 });
+    series.push({ ...front, z: 3, barGap: "-100%" });
+  } else if (inputSeries) {
+    series.push({ ...inputSeries, z: 2 });
+  } else if (outputSeries) {
+    series.push({ ...outputSeries, z: 2 });
+  }
+
+  if (showRequests) {
+    series.push({
+      name: input.labels.requests,
+      type: "line",
+      yAxisIndex: 1,
+      smooth: true,
+      symbol: "circle",
+      symbolSize: 7,
+      lineStyle: { width: 3, color: "#3b82f6" },
+      itemStyle: { color: "#3b82f6" },
+      data: requestY,
+      z: 10,
+    });
+  }
+
+  series.push({
+    name: "__token_axis__",
+    type: "line",
+    yAxisIndex: 0,
+    data: tokenAxisAnchor,
+    showSymbol: false,
+    silent: true,
+    tooltip: { show: false },
+    emphasis: { disabled: true },
+    lineStyle: { opacity: 0 },
+    itemStyle: { opacity: 0 },
+  });
+
+  series.push({
+    name: "__request_axis__",
+    type: "line",
+    yAxisIndex: 1,
+    data: requestAxisAnchor,
+    showSymbol: false,
+    silent: true,
+    tooltip: { show: false },
+    emphasis: { disabled: true },
+    lineStyle: { opacity: 0 },
+    itemStyle: { opacity: 0 },
+  });
+
+  const compact = input.compact ?? false;
+
+  return {
+    backgroundColor: "transparent",
+    color: ["rgba(196,181,253,0.88)", "rgba(110,231,183,0.88)", "#3b82f6"],
+    tooltip: {
+      trigger: "axis",
+      axisPointer: { type: "shadow" },
+      renderMode: "html",
+      appendToBody: true,
+      confine: true,
+      borderWidth: 0,
+      backgroundColor: "rgba(15, 23, 42, 0.92)",
+      textStyle: { color: "#fff" },
+      extraCssText: "z-index: 10000;",
+    },
+    legend: {
+      show: false,
+    },
+    grid: compact
+      ? { left: 4, right: 4, top: 12, bottom: 34, containLabel: true }
+      : { left: 12, right: 12, top: 18, bottom: 48, containLabel: true },
+    xAxis: {
+      type: "category",
+      data: x,
+      axisTick: { show: false },
+      axisLabel: compact
+        ? { margin: 10, hideOverlap: true, fontSize: 10 }
+        : { margin: 14, hideOverlap: true },
+      axisLine: {
+        lineStyle: {
+          color: input.isDark ? "rgba(255,255,255,0.16)" : "rgba(148, 163, 184, 0.55)",
+        },
+      },
+    },
+    yAxis: [
+      {
+        type: "value",
+        min: 0,
+        max: tokenAxisMax,
+        axisLabel: compact
+          ? {
+              formatter: (value: number) => formatTokenCompact(value),
+              margin: 4,
+              width: 36,
+              overflow: "truncate",
+              fontSize: 10,
+            }
+          : {
+              formatter: (value: number) => formatTokenCompact(value),
+              margin: 6,
+              width: 56,
+              overflow: "truncate",
+            },
+        splitNumber: 4,
+        splitLine: {
+          lineStyle: {
+            color: input.isDark ? "rgba(255,255,255,0.08)" : "rgba(148, 163, 184, 0.25)",
+          },
+        },
+      },
+      {
+        type: "value",
+        min: 0,
+        max: requestAxisMax,
+        axisLabel: compact
+          ? {
+              formatter: (value: number) => formatNumber(value),
+              margin: 4,
+              width: 36,
+              overflow: "truncate",
+              fontSize: 10,
+            }
+          : {
+              formatter: (value: number) => formatNumber(value),
+              margin: 6,
+              width: 56,
+              overflow: "truncate",
+            },
+        splitNumber: 4,
+        splitLine: { show: false },
+      },
+    ],
+    series,
+    animationEasing: "cubicOut" as const,
+    animationDuration: 520,
+    animationDurationUpdate: 360,
+  };
+};

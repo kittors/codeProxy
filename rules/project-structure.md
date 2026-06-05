@@ -30,6 +30,12 @@ summary: 目录职责、依赖方向与最小模块化策略
 
 - 公共层（如 `packages/*` / `lib/*`）不得反向依赖应用/业务层。
 - 模块间依赖优先通过稳定入口（如 `index.ts` / `__init__.py` / `mod.rs`）导出，避免跨层深路径导入。
+- 前端 monorepo 依赖方向以 `apps/admin-panel -> pages -> features -> packages` 为主线：
+  `apps/admin-panel` 可消费 pages/features/packages，`pages` 可消费 features/packages，
+  `features` 应优先消费 packages，`packages` 只能消费 packages。
+- 新增跨页面共享能力时，纯逻辑放 `packages/domain`，HTTP/DTO 放 `packages/api-client`，
+  UI primitives 放 `packages/ui`，带流程状态的 UI 能力放 `features/*`。
+- 不允许新增 `@/modules/*` 或 `@/lib/http/*` import；提交前必须运行 `bun run boundary:imports`。
 
 ### 3) 单文件复杂度控制（建议）
 
@@ -39,6 +45,6 @@ summary: 目录职责、依赖方向与最小模块化策略
 
 <!-- PROJECT-OVERRIDES:START -->
 
-- `src/modules/update/`：登录后全局自动更新体验，包含更新检查、release notes 二次确认、触发更新与心跳等待。只能依赖 `src/lib/http` 与通用 UI 组件，不反向耦合具体页面。
+- `apps/admin-panel/src/app/update/`：登录后全局自动更新体验，包含更新检查、release notes 二次确认、触发更新与心跳等待。只能依赖 `packages/api-client` 与通用 UI 组件，不反向耦合具体页面。
 
 <!-- PROJECT-OVERRIDES:END -->

@@ -1,0 +1,23 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "ignoreDeprecations": "5.0",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@app/*": ["./src/app/*"],
+      "@pages/*": ["../../pages/*"],
+      "@features/*": ["../../features/*"],
+      "@code-proxy/ui": ["../../packages/ui/src/index.ts"],
+      "@code-proxy/ui/*": ["../../packages/ui/src/*"],
+      "@code-proxy/api-client": ["../../packages/api-client/src/index.ts"],
+      "@code-proxy/api-client/*": ["../../packages/api-client/src/*"],
+      "@code-proxy/domain": ["../../packages/domain/src/index.ts"],
+      "@code-proxy/domain/*": ["../../packages/domain/src/*"],
+      "@code-proxy/assets": ["../../packages/assets/src/index.ts"],
+      "@code-proxy/assets/*": ["../../packages/assets/src/*"],
+      "@code-proxy/i18n": ["../../packages/i18n/src/index.ts"]
+    }
+  },
+  "include": ["src", "../../pages", "../../features", "../../packages", "vite.config.ts"]
+}
