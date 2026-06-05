@@ -16,7 +16,9 @@ test("Login: successful sign in persists auth snapshot and restores monitor rout
     localStorage.removeItem("code-proxy-admin-auth");
   });
 
-  await page.getByRole("textbox", { name: "Eg: https://example.com:8317" }).fill("http://127.0.0.1:8317");
+  await page
+    .getByRole("textbox", { name: "Eg: https://example.com:8317" })
+    .fill("http://127.0.0.1:8317");
   await page.getByRole("textbox", { name: "Enter MANAGEMENT_KEY" }).fill("test-management-key");
   await page.getByRole("checkbox", { name: "Remember password" }).check();
   await page.getByRole("button", { name: "Login" }).click();

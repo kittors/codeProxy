@@ -10,7 +10,7 @@
 - 复杂模块必须采用：
 
 ```text
-modules/<feature>/
+pages/<feature>/
   <Feature>Page.tsx
   components/
   hooks/
@@ -29,8 +29,8 @@ modules/<feature>/
 
 ## API 与类型
 
-- 运行期网络层只使用 `src/lib/http/*`。
-- 后端契约类型只使用 `src/lib/http/types.ts`。
+- 运行期网络层只使用 `packages/api-client` 与 `@code-proxy/api-client`。
+- 后端契约类型只使用 `packages/api-client` 导出的类型。
 - 禁止重新引入旧 `src/services/api/*`、`useAuthStore`、`useConfigStore`、`useModelsStore`、`secureStorage`。
 - 页面内禁止直接拼复杂 API 请求；请求编排必须进入 API 层或 feature hooks。
 - 迁移期遗留目录必须在目录级说明“禁止新增依赖”和下线目标。

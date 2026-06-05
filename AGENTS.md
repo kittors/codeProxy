@@ -8,26 +8,22 @@
 ## 项目概览（自动识别）
 
 > **注意**：本项目（codeProxy）是 **CliProxy** 项目的 React 前端管理面板。CliProxy 还包含一个 Go 后端代理服务器 **CliRelay**（在 `CliRelay/` 目录下，独立的 git 仓库）。
+>
 > - 项目整体规范请阅读 `CLAUDE.md`（本仓库根目录）
 > - CliRelay 仓库有其独立的 `AGENTS.md` 规范
 
 - 技术栈：React 19.2 + Vite + Bun + Tailwind CSS v4 + oxlint + oxfmt
-- 关键模块：
-- `src/app/`：路由与守卫
-- `src/lib/`：常量、连接处理、HTTP 客户端与 API
-- `src/modules/auth/`：鉴权 Provider
-- `src/modules/dashboard/`：仪表盘
-- `src/modules/layout/`：后台布局
-- `src/modules/login/`：登录页
-- `src/modules/monitor/`：监控中心
-- `src/modules/system/`：系统信息
-- `src/modules/update/`：自动更新提示、release notes 二次确认与更新心跳等待
-- `src/modules/proxies/`：代理池管理页面与代理检测交互
-- `src/modules/ui/`：复合 UI 容器
-- `src/modules/usage/`：用量统计（当前复用监控视图）
-- `src/styles/`：全局样式与主题变量
-- `management.html` + `src/management.tsx`：历史多入口文件（默认不再构建产物；优先以 `index.html` 为准）
-- `src/pages/`、`src/components/`、`src/services/`、`src/stores/`、`src/i18n/`：参考项目业务功能实现（从上游移植，用于页面/路由/交互对齐）
+- 关键结构：
+- `apps/admin-panel/`：Vite 应用壳、路由、守卫、全局 providers、stores 与样式入口
+- `pages/`：路由级页面，页面私有组件/hooks/domain/types 与 `route.tsx`
+- `features/`：跨页面复用但包含 UI/流程状态的能力，例如日志内容查看、OAuth、路由配置编辑器
+- `packages/ui/`：共享 UI primitives、overlays、DataTable、charts、theme
+- `packages/api-client/`：Management API client、endpoint DTO 与请求辅助
+- `packages/domain/`：纯业务 normalize/format/pricing/quota/helpers
+- `packages/assets/`：厂商图标和共享静态资源
+- `packages/i18n/`：i18next 初始化与 locale 资源
+- `tooling/`：Vite 插件和构建期工具
+- `scripts/check-import-boundaries.mjs`：monorepo 依赖边界守卫
 
 ## 0. 必读与优先级（冲突时从高到低）
 
@@ -91,18 +87,18 @@
 
 ## 6. 关键路径速查（按需补全）
 
-- 应用入口：`src/main.tsx`
-- 历史多入口脚本：`src/management.tsx`（默认不再构建产物）
-- 主要模块目录：`src/`
-- OAuth 登录弹窗：`src/modules/oauth/OAuthLoginDialog.tsx`
-- CC Switch 导入：`src/modules/ccswitch/`（deeplink 协议生成与复用入口组件）
-- 自动更新提示：`src/modules/update/AutoUpdatePrompt.tsx`
-- 通用数据表格：`src/modules/ui/DataTable.tsx`（有限行表格壳，支持列宽拖拽与按 `tableId` 的 localStorage 缓存）
-- 模型配置管理：`src/modules/models/ModelsPage.tsx`（`/manage/models`，数据库模型配置与计价规则）
-- 代理池管理：`src/modules/proxies/ProxiesPage.tsx`（`/proxies`，集中维护可复用出站代理）
-- API Key 权限配置：`src/modules/api-key-permissions/ApiKeyPermissionsPage.tsx`（`/api-key-permissions`，维护可复用权限配置，供 API Key 弹窗选择）
-- 关键配置文件：`package.json`, `tsconfig.json`, `vite.config.ts`
-- 入口文件：`index.html`（默认构建）
+- 应用入口：`apps/admin-panel/src/main.tsx`
+- 管理入口：`apps/admin-panel/src/manage-entry.tsx`
+- 路由聚合：`pages/registry.ts`
+- OAuth 登录弹窗：`features/oauth-login/components/OAuthLoginDialog.tsx`
+- CC Switch 导入：`features/ccswitch-import/`
+- 自动更新提示：`apps/admin-panel/src/app/update/AutoUpdatePrompt.tsx`
+- 通用数据表格：`packages/ui/src/data-table/DataTable.tsx`
+- 模型配置管理：`pages/models/ModelsPage.tsx`（`/manage/models`，数据库模型配置与计价规则）
+- 代理池管理：`pages/proxies/ProxiesPage.tsx`（`/proxies`，集中维护可复用出站代理）
+- API Key 权限配置：`pages/api-key-permissions/ApiKeyPermissionsPage.tsx`
+- 关键配置文件：`package.json`, `tsconfig.base.json`, `tsconfig.json`, `apps/admin-panel/vite.config.ts`
+- 入口文件：`apps/admin-panel/index.html` 与 `apps/admin-panel/manage.html`
 
 ## 7. 项目内 Skills（可选）
 

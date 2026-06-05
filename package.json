@@ -2,18 +2,25 @@
   "name": "code-proxy-admin",
   "version": "0.1.0",
   "private": true,
+  "workspaces": [
+    "apps/*",
+    "pages",
+    "features/*",
+    "packages/*"
+  ],
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc --noEmit && vite build",
-    "preview": "vite preview",
+    "dev": "bun run --filter @code-proxy/admin-panel dev",
+    "build": "bun run --filter @code-proxy/admin-panel build",
+    "preview": "bun run --filter @code-proxy/admin-panel preview",
     "lint": "oxlint .",
     "format": "oxfmt .",
-    "check": "bun run lint && bun run build && bun run bundle:diff",
+    "check": "bun run lint && bun run boundary:imports && bun run build && bun run bundle:diff",
+    "boundary:imports": "node scripts/check-import-boundaries.mjs",
     "bundle:diff": "node scripts/bundle-diff.mjs",
-    "test": "vitest run",
-    "test:ci": "vitest run --no-file-parallelism --maxWorkers=1 --testTimeout=30000 --reporter=dot",
-    "test:watch": "vitest",
+    "test": "bun run --filter @code-proxy/admin-panel test",
+    "test:ci": "bun run --filter @code-proxy/admin-panel test:ci",
+    "test:watch": "bun run --filter @code-proxy/admin-panel test:watch",
     "e2e": "playwright test"
   },
   "dependencies": {

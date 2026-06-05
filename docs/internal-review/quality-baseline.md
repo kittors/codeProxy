@@ -49,13 +49,13 @@ bun run check
 
 基于最近一次 `bun run build`：
 
-| Chunk | Size | Gzip |
-| --- | ---: | ---: |
-| `vendor-echarts` | 1137.56 kB | 377.94 kB |
-| `vendor-markdown` | 779.40 kB | 270.17 kB |
-| `index` | 638.96 kB | 187.23 kB |
-| `ConfigPage` | 152.30 kB | 44.42 kB |
-| `AuthFilesPage` | 101.38 kB | 25.84 kB |
+| Chunk             |       Size |      Gzip |
+| ----------------- | ---------: | --------: |
+| `vendor-echarts`  | 1137.56 kB | 377.94 kB |
+| `vendor-markdown` |  779.40 kB | 270.17 kB |
+| `index`           |  638.96 kB | 187.23 kB |
+| `ConfigPage`      |  152.30 kB |  44.42 kB |
+| `AuthFilesPage`   |  101.38 kB |  25.84 kB |
 
 ## 当前大文件阈值
 

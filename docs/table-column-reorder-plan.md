@@ -101,21 +101,21 @@ const NON_RESIZABLE_COLUMN_KEYS = new Set(["select", "action", "actions"]);
 
 当前仓库内 `DataTable` 使用集中在管理面板核心页面，已配置 `tableId` 的业务表格如下：
 
-| tableId | 位置 | 特征 |
-| --- | --- | --- |
-| `api-keys` | `src/modules/api-keys/ApiKeysPage.tsx` | 宽表格，含状态列、多个权限列、`actions` 操作列 |
-| `api-key-permission-profiles` | `src/modules/api-key-permissions/ApiKeyPermissionsPage.tsx` | 权限模板表，含 `actions` |
-| `auth-files` | `src/modules/auth-files/components/AuthFilesFilesTab.tsx` | 宽表格，含 `select`、quota headerRender、`actions` |
-| `ccswitch-import-configs` | `src/modules/ccswitch/CcSwitchImportSettingsPage.tsx` | 导入配置表 |
-| `routing-channel-groups` | `src/modules/channel-groups/RoutingConfigEditor.tsx` | 渠道组表，含操作列 |
-| `routing-channel-group-members` | `src/modules/channel-groups/RoutingConfigEditor.tsx` | Modal 内 naturalFlow 表格，含输入框、操作列 |
-| `routing-model-options` | `src/modules/channel-groups/RoutingConfigEditor.tsx` | Modal 内模型选择表，含 `select` |
-| `image-generation-request-params` | `src/modules/image-generation/ImageGenerationPage.tsx` | 文档型参数表 |
-| `image-generation-response-schema` | `src/modules/image-generation/ImageGenerationPage.tsx` | 文档型响应 schema 表 |
-| `models-library` | `src/modules/models/ModelsPage.tsx` | 模型库表，可能含 `select` |
-| `model-configs` | `src/modules/models/ModelsPage.tsx` | 模型配置表，共用 modelColumns |
-| `request-logs` | `src/modules/monitor/RequestLogsPage.tsx` | 请求日志表，加载 overlay，横向滚动 |
-| `proxy-pool` | `src/modules/proxies/ProxiesPage.tsx` | 代理池表，含操作列 |
+| tableId                            | 位置                                                        | 特征                                               |
+| ---------------------------------- | ----------------------------------------------------------- | -------------------------------------------------- |
+| `api-keys`                         | `src/modules/api-keys/ApiKeysPage.tsx`                      | 宽表格，含状态列、多个权限列、`actions` 操作列     |
+| `api-key-permission-profiles`      | `src/modules/api-key-permissions/ApiKeyPermissionsPage.tsx` | 权限模板表，含 `actions`                           |
+| `auth-files`                       | `src/modules/auth-files/components/AuthFilesFilesTab.tsx`   | 宽表格，含 `select`、quota headerRender、`actions` |
+| `ccswitch-import-configs`          | `src/modules/ccswitch/CcSwitchImportSettingsPage.tsx`       | 导入配置表                                         |
+| `routing-channel-groups`           | `src/modules/channel-groups/RoutingConfigEditor.tsx`        | 渠道组表，含操作列                                 |
+| `routing-channel-group-members`    | `src/modules/channel-groups/RoutingConfigEditor.tsx`        | Modal 内 naturalFlow 表格，含输入框、操作列        |
+| `routing-model-options`            | `src/modules/channel-groups/RoutingConfigEditor.tsx`        | Modal 内模型选择表，含 `select`                    |
+| `image-generation-request-params`  | `src/modules/image-generation/ImageGenerationPage.tsx`      | 文档型参数表                                       |
+| `image-generation-response-schema` | `src/modules/image-generation/ImageGenerationPage.tsx`      | 文档型响应 schema 表                               |
+| `models-library`                   | `src/modules/models/ModelsPage.tsx`                         | 模型库表，可能含 `select`                          |
+| `model-configs`                    | `src/modules/models/ModelsPage.tsx`                         | 模型配置表，共用 modelColumns                      |
+| `request-logs`                     | `src/modules/monitor/RequestLogsPage.tsx`                   | 请求日志表，加载 overlay，横向滚动                 |
+| `proxy-pool`                       | `src/modules/proxies/ProxiesPage.tsx`                       | 代理池表，含操作列                                 |
 
 `SpecTable` 这种封装组件通过 `tableId={tableId}` 透传，也应自动获得独立缓存。
 
@@ -372,7 +372,9 @@ function readStoredColumnOrder(tableId?: string): ColumnOrder {
     if (!raw) return [];
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed)) return [];
-    return parsed.filter((value): value is string => typeof value === "string" && value.trim() !== "");
+    return parsed.filter(
+      (value): value is string => typeof value === "string" && value.trim() !== "",
+    );
   } catch {
     return [];
   }
@@ -408,10 +410,7 @@ function writeStoredColumnOrder(tableId: string | undefined, order: ColumnOrder)
 建议函数：
 
 ```ts
-function normalizeColumnOrder<T>(
-  columns: DataTableColumn<T>[],
-  storedOrder: ColumnOrder,
-) {
+function normalizeColumnOrder<T>(columns: DataTableColumn<T>[], storedOrder: ColumnOrder) {
   const validKeys = new Set(columns.map((column) => column.key));
   const seen = new Set<string>();
   const storedValid = storedOrder.filter((key) => {
@@ -736,29 +735,32 @@ useEffect(() => {
 ### 9.7 pointerup 提交
 
 ```ts
-const finishColumnReorder = useCallback((event?: PointerEvent) => {
-  const active = columnReorderRef.current;
-  if (!active) return;
-  if (event && active.pointerId !== event.pointerId) return;
+const finishColumnReorder = useCallback(
+  (event?: PointerEvent) => {
+    const active = columnReorderRef.current;
+    if (!active) return;
+    if (event && active.pointerId !== event.pointerId) return;
 
-  clearColumnReorderTimer(active);
-  columnReorderRef.current = null;
-  setReorderPreview(null);
-  document.body.style.cursor = "";
-  document.body.style.userSelect = "";
-  document.documentElement.style.cursor = "";
+    clearColumnReorderTimer(active);
+    columnReorderRef.current = null;
+    setReorderPreview(null);
+    document.body.style.cursor = "";
+    document.body.style.userSelect = "";
+    document.documentElement.style.cursor = "";
 
-  if (!active.activated || !reorderPreviewRef.current) return;
+    if (!active.activated || !reorderPreviewRef.current) return;
 
-  setColumnOrder((prev) => {
-    const normalizedPrev = normalizeColumnOrder(columnsRef.current, prev);
-    const fromIndex = normalizedPrev.indexOf(active.columnKey);
-    const next = moveColumnKey(normalizedPrev, fromIndex, reorderPreviewRef.current.toIndex);
-    if (next.join("\u0000") === normalizedPrev.join("\u0000")) return prev;
-    writeStoredColumnOrder(tableId, next);
-    return next;
-  });
-}, [tableId]);
+    setColumnOrder((prev) => {
+      const normalizedPrev = normalizeColumnOrder(columnsRef.current, prev);
+      const fromIndex = normalizedPrev.indexOf(active.columnKey);
+      const next = moveColumnKey(normalizedPrev, fromIndex, reorderPreviewRef.current.toIndex);
+      if (next.join("\u0000") === normalizedPrev.join("\u0000")) return prev;
+      writeStoredColumnOrder(tableId, next);
+      return next;
+    });
+  },
+  [tableId],
+);
 ```
 
 建议用 `reorderPreviewRef` 保存最新 preview，避免 pointerup 读取 stale state。
@@ -943,7 +945,9 @@ test("reorders header and body cells after dragging a column handle", async () =
 
   const handle = container.querySelector("[data-vt-column-reorder-handle]") as HTMLButtonElement;
   fireEvent.pointerDown(handle, { button: 0, pointerId: 1, clientX: 20, clientY: 20 });
-  window.dispatchEvent(new PointerEvent("pointermove", { pointerId: 1, clientX: 220, clientY: 20 }));
+  window.dispatchEvent(
+    new PointerEvent("pointermove", { pointerId: 1, clientX: 220, clientY: 20 }),
+  );
   window.dispatchEvent(new PointerEvent("pointerup", { pointerId: 1, clientX: 220, clientY: 20 }));
 
   await waitFor(() => {
@@ -951,9 +955,9 @@ test("reorders header and body cells after dragging a column handle", async () =
     expect(headers.join("|")).toContain("ID|Name");
   });
 
-  expect(window.localStorage.getItem("codeProxy.dataTable.columnOrder.v1.test-column-reorder")).toBe(
-    JSON.stringify(["id", "name"]),
-  );
+  expect(
+    window.localStorage.getItem("codeProxy.dataTable.columnOrder.v1.test-column-reorder"),
+  ).toBe(JSON.stringify(["id", "name"]));
 });
 ```
 
@@ -984,9 +988,12 @@ test("normalizes stale column order cache against current columns", () => {
 
   const colElements = container.querySelectorAll("col");
   expect(colElements).toHaveLength(2);
-  expect(screen.getAllByRole("columnheader").map((node) => node.textContent).join("|")).toContain(
-    "ID|Name",
-  );
+  expect(
+    screen
+      .getAllByRole("columnheader")
+      .map((node) => node.textContent)
+      .join("|"),
+  ).toContain("ID|Name");
 });
 ```
 

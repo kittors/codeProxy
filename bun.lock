@@ -49,6 +49,126 @@
         "vitest": "^4.0.18",
       },
     },
+    "apps/admin-panel": {
+      "name": "@code-proxy/admin-panel",
+      "version": "0.1.0",
+      "dependencies": {
+        "@radix-ui/react-dropdown-menu": "^2.1.16",
+        "@tailwindcss/typography": "^0.5.19",
+        "@tanstack/react-virtual": "^3.13.18",
+        "axios": "^1.13.2",
+        "chart.js": "^4.5.1",
+        "echarts": "^6.0.0",
+        "echarts-for-react": "^3.0.6",
+        "framer-motion": "^12.34.3",
+        "goey-toast": "^0.2.2",
+        "gsap": "^3.14.2",
+        "i18next": "^25.7.1",
+        "lucide-react": "0.563.0",
+        "react": "19.2.4",
+        "react-chartjs-2": "^5.3.1",
+        "react-dom": "19.2.4",
+        "react-i18next": "^16.4.0",
+        "react-markdown": "^10.1.0",
+        "react-router-dom": "7.13.0",
+        "react-syntax-highlighter": "^16.1.1",
+        "remark-gfm": "^4.0.1",
+        "yaml": "^2.8.1",
+        "zustand": "^5.0.9",
+      },
+      "devDependencies": {
+        "@playwright/test": "^1.58.2",
+        "@tailwindcss/vite": "4.1.18",
+        "@testing-library/jest-dom": "^6.9.1",
+        "@testing-library/react": "^16.3.2",
+        "@testing-library/user-event": "^14.6.1",
+        "@types/node": "^25.4.0",
+        "@types/react": "19.2.13",
+        "@types/react-dom": "19.2.3",
+        "@types/react-syntax-highlighter": "^15.5.13",
+        "@vitejs/plugin-react": "5.1.4",
+        "jsdom": "^28.1.0",
+        "oxfmt": "0.31.0",
+        "oxlint": "1.46.0",
+        "sass": "^1.94.2",
+        "tailwindcss": "4.1.18",
+        "typescript": "5.9.3",
+        "vite": "7.3.1",
+        "vitest": "^4.0.18",
+      },
+    },
+    "packages/api-client": {
+      "name": "@code-proxy/api-client",
+      "version": "0.1.0",
+      "dependencies": {
+        "axios": "^1.13.2",
+      },
+    },
+    "packages/assets": {
+      "name": "@code-proxy/assets",
+      "version": "0.1.0",
+      "dependencies": {
+        "react": "19.2.4",
+      },
+      "devDependencies": {
+        "@types/react": "19.2.13",
+      },
+    },
+    "packages/domain": {
+      "name": "@code-proxy/domain",
+      "version": "0.1.0",
+      "dependencies": {
+        "chart.js": "^4.5.1",
+      },
+      "devDependencies": {
+        "@types/node": "^25.4.0",
+      },
+    },
+    "packages/i18n": {
+      "name": "@code-proxy/i18n",
+      "version": "0.1.0",
+      "dependencies": {
+        "i18next": "^25.7.1",
+        "react-i18next": "^16.4.0",
+      },
+    },
+    "packages/test-utils": {
+      "name": "@code-proxy/test-utils",
+      "version": "0.1.0",
+    },
+    "packages/ui": {
+      "name": "@code-proxy/ui",
+      "version": "0.1.0",
+      "dependencies": {
+        "@tanstack/react-virtual": "^3.13.18",
+        "echarts": "^6.0.0",
+        "echarts-for-react": "^3.0.6",
+        "framer-motion": "^12.34.3",
+        "goey-toast": "^0.2.2",
+        "lucide-react": "0.563.0",
+        "react": "19.2.4",
+        "react-dom": "19.2.4",
+        "react-i18next": "^16.4.0",
+        "react-router-dom": "7.13.0",
+      },
+      "devDependencies": {
+        "@types/react": "19.2.13",
+        "@types/react-dom": "19.2.3",
+      },
+    },
+    "pages": {
+      "name": "@code-proxy/pages",
+      "version": "0.1.0",
+      "dependencies": {
+        "react": "19.2.4",
+        "react-dom": "19.2.4",
+        "react-router-dom": "7.13.0",
+      },
+      "devDependencies": {
+        "@types/react": "19.2.13",
+        "@types/react-dom": "19.2.3",
+      },
+    },
   },
   "packages": {
     "@acemir/cssom": ["@acemir/cssom@0.9.31", "", {}, "sha512-ZnR3GSaH+/vJ0YlHau21FjfLYjMpYVIzTD8M8vIEQvIGxeOXyXdzCI140rrCY862p/C/BbzWsjc1dgnM9mkoTA=="],
@@ -102,6 +222,22 @@
     "@babel/types": ["@babel/types@7.29.0", "", { "dependencies": { "@babel/helper-string-parser": "^7.27.1", "@babel/helper-validator-identifier": "^7.28.5" } }, "sha512-LwdZHpScM4Qz8Xw2iKSzS+cfglZzJGvofQICy7W7v4caru4EaAmyUuO6BGrbyQ2mYV11W0U8j5mBhd14dd3B0A=="],
 
     "@bramus/specificity": ["@bramus/specificity@2.4.2", "", { "dependencies": { "css-tree": "^3.0.0" }, "bin": { "specificity": "bin/cli.js" } }, "sha512-ctxtJ/eA+t+6q2++vj5j7FYX3nRu311q1wfYH3xjlLOsczhlhxAg2FWNUXhpGvAw3BWo1xBcvOV6/YLc2r5FJw=="],
+
+    "@code-proxy/admin-panel": ["@code-proxy/admin-panel@workspace:apps/admin-panel"],
+
+    "@code-proxy/api-client": ["@code-proxy/api-client@workspace:packages/api-client"],
+
+    "@code-proxy/assets": ["@code-proxy/assets@workspace:packages/assets"],
+
+    "@code-proxy/domain": ["@code-proxy/domain@workspace:packages/domain"],
+
+    "@code-proxy/i18n": ["@code-proxy/i18n@workspace:packages/i18n"],
+
+    "@code-proxy/pages": ["@code-proxy/pages@workspace:pages"],
+
+    "@code-proxy/test-utils": ["@code-proxy/test-utils@workspace:packages/test-utils"],
+
+    "@code-proxy/ui": ["@code-proxy/ui@workspace:packages/ui"],
 
     "@csstools/color-helpers": ["@csstools/color-helpers@6.0.2", "", {}, "sha512-LMGQLS9EuADloEFkcTBR3BwV/CGHV7zyDxVRtVDTwdI2Ca4it0CCVTT9wCkxSgokjE5Ho41hEPgb8OEUwoXr6Q=="],
 

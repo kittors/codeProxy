@@ -6,13 +6,7 @@ import { basename, dirname, join, resolve } from "node:path";
 const root = resolve(import.meta.dirname, "..");
 const distAssetsDir = join(root, "dist", "assets");
 const baselinePath = join(root, "docs", "internal-review", "bundle-baseline.md");
-const defaultOutputPath = resolve(
-  root,
-  "..",
-  ".omx",
-  "logs",
-  "phase-4-bundle-diff.md",
-);
+const defaultOutputPath = resolve(root, "..", ".omx", "logs", "phase-4-bundle-diff.md");
 
 const args = new Map();
 for (let index = 2; index < process.argv.length; index += 1) {
@@ -48,7 +42,9 @@ const findCurrentChunks = (baselineKeys) => {
     const path = join(distAssetsDir, name);
     if (!statSync(path).isFile()) continue;
     const stem =
-      baselineKeys.find((key) => name === key || name.startsWith(`${key}-`) || name.startsWith(`${key}.`)) ??
+      baselineKeys.find(
+        (key) => name === key || name.startsWith(`${key}-`) || name.startsWith(`${key}.`),
+      ) ??
       (() => {
         const withoutExt = name.replace(/\.(?:[cm]?js|css|svg)$/, "");
         const separatorIndex = withoutExt.lastIndexOf("-");
@@ -116,7 +112,9 @@ const markdown = [
     return `| \`${row.key}\` | ${formatKb(row.now.sizeKb)} | ${formatKb(row.now.gzipKb)} | ${formatKb(row.base.gzipKb)} | ${formatDelta(row.deltaGzip)} | ${status} |`;
   }),
   "",
-  missing.length ? `Missing tracked chunks: ${missing.map((key) => `\`${key}\``).join(", ")}` : "Missing tracked chunks: none",
+  missing.length
+    ? `Missing tracked chunks: ${missing.map((key) => `\`${key}\``).join(", ")}`
+    : "Missing tracked chunks: none",
   "",
   failures.length
     ? `Result: FAIL (${failures.length} tracked chunk budget issue${failures.length === 1 ? "" : "s"})`

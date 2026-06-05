@@ -70,35 +70,41 @@ test("Request Logs: opens full detail content and switches output raw view", asy
     });
   });
 
-  await page.route("**/v0/management/usage/logs/101/content?part=input&format=json", async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({
-        id: 101,
-        model: "gpt-4.1",
-        part: "input",
-        content: JSON.stringify({
-          messages: [{ role: "user", content: "hello input payload" }],
+  await page.route(
+    "**/v0/management/usage/logs/101/content?part=input&format=json",
+    async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          id: 101,
+          model: "gpt-4.1",
+          part: "input",
+          content: JSON.stringify({
+            messages: [{ role: "user", content: "hello input payload" }],
+          }),
         }),
-      }),
-    });
-  });
+      });
+    },
+  );
 
-  await page.route("**/v0/management/usage/logs/101/content?part=output&format=json", async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({
-        id: 101,
-        model: "gpt-4.1",
-        part: "output",
-        content: JSON.stringify({
-          choices: [{ message: { content: "hello output payload" } }],
+  await page.route(
+    "**/v0/management/usage/logs/101/content?part=output&format=json",
+    async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          id: 101,
+          model: "gpt-4.1",
+          part: "output",
+          content: JSON.stringify({
+            choices: [{ message: { content: "hello output payload" } }],
+          }),
         }),
-      }),
-    });
-  });
+      });
+    },
+  );
 
   await page.goto("/#/monitor/request-logs");
   await expect(page.getByRole("heading", { name: "Request Logs" }).first()).toBeVisible();
