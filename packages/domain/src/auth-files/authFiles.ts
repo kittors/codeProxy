@@ -812,12 +812,40 @@ export const TYPE_BADGE_CLASSES: Record<string, string> = {
   unknown: "bg-slate-50 text-slate-600 dark:bg-white/10 dark:text-white/70",
 };
 
+const KNOWN_AUTH_FILE_PROVIDER_KEYS = Object.keys(TYPE_BADGE_CLASSES)
+  .filter((key) => key !== "empty" && key !== "unknown")
+  .sort((left, right) => right.length - left.length);
+
+const trimAuthFileExtension = (name: string): string =>
+  String(name ?? "")
+    .trim()
+    .replace(/\.[^.]+$/u, "");
+
+const matchKnownAuthFileProviderKey = (value: string): string => {
+  const normalized = normalizeProviderKey(value);
+  if (!normalized) return "";
+  return (
+    KNOWN_AUTH_FILE_PROVIDER_KEYS.find(
+      (providerKey) => normalized === providerKey || normalized.startsWith(`${providerKey}-`),
+    ) ?? ""
+  );
+};
+
 export const resolveFileType = (file: AuthFileItem): string => {
   const type = typeof file.type === "string" ? file.type : "";
   const provider = typeof file.provider === "string" ? file.provider : "";
-  const fromName = String(file.name || "").split(".")[0] ?? "";
-  const candidate = normalizeProviderKey(type || provider || fromName);
-  return candidate || "unknown";
+  const directMatch =
+    matchKnownAuthFileProviderKey(type) || matchKnownAuthFileProviderKey(provider);
+  if (directMatch) return directMatch;
+
+  const explicitCandidate = normalizeProviderKey(type || provider);
+  if (explicitCandidate) return explicitCandidate;
+
+  const fromName = trimAuthFileExtension(String(file.name || ""));
+  const nameMatch = matchKnownAuthFileProviderKey(fromName);
+  if (nameMatch) return nameMatch;
+
+  return normalizeProviderKey(fromName) || "unknown";
 };
 
 export const resolveProviderLabel = (providerKey: string): string => {
@@ -863,7 +891,7 @@ const readCodexFilenameChannelName = (fileName: string): string => {
   const normalized = String(fileName ?? "")
     .trim()
     .toLowerCase();
-  const base = normalized.replace(/\.json$/u, "");
+  const base = trimAuthFileExtension(normalized);
   if (!base.startsWith("codex-")) return "";
   const rest = base.slice("codex-".length);
   if (!rest) return "";

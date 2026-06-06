@@ -26,6 +26,18 @@ const mocks = vi.hoisted(() => ({
     ],
   })),
   getEntityStats: vi.fn(async () => ({ source: [], auth_index: [] })),
+  getAuthFileTrend: vi.fn(async () => ({
+    auth_index: "auth-1",
+    days: 7,
+    hours: 5,
+    request_total: 3,
+    cycle_request_total: 2,
+    cycle_cost_total: 1.2345,
+    cycle_start: "2026-04-27T16:01:21Z",
+    daily_usage: [{ date: "2026-04-30", requests: 2 }],
+    hourly_usage: [{ hour: "2026-04-30 16:00", requests: 1 }],
+    quota_series: [],
+  })),
   getUsageLogs: vi.fn(async () => ({ items: [], total: 0, page: 1, size: 200 })),
   getAuthFileGroupTrend: vi.fn(async () => ({
     days: 7,
@@ -81,6 +93,7 @@ vi.mock("@code-proxy/api-client", async (importOriginal) => {
     usageApi: {
       ...mod.usageApi,
       getEntityStats: mocks.getEntityStats,
+      getAuthFileTrend: mocks.getAuthFileTrend,
       getUsageLogs: mocks.getUsageLogs,
       getAuthFileGroupTrend: mocks.getAuthFileGroupTrend,
       recordAuthFileQuotaSnapshot: mocks.recordAuthFileQuotaSnapshot,
@@ -149,6 +162,19 @@ describe("AuthFilesPage files table", () => {
     }));
     mocks.getEntityStats.mockReset();
     mocks.getEntityStats.mockImplementation(async () => ({ source: [], auth_index: [] }));
+    mocks.getAuthFileTrend.mockReset();
+    mocks.getAuthFileTrend.mockImplementation(async () => ({
+      auth_index: "auth-1",
+      days: 7,
+      hours: 5,
+      request_total: 3,
+      cycle_request_total: 2,
+      cycle_cost_total: 1.2345,
+      cycle_start: "2026-04-27T16:01:21Z",
+      daily_usage: [{ date: "2026-04-30", requests: 2 }],
+      hourly_usage: [{ hour: "2026-04-30 16:00", requests: 1 }],
+      quota_series: [],
+    }));
     mocks.getUsageLogs.mockReset();
     mocks.getUsageLogs.mockImplementation(async () => ({
       items: [],
@@ -2411,6 +2437,47 @@ describe("AuthFilesPage files table", () => {
       ).not.toBeInTheDocument(),
     );
     await waitFor(() => expect(screen.getByTestId("auth-files-cards")).toHaveTextContent(/d left/));
+  });
+
+  test("opens usage trend cards for codex files inferred from dotted email file names", async () => {
+    mocks.list.mockImplementation(async () => ({
+      files: [
+        {
+          name: "codex-pcamtu927@gmail.com-plus.json",
+          type: "codex",
+          auth_index: "auth-1",
+          size: 1024,
+          modified: Date.now(),
+          disabled: false,
+        },
+      ],
+    }));
+    mocks.downloadText.mockImplementation(async () => JSON.stringify({ type: "codex" }, null, 2));
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    const cards = await screen.findByTestId("auth-files-cards");
+    expect(cards).toHaveTextContent("pcamtu927@gmail.com");
+
+    fireEvent.click(within(cards).getByRole("button", { name: "View" }));
+
+    const dialog = await screen.findByRole("dialog", {
+      name: "View: codex-pcamtu927@gmail.com-plus.json",
+    });
+    expect(within(dialog).getByRole("tab", { name: "Usage" })).toBeInTheDocument();
+    expect(await within(dialog).findByText("Current cycle cost")).toBeInTheDocument();
+    expect(within(dialog).getByText("$1.2345")).toBeInTheDocument();
+    expect(mocks.getAuthFileTrend).toHaveBeenCalledWith("auth-1", { days: 7, hours: 5 });
   });
 
   test("sets model owner group from an icon modal after confirmation", async () => {

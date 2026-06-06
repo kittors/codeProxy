@@ -154,6 +154,19 @@ describe("AuthFileDetailModal", () => {
     expect(screen.getByRole("button", { name: "Download" })).toBeEnabled();
   });
 
+  test("keeps the usage cost card visible for codex files inferred from dotted email file names", () => {
+    renderDetailModal({
+      detailFile: {
+        name: "codex-pcamtu927@gmail.com-plus.json",
+        size: 256,
+      },
+    });
+
+    expect(screen.getByRole("tab", { name: "Usage" })).toBeInTheDocument();
+    expect(screen.getByText("Current cycle cost")).toBeInTheDocument();
+    expect(screen.getByText("$1.2345")).toBeInTheDocument();
+  });
+
   test("keeps the rendered trend visible while a background refresh is running", () => {
     renderDetailModal({ detailTrendLoading: true });
 

@@ -15,6 +15,7 @@ import {
   resolveAuthFilePlanType,
   resolveAuthFileSupplementalTags,
   resolveAuthFileSubscriptionStatus,
+  resolveFileType,
   resolveAuthFileStats,
   sanitizeAuthFilesForCache,
   shouldShowAuthFileDisplayTag,
@@ -215,6 +216,15 @@ describe("Auth Files helper coverage", () => {
     } satisfies AuthFileItem;
 
     expect(resolveAuthFileDisplayName(file)).toBe("alpha@example.test");
+  });
+
+  test("infers the codex provider from file names that include dotted emails", () => {
+    const file = {
+      name: "codex-pcamtu927@gmail.com-plus.json",
+    } satisfies AuthFileItem;
+
+    expect(resolveFileType(file)).toBe("codex");
+    expect(resolveAuthFileDisplayName(file)).toBe("pcamtu927@gmail.com");
   });
 
   test("treats an explicit empty display tag list as hiding every tag", () => {
