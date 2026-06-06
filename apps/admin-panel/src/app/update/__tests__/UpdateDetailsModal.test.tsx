@@ -1,4 +1,4 @@
-import { act, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import i18n from "@code-proxy/i18n";
 import { UpdateDetailsModal } from "@app/update/UpdateDetailsModal";
@@ -32,28 +32,8 @@ describe("UpdateDetailsModal", () => {
     vi.restoreAllMocks();
   });
 
-  test("paces update log rendering at 30fps and auto-scrolls each visible frame", async () => {
-    vi.useFakeTimers();
-    let frameTime = 0;
-    vi.spyOn(window, "requestAnimationFrame").mockImplementation((callback) =>
-      window.setTimeout(() => {
-        frameTime += 34;
-        callback(frameTime);
-      }, 34),
-    );
-    vi.spyOn(window, "cancelAnimationFrame").mockImplementation((id) => {
-      window.clearTimeout(id);
-    });
-
-    let scrollHeight = 400;
-    Object.defineProperty(HTMLElement.prototype, "scrollHeight", {
-      configurable: true,
-      get() {
-        return scrollHeight;
-      },
-    });
-
-    const { rerender } = render(
+  test("localizes common updater messages, shows percentage, and hides verbose logs", async () => {
+    render(
       <UpdateDetailsModal
         open
         candidate={candidate}
@@ -62,82 +42,17 @@ describe("UpdateDetailsModal", () => {
         progress={{
           status: "running",
           stage: "pulling",
-          logs: [
-            { timestamp: "2026-04-20T07:30:01Z", stream: "stdout", message: "pull image" },
-            {
-              timestamp: "2026-04-20T07:30:02Z",
-              stream: "stdout",
-              message: "extract layer",
-            },
-            {
-              timestamp: "2026-04-20T07:30:03Z",
-              stream: "stderr",
-              message: "container started",
-            },
-          ],
+          message: "pulling target image",
+          logs: [{ timestamp: "2026-04-20T07:30:01Z", stream: "stdout", message: "pull image" }],
         }}
         onApply={() => {}}
         onClose={() => {}}
       />,
     );
 
-    const stream = screen.getByTestId("update-log-stream");
-    expect(screen.getByText("pull image")).toBeInTheDocument();
-    expect(screen.queryByText("extract layer")).not.toBeInTheDocument();
-    expect(screen.queryByText("container started")).not.toBeInTheDocument();
-    expect(stream.scrollTop).toBe(400);
-
-    scrollHeight = 960;
-    await act(async () => {
-      vi.advanceTimersByTime(34);
-    });
-    expect(screen.getByText("extract layer")).toBeInTheDocument();
-    expect(screen.queryByText("container started")).not.toBeInTheDocument();
-    expect(stream.scrollTop).toBe(960);
-
-    scrollHeight = 1280;
-    await act(async () => {
-      vi.advanceTimersByTime(34);
-    });
-    expect(screen.getByText("container started")).toBeInTheDocument();
-    expect(stream.scrollTop).toBe(1280);
-
-    scrollHeight = 1600;
-    rerender(
-      <UpdateDetailsModal
-        open
-        candidate={candidate}
-        updateTarget={candidate}
-        updating
-        progress={{
-          status: "running",
-          stage: "restarting",
-          logs: [
-            { timestamp: "2026-04-20T07:30:01Z", stream: "stdout", message: "pull image" },
-            {
-              timestamp: "2026-04-20T07:30:02Z",
-              stream: "stdout",
-              message: "extract layer",
-            },
-            {
-              timestamp: "2026-04-20T07:30:03Z",
-              stream: "stderr",
-              message: "container started",
-            },
-            { timestamp: "2026-04-20T07:30:04Z", stream: "stdout", message: "verify service" },
-          ],
-        }}
-        onApply={() => {}}
-        onClose={() => {}}
-      />,
-    );
-
-    expect(screen.queryByText("verify service")).not.toBeInTheDocument();
-    await act(async () => {
-      vi.advanceTimersByTime(34);
-    });
-    expect(screen.getByText("verify service")).toBeInTheDocument();
-    expect(screen.getByTestId("update-log-stream")).toHaveProperty("scrollTop", 1600);
+    expect(screen.getByText("Pulling the target image.")).toBeInTheDocument();
+    expect(screen.getByText("30%")).toBeInTheDocument();
+    expect(screen.queryByTestId("update-log-stream")).toBeNull();
   });
 
   test("renders localized success styling when already up to date", async () => {
@@ -192,6 +107,7 @@ describe("UpdateDetailsModal", () => {
     );
 
     expect(screen.getByRole("heading", { name: /update completed/i })).toBeInTheDocument();
+    expect(screen.getByText("100%")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /updating/i })).toBeNull();
     expect(screen.getAllByRole("button", { name: /close/i }).at(-1)).toBeEnabled();
   });

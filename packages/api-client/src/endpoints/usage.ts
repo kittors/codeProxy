@@ -1,5 +1,9 @@
 import { apiClient } from "../client/client";
-import type { UsageData, ChartDataResponse, EntityStatsResponse } from "../dto/types";
+import type {
+  UsageData,
+  ChartDataResponse,
+  EntityStatsResponse,
+} from "../dto/types";
 
 export interface UsageExportPayload {
   version?: number;
@@ -99,7 +103,11 @@ export interface EntityStatsScope {
   sources?: string[];
 }
 
-const appendUniqueParams = (qs: URLSearchParams, key: string, values?: string[]) => {
+const appendUniqueParams = (
+  qs: URLSearchParams,
+  key: string,
+  values?: string[],
+) => {
   const seen = new Set<string>();
   (values ?? []).forEach((value) => {
     const trimmed = String(value ?? "").trim();
@@ -113,7 +121,9 @@ export const usageApi = {
   async getUsage(): Promise<UsageData> {
     const response = await apiClient.get<Record<string, unknown>>("/usage");
     const candidate =
-      response.usage && typeof response.usage === "object" ? response.usage : response;
+      response.usage && typeof response.usage === "object"
+        ? response.usage
+        : response;
 
     if (!candidate || typeof candidate !== "object") {
       return {
@@ -161,13 +171,23 @@ export const usageApi = {
   async getChartData(days = 7, apiKey = ""): Promise<ChartDataResponse> {
     const qs = new URLSearchParams({ days: String(days) });
     if (apiKey && apiKey !== "all") qs.set("api_key", apiKey);
-    const resp = await apiClient.get<ChartDataResponse>(`/usage/chart-data?${qs.toString()}`);
+    const resp = await apiClient.get<ChartDataResponse>(
+      `/usage/chart-data?${qs.toString()}`,
+    );
     return {
       daily_series: Array.isArray(resp?.daily_series) ? resp.daily_series : [],
-      model_distribution: Array.isArray(resp?.model_distribution) ? resp.model_distribution : [],
-      hourly_tokens: Array.isArray(resp?.hourly_tokens) ? resp.hourly_tokens : [],
-      hourly_models: Array.isArray(resp?.hourly_models) ? resp.hourly_models : [],
-      apikey_distribution: Array.isArray(resp?.apikey_distribution) ? resp.apikey_distribution : [],
+      model_distribution: Array.isArray(resp?.model_distribution)
+        ? resp.model_distribution
+        : [],
+      hourly_tokens: Array.isArray(resp?.hourly_tokens)
+        ? resp.hourly_tokens
+        : [],
+      hourly_models: Array.isArray(resp?.hourly_models)
+        ? resp.hourly_models
+        : [],
+      apikey_distribution: Array.isArray(resp?.apikey_distribution)
+        ? resp.apikey_distribution
+        : [],
     };
   },
 
@@ -180,14 +200,19 @@ export const usageApi = {
     if (apiKey && apiKey !== "all") qs.set("api_key", apiKey);
     appendUniqueParams(qs, "auth_index", scope?.authIndexes);
     appendUniqueParams(qs, "source", scope?.sources);
-    const resp = await apiClient.get<EntityStatsResponse>(`/usage/entity-stats?${qs.toString()}`);
+    const resp = await apiClient.get<EntityStatsResponse>(
+      `/usage/entity-stats?${qs.toString()}`,
+    );
     return {
       source: Array.isArray(resp?.source) ? resp.source : [],
       auth_index: Array.isArray(resp?.auth_index) ? resp.auth_index : [],
     };
   },
 
-  async getAuthFileGroupTrend(group: string, days = 7): Promise<AuthFileGroupTrendResponse> {
+  async getAuthFileGroupTrend(
+    group: string,
+    days = 7,
+  ): Promise<AuthFileGroupTrendResponse> {
     const qs = new URLSearchParams({ group, days: String(days) });
     const resp = await apiClient.get<AuthFileGroupTrendResponse>(
       `/usage/auth-file-group-trend?${qs.toString()}`,
@@ -227,7 +252,9 @@ export const usageApi = {
     };
   },
 
-  async recordAuthFileQuotaSnapshot(payload: AuthFileQuotaSnapshotPayload): Promise<void> {
+  async recordAuthFileQuotaSnapshot(
+    payload: AuthFileQuotaSnapshotPayload,
+  ): Promise<void> {
     await apiClient.post("/usage/auth-file-quota-snapshot", payload);
   },
 
@@ -254,22 +281,31 @@ export const usageApi = {
     appendUniqueParams(qs, "channel", params.channels);
     appendUniqueParams(qs, "status", params.statuses);
     // Backward compatibility: fallback to single-value params if no multi-value
-    if (!params.api_keys?.length && params.api_key) qs.set("api_key", params.api_key);
+    if (!params.api_keys?.length && params.api_key)
+      qs.set("api_key", params.api_key);
     if (!params.models?.length && params.model) qs.set("model", params.model);
-    if (!params.channels?.length && params.channel) qs.set("channel", params.channel);
-    if (!params.statuses?.length && params.status) qs.set("status", params.status);
+    if (!params.channels?.length && params.channel)
+      qs.set("channel", params.channel);
+    if (!params.statuses?.length && params.status)
+      qs.set("status", params.status);
     const query = qs.toString();
-    const resp = await apiClient.get<UsageLogsResponse>(`/usage/logs${query ? `?${query}` : ""}`);
+    const resp = await apiClient.get<UsageLogsResponse>(
+      `/usage/logs${query ? `?${query}` : ""}`,
+    );
     return {
       items: Array.isArray(resp?.items) ? resp.items : [],
       total: resp?.total ?? 0,
       page: resp?.page ?? 1,
       size: resp?.size ?? params.size ?? 50,
       filters: {
-        api_keys: Array.isArray(resp?.filters?.api_keys) ? resp.filters.api_keys : [],
+        api_keys: Array.isArray(resp?.filters?.api_keys)
+          ? resp.filters.api_keys
+          : [],
         api_key_names: resp?.filters?.api_key_names ?? {},
         models: Array.isArray(resp?.filters?.models) ? resp.filters.models : [],
-        channels: Array.isArray(resp?.filters?.channels) ? resp.filters.channels : [],
+        channels: Array.isArray(resp?.filters?.channels)
+          ? resp.filters.channels
+          : [],
       },
       stats: {
         total: resp?.stats?.total ?? 0,
@@ -281,7 +317,9 @@ export const usageApi = {
     };
   },
 
-  clearUsageLogs(payload: ClearUsageLogsPayload): Promise<ClearUsageLogsResponse> {
+  clearUsageLogs(
+    payload: ClearUsageLogsPayload,
+  ): Promise<ClearUsageLogsResponse> {
     return apiClient.delete<ClearUsageLogsResponse>("/usage/logs", payload);
   },
 
@@ -314,7 +352,11 @@ export const usageApi = {
 
     if (resp && typeof resp === "object") {
       const record = resp as Record<string, unknown>;
-      if (record.part === "input" || record.part === "output" || record.part === "details") {
+      if (
+        record.part === "input" ||
+        record.part === "output" ||
+        record.part === "details"
+      ) {
         return {
           id: Number(record.id ?? id),
           model: String(record.model ?? ""),
@@ -339,6 +381,16 @@ export const usageApi = {
     }
 
     return { id, model: "", part, content: "" };
+  },
+
+  getLogEgress(
+    id: number,
+    options?: { signal?: AbortSignal; timeoutMs?: number },
+  ): Promise<UsageLogEgressResponse> {
+    return apiClient.get<UsageLogEgressResponse>(`/usage/logs/${id}/egress`, {
+      signal: options?.signal,
+      timeoutMs: options?.timeoutMs,
+    });
   },
 };
 
@@ -444,6 +496,21 @@ export interface LogContentPartResponse {
   model: string;
   part: LogContentPart;
   content: string;
+}
+
+export interface UsageLogEgressResponse {
+  id: number;
+  model?: string;
+  route_kind?: string;
+  proxy_source?: string;
+  proxy_id?: string;
+  proxy_name?: string;
+  proxy_url_host?: string;
+  effective_ip?: string;
+  server_ip?: string;
+  matches_server_ip?: boolean | null;
+  using_proxy?: boolean;
+  error?: string;
 }
 
 export type LogContentPart = "input" | "output" | "details";

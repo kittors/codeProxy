@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import { CheckCircle2, Circle, LoaderCircle, RefreshCw, XCircle } from "lucide-react";
@@ -69,6 +69,15 @@ const UPDATE_STAGE_LABEL_KEYS: Record<string, string> = {
   failed: "auto_update.progress_stage_failed",
   idle: "auto_update.progress_stage_idle",
 };
+const UPDATE_PROGRESS_MESSAGE_KEYS: Record<string, string> = {
+  "preparing update": "auto_update.progress_message_preparing_update",
+  "pulling target image": "auto_update.progress_message_pulling_target_image",
+  "restarting container": "auto_update.progress_message_restarting_container",
+  "restarting service": "auto_update.progress_message_restarting_container",
+  "verifying service health": "auto_update.progress_message_verifying_service",
+  "waiting for service health": "auto_update.progress_message_verifying_service",
+  "update completed": "auto_update.progress_message_completed",
+};
 
 function buildReleaseNotesPreview(text: string) {
   const lines = text.split("\n");
@@ -109,6 +118,23 @@ function progressPercent(status: string, activeStageIndex: number) {
     return Math.min(100, Math.max(14, ((safeStageIndex + 1) / UPDATE_STAGE_ORDER.length) * 100));
   }
   return Math.min(94, Math.max(10, ((safeStageIndex + 0.5) / UPDATE_STAGE_ORDER.length) * 100));
+}
+
+function translateProgressMessage(
+  t: TFunction,
+  progress?: UpdateProgressResponse | null,
+  fallbackStage?: string,
+) {
+  const raw = progress?.message?.trim() ?? "";
+  if (!raw) return t("auto_update.progress_default_message");
+  const key = UPDATE_PROGRESS_MESSAGE_KEYS[raw.toLowerCase()];
+  if (key) return t(key);
+  if (fallbackStage && UPDATE_STAGE_LABEL_KEYS[fallbackStage]) {
+    return t("auto_update.progress_message_stage_generic", {
+      stage: stageLabel(t, fallbackStage),
+    });
+  }
+  return raw;
 }
 
 function formatLogTimestamp(value?: string) {
@@ -153,6 +179,41 @@ function limitVisibleLogs(logs: UpdateProgressLogEntry[]) {
 
 function frameNow() {
   return window.performance?.now?.() ?? Date.now();
+}
+
+function useAnimatedProgressValue(target: number, snap = false) {
+  const [displayValue, setDisplayValue] = useState(target);
+  const frameRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (snap || Math.abs(displayValue - target) < 0.1) {
+      if (frameRef.current !== null) {
+        window.cancelAnimationFrame(frameRef.current);
+        frameRef.current = null;
+      }
+      setDisplayValue(target);
+      return;
+    }
+
+    const tick = () => {
+      setDisplayValue((current) => {
+        const delta = target - current;
+        if (Math.abs(delta) < 0.1) return target;
+        const next = current + delta * 0.18;
+        return delta > 0 ? Math.min(target, next) : Math.max(target, next);
+      });
+      frameRef.current = window.requestAnimationFrame(tick);
+    };
+
+    frameRef.current = window.requestAnimationFrame(tick);
+    return () => {
+      if (frameRef.current !== null) {
+        window.cancelAnimationFrame(frameRef.current);
+      }
+    };
+  }, [displayValue, snap, target]);
+
+  return displayValue;
 }
 
 type AnimationFrameHandle =
@@ -279,7 +340,6 @@ function UpdateProgressConsole({
   progress?: UpdateProgressResponse | null;
 }) {
   const { t } = useTranslation();
-  const logStreamRef = useRef<HTMLDivElement | null>(null);
   const stage = normalizedStage(progress);
   const currentVersion = versionLabel(
     candidate.current_version,
@@ -300,20 +360,20 @@ function UpdateProgressConsole({
       candidate.latest_ui_version,
       candidate.latest_ui_commit,
       candidate.target_channel,
-    );
+  );
   const dockerImage =
     [progress?.target_image, progress?.target_tag].filter(Boolean).join(":") ||
     [candidate.docker_image, candidate.docker_tag].filter(Boolean).join(":") ||
     "--";
-  const logs = progress?.logs ?? [];
   const progressStatus = normalizedProgressStatus(progress);
   const rawStageIndex = UPDATE_STAGE_ORDER.indexOf(stage);
   const activeStageIndex = Math.max(0, rawStageIndex);
   const isCompleted = progressStatus === "completed";
   const isFailed = progressStatus === "failed";
-  const visibleLogs = useSmoothUpdateLogs(logs, isCompleted || isFailed);
   const isRunning = progressStatus === "running";
   const percent = progressPercent(progressStatus, activeStageIndex);
+  const animatedPercent = useAnimatedProgressValue(percent, isCompleted || isFailed);
+  const progressMessage = translateProgressMessage(t, progress, stage);
   const StatusIcon = isCompleted
     ? CheckCircle2
     : isFailed
@@ -347,12 +407,6 @@ function UpdateProgressConsole({
           ? "bg-sky-500"
           : "bg-slate-400";
 
-  useLayoutEffect(() => {
-    const node = logStreamRef.current;
-    if (!node) return;
-    node.scrollTop = node.scrollHeight;
-  }, [visibleLogs]);
-
   return (
     <section
       data-testid="update-progress-console"
@@ -374,26 +428,31 @@ function UpdateProgressConsole({
                 {t("auto_update.progress_title")}
               </h3>
               <p className="mt-1 break-words text-xs leading-5 text-slate-600 dark:text-white/60">
-                {progress?.message?.trim() || t("auto_update.progress_default_message")}
+                {progressMessage}
               </p>
             </div>
           </div>
-          <span
-            className={[
-              "rounded-full px-2.5 py-1 text-xs font-medium ring-1",
-              statusChipClass,
-            ].join(" ")}
-          >
-            {stageLabel(t, stage)}
-          </span>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <span
+              className={[
+                "rounded-full px-2.5 py-1 text-xs font-medium ring-1",
+                statusChipClass,
+              ].join(" ")}
+            >
+              {stageLabel(t, stage)}
+            </span>
+            <span className="font-mono text-sm font-semibold text-slate-900 dark:text-white">
+              {Math.round(animatedPercent)}%
+            </span>
+          </div>
         </div>
         <div className="h-1.5 overflow-hidden rounded-full bg-slate-100 dark:bg-white/10">
           <div
             className={[
-              "h-full rounded-full transition-[width] duration-500 ease-out",
+              "h-full rounded-full transition-[width] duration-700 ease-out",
               progressBarClass,
             ].join(" ")}
-            style={{ width: `${percent}%` }}
+            style={{ width: `${animatedPercent}%` }}
           />
         </div>
       </div>
@@ -456,32 +515,6 @@ function UpdateProgressConsole({
           );
         })}
       </ol>
-
-      <div className="min-w-0 overflow-hidden rounded-lg border border-neutral-900 bg-neutral-950 text-xs text-slate-100 shadow-inner">
-        <div className="flex items-center justify-between border-b border-white/10 px-3 py-2 text-[11px] uppercase tracking-wide text-slate-400">
-          <span>{t("auto_update.progress_logs")}</span>
-          <span>
-            {logs.length ? t("auto_update.progress_log_count", { count: logs.length }) : ""}
-          </span>
-        </div>
-        <div
-          data-testid="update-log-stream"
-          ref={logStreamRef}
-          className="max-h-64 min-h-32 overflow-y-auto whitespace-pre-wrap break-words p-3 font-mono leading-5"
-        >
-          {visibleLogs.length ? (
-            visibleLogs.map((entry, index) => (
-              <div key={`${entry.timestamp ?? "log"}-${index}`} className="break-words">
-                <span className="text-slate-500">{formatLogTimestamp(entry.timestamp)}</span>{" "}
-                <span className="text-sky-300">{entry.stream || "log"}</span>{" "}
-                <span>{entry.message}</span>
-              </div>
-            ))
-          ) : (
-            <p className="text-slate-400">{t("auto_update.progress_logs_empty")}</p>
-          )}
-        </div>
-      </div>
     </section>
   );
 }

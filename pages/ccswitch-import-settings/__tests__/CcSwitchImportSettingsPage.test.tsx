@@ -645,6 +645,79 @@ describe("CcSwitchImportSettingsPage", () => {
     );
   });
 
+  test("does not auto-expand saved generic mappings into identity rows after model refresh", async () => {
+    const modelsDeferred = createDeferred<{ id: string }[]>();
+    listChannelGroups.mockResolvedValue([
+      {
+        name: "deepseekv4flash+chatgpt",
+        description: "DeepSeek v4 flash route",
+        "path-routes": ["/deepseekv4flash-chatgpt"],
+      },
+    ]);
+    listAvailableModels.mockReturnValue(modelsDeferred.promise);
+    listConfigs.mockResolvedValue([
+      {
+        id: "cfg-deepseek",
+        clientType: "codex",
+        providerName: "Relay DeepSeek",
+        note: "saved mapping",
+        defaultModel: "gpt-5.4",
+        allowedChannelGroups: ["deepseekv4flash+chatgpt"],
+        endpointPath: "/v1",
+        usageAutoInterval: 30,
+        modelMappings: [
+          {
+            requestModel: "gpt-5.4",
+            targetModel: "deepseek-v4-flash",
+          },
+        ],
+      },
+    ]);
+
+    renderPage();
+    const user = userEvent.setup();
+
+    expect(await screen.findByText("Relay DeepSeek")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /edit config/i }));
+
+    const dialog = await screen.findByRole("dialog", { name: /edit cc switch config/i });
+    expect(within(dialog).getByLabelText(/cc switch request model for mapping 1/i)).toHaveValue(
+      "gpt-5.4",
+    );
+    expect(
+      within(dialog).getByRole("combobox", { name: /actual channel model 1/i }),
+    ).toHaveTextContent("deepseek-v4-flash");
+
+    modelsDeferred.resolve([
+      { id: "gpt-5.5" },
+      { id: "gpt-5.4" },
+      { id: "deepseek-v4-flash" },
+      { id: "deepseek-v4-pro" },
+    ]);
+
+    await waitFor(() =>
+      expect(within(dialog).queryByTestId("ccswitch-model-mapping-loading")).toBeNull(),
+    );
+
+    await user.click(within(dialog).getByRole("button", { name: /^save$/i }));
+
+    await waitFor(() =>
+      expect(replaceConfigs).toHaveBeenCalledWith([
+        expect.objectContaining({
+          id: "cfg-deepseek",
+          defaultModel: "gpt-5.4",
+          allowedChannelGroups: ["deepseekv4flash+chatgpt"],
+          modelMappings: [
+            {
+              requestModel: "gpt-5.4",
+              targetModel: "deepseek-v4-flash",
+            },
+          ],
+        }),
+      ]),
+    );
+  });
+
   test("previews the full BaseURL request address from the selected channel group path", async () => {
     renderPage();
     const user = userEvent.setup();

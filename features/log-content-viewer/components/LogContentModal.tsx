@@ -1,4 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { useTranslation } from "react-i18next";
 import {
   ChevronDown,
@@ -11,8 +18,17 @@ import {
   Loader2,
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
-import { buildInputRenderedView, buildOutputRenderedView } from "../log-content/parsers";
-import { ContentModal, MessageBlock, MessageList, PlainPre } from "../log-content/rendering";
+import { usageApi, type UsageLogEgressResponse } from "@code-proxy/api-client";
+import {
+  buildInputRenderedView,
+  buildOutputRenderedView,
+} from "../log-content/parsers";
+import {
+  ContentModal,
+  MessageBlock,
+  MessageList,
+  PlainPre,
+} from "../log-content/rendering";
 import { scheduleIdle, type CancelFn } from "../log-content/scheduler";
 import { Tabs, TabsList, TabsTrigger } from "@code-proxy/ui";
 import { ImagePreviewOverlay } from "@code-proxy/ui";
@@ -53,7 +69,8 @@ function parseJsonObject(raw: string): JsonObject | null {
   if (!raw) return null;
   try {
     const parsed = JSON.parse(raw) as unknown;
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed))
+      return null;
     return parsed as JsonObject;
   } catch {
     return null;
@@ -62,7 +79,8 @@ function parseJsonObject(raw: string): JsonObject | null {
 
 function stringifyFieldValue(value: unknown): string {
   if (typeof value === "string") return value;
-  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  if (typeof value === "number" || typeof value === "boolean")
+    return String(value);
   if (value === null || value === undefined) return "";
   return JSON.stringify(value, null, 2);
 }
@@ -79,7 +97,8 @@ function formatDetailValue(value: unknown): string {
   if (value === null) return "null";
   if (value === undefined) return "";
   if (typeof value === "string") return value.trim();
-  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  if (typeof value === "number" || typeof value === "boolean")
+    return String(value);
   if (Array.isArray(value)) {
     return value
       .map((item) => formatDetailValue(item))
@@ -94,10 +113,18 @@ function formatDetailValue(value: unknown): string {
 }
 
 function hasDetailValue(value: string): boolean {
-  return value.trim() !== "" && value.trim() !== "<empty>" && value.trim() !== "<none>";
+  return (
+    value.trim() !== "" &&
+    value.trim() !== "<empty>" &&
+    value.trim() !== "<none>"
+  );
 }
 
-function pushDetailRow(rows: RequestDetailRow[], label: string, value: unknown) {
+function pushDetailRow(
+  rows: RequestDetailRow[],
+  label: string,
+  value: unknown,
+) {
   const text = formatDetailValue(value);
   if (hasDetailValue(text)) rows.push({ label, value: text });
 }
@@ -110,7 +137,10 @@ function normalizeHeaderRows(value: unknown): RequestDetailRow[] {
     .sort((a, b) => a.label.localeCompare(b.label));
 }
 
-function parseExchangeLog(raw: unknown, kind: "request" | "response"): RequestDetailAttempt[] {
+function parseExchangeLog(
+  raw: unknown,
+  kind: "request" | "response",
+): RequestDetailAttempt[] {
   const text = formatDetailValue(raw);
   if (!hasDetailValue(text)) return [];
 
@@ -138,7 +168,9 @@ function parseExchangeLog(raw: unknown, kind: "request" | "response"): RequestDe
 
   for (const rawLine of lines) {
     const line = rawLine.trimEnd();
-    const sectionMatch = line.match(/^=== API (REQUEST|RESPONSE)\s*(\d+)? ===$/);
+    const sectionMatch = line.match(
+      /^=== API (REQUEST|RESPONSE)\s*(\d+)? ===$/,
+    );
     if (sectionMatch) {
       flushGroup();
       const attemptNumber = sectionMatch[2];
@@ -180,7 +212,11 @@ function parseExchangeLog(raw: unknown, kind: "request" | "response"): RequestDe
     const separator = line.indexOf(":");
     if (separator === -1) {
       if (line !== "<missing>")
-        pushDetailRow(ensureCurrent().rows, kind === "request" ? "请求" : "响应", line);
+        pushDetailRow(
+          ensureCurrent().rows,
+          kind === "request" ? "请求" : "响应",
+          line,
+        );
       continue;
     }
 
@@ -197,7 +233,9 @@ function parseExchangeLog(raw: unknown, kind: "request" | "response"): RequestDe
   }
 
   flushGroup();
-  return attempts.filter((attempt) => attempt.rows.length > 0 || attempt.groups.length > 0);
+  return attempts.filter(
+    (attempt) => attempt.rows.length > 0 || attempt.groups.length > 0,
+  );
 }
 
 const BODY_DETAIL_KEYS = new Set([
@@ -223,21 +261,27 @@ function isBodyDetailKey(key: string): boolean {
   return BODY_DETAIL_KEYS.has(key.trim().toLowerCase());
 }
 
-function buildGenericRows(record: unknown, skipKeys: Iterable<string> = []): RequestDetailRow[] {
+function buildGenericRows(
+  record: unknown,
+  skipKeys: Iterable<string> = [],
+): RequestDetailRow[] {
   if (!isRecord(record)) return [];
   const skip = new Set([...BODY_DETAIL_KEYS, ...skipKeys]);
-  return Object.entries(record).reduce<RequestDetailRow[]>((rows, [key, value]) => {
-    const normalizedKey = key.trim().toLowerCase();
-    if (
-      skip.has(normalizedKey) ||
-      normalizedKey === "headers" ||
-      normalizedKey === "fingerprint_headers"
-    ) {
+  return Object.entries(record).reduce<RequestDetailRow[]>(
+    (rows, [key, value]) => {
+      const normalizedKey = key.trim().toLowerCase();
+      if (
+        skip.has(normalizedKey) ||
+        normalizedKey === "headers" ||
+        normalizedKey === "fingerprint_headers"
+      ) {
+        return rows;
+      }
+      pushDetailRow(rows, key, value);
       return rows;
-    }
-    pushDetailRow(rows, key, value);
-    return rows;
-  }, []);
+    },
+    [],
+  );
 }
 
 function buildClientAttempt(client: unknown): RequestDetailAttempt {
@@ -261,7 +305,8 @@ function buildClientAttempt(client: unknown): RequestDetailAttempt {
   const headers = normalizeHeaderRows(record.headers);
   if (headers.length > 0) groups.push({ title: "Headers", rows: headers });
   const fingerprints = normalizeHeaderRows(record.fingerprint_headers);
-  if (fingerprints.length > 0) groups.push({ title: "指纹 / 透传", rows: fingerprints });
+  if (fingerprints.length > 0)
+    groups.push({ title: "指纹 / 透传", rows: fingerprints });
 
   return { rows, groups };
 }
@@ -273,7 +318,12 @@ function buildUpstreamAttempts(upstream: unknown): RequestDetailAttempt[] {
 
   const rows = buildGenericRows(upstream);
   const headers = normalizeHeaderRows(upstream.headers);
-  return [{ rows, groups: headers.length > 0 ? [{ title: "Headers", rows: headers }] : [] }];
+  return [
+    {
+      rows,
+      groups: headers.length > 0 ? [{ title: "Headers", rows: headers }] : [],
+    },
+  ];
 }
 
 function buildResponseAttempts(response: unknown): RequestDetailAttempt[] {
@@ -283,7 +333,12 @@ function buildResponseAttempts(response: unknown): RequestDetailAttempt[] {
 
   const rows = buildGenericRows(response);
   const headers = normalizeHeaderRows(response.headers);
-  return [{ rows, groups: headers.length > 0 ? [{ title: "Headers", rows: headers }] : [] }];
+  return [
+    {
+      rows,
+      groups: headers.length > 0 ? [{ title: "Headers", rows: headers }] : [],
+    },
+  ];
 }
 
 function RequestDetailRows({ rows }: { rows: RequestDetailRow[] }) {
@@ -342,7 +397,11 @@ function RequestDetailAttemptView({
 }
 
 function RequestDetailEmpty() {
-  return <span className="px-3 py-3 text-sm text-slate-400 dark:text-white/35">--</span>;
+  return (
+    <span className="px-3 py-3 text-sm text-slate-400 dark:text-white/35">
+      --
+    </span>
+  );
 }
 
 function RequestDetailSection({
@@ -350,16 +409,20 @@ function RequestDetailSection({
   attempts,
   testId,
   defaultOpen = true,
+  headerExtras,
 }: {
   title: string;
   attempts: RequestDetailAttempt[];
   testId?: string;
   defaultOpen?: boolean;
+  headerExtras?: ReactNode;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   const contentId = testId ? `${testId}-content` : undefined;
   const visibleAttempts = attempts.filter(
-    (attempt) => attempt.rows.length > 0 || attempt.groups.some((group) => group.rows.length > 0),
+    (attempt) =>
+      attempt.rows.length > 0 ||
+      attempt.groups.some((group) => group.rows.length > 0),
   );
   const showAttemptTitle = visibleAttempts.length > 1;
 
@@ -375,9 +438,16 @@ function RequestDetailSection({
         onClick={() => setOpen((prev) => !prev)}
         className="flex w-full touch-manipulation items-center justify-between gap-3 px-3.5 py-2.5 text-left transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/10 dark:hover:bg-white/[0.04] dark:focus-visible:ring-white/20"
       >
-        <h3 className="min-w-0 truncate text-sm font-medium text-slate-900 dark:text-white">
-          {title}
-        </h3>
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+          <h3 className="min-w-0 truncate text-sm font-medium text-slate-900 dark:text-white">
+            {title}
+          </h3>
+          {headerExtras ? (
+            <div className="flex flex-wrap items-center gap-1">
+              {headerExtras}
+            </div>
+          ) : null}
+        </div>
         <ChevronDown
           size={16}
           className={`shrink-0 text-slate-400 transition-transform duration-200 dark:text-white/35 ${open ? "rotate-180" : ""}`}
@@ -419,7 +489,11 @@ function buildExtraDetailSections(details: RequestDetailRecord): Array<{
   attempts: RequestDetailAttempt[];
 }> {
   return Object.entries(details)
-    .filter(([key]) => !["client", "upstream", "response"].includes(key) && !isBodyDetailKey(key))
+    .filter(
+      ([key]) =>
+        !["client", "upstream", "response"].includes(key) &&
+        !isBodyDetailKey(key),
+    )
     .map(([key, value]) => {
       if (isRecord(value)) {
         const rows = buildGenericRows(value);
@@ -427,25 +501,34 @@ function buildExtraDetailSections(details: RequestDetailRecord): Array<{
         return {
           key,
           attempts: [
-            { rows, groups: headers.length > 0 ? [{ title: "Headers", rows: headers }] : [] },
+            {
+              rows,
+              groups:
+                headers.length > 0 ? [{ title: "Headers", rows: headers }] : [],
+            },
           ],
         };
       }
       const text = formatDetailValue(value);
       return {
         key,
-        attempts: hasDetailValue(text) ? [{ rows: [{ label: key, value: text }], groups: [] }] : [],
+        attempts: hasDetailValue(text)
+          ? [{ rows: [{ label: key, value: text }], groups: [] }]
+          : [],
       };
     })
     .filter((section) =>
       section.attempts.some(
         (attempt) =>
-          attempt.rows.length > 0 || attempt.groups.some((group) => group.rows.length > 0),
+          attempt.rows.length > 0 ||
+          attempt.groups.some((group) => group.rows.length > 0),
       ),
     );
 }
 
-function parseImageGenerationInput(raw: string): ImageGenerationInputView | null {
+function parseImageGenerationInput(
+  raw: string,
+): ImageGenerationInputView | null {
   const parsed = parseJsonObject(raw);
   if (!parsed) return null;
   const model = typeof parsed.model === "string" ? parsed.model : "";
@@ -464,7 +547,9 @@ function parseImageGenerationInput(raw: string): ImageGenerationInputView | null
   };
 }
 
-function parseImageGenerationOutput(raw: string): ImageGenerationOutputView | null {
+function parseImageGenerationOutput(
+  raw: string,
+): ImageGenerationOutputView | null {
   const parsed = parseJsonObject(raw);
   if (!parsed || !Array.isArray(parsed.data)) return null;
 
@@ -472,11 +557,13 @@ function parseImageGenerationOutput(raw: string): ImageGenerationOutputView | nu
     .map((item) => {
       if (!item || typeof item !== "object") return null;
       const record = item as JsonObject;
-      const b64Json = typeof record.b64_json === "string" ? record.b64_json.trim() : "";
+      const b64Json =
+        typeof record.b64_json === "string" ? record.b64_json.trim() : "";
       if (!b64Json) return null;
       const src = `data:image/png;base64,${b64Json}`;
       const revisedPrompt =
-        typeof record.revised_prompt === "string" && record.revised_prompt.trim()
+        typeof record.revised_prompt === "string" &&
+        record.revised_prompt.trim()
           ? record.revised_prompt.trim()
           : "";
       return revisedPrompt ? { src, revisedPrompt } : { src };
@@ -570,6 +657,7 @@ export function LogContentModal({
   fetchFn,
   fetchPartFn,
   fetchDetailsFn,
+  fetchEgressFn,
 }: LogContentModalProps) {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<LogContentPart>(initialTab);
@@ -588,6 +676,13 @@ export function LogContentModal({
   const [displayPhase, setDisplayPhase] = useState<ContentPhase>("loading");
   const [imagePreviewOpen, setImagePreviewOpen] = useState(false);
   const [outputImagePreviewIndex, setOutputImagePreviewIndex] = useState(0);
+  const [egressInfo, setEgressInfo] = useState<UsageLogEgressResponse | null>(
+    null,
+  );
+  const [egressLoading, setEgressLoading] = useState(false);
+  const [egressLoaded, setEgressLoaded] = useState(false);
+  const [egressError, setEgressError] = useState<string | null>(null);
+  const egressAbortRef = useRef<AbortController | null>(null);
   const dataOpen = open && contentLoadReady;
   const {
     inputLoading,
@@ -613,6 +708,37 @@ export function LogContentModal({
     fetchDetailsFn,
   });
 
+  const fetchEgress = useCallback(
+    async (id: number) => {
+      const controller = new AbortController();
+      egressAbortRef.current?.abort();
+      egressAbortRef.current = controller;
+      setEgressLoading(true);
+      setEgressError(null);
+      try {
+        const next = fetchEgressFn
+          ? await fetchEgressFn(id, { signal: controller.signal })
+          : await usageApi.getLogEgress(id, {
+              signal: controller.signal,
+              timeoutMs: 60_000,
+            });
+        if (controller.signal.aborted) return;
+        setEgressInfo(next);
+      } catch (err) {
+        if (controller.signal.aborted) return;
+        setEgressError(
+          err instanceof Error ? err.message : t("error_detail.load_failed"),
+        );
+      } finally {
+        if (!controller.signal.aborted) {
+          setEgressLoaded(true);
+          setEgressLoading(false);
+        }
+      }
+    },
+    [fetchEgressFn, t],
+  );
+
   useEffect(() => {
     setActiveTab(initialTab);
   }, [initialTab, logId]);
@@ -633,6 +759,15 @@ export function LogContentModal({
   }, [open, logId]);
 
   useEffect(() => {
+    egressAbortRef.current?.abort();
+    egressAbortRef.current = null;
+    setEgressInfo(null);
+    setEgressLoading(false);
+    setEgressLoaded(false);
+    setEgressError(null);
+  }, [logId, open]);
+
+  useEffect(() => {
     if (!dataOpen || !logId) return;
     if (activeTab === initialTab) return;
     if (activeTab === "details" && !showRequestDetails) return;
@@ -649,7 +784,11 @@ export function LogContentModal({
           ? outputLoading
           : detailsLoading;
     const loaded =
-      activeTab === "input" ? inputLoaded : activeTab === "output" ? outputLoaded : detailsLoaded;
+      activeTab === "input"
+        ? inputLoaded
+        : activeTab === "output"
+          ? outputLoaded
+          : detailsLoaded;
     if (content || loading || loaded) return;
     void fetchPart(logId, activeTab);
   }, [
@@ -667,6 +806,21 @@ export function LogContentModal({
     detailsLoaded,
     showRequestDetails,
     fetchPart,
+  ]);
+
+  useEffect(() => {
+    if (!dataOpen || !logId || !showRequestDetails) return;
+    if (activeTab !== "details") return;
+    if (egressLoaded || egressLoading) return;
+    void fetchEgress(logId);
+  }, [
+    activeTab,
+    dataOpen,
+    egressLoaded,
+    egressLoading,
+    fetchEgress,
+    logId,
+    showRequestDetails,
   ]);
 
   useEffect(() => {
@@ -721,7 +875,8 @@ export function LogContentModal({
     if (total <= 0) return;
 
     const batchSize = 6;
-    const setCount = activeTab === "input" ? setInputRevealCount : setOutputRevealCount;
+    const setCount =
+      activeTab === "input" ? setInputRevealCount : setOutputRevealCount;
 
     if (total > VIRTUAL_MESSAGE_REVEAL_THRESHOLD) {
       setCount(total);
@@ -778,7 +933,12 @@ export function LogContentModal({
 
   const renderRaw = (content: string) => {
     if (!content) {
-      const Icon = activeTab === "input" ? FileInput : activeTab === "output" ? FileOutput : Info;
+      const Icon =
+        activeTab === "input"
+          ? FileInput
+          : activeTab === "output"
+            ? FileOutput
+            : Info;
       return (
         <div className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-white/25">
           <Icon size={40} className="mb-3 opacity-40" />
@@ -796,19 +956,33 @@ export function LogContentModal({
   };
 
   const currentContent =
-    activeTab === "input" ? inputContent : activeTab === "output" ? outputContent : detailsContent;
+    activeTab === "input"
+      ? inputContent
+      : activeTab === "output"
+        ? outputContent
+        : detailsContent;
   const activeLoading =
-    activeTab === "input" ? inputLoading : activeTab === "output" ? outputLoading : detailsLoading;
+    activeTab === "input"
+      ? inputLoading
+      : activeTab === "output"
+        ? outputLoading
+        : detailsLoading;
   const activeError =
-    activeTab === "input" ? inputError : activeTab === "output" ? outputError : detailsError;
+    activeTab === "input"
+      ? inputError
+      : activeTab === "output"
+        ? outputError
+        : detailsError;
   const activeParsed = activeTab === "input" ? inputParsed : outputParsed;
   const isImageGenerationLog = model === "gpt-image-2";
   const imageGenerationInput = useMemo(
-    () => (isImageGenerationLog ? parseImageGenerationInput(inputContent) : null),
+    () =>
+      isImageGenerationLog ? parseImageGenerationInput(inputContent) : null,
     [inputContent, isImageGenerationLog],
   );
   const imageGenerationOutput = useMemo(
-    () => (isImageGenerationLog ? parseImageGenerationOutput(outputContent) : null),
+    () =>
+      isImageGenerationLog ? parseImageGenerationOutput(outputContent) : null,
     [outputContent, isImageGenerationLog],
   );
   const outputImagePreviewSrc =
@@ -816,7 +990,12 @@ export function LogContentModal({
     imageGenerationOutput?.images[0]?.src ??
     null;
   const activeDownloadName = useMemo(() => {
-    const suffix = activeTab === "input" ? "input" : activeTab === "output" ? "output" : "details";
+    const suffix =
+      activeTab === "input"
+        ? "input"
+        : activeTab === "output"
+          ? "output"
+          : "details";
     return `${model || "request-log"}-${suffix}.png`;
   }, [activeTab, model]);
   const waitingForRenderedContent =
@@ -825,7 +1004,9 @@ export function LogContentModal({
     viewMode === "rendered" &&
     (activeParsed.status !== "ready" || !activeParsed.view);
   const contentPhase =
-    !contentLoadReady || (activeLoading && !currentContent) || waitingForRenderedContent
+    !contentLoadReady ||
+    (activeLoading && !currentContent) ||
+    waitingForRenderedContent
       ? "loading"
       : activeError && !currentContent
         ? "error"
@@ -853,7 +1034,10 @@ export function LogContentModal({
 
   const renderCenteredLoading = () => (
     <div className="flex min-h-0 flex-1 items-center justify-center">
-      <Loader2 size={24} className="animate-spin text-slate-400 dark:text-white/40" />
+      <Loader2
+        size={24}
+        className="animate-spin text-slate-400 dark:text-white/40"
+      />
       <span className="ml-3 text-sm text-slate-500 dark:text-white/50">
         {t("common.loading_ellipsis")}
       </span>
@@ -862,7 +1046,10 @@ export function LogContentModal({
 
   const tabBar = (
     <div className="flex items-center gap-3">
-      <Tabs value={activeTab} onValueChange={(next) => setActiveTab(next as typeof activeTab)}>
+      <Tabs
+        value={activeTab}
+        onValueChange={(next) => setActiveTab(next as typeof activeTab)}
+      >
         <TabsList>
           <TabsTrigger value="input">
             <FileInput size={15} />
@@ -882,7 +1069,10 @@ export function LogContentModal({
       </Tabs>
       <div className="flex items-center gap-1">
         {activeTab === "details" ? null : (
-          <Tabs value={viewMode} onValueChange={(next) => setViewMode(next as typeof viewMode)}>
+          <Tabs
+            value={viewMode}
+            onValueChange={(next) => setViewMode(next as typeof viewMode)}
+          >
             <TabsList>
               <TabsTrigger value="rendered" title={t("log_content.rendered")}>
                 <Eye size={14} />
@@ -929,11 +1119,15 @@ export function LogContentModal({
         />
       );
     }
-    if (inputParsed.status !== "ready" || !inputParsed.view) return renderCenteredLoading();
+    if (inputParsed.status !== "ready" || !inputParsed.view)
+      return renderCenteredLoading();
 
     const view = inputParsed.view;
     if (view.kind === "messages") {
-      const count = inputRevealCount > 0 ? inputRevealCount : Math.min(view.messages.length, 6);
+      const count =
+        inputRevealCount > 0
+          ? inputRevealCount
+          : Math.min(view.messages.length, 6);
       return <MessageList messages={view.messages.slice(0, count)} />;
     }
     if (view.kind === "pretty_json") return <PlainPre text={view.pretty} />;
@@ -994,7 +1188,8 @@ export function LogContentModal({
         </div>
       );
     }
-    if (outputParsed.status !== "ready" || !outputParsed.view) return renderCenteredLoading();
+    if (outputParsed.status !== "ready" || !outputParsed.view)
+      return renderCenteredLoading();
 
     const view = outputParsed.view;
     const imagePreviewCard = outputImagePreviewSrc ? (
@@ -1017,7 +1212,10 @@ export function LogContentModal({
       </div>
     ) : null;
     if (view.kind === "messages") {
-      const count = outputRevealCount > 0 ? outputRevealCount : Math.min(view.messages.length, 6);
+      const count =
+        outputRevealCount > 0
+          ? outputRevealCount
+          : Math.min(view.messages.length, 6);
       return (
         <div>
           {imagePreviewCard}
@@ -1065,9 +1263,144 @@ export function LogContentModal({
     const upstreamAttempts = buildUpstreamAttempts(details.upstream);
     const responseAttempts = buildResponseAttempts(details.response);
     const extraSections = buildExtraDetailSections(details);
+    const egressRows: RequestDetailRow[] = [];
+    const egressBadges: ReactNode[] = [];
+
+    const routeLabel = egressInfo?.using_proxy
+      ? t("log_content.egress_route_proxy")
+      : t("log_content.egress_route_direct");
+    if (egressInfo) {
+      pushDetailRow(
+        egressRows,
+        t("log_content.egress_upstream_ip"),
+        egressInfo.effective_ip,
+      );
+      pushDetailRow(
+        egressRows,
+        t("log_content.egress_server_ip"),
+        egressInfo.server_ip,
+      );
+      pushDetailRow(egressRows, t("log_content.egress_route"), routeLabel);
+      pushDetailRow(
+        egressRows,
+        t("log_content.egress_proxy_source"),
+        egressInfo.proxy_source === "proxy_id"
+          ? t("log_content.egress_source_proxy_id")
+          : egressInfo.proxy_source === "auth_proxy_url"
+            ? t("log_content.egress_source_auth_proxy_url")
+            : egressInfo.proxy_source === "global_proxy_url"
+              ? t("log_content.egress_source_global_proxy_url")
+              : egressInfo.proxy_source === "direct"
+                ? t("log_content.egress_source_direct")
+                : egressInfo.proxy_source === "proxy_url"
+                  ? t("log_content.egress_source_proxy_url")
+                  : egressInfo.proxy_source,
+      );
+      pushDetailRow(
+        egressRows,
+        t("log_content.egress_proxy_id"),
+        egressInfo.proxy_id,
+      );
+      pushDetailRow(
+        egressRows,
+        t("log_content.egress_proxy_name"),
+        egressInfo.proxy_name,
+      );
+      pushDetailRow(
+        egressRows,
+        t("log_content.egress_proxy_host"),
+        egressInfo.proxy_url_host,
+      );
+      if (typeof egressInfo.matches_server_ip === "boolean") {
+        pushDetailRow(
+          egressRows,
+          t("log_content.egress_compare"),
+          egressInfo.matches_server_ip
+            ? t("log_content.egress_compare_same")
+            : t("log_content.egress_compare_different"),
+        );
+      }
+      pushDetailRow(
+        egressRows,
+        t("log_content.egress_error"),
+        egressInfo.error,
+      );
+    } else if (egressLoading) {
+      pushDetailRow(
+        egressRows,
+        t("log_content.egress_status"),
+        t("common.loading"),
+      );
+    } else if (egressError) {
+      pushDetailRow(egressRows, t("log_content.egress_error"), egressError);
+    }
+
+    if (egressLoading) {
+      egressBadges.push(
+        <span
+          key="loading"
+          className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600 dark:bg-white/10 dark:text-white/60"
+        >
+          {t("log_content.egress_badge_verifying")}
+        </span>,
+      );
+    } else if (egressInfo?.using_proxy) {
+      egressBadges.push(
+        <span
+          key="proxy"
+          className="rounded-full bg-sky-100 px-2 py-0.5 text-[11px] font-medium text-sky-700 dark:bg-sky-500/15 dark:text-sky-200"
+        >
+          {t("log_content.egress_badge_proxy")}
+        </span>,
+      );
+    } else if (egressInfo) {
+      egressBadges.push(
+        <span
+          key="direct"
+          className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-700 dark:bg-white/10 dark:text-white/70"
+        >
+          {t("log_content.egress_badge_server")}
+        </span>,
+      );
+    }
+    if (egressInfo && typeof egressInfo.matches_server_ip === "boolean") {
+      egressBadges.push(
+        <span
+          key="compare"
+          className={[
+            "rounded-full px-2 py-0.5 text-[11px] font-medium",
+            egressInfo.matches_server_ip
+              ? "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-200"
+              : "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200",
+          ].join(" ")}
+        >
+          {egressInfo.matches_server_ip
+            ? t("log_content.egress_badge_same")
+            : t("log_content.egress_badge_different")}
+        </span>,
+      );
+    }
+    if ((egressInfo?.error || egressError) && !egressLoading) {
+      egressBadges.push(
+        <span
+          key="error"
+          className="rounded-full bg-rose-100 px-2 py-0.5 text-[11px] font-medium text-rose-700 dark:bg-rose-500/15 dark:text-rose-200"
+        >
+          {t("log_content.egress_badge_failed")}
+        </span>,
+      );
+    }
 
     return (
       <div className="space-y-3 p-1">
+        <RequestDetailSection
+          testId="request-detail-section-egress"
+          title={t("log_content.details_egress")}
+          attempts={
+            egressRows.length > 0 ? [{ rows: egressRows, groups: [] }] : []
+          }
+          headerExtras={egressBadges}
+        />
         <RequestDetailSection
           testId="request-detail-section-client"
           title={t("log_content.details_client")}
@@ -1084,7 +1417,11 @@ export function LogContentModal({
           attempts={responseAttempts}
         />
         {extraSections.map((section) => (
-          <RequestDetailSection key={section.key} title={section.key} attempts={section.attempts} />
+          <RequestDetailSection
+            key={section.key}
+            title={section.key}
+            attempts={section.attempts}
+          />
         ))}
       </div>
     );
@@ -1114,7 +1451,9 @@ export function LogContentModal({
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
             >
-              <p className="text-sm text-red-500 dark:text-red-400">{activeError}</p>
+              <p className="text-sm text-red-500 dark:text-red-400">
+                {activeError}
+              </p>
             </motion.div>
           ) : (
             <motion.div
@@ -1141,7 +1480,11 @@ export function LogContentModal({
         open={imagePreviewOpen && Boolean(outputImagePreviewSrc)}
         imageSrc={outputImagePreviewSrc}
         imageAlt={t("log_content.output")}
-        title={model ? `${t("log_content.output")} · ${model}` : t("log_content.output")}
+        title={
+          model
+            ? `${t("log_content.output")} · ${model}`
+            : t("log_content.output")
+        }
         downloadName={activeDownloadName}
         images={imageGenerationOutput?.images.map((image, index) => ({
           src: image.src,

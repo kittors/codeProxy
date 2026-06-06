@@ -581,14 +581,15 @@ describe("SystemPage", () => {
     });
 
     expect(within(dialog).getByTestId("update-progress-console")).toBeInTheDocument();
-    expect(within(dialog).getByText(/docker compose pull clirelay/i)).toBeInTheDocument();
     await waitFor(() => {
-      expect(within(dialog).getByText(/Container clirelay Started/i)).toBeInTheDocument();
+      expect(within(dialog).getByRole("heading", { name: /update completed/i })).toBeInTheDocument();
     });
+    expect(within(dialog).queryByText(/docker compose pull clirelay/i)).toBeNull();
+    expect(within(dialog).getByText(/The updater finished all steps\./i)).toBeInTheDocument();
+    expect(within(dialog).getByText("100%")).toBeInTheDocument();
     expect(within(dialog).getByText(/main-1111111/i)).toBeInTheDocument();
     expect(within(dialog).getByText(/main-abcdef1/i)).toBeInTheDocument();
     expect(within(dialog).getAllByText("Completed").length).toBeGreaterThan(0);
-    expect(within(dialog).getByRole("heading", { name: /update completed/i })).toBeInTheDocument();
 
     await waitFor(() => {
       expect(within(dialog).queryByRole("button", { name: /updating/i })).toBeNull();

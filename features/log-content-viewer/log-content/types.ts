@@ -1,3 +1,5 @@
+import type { UsageLogEgressResponse } from "@code-proxy/api-client";
+
 export type LogContentBodyPart = "input" | "output";
 export type LogContentPart = LogContentBodyPart | "details";
 
@@ -9,7 +11,11 @@ export interface LogContentModalProps {
   showRequestDetails?: boolean;
   fetchFn?: (
     id: number,
-  ) => Promise<{ input_content: string; output_content: string; model: string }>;
+  ) => Promise<{
+    input_content: string;
+    output_content: string;
+    model: string;
+  }>;
   fetchPartFn?: (
     id: number,
     part: LogContentBodyPart,
@@ -22,6 +28,10 @@ export interface LogContentModalProps {
     id: number,
     options?: { signal?: AbortSignal },
   ) => Promise<{ id: number; model: string; part: "details"; content: string }>;
+  fetchEgressFn?: (
+    id: number,
+    options?: { signal?: AbortSignal },
+  ) => Promise<UsageLogEgressResponse>;
 }
 
 export type Msg = { role: string; content: string };
@@ -32,5 +42,11 @@ export type RenderedView =
   | { kind: "pretty_json"; pretty: string }
   | { kind: "raw"; raw: string };
 
-export type AsyncParsedState = { status: "idle" | "parsing" | "ready"; view: RenderedView | null };
-export type AsyncPrettyState = { status: "idle" | "formatting" | "ready"; pretty: string | null };
+export type AsyncParsedState = {
+  status: "idle" | "parsing" | "ready";
+  view: RenderedView | null;
+};
+export type AsyncPrettyState = {
+  status: "idle" | "formatting" | "ready";
+  pretty: string | null;
+};

@@ -129,40 +129,34 @@ function reconcileGenericMappings(
   fallbackModel: string,
 ): CcSwitchModelMapping[] {
   const currentNonRole = currentMappings.filter((mapping) => !mapping.role);
-  const currentByTarget = new Map(
-    currentNonRole.map((mapping) => [mapping.targetModel.trim().toLowerCase(), mapping]),
-  );
-  const seen = new Set<string>();
-  const result: CcSwitchModelMapping[] = [];
+  if (currentNonRole.length > 0) {
+    const seen = new Set<string>();
+    const preserved: CcSwitchModelMapping[] = [];
 
-  for (const mapping of currentNonRole) {
-    const key = mapping.targetModel.trim().toLowerCase();
-    if (!key || seen.has(key)) continue;
-    seen.add(key);
-    result.push(mapping);
+    for (const mapping of currentNonRole) {
+      const targetKey = mapping.targetModel.trim().toLowerCase();
+      if (targetKey) {
+        if (seen.has(targetKey)) continue;
+        seen.add(targetKey);
+      }
+      preserved.push(mapping);
+    }
+
+    if (preserved.length > 0) {
+      return preserved;
+    }
   }
 
-  const sortedNew = [...new Set(models.map((m) => m.trim()).filter(Boolean))]
-    .filter((m) => !seen.has(m.toLowerCase()))
-    .sort((a, b) => a.localeCompare(b));
-  for (const targetModel of sortedNew) {
-    const key = targetModel.toLowerCase();
-    if (seen.has(key)) continue;
-    seen.add(key);
-    result.push({ requestModel: targetModel, targetModel });
-  }
+  const autoMappings = dedupeModels(models).map((targetModel) => ({
+    requestModel: targetModel,
+    targetModel,
+  }));
+  if (autoMappings.length > 0) return autoMappings;
 
-  const resolvedTargets =
-    result.length > 0
-      ? result
-      : dedupeModels([fallbackModel]).map((targetModel) => ({
-          requestModel: targetModel,
-          targetModel,
-        }));
-  return resolvedTargets.map((mapping) => {
-    const existing = currentByTarget.get(mapping.targetModel.trim().toLowerCase());
-    return existing ?? mapping;
-  });
+  return dedupeModels([fallbackModel]).map((targetModel) => ({
+    requestModel: targetModel,
+    targetModel,
+  }));
 }
 
 function reconcileClaudeMappings(
