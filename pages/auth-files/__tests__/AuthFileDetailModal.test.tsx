@@ -64,6 +64,7 @@ const renderDetailModal = (overrides: Partial<DetailModalProps> = {}) => {
       hours: 5,
       request_total: 3,
       cycle_request_total: 2,
+      cycle_cost_total: 1.2345,
       cycle_start: "2026-04-27T16:01:21Z",
       daily_usage: [
         { date: "2026-04-24", requests: 0 },
@@ -147,6 +148,8 @@ describe("AuthFileDetailModal", () => {
     expect(screen.getByText("3")).toBeInTheDocument();
     expect(screen.getByText("Current weekly cycle")).toBeInTheDocument();
     expect(screen.getByText("2")).toBeInTheDocument();
+    expect(screen.getByText("Current cycle cost")).toBeInTheDocument();
+    expect(screen.getByText("$1.2345")).toBeInTheDocument();
     expect(screen.getByRole("dialog", { name: "View: codex.json" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Download" })).toBeEnabled();
   });
@@ -178,6 +181,7 @@ describe("AuthFileDetailModal", () => {
         hours: 5,
         request_total: 12,
         cycle_request_total: 12,
+        cycle_cost_total: 0.008,
         cycle_start: "2026-04-28T05:34:34Z",
         daily_usage: [],
         hourly_usage: [

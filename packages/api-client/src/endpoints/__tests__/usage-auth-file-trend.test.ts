@@ -24,6 +24,7 @@ describe("usage auth file trend api", () => {
       hours: 5,
       request_total: 3,
       cycle_request_total: 2,
+      cycle_cost_total: 1.2345,
       cycle_start: "2026-04-27T16:01:21Z",
       daily_usage: [{ date: "2026-04-30", requests: 2 }],
       hourly_usage: [{ hour: "2026-04-30 16:00", requests: 1 }],
@@ -41,6 +42,7 @@ describe("usage auth file trend api", () => {
 
     expect(getMock).toHaveBeenCalledWith("/usage/auth-file-trend?auth_index=auth-1&days=7&hours=5");
     expect(result.request_total).toBe(3);
+    expect(result.cycle_cost_total).toBe(1.2345);
     expect(result.daily_usage).toHaveLength(1);
     expect(result.quota_series[0]?.quota_key).toBe("code_week");
   });

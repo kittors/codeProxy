@@ -686,6 +686,7 @@
     "detail_tab_models_desc": "Запросить поддерживаемые модели для этих учётных данных, чтобы проверить права и исключения.",
     "trend_last_7_days_requests": "Запросы за 7 дней",
     "trend_current_weekly_cycle": "Текущий недельный цикл",
+    "trend_current_cycle_cost": "Стоимость текущего цикла",
     "trend_cycle_start": "Начало цикла",
     "trend_window_title": "Тренды квоты и запросов",
     "trend_window_5h": "5 часов",

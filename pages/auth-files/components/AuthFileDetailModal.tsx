@@ -45,6 +45,8 @@ const formatLocalHourKey = (timestamp: string) => {
   return `${formatLocalDateKey(timestamp)} ${padTwo(date.getHours())}:00`;
 };
 
+const formatCurrency = (value: number) => `$${(Number.isFinite(value) ? value : 0).toFixed(4)}`;
+
 interface AuthFileDetailModalProps {
   open: boolean;
   detailFile: AuthFileItem | null;
@@ -295,7 +297,7 @@ export function AuthFileDetailModal({
 
     return (
       <div className="space-y-4">
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <div className="rounded-lg bg-slate-50/80 px-3 py-3 dark:bg-white/[0.04]">
             <p className="text-xs font-semibold text-slate-500 dark:text-white/55">
               {t("auth_files.trend_last_7_days_requests")}
@@ -310,6 +312,14 @@ export function AuthFileDetailModal({
             </p>
             <p className="mt-2 text-2xl font-semibold text-slate-950 dark:text-white">
               {formatCount(detailTrend.cycle_request_total)}
+            </p>
+          </div>
+          <div className="rounded-lg bg-slate-50/80 px-3 py-3 dark:bg-white/[0.04]">
+            <p className="text-xs font-semibold text-slate-500 dark:text-white/55">
+              {t("auth_files.trend_current_cycle_cost")}
+            </p>
+            <p className="mt-2 text-2xl font-semibold text-slate-950 dark:text-white">
+              {formatCurrency(detailTrend.cycle_cost_total)}
             </p>
           </div>
           <div className="rounded-lg bg-slate-50/80 px-3 py-3 dark:bg-white/[0.04]">

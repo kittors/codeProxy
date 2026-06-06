@@ -691,6 +691,7 @@
     "detail_tab_models_desc": "Query supported models for this credential to troubleshoot permissions and exclusions.",
     "trend_last_7_days_requests": "Last 7 days requests",
     "trend_current_weekly_cycle": "Current weekly cycle",
+    "trend_current_cycle_cost": "Current cycle cost",
     "trend_cycle_start": "Cycle start",
     "trend_window_title": "Quota and request trends",
     "trend_window_5h": "5 hours",
