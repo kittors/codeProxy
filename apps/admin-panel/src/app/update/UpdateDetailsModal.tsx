@@ -57,9 +57,9 @@ function ReleaseNotesMarkdown({ text }: { text: string }) {
 
 const MAX_RELEASE_NOTE_ITEMS = 5;
 const LIST_ITEM_PATTERN = /^\s*(?:[-*+]|\d+\.)\s+/;
-const UPDATE_STAGE_ORDER = ["preparing", "pulling", "restarting", "verifying", "completed"];
 const UPDATE_LOG_MAX_VISIBLE_LINES = 60;
 const UPDATE_LOG_FRAME_INTERVAL_MS = 1000 / 30;
+const UPDATE_PROGRESS_TICK_MS = 180;
 const UPDATE_STAGE_LABEL_KEYS: Record<string, string> = {
   preparing: "auto_update.progress_stage_preparing",
   pulling: "auto_update.progress_stage_pulling",
@@ -77,6 +77,18 @@ const UPDATE_PROGRESS_MESSAGE_KEYS: Record<string, string> = {
   "verifying service health": "auto_update.progress_message_verifying_service",
   "waiting for service health": "auto_update.progress_message_verifying_service",
   "update completed": "auto_update.progress_message_completed",
+};
+const UPDATE_STAGE_PROGRESS_SEGMENTS: Record<
+  string,
+  { start: number; end: number; durationMs: number }
+> = {
+  idle: { start: 0, end: 0, durationMs: 0 },
+  preparing: { start: 8, end: 18, durationMs: 2200 },
+  pulling: { start: 18, end: 68, durationMs: 16000 },
+  restarting: { start: 68, end: 84, durationMs: 7000 },
+  verifying: { start: 84, end: 97, durationMs: 9000 },
+  completed: { start: 100, end: 100, durationMs: 0 },
+  failed: { start: 24, end: 90, durationMs: 0 },
 };
 
 function buildReleaseNotesPreview(text: string) {
@@ -109,15 +121,6 @@ function stageLabel(t: TFunction, stage: string) {
 
 function normalizedProgressStatus(progress?: UpdateProgressResponse | null) {
   return progress?.status?.trim().toLowerCase() ?? "";
-}
-
-function progressPercent(status: string, activeStageIndex: number) {
-  if (status === "completed") return 100;
-  const safeStageIndex = Math.max(0, activeStageIndex);
-  if (status === "failed") {
-    return Math.min(100, Math.max(14, ((safeStageIndex + 1) / UPDATE_STAGE_ORDER.length) * 100));
-  }
-  return Math.min(94, Math.max(10, ((safeStageIndex + 0.5) / UPDATE_STAGE_ORDER.length) * 100));
 }
 
 function translateProgressMessage(
@@ -181,6 +184,30 @@ function frameNow() {
   return window.performance?.now?.() ?? Date.now();
 }
 
+function stageProgressSegment(stage: string, status: string) {
+  if (status === "completed") return UPDATE_STAGE_PROGRESS_SEGMENTS.completed;
+  if (status === "failed") {
+    return UPDATE_STAGE_PROGRESS_SEGMENTS[stage] ?? UPDATE_STAGE_PROGRESS_SEGMENTS.failed;
+  }
+  return UPDATE_STAGE_PROGRESS_SEGMENTS[stage] ?? { start: 22, end: 78, durationMs: 9000 };
+}
+
+function easeOutCubic(value: number) {
+  return 1 - Math.pow(1 - value, 3);
+}
+
+function visualProgressTarget(status: string, stage: string, stageElapsedMs: number) {
+  if (status === "idle") return 0;
+  if (status === "completed") return 100;
+  const segment = stageProgressSegment(stage, status);
+  if (status === "failed" || segment.durationMs <= 0) {
+    return segment.end;
+  }
+  const phase = Math.min(1, stageElapsedMs / segment.durationMs);
+  const span = Math.max(0, segment.end - segment.start);
+  return segment.start + span * easeOutCubic(phase);
+}
+
 function useAnimatedProgressValue(target: number, snap = false) {
   const [displayValue, setDisplayValue] = useState(target);
   const frameRef = useRef<number | null>(null);
@@ -214,6 +241,37 @@ function useAnimatedProgressValue(target: number, snap = false) {
   }, [displayValue, snap, target]);
 
   return displayValue;
+}
+
+function useVisualProgressTarget(progress?: UpdateProgressResponse | null) {
+  const stage = normalizedStage(progress);
+  const status = normalizedProgressStatus(progress);
+  const [now, setNow] = useState(() => Date.now());
+  const markerRef = useRef({
+    key: "",
+    enteredAt: Date.now(),
+  });
+  const markerKey = `${status}:${stage}:${progress?.started_at ?? ""}:${progress?.finished_at ?? ""}`;
+
+  useEffect(() => {
+    if (markerRef.current.key === markerKey) return;
+    markerRef.current = {
+      key: markerKey,
+      enteredAt: Date.now(),
+    };
+    setNow(Date.now());
+  }, [markerKey]);
+
+  useEffect(() => {
+    if (status !== "running") return undefined;
+    const timer = window.setInterval(() => {
+      setNow(Date.now());
+    }, UPDATE_PROGRESS_TICK_MS);
+    return () => window.clearInterval(timer);
+  }, [status, stage]);
+
+  if (status === "completed") return 100;
+  return visualProgressTarget(status, stage, Math.max(0, now - markerRef.current.enteredAt));
 }
 
 type AnimationFrameHandle =
@@ -361,18 +419,15 @@ function UpdateProgressConsole({
       candidate.latest_ui_commit,
       candidate.target_channel,
   );
-  const dockerImage =
-    [progress?.target_image, progress?.target_tag].filter(Boolean).join(":") ||
-    [candidate.docker_image, candidate.docker_tag].filter(Boolean).join(":") ||
-    "--";
   const progressStatus = normalizedProgressStatus(progress);
-  const rawStageIndex = UPDATE_STAGE_ORDER.indexOf(stage);
-  const activeStageIndex = Math.max(0, rawStageIndex);
   const isCompleted = progressStatus === "completed";
   const isFailed = progressStatus === "failed";
   const isRunning = progressStatus === "running";
-  const percent = progressPercent(progressStatus, activeStageIndex);
-  const animatedPercent = useAnimatedProgressValue(percent, isCompleted || isFailed);
+  const progressTarget = useVisualProgressTarget(progress);
+  const animatedPercent = useAnimatedProgressValue(progressTarget, isFailed);
+  const sourceLogs = progress?.logs ?? [];
+  const visibleLogs = useSmoothUpdateLogs(sourceLogs, isCompleted || isFailed);
+  const logContainerRef = useRef<HTMLDivElement | null>(null);
   const progressMessage = translateProgressMessage(t, progress, stage);
   const StatusIcon = isCompleted
     ? CheckCircle2
@@ -407,21 +462,23 @@ function UpdateProgressConsole({
           ? "bg-sky-500"
           : "bg-slate-400";
 
+  useEffect(() => {
+    if (!logContainerRef.current) return;
+    logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
+  }, [visibleLogs]);
+
   return (
-    <section
-      data-testid="update-progress-console"
-      className="min-w-0 space-y-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950"
-    >
-      <div className="space-y-3">
+    <div data-testid="update-progress-console" className="min-w-0 space-y-4">
+      <section className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-[radial-gradient(circle_at_top_left,_rgba(14,165,233,0.08),_transparent_45%),linear-gradient(180deg,_rgba(255,255,255,1)_0%,_rgba(248,250,252,1)_100%)] p-4 shadow-sm dark:border-neutral-800 dark:bg-[radial-gradient(circle_at_top_left,_rgba(56,189,248,0.14),_transparent_42%),linear-gradient(180deg,_rgba(10,15,27,1)_0%,_rgba(8,12,22,1)_100%)]">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex min-w-0 items-start gap-3">
             <span
               className={[
-                "mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full ring-1",
+                "mt-0.5 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ring-1",
                 statusIconClass,
               ].join(" ")}
             >
-              <StatusIcon size={16} className={isRunning ? "animate-spin" : ""} />
+              <StatusIcon size={18} className={isRunning ? "animate-spin" : ""} />
             </span>
             <div className="min-w-0">
               <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
@@ -441,81 +498,100 @@ function UpdateProgressConsole({
             >
               {stageLabel(t, stage)}
             </span>
-            <span className="font-mono text-sm font-semibold text-slate-900 dark:text-white">
+            <span className="font-mono text-lg font-semibold text-slate-900 dark:text-white">
               {Math.round(animatedPercent)}%
             </span>
           </div>
         </div>
-        <div className="h-1.5 overflow-hidden rounded-full bg-slate-100 dark:bg-white/10">
+
+        <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-200/80 dark:bg-white/10">
           <div
             className={[
-              "h-full rounded-full transition-[width] duration-700 ease-out",
+              "relative h-full rounded-full transition-[width] duration-500 ease-out",
               progressBarClass,
             ].join(" ")}
             style={{ width: `${animatedPercent}%` }}
-          />
+          >
+            {isRunning ? (
+              <span className="absolute inset-y-0 right-0 w-16 bg-white/30 blur-md dark:bg-white/20" />
+            ) : null}
+          </div>
         </div>
-      </div>
 
-      <dl className="grid min-w-0 gap-2 lg:grid-cols-2">
-        <div className="min-w-0 rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-neutral-800 dark:bg-neutral-900/50">
-          <dt className="text-xs font-medium text-slate-500 dark:text-white/55">
-            {t("auto_update.progress_service_path")}
-          </dt>
-          <dd className="mt-1 break-words font-mono text-sm text-slate-900 dark:text-white">
-            {currentVersion} <span className="text-slate-400">-&gt;</span> {targetVersion}
-          </dd>
-        </div>
-        <div className="min-w-0 rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-neutral-800 dark:bg-neutral-900/50">
-          <dt className="text-xs font-medium text-slate-500 dark:text-white/55">
-            {t("auto_update.progress_ui_path")}
-          </dt>
-          <dd className="mt-1 break-words font-mono text-sm text-slate-900 dark:text-white">
-            {currentUIVersion} <span className="text-slate-400">-&gt;</span> {targetUIVersion}
-          </dd>
-        </div>
-        <div className="min-w-0 rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-neutral-800 dark:bg-neutral-900/50 lg:col-span-2">
-          <dt className="text-xs font-medium text-slate-500 dark:text-white/55">
-            {t("auto_update.image")}
-          </dt>
-          <dd className="mt-1 break-words font-mono text-sm text-slate-900 dark:text-white">
-            {dockerImage}
-          </dd>
-        </div>
-      </dl>
+        <dl className="mt-4 grid min-w-0 gap-3 lg:grid-cols-2">
+          <div className="min-w-0 rounded-2xl border border-white/60 bg-white/80 p-3 backdrop-blur-sm dark:border-white/8 dark:bg-white/5">
+            <dt className="text-xs font-medium uppercase tracking-[0.18em] text-slate-500 dark:text-white/45">
+              {t("auto_update.progress_service_path")}
+            </dt>
+            <dd className="mt-2 break-words font-mono text-sm text-slate-900 dark:text-white">
+              {currentVersion} <span className="text-slate-400">-&gt;</span> {targetVersion}
+            </dd>
+          </div>
+          <div className="min-w-0 rounded-2xl border border-white/60 bg-white/80 p-3 backdrop-blur-sm dark:border-white/8 dark:bg-white/5">
+            <dt className="text-xs font-medium uppercase tracking-[0.18em] text-slate-500 dark:text-white/45">
+              {t("auto_update.progress_ui_path")}
+            </dt>
+            <dd className="mt-2 break-words font-mono text-sm text-slate-900 dark:text-white">
+              {currentUIVersion} <span className="text-slate-400">-&gt;</span> {targetUIVersion}
+            </dd>
+          </div>
+        </dl>
+      </section>
 
-      <ol className="grid gap-2 text-xs sm:grid-cols-5">
-        {UPDATE_STAGE_ORDER.map((item, index) => {
-          const completed = isCompleted || (!isFailed && index < activeStageIndex);
-          const active = !isCompleted && item === stage;
-          const StageIcon = completed
-            ? CheckCircle2
-            : active && isFailed
-              ? XCircle
-              : active && isRunning
-                ? LoaderCircle
-                : Circle;
-          return (
-            <li
-              key={item}
-              className={[
-                "flex items-center gap-2 rounded-lg border px-2.5 py-2",
-                completed
-                  ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-200"
-                  : active && isFailed
-                    ? "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-200"
-                    : active
-                      ? "border-sky-300 bg-sky-100 text-sky-800 dark:border-sky-400/25 dark:bg-sky-400/15 dark:text-sky-100"
-                      : "border-slate-200 bg-white/70 text-slate-500 dark:border-neutral-800 dark:bg-neutral-950/40 dark:text-white/45",
-              ].join(" ")}
-            >
-              <StageIcon size={13} className={active && isRunning ? "animate-spin" : ""} />
-              <span className="min-w-0 truncate">{stageLabel(t, item)}</span>
-            </li>
-          );
-        })}
-      </ol>
-    </section>
+      <section
+        data-testid="update-log-stream"
+        className="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950"
+      >
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <h4 className="text-sm font-semibold text-slate-900 dark:text-white">
+            {t("auto_update.progress_logs")}
+          </h4>
+          <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600 dark:bg-white/8 dark:text-white/60">
+            {t("auto_update.progress_log_count", { count: sourceLogs.length })}
+          </span>
+        </div>
+
+        {visibleLogs.length ? (
+          <div
+            ref={logContainerRef}
+            className="max-h-72 overflow-y-auto rounded-2xl bg-slate-950 px-3 py-3 font-mono text-[12px] leading-6 text-slate-100 shadow-inner dark:bg-black"
+          >
+            {visibleLogs.map((entry, index) => {
+              const stream = entry.stream?.trim().toLowerCase() || "stdout";
+              const streamClass =
+                stream === "stderr"
+                  ? "bg-rose-500/15 text-rose-200 ring-rose-400/20"
+                  : "bg-sky-500/15 text-sky-100 ring-sky-400/20";
+              return (
+                <div
+                  key={`${entry.timestamp ?? "unknown"}-${stream}-${index}-${entry.message}`}
+                  className="flex min-w-0 items-start gap-3 border-b border-white/6 py-1.5 last:border-b-0"
+                >
+                  <span className="shrink-0 text-[11px] text-slate-500">
+                    {formatLogTimestamp(entry.timestamp) || "--:--:--"}
+                  </span>
+                  <span
+                    className={[
+                      "mt-0.5 inline-flex shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ring-1",
+                      streamClass,
+                    ].join(" ")}
+                  >
+                    {stream}
+                  </span>
+                  <span className="min-w-0 flex-1 whitespace-pre-wrap break-words text-slate-100">
+                    {entry.message}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-sm text-slate-500 dark:border-neutral-800 dark:bg-neutral-900/40 dark:text-white/50">
+            {t("auto_update.progress_logs_empty")}
+          </div>
+        )}
+      </section>
+    </div>
   );
 }
 
@@ -632,6 +708,9 @@ export function UpdateDetailsModal({
   const versionCardMetaClass = alreadyUpToDate
     ? "mt-1 truncate text-xs text-emerald-700/80 dark:text-emerald-200/80"
     : "mt-1 truncate text-xs text-slate-500 dark:text-white/50";
+  const handleReloadPage = () => {
+    window.location.reload();
+  };
 
   useEffect(() => {
     setReleaseNotesExpanded(false);
@@ -643,27 +722,33 @@ export function UpdateDetailsModal({
       title={modalTitle}
       description={modalDescription}
       maxWidth="max-w-[min(92vw,900px)]"
-      bodyHeightClassName="h-[min(68vh,560px)]"
+      bodyHeightClassName="max-h-[min(72vh,640px)]"
       bodyTestId="update-details-modal-body"
       onClose={() => {
         if (!activeUpdate) onClose();
       }}
       footer={
-        <>
-          <Button variant="secondary" onClick={onClose} disabled={activeUpdate}>
-            {t("common.close")}
+        progressCompleted ? (
+          <Button variant="primary" onClick={handleReloadPage}>
+            {t("auto_update.refresh_page")}
           </Button>
-          {!showProgressConsole || activeUpdate ? (
-            <Button
-              variant="primary"
-              onClick={onApply}
-              disabled={checking || activeUpdate || !canUpdate}
-            >
-              {activeUpdate ? <RefreshCw size={14} className="animate-spin" /> : null}
-              {activeUpdate ? t("auto_update.updating") : t("auto_update.update_now")}
+        ) : (
+          <>
+            <Button variant="secondary" onClick={onClose} disabled={activeUpdate}>
+              {t("common.close")}
             </Button>
-          ) : null}
-        </>
+            {!showProgressConsole || activeUpdate ? (
+              <Button
+                variant="primary"
+                onClick={onApply}
+                disabled={checking || activeUpdate || !canUpdate}
+              >
+                {activeUpdate ? <RefreshCw size={14} className="animate-spin" /> : null}
+                {activeUpdate ? t("auto_update.updating") : t("auto_update.update_now")}
+              </Button>
+            ) : null}
+          </>
+        )
       }
     >
       <div className="min-w-0 space-y-4">

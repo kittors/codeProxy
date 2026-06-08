@@ -32,7 +32,7 @@ describe("UpdateDetailsModal", () => {
     vi.restoreAllMocks();
   });
 
-  test("localizes common updater messages, shows percentage, and hides verbose logs", async () => {
+  test("localizes common updater messages, shows percentage, and restores live docker logs", async () => {
     render(
       <UpdateDetailsModal
         open
@@ -51,8 +51,9 @@ describe("UpdateDetailsModal", () => {
     );
 
     expect(screen.getByText("Pulling the target image.")).toBeInTheDocument();
-    expect(screen.getByText("30%")).toBeInTheDocument();
-    expect(screen.queryByTestId("update-log-stream")).toBeNull();
+    expect(screen.getByText(/1[89]%|20%/)).toBeInTheDocument();
+    expect(await screen.findByText("pull image")).toBeInTheDocument();
+    expect(screen.getByTestId("update-log-stream")).toBeInTheDocument();
   });
 
   test("renders localized success styling when already up to date", async () => {
@@ -82,7 +83,7 @@ describe("UpdateDetailsModal", () => {
     ).toHaveClass("text-emerald-800");
   });
 
-  test("lets completed progress override a stale parent updating flag", async () => {
+  test("replaces footer close action with reload when update is completed", async () => {
     render(
       <UpdateDetailsModal
         open
@@ -109,6 +110,7 @@ describe("UpdateDetailsModal", () => {
     expect(screen.getByRole("heading", { name: /update completed/i })).toBeInTheDocument();
     expect(screen.getByText("100%")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /updating/i })).toBeNull();
-    expect(screen.getAllByRole("button", { name: /close/i }).at(-1)).toBeEnabled();
+    expect(screen.queryByText("Close")).toBeNull();
+    expect(screen.getByRole("button", { name: /refresh page/i })).toBeEnabled();
   });
 });

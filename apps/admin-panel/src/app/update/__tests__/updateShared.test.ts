@@ -64,8 +64,25 @@ describe("applyUpdateFlow", () => {
     });
   });
 
-  test("treats completed updater progress as success even when the current page still has the old UI commit", async () => {
+  test("keeps a verifying transition before reporting completed progress", async () => {
     const notify = vi.fn();
+    const onProgress = vi.fn();
+    mocks.current.mockResolvedValue({
+      enabled: true,
+      update_available: false,
+      current_version: "main-a0ed5c6",
+      current_commit: "a0ed5c63a118412d5b4da8d57ec6d049111b7888",
+      current_ui_version: "panel-main-9477958",
+      current_ui_commit: "94779588adb784b1ceff19c662d3ab55155997e1",
+      latest_version: "main-a0ed5c6",
+      latest_commit: "a0ed5c63a118412d5b4da8d57ec6d049111b7888",
+      latest_ui_version: "panel-main-9477958",
+      latest_ui_commit: "94779588adb784b1ceff19c662d3ab55155997e1",
+      target_channel: "main",
+      docker_image: "ghcr.io/kittors/clirelay",
+      docker_tag: "latest",
+      updater_available: true,
+    });
 
     const result = await applyUpdateFlow({
       candidate: {
@@ -87,10 +104,25 @@ describe("applyUpdateFlow", () => {
       heartbeatIntervalMs: 1,
       heartbeatTimeoutMs: 20,
       notify,
+      onProgress,
       t: ((key: string) => key) as never,
     });
 
     expect(result).toBe(true);
+    expect(onProgress).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: "running",
+        stage: "verifying",
+        message: "waiting for service health",
+      }),
+    );
+    expect(onProgress).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        status: "completed",
+        stage: "completed",
+        message: "update completed",
+      }),
+    );
     expect(notify).toHaveBeenCalledWith({
       type: "success",
       message: "auto_update.success",

@@ -6,7 +6,7 @@ import {
   type UpdateProgressResponse,
 } from "@code-proxy/api-client/endpoints/update";
 
-export const DEFAULT_HEARTBEAT_INTERVAL_MS = 2000;
+export const DEFAULT_HEARTBEAT_INTERVAL_MS = 1000;
 export const DEFAULT_HEARTBEAT_TIMEOUT_MS = 180000;
 
 const sleep = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms));
@@ -91,6 +91,48 @@ export const createPendingUpdateProgress = (
   logs: [],
 });
 
+const mergeProgressTargetMetadata = (
+  progress: UpdateProgressResponse | null | undefined,
+  target?: UpdateCheckResponse | null,
+) => ({
+  target_image: progress?.target_image ?? target?.docker_image,
+  target_tag: progress?.target_tag ?? target?.docker_tag,
+  target_version: progress?.target_version ?? target?.latest_version,
+  target_commit: progress?.target_commit ?? target?.latest_commit,
+  target_ui_version: progress?.target_ui_version ?? target?.latest_ui_version,
+  target_ui_commit: progress?.target_ui_commit ?? target?.latest_ui_commit,
+  target_channel: progress?.target_channel ?? target?.target_channel,
+});
+
+const createVerifyingProgress = (
+  progress: UpdateProgressResponse | null | undefined,
+  target?: UpdateCheckResponse | null,
+): UpdateProgressResponse => ({
+  ...(progress ?? createPendingUpdateProgress(target)),
+  ...mergeProgressTargetMetadata(progress, target),
+  status: "running",
+  stage: "verifying",
+  message: "waiting for service health",
+  logs: progress?.logs ?? [],
+});
+
+const createCompletedProgress = (
+  progress: UpdateProgressResponse | null | undefined,
+  target?: UpdateCheckResponse | null,
+): UpdateProgressResponse => {
+  const finishedAt = progress?.finished_at ?? new Date().toISOString();
+  return {
+    ...(progress ?? createPendingUpdateProgress(target)),
+    ...mergeProgressTargetMetadata(progress, target),
+    status: "completed",
+    stage: "completed",
+    message: "update completed",
+    updated_at: progress?.updated_at ?? finishedAt,
+    finished_at: finishedAt,
+    logs: progress?.logs ?? [],
+  };
+};
+
 const targetNeedsBackendChange = (target?: UpdateCheckResponse | null) =>
   Boolean(target?.latest_commit?.trim()) &&
   !sameCommit(target?.current_commit, target?.latest_commit);
@@ -137,6 +179,12 @@ const waitForAppliedTarget = async ({
   const deadline = Date.now() + heartbeatTimeoutMs;
   let lastCheck: UpdateCheckResponse | null = null;
   let lastProgress: UpdateProgressResponse | null = null;
+  const reportVerifyingProgress = (progress?: UpdateProgressResponse | null) => {
+    const verifyingProgress = createVerifyingProgress(progress ?? lastProgress, target);
+    lastProgress = verifyingProgress;
+    onProgress?.(verifyingProgress);
+    return verifyingProgress;
+  };
   const pollProgress = async () => {
     try {
       const progress = await updateApi.progress({
@@ -160,7 +208,7 @@ const waitForAppliedTarget = async ({
     };
   }
   if (initialStatus === "completed") {
-    return { ok: true as const, latest: lastCheck, progress: initialProgress };
+    reportVerifyingProgress(initialProgress);
   }
   await sleep(Math.min(heartbeatIntervalMs, 3000));
   while (true) {
@@ -170,7 +218,7 @@ const waitForAppliedTarget = async ({
       return { ok: false as const, latest: lastCheck, progress, failed: true as const };
     }
     if (status === "completed") {
-      return { ok: true as const, latest: lastCheck, progress };
+      reportVerifyingProgress(progress);
     }
     try {
       await apiClient.get("/system-stats", {
@@ -252,6 +300,7 @@ export const applyUpdateFlow = async ({
     });
     return false;
   }
+  onProgress?.(createCompletedProgress(result.progress, target));
   notify({ type: "success", message: t("auto_update.success") });
   return true;
 };
