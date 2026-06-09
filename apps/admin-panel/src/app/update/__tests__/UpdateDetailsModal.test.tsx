@@ -112,5 +112,7 @@ describe("UpdateDetailsModal", () => {
     expect(screen.queryByRole("button", { name: /updating/i })).toBeNull();
     expect(screen.queryByText("Close")).toBeNull();
     expect(screen.getByRole("button", { name: /refresh page/i })).toBeEnabled();
+    expect(screen.queryByTestId("update-log-stream")).toBeNull();
+    expect(screen.getByTestId("update-details-modal-body")).toHaveClass("max-h-[min(62vh,520px)]");
   });
 });
