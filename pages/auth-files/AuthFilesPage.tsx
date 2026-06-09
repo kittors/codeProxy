@@ -226,6 +226,7 @@ export function AuthFilesPage() {
 
   const {
     uploading,
+    uploadProgress,
     deletingAll,
     statusUpdating,
     tagSavingByName,
@@ -566,6 +567,7 @@ export function AuthFilesPage() {
             usageLoading={usageLoading}
             refreshingAll={refreshingAll || refreshingCurrentPage}
             uploading={uploading}
+            uploadProgress={uploadProgress}
             setOauthDialogDefaultTab={setOauthDialogDefaultTab}
             setOauthDialogOpen={setOAuthDialogOpenWithBaseline}
             selectableFilteredFiles={selectableFilteredFiles}

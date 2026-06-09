@@ -437,6 +437,73 @@ describe("AuthFilesPage files table", () => {
     );
   });
 
+  test("shows upload progress while pasted auth files are uploading", async () => {
+    const firstUpload = createDeferred<{}>();
+    const secondUpload = createDeferred<{}>();
+    mocks.upload
+      .mockImplementationOnce(() => firstUpload.promise)
+      .mockImplementationOnce(() => secondUpload.promise);
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("qwen.json")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Paste JSON" }));
+
+    const dialog = await screen.findByRole("dialog", { name: "Paste Auth JSON" });
+    fireEvent.change(within(dialog).getByLabelText("Auth file JSON"), {
+      target: {
+        value: [
+          JSON.stringify({ type: "codex", account_id: "acct-one", access_token: "token-one" }),
+          JSON.stringify({ type: "kimi", account_id: "acct-two", refresh_token: "token-two" }),
+        ].join("\n"),
+      },
+    });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Upload JSON" }));
+
+    await waitFor(() => expect(mocks.upload).toHaveBeenCalledTimes(2));
+    await waitFor(() =>
+      expect(screen.getByTestId("auth-files-upload-progress-title")).toHaveTextContent(
+        "Uploading 0 / 2",
+      ),
+    );
+    expect(within(dialog).getByTestId("auth-files-json-upload-progress")).toHaveTextContent(
+      "Uploading 0 / 2",
+    );
+
+    await act(async () => {
+      firstUpload.resolve({});
+      await firstUpload.promise;
+    });
+
+    await waitFor(() =>
+      expect(screen.getByTestId("auth-files-upload-progress-title")).toHaveTextContent(
+        "Uploading 1 / 2",
+      ),
+    );
+
+    await act(async () => {
+      secondUpload.resolve({});
+      await secondUpload.promise;
+    });
+
+    await waitFor(() =>
+      expect(screen.queryByTestId("auth-files-upload-progress")).not.toBeInTheDocument(),
+    );
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog", { name: "Paste Auth JSON" })).not.toBeInTheDocument(),
+    );
+  });
+
   test("expands pasted codex export bundles into synthesized auth files", async () => {
     render(
       <MemoryRouter initialEntries={["/auth-files"]}>

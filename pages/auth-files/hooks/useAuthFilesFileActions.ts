@@ -6,6 +6,8 @@ import { invalidateConfiguredModelAvailability } from "@features/model-availabil
 import { useToast } from "@code-proxy/ui";
 import { formatFileSize, MAX_AUTH_FILE_SIZE, readAuthFileDefaultTags } from "@code-proxy/domain";
 
+const AUTH_FILES_UPLOAD_CONCURRENCY = 4;
+
 interface UseAuthFilesFileActionsOptions {
   loadAll: () => Promise<AuthFileItem[]>;
   fileInputRef: RefObject<HTMLInputElement | null>;
@@ -21,6 +23,26 @@ export type AuthFilesUploadResult = {
   uploadedNames: string[];
 };
 
+export type AuthFilesUploadProgress = {
+  phase: "idle" | "uploading" | "refreshing";
+  total: number;
+  completed: number;
+  success: number;
+  failed: number;
+  skipped: number;
+  activeFileNames: string[];
+};
+
+const IDLE_UPLOAD_PROGRESS: AuthFilesUploadProgress = {
+  phase: "idle",
+  total: 0,
+  completed: 0,
+  success: 0,
+  failed: 0,
+  skipped: 0,
+  activeFileNames: [],
+};
+
 export function useAuthFilesFileActions({
   loadAll,
   fileInputRef,
@@ -34,6 +56,7 @@ export function useAuthFilesFileActions({
   const { notify } = useToast();
 
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<AuthFilesUploadProgress>(IDLE_UPLOAD_PROGRESS);
   const [deletingAll, setDeletingAll] = useState(false);
   const [statusUpdating, setStatusUpdating] = useState<Record<string, boolean>>({});
   const [tagSavingByName, setTagSavingByName] = useState<Record<string, boolean>>({});
@@ -92,19 +115,53 @@ export function useAuthFilesFileActions({
 
       setUploading(true);
       try {
-        let success = 0;
-        let failed = 0;
         const uploadedNames: string[] = [];
+        const queue = [...valid];
+        setUploadProgress({
+          phase: "uploading",
+          total: files.length,
+          completed: tooLarge.length,
+          success: 0,
+          failed: 0,
+          skipped: tooLarge.length,
+          activeFileNames: [],
+        });
 
-        for (const file of valid) {
-          try {
-            await authFilesApi.upload(file);
-            success += 1;
-            uploadedNames.push(file.name);
-          } catch {
-            failed += 1;
-          }
-        }
+        const workerCount = Math.min(AUTH_FILES_UPLOAD_CONCURRENCY, queue.length);
+        await Promise.all(
+          Array.from({ length: workerCount }, async () => {
+            while (true) {
+              const file = queue.shift();
+              if (!file) return;
+
+              setUploadProgress((prev) => ({
+                ...prev,
+                activeFileNames: [...prev.activeFileNames, file.name],
+              }));
+
+              try {
+                await authFilesApi.upload(file);
+                uploadedNames.push(file.name);
+                setUploadProgress((prev) => ({
+                  ...prev,
+                  completed: prev.completed + 1,
+                  success: prev.success + 1,
+                  activeFileNames: prev.activeFileNames.filter((name) => name !== file.name),
+                }));
+              } catch {
+                setUploadProgress((prev) => ({
+                  ...prev,
+                  completed: prev.completed + 1,
+                  failed: prev.failed + 1,
+                  activeFileNames: prev.activeFileNames.filter((name) => name !== file.name),
+                }));
+              }
+            }
+          }),
+        );
+
+        const success = uploadedNames.length;
+        const failed = valid.length - success;
 
         if (success > 0) invalidateConfiguredModelAvailability();
 
@@ -117,8 +174,15 @@ export function useAuthFilesFileActions({
           });
         }
 
+        if (success === 0) return null;
+
+        setUploadProgress((prev) => ({
+          ...prev,
+          phase: "refreshing",
+          activeFileNames: [],
+        }));
         const nextFiles = await loadAll();
-        return success > 0 ? { files: nextFiles, uploadedNames } : null;
+        return { files: nextFiles, uploadedNames };
       } catch (err: unknown) {
         notify({
           type: "error",
@@ -127,6 +191,7 @@ export function useAuthFilesFileActions({
         return null;
       } finally {
         setUploading(false);
+        setUploadProgress(IDLE_UPLOAD_PROGRESS);
         if (fileInputRef.current) {
           fileInputRef.current.value = "";
         }
@@ -279,6 +344,7 @@ export function useAuthFilesFileActions({
 
   return {
     uploading,
+    uploadProgress,
     deletingAll,
     statusUpdating,
     tagSavingByName,

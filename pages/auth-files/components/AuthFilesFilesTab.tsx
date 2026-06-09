@@ -8,6 +8,7 @@ import {
   Ellipsis,
   Eye,
   ListChecks,
+  Loader2,
   Plus,
   RefreshCw,
   Search,
@@ -28,6 +29,7 @@ import { SearchableSelect, type SearchableSelectOption } from "@code-proxy/ui";
 import { Tabs, TabsList, TabsTrigger } from "@code-proxy/ui";
 import { DataTable, type DataTableColumn } from "@code-proxy/ui";
 import { ToggleSwitch } from "@code-proxy/ui";
+import type { AuthFilesUploadProgress } from "@pages/auth-files/hooks/useAuthFilesFileActions";
 import type {
   AuthFileModelOwnerGroup,
   AuthFileStatusFilter,
@@ -492,6 +494,7 @@ interface AuthFilesFilesTabProps {
   usageLoading: boolean;
   refreshingAll: boolean;
   uploading: boolean;
+  uploadProgress: AuthFilesUploadProgress;
   setOauthDialogDefaultTab: (tab: OAuthDialogTab) => void;
   setOauthDialogOpen: (open: boolean) => void;
   selectableFilteredFiles: AuthFileItem[];
@@ -571,6 +574,7 @@ export function AuthFilesFilesTab({
   usageLoading,
   refreshingAll,
   uploading,
+  uploadProgress,
   setOauthDialogDefaultTab,
   setOauthDialogOpen,
   selectableFilteredFiles,
@@ -688,6 +692,41 @@ export function AuthFilesFilesTab({
       }),
     [statusFilter, statusFilterCounts, t],
   );
+  const uploadPercent =
+    uploadProgress.total > 0
+      ? Math.round((uploadProgress.completed / uploadProgress.total) * 100)
+      : 0;
+  const uploadStatusTitle =
+    uploadProgress.phase === "refreshing"
+      ? t("auth_files.upload_progress_refreshing")
+      : t("auth_files.upload_progress_title", {
+          completed: uploadProgress.completed,
+          total: uploadProgress.total,
+        });
+  const uploadActiveNamesLabel =
+    uploadProgress.activeFileNames.length > 0
+      ? uploadProgress.activeFileNames.slice(0, 2).join(", ")
+      : "";
+  const uploadStatusDescription =
+    uploadProgress.phase === "refreshing"
+      ? t("auth_files.upload_progress_refreshing_hint", {
+          success: uploadProgress.success,
+          failed: uploadProgress.failed,
+          skipped: uploadProgress.skipped,
+        })
+      : uploadProgress.activeFileNames.length > 0
+        ? t("auth_files.upload_progress_active", {
+            count: uploadProgress.activeFileNames.length,
+            names: uploadActiveNamesLabel,
+          })
+        : t("auth_files.upload_progress_waiting");
+  const uploadCompactLabel =
+    uploadProgress.phase === "refreshing"
+      ? t("auth_files.upload_progress_refreshing_short")
+      : t("auth_files.upload_progress_compact", {
+          completed: uploadProgress.completed,
+          total: uploadProgress.total,
+        });
 
   useEffect(() => {
     if (!modelOwnerDialogOpen) {
@@ -1003,7 +1042,11 @@ export function AuthFilesFilesTab({
                     aria-label={t("auth_files.upload")}
                     title={t("auth_files.upload")}
                   >
-                    <Upload size={15} />
+                    {uploading ? (
+                      <Loader2 size={15} className="animate-spin" />
+                    ) : (
+                      <Upload size={15} />
+                    )}
                   </Button>
                 </HoverTooltip>
                 <HoverTooltip content={t("auth_files.paste_json")}>
@@ -1018,7 +1061,11 @@ export function AuthFilesFilesTab({
                     aria-label={t("auth_files.paste_json")}
                     title={t("auth_files.paste_json")}
                   >
-                    <ClipboardPaste size={15} />
+                    {uploading ? (
+                      <Loader2 size={15} className="animate-spin" />
+                    ) : (
+                      <ClipboardPaste size={15} />
+                    )}
                   </Button>
                 </HoverTooltip>
                 <HoverTooltip content={t("auth_files_page.add_oauth")}>
@@ -1046,6 +1093,56 @@ export function AuthFilesFilesTab({
                   </Button>
                 </HoverTooltip>
               </div>
+
+              {uploading ? (
+                <div
+                  className="rounded-3xl border border-black/[0.08] bg-white/80 p-3 shadow-[0_10px_30px_rgb(15_23_42_/_0.06)] backdrop-blur dark:border-white/10 dark:bg-[#18181B]/80"
+                  data-testid="auth-files-upload-progress"
+                  aria-live="polite"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0 space-y-1">
+                      <div className="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-white">
+                        <Loader2 size={15} className="shrink-0 animate-spin" />
+                        <span data-testid="auth-files-upload-progress-title">
+                          {uploadStatusTitle}
+                        </span>
+                      </div>
+                      <p
+                        className="text-xs text-slate-500 dark:text-white/55"
+                        data-testid="auth-files-upload-progress-detail"
+                      >
+                        {uploadStatusDescription}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-lg font-semibold tabular-nums text-slate-900 dark:text-white">
+                        {uploadPercent}%
+                      </p>
+                      <p className="text-xs text-slate-500 dark:text-white/55">
+                        {uploadProgress.completed} / {uploadProgress.total}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-white/10">
+                    <div
+                      className="h-full rounded-full bg-slate-900 transition-[width] duration-300 ease-out dark:bg-white"
+                      style={{ width: `${uploadPercent}%` }}
+                    />
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-3 text-[11px] font-medium text-slate-500 dark:text-white/55">
+                    <span>
+                      {t("auth_files.upload_progress_success", { count: uploadProgress.success })}
+                    </span>
+                    <span>
+                      {t("auth_files.upload_progress_failed", { count: uploadProgress.failed })}
+                    </span>
+                    <span>
+                      {t("auth_files.upload_progress_skipped", { count: uploadProgress.skipped })}
+                    </span>
+                  </div>
+                </div>
+              ) : null}
             </div>
           </div>
 
@@ -1439,7 +1536,7 @@ export function AuthFilesFilesTab({
               onClick={() => void submitJsonImport()}
               disabled={uploading || jsonImportText.trim().length === 0}
             >
-              {uploading ? t("auth_files.upload") : t("auth_files.paste_json_upload")}
+              {uploading ? uploadCompactLabel : t("auth_files.paste_json_upload")}
             </Button>
           </>
         }
@@ -1468,9 +1565,25 @@ export function AuthFilesFilesTab({
               {jsonImportError}
             </p>
           ) : (
-            <p className="text-xs text-slate-500 dark:text-white/45">
-              {t("auth_files.paste_json_hint")}
-            </p>
+            <div className="space-y-2">
+              <p className="text-xs text-slate-500 dark:text-white/45">
+                {t("auth_files.paste_json_hint")}
+              </p>
+              {uploading ? (
+                <div
+                  className="rounded-2xl border border-black/[0.06] bg-slate-50/80 px-3 py-2 text-xs text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-white/65"
+                  data-testid="auth-files-json-upload-progress"
+                >
+                  <div className="flex items-center gap-2 font-medium text-slate-800 dark:text-white">
+                    <Loader2 size={13} className="animate-spin" />
+                    <span>{uploadStatusTitle}</span>
+                  </div>
+                  <p className="mt-1 text-[11px] text-slate-500 dark:text-white/50">
+                    {uploadStatusDescription}
+                  </p>
+                </div>
+              ) : null}
+            </div>
           )}
         </div>
       </Modal>
