@@ -32,7 +32,7 @@ describe("UpdateDetailsModal", () => {
     vi.restoreAllMocks();
   });
 
-  test("localizes common updater messages, shows percentage, and restores live docker logs", async () => {
+  test("localizes common updater messages, shows percentage, and hides live docker logs", async () => {
     render(
       <UpdateDetailsModal
         open
@@ -52,8 +52,8 @@ describe("UpdateDetailsModal", () => {
 
     expect(screen.getByText("Pulling the target image.")).toBeInTheDocument();
     expect(screen.getByText(/1[89]%|20%/)).toBeInTheDocument();
-    expect(await screen.findByText("pull image")).toBeInTheDocument();
-    expect(screen.getByTestId("update-log-stream")).toBeInTheDocument();
+    expect(screen.queryByText("pull image")).toBeNull();
+    expect(screen.queryByTestId("update-log-stream")).toBeNull();
   });
 
   test("renders localized success styling when already up to date", async () => {
