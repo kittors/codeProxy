@@ -35,12 +35,14 @@ export function ScrollArea({
   viewportClassName,
   contentClassName,
   scrollbarVisibility = "hover",
+  scrollbarTrackInset = 8,
   ...divProps
 }: PropsWithChildren<
   {
     viewportClassName?: string;
     contentClassName?: string;
     scrollbarVisibility?: ScrollbarVisibility;
+    scrollbarTrackInset?: number;
   } & HTMLAttributes<HTMLDivElement>
 >) {
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -86,7 +88,7 @@ export function ScrollArea({
   }, [children, measure]);
 
   const thumb = useMemo(() => {
-    const trackInset = 8;
+    const trackInset = Math.max(0, scrollbarTrackInset);
     const hasVerticalOverflow = metrics.scrollHeight > metrics.clientHeight + 1;
     if (!hasVerticalOverflow) return null;
 
@@ -107,7 +109,7 @@ export function ScrollArea({
       trackLength,
       scrollRange,
     };
-  }, [metrics]);
+  }, [metrics, scrollbarTrackInset]);
 
   const handleScroll = useCallback(() => {
     measure();
@@ -188,11 +190,14 @@ export function ScrollArea({
             visibilityClasses,
           )}
         >
-          <div className="absolute inset-y-2 left-0 right-0 rounded-full bg-slate-200/40 dark:bg-white/10" />
+          <div
+            className="absolute left-0 right-0 rounded-full bg-slate-200/40 dark:bg-white/10"
+            style={{ top: Math.max(0, scrollbarTrackInset), bottom: Math.max(0, scrollbarTrackInset) }}
+          />
           <div
             role="presentation"
             className="pointer-events-auto absolute left-0 right-0 cursor-pointer rounded-full bg-slate-500/40 transition-colors hover:bg-slate-500/70 dark:bg-white/25 dark:hover:bg-white/50"
-            style={{ top: thumb.top + 8, height: thumb.height }}
+            style={{ top: thumb.top + Math.max(0, scrollbarTrackInset), height: thumb.height }}
             onPointerDown={handleThumbPointerDown}
             onPointerMove={handleThumbPointerMove}
             onPointerUp={handleThumbPointerUp}

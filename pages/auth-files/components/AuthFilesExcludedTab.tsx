@@ -16,8 +16,7 @@ interface AuthFilesExcludedTabProps {
   excluded: Record<string, string[]>;
   excludedDraft: Record<string, string>;
   setExcludedDraft: Dispatch<SetStateAction<Record<string, string>>>;
-  saveExcludedProvider: (provider: string, text: string) => Promise<void>;
-  deleteExcludedProvider: (provider: string) => Promise<void>;
+  deleteExcludedProvider: (provider: string) => void;
   showHeading?: boolean;
 }
 
@@ -32,7 +31,6 @@ export function AuthFilesExcludedTab({
   excluded,
   excludedDraft,
   setExcludedDraft,
-  saveExcludedProvider,
   deleteExcludedProvider,
   showHeading = true,
 }: AuthFilesExcludedTabProps) {
@@ -132,19 +130,9 @@ export function AuthFilesExcludedTab({
                         </div>
                         <div className="flex items-center gap-2">
                           <Button
-                            variant="secondary"
-                            size="sm"
-                            onClick={() =>
-                              void saveExcludedProvider(provider, excludedDraft[provider] ?? text)
-                            }
-                            disabled={isPending || excludedUnsupported}
-                          >
-                            {t("auth_files.save")}
-                          </Button>
-                          <Button
                             variant="danger"
                             size="sm"
-                            onClick={() => void deleteExcludedProvider(provider)}
+                            onClick={() => deleteExcludedProvider(provider)}
                             disabled={isPending || excludedUnsupported}
                           >
                             {t("common.delete")}

@@ -19,6 +19,13 @@ export type { EChartProps, EChartEvents as EChartRendererEvents } from "./charts
 
 export { PageBackground } from "./layout/PageBackground";
 
+export { PaginationBar, getPaginationItems } from "./navigation/PaginationBar";
+export type {
+  PaginationBarLabels,
+  PaginationBarProps,
+  PaginationRangeInfo,
+} from "./navigation/PaginationBar";
+
 export { ConfirmModal } from "./overlays/ConfirmModal";
 export { ImagePreviewOverlay } from "./overlays/ImagePreviewOverlay";
 export { Modal } from "./overlays/Modal";

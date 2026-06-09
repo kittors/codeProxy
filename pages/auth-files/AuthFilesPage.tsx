@@ -1,7 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
-import { ConfirmModal, Modal } from "@code-proxy/ui";
+import {
+  Button,
+  ConfirmModal,
+  Modal,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@code-proxy/ui";
 import type { AuthFileItem } from "@code-proxy/api-client";
 import { proxiesApi, type ProxyPoolEntry } from "@code-proxy/api-client/endpoints/proxies";
 import { OAuthLoginDialog } from "@features/oauth-login";
@@ -74,6 +82,7 @@ export function AuthFilesPage() {
   const [searchParams] = useSearchParams();
 
   const [configModalTab, setConfigModalTab] = useState<AuthFilesConfigModalTab | null>(null);
+  const [configSaving, setConfigSaving] = useState(false);
   const {
     isPending,
     excludedLoading,
@@ -101,12 +110,12 @@ export function AuthFilesPage() {
     importFilteredModels,
     refreshExcluded,
     refreshAlias,
-    saveExcludedProvider,
     deleteExcludedProvider,
     addExcludedProvider,
     addAliasChannel,
-    saveAliasChannel,
     deleteAliasChannel,
+    saveExcludedAll,
+    saveAliasAll,
     openImport,
     applyImport,
   } = useAuthFilesOAuthConfig(configModalTab ?? "files");
@@ -438,6 +447,24 @@ export function AuthFilesPage() {
     }
   }, [forceRefreshPage, loading, pageItems, refreshFilesForItems, refreshingAll, usageLoading]);
 
+  const closeConfigModal = useCallback(() => {
+    setConfigModalTab(null);
+  }, []);
+
+  const saveConfigModal = useCallback(async () => {
+    if (!configModalTab || configSaving) return;
+    setConfigSaving(true);
+    try {
+      const saved =
+        configModalTab === "alias" ? await saveAliasAll() : await saveExcludedAll();
+      if (saved) {
+        setConfigModalTab(null);
+      }
+    } finally {
+      setConfigSaving(false);
+    }
+  }, [configModalTab, configSaving, saveAliasAll, saveExcludedAll]);
+
   useEffect(() => {
     const previousTab = previousConfigModalTabRef.current;
     previousConfigModalTabRef.current = configModalTab;
@@ -563,7 +590,7 @@ export function AuthFilesPage() {
         uploadProgress={uploadProgress}
         setOauthDialogDefaultTab={setOauthDialogDefaultTab}
         setOauthDialogOpen={setOAuthDialogOpenWithBaseline}
-        openConfigModal={setConfigModalTab}
+        openConfigModal={() => setConfigModalTab("excluded")}
         selectableFilteredFiles={selectableFilteredFiles}
         selectedCount={selectedCount}
         selectCurrentPage={selectCurrentPage}
@@ -615,41 +642,80 @@ export function AuthFilesPage() {
             : t("auth_files_page.excluded_desc")
         }
         maxWidth="max-w-5xl"
-        bodyHeightClassName="max-h-[76vh]"
-        onClose={() => setConfigModalTab(null)}
+        bodyHeightClassName="h-[76vh] max-h-[76vh]"
+        bodyOverflowClassName="overflow-hidden"
+        bodyClassName="flex min-h-0 flex-col"
+        footer={
+          <>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={closeConfigModal}
+              disabled={configSaving}
+            >
+              {t("common.cancel")}
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => void saveConfigModal()}
+              disabled={configSaving || excludedLoading || aliasLoading || isPending}
+            >
+              {configSaving ? t("common.saving") : t("auth_files.save")}
+            </Button>
+          </>
+        }
+        onClose={closeConfigModal}
       >
-        {configModalTab === "alias" ? (
-          <AuthFilesAliasTab
-            aliasLoading={aliasLoading}
-            isPending={isPending}
-            refreshAlias={refreshAlias}
-            aliasUnsupported={aliasUnsupported}
-            aliasNewChannel={aliasNewChannel}
-            setAliasNewChannel={setAliasNewChannel}
-            addAliasChannel={addAliasChannel}
-            aliasEditing={aliasEditing}
-            setAliasEditing={setAliasEditing}
-            openImport={openImport}
-            saveAliasChannel={saveAliasChannel}
-            deleteAliasChannel={deleteAliasChannel}
-            showHeading={false}
-          />
-        ) : configModalTab === "excluded" ? (
-          <AuthFilesExcludedTab
-            excludedLoading={excludedLoading}
-            isPending={isPending}
-            refreshExcluded={refreshExcluded}
-            excludedUnsupported={excludedUnsupported}
-            excludedNewProvider={excludedNewProvider}
-            setExcludedNewProvider={setExcludedNewProvider}
-            addExcludedProvider={addExcludedProvider}
-            excluded={excluded}
-            excludedDraft={excludedDraft}
-            setExcludedDraft={setExcludedDraft}
-            saveExcludedProvider={saveExcludedProvider}
-            deleteExcludedProvider={deleteExcludedProvider}
-            showHeading={false}
-          />
+        {configModalTab ? (
+          <Tabs
+            value={configModalTab}
+            onValueChange={(next) => setConfigModalTab(next as AuthFilesConfigModalTab)}
+            size="sm"
+          >
+            <div className="mb-4 flex shrink-0 justify-start">
+              <TabsList>
+                <TabsTrigger value="excluded">{t("auth_files_page.excluded_tab")}</TabsTrigger>
+                <TabsTrigger value="alias">{t("auth_files_page.alias_tab")}</TabsTrigger>
+              </TabsList>
+            </div>
+
+            <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+              <TabsContent value="excluded">
+                <AuthFilesExcludedTab
+                  excludedLoading={excludedLoading}
+                  isPending={isPending}
+                  refreshExcluded={refreshExcluded}
+                  excludedUnsupported={excludedUnsupported}
+                  excludedNewProvider={excludedNewProvider}
+                  setExcludedNewProvider={setExcludedNewProvider}
+                  addExcludedProvider={addExcludedProvider}
+                  excluded={excluded}
+                  excludedDraft={excludedDraft}
+                  setExcludedDraft={setExcludedDraft}
+                  deleteExcludedProvider={deleteExcludedProvider}
+                  showHeading={false}
+                />
+              </TabsContent>
+
+              <TabsContent value="alias">
+                <AuthFilesAliasTab
+                  aliasLoading={aliasLoading}
+                  isPending={isPending}
+                  refreshAlias={refreshAlias}
+                  aliasUnsupported={aliasUnsupported}
+                  aliasNewChannel={aliasNewChannel}
+                  setAliasNewChannel={setAliasNewChannel}
+                  addAliasChannel={addAliasChannel}
+                  aliasEditing={aliasEditing}
+                  setAliasEditing={setAliasEditing}
+                  openImport={openImport}
+                  deleteAliasChannel={deleteAliasChannel}
+                  showHeading={false}
+                />
+              </TabsContent>
+            </div>
+          </Tabs>
         ) : null}
       </Modal>
 

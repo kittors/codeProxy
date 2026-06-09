@@ -17,8 +17,7 @@ interface AuthFilesAliasTabProps {
   aliasEditing: Record<string, AliasRow[]>;
   setAliasEditing: Dispatch<SetStateAction<Record<string, AliasRow[]>>>;
   openImport: (channel: string) => Promise<void>;
-  saveAliasChannel: (channel: string) => Promise<void>;
-  deleteAliasChannel: (channel: string) => Promise<void>;
+  deleteAliasChannel: (channel: string) => void;
   showHeading?: boolean;
 }
 
@@ -33,7 +32,6 @@ export function AuthFilesAliasTab({
   aliasEditing,
   setAliasEditing,
   openImport,
-  saveAliasChannel,
   deleteAliasChannel,
   showHeading = true,
 }: AuthFilesAliasTabProps) {
@@ -137,17 +135,9 @@ export function AuthFilesAliasTab({
                             {t("auth_files.import_models")}
                           </Button>
                           <Button
-                            variant="secondary"
-                            size="sm"
-                            onClick={() => void saveAliasChannel(channel)}
-                            disabled={isPending || aliasUnsupported}
-                          >
-                            {t("auth_files.save")}
-                          </Button>
-                          <Button
                             variant="danger"
                             size="sm"
-                            onClick={() => void deleteAliasChannel(channel)}
+                            onClick={() => deleteAliasChannel(channel)}
                             disabled={isPending || aliasUnsupported}
                           >
                             {t("common.delete")}

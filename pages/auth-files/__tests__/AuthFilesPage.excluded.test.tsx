@@ -9,6 +9,7 @@ import { AuthFilesPage } from "@pages/auth-files/AuthFilesPage";
 const mocks = vi.hoisted(() => ({
   list: vi.fn(async (): Promise<{ files: any[] }> => ({ files: [] })),
   getOauthExcludedModels: vi.fn(async () => ({})),
+  replaceOauthExcludedModels: vi.fn(async () => ({})),
   getOauthModelAlias: vi.fn(async () => ({})),
   getModelConfigs: vi.fn(async () => []),
   getModelOwnerPresets: vi.fn(async () => []),
@@ -24,6 +25,7 @@ vi.mock("@code-proxy/api-client", async (importOriginal) => {
       ...mod.authFilesApi,
       list: mocks.list,
       getOauthExcludedModels: mocks.getOauthExcludedModels,
+      replaceOauthExcludedModels: mocks.replaceOauthExcludedModels,
       getOauthModelAlias: mocks.getOauthModelAlias,
     },
     modelsApi: {
@@ -45,7 +47,6 @@ vi.mock("@code-proxy/api-client", async (importOriginal) => {
 
 async function openExcludedConfig(user: ReturnType<typeof userEvent.setup>) {
   await user.click(screen.getByRole("button", { name: "Auth config" }));
-  await user.click(await screen.findByRole("menuitem", { name: "OAuth Excluded Models" }));
   return screen.findByRole("dialog", { name: "OAuth Excluded Models" });
 }
 
@@ -64,6 +65,8 @@ describe("AuthFilesPage OAuth excluded models", () => {
     mocks.list.mockResolvedValue({ files: [] });
     mocks.getOauthExcludedModels.mockReset();
     mocks.getOauthExcludedModels.mockResolvedValue({});
+    mocks.replaceOauthExcludedModels.mockReset();
+    mocks.replaceOauthExcludedModels.mockResolvedValue({});
     mocks.getOauthModelAlias.mockReset();
     mocks.getOauthModelAlias.mockResolvedValue({});
     mocks.getModelConfigs.mockReset();
@@ -155,5 +158,50 @@ describe("AuthFilesPage OAuth excluded models", () => {
 
     await waitFor(() => expect(mocks.list).toHaveBeenCalledTimes(2));
     expect(await screen.findByText("after.json")).toBeInTheDocument();
+  });
+
+  test("keeps excluded model edits local until the footer save button is clicked", async () => {
+    const user = userEvent.setup();
+    mocks.getOauthExcludedModels.mockResolvedValue({ codex: ["old-model"] });
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files?tab=excluded"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    const dialog = await screen.findByRole("dialog", { name: "OAuth Excluded Models" });
+    const textarea = await within(dialog).findByRole("textbox", {
+      name: "codex OAuth Excluded Models",
+    });
+
+    await user.clear(textarea);
+    await user.type(textarea, "new-model");
+
+    expect(mocks.replaceOauthExcludedModels).not.toHaveBeenCalled();
+
+    await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog", { name: "OAuth Excluded Models" })).not.toBeInTheDocument();
+    });
+    expect(mocks.replaceOauthExcludedModels).not.toHaveBeenCalled();
+
+    const reopenedDialog = await openExcludedConfig(user);
+    const reopenedTextarea = await within(reopenedDialog).findByRole("textbox", {
+      name: "codex OAuth Excluded Models",
+    });
+    await user.clear(reopenedTextarea);
+    await user.type(reopenedTextarea, "new-model");
+    await user.click(within(reopenedDialog).getByRole("button", { name: "Save" }));
+
+    await waitFor(() => {
+      expect(mocks.replaceOauthExcludedModels).toHaveBeenCalledWith({ codex: ["new-model"] });
+    });
   });
 });

@@ -19,6 +19,7 @@ export function useAuthFilesOAuthConfig(tab: "files" | "excluded" | "alias") {
 
   const [aliasLoading, setAliasLoading] = useState(false);
   const [aliasEditing, setAliasEditing] = useState<Record<string, AliasRow[]>>({});
+  const [aliasSavedChannels, setAliasSavedChannels] = useState<string[]>([]);
   const [aliasNewChannel, setAliasNewChannel] = useState("");
   const [aliasUnsupported, setAliasUnsupported] = useState(false);
 
@@ -63,6 +64,7 @@ export function useAuthFilesOAuthConfig(tab: "files" | "excluded" | "alias") {
     try {
       const map = await authFilesApi.getOauthModelAlias();
       setAliasUnsupported(false);
+      setAliasSavedChannels(Object.keys(map).map((key) => normalizeProviderKey(key)));
       setAliasEditing(
         Object.fromEntries(Object.entries(map).map(([key, value]) => [key, buildAliasRows(value)])),
       );
@@ -70,6 +72,7 @@ export function useAuthFilesOAuthConfig(tab: "files" | "excluded" | "alias") {
       const message = err instanceof Error ? err.message : "";
       if (/404|not found/i.test(message)) {
         setAliasUnsupported(true);
+        setAliasSavedChannels([]);
         setAliasEditing({});
         return;
       }
@@ -122,29 +125,20 @@ export function useAuthFilesOAuthConfig(tab: "files" | "excluded" | "alias") {
   );
 
   const deleteExcludedProvider = useCallback(
-    async (provider: string) => {
-      if (excludedUnsupported) {
-        notify({
-          type: "error",
-          message:
-            "Server does not support OAuth excluded models API (/oauth-excluded-models). Please upgrade.",
-        });
-        return;
-      }
+    (provider: string) => {
       const key = normalizeProviderKey(provider);
-      try {
-        await authFilesApi.deleteOauthExcludedEntry(key);
-        invalidateConfiguredModelAvailability();
-        notify({ type: "success", message: t("auth_files.deleted") });
-        startTransition(() => void refreshExcluded());
-      } catch (err: unknown) {
-        notify({
-          type: "error",
-          message: err instanceof Error ? err.message : t("auth_files.delete_failed"),
-        });
-      }
+      setExcluded((prev) => {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
+      setExcludedDraft((prev) => {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
     },
-    [excludedUnsupported, notify, refreshExcluded, startTransition, t],
+    [],
   );
 
   const addExcludedProvider = useCallback(() => {
@@ -203,29 +197,94 @@ export function useAuthFilesOAuthConfig(tab: "files" | "excluded" | "alias") {
   );
 
   const deleteAliasChannel = useCallback(
-    async (channel: string) => {
-      if (aliasUnsupported) {
-        notify({
-          type: "error",
-          message: t("auth_files.server_no_alias_api"),
-        });
-        return;
-      }
+    (channel: string) => {
       const key = normalizeProviderKey(channel);
-      try {
-        await authFilesApi.deleteOauthModelAlias(key);
-        invalidateConfiguredModelAvailability();
-        notify({ type: "success", message: t("auth_files.deleted") });
-        startTransition(() => void refreshAlias());
-      } catch (err: unknown) {
-        notify({
-          type: "error",
-          message: err instanceof Error ? err.message : t("auth_files.delete_failed"),
-        });
-      }
+      setAliasEditing((prev) => {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
     },
-    [aliasUnsupported, notify, refreshAlias, startTransition, t],
+    [],
   );
+
+  const saveExcludedAll = useCallback(async (): Promise<boolean> => {
+    if (excludedUnsupported) {
+      notify({ type: "error", message: t("auth_files.server_no_excluded_api") });
+      return false;
+    }
+
+    const nextMap = Object.fromEntries(
+      Object.entries(excludedDraft).flatMap(([provider, text]) => {
+        const key = normalizeProviderKey(provider);
+        if (!key) return [];
+        const models = text
+          .split(/[\n,]+/)
+          .map((item) => item.trim())
+          .filter(Boolean);
+        return [[key, models]];
+      }),
+    );
+
+    try {
+      await authFilesApi.replaceOauthExcludedModels(nextMap);
+      setExcluded(nextMap);
+      setExcludedDraft(
+        Object.fromEntries(Object.entries(nextMap).map(([key, value]) => [key, value.join("\n")])),
+      );
+      invalidateConfiguredModelAvailability();
+      notify({ type: "success", message: t("auth_files.saved") });
+      return true;
+    } catch (err: unknown) {
+      notify({
+        type: "error",
+        message: err instanceof Error ? err.message : t("auth_files.save_failed"),
+      });
+      return false;
+    }
+  }, [excludedDraft, excludedUnsupported, notify, t]);
+
+  const saveAliasAll = useCallback(async (): Promise<boolean> => {
+    if (aliasUnsupported) {
+      notify({ type: "error", message: t("auth_files.server_no_alias_api") });
+      return false;
+    }
+
+    const currentEntries = Object.entries(aliasEditing).flatMap(([channel, rows]) => {
+      const key = normalizeProviderKey(channel);
+      return key ? ([[key, rows]] as const) : [];
+    });
+    const currentChannels = currentEntries.map(([channel]) => channel);
+    const currentSet = new Set(currentChannels);
+    const removedChannels = aliasSavedChannels.filter((channel) => !currentSet.has(channel));
+
+    try {
+      for (const [channel, rows] of currentEntries) {
+        const next = rows
+          .map((row) => ({
+            name: row.name.trim(),
+            alias: row.alias.trim(),
+            ...(row.fork ? { fork: true } : {}),
+          }))
+          .filter((row) => row.name && row.alias);
+        await authFilesApi.saveOauthModelAlias(channel, next);
+      }
+      for (const channel of removedChannels) {
+        await authFilesApi.deleteOauthModelAlias(channel);
+      }
+
+      setAliasSavedChannels(currentChannels);
+      invalidateConfiguredModelAvailability();
+      notify({ type: "success", message: t("auth_files.saved") });
+      return true;
+    } catch (err: unknown) {
+      notify({
+        type: "error",
+        message: err instanceof Error ? err.message : t("auth_files.save_failed"),
+      });
+      return false;
+    }
+  }, [aliasEditing, aliasSavedChannels, aliasUnsupported, notify, t]);
 
   const openImport = useCallback(
     async (channel: string) => {
@@ -339,6 +398,8 @@ export function useAuthFilesOAuthConfig(tab: "files" | "excluded" | "alias") {
     addAliasChannel,
     saveAliasChannel,
     deleteAliasChannel,
+    saveExcludedAll,
+    saveAliasAll,
     openImport,
     applyImport,
   };
