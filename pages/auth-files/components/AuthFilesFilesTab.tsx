@@ -621,6 +621,7 @@ export function AuthFilesFilesTab({
   const [jsonImportText, setJsonImportText] = useState("");
   const [jsonImportError, setJsonImportError] = useState("");
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  const [uploadProgressDismissed, setUploadProgressDismissed] = useState(false);
   const normalizedFilter = normalizeProviderKey(filter);
   const canSetModelOwnerGroup = normalizedFilter !== "all";
   const activeFilterCount = [
@@ -727,12 +728,26 @@ export function AuthFilesFilesTab({
           completed: uploadProgress.completed,
           total: uploadProgress.total,
         });
+  const uploadProgressModalOpen = uploading && !uploadProgressDismissed;
 
   useEffect(() => {
     if (!modelOwnerDialogOpen) {
       setDraftModelOwner(selectedModelOwner);
     }
   }, [modelOwnerDialogOpen, selectedModelOwner]);
+
+  useEffect(() => {
+    if (!uploading || !jsonImportOpen) return;
+    setJsonImportText("");
+    setJsonImportError("");
+    setJsonImportOpen(false);
+  }, [jsonImportOpen, uploading]);
+
+  useEffect(() => {
+    if (uploading) {
+      setUploadProgressDismissed(false);
+    }
+  }, [uploading]);
 
   const closeJsonImport = useCallback(() => {
     if (uploading) return;
@@ -754,10 +769,7 @@ export function AuthFilesFilesTab({
       setJsonImportError(t("auth_files.paste_json_empty"));
       return;
     }
-
     await handleUpload(uploadFiles);
-    setJsonImportText("");
-    setJsonImportOpen(false);
   }, [files, handleUpload, jsonImportText, t]);
 
   const selectionActionsMenu = showSelectionActions ? (
@@ -1094,55 +1106,6 @@ export function AuthFilesFilesTab({
                 </HoverTooltip>
               </div>
 
-              {uploading ? (
-                <div
-                  className="rounded-3xl border border-black/[0.08] bg-white/80 p-3 shadow-[0_10px_30px_rgb(15_23_42_/_0.06)] backdrop-blur dark:border-white/10 dark:bg-[#18181B]/80"
-                  data-testid="auth-files-upload-progress"
-                  aria-live="polite"
-                >
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="min-w-0 space-y-1">
-                      <div className="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-white">
-                        <Loader2 size={15} className="shrink-0 animate-spin" />
-                        <span data-testid="auth-files-upload-progress-title">
-                          {uploadStatusTitle}
-                        </span>
-                      </div>
-                      <p
-                        className="text-xs text-slate-500 dark:text-white/55"
-                        data-testid="auth-files-upload-progress-detail"
-                      >
-                        {uploadStatusDescription}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-lg font-semibold tabular-nums text-slate-900 dark:text-white">
-                        {uploadPercent}%
-                      </p>
-                      <p className="text-xs text-slate-500 dark:text-white/55">
-                        {uploadProgress.completed} / {uploadProgress.total}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-white/10">
-                    <div
-                      className="h-full rounded-full bg-slate-900 transition-[width] duration-300 ease-out dark:bg-white"
-                      style={{ width: `${uploadPercent}%` }}
-                    />
-                  </div>
-                  <div className="mt-2 flex flex-wrap gap-3 text-[11px] font-medium text-slate-500 dark:text-white/55">
-                    <span>
-                      {t("auth_files.upload_progress_success", { count: uploadProgress.success })}
-                    </span>
-                    <span>
-                      {t("auth_files.upload_progress_failed", { count: uploadProgress.failed })}
-                    </span>
-                    <span>
-                      {t("auth_files.upload_progress_skipped", { count: uploadProgress.skipped })}
-                    </span>
-                  </div>
-                </div>
-              ) : null}
             </div>
           </div>
 
@@ -1517,6 +1480,90 @@ export function AuthFilesFilesTab({
           {t("auth_files.usage_stats_warning")}
         </p>
       )}
+
+      <Modal
+        open={uploadProgressModalOpen}
+        title={t("auth_files.upload")}
+        description={uploadStatusDescription}
+        maxWidth="max-w-lg"
+        bodyHeightClassName="max-h-none"
+        bodyOverflowClassName="overflow-visible"
+        bodyClassName="px-5 pt-3 pb-5"
+        onClose={() => setUploadProgressDismissed(true)}
+      >
+        <div className="space-y-4" data-testid="auth-files-upload-progress" aria-live="polite">
+          <div className="overflow-hidden rounded-[28px] border border-slate-200/80 bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.95),_rgba(241,245,249,0.95))] p-4 shadow-[0_20px_50px_rgb(15_23_42_/_0.08)] dark:border-white/10 dark:bg-[radial-gradient(circle_at_top_left,_rgba(39,39,42,0.98),_rgba(9,9,11,0.98))] dark:shadow-[0_24px_60px_rgb(0_0_0_/_0.28)]">
+            <div className="flex items-start gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-lg shadow-slate-900/15 dark:bg-white dark:text-neutral-950 dark:shadow-black/25">
+                <Loader2 size={18} className="animate-spin" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-white/35">
+                  {uploadProgress.phase === "refreshing"
+                    ? t("auth_files.upload_progress_refreshing_short")
+                    : t("auth_files.upload")}
+                </p>
+                <p
+                  className="mt-1 text-base font-semibold text-slate-900 dark:text-white"
+                  data-testid="auth-files-upload-progress-title"
+                >
+                  {uploadStatusTitle}
+                </p>
+                <p
+                  className="mt-1 text-sm leading-6 text-slate-500 dark:text-white/60"
+                  data-testid="auth-files-upload-progress-detail"
+                >
+                  {uploadStatusDescription}
+                </p>
+              </div>
+              <div className="shrink-0 text-right">
+                <p className="text-2xl font-semibold tracking-tight tabular-nums text-slate-900 dark:text-white">
+                  {uploadProgress.completed}
+                  <span className="ml-1 text-base font-medium text-slate-400 dark:text-white/35">
+                    / {uploadProgress.total}
+                  </span>
+                </p>
+                <p className="text-xs font-medium tabular-nums text-slate-500 dark:text-white/55">
+                  {uploadPercent}%
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2 text-left">
+            {[
+              t("auth_files.upload_progress_success", { count: uploadProgress.success }),
+              t("auth_files.upload_progress_failed", { count: uploadProgress.failed }),
+              t("auth_files.upload_progress_skipped", { count: uploadProgress.skipped }),
+            ].map((label) => (
+              <div
+                key={label}
+                className="rounded-2xl border border-slate-200 bg-slate-50/90 px-3 py-2 text-xs font-semibold text-slate-600 dark:border-white/10 dark:bg-white/[0.04] dark:text-white/65"
+              >
+                {label}
+              </div>
+            ))}
+          </div>
+
+          {uploadProgress.activeFileNames.length > 0 ? (
+            <div className="rounded-2xl border border-dashed border-slate-200 bg-white/80 px-3 py-3 dark:border-white/10 dark:bg-white/[0.02]">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400 dark:text-white/35">
+                {t("auth_files.upload")}
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {uploadProgress.activeFileNames.map((name) => (
+                  <span
+                    key={name}
+                    className="inline-flex max-w-full items-center rounded-full bg-slate-900 px-2.5 py-1 text-[11px] font-medium text-white dark:bg-white dark:text-neutral-950"
+                  >
+                    <span className="truncate">{name}</span>
+                  </span>
+                ))}
+              </div>
+            </div>
+          ) : null}
+        </div>
+      </Modal>
 
       <Modal
         open={jsonImportOpen}

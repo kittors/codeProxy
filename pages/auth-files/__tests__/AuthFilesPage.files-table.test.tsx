@@ -472,13 +472,14 @@ describe("AuthFilesPage files table", () => {
 
     await waitFor(() => expect(mocks.upload).toHaveBeenCalledTimes(2));
     await waitFor(() =>
+      expect(screen.queryByRole("dialog", { name: "Paste Auth JSON" })).not.toBeInTheDocument(),
+    );
+    await waitFor(() =>
       expect(screen.getByTestId("auth-files-upload-progress-title")).toHaveTextContent(
         "Uploading 0 / 2",
       ),
     );
-    expect(within(dialog).getByTestId("auth-files-json-upload-progress")).toHaveTextContent(
-      "Uploading 0 / 2",
-    );
+    expect(screen.queryByTestId("auth-files-json-upload-progress")).not.toBeInTheDocument();
 
     await act(async () => {
       firstUpload.resolve({});
@@ -498,9 +499,6 @@ describe("AuthFilesPage files table", () => {
 
     await waitFor(() =>
       expect(screen.queryByTestId("auth-files-upload-progress")).not.toBeInTheDocument(),
-    );
-    await waitFor(() =>
-      expect(screen.queryByRole("dialog", { name: "Paste Auth JSON" })).not.toBeInTheDocument(),
     );
   });
 
