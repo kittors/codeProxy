@@ -52,7 +52,7 @@ test("Auth Files: OAuth excluded models tab should not stay loading on empty res
   await page.goto("/#/auth-files?tab=excluded");
 
   await expect(
-    page.getByRole("tab", { name: /OAuth Excluded Models|OAuth 模型禁用/i }),
+    page.getByRole("dialog", { name: /OAuth Excluded Models|OAuth 模型禁用/i }),
   ).toBeVisible();
   await expect(page.getByText(/No config|No configuration|暂无配置/i)).toBeVisible();
 

@@ -18,6 +18,7 @@ interface AuthFilesExcludedTabProps {
   setExcludedDraft: Dispatch<SetStateAction<Record<string, string>>>;
   saveExcludedProvider: (provider: string, text: string) => Promise<void>;
   deleteExcludedProvider: (provider: string) => Promise<void>;
+  showHeading?: boolean;
 }
 
 export function AuthFilesExcludedTab({
@@ -33,20 +34,25 @@ export function AuthFilesExcludedTab({
   setExcludedDraft,
   saveExcludedProvider,
   deleteExcludedProvider,
+  showHeading = true,
 }: AuthFilesExcludedTabProps) {
   const { t } = useTranslation();
 
   return (
-    <div className="mt-4 space-y-4">
+    <div className={showHeading ? "mt-4 space-y-4" : "space-y-4"}>
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <div>
-          <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-            {t("auth_files_page.excluded_title")}
-          </h2>
-          <p className="mt-1 text-sm text-slate-500 dark:text-neutral-400">
-            {t("auth_files_page.excluded_desc")}
-          </p>
-        </div>
+        {showHeading ? (
+          <div>
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+              {t("auth_files_page.excluded_title")}
+            </h2>
+            <p className="mt-1 text-sm text-slate-500 dark:text-neutral-400">
+              {t("auth_files_page.excluded_desc")}
+            </p>
+          </div>
+        ) : (
+          <div />
+        )}
         <div className="flex flex-wrap items-center gap-2">
           <Button
             variant="secondary"

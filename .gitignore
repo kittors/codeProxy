@@ -13,3 +13,4 @@ playwright-report/
 .agentflow/
 .helloagents/
 output/playwright/
+.playwright-cli/

@@ -1,4 +1,5 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { ToastProvider } from "@code-proxy/ui";
@@ -41,6 +42,19 @@ vi.mock("@code-proxy/api-client", async (importOriginal) => {
     vertexApi: { ...mod.vertexApi, importCredential: vi.fn(async () => ({})) },
   };
 });
+
+async function openExcludedConfig(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByRole("button", { name: "Auth config" }));
+  await user.click(await screen.findByRole("menuitem", { name: "OAuth Excluded Models" }));
+  return screen.findByRole("dialog", { name: "OAuth Excluded Models" });
+}
+
+async function closeDialog(user: ReturnType<typeof userEvent.setup>, dialog: HTMLElement) {
+  await user.click(within(dialog).getByRole("button", { name: "close" }));
+  await waitFor(() => {
+    expect(screen.queryByRole("dialog", { name: "OAuth Excluded Models" })).not.toBeInTheDocument();
+  });
+}
 
 describe("AuthFilesPage OAuth excluded models", () => {
   beforeEach(() => {
@@ -86,6 +100,7 @@ describe("AuthFilesPage OAuth excluded models", () => {
   });
 
   test("refetches excluded models whenever the excluded tab is entered", async () => {
+    const user = userEvent.setup();
     render(
       <MemoryRouter initialEntries={["/auth-files"]}>
         <ThemeProvider>
@@ -100,19 +115,17 @@ describe("AuthFilesPage OAuth excluded models", () => {
 
     await waitFor(() => expect(mocks.list).toHaveBeenCalledTimes(1));
 
-    fireEvent.click(screen.getByRole("tab", { name: "OAuth Excluded Models" }));
+    const firstDialog = await openExcludedConfig(user);
     await waitFor(() => expect(mocks.getOauthExcludedModels).toHaveBeenCalledTimes(1));
 
-    fireEvent.click(screen.getByRole("tab", { name: "Files" }));
-    await waitFor(() =>
-      expect(screen.getByRole("tab", { name: "Files" })).toHaveAttribute("aria-selected", "true"),
-    );
+    await closeDialog(user, firstDialog);
 
-    fireEvent.click(screen.getByRole("tab", { name: "OAuth Excluded Models" }));
+    await openExcludedConfig(user);
     await waitFor(() => expect(mocks.getOauthExcludedModels).toHaveBeenCalledTimes(2));
   });
 
   test("refetches auth files whenever the files tab is re-entered", async () => {
+    const user = userEvent.setup();
     mocks.list
       .mockResolvedValueOnce({
         files: [{ name: "before.json", type: "codex", size: 1, modified: Date.now() }] as any[],
@@ -135,10 +148,10 @@ describe("AuthFilesPage OAuth excluded models", () => {
 
     expect(await screen.findByText("before.json")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("tab", { name: "OAuth Excluded Models" }));
+    const dialog = await openExcludedConfig(user);
     await waitFor(() => expect(mocks.getOauthExcludedModels).toHaveBeenCalledTimes(1));
 
-    fireEvent.click(screen.getByRole("tab", { name: "Files" }));
+    await closeDialog(user, dialog);
 
     await waitFor(() => expect(mocks.list).toHaveBeenCalledTimes(2));
     expect(await screen.findByText("after.json")).toBeInTheDocument();

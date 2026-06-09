@@ -26,7 +26,6 @@ import { Modal } from "@code-proxy/ui";
 import { HoverTooltip } from "@code-proxy/ui";
 import { Select } from "@code-proxy/ui";
 import { SearchableSelect, type SearchableSelectOption } from "@code-proxy/ui";
-import { Tabs, TabsList, TabsTrigger } from "@code-proxy/ui";
 import { DataTable, type DataTableColumn } from "@code-proxy/ui";
 import { ToggleSwitch } from "@code-proxy/ui";
 import type { AuthFilesUploadProgress } from "@pages/auth-files/hooks/useAuthFilesFileActions";
@@ -497,6 +496,7 @@ interface AuthFilesFilesTabProps {
   uploadProgress: AuthFilesUploadProgress;
   setOauthDialogDefaultTab: (tab: OAuthDialogTab) => void;
   setOauthDialogOpen: (open: boolean) => void;
+  openConfigModal: (tab: "excluded" | "alias") => void;
   selectableFilteredFiles: AuthFileItem[];
   selectedCount: number;
   selectCurrentPage: (checked: boolean) => void;
@@ -577,6 +577,7 @@ export function AuthFilesFilesTab({
   uploadProgress,
   setOauthDialogDefaultTab,
   setOauthDialogOpen,
+  openConfigModal,
   selectableFilteredFiles,
   selectedCount,
   selectCurrentPage,
@@ -669,6 +670,29 @@ export function AuthFilesFilesTab({
       })),
     ],
     [customTagOptions, t],
+  );
+  const providerFilterOptions = useMemo<SearchableSelectOption[]>(
+    () =>
+      filterChips.map((key) => {
+        const normalizedKey = normalizeProviderKey(key);
+        const count =
+          key === "all" ? filterCounts.total : (filterCounts.counts[normalizedKey] ?? 0);
+        const label = key === "all" ? t("auth_files.all") : key;
+        return {
+          value: key,
+          label: (
+            <span className="flex min-w-0 items-center gap-2">
+              <span className="min-w-0 truncate">{label}</span>
+              <span className="ml-auto inline-flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-slate-100 px-1 text-[10px] font-semibold tabular-nums text-slate-700 dark:bg-white/10 dark:text-white/70">
+                {count}
+              </span>
+            </span>
+          ),
+          triggerLabel: `${label} (${count})`,
+          searchText: `${key} ${label}`,
+        };
+      }),
+    [filterChips, filterCounts, t],
   );
   const statusFilterOptions = useMemo(
     () =>
@@ -820,6 +844,44 @@ export function AuthFilesFilesTab({
     </DropdownMenu.Root>
   ) : null;
 
+  const configActionsMenu = (
+    <DropdownMenu.Root>
+      <DropdownMenu.Trigger asChild>
+        <button
+          type="button"
+          className={buttonClassName({
+            variant: "secondary",
+            size: "sm",
+            iconOnly: true,
+          })}
+          aria-label={t("auth_files_page.config_menu")}
+          title={t("auth_files_page.config_menu")}
+          data-tooltip-placement="top"
+        >
+          <Settings2 size={15} />
+        </button>
+      </DropdownMenu.Trigger>
+      <DropdownMenu.Portal>
+        <DropdownMenu.Content align="end" sideOffset={8} className={ACTION_MENU_CONTENT_CLASS}>
+          <DropdownMenu.Item
+            className={ACTION_MENU_ITEM_CLASS}
+            onSelect={() => openConfigModal("excluded")}
+          >
+            <SlidersHorizontal size={15} />
+            <span>{t("auth_files_page.excluded_tab")}</span>
+          </DropdownMenu.Item>
+          <DropdownMenu.Item
+            className={ACTION_MENU_ITEM_CLASS}
+            onSelect={() => openConfigModal("alias")}
+          >
+            <Tags size={15} />
+            <span>{t("auth_files_page.alias_tab")}</span>
+          </DropdownMenu.Item>
+        </DropdownMenu.Content>
+      </DropdownMenu.Portal>
+    </DropdownMenu.Root>
+  );
+
   return (
     <div className="mt-3 space-y-3">
       <input
@@ -855,34 +917,6 @@ export function AuthFilesFilesTab({
             </Button>
           </div>
 
-          <Tabs value={filter} onValueChange={setFilter} size="sm">
-            <TabsList className="max-w-full">
-              {filterChips.map((key) => {
-                const active = filter === key;
-                const normalizedKey = normalizeProviderKey(key);
-                const count =
-                  key === "all" ? filterCounts.total : (filterCounts.counts[normalizedKey] ?? 0);
-                const label = key === "all" ? t("auth_files.all") : key;
-                const countClass = active
-                  ? "bg-black/[0.06] text-[#18181B] dark:bg-white/12 dark:text-white"
-                  : "bg-slate-100 text-slate-700 dark:bg-white/10 dark:text-white/70";
-                return (
-                  <TabsTrigger key={key} value={key}>
-                    {label}
-                    <span
-                      className={[
-                        "ml-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-semibold tabular-nums",
-                        countClass,
-                      ].join(" ")}
-                    >
-                      {count}
-                    </span>
-                  </TabsTrigger>
-                );
-              })}
-            </TabsList>
-          </Tabs>
-
           <div
             id="auth-files-mobile-filter-panel"
             data-testid="auth-files-mobile-filter-panel"
@@ -890,6 +924,22 @@ export function AuthFilesFilesTab({
           >
             <div className="flex flex-col gap-1.5">
               <div className="flex min-w-0 flex-wrap items-start gap-x-1.5 gap-y-2">
+                <div className="min-w-0 basis-[150px]">
+                  <div className="space-y-1.5">
+                    <p className="truncate text-[11px] font-semibold text-slate-600 dark:text-white/65">
+                      {t("auth_files_page.provider_filter")}
+                    </p>
+                    <SearchableSelect
+                      value={filter}
+                      onChange={setFilter}
+                      options={providerFilterOptions}
+                      searchPlaceholder={t("auth_files_page.provider_filter_search")}
+                      aria-label={t("auth_files_page.provider_filter")}
+                      size="sm"
+                    />
+                  </div>
+                </div>
+
                 {canSetModelOwnerGroup ? (
                   <div className="min-w-0 basis-[140px]">
                     <div className="space-y-1.5">
@@ -1104,6 +1154,7 @@ export function AuthFilesFilesTab({
                     <Plus size={15} />
                   </Button>
                 </HoverTooltip>
+                {configActionsMenu}
               </div>
 
             </div>

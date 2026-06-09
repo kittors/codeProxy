@@ -143,6 +143,12 @@ const useTableFilesView = () => {
   window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("table"));
 };
 
+async function selectFileGroup(name: string | RegExp) {
+  const user = userEvent.setup();
+  await user.click(screen.getByRole("combobox", { name: "File group" }));
+  await user.click(await screen.findByRole("option", { name }));
+}
+
 describe("AuthFilesPage files table", () => {
   beforeEach(async () => {
     await i18n.changeLanguage("en");
@@ -1635,18 +1641,19 @@ describe("AuthFilesPage files table", () => {
     );
 
     expect(await screen.findByText("codex-alpha.json")).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: /All3/i })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: /codex2/i })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: /qwen1/i })).toBeInTheDocument();
+    const fileGroupSelect = screen.getByRole("combobox", { name: "File group" });
+    expect(fileGroupSelect).toHaveTextContent("All (3)");
+    await user.click(fileGroupSelect);
+    expect(await screen.findByRole("option", { name: /codex\s*2/i })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: /qwen\s*1/i })).toBeInTheDocument();
+    await user.click(screen.getByRole("option", { name: /All\s*3/i }));
 
     await user.type(screen.getByPlaceholderText("Filename / provider / type"), "alpha");
 
     expect(screen.getByText("codex-alpha.json")).toBeInTheDocument();
     await waitFor(() => expect(screen.queryByText("codex-beta.json")).not.toBeInTheDocument());
     expect(screen.queryByText("qwen-lab.json")).not.toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: /All3/i })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: /codex2/i })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: /qwen1/i })).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "File group" })).toHaveTextContent("All (3)");
   });
 
   test("refreshes only the clicked auth-file card usage stats after quota refresh", async () => {
@@ -1929,7 +1936,7 @@ describe("AuthFilesPage files table", () => {
     await waitFor(() => expect(mocks.fetchQuota).toHaveBeenCalledTimes(9));
     mocks.fetchQuota.mockClear();
 
-    fireEvent.click(screen.getByRole("tab", { name: /^All/i }));
+    await selectFileGroup(/^All/i);
 
     await waitFor(() => expect(mocks.fetchQuota).toHaveBeenCalledTimes(9));
     expect(mocks.fetchQuota.mock.calls.map(([, file]) => (file as { name: string }).name)).toEqual(
@@ -2014,7 +2021,7 @@ describe("AuthFilesPage files table", () => {
     expect(await screen.findByText("qwen-1.json")).toBeInTheDocument();
     mocks.fetchQuota.mockClear();
 
-    fireEvent.click(screen.getByRole("tab", { name: /^codex/i }));
+    await selectFileGroup(/^codex\s*2/i);
 
     await waitFor(() => expect(mocks.fetchQuota).toHaveBeenCalledTimes(2));
     expect(mocks.fetchQuota.mock.calls.map(([, file]) => (file as { name: string }).name)).toEqual(
@@ -2573,7 +2580,7 @@ describe("AuthFilesPage files table", () => {
     );
 
     expect(await screen.findByText("Codex Main")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("tab", { name: /codex/i }));
+    await selectFileGroup(/codex\s*1/i);
 
     expect(
       screen.queryByText("No owner group selected; each auth file uses live model query."),
@@ -3275,7 +3282,7 @@ describe("AuthFilesPage files table", () => {
     expect(screen.getByText("44%")).toBeInTheDocument();
   });
 
-  test("cards view spins current-page refresh actions when switching provider tabs and clears them per card", async () => {
+  test("cards view spins current-page refresh actions when switching provider filter and clears them per card", async () => {
     const now = Date.now();
     const files = [
       {
@@ -3359,7 +3366,7 @@ describe("AuthFilesPage files table", () => {
     );
 
     expect(await screen.findByText("qwen.json")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("tab", { name: /codex/i }));
+    await selectFileGroup(/codex\s*3/i);
     expect(await screen.findByText("codex-a.json")).toBeInTheDocument();
 
     await waitFor(() =>
