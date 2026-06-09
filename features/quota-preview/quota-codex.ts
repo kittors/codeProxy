@@ -155,6 +155,9 @@ export const buildCodexItems = (payload: CodexUsagePayload): QuotaItem[] => {
       : [];
   const items: QuotaItem[] = [];
 
+  const isStandardWindowSeconds = (seconds: number | null) =>
+    seconds === fiveHourSeconds || seconds === weekSeconds;
+
   const pickWindows = (limitInfo?: CodexRateLimitInfo | null) => {
     const rawWindows = [
       limitInfo?.primary_window ?? limitInfo?.primaryWindow ?? null,
@@ -198,9 +201,34 @@ export const buildCodexItems = (payload: CodexUsagePayload): QuotaItem[] => {
     });
   };
 
+  const addNonStandardWindows = (
+    prefix: "code" | "review",
+    limitInfo?: CodexRateLimitInfo | null,
+  ) => {
+    const rawWindows = [
+      limitInfo?.primary_window ?? limitInfo?.primaryWindow ?? null,
+      limitInfo?.secondary_window ?? limitInfo?.secondaryWindow ?? null,
+    ];
+    rawWindows.forEach((window) => {
+      if (!window) return;
+      const seconds = normalizeNumberValue(
+        window.limit_window_seconds ?? window.limitWindowSeconds,
+      );
+      if (seconds === null || seconds <= 0 || isStandardWindowSeconds(seconds)) return;
+      addWindow(
+        `${prefix}_subscription_${seconds}`,
+        prefix === "code" ? "m_quota.code_subscription" : "m_quota.review_subscription",
+        seconds,
+        window,
+        limitInfo,
+      );
+    });
+  };
+
   const rateWindows = pickWindows(rate);
   addWindow("code_5h", "m_quota.code_5h", fiveHourSeconds, rateWindows.fiveHour, rate);
   addWindow("code_week", "m_quota.code_weekly", weekSeconds, rateWindows.weekly, rate);
+  addNonStandardWindows("code", rate);
   if (codeReview) {
     const reviewWindows = pickWindows(codeReview);
     addWindow(
@@ -217,6 +245,7 @@ export const buildCodexItems = (payload: CodexUsagePayload): QuotaItem[] => {
       reviewWindows.weekly,
       codeReview,
     );
+    addNonStandardWindows("review", codeReview);
   }
 
   additionalRateLimits.forEach((entry) => {

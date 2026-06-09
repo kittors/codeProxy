@@ -4016,6 +4016,64 @@ describe("AuthFilesPage files table", () => {
     expect(screen.getByText("0%")).toHaveClass("text-rose-700");
   });
 
+  test("cards view shows codex team subscription quota instead of empty stable placeholders", async () => {
+    const now = Date.now();
+    const file = {
+      name: "codex-team.json",
+      type: "codex",
+      size: 1024,
+      modified: now,
+      disabled: false,
+      auth_index: "team-1",
+      plan_type: "team",
+    } as any;
+
+    mocks.list.mockImplementation(async () => ({ files: [file] }));
+    mocks.fetchQuota.mockResolvedValue({
+      planType: "team",
+      items: [
+        {
+          key: "code_subscription_2628000",
+          label: "m_quota.code_subscription",
+          percent: 89,
+          resetAtMs: now + 60_000,
+          windowSeconds: 2628000,
+        },
+      ],
+    });
+
+    window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
+    window.localStorage.setItem(
+      AUTH_FILES_DATA_CACHE_KEY,
+      JSON.stringify({
+        savedAtMs: now,
+        files: [file],
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("codex-team.json")).toBeInTheDocument();
+    fireEvent.click(
+      within(screen.getByTestId("auth-files-cards")).getByRole("button", { name: "Refresh" }),
+    );
+
+    expect(await screen.findByText("Code: Subscription")).toBeInTheDocument();
+    expect(screen.queryByText("Code: 5h")).not.toBeInTheDocument();
+    expect(screen.queryByText("Code: Weekly")).not.toBeInTheDocument();
+    expect(screen.getByText("89%")).toBeInTheDocument();
+  });
+
   test("table preview and hover mark depleted codex quotas red", async () => {
     useTableFilesView();
     const now = Date.now();

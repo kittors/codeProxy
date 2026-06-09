@@ -124,6 +124,30 @@ describe("buildCodexItems", () => {
       ]),
     );
   });
+
+  test("maps codex team monthly limits into a subscription quota item", () => {
+    const items = buildCodexItems({
+      plan_type: "team",
+      rate_limit: {
+        allowed: true,
+        limit_reached: false,
+        primary_window: {
+          used_percent: 11,
+          limit_window_seconds: 2628000,
+          reset_after_seconds: 2618817,
+        },
+      },
+    });
+
+    expect(items).toEqual([
+      expect.objectContaining({
+        key: "code_subscription_2628000",
+        label: "m_quota.code_subscription",
+        percent: 89,
+        windowSeconds: 2628000,
+      }),
+    ]);
+  });
 });
 
 describe("buildAntigravityItems", () => {
