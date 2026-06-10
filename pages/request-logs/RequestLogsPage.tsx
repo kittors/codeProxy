@@ -26,6 +26,8 @@ import {
   type TimeRange,
 } from "@features/request-log-viewer";
 type StatusFilterValue = "success" | "failed";
+type MultiSelectFilterState<T extends string = string> = T[] | null;
+
 const DEFAULT_LOG_STATS = {
   total: 0,
   success_rate: 0,
@@ -39,23 +41,36 @@ const DEFAULT_CLEAR_OPTIONS: ClearUsageLogsPayload = {
   clear_request_records: false,
 };
 
-function normalizeFilterSelection(selected: string[], allowedValues: string[]): string[] {
+function normalizeFilterSelection<T extends string>(
+  selected: MultiSelectFilterState<T>,
+  allowedValues: T[],
+): MultiSelectFilterState<T> {
+  if (selected === null) return null;
   if (allowedValues.length === 0) return [];
   const allowed = new Set(allowedValues);
-  return selected.filter(
+  const normalized = selected.filter(
     (item, index) => allowed.has(item) && selected.indexOf(item) === index,
   );
-}
-
-function toFilterParam(selected: string[], allowedValues: string[]): string[] | undefined {
-  const normalized = normalizeFilterSelection(selected, allowedValues);
-  if (normalized.length === 0 || normalized.length === allowedValues.length) return undefined;
+  if (normalized.length === allowedValues.length) return null;
   return normalized;
 }
 
-function hasPartialFilterSelection(selected: string[], allowedValues: string[]): boolean {
+function toFilterParam<T extends string>(
+  selected: MultiSelectFilterState<T>,
+  allowedValues: T[],
+): { values?: T[]; matchesNone: boolean } {
   const normalized = normalizeFilterSelection(selected, allowedValues);
-  return normalized.length > 0 && normalized.length < allowedValues.length;
+  if (normalized === null) return { values: undefined, matchesNone: false };
+  if (normalized.length === 0) return { values: undefined, matchesNone: true };
+  return { values: normalized, matchesNone: false };
+}
+
+function hasActiveFilterSelection<T extends string>(
+  selected: MultiSelectFilterState<T>,
+  allowedValues: T[],
+): boolean {
+  const normalized = normalizeFilterSelection(selected, allowedValues);
+  return normalized !== null;
 }
 
 // ---------------------------------------------------------------------------
@@ -126,10 +141,11 @@ export function RequestLogsPage() {
 
   // Multi-value filters
   const [timeRange, setTimeRange] = useState<TimeRange>(7);
-  const [selectedApiKeys, setSelectedApiKeys] = useState<string[]>([]);
-  const [selectedModels, setSelectedModels] = useState<string[]>([]);
-  const [selectedChannels, setSelectedChannels] = useState<string[]>([]);
-  const [selectedStatuses, setSelectedStatuses] = useState<StatusFilterValue[]>([]);
+  const [selectedApiKeys, setSelectedApiKeys] = useState<MultiSelectFilterState<string>>(null);
+  const [selectedModels, setSelectedModels] = useState<MultiSelectFilterState<string>>(null);
+  const [selectedChannels, setSelectedChannels] = useState<MultiSelectFilterState<string>>(null);
+  const [selectedStatuses, setSelectedStatuses] =
+    useState<MultiSelectFilterState<StatusFilterValue>>(null);
   const [confirmClearOpen, setConfirmClearOpen] = useState(false);
   const [clearingLogs, setClearingLogs] = useState(false);
   const [clearOptions, setClearOptions] = useState<ClearUsageLogsPayload>(DEFAULT_CLEAR_OPTIONS);
@@ -187,22 +203,67 @@ export function RequestLogsPage() {
     () => channelOptions.map((option) => option.value),
     [channelOptions],
   );
-  const statusFilterValues = useMemo(
-    () => statusOptions.map((option) => option.value),
+  const statusFilterValues = useMemo<StatusFilterValue[]>(
+    () => statusOptions.map((option) => option.value as StatusFilterValue),
     [statusOptions],
   );
 
+  const apiKeyFilterParam = useMemo(
+    () => toFilterParam(selectedApiKeys, apiKeyFilterValues),
+    [apiKeyFilterValues, selectedApiKeys],
+  );
+  const modelFilterParam = useMemo(
+    () => toFilterParam(selectedModels, modelFilterValues),
+    [modelFilterValues, selectedModels],
+  );
+  const channelFilterParam = useMemo(
+    () => toFilterParam(selectedChannels, channelFilterValues),
+    [channelFilterValues, selectedChannels],
+  );
+  const statusFilterParam = useMemo(
+    () => toFilterParam(selectedStatuses, statusFilterValues),
+    [selectedStatuses, statusFilterValues],
+  );
+
   const hasActiveFilters =
-    hasPartialFilterSelection(selectedApiKeys, apiKeyFilterValues) ||
-    hasPartialFilterSelection(selectedModels, modelFilterValues) ||
-    hasPartialFilterSelection(selectedChannels, channelFilterValues) ||
-    hasPartialFilterSelection(selectedStatuses, statusFilterValues);
+    hasActiveFilterSelection(selectedApiKeys, apiKeyFilterValues) ||
+    hasActiveFilterSelection(selectedModels, modelFilterValues) ||
+    hasActiveFilterSelection(selectedChannels, channelFilterValues) ||
+    hasActiveFilterSelection(selectedStatuses, statusFilterValues);
+
+  const handleApiKeysChange = useCallback(
+    (value: string[]) => {
+      setSelectedApiKeys(normalizeFilterSelection(value, apiKeyFilterValues));
+    },
+    [apiKeyFilterValues],
+  );
+
+  const handleModelsChange = useCallback(
+    (value: string[]) => {
+      setSelectedModels(normalizeFilterSelection(value, modelFilterValues));
+    },
+    [modelFilterValues],
+  );
+
+  const handleChannelsChange = useCallback(
+    (value: string[]) => {
+      setSelectedChannels(normalizeFilterSelection(value, channelFilterValues));
+    },
+    [channelFilterValues],
+  );
+
+  const handleStatusesChange = useCallback(
+    (value: StatusFilterValue[]) => {
+      setSelectedStatuses(normalizeFilterSelection(value, statusFilterValues));
+    },
+    [statusFilterValues],
+  );
 
   const resetFilters = useCallback(() => {
-    setSelectedApiKeys([]);
-    setSelectedModels([]);
-    setSelectedChannels([]);
-    setSelectedStatuses([]);
+    setSelectedApiKeys(null);
+    setSelectedModels(null);
+    setSelectedChannels(null);
+    setSelectedStatuses(null);
   }, []);
 
   // Fetch logs from backend (server-side pagination)
@@ -216,10 +277,14 @@ export function RequestLogsPage() {
           page,
           size,
           days: timeRange,
-          api_keys: toFilterParam(selectedApiKeys, apiKeyFilterValues),
-          models: toFilterParam(selectedModels, modelFilterValues),
-          channels: toFilterParam(selectedChannels, channelFilterValues),
-          statuses: toFilterParam(selectedStatuses, statusFilterValues),
+          api_keys: apiKeyFilterParam.values,
+          models: modelFilterParam.values,
+          channels: channelFilterParam.values,
+          statuses: statusFilterParam.values,
+          api_keys_empty: apiKeyFilterParam.matchesNone,
+          models_empty: modelFilterParam.matchesNone,
+          channels_empty: channelFilterParam.matchesNone,
+          statuses_empty: statusFilterParam.matchesNone,
         });
 
         if (seq !== requestSeqRef.current) return;
@@ -254,15 +319,11 @@ export function RequestLogsPage() {
       }
     },
     [
-      apiKeyFilterValues,
-      channelFilterValues,
-      modelFilterValues,
+      apiKeyFilterParam,
+      channelFilterParam,
+      modelFilterParam,
       notify,
-      selectedApiKeys,
-      selectedChannels,
-      selectedModels,
-      selectedStatuses,
-      statusFilterValues,
+      statusFilterParam,
       t,
       timeRange,
     ],
@@ -457,10 +518,10 @@ export function RequestLogsPage() {
           selectedModels={selectedModels}
           selectedChannels={selectedChannels}
           selectedStatuses={selectedStatuses}
-          onApiKeysChange={setSelectedApiKeys}
-          onModelsChange={setSelectedModels}
-          onChannelsChange={setSelectedChannels}
-          onStatusesChange={setSelectedStatuses}
+          onApiKeysChange={handleApiKeysChange}
+          onModelsChange={handleModelsChange}
+          onChannelsChange={handleChannelsChange}
+          onStatusesChange={handleStatusesChange}
           onResetFilters={resetFilters}
           hasActiveFilters={hasActiveFilters}
         />
