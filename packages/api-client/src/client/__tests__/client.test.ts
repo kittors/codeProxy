@@ -105,6 +105,27 @@ describe("ApiClient request standardization", () => {
       isAuthError: false,
     } satisfies Partial<ApiError>);
   });
+
+  test("sanitizes HTML error pages returned by upstream proxies", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response("<!doctype html><html><head><title>502 Bad Gateway</title></head></html>", {
+        status: 502,
+        statusText: "Bad Gateway",
+        headers: { "Content-Type": "text/html; charset=utf-8" },
+      }),
+    );
+    globalThis.fetch = fetchMock;
+
+    const client = new ApiClient();
+    client.setConfig({ apiBase: "http://localhost:8317", managementKey: "test-key" });
+
+    await expect(client.get("/dashboard-summary")).rejects.toMatchObject({
+      name: "ApiError",
+      status: 502,
+      message: "Management API temporarily returned an HTML error page (502 Bad Gateway).",
+      payload: expect.stringContaining("<!doctype html>"),
+    } satisfies Partial<ApiError>);
+  });
 });
 
 describe("ApiClient authentication failure handling", () => {

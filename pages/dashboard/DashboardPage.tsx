@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Activity,
@@ -369,6 +369,7 @@ export function DashboardPage() {
   const { notify } = useToast();
   const { stats, connected } = useSystemStats(5);
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
+  const summaryRef = useRef<DashboardSummary | null>(null);
   const [range, setRange] = useState<DashboardRange>(7);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -378,15 +379,22 @@ export function DashboardPage() {
     async (days: DashboardRange, silent = false) => {
       if (!silent) {
         setLoading(true);
+        setError(null);
       }
-      setError(null);
       try {
         const data = await usageApi.getDashboardSummary(days);
+        summaryRef.current = data;
         setSummary(data);
+        setError(null);
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : t("dashboard.load_failed");
-        setError(message);
-        notify({ type: "error", message });
+        const hasSummary = summaryRef.current !== null;
+        if (!silent || !hasSummary) {
+          setError(message);
+        }
+        if (!silent) {
+          notify({ type: "error", message });
+        }
       } finally {
         if (!silent) {
           setLoading(false);

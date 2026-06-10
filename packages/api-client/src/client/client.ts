@@ -41,6 +41,18 @@ const dispatchWindowEvent = (event: Event): void => {
   }
 };
 
+const isHtmlDocument = (contentType: string, text: string) =>
+  contentType.toLowerCase().includes("text/html") &&
+  /^<!doctype html|^<html[\s>]/i.test(text.trim());
+
+const buildHtmlErrorMessage = (response: Response) => {
+  const status = response.status || 0;
+  const suffix = response.statusText?.trim()
+    ? `${status} ${response.statusText.trim()}`
+    : String(status);
+  return `Management API temporarily returned an HTML error page (${suffix}).`;
+};
+
 const normalizeRequestPath = (path: string): string => {
   const trimmed = path.trim();
   if (!trimmed) return "/";
@@ -156,10 +168,7 @@ export class ApiClient {
     if (!trimmed) return undefined;
 
     const contentType = response.headers.get("Content-Type") ?? "";
-    if (
-      contentType.toLowerCase().includes("text/html") &&
-      /^<!doctype html|^<html[\s>]/i.test(trimmed)
-    ) {
+    if (isHtmlDocument(contentType, trimmed)) {
       throw new ApiError({
         message:
           "Management API returned the web panel HTML instead of JSON. Check the API base URL.",
@@ -185,12 +194,17 @@ export class ApiClient {
       const text = await response.text();
       const trimmed = text.trim();
       if (trimmed) {
-        try {
-          payload = JSON.parse(trimmed) as unknown;
-          message = extractApiErrorMessage(payload, truncateErrorText(trimmed));
-        } catch {
+        if (isHtmlDocument(response.headers.get("Content-Type") ?? "", trimmed)) {
           payload = truncateErrorText(trimmed);
-          message = truncateErrorText(trimmed);
+          message = buildHtmlErrorMessage(response);
+        } else {
+          try {
+            payload = JSON.parse(trimmed) as unknown;
+            message = extractApiErrorMessage(payload, truncateErrorText(trimmed));
+          } catch {
+            payload = truncateErrorText(trimmed);
+            message = truncateErrorText(trimmed);
+          }
         }
       }
     } catch {
