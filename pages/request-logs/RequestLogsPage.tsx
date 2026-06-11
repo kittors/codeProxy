@@ -13,6 +13,7 @@ import { Modal } from "@code-proxy/ui";
 import { useToast } from "@code-proxy/ui";
 import { DataTable } from "@code-proxy/ui";
 import { ErrorDetailModal, LogContentModal } from "@features/log-content-viewer";
+import { ModelTag } from "@features/model-tags";
 import { RequestLogsFilters } from "./RequestLogsFilters";
 import type { SearchableCheckboxMultiSelectOption } from "@code-proxy/ui";
 import {
@@ -174,7 +175,7 @@ export function RequestLogsPage() {
   const modelOptions = useMemo<SearchableCheckboxMultiSelectOption[]>(() => {
     return filterOptions.models.map((m) => ({
       value: m,
-      label: m,
+      label: <ModelTag id={m} size="sm" />,
       searchText: m,
     }));
   }, [filterOptions.models]);

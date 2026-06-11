@@ -4,6 +4,7 @@ import { parseUsageTimestampMs } from "@features/monitor-widgets/monitor-utils";
 import { Tabs, TabsList, TabsTrigger } from "@code-proxy/ui";
 import { HoverTooltip, OverflowTooltip } from "@code-proxy/ui";
 import { PaginationBar } from "@code-proxy/ui";
+import { ModelTag } from "@features/model-tags";
 
 export type TimeRange = 1 | 7 | 14 | 30;
 
@@ -462,14 +463,17 @@ export function buildRequestLogsColumns(
     {
       key: "model",
       label: t("request_logs.col_model"),
-      width: "w-36",
+      width: "w-44",
       headerClassName: "text-center",
       cellClassName: "text-center",
-      render: (row) => (
-        <OverflowTooltip content={row.model} className="block min-w-0">
-          <span className="block min-w-0 truncate">{row.model}</span>
-        </OverflowTooltip>
-      ),
+      render: (row) =>
+        row.model ? (
+          <OverflowTooltip content={row.model} className="inline-block max-w-full align-middle">
+            <ModelTag id={row.model} size="sm" className="align-middle" />
+          </OverflowTooltip>
+        ) : (
+          <span className="text-xs text-slate-400 dark:text-white/30">--</span>
+        ),
     },
   ];
 }
