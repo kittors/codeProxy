@@ -141,22 +141,28 @@ export function ProxiesPage() {
       description: draft.description?.trim() ?? "",
       enabled: draft.enabled,
     };
-    const nextEntries =
-      editingID && entries.some((entry) => entry.id === editingID)
-        ? entries.map((entry) => (entry.id === editingID ? normalized : entry))
-        : [...entries, normalized];
 
     setSaving(true);
     try {
-      await proxiesApi.saveAll(nextEntries);
-      setEntries(nextEntries);
-      if (editingID && editingID !== normalized.id) {
+      if (editingID) {
+        await proxiesApi.update(editingID, {
+          name: normalized.name,
+          url: normalized.url,
+          enabled: normalized.enabled,
+          description: normalized.description,
+        });
+        setEntries((prev) => prev.map((entry) => (entry.id === editingID ? normalized : entry)));
         setCheckState((prev) => {
           const next = { ...prev };
           delete next[editingID];
           writeCachedProxyCheckState(next);
           return next;
         });
+        void refreshCheckResults([normalized]);
+      } else {
+        const nextEntries = [...entries, normalized];
+        await proxiesApi.saveAll(nextEntries);
+        setEntries(nextEntries);
       }
       notify({ type: "success", message: t("proxies.saved") });
       closeModal();
