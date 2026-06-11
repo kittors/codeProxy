@@ -45,7 +45,15 @@ const resolveSystemTheme = (): ThemeMode => {
 };
 
 const applyThemeToDom = (mode: ThemeMode): void => {
-  document.documentElement.classList.toggle("dark", mode === "dark");
+  const isDark = mode === "dark";
+
+  document.documentElement.classList.toggle("dark", isDark);
+  document.documentElement.style.colorScheme = mode;
+  if (isDark) {
+    document.documentElement.setAttribute("data-theme", "dark");
+  } else {
+    document.documentElement.removeAttribute("data-theme");
+  }
 };
 
 const persistTheme = (mode: ThemeMode): void => {
