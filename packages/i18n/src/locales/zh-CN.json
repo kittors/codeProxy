@@ -2659,7 +2659,16 @@
     "clear_key_filter": "清空密钥筛选",
     "clear_model_filter": "清空模型筛选",
     "clear_channel_filter": "清空渠道筛选",
-    "clear_status_filter": "清空状态筛选"
+    "clear_status_filter": "清空状态筛选",
+    "export_summary": "导出汇总",
+    "export_summary_empty": "导出汇总无数据",
+    "csv_person_name": "人员名",
+    "csv_api_key": "API Key",
+    "csv_request_count": "请求数",
+    "csv_input_tokens": "输入Token",
+    "csv_output_tokens": "输出Token",
+    "csv_total_tokens": "总Token",
+    "csv_total_cost": "费用(USD)"
   },
   "ccswitch": {
     "import_to_ccswitch": "导入到 CC Switch",

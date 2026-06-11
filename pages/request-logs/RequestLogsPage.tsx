@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { LoaderCircle, RefreshCw, ScrollText, Trash2 } from "lucide-react";
+import { LoaderCircle, Download, RefreshCw, ScrollText, Trash2 } from "lucide-react";
 import { usageApi } from "@code-proxy/api-client";
 import type {
   ClearUsageLogsPayload,
@@ -14,6 +14,7 @@ import { useToast } from "@code-proxy/ui";
 import { DataTable } from "@code-proxy/ui";
 import { ErrorDetailModal, LogContentModal } from "@features/log-content-viewer";
 import { RequestLogsFilters } from "./RequestLogsFilters";
+import { exportSummaryCsv } from "./exportSummaryCsv";
 import type { SearchableCheckboxMultiSelectOption } from "@code-proxy/ui";
 import {
   buildRequestLogKeyOptions,
@@ -132,6 +133,7 @@ export function RequestLogsPage() {
   const [selectedStatuses, setSelectedStatuses] = useState<StatusFilterValue[]>([]);
   const [confirmClearOpen, setConfirmClearOpen] = useState(false);
   const [clearingLogs, setClearingLogs] = useState(false);
+  const [exportingSummary, setExportingSummary] = useState(false);
   const [clearOptions, setClearOptions] = useState<ClearUsageLogsPayload>(DEFAULT_CLEAR_OPTIONS);
 
   const requestSeqRef = useRef(0);
@@ -299,6 +301,34 @@ export function RequestLogsPage() {
     });
   }, [lastUpdatedAt, loading, t]);
 
+  const handleExportSummary = useCallback(async () => {
+    setExportingSummary(true);
+    try {
+      const data = await usageApi.exportSummary({
+        days: timeRange,
+        api_key: selectedApiKeys.length === 1 ? selectedApiKeys[0] : undefined,
+      });
+      if (data.length === 0) {
+        notify({ type: "info", message: t("request_logs.export_summary_empty") });
+        return;
+      }
+      exportSummaryCsv(data, [
+        t("request_logs.csv_person_name"),
+        t("request_logs.csv_api_key"),
+        t("request_logs.csv_request_count"),
+        t("request_logs.csv_input_tokens"),
+        t("request_logs.csv_output_tokens"),
+        t("request_logs.csv_total_tokens"),
+        t("request_logs.csv_total_cost"),
+      ]);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : t("request_logs.refresh_failed");
+      notify({ type: "error", message });
+    } finally {
+      setExportingSummary(false);
+    }
+  }, [timeRange, selectedApiKeys, notify, t]);
+
   const handleOpenClearDialog = useCallback(() => {
     setClearOptions(DEFAULT_CLEAR_OPTIONS);
     setConfirmClearOpen(true);
@@ -419,6 +449,20 @@ export function RequestLogsPage() {
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <RequestLogsTimeRangeSelector value={timeRange} onChange={setTimeRange} />
+            <button
+              type="button"
+              onClick={() => void handleExportSummary()}
+              disabled={loading || exportingSummary}
+              aria-label={t("request_logs.export_summary")}
+              title={t("request_logs.export_summary")}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 transition hover:bg-emerald-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/50 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-emerald-500/15 dark:text-emerald-300 dark:hover:bg-emerald-500/25"
+            >
+              {exportingSummary ? (
+                <span className="h-3.5 w-3.5 rounded-full border-2 border-emerald-300 border-t-emerald-600 motion-reduce:animate-none motion-safe:animate-spin dark:border-emerald-500/30 dark:border-t-emerald-300" aria-hidden="true" />
+              ) : (
+                <Download size={14} aria-hidden="true" />
+              )}
+            </button>
             <button
               type="button"
               onClick={handleOpenClearDialog}

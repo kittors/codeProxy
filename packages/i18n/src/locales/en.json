@@ -2390,7 +2390,16 @@
     "clear_model_filter": "Clear model filter",
     "clear_channel_filter": "Clear channel filter",
     "clear_status_filter": "Clear status filter",
-    "cache_rate": "Cache Token Ratio"
+    "cache_rate": "Cache Token Ratio",
+    "export_summary": "Export Summary",
+    "export_summary_empty": "No data to export",
+    "csv_person_name": "Person Name",
+    "csv_api_key": "API Key",
+    "csv_request_count": "Request Count",
+    "csv_input_tokens": "Input Tokens",
+    "csv_output_tokens": "Output Tokens",
+    "csv_total_tokens": "Total Tokens",
+    "csv_total_cost": "Cost (USD)"
   },
   "ccswitch": {
     "import_to_ccswitch": "Import to CC Switch",

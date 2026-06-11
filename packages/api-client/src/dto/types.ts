@@ -257,6 +257,16 @@ export interface IFlowCookieAuthResponse {
   type?: string;
 }
 
+export interface UsageSummaryItem {
+  person_name: string;
+  api_key: string;
+  request_count: number;
+  input_tokens: number;
+  output_tokens: number;
+  total_tokens: number;
+  total_cost_usd: number;
+}
+
 export interface LogsQuery {
   after?: number;
   limit?: number;

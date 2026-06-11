@@ -3,6 +3,7 @@ import type {
   UsageData,
   ChartDataResponse,
   EntityStatsResponse,
+  UsageSummaryItem,
 } from "../dto/types";
 
 export interface UsageExportPayload {
@@ -327,6 +328,16 @@ export const usageApi = {
 
   exportUsage(): Promise<UsageExportPayload> {
     return apiClient.get<UsageExportPayload>("/usage/export");
+  },
+
+  async exportSummary(params?: {
+    days?: number;
+    api_key?: string;
+  }): Promise<UsageSummaryItem[]> {
+    const resp = await apiClient.get<UsageSummaryItem[]>("/usage/export/summary", {
+      params: { days: params?.days, api_key: params?.api_key },
+    });
+    return Array.isArray(resp) ? resp : [];
   },
 
   importUsage(payload: unknown): Promise<UsageImportResponse> {
