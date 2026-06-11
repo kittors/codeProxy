@@ -1,5 +1,5 @@
 import type { ComponentProps } from "react";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { AuthFileDetailModal } from "@pages/auth-files/components/AuthFileDetailModal";
 import i18n from "@code-proxy/i18n";
@@ -7,11 +7,21 @@ import i18n from "@code-proxy/i18n";
 type DetailModalProps = ComponentProps<typeof AuthFileDetailModal>;
 
 const chartOptions = vi.hoisted(() => [] as any[]);
+const chartEvents = vi.hoisted(() => [] as any[]);
 
 vi.mock("@code-proxy/ui", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@code-proxy/ui")>()),
-  EChart: ({ option, className }: { option: any; className?: string }) => {
+  EChart: ({
+    option,
+    className,
+    onEvents,
+  }: {
+    option: any;
+    className?: string;
+    onEvents?: Record<string, () => void>;
+  }) => {
     chartOptions.push(option);
+    chartEvents.push(onEvents);
     return (
       <div
         className={className}
@@ -133,6 +143,7 @@ describe("AuthFileDetailModal", () => {
     await i18n.changeLanguage("en");
     window.localStorage.clear();
     chartOptions.length = 0;
+    chartEvents.length = 0;
   });
 
   test("uses usage trend as the primary view for Codex files", () => {
@@ -155,10 +166,22 @@ describe("AuthFileDetailModal", () => {
     expect(screen.getByText("8%")).toBeInTheDocument();
     expect(screen.getByRole("dialog", { name: "Codex Primary" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Download" })).toBeEnabled();
-    expect(chartOptions[0]?.animation).toBe(false);
-    expect(chartOptions[0]?.grid?.top).toBeGreaterThanOrEqual(70);
-    expect(chartOptions[0]?.yAxis?.every((item: any) => !item.name)).toBe(true);
-    expect(chartOptions[0]?.series?.every((item: any) => item.animation === false)).toBe(true);
+    expect(chartOptions.at(-1)?.animation).toBe(true);
+    expect(chartOptions.at(-1)?.grid?.top).toBeGreaterThanOrEqual(70);
+    expect(chartOptions.at(-1)?.yAxis?.every((item: any) => !item.name)).toBe(true);
+    expect(chartOptions.at(-1)?.series?.every((item: any) => item.animation === true)).toBe(true);
+  });
+
+  test("disables trend chart animation after the first render completes", () => {
+    renderDetailModal();
+
+    expect(chartOptions.at(-1)?.animation).toBe(true);
+    act(() => {
+      chartEvents.at(-1)?.finished?.();
+    });
+
+    expect(chartOptions.at(-1)?.animation).toBe(false);
+    expect(chartOptions.at(-1)?.series?.every((item: any) => item.animation === false)).toBe(true);
   });
 
   test("keeps the usage cost card visible for codex files inferred from dotted email file names", () => {

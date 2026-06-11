@@ -1,4 +1,13 @@
-import { useMemo, type Dispatch, type SetStateAction } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type Dispatch,
+  type SetStateAction,
+} from "react";
 import { useTranslation } from "react-i18next";
 import { Download, RefreshCw, ShieldCheck } from "lucide-react";
 import type { AuthFileTrendResponse } from "@code-proxy/api-client/endpoints/usage";
@@ -141,6 +150,10 @@ export function AuthFileDetailModal({
   const providerKey = normalizeProviderKey(modelsFileType);
   const detailProviderKey = detailFile ? normalizeProviderKey(resolveFileType(detailFile)) : "";
   const supportsUsageTrend = detailProviderKey === "kimi" || detailProviderKey === "codex";
+  const openedDetailFileRef = useRef<string | null>(null);
+  const detailOpenCounterRef = useRef(0);
+  const [detailOpenKey, setDetailOpenKey] = useState("");
+  const [animatedTrendKey, setAnimatedTrendKey] = useState("");
   const detailTitle = detailFile
     ? resolveAuthFileDisplayName(detailFile) || String(detailFile.name || "")
     : t("auth_files.view_auth_file");
@@ -189,6 +202,38 @@ export function AuthFileDetailModal({
       detailTrendWindow === "5h" ? item.window_seconds === 18000 : item.window_seconds >= 604800,
     );
   }, [detailTrend, detailTrendWindow]);
+  useLayoutEffect(() => {
+    const fileName = open && detailFile ? detailFile.name : "";
+    if (!fileName) {
+      openedDetailFileRef.current = null;
+      setDetailOpenKey("");
+      return;
+    }
+    if (openedDetailFileRef.current === fileName) return;
+    openedDetailFileRef.current = fileName;
+    detailOpenCounterRef.current += 1;
+    setDetailOpenKey(`${fileName}:${detailOpenCounterRef.current}`);
+  }, [detailFile?.name, open]);
+  const trendAnimationKey =
+    detailFile && detailTrend && detailOpenKey
+      ? `${detailOpenKey}:${detailTrend.auth_index}`
+      : "";
+  const shouldAnimateTrend = Boolean(trendAnimationKey && animatedTrendKey !== trendAnimationKey);
+  const markTrendAnimationDone = useCallback(() => {
+    if (!trendAnimationKey) return;
+    setAnimatedTrendKey((current) =>
+      current === trendAnimationKey ? current : trendAnimationKey,
+    );
+  }, [trendAnimationKey]);
+  useEffect(() => {
+    if (!shouldAnimateTrend) return;
+    const timer = window.setTimeout(markTrendAnimationDone, 900);
+    return () => window.clearTimeout(timer);
+  }, [markTrendAnimationDone, shouldAnimateTrend]);
+  const trendChartEvents = useMemo(
+    () => (shouldAnimateTrend ? { finished: markTrendAnimationDone } : undefined),
+    [markTrendAnimationDone, shouldAnimateTrend],
+  );
   const trendChartOption = useMemo(() => {
     const usagePoints =
       detailTrendWindow === "5h"
@@ -234,9 +279,10 @@ export function AuthFileDetailModal({
     const palette = ["#2563eb", "#db2777", "#16a34a", "#9333ea", "#0f766e", "#dc2626"];
 
     return {
-      animation: false,
-      animationDuration: 0,
+      animation: shouldAnimateTrend,
+      animationDuration: shouldAnimateTrend ? 680 : 0,
       animationDurationUpdate: 0,
+      animationEasing: "cubicOut" as const,
       grid: { left: 46, right: 108, top: 74, bottom: 38 },
       tooltip: { trigger: "axis", confine: true },
       legend: {
@@ -296,7 +342,9 @@ export function AuthFileDetailModal({
           name: t("auth_files.trend_requests"),
           type: "bar",
           yAxisIndex: 0,
-          animation: false,
+          animation: shouldAnimateTrend,
+          animationDuration: shouldAnimateTrend ? 680 : 0,
+          animationDurationUpdate: 0,
           barMaxWidth: 24,
           itemStyle: { color: "#2563eb", borderRadius: [4, 4, 0, 0] },
           data: sortedKeys.map((key) => requestByKey.get(key) ?? 0),
@@ -305,7 +353,9 @@ export function AuthFileDetailModal({
           name: t("auth_files.trend_cost"),
           type: "line",
           yAxisIndex: 2,
-          animation: false,
+          animation: shouldAnimateTrend,
+          animationDuration: shouldAnimateTrend ? 680 : 0,
+          animationDurationUpdate: 0,
           connectNulls: true,
           showSymbol: false,
           smooth: true,
@@ -323,7 +373,9 @@ export function AuthFileDetailModal({
           )}`,
           type: "line",
           yAxisIndex: 1,
-          animation: false,
+          animation: shouldAnimateTrend,
+          animationDuration: shouldAnimateTrend ? 680 : 0,
+          animationDurationUpdate: 0,
           connectNulls: true,
           showSymbol: false,
           smooth: true,
@@ -337,7 +389,7 @@ export function AuthFileDetailModal({
         })),
       ],
     };
-  }, [activeQuotaSeries, detailTrend, detailTrendWindow, t, translateQuotaLabel]);
+  }, [activeQuotaSeries, detailTrend, detailTrendWindow, shouldAnimateTrend, t, translateQuotaLabel]);
 
   const closeModal = () => {
     setDetailOpen(false);
@@ -469,6 +521,7 @@ export function AuthFileDetailModal({
           <EChart
             option={trendChartOption}
             className="h-80 min-w-0"
+            onEvents={trendChartEvents}
             replaceMerge="series"
           />
         </div>
