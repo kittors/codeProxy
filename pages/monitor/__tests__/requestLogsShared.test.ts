@@ -64,6 +64,6 @@ describe("requestLogsShared", () => {
     expect(keys.indexOf("cachedTokens")).toBeLessThan(keys.indexOf("model"));
     expect(keys.indexOf("cost")).toBeLessThan(keys.indexOf("model"));
     expect(columns.find((column) => column.key === "apiKeyName")?.width).toBe("w-28");
-    expect(columns.find((column) => column.key === "model")?.width).toBe("w-36");
+    expect(columns.find((column) => column.key === "model")?.width).toBe("w-44");
   });
 });
