@@ -42,6 +42,9 @@ import {
 type DetailTab = "usage" | "fields" | "models";
 type DetailTrendWindow = "5h" | "week";
 
+const TREND_CHART_ANIMATION_MS = 680;
+const TREND_CHART_ANIMATION_GUARD_MS = TREND_CHART_ANIMATION_MS + 120;
+
 const padTwo = (value: number) => String(value).padStart(2, "0");
 
 const formatLocalDateKey = (timestamp: string) => {
@@ -280,7 +283,7 @@ export function AuthFileDetailModal({
 
     return {
       animation: shouldAnimateTrend,
-      animationDuration: shouldAnimateTrend ? 680 : 0,
+      animationDuration: shouldAnimateTrend ? TREND_CHART_ANIMATION_MS : 0,
       animationDurationUpdate: 0,
       animationEasing: "cubicOut" as const,
       grid: { left: 46, right: 108, top: 74, bottom: 38 },
@@ -343,7 +346,7 @@ export function AuthFileDetailModal({
           type: "bar",
           yAxisIndex: 0,
           animation: shouldAnimateTrend,
-          animationDuration: shouldAnimateTrend ? 680 : 0,
+          animationDuration: shouldAnimateTrend ? TREND_CHART_ANIMATION_MS : 0,
           animationDurationUpdate: 0,
           barMaxWidth: 24,
           itemStyle: { color: "#2563eb", borderRadius: [4, 4, 0, 0] },
@@ -354,7 +357,7 @@ export function AuthFileDetailModal({
           type: "line",
           yAxisIndex: 2,
           animation: shouldAnimateTrend,
-          animationDuration: shouldAnimateTrend ? 680 : 0,
+          animationDuration: shouldAnimateTrend ? TREND_CHART_ANIMATION_MS : 0,
           animationDurationUpdate: 0,
           connectNulls: true,
           showSymbol: false,
@@ -374,7 +377,7 @@ export function AuthFileDetailModal({
           type: "line",
           yAxisIndex: 1,
           animation: shouldAnimateTrend,
-          animationDuration: shouldAnimateTrend ? 680 : 0,
+          animationDuration: shouldAnimateTrend ? TREND_CHART_ANIMATION_MS : 0,
           animationDurationUpdate: 0,
           connectNulls: true,
           showSymbol: false,
@@ -523,6 +526,7 @@ export function AuthFileDetailModal({
             className="h-80 min-w-0"
             onEvents={trendChartEvents}
             replaceMerge="series"
+            initialAnimationGuardMs={shouldAnimateTrend ? TREND_CHART_ANIMATION_GUARD_MS : 0}
           />
         </div>
       </div>

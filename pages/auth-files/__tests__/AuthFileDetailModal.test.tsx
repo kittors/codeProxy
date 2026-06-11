@@ -8,6 +8,7 @@ type DetailModalProps = ComponentProps<typeof AuthFileDetailModal>;
 
 const chartOptions = vi.hoisted(() => [] as any[]);
 const chartEvents = vi.hoisted(() => [] as any[]);
+const chartProps = vi.hoisted(() => [] as any[]);
 
 vi.mock("@code-proxy/ui", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@code-proxy/ui")>()),
@@ -15,13 +16,16 @@ vi.mock("@code-proxy/ui", async (importOriginal) => ({
     option,
     className,
     onEvents,
+    initialAnimationGuardMs,
   }: {
     option: any;
     className?: string;
     onEvents?: Record<string, () => void>;
+    initialAnimationGuardMs?: number;
   }) => {
     chartOptions.push(option);
     chartEvents.push(onEvents);
+    chartProps.push({ initialAnimationGuardMs, onEvents, option });
     return (
       <div
         className={className}
@@ -144,6 +148,7 @@ describe("AuthFileDetailModal", () => {
     window.localStorage.clear();
     chartOptions.length = 0;
     chartEvents.length = 0;
+    chartProps.length = 0;
   });
 
   test("uses usage trend as the primary view for Codex files", () => {
@@ -167,6 +172,7 @@ describe("AuthFileDetailModal", () => {
     expect(screen.getByRole("dialog", { name: "Codex Primary" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Download" })).toBeEnabled();
     expect(chartOptions.at(-1)?.animation).toBe(true);
+    expect(chartProps.at(-1)?.initialAnimationGuardMs).toBe(800);
     expect(chartOptions.at(-1)?.grid?.top).toBeGreaterThanOrEqual(70);
     expect(chartOptions.at(-1)?.yAxis?.every((item: any) => !item.name)).toBe(true);
     expect(chartOptions.at(-1)?.series?.every((item: any) => item.animation === true)).toBe(true);
@@ -181,6 +187,7 @@ describe("AuthFileDetailModal", () => {
     });
 
     expect(chartOptions.at(-1)?.animation).toBe(false);
+    expect(chartProps.at(-1)?.initialAnimationGuardMs).toBe(0);
     expect(chartOptions.at(-1)?.series?.every((item: any) => item.animation === false)).toBe(true);
   });
 
