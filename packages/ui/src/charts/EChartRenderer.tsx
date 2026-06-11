@@ -12,6 +12,8 @@ export type EChartProps = {
   notMerge?: boolean;
   replaceMerge?: string | string[];
   overflowVisible?: boolean;
+  loading?: boolean;
+  loadingText?: string;
 };
 
 export function EChartRenderer({
@@ -21,6 +23,8 @@ export function EChartRenderer({
   notMerge = false,
   replaceMerge,
   overflowVisible = false,
+  loading = false,
+  loadingText = "",
 }: EChartProps) {
   const {
     state: { mode },
@@ -124,6 +128,26 @@ export function EChartRenderer({
     lastSizeRef.current = null;
   }, [mode]);
 
+  useEffect(() => {
+    const instance = instanceRef.current ?? chartRef.current?.getEchartsInstance?.();
+    if (!instance) return;
+    try {
+      if (loading) {
+        instance.showLoading?.({
+          text: loadingText,
+          color: "#2563eb",
+          textColor: mode === "dark" ? "#e2e8f0" : "#475569",
+          maskColor: mode === "dark" ? "rgba(15, 23, 42, 0.48)" : "rgba(248, 250, 252, 0.64)",
+          zlevel: 1,
+        });
+      } else {
+        instance.hideLoading?.();
+      }
+    } catch {
+      // ignore
+    }
+  }, [loading, loadingText, mode]);
+
   return (
     <div
       ref={containerRef}
@@ -140,7 +164,14 @@ export function EChartRenderer({
         option={option}
         theme={mode === "dark" ? "dark" : undefined}
         style={{ height: "100%", width: "100%" }}
-        showLoading={false}
+        showLoading={loading}
+        loadingOption={{
+          text: loadingText,
+          color: "#2563eb",
+          textColor: mode === "dark" ? "#e2e8f0" : "#475569",
+          maskColor: mode === "dark" ? "rgba(15, 23, 42, 0.48)" : "rgba(248, 250, 252, 0.64)",
+          zlevel: 1,
+        }}
         notMerge={notMerge}
         replaceMerge={replaceMerge}
         autoResize={false}
@@ -150,7 +181,9 @@ export function EChartRenderer({
           instanceRef.current = instance;
 
           try {
-            instance?.hideLoading?.();
+            if (!loading) {
+              instance?.hideLoading?.();
+            }
           } catch {
             // ignore
           }

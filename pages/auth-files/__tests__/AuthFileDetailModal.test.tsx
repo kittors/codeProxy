@@ -65,17 +65,18 @@ const renderDetailModal = (overrides: Partial<DetailModalProps> = {}) => {
       request_total: 3,
       cycle_request_total: 2,
       cycle_cost_total: 1.2345,
+      weekly_quota_used_percent: 8,
       cycle_start: "2026-04-27T16:01:21Z",
       daily_usage: [
-        { date: "2026-04-24", requests: 0 },
-        { date: "2026-04-25", requests: 0 },
-        { date: "2026-04-26", requests: 0 },
-        { date: "2026-04-27", requests: 1 },
-        { date: "2026-04-28", requests: 0 },
-        { date: "2026-04-29", requests: 0 },
-        { date: "2026-04-30", requests: 2 },
+        { date: "2026-04-24", requests: 0, cost: 0 },
+        { date: "2026-04-25", requests: 0, cost: 0 },
+        { date: "2026-04-26", requests: 0, cost: 0 },
+        { date: "2026-04-27", requests: 1, cost: 0.01 },
+        { date: "2026-04-28", requests: 0, cost: 0 },
+        { date: "2026-04-29", requests: 0, cost: 0 },
+        { date: "2026-04-30", requests: 2, cost: 0.02 },
       ],
-      hourly_usage: [{ hour: "2026-04-30 16:00", requests: 1 }],
+      hourly_usage: [{ hour: "2026-04-30 16:00", requests: 1, cost: 0.004 }],
       quota_series: [
         {
           quota_key: "code_5h",
@@ -150,8 +151,12 @@ describe("AuthFileDetailModal", () => {
     expect(screen.getByText("2")).toBeInTheDocument();
     expect(screen.getByText("Current cycle cost")).toBeInTheDocument();
     expect(screen.getByText("$1.2345")).toBeInTheDocument();
+    expect(screen.getByText("Weekly quota used")).toBeInTheDocument();
+    expect(screen.getByText("8%")).toBeInTheDocument();
     expect(screen.getByRole("dialog", { name: "View: codex.json" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Download" })).toBeEnabled();
+    expect(chartOptions[0]?.animation).toBe(true);
+    expect(chartOptions[0]?.series?.every((item: any) => item.animation === true)).toBe(true);
   });
 
   test("keeps the usage cost card visible for codex files inferred from dotted email file names", () => {
@@ -175,6 +180,13 @@ describe("AuthFileDetailModal", () => {
     expect(screen.queryByText("Loading...")).not.toBeInTheDocument();
   });
 
+  test("renders an animated loading state before the first trend payload arrives", () => {
+    renderDetailModal({ detailTrend: null, detailTrendLoading: true });
+
+    expect(screen.getByTestId("auth-file-trend-loading")).toBeInTheDocument();
+    expect(screen.getByTestId("auth-file-trend-chart")).toBeInTheDocument();
+  });
+
   test("does not render quota sample summary cards below the trend chart", () => {
     renderDetailModal();
 
@@ -195,14 +207,15 @@ describe("AuthFileDetailModal", () => {
         request_total: 12,
         cycle_request_total: 12,
         cycle_cost_total: 0.008,
+        weekly_quota_used_percent: 6,
         cycle_start: "2026-04-28T05:34:34Z",
         daily_usage: [],
         hourly_usage: [
-          { hour: "2026-05-01 11:00", requests: 0 },
-          { hour: "2026-05-01 12:00", requests: 2 },
-          { hour: "2026-05-01 13:00", requests: 1 },
-          { hour: "2026-05-01 14:00", requests: 1 },
-          { hour: "2026-05-01 15:00", requests: 10 },
+          { hour: "2026-05-01 11:00", requests: 0, cost: 0 },
+          { hour: "2026-05-01 12:00", requests: 2, cost: 0.002 },
+          { hour: "2026-05-01 13:00", requests: 1, cost: 0.001 },
+          { hour: "2026-05-01 14:00", requests: 1, cost: 0.001 },
+          { hour: "2026-05-01 15:00", requests: 10, cost: 0.01 },
         ],
         quota_series: [
           {
@@ -229,7 +242,8 @@ describe("AuthFileDetailModal", () => {
 
     const series = JSON.parse(chart.dataset.series ?? "[]");
     expect(series[0].data).toEqual([0, 2, 1, 1, 10]);
-    expect(series[1].data).toEqual([null, null, null, null, 94]);
+    expect(series[1].data).toEqual([0, 0.002, 0.001, 0.001, 0.01]);
+    expect(series[2].data).toEqual([null, null, null, null, 6]);
   });
 
   test("renders models as a compact list without raw field labels", () => {
