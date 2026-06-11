@@ -7,6 +7,7 @@ const ANIMATION_MS = 180;
 export function Modal({
   open,
   title,
+  titleAccessory,
   description,
   footer,
   maxWidth = "max-w-3xl",
@@ -21,6 +22,7 @@ export function Modal({
 }: PropsWithChildren<{
   open: boolean;
   title: string;
+  titleAccessory?: ReactNode;
   description?: ReactNode;
   footer?: ReactNode;
   maxWidth?: string;
@@ -122,8 +124,15 @@ export function Modal({
         ) : (
           <div className="flex items-start justify-between gap-3 border-b border-slate-200 px-5 py-4 dark:border-neutral-800">
             <div className="min-w-0">
-              <h2 className="truncate text-base font-semibold tracking-tight text-slate-900 dark:text-white">
-                <span id={titleId}>{title}</span>
+              <h2 className="flex min-w-0 items-center gap-2 text-base font-semibold tracking-tight text-slate-900 dark:text-white">
+                <span id={titleId} className="min-w-0 truncate">
+                  {title}
+                </span>
+                {titleAccessory ? (
+                  <span className="shrink-0" aria-hidden="true">
+                    {titleAccessory}
+                  </span>
+                ) : null}
               </h2>
               {description ? (
                 <p className="mt-1 text-sm text-slate-600 dark:text-white/65">{description}</p>

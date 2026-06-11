@@ -1,6 +1,6 @@
 import { useMemo, type Dispatch, type SetStateAction } from "react";
 import { useTranslation } from "react-i18next";
-import { Download, Loader2, RefreshCw, ShieldCheck } from "lucide-react";
+import { Download, RefreshCw, ShieldCheck } from "lucide-react";
 import type { AuthFileTrendResponse } from "@code-proxy/api-client/endpoints/usage";
 import type { AuthFileItem, AuthFileSubscriptionPeriod } from "@code-proxy/api-client";
 import type { ProxyPoolEntry } from "@code-proxy/api-client/endpoints/proxies";
@@ -145,6 +145,15 @@ export function AuthFileDetailModal({
     ? resolveAuthFileDisplayName(detailFile) || String(detailFile.name || "")
     : t("auth_files.view_auth_file");
   const detailPlanType = detailFile ? resolveAuthFilePlanType(detailFile) : null;
+  const detailPlanLabel = useMemo(() => {
+    if (!detailPlanType) return "";
+    const normalized = detailPlanType.trim().toLowerCase();
+    if (!normalized) return "";
+    if (normalized === "plus" || normalized === "team" || normalized === "free") {
+      return t(`codex_quota.plan_${normalized}`);
+    }
+    return normalized;
+  }, [detailPlanType, t]);
   const excludedModels = excluded[providerKey] ?? [];
   const canRenameChannel = detailFile ? canRenameAuthFileChannel(detailFile) : false;
   const channelBaseline = detailFile ? readAuthFileChannelName(detailFile) : "";
@@ -225,11 +234,9 @@ export function AuthFileDetailModal({
     const palette = ["#2563eb", "#db2777", "#16a34a", "#9333ea", "#0f766e", "#dc2626"];
 
     return {
-      animation: true,
-      animationDuration: 720,
-      animationDurationUpdate: 420,
-      animationEasing: "cubicOut" as const,
-      animationEasingUpdate: "cubicOut" as const,
+      animation: false,
+      animationDuration: 0,
+      animationDurationUpdate: 0,
       grid: { left: 46, right: 108, top: 74, bottom: 38 },
       tooltip: { trigger: "axis", confine: true },
       legend: {
@@ -289,7 +296,7 @@ export function AuthFileDetailModal({
           name: t("auth_files.trend_requests"),
           type: "bar",
           yAxisIndex: 0,
-          animation: true,
+          animation: false,
           barMaxWidth: 24,
           itemStyle: { color: "#2563eb", borderRadius: [4, 4, 0, 0] },
           data: sortedKeys.map((key) => requestByKey.get(key) ?? 0),
@@ -298,7 +305,7 @@ export function AuthFileDetailModal({
           name: t("auth_files.trend_cost"),
           type: "line",
           yAxisIndex: 2,
-          animation: true,
+          animation: false,
           connectNulls: true,
           showSymbol: false,
           smooth: true,
@@ -316,7 +323,7 @@ export function AuthFileDetailModal({
           )}`,
           type: "line",
           yAxisIndex: 1,
-          animation: true,
+          animation: false,
           connectNulls: true,
           showSymbol: false,
           smooth: true,
@@ -349,35 +356,7 @@ export function AuthFileDetailModal({
 
   const renderUsageTrend = () => {
     if (detailTrendLoading && !detailTrend) {
-      return (
-        <div className="space-y-4" data-testid="auth-file-trend-loading">
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-            {Array.from({ length: 5 }).map((_, index) => (
-              <div key={index} className="rounded-lg bg-slate-50/80 px-3 py-3 dark:bg-white/[0.04]">
-                <div className="h-3 w-24 animate-pulse rounded bg-slate-200 dark:bg-white/10" />
-                <div className="mt-3 h-7 w-28 animate-pulse rounded bg-slate-200 dark:bg-white/10" />
-              </div>
-            ))}
-          </div>
-          <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-white/65">
-            <Loader2 size={16} className="animate-spin" />
-            {t("common.loading_ellipsis")}
-          </div>
-          <div className="min-w-0 rounded-lg bg-slate-50/70 p-3 dark:bg-white/[0.04]">
-            <div className="h-80 min-w-0 overflow-hidden rounded-md border border-slate-200/70 bg-white/70 dark:border-white/10 dark:bg-white/[0.03]">
-              <div className="flex h-full items-end gap-2 px-4 pb-5 pt-8">
-                {Array.from({ length: 14 }).map((_, index) => (
-                  <div
-                    key={index}
-                    className="min-w-0 flex-1 animate-pulse rounded-t bg-slate-200/80 dark:bg-white/10"
-                    style={{ height: `${24 + ((index * 17) % 52)}%` }}
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      );
+      return <div className="min-h-80" data-testid="auth-file-trend-loading" aria-hidden="true" />;
     }
 
     if (detailTrendError) {
@@ -475,8 +454,6 @@ export function AuthFileDetailModal({
             option={trendChartOption}
             className="h-80 min-w-0"
             replaceMerge="series"
-            loading={detailTrendLoading}
-            loadingText={t("common.loading_ellipsis")}
           />
         </div>
       </div>
@@ -487,10 +464,10 @@ export function AuthFileDetailModal({
     <Modal
       open={open}
       title={detailTitle}
-      description={
-        detailPlanType ? (
-          <span className="inline-flex h-6 max-w-full items-center rounded-full border border-blue-200 bg-blue-50 px-2 text-xs font-semibold tracking-normal text-blue-700 dark:border-blue-400/30 dark:bg-blue-400/10 dark:text-blue-200">
-            {detailPlanType}
+      titleAccessory={
+        detailPlanLabel ? (
+          <span className="inline-flex shrink-0 items-center rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-800 dark:bg-amber-500/15 dark:text-amber-200">
+            {detailPlanLabel}
           </span>
         ) : undefined
       }
@@ -524,7 +501,7 @@ export function AuthFileDetailModal({
               onClick={() => void refreshDetailTrend(detailFile)}
               disabled={detailTrendLoading}
             >
-              <RefreshCw size={14} className={detailTrendLoading ? "animate-spin" : ""} />
+              <RefreshCw size={14} />
               {t("auth_files.trend_refresh")}
             </Button>
           ) : null}

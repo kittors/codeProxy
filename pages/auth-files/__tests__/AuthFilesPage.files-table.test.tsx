@@ -2566,7 +2566,7 @@ describe("AuthFilesPage files table", () => {
     const dialog = await screen.findByRole("dialog", {
       name: "pcamtu927@gmail.com",
     });
-    expect(within(dialog).getByText("plus")).toBeInTheDocument();
+    expect(within(dialog).getByText("Plus")).toBeInTheDocument();
     expect(within(dialog).getByRole("tab", { name: "Usage" })).toBeInTheDocument();
     expect(await within(dialog).findByText("Current cycle cost")).toBeInTheDocument();
     expect(within(dialog).getByText("$1.2345")).toBeInTheDocument();

@@ -155,10 +155,10 @@ describe("AuthFileDetailModal", () => {
     expect(screen.getByText("8%")).toBeInTheDocument();
     expect(screen.getByRole("dialog", { name: "Codex Primary" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Download" })).toBeEnabled();
-    expect(chartOptions[0]?.animation).toBe(true);
+    expect(chartOptions[0]?.animation).toBe(false);
     expect(chartOptions[0]?.grid?.top).toBeGreaterThanOrEqual(70);
     expect(chartOptions[0]?.yAxis?.every((item: any) => !item.name)).toBe(true);
-    expect(chartOptions[0]?.series?.every((item: any) => item.animation === true)).toBe(true);
+    expect(chartOptions[0]?.series?.every((item: any) => item.animation === false)).toBe(true);
   });
 
   test("keeps the usage cost card visible for codex files inferred from dotted email file names", () => {
@@ -171,7 +171,7 @@ describe("AuthFileDetailModal", () => {
 
     expect(screen.getByRole("tab", { name: "Usage" })).toBeInTheDocument();
     expect(screen.getByRole("dialog", { name: "pcamtu927@gmail.com" })).toBeInTheDocument();
-    expect(screen.getByText("plus")).toBeInTheDocument();
+    expect(screen.getByText("Plus")).toBeInTheDocument();
     expect(screen.getByText("Current cycle cost")).toBeInTheDocument();
     expect(screen.getByText("$1.2345")).toBeInTheDocument();
   });
@@ -184,10 +184,11 @@ describe("AuthFileDetailModal", () => {
     expect(screen.queryByText("Loading...")).not.toBeInTheDocument();
   });
 
-  test("renders an animated loading state before the first trend payload arrives", () => {
+  test("keeps first trend loading quiet before the first payload arrives", () => {
     renderDetailModal({ detailTrend: null, detailTrendLoading: true });
 
-    expect(screen.getByTestId("auth-file-trend-loading")).toBeInTheDocument();
+    expect(screen.getByTestId("auth-file-trend-loading")).toBeEmptyDOMElement();
+    expect(screen.queryByText("Loading...")).not.toBeInTheDocument();
     expect(screen.queryByTestId("auth-file-trend-chart")).not.toBeInTheDocument();
     expect(chartOptions).toHaveLength(0);
   });
