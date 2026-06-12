@@ -17,6 +17,21 @@ interface RouteWithMeta {
   hasWildcard?: boolean;
 }
 
+function RouteFallback() {
+  return (
+    <div
+      role="status"
+      aria-label="Loading"
+      className="flex min-h-screen items-center justify-center bg-slate-50 text-slate-700 dark:bg-neutral-950 dark:text-white/80"
+    >
+      <span
+        aria-hidden="true"
+        className="h-6 w-6 rounded-full border-2 border-slate-300 border-t-slate-900 motion-reduce:animate-none motion-safe:animate-spin dark:border-white/20 dark:border-t-white"
+      />
+    </div>
+  );
+}
+
 export function AppRouter() {
   const routes = pageRoutes as RouteWithMeta[];
   const publicRoutes = routes.filter((r) => !r.auth);
@@ -28,7 +43,7 @@ export function AppRouter() {
     <ThemeProvider>
       <ToastProvider>
         <div className="font-sans antialiased">
-          <Suspense>
+          <Suspense fallback={<RouteFallback />}>
             <Routes>
               {/* Public routes */}
               {standalonePublicRoutes.map((route) => (
@@ -47,7 +62,7 @@ export function AppRouter() {
                 element={
                   <AuthProvider>
                     <AutoUpdatePrompt />
-                    <Suspense>
+                    <Suspense fallback={<RouteFallback />}>
                       <Routes>
                         {publicRoutes.map((route) =>
                           route.redirects?.map((rd) => (

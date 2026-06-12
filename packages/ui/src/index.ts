@@ -14,7 +14,6 @@ export { ChartLegend } from "./charts/ChartLegend";
 export type { ChartLegendItem } from "./charts/ChartLegend";
 export { EChart } from "./charts/EChart";
 export type { EChartEvents } from "./charts/EChart";
-export { EChartRenderer } from "./charts/EChartRenderer";
 export type { EChartProps, EChartEvents as EChartRendererEvents } from "./charts/EChartRenderer";
 
 export { PageBackground } from "./layout/PageBackground";

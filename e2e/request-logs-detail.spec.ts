@@ -112,10 +112,11 @@ test("Request Logs: opens full detail content and switches output raw view", asy
   await page.getByTitle("Click to view output").click();
   await expect(page.getByText("hello output payload")).toBeVisible();
 
-  await page.getByRole("button", { name: "Input" }).click();
+  const detailDialog = page.getByRole("dialog");
+  await detailDialog.getByRole("tab", { name: "Input" }).click();
   await expect(page.getByText("hello input payload")).toBeVisible();
 
-  await page.getByTitle("Raw Data").click();
+  await detailDialog.getByRole("tab", { name: "Raw Data" }).click();
   await expect(page.locator("pre")).toContainText('"messages"');
   await expect(page.locator("pre")).toContainText("hello input payload");
 });

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usageApi } from "@code-proxy/api-client";
 import { useTheme } from "@code-proxy/ui";
 import {
@@ -90,19 +90,40 @@ export function MonitorPage() {
   >({});
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(true);
+  const refreshRequestIdRef = useRef(0);
+  const refreshAbortRef = useRef<AbortController | null>(null);
 
   const refreshData = useCallback(async () => {
+    const requestId = refreshRequestIdRef.current + 1;
+    refreshRequestIdRef.current = requestId;
+    refreshAbortRef.current?.abort();
+
+    const abortController = new AbortController();
+    refreshAbortRef.current = abortController;
     setIsRefreshing(true);
     setError(null);
     try {
-      const chartResp = await usageApi.getChartData(timeRange, apiFilter);
+      const chartResp = await usageApi.getChartData(timeRange, apiFilter, {
+        signal: abortController.signal,
+      });
+      if (refreshRequestIdRef.current !== requestId || abortController.signal.aborted) {
+        return;
+      }
       setChartData(chartResp);
     } catch (requestError) {
+      if (refreshRequestIdRef.current !== requestId || abortController.signal.aborted) {
+        return;
+      }
       const message =
         requestError instanceof Error ? requestError.message : t("monitor.failed_fetch");
       setError(message);
     } finally {
-      setIsRefreshing(false);
+      if (refreshRequestIdRef.current === requestId) {
+        if (refreshAbortRef.current === abortController) {
+          refreshAbortRef.current = null;
+        }
+        setIsRefreshing(false);
+      }
     }
   }, [t, timeRange, apiFilter]);
 
@@ -159,11 +180,12 @@ export function MonitorPage() {
 
   useEffect(() => {
     void refreshData();
+    return () => refreshAbortRef.current?.abort();
   }, [refreshData]);
 
   const modelTotals = useMemo(() => {
     if (!chartData?.model_distribution) return [];
-    return chartData.model_distribution.sort(
+    return [...chartData.model_distribution].sort(
       (left, right) => right.requests - left.requests || left.model.localeCompare(right.model),
     );
   }, [chartData]);

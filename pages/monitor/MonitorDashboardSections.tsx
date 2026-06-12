@@ -1,4 +1,5 @@
 import { Activity, ChartSpline, Coins, ShieldCheck, Sigma } from "lucide-react";
+import { useEffect, useState } from "react";
 import type { HourWindow } from "@features/monitor-widgets/monitor-constants";
 import { formatNumber, formatRate } from "@features/monitor-widgets/monitor-utils";
 import { AnimatedNumber } from "@code-proxy/ui";
@@ -7,6 +8,17 @@ import { EChart } from "@code-proxy/ui";
 import { ChartLegend } from "@code-proxy/ui";
 import { Tabs, TabsList, TabsTrigger } from "@code-proxy/ui";
 import { HourWindowSelector, KpiCard, MonitorCard as Card } from "@features/monitor-widgets";
+
+function useDeferredMount(delayMs = 120) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setMounted(true), delayMs);
+    return () => window.clearTimeout(timer);
+  }, [delayMs]);
+
+  return mounted;
+}
 
 export function MonitorKpiSection({
   t,
@@ -358,49 +370,57 @@ export function MonitorHourlySections({
   hourlyTokenSelected: Record<string, boolean>;
   toggleHourlyTokenLegend: (key: string) => void;
 }) {
-  return (
-    <>
-      <Card
-        title={t("monitor.hourly_model.title")}
-        description={t("monitor.hourly_model_desc")}
-        actions={
-          <HourWindowSelector value={modelHourWindow as any} onChange={setModelHourWindow} />
-        }
-        loading={isRefreshing}
-      >
-        <EChart option={hourlyModelOption} className="h-64 sm:h-72" replaceMerge="series" />
-        <ChartLegend
-          className="max-h-32 justify-start overflow-y-auto pt-4 sm:max-h-none sm:justify-center"
-          items={hourlyModelLegendKeys.map((key) => ({
-            key,
-            label: getHourlyModelSeriesLabel(key),
-            colorClass: hourlyModelPalette.classByKey[key] ?? "bg-slate-400",
-            enabled: hourlyModelSelected[key] ?? true,
-            onToggle: toggleHourlyModelLegend,
-          }))}
-        />
-      </Card>
+  const shouldRenderCharts = useDeferredMount();
 
-      <Card
-        title={t("monitor.hourly_token.title")}
-        description={t("monitor.hourly_token_desc")}
-        actions={
-          <HourWindowSelector value={tokenHourWindow as any} onChange={setTokenHourWindow} />
-        }
-        loading={isRefreshing}
-      >
-        <EChart option={hourlyTokenOption} className="h-64 sm:h-72" replaceMerge="series" />
-        <ChartLegend
-          className="max-h-32 justify-start overflow-y-auto pt-4 sm:max-h-none sm:justify-center"
-          items={hourlySeries.tokenKeys.map((key) => ({
-            key,
-            label: hourlyTokenLabels[key] ?? key,
-            colorClass: hourlyTokenPalette.classByKey[key] ?? "bg-slate-400",
-            enabled: hourlyTokenSelected[key] ?? true,
-            onToggle: toggleHourlyTokenLegend,
-          }))}
-        />
-      </Card>
-    </>
+  return (
+    <section className="space-y-4">
+      {shouldRenderCharts ? (
+        <>
+          <Card
+            title={t("monitor.hourly_model.title")}
+            description={t("monitor.hourly_model_desc")}
+            actions={
+              <HourWindowSelector value={modelHourWindow as any} onChange={setModelHourWindow} />
+            }
+            loading={isRefreshing}
+          >
+            <EChart option={hourlyModelOption} className="h-64 sm:h-72" replaceMerge="series" />
+            <ChartLegend
+              className="max-h-32 justify-start overflow-y-auto pt-4 sm:max-h-none sm:justify-center"
+              items={hourlyModelLegendKeys.map((key) => ({
+                key,
+                label: getHourlyModelSeriesLabel(key),
+                colorClass: hourlyModelPalette.classByKey[key] ?? "bg-slate-400",
+                enabled: hourlyModelSelected[key] ?? true,
+                onToggle: toggleHourlyModelLegend,
+              }))}
+            />
+          </Card>
+
+          <Card
+            title={t("monitor.hourly_token.title")}
+            description={t("monitor.hourly_token_desc")}
+            actions={
+              <HourWindowSelector value={tokenHourWindow as any} onChange={setTokenHourWindow} />
+            }
+            loading={isRefreshing}
+          >
+            <EChart option={hourlyTokenOption} className="h-64 sm:h-72" replaceMerge="series" />
+            <ChartLegend
+              className="max-h-32 justify-start overflow-y-auto pt-4 sm:max-h-none sm:justify-center"
+              items={hourlySeries.tokenKeys.map((key) => ({
+                key,
+                label: hourlyTokenLabels[key] ?? key,
+                colorClass: hourlyTokenPalette.classByKey[key] ?? "bg-slate-400",
+                enabled: hourlyTokenSelected[key] ?? true,
+                onToggle: toggleHourlyTokenLegend,
+              }))}
+            />
+          </Card>
+        </>
+      ) : (
+        <div aria-hidden="true" className="min-h-[42rem]" />
+      )}
+    </section>
   );
 }

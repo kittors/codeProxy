@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ECBasicOption } from "echarts/types/dist/shared";
 import ReactECharts from "echarts-for-react";
 import { useTheme } from "../theme/ThemeProvider";
@@ -41,6 +41,7 @@ export function EChartRenderer({
   const guardedResizeTimerRef = useRef<number | null>(null);
   const initialAnimationGuardUntilRef = useRef(0);
   const didResizeOnceRef = useRef(false);
+  const [hasMeasuredSize, setHasMeasuredSize] = useState(false);
 
   const now = () => Date.now();
 
@@ -49,6 +50,9 @@ export function EChartRenderer({
     if (!container) return;
 
     lastSizeRef.current = { width, height };
+    if (width > 0 && height > 0) {
+      setHasMeasuredSize(true);
+    }
 
     const guardUntil = initialAnimationGuardUntilRef.current;
     if (guardUntil > 0) {
@@ -137,6 +141,11 @@ export function EChartRenderer({
     });
 
     observer.observe(element);
+    const width = element.clientWidth;
+    const height = element.clientHeight;
+    if (width > 0 && height > 0) {
+      requestResize(width, height);
+    }
     return () => {
       observer.disconnect();
       if (rafIdRef.current !== null) {
@@ -211,56 +220,58 @@ export function EChartRenderer({
         .filter(Boolean)
         .join(" ")}
     >
-      <ReactECharts
-        ref={chartRef}
-        option={option}
-        theme={mode === "dark" ? "dark" : undefined}
-        style={{ height: "100%", width: "100%" }}
-        showLoading={loading}
-        loadingOption={{
-          text: loadingText,
-          color: "#2563eb",
-          textColor: mode === "dark" ? "#e2e8f0" : "#475569",
-          maskColor: mode === "dark" ? "rgba(15, 23, 42, 0.48)" : "rgba(248, 250, 252, 0.64)",
-          zlevel: 1,
-        }}
-        notMerge={notMerge}
-        replaceMerge={replaceMerge}
-        autoResize={false}
-        className="h-full w-full"
-        onEvents={onEvents}
-        onChartReady={(instance: any) => {
-          instanceRef.current = instance;
+      {hasMeasuredSize ? (
+        <ReactECharts
+          ref={chartRef}
+          option={option}
+          theme={mode === "dark" ? "dark" : undefined}
+          style={{ height: "100%", width: "100%" }}
+          showLoading={loading}
+          loadingOption={{
+            text: loadingText,
+            color: "#2563eb",
+            textColor: mode === "dark" ? "#e2e8f0" : "#475569",
+            maskColor: mode === "dark" ? "rgba(15, 23, 42, 0.48)" : "rgba(248, 250, 252, 0.64)",
+            zlevel: 1,
+          }}
+          notMerge={notMerge}
+          replaceMerge={replaceMerge}
+          autoResize={false}
+          className="h-full w-full"
+          onEvents={onEvents}
+          onChartReady={(instance: any) => {
+            instanceRef.current = instance;
 
-          try {
-            if (!loading) {
-              instance?.hideLoading?.();
+            try {
+              if (!loading) {
+                instance?.hideLoading?.();
+              }
+            } catch {
+              // ignore
             }
-          } catch {
-            // ignore
-          }
 
-          const container = containerRef.current;
-          if (!container) return;
-          const width = container.clientWidth;
-          const height = container.clientHeight;
-          if (width > 0 && height > 0) {
-            window.setTimeout(() => {
-              requestResize(container.clientWidth, container.clientHeight);
-            }, 60);
-            window.setTimeout(() => {
-              requestResize(container.clientWidth, container.clientHeight);
-            }, 240);
-            window.setTimeout(() => {
-              requestResize(container.clientWidth, container.clientHeight);
-            }, 500);
-          } else {
-            const size = lastSizeRef.current;
-            if (!size) return;
-            requestResize(size.width, size.height);
-          }
-        }}
-      />
+            const container = containerRef.current;
+            if (!container) return;
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+            if (width > 0 && height > 0) {
+              window.setTimeout(() => {
+                requestResize(container.clientWidth, container.clientHeight);
+              }, 60);
+              window.setTimeout(() => {
+                requestResize(container.clientWidth, container.clientHeight);
+              }, 240);
+              window.setTimeout(() => {
+                requestResize(container.clientWidth, container.clientHeight);
+              }, 500);
+            } else {
+              const size = lastSizeRef.current;
+              if (!size) return;
+              requestResize(size.width, size.height);
+            }
+          }}
+        />
+      ) : null}
     </div>
   );
 }

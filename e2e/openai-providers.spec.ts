@@ -64,7 +64,7 @@ test("AI Providers (OpenAI): typing provider name should not crash page", async 
 
   await page.goto("/#/ai-providers");
 
-  await page.getByRole("button", { name: /openai compatible|openai 兼容/i }).click();
+  await page.getByRole("tab", { name: /openai compatible|openai 兼容/i }).click();
 
   await page.getByRole("button", { name: /add provider|添加/i }).click();
 
