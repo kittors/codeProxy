@@ -452,9 +452,13 @@ const addStaticProviderModels = (
 const hasCredential = (config: ProviderSimpleConfig): boolean =>
   String(config.apiKey ?? "").trim().length > 0;
 
-const hasOpenAIProviderCredential = (provider: OpenAIProvider): boolean =>
-  Array.isArray(provider.apiKeyEntries) &&
-  provider.apiKeyEntries.some((entry) => String(entry.apiKey ?? "").trim());
+const isOpenAIProviderServiceable = (provider: OpenAIProvider): boolean => {
+  if (provider.disabled === true) return false;
+  if (!Array.isArray(provider.apiKeyEntries) || provider.apiKeyEntries.length === 0) return true;
+  return provider.apiKeyEntries.some(
+    (entry) => entry.disabled !== true && Boolean(String(entry.apiKey ?? "").trim()),
+  );
+};
 
 const loadStaticDefinitions = async (provider: string): Promise<ModelDefinition[]> => {
   try {
@@ -493,7 +497,7 @@ const loadProviderModelItems = async (): Promise<ModelAvailabilityItem[]> => {
 
   let openAIProviders: OpenAIProvider[] = [];
   try {
-    openAIProviders = (await providersApi.getOpenAIProviders()).filter(hasOpenAIProviderCredential);
+    openAIProviders = (await providersApi.getOpenAIProviders()).filter(isOpenAIProviderServiceable);
   } catch {
     openAIProviders = [];
   }
