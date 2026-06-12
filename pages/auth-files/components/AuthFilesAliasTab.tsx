@@ -17,8 +17,8 @@ interface AuthFilesAliasTabProps {
   aliasEditing: Record<string, AliasRow[]>;
   setAliasEditing: Dispatch<SetStateAction<Record<string, AliasRow[]>>>;
   openImport: (channel: string) => Promise<void>;
-  saveAliasChannel: (channel: string) => Promise<void>;
-  deleteAliasChannel: (channel: string) => Promise<void>;
+  deleteAliasChannel: (channel: string) => void;
+  showHeading?: boolean;
 }
 
 export function AuthFilesAliasTab({
@@ -32,22 +32,26 @@ export function AuthFilesAliasTab({
   aliasEditing,
   setAliasEditing,
   openImport,
-  saveAliasChannel,
   deleteAliasChannel,
+  showHeading = true,
 }: AuthFilesAliasTabProps) {
   const { t } = useTranslation();
 
   return (
-    <div className="mt-4 space-y-4">
+    <div className={showHeading ? "mt-4 space-y-4" : "space-y-4"}>
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <div>
-          <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-            {t("auth_files_page.alias_title")}
-          </h2>
-          <p className="mt-1 text-sm text-slate-500 dark:text-neutral-400">
-            {t("auth_files.model_alias_desc")}
-          </p>
-        </div>
+        {showHeading ? (
+          <div>
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+              {t("auth_files_page.alias_title")}
+            </h2>
+            <p className="mt-1 text-sm text-slate-500 dark:text-neutral-400">
+              {t("auth_files.model_alias_desc")}
+            </p>
+          </div>
+        ) : (
+          <div />
+        )}
         <div className="flex flex-wrap items-center gap-2">
           <Button
             variant="secondary"
@@ -131,17 +135,9 @@ export function AuthFilesAliasTab({
                             {t("auth_files.import_models")}
                           </Button>
                           <Button
-                            variant="secondary"
-                            size="sm"
-                            onClick={() => void saveAliasChannel(channel)}
-                            disabled={isPending || aliasUnsupported}
-                          >
-                            {t("auth_files.save")}
-                          </Button>
-                          <Button
                             variant="danger"
                             size="sm"
-                            onClick={() => void deleteAliasChannel(channel)}
+                            onClick={() => deleteAliasChannel(channel)}
                             disabled={isPending || aliasUnsupported}
                           >
                             {t("common.delete")}

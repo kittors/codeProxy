@@ -1,6 +1,11 @@
-import { MANAGEMENT_API_PREFIX } from "@code-proxy/api-client";
-import { detectApiBaseFromLocation } from "@code-proxy/api-client";
+import { detectApiBaseFromLocation, publicApiClient } from "@code-proxy/api-client";
 import type { ChartDataResponse, PublicLogsResponse } from "./types";
+
+type LogContentBodyPart = "input" | "output";
+
+type PublicLogContentResponse =
+  | { id: number; model: string; part: LogContentBodyPart; content: string }
+  | { input_content: string; output_content: string; model: string };
 
 type V1ModelsResponse =
   | { data?: Array<{ id?: string }> }
@@ -37,45 +42,49 @@ export async function fetchPublicLogs(params: {
   status?: string;
   signal?: AbortSignal;
 }): Promise<PublicLogsResponse> {
-  const base = detectApiBaseFromLocation();
-  const resp = await fetch(`${base}${MANAGEMENT_API_PREFIX}/public/usage/logs`, {
-    method: "POST",
-    signal: params.signal,
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
+  return publicApiClient.post<PublicLogsResponse>(
+    "/usage/logs",
+    {
       api_key: params.apiKey,
       page: params.page,
       size: params.size,
       days: params.days,
       model: params.model,
       status: params.status,
-    }),
-  });
-  if (!resp.ok) {
-    const text = await resp.text().catch(() => "");
-    throw new Error(text || `Request failed (${resp.status})`);
-  }
-  return resp.json() as Promise<PublicLogsResponse>;
+    },
+    { signal: params.signal },
+  );
 }
 
 export async function fetchPublicChartData(params: {
   apiKey: string;
   days?: number;
 }): Promise<ChartDataResponse> {
-  const base = detectApiBaseFromLocation();
-  const resp = await fetch(`${base}${MANAGEMENT_API_PREFIX}/public/usage/chart-data`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      api_key: params.apiKey,
-      days: params.days,
-    }),
+  return publicApiClient.post<ChartDataResponse>("/usage/chart-data", {
+    api_key: params.apiKey,
+    days: params.days,
   });
-  if (!resp.ok) {
-    const text = await resp.text().catch(() => "");
-    throw new Error(text || `Request failed (${resp.status})`);
+}
+
+export async function fetchPublicLogContent(params: {
+  id: number;
+  apiKey: string;
+  part: LogContentBodyPart;
+  signal?: AbortSignal;
+}): Promise<PublicLogContentResponse> {
+  if (!Number.isInteger(params.id) || params.id <= 0) {
+    throw new Error("Invalid log id");
   }
-  return resp.json() as Promise<ChartDataResponse>;
+
+  return publicApiClient.post<PublicLogContentResponse>(
+    `/usage/logs/${params.id}/content`,
+    {
+      api_key: params.apiKey,
+      part: params.part,
+      format: "json",
+    },
+    { signal: params.signal },
+  );
 }
 
 export async function fetchAvailableModels(apiKey: string): Promise<string[]> {

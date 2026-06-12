@@ -8,6 +8,34 @@ afterEach(() => {
 });
 
 if (typeof window !== "undefined") {
+  const ensureStorage = (key: "localStorage" | "sessionStorage") => {
+    if (typeof window[key] !== "undefined") {
+      return;
+    }
+    const store = new Map<string, string>();
+    const storage: Storage = {
+      get length() {
+        return store.size;
+      },
+      clear: () => store.clear(),
+      getItem: (itemKey: string) => store.get(itemKey) ?? null,
+      key: (index: number) => Array.from(store.keys())[index] ?? null,
+      removeItem: (itemKey: string) => {
+        store.delete(itemKey);
+      },
+      setItem: (itemKey: string, value: string) => {
+        store.set(itemKey, String(value));
+      },
+    };
+    Object.defineProperty(window, key, {
+      configurable: true,
+      value: storage,
+    });
+  };
+
+  ensureStorage("localStorage");
+  ensureStorage("sessionStorage");
+
   if (!window.matchMedia) {
     window.matchMedia = ((query: string) =>
       ({

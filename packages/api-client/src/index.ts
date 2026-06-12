@@ -1,6 +1,7 @@
 export { ApiClient, apiClient } from "./client/client";
 export type { RequestOptions } from "./client/client";
 export {
+  AUTH_PERSIST_TTL_MS,
   AUTH_STORAGE_KEY,
   BUILD_DATE_HEADER_KEYS,
   DEFAULT_API_PORT,
@@ -11,6 +12,21 @@ export {
   detectApiBaseFromLocation,
   normalizeApiBase,
 } from "./client/constants";
+export {
+  ApiError,
+  ApiClientError,
+  extractApiErrorMessage,
+  isApiClientError,
+} from "./client/errors";
+export type { ApiErrorBody, ApiErrorOptions, ApiClientErrorOptions } from "./client/errors";
+export { ensureArrayPayload, isApiEnvelope, unwrapApiEnvelope } from "./client/response";
+export type { ApiEnvelope, ApiListPayload, ApiSuccessEnvelope } from "./client/response";
+export { publicApiClient, PublicApiClient } from "./client/public-client";
+export {
+  clearPersistedAuthSnapshot,
+  readPersistedAuthSnapshot,
+  writePersistedAuthSnapshot,
+} from "./client/auth-storage";
 export type * from "./dto/types";
 
 export { configApi } from "./endpoints/config";

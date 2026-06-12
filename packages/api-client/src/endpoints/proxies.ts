@@ -22,6 +22,13 @@ export interface ProxyCheckResult {
   message?: string;
 }
 
+export interface ProxyPoolUpdateInput {
+  name: string;
+  url: string;
+  enabled: boolean;
+  description?: string;
+}
+
 type RawProxyPoolEntry = {
   id?: unknown;
   name?: unknown;
@@ -104,6 +111,15 @@ export const proxiesApi = {
         enabled: entry.enabled,
         ...(entry.description ? { description: entry.description } : {}),
       })),
+    });
+  },
+
+  update(id: string, entry: ProxyPoolUpdateInput) {
+    return apiClient.patch(`/proxy-pool/${encodeURIComponent(id)}`, {
+      name: entry.name,
+      url: entry.url,
+      enabled: entry.enabled,
+      ...(entry.description ? { description: entry.description } : {}),
     });
   },
 

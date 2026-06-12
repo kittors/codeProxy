@@ -13,17 +13,24 @@
     <script>
       (function () {
         try {
+          var root = document.documentElement;
+          var apply = function (isDark) {
+            root.classList.toggle("dark", isDark);
+            root.style.colorScheme = isDark ? "dark" : "light";
+            if (isDark) {
+              root.setAttribute("data-theme", "dark");
+            } else {
+              root.removeAttribute("data-theme");
+            }
+          };
           var t = localStorage.getItem("code-proxy-admin-theme");
           if (t === "dark") {
-            document.documentElement.classList.add("dark");
-            document.documentElement.style.colorScheme = "dark";
+            apply(true);
           } else if (t === "light") {
-            document.documentElement.classList.remove("dark");
-            document.documentElement.style.colorScheme = "light";
+            apply(false);
           } else {
             if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) {
-              document.documentElement.classList.add("dark");
-              document.documentElement.style.colorScheme = "dark";
+              apply(true);
             }
           }
         } catch (e) {}

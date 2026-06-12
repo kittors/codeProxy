@@ -11,6 +11,7 @@ import { downloadBlob, type ErrorLogItem, isManagementTraffic, parseLogLine } fr
 const INITIAL_DISPLAY_LINES = 400;
 const LOAD_MORE_LINES = 400;
 const MAX_BUFFER_LINES = 50000;
+const SERVER_LOG_FETCH_LIMIT = 20000;
 const INCREMENTAL_FETCH_LIMIT = 2000;
 const LOAD_MORE_THRESHOLD_PX = 64;
 const STICK_TO_BOTTOM_THRESHOLD_PX = 48;
@@ -99,7 +100,7 @@ export function LogsPage() {
         const result = await logsApi.fetchLogs(
           options.mode === "incremental"
             ? { after, limit: INCREMENTAL_FETCH_LIMIT }
-            : { limit: MAX_BUFFER_LINES },
+            : { limit: SERVER_LOG_FETCH_LIMIT },
         );
         const lines = Array.isArray(result?.lines) ? result.lines : [];
         const nextLatest =

@@ -329,13 +329,11 @@ describe("ModelsPage", () => {
   });
 
   test("filters current models by auth-file model owner group mapping", async () => {
-    window.localStorage.setItem(
-      "authFilesPage.modelOwnerGroupMap.v1",
-      JSON.stringify({ claude: "anthropic" }),
-    );
     mocks.apiGet.mockImplementation((path: string) => {
-      if (path === "/models/configured-availability") {
-        return Promise.reject(new Error("configured availability unavailable"));
+      if (path === "/auth-group-model-owner-mappings") {
+        return Promise.resolve({
+          items: [{ auth_group: "claude", owner: "anthropic" }],
+        });
       }
       if (path === "/model-configs?scope=active" || path === "/model-configs") {
         return Promise.resolve({
@@ -385,6 +383,9 @@ describe("ModelsPage", () => {
         return Promise.resolve({
           files: [{ name: "claude-account.json", type: "claude", disabled: false }],
         });
+      }
+      if (path === "/models/configured-availability") {
+        return Promise.reject(new Error("configured availability unavailable"));
       }
       if (
         path === "/gemini-api-key" ||

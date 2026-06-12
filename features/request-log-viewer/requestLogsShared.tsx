@@ -1,11 +1,10 @@
 import { useTranslation } from "react-i18next";
-import { useMemo } from "react";
-import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
 import type { UsageLogItem } from "@code-proxy/api-client/endpoints/usage";
 import { parseUsageTimestampMs } from "@features/monitor-widgets/monitor-utils";
 import { Tabs, TabsList, TabsTrigger } from "@code-proxy/ui";
 import { HoverTooltip, OverflowTooltip } from "@code-proxy/ui";
-import { Select } from "@code-proxy/ui";
+import { PaginationBar } from "@code-proxy/ui";
+import { ModelTag } from "@features/model-tags";
 
 export type TimeRange = 1 | 7 | 14 | 30;
 
@@ -464,14 +463,17 @@ export function buildRequestLogsColumns(
     {
       key: "model",
       label: t("request_logs.col_model"),
-      width: "w-36",
+      width: "w-44",
       headerClassName: "text-center",
       cellClassName: "text-center",
-      render: (row) => (
-        <OverflowTooltip content={row.model} className="block min-w-0">
-          <span className="block min-w-0 truncate">{row.model}</span>
-        </OverflowTooltip>
-      ),
+      render: (row) =>
+        row.model ? (
+          <OverflowTooltip content={row.model} className="inline-block max-w-full align-middle">
+            <ModelTag id={row.model} size="sm" className="align-middle" />
+          </OverflowTooltip>
+        ) : (
+          <span className="text-xs text-slate-400 dark:text-white/30">--</span>
+        ),
     },
   ];
 }
@@ -493,112 +495,25 @@ export function RequestLogsPaginationBar({
 }) {
   const { t } = useTranslation();
 
-  const start = totalCount === 0 ? 0 : (currentPage - 1) * pageSize + 1;
-  const end = Math.min(currentPage * pageSize, totalCount);
-
-  const pageNumbers = useMemo(() => {
-    const pages: (number | "...")[] = [];
-    if (totalPages <= 7) {
-      for (let i = 1; i <= totalPages; i++) pages.push(i);
-    } else {
-      pages.push(1);
-      if (currentPage > 3) pages.push("...");
-      const rangeStart = Math.max(2, currentPage - 1);
-      const rangeEnd = Math.min(totalPages - 1, currentPage + 1);
-      for (let i = rangeStart; i <= rangeEnd; i++) pages.push(i);
-      if (currentPage < totalPages - 2) pages.push("...");
-      pages.push(totalPages);
-    }
-    return pages;
-  }, [currentPage, totalPages]);
-
-  const btnBase =
-    "inline-flex h-8 min-w-[32px] items-center justify-center rounded-lg text-xs font-medium transition-colors disabled:pointer-events-none disabled:opacity-40";
-  const btnNormal = `${btnBase} text-slate-600 hover:bg-slate-100 dark:text-white/60 dark:hover:bg-white/10`;
-  const btnActive = `${btnBase} bg-slate-900 text-white dark:bg-white dark:text-neutral-950`;
-
   return (
-    <div className="flex flex-shrink-0 flex-col gap-2 border-t border-slate-100 px-3 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:px-5 dark:border-neutral-800/60">
-      <span className="text-xs text-slate-500 dark:text-white/50 tabular-nums whitespace-nowrap">
-        {t("request_logs.page_info", { start, end, total: totalCount })}
-      </span>
-
-      <div className="flex items-center gap-1 overflow-x-auto">
-        <button
-          type="button"
-          className={btnNormal}
-          disabled={currentPage <= 1}
-          onClick={() => onPageChange(1)}
-          title={t("request_logs.first_page")}
-          aria-label={t("request_logs.first_page")}
-        >
-          <ChevronsLeft size={14} />
-        </button>
-        <button
-          type="button"
-          className={btnNormal}
-          disabled={currentPage <= 1}
-          onClick={() => onPageChange(currentPage - 1)}
-          title={t("request_logs.prev_page")}
-          aria-label={t("request_logs.prev_page")}
-        >
-          <ChevronLeft size={14} />
-        </button>
-
-        {pageNumbers.map((p, i) =>
-          p === "..." ? (
-            <span key={`dots-${i}`} className="px-1 text-xs text-slate-400 dark:text-white/30">
-              …
-            </span>
-          ) : (
-            <button
-              key={p}
-              type="button"
-              className={p === currentPage ? btnActive : btnNormal}
-              onClick={() => onPageChange(p)}
-            >
-              {p}
-            </button>
-          ),
-        )}
-
-        <button
-          type="button"
-          className={btnNormal}
-          disabled={currentPage >= totalPages}
-          onClick={() => onPageChange(currentPage + 1)}
-          title={t("request_logs.next_page")}
-          aria-label={t("request_logs.next_page")}
-        >
-          <ChevronRight size={14} />
-        </button>
-        <button
-          type="button"
-          className={btnNormal}
-          disabled={currentPage >= totalPages}
-          onClick={() => onPageChange(totalPages)}
-          title={t("request_logs.last_page")}
-          aria-label={t("request_logs.last_page")}
-        >
-          <ChevronsRight size={14} />
-        </button>
-      </div>
-
-      <div className="flex items-center gap-1.5">
-        <span className="text-xs text-slate-500 dark:text-white/50 whitespace-nowrap">
-          {t("request_logs.rows_per_page")}
-        </span>
-        <Select
-          value={String(pageSize)}
-          onChange={(value) => onPageSizeChange(Number(value))}
-          options={REQUEST_LOG_PAGE_SIZE_OPTIONS.map((size) => ({
-            value: String(size),
-            label: String(size),
-          }))}
-          aria-label={t("request_logs.rows_per_page")}
-          className="w-[88px]"
-        />
-      </div>
-    </div>
+    <PaginationBar
+      currentPage={currentPage}
+      totalPages={totalPages}
+      totalCount={totalCount}
+      pageSize={pageSize}
+      onPageChange={onPageChange}
+      onPageSizeChange={onPageSizeChange}
+      pageSizeOptions={REQUEST_LOG_PAGE_SIZE_OPTIONS}
+      className="border-t border-slate-100 px-3 py-3 sm:px-5 dark:border-neutral-800/60"
+      labels={{
+        firstPage: t("request_logs.first_page"),
+        previousPage: t("request_logs.prev_page"),
+        nextPage: t("request_logs.next_page"),
+        lastPage: t("request_logs.last_page"),
+        rowsPerPage: t("request_logs.rows_per_page"),
+        pageInfo: ({ start, end, total }) =>
+          t("request_logs.page_info", { start, end, total }),
+      }}
+    />
   );
 }

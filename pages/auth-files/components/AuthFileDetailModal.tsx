@@ -1,4 +1,13 @@
-import { useMemo, type Dispatch, type SetStateAction } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type Dispatch,
+  type SetStateAction,
+} from "react";
 import { useTranslation } from "react-i18next";
 import { Download, RefreshCw, ShieldCheck } from "lucide-react";
 import type { AuthFileTrendResponse } from "@code-proxy/api-client/endpoints/usage";
@@ -21,6 +30,8 @@ import {
   normalizeProviderKey,
   parseAdditionalQuotaWindowLabel,
   readAuthFileChannelName,
+  resolveAuthFileDisplayName,
+  resolveAuthFilePlanType,
   resolveFileType,
   type AuthFileModelItem,
   type AuthFileModelOwnerGroup,
@@ -30,6 +41,9 @@ import {
 
 type DetailTab = "usage" | "fields" | "models";
 type DetailTrendWindow = "5h" | "week";
+
+const TREND_CHART_ANIMATION_MS = 680;
+const TREND_CHART_ANIMATION_GUARD_MS = TREND_CHART_ANIMATION_MS + 120;
 
 const padTwo = (value: number) => String(value).padStart(2, "0");
 
@@ -46,6 +60,20 @@ const formatLocalHourKey = (timestamp: string) => {
 };
 
 const formatCurrency = (value: number) => `$${(Number.isFinite(value) ? value : 0).toFixed(4)}`;
+
+const clampPercent = (value: number) => Math.min(100, Math.max(0, value));
+
+const toQuotaUsedPercent = (remainingPercent: number | null | undefined) => {
+  if (typeof remainingPercent !== "number" || !Number.isFinite(remainingPercent)) return null;
+  return clampPercent(100 - clampPercent(remainingPercent));
+};
+
+const formatPercent = (value: number | null | undefined) => {
+  if (typeof value !== "number" || !Number.isFinite(value)) return "--";
+  return `${new Intl.NumberFormat(undefined, {
+    maximumFractionDigits: Number.isInteger(value) ? 0 : 1,
+  }).format(clampPercent(value))}%`;
+};
 
 interface AuthFileDetailModalProps {
   open: boolean;
@@ -125,6 +153,23 @@ export function AuthFileDetailModal({
   const providerKey = normalizeProviderKey(modelsFileType);
   const detailProviderKey = detailFile ? normalizeProviderKey(resolveFileType(detailFile)) : "";
   const supportsUsageTrend = detailProviderKey === "kimi" || detailProviderKey === "codex";
+  const openedDetailFileRef = useRef<string | null>(null);
+  const detailOpenCounterRef = useRef(0);
+  const [detailOpenKey, setDetailOpenKey] = useState("");
+  const [animatedTrendKey, setAnimatedTrendKey] = useState("");
+  const detailTitle = detailFile
+    ? resolveAuthFileDisplayName(detailFile) || String(detailFile.name || "")
+    : t("auth_files.view_auth_file");
+  const detailPlanType = detailFile ? resolveAuthFilePlanType(detailFile) : null;
+  const detailPlanLabel = useMemo(() => {
+    if (!detailPlanType) return "";
+    const normalized = detailPlanType.trim().toLowerCase();
+    if (!normalized) return "";
+    if (normalized === "plus" || normalized === "team" || normalized === "free") {
+      return t(`codex_quota.plan_${normalized}`);
+    }
+    return normalized;
+  }, [detailPlanType, t]);
   const excludedModels = excluded[providerKey] ?? [];
   const canRenameChannel = detailFile ? canRenameAuthFileChannel(detailFile) : false;
   const channelBaseline = detailFile ? readAuthFileChannelName(detailFile) : "";
@@ -160,6 +205,38 @@ export function AuthFileDetailModal({
       detailTrendWindow === "5h" ? item.window_seconds === 18000 : item.window_seconds >= 604800,
     );
   }, [detailTrend, detailTrendWindow]);
+  useLayoutEffect(() => {
+    const fileName = open && detailFile ? detailFile.name : "";
+    if (!fileName) {
+      openedDetailFileRef.current = null;
+      setDetailOpenKey("");
+      return;
+    }
+    if (openedDetailFileRef.current === fileName) return;
+    openedDetailFileRef.current = fileName;
+    detailOpenCounterRef.current += 1;
+    setDetailOpenKey(`${fileName}:${detailOpenCounterRef.current}`);
+  }, [detailFile?.name, open]);
+  const trendAnimationKey =
+    detailFile && detailTrend && detailOpenKey
+      ? `${detailOpenKey}:${detailTrend.auth_index}`
+      : "";
+  const shouldAnimateTrend = Boolean(trendAnimationKey && animatedTrendKey !== trendAnimationKey);
+  const markTrendAnimationDone = useCallback(() => {
+    if (!trendAnimationKey) return;
+    setAnimatedTrendKey((current) =>
+      current === trendAnimationKey ? current : trendAnimationKey,
+    );
+  }, [trendAnimationKey]);
+  useEffect(() => {
+    if (!shouldAnimateTrend) return;
+    const timer = window.setTimeout(markTrendAnimationDone, 900);
+    return () => window.clearTimeout(timer);
+  }, [markTrendAnimationDone, shouldAnimateTrend]);
+  const trendChartEvents = useMemo(
+    () => (shouldAnimateTrend ? { finished: markTrendAnimationDone } : undefined),
+    [markTrendAnimationDone, shouldAnimateTrend],
+  );
   const trendChartOption = useMemo(() => {
     const usagePoints =
       detailTrendWindow === "5h"
@@ -167,12 +244,14 @@ export function AuthFileDetailModal({
         : (detailTrend?.daily_usage ?? []);
     const xKeys = new Set<string>();
     const requestByKey = new Map<string, number>();
+    const costByKey = new Map<string, number>();
 
     usagePoints.forEach((point) => {
       const key = detailTrendWindow === "5h" ? point.hour : point.date;
       if (!key) return;
       xKeys.add(key);
       requestByKey.set(key, point.requests ?? 0);
+      costByKey.set(key, point.cost ?? 0);
     });
 
     const quotaBySeries = activeQuotaSeries.map((series) => {
@@ -184,7 +263,7 @@ export function AuthFileDetailModal({
             ? formatLocalHourKey(point.timestamp)
             : formatLocalDateKey(point.timestamp);
         if (!key || !xKeys.has(key)) return;
-        values.set(key, point.percent);
+        values.set(key, toQuotaUsedPercent(point.percent));
       });
       return { series, values };
     });
@@ -192,37 +271,72 @@ export function AuthFileDetailModal({
     const sortedKeys = Array.from(xKeys).sort();
     const formatAxisLabel = (key: string) =>
       detailTrendWindow === "5h" ? key.slice(5) : key.slice(5);
-    const palette = ["#2563eb", "#f97316", "#16a34a", "#9333ea", "#0f766e", "#dc2626"];
+    const compactQuotaLegendLabel = (label: string) => {
+      const translated = translateQuotaLabel(label).trim();
+      if (translated.length <= 14) return translated;
+      const colonIndex = Math.max(translated.lastIndexOf(":"), translated.lastIndexOf("："));
+      const suffix = colonIndex >= 0 ? translated.slice(colonIndex + 1).trim() : "";
+      if (suffix) return suffix.length > 14 ? `${suffix.slice(0, 14)}...` : suffix;
+      return `${translated.slice(0, 14)}...`;
+    };
+    const palette = ["#2563eb", "#db2777", "#16a34a", "#9333ea", "#0f766e", "#dc2626"];
 
     return {
-      animation: false,
-      grid: { left: 38, right: 42, top: 34, bottom: 34 },
-      tooltip: { trigger: "axis" },
+      animation: shouldAnimateTrend,
+      animationDuration: shouldAnimateTrend ? TREND_CHART_ANIMATION_MS : 0,
+      animationDurationUpdate: 0,
+      animationEasing: "cubicOut" as const,
+      grid: { left: 46, right: 108, top: 74, bottom: 38 },
+      tooltip: { trigger: "axis", confine: true },
       legend: {
-        top: 0,
+        top: 8,
+        left: 8,
+        right: 8,
         type: "scroll",
-        textStyle: { color: "#64748b" },
+        itemGap: 14,
+        pageButtonPosition: "end",
+        pageIconColor: "#64748b",
+        pageIconInactiveColor: "#cbd5e1",
+        pageTextStyle: { color: "#64748b" },
+        textStyle: {
+          color: "#64748b",
+          width: 154,
+          overflow: "truncate",
+        },
       },
       xAxis: {
         type: "category",
         data: sortedKeys.map(formatAxisLabel),
-        axisLabel: { color: "#64748b" },
+        axisLabel: { color: "#64748b", hideOverlap: true },
         axisLine: { lineStyle: { color: "#cbd5e1" } },
       },
       yAxis: [
         {
           type: "value",
           min: 0,
-          name: t("auth_files.trend_requests"),
-          axisLabel: { color: "#64748b" },
+          axisLabel: { color: "#64748b", hideOverlap: true },
           splitLine: { lineStyle: { color: "#e2e8f0" } },
         },
         {
           type: "value",
           min: 0,
           max: 100,
-          name: "%",
-          axisLabel: { color: "#64748b", formatter: "{value}%" },
+          offset: 46,
+          axisLabel: { color: "#64748b", formatter: "{value}%", hideOverlap: true },
+          splitLine: { show: false },
+        },
+        {
+          type: "value",
+          min: 0,
+          axisLabel: {
+            color: "#64748b",
+            hideOverlap: true,
+            formatter: (value: number) => {
+              if (!Number.isFinite(value)) return "$0";
+              if (Math.abs(value) < 1) return `$${value.toFixed(3)}`;
+              return `$${value.toFixed(1)}`;
+            },
+          },
           splitLine: { show: false },
         },
       ],
@@ -231,24 +345,54 @@ export function AuthFileDetailModal({
           name: t("auth_files.trend_requests"),
           type: "bar",
           yAxisIndex: 0,
+          animation: shouldAnimateTrend,
+          animationDuration: shouldAnimateTrend ? TREND_CHART_ANIMATION_MS : 0,
+          animationDurationUpdate: 0,
           barMaxWidth: 24,
           itemStyle: { color: "#2563eb", borderRadius: [4, 4, 0, 0] },
           data: sortedKeys.map((key) => requestByKey.get(key) ?? 0),
         },
-        ...quotaBySeries.map(({ series, values }, index) => ({
-          name: translateQuotaLabel(series.quota_label),
+        {
+          name: t("auth_files.trend_cost"),
           type: "line",
-          yAxisIndex: 1,
+          yAxisIndex: 2,
+          animation: shouldAnimateTrend,
+          animationDuration: shouldAnimateTrend ? TREND_CHART_ANIMATION_MS : 0,
+          animationDurationUpdate: 0,
           connectNulls: true,
           showSymbol: false,
           smooth: true,
-          lineStyle: { width: 2, color: palette[(index + 1) % palette.length] },
-          itemStyle: { color: palette[(index + 1) % palette.length] },
+          lineStyle: { width: 2.2, color: "#db2777" },
+          itemStyle: { color: "#db2777" },
+          areaStyle: { color: "rgba(219, 39, 119, 0.08)" },
+          tooltip: {
+            valueFormatter: (value: number) => formatCurrency(Number(value)),
+          },
+          data: sortedKeys.map((key) => costByKey.get(key) ?? 0),
+        },
+        ...quotaBySeries.map(({ series, values }, index) => ({
+          name: `${compactQuotaLegendLabel(series.quota_label)} ${t(
+            "auth_files.trend_quota_used_suffix",
+          )}`,
+          type: "line",
+          yAxisIndex: 1,
+          animation: shouldAnimateTrend,
+          animationDuration: shouldAnimateTrend ? TREND_CHART_ANIMATION_MS : 0,
+          animationDurationUpdate: 0,
+          connectNulls: true,
+          showSymbol: false,
+          smooth: true,
+          lineStyle: { width: 2, color: palette[(index + 2) % palette.length] },
+          itemStyle: { color: palette[(index + 2) % palette.length] },
+          tooltip: {
+            valueFormatter: (value: number) =>
+              typeof value === "number" && Number.isFinite(value) ? `${value.toFixed(1)}%` : "--",
+          },
           data: sortedKeys.map((key) => values.get(key) ?? null),
         })),
       ],
     };
-  }, [activeQuotaSeries, detailTrend, detailTrendWindow, t, translateQuotaLabel]);
+  }, [activeQuotaSeries, detailTrend, detailTrendWindow, shouldAnimateTrend, t, translateQuotaLabel]);
 
   const closeModal = () => {
     setDetailOpen(false);
@@ -267,9 +411,21 @@ export function AuthFileDetailModal({
 
   const renderUsageTrend = () => {
     if (detailTrendLoading && !detailTrend) {
+      const skeletonClass =
+        "animate-pulse rounded-lg bg-slate-100/80 dark:bg-white/[0.06]";
+
       return (
-        <div className="text-sm text-slate-600 dark:text-white/65">
-          {t("common.loading_ellipsis")}
+        <div className="space-y-4" data-testid="auth-file-trend-loading" aria-hidden="true">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+            {Array.from({ length: 5 }).map((_, index) => (
+              <div key={index} className={`${skeletonClass} h-20`} />
+            ))}
+          </div>
+          <div className="space-y-2">
+            <div className={`${skeletonClass} h-4 w-32`} />
+            <div className={`${skeletonClass} h-3 w-56 max-w-full`} />
+          </div>
+          <div className={`${skeletonClass} h-80 min-w-0`} />
         </div>
       );
     }
@@ -294,10 +450,11 @@ export function AuthFileDetailModal({
     const cycleStart = detailTrend.cycle_start
       ? new Date(detailTrend.cycle_start).toLocaleString()
       : "--";
+    const weeklyQuotaUsed = formatPercent(detailTrend.weekly_quota_used_percent);
 
     return (
       <div className="space-y-4">
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
           <div className="rounded-lg bg-slate-50/80 px-3 py-3 dark:bg-white/[0.04]">
             <p className="text-xs font-semibold text-slate-500 dark:text-white/55">
               {t("auth_files.trend_last_7_days_requests")}
@@ -320,6 +477,14 @@ export function AuthFileDetailModal({
             </p>
             <p className="mt-2 text-2xl font-semibold text-slate-950 dark:text-white">
               {formatCurrency(detailTrend.cycle_cost_total)}
+            </p>
+          </div>
+          <div className="rounded-lg bg-slate-50/80 px-3 py-3 dark:bg-white/[0.04]">
+            <p className="text-xs font-semibold text-slate-500 dark:text-white/55">
+              {t("auth_files.trend_weekly_quota_used")}
+            </p>
+            <p className="mt-2 text-2xl font-semibold text-slate-950 dark:text-white">
+              {weeklyQuotaUsed}
             </p>
           </div>
           <div className="rounded-lg bg-slate-50/80 px-3 py-3 dark:bg-white/[0.04]">
@@ -356,7 +521,13 @@ export function AuthFileDetailModal({
         </div>
 
         <div className="min-w-0 rounded-lg bg-slate-50/70 p-3 dark:bg-white/[0.04]">
-          <EChart option={trendChartOption} className="h-72 min-w-0" replaceMerge="series" />
+          <EChart
+            option={trendChartOption}
+            className="h-80 min-w-0"
+            onEvents={trendChartEvents}
+            replaceMerge="series"
+            initialAnimationGuardMs={shouldAnimateTrend ? TREND_CHART_ANIMATION_GUARD_MS : 0}
+          />
         </div>
       </div>
     );
@@ -365,10 +536,13 @@ export function AuthFileDetailModal({
   return (
     <Modal
       open={open}
-      title={
-        detailFile
-          ? t("auth_files.view_file_title", { name: detailFile.name })
-          : t("auth_files.view_auth_file")
+      title={detailTitle}
+      titleAccessory={
+        detailPlanLabel ? (
+          <span className="inline-flex shrink-0 items-center rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-800 dark:bg-amber-500/15 dark:text-amber-200">
+            {detailPlanLabel}
+          </span>
+        ) : undefined
       }
       maxWidth="max-w-4xl"
       bodyHeightClassName="h-[70vh]"
@@ -400,7 +574,7 @@ export function AuthFileDetailModal({
               onClick={() => void refreshDetailTrend(detailFile)}
               disabled={detailTrendLoading}
             >
-              <RefreshCw size={14} className={detailTrendLoading ? "animate-spin" : ""} />
+              <RefreshCw size={14} />
               {t("auth_files.trend_refresh")}
             </Button>
           ) : null}

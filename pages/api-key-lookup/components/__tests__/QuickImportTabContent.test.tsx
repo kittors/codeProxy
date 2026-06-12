@@ -202,7 +202,11 @@ describe("QuickImportTabContent", () => {
   test("filters quick import cards by the looked up API key permissions", async () => {
     window.localStorage.setItem(
       "code-proxy-admin-auth",
-      JSON.stringify({ apiBase: "http://localhost:3000", managementKey: "mgmt-test" }),
+      JSON.stringify({
+        apiBase: "http://localhost:3000",
+        managementKey: "mgmt-test",
+        expiresAt: Date.now() + 60_000,
+      }),
     );
     vi.mocked(globalThis.fetch).mockImplementation(async (input) => {
       const url = String(input);

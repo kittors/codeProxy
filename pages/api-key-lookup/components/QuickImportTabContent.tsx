@@ -3,11 +3,11 @@ import { useTranslation } from "react-i18next";
 import { Check, Copy, Download, ExternalLink } from "lucide-react";
 import iconClaude from "@code-proxy/assets/icons/claude.svg";
 import iconCodex from "@code-proxy/assets/icons/codex.svg";
-import { AUTH_STORAGE_KEY, MANAGEMENT_API_PREFIX } from "@code-proxy/api-client";
 import {
-  computeManagementApiBase,
+  ApiClient,
   detectApiBaseFromLocation,
-  normalizeApiBase,
+  publicApiClient,
+  readPersistedAuthSnapshot,
 } from "@code-proxy/api-client";
 import {
   ccSwitchImportConfigsApi,
@@ -43,17 +43,9 @@ const clientLabelKey: Record<"codex" | "claude", string> = {
 };
 
 function readStoredManagementAuth(): { apiBase: string; managementKey: string } | null {
-  try {
-    const raw = window.localStorage.getItem(AUTH_STORAGE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as { apiBase?: unknown; managementKey?: unknown };
-    const apiBase = normalizeApiBase(String(parsed.apiBase ?? ""));
-    const managementKey = String(parsed.managementKey ?? "").trim();
-    if (!apiBase || !managementKey) return null;
-    return { apiBase, managementKey };
-  } catch {
-    return null;
-  }
+  const snapshot = readPersistedAuthSnapshot();
+  if (!snapshot?.apiBase || !snapshot.managementKey) return null;
+  return { apiBase: snapshot.apiBase, managementKey: snapshot.managementKey };
 }
 
 async function fetchPublicQuickImportConfigs(
@@ -62,19 +54,9 @@ async function fetchPublicQuickImportConfigs(
   const key = apiKey.trim();
   if (!key) return [];
 
-  const base = detectApiBaseFromLocation();
-  const resp = await fetch(`${base}${MANAGEMENT_API_PREFIX}/public/ccswitch-import-configs`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ api_key: key }),
+  const data = await publicApiClient.post<Record<string, unknown>>("/ccswitch-import-configs", {
+    api_key: key,
   });
-  if (!resp.ok) {
-    const text = await resp.text().catch(() => "");
-    throw new Error(text || `Request failed (${resp.status})`);
-  }
-  const data = (await resp.json()) as Record<string, unknown>;
   return normalizeCcSwitchImportConfigs(data["ccswitch-import-configs"] ?? data.items ?? data);
 }
 
@@ -89,18 +71,9 @@ async function fetchQuickImportConfigs(apiKey: string): Promise<CcSwitchImportCo
     }
   }
 
-  const managementBase = computeManagementApiBase(auth.apiBase);
-
-  const response = await fetch(`${managementBase}/ccswitch-import-configs`, {
-    headers: {
-      Authorization: `Bearer ${auth.managementKey}`,
-    },
-  });
-  if (!response.ok) {
-    const text = await response.text().catch(() => "");
-    throw new Error(text || `Request failed (${response.status})`);
-  }
-  const data = (await response.json()) as Record<string, unknown>;
+  const client = new ApiClient();
+  client.setConfig(auth);
+  const data = await client.get<Record<string, unknown>>("/ccswitch-import-configs");
   return normalizeCcSwitchImportConfigs(data["ccswitch-import-configs"] ?? data.items ?? data);
 }
 
@@ -122,15 +95,10 @@ async function fetchQuickImportApiKeyEntry(apiKey: string): Promise<ApiKeyEntry 
   const key = apiKey.trim();
   if (!key) return null;
 
-  const managementBase = computeManagementApiBase(auth.apiBase);
   try {
-    const response = await fetch(`${managementBase}/api-key-entries`, {
-      headers: {
-        Authorization: `Bearer ${auth.managementKey}`,
-      },
-    });
-    if (!response.ok) return null;
-    const data = (await response.json()) as Record<string, unknown>;
+    const client = new ApiClient();
+    client.setConfig(auth);
+    const data = await client.get<Record<string, unknown>>("/api-key-entries");
     const entries = normalizeApiKeyEntries(data["api-key-entries"] ?? data.items ?? data);
     return entries.find((entry) => entry.key === key) ?? null;
   } catch {

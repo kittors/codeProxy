@@ -55,11 +55,22 @@ export interface SearchableCheckboxMultiSelectProps {
   mobileBreakpoint?: number;
   emptyValueMeansAllSelected?: boolean;
   showFilteredToggleWithoutQuery?: boolean;
+  applyMode?: "immediate" | "manual";
+  applyLabel?: string;
+  cancelLabel?: string;
+  selectAllLabel?: string;
+  deselectAllLabel?: string;
+  emptySelectionLabel?: string;
+  emptyValueRepresentsAllSelected?: boolean;
 }
 
 function optionText(option: SearchableCheckboxMultiSelectOption): string {
   if (typeof option.label === "string") return option.label;
   return option.searchText ?? option.value;
+}
+
+function selectionsEqual(left: string[], right: string[]): boolean {
+  return left.length === right.length && left.every((item, index) => item === right[index]);
 }
 
 export function SearchableCheckboxMultiSelect({
@@ -83,6 +94,13 @@ export function SearchableCheckboxMultiSelect({
   mobileBreakpoint = 640,
   emptyValueMeansAllSelected = false,
   showFilteredToggleWithoutQuery = true,
+  applyMode = "immediate",
+  applyLabel = "",
+  cancelLabel = "",
+  selectAllLabel = "",
+  deselectAllLabel = "",
+  emptySelectionLabel,
+  emptyValueRepresentsAllSelected,
 }: SearchableCheckboxMultiSelectProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -92,6 +110,11 @@ export function SearchableCheckboxMultiSelect({
   const [dropdownStyle, setDropdownStyle] = useState<CSSProperties>({});
   const [dropdownPlacement, setDropdownPlacement] = useState<"bottom" | "top">("bottom");
 
+  const manualApply = applyMode === "manual";
+  const committedEmptyMeansAllSelected =
+    emptyValueMeansAllSelected &&
+    (emptyValueRepresentsAllSelected ?? (value.length === 0 && options.length > 0));
+
   const sanitizedExplicitValue = useMemo(() => {
     const allowed = new Set(options.map((option) => option.value));
     return value.filter(
@@ -99,16 +122,34 @@ export function SearchableCheckboxMultiSelect({
     );
   }, [options, value]);
 
+  const [draftExplicitValue, setDraftExplicitValue] = useState<string[]>(sanitizedExplicitValue);
+  const [draftEmptyMeansAllSelected, setDraftEmptyMeansAllSelected] = useState(
+    committedEmptyMeansAllSelected,
+  );
+
+  useEffect(() => {
+    if (manualApply && open) return;
+    setDraftExplicitValue(sanitizedExplicitValue);
+    setDraftEmptyMeansAllSelected(committedEmptyMeansAllSelected);
+  }, [committedEmptyMeansAllSelected, manualApply, open, sanitizedExplicitValue]);
+
+  const activeExplicitValue = manualApply ? draftExplicitValue : sanitizedExplicitValue;
+  const activeEmptyMeansAllSelected = manualApply
+    ? draftEmptyMeansAllSelected
+    : committedEmptyMeansAllSelected;
+
   const implicitAllSelected =
-    emptyValueMeansAllSelected && sanitizedExplicitValue.length === 0 && options.length > 0;
+    emptyValueMeansAllSelected &&
+    activeEmptyMeansAllSelected &&
+    activeExplicitValue.length === 0;
 
   const effectiveValue = useMemo(
-    () => (implicitAllSelected ? options.map((option) => option.value) : sanitizedExplicitValue),
-    [implicitAllSelected, options, sanitizedExplicitValue],
+    () => (implicitAllSelected ? options.map((option) => option.value) : activeExplicitValue),
+    [activeExplicitValue, implicitAllSelected, options],
   );
 
   const allOptionsSelectedExplicitly =
-    !implicitAllSelected && options.length > 0 && sanitizedExplicitValue.length === options.length;
+    !implicitAllSelected && options.length > 0 && activeExplicitValue.length === options.length;
 
   const showAllSelectionSummary = implicitAllSelected || allOptionsSelectedExplicitly;
 
@@ -136,6 +177,18 @@ export function SearchableCheckboxMultiSelect({
   const showFilteredToggle =
     hasQuery || (showFilteredToggleWithoutQuery && !showAllSelectionSummary);
 
+  const closeDropdown = useCallback(
+    (discardDraft: boolean) => {
+      if (discardDraft && manualApply) {
+        setDraftExplicitValue(sanitizedExplicitValue);
+        setDraftEmptyMeansAllSelected(committedEmptyMeansAllSelected);
+      }
+      setOpen(false);
+      setQuery("");
+    },
+    [committedEmptyMeansAllSelected, manualApply, sanitizedExplicitValue],
+  );
+
   const updatePosition = useCallback(() => {
     const trigger = triggerRef.current;
     if (!trigger) return;
@@ -144,7 +197,6 @@ export function SearchableCheckboxMultiSelect({
     const gap = 6;
     const maxHeight = 360;
 
-    // Mobile: use viewport-safe positioning
     const isNarrow = window.innerWidth < mobileBreakpoint;
     if (isNarrow) {
       const maxHeightMobile = Math.min(420, window.innerHeight * 0.7);
@@ -212,24 +264,22 @@ export function SearchableCheckboxMultiSelect({
       const target = event.target as Node | null;
       if (triggerRef.current?.contains(target)) return;
       if (dropdownRef.current?.contains(target)) return;
-      setOpen(false);
-      setQuery("");
+      closeDropdown(manualApply);
     };
     document.addEventListener("mousedown", handleOutsideClick);
     return () => document.removeEventListener("mousedown", handleOutsideClick);
-  }, [open]);
+  }, [closeDropdown, manualApply, open]);
 
   useEffect(() => {
     if (!open) return;
     const handleKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        setOpen(false);
-        setQuery("");
+        closeDropdown(manualApply);
       }
     };
     document.addEventListener("keydown", handleKey);
     return () => document.removeEventListener("keydown", handleKey);
-  }, [open]);
+  }, [closeDropdown, manualApply, open]);
 
   useLayoutEffect(() => {
     if (!open) return;
@@ -247,68 +297,104 @@ export function SearchableCheckboxMultiSelect({
     };
   }, [open, updatePosition]);
 
-  const commitSelection = useCallback(
+  const normalizeSelection = useCallback(
     (next: string[]) => {
       const allowed = new Set(options.map((option) => option.value));
-      const unique = next.filter(
+      return next.filter(
         (item, index) => allowed.has(item) && next.indexOf(item) === index,
       );
+    },
+    [options],
+  );
+
+  const updateSelection = useCallback(
+    (next: string[], nextEmptyMeansAllSelected = false) => {
+      const unique = normalizeSelection(next);
+      if (manualApply) {
+        setDraftExplicitValue(unique);
+        setDraftEmptyMeansAllSelected(unique.length === 0 && nextEmptyMeansAllSelected);
+        return;
+      }
       onChange(unique);
     },
-    [onChange, options],
+    [manualApply, normalizeSelection, onChange],
   );
 
   const toggleOption = useCallback(
     (optionValue: string) => {
       if (selectedSet.has(optionValue)) {
-        commitSelection(effectiveValue.filter((item) => item !== optionValue));
+        updateSelection(effectiveValue.filter((item) => item !== optionValue));
         return;
       }
-      commitSelection([...effectiveValue, optionValue]);
+      updateSelection([...effectiveValue, optionValue]);
     },
-    [commitSelection, effectiveValue, selectedSet],
+    [effectiveValue, selectedSet, updateSelection],
   );
 
   const toggleFiltered = useCallback(() => {
     if (visibleValues.length === 0) return;
     if (allVisibleSelected) {
       const visibleSet = new Set(visibleValues);
-      commitSelection(effectiveValue.filter((item) => !visibleSet.has(item)));
+      updateSelection(effectiveValue.filter((item) => !visibleSet.has(item)));
       return;
     }
-    commitSelection([...effectiveValue, ...visibleValues]);
-  }, [allVisibleSelected, commitSelection, effectiveValue, visibleValues]);
+    updateSelection([...effectiveValue, ...visibleValues]);
+  }, [allVisibleSelected, effectiveValue, updateSelection, visibleValues]);
+
+  const selectAllOptions = useCallback(() => {
+    if (options.length === 0 || allOptionsSelectedExplicitly || implicitAllSelected) return;
+    updateSelection(options.map((option) => option.value));
+  }, [allOptionsSelectedExplicitly, implicitAllSelected, options, updateSelection]);
+
+  const deselectAllOptions = useCallback(() => {
+    updateSelection([]);
+  }, [updateSelection]);
+
+  const applyDraftSelection = useCallback(() => {
+    if (!manualApply) return;
+    onChange(normalizeSelection(draftExplicitValue));
+    closeDropdown(false);
+  }, [closeDropdown, draftExplicitValue, manualApply, normalizeSelection, onChange]);
+
+  const hasPendingChanges =
+    manualApply &&
+    (!selectionsEqual(draftExplicitValue, sanitizedExplicitValue) ||
+      draftEmptyMeansAllSelected !== committedEmptyMeansAllSelected);
 
   const selectedSummary = useMemo(() => {
-    if (showAllSelectionSummary || sanitizedExplicitValue.length === 0) return placeholder;
-    const labels = sanitizedExplicitValue
+    if (showAllSelectionSummary) return placeholder;
+    if (activeExplicitValue.length === 0) {
+      return emptySelectionLabel ?? selectedCountLabel(0);
+    }
+    const labels = activeExplicitValue
       .slice(0, maxSummaryItems)
       .map((item) =>
         optionText(options.find((option) => option.value === item) ?? { value: item, label: item }),
       )
       .join(", ");
-    return sanitizedExplicitValue.length > maxSummaryItems
-      ? `${labels} +${sanitizedExplicitValue.length - maxSummaryItems}`
+    return activeExplicitValue.length > maxSummaryItems
+      ? `${labels} +${activeExplicitValue.length - maxSummaryItems}`
       : labels;
   }, [
+    activeExplicitValue,
     maxSummaryItems,
+    emptySelectionLabel,
     options,
     placeholder,
-    sanitizedExplicitValue,
     showAllSelectionSummary,
   ]);
 
-  const showSelectionBadge = sanitizedExplicitValue.length > 0 && !showAllSelectionSummary;
+  const showSelectionBadge = activeExplicitValue.length > 0 && !showAllSelectionSummary;
 
   const handleClear = useCallback(
     (event: React.MouseEvent) => {
       event.preventDefault();
       event.stopPropagation();
       onClear?.();
-      commitSelection([]);
+      updateSelection([]);
       setQuery("");
     },
-    [commitSelection, onClear],
+    [onClear, updateSelection],
   );
 
   return (
@@ -323,9 +409,13 @@ export function SearchableCheckboxMultiSelect({
           aria-label={ariaLabel}
           disabled={disabled}
           onClick={() => {
-            if (!open) updatePosition();
-            setOpen((current) => !current);
-          }}
+              if (!open) {
+                if (manualApply) setDraftExplicitValue(sanitizedExplicitValue);
+                if (manualApply) setDraftEmptyMeansAllSelected(committedEmptyMeansAllSelected);
+                updatePosition();
+              }
+              setOpen((current) => !current);
+            }}
           className={cn(
             getSelectTriggerBase(size),
             "w-full justify-between text-left",
@@ -335,7 +425,7 @@ export function SearchableCheckboxMultiSelect({
           <span
             className={cn(
               "min-w-0 flex-1 truncate text-left",
-              (sanitizedExplicitValue.length === 0 || showAllSelectionSummary) &&
+              (activeExplicitValue.length === 0 || showAllSelectionSummary) &&
                 "text-slate-400 dark:text-white/35",
             )}
           >
@@ -344,7 +434,7 @@ export function SearchableCheckboxMultiSelect({
           <span className="flex shrink-0 items-center gap-2">
             {showSelectionBadge ? (
               <span className="rounded-md bg-sky-50 px-1.5 py-0.5 text-[11px] font-semibold text-sky-700 dark:bg-sky-900/30 dark:text-sky-300">
-                {selectedCountLabel(sanitizedExplicitValue.length)}
+                {selectedCountLabel(activeExplicitValue.length)}
               </span>
             ) : null}
             <ChevronDown
@@ -406,37 +496,46 @@ export function SearchableCheckboxMultiSelect({
                   spellCheck={false}
                 />
               </div>
-              {showFilteredToggle ? (
-                <button
-                  type="button"
-                  onClick={toggleFiltered}
-                  disabled={visibleValues.length === 0}
-                  className={cn(
-                    "mx-1 mt-1 shrink-0",
-                    selectOptionBase,
-                    visibleValues.length === 0
-                      ? "cursor-not-allowed text-[#A1A1AA] dark:text-[#71717A]"
-                      : selectOptionIdle,
-                  )}
-                >
+              {selectAllLabel || showFilteredToggle ? (
+                <div className="flex items-center justify-between gap-2 border-b border-slate-100 px-3 py-2 dark:border-neutral-800">
                   <span
                     className={cn(
-                      "flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors",
-                      allVisibleSelected
-                        ? "border-[#18181B] bg-[#18181B] text-white dark:border-white dark:bg-white dark:text-[#18181B]"
-                        : "border-[#96969B] bg-white dark:border-[#9F9FA8] dark:bg-[#27272A]",
+                      "text-xs font-medium",
+                      showAllSelectionSummary
+                        ? "text-emerald-600 dark:text-emerald-300"
+                        : "text-slate-500 dark:text-white/50",
                     )}
-                    aria-hidden="true"
                   >
-                    {allVisibleSelected ? <Check size={12} /> : null}
+                    {showAllSelectionSummary ? placeholder : selectedCountLabel(effectiveValue.length)}
                   </span>
-                  <span className="min-w-0 flex-1 truncate">
-                    {allVisibleSelected ? deselectFilteredLabel : selectFilteredLabel}
-                  </span>
-                  <span className="shrink-0 text-xs text-slate-400 dark:text-white/35">
-                    {selectedCountLabel(effectiveValue.length)}
-                  </span>
-                </button>
+                  <div className="flex items-center gap-2">
+                    {selectAllLabel ? (
+                      <button
+                        type="button"
+                        onClick={showAllSelectionSummary ? deselectAllOptions : selectAllOptions}
+                        disabled={
+                          options.length === 0 ||
+                          (!deselectAllLabel && (allOptionsSelectedExplicitly || implicitAllSelected))
+                        }
+                        className="rounded-md px-2 py-1 text-xs font-medium text-indigo-600 transition hover:bg-indigo-50 disabled:cursor-not-allowed disabled:text-slate-300 dark:text-indigo-300 dark:hover:bg-indigo-500/10 dark:disabled:text-white/20"
+                      >
+                        {showAllSelectionSummary && deselectAllLabel
+                          ? deselectAllLabel
+                          : selectAllLabel}
+                      </button>
+                    ) : null}
+                    {showFilteredToggle ? (
+                      <button
+                        type="button"
+                        onClick={toggleFiltered}
+                        disabled={visibleValues.length === 0}
+                        className="rounded-md px-2 py-1 text-xs font-medium text-indigo-600 transition hover:bg-indigo-50 disabled:cursor-not-allowed disabled:text-slate-300 dark:text-indigo-300 dark:hover:bg-indigo-500/10 dark:disabled:text-white/20"
+                      >
+                        {allVisibleSelected ? deselectFilteredLabel : selectFilteredLabel}
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
               ) : null}
               <div
                 role="listbox"
@@ -477,6 +576,25 @@ export function SearchableCheckboxMultiSelect({
                   })
                 )}
               </div>
+              {manualApply ? (
+                <div className="flex items-center justify-end gap-2 border-t border-slate-100 px-3 py-2 dark:border-neutral-800">
+                  <button
+                    type="button"
+                    onClick={() => closeDropdown(true)}
+                    className="rounded-md px-3 py-1.5 text-xs font-medium text-slate-500 transition hover:bg-slate-100 dark:text-white/60 dark:hover:bg-white/5"
+                  >
+                    {cancelLabel}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={applyDraftSelection}
+                    disabled={!hasPendingChanges}
+                    className="rounded-md bg-slate-900 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 dark:bg-white dark:text-neutral-950 dark:hover:bg-slate-200 dark:disabled:bg-neutral-800 dark:disabled:text-white/30"
+                  >
+                    {applyLabel}
+                  </button>
+                </div>
+              ) : null}
             </motion.div>
           ) : null}
         </AnimatePresence>,

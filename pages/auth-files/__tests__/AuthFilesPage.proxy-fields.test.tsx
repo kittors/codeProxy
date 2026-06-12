@@ -24,6 +24,9 @@ const mocks = vi.hoisted(() => ({
   getEntityStats: vi.fn(async () => ({ source: [], auth_index: [] })),
   downloadText: vi.fn(async () => JSON.stringify({ type: "codex" })),
   upload: vi.fn(async () => ({})),
+  getModelConfigs: vi.fn(async () => []),
+  getModelOwnerPresets: vi.fn(async () => []),
+  getAuthGroupModelOwnerMappingMap: vi.fn(async () => ({})),
   proxiesList: vi.fn<() => Promise<ProxyPoolEntry[]>>(async () => []),
   proxiesCheck: vi.fn<() => Promise<ProxyCheckResult>>(async () => ({ ok: true, latencyMs: 420 })),
 }));
@@ -37,6 +40,12 @@ vi.mock("@code-proxy/api-client", async (importOriginal) => {
       list: mocks.list,
       downloadText: mocks.downloadText,
       upload: mocks.upload,
+    },
+    modelsApi: {
+      ...mod.modelsApi,
+      getModelConfigs: mocks.getModelConfigs,
+      getModelOwnerPresets: mocks.getModelOwnerPresets,
+      getAuthGroupModelOwnerMappingMap: mocks.getAuthGroupModelOwnerMappingMap,
     },
     usageApi: { ...mod.usageApi, getEntityStats: mocks.getEntityStats },
   };
@@ -57,6 +66,12 @@ describe("AuthFilesPage proxy fields editor", () => {
     mocks.getEntityStats.mockClear();
     mocks.downloadText.mockClear();
     mocks.upload.mockClear();
+    mocks.getModelConfigs.mockReset();
+    mocks.getModelConfigs.mockResolvedValue([]);
+    mocks.getModelOwnerPresets.mockReset();
+    mocks.getModelOwnerPresets.mockResolvedValue([]);
+    mocks.getAuthGroupModelOwnerMappingMap.mockReset();
+    mocks.getAuthGroupModelOwnerMappingMap.mockResolvedValue({});
     mocks.proxiesList.mockReset();
     mocks.proxiesCheck.mockReset();
     mocks.proxiesList.mockResolvedValue([

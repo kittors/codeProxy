@@ -9,6 +9,7 @@ import {
 import { Button } from "@code-proxy/ui";
 import { Card } from "@code-proxy/ui";
 import { ConfirmModal } from "@code-proxy/ui";
+import { HoverTooltip } from "@code-proxy/ui";
 import { TextInput } from "@code-proxy/ui";
 import { Modal } from "@code-proxy/ui";
 import { ToggleSwitch } from "@code-proxy/ui";
@@ -22,6 +23,7 @@ import {
   readCachedProxyCheckState,
   slugifyProxyID,
   validateProxyDraft,
+  type ProxyCheckStateEntry,
   writeCachedProxyCheckState,
   type ProxyCheckState,
   type ProxyLatencyTone,
@@ -139,22 +141,28 @@ export function ProxiesPage() {
       description: draft.description?.trim() ?? "",
       enabled: draft.enabled,
     };
-    const nextEntries =
-      editingID && entries.some((entry) => entry.id === editingID)
-        ? entries.map((entry) => (entry.id === editingID ? normalized : entry))
-        : [...entries, normalized];
 
     setSaving(true);
     try {
-      await proxiesApi.saveAll(nextEntries);
-      setEntries(nextEntries);
-      if (editingID && editingID !== normalized.id) {
+      if (editingID) {
+        await proxiesApi.update(editingID, {
+          name: normalized.name,
+          url: normalized.url,
+          enabled: normalized.enabled,
+          description: normalized.description,
+        });
+        setEntries((prev) => prev.map((entry) => (entry.id === editingID ? normalized : entry)));
         setCheckState((prev) => {
           const next = { ...prev };
           delete next[editingID];
           writeCachedProxyCheckState(next);
           return next;
         });
+        void refreshCheckResults([normalized]);
+      } else {
+        const nextEntries = [...entries, normalized];
+        await proxiesApi.saveAll(nextEntries);
+        setEntries(nextEntries);
       }
       notify({ type: "success", message: t("proxies.saved") });
       closeModal();
@@ -202,6 +210,48 @@ export function ProxiesPage() {
     [refreshCheckResults],
   );
 
+  const formatCheckBadgeLabel = useCallback(
+    (result?: ProxyCheckStateEntry) => {
+      if (!result || typeof result.ok !== "boolean") return "";
+      if (result.ok) {
+        return typeof result.latencyMs === "number"
+          ? `${result.latencyMs} ms`
+          : t("proxies.latency_unknown");
+      }
+      if (typeof result.statusCode === "number" && result.statusCode > 0) {
+        return `HTTP ${result.statusCode}`;
+      }
+      return t("proxies.check_failed");
+    },
+    [t],
+  );
+
+  const formatCheckTooltip = useCallback(
+    (result?: ProxyCheckStateEntry) => {
+      if (!result || typeof result.ok !== "boolean") return "";
+
+      const lines = [
+        `${t("proxies.tooltip_status")}: ${
+          result.ok ? t("proxies.check_ok") : t("proxies.check_failed")
+        }`,
+        `${t("proxies.tooltip_target")}: ${t("proxies.tooltip_target_server")}`,
+      ];
+
+      if (typeof result.latencyMs === "number") {
+        lines.push(`${t("proxies.tooltip_latency")}: ${result.latencyMs} ms`);
+      }
+      if (typeof result.statusCode === "number" && result.statusCode > 0) {
+        lines.push(`${t("proxies.tooltip_http_status")}: ${result.statusCode}`);
+      }
+      if (result.message) {
+        lines.push(`${t("proxies.tooltip_error")}: ${result.message}`);
+      }
+
+      return lines.join("\n");
+    },
+    [t],
+  );
+
   const columns = useMemo<DataTableColumn<ProxyPoolEntry>[]>(
     () => [
       {
@@ -234,7 +284,7 @@ export function ProxiesPage() {
       },
       {
         key: "status",
-        label: t("proxies.status"),
+        label: t("proxies.latency"),
         width: "w-40",
         render: (entry) => {
           const result = checkState[entry.id];
@@ -247,14 +297,13 @@ export function ProxiesPage() {
             );
           }
           const tone = proxyLatencyTone(result);
-          const statusText = result.ok ? t("proxies.check_ok") : t("proxies.check_failed");
-          const latencyText =
-            typeof result.latencyMs === "number" ? `${result.latencyMs} ms` : null;
-          const summary = [statusText, latencyText].filter(Boolean).join(" · ");
+          const badgeLabel = formatCheckBadgeLabel(result);
+          const tooltipContent = formatCheckTooltip(result);
           return (
-            <div
-              className="min-w-0 text-xs"
-              title={result.message ? `${summary} · ${result.message}` : summary}
+            <HoverTooltip
+              content={tooltipContent}
+              disabled={!tooltipContent}
+              className="max-w-full"
             >
               <span
                 data-latency-tone={tone}
@@ -263,14 +312,9 @@ export function ProxiesPage() {
                   latencyToneClasses[tone],
                 ].join(" ")}
               >
-                <span className="truncate">{summary}</span>
+                <span className="truncate">{badgeLabel}</span>
               </span>
-              {result.message ? (
-                <span className="mt-1 block truncate font-normal text-rose-600 dark:text-rose-300">
-                  {result.message}
-                </span>
-              ) : null}
-            </div>
+            </HoverTooltip>
           );
         },
       },
@@ -329,7 +373,7 @@ export function ProxiesPage() {
         },
       },
     ],
-    [checkEntry, checkState, deleteEntry, openEdit, t],
+    [checkEntry, checkState, deleteEntry, formatCheckBadgeLabel, formatCheckTooltip, openEdit, t],
   );
 
   const modalTitle = editingID ? t("proxies.edit_title") : t("proxies.add_title");

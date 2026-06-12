@@ -1,5 +1,5 @@
 import type { ComponentProps } from "react";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { AuthFileDetailModal } from "@pages/auth-files/components/AuthFileDetailModal";
 import i18n from "@code-proxy/i18n";
@@ -7,11 +7,25 @@ import i18n from "@code-proxy/i18n";
 type DetailModalProps = ComponentProps<typeof AuthFileDetailModal>;
 
 const chartOptions = vi.hoisted(() => [] as any[]);
+const chartEvents = vi.hoisted(() => [] as any[]);
+const chartProps = vi.hoisted(() => [] as any[]);
 
 vi.mock("@code-proxy/ui", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@code-proxy/ui")>()),
-  EChart: ({ option, className }: { option: any; className?: string }) => {
+  EChart: ({
+    option,
+    className,
+    onEvents,
+    initialAnimationGuardMs,
+  }: {
+    option: any;
+    className?: string;
+    onEvents?: Record<string, () => void>;
+    initialAnimationGuardMs?: number;
+  }) => {
     chartOptions.push(option);
+    chartEvents.push(onEvents);
+    chartProps.push({ initialAnimationGuardMs, onEvents, option });
     return (
       <div
         className={className}
@@ -65,17 +79,18 @@ const renderDetailModal = (overrides: Partial<DetailModalProps> = {}) => {
       request_total: 3,
       cycle_request_total: 2,
       cycle_cost_total: 1.2345,
+      weekly_quota_used_percent: 8,
       cycle_start: "2026-04-27T16:01:21Z",
       daily_usage: [
-        { date: "2026-04-24", requests: 0 },
-        { date: "2026-04-25", requests: 0 },
-        { date: "2026-04-26", requests: 0 },
-        { date: "2026-04-27", requests: 1 },
-        { date: "2026-04-28", requests: 0 },
-        { date: "2026-04-29", requests: 0 },
-        { date: "2026-04-30", requests: 2 },
+        { date: "2026-04-24", requests: 0, cost: 0 },
+        { date: "2026-04-25", requests: 0, cost: 0 },
+        { date: "2026-04-26", requests: 0, cost: 0 },
+        { date: "2026-04-27", requests: 1, cost: 0.01 },
+        { date: "2026-04-28", requests: 0, cost: 0 },
+        { date: "2026-04-29", requests: 0, cost: 0 },
+        { date: "2026-04-30", requests: 2, cost: 0.02 },
       ],
-      hourly_usage: [{ hour: "2026-04-30 16:00", requests: 1 }],
+      hourly_usage: [{ hour: "2026-04-30 16:00", requests: 1, cost: 0.004 }],
       quota_series: [
         {
           quota_key: "code_5h",
@@ -132,6 +147,8 @@ describe("AuthFileDetailModal", () => {
     await i18n.changeLanguage("en");
     window.localStorage.clear();
     chartOptions.length = 0;
+    chartEvents.length = 0;
+    chartProps.length = 0;
   });
 
   test("uses usage trend as the primary view for Codex files", () => {
@@ -150,8 +167,43 @@ describe("AuthFileDetailModal", () => {
     expect(screen.getByText("2")).toBeInTheDocument();
     expect(screen.getByText("Current cycle cost")).toBeInTheDocument();
     expect(screen.getByText("$1.2345")).toBeInTheDocument();
-    expect(screen.getByRole("dialog", { name: "View: codex.json" })).toBeInTheDocument();
+    expect(screen.getByText("Weekly quota used")).toBeInTheDocument();
+    expect(screen.getByText("8%")).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "Codex Primary" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Download" })).toBeEnabled();
+    expect(chartOptions.at(-1)?.animation).toBe(true);
+    expect(chartProps.at(-1)?.initialAnimationGuardMs).toBe(800);
+    expect(chartOptions.at(-1)?.grid?.top).toBeGreaterThanOrEqual(70);
+    expect(chartOptions.at(-1)?.yAxis?.every((item: any) => !item.name)).toBe(true);
+    expect(chartOptions.at(-1)?.series?.every((item: any) => item.animation === true)).toBe(true);
+  });
+
+  test("disables trend chart animation after the first render completes", () => {
+    renderDetailModal();
+
+    expect(chartOptions.at(-1)?.animation).toBe(true);
+    act(() => {
+      chartEvents.at(-1)?.finished?.();
+    });
+
+    expect(chartOptions.at(-1)?.animation).toBe(false);
+    expect(chartProps.at(-1)?.initialAnimationGuardMs).toBe(0);
+    expect(chartOptions.at(-1)?.series?.every((item: any) => item.animation === false)).toBe(true);
+  });
+
+  test("keeps the usage cost card visible for codex files inferred from dotted email file names", () => {
+    renderDetailModal({
+      detailFile: {
+        name: "codex-pcamtu927@gmail.com-plus.json",
+        size: 256,
+      },
+    });
+
+    expect(screen.getByRole("tab", { name: "Usage" })).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "pcamtu927@gmail.com" })).toBeInTheDocument();
+    expect(screen.getByText("Plus")).toBeInTheDocument();
+    expect(screen.getByText("Current cycle cost")).toBeInTheDocument();
+    expect(screen.getByText("$1.2345")).toBeInTheDocument();
   });
 
   test("keeps the usage cost card visible for codex files inferred from dotted email file names", () => {
@@ -175,6 +227,16 @@ describe("AuthFileDetailModal", () => {
     expect(screen.queryByText("Loading...")).not.toBeInTheDocument();
   });
 
+  test("keeps first trend loading quiet before the first payload arrives", () => {
+    renderDetailModal({ detailTrend: null, detailTrendLoading: true });
+
+    const loading = screen.getByTestId("auth-file-trend-loading");
+    expect(loading.querySelectorAll(".animate-pulse")).toHaveLength(8);
+    expect(screen.queryByText("Loading...")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("auth-file-trend-chart")).not.toBeInTheDocument();
+    expect(chartOptions).toHaveLength(0);
+  });
+
   test("does not render quota sample summary cards below the trend chart", () => {
     renderDetailModal();
 
@@ -195,19 +257,20 @@ describe("AuthFileDetailModal", () => {
         request_total: 12,
         cycle_request_total: 12,
         cycle_cost_total: 0.008,
+        weekly_quota_used_percent: 6,
         cycle_start: "2026-04-28T05:34:34Z",
         daily_usage: [],
         hourly_usage: [
-          { hour: "2026-05-01 11:00", requests: 0 },
-          { hour: "2026-05-01 12:00", requests: 2 },
-          { hour: "2026-05-01 13:00", requests: 1 },
-          { hour: "2026-05-01 14:00", requests: 1 },
-          { hour: "2026-05-01 15:00", requests: 10 },
+          { hour: "2026-05-01 11:00", requests: 0, cost: 0 },
+          { hour: "2026-05-01 12:00", requests: 2, cost: 0.002 },
+          { hour: "2026-05-01 13:00", requests: 1, cost: 0.001 },
+          { hour: "2026-05-01 14:00", requests: 1, cost: 0.001 },
+          { hour: "2026-05-01 15:00", requests: 10, cost: 0.01 },
         ],
         quota_series: [
           {
             quota_key: "code_5h",
-            quota_label: "m_quota.code_5h",
+            quota_label: "GPT-5.3-Codex-Spark: 五小时",
             window_seconds: 18000,
             points: [
               { timestamp: oldQuotaAt22, percent: 100 },
@@ -229,7 +292,9 @@ describe("AuthFileDetailModal", () => {
 
     const series = JSON.parse(chart.dataset.series ?? "[]");
     expect(series[0].data).toEqual([0, 2, 1, 1, 10]);
-    expect(series[1].data).toEqual([null, null, null, null, 94]);
+    expect(series[1].data).toEqual([0, 0.002, 0.001, 0.001, 0.01]);
+    expect(series[2].name).toBe("五小时 used");
+    expect(series[2].data).toEqual([null, null, null, null, 6]);
   });
 
   test("renders models as a compact list without raw field labels", () => {

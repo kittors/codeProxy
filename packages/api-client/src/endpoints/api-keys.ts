@@ -1,6 +1,7 @@
 import { apiClient } from "../client/client";
 
 export interface ApiKeyEntry {
+  id?: string;
   key: string;
   name?: string;
   disabled?: boolean;
@@ -41,12 +42,14 @@ export const apiKeyEntriesApi = {
 
   replace: (entries: ApiKeyEntry[]) => apiClient.put("/api-key-entries", entries),
 
-  update: (payload: { index?: number; match?: string; value: Partial<ApiKeyEntry> }) =>
+  update: (payload: { id?: string; index?: number; match?: string; value: Partial<ApiKeyEntry> }) =>
     apiClient.patch("/api-key-entries", payload),
 
-  delete: (params: { index?: number; key?: string; deleteLogs?: boolean }) => {
+  delete: (params: { id?: string; index?: number; key?: string; deleteLogs?: boolean }) => {
     const query = new URLSearchParams();
-    if (params.key) {
+    if (params.id) {
+      query.set("id", params.id);
+    } else if (params.key) {
       query.set("key", params.key);
     } else if (params.index !== undefined) {
       query.set("index", String(params.index));

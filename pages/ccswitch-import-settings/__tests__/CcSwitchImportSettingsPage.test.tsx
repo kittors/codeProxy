@@ -10,6 +10,7 @@ import type { CcSwitchImportConfigListItem } from "@code-proxy/domain/ccswitch/c
 const listChannelGroups = vi.fn();
 const listAvailableModels = vi.fn();
 const getModelConfigs = vi.fn();
+const getAuthGroupModelOwnerMappingMap = vi.fn();
 const listConfigs = vi.fn();
 const replaceConfigs = vi.fn();
 const loadConfiguredModelAvailability = vi.fn();
@@ -45,6 +46,7 @@ vi.mock("@code-proxy/api-client/endpoints/models", () => ({
       allowedChannels?: string[];
     }) => listAvailableModels(params),
     getModelConfigs: (scope: "active" | "library") => getModelConfigs(scope),
+    getAuthGroupModelOwnerMappingMap: () => getAuthGroupModelOwnerMappingMap(),
   },
 }));
 
@@ -73,6 +75,7 @@ describe("CcSwitchImportSettingsPage", () => {
     listChannelGroups.mockReset();
     listAvailableModels.mockReset();
     getModelConfigs.mockReset();
+    getAuthGroupModelOwnerMappingMap.mockReset();
     listConfigs.mockReset();
     replaceConfigs.mockReset();
     loadConfiguredModelAvailability.mockReset();
@@ -97,6 +100,7 @@ describe("CcSwitchImportSettingsPage", () => {
     ]);
     listAvailableModels.mockResolvedValue([{ id: "deepseek-v4-flash" }, { id: "kimi-k2" }]);
     getModelConfigs.mockResolvedValue([]);
+    getAuthGroupModelOwnerMappingMap.mockResolvedValue({});
     listConfigs.mockResolvedValue([]);
     replaceConfigs.mockResolvedValue(undefined);
   });
@@ -406,10 +410,7 @@ describe("CcSwitchImportSettingsPage", () => {
   });
 
   test("merges mapped Codex owner models with OpenCode Go channel models in CC Switch presets", async () => {
-    window.localStorage.setItem(
-      "authFilesPage.modelOwnerGroupMap.v1",
-      JSON.stringify({ codex: "codex" }),
-    );
+    getAuthGroupModelOwnerMappingMap.mockResolvedValue({ codex: "codex" });
     listChannelGroups.mockResolvedValue([
       {
         name: "opencodego+gpt",
@@ -469,10 +470,7 @@ describe("CcSwitchImportSettingsPage", () => {
   });
 
   test("uses the auth-file owner model group as the CC Switch actual model source", async () => {
-    window.localStorage.setItem(
-      "authFilesPage.modelOwnerGroupMap.v1",
-      JSON.stringify({ kimi: "kimi-code" }),
-    );
+    getAuthGroupModelOwnerMappingMap.mockResolvedValue({ kimi: "kimi-code" });
     listChannelGroups.mockResolvedValue([
       {
         name: "kimicode",

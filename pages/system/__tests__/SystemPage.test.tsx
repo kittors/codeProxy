@@ -18,6 +18,23 @@ vi.mock("@code-proxy/api-client", () => ({
   apiClient: {
     get: mocks.apiGet,
   },
+  authFilesApi: {
+    list: () => mocks.apiGet("/auth-files"),
+    getModelsForAuthFile: async (name: string) => {
+      const payload = await mocks.apiGet("/auth-files/models", { params: { name } });
+      const record =
+        payload && typeof payload === "object" ? (payload as Record<string, unknown>) : {};
+      return Array.isArray(record.models) ? record.models : [];
+    },
+  },
+  providersApi: {
+    getGeminiKeys: async () => [],
+    getClaudeConfigs: async () => [],
+    getCodexConfigs: async () => [],
+    getOpenCodeGoConfigs: async () => [],
+    getVertexConfigs: async () => [],
+    getOpenAIProviders: async () => [],
+  },
 }));
 
 vi.mock("@code-proxy/api-client/endpoints/update", () => ({
@@ -57,6 +74,7 @@ describe("SystemPage", () => {
     await i18n.changeLanguage("en");
     window.localStorage.clear();
     mocks.apiGet.mockImplementation((path: string) => {
+      if (path === "/auth-group-model-owner-mappings") return Promise.resolve({ items: [] });
       if (path === "/model-path-availability") return Promise.resolve({ data: [] });
       if (path === "/model-configs?scope=library") return Promise.resolve({ data: [] });
       if (path === "/auth-files") return Promise.resolve({ files: [] });
@@ -182,6 +200,7 @@ describe("SystemPage", () => {
 
   test("shows only default root v1 model discovery results", async () => {
     mocks.apiGet.mockImplementation((path: string) => {
+      if (path === "/auth-group-model-owner-mappings") return Promise.resolve({ items: [] });
       if (path === "/model-path-availability") {
         return Promise.resolve({
           data: [
@@ -219,6 +238,56 @@ describe("SystemPage", () => {
     expect(screen.queryByText("gpt-group-only")).not.toBeInTheDocument();
     expect(screen.queryByText("gemini-v1beta-only")).not.toBeInTheDocument();
     expect(mocks.apiGet).toHaveBeenCalledWith("/model-path-availability");
+  });
+
+  test("shows persisted mapped owner models on the system page", async () => {
+    mocks.apiGet.mockImplementation((path: string) => {
+      if (path === "/auth-group-model-owner-mappings") {
+        return Promise.resolve({
+          items: [{ auth_group: "codex", owner: "codex" }],
+        });
+      }
+      if (path === "/model-path-availability") {
+        return Promise.resolve({
+          data: [
+            {
+              id: "gpt-5.5",
+              paths: [{ scope: "root", method: "GET", path: "/v1/models" }],
+            },
+            {
+              id: "gpt-5-codex",
+              paths: [{ scope: "root", method: "GET", path: "/v1/models" }],
+            },
+          ],
+        });
+      }
+      if (path === "/model-configs?scope=library") {
+        return Promise.resolve({
+          data: [{ id: "gpt-5.5", owned_by: "codex", description: "Mapped Codex model" }],
+        });
+      }
+      if (path === "/auth-files") {
+        return Promise.resolve({
+          files: [{ name: "codex-main.json", type: "codex", disabled: false }],
+        });
+      }
+      if (
+        path === "/gemini-api-key" ||
+        path === "/claude-api-key" ||
+        path === "/codex-api-key" ||
+        path === "/vertex-api-key" ||
+        path === "/openai-compatibility"
+      ) {
+        return Promise.resolve([]);
+      }
+      if (path === "/system-stats") return Promise.resolve({ uptime: 10 });
+      return Promise.resolve({});
+    });
+
+    renderPage();
+
+    expect(await screen.findByText("gpt-5.5")).toBeInTheDocument();
+    expect(screen.queryByText("gpt-5-codex")).not.toBeInTheDocument();
   });
 
   test("rechecks the target version before treating the update as successful", async () => {
@@ -586,10 +655,13 @@ describe("SystemPage", () => {
 
     expect(within(dialog).getByTestId("update-progress-console")).toBeInTheDocument();
     await waitFor(() => {
-      expect(within(dialog).getByRole("heading", { name: /update completed/i })).toBeInTheDocument();
+      expect(
+        within(dialog).getByRole("heading", { name: /update completed/i }),
+      ).toBeInTheDocument();
     });
-    expect(within(dialog).getByText(/docker compose pull clirelay/i)).toBeInTheDocument();
     expect(within(dialog).getByText(/The updater finished all steps\./i)).toBeInTheDocument();
+    expect(within(dialog).queryByText(/docker compose pull clirelay/i)).toBeNull();
+    expect(within(dialog).queryByTestId("update-log-stream")).toBeNull();
     expect(
       within(dialog).getByText((_, element) =>
         Boolean(element?.textContent?.trim().match(/^\d+%$/)),

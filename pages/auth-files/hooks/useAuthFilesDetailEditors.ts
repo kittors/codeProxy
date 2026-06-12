@@ -231,6 +231,9 @@ export function useAuthFilesDetailEditors(
 
       const request = (async () => {
         const trend = await usageApi.getAuthFileTrend(authIndex, { days: 7, hours: 5 });
+        if (shouldShowLoading) {
+          setDetailTrendLoading(false);
+        }
         setDetailTrend(trend);
       })();
       detailTrendInFlightRef.current.set(authIndex, request);
@@ -245,7 +248,7 @@ export function useAuthFilesDetailEditors(
         if (detailTrendInFlightRef.current.get(authIndex) === request) {
           detailTrendInFlightRef.current.delete(authIndex);
         }
-        if (shouldShowLoading) {
+        if (shouldShowLoading && !detailTrend) {
           setDetailTrendLoading(false);
         }
       }

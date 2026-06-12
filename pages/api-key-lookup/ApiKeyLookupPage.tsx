@@ -7,9 +7,12 @@ import { LanguageSelector } from "@code-proxy/ui";
 import { Reveal } from "@code-proxy/ui";
 import type { TimeRange } from "@features/monitor-widgets/monitor-constants";
 import { LogContentModal } from "@features/log-content-viewer";
-import { MANAGEMENT_API_PREFIX } from "@code-proxy/api-client";
-import { detectApiBaseFromLocation } from "@code-proxy/api-client";
-import { fetchAvailableModels, fetchPublicChartData, fetchPublicLogs } from "./api";
+import {
+  fetchAvailableModels,
+  fetchPublicChartData,
+  fetchPublicLogContent,
+  fetchPublicLogs,
+} from "./api";
 import { LookupEmptyState } from "./components/LookupEmptyState";
 import { LookupResultsToolbar, type ApiKeyLookupTab } from "./components/LookupResultsToolbar";
 import { LookupSearchSection } from "./components/LookupSearchSection";
@@ -644,25 +647,12 @@ export function ApiKeyLookupPage() {
                   part: "input" | "output",
                   options?: { signal?: AbortSignal },
                 ) => {
-                  const base = detectApiBaseFromLocation();
-                  const url = `${base}${MANAGEMENT_API_PREFIX}/public/usage/logs/${id}/content`;
-                  const resp = await fetch(url, {
-                    method: "POST",
+                  return fetchPublicLogContent({
+                    id,
+                    apiKey: queriedKey,
+                    part,
                     signal: options?.signal,
-                    headers: {
-                      "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({
-                      api_key: queriedKey,
-                      part,
-                      format: "json",
-                    }),
                   });
-                  if (!resp.ok) {
-                    const text = await resp.text().catch(() => "");
-                    throw new Error(text || `Request failed (${resp.status})`);
-                  }
-                  return resp.json();
                 }
               : undefined
           }

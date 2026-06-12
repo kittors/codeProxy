@@ -1,8 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
-import { ConfirmModal } from "@code-proxy/ui";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@code-proxy/ui";
+import {
+  Button,
+  ConfirmModal,
+  Modal,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@code-proxy/ui";
 import type { AuthFileItem } from "@code-proxy/api-client";
 import { proxiesApi, type ProxyPoolEntry } from "@code-proxy/api-client/endpoints/proxies";
 import { OAuthLoginDialog } from "@features/oauth-login";
@@ -41,6 +48,7 @@ import {
 
 const OAUTH_AUTH_FILES_REFRESH_TIMEOUT_MS = 12_000;
 const OAUTH_AUTH_FILES_REFRESH_INTERVAL_MS = 600;
+type AuthFilesConfigModalTab = "excluded" | "alias";
 
 const wait = (ms: number) =>
   new Promise<void>((resolve) => {
@@ -73,7 +81,8 @@ export function AuthFilesPage() {
   const { t } = useTranslation();
   const [searchParams] = useSearchParams();
 
-  const [tab, setTab] = useState<"files" | "excluded" | "alias">("files");
+  const [configModalTab, setConfigModalTab] = useState<AuthFilesConfigModalTab | null>(null);
+  const [configSaving, setConfigSaving] = useState(false);
   const {
     isPending,
     excludedLoading,
@@ -101,15 +110,15 @@ export function AuthFilesPage() {
     importFilteredModels,
     refreshExcluded,
     refreshAlias,
-    saveExcludedProvider,
     deleteExcludedProvider,
     addExcludedProvider,
     addAliasChannel,
-    saveAliasChannel,
     deleteAliasChannel,
+    saveExcludedAll,
+    saveAliasAll,
     openImport,
     applyImport,
-  } = useAuthFilesOAuthConfig(tab);
+  } = useAuthFilesOAuthConfig(configModalTab ?? "files");
 
   const {
     files,
@@ -144,7 +153,7 @@ export function AuthFilesPage() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const filesRef = useRef<AuthFileItem[]>(files);
   const oauthBaselineSignatureRef = useRef("");
-  const previousTabRef = useRef<"files" | "excluded" | "alias" | null>(null);
+  const previousConfigModalTabRef = useRef<AuthFilesConfigModalTab | null>(null);
 
   useEffect(() => {
     filesRef.current = files;
@@ -226,6 +235,7 @@ export function AuthFilesPage() {
 
   const {
     uploading,
+    uploadProgress,
     deletingAll,
     statusUpdating,
     tagSavingByName,
@@ -247,7 +257,6 @@ export function AuthFilesPage() {
   useEffect(() => {
     const state = readAuthFilesUiState();
     if (!state) return;
-    if (state.tab) setTab(state.tab);
     if (typeof state.filter === "string") setFilter(state.filter);
     if (typeof state.tagFilter === "string") setTagFilter(state.tagFilter);
     if (
@@ -263,8 +272,12 @@ export function AuthFilesPage() {
 
   useEffect(() => {
     const requestedTab = searchParams.get("tab");
-    if (requestedTab === "files" || requestedTab === "excluded" || requestedTab === "alias") {
-      setTab(requestedTab);
+    if (requestedTab === "excluded" || requestedTab === "alias") {
+      setConfigModalTab(requestedTab);
+      return;
+    }
+    if (requestedTab === "files") {
+      setConfigModalTab(null);
     }
   }, [searchParams]);
 
@@ -276,13 +289,12 @@ export function AuthFilesPage() {
   }, []);
 
   useEffect(() => {
-    writeAuthFilesUiState({ tab, filter, tagFilter, statusFilter, search, page });
-  }, [filter, page, search, statusFilter, tab, tagFilter]);
+    writeAuthFilesUiState({ tab: "files", filter, tagFilter, statusFilter, search, page });
+  }, [filter, page, search, statusFilter, tagFilter]);
 
   useEffect(() => {
-    if (tab !== "files") return;
     void loadModelOwnerGroups();
-  }, [loadModelOwnerGroups, tab]);
+  }, [loadModelOwnerGroups]);
 
   const updateFilter = useCallback((value: string) => {
     setFilter(value);
@@ -351,7 +363,7 @@ export function AuthFilesPage() {
     forceRefreshPage,
     runQuotaRefreshBatch,
   } = useAuthFilesQuotaState({
-    tab,
+    tab: "files",
     pageItems,
     visibleScopeKey: [
       filter,
@@ -369,7 +381,6 @@ export function AuthFilesPage() {
 
   const refreshQuotaForFiles = useCallback(
     async (targetFiles: AuthFileItem[]) => {
-      if (tab !== "files") return;
       const targets = targetFiles.flatMap((file) => {
         const provider = resolveQuotaProvider(file);
         return provider ? [{ file, provider }] : [];
@@ -377,19 +388,19 @@ export function AuthFilesPage() {
       if (!targets.length) return;
       await runQuotaRefreshBatch(targets, { markAsAutoRefreshing: true, showLoading: true });
     },
-    [runQuotaRefreshBatch, tab],
+    [runQuotaRefreshBatch],
   );
 
   const refreshQuotaForUploadedFiles = useCallback(
     async (result: AuthFilesUploadResult | null, previousNames: Set<string>) => {
-      if (!result || tab !== "files") return;
+      if (!result) return;
       const uploadedNames = new Set(result.uploadedNames);
       const targetFiles = result.files.filter(
         (file) => uploadedNames.has(file.name) || !previousNames.has(file.name),
       );
       await refreshQuotaForFiles(targetFiles);
     },
-    [refreshQuotaForFiles, tab],
+    [refreshQuotaForFiles],
   );
 
   const refreshAfterOAuthAuthorized = useCallback(async () => {
@@ -436,16 +447,34 @@ export function AuthFilesPage() {
     }
   }, [forceRefreshPage, loading, pageItems, refreshFilesForItems, refreshingAll, usageLoading]);
 
+  const closeConfigModal = useCallback(() => {
+    setConfigModalTab(null);
+  }, []);
+
+  const saveConfigModal = useCallback(async () => {
+    if (!configModalTab || configSaving) return;
+    setConfigSaving(true);
+    try {
+      const saved =
+        configModalTab === "alias" ? await saveAliasAll() : await saveExcludedAll();
+      if (saved) {
+        setConfigModalTab(null);
+      }
+    } finally {
+      setConfigSaving(false);
+    }
+  }, [configModalTab, configSaving, saveAliasAll, saveExcludedAll]);
+
   useEffect(() => {
-    const previousTab = previousTabRef.current;
-    previousTabRef.current = tab;
-    if (previousTab === null || previousTab === tab || tab !== "files") return;
+    const previousTab = previousConfigModalTabRef.current;
+    previousConfigModalTabRef.current = configModalTab;
+    if (previousTab === null || configModalTab !== null) return;
 
     void (async () => {
       await loadAll();
       await forceRefreshPage();
     })();
-  }, [forceRefreshPage, loadAll, tab]);
+  }, [configModalTab, forceRefreshPage, loadAll]);
 
   const {
     groupOverviewOpen,
@@ -469,7 +498,7 @@ export function AuthFilesPage() {
     providerOptions,
     quotaByFileName,
     usageIndex,
-    tab,
+    tab: "files",
     runQuotaRefreshBatch,
     resolveQuotaProvider,
     resolveQuotaCardSlots,
@@ -525,122 +554,170 @@ export function AuthFilesPage() {
 
   return (
     <div className="space-y-3">
-      <Tabs value={tab} onValueChange={(next) => setTab(next as typeof tab)}>
-        <TabsList>
-          <TabsTrigger value="files">{t("auth_files_page.files_tab")}</TabsTrigger>
-          <TabsTrigger value="excluded">{t("auth_files_page.excluded_tab")}</TabsTrigger>
-          <TabsTrigger value="alias">{t("auth_files_page.alias_tab")}</TabsTrigger>
-        </TabsList>
+      <AuthFilesFilesTab
+        fileInputRef={fileInputRef}
+        handleUpload={handleUploadAndRefreshQuota}
+        filterChips={filterChips}
+        filter={filter}
+        setFilter={updateFilter}
+        filterCounts={filterCounts}
+        tagFilter={tagFilter}
+        setTagFilter={updateTagFilter}
+        customTagOptions={customTagOptions}
+        statusFilter={statusFilter}
+        setStatusFilter={updateStatusFilter}
+        statusFilterCounts={statusFilterCounts}
+        modelOwnerGroupsLoading={modelOwnerGroupsLoading}
+        modelOwnerGroups={modelOwnerGroups}
+        selectedModelOwner={selectedModelOwner}
+        setSelectedModelOwner={(owner) => setModelOwnerForAuthGroup(filter, owner)}
+        search={search}
+        setSearch={updateSearch}
+        loading={loading}
+        files={files}
+        filesLength={files.length}
+        renderFilesViewModeTabs={renderFilesViewModeTabs}
+        quotaAutoRefreshMs={quotaAutoRefreshMs}
+        setQuotaAutoRefreshMsRaw={setQuotaAutoRefreshMsRaw}
+        normalizeQuotaAutoRefreshMs={normalizeQuotaAutoRefreshMs}
+        openGroupOverview={openGroupOverview}
+        groupOverviewLoading={groupOverviewLoading}
+        filteredFiles={filteredFiles}
+        refreshFilesAndQuota={refreshFilesAndQuota}
+        usageLoading={usageLoading}
+        refreshingAll={refreshingAll || refreshingCurrentPage}
+        uploading={uploading}
+        uploadProgress={uploadProgress}
+        setOauthDialogDefaultTab={setOauthDialogDefaultTab}
+        setOauthDialogOpen={setOAuthDialogOpenWithBaseline}
+        openConfigModal={() => setConfigModalTab("excluded")}
+        selectableFilteredFiles={selectableFilteredFiles}
+        selectedCount={selectedCount}
+        selectCurrentPage={selectCurrentPage}
+        allPageSelected={allPageSelected}
+        selectablePageNames={selectablePageNames}
+        selectFilteredFiles={selectFilteredFiles}
+        allFilteredSelected={allFilteredSelected}
+        setSelectedFileNames={setSelectedFileNames}
+        setConfirm={setConfirm}
+        selectedFileNames={selectedFileNames}
+        deletingAll={deletingAll}
+        pageItems={pageItems}
+        fileColumns={fileColumns}
+        filesViewMode={filesViewMode}
+        selectedFileNameSet={selectedFileNameSet}
+        quotaByFileName={quotaByFileName}
+        resolveQuotaProvider={resolveQuotaProvider}
+        resolveQuotaCardSlots={resolveQuotaCardSlots}
+        refreshQuota={refreshQuota}
+        setFileEnabled={setFileEnabled}
+        statusUpdating={statusUpdating}
+        usageIndex={usageIndex}
+        resolveAuthFileStats={resolveAuthFileStats}
+        toggleFileSelection={toggleFileSelection}
+        formatPlanTypeLabel={formatPlanTypeLabel}
+        translateQuotaText={translateQuotaText}
+        renderRestrictionBadges={renderRestrictionBadges}
+        renderSubscriptionBadge={renderSubscriptionBadge}
+        renderQuotaBar={renderQuotaBar}
+        openTagsEditor={(file) => setTagsEditorFileName(file.name)}
+        openDetail={openDetailWithQuotaRefresh}
+        downloadAuthFile={downloadAuthFile}
+        safePage={safePage}
+        totalPages={totalPages}
+        setPage={setPage}
+        usageData={usageData}
+      />
 
-        <TabsContent value="files">
-          <AuthFilesFilesTab
-            fileInputRef={fileInputRef}
-            handleUpload={handleUploadAndRefreshQuota}
-            filterChips={filterChips}
-            filter={filter}
-            setFilter={updateFilter}
-            filterCounts={filterCounts}
-            tagFilter={tagFilter}
-            setTagFilter={updateTagFilter}
-            customTagOptions={customTagOptions}
-            statusFilter={statusFilter}
-            setStatusFilter={updateStatusFilter}
-            statusFilterCounts={statusFilterCounts}
-            modelOwnerGroupsLoading={modelOwnerGroupsLoading}
-            modelOwnerGroups={modelOwnerGroups}
-            selectedModelOwner={selectedModelOwner}
-            setSelectedModelOwner={(owner) => setModelOwnerForAuthGroup(filter, owner)}
-            search={search}
-            setSearch={updateSearch}
-            loading={loading}
-            files={files}
-            filesLength={files.length}
-            renderFilesViewModeTabs={renderFilesViewModeTabs}
-            quotaAutoRefreshMs={quotaAutoRefreshMs}
-            setQuotaAutoRefreshMsRaw={setQuotaAutoRefreshMsRaw}
-            normalizeQuotaAutoRefreshMs={normalizeQuotaAutoRefreshMs}
-            openGroupOverview={openGroupOverview}
-            groupOverviewLoading={groupOverviewLoading}
-            filteredFiles={filteredFiles}
-            refreshFilesAndQuota={refreshFilesAndQuota}
-            usageLoading={usageLoading}
-            refreshingAll={refreshingAll || refreshingCurrentPage}
-            uploading={uploading}
-            setOauthDialogDefaultTab={setOauthDialogDefaultTab}
-            setOauthDialogOpen={setOAuthDialogOpenWithBaseline}
-            selectableFilteredFiles={selectableFilteredFiles}
-            selectedCount={selectedCount}
-            selectCurrentPage={selectCurrentPage}
-            allPageSelected={allPageSelected}
-            selectablePageNames={selectablePageNames}
-            selectFilteredFiles={selectFilteredFiles}
-            allFilteredSelected={allFilteredSelected}
-            setSelectedFileNames={setSelectedFileNames}
-            setConfirm={setConfirm}
-            selectedFileNames={selectedFileNames}
-            deletingAll={deletingAll}
-            pageItems={pageItems}
-            fileColumns={fileColumns}
-            filesViewMode={filesViewMode}
-            selectedFileNameSet={selectedFileNameSet}
-            quotaByFileName={quotaByFileName}
-            resolveQuotaProvider={resolveQuotaProvider}
-            resolveQuotaCardSlots={resolveQuotaCardSlots}
-            refreshQuota={refreshQuota}
-            setFileEnabled={setFileEnabled}
-            statusUpdating={statusUpdating}
-            usageIndex={usageIndex}
-            resolveAuthFileStats={resolveAuthFileStats}
-            toggleFileSelection={toggleFileSelection}
-            formatPlanTypeLabel={formatPlanTypeLabel}
-            translateQuotaText={translateQuotaText}
-            renderRestrictionBadges={renderRestrictionBadges}
-            renderSubscriptionBadge={renderSubscriptionBadge}
-            renderQuotaBar={renderQuotaBar}
-            openTagsEditor={(file) => setTagsEditorFileName(file.name)}
-            openDetail={openDetailWithQuotaRefresh}
-            downloadAuthFile={downloadAuthFile}
-            safePage={safePage}
-            totalPages={totalPages}
-            setPage={setPage}
-            usageData={usageData}
-          />
-        </TabsContent>
+      <Modal
+        open={configModalTab !== null}
+        title={
+          configModalTab === "alias"
+            ? t("auth_files_page.alias_title")
+            : t("auth_files_page.excluded_title")
+        }
+        description={
+          configModalTab === "alias"
+            ? t("auth_files.model_alias_desc")
+            : t("auth_files_page.excluded_desc")
+        }
+        maxWidth="max-w-5xl"
+        bodyHeightClassName="h-[76vh] max-h-[76vh]"
+        bodyOverflowClassName="overflow-hidden"
+        bodyClassName="flex min-h-0 flex-col"
+        footer={
+          <>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={closeConfigModal}
+              disabled={configSaving}
+            >
+              {t("common.cancel")}
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => void saveConfigModal()}
+              disabled={configSaving || excludedLoading || aliasLoading || isPending}
+            >
+              {configSaving ? t("common.saving") : t("auth_files.save")}
+            </Button>
+          </>
+        }
+        onClose={closeConfigModal}
+      >
+        {configModalTab ? (
+          <Tabs
+            value={configModalTab}
+            onValueChange={(next) => setConfigModalTab(next as AuthFilesConfigModalTab)}
+            size="sm"
+          >
+            <div className="mb-4 flex shrink-0 justify-start">
+              <TabsList>
+                <TabsTrigger value="excluded">{t("auth_files_page.excluded_tab")}</TabsTrigger>
+                <TabsTrigger value="alias">{t("auth_files_page.alias_tab")}</TabsTrigger>
+              </TabsList>
+            </div>
 
-        <TabsContent value="excluded">
-          <AuthFilesExcludedTab
-            excludedLoading={excludedLoading}
-            isPending={isPending}
-            refreshExcluded={refreshExcluded}
-            excludedUnsupported={excludedUnsupported}
-            excludedNewProvider={excludedNewProvider}
-            setExcludedNewProvider={setExcludedNewProvider}
-            addExcludedProvider={addExcludedProvider}
-            excluded={excluded}
-            excludedDraft={excludedDraft}
-            setExcludedDraft={setExcludedDraft}
-            saveExcludedProvider={saveExcludedProvider}
-            deleteExcludedProvider={deleteExcludedProvider}
-          />
-        </TabsContent>
+            <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+              <TabsContent value="excluded">
+                <AuthFilesExcludedTab
+                  excludedLoading={excludedLoading}
+                  isPending={isPending}
+                  refreshExcluded={refreshExcluded}
+                  excludedUnsupported={excludedUnsupported}
+                  excludedNewProvider={excludedNewProvider}
+                  setExcludedNewProvider={setExcludedNewProvider}
+                  addExcludedProvider={addExcludedProvider}
+                  excluded={excluded}
+                  excludedDraft={excludedDraft}
+                  setExcludedDraft={setExcludedDraft}
+                  deleteExcludedProvider={deleteExcludedProvider}
+                  showHeading={false}
+                />
+              </TabsContent>
 
-        <TabsContent value="alias">
-          <AuthFilesAliasTab
-            aliasLoading={aliasLoading}
-            isPending={isPending}
-            refreshAlias={refreshAlias}
-            aliasUnsupported={aliasUnsupported}
-            aliasNewChannel={aliasNewChannel}
-            setAliasNewChannel={setAliasNewChannel}
-            addAliasChannel={addAliasChannel}
-            aliasEditing={aliasEditing}
-            setAliasEditing={setAliasEditing}
-            openImport={openImport}
-            saveAliasChannel={saveAliasChannel}
-            deleteAliasChannel={deleteAliasChannel}
-          />
-        </TabsContent>
-      </Tabs>
+              <TabsContent value="alias">
+                <AuthFilesAliasTab
+                  aliasLoading={aliasLoading}
+                  isPending={isPending}
+                  refreshAlias={refreshAlias}
+                  aliasUnsupported={aliasUnsupported}
+                  aliasNewChannel={aliasNewChannel}
+                  setAliasNewChannel={setAliasNewChannel}
+                  addAliasChannel={addAliasChannel}
+                  aliasEditing={aliasEditing}
+                  setAliasEditing={setAliasEditing}
+                  openImport={openImport}
+                  deleteAliasChannel={deleteAliasChannel}
+                  showHeading={false}
+                />
+              </TabsContent>
+            </div>
+          </Tabs>
+        ) : null}
+      </Modal>
 
       <AuthFileDetailModal
         open={detailOpen}

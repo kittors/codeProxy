@@ -7,9 +7,12 @@ import {
   useMemo,
   useState,
 } from "react";
-import { flushSync } from "react-dom";
 import { Moon, Sun } from "lucide-react";
 const THEME_STORAGE_KEY = "code-proxy-admin-theme";
+const THEME_TRANSITION_LOCK_CLASS = "theme-transition-lock";
+const THEME_TRANSITION_LOCK_RELEASE_MS = 120;
+
+let transitionLockTimer: number | null = null;
 
 export type ThemeMode = "light" | "dark";
 
@@ -45,26 +48,60 @@ const resolveSystemTheme = (): ThemeMode => {
 };
 
 const applyThemeToDom = (mode: ThemeMode): void => {
-  document.documentElement.classList.toggle("dark", mode === "dark");
+  if (typeof document === "undefined") {
+    return;
+  }
+
+  const isDark = mode === "dark";
+
+  document.documentElement.classList.toggle("dark", isDark);
+  document.documentElement.style.colorScheme = mode;
+  if (isDark) {
+    document.documentElement.setAttribute("data-theme", "dark");
+  } else {
+    document.documentElement.removeAttribute("data-theme");
+  }
 };
 
 const persistTheme = (mode: ThemeMode): void => {
-  localStorage.setItem(THEME_STORAGE_KEY, mode);
+  try {
+    localStorage.setItem(THEME_STORAGE_KEY, mode);
+  } catch {
+    // Ignore unavailable storage, e.g. hardened browser settings.
+  }
 };
 
-const runWithViewTransition = (fn: () => void) => {
-  const startViewTransition = document.startViewTransition;
-  if (typeof startViewTransition !== "function") {
-    fn();
+const lockThemeTransitions = (): void => {
+  if (typeof document === "undefined") {
     return;
   }
-  try {
-    startViewTransition(() => {
-      flushSync(fn);
-    });
-  } catch {
-    fn();
+
+  const root = document.documentElement;
+  root.classList.add(THEME_TRANSITION_LOCK_CLASS);
+
+  if (transitionLockTimer !== null) {
+    window.clearTimeout(transitionLockTimer);
+    transitionLockTimer = null;
   }
+
+  // Ensure the transition lock wins in computed styles before color classes change.
+  void root.offsetHeight;
+
+  const release = () => {
+    transitionLockTimer = window.setTimeout(() => {
+      root.classList.remove(THEME_TRANSITION_LOCK_CLASS);
+      transitionLockTimer = null;
+    }, THEME_TRANSITION_LOCK_RELEASE_MS);
+  };
+
+  if (typeof window.requestAnimationFrame !== "function") {
+    release();
+    return;
+  }
+
+  window.requestAnimationFrame(() => {
+    window.requestAnimationFrame(release);
+  });
 };
 
 export function ThemeProvider({ children }: PropsWithChildren) {
@@ -78,9 +115,10 @@ export function ThemeProvider({ children }: PropsWithChildren) {
   }, [mode]);
 
   const setMode = useCallback((next: ThemeMode) => {
+    lockThemeTransitions();
     applyThemeToDom(next);
     persistTheme(next);
-    runWithViewTransition(() => setModeState(next));
+    setModeState(next);
   }, []);
 
   const toggle = useCallback(() => {

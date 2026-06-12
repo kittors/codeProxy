@@ -45,6 +45,19 @@ describe("LogsPage", () => {
     vi.clearAllMocks();
   });
 
+  test("uses a backend-safe limit for the initial log fetch", async () => {
+    await i18n.changeLanguage("zh-CN");
+
+    mocks.fetchLogs.mockResolvedValue({
+      lines: [],
+      "latest-timestamp": null,
+    });
+
+    renderLogsPage();
+
+    await waitFor(() => expect(mocks.fetchLogs).toHaveBeenCalledWith({ limit: 20000 }));
+  });
+
   test("treats an empty error log list as loaded instead of retrying", async () => {
     await i18n.changeLanguage("zh-CN");
     const user = userEvent.setup();

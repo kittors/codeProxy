@@ -7,17 +7,16 @@ import {
   useMemo,
   useState,
 } from "react";
-import { AUTH_STORAGE_KEY } from "@code-proxy/api-client";
 import {
   computeManagementApiBase,
+  readPersistedAuthSnapshot,
   detectApiBaseFromLocation,
+  clearPersistedAuthSnapshot,
   normalizeApiBase,
+  writePersistedAuthSnapshot,
 } from "@code-proxy/api-client";
 import { apiClient } from "@code-proxy/api-client";
 import { configApi } from "@code-proxy/api-client";
-import type { AuthSnapshot } from "@code-proxy/api-client";
-
-const AUTH_PERSIST_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
 interface AuthContextState {
   state: {
@@ -45,46 +44,6 @@ interface AuthContextState {
 
 const AuthContext = createContext<AuthContextState | null>(null);
 
-interface PersistedAuthSnapshot extends AuthSnapshot {
-  expiresAt: number;
-}
-
-const readAuthSnapshot = (): AuthSnapshot | null => {
-  try {
-    const raw = window.localStorage.getItem(AUTH_STORAGE_KEY);
-    if (!raw) {
-      return null;
-    }
-    const parsed = JSON.parse(raw) as Partial<PersistedAuthSnapshot>;
-    if (typeof parsed.expiresAt !== "number" || parsed.expiresAt <= Date.now()) {
-      window.localStorage.removeItem(AUTH_STORAGE_KEY);
-      return null;
-    }
-    if (!parsed.apiBase || !parsed.managementKey) {
-      return null;
-    }
-    return {
-      apiBase: normalizeApiBase(parsed.apiBase),
-      managementKey: parsed.managementKey,
-      rememberPassword: Boolean(parsed.rememberPassword),
-    };
-  } catch {
-    return null;
-  }
-};
-
-const writeAuthSnapshot = (snapshot: AuthSnapshot): void => {
-  const payload: PersistedAuthSnapshot = {
-    ...snapshot,
-    expiresAt: Date.now() + AUTH_PERSIST_TTL_MS,
-  };
-  window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(payload));
-};
-
-const clearAuthSnapshot = (): void => {
-  window.localStorage.removeItem(AUTH_STORAGE_KEY);
-};
-
 export function AuthProvider({ children }: PropsWithChildren) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isRestoring, setIsRestoring] = useState(true);
@@ -96,7 +55,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   const bootstrap = useCallback(async () => {
     const fallbackBase = detectApiBaseFromLocation();
-    const snapshot = readAuthSnapshot();
+    const snapshot = readPersistedAuthSnapshot();
 
     const resolvedBase = snapshot?.apiBase ?? fallbackBase;
     const resolvedKey = snapshot?.managementKey ?? "";
@@ -122,7 +81,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       setIsAuthenticated(true);
     } catch {
       setIsAuthenticated(false);
-      clearAuthSnapshot();
+      clearPersistedAuthSnapshot();
     } finally {
       setIsRestoring(false);
     }
@@ -135,7 +94,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
   useEffect(() => {
     const handleUnauthorized = () => {
       setIsAuthenticated(false);
-      clearAuthSnapshot();
+      clearPersistedAuthSnapshot();
     };
 
     const handleVersion = (event: Event) => {
@@ -174,13 +133,13 @@ export function AuthProvider({ children }: PropsWithChildren) {
       setIsAuthenticated(true);
 
       if (input.rememberPassword) {
-        writeAuthSnapshot({
+        writePersistedAuthSnapshot({
           apiBase: normalizedBase,
           managementKey: trimmedKey,
           rememberPassword: true,
         });
       } else {
-        clearAuthSnapshot();
+        clearPersistedAuthSnapshot();
       }
     },
     [],
@@ -189,7 +148,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const logout = useCallback(() => {
     setIsAuthenticated(false);
     setManagementKey("");
-    clearAuthSnapshot();
+    clearPersistedAuthSnapshot();
   }, []);
 
   const restore = useCallback(async () => {

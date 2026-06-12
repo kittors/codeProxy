@@ -408,15 +408,25 @@ export function GlobalIconButtonTooltip({
   const activeRef = useRef<GlobalTooltipState | null>(null);
   const [active, setActive] = useState<GlobalTooltipState | null>(null);
 
-  const hide = useCallback((relatedTarget?: EventTarget | null) => {
+  const dismiss = useCallback(() => {
     const current = activeRef.current;
     if (!current) return;
-    if (relatedTarget instanceof Node && current.anchor.contains(relatedTarget)) return;
 
     restoreNativeTitle(current.anchor);
     activeRef.current = null;
     setActive(null);
   }, []);
+
+  const hide = useCallback(
+    (relatedTarget?: EventTarget | null) => {
+      const current = activeRef.current;
+      if (!current) return;
+      if (relatedTarget instanceof Node && current.anchor.contains(relatedTarget)) return;
+
+      dismiss();
+    },
+    [dismiss],
+  );
 
   const show = useCallback((target: EventTarget | null) => {
     const next = resolveIconButtonTooltip(target);
@@ -435,11 +445,13 @@ export function GlobalIconButtonTooltip({
     const handleMouseOut = (event: MouseEvent) => hide(event.relatedTarget);
     const handleFocusIn = (event: FocusEvent) => show(event.target);
     const handleFocusOut = (event: FocusEvent) => hide(event.relatedTarget);
+    const handlePointerDown = () => dismiss();
 
     document.addEventListener("mouseover", handleMouseOver);
     document.addEventListener("mouseout", handleMouseOut);
     document.addEventListener("focusin", handleFocusIn);
     document.addEventListener("focusout", handleFocusOut);
+    document.addEventListener("pointerdown", handlePointerDown, true);
 
     return () => {
       restoreNativeTitle(activeRef.current?.anchor);
@@ -447,8 +459,9 @@ export function GlobalIconButtonTooltip({
       document.removeEventListener("mouseout", handleMouseOut);
       document.removeEventListener("focusin", handleFocusIn);
       document.removeEventListener("focusout", handleFocusOut);
+      document.removeEventListener("pointerdown", handlePointerDown, true);
     };
-  }, [hide, show]);
+  }, [dismiss, hide, show]);
 
   return (
     <TooltipBubble

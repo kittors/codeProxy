@@ -16,8 +16,8 @@ interface AuthFilesExcludedTabProps {
   excluded: Record<string, string[]>;
   excludedDraft: Record<string, string>;
   setExcludedDraft: Dispatch<SetStateAction<Record<string, string>>>;
-  saveExcludedProvider: (provider: string, text: string) => Promise<void>;
-  deleteExcludedProvider: (provider: string) => Promise<void>;
+  deleteExcludedProvider: (provider: string) => void;
+  showHeading?: boolean;
 }
 
 export function AuthFilesExcludedTab({
@@ -31,22 +31,26 @@ export function AuthFilesExcludedTab({
   excluded,
   excludedDraft,
   setExcludedDraft,
-  saveExcludedProvider,
   deleteExcludedProvider,
+  showHeading = true,
 }: AuthFilesExcludedTabProps) {
   const { t } = useTranslation();
 
   return (
-    <div className="mt-4 space-y-4">
+    <div className={showHeading ? "mt-4 space-y-4" : "space-y-4"}>
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <div>
-          <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-            {t("auth_files_page.excluded_title")}
-          </h2>
-          <p className="mt-1 text-sm text-slate-500 dark:text-neutral-400">
-            {t("auth_files_page.excluded_desc")}
-          </p>
-        </div>
+        {showHeading ? (
+          <div>
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+              {t("auth_files_page.excluded_title")}
+            </h2>
+            <p className="mt-1 text-sm text-slate-500 dark:text-neutral-400">
+              {t("auth_files_page.excluded_desc")}
+            </p>
+          </div>
+        ) : (
+          <div />
+        )}
         <div className="flex flex-wrap items-center gap-2">
           <Button
             variant="secondary"
@@ -126,19 +130,9 @@ export function AuthFilesExcludedTab({
                         </div>
                         <div className="flex items-center gap-2">
                           <Button
-                            variant="secondary"
-                            size="sm"
-                            onClick={() =>
-                              void saveExcludedProvider(provider, excludedDraft[provider] ?? text)
-                            }
-                            disabled={isPending || excludedUnsupported}
-                          >
-                            {t("auth_files.save")}
-                          </Button>
-                          <Button
                             variant="danger"
                             size="sm"
-                            onClick={() => void deleteExcludedProvider(provider)}
+                            onClick={() => deleteExcludedProvider(provider)}
                             disabled={isPending || excludedUnsupported}
                           >
                             {t("common.delete")}

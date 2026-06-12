@@ -11,6 +11,15 @@
   --font-sans: "Inter", "SF Pro Text", "PingFang SC", "Microsoft YaHei", sans-serif;
 }
 
+html.theme-transition-lock,
+html.theme-transition-lock *,
+html.theme-transition-lock *::before,
+html.theme-transition-lock *::after {
+  transition-property: none !important;
+  transition-duration: 0s !important;
+  transition-delay: 0s !important;
+}
+
 /* 统一交互元素鼠标样式，便于用户识别可点击区域 */
 :where(
   a[href],

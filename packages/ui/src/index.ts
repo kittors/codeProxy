@@ -19,6 +19,13 @@ export type { EChartProps, EChartEvents as EChartRendererEvents } from "./charts
 
 export { PageBackground } from "./layout/PageBackground";
 
+export { PaginationBar, getPaginationItems } from "./navigation/PaginationBar";
+export type {
+  PaginationBarLabels,
+  PaginationBarProps,
+  PaginationRangeInfo,
+} from "./navigation/PaginationBar";
+
 export { ConfirmModal } from "./overlays/ConfirmModal";
 export { ImagePreviewOverlay } from "./overlays/ImagePreviewOverlay";
 export { Modal } from "./overlays/Modal";
@@ -35,6 +42,7 @@ export { Button, buttonClassName } from "./primitives/Button";
 export { Card } from "./primitives/Card";
 export { Checkbox } from "./primitives/Checkbox";
 export { DateTimePicker } from "./primitives/DateTimePicker";
+export { Fieldset } from "./primitives/Fieldset";
 export { TextInput } from "./primitives/Input";
 export { MultiSelect } from "./primitives/MultiSelect";
 export type { MultiSelectOption } from "./primitives/MultiSelect";

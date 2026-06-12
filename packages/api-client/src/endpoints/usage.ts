@@ -56,6 +56,7 @@ export interface AuthFileTrendUsagePoint {
   date?: string;
   hour?: string;
   requests: number;
+  cost?: number;
 }
 
 export interface AuthFileTrendQuotaPoint {
@@ -78,6 +79,7 @@ export interface AuthFileTrendResponse {
   request_total: number;
   cycle_request_total: number;
   cycle_cost_total: number;
+  weekly_quota_used_percent: number | null;
   cycle_start: string;
   daily_usage: AuthFileTrendUsagePoint[];
   hourly_usage: AuthFileTrendUsagePoint[];
@@ -247,6 +249,11 @@ export const usageApi = {
       request_total: resp?.request_total ?? 0,
       cycle_request_total: resp?.cycle_request_total ?? 0,
       cycle_cost_total: resp?.cycle_cost_total ?? 0,
+      weekly_quota_used_percent:
+        typeof resp?.weekly_quota_used_percent === "number" &&
+        Number.isFinite(resp.weekly_quota_used_percent)
+          ? resp.weekly_quota_used_percent
+          : null,
       cycle_start: resp?.cycle_start ?? "",
       daily_usage: Array.isArray(resp?.daily_usage) ? resp.daily_usage : [],
       hourly_usage: Array.isArray(resp?.hourly_usage) ? resp.hourly_usage : [],
@@ -272,6 +279,10 @@ export const usageApi = {
     models?: string[];
     channels?: string[];
     statuses?: string[];
+    api_keys_empty?: boolean;
+    models_empty?: boolean;
+    channels_empty?: boolean;
+    statuses_empty?: boolean;
   }): Promise<UsageLogsResponse> {
     const qs = new URLSearchParams();
     if (params.page) qs.set("page", String(params.page));
@@ -282,6 +293,10 @@ export const usageApi = {
     appendUniqueParams(qs, "model", params.models);
     appendUniqueParams(qs, "channel", params.channels);
     appendUniqueParams(qs, "status", params.statuses);
+    if (params.api_keys_empty) qs.set("api_keys_empty", "1");
+    if (params.models_empty) qs.set("models_empty", "1");
+    if (params.channels_empty) qs.set("channels_empty", "1");
+    if (params.statuses_empty) qs.set("statuses_empty", "1");
     // Backward compatibility: fallback to single-value params if no multi-value
     if (!params.api_keys?.length && params.api_key)
       qs.set("api_key", params.api_key);

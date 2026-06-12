@@ -26,10 +26,15 @@ const getSystemTheme = (): ResolvedTheme => {
 };
 
 const applyTheme = (resolved: ResolvedTheme) => {
-  if (resolved === "dark") {
-    document.documentElement.setAttribute("data-theme", "dark");
+  const isDark = resolved === "dark";
+  const root = document.documentElement;
+
+  root.classList.toggle("dark", isDark);
+  root.style.colorScheme = resolved;
+  if (isDark) {
+    root.setAttribute("data-theme", "dark");
   } else {
-    document.documentElement.removeAttribute("data-theme");
+    root.removeAttribute("data-theme");
   }
 };
 

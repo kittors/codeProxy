@@ -2,12 +2,14 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 
 const getMock = vi.fn();
 const putMock = vi.fn();
+const patchMock = vi.fn();
 const postMock = vi.fn();
 
 vi.mock("../../client/client", () => ({
   apiClient: {
     get: getMock,
     put: putMock,
+    patch: patchMock,
     post: postMock,
   },
 }));
@@ -16,6 +18,7 @@ describe("proxiesApi", () => {
   beforeEach(() => {
     getMock.mockReset();
     putMock.mockReset();
+    patchMock.mockReset();
     postMock.mockReset();
   });
 
@@ -58,5 +61,24 @@ describe("proxiesApi", () => {
       expect.objectContaining({ timeoutMs: 12000 }),
     );
     expect(result).toEqual({ ok: true, statusCode: 204, latencyMs: 24 });
+  });
+
+  test("updates one proxy entry through the single-item patch API", async () => {
+    const { proxiesApi } = await import("@code-proxy/api-client/endpoints/proxies");
+    patchMock.mockResolvedValue({ status: "ok" });
+
+    await proxiesApi.update("hk", {
+      name: "Updated HK",
+      url: "http://127.0.0.1:7891",
+      enabled: false,
+      description: "rotated",
+    });
+
+    expect(patchMock).toHaveBeenCalledWith("/proxy-pool/hk", {
+      name: "Updated HK",
+      url: "http://127.0.0.1:7891",
+      enabled: false,
+      description: "rotated",
+    });
   });
 });

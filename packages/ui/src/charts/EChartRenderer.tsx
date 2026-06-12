@@ -12,6 +12,9 @@ export type EChartProps = {
   notMerge?: boolean;
   replaceMerge?: string | string[];
   overflowVisible?: boolean;
+  loading?: boolean;
+  loadingText?: string;
+  initialAnimationGuardMs?: number;
 };
 
 export function EChartRenderer({
@@ -21,6 +24,9 @@ export function EChartRenderer({
   notMerge = false,
   replaceMerge,
   overflowVisible = false,
+  loading = false,
+  loadingText = "",
+  initialAnimationGuardMs = 0,
 }: EChartProps) {
   const {
     state: { mode },
@@ -31,13 +37,37 @@ export function EChartRenderer({
   const instanceRef = useRef<any>(null);
   const rafIdRef = useRef<number | null>(null);
   const lastSizeRef = useRef<{ width: number; height: number } | null>(null);
+  const pendingGuardedResizeRef = useRef<{ width: number; height: number } | null>(null);
+  const guardedResizeTimerRef = useRef<number | null>(null);
+  const initialAnimationGuardUntilRef = useRef(0);
   const didResizeOnceRef = useRef(false);
+
+  const now = () => Date.now();
 
   const requestResize = (width: number, height: number) => {
     const container = containerRef.current;
     if (!container) return;
 
     lastSizeRef.current = { width, height };
+
+    const guardUntil = initialAnimationGuardUntilRef.current;
+    if (guardUntil > 0) {
+      const remainingMs = guardUntil - now();
+      if (remainingMs > 0) {
+        pendingGuardedResizeRef.current = { width, height };
+        if (guardedResizeTimerRef.current === null) {
+          guardedResizeTimerRef.current = window.setTimeout(() => {
+            guardedResizeTimerRef.current = null;
+            const size = pendingGuardedResizeRef.current ?? lastSizeRef.current;
+            pendingGuardedResizeRef.current = null;
+            if (size) requestResize(size.width, size.height);
+          }, remainingMs);
+        }
+        return;
+      }
+      initialAnimationGuardUntilRef.current = 0;
+    }
+
     if (rafIdRef.current !== null) return;
 
     rafIdRef.current = window.requestAnimationFrame(() => {
@@ -75,6 +105,28 @@ export function EChartRenderer({
   };
 
   useEffect(() => {
+    const guardMs = Math.max(0, initialAnimationGuardMs);
+    if (guardMs > 0) {
+      initialAnimationGuardUntilRef.current = now() + guardMs;
+      pendingGuardedResizeRef.current = null;
+      if (guardedResizeTimerRef.current !== null) {
+        window.clearTimeout(guardedResizeTimerRef.current);
+        guardedResizeTimerRef.current = null;
+      }
+      return;
+    }
+
+    initialAnimationGuardUntilRef.current = 0;
+    if (guardedResizeTimerRef.current === null) return;
+
+    window.clearTimeout(guardedResizeTimerRef.current);
+    guardedResizeTimerRef.current = null;
+    const size = pendingGuardedResizeRef.current ?? lastSizeRef.current;
+    pendingGuardedResizeRef.current = null;
+    if (size) requestResize(size.width, size.height);
+  }, [initialAnimationGuardMs]);
+
+  useEffect(() => {
     const element = containerRef.current;
     if (!element) return;
 
@@ -90,6 +142,10 @@ export function EChartRenderer({
       if (rafIdRef.current !== null) {
         window.cancelAnimationFrame(rafIdRef.current);
         rafIdRef.current = null;
+      }
+      if (guardedResizeTimerRef.current !== null) {
+        window.clearTimeout(guardedResizeTimerRef.current);
+        guardedResizeTimerRef.current = null;
       }
     };
   }, []);
@@ -124,6 +180,26 @@ export function EChartRenderer({
     lastSizeRef.current = null;
   }, [mode]);
 
+  useEffect(() => {
+    const instance = instanceRef.current ?? chartRef.current?.getEchartsInstance?.();
+    if (!instance) return;
+    try {
+      if (loading) {
+        instance.showLoading?.({
+          text: loadingText,
+          color: "#2563eb",
+          textColor: mode === "dark" ? "#e2e8f0" : "#475569",
+          maskColor: mode === "dark" ? "rgba(15, 23, 42, 0.48)" : "rgba(248, 250, 252, 0.64)",
+          zlevel: 1,
+        });
+      } else {
+        instance.hideLoading?.();
+      }
+    } catch {
+      // ignore
+    }
+  }, [loading, loadingText, mode]);
+
   return (
     <div
       ref={containerRef}
@@ -140,7 +216,14 @@ export function EChartRenderer({
         option={option}
         theme={mode === "dark" ? "dark" : undefined}
         style={{ height: "100%", width: "100%" }}
-        showLoading={false}
+        showLoading={loading}
+        loadingOption={{
+          text: loadingText,
+          color: "#2563eb",
+          textColor: mode === "dark" ? "#e2e8f0" : "#475569",
+          maskColor: mode === "dark" ? "rgba(15, 23, 42, 0.48)" : "rgba(248, 250, 252, 0.64)",
+          zlevel: 1,
+        }}
         notMerge={notMerge}
         replaceMerge={replaceMerge}
         autoResize={false}
@@ -150,7 +233,9 @@ export function EChartRenderer({
           instanceRef.current = instance;
 
           try {
-            instance?.hideLoading?.();
+            if (!loading) {
+              instance?.hideLoading?.();
+            }
           } catch {
             // ignore
           }

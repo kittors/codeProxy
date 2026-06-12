@@ -911,6 +911,19 @@ const readCodexFilenameChannelName = (fileName: string): string => {
   return "";
 };
 
+const readCodexFilenamePlanType = (fileName: string): string | null => {
+  const normalized = String(fileName ?? "")
+    .trim()
+    .toLowerCase();
+  const base = trimAuthFileExtension(normalized);
+  if (!base.startsWith("codex-")) return null;
+  const rest = base.slice("codex-".length);
+  if (!rest) return null;
+  const parts = rest.split("-").filter(Boolean);
+  const lastPart = parts.at(-1) ?? "";
+  return codexFilenamePlanSuffixes.has(lastPart) ? lastPart : null;
+};
+
 export const readAuthFileChannelName = (file: AuthFileItem): string => {
   const candidates = [file.label, file.email];
   for (const candidate of candidates) {
@@ -998,7 +1011,10 @@ export const shouldShowAuthFileDisplayTag = (file: AuthFileItem, tag: unknown): 
 export const resolveAuthFilePlanType = (
   file: AuthFileItem,
   quotaState?: QuotaState | null,
-): string | null => resolveCodexPlanType(file) ?? normalizePlanType(quotaState?.planType);
+): string | null =>
+  resolveCodexPlanType(file) ??
+  readCodexFilenamePlanType(String(file.name || "")) ??
+  normalizePlanType(quotaState?.planType);
 
 export const resolveAuthFileSupplementalTags = (
   file: AuthFileItem,

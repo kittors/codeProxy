@@ -33,9 +33,10 @@ const mocks = vi.hoisted(() => ({
     request_total: 3,
     cycle_request_total: 2,
     cycle_cost_total: 1.2345,
+    weekly_quota_used_percent: 8,
     cycle_start: "2026-04-27T16:01:21Z",
-    daily_usage: [{ date: "2026-04-30", requests: 2 }],
-    hourly_usage: [{ hour: "2026-04-30 16:00", requests: 1 }],
+    daily_usage: [{ date: "2026-04-30", requests: 2, cost: 0.0123 }],
+    hourly_usage: [{ hour: "2026-04-30 16:00", requests: 1, cost: 0.0045 }],
     quota_series: [],
   })),
   getUsageLogs: vi.fn(async () => ({ items: [], total: 0, page: 1, size: 200 })),
@@ -58,12 +59,16 @@ const mocks = vi.hoisted(() => ({
     { value: "openai", label: "OpenAI", description: "OpenAI models", enabled: true },
     { value: "anthropic", label: "Anthropic", description: "Anthropic models", enabled: true },
   ]),
+  getAuthGroupModelOwnerMappingMap: vi.fn(async () => ({})),
+  saveAuthGroupModelOwnerMapping: vi.fn(async (_authGroup: string, _owner: string) => undefined),
   upload: vi.fn(async () => ({})),
   submitCallback: vi.fn(async () => ({})),
   getAuthStatus: vi.fn(async () => ({ status: "pending" })),
   startAuth: vi.fn(async () => ({ url: "https://example.test/oauth", state: "state-1" })),
   reconcile: vi.fn(async () => ({})),
 }));
+
+let authGroupOwnerMappingMap: Record<string, string> = {};
 
 vi.mock("@code-proxy/api-client", async (importOriginal) => {
   const mod = await importOriginal<typeof import("@code-proxy/api-client")>();
@@ -88,6 +93,8 @@ vi.mock("@code-proxy/api-client", async (importOriginal) => {
       ...mod.modelsApi,
       getModelConfigs: mocks.getModelConfigs,
       getModelOwnerPresets: mocks.getModelOwnerPresets,
+      getAuthGroupModelOwnerMappingMap: mocks.getAuthGroupModelOwnerMappingMap,
+      saveAuthGroupModelOwnerMapping: mocks.saveAuthGroupModelOwnerMapping,
     },
     quotaApi: { ...mod.quotaApi, reconcile: mocks.reconcile },
     usageApi: {
@@ -143,6 +150,12 @@ const useTableFilesView = () => {
   window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("table"));
 };
 
+async function selectFileGroup(name: string | RegExp) {
+  const user = userEvent.setup();
+  await user.click(screen.getByRole("combobox", { name: "File group" }));
+  await user.click(await screen.findByRole("option", { name }));
+}
+
 describe("AuthFilesPage files table", () => {
   beforeEach(async () => {
     await i18n.changeLanguage("en");
@@ -170,9 +183,10 @@ describe("AuthFilesPage files table", () => {
       request_total: 3,
       cycle_request_total: 2,
       cycle_cost_total: 1.2345,
+      weekly_quota_used_percent: 8,
       cycle_start: "2026-04-27T16:01:21Z",
-      daily_usage: [{ date: "2026-04-30", requests: 2 }],
-      hourly_usage: [{ hour: "2026-04-30 16:00", requests: 1 }],
+      daily_usage: [{ date: "2026-04-30", requests: 2, cost: 0.0123 }],
+      hourly_usage: [{ hour: "2026-04-30 16:00", requests: 1, cost: 0.0045 }],
       quota_series: [],
     }));
     mocks.getUsageLogs.mockReset();
@@ -212,6 +226,18 @@ describe("AuthFilesPage files table", () => {
       { value: "openai", label: "OpenAI", description: "OpenAI models", enabled: true },
       { value: "anthropic", label: "Anthropic", description: "Anthropic models", enabled: true },
     ]);
+    authGroupOwnerMappingMap = {};
+    mocks.getAuthGroupModelOwnerMappingMap.mockReset();
+    mocks.getAuthGroupModelOwnerMappingMap.mockImplementation(async () => ({
+      ...authGroupOwnerMappingMap,
+    }));
+    mocks.saveAuthGroupModelOwnerMapping.mockReset();
+    mocks.saveAuthGroupModelOwnerMapping.mockImplementation(
+      async (authGroup: string, owner: string) => {
+        if (owner) authGroupOwnerMappingMap[authGroup] = owner;
+        else delete authGroupOwnerMappingMap[authGroup];
+      },
+    );
     mocks.upload.mockReset();
     mocks.upload.mockImplementation(async () => ({}));
     mocks.submitCallback.mockReset();
@@ -434,6 +460,71 @@ describe("AuthFilesPage files table", () => {
     ]);
     await waitFor(() =>
       expect(screen.queryByRole("dialog", { name: "Paste Auth JSON" })).not.toBeInTheDocument(),
+    );
+  });
+
+  test("shows upload progress while pasted auth files are uploading", async () => {
+    const firstUpload = createDeferred<{}>();
+    const secondUpload = createDeferred<{}>();
+    mocks.upload
+      .mockImplementationOnce(() => firstUpload.promise)
+      .mockImplementationOnce(() => secondUpload.promise);
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("qwen.json")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Paste JSON" }));
+
+    const dialog = await screen.findByRole("dialog", { name: "Paste Auth JSON" });
+    fireEvent.change(within(dialog).getByLabelText("Auth file JSON"), {
+      target: {
+        value: [
+          JSON.stringify({ type: "codex", account_id: "acct-one", access_token: "token-one" }),
+          JSON.stringify({ type: "kimi", account_id: "acct-two", refresh_token: "token-two" }),
+        ].join("\n"),
+      },
+    });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Upload JSON" }));
+
+    await waitFor(() => expect(mocks.upload).toHaveBeenCalledTimes(2));
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog", { name: "Paste Auth JSON" })).not.toBeInTheDocument(),
+    );
+    await waitFor(() =>
+      expect(screen.getByTestId("auth-files-upload-progress-title")).toHaveTextContent(
+        "Uploading 0 / 2",
+      ),
+    );
+    expect(screen.queryByTestId("auth-files-json-upload-progress")).not.toBeInTheDocument();
+
+    await act(async () => {
+      firstUpload.resolve({});
+      await firstUpload.promise;
+    });
+
+    await waitFor(() =>
+      expect(screen.getByTestId("auth-files-upload-progress-title")).toHaveTextContent(
+        "Uploading 1 / 2",
+      ),
+    );
+
+    await act(async () => {
+      secondUpload.resolve({});
+      await secondUpload.promise;
+    });
+
+    await waitFor(() =>
+      expect(screen.queryByTestId("auth-files-upload-progress")).not.toBeInTheDocument(),
     );
   });
 
@@ -1570,18 +1661,19 @@ describe("AuthFilesPage files table", () => {
     );
 
     expect(await screen.findByText("codex-alpha.json")).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: /All3/i })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: /codex2/i })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: /qwen1/i })).toBeInTheDocument();
+    const fileGroupSelect = screen.getByRole("combobox", { name: "File group" });
+    expect(fileGroupSelect).toHaveTextContent("All (3)");
+    await user.click(fileGroupSelect);
+    expect(await screen.findByRole("option", { name: /codex\s*2/i })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: /qwen\s*1/i })).toBeInTheDocument();
+    await user.click(screen.getByRole("option", { name: /All\s*3/i }));
 
     await user.type(screen.getByPlaceholderText("Filename / provider / type"), "alpha");
 
     expect(screen.getByText("codex-alpha.json")).toBeInTheDocument();
     await waitFor(() => expect(screen.queryByText("codex-beta.json")).not.toBeInTheDocument());
     expect(screen.queryByText("qwen-lab.json")).not.toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: /All3/i })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: /codex2/i })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: /qwen1/i })).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "File group" })).toHaveTextContent("All (3)");
   });
 
   test("refreshes only the clicked auth-file card usage stats after quota refresh", async () => {
@@ -1864,7 +1956,7 @@ describe("AuthFilesPage files table", () => {
     await waitFor(() => expect(mocks.fetchQuota).toHaveBeenCalledTimes(9));
     mocks.fetchQuota.mockClear();
 
-    fireEvent.click(screen.getByRole("tab", { name: /^All/i }));
+    await selectFileGroup(/^All/i);
 
     await waitFor(() => expect(mocks.fetchQuota).toHaveBeenCalledTimes(9));
     expect(mocks.fetchQuota.mock.calls.map(([, file]) => (file as { name: string }).name)).toEqual(
@@ -1949,7 +2041,7 @@ describe("AuthFilesPage files table", () => {
     expect(await screen.findByText("qwen-1.json")).toBeInTheDocument();
     mocks.fetchQuota.mockClear();
 
-    fireEvent.click(screen.getByRole("tab", { name: /^codex/i }));
+    await selectFileGroup(/^codex\s*2/i);
 
     await waitFor(() => expect(mocks.fetchQuota).toHaveBeenCalledTimes(2));
     expect(mocks.fetchQuota.mock.calls.map(([, file]) => (file as { name: string }).name)).toEqual(
@@ -2420,7 +2512,7 @@ describe("AuthFilesPage files table", () => {
     const cards = await screen.findByTestId("auth-files-cards");
     expect(cards).not.toHaveTextContent(/d left/);
     fireEvent.click(within(cards).getByRole("button", { name: "View" }));
-    const dialog = await screen.findByRole("dialog", { name: "View: codex-subscription.json" });
+    const dialog = await screen.findByRole("dialog", { name: "Codex Subscriber" });
     fireEvent.click(within(dialog).getByRole("tab", { name: "Fields" }));
 
     const input = await within(dialog).findByLabelText("Subscription start date");
@@ -2433,7 +2525,7 @@ describe("AuthFilesPage files table", () => {
     expect(uploadedJson.subscription_started_at).toBe(new Date(startedAtInput).toISOString());
     await waitFor(() =>
       expect(
-        screen.queryByRole("dialog", { name: "View: codex-subscription.json" }),
+        screen.queryByRole("dialog", { name: "Codex Subscriber" }),
       ).not.toBeInTheDocument(),
     );
     await waitFor(() => expect(screen.getByTestId("auth-files-cards")).toHaveTextContent(/d left/));
@@ -2472,8 +2564,9 @@ describe("AuthFilesPage files table", () => {
     fireEvent.click(within(cards).getByRole("button", { name: "View" }));
 
     const dialog = await screen.findByRole("dialog", {
-      name: "View: codex-pcamtu927@gmail.com-plus.json",
+      name: "pcamtu927@gmail.com",
     });
+    expect(within(dialog).getByText("Plus")).toBeInTheDocument();
     expect(within(dialog).getByRole("tab", { name: "Usage" })).toBeInTheDocument();
     expect(await within(dialog).findByText("Current cycle cost")).toBeInTheDocument();
     expect(within(dialog).getByText("$1.2345")).toBeInTheDocument();
@@ -2508,7 +2601,7 @@ describe("AuthFilesPage files table", () => {
     );
 
     expect(await screen.findByText("Codex Main")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("tab", { name: /codex/i }));
+    await selectFileGroup(/codex\s*1/i);
 
     expect(
       screen.queryByText("No owner group selected; each auth file uses live model query."),
@@ -2531,15 +2624,16 @@ describe("AuthFilesPage files table", () => {
     expect(ownerSelect).toHaveTextContent("OpenAI");
     expect(await within(settingsDialog).findByText("gpt-4.1")).toBeInTheDocument();
     expect(within(settingsDialog).queryByText("claude-sonnet-4-5")).not.toBeInTheDocument();
-    expect(window.localStorage.getItem("authFilesPage.modelOwnerGroupMap.v1")).toBeNull();
+    expect(authGroupOwnerMappingMap).toEqual({});
 
     fireEvent.click(within(settingsDialog).getByRole("button", { name: "Save" }));
-    expect(window.localStorage.getItem("authFilesPage.modelOwnerGroupMap.v1")).toBe(
-      JSON.stringify({ codex: "openai" }),
-    );
+    await waitFor(() => {
+      expect(mocks.saveAuthGroupModelOwnerMapping).toHaveBeenCalledWith("codex", "openai");
+    });
+    expect(authGroupOwnerMappingMap).toEqual({ codex: "openai" });
 
     fireEvent.click(screen.getByRole("button", { name: "View" }));
-    const dialog = await screen.findByRole("dialog", { name: "View: codex.json" });
+    const dialog = await screen.findByRole("dialog", { name: "Codex Main" });
     fireEvent.click(within(dialog).getByRole("tab", { name: "Models" }));
 
     expect(
@@ -3210,7 +3304,7 @@ describe("AuthFilesPage files table", () => {
     expect(screen.getByText("44%")).toBeInTheDocument();
   });
 
-  test("cards view spins current-page refresh actions when switching provider tabs and clears them per card", async () => {
+  test("cards view spins current-page refresh actions when switching provider filter and clears them per card", async () => {
     const now = Date.now();
     const files = [
       {
@@ -3294,7 +3388,7 @@ describe("AuthFilesPage files table", () => {
     );
 
     expect(await screen.findByText("qwen.json")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("tab", { name: /codex/i }));
+    await selectFileGroup(/codex\s*3/i);
     expect(await screen.findByText("codex-a.json")).toBeInTheDocument();
 
     await waitFor(() =>
@@ -4014,6 +4108,64 @@ describe("AuthFilesPage files table", () => {
     expect(screen.getByText("Code: Weekly")).toBeInTheDocument();
     expect(screen.queryByText("Review: Weekly")).not.toBeInTheDocument();
     expect(screen.getByText("0%")).toHaveClass("text-rose-700");
+  });
+
+  test("cards view shows codex team subscription quota instead of empty stable placeholders", async () => {
+    const now = Date.now();
+    const file = {
+      name: "codex-team.json",
+      type: "codex",
+      size: 1024,
+      modified: now,
+      disabled: false,
+      auth_index: "team-1",
+      plan_type: "team",
+    } as any;
+
+    mocks.list.mockImplementation(async () => ({ files: [file] }));
+    mocks.fetchQuota.mockResolvedValue({
+      planType: "team",
+      items: [
+        {
+          key: "code_subscription_2628000",
+          label: "m_quota.code_subscription",
+          percent: 89,
+          resetAtMs: now + 60_000,
+          windowSeconds: 2628000,
+        },
+      ],
+    });
+
+    window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
+    window.localStorage.setItem(
+      AUTH_FILES_DATA_CACHE_KEY,
+      JSON.stringify({
+        savedAtMs: now,
+        files: [file],
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("codex-team.json")).toBeInTheDocument();
+    fireEvent.click(
+      within(screen.getByTestId("auth-files-cards")).getByRole("button", { name: "Refresh" }),
+    );
+
+    expect(await screen.findByText("Code: Subscription")).toBeInTheDocument();
+    expect(screen.queryByText("Code: 5h")).not.toBeInTheDocument();
+    expect(screen.queryByText("Code: Weekly")).not.toBeInTheDocument();
+    expect(screen.getByText("89%")).toBeInTheDocument();
   });
 
   test("table preview and hover mark depleted codex quotas red", async () => {

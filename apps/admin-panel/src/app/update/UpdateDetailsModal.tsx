@@ -2,11 +2,7 @@ import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import { CheckCircle2, Circle, LoaderCircle, RefreshCw, XCircle } from "lucide-react";
-import type {
-  UpdateCheckResponse,
-  UpdateProgressLogEntry,
-  UpdateProgressResponse,
-} from "@code-proxy/api-client/endpoints/update";
+import type { UpdateCheckResponse, UpdateProgressResponse } from "@code-proxy/api-client/endpoints/update";
 import { Button } from "@code-proxy/ui";
 import { Modal } from "@code-proxy/ui";
 import {
@@ -57,8 +53,6 @@ function ReleaseNotesMarkdown({ text }: { text: string }) {
 
 const MAX_RELEASE_NOTE_ITEMS = 5;
 const LIST_ITEM_PATTERN = /^\s*(?:[-*+]|\d+\.)\s+/;
-const UPDATE_LOG_MAX_VISIBLE_LINES = 60;
-const UPDATE_LOG_FRAME_INTERVAL_MS = 1000 / 30;
 const UPDATE_PROGRESS_TICK_MS = 180;
 const UPDATE_STAGE_LABEL_KEYS: Record<string, string> = {
   preparing: "auto_update.progress_stage_preparing",
@@ -138,50 +132,6 @@ function translateProgressMessage(
     });
   }
   return raw;
-}
-
-function formatLogTimestamp(value?: string) {
-  if (!value) return "";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "";
-  return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-}
-
-function sameLogEntry(left: UpdateProgressLogEntry, right: UpdateProgressLogEntry) {
-  return (
-    left.timestamp === right.timestamp &&
-    left.stream === right.stream &&
-    left.message === right.message
-  );
-}
-
-function findLogOverlap(previous: UpdateProgressLogEntry[], next: UpdateProgressLogEntry[]) {
-  const maxOverlap = Math.min(previous.length, next.length);
-  for (let size = maxOverlap; size > 0; size -= 1) {
-    let matches = true;
-    for (let index = 0; index < size; index += 1) {
-      if (!sameLogEntry(previous[previous.length - size + index], next[index])) {
-        matches = false;
-        break;
-      }
-    }
-    if (matches) return size;
-  }
-  return 0;
-}
-
-function sameLogEntries(left: UpdateProgressLogEntry[], right: UpdateProgressLogEntry[]) {
-  return (
-    left.length === right.length && left.every((entry, index) => sameLogEntry(entry, right[index]))
-  );
-}
-
-function limitVisibleLogs(logs: UpdateProgressLogEntry[]) {
-  return logs.slice(-UPDATE_LOG_MAX_VISIBLE_LINES);
-}
-
-function frameNow() {
-  return window.performance?.now?.() ?? Date.now();
 }
 
 function stageProgressSegment(stage: string, status: string) {
@@ -274,122 +224,6 @@ function useVisualProgressTarget(progress?: UpdateProgressResponse | null) {
   return visualProgressTarget(status, stage, Math.max(0, now - markerRef.current.enteredAt));
 }
 
-type AnimationFrameHandle =
-  | { kind: "animation-frame"; id: number }
-  | { kind: "timeout"; id: number };
-
-function useSmoothUpdateLogs(sourceLogs: UpdateProgressLogEntry[], flushImmediately = false) {
-  const [visibleLogs, setVisibleLogs] = useState<UpdateProgressLogEntry[]>([]);
-  const visibleLogsRef = useRef<UpdateProgressLogEntry[]>([]);
-  const queuedLogsRef = useRef<UpdateProgressLogEntry[]>([]);
-  const frameHandleRef = useRef<AnimationFrameHandle | null>(null);
-  const lastFrameTimeRef = useRef(0);
-
-  const commitVisibleLogs = (
-    updater:
-      | UpdateProgressLogEntry[]
-      | ((current: UpdateProgressLogEntry[]) => UpdateProgressLogEntry[]),
-  ) => {
-    setVisibleLogs((current) => {
-      const next = typeof updater === "function" ? updater(current) : updater;
-      visibleLogsRef.current = next;
-      return next;
-    });
-  };
-
-  const cancelFrame = () => {
-    const handle = frameHandleRef.current;
-    if (!handle) return;
-    if (handle.kind === "animation-frame" && typeof window.cancelAnimationFrame === "function") {
-      window.cancelAnimationFrame(handle.id);
-    } else {
-      window.clearTimeout(handle.id);
-    }
-    frameHandleRef.current = null;
-  };
-
-  const scheduleFrame = () => {
-    if (frameHandleRef.current || !queuedLogsRef.current.length) return;
-
-    const flushFrame = (timestamp: number) => {
-      frameHandleRef.current = null;
-      if (!queuedLogsRef.current.length) return;
-
-      if (timestamp - lastFrameTimeRef.current < UPDATE_LOG_FRAME_INTERVAL_MS) {
-        scheduleFrame();
-        return;
-      }
-
-      lastFrameTimeRef.current = timestamp;
-      const nextLog = queuedLogsRef.current.shift();
-      if (nextLog) {
-        commitVisibleLogs((current) => limitVisibleLogs([...current, nextLog]));
-      }
-      scheduleFrame();
-    };
-
-    if (typeof window.requestAnimationFrame === "function") {
-      frameHandleRef.current = {
-        kind: "animation-frame",
-        id: window.requestAnimationFrame(flushFrame),
-      };
-    } else {
-      frameHandleRef.current = {
-        kind: "timeout",
-        id: window.setTimeout(() => flushFrame(frameNow()), UPDATE_LOG_FRAME_INTERVAL_MS),
-      };
-    }
-  };
-
-  useEffect(() => cancelFrame, []);
-
-  useEffect(() => {
-    const targetLogs = limitVisibleLogs(sourceLogs);
-    const currentVisibleLogs = visibleLogsRef.current;
-    const currentQueuedLogs = queuedLogsRef.current;
-
-    if (flushImmediately) {
-      queuedLogsRef.current = [];
-      cancelFrame();
-      if (!sameLogEntries(currentVisibleLogs, targetLogs)) {
-        commitVisibleLogs(targetLogs);
-      }
-      return;
-    }
-
-    if (!targetLogs.length) {
-      queuedLogsRef.current = [];
-      cancelFrame();
-      if (currentVisibleLogs.length) {
-        commitVisibleLogs([]);
-      }
-      return;
-    }
-
-    const plannedLogs = limitVisibleLogs([...currentVisibleLogs, ...currentQueuedLogs]);
-    const overlap = findLogOverlap(plannedLogs, targetLogs);
-    const overlapStart = plannedLogs.length - overlap;
-    const visibleOverlap =
-      overlap > 0 && overlapStart < currentVisibleLogs.length
-        ? currentVisibleLogs.slice(overlapStart)
-        : [];
-    const hadPendingLogs = currentQueuedLogs.length > 0;
-    const nextVisibleLogs = visibleOverlap.length ? visibleOverlap : targetLogs.slice(0, 1);
-    const nextQueuedLogs = targetLogs.slice(nextVisibleLogs.length);
-
-    queuedLogsRef.current = nextQueuedLogs;
-    if (!sameLogEntries(currentVisibleLogs, nextVisibleLogs)) {
-      lastFrameTimeRef.current = frameNow();
-      commitVisibleLogs(nextVisibleLogs);
-    }
-    if (nextQueuedLogs.length && (!hadPendingLogs || !frameHandleRef.current)) {
-      scheduleFrame();
-    }
-  }, [flushImmediately, sourceLogs]);
-
-  return visibleLogs;
-}
-
 function UpdateProgressConsole({
   candidate,
   progress,
@@ -425,9 +259,6 @@ function UpdateProgressConsole({
   const isRunning = progressStatus === "running";
   const progressTarget = useVisualProgressTarget(progress);
   const animatedPercent = useAnimatedProgressValue(progressTarget, isFailed);
-  const sourceLogs = progress?.logs ?? [];
-  const visibleLogs = useSmoothUpdateLogs(sourceLogs, isCompleted || isFailed);
-  const logContainerRef = useRef<HTMLDivElement | null>(null);
   const progressMessage = translateProgressMessage(t, progress, stage);
   const StatusIcon = isCompleted
     ? CheckCircle2
@@ -462,13 +293,11 @@ function UpdateProgressConsole({
           ? "bg-sky-500"
           : "bg-slate-400";
 
-  useEffect(() => {
-    if (!logContainerRef.current) return;
-    logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
-  }, [visibleLogs]);
-
   return (
-    <div data-testid="update-progress-console" className="min-w-0 space-y-4">
+    <div
+      data-testid="update-progress-console"
+      className={`min-w-0 ${isCompleted ? "space-y-3" : "space-y-4"}`}
+    >
       <section className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-[radial-gradient(circle_at_top_left,_rgba(14,165,233,0.08),_transparent_45%),linear-gradient(180deg,_rgba(255,255,255,1)_0%,_rgba(248,250,252,1)_100%)] p-4 shadow-sm dark:border-neutral-800 dark:bg-[radial-gradient(circle_at_top_left,_rgba(56,189,248,0.14),_transparent_42%),linear-gradient(180deg,_rgba(10,15,27,1)_0%,_rgba(8,12,22,1)_100%)]">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex min-w-0 items-start gap-3">
@@ -536,60 +365,6 @@ function UpdateProgressConsole({
             </dd>
           </div>
         </dl>
-      </section>
-
-      <section
-        data-testid="update-log-stream"
-        className="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950"
-      >
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <h4 className="text-sm font-semibold text-slate-900 dark:text-white">
-            {t("auto_update.progress_logs")}
-          </h4>
-          <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600 dark:bg-white/8 dark:text-white/60">
-            {t("auto_update.progress_log_count", { count: sourceLogs.length })}
-          </span>
-        </div>
-
-        {visibleLogs.length ? (
-          <div
-            ref={logContainerRef}
-            className="max-h-72 overflow-y-auto rounded-2xl bg-slate-950 px-3 py-3 font-mono text-[12px] leading-6 text-slate-100 shadow-inner dark:bg-black"
-          >
-            {visibleLogs.map((entry, index) => {
-              const stream = entry.stream?.trim().toLowerCase() || "stdout";
-              const streamClass =
-                stream === "stderr"
-                  ? "bg-rose-500/15 text-rose-200 ring-rose-400/20"
-                  : "bg-sky-500/15 text-sky-100 ring-sky-400/20";
-              return (
-                <div
-                  key={`${entry.timestamp ?? "unknown"}-${stream}-${index}-${entry.message}`}
-                  className="flex min-w-0 items-start gap-3 border-b border-white/6 py-1.5 last:border-b-0"
-                >
-                  <span className="shrink-0 text-[11px] text-slate-500">
-                    {formatLogTimestamp(entry.timestamp) || "--:--:--"}
-                  </span>
-                  <span
-                    className={[
-                      "mt-0.5 inline-flex shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ring-1",
-                      streamClass,
-                    ].join(" ")}
-                  >
-                    {stream}
-                  </span>
-                  <span className="min-w-0 flex-1 whitespace-pre-wrap break-words text-slate-100">
-                    {entry.message}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-sm text-slate-500 dark:border-neutral-800 dark:bg-neutral-900/40 dark:text-white/50">
-            {t("auto_update.progress_logs_empty")}
-          </div>
-        )}
       </section>
     </div>
   );
@@ -722,7 +497,9 @@ export function UpdateDetailsModal({
       title={modalTitle}
       description={modalDescription}
       maxWidth="max-w-[min(92vw,900px)]"
-      bodyHeightClassName="max-h-[min(72vh,640px)]"
+      bodyHeightClassName={
+        progressCompleted ? "max-h-[min(62vh,520px)]" : "max-h-[min(72vh,640px)]"
+      }
       bodyTestId="update-details-modal-body"
       onClose={() => {
         if (!activeUpdate) onClose();

@@ -9,6 +9,7 @@ import { ToastProvider } from "@code-proxy/ui";
 const mocks = vi.hoisted(() => ({
   apiGet: vi.fn(),
   apiPut: vi.fn(),
+  apiPatch: vi.fn(),
   apiPost: vi.fn(),
 }));
 
@@ -18,6 +19,7 @@ vi.mock("@code-proxy/api-client", () => ({
   apiClient: {
     get: mocks.apiGet,
     put: mocks.apiPut,
+    patch: mocks.apiPatch,
     post: mocks.apiPost,
   },
 }));
@@ -37,6 +39,7 @@ vi.mock("@code-proxy/api-client/endpoints/proxies", async (importOriginal) => {
         return items.map(mod.normalizeProxyEntry).filter(Boolean);
       },
       saveAll: (entries: unknown[]) => mocks.apiPut("/proxy-pool", { items: entries }),
+      update: (id: string, entry: unknown) => mocks.apiPatch(`/proxy-pool/${id}`, entry),
       check: async (request: { id?: string; url?: string; testUrl?: string }) =>
         mod.normalizeProxyCheckResult(
           await mocks.apiPost(
@@ -69,6 +72,7 @@ describe("ProxiesPage", () => {
     window.sessionStorage.clear();
     mocks.apiGet.mockReset();
     mocks.apiPut.mockReset();
+    mocks.apiPatch.mockReset();
     mocks.apiPost.mockReset();
     mocks.apiGet.mockResolvedValue({
       items: [
@@ -83,6 +87,7 @@ describe("ProxiesPage", () => {
       ],
     });
     mocks.apiPut.mockResolvedValue({ status: "ok" });
+    mocks.apiPatch.mockResolvedValue({ status: "ok" });
     mocks.apiPost.mockResolvedValue({ ok: true, status_code: 204, latency_ms: 31 });
   });
 
@@ -93,7 +98,7 @@ describe("ProxiesPage", () => {
     expect(screen.getByRole("columnheader", { name: /name/i })).toBeInTheDocument();
     expect(screen.queryByRole("columnheader", { name: /proxy url/i })).not.toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: /protocol.*ip/i })).toBeInTheDocument();
-    expect(screen.getByRole("columnheader", { name: /health check/i })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: /server latency/i })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: /remark/i })).toBeInTheDocument();
 
     expect(await screen.findByText("HK Proxy")).toBeInTheDocument();
@@ -276,16 +281,80 @@ describe("ProxiesPage", () => {
     });
   });
 
+  test("edits an existing proxy through the single-item patch API without appending a new row", async () => {
+    mocks.apiGet
+      .mockResolvedValueOnce({
+        items: [
+          {
+            id: "hk",
+            name: "HK Proxy",
+            url: "socks5://user:pass@127.0.0.1:1080",
+            masked_url: "socks5://127.0.0.1:1080",
+            enabled: true,
+            description: "Codex egress",
+          },
+        ],
+      })
+      .mockResolvedValueOnce({
+        items: [
+          {
+            id: "hk",
+            name: "Updated HK Proxy",
+            url: "http://127.0.0.1:7891",
+            masked_url: "http://127.0.0.1:7891",
+            enabled: false,
+            description: "Rotated egress",
+          },
+        ],
+      });
+
+    renderPage();
+
+    await userEvent.click(await screen.findByRole("button", { name: /edit hk proxy/i }));
+    const dialog = await screen.findByRole("dialog", { name: /edit proxy/i });
+
+    const nameInput = within(dialog).getByLabelText(/name/i);
+    const urlInput = within(dialog).getByLabelText(/proxy url/i);
+    const remarkInput = within(dialog).getByLabelText(/remark/i);
+
+    await userEvent.clear(nameInput);
+    await userEvent.type(nameInput, "Updated HK Proxy");
+    await userEvent.clear(urlInput);
+    await userEvent.type(urlInput, "http://127.0.0.1:7891");
+    await userEvent.clear(remarkInput);
+    await userEvent.type(remarkInput, "Rotated egress");
+    await userEvent.click(within(dialog).getByRole("button", { name: /^save$/i }));
+
+    await waitFor(() => {
+      expect(mocks.apiPatch).toHaveBeenCalledWith("/proxy-pool/hk", {
+        name: "Updated HK Proxy",
+        url: "http://127.0.0.1:7891",
+        enabled: true,
+        description: "Rotated egress",
+      });
+    });
+    expect(mocks.apiPut).not.toHaveBeenCalled();
+    expect(await screen.findByText("Updated HK Proxy")).toBeInTheDocument();
+    expect(screen.queryByText("HK Proxy")).not.toBeInTheDocument();
+  });
+
   test("checks a proxy and renders the last check result", async () => {
     renderPage();
 
     await userEvent.click(await screen.findByRole("button", { name: /check hk proxy/i }));
 
-    expect(await screen.findByText(/health check · 31 ms/i)).toBeInTheDocument();
-    const latency = screen.getByText(/31 ms/i);
+    const latency = await screen.findByText(/^31 ms$/i);
     expect(latency).toBeInTheDocument();
     expect(latency.closest("[data-latency-tone]")).toHaveAttribute("data-latency-tone", "fast");
     expect(screen.queryByText(/204/)).not.toBeInTheDocument();
+    await userEvent.hover(latency);
+    const tooltip = (await screen.findAllByRole("tooltip")).find((node) =>
+      /http status:\s*204/i.test(node.textContent ?? ""),
+    );
+    expect(tooltip).toBeDefined();
+    expect(tooltip).toHaveTextContent(/reachable/i);
+    expect(tooltip).toHaveTextContent(/http status:\s*204/i);
+    expect(tooltip).toHaveTextContent(/current deployed server/i);
     expect(mocks.apiPost).toHaveBeenCalledWith(
       "/proxy-pool/check",
       { id: "hk" },
@@ -315,7 +384,15 @@ describe("ProxiesPage", () => {
 
     await userEvent.click(await screen.findByRole("button", { name: /check hk proxy/i }));
 
-    expect(await screen.findByText(/health check failed/i)).toBeInTheDocument();
-    expect(screen.getByText(/proxy dial timeout/i)).toBeInTheDocument();
+    const failedBadge = await screen.findByText(/probe failed/i);
+    expect(failedBadge).toBeInTheDocument();
+    expect(screen.queryByText(/proxy dial timeout/i)).not.toBeInTheDocument();
+    await userEvent.hover(failedBadge);
+    const tooltip = (await screen.findAllByRole("tooltip")).find((node) =>
+      /proxy dial timeout/i.test(node.textContent ?? ""),
+    );
+    expect(tooltip).toBeDefined();
+    expect(tooltip).toHaveTextContent(/proxy dial timeout/i);
+    expect(tooltip).toHaveTextContent(/latency:\s*12001 ms/i);
   });
 });

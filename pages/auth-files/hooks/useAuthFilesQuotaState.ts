@@ -211,18 +211,21 @@ export function useAuthFilesQuotaState({
         if (item) knownItems.add(item);
       });
 
-      const codingSlots: { id: string; label: string; item: QuotaItem | null }[] = [
-        {
+      const codingSlots: { id: string; label: string; item: QuotaItem | null }[] = [];
+      if (codeFiveHour) {
+        codingSlots.push({
           id: "code_5h",
           label: translateQuotaLabel("m_quota.code_5h"),
           item: codeFiveHour,
-        },
-        {
+        });
+      }
+      if (codeWeek) {
+        codingSlots.push({
           id: "code_week",
           label: translateQuotaLabel("m_quota.code_weekly"),
           item: codeWeek,
-        },
-      ];
+        });
+      }
       if (provider === "kimi") return codingSlots;
 
       const codexSlots = [...codingSlots];
@@ -252,6 +255,7 @@ export function useAuthFilesQuotaState({
           };
         });
 
+      if (codexSlots.length === 0 && extraSlots.length > 0) return extraSlots;
       return [...codexSlots, ...extraSlots];
     },
     [t],

@@ -4,12 +4,12 @@ import { useTranslation } from "react-i18next";
 import iconClaude from "@code-proxy/assets/icons/claude.svg";
 import iconCodex from "@code-proxy/assets/icons/codex.svg";
 import iconGemini from "@code-proxy/assets/icons/gemini.svg";
-import { detectApiBaseFromLocation } from "@code-proxy/api-client";
+import { detectApiBaseFromLocation, modelsApi } from "@code-proxy/api-client";
 import {
   channelGroupsApi,
   type ChannelGroupChannelDetail,
 } from "@code-proxy/api-client/endpoints/channel-groups";
-import { normalizeProviderKey, readAuthFilesModelOwnerGroupMap } from "@code-proxy/domain";
+import { normalizeProviderKey } from "@code-proxy/domain";
 import { useOptionalAuth } from "@app/providers/AuthProvider";
 import { ccSwitchImportConfigsApi } from "@code-proxy/api-client/endpoints/ccswitch-import-configs";
 import { Button } from "@code-proxy/ui";
@@ -68,8 +68,8 @@ const getChannelGroupModelOwnerKeys = (
 
 const getChannelGroupMappedModelOwnerKeys = (
   details: readonly ChannelGroupChannelDetail[] | undefined,
+  ownerByAuthGroup: Record<string, string>,
 ): string[] => {
-  const ownerByAuthGroup = readAuthFilesModelOwnerGroupMap();
   const keys = new Set<string>();
   for (const detail of details ?? []) {
     const values = [
@@ -103,9 +103,11 @@ export function CcSwitchImportSettingsPage() {
   useEffect(() => {
     let cancelled = false;
     setChannelGroupsLoading(true);
-    channelGroupsApi
-      .list()
-      .then((items) => {
+    Promise.all([
+      channelGroupsApi.list(),
+      modelsApi.getAuthGroupModelOwnerMappingMap().catch(() => ({})),
+    ])
+      .then(([items, ownerMappings]) => {
         if (cancelled) return;
         setChannelGroupOptions(
           items
@@ -125,7 +127,10 @@ export function CcSwitchImportSettingsPage() {
               allowedModels: Array.isArray(item["allowed-models"]) ? item["allowed-models"] : [],
               channels: Array.isArray(item.channels) ? item.channels : [],
               modelOwnerKeys: getChannelGroupModelOwnerKeys(item.channelDetails),
-              authoritativeModelOwnerKeys: getChannelGroupMappedModelOwnerKeys(item.channelDetails),
+              authoritativeModelOwnerKeys: getChannelGroupMappedModelOwnerKeys(
+                item.channelDetails,
+                ownerMappings,
+              ),
             }))
             .filter((item) => item.value)
             .sort((left, right) => left.label.localeCompare(right.label)),

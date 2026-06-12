@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { ApiClient } from "@code-proxy/api-client";
+import { ApiClient, ApiError, unwrapApiEnvelope } from "@code-proxy/api-client";
 import { computeManagementApiBase, normalizeApiBase } from "../constants";
 
 describe("API base normalization", () => {
@@ -22,6 +22,109 @@ describe("API base normalization", () => {
     expect(computeManagementApiBase("https://example.com/relay/v0/management/config")).toBe(
       "https://example.com/relay/v0/management",
     );
+  });
+});
+
+describe("ApiClient request standardization", () => {
+  const originalFetch = globalThis.fetch;
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  test("unwraps standardized API envelopes when data helpers are used", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ code: 0, data: { enabled: true } }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    globalThis.fetch = fetchMock;
+
+    const client = new ApiClient();
+    client.setConfig({ apiBase: "http://localhost:8317", managementKey: "test-key" });
+
+    await expect(client.getData("/config")).resolves.toEqual({ enabled: true });
+    expect(unwrapApiEnvelope<{ ok: boolean }>({ result: { ok: true } })).toEqual({ ok: true });
+  });
+
+  test("keeps management Authorization controlled by the configured key", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    globalThis.fetch = fetchMock;
+
+    const client = new ApiClient();
+    client.setConfig({ apiBase: "http://localhost:8317", managementKey: "expected-key" });
+    await client.get("/config", {
+      headers: {
+        Authorization: "Bearer stale-key",
+        "X-Request-Source": "unit-test",
+      },
+    });
+
+    const init = fetchMock.mock.calls[0]?.[1] as RequestInit;
+    const headers = new Headers(init.headers);
+    expect(headers.get("Authorization")).toBe("Bearer expected-key");
+    expect(headers.get("X-Request-Source")).toBe("unit-test");
+  });
+
+  test("rejects absolute request paths before they can be fetched", async () => {
+    const fetchMock = vi.fn();
+    globalThis.fetch = fetchMock;
+
+    const client = new ApiClient();
+    client.setConfig({ apiBase: "http://localhost:8317", managementKey: "test-key" });
+
+    await expect(client.get("https://evil.example/config")).rejects.toThrow(
+      "Management API paths must be relative",
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  test("surfaces HTTP metadata through ApiError", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ message: "bad request" }), {
+        status: 400,
+        statusText: "Bad Request",
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    globalThis.fetch = fetchMock;
+
+    const client = new ApiClient();
+    client.setConfig({ apiBase: "http://localhost:8317", managementKey: "test-key" });
+
+    await expect(client.get("/config")).rejects.toMatchObject({
+      name: "ApiError",
+      status: 400,
+      statusText: "Bad Request",
+      isAuthError: false,
+    } satisfies Partial<ApiError>);
+  });
+
+  test("sanitizes HTML error pages returned by upstream proxies", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response("<!doctype html><html><head><title>502 Bad Gateway</title></head></html>", {
+        status: 502,
+        statusText: "Bad Gateway",
+        headers: { "Content-Type": "text/html; charset=utf-8" },
+      }),
+    );
+    globalThis.fetch = fetchMock;
+
+    const client = new ApiClient();
+    client.setConfig({ apiBase: "http://localhost:8317", managementKey: "test-key" });
+
+    await expect(client.get("/dashboard-summary")).rejects.toMatchObject({
+      name: "ApiError",
+      status: 502,
+      message: "Management API temporarily returned an HTML error page (502 Bad Gateway).",
+      payload: expect.stringContaining("<!doctype html>"),
+    } satisfies Partial<ApiError>);
   });
 });
 

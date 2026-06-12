@@ -225,6 +225,7 @@ describe("Auth Files helper coverage", () => {
 
     expect(resolveFileType(file)).toBe("codex");
     expect(resolveAuthFileDisplayName(file)).toBe("pcamtu927@gmail.com");
+    expect(resolveAuthFilePlanType(file)).toBe("plus");
   });
 
   test("treats an explicit empty display tag list as hiding every tag", () => {

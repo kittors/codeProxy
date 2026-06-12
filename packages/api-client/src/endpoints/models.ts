@@ -29,6 +29,12 @@ export type ModelOwnerPresetItem = {
   modelCount?: number;
 };
 
+export type AuthGroupModelOwnerMappingItem = {
+  auth_group: string;
+  owner: string;
+  updated_at?: string;
+};
+
 const normalizeApiBase = (baseUrl: string): string => {
   const trimmed = baseUrl.trim();
   if (!trimmed) return "";
@@ -187,6 +193,45 @@ const normalizeOwnerPresetResponse = (payload: unknown): ModelOwnerPresetItem[] 
     .sort((a, b) => a.label.localeCompare(b.label));
 };
 
+const normalizeAuthGroupKey = (value: string): string =>
+  value.trim().replace(/\s+/g, "-").toLowerCase();
+
+const normalizeAuthGroupModelOwnerMappings = (
+  payload: unknown,
+): AuthGroupModelOwnerMappingItem[] => {
+  const record = payload && typeof payload === "object" ? (payload as Record<string, unknown>) : {};
+  const rawList = Array.isArray(record.items)
+    ? record.items
+    : Array.isArray(record.data)
+      ? record.data
+      : Array.isArray(payload)
+        ? payload
+        : [];
+
+  const seen = new Set<string>();
+  const items = rawList
+    .map((item): AuthGroupModelOwnerMappingItem | null => {
+      if (!item || typeof item !== "object") return null;
+      const row = item as Record<string, unknown>;
+      const authGroup = normalizeAuthGroupKey(String(row.auth_group ?? row.authGroup ?? ""));
+      const owner = normalizeOwnerValue(String(row.owner ?? row.owner_value ?? ""));
+      if (!authGroup || authGroup === "all" || !owner || seen.has(authGroup)) return null;
+      seen.add(authGroup);
+      return {
+        auth_group: authGroup,
+        owner,
+        updated_at:
+          typeof row.updated_at === "string"
+            ? row.updated_at
+            : typeof row.updatedAt === "string"
+              ? row.updatedAt
+              : undefined,
+      };
+    })
+    .filter((item): item is AuthGroupModelOwnerMappingItem => item !== null);
+  return items.sort((a, b) => a.auth_group.localeCompare(b.auth_group));
+};
+
 export const modelsApi = {
   buildClaudeModelsEndpoint,
 
@@ -216,6 +261,30 @@ export const modelsApi = {
 
   async getModelOwnerPresets() {
     return normalizeOwnerPresetResponse(await apiClient.get("/model-owner-presets"));
+  },
+
+  async getAuthGroupModelOwnerMappings() {
+    return normalizeAuthGroupModelOwnerMappings(
+      await apiClient.get("/auth-group-model-owner-mappings"),
+    );
+  },
+
+  async getAuthGroupModelOwnerMappingMap() {
+    const items = normalizeAuthGroupModelOwnerMappings(
+      await apiClient.get("/auth-group-model-owner-mappings"),
+    );
+    return Object.fromEntries(items.map((item) => [item.auth_group, item.owner]));
+  },
+
+  async saveAuthGroupModelOwnerMapping(authGroup: string, owner: string) {
+    const normalizedAuthGroup = normalizeAuthGroupKey(authGroup);
+    if (!normalizedAuthGroup || normalizedAuthGroup === "all") {
+      throw new Error("Invalid auth group");
+    }
+    await apiClient.patch("/auth-group-model-owner-mappings", {
+      auth_group: normalizedAuthGroup,
+      owner: normalizeOwnerValue(owner),
+    });
   },
 
   async fetchV1Models(baseUrl: string, apiKey?: string, headers: Record<string, string> = {}) {

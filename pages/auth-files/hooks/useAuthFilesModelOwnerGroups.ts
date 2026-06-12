@@ -5,11 +5,10 @@ import type {
   ModelConfigItem,
   ModelOwnerPresetItem,
 } from "@code-proxy/api-client/endpoints/models";
+import { invalidateConfiguredModelAvailability } from "@features/model-availability";
 import { useToast } from "@code-proxy/ui";
 import {
   normalizeProviderKey,
-  readAuthFilesModelOwnerGroupMap,
-  writeAuthFilesModelOwnerGroupMap,
   type AuthFileModelOwnerGroup,
   type AuthFilesModelOwnerGroupMap,
 } from "@code-proxy/domain";
@@ -75,27 +74,20 @@ export function useAuthFilesModelOwnerGroups() {
   const [modelOwnerGroupsLoading, setModelOwnerGroupsLoading] = useState(false);
   const [modelOwnerGroups, setModelOwnerGroups] = useState<AuthFileModelOwnerGroup[]>([]);
   const [modelOwnerByAuthGroup, setModelOwnerByAuthGroup] = useState<AuthFilesModelOwnerGroupMap>(
-    () => readAuthFilesModelOwnerGroupMap(),
+    {},
   );
 
   const loadModelOwnerGroups = useCallback(async () => {
     setModelOwnerGroupsLoading(true);
     try {
-      const [models, presets] = await Promise.all([
+      const [models, presets, mappings] = await Promise.all([
         modelsApi.getModelConfigs("library"),
         modelsApi.getModelOwnerPresets(),
+        modelsApi.getAuthGroupModelOwnerMappingMap(),
       ]);
       const groups = buildModelOwnerGroups(models, presets);
-      const validOwners = new Set(groups.map((group) => group.value));
       setModelOwnerGroups(groups);
-      setModelOwnerByAuthGroup((current) => {
-        const next = Object.fromEntries(
-          Object.entries(current).filter(([, owner]) => validOwners.has(owner)),
-        ) as AuthFilesModelOwnerGroupMap;
-        if (sameMap(current, next)) return current;
-        writeAuthFilesModelOwnerGroupMap(next);
-        return next;
-      });
+      setModelOwnerByAuthGroup((current) => (sameMap(current, mappings) ? current : mappings));
     } catch (err: unknown) {
       notify({
         type: "error",
@@ -106,19 +98,30 @@ export function useAuthFilesModelOwnerGroups() {
     }
   }, [notify, t]);
 
-  const setModelOwnerForAuthGroup = useCallback((authGroup: string, ownerValue: string) => {
-    const key = normalizeProviderKey(authGroup);
-    const owner = normalizeOwnerValue(ownerValue);
-    if (!key || key === "all") return;
-    setModelOwnerByAuthGroup((current) => {
-      const next = { ...current };
-      if (owner) next[key] = owner;
-      else delete next[key];
-      if (sameMap(current, next)) return current;
-      writeAuthFilesModelOwnerGroupMap(next);
-      return next;
-    });
-  }, []);
+  const setModelOwnerForAuthGroup = useCallback(
+    async (authGroup: string, ownerValue: string) => {
+      const key = normalizeProviderKey(authGroup);
+      const owner = normalizeOwnerValue(ownerValue);
+      if (!key || key === "all") return;
+      try {
+        await modelsApi.saveAuthGroupModelOwnerMapping(key, owner);
+        invalidateConfiguredModelAvailability();
+        setModelOwnerByAuthGroup((current) => {
+          const next = { ...current };
+          if (owner) next[key] = owner;
+          else delete next[key];
+          return sameMap(current, next) ? current : next;
+        });
+      } catch (err: unknown) {
+        notify({
+          type: "error",
+          message: err instanceof Error ? err.message : t("auth_files.failed_get_model_owners"),
+        });
+        throw err;
+      }
+    },
+    [notify, t],
+  );
 
   return {
     modelOwnerGroupsLoading,

@@ -10,13 +10,9 @@ import {
   type RoutingConfigItem,
   type RoutingConfigPathRouteItem,
 } from "@code-proxy/api-client/endpoints/routing-config";
-import { apiClient } from "@code-proxy/api-client";
+import { apiClient, modelsApi } from "@code-proxy/api-client";
 import { RoutingConfigEditor, type RoutingModelOption } from "@features/routing-config-editor";
-import {
-  normalizeProviderKey,
-  normalizeTagValue,
-  readAuthFilesModelOwnerGroupMap,
-} from "@code-proxy/domain";
+import { normalizeProviderKey, normalizeTagValue } from "@code-proxy/domain";
 import {
   DEFAULT_VISUAL_VALUES,
   makeClientId,
@@ -68,8 +64,8 @@ type MappedOwnerSelection = {
 const collectMappedOwnersForChannels = (
   channels: string[],
   detailsByName: Record<string, ChannelGroupChannelDetail>,
+  ownerByAuthGroup: Record<string, string>,
 ): MappedOwnerSelection => {
-  const ownerByAuthGroup = readAuthFilesModelOwnerGroupMap();
   const owners = new Set<string>();
   let hasUnmappedChannels = false;
   for (const channel of channels) {
@@ -233,6 +229,7 @@ export function ChannelGroupsPage() {
   const [availableChannelDetails, setAvailableChannelDetails] = useState<
     Record<string, ChannelGroupChannelDetail>
   >({});
+  const [authGroupOwnerMap, setAuthGroupOwnerMap] = useState<Record<string, string>>({});
 
   const loadAvailableChannels = useCallback(async () => {
     const items = await channelGroupsApi.list();
@@ -286,6 +283,7 @@ export function ChannelGroupsPage() {
       const ownerSelection = collectMappedOwnersForChannels(
         normalizedChannels,
         availableChannelDetails,
+        authGroupOwnerMap,
       );
       let visibleModels = filterByConfiguredModelAvailability(
         ids.map((id) => ({ id })),
@@ -331,21 +329,23 @@ export function ChannelGroupsPage() {
 
       return Array.from(optionMap.values()).sort((a, b) => a.id.localeCompare(b.id));
     },
-    [availableChannelDetails],
+    [authGroupOwnerMap, availableChannelDetails],
   );
 
   const loadPage = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
-      const [routing, channels] = await Promise.all([
+      const [routing, channels, ownerMappings] = await Promise.all([
         routingConfigApi.get(),
         loadAvailableChannels().catch(() => ({ names: [], detailsByName: {} })),
+        modelsApi.getAuthGroupModelOwnerMappingMap().catch(() => ({})),
       ]);
       const nextValues = hydrateRoutingValues(routing);
       setVisualValues(nextValues);
       setAvailableChannels(channels.names);
       setAvailableChannelDetails(channels.detailsByName);
+      setAuthGroupOwnerMap(ownerMappings);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : t("channel_groups_page.load_failed");
       setError(message);

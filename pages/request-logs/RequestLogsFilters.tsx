@@ -6,16 +6,17 @@ import type { SearchableCheckboxMultiSelectOption } from "@code-proxy/ui";
 import { cn } from "@code-proxy/ui";
 
 type StatusFilterValue = "success" | "failed";
+type MultiSelectFilterState<T extends string = string> = T[] | null;
 
 interface RequestLogsFiltersProps {
   keyOptions: SearchableCheckboxMultiSelectOption[];
   modelOptions: SearchableCheckboxMultiSelectOption[];
   channelOptions: SearchableCheckboxMultiSelectOption[];
   statusOptions: SearchableCheckboxMultiSelectOption[];
-  selectedApiKeys: string[];
-  selectedModels: string[];
-  selectedChannels: string[];
-  selectedStatuses: StatusFilterValue[];
+  selectedApiKeys: MultiSelectFilterState<string>;
+  selectedModels: MultiSelectFilterState<string>;
+  selectedChannels: MultiSelectFilterState<string>;
+  selectedStatuses: MultiSelectFilterState<StatusFilterValue>;
   onApiKeysChange: (value: string[]) => void;
   onModelsChange: (value: string[]) => void;
   onChannelsChange: (value: string[]) => void;
@@ -52,7 +53,7 @@ export function RequestLogsFilters({
       <div className="flex flex-wrap items-center gap-2">
         <div className="w-full min-[480px]:w-auto sm:w-[180px]">
           <SearchableCheckboxMultiSelect
-            value={selectedApiKeys}
+            value={selectedApiKeys ?? []}
             onChange={onApiKeysChange}
             options={keyOptions}
             placeholder={t("request_logs.all_keys_placeholder")}
@@ -66,12 +67,19 @@ export function RequestLogsFilters({
             showClearButton
             size="sm"
             emptyValueMeansAllSelected
+            emptyValueRepresentsAllSelected={selectedApiKeys === null}
             showFilteredToggleWithoutQuery={false}
+            applyMode="manual"
+            applyLabel={t("request_logs.apply_filters")}
+            cancelLabel={t("common.cancel")}
+            selectAllLabel={t("request_logs.select_all")}
+            deselectAllLabel={t("request_logs.deselect_all")}
+            emptySelectionLabel={t("request_logs.none_selected")}
           />
         </div>
         <div className="w-full min-[480px]:w-auto sm:w-[200px]">
           <SearchableCheckboxMultiSelect
-            value={selectedModels}
+            value={selectedModels ?? []}
             onChange={onModelsChange}
             options={modelOptions}
             placeholder={t("request_logs.all_models_placeholder")}
@@ -85,12 +93,19 @@ export function RequestLogsFilters({
             showClearButton
             size="sm"
             emptyValueMeansAllSelected
+            emptyValueRepresentsAllSelected={selectedModels === null}
             showFilteredToggleWithoutQuery={false}
+            applyMode="manual"
+            applyLabel={t("request_logs.apply_filters")}
+            cancelLabel={t("common.cancel")}
+            selectAllLabel={t("request_logs.select_all")}
+            deselectAllLabel={t("request_logs.deselect_all")}
+            emptySelectionLabel={t("request_logs.none_selected")}
           />
         </div>
         <div className="w-full min-[480px]:w-auto sm:w-[180px]">
           <SearchableCheckboxMultiSelect
-            value={selectedChannels}
+            value={selectedChannels ?? []}
             onChange={onChannelsChange}
             options={channelOptions}
             placeholder={t("request_logs.all_channels_placeholder")}
@@ -104,12 +119,19 @@ export function RequestLogsFilters({
             showClearButton
             size="sm"
             emptyValueMeansAllSelected
+            emptyValueRepresentsAllSelected={selectedChannels === null}
             showFilteredToggleWithoutQuery={false}
+            applyMode="manual"
+            applyLabel={t("request_logs.apply_filters")}
+            cancelLabel={t("common.cancel")}
+            selectAllLabel={t("request_logs.select_all")}
+            deselectAllLabel={t("request_logs.deselect_all")}
+            emptySelectionLabel={t("request_logs.none_selected")}
           />
         </div>
         <div className="w-full min-[480px]:w-auto sm:w-[150px]">
           <SearchableCheckboxMultiSelect
-            value={selectedStatuses}
+            value={selectedStatuses ?? []}
             onChange={statusChangeAdapter}
             options={statusOptions}
             placeholder={t("request_logs.all_status")}
@@ -123,7 +145,14 @@ export function RequestLogsFilters({
             showClearButton
             size="sm"
             emptyValueMeansAllSelected
+            emptyValueRepresentsAllSelected={selectedStatuses === null}
             showFilteredToggleWithoutQuery={false}
+            applyMode="manual"
+            applyLabel={t("request_logs.apply_filters")}
+            cancelLabel={t("common.cancel")}
+            selectAllLabel={t("request_logs.select_all")}
+            deselectAllLabel={t("request_logs.deselect_all")}
+            emptySelectionLabel={t("request_logs.none_selected")}
           />
         </div>
 

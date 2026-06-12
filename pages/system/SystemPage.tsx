@@ -21,173 +21,16 @@ import { Card } from "@code-proxy/ui";
 import { TextInput } from "@code-proxy/ui";
 import { useToast } from "@code-proxy/ui";
 import { UpdateDetailsCard } from "@app/update/UpdateDetailsCard";
-import { loadModelPathAvailability } from "@features/model-availability";
+import {
+  loadConfiguredModelAvailability,
+  loadModelPathAvailability,
+} from "@features/model-availability";
+import {
+  buildModelVendorStats,
+  CopyableModelTag,
+  ModelVendorStatBadge,
+} from "@features/model-tags";
 import { HoverTooltip } from "@code-proxy/ui";
-
-// Vendor SVG icons
-import iconClaude from "@code-proxy/assets/icons/claude.svg";
-import iconOpenai from "@code-proxy/assets/icons/openai.svg";
-import iconGemini from "@code-proxy/assets/icons/gemini.svg";
-import iconDeepseek from "@code-proxy/assets/icons/deepseek.svg";
-import iconQwen from "@code-proxy/assets/icons/qwen.svg";
-import iconMinimax from "@code-proxy/assets/icons/minimax.svg";
-import iconGrok from "@code-proxy/assets/icons/grok.svg";
-import iconKimiLight from "@code-proxy/assets/icons/kimi-light.svg";
-import iconKimiDark from "@code-proxy/assets/icons/kimi-dark.svg";
-import iconCodex from "@code-proxy/assets/icons/codex.svg";
-import iconGlm from "@code-proxy/assets/icons/glm.svg";
-import iconKiro from "@code-proxy/assets/icons/kiro.svg";
-import iconVertex from "@code-proxy/assets/icons/vertex.svg";
-import iconIflow from "@code-proxy/assets/icons/iflow.svg";
-import iconMimo from "@code-proxy/assets/icons/mimo.svg";
-
-/* ═══════════════════════════════════════════════════════════
-   Helpers
-   ═══════════════════════════════════════════════════════════ */
-
-/** Vendor prefix → color scheme */
-const VENDOR_COLORS: Record<string, { bg: string; text: string; border: string }> = {
-  claude: {
-    bg: "bg-orange-50 dark:bg-orange-950/20",
-    text: "text-orange-700 dark:text-orange-300",
-    border: "border-orange-200/60 dark:border-orange-800/30",
-  },
-  gpt: {
-    bg: "bg-emerald-50 dark:bg-emerald-950/20",
-    text: "text-emerald-700 dark:text-emerald-300",
-    border: "border-emerald-200/60 dark:border-emerald-800/30",
-  },
-  o1: {
-    bg: "bg-emerald-50 dark:bg-emerald-950/20",
-    text: "text-emerald-700 dark:text-emerald-300",
-    border: "border-emerald-200/60 dark:border-emerald-800/30",
-  },
-  o3: {
-    bg: "bg-emerald-50 dark:bg-emerald-950/20",
-    text: "text-emerald-700 dark:text-emerald-300",
-    border: "border-emerald-200/60 dark:border-emerald-800/30",
-  },
-  o4: {
-    bg: "bg-emerald-50 dark:bg-emerald-950/20",
-    text: "text-emerald-700 dark:text-emerald-300",
-    border: "border-emerald-200/60 dark:border-emerald-800/30",
-  },
-  gemini: {
-    bg: "bg-blue-50 dark:bg-blue-950/20",
-    text: "text-blue-700 dark:text-blue-300",
-    border: "border-blue-200/60 dark:border-blue-800/30",
-  },
-  deepseek: {
-    bg: "bg-cyan-50 dark:bg-cyan-950/20",
-    text: "text-cyan-700 dark:text-cyan-300",
-    border: "border-cyan-200/60 dark:border-cyan-800/30",
-  },
-  qwen: {
-    bg: "bg-violet-50 dark:bg-violet-950/20",
-    text: "text-violet-700 dark:text-violet-300",
-    border: "border-violet-200/60 dark:border-violet-800/30",
-  },
-  llama: {
-    bg: "bg-indigo-50 dark:bg-indigo-950/20",
-    text: "text-indigo-700 dark:text-indigo-300",
-    border: "border-indigo-200/60 dark:border-indigo-800/30",
-  },
-  mistral: {
-    bg: "bg-amber-50 dark:bg-amber-950/20",
-    text: "text-amber-700 dark:text-amber-300",
-    border: "border-amber-200/60 dark:border-amber-800/30",
-  },
-  minimax: {
-    bg: "bg-sky-50 dark:bg-sky-950/20",
-    text: "text-sky-700 dark:text-sky-300",
-    border: "border-sky-200/60 dark:border-sky-800/30",
-  },
-  grok: {
-    bg: "bg-slate-50 dark:bg-slate-900/30",
-    text: "text-slate-700 dark:text-slate-300",
-    border: "border-slate-200/60 dark:border-slate-700/30",
-  },
-  kimi: {
-    bg: "bg-slate-50 dark:bg-slate-900/30",
-    text: "text-slate-700 dark:text-slate-300",
-    border: "border-slate-200/60 dark:border-slate-700/30",
-  },
-  codex: {
-    bg: "bg-emerald-50 dark:bg-emerald-950/20",
-    text: "text-emerald-700 dark:text-emerald-300",
-    border: "border-emerald-200/60 dark:border-emerald-800/30",
-  },
-  glm: {
-    bg: "bg-blue-50 dark:bg-blue-950/20",
-    text: "text-blue-700 dark:text-blue-300",
-    border: "border-blue-200/60 dark:border-blue-800/30",
-  },
-  kiro: {
-    bg: "bg-amber-50 dark:bg-amber-950/20",
-    text: "text-amber-700 dark:text-amber-300",
-    border: "border-amber-200/60 dark:border-amber-800/30",
-  },
-  mimo: {
-    bg: "bg-purple-50 dark:bg-purple-950/20",
-    text: "text-purple-700 dark:text-purple-300",
-    border: "border-purple-200/60 dark:border-purple-800/30",
-  },
-};
-
-const DEFAULT_VENDOR = {
-  bg: "bg-slate-50 dark:bg-neutral-900/40",
-  text: "text-slate-600 dark:text-slate-300",
-  border: "border-slate-200/60 dark:border-neutral-700/40",
-};
-
-/** Vendor prefix → icon (light, dark) */
-const VENDOR_ICONS: Record<string, { light: string; dark: string }> = {
-  claude: { light: iconClaude, dark: iconClaude },
-  gpt: { light: iconOpenai, dark: iconOpenai },
-  o1: { light: iconOpenai, dark: iconOpenai },
-  o3: { light: iconOpenai, dark: iconOpenai },
-  o4: { light: iconOpenai, dark: iconOpenai },
-  gemini: { light: iconGemini, dark: iconGemini },
-  deepseek: { light: iconDeepseek, dark: iconDeepseek },
-  qwen: { light: iconQwen, dark: iconQwen },
-  minimax: { light: iconMinimax, dark: iconMinimax },
-  grok: { light: iconGrok, dark: iconGrok },
-  kimi: { light: iconKimiLight, dark: iconKimiDark },
-  codex: { light: iconCodex, dark: iconCodex },
-  glm: { light: iconGlm, dark: iconGlm },
-  kiro: { light: iconKiro, dark: iconKiro },
-  vertex: { light: iconVertex, dark: iconVertex },
-  iflow: { light: iconIflow, dark: iconIflow },
-  mimo: { light: iconMimo, dark: iconMimo },
-};
-
-function getVendorColor(modelId: string) {
-  const lower = modelId.toLowerCase();
-  for (const [prefix, color] of Object.entries(VENDOR_COLORS)) {
-    if (lower.startsWith(prefix)) return color;
-  }
-  return DEFAULT_VENDOR;
-}
-
-function getVendorPrefix(modelId: string): string {
-  const lower = modelId.toLowerCase();
-  for (const prefix of Object.keys(VENDOR_ICONS)) {
-    if (lower.startsWith(prefix)) return prefix;
-  }
-  return "";
-}
-
-function VendorIcon({ modelId, size = 14 }: { modelId: string; size?: number }) {
-  const prefix = getVendorPrefix(modelId);
-  const icons = prefix ? VENDOR_ICONS[prefix] : null;
-  if (!icons) return null;
-  return (
-    <>
-      <img src={icons.light} alt="" width={size} height={size} className="dark:hidden" />
-      <img src={icons.dark} alt="" width={size} height={size} className="hidden dark:block" />
-    </>
-  );
-}
 
 /* ═══════════════════════════════════════════════════════════
    InfoCard — compact grid card with icon
@@ -276,45 +119,6 @@ function InfoCard({
 }
 
 /* ═══════════════════════════════════════════════════════════
-   ModelTag — tag-style model badge
-   ═══════════════════════════════════════════════════════════ */
-
-function ModelTag({ id }: { id: string }) {
-  const { t } = useTranslation();
-  const { notify } = useToast();
-  const [copied, setCopied] = useState(false);
-  const vc = getVendorColor(id);
-
-  const handleClick = () => {
-    void navigator.clipboard.writeText(id);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
-    notify({ type: "success", message: t("system_page.copied"), duration: 1200 });
-  };
-
-  return (
-    <button
-      type="button"
-      onClick={handleClick}
-      title={t("system_page.click_copy")}
-      className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 font-mono text-xs transition hover:shadow-sm active:scale-95 ${vc.bg} ${vc.text} ${vc.border}`}
-    >
-      {copied ? (
-        <>
-          <Check size={11} className="text-emerald-500" />
-          {t("system_page.copied")}
-        </>
-      ) : (
-        <>
-          <VendorIcon modelId={id} size={14} />
-          {id}
-        </>
-      )}
-    </button>
-  );
-}
-
-/* ═══════════════════════════════════════════════════════════
    Main Page
    ═══════════════════════════════════════════════════════════ */
 
@@ -328,6 +132,7 @@ export function SystemPage({
   updateHeartbeatTimeoutMs?: number;
 } = {}) {
   const { t } = useTranslation();
+  const { notify } = useToast();
   const auth = useAuth();
 
   const [modelsLoading, setModelsLoading] = useState(false);
@@ -339,15 +144,27 @@ export function SystemPage({
     setModelsLoading(true);
     setModelsError(null);
     try {
-      const availability = await loadModelPathAvailability();
-      const rootV1ModelIds = availability.items
-        .filter((item) =>
-          item.paths.some(
-            (path) => path.scope === "root" && path.method === "GET" && path.path === "/v1/models",
-          ),
-        )
-        .map((item) => item.id);
-      setModels(Array.from(new Set(rootV1ModelIds)).sort((a, b) => a.localeCompare(b)));
+      const [configuredAvailability, pathAvailability] = await Promise.all([
+        loadConfiguredModelAvailability().catch(() => null),
+        loadModelPathAvailability().catch(() => null),
+      ]);
+
+      const useMappedOwnerModels = configuredAvailability?.usesMappedOwners === true;
+      const rootV1ModelIds =
+        pathAvailability?.items
+          .filter((item) =>
+            item.paths.some(
+              (path) => path.scope === "root" && path.method === "GET" && path.path === "/v1/models",
+            ),
+          )
+          .map((item) => item.id) ?? [];
+      const nextModelIds = useMappedOwnerModels
+        ? (configuredAvailability?.items ?? []).map((item) => item.id)
+        : rootV1ModelIds.length > 0
+          ? rootV1ModelIds
+          : (configuredAvailability?.items ?? []).map((item) => item.id);
+
+      setModels(Array.from(new Set(nextModelIds)).sort((a, b) => a.localeCompare(b)));
     } catch (err: unknown) {
       setModelsError(err instanceof Error ? err.message : t("system_page.load_failed"));
     } finally {
@@ -365,22 +182,13 @@ export function SystemPage({
     return models.filter((id) => id.toLowerCase().includes(needle));
   }, [modelFilter, models]);
 
-  // Group models by vendor prefix for stats
   const vendorStats = useMemo(() => {
-    const map = new Map<string, number>();
-    for (const id of models) {
-      const lower = id.toLowerCase();
-      let vendor = "Other";
-      for (const prefix of Object.keys(VENDOR_COLORS)) {
-        if (lower.startsWith(prefix)) {
-          vendor = prefix;
-          break;
-        }
-      }
-      map.set(vendor, (map.get(vendor) ?? 0) + 1);
-    }
-    return Array.from(map.entries()).sort((a, b) => b[1] - a[1]);
-  }, [models]);
+    return buildModelVendorStats(models, t("common.other"));
+  }, [models, t]);
+
+  const handleModelCopied = useCallback(() => {
+    notify({ type: "success", message: t("system_page.copied"), duration: 1200 });
+  }, [notify, t]);
 
   const apiKeyLookupUrl = `${window.location.origin}/manage/apikey-lookup`;
 
@@ -494,21 +302,14 @@ export function SystemPage({
         {/* Vendor stats bar */}
         {vendorStats.length > 0 && !modelsLoading && (
           <div className="flex flex-wrap items-center gap-2 border-b border-slate-100 px-5 py-2.5 dark:border-neutral-800/60">
-            {vendorStats.map(([vendor, count]) => {
-              const vc = VENDOR_COLORS[vendor] ?? DEFAULT_VENDOR;
-              // Use vendor name as a fake model id to get the icon
-              const iconKey = vendor + "-placeholder";
-              return (
-                <span
-                  key={vendor}
-                  className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-[10px] font-semibold ${vc.bg} ${vc.text} ${vc.border}`}
-                >
-                  <VendorIcon modelId={iconKey} size={12} />
-                  {vendor}
-                  <span className="tabular-nums">{count}</span>
-                </span>
-              );
-            })}
+            {vendorStats.map((stat) => (
+              <ModelVendorStatBadge
+                key={stat.key}
+                vendorKey={stat.key}
+                label={stat.label}
+                count={stat.count}
+              />
+            ))}
           </div>
         )}
 
@@ -529,7 +330,13 @@ export function SystemPage({
           ) : filteredModels.length > 0 ? (
             <div className="flex flex-wrap gap-2">
               {filteredModels.map((id) => (
-                <ModelTag key={id} id={id} />
+                <CopyableModelTag
+                  key={id}
+                  id={id}
+                  title={t("system_page.click_copy")}
+                  copiedLabel={t("system_page.copied")}
+                  onCopied={handleModelCopied}
+                />
               ))}
             </div>
           ) : (

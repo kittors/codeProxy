@@ -313,6 +313,7 @@ export function ApiKeysPage() {
     setSaving(true);
     try {
       await apiKeyEntriesApi.update({
+        id: entries[editIndex].id,
         index: editIndex,
         value: {
           ...(newKey !== originalKey ? { key: newKey } : {}),
@@ -357,6 +358,7 @@ export function ApiKeysPage() {
     setSaving(true);
     try {
       const response = (await apiKeyEntriesApi.delete({
+        id: entries[deleteIndex]?.id,
         index: deleteIndex,
         deleteLogs: deleteLogsOnDelete,
       })) as { logs_deleted?: number } | undefined;

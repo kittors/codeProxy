@@ -4,21 +4,14 @@ import {
   BUILD_DATE_HEADER_KEYS,
   computeManagementApiBase,
 } from "./constants";
+import { extractDownloadFilename, type BrowserFilePickerWindow } from "./download";
+import { ApiError, extractApiErrorMessage, isAbortError, truncateErrorText } from "./errors";
+import { unwrapApiEnvelope, type ApiSuccessEnvelope } from "./response";
 
 interface ApiClientConfig {
   apiBase: string;
   managementKey: string;
 }
-
-type BrowserFilePickerWindow = Window &
-  typeof globalThis & {
-    showSaveFilePicker?: (options?: { suggestedName?: string }) => Promise<{
-      createWritable: () => Promise<{
-        write: (data: BufferSource | Blob | string) => Promise<void>;
-        close: () => Promise<void>;
-      }>;
-    }>;
-  };
 
 type Primitive = string | number | boolean;
 
@@ -27,9 +20,47 @@ export interface RequestOptions {
   headers?: HeadersInit;
   timeoutMs?: number;
   signal?: AbortSignal;
+  unwrapEnvelope?: boolean;
 }
 
 type ResponseType = "json" | "text" | "blob";
+
+const RESERVED_MANAGEMENT_HEADERS = new Set(["authorization"]);
+
+const getWindowOrigin = () => {
+  try {
+    return window.location.origin;
+  } catch {
+    return "http://localhost";
+  }
+};
+
+const dispatchWindowEvent = (event: Event): void => {
+  if (typeof window !== "undefined" && typeof window.dispatchEvent === "function") {
+    window.dispatchEvent(event);
+  }
+};
+
+const isHtmlDocument = (contentType: string, text: string) =>
+  contentType.toLowerCase().includes("text/html") &&
+  /^<!doctype html|^<html[\s>]/i.test(text.trim());
+
+const buildHtmlErrorMessage = (response: Response) => {
+  const status = response.status || 0;
+  const suffix = response.statusText?.trim()
+    ? `${status} ${response.statusText.trim()}`
+    : String(status);
+  return `Management API temporarily returned an HTML error page (${suffix}).`;
+};
+
+const normalizeRequestPath = (path: string): string => {
+  const trimmed = path.trim();
+  if (!trimmed) return "/";
+  if (/^(?:https?:)?\/\//i.test(trimmed)) {
+    throw new ApiError({ message: "Management API paths must be relative." });
+  }
+  return trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
+};
 
 export class ApiClient {
   private apiBase = "";
@@ -45,7 +76,8 @@ export class ApiClient {
   }
 
   private buildUrl(path: string, params?: RequestOptions["params"]): string {
-    const baseUrl = `${this.apiBase}${path}`;
+    const requestPath = normalizeRequestPath(path);
+    const baseUrl = `${this.apiBase}${requestPath}`;
     if (!params) return baseUrl;
 
     const pairs = Object.entries(params).filter(
@@ -53,11 +85,12 @@ export class ApiClient {
     );
     if (pairs.length === 0) return baseUrl;
 
-    const url = new URL(baseUrl, window.location.origin);
+    const origin = getWindowOrigin();
+    const url = new URL(baseUrl, origin);
     for (const [key, value] of pairs) {
       url.searchParams.set(key, String(value));
     }
-    return url.toString().replace(window.location.origin, "");
+    return url.toString().replace(origin, "");
   }
 
   private readHeader(headers: Headers, keys: string[]): string | null {
@@ -70,6 +103,13 @@ export class ApiClient {
     return null;
   }
 
+  private mergeAllowedHeaders(target: Headers, source: Headers): void {
+    source.forEach((value, key) => {
+      if (RESERVED_MANAGEMENT_HEADERS.has(key.toLowerCase())) return;
+      target.set(key, value);
+    });
+  }
+
   private buildHeaders(init?: RequestInit, options?: RequestOptions): Headers {
     const headersFromOptions = new Headers(options?.headers);
     const headersFromInit = new Headers(init?.headers);
@@ -80,24 +120,25 @@ export class ApiClient {
     if (typeof init?.body === "string" && !hasContentType) {
       headers.set("Content-Type", "application/json");
     }
+
+    this.mergeAllowedHeaders(headers, headersFromOptions);
+    this.mergeAllowedHeaders(headers, headersFromInit);
+
     if (this.managementKey) {
       headers.set("Authorization", `Bearer ${this.managementKey}`);
     }
-
-    headersFromOptions.forEach((value, key) => {
-      headers.set(key, value);
-    });
-    headersFromInit.forEach((value, key) => {
-      headers.set(key, value);
-    });
 
     return headers;
   }
 
   private createAbortController(options?: RequestOptions) {
     const controller = new AbortController();
-    const timeoutMs = options?.timeoutMs ?? REQUEST_TIMEOUT_MS;
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    const timeoutMs = Math.max(1, options?.timeoutMs ?? REQUEST_TIMEOUT_MS);
+    let timedOut = false;
+    const timer = globalThis.setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, timeoutMs);
     const externalSignal = options?.signal;
     const onExternalAbort = () => controller.abort();
 
@@ -111,8 +152,9 @@ export class ApiClient {
 
     return {
       controller,
+      didTimeout: () => timedOut,
       cleanup: () => {
-        clearTimeout(timer);
+        globalThis.clearTimeout(timer);
         if (externalSignal) {
           externalSignal.removeEventListener("abort", onExternalAbort);
         }
@@ -120,42 +162,63 @@ export class ApiClient {
     };
   }
 
-  private async buildErrorMessage(response: Response): Promise<string> {
+  private async parseResponseBody(response: Response): Promise<unknown> {
+    const text = await response.text();
+    const trimmed = text.trim();
+    if (!trimmed) return undefined;
+
+    const contentType = response.headers.get("Content-Type") ?? "";
+    if (isHtmlDocument(contentType, trimmed)) {
+      throw new ApiError({
+        message:
+          "Management API returned the web panel HTML instead of JSON. Check the API base URL.",
+        status: response.status,
+        statusText: response.statusText,
+        url: response.url,
+        payload: truncateErrorText(trimmed),
+      });
+    }
+
+    try {
+      return JSON.parse(trimmed) as unknown;
+    } catch {
+      return text;
+    }
+  }
+
+  private async buildApiError(response: Response): Promise<ApiError> {
+    let payload: unknown = null;
     let message = `Request failed (${response.status})`;
+
     try {
       const text = await response.text();
       const trimmed = text.trim();
-
       if (trimmed) {
-        try {
-          const errorPayload = JSON.parse(trimmed) as Record<string, unknown>;
-          const nestedError =
-            errorPayload.error &&
-            typeof errorPayload.error === "object" &&
-            !Array.isArray(errorPayload.error)
-              ? (errorPayload.error as Record<string, unknown>)
-              : null;
-          const errorText =
-            typeof errorPayload.error === "string"
-              ? errorPayload.error
-              : typeof nestedError?.message === "string"
-                ? nestedError.message
-                : typeof errorPayload.message === "string"
-                  ? errorPayload.message
-                  : null;
-          if (errorText) {
-            message = errorText;
-          } else {
-            message = trimmed;
+        if (isHtmlDocument(response.headers.get("Content-Type") ?? "", trimmed)) {
+          payload = truncateErrorText(trimmed);
+          message = buildHtmlErrorMessage(response);
+        } else {
+          try {
+            payload = JSON.parse(trimmed) as unknown;
+            message = extractApiErrorMessage(payload, truncateErrorText(trimmed));
+          } catch {
+            payload = truncateErrorText(trimmed);
+            message = truncateErrorText(trimmed);
           }
-        } catch {
-          message = trimmed;
         }
       }
     } catch {
-      // 忽略错误体解析失败
+      // Keep the status-based fallback when error body cannot be read.
     }
-    return message;
+
+    return new ApiError({
+      message,
+      status: response.status,
+      statusText: response.statusText,
+      url: response.url,
+      payload,
+      isAuthError: this.shouldSuspendAuth(response.status, message),
+    });
   }
 
   private shouldSuspendAuth(status: number, message: string): boolean {
@@ -166,12 +229,16 @@ export class ApiClient {
   private suspendAuth(): void {
     if (this.authSuspended) return;
     this.authSuspended = true;
-    window.dispatchEvent(new Event("unauthorized"));
+    dispatchWindowEvent(new Event("unauthorized"));
   }
 
   private assertAuthActive(): void {
     if (this.authSuspended) {
-      throw new Error("Management session is no longer valid. Please sign in again.");
+      throw new ApiError({
+        message: "Management session is no longer valid. Please sign in again.",
+        status: 401,
+        isAuthError: true,
+      });
     }
   }
 
@@ -180,32 +247,12 @@ export class ApiClient {
     const buildDate = this.readHeader(response.headers, BUILD_DATE_HEADER_KEYS);
 
     if (version || buildDate) {
-      window.dispatchEvent(
+      dispatchWindowEvent(
         new CustomEvent("server-version-update", {
           detail: { version, buildDate },
         }),
       );
     }
-  }
-
-  private extractDownloadFilename(headers: Headers, fallback: string): string {
-    const header = headers.get("Content-Disposition")?.trim();
-    if (!header) return fallback;
-
-    const utf8Match = header.match(/filename\*=UTF-8''([^;]+)/i);
-    if (utf8Match?.[1]) {
-      try {
-        return decodeURIComponent(utf8Match[1]);
-      } catch {
-        return utf8Match[1];
-      }
-    }
-
-    const quotedMatch = header.match(/filename="([^"]+)"/i);
-    if (quotedMatch?.[1]) return quotedMatch[1];
-
-    const plainMatch = header.match(/filename=([^;]+)/i);
-    return plainMatch?.[1]?.trim() || fallback;
   }
 
   private async request<T>(
@@ -221,7 +268,7 @@ export class ApiClient {
     } = {},
   ): Promise<T> {
     this.assertAuthActive();
-    const { controller, cleanup } = this.createAbortController(options);
+    const { controller, cleanup, didTimeout } = this.createAbortController(options);
 
     try {
       const url = this.buildUrl(path, options?.params);
@@ -236,11 +283,11 @@ export class ApiClient {
       this.applyVersionHeaders(response);
 
       if (!response.ok) {
-        const message = await this.buildErrorMessage(response);
-        if (this.shouldSuspendAuth(response.status, message)) {
+        const error = await this.buildApiError(response);
+        if (error.isAuthError) {
           this.suspendAuth();
         }
-        throw new Error(message);
+        throw error;
       }
 
       if (response.status === 204) {
@@ -251,31 +298,26 @@ export class ApiClient {
         return (await response.blob()) as T;
       }
 
-      const text = await response.text();
       if (responseType === "text") {
-        return text as T;
+        return (await response.text()) as T;
       }
 
-      const trimmed = text.trim();
-      if (!trimmed) {
-        return undefined as T;
+      const payload = await this.parseResponseBody(response);
+      return (options?.unwrapEnvelope ? unwrapApiEnvelope<T>(payload) : payload) as T;
+    } catch (error) {
+      if (error instanceof ApiError) {
+        throw error;
       }
-
-      const contentType = response.headers.get("Content-Type") ?? "";
-      if (
-        contentType.toLowerCase().includes("text/html") &&
-        /^<!doctype html|^<html[\s>]/i.test(trimmed)
-      ) {
-        throw new Error(
-          "Management API returned the web panel HTML instead of JSON. Check the API base URL.",
-        );
+      if (isAbortError(error)) {
+        throw new ApiError({
+          message: didTimeout()
+            ? `Request timed out after ${options?.timeoutMs ?? REQUEST_TIMEOUT_MS}ms`
+            : "Request was cancelled",
+          isTimeout: didTimeout(),
+          url: path,
+        });
       }
-
-      try {
-        return JSON.parse(trimmed) as T;
-      } catch {
-        return text as unknown as T;
-      }
+      throw error;
     } finally {
       cleanup();
     }
@@ -283,6 +325,10 @@ export class ApiClient {
 
   get<T>(path: string, options?: RequestOptions): Promise<T> {
     return this.request<T>(path, { options });
+  }
+
+  getData<T>(path: string, options?: RequestOptions): Promise<T> {
+    return this.get<T>(path, { ...options, unwrapEnvelope: true });
   }
 
   post<T>(path: string, body?: unknown, options?: RequestOptions): Promise<T> {
@@ -295,6 +341,10 @@ export class ApiClient {
     });
   }
 
+  postData<T>(path: string, body?: unknown, options?: RequestOptions): Promise<T> {
+    return this.post<T>(path, body, { ...options, unwrapEnvelope: true });
+  }
+
   put<T>(path: string, body?: unknown, options?: RequestOptions): Promise<T> {
     return this.request<T>(path, {
       init: {
@@ -303,6 +353,10 @@ export class ApiClient {
       },
       options,
     });
+  }
+
+  putData<T>(path: string, body?: unknown, options?: RequestOptions): Promise<T> {
+    return this.put<T>(path, body, { ...options, unwrapEnvelope: true });
   }
 
   patch<T>(path: string, body?: unknown, options?: RequestOptions): Promise<T> {
@@ -315,6 +369,10 @@ export class ApiClient {
     });
   }
 
+  patchData<T>(path: string, body?: unknown, options?: RequestOptions): Promise<T> {
+    return this.patch<T>(path, body, { ...options, unwrapEnvelope: true });
+  }
+
   delete<T>(path: string, body?: unknown, options?: RequestOptions): Promise<T> {
     return this.request<T>(path, {
       init: {
@@ -323,6 +381,10 @@ export class ApiClient {
       },
       options,
     });
+  }
+
+  deleteData<T>(path: string, body?: unknown, options?: RequestOptions): Promise<T> {
+    return this.delete<T>(path, body, { ...options, unwrapEnvelope: true });
   }
 
   postForm<T>(path: string, formData: FormData, options?: RequestOptions): Promise<T> {
@@ -360,7 +422,7 @@ export class ApiClient {
     options?: RequestOptions,
   ): Promise<void> {
     this.assertAuthActive();
-    const { controller, cleanup } = this.createAbortController(options);
+    const { controller, cleanup, didTimeout } = this.createAbortController(options);
 
     try {
       const url = this.buildUrl(path, options?.params);
@@ -374,14 +436,14 @@ export class ApiClient {
       this.applyVersionHeaders(response);
 
       if (!response.ok) {
-        const message = await this.buildErrorMessage(response);
-        if (this.shouldSuspendAuth(response.status, message)) {
+        const error = await this.buildApiError(response);
+        if (error.isAuthError) {
           this.suspendAuth();
         }
-        throw new Error(message);
+        throw error;
       }
 
-      const filename = this.extractDownloadFilename(response.headers, preferredFilename);
+      const filename = extractDownloadFilename(response.headers, preferredFilename);
       const pickerWindow = window as BrowserFilePickerWindow;
 
       if (pickerWindow.showSaveFilePicker && response.body) {
@@ -414,7 +476,21 @@ export class ApiClient {
       link.href = objectUrl;
       link.download = filename;
       link.click();
-      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+      globalThis.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+    } catch (error) {
+      if (error instanceof ApiError) {
+        throw error;
+      }
+      if (isAbortError(error)) {
+        throw new ApiError({
+          message: didTimeout()
+            ? `Request timed out after ${options?.timeoutMs ?? REQUEST_TIMEOUT_MS}ms`
+            : "Request was cancelled",
+          isTimeout: didTimeout(),
+          url: path,
+        });
+      }
+      throw error;
     } finally {
       cleanup();
     }
@@ -422,3 +498,5 @@ export class ApiClient {
 }
 
 export const apiClient = new ApiClient();
+export type { ApiSuccessEnvelope };
+export { ApiError, unwrapApiEnvelope };

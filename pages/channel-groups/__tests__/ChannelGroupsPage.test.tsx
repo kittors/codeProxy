@@ -20,6 +20,31 @@ const apiMocks = vi.hoisted(() => ({
   put: vi.fn(),
 }));
 
+function extractList(payload: unknown, key: string): unknown[] {
+  if (Array.isArray(payload)) return payload;
+  const record = payload && typeof payload === "object" ? (payload as Record<string, unknown>) : {};
+  const value = record[key] ?? record.items ?? record.data;
+  return Array.isArray(value) ? value : [];
+}
+
+async function normalizeProviderConfigs(path: string, key: string) {
+  const payload = await apiMocks.get(path);
+  return extractList(payload, key).map((entry) => {
+    const item = entry && typeof entry === "object" ? (entry as Record<string, unknown>) : {};
+    return {
+      apiKey: String(item["api-key"] ?? item.apiKey ?? ""),
+      name: typeof item.name === "string" ? item.name : undefined,
+      prefix: typeof item.prefix === "string" ? item.prefix : undefined,
+      models: Array.isArray(item.models) ? item.models : [],
+      excludedModels: Array.isArray(item["excluded-models"])
+        ? item["excluded-models"]
+        : Array.isArray(item.excludedModels)
+          ? item.excludedModels
+          : [],
+    };
+  });
+}
+
 vi.mock("goey-toast", () => ({
   GoeyToaster: () => null,
   goeyToast: {
@@ -34,6 +59,73 @@ vi.mock("@code-proxy/api-client", () => ({
   apiClient: {
     get: apiMocks.get,
     put: apiMocks.put,
+  },
+  authFilesApi: {
+    list: () => apiMocks.get("/auth-files"),
+    getModelsForAuthFile: async (name: string) => {
+      const payload = await apiMocks.get("/auth-files/models", { params: { name } });
+      const record =
+        payload && typeof payload === "object" ? (payload as Record<string, unknown>) : {};
+      return Array.isArray(record.models) ? record.models : [];
+    },
+    getModelDefinitions: async (channel: string) => {
+      const normalizedChannel = String(channel ?? "")
+        .trim()
+        .toLowerCase();
+      const payload = await apiMocks.get(
+        `/model-definitions/${encodeURIComponent(normalizedChannel)}`,
+      );
+      const record =
+        payload && typeof payload === "object" ? (payload as Record<string, unknown>) : {};
+      return Array.isArray(record.models) ? record.models : [];
+    },
+  },
+  providersApi: {
+    getGeminiKeys: () => normalizeProviderConfigs("/gemini-api-key", "gemini-api-key"),
+    getClaudeConfigs: () => normalizeProviderConfigs("/claude-api-key", "claude-api-key"),
+    getCodexConfigs: () => normalizeProviderConfigs("/codex-api-key", "codex-api-key"),
+    getOpenCodeGoConfigs: () =>
+      normalizeProviderConfigs("/opencode-go-api-key", "opencode-go-api-key"),
+    getVertexConfigs: () => normalizeProviderConfigs("/vertex-api-key", "vertex-api-key"),
+    getOpenAIProviders: async () => {
+      const payload = await apiMocks.get("/openai-compatibility");
+      return extractList(payload, "openai-compatibility").map((entry) => {
+        const item = entry as Record<string, unknown>;
+        return {
+          name: String(item.name ?? ""),
+          prefix: typeof item.prefix === "string" ? item.prefix : undefined,
+          models: Array.isArray(item.models) ? item.models : [],
+          apiKeyEntries: Array.isArray(item["api-key-entries"])
+            ? item["api-key-entries"]
+            : Array.isArray(item.apiKeyEntries)
+              ? item.apiKeyEntries
+              : [],
+        };
+      });
+    },
+  },
+  modelsApi: {
+    getAuthGroupModelOwnerMappingMap: async () => {
+      const payload = await apiMocks.get("/auth-group-model-owner-mappings");
+      const record =
+        payload && typeof payload === "object" ? (payload as Record<string, unknown>) : {};
+      const items = Array.isArray(record.items) ? record.items : [];
+      return Object.fromEntries(
+        items
+          .map((entry) => {
+            if (!entry || typeof entry !== "object" || Array.isArray(entry)) return null;
+            const row = entry as Record<string, unknown>;
+            const authGroup = String(row.auth_group ?? "")
+              .trim()
+              .toLowerCase();
+            const owner = String(row.owner ?? "")
+              .trim()
+              .toLowerCase();
+            return authGroup && owner ? ([authGroup, owner] as const) : null;
+          })
+          .filter(Boolean) as Array<readonly [string, string]>,
+      );
+    },
   },
 }));
 
@@ -159,6 +251,9 @@ describe("ChannelGroupsPage", () => {
           ],
         });
       }
+      if (path === "/auth-group-model-owner-mappings") {
+        return Promise.resolve({ items: [] });
+      }
       if (path.startsWith("/models?")) {
         return Promise.resolve({
           data: [{ id: "claude-3-7-sonnet-latest" }, { id: "gpt-should-not-leak" }],
@@ -206,11 +301,100 @@ describe("ChannelGroupsPage", () => {
   });
 
   test("filters group editor models by the auth-file model owner group mapping", async () => {
-    window.localStorage.setItem(
-      "authFilesPage.modelOwnerGroupMap.v1",
-      JSON.stringify({ claude: "anthropic" }),
-    );
     const user = userEvent.setup();
+
+    mockedApiGet.mockImplementation((path: string) => {
+      if (path === "/auth-group-model-owner-mappings") {
+        return Promise.resolve({
+          items: [{ auth_group: "claude", owner: "anthropic" }],
+        });
+      }
+      if (path === "/models/configured-availability") {
+        return Promise.resolve({
+          scoped: true,
+          data: [
+            {
+              id: "claude-3-7-sonnet-latest",
+              owned_by: "anthropic",
+              description: "Mapped Claude model",
+              pricing: {
+                mode: "token",
+                input_price_per_million: 3,
+                output_price_per_million: 15,
+                cached_price_per_million: 0.3,
+              },
+            },
+            {
+              id: "gpt-should-not-leak",
+              owned_by: "openai",
+              description: "Unmapped OpenAI model",
+            },
+          ],
+        });
+      }
+      if (path === "/routing-config") {
+        return Promise.resolve({
+          strategy: "round-robin",
+          "include-default-group": true,
+          "channel-groups": [],
+          "path-routes": [],
+        });
+      }
+      if (path === "/channel-groups") {
+        return Promise.resolve({
+          items: [
+            {
+              name: "Claude Pool",
+              channels: ["Team A Claude"],
+              "channel-details": [{ name: "Team A Claude", source: "claude" }],
+            },
+          ],
+        });
+      }
+      if (path.startsWith("/models?")) {
+        return Promise.resolve({
+          data: [{ id: "claude-3-7-sonnet-latest" }, { id: "gpt-should-not-leak" }],
+        });
+      }
+      if (path === "/auth-files") {
+        return Promise.resolve({
+          files: [{ name: "claude-account.json", type: "claude", disabled: false }],
+        });
+      }
+      if (path === "/model-configs?scope=library") {
+        return Promise.resolve({
+          data: [
+            {
+              id: "claude-3-7-sonnet-latest",
+              owned_by: "anthropic",
+              description: "Mapped Claude model",
+              pricing: {
+                mode: "token",
+                input_price_per_million: 3,
+                output_price_per_million: 15,
+                cached_price_per_million: 0.3,
+              },
+            },
+            {
+              id: "gpt-should-not-leak",
+              owned_by: "openai",
+              description: "Unmapped OpenAI model",
+            },
+          ],
+        });
+      }
+      if (
+        path === "/gemini-api-key" ||
+        path === "/claude-api-key" ||
+        path === "/codex-api-key" ||
+        path === "/opencode-go-api-key" ||
+        path === "/vertex-api-key" ||
+        path === "/openai-compatibility"
+      ) {
+        return Promise.resolve([]);
+      }
+      return Promise.resolve({});
+    });
 
     renderPage();
 
@@ -231,11 +415,12 @@ describe("ChannelGroupsPage", () => {
   });
 
   test("uses the configured auth-file model owner group as the authoritative model scope", async () => {
-    window.localStorage.setItem(
-      "authFilesPage.modelOwnerGroupMap.v1",
-      JSON.stringify({ kimi: "kimi-code" }),
-    );
     mockedApiGet.mockImplementation((path: string) => {
+      if (path === "/auth-group-model-owner-mappings") {
+        return Promise.resolve({
+          items: [{ auth_group: "kimi", owner: "kimi-code" }],
+        });
+      }
       if (path === "/models/configured-availability") {
         return Promise.resolve({
           scoped: true,
@@ -345,11 +530,12 @@ describe("ChannelGroupsPage", () => {
   });
 
   test("merges mapped owner models with OpenCode Go live models for mixed channel groups", async () => {
-    window.localStorage.setItem(
-      "authFilesPage.modelOwnerGroupMap.v1",
-      JSON.stringify({ codex: "codex" }),
-    );
     mockedApiGet.mockImplementation((path: string) => {
+      if (path === "/auth-group-model-owner-mappings") {
+        return Promise.resolve({
+          items: [{ auth_group: "codex", owner: "codex" }],
+        });
+      }
       if (path === "/routing-config") {
         return Promise.resolve({
           strategy: "round-robin",
