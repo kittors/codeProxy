@@ -10,15 +10,17 @@ import {
 } from "@code-proxy/i18n";
 
 const SUPPORTED_LANGUAGES = LANGUAGE_ORDER;
-const LANGUAGE_LABEL_KEYS: Record<string, string> = {
-  "zh-CN": "nav.language_cn",
-  en: "nav.language_en",
+const LANGUAGE_LABEL_KEYS: Record<Language, string> = {
+  "zh-CN": "language.chinese",
+  en: "language.english",
+  ru: "language.russian",
 };
 
 /** Short labels for each language, shown next to the icon */
-const SHORT_LABELS: Record<string, string> = {
+const SHORT_LABELS: Record<Language, string> = {
   en: "EN",
   "zh-CN": "中",
+  ru: "RU",
 };
 
 export function LanguageSelector({ className }: { className?: string }) {
