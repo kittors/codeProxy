@@ -1,5 +1,9 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { applyUpdateFlow, formatUpdateStatusMessage } from "@app/update/updateShared";
+import {
+  applyUpdateFlow,
+  formatUpdateStatusMessage,
+  selectLocalizedReleaseNotes,
+} from "@app/update/updateShared";
 
 const mocks = vi.hoisted(() => ({
   apiGet: vi.fn(),
@@ -34,6 +38,50 @@ describe("formatUpdateStatusMessage", () => {
 
   test("keeps ordinary status messages unchanged", () => {
     expect(formatUpdateStatusMessage("already up to date")).toBe("already up to date");
+  });
+});
+
+describe("selectLocalizedReleaseNotes", () => {
+  const bilingualNotes = [
+    "v0.4.0 - dev 全量合并发布 / Full dev-to-main release",
+    "",
+    "中文",
+    "",
+    "这是中文更新说明。",
+    "",
+    "- 后端架构整理",
+    "",
+    "English",
+    "",
+    "This is the English release note.",
+    "",
+    "- Backend architecture cleanup",
+  ].join("\n");
+
+  test("selects the English section and localizes the bilingual heading", () => {
+    expect(selectLocalizedReleaseNotes(bilingualNotes, "en")).toBe(
+      [
+        "v0.4.0 - Full dev-to-main release",
+        "",
+        "This is the English release note.",
+        "",
+        "- Backend architecture cleanup",
+      ].join("\n"),
+    );
+  });
+
+  test("keeps the Chinese section for Chinese UI", () => {
+    expect(selectLocalizedReleaseNotes(bilingualNotes, "zh-CN")).toBe(
+      ["v0.4.0 - dev 全量合并发布", "", "这是中文更新说明。", "", "- 后端架构整理"].join(
+        "\n",
+      ),
+    );
+  });
+
+  test("falls back to English for locales without a dedicated release section", () => {
+    expect(selectLocalizedReleaseNotes(bilingualNotes, "ru")).toContain(
+      "This is the English release note.",
+    );
   });
 });
 

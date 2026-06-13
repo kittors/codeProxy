@@ -8,6 +8,7 @@ import { Modal } from "@code-proxy/ui";
 import {
   formatUpdateStatusMessage,
   isAlreadyUpToDateMessage,
+  selectLocalizedReleaseNotes,
   shortCommit,
   uiVersionLabel,
   versionLabel,
@@ -391,7 +392,7 @@ export function UpdateDetailsModal({
   onApply: () => void;
   onClose: () => void;
 }) {
-  const { t } = useTranslation();
+  const { i18n, t } = useTranslation();
   const [releaseNotesExpanded, setReleaseNotesExpanded] = useState(false);
   const progressStatus = normalizedProgressStatus(progress);
   const showProgressConsole = Boolean(progress && progressStatus !== "idle");
@@ -429,7 +430,12 @@ export function UpdateDetailsModal({
         : alreadyUpToDate
           ? t("auto_update.up_to_date_description")
           : t("auto_update.description");
-  const releaseNotes = displayCandidate?.release_notes?.trim() || t("auto_update.no_release_notes");
+  const rawReleaseNotes =
+    displayCandidate?.release_notes?.trim() || t("auto_update.no_release_notes");
+  const releaseNotes = useMemo(
+    () => selectLocalizedReleaseNotes(rawReleaseNotes, i18n.language),
+    [i18n.language, rawReleaseNotes],
+  );
   const showReleaseNotes = Boolean(displayCandidate?.update_available) && !showProgressConsole;
   const releaseNotesPreview = useMemo(() => buildReleaseNotesPreview(releaseNotes), [releaseNotes]);
   const visibleReleaseNotes =
@@ -489,7 +495,7 @@ export function UpdateDetailsModal({
 
   useEffect(() => {
     setReleaseNotesExpanded(false);
-  }, [candidate?.latest_commit, candidate?.latest_ui_commit, open]);
+  }, [candidate?.latest_commit, candidate?.latest_ui_commit, i18n.language, open]);
 
   return (
     <Modal

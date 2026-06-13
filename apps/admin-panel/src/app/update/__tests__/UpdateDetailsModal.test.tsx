@@ -115,4 +115,33 @@ describe("UpdateDetailsModal", () => {
     expect(screen.queryByTestId("update-log-stream")).toBeNull();
     expect(screen.getByTestId("update-details-modal-body")).toHaveClass("max-h-[min(62vh,520px)]");
   });
+
+  test("shows the release notes section that matches the active language", async () => {
+    render(
+      <UpdateDetailsModal
+        open
+        candidate={{
+          ...candidate,
+          release_notes: [
+            "v0.4.0 - dev 全量合并发布 / Full dev-to-main release",
+            "",
+            "中文",
+            "",
+            "这是中文更新说明。",
+            "",
+            "English",
+            "",
+            "This is the English release note.",
+          ].join("\n"),
+        }}
+        onApply={() => {}}
+        onClose={() => {}}
+      />,
+    );
+
+    expect(await screen.findByText("v0.4.0 - Full dev-to-main release")).toBeInTheDocument();
+    expect(screen.getByText("This is the English release note.")).toBeInTheDocument();
+    expect(screen.queryByText("中文")).not.toBeInTheDocument();
+    expect(screen.queryByText("这是中文更新说明。")).not.toBeInTheDocument();
+  });
 });
