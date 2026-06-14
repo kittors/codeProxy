@@ -522,6 +522,7 @@ function scheduleColumnReorderSettleCleanup(element: HTMLElement) {
     element.style.overflow = "";
     element.style.contain = "";
     element.style.isolation = "";
+    element.style.borderRadius = "";
   }, COLUMN_REORDER_SETTLE_CLEANUP_MS);
 }
 
@@ -1298,6 +1299,7 @@ export function DataTable<T>({
         element.style.overflow = "";
         element.style.contain = "";
         element.style.isolation = "";
+        element.style.borderRadius = "";
         element.removeAttribute("data-vt-column-dragging-cell");
         element.removeAttribute("data-vt-column-shifted-cell");
       });
@@ -1344,6 +1346,7 @@ export function DataTable<T>({
           element.style.overflow = isMoved ? "hidden" : "";
           element.style.contain = isMoved ? "paint" : "";
           element.style.isolation = isMoved ? "isolate" : "";
+          element.style.borderRadius = isMoved ? "0" : "";
           element.style.boxShadow = isDragged
             ? "inset 2px 0 0 rgba(37, 99, 235, 0.42), inset -2px 0 0 rgba(14, 165, 233, 0.28), 0 10px 26px -22px rgba(15, 23, 42, 0.65)"
             : "";

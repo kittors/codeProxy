@@ -120,6 +120,10 @@ const readDragVisualState = async (page: Page) =>
           boxShadow: style.boxShadow,
           inlineBackground: element.style.background,
           isOpaque: isOpaque(style, element.style.background),
+          borderTopLeftRadius: style.borderTopLeftRadius,
+          borderTopRightRadius: style.borderTopRightRadius,
+          borderBottomLeftRadius: style.borderBottomLeftRadius,
+          borderBottomRightRadius: style.borderBottomRightRadius,
           opacity: style.opacity,
           overflowX: style.overflowX,
           overflowY: style.overflowY,
@@ -157,7 +161,8 @@ const readDragVisualState = async (page: Page) =>
           element.style.background === "" &&
           element.style.overflow === "" &&
           element.style.contain === "" &&
-          element.style.isolation === "",
+          element.style.isolation === "" &&
+          element.style.borderRadius === "",
       ),
     };
   });
@@ -208,6 +213,10 @@ test("Request Logs: column reorder follows the pointer and auto-scrolls horizont
         style.overflowX === "hidden" &&
         style.overflowY === "hidden" &&
         style.isOpaque &&
+        style.borderTopLeftRadius === "0px" &&
+        style.borderTopRightRadius === "0px" &&
+        style.borderBottomLeftRadius === "0px" &&
+        style.borderBottomRightRadius === "0px" &&
         style.backgroundImage.includes("gradient") &&
         style.boxShadow !== "none" &&
         Number(style.zIndex) >= 90,
@@ -220,6 +229,10 @@ test("Request Logs: column reorder follows the pointer and auto-scrolls horizont
         style.overflowX === "hidden" &&
         style.overflowY === "hidden" &&
         style.isOpaque &&
+        style.borderTopLeftRadius === "0px" &&
+        style.borderTopRightRadius === "0px" &&
+        style.borderBottomLeftRadius === "0px" &&
+        style.borderBottomRightRadius === "0px" &&
         Number(style.zIndex) >= 45,
     ),
   ).toBe(true);
@@ -283,4 +296,67 @@ test("Request Logs: last column does not auto-scroll past the right reorder boun
   const after = await readTableState(page);
   expect(after.draggingCells).toBe(0);
   expect(after.order.at(-1)).toBe("model");
+});
+
+test("Request Logs: first column drag keeps a straight left edge", async ({ page }) => {
+  await setAuthed(page);
+  await mockRequestLogsApis(page);
+
+  await page.goto("/manage/#/monitor/request-logs");
+  await page.locator('th[data-vt-column-key="id"]').waitFor({ state: "visible" });
+
+  const dragStart = await page
+    .locator('th[data-vt-column-key="id"] [data-vt-column-reorder-handle]')
+    .evaluate((element) => {
+      const rect = element.getBoundingClientRect();
+      return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+    });
+
+  await page.mouse.move(dragStart.x, dragStart.y);
+  await page.mouse.down();
+  await page.waitForTimeout(130);
+  await page.mouse.move(dragStart.x + 260, dragStart.y, { steps: 10 });
+  await page.waitForTimeout(120);
+
+  const visualDuringDrag = await readDragVisualState(page);
+  expect(visualDuringDrag.dragging.length).toBeGreaterThan(0);
+  expect(
+    visualDuringDrag.dragging.every(
+      (style) => style.borderTopLeftRadius === "0px" && style.borderBottomLeftRadius === "0px",
+    ),
+  ).toBe(true);
+
+  await page.mouse.up();
+});
+
+test("Request Logs: last column drag keeps a straight right edge", async ({ page }) => {
+  await setAuthed(page);
+  await mockRequestLogsApis(page);
+
+  await page.goto("/manage/#/monitor/request-logs");
+  await page.locator('th[data-vt-column-key="model"]').waitFor({ state: "visible" });
+  await scrollTableNearRightEdge(page);
+
+  const dragStart = await page
+    .locator('th[data-vt-column-key="model"] [data-vt-column-reorder-handle]')
+    .evaluate((element) => {
+      const rect = element.getBoundingClientRect();
+      return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+    });
+
+  await page.mouse.move(dragStart.x, dragStart.y);
+  await page.mouse.down();
+  await page.waitForTimeout(130);
+  await page.mouse.move(dragStart.x - 260, dragStart.y, { steps: 10 });
+  await page.waitForTimeout(120);
+
+  const visualDuringDrag = await readDragVisualState(page);
+  expect(visualDuringDrag.dragging.length).toBeGreaterThan(0);
+  expect(
+    visualDuringDrag.dragging.every(
+      (style) => style.borderTopRightRadius === "0px" && style.borderBottomRightRadius === "0px",
+    ),
+  ).toBe(true);
+
+  await page.mouse.up();
 });
