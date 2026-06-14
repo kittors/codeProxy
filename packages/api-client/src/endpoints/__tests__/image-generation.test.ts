@@ -3,12 +3,14 @@ import { describe, expect, test, vi, beforeEach } from "vitest";
 const postMock = vi.fn();
 const postFormMock = vi.fn();
 const getMock = vi.fn();
+const putMock = vi.fn();
 
 vi.mock("../../client/client", () => ({
   apiClient: {
     get: getMock,
     post: postMock,
     postForm: postFormMock,
+    put: putMock,
   },
 }));
 
@@ -17,6 +19,31 @@ describe("imageGenerationApi", () => {
     getMock.mockReset();
     postMock.mockReset();
     postFormMock.mockReset();
+    putMock.mockReset();
+  });
+
+  test("loads image generation size presets", async () => {
+    const { imageGenerationApi } =
+      await import("@code-proxy/api-client/endpoints/image-generation");
+
+    getMock.mockResolvedValue({ sizes: ["1024x1024", "4096x2304"] });
+
+    await imageGenerationApi.getSizePresets();
+
+    expect(getMock).toHaveBeenCalledWith("/image-generation/size-presets");
+  });
+
+  test("updates image generation size presets", async () => {
+    const { imageGenerationApi } =
+      await import("@code-proxy/api-client/endpoints/image-generation");
+
+    putMock.mockResolvedValue({ sizes: ["1024x1024", "4096x2304"] });
+
+    await imageGenerationApi.updateSizePresets(["1024x1024", "4096x2304"]);
+
+    expect(putMock).toHaveBeenCalledWith("/image-generation/size-presets", {
+      sizes: ["1024x1024", "4096x2304"],
+    });
   });
 
   test("creates a background task for text generation tests", async () => {

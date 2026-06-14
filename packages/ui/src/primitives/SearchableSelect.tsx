@@ -173,6 +173,7 @@ export function SearchableSelect({
   const canCreate = useMemo(() => {
     if (!allowCreate || !createValue) return false;
     const key = normalizeCreateValue(createValue).toLowerCase();
+    if (!key) return false;
     return !options.some((option) => {
       const labelText = typeof option.label === "string" ? option.label : "";
       return (
