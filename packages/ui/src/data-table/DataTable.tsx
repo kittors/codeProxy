@@ -89,6 +89,10 @@ export interface DataTableProps<T> {
   showAllLoadedMessage?: boolean;
   /** Extra row className */
   rowClassName?: string | ((row: T, index: number) => string);
+  /** Optional row click handler. When set, rows become keyboard-focusable selection targets. */
+  onRowClick?: (row: T, index: number) => void;
+  /** Optional selected state for row interaction semantics. */
+  rowAriaSelected?: (row: T, index: number) => boolean;
   /** Let parent scroll containers handle wheel events when this table is already at an edge. */
   allowWheelPropagationAtBoundary?: boolean;
   /** Render the table in normal document flow without any internal table scrollbars. */
@@ -551,6 +555,8 @@ export function DataTable<T>({
   emptyText = "",
   showAllLoadedMessage = true,
   rowClassName,
+  onRowClick,
+  rowAriaSelected,
   allowWheelPropagationAtBoundary = false,
   naturalFlow = false,
   scrollContentClassName,
@@ -2078,13 +2084,35 @@ export function DataTable<T>({
                       typeof rowClassName === "function"
                         ? rowClassName(row, globalIdx)
                         : (rowClassName ?? "");
+                    const rowSelected = rowAriaSelected?.(row, globalIdx);
+                    const rowInteractive = Boolean(onRowClick);
                     return (
                       <tr
                         key={key}
+                        tabIndex={rowInteractive ? 0 : undefined}
+                        aria-selected={rowSelected}
                         className={`group/row relative z-0 text-sm transition-colors ${
+                          rowInteractive ? "cursor-pointer outline-none" : ""
+                        } ${
                           naturalFlow ? "hover:bg-slate-50 dark:hover:bg-white/[0.04]" : ""
                         } ${extraCls}`}
                         style={virtualize ? { height: rowHeight } : undefined}
+                        onClick={
+                          rowInteractive
+                            ? () => {
+                                onRowClick?.(row, globalIdx);
+                              }
+                            : undefined
+                        }
+                        onKeyDown={
+                          rowInteractive
+                            ? (event) => {
+                                if (event.key !== "Enter" && event.key !== " ") return;
+                                event.preventDefault();
+                                onRowClick?.(row, globalIdx);
+                              }
+                            : undefined
+                        }
                         onMouseEnter={
                           naturalFlow
                             ? undefined

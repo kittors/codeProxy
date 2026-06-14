@@ -1,12 +1,12 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Check, Eye, RefreshCw } from "lucide-react";
+import { Check, RefreshCw } from "lucide-react";
 import {
   identityFingerprintApi,
   type CodexFingerprintRecommendation,
   type CodexIdentityFingerprint,
 } from "@code-proxy/api-client/endpoints/identity-fingerprint";
-import { Button, DataTable, HoverTooltip, Modal, type DataTableColumn } from "@code-proxy/ui";
+import { Button, ConfirmModal, DataTable, Modal, type DataTableColumn } from "@code-proxy/ui";
 
 type RecommendationDiff = {
   key: string;
@@ -29,10 +29,13 @@ export function CodexRecommendationsModal({
   onClose: () => void;
 }) {
   const { t } = useTranslation();
+  const requestSeqRef = useRef(0);
   const [items, setItems] = useState<CodexFingerprintRecommendation[]>([]);
   const [selectedId, setSelectedId] = useState("");
   const [loading, setLoading] = useState(false);
+  const [hasLoaded, setHasLoaded] = useState(false);
   const [error, setError] = useState("");
+  const [confirmApplyOpen, setConfirmApplyOpen] = useState(false);
   const [summary, setSummary] = useState({ inspected: 0, matched: 0, days: 7 });
 
   const selected = useMemo(
@@ -41,6 +44,8 @@ export function CodexRecommendationsModal({
   );
 
   const loadRecommendations = useCallback(async () => {
+    const requestId = requestSeqRef.current + 1;
+    requestSeqRef.current = requestId;
     setLoading(true);
     setError("");
     try {
@@ -48,6 +53,7 @@ export function CodexRecommendationsModal({
         days: 7,
         limit: 200,
       });
+      if (requestSeqRef.current !== requestId) return;
       setItems(payload.items);
       setSummary({
         inspected: payload.inspected,
@@ -60,18 +66,31 @@ export function CodexRecommendationsModal({
           : (payload.items[0]?.id ?? ""),
       );
     } catch (err: unknown) {
+      if (requestSeqRef.current !== requestId) return;
       setError(
         err instanceof Error ? err.message : t("identity_fingerprint.recommend_load_failed"),
       );
       setItems([]);
       setSelectedId("");
     } finally {
-      setLoading(false);
+      if (requestSeqRef.current === requestId) {
+        setLoading(false);
+        setHasLoaded(true);
+      }
     }
   }, [t]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      requestSeqRef.current += 1;
+      setLoading(false);
+      setConfirmApplyOpen(false);
+      return;
+    }
+    setHasLoaded(false);
+    setError("");
+    setItems([]);
+    setSelectedId("");
     void loadRecommendations();
   }, [loadRecommendations, open]);
 
@@ -89,6 +108,8 @@ export function CodexRecommendationsModal({
         key: "last_seen",
         label: t("identity_fingerprint.recommend_last_seen"),
         width: "w-36",
+        resizable: false,
+        reorderable: false,
         render: (item) => (
           <div className="text-xs">
             <div className="font-medium text-slate-900 dark:text-white">
@@ -101,158 +122,115 @@ export function CodexRecommendationsModal({
         ),
       },
       {
-        key: "user_agent",
-        label: t("identity_fingerprint.user_agent"),
-        width: "w-[300px]",
-        overflowTooltip: (item) =>
-          item.headers["User-Agent"] || item.recommended["user-agent"] || "",
-        render: (item) => (
-          <span className="block truncate font-mono text-xs text-slate-700 dark:text-white/70">
-            {item.headers["User-Agent"] || item.recommended["user-agent"] || "-"}
-          </span>
-        ),
-      },
-      {
         key: "originator",
         label: t("identity_fingerprint.originator"),
-        width: "w-32",
+        width: "w-44",
+        resizable: false,
+        reorderable: false,
+        overflowTooltip: (item) => item.headers.Originator || item.recommended.originator || "",
         render: (item) => (
-          <span className="font-mono text-xs text-slate-700 dark:text-white/70">
+          <span className="block truncate font-mono text-xs text-slate-700 dark:text-white/70">
             {item.headers.Originator || item.recommended.originator || "-"}
           </span>
         ),
       },
-      {
-        key: "version",
-        label: t("identity_fingerprint.version"),
-        width: "w-28",
-        render: (item) => (
-          <span className="font-mono text-xs text-slate-700 dark:text-white/70">
-            {item.headers.Version || item.recommended.version || "-"}
-          </span>
-        ),
-      },
-      {
-        key: "diff",
-        label: t("identity_fingerprint.recommend_diff"),
-        width: "w-36",
-        render: (item) => {
-          const diff = diffById.get(item.id) ?? [];
-          return (
-            <span
-              className={[
-                "inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold",
-                diff.length > 0
-                  ? "bg-sky-50 text-sky-700 dark:bg-sky-400/10 dark:text-sky-200"
-                  : "bg-emerald-50 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-200",
-              ].join(" ")}
-            >
-              {diff.length > 0
-                ? t("identity_fingerprint.recommend_diff_count", { count: diff.length })
-                : t("identity_fingerprint.recommend_same")}
-            </span>
-          );
-        },
-      },
-      {
-        key: "actions",
-        label: t("identity_fingerprint.recommend_actions"),
-        width: "w-28",
-        headerClassName: "text-right",
-        cellClassName: "text-right",
-        render: (item) => (
-          <div className="flex justify-end gap-1">
-            <Button
-              size="xs"
-              variant={selected?.id === item.id ? "primary" : "ghost"}
-              onClick={() => setSelectedId(item.id)}
-              title={t("identity_fingerprint.recommend_view_detail")}
-            >
-              <Eye size={14} />
-            </Button>
-            <Button
-              size="xs"
-              variant="primary"
-              onClick={() => onApply(item)}
-              title={t("identity_fingerprint.recommend_apply")}
-            >
-              <Check size={14} />
-            </Button>
-          </div>
-        ),
-      },
     ],
-    [diffById, onApply, selected?.id, t],
+    [t],
   );
 
   return (
-    <Modal
-      open={open}
-      title={t("identity_fingerprint.recommend_modal_title")}
-      description={t("identity_fingerprint.recommend_modal_desc", {
-        days: summary.days,
-        inspected: summary.inspected,
-        matched: summary.matched,
-      })}
-      maxWidth="max-w-6xl"
-      bodyHeightClassName="max-h-[56vh]"
-      bodyClassName="space-y-4"
-      onClose={onClose}
-      footer={
-        <>
-          <Button variant="secondary" onClick={() => void loadRecommendations()} disabled={loading}>
-            <RefreshCw size={15} className={loading ? "motion-safe:animate-spin" : ""} />
-            {t("common.refresh")}
-          </Button>
-          <Button variant="secondary" onClick={onClose}>
-            {t("common.cancel")}
-          </Button>
-          <Button
-            variant="primary"
-            onClick={() => {
-              if (selected) onApply(selected);
-            }}
-            disabled={!selected}
-          >
-            <Check size={15} />
-            {t("identity_fingerprint.recommend_apply_selected")}
-          </Button>
-        </>
-      }
-    >
-      {error ? (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:border-rose-400/30 dark:bg-rose-400/10 dark:text-rose-200">
-          {error}
-        </div>
-      ) : null}
+    <>
+      <Modal
+        open={open}
+        title={t("identity_fingerprint.recommend_modal_title")}
+        description={t("identity_fingerprint.recommend_modal_desc", {
+          days: summary.days,
+          inspected: summary.inspected,
+          matched: summary.matched,
+        })}
+        maxWidth="max-w-5xl"
+        bodyHeightClassName="max-h-[70vh]"
+        bodyOverflowClassName="overflow-y-auto overflow-x-hidden"
+        bodyClassName="space-y-4"
+        onClose={onClose}
+        footer={
+          <>
+            <Button
+              variant="secondary"
+              onClick={() => void loadRecommendations()}
+              disabled={loading}
+            >
+              <RefreshCw size={15} className={loading ? "motion-safe:animate-spin" : ""} />
+              {t("common.refresh")}
+            </Button>
+            <Button variant="secondary" onClick={onClose}>
+              {t("common.cancel")}
+            </Button>
+            <Button
+              variant="primary"
+              onClick={() => setConfirmApplyOpen(true)}
+              disabled={!selected || loading}
+            >
+              <Check size={15} />
+              {t("identity_fingerprint.recommend_apply_selected")}
+            </Button>
+          </>
+        }
+      >
+        {error ? (
+          <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:border-rose-400/30 dark:bg-rose-400/10 dark:text-rose-200">
+            {error}
+          </div>
+        ) : null}
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.45fr)_minmax(320px,0.75fr)]">
-        <div className="min-w-0 overflow-hidden rounded-xl border border-slate-200 dark:border-neutral-800">
-          <DataTable<CodexFingerprintRecommendation>
-            tableId="codex-fingerprint-recommendations"
-            rows={items}
-            columns={columns}
-            rowKey={(item) => item.id}
-            loading={loading}
-            rowHeight={58}
-            height="h-[340px]"
-            minHeight="min-h-[260px]"
-            minWidth="min-w-[960px]"
-            caption={t("identity_fingerprint.recommend_table_caption")}
-            emptyText={t("identity_fingerprint.recommend_empty")}
-            showAllLoadedMessage={false}
-            rowClassName={(item) =>
-              item.id === selected?.id ? "bg-sky-50/60 dark:bg-sky-400/10" : ""
-            }
+        <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(460px,0.95fr)_minmax(0,1.05fr)]">
+          <div className="min-w-0">
+            <DataTable<CodexFingerprintRecommendation>
+              rows={items}
+              columns={columns}
+              rowKey={(item) => item.id}
+              loading={loading && !hasLoaded}
+              rowHeight={58}
+              height="h-[220px] sm:h-[300px] lg:h-[430px]"
+              minHeight="min-h-[180px]"
+              minWidth="min-w-full"
+              caption={t("identity_fingerprint.recommend_table_caption")}
+              emptyText={t("identity_fingerprint.recommend_empty")}
+              showAllLoadedMessage={false}
+              columnReorderable={false}
+              onRowClick={(item) => setSelectedId(item.id)}
+              rowAriaSelected={(item) => item.id === selected?.id}
+              rowClassName={(item) =>
+                item.id === selected?.id
+                  ? "[&>td]:!bg-sky-50/90 dark:[&>td]:!bg-sky-400/10 [&>td:first-child]:shadow-[inset_3px_0_0_rgb(2_132_199)] dark:[&>td:first-child]:shadow-[inset_3px_0_0_rgb(56_189_248)]"
+                  : "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-sky-500"
+              }
+            />
+          </div>
+
+          <RecommendationDetail
+            item={selected}
+            diffs={selected ? (diffById.get(selected.id) ?? []) : []}
           />
         </div>
-
-        <RecommendationDetail
-          item={selected}
-          diffs={selected ? (diffById.get(selected.id) ?? []) : []}
-        />
-      </div>
-    </Modal>
+      </Modal>
+      <ConfirmModal
+        open={confirmApplyOpen}
+        title={t("identity_fingerprint.recommend_confirm_title")}
+        description={t("identity_fingerprint.recommend_confirm_desc", {
+          originator: selected?.recommended.originator || selected?.headers.Originator || "-",
+          version: selected?.recommended.version || selected?.headers.Version || "-",
+        })}
+        confirmText={t("identity_fingerprint.recommend_apply_confirm")}
+        variant="primary"
+        onClose={() => setConfirmApplyOpen(false)}
+        onConfirm={() => {
+          if (!selected) return;
+          setConfirmApplyOpen(false);
+          onApply(selected);
+        }}
+      />
+    </>
   );
 }
 
@@ -273,7 +251,7 @@ function RecommendationDetail({
   }
 
   return (
-    <aside className="min-w-0 rounded-xl border border-slate-200 bg-slate-50/60 p-4 dark:border-neutral-800 dark:bg-neutral-900/35">
+    <aside className="min-w-0 overflow-y-auto rounded-xl bg-slate-50/70 p-4 ring-1 ring-slate-200 dark:bg-neutral-900/35 dark:ring-neutral-800 lg:max-h-[430px]">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
@@ -374,16 +352,14 @@ function HeaderValueList({
       {entries.map(([key, value]) => (
         <div key={key} className="min-w-0 rounded-lg bg-white px-3 py-2 dark:bg-neutral-950/70">
           <div className="text-[11px] font-semibold text-slate-500 dark:text-white/45">{key}</div>
-          <HoverTooltip content={value} disabled={value.length < 48}>
-            <div
-              className={[
-                "mt-1 truncate font-mono text-xs",
-                muted ? "text-slate-500 dark:text-white/50" : "text-slate-800 dark:text-white/80",
-              ].join(" ")}
-            >
-              {value}
-            </div>
-          </HoverTooltip>
+          <div
+            className={[
+              "mt-1 whitespace-pre-wrap break-words [overflow-wrap:anywhere] font-mono text-xs leading-relaxed",
+              muted ? "text-slate-500 dark:text-white/50" : "text-slate-800 dark:text-white/80",
+            ].join(" ")}
+          >
+            {value}
+          </div>
         </div>
       ))}
     </div>
@@ -392,9 +368,11 @@ function HeaderValueList({
 
 function DiffLine({ label, value }: { label: string; value: string }) {
   return (
-    <div className="grid grid-cols-[56px_minmax(0,1fr)] gap-2">
+    <div className="grid grid-cols-[88px_minmax(0,1fr)] gap-2">
       <span className="text-slate-400 dark:text-white/35">{label}</span>
-      <span className="truncate font-mono text-slate-700 dark:text-white/70">{value || "-"}</span>
+      <span className="min-w-0 break-words [overflow-wrap:anywhere] font-mono text-slate-700 dark:text-white/70">
+        {value || "-"}
+      </span>
     </div>
   );
 }

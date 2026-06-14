@@ -275,8 +275,20 @@ describe("IdentityFingerprintPage provider tabs", () => {
     expect(mocks.codexRecommendations).toHaveBeenCalledWith({ days: 7, limit: 200 });
     expect(within(dialog).getAllByText(/codex-tui\/0\.125\.0/).length).toBeGreaterThan(0);
     expect(within(dialog).getByText(/sess\.\.\.abcd/)).toBeInTheDocument();
+    expect(within(dialog).queryByText(/^Actions$/i)).not.toBeInTheDocument();
 
     await userEvent.click(within(dialog).getByRole("button", { name: /Apply selected/i }));
+    expect(
+      screen.queryByDisplayValue("codex-tui/0.125.0 (Mac OS 26.5; arm64)"),
+    ).not.toBeInTheDocument();
+
+    const confirmDialog = await screen.findByRole("dialog", {
+      name: /Apply this recommended fingerprint/i,
+    });
+    expect(
+      within(confirmDialog).getByText(/codex-tui 0\.125\.0/i),
+    ).toBeInTheDocument();
+    await userEvent.click(within(confirmDialog).getByRole("button", { name: /Confirm apply/i }));
 
     await waitFor(() => {
       expect(
@@ -308,5 +320,90 @@ describe("IdentityFingerprintPage provider tabs", () => {
         }),
       }),
     );
+  });
+
+  test("selects a Codex recommendation row without applying until confirmation", async () => {
+    mocks.codexRecommendations.mockResolvedValueOnce({
+      items: [
+        {
+          id: "codex-cli",
+          count: 2,
+          first_seen_at: "2026-06-14T10:00:00Z",
+          last_seen_at: "2026-06-14T10:03:00Z",
+          headers: {
+            "User-Agent": "codex-tui/0.125.0 (Mac OS 26.5; arm64)",
+            Version: "0.125.0",
+            Originator: "codex-tui",
+          },
+          recommended: {
+            enabled: true,
+            "user-agent": "codex-tui/0.125.0 (Mac OS 26.5; arm64)",
+            version: "0.125.0",
+            originator: "codex-tui",
+            "session-mode": "per-request",
+            "custom-headers": {},
+          },
+          ignored_headers: {},
+          samples: [],
+        },
+        {
+          id: "codex-desktop",
+          count: 4,
+          first_seen_at: "2026-06-14T11:00:00Z",
+          last_seen_at: "2026-06-14T11:30:00Z",
+          headers: {
+            "User-Agent":
+              "Codex Desktop/0.140.0-alpha.2 (Windows 10.0.26200; x86_64) unknown (Codex Desktop; 26.609.41114)",
+            Originator: "Codex Desktop",
+            "X-Codex-Beta-Features": "terminal_resize_reflow,memories,remote_compaction_v2",
+          },
+          recommended: {
+            enabled: true,
+            "user-agent":
+              "Codex Desktop/0.140.0-alpha.2 (Windows 10.0.26200; x86_64) unknown (Codex Desktop; 26.609.41114)",
+            originator: "Codex Desktop",
+            "session-mode": "per-request",
+            "custom-headers": {
+              "X-Codex-Beta-Features": "terminal_resize_reflow,memories,remote_compaction_v2",
+            },
+          },
+          ignored_headers: {
+            Session_id: "sess...desktop",
+          },
+          samples: [],
+        },
+      ],
+      days: 7,
+      limit: 200,
+      inspected: 6,
+      matched: 6,
+    });
+
+    renderPage();
+    await screen.findByDisplayValue("codex_cli_rs/test");
+    await userEvent.click(screen.getByRole("button", { name: /Generate from recent requests/i }));
+
+    const dialog = await screen.findByRole("dialog", {
+      name: /Codex Fingerprint Recommendations/i,
+    });
+    const desktopRow = within(dialog).getByText("Codex Desktop").closest("tr");
+    expect(desktopRow).not.toBeNull();
+    await userEvent.click(desktopRow as HTMLElement);
+
+    expect(desktopRow).toHaveAttribute("aria-selected", "true");
+    expect(within(dialog).getAllByText(/0\.140\.0-alpha\.2/).length).toBeGreaterThan(0);
+    expect(
+      screen.queryByDisplayValue(/Codex Desktop\/0\.140\.0-alpha\.2/),
+    ).not.toBeInTheDocument();
+
+    await userEvent.click(within(dialog).getByRole("button", { name: /Apply selected/i }));
+    const confirmDialog = await screen.findByRole("dialog", {
+      name: /Apply this recommended fingerprint/i,
+    });
+    await userEvent.click(within(confirmDialog).getByRole("button", { name: /Confirm apply/i }));
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue(/Codex Desktop\/0\.140\.0-alpha\.2/)).toBeInTheDocument();
+    });
   });
 });
