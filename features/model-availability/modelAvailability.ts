@@ -759,15 +759,11 @@ export { invalidateConfiguredModelAvailability };
 export const loadConfiguredModelAvailability = async (options?: {
   allowedChannelGroups?: string[];
 }): Promise<ConfiguredModelAvailability> => {
-  const ownerByAuthGroup = await loadAuthGroupOwnerMappingMap();
-  const hasOwnerMappings = Object.keys(ownerByAuthGroup).length > 0;
   const validGroups = (options?.allowedChannelGroups ?? [])
     .map((g) => String(g ?? "").trim())
     .filter(Boolean);
-
-  if (hasOwnerMappings) {
-    return loadConfiguredModelAvailabilityFallback(ownerByAuthGroup);
-  }
+  const loadFallback = async () =>
+    loadConfiguredModelAvailabilityFallback(await loadAuthGroupOwnerMappingMap());
 
   if (validGroups.length > 0) {
     const cacheKey = validGroups.join(",");
@@ -791,7 +787,7 @@ export const loadConfiguredModelAvailability = async (options?: {
         });
         return result;
       } catch {
-        return loadConfiguredModelAvailabilityFallback(ownerByAuthGroup);
+        return loadFallback();
       }
     })();
     groupAvailabilityCache.set(cacheKey, {
@@ -828,7 +824,7 @@ export const loadConfiguredModelAvailability = async (options?: {
       return result;
     } catch {
       // Fallback to old multi-API aggregation for backward compatibility.
-      return loadConfiguredModelAvailabilityFallback(ownerByAuthGroup);
+      return loadFallback();
     }
   })();
   configuredAvailabilityInFlight = { version: cacheVersion, promise };

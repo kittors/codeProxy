@@ -399,13 +399,11 @@ export function CcSwitchImportConfigModal({
           if (!optionMap.has(key)) optionMap.set(key, normalized);
         };
         const needsModelConfigs = authoritativeModelOwnerKeys.size > 0 || modelOwnerKeys.size > 0;
-        let modelConfigs: ModelMetadataLike[] = [];
         if (needsModelConfigs) {
-          modelConfigs =
-            availability.metadataItems && availability.metadataItems.length > 0
-              ? availability.metadataItems
-              : await modelsApi.getModelConfigs("all").catch(() => []);
-          if (cancelled) return;
+          const modelConfigs: ModelMetadataLike[] = [
+            ...(availability.metadataItems ?? []),
+            ...availability.items,
+          ];
           if (modelOwnerKeys.size > 0 && authoritativeModelOwnerKeys.size === 0) {
             const allowedModelIds = new Set(
               modelConfigs
