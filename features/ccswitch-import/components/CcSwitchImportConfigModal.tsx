@@ -72,6 +72,7 @@ type ModelMetadataLike = {
   id: string;
   owned_by?: string;
   source?: string;
+  enabled?: boolean;
 };
 
 const GENERIC_MODEL_CONFIG_OWNER_KEYS = new Set([
@@ -138,8 +139,9 @@ const modelMetadataMatchesOwnerKeys = (
   model: ModelMetadataLike,
   ownerKeys: ReadonlySet<string>,
 ): boolean =>
-  ownerKeys.has(normalizeModelOwnerKey(model.owned_by)) ||
-  ownerKeys.has(normalizeModelOwnerKey(model.source));
+  model.enabled !== false &&
+  (ownerKeys.has(normalizeModelOwnerKey(model.owned_by)) ||
+    ownerKeys.has(normalizeModelOwnerKey(model.source)));
 
 function pickClaudeRoleModel(role: CcSwitchClaudeModelRole, models: readonly string[]): string {
   const normalized = dedupeModels(models);
@@ -402,7 +404,7 @@ export function CcSwitchImportConfigModal({
           modelConfigs =
             availability.metadataItems && availability.metadataItems.length > 0
               ? availability.metadataItems
-              : await modelsApi.getModelConfigs("active").catch(() => []);
+              : await modelsApi.getModelConfigs("all").catch(() => []);
           if (cancelled) return;
           if (modelOwnerKeys.size > 0 && authoritativeModelOwnerKeys.size === 0) {
             const allowedModelIds = new Set(
