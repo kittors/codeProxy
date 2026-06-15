@@ -49,6 +49,14 @@ if (typeof window !== "undefined") {
         dispatchEvent: () => false,
       }) as unknown as MediaQueryList) as typeof window.matchMedia;
   }
+
+  if (!Element.prototype.setPointerCapture) {
+    Element.prototype.setPointerCapture = () => undefined;
+  }
+
+  if (!Element.prototype.releasePointerCapture) {
+    Element.prototype.releasePointerCapture = () => undefined;
+  }
 }
 
 if (typeof globalThis !== "undefined" && !(globalThis as any).ResizeObserver) {

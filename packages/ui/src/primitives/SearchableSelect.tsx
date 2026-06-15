@@ -37,6 +37,12 @@ export interface SearchableSelectOption {
   triggerLabel?: ReactNode;
   /** searchable text (defaults to value if omitted) */
   searchText?: string;
+  action?: {
+    label: string;
+    icon: ReactNode;
+    onClick: () => void;
+    className?: string;
+  };
 }
 
 export interface SearchableSelectProps {
@@ -267,6 +273,50 @@ export function SearchableSelect({
                   <>
                     {filtered.map((opt) => {
                       const selected = opt.value === value;
+                      const optionClassName = cn(
+                        selectOptionBase,
+                        selected ? selectOptionSelected : selectOptionIdle,
+                      );
+                      if (opt.action) {
+                        return (
+                          <div
+                            key={opt.value}
+                            role="option"
+                            aria-selected={selected}
+                            className={cn(optionClassName, "pr-1")}
+                          >
+                            <button
+                              type="button"
+                              onClick={() => handleSelect(opt.value)}
+                              className="flex min-w-0 flex-1 items-center gap-2 text-left outline-none"
+                            >
+                              <span className="min-w-0 flex-1">{opt.label}</span>
+                              {selected ? (
+                                <Check
+                                  size={14}
+                                  className="shrink-0 text-[#96969B] dark:text-[#9F9FA8]"
+                                  aria-hidden="true"
+                                />
+                              ) : null}
+                            </button>
+                            <button
+                              type="button"
+                              aria-label={opt.action.label}
+                              onClick={(event) => {
+                                event.preventDefault();
+                                event.stopPropagation();
+                                opt.action?.onClick();
+                              }}
+                              className={cn(
+                                "inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[#96969B] transition-colors hover:bg-red-50 hover:text-red-500 dark:text-[#9F9FA8] dark:hover:bg-red-500/15 dark:hover:text-red-300",
+                                opt.action.className,
+                              )}
+                            >
+                              {opt.action.icon}
+                            </button>
+                          </div>
+                        );
+                      }
                       return (
                         <button
                           key={opt.value}
@@ -274,10 +324,7 @@ export function SearchableSelect({
                           role="option"
                           aria-selected={selected}
                           onClick={() => handleSelect(opt.value)}
-                          className={cn(
-                            selectOptionBase,
-                            selected ? selectOptionSelected : selectOptionIdle,
-                          )}
+                          className={optionClassName}
                         >
                           <span className="min-w-0 flex-1">{opt.label}</span>
                           {selected ? (
