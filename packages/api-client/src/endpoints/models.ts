@@ -5,7 +5,7 @@ const DEFAULT_CLAUDE_BASE_URL = "https://api.anthropic.com";
 const DEFAULT_ANTHROPIC_VERSION = "2023-06-01";
 const CLAUDE_MODELS_IN_FLIGHT = new Map<string, Promise<ModelInfo[]>>();
 
-export type ModelConfigScope = "active" | "library";
+export type ModelConfigScope = "active" | "library" | "all";
 
 export type ModelInfo = {
   id: string;

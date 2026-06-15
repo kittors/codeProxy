@@ -45,7 +45,7 @@ vi.mock("@code-proxy/api-client/endpoints/models", () => ({
       allowedChannelGroups?: string[];
       allowedChannels?: string[];
     }) => listAvailableModels(params),
-    getModelConfigs: (scope: "active" | "library") => getModelConfigs(scope),
+    getModelConfigs: (scope: "active" | "library" | "all") => getModelConfigs(scope),
     getAuthGroupModelOwnerMappingMap: () => getAuthGroupModelOwnerMappingMap(),
   },
 }));
@@ -406,7 +406,7 @@ describe("CcSwitchImportSettingsPage", () => {
       allowedChannelGroups: ["chatgpt-pro"],
     });
     expect(loadConfiguredModelAvailability).toHaveBeenCalledTimes(1);
-    expect(getModelConfigs).toHaveBeenCalledWith("active");
+    expect(getModelConfigs).toHaveBeenCalledWith("all");
   });
 
   test("hydrates fallback channel group models from configured metadata owner keys", async () => {
@@ -560,6 +560,8 @@ describe("CcSwitchImportSettingsPage", () => {
     getModelConfigs.mockResolvedValue([
       { id: "kimi-k2.5", owned_by: "kimi-code" },
       { id: "kimi-k2.6", owned_by: "kimi-code" },
+      { id: "kimi-k2.7", owned_by: "kimi-code" },
+      { id: "kimi-k2.7-code", owned_by: "kimi-code" },
       { id: "kimi-k2", owned_by: "moonshot" },
     ]);
     renderPage();
@@ -576,11 +578,13 @@ describe("CcSwitchImportSettingsPage", () => {
     await user.click(within(dialog).getByRole("combobox", { name: /^main model$/i }));
 
     expect(await screen.findByRole("option", { name: "kimi-k2.6" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "kimi-k2.7" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "kimi-k2.7-code" })).toBeInTheDocument();
     expect(screen.queryByRole("option", { name: "kimi-k2" })).not.toBeInTheDocument();
     expect(listAvailableModels).toHaveBeenCalledWith({
       allowedChannelGroups: ["kimicode"],
     });
-    expect(getModelConfigs).toHaveBeenCalledWith("active");
+    expect(getModelConfigs).toHaveBeenCalledWith("all");
   });
 
   test("preserves saved generic model mappings when reopening an edited config", async () => {
