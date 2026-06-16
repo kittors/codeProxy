@@ -711,7 +711,9 @@ export const normalizeConfiguredModelAvailability = (
       ? record.models
       : Array.isArray(record.items)
         ? record.items
-        : [];
+        : Array.isArray(payload)
+          ? payload
+          : [];
   const items = rawItems
     .map((item) => normalizeAvailabilityItem(item))
     .filter((item): item is NonNullable<typeof item> => item !== null)
@@ -730,6 +732,26 @@ export const normalizeConfiguredModelAvailability = (
     idSet: new Set(items.map((item) => item.id.toLowerCase())),
     usesMappedOwners: false,
   };
+};
+
+const hasConfiguredAvailabilityPayloadShape = (payload: unknown): boolean => {
+  if (Array.isArray(payload)) return true;
+  if (!isRecord(payload)) return false;
+  return (
+    Array.isArray(payload.data) ||
+    Array.isArray(payload.models) ||
+    Array.isArray(payload.items) ||
+    Array.isArray(payload.active_metadata) ||
+    typeof payload.scoped === "boolean"
+  );
+};
+
+const loadConfiguredAvailabilityEndpoint = async (
+  requestPath: string,
+): Promise<ConfiguredModelAvailability | null> => {
+  const payload = await apiClient.get(requestPath);
+  if (!hasConfiguredAvailabilityPayloadShape(payload)) return null;
+  return normalizeConfiguredModelAvailability(payload);
 };
 
 /* ── In-flight/TTL cache ── */
@@ -775,11 +797,10 @@ export const loadConfiguredModelAvailability = async (options?: {
     }
     const promise = (async (): Promise<ConfiguredModelAvailability> => {
       try {
-        const result = normalizeConfiguredModelAvailability(
-          await apiClient.get(
-            `/models/configured-availability?allowed_channel_groups=${encodeURIComponent(cacheKey)}`,
-          ),
+        const result = await loadConfiguredAvailabilityEndpoint(
+          `/models/configured-availability?allowed_channel_groups=${encodeURIComponent(cacheKey)}`,
         );
+        if (!result) return loadFallback();
         groupAvailabilityCache.set(cacheKey, {
           expiresAt: now + GROUP_AVAILABILITY_TTL_MS,
           cacheVersion,
@@ -813,9 +834,8 @@ export const loadConfiguredModelAvailability = async (options?: {
 
   const promise = (async (): Promise<ConfiguredModelAvailability> => {
     try {
-      const result = normalizeConfiguredModelAvailability(
-        await apiClient.get("/models/configured-availability"),
-      );
+      const result = await loadConfiguredAvailabilityEndpoint("/models/configured-availability");
+      if (!result) return loadFallback();
       configuredAvailabilityCache = {
         expiresAt: now + CONFIGURED_AVAILABILITY_TTL_MS,
         version: cacheVersion,
