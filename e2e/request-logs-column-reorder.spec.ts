@@ -90,6 +90,7 @@ const readTableState = async (page: Page) =>
       clientWidth: scroller?.clientWidth ?? 0,
       draggingCells: document.querySelectorAll("[data-vt-column-dragging-cell]").length,
       shiftedCells: document.querySelectorAll("[data-vt-column-shifted-cell]").length,
+      settledCells: document.querySelectorAll("[data-vt-column-settled-cell]").length,
       storedOrder: localStorage.getItem("codeProxy.dataTable.columnOrder.v1.request-logs"),
     };
   });
@@ -164,6 +165,27 @@ const readDragVisualState = async (page: Page) =>
           element.style.isolation === "" &&
           element.style.borderRadius === "",
       ),
+    };
+  });
+
+const readSettleVisualState = async (page: Page) =>
+  page.evaluate(() => {
+    const cells = [...document.querySelectorAll<HTMLElement>("[data-vt-column-settled-cell]")];
+    return {
+      count: cells.length,
+      columnKeys: cells.map((element) => element.dataset.vtColumnKey),
+      headerKeys: cells
+        .filter((element) => element.tagName === "TH")
+        .map((element) => element.dataset.vtColumnKey),
+      styles: cells.map((element) => {
+        const style = getComputedStyle(element);
+        return {
+          animationName: style.animationName,
+          animationDuration: style.animationDuration,
+          backgroundColor: style.backgroundColor,
+          boxShadow: style.boxShadow,
+        };
+      }),
     };
   });
 
@@ -252,7 +274,28 @@ test("Request Logs: column reorder follows the pointer and auto-scrolls horizont
   expect(after.draggingCells).toBe(0);
   expect(after.shiftedCells).toBe(0);
   expect(after.storedOrder).toContain('"timestamp"');
-  await page.waitForTimeout(160);
+  expect(after.settledCells).toBeGreaterThan(0);
+
+  const settleVisual = await readSettleVisualState(page);
+  expect(settleVisual.count).toBeGreaterThan(0);
+  expect(settleVisual.headerKeys).toEqual(["timestamp"]);
+  expect(settleVisual.columnKeys.every((key) => key === "timestamp")).toBe(true);
+  expect(
+    settleVisual.styles.every(
+      (style) =>
+        style.animationName.includes("dataTableColumnSettle") &&
+        style.animationDuration !== "0s" &&
+        style.boxShadow !== "none",
+    ),
+  ).toBe(true);
+
+  await expect
+    .poll(async () => {
+      const state = await readTableState(page);
+      return state.settledCells;
+    })
+    .toBe(0);
+
   const visualAfterDrag = await readDragVisualState(page);
   expect(visualAfterDrag.inlineStylesCleared).toBe(true);
 });
