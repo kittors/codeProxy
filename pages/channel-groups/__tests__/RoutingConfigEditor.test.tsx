@@ -450,7 +450,10 @@ describe("RoutingConfigEditor", () => {
 
     expect(screen.queryByText("模型数")).not.toBeInTheDocument();
     expect(screen.queryByText("可用能力")).not.toBeInTheDocument();
-    expect(screen.getByRole("row", { name: /系统默认/ })).toHaveTextContent("/");
+    const row = screen.getByRole("row", { name: /系统默认/ });
+    expect(row).toHaveTextContent("/");
+    expect(row).toHaveTextContent("默认调度池");
+    expect(row).toHaveTextContent("轮询分配");
     expect(screen.queryByText("系统内置，只读")).not.toBeInTheDocument();
     expect(screen.queryByText("models")).not.toBeInTheDocument();
     expect(screen.queryByText("chat")).not.toBeInTheDocument();
@@ -487,6 +490,26 @@ describe("RoutingConfigEditor", () => {
 
     expect(screen.getByTestId("group-name")).toHaveTextContent("default");
     expect(screen.getByTestId("group-strategy")).toHaveTextContent("session-sticky");
+    expect(screen.getByRole("row", { name: /系统默认/ })).toHaveTextContent("会话粘性");
+  });
+
+  test("explains default pool scope and isolation behavior with tooltips", async () => {
+    await i18n.changeLanguage("zh-CN");
+    const user = userEvent.setup();
+
+    render(<Harness />);
+
+    await user.hover(screen.getByLabelText(/这里不是访问路径/));
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(
+      "默认可用表示请求没有命中自定义路径时",
+    );
+    await user.unhover(screen.getByLabelText(/这里不是访问路径/));
+
+    await user.click(screen.getByRole("button", { name: "新增分组" }));
+    await user.hover(screen.getByLabelText(/开启后，这个分组只会在请求命中自己的分组路径/));
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(
+      "API Key 显式允许该分组时被使用",
+    );
   });
 
   test("updates model permissions for the system root route", async () => {

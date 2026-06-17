@@ -114,17 +114,34 @@ function Field({
     <div className="space-y-2">
       <div className="flex items-center gap-2">
         <div className="text-sm font-semibold text-slate-900 dark:text-white">{label}</div>
-        {tooltip ? (
-          <HoverTooltip content={tooltip} placement="bottom">
-            <span className="inline-flex h-6 w-6 items-center justify-center text-slate-400 dark:text-white/45">
-              <CircleAlert size={16} aria-hidden="true" />
-            </span>
-          </HoverTooltip>
-        ) : null}
+        {tooltip ? <InfoTooltip content={tooltip} /> : null}
       </div>
       {hint ? <div className="text-xs text-slate-500 dark:text-white/55">{hint}</div> : null}
       {children}
     </div>
+  );
+}
+
+function InfoTooltip({ content }: { content: string }) {
+  return (
+    <HoverTooltip content={content} placement="bottom">
+      <span
+        className="inline-flex h-6 w-6 items-center justify-center text-slate-400 dark:text-white/45"
+        aria-label={content}
+        tabIndex={0}
+      >
+        <CircleAlert size={16} aria-hidden="true" />
+      </span>
+    </HoverTooltip>
+  );
+}
+
+function TooltipHeader({ label, tooltip }: { label: string; tooltip: string }) {
+  return (
+    <span className="flex min-w-0 items-center gap-1.5">
+      <span className="truncate">{label}</span>
+      <InfoTooltip content={tooltip} />
+    </span>
   );
 }
 
@@ -989,6 +1006,13 @@ export function RoutingConfigEditor({
         headerClassName: "text-center",
         cellClassName: "whitespace-nowrap text-center",
         render: (group) => {
+          if (group.system) {
+            return (
+              <span className="inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600 dark:bg-neutral-800 dark:text-white/60">
+                {t("channel_groups_page.default_pool_label")}
+              </span>
+            );
+          }
           const channels = resolveGroupChannels(group);
           return (
             <span className="inline-flex h-5 min-w-[24px] items-center justify-center rounded-md bg-sky-50 px-1.5 text-xs font-semibold tabular-nums text-sky-700 dark:bg-sky-900/30 dark:text-sky-300">
@@ -1028,13 +1052,19 @@ export function RoutingConfigEditor({
       {
         key: "defaultScope",
         label: t("channel_groups_page.table_default_scope"),
+        headerRender: () => (
+          <TooltipHeader
+            label={t("channel_groups_page.table_default_scope")}
+            tooltip={t("channel_groups_page.table_default_scope_tooltip")}
+          />
+        ),
         width: "w-[128px] min-w-[128px]",
         cellClassName: "whitespace-nowrap",
         render: (group) => {
           if (group.system) {
             return (
-              <span className="text-slate-400 dark:text-white/35">
-                {t("channel_groups_page.none")}
+              <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600 dark:bg-neutral-800 dark:text-white/60">
+                {t("channel_groups_page.system_default_route")}
               </span>
             );
           }
@@ -1055,6 +1085,13 @@ export function RoutingConfigEditor({
         width: "w-[280px] min-w-[280px]",
         cellClassName: "min-w-0 whitespace-nowrap text-slate-700 dark:text-white/75",
         render: (group) => {
+          if (group.system) {
+            return (
+              <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600 dark:bg-neutral-800 dark:text-white/60">
+                {t("channel_groups_page.default_pool_label")}
+              </span>
+            );
+          }
           const channels = resolveGroupChannels(group);
           const names = channels.map((channel) => channel.name.trim()).filter(Boolean);
           if (names.length === 0) {
@@ -1098,15 +1135,8 @@ export function RoutingConfigEditor({
         width: "w-[190px] min-w-[190px]",
         cellClassName: "min-w-0 whitespace-nowrap text-slate-700 dark:text-white/75",
         render: (group) => {
-          if (group.system) {
-            return (
-              <span className="text-slate-400 dark:text-white/35">
-                {t("channel_groups_page.none")}
-              </span>
-            );
-          }
           const summary =
-            group.strategy === "fill-first" || group.strategy === "session-sticky"
+            group.system || group.strategy === "fill-first" || group.strategy === "session-sticky"
               ? routingStrategyLabel(t, group.strategy)
               : summarizePriorityMode(
                   resolveGroupChannels(group),
@@ -1714,8 +1744,11 @@ export function RoutingConfigEditor({
                             className="mt-0.5"
                           />
                           <span className="min-w-0">
-                            <span className="block font-semibold text-slate-900 dark:text-white">
-                              {t("channel_groups_page.exclude_from_default_label")}
+                            <span className="flex items-center gap-1.5 font-semibold text-slate-900 dark:text-white">
+                              <span>{t("channel_groups_page.exclude_from_default_label")}</span>
+                              <InfoTooltip
+                                content={t("channel_groups_page.exclude_from_default_tooltip")}
+                              />
                             </span>
                             <span className="mt-1 block text-xs leading-5 text-slate-500 dark:text-white/55">
                               {t("channel_groups_page.exclude_from_default_hint")}
