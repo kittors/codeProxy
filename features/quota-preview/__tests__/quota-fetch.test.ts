@@ -20,7 +20,11 @@ vi.mock("@code-proxy/api-client", async (importOriginal) => {
   };
 });
 
-import { fetchQuota, resolveQuotaProvider } from "@features/quota-preview/quota-fetch";
+import {
+  consumeCodexResetCredit,
+  fetchQuota,
+  resolveQuotaProvider,
+} from "@features/quota-preview/quota-fetch";
 
 beforeEach(() => {
   mocks.request.mockReset();
@@ -104,6 +108,45 @@ describe("fetchQuota for codex", () => {
         }),
       }),
     );
+  });
+});
+
+describe("consumeCodexResetCredit", () => {
+  test("posts a redeem request id to the ChatGPT reset-credit consume endpoint", async () => {
+    mocks.request.mockResolvedValueOnce({
+      statusCode: 200,
+      header: {},
+      bodyText: "",
+      body: { code: "success", windows_reset: 1 },
+    });
+
+    await consumeCodexResetCredit({
+      name: "codex-alpha@example.test-plus.json",
+      type: "codex",
+      provider: "codex",
+      auth_index: "auth-codex-alpha",
+      id_token: buildSyntheticCodexIdToken("acct-111"),
+    } as any);
+
+    expect(mocks.request).toHaveBeenCalledTimes(1);
+    const payload = mocks.request.mock.calls[0]?.[0];
+    expect(payload).toEqual(
+      expect.objectContaining({
+        authIndex: "auth-codex-alpha",
+        method: "POST",
+        url: "https://chatgpt.com/backend-api/wham/rate-limit-reset-credits/consume",
+        header: expect.objectContaining({
+          Authorization: "Bearer $TOKEN$",
+          "Chatgpt-Account-Id": "acct-111",
+          "Content-Type": "application/json",
+        }),
+      }),
+    );
+    expect(JSON.parse(payload.data)).toEqual({
+      redeem_request_id: expect.stringMatching(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+      ),
+    });
   });
 });
 

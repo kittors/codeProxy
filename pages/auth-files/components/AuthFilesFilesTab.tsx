@@ -7,6 +7,7 @@ import {
   Download,
   Ellipsis,
   Eye,
+  Gauge,
   ListChecks,
   Loader2,
   Plus,
@@ -528,6 +529,8 @@ interface AuthFilesFilesTabProps {
     items: QuotaItem[],
   ) => { id: string; label: string; item: QuotaItem | null }[];
   refreshQuota: (file: AuthFileItem, provider: QuotaProvider) => Promise<void>;
+  requestResetCredit: (file: AuthFileItem) => void;
+  resettingCreditFileName: string | null;
   setFileEnabled: (file: AuthFileItem, enabled: boolean) => Promise<void>;
   statusUpdating: Record<string, boolean>;
   usageIndex: UsageIndex;
@@ -606,6 +609,8 @@ export function AuthFilesFilesTab({
   resolveQuotaProvider,
   resolveQuotaCardSlots,
   refreshQuota,
+  requestResetCredit,
+  resettingCreditFileName,
   setFileEnabled,
   statusUpdating,
   usageIndex,
@@ -667,27 +672,24 @@ export function AuthFilesFilesTab({
     ],
     [modelOwnerGroups, t],
   );
-  const customTagSelectOptions = useMemo<SearchableSelectOption[]>(
-    () => {
-      const options =
-        normalizedTagFilter && !customTagOptions.includes(normalizedTagFilter)
-          ? [normalizedTagFilter, ...customTagOptions]
-          : customTagOptions;
-      return [
-        {
-          value: "",
-          label: t("auth_files.all_tags"),
-          searchText: t("auth_files.all_tags"),
-        },
-        ...options.map((tag) => ({
-          value: tag,
-          label: tag,
-          searchText: tag,
-        })),
-      ];
-    },
-    [customTagOptions, normalizedTagFilter, t],
-  );
+  const customTagSelectOptions = useMemo<SearchableSelectOption[]>(() => {
+    const options =
+      normalizedTagFilter && !customTagOptions.includes(normalizedTagFilter)
+        ? [normalizedTagFilter, ...customTagOptions]
+        : customTagOptions;
+    return [
+      {
+        value: "",
+        label: t("auth_files.all_tags"),
+        searchText: t("auth_files.all_tags"),
+      },
+      ...options.map((tag) => ({
+        value: tag,
+        label: tag,
+        searchText: tag,
+      })),
+    ];
+  }, [customTagOptions, normalizedTagFilter, t]);
   const providerFilterOptions = useMemo<SearchableSelectOption[]>(
     () =>
       filterChips.map((key) => {
@@ -1322,6 +1324,16 @@ export function AuthFilesFilesTab({
                     provider === "codex" && typeof state.resetCreditCount === "number"
                       ? state.resetCreditCount
                       : 0;
+                  const resetCreditBusy = resettingCreditFileName === file.name;
+                  const resetCreditDisabled =
+                    provider !== "codex" ||
+                    quotaRefreshing ||
+                    resetCreditBusy ||
+                    resetCreditCount <= 0;
+                  const resetCreditTitle =
+                    resetCreditCount > 0
+                      ? t("auth_files.reset_credit_consume")
+                      : t("auth_files.reset_credit_no_credits");
                   const showSelectionControl = fileSelected;
 
                   return (
@@ -1494,6 +1506,25 @@ export function AuthFilesFilesTab({
                                   size={16}
                                   className={quotaRefreshing ? "animate-spin" : ""}
                                 />
+                              </Button>
+                            </HoverTooltip>
+                          ) : null}
+
+                          {provider === "codex" ? (
+                            <HoverTooltip content={resetCreditTitle}>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                disabled={resetCreditDisabled}
+                                onClick={() => requestResetCredit(file)}
+                                title={resetCreditTitle}
+                                aria-label={t("auth_files.reset_credit_consume")}
+                              >
+                                {resetCreditBusy ? (
+                                  <Loader2 size={16} className="animate-spin" />
+                                ) : (
+                                  <Gauge size={16} />
+                                )}
                               </Button>
                             </HoverTooltip>
                           ) : null}

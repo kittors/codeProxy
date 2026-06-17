@@ -47,6 +47,7 @@ const mocks = vi.hoisted(() => ({
   })),
   recordAuthFileQuotaSnapshot: vi.fn(async () => ({})),
   fetchQuota: vi.fn((_provider?: unknown, _file?: { name?: string }) => new Promise(() => {})),
+  consumeCodexResetCredit: vi.fn(async (_file?: { name?: string }) => undefined),
   deleteFile: vi.fn(async () => ({})),
   downloadText: vi.fn(async () => "{}"),
   patchFields: vi.fn(async () => ({})),
@@ -110,7 +111,11 @@ vi.mock("@code-proxy/api-client", async (importOriginal) => {
 
 vi.mock("@features/quota-preview/quota-fetch", async (importOriginal) => {
   const mod = await importOriginal<typeof import("@features/quota-preview/quota-fetch")>();
-  return { ...mod, fetchQuota: mocks.fetchQuota };
+  return {
+    ...mod,
+    fetchQuota: mocks.fetchQuota,
+    consumeCodexResetCredit: mocks.consumeCodexResetCredit,
+  };
 });
 
 vi.mock("@code-proxy/ui", async (importOriginal) => ({
@@ -206,6 +211,8 @@ describe("AuthFilesPage files table", () => {
     mocks.recordAuthFileQuotaSnapshot.mockImplementation(async () => ({}));
     mocks.fetchQuota.mockReset();
     mocks.fetchQuota.mockImplementation(() => new Promise(() => {}));
+    mocks.consumeCodexResetCredit.mockReset();
+    mocks.consumeCodexResetCredit.mockResolvedValue(undefined);
     mocks.deleteFile.mockReset();
     mocks.deleteFile.mockImplementation(async () => ({}));
     mocks.downloadText.mockReset();
@@ -2580,9 +2587,7 @@ describe("AuthFilesPage files table", () => {
     const uploadedJson = JSON.parse(await uploadCalls[0][0].text()) as Record<string, unknown>;
     expect(uploadedJson.subscription_started_at).toBe(new Date(startedAtInput).toISOString());
     await waitFor(() =>
-      expect(
-        screen.queryByRole("dialog", { name: "Codex Subscriber" }),
-      ).not.toBeInTheDocument(),
+      expect(screen.queryByRole("dialog", { name: "Codex Subscriber" })).not.toBeInTheDocument(),
     );
     await waitFor(() => expect(screen.getByTestId("auth-files-cards")).toHaveTextContent(/d left/));
   });
@@ -4359,6 +4364,85 @@ describe("AuthFilesPage files table", () => {
       expect(raw).toContain('"planType":"plus"');
       expect(raw).toContain('"resetCreditCount":4');
     });
+  });
+
+  test("cards view confirms before consuming a Codex reset credit", async () => {
+    const now = Date.now();
+    const file = {
+      name: "codex.json",
+      label: "Codex Main",
+      account_type: "oauth",
+      type: "codex",
+      size: 1024,
+      modified: now,
+      disabled: false,
+      auth_index: "1",
+      plan_type: "plus",
+    } as any;
+
+    mocks.list.mockImplementationOnce(async () => ({ files: [file] }));
+    mocks.fetchQuota
+      .mockResolvedValueOnce({
+        items: [{ label: "m_quota.code_5h", percent: 12, resetAtMs: now + 60_000 }],
+        planType: "plus",
+        resetCreditCount: 3,
+      })
+      .mockResolvedValueOnce({
+        items: [{ label: "m_quota.code_5h", percent: 12, resetAtMs: now + 60_000 }],
+        planType: "plus",
+        resetCreditCount: 2,
+      });
+
+    window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
+    window.localStorage.setItem(
+      AUTH_FILES_DATA_CACHE_KEY,
+      JSON.stringify({
+        savedAtMs: now,
+        files: [file],
+        usageData: { source: [], auth_index: [] },
+        quotaByFileName: {
+          "codex.json": {
+            status: "success",
+            updatedAt: now,
+            planType: "plus",
+            resetCreditCount: 3,
+            items: [{ label: "m_quota.code_5h", percent: 20, resetAtMs: now + 30_000 }],
+          },
+        },
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("Reset 3 times")).toBeInTheDocument();
+    const cards = screen.getByTestId("auth-files-cards");
+    fireEvent.click(within(cards).getByRole("button", { name: "Reset quota" }));
+
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText("Reset quota?")).toBeInTheDocument();
+    expect(mocks.consumeCodexResetCredit).not.toHaveBeenCalled();
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Reset quota" }));
+
+    await waitFor(() => expect(mocks.consumeCodexResetCredit).toHaveBeenCalledTimes(1));
+    expect(mocks.consumeCodexResetCredit).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "codex.json" }),
+    );
+    expect(await screen.findByText("Reset 2 times")).toBeInTheDocument();
+    expect(mocks.fetchQuota).toHaveBeenLastCalledWith(
+      "codex",
+      expect.objectContaining({ name: "codex.json" }),
+    );
   });
 
   test("cards view uses current auth-file plan badge instead of stale cached quota plan", async () => {

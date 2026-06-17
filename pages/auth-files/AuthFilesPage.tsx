@@ -9,6 +9,7 @@ import {
   TabsContent,
   TabsList,
   TabsTrigger,
+  useToast,
 } from "@code-proxy/ui";
 import type { AuthFileItem } from "@code-proxy/api-client";
 import { proxiesApi, type ProxyPoolEntry } from "@code-proxy/api-client/endpoints/proxies";
@@ -32,12 +33,13 @@ import { useAuthFilesModelOwnerGroups } from "./hooks/useAuthFilesModelOwnerGrou
 import { useAuthFilesQuotaState } from "./hooks/useAuthFilesQuotaState";
 import { useAuthFilesGroupOverview } from "./hooks/useAuthFilesGroupOverview";
 import { useAuthFilesOAuthConfig } from "./hooks/useAuthFilesOAuthConfig";
-import { resolveQuotaProvider } from "@features/quota-preview/quota-fetch";
+import { consumeCodexResetCredit, resolveQuotaProvider } from "@features/quota-preview/quota-fetch";
 import {
   AUTH_FILE_STATUS_FILTERS,
   normalizeProviderKey,
   normalizeQuotaAutoRefreshMs,
   readAuthFilesUiState,
+  resolveAuthFileDisplayName,
   resolveAuthFileStats,
   resolveFileType,
   resolveProviderLabel,
@@ -49,6 +51,9 @@ import {
 const OAUTH_AUTH_FILES_REFRESH_TIMEOUT_MS = 12_000;
 const OAUTH_AUTH_FILES_REFRESH_INTERVAL_MS = 600;
 type AuthFilesConfigModalTab = "excluded" | "alias";
+type AuthFilesConfirmAction =
+  | { type: "deleteSelection"; names: string[] }
+  | { type: "resetCredit"; file: AuthFileItem };
 
 const wait = (ms: number) =>
   new Promise<void>((resolve) => {
@@ -79,6 +84,7 @@ const buildAuthFilesSignature = (items: AuthFileItem[]): string =>
 
 export function AuthFilesPage() {
   const { t } = useTranslation();
+  const { notify } = useToast();
   const [searchParams] = useSearchParams();
 
   const [configModalTab, setConfigModalTab] = useState<AuthFilesConfigModalTab | null>(null);
@@ -133,7 +139,8 @@ export function AuthFilesPage() {
     refreshUsageDataForFiles,
   } = useAuthFilesDataState();
 
-  const [confirm, setConfirm] = useState<null | { type: "deleteSelection"; names: string[] }>(null);
+  const [confirm, setConfirm] = useState<AuthFilesConfirmAction | null>(null);
+  const [resettingCreditFileName, setResettingCreditFileName] = useState<string | null>(null);
 
   const [oauthDialogOpen, setOauthDialogOpen] = useState(false);
   const [oauthDialogDefaultTab, setOauthDialogDefaultTab] = useState<OAuthDialogTab>("codex");
@@ -430,6 +437,40 @@ export function AuthFilesPage() {
     [openDetail, refreshDetailTrend, refreshQuota],
   );
 
+  const requestResetCredit = useCallback(
+    (file: AuthFileItem) => {
+      const count = quotaByFileName[file.name]?.resetCreditCount ?? 0;
+      if (count <= 0) return;
+      setConfirm({ type: "resetCredit", file });
+    },
+    [quotaByFileName],
+  );
+
+  const handleResetCredit = useCallback(
+    async (file: AuthFileItem) => {
+      if (resettingCreditFileName) return;
+      const name = resolveAuthFileDisplayName(file) || file.name;
+      setResettingCreditFileName(file.name);
+      try {
+        await consumeCodexResetCredit(file);
+        await refreshQuota(file, "codex", { showLoading: true });
+        notify({
+          type: "success",
+          message: t("auth_files.reset_credit_success", { name }),
+        });
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : t("common.unknown_error");
+        notify({
+          type: "error",
+          message: t("auth_files.reset_credit_failed", { name, message }),
+        });
+      } finally {
+        setResettingCreditFileName(null);
+      }
+    },
+    [notify, refreshQuota, resettingCreditFileName, t],
+  );
+
   const refreshFilesAndQuota = useCallback(async () => {
     if (refreshingFilesAndQuotaRef.current || loading || usageLoading || refreshingAll) return;
     refreshingFilesAndQuotaRef.current = true;
@@ -455,8 +496,7 @@ export function AuthFilesPage() {
     if (!configModalTab || configSaving) return;
     setConfigSaving(true);
     try {
-      const saved =
-        configModalTab === "alias" ? await saveAliasAll() : await saveExcludedAll();
+      const saved = configModalTab === "alias" ? await saveAliasAll() : await saveExcludedAll();
       if (saved) {
         setConfigModalTab(null);
       }
@@ -544,6 +584,8 @@ export function AuthFilesPage() {
     checkAuthFileConnectivity,
     quotaByFileName,
     refreshQuota,
+    requestResetCredit,
+    resettingCreditFileName,
     openDetail: openDetailWithQuotaRefresh,
     downloadAuthFile,
     openTagsEditor: (file) => setTagsEditorFileName(file.name),
@@ -610,6 +652,8 @@ export function AuthFilesPage() {
         resolveQuotaProvider={resolveQuotaProvider}
         resolveQuotaCardSlots={resolveQuotaCardSlots}
         refreshQuota={refreshQuota}
+        requestResetCredit={requestResetCredit}
+        resettingCreditFileName={resettingCreditFileName}
         setFileEnabled={setFileEnabled}
         statusUpdating={statusUpdating}
         usageIndex={usageIndex}
@@ -803,15 +847,40 @@ export function AuthFilesPage() {
 
       <ConfirmModal
         open={confirm !== null}
-        title={t("auth_files.batch_delete_title")}
-        description={t("auth_files.batch_delete_confirm", { count: confirm?.names.length ?? 0 })}
-        confirmText={t("common.delete")}
+        title={
+          confirm?.type === "resetCredit"
+            ? t("auth_files.reset_credit_confirm_title")
+            : t("auth_files.batch_delete_title")
+        }
+        description={
+          confirm?.type === "resetCredit"
+            ? t("auth_files.reset_credit_confirm_desc", {
+                name: resolveAuthFileDisplayName(confirm.file) || confirm.file.name,
+                count: quotaByFileName[confirm.file.name]?.resetCreditCount ?? 0,
+              })
+            : t("auth_files.batch_delete_confirm", {
+                count: confirm?.type === "deleteSelection" ? confirm.names.length : 0,
+              })
+        }
+        confirmText={
+          confirm?.type === "resetCredit"
+            ? t("auth_files.reset_credit_confirm_button")
+            : t("common.delete")
+        }
         cancelText={t("common.cancel")}
-        busy={deletingAll}
-        onClose={() => setConfirm(null)}
+        variant={confirm?.type === "resetCredit" ? "primary" : "danger"}
+        busy={confirm?.type === "resetCredit" ? Boolean(resettingCreditFileName) : deletingAll}
+        onClose={() => {
+          if (resettingCreditFileName) return;
+          setConfirm(null);
+        }}
         onConfirm={() => {
           const action = confirm;
           if (!action) return;
+          if (action.type === "resetCredit") {
+            void handleResetCredit(action.file).finally(() => setConfirm(null));
+            return;
+          }
           void handleDeleteSelection(action.names).finally(() => setConfirm(null));
         }}
       />

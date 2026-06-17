@@ -5,6 +5,7 @@ import {
   CalendarClock,
   Download,
   Eye,
+  Gauge,
   Loader2,
   RefreshCw,
   Tags,
@@ -139,6 +140,8 @@ interface UseAuthFilesFilesPresentationOptions {
   checkAuthFileConnectivity: (name: string) => Promise<void>;
   quotaByFileName: Record<string, QuotaState>;
   refreshQuota: (file: AuthFileItem, provider: QuotaProvider) => Promise<void>;
+  requestResetCredit: (file: AuthFileItem) => void;
+  resettingCreditFileName: string | null;
   openDetail: (file: AuthFileItem) => Promise<void>;
   downloadAuthFile: (file: AuthFileItem) => Promise<void>;
   openTagsEditor: (file: AuthFileItem) => void;
@@ -163,6 +166,8 @@ export function useAuthFilesFilesPresentation({
   checkAuthFileConnectivity,
   quotaByFileName,
   refreshQuota,
+  requestResetCredit,
+  resettingCreditFileName,
   openDetail,
   downloadAuthFile,
   openTagsEditor,
@@ -823,6 +828,21 @@ export function useAuthFilesFilesPresentation({
           const quotaRefreshing = quotaProvider
             ? quotaByFileName[file.name]?.status === "loading"
             : false;
+          const resetCreditCount =
+            quotaProvider === "codex" &&
+            typeof quotaByFileName[file.name]?.resetCreditCount === "number"
+              ? (quotaByFileName[file.name]?.resetCreditCount ?? 0)
+              : 0;
+          const resetCreditBusy = resettingCreditFileName === file.name;
+          const resetCreditDisabled =
+            quotaProvider !== "codex" ||
+            quotaRefreshing ||
+            resetCreditBusy ||
+            resetCreditCount <= 0;
+          const resetCreditTitle =
+            resetCreditCount > 0
+              ? t("auth_files.reset_credit_consume")
+              : t("auth_files.reset_credit_no_credits");
 
           return (
             <div className="inline-flex min-w-max items-center justify-center gap-1 whitespace-nowrap">
@@ -836,6 +856,25 @@ export function useAuthFilesFilesPresentation({
                     aria-label={t("common.refresh")}
                   >
                     <RefreshCw size={16} className={quotaRefreshing ? "animate-spin" : ""} />
+                  </Button>
+                </HoverTooltip>
+              ) : null}
+
+              {quotaProvider === "codex" ? (
+                <HoverTooltip content={resetCreditTitle}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={resetCreditDisabled}
+                    onClick={() => requestResetCredit(file)}
+                    title={resetCreditTitle}
+                    aria-label={t("auth_files.reset_credit_consume")}
+                  >
+                    {resetCreditBusy ? (
+                      <Loader2 size={16} className="animate-spin" />
+                    ) : (
+                      <Gauge size={16} />
+                    )}
                   </Button>
                 </HoverTooltip>
               ) : null}
@@ -893,8 +932,10 @@ export function useAuthFilesFilesPresentation({
     quotaPreviewMode,
     quotaProgressCircle,
     refreshQuota,
+    requestResetCredit,
     renderRestrictionBadges,
     renderSubscriptionBadge,
+    resettingCreditFileName,
     selectCurrentPage,
     selectablePageNames.length,
     selectedFileNameSet,
