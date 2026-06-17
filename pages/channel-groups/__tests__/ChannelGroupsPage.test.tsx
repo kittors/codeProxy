@@ -828,6 +828,30 @@ describe("ChannelGroupsPage", () => {
     expect(row).toHaveTextContent("会话粘性");
   });
 
+  test("saves the system default route scheduling strategy", async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    const row = await screen.findByRole("row", { name: /系统默认/ });
+    await user.click(within(row).getByRole("button", { name: "编辑分组" }));
+    await user.click(screen.getByRole("combobox", { name: "分组内调度策略" }));
+    await user.click(await screen.findByRole("option", { name: "会话粘性" }));
+    await user.click(screen.getByRole("button", { name: "保存" }));
+
+    await waitFor(() => expect(mockedApiPut).toHaveBeenCalled());
+    expect(mockedApiPut).toHaveBeenCalledWith(
+      "/routing-config",
+      expect.objectContaining({
+        "channel-groups": [
+          expect.objectContaining({
+            name: "default",
+            strategy: "session-sticky",
+          }),
+        ],
+      }),
+    );
+  });
+
   test("refreshes channel options when opening the new group editor", async () => {
     let channelGroupsCalls = 0;
     mockedApiGet.mockImplementation((path: string) => {

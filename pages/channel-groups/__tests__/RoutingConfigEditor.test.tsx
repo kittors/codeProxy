@@ -468,6 +468,27 @@ describe("RoutingConfigEditor", () => {
     expect(within(row).queryByRole("button", { name: "删除分组" })).not.toBeInTheDocument();
   });
 
+  test("updates the system root route scheduling strategy", async () => {
+    await i18n.changeLanguage("zh-CN");
+    const user = userEvent.setup();
+
+    render(<Harness />);
+
+    const row = screen.getByRole("row", { name: /系统默认/ });
+    await user.click(within(row).getByRole("button", { name: "编辑分组" }));
+
+    expect(screen.getByRole("tab", { name: "基础配置" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    await user.click(screen.getByRole("combobox", { name: "分组内调度策略" }));
+    await user.click(screen.getByRole("option", { name: "会话粘性" }));
+    await user.click(screen.getByRole("button", { name: "保存" }));
+
+    expect(screen.getByTestId("group-name")).toHaveTextContent("default");
+    expect(screen.getByTestId("group-strategy")).toHaveTextContent("session-sticky");
+  });
+
   test("updates model permissions for the system root route", async () => {
     await i18n.changeLanguage("zh-CN");
     const user = userEvent.setup();
@@ -481,6 +502,7 @@ describe("RoutingConfigEditor", () => {
 
     const row = screen.getByRole("row", { name: /系统默认/ });
     await user.click(within(row).getByRole("button", { name: "编辑分组" }));
+    await user.click(screen.getByRole("tab", { name: "模型列表" }));
 
     expect(await screen.findByLabelText("gpt-root-allowed")).toBeChecked();
     await user.click(screen.getByLabelText("gpt-root-hidden"));
