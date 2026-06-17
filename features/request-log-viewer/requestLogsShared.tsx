@@ -1,5 +1,13 @@
 import { useTranslation } from "react-i18next";
 import type { UsageLogItem } from "@code-proxy/api-client/endpoints/usage";
+import {
+  formatUsageMetricCost,
+  formatUsageMetricNumber,
+  formatUsageMetricTooltipCost,
+  formatUsageMetricTooltipNumber,
+  isUsageMetricCompact,
+  type UsageMetricVariant,
+} from "@code-proxy/domain";
 import { parseUsageTimestampMs } from "@features/monitor-widgets/monitor-utils";
 import { Tabs, TabsList, TabsTrigger } from "@code-proxy/ui";
 import { HoverTooltip, OverflowTooltip } from "@code-proxy/ui";
@@ -96,6 +104,37 @@ function RequestLogMetricChip({
     >
       {value}
     </span>
+  );
+}
+
+export function RequestLogUsageMetricValue({
+  value,
+  variant = "number",
+  className,
+}: {
+  value: number;
+  variant?: UsageMetricVariant;
+  className?: string;
+}) {
+  const display =
+    variant === "currency" ? formatUsageMetricCost(value) : formatUsageMetricNumber(value);
+  const tooltip =
+    variant === "currency"
+      ? formatUsageMetricTooltipCost(value)
+      : formatUsageMetricTooltipNumber(value);
+  const compact = isUsageMetricCompact(value, variant);
+
+  return (
+    <HoverTooltip
+      content={tooltip}
+      disabled={!compact}
+      placement="top"
+      className={compact ? "cursor-help" : undefined}
+    >
+      <span className={["block min-w-0 truncate", className].filter(Boolean).join(" ")}>
+        {display}
+      </span>
+    </HoverTooltip>
   );
 }
 
@@ -365,14 +404,13 @@ export function buildRequestLogsColumns(
             className="inline-block ml-auto cursor-pointer rounded px-1.5 py-0.5 transition hover:bg-sky-50 dark:hover:bg-sky-950/30"
             title={t("request_logs.view_input")}
           >
-            <span className="truncate text-sky-600 dark:text-sky-400 underline decoration-sky-300/50 dark:decoration-sky-500/40 underline-offset-2">
-              {row.inputTokens.toLocaleString()}
-            </span>
+            <RequestLogUsageMetricValue
+              value={row.inputTokens}
+              className="text-sky-600 dark:text-sky-400 underline decoration-sky-300/50 dark:decoration-sky-500/40 underline-offset-2"
+            />
           </button>
         ) : (
-          <OverflowTooltip content={row.inputTokens.toLocaleString()} className="block min-w-0">
-            <span className="block min-w-0 truncate">{row.inputTokens.toLocaleString()}</span>
-          </OverflowTooltip>
+          <RequestLogUsageMetricValue value={row.inputTokens} />
         ),
     },
     {
@@ -382,13 +420,14 @@ export function buildRequestLogsColumns(
       headerClassName: "text-center",
       cellClassName: "text-center font-mono text-xs tabular-nums",
       render: (row) => (
-        <OverflowTooltip content={row.cachedTokens.toLocaleString()} className="block min-w-0">
-          <span
-            className={`block min-w-0 truncate ${row.cachedTokens > 0 ? "font-semibold text-amber-600 dark:text-amber-400" : "text-slate-400 dark:text-white/30"}`}
-          >
-            {row.cachedTokens > 0 ? row.cachedTokens.toLocaleString() : "0"}
-          </span>
-        </OverflowTooltip>
+        <RequestLogUsageMetricValue
+          value={row.cachedTokens}
+          className={
+            row.cachedTokens > 0
+              ? "font-semibold text-amber-600 dark:text-amber-400"
+              : "text-slate-400 dark:text-white/30"
+          }
+        />
       ),
     },
     {
@@ -406,14 +445,13 @@ export function buildRequestLogsColumns(
             className="inline-block ml-auto cursor-pointer rounded px-1.5 py-0.5 transition hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
             title={t("request_logs.view_output")}
           >
-            <span className="truncate text-emerald-600 dark:text-emerald-400 underline decoration-emerald-300/50 dark:decoration-emerald-500/40 underline-offset-2">
-              {row.outputTokens.toLocaleString()}
-            </span>
+            <RequestLogUsageMetricValue
+              value={row.outputTokens}
+              className="text-emerald-600 dark:text-emerald-400 underline decoration-emerald-300/50 dark:decoration-emerald-500/40 underline-offset-2"
+            />
           </button>
         ) : (
-          <OverflowTooltip content={row.outputTokens.toLocaleString()} className="block min-w-0">
-            <span className="block min-w-0 truncate">{row.outputTokens.toLocaleString()}</span>
-          </OverflowTooltip>
+          <RequestLogUsageMetricValue value={row.outputTokens} />
         ),
     },
     {
@@ -422,11 +460,7 @@ export function buildRequestLogsColumns(
       width: "w-28",
       headerClassName: "text-center",
       cellClassName: "text-center font-mono text-xs tabular-nums text-slate-900 dark:text-white",
-      render: (row) => (
-        <OverflowTooltip content={row.totalTokens.toLocaleString()} className="block min-w-0">
-          <span className="block min-w-0 truncate">{row.totalTokens.toLocaleString()}</span>
-        </OverflowTooltip>
-      ),
+      render: (row) => <RequestLogUsageMetricValue value={row.totalTokens} />,
     },
     {
       key: "cost",
@@ -435,11 +469,7 @@ export function buildRequestLogsColumns(
       headerClassName: "text-center",
       cellClassName:
         "text-center font-mono text-xs tabular-nums text-emerald-700 dark:text-emerald-400",
-      render: (row) => (
-        <OverflowTooltip content={`$${row.cost.toFixed(6)}`} className="block min-w-0">
-          <span className="block min-w-0 truncate">${row.cost.toFixed(4)}</span>
-        </OverflowTooltip>
-      ),
+      render: (row) => <RequestLogUsageMetricValue value={row.cost} variant="currency" />,
     },
     {
       key: "apiKeyName",
@@ -511,8 +541,7 @@ export function RequestLogsPaginationBar({
         nextPage: t("request_logs.next_page"),
         lastPage: t("request_logs.last_page"),
         rowsPerPage: t("request_logs.rows_per_page"),
-        pageInfo: ({ start, end, total }) =>
-          t("request_logs.page_info", { start, end, total }),
+        pageInfo: ({ start, end, total }) => t("request_logs.page_info", { start, end, total }),
       }}
     />
   );

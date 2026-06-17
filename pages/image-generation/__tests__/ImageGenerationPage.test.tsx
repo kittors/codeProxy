@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
@@ -13,6 +13,10 @@ const imageGenerationStartTaskMock = () =>
   imageGenerationApi.startTestTask as unknown as ReturnType<typeof vi.fn>;
 const imageGenerationGetTaskMock = () =>
   imageGenerationApi.getTestTask as unknown as ReturnType<typeof vi.fn>;
+const imageGenerationGetSizePresetsMock = () =>
+  imageGenerationApi.getSizePresets as unknown as ReturnType<typeof vi.fn>;
+const imageGenerationUpdateSizePresetsMock = () =>
+  imageGenerationApi.updateSizePresets as unknown as ReturnType<typeof vi.fn>;
 
 function createDeferred<T>() {
   let resolve!: (value: T) => void;
@@ -40,6 +44,8 @@ describe("ImageGenerationPage", () => {
   beforeEach(async () => {
     await i18n.changeLanguage("zh-CN");
     vi.spyOn(authFilesApi, "list");
+    vi.spyOn(imageGenerationApi, "getSizePresets");
+    vi.spyOn(imageGenerationApi, "updateSizePresets");
     vi.spyOn(imageGenerationApi, "startTestTask");
     vi.spyOn(imageGenerationApi, "getTestTask");
     authFilesListMock().mockResolvedValue({
@@ -64,10 +70,17 @@ describe("ImageGenerationPage", () => {
         },
       ],
     });
+    imageGenerationGetSizePresetsMock().mockResolvedValue({
+      sizes: ["1024x1024", "1792x1024", "1024x1792", "2560x1440", "2160x3840"],
+    });
+    imageGenerationUpdateSizePresetsMock().mockResolvedValue({
+      sizes: ["1024x1024", "1792x1024", "1024x1792", "2560x1440", "2160x3840"],
+    });
   });
 
   afterEach(() => {
     vi.useRealTimers();
+    vi.restoreAllMocks();
   });
 
   test("renders text-to-image call docs with structured endpoint tables", async () => {
@@ -281,6 +294,127 @@ describe("ImageGenerationPage", () => {
     expect(within(preview).getByRole("img", { name: /gpt-image-2 预览/i })).toHaveClass(
       "max-w-none",
     );
+  });
+
+  test("creates and persists a custom size preset from the size dropdown", async () => {
+    const user = userEvent.setup();
+    const savedSizes = [
+      "1024x1024",
+      "1792x1024",
+      "1024x1792",
+      "2560x1440",
+      "2160x3840",
+      "4096x2304",
+    ];
+    imageGenerationUpdateSizePresetsMock().mockResolvedValue({ sizes: savedSizes });
+    imageGenerationStartTaskMock().mockResolvedValue({
+      task_id: "task-custom-size",
+      status: "queued",
+      phase: "queued",
+    });
+    imageGenerationGetTaskMock().mockResolvedValue({
+      task_id: "task-custom-size",
+      status: "succeeded",
+      phase: "completed",
+      result: {
+        created: 1,
+        data: [{ b64_json: "aA==", revised_prompt: "超宽海报" }],
+      },
+    });
+
+    renderPage();
+
+    await screen.findByRole("tab", { name: "gpt-image-2" });
+    await user.click(screen.getByRole("button", { name: "测试生成" }));
+
+    const dialog = await screen.findByRole("dialog", { name: "测试生成" });
+    await waitFor(() => {
+      expect(imageGenerationGetSizePresetsMock()).toHaveBeenCalled();
+    });
+
+    const sizeSelect = within(dialog).getByRole("combobox", { name: "分辨率" });
+    await user.click(sizeSelect);
+    await user.type(screen.getByPlaceholderText("搜索或输入分辨率"), "4096x2304");
+    await user.click(await screen.findByRole("option", { name: /新增 4096x2304.*确定/ }));
+
+    await waitFor(() => {
+      expect(imageGenerationUpdateSizePresetsMock()).toHaveBeenCalledWith(savedSizes);
+    });
+    expect(sizeSelect).toHaveTextContent("4096x2304");
+
+    await user.type(within(dialog).getByRole("textbox", { name: "提示词" }), "画一个超宽海报");
+    await user.click(within(dialog).getByRole("button", { name: "发送" }));
+
+    await waitFor(() => {
+      expect(imageGenerationStartTaskMock()).toHaveBeenCalledWith({
+        mode: "generations",
+        model: "gpt-image-2",
+        prompt: "画一个超宽海报",
+        quality: "medium",
+        size: "4096x2304",
+        n: 1,
+      });
+    });
+  });
+
+  test("deletes a custom size preset from the size dropdown and can undo it", async () => {
+    const user = userEvent.setup();
+    const defaultSizes = ["1024x1024", "1792x1024", "1024x1792", "2560x1440", "2160x3840"];
+    const customSizes = [...defaultSizes, "4096x2304"];
+    imageGenerationGetSizePresetsMock().mockResolvedValue({ sizes: customSizes });
+    imageGenerationUpdateSizePresetsMock()
+      .mockResolvedValueOnce({ sizes: defaultSizes })
+      .mockResolvedValueOnce({ sizes: customSizes });
+
+    renderPage();
+
+    await screen.findByRole("tab", { name: "gpt-image-2" });
+    await user.click(screen.getByRole("button", { name: "测试生成" }));
+
+    const dialog = await screen.findByRole("dialog", { name: "测试生成" });
+    await waitFor(() => {
+      expect(imageGenerationGetSizePresetsMock()).toHaveBeenCalled();
+    });
+
+    const sizeSelect = within(dialog).getByRole("combobox", { name: "分辨率" });
+    await user.click(sizeSelect);
+    await user.click(await screen.findByRole("button", { name: "4096x2304" }));
+    expect(sizeSelect).toHaveTextContent("4096x2304");
+
+    await user.click(sizeSelect);
+    await user.click(await screen.findByRole("button", { name: "删除尺寸预设 4096x2304" }));
+
+    await waitFor(() => {
+      expect(imageGenerationUpdateSizePresetsMock()).toHaveBeenCalledWith(defaultSizes);
+    });
+    expect(sizeSelect).toHaveTextContent("1024x1024");
+    expect(await screen.findAllByText("已删除尺寸预设 4096x2304")).not.toHaveLength(0);
+
+    await user.click(await screen.findByRole("button", { name: "撤销" }));
+    await waitFor(() => {
+      expect(imageGenerationUpdateSizePresetsMock()).toHaveBeenLastCalledWith(customSizes);
+    });
+    expect(sizeSelect).toHaveTextContent("4096x2304");
+  });
+
+  test("rejects an oversized custom size preset before persistence", async () => {
+    const user = userEvent.setup();
+
+    renderPage();
+
+    await screen.findByRole("tab", { name: "gpt-image-2" });
+    await user.click(screen.getByRole("button", { name: "测试生成" }));
+
+    const dialog = await screen.findByRole("dialog", { name: "测试生成" });
+    const sizeSelect = within(dialog).getByRole("combobox", { name: "分辨率" });
+    await user.click(sizeSelect);
+    await user.type(screen.getByPlaceholderText("搜索或输入分辨率"), "9000x9000");
+    await user.click(await screen.findByRole("option", { name: /新增 9000x9000.*确定/ }));
+
+    expect(imageGenerationUpdateSizePresetsMock()).not.toHaveBeenCalled();
+    expect(
+      await screen.findAllByText("尺寸过大，最长边不能超过 8192，总像素不能超过 8192x8192"),
+    ).not.toHaveLength(0);
   });
 
   test("switches to image edit mode after uploading reference images", async () => {

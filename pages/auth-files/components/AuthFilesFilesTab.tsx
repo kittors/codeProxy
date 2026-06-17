@@ -45,6 +45,7 @@ import {
   TYPE_BADGE_CLASSES,
   isRuntimeOnlyAuthFile,
   normalizeProviderKey,
+  normalizeTagValue,
   resolveAuthFileDisplayName,
   resolveAuthFilePlanType,
   resolveAuthFileSupplementalTags,
@@ -633,10 +634,11 @@ export function AuthFilesFilesTab({
   const [uploadProgressDismissed, setUploadProgressDismissed] = useState(false);
   const [modelOwnerDialogSaving, setModelOwnerDialogSaving] = useState(false);
   const normalizedFilter = normalizeProviderKey(filter);
+  const normalizedTagFilter = normalizeTagValue(tagFilter);
   const canSetModelOwnerGroup = normalizedFilter !== "all";
   const activeFilterCount = [
     normalizedFilter !== "all",
-    customTagOptions.length > 0 && tagFilter.trim() !== "",
+    normalizedTagFilter !== "",
     statusFilter !== "all",
     search.trim() !== "",
     canSetModelOwnerGroup && selectedModelOwner.trim() !== "",
@@ -666,19 +668,25 @@ export function AuthFilesFilesTab({
     [modelOwnerGroups, t],
   );
   const customTagSelectOptions = useMemo<SearchableSelectOption[]>(
-    () => [
-      {
-        value: "",
-        label: t("auth_files.all_tags"),
-        searchText: t("auth_files.all_tags"),
-      },
-      ...customTagOptions.map((tag) => ({
-        value: tag,
-        label: tag,
-        searchText: tag,
-      })),
-    ],
-    [customTagOptions, t],
+    () => {
+      const options =
+        normalizedTagFilter && !customTagOptions.includes(normalizedTagFilter)
+          ? [normalizedTagFilter, ...customTagOptions]
+          : customTagOptions;
+      return [
+        {
+          value: "",
+          label: t("auth_files.all_tags"),
+          searchText: t("auth_files.all_tags"),
+        },
+        ...options.map((tag) => ({
+          value: tag,
+          label: tag,
+          searchText: tag,
+        })),
+      ];
+    },
+    [customTagOptions, normalizedTagFilter, t],
   );
   const providerFilterOptions = useMemo<SearchableSelectOption[]>(
     () =>
@@ -1010,7 +1018,7 @@ export function AuthFilesFilesTab({
                   </div>
                 </div>
 
-                {customTagOptions.length > 0 ? (
+                {customTagOptions.length > 0 || normalizedTagFilter ? (
                   <div className="w-full">
                     <div className={FILTER_FIELD_CLASS}>
                       <p className={FILTER_LABEL_CLASS}>{t("auth_files.tag_filter")}</p>
@@ -1343,7 +1351,7 @@ export function AuthFilesFilesTab({
                                   "flex h-8 items-center justify-center px-1 transition-opacity",
                                   showSelectionControl
                                     ? "opacity-100 pointer-events-auto"
-                                    : "opacity-0 pointer-events-none group-hover/card:opacity-100 group-focus-within/card:opacity-100 group-hover/card:pointer-events-auto group-focus-within/card:pointer-events-auto",
+                                    : "opacity-100 pointer-events-auto md:opacity-0 md:pointer-events-none md:group-hover/card:opacity-100 md:group-focus-within/card:opacity-100 md:group-hover/card:pointer-events-auto md:group-focus-within/card:pointer-events-auto",
                                 ].join(" ")}
                               >
                                 <input
@@ -1365,7 +1373,7 @@ export function AuthFilesFilesTab({
                               <div
                                 className={[
                                   "flex h-8 items-center justify-center transition-opacity",
-                                  "opacity-0 pointer-events-none group-hover/card:opacity-100 group-focus-within/card:opacity-100 group-hover/card:pointer-events-auto group-focus-within/card:pointer-events-auto",
+                                  "opacity-100 pointer-events-auto md:opacity-0 md:pointer-events-none md:group-hover/card:opacity-100 md:group-focus-within/card:opacity-100 md:group-hover/card:pointer-events-auto md:group-focus-within/card:pointer-events-auto",
                                 ].join(" ")}
                               >
                                 <ToggleSwitch

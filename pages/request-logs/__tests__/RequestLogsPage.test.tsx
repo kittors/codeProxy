@@ -412,12 +412,8 @@ describe("RequestLogsPage", () => {
           buildUsageLogItem({ id: 2, model: "gpt-4.1" }),
         ]),
       )
-      .mockResolvedValueOnce(
-        responseWithRows([buildUsageLogItem({ id: 3, model: "gpt-5.4" })]),
-      )
-      .mockResolvedValueOnce(
-        responseWithRows([buildUsageLogItem({ id: 4, model: "gpt-4.1" })]),
-      );
+      .mockResolvedValueOnce(responseWithRows([buildUsageLogItem({ id: 3, model: "gpt-5.4" })]))
+      .mockResolvedValueOnce(responseWithRows([buildUsageLogItem({ id: 4, model: "gpt-4.1" })]));
 
     render(
       <ThemeProvider>
@@ -442,9 +438,7 @@ describe("RequestLogsPage", () => {
         }),
       ),
     );
-    expect(screen.getByRole("combobox", { name: "Filter by model" })).toHaveTextContent(
-      "gpt-5.4",
-    );
+    expect(screen.getByRole("combobox", { name: "Filter by model" })).toHaveTextContent("gpt-5.4");
 
     await user.click(screen.getByRole("button", { name: "Clear model filter" }));
 
@@ -458,9 +452,7 @@ describe("RequestLogsPage", () => {
       ),
     );
     await waitFor(() =>
-      expect(
-        screen.queryByRole("button", { name: "Clear model filter" }),
-      ).not.toBeInTheDocument(),
+      expect(screen.queryByRole("button", { name: "Clear model filter" })).not.toBeInTheDocument(),
     );
     expect(screen.getByRole("combobox", { name: "Filter by model" })).toHaveTextContent(
       "All Models",
@@ -547,6 +539,70 @@ describe("RequestLogsPage", () => {
 
     await screen.findByRole("table", { name: "请求日志表" });
     expect(container.querySelector(".table-scrollbar")).not.toBeNull();
+  });
+
+  test("uses dashboard compact metric formatting without the updated-at summary text", async () => {
+    await i18n.changeLanguage("en");
+    const user = userEvent.setup();
+
+    mocks.getUsageLogs.mockResolvedValue({
+      items: [
+        buildUsageLogItem({
+          input_tokens: 2_806_800_000,
+          cached_tokens: 2_576_200_000,
+          output_tokens: 13_100_000,
+          total_tokens: 2_819_900_000,
+          cost: 12_345.67891,
+          has_content: true,
+        }),
+      ],
+      total: 23_800,
+      page: 1,
+      size: 50,
+      filters: {
+        api_keys: [],
+        api_key_names: {},
+        models: [],
+        channels: [],
+      },
+      stats: {
+        total: 23_800,
+        success_rate: 99.5,
+        total_tokens: 2_819_900_000,
+        total_cost: 12_345.67891,
+        cache_rate: 91.234,
+      },
+    });
+
+    render(
+      <ThemeProvider>
+        <ToastProvider>
+          <RequestLogsPage />
+        </ToastProvider>
+      </ThemeProvider>,
+    );
+
+    const recordsCount = await screen.findByText("23.8K records");
+    expect(screen.queryByText(/Updated at/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Not yet refreshed/i)).not.toBeInTheDocument();
+    expect(screen.getAllByText("2.8B").length).toBeGreaterThan(0);
+    expect(screen.getByText("2.6B")).toBeInTheDocument();
+    expect(screen.getByText("13.1M")).toBeInTheDocument();
+    expect(screen.getAllByText("$12.35K").length).toBeGreaterThan(0);
+    expect(screen.getByText("91.23%")).toBeInTheDocument();
+
+    await user.hover(recordsCount);
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("23,800.00");
+    await user.unhover(recordsCount);
+
+    const cachedTokens = screen.getByText("2.6B");
+    await user.hover(cachedTokens);
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("2,576,200,000.00");
+    await user.unhover(cachedTokens);
+
+    const cost = screen.getAllByText("$12.35K")[0];
+    await user.hover(cost);
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("$12,345.6789");
   });
 
   test("clears bulky request-log content by default while preserving request rows", async () => {

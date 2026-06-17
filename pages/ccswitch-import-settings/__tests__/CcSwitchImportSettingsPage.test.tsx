@@ -45,13 +45,14 @@ vi.mock("@code-proxy/api-client/endpoints/models", () => ({
       allowedChannelGroups?: string[];
       allowedChannels?: string[];
     }) => listAvailableModels(params),
-    getModelConfigs: (scope: "active" | "library") => getModelConfigs(scope),
+    getModelConfigs: (scope: "active" | "library" | "all") => getModelConfigs(scope),
     getAuthGroupModelOwnerMappingMap: () => getAuthGroupModelOwnerMappingMap(),
   },
 }));
 
 vi.mock("@features/model-availability", () => ({
-  loadConfiguredModelAvailability: () => loadConfiguredModelAvailability(),
+  loadConfiguredModelAvailability: (options?: { allowedChannelGroups?: string[] }) =>
+    loadConfiguredModelAvailability(options),
   filterByConfiguredModelAvailability: <T extends { id: string }>(
     models: T[],
     availability: { scoped: boolean; idSet: Set<string> },
@@ -372,7 +373,13 @@ describe("CcSwitchImportSettingsPage", () => {
     ]);
     loadConfiguredModelAvailability.mockResolvedValue({
       scoped: true,
-      items: [],
+      items: [
+        { id: "gpt-5", owned_by: "openai" },
+        { id: "gpt-5-codex", owned_by: "openai" },
+        { id: "gpt-5.3-codex", owned_by: "codex" },
+        { id: "gpt-5.5", owned_by: "codex" },
+        { id: "gpt-image-2", owned_by: "openai" },
+      ],
       idSet: new Set([
         "codex-auto-review",
         "gpt-5",
@@ -384,13 +391,6 @@ describe("CcSwitchImportSettingsPage", () => {
         "gpt-image-2",
       ]),
     });
-    getModelConfigs.mockResolvedValue([
-      { id: "gpt-5", owned_by: "openai" },
-      { id: "gpt-5-codex", owned_by: "openai" },
-      { id: "gpt-5.3-codex", owned_by: "codex" },
-      { id: "gpt-5.5", owned_by: "codex" },
-      { id: "gpt-image-2", owned_by: "openai" },
-    ]);
     renderPage();
     const user = userEvent.setup();
 
@@ -405,8 +405,89 @@ describe("CcSwitchImportSettingsPage", () => {
     expect(listAvailableModels).toHaveBeenCalledWith({
       allowedChannelGroups: ["chatgpt-pro"],
     });
-    expect(loadConfiguredModelAvailability).toHaveBeenCalledTimes(1);
-    expect(getModelConfigs).toHaveBeenCalledWith("active");
+    expect(loadConfiguredModelAvailability).toHaveBeenCalledWith({
+      allowedChannelGroups: ["chatgpt-pro"],
+    });
+    expect(getModelConfigs).not.toHaveBeenCalled();
+  });
+
+  test("hydrates the Kimi and DeepSeek channel group from scoped backend availability", async () => {
+    getAuthGroupModelOwnerMappingMap.mockResolvedValue({ kimi: "kimi-code" });
+    listChannelGroups.mockResolvedValue([
+      {
+        name: "kimi+deepseek v4 flash",
+        description: "Kimi and DeepSeek route",
+        channels: ["kimi-code", "opencode"],
+        channelDetails: [
+          {
+            name: "kimi-code",
+            source: "openai",
+            default_tags: ["openai"],
+            custom_tags: ["kimi-code"],
+            display_tags: ["kimi-code"],
+          },
+          {
+            name: "opencode",
+            source: "opencode-go",
+            default_tags: ["opencode-go"],
+            custom_tags: ["opencode"],
+            display_tags: ["opencode"],
+          },
+        ],
+        "path-routes": ["/deepseekkimi"],
+      },
+    ]);
+    listAvailableModels.mockResolvedValue([
+      { id: "deepseek-v4-flash" },
+      { id: "kimi-k2.5" },
+      { id: "kimi-k2.6" },
+      { id: "qwen3.5-plus" },
+    ]);
+    loadConfiguredModelAvailability.mockResolvedValue({
+      scoped: true,
+      items: [
+        { id: "deepseek-v4-flash", owned_by: "opencode", source: "seed" },
+        { id: "kimi-k2.5", owned_by: "kimi-code", source: "seed" },
+        { id: "kimi-k2.6", owned_by: "kimi-code", source: "seed" },
+        { id: "kimi-k2.7", owned_by: "kimi-code", source: "seed" },
+        { id: "kimi-k2.7-code", owned_by: "kimi-code", source: "seed" },
+        { id: "qwen3.5-plus", owned_by: "opencode", source: "seed" },
+        { id: "unrelated-openai", owned_by: "openai", source: "seed" },
+      ],
+      idSet: new Set([
+        "deepseek-v4-flash",
+        "kimi-k2.5",
+        "kimi-k2.6",
+        "kimi-k2.7",
+        "kimi-k2.7-code",
+        "qwen3.5-plus",
+      ]),
+    });
+    renderPage();
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole("button", { name: /new config/i }));
+
+    const dialog = await screen.findByRole("dialog", { name: /new cc switch config/i });
+    await user.click(within(dialog).getByRole("combobox", { name: /select channel group/i }));
+    await user.click(
+      await screen.findByRole("option", { name: /kimi\+deepseek v4 flash.*\/deepseekkimi/i }),
+    );
+
+    expect(await within(dialog).findByDisplayValue("deepseek-v4-flash")).toBeInTheDocument();
+    expect(within(dialog).getByDisplayValue("kimi-k2.5")).toBeInTheDocument();
+    expect(within(dialog).getByDisplayValue("kimi-k2.6")).toBeInTheDocument();
+    expect(within(dialog).getByDisplayValue("kimi-k2.7")).toBeInTheDocument();
+    expect(within(dialog).getByDisplayValue("kimi-k2.7-code")).toBeInTheDocument();
+    expect(within(dialog).getByDisplayValue("qwen3.5-plus")).toBeInTheDocument();
+    expect(within(dialog).queryByDisplayValue("unrelated-openai")).not.toBeInTheDocument();
+    expect(
+      within(dialog).queryByText(/no models are available for this channel group/i),
+    ).not.toBeInTheDocument();
+    expect(loadConfiguredModelAvailability).toHaveBeenCalledWith({
+      allowedChannelGroups: ["kimi+deepseek v4 flash"],
+    });
+    expect(getModelConfigs).not.toHaveBeenCalled();
   });
 
   test("merges mapped Codex owner models with OpenCode Go channel models in CC Switch presets", async () => {
@@ -496,14 +577,14 @@ describe("CcSwitchImportSettingsPage", () => {
     ]);
     loadConfiguredModelAvailability.mockResolvedValue({
       scoped: true,
-      items: [],
+      items: [
+        { id: "kimi-k2.5", owned_by: "kimi-code" },
+        { id: "kimi-k2.6", owned_by: "kimi-code" },
+        { id: "kimi-k2.7", owned_by: "kimi-code" },
+        { id: "kimi-k2.7-code", owned_by: "kimi-code" },
+      ],
       idSet: new Set(["kimi-k2.5", "kimi-k2.6"]),
     });
-    getModelConfigs.mockResolvedValue([
-      { id: "kimi-k2.5", owned_by: "kimi-code" },
-      { id: "kimi-k2.6", owned_by: "kimi-code" },
-      { id: "kimi-k2", owned_by: "moonshot" },
-    ]);
     renderPage();
     const user = userEvent.setup();
 
@@ -518,11 +599,16 @@ describe("CcSwitchImportSettingsPage", () => {
     await user.click(within(dialog).getByRole("combobox", { name: /^main model$/i }));
 
     expect(await screen.findByRole("option", { name: "kimi-k2.6" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "kimi-k2.7" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "kimi-k2.7-code" })).toBeInTheDocument();
     expect(screen.queryByRole("option", { name: "kimi-k2" })).not.toBeInTheDocument();
     expect(listAvailableModels).toHaveBeenCalledWith({
       allowedChannelGroups: ["kimicode"],
     });
-    expect(getModelConfigs).toHaveBeenCalledWith("active");
+    expect(loadConfiguredModelAvailability).toHaveBeenCalledWith({
+      allowedChannelGroups: ["kimicode"],
+    });
+    expect(getModelConfigs).not.toHaveBeenCalled();
   });
 
   test("preserves saved generic model mappings when reopening an edited config", async () => {

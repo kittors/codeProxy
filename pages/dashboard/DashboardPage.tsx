@@ -1,5 +1,13 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { useTranslation } from "react-i18next";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactElement,
+  type ReactNode,
+} from "react";
+import { Trans, useTranslation } from "react-i18next";
 import {
   Activity,
   Database,
@@ -16,12 +24,21 @@ import {
   type DashboardThroughputPoint,
   type DashboardTrendPoint,
 } from "@code-proxy/api-client/endpoints/usage";
+import {
+  formatCompactNumber,
+  formatCompactUsd,
+  formatFixedNumber,
+  formatUsd,
+  getCompactNumberParts,
+  type CompactNumberOptions,
+} from "@code-proxy/domain";
 import { SystemMonitorSection } from "./SystemMonitorSection";
 import { useSystemStats } from "./useSystemStats";
 import { AnimatedNumber } from "@code-proxy/ui";
 import { Button } from "@code-proxy/ui";
 import { Card } from "@code-proxy/ui";
 import { EmptyState } from "@code-proxy/ui";
+import { HoverTooltip } from "@code-proxy/ui";
 import { Tabs, TabsList, TabsTrigger } from "@code-proxy/ui";
 import { useToast } from "@code-proxy/ui";
 import { EChart } from "@code-proxy/ui";
@@ -36,18 +53,72 @@ const RANGE_KEYS: Record<DashboardRange, string> = {
   30: "dashboard.last_30_days",
 };
 
-const formatNumber = (n: number) =>
-  n >= 1_000_000
-    ? `${(n / 1_000_000).toFixed(1)}m`
-    : n >= 10_000
-      ? `${(n / 1000).toFixed(1)}k`
-      : n.toLocaleString();
+const DASHBOARD_COMPACT_OPTIONS = {
+  threshold: 10_000,
+  maximumFractionDigits: 1,
+  standardMaximumFractionDigits: 0,
+} satisfies CompactNumberOptions;
+const DASHBOARD_COST_COMPACT_OPTIONS = {
+  threshold: 10_000,
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+  standardMinimumFractionDigits: 4,
+  standardMaximumFractionDigits: 4,
+} satisfies CompactNumberOptions;
 
-const formatCompactNumber = (n: number) => {
-  if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(1)}b`;
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}m`;
-  if (n >= 10_000) return `${(n / 1_000).toFixed(1)}k`;
-  return n.toLocaleString();
+const formatDashboardNumber = (value: number) =>
+  formatCompactNumber(value, DASHBOARD_COMPACT_OPTIONS);
+const formatDashboardTooltipNumber = (value: number) =>
+  formatFixedNumber(value, { fractionDigits: 2 });
+const formatDashboardCost = (value: number) =>
+  formatCompactUsd(value, DASHBOARD_COST_COMPACT_OPTIONS);
+const formatDashboardTooltipCost = (value: number) => formatUsd(value, { fractionDigits: 4 });
+
+function DashboardMetricValue({
+  value,
+  variant = "number",
+  animated = false,
+  className,
+}: {
+  value: number;
+  variant?: "number" | "currency";
+  animated?: boolean;
+  className?: string;
+}) {
+  const compactOptions =
+    variant === "currency" ? DASHBOARD_COST_COMPACT_OPTIONS : DASHBOARD_COMPACT_OPTIONS;
+  const format = variant === "currency" ? formatDashboardCost : formatDashboardNumber;
+  const tooltip =
+    variant === "currency"
+      ? formatDashboardTooltipCost(value)
+      : formatDashboardTooltipNumber(value);
+  const compact = getCompactNumberParts(value, compactOptions).compact;
+  const content = animated ? (
+    <AnimatedNumber value={value} format={format} className={className} />
+  ) : (
+    <span className={["inline-block tabular-nums", className].filter(Boolean).join(" ")}>
+      {format(value)}
+    </span>
+  );
+
+  return (
+    <HoverTooltip
+      content={tooltip}
+      disabled={!compact}
+      placement="top"
+      className={compact ? "cursor-help" : undefined}
+    >
+      {content}
+    </HoverTooltip>
+  );
+}
+
+const renderDashboardHint = (
+  i18nKey: string,
+  first: ReactElement,
+  second: ReactElement,
+): ReactNode => {
+  return <Trans i18nKey={i18nKey} components={[first, second]} />;
 };
 
 const throughputNumberFormatter = new Intl.NumberFormat(undefined, {
@@ -56,7 +127,6 @@ const throughputNumberFormatter = new Intl.NumberFormat(undefined, {
 const formatThroughputValue = (value: number) =>
   throughputNumberFormatter.format(Number.isFinite(value) ? value : 0);
 const formatRate = (rate: number) => `${rate.toFixed(2)}%`;
-const formatCurrency = (value: number) => `$${value.toFixed(4)}`;
 const PANEL_SURFACE =
   "rounded-[18px] border border-slate-200/85 bg-white shadow-[0_10px_26px_rgba(15,23,42,0.05)] dark:border-neutral-800 dark:bg-neutral-950/85 dark:shadow-[0_10px_26px_rgba(0,0,0,0.28)]";
 
@@ -85,7 +155,7 @@ function createSparklineOption(points: DashboardTrendPoint[], color: string): EC
       textStyle: { color: "#fff", fontSize: 11 },
       formatter: (params: any) => {
         const first = Array.isArray(params) ? params[0] : params;
-        return `${first?.axisValueLabel ?? ""}<br/>${formatNumber(Number(first?.data ?? 0))}`;
+        return `${first?.axisValueLabel ?? ""}<br/>${formatDashboardTooltipNumber(Number(first?.data ?? 0))}`;
       },
     },
     xAxis: {
@@ -239,7 +309,7 @@ function DashboardKpiCard({
 }: {
   title: string;
   value: ReactNode;
-  hint: string;
+  hint: ReactNode;
   icon: typeof Activity;
   option: ECBasicOption;
   accent: {
@@ -328,7 +398,7 @@ function ThroughputTrendChart({
             RPM
           </div>
           <div className="mt-1 text-xl font-semibold tabular-nums text-blue-600 dark:text-blue-400">
-            {formatCompactNumber(rpm)}
+            <DashboardMetricValue value={rpm} />
           </div>
         </div>
         <div className="rounded-[14px] bg-slate-50 px-3 py-2 dark:bg-neutral-900/70 dark:ring-1 dark:ring-white/8">
@@ -336,7 +406,7 @@ function ThroughputTrendChart({
             TPM
           </div>
           <div className="mt-1 text-xl font-semibold tabular-nums text-violet-600 dark:text-violet-400">
-            {formatCompactNumber(tpm)}
+            <DashboardMetricValue value={tpm} />
           </div>
         </div>
       </div>
@@ -501,7 +571,7 @@ export function DashboardPage() {
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
         <DashboardKpiCard
           title={t("dashboard.total_requests")}
-          value={<AnimatedNumber value={kpi?.total_requests ?? 0} format={formatNumber} />}
+          value={<DashboardMetricValue value={kpi?.total_requests ?? 0} animated />}
           hint={
             range === 1
               ? t("dashboard.total_hint_today")
@@ -517,10 +587,11 @@ export function DashboardPage() {
         <DashboardKpiCard
           title={t("dashboard.success_rate")}
           value={<AnimatedNumber value={kpi?.success_rate ?? 0} format={formatRate} />}
-          hint={t("dashboard.success_hint", {
-            success: formatNumber(kpi?.success_requests ?? 0),
-            failed: formatNumber(kpi?.failed_requests ?? 0),
-          })}
+          hint={renderDashboardHint(
+            "dashboard.success_hint",
+            <DashboardMetricValue key="success" value={kpi?.success_requests ?? 0} />,
+            <DashboardMetricValue key="failed" value={kpi?.failed_requests ?? 0} />,
+          )}
           icon={Sigma}
           option={successRateOption}
           accent={{
@@ -530,11 +601,12 @@ export function DashboardPage() {
         />
         <DashboardKpiCard
           title={t("dashboard.total_tokens")}
-          value={<AnimatedNumber value={kpi?.total_tokens ?? 0} format={formatNumber} />}
-          hint={t("dashboard.token_hint", {
-            input: formatNumber(kpi?.input_tokens ?? 0),
-            output: formatNumber(kpi?.output_tokens ?? 0),
-          })}
+          value={<DashboardMetricValue value={kpi?.total_tokens ?? 0} animated />}
+          hint={renderDashboardHint(
+            "dashboard.token_hint",
+            <DashboardMetricValue key="input" value={kpi?.input_tokens ?? 0} />,
+            <DashboardMetricValue key="output" value={kpi?.output_tokens ?? 0} />,
+          )}
           icon={Sparkles}
           option={totalTokenOption}
           accent={{
@@ -544,7 +616,7 @@ export function DashboardPage() {
         />
         <DashboardKpiCard
           title={t("dashboard.total_cost")}
-          value={<AnimatedNumber value={kpi?.total_cost ?? 0} format={formatCurrency} />}
+          value={<DashboardMetricValue value={kpi?.total_cost ?? 0} variant="currency" animated />}
           hint={t("dashboard.total_cost_hint")}
           icon={DollarSign}
           option={totalCostOption}
@@ -555,7 +627,7 @@ export function DashboardPage() {
         />
         <DashboardKpiCard
           title={t("dashboard.failed_requests")}
-          value={<AnimatedNumber value={kpi?.failed_requests ?? 0} format={formatNumber} />}
+          value={<DashboardMetricValue value={kpi?.failed_requests ?? 0} animated />}
           hint={t("dashboard.failed_hint")}
           icon={TriangleAlert}
           option={failedRequestOption}
@@ -567,10 +639,11 @@ export function DashboardPage() {
         <DashboardKpiCard
           title={t("dashboard.cache_rate")}
           value={<AnimatedNumber value={kpi?.cache_rate ?? 0} format={formatRate} />}
-          hint={t("dashboard.cache_hint", {
-            cached: formatNumber(kpi?.cached_tokens ?? 0),
-            input: formatNumber(kpi?.input_tokens ?? 0),
-          })}
+          hint={renderDashboardHint(
+            "dashboard.cache_hint",
+            <DashboardMetricValue key="cached" value={kpi?.cached_tokens ?? 0} />,
+            <DashboardMetricValue key="input" value={kpi?.input_tokens ?? 0} />,
+          )}
           icon={Database}
           option={cacheRateOption}
           accent={{

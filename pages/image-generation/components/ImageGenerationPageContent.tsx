@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
-import { ArrowUp, ChevronLeft, ChevronRight, Plus, X } from "lucide-react";
+import { ArrowUp, ChevronLeft, ChevronRight, Plus, Trash2, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { authFilesApi, imageGenerationApi } from "@code-proxy/api-client";
 import type { AuthFileItem } from "@code-proxy/api-client";
@@ -7,9 +7,11 @@ import { Button } from "@code-proxy/ui";
 import { Card } from "@code-proxy/ui";
 import { ImagePreviewOverlay } from "@code-proxy/ui";
 import { Modal } from "@code-proxy/ui";
+import { SearchableSelect, type SearchableSelectOption } from "@code-proxy/ui";
 import { Select } from "@code-proxy/ui";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@code-proxy/ui";
 import { DataTable, type DataTableColumn } from "@code-proxy/ui";
+import { useToast } from "@code-proxy/ui";
 
 const GPT_IMAGE_MODEL = "gpt-image-2";
 const GENERATION_STATUS_KEYS = [
@@ -32,11 +34,23 @@ const IMAGE_GENERATION_PHASE_STATUS_INDEX: Record<string, number> = {
   image_download: 3,
   completed: 3,
 };
-const SIZE_OPTIONS = ["1024x1024", "1792x1024", "1024x1792", "2560x1440", "2160x3840"] as const;
+const DEFAULT_SIZE_OPTION = "1024x1024";
+const SIZE_OPTIONS = [
+  DEFAULT_SIZE_OPTION,
+  "1792x1024",
+  "1024x1792",
+  "2560x1440",
+  "2160x3840",
+] as const;
+const DEFAULT_SIZE_OPTIONS = new Set<string>(SIZE_OPTIONS);
 const QUALITY_OPTIONS = ["low", "medium", "high"] as const;
 const COUNT_OPTIONS = [1, 2, 3, 4] as const;
 const MAX_UPLOAD_IMAGES = 5;
 const IMAGE_EDITS_ENABLED = true;
+const IMAGE_GENERATION_SIZE_PATTERN = /^[1-9]\d*x[1-9]\d*$/;
+const IMAGE_GENERATION_MAX_SIZE_EDGE = 8192;
+const IMAGE_GENERATION_MAX_SIZE_PIXELS =
+  IMAGE_GENERATION_MAX_SIZE_EDGE * IMAGE_GENERATION_MAX_SIZE_EDGE;
 
 type ImageMode = "generations" | "edits";
 type SpecRow = {
@@ -58,6 +72,51 @@ type EndpointDoc = {
 };
 type GeneratedImage = { src: string; revisedPrompt?: string };
 type UploadedImage = { id: string; file: File; previewUrl: string };
+
+function normalizeImageGenerationSizePreset(value: string): string {
+  const normalized = value.trim().toLowerCase().replace(/[×*]/g, "x").replace(/\s+/g, "");
+  return IMAGE_GENERATION_SIZE_PATTERN.test(normalized) ? normalized : "";
+}
+
+function parseImageGenerationSizePreset(value: string): { width: number; height: number } | null {
+  const normalized = normalizeImageGenerationSizePreset(value);
+  if (!normalized) return null;
+  const [widthText, heightText] = normalized.split("x");
+  const width = Number.parseInt(widthText, 10);
+  const height = Number.parseInt(heightText, 10);
+  if (!Number.isSafeInteger(width) || !Number.isSafeInteger(height) || width <= 0 || height <= 0) {
+    return null;
+  }
+  return { width, height };
+}
+
+function isImageGenerationSizePresetWithinLimit(value: string): boolean {
+  const size = parseImageGenerationSizePreset(value);
+  if (!size) return false;
+  return (
+    size.width <= IMAGE_GENERATION_MAX_SIZE_EDGE &&
+    size.height <= IMAGE_GENERATION_MAX_SIZE_EDGE &&
+    size.width * size.height <= IMAGE_GENERATION_MAX_SIZE_PIXELS
+  );
+}
+
+function mergeImageGenerationSizePresets(values: string[]): string[] {
+  const merged: string[] = [];
+  const seen = new Set<string>();
+  for (const value of [...SIZE_OPTIONS, ...values]) {
+    const normalized = normalizeImageGenerationSizePreset(value);
+    if (
+      !normalized ||
+      !isImageGenerationSizePresetWithinLimit(normalized) ||
+      seen.has(normalized)
+    ) {
+      continue;
+    }
+    seen.add(normalized);
+    merged.push(normalized);
+  }
+  return merged;
+}
 
 const isCodexOauthFile = (file: AuthFileItem): boolean => {
   const accountType = String(file.account_type ?? "")
@@ -491,8 +550,12 @@ function extractImageGenerationTaskError(error: unknown): string | null {
 
 function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { t } = useTranslation();
+  const { notify } = useToast();
   const [prompt, setPrompt] = useState("");
-  const [size, setSize] = useState<(typeof SIZE_OPTIONS)[number]>("1024x1024");
+  const [size, setSize] = useState<string>(DEFAULT_SIZE_OPTION);
+  const [sizePresets, setSizePresets] = useState<string[]>(() =>
+    mergeImageGenerationSizePresets([]),
+  );
   const [quality, setQuality] = useState<(typeof QUALITY_OPTIONS)[number]>("medium");
   const [count, setCount] = useState<(typeof COUNT_OPTIONS)[number]>(1);
   const [uploadedImages, setUploadedImages] = useState<UploadedImage[]>([]);
@@ -514,7 +577,7 @@ function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: (
     if (!open) return;
     generationSessionRef.current += 1;
     setPrompt("");
-    setSize("1024x1024");
+    setSize(DEFAULT_SIZE_OPTION);
     setQuality("medium");
     setCount(1);
     setUploadedImages((current) => {
@@ -531,6 +594,29 @@ function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: (
     setUploadPreviewIndex(0);
     setGenerationElapsedMs(null);
     generationStartedAtRef.current = null;
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+
+    const loadSizePresets = async () => {
+      try {
+        const response = await imageGenerationApi.getSizePresets();
+        if (cancelled) return;
+        setSizePresets(mergeImageGenerationSizePresets(response.sizes ?? []));
+      } catch {
+        if (!cancelled) {
+          setSizePresets(mergeImageGenerationSizePresets([]));
+        }
+      }
+    };
+
+    void loadSizePresets();
+
+    return () => {
+      cancelled = true;
+    };
   }, [open]);
 
   useEffect(() => {
@@ -630,6 +716,134 @@ function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: (
       return next;
     });
   };
+
+  const handleCreateSizePreset = useCallback(
+    async (value: string) => {
+      const nextSize = normalizeImageGenerationSizePreset(value);
+      if (!nextSize) {
+        notify({
+          type: "warning",
+          message: t("image_generation.size_preset_invalid"),
+        });
+        return;
+      }
+      if (!isImageGenerationSizePresetWithinLimit(nextSize)) {
+        notify({
+          type: "warning",
+          message: t("image_generation.size_preset_too_large"),
+        });
+        return;
+      }
+
+      const previousPresets = sizePresets;
+      const nextPresets = mergeImageGenerationSizePresets([...sizePresets, nextSize]);
+      setSizePresets(nextPresets);
+      setSize(nextSize);
+
+      try {
+        const response = await imageGenerationApi.updateSizePresets(nextPresets);
+        setSizePresets(mergeImageGenerationSizePresets(response.sizes ?? nextPresets));
+        notify({
+          type: "success",
+          message: t("image_generation.size_preset_saved", { size: nextSize }),
+        });
+      } catch (error) {
+        setSizePresets(previousPresets);
+        setSize((current) => (current === nextSize ? DEFAULT_SIZE_OPTION : current));
+        notify({
+          type: "error",
+          message:
+            error instanceof Error ? error.message : t("image_generation.size_preset_save_failed"),
+        });
+      }
+    },
+    [notify, sizePresets, t],
+  );
+
+  const handleDeleteSizePreset = useCallback(
+    async (value: string) => {
+      const targetSize = normalizeImageGenerationSizePreset(value);
+      if (!targetSize || DEFAULT_SIZE_OPTIONS.has(targetSize)) return;
+
+      const previousPresets = sizePresets;
+      const previousSize = size;
+      const nextPresets = sizePresets.filter((item) => item !== targetSize);
+      const sizeAfterDelete = previousSize === targetSize ? DEFAULT_SIZE_OPTION : previousSize;
+      setSizePresets(nextPresets);
+      setSize(sizeAfterDelete);
+
+      const restorePreset = () => {
+        setSizePresets(previousPresets);
+        setSize(previousSize);
+        void imageGenerationApi
+          .updateSizePresets(previousPresets)
+          .then((response) => {
+            setSizePresets(mergeImageGenerationSizePresets(response.sizes ?? previousPresets));
+            setSize(previousSize);
+          })
+          .catch((error) => {
+            setSizePresets(nextPresets);
+            setSize(sizeAfterDelete);
+            notify({
+              type: "error",
+              message:
+                error instanceof Error
+                  ? error.message
+                  : t("image_generation.size_preset_save_failed"),
+            });
+          });
+      };
+
+      try {
+        const response = await imageGenerationApi.updateSizePresets(nextPresets);
+        setSizePresets(mergeImageGenerationSizePresets(response.sizes ?? nextPresets));
+        notify({
+          type: "success",
+          message: t("image_generation.size_preset_deleted", { size: targetSize }),
+          duration: 4000,
+          action: {
+            label: t("image_generation.size_preset_undo"),
+            onClick: restorePreset,
+            successLabel: t("image_generation.size_preset_restored", { size: targetSize }),
+          },
+        });
+      } catch (error) {
+        setSizePresets(previousPresets);
+        setSize(previousSize);
+        notify({
+          type: "error",
+          message:
+            error instanceof Error
+              ? error.message
+              : t("image_generation.size_preset_delete_failed"),
+        });
+      }
+    },
+    [notify, size, sizePresets, t],
+  );
+
+  const sizePresetOptions = useMemo<SearchableSelectOption[]>(
+    () =>
+      sizePresets.map((value) => {
+        const custom = !DEFAULT_SIZE_OPTIONS.has(value);
+        return {
+          value,
+          label: value,
+          triggerLabel: value,
+          searchText: value,
+          action: custom
+            ? {
+                label: t("image_generation.size_delete_label", { size: value }),
+                icon: <Trash2 size={13} aria-hidden="true" />,
+                onClick: () => {
+                  void handleDeleteSizePreset(value);
+                },
+              }
+            : undefined,
+        };
+      }),
+    [handleDeleteSizePreset, sizePresets, t],
+  );
 
   const handleGenerate = async () => {
     const trimmedPrompt = prompt.trim();
@@ -769,11 +983,28 @@ function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: (
           }}
         >
           <div className="flex flex-wrap gap-2">
-            <Select
+            <SearchableSelect
               aria-label={t("image_generation.size_label")}
               value={size}
-              onChange={(value) => setSize(value as (typeof SIZE_OPTIONS)[number])}
-              options={SIZE_OPTIONS.map((value) => ({ value, label: value }))}
+              onChange={setSize}
+              options={sizePresetOptions}
+              allowCreate
+              normalizeCreateValue={normalizeImageGenerationSizePreset}
+              createLabel={(value) => {
+                const normalized = normalizeImageGenerationSizePreset(value) || value.trim();
+                return (
+                  <span className="flex min-w-0 items-center justify-between gap-3">
+                    <span className="truncate">
+                      {t("image_generation.size_create_option", { size: normalized })}
+                    </span>
+                    <span className="shrink-0 text-xs font-semibold text-slate-500 dark:text-white/45">
+                      {t("image_generation.size_create_confirm")}
+                    </span>
+                  </span>
+                );
+              }}
+              onCreate={handleCreateSizePreset}
+              searchPlaceholder={t("image_generation.size_search_placeholder")}
               className="min-w-[132px]"
               size="sm"
             />

@@ -1563,6 +1563,62 @@ describe("AuthFilesPage files table", () => {
     expect(screen.getByText("Total 1 · Page 1 / 1")).toBeInTheDocument();
   });
 
+  test("keeps an emptied custom tag filter clearable after deleting selected files", async () => {
+    const user = userEvent.setup();
+    mocks.list.mockImplementation(async () => ({
+      files: [
+        {
+          name: "codex-vip.json",
+          type: "codex",
+          size: 1024,
+          modified: Date.now(),
+          disabled: false,
+          custom_tags: ["vip-team"],
+          display_tags: ["vip-team"],
+        },
+        {
+          name: "qwen-lab.json",
+          type: "qwen",
+          size: 1024,
+          modified: Date.now(),
+          disabled: false,
+          custom_tags: ["lab"],
+          display_tags: ["lab"],
+        },
+      ],
+    }));
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("codex-vip.json")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("combobox", { name: "Custom tag" }));
+    await user.click(screen.getByRole("option", { name: "vip-team" }));
+
+    fireEvent.click(screen.getByLabelText("Select codex-vip.json"));
+    fireEvent.click(screen.getByRole("button", { name: "Delete selected (1)" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Delete" }));
+
+    await waitFor(() => {
+      expect(screen.queryByText("codex-vip.json")).not.toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole("combobox", { name: "Custom tag" }));
+    await user.click(screen.getByRole("option", { name: "All tags" }));
+
+    expect(await screen.findByText("qwen-lab.json")).toBeInTheDocument();
+  });
+
   test("keeps custom tag filter options stable while searching", async () => {
     const user = userEvent.setup();
     const now = Date.now();
@@ -4559,6 +4615,8 @@ describe("AuthFilesPage files table", () => {
 
     const checkbox = screen.getByLabelText("Select qwen.json") as HTMLInputElement;
     expect(checkbox).toBeInTheDocument();
+    expect(checkbox.parentElement).not.toHaveClass("opacity-0");
+    expect(checkbox.parentElement).not.toHaveClass("pointer-events-none");
     expect(checkbox.checked).toBe(false);
 
     fireEvent.click(checkbox);

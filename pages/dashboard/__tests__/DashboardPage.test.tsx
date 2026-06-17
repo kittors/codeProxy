@@ -27,24 +27,15 @@ vi.mock("../SystemMonitorSection", () => ({
 vi.mock("@code-proxy/ui", async () => {
   const React = await vi.importActual<typeof import("react")>("react");
   return {
-    AnimatedNumber: ({
-      value,
-      format,
-    }: {
-      value: number;
-      format?: (value: number) => string;
-    }) => <span>{format ? format(value) : value}</span>,
+    AnimatedNumber: ({ value, format }: { value: number; format?: (value: number) => string }) => (
+      <span>{format ? format(value) : value}</span>
+    ),
     Button: ({ children, type = "button", ...props }: any) => (
       <button type={type} {...props}>
         {children}
       </button>
     ),
-    Card: ({
-      title,
-      description,
-      actions,
-      children,
-    }: any) => (
+    Card: ({ title, description, actions, children }: any) => (
       <section>
         {title ? <h3>{title}</h3> : null}
         {description ? <p>{description}</p> : null}
@@ -58,6 +49,11 @@ vi.mock("@code-proxy/ui", async () => {
         <p>{description}</p>
         {action}
       </div>
+    ),
+    HoverTooltip: ({ content, children, disabled }: any) => (
+      <span data-testid="hover-tooltip" data-tooltip={disabled ? "" : content}>
+        {children}
+      </span>
     ),
     Tabs: ({ children }: any) => <div>{children}</div>,
     TabsList: ({ children }: any) => <div>{children}</div>,
@@ -136,9 +132,7 @@ describe("DashboardPage", () => {
     mocks.getDashboardSummary
       .mockResolvedValueOnce(summary)
       .mockRejectedValueOnce(
-        new Error(
-          "Management API temporarily returned an HTML error page (502 Bad Gateway).",
-        ),
+        new Error("Management API temporarily returned an HTML error page (502 Bad Gateway)."),
       );
 
     render(<DashboardPage />);
@@ -163,5 +157,39 @@ describe("DashboardPage", () => {
     expect(mocks.notify).not.toHaveBeenCalled();
     expect(screen.getByText("1,234")).toBeInTheDocument();
     expect(screen.queryByTestId("empty-state")).toBeNull();
+  });
+
+  test("uses billion compact units and precise tooltip values for dashboard metrics", async () => {
+    mocks.getDashboardSummary.mockResolvedValueOnce({
+      ...summary,
+      kpi: {
+        ...summary.kpi,
+        total_requests: 23_800,
+        success_requests: 23_681,
+        failed_requests: 119,
+        input_tokens: 2_806_800_000,
+        output_tokens: 13_100_000,
+        cached_tokens: 2_576_200_000,
+        total_tokens: 2_819_900_000,
+        total_cost: 12_345.67891,
+      },
+    });
+
+    render(<DashboardPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("23.8K")).toBeInTheDocument();
+    });
+
+    expect(screen.getAllByText("2.8B").length).toBeGreaterThan(0);
+    expect(screen.getByText("$12.35K")).toBeInTheDocument();
+    expect(screen.getByText("13.1M")).toBeInTheDocument();
+
+    const tooltipValues = screen
+      .getAllByTestId("hover-tooltip")
+      .map((node) => node.getAttribute("data-tooltip"));
+    expect(tooltipValues).toContain("2,819,900,000.00");
+    expect(tooltipValues).toContain("13,100,000.00");
+    expect(tooltipValues).toContain("$12,345.6789");
   });
 });

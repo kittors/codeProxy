@@ -61,9 +61,12 @@ type MappedOwnerSelection = {
   hasUnmappedChannels: boolean;
 };
 
+type ChannelDetailsByName = Record<string, ChannelGroupChannelDetail>;
+type ChannelDetailsByGroup = Record<string, ChannelDetailsByName>;
+
 const collectMappedOwnersForChannels = (
   channels: string[],
-  detailsByName: Record<string, ChannelGroupChannelDetail>,
+  detailsByName: ChannelDetailsByName,
   ownerByAuthGroup: Record<string, string>,
 ): MappedOwnerSelection => {
   const owners = new Set<string>();
@@ -226,16 +229,18 @@ export function ChannelGroupsPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [availableChannels, setAvailableChannels] = useState<string[]>([]);
-  const [availableChannelDetails, setAvailableChannelDetails] = useState<
-    Record<string, ChannelGroupChannelDetail>
-  >({});
+  const [availableChannelDetails, setAvailableChannelDetails] = useState<ChannelDetailsByName>({});
+  const [availableChannelDetailsByGroup, setAvailableChannelDetailsByGroup] =
+    useState<ChannelDetailsByGroup>({});
   const [authGroupOwnerMap, setAuthGroupOwnerMap] = useState<Record<string, string>>({});
 
   const loadAvailableChannels = useCallback(async () => {
     const items = await channelGroupsApi.list();
     const known = new Set<string>();
-    const detailsByName: Record<string, ChannelGroupChannelDetail> = {};
+    const detailsByName: ChannelDetailsByName = {};
+    const detailsByGroup: ChannelDetailsByGroup = {};
     for (const item of items) {
+      const groupKey = item.name.trim().toLowerCase();
       for (const channel of item.channels ?? []) {
         const name = String(channel ?? "").trim();
         if (name) known.add(name);
@@ -244,12 +249,22 @@ export function ChannelGroupsPage() {
         const name = String(detail.name ?? "").trim();
         if (!name) continue;
         known.add(name);
-        detailsByName[name.trim().toLowerCase()] = detail;
+        const channelKey = name.toLowerCase();
+        if (groupKey) {
+          detailsByGroup[groupKey] = {
+            ...(detailsByGroup[groupKey] ?? {}),
+            [channelKey]: detail,
+          };
+        }
+        if (!detailsByName[channelKey] || detailsByName[channelKey].disabled === true) {
+          detailsByName[channelKey] = detail;
+        }
       }
     }
     return {
       names: Array.from(known).sort((a, b) => a.localeCompare(b)),
       detailsByName,
+      detailsByGroup,
     };
   }, []);
 
@@ -257,6 +272,7 @@ export function ChannelGroupsPage() {
     const channels = await loadAvailableChannels();
     setAvailableChannels(channels.names);
     setAvailableChannelDetails(channels.detailsByName);
+    setAvailableChannelDetailsByGroup(channels.detailsByGroup);
   }, [loadAvailableChannels]);
 
   const loadModelsForChannels = useCallback(
@@ -280,9 +296,12 @@ export function ChannelGroupsPage() {
         ? data.data.map((model) => String(model.id ?? "").trim()).filter(Boolean)
         : [];
       const availability = await loadConfiguredModelAvailability();
+      const detailsForGroup =
+        (normalizedGroup ? availableChannelDetailsByGroup[normalizedGroup.toLowerCase()] : undefined) ??
+        availableChannelDetails;
       const ownerSelection = collectMappedOwnersForChannels(
         normalizedChannels,
-        availableChannelDetails,
+        detailsForGroup,
         authGroupOwnerMap,
       );
       let visibleModels = filterByConfiguredModelAvailability(
@@ -329,7 +348,7 @@ export function ChannelGroupsPage() {
 
       return Array.from(optionMap.values()).sort((a, b) => a.id.localeCompare(b.id));
     },
-    [authGroupOwnerMap, availableChannelDetails],
+    [authGroupOwnerMap, availableChannelDetails, availableChannelDetailsByGroup],
   );
 
   const loadPage = useCallback(async () => {
@@ -338,13 +357,14 @@ export function ChannelGroupsPage() {
     try {
       const [routing, channels, ownerMappings] = await Promise.all([
         routingConfigApi.get(),
-        loadAvailableChannels().catch(() => ({ names: [], detailsByName: {} })),
+        loadAvailableChannels().catch(() => ({ names: [], detailsByName: {}, detailsByGroup: {} })),
         modelsApi.getAuthGroupModelOwnerMappingMap().catch(() => ({})),
       ]);
       const nextValues = hydrateRoutingValues(routing);
       setVisualValues(nextValues);
       setAvailableChannels(channels.names);
       setAvailableChannelDetails(channels.detailsByName);
+      setAvailableChannelDetailsByGroup(channels.detailsByGroup);
       setAuthGroupOwnerMap(ownerMappings);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : t("channel_groups_page.load_failed");
@@ -370,12 +390,14 @@ export function ChannelGroupsPage() {
           loadAvailableChannels().catch(() => ({
             names: availableChannels,
             detailsByName: availableChannelDetails,
+            detailsByGroup: availableChannelDetailsByGroup,
           })),
         ]);
         const hydrated = hydrateRoutingValues(latest);
         setVisualValues(hydrated);
         setAvailableChannels(channels.names);
         setAvailableChannelDetails(channels.detailsByName);
+        setAvailableChannelDetailsByGroup(channels.detailsByGroup);
         notify({ type: "success", message: t("channel_groups_page.saved") });
       } catch (err: unknown) {
         setVisualValues(visualValues);
@@ -389,7 +411,15 @@ export function ChannelGroupsPage() {
         setSaving(false);
       }
     },
-    [availableChannelDetails, availableChannels, loadAvailableChannels, notify, t, visualValues],
+    [
+      availableChannelDetails,
+      availableChannelDetailsByGroup,
+      availableChannels,
+      loadAvailableChannels,
+      notify,
+      t,
+      visualValues,
+    ],
   );
 
   const handleEditorChange = useCallback(
@@ -416,6 +446,7 @@ export function ChannelGroupsPage() {
             disabled={loading || saving}
             availableChannels={availableChannels}
             availableChannelDetails={availableChannelDetails}
+            availableChannelDetailsByGroup={availableChannelDetailsByGroup}
             onRefreshAvailableChannels={refreshAvailableChannels}
             loadModelsForChannels={loadModelsForChannels}
             onChange={handleEditorChange}

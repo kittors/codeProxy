@@ -54,7 +54,21 @@ export interface ImageGenerationTestTaskResponse extends ImageGenerationTestTask
   };
 }
 
+export interface ImageGenerationSizePresetsResponse {
+  sizes: string[];
+}
+
 export const imageGenerationApi = {
+  getSizePresets: (): Promise<ImageGenerationSizePresetsResponse> => {
+    return apiClient.get<ImageGenerationSizePresetsResponse>("/image-generation/size-presets");
+  },
+
+  updateSizePresets: (sizes: string[]): Promise<ImageGenerationSizePresetsResponse> => {
+    return apiClient.put<ImageGenerationSizePresetsResponse>("/image-generation/size-presets", {
+      sizes,
+    });
+  },
+
   startTestTask: (
     payload: ImageGenerationTestRequest | ImageEditTestRequest,
   ): Promise<ImageGenerationTestTaskStartResponse> => {

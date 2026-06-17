@@ -711,7 +711,9 @@ export const normalizeConfiguredModelAvailability = (
       ? record.models
       : Array.isArray(record.items)
         ? record.items
-        : [];
+        : Array.isArray(payload)
+          ? payload
+          : [];
   const items = rawItems
     .map((item) => normalizeAvailabilityItem(item))
     .filter((item): item is NonNullable<typeof item> => item !== null)
@@ -730,6 +732,26 @@ export const normalizeConfiguredModelAvailability = (
     idSet: new Set(items.map((item) => item.id.toLowerCase())),
     usesMappedOwners: false,
   };
+};
+
+const hasConfiguredAvailabilityPayloadShape = (payload: unknown): boolean => {
+  if (Array.isArray(payload)) return true;
+  if (!isRecord(payload)) return false;
+  return (
+    Array.isArray(payload.data) ||
+    Array.isArray(payload.models) ||
+    Array.isArray(payload.items) ||
+    Array.isArray(payload.active_metadata) ||
+    typeof payload.scoped === "boolean"
+  );
+};
+
+const loadConfiguredAvailabilityEndpoint = async (
+  requestPath: string,
+): Promise<ConfiguredModelAvailability | null> => {
+  const payload = await apiClient.get(requestPath);
+  if (!hasConfiguredAvailabilityPayloadShape(payload)) return null;
+  return normalizeConfiguredModelAvailability(payload);
 };
 
 /* ── In-flight/TTL cache ── */
@@ -759,15 +781,11 @@ export { invalidateConfiguredModelAvailability };
 export const loadConfiguredModelAvailability = async (options?: {
   allowedChannelGroups?: string[];
 }): Promise<ConfiguredModelAvailability> => {
-  const ownerByAuthGroup = await loadAuthGroupOwnerMappingMap();
-  const hasOwnerMappings = Object.keys(ownerByAuthGroup).length > 0;
   const validGroups = (options?.allowedChannelGroups ?? [])
     .map((g) => String(g ?? "").trim())
     .filter(Boolean);
-
-  if (hasOwnerMappings) {
-    return loadConfiguredModelAvailabilityFallback(ownerByAuthGroup);
-  }
+  const loadFallback = async () =>
+    loadConfiguredModelAvailabilityFallback(await loadAuthGroupOwnerMappingMap());
 
   if (validGroups.length > 0) {
     const cacheKey = validGroups.join(",");
@@ -779,11 +797,10 @@ export const loadConfiguredModelAvailability = async (options?: {
     }
     const promise = (async (): Promise<ConfiguredModelAvailability> => {
       try {
-        const result = normalizeConfiguredModelAvailability(
-          await apiClient.get(
-            `/models/configured-availability?allowed_channel_groups=${encodeURIComponent(cacheKey)}`,
-          ),
+        const result = await loadConfiguredAvailabilityEndpoint(
+          `/models/configured-availability?allowed_channel_groups=${encodeURIComponent(cacheKey)}`,
         );
+        if (!result) return loadFallback();
         groupAvailabilityCache.set(cacheKey, {
           expiresAt: now + GROUP_AVAILABILITY_TTL_MS,
           cacheVersion,
@@ -791,7 +808,7 @@ export const loadConfiguredModelAvailability = async (options?: {
         });
         return result;
       } catch {
-        return loadConfiguredModelAvailabilityFallback(ownerByAuthGroup);
+        return loadFallback();
       }
     })();
     groupAvailabilityCache.set(cacheKey, {
@@ -817,9 +834,8 @@ export const loadConfiguredModelAvailability = async (options?: {
 
   const promise = (async (): Promise<ConfiguredModelAvailability> => {
     try {
-      const result = normalizeConfiguredModelAvailability(
-        await apiClient.get("/models/configured-availability"),
-      );
+      const result = await loadConfiguredAvailabilityEndpoint("/models/configured-availability");
+      if (!result) return loadFallback();
       configuredAvailabilityCache = {
         expiresAt: now + CONFIGURED_AVAILABILITY_TTL_MS,
         version: cacheVersion,
@@ -828,7 +844,7 @@ export const loadConfiguredModelAvailability = async (options?: {
       return result;
     } catch {
       // Fallback to old multi-API aggregation for backward compatibility.
-      return loadConfiguredModelAvailabilityFallback(ownerByAuthGroup);
+      return loadFallback();
     }
   })();
   configuredAvailabilityInFlight = { version: cacheVersion, promise };

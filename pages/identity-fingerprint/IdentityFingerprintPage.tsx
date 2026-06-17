@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
+import { Sparkles } from "lucide-react";
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 import { configFileApi } from "@code-proxy/api-client/endpoints/config-file";
 import {
   identityFingerprintApi,
   type ClaudeIdentityFingerprint,
+  type CodexFingerprintRecommendation,
   type CodexIdentityFingerprint,
   type IdentityFingerprintConfig,
 } from "@code-proxy/api-client/endpoints/identity-fingerprint";
@@ -15,6 +17,7 @@ import { Select } from "@code-proxy/ui";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@code-proxy/ui";
 import { ToggleSwitch } from "@code-proxy/ui";
 import { useToast } from "@code-proxy/ui";
+import { CodexRecommendationsModal } from "./CodexRecommendationsModal";
 
 type ProviderTab = "codex" | "claude" | "gemini" | "kimi";
 
@@ -93,6 +96,26 @@ function mergeClaude(
     ...base,
     "custom-headers": base?.["custom-headers"] ?? {},
   };
+}
+
+function codexFromRecommendation(
+  current: Required<CodexIdentityFingerprint>,
+  recommendation: CodexFingerprintRecommendation,
+): Required<CodexIdentityFingerprint> {
+  const recommended = recommendation.recommended;
+  const nextCustomHeaders = { ...recommended["custom-headers"] };
+  const next: Required<CodexIdentityFingerprint> = {
+    ...current,
+    enabled: true,
+    "session-mode": recommended["session-mode"] ?? "per-request",
+    "session-id": "",
+    "custom-headers": nextCustomHeaders,
+  };
+  if (recommended["user-agent"]) next["user-agent"] = recommended["user-agent"];
+  if (recommended.version) next.version = recommended.version;
+  if (recommended.originator) next.originator = recommended.originator;
+  if (recommended["websocket-beta"]) next["websocket-beta"] = recommended["websocket-beta"];
+  return next;
 }
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -213,6 +236,7 @@ export function IdentityFingerprintPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [codexRecommendationsOpen, setCodexRecommendationsOpen] = useState(false);
 
   const loadPage = useCallback(async () => {
     setLoading(true);
@@ -259,6 +283,14 @@ export function IdentityFingerprintPage() {
     setClaude((current) => ({ ...current, ...patch }));
   }, []);
 
+  const parsedCodexCustomHeaders = useMemo(() => {
+    try {
+      return parseCustomHeaders(customHeadersText);
+    } catch {
+      return codex["custom-headers"];
+    }
+  }, [codex, customHeadersText]);
+
   const restoreDefaults = useCallback(() => {
     setCodex(defaults);
     setCustomHeadersText(JSON.stringify(defaults["custom-headers"], null, 2));
@@ -276,6 +308,34 @@ export function IdentityFingerprintPage() {
   const restoreKimiDefaults = useCallback(() => {
     setKimi(DEFAULT_KIMI_HEADERS);
   }, []);
+
+  const applyCodexRecommendation = useCallback(
+    async (recommendation: CodexFingerprintRecommendation) => {
+      const nextCodex = codexFromRecommendation(codex, recommendation);
+      const nextCustomHeaders = nextCodex["custom-headers"];
+      setSaving(true);
+      setError("");
+      try {
+        await identityFingerprintApi.update({
+          codex: nextCodex,
+          claude,
+        });
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : t("identity_fingerprint.save_failed");
+        setError(message);
+        notify({ type: "error", message });
+        throw err instanceof Error ? err : new Error(message);
+      } finally {
+        setSaving(false);
+      }
+      setCustomHeadersText(JSON.stringify(nextCustomHeaders, null, 2));
+      setCodex(nextCodex);
+      setCodexRecommendationsOpen(false);
+      notify({ type: "success", message: t("identity_fingerprint.recommend_applied") });
+      await loadPage();
+    },
+    [claude, codex, loadPage, notify, t],
+  );
 
   const saveConfigYaml = useCallback(
     async (mutate: (root: Record<string, unknown>) => Record<string, unknown>) => {
@@ -438,7 +498,7 @@ export function IdentityFingerprintPage() {
           <TabsContent value="codex" className="mt-5">
             <div className="space-y-4">
               <section className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 dark:border-neutral-800 dark:bg-neutral-900/45">
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div className="flex flex-col gap-4 2xl:flex-row 2xl:items-start 2xl:justify-between">
                   <ToggleSwitch
                     checked={Boolean(codex.enabled)}
                     onCheckedChange={(enabled) => updateCodex({ enabled })}
@@ -446,7 +506,15 @@ export function IdentityFingerprintPage() {
                     description={t("identity_fingerprint.codex_enabled_desc")}
                     disabled={saving}
                   />
-                  <div className="flex shrink-0 flex-wrap gap-2">
+                  <div className="flex w-full flex-wrap gap-2 2xl:w-auto 2xl:justify-end">
+                    <Button
+                      variant="secondary"
+                      onClick={() => setCodexRecommendationsOpen(true)}
+                      disabled={loading || saving}
+                    >
+                      <Sparkles size={15} />
+                      {t("identity_fingerprint.recommend_open")}
+                    </Button>
                     <Button
                       variant="secondary"
                       onClick={restoreDefaults}
@@ -588,7 +656,7 @@ export function IdentityFingerprintPage() {
           <TabsContent value="claude" className="mt-5">
             <div className="space-y-4">
               <section className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 dark:border-neutral-800 dark:bg-neutral-900/45">
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div className="flex flex-col gap-4 2xl:flex-row 2xl:items-start 2xl:justify-between">
                   <ToggleSwitch
                     checked={Boolean(claude.enabled)}
                     onCheckedChange={(enabled) => updateClaude({ enabled })}
@@ -596,7 +664,7 @@ export function IdentityFingerprintPage() {
                     description={t("identity_fingerprint.claude_enabled_desc")}
                     disabled={saving}
                   />
-                  <div className="flex shrink-0 flex-wrap gap-2">
+                  <div className="flex w-full flex-wrap gap-2 2xl:w-auto 2xl:justify-end">
                     <Button
                       variant="secondary"
                       onClick={restoreClaudeDefaults}
@@ -895,6 +963,13 @@ export function IdentityFingerprintPage() {
           </div>
         ) : null}
       </Card>
+      <CodexRecommendationsModal
+        open={codexRecommendationsOpen}
+        current={codex}
+        currentCustomHeaders={parsedCodexCustomHeaders}
+        onApply={applyCodexRecommendation}
+        onClose={() => setCodexRecommendationsOpen(false)}
+      />
     </div>
   );
 }

@@ -10,6 +10,7 @@ import { ToastProvider } from "@code-proxy/ui";
 const mocks = vi.hoisted(() => ({
   identityGet: vi.fn(),
   identityUpdate: vi.fn(),
+  codexRecommendations: vi.fn(),
   fetchConfigYaml: vi.fn(),
   saveConfigYaml: vi.fn(),
 }));
@@ -17,6 +18,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@code-proxy/api-client/endpoints/identity-fingerprint", () => ({
   identityFingerprintApi: {
     get: mocks.identityGet,
+    getCodexRecommendations: mocks.codexRecommendations,
     update: mocks.identityUpdate,
   },
 }));
@@ -58,6 +60,7 @@ kimi-header-defaults:
 
 describe("IdentityFingerprintPage provider tabs", () => {
   beforeEach(async () => {
+    vi.clearAllMocks();
     await i18n.changeLanguage("en");
     mocks.identityGet.mockResolvedValue({
       "identity-fingerprint": {
@@ -68,7 +71,9 @@ describe("IdentityFingerprintPage provider tabs", () => {
           originator: "codex_cli_rs",
           "websocket-beta": "responses_websockets=test",
           "session-mode": "per-request",
-          "custom-headers": {},
+          "custom-headers": {
+            "X-Old-Fingerprint": "stale",
+          },
         },
         claude: {
           enabled: false,
@@ -108,6 +113,55 @@ describe("IdentityFingerprintPage provider tabs", () => {
       },
     });
     mocks.identityUpdate.mockResolvedValue({ status: "ok" });
+    mocks.codexRecommendations.mockResolvedValue({
+      items: [
+        {
+          id: "codex-real-125",
+          count: 2,
+          first_seen_at: "2026-06-14T10:00:00Z",
+          last_seen_at: "2026-06-14T10:03:00Z",
+          headers: {
+            "User-Agent": "codex-tui/0.125.0 (Mac OS 26.5; arm64)",
+            Version: "0.125.0",
+            Originator: "codex-tui",
+            "X-Codex-Beta-Features": "exec_command_v2",
+          },
+          recommended: {
+            enabled: true,
+            "user-agent": "codex-tui/0.125.0 (Mac OS 26.5; arm64)",
+            version: "0.125.0",
+            originator: "codex-tui",
+            "session-mode": "per-request",
+            "custom-headers": {
+              "X-Codex-Beta-Features": "exec_command_v2",
+            },
+          },
+          ignored_headers: {
+            Session_id: "sess...abcd",
+            "X-Codex-Turn-Metadata": '{"turn":"sample"}',
+          },
+          samples: [
+            {
+              log_id: 101,
+              timestamp: "2026-06-14T10:03:00Z",
+              model: "gpt-5.4",
+              source: "codex",
+              channel_name: "Codex",
+              auth_index: "auth-1",
+              failed: false,
+              method: "POST",
+              path: "/v1/responses",
+              host: "relay.test",
+              ip: "203.0.113.10",
+            },
+          ],
+        },
+      ],
+      days: 7,
+      limit: 200,
+      inspected: 2,
+      matched: 2,
+    });
     mocks.fetchConfigYaml.mockResolvedValue(configYaml);
     mocks.saveConfigYaml.mockResolvedValue({ status: "ok" });
   });
@@ -207,5 +261,248 @@ describe("IdentityFingerprintPage provider tabs", () => {
       }),
     );
     expect(mocks.saveConfigYaml).not.toHaveBeenCalled();
+  });
+
+  test("applies and saves a log-derived Codex recommendation after confirmation", async () => {
+    renderPage();
+
+    await screen.findByDisplayValue("codex_cli_rs/test");
+    mocks.identityGet.mockResolvedValue({
+      "identity-fingerprint": {
+        codex: {
+          enabled: true,
+          "user-agent": "codex-tui/0.125.0 (Mac OS 26.5; arm64)",
+          version: "0.125.0",
+          originator: "codex-tui",
+          "session-mode": "per-request",
+          "session-id": "",
+          "custom-headers": {
+            "X-Codex-Beta-Features": "exec_command_v2",
+          },
+        },
+        claude: {
+          enabled: false,
+          "cli-version": "2.1.88",
+          entrypoint: "cli",
+          "user-agent": "claude-cli/2.1.88 (external, cli)",
+          "anthropic-beta": "oauth-2025-04-20,claude-code-20250219",
+          "stainless-package-version": "0.74.0",
+          "stainless-runtime-version": "v22.13.0",
+          "stainless-timeout": "600",
+          "session-mode": "per-request",
+          "custom-headers": {},
+        },
+      },
+      defaults: {
+        codex: {
+          enabled: false,
+          "user-agent": "codex_cli_rs/default",
+          version: "0.120.0",
+          originator: "codex_cli_rs",
+          "websocket-beta": "responses_websockets=default",
+          "session-mode": "per-request",
+          "custom-headers": {},
+        },
+        claude: {
+          enabled: false,
+          "cli-version": "2.1.88",
+          entrypoint: "cli",
+          "user-agent": "claude-cli/2.1.88 (external, cli)",
+          "anthropic-beta": "oauth-2025-04-20,claude-code-20250219",
+          "stainless-package-version": "0.74.0",
+          "stainless-runtime-version": "v22.13.0",
+          "stainless-timeout": "600",
+          "session-mode": "per-request",
+          "custom-headers": {},
+        },
+      },
+    });
+    await userEvent.click(screen.getByRole("button", { name: /Generate from recent requests/i }));
+
+    const dialog = await screen.findByRole("dialog", {
+      name: /Codex Fingerprint Recommendations/i,
+    });
+    expect(mocks.codexRecommendations).toHaveBeenCalledWith(
+      { days: 7, limit: 200 },
+      expect.objectContaining({ timeoutMs: 15000 }),
+    );
+    expect(within(dialog).getAllByText(/codex-tui\/0\.125\.0/).length).toBeGreaterThan(0);
+    expect(within(dialog).getByText(/sess\.\.\.abcd/)).toBeInTheDocument();
+    expect(within(dialog).queryByText(/^Actions$/i)).not.toBeInTheDocument();
+
+    await userEvent.click(within(dialog).getByRole("button", { name: /Apply and save/i }));
+    expect(
+      screen.queryByDisplayValue("codex-tui/0.125.0 (Mac OS 26.5; arm64)"),
+    ).not.toBeInTheDocument();
+
+    const confirmDialog = await screen.findByRole("dialog", {
+      name: /Apply this recommended fingerprint/i,
+    });
+    expect(
+      within(confirmDialog).getByText(/codex-tui 0\.125\.0/i),
+    ).toBeInTheDocument();
+    await userEvent.click(within(confirmDialog).getByRole("button", { name: /Apply and save/i }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByDisplayValue("codex-tui/0.125.0 (Mac OS 26.5; arm64)"),
+      ).toBeInTheDocument();
+    });
+    expect(screen.getByDisplayValue("0.125.0")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("codex-tui")).toBeInTheDocument();
+    expect(screen.getByDisplayValue(/exec_command_v2/)).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(mocks.identityUpdate).toHaveBeenCalledTimes(1);
+    });
+    expect(mocks.identityUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        codex: expect.objectContaining({
+          enabled: true,
+          "user-agent": "codex-tui/0.125.0 (Mac OS 26.5; arm64)",
+          version: "0.125.0",
+          originator: "codex-tui",
+          "session-mode": "per-request",
+          "session-id": "",
+          "custom-headers": {
+            "X-Codex-Beta-Features": "exec_command_v2",
+          },
+        }),
+      }),
+    );
+  });
+
+  test("selects a Codex recommendation row without applying until confirmation", async () => {
+    mocks.codexRecommendations.mockResolvedValueOnce({
+      items: [
+        {
+          id: "codex-cli",
+          count: 2,
+          first_seen_at: "2026-06-14T10:00:00Z",
+          last_seen_at: "2026-06-14T10:03:00Z",
+          headers: {
+            "User-Agent": "codex-tui/0.125.0 (Mac OS 26.5; arm64)",
+            Version: "0.125.0",
+            Originator: "codex-tui",
+          },
+          recommended: {
+            enabled: true,
+            "user-agent": "codex-tui/0.125.0 (Mac OS 26.5; arm64)",
+            version: "0.125.0",
+            originator: "codex-tui",
+            "session-mode": "per-request",
+            "custom-headers": {},
+          },
+          ignored_headers: {},
+          samples: [],
+        },
+        {
+          id: "codex-desktop",
+          count: 4,
+          first_seen_at: "2026-06-14T11:00:00Z",
+          last_seen_at: "2026-06-14T11:30:00Z",
+          headers: {
+            "User-Agent":
+              "Codex Desktop/0.140.0-alpha.2 (Windows 10.0.26200; x86_64) unknown (Codex Desktop; 26.609.41114)",
+            Originator: "Codex Desktop",
+            "X-Codex-Beta-Features": "terminal_resize_reflow,memories,remote_compaction_v2",
+          },
+          recommended: {
+            enabled: true,
+            "user-agent":
+              "Codex Desktop/0.140.0-alpha.2 (Windows 10.0.26200; x86_64) unknown (Codex Desktop; 26.609.41114)",
+            originator: "Codex Desktop",
+            "session-mode": "per-request",
+            "custom-headers": {
+              "X-Codex-Beta-Features": "terminal_resize_reflow,memories,remote_compaction_v2",
+            },
+          },
+          ignored_headers: {
+            Session_id: "sess...desktop",
+          },
+          samples: [],
+        },
+      ],
+      days: 7,
+      limit: 200,
+      inspected: 6,
+      matched: 6,
+    });
+
+    renderPage();
+    await screen.findByDisplayValue("codex_cli_rs/test");
+    await userEvent.click(screen.getByRole("button", { name: /Generate from recent requests/i }));
+
+    const dialog = await screen.findByRole("dialog", {
+      name: /Codex Fingerprint Recommendations/i,
+    });
+    const desktopRow = within(dialog).getByText("Codex Desktop").closest("tr");
+    expect(desktopRow).not.toBeNull();
+    await userEvent.click(desktopRow as HTMLElement);
+
+    expect(desktopRow).toHaveAttribute("aria-selected", "true");
+    expect(within(dialog).getAllByText(/0\.140\.0-alpha\.2/).length).toBeGreaterThan(0);
+    expect(
+      screen.queryByDisplayValue(/Codex Desktop\/0\.140\.0-alpha\.2/),
+    ).not.toBeInTheDocument();
+    mocks.identityGet.mockResolvedValue({
+      "identity-fingerprint": {
+        codex: {
+          enabled: true,
+          "user-agent":
+            "Codex Desktop/0.140.0-alpha.2 (Windows 10.0.26200; x86_64) unknown (Codex Desktop; 26.609.41114)",
+          originator: "Codex Desktop",
+          "session-mode": "per-request",
+          "custom-headers": {
+            "X-Codex-Beta-Features": "terminal_resize_reflow,memories,remote_compaction_v2",
+          },
+        },
+        claude: {
+          enabled: false,
+          "cli-version": "2.1.88",
+          entrypoint: "cli",
+          "user-agent": "claude-cli/2.1.88 (external, cli)",
+          "anthropic-beta": "oauth-2025-04-20,claude-code-20250219",
+          "stainless-package-version": "0.74.0",
+          "stainless-runtime-version": "v22.13.0",
+          "stainless-timeout": "600",
+          "session-mode": "per-request",
+          "custom-headers": {},
+        },
+      },
+      defaults: {
+        codex: {
+          enabled: false,
+          "user-agent": "codex_cli_rs/default",
+          version: "0.120.0",
+          originator: "codex_cli_rs",
+          "websocket-beta": "responses_websockets=default",
+          "session-mode": "per-request",
+          "custom-headers": {},
+        },
+        claude: {
+          enabled: false,
+          "cli-version": "2.1.88",
+          entrypoint: "cli",
+          "user-agent": "claude-cli/2.1.88 (external, cli)",
+          "anthropic-beta": "oauth-2025-04-20,claude-code-20250219",
+          "stainless-package-version": "0.74.0",
+          "stainless-runtime-version": "v22.13.0",
+          "stainless-timeout": "600",
+          "session-mode": "per-request",
+          "custom-headers": {},
+        },
+      },
+    });
+
+    await userEvent.click(within(dialog).getByRole("button", { name: /Apply and save/i }));
+    const confirmDialog = await screen.findByRole("dialog", {
+      name: /Apply this recommended fingerprint/i,
+    });
+    await userEvent.click(within(confirmDialog).getByRole("button", { name: /Apply and save/i }));
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue(/Codex Desktop\/0\.140\.0-alpha\.2/)).toBeInTheDocument();
+    });
   });
 });

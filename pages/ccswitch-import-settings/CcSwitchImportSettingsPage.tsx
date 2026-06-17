@@ -49,11 +49,17 @@ const normalizeModelOwnerKey = (value: string): string =>
 
 const getChannelGroupModelOwnerKeys = (
   details: readonly ChannelGroupChannelDetail[] | undefined,
+  channels: readonly string[] | undefined,
 ): string[] => {
   const keys = new Set<string>();
+  for (const channel of channels ?? []) {
+    const key = normalizeModelOwnerKey(String(channel ?? ""));
+    if (key) keys.add(key);
+  }
   for (const detail of details ?? []) {
     const values = [
       detail.source,
+      detail.name,
       ...(detail.default_tags ?? []),
       ...(detail.custom_tags ?? []),
       ...(detail.display_tags ?? []),
@@ -68,9 +74,15 @@ const getChannelGroupModelOwnerKeys = (
 
 const getChannelGroupMappedModelOwnerKeys = (
   details: readonly ChannelGroupChannelDetail[] | undefined,
+  channels: readonly string[] | undefined,
   ownerByAuthGroup: Record<string, string>,
 ): string[] => {
   const keys = new Set<string>();
+  for (const channel of channels ?? []) {
+    const authGroup = normalizeProviderKey(String(channel ?? ""));
+    const owner = normalizeModelOwnerKey(ownerByAuthGroup[authGroup] ?? "");
+    if (owner) keys.add(owner);
+  }
   for (const detail of details ?? []) {
     const values = [
       detail.source,
@@ -126,9 +138,10 @@ export function CcSwitchImportSettingsPage() {
               routePath: Array.isArray(item["path-routes"]) ? item["path-routes"][0] : "",
               allowedModels: Array.isArray(item["allowed-models"]) ? item["allowed-models"] : [],
               channels: Array.isArray(item.channels) ? item.channels : [],
-              modelOwnerKeys: getChannelGroupModelOwnerKeys(item.channelDetails),
+              modelOwnerKeys: getChannelGroupModelOwnerKeys(item.channelDetails, item.channels),
               authoritativeModelOwnerKeys: getChannelGroupMappedModelOwnerKeys(
                 item.channelDetails,
+                item.channels,
                 ownerMappings,
               ),
             }))

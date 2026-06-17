@@ -318,6 +318,7 @@ export function RoutingConfigEditor({
   disabled,
   availableChannels,
   availableChannelDetails = {},
+  availableChannelDetailsByGroup = {},
   onRefreshAvailableChannels,
   loadModelsForChannels,
   onChange,
@@ -326,6 +327,7 @@ export function RoutingConfigEditor({
   disabled?: boolean;
   availableChannels: string[];
   availableChannelDetails?: Record<string, ChannelGroupChannelDetail>;
+  availableChannelDetailsByGroup?: Record<string, Record<string, ChannelGroupChannelDetail>>;
   onRefreshAvailableChannels?: () => Promise<void> | void;
   loadModelsForChannels?: (
     channels: string[],
@@ -435,6 +437,19 @@ export function RoutingConfigEditor({
       availableChannels.map((channel) => normalizeChannelName(channel)).filter(Boolean),
     );
   }, [availableChannels]);
+
+  const getChannelDetail = useCallback(
+    (channelName: string, groupName?: string) => {
+      const channelKey = normalizeChannelName(channelName);
+      if (!channelKey) return undefined;
+      const groupKey = normalizeChannelName(groupName ?? "");
+      return (
+        (groupKey ? availableChannelDetailsByGroup[groupKey]?.[channelKey] : undefined) ??
+        availableChannelDetails[channelKey]
+      );
+    },
+    [availableChannelDetails, availableChannelDetailsByGroup],
+  );
 
   const resolveGroupChannels = useCallback(
     (group: Pick<RoutingChannelGroupEntry, "channels" | "matchMode" | "tags">) => {
@@ -1175,7 +1190,7 @@ export function RoutingConfigEditor({
         label: t("channel_groups_page.table_channels"),
         cellClassName: "min-w-0 whitespace-nowrap",
         render: (channel) => {
-          const detail = availableChannelDetails[normalizeChannelName(channel.name)];
+          const detail = getChannelDetail(channel.name, groupDraft.name);
           const displayTags = readChannelDisplayTags(detail);
           const isStale = draftStaleChannelIds.has(channel.id);
           const isDisabled = isDisabledChannel(detail);
@@ -1266,9 +1281,10 @@ export function RoutingConfigEditor({
           ]),
     ],
     [
-      availableChannelDetails,
       disabled,
       draftStaleChannelIds,
+      getChannelDetail,
+      groupDraft.name,
       groupDraft.matchMode,
       removeDraftChannel,
       t,

@@ -89,6 +89,10 @@ export interface DataTableProps<T> {
   showAllLoadedMessage?: boolean;
   /** Extra row className */
   rowClassName?: string | ((row: T, index: number) => string);
+  /** Optional row click handler. When set, rows become keyboard-focusable selection targets. */
+  onRowClick?: (row: T, index: number) => void;
+  /** Optional selected state for row interaction semantics. */
+  rowAriaSelected?: (row: T, index: number) => boolean;
   /** Let parent scroll containers handle wheel events when this table is already at an edge. */
   allowWheelPropagationAtBoundary?: boolean;
   /** Render the table in normal document flow without any internal table scrollbars. */
@@ -125,6 +129,7 @@ const COLUMN_REORDER_AUTOSCROLL_EDGE_PX = 72;
 const COLUMN_REORDER_AUTOSCROLL_MAX_PX_PER_FRAME = 22;
 const COLUMN_REORDER_SHIFT_TRANSITION = "transform 72ms cubic-bezier(0.2, 0, 0, 1)";
 const COLUMN_REORDER_SETTLE_CLEANUP_MS = 110;
+const COLUMN_REORDER_SETTLE_FEEDBACK_MS = 900;
 const NON_REORDERABLE_COLUMN_KEYS = new Set(["select", "action", "actions"]);
 
 type ColumnOrder = string[];
@@ -551,6 +556,8 @@ export function DataTable<T>({
   emptyText = "",
   showAllLoadedMessage = true,
   rowClassName,
+  onRowClick,
+  rowAriaSelected,
   allowWheelPropagationAtBoundary = false,
   naturalFlow = false,
   scrollContentClassName,
@@ -616,6 +623,7 @@ export function DataTable<T>({
   );
   const columnOrderRef = useRef<ColumnOrder>(columnOrder);
   const [activeReorderColumnKey, setActiveReorderColumnKey] = useState<string | null>(null);
+  const [settledReorderColumnKey, setSettledReorderColumnKey] = useState<string | null>(null);
   const [rowHoverOverlay, setRowHoverOverlay] = useState<{
     left: number;
     top: number;
@@ -625,6 +633,7 @@ export function DataTable<T>({
   const columnReorderRef = useRef<ColumnReorderState | null>(null);
   const columnReorderRafRef = useRef<number | null>(null);
   const columnReorderAutoScrollRafRef = useRef<number | null>(null);
+  const columnReorderSettleTimeoutRef = useRef<number | null>(null);
   const hoveredRowRef = useRef<HTMLTableRowElement | null>(null);
 
   const orderedColumns = useMemo(() => {
@@ -1466,6 +1475,27 @@ export function DataTable<T>({
     );
   }, [runColumnReorderAutoScroll]);
 
+  const clearColumnReorderSettleFeedback = useCallback(() => {
+    if (columnReorderSettleTimeoutRef.current !== null) {
+      window.clearTimeout(columnReorderSettleTimeoutRef.current);
+      columnReorderSettleTimeoutRef.current = null;
+    }
+    setSettledReorderColumnKey(null);
+  }, []);
+
+  const startColumnReorderSettleFeedback = useCallback((columnKey: string) => {
+    if (columnReorderSettleTimeoutRef.current !== null) {
+      window.clearTimeout(columnReorderSettleTimeoutRef.current);
+      columnReorderSettleTimeoutRef.current = null;
+    }
+
+    setSettledReorderColumnKey(columnKey);
+    columnReorderSettleTimeoutRef.current = window.setTimeout(() => {
+      columnReorderSettleTimeoutRef.current = null;
+      setSettledReorderColumnKey((current) => (current === columnKey ? null : current));
+    }, COLUMN_REORDER_SETTLE_FEEDBACK_MS);
+  }, []);
+
   const activateColumnReorder = useCallback(
     (active: ColumnReorderState) => {
       if (active.activated) return active;
@@ -1549,23 +1579,28 @@ export function DataTable<T>({
 
       if (!shouldCommit) return;
 
-      setColumnOrder((prev) => {
-        const normalizedPrev = normalizeColumnOrder(columnsRef.current, prev);
-        const fromIndex = normalizedPrev.indexOf(active.columnKey);
-        if (fromIndex < 0) return prev;
-        const next = moveColumnKey(normalizedPrev, fromIndex, toIndex);
-        if (next.length === normalizedPrev.length && next.every((v, i) => v === normalizedPrev[i]))
-          return prev;
+      const normalizedOrder = normalizeColumnOrder(columnsRef.current, columnOrderRef.current);
+      const fromIndex = normalizedOrder.indexOf(active.columnKey);
+      if (fromIndex < 0) return;
+
+      const next = moveColumnKey(normalizedOrder, fromIndex, toIndex);
+      const orderChanged =
+        next.length !== normalizedOrder.length ||
+        next.some((value, index) => value !== normalizedOrder[index]);
+      if (orderChanged) {
+        columnOrderRef.current = next;
         if (canPersistColumnOrder) {
           writeStoredColumnOrder(tableId, next);
         }
-        return next;
-      });
+        setColumnOrder(next);
+      }
+      startColumnReorderSettleFeedback(active.columnKey);
       window.requestAnimationFrame(() => updateScrollMetrics());
     },
     [
       canPersistColumnOrder,
       clearColumnReorderStyles,
+      startColumnReorderSettleFeedback,
       stopColumnReorderAutoScroll,
       tableId,
       updateScrollMetrics,
@@ -1581,6 +1616,7 @@ export function DataTable<T>({
       e.preventDefault();
       e.stopPropagation();
       safeSetPointerCapture(e.currentTarget, e.pointerId);
+      clearColumnReorderSettleFeedback();
 
       const currentColumns = orderedColumnsRef.current;
       const columnIndex = currentColumns.indexOf(column);
@@ -1620,7 +1656,12 @@ export function DataTable<T>({
 
       columnReorderRef.current = state;
     },
-    [activateColumnReorder, canUseColumnOrder, collectColumnReorderGeometry],
+    [
+      activateColumnReorder,
+      canUseColumnOrder,
+      clearColumnReorderSettleFeedback,
+      collectColumnReorderGeometry,
+    ],
   );
 
   useEffect(() => {
@@ -1791,6 +1832,10 @@ export function DataTable<T>({
         window.cancelAnimationFrame(columnReorderAutoScrollRafRef.current);
         columnReorderAutoScrollRafRef.current = null;
       }
+      if (columnReorderSettleTimeoutRef.current) {
+        window.clearTimeout(columnReorderSettleTimeoutRef.current);
+        columnReorderSettleTimeoutRef.current = null;
+      }
       pendingColumnResizePointerRef.current = null;
     };
   }, []);
@@ -1952,6 +1997,7 @@ export function DataTable<T>({
                   const canResize = shouldAllowColumnResize(col, colIndex, orderedColumns);
                   const canReorder = canUseColumnOrder && shouldAllowColumnReorder(col);
                   const isResizingThisColumn = activeResizeColumnKey === col.key;
+                  const isSettledReorderColumn = settledReorderColumnKey === col.key;
                   const headerChromeClass = naturalFlow ? "bg-slate-100 dark:bg-neutral-800" : "";
                   const headerCornerClass = [
                     naturalFlow && colIndex === 0 ? "rounded-l-xl" : "",
@@ -1964,6 +2010,7 @@ export function DataTable<T>({
                       key={col.key}
                       aria-label={col.label}
                       data-vt-column-key={col.key}
+                      data-vt-column-settled-cell={isSettledReorderColumn ? true : undefined}
                       ref={(node) => {
                         headerCellsRef.current[col.key] = node;
                       }}
@@ -2078,13 +2125,35 @@ export function DataTable<T>({
                       typeof rowClassName === "function"
                         ? rowClassName(row, globalIdx)
                         : (rowClassName ?? "");
+                    const rowSelected = rowAriaSelected?.(row, globalIdx);
+                    const rowInteractive = Boolean(onRowClick);
                     return (
                       <tr
                         key={key}
+                        tabIndex={rowInteractive ? 0 : undefined}
+                        aria-selected={rowSelected}
                         className={`group/row relative z-0 text-sm transition-colors ${
+                          rowInteractive ? "cursor-pointer outline-none" : ""
+                        } ${
                           naturalFlow ? "hover:bg-slate-50 dark:hover:bg-white/[0.04]" : ""
                         } ${extraCls}`}
                         style={virtualize ? { height: rowHeight } : undefined}
+                        onClick={
+                          rowInteractive
+                            ? () => {
+                                onRowClick?.(row, globalIdx);
+                              }
+                            : undefined
+                        }
+                        onKeyDown={
+                          rowInteractive
+                            ? (event) => {
+                                if (event.key !== "Enter" && event.key !== " ") return;
+                                event.preventDefault();
+                                onRowClick?.(row, globalIdx);
+                              }
+                            : undefined
+                        }
                         onMouseEnter={
                           naturalFlow
                             ? undefined
@@ -2095,6 +2164,7 @@ export function DataTable<T>({
                         {orderedColumns.map((col, colIdx) => {
                           const isFirst = colIdx === 0;
                           const isLast = colIdx === orderedColumns.length - 1;
+                          const isSettledReorderColumn = settledReorderColumnKey === col.key;
                           const content = col.render(row, globalIdx);
                           const overflowTooltip = resolveCellOverflowTooltip(col, row, globalIdx);
                           const roundCls = [
@@ -2107,6 +2177,7 @@ export function DataTable<T>({
                             <td
                               key={col.key}
                               data-vt-column-key={col.key}
+                              data-vt-column-settled-cell={isSettledReorderColumn ? true : undefined}
                               style={resolveColumnStyle(col)}
                               className={`overflow-hidden px-4 py-2.5 align-middle ${
                                 naturalFlow

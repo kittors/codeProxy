@@ -68,6 +68,23 @@ const rolePriority: Record<CcSwitchClaudeModelRole, string[]> = {
 };
 
 type ConfigDraft = CcSwitchImportConfigListItem;
+type ModelMetadataLike = {
+  id: string;
+  owned_by?: string;
+  source?: string;
+  enabled?: boolean;
+};
+
+const GENERIC_MODEL_CONFIG_OWNER_KEYS = new Set([
+  "all",
+  "default",
+  "openai",
+  "openai-api",
+  "openai-compat",
+  "openai-compatible",
+  "provider",
+  "registry",
+]);
 
 const normalizeRoutePath = (path: string | undefined): string => {
   const trimmed = String(path ?? "").trim();
@@ -112,6 +129,19 @@ const normalizeModelOwnerKey = (value: unknown): string =>
     .trim()
     .replace(/\s+/g, "-")
     .toLowerCase();
+
+const isSpecificModelConfigOwnerKey = (value: string): boolean => {
+  const key = normalizeModelOwnerKey(value);
+  return Boolean(key && !GENERIC_MODEL_CONFIG_OWNER_KEYS.has(key));
+};
+
+const modelMetadataMatchesOwnerKeys = (
+  model: ModelMetadataLike,
+  ownerKeys: ReadonlySet<string>,
+): boolean =>
+  model.enabled !== false &&
+  (ownerKeys.has(normalizeModelOwnerKey(model.owned_by)) ||
+    ownerKeys.has(normalizeModelOwnerKey(model.source)));
 
 function pickClaudeRoleModel(role: CcSwitchClaudeModelRole, models: readonly string[]): string {
   const normalized = dedupeModels(models);
@@ -370,19 +400,14 @@ export function CcSwitchImportConfigModal({
         };
         const needsModelConfigs = authoritativeModelOwnerKeys.size > 0 || modelOwnerKeys.size > 0;
         if (needsModelConfigs) {
-          const modelConfigs =
-            availability.metadataItems && availability.metadataItems.length > 0
-              ? availability.metadataItems
-              : await modelsApi.getModelConfigs("active").catch(() => []);
-          if (cancelled) return;
+          const modelConfigs: ModelMetadataLike[] = [
+            ...(availability.metadataItems ?? []),
+            ...availability.items,
+          ];
           if (modelOwnerKeys.size > 0 && authoritativeModelOwnerKeys.size === 0) {
             const allowedModelIds = new Set(
               modelConfigs
-                .filter(
-                  (model) =>
-                    modelOwnerKeys.has(normalizeModelOwnerKey(model.owned_by)) ||
-                    modelOwnerKeys.has(normalizeModelOwnerKey(model.source)),
-                )
+                .filter((model) => modelMetadataMatchesOwnerKeys(model, modelOwnerKeys))
                 .map((model) => model.id.toLowerCase()),
             );
             if (allowedModelIds.size > 0) {
@@ -393,11 +418,19 @@ export function CcSwitchImportConfigModal({
           }
           if (authoritativeModelOwnerKeys.size > 0) {
             for (const model of modelConfigs) {
-              if (
-                authoritativeModelOwnerKeys.has(normalizeModelOwnerKey(model.owned_by)) ||
-                authoritativeModelOwnerKeys.has(normalizeModelOwnerKey(model.source))
-              ) {
+              if (modelMetadataMatchesOwnerKeys(model, authoritativeModelOwnerKeys)) {
                 addModelId(model.id);
+              }
+            }
+          } else if (modelOwnerKeys.size > 0) {
+            const expandableOwnerKeys = new Set(
+              Array.from(modelOwnerKeys).filter(isSpecificModelConfigOwnerKey),
+            );
+            if (expandableOwnerKeys.size > 0) {
+              for (const model of modelConfigs) {
+                if (modelMetadataMatchesOwnerKeys(model, expandableOwnerKeys)) {
+                  addModelId(model.id);
+                }
               }
             }
           }
