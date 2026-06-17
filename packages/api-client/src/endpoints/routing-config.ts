@@ -1,9 +1,11 @@
 import { apiClient } from "../client/client";
 
+export type RoutingStrategy = "round-robin" | "fill-first" | "session-sticky";
+
 export interface RoutingConfigGroupItem {
   name?: string;
   description?: string;
-  strategy?: "round-robin" | "fill-first";
+  strategy?: RoutingStrategy;
   "exclude-from-default"?: boolean;
   match?: {
     channels?: string[];
@@ -21,7 +23,7 @@ export interface RoutingConfigPathRouteItem {
 }
 
 export interface RoutingConfigItem {
-  strategy?: "round-robin" | "fill-first";
+  strategy?: RoutingStrategy;
   "include-default-group"?: boolean;
   "channel-groups"?: RoutingConfigGroupItem[];
   "path-routes"?: RoutingConfigPathRouteItem[];

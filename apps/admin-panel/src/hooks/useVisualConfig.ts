@@ -327,7 +327,10 @@ export function useVisualConfig() {
         quotaSwitchProject: Boolean(quotaExceeded?.["switch-project"] ?? true),
         quotaSwitchPreviewModel: Boolean(quotaExceeded?.["switch-preview-model"] ?? true),
 
-        routingStrategy: routing?.strategy === "fill-first" ? "fill-first" : "round-robin",
+        routingStrategy:
+          routing?.strategy === "fill-first" || routing?.strategy === "session-sticky"
+            ? routing.strategy
+            : "round-robin",
 
         payloadDefaultRules: parsePayloadRules(payload?.default),
         payloadOverrideRules: parsePayloadRules(payload?.override),

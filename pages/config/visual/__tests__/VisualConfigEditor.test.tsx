@@ -143,6 +143,38 @@ describe("VisualConfigEditor auto update config", () => {
     });
   });
 
+  test("loads and writes session-sticky routing strategy in config yaml", async () => {
+    const { result } = renderHook(() => useVisualConfig());
+
+    act(() => {
+      result.current.loadVisualValuesFromYaml(
+        [
+          "routing:",
+          "  strategy: session-sticky",
+          "  channel-groups:",
+          "    - name: sticky-pool",
+          "      strategy: session-sticky",
+          "      match:",
+          "        channels:",
+          "          - Main Codex",
+        ].join("\n"),
+      );
+    });
+
+    await waitFor(() => {
+      expect(result.current.visualValues.routingStrategy).toBe("session-sticky");
+      expect(result.current.visualValues.routingChannelGroups[0]?.strategy).toBe(
+        "session-sticky",
+      );
+    });
+
+    await waitFor(() => {
+      const nextYaml = result.current.applyVisualChangesToYaml("");
+      expect(nextYaml).toContain("strategy: session-sticky");
+      expect(nextYaml).toContain("name: sticky-pool");
+    });
+  });
+
   test("loads payload rules from runtime config when YAML was cleaned after DB migration", async () => {
     const { result } = renderHook(() => useVisualConfig());
 

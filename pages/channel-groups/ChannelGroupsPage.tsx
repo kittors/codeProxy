@@ -16,6 +16,7 @@ import { normalizeProviderKey, normalizeTagValue } from "@code-proxy/domain";
 import {
   DEFAULT_VISUAL_VALUES,
   makeClientId,
+  type RoutingStrategy,
   type VisualConfigValues,
 } from "@features/visual-config-editor";
 import {
@@ -42,6 +43,10 @@ function parsePriorityText(value: string): number | null {
 
 const normalizeOwnerValue = (value: string): string =>
   value.trim().replace(/\s+/g, "-").toLowerCase();
+
+function normalizeRoutingStrategy(value: unknown): RoutingStrategy {
+  return value === "fill-first" || value === "session-sticky" ? value : "round-robin";
+}
 
 const normalizeRoutingTags = (values: unknown): string[] => {
   if (!Array.isArray(values)) return [];
@@ -89,7 +94,7 @@ const collectMappedOwnersForChannels = (
 
 function hydrateRoutingValues(payload: RoutingConfigItem | undefined): VisualConfigValues {
   const next = createEmptyRoutingValues();
-  next.routingStrategy = payload?.strategy === "fill-first" ? "fill-first" : "round-robin";
+  next.routingStrategy = normalizeRoutingStrategy(payload?.strategy);
   next.routingIncludeDefaultGroup = payload?.["include-default-group"] !== false;
   next.routingChannelGroups = Array.isArray(payload?.["channel-groups"])
     ? payload["channel-groups"].map((group, index) => {
@@ -108,7 +113,7 @@ function hydrateRoutingValues(payload: RoutingConfigItem | undefined): VisualCon
           id: `routing-group-${index}-${makeClientId()}`,
           name: String(group?.name ?? ""),
           description: String(group?.description ?? ""),
-          strategy: group?.strategy === "fill-first" ? "fill-first" : "round-robin",
+          strategy: normalizeRoutingStrategy(group?.strategy),
           excludeFromDefault:
             group?.["exclude-from-default"] === true &&
             String(group?.name ?? "")
@@ -159,7 +164,7 @@ function serializeRoutingValues(values: VisualConfigValues): RoutingConfigItem {
     if (group.description.trim()) {
       item.description = group.description.trim();
     }
-    item.strategy = group.strategy === "fill-first" ? "fill-first" : "round-robin";
+    item.strategy = normalizeRoutingStrategy(group.strategy);
     if (group.excludeFromDefault && name.toLowerCase() !== "default") {
       item["exclude-from-default"] = true;
     }

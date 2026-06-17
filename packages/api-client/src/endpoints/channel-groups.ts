@@ -10,7 +10,7 @@ export interface ChannelGroupChannelDetail extends TagDisplayFields {
 export interface ChannelGroupItem {
   name: string;
   description?: string;
-  strategy?: "round-robin" | "fill-first";
+  strategy?: "round-robin" | "fill-first" | "session-sticky";
   priority?: number;
   "exclude-from-default"?: boolean;
   implicit?: boolean;
@@ -34,6 +34,9 @@ const normalizeStringList = (value: unknown): string[] => {
   });
   return items;
 };
+
+const normalizeRoutingStrategy = (value: unknown): ChannelGroupItem["strategy"] =>
+  value === "fill-first" || value === "session-sticky" ? value : "round-robin";
 
 const normalizeChannelDetail = (value: unknown): ChannelGroupChannelDetail | null => {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
@@ -65,7 +68,7 @@ export const channelGroupsApi = {
         return {
           name,
           description: typeof item.description === "string" ? item.description.trim() : undefined,
-          strategy: item.strategy === "fill-first" ? "fill-first" : "round-robin",
+          strategy: normalizeRoutingStrategy(item.strategy),
           priority:
             typeof item.priority === "number" && Number.isFinite(item.priority)
               ? item.priority

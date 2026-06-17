@@ -54,7 +54,7 @@ export type VisualConfigValues = {
   maxRetryInterval: string;
   quotaSwitchProject: boolean;
   quotaSwitchPreviewModel: boolean;
-  routingStrategy: "round-robin" | "fill-first";
+  routingStrategy: "round-robin" | "fill-first" | "session-sticky";
   wsAuth: boolean;
   payloadDefaultRules: PayloadRule[];
   payloadOverrideRules: PayloadRule[];

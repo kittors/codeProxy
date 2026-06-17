@@ -107,7 +107,7 @@ describe("RuntimeConfigPanel", () => {
     await userEvent.clear(logsInput);
     await userEvent.type(logsInput, "256");
     await userEvent.clear(routingInput);
-    await userEvent.type(routingInput, "fill-first");
+    await userEvent.type(routingInput, "session-sticky");
 
     await userEvent.click(screen.getByRole("button", { name: /save changes/i }));
 
@@ -115,7 +115,7 @@ describe("RuntimeConfigPanel", () => {
       expect(mocks.updateProxyUrl).toHaveBeenCalledWith("http://127.0.0.1:9999");
       expect(mocks.updateRequestRetry).toHaveBeenCalledWith(4);
       expect(mocks.updateLogsMaxTotalSizeMb).toHaveBeenCalledWith(256);
-      expect(mocks.updateRoutingStrategy).toHaveBeenCalledWith("fill-first");
+      expect(mocks.updateRoutingStrategy).toHaveBeenCalledWith("session-sticky");
     });
     expect(mocks.getConfig).toHaveBeenCalledTimes(2);
   });

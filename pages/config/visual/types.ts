@@ -39,7 +39,7 @@ export interface StreamingConfig {
   nonstreamKeepaliveInterval: string;
 }
 
-export type RoutingStrategy = "round-robin" | "fill-first";
+export type RoutingStrategy = "round-robin" | "fill-first" | "session-sticky";
 
 export type RoutingFallback = "none" | "default";
 

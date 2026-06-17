@@ -33,6 +33,20 @@ import {
 const SYSTEM_DEFAULT_GROUP_NAME = "default";
 const SYSTEM_DEFAULT_GROUP_ID = "system-default-root";
 
+function normalizeRoutingStrategy(value: unknown): RoutingStrategy {
+  return value === "fill-first" || value === "session-sticky" ? value : "round-robin";
+}
+
+function routingStrategyLabel(t: ReturnType<typeof useTranslation>["t"], strategy: RoutingStrategy) {
+  if (strategy === "session-sticky") {
+    return t("channel_groups_page.routing_strategy_session_sticky");
+  }
+  if (strategy === "fill-first") {
+    return t("channel_groups_page.routing_strategy_fill_first");
+  }
+  return t("channel_groups_page.routing_strategy_round_robin");
+}
+
 type GroupDraft = {
   name: string;
   description: string;
@@ -100,17 +114,34 @@ function Field({
     <div className="space-y-2">
       <div className="flex items-center gap-2">
         <div className="text-sm font-semibold text-slate-900 dark:text-white">{label}</div>
-        {tooltip ? (
-          <HoverTooltip content={tooltip} placement="bottom">
-            <span className="inline-flex h-6 w-6 items-center justify-center text-slate-400 dark:text-white/45">
-              <CircleAlert size={16} aria-hidden="true" />
-            </span>
-          </HoverTooltip>
-        ) : null}
+        {tooltip ? <InfoTooltip content={tooltip} /> : null}
       </div>
       {hint ? <div className="text-xs text-slate-500 dark:text-white/55">{hint}</div> : null}
       {children}
     </div>
+  );
+}
+
+function InfoTooltip({ content }: { content: string }) {
+  return (
+    <HoverTooltip content={content} placement="bottom">
+      <span
+        className="inline-flex h-6 w-6 items-center justify-center text-slate-400 dark:text-white/45"
+        aria-label={content}
+        tabIndex={0}
+      >
+        <CircleAlert size={16} aria-hidden="true" />
+      </span>
+    </HoverTooltip>
+  );
+}
+
+function TooltipHeader({ label, tooltip }: { label: string; tooltip: string }) {
+  return (
+    <span className="flex min-w-0 items-center gap-1.5">
+      <span className="truncate">{label}</span>
+      <InfoTooltip content={tooltip} />
+    </span>
   );
 }
 
@@ -649,7 +680,7 @@ export function RoutingConfigEditor({
       setGroupDraft({
         name: group.name,
         description: group.description,
-        strategy: group.strategy === "fill-first" ? "fill-first" : "round-robin",
+        strategy: normalizeRoutingStrategy(group.strategy),
         excludeFromDefault: isSystemDefault ? false : group.excludeFromDefault === true,
         matchMode: isSystemDefault ? "channels" : (group.matchMode ?? "channels"),
         channels: cloneMembers(group.channels),
@@ -661,7 +692,7 @@ export function RoutingConfigEditor({
             ? existingRoutes
             : [{ ...EMPTY_ROUTE_DRAFT(), group: group.name.trim() }],
       });
-      setGroupEditorTab(isSystemDefault ? "models" : "basic");
+      setGroupEditorTab("basic");
       setModelOptions([]);
       setModelsError("");
       setModelsSelectionTouched((group.allowedModels ?? []).length > 0);
@@ -819,7 +850,7 @@ export function RoutingConfigEditor({
         id: existingDefault?.id ?? makeClientId(),
         name: SYSTEM_DEFAULT_GROUP_NAME,
         description: existingDefault?.description ?? "",
-        strategy: existingDefault?.strategy === "fill-first" ? "fill-first" : "round-robin",
+        strategy: normalizeRoutingStrategy(groupDraft.strategy),
         excludeFromDefault: false,
         matchMode: "channels",
         channels: existingDefault ? cloneMembers(existingDefault.channels) : [],
@@ -850,7 +881,7 @@ export function RoutingConfigEditor({
       id: groupEditorId ?? makeClientId(),
       name: groupName,
       description: groupDraft.description.trim(),
-      strategy: groupDraft.strategy === "fill-first" ? "fill-first" : "round-robin",
+      strategy: normalizeRoutingStrategy(groupDraft.strategy),
       excludeFromDefault:
         groupDraft.excludeFromDefault && groupName.toLowerCase() !== SYSTEM_DEFAULT_GROUP_NAME,
       matchMode: groupDraft.matchMode,
@@ -975,6 +1006,13 @@ export function RoutingConfigEditor({
         headerClassName: "text-center",
         cellClassName: "whitespace-nowrap text-center",
         render: (group) => {
+          if (group.system) {
+            return (
+              <span className="inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600 dark:bg-neutral-800 dark:text-white/60">
+                {t("channel_groups_page.default_pool_label")}
+              </span>
+            );
+          }
           const channels = resolveGroupChannels(group);
           return (
             <span className="inline-flex h-5 min-w-[24px] items-center justify-center rounded-md bg-sky-50 px-1.5 text-xs font-semibold tabular-nums text-sky-700 dark:bg-sky-900/30 dark:text-sky-300">
@@ -1014,13 +1052,19 @@ export function RoutingConfigEditor({
       {
         key: "defaultScope",
         label: t("channel_groups_page.table_default_scope"),
+        headerRender: () => (
+          <TooltipHeader
+            label={t("channel_groups_page.table_default_scope")}
+            tooltip={t("channel_groups_page.table_default_scope_tooltip")}
+          />
+        ),
         width: "w-[128px] min-w-[128px]",
         cellClassName: "whitespace-nowrap",
         render: (group) => {
           if (group.system) {
             return (
-              <span className="text-slate-400 dark:text-white/35">
-                {t("channel_groups_page.none")}
+              <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600 dark:bg-neutral-800 dark:text-white/60">
+                {t("channel_groups_page.system_default_route")}
               </span>
             );
           }
@@ -1041,6 +1085,13 @@ export function RoutingConfigEditor({
         width: "w-[280px] min-w-[280px]",
         cellClassName: "min-w-0 whitespace-nowrap text-slate-700 dark:text-white/75",
         render: (group) => {
+          if (group.system) {
+            return (
+              <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600 dark:bg-neutral-800 dark:text-white/60">
+                {t("channel_groups_page.default_pool_label")}
+              </span>
+            );
+          }
           const channels = resolveGroupChannels(group);
           const names = channels.map((channel) => channel.name.trim()).filter(Boolean);
           if (names.length === 0) {
@@ -1084,16 +1135,9 @@ export function RoutingConfigEditor({
         width: "w-[190px] min-w-[190px]",
         cellClassName: "min-w-0 whitespace-nowrap text-slate-700 dark:text-white/75",
         render: (group) => {
-          if (group.system) {
-            return (
-              <span className="text-slate-400 dark:text-white/35">
-                {t("channel_groups_page.none")}
-              </span>
-            );
-          }
           const summary =
-            group.strategy === "fill-first"
-              ? t("channel_groups_page.routing_strategy_fill_first")
+            group.system || group.strategy === "fill-first" || group.strategy === "session-sticky"
+              ? routingStrategyLabel(t, group.strategy)
               : summarizePriorityMode(
                   resolveGroupChannels(group),
                   t("channel_groups_page.round_robin_mode"),
@@ -1637,11 +1681,9 @@ export function RoutingConfigEditor({
             <div data-testid="group-editor-tabs-shell" className="flex min-h-0 flex-1 flex-col">
               <div className="shrink-0">
                 <TabsList>
-                  {editingSystemDefaultGroup ? null : (
-                    <TabsTrigger value="basic">
-                      {t("channel_groups_page.basic_config_tab")}
-                    </TabsTrigger>
-                  )}
+                  <TabsTrigger value="basic">
+                    {t("channel_groups_page.basic_config_tab")}
+                  </TabsTrigger>
                   <TabsTrigger value="models">{t("channel_groups_page.models_tab")}</TabsTrigger>
                 </TabsList>
               </div>
@@ -1672,184 +1714,201 @@ export function RoutingConfigEditor({
                             value: "fill-first",
                             label: t("channel_groups_page.routing_strategy_fill_first"),
                           },
+                          {
+                            value: "session-sticky",
+                            label: t("channel_groups_page.routing_strategy_session_sticky"),
+                          },
                         ]}
                         onChange={(value) => {
                           setGroupDraft((current) => ({
                             ...current,
-                            strategy: value === "fill-first" ? "fill-first" : "round-robin",
+                            strategy: normalizeRoutingStrategy(value),
                           }));
                         }}
                       />
                     </Field>
 
-                    <label className="flex items-start gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 text-sm dark:border-neutral-800 dark:bg-neutral-900/60">
-                      <Checkbox
-                        checked={groupDraft.excludeFromDefault}
-                        onCheckedChange={(checked) =>
-                          setGroupDraft((current) => ({
-                            ...current,
-                            excludeFromDefault: checked,
-                          }))
-                        }
-                        disabled={disabled}
-                        aria-label={t("channel_groups_page.exclude_from_default_label")}
-                        className="mt-0.5"
-                      />
-                      <span className="min-w-0">
-                        <span className="block font-semibold text-slate-900 dark:text-white">
-                          {t("channel_groups_page.exclude_from_default_label")}
-                        </span>
-                        <span className="mt-1 block text-xs leading-5 text-slate-500 dark:text-white/55">
-                          {t("channel_groups_page.exclude_from_default_hint")}
-                        </span>
-                      </span>
-                    </label>
+                    {!editingSystemDefaultGroup ? (
+                      <>
+                        <label className="flex items-start gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 text-sm dark:border-neutral-800 dark:bg-neutral-900/60">
+                          <Checkbox
+                            checked={groupDraft.excludeFromDefault}
+                            onCheckedChange={(checked) =>
+                              setGroupDraft((current) => ({
+                                ...current,
+                                excludeFromDefault: checked,
+                              }))
+                            }
+                            disabled={disabled}
+                            aria-label={t("channel_groups_page.exclude_from_default_label")}
+                            className="mt-0.5"
+                          />
+                          <span className="min-w-0">
+                            <span className="flex items-center gap-1.5 font-semibold text-slate-900 dark:text-white">
+                              <span>{t("channel_groups_page.exclude_from_default_label")}</span>
+                              <InfoTooltip
+                                content={t("channel_groups_page.exclude_from_default_tooltip")}
+                              />
+                            </span>
+                            <span className="mt-1 block text-xs leading-5 text-slate-500 dark:text-white/55">
+                              {t("channel_groups_page.exclude_from_default_hint")}
+                            </span>
+                          </span>
+                        </label>
 
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <Field label={t("channel_groups_page.group_name_label")}>
-                        <TextInput
-                          value={groupDraft.name}
-                          onChange={(event) => {
-                            const value = event.currentTarget.value;
-                            setGroupDraft((current) => ({ ...current, name: value }));
-                          }}
-                          placeholder="pro"
-                          disabled={disabled}
-                        />
-                      </Field>
-                      <Field label={t("channel_groups_page.description_label")}>
-                        <TextInput
-                          value={groupDraft.description}
-                          onChange={(event) => {
-                            const value = event.currentTarget.value;
-                            setGroupDraft((current) => ({ ...current, description: value }));
-                          }}
-                          placeholder={t("channel_groups_page.description_placeholder")}
-                          disabled={disabled}
-                        />
-                      </Field>
-                    </div>
+                        <div className="grid gap-4 md:grid-cols-2">
+                          <Field label={t("channel_groups_page.group_name_label")}>
+                            <TextInput
+                              value={groupDraft.name}
+                              onChange={(event) => {
+                                const value = event.currentTarget.value;
+                                setGroupDraft((current) => ({ ...current, name: value }));
+                              }}
+                              placeholder="pro"
+                              disabled={disabled}
+                            />
+                          </Field>
+                          <Field label={t("channel_groups_page.description_label")}>
+                            <TextInput
+                              value={groupDraft.description}
+                              onChange={(event) => {
+                                const value = event.currentTarget.value;
+                                setGroupDraft((current) => ({ ...current, description: value }));
+                              }}
+                              placeholder={t("channel_groups_page.description_placeholder")}
+                              disabled={disabled}
+                            />
+                          </Field>
+                        </div>
 
-                    <div className="grid gap-4 md:grid-cols-1">
-                      <Field
-                        label={t("channel_groups_page.route_path_label")}
-                        hint={t("channel_groups_page.route_path_hint")}
-                      >
-                        <TextInput
-                          value={primaryRoute.path}
-                          onChange={(event) =>
-                            updatePrimaryRoute({ path: event.currentTarget.value })
+                        <div className="grid gap-4 md:grid-cols-1">
+                          <Field
+                            label={t("channel_groups_page.route_path_label")}
+                            hint={t("channel_groups_page.route_path_hint")}
+                          >
+                            <TextInput
+                              value={primaryRoute.path}
+                              onChange={(event) =>
+                                updatePrimaryRoute({ path: event.currentTarget.value })
+                              }
+                              placeholder="/pro"
+                              disabled={disabled}
+                            />
+                          </Field>
+                        </div>
+
+                        <Field
+                          label={t("channel_groups_page.match_strategy_label")}
+                          hint={t("channel_groups_page.match_strategy_hint")}
+                        >
+                          <Select
+                            aria-label={t("channel_groups_page.match_strategy_label")}
+                            value={groupDraft.matchMode}
+                            disabled={disabled}
+                            className="w-full"
+                            options={[
+                              {
+                                value: "channels",
+                                label: t("channel_groups_page.match_strategy_channels"),
+                              },
+                              {
+                                value: "tags",
+                                label: t("channel_groups_page.match_strategy_tags"),
+                              },
+                            ]}
+                            onChange={(value) => {
+                              setGroupDraft((current) => ({
+                                ...current,
+                                matchMode: value === "tags" ? "tags" : "channels",
+                              }));
+                              setModelsSelectionTouched(false);
+                            }}
+                          />
+                        </Field>
+
+                        <div className="space-y-3">
+                          {groupDraft.matchMode === "tags" ? (
+                            <Field
+                              label={t("channel_groups_page.select_tag_label")}
+                              hint={t("channel_groups_page.select_tag_hint")}
+                            >
+                              <SearchableCheckboxMultiSelect
+                                value={selectedTagValues}
+                                onChange={updateDraftTags}
+                                options={tagOptions}
+                                placeholder={t("channel_groups_page.select_tag_placeholder")}
+                                searchPlaceholder={t("channel_groups_page.search_tag_placeholder")}
+                                selectFilteredLabel={t("channel_groups_page.select_filtered_tags")}
+                                deselectFilteredLabel={t(
+                                  "channel_groups_page.deselect_filtered_tags",
+                                )}
+                                selectedCountLabel={(count) =>
+                                  t("channel_groups_page.selected_tags_count", { count })
+                                }
+                                noResultsLabel={t("channel_groups_page.no_search_results")}
+                                aria-label={t("channel_groups_page.select_tag_label")}
+                                disabled={disabled}
+                              />
+                            </Field>
+                          ) : (
+                            <Field
+                              label={t("channel_groups_page.select_channel_label")}
+                              hint={t("channel_groups_page.select_channel_hint")}
+                            >
+                              <SearchableCheckboxMultiSelect
+                                value={selectedChannelValues}
+                                onChange={updateDraftChannels}
+                                options={channelOptions}
+                                placeholder={t("channel_groups_page.select_channel_placeholder")}
+                                searchPlaceholder={t(
+                                  "channel_groups_page.search_channel_placeholder",
+                                )}
+                                selectFilteredLabel={t(
+                                  "channel_groups_page.select_filtered_channels",
+                                )}
+                                deselectFilteredLabel={t(
+                                  "channel_groups_page.deselect_filtered_channels",
+                                )}
+                                selectedCountLabel={(count) =>
+                                  t("channel_groups_page.selected_channels_count", { count })
+                                }
+                                noResultsLabel={t("channel_groups_page.no_search_results")}
+                                aria-label={t("channel_groups_page.select_channel_label")}
+                                disabled={disabled}
+                              />
+                            </Field>
+                          )}
+                        </div>
+
+                        <DataTable<RoutingChannelGroupMemberEntry>
+                          tableId="routing-channel-group-members"
+                          rows={resolvedDraftChannels}
+                          columns={groupMemberColumns}
+                          rowKey={(channel) => channel.id}
+                          virtualize={false}
+                          rowHeight={52}
+                          height="h-auto"
+                          minHeight="min-h-0"
+                          minWidth="min-w-[640px]"
+                          caption={
+                            groupDraft.matchMode === "tags"
+                              ? t("channel_groups_page.matched_channel_label")
+                              : t("channel_groups_page.select_channel_label")
                           }
-                          placeholder="/pro"
-                          disabled={disabled}
+                          emptyText={
+                            groupDraft.matchMode === "tags"
+                              ? t("channel_groups_page.empty_matched_channels")
+                              : t("channel_groups_page.empty_group_channels")
+                          }
+                          rowClassName={(channel) =>
+                            draftStaleChannelIds.has(channel.id)
+                              ? "bg-rose-50/70 dark:bg-rose-500/10"
+                              : ""
+                          }
+                          naturalFlow
                         />
-                      </Field>
-                    </div>
-
-                    <Field
-                      label={t("channel_groups_page.match_strategy_label")}
-                      hint={t("channel_groups_page.match_strategy_hint")}
-                    >
-                      <Select
-                        aria-label={t("channel_groups_page.match_strategy_label")}
-                        value={groupDraft.matchMode}
-                        disabled={disabled}
-                        className="w-full"
-                        options={[
-                          {
-                            value: "channels",
-                            label: t("channel_groups_page.match_strategy_channels"),
-                          },
-                          {
-                            value: "tags",
-                            label: t("channel_groups_page.match_strategy_tags"),
-                          },
-                        ]}
-                        onChange={(value) => {
-                          setGroupDraft((current) => ({
-                            ...current,
-                            matchMode: value === "tags" ? "tags" : "channels",
-                          }));
-                          setModelsSelectionTouched(false);
-                        }}
-                      />
-                    </Field>
-
-                    <div className="space-y-3">
-                      {groupDraft.matchMode === "tags" ? (
-                        <Field
-                          label={t("channel_groups_page.select_tag_label")}
-                          hint={t("channel_groups_page.select_tag_hint")}
-                        >
-                          <SearchableCheckboxMultiSelect
-                            value={selectedTagValues}
-                            onChange={updateDraftTags}
-                            options={tagOptions}
-                            placeholder={t("channel_groups_page.select_tag_placeholder")}
-                            searchPlaceholder={t("channel_groups_page.search_tag_placeholder")}
-                            selectFilteredLabel={t("channel_groups_page.select_filtered_tags")}
-                            deselectFilteredLabel={t("channel_groups_page.deselect_filtered_tags")}
-                            selectedCountLabel={(count) =>
-                              t("channel_groups_page.selected_tags_count", { count })
-                            }
-                            noResultsLabel={t("channel_groups_page.no_search_results")}
-                            aria-label={t("channel_groups_page.select_tag_label")}
-                            disabled={disabled}
-                          />
-                        </Field>
-                      ) : (
-                        <Field
-                          label={t("channel_groups_page.select_channel_label")}
-                          hint={t("channel_groups_page.select_channel_hint")}
-                        >
-                          <SearchableCheckboxMultiSelect
-                            value={selectedChannelValues}
-                            onChange={updateDraftChannels}
-                            options={channelOptions}
-                            placeholder={t("channel_groups_page.select_channel_placeholder")}
-                            searchPlaceholder={t("channel_groups_page.search_channel_placeholder")}
-                            selectFilteredLabel={t("channel_groups_page.select_filtered_channels")}
-                            deselectFilteredLabel={t(
-                              "channel_groups_page.deselect_filtered_channels",
-                            )}
-                            selectedCountLabel={(count) =>
-                              t("channel_groups_page.selected_channels_count", { count })
-                            }
-                            noResultsLabel={t("channel_groups_page.no_search_results")}
-                            aria-label={t("channel_groups_page.select_channel_label")}
-                            disabled={disabled}
-                          />
-                        </Field>
-                      )}
-                    </div>
-
-                    <DataTable<RoutingChannelGroupMemberEntry>
-                      tableId="routing-channel-group-members"
-                      rows={resolvedDraftChannels}
-                      columns={groupMemberColumns}
-                      rowKey={(channel) => channel.id}
-                      virtualize={false}
-                      rowHeight={52}
-                      height="h-auto"
-                      minHeight="min-h-0"
-                      minWidth="min-w-[640px]"
-                      caption={
-                        groupDraft.matchMode === "tags"
-                          ? t("channel_groups_page.matched_channel_label")
-                          : t("channel_groups_page.select_channel_label")
-                      }
-                      emptyText={
-                        groupDraft.matchMode === "tags"
-                          ? t("channel_groups_page.empty_matched_channels")
-                          : t("channel_groups_page.empty_group_channels")
-                      }
-                      rowClassName={(channel) =>
-                        draftStaleChannelIds.has(channel.id)
-                          ? "bg-rose-50/70 dark:bg-rose-500/10"
-                          : ""
-                      }
-                      naturalFlow
-                    />
+                      </>
+                    ) : null}
                   </ScrollArea>
                 </TabsContent>
 

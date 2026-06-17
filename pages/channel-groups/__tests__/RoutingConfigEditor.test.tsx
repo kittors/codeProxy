@@ -129,6 +129,25 @@ describe("RoutingConfigEditor", () => {
     expect(screen.getByTestId("group-strategy")).toHaveTextContent("fill-first");
   });
 
+  test("stores session-sticky as the group-scoped routing strategy", async () => {
+    await i18n.changeLanguage("zh-CN");
+    const user = userEvent.setup();
+
+    render(<Harness />);
+
+    await user.click(screen.getByRole("button", { name: "新增分组" }));
+    await user.click(screen.getByRole("combobox", { name: "分组内调度策略" }));
+    await user.click(screen.getByRole("option", { name: "会话粘性" }));
+    await user.type(screen.getByPlaceholderText("pro"), "team-session");
+    await user.type(screen.getByPlaceholderText("/pro"), "/team-session");
+    await user.click(screen.getByRole("combobox", { name: "选择渠道" }));
+    await user.click(screen.getByRole("option", { name: "Main Codex" }));
+    await user.click(screen.getByRole("combobox", { name: "选择渠道" }));
+    await user.click(screen.getByRole("button", { name: "添加" }));
+
+    expect(screen.getByTestId("group-strategy")).toHaveTextContent("session-sticky");
+  });
+
   test("shows fill-first as the table scheduling mode for that group", async () => {
     await i18n.changeLanguage("zh-CN");
 
@@ -156,6 +175,35 @@ describe("RoutingConfigEditor", () => {
     const row = screen.getByRole("row", { name: /kimicode/i });
     expect(row).toHaveTextContent("优先首个可用渠道");
   });
+
+  test("shows session-sticky as the table scheduling mode for that group", async () => {
+    await i18n.changeLanguage("zh-CN");
+
+    render(
+      <Harness
+        initialValues={{
+          ...DEFAULT_VISUAL_VALUES,
+          routingChannelGroups: [
+            {
+              id: "group-session",
+              name: "session-pool",
+              description: "",
+              strategy: "session-sticky",
+              channels: [
+                { id: "channel-main", name: "Main Codex", priority: "" },
+                { id: "channel-backup", name: "Backup Claude", priority: "" },
+              ],
+              allowedModels: [],
+            },
+          ],
+        }}
+      />,
+    );
+
+    const row = screen.getByRole("row", { name: /session-pool/i });
+    expect(row).toHaveTextContent("会话粘性");
+  });
+
 
   test("defaults model tab selections to every channel-scoped model", async () => {
     await i18n.changeLanguage("zh-CN");
@@ -402,7 +450,10 @@ describe("RoutingConfigEditor", () => {
 
     expect(screen.queryByText("模型数")).not.toBeInTheDocument();
     expect(screen.queryByText("可用能力")).not.toBeInTheDocument();
-    expect(screen.getByRole("row", { name: /系统默认/ })).toHaveTextContent("/");
+    const row = screen.getByRole("row", { name: /系统默认/ });
+    expect(row).toHaveTextContent("/");
+    expect(row).toHaveTextContent("默认调度池");
+    expect(row).toHaveTextContent("轮询分配");
     expect(screen.queryByText("系统内置，只读")).not.toBeInTheDocument();
     expect(screen.queryByText("models")).not.toBeInTheDocument();
     expect(screen.queryByText("chat")).not.toBeInTheDocument();
@@ -420,6 +471,47 @@ describe("RoutingConfigEditor", () => {
     expect(within(row).queryByRole("button", { name: "删除分组" })).not.toBeInTheDocument();
   });
 
+  test("updates the system root route scheduling strategy", async () => {
+    await i18n.changeLanguage("zh-CN");
+    const user = userEvent.setup();
+
+    render(<Harness />);
+
+    const row = screen.getByRole("row", { name: /系统默认/ });
+    await user.click(within(row).getByRole("button", { name: "编辑分组" }));
+
+    expect(screen.getByRole("tab", { name: "基础配置" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    await user.click(screen.getByRole("combobox", { name: "分组内调度策略" }));
+    await user.click(screen.getByRole("option", { name: "会话粘性" }));
+    await user.click(screen.getByRole("button", { name: "保存" }));
+
+    expect(screen.getByTestId("group-name")).toHaveTextContent("default");
+    expect(screen.getByTestId("group-strategy")).toHaveTextContent("session-sticky");
+    expect(screen.getByRole("row", { name: /系统默认/ })).toHaveTextContent("会话粘性");
+  });
+
+  test("explains default pool scope and isolation behavior with tooltips", async () => {
+    await i18n.changeLanguage("zh-CN");
+    const user = userEvent.setup();
+
+    render(<Harness />);
+
+    await user.hover(screen.getByLabelText(/这里不是访问路径/));
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(
+      "默认可用表示请求没有命中自定义路径时",
+    );
+    await user.unhover(screen.getByLabelText(/这里不是访问路径/));
+
+    await user.click(screen.getByRole("button", { name: "新增分组" }));
+    await user.hover(screen.getByLabelText(/开启后，这个分组只会在请求命中自己的分组路径/));
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(
+      "API Key 显式允许该分组时被使用",
+    );
+  });
+
   test("updates model permissions for the system root route", async () => {
     await i18n.changeLanguage("zh-CN");
     const user = userEvent.setup();
@@ -433,6 +525,7 @@ describe("RoutingConfigEditor", () => {
 
     const row = screen.getByRole("row", { name: /系统默认/ });
     await user.click(within(row).getByRole("button", { name: "编辑分组" }));
+    await user.click(screen.getByRole("tab", { name: "模型列表" }));
 
     expect(await screen.findByLabelText("gpt-root-allowed")).toBeChecked();
     await user.click(screen.getByLabelText("gpt-root-hidden"));

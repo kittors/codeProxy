@@ -253,7 +253,7 @@ function parseRoutingFallback(raw: unknown): RoutingFallback {
 }
 
 function parseRoutingStrategy(raw: unknown): RoutingStrategy {
-  return raw === "fill-first" ? "fill-first" : "round-robin";
+  return raw === "fill-first" || raw === "session-sticky" ? raw : "round-robin";
 }
 
 function parseRoutingTags(raw: unknown): string[] {
@@ -422,7 +422,7 @@ function serializeRoutingChannelGroupsForYaml(
       if (group.description.trim()) {
         item.description = group.description.trim();
       }
-      item.strategy = group.strategy === "fill-first" ? "fill-first" : "round-robin";
+      item.strategy = parseRoutingStrategy(group.strategy);
       if (group.excludeFromDefault && name.trim().toLowerCase() !== "default") {
         item["exclude-from-default"] = true;
       }
@@ -564,7 +564,7 @@ export function useVisualConfig() {
           quotaSwitchProject: Boolean(quotaExceeded?.["switch-project"] ?? true),
           quotaSwitchPreviewModel: Boolean(quotaExceeded?.["switch-preview-model"] ?? true),
 
-          routingStrategy: routing?.strategy === "fill-first" ? "fill-first" : "round-robin",
+          routingStrategy: parseRoutingStrategy(routing?.strategy),
           routingIncludeDefaultGroup: routing?.["include-default-group"] !== false,
           routingChannelGroups: parseRoutingChannelGroups(routing?.["channel-groups"]),
           routingPathRoutes: parseRoutingPathRoutes(routing?.["path-routes"]),
