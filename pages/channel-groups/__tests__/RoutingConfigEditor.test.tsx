@@ -31,6 +31,7 @@ function Harness({
   loadModelsForChannels,
   availableChannels = ["Team A Claude", "Main Codex", "Backup Claude"],
   availableChannelDetails,
+  availableChannelDetailsByGroup,
 }: {
   initialValues?: VisualConfigValues;
   loadModelsForChannels?: (
@@ -39,6 +40,7 @@ function Harness({
   ) => Promise<Array<string | RoutingModelOption>>;
   availableChannels?: string[];
   availableChannelDetails?: Record<string, ChannelGroupChannelDetail>;
+  availableChannelDetailsByGroup?: Record<string, Record<string, ChannelGroupChannelDetail>>;
 }) {
   const [values, setValues] = useState<VisualConfigValues>({
     ...DEFAULT_VISUAL_VALUES,
@@ -54,6 +56,7 @@ function Harness({
           values={values}
           availableChannels={availableChannels}
           availableChannelDetails={availableChannelDetails}
+          availableChannelDetailsByGroup={availableChannelDetailsByGroup}
           loadModelsForChannels={loadModelsForChannels}
           onChange={(patch) => setValues((prev) => ({ ...prev, ...patch }))}
         />
@@ -631,5 +634,79 @@ describe("RoutingConfigEditor", () => {
     const disabledRow = screen.getByRole("row", { name: /GptPlus8/ });
     expect(within(disabledRow).getByText("已禁用")).toBeInTheDocument();
     expect(within(disabledRow).queryByText("已删除")).not.toBeInTheDocument();
+  });
+
+  test("uses group-scoped channel details for duplicate channel names", async () => {
+    await i18n.changeLanguage("zh-CN");
+    const user = userEvent.setup();
+
+    render(
+      <Harness
+        availableChannels={["Shared Codex"]}
+        availableChannelDetails={{
+          "shared codex": {
+            name: "Shared Codex",
+            source: "codex",
+            disabled: true,
+            default_tags: [],
+            custom_tags: [],
+            hidden_default_tags: [],
+            display_tags: ["codex"],
+          },
+        }}
+        availableChannelDetailsByGroup={{
+          "active-pool": {
+            "shared codex": {
+              name: "Shared Codex",
+              source: "codex",
+              disabled: false,
+              default_tags: [],
+              custom_tags: [],
+              hidden_default_tags: [],
+              display_tags: ["codex"],
+            },
+          },
+          "disabled-pool": {
+            "shared codex": {
+              name: "Shared Codex",
+              source: "codex",
+              disabled: true,
+              default_tags: [],
+              custom_tags: [],
+              hidden_default_tags: [],
+              display_tags: ["codex"],
+            },
+          },
+        }}
+        initialValues={{
+          ...DEFAULT_VISUAL_VALUES,
+          routingChannelGroups: [
+            {
+              id: "group-active",
+              name: "active-pool",
+              description: "",
+              strategy: "round-robin",
+              allowedModels: [],
+              channels: [{ id: "channel-active", name: "Shared Codex", priority: "" }],
+            },
+            {
+              id: "group-disabled",
+              name: "disabled-pool",
+              description: "",
+              strategy: "round-robin",
+              allowedModels: [],
+              channels: [{ id: "channel-disabled", name: "Shared Codex", priority: "" }],
+            },
+          ],
+        }}
+      />,
+    );
+
+    const activeGroupRow = screen.getByRole("row", { name: /active-pool/ });
+    await user.click(within(activeGroupRow).getByRole("button", { name: "编辑分组" }));
+
+    const dialog = screen.getByRole("dialog", { name: "编辑分组" });
+    const activeChannelRow = within(dialog).getByRole("row", { name: /Shared Codex/ });
+    expect(within(activeChannelRow).queryByText("已禁用")).not.toBeInTheDocument();
   });
 });
