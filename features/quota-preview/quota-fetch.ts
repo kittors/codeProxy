@@ -37,6 +37,7 @@ import {
   parseResetTimeToMs,
   resolveAuthProvider,
   resolveCodexChatgptAccountId,
+  resolveCodexResetCreditCount,
   resolveGeminiCliProjectId,
   type QuotaItem,
 } from "@features/quota-preview/quota-helpers";
@@ -45,6 +46,7 @@ export type QuotaProvider = "antigravity" | "claude" | "codex" | "gemini-cli" | 
 export type QuotaFetchResult = {
   items: QuotaItem[];
   planType?: string | null;
+  resetCreditCount?: number;
 };
 
 export const resolveQuotaProvider = (file: AuthFileItem): QuotaProvider | null => {
@@ -149,6 +151,7 @@ export const fetchQuota = async (
     return {
       items: buildCodexItems(payload),
       planType: normalizeStringValue(payload.plan_type ?? payload.planType)?.toLowerCase() ?? null,
+      resetCreditCount: resolveCodexResetCreditCount(payload),
     };
   }
 

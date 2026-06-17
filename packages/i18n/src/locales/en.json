@@ -580,6 +580,8 @@
     "prefix_proxy_saved_success": "Updated auth file \"{{name}}\" successfully",
     "quota_refresh_success": "Quota refreshed for \"{{name}}\"",
     "quota_refresh_failed": "Failed to refresh quota for \"{{name}}\": {{message}}",
+    "reset_credits_badge": "Reset {{count}} times",
+    "reset_credits_query": "Query reset credits",
     "restriction_http_label": "{{status}} Error",
     "restriction_quota_label": "Quota Limited",
     "restriction_generic_label": "Restricted",

@@ -1318,6 +1318,10 @@ export function AuthFilesFilesTab({
                   const quotaRefreshing = provider
                     ? quotaByFileName[file.name]?.status === "loading"
                     : false;
+                  const resetCreditCount =
+                    provider === "codex" && typeof state.resetCreditCount === "number"
+                      ? state.resetCreditCount
+                      : 0;
                   const showSelectionControl = fileSelected;
 
                   return (
@@ -1402,6 +1406,26 @@ export function AuthFilesFilesTab({
                             <span className="inline-flex shrink-0 items-center rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-800 dark:bg-amber-500/15 dark:text-amber-200">
                               {t("codex_quota.plan_label")} {formatPlanTypeLabel(planType)}
                             </span>
+                          ) : null}
+                          {provider === "codex" ? (
+                            <button
+                              type="button"
+                              className="inline-flex shrink-0 items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-700 transition-colors hover:bg-blue-50 hover:text-blue-700 disabled:cursor-wait disabled:opacity-70 dark:bg-white/10 dark:text-white/70 dark:hover:bg-blue-500/15 dark:hover:text-blue-200"
+                              disabled={quotaRefreshing}
+                              onClick={() => void refreshQuota(file, provider)}
+                              title={t("auth_files.reset_credits_query")}
+                              aria-label={t("auth_files.reset_credits_query")}
+                            >
+                              <RefreshCw
+                                size={10}
+                                className={quotaRefreshing ? "animate-spin" : ""}
+                              />
+                              <span className="tabular-nums">
+                                {t("auth_files.reset_credits_badge", {
+                                  count: resetCreditCount,
+                                })}
+                              </span>
+                            </button>
                           ) : null}
                           <span className="inline-flex shrink-0 items-center rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-700 dark:bg-white/10 dark:text-white/70">
                             {t("auth_files.calls_count", { count: totalCalls })}

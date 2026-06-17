@@ -6,6 +6,7 @@ import {
   formatRelativeResetLabel,
   parseAntigravityPayload,
   parseKimiUsagePayload,
+  resolveCodexResetCreditCount,
 } from "@features/quota-preview/quota-helpers";
 
 describe("formatRelativeResetLabel", () => {
@@ -147,6 +148,14 @@ describe("buildCodexItems", () => {
         windowSeconds: 2628000,
       }),
     ]);
+  });
+
+  test("reads available reset credits from Codex usage payload", () => {
+    expect(
+      resolveCodexResetCreditCount({
+        rate_limit_reset_credits: { available_count: "3" },
+      }),
+    ).toBe(3);
   });
 });
 

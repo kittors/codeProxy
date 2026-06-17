@@ -270,6 +270,12 @@ const sanitizeQuotaItemsForCache = (items: unknown): QuotaItem[] => {
     .filter((item): item is QuotaItem => Boolean(item));
 };
 
+const sanitizeResetCreditCountForCache = (value: unknown): number | undefined => {
+  const count = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(count)) return undefined;
+  return Math.max(0, Math.floor(count));
+};
+
 const sanitizeQuotaByFileNameForCache = (
   quotaByFileName: unknown,
   fileNames?: Set<string>,
@@ -292,11 +298,13 @@ const sanitizeQuotaByFileNameForCache = (
         ? state.updatedAt
         : undefined;
     const planType = normalizePlanType(state.planType ?? state.plan_type);
+    const resetCreditCount = sanitizeResetCreditCountForCache(state.resetCreditCount);
     const error = typeof state.error === "string" ? state.error : undefined;
     output[fileName] = {
       status: status === "loading" ? "success" : (status as QuotaStatus),
       items,
       planType: planType ?? undefined,
+      resetCreditCount,
       updatedAt,
       error: status === "error" ? error : undefined,
     };

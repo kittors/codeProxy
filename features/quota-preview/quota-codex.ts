@@ -39,6 +39,11 @@ type CodexAdditionalRateLimit = {
   rateLimit?: CodexRateLimitInfo | null;
 };
 
+type CodexRateLimitResetCredits = {
+  available_count?: number | string;
+  availableCount?: number | string;
+};
+
 export type CodexUsagePayload = {
   plan_type?: string;
   planType?: string;
@@ -48,6 +53,8 @@ export type CodexUsagePayload = {
   codeReviewRateLimit?: CodexRateLimitInfo | null;
   additional_rate_limits?: CodexAdditionalRateLimit[];
   additionalRateLimits?: CodexAdditionalRateLimit[];
+  rate_limit_reset_credits?: CodexRateLimitResetCredits | null;
+  rateLimitResetCredits?: CodexRateLimitResetCredits | null;
 };
 
 export const resolveCodexChatgptAccountId = (file: AuthFileItem): string | null => {
@@ -113,6 +120,12 @@ export const parseCodexUsagePayload = (payload: unknown): CodexUsagePayload | nu
     }
   }
   return typeof payload === "object" ? (payload as CodexUsagePayload) : null;
+};
+
+export const resolveCodexResetCreditCount = (payload: CodexUsagePayload): number => {
+  const credits = payload.rate_limit_reset_credits ?? payload.rateLimitResetCredits ?? null;
+  const count = normalizeNumberValue(credits?.available_count ?? credits?.availableCount);
+  return count === null ? 0 : Math.max(0, Math.floor(count));
 };
 
 const resolveCodexResetAtMs = (window?: CodexUsageWindow | null): number | undefined => {

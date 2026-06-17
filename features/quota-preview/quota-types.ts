@@ -13,6 +13,7 @@ export type QuotaState = {
   status: QuotaStatus;
   items: QuotaItem[];
   planType?: string;
+  resetCreditCount?: number;
   error?: string;
   updatedAt?: number;
 };

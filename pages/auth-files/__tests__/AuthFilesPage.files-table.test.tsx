@@ -4276,7 +4276,7 @@ describe("AuthFilesPage files table", () => {
     expect(table).toBeInTheDocument();
   });
 
-  test("quota refresh updates the plan badge from api-call payload", async () => {
+  test("quota refresh updates the plan and reset credit badges from api-call payload", async () => {
     const now = Date.now();
     const file = {
       name: "codex.json",
@@ -4291,10 +4291,17 @@ describe("AuthFilesPage files table", () => {
     } as any;
 
     mocks.list.mockImplementationOnce(async () => ({ files: [file] }));
-    mocks.fetchQuota.mockResolvedValue({
-      items: [{ label: "m_quota.code_5h", percent: 12, resetAtMs: now + 60_000 }],
-      planType: "plus",
-    });
+    mocks.fetchQuota
+      .mockResolvedValueOnce({
+        items: [{ label: "m_quota.code_5h", percent: 12, resetAtMs: now + 60_000 }],
+        planType: "plus",
+        resetCreditCount: 3,
+      })
+      .mockResolvedValueOnce({
+        items: [{ label: "m_quota.code_5h", percent: 12, resetAtMs: now + 60_000 }],
+        planType: "plus",
+        resetCreditCount: 4,
+      });
 
     window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
     window.localStorage.setItem(
@@ -4308,6 +4315,7 @@ describe("AuthFilesPage files table", () => {
             status: "success",
             updatedAt: now,
             planType: "free",
+            resetCreditCount: 0,
             items: [{ label: "m_quota.code_5h", percent: 20, resetAtMs: now + 30_000 }],
           },
         },
@@ -4327,10 +4335,20 @@ describe("AuthFilesPage files table", () => {
     );
 
     expect(await screen.findByText("Codex Main")).toBeInTheDocument();
-    fireEvent.click(
-      within(screen.getByTestId("auth-files-cards")).getByRole("button", { name: "Refresh" }),
-    );
+    expect(await screen.findByText("Reset 3 times")).toBeInTheDocument();
+    const cards = screen.getByTestId("auth-files-cards");
+    const resetButton = within(cards).getByRole("button", { name: "Query reset credits" });
+    const callsBadge = within(cards).getByText("0 calls");
+    expect(
+      resetButton.compareDocumentPosition(callsBadge) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    fireEvent.click(resetButton);
 
+    expect(await screen.findByText("Reset 4 times")).toBeInTheDocument();
+    expect(mocks.fetchQuota).toHaveBeenLastCalledWith(
+      "codex",
+      expect.objectContaining({ name: "codex.json" }),
+    );
     expect(
       (await screen.findAllByText((_, node) => node?.textContent?.includes("Plan Plus") ?? false))
         .length,
@@ -4339,6 +4357,7 @@ describe("AuthFilesPage files table", () => {
     await waitFor(() => {
       const raw = window.localStorage.getItem(AUTH_FILES_DATA_CACHE_KEY);
       expect(raw).toContain('"planType":"plus"');
+      expect(raw).toContain('"resetCreditCount":4');
     });
   });
 

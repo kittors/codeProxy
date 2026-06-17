@@ -588,6 +588,8 @@
     "prefix_proxy_saved_success": "已更新认证文件 \"{{name}}\"",
     "quota_refresh_success": "已刷新 \"{{name}}\" 的额度",
     "quota_refresh_failed": "刷新 \"{{name}}\" 的额度失败：{{message}}",
+    "reset_credits_badge": "重置 {{count}} 次",
+    "reset_credits_query": "查询重置次数",
     "restriction_http_label": "{{status}} 错误",
     "restriction_quota_label": "配额限制",
     "restriction_generic_label": "已限制",

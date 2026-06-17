@@ -12,6 +12,7 @@ export { type CodexUsagePayload } from "@features/quota-preview/quota-codex";
 export {
   buildCodexItems,
   parseCodexUsagePayload,
+  resolveCodexResetCreditCount,
   resolveCodexChatgptAccountId,
 } from "@features/quota-preview/quota-codex";
 export { type ClaudeUsagePayload } from "@features/quota-preview/quota-claude";
