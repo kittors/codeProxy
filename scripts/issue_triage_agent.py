@@ -163,22 +163,37 @@ def sync_issue_labels(repo, issue, token, desired_labels):
 
 
 def security_hint(text):
-    terms = [
-        "leak",
-        "泄露",
-        "security",
-        "vulnerability",
-        "漏洞",
-        "token",
-        "secret",
-        "cookie",
+    lower = text.lower()
+    strong_terms = [
         "api key",
         "apikey",
-        "auth file",
+        "x-api-key",
+        "authorization:",
+        "bearer ",
+        "secret",
+        "cookie",
+        "credential",
+        "password",
+        "private key",
+        "auth bypass",
+        "authentication bypass",
+        "unauthorized",
+        "vulnerability",
+        "exploit",
+        "ssrf",
+        "rce",
+        "xss",
+        "csrf",
+        "泄露",
+        "漏洞",
         "未授权",
+        "暴露",
+        "密钥",
+        "凭证",
     ]
-    lower = text.lower()
-    return any(term in lower for term in terms)
+    if any(term in lower for term in strong_terms):
+        return True
+    return bool(re.search(r"\btoken\b.{0,40}\b(leak|exposed|stolen|secret|compromised)\b", lower))
 
 
 def fallback_triage(issue, comments):
@@ -263,6 +278,7 @@ Rules:
 - Do not close issues, promise fixes, assign people, or ask for private secrets.
 - Never repeat API keys, tokens, cookies, auth files, private domains, or long log bodies.
 - Add security for key leaks, auth bypass, exposed management panels, credential handling, SSRF, RCE, supply chain, or other security-sensitive reports.
+- Do not add security for normal token usage metrics, "token count", ordinary auth configuration, smoke tests, or missing logs.
 - For public security reports, remind the reporter not to share secrets; if live credentials or exploit details are involved, suggest GitHub Security Advisory or a private maintainer channel.
 - Add needs-repro when a bug lacks clear minimal reproduction steps.
 - Add needs-logs when a runtime/API/deployment/billing bug lacks sanitized logs, request id, response error, or relevant screenshots.
@@ -322,10 +338,15 @@ def normalize_triage(raw, issue, comments):
     if primary not in PRIMARY_LABELS:
         primary = fallback_triage(issue, comments)["primary_label"]
 
-    labels = [label for label in raw.get("labels", []) if label in MANAGED_LABELS]
+    security = security_hint(f"{issue.get('title', '')}\n{issue.get('body', '')}")
+    labels = [
+        label
+        for label in raw.get("labels", [])
+        if label in MANAGED_LABELS and (label != "security" or security)
+    ]
     labels.append(primary)
     labels.append("triaged")
-    if security_hint(f"{issue.get('title', '')}\n{issue.get('body', '')}"):
+    if security:
         labels.append("security")
 
     comment = str(raw.get("comment") or "").strip()
@@ -424,6 +445,12 @@ def self_test():
     )
     assert "security" in triage["labels"]
     assert "unknown" not in triage["labels"]
+    triage = normalize_triage(
+        {"primary_label": "bug", "labels": ["security"], "comment": "ok"},
+        {"title": "token count remains 0", "body": "API requests succeed but token count remains 0.", "labels": []},
+        [],
+    )
+    assert "security" not in triage["labels"]
 
 
 if __name__ == "__main__":
