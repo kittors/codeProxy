@@ -22,6 +22,11 @@ const mocks = vi.hoisted(() => ({
   getOpenCodeGoConfigs: vi.fn(async (): Promise<any[]> => []),
   getOpenAIProviders: vi.fn(async () => []),
   saveOpenCodeGoConfigs: vi.fn(async (_configs: unknown[]) => ({})),
+  getModelDefinitions: vi.fn(async () => [
+    { id: "deepseek-v4-flash", object: "model", owned_by: "opencode" },
+    { id: "qwen3.5-plus", object: "model", owned_by: "opencode" },
+    { id: "kimi-k2.6", object: "model", owned_by: "opencode" },
+  ]),
   apiCallRequest: vi.fn(
     async (_payload: unknown): Promise<MockApiCallResult> => ({
       statusCode: 200,
@@ -33,6 +38,7 @@ const mocks = vi.hoisted(() => ({
           { id: "deepseek-v4-flash", object: "model", owned_by: "opencode" },
           { id: "qwen3.5-plus", object: "model", owned_by: "opencode" },
           { id: "kimi-k2.6", object: "model", owned_by: "opencode" },
+          { id: "qwen3.7-max", object: "model", owned_by: "opencode" },
         ],
       },
     }),
@@ -66,6 +72,10 @@ vi.mock("@code-proxy/api-client", async (importOriginal) => {
       ...mod.apiCallApi,
       request: mocks.apiCallRequest,
     },
+    authFilesApi: {
+      ...mod.authFilesApi,
+      getModelDefinitions: mocks.getModelDefinitions,
+    },
   };
 });
 
@@ -98,6 +108,11 @@ describe("ProvidersPage OpenCode Go tab", () => {
     mocks.getOpenCodeGoConfigs.mockImplementation(async () => []);
     mocks.getOpenAIProviders.mockImplementation(async () => []);
     mocks.saveOpenCodeGoConfigs.mockImplementation(async () => ({}));
+    mocks.getModelDefinitions.mockImplementation(async () => [
+      { id: "deepseek-v4-flash", object: "model", owned_by: "opencode" },
+      { id: "qwen3.5-plus", object: "model", owned_by: "opencode" },
+      { id: "kimi-k2.6", object: "model", owned_by: "opencode" },
+    ]);
     mocks.apiCallRequest.mockImplementation(async () => ({
       statusCode: 200,
       header: {},
@@ -108,6 +123,7 @@ describe("ProvidersPage OpenCode Go tab", () => {
           { id: "deepseek-v4-flash", object: "model", owned_by: "opencode" },
           { id: "qwen3.5-plus", object: "model", owned_by: "opencode" },
           { id: "kimi-k2.6", object: "model", owned_by: "opencode" },
+          { id: "qwen3.7-max", object: "model", owned_by: "opencode" },
         ],
       },
     }));
@@ -226,7 +242,8 @@ describe("ProvidersPage OpenCode Go tab", () => {
     });
 
     const deepseek = await within(dialog).findByRole("checkbox", { name: /deepseek-v4-flash/i });
-    expect(deepseek).toBeChecked();
+    await waitFor(() => expect(deepseek).toBeChecked());
+    expect(within(dialog).getByRole("checkbox", { name: /qwen3\.7-max/i })).not.toBeChecked();
     await user.click(deepseek);
 
     await user.click(within(dialog).getByRole("tab", { name: /Basic/i }));
@@ -239,11 +256,11 @@ describe("ProvidersPage OpenCode Go tab", () => {
         expect.objectContaining({
           name: "OpenCode Go",
           apiKey: "sk-opencode-go",
+          models: [{ name: "qwen3.5-plus" }, { name: "kimi-k2.6" }],
           excludedModels: ["deepseek-v4-flash"],
         }),
       ]);
     });
-    expect(mocks.saveOpenCodeGoConfigs.mock.calls[0][0][0]).not.toHaveProperty("models");
   });
 
   test("offers allowed multimodal OpenCode Go models as vision fallback options from string api-call body", async () => {
@@ -278,7 +295,10 @@ describe("ProvidersPage OpenCode Go tab", () => {
 
     const dialog = await screen.findByRole("dialog", { name: /Add OpenCode Go configuration/i });
     await user.click(within(dialog).getByRole("tab", { name: /Models/i }));
-    await user.click(await within(dialog).findByRole("checkbox", { name: /minimax-m2.5/i }));
+    await waitFor(() =>
+      expect(within(dialog).getByRole("checkbox", { name: /qwen3\.5-plus/i })).toBeChecked(),
+    );
+    await user.click(await within(dialog).findByRole("checkbox", { name: /mimo-v2-omni/i }));
 
     await user.click(within(dialog).getByRole("tab", { name: /Request/i }));
     const fallback = await within(dialog).findByRole("combobox", {
@@ -287,7 +307,7 @@ describe("ProvidersPage OpenCode Go tab", () => {
     await user.click(fallback);
 
     expect(await screen.findByRole("option", { name: /qwen3\.5-plus/i })).toBeInTheDocument();
-    expect(screen.getByRole("option", { name: /qwen3\.6-plus/i })).toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: /qwen3\.6-plus/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("option", { name: /deepseek-v4-flash/i })).not.toBeInTheDocument();
     expect(screen.getByRole("option", { name: /mimo-v2-omni/i })).toBeInTheDocument();
     expect(screen.queryByRole("option", { name: /minimax-m2\.5/i })).not.toBeInTheDocument();
@@ -303,7 +323,12 @@ describe("ProvidersPage OpenCode Go tab", () => {
         expect.objectContaining({
           name: "OpenCode Go",
           apiKey: "sk-opencode-go",
-          excludedModels: ["minimax-m2.5"],
+          models: [
+            { name: "deepseek-v4-flash" },
+            { name: "qwen3.5-plus" },
+            { name: "kimi-k2.6" },
+            { name: "mimo-v2-omni" },
+          ],
           visionFallbackModel: "mimo-v2-omni",
         }),
       ]);

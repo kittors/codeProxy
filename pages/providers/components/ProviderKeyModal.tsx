@@ -8,7 +8,12 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 import { Check } from "lucide-react";
-import { apiCallApi, getApiCallErrorMessage } from "@code-proxy/api-client";
+import {
+  apiCallApi,
+  authFilesApi,
+  getApiCallErrorMessage,
+  modelsApi,
+} from "@code-proxy/api-client";
 import type { ProxyPoolEntry } from "@code-proxy/api-client/endpoints/proxies";
 import { Button } from "@code-proxy/ui";
 import { Modal } from "@code-proxy/ui";
@@ -20,7 +25,6 @@ import {
   normalizeDiscoveredModels,
   stripDisableAllModelsRule,
 } from "../providers-helpers";
-import { modelsApi } from "@code-proxy/api-client";
 import type { ModelEntryDraft } from "../ModelInputList";
 import { ProviderKeyStatusBadges } from "./ProviderKeyStatusBadges";
 import { ProviderKeyBasicTab } from "./ProviderKeyBasicTab";
@@ -30,6 +34,14 @@ import { ProviderKeyModelsTab } from "./ProviderKeyModelsTab";
 type ProviderKeyModalTab = "basic" | "request" | "models";
 
 const OPENCODE_GO_MODELS_URL = "https://opencode.ai/zen/go/v1/models";
+
+const createModelEntryDraft = (name: string): ModelEntryDraft => ({
+  id: `model-${Date.now()}-${Math.random().toString(16).slice(2)}-${name}`,
+  name,
+  alias: "",
+  priorityText: "",
+  testModel: "",
+});
 
 const isOpenCodeGoVisionModel = (modelId: string): boolean => {
   const normalized = modelId.trim().toLowerCase();
@@ -94,6 +106,10 @@ export function ProviderKeyModal({
   const { t } = useTranslation();
   const [modalTab, setModalTab] = useState<ProviderKeyModalTab>("basic");
   const [openCodeModels, setOpenCodeModels] = useState<{ id: string; owned_by?: string }[]>([]);
+  const [openCodeStaticModels, setOpenCodeStaticModels] = useState<
+    { id: string; owned_by?: string }[]
+  >([]);
+  const [openCodeModelsSeeded, setOpenCodeModelsSeeded] = useState(false);
   const [openCodeModelsLoading, setOpenCodeModelsLoading] = useState(false);
   const [openCodeModelsError, setOpenCodeModelsError] = useState<string | null>(null);
   const [openCodeModelQuery, setOpenCodeModelQuery] = useState("");
@@ -150,6 +166,7 @@ export function ProviderKeyModal({
     setModalTab("basic");
     setOpenCodeModelQuery("");
     setSelectedModelGroup("");
+    setOpenCodeModelsSeeded(false);
   }, [editKeyIndex, editKeyType, open]);
 
   useEffect(() => {
@@ -201,6 +218,25 @@ export function ProviderKeyModal({
     void fetchOpenCodeModels();
   }, [fetchOpenCodeModels, isOpenCodeGo, open]);
 
+  useEffect(() => {
+    if (!open || !isOpenCodeGo) return;
+    let cancelled = false;
+    authFilesApi
+      .getModelDefinitions("opencode-go")
+      .then((items) => {
+        if (cancelled) return;
+        setOpenCodeStaticModels(
+          normalizeDiscoveredModels({ data: items.map((item) => ({ ...item, object: "model" })) }),
+        );
+      })
+      .catch(() => {
+        if (!cancelled) setOpenCodeStaticModels([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpenCodeGo, open]);
+
   const excludedModels = useMemo(
     () => excludedModelsFromText(keyDraft.excludedModelsText),
     [keyDraft.excludedModelsText],
@@ -210,6 +246,25 @@ export function ProviderKeyModal({
     () => new Set(stripDisableAllModelsRule(excludedModels).map((model) => model.toLowerCase())),
     [excludedModels],
   );
+  const enabledOpenCodeModelIds = useMemo(
+    () =>
+      new Set(
+        keyDraft.modelEntries.map((entry) => entry.name.trim().toLowerCase()).filter(Boolean),
+      ),
+    [keyDraft.modelEntries],
+  );
+  const isOpenCodeModelAllowed = useCallback(
+    (modelId: string) => {
+      const normalized = modelId.trim().toLowerCase();
+      return (
+        normalized !== "" &&
+        !disableAllModels &&
+        enabledOpenCodeModelIds.has(normalized) &&
+        !excludedModelIds.has(normalized)
+      );
+    },
+    [disableAllModels, enabledOpenCodeModelIds, excludedModelIds],
+  );
   const filteredOpenCodeModels = useMemo(() => {
     const query = openCodeModelQuery.trim().toLowerCase();
     if (!query) return openCodeModels;
@@ -218,36 +273,61 @@ export function ProviderKeyModal({
       return model.id.toLowerCase().includes(query) || owner.includes(query);
     });
   }, [openCodeModelQuery, openCodeModels]);
-  const allowedOpenCodeCount = openCodeModels.filter(
-    (model) => !disableAllModels && !excludedModelIds.has(model.id.toLowerCase()),
+  const allowedOpenCodeCount = openCodeModels.filter((model) =>
+    isOpenCodeModelAllowed(model.id),
   ).length;
   const openCodeVisionFallbackOptions = useMemo(() => {
     const allowedModels = openCodeModels.filter(
-      (model) =>
-        isOpenCodeGoVisionModel(model.id) &&
-        !disableAllModels &&
-        !excludedModelIds.has(model.id.toLowerCase()),
+      (model) => isOpenCodeGoVisionModel(model.id) && isOpenCodeModelAllowed(model.id),
     );
     const modelOptions = allowedModels.map((model) => ({
       value: model.id,
       label: model.owned_by ? `${model.id} · ${model.owned_by}` : model.id,
     }));
     return [{ value: "", label: t("providers.opencode_go_vision_fallback_none") }, ...modelOptions];
-  }, [disableAllModels, excludedModelIds, openCodeModels, t]);
+  }, [isOpenCodeModelAllowed, openCodeModels, t]);
+
+  useEffect(() => {
+    if (!open || !isOpenCodeGo || openCodeModelsSeeded) return;
+    if (disableAllModels || keyDraft.modelEntries.some((entry) => entry.name.trim())) {
+      setOpenCodeModelsSeeded(true);
+      return;
+    }
+    if (openCodeStaticModels.length === 0) return;
+
+    const entries = openCodeStaticModels
+      .map((model) => model.id.trim())
+      .filter((id) => id && !excludedModelIds.has(id.toLowerCase()))
+      .map(createModelEntryDraft);
+    setOpenCodeModelsSeeded(true);
+    if (entries.length === 0) return;
+    setKeyDraft((prev) =>
+      prev.modelEntries.some((entry) => entry.name.trim())
+        ? prev
+        : { ...prev, modelEntries: entries },
+    );
+  }, [
+    disableAllModels,
+    excludedModelIds,
+    isOpenCodeGo,
+    keyDraft.modelEntries,
+    open,
+    openCodeModelsSeeded,
+    openCodeStaticModels,
+    setKeyDraft,
+  ]);
 
   useEffect(() => {
     if (!open || !isOpenCodeGo || openCodeModels.length === 0) return;
     const fallback = keyDraft.visionFallbackModel.trim();
     if (!fallback) return;
     const fallbackLower = fallback.toLowerCase();
-    const allowed =
-      !disableAllModels &&
-      openCodeModels.some(
-        (model) =>
-          model.id.toLowerCase() === fallbackLower &&
-          isOpenCodeGoVisionModel(model.id) &&
-          !excludedModelIds.has(fallbackLower),
-      );
+    const allowed = openCodeModels.some(
+      (model) =>
+        model.id.toLowerCase() === fallbackLower &&
+        isOpenCodeGoVisionModel(model.id) &&
+        isOpenCodeModelAllowed(model.id),
+    );
     if (allowed) return;
     setKeyDraft((prev) =>
       prev.visionFallbackModel.trim().toLowerCase() === fallbackLower
@@ -255,8 +335,7 @@ export function ProviderKeyModal({
         : prev,
     );
   }, [
-    disableAllModels,
-    excludedModelIds,
+    isOpenCodeModelAllowed,
     isOpenCodeGo,
     keyDraft.visionFallbackModel,
     open,
@@ -264,50 +343,56 @@ export function ProviderKeyModal({
     setKeyDraft,
   ]);
 
-  const setExcludedModels = useCallback(
-    (next: string[]) => {
-      const deduped = Array.from(new Set(next.map((model) => model.trim()).filter(Boolean)));
-      setKeyDraft((prev) => ({ ...prev, excludedModelsText: deduped.join("\n") }));
-    },
-    [setKeyDraft],
-  );
-
   const setOpenCodeModelAllowed = useCallback(
     (modelId: string, allowed: boolean) => {
-      const normalized = modelId.toLowerCase();
-      const fetchedIds = new Set(openCodeModels.map((model) => model.id.toLowerCase()));
-      const current = stripDisableAllModelsRule(excludedModels);
-      let next: string[];
-
-      if (disableAllModels) {
-        next = openCodeModels
-          .map((model) => model.id)
-          .filter((id) => id.toLowerCase() !== normalized);
-      } else if (allowed) {
-        next = current.filter((model) => model.toLowerCase() !== normalized);
-      } else {
-        next = [...current, modelId];
-      }
-
-      const unknownExisting = current.filter((model) => !fetchedIds.has(model.toLowerCase()));
-      setExcludedModels([...unknownExisting, ...next]);
+      const normalized = modelId.trim().toLowerCase();
+      if (!normalized) return;
+      setKeyDraft((prev) => {
+        const currentExcluded = stripDisableAllModelsRule(
+          excludedModelsFromText(prev.excludedModelsText),
+        );
+        const nextExcluded = currentExcluded.filter(
+          (model) => model.trim().toLowerCase() !== normalized,
+        );
+        const modelEntries = prev.modelEntries.filter(
+          (entry) => entry.name.trim().toLowerCase() !== normalized,
+        );
+        return {
+          ...prev,
+          modelEntries: allowed ? [...modelEntries, createModelEntryDraft(modelId)] : modelEntries,
+          excludedModelsText: (allowed ? nextExcluded : [...nextExcluded, modelId]).join("\n"),
+        };
+      });
     },
-    [disableAllModels, excludedModels, openCodeModels, setExcludedModels],
+    [setKeyDraft],
   );
 
   const setAllFetchedOpenCodeModelsAllowed = useCallback(
     (allowed: boolean) => {
       const fetchedIds = new Set(openCodeModels.map((model) => model.id.toLowerCase()));
-      const unknownExisting = stripDisableAllModelsRule(excludedModels).filter(
-        (model) => !fetchedIds.has(model.toLowerCase()),
-      );
-      setExcludedModels(
-        allowed
-          ? unknownExisting
-          : [...unknownExisting, ...openCodeModels.map((model) => model.id)],
-      );
+      setKeyDraft((prev) => {
+        const currentExcluded = stripDisableAllModelsRule(
+          excludedModelsFromText(prev.excludedModelsText),
+        );
+        const unknownExcluded = currentExcluded.filter(
+          (model) => !fetchedIds.has(model.toLowerCase()),
+        );
+        const unknownEntries = prev.modelEntries.filter(
+          (entry) => !fetchedIds.has(entry.name.trim().toLowerCase()),
+        );
+        return {
+          ...prev,
+          modelEntries: allowed
+            ? [...unknownEntries, ...openCodeModels.map((model) => createModelEntryDraft(model.id))]
+            : unknownEntries,
+          excludedModelsText: (allowed
+            ? unknownExcluded
+            : [...unknownExcluded, ...openCodeModels.map((model) => model.id)]
+          ).join("\n"),
+        };
+      });
     },
-    [excludedModels, openCodeModels, setExcludedModels],
+    [openCodeModels, setKeyDraft],
   );
 
   const statusBadges = (
@@ -409,6 +494,7 @@ export function ProviderKeyModal({
               allowedOpenCodeCount={allowedOpenCodeCount}
               excludeAll={disableAllModels}
               excludedModelIds={excludedModelIds}
+              enabledOpenCodeModelIds={enabledOpenCodeModelIds}
               fetchOpenCodeModels={fetchOpenCodeModels}
               setAllFetchedOpenCodeModelsAllowed={setAllFetchedOpenCodeModelsAllowed}
               setOpenCodeModelAllowed={setOpenCodeModelAllowed}

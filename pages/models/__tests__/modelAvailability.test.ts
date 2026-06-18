@@ -24,4 +24,32 @@ describe("model availability normalization", () => {
       { id: "gpt-5" },
     ]);
   });
+
+  test("normalizes model source details from configured availability", () => {
+    const availability = normalizeConfiguredModelAvailability({
+      scoped: true,
+      data: [
+        {
+          id: "gpt-5",
+          sources: [
+            {
+              label: "codex · Codex Pro",
+              provider: "codex",
+              channel: "Codex Pro",
+              client_id: "codex-1",
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(availability.items[0]?.sources).toEqual([
+      {
+        label: "codex · Codex Pro",
+        provider: "codex",
+        channel: "Codex Pro",
+        clientId: "codex-1",
+      },
+    ]);
+  });
 });

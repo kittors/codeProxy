@@ -73,8 +73,7 @@ function renderPage() {
 
 function extractList(payload: unknown, key: string): unknown[] {
   if (Array.isArray(payload)) return payload;
-  const record =
-    payload && typeof payload === "object" ? (payload as Record<string, unknown>) : {};
+  const record = payload && typeof payload === "object" ? (payload as Record<string, unknown>) : {};
   const value = record[key] ?? record.items ?? record.data;
   return Array.isArray(value) ? value : [];
 }
@@ -94,8 +93,7 @@ function normalizeOpenAIProviders(payload: unknown) {
       models: Array.isArray(item.models) ? item.models : [],
       apiKeyEntries: rawEntries
         .map((raw) => {
-          const keyEntry =
-            raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+          const keyEntry = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
           const apiKey = String(keyEntry["api-key"] ?? keyEntry.apiKey ?? "").trim();
           if (!apiKey) return null;
           return {
@@ -278,6 +276,45 @@ describe("SystemPage", () => {
     expect(screen.queryByText("gpt-group-only")).not.toBeInTheDocument();
     expect(screen.queryByText("gemini-v1beta-only")).not.toBeInTheDocument();
     expect(mocks.apiGet).toHaveBeenCalledWith("/model-path-availability");
+  });
+
+  test("shows model sources in the model tag tooltip", async () => {
+    mocks.apiGet.mockImplementation((path: string) => {
+      if (path === "/auth-group-model-owner-mappings") return Promise.resolve({ items: [] });
+      if (path === "/models/configured-availability") {
+        return Promise.resolve({
+          scoped: true,
+          data: [
+            {
+              id: "gpt-root-model",
+              sources: [
+                { label: "codex · Codex Pro", provider: "codex" },
+                { label: "opencode-go · OpenCode Go", provider: "opencode-go" },
+              ],
+            },
+          ],
+        });
+      }
+      if (path === "/model-path-availability") {
+        return Promise.resolve({
+          data: [
+            {
+              id: "gpt-root-model",
+              paths: [{ scope: "root", method: "GET", path: "/v1/models" }],
+            },
+          ],
+        });
+      }
+      if (path === "/system-stats") return Promise.resolve({ uptime: 10 });
+      return Promise.resolve({});
+    });
+
+    renderPage();
+
+    await userEvent.hover(await screen.findByText("gpt-root-model"));
+
+    expect(await screen.findByText(/codex · Codex Pro/)).toBeInTheDocument();
+    expect(screen.getByText(/opencode-go · OpenCode Go/)).toBeInTheDocument();
   });
 
   test("shows persisted mapped owner models on the system page", async () => {
