@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { Check } from "lucide-react";
+import { Check, Languages } from "lucide-react";
 import {
   ensureLanguageResources,
   LANGUAGE_ORDER,
@@ -128,12 +128,7 @@ export function LanguageSelector({ className }: { className?: string }) {
           aria-expanded={open}
           aria-haspopup="listbox"
         >
-          <span
-            className="inline-flex h-5 w-7 shrink-0 items-center justify-center overflow-hidden rounded-[4px] bg-white text-base leading-none shadow-[inset_0_0_0_1px_rgb(15_23_42_/_0.08)]"
-            aria-hidden="true"
-          >
-            {FLAG_ICONS[currentValue]}
-          </span>
+          <Languages size={16} />
           <span className="ml-1 text-[11px] font-bold leading-none">{shortLabel}</span>
         </button>
       </HoverTooltip>
@@ -163,10 +158,7 @@ export function LanguageSelector({ className }: { className?: string }) {
                         : selectOptionIdle,
                     )}
                   >
-                    <span
-                      className="inline-flex h-5 w-7 shrink-0 items-center justify-center overflow-hidden rounded-[4px] bg-white text-base leading-none shadow-[inset_0_0_0_1px_rgb(15_23_42_/_0.08)]"
-                      aria-hidden="true"
-                    >
+                    <span className="shrink-0 text-base leading-none" aria-hidden="true">
                       {FLAG_ICONS[lng]}
                     </span>
                     <span className="flex-1 truncate">{t(LANGUAGE_LABEL_KEYS[lng])}</span>
