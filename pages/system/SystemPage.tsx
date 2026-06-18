@@ -24,6 +24,7 @@ import { UpdateDetailsCard } from "@app/update/UpdateDetailsCard";
 import {
   loadConfiguredModelAvailability,
   loadModelPathAvailability,
+  type ModelAvailabilitySource,
 } from "@features/model-availability";
 import {
   buildModelVendorStats,
@@ -124,6 +125,21 @@ function InfoCard({
 
 const _AUTO_REFRESH_INTERVAL = 30_000;
 
+type SystemModelEntry = {
+  id: string;
+  sources?: ModelAvailabilitySource[];
+};
+
+const formatModelSourcesTooltip = (
+  sources: ModelAvailabilitySource[] | undefined,
+  title: string,
+) => {
+  if (!sources?.length) return "";
+  const labels = Array.from(new Set(sources.map((source) => source.label.trim()).filter(Boolean)));
+  if (labels.length === 0) return "";
+  return `${title}\n${labels.join("\n")}`;
+};
+
 export function SystemPage({
   updateHeartbeatIntervalMs,
   updateHeartbeatTimeoutMs,
@@ -137,7 +153,7 @@ export function SystemPage({
 
   const [modelsLoading, setModelsLoading] = useState(false);
   const [modelsError, setModelsError] = useState<string | null>(null);
-  const [models, setModels] = useState<string[]>([]);
+  const [models, setModels] = useState<SystemModelEntry[]>([]);
   const [modelFilter, setModelFilter] = useState("");
 
   const loadModels = useCallback(async () => {
@@ -150,11 +166,15 @@ export function SystemPage({
       ]);
 
       const useMappedOwnerModels = configuredAvailability?.usesMappedOwners === true;
+      const configuredById = new Map(
+        (configuredAvailability?.items ?? []).map((item) => [item.id.toLowerCase(), item]),
+      );
       const rootV1ModelIds =
         pathAvailability?.items
           .filter((item) =>
             item.paths.some(
-              (path) => path.scope === "root" && path.method === "GET" && path.path === "/v1/models",
+              (path) =>
+                path.scope === "root" && path.method === "GET" && path.path === "/v1/models",
             ),
           )
           .map((item) => item.id) ?? [];
@@ -164,7 +184,14 @@ export function SystemPage({
           ? rootV1ModelIds
           : (configuredAvailability?.items ?? []).map((item) => item.id);
 
-      setModels(Array.from(new Set(nextModelIds)).sort((a, b) => a.localeCompare(b)));
+      setModels(
+        Array.from(new Set(nextModelIds))
+          .sort((a, b) => a.localeCompare(b))
+          .map((id) => ({
+            id,
+            sources: configuredById.get(id.toLowerCase())?.sources,
+          })),
+      );
     } catch (err: unknown) {
       setModelsError(err instanceof Error ? err.message : t("system_page.load_failed"));
     } finally {
@@ -179,11 +206,14 @@ export function SystemPage({
   const filteredModels = useMemo(() => {
     const needle = modelFilter.trim().toLowerCase();
     if (!needle) return models;
-    return models.filter((id) => id.toLowerCase().includes(needle));
+    return models.filter((model) => model.id.toLowerCase().includes(needle));
   }, [modelFilter, models]);
 
   const vendorStats = useMemo(() => {
-    return buildModelVendorStats(models, t("common.other"));
+    return buildModelVendorStats(
+      models.map((model) => model.id),
+      t("common.other"),
+    );
   }, [models, t]);
 
   const handleModelCopied = useCallback(() => {
@@ -329,15 +359,33 @@ export function SystemPage({
             </div>
           ) : filteredModels.length > 0 ? (
             <div className="flex flex-wrap gap-2">
-              {filteredModels.map((id) => (
-                <CopyableModelTag
-                  key={id}
-                  id={id}
-                  title={t("system_page.click_copy")}
-                  copiedLabel={t("system_page.copied")}
-                  onCopied={handleModelCopied}
-                />
-              ))}
+              {filteredModels.map((model) => {
+                const tooltip = formatModelSourcesTooltip(
+                  model.sources,
+                  t("system_page.model_sources"),
+                );
+                const tag = (
+                  <CopyableModelTag
+                    id={model.id}
+                    title={t("system_page.click_copy")}
+                    copiedLabel={t("system_page.copied")}
+                    onCopied={handleModelCopied}
+                  />
+                );
+                return tooltip ? (
+                  <HoverTooltip key={model.id} content={tooltip} placement="top">
+                    <span className="inline-flex">{tag}</span>
+                  </HoverTooltip>
+                ) : (
+                  <CopyableModelTag
+                    key={model.id}
+                    id={model.id}
+                    title={t("system_page.click_copy")}
+                    copiedLabel={t("system_page.copied")}
+                    onCopied={handleModelCopied}
+                  />
+                );
+              })}
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center py-12 text-slate-400 dark:text-white/30">

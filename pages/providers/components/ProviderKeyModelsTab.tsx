@@ -25,6 +25,7 @@ interface ProviderKeyModelsTabProps {
   allowedOpenCodeCount: number;
   excludeAll: boolean;
   excludedModelIds: Set<string>;
+  enabledOpenCodeModelIds: Set<string>;
   fetchOpenCodeModels: () => Promise<void>;
   setAllFetchedOpenCodeModelsAllowed: (allowed: boolean) => void;
   setOpenCodeModelAllowed: (modelId: string, allowed: boolean) => void;
@@ -51,6 +52,7 @@ export function ProviderKeyModelsTab({
   allowedOpenCodeCount,
   excludeAll,
   excludedModelIds,
+  enabledOpenCodeModelIds,
   fetchOpenCodeModels,
   setAllFetchedOpenCodeModelsAllowed,
   setOpenCodeModelAllowed,
@@ -136,7 +138,11 @@ export function ProviderKeyModelsTab({
             ) : filteredOpenCodeModels.length ? (
               <div className="divide-y divide-slate-100 dark:divide-neutral-900">
                 {filteredOpenCodeModels.map((model) => {
-                  const checked = !excludeAll && !excludedModelIds.has(model.id.toLowerCase());
+                  const normalized = model.id.toLowerCase();
+                  const checked =
+                    !excludeAll &&
+                    enabledOpenCodeModelIds.has(normalized) &&
+                    !excludedModelIds.has(normalized);
                   return (
                     <label
                       key={model.id}

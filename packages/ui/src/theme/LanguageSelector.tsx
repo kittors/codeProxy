@@ -8,6 +8,14 @@ import {
   STORAGE_KEY_LANGUAGE,
   type Language,
 } from "@code-proxy/i18n";
+import { HoverTooltip } from "../overlays/Tooltip";
+import {
+  cn,
+  selectOptionBase,
+  selectOptionIdle,
+  selectOptionSelected,
+  selectPanel,
+} from "../utils/selectStyles";
 
 const SUPPORTED_LANGUAGES = LANGUAGE_ORDER;
 const LANGUAGE_LABEL_KEYS: Record<Language, string> = {
@@ -21,6 +29,12 @@ const SHORT_LABELS: Record<Language, string> = {
   en: "EN",
   "zh-CN": "中",
   ru: "RU",
+};
+
+const FLAG_ICONS: Record<Language, string> = {
+  "zh-CN": "🇨🇳",
+  en: "🇬🇧",
+  ru: "🇷🇺",
 };
 
 export function LanguageSelector({ className }: { className?: string }) {
@@ -59,7 +73,7 @@ export function LanguageSelector({ className }: { className?: string }) {
     const el = triggerRef.current;
     if (!el) return;
     const rect = el.getBoundingClientRect();
-    const width = 130;
+    const width = 170;
     const margin = 8;
     const nextLeft = rect.right - width;
     const maxLeft = Math.max(margin, window.innerWidth - width - margin);
@@ -100,22 +114,24 @@ export function LanguageSelector({ className }: { className?: string }) {
 
   const label = t("language.switch");
   const shortLabel = SHORT_LABELS[currentValue] ?? currentValue;
+  const tooltip = `${label}: ${t(LANGUAGE_LABEL_KEYS[currentValue])}`;
 
   return (
     <>
-      <button
-        ref={triggerRef}
-        type="button"
-        onClick={() => setOpen((prev) => !prev)}
-        className={className}
-        aria-label={label}
-        title={label}
-        aria-expanded={open}
-        aria-haspopup="listbox"
-      >
-        <Languages size={16} />
-        <span className="ml-1 text-[11px] font-bold leading-none">{shortLabel}</span>
-      </button>
+      <HoverTooltip content={tooltip}>
+        <button
+          ref={triggerRef}
+          type="button"
+          onClick={() => setOpen((prev) => !prev)}
+          className={className}
+          aria-label={label}
+          aria-expanded={open}
+          aria-haspopup="listbox"
+        >
+          <Languages size={16} />
+          <span className="ml-1 text-[11px] font-bold leading-none">{shortLabel}</span>
+        </button>
+      </HoverTooltip>
 
       {open
         ? createPortal(
@@ -123,7 +139,7 @@ export function LanguageSelector({ className }: { className?: string }) {
               ref={listRef}
               role="listbox"
               aria-label={label}
-              className="fixed z-[9999] w-[130px] overflow-hidden rounded-xl border border-slate-200 bg-white p-1 shadow-lg dark:border-neutral-700 dark:bg-neutral-900"
+              className={cn(selectPanel, "w-[170px]")}
               style={{ top: pos.top, left: pos.left }}
             >
               {SUPPORTED_LANGUAGES.map((lng) => {
@@ -135,22 +151,18 @@ export function LanguageSelector({ className }: { className?: string }) {
                     role="option"
                     aria-selected={selected}
                     onClick={() => handleLanguageChange(lng)}
-                    className={[
-                      "flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm outline-none transition-colors",
-                      "hover:bg-slate-100 dark:hover:bg-white/10",
+                    className={cn(
+                      selectOptionBase,
                       selected
-                        ? "font-medium text-slate-900 dark:text-white"
-                        : "text-slate-600 dark:text-slate-300",
-                    ].join(" ")}
+                        ? `${selectOptionSelected} bg-[#EBEBEC] dark:bg-[#46464C]`
+                        : selectOptionIdle,
+                    )}
                   >
+                    <span className="shrink-0 text-base leading-none" aria-hidden="true">
+                      {FLAG_ICONS[lng]}
+                    </span>
                     <span className="flex-1 truncate">{t(LANGUAGE_LABEL_KEYS[lng])}</span>
-                    {selected ? (
-                      <Check
-                        size={14}
-                        className="shrink-0 text-slate-400 dark:text-white/50"
-                        aria-hidden="true"
-                      />
-                    ) : null}
+                    {selected ? <Check size={14} className="shrink-0" aria-hidden="true" /> : null}
                   </button>
                 );
               })}

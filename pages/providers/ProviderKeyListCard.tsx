@@ -84,8 +84,15 @@ export function ProviderKeyListCard({
       ) : (
         <div
           data-testid="providers-tab-scroll"
-          className="min-h-0 flex-1 overflow-y-auto pr-1 grid gap-3 items-start content-start justify-start"
-          style={{ gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 18rem), 22rem))" }}
+          className={[
+            "min-h-0 flex-1 overflow-y-auto pr-1 gap-3 items-start content-start justify-start",
+            naturalHeight ? "flex flex-wrap" : "grid",
+          ].join(" ")}
+          style={
+            naturalHeight
+              ? undefined
+              : { gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 18rem), 22rem))" }
+          }
         >
           {items.map((item, idx) => {
             const selectionKey = `${item.apiKey.trim().toLowerCase()}:${idx}`;
@@ -105,6 +112,7 @@ export function ProviderKeyListCard({
                 enabled={!disabled}
                 dimmed={disabled}
                 naturalHeight={naturalHeight}
+                className={naturalHeight ? "w-full max-w-[22rem] flex-none" : undefined}
                 onToggleSelected={
                   onToggleSelected
                     ? (checked) => onToggleSelected(selectionKey, checked)
