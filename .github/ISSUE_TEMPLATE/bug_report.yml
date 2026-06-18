@@ -1,0 +1,136 @@
+name: Bug / Issue
+description: Report a reproducible problem
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report this.
+
+        Please copy the panel version and backend version from `/manage/#/system`.
+        Do not paste API keys, auth files, cookies, tokens, or private domains.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Problem area
+      description: Pick the closest area.
+      options:
+        - Request forwarding / API compatibility
+        - Management panel
+        - Auth files / OAuth accounts
+        - API keys / permissions / quotas
+        - Usage logs / billing / statistics
+        - Deployment / Docker / reverse proxy
+        - Models / routing / channel groups
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: panel-version
+    attributes:
+      label: Panel version
+      description: Copy this from `/manage/#/system`.
+      placeholder: "panel-main-xxxx / panel-dev-xxxx"
+    validations:
+      required: true
+
+  - type: input
+    id: backend-version
+    attributes:
+      label: Backend version
+      description: Copy this from `/manage/#/system`.
+      placeholder: "main-xxxx / dev-xxxx / v0.x.x"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: deployment
+    attributes:
+      label: Deployment
+      options:
+        - Docker
+        - Native binary
+        - Source build
+        - Other / not sure
+    validations:
+      required: true
+
+  - type: dropdown
+    id: cli-type
+    attributes:
+      label: CLI / client type
+      options:
+        - Codex
+        - Claude Code
+        - Gemini CLI
+        - OpenAI-compatible client
+        - Management panel only
+        - Other / not applicable
+    validations:
+      required: true
+
+  - type: input
+    id: model
+    attributes:
+      label: Model
+      description: Use N/A for panel, deployment, or non-model issues.
+      placeholder: "gpt-5.4 / claude-sonnet-4 / gemini-2.5-pro / N/A"
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Write the shortest steps that can reproduce the issue.
+      placeholder: |
+        1. Go to ...
+        2. Send request ...
+        3. See error ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual result
+      description: What happened?
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected result
+      description: What did you expect to happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or request information
+      description: Paste sanitized logs, request logs, cURL, screenshots, or explain why logs are unavailable.
+      placeholder: |
+        Recommended:
+        - enable request-log when the problem is request-related
+        - remove API keys, cookies, tokens, auth file contents, private domains, and IPs
+    validations:
+      required: true
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Extra context
+      description: Anything else that may help. Optional.
+
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety check
+      options:
+        - label: I have removed API keys, auth files, cookies, tokens, and other secrets from this issue.
+          required: true
