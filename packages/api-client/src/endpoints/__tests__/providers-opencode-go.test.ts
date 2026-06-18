@@ -54,6 +54,7 @@ describe("providersApi OpenCode Go", () => {
         proxyId: "hk",
         proxyUrl: "http://127.0.0.1:7890",
         headers: { "X-Test": "yes" },
+        models: [{ name: "should-not-surface" }],
         excludedModels: ["disabled-model"],
         visionFallbackModel: "qwen3.5-plus",
         workspaceId: "wrk_123",
@@ -87,7 +88,7 @@ describe("providersApi OpenCode Go", () => {
     ]);
   });
 
-  test("serializes and deletes OpenCode Go configs without Base URL or models", async () => {
+  test("serializes and deletes OpenCode Go configs without Base URL", async () => {
     const { providersApi } = await import("@code-proxy/api-client/endpoints/providers");
     putMock.mockResolvedValue({ status: "ok" });
     deleteMock.mockResolvedValue({ status: "ok" });
@@ -117,6 +118,7 @@ describe("providersApi OpenCode Go", () => {
         "proxy-id": "hk",
         "proxy-url": "http://127.0.0.1:7890",
         headers: { "X-Test": "yes" },
+        models: [{ name: "should-not-save" }],
         "excluded-models": ["disabled-model"],
         "vision-fallback-model": "qwen3.5-plus",
         "workspace-id": "wrk_123",

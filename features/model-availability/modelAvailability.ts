@@ -17,11 +17,20 @@ export type ModelAvailabilityItem = {
   owned_by?: string;
   description?: string;
   source?: string;
+  sources?: ModelAvailabilitySource[];
   enabled?: boolean;
   pricing?: ModelPricing;
   inputModalities?: string[];
   outputModalities?: string[];
   supportsVision?: boolean;
+};
+
+export type ModelAvailabilitySource = {
+  label: string;
+  provider?: string;
+  channel?: string;
+  clientId?: string;
+  source?: string;
 };
 
 export type ConfiguredModelAvailability = {
@@ -648,6 +657,34 @@ const augmentPathAvailabilityWithMappedOwners = async (
 
 /* ── New backend aggregation endpoint support ── */
 
+const normalizeAvailabilitySources = (value: unknown): ModelAvailabilitySource[] | undefined => {
+  if (!Array.isArray(value)) return undefined;
+  const seen = new Set<string>();
+  const sources: ModelAvailabilitySource[] = [];
+  for (const item of value) {
+    if (!isRecord(item)) continue;
+    const label = String(
+      item.label ?? item.channel ?? item.provider ?? item.client_id ?? "",
+    ).trim();
+    if (!label) continue;
+    const provider = String(item.provider ?? "").trim();
+    const channel = String(item.channel ?? "").trim();
+    const clientId = String(item.client_id ?? item.clientId ?? "").trim();
+    const source = String(item.source ?? "").trim();
+    const key = [label, provider, channel, clientId, source].join("\x00").toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    sources.push({
+      label,
+      ...(provider ? { provider } : {}),
+      ...(channel ? { channel } : {}),
+      ...(clientId ? { clientId } : {}),
+      ...(source ? { source } : {}),
+    });
+  }
+  return sources.length ? sources : undefined;
+};
+
 const normalizeAvailabilityItem = (raw: unknown): ModelAvailabilityItem | null => {
   if (!raw || typeof raw !== "object") return null;
   const record = raw as Record<string, unknown>;
@@ -693,6 +730,7 @@ const normalizeAvailabilityItem = (raw: unknown): ModelAvailabilityItem | null =
     owned_by: String(record.owned_by ?? ""),
     description: String(record.description ?? ""),
     source: String(record.source ?? record.metadata_source ?? ""),
+    sources: normalizeAvailabilitySources(record.sources),
     enabled: record.enabled !== false,
     pricing,
     inputModalities,
