@@ -17,6 +17,9 @@ describe("LanguageSelector", () => {
     expect(screen.getByRole("option", { name: /中文/ })).toBeInTheDocument();
     expect(screen.getByRole("option", { name: /English/ })).toBeInTheDocument();
     expect(screen.getByRole("option", { name: /Русский/ })).toBeInTheDocument();
+    expect(screen.getAllByText("🇨🇳").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("🇬🇧").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("🇷🇺").length).toBeGreaterThan(0);
     expect(screen.queryByText(/nav\.language/)).not.toBeInTheDocument();
   });
 });
