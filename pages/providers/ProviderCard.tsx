@@ -35,6 +35,7 @@ export interface ProviderCardProps {
   footer?: ReactNode;
   /** Card body content */
   children?: ReactNode;
+  className?: string;
 }
 
 export function ProviderCard({
@@ -50,6 +51,7 @@ export function ProviderCard({
   headerExtra,
   footer,
   children,
+  className,
 }: ProviderCardProps) {
   const { t } = useTranslation();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -65,6 +67,7 @@ export function ProviderCard({
           ? "border-blue-400 bg-blue-50/50 ring-1 ring-blue-200 dark:border-blue-500/50 dark:bg-blue-950/20 dark:ring-blue-500/20"
           : "border-slate-200 bg-white/70 hover:border-slate-300 hover:bg-white hover:shadow-md dark:border-neutral-800 dark:bg-neutral-950/60 dark:hover:border-neutral-700 dark:hover:bg-neutral-950/80 dark:hover:shadow-lg dark:hover:shadow-black/20",
         dimmed ? "opacity-50" : "",
+        className,
       ]
         .filter(Boolean)
         .join(" ")}

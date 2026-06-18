@@ -1,0 +1,68 @@
+name: Question / Help
+description: Ask a configuration, deployment, or usage question
+title: "[Question]: "
+labels: ["question"]
+body:
+  - type: dropdown
+    id: category
+    attributes:
+      label: Question category
+      options:
+        - Configuration
+        - Deployment / Docker / reverse proxy
+        - API keys / permissions / quotas
+        - Auth files / OAuth accounts
+        - Models / routing / channel groups
+        - Logs / billing / statistics
+        - Management panel
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: panel-version
+    attributes:
+      label: Panel version
+      description: Copy this from `/manage/#/system`, or write N/A if not running yet.
+      placeholder: "panel-main-xxxx / N/A"
+    validations:
+      required: true
+
+  - type: input
+    id: backend-version
+    attributes:
+      label: Backend version
+      description: Copy this from `/manage/#/system`, or write N/A if not running yet.
+      placeholder: "main-xxxx / v0.x.x / N/A"
+    validations:
+      required: true
+
+  - type: textarea
+    id: question
+    attributes:
+      label: Question
+      description: What do you want to know?
+    validations:
+      required: true
+
+  - type: textarea
+    id: tried
+    attributes:
+      label: What have you tried?
+      description: Mention docs, settings, commands, or pages you already checked.
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context / logs
+      description: Optional. Paste sanitized logs or screenshots if useful.
+
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety check
+      options:
+        - label: I have removed API keys, auth files, cookies, tokens, and other secrets from this issue.
+          required: true

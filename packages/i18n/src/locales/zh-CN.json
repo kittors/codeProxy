@@ -3735,6 +3735,7 @@
     "title": "系统信息",
     "available_models": "可用模型",
     "available_models_tooltip": "这里展示默认入口当前真正可用的模型；当配置了认证分组到模型归属的统一映射后，会优先按映射后的固定模型集展示，而不是直接使用静态 provider 模型目录。自定义路径、渠道分组、别名与其他协议路径的模型请到“模型”页面查看。",
+    "model_sources": "来源",
     "subtitle": "服务、版本和模型",
     "api_base": "API 地址",
     "api_key_lookup": "API 密钥查询",

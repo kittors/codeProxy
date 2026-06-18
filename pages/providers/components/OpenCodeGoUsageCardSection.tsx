@@ -42,6 +42,9 @@ const resolveRemainingPercent = (usagePercentage: number | undefined): number | 
   return clampPercent(100 - clampPercent(usagePercentage));
 };
 
+const formatPercent = (value: number): string =>
+  Number.isInteger(value) ? String(value) : value.toFixed(1).replace(/\.0$/, "");
+
 const resolveRemainingTone = (
   remaining: number | null,
 ): { fillClass: string; percentClass: string } => {
@@ -149,7 +152,8 @@ export function OpenCodeGoUsageCardSection({
             const item = usageByType.get(type);
             const remaining = resolveRemainingPercent(item?.percentage);
             const tone = resolveRemainingTone(remaining);
-            const remainingText = remaining === null ? "剩余 --" : `剩余 ${remaining}%`;
+            const remainingText =
+              remaining === null ? "剩余 --" : `剩余 ${formatPercent(remaining)}%`;
 
             return (
               <div

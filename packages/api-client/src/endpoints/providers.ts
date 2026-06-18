@@ -131,6 +131,7 @@ export const providersApi = {
         const proxyUrl = normalizeString(item["proxy-url"] ?? item.proxyUrl) ?? undefined;
         const proxyId = normalizeString(item["proxy-id"] ?? item.proxyId) ?? undefined;
         const headers = normalizeHeaders(item.headers);
+        const models = normalizeModels(item.models);
         const excludedModels = normalizeExcludedModels(
           item["excluded-models"] ?? item.excludedModels,
         );
@@ -145,6 +146,7 @@ export const providersApi = {
           ...(proxyUrl ? { proxyUrl } : {}),
           ...(proxyId ? { proxyId } : {}),
           ...(headers ? { headers } : {}),
+          ...(models ? { models } : {}),
           ...(excludedModels ? { excludedModels } : {}),
           ...(visionFallbackModel ? { visionFallbackModel } : {}),
           ...(workspaceId ? { workspaceId } : {}),

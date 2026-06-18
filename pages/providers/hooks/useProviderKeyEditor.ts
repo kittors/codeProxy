@@ -151,7 +151,7 @@ export function useProviderKeyEditor({
       ...(isOpenCodeGo && keyDraft.authCookie.trim()
         ? { authCookie: keyDraft.authCookie.trim() }
         : {}),
-      ...(!isOpenCodeGo && modelCommit.models ? { models: modelCommit.models } : {}),
+      ...(modelCommit.models ? { models: modelCommit.models } : {}),
       ...(editKeyType === "claude" && keyDraft.skipAnthropicProcessing
         ? { skipAnthropicProcessing: true }
         : {}),
