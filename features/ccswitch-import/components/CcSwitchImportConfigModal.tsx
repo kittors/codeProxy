@@ -377,18 +377,19 @@ export function CcSwitchImportConfigModal({
     const modelOwnerKeys = new Set(
       (selectedGroupOption?.modelOwnerKeys ?? []).map(normalizeModelOwnerKey).filter(Boolean),
     );
-    const lookupParams = selectedGroup
-      ? { allowedChannelGroups: [selectedGroup] }
-      : { allowedChannels: lookupChannels };
+    const useResolvedChannels = lookupChannels.length > 0;
+    const lookupParams = useResolvedChannels
+      ? { allowedChannels: lookupChannels }
+      : { allowedChannelGroups: [selectedGroup] };
 
     setModelsLoading(true);
     modelsApi
       .listAvailableModels(lookupParams)
       .then(async (models) => {
         if (cancelled) return;
-        const availability = await loadConfiguredModelAvailability(
-          selectedGroup ? { allowedChannelGroups: [selectedGroup] } : undefined,
-        );
+        const availability = useResolvedChannels
+          ? await loadConfiguredModelAvailability()
+          : await loadConfiguredModelAvailability({ allowedChannelGroups: [selectedGroup] });
         if (cancelled) return;
         let visibleModels = filterByConfiguredModelAvailability(models, availability);
         const optionMap = new Map<string, string>();
