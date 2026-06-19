@@ -14,6 +14,10 @@ export interface CcSwitchModelMappingInput {
   role?: CcSwitchClaudeModelRole;
 }
 
+interface CcSwitchCodexCatalogModel {
+  model: string;
+}
+
 export interface CcSwitchClientConfig {
   type: CcSwitchClientType;
   app: string;
@@ -181,6 +185,44 @@ const normalizeUsageScriptLanguage = (language: string | undefined): CcSwitchUsa
     .startsWith("en")
     ? "en"
     : "zh-CN";
+
+const buildCodexConfig = (input: {
+  apiKey: string;
+  endpoint: string;
+  model: string;
+  providerName: string;
+  modelMappings: readonly CcSwitchModelMappingInput[];
+}): string => {
+  const tomlString = (value: string) => JSON.stringify(value);
+  const model = input.model.trim() || "gpt-5-codex";
+  const config = `model_provider = "custom"
+model = ${tomlString(model)}
+model_reasoning_effort = "high"
+disable_response_storage = true
+
+[model_providers.custom]
+name = ${tomlString(input.providerName.trim() || "CliProxy Codex")}
+base_url = ${tomlString(input.endpoint)}
+wire_api = "responses"
+requires_openai_auth = true`;
+
+  const catalogModels: CcSwitchCodexCatalogModel[] = [];
+  const seen = new Set<string>();
+  for (const mapping of input.modelMappings) {
+    if (mapping.role) continue;
+    const model = mapping.requestModel.trim();
+    const key = model.toLowerCase();
+    if (!model || seen.has(key)) continue;
+    seen.add(key);
+    catalogModels.push({ model });
+  }
+
+  return JSON.stringify({
+    auth: { OPENAI_API_KEY: input.apiKey.trim() },
+    config,
+    ...(catalogModels.length > 0 ? { modelCatalog: { models: catalogModels } } : {}),
+  });
+};
 
 export function buildCcSwitchUsageScript(language?: string): string {
   const labels =
@@ -356,6 +398,20 @@ export function buildCcSwitchImportUrl(input: {
     if (haikuModel) params.set("haikuModel", haikuModel);
     if (sonnetModel) params.set("sonnetModel", sonnetModel);
     if (opusModel) params.set("opusModel", opusModel);
+  }
+  if (input.clientType === "codex") {
+    params.set(
+      "config",
+      encodeBase64(
+        buildCodexConfig({
+          apiKey: input.apiKey,
+          endpoint: importConfig.endpoint,
+          model,
+          providerName: params.get("name") ?? input.providerName,
+          modelMappings,
+        }),
+      ),
+    );
   }
 
   return `ccswitch://v1/import?${params.toString()}`;

@@ -18,6 +18,17 @@ const decodeUsageScript = (url: string) => {
   return new TextDecoder().decode(bytes);
 };
 
+const decodeConfig = (url: string) => {
+  const encoded = new URL(url).searchParams.get("config");
+  expect(encoded).toBeTruthy();
+  const binary = atob(encoded!);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return JSON.parse(new TextDecoder().decode(bytes));
+};
+
 describe("ccswitchImport", () => {
   afterEach(() => {
     vi.useRealTimers();
@@ -244,6 +255,12 @@ describe("ccswitchImport", () => {
 
     const parsed = new URL(url);
     expect(parsed.searchParams.get("model")).toBe("gpt-6-router");
+    expect(decodeConfig(url)).toMatchObject({
+      auth: { OPENAI_API_KEY: "sk-test-key" },
+      modelCatalog: {
+        models: [{ model: "gpt-6-router" }, { model: "kimi-k2" }],
+      },
+    });
   });
 
   test("selects a client-specific default model from available models", () => {
