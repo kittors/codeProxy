@@ -12,6 +12,9 @@ const t = ((key: string) => {
     "api_keys_page.col_spending_limit": "Spending limit",
     "api_keys_page.spending_limit_help":
       "Maximum cumulative API key cost in USD. Empty means unlimited.",
+    "api_keys_page.col_daily_spending_limit": "Daily spending limit",
+    "api_keys_page.daily_spending_limit_help":
+      "Maximum daily API key cost in USD. Empty means unlimited.",
     "api_keys_page.unlimited": "Unlimited",
     "api_keys_page.view_usage": "View usage",
     "api_keys_page.copy_key": "Copy key",
@@ -133,5 +136,35 @@ describe("ApiKeyColumns", () => {
     await userEvent.hover(screen.getByText("Spending limit"));
 
     expect(screen.getByRole("tooltip")).toHaveTextContent("Maximum cumulative API key cost");
+  });
+
+  test("shows API key daily spending limits as a dedicated cost column", async () => {
+    const row: ApiKeyEntry = {
+      key: "sk-test",
+      name: "Test key",
+      "daily-spending-limit": 0.5,
+      "created-at": "2026-04-28T00:00:00Z",
+    };
+    const columns = createApiKeyColumns({
+      t,
+      onCopy: vi.fn(),
+      onDelete: vi.fn(),
+      onEdit: vi.fn(),
+      onImportToCcSwitch: vi.fn(),
+      onToggleDisable: vi.fn(),
+      onViewUsage: vi.fn(),
+    });
+    const dailyColumn = columns.find((column) => column.key === "dailySpendingLimit");
+
+    expect(dailyColumn?.label).toBe("Daily spending limit");
+
+    render(
+      <>
+        <div>{dailyColumn?.headerRender?.()}</div>
+        <div>{dailyColumn?.render(row, 0)}</div>
+      </>,
+    );
+
+    expect(screen.getByText("$0.50")).toBeInTheDocument();
   });
 });

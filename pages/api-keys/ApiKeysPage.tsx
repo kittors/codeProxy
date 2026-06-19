@@ -16,7 +16,7 @@ import {
 import { ccSwitchImportConfigsApi } from "@code-proxy/api-client/endpoints/ccswitch-import-configs";
 import { detectApiBaseFromLocation } from "@code-proxy/api-client";
 import { useOptionalAuth } from "@app/providers/AuthProvider";
-import { generateApiKey, makeEmptyApiKeyForm, maskApiKey } from "./apiKeyPageUtils";
+import { generateApiKey, makeEmptyApiKeyForm, maskApiKey, parseSpendingLimit } from "./apiKeyPageUtils";
 import { createApiKeyColumns } from "./components/ApiKeyColumns";
 import { DeleteApiKeyModal } from "./components/DeleteApiKeyModal";
 import { copyTextToClipboard } from "@code-proxy/ui";
@@ -285,6 +285,7 @@ export function ApiKeysPage() {
       dailyLimit: entry["daily-limit"]?.toString() || "",
       totalQuota: entry["total-quota"]?.toString() || "",
       spendingLimit: entry["spending-limit"]?.toString() || "",
+      dailySpendingLimit: entry["daily-spending-limit"]?.toString() || "",
       concurrencyLimit: entry["concurrency-limit"]?.toString() || "",
       rpmLimit: entry["rpm-limit"]?.toString() || "",
       tpmLimit: entry["tpm-limit"]?.toString() || "",
@@ -312,25 +313,33 @@ export function ApiKeysPage() {
     }
     setSaving(true);
     try {
+      const useCustomLimits =
+        form.permissionProfileId === CUSTOM_PERMISSION_PROFILE_ID ||
+        form.permissionProfileId === "";
       await apiKeyEntriesApi.update({
         id: entries[editIndex].id,
         index: editIndex,
         value: {
           ...(newKey !== originalKey ? { key: newKey } : {}),
           name: form.name.trim(),
-          ...(form.permissionProfileId === CUSTOM_PERMISSION_PROFILE_ID
+          ...(useCustomLimits
             ? {
-                "permission-profile-id": entries[editIndex]["permission-profile-id"] ?? "",
-                "daily-limit": entries[editIndex]["daily-limit"] ?? 0,
-                "total-quota": entries[editIndex]["total-quota"] ?? 0,
-                "spending-limit": entries[editIndex]["spending-limit"] ?? 0,
-                "concurrency-limit": entries[editIndex]["concurrency-limit"] ?? 0,
-                "rpm-limit": entries[editIndex]["rpm-limit"] ?? 0,
-                "tpm-limit": entries[editIndex]["tpm-limit"] ?? 0,
-                "allowed-models": entries[editIndex]["allowed-models"] ?? [],
-                "allowed-channels": entries[editIndex]["allowed-channels"] ?? [],
-                "allowed-channel-groups": entries[editIndex]["allowed-channel-groups"] ?? [],
-                "system-prompt": entries[editIndex]["system-prompt"] ?? "",
+                ...(form.permissionProfileId === ""
+                  ? applyApiKeyPermissionProfile({} as ApiKeyEntry, null)
+                  : {
+                      "permission-profile-id": entries[editIndex]["permission-profile-id"] ?? "",
+                      "daily-limit": entries[editIndex]["daily-limit"] ?? 0,
+                      "total-quota": entries[editIndex]["total-quota"] ?? 0,
+                      "concurrency-limit": entries[editIndex]["concurrency-limit"] ?? 0,
+                      "rpm-limit": entries[editIndex]["rpm-limit"] ?? 0,
+                      "tpm-limit": entries[editIndex]["tpm-limit"] ?? 0,
+                      "allowed-models": entries[editIndex]["allowed-models"] ?? [],
+                      "allowed-channels": entries[editIndex]["allowed-channels"] ?? [],
+                      "allowed-channel-groups": entries[editIndex]["allowed-channel-groups"] ?? [],
+                      "system-prompt": entries[editIndex]["system-prompt"] ?? "",
+                    }),
+                "spending-limit": parseSpendingLimit(form.spendingLimit),
+                "daily-spending-limit": parseSpendingLimit(form.dailySpendingLimit),
               }
             : applyApiKeyPermissionProfile(
                 {} as ApiKeyEntry,
