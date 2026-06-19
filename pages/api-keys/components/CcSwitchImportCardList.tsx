@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { Check, Copy } from "lucide-react";
+import { Check, Copy, Download } from "lucide-react";
 import iconClaude from "@code-proxy/assets/icons/claude.svg";
 import iconCodex from "@code-proxy/assets/icons/codex.svg";
 import iconGemini from "@code-proxy/assets/icons/gemini.svg";
@@ -7,6 +7,7 @@ import { Button } from "@code-proxy/ui";
 import { Modal } from "@code-proxy/ui";
 import type { CcSwitchImportConfigListItem } from "@code-proxy/domain/ccswitch/ccswitchImportConfigList";
 import type { CcSwitchClientType } from "@code-proxy/domain/ccswitch/ccswitchImport";
+import { buildCcSwitchCodexModelCatalogJsonForConfig } from "@code-proxy/domain/ccswitch/ccswitchImportLinks";
 
 const iconByType: Record<CcSwitchClientType, string> = {
   claude: iconClaude,
@@ -19,6 +20,7 @@ export interface CcSwitchImportCardListProps {
   configs: CcSwitchImportConfigListItem[];
   copiedConfigId: string | null;
   onCopyLink: (config: CcSwitchImportConfigListItem) => void;
+  onDownloadCatalog: (config: CcSwitchImportConfigListItem) => void;
   onSelect: (config: CcSwitchImportConfigListItem) => void;
   onClose: () => void;
 }
@@ -28,6 +30,7 @@ export function CcSwitchImportCardList({
   configs,
   copiedConfigId,
   onCopyLink,
+  onDownloadCatalog,
   onSelect,
   onClose,
 }: CcSwitchImportCardListProps) {
@@ -50,6 +53,7 @@ export function CcSwitchImportCardList({
         ) : (
           configs.map((config) => {
             const isCopied = copiedConfigId === config.id;
+            const catalogAvailable = Boolean(buildCcSwitchCodexModelCatalogJsonForConfig(config));
 
             return (
               <div
@@ -92,7 +96,18 @@ export function CcSwitchImportCardList({
                     </div>
                   </div>
                 </button>
-                <div className="flex items-start p-3 pl-0">
+                <div className="flex items-start gap-1 p-3 pl-0">
+                  {catalogAvailable ? (
+                    <Button
+                      variant="ghost"
+                      size="xs"
+                      title={t("ccswitch.download_codex_model_catalog")}
+                      onClick={() => onDownloadCatalog(config)}
+                      className="rounded-lg border border-slate-200/70 bg-white text-slate-500 hover:text-slate-900 dark:border-neutral-800 dark:bg-neutral-950 dark:text-white/55 dark:hover:text-white"
+                    >
+                      <Download size={14} />
+                    </Button>
+                  ) : null}
                   <Button
                     variant="ghost"
                     size="xs"

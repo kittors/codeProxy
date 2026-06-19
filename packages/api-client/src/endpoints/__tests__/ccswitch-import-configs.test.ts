@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { apiClient } from "../../client/client";
-import { ccSwitchImportConfigsApi } from "@code-proxy/api-client/endpoints/ccswitch-import-configs";
+import {
+  ccSwitchImportConfigsApi,
+  normalizeCcSwitchImportConfigs,
+} from "@code-proxy/api-client/endpoints/ccswitch-import-configs";
 
 vi.mock("../../client/client", () => ({
   apiClient: {
@@ -52,5 +55,39 @@ describe("ccSwitchImportConfigsApi", () => {
         ],
       }),
     ]);
+  });
+
+  test("normalizes backend Codex model catalog fields", () => {
+    const configs = normalizeCcSwitchImportConfigs([
+      {
+        id: "codex-deepseek",
+        "client-type": "codex",
+        "provider-name": "Pro pool + DeepSeek",
+        "default-model": "gpt-5.5",
+        "model-mappings": [
+          { "request-model": "gpt-5.5", "target-model": "gpt-5.5" },
+          { "request-model": "deepseek-v4-flash", "target-model": "deepseek-chat" },
+        ],
+        "allowed-channel-groups": ["pro"],
+        "route-path": "/pro/cs_deepseek",
+        "endpoint-path": "/v1",
+        "usage-auto-interval": 30,
+        "codex-model-catalog-filename": "cc-switch-model-catalog.json",
+        "codex-model-catalog": {
+          models: [
+            { slug: "gpt-5.5", display_name: "gpt-5.5" },
+            { slug: "deepseek-v4-flash", display_name: "deepseek-v4-flash" },
+          ],
+        },
+      },
+    ]);
+
+    expect(configs).toHaveLength(1);
+    expect(configs[0]).toMatchObject({
+      codexModelCatalogFilename: "cc-switch-model-catalog.json",
+      codexModelCatalog: {
+        models: [{ slug: "gpt-5.5" }, { slug: "deepseek-v4-flash" }],
+      },
+    });
   });
 });

@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
 import {
+  buildCcSwitchCodexModelCatalog,
+  buildCcSwitchCodexModelCatalogJson,
   buildCcSwitchImportUrl,
+  CC_SWITCH_CODEX_MODEL_CATALOG_FILENAME,
   openCcSwitchImportUrl,
   pickCcSwitchDefaultModel,
   resolveCcSwitchImportConfig,
@@ -261,6 +264,56 @@ describe("ccswitchImport", () => {
         models: [{ model: "gpt-6-router" }, { model: "kimi-k2" }],
       },
     });
+    expect(decodeConfig(url).config).toContain(
+      `model_catalog_json = "${CC_SWITCH_CODEX_MODEL_CATALOG_FILENAME}"`,
+    );
+  });
+
+  test("builds a Codex model catalog from request-side mapped model names", () => {
+    const catalog = buildCcSwitchCodexModelCatalog([
+      { model: "gpt-5.5" },
+      { model: "deepseek-v4-flash", displayName: "DeepSeek V4 Flash", contextWindow: 256000 },
+      { model: "DeepSeek-V4-Flash" },
+      { model: "deepseek-v4-pro" },
+    ]);
+
+    expect(catalog.models.map((model) => model.slug)).toEqual([
+      "gpt-5.5",
+      "deepseek-v4-flash",
+      "deepseek-v4-pro",
+    ]);
+    expect(catalog.models[1]).toMatchObject({
+      display_name: "DeepSeek V4 Flash",
+      context_window: 256000,
+      max_context_window: 256000,
+      visibility: "list",
+      supported_in_api: true,
+      supports_reasoning_summaries: true,
+      support_verbosity: true,
+      model_messages: {
+        context_window: 256000,
+        max_context_window: 256000,
+        input_modalities: ["text", "image"],
+      },
+    });
+  });
+
+  test("serializes a Codex model catalog JSON that preserves all model IDs", () => {
+    const catalog = JSON.parse(
+      buildCcSwitchCodexModelCatalogJson([
+        { model: "gpt-5.5" },
+        { model: "deepseek-v4-flash" },
+        { model: "deepseek-v4-pro" },
+      ]),
+    );
+
+    expect(catalog.models.map((model: { slug: string }) => model.slug)).toEqual([
+      "gpt-5.5",
+      "deepseek-v4-flash",
+      "deepseek-v4-pro",
+    ]);
+    expect(catalog.models[0]).toHaveProperty("base_instructions");
+    expect(catalog.models[0]).toHaveProperty("model_messages");
   });
 
   test("selects a client-specific default model from available models", () => {

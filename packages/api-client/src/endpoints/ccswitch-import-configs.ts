@@ -1,6 +1,7 @@
 import { apiClient } from "../client/client";
 import {
   createCcSwitchImportConfig,
+  type CcSwitchImportCodexModelCatalog,
   type CcSwitchModelMapping,
   type CcSwitchImportConfigListItem,
 } from "@code-proxy/domain/ccswitch/ccswitchImportConfigList";
@@ -53,6 +54,19 @@ const normalizeModelMappings = (value: unknown): CcSwitchModelMapping[] => {
     .filter((item): item is CcSwitchModelMapping => Boolean(item));
 };
 
+const normalizeCodexModelCatalog = (
+  value: unknown,
+): CcSwitchImportCodexModelCatalog | undefined => {
+  const record = asRecord(value);
+  if (!record || !Array.isArray(record.models)) return undefined;
+
+  const models = record.models.filter(
+    (entry): entry is Record<string, unknown> => asRecord(entry) !== null,
+  );
+  const hasSlug = models.some((entry) => normalizeString(entry.slug));
+  return hasSlug ? { models: models.map((entry) => ({ ...entry })) } : undefined;
+};
+
 export function normalizeCcSwitchImportConfigs(raw: unknown): CcSwitchImportConfigListItem[] {
   if (!Array.isArray(raw)) return [];
 
@@ -78,6 +92,12 @@ export function normalizeCcSwitchImportConfigs(raw: unknown): CcSwitchImportConf
         routePath: normalizeString(record["route-path"] ?? record.routePath),
         endpointPath: normalizeString(record["endpoint-path"]),
         usageAutoInterval: normalizeNumber(record["usage-auto-interval"]),
+        codexModelCatalogFilename: normalizeString(
+          record["codex-model-catalog-filename"] ?? record.codexModelCatalogFilename,
+        ),
+        codexModelCatalog: normalizeCodexModelCatalog(
+          record["codex-model-catalog"] ?? record.codexModelCatalog,
+        ),
         apiKeyField:
           record["api-key-field"] === "ANTHROPIC_AUTH_TOKEN"
             ? "ANTHROPIC_AUTH_TOKEN"

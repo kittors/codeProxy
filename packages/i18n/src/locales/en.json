@@ -2503,6 +2503,8 @@
     "copy_import_link_copied": "Import link copied",
     "copy_import_link_success": "Import link copied",
     "copy_import_link_failed": "Failed to copy import link",
+    "download_codex_model_catalog": "Download Codex model catalog",
+    "download_codex_model_catalog_success": "Codex model catalog downloaded",
     "import_no_compatible_configs": "No compatible CC Switch configs found. Create one in CC Switch import settings first.",
     "config_new": "New config",
     "config_table_title": "Config list",
