@@ -3,6 +3,7 @@ import {
   buildCcSwitchCodexModelCatalog,
   buildCcSwitchCodexModelCatalogJson,
   buildCcSwitchImportUrl,
+  CC_SWITCH_CODEX_API_FORMAT,
   CC_SWITCH_CODEX_MODEL_CATALOG_FILENAME,
   openCcSwitchImportUrl,
   pickCcSwitchDefaultModel,
@@ -126,6 +127,7 @@ describe("ccswitchImport", () => {
     expect(parsed.searchParams.get("apiKey")).toBe("sk-test-key");
     expect(parsed.searchParams.get("icon")).toBe("codex");
     expect(parsed.searchParams.get("model")).toBe("gpt-5.5");
+    expect(parsed.searchParams.get("apiFormat")).toBe(CC_SWITCH_CODEX_API_FORMAT);
     expect(parsed.searchParams.get("configFormat")).toBe("json");
     expect(parsed.searchParams.get("usageEnabled")).toBe("true");
     expect(parsed.searchParams.get("usageBaseUrl")).toBe("https://relay.example.com");
@@ -204,6 +206,65 @@ describe("ccswitchImport", () => {
     expect(decodeUsageScript(url)).toContain("Today's usage");
   });
 
+  test("inlines the saved Codex model catalog when building a preset import link", () => {
+    const url = buildCcSwitchImportUrlForConfig({
+      apiKey: "sk-test-key",
+      baseUrl: "https://relay.example.com/",
+      config: {
+        id: "codex-pro",
+        clientType: "codex",
+        providerName: "Relay Pro",
+        note: "",
+        defaultModel: "gpt-5.5",
+        modelMappings: [
+          { requestModel: "deepseek-v4-flash", targetModel: "deepseek-chat" },
+          { requestModel: "glm-4.6", targetModel: "glm-4.6-upstream" },
+        ],
+        allowedChannelGroups: ["pro"],
+        routePath: "/pro/cs_test",
+        endpointPath: "/v1",
+        usageAutoInterval: 30,
+        codexModelCatalogFilename: "cc-switch-model-catalog.json",
+        codexModelCatalog: {
+          models: [
+            {
+              slug: "gpt-5.5",
+              display_name: "GPT 5.5",
+              context_window: 512000,
+              model_messages: { context_window: 512000 },
+            },
+            {
+              slug: "deepseek-v4-flash",
+              display_name: "DeepSeek V4 Flash",
+              context_window: 256000,
+            },
+          ],
+        },
+      },
+      configs: [],
+      usageLanguage: "en",
+    });
+
+    const config = decodeConfig(url);
+    expect(config.modelCatalog.models).toEqual([
+      {
+        slug: "gpt-5.5",
+        display_name: "GPT 5.5",
+        context_window: 512000,
+        model_messages: { context_window: 512000 },
+      },
+      {
+        slug: "deepseek-v4-flash",
+        display_name: "DeepSeek V4 Flash",
+        context_window: 256000,
+      },
+      { model: "glm-4.6" },
+    ]);
+    expect(config.config).toContain(
+      `model_catalog_json = "${CC_SWITCH_CODEX_MODEL_CATALOG_FILENAME}"`,
+    );
+  });
+
   test("builds a provider deeplink for a selected channel group route and enabled state", () => {
     const url = buildCcSwitchImportUrl({
       apiKey: "sk-test-key",
@@ -260,6 +321,7 @@ describe("ccswitchImport", () => {
     expect(parsed.searchParams.get("model")).toBe("gpt-6-router");
     expect(decodeConfig(url)).toMatchObject({
       auth: { OPENAI_API_KEY: "sk-test-key" },
+      apiFormat: CC_SWITCH_CODEX_API_FORMAT,
       modelCatalog: {
         models: [{ model: "gpt-6-router" }, { model: "kimi-k2" }],
       },

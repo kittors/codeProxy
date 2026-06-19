@@ -127,6 +127,12 @@ const serializeCcSwitchImportConfig = (config: CcSwitchImportConfigListItem) => 
   ...(config.clientType === "claude" && config.apiKeyField
     ? { "api-key-field": config.apiKeyField }
     : {}),
+  ...(config.clientType === "codex" && config.codexModelCatalog
+    ? {
+        "codex-model-catalog-filename": config.codexModelCatalogFilename,
+        "codex-model-catalog": config.codexModelCatalog,
+      }
+    : {}),
 });
 
 export const ccSwitchImportConfigsApi = {

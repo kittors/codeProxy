@@ -57,6 +57,47 @@ describe("ccSwitchImportConfigsApi", () => {
     ]);
   });
 
+  test("serializes Codex model catalog for database-backed persistence", async () => {
+    await ccSwitchImportConfigsApi.replace([
+      {
+        id: "codex-deepseek",
+        clientType: "codex",
+        providerName: "Pro pool + DeepSeek",
+        note: "",
+        defaultModel: "gpt-5.5",
+        allowedChannelGroups: ["pro"],
+        routePath: "/pro/cs_deepseek",
+        endpointPath: "/v1",
+        usageAutoInterval: 30,
+        modelMappings: [
+          { requestModel: "gpt-5.5", targetModel: "gpt-5.5" },
+          { requestModel: "deepseek-v4-flash", targetModel: "deepseek-chat" },
+        ],
+        codexModelCatalogFilename: "cc-switch-model-catalog.json",
+        codexModelCatalog: {
+          models: [
+            { slug: "gpt-5.5", display_name: "gpt-5.5" },
+            { slug: "deepseek-v4-flash", display_name: "deepseek-v4-flash" },
+          ],
+        },
+      },
+    ]);
+
+    expect(mockedApiPut).toHaveBeenCalledWith("/ccswitch-import-configs", [
+      expect.objectContaining({
+        id: "codex-deepseek",
+        "client-type": "codex",
+        "codex-model-catalog-filename": "cc-switch-model-catalog.json",
+        "codex-model-catalog": expect.objectContaining({
+          models: expect.arrayContaining([
+            expect.objectContaining({ slug: "gpt-5.5" }),
+            expect.objectContaining({ slug: "deepseek-v4-flash" }),
+          ]),
+        }),
+      }),
+    ]);
+  });
+
   test("normalizes backend Codex model catalog fields", () => {
     const configs = normalizeCcSwitchImportConfigs([
       {

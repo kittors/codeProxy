@@ -26,6 +26,10 @@ export interface CcSwitchCodexModelCatalog {
   models: CcSwitchCodexModelCatalogEntry[];
 }
 
+export interface CcSwitchCodexInlineModelCatalog {
+  models: Array<Record<string, unknown>>;
+}
+
 export interface CcSwitchCodexModelCatalogEntry {
   slug: string;
   display_name: string;
@@ -82,6 +86,7 @@ export interface CcSwitchCodexModelCatalogEntry {
   use_responses_lite: false;
 }
 
+export const CC_SWITCH_CODEX_API_FORMAT = "openai_responses";
 export interface CcSwitchClientConfig {
   type: CcSwitchClientType;
   app: string;
@@ -354,11 +359,25 @@ const buildCodexConfig = (input: {
   model: string;
   providerName: string;
   modelMappings: readonly CcSwitchModelMappingInput[];
+  codexModelCatalog?: CcSwitchCodexInlineModelCatalog;
 }): string => {
   const tomlString = (value: string) => JSON.stringify(value);
   const model = input.model.trim() || "gpt-5-codex";
-  const catalogModels: CcSwitchCodexCatalogModel[] = [];
+  const catalogModels: Array<Record<string, unknown>> = [];
   const seen = new Set<string>();
+
+  const getCatalogModelId = (entry: Record<string, unknown>): string => {
+    const slug = String(entry.slug ?? "").trim();
+    if (slug) return slug;
+    return String(entry.model ?? "").trim();
+  };
+  const addCatalogEntry = (entry: Record<string, unknown>) => {
+    const normalized = getCatalogModelId(entry);
+    const key = normalized.toLowerCase();
+    if (!normalized || seen.has(key)) return;
+    seen.add(key);
+    catalogModels.push({ ...entry });
+  };
   const addCatalogModel = (value: string) => {
     const normalized = value.trim();
     const key = normalized.toLowerCase();
@@ -367,6 +386,10 @@ const buildCodexConfig = (input: {
     catalogModels.push({ model: normalized });
   };
 
+  for (const entry of input.codexModelCatalog?.models ?? []) {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) continue;
+    addCatalogEntry(entry);
+  }
   addCatalogModel(model);
   for (const mapping of input.modelMappings) {
     if (mapping.role) continue;
@@ -392,6 +415,7 @@ requires_openai_auth = true`;
   return JSON.stringify({
     auth: { OPENAI_API_KEY: input.apiKey.trim() },
     config,
+    apiFormat: CC_SWITCH_CODEX_API_FORMAT,
     ...(catalogModels.length > 0 ? { modelCatalog: { models: catalogModels } } : {}),
   });
 };
@@ -508,6 +532,7 @@ export function buildCcSwitchImportUrl(input: {
   model?: string;
   modelMappings?: readonly CcSwitchModelMappingInput[];
   models?: readonly string[];
+  codexModelCatalog?: CcSwitchCodexInlineModelCatalog;
   settings?: CcSwitchImportSettingsInput;
   usageBaseUrl?: string;
   usageLanguage?: string;
@@ -572,6 +597,7 @@ export function buildCcSwitchImportUrl(input: {
     if (opusModel) params.set("opusModel", opusModel);
   }
   if (input.clientType === "codex") {
+    params.set("apiFormat", CC_SWITCH_CODEX_API_FORMAT);
     params.set(
       "config",
       encodeBase64(
@@ -581,6 +607,7 @@ export function buildCcSwitchImportUrl(input: {
           model,
           providerName: params.get("name") ?? input.providerName,
           modelMappings,
+          codexModelCatalog: input.codexModelCatalog,
         }),
       ),
     );

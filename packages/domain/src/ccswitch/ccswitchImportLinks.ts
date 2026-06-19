@@ -89,6 +89,7 @@ export function buildCcSwitchImportUrlForConfig({
     model: config.defaultModel,
     modelMappings: config.modelMappings,
     models: [],
+    codexModelCatalog: config.codexModelCatalog,
     settings: buildCcSwitchSettingsForConfig(config, configs),
     usageBaseUrl,
     usageLanguage,
