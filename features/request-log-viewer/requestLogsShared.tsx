@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import type { UsageLogItem } from "@code-proxy/api-client/endpoints/usage";
 import {
+  formatFixedNumber,
   formatUsageMetricCost,
   formatUsageMetricNumber,
   formatUsageMetricTooltipCost,
@@ -113,26 +114,39 @@ function RequestLogMetricChip({
 export function RequestLogUsageMetricValue({
   value,
   variant = "number",
+  compact = false,
   className,
 }: {
   value: number;
   variant?: UsageMetricVariant;
+  /**
+   * When true, renders the value in compact form (e.g. "23.8K", "$12.35K")
+   * with a hover tooltip carrying the full precision value. Defaults to false
+   * so the request-logs table always shows the complete numeric value.
+   */
+  compact?: boolean;
   className?: string;
 }) {
+  const useCompact = compact && isUsageMetricCompact(value, variant);
   const display =
-    variant === "currency" ? formatUsageMetricCost(value) : formatUsageMetricNumber(value);
+    variant === "currency"
+      ? useCompact
+        ? formatUsageMetricCost(value)
+        : formatUsageMetricTooltipCost(value)
+      : useCompact
+        ? formatUsageMetricNumber(value)
+        : formatFixedNumber(value, { fractionDigits: 0 });
   const tooltip =
     variant === "currency"
       ? formatUsageMetricTooltipCost(value)
       : formatUsageMetricTooltipNumber(value);
-  const compact = isUsageMetricCompact(value, variant);
 
   return (
     <HoverTooltip
       content={tooltip}
-      disabled={!compact}
+      disabled={!useCompact}
       placement="top"
-      className={compact ? "cursor-help" : undefined}
+      className={useCompact ? "cursor-help" : undefined}
     >
       <span className={["block min-w-0 truncate", className].filter(Boolean).join(" ")}>
         {display}

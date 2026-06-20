@@ -2042,7 +2042,12 @@ export function DataTable<T>({
                       ) : null}
                       <div
                         data-vt-column-header-content
-                        className={`min-w-0 max-w-full overflow-hidden truncate ${canReorder ? "pl-5" : ""}`}
+                        className={`min-w-0 max-w-full overflow-hidden truncate ${
+                          canReorder
+                            ? "group-hover/column:pl-5 group-hover/column:transition-[padding] group-focus-within/column:pl-5 data-[vt-reorder-active=true]:pl-5"
+                            : ""
+                        }`}
+                        data-vt-reorder-active={activeReorderColumnKey === col.key ? "true" : undefined}
                       >
                         {col.headerRender ? col.headerRender() : col.label}
                       </div>

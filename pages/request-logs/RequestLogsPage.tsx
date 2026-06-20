@@ -486,14 +486,14 @@ export function RequestLogsPage() {
               <span>
                 {t("request_logs.col_total_token")}{" "}
                 <span className="font-mono tabular-nums text-slate-900 dark:text-white">
-                  <RequestLogUsageMetricValue value={stats.total_tokens} />
+                  <RequestLogUsageMetricValue value={stats.total_tokens} compact />
                 </span>
               </span>
               <span className="text-slate-300 dark:text-white/15">|</span>
               <span>
                 {t("request_logs.col_cost")}{" "}
                 <span className="font-mono tabular-nums text-emerald-700 dark:text-emerald-400">
-                  <RequestLogUsageMetricValue value={stats.total_cost} variant="currency" />
+                  <RequestLogUsageMetricValue value={stats.total_cost} variant="currency" compact />
                 </span>
               </span>
               <span className="text-slate-300 dark:text-white/15">|</span>
