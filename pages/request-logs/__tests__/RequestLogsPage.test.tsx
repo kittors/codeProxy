@@ -168,6 +168,7 @@ describe("RequestLogsPage", () => {
           channel_name: "Codex",
           auth_index: "auth-1",
           failed: false,
+          streaming: true,
           latency_ms: 1200,
           first_token_ms: 183,
           input_tokens: 10,
@@ -204,7 +205,32 @@ describe("RequestLogsPage", () => {
     );
 
     expect(await screen.findByText("Duration")).toBeInTheDocument();
+    expect(await screen.findByText("Streaming")).toBeInTheDocument();
     expect(await screen.findByText("183ms")).toBeInTheDocument();
+  });
+
+  test("labels non-streaming logs without rendering a first token placeholder", async () => {
+    await i18n.changeLanguage("en");
+
+    mocks.getUsageLogs.mockResolvedValue(
+      responseWithRows([
+        buildUsageLogItem({
+          streaming: false,
+          first_token_ms: 0,
+        }),
+      ]),
+    );
+
+    render(
+      <ThemeProvider>
+        <ToastProvider>
+          <RequestLogsPage />
+        </ToastProvider>
+      </ThemeProvider>,
+    );
+
+    expect(await screen.findByText("Non-streaming")).toBeInTheDocument();
+    expect(screen.queryByLabelText("First Token: --")).not.toBeInTheDocument();
   });
 
   test("does not crash when backend returns null filter arrays", async () => {
@@ -541,7 +567,7 @@ describe("RequestLogsPage", () => {
     expect(container.querySelector(".table-scrollbar")).not.toBeNull();
   });
 
-  test("uses dashboard compact metric formatting without the updated-at summary text", async () => {
+  test("shows full numeric values in the table while keeping the summary bar compact", async () => {
     await i18n.changeLanguage("en");
     const user = userEvent.setup();
 
@@ -585,23 +611,30 @@ describe("RequestLogsPage", () => {
     const recordsCount = await screen.findByText("23.8K records");
     expect(screen.queryByText(/Updated at/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Not yet refreshed/i)).not.toBeInTheDocument();
-    expect(screen.getAllByText("2.8B").length).toBeGreaterThan(0);
-    expect(screen.getByText("2.6B")).toBeInTheDocument();
-    expect(screen.getByText("13.1M")).toBeInTheDocument();
-    expect(screen.getAllByText("$12.35K").length).toBeGreaterThan(0);
     expect(screen.getByText("91.23%")).toBeInTheDocument();
+
+    // Summary bar keeps compact metric formatting, with a full-precision tooltip.
+    expect(screen.getAllByText("2.8B").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("$12.35K").length).toBeGreaterThan(0);
+
+    // Table rows render complete numeric values (no k/M/B compact suffix).
+    expect(screen.getByText("2,806,800,000")).toBeInTheDocument();
+    expect(screen.getByText("2,576,200,000")).toBeInTheDocument();
+    expect(screen.getByText("13,100,000")).toBeInTheDocument();
+    expect(screen.getByText("2,819,900,000")).toBeInTheDocument();
+    expect(screen.getByText("$12,345.6789")).toBeInTheDocument();
 
     await user.hover(recordsCount);
     expect(await screen.findByRole("tooltip")).toHaveTextContent("23,800.00");
     await user.unhover(recordsCount);
 
-    const cachedTokens = screen.getByText("2.6B");
-    await user.hover(cachedTokens);
-    expect(await screen.findByRole("tooltip")).toHaveTextContent("2,576,200,000.00");
-    await user.unhover(cachedTokens);
+    const summaryTotalTokens = screen.getAllByText("2.8B")[0];
+    await user.hover(summaryTotalTokens);
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("2,819,900,000.00");
+    await user.unhover(summaryTotalTokens);
 
-    const cost = screen.getAllByText("$12.35K")[0];
-    await user.hover(cost);
+    const summaryCost = screen.getAllByText("$12.35K")[0];
+    await user.hover(summaryCost);
     expect(await screen.findByRole("tooltip")).toHaveTextContent("$12,345.6789");
   });
 

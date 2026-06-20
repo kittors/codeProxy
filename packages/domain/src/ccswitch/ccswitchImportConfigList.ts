@@ -17,6 +17,10 @@ export interface CcSwitchModelMapping {
   role?: CcSwitchClaudeModelRole;
 }
 
+export interface CcSwitchImportCodexModelCatalog {
+  models: Array<Record<string, unknown>>;
+}
+
 export interface CcSwitchImportConfigListItem {
   id: string;
   clientType: CcSwitchClientType;
@@ -29,6 +33,8 @@ export interface CcSwitchImportConfigListItem {
   endpointPath: string;
   usageAutoInterval: number;
   apiKeyField?: CcSwitchClaudeAuthField;
+  codexModelCatalogFilename?: string;
+  codexModelCatalog?: CcSwitchImportCodexModelCatalog;
 }
 
 const CLIENT_TYPES: CcSwitchClientType[] = ["claude", "codex", "gemini"];
@@ -105,6 +111,22 @@ const normalizeUsageAutoInterval = (value: unknown, fallback: number) => {
   const parsed = Number(value);
   if (!Number.isFinite(parsed) || parsed <= 0) return fallback;
   return Math.round(parsed);
+};
+
+const normalizeCodexModelCatalog = (
+  value: unknown,
+): CcSwitchImportCodexModelCatalog | undefined => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  if (!("models" in value)) return undefined;
+  const { models } = value;
+  if (!Array.isArray(models)) return undefined;
+
+  const entries = models.filter(
+    (entry): entry is Record<string, unknown> =>
+      entry !== null && typeof entry === "object" && !Array.isArray(entry),
+  );
+  const hasSlug = entries.some((entry) => typeof entry.slug === "string" && entry.slug.trim());
+  return hasSlug ? { models: entries.map((entry) => ({ ...entry })) } : undefined;
 };
 
 const createConfigId = () => {
@@ -203,6 +225,8 @@ export function createCcSwitchImportConfig(
 ): CcSwitchImportConfigListItem {
   const defaults = DEFAULT_CC_SWITCH_IMPORT_SETTINGS[input.clientType];
   const modelMappings = normalizeModelMappings(input.modelMappings);
+  const codexModelCatalog =
+    input.clientType === "codex" ? normalizeCodexModelCatalog(input.codexModelCatalog) : undefined;
   const mappedDefaultModel =
     input.clientType === "claude"
       ? modelMappings.find((mapping) => mapping.role === "main")?.targetModel
@@ -230,6 +254,12 @@ export function createCcSwitchImportConfig(
     ...(input.clientType === "claude"
       ? {
           apiKeyField: normalizeCcSwitchClaudeAuthField(input.apiKeyField ?? defaults.apiKeyField),
+        }
+      : {}),
+    ...(input.clientType === "codex" && codexModelCatalog
+      ? {
+          codexModelCatalogFilename: String(input.codexModelCatalogFilename ?? "").trim(),
+          codexModelCatalog,
         }
       : {}),
   };

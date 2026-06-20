@@ -30,6 +30,7 @@ const mockRequestLogsApis = async (page: Page) => {
         channel_name: index % 2 ? "Anthropic long provider channel" : "OpenAI fallback channel",
         auth_index: `auth-${index + 1}`,
         failed: index === 4,
+        streaming: true,
         latency_ms: 850 + index * 120,
         first_token_ms: 90 + index * 8,
         input_tokens: 120 + index,

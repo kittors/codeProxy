@@ -18,7 +18,24 @@ const quickImportConfigs = [
         "request-model": "gpt-5.3-codex",
         "target-model": "gpt-5.3-codex",
       },
+      {
+        "request-model": "deepseek-v4-flash",
+        "target-model": "deepseek-chat",
+      },
     ],
+    "codex-model-catalog-filename": "cc-switch-model-catalog.json",
+    "codex-model-catalog": {
+      models: [
+        {
+          slug: "gpt-5.3-codex",
+          display_name: "gpt-5.3-codex",
+        },
+        {
+          slug: "deepseek-v4-flash",
+          display_name: "deepseek-v4-flash",
+        },
+      ],
+    },
     "allowed-channel-groups": ["pro"],
     "route-path": "/pro/cs_codex",
     "endpoint-path": "/v1",
@@ -162,6 +179,55 @@ describe("QuickImportTabContent", () => {
     }
   });
 
+  test("downloads the Codex model catalog for mapped quick imports", async () => {
+    const originalCreateObjectURL = URL.createObjectURL;
+    const originalRevokeObjectURL = URL.revokeObjectURL;
+    const createObjectURL = vi.fn<(object: Blob | MediaSource) => string>(() => "blob:codex-catalog");
+    const revokeObjectURL = vi.fn();
+    const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+    Object.defineProperty(URL, "createObjectURL", {
+      configurable: true,
+      value: createObjectURL,
+    });
+    Object.defineProperty(URL, "revokeObjectURL", {
+      configurable: true,
+      value: revokeObjectURL,
+    });
+
+    try {
+      render(
+        <ThemeProvider>
+          <ToastProvider>
+            <QuickImportTabContent apiKey="sk-lookup-key" />
+          </ToastProvider>
+        </ThemeProvider>,
+      );
+
+      const codexSection = await screen.findByRole("region", { name: /codex quick imports/i });
+      await userEvent.click(
+        within(codexSection).getByRole("button", { name: /download codex model catalog/i }),
+      );
+
+      await waitFor(() => expect(createObjectURL).toHaveBeenCalled());
+      const blob = createObjectURL.mock.calls[0]?.[0];
+      if (!(blob instanceof Blob)) {
+        throw new Error("Expected Codex model catalog download to create a Blob");
+      }
+      await expect(blob.text()).resolves.toContain("deepseek-v4-flash");
+      expect(click).toHaveBeenCalled();
+    } finally {
+      Object.defineProperty(URL, "createObjectURL", {
+        configurable: true,
+        value: originalCreateObjectURL,
+      });
+      Object.defineProperty(URL, "revokeObjectURL", {
+        configurable: true,
+        value: originalRevokeObjectURL,
+      });
+      click.mockRestore();
+    }
+  });
+
   test("hides quick import groups that do not have presets", async () => {
     vi.mocked(globalThis.fetch).mockResolvedValue(
       new Response(JSON.stringify({ "ccswitch-import-configs": [quickImportConfigs[0]] }), {
@@ -240,7 +306,7 @@ describe("QuickImportTabContent", () => {
               {
                 key: "sk-lookup-key",
                 "allowed-channel-groups": ["pro"],
-                "allowed-models": ["gpt-5.3-codex"],
+                "allowed-models": ["gpt-5.3-codex", "deepseek-chat"],
               },
             ],
           }),

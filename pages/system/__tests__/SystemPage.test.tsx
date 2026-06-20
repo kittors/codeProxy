@@ -367,6 +367,74 @@ describe("SystemPage", () => {
     expect(screen.queryByText("gpt-5-codex")).not.toBeInTheDocument();
   });
 
+  test("uses backend mapped owner availability instead of root path registry models", async () => {
+    mocks.apiGet.mockImplementation((path: string) => {
+      if (path === "/models/configured-availability") {
+        return Promise.resolve({
+          scoped: true,
+          uses_mapped_owners: true,
+          data: [{ id: "gpt-5.5", owned_by: "codex" }],
+        });
+      }
+      if (path === "/model-path-availability") {
+        return Promise.resolve({
+          data: [
+            {
+              id: "gpt-5.5",
+              paths: [{ scope: "root", method: "GET", path: "/v1/models" }],
+            },
+            {
+              id: "gpt-5-codex",
+              paths: [{ scope: "root", method: "GET", path: "/v1/models" }],
+            },
+          ],
+        });
+      }
+      if (path === "/auth-group-model-owner-mappings") return Promise.resolve({ items: [] });
+      if (path === "/system-stats") return Promise.resolve({ uptime: 10 });
+      return Promise.resolve({});
+    });
+
+    renderPage();
+
+    expect(await screen.findByText("gpt-5.5")).toBeInTheDocument();
+    expect(screen.queryByText("gpt-5-codex")).not.toBeInTheDocument();
+  });
+
+  test("keeps provider models returned with mapped owner availability", async () => {
+    mocks.apiGet.mockImplementation((path: string) => {
+      if (path === "/models/configured-availability") {
+        return Promise.resolve({
+          scoped: true,
+          uses_mapped_owners: true,
+          data: [
+            { id: "gpt-5.5", owned_by: "codex" },
+            { id: "qwen3.7-max", owned_by: "opencode" },
+          ],
+        });
+      }
+      if (path === "/model-path-availability") {
+        return Promise.resolve({
+          data: [
+            {
+              id: "gpt-5-codex",
+              paths: [{ scope: "root", method: "GET", path: "/v1/models" }],
+            },
+          ],
+        });
+      }
+      if (path === "/auth-group-model-owner-mappings") return Promise.resolve({ items: [] });
+      if (path === "/system-stats") return Promise.resolve({ uptime: 10 });
+      return Promise.resolve({});
+    });
+
+    renderPage();
+
+    expect(await screen.findByText("gpt-5.5")).toBeInTheDocument();
+    expect(screen.getByText("qwen3.7-max")).toBeInTheDocument();
+    expect(screen.queryByText("gpt-5-codex")).not.toBeInTheDocument();
+  });
+
   test("hides disabled OpenAI compatible provider models in mapped owner mode", async () => {
     mocks.apiGet.mockImplementation((path: string) => {
       if (path === "/auth-group-model-owner-mappings") {

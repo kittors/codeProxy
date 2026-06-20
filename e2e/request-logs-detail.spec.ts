@@ -41,6 +41,7 @@ test("Request Logs: opens full detail content and switches output raw view", asy
             channel_name: "OpenAI",
             auth_index: "auth-1",
             failed: false,
+            streaming: true,
             latency_ms: 1234,
             first_token_ms: 120,
             input_tokens: 12,
@@ -108,6 +109,8 @@ test("Request Logs: opens full detail content and switches output raw view", asy
 
   await page.goto("/#/monitor/request-logs");
   await expect(page.getByRole("heading", { name: "Request Logs" }).first()).toBeVisible();
+  await expect(page.getByText("Streaming")).toBeVisible();
+  await expect(page.getByText("120ms")).toBeVisible();
 
   await page.getByTitle("Click to view output").click();
   await expect(page.getByText("hello output payload")).toBeVisible();

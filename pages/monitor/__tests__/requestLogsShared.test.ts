@@ -26,6 +26,7 @@ describe("requestLogsShared", () => {
       channel_name: "GptPlus1",
       auth_index: "auth-1",
       failed: false,
+      streaming: true,
       latency_ms: 1200,
       first_token_ms: 300,
       input_tokens: 10,
@@ -39,6 +40,7 @@ describe("requestLogsShared", () => {
 
     expect(row.isSystemCall).toBe(true);
     expect(row.apiKeyName).toBe("");
+    expect(row.streaming).toBe(true);
   });
 
   test("deduplicates system call filter options", () => {
@@ -59,6 +61,7 @@ describe("requestLogsShared", () => {
     const columns = buildRequestLogsColumns((key) => key);
     const keys = columns.map((column) => column.key);
 
+    expect(keys).toContain("mode");
     expect(keys.indexOf("latency")).toBeLessThan(keys.indexOf("apiKeyName"));
     expect(keys.indexOf("inputTokens")).toBeLessThan(keys.indexOf("apiKeyName"));
     expect(keys.indexOf("cachedTokens")).toBeLessThan(keys.indexOf("model"));

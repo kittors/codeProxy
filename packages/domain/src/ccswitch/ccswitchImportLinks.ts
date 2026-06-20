@@ -1,4 +1,10 @@
-import { buildCcSwitchImportUrl, type CcSwitchClientType } from "./ccswitchImport";
+import {
+  buildCcSwitchCodexModelCatalogJson,
+  buildCcSwitchImportUrl,
+  CC_SWITCH_CODEX_MODEL_CATALOG_FILENAME,
+  type CcSwitchClientType,
+  type CcSwitchCodexCatalogModel,
+} from "./ccswitchImport";
 import {
   normalizeCcSwitchClaudeAuthField,
   normalizeCcSwitchImportSettings,
@@ -83,8 +89,39 @@ export function buildCcSwitchImportUrlForConfig({
     model: config.defaultModel,
     modelMappings: config.modelMappings,
     models: [],
+    codexModelCatalog: config.codexModelCatalog,
     settings: buildCcSwitchSettingsForConfig(config, configs),
     usageBaseUrl,
     usageLanguage,
   });
+}
+
+export function getCcSwitchCodexModelCatalogFilenameForConfig(
+  config: CcSwitchImportConfigListItem,
+): string {
+  return config.codexModelCatalogFilename?.trim() || CC_SWITCH_CODEX_MODEL_CATALOG_FILENAME;
+}
+
+export function buildCcSwitchCodexModelCatalogJsonForConfig(
+  config: CcSwitchImportConfigListItem,
+): string {
+  if (config.clientType !== "codex") return "";
+  if (config.codexModelCatalog?.models.length) {
+    return `${JSON.stringify(config.codexModelCatalog, null, 2)}\n`;
+  }
+
+  const models: CcSwitchCodexCatalogModel[] = [];
+  const defaultModel = config.defaultModel.trim();
+  if (defaultModel) {
+    models.push({ model: defaultModel });
+  }
+  for (const mapping of config.modelMappings) {
+    if (mapping.role) continue;
+    const model = (mapping.requestModel || mapping.targetModel).trim();
+    if (model) {
+      models.push({ model });
+    }
+  }
+  if (models.length === 0) return "";
+  return `${buildCcSwitchCodexModelCatalogJson(models)}\n`;
 }

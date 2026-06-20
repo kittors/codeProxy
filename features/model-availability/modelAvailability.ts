@@ -768,7 +768,7 @@ export const normalizeConfiguredModelAvailability = (
     items,
     metadataItems,
     idSet: new Set(items.map((item) => item.id.toLowerCase())),
-    usesMappedOwners: false,
+    usesMappedOwners: record.uses_mapped_owners === true || record.usesMappedOwners === true,
   };
 };
 

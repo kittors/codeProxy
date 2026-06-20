@@ -474,6 +474,7 @@ export interface UsageLogItem {
   channel_name: string;
   auth_index: string;
   failed: boolean;
+  streaming?: boolean;
   latency_ms: number;
   first_token_ms: number;
   input_tokens: number;
