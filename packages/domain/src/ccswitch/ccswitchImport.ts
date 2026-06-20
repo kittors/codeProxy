@@ -32,6 +32,7 @@ export interface CcSwitchCodexInlineModelCatalog {
 
 export interface CcSwitchCodexModelCatalogEntry {
   slug: string;
+  model: string;
   display_name: string;
   description: string;
   default_reasoning_level: "medium";
@@ -280,6 +281,7 @@ const buildCodexCatalogEntry = (
 
   return {
     slug,
+    model: slug,
     display_name: displayName,
     description: displayName,
     default_reasoning_level: "medium",
@@ -376,7 +378,11 @@ const buildCodexConfig = (input: {
     const key = normalized.toLowerCase();
     if (!normalized || seen.has(key)) return;
     seen.add(key);
-    catalogModels.push({ ...entry });
+    const normalizedEntry: Record<string, unknown> = { ...entry };
+    if (!String(normalizedEntry.model ?? "").trim()) {
+      normalizedEntry.model = normalized;
+    }
+    catalogModels.push(normalizedEntry);
   };
   const addCatalogModel = (value: string) => {
     const normalized = value.trim();

@@ -249,12 +249,14 @@ describe("ccswitchImport", () => {
     expect(config.modelCatalog.models).toEqual([
       {
         slug: "gpt-5.5",
+        model: "gpt-5.5",
         display_name: "GPT 5.5",
         context_window: 512000,
         model_messages: { context_window: 512000 },
       },
       {
         slug: "deepseek-v4-flash",
+        model: "deepseek-v4-flash",
         display_name: "DeepSeek V4 Flash",
         context_window: 256000,
       },
@@ -340,6 +342,11 @@ describe("ccswitchImport", () => {
     ]);
 
     expect(catalog.models.map((model) => model.slug)).toEqual([
+      "gpt-5.5",
+      "deepseek-v4-flash",
+      "deepseek-v4-pro",
+    ]);
+    expect(catalog.models.map((model) => model.model)).toEqual([
       "gpt-5.5",
       "deepseek-v4-flash",
       "deepseek-v4-pro",
