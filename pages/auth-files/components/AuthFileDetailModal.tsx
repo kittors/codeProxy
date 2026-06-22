@@ -463,7 +463,7 @@ export function AuthFileDetailModal({
   const renderUsageTrend = () => {
     const isCodexDetail = detailProviderKey === "codex";
     const summaryGridClassName = isCodexDetail
-      ? "grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6"
+      ? "grid gap-3 sm:grid-cols-2 xl:grid-cols-6"
       : "grid gap-3 sm:grid-cols-2 xl:grid-cols-5";
     const summarySkeletonCount = isCodexDetail ? 6 : 5;
 

@@ -26,14 +26,15 @@ const mocks = vi.hoisted(() => ({
     ],
   })),
   getEntityStats: vi.fn(async () => ({ source: [], auth_index: [] })),
-  getAuthFileTrend: vi.fn(async () => ({
-    auth_index: "auth-1",
+  getAuthFileTrend: vi.fn(async (authIndex: string) => ({
+    auth_index: authIndex,
     days: 7,
     hours: 5,
     request_total: 3,
     cycle_request_total: 2,
     cycle_cost_total: 1.2345,
     weekly_quota_used_percent: 8,
+    cycle_known: true,
     cycle_start: "2026-04-27T16:01:21Z",
     daily_usage: [{ date: "2026-04-30", requests: 2, cost: 0.0123 }],
     hourly_usage: [{ hour: "2026-04-30 16:00", requests: 1, cost: 0.0045 }],
@@ -151,6 +152,21 @@ function createDeferred<T>() {
   return { promise, resolve, reject };
 }
 
+const createAuthFileTrend = (authIndex: string, cycleRequestTotal: number) => ({
+  auth_index: authIndex,
+  days: 7,
+  hours: 5,
+  request_total: cycleRequestTotal,
+  cycle_request_total: cycleRequestTotal,
+  cycle_cost_total: 1.2345,
+  weekly_quota_used_percent: 8,
+  cycle_known: true,
+  cycle_start: "2026-04-27T16:01:21Z",
+  daily_usage: [{ date: "2026-04-30", requests: cycleRequestTotal, cost: 0.0123 }],
+  hourly_usage: [{ hour: "2026-04-30 16:00", requests: cycleRequestTotal, cost: 0.0045 }],
+  quota_series: [],
+});
+
 const useTableFilesView = () => {
   window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("table"));
 };
@@ -181,14 +197,15 @@ describe("AuthFilesPage files table", () => {
     mocks.getEntityStats.mockReset();
     mocks.getEntityStats.mockImplementation(async () => ({ source: [], auth_index: [] }));
     mocks.getAuthFileTrend.mockReset();
-    mocks.getAuthFileTrend.mockImplementation(async () => ({
-      auth_index: "auth-1",
+    mocks.getAuthFileTrend.mockImplementation(async (authIndex: string) => ({
+      auth_index: authIndex,
       days: 7,
       hours: 5,
       request_total: 3,
       cycle_request_total: 2,
       cycle_cost_total: 1.2345,
       weekly_quota_used_percent: 8,
+      cycle_known: true,
       cycle_start: "2026-04-27T16:01:21Z",
       daily_usage: [{ date: "2026-04-30", requests: 2, cost: 0.0123 }],
       hourly_usage: [{ hour: "2026-04-30 16:00", requests: 1, cost: 0.0045 }],
@@ -1501,6 +1518,9 @@ describe("AuthFilesPage files table", () => {
           ],
         }) as any,
     );
+    mocks.getAuthFileTrend.mockImplementation(async (authIndex: string) =>
+      createAuthFileTrend(authIndex, 5),
+    );
 
     render(
       <MemoryRouter initialEntries={["/auth-files"]}>
@@ -1520,6 +1540,55 @@ describe("AuthFilesPage files table", () => {
     expect(within(card as HTMLElement).getByText("5 calls")).toBeInTheDocument();
     expect(within(card as HTMLElement).getByText("Success Rate")).toBeInTheDocument();
     expect(within(card as HTMLElement).getByText("80.0%")).toBeInTheDocument();
+  });
+
+  test("cards view shows current cycle call volume from auth-file trend", async () => {
+    window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
+    mocks.list.mockImplementation(async () => ({
+      files: [
+        {
+          name: "codex-pro.json",
+          label: "A_GptPro",
+          account_type: "oauth",
+          type: "codex",
+          auth_index: "77",
+          size: 1024,
+          modified: Date.now(),
+          disabled: false,
+        },
+      ],
+    }));
+    mocks.getEntityStats.mockImplementation(
+      async () =>
+        ({
+          source: [],
+          auth_index: [
+            { entity_name: "77", requests: 99, failed: 0, avg_latency: 0, total_tokens: 0 },
+          ],
+        }) as any,
+    );
+    mocks.getAuthFileTrend.mockImplementation(async (authIndex: string) =>
+      createAuthFileTrend(authIndex, 7),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    const title = await screen.findByText("A_GptPro");
+    const card = title.closest("section");
+    expect(card).not.toBeNull();
+    expect(await within(card as HTMLElement).findByText("7 calls")).toBeInTheDocument();
+    expect(within(card as HTMLElement).queryByText("99 calls")).not.toBeInTheDocument();
+    expect(mocks.getAuthFileTrend).toHaveBeenCalledWith("77", { days: 7, hours: 5 });
   });
 
   test("filters auth files by custom tag options", async () => {
@@ -1739,7 +1808,7 @@ describe("AuthFilesPage files table", () => {
     expect(screen.getByRole("combobox", { name: "File group" })).toHaveTextContent("All (3)");
   });
 
-  test("refreshes only the clicked auth-file card usage stats after quota refresh", async () => {
+  test("refreshes only the clicked auth-file card cycle call count after quota refresh", async () => {
     const now = Date.now();
     const files = [
       {
@@ -1802,6 +1871,15 @@ describe("AuthFilesPage files table", () => {
     mocks.fetchQuota.mockImplementation(async () => [
       { key: "code_5h", label: "m_quota.code_5h", percent: 60 },
     ]);
+    const cycleCountsByAuthIndex = new Map<string, number[]>([
+      ["77", [1, 4]],
+      ["88", [10]],
+    ]);
+    mocks.getAuthFileTrend.mockImplementation(async (authIndex: string) => {
+      const counts = cycleCountsByAuthIndex.get(authIndex) ?? [0];
+      const count = counts.length > 1 ? counts.shift() : counts[0];
+      return createAuthFileTrend(authIndex, count ?? 0);
+    });
 
     render(
       <MemoryRouter initialEntries={["/auth-files"]}>
@@ -2282,6 +2360,9 @@ describe("AuthFilesPage files table", () => {
             { entity_name: "2", requests: 2, failed: 0, avg_latency: 0, total_tokens: 0 },
           ],
         }) as any,
+    );
+    mocks.getAuthFileTrend.mockImplementation(async (authIndex: string) =>
+      createAuthFileTrend(authIndex, authIndex === "1" ? 9 : 2),
     );
     window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
 
@@ -3662,6 +3743,14 @@ describe("AuthFilesPage files table", () => {
       .mockResolvedValue({ source: [], auth_index: nextStats } as any)
       .mockResolvedValueOnce({ source: [], auth_index: oldStats } as any)
       .mockResolvedValueOnce({ source: [], auth_index: nextStats } as any);
+    const trendCallsByAuthIndex = new Map<string, number>();
+    mocks.getAuthFileTrend.mockImplementation(async (authIndex: string) => {
+      const seenCount = trendCallsByAuthIndex.get(authIndex) ?? 0;
+      trendCallsByAuthIndex.set(authIndex, seenCount + 1);
+      const number = Number(authIndex);
+      const cycleCount = seenCount === 0 ? number : 100 + number;
+      return createAuthFileTrend(authIndex, cycleCount);
+    });
     mocks.fetchQuota.mockResolvedValue({
       items: [{ label: "m_quota.code_5h", percent: 55, resetAtMs: now + 60_000 }],
     });
@@ -4296,6 +4385,9 @@ describe("AuthFilesPage files table", () => {
     } as any;
 
     mocks.list.mockImplementationOnce(async () => ({ files: [file] }));
+    mocks.getAuthFileTrend.mockImplementation(async (authIndex: string) =>
+      createAuthFileTrend(authIndex, 0),
+    );
     mocks.fetchQuota
       .mockResolvedValueOnce({
         items: [{ label: "m_quota.code_5h", percent: 12, resetAtMs: now + 60_000 }],

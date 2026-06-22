@@ -45,6 +45,7 @@ import {
   AUTH_FILE_STATUS_FILTERS,
   TYPE_BADGE_CLASSES,
   isRuntimeOnlyAuthFile,
+  normalizeAuthIndexValue,
   normalizeProviderKey,
   normalizeTagValue,
   resolveAuthFileDisplayName,
@@ -523,6 +524,7 @@ interface AuthFilesFilesTabProps {
   filesViewMode: FilesViewMode;
   selectedFileNameSet: Set<string>;
   quotaByFileName: Record<string, QuotaState>;
+  cycleCallsByAuthIndex: Record<string, number>;
   resolveQuotaProvider: (file: AuthFileItem) => QuotaProvider | null;
   resolveQuotaCardSlots: (
     provider: QuotaProvider,
@@ -606,6 +608,7 @@ export function AuthFilesFilesTab({
   filesViewMode,
   selectedFileNameSet,
   quotaByFileName,
+  cycleCallsByAuthIndex,
   resolveQuotaProvider,
   resolveQuotaCardSlots,
   refreshQuota,
@@ -1303,8 +1306,13 @@ export function AuthFilesFilesTab({
                     : false;
                   const subscriptionBadge = renderSubscriptionBadge(file);
                   const stats = resolveAuthFileStats(file, usageIndex);
-                  const totalCalls = stats.success + stats.failure;
-                  const successRate = totalCalls > 0 ? (stats.success / totalCalls) * 100 : null;
+                  const usageTotalCalls = stats.success + stats.failure;
+                  const authIndex = normalizeAuthIndexValue(file.auth_index ?? file.authIndex);
+                  const cycleCalls = authIndex ? cycleCallsByAuthIndex[authIndex] : undefined;
+                  const displayCalls =
+                    typeof cycleCalls === "number" ? cycleCalls : usageTotalCalls;
+                  const successRate =
+                    usageTotalCalls > 0 ? (stats.success / usageTotalCalls) * 100 : null;
                   const successRateClass =
                     successRate === null
                       ? "text-slate-500 dark:text-white/45"
@@ -1440,7 +1448,7 @@ export function AuthFilesFilesTab({
                             </button>
                           ) : null}
                           <span className="inline-flex shrink-0 items-center rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-700 dark:bg-white/10 dark:text-white/70">
-                            {t("auth_files.calls_count", { count: totalCalls })}
+                            {t("auth_files.calls_count", { count: displayCalls })}
                           </span>
                           <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-700 dark:bg-white/10 dark:text-white/70">
                             <span>{t("common.success_rate")}</span>

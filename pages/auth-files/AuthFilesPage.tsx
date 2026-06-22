@@ -22,6 +22,7 @@ import { AuthFileTagsModal } from "./components/AuthFileTagsModal";
 import { ImportModelsModal } from "./components/ImportModelsModal";
 import { GroupOverviewModal } from "./components/GroupOverviewModal";
 import { useAuthFilesDataState } from "./hooks/useAuthFilesDataState";
+import { useAuthFilesCycleUsageState } from "./hooks/useAuthFilesCycleUsageState";
 import { useAuthFilesDetailEditors } from "./hooks/useAuthFilesDetailEditors";
 import {
   useAuthFilesFileActions,
@@ -386,6 +387,16 @@ export function AuthFilesPage() {
     refreshUsageDataForFiles,
   });
 
+  const { callsByAuthIndex, refreshCycleUsageForFiles } = useAuthFilesCycleUsageState();
+
+  const refreshQuotaAndCycleUsage = useCallback(
+    async (file: AuthFileItem, provider: NonNullable<ReturnType<typeof resolveQuotaProvider>>) => {
+      await refreshQuota(file, provider);
+      await refreshCycleUsageForFiles([file], { force: true });
+    },
+    [refreshCycleUsageForFiles, refreshQuota],
+  );
+
   const refreshQuotaForFiles = useCallback(
     async (targetFiles: AuthFileItem[]) => {
       const targets = targetFiles.flatMap((file) => {
@@ -454,6 +465,7 @@ export function AuthFilesPage() {
       try {
         await consumeCodexResetCredit(file);
         await refreshQuota(file, "codex", { showLoading: true });
+        await refreshCycleUsageForFiles([file], { force: true });
         notify({
           type: "success",
           message: t("auth_files.reset_credit_success", { name }),
@@ -468,7 +480,7 @@ export function AuthFilesPage() {
         setResettingCreditFileName(null);
       }
     },
-    [notify, refreshQuota, resettingCreditFileName, t],
+    [notify, refreshCycleUsageForFiles, refreshQuota, resettingCreditFileName, t],
   );
 
   const refreshFilesAndQuota = useCallback(async () => {
@@ -479,14 +491,30 @@ export function AuthFilesPage() {
     try {
       const quotaRefreshPromise = forceRefreshPage();
       const filesRefreshPromise = refreshFilesForItems(currentPageItems);
-      await Promise.all([filesRefreshPromise, quotaRefreshPromise]);
+      const [updatedFiles] = await Promise.all([filesRefreshPromise, quotaRefreshPromise]);
+      if (filesViewMode === "cards") {
+        const updatedByName = new Map(updatedFiles.map((file) => [file.name, file]));
+        await refreshCycleUsageForFiles(
+          currentPageItems.map((file) => updatedByName.get(file.name) ?? file),
+          { force: true },
+        );
+      }
     } finally {
       refreshingFilesAndQuotaRef.current = false;
       if (isMountedRef.current) {
         setRefreshingCurrentPage(false);
       }
     }
-  }, [forceRefreshPage, loading, pageItems, refreshFilesForItems, refreshingAll, usageLoading]);
+  }, [
+    filesViewMode,
+    forceRefreshPage,
+    loading,
+    pageItems,
+    refreshCycleUsageForFiles,
+    refreshFilesForItems,
+    refreshingAll,
+    usageLoading,
+  ]);
 
   const closeConfigModal = useCallback(() => {
     setConfigModalTab(null);
@@ -515,6 +543,11 @@ export function AuthFilesPage() {
       await forceRefreshPage();
     })();
   }, [configModalTab, forceRefreshPage, loadAll]);
+
+  useEffect(() => {
+    if (filesViewMode !== "cards" || loading) return;
+    void refreshCycleUsageForFiles(pageItems);
+  }, [filesViewMode, loading, pageItems, refreshCycleUsageForFiles]);
 
   const {
     groupOverviewOpen,
@@ -649,9 +682,10 @@ export function AuthFilesPage() {
         filesViewMode={filesViewMode}
         selectedFileNameSet={selectedFileNameSet}
         quotaByFileName={quotaByFileName}
+        cycleCallsByAuthIndex={callsByAuthIndex}
         resolveQuotaProvider={resolveQuotaProvider}
         resolveQuotaCardSlots={resolveQuotaCardSlots}
-        refreshQuota={refreshQuota}
+        refreshQuota={refreshQuotaAndCycleUsage}
         requestResetCredit={requestResetCredit}
         resettingCreditFileName={resettingCreditFileName}
         setFileEnabled={setFileEnabled}

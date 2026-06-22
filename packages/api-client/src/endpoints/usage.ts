@@ -80,6 +80,7 @@ export interface AuthFileTrendResponse {
   cycle_request_total: number;
   cycle_cost_total: number;
   weekly_quota_used_percent: number | null;
+  cycle_known?: boolean;
   cycle_start: string;
   daily_usage: AuthFileTrendUsagePoint[];
   hourly_usage: AuthFileTrendUsagePoint[];
@@ -258,6 +259,7 @@ export const usageApi = {
         Number.isFinite(resp.weekly_quota_used_percent)
           ? resp.weekly_quota_used_percent
           : null,
+      cycle_known: resp?.cycle_known === true,
       cycle_start: resp?.cycle_start ?? "",
       daily_usage: Array.isArray(resp?.daily_usage) ? resp.daily_usage : [],
       hourly_usage: Array.isArray(resp?.hourly_usage) ? resp.hourly_usage : [],
