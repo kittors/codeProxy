@@ -851,9 +851,9 @@
     "empty_models": "No quota data available",
     "refresh_button": "Refresh Quota",
     "fetch_all": "Fetch All",
-    "gemini3_pro": "G3P",
-    "gemini3_flash": "G3F",
-    "gemini_image": "G31FI",
+    "gemini3_pro": "Gemini 3 Pro",
+    "gemini3_flash": "Gemini 3 Flash",
+    "gemini_image": "Gemini 3.1 Flash Image",
     "claude": "Claude"
   },
   "claude_quota": {

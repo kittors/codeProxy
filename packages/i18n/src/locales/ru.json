@@ -739,9 +739,9 @@
     "empty_models": "Данные по квоте отсутствуют",
     "refresh_button": "Обновить квоту",
     "fetch_all": "Получить все",
-    "gemini3_pro": "G3P",
-    "gemini3_flash": "G3F",
-    "gemini_image": "G31FI",
+    "gemini3_pro": "Gemini 3 Pro",
+    "gemini3_flash": "Gemini 3 Flash",
+    "gemini_image": "Gemini 3.1 Flash Image",
     "claude": "Claude"
   },
   "claude_quota": {

@@ -3019,9 +3019,9 @@ describe("AuthFilesPage files table", () => {
     expect(await screen.findByText("antigravity.json")).toBeInTheDocument();
     const cards = screen.getByTestId("auth-files-cards");
 
-    expect(within(cards).getByText("G3P")).toBeInTheDocument();
-    expect(within(cards).getByText("G3F")).toBeInTheDocument();
-    expect(within(cards).getByText("G31FI")).toBeInTheDocument();
+    expect(within(cards).getByText("Gemini 3 Pro")).toBeInTheDocument();
+    expect(within(cards).getByText("Gemini 3 Flash")).toBeInTheDocument();
+    expect(within(cards).getByText("Gemini 3.1 Flash Image")).toBeInTheDocument();
     expect(within(cards).getByText("Claude")).toBeInTheDocument();
     expect(within(cards).getByText("82%")).toBeInTheDocument();
     expect(within(cards).getByText("77%")).toBeInTheDocument();
@@ -3108,7 +3108,7 @@ describe("AuthFilesPage files table", () => {
     expect(await screen.findByText("antigravity.json")).toBeInTheDocument();
     const cards = screen.getByTestId("auth-files-cards");
 
-    expect(within(cards).getByText("G3P")).toBeInTheDocument();
+    expect(within(cards).getByText("Gemini 3 Pro")).toBeInTheDocument();
     expect(
       within(cards).queryByText("Gemini 3.1 Pro (High) [gemini-3.1-pro-high]"),
     ).not.toBeInTheDocument();
@@ -3175,7 +3175,7 @@ describe("AuthFilesPage files table", () => {
     expect(await screen.findByText("antigravity.json")).toBeInTheDocument();
     const cards = screen.getByTestId("auth-files-cards");
 
-    expect(within(cards).getByText("G3P")).toBeInTheDocument();
+    expect(within(cards).getByText("Gemini 3 Pro")).toBeInTheDocument();
     expect(within(cards).getByText("91%")).toBeInTheDocument();
     expect(
       within(cards).queryByText("Gemini 3.1 Pro (High) [gemini-3.1-pro-high]"),
@@ -3242,10 +3242,10 @@ describe("AuthFilesPage files table", () => {
 
     const row = screen.getByText("antigravity.json").closest("tr");
     expect(row).not.toBeNull();
-    fireEvent.mouseEnter(within(row as HTMLElement).getByText("G3P"));
+    fireEvent.mouseEnter(within(row as HTMLElement).getByText("Gemini 3 Pro"));
 
     const tooltip = await screen.findByRole("tooltip");
-    expect(within(tooltip).getByText("G3P")).toBeInTheDocument();
+    expect(within(tooltip).getByText("Gemini 3 Pro")).toBeInTheDocument();
     expect(
       within(tooltip).queryByText("Gemini 3.1 Pro (Low) [gemini-3.1-pro-low]"),
     ).not.toBeInTheDocument();
@@ -3320,7 +3320,7 @@ describe("AuthFilesPage files table", () => {
 
     const row = screen.getByText("antigravity.json").closest("tr");
     expect(row).not.toBeNull();
-    fireEvent.mouseEnter(within(row as HTMLElement).getByText("G3P"));
+    fireEvent.mouseEnter(within(row as HTMLElement).getByText("Gemini 3 Pro"));
 
     const tooltips = await screen.findAllByRole("tooltip");
     expect(tooltips).toHaveLength(1);
@@ -3392,7 +3392,7 @@ describe("AuthFilesPage files table", () => {
     const row = screen.getByText("antigravity.json").closest("tr");
     expect(row).not.toBeNull();
     expect(within(row as HTMLElement).queryByText("chat_20706")).not.toBeInTheDocument();
-    const visibleModel = within(row as HTMLElement).getByText("G3P");
+    const visibleModel = within(row as HTMLElement).getByText("Gemini 3 Pro");
     expect(visibleModel).toBeInTheDocument();
     expect(
       within(row as HTMLElement).queryByText("Gemini 3.1 Pro (High) [gemini-3.1-pro-high]"),
@@ -3402,7 +3402,7 @@ describe("AuthFilesPage files table", () => {
 
     const tooltip = await screen.findByRole("tooltip");
     expect(within(tooltip).queryByText("chat_20706")).not.toBeInTheDocument();
-    expect(within(tooltip).getByText("G3P")).toBeInTheDocument();
+    expect(within(tooltip).getByText("Gemini 3 Pro")).toBeInTheDocument();
     expect(
       within(tooltip).queryByText("Gemini 3.1 Pro (High) [gemini-3.1-pro-high]"),
     ).not.toBeInTheDocument();

@@ -859,9 +859,9 @@
     "empty_models": "暂无额度数据",
     "refresh_button": "刷新额度",
     "fetch_all": "获取全部",
-    "gemini3_pro": "G3P",
-    "gemini3_flash": "G3F",
-    "gemini_image": "G31FI",
+    "gemini3_pro": "Gemini 3 Pro",
+    "gemini3_flash": "Gemini 3 Flash",
+    "gemini_image": "Gemini 3.1 Flash Image",
     "claude": "Claude"
   },
   "claude_quota": {
