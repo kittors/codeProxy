@@ -858,7 +858,11 @@
     "missing_auth_index": "认证文件缺少 auth_index",
     "empty_models": "暂无额度数据",
     "refresh_button": "刷新额度",
-    "fetch_all": "获取全部"
+    "fetch_all": "获取全部",
+    "gemini3_pro": "G3P",
+    "gemini3_flash": "G3F",
+    "gemini_image": "G31FI",
+    "claude": "Claude"
   },
   "claude_quota": {
     "title": "Claude 额度",

@@ -738,7 +738,11 @@
     "missing_auth_index": "В файле авторизации отсутствует auth_index",
     "empty_models": "Данные по квоте отсутствуют",
     "refresh_button": "Обновить квоту",
-    "fetch_all": "Получить все"
+    "fetch_all": "Получить все",
+    "gemini3_pro": "G3P",
+    "gemini3_flash": "G3F",
+    "gemini_image": "G31FI",
+    "claude": "Claude"
   },
   "claude_quota": {
     "title": "Квота Claude",

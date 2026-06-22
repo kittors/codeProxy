@@ -182,6 +182,7 @@ export function useAuthFilesFilesPresentation({
       if (!text) return text;
       if (text.startsWith("m_quota.")) return t(text);
       if (text.startsWith("claude_quota.")) return t(text);
+      if (text.startsWith("antigravity_quota.")) return t(text);
       if (KNOWN_QUOTA_TEXT_KEYS.has(text)) return t(`m_quota.${text}`);
       const additionalQuota = parseAdditionalQuotaWindowLabel(text);
       if (additionalQuota) {

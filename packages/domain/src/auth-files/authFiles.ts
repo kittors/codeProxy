@@ -253,6 +253,7 @@ const sanitizeQuotaItemsForCache = (items: unknown): QuotaItem[] => {
     .map((item): QuotaItem | null => {
       if (!item || typeof item !== "object" || Array.isArray(item)) return null;
       const record = item as Record<string, unknown>;
+      const key = typeof record.key === "string" && record.key ? record.key : undefined;
       const label = typeof record.label === "string" ? record.label : "";
       if (!label) return null;
       const percent =
@@ -265,7 +266,7 @@ const sanitizeQuotaItemsForCache = (items: unknown): QuotaItem[] => {
           ? record.resetAtMs
           : undefined;
       const meta = typeof record.meta === "string" ? record.meta : undefined;
-      return { label, percent, resetAtMs, meta };
+      return { ...(key ? { key } : {}), label, percent, resetAtMs, meta };
     })
     .filter((item): item is QuotaItem => Boolean(item));
 };

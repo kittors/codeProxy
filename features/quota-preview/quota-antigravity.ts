@@ -11,6 +11,11 @@ type AntigravityQuotaInfo = {
   displayName?: string;
   quotaInfo?: Record<string, unknown>;
   quota_info?: Record<string, unknown>;
+  apiProvider?: unknown;
+  api_provider?: unknown;
+  modelProvider?: unknown;
+  model_provider?: unknown;
+  model?: unknown;
 };
 
 export type AntigravityModelsPayload = Record<string, AntigravityQuotaInfo>;
@@ -54,6 +59,58 @@ export const shouldSkipAntigravityModelId = (id: string): boolean =>
   REFERENCE_SKIPPED_MODEL_IDS.has(id);
 
 const ANTIGRAVITY_MODEL_KEY_PREFIX = "model:";
+const ANTIGRAVITY_SUMMARY_KEY_PREFIX = "provider:";
+
+type AntigravityQuotaGroup = "gemini3Pro" | "gemini3Flash" | "gemini3Image" | "claude";
+
+const ANTIGRAVITY_QUOTA_GROUPS: Array<{
+  group: AntigravityQuotaGroup;
+  key: string;
+  label: string;
+}> = [
+  { group: "gemini3Pro", key: "provider:gemini3-pro", label: "antigravity_quota.gemini3_pro" },
+  {
+    group: "gemini3Flash",
+    key: "provider:gemini3-flash",
+    label: "antigravity_quota.gemini3_flash",
+  },
+  { group: "gemini3Image", key: "provider:gemini-image", label: "antigravity_quota.gemini_image" },
+  { group: "claude", key: "provider:claude", label: "antigravity_quota.claude" },
+];
+
+const ANTIGRAVITY_QUOTA_GROUP_MODEL_IDS: Record<AntigravityQuotaGroup, ReadonlySet<string>> = {
+  gemini3Pro: new Set([
+    "gemini-3-pro-low",
+    "gemini-3-pro-high",
+    "gemini-3-pro-preview",
+    "gemini-3.1-pro-low",
+    "gemini-3.1-pro-high",
+    "gemini-3.1-pro-preview",
+  ]),
+  gemini3Flash: new Set(["gemini-3-flash", "gemini-3-flash-agent"]),
+  gemini3Image: new Set([
+    "gemini-2.5-flash-image",
+    "gemini-3.1-flash-image",
+    "gemini-3-pro-image",
+    "gemini-3-pro-image-preview",
+  ]),
+  claude: new Set([
+    "claude-fable-5",
+    "claude-sonnet-4-5",
+    "claude-sonnet-4-5-thinking",
+    "claude-opus-4-5-thinking",
+    "claude-sonnet-4-6",
+    "claude-opus-4-6",
+    "claude-opus-4-6-thinking",
+    "claude-opus-4-7",
+    "claude-opus-4-8",
+  ]),
+};
+
+const normalizeAntigravityModelIdForGroup = (value: string): string => {
+  const normalized = value.trim().toLowerCase();
+  return normalized.startsWith("models/") ? normalized.slice("models/".length) : normalized;
+};
 
 const resolveAntigravityModelIdFromQuotaItem = (item: QuotaItem): string | null => {
   const key = typeof item.key === "string" ? item.key.trim() : "";
@@ -68,11 +125,89 @@ const resolveAntigravityModelIdFromQuotaItem = (item: QuotaItem): string | null 
   return label && shouldSkipAntigravityModelId(label) ? label : null;
 };
 
-export const filterAntigravityQuotaItems = (items: QuotaItem[]): QuotaItem[] =>
-  items.filter((item) => {
+const resolveAntigravityQuotaGroupFromModelId = (id: string): AntigravityQuotaGroup | null => {
+  const modelId = normalizeAntigravityModelIdForGroup(id);
+  const match = ANTIGRAVITY_QUOTA_GROUPS.find(({ group }) =>
+    ANTIGRAVITY_QUOTA_GROUP_MODEL_IDS[group].has(modelId),
+  );
+  return match?.group ?? null;
+};
+
+const resolveAntigravityQuotaGroupFromSummaryValue = (
+  value: string,
+): AntigravityQuotaGroup | null =>
+  ANTIGRAVITY_QUOTA_GROUPS.find((group) => group.key === value || group.label === value)?.group ??
+  null;
+
+const resolveAntigravityQuotaGroupFromItem = (item: QuotaItem): AntigravityQuotaGroup | null => {
+  const key = typeof item.key === "string" ? item.key.trim() : "";
+  if (key.startsWith(ANTIGRAVITY_SUMMARY_KEY_PREFIX)) {
+    const group = resolveAntigravityQuotaGroupFromSummaryValue(key);
+    if (group) return group;
+  }
+  const label = String(item.label ?? "").trim();
+  const labelGroup = resolveAntigravityQuotaGroupFromSummaryValue(label);
+  if (labelGroup) return labelGroup;
+  const modelId = resolveAntigravityModelIdFromQuotaItem(item);
+  return modelId ? resolveAntigravityQuotaGroupFromModelId(modelId) : null;
+};
+
+const resolveAntigravityQuotaGroupFromModel = (id: string): AntigravityQuotaGroup | null =>
+  resolveAntigravityQuotaGroupFromModelId(id);
+
+const earlierResetAtMs = (current: number | undefined, next: number | undefined) => {
+  if (typeof next !== "number" || !Number.isFinite(next)) return current;
+  if (typeof current !== "number" || !Number.isFinite(current)) return next;
+  return Math.min(current, next);
+};
+
+export const summarizeAntigravityQuotaItems = (items: QuotaItem[]): QuotaItem[] => {
+  const grouped = new Map<
+    AntigravityQuotaGroup,
+    { percent: number | null; resetAtMs?: number; count: number }
+  >();
+
+  items.forEach((item) => {
     const modelId = resolveAntigravityModelIdFromQuotaItem(item);
-    return !modelId || !shouldSkipAntigravityModelId(modelId);
+    if (modelId && shouldSkipAntigravityModelId(modelId)) return;
+
+    const group = resolveAntigravityQuotaGroupFromItem(item);
+    if (!group) return;
+
+    const existing = grouped.get(group) ?? { percent: null, count: 0 };
+    const percent =
+      typeof item.percent === "number" && Number.isFinite(item.percent)
+        ? clampPercent(item.percent)
+        : null;
+
+    grouped.set(group, {
+      percent:
+        percent === null
+          ? existing.percent
+          : existing.percent === null
+            ? percent
+            : Math.min(existing.percent, percent),
+      resetAtMs: earlierResetAtMs(existing.resetAtMs, item.resetAtMs),
+      count: existing.count + 1,
+    });
   });
+
+  return ANTIGRAVITY_QUOTA_GROUPS.flatMap(({ group, key, label }) => {
+    const summary = grouped.get(group);
+    if (!summary || summary.count === 0) return [];
+    return [
+      {
+        key,
+        label,
+        percent: summary.percent,
+        resetAtMs: summary.resetAtMs,
+      },
+    ];
+  });
+};
+
+export const filterAntigravityQuotaItems = (items: QuotaItem[]): QuotaItem[] =>
+  summarizeAntigravityQuotaItems(items);
 
 const resolvePayloadAndModels = (
   input: AntigravityFetchAvailableModelsPayload | AntigravityModelsPayload,
@@ -137,7 +272,7 @@ const buildModelLabel = (id: string, entry: AntigravityQuotaInfo): string => {
   return `${displayName} [${id}]`;
 };
 
-export const buildAntigravityItems = (
+const buildAntigravityModelItems = (
   input: AntigravityFetchAvailableModelsPayload | AntigravityModelsPayload,
 ): QuotaItem[] => {
   const { payload, models } = resolvePayloadAndModels(input);
@@ -156,6 +291,7 @@ export const buildAntigravityItems = (
   return order.flatMap((id) => {
     const entry = models[id];
     if (!entry) return [];
+    if (!resolveAntigravityQuotaGroupFromModel(id)) return [];
     const info = quotaInfo(entry);
     if (info.remainingFraction === null && !info.resetTime) return [];
     const percent =
@@ -173,6 +309,10 @@ export const buildAntigravityItems = (
     ];
   });
 };
+
+export const buildAntigravityItems = (
+  input: AntigravityFetchAvailableModelsPayload | AntigravityModelsPayload,
+): QuotaItem[] => summarizeAntigravityQuotaItems(buildAntigravityModelItems(input));
 
 export const buildAntigravityGroups = (
   input: AntigravityFetchAvailableModelsPayload | AntigravityModelsPayload,

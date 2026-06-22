@@ -850,7 +850,11 @@
     "missing_auth_index": "Auth file missing auth_index",
     "empty_models": "No quota data available",
     "refresh_button": "Refresh Quota",
-    "fetch_all": "Fetch All"
+    "fetch_all": "Fetch All",
+    "gemini3_pro": "G3P",
+    "gemini3_flash": "G3F",
+    "gemini_image": "G31FI",
+    "claude": "Claude"
   },
   "claude_quota": {
     "title": "Claude Quota",

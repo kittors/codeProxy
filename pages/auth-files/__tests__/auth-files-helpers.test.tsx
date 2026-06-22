@@ -187,7 +187,7 @@ describe("Auth Files helper coverage", () => {
           status: "success",
           updatedAt: 456,
           planType: "pro",
-          items: [{ label: "m_quota.code_5h", percent: 42, resetAtMs: 789 }],
+          items: [{ key: "code_5h", label: "m_quota.code_5h", percent: 42, resetAtMs: 789 }],
         },
       },
     });
@@ -200,7 +200,7 @@ describe("Auth Files helper coverage", () => {
           status: "success",
           updatedAt: 456,
           planType: "pro",
-          items: [{ label: "m_quota.code_5h", percent: 42, resetAtMs: 789 }],
+          items: [{ key: "code_5h", label: "m_quota.code_5h", percent: 42, resetAtMs: 789 }],
         },
       },
     });

@@ -2963,7 +2963,7 @@ describe("AuthFilesPage files table", () => {
     expect(within(card as HTMLElement).queryByText(modifiedText)).not.toBeInTheDocument();
   });
 
-  test("cards view shows all antigravity quota items instead of truncating to three", async () => {
+  test("cards view shows sub2api-style Antigravity quota summaries", async () => {
     const now = Date.now();
     const file = {
       name: "antigravity.json",
@@ -2988,10 +2988,16 @@ describe("AuthFilesPage files table", () => {
             status: "success",
             updatedAt: now,
             items: [
-              { key: "model:a", label: "Model A [a]", percent: 91 },
-              { key: "model:b", label: "Model B [b]", percent: 82 },
-              { key: "model:c", label: "Model C [c]", percent: 73 },
-              { key: "model:d", label: "Model D [d]", percent: 64 },
+              { key: "model:gemini-3.1-pro-high", label: "Model A [gemini-a]", percent: 91 },
+              { key: "model:gemini-3.1-pro-low", label: "Model B [gemini-b]", percent: 82 },
+              { key: "model:gemini-3-flash", label: "Model Flash [gemini-flash]", percent: 77 },
+              {
+                key: "model:gemini-3.1-flash-image",
+                label: "Model Image [gemini-image]",
+                percent: 65,
+              },
+              { key: "model:claude-sonnet-4-6", label: "Model C [claude-c]", percent: 73 },
+              { key: "model:gpt-oss-120b-medium", label: "Model D [gpt-d]", percent: 64 },
             ],
           },
         },
@@ -3013,10 +3019,20 @@ describe("AuthFilesPage files table", () => {
     expect(await screen.findByText("antigravity.json")).toBeInTheDocument();
     const cards = screen.getByTestId("auth-files-cards");
 
-    expect(within(cards).getByText("Model A [a]")).toBeInTheDocument();
-    expect(within(cards).getByText("Model B [b]")).toBeInTheDocument();
-    expect(within(cards).getByText("Model C [c]")).toBeInTheDocument();
-    expect(within(cards).getByText("Model D [d]")).toBeInTheDocument();
+    expect(within(cards).getByText("G3P")).toBeInTheDocument();
+    expect(within(cards).getByText("G3F")).toBeInTheDocument();
+    expect(within(cards).getByText("G31FI")).toBeInTheDocument();
+    expect(within(cards).getByText("Claude")).toBeInTheDocument();
+    expect(within(cards).getByText("82%")).toBeInTheDocument();
+    expect(within(cards).getByText("77%")).toBeInTheDocument();
+    expect(within(cards).getByText("65%")).toBeInTheDocument();
+    expect(within(cards).getByText("73%")).toBeInTheDocument();
+    expect(within(cards).queryByText("Model A [gemini-a]")).not.toBeInTheDocument();
+    expect(within(cards).queryByText("Model B [gemini-b]")).not.toBeInTheDocument();
+    expect(within(cards).queryByText("Model Flash [gemini-flash]")).not.toBeInTheDocument();
+    expect(within(cards).queryByText("Model Image [gemini-image]")).not.toBeInTheDocument();
+    expect(within(cards).queryByText("Model C [claude-c]")).not.toBeInTheDocument();
+    expect(within(cards).queryByText("Model D [gpt-d]")).not.toBeInTheDocument();
   });
 
   test("cards view hides cached antigravity models skipped by the reference implementation", async () => {
@@ -3092,9 +3108,10 @@ describe("AuthFilesPage files table", () => {
     expect(await screen.findByText("antigravity.json")).toBeInTheDocument();
     const cards = screen.getByTestId("auth-files-cards");
 
+    expect(within(cards).getByText("G3P")).toBeInTheDocument();
     expect(
-      within(cards).getByText("Gemini 3.1 Pro (High) [gemini-3.1-pro-high]"),
-    ).toBeInTheDocument();
+      within(cards).queryByText("Gemini 3.1 Pro (High) [gemini-3.1-pro-high]"),
+    ).not.toBeInTheDocument();
     expect(within(cards).queryByText("chat_20706")).not.toBeInTheDocument();
     expect(within(cards).queryByText("chat_23310")).not.toBeInTheDocument();
     expect(within(cards).queryByText("tab_flash_lite_preview")).not.toBeInTheDocument();
@@ -3158,10 +3175,11 @@ describe("AuthFilesPage files table", () => {
     expect(await screen.findByText("antigravity.json")).toBeInTheDocument();
     const cards = screen.getByTestId("auth-files-cards");
 
-    expect(
-      within(cards).getByText("Gemini 3.1 Pro (High) [gemini-3.1-pro-high]"),
-    ).toBeInTheDocument();
+    expect(within(cards).getByText("G3P")).toBeInTheDocument();
     expect(within(cards).getByText("91%")).toBeInTheDocument();
+    expect(
+      within(cards).queryByText("Gemini 3.1 Pro (High) [gemini-3.1-pro-high]"),
+    ).not.toBeInTheDocument();
     expect(within(cards).queryByText(/maxTokens=1048576/)).not.toBeInTheDocument();
     expect(within(cards).queryByText(/maxOutputTokens=65535/)).not.toBeInTheDocument();
     expect(
@@ -3224,14 +3242,13 @@ describe("AuthFilesPage files table", () => {
 
     const row = screen.getByText("antigravity.json").closest("tr");
     expect(row).not.toBeNull();
-    fireEvent.mouseEnter(
-      within(row as HTMLElement).getByText("Gemini 3.1 Pro (Low) [gemini-3.1-pro-low]"),
-    );
+    fireEvent.mouseEnter(within(row as HTMLElement).getByText("G3P"));
 
     const tooltip = await screen.findByRole("tooltip");
+    expect(within(tooltip).getByText("G3P")).toBeInTheDocument();
     expect(
-      within(tooltip).getByText("Gemini 3.1 Pro (Low) [gemini-3.1-pro-low]"),
-    ).toBeInTheDocument();
+      within(tooltip).queryByText("Gemini 3.1 Pro (Low) [gemini-3.1-pro-low]"),
+    ).not.toBeInTheDocument();
     expect(within(tooltip).queryByText(/maxTokens=1048576/)).not.toBeInTheDocument();
     expect(
       within(tooltip).queryByText(/apiProvider=API_PROVIDER_GOOGLE_GEMINI/),
@@ -3303,15 +3320,11 @@ describe("AuthFilesPage files table", () => {
 
     const row = screen.getByText("antigravity.json").closest("tr");
     expect(row).not.toBeNull();
-    fireEvent.mouseEnter(
-      within(row as HTMLElement).getByText("Gemini 3.1 Pro (High) [gemini-3.1-pro-high]"),
-    );
+    fireEvent.mouseEnter(within(row as HTMLElement).getByText("G3P"));
 
     const tooltips = await screen.findAllByRole("tooltip");
     expect(tooltips).toHaveLength(1);
-    expect(
-      within(tooltips[0]).getByText("Claude Sonnet 4.6 (Thinking) [claude-sonnet-4-6]"),
-    ).toBeInTheDocument();
+    expect(within(tooltips[0]).getByText("Claude")).toBeInTheDocument();
     const resetText = Array.from(tooltips[0].querySelectorAll("span")).find(
       (element) =>
         element.textContent?.includes("秒") && element.className.includes("tabular-nums"),
@@ -3379,18 +3392,20 @@ describe("AuthFilesPage files table", () => {
     const row = screen.getByText("antigravity.json").closest("tr");
     expect(row).not.toBeNull();
     expect(within(row as HTMLElement).queryByText("chat_20706")).not.toBeInTheDocument();
-    const visibleModel = within(row as HTMLElement).getByText(
-      "Gemini 3.1 Pro (High) [gemini-3.1-pro-high]",
-    );
+    const visibleModel = within(row as HTMLElement).getByText("G3P");
     expect(visibleModel).toBeInTheDocument();
+    expect(
+      within(row as HTMLElement).queryByText("Gemini 3.1 Pro (High) [gemini-3.1-pro-high]"),
+    ).not.toBeInTheDocument();
 
     fireEvent.mouseEnter(visibleModel);
 
     const tooltip = await screen.findByRole("tooltip");
     expect(within(tooltip).queryByText("chat_20706")).not.toBeInTheDocument();
+    expect(within(tooltip).getByText("G3P")).toBeInTheDocument();
     expect(
-      within(tooltip).getByText("Gemini 3.1 Pro (High) [gemini-3.1-pro-high]"),
-    ).toBeInTheDocument();
+      within(tooltip).queryByText("Gemini 3.1 Pro (High) [gemini-3.1-pro-high]"),
+    ).not.toBeInTheDocument();
   });
 
   test("cards view restores cached quota while refreshing in the background", async () => {
