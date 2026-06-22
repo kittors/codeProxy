@@ -726,6 +726,8 @@
     "trend_last_7_days_requests": "近 7 天请求数",
     "trend_current_weekly_cycle": "当前周周期",
     "trend_current_cycle_cost": "当前周期费用消耗",
+    "trend_predicted_5h_window_quota": "预测 5 小时窗口额度",
+    "trend_predicted_week_window_quota": "预测周窗口额度",
     "trend_weekly_quota_used": "周额度已消耗",
     "trend_cycle_start": "周期开始",
     "trend_window_title": "额度与请求趋势",

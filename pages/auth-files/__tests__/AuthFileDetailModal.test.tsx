@@ -53,6 +53,15 @@ const basePrefixProxyEditor: DetailModalProps["prefixProxyEditor"] = {
   subscriptionPeriod: "monthly",
 };
 
+const expectSummaryCard = (label: string, value: string) => {
+  const labelNode = screen.getByText(label);
+  const card = labelNode.closest("div");
+  if (!(card instanceof HTMLElement)) {
+    throw new Error(`Missing summary card for ${label}`);
+  }
+  expect(within(card).getByText(value)).toBeInTheDocument();
+};
+
 const renderDetailModal = (overrides: Partial<DetailModalProps> = {}) => {
   const props: DetailModalProps = {
     open: true,
@@ -161,14 +170,12 @@ describe("AuthFileDetailModal", () => {
     expect(screen.queryByRole("tab", { name: "Channel" })).not.toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Usage" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Fields" })).toBeInTheDocument();
-    expect(screen.getByText("Last 7 days requests")).toBeInTheDocument();
-    expect(screen.getByText("3")).toBeInTheDocument();
-    expect(screen.getByText("Current weekly cycle")).toBeInTheDocument();
-    expect(screen.getByText("2")).toBeInTheDocument();
-    expect(screen.getByText("Current cycle cost")).toBeInTheDocument();
-    expect(screen.getByText("$1.2345")).toBeInTheDocument();
-    expect(screen.getByText("Weekly quota used")).toBeInTheDocument();
-    expect(screen.getByText("8%")).toBeInTheDocument();
+    expect(screen.queryByText("Last 7 days requests")).not.toBeInTheDocument();
+    expectSummaryCard("Current weekly cycle", "2");
+    expectSummaryCard("Current cycle cost", "$1.2345");
+    expectSummaryCard("Predicted 5-hour window quota", "$0.0500");
+    expectSummaryCard("Predicted weekly window quota", "$15.4312");
+    expectSummaryCard("Weekly quota used", "8%");
     expect(screen.getByRole("dialog", { name: "Codex Primary" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Download" })).toBeEnabled();
     expect(chartOptions.at(-1)?.animation).toBe(true);
@@ -176,6 +183,27 @@ describe("AuthFileDetailModal", () => {
     expect(chartOptions.at(-1)?.grid?.top).toBeGreaterThanOrEqual(70);
     expect(chartOptions.at(-1)?.yAxis?.every((item: any) => !item.name)).toBe(true);
     expect(chartOptions.at(-1)?.series?.every((item: any) => item.animation === true)).toBe(true);
+  });
+
+  test("renders zero predicted quota values when Codex trend data is incomplete", () => {
+    renderDetailModal({
+      detailTrend: {
+        auth_index: "auth-1",
+        days: 7,
+        hours: 5,
+        request_total: 3,
+        cycle_request_total: 2,
+        cycle_cost_total: 0,
+        weekly_quota_used_percent: null,
+        cycle_start: "",
+        daily_usage: [],
+        hourly_usage: [{ hour: "2026-04-30 16:00", requests: 1 }],
+        quota_series: [],
+      },
+    });
+
+    expectSummaryCard("Predicted 5-hour window quota", "$0.0000");
+    expectSummaryCard("Predicted weekly window quota", "$0.0000");
   });
 
   test("disables trend chart animation after the first render completes", () => {
@@ -223,7 +251,7 @@ describe("AuthFileDetailModal", () => {
     renderDetailModal({ detailTrendLoading: true });
 
     expect(screen.getByText("Quota and request trends")).toBeInTheDocument();
-    expect(screen.getByText("Last 7 days requests")).toBeInTheDocument();
+    expect(screen.getByText("Predicted 5-hour window quota")).toBeInTheDocument();
     expect(screen.queryByText("Loading...")).not.toBeInTheDocument();
   });
 
@@ -231,7 +259,7 @@ describe("AuthFileDetailModal", () => {
     renderDetailModal({ detailTrend: null, detailTrendLoading: true });
 
     const loading = screen.getByTestId("auth-file-trend-loading");
-    expect(loading.querySelectorAll(".animate-pulse")).toHaveLength(8);
+    expect(loading.querySelectorAll(".animate-pulse")).toHaveLength(9);
     expect(screen.queryByText("Loading...")).not.toBeInTheDocument();
     expect(screen.queryByTestId("auth-file-trend-chart")).not.toBeInTheDocument();
     expect(chartOptions).toHaveLength(0);
