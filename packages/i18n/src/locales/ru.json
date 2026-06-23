@@ -2230,6 +2230,8 @@
     "progress_stage_failed": "Failed",
     "progress_stage_unknown": "Running",
     "updater_unavailable": "Updater sidecar недоступен. Обновление из панели доступно для Docker-развертываний с новым compose-файлом.",
+    "updater_token_missing": "Updater token не настроен. Укажите одинаковый непустой CLIRELAY_UPDATER_TOKEN для API и updater sidecar, затем пересоздайте контейнеры.",
+    "updater_auth_failed": "Updater sidecar отклонил health check. Убедитесь, что API и updater sidecar используют один CLIRELAY_UPDATER_TOKEN.",
     "later": "Не сейчас",
     "update_now": "Обновить",
     "updating": "Обновление…",

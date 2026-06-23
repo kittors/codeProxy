@@ -3311,6 +3311,8 @@
     "progress_stage_failed": "失败",
     "progress_stage_unknown": "运行中",
     "updater_unavailable": "当前无法连接 updater sidecar。使用最新 Docker Compose 部署后即可从这里更新。",
+    "updater_token_missing": "当前未配置 updater token。请为 API 和 updater sidecar 设置同一个非空 CLIRELAY_UPDATER_TOKEN，然后重新创建容器。",
+    "updater_auth_failed": "Updater sidecar 拒绝了健康检查。请确认 API 与 updater sidecar 使用同一个 CLIRELAY_UPDATER_TOKEN。",
     "later": "暂不更新",
     "update_now": "立即更新",
     "updating": "更新中…",

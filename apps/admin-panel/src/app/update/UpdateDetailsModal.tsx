@@ -118,6 +118,17 @@ function normalizedProgressStatus(progress?: UpdateProgressResponse | null) {
   return progress?.status?.trim().toLowerCase() ?? "";
 }
 
+function updaterUnavailableMessageKey(candidate?: UpdateCheckResponse | null) {
+  switch (candidate?.updater_health_status) {
+    case "token_missing":
+      return "auto_update.updater_token_missing";
+    case "auth_failed":
+      return "auto_update.updater_auth_failed";
+    default:
+      return "auto_update.updater_unavailable";
+  }
+}
+
 function translateProgressMessage(
   t: TFunction,
   progress?: UpdateProgressResponse | null,
@@ -477,6 +488,9 @@ export function UpdateDetailsModal({
     alreadyUpToDate && isAlreadyUpToDateMessage(displayCandidate?.message)
       ? ""
       : formatUpdateStatusMessage(displayCandidate?.message);
+  const updaterUnavailableMessage = displayCandidate
+    ? t(updaterUnavailableMessageKey(displayCandidate))
+    : "";
   const versionCardClass = alreadyUpToDate
     ? "min-w-0 rounded-xl border border-emerald-200 bg-emerald-50 p-3 dark:border-emerald-500/20 dark:bg-emerald-500/10"
     : "min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-neutral-800 dark:bg-neutral-900/50";
@@ -678,7 +692,7 @@ export function UpdateDetailsModal({
 
             {!showProgressConsole && !displayCandidate.updater_available ? (
               <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200">
-                {t("auto_update.updater_unavailable")}
+                {updaterUnavailableMessage}
               </p>
             ) : null}
 
