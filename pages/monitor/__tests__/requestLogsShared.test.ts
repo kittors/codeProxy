@@ -65,7 +65,7 @@ describe("requestLogsShared", () => {
     expect(columns.find((column) => column.key === "latency")?.label).toBe(
       "request_logs.col_response_metrics",
     );
-    expect(columns.find((column) => column.key === "latency")?.minWidthPx).toBe(184);
+    expect(columns.find((column) => column.key === "latency")?.minWidthPx).toBe(240);
     expect(keys.indexOf("latency")).toBeLessThan(keys.indexOf("apiKeyName"));
     expect(keys.indexOf("inputTokens")).toBeLessThan(keys.indexOf("apiKeyName"));
     expect(keys.indexOf("cachedTokens")).toBeLessThan(keys.indexOf("model"));

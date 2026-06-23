@@ -128,8 +128,19 @@ export function calculateScrollbarThumbs(scrollMetrics: ScrollMetrics, headerHei
   return { vThumb: v, hThumb: h };
 }
 
+function parseArbitraryMinWidthPx(widthClassName?: string) {
+  const match = widthClassName?.match(/(?:^|\s)min-w-\[(\d+(?:\.\d+)?)px\](?:\s|$)/);
+  if (!match) return null;
+  const value = Number(match[1]);
+  return Number.isFinite(value) && value > 0 ? Math.round(value) : null;
+}
+
+function resolveColumnMinWidth<T>(column: DataTableColumn<T>) {
+  return column.minWidthPx ?? parseArbitraryMinWidthPx(column.width) ?? DEFAULT_MIN_COLUMN_WIDTH;
+}
+
 export function clampColumnWidth<T>(column: DataTableColumn<T>, width: number) {
-  const minWidth = column.minWidthPx ?? DEFAULT_MIN_COLUMN_WIDTH;
+  const minWidth = resolveColumnMinWidth(column);
   const maxWidth = column.maxWidthPx ?? DEFAULT_MAX_COLUMN_WIDTH;
   return Math.max(minWidth, Math.min(maxWidth, Math.round(width)));
 }
