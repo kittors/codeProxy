@@ -96,22 +96,27 @@ const resolveLatencyToneClasses = (latencyText: string): string => {
 
 function RequestLogMetricChip({
   ariaLabel,
+  label,
   value,
   className,
 }: {
   ariaLabel: string;
+  label?: string;
   value: string;
   className: string;
 }) {
   return (
     <span
       className={[
-        "inline-flex items-center rounded-full border px-1.5 py-0.5 font-mono text-[11px] font-semibold tabular-nums whitespace-nowrap",
+        "inline-flex shrink-0 items-center gap-1 rounded-full border px-1.5 py-0.5 text-[11px] whitespace-nowrap",
         className,
       ].join(" ")}
       aria-label={ariaLabel}
     >
-      {value}
+      {label ? (
+        <span className="font-sans text-[10px] font-medium leading-none opacity-80">{label}</span>
+      ) : null}
+      <span className="font-mono font-semibold tabular-nums">{value}</span>
     </span>
   );
 }
@@ -396,8 +401,8 @@ export function buildRequestLogsColumns(
     {
       key: "latency",
       label: t("request_logs.col_response_metrics"),
-      width: "w-52",
-      minWidthPx: 184,
+      width: "w-64",
+      minWidthPx: 240,
       headerClassName: "text-center",
       cellClassName: "text-center text-xs tabular-nums text-slate-700 dark:text-slate-200",
       render: (row) => {
@@ -417,14 +422,23 @@ export function buildRequestLogsColumns(
             content={tooltipLines.join("\n")}
             disabled={tooltipLines.length === 0}
             placement="bottom"
-            className="max-w-full justify-center"
+            className="block max-w-full"
           >
-            <div className="inline-flex max-w-full items-center justify-center gap-1.5 whitespace-nowrap">
+            <div className="flex max-w-full flex-wrap items-center justify-center gap-1.5">
               {hasLatency ? (
                 <RequestLogMetricChip
                   ariaLabel={`${t("request_logs.col_duration")}: ${row.latencyText}`}
+                  label={t("request_logs.col_duration")}
                   value={row.latencyText}
                   className={resolveLatencyToneClasses(row.latencyText)}
+                />
+              ) : null}
+              {hasFirstToken ? (
+                <RequestLogMetricChip
+                  ariaLabel={`${t("request_logs.col_first_token")}: ${row.firstTokenText}`}
+                  label={t("request_logs.col_first_token")}
+                  value={row.firstTokenText}
+                  className="border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-500/20 dark:bg-sky-500/10 dark:text-sky-200"
                 />
               ) : null}
               <RequestLogModeChip

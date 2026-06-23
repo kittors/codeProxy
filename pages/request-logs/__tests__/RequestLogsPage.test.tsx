@@ -153,7 +153,7 @@ describe("RequestLogsPage", () => {
     mocks.clearUsageLogs.mockReset();
   });
 
-  test("renders first token latency in the response metrics tooltip", async () => {
+  test("renders first token latency in the response metrics cell and tooltip", async () => {
     await i18n.changeLanguage("en");
     const user = userEvent.setup();
 
@@ -209,9 +209,10 @@ describe("RequestLogsPage", () => {
     expect(within(table).getByRole("columnheader", { name: "Response Metrics" })).toBeInTheDocument();
     expect(within(table).getByText("Streaming")).toBeInTheDocument();
     expect(within(table).getByText("1.20s")).toBeInTheDocument();
-    expect(within(table).queryByText("183ms")).not.toBeInTheDocument();
+    expect(within(table).getByText("First Token")).toBeInTheDocument();
+    expect(within(table).getByText("183ms")).toBeInTheDocument();
 
-    await user.hover(within(table).getByLabelText("Duration: 1.20s"));
+    await user.hover(within(table).getByLabelText("First Token: 183ms"));
     expect(await screen.findByRole("tooltip")).toHaveTextContent("First Token: 183ms");
   });
 

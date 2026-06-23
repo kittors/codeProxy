@@ -40,6 +40,8 @@ export interface DataTableColumn<T> {
   headerClassName?: string;
   /** Extra cell class */
   cellClassName?: string;
+  /** Extra class for the inner cell content wrapper. */
+  cellContentClassName?: string;
   /** Overflow tooltip text for a truncated cell. Primitive render output is used by default. */
   overflowTooltip?: boolean | ((row: T, index: number) => string | null | undefined);
   /** Custom header render function (overrides label) */
@@ -246,8 +248,19 @@ function calculateScrollbarThumbs(scrollMetrics: ScrollMetrics, headerHeight: nu
   return { vThumb: v, hThumb: h };
 }
 
+function parseArbitraryMinWidthPx(widthClassName?: string) {
+  const match = widthClassName?.match(/(?:^|\s)min-w-\[(\d+(?:\.\d+)?)px\](?:\s|$)/);
+  if (!match) return null;
+  const value = Number(match[1]);
+  return Number.isFinite(value) && value > 0 ? Math.round(value) : null;
+}
+
+function resolveColumnMinWidth<T>(column: DataTableColumn<T>) {
+  return column.minWidthPx ?? parseArbitraryMinWidthPx(column.width) ?? DEFAULT_MIN_COLUMN_WIDTH;
+}
+
 function clampColumnWidth<T>(column: DataTableColumn<T>, width: number) {
-  const minWidth = column.minWidthPx ?? DEFAULT_MIN_COLUMN_WIDTH;
+  const minWidth = resolveColumnMinWidth(column);
   const maxWidth = column.maxWidthPx ?? DEFAULT_MAX_COLUMN_WIDTH;
   return Math.max(minWidth, Math.min(maxWidth, Math.round(width)));
 }
@@ -1207,7 +1220,7 @@ export function DataTable<T>({
       const rect = headerCell.getBoundingClientRect();
       const containerRect = containerRef.current?.getBoundingClientRect();
       const startWidth = rect.width;
-      const minWidth = column.minWidthPx ?? DEFAULT_MIN_COLUMN_WIDTH;
+      const minWidth = resolveColumnMinWidth(column);
       const maxWidth = column.maxWidthPx ?? DEFAULT_MAX_COLUMN_WIDTH;
       const nextStartWidth = Math.max(minWidth, Math.min(maxWidth, startWidth));
 
@@ -2199,7 +2212,12 @@ export function DataTable<T>({
                             >
                               <div
                                 data-vt-cell-content-clip
-                                className="min-w-0 max-w-full overflow-hidden"
+                                className={[
+                                  "min-w-0 max-w-full overflow-hidden",
+                                  col.cellContentClassName,
+                                ]
+                                  .filter(Boolean)
+                                  .join(" ")}
                               >
                                 <TableCellOverflowTooltip
                                   tooltipContent={overflowTooltip}

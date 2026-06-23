@@ -101,6 +101,67 @@ describe("ApiKeyColumns", () => {
     expect(keyColumn?.width).toBe("w-[320px] min-w-[320px]");
   });
 
+  test("renders key and unrestricted permission cells with bounded truncation", () => {
+    const row: ApiKeyEntry = {
+      key: "sk-team-a-abcdefghijklmnopqrstuvwxyz1234567890",
+      name: "Test key",
+      "created-at": "2026-04-28T00:00:00Z",
+    };
+    const columns = createApiKeyColumns({
+      t,
+      onCopy: vi.fn(),
+      onDelete: vi.fn(),
+      onEdit: vi.fn(),
+      onImportToCcSwitch: vi.fn(),
+      onToggleDisable: vi.fn(),
+      onViewUsage: vi.fn(),
+    });
+    const keyColumn = columns.find((column) => column.key === "key");
+    const modelsColumn = columns.find((column) => column.key === "allowedModels");
+
+    const { container } = render(
+      <div>
+        <div data-testid="key-cell">{keyColumn?.render(row, 0)}</div>
+        <div data-testid="models-cell">{modelsColumn?.render(row, 0)}</div>
+      </div>,
+    );
+
+    const code = container.querySelector("code");
+    expect(code).toHaveClass("max-w-full");
+    expect(code).toHaveClass("truncate");
+    expect(screen.getByText("api_keys_page.all_models")).toHaveClass("truncate");
+  });
+
+  test("keeps restricted permission summaries bounded inside the cell", () => {
+    const row: ApiKeyEntry = {
+      key: "sk-team-a-abcdefghijklmnopqrstuvwxyz1234567890",
+      name: "Test key",
+      "created-at": "2026-04-28T00:00:00Z",
+      "allowed-models": ["deepseek-r1-ultra-long-name", "gpt-5.3-codex"],
+    };
+    const columns = createApiKeyColumns({
+      t,
+      onCopy: vi.fn(),
+      onDelete: vi.fn(),
+      onEdit: vi.fn(),
+      onImportToCcSwitch: vi.fn(),
+      onToggleDisable: vi.fn(),
+      onViewUsage: vi.fn(),
+    });
+    const modelsColumn = columns.find((column) => column.key === "allowedModels");
+
+    const { container } = render(<div>{modelsColumn?.render(row, 0)}</div>);
+    const trigger = container.querySelector("[data-tooltip-managed='true']");
+    const summary = container.querySelector("span.flex.max-w-full.overflow-hidden");
+
+    expect(trigger).toHaveClass("!flex");
+    expect(trigger).toHaveClass("max-w-full");
+    expect(trigger).toHaveClass("overflow-hidden");
+    expect(summary).toHaveClass("flex");
+    expect(summary).toHaveClass("min-w-0");
+    expect(screen.getByText("deepseek-r1-ultra-long-name")).toHaveClass("truncate");
+  });
+
   test("shows API key spending limits as a dedicated cost column", async () => {
     const row: ApiKeyEntry = {
       key: "sk-test",

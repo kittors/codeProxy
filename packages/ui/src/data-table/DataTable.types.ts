@@ -26,6 +26,8 @@ export interface DataTableColumn<T> {
   headerClassName?: string;
   /** Extra cell class */
   cellClassName?: string;
+  /** Extra class for the inner cell content wrapper. */
+  cellContentClassName?: string;
   /** Overflow tooltip text for a truncated cell. Primitive render output is used by default. */
   overflowTooltip?: boolean | ((row: T, index: number) => string | null | undefined);
   /** Custom header render function (overrides label) */

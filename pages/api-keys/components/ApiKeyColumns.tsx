@@ -31,6 +31,17 @@ type CreateApiKeyColumnsOptions = {
   onDelete: (index: number) => void;
 };
 
+function ApiKeyPermissionAllValue({ label }: { label: string }) {
+  return (
+    <OverflowTooltip content={label} className="block min-w-0 max-w-full">
+      <span className="inline-flex max-w-full min-w-0 items-center gap-1 text-green-600 dark:text-green-400">
+        <ShieldCheck size={14} className="shrink-0" />
+        <span className="min-w-0 truncate">{label}</span>
+      </span>
+    </OverflowTooltip>
+  );
+}
+
 export const createApiKeyColumns = ({
   t,
   onToggleDisable,
@@ -84,12 +95,17 @@ export const createApiKeyColumns = ({
     key: "key",
     label: t("api_keys_page.col_key"),
     width: "w-[320px] min-w-[320px]",
-    cellClassName: "whitespace-nowrap",
-    render: (row) => (
-      <code className="rounded-md bg-slate-100 px-2 py-0.5 font-mono text-xs text-slate-700 dark:bg-neutral-800 dark:text-white/70">
-        {maskApiKey(row.key)}
-      </code>
-    ),
+    cellClassName: "min-w-0 whitespace-nowrap",
+    render: (row) => {
+      const maskedKey = maskApiKey(row.key);
+      return (
+        <OverflowTooltip content={maskedKey} className="block min-w-0 max-w-full">
+          <code className="inline-block max-w-full truncate align-middle rounded-md bg-slate-100 px-2 py-0.5 font-mono text-xs text-slate-700 dark:bg-neutral-800 dark:text-white/70">
+            {maskedKey}
+          </code>
+        </OverflowTooltip>
+      );
+    },
   },
   {
     key: "dailyLimit",
@@ -218,9 +234,9 @@ export const createApiKeyColumns = ({
               ))}
             </div>
           }
-          className="block min-w-0"
+          className="!flex min-w-0 max-w-full overflow-hidden"
         >
-          <span className="inline-flex min-w-0 w-full items-center gap-1.5 text-xs">
+          <span className="flex min-w-0 max-w-full items-center gap-1.5 overflow-hidden text-xs">
             <span className="inline-flex h-5 min-w-[20px] flex-shrink-0 items-center justify-center rounded-md bg-indigo-50 px-1.5 font-semibold tabular-nums text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-300">
               {row["allowed-models"].length}
             </span>
@@ -230,9 +246,7 @@ export const createApiKeyColumns = ({
           </span>
         </HoverTooltip>
       ) : (
-        <span className="inline-flex items-center gap-1 whitespace-nowrap text-green-600 dark:text-green-400">
-          <ShieldCheck size={14} /> {t("api_keys_page.all_models")}
-        </span>
+        <ApiKeyPermissionAllValue label={t("api_keys_page.all_models")} />
       ),
   },
   {
@@ -255,9 +269,9 @@ export const createApiKeyColumns = ({
               ))}
             </div>
           }
-          className="block min-w-0"
+          className="!flex min-w-0 max-w-full overflow-hidden"
         >
-          <span className="inline-flex min-w-0 w-full items-center gap-1.5 text-xs">
+          <span className="flex min-w-0 max-w-full items-center gap-1.5 overflow-hidden text-xs">
             <span className="inline-flex h-5 min-w-[20px] flex-shrink-0 items-center justify-center rounded-md bg-violet-50 px-1.5 font-semibold tabular-nums text-violet-700 dark:bg-violet-900/30 dark:text-violet-300">
               {row["allowed-channel-groups"].length}
             </span>
@@ -267,9 +281,7 @@ export const createApiKeyColumns = ({
           </span>
         </HoverTooltip>
       ) : (
-        <span className="inline-flex items-center gap-1 whitespace-nowrap text-green-600 dark:text-green-400">
-          <ShieldCheck size={14} /> {t("api_keys_page.all_channel_groups")}
-        </span>
+        <ApiKeyPermissionAllValue label={t("api_keys_page.all_channel_groups")} />
       ),
   },
   {
@@ -292,9 +304,9 @@ export const createApiKeyColumns = ({
               ))}
             </div>
           }
-          className="block min-w-0"
+          className="!flex min-w-0 max-w-full overflow-hidden"
         >
-          <span className="inline-flex min-w-0 w-full items-center gap-1.5 text-xs">
+          <span className="flex min-w-0 max-w-full items-center gap-1.5 overflow-hidden text-xs">
             <span className="inline-flex h-5 min-w-[20px] flex-shrink-0 items-center justify-center rounded-md bg-cyan-50 px-1.5 font-semibold tabular-nums text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300">
               {row["allowed-channels"].length}
             </span>
@@ -304,9 +316,7 @@ export const createApiKeyColumns = ({
           </span>
         </HoverTooltip>
       ) : (
-        <span className="inline-flex items-center gap-1 whitespace-nowrap text-green-600 dark:text-green-400">
-          <ShieldCheck size={14} /> {t("api_keys_page.all_channels")}
-        </span>
+        <ApiKeyPermissionAllValue label={t("api_keys_page.all_channels")} />
       ),
   },
   {
