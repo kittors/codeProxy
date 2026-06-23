@@ -200,10 +200,12 @@ const readResponseMetricsColumnState = async (page: Page) =>
     const cellRect = firstCell.getBoundingClientRect();
     const chips = [...firstCell.querySelectorAll<HTMLElement>(".rounded-full")].map((element) => {
       const rect = element.getBoundingClientRect();
+      const style = getComputedStyle(element);
       return {
         text: element.textContent?.trim() ?? "",
         left: rect.left,
         right: rect.right,
+        borderTopWidth: style.borderTopWidth,
       };
     });
     const storedWidths = JSON.parse(
@@ -213,6 +215,7 @@ const readResponseMetricsColumnState = async (page: Page) =>
     return {
       width: Math.round(header.getBoundingClientRect().width),
       text: firstCell.textContent?.trim() ?? "",
+      chips,
       chipsStayInsideCell: chips.every(
         (chip) => chip.left >= cellRect.left - 1 && chip.right <= cellRect.right + 1,
       ),
@@ -249,11 +252,12 @@ test("Request Logs: response metrics column resize clamps at its minimum width",
   const during = await readResponseMetricsColumnState(page);
   expect(during.width).toBeGreaterThanOrEqual(239);
   expect(during.width).toBeLessThanOrEqual(241);
-  expect(during.text).toMatch(/First Token Latency|首 Token 耗时/);
+  expect(during.text).not.toMatch(/First Token Latency|首 Token 耗时/);
   expect(during.text).toMatch(/90ms/);
   expect(during.text).toMatch(/Streaming|流式/);
   expect(during.text).not.toContain("--");
   expect(during.chipsStayInsideCell).toBe(true);
+  expect(during.chips.find((chip) => /Streaming|流式/.test(chip.text))?.borderTopWidth).toBe("1px");
 
   await page.mouse.up();
 

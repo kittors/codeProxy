@@ -135,6 +135,46 @@ describe("ApiKeyColumns", () => {
     expect(tooltipTrigger).toHaveClass("block", "max-w-full");
   });
 
+  test("truncates limited model summaries inside an intact rounded pill", () => {
+    const row: ApiKeyEntry = {
+      key: "sk-test",
+      name: "Test key",
+      "allowed-models": [
+        "deepseek-v4-flash-ultra-long-model-name",
+        "deepseek-v4-pro",
+        "kimi-k2.5",
+        "kimi-k2.6",
+      ],
+      "created-at": "2026-04-28T00:00:00Z",
+    };
+    const columns = createApiKeyColumns({
+      t,
+      onCopy: vi.fn(),
+      onDelete: vi.fn(),
+      onEdit: vi.fn(),
+      onImportToCcSwitch: vi.fn(),
+      onToggleDisable: vi.fn(),
+      onViewUsage: vi.fn(),
+    });
+    const modelColumn = columns.find((column) => column.key === "allowedModels");
+
+    render(<div>{modelColumn?.render(row, 0)}</div>);
+
+    const modelText = screen.getByText("deepseek-v4-flash-ultra-long-model-name");
+    const pill = modelText.parentElement;
+    const tooltipTrigger = pill?.parentElement;
+
+    expect(screen.getByText("4")).toBeInTheDocument();
+    expect(pill).not.toBeNull();
+    expect(tooltipTrigger).not.toBeNull();
+    if (!pill || !tooltipTrigger) return;
+
+    expect(modelText).toHaveClass("min-w-0", "truncate");
+    expect(pill).toHaveClass("flex", "min-w-0", "max-w-full", "rounded-full", "border");
+    expect(tooltipTrigger).toHaveAttribute("data-tooltip-managed", "true");
+    expect(tooltipTrigger).toHaveClass("!flex", "min-w-0", "max-w-full");
+  });
+
   test("shows API key spending limits as a dedicated cost column", async () => {
     const row: ApiKeyEntry = {
       key: "sk-test",

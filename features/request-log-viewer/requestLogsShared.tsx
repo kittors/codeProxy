@@ -57,9 +57,7 @@ const computeOutputTokensPerSecond = (row: RequestLogsRow): number | null => {
   const totalSeconds = parseLatencyTextToSeconds(row.latencyText);
   if (totalSeconds === null || totalSeconds <= 0) return null;
 
-  const firstSeconds = row.streaming
-    ? (parseLatencyTextToSeconds(row.firstTokenText) ?? 0)
-    : 0;
+  const firstSeconds = row.streaming ? (parseLatencyTextToSeconds(row.firstTokenText) ?? 0) : 0;
   const generationSeconds = Math.max(0, totalSeconds - firstSeconds);
   if (generationSeconds <= 0) return null;
 
@@ -96,12 +94,10 @@ const resolveLatencyToneClasses = (latencyText: string): string => {
 
 function RequestLogMetricChip({
   ariaLabel,
-  label,
   value,
   className,
 }: {
   ariaLabel: string;
-  label?: string;
   value: string;
   className: string;
 }) {
@@ -113,27 +109,18 @@ function RequestLogMetricChip({
       ].join(" ")}
       aria-label={ariaLabel}
     >
-      {label ? (
-        <span className="font-sans text-[10px] font-medium leading-none opacity-80">{label}</span>
-      ) : null}
       <span className="font-mono font-semibold tabular-nums">{value}</span>
     </span>
   );
 }
 
-function RequestLogModeChip({
-  label,
-  streaming,
-}: {
-  label: string;
-  streaming: boolean;
-}) {
+function RequestLogModeChip({ label, streaming }: { label: string; streaming: boolean }) {
   return (
     <span
       className={
         streaming
-          ? "inline-flex shrink-0 items-center justify-center rounded-full bg-sky-50 px-2.5 py-1 text-xs font-semibold text-sky-600 dark:bg-sky-500/15 dark:text-sky-300"
-          : "inline-flex shrink-0 items-center justify-center rounded-full bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-500 dark:bg-neutral-900 dark:text-white/55"
+          ? "inline-flex shrink-0 items-center justify-center rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-xs font-semibold text-sky-600 dark:border-sky-500/25 dark:bg-sky-500/15 dark:text-sky-300"
+          : "inline-flex shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs font-semibold text-slate-500 dark:border-white/10 dark:bg-neutral-900 dark:text-white/55"
       }
     >
       {label}
@@ -422,13 +409,12 @@ export function buildRequestLogsColumns(
             content={tooltipLines.join("\n")}
             disabled={tooltipLines.length === 0}
             placement="bottom"
-            className="block max-w-full"
+            className="!flex min-w-0 max-w-full justify-center"
           >
-            <div className="flex max-w-full flex-wrap items-center justify-center gap-1.5">
+            <div className="flex min-w-0 max-w-full flex-nowrap items-center justify-center gap-1.5">
               {hasLatency ? (
                 <RequestLogMetricChip
                   ariaLabel={`${t("request_logs.col_duration")}: ${row.latencyText}`}
-                  label={t("request_logs.col_duration")}
                   value={row.latencyText}
                   className={resolveLatencyToneClasses(row.latencyText)}
                 />
@@ -436,7 +422,6 @@ export function buildRequestLogsColumns(
               {hasFirstToken ? (
                 <RequestLogMetricChip
                   ariaLabel={`${t("request_logs.col_first_token")}: ${row.firstTokenText}`}
-                  label={t("request_logs.col_first_token")}
                   value={row.firstTokenText}
                   className="border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-500/20 dark:bg-sky-500/10 dark:text-sky-200"
                 />
