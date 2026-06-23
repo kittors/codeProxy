@@ -252,6 +252,22 @@ function clampColumnWidth<T>(column: DataTableColumn<T>, width: number) {
   return Math.max(minWidth, Math.min(maxWidth, Math.round(width)));
 }
 
+function normalizeColumnWidths<T>(columns: DataTableColumn<T>[], widths: ColumnWidthMap) {
+  const next: ColumnWidthMap = {};
+  columns.forEach((column) => {
+    const width = widths[column.key];
+    if (width !== undefined) next[column.key] = clampColumnWidth(column, width);
+  });
+  return next;
+}
+
+function areColumnWidthMapsEqual(left: ColumnWidthMap, right: ColumnWidthMap) {
+  const leftKeys = Object.keys(left);
+  const rightKeys = Object.keys(right);
+  if (leftKeys.length !== rightKeys.length) return false;
+  return leftKeys.every((key) => left[key] === right[key]);
+}
+
 function getColumnWidthStorageKey(tableId?: string) {
   const trimmed = tableId?.trim();
   return trimmed ? `${COLUMN_WIDTH_STORAGE_PREFIX}.${trimmed}` : null;
@@ -573,7 +589,7 @@ export function DataTable<T>({
   const columnElementsRef = useRef<Record<string, HTMLTableColElement | null>>({});
   const headerHeightRef = useRef(0);
   const [columnWidths, setColumnWidths] = useState<ColumnWidthMap>(() =>
-    readStoredColumnWidths(tableId),
+    normalizeColumnWidths(columns, readStoredColumnWidths(tableId)),
   );
   const columnWidthsRef = useRef<ColumnWidthMap>(columnWidths);
   const [resizePreview, setResizePreview] = useState<ColumnResizePreview | null>(null);
@@ -647,7 +663,7 @@ export function DataTable<T>({
   const colCount = orderedColumns.length;
 
   useEffect(() => {
-    setColumnWidths(readStoredColumnWidths(tableId));
+    setColumnWidths(normalizeColumnWidths(columns, readStoredColumnWidths(tableId)));
     if (canUseColumnOrder) {
       setColumnOrder(
         normalizeColumnOrder(columns, canPersistColumnOrder ? readStoredColumnOrder(tableId) : []),
@@ -684,19 +700,9 @@ export function DataTable<T>({
   useEffect(() => {
     const validKeys = new Set(columns.map((column) => column.key));
     setColumnWidths((prev) => {
-      let changed = false;
-      const next: ColumnWidthMap = {};
-      columns.forEach((column) => {
-        const width = prev[column.key];
-        if (width !== undefined) next[column.key] = clampColumnWidth(column, width);
-      });
-      Object.keys(prev).forEach((key) => {
-        if (!validKeys.has(key)) changed = true;
-      });
-      columns.forEach((column) => {
-        if (next[column.key] !== prev[column.key]) changed = true;
-      });
-      return changed ? next : prev;
+      const next = normalizeColumnWidths(columns, prev);
+      const removedStaleKey = Object.keys(prev).some((key) => !validKeys.has(key));
+      return removedStaleKey || !areColumnWidthMapsEqual(prev, next) ? next : prev;
     });
   }, [columns]);
 
@@ -1887,7 +1893,8 @@ export function DataTable<T>({
     (column: DataTableColumn<T>): CSSProperties | undefined => {
       const width = columnWidths[column.key];
       if (!width) return undefined;
-      return { width, minWidth: width, maxWidth: width };
+      const clampedWidth = clampColumnWidth(column, width);
+      return { width: clampedWidth, minWidth: clampedWidth, maxWidth: clampedWidth };
     },
     [columnWidths],
   );

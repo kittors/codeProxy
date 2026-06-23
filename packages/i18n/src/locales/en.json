@@ -2437,6 +2437,7 @@
     "col_status": "Status",
     "col_mode": "Mode",
     "col_duration": "Duration",
+    "col_response_metrics": "Response Metrics",
     "col_first_token": "First Token",
     "mode_streaming": "Streaming",
     "mode_non_streaming": "Non-streaming",

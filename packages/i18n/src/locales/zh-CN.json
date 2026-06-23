@@ -2706,6 +2706,7 @@
     "col_status": "状态",
     "col_mode": "类型",
     "col_duration": "耗时",
+    "col_response_metrics": "响应指标",
     "col_first_token": "首 Token",
     "mode_streaming": "流式",
     "mode_non_streaming": "非流式",

@@ -74,6 +74,11 @@ const formatTokensPerSecond = (value: number | null): string => {
   return `${value.toFixed(2)} t/s`;
 };
 
+const hasRequestLogMetricText = (value: string): boolean => {
+  const trimmed = String(value || "").trim();
+  return trimmed !== "" && trimmed !== "--";
+};
+
 const resolveLatencyToneClasses = (latencyText: string): string => {
   const seconds = parseLatencyTextToSeconds(latencyText);
   if (seconds === null) {
@@ -107,6 +112,26 @@ function RequestLogMetricChip({
       aria-label={ariaLabel}
     >
       {value}
+    </span>
+  );
+}
+
+function RequestLogModeChip({
+  label,
+  streaming,
+}: {
+  label: string;
+  streaming: boolean;
+}) {
+  return (
+    <span
+      className={
+        streaming
+          ? "inline-flex shrink-0 items-center justify-center rounded-full bg-sky-50 px-2.5 py-1 text-xs font-semibold text-sky-600 dark:bg-sky-500/15 dark:text-sky-300"
+          : "inline-flex shrink-0 items-center justify-center rounded-full bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-500 dark:bg-neutral-900 dark:text-white/55"
+      }
+    >
+      {label}
     </span>
   );
 }
@@ -369,62 +394,47 @@ export function buildRequestLogsColumns(
         ),
     },
     {
-      key: "mode",
-      label: t("request_logs.col_mode"),
-      width: "w-24",
-      headerClassName: "text-center",
-      cellClassName: "text-center",
-      render: (row) => (
-        <span
-          className={
-            row.streaming
-              ? "inline-flex min-w-[52px] justify-center rounded-full bg-sky-50 px-2.5 py-1 text-xs font-semibold text-sky-600 dark:bg-sky-500/15 dark:text-sky-300"
-              : "inline-flex min-w-[52px] justify-center rounded-full bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-500 dark:bg-neutral-900 dark:text-white/55"
-          }
-        >
-          {row.streaming ? t("request_logs.mode_streaming") : t("request_logs.mode_non_streaming")}
-        </span>
-      ),
-    },
-    {
       key: "latency",
-      label: t("request_logs.col_duration"),
-      width: "w-44",
+      label: t("request_logs.col_response_metrics"),
+      width: "w-52",
+      minWidthPx: 184,
       headerClassName: "text-center",
-      cellClassName: "text-center text-xs tabular-nums text-slate-700 dark:text-slate-200 pr-6",
+      cellClassName: "text-center text-xs tabular-nums text-slate-700 dark:text-slate-200",
       render: (row) => {
         const tps = computeOutputTokensPerSecond(row);
         const tpsText = formatTokensPerSecond(tps);
-        const firstTokenText = row.streaming
-          ? row.firstTokenText
-          : t("request_logs.first_token_not_applicable");
-        const tooltip =
-          `${t("request_logs.col_duration")}: ${row.latencyText}\n` +
-          `${t("request_logs.col_first_token")}: ${firstTokenText}\n` +
-          `${t("request_logs.tokens_per_second")}: ${tpsText}`;
+        const hasLatency = hasRequestLogMetricText(row.latencyText);
+        const hasFirstToken = row.streaming && hasRequestLogMetricText(row.firstTokenText);
+        const hasTps = hasRequestLogMetricText(tpsText);
+        const tooltipLines = [
+          hasLatency ? `${t("request_logs.col_duration")}: ${row.latencyText}` : null,
+          hasFirstToken ? `${t("request_logs.col_first_token")}: ${row.firstTokenText}` : null,
+          hasTps ? `${t("request_logs.tokens_per_second")}: ${tpsText}` : null,
+        ].filter((line): line is string => Boolean(line));
 
         return (
-          <HoverTooltip content={tooltip} placement="bottom">
+          <HoverTooltip
+            content={tooltipLines.join("\n")}
+            disabled={tooltipLines.length === 0}
+            placement="bottom"
+            className="max-w-full justify-center"
+          >
             <div className="inline-flex max-w-full items-center justify-center gap-1.5 whitespace-nowrap">
-              <RequestLogMetricChip
-                ariaLabel={`${t("request_logs.col_duration")}: ${row.latencyText}`}
-                value={row.latencyText}
-                className={resolveLatencyToneClasses(row.latencyText)}
-              />
-              {row.streaming ? (
+              {hasLatency ? (
                 <RequestLogMetricChip
-                  ariaLabel={`${t("request_logs.col_first_token")}: ${row.firstTokenText}`}
-                  value={row.firstTokenText}
-                  className={
-                    row.firstTokenText === "--"
-                      ? "border-slate-200 bg-slate-50 text-slate-500 dark:border-neutral-800 dark:bg-neutral-950/45 dark:text-white/55"
-                      : "border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-500/20 dark:bg-sky-500/10 dark:text-sky-200"
-                  }
+                  ariaLabel={`${t("request_logs.col_duration")}: ${row.latencyText}`}
+                  value={row.latencyText}
+                  className={resolveLatencyToneClasses(row.latencyText)}
                 />
               ) : null}
-              <span className="font-mono text-[11px] tabular-nums text-slate-400 dark:text-white/35 whitespace-nowrap">
-                {tpsText}
-              </span>
+              <RequestLogModeChip
+                streaming={row.streaming}
+                label={
+                  row.streaming
+                    ? t("request_logs.mode_streaming")
+                    : t("request_logs.mode_non_streaming")
+                }
+              />
             </div>
           </HoverTooltip>
         );

@@ -3,6 +3,7 @@ import { expect, test, type Page } from "@playwright/test";
 const setAuthed = async (page: Page) => {
   await page.addInitScript(() => {
     localStorage.removeItem("codeProxy.dataTable.columnOrder.v1.request-logs");
+    localStorage.removeItem("codeProxy.dataTable.columnWidths.v1.request-logs");
     localStorage.setItem(
       "code-proxy-admin-auth",
       JSON.stringify({
@@ -189,6 +190,74 @@ const readSettleVisualState = async (page: Page) =>
       }),
     };
   });
+
+const readResponseMetricsColumnState = async (page: Page) =>
+  page.evaluate(() => {
+    const header = document.querySelector<HTMLElement>('th[data-vt-column-key="latency"]');
+    const firstCell = document.querySelector<HTMLElement>('td[data-vt-column-key="latency"]');
+    if (!header || !firstCell) throw new Error("Missing response metrics column");
+
+    const cellRect = firstCell.getBoundingClientRect();
+    const chips = [...firstCell.querySelectorAll<HTMLElement>(".rounded-full")].map((element) => {
+      const rect = element.getBoundingClientRect();
+      return {
+        text: element.textContent?.trim() ?? "",
+        left: rect.left,
+        right: rect.right,
+      };
+    });
+    const storedWidths = JSON.parse(
+      localStorage.getItem("codeProxy.dataTable.columnWidths.v1.request-logs") ?? "{}",
+    ) as Record<string, unknown>;
+
+    return {
+      width: Math.round(header.getBoundingClientRect().width),
+      text: firstCell.textContent?.trim() ?? "",
+      chipsStayInsideCell: chips.every(
+        (chip) => chip.left >= cellRect.left - 1 && chip.right <= cellRect.right + 1,
+      ),
+      storedLatencyWidth:
+        typeof storedWidths.latency === "number" ? Math.round(storedWidths.latency) : null,
+    };
+  });
+
+test("Request Logs: response metrics column resize clamps at its minimum width", async ({
+  page,
+}) => {
+  await setAuthed(page);
+  await mockRequestLogsApis(page);
+
+  await page.goto("/manage/#/monitor/request-logs");
+  await page.locator('th[data-vt-column-key="latency"]').waitFor({ state: "visible" });
+
+  const dragStart = await page
+    .locator('th[data-vt-column-key="latency"] [data-vt-column-resizer]')
+    .evaluate((element) => {
+      const rect = element.getBoundingClientRect();
+      const headerRect = element.closest("th")?.getBoundingClientRect();
+      return {
+        x: headerRect ? Math.min(rect.left + rect.width / 2, headerRect.right - 2) : rect.left,
+        y: rect.top + rect.height / 2,
+      };
+    });
+
+  await page.mouse.move(dragStart.x, dragStart.y);
+  await page.mouse.down();
+  await page.mouse.move(dragStart.x - 520, dragStart.y, { steps: 10 });
+  await page.waitForTimeout(80);
+
+  const during = await readResponseMetricsColumnState(page);
+  expect(during.width).toBeGreaterThanOrEqual(183);
+  expect(during.width).toBeLessThanOrEqual(185);
+  expect(during.text).toMatch(/Streaming|流式/);
+  expect(during.text).not.toContain("--");
+  expect(during.chipsStayInsideCell).toBe(true);
+
+  await page.mouse.up();
+
+  const after = await readResponseMetricsColumnState(page);
+  expect(after.storedLatencyWidth).toBe(184);
+});
 
 test("Request Logs: column reorder follows the pointer and auto-scrolls horizontally", async ({
   page,
