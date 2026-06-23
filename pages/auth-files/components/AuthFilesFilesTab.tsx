@@ -544,6 +544,7 @@ interface AuthFilesFilesTabProps {
   formatPlanTypeLabel: (planType: string) => string;
   translateQuotaText: (text: string) => string;
   renderRestrictionBadges: (file: AuthFileItem) => ReactNode | null;
+  renderClaudeOAuthHealthBadges: (file: AuthFileItem) => ReactNode | null;
   renderSubscriptionBadge: (file: AuthFileItem) => ReactNode | null;
   renderQuotaBar: (label: string, item: QuotaItem | null) => ReactNode;
   openTagsEditor: (file: AuthFileItem) => void;
@@ -622,6 +623,7 @@ export function AuthFilesFilesTab({
   formatPlanTypeLabel,
   translateQuotaText,
   renderRestrictionBadges,
+  renderClaudeOAuthHealthBadges,
   renderSubscriptionBadge,
   renderQuotaBar,
   openTagsEditor,
@@ -1457,6 +1459,7 @@ export function AuthFilesFilesTab({
                             </span>
                           </span>
                           {renderRestrictionBadges(file)}
+                          {renderClaudeOAuthHealthBadges(file)}
                           {subscriptionBadge}
                           {runtimeOnly ? (
                             <span className="inline-flex shrink-0 items-center rounded-full bg-slate-900 px-2 py-0.5 text-[10px] font-semibold text-white dark:bg-white dark:text-neutral-950">

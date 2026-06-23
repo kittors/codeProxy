@@ -597,6 +597,7 @@ export function AuthFilesPage() {
     translateQuotaText,
     formatPlanTypeLabel,
     renderRestrictionBadges,
+    renderClaudeOAuthHealthBadges,
     renderSubscriptionBadge,
     renderQuotaBar,
     renderFilesViewModeTabs,
@@ -696,6 +697,7 @@ export function AuthFilesPage() {
         formatPlanTypeLabel={formatPlanTypeLabel}
         translateQuotaText={translateQuotaText}
         renderRestrictionBadges={renderRestrictionBadges}
+        renderClaudeOAuthHealthBadges={renderClaudeOAuthHealthBadges}
         renderSubscriptionBadge={renderSubscriptionBadge}
         renderQuotaBar={renderQuotaBar}
         openTagsEditor={(file) => setTagsEditorFileName(file.name)}

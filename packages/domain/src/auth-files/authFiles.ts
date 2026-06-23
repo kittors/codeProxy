@@ -2,6 +2,9 @@ import type {
   AuthFileItem,
   AuthFileRestriction,
   AuthFileSubscriptionPeriod,
+  ClaudeOAuthHealth,
+  ClaudeOAuthHealthWindow,
+  ClaudeOAuthRuntimeProfile,
   EntityStatsResponse,
   OAuthModelAliasEntry,
 } from "./types";
@@ -85,6 +88,111 @@ export type AuthFilesDataCache = {
 const sanitizeDecodedIdToken = (value: unknown): unknown => {
   if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
   return value;
+};
+
+const isPlainRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const readOptionalString = (value: unknown): string | undefined => {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  return trimmed ? trimmed : undefined;
+};
+
+const readOptionalBoolean = (value: unknown): boolean | undefined =>
+  typeof value === "boolean" ? value : undefined;
+
+const readOptionalNumber = (value: unknown): number | undefined => {
+  const numberValue = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(numberValue) ? numberValue : undefined;
+};
+
+const readOptionalHttpStatus = (value: unknown): number | undefined => {
+  const status = readOptionalNumber(value);
+  if (status === undefined) return undefined;
+  const rounded = Math.round(status);
+  return rounded >= 100 && rounded <= 599 ? rounded : undefined;
+};
+
+const sanitizeClaudeOAuthHealthWindowForCache = (
+  value: unknown,
+): ClaudeOAuthHealthWindow | undefined => {
+  if (!isPlainRecord(value)) return undefined;
+  const output: ClaudeOAuthHealthWindow = {};
+  const status = readOptionalString(value.status);
+  const resetAt = readOptionalString(value.reset_at);
+  const utilization = readOptionalNumber(value.utilization);
+  const exceeded = readOptionalBoolean(value.exceeded);
+  const surpassedThreshold = readOptionalBoolean(value.surpassed_threshold);
+  const updatedAt = readOptionalString(value.updated_at);
+
+  if (status) output.status = status;
+  if (resetAt) output.reset_at = resetAt;
+  if (utilization !== undefined) output.utilization = utilization;
+  if (exceeded !== undefined) output.exceeded = exceeded;
+  if (surpassedThreshold !== undefined) output.surpassed_threshold = surpassedThreshold;
+  if (updatedAt) output.updated_at = updatedAt;
+
+  return Object.keys(output).length > 0 ? output : undefined;
+};
+
+const sanitizeClaudeOAuthRuntimeProfileForCache = (
+  value: unknown,
+): ClaudeOAuthRuntimeProfile | undefined => {
+  if (!isPlainRecord(value)) return undefined;
+  const output: ClaudeOAuthRuntimeProfile = {};
+  const name = readOptionalString(value.name);
+  const identityFingerprint = readOptionalString(value.identity_fingerprint);
+  const transport = readOptionalString(value.transport);
+  const egress = readOptionalString(value.egress);
+
+  if (name) output.name = name;
+  if (identityFingerprint) output.identity_fingerprint = identityFingerprint;
+  if (transport) output.transport = transport;
+  if (egress) output.egress = egress;
+
+  return Object.keys(output).length > 0 ? output : undefined;
+};
+
+const sanitizeClaudeOAuthHealthForCache = (value: unknown): ClaudeOAuthHealth | undefined => {
+  if (!isPlainRecord(value)) return undefined;
+  const output: ClaudeOAuthHealth = {};
+  const enabled = readOptionalBoolean(value.enabled);
+  const status = readOptionalString(value.status);
+  const updatedAt = readOptionalString(value.updated_at);
+  const refreshAvailable = readOptionalBoolean(value.refresh_available);
+  const lastRuntimeStatus = readOptionalHttpStatus(value.last_runtime_status);
+  const lastRuntimeAt = readOptionalString(value.last_runtime_at);
+  const lastRefreshAt = readOptionalString(value.last_refresh_at);
+  const last401At = readOptionalString(value.last_401_at);
+  const last401Message = readOptionalString(value.last_401_message);
+  const temporaryUntil = readOptionalString(value.temporary_unschedulable_until);
+  const temporaryReason = readOptionalString(value.temporary_unschedulable_reason);
+  const windows = isPlainRecord(value.windows) ? value.windows : undefined;
+  const fiveHour = sanitizeClaudeOAuthHealthWindowForCache(windows?.five_hour);
+  const sevenDay = sanitizeClaudeOAuthHealthWindowForCache(windows?.seven_day);
+  const runtimeProfile = sanitizeClaudeOAuthRuntimeProfileForCache(value.runtime_profile);
+
+  if (enabled !== undefined) output.enabled = enabled;
+  if (status) output.status = status;
+  if (updatedAt) output.updated_at = updatedAt;
+  if (refreshAvailable !== undefined) output.refresh_available = refreshAvailable;
+  if (lastRuntimeStatus !== undefined) output.last_runtime_status = lastRuntimeStatus;
+  if (lastRuntimeAt) output.last_runtime_at = lastRuntimeAt;
+  if (lastRefreshAt) output.last_refresh_at = lastRefreshAt;
+  if (last401At) output.last_401_at = last401At;
+  if (last401Message) output.last_401_message = last401Message;
+  if (temporaryUntil) output.temporary_unschedulable_until = temporaryUntil;
+  if (temporaryReason) output.temporary_unschedulable_reason = temporaryReason;
+  if (fiveHour || sevenDay) {
+    output.windows = {
+      ...(fiveHour ? { five_hour: fiveHour } : {}),
+      ...(sevenDay ? { seven_day: sevenDay } : {}),
+    };
+  }
+  if (runtimeProfile) output.runtime_profile = runtimeProfile;
+
+  return Object.keys(output).length > 0 ? output : undefined;
 };
 
 const sanitizeAuthFileRestrictionsForCache = (
@@ -242,6 +350,7 @@ export const sanitizeAuthFilesForCache = (files: AuthFileItem[]): AuthFileItem[]
     display_tags: Array.isArray(file.display_tags)
       ? normalizeTagList(file.display_tags)
       : undefined,
+    claude_oauth_health: sanitizeClaudeOAuthHealthForCache(file.claude_oauth_health),
     id_token: sanitizeDecodedIdToken(file.id_token),
   }));
 
@@ -436,6 +545,140 @@ const readRestrictionHttpStatus = (restriction: AuthFileRestriction): number | n
   return Number.isFinite(status) && status > 0 ? Math.round(status) : null;
 };
 
+const normalizeClaudeOAuthHealthToken = (value: unknown): string =>
+  normalizeTagValue(value).replace(/_/g, "-");
+
+export type ClaudeOAuthHealthBadge = {
+  key: "refresh-pending" | "five-hour-limited" | "seven-day-limited";
+  label:
+    | "OAuth refresh pending"
+    | "5h limited"
+    | "7d limited";
+  tone: "danger" | "warning";
+  status?: string;
+  reason?: string;
+  resetAtMs?: number;
+  utilization?: number;
+};
+
+const CLAUDE_OAUTH_429_REASONS = new Set([
+  "anthropic-5h-window-exhausted",
+  "anthropic-7d-window-exhausted",
+]);
+
+const CLAUDE_OAUTH_LIMITED_WINDOW_STATUSES = new Set([
+  "blocked",
+  "error",
+  "exceeded",
+  "limited",
+  "rate-limited",
+  "rejected",
+]);
+
+const isClaudeOAuthHealthWindowLimited = (
+  window: ClaudeOAuthHealthWindow | undefined,
+): boolean => {
+  if (!window) return false;
+  const status = normalizeClaudeOAuthHealthToken(window.status);
+  const utilization = readOptionalNumber(window.utilization);
+  return (
+    window.exceeded === true ||
+    window.surpassed_threshold === true ||
+    (utilization !== undefined && utilization >= 1) ||
+    CLAUDE_OAUTH_LIMITED_WINDOW_STATUSES.has(status)
+  );
+};
+
+export const isClaudeOAuthAuthFile = (file: AuthFileItem): boolean => {
+  if (normalizeProviderKey(resolveFileType(file)) !== "claude") return false;
+  const accountType = normalizeClaudeOAuthHealthToken(file.account_type);
+  if (accountType) return accountType === "oauth";
+  const health = sanitizeClaudeOAuthHealthForCache(file.claude_oauth_health);
+  if (!health) return false;
+  return Boolean(
+    health.enabled === true ||
+      health.refresh_available === true ||
+      health.last_runtime_status ||
+      normalizeClaudeOAuthHealthToken(health.status),
+  );
+};
+
+export const resolveClaudeOAuthHealth = (file: AuthFileItem): ClaudeOAuthHealth | null => {
+  if (!isClaudeOAuthAuthFile(file)) return null;
+  return sanitizeClaudeOAuthHealthForCache(file.claude_oauth_health) ?? null;
+};
+
+const hasClaudeOAuthAuthFailure = (health: ClaudeOAuthHealth | null): boolean => {
+  if (!health) return false;
+  const status = normalizeClaudeOAuthHealthToken(health.status);
+  const reason = normalizeClaudeOAuthHealthToken(health.temporary_unschedulable_reason);
+  return (
+    health.last_runtime_status === 401 ||
+    health.last_runtime_status === 403 ||
+    status === "refresh-pending" ||
+    reason === "oauth-401"
+  );
+};
+
+const hasClaudeOAuthRateLimit = (health: ClaudeOAuthHealth | null): boolean => {
+  if (!health) return false;
+  const reason = normalizeClaudeOAuthHealthToken(health.temporary_unschedulable_reason);
+  return (
+    health.last_runtime_status === 429 ||
+    CLAUDE_OAUTH_429_REASONS.has(reason) ||
+    isClaudeOAuthHealthWindowLimited(health.windows?.five_hour) ||
+    isClaudeOAuthHealthWindowLimited(health.windows?.seven_day)
+  );
+};
+
+export const resolveClaudeOAuthHealthBadges = (
+  file: AuthFileItem,
+  nowMs = Date.now(),
+): ClaudeOAuthHealthBadge[] => {
+  const health = resolveClaudeOAuthHealth(file);
+  if (!health) return [];
+
+  const badges: ClaudeOAuthHealthBadge[] = [];
+  const reason = readOptionalString(health.temporary_unschedulable_reason);
+  const temporaryUntilMs = parseDateLikeMs(health.temporary_unschedulable_until);
+  if (
+    hasClaudeOAuthAuthFailure(health) &&
+    (temporaryUntilMs === null || temporaryUntilMs > nowMs)
+  ) {
+    badges.push({
+      key: "refresh-pending",
+      label: "OAuth refresh pending",
+      tone: "warning",
+      ...(health.status ? { status: health.status } : {}),
+      ...(reason ? { reason } : {}),
+      ...(temporaryUntilMs !== null ? { resetAtMs: temporaryUntilMs } : {}),
+    });
+  }
+
+  const appendWindowBadge = (
+    windowKey: "five-hour-limited" | "seven-day-limited",
+    label: "5h limited" | "7d limited",
+    window: ClaudeOAuthHealthWindow | undefined,
+  ) => {
+    if (!isClaudeOAuthHealthWindowLimited(window)) return;
+    const resetAtMs = parseDateLikeMs(window?.reset_at);
+    const utilization = readOptionalNumber(window?.utilization);
+    badges.push({
+      key: windowKey,
+      label,
+      tone: "danger",
+      ...(window?.status ? { status: window.status } : {}),
+      ...(resetAtMs !== null ? { resetAtMs } : {}),
+      ...(utilization !== undefined ? { utilization } : {}),
+    });
+  };
+
+  appendWindowBadge("five-hour-limited", "5h limited", health.windows?.five_hour);
+  appendWindowBadge("seven-day-limited", "7d limited", health.windows?.seven_day);
+
+  return badges;
+};
+
 const hasRestrictionErrorSignal = (restriction: AuthFileRestriction): boolean => {
   if (readRestrictionHttpStatus(restriction) !== null) return true;
   if (restriction.unavailable === true || restriction.quota_exceeded === true) return true;
@@ -448,14 +691,17 @@ const hasRestrictionErrorSignal = (restriction: AuthFileRestriction): boolean =>
 export const resolveAuthFileStatusBuckets = (file: AuthFileItem): Set<AuthFileStatusFilter> => {
   const buckets = new Set<AuthFileStatusFilter>();
   if (file.disabled === true) buckets.add("disabled");
+  const claudeOAuthHealth = resolveClaudeOAuthHealth(file);
 
   const restrictions = getAuthLevelRestrictions(file);
   const statuses = restrictions
     .map(readRestrictionHttpStatus)
     .filter((status): status is number => status !== null);
 
-  const has429 = statuses.includes(429);
-  const hasAuthError = statuses.some((status) => status === 401 || status === 403);
+  const has429 = statuses.includes(429) || hasClaudeOAuthRateLimit(claudeOAuthHealth);
+  const hasAuthError =
+    statuses.some((status) => status === 401 || status === 403) ||
+    hasClaudeOAuthAuthFailure(claudeOAuthHealth);
   const hasServerError = statuses.some((status) => status >= 500);
   const hasOtherHttpError = statuses.some(
     (status) => status !== 429 && status !== 401 && status !== 403 && status < 500,

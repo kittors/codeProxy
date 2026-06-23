@@ -30,12 +30,14 @@ import {
   normalizeProviderKey,
   parseAdditionalQuotaWindowLabel,
   readAuthFileChannelName,
+  resolveClaudeOAuthHealth,
   resolveAuthFileDisplayName,
   resolveAuthFilePlanType,
   resolveFileType,
   type AuthFileModelItem,
   type AuthFileModelOwnerGroup,
   type ChannelEditorState,
+  type ClaudeOAuthHealthWindow,
   type PrefixProxyEditorState,
 } from "@code-proxy/domain";
 
@@ -206,6 +208,7 @@ export function AuthFileDetailModal({
   const detailTitle = detailFile
     ? resolveAuthFileDisplayName(detailFile) || String(detailFile.name || "")
     : t("auth_files.view_auth_file");
+  const claudeOAuthHealth = detailFile ? resolveClaudeOAuthHealth(detailFile) : null;
   const detailPlanType = detailFile ? resolveAuthFilePlanType(detailFile) : null;
   const detailPlanLabel = useMemo(() => {
     if (!detailPlanType) return "";
@@ -459,6 +462,64 @@ export function AuthFileDetailModal({
       await savePrefixProxy();
     }
   };
+
+  const formatOptionalText = (value: unknown): string => {
+    if (typeof value === "boolean") return value ? t("common.yes") : t("common.no");
+    if (typeof value === "number" && Number.isFinite(value)) return String(value);
+    if (typeof value === "string" && value.trim()) return value.trim();
+    return "--";
+  };
+
+  const formatOptionalDate = (value: unknown): string => {
+    const raw = typeof value === "number" ? value : typeof value === "string" ? value.trim() : "";
+    if (!raw) return "--";
+    const numberValue = Number(raw);
+    const date =
+      Number.isFinite(numberValue) && numberValue > 0
+        ? new Date(numberValue < 1e12 ? numberValue * 1000 : numberValue)
+        : new Date(String(raw));
+    return Number.isNaN(date.getTime()) ? String(raw) : date.toLocaleString();
+  };
+
+  const formatHealthUtilization = (value: unknown): string => {
+    if (typeof value !== "number" || !Number.isFinite(value)) return "--";
+    return `${Math.round(value * 100)}%`;
+  };
+
+  const renderHealthValue = (label: string, value: string) => (
+    <div className="min-w-0">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.02em] text-slate-500 dark:text-white/45">
+        {label}
+      </p>
+      <p className="mt-1 min-w-0 break-words font-mono text-xs text-slate-900 dark:text-white/85">
+        {value}
+      </p>
+    </div>
+  );
+
+  const renderHealthWindow = (label: string, window: ClaudeOAuthHealthWindow | undefined) => (
+    <div className="min-w-0 rounded-lg bg-white px-3 py-3 ring-1 ring-slate-200 dark:bg-neutral-950/40 dark:ring-white/10">
+      <p className="text-xs font-semibold text-slate-900 dark:text-white">{label}</p>
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        {renderHealthValue(
+          t("auth_files.claude_oauth_health_window_status"),
+          formatOptionalText(window?.status),
+        )}
+        {renderHealthValue(
+          t("auth_files.claude_oauth_health_window_reset"),
+          formatOptionalDate(window?.reset_at),
+        )}
+        {renderHealthValue(
+          t("auth_files.claude_oauth_health_window_utilization"),
+          formatHealthUtilization(window?.utilization),
+        )}
+        {renderHealthValue(
+          t("auth_files.claude_oauth_health_window_exceeded"),
+          formatOptionalText(window?.exceeded),
+        )}
+      </div>
+    </div>
+  );
 
   const renderUsageTrend = () => {
     const isCodexDetail = detailProviderKey === "codex";
@@ -728,6 +789,106 @@ export function AuthFileDetailModal({
                     className="grid max-w-none items-start gap-x-10 gap-y-5 lg:grid-cols-2"
                     data-testid="auth-file-fields-grid"
                   >
+                    {claudeOAuthHealth ? (
+                      <div
+                        className="min-w-0 space-y-4 rounded-lg bg-slate-50/80 px-4 py-4 lg:col-span-2 dark:bg-white/[0.04]"
+                        data-testid="claude-oauth-health-panel"
+                      >
+                        <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                              {t("auth_files.claude_oauth_health_title")}
+                            </p>
+                            <p className="mt-1 text-xs text-slate-500 dark:text-white/55">
+                              {t("auth_files.claude_oauth_health_desc")}
+                            </p>
+                          </div>
+                          {claudeOAuthHealth.status ? (
+                            <span className="inline-flex max-w-full items-center rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-800 dark:bg-amber-500/15 dark:text-amber-200">
+                              {claudeOAuthHealth.status}
+                            </span>
+                          ) : null}
+                        </div>
+
+                        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                          {renderHealthValue(
+                            t("auth_files.claude_oauth_health_status_label"),
+                            formatOptionalText(claudeOAuthHealth.status),
+                          )}
+                          {renderHealthValue(
+                            t("auth_files.claude_oauth_health_refresh_available"),
+                            formatOptionalText(claudeOAuthHealth.refresh_available),
+                          )}
+                          {renderHealthValue(
+                            t("auth_files.claude_oauth_health_last_runtime"),
+                            [
+                              formatOptionalText(claudeOAuthHealth.last_runtime_status),
+                              formatOptionalDate(claudeOAuthHealth.last_runtime_at),
+                            ]
+                              .filter((value) => value !== "--")
+                              .join(" · ") || "--",
+                          )}
+                          {renderHealthValue(
+                            t("auth_files.claude_oauth_health_last_refresh"),
+                            formatOptionalDate(claudeOAuthHealth.last_refresh_at),
+                          )}
+                          {renderHealthValue(
+                            t("auth_files.claude_oauth_health_temporary_until"),
+                            formatOptionalDate(claudeOAuthHealth.temporary_unschedulable_until),
+                          )}
+                          {renderHealthValue(
+                            t("auth_files.claude_oauth_health_temporary_reason"),
+                            formatOptionalText(claudeOAuthHealth.temporary_unschedulable_reason),
+                          )}
+                          {renderHealthValue(
+                            t("auth_files.claude_oauth_health_last_401"),
+                            [
+                              formatOptionalDate(claudeOAuthHealth.last_401_at),
+                              formatOptionalText(claudeOAuthHealth.last_401_message),
+                            ]
+                              .filter((value) => value !== "--")
+                              .join(" · ") || "--",
+                          )}
+                          {renderHealthValue(
+                            t("auth_files.claude_oauth_health_egress"),
+                            formatOptionalText(claudeOAuthHealth.runtime_profile?.egress),
+                          )}
+                        </div>
+
+                        <div className="grid gap-3 xl:grid-cols-2">
+                          {renderHealthWindow(
+                            t("auth_files.claude_oauth_health_window_5h"),
+                            claudeOAuthHealth.windows?.five_hour,
+                          )}
+                          {renderHealthWindow(
+                            t("auth_files.claude_oauth_health_window_7d"),
+                            claudeOAuthHealth.windows?.seven_day,
+                          )}
+                        </div>
+
+                        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                          {renderHealthValue(
+                            t("auth_files.claude_oauth_health_runtime_name"),
+                            formatOptionalText(claudeOAuthHealth.runtime_profile?.name),
+                          )}
+                          {renderHealthValue(
+                            t("auth_files.claude_oauth_health_runtime_identity"),
+                            formatOptionalText(
+                              claudeOAuthHealth.runtime_profile?.identity_fingerprint,
+                            ),
+                          )}
+                          {renderHealthValue(
+                            t("auth_files.claude_oauth_health_runtime_transport"),
+                            formatOptionalText(claudeOAuthHealth.runtime_profile?.transport),
+                          )}
+                          {renderHealthValue(
+                            t("auth_files.claude_oauth_health_updated_at"),
+                            formatOptionalDate(claudeOAuthHealth.updated_at),
+                          )}
+                        </div>
+                      </div>
+                    ) : null}
+
                     {canRenameChannel || prefixProxyEditor.json ? (
                       <div className="min-w-0 space-y-5">
                         {canRenameChannel ? (

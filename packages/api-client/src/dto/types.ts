@@ -44,6 +44,41 @@ export interface AuthFileRestriction {
   next_recover_at?: string | number;
 }
 
+export interface ClaudeOAuthHealthWindow {
+  status?: string;
+  reset_at?: string;
+  utilization?: number;
+  exceeded?: boolean;
+  surpassed_threshold?: boolean;
+  updated_at?: string;
+}
+
+export interface ClaudeOAuthRuntimeProfile {
+  name?: string;
+  identity_fingerprint?: string;
+  transport?: string;
+  egress?: string;
+}
+
+export interface ClaudeOAuthHealth {
+  enabled?: boolean;
+  status?: string;
+  updated_at?: string;
+  refresh_available?: boolean;
+  last_runtime_status?: number;
+  last_runtime_at?: string;
+  last_refresh_at?: string;
+  last_401_at?: string;
+  last_401_message?: string;
+  temporary_unschedulable_until?: string;
+  temporary_unschedulable_reason?: string;
+  windows?: {
+    five_hour?: ClaudeOAuthHealthWindow;
+    seven_day?: ClaudeOAuthHealthWindow;
+  };
+  runtime_profile?: ClaudeOAuthRuntimeProfile;
+}
+
 export interface AuthFileItem extends TagDisplayFields {
   name: string;
   type?: AuthFileType | string;
@@ -83,6 +118,7 @@ export interface AuthFileItem extends TagDisplayFields {
   subscriptionRemainingMinutes?: number;
   subscription_expired?: boolean;
   subscriptionExpired?: boolean;
+  claude_oauth_health?: ClaudeOAuthHealth;
   [key: string]: unknown;
 }
 
