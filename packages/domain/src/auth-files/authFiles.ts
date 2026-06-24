@@ -550,10 +550,7 @@ const normalizeClaudeOAuthHealthToken = (value: unknown): string =>
 
 export type ClaudeOAuthHealthBadge = {
   key: "refresh-pending" | "five-hour-limited" | "seven-day-limited";
-  label:
-    | "OAuth refresh pending"
-    | "5h limited"
-    | "7d limited";
+  label: "OAuth refresh pending" | "5h limited" | "7d limited";
   tone: "danger" | "warning";
   status?: string;
   reason?: string;
@@ -575,9 +572,7 @@ const CLAUDE_OAUTH_LIMITED_WINDOW_STATUSES = new Set([
   "rejected",
 ]);
 
-const isClaudeOAuthHealthWindowLimited = (
-  window: ClaudeOAuthHealthWindow | undefined,
-): boolean => {
+const isClaudeOAuthHealthWindowLimited = (window: ClaudeOAuthHealthWindow | undefined): boolean => {
   if (!window) return false;
   const status = normalizeClaudeOAuthHealthToken(window.status);
   const utilization = readOptionalNumber(window.utilization);
@@ -597,9 +592,9 @@ export const isClaudeOAuthAuthFile = (file: AuthFileItem): boolean => {
   if (!health) return false;
   return Boolean(
     health.enabled === true ||
-      health.refresh_available === true ||
-      health.last_runtime_status ||
-      normalizeClaudeOAuthHealthToken(health.status),
+    health.refresh_available === true ||
+    health.last_runtime_status ||
+    normalizeClaudeOAuthHealthToken(health.status),
   );
 };
 
@@ -1511,6 +1506,22 @@ export type ChannelEditorState = {
   open: boolean;
   fileName: string;
   label: string;
+  saving: boolean;
+  error: string | null;
+};
+
+export type CodexOAuthAdmissionAllowedClient = {
+  id: string;
+  label: string;
+  description?: string;
+};
+
+export type CodexOAuthAdmissionEditorState = {
+  fileName: string;
+  supported: boolean;
+  enabled: boolean;
+  allowedClients: string[];
+  availableAllowedClients: CodexOAuthAdmissionAllowedClient[];
   saving: boolean;
   error: string | null;
 };

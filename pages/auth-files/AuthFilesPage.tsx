@@ -226,11 +226,15 @@ export function AuthFilesPage() {
     setPrefixProxyEditor,
     channelEditor,
     setChannelEditor,
+    codexOAuthAdmissionEditor,
+    setCodexOAuthAdmissionEditor,
     loadModelsForDetail,
     openDetail,
     prefixProxyDirty,
+    codexOAuthAdmissionDirty,
     savePrefixProxy,
     saveChannelEditor,
+    saveCodexOAuthAdmission,
   } = useAuthFilesDetailEditors(loadAll, setFiles);
 
   const {
@@ -831,6 +835,10 @@ export function AuthFilesPage() {
         channelEditor={channelEditor}
         setChannelEditor={setChannelEditor}
         saveChannelEditor={saveChannelEditor}
+        codexOAuthAdmissionEditor={codexOAuthAdmissionEditor}
+        setCodexOAuthAdmissionEditor={setCodexOAuthAdmissionEditor}
+        codexOAuthAdmissionDirty={codexOAuthAdmissionDirty}
+        saveCodexOAuthAdmission={saveCodexOAuthAdmission}
       />
 
       <ImportModelsModal

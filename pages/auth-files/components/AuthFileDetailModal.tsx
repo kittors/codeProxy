@@ -14,12 +14,14 @@ import type { AuthFileTrendResponse } from "@code-proxy/api-client/endpoints/usa
 import type { AuthFileItem, AuthFileSubscriptionPeriod } from "@code-proxy/api-client";
 import type { ProxyPoolEntry } from "@code-proxy/api-client/endpoints/proxies";
 import { Button } from "@code-proxy/ui";
+import { Checkbox } from "@code-proxy/ui";
 import { DateTimePicker } from "@code-proxy/ui";
 import { EmptyState } from "@code-proxy/ui";
 import { TextInput } from "@code-proxy/ui";
 import { Modal } from "@code-proxy/ui";
 import { Select } from "@code-proxy/ui";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@code-proxy/ui";
+import { ToggleSwitch } from "@code-proxy/ui";
 import { EChart } from "@code-proxy/ui";
 import { ProxyPoolSelect } from "@features/proxy-pool";
 import { useProxyPoolChecks } from "@features/proxy-pool";
@@ -38,6 +40,7 @@ import {
   type AuthFileModelOwnerGroup,
   type ChannelEditorState,
   type ClaudeOAuthHealthWindow,
+  type CodexOAuthAdmissionEditorState,
   type PrefixProxyEditorState,
 } from "@code-proxy/domain";
 
@@ -155,6 +158,10 @@ interface AuthFileDetailModalProps {
   channelEditor: ChannelEditorState;
   setChannelEditor: Dispatch<SetStateAction<ChannelEditorState>>;
   saveChannelEditor: () => Promise<boolean>;
+  codexOAuthAdmissionEditor: CodexOAuthAdmissionEditorState;
+  setCodexOAuthAdmissionEditor: Dispatch<SetStateAction<CodexOAuthAdmissionEditorState>>;
+  codexOAuthAdmissionDirty: boolean;
+  saveCodexOAuthAdmission: () => Promise<boolean>;
 }
 
 export function AuthFileDetailModal({
@@ -189,6 +196,10 @@ export function AuthFileDetailModal({
   channelEditor,
   setChannelEditor,
   saveChannelEditor,
+  codexOAuthAdmissionEditor,
+  setCodexOAuthAdmissionEditor,
+  codexOAuthAdmissionDirty,
+  saveCodexOAuthAdmission,
 }: AuthFileDetailModalProps) {
   const { t, i18n } = useTranslation();
   const proxyCheckState = useProxyPoolChecks(proxyPoolEntries, open && detailTab === "fields");
@@ -233,7 +244,8 @@ export function AuthFileDetailModal({
     prefixProxyEditor.loading ||
     prefixProxyEditor.saving ||
     channelEditor.saving ||
-    !((prefixProxyDirty && prefixProxyEditor.json) || channelDirty);
+    codexOAuthAdmissionEditor.saving ||
+    !((prefixProxyDirty && prefixProxyEditor.json) || channelDirty || codexOAuthAdmissionDirty);
   const translateQuotaLabel = useMemo(
     () => (label: string) => {
       if (!label) return label;
@@ -458,9 +470,30 @@ export function AuthFileDetailModal({
       const saved = await saveChannelEditor();
       if (!saved) return;
     }
+    if (codexOAuthAdmissionDirty) {
+      const saved = await saveCodexOAuthAdmission();
+      if (!saved) return;
+    }
     if (prefixProxyDirty) {
       await savePrefixProxy();
     }
+  };
+
+  const updateCodexAllowedClient = (clientId: string, checked: boolean) => {
+    const normalizedId = clientId.trim().toLowerCase();
+    if (!normalizedId) return;
+    setCodexOAuthAdmissionEditor((prev) => {
+      const current = new Set(prev.allowedClients.map((id) => id.trim().toLowerCase()));
+      if (checked) {
+        current.add(normalizedId);
+      } else {
+        current.delete(normalizedId);
+      }
+      const ordered = prev.availableAllowedClients
+        .map((preset) => preset.id.trim().toLowerCase())
+        .filter((id) => id && current.has(id));
+      return { ...prev, allowedClients: ordered, error: null };
+    });
   };
 
   const formatOptionalText = (value: unknown): string => {
@@ -886,6 +919,107 @@ export function AuthFileDetailModal({
                             formatOptionalDate(claudeOAuthHealth.updated_at),
                           )}
                         </div>
+                      </div>
+                    ) : null}
+
+                    {codexOAuthAdmissionEditor.supported ? (
+                      <div
+                        className="min-w-0 space-y-4 rounded-lg bg-slate-50/80 px-4 py-4 lg:col-span-2 dark:bg-white/[0.04]"
+                        data-testid="codex-oauth-admission-panel"
+                      >
+                        <div className="flex min-w-0 flex-wrap items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                              {t("auth_files.codex_oauth_admission_title")}
+                            </p>
+                            <p className="mt-1 text-xs text-slate-500 dark:text-white/55">
+                              {t("auth_files.codex_oauth_admission_desc")}
+                            </p>
+                          </div>
+                          <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600 dark:bg-white/10 dark:text-white/65">
+                            {codexOAuthAdmissionEditor.enabled
+                              ? t("auth_files.enabled")
+                              : t("auth_files.disabled")}
+                          </span>
+                        </div>
+
+                        <div
+                          className="rounded-lg bg-white px-3 py-3 ring-1 ring-slate-200 dark:bg-neutral-950/40 dark:ring-white/10"
+                          data-testid="codex-oauth-admission-toggle"
+                        >
+                          <ToggleSwitch
+                            checked={codexOAuthAdmissionEditor.enabled}
+                            onCheckedChange={(checked) =>
+                              setCodexOAuthAdmissionEditor((prev) => ({
+                                ...prev,
+                                enabled: checked,
+                                error: null,
+                              }))
+                            }
+                            disabled={codexOAuthAdmissionEditor.saving}
+                            label={t("auth_files.codex_oauth_admission_toggle")}
+                            description={t("auth_files.codex_oauth_admission_toggle_hint")}
+                          />
+                        </div>
+
+                        <div className="rounded-lg bg-white px-3 py-3 ring-1 ring-slate-200 dark:bg-neutral-950/40 dark:ring-white/10">
+                          <p className="text-xs font-semibold text-slate-700 dark:text-white/75">
+                            {t("auth_files.codex_oauth_admission_allowed_clients")}
+                          </p>
+                          <p className="mt-1 text-xs text-slate-500 dark:text-white/55">
+                            {t("auth_files.codex_oauth_admission_allowed_clients_hint")}
+                          </p>
+                          {codexOAuthAdmissionEditor.availableAllowedClients.length ? (
+                            <div className="mt-3 grid gap-2">
+                              {codexOAuthAdmissionEditor.availableAllowedClients.map((preset) => (
+                                <label
+                                  key={preset.id}
+                                  className="grid cursor-pointer grid-cols-[auto_minmax(0,1fr)] gap-3 rounded-lg bg-slate-50 px-3 py-2.5 ring-1 ring-slate-200 dark:bg-white/[0.04] dark:ring-white/10"
+                                >
+                                  <Checkbox
+                                    checked={codexOAuthAdmissionEditor.allowedClients.includes(
+                                      preset.id,
+                                    )}
+                                    disabled={codexOAuthAdmissionEditor.saving}
+                                    onCheckedChange={(checked) =>
+                                      updateCodexAllowedClient(preset.id, checked)
+                                    }
+                                    data-testid={`codex-oauth-admission-preset-${preset.id}`}
+                                  />
+                                  <span className="min-w-0">
+                                    <span className="block text-sm font-semibold text-slate-900 dark:text-white">
+                                      {preset.label}
+                                    </span>
+                                    {preset.description ? (
+                                      <span className="mt-1 block text-xs leading-5 text-slate-500 dark:text-white/55">
+                                        {preset.description}
+                                      </span>
+                                    ) : null}
+                                  </span>
+                                </label>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="mt-3 text-xs text-slate-500 dark:text-white/55">
+                              {t("auth_files.codex_oauth_admission_no_allowed_clients")}
+                            </p>
+                          )}
+                        </div>
+
+                        <div className="grid gap-3 lg:grid-cols-2">
+                          <p className="rounded-lg bg-white px-3 py-2.5 text-xs leading-5 text-slate-600 ring-1 ring-slate-200 dark:bg-neutral-950/40 dark:text-white/60 dark:ring-white/10">
+                            {t("auth_files.codex_oauth_admission_auto_learning")}
+                          </p>
+                          <p className="rounded-lg bg-white px-3 py-2.5 text-xs leading-5 text-slate-600 ring-1 ring-slate-200 dark:bg-neutral-950/40 dark:text-white/60 dark:ring-white/10">
+                            {t("auth_files.codex_oauth_admission_fixed_presets")}
+                          </p>
+                        </div>
+
+                        {codexOAuthAdmissionEditor.error ? (
+                          <p className="text-sm text-rose-600 dark:text-rose-300">
+                            {codexOAuthAdmissionEditor.error}
+                          </p>
+                        ) : null}
                       </div>
                     ) : null}
 
