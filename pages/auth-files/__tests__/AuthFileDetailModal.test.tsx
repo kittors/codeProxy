@@ -371,6 +371,8 @@ describe("AuthFileDetailModal", () => {
     });
 
     const panel = screen.getByTestId("auth-file-identity-fingerprint");
+    const summary = within(panel).getByTestId("auth-file-identity-summary");
+    const fields = within(panel).getByTestId("auth-file-identity-fields");
     expect(screen.getAllByRole("tab").map((tab) => tab.textContent)).toEqual([
       "Usage",
       "Identity",
@@ -378,25 +380,26 @@ describe("AuthFileDetailModal", () => {
       "Models",
     ]);
     expect(screen.getByRole("tab", { name: "Identity" })).toBeInTheDocument();
-    expect(panel).toHaveTextContent("codex-account-1");
-    expect(within(panel).getByText("auth-subject-1")).toBeInTheDocument();
-    expect(within(panel).getByText("codex-tui / terminal")).toBeInTheDocument();
+    expect(summary).toHaveTextContent("codex-account-1");
+    expect(within(summary).getByText("auth-subject-1")).toBeInTheDocument();
+    expect(within(summary).getByText("codex-tui / terminal")).toBeInTheDocument();
+    expect(within(summary).getByText("0.125.0")).toBeInTheDocument();
     expect(within(panel).getAllByText("Learned").length).toBeGreaterThanOrEqual(2);
     expect(within(panel).getAllByText("Account preset").length).toBeGreaterThanOrEqual(1);
     expect(within(panel).getAllByText("System default").length).toBeGreaterThanOrEqual(1);
-    expect(within(panel).getByText("Section")).toBeInTheDocument();
-    expect(within(panel).getByText("Field")).toBeInTheDocument();
-    expect(within(panel).getByText("Value")).toBeInTheDocument();
-    expect(within(panel).getByText("Source")).toBeInTheDocument();
-    expect(within(panel).getAllByText("Effective Fields").length).toBeGreaterThanOrEqual(1);
-    expect(within(panel).getAllByText("Learned Fields").length).toBeGreaterThanOrEqual(1);
-    expect(within(panel).getAllByText("Observed Headers").length).toBeGreaterThanOrEqual(1);
-    expect(within(panel).getAllByText("user-agent").length).toBeGreaterThanOrEqual(2);
-    expect(within(panel).getAllByText("codex-cli/0.125.0").length).toBeGreaterThanOrEqual(2);
-    expect(within(panel).getByText("session-mode")).toBeInTheDocument();
-    expect(within(panel).getByText("server-stable")).toBeInTheDocument();
-    expect(within(panel).getByText("websocket-beta")).toBeInTheDocument();
-    expect(within(panel).getByText("realtime=v1")).toBeInTheDocument();
+    expect(within(fields).getByText("Section")).toBeInTheDocument();
+    expect(within(fields).getByText("Field")).toBeInTheDocument();
+    expect(within(fields).getByText("Value")).toBeInTheDocument();
+    expect(within(fields).getByText("Source")).toBeInTheDocument();
+    expect(within(fields).getAllByText("Effective Fields").length).toBeGreaterThanOrEqual(1);
+    expect(within(fields).getAllByText("Learned Fields").length).toBeGreaterThanOrEqual(1);
+    expect(within(fields).getAllByText("Observed Headers").length).toBeGreaterThanOrEqual(1);
+    expect(within(fields).getAllByText("user-agent").length).toBeGreaterThanOrEqual(2);
+    expect(within(fields).getAllByText("codex-cli/0.125.0").length).toBeGreaterThanOrEqual(2);
+    expect(within(fields).getByText("session-mode")).toBeInTheDocument();
+    expect(within(fields).getByText("server-stable")).toBeInTheDocument();
+    expect(within(fields).getByText("websocket-beta")).toBeInTheDocument();
+    expect(within(fields).getByText("realtime=v1")).toBeInTheDocument();
     expect(within(panel).queryByText("Custom")).not.toBeInTheDocument();
   });
 

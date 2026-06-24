@@ -308,18 +308,26 @@ test("learned Codex runtime state is visible from account details", async ({ pag
   await dialog.getByRole("tab", { name: /Identity|身份/i }).click();
 
   const panel = page.getByTestId("auth-file-identity-fingerprint");
-  await expect(panel).toContainText("codex-e2e-account");
-  await expect(panel).toContainText("codex_cli_rs / Codex Desktop");
-  await expect(panel).toContainText(codexTerminalUserAgent);
-  await expect(panel).toContainText(codexBetaFeatures);
-  await expect(panel).toContainText(/Section|分组/i);
-  await expect(panel).toContainText(/Field|字段/i);
-  await expect(panel).toContainText(/Value|值/i);
-  await expect(panel).toContainText(/Source|来源/i);
-  await expect(panel).toContainText(/Learned Fields|自学习字段/i);
-  await expect(panel).toContainText(/Observed Headers|观测请求头/i);
+  const summary = panel.getByTestId("auth-file-identity-summary");
+  const fields = panel.getByTestId("auth-file-identity-fields");
+  await expect(summary).toContainText("codex-e2e-account");
+  await expect(summary).toContainText("codex_cli_rs / Codex Desktop");
+  await expect(fields).toContainText(codexTerminalUserAgent);
+  await expect(fields).toContainText(codexBetaFeatures);
+  await expect(fields).toContainText(/Section|分组/i);
+  await expect(fields).toContainText(/Field|字段/i);
+  await expect(fields).toContainText(/Value|值/i);
+  await expect(fields).toContainText(/Source|来源/i);
+  await expect(fields).toContainText(/Learned Fields|自学习字段/i);
+  await expect(fields).toContainText(/Observed Headers|观测请求头/i);
   await expect(panel).not.toContainText("Session_id");
   await expect(panel).not.toContainText("Conversation_id");
+  const summaryBox = await summary.boundingBox();
+  const fieldsBox = await fields.boundingBox();
+  if (!summaryBox || !fieldsBox) {
+    throw new Error("identity fingerprint summary and fields columns must be visible");
+  }
+  expect(fieldsBox.x).toBeGreaterThan(summaryBox.x + summaryBox.width - 8);
 });
 
 test("Gemini account uses builtin defaults without legacy manual save flow", async ({ page }) => {

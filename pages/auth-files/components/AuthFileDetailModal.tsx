@@ -721,101 +721,108 @@ export function AuthFileDetailModal({
 
     return (
       <div className="space-y-4" data-testid="auth-file-identity-fingerprint">
-        <div className="rounded-lg bg-slate-50/80 px-4 py-4 dark:bg-white/[0.04]">
-          <div className="flex min-w-0 flex-wrap items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="min-w-0 break-words text-sm font-semibold text-slate-950 dark:text-white">
-                {clientLabel}
-              </p>
-              <p className="mt-1 min-w-0 break-words text-xs text-slate-500 dark:text-white/55">
-                {formatOptionalText(summary.provider)} · {formatOptionalText(summary.account_key)}
-              </p>
-            </div>
-            <div className="shrink-0">{renderIdentitySourceBadge(summary.primary_source)}</div>
-          </div>
-
-          <dl className="mt-4 grid gap-x-6 gap-y-3 sm:grid-cols-2 lg:grid-cols-4">
-            {renderIdentitySummaryItem(
-              t("auth_files.identity_fingerprint_auth_subject"),
-              formatOptionalText(summary.auth_subject_id),
-            )}
-            {renderIdentitySummaryItem(
-              t("auth_files.identity_fingerprint_version"),
-              formatOptionalText(summary.version),
-            )}
-            {renderIdentitySummaryItem(
-              t("auth_files.identity_fingerprint_updated_at"),
-              formatOptionalDate(summary.updated_at),
-            )}
-            {renderIdentitySummaryItem(
-              t("auth_files.identity_fingerprint_last_seen_at"),
-              formatOptionalDate(summary.last_seen_at),
-            )}
-          </dl>
-
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            <span className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-slate-600 ring-1 ring-slate-200 dark:bg-neutral-950/40 dark:text-white/65 dark:ring-white/10">
-              {t("auth_files.identity_fingerprint_effective_count")}: {summary.effective_fields}
-            </span>
-            <span className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-slate-600 ring-1 ring-slate-200 dark:bg-neutral-950/40 dark:text-white/65 dark:ring-white/10">
-              {t("auth_files.identity_fingerprint_learned_count")}: {summary.learned_fields}
-            </span>
-            {IDENTITY_FINGERPRINT_SOURCE_ORDER.map((source) => (
-              <span
-                key={source}
-                className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-slate-600 ring-1 ring-slate-200 dark:bg-neutral-950/40 dark:text-white/65 dark:ring-white/10"
-              >
-                {formatIdentitySource(source)}: {summary.source_counts?.[source] ?? 0}
-              </span>
-            ))}
-          </div>
-        </div>
-
-        {identityFingerprintLoading && !identityFingerprintDetail ? (
-          <div
-            className="grid gap-2 rounded-lg bg-slate-50/80 px-3 py-3 dark:bg-white/[0.04]"
-            data-testid="auth-file-identity-loading"
+        <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(17rem,0.78fr)_minmax(0,1.65fr)]">
+          <aside
+            className="min-w-0 rounded-lg bg-slate-50/80 px-4 py-4 dark:bg-white/[0.04]"
+            data-testid="auth-file-identity-summary"
           >
-            <div className="h-3 w-36 animate-pulse rounded bg-slate-200 dark:bg-white/10" />
-            <div className="h-3 w-5/6 animate-pulse rounded bg-slate-200 dark:bg-white/10" />
-            <div className="h-3 w-2/3 animate-pulse rounded bg-slate-200 dark:bg-white/10" />
-          </div>
-        ) : null}
-
-        {identityFingerprintError ? (
-          <EmptyState
-            title={t("auth_files.identity_fingerprint_loading_failed")}
-            description={identityFingerprintError}
-          />
-        ) : null}
-
-        {identityFingerprintDetail ? (
-          <section className="min-w-0 space-y-3">
-            <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
-              <p className="text-sm font-semibold text-slate-900 dark:text-white">
-                {t("auth_files.identity_fingerprint_title")}
-              </p>
-              <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600 dark:bg-white/10 dark:text-white/65">
-                {t("auth_files.count_items", { count: identityFieldRows.length })}
-              </span>
+            <div className="flex min-w-0 flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="min-w-0 break-words text-sm font-semibold text-slate-950 dark:text-white">
+                  {clientLabel}
+                </p>
+                <p className="mt-1 min-w-0 break-words text-xs text-slate-500 dark:text-white/55">
+                  {formatOptionalText(summary.provider)} · {formatOptionalText(summary.account_key)}
+                </p>
+              </div>
+              <div className="shrink-0">{renderIdentitySourceBadge(summary.primary_source)}</div>
             </div>
-            <DataTable<IdentityFingerprintFieldRow>
-              rows={identityFieldRows}
-              columns={identityFieldColumns}
-              rowKey={(row) => row.id}
-              rowHeight={48}
-              minWidth="min-w-[980px]"
-              minHeight="min-h-0"
-              height="h-auto"
-              naturalFlow
-              caption={t("auth_files.identity_fingerprint_title")}
-              emptyText={t("auth_files.identity_fingerprint_no_fields")}
-              showAllLoadedMessage={false}
-              columnReorderable={false}
-              persistColumnOrder={false}
-            />
+
+            <dl className="mt-4 grid gap-x-6 gap-y-3 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
+              {renderIdentitySummaryItem(
+                t("auth_files.identity_fingerprint_auth_subject"),
+                formatOptionalText(summary.auth_subject_id),
+              )}
+              {renderIdentitySummaryItem(
+                t("auth_files.identity_fingerprint_version"),
+                formatOptionalText(summary.version),
+              )}
+              {renderIdentitySummaryItem(
+                t("auth_files.identity_fingerprint_updated_at"),
+                formatOptionalDate(summary.updated_at),
+              )}
+              {renderIdentitySummaryItem(
+                t("auth_files.identity_fingerprint_last_seen_at"),
+                formatOptionalDate(summary.last_seen_at),
+              )}
+            </dl>
+
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <span className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-slate-600 ring-1 ring-slate-200 dark:bg-neutral-950/40 dark:text-white/65 dark:ring-white/10">
+                {t("auth_files.identity_fingerprint_effective_count")}: {summary.effective_fields}
+              </span>
+              <span className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-slate-600 ring-1 ring-slate-200 dark:bg-neutral-950/40 dark:text-white/65 dark:ring-white/10">
+                {t("auth_files.identity_fingerprint_learned_count")}: {summary.learned_fields}
+              </span>
+              {IDENTITY_FINGERPRINT_SOURCE_ORDER.map((source) => (
+                <span
+                  key={source}
+                  className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-slate-600 ring-1 ring-slate-200 dark:bg-neutral-950/40 dark:text-white/65 dark:ring-white/10"
+                >
+                  {formatIdentitySource(source)}: {summary.source_counts?.[source] ?? 0}
+                </span>
+              ))}
+            </div>
+          </aside>
+
+          <section className="min-w-0 space-y-3" data-testid="auth-file-identity-fields">
+            {identityFingerprintLoading && !identityFingerprintDetail ? (
+              <div
+                className="grid gap-2 rounded-lg bg-slate-50/80 px-3 py-3 dark:bg-white/[0.04]"
+                data-testid="auth-file-identity-loading"
+              >
+                <div className="h-3 w-36 animate-pulse rounded bg-slate-200 dark:bg-white/10" />
+                <div className="h-3 w-5/6 animate-pulse rounded bg-slate-200 dark:bg-white/10" />
+                <div className="h-3 w-2/3 animate-pulse rounded bg-slate-200 dark:bg-white/10" />
+              </div>
+            ) : null}
+
+            {identityFingerprintError ? (
+              <EmptyState
+                title={t("auth_files.identity_fingerprint_loading_failed")}
+                description={identityFingerprintError}
+              />
+            ) : null}
+
+            {identityFingerprintDetail ? (
+              <>
+                <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
+                  <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                    {t("auth_files.identity_fingerprint_title")}
+                  </p>
+                  <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600 dark:bg-white/10 dark:text-white/65">
+                    {t("auth_files.count_items", { count: identityFieldRows.length })}
+                  </span>
+                </div>
+                <DataTable<IdentityFingerprintFieldRow>
+                  rows={identityFieldRows}
+                  columns={identityFieldColumns}
+                  rowKey={(row) => row.id}
+                  rowHeight={48}
+                  minWidth="min-w-[920px]"
+                  minHeight="min-h-0"
+                  height="h-auto"
+                  naturalFlow
+                  caption={t("auth_files.identity_fingerprint_title")}
+                  emptyText={t("auth_files.identity_fingerprint_no_fields")}
+                  showAllLoadedMessage={false}
+                  columnReorderable={false}
+                  persistColumnOrder={false}
+                />
+              </>
+            ) : null}
           </section>
-        ) : null}
+        </div>
       </div>
     );
   };
