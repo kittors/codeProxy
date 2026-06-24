@@ -1,5 +1,21 @@
 import { apiClient } from "../client/client";
 
+export interface CodexOAuthAllowedClientPresetInfo {
+  id: string;
+  label: string;
+  description?: string;
+}
+
+export interface CodexOAuthAdmissionConfig {
+  allowed_clients?: string[];
+}
+
+export interface CodexOAuthAdmissionResponse {
+  allowed_clients?: string[];
+  available_allowed_clients?: CodexOAuthAllowedClientPresetInfo[];
+  "codex-oauth-admission"?: CodexOAuthAdmissionConfig;
+}
+
 export const configApi = {
   getConfig: () => apiClient.get<Record<string, unknown>>("/config"),
 
@@ -50,4 +66,10 @@ export const configApi = {
   },
   updateAutoUpdateChannel: (channel: string) =>
     apiClient.put("/auto-update/channel", { value: channel }),
+  getCodexOAuthAdmission: () =>
+    apiClient.get<CodexOAuthAdmissionResponse>("/codex-oauth-admission"),
+  updateCodexOAuthAdmission: (allowedClients: string[]) =>
+    apiClient.put<{ status: string }>("/codex-oauth-admission", {
+      allowed_clients: allowedClients,
+    }),
 };

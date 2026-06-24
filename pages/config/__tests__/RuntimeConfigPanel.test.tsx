@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => ({
   getRoutingStrategy: vi.fn(),
   getAutoUpdateEnabled: vi.fn(),
   getAutoUpdateChannel: vi.fn(),
+  getCodexOAuthAdmission: vi.fn(),
   updateProxyUrl: vi.fn(),
   clearProxyUrl: vi.fn(),
   updateRequestRetry: vi.fn(),
@@ -28,6 +29,7 @@ const mocks = vi.hoisted(() => ({
   updateForceModelPrefix: vi.fn(),
   updateAutoUpdateEnabled: vi.fn(),
   updateAutoUpdateChannel: vi.fn(),
+  updateCodexOAuthAdmission: vi.fn(),
 }));
 
 vi.mock("@code-proxy/api-client/endpoints/config", () => ({
@@ -38,6 +40,7 @@ vi.mock("@code-proxy/api-client/endpoints/config", () => ({
     getRoutingStrategy: mocks.getRoutingStrategy,
     getAutoUpdateEnabled: mocks.getAutoUpdateEnabled,
     getAutoUpdateChannel: mocks.getAutoUpdateChannel,
+    getCodexOAuthAdmission: mocks.getCodexOAuthAdmission,
     updateProxyUrl: mocks.updateProxyUrl,
     clearProxyUrl: mocks.clearProxyUrl,
     updateRequestRetry: mocks.updateRequestRetry,
@@ -53,6 +56,7 @@ vi.mock("@code-proxy/api-client/endpoints/config", () => ({
     updateForceModelPrefix: mocks.updateForceModelPrefix,
     updateAutoUpdateEnabled: mocks.updateAutoUpdateEnabled,
     updateAutoUpdateChannel: mocks.updateAutoUpdateChannel,
+    updateCodexOAuthAdmission: mocks.updateCodexOAuthAdmission,
   },
 }));
 
@@ -83,6 +87,16 @@ describe("RuntimeConfigPanel", () => {
     mocks.getRoutingStrategy.mockResolvedValue("round-robin");
     mocks.getAutoUpdateEnabled.mockResolvedValue(true);
     mocks.getAutoUpdateChannel.mockResolvedValue("main");
+    mocks.getCodexOAuthAdmission.mockResolvedValue({
+      allowed_clients: [],
+      available_allowed_clients: [
+        {
+          id: "claude_code",
+          label: "Claude Code",
+          description: "Requires Originator and User-Agent to match.",
+        },
+      ],
+    });
     mocks.updateProxyUrl.mockResolvedValue({});
     mocks.clearProxyUrl.mockResolvedValue({});
     mocks.updateRequestRetry.mockResolvedValue({});
@@ -90,6 +104,7 @@ describe("RuntimeConfigPanel", () => {
     mocks.updateRoutingStrategy.mockResolvedValue({});
     mocks.updateAutoUpdateEnabled.mockResolvedValue({});
     mocks.updateAutoUpdateChannel.mockResolvedValue({});
+    mocks.updateCodexOAuthAdmission.mockResolvedValue({});
   });
 
   test("saves modified runtime text fields and reloads config", async () => {
@@ -155,5 +170,19 @@ describe("RuntimeConfigPanel", () => {
     await waitFor(() => {
       expect(mocks.updateAutoUpdateChannel).toHaveBeenCalledWith("dev");
     });
+  });
+
+  test("saves global Codex OAuth allowed-client presets", async () => {
+    renderPanel();
+
+    const checkbox = await screen.findByTestId("codex-oauth-global-preset-claude_code");
+    expect(checkbox).not.toBeChecked();
+
+    await userEvent.click(checkbox);
+
+    await waitFor(() => {
+      expect(mocks.updateCodexOAuthAdmission).toHaveBeenCalledWith(["claude_code"]);
+    });
+    expect(checkbox).toBeChecked();
   });
 });

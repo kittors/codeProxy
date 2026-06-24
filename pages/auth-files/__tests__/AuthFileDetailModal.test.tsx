@@ -53,6 +53,22 @@ const basePrefixProxyEditor: DetailModalProps["prefixProxyEditor"] = {
   subscriptionPeriod: "monthly",
 };
 
+const baseCodexOAuthAdmissionEditor: DetailModalProps["codexOAuthAdmissionEditor"] = {
+  fileName: "codex.json",
+  supported: true,
+  enabled: true,
+  allowedClients: ["claude_code"],
+  availableAllowedClients: [
+    {
+      id: "claude_code",
+      label: "Claude Code",
+      description: "Allow the Claude Code Codex plugin when Originator and User-Agent both match.",
+    },
+  ],
+  saving: false,
+  error: null,
+};
+
 const expectSummaryCard = (label: string, value: string) => {
   const labelNode = screen.getByText(label);
   const card = labelNode.closest("div");
@@ -144,6 +160,10 @@ const renderDetailModal = (overrides: Partial<DetailModalProps> = {}) => {
     },
     setChannelEditor: vi.fn(),
     saveChannelEditor: vi.fn(async () => true),
+    codexOAuthAdmissionEditor: baseCodexOAuthAdmissionEditor,
+    setCodexOAuthAdmissionEditor: vi.fn(),
+    codexOAuthAdmissionDirty: false,
+    saveCodexOAuthAdmission: vi.fn(async () => true),
     ...overrides,
   };
 
@@ -382,6 +402,49 @@ describe("AuthFileDetailModal", () => {
     expect(screen.getByRole("button", { name: "Save" })).toBeEnabled();
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
     expect(saveChannelEditor).toHaveBeenCalled();
+  });
+
+  test("renders Codex OAuth admission controls and saves the dirty state", () => {
+    const saveCodexOAuthAdmission = vi.fn(async () => true);
+    const props = renderDetailModal({
+      detailTab: "fields",
+      prefixProxyDirty: false,
+      codexOAuthAdmissionDirty: true,
+      saveCodexOAuthAdmission,
+    });
+
+    const panel = screen.getByTestId("codex-oauth-admission-panel");
+    expect(within(panel).getByText("Official Codex client admission")).toBeInTheDocument();
+    expect(
+      within(panel).getByRole("switch", { name: "Only allow official Codex clients" }),
+    ).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByTestId("codex-oauth-admission-preset-claude_code")).toBeChecked();
+    expect(panel).toHaveTextContent("Claude Code");
+    expect(panel).toHaveTextContent("Originator and User-Agent");
+    expect(panel).toHaveTextContent("leave fingerprint fields empty");
+
+    fireEvent.click(screen.getByTestId("codex-oauth-admission-preset-claude_code"));
+    expect(props.setCodexOAuthAdmissionEditor).toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(saveCodexOAuthAdmission).toHaveBeenCalled();
+  });
+
+  test("hides Codex OAuth admission controls when the server does not expose metadata", () => {
+    renderDetailModal({
+      detailTab: "fields",
+      codexOAuthAdmissionEditor: {
+        fileName: "codex-api-key.json",
+        supported: false,
+        enabled: false,
+        allowedClients: [],
+        availableAllowedClients: [],
+        saving: false,
+        error: null,
+      },
+    });
+
+    expect(screen.queryByTestId("codex-oauth-admission-panel")).not.toBeInTheDocument();
   });
 
   test("shows the channel alias editor for Kimi auth files without account_type metadata", () => {

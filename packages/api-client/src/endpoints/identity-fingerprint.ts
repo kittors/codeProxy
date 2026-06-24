@@ -6,6 +6,7 @@ export interface CodexIdentityFingerprint {
   version?: string;
   originator?: string;
   "websocket-beta"?: string;
+  "x-codex-beta-features"?: string;
   "session-mode"?: "server-stable" | "fixed" | "per-request";
   "session-id"?: string;
   "custom-headers"?: Record<string, string>;
@@ -26,14 +27,64 @@ export interface ClaudeIdentityFingerprint {
   "custom-headers"?: Record<string, string>;
 }
 
+export interface GeminiIdentityFingerprint {
+  enabled?: boolean;
+  "user-agent"?: string;
+  "x-goog-api-client"?: string;
+  "client-metadata"?: string;
+  "custom-headers"?: Record<string, string>;
+}
+
 export interface IdentityFingerprintConfig {
   codex?: CodexIdentityFingerprint;
   claude?: ClaudeIdentityFingerprint;
+  gemini?: GeminiIdentityFingerprint;
+}
+
+export type IdentityFingerprintProvider = "claude" | "codex" | "gemini";
+export type IdentityFingerprintFieldSource = "custom" | "learned" | "default";
+
+export interface IdentityFingerprintFieldValue {
+  value: string;
+  source: IdentityFingerprintFieldSource;
+}
+
+export interface IdentityFingerprintLearnedRecord {
+  provider: IdentityFingerprintProvider;
+  account_key: string;
+  auth_subject_id?: string;
+  client_product?: string;
+  client_variant?: string;
+  version?: string;
+  fields: Record<string, string>;
+  observed_headers?: Record<string, string>;
+  created_at: string;
+  updated_at: string;
+  last_seen_at: string;
+}
+
+export interface IdentityFingerprintEffectiveRecord {
+  provider: IdentityFingerprintProvider;
+  account_key?: string;
+  auth_subject_id?: string;
+  enabled: boolean;
+  client_product?: string;
+  version?: string;
+  fields: Record<string, IdentityFingerprintFieldValue>;
+  learned?: IdentityFingerprintLearnedRecord;
+}
+
+export interface IdentityFingerprintProviderStatus {
+  enabled: boolean;
+  learned_count: number;
 }
 
 export interface IdentityFingerprintResponse {
   "identity-fingerprint": IdentityFingerprintConfig;
   defaults: IdentityFingerprintConfig;
+  learned?: Partial<Record<IdentityFingerprintProvider, IdentityFingerprintLearnedRecord[]>>;
+  effective?: Partial<Record<IdentityFingerprintProvider, IdentityFingerprintEffectiveRecord[]>>;
+  status?: Partial<Record<IdentityFingerprintProvider, IdentityFingerprintProviderStatus>>;
 }
 
 export interface CodexFingerprintRecommendationSample {
@@ -81,4 +132,8 @@ export const identityFingerprintApi = {
     ),
   update: (payload: IdentityFingerprintConfig) =>
     apiClient.put<{ status: string }>("/identity-fingerprint", payload),
+  deleteLearned: (provider: IdentityFingerprintProvider, accountKey: string) =>
+    apiClient.delete<{ deleted: number }>("/identity-fingerprint/learned", undefined, {
+      params: { provider, account_key: accountKey },
+    }),
 };

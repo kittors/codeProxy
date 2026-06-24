@@ -1,9 +1,14 @@
 import { useCallback, useEffect, useState, useTransition } from "react";
 import { useTranslation } from "react-i18next";
 import { RefreshCw, Save } from "lucide-react";
-import { configApi } from "@code-proxy/api-client";
+import {
+  configApi,
+  type CodexOAuthAdmissionResponse,
+  type CodexOAuthAllowedClientPresetInfo,
+} from "@code-proxy/api-client";
 import { Button } from "@code-proxy/ui";
 import { Card } from "@code-proxy/ui";
+import { Checkbox } from "@code-proxy/ui";
 import { TextInput } from "@code-proxy/ui";
 import { Select } from "@code-proxy/ui";
 import { ToggleSwitch } from "@code-proxy/ui";
@@ -46,9 +51,48 @@ const readNumber = (obj: Record<string, unknown> | null, ...keys: string[]): num
   return null;
 };
 
+const normalizeStringList = (values: unknown): string[] => {
+  if (!Array.isArray(values)) return [];
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const value of values) {
+    if (typeof value !== "string") continue;
+    const item = value.trim();
+    if (!item || seen.has(item)) continue;
+    seen.add(item);
+    out.push(item);
+  }
+  return out;
+};
+
+const normalizeCodexOAuthAvailableClients = (
+  values: unknown,
+): CodexOAuthAllowedClientPresetInfo[] => {
+  if (!Array.isArray(values)) return [];
+  const out: CodexOAuthAllowedClientPresetInfo[] = [];
+  const seen = new Set<string>();
+  for (const value of values) {
+    if (!isRecord(value)) continue;
+    const id = readString(value, "id");
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    out.push({
+      id,
+      label: readString(value, "label") || id,
+      description: readString(value, "description"),
+    });
+  }
+  return out;
+};
+
 const normalizeUpdateChannel = (value: string) => {
   const channel = value.trim().toLowerCase();
   return channel === "dev" ? channel : "main";
+};
+
+const emptyCodexOAuthAdmission: CodexOAuthAdmissionResponse = {
+  allowed_clients: [],
+  available_allowed_clients: [],
 };
 
 export function RuntimeConfigPanel() {
@@ -69,6 +113,11 @@ export function RuntimeConfigPanel() {
   const [forceModelPrefixEnabled, setForceModelPrefixEnabled] = useState(false);
   const [autoUpdateEnabled, setAutoUpdateEnabled] = useState(true);
   const [autoUpdateChannel, setAutoUpdateChannel] = useState("main");
+  const [codexOAuthAllowedClients, setCodexOAuthAllowedClients] = useState<string[]>([]);
+  const [codexOAuthAvailableClients, setCodexOAuthAvailableClients] = useState<
+    CodexOAuthAllowedClientPresetInfo[]
+  >([]);
+  const [codexOAuthAdmissionSaving, setCodexOAuthAdmissionSaving] = useState(false);
 
   const [proxyUrl, setProxyUrl] = useState("");
   const [requestRetry, setRequestRetry] = useState("0");
@@ -85,15 +134,25 @@ export function RuntimeConfigPanel() {
   const loadRuntimeConfig = useCallback(async () => {
     setLoading(true);
     try {
-      const [config, logsLimit, forcePrefix, strategy, autoUpdate, autoUpdateChannelValue] =
-        await Promise.all([
-          configApi.getConfig(),
-          configApi.getLogsMaxTotalSizeMb().catch(() => 0),
-          configApi.getForceModelPrefix().catch(() => false),
-          configApi.getRoutingStrategy().catch(() => "round-robin"),
-          configApi.getAutoUpdateEnabled().catch(() => true),
-          configApi.getAutoUpdateChannel().catch(() => "main"),
-        ]);
+      const [
+        config,
+        logsLimit,
+        forcePrefix,
+        strategy,
+        autoUpdate,
+        autoUpdateChannelValue,
+        codexOAuthAdmission,
+      ] = await Promise.all([
+        configApi.getConfig(),
+        configApi.getLogsMaxTotalSizeMb().catch(() => 0),
+        configApi.getForceModelPrefix().catch(() => false),
+        configApi.getRoutingStrategy().catch(() => "round-robin"),
+        configApi.getAutoUpdateEnabled().catch(() => true),
+        configApi.getAutoUpdateChannel().catch(() => "main"),
+        configApi.getCodexOAuthAdmission().catch((): CodexOAuthAdmissionResponse => {
+          return emptyCodexOAuthAdmission;
+        }),
+      ]);
 
       const record = isRecord(config) ? (config as Record<string, unknown>) : null;
       setRawConfig(record);
@@ -122,6 +181,15 @@ export function RuntimeConfigPanel() {
         normalizeUpdateChannel(
           typeof autoUpdateChannelValue === "string" ? autoUpdateChannelValue : "main",
         ),
+      );
+      setCodexOAuthAllowedClients(
+        normalizeStringList(
+          codexOAuthAdmission.allowed_clients ??
+            codexOAuthAdmission["codex-oauth-admission"]?.allowed_clients,
+        ),
+      );
+      setCodexOAuthAvailableClients(
+        normalizeCodexOAuthAvailableClients(codexOAuthAdmission.available_allowed_clients),
       );
 
       setBaselineText({
@@ -185,6 +253,33 @@ export function RuntimeConfigPanel() {
       }
     },
     [autoUpdateChannel, notify, t],
+  );
+
+  const updateCodexOAuthAllowedClient = useCallback(
+    async (presetId: string, checked: boolean) => {
+      const id = presetId.trim();
+      if (!id) return;
+      const previous = codexOAuthAllowedClients;
+      const next = checked
+        ? Array.from(new Set([...previous, id]))
+        : previous.filter((value) => value !== id);
+
+      setCodexOAuthAllowedClients(next);
+      setCodexOAuthAdmissionSaving(true);
+      try {
+        await configApi.updateCodexOAuthAdmission(next);
+        notify({ type: "success", message: t("config_page.toast_updated") });
+      } catch (err: unknown) {
+        setCodexOAuthAllowedClients(previous);
+        notify({
+          type: "error",
+          message: err instanceof Error ? err.message : t("config_page.toast_update_failed"),
+        });
+      } finally {
+        setCodexOAuthAdmissionSaving(false);
+      }
+    },
+    [codexOAuthAllowedClients, notify, t],
   );
 
   const runtimeTextDirty =
@@ -402,6 +497,57 @@ export function RuntimeConfigPanel() {
                 ]}
               />
             </div>
+          </div>
+
+          <div
+            className="space-y-3 rounded-2xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60 lg:col-span-2"
+            data-testid="codex-oauth-global-admission-panel"
+          >
+            <div>
+              <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                {t("config_page.codex_oauth_admission_title")}
+              </p>
+              <p className="mt-1 text-xs leading-5 text-slate-600 dark:text-white/65">
+                {t("config_page.codex_oauth_admission_desc")}
+              </p>
+            </div>
+            {codexOAuthAvailableClients.length ? (
+              <div className="grid gap-2 md:grid-cols-2">
+                {codexOAuthAvailableClients.map((preset) => (
+                  <label
+                    key={preset.id}
+                    className="grid cursor-pointer grid-cols-[auto_minmax(0,1fr)] gap-3 rounded-lg bg-slate-50 px-3 py-2.5 ring-1 ring-slate-200 dark:bg-white/[0.04] dark:ring-white/10"
+                  >
+                    <Checkbox
+                      checked={codexOAuthAllowedClients.includes(preset.id)}
+                      disabled={loading || codexOAuthAdmissionSaving}
+                      onCheckedChange={(checked) =>
+                        void updateCodexOAuthAllowedClient(preset.id, checked)
+                      }
+                      aria-label={preset.label}
+                      data-testid={`codex-oauth-global-preset-${preset.id}`}
+                    />
+                    <span className="min-w-0">
+                      <span className="block text-sm font-semibold text-slate-900 dark:text-white">
+                        {preset.label}
+                      </span>
+                      {preset.description ? (
+                        <span className="mt-1 block text-xs leading-5 text-slate-500 dark:text-white/55">
+                          {preset.description}
+                        </span>
+                      ) : null}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-slate-500 dark:text-white/55">
+                {t("config_page.codex_oauth_admission_empty")}
+              </p>
+            )}
+            <p className="text-xs leading-5 text-slate-500 dark:text-white/55">
+              {t("config_page.codex_oauth_admission_trace_hint")}
+            </p>
           </div>
 
           <Card

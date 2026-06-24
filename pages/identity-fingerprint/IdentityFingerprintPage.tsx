@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Sparkles } from "lucide-react";
+import { Sparkles, Trash2 } from "lucide-react";
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 import { configFileApi } from "@code-proxy/api-client/endpoints/config-file";
 import {
@@ -8,6 +8,11 @@ import {
   type ClaudeIdentityFingerprint,
   type CodexFingerprintRecommendation,
   type CodexIdentityFingerprint,
+  type GeminiIdentityFingerprint,
+  type IdentityFingerprintEffectiveRecord,
+  type IdentityFingerprintLearnedRecord,
+  type IdentityFingerprintProvider,
+  type IdentityFingerprintProviderStatus,
   type IdentityFingerprintConfig,
 } from "@code-proxy/api-client/endpoints/identity-fingerprint";
 import { Button } from "@code-proxy/ui";
@@ -20,6 +25,10 @@ import { useToast } from "@code-proxy/ui";
 import { CodexRecommendationsModal } from "./CodexRecommendationsModal";
 
 type ProviderTab = "codex" | "claude" | "gemini" | "kimi";
+type RuntimeProvider = IdentityFingerprintProvider;
+
+type ProviderRuntimeMap<T> = Record<RuntimeProvider, T[]>;
+type ProviderStatusMap = Record<RuntimeProvider, IdentityFingerprintProviderStatus>;
 
 const PROVIDERS: Array<{ id: ProviderTab; label: string }> = [
   { id: "codex", label: "Codex" },
@@ -27,6 +36,24 @@ const PROVIDERS: Array<{ id: ProviderTab; label: string }> = [
   { id: "gemini", label: "Gemini" },
   { id: "kimi", label: "Kimi" },
 ];
+
+const EMPTY_RUNTIME_RECORDS: ProviderRuntimeMap<IdentityFingerprintLearnedRecord> = {
+  claude: [],
+  codex: [],
+  gemini: [],
+};
+
+const EMPTY_EFFECTIVE_RECORDS: ProviderRuntimeMap<IdentityFingerprintEffectiveRecord> = {
+  claude: [],
+  codex: [],
+  gemini: [],
+};
+
+const EMPTY_PROVIDER_STATUS: ProviderStatusMap = {
+  claude: { enabled: false, learned_count: 0 },
+  codex: { enabled: false, learned_count: 0 },
+  gemini: { enabled: false, learned_count: 0 },
+};
 
 const SESSION_MODE_OPTIONS = [
   { value: "per-request", labelKey: "identity_fingerprint.session_per_request" },
@@ -40,6 +67,7 @@ const EMPTY_CODEX: Required<CodexIdentityFingerprint> = {
   version: "",
   originator: "",
   "websocket-beta": "",
+  "x-codex-beta-features": "",
   "session-mode": "per-request",
   "session-id": "",
   "custom-headers": {},
@@ -47,18 +75,55 @@ const EMPTY_CODEX: Required<CodexIdentityFingerprint> = {
 
 const EMPTY_CLAUDE: Required<ClaudeIdentityFingerprint> = {
   enabled: false,
-  "cli-version": "2.1.88",
-  entrypoint: "cli",
-  "user-agent": "claude-cli/2.1.88 (external, cli)",
-  "anthropic-beta":
-    "claude-code-20250219,oauth-2025-04-20,interleaved-thinking-2025-05-14,redact-thinking-2026-02-12,context-management-2025-06-27,prompt-caching-scope-2026-01-05,advanced-tool-use-2025-11-20,effort-2025-11-24",
-  "stainless-package-version": "0.74.0",
-  "stainless-runtime-version": "v22.13.0",
-  "stainless-timeout": "600",
+  "cli-version": "",
+  entrypoint: "",
+  "user-agent": "",
+  "anthropic-beta": "",
+  "stainless-package-version": "",
+  "stainless-runtime-version": "",
+  "stainless-timeout": "",
   "session-mode": "per-request",
   "session-id": "",
   "device-id": "",
   "custom-headers": {},
+};
+
+const EMPTY_GEMINI: Required<GeminiIdentityFingerprint> = {
+  enabled: false,
+  "user-agent": "",
+  "x-goog-api-client": "",
+  "client-metadata": "",
+  "custom-headers": {},
+};
+
+const PROVIDER_FIELD_ORDER: Record<RuntimeProvider, string[]> = {
+  claude: [
+    "user-agent",
+    "cli-version",
+    "entrypoint",
+    "anthropic-beta",
+    "stainless-package-version",
+    "stainless-runtime-version",
+    "stainless-timeout",
+  ],
+  codex: ["user-agent", "version", "originator", "websocket-beta", "x-codex-beta-features"],
+  gemini: ["user-agent", "x-goog-api-client", "client-metadata"],
+};
+
+const FIELD_LABEL_KEYS: Record<string, string> = {
+  "user-agent": "identity_fingerprint.user_agent",
+  version: "identity_fingerprint.version",
+  originator: "identity_fingerprint.originator",
+  "websocket-beta": "identity_fingerprint.websocket_beta",
+  "x-codex-beta-features": "identity_fingerprint.codex_beta_features",
+  "cli-version": "identity_fingerprint.claude_cli_version",
+  entrypoint: "identity_fingerprint.claude_entrypoint",
+  "anthropic-beta": "identity_fingerprint.claude_anthropic_beta",
+  "stainless-package-version": "identity_fingerprint.claude_stainless_package_version",
+  "stainless-runtime-version": "identity_fingerprint.claude_stainless_runtime_version",
+  "stainless-timeout": "identity_fingerprint.claude_stainless_timeout",
+  "x-goog-api-client": "identity_fingerprint.gemini_api_client",
+  "client-metadata": "identity_fingerprint.gemini_client_metadata",
 };
 
 type KimiHeaderDefaults = {
@@ -98,12 +163,58 @@ function mergeClaude(
   };
 }
 
+function mergeGemini(
+  base: GeminiIdentityFingerprint | undefined,
+): Required<GeminiIdentityFingerprint> {
+  return {
+    ...EMPTY_GEMINI,
+    ...base,
+    "custom-headers": base?.["custom-headers"] ?? {},
+  };
+}
+
+function mergeRuntimeRecords<T>(
+  input: Partial<Record<RuntimeProvider, T[]>> | undefined,
+  empty: ProviderRuntimeMap<T>,
+): ProviderRuntimeMap<T> {
+  return {
+    claude: input?.claude ?? empty.claude,
+    codex: input?.codex ?? empty.codex,
+    gemini: input?.gemini ?? empty.gemini,
+  };
+}
+
+function mergeProviderStatus(
+  input: Partial<Record<RuntimeProvider, IdentityFingerprintProviderStatus>> | undefined,
+): ProviderStatusMap {
+  return {
+    claude: input?.claude ?? EMPTY_PROVIDER_STATUS.claude,
+    codex: input?.codex ?? EMPTY_PROVIDER_STATUS.codex,
+    gemini: input?.gemini ?? EMPTY_PROVIDER_STATUS.gemini,
+  };
+}
+
+function withoutManagedCodexBetaFeatures(headers: Record<string, string> | undefined) {
+  return Object.fromEntries(
+    Object.entries(headers ?? {}).filter(([key]) => key.toLowerCase() !== "x-codex-beta-features"),
+  );
+}
+
+function readManagedCodexBetaFeatures(headers: Record<string, string> | undefined) {
+  return Object.entries(headers ?? {}).find(
+    ([key]) => key.toLowerCase() === "x-codex-beta-features",
+  )?.[1];
+}
+
 function codexFromRecommendation(
   current: Required<CodexIdentityFingerprint>,
   recommendation: CodexFingerprintRecommendation,
 ): Required<CodexIdentityFingerprint> {
   const recommended = recommendation.recommended;
-  const nextCustomHeaders = { ...recommended["custom-headers"] };
+  const betaFeatures =
+    recommended["x-codex-beta-features"] ||
+    readManagedCodexBetaFeatures(recommended["custom-headers"]);
+  const nextCustomHeaders = withoutManagedCodexBetaFeatures(recommended["custom-headers"]);
   const next: Required<CodexIdentityFingerprint> = {
     ...current,
     enabled: true,
@@ -115,6 +226,7 @@ function codexFromRecommendation(
   if (recommended.version) next.version = recommended.version;
   if (recommended.originator) next.originator = recommended.originator;
   if (recommended["websocket-beta"]) next["websocket-beta"] = recommended["websocket-beta"];
+  if (betaFeatures) next["x-codex-beta-features"] = betaFeatures;
   return next;
 }
 
@@ -216,6 +328,59 @@ function upsertGeminiHeaders(
   return { root, count: rawEntries.length };
 }
 
+function orderedFieldEntries(
+  provider: RuntimeProvider,
+  fields: Record<string, { value: string; source: string }>,
+) {
+  const seen = new Set<string>();
+  const ordered: Array<[string, { value: string; source: string }]> = [];
+  for (const key of PROVIDER_FIELD_ORDER[provider]) {
+    const value = fields[key];
+    if (value) {
+      ordered.push([key, value]);
+      seen.add(key);
+    }
+  }
+  for (const entry of Object.entries(fields).sort(([a], [b]) => a.localeCompare(b))) {
+    if (!seen.has(entry[0])) ordered.push(entry);
+  }
+  return ordered;
+}
+
+function orderedStringEntries(provider: RuntimeProvider, fields: Record<string, string>) {
+  const seen = new Set<string>();
+  const ordered: Array<[string, string]> = [];
+  for (const key of PROVIDER_FIELD_ORDER[provider]) {
+    const value = fields[key];
+    if (value) {
+      ordered.push([key, value]);
+      seen.add(key);
+    }
+  }
+  for (const entry of Object.entries(fields).sort(([a], [b]) => a.localeCompare(b))) {
+    if (!seen.has(entry[0]) && entry[1]) ordered.push(entry);
+  }
+  return ordered;
+}
+
+function providerLabel(provider: RuntimeProvider) {
+  switch (provider) {
+    case "claude":
+      return "Claude";
+    case "codex":
+      return "Codex";
+    case "gemini":
+      return "Gemini";
+  }
+}
+
+function formatTimestamp(value: string | undefined) {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString();
+}
+
 export function IdentityFingerprintPage() {
   const { t } = useTranslation();
   const { notify } = useToast();
@@ -225,6 +390,10 @@ export function IdentityFingerprintPage() {
   const [claude, setClaude] = useState<Required<ClaudeIdentityFingerprint>>(EMPTY_CLAUDE);
   const [claudeDefaults, setClaudeDefaults] =
     useState<Required<ClaudeIdentityFingerprint>>(EMPTY_CLAUDE);
+  const [geminiFingerprint, setGeminiFingerprint] =
+    useState<Required<GeminiIdentityFingerprint>>(EMPTY_GEMINI);
+  const [geminiDefaults, setGeminiDefaults] =
+    useState<Required<GeminiIdentityFingerprint>>(EMPTY_GEMINI);
   const [configYaml, setConfigYaml] = useState("");
   const [kimi, setKimi] = useState<KimiHeaderDefaults>(DEFAULT_KIMI_HEADERS);
   const [geminiHeadersText, setGeminiHeadersText] = useState(
@@ -233,6 +402,13 @@ export function IdentityFingerprintPage() {
   const [geminiKeyCount, setGeminiKeyCount] = useState(0);
   const [customHeadersText, setCustomHeadersText] = useState("{}");
   const [claudeCustomHeadersText, setClaudeCustomHeadersText] = useState("{}");
+  const [geminiCustomHeadersText, setGeminiCustomHeadersText] = useState("{}");
+  const [learnedRecords, setLearnedRecords] =
+    useState<ProviderRuntimeMap<IdentityFingerprintLearnedRecord>>(EMPTY_RUNTIME_RECORDS);
+  const [effectiveRecords, setEffectiveRecords] =
+    useState<ProviderRuntimeMap<IdentityFingerprintEffectiveRecord>>(EMPTY_EFFECTIVE_RECORDS);
+  const [providerStatus, setProviderStatus] =
+    useState<ProviderStatusMap>(EMPTY_PROVIDER_STATUS);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -250,18 +426,28 @@ export function IdentityFingerprintPage() {
       const nextDefaults = mergeCodex(payload.defaults?.codex);
       const nextClaude = mergeClaude(payload["identity-fingerprint"]?.claude);
       const nextClaudeDefaults = mergeClaude(payload.defaults?.claude);
+      const nextGeminiFingerprint = mergeGemini(payload["identity-fingerprint"]?.gemini);
+      const nextGeminiDefaults = mergeGemini(payload.defaults?.gemini);
       const parsedConfig = parseConfigYaml(yamlText);
       const gemini = firstGeminiHeaders(parsedConfig["gemini-api-key"]);
       setCodex(nextCodex);
       setDefaults(nextDefaults);
       setClaude(nextClaude);
       setClaudeDefaults(nextClaudeDefaults);
+      setGeminiFingerprint(nextGeminiFingerprint);
+      setGeminiDefaults(nextGeminiDefaults);
       setConfigYaml(yamlText);
       setKimi(normalizeKimiHeaders(parsedConfig["kimi-header-defaults"]));
       setGeminiHeadersText(JSON.stringify(gemini.headers, null, 2));
       setGeminiKeyCount(gemini.count);
       setCustomHeadersText(JSON.stringify(nextCodex["custom-headers"], null, 2));
       setClaudeCustomHeadersText(JSON.stringify(nextClaude["custom-headers"], null, 2));
+      setGeminiCustomHeadersText(
+        JSON.stringify(nextGeminiFingerprint["custom-headers"], null, 2),
+      );
+      setLearnedRecords(mergeRuntimeRecords(payload.learned, EMPTY_RUNTIME_RECORDS));
+      setEffectiveRecords(mergeRuntimeRecords(payload.effective, EMPTY_EFFECTIVE_RECORDS));
+      setProviderStatus(mergeProviderStatus(payload.status));
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : t("identity_fingerprint.load_failed");
       setError(message);
@@ -283,6 +469,10 @@ export function IdentityFingerprintPage() {
     setClaude((current) => ({ ...current, ...patch }));
   }, []);
 
+  const updateGeminiFingerprint = useCallback((patch: Partial<GeminiIdentityFingerprint>) => {
+    setGeminiFingerprint((current) => ({ ...current, ...patch }));
+  }, []);
+
   const parsedCodexCustomHeaders = useMemo(() => {
     try {
       return parseCustomHeaders(customHeadersText);
@@ -300,6 +490,11 @@ export function IdentityFingerprintPage() {
     setClaude(claudeDefaults);
     setClaudeCustomHeadersText(JSON.stringify(claudeDefaults["custom-headers"], null, 2));
   }, [claudeDefaults]);
+
+  const restoreGeminiFingerprintDefaults = useCallback(() => {
+    setGeminiFingerprint(geminiDefaults);
+    setGeminiCustomHeadersText(JSON.stringify(geminiDefaults["custom-headers"], null, 2));
+  }, [geminiDefaults]);
 
   const restoreGeminiDefaults = useCallback(() => {
     setGeminiHeadersText(JSON.stringify(DEFAULT_GEMINI_HEADERS, null, 2));
@@ -319,6 +514,7 @@ export function IdentityFingerprintPage() {
         await identityFingerprintApi.update({
           codex: nextCodex,
           claude,
+          gemini: geminiFingerprint,
         });
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : t("identity_fingerprint.save_failed");
@@ -334,7 +530,7 @@ export function IdentityFingerprintPage() {
       notify({ type: "success", message: t("identity_fingerprint.recommend_applied") });
       await loadPage();
     },
-    [claude, codex, loadPage, notify, t],
+    [claude, codex, geminiFingerprint, loadPage, notify, t],
   );
 
   const saveConfigYaml = useCallback(
@@ -359,6 +555,7 @@ export function IdentityFingerprintPage() {
           "custom-headers": customHeaders,
         },
         claude,
+        gemini: geminiFingerprint,
       };
       await identityFingerprintApi.update(payload);
       notify({ type: "success", message: t("identity_fingerprint.saved") });
@@ -370,7 +567,7 @@ export function IdentityFingerprintPage() {
     } finally {
       setSaving(false);
     }
-  }, [claude, codex, customHeadersText, loadPage, notify, t]);
+  }, [claude, codex, customHeadersText, geminiFingerprint, loadPage, notify, t]);
 
   const saveClaude = useCallback(async () => {
     setSaving(true);
@@ -381,6 +578,32 @@ export function IdentityFingerprintPage() {
         codex,
         claude: {
           ...claude,
+          "custom-headers": customHeaders,
+        },
+        gemini: geminiFingerprint,
+      };
+      await identityFingerprintApi.update(payload);
+      notify({ type: "success", message: t("identity_fingerprint.saved") });
+      await loadPage();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : t("identity_fingerprint.save_failed");
+      setError(message);
+      notify({ type: "error", message });
+    } finally {
+      setSaving(false);
+    }
+  }, [claude, claudeCustomHeadersText, codex, geminiFingerprint, loadPage, notify, t]);
+
+  const saveGeminiFingerprint = useCallback(async () => {
+    setSaving(true);
+    setError("");
+    try {
+      const customHeaders = parseCustomHeaders(geminiCustomHeadersText);
+      const payload: IdentityFingerprintConfig = {
+        codex,
+        claude,
+        gemini: {
+          ...geminiFingerprint,
           "custom-headers": customHeaders,
         },
       };
@@ -394,7 +617,7 @@ export function IdentityFingerprintPage() {
     } finally {
       setSaving(false);
     }
-  }, [claude, claudeCustomHeadersText, codex, loadPage, notify, t]);
+  }, [claude, codex, geminiCustomHeadersText, geminiFingerprint, loadPage, notify, t]);
 
   const saveGemini = useCallback(async () => {
     setSaving(true);
@@ -432,6 +655,26 @@ export function IdentityFingerprintPage() {
     }
   }, [kimi, loadPage, notify, saveConfigYaml, t]);
 
+  const clearLearnedRecord = useCallback(
+    async (provider: RuntimeProvider, accountKey: string) => {
+      setSaving(true);
+      setError("");
+      try {
+        await identityFingerprintApi.deleteLearned(provider, accountKey);
+        notify({ type: "success", message: t("identity_fingerprint.learned_deleted") });
+        await loadPage();
+      } catch (err: unknown) {
+        const message =
+          err instanceof Error ? err.message : t("identity_fingerprint.learned_delete_failed");
+        setError(message);
+        notify({ type: "error", message });
+      } finally {
+        setSaving(false);
+      }
+    },
+    [loadPage, notify, t],
+  );
+
   const previewItems = useMemo(
     () => [
       [t("identity_fingerprint.preview_client"), codex["user-agent"]],
@@ -445,6 +688,7 @@ export function IdentityFingerprintPage() {
             : t("identity_fingerprint.session_server_stable"),
       ],
       [t("identity_fingerprint.preview_transport"), codex["websocket-beta"]],
+      [t("identity_fingerprint.codex_beta_features"), codex["x-codex-beta-features"]],
     ],
     [codex, t],
   );
@@ -477,6 +721,15 @@ export function IdentityFingerprintPage() {
       [t("identity_fingerprint.preview_version"), kimi.version],
     ],
     [kimi, t],
+  );
+
+  const geminiPreviewItems = useMemo(
+    () => [
+      [t("identity_fingerprint.preview_client"), geminiFingerprint["user-agent"]],
+      [t("identity_fingerprint.gemini_api_client"), geminiFingerprint["x-goog-api-client"]],
+      [t("identity_fingerprint.gemini_client_metadata"), geminiFingerprint["client-metadata"]],
+    ],
+    [geminiFingerprint, t],
   );
 
   return (
@@ -544,6 +797,7 @@ export function IdentityFingerprintPage() {
                           value={codex["user-agent"]}
                           onChange={(event) => updateCodex({ "user-agent": event.target.value })}
                           disabled={saving}
+                          placeholder={t("identity_fingerprint.auto_learn_placeholder")}
                         />
                       </Field>
                       <Field
@@ -554,6 +808,7 @@ export function IdentityFingerprintPage() {
                           value={codex.version}
                           onChange={(event) => updateCodex({ version: event.target.value })}
                           disabled={saving}
+                          placeholder={t("identity_fingerprint.auto_learn_placeholder")}
                         />
                       </Field>
                     </div>
@@ -609,6 +864,7 @@ export function IdentityFingerprintPage() {
                           value={codex.originator}
                           onChange={(event) => updateCodex({ originator: event.target.value })}
                           disabled={saving}
+                          placeholder={t("identity_fingerprint.auto_learn_placeholder")}
                         />
                       </Field>
                       <Field label={t("identity_fingerprint.websocket_beta")}>
@@ -618,6 +874,17 @@ export function IdentityFingerprintPage() {
                             updateCodex({ "websocket-beta": event.target.value })
                           }
                           disabled={saving}
+                          placeholder={t("identity_fingerprint.auto_learn_placeholder")}
+                        />
+                      </Field>
+                      <Field label={t("identity_fingerprint.codex_beta_features")}>
+                        <TextInput
+                          value={codex["x-codex-beta-features"]}
+                          onChange={(event) =>
+                            updateCodex({ "x-codex-beta-features": event.target.value })
+                          }
+                          disabled={saving}
+                          placeholder={t("identity_fingerprint.auto_learn_placeholder")}
                         />
                       </Field>
                     </div>
@@ -636,19 +903,29 @@ export function IdentityFingerprintPage() {
                   </SimplePanel>
                 </div>
 
-                <SimplePanel
-                  title={t("identity_fingerprint.preview_title")}
-                  description={t("identity_fingerprint.preview_desc")}
-                >
-                  <div className="space-y-2">
-                    {previewItems.map(([label, value]) => (
-                      <PreviewRow key={label} label={label} value={value} />
-                    ))}
-                  </div>
-                  <div className="mt-4 rounded-xl bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
-                    {t("identity_fingerprint.notice_desc")}
-                  </div>
-                </SimplePanel>
+                <div className="space-y-4">
+                  <SimplePanel
+                    title={t("identity_fingerprint.preview_title")}
+                    description={t("identity_fingerprint.preview_desc")}
+                  >
+                    <div className="space-y-2">
+                      {previewItems.map(([label, value]) => (
+                        <PreviewRow key={label} label={label} value={value} />
+                      ))}
+                    </div>
+                    <div className="mt-4 rounded-xl bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
+                      {t("identity_fingerprint.notice_desc")}
+                    </div>
+                  </SimplePanel>
+                  <RuntimeStatePanel
+                    provider="codex"
+                    status={providerStatus.codex}
+                    learned={learnedRecords.codex}
+                    effective={effectiveRecords.codex}
+                    disabled={saving}
+                    onClear={clearLearnedRecord}
+                  />
+                </div>
               </div>
             </div>
           </TabsContent>
@@ -696,6 +973,7 @@ export function IdentityFingerprintPage() {
                           value={claude["cli-version"]}
                           onChange={(event) => updateClaude({ "cli-version": event.target.value })}
                           disabled={saving}
+                          placeholder={t("identity_fingerprint.auto_learn_placeholder")}
                         />
                       </Field>
                       <Field label={t("identity_fingerprint.claude_entrypoint")}>
@@ -703,6 +981,7 @@ export function IdentityFingerprintPage() {
                           value={claude.entrypoint}
                           onChange={(event) => updateClaude({ entrypoint: event.target.value })}
                           disabled={saving}
+                          placeholder={t("identity_fingerprint.auto_learn_placeholder")}
                         />
                       </Field>
                       <Field
@@ -713,6 +992,7 @@ export function IdentityFingerprintPage() {
                           value={claude["user-agent"]}
                           onChange={(event) => updateClaude({ "user-agent": event.target.value })}
                           disabled={saving}
+                          placeholder={t("identity_fingerprint.auto_learn_placeholder")}
                         />
                       </Field>
                       <Field label={t("identity_fingerprint.claude_anthropic_beta")}>
@@ -722,6 +1002,7 @@ export function IdentityFingerprintPage() {
                             updateClaude({ "anthropic-beta": event.target.value })
                           }
                           disabled={saving}
+                          placeholder={t("identity_fingerprint.auto_learn_placeholder")}
                         />
                       </Field>
                     </div>
@@ -739,6 +1020,7 @@ export function IdentityFingerprintPage() {
                             updateClaude({ "stainless-package-version": event.target.value })
                           }
                           disabled={saving}
+                          placeholder={t("identity_fingerprint.auto_learn_placeholder")}
                         />
                       </Field>
                       <Field label={t("identity_fingerprint.claude_stainless_runtime_version")}>
@@ -748,6 +1030,7 @@ export function IdentityFingerprintPage() {
                             updateClaude({ "stainless-runtime-version": event.target.value })
                           }
                           disabled={saving}
+                          placeholder={t("identity_fingerprint.auto_learn_placeholder")}
                         />
                       </Field>
                       <Field
@@ -760,6 +1043,7 @@ export function IdentityFingerprintPage() {
                             updateClaude({ "stainless-timeout": event.target.value })
                           }
                           disabled={saving}
+                          placeholder={t("identity_fingerprint.auto_learn_placeholder")}
                         />
                       </Field>
                     </div>
@@ -828,68 +1112,181 @@ export function IdentityFingerprintPage() {
                   </SimplePanel>
                 </div>
 
-                <SimplePanel
-                  title={t("identity_fingerprint.preview_title")}
-                  description={t("identity_fingerprint.claude_preview_desc")}
-                >
-                  <div className="space-y-2">
-                    {claudePreviewItems.map(([label, value]) => (
-                      <PreviewRow key={label} label={label} value={value} />
-                    ))}
-                  </div>
-                  <ProviderNotice>{t("identity_fingerprint.claude_notice")}</ProviderNotice>
-                </SimplePanel>
+                <div className="space-y-4">
+                  <SimplePanel
+                    title={t("identity_fingerprint.preview_title")}
+                    description={t("identity_fingerprint.claude_preview_desc")}
+                  >
+                    <div className="space-y-2">
+                      {claudePreviewItems.map(([label, value]) => (
+                        <PreviewRow key={label} label={label} value={value} />
+                      ))}
+                    </div>
+                    <ProviderNotice>{t("identity_fingerprint.claude_notice")}</ProviderNotice>
+                  </SimplePanel>
+                  <RuntimeStatePanel
+                    provider="claude"
+                    status={providerStatus.claude}
+                    learned={learnedRecords.claude}
+                    effective={effectiveRecords.claude}
+                    disabled={saving}
+                    onClear={clearLearnedRecord}
+                  />
+                </div>
               </div>
             </div>
           </TabsContent>
 
           <TabsContent value="gemini" className="mt-5">
-            <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
-              <SimplePanel
-                title={t("identity_fingerprint.gemini_title")}
-                description={t("identity_fingerprint.gemini_desc")}
-              >
-                <Field label={t("identity_fingerprint.headers_json")}>
-                  <textarea
-                    value={geminiHeadersText}
-                    onChange={(event) => setGeminiHeadersText(event.target.value)}
+            <div className="space-y-4">
+              <section className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 dark:border-neutral-800 dark:bg-neutral-900/45">
+                <div className="flex flex-col gap-4 2xl:flex-row 2xl:items-start 2xl:justify-between">
+                  <ToggleSwitch
+                    checked={Boolean(geminiFingerprint.enabled)}
+                    onCheckedChange={(enabled) => updateGeminiFingerprint({ enabled })}
+                    label={t("identity_fingerprint.gemini_enabled")}
+                    description={t("identity_fingerprint.gemini_enabled_desc")}
                     disabled={saving}
-                    spellCheck={false}
-                    className="min-h-36 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 font-mono text-sm text-slate-900 shadow-sm outline-none dark:border-neutral-800 dark:bg-neutral-900 dark:text-slate-100"
                   />
-                  <p className="mt-2 text-xs text-slate-500 dark:text-white/50">
-                    {t("identity_fingerprint.gemini_headers_hint")}
-                  </p>
-                </Field>
-                <ProviderActions
-                  restoreLabel={t("identity_fingerprint.restore_defaults")}
-                  saveLabel={
-                    saving
-                      ? t("identity_fingerprint.saving")
-                      : t("identity_fingerprint.save_gemini")
-                  }
-                  onRestore={restoreGeminiDefaults}
-                  onSave={() => void saveGemini()}
-                  disabled={loading || saving || geminiKeyCount === 0}
-                />
-              </SimplePanel>
+                  <div className="flex w-full flex-wrap gap-2 2xl:w-auto 2xl:justify-end">
+                    <Button
+                      variant="secondary"
+                      onClick={restoreGeminiFingerprintDefaults}
+                      disabled={loading || saving}
+                    >
+                      {t("identity_fingerprint.restore_defaults")}
+                    </Button>
+                    <Button
+                      onClick={() => void saveGeminiFingerprint()}
+                      disabled={loading || saving}
+                    >
+                      {saving
+                        ? t("identity_fingerprint.saving")
+                        : t("identity_fingerprint.save_gemini_fingerprint")}
+                    </Button>
+                  </div>
+                </div>
+              </section>
 
-              <SimplePanel
-                title={t("identity_fingerprint.preview_title")}
-                description={t("identity_fingerprint.gemini_preview_desc")}
-              >
-                <PreviewRow
-                  label={t("identity_fingerprint.gemini_key_count")}
-                  value={t("identity_fingerprint.gemini_key_count_value", {
-                    count: geminiKeyCount,
-                  })}
-                />
-                <ProviderNotice>
-                  {geminiKeyCount > 0
-                    ? t("identity_fingerprint.gemini_notice")
-                    : t("identity_fingerprint.gemini_empty_notice")}
-                </ProviderNotice>
-              </SimplePanel>
+              <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+                <div className="space-y-4">
+                  <SimplePanel
+                    title={t("identity_fingerprint.gemini_fingerprint_title")}
+                    description={t("identity_fingerprint.gemini_fingerprint_desc")}
+                  >
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <Field
+                        label={t("identity_fingerprint.user_agent")}
+                        hint={t("identity_fingerprint.gemini_user_agent_hint")}
+                      >
+                        <TextInput
+                          value={geminiFingerprint["user-agent"]}
+                          onChange={(event) =>
+                            updateGeminiFingerprint({ "user-agent": event.target.value })
+                          }
+                          disabled={saving}
+                          placeholder={t("identity_fingerprint.auto_learn_placeholder")}
+                        />
+                      </Field>
+                      <Field label={t("identity_fingerprint.gemini_api_client")}>
+                        <TextInput
+                          value={geminiFingerprint["x-goog-api-client"]}
+                          onChange={(event) =>
+                            updateGeminiFingerprint({
+                              "x-goog-api-client": event.target.value,
+                            })
+                          }
+                          disabled={saving}
+                          placeholder={t("identity_fingerprint.auto_learn_placeholder")}
+                        />
+                      </Field>
+                    </div>
+                    <Field label={t("identity_fingerprint.gemini_client_metadata")}>
+                      <TextInput
+                        value={geminiFingerprint["client-metadata"]}
+                        onChange={(event) =>
+                          updateGeminiFingerprint({ "client-metadata": event.target.value })
+                        }
+                        disabled={saving}
+                        placeholder={t("identity_fingerprint.auto_learn_placeholder")}
+                      />
+                    </Field>
+                    <Field label={t("identity_fingerprint.custom_headers")}>
+                      <textarea
+                        value={geminiCustomHeadersText}
+                        onChange={(event) => setGeminiCustomHeadersText(event.target.value)}
+                        disabled={saving}
+                        spellCheck={false}
+                        className="min-h-24 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 font-mono text-sm text-slate-900 shadow-sm outline-none dark:border-neutral-800 dark:bg-neutral-900 dark:text-slate-100"
+                      />
+                      <p className="mt-2 text-xs text-slate-500 dark:text-white/50">
+                        {t("identity_fingerprint.gemini_custom_headers_hint")}
+                      </p>
+                    </Field>
+                  </SimplePanel>
+
+                  <SimplePanel
+                    title={t("identity_fingerprint.gemini_title")}
+                    description={t("identity_fingerprint.gemini_desc")}
+                  >
+                    <Field label={t("identity_fingerprint.headers_json")}>
+                      <textarea
+                        value={geminiHeadersText}
+                        onChange={(event) => setGeminiHeadersText(event.target.value)}
+                        disabled={saving}
+                        spellCheck={false}
+                        className="min-h-36 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 font-mono text-sm text-slate-900 shadow-sm outline-none dark:border-neutral-800 dark:bg-neutral-900 dark:text-slate-100"
+                      />
+                      <p className="mt-2 text-xs text-slate-500 dark:text-white/50">
+                        {t("identity_fingerprint.gemini_headers_hint")}
+                      </p>
+                    </Field>
+                    <ProviderActions
+                      restoreLabel={t("identity_fingerprint.restore_defaults")}
+                      saveLabel={
+                        saving
+                          ? t("identity_fingerprint.saving")
+                          : t("identity_fingerprint.save_gemini")
+                      }
+                      onRestore={restoreGeminiDefaults}
+                      onSave={() => void saveGemini()}
+                      disabled={loading || saving || geminiKeyCount === 0}
+                    />
+                  </SimplePanel>
+                </div>
+
+                <div className="space-y-4">
+                  <SimplePanel
+                    title={t("identity_fingerprint.preview_title")}
+                    description={t("identity_fingerprint.gemini_preview_desc")}
+                  >
+                    <div className="space-y-2">
+                      {geminiPreviewItems.map(([label, value]) => (
+                        <PreviewRow key={label} label={label} value={value} />
+                      ))}
+                      <PreviewRow
+                        label={t("identity_fingerprint.gemini_key_count")}
+                        value={t("identity_fingerprint.gemini_key_count_value", {
+                          count: geminiKeyCount,
+                        })}
+                      />
+                    </div>
+                    <ProviderNotice>
+                      {geminiKeyCount > 0
+                        ? t("identity_fingerprint.gemini_notice")
+                        : t("identity_fingerprint.gemini_empty_notice")}
+                    </ProviderNotice>
+                  </SimplePanel>
+                  <RuntimeStatePanel
+                    provider="gemini"
+                    status={providerStatus.gemini}
+                    learned={learnedRecords.gemini}
+                    effective={effectiveRecords.gemini}
+                    disabled={saving}
+                    onClear={clearLearnedRecord}
+                  />
+                </div>
+              </div>
             </div>
           </TabsContent>
 
@@ -971,6 +1368,214 @@ export function IdentityFingerprintPage() {
         onClose={() => setCodexRecommendationsOpen(false)}
       />
     </div>
+  );
+}
+
+function RuntimeStatePanel({
+  provider,
+  status,
+  learned,
+  effective,
+  disabled,
+  onClear,
+}: {
+  provider: RuntimeProvider;
+  status: IdentityFingerprintProviderStatus;
+  learned: IdentityFingerprintLearnedRecord[];
+  effective: IdentityFingerprintEffectiveRecord[];
+  disabled?: boolean;
+  onClear: (provider: RuntimeProvider, accountKey: string) => void;
+}) {
+  const { t } = useTranslation();
+  const label = providerLabel(provider);
+  return (
+    <SimplePanel
+      title={t("identity_fingerprint.learned_title", { provider: label })}
+      description={t("identity_fingerprint.learned_desc")}
+    >
+      <div className="flex flex-wrap items-center gap-2 text-xs">
+        <SourcePill tone={status.enabled ? "learned" : "default"}>
+          {status.enabled
+            ? t("identity_fingerprint.status_enabled")
+            : t("identity_fingerprint.status_disabled")}
+        </SourcePill>
+        <span className="text-slate-500 dark:text-white/50">
+          {t("identity_fingerprint.learned_count", {
+            count: status.learned_count ?? learned.length,
+          })}
+        </span>
+      </div>
+
+      {effective.length > 0 ? (
+        <div className="space-y-3">
+          <h4 className="text-xs font-semibold uppercase text-slate-500 dark:text-white/45">
+            {t("identity_fingerprint.effective_title")}
+          </h4>
+          {effective.map((record, index) => (
+            <div
+              key={`${record.account_key || "default"}-${index}`}
+              className="rounded-xl border border-slate-200 bg-slate-50/70 p-3 dark:border-neutral-800 dark:bg-neutral-900/60"
+            >
+              <RecordHeader
+                accountKey={record.account_key}
+                authSubjectId={record.auth_subject_id}
+                product={record.client_product}
+                version={record.version}
+              />
+              <div className="mt-3 space-y-2">
+                {orderedFieldEntries(provider, record.fields).map(([field, fieldValue]) => (
+                  <div key={field} className="rounded-lg bg-white px-3 py-2 dark:bg-neutral-950">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs font-semibold text-slate-600 dark:text-white/60">
+                        {t(FIELD_LABEL_KEYS[field] ?? field)}
+                      </span>
+                      <SourceBadge source={fieldValue.source} />
+                    </div>
+                    <div className="mt-1 break-all text-xs text-slate-900 dark:text-white">
+                      {fieldValue.value || "-"}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="rounded-xl bg-slate-50 px-3 py-2 text-xs leading-5 text-slate-500 dark:bg-neutral-900/70 dark:text-white/50">
+          {t("identity_fingerprint.no_effective_records")}
+        </p>
+      )}
+
+      {learned.length > 0 ? (
+        <div className="space-y-3">
+          <h4 className="text-xs font-semibold uppercase text-slate-500 dark:text-white/45">
+            {t("identity_fingerprint.learned_records_title")}
+          </h4>
+          {learned.map((record) => (
+            <div
+              key={record.account_key}
+              className="rounded-xl border border-slate-200 bg-white p-3 dark:border-neutral-800 dark:bg-neutral-950"
+            >
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <RecordHeader
+                  accountKey={record.account_key}
+                  authSubjectId={record.auth_subject_id}
+                  product={record.client_product}
+                  variant={record.client_variant}
+                  version={record.version}
+                />
+                <Button
+                  variant="secondary"
+                  onClick={() => onClear(provider, record.account_key)}
+                  disabled={disabled}
+                >
+                  <Trash2 size={14} />
+                  {t("identity_fingerprint.clear_learned")}
+                </Button>
+              </div>
+              <PreviewRow
+                label={t("identity_fingerprint.last_seen")}
+                value={formatTimestamp(record.last_seen_at)}
+              />
+              <KeyValueList
+                title={t("identity_fingerprint.learned_fields")}
+                entries={orderedStringEntries(provider, record.fields)}
+              />
+              <KeyValueList
+                title={t("identity_fingerprint.observed_headers")}
+                entries={Object.entries(record.observed_headers ?? {}).sort(([a], [b]) =>
+                  a.localeCompare(b),
+                )}
+              />
+            </div>
+          ))}
+        </div>
+      ) : null}
+    </SimplePanel>
+  );
+}
+
+function RecordHeader({
+  accountKey,
+  authSubjectId,
+  product,
+  variant,
+  version,
+}: {
+  accountKey?: string;
+  authSubjectId?: string;
+  product?: string;
+  variant?: string;
+  version?: string;
+}) {
+  const { t } = useTranslation();
+  const productLine = [product, variant, version].filter(Boolean).join(" / ");
+  return (
+    <div className="min-w-0">
+      <div className="break-all text-xs font-semibold text-slate-900 dark:text-white">
+        {accountKey || t("identity_fingerprint.default_account")}
+      </div>
+      {authSubjectId ? (
+        <div className="mt-1 break-all text-xs text-slate-500 dark:text-white/50">
+          {authSubjectId}
+        </div>
+      ) : null}
+      {productLine ? (
+        <div className="mt-1 break-all text-xs text-slate-500 dark:text-white/50">
+          {productLine}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function KeyValueList({ title, entries }: { title: string; entries: Array<[string, string]> }) {
+  if (entries.length === 0) return null;
+  return (
+    <details className="mt-3 rounded-lg bg-slate-50 px-3 py-2 text-xs dark:bg-neutral-900">
+      <summary className="cursor-pointer font-semibold text-slate-600 dark:text-white/60">
+        {title}
+      </summary>
+      <div className="mt-2 space-y-2">
+        {entries.map(([key, value]) => (
+          <div key={key}>
+            <div className="font-semibold text-slate-500 dark:text-white/45">{key}</div>
+            <div className="break-all text-slate-900 dark:text-white">{value || "-"}</div>
+          </div>
+        ))}
+      </div>
+    </details>
+  );
+}
+
+function SourceBadge({ source }: { source: string }) {
+  const { t } = useTranslation();
+  if (source === "custom") {
+    return <SourcePill tone="custom">{t("identity_fingerprint.source_custom")}</SourcePill>;
+  }
+  if (source === "learned") {
+    return <SourcePill tone="learned">{t("identity_fingerprint.source_learned")}</SourcePill>;
+  }
+  return <SourcePill tone="default">{t("identity_fingerprint.source_default")}</SourcePill>;
+}
+
+function SourcePill({
+  tone,
+  children,
+}: {
+  tone: "custom" | "learned" | "default";
+  children: ReactNode;
+}) {
+  const className =
+    tone === "custom"
+      ? "bg-rose-50 text-rose-700 dark:bg-rose-400/10 dark:text-rose-200"
+      : tone === "learned"
+        ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-200"
+        : "bg-slate-100 text-slate-600 dark:bg-neutral-800 dark:text-white/60";
+  return (
+    <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${className}`}>
+      {children}
+    </span>
   );
 }
 

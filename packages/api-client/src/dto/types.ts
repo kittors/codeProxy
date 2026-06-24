@@ -79,6 +79,18 @@ export interface ClaudeOAuthHealth {
   runtime_profile?: ClaudeOAuthRuntimeProfile;
 }
 
+export interface AuthFileCodexAllowedClientPresetInfo {
+  id: string;
+  label: string;
+  description?: string;
+}
+
+export interface AuthFileCodexOAuthAdmission {
+  enabled?: boolean;
+  allowed_clients?: string[];
+  available_allowed_clients?: AuthFileCodexAllowedClientPresetInfo[];
+}
+
 export interface AuthFileItem extends TagDisplayFields {
   name: string;
   type?: AuthFileType | string;
@@ -119,6 +131,9 @@ export interface AuthFileItem extends TagDisplayFields {
   subscription_expired?: boolean;
   subscriptionExpired?: boolean;
   claude_oauth_health?: ClaudeOAuthHealth;
+  codex_oauth_admission?: AuthFileCodexOAuthAdmission;
+  codex_cli_only?: boolean;
+  codex_cli_only_allowed_clients?: string[];
   [key: string]: unknown;
 }
 

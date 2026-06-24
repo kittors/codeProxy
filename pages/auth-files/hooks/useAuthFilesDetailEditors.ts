@@ -25,6 +25,7 @@ import {
   resolveFileType,
   type AuthFileModelItem,
   type ChannelEditorState,
+  type CodexOAuthAdmissionEditorState,
   type PrefixProxyEditorState,
 } from "@code-proxy/domain";
 
@@ -53,6 +54,56 @@ const createChannelEditorState = (): ChannelEditorState => ({
   saving: false,
   error: null,
 });
+
+const createCodexOAuthAdmissionEditorState = (): CodexOAuthAdmissionEditorState => ({
+  fileName: "",
+  supported: false,
+  enabled: false,
+  allowedClients: [],
+  availableAllowedClients: [],
+  saving: false,
+  error: null,
+});
+
+const normalizeCodexAllowedClientId = (value: string): string => value.trim().toLowerCase();
+
+const normalizeCodexAllowedClientIds = (values: string[] | undefined): string[] => {
+  const seen = new Set<string>();
+  const normalized: string[] = [];
+  (values ?? []).forEach((value) => {
+    const id = normalizeCodexAllowedClientId(value);
+    if (!id || seen.has(id)) return;
+    seen.add(id);
+    normalized.push(id);
+  });
+  return normalized;
+};
+
+const codexAllowedClientSetKey = (values: string[] | undefined): string =>
+  [...normalizeCodexAllowedClientIds(values)].sort().join("\n");
+
+const buildCodexOAuthAdmissionEditorState = (
+  file: AuthFileItem,
+): CodexOAuthAdmissionEditorState => {
+  const admission = file.codex_oauth_admission;
+  if (!admission) {
+    return { ...createCodexOAuthAdmissionEditorState(), fileName: file.name };
+  }
+
+  return {
+    fileName: file.name,
+    supported: true,
+    enabled: Boolean(admission.enabled),
+    allowedClients: normalizeCodexAllowedClientIds(admission.allowed_clients),
+    availableAllowedClients: (admission.available_allowed_clients ?? []).map((preset) => ({
+      id: normalizeCodexAllowedClientId(preset.id),
+      label: preset.label,
+      description: preset.description,
+    })),
+    saving: false,
+    error: null,
+  };
+};
 
 const readSubscriptionStartValue = (json: Record<string, unknown>): unknown =>
   json.subscription_started_at ??
@@ -113,6 +164,25 @@ const mergeSavedSubscriptionFields = (
   return next;
 };
 
+const mergeSavedCodexOAuthAdmissionFields = (
+  file: AuthFileItem,
+  editor: CodexOAuthAdmissionEditorState,
+): AuthFileItem => {
+  if (file.name !== editor.fileName || !file.codex_oauth_admission) return file;
+  const allowedClients = normalizeCodexAllowedClientIds(editor.allowedClients);
+  return {
+    ...file,
+    codex_oauth_admission: {
+      ...file.codex_oauth_admission,
+      enabled: editor.enabled,
+      allowed_clients: allowedClients,
+      available_allowed_clients: editor.availableAllowedClients,
+    },
+    codex_cli_only: editor.enabled,
+    codex_cli_only_allowed_clients: allowedClients,
+  };
+};
+
 const supportsAuthFileTrend = (file: AuthFileItem): boolean => {
   const provider = normalizeProviderKey(resolveFileType(file));
   return provider === "kimi" || provider === "codex";
@@ -148,6 +218,8 @@ export function useAuthFilesDetailEditors(
   const [channelEditor, setChannelEditor] = useState<ChannelEditorState>(() =>
     createChannelEditorState(),
   );
+  const [codexOAuthAdmissionEditor, setCodexOAuthAdmissionEditor] =
+    useState<CodexOAuthAdmissionEditorState>(() => createCodexOAuthAdmissionEditorState());
 
   const applySavedAuthFilePatch = useCallback(
     (fileName: string, json: Record<string, unknown>) => {
@@ -373,6 +445,10 @@ export function useAuthFilesDetailEditors(
     });
   }, []);
 
+  const openCodexOAuthAdmissionEditor = useCallback((file: AuthFileItem) => {
+    setCodexOAuthAdmissionEditor(buildCodexOAuthAdmissionEditorState(file));
+  }, []);
+
   const saveChannelEditor = useCallback(async (): Promise<boolean> => {
     const fileName = channelEditor.fileName.trim();
     const label = channelEditor.label.trim();
@@ -397,6 +473,61 @@ export function useAuthFilesDetailEditors(
     }
   }, [channelEditor.fileName, channelEditor.label, loadAll, notify, t]);
 
+  const codexOAuthAdmissionDirty = useMemo(() => {
+    if (!detailFile || !codexOAuthAdmissionEditor.supported) return false;
+    if (codexOAuthAdmissionEditor.fileName !== detailFile.name) return false;
+    const baseline = buildCodexOAuthAdmissionEditorState(detailFile);
+    if (!baseline.supported) return false;
+    return (
+      baseline.enabled !== codexOAuthAdmissionEditor.enabled ||
+      codexAllowedClientSetKey(baseline.allowedClients) !==
+        codexAllowedClientSetKey(codexOAuthAdmissionEditor.allowedClients)
+    );
+  }, [
+    codexOAuthAdmissionEditor.allowedClients,
+    codexOAuthAdmissionEditor.enabled,
+    codexOAuthAdmissionEditor.fileName,
+    codexOAuthAdmissionEditor.supported,
+    detailFile,
+  ]);
+
+  const saveCodexOAuthAdmission = useCallback(async (): Promise<boolean> => {
+    const fileName = codexOAuthAdmissionEditor.fileName.trim();
+    if (!fileName || !codexOAuthAdmissionEditor.supported) return false;
+
+    const nextEditor: CodexOAuthAdmissionEditorState = {
+      ...codexOAuthAdmissionEditor,
+      allowedClients: normalizeCodexAllowedClientIds(codexOAuthAdmissionEditor.allowedClients),
+    };
+
+    setCodexOAuthAdmissionEditor((prev) => ({ ...prev, saving: true, error: null }));
+    try {
+      await authFilesApi.patchFields({
+        name: fileName,
+        codex_cli_only: nextEditor.enabled,
+        codex_cli_only_allowed_clients: nextEditor.allowedClients,
+      });
+      const applyPatch = (file: AuthFileItem): AuthFileItem =>
+        mergeSavedCodexOAuthAdmissionFields(file, nextEditor);
+      setFiles?.((prev) => prev.map(applyPatch));
+      setDetailFile((prev) => (prev && prev.name === fileName ? applyPatch(prev) : prev));
+      notify({ type: "success", message: t("auth_files.saved") });
+      setCodexOAuthAdmissionEditor((prev) => ({
+        ...prev,
+        saving: false,
+        error: null,
+        allowedClients: nextEditor.allowedClients,
+      }));
+      void loadAll();
+      return true;
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : t("auth_files.save_failed");
+      setCodexOAuthAdmissionEditor((prev) => ({ ...prev, saving: false, error: message }));
+      notify({ type: "error", message });
+      return false;
+    }
+  }, [codexOAuthAdmissionEditor, loadAll, notify, setFiles, t]);
+
   useEffect(() => {
     if (!detailOpen || !detailFile) return;
     if (detailTab === "models") {
@@ -416,10 +547,14 @@ export function useAuthFilesDetailEditors(
       if (canRenameAuthFileChannel(detailFile) && channelEditor.fileName !== detailFile.name) {
         openChannelEditor(detailFile);
       }
+      if (codexOAuthAdmissionEditor.fileName !== detailFile.name) {
+        openCodexOAuthAdmissionEditor(detailFile);
+      }
       return;
     }
   }, [
     channelEditor.fileName,
+    codexOAuthAdmissionEditor.fileName,
     detailFile,
     detailOpen,
     detailTab,
@@ -427,6 +562,7 @@ export function useAuthFilesDetailEditors(
     detailTrendLoading,
     loadModelsForDetail,
     openChannelEditor,
+    openCodexOAuthAdmissionEditor,
     openPrefixProxyEditor,
     prefixProxyEditor.fileName,
     refreshDetailTrend,
@@ -584,11 +720,15 @@ export function useAuthFilesDetailEditors(
     setPrefixProxyEditor,
     channelEditor,
     setChannelEditor,
+    codexOAuthAdmissionEditor,
+    setCodexOAuthAdmissionEditor,
     loadModelsForDetail,
     openDetail,
     prefixProxyDirty,
+    codexOAuthAdmissionDirty,
     prefixProxyUpdatedText,
     savePrefixProxy,
     saveChannelEditor,
+    saveCodexOAuthAdmission,
   };
 }
