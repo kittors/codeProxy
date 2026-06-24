@@ -1288,8 +1288,9 @@ export function AuthFilesFilesTab({
             ) : (
               <ScrollArea
                 data-testid="auth-files-cards"
-                className="h-full items-stretch"
-                contentClassName="grid grid-cols-1 items-stretch gap-5 px-4 py-4 pr-8 sm:py-5 sm:pl-5 sm:pr-8 md:grid-cols-2 xl:grid-cols-3"
+                className="items-stretch md:h-full"
+                viewportClassName="max-md:h-auto max-md:overflow-visible max-md:overscroll-auto"
+                contentClassName="grid grid-cols-1 items-stretch justify-items-center gap-5 px-4 py-4 sm:px-5 sm:py-5 md:grid-cols-2 md:justify-items-stretch md:pr-8 xl:grid-cols-3"
                 scrollbarTrackInset={0}
               >
                 {pageItems.map((file) => {
@@ -1353,7 +1354,7 @@ export function AuthFilesFilesTab({
                       padding="default"
                       bodyClassName="mt-0 flex min-h-0 flex-1 flex-col"
                       className={[
-                        "group/card flex h-full flex-col transition-colors duration-200 ease-out hover:border-slate-300 hover:bg-white dark:hover:border-neutral-700 dark:hover:bg-neutral-950/70",
+                        "group/card flex h-full w-full max-w-[34rem] flex-col transition-colors duration-200 ease-out hover:border-slate-300 hover:bg-white md:max-w-none dark:hover:border-neutral-700 dark:hover:bg-neutral-950/70",
                         fileSelected
                           ? "border-slate-900 ring-1 ring-slate-300 dark:border-white dark:ring-white/20"
                           : "",

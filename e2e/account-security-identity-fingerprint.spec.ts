@@ -524,7 +524,7 @@ test("Account & Security shows auth files and account identity fingerprint detai
 test("Account & Security keeps card mode usable and redirects old identity route", async ({
   page,
 }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
+  await page.setViewportSize({ width: 390, height: 640 });
   await setAuthed(page, "cards");
   await routeManagementMocks(page);
 
@@ -541,6 +541,98 @@ test("Account & Security keeps card mode usable and redirects old identity route
   await expect(
     page.locator('[class*="group/card"]', { hasText: "Claude OAuth Primary" }),
   ).toBeVisible();
+
+  const cardsRoot = page.getByTestId("auth-files-cards");
+  const cardsContent = cardsRoot.locator("[data-scroll-area-content]");
+  const codexCard = page.locator('[class*="group/card"]', { hasText: "Codex Terminal OAuth" });
+  const cardsContentBox = await cardsContent.boundingBox();
+  const codexCardBox = await codexCard.boundingBox();
+  if (!cardsContentBox || !codexCardBox) {
+    throw new Error("cards content and codex card must be visible on mobile");
+  }
+  const leftGap = codexCardBox.x - cardsContentBox.x;
+  const rightGap =
+    cardsContentBox.x + cardsContentBox.width - (codexCardBox.x + codexCardBox.width);
+  expect(Math.abs(leftGap - rightGap)).toBeLessThanOrEqual(2);
+
+  const shellScrollBefore = await page.evaluate(() => {
+    const shellScroller = document.getElementById("main-content")?.parentElement;
+    if (!(shellScroller instanceof HTMLElement)) return null;
+    shellScroller.scrollTop = 0;
+    return {
+      clientHeight: shellScroller.clientHeight,
+      scrollHeight: shellScroller.scrollHeight,
+      scrollTop: shellScroller.scrollTop,
+    };
+  });
+  if (!shellScrollBefore) {
+    throw new Error("Account & Security shell scroll container must exist");
+  }
+  expect(shellScrollBefore.scrollHeight).toBeGreaterThan(shellScrollBefore.clientHeight + 20);
+
+  const quotaPanel = codexCard.getByTestId("auth-file-card-quota");
+  const quotaBox = await quotaPanel.boundingBox();
+  if (!quotaBox) {
+    throw new Error("Codex quota panel must be visible on mobile");
+  }
+  await swipeVerticallyFromPoint(
+    page,
+    quotaBox.x + quotaBox.width / 2,
+    quotaBox.y + quotaBox.height / 2,
+    -260,
+  );
+
+  await expect
+    .poll(async () =>
+      page.evaluate(() => {
+        const shellScroller = document.getElementById("main-content")?.parentElement;
+        return shellScroller instanceof HTMLElement ? shellScroller.scrollTop : 0;
+      }),
+    )
+    .toBeGreaterThan(20);
+});
+
+test("Account & Security keeps wide desktop cards stretched in a three-column grid", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await setAuthed(page, "cards");
+  await routeManagementMocks(page);
+
+  await page.goto("/#/account-security");
+
+  const cardsRoot = page.getByTestId("auth-files-cards");
+  const cardsContent = cardsRoot.locator("[data-scroll-area-content]");
+  await expect(
+    page.locator('[class*="group/card"]', { hasText: "Codex Terminal OAuth" }),
+  ).toBeVisible();
+
+  const desktopCardLayout = await cardsContent.evaluate((node: HTMLElement) => {
+    const style = window.getComputedStyle(node);
+    const cards = Array.from(node.querySelectorAll<HTMLElement>('[class*="group/card"]')).map(
+      (card) => {
+        const box = card.getBoundingClientRect();
+        return {
+          x: box.x,
+          width: box.width,
+          maxWidth: window.getComputedStyle(card).maxWidth,
+        };
+      },
+    );
+    return {
+      gridTemplateColumns: style.gridTemplateColumns,
+      justifyItems: style.justifyItems,
+      cards,
+    };
+  });
+
+  expect(desktopCardLayout.gridTemplateColumns.split(" ").filter(Boolean)).toHaveLength(3);
+  expect(desktopCardLayout.justifyItems).toBe("stretch");
+  expect(desktopCardLayout.cards).toHaveLength(3);
+  expect(desktopCardLayout.cards.every((card) => card.maxWidth === "none")).toBe(true);
+  expect(desktopCardLayout.cards[1].x).toBeGreaterThan(desktopCardLayout.cards[0].x);
+  expect(desktopCardLayout.cards[2].x).toBeGreaterThan(desktopCardLayout.cards[1].x);
+  expect(Math.min(...desktopCardLayout.cards.map((card) => card.width))).toBeGreaterThan(320);
 });
 
 test("Account & Security mobile table scroll chains from the middle of the page", async ({
@@ -647,28 +739,64 @@ test("Account & Security identity detail stacks cleanly on mobile", async ({ pag
   expect(Math.abs(fieldsBox.x - summaryBox.x)).toBeLessThanOrEqual(8);
   const detailScroller = dialog.getByTestId("auth-file-detail-scroll");
   await expect(detailScroller).toHaveCSS("overflow-x", "hidden");
-  await expect(detailScroller).toHaveCSS("overflow-y", "hidden");
-  const identityTableViewport = identityFields.locator('[data-scrollbar-visibility="hover"]');
-  await expect(identityTableViewport).toBeVisible();
-  const mobileTableScrollState = await identityTableViewport.evaluate((node: HTMLElement) => {
-    node.scrollTop = 120;
+  await expect(detailScroller).toHaveCSS("overflow-y", "auto");
+  const mobileTable = identityFields.getByTestId("auth-file-identity-table-mobile");
+  await expect(mobileTable).toBeVisible();
+  await expect(mobileTable.locator("[data-vt-natural-flow]")).toBeVisible();
+  await expect(identityFields.locator('[data-scrollbar-visibility="hover"]')).toHaveCount(0);
+
+  const detailScrollState = await detailScroller.evaluate((node: HTMLElement) => {
+    node.scrollTop = 160;
+    const style = window.getComputedStyle(node);
+    return {
+      canScrollY: node.scrollHeight > node.clientHeight,
+      overflowY: style.overflowY,
+      scrollTop: node.scrollTop,
+    };
+  });
+  expect(detailScrollState.overflowY).toBe("auto");
+  expect(detailScrollState.canScrollY).toBe(true);
+  expect(detailScrollState.scrollTop).toBeGreaterThan(0);
+
+  const mobileTableScrollState = await mobileTable.evaluate((node: HTMLElement) => {
     node.scrollLeft = 160;
     const style = window.getComputedStyle(node);
     return {
       canScrollX: node.scrollWidth > node.clientWidth,
-      canScrollY: node.scrollHeight > node.clientHeight,
       overflowX: style.overflowX,
-      overflowY: style.overflowY,
       scrollLeft: node.scrollLeft,
-      scrollTop: node.scrollTop,
     };
   });
   expect(mobileTableScrollState.overflowX).toBe("auto");
-  expect(mobileTableScrollState.overflowY).toBe("auto");
   expect(mobileTableScrollState.canScrollX).toBe(true);
-  expect(mobileTableScrollState.canScrollY).toBe(true);
   expect(mobileTableScrollState.scrollLeft).toBeGreaterThan(0);
-  expect(mobileTableScrollState.scrollTop).toBeGreaterThan(0);
+
+  await detailScroller.evaluate((node: HTMLElement) => {
+    node.scrollTop = 0;
+  });
+  const mobileTableBox = await mobileTable.boundingBox();
+  const viewportSize = page.viewportSize();
+  if (!mobileTableBox || !viewportSize) {
+    throw new Error("mobile identity fingerprint table must be visible");
+  }
+  const visibleLeft = Math.max(mobileTableBox.x, 16);
+  const visibleRight = Math.min(mobileTableBox.x + mobileTableBox.width, viewportSize.width - 16);
+  const visibleTop = Math.max(mobileTableBox.y, 120);
+  const visibleBottom = Math.min(
+    mobileTableBox.y + mobileTableBox.height,
+    viewportSize.height - 96,
+  );
+  expect(visibleRight).toBeGreaterThan(visibleLeft + 20);
+  expect(visibleBottom).toBeGreaterThan(visibleTop + 20);
+  await swipeVerticallyFromPoint(
+    page,
+    (visibleLeft + visibleRight) / 2,
+    (visibleTop + visibleBottom) / 2,
+    -260,
+  );
+  await expect
+    .poll(async () => detailScroller.evaluate((node: HTMLElement) => node.scrollTop))
+    .toBeGreaterThan(20);
 
   const documentOverflowX = await page.evaluate(
     () => document.documentElement.scrollWidth - document.documentElement.clientWidth,

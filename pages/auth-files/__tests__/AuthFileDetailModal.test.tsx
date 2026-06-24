@@ -138,6 +138,22 @@ const expectSummaryCard = (label: string, value: string) => {
   expect(within(card).getByText(value)).toBeInTheDocument();
 };
 
+const mockMediaQueryMatches = (matches: boolean) => {
+  vi.spyOn(window, "matchMedia").mockImplementation(
+    (query: string) =>
+      ({
+        matches,
+        media: query,
+        onchange: null,
+        addListener: () => undefined,
+        removeListener: () => undefined,
+        addEventListener: () => undefined,
+        removeEventListener: () => undefined,
+        dispatchEvent: () => false,
+      }) as MediaQueryList,
+  );
+};
+
 const renderDetailModal = (overrides: Partial<DetailModalProps> = {}) => {
   const props: DetailModalProps = {
     open: true,
@@ -356,7 +372,7 @@ describe("AuthFileDetailModal", () => {
     expect(screen.queryByText(/resets/)).not.toBeInTheDocument();
   });
 
-  test("renders account identity fingerprint sources and learned request headers", () => {
+  test("renders account identity fingerprint sources and learned request headers in mobile flow", () => {
     renderDetailModal({
       detailTab: "identity",
       detailFile: {
@@ -381,9 +397,9 @@ describe("AuthFileDetailModal", () => {
       "Models",
     ]);
     expect(screen.getByRole("tab", { name: "Identity" })).toBeInTheDocument();
-    expect(scroller.className).toContain("overflow-hidden");
-    expect(scroller.className).not.toContain("overflow-y-auto");
-    expect(panel.className).toContain("h-full");
+    expect(scroller.className).toContain("overflow-y-auto");
+    expect(scroller.className).toContain("lg:overflow-hidden");
+    expect(panel.className).toContain("lg:h-full");
     expect(fields.className).toContain("flex");
     expect(summary).toHaveTextContent("codex-account-1");
     expect(within(summary).getByText("auth-subject-1")).toBeInTheDocument();
@@ -406,6 +422,35 @@ describe("AuthFileDetailModal", () => {
     expect(within(fields).getByText("websocket-beta")).toBeInTheDocument();
     expect(within(fields).getByText("realtime=v1")).toBeInTheDocument();
     expect(within(panel).queryByText("Custom")).not.toBeInTheDocument();
+    const mobileTable = within(fields).getByTestId("auth-file-identity-table-mobile");
+    expect(mobileTable.className).toContain("overflow-x-auto");
+    expect(
+      within(fields).queryByTestId("auth-file-identity-table-desktop"),
+    ).not.toBeInTheDocument();
+    expect(fields.querySelector("[data-vt-natural-flow]")).toBeInTheDocument();
+    expect(fields.querySelector('[data-scrollbar-visibility="hover"]')).toBeNull();
+  });
+
+  test("keeps identity fingerprint table scroll owned by the table on desktop", () => {
+    mockMediaQueryMatches(true);
+
+    renderDetailModal({
+      detailTab: "identity",
+      detailFile: {
+        name: "codex.json",
+        label: "Codex Primary",
+        type: "codex",
+        size: 256,
+        account_type: "oauth",
+        identity_fingerprint_summary: codexIdentityFingerprintDetail.summary,
+      },
+      identityFingerprintDetail: codexIdentityFingerprintDetail,
+    });
+
+    const fields = screen.getByTestId("auth-file-identity-fields");
+    const desktopTable = within(fields).getByTestId("auth-file-identity-table-desktop");
+    expect(desktopTable.className).toContain("overflow-hidden");
+    expect(within(fields).queryByTestId("auth-file-identity-table-mobile")).not.toBeInTheDocument();
     const tableViewport = fields.querySelector('[data-scrollbar-visibility="hover"]');
     if (!(tableViewport instanceof HTMLElement)) {
       throw new Error("identity fingerprint fields table must own its scroll viewport");
