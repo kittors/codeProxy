@@ -8,9 +8,9 @@ import {
   type SetStateAction,
 } from "react";
 import { useTranslation } from "react-i18next";
-import { authFilesApi, usageApi } from "@code-proxy/api-client";
+import { authFilesApi, identityFingerprintApi, usageApi } from "@code-proxy/api-client";
 import type { AuthFileTrendResponse } from "@code-proxy/api-client/endpoints/usage";
-import type { AuthFileItem } from "@code-proxy/api-client";
+import type { AuthFileItem, IdentityFingerprintAccountDetail } from "@code-proxy/api-client";
 import { useToast } from "@code-proxy/ui";
 import {
   dateLikeToDateTimeLocalInput,
@@ -29,7 +29,7 @@ import {
   type PrefixProxyEditorState,
 } from "@code-proxy/domain";
 
-type DetailTab = "usage" | "fields" | "models";
+type DetailTab = "usage" | "identity" | "fields" | "models";
 type DetailTrendWindow = "5h" | "week";
 type RefreshDetailTrendOptions = { silent?: boolean };
 
@@ -188,6 +188,12 @@ const supportsAuthFileTrend = (file: AuthFileItem): boolean => {
   return provider === "kimi" || provider === "codex";
 };
 
+const identityFingerprintDetailKey = (file: AuthFileItem): string => {
+  const summary = file.identity_fingerprint_summary;
+  if (!summary?.account_key) return "";
+  return [summary.provider, summary.account_key, summary.auth_subject_id ?? ""].join("\n");
+};
+
 export function useAuthFilesDetailEditors(
   loadAll: () => Promise<AuthFileItem[]>,
   setFiles?: Dispatch<SetStateAction<AuthFileItem[]>>,
@@ -196,6 +202,7 @@ export function useAuthFilesDetailEditors(
   const { notify } = useToast();
   const modelsCacheRef = useRef<Map<string, AuthFileModelItem[]>>(new Map());
   const detailTrendInFlightRef = useRef<Map<string, Promise<void>>>(new Map());
+  const identityFingerprintDetailKeyRef = useRef("");
 
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailFile, setDetailFile] = useState<AuthFileItem | null>(null);
@@ -206,6 +213,10 @@ export function useAuthFilesDetailEditors(
   const [detailTrend, setDetailTrend] = useState<AuthFileTrendResponse | null>(null);
   const [detailTrendLoading, setDetailTrendLoading] = useState(false);
   const [detailTrendError, setDetailTrendError] = useState<string | null>(null);
+  const [identityFingerprintDetail, setIdentityFingerprintDetail] =
+    useState<IdentityFingerprintAccountDetail | null>(null);
+  const [identityFingerprintLoading, setIdentityFingerprintLoading] = useState(false);
+  const [identityFingerprintError, setIdentityFingerprintError] = useState<string | null>(null);
 
   const [modelsLoading, setModelsLoading] = useState(false);
   const [modelsFileType, setModelsFileType] = useState("");
@@ -328,17 +339,76 @@ export function useAuthFilesDetailEditors(
     [detailFile, detailTrend, t],
   );
 
+  const loadIdentityFingerprintForDetail = useCallback(
+    async (file: AuthFileItem) => {
+      const summary = file.identity_fingerprint_summary;
+      const key = identityFingerprintDetailKey(file);
+      if (!summary?.account_key || !key) {
+        identityFingerprintDetailKeyRef.current = "";
+        setIdentityFingerprintDetail(null);
+        setIdentityFingerprintLoading(false);
+        setIdentityFingerprintError(null);
+        return;
+      }
+      if (
+        identityFingerprintDetailKeyRef.current === key &&
+        identityFingerprintLoading &&
+        !identityFingerprintError
+      ) {
+        return;
+      }
+      if (
+        identityFingerprintDetailKeyRef.current === key &&
+        identityFingerprintDetail &&
+        !identityFingerprintError
+      ) {
+        return;
+      }
+
+      identityFingerprintDetailKeyRef.current = key;
+      setIdentityFingerprintLoading(true);
+      setIdentityFingerprintError(null);
+      try {
+        const detail = await identityFingerprintApi.getAccountDetail({
+          provider: summary.provider,
+          account_key: summary.account_key,
+          auth_subject_id: summary.auth_subject_id,
+        });
+        if (identityFingerprintDetailKeyRef.current !== key) return;
+        setIdentityFingerprintDetail(detail);
+      } catch (err: unknown) {
+        if (identityFingerprintDetailKeyRef.current !== key) return;
+        setIdentityFingerprintDetail(null);
+        setIdentityFingerprintError(
+          err instanceof Error ? err.message : t("auth_files.identity_fingerprint_loading_failed"),
+        );
+      } finally {
+        if (identityFingerprintDetailKeyRef.current === key) {
+          setIdentityFingerprintLoading(false);
+        }
+      }
+    },
+    [identityFingerprintDetail, identityFingerprintError, identityFingerprintLoading, t],
+  );
+
   const openDetail = useCallback(
     async (file: AuthFileItem) => {
       const hasTrend = supportsAuthFileTrend(file);
+      const hasIdentity = Boolean(file.identity_fingerprint_summary?.account_key);
       setDetailOpen(true);
-      setDetailTab(hasTrend ? "usage" : "fields");
+      setDetailTab(hasTrend ? "usage" : hasIdentity ? "identity" : "fields");
       setDetailTrendWindow("5h");
       setDetailFile(file);
       setDetailLoading(true);
       setDetailText("");
       setDetailTrend(null);
       setDetailTrendError(null);
+      setIdentityFingerprintDetail(null);
+      setIdentityFingerprintError(null);
+      identityFingerprintDetailKeyRef.current = "";
+      if (hasIdentity) {
+        void loadIdentityFingerprintForDetail(file);
+      }
       if (hasTrend) {
         void refreshDetailTrend(file);
       }
@@ -354,7 +424,7 @@ export function useAuthFilesDetailEditors(
         setDetailLoading(false);
       }
     },
-    [notify, refreshDetailTrend, t],
+    [loadIdentityFingerprintForDetail, notify, refreshDetailTrend, t],
   );
 
   const openPrefixProxyEditor = useCallback(
@@ -540,6 +610,10 @@ export function useAuthFilesDetailEditors(
       }
       return;
     }
+    if (detailTab === "identity") {
+      void loadIdentityFingerprintForDetail(detailFile);
+      return;
+    }
     if (detailTab === "fields") {
       if (prefixProxyEditor.fileName !== detailFile.name) {
         void openPrefixProxyEditor(detailFile);
@@ -561,6 +635,7 @@ export function useAuthFilesDetailEditors(
     detailTrend,
     detailTrendLoading,
     loadModelsForDetail,
+    loadIdentityFingerprintForDetail,
     openChannelEditor,
     openCodexOAuthAdmissionEditor,
     openPrefixProxyEditor,
@@ -711,6 +786,10 @@ export function useAuthFilesDetailEditors(
     detailTrend,
     detailTrendLoading,
     detailTrendError,
+    identityFingerprintDetail,
+    identityFingerprintLoading,
+    identityFingerprintError,
+    loadIdentityFingerprintForDetail,
     refreshDetailTrend,
     modelsLoading,
     modelsFileType,

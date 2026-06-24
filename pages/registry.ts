@@ -3,6 +3,7 @@ import { dashboardRoute } from "./dashboard/route";
 import { monitorRoute } from "./monitor/route";
 import { requestLogsRoute } from "./request-logs/route";
 import { providersRoute } from "./providers/route";
+import { accountSecurityRoute } from "./account-security/route";
 import { authFilesRoute } from "./auth-files/route";
 import { apiKeysRoute } from "./api-keys/route";
 import { apiKeyPermissionsRoute } from "./api-key-permissions/route";
@@ -23,6 +24,7 @@ export const pageRoutes = [
   monitorRoute,
   requestLogsRoute,
   providersRoute,
+  accountSecurityRoute,
   authFilesRoute,
   apiKeysRoute,
   apiKeyPermissionsRoute,

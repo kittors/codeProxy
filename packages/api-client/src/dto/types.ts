@@ -91,6 +91,26 @@ export interface AuthFileCodexOAuthAdmission {
   available_allowed_clients?: AuthFileCodexAllowedClientPresetInfo[];
 }
 
+export type AuthFileIdentityFingerprintProvider = "claude" | "codex" | "gemini";
+export type AuthFileIdentityFingerprintSource = "learned" | "preset" | "builtin_default";
+
+export interface AuthFileIdentityFingerprintSummary {
+  provider: AuthFileIdentityFingerprintProvider;
+  account_key?: string;
+  auth_subject_id?: string;
+  enabled: boolean;
+  primary_source: AuthFileIdentityFingerprintSource;
+  learned: boolean;
+  learned_fields: number;
+  effective_fields: number;
+  source_counts: Partial<Record<AuthFileIdentityFingerprintSource, number>>;
+  client_product?: string;
+  client_variant?: string;
+  version?: string;
+  updated_at?: string;
+  last_seen_at?: string;
+}
+
 export interface AuthFileItem extends TagDisplayFields {
   name: string;
   type?: AuthFileType | string;
@@ -132,6 +152,7 @@ export interface AuthFileItem extends TagDisplayFields {
   subscriptionExpired?: boolean;
   claude_oauth_health?: ClaudeOAuthHealth;
   codex_oauth_admission?: AuthFileCodexOAuthAdmission;
+  identity_fingerprint_summary?: AuthFileIdentityFingerprintSummary;
   codex_cli_only?: boolean;
   codex_cli_only_allowed_clients?: string[];
   [key: string]: unknown;

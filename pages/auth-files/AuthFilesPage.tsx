@@ -217,6 +217,9 @@ export function AuthFilesPage() {
     detailTrend,
     detailTrendLoading,
     detailTrendError,
+    identityFingerprintDetail,
+    identityFingerprintLoading,
+    identityFingerprintError,
     refreshDetailTrend,
     modelsLoading,
     modelsFileType,
@@ -816,6 +819,9 @@ export function AuthFilesPage() {
         detailTrend={detailTrend}
         detailTrendLoading={detailTrendLoading}
         detailTrendError={detailTrendError}
+        identityFingerprintDetail={identityFingerprintDetail}
+        identityFingerprintLoading={identityFingerprintLoading}
+        identityFingerprintError={identityFingerprintError}
         refreshDetailTrend={refreshDetailTrend}
         loadModelsForDetail={loadModelsForDetail}
         loadModelOwnerGroups={loadModelOwnerGroups}

@@ -42,7 +42,7 @@ export interface IdentityFingerprintConfig {
 }
 
 export type IdentityFingerprintProvider = "claude" | "codex" | "gemini";
-export type IdentityFingerprintFieldSource = "custom" | "learned" | "default";
+export type IdentityFingerprintFieldSource = "learned" | "preset" | "builtin_default";
 
 export interface IdentityFingerprintFieldValue {
   value: string;
@@ -87,6 +87,31 @@ export interface IdentityFingerprintResponse {
   status?: Partial<Record<IdentityFingerprintProvider, IdentityFingerprintProviderStatus>>;
 }
 
+export interface IdentityFingerprintAccountSummary {
+  provider: IdentityFingerprintProvider;
+  account_key?: string;
+  auth_subject_id?: string;
+  enabled: boolean;
+  primary_source: IdentityFingerprintFieldSource;
+  learned: boolean;
+  learned_fields: number;
+  effective_fields: number;
+  source_counts: Partial<Record<IdentityFingerprintFieldSource, number>>;
+  client_product?: string;
+  client_variant?: string;
+  version?: string;
+  updated_at?: string;
+  last_seen_at?: string;
+}
+
+export interface IdentityFingerprintAccountDetail {
+  summary: IdentityFingerprintAccountSummary;
+  effective: IdentityFingerprintEffectiveRecord;
+  learned?: IdentityFingerprintLearnedRecord;
+  preset?: unknown;
+  builtin_default?: unknown;
+}
+
 export interface CodexFingerprintRecommendationSample {
   log_id: number;
   timestamp: string;
@@ -122,6 +147,18 @@ export interface CodexFingerprintRecommendationsResponse {
 
 export const identityFingerprintApi = {
   get: () => apiClient.get<IdentityFingerprintResponse>("/identity-fingerprint"),
+  getAccountDetail: (
+    params: {
+      provider: IdentityFingerprintProvider;
+      account_key: string;
+      auth_subject_id?: string;
+    },
+    options?: Omit<RequestOptions, "params">,
+  ) =>
+    apiClient.get<IdentityFingerprintAccountDetail>("/identity-fingerprint/account", {
+      ...options,
+      params,
+    }),
   getCodexRecommendations: (
     params?: { days?: number; limit?: number },
     options?: Omit<RequestOptions, "params">,

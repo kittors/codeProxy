@@ -183,7 +183,7 @@ test("Auth Files: Claude OAuth health is visible in table rows and detail fields
   await expect(apiKeyRow.getByText("5h limited")).toHaveCount(0);
   await expect(apiKeyRow.getByText("7d limited")).toHaveCount(0);
 
-  await oauthRow.getByRole("button", { name: /View|查看/i }).click();
+  await oauthRow.getByRole("button", { name: /Details|详情/i }).click();
 
   const dialog = page.getByRole("dialog", { name: /Claude OAuth Primary|查看/i });
   await expect(dialog).toBeVisible();

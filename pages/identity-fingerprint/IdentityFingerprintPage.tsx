@@ -407,8 +407,7 @@ export function IdentityFingerprintPage() {
     useState<ProviderRuntimeMap<IdentityFingerprintLearnedRecord>>(EMPTY_RUNTIME_RECORDS);
   const [effectiveRecords, setEffectiveRecords] =
     useState<ProviderRuntimeMap<IdentityFingerprintEffectiveRecord>>(EMPTY_EFFECTIVE_RECORDS);
-  const [providerStatus, setProviderStatus] =
-    useState<ProviderStatusMap>(EMPTY_PROVIDER_STATUS);
+  const [providerStatus, setProviderStatus] = useState<ProviderStatusMap>(EMPTY_PROVIDER_STATUS);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -442,9 +441,7 @@ export function IdentityFingerprintPage() {
       setGeminiKeyCount(gemini.count);
       setCustomHeadersText(JSON.stringify(nextCodex["custom-headers"], null, 2));
       setClaudeCustomHeadersText(JSON.stringify(nextClaude["custom-headers"], null, 2));
-      setGeminiCustomHeadersText(
-        JSON.stringify(nextGeminiFingerprint["custom-headers"], null, 2),
-      );
+      setGeminiCustomHeadersText(JSON.stringify(nextGeminiFingerprint["custom-headers"], null, 2));
       setLearnedRecords(mergeRuntimeRecords(payload.learned, EMPTY_RUNTIME_RECORDS));
       setEffectiveRecords(mergeRuntimeRecords(payload.effective, EMPTY_EFFECTIVE_RECORDS));
       setProviderStatus(mergeProviderStatus(payload.status));
@@ -1550,11 +1547,14 @@ function KeyValueList({ title, entries }: { title: string; entries: Array<[strin
 
 function SourceBadge({ source }: { source: string }) {
   const { t } = useTranslation();
-  if (source === "custom") {
+  if (source === "custom" || source === "preset") {
     return <SourcePill tone="custom">{t("identity_fingerprint.source_custom")}</SourcePill>;
   }
   if (source === "learned") {
     return <SourcePill tone="learned">{t("identity_fingerprint.source_learned")}</SourcePill>;
+  }
+  if (source === "default" || source === "builtin_default") {
+    return <SourcePill tone="default">{t("identity_fingerprint.source_default")}</SourcePill>;
   }
   return <SourcePill tone="default">{t("identity_fingerprint.source_default")}</SourcePill>;
 }

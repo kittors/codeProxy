@@ -11,8 +11,14 @@ import {
 import { useTranslation } from "react-i18next";
 import { Download, RefreshCw, ShieldCheck } from "lucide-react";
 import type { AuthFileTrendResponse } from "@code-proxy/api-client/endpoints/usage";
-import type { AuthFileItem, AuthFileSubscriptionPeriod } from "@code-proxy/api-client";
+import type {
+  AuthFileItem,
+  AuthFileSubscriptionPeriod,
+  IdentityFingerprintAccountDetail,
+  IdentityFingerprintFieldSource,
+} from "@code-proxy/api-client";
 import type { ProxyPoolEntry } from "@code-proxy/api-client/endpoints/proxies";
+import { DataTable, type DataTableColumn } from "@code-proxy/ui";
 import { Button } from "@code-proxy/ui";
 import { Checkbox } from "@code-proxy/ui";
 import { DateTimePicker } from "@code-proxy/ui";
@@ -44,10 +50,19 @@ import {
   type PrefixProxyEditorState,
 } from "@code-proxy/domain";
 
-type DetailTab = "usage" | "fields" | "models";
+type DetailTab = "usage" | "identity" | "fields" | "models";
 type DetailTrendWindow = "5h" | "week";
 type TrendQuotaSeries = AuthFileTrendResponse["quota_series"][number];
 type TrendUsagePoint = AuthFileTrendResponse["hourly_usage"][number];
+type IdentityFingerprintFieldSection = "effective" | "learned" | "observed";
+
+interface IdentityFingerprintFieldRow {
+  id: string;
+  section: IdentityFingerprintFieldSection;
+  field: string;
+  value: string;
+  source: IdentityFingerprintFieldSource;
+}
 
 const FIVE_HOUR_WINDOW_SECONDS = 18000;
 const WEEK_WINDOW_SECONDS = 604800;
@@ -57,6 +72,11 @@ const SUMMARY_CARD_CLASS_NAME = "min-w-0 rounded-lg bg-slate-50/80 px-3 py-3 dar
 const SUMMARY_LABEL_CLASS_NAME = "text-xs font-semibold text-slate-500 dark:text-white/55";
 const SUMMARY_VALUE_CLASS_NAME =
   "mt-2 min-w-0 break-words text-2xl font-semibold leading-tight text-slate-950 dark:text-white";
+const IDENTITY_FINGERPRINT_SOURCE_ORDER: IdentityFingerprintFieldSource[] = [
+  "learned",
+  "preset",
+  "builtin_default",
+];
 
 const padTwo = (value: number) => String(value).padStart(2, "0");
 
@@ -139,6 +159,9 @@ interface AuthFileDetailModalProps {
   detailTrend: AuthFileTrendResponse | null;
   detailTrendLoading: boolean;
   detailTrendError: string | null;
+  identityFingerprintDetail: IdentityFingerprintAccountDetail | null;
+  identityFingerprintLoading: boolean;
+  identityFingerprintError: string | null;
   refreshDetailTrend: (file?: AuthFileItem | null, options?: { silent?: boolean }) => Promise<void>;
   loadModelsForDetail: (file: AuthFileItem, options?: { force?: boolean }) => Promise<void>;
   loadModelOwnerGroups: () => Promise<void>;
@@ -177,6 +200,9 @@ export function AuthFileDetailModal({
   detailTrend,
   detailTrendLoading,
   detailTrendError,
+  identityFingerprintDetail,
+  identityFingerprintLoading,
+  identityFingerprintError,
   refreshDetailTrend,
   loadModelsForDetail,
   loadModelOwnerGroups,
@@ -212,6 +238,7 @@ export function AuthFileDetailModal({
   const providerKey = normalizeProviderKey(modelsFileType);
   const detailProviderKey = detailFile ? normalizeProviderKey(resolveFileType(detailFile)) : "";
   const supportsUsageTrend = detailProviderKey === "kimi" || detailProviderKey === "codex";
+  const hasIdentityFingerprint = Boolean(detailFile?.identity_fingerprint_summary);
   const openedDetailFileRef = useRef<string | null>(null);
   const detailOpenCounterRef = useRef(0);
   const [detailOpenKey, setDetailOpenKey] = useState("");
@@ -554,6 +581,245 @@ export function AuthFileDetailModal({
     </div>
   );
 
+  const formatIdentitySource = (source: IdentityFingerprintFieldSource): string =>
+    t(`auth_files.identity_fingerprint_source_${source}`);
+
+  const renderIdentitySourceBadge = (source: IdentityFingerprintFieldSource) => {
+    const className =
+      source === "learned"
+        ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200"
+        : source === "preset"
+          ? "bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-200"
+          : "bg-slate-100 text-slate-600 dark:bg-white/10 dark:text-white/65";
+
+    return (
+      <span
+        className={`inline-flex max-w-full items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${className}`}
+      >
+        {formatIdentitySource(source)}
+      </span>
+    );
+  };
+
+  const identityFieldSectionLabel = (section: IdentityFingerprintFieldSection) => {
+    if (section === "effective") return t("auth_files.identity_fingerprint_effective_fields");
+    if (section === "learned") return t("auth_files.identity_fingerprint_learned_fields");
+    return t("auth_files.identity_fingerprint_observed_headers");
+  };
+
+  const renderIdentitySummaryItem = (label: string, value: string) => (
+    <div className="min-w-0">
+      <dt className="text-[11px] font-semibold uppercase tracking-[0.02em] text-slate-500 dark:text-white/45">
+        {label}
+      </dt>
+      <dd className="mt-1 min-w-0 break-words text-sm font-semibold text-slate-950 dark:text-white">
+        {value}
+      </dd>
+    </div>
+  );
+
+  const identityFieldColumns: DataTableColumn<IdentityFingerprintFieldRow>[] = [
+    {
+      key: "section",
+      label: t("auth_files.identity_fingerprint_table_section"),
+      width: "w-40",
+      resizable: false,
+      reorderable: false,
+      overflowTooltip: (row) => identityFieldSectionLabel(row.section),
+      render: (row) => (
+        <span className="block truncate text-xs font-semibold text-slate-700 dark:text-white/70">
+          {identityFieldSectionLabel(row.section)}
+        </span>
+      ),
+    },
+    {
+      key: "field",
+      label: t("auth_files.identity_fingerprint_table_field"),
+      width: "w-60",
+      resizable: false,
+      reorderable: false,
+      overflowTooltip: (row) => row.field,
+      render: (row) => (
+        <code className="block truncate font-mono text-xs font-semibold text-slate-800 dark:text-white/85">
+          {row.field}
+        </code>
+      ),
+    },
+    {
+      key: "value",
+      label: t("auth_files.identity_fingerprint_table_value"),
+      width: "w-[32rem]",
+      resizable: false,
+      reorderable: false,
+      overflowTooltip: (row) => row.value,
+      render: (row) => (
+        <span className="block truncate font-mono text-xs text-slate-700 dark:text-white/70">
+          {row.value}
+        </span>
+      ),
+    },
+    {
+      key: "source",
+      label: t("auth_files.identity_fingerprint_table_source"),
+      width: "w-36",
+      resizable: false,
+      reorderable: false,
+      overflowTooltip: (row) => formatIdentitySource(row.source),
+      render: (row) => renderIdentitySourceBadge(row.source),
+    },
+  ];
+
+  const renderIdentityFingerprint = () => {
+    const summary = identityFingerprintDetail?.summary ?? detailFile?.identity_fingerprint_summary;
+    if (!summary) {
+      return (
+        <EmptyState
+          title={t("auth_files.identity_fingerprint_empty")}
+          description={t("auth_files.identity_fingerprint_empty_desc")}
+        />
+      );
+    }
+
+    const clientLabel =
+      [summary.client_product, summary.client_variant].filter(Boolean).join(" / ") || "--";
+    const effectiveRows = Object.entries(identityFingerprintDetail?.effective.fields ?? {})
+      .map(
+        ([key, field]): IdentityFingerprintFieldRow => ({
+          id: `effective:${key}`,
+          section: "effective",
+          field: key,
+          value: field.value,
+          source: field.source,
+        }),
+      )
+      .sort((left, right) => left.field.localeCompare(right.field));
+    const learnedRows = Object.entries(identityFingerprintDetail?.learned?.fields ?? {})
+      .map(
+        ([key, value]): IdentityFingerprintFieldRow => ({
+          id: `learned:${key}`,
+          section: "learned",
+          field: key,
+          value,
+          source: "learned",
+        }),
+      )
+      .sort((left, right) => left.field.localeCompare(right.field));
+    const observedHeaderRows = Object.entries(
+      identityFingerprintDetail?.learned?.observed_headers ?? {},
+    )
+      .map(
+        ([key, value]): IdentityFingerprintFieldRow => ({
+          id: `observed:${key}`,
+          section: "observed",
+          field: key,
+          value,
+          source: "learned",
+        }),
+      )
+      .sort((left, right) => left.field.localeCompare(right.field));
+    const identityFieldRows = [...effectiveRows, ...learnedRows, ...observedHeaderRows];
+
+    return (
+      <div className="space-y-4" data-testid="auth-file-identity-fingerprint">
+        <div className="rounded-lg bg-slate-50/80 px-4 py-4 dark:bg-white/[0.04]">
+          <div className="flex min-w-0 flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="min-w-0 break-words text-sm font-semibold text-slate-950 dark:text-white">
+                {clientLabel}
+              </p>
+              <p className="mt-1 min-w-0 break-words text-xs text-slate-500 dark:text-white/55">
+                {formatOptionalText(summary.provider)} · {formatOptionalText(summary.account_key)}
+              </p>
+            </div>
+            <div className="shrink-0">{renderIdentitySourceBadge(summary.primary_source)}</div>
+          </div>
+
+          <dl className="mt-4 grid gap-x-6 gap-y-3 sm:grid-cols-2 lg:grid-cols-4">
+            {renderIdentitySummaryItem(
+              t("auth_files.identity_fingerprint_auth_subject"),
+              formatOptionalText(summary.auth_subject_id),
+            )}
+            {renderIdentitySummaryItem(
+              t("auth_files.identity_fingerprint_version"),
+              formatOptionalText(summary.version),
+            )}
+            {renderIdentitySummaryItem(
+              t("auth_files.identity_fingerprint_updated_at"),
+              formatOptionalDate(summary.updated_at),
+            )}
+            {renderIdentitySummaryItem(
+              t("auth_files.identity_fingerprint_last_seen_at"),
+              formatOptionalDate(summary.last_seen_at),
+            )}
+          </dl>
+
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <span className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-slate-600 ring-1 ring-slate-200 dark:bg-neutral-950/40 dark:text-white/65 dark:ring-white/10">
+              {t("auth_files.identity_fingerprint_effective_count")}: {summary.effective_fields}
+            </span>
+            <span className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-slate-600 ring-1 ring-slate-200 dark:bg-neutral-950/40 dark:text-white/65 dark:ring-white/10">
+              {t("auth_files.identity_fingerprint_learned_count")}: {summary.learned_fields}
+            </span>
+            {IDENTITY_FINGERPRINT_SOURCE_ORDER.map((source) => (
+              <span
+                key={source}
+                className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-slate-600 ring-1 ring-slate-200 dark:bg-neutral-950/40 dark:text-white/65 dark:ring-white/10"
+              >
+                {formatIdentitySource(source)}: {summary.source_counts?.[source] ?? 0}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {identityFingerprintLoading && !identityFingerprintDetail ? (
+          <div
+            className="grid gap-2 rounded-lg bg-slate-50/80 px-3 py-3 dark:bg-white/[0.04]"
+            data-testid="auth-file-identity-loading"
+          >
+            <div className="h-3 w-36 animate-pulse rounded bg-slate-200 dark:bg-white/10" />
+            <div className="h-3 w-5/6 animate-pulse rounded bg-slate-200 dark:bg-white/10" />
+            <div className="h-3 w-2/3 animate-pulse rounded bg-slate-200 dark:bg-white/10" />
+          </div>
+        ) : null}
+
+        {identityFingerprintError ? (
+          <EmptyState
+            title={t("auth_files.identity_fingerprint_loading_failed")}
+            description={identityFingerprintError}
+          />
+        ) : null}
+
+        {identityFingerprintDetail ? (
+          <section className="min-w-0 space-y-3">
+            <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
+              <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                {t("auth_files.identity_fingerprint_title")}
+              </p>
+              <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600 dark:bg-white/10 dark:text-white/65">
+                {t("auth_files.count_items", { count: identityFieldRows.length })}
+              </span>
+            </div>
+            <DataTable<IdentityFingerprintFieldRow>
+              rows={identityFieldRows}
+              columns={identityFieldColumns}
+              rowKey={(row) => row.id}
+              rowHeight={48}
+              minWidth="min-w-[980px]"
+              minHeight="min-h-0"
+              height="h-auto"
+              naturalFlow
+              caption={t("auth_files.identity_fingerprint_title")}
+              emptyText={t("auth_files.identity_fingerprint_no_fields")}
+              showAllLoadedMessage={false}
+              columnReorderable={false}
+              persistColumnOrder={false}
+            />
+          </section>
+        ) : null}
+      </div>
+    );
+  };
+
   const renderUsageTrend = () => {
     const isCodexDetail = detailProviderKey === "codex";
     const summaryGridClassName = isCodexDetail
@@ -797,6 +1063,9 @@ export function AuthFileDetailModal({
                 {supportsUsageTrend ? (
                   <TabsTrigger value="usage">{t("auth_files.detail_tab_usage")}</TabsTrigger>
                 ) : null}
+                {hasIdentityFingerprint ? (
+                  <TabsTrigger value="identity">{t("auth_files.detail_tab_identity")}</TabsTrigger>
+                ) : null}
                 <TabsTrigger value="fields">{t("auth_files.detail_tab_fields")}</TabsTrigger>
                 <TabsTrigger value="models">{t("auth_files.detail_tab_models")}</TabsTrigger>
               </TabsList>
@@ -809,6 +1078,12 @@ export function AuthFileDetailModal({
               {supportsUsageTrend ? (
                 <TabsContent value="usage" className="pb-1">
                   {renderUsageTrend()}
+                </TabsContent>
+              ) : null}
+
+              {hasIdentityFingerprint ? (
+                <TabsContent value="identity" className="pb-1">
+                  {renderIdentityFingerprint()}
                 </TabsContent>
               ) : null}
 

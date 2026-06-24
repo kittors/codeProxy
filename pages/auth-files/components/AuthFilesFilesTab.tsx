@@ -1540,13 +1540,13 @@ export function AuthFilesFilesTab({
                             </HoverTooltip>
                           ) : null}
 
-                          <HoverTooltip content={t("auth_files.view")}>
+                          <HoverTooltip content={t("auth_files.detail")}>
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={() => void openDetail(file)}
-                              title={t("auth_files.view")}
-                              aria-label={t("auth_files.view")}
+                              title={t("auth_files.detail")}
+                              aria-label={t("auth_files.detail")}
                             >
                               <Eye size={16} />
                             </Button>
