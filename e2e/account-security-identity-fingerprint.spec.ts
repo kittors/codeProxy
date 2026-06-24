@@ -464,3 +464,38 @@ test("Account & Security keeps card mode usable and redirects old identity route
     page.locator('[class*="group/card"]', { hasText: "Claude OAuth Primary" }),
   ).toBeVisible();
 });
+
+test("Account & Security identity detail stacks cleanly on mobile", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await setAuthed(page, "cards");
+  await routeManagementMocks(page);
+
+  await page.goto("/#/account-security");
+
+  const codexCard = page.locator('[class*="group/card"]', { hasText: "Codex Terminal OAuth" });
+  await expect(codexCard).toBeVisible();
+  await codexCard.getByRole("button", { name: /Details|详情/i }).click();
+
+  const dialog = page.getByRole("dialog", { name: /Codex Terminal OAuth|查看/i });
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole("tab", { name: /Identity|身份/i }).click();
+
+  const identityPanel = dialog.getByTestId("auth-file-identity-fingerprint");
+  const identitySummary = identityPanel.getByTestId("auth-file-identity-summary");
+  const identityFields = identityPanel.getByTestId("auth-file-identity-fields");
+  await expect(identitySummary).toContainText("authsub_codex_terminal");
+  await expect(identityFields.getByText("websocket-beta")).toBeVisible();
+
+  const summaryBox = await identitySummary.boundingBox();
+  const fieldsBox = await identityFields.boundingBox();
+  if (!summaryBox || !fieldsBox) {
+    throw new Error("identity fingerprint summary and fields columns must be visible on mobile");
+  }
+  expect(fieldsBox.y).toBeGreaterThan(summaryBox.y + summaryBox.height - 8);
+  expect(Math.abs(fieldsBox.x - summaryBox.x)).toBeLessThanOrEqual(8);
+
+  const documentOverflowX = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  );
+  expect(documentOverflowX).toBeLessThanOrEqual(2);
+});
