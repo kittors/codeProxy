@@ -1,16 +1,10 @@
-import { lazy } from "react";
-
-const IdentityFingerprintPage = lazy(() =>
-  import("./IdentityFingerprintPage").then((m) => ({
-    default: m.IdentityFingerprintPage,
-  })),
-);
+import { Navigate } from "react-router-dom";
 
 export const identityFingerprintRoute = {
   path: "/identity-fingerprint",
-  element: <IdentityFingerprintPage />,
+  element: <Navigate to="/account-security" replace />,
   auth: true,
   layout: "dashboard",
   nav: { labelKey: "nav.identityFingerprint" },
-  redirects: [{ from: "/manage/identity-fingerprint", to: "/identity-fingerprint" }],
+  redirects: [{ from: "/manage/identity-fingerprint", to: "/account-security" }],
 };

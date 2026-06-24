@@ -210,7 +210,7 @@ test("Auth Files: Codex OAuth admission controls save the cli-only policy", asyn
 
   const oauthRow = page.locator("tr", { hasText: "Codex OAuth Primary" });
   await expect(oauthRow).toBeVisible();
-  await oauthRow.getByRole("button", { name: /View|查看/i }).click();
+  await oauthRow.getByRole("button", { name: /Details|详情/i }).click();
 
   const dialog = page.getByRole("dialog", { name: /Codex OAuth Primary|查看/i });
   await expect(dialog).toBeVisible();
@@ -252,7 +252,7 @@ test("Auth Files: Codex API key files do not expose OAuth admission controls", a
 
   const apiKeyRow = page.locator("tr", { hasText: "Codex API Key" });
   await expect(apiKeyRow).toBeVisible();
-  await apiKeyRow.getByRole("button", { name: /View|查看/i }).click();
+  await apiKeyRow.getByRole("button", { name: /Details|详情/i }).click();
 
   const dialog = page.getByRole("dialog", { name: /Codex API Key|查看/i });
   await expect(dialog).toBeVisible();

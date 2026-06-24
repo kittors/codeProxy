@@ -69,6 +69,66 @@ const baseCodexOAuthAdmissionEditor: DetailModalProps["codexOAuthAdmissionEditor
   error: null,
 };
 
+const codexIdentityFingerprintDetail: NonNullable<DetailModalProps["identityFingerprintDetail"]> = {
+  summary: {
+    provider: "codex",
+    account_key: "codex-account-1",
+    auth_subject_id: "auth-subject-1",
+    enabled: true,
+    primary_source: "learned",
+    learned: true,
+    learned_fields: 3,
+    effective_fields: 5,
+    source_counts: {
+      learned: 3,
+      preset: 1,
+      builtin_default: 1,
+    },
+    client_product: "codex-tui",
+    client_variant: "terminal",
+    version: "0.125.0",
+    updated_at: "2026-06-23T10:15:00Z",
+    last_seen_at: "2026-06-23T10:16:00Z",
+  },
+  effective: {
+    provider: "codex",
+    account_key: "codex-account-1",
+    auth_subject_id: "auth-subject-1",
+    enabled: true,
+    client_product: "codex-tui",
+    version: "0.125.0",
+    fields: {
+      "user-agent": { value: "codex-cli/0.125.0", source: "learned" },
+      originator: { value: "codex_cli_rs", source: "learned" },
+      "x-codex-beta-features": { value: "responses=v1", source: "learned" },
+      "session-mode": { value: "server-stable", source: "preset" },
+      "websocket-beta": { value: "realtime=v1", source: "builtin_default" },
+    },
+  },
+  learned: {
+    provider: "codex",
+    account_key: "codex-account-1",
+    auth_subject_id: "auth-subject-1",
+    client_product: "codex-tui",
+    client_variant: "terminal",
+    version: "0.125.0",
+    fields: {
+      "user-agent": "codex-cli/0.125.0",
+      originator: "codex_cli_rs",
+      "x-codex-beta-features": "responses=v1",
+    },
+    observed_headers: {
+      "user-agent": "codex-cli/0.125.0",
+      originator: "codex_cli_rs",
+    },
+    created_at: "2026-06-22T08:00:00Z",
+    updated_at: "2026-06-23T10:15:00Z",
+    last_seen_at: "2026-06-23T10:16:00Z",
+  },
+  preset: {},
+  builtin_default: {},
+};
+
 const expectSummaryCard = (label: string, value: string) => {
   const labelNode = screen.getByText(label);
   const card = labelNode.closest("div");
@@ -125,6 +185,9 @@ const renderDetailModal = (overrides: Partial<DetailModalProps> = {}) => {
         },
       ],
     },
+    identityFingerprintDetail: null,
+    identityFingerprintLoading: false,
+    identityFingerprintError: null,
     refreshDetailTrend: vi.fn(async () => undefined),
     loadModelsForDetail: vi.fn(async () => undefined),
     loadModelOwnerGroups: vi.fn(async () => undefined),
@@ -291,6 +354,50 @@ describe("AuthFileDetailModal", () => {
     expect(screen.queryByTestId("auth-file-quota-series-list")).not.toBeInTheDocument();
     expect(screen.queryByText(/samples/)).not.toBeInTheDocument();
     expect(screen.queryByText(/resets/)).not.toBeInTheDocument();
+  });
+
+  test("renders account identity fingerprint sources and learned request headers", () => {
+    renderDetailModal({
+      detailTab: "identity",
+      detailFile: {
+        name: "codex.json",
+        label: "Codex Primary",
+        type: "codex",
+        size: 256,
+        account_type: "oauth",
+        identity_fingerprint_summary: codexIdentityFingerprintDetail.summary,
+      },
+      identityFingerprintDetail: codexIdentityFingerprintDetail,
+    });
+
+    const panel = screen.getByTestId("auth-file-identity-fingerprint");
+    expect(screen.getAllByRole("tab").map((tab) => tab.textContent)).toEqual([
+      "Usage",
+      "Identity",
+      "Fields",
+      "Models",
+    ]);
+    expect(screen.getByRole("tab", { name: "Identity" })).toBeInTheDocument();
+    expect(panel).toHaveTextContent("codex-account-1");
+    expect(within(panel).getByText("auth-subject-1")).toBeInTheDocument();
+    expect(within(panel).getByText("codex-tui / terminal")).toBeInTheDocument();
+    expect(within(panel).getAllByText("Learned").length).toBeGreaterThanOrEqual(2);
+    expect(within(panel).getAllByText("Account preset").length).toBeGreaterThanOrEqual(1);
+    expect(within(panel).getAllByText("System default").length).toBeGreaterThanOrEqual(1);
+    expect(within(panel).getByText("Section")).toBeInTheDocument();
+    expect(within(panel).getByText("Field")).toBeInTheDocument();
+    expect(within(panel).getByText("Value")).toBeInTheDocument();
+    expect(within(panel).getByText("Source")).toBeInTheDocument();
+    expect(within(panel).getAllByText("Effective Fields").length).toBeGreaterThanOrEqual(1);
+    expect(within(panel).getAllByText("Learned Fields").length).toBeGreaterThanOrEqual(1);
+    expect(within(panel).getAllByText("Observed Headers").length).toBeGreaterThanOrEqual(1);
+    expect(within(panel).getAllByText("user-agent").length).toBeGreaterThanOrEqual(2);
+    expect(within(panel).getAllByText("codex-cli/0.125.0").length).toBeGreaterThanOrEqual(2);
+    expect(within(panel).getByText("session-mode")).toBeInTheDocument();
+    expect(within(panel).getByText("server-stable")).toBeInTheDocument();
+    expect(within(panel).getByText("websocket-beta")).toBeInTheDocument();
+    expect(within(panel).getByText("realtime=v1")).toBeInTheDocument();
+    expect(within(panel).queryByText("Custom")).not.toBeInTheDocument();
   });
 
   test("five-hour trend uses only the latest five hourly buckets and maps quota timestamps to local hours", () => {

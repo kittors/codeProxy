@@ -4,10 +4,26 @@ const codexTerminalUserAgent = "codex_cli_rs/0.125.0 (Mac OS 26.0.1; arm64) Appl
 const codexBetaFeatures = "terminal_resize_reflow,memories,goals";
 
 const identitySummaries = {
+  claude: {
+    provider: "claude",
+    account_key: "authsub_claude_primary",
+    auth_subject_id: "authsub_claude_primary",
+    enabled: true,
+    primary_source: "learned",
+    learned: true,
+    learned_fields: 7,
+    effective_fields: 7,
+    source_counts: { learned: 7, preset: 0, builtin_default: 0 },
+    client_product: "claude-cli",
+    client_variant: "cli",
+    version: "2.1.161",
+    updated_at: "2026-06-23T08:15:00Z",
+    last_seen_at: "2026-06-23T08:16:00Z",
+  },
   codex: {
     provider: "codex",
-    account_key: "codex-e2e-account",
-    auth_subject_id: "codex-e2e-account",
+    account_key: "authsub_codex_terminal",
+    auth_subject_id: "authsub_codex_terminal",
     enabled: true,
     primary_source: "learned",
     learned: true,
@@ -22,18 +38,34 @@ const identitySummaries = {
   },
   gemini: {
     provider: "gemini",
-    account_key: "gemini-e2e-account",
-    auth_subject_id: "gemini-e2e-account",
+    account_key: "authsub_gemini_builtin",
+    auth_subject_id: "authsub_gemini_builtin",
     enabled: true,
     primary_source: "builtin_default",
     learned: false,
     learned_fields: 0,
     effective_fields: 3,
     source_counts: { learned: 0, preset: 0, builtin_default: 3 },
+    client_product: "",
+    client_variant: "",
+    version: "",
   },
 } as const;
 
 const authFiles = [
+  {
+    id: "claude-auth-id",
+    name: "claude-oauth-primary.json",
+    type: "claude",
+    provider: "claude",
+    label: "Claude OAuth Primary",
+    account_type: "oauth",
+    auth_index: "claude-oauth-1",
+    disabled: false,
+    size: 1024,
+    modified: 1782268800000,
+    identity_fingerprint_summary: identitySummaries.claude,
+  },
   {
     id: "codex-auth-id",
     name: "codex-terminal-oauth.json",
@@ -45,14 +77,28 @@ const authFiles = [
     disabled: false,
     size: 1024,
     modified: 1782268800000,
+    codex_oauth_admission: {
+      enabled: true,
+      allowed_clients: ["claude_code"],
+      available_allowed_clients: [
+        {
+          id: "claude_code",
+          label: "Claude Code",
+          description:
+            "Allow the Claude Code Codex plugin when Originator and User-Agent both match.",
+        },
+      ],
+    },
+    codex_cli_only: true,
+    codex_cli_only_allowed_clients: ["claude_code"],
     identity_fingerprint_summary: identitySummaries.codex,
   },
   {
     id: "gemini-auth-id",
-    name: "gemini-cli-oauth.json",
+    name: "gemini-cli-primary.json",
     type: "gemini",
     provider: "gemini",
-    label: "Gemini CLI OAuth",
+    label: "Gemini CLI Primary",
     account_type: "oauth",
     auth_index: "gemini-oauth-1",
     disabled: false,
@@ -63,12 +109,65 @@ const authFiles = [
 ];
 
 const accountDetails = {
-  "codex-e2e-account": {
+  authsub_claude_primary: {
+    summary: identitySummaries.claude,
+    effective: {
+      provider: "claude",
+      account_key: "authsub_claude_primary",
+      auth_subject_id: "authsub_claude_primary",
+      enabled: true,
+      client_product: "claude-cli",
+      version: "2.1.161",
+      fields: {
+        "user-agent": {
+          value: "claude-cli/2.1.161 (external, cli)",
+          source: "learned",
+        },
+        "cli-version": { value: "2.1.161", source: "learned" },
+        entrypoint: { value: "cli", source: "learned" },
+        "anthropic-beta": { value: "oauth-2025-04-20", source: "learned" },
+        "stainless-package-version": { value: "0.94.0", source: "learned" },
+        "stainless-runtime-version": { value: "v24.3.0", source: "learned" },
+        "stainless-timeout": { value: "600", source: "learned" },
+      },
+    },
+    learned: {
+      provider: "claude",
+      account_key: "authsub_claude_primary",
+      auth_subject_id: "authsub_claude_primary",
+      client_product: "claude-cli",
+      client_variant: "cli",
+      version: "2.1.161",
+      fields: {
+        "user-agent": "claude-cli/2.1.161 (external, cli)",
+        "cli-version": "2.1.161",
+        entrypoint: "cli",
+        "anthropic-beta": "oauth-2025-04-20",
+        "stainless-package-version": "0.94.0",
+        "stainless-runtime-version": "v24.3.0",
+        "stainless-timeout": "600",
+      },
+      observed_headers: {
+        "User-Agent": "claude-cli/2.1.161 (external, cli)",
+        "X-App": "cli",
+        "Anthropic-Beta": "oauth-2025-04-20",
+        "X-Stainless-Package-Version": "0.94.0",
+        "X-Stainless-Runtime-Version": "v24.3.0",
+        "X-Stainless-Timeout": "600",
+      },
+      created_at: "2026-06-23T08:14:00Z",
+      updated_at: "2026-06-23T08:15:00Z",
+      last_seen_at: "2026-06-23T08:16:00Z",
+    },
+    preset: {},
+    builtin_default: {},
+  },
+  authsub_codex_terminal: {
     summary: identitySummaries.codex,
     effective: {
       provider: "codex",
-      account_key: "codex-e2e-account",
-      auth_subject_id: "codex-e2e-account",
+      account_key: "authsub_codex_terminal",
+      auth_subject_id: "authsub_codex_terminal",
       enabled: true,
       client_product: "codex_cli_rs",
       version: "0.125.0",
@@ -85,8 +184,8 @@ const accountDetails = {
     },
     learned: {
       provider: "codex",
-      account_key: "codex-e2e-account",
-      auth_subject_id: "codex-e2e-account",
+      account_key: "authsub_codex_terminal",
+      auth_subject_id: "authsub_codex_terminal",
       client_product: "codex_cli_rs",
       client_variant: "Codex Desktop",
       version: "0.125.0",
@@ -109,12 +208,12 @@ const accountDetails = {
     preset: {},
     builtin_default: {},
   },
-  "gemini-e2e-account": {
+  authsub_gemini_builtin: {
     summary: identitySummaries.gemini,
     effective: {
       provider: "gemini",
-      account_key: "gemini-e2e-account",
-      auth_subject_id: "gemini-e2e-account",
+      account_key: "authsub_gemini_builtin",
+      auth_subject_id: "authsub_gemini_builtin",
       enabled: true,
       fields: {
         "user-agent": {
@@ -133,8 +232,8 @@ const accountDetails = {
   },
 } as const;
 
-const setAuthed = async (page: Page) => {
-  await page.addInitScript(() => {
+const setAuthed = async (page: Page, viewMode: "table" | "cards" = "table") => {
+  await page.addInitScript((mode) => {
     localStorage.setItem(
       "code-proxy-admin-auth",
       JSON.stringify({
@@ -144,9 +243,9 @@ const setAuthed = async (page: Page) => {
         expiresAt: Date.now() + 24 * 60 * 60 * 1000,
       }),
     );
-    localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("table"));
+    localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify(mode));
     localStorage.setItem("authFilesPage.quotaAutoRefreshMs.v1", JSON.stringify(0));
-  });
+  }, viewMode);
 };
 
 const routeManagementMocks = async (page: Page) => {
@@ -275,63 +374,85 @@ const routeManagementMocks = async (page: Page) => {
   });
 };
 
-test.beforeEach(async ({ page }) => {
-  await page.setViewportSize({ width: 1360, height: 860 });
+test("Account & Security shows auth files and account identity fingerprint details", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
   await setAuthed(page);
   await routeManagementMocks(page);
-});
 
-test("legacy identity fingerprint URL redirects to Account & Security", async ({ page }) => {
-  await page.goto("/manage/#/identity-fingerprint");
+  await page.goto("/#/account-security");
 
-  await expect(page).toHaveURL(/#\/account-security/);
-  await expect(page.getByRole("heading", { name: /Account & Security|账号与安全/i })).toBeVisible();
-  await expect(page.locator('a[href="#/account-security"]')).toHaveCount(1);
-  await expect(page.locator('a[href="#/identity-fingerprint"]')).toHaveCount(0);
-  await expect(
-    page.getByRole("button", { name: /Generate from recent requests|从近期请求生成/i }),
-  ).toHaveCount(0);
-});
-
-test("learned Codex runtime state is visible from account details", async ({ page }) => {
-  await page.goto("/manage/#/identity-fingerprint");
+  await expect(page.getByRole("link", { name: /Account & Security|账号与安全/i })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Auth Files|认证文件/i })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: /Identity Fingerprint|身份指纹/i })).toHaveCount(0);
+  await expect(page.getByText("Claude OAuth Primary")).toBeVisible();
+  await expect(page.getByText("Codex Terminal OAuth")).toBeVisible();
+  await expect(page.getByText("Gemini CLI Primary")).toBeVisible();
 
   const codexRow = page.locator("tr", { hasText: "Codex Terminal OAuth" });
   await expect(codexRow).toBeVisible();
   await codexRow.getByRole("button", { name: /Details|详情/i }).click();
 
   const dialog = page.getByRole("dialog", { name: /Codex Terminal OAuth|查看/i });
+  await expect(dialog).toBeVisible();
+  const topTabs = dialog.getByRole("tab");
+  await expect(topTabs.nth(0)).toHaveText(/Usage|用量/i);
   await expect(dialog.getByRole("tab", { name: /Usage|用量/i })).toHaveAttribute(
     "aria-selected",
     "true",
   );
   await dialog.getByRole("tab", { name: /Identity|身份/i }).click();
 
-  const panel = page.getByTestId("auth-file-identity-fingerprint");
-  await expect(panel).toContainText("codex-e2e-account");
-  await expect(panel).toContainText("codex_cli_rs / Codex Desktop");
-  await expect(panel).toContainText(codexTerminalUserAgent);
-  await expect(panel).toContainText(codexBetaFeatures);
-  await expect(panel).toContainText(/Section|分组/i);
-  await expect(panel).toContainText(/Field|字段/i);
-  await expect(panel).toContainText(/Value|值/i);
-  await expect(panel).toContainText(/Source|来源/i);
-  await expect(panel).toContainText(/Learned Fields|自学习字段/i);
-  await expect(panel).toContainText(/Observed Headers|观测请求头/i);
-  await expect(panel).not.toContainText("Session_id");
-  await expect(panel).not.toContainText("Conversation_id");
-});
+  const identityPanel = dialog.getByTestId("auth-file-identity-fingerprint");
+  await expect(identityPanel).toContainText("authsub_codex_terminal");
+  await expect(identityPanel).toContainText("codex_cli_rs / Codex Desktop");
+  await expect(identityPanel).toContainText(codexTerminalUserAgent);
+  await expect(identityPanel).toContainText(codexBetaFeatures);
+  await expect(identityPanel).toContainText(/Section|分组/i);
+  await expect(identityPanel).toContainText(/Field|字段/i);
+  await expect(identityPanel).toContainText(/Value|值/i);
+  await expect(identityPanel).toContainText(/Source|来源/i);
+  await expect(identityPanel).toContainText(/Effective Fields|生效字段/i);
+  await expect(identityPanel).toContainText(/Learned Fields|自学习字段/i);
+  await expect(identityPanel).toContainText(/Observed Headers|观测请求头/i);
+  await expect(identityPanel.getByText(/Learned|自学习/i).first()).toBeVisible();
+  await expect(identityPanel.getByText(/System default|系统默认/i).first()).toBeVisible();
+  await expect(identityPanel.getByText("websocket-beta")).toBeVisible();
+  await expect(identityPanel).not.toContainText("Session_id");
+  await expect(identityPanel).not.toContainText("Conversation_id");
 
-test("Gemini account uses builtin defaults without legacy manual save flow", async ({ page }) => {
-  await page.goto("/manage/#/identity-fingerprint");
+  await dialog.getByRole("button", { name: /^(Close|关闭)$/ }).click();
 
-  const geminiRow = page.locator("tr", { hasText: "Gemini CLI OAuth" });
+  const geminiRow = page.locator("tr", { hasText: "Gemini CLI Primary" });
   await expect(geminiRow).toBeVisible();
   await geminiRow.getByRole("button", { name: /Details|详情/i }).click();
+  const geminiDialog = page.getByRole("dialog", { name: /Gemini CLI Primary|查看/i });
+  await expect(geminiDialog).toBeVisible();
+  const geminiPanel = geminiDialog.getByTestId("auth-file-identity-fingerprint");
+  await expect(geminiPanel).toContainText(/System default|系统默认/i);
+  await expect(geminiPanel).toContainText("google-api-nodejs-client/9.16.0");
+  await expect(geminiPanel).toContainText("pluginType=GEMINI");
+});
 
-  const panel = page.getByTestId("auth-file-identity-fingerprint");
-  await expect(panel).toContainText(/System default|系统默认/i);
-  await expect(panel).toContainText("google-api-nodejs-client/9.16.0");
-  await expect(panel).toContainText("pluginType=GEMINI");
-  await expect(page.getByRole("button", { name: /^Save$|^保存$/ })).toHaveCount(0);
+test("Account & Security keeps card mode usable and redirects old identity route", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await setAuthed(page, "cards");
+  await routeManagementMocks(page);
+
+  await page.goto("/#/identity-fingerprint");
+
+  await expect(page).toHaveURL(/#\/account-security/);
+  await expect(page.getByRole("heading", { name: /Account & Security|账号与安全/i })).toBeVisible();
+  await expect(page.locator('a[href="#/account-security"]')).toHaveCount(1);
+  await expect(page.locator('a[href="#/auth-files"]')).toHaveCount(0);
+  await expect(page.locator('a[href="#/identity-fingerprint"]')).toHaveCount(0);
+  await expect(
+    page.locator('[class*="group/card"]', { hasText: "Codex Terminal OAuth" }),
+  ).toBeVisible();
+  await expect(
+    page.locator('[class*="group/card"]', { hasText: "Claude OAuth Primary" }),
+  ).toBeVisible();
 });

@@ -2546,7 +2546,7 @@ describe("AuthFilesPage files table", () => {
     );
 
     expect(await screen.findByText("Codex Subscriber")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "View" }));
+    fireEvent.click(screen.getByRole("button", { name: "Details" }));
     fireEvent.click(await screen.findByRole("tab", { name: "Fields" }));
 
     const input = await screen.findByLabelText("Subscription start date");
@@ -2606,7 +2606,7 @@ describe("AuthFilesPage files table", () => {
     );
 
     expect(await screen.findByText("Codex Subscriber")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "View" }));
+    fireEvent.click(screen.getByRole("button", { name: "Details" }));
     fireEvent.click(await screen.findByRole("tab", { name: "Fields" }));
 
     fireEvent.click(await screen.findByLabelText("Subscription start date"));
@@ -2655,7 +2655,7 @@ describe("AuthFilesPage files table", () => {
 
     const cards = await screen.findByTestId("auth-files-cards");
     expect(cards).not.toHaveTextContent(/d left/);
-    fireEvent.click(within(cards).getByRole("button", { name: "View" }));
+    fireEvent.click(within(cards).getByRole("button", { name: "Details" }));
     const dialog = await screen.findByRole("dialog", { name: "Codex Subscriber" });
     fireEvent.click(within(dialog).getByRole("tab", { name: "Fields" }));
 
@@ -2703,7 +2703,7 @@ describe("AuthFilesPage files table", () => {
     const cards = await screen.findByTestId("auth-files-cards");
     expect(cards).toHaveTextContent("pcamtu927@gmail.com");
 
-    fireEvent.click(within(cards).getByRole("button", { name: "View" }));
+    fireEvent.click(within(cards).getByRole("button", { name: "Details" }));
 
     const dialog = await screen.findByRole("dialog", {
       name: "pcamtu927@gmail.com",
@@ -2774,7 +2774,7 @@ describe("AuthFilesPage files table", () => {
     });
     expect(authGroupOwnerMappingMap).toEqual({ codex: "openai" });
 
-    fireEvent.click(screen.getByRole("button", { name: "View" }));
+    fireEvent.click(screen.getByRole("button", { name: "Details" }));
     const dialog = await screen.findByRole("dialog", { name: "Codex Main" });
     fireEvent.click(within(dialog).getByRole("tab", { name: "Models" }));
 
@@ -4157,7 +4157,7 @@ describe("AuthFilesPage files table", () => {
     const cardView = within(card as HTMLElement);
 
     expect(cardView.getByRole("button", { name: "Refresh" })).toBeInTheDocument();
-    expect(cardView.getByRole("button", { name: "View" })).toBeInTheDocument();
+    expect(cardView.getByRole("button", { name: "Details" })).toBeInTheDocument();
     expect(cardView.getByRole("button", { name: "More actions" })).toBeInTheDocument();
     expect(cardView.queryByRole("button", { name: "Edit Tags" })).not.toBeInTheDocument();
     expect(cardView.queryByRole("button", { name: "Download" })).not.toBeInTheDocument();

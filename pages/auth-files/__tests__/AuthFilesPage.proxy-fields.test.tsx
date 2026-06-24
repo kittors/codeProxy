@@ -102,7 +102,7 @@ describe("AuthFilesPage proxy fields editor", () => {
     );
 
     expect(await screen.findByText("Codex Auth")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "View" }));
+    await user.click(screen.getByRole("button", { name: "Details" }));
     await user.click(await screen.findByRole("tab", { name: "Fields" }));
 
     const proxySelect = await screen.findByRole("combobox", { name: "proxy_id (proxy pool)" });

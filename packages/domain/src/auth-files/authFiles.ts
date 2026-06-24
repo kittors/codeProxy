@@ -1,5 +1,7 @@
 import type {
   AuthFileItem,
+  AuthFileIdentityFingerprintSummary,
+  AuthFileIdentityFingerprintSource,
   AuthFileRestriction,
   AuthFileSubscriptionPeriod,
   ClaudeOAuthHealth,
@@ -195,6 +197,73 @@ const sanitizeClaudeOAuthHealthForCache = (value: unknown): ClaudeOAuthHealth | 
   return Object.keys(output).length > 0 ? output : undefined;
 };
 
+const IDENTITY_FINGERPRINT_SOURCES: AuthFileIdentityFingerprintSource[] = [
+  "learned",
+  "preset",
+  "builtin_default",
+];
+
+const sanitizeIdentityFingerprintSourceCountsForCache = (
+  value: unknown,
+): Partial<Record<AuthFileIdentityFingerprintSource, number>> | undefined => {
+  if (!isPlainRecord(value)) return undefined;
+  const output: Partial<Record<AuthFileIdentityFingerprintSource, number>> = {};
+  IDENTITY_FINGERPRINT_SOURCES.forEach((source) => {
+    const count = readOptionalNumber(value[source]);
+    if (count !== undefined && count >= 0) {
+      output[source] = Math.floor(count);
+    }
+  });
+  return Object.keys(output).length > 0 ? output : undefined;
+};
+
+const sanitizeIdentityFingerprintSourceForCache = (
+  value: unknown,
+): AuthFileIdentityFingerprintSource | undefined => {
+  const source = readOptionalString(value);
+  if (!source) return undefined;
+  return IDENTITY_FINGERPRINT_SOURCES.includes(source as AuthFileIdentityFingerprintSource)
+    ? (source as AuthFileIdentityFingerprintSource)
+    : undefined;
+};
+
+const sanitizeIdentityFingerprintSummaryForCache = (
+  value: unknown,
+): AuthFileIdentityFingerprintSummary | undefined => {
+  if (!isPlainRecord(value)) return undefined;
+  const provider = readOptionalString(value.provider);
+  if (provider !== "claude" && provider !== "codex" && provider !== "gemini") return undefined;
+  const primarySource =
+    sanitizeIdentityFingerprintSourceForCache(value.primary_source) ?? "builtin_default";
+  const sourceCounts = sanitizeIdentityFingerprintSourceCountsForCache(value.source_counts) ?? {};
+  const summary: AuthFileIdentityFingerprintSummary = {
+    provider,
+    enabled: Boolean(value.enabled),
+    primary_source: primarySource,
+    learned: Boolean(value.learned),
+    learned_fields: Math.max(0, Math.floor(readOptionalNumber(value.learned_fields) ?? 0)),
+    effective_fields: Math.max(0, Math.floor(readOptionalNumber(value.effective_fields) ?? 0)),
+    source_counts: sourceCounts,
+  };
+  const accountKey = readOptionalString(value.account_key);
+  const authSubjectId = readOptionalString(value.auth_subject_id);
+  const clientProduct = readOptionalString(value.client_product);
+  const clientVariant = readOptionalString(value.client_variant);
+  const version = readOptionalString(value.version);
+  const updatedAt = readOptionalString(value.updated_at);
+  const lastSeenAt = readOptionalString(value.last_seen_at);
+
+  if (accountKey) summary.account_key = accountKey;
+  if (authSubjectId) summary.auth_subject_id = authSubjectId;
+  if (clientProduct) summary.client_product = clientProduct;
+  if (clientVariant) summary.client_variant = clientVariant;
+  if (version) summary.version = version;
+  if (updatedAt) summary.updated_at = updatedAt;
+  if (lastSeenAt) summary.last_seen_at = lastSeenAt;
+
+  return summary;
+};
+
 const sanitizeAuthFileRestrictionsForCache = (
   value: unknown,
 ): AuthFileRestriction[] | undefined => {
@@ -351,6 +420,9 @@ export const sanitizeAuthFilesForCache = (files: AuthFileItem[]): AuthFileItem[]
       ? normalizeTagList(file.display_tags)
       : undefined,
     claude_oauth_health: sanitizeClaudeOAuthHealthForCache(file.claude_oauth_health),
+    identity_fingerprint_summary: sanitizeIdentityFingerprintSummaryForCache(
+      file.identity_fingerprint_summary,
+    ),
     id_token: sanitizeDecodedIdToken(file.id_token),
   }));
 

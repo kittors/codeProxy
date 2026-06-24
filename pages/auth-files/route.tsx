@@ -1,17 +1,13 @@
-import { lazy } from "react";
-
-const AuthFilesPage = lazy(() =>
-  import("./AuthFilesPage").then((m) => ({ default: m.AuthFilesPage })),
-);
+import { Navigate } from "react-router-dom";
 
 export const authFilesRoute = {
   path: "/auth-files",
-  element: <AuthFilesPage />,
+  element: <Navigate to="/account-security" replace />,
   auth: true,
   layout: "dashboard",
   nav: { labelKey: "nav.authFiles" },
   redirects: [
-    { from: "/auth-files/oauth-excluded", to: "/auth-files?tab=excluded" },
-    { from: "/auth-files/oauth-model-alias", to: "/auth-files?tab=alias" },
+    { from: "/auth-files/oauth-excluded", to: "/account-security?tab=excluded" },
+    { from: "/auth-files/oauth-model-alias", to: "/account-security?tab=alias" },
   ],
 };

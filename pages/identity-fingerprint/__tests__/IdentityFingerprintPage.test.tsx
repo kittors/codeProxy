@@ -191,12 +191,14 @@ const identityResponse = () => ({
         fields: {
           "user-agent": "google-api-nodejs-client/9.16.0",
           "x-goog-api-client": "gl-node/24.1.0",
-          "client-metadata": "ideType=IDE_UNSPECIFIED,platform=PLATFORM_UNSPECIFIED,pluginType=GEMINI",
+          "client-metadata":
+            "ideType=IDE_UNSPECIFIED,platform=PLATFORM_UNSPECIFIED,pluginType=GEMINI",
         },
         observed_headers: {
           "User-Agent": "google-api-nodejs-client/9.16.0",
           "X-Goog-Api-Client": "gl-node/24.1.0",
-          "Client-Metadata": "ideType=IDE_UNSPECIFIED,platform=PLATFORM_UNSPECIFIED,pluginType=GEMINI",
+          "Client-Metadata":
+            "ideType=IDE_UNSPECIFIED,platform=PLATFORM_UNSPECIFIED,pluginType=GEMINI",
         },
         ...learnedTimestamps,
       },
@@ -218,7 +220,10 @@ const identityResponse = () => ({
           },
           version: { value: "0.130.0", source: "learned" },
           originator: { value: "codex_cli_rs", source: "learned" },
-          "websocket-beta": { value: "responses_websockets=default", source: "default" },
+          "websocket-beta": {
+            value: "responses_websockets=default",
+            source: "builtin_default",
+          },
           "x-codex-beta-features": { value: "compact_mode", source: "learned" },
         },
       },
@@ -233,15 +238,15 @@ const identityResponse = () => ({
         version: "2.1.200",
         fields: {
           "user-agent": { value: "claude-cli/2.1.200 (external, cli)", source: "learned" },
-          "cli-version": { value: "2.1.88", source: "custom" },
-          entrypoint: { value: "cli", source: "custom" },
+          "cli-version": { value: "2.1.88", source: "preset" },
+          entrypoint: { value: "cli", source: "preset" },
           "anthropic-beta": {
             value: "oauth-2025-04-20,claude-code-20250219",
-            source: "custom",
+            source: "preset",
           },
-          "stainless-package-version": { value: "0.74.0", source: "custom" },
-          "stainless-runtime-version": { value: "v22.13.0", source: "custom" },
-          "stainless-timeout": { value: "600", source: "custom" },
+          "stainless-package-version": { value: "0.74.0", source: "preset" },
+          "stainless-runtime-version": { value: "v22.13.0", source: "preset" },
+          "stainless-timeout": { value: "600", source: "preset" },
         },
       },
     ],
@@ -577,9 +582,7 @@ describe("IdentityFingerprintPage provider tabs", () => {
     const confirmDialog = await screen.findByRole("dialog", {
       name: /Apply this recommended fingerprint/i,
     });
-    expect(
-      within(confirmDialog).getByText(/codex-tui 0\.125\.0/i),
-    ).toBeInTheDocument();
+    expect(within(confirmDialog).getByText(/codex-tui 0\.125\.0/i)).toBeInTheDocument();
     await userEvent.click(within(confirmDialog).getByRole("button", { name: /Apply and save/i }));
 
     await waitFor(() => {
@@ -680,9 +683,7 @@ describe("IdentityFingerprintPage provider tabs", () => {
 
     expect(desktopRow).toHaveAttribute("aria-selected", "true");
     expect(within(dialog).getAllByText(/0\.140\.0-alpha\.2/).length).toBeGreaterThan(0);
-    expect(
-      screen.queryByDisplayValue(/Codex Desktop\/0\.140\.0-alpha\.2/),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByDisplayValue(/Codex Desktop\/0\.140\.0-alpha\.2/)).not.toBeInTheDocument();
     mocks.identityGet.mockResolvedValue({
       "identity-fingerprint": {
         codex: {
