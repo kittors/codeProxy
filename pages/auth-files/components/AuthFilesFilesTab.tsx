@@ -3,6 +3,7 @@ import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { useTranslation } from "react-i18next";
 import {
   BarChart3,
+  CircleOff,
   ClipboardPaste,
   Download,
   Ellipsis,
@@ -533,6 +534,8 @@ interface AuthFilesFilesTabProps {
   refreshQuota: (file: AuthFileItem, provider: QuotaProvider) => Promise<void>;
   requestResetCredit: (file: AuthFileItem) => void;
   resettingCreditFileName: string | null;
+  clearAuthFileStatus: (file: AuthFileItem) => Promise<void>;
+  clearingStatusFileName: string | null;
   setFileEnabled: (file: AuthFileItem, enabled: boolean) => Promise<void>;
   statusUpdating: Record<string, boolean>;
   usageIndex: UsageIndex;
@@ -615,6 +618,8 @@ export function AuthFilesFilesTab({
   refreshQuota,
   requestResetCredit,
   resettingCreditFileName,
+  clearAuthFileStatus,
+  clearingStatusFileName,
   setFileEnabled,
   statusUpdating,
   usageIndex,
@@ -1337,6 +1342,8 @@ export function AuthFilesFilesTab({
                       ? state.resetCreditCount
                       : 0;
                   const resetCreditBusy = resettingCreditFileName === file.name;
+                  const clearStatusBusy = clearingStatusFileName === file.name;
+                  const clearStatusDisabled = !authIndex || clearStatusBusy;
                   const resetCreditDisabled =
                     provider !== "codex" ||
                     quotaRefreshing ||
@@ -1582,6 +1589,18 @@ export function AuthFilesFilesTab({
                                 >
                                   <Tags size={15} />
                                   <span>{t("auth_files.edit_tags")}</span>
+                                </DropdownMenu.Item>
+                                <DropdownMenu.Item
+                                  className={ACTION_MENU_ITEM_CLASS}
+                                  disabled={clearStatusDisabled}
+                                  onSelect={() => void clearAuthFileStatus(file)}
+                                >
+                                  {clearStatusBusy ? (
+                                    <Loader2 size={15} className="animate-spin" />
+                                  ) : (
+                                    <CircleOff size={15} />
+                                  )}
+                                  <span>{t("auth_files.clear_status")}</span>
                                 </DropdownMenu.Item>
                                 <DropdownMenu.Item
                                   className={ACTION_MENU_ITEM_CLASS}

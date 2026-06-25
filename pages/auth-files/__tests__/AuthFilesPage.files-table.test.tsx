@@ -68,6 +68,7 @@ const mocks = vi.hoisted(() => ({
   getAuthStatus: vi.fn(async () => ({ status: "pending" })),
   startAuth: vi.fn(async () => ({ url: "https://example.test/oauth", state: "state-1" })),
   reconcile: vi.fn(async () => ({})),
+  clearStatus: vi.fn(async () => ({})),
 }));
 
 let authGroupOwnerMappingMap: Record<string, string> = {};
@@ -98,7 +99,7 @@ vi.mock("@code-proxy/api-client", async (importOriginal) => {
       getAuthGroupModelOwnerMappingMap: mocks.getAuthGroupModelOwnerMappingMap,
       saveAuthGroupModelOwnerMapping: mocks.saveAuthGroupModelOwnerMapping,
     },
-    quotaApi: { ...mod.quotaApi, reconcile: mocks.reconcile },
+    quotaApi: { ...mod.quotaApi, reconcile: mocks.reconcile, clearStatus: mocks.clearStatus },
     usageApi: {
       ...mod.usageApi,
       getEntityStats: mocks.getEntityStats,
@@ -275,6 +276,8 @@ describe("AuthFilesPage files table", () => {
     }));
     mocks.reconcile.mockReset();
     mocks.reconcile.mockImplementation(async () => ({}));
+    mocks.clearStatus.mockReset();
+    mocks.clearStatus.mockImplementation(async () => ({}));
   });
 
   afterEach(() => {
@@ -4160,12 +4163,17 @@ describe("AuthFilesPage files table", () => {
     expect(cardView.getByRole("button", { name: "Details" })).toBeInTheDocument();
     expect(cardView.getByRole("button", { name: "More actions" })).toBeInTheDocument();
     expect(cardView.queryByRole("button", { name: "Edit Tags" })).not.toBeInTheDocument();
+    expect(cardView.queryByRole("button", { name: "Clear status" })).not.toBeInTheDocument();
     expect(cardView.queryByRole("button", { name: "Download" })).not.toBeInTheDocument();
 
     await user.click(cardView.getByRole("button", { name: "More actions" }));
 
     expect(screen.getByRole("menuitem", { name: "Edit Tags" })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Clear status" })).toBeInTheDocument();
     expect(screen.getByRole("menuitem", { name: "Download" })).toBeInTheDocument();
+    await user.click(screen.getByRole("menuitem", { name: "Clear status" }));
+
+    await waitFor(() => expect(mocks.clearStatus).toHaveBeenCalledWith("1"));
   });
 
   test("cards localize codex additional quota window labels in Chinese", async () => {
