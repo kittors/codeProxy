@@ -2,6 +2,7 @@ import { RefreshCw } from "lucide-react";
 import { Button } from "@code-proxy/ui";
 import { TextInput } from "@code-proxy/ui";
 import { Select, type SelectOption } from "@code-proxy/ui";
+import { CUSTOM_PERMISSION_PROFILE_ID } from "@code-proxy/api-client/endpoints/api-key-permission-profiles";
 import type { ApiKeyFormValues } from "../types";
 
 export function ApiKeyFormFields({
@@ -67,6 +68,39 @@ export function ApiKeyFormFields({
           {t("api_keys_page.form_permission_profile_desc")}
         </p>
       </div>
+
+      {editMode &&
+        (form.permissionProfileId === "" ||
+          form.permissionProfileId === CUSTOM_PERMISSION_PROFILE_ID) && (
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
+              {t("api_keys_page.form_spending_limit")}
+            </label>
+            <TextInput
+              type="number"
+              min="0"
+              step="0.01"
+              value={form.spendingLimit}
+              onChange={(e) => setForm((prev) => ({ ...prev, spendingLimit: e.target.value }))}
+              placeholder={t("api_keys_page.form_unlimited_hint")}
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
+              {t("api_keys_page.form_daily_spending_limit")}
+            </label>
+            <TextInput
+              type="number"
+              min="0"
+              step="0.01"
+              value={form.dailySpendingLimit}
+              onChange={(e) => setForm((prev) => ({ ...prev, dailySpendingLimit: e.target.value }))}
+              placeholder={t("api_keys_page.form_unlimited_hint")}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

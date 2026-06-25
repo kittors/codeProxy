@@ -112,6 +112,7 @@ export function applyApiKeyPermissionProfile(
       "daily-limit": 0,
       "total-quota": 0,
       "spending-limit": 0,
+      "daily-spending-limit": 0,
       "concurrency-limit": 0,
       "rpm-limit": 0,
       "tpm-limit": 0,

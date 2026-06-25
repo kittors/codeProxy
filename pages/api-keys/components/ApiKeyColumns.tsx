@@ -204,6 +204,32 @@ export const createApiKeyColumns = ({
     ),
   },
   {
+    key: "dailySpendingLimit",
+    label: t("api_keys_page.col_daily_spending_limit"),
+    width: "w-[148px] min-w-[148px]",
+    cellClassName: "whitespace-nowrap text-slate-700 dark:text-white/70",
+    headerRender: () => (
+      <HoverTooltip
+        content={t("api_keys_page.daily_spending_limit_help")}
+        className="inline-flex items-center gap-1"
+      >
+        <span>{t("api_keys_page.col_daily_spending_limit")}</span>
+        <Info size={12} className="text-slate-400 dark:text-white/40" />
+      </HoverTooltip>
+    ),
+    render: (row) => (
+      <span className="inline-flex items-center gap-1">
+        {!row["daily-spending-limit"] ? (
+          <>
+            <InfinityIcon size={14} className="text-green-500" /> {t("api_keys_page.unlimited")}
+          </>
+        ) : (
+          formatApiKeySpendingLimit(row["daily-spending-limit"])
+        )}
+      </span>
+    ),
+  },
+  {
     key: "rpmLimit",
     label: "RPM",
     width: "w-[108px] min-w-[108px]",

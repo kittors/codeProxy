@@ -5,6 +5,7 @@ export interface ApiKeyFormValues {
   dailyLimit: string;
   totalQuota: string;
   spendingLimit: string;
+  dailySpendingLimit: string;
   concurrencyLimit: string;
   rpmLimit: string;
   tpmLimit: string;
