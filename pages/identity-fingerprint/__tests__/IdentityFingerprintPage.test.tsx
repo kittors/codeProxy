@@ -10,6 +10,7 @@ import { ToastProvider } from "@code-proxy/ui";
 const mocks = vi.hoisted(() => ({
   identityGet: vi.fn(),
   identityUpdate: vi.fn(),
+  identityDeleteLearned: vi.fn(),
   codexRecommendations: vi.fn(),
   fetchConfigYaml: vi.fn(),
   saveConfigYaml: vi.fn(),
@@ -20,6 +21,7 @@ vi.mock("@code-proxy/api-client/endpoints/identity-fingerprint", () => ({
     get: mocks.identityGet,
     getCodexRecommendations: mocks.codexRecommendations,
     update: mocks.identityUpdate,
+    deleteLearned: mocks.identityDeleteLearned,
   },
 }));
 
@@ -58,61 +60,229 @@ kimi-header-defaults:
   version: "1.9.0"
 `;
 
+const learnedTimestamps = {
+  created_at: "2026-06-23T08:00:00Z",
+  updated_at: "2026-06-23T08:05:00Z",
+  last_seen_at: "2026-06-23T08:05:00Z",
+};
+
+const identityResponse = () => ({
+  "identity-fingerprint": {
+    codex: {
+      enabled: false,
+      "user-agent": "codex_cli_rs/test",
+      version: "0.120.0",
+      originator: "codex_cli_rs",
+      "websocket-beta": "responses_websockets=test",
+      "x-codex-beta-features": "",
+      "session-mode": "per-request",
+      "custom-headers": {
+        "X-Old-Fingerprint": "stale",
+      },
+    },
+    claude: {
+      enabled: false,
+      "cli-version": "2.1.88",
+      entrypoint: "cli",
+      "user-agent": "claude-cli/2.1.88 (external, cli)",
+      "anthropic-beta": "oauth-2025-04-20,claude-code-20250219",
+      "stainless-package-version": "0.74.0",
+      "stainless-runtime-version": "v22.13.0",
+      "stainless-timeout": "600",
+      "session-mode": "per-request",
+      "custom-headers": {},
+    },
+    gemini: {
+      enabled: true,
+      "user-agent": "",
+      "x-goog-api-client": "",
+      "client-metadata": "",
+      "custom-headers": {},
+    },
+  },
+  defaults: {
+    codex: {
+      enabled: false,
+      "user-agent": "codex_cli_rs/default",
+      version: "0.120.0",
+      originator: "codex_cli_rs",
+      "websocket-beta": "responses_websockets=default",
+      "x-codex-beta-features": "",
+      "session-mode": "per-request",
+      "custom-headers": {},
+    },
+    claude: {
+      enabled: false,
+      "cli-version": "2.1.88",
+      entrypoint: "cli",
+      "user-agent": "claude-cli/2.1.88 (external, cli)",
+      "anthropic-beta": "oauth-2025-04-20,claude-code-20250219",
+      "stainless-package-version": "0.74.0",
+      "stainless-runtime-version": "v22.13.0",
+      "stainless-timeout": "600",
+      "session-mode": "per-request",
+      "custom-headers": {},
+    },
+    gemini: {
+      enabled: false,
+      "user-agent": "google-api-nodejs-client/9.15.1",
+      "x-goog-api-client": "gl-node/22.17.0",
+      "client-metadata": "ideType=IDE_UNSPECIFIED,platform=PLATFORM_UNSPECIFIED,pluginType=GEMINI",
+      "custom-headers": {},
+    },
+  },
+  learned: {
+    codex: [
+      {
+        provider: "codex",
+        account_key: "codex-account-1",
+        auth_subject_id: "codex-subject-1",
+        client_product: "codex_cli_rs",
+        client_variant: "codex_cli_rs",
+        version: "0.130.0",
+        fields: {
+          "user-agent": "codex_cli_rs/0.130.0 (Mac OS 26.3.1; arm64) iTerm.app/3.6.9",
+          version: "0.130.0",
+          originator: "codex_cli_rs",
+          "x-codex-beta-features": "compact_mode",
+        },
+        observed_headers: {
+          "User-Agent": "codex_cli_rs/0.130.0 (Mac OS 26.3.1; arm64) iTerm.app/3.6.9",
+          Version: "0.130.0",
+          Originator: "codex_cli_rs",
+          "X-Codex-Beta-Features": "compact_mode",
+        },
+        ...learnedTimestamps,
+      },
+    ],
+    claude: [
+      {
+        provider: "claude",
+        account_key: "claude-account-1",
+        auth_subject_id: "claude-subject-1",
+        client_product: "claude-cli",
+        client_variant: "cli",
+        version: "2.1.200",
+        fields: {
+          "user-agent": "claude-cli/2.1.200 (external, cli)",
+          "cli-version": "2.1.200",
+          entrypoint: "cli",
+          "anthropic-beta": "claude-code-20250219,oauth-2025-04-20",
+          "stainless-package-version": "0.99.0",
+          "stainless-runtime-version": "v24.4.0",
+          "stainless-timeout": "700",
+        },
+        observed_headers: {
+          "User-Agent": "claude-cli/2.1.200 (external, cli)",
+          "X-App": "cli",
+          "Anthropic-Beta": "claude-code-20250219,oauth-2025-04-20",
+        },
+        ...learnedTimestamps,
+      },
+    ],
+    gemini: [
+      {
+        provider: "gemini",
+        account_key: "gemini-account-1",
+        auth_subject_id: "gemini-subject-1",
+        client_product: "google-api-nodejs-client",
+        client_variant: "cli",
+        version: "9.16.0",
+        fields: {
+          "user-agent": "google-api-nodejs-client/9.16.0",
+          "x-goog-api-client": "gl-node/24.1.0",
+          "client-metadata":
+            "ideType=IDE_UNSPECIFIED,platform=PLATFORM_UNSPECIFIED,pluginType=GEMINI",
+        },
+        observed_headers: {
+          "User-Agent": "google-api-nodejs-client/9.16.0",
+          "X-Goog-Api-Client": "gl-node/24.1.0",
+          "Client-Metadata":
+            "ideType=IDE_UNSPECIFIED,platform=PLATFORM_UNSPECIFIED,pluginType=GEMINI",
+        },
+        ...learnedTimestamps,
+      },
+    ],
+  },
+  effective: {
+    codex: [
+      {
+        provider: "codex",
+        account_key: "codex-account-1",
+        auth_subject_id: "codex-subject-1",
+        enabled: false,
+        client_product: "codex_cli_rs",
+        version: "0.130.0",
+        fields: {
+          "user-agent": {
+            value: "codex_cli_rs/0.130.0 (Mac OS 26.3.1; arm64) iTerm.app/3.6.9",
+            source: "learned",
+          },
+          version: { value: "0.130.0", source: "learned" },
+          originator: { value: "codex_cli_rs", source: "learned" },
+          "websocket-beta": {
+            value: "responses_websockets=default",
+            source: "builtin_default",
+          },
+          "x-codex-beta-features": { value: "compact_mode", source: "learned" },
+        },
+      },
+    ],
+    claude: [
+      {
+        provider: "claude",
+        account_key: "claude-account-1",
+        auth_subject_id: "claude-subject-1",
+        enabled: false,
+        client_product: "claude-cli",
+        version: "2.1.200",
+        fields: {
+          "user-agent": { value: "claude-cli/2.1.200 (external, cli)", source: "learned" },
+          "cli-version": { value: "2.1.88", source: "preset" },
+          entrypoint: { value: "cli", source: "preset" },
+          "anthropic-beta": {
+            value: "oauth-2025-04-20,claude-code-20250219",
+            source: "preset",
+          },
+          "stainless-package-version": { value: "0.74.0", source: "preset" },
+          "stainless-runtime-version": { value: "v22.13.0", source: "preset" },
+          "stainless-timeout": { value: "600", source: "preset" },
+        },
+      },
+    ],
+    gemini: [
+      {
+        provider: "gemini",
+        account_key: "gemini-account-1",
+        auth_subject_id: "gemini-subject-1",
+        enabled: true,
+        client_product: "google-api-nodejs-client",
+        version: "9.16.0",
+        fields: {
+          "user-agent": { value: "google-api-nodejs-client/9.16.0", source: "learned" },
+          "x-goog-api-client": { value: "gl-node/24.1.0", source: "learned" },
+          "client-metadata": {
+            value: "ideType=IDE_UNSPECIFIED,platform=PLATFORM_UNSPECIFIED,pluginType=GEMINI",
+            source: "learned",
+          },
+        },
+      },
+    ],
+  },
+  status: {
+    codex: { enabled: false, learned_count: 1 },
+    claude: { enabled: false, learned_count: 1 },
+    gemini: { enabled: true, learned_count: 1 },
+  },
+});
+
 describe("IdentityFingerprintPage provider tabs", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     await i18n.changeLanguage("en");
-    mocks.identityGet.mockResolvedValue({
-      "identity-fingerprint": {
-        codex: {
-          enabled: false,
-          "user-agent": "codex_cli_rs/test",
-          version: "0.120.0",
-          originator: "codex_cli_rs",
-          "websocket-beta": "responses_websockets=test",
-          "session-mode": "per-request",
-          "custom-headers": {
-            "X-Old-Fingerprint": "stale",
-          },
-        },
-        claude: {
-          enabled: false,
-          "cli-version": "2.1.88",
-          entrypoint: "cli",
-          "user-agent": "claude-cli/2.1.88 (external, cli)",
-          "anthropic-beta": "oauth-2025-04-20,claude-code-20250219",
-          "stainless-package-version": "0.74.0",
-          "stainless-runtime-version": "v22.13.0",
-          "stainless-timeout": "600",
-          "session-mode": "per-request",
-          "custom-headers": {},
-        },
-      },
-      defaults: {
-        codex: {
-          enabled: false,
-          "user-agent": "codex_cli_rs/default",
-          version: "0.120.0",
-          originator: "codex_cli_rs",
-          "websocket-beta": "responses_websockets=default",
-          "session-mode": "per-request",
-          "custom-headers": {},
-        },
-        claude: {
-          enabled: false,
-          "cli-version": "2.1.88",
-          entrypoint: "cli",
-          "user-agent": "claude-cli/2.1.88 (external, cli)",
-          "anthropic-beta": "oauth-2025-04-20,claude-code-20250219",
-          "stainless-package-version": "0.74.0",
-          "stainless-runtime-version": "v22.13.0",
-          "stainless-timeout": "600",
-          "session-mode": "per-request",
-          "custom-headers": {},
-        },
-      },
-    });
+    mocks.identityGet.mockResolvedValue(identityResponse());
     mocks.identityUpdate.mockResolvedValue({ status: "ok" });
+    mocks.identityDeleteLearned.mockResolvedValue({ deleted: 1 });
     mocks.codexRecommendations.mockResolvedValue({
       items: [
         {
@@ -169,15 +339,35 @@ describe("IdentityFingerprintPage provider tabs", () => {
   test("renders Claude, Gemini, and Kimi as real editable provider panels", async () => {
     renderPage();
 
+    expect((await screen.findAllByText("codex-account-1")).length).toBeGreaterThan(0);
+    expect(screen.getByText(/1 learned accounts/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/^learned$/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText("compact_mode").length).toBeGreaterThan(0);
+    expect(
+      screen.getByText(/Manual overrides have the highest priority.*not recommended/i),
+    ).toBeInTheDocument();
+
     await userEvent.click(await screen.findByRole("tab", { name: "Claude" }));
     expect(
       await screen.findByRole("heading", { name: /Claude Code Fingerprint/i }),
     ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Manual values override learned\/default values.*not recommended/i),
+    ).toBeInTheDocument();
     expect(screen.getByDisplayValue("claude-cli/2.1.88 (external, cli)")).toBeInTheDocument();
     expect(screen.getByDisplayValue("0.74.0")).toBeInTheDocument();
+    expect(screen.getAllByText("claude-account-1").length).toBeGreaterThan(0);
     expect(screen.queryByText(/reserved/i)).not.toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("tab", { name: "Gemini" }));
+    expect(
+      await screen.findByRole("heading", { name: /Gemini OAuth\/CLI Fingerprint/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Manual values override learned\/default values.*not recommended/i),
+    ).toBeInTheDocument();
+    expect(screen.getAllByText("gemini-account-1").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("gl-node/24.1.0").length).toBeGreaterThan(0);
     expect(
       await screen.findByRole("heading", { name: /Gemini API Key Headers/i }),
     ).toBeInTheDocument();
@@ -232,6 +422,60 @@ describe("IdentityFingerprintPage provider tabs", () => {
     );
   });
 
+  test("saves Gemini OAuth CLI fingerprint through the identity fingerprint API", async () => {
+    renderPage();
+
+    await userEvent.click(await screen.findByRole("tab", { name: "Gemini" }));
+    const panel = await screen.findByRole("heading", {
+      name: /Gemini OAuth\/CLI Fingerprint/i,
+    });
+    const section = panel.closest("section");
+    expect(section).not.toBeNull();
+
+    const autoLearnInputs = within(section as HTMLElement).getAllByPlaceholderText(
+      /Auto learn from real client requests/i,
+    );
+    expect(autoLearnInputs).toHaveLength(3);
+    const [userAgentInput, apiClientInput, clientMetadataInput] = autoLearnInputs;
+    await userEvent.type(userAgentInput, "google-api-nodejs-client/9.17.0");
+    await userEvent.type(apiClientInput, "gl-node/24.5.0");
+    await userEvent.type(
+      clientMetadataInput,
+      "ideType=IDE_UNSPECIFIED,platform=PLATFORM_UNSPECIFIED,pluginType=GEMINI",
+    );
+    await userEvent.click(screen.getByRole("button", { name: /Save Gemini Fingerprint/i }));
+
+    await waitFor(() => {
+      expect(mocks.identityUpdate).toHaveBeenCalledTimes(1);
+    });
+
+    expect(mocks.identityUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        gemini: expect.objectContaining({
+          enabled: true,
+          "user-agent": "google-api-nodejs-client/9.17.0",
+          "x-goog-api-client": "gl-node/24.5.0",
+          "client-metadata":
+            "ideType=IDE_UNSPECIFIED,platform=PLATFORM_UNSPECIFIED,pluginType=GEMINI",
+        }),
+      }),
+    );
+    expect(mocks.saveConfigYaml).not.toHaveBeenCalled();
+  });
+
+  test("clears a learned account fingerprint without changing manual config", async () => {
+    renderPage();
+
+    expect((await screen.findAllByText("codex-account-1")).length).toBeGreaterThan(0);
+    await userEvent.click(screen.getByRole("button", { name: /Clear learned/i }));
+
+    await waitFor(() => {
+      expect(mocks.identityDeleteLearned).toHaveBeenCalledTimes(1);
+    });
+    expect(mocks.identityDeleteLearned).toHaveBeenCalledWith("codex", "codex-account-1");
+    expect(mocks.identityUpdate).not.toHaveBeenCalled();
+  });
+
   test("saves Claude fingerprint through the identity fingerprint API", async () => {
     renderPage();
 
@@ -274,11 +518,10 @@ describe("IdentityFingerprintPage provider tabs", () => {
           "user-agent": "codex-tui/0.125.0 (Mac OS 26.5; arm64)",
           version: "0.125.0",
           originator: "codex-tui",
+          "x-codex-beta-features": "exec_command_v2",
           "session-mode": "per-request",
           "session-id": "",
-          "custom-headers": {
-            "X-Codex-Beta-Features": "exec_command_v2",
-          },
+          "custom-headers": {},
         },
         claude: {
           enabled: false,
@@ -300,6 +543,7 @@ describe("IdentityFingerprintPage provider tabs", () => {
           version: "0.120.0",
           originator: "codex_cli_rs",
           "websocket-beta": "responses_websockets=default",
+          "x-codex-beta-features": "",
           "session-mode": "per-request",
           "custom-headers": {},
         },
@@ -338,9 +582,7 @@ describe("IdentityFingerprintPage provider tabs", () => {
     const confirmDialog = await screen.findByRole("dialog", {
       name: /Apply this recommended fingerprint/i,
     });
-    expect(
-      within(confirmDialog).getByText(/codex-tui 0\.125\.0/i),
-    ).toBeInTheDocument();
+    expect(within(confirmDialog).getByText(/codex-tui 0\.125\.0/i)).toBeInTheDocument();
     await userEvent.click(within(confirmDialog).getByRole("button", { name: /Apply and save/i }));
 
     await waitFor(() => {
@@ -362,11 +604,10 @@ describe("IdentityFingerprintPage provider tabs", () => {
           "user-agent": "codex-tui/0.125.0 (Mac OS 26.5; arm64)",
           version: "0.125.0",
           originator: "codex-tui",
+          "x-codex-beta-features": "exec_command_v2",
           "session-mode": "per-request",
           "session-id": "",
-          "custom-headers": {
-            "X-Codex-Beta-Features": "exec_command_v2",
-          },
+          "custom-headers": {},
         }),
       }),
     );
@@ -442,9 +683,7 @@ describe("IdentityFingerprintPage provider tabs", () => {
 
     expect(desktopRow).toHaveAttribute("aria-selected", "true");
     expect(within(dialog).getAllByText(/0\.140\.0-alpha\.2/).length).toBeGreaterThan(0);
-    expect(
-      screen.queryByDisplayValue(/Codex Desktop\/0\.140\.0-alpha\.2/),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByDisplayValue(/Codex Desktop\/0\.140\.0-alpha\.2/)).not.toBeInTheDocument();
     mocks.identityGet.mockResolvedValue({
       "identity-fingerprint": {
         codex: {
@@ -452,10 +691,9 @@ describe("IdentityFingerprintPage provider tabs", () => {
           "user-agent":
             "Codex Desktop/0.140.0-alpha.2 (Windows 10.0.26200; x86_64) unknown (Codex Desktop; 26.609.41114)",
           originator: "Codex Desktop",
+          "x-codex-beta-features": "terminal_resize_reflow,memories,remote_compaction_v2",
           "session-mode": "per-request",
-          "custom-headers": {
-            "X-Codex-Beta-Features": "terminal_resize_reflow,memories,remote_compaction_v2",
-          },
+          "custom-headers": {},
         },
         claude: {
           enabled: false,
@@ -477,6 +715,7 @@ describe("IdentityFingerprintPage provider tabs", () => {
           version: "0.120.0",
           originator: "codex_cli_rs",
           "websocket-beta": "responses_websockets=default",
+          "x-codex-beta-features": "",
           "session-mode": "per-request",
           "custom-headers": {},
         },

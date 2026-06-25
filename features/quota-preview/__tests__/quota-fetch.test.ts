@@ -151,7 +151,7 @@ describe("consumeCodexResetCredit", () => {
 });
 
 describe("fetchQuota for antigravity", () => {
-  test("requests fetchAvailableModels with the auth project and returns dynamic quota items", async () => {
+  test("requests fetchAvailableModels with the auth project and returns quota summaries", async () => {
     mocks.downloadText.mockResolvedValueOnce(
       JSON.stringify({ project_id: "bamboo-precept-lgxtn" }),
     );
@@ -240,17 +240,27 @@ describe("fetchQuota for antigravity", () => {
       }),
     );
     expect(result.items.map((item) => item.key)).toEqual([
-      "model:gemini-3.1-pro-high",
-      "model:gemini-3.1-pro-low",
-      "model:gemini-3-flash-agent",
-      "model:claude-sonnet-4-6",
-      "model:gpt-oss-120b-medium",
+      "provider:gemini3-pro",
+      "provider:gemini3-flash",
+      "provider:claude",
     ]);
     expect(result.items[0]).toEqual(
       expect.objectContaining({
-        label: "Gemini 3.1 Pro (High) [gemini-3.1-pro-high]",
-        percent: 100,
+        label: "antigravity_quota.gemini3_pro",
+        percent: 80,
         resetAtMs: Date.parse("2026-05-09T15:50:29Z"),
+      }),
+    );
+    expect(result.items[1]).toEqual(
+      expect.objectContaining({
+        label: "antigravity_quota.gemini3_flash",
+        percent: 70,
+      }),
+    );
+    expect(result.items[2]).toEqual(
+      expect.objectContaining({
+        label: "antigravity_quota.claude",
+        percent: 60,
       }),
     );
     expect(result.items[0].meta).toBeUndefined();

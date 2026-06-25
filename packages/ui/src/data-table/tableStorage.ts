@@ -13,6 +13,7 @@ export const DEFAULT_MIN_COLUMN_WIDTH = 72;
 export const DEFAULT_MAX_COLUMN_WIDTH = 640;
 export const COLUMN_RESIZE_PREVIEW_LINE_WIDTH = 2;
 export const NON_RESIZABLE_COLUMN_KEYS = new Set(["select", "action", "actions"]);
+const TAILWIND_SPACING_UNIT_PX = 4;
 
 // ---------------------------------------------------------------------------
 // Column Reorder
@@ -129,9 +130,46 @@ export function calculateScrollbarThumbs(scrollMetrics: ScrollMetrics, headerHei
 }
 
 export function clampColumnWidth<T>(column: DataTableColumn<T>, width: number) {
-  const minWidth = column.minWidthPx ?? DEFAULT_MIN_COLUMN_WIDTH;
-  const maxWidth = column.maxWidthPx ?? DEFAULT_MAX_COLUMN_WIDTH;
+  const minWidth = resolveColumnMinWidth(column);
+  const maxWidth = resolveColumnMaxWidth(column, minWidth);
   return Math.max(minWidth, Math.min(maxWidth, Math.round(width)));
+}
+
+function parseTailwindSizePx(token: string) {
+  const arbitrary = token.match(/^\[(\d+(?:\.\d+)?)(px|rem)\]$/);
+  if (arbitrary) {
+    const value = Number(arbitrary[1]);
+    if (!Number.isFinite(value)) return null;
+    return arbitrary[2] === "rem" ? Math.round(value * 16) : Math.round(value);
+  }
+
+  if (token === "px") return 1;
+
+  const numeric = Number(token);
+  if (!Number.isFinite(numeric)) return null;
+  return Math.round(numeric * TAILWIND_SPACING_UNIT_PX);
+}
+
+function resolveWidthClassPx(width: string | undefined, prefix: string) {
+  if (!width) return null;
+  const classes = width.split(/\s+/).filter(Boolean).reverse();
+  for (const className of classes) {
+    if (!className.startsWith(`${prefix}-`)) continue;
+    const parsed = parseTailwindSizePx(className.slice(prefix.length + 1));
+    if (parsed !== null) return parsed;
+  }
+  return null;
+}
+
+export function resolveColumnMinWidth<T>(column: DataTableColumn<T>) {
+  return column.minWidthPx ?? resolveWidthClassPx(column.width, "min-w") ?? DEFAULT_MIN_COLUMN_WIDTH;
+}
+
+export function resolveColumnMaxWidth<T>(
+  column: DataTableColumn<T>,
+  minWidth = resolveColumnMinWidth(column),
+) {
+  return Math.max(minWidth, column.maxWidthPx ?? DEFAULT_MAX_COLUMN_WIDTH);
 }
 
 export function getColumnWidthStorageKey(tableId?: string) {

@@ -93,7 +93,7 @@ export interface DataTableProps<T> {
   onRowClick?: (row: T, index: number) => void;
   /** Optional selected state for row interaction semantics. */
   rowAriaSelected?: (row: T, index: number) => boolean;
-  /** Let parent scroll containers handle wheel events when this table is already at an edge. */
+  /** Let parent scroll containers handle wheel/touch scroll chaining when this table is already at an edge. */
   allowWheelPropagationAtBoundary?: boolean;
   /** Render the table in normal document flow without any internal table scrollbars. */
   naturalFlow?: boolean;
@@ -118,6 +118,7 @@ const DEFAULT_MIN_COLUMN_WIDTH = 72;
 const DEFAULT_MAX_COLUMN_WIDTH = 640;
 const COLUMN_RESIZE_PREVIEW_LINE_WIDTH = 2;
 const NON_RESIZABLE_COLUMN_KEYS = new Set(["select", "action", "actions"]);
+const TAILWIND_SPACING_UNIT_PX = 4;
 
 // ---------------------------------------------------------------------------
 // Column Reorder
@@ -247,9 +248,64 @@ function calculateScrollbarThumbs(scrollMetrics: ScrollMetrics, headerHeight: nu
 }
 
 function clampColumnWidth<T>(column: DataTableColumn<T>, width: number) {
-  const minWidth = column.minWidthPx ?? DEFAULT_MIN_COLUMN_WIDTH;
-  const maxWidth = column.maxWidthPx ?? DEFAULT_MAX_COLUMN_WIDTH;
+  const minWidth = resolveColumnMinWidth(column);
+  const maxWidth = resolveColumnMaxWidth(column, minWidth);
   return Math.max(minWidth, Math.min(maxWidth, Math.round(width)));
+}
+
+function parseTailwindSizePx(token: string) {
+  const arbitrary = token.match(/^\[(\d+(?:\.\d+)?)(px|rem)\]$/);
+  if (arbitrary) {
+    const value = Number(arbitrary[1]);
+    if (!Number.isFinite(value)) return null;
+    return arbitrary[2] === "rem" ? Math.round(value * 16) : Math.round(value);
+  }
+
+  if (token === "px") return 1;
+
+  const numeric = Number(token);
+  if (!Number.isFinite(numeric)) return null;
+  return Math.round(numeric * TAILWIND_SPACING_UNIT_PX);
+}
+
+function resolveWidthClassPx(width: string | undefined, prefix: string) {
+  if (!width) return null;
+  const classes = width.split(/\s+/).filter(Boolean).reverse();
+  for (const className of classes) {
+    if (!className.startsWith(`${prefix}-`)) continue;
+    const parsed = parseTailwindSizePx(className.slice(prefix.length + 1));
+    if (parsed !== null) return parsed;
+  }
+  return null;
+}
+
+function resolveColumnMinWidth<T>(column: DataTableColumn<T>) {
+  return (
+    column.minWidthPx ?? resolveWidthClassPx(column.width, "min-w") ?? DEFAULT_MIN_COLUMN_WIDTH
+  );
+}
+
+function resolveColumnMaxWidth<T>(
+  column: DataTableColumn<T>,
+  minWidth = resolveColumnMinWidth(column),
+) {
+  return Math.max(minWidth, column.maxWidthPx ?? DEFAULT_MAX_COLUMN_WIDTH);
+}
+
+function normalizeColumnWidths<T>(columns: DataTableColumn<T>[], widths: ColumnWidthMap) {
+  const next: ColumnWidthMap = {};
+  columns.forEach((column) => {
+    const width = widths[column.key];
+    if (width !== undefined) next[column.key] = clampColumnWidth(column, width);
+  });
+  return next;
+}
+
+function areColumnWidthMapsEqual(left: ColumnWidthMap, right: ColumnWidthMap) {
+  const leftKeys = Object.keys(left);
+  const rightKeys = Object.keys(right);
+  if (leftKeys.length !== rightKeys.length) return false;
+  return leftKeys.every((key) => left[key] === right[key]);
 }
 
 function getColumnWidthStorageKey(tableId?: string) {
@@ -300,6 +356,14 @@ function logColumnResizeDebug(event: string, payload: Record<string, unknown>) {
   if (!shouldDebugColumnResize()) return;
   // eslint-disable-next-line no-console
   console.debug("[DataTable resize]", event, payload);
+}
+
+function resolveColumnResizeWidth(active: ColumnResizeState, pointerClientX: number) {
+  const rawBoundaryClientX = pointerClientX + active.pointerBoundaryOffsetClientX;
+  return Math.max(
+    active.minWidth,
+    Math.min(active.maxWidth, Math.round(rawBoundaryClientX - active.startLeftClientX)),
+  );
 }
 
 function shouldAllowColumnResize<T>(
@@ -573,7 +637,7 @@ export function DataTable<T>({
   const columnElementsRef = useRef<Record<string, HTMLTableColElement | null>>({});
   const headerHeightRef = useRef(0);
   const [columnWidths, setColumnWidths] = useState<ColumnWidthMap>(() =>
-    readStoredColumnWidths(tableId),
+    normalizeColumnWidths(columns, readStoredColumnWidths(tableId)),
   );
   const columnWidthsRef = useRef<ColumnWidthMap>(columnWidths);
   const [resizePreview, setResizePreview] = useState<ColumnResizePreview | null>(null);
@@ -647,7 +711,7 @@ export function DataTable<T>({
   const colCount = orderedColumns.length;
 
   useEffect(() => {
-    setColumnWidths(readStoredColumnWidths(tableId));
+    setColumnWidths(normalizeColumnWidths(columns, readStoredColumnWidths(tableId)));
     if (canUseColumnOrder) {
       setColumnOrder(
         normalizeColumnOrder(columns, canPersistColumnOrder ? readStoredColumnOrder(tableId) : []),
@@ -684,19 +748,9 @@ export function DataTable<T>({
   useEffect(() => {
     const validKeys = new Set(columns.map((column) => column.key));
     setColumnWidths((prev) => {
-      let changed = false;
-      const next: ColumnWidthMap = {};
-      columns.forEach((column) => {
-        const width = prev[column.key];
-        if (width !== undefined) next[column.key] = clampColumnWidth(column, width);
-      });
-      Object.keys(prev).forEach((key) => {
-        if (!validKeys.has(key)) changed = true;
-      });
-      columns.forEach((column) => {
-        if (next[column.key] !== prev[column.key]) changed = true;
-      });
-      return changed ? next : prev;
+      const next = normalizeColumnWidths(columns, prev);
+      const removedStaleKey = Object.keys(prev).some((key) => !validKeys.has(key));
+      return removedStaleKey || !areColumnWidthMapsEqual(prev, next) ? next : prev;
     });
   }, [columns]);
 
@@ -1037,14 +1091,15 @@ export function DataTable<T>({
       pointerClientX: number,
       pointerClientY: number,
     ): ColumnResizePreview | null => {
-      const minBoundaryClientX = active.startLeftClientX + active.minWidth;
-      const maxBoundaryClientX = active.startLeftClientX + active.maxWidth;
-      const rawBoundaryClientX = pointerClientX + active.pointerBoundaryOffsetClientX;
+      const width = resolveColumnResizeWidth(active, pointerClientX);
+      const headerRect = headerCellsRef.current[active.columnKey]?.getBoundingClientRect();
+      const visualLeftClientX = headerRect?.left ?? active.startLeftClientX;
+      const minBoundaryClientX = visualLeftClientX + active.minWidth;
+      const maxBoundaryClientX = visualLeftClientX + active.maxWidth;
       const lineCenterClientX = Math.max(
         minBoundaryClientX,
-        Math.min(maxBoundaryClientX, rawBoundaryClientX),
+        Math.min(maxBoundaryClientX, visualLeftClientX + width),
       );
-      const width = Math.round(lineCenterClientX - active.startLeftClientX);
       const top = active.previewTop;
       const bottomInset = hasHorizontalOverflow(scrollMetricsRef.current) ? 14 : 0;
       const bottom = Math.max(top, active.previewBottom - bottomInset);
@@ -1101,20 +1156,14 @@ export function DataTable<T>({
 
     pendingColumnResizePointerRef.current = null;
 
-    const minBoundaryClientX = active.startLeftClientX + active.minWidth;
-    const maxBoundaryClientX = active.startLeftClientX + active.maxWidth;
-    const lineCenterClientX = Math.max(
-      minBoundaryClientX,
-      Math.min(maxBoundaryClientX, pointer.clientX + active.pointerBoundaryOffsetClientX),
-    );
-    const roundedWidth = Math.round(lineCenterClientX - active.startLeftClientX);
+    const roundedWidth = resolveColumnResizeWidth(active, pointer.clientX);
 
     active.currentWidth = roundedWidth;
     applyColumnWidthToDom(active.columnKey, roundedWidth);
     const preview = {
       ...(buildColumnResizePreview(active, pointer.clientX, pointer.clientY) ?? {
         width: roundedWidth,
-        left: lineCenterClientX - COLUMN_RESIZE_PREVIEW_LINE_WIDTH / 2,
+        left: active.startLeftClientX + roundedWidth - COLUMN_RESIZE_PREVIEW_LINE_WIDTH / 2,
         top: active.previewTop,
         height: Math.max(0, active.previewBottom - active.previewTop),
         tooltipTop: active.previewTop,
@@ -1201,9 +1250,11 @@ export function DataTable<T>({
       const rect = headerCell.getBoundingClientRect();
       const containerRect = containerRef.current?.getBoundingClientRect();
       const startWidth = rect.width;
-      const minWidth = column.minWidthPx ?? DEFAULT_MIN_COLUMN_WIDTH;
-      const maxWidth = column.maxWidthPx ?? DEFAULT_MAX_COLUMN_WIDTH;
+      const minWidth = resolveColumnMinWidth(column);
+      const maxWidth = resolveColumnMaxWidth(column, minWidth);
       const nextStartWidth = Math.max(minWidth, Math.min(maxWidth, startWidth));
+      const startLeftClientX = rect.right - nextStartWidth;
+      const startBoundaryClientX = startLeftClientX + nextStartWidth;
 
       e.preventDefault();
       e.stopPropagation();
@@ -1212,8 +1263,8 @@ export function DataTable<T>({
       const resizeState = {
         pointerId: e.pointerId,
         columnKey: column.key,
-        startLeftClientX: rect.left,
-        pointerBoundaryOffsetClientX: rect.right - e.clientX,
+        startLeftClientX,
+        pointerBoundaryOffsetClientX: startBoundaryClientX - e.clientX,
         minWidth,
         maxWidth,
         previewTop: Math.max(0, containerRect?.top ?? rect.top),
@@ -1236,7 +1287,7 @@ export function DataTable<T>({
           tableId,
           columnKey: column.key,
           pointerX: Math.round(e.clientX),
-          headerLeft: Math.round(rect.left),
+          headerLeft: Math.round(startLeftClientX),
           headerRight: Math.round(rect.right),
           headerWidth: Math.round(rect.width),
           previewCenterX: preview
@@ -1887,7 +1938,8 @@ export function DataTable<T>({
     (column: DataTableColumn<T>): CSSProperties | undefined => {
       const width = columnWidths[column.key];
       if (!width) return undefined;
-      return { width, minWidth: width, maxWidth: width };
+      const clampedWidth = clampColumnWidth(column, width);
+      return { width: clampedWidth, minWidth: clampedWidth, maxWidth: clampedWidth };
     },
     [columnWidths],
   );
@@ -1898,6 +1950,7 @@ export function DataTable<T>({
           <>
             <div
               ref={resizePreviewLineRef}
+              data-vt-column-resize-preview-line
               aria-hidden="true"
               className="pointer-events-none fixed z-[1000] w-0.5 bg-slate-500/70"
               style={{
@@ -1908,6 +1961,7 @@ export function DataTable<T>({
             />
             <div
               ref={resizePreviewTooltipRef}
+              data-vt-column-resize-preview-tooltip
               role="status"
               className="pointer-events-none fixed z-[1001] rounded-md bg-slate-900 px-2 py-1 text-xs font-medium text-white shadow-lg dark:bg-white dark:text-neutral-950"
               style={{
@@ -1954,7 +2008,9 @@ export function DataTable<T>({
         className={
           naturalFlow
             ? "relative z-10 min-h-0 overflow-visible rounded-xl"
-            : "relative col-start-1 row-start-1 h-full min-h-0 table-scrollbar overflow-auto overscroll-x-none overscroll-y-none"
+            : `relative col-start-1 row-start-1 h-full min-h-0 table-scrollbar overflow-auto overscroll-x-none ${
+                allowWheelPropagationAtBoundary ? "overscroll-y-auto" : "overscroll-y-none"
+              }`
         }
       >
         <div data-vt-scroll-content className={`relative ${scrollContentClassName ?? ""}`}>
@@ -2047,7 +2103,9 @@ export function DataTable<T>({
                             ? "group-hover/column:pl-5 group-hover/column:transition-[padding] group-focus-within/column:pl-5 data-[vt-reorder-active=true]:pl-5"
                             : ""
                         }`}
-                        data-vt-reorder-active={activeReorderColumnKey === col.key ? "true" : undefined}
+                        data-vt-reorder-active={
+                          activeReorderColumnKey === col.key ? "true" : undefined
+                        }
                       >
                         {col.headerRender ? col.headerRender() : col.label}
                       </div>
@@ -2182,7 +2240,9 @@ export function DataTable<T>({
                             <td
                               key={col.key}
                               data-vt-column-key={col.key}
-                              data-vt-column-settled-cell={isSettledReorderColumn ? true : undefined}
+                              data-vt-column-settled-cell={
+                                isSettledReorderColumn ? true : undefined
+                              }
                               style={resolveColumnStyle(col)}
                               className={`overflow-hidden px-4 py-2.5 align-middle ${
                                 naturalFlow

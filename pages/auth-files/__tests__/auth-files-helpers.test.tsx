@@ -9,6 +9,9 @@ import {
   pickQuotaPreviewItem,
   readAuthFilesDataCache,
   readAuthFilesUiState,
+  resolveAuthFileStatusBuckets,
+  resolveClaudeOAuthHealth,
+  resolveClaudeOAuthHealthBadges,
   resolveAuthFileDisplayName,
   resolveAuthFileRestrictionBadges,
   resolveAuthFileDisplayTags,
@@ -101,6 +104,32 @@ describe("Auth Files helper coverage", () => {
       page: 3,
     });
 
+    const rawClaudeOAuthHealth = {
+      enabled: true,
+      status: "refresh_pending",
+      updated_at: "2026-06-23T08:00:00Z",
+      refresh_available: true,
+      last_runtime_status: 401,
+      temporary_unschedulable_until: "2026-06-23T08:10:00Z",
+      temporary_unschedulable_reason: "oauth_401",
+      windows: {
+        five_hour: {
+          status: "rejected",
+          reset_at: "2026-06-23T10:00:00Z",
+          utilization: 1.02,
+          exceeded: true,
+          access_token: "should-not-persist",
+        },
+      },
+      runtime_profile: {
+        name: "claude_oauth_runtime",
+        identity_fingerprint: "claude_headers",
+        transport: "go_http_transport",
+        egress: "proxy_pool",
+      },
+      refresh_token: "should-not-persist",
+    };
+
     const files: AuthFileItem[] = [
       {
         id: "codex-main",
@@ -129,6 +158,21 @@ describe("Auth Files helper coverage", () => {
         },
         access_token: "should-not-persist",
       } as AuthFileItem,
+      {
+        id: "claude-oauth-main",
+        name: "claude-oauth-primary.json",
+        type: "claude",
+        provider: "claude",
+        label: "Claude OAuth Primary",
+        account_type: "oauth",
+        auth_index: "claude-oauth-1",
+        disabled: false,
+        modified: 1782182400000,
+        size: 1024,
+        claude_oauth_health: rawClaudeOAuthHealth,
+        access_token: "should-not-persist",
+        refresh_token: "should-not-persist",
+      },
     ];
 
     const sanitized = sanitizeAuthFilesForCache(files);
@@ -177,7 +221,77 @@ describe("Auth Files helper coverage", () => {
           plan_type: "pro",
         },
       },
+      {
+        id: "claude-oauth-main",
+        name: "claude-oauth-primary.json",
+        type: "claude",
+        provider: "claude",
+        label: "Claude OAuth Primary",
+        email: undefined,
+        account: undefined,
+        account_type: "oauth",
+        auth_index: "claude-oauth-1",
+        authIndex: undefined,
+        disabled: false,
+        status: undefined,
+        status_message: undefined,
+        unavailable: undefined,
+        next_retry_after: undefined,
+        restrictions: undefined,
+        modified: 1782182400000,
+        modtime: undefined,
+        size: 1024,
+        runtimeOnly: undefined,
+        runtime_only: undefined,
+        plan_type: undefined,
+        planType: undefined,
+        subscription_started_at: undefined,
+        subscriptionStartedAt: undefined,
+        subscription_start_at: undefined,
+        subscriptionStartAt: undefined,
+        subscription_started_at_ms: undefined,
+        subscriptionStartedAtMs: undefined,
+        subscription_period: undefined,
+        subscriptionPeriod: undefined,
+        subscription_expires_at: undefined,
+        subscriptionExpiresAt: undefined,
+        subscription_expires_at_ms: undefined,
+        subscriptionExpiresAtMs: undefined,
+        subscription_remaining_minutes: undefined,
+        subscriptionRemainingMinutes: undefined,
+        subscription_expired: undefined,
+        subscriptionExpired: undefined,
+        default_tags: [],
+        custom_tags: [],
+        hidden_default_tags: [],
+        display_tags: undefined,
+        claude_oauth_health: {
+          enabled: true,
+          status: "refresh_pending",
+          updated_at: "2026-06-23T08:00:00Z",
+          refresh_available: true,
+          last_runtime_status: 401,
+          temporary_unschedulable_until: "2026-06-23T08:10:00Z",
+          temporary_unschedulable_reason: "oauth_401",
+          windows: {
+            five_hour: {
+              status: "rejected",
+              reset_at: "2026-06-23T10:00:00Z",
+              utilization: 1.02,
+              exceeded: true,
+            },
+          },
+          runtime_profile: {
+            name: "claude_oauth_runtime",
+            identity_fingerprint: "claude_headers",
+            transport: "go_http_transport",
+            egress: "proxy_pool",
+          },
+        },
+        id_token: undefined,
+      },
     ]);
+    expect(JSON.stringify(sanitized)).not.toContain("should-not-persist");
 
     writeAuthFilesDataCache({
       savedAtMs: 123,
@@ -187,7 +301,7 @@ describe("Auth Files helper coverage", () => {
           status: "success",
           updatedAt: 456,
           planType: "pro",
-          items: [{ label: "m_quota.code_5h", percent: 42, resetAtMs: 789 }],
+          items: [{ key: "code_5h", label: "m_quota.code_5h", percent: 42, resetAtMs: 789 }],
         },
       },
     });
@@ -200,7 +314,7 @@ describe("Auth Files helper coverage", () => {
           status: "success",
           updatedAt: 456,
           planType: "pro",
-          items: [{ label: "m_quota.code_5h", percent: 42, resetAtMs: 789 }],
+          items: [{ key: "code_5h", label: "m_quota.code_5h", percent: 42, resetAtMs: 789 }],
         },
       },
     });
@@ -419,6 +533,185 @@ describe("Auth Files helper coverage", () => {
         unavailable: false,
       } as AuthFileItem),
     ).toEqual([]);
+  });
+
+  test("derives Claude OAuth health badges from refresh pending and Anthropic windows", () => {
+    const nowMs = Date.parse("2026-06-23T08:00:00.000Z");
+    const file = {
+      name: "claude-oauth-primary.json",
+      type: "claude",
+      provider: "claude",
+      account_type: "oauth",
+      claude_oauth_health: {
+        enabled: true,
+        status: "refresh_pending",
+        refresh_available: true,
+        last_runtime_status: 401,
+        temporary_unschedulable_until: "2026-06-23T08:10:00.000Z",
+        temporary_unschedulable_reason: "oauth_401",
+        windows: {
+          five_hour: {
+            status: "rejected",
+            reset_at: "2026-06-23T10:00:00.000Z",
+            utilization: 1.02,
+            exceeded: true,
+          },
+          seven_day: {
+            status: "allowed",
+            utilization: 0.32,
+            exceeded: false,
+          },
+        },
+      },
+    } satisfies AuthFileItem;
+
+    expect(resolveClaudeOAuthHealth(file)).toEqual(
+      expect.objectContaining({
+        status: "refresh_pending",
+        refresh_available: true,
+        last_runtime_status: 401,
+      }),
+    );
+    expect(resolveClaudeOAuthHealthBadges(file, nowMs)).toEqual([
+      expect.objectContaining({
+        key: "refresh-pending",
+        label: "OAuth refresh pending",
+        resetAtMs: Date.parse("2026-06-23T08:10:00.000Z"),
+      }),
+      expect.objectContaining({
+        key: "five-hour-limited",
+        label: "5h limited",
+        resetAtMs: Date.parse("2026-06-23T10:00:00.000Z"),
+        utilization: 1.02,
+      }),
+    ]);
+  });
+
+  test("derives Claude OAuth health badges from seven-day Anthropic windows", () => {
+    const nowMs = Date.parse("2026-06-23T08:00:00.000Z");
+    const file = {
+      name: "claude-oauth-primary.json",
+      type: "claude",
+      provider: "claude",
+      account_type: "oauth",
+      claude_oauth_health: {
+        enabled: true,
+        status: "exhausted",
+        last_runtime_status: 429,
+        temporary_unschedulable_until: "2026-06-26T08:00:00.000Z",
+        temporary_unschedulable_reason: "anthropic_7d_window_exhausted",
+        windows: {
+          five_hour: {
+            status: "allowed",
+            utilization: 0.42,
+            exceeded: false,
+          },
+          seven_day: {
+            status: "allowed_warning",
+            reset_at: "2026-06-26T08:00:00.000Z",
+            utilization: 1.15,
+            surpassed_threshold: true,
+          },
+        },
+      },
+    } satisfies AuthFileItem;
+
+    expect(resolveClaudeOAuthHealthBadges(file, nowMs)).toEqual([
+      expect.objectContaining({
+        key: "seven-day-limited",
+        label: "7d limited",
+        resetAtMs: Date.parse("2026-06-26T08:00:00.000Z"),
+        utilization: 1.15,
+      }),
+    ]);
+    expect(Array.from(resolveAuthFileStatusBuckets(file))).toContain("http-429");
+  });
+
+  test("does not show an expired Claude OAuth refresh-pending badge", () => {
+    const file = {
+      name: "claude-oauth-primary.json",
+      type: "claude",
+      provider: "claude",
+      account_type: "oauth",
+      claude_oauth_health: {
+        enabled: true,
+        status: "refresh_pending",
+        last_runtime_status: 401,
+        temporary_unschedulable_until: "2026-06-23T08:10:00.000Z",
+        temporary_unschedulable_reason: "oauth_401",
+      },
+    } satisfies AuthFileItem;
+
+    expect(resolveClaudeOAuthHealthBadges(file, Date.parse("2026-06-23T08:11:00.000Z"))).toEqual(
+      [],
+    );
+  });
+
+  test("does not expose Claude OAuth health badges for ordinary Claude API key files", () => {
+    const file = {
+      name: "claude-api-key.json",
+      type: "claude",
+      provider: "claude",
+      account_type: "api_key",
+    } satisfies AuthFileItem;
+
+    expect(resolveClaudeOAuthHealth(file)).toBeNull();
+    expect(resolveClaudeOAuthHealthBadges(file)).toEqual([]);
+  });
+
+  test("ignores contaminated Claude OAuth health on explicit Claude API key files", () => {
+    const file = {
+      name: "claude-api-key.json",
+      type: "claude",
+      provider: "claude",
+      account_type: "api_key",
+      claude_oauth_health: {
+        enabled: true,
+        status: "refresh_pending",
+        last_runtime_status: 401,
+        temporary_unschedulable_until: "2026-06-23T08:10:00.000Z",
+        windows: {
+          seven_day: {
+            status: "rejected",
+            utilization: 1,
+            exceeded: true,
+          },
+        },
+      },
+    } satisfies AuthFileItem;
+
+    expect(resolveClaudeOAuthHealth(file)).toBeNull();
+    expect(resolveClaudeOAuthHealthBadges(file, Date.parse("2026-06-23T08:00:00.000Z"))).toEqual(
+      [],
+    );
+    expect(Array.from(resolveAuthFileStatusBuckets(file))).toEqual([]);
+  });
+
+  test("classifies Claude OAuth health into auth and 429 status buckets", () => {
+    const file = {
+      name: "claude-oauth-primary.json",
+      type: "claude",
+      provider: "claude",
+      account_type: "oauth",
+      claude_oauth_health: {
+        enabled: true,
+        status: "refresh_pending",
+        last_runtime_status: 401,
+        temporary_unschedulable_reason: "anthropic_5h_window_exhausted",
+        windows: {
+          five_hour: {
+            status: "rejected",
+            utilization: 1,
+            exceeded: true,
+          },
+        },
+      },
+    } satisfies AuthFileItem;
+
+    expect(Array.from(resolveAuthFileStatusBuckets(file)).sort()).toEqual([
+      "http-429",
+      "http-auth",
+    ]);
   });
 
   test("prefers current auth-file plan metadata over cached quota plan", () => {

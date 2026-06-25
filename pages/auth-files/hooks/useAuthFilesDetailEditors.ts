@@ -8,9 +8,9 @@ import {
   type SetStateAction,
 } from "react";
 import { useTranslation } from "react-i18next";
-import { authFilesApi, usageApi } from "@code-proxy/api-client";
+import { authFilesApi, identityFingerprintApi, usageApi } from "@code-proxy/api-client";
 import type { AuthFileTrendResponse } from "@code-proxy/api-client/endpoints/usage";
-import type { AuthFileItem } from "@code-proxy/api-client";
+import type { AuthFileItem, IdentityFingerprintAccountDetail } from "@code-proxy/api-client";
 import { useToast } from "@code-proxy/ui";
 import {
   dateLikeToDateTimeLocalInput,
@@ -25,10 +25,11 @@ import {
   resolveFileType,
   type AuthFileModelItem,
   type ChannelEditorState,
+  type CodexOAuthAdmissionEditorState,
   type PrefixProxyEditorState,
 } from "@code-proxy/domain";
 
-type DetailTab = "usage" | "fields" | "models";
+type DetailTab = "usage" | "identity" | "fields" | "models";
 type DetailTrendWindow = "5h" | "week";
 type RefreshDetailTrendOptions = { silent?: boolean };
 
@@ -53,6 +54,56 @@ const createChannelEditorState = (): ChannelEditorState => ({
   saving: false,
   error: null,
 });
+
+const createCodexOAuthAdmissionEditorState = (): CodexOAuthAdmissionEditorState => ({
+  fileName: "",
+  supported: false,
+  enabled: false,
+  allowedClients: [],
+  availableAllowedClients: [],
+  saving: false,
+  error: null,
+});
+
+const normalizeCodexAllowedClientId = (value: string): string => value.trim().toLowerCase();
+
+const normalizeCodexAllowedClientIds = (values: string[] | undefined): string[] => {
+  const seen = new Set<string>();
+  const normalized: string[] = [];
+  (values ?? []).forEach((value) => {
+    const id = normalizeCodexAllowedClientId(value);
+    if (!id || seen.has(id)) return;
+    seen.add(id);
+    normalized.push(id);
+  });
+  return normalized;
+};
+
+const codexAllowedClientSetKey = (values: string[] | undefined): string =>
+  [...normalizeCodexAllowedClientIds(values)].sort().join("\n");
+
+const buildCodexOAuthAdmissionEditorState = (
+  file: AuthFileItem,
+): CodexOAuthAdmissionEditorState => {
+  const admission = file.codex_oauth_admission;
+  if (!admission) {
+    return { ...createCodexOAuthAdmissionEditorState(), fileName: file.name };
+  }
+
+  return {
+    fileName: file.name,
+    supported: true,
+    enabled: Boolean(admission.enabled),
+    allowedClients: normalizeCodexAllowedClientIds(admission.allowed_clients),
+    availableAllowedClients: (admission.available_allowed_clients ?? []).map((preset) => ({
+      id: normalizeCodexAllowedClientId(preset.id),
+      label: preset.label,
+      description: preset.description,
+    })),
+    saving: false,
+    error: null,
+  };
+};
 
 const readSubscriptionStartValue = (json: Record<string, unknown>): unknown =>
   json.subscription_started_at ??
@@ -113,9 +164,34 @@ const mergeSavedSubscriptionFields = (
   return next;
 };
 
+const mergeSavedCodexOAuthAdmissionFields = (
+  file: AuthFileItem,
+  editor: CodexOAuthAdmissionEditorState,
+): AuthFileItem => {
+  if (file.name !== editor.fileName || !file.codex_oauth_admission) return file;
+  const allowedClients = normalizeCodexAllowedClientIds(editor.allowedClients);
+  return {
+    ...file,
+    codex_oauth_admission: {
+      ...file.codex_oauth_admission,
+      enabled: editor.enabled,
+      allowed_clients: allowedClients,
+      available_allowed_clients: editor.availableAllowedClients,
+    },
+    codex_cli_only: editor.enabled,
+    codex_cli_only_allowed_clients: allowedClients,
+  };
+};
+
 const supportsAuthFileTrend = (file: AuthFileItem): boolean => {
   const provider = normalizeProviderKey(resolveFileType(file));
   return provider === "kimi" || provider === "codex";
+};
+
+const identityFingerprintDetailKey = (file: AuthFileItem): string => {
+  const summary = file.identity_fingerprint_summary;
+  if (!summary?.account_key) return "";
+  return [summary.provider, summary.account_key, summary.auth_subject_id ?? ""].join("\n");
 };
 
 export function useAuthFilesDetailEditors(
@@ -126,6 +202,7 @@ export function useAuthFilesDetailEditors(
   const { notify } = useToast();
   const modelsCacheRef = useRef<Map<string, AuthFileModelItem[]>>(new Map());
   const detailTrendInFlightRef = useRef<Map<string, Promise<void>>>(new Map());
+  const identityFingerprintDetailKeyRef = useRef("");
 
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailFile, setDetailFile] = useState<AuthFileItem | null>(null);
@@ -136,6 +213,10 @@ export function useAuthFilesDetailEditors(
   const [detailTrend, setDetailTrend] = useState<AuthFileTrendResponse | null>(null);
   const [detailTrendLoading, setDetailTrendLoading] = useState(false);
   const [detailTrendError, setDetailTrendError] = useState<string | null>(null);
+  const [identityFingerprintDetail, setIdentityFingerprintDetail] =
+    useState<IdentityFingerprintAccountDetail | null>(null);
+  const [identityFingerprintLoading, setIdentityFingerprintLoading] = useState(false);
+  const [identityFingerprintError, setIdentityFingerprintError] = useState<string | null>(null);
 
   const [modelsLoading, setModelsLoading] = useState(false);
   const [modelsFileType, setModelsFileType] = useState("");
@@ -148,6 +229,8 @@ export function useAuthFilesDetailEditors(
   const [channelEditor, setChannelEditor] = useState<ChannelEditorState>(() =>
     createChannelEditorState(),
   );
+  const [codexOAuthAdmissionEditor, setCodexOAuthAdmissionEditor] =
+    useState<CodexOAuthAdmissionEditorState>(() => createCodexOAuthAdmissionEditorState());
 
   const applySavedAuthFilePatch = useCallback(
     (fileName: string, json: Record<string, unknown>) => {
@@ -256,17 +339,76 @@ export function useAuthFilesDetailEditors(
     [detailFile, detailTrend, t],
   );
 
+  const loadIdentityFingerprintForDetail = useCallback(
+    async (file: AuthFileItem) => {
+      const summary = file.identity_fingerprint_summary;
+      const key = identityFingerprintDetailKey(file);
+      if (!summary?.account_key || !key) {
+        identityFingerprintDetailKeyRef.current = "";
+        setIdentityFingerprintDetail(null);
+        setIdentityFingerprintLoading(false);
+        setIdentityFingerprintError(null);
+        return;
+      }
+      if (
+        identityFingerprintDetailKeyRef.current === key &&
+        identityFingerprintLoading &&
+        !identityFingerprintError
+      ) {
+        return;
+      }
+      if (
+        identityFingerprintDetailKeyRef.current === key &&
+        identityFingerprintDetail &&
+        !identityFingerprintError
+      ) {
+        return;
+      }
+
+      identityFingerprintDetailKeyRef.current = key;
+      setIdentityFingerprintLoading(true);
+      setIdentityFingerprintError(null);
+      try {
+        const detail = await identityFingerprintApi.getAccountDetail({
+          provider: summary.provider,
+          account_key: summary.account_key,
+          auth_subject_id: summary.auth_subject_id,
+        });
+        if (identityFingerprintDetailKeyRef.current !== key) return;
+        setIdentityFingerprintDetail(detail);
+      } catch (err: unknown) {
+        if (identityFingerprintDetailKeyRef.current !== key) return;
+        setIdentityFingerprintDetail(null);
+        setIdentityFingerprintError(
+          err instanceof Error ? err.message : t("auth_files.identity_fingerprint_loading_failed"),
+        );
+      } finally {
+        if (identityFingerprintDetailKeyRef.current === key) {
+          setIdentityFingerprintLoading(false);
+        }
+      }
+    },
+    [identityFingerprintDetail, identityFingerprintError, identityFingerprintLoading, t],
+  );
+
   const openDetail = useCallback(
     async (file: AuthFileItem) => {
       const hasTrend = supportsAuthFileTrend(file);
+      const hasIdentity = Boolean(file.identity_fingerprint_summary?.account_key);
       setDetailOpen(true);
-      setDetailTab(hasTrend ? "usage" : "fields");
+      setDetailTab(hasTrend ? "usage" : hasIdentity ? "identity" : "fields");
       setDetailTrendWindow("5h");
       setDetailFile(file);
       setDetailLoading(true);
       setDetailText("");
       setDetailTrend(null);
       setDetailTrendError(null);
+      setIdentityFingerprintDetail(null);
+      setIdentityFingerprintError(null);
+      identityFingerprintDetailKeyRef.current = "";
+      if (hasIdentity) {
+        void loadIdentityFingerprintForDetail(file);
+      }
       if (hasTrend) {
         void refreshDetailTrend(file);
       }
@@ -282,7 +424,7 @@ export function useAuthFilesDetailEditors(
         setDetailLoading(false);
       }
     },
-    [notify, refreshDetailTrend, t],
+    [loadIdentityFingerprintForDetail, notify, refreshDetailTrend, t],
   );
 
   const openPrefixProxyEditor = useCallback(
@@ -373,6 +515,10 @@ export function useAuthFilesDetailEditors(
     });
   }, []);
 
+  const openCodexOAuthAdmissionEditor = useCallback((file: AuthFileItem) => {
+    setCodexOAuthAdmissionEditor(buildCodexOAuthAdmissionEditorState(file));
+  }, []);
+
   const saveChannelEditor = useCallback(async (): Promise<boolean> => {
     const fileName = channelEditor.fileName.trim();
     const label = channelEditor.label.trim();
@@ -397,6 +543,61 @@ export function useAuthFilesDetailEditors(
     }
   }, [channelEditor.fileName, channelEditor.label, loadAll, notify, t]);
 
+  const codexOAuthAdmissionDirty = useMemo(() => {
+    if (!detailFile || !codexOAuthAdmissionEditor.supported) return false;
+    if (codexOAuthAdmissionEditor.fileName !== detailFile.name) return false;
+    const baseline = buildCodexOAuthAdmissionEditorState(detailFile);
+    if (!baseline.supported) return false;
+    return (
+      baseline.enabled !== codexOAuthAdmissionEditor.enabled ||
+      codexAllowedClientSetKey(baseline.allowedClients) !==
+        codexAllowedClientSetKey(codexOAuthAdmissionEditor.allowedClients)
+    );
+  }, [
+    codexOAuthAdmissionEditor.allowedClients,
+    codexOAuthAdmissionEditor.enabled,
+    codexOAuthAdmissionEditor.fileName,
+    codexOAuthAdmissionEditor.supported,
+    detailFile,
+  ]);
+
+  const saveCodexOAuthAdmission = useCallback(async (): Promise<boolean> => {
+    const fileName = codexOAuthAdmissionEditor.fileName.trim();
+    if (!fileName || !codexOAuthAdmissionEditor.supported) return false;
+
+    const nextEditor: CodexOAuthAdmissionEditorState = {
+      ...codexOAuthAdmissionEditor,
+      allowedClients: normalizeCodexAllowedClientIds(codexOAuthAdmissionEditor.allowedClients),
+    };
+
+    setCodexOAuthAdmissionEditor((prev) => ({ ...prev, saving: true, error: null }));
+    try {
+      await authFilesApi.patchFields({
+        name: fileName,
+        codex_cli_only: nextEditor.enabled,
+        codex_cli_only_allowed_clients: nextEditor.allowedClients,
+      });
+      const applyPatch = (file: AuthFileItem): AuthFileItem =>
+        mergeSavedCodexOAuthAdmissionFields(file, nextEditor);
+      setFiles?.((prev) => prev.map(applyPatch));
+      setDetailFile((prev) => (prev && prev.name === fileName ? applyPatch(prev) : prev));
+      notify({ type: "success", message: t("auth_files.saved") });
+      setCodexOAuthAdmissionEditor((prev) => ({
+        ...prev,
+        saving: false,
+        error: null,
+        allowedClients: nextEditor.allowedClients,
+      }));
+      void loadAll();
+      return true;
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : t("auth_files.save_failed");
+      setCodexOAuthAdmissionEditor((prev) => ({ ...prev, saving: false, error: message }));
+      notify({ type: "error", message });
+      return false;
+    }
+  }, [codexOAuthAdmissionEditor, loadAll, notify, setFiles, t]);
+
   useEffect(() => {
     if (!detailOpen || !detailFile) return;
     if (detailTab === "models") {
@@ -409,6 +610,10 @@ export function useAuthFilesDetailEditors(
       }
       return;
     }
+    if (detailTab === "identity") {
+      void loadIdentityFingerprintForDetail(detailFile);
+      return;
+    }
     if (detailTab === "fields") {
       if (prefixProxyEditor.fileName !== detailFile.name) {
         void openPrefixProxyEditor(detailFile);
@@ -416,17 +621,23 @@ export function useAuthFilesDetailEditors(
       if (canRenameAuthFileChannel(detailFile) && channelEditor.fileName !== detailFile.name) {
         openChannelEditor(detailFile);
       }
+      if (codexOAuthAdmissionEditor.fileName !== detailFile.name) {
+        openCodexOAuthAdmissionEditor(detailFile);
+      }
       return;
     }
   }, [
     channelEditor.fileName,
+    codexOAuthAdmissionEditor.fileName,
     detailFile,
     detailOpen,
     detailTab,
     detailTrend,
     detailTrendLoading,
     loadModelsForDetail,
+    loadIdentityFingerprintForDetail,
     openChannelEditor,
+    openCodexOAuthAdmissionEditor,
     openPrefixProxyEditor,
     prefixProxyEditor.fileName,
     refreshDetailTrend,
@@ -575,6 +786,10 @@ export function useAuthFilesDetailEditors(
     detailTrend,
     detailTrendLoading,
     detailTrendError,
+    identityFingerprintDetail,
+    identityFingerprintLoading,
+    identityFingerprintError,
+    loadIdentityFingerprintForDetail,
     refreshDetailTrend,
     modelsLoading,
     modelsFileType,
@@ -584,11 +799,15 @@ export function useAuthFilesDetailEditors(
     setPrefixProxyEditor,
     channelEditor,
     setChannelEditor,
+    codexOAuthAdmissionEditor,
+    setCodexOAuthAdmissionEditor,
     loadModelsForDetail,
     openDetail,
     prefixProxyDirty,
+    codexOAuthAdmissionDirty,
     prefixProxyUpdatedText,
     savePrefixProxy,
     saveChannelEditor,
+    saveCodexOAuthAdmission,
   };
 }

@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, describe, expect, test, vi } from "vitest";
 import i18n from "@code-proxy/i18n";
@@ -153,8 +153,9 @@ describe("RequestLogsPage", () => {
     mocks.clearUsageLogs.mockReset();
   });
 
-  test("renders the first token latency column from backend data", async () => {
+  test("renders first token latency value in the response metrics column", async () => {
     await i18n.changeLanguage("en");
+    const user = userEvent.setup();
 
     mocks.getUsageLogs.mockResolvedValue({
       items: [
@@ -204,9 +205,17 @@ describe("RequestLogsPage", () => {
       </ThemeProvider>,
     );
 
-    expect(await screen.findByText("Duration")).toBeInTheDocument();
-    expect(await screen.findByText("Streaming")).toBeInTheDocument();
-    expect(await screen.findByText("183ms")).toBeInTheDocument();
+    const table = await screen.findByRole("table", { name: "Request Logs Table" });
+    expect(
+      within(table).getByRole("columnheader", { name: "Response Metrics" }),
+    ).toBeInTheDocument();
+    expect(within(table).getByText("Streaming")).toBeInTheDocument();
+    expect(within(table).getByText("1.20s")).toBeInTheDocument();
+    expect(within(table).getByText("183ms")).toBeInTheDocument();
+    expect(within(table).queryByText("First Token Latency")).not.toBeInTheDocument();
+
+    await user.hover(within(table).getByLabelText("Duration: 1.20s"));
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("First Token Latency: 183ms");
   });
 
   test("labels non-streaming logs without rendering a first token placeholder", async () => {
@@ -230,7 +239,7 @@ describe("RequestLogsPage", () => {
     );
 
     expect(await screen.findByText("Non-streaming")).toBeInTheDocument();
-    expect(screen.queryByLabelText("First Token: --")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("First Token Latency: --")).not.toBeInTheDocument();
   });
 
   test("does not crash when backend returns null filter arrays", async () => {
@@ -565,6 +574,58 @@ describe("RequestLogsPage", () => {
 
     await screen.findByRole("table", { name: "请求日志表" });
     expect(container.querySelector(".table-scrollbar")).not.toBeNull();
+  });
+
+  test("renders response metrics without missing-value placeholders", async () => {
+    await i18n.changeLanguage("zh-CN");
+    const user = userEvent.setup();
+
+    mocks.getUsageLogs.mockResolvedValue(
+      responseWithRows([
+        buildUsageLogItem({
+          id: 1,
+          streaming: true,
+          latency_ms: 354,
+          first_token_ms: 0,
+          output_tokens: 0,
+        }),
+        buildUsageLogItem({
+          id: 2,
+          streaming: false,
+          latency_ms: -1,
+          first_token_ms: 0,
+          output_tokens: 0,
+        }),
+      ]),
+    );
+
+    render(
+      <ThemeProvider>
+        <ToastProvider>
+          <RequestLogsPage />
+        </ToastProvider>
+      </ThemeProvider>,
+    );
+
+    const table = await screen.findByRole("table", { name: "请求日志表" });
+    expect(within(table).getByRole("columnheader", { name: "响应指标" })).toBeInTheDocument();
+    expect(within(table).queryByRole("columnheader", { name: "类型" })).not.toBeInTheDocument();
+    expect(within(table).getByText("354ms")).toBeInTheDocument();
+    expect(within(table).getByText("流式")).toBeInTheDocument();
+    expect(within(table).getByText("非流式")).toBeInTheDocument();
+    expect(within(table).queryByText("--")).not.toBeInTheDocument();
+
+    await user.hover(within(table).getByLabelText("耗时: 354ms"));
+    const tooltip = await screen.findByRole("tooltip");
+    expect(tooltip).toHaveTextContent("耗时: 354ms");
+    expect(tooltip).not.toHaveTextContent("首 Token 耗时");
+    expect(tooltip).not.toHaveTextContent("每秒 Token");
+    expect(tooltip).not.toHaveTextContent("--");
+    await user.unhover(within(table).getByLabelText("耗时: 354ms"));
+    await waitFor(() => expect(screen.queryByRole("tooltip")).not.toBeInTheDocument());
+
+    await user.hover(within(table).getByText("非流式"));
+    expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
   });
 
   test("shows full numeric values in the table while keeping the summary bar compact", async () => {

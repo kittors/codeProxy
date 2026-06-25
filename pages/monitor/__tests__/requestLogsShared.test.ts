@@ -61,7 +61,11 @@ describe("requestLogsShared", () => {
     const columns = buildRequestLogsColumns((key) => key);
     const keys = columns.map((column) => column.key);
 
-    expect(keys).toContain("mode");
+    expect(keys).not.toContain("mode");
+    expect(columns.find((column) => column.key === "latency")?.label).toBe(
+      "request_logs.col_response_metrics",
+    );
+    expect(columns.find((column) => column.key === "latency")?.minWidthPx).toBe(240);
     expect(keys.indexOf("latency")).toBeLessThan(keys.indexOf("apiKeyName"));
     expect(keys.indexOf("inputTokens")).toBeLessThan(keys.indexOf("apiKeyName"));
     expect(keys.indexOf("cachedTokens")).toBeLessThan(keys.indexOf("model"));

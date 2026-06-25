@@ -75,7 +75,7 @@ export interface DataTableProps<T> {
   showAllLoadedMessage?: boolean;
   /** Extra row className */
   rowClassName?: string | ((row: T, index: number) => string);
-  /** Let parent scroll containers handle wheel events when this table is already at an edge. */
+  /** Let parent scroll containers handle wheel/touch scroll chaining when this table is already at an edge. */
   allowWheelPropagationAtBoundary?: boolean;
   /** Render the table in normal document flow without any internal table scrollbars. */
   naturalFlow?: boolean;

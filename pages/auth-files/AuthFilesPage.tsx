@@ -11,7 +11,7 @@ import {
   TabsTrigger,
   useToast,
 } from "@code-proxy/ui";
-import type { AuthFileItem } from "@code-proxy/api-client";
+import { quotaApi, type AuthFileItem } from "@code-proxy/api-client";
 import { proxiesApi, type ProxyPoolEntry } from "@code-proxy/api-client/endpoints/proxies";
 import { OAuthLoginDialog } from "@features/oauth-login";
 import { AuthFileDetailModal } from "./components/AuthFileDetailModal";
@@ -22,6 +22,7 @@ import { AuthFileTagsModal } from "./components/AuthFileTagsModal";
 import { ImportModelsModal } from "./components/ImportModelsModal";
 import { GroupOverviewModal } from "./components/GroupOverviewModal";
 import { useAuthFilesDataState } from "./hooks/useAuthFilesDataState";
+import { useAuthFilesCycleUsageState } from "./hooks/useAuthFilesCycleUsageState";
 import { useAuthFilesDetailEditors } from "./hooks/useAuthFilesDetailEditors";
 import {
   useAuthFilesFileActions,
@@ -36,6 +37,7 @@ import { useAuthFilesOAuthConfig } from "./hooks/useAuthFilesOAuthConfig";
 import { consumeCodexResetCredit, resolveQuotaProvider } from "@features/quota-preview/quota-fetch";
 import {
   AUTH_FILE_STATUS_FILTERS,
+  normalizeAuthIndexValue,
   normalizeProviderKey,
   normalizeQuotaAutoRefreshMs,
   readAuthFilesUiState,
@@ -141,6 +143,7 @@ export function AuthFilesPage() {
 
   const [confirm, setConfirm] = useState<AuthFilesConfirmAction | null>(null);
   const [resettingCreditFileName, setResettingCreditFileName] = useState<string | null>(null);
+  const [clearingStatusFileName, setClearingStatusFileName] = useState<string | null>(null);
 
   const [oauthDialogOpen, setOauthDialogOpen] = useState(false);
   const [oauthDialogDefaultTab, setOauthDialogDefaultTab] = useState<OAuthDialogTab>("codex");
@@ -216,6 +219,9 @@ export function AuthFilesPage() {
     detailTrend,
     detailTrendLoading,
     detailTrendError,
+    identityFingerprintDetail,
+    identityFingerprintLoading,
+    identityFingerprintError,
     refreshDetailTrend,
     modelsLoading,
     modelsFileType,
@@ -225,11 +231,15 @@ export function AuthFilesPage() {
     setPrefixProxyEditor,
     channelEditor,
     setChannelEditor,
+    codexOAuthAdmissionEditor,
+    setCodexOAuthAdmissionEditor,
     loadModelsForDetail,
     openDetail,
     prefixProxyDirty,
+    codexOAuthAdmissionDirty,
     savePrefixProxy,
     saveChannelEditor,
+    saveCodexOAuthAdmission,
   } = useAuthFilesDetailEditors(loadAll, setFiles);
 
   const {
@@ -386,6 +396,16 @@ export function AuthFilesPage() {
     refreshUsageDataForFiles,
   });
 
+  const { callsByAuthIndex, refreshCycleUsageForFiles } = useAuthFilesCycleUsageState();
+
+  const refreshQuotaAndCycleUsage = useCallback(
+    async (file: AuthFileItem, provider: NonNullable<ReturnType<typeof resolveQuotaProvider>>) => {
+      await refreshQuota(file, provider);
+      await refreshCycleUsageForFiles([file], { force: true });
+    },
+    [refreshCycleUsageForFiles, refreshQuota],
+  );
+
   const refreshQuotaForFiles = useCallback(
     async (targetFiles: AuthFileItem[]) => {
       const targets = targetFiles.flatMap((file) => {
@@ -454,6 +474,7 @@ export function AuthFilesPage() {
       try {
         await consumeCodexResetCredit(file);
         await refreshQuota(file, "codex", { showLoading: true });
+        await refreshCycleUsageForFiles([file], { force: true });
         notify({
           type: "success",
           message: t("auth_files.reset_credit_success", { name }),
@@ -468,7 +489,44 @@ export function AuthFilesPage() {
         setResettingCreditFileName(null);
       }
     },
-    [notify, refreshQuota, resettingCreditFileName, t],
+    [notify, refreshCycleUsageForFiles, refreshQuota, resettingCreditFileName, t],
+  );
+
+  const clearAuthFileStatus = useCallback(
+    async (file: AuthFileItem) => {
+      if (clearingStatusFileName) return;
+      const name = resolveAuthFileDisplayName(file) || file.name;
+      const authIndex = normalizeAuthIndexValue(file.auth_index ?? file.authIndex);
+      if (!authIndex) {
+        notify({
+          type: "error",
+          message: t("auth_files.clear_status_failed", {
+            name,
+            message: t("auth_files.trend_missing_auth_index"),
+          }),
+        });
+        return;
+      }
+
+      setClearingStatusFileName(file.name);
+      try {
+        await quotaApi.clearStatus(authIndex);
+        await refreshFilesForItems([file]);
+        notify({
+          type: "success",
+          message: t("auth_files.clear_status_success", { name }),
+        });
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : t("common.unknown_error");
+        notify({
+          type: "error",
+          message: t("auth_files.clear_status_failed", { name, message }),
+        });
+      } finally {
+        setClearingStatusFileName(null);
+      }
+    },
+    [clearingStatusFileName, notify, refreshFilesForItems, t],
   );
 
   const refreshFilesAndQuota = useCallback(async () => {
@@ -479,14 +537,30 @@ export function AuthFilesPage() {
     try {
       const quotaRefreshPromise = forceRefreshPage();
       const filesRefreshPromise = refreshFilesForItems(currentPageItems);
-      await Promise.all([filesRefreshPromise, quotaRefreshPromise]);
+      const [updatedFiles] = await Promise.all([filesRefreshPromise, quotaRefreshPromise]);
+      if (filesViewMode === "cards") {
+        const updatedByName = new Map(updatedFiles.map((file) => [file.name, file]));
+        await refreshCycleUsageForFiles(
+          currentPageItems.map((file) => updatedByName.get(file.name) ?? file),
+          { force: true },
+        );
+      }
     } finally {
       refreshingFilesAndQuotaRef.current = false;
       if (isMountedRef.current) {
         setRefreshingCurrentPage(false);
       }
     }
-  }, [forceRefreshPage, loading, pageItems, refreshFilesForItems, refreshingAll, usageLoading]);
+  }, [
+    filesViewMode,
+    forceRefreshPage,
+    loading,
+    pageItems,
+    refreshCycleUsageForFiles,
+    refreshFilesForItems,
+    refreshingAll,
+    usageLoading,
+  ]);
 
   const closeConfigModal = useCallback(() => {
     setConfigModalTab(null);
@@ -515,6 +589,11 @@ export function AuthFilesPage() {
       await forceRefreshPage();
     })();
   }, [configModalTab, forceRefreshPage, loadAll]);
+
+  useEffect(() => {
+    if (filesViewMode !== "cards" || loading) return;
+    void refreshCycleUsageForFiles(pageItems);
+  }, [filesViewMode, loading, pageItems, refreshCycleUsageForFiles]);
 
   const {
     groupOverviewOpen,
@@ -564,6 +643,7 @@ export function AuthFilesPage() {
     translateQuotaText,
     formatPlanTypeLabel,
     renderRestrictionBadges,
+    renderClaudeOAuthHealthBadges,
     renderSubscriptionBadge,
     renderQuotaBar,
     renderFilesViewModeTabs,
@@ -649,11 +729,14 @@ export function AuthFilesPage() {
         filesViewMode={filesViewMode}
         selectedFileNameSet={selectedFileNameSet}
         quotaByFileName={quotaByFileName}
+        cycleCallsByAuthIndex={callsByAuthIndex}
         resolveQuotaProvider={resolveQuotaProvider}
         resolveQuotaCardSlots={resolveQuotaCardSlots}
-        refreshQuota={refreshQuota}
+        refreshQuota={refreshQuotaAndCycleUsage}
         requestResetCredit={requestResetCredit}
         resettingCreditFileName={resettingCreditFileName}
+        clearAuthFileStatus={clearAuthFileStatus}
+        clearingStatusFileName={clearingStatusFileName}
         setFileEnabled={setFileEnabled}
         statusUpdating={statusUpdating}
         usageIndex={usageIndex}
@@ -662,6 +745,7 @@ export function AuthFilesPage() {
         formatPlanTypeLabel={formatPlanTypeLabel}
         translateQuotaText={translateQuotaText}
         renderRestrictionBadges={renderRestrictionBadges}
+        renderClaudeOAuthHealthBadges={renderClaudeOAuthHealthBadges}
         renderSubscriptionBadge={renderSubscriptionBadge}
         renderQuotaBar={renderQuotaBar}
         openTagsEditor={(file) => setTagsEditorFileName(file.name)}
@@ -776,6 +860,9 @@ export function AuthFilesPage() {
         detailTrend={detailTrend}
         detailTrendLoading={detailTrendLoading}
         detailTrendError={detailTrendError}
+        identityFingerprintDetail={identityFingerprintDetail}
+        identityFingerprintLoading={identityFingerprintLoading}
+        identityFingerprintError={identityFingerprintError}
         refreshDetailTrend={refreshDetailTrend}
         loadModelsForDetail={loadModelsForDetail}
         loadModelOwnerGroups={loadModelOwnerGroups}
@@ -795,6 +882,10 @@ export function AuthFilesPage() {
         channelEditor={channelEditor}
         setChannelEditor={setChannelEditor}
         saveChannelEditor={saveChannelEditor}
+        codexOAuthAdmissionEditor={codexOAuthAdmissionEditor}
+        setCodexOAuthAdmissionEditor={setCodexOAuthAdmissionEditor}
+        codexOAuthAdmissionDirty={codexOAuthAdmissionDirty}
+        saveCodexOAuthAdmission={saveCodexOAuthAdmission}
       />
 
       <ImportModelsModal

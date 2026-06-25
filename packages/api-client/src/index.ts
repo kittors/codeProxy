@@ -30,6 +30,7 @@ export {
 export type * from "./dto/types";
 
 export { configApi } from "./endpoints/config";
+export type * from "./endpoints/config";
 export { usageApi } from "./endpoints/usage";
 export type * from "./endpoints/usage";
 export { providersApi } from "./endpoints/providers";

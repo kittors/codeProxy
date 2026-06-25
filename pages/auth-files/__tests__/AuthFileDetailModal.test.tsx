@@ -53,6 +53,107 @@ const basePrefixProxyEditor: DetailModalProps["prefixProxyEditor"] = {
   subscriptionPeriod: "monthly",
 };
 
+const baseCodexOAuthAdmissionEditor: DetailModalProps["codexOAuthAdmissionEditor"] = {
+  fileName: "codex.json",
+  supported: true,
+  enabled: true,
+  allowedClients: ["claude_code"],
+  availableAllowedClients: [
+    {
+      id: "claude_code",
+      label: "Claude Code",
+      description: "Allow the Claude Code Codex plugin when Originator and User-Agent both match.",
+    },
+  ],
+  saving: false,
+  error: null,
+};
+
+const codexIdentityFingerprintDetail: NonNullable<DetailModalProps["identityFingerprintDetail"]> = {
+  summary: {
+    provider: "codex",
+    account_key: "codex-account-1",
+    auth_subject_id: "auth-subject-1",
+    enabled: true,
+    primary_source: "learned",
+    learned: true,
+    learned_fields: 3,
+    effective_fields: 5,
+    source_counts: {
+      learned: 3,
+      preset: 1,
+      builtin_default: 1,
+    },
+    client_product: "codex-tui",
+    client_variant: "terminal",
+    version: "0.125.0",
+    updated_at: "2026-06-23T10:15:00Z",
+    last_seen_at: "2026-06-23T10:16:00Z",
+  },
+  effective: {
+    provider: "codex",
+    account_key: "codex-account-1",
+    auth_subject_id: "auth-subject-1",
+    enabled: true,
+    client_product: "codex-tui",
+    version: "0.125.0",
+    fields: {
+      "user-agent": { value: "codex-cli/0.125.0", source: "learned" },
+      originator: { value: "codex_cli_rs", source: "learned" },
+      "x-codex-beta-features": { value: "responses=v1", source: "learned" },
+      "session-mode": { value: "server-stable", source: "preset" },
+      "websocket-beta": { value: "realtime=v1", source: "builtin_default" },
+    },
+  },
+  learned: {
+    provider: "codex",
+    account_key: "codex-account-1",
+    auth_subject_id: "auth-subject-1",
+    client_product: "codex-tui",
+    client_variant: "terminal",
+    version: "0.125.0",
+    fields: {
+      "user-agent": "codex-cli/0.125.0",
+      originator: "codex_cli_rs",
+      "x-codex-beta-features": "responses=v1",
+    },
+    observed_headers: {
+      "user-agent": "codex-cli/0.125.0",
+      originator: "codex_cli_rs",
+    },
+    created_at: "2026-06-22T08:00:00Z",
+    updated_at: "2026-06-23T10:15:00Z",
+    last_seen_at: "2026-06-23T10:16:00Z",
+  },
+  preset: {},
+  builtin_default: {},
+};
+
+const expectSummaryCard = (label: string, value: string) => {
+  const labelNode = screen.getByText(label);
+  const card = labelNode.closest("div");
+  if (!(card instanceof HTMLElement)) {
+    throw new Error(`Missing summary card for ${label}`);
+  }
+  expect(within(card).getByText(value)).toBeInTheDocument();
+};
+
+const mockMediaQueryMatches = (matches: boolean) => {
+  vi.spyOn(window, "matchMedia").mockImplementation(
+    (query: string) =>
+      ({
+        matches,
+        media: query,
+        onchange: null,
+        addListener: () => undefined,
+        removeListener: () => undefined,
+        addEventListener: () => undefined,
+        removeEventListener: () => undefined,
+        dispatchEvent: () => false,
+      }) as MediaQueryList,
+  );
+};
+
 const renderDetailModal = (overrides: Partial<DetailModalProps> = {}) => {
   const props: DetailModalProps = {
     open: true,
@@ -100,6 +201,9 @@ const renderDetailModal = (overrides: Partial<DetailModalProps> = {}) => {
         },
       ],
     },
+    identityFingerprintDetail: null,
+    identityFingerprintLoading: false,
+    identityFingerprintError: null,
     refreshDetailTrend: vi.fn(async () => undefined),
     loadModelsForDetail: vi.fn(async () => undefined),
     loadModelOwnerGroups: vi.fn(async () => undefined),
@@ -135,6 +239,10 @@ const renderDetailModal = (overrides: Partial<DetailModalProps> = {}) => {
     },
     setChannelEditor: vi.fn(),
     saveChannelEditor: vi.fn(async () => true),
+    codexOAuthAdmissionEditor: baseCodexOAuthAdmissionEditor,
+    setCodexOAuthAdmissionEditor: vi.fn(),
+    codexOAuthAdmissionDirty: false,
+    saveCodexOAuthAdmission: vi.fn(async () => true),
     ...overrides,
   };
 
@@ -161,14 +269,12 @@ describe("AuthFileDetailModal", () => {
     expect(screen.queryByRole("tab", { name: "Channel" })).not.toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Usage" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Fields" })).toBeInTheDocument();
-    expect(screen.getByText("Last 7 days requests")).toBeInTheDocument();
-    expect(screen.getByText("3")).toBeInTheDocument();
-    expect(screen.getByText("Current weekly cycle")).toBeInTheDocument();
-    expect(screen.getByText("2")).toBeInTheDocument();
-    expect(screen.getByText("Current cycle cost")).toBeInTheDocument();
-    expect(screen.getByText("$1.2345")).toBeInTheDocument();
-    expect(screen.getByText("Weekly quota used")).toBeInTheDocument();
-    expect(screen.getByText("8%")).toBeInTheDocument();
+    expect(screen.queryByText("Last 7 days requests")).not.toBeInTheDocument();
+    expectSummaryCard("Current weekly cycle", "2");
+    expectSummaryCard("Current cycle cost", "$1.2345");
+    expectSummaryCard("Predicted 5-hour window quota", "$0.0500");
+    expectSummaryCard("Predicted weekly window quota", "$15.4312");
+    expectSummaryCard("Weekly quota used", "8%");
     expect(screen.getByRole("dialog", { name: "Codex Primary" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Download" })).toBeEnabled();
     expect(chartOptions.at(-1)?.animation).toBe(true);
@@ -176,6 +282,27 @@ describe("AuthFileDetailModal", () => {
     expect(chartOptions.at(-1)?.grid?.top).toBeGreaterThanOrEqual(70);
     expect(chartOptions.at(-1)?.yAxis?.every((item: any) => !item.name)).toBe(true);
     expect(chartOptions.at(-1)?.series?.every((item: any) => item.animation === true)).toBe(true);
+  });
+
+  test("renders zero predicted quota values when Codex trend data is incomplete", () => {
+    renderDetailModal({
+      detailTrend: {
+        auth_index: "auth-1",
+        days: 7,
+        hours: 5,
+        request_total: 3,
+        cycle_request_total: 2,
+        cycle_cost_total: 0,
+        weekly_quota_used_percent: null,
+        cycle_start: "",
+        daily_usage: [],
+        hourly_usage: [{ hour: "2026-04-30 16:00", requests: 1 }],
+        quota_series: [],
+      },
+    });
+
+    expectSummaryCard("Predicted 5-hour window quota", "$0.0000");
+    expectSummaryCard("Predicted weekly window quota", "$0.0000");
   });
 
   test("disables trend chart animation after the first render completes", () => {
@@ -223,7 +350,7 @@ describe("AuthFileDetailModal", () => {
     renderDetailModal({ detailTrendLoading: true });
 
     expect(screen.getByText("Quota and request trends")).toBeInTheDocument();
-    expect(screen.getByText("Last 7 days requests")).toBeInTheDocument();
+    expect(screen.getByText("Predicted 5-hour window quota")).toBeInTheDocument();
     expect(screen.queryByText("Loading...")).not.toBeInTheDocument();
   });
 
@@ -231,7 +358,7 @@ describe("AuthFileDetailModal", () => {
     renderDetailModal({ detailTrend: null, detailTrendLoading: true });
 
     const loading = screen.getByTestId("auth-file-trend-loading");
-    expect(loading.querySelectorAll(".animate-pulse")).toHaveLength(8);
+    expect(loading.querySelectorAll(".animate-pulse")).toHaveLength(9);
     expect(screen.queryByText("Loading...")).not.toBeInTheDocument();
     expect(screen.queryByTestId("auth-file-trend-chart")).not.toBeInTheDocument();
     expect(chartOptions).toHaveLength(0);
@@ -243,6 +370,94 @@ describe("AuthFileDetailModal", () => {
     expect(screen.queryByTestId("auth-file-quota-series-list")).not.toBeInTheDocument();
     expect(screen.queryByText(/samples/)).not.toBeInTheDocument();
     expect(screen.queryByText(/resets/)).not.toBeInTheDocument();
+  });
+
+  test("renders account identity fingerprint sources and learned request headers in mobile flow", () => {
+    renderDetailModal({
+      detailTab: "identity",
+      detailFile: {
+        name: "codex.json",
+        label: "Codex Primary",
+        type: "codex",
+        size: 256,
+        account_type: "oauth",
+        identity_fingerprint_summary: codexIdentityFingerprintDetail.summary,
+      },
+      identityFingerprintDetail: codexIdentityFingerprintDetail,
+    });
+
+    const panel = screen.getByTestId("auth-file-identity-fingerprint");
+    const summary = within(panel).getByTestId("auth-file-identity-summary");
+    const fields = within(panel).getByTestId("auth-file-identity-fields");
+    const scroller = screen.getByTestId("auth-file-detail-scroll");
+    expect(screen.getAllByRole("tab").map((tab) => tab.textContent)).toEqual([
+      "Usage",
+      "Identity",
+      "Fields",
+      "Models",
+    ]);
+    expect(screen.getByRole("tab", { name: "Identity" })).toBeInTheDocument();
+    expect(scroller.className).toContain("overflow-y-auto");
+    expect(scroller.className).toContain("lg:overflow-hidden");
+    expect(panel.className).toContain("lg:h-full");
+    expect(fields.className).toContain("flex");
+    expect(summary).toHaveTextContent("codex-account-1");
+    expect(within(summary).getByText("auth-subject-1")).toBeInTheDocument();
+    expect(within(summary).getByText("codex-tui / terminal")).toBeInTheDocument();
+    expect(within(summary).getByText("0.125.0")).toBeInTheDocument();
+    expect(within(panel).getAllByText("Learned").length).toBeGreaterThanOrEqual(2);
+    expect(within(panel).getAllByText("Account preset").length).toBeGreaterThanOrEqual(1);
+    expect(within(panel).getAllByText("System default").length).toBeGreaterThanOrEqual(1);
+    expect(within(fields).getByText("Section")).toBeInTheDocument();
+    expect(within(fields).getByText("Field")).toBeInTheDocument();
+    expect(within(fields).getByText("Value")).toBeInTheDocument();
+    expect(within(fields).getByText("Source")).toBeInTheDocument();
+    expect(within(fields).getAllByText("Effective Fields").length).toBeGreaterThanOrEqual(1);
+    expect(within(fields).getAllByText("Learned Fields").length).toBeGreaterThanOrEqual(1);
+    expect(within(fields).getAllByText("Observed Headers").length).toBeGreaterThanOrEqual(1);
+    expect(within(fields).getAllByText("user-agent").length).toBeGreaterThanOrEqual(2);
+    expect(within(fields).getAllByText("codex-cli/0.125.0").length).toBeGreaterThanOrEqual(2);
+    expect(within(fields).getByText("session-mode")).toBeInTheDocument();
+    expect(within(fields).getByText("server-stable")).toBeInTheDocument();
+    expect(within(fields).getByText("websocket-beta")).toBeInTheDocument();
+    expect(within(fields).getByText("realtime=v1")).toBeInTheDocument();
+    expect(within(panel).queryByText("Custom")).not.toBeInTheDocument();
+    const mobileTable = within(fields).getByTestId("auth-file-identity-table-mobile");
+    expect(mobileTable.className).toContain("overflow-x-auto");
+    expect(
+      within(fields).queryByTestId("auth-file-identity-table-desktop"),
+    ).not.toBeInTheDocument();
+    expect(fields.querySelector("[data-vt-natural-flow]")).toBeInTheDocument();
+    expect(fields.querySelector('[data-scrollbar-visibility="hover"]')).toBeNull();
+  });
+
+  test("keeps identity fingerprint table scroll owned by the table on desktop", () => {
+    mockMediaQueryMatches(true);
+
+    renderDetailModal({
+      detailTab: "identity",
+      detailFile: {
+        name: "codex.json",
+        label: "Codex Primary",
+        type: "codex",
+        size: 256,
+        account_type: "oauth",
+        identity_fingerprint_summary: codexIdentityFingerprintDetail.summary,
+      },
+      identityFingerprintDetail: codexIdentityFingerprintDetail,
+    });
+
+    const fields = screen.getByTestId("auth-file-identity-fields");
+    const desktopTable = within(fields).getByTestId("auth-file-identity-table-desktop");
+    expect(desktopTable.className).toContain("overflow-hidden");
+    expect(within(fields).queryByTestId("auth-file-identity-table-mobile")).not.toBeInTheDocument();
+    const tableViewport = fields.querySelector('[data-scrollbar-visibility="hover"]');
+    if (!(tableViewport instanceof HTMLElement)) {
+      throw new Error("identity fingerprint fields table must own its scroll viewport");
+    }
+    expect(tableViewport.className).toContain("overflow-auto");
+    expect(tableViewport.className).toContain("overscroll-y-none");
+    expect(fields.querySelector("[data-vt-natural-flow]")).toBeNull();
   });
 
   test("five-hour trend uses only the latest five hourly buckets and maps quota timestamps to local hours", () => {
@@ -318,6 +533,8 @@ describe("AuthFileDetailModal", () => {
     expect(body.className).toContain("!overflow-hidden");
     expect(scroller.className).toContain("overflow-y-auto");
     expect(scroller).not.toContainElement(screen.getByRole("tablist"));
+    expect(grid.className).toContain("lg:grid-cols-2");
+    expect(grid.className).not.toContain("max-w-3xl");
     expect(grid.className).not.toMatch(/\bborder\b/);
     expect(grid.className).not.toContain("divide-y");
     expect(within(grid).getByPlaceholderText("e.g. team-a")).toHaveValue("team-a");
@@ -352,6 +569,49 @@ describe("AuthFileDetailModal", () => {
     expect(screen.getByRole("button", { name: "Save" })).toBeEnabled();
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
     expect(saveChannelEditor).toHaveBeenCalled();
+  });
+
+  test("renders Codex OAuth admission controls and saves the dirty state", () => {
+    const saveCodexOAuthAdmission = vi.fn(async () => true);
+    const props = renderDetailModal({
+      detailTab: "fields",
+      prefixProxyDirty: false,
+      codexOAuthAdmissionDirty: true,
+      saveCodexOAuthAdmission,
+    });
+
+    const panel = screen.getByTestId("codex-oauth-admission-panel");
+    expect(within(panel).getByText("Official Codex client admission")).toBeInTheDocument();
+    expect(
+      within(panel).getByRole("switch", { name: "Only allow official Codex clients" }),
+    ).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByTestId("codex-oauth-admission-preset-claude_code")).toBeChecked();
+    expect(panel).toHaveTextContent("Claude Code");
+    expect(panel).toHaveTextContent("Originator and User-Agent");
+    expect(panel).toHaveTextContent("leave fingerprint fields empty");
+
+    fireEvent.click(screen.getByTestId("codex-oauth-admission-preset-claude_code"));
+    expect(props.setCodexOAuthAdmissionEditor).toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(saveCodexOAuthAdmission).toHaveBeenCalled();
+  });
+
+  test("hides Codex OAuth admission controls when the server does not expose metadata", () => {
+    renderDetailModal({
+      detailTab: "fields",
+      codexOAuthAdmissionEditor: {
+        fileName: "codex-api-key.json",
+        supported: false,
+        enabled: false,
+        allowedClients: [],
+        availableAllowedClients: [],
+        saving: false,
+        error: null,
+      },
+    });
+
+    expect(screen.queryByTestId("codex-oauth-admission-panel")).not.toBeInTheDocument();
   });
 
   test("shows the channel alias editor for Kimi auth files without account_type metadata", () => {

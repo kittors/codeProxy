@@ -5,4 +5,8 @@ export const quotaApi = {
     apiClient.post("/quota/reconcile", {
       authIndex,
     }),
+  clearStatus: async (authIndex: string) =>
+    apiClient.post("/quota/clear-status", {
+      authIndex,
+    }),
 };

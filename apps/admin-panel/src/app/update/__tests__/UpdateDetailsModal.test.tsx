@@ -83,6 +83,26 @@ describe("UpdateDetailsModal", () => {
     ).toHaveClass("text-emerald-800");
   });
 
+  test("shows updater token configuration warning when health reports a missing token", async () => {
+    render(
+      <UpdateDetailsModal
+        open
+        candidate={{
+          ...candidate,
+          updater_available: false,
+          updater_health_status: "token_missing",
+          updater_health_message: "updater token is not configured",
+        }}
+        onApply={() => {}}
+        onClose={() => {}}
+      />,
+    );
+
+    expect(screen.getByText(/updater token is not configured/i)).toBeInTheDocument();
+    expect(screen.getByText(/CLIRELAY_UPDATER_TOKEN/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /update now/i })).toBeDisabled();
+  });
+
   test("replaces footer close action with reload when update is completed", async () => {
     render(
       <UpdateDetailsModal

@@ -20,6 +20,8 @@ export interface UpdateCheckResponse {
   release_url?: string;
   update_available?: boolean;
   updater_available?: boolean;
+  updater_health_status?: string;
+  updater_health_message?: string;
   message?: string;
 }
 
