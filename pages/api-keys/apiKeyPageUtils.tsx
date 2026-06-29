@@ -60,6 +60,7 @@ export const makeEmptyApiKeyForm = (key = ""): ApiKeyFormValues => ({
   dailyLimit: "",
   totalQuota: "",
   spendingLimit: "",
+  dailySpendingLimit: "",
   concurrencyLimit: "",
   rpmLimit: "",
   tpmLimit: "",
@@ -112,6 +113,11 @@ export const formatApiKeySpendingLimit = (limit: number | undefined) => {
     minimumFractionDigits: 2,
     style: "currency",
   }).format(limit);
+};
+
+export const parseSpendingLimit = (value: string): number => {
+  const parsed = Number.parseFloat(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
 };
 
 export const normalizeChannelKey = (value: string) => value.trim().toLowerCase();
