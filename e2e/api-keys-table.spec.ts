@@ -278,3 +278,51 @@ test("API Keys: restored wider columns keep resize preview at the minimum bounda
     )
     .toBe(168);
 });
+
+test("API Keys: fixed columns do not cover the created time at the right edge", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 2048, height: 1180 });
+  await setAuthed(page);
+  await mockApiKeysApis(page);
+
+  await page.goto("/#/api-keys");
+  await page.locator('td[data-vt-column-key="createdAt"]').waitFor({ state: "visible" });
+
+  const state = await page.evaluate(async () => {
+    const scrollContent = document.querySelector<HTMLElement>("[data-vt-scroll-content]");
+    const container = scrollContent?.parentElement;
+    if (!scrollContent || !container) throw new Error("Missing API keys table viewport");
+
+    container.scrollLeft = container.scrollWidth;
+    await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)));
+    await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)));
+
+    const createdAt = document.querySelector<HTMLElement>('td[data-vt-column-key="createdAt"]');
+    const actions = document.querySelector<HTMLElement>('td[data-vt-column-key="actions"]');
+    const startRail = document.querySelector<HTMLElement>("[data-vt-sticky-start-rail]");
+    const endRail = document.querySelector<HTMLElement>("[data-vt-sticky-end-rail]");
+    if (!createdAt || !actions || !startRail || !endRail) {
+      throw new Error("Missing fixed-column geometry");
+    }
+
+    const createdAtRect = createdAt.getBoundingClientRect();
+    const actionsRect = actions.getBoundingClientRect();
+    const containerRect = container.getBoundingClientRect();
+    const startRailRect = startRail.getBoundingClientRect();
+    const endRailRect = endRail.getBoundingClientRect();
+    const horizontalScrollbarInset = 14;
+
+    return {
+      createdAtRight: createdAtRect.right,
+      actionsLeft: actionsRect.left,
+      startRailBottom: startRailRect.bottom,
+      endRailBottom: endRailRect.bottom,
+      fixedRailBottom: containerRect.bottom - horizontalScrollbarInset,
+    };
+  });
+
+  expect(state.createdAtRight).toBeLessThanOrEqual(state.actionsLeft + 1);
+  expect(state.startRailBottom).toBeGreaterThanOrEqual(state.fixedRailBottom - 1);
+  expect(state.endRailBottom).toBeGreaterThanOrEqual(state.fixedRailBottom - 1);
+});

@@ -292,6 +292,33 @@ function resolveColumnMaxWidth<T>(
   return Math.max(minWidth, column.maxWidthPx ?? DEFAULT_MAX_COLUMN_WIDTH);
 }
 
+function hasStickyColumnClass<T>(column: DataTableColumn<T>) {
+  return `${column.headerClassName ?? ""} ${column.cellClassName ?? ""}`
+    .split(/\s+/)
+    .some((className) => className === "sticky" || className.endsWith(":sticky"));
+}
+
+function resolveColumnLayoutWidth<T>(column: DataTableColumn<T>, widths: ColumnWidthMap) {
+  const resizedWidth = widths[column.key];
+  return resizedWidth ? clampColumnWidth(column, resizedWidth) : resolveColumnMinWidth(column);
+}
+
+function resolveStickyRailWidth<T>(
+  columns: DataTableColumn<T>[],
+  widths: ColumnWidthMap,
+  edge: "start" | "end",
+) {
+  const edgeColumns = edge === "start" ? columns : [...columns].reverse();
+  let width = 0;
+
+  for (const column of edgeColumns) {
+    if (resolveColumnOrderLock(column) !== edge || !hasStickyColumnClass(column)) break;
+    width += resolveColumnLayoutWidth(column, widths);
+  }
+
+  return width;
+}
+
 function normalizeColumnWidths<T>(columns: DataTableColumn<T>[], widths: ColumnWidthMap) {
   const next: ColumnWidthMap = {};
   columns.forEach((column) => {
@@ -1933,6 +1960,20 @@ export function DataTable<T>({
   const { vThumb, hThumb } = useMemo(() => {
     return calculateScrollbarThumbs(scrollMetrics, headerHeight);
   }, [headerHeight, scrollMetrics]);
+  const stickyStartRailWidth = useMemo(
+    () => resolveStickyRailWidth(orderedColumns, columnWidths, "start"),
+    [columnWidths, orderedColumns],
+  );
+  const stickyEndRailWidth = useMemo(
+    () => resolveStickyRailWidth(orderedColumns, columnWidths, "end"),
+    [columnWidths, orderedColumns],
+  );
+  const stickyRailBottomInset = hThumb ? 14 : 0;
+  const stickyRailTop = scrollMetrics.scrollTop + headerHeight;
+  const stickyRailHeight = Math.max(
+    0,
+    scrollMetrics.clientHeight - headerHeight - stickyRailBottomInset,
+  );
 
   const resolveColumnStyle = useCallback(
     (column: DataTableColumn<T>): CSSProperties | undefined => {
@@ -2013,7 +2054,36 @@ export function DataTable<T>({
               }`
         }
       >
-        <div data-vt-scroll-content className={`relative ${scrollContentClassName ?? ""}`}>
+        <div
+          data-vt-scroll-content
+          className={`relative min-h-full ${scrollContentClassName ?? ""}`}
+        >
+          {!naturalFlow && stickyStartRailWidth > 0 && stickyRailHeight > 0 ? (
+            <div
+              data-vt-sticky-start-rail
+              aria-hidden="true"
+              className="pointer-events-none absolute z-20 hidden border-r border-slate-200 bg-white md:block dark:border-neutral-800 dark:bg-neutral-950"
+              style={{
+                left: scrollMetrics.scrollLeft,
+                top: stickyRailTop,
+                width: stickyStartRailWidth,
+                height: stickyRailHeight,
+              }}
+            />
+          ) : null}
+          {!naturalFlow && stickyEndRailWidth > 0 && stickyRailHeight > 0 ? (
+            <div
+              data-vt-sticky-end-rail
+              aria-hidden="true"
+              className="pointer-events-none absolute z-20 hidden border-l border-slate-200 bg-white md:block dark:border-neutral-800 dark:bg-neutral-950"
+              style={{
+                left: scrollMetrics.scrollLeft + scrollMetrics.clientWidth - stickyEndRailWidth,
+                top: stickyRailTop,
+                width: stickyEndRailWidth,
+                height: stickyRailHeight,
+              }}
+            />
+          ) : null}
           {!naturalFlow && rowHoverOverlay ? (
             <div
               data-vt-row-hover-overlay
