@@ -475,7 +475,9 @@ test("API Keys: fixed columns do not cover the created time at the right edge", 
       endBoundaryBottom: number;
       fixedRailBottom: number;
       selectHeaderTopLeftRadius: number;
+      selectHeaderBottomLeftRadius: number;
       actionsHeaderTopRightRadius: number;
+      actionsHeaderBottomRightRadius: number;
     }> = [];
     for (const scrollLeft of positions) {
       container.scrollLeft = scrollLeft;
@@ -569,7 +571,11 @@ test("API Keys: fixed columns do not cover the created time at the right edge", 
         endBoundaryBottom: endBoundaryRect.bottom,
         fixedRailBottom: containerRect.bottom - horizontalScrollbarInset,
         selectHeaderTopLeftRadius: Number.parseFloat(selectHeaderStyle.borderTopLeftRadius),
+        selectHeaderBottomLeftRadius: Number.parseFloat(selectHeaderStyle.borderBottomLeftRadius),
         actionsHeaderTopRightRadius: Number.parseFloat(actionsHeaderStyle.borderTopRightRadius),
+        actionsHeaderBottomRightRadius: Number.parseFloat(
+          actionsHeaderStyle.borderBottomRightRadius,
+        ),
       });
     }
 
@@ -615,7 +621,9 @@ test("API Keys: fixed columns do not cover the created time at the right edge", 
     expect(state.startBoundaryBottom).toBeGreaterThanOrEqual(state.fixedRailBottom - 1);
     expect(state.endBoundaryBottom).toBeGreaterThanOrEqual(state.fixedRailBottom - 1);
     expect(state.selectHeaderTopLeftRadius).toBeGreaterThan(0);
+    expect(state.selectHeaderBottomLeftRadius).toBeGreaterThan(0);
     expect(state.actionsHeaderTopRightRadius).toBeGreaterThan(0);
+    expect(state.actionsHeaderBottomRightRadius).toBeGreaterThan(0);
   }
 
   const maxScrollState = states.at(-1);
