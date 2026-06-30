@@ -200,8 +200,20 @@ describe("ApiKeyColumns", () => {
     expect(nameColumn?.lockOrder).toBe("start");
     expect(actionsColumn?.lockOrder).toBe("end");
     expect(selectColumn?.headerClassName).toContain("md:sticky");
-    expect(nameColumn?.cellClassName).toContain("md:left-12");
-    expect(actionsColumn?.cellClassName).toContain("md:right-0");
+    expect(selectColumn?.cellClassName).toContain("md:sticky");
+    expect(nameColumn?.headerClassName).toContain("md:sticky");
+    expect(nameColumn?.cellClassName).toContain("md:sticky");
+    expect(actionsColumn?.headerClassName).toContain("md:sticky");
+    expect(actionsColumn?.cellClassName).toContain("md:sticky");
+    expect(`${selectColumn?.headerClassName} ${selectColumn?.cellClassName}`).not.toMatch(
+      /\bmd:(?:left|right)-/,
+    );
+    expect(`${nameColumn?.headerClassName} ${nameColumn?.cellClassName}`).not.toMatch(
+      /\bmd:(?:left|right)-/,
+    );
+    expect(`${actionsColumn?.headerClassName} ${actionsColumn?.cellClassName}`).not.toMatch(
+      /\bmd:(?:left|right)-/,
+    );
     expect(selectColumn?.headerClassName).not.toMatch(/(^|\s)sticky(\s|$)/);
     expect(nameColumn?.cellClassName).not.toMatch(/(^|\s)sticky(\s|$)/);
     expect(actionsColumn?.cellClassName).not.toMatch(/(^|\s)sticky(\s|$)/);

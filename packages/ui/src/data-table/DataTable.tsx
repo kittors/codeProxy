@@ -197,6 +197,16 @@ interface ScrollMetrics {
   clientWidth: number;
 }
 
+type StickyColumnPlacement = {
+  edge: "start" | "end";
+  offset: number;
+};
+
+type DataTableColumnStyle = CSSProperties & {
+  "--vt-sticky-left"?: string;
+  "--vt-sticky-right"?: string;
+};
+
 function hasHorizontalOverflow(metrics: ScrollMetrics) {
   return metrics.scrollWidth > metrics.clientWidth + 1;
 }
@@ -317,6 +327,26 @@ function resolveStickyRailWidth<T>(
   }
 
   return width;
+}
+
+function resolveStickyColumnPlacements<T>(columns: DataTableColumn<T>[], widths: ColumnWidthMap) {
+  const placements: Record<string, StickyColumnPlacement> = {};
+
+  let startOffset = 0;
+  for (const column of columns) {
+    if (resolveColumnOrderLock(column) !== "start" || !hasStickyColumnClass(column)) break;
+    placements[column.key] = { edge: "start", offset: startOffset };
+    startOffset += resolveColumnLayoutWidth(column, widths);
+  }
+
+  let endOffset = 0;
+  for (const column of [...columns].reverse()) {
+    if (resolveColumnOrderLock(column) !== "end" || !hasStickyColumnClass(column)) break;
+    placements[column.key] = { edge: "end", offset: endOffset };
+    endOffset += resolveColumnLayoutWidth(column, widths);
+  }
+
+  return placements;
 }
 
 function normalizeColumnWidths<T>(columns: DataTableColumn<T>[], widths: ColumnWidthMap) {
@@ -1974,6 +2004,10 @@ export function DataTable<T>({
     () => resolveStickyRailWidth(orderedColumns, columnWidths, "end"),
     [columnWidths, orderedColumns],
   );
+  const stickyColumnPlacements = useMemo(
+    () => resolveStickyColumnPlacements(orderedColumns, columnWidths),
+    [columnWidths, orderedColumns],
+  );
   const stickyRailBottomInset = hThumb ? 14 : 0;
   const stickyRailTop = headerHeight;
   const stickyRailHeight = Math.max(
@@ -1985,13 +2019,30 @@ export function DataTable<T>({
   const stickyEndRailLeft = Math.max(0, scrollMetrics.clientWidth - stickyEndRailWidth);
 
   const resolveColumnStyle = useCallback(
-    (column: DataTableColumn<T>): CSSProperties | undefined => {
+    (column: DataTableColumn<T>, area: "header" | "cell" = "cell"): DataTableColumnStyle => {
       const width = columnWidths[column.key];
-      if (!width) return undefined;
-      const clampedWidth = clampColumnWidth(column, width);
-      return { width: clampedWidth, minWidth: clampedWidth, maxWidth: clampedWidth };
+      const placement = naturalFlow ? undefined : stickyColumnPlacements[column.key];
+      const style: DataTableColumnStyle = {};
+
+      if (width) {
+        const clampedWidth = clampColumnWidth(column, width);
+        style.width = clampedWidth;
+        style.minWidth = clampedWidth;
+        style.maxWidth = clampedWidth;
+      }
+
+      if (placement) {
+        style.zIndex = area === "header" ? 70 : 30;
+        if (placement.edge === "start") {
+          style["--vt-sticky-left"] = `${placement.offset}px`;
+        } else {
+          style["--vt-sticky-right"] = `${placement.offset}px`;
+        }
+      }
+
+      return style;
     },
-    [columnWidths],
+    [columnWidths, naturalFlow, stickyColumnPlacements],
   );
 
   const resizePreviewOverlay =
@@ -2137,6 +2188,7 @@ export function DataTable<T>({
                   const canReorder = canUseColumnOrder && shouldAllowColumnReorder(col);
                   const isResizingThisColumn = activeResizeColumnKey === col.key;
                   const isSettledReorderColumn = settledReorderColumnKey === col.key;
+                  const stickyPlacement = naturalFlow ? undefined : stickyColumnPlacements[col.key];
                   const headerChromeClass = naturalFlow ? "bg-slate-100 dark:bg-neutral-800" : "";
                   const headerCornerClass = [
                     naturalFlow && colIndex === 0 ? "rounded-l-xl" : "",
@@ -2153,8 +2205,12 @@ export function DataTable<T>({
                       ref={(node) => {
                         headerCellsRef.current[col.key] = node;
                       }}
-                      style={resolveColumnStyle(col)}
-                      className={`group/column relative z-50 overflow-hidden px-4 py-3 whitespace-nowrap ${headerChromeClass} ${headerCornerClass} ${col.width ?? ""} ${col.headerClassName ?? ""} ${
+                      style={resolveColumnStyle(col, "header")}
+                      className={`group/column relative overflow-hidden px-4 py-3 whitespace-nowrap ${
+                        stickyPlacement?.edge === "start" ? "md:left-[var(--vt-sticky-left)]" : ""
+                      } ${
+                        stickyPlacement?.edge === "end" ? "md:right-[var(--vt-sticky-right)]" : ""
+                      } ${headerChromeClass} ${headerCornerClass} ${col.width ?? ""} ${col.headerClassName ?? ""} ${
                         activeReorderColumnKey === col.key
                           ? "cursor-grabbing bg-slate-100 text-slate-700 shadow-[inset_2px_0_0_rgba(37,99,235,0.42),inset_-2px_0_0_rgba(14,165,233,0.28)] dark:bg-neutral-800 dark:text-white/80"
                           : ""
@@ -2311,6 +2367,9 @@ export function DataTable<T>({
                           const isFirst = colIdx === 0;
                           const isLast = colIdx === orderedColumns.length - 1;
                           const isSettledReorderColumn = settledReorderColumnKey === col.key;
+                          const stickyPlacement = naturalFlow
+                            ? undefined
+                            : stickyColumnPlacements[col.key];
                           const content = col.render(row, globalIdx);
                           const overflowTooltip = resolveCellOverflowTooltip(col, row, globalIdx);
                           const roundCls = [
@@ -2326,8 +2385,16 @@ export function DataTable<T>({
                               data-vt-column-settled-cell={
                                 isSettledReorderColumn ? true : undefined
                               }
-                              style={resolveColumnStyle(col)}
+                              style={resolveColumnStyle(col, "cell")}
                               className={`overflow-hidden px-4 py-2.5 align-middle ${
+                                stickyPlacement?.edge === "start"
+                                  ? "md:left-[var(--vt-sticky-left)]"
+                                  : ""
+                              } ${
+                                stickyPlacement?.edge === "end"
+                                  ? "md:right-[var(--vt-sticky-right)]"
+                                  : ""
+                              } ${
                                 naturalFlow
                                   ? ""
                                   : "group-hover/row:bg-slate-50 dark:group-hover/row:bg-white/[0.04]"

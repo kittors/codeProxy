@@ -53,17 +53,16 @@ const permissionCountToneClasses: Record<PermissionSummaryTone, string> = {
   violet: "bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-200",
 };
 
-const stickySelectHeaderClass =
-  "md:sticky md:left-0 md:z-40 md:bg-slate-100 md:dark:bg-neutral-800";
-const stickySelectCellClass = "md:sticky md:left-0 md:z-30 md:bg-white md:dark:bg-neutral-950";
+const stickySelectHeaderClass = "md:sticky md:z-40 md:bg-slate-100 md:dark:bg-neutral-800";
+const stickySelectCellClass = "md:sticky md:z-30 md:bg-white md:dark:bg-neutral-950";
 const stickyNameHeaderClass =
-  "md:sticky md:left-12 md:z-40 md:border-r md:border-slate-200 md:bg-slate-100 md:dark:border-neutral-800 md:dark:bg-neutral-800";
+  "md:sticky md:z-40 md:border-r md:border-slate-200 md:bg-slate-100 md:dark:border-neutral-800 md:dark:bg-neutral-800";
 const stickyNameCellClass =
-  "font-medium md:sticky md:left-12 md:z-30 md:border-r md:border-slate-200 md:bg-white md:dark:border-neutral-800 md:dark:bg-neutral-950";
+  "font-medium md:sticky md:z-30 md:border-r md:border-slate-200 md:bg-white md:dark:border-neutral-800 md:dark:bg-neutral-950";
 const stickyActionsHeaderClass =
-  "text-center md:sticky md:right-0 md:z-40 md:border-l md:border-slate-200 md:bg-slate-100 md:dark:border-neutral-800 md:dark:bg-neutral-800";
+  "text-center md:sticky md:z-40 md:border-l md:border-slate-200 md:bg-slate-100 md:dark:border-neutral-800 md:dark:bg-neutral-800";
 const stickyActionsCellClass =
-  "md:sticky md:right-0 md:z-30 md:border-l md:border-slate-200 md:bg-white md:dark:border-neutral-800 md:dark:bg-neutral-950";
+  "md:sticky md:z-30 md:border-l md:border-slate-200 md:bg-white md:dark:border-neutral-800 md:dark:bg-neutral-950";
 
 function ApiKeyBadge({ value }: { value: string }) {
   return (

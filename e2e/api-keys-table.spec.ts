@@ -295,53 +295,152 @@ test("API Keys: fixed columns do not cover the created time at the right edge", 
     if (!scrollContent || !container) throw new Error("Missing API keys table viewport");
 
     const maxScrollLeft = container.scrollWidth - container.clientWidth;
-    const positions = [Math.round(maxScrollLeft / 2), maxScrollLeft];
+    const positions = [0, Math.round(maxScrollLeft / 2), maxScrollLeft];
     const horizontalScrollbarInset = 14;
 
-    return Promise.all(
-      positions.map(async (scrollLeft) => {
-        container.scrollLeft = scrollLeft;
-        await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)));
-        await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)));
+    const states: Array<{
+      scrollLeft: number;
+      maxScrollLeft: number;
+      createdAtRight: number;
+      actionsLeft: number;
+      actionsRight: number;
+      containerLeft: number;
+      containerRight: number;
+      selectHeaderLeft: number;
+      selectHeaderWidth: number;
+      nameHeaderLeft: number;
+      nameHeaderRight: number;
+      nameHeaderWidth: number;
+      actionsHeaderRight: number;
+      selectCellLeft: number;
+      selectCellWidth: number;
+      nameCellLeft: number;
+      nameCellRight: number;
+      nameCellWidth: number;
+      nameHeaderHitColumn: string | null;
+      nameCellHitColumn: string | null;
+      startRailLeft: number;
+      startRailBottom: number;
+      endRailRight: number;
+      endRailBottom: number;
+      fixedRailBottom: number;
+    }> = [];
+    for (const scrollLeft of positions) {
+      container.scrollLeft = scrollLeft;
+      await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)));
+      await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)));
 
-        const createdAt = document.querySelector<HTMLElement>(
-          'td[data-vt-column-key="createdAt"]',
-        );
-        const actions = document.querySelector<HTMLElement>('td[data-vt-column-key="actions"]');
-        const startRail = document.querySelector<HTMLElement>("[data-vt-sticky-start-rail]");
-        const endRail = document.querySelector<HTMLElement>("[data-vt-sticky-end-rail]");
-        if (!createdAt || !actions || !startRail || !endRail) {
-          throw new Error("Missing fixed-column geometry");
-        }
+      const createdAt = document.querySelector<HTMLElement>('td[data-vt-column-key="createdAt"]');
+      const actions = document.querySelector<HTMLElement>('td[data-vt-column-key="actions"]');
+      const selectHeader = document.querySelector<HTMLElement>('th[data-vt-column-key="select"]');
+      const nameHeader = document.querySelector<HTMLElement>('th[data-vt-column-key="name"]');
+      const actionsHeader = document.querySelector<HTMLElement>('th[data-vt-column-key="actions"]');
+      const selectCell = document.querySelector<HTMLElement>('td[data-vt-column-key="select"]');
+      const nameCell = document.querySelector<HTMLElement>('td[data-vt-column-key="name"]');
+      const startRail = document.querySelector<HTMLElement>("[data-vt-sticky-start-rail]");
+      const endRail = document.querySelector<HTMLElement>("[data-vt-sticky-end-rail]");
+      if (
+        !createdAt ||
+        !actions ||
+        !selectHeader ||
+        !nameHeader ||
+        !actionsHeader ||
+        !selectCell ||
+        !nameCell ||
+        !startRail ||
+        !endRail
+      ) {
+        throw new Error("Missing fixed-column geometry");
+      }
 
-        const createdAtRect = createdAt.getBoundingClientRect();
-        const actionsRect = actions.getBoundingClientRect();
-        const containerRect = container.getBoundingClientRect();
-        const startRailRect = startRail.getBoundingClientRect();
-        const endRailRect = endRail.getBoundingClientRect();
+      const createdAtRect = createdAt.getBoundingClientRect();
+      const actionsRect = actions.getBoundingClientRect();
+      const selectHeaderRect = selectHeader.getBoundingClientRect();
+      const nameHeaderRect = nameHeader.getBoundingClientRect();
+      const actionsHeaderRect = actionsHeader.getBoundingClientRect();
+      const selectCellRect = selectCell.getBoundingClientRect();
+      const nameCellRect = nameCell.getBoundingClientRect();
+      const containerRect = container.getBoundingClientRect();
+      const startRailRect = startRail.getBoundingClientRect();
+      const endRailRect = endRail.getBoundingClientRect();
+      const nameHeaderHit = document.elementFromPoint(
+        nameHeaderRect.right - 8,
+        nameHeaderRect.top + nameHeaderRect.height / 2,
+      );
+      const nameCellHit = document.elementFromPoint(
+        nameCellRect.right - 8,
+        nameCellRect.top + nameCellRect.height / 2,
+      );
 
-        return {
-          createdAtRight: createdAtRect.right,
-          actionsLeft: actionsRect.left,
-          containerLeft: containerRect.left,
-          containerRight: containerRect.right,
-          startRailLeft: startRailRect.left,
-          startRailBottom: startRailRect.bottom,
-          endRailRight: endRailRect.right,
-          endRailBottom: endRailRect.bottom,
-          fixedRailBottom: containerRect.bottom - horizontalScrollbarInset,
-        };
-      }),
-    );
+      states.push({
+        scrollLeft,
+        maxScrollLeft,
+        createdAtRight: createdAtRect.right,
+        actionsLeft: actionsRect.left,
+        actionsRight: actionsRect.right,
+        containerLeft: containerRect.left,
+        containerRight: containerRect.right,
+        selectHeaderLeft: selectHeaderRect.left,
+        selectHeaderWidth: selectHeaderRect.width,
+        nameHeaderLeft: nameHeaderRect.left,
+        nameHeaderRight: nameHeaderRect.right,
+        nameHeaderWidth: nameHeaderRect.width,
+        actionsHeaderRight: actionsHeaderRect.right,
+        selectCellLeft: selectCellRect.left,
+        selectCellWidth: selectCellRect.width,
+        nameCellLeft: nameCellRect.left,
+        nameCellRight: nameCellRect.right,
+        nameCellWidth: nameCellRect.width,
+        nameHeaderHitColumn:
+          nameHeaderHit?.closest<HTMLElement>("[data-vt-column-key]")?.dataset.vtColumnKey ?? null,
+        nameCellHitColumn:
+          nameCellHit?.closest<HTMLElement>("[data-vt-column-key]")?.dataset.vtColumnKey ?? null,
+        startRailLeft: startRailRect.left,
+        startRailBottom: startRailRect.bottom,
+        endRailRight: endRailRect.right,
+        endRailBottom: endRailRect.bottom,
+        fixedRailBottom: containerRect.bottom - horizontalScrollbarInset,
+      });
+    }
+
+    return states;
   });
 
   for (const state of states) {
-    expect(state.createdAtRight).toBeLessThanOrEqual(state.actionsLeft + 1);
+    const expectedHeaderNameLeft = state.containerLeft + state.selectHeaderWidth;
+    const expectedHeaderNameRight = expectedHeaderNameLeft + state.nameHeaderWidth;
+    const expectedCellNameLeft = state.containerLeft + state.selectCellWidth;
+    const expectedCellNameRight = expectedCellNameLeft + state.nameCellWidth;
+
     expect(state.startRailLeft).toBeGreaterThanOrEqual(state.containerLeft - 1);
     expect(state.startRailLeft).toBeLessThanOrEqual(state.containerLeft + 1);
     expect(state.endRailRight).toBeGreaterThanOrEqual(state.containerRight - 1);
     expect(state.endRailRight).toBeLessThanOrEqual(state.containerRight + 1);
+    expect(state.selectHeaderLeft).toBeGreaterThanOrEqual(state.containerLeft - 1);
+    expect(state.selectHeaderLeft).toBeLessThanOrEqual(state.containerLeft + 1);
+    expect(state.nameHeaderLeft).toBeGreaterThanOrEqual(expectedHeaderNameLeft - 1);
+    expect(state.nameHeaderLeft).toBeLessThanOrEqual(expectedHeaderNameLeft + 1);
+    expect(state.nameHeaderRight).toBeGreaterThanOrEqual(expectedHeaderNameRight - 1);
+    expect(state.nameHeaderRight).toBeLessThanOrEqual(expectedHeaderNameRight + 1);
+    expect(state.actionsHeaderRight).toBeGreaterThanOrEqual(state.containerRight - 1);
+    expect(state.actionsHeaderRight).toBeLessThanOrEqual(state.containerRight + 1);
+    expect(state.selectCellLeft).toBeGreaterThanOrEqual(state.containerLeft - 1);
+    expect(state.selectCellLeft).toBeLessThanOrEqual(state.containerLeft + 1);
+    expect(state.nameCellLeft).toBeGreaterThanOrEqual(expectedCellNameLeft - 1);
+    expect(state.nameCellLeft).toBeLessThanOrEqual(expectedCellNameLeft + 1);
+    expect(state.nameCellRight).toBeGreaterThanOrEqual(expectedCellNameRight - 1);
+    expect(state.nameCellRight).toBeLessThanOrEqual(expectedCellNameRight + 1);
+    expect(state.actionsRight).toBeGreaterThanOrEqual(state.containerRight - 1);
+    expect(state.actionsRight).toBeLessThanOrEqual(state.containerRight + 1);
+    expect(state.nameHeaderHitColumn).toBe("name");
+    expect(state.nameCellHitColumn).toBe("name");
     expect(state.startRailBottom).toBeGreaterThanOrEqual(state.fixedRailBottom - 1);
     expect(state.endRailBottom).toBeGreaterThanOrEqual(state.fixedRailBottom - 1);
   }
+
+  const maxScrollState = states.at(-1);
+  expect(maxScrollState?.scrollLeft).toBe(maxScrollState?.maxScrollLeft);
+  expect(maxScrollState?.createdAtRight).toBeLessThanOrEqual(
+    (maxScrollState?.actionsLeft ?? 0) + 1,
+  );
 });
