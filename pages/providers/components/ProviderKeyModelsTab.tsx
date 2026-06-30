@@ -16,6 +16,7 @@ const SectionCard = ({ children }: { children: React.ReactNode }) => (
 
 interface ProviderKeyModelsTabProps {
   isOpenCodeGo: boolean;
+  isCline: boolean;
   openCodeModels: { id: string; owned_by?: string }[];
   openCodeModelsLoading: boolean;
   openCodeModelsError: string | null;
@@ -43,6 +44,7 @@ interface ProviderKeyModelsTabProps {
 
 export function ProviderKeyModelsTab({
   isOpenCodeGo,
+  isCline,
   openCodeModels,
   openCodeModelsLoading,
   openCodeModelsError,
@@ -68,18 +70,23 @@ export function ProviderKeyModelsTab({
   editKeyEnabledToggle,
 }: ProviderKeyModelsTabProps) {
   const { t } = useTranslation();
+  const isModelAccessProvider = isOpenCodeGo || isCline;
 
-  if (isOpenCodeGo) {
+  if (isModelAccessProvider) {
     return (
       <div className="space-y-4">
         <SectionCard>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
               <p className="text-sm font-semibold text-slate-900 dark:text-white">
-                {t("providers.opencode_go_models_title")}
+                {isCline
+                  ? t("providers.cline_models_title")
+                  : t("providers.opencode_go_models_title")}
               </p>
               <p className="mt-1 text-xs text-slate-500 dark:text-white/55">
-                {t("providers.opencode_go_models_hint")}
+                {isCline
+                  ? t("providers.cline_models_hint")
+                  : t("providers.opencode_go_models_hint")}
               </p>
             </div>
             <Button

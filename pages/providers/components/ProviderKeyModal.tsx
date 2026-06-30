@@ -68,7 +68,7 @@ interface ProviderKeyModalProps {
   open: boolean;
   editKeyIndex: number | null;
   editKeyTitle: string;
-  editKeyType: "gemini" | "claude" | "codex" | "opencode-go" | "vertex" | "bedrock";
+  editKeyType: "gemini" | "claude" | "codex" | "opencode-go" | "cline" | "vertex" | "bedrock";
   keyDraft: ProviderKeyDraft;
   setKeyDraft: Dispatch<SetStateAction<ProviderKeyDraft>>;
   keyDraftError: string | null;
@@ -116,6 +116,9 @@ export function ProviderKeyModal({
 
   const isBedrock = editKeyType === "bedrock";
   const isOpenCodeGo = editKeyType === "opencode-go";
+  const isCline = editKeyType === "cline";
+  const isModelAccessProvider = isOpenCodeGo || isCline;
+  const modelAccessChannel = isCline ? "cline" : "opencode-go";
 
   const [modelConfigs, setModelConfigs] = useState<{ id: string; owned_by: string }[]>([]);
   const [modelConfigsLoading, setModelConfigsLoading] = useState(false);
@@ -170,7 +173,7 @@ export function ProviderKeyModal({
   }, [editKeyIndex, editKeyType, open]);
 
   useEffect(() => {
-    if (!open || isOpenCodeGo) return;
+    if (!open || isModelAccessProvider) return;
     let cancelled = false;
     setModelConfigsLoading(true);
     modelsApi
@@ -189,13 +192,20 @@ export function ProviderKeyModal({
     return () => {
       cancelled = true;
     };
-  }, [open, isOpenCodeGo]);
+  }, [open, isModelAccessProvider]);
 
   const fetchOpenCodeModels = useCallback(async () => {
-    if (!isOpenCodeGo) return;
+    if (!isModelAccessProvider) return;
     setOpenCodeModelsLoading(true);
     setOpenCodeModelsError(null);
     try {
+      if (isCline) {
+        const items = await authFilesApi.getModelDefinitions("cline");
+        setOpenCodeModels(
+          normalizeDiscoveredModels({ data: items.map((item) => ({ ...item, object: "model" })) }),
+        );
+        return;
+      }
       const result = await apiCallApi.request({
         method: "GET",
         url: OPENCODE_GO_MODELS_URL,
@@ -211,18 +221,18 @@ export function ProviderKeyModal({
     } finally {
       setOpenCodeModelsLoading(false);
     }
-  }, [isOpenCodeGo, t]);
+  }, [isCline, isModelAccessProvider, t]);
 
   useEffect(() => {
-    if (!open || !isOpenCodeGo) return;
+    if (!open || !isModelAccessProvider) return;
     void fetchOpenCodeModels();
-  }, [fetchOpenCodeModels, isOpenCodeGo, open]);
+  }, [fetchOpenCodeModels, isModelAccessProvider, open]);
 
   useEffect(() => {
-    if (!open || !isOpenCodeGo) return;
+    if (!open || !isModelAccessProvider) return;
     let cancelled = false;
     authFilesApi
-      .getModelDefinitions("opencode-go")
+      .getModelDefinitions(modelAccessChannel)
       .then((items) => {
         if (cancelled) return;
         setOpenCodeStaticModels(
@@ -235,7 +245,7 @@ export function ProviderKeyModal({
     return () => {
       cancelled = true;
     };
-  }, [isOpenCodeGo, open]);
+  }, [isModelAccessProvider, modelAccessChannel, open]);
 
   const excludedModels = useMemo(
     () => excludedModelsFromText(keyDraft.excludedModelsText),
@@ -288,7 +298,7 @@ export function ProviderKeyModal({
   }, [isOpenCodeModelAllowed, openCodeModels, t]);
 
   useEffect(() => {
-    if (!open || !isOpenCodeGo || openCodeModelsSeeded) return;
+    if (!open || !isModelAccessProvider || openCodeModelsSeeded) return;
     if (disableAllModels || keyDraft.modelEntries.some((entry) => entry.name.trim())) {
       setOpenCodeModelsSeeded(true);
       return;
@@ -309,7 +319,7 @@ export function ProviderKeyModal({
   }, [
     disableAllModels,
     excludedModelIds,
-    isOpenCodeGo,
+    isModelAccessProvider,
     keyDraft.modelEntries,
     open,
     openCodeModelsSeeded,
@@ -402,7 +412,7 @@ export function ProviderKeyModal({
       editKeyModelCount={editKeyModelCount}
       editKeyExcludedCount={editKeyExcludedCount}
       editKeyType={editKeyType}
-      isOpenCodeGo={isOpenCodeGo}
+      isModelAccessProvider={isModelAccessProvider}
       allowedOpenCodeCount={allowedOpenCodeCount}
       totalOpenCodeModels={openCodeModels.length}
       authMode={keyDraft.authMode}
@@ -422,9 +432,11 @@ export function ProviderKeyModal({
           ? t("providers.vertex_config_desc")
           : isBedrock
             ? t("providers.bedrock_config_desc")
-            : isOpenCodeGo
-              ? t("providers.opencode_go_config_desc")
-              : t("providers.generic_config_desc")
+            : isCline
+              ? t("providers.cline_config_desc")
+              : isOpenCodeGo
+                ? t("providers.opencode_go_config_desc")
+                : t("providers.generic_config_desc")
       }
       onClose={closeKeyEditor}
       maxWidth="max-w-4xl"
@@ -477,6 +489,7 @@ export function ProviderKeyModal({
               editKeyType={editKeyType}
               proxyPoolEntries={proxyPoolEntries}
               isOpenCodeGo={isOpenCodeGo}
+              isCline={isCline}
               openCodeVisionFallbackOptions={openCodeVisionFallbackOptions}
               openCodeModelsLoading={openCodeModelsLoading}
             />
@@ -485,6 +498,7 @@ export function ProviderKeyModal({
           <TabsContent value="models">
             <ProviderKeyModelsTab
               isOpenCodeGo={isOpenCodeGo}
+              isCline={isCline}
               openCodeModels={openCodeModels}
               openCodeModelsLoading={openCodeModelsLoading}
               openCodeModelsError={openCodeModelsError}

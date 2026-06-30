@@ -6,7 +6,7 @@ interface ProviderKeyStatusBadgesProps {
   editKeyModelCount: number;
   editKeyExcludedCount: number;
   editKeyType: string;
-  isOpenCodeGo: boolean;
+  isModelAccessProvider: boolean;
   allowedOpenCodeCount: number;
   totalOpenCodeModels: number;
   authMode: string;
@@ -18,7 +18,7 @@ export function ProviderKeyStatusBadges({
   editKeyModelCount,
   editKeyExcludedCount,
   editKeyType,
-  isOpenCodeGo,
+  isModelAccessProvider,
   allowedOpenCodeCount,
   totalOpenCodeModels,
   authMode,
@@ -41,7 +41,7 @@ export function ProviderKeyStatusBadges({
         {t("providers.headers_optional")}:{" "}
         <span className="font-semibold tabular-nums">{editKeyHeaderCount}</span>
       </span>
-      {isOpenCodeGo ? (
+      {isModelAccessProvider ? (
         <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-700 dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-white/75">
           {t("providers.models_allowed_count", {
             allowed: allowedOpenCodeCount,

@@ -49,6 +49,7 @@ const PROVIDER_TAB_VALUES: ProviderTab[] = [
   "claude",
   "codex",
   "opencode-go",
+  "cline",
   "vertex",
   "bedrock",
   "openai",
@@ -180,6 +181,7 @@ export function ProvidersPage() {
   const [claudeKeys, setClaudeKeys] = useState<ProviderSimpleConfig[]>([]);
   const [codexKeys, setCodexKeys] = useState<ProviderSimpleConfig[]>([]);
   const [openCodeGoKeys, setOpenCodeGoKeys] = useState<ProviderSimpleConfig[]>([]);
+  const [clineKeys, setClineKeys] = useState<ProviderSimpleConfig[]>([]);
   const [vertexKeys, setVertexKeys] = useState<ProviderSimpleConfig[]>([]);
   const [bedrockKeys, setBedrockKeys] = useState<BedrockProviderConfig[]>([]);
   const [openaiProviders, setOpenaiProviders] = useState<OpenAIProvider[]>([]);
@@ -239,7 +241,7 @@ export function ProvidersPage() {
     | null
     | {
         type: "deleteKey";
-        keyType: "gemini" | "claude" | "codex" | "opencode-go" | "vertex" | "bedrock";
+        keyType: "gemini" | "claude" | "codex" | "opencode-go" | "cline" | "vertex" | "bedrock";
         index: number;
       }
     | { type: "deleteOpenAI"; index: number }
@@ -305,6 +307,14 @@ export function ProvidersPage() {
             const freshO = await providersApi.getOpenCodeGoConfigs();
             setOpenCodeGoKeys(freshO);
             setCachedData("opencode-go", freshO);
+            break;
+          }
+          case "cline": {
+            const cachedCl = getCachedData<ProviderSimpleConfig[]>("cline");
+            if (cachedCl) setClineKeys(cachedCl);
+            const freshCl = await providersApi.getClineConfigs();
+            setClineKeys(freshCl);
+            setCachedData("cline", freshCl);
             break;
           }
           case "vertex": {
@@ -460,12 +470,14 @@ export function ProvidersPage() {
     claudeKeys,
     codexKeys,
     openCodeGoKeys,
+    clineKeys,
     vertexKeys,
     bedrockKeys,
     setGeminiKeys,
     setClaudeKeys,
     setCodexKeys,
     setOpenCodeGoKeys,
+    setClineKeys,
     setVertexKeys,
     setBedrockKeys,
     refreshAll,
@@ -519,6 +531,7 @@ export function ProvidersPage() {
         provider === "claude" ||
         provider === "codex" ||
         provider === "opencode-go" ||
+        provider === "cline" ||
         provider === "vertex" ||
         provider === "bedrock"
       ) {
@@ -627,6 +640,8 @@ export function ProvidersPage() {
           return codexKeys;
         case "opencode-go":
           return openCodeGoKeys;
+        case "cline":
+          return clineKeys;
         case "vertex":
           return vertexKeys;
         case "bedrock":
@@ -635,7 +650,16 @@ export function ProvidersPage() {
           return openaiProviders;
       }
     },
-    [bedrockKeys, claudeKeys, codexKeys, geminiKeys, openCodeGoKeys, openaiProviders, vertexKeys],
+    [
+      bedrockKeys,
+      claudeKeys,
+      clineKeys,
+      codexKeys,
+      geminiKeys,
+      openCodeGoKeys,
+      openaiProviders,
+      vertexKeys,
+    ],
   );
 
   const currentImportKind = getImportKind();
@@ -676,6 +700,7 @@ export function ProvidersPage() {
       claude: claudeKeys.length,
       codex: codexKeys.length,
       "opencode-go": openCodeGoKeys.length,
+      cline: clineKeys.length,
       vertex: vertexKeys.length,
       bedrock: bedrockKeys.length,
       openai: openaiProviders.length,
@@ -684,6 +709,7 @@ export function ProvidersPage() {
   }, [
     geminiKeys,
     claudeKeys,
+    clineKeys,
     codexKeys,
     openCodeGoKeys,
     vertexKeys,
@@ -710,6 +736,9 @@ export function ProvidersPage() {
           return;
         case "opencode-go":
           await providersApi.saveOpenCodeGoConfigs(items as ProviderSimpleConfig[]);
+          return;
+        case "cline":
+          await providersApi.saveClineConfigs(items as ProviderSimpleConfig[]);
           return;
         case "vertex":
           await providersApi.saveVertexConfigs(items as ProviderSimpleConfig[]);
@@ -889,6 +918,7 @@ export function ProvidersPage() {
             { id: "claude", label: "Claude", count: tabCounts.claude },
             { id: "codex", label: "Codex", count: tabCounts.codex },
             { id: "opencode-go", label: "OpenCode Go", count: tabCounts["opencode-go"] },
+            { id: "cline", label: "Cline", count: tabCounts.cline },
             { id: "vertex", label: "Vertex", count: tabCounts.vertex },
             { id: "bedrock", label: "Bedrock", count: tabCounts.bedrock },
             { id: "openai", label: t("providers.openai_compatible"), count: tabCounts.openai },
@@ -1019,6 +1049,23 @@ export function ProvidersPage() {
                   </button>
                 );
               }}
+              selectedKeys={selectedExportKeySet}
+              onToggleSelected={toggleExportSelection}
+            />
+          </TabsContent>
+
+          <TabsContent value="cline" className="min-h-0 flex flex-1 flex-col">
+            <ProviderKeyListCard
+              items={clineKeys}
+              loading={isActiveTabListLoading("cline")}
+              onAdd={() => openKeyEditor("cline", null)}
+              onEdit={(idx) => openKeyEditor("cline", idx)}
+              onDelete={(idx) => setConfirm({ type: "deleteKey", keyType: "cline", index: idx })}
+              onToggleEnabled={(idx, enabled) => void toggleKeyEnabled("cline", idx, enabled)}
+              getStats={getSimpleStats}
+              getStatusBar={getSimpleStatusBar}
+              getLatencyEntry={getLatencyEntry}
+              checkLatency={checkLatency}
               selectedKeys={selectedExportKeySet}
               onToggleSelected={toggleExportSelection}
             />

@@ -25,6 +25,7 @@ export type ProviderImportKind =
   | "claude"
   | "codex"
   | "opencode-go"
+  | "cline"
   | "vertex"
   | "bedrock"
   | "openai";
@@ -34,6 +35,7 @@ type ProviderItemsByKind = {
   claude: ProviderSimpleConfig[];
   codex: ProviderSimpleConfig[];
   "opencode-go": ProviderSimpleConfig[];
+  cline: ProviderSimpleConfig[];
   vertex: ProviderSimpleConfig[];
   bedrock: BedrockProviderConfig[];
   openai: OpenAIProvider[];
@@ -355,6 +357,7 @@ const serializeItem = (kind: ProviderImportKind, item: CanonicalProviderItem) =>
       return serializeGeminiKey(item as ProviderSimpleConfig);
     case "claude":
     case "codex":
+    case "cline":
     case "vertex":
       return serializeProviderKey(item as ProviderSimpleConfig);
     case "opencode-go":

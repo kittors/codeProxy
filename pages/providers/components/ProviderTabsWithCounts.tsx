@@ -3,6 +3,7 @@ import { Cloud } from "lucide-react";
 import iconGemini from "@code-proxy/assets/icons/gemini.svg";
 import iconClaude from "@code-proxy/assets/icons/claude.svg";
 import iconCodex from "@code-proxy/assets/icons/codex.svg";
+import iconCline from "@code-proxy/assets/icons/cline.svg";
 import iconVertex from "@code-proxy/assets/icons/vertex.svg";
 import iconAmp from "@code-proxy/assets/icons/amp.svg";
 import iconOpenai from "@code-proxy/assets/icons/openai.svg";
@@ -15,6 +16,7 @@ export type ProviderTabId =
   | "claude"
   | "codex"
   | "opencode-go"
+  | "cline"
   | "vertex"
   | "bedrock"
   | "openai"
@@ -46,6 +48,7 @@ const TAB_META: Record<ProviderTabId, { icon: ReactNode }> = {
       </>
     ),
   },
+  cline: { icon: <img src={iconCline} alt="" className="size-4" /> },
   vertex: { icon: <img src={iconVertex} alt="" className="size-4" /> },
   bedrock: { icon: <Cloud size={16} /> },
   openai: {

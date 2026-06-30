@@ -20,9 +20,11 @@ const mocks = vi.hoisted(() => ({
   getVertexConfigs: vi.fn(async () => []),
   getBedrockConfigs: vi.fn(async () => []),
   getOpenCodeGoConfigs: vi.fn(async (): Promise<any[]> => []),
+  getClineConfigs: vi.fn(async (): Promise<any[]> => []),
   getOpenAIProviders: vi.fn(async () => []),
   saveOpenCodeGoConfigs: vi.fn(async (_configs: unknown[]) => ({})),
-  getModelDefinitions: vi.fn(async () => [
+  saveClineConfigs: vi.fn(async (_configs: unknown[]) => ({})),
+  getModelDefinitions: vi.fn(async (_channel?: string) => [
     { id: "deepseek-v4-flash", object: "model", owned_by: "opencode" },
     { id: "qwen3.5-plus", object: "model", owned_by: "opencode" },
     { id: "kimi-k2.6", object: "model", owned_by: "opencode" },
@@ -61,8 +63,10 @@ vi.mock("@code-proxy/api-client", async (importOriginal) => {
       getVertexConfigs: mocks.getVertexConfigs,
       getBedrockConfigs: mocks.getBedrockConfigs,
       getOpenCodeGoConfigs: mocks.getOpenCodeGoConfigs,
+      getClineConfigs: mocks.getClineConfigs,
       getOpenAIProviders: mocks.getOpenAIProviders,
       saveOpenCodeGoConfigs: mocks.saveOpenCodeGoConfigs,
+      saveClineConfigs: mocks.saveClineConfigs,
     },
     usageApi: {
       ...mod.usageApi,
@@ -106,8 +110,10 @@ describe("ProvidersPage OpenCode Go tab", () => {
     mocks.getVertexConfigs.mockImplementation(async () => []);
     mocks.getBedrockConfigs.mockImplementation(async () => []);
     mocks.getOpenCodeGoConfigs.mockImplementation(async () => []);
+    mocks.getClineConfigs.mockImplementation(async () => []);
     mocks.getOpenAIProviders.mockImplementation(async () => []);
     mocks.saveOpenCodeGoConfigs.mockImplementation(async () => ({}));
+    mocks.saveClineConfigs.mockImplementation(async () => ({}));
     mocks.getModelDefinitions.mockImplementation(async () => [
       { id: "deepseek-v4-flash", object: "model", owned_by: "opencode" },
       { id: "qwen3.5-plus", object: "model", owned_by: "opencode" },
@@ -330,6 +336,128 @@ describe("ProvidersPage OpenCode Go tab", () => {
             { name: "mimo-v2-omni" },
           ],
           visionFallbackModel: "mimo-v2-omni",
+        }),
+      ]);
+    });
+  });
+});
+
+describe("ProvidersPage Cline tab", () => {
+  beforeEach(() => {
+    Object.values(mocks).forEach((mock) => mock.mockReset());
+    mocks.getGeminiKeys.mockImplementation(async () => []);
+    mocks.getClaudeConfigs.mockImplementation(async () => []);
+    mocks.getCodexConfigs.mockImplementation(async () => []);
+    mocks.getVertexConfigs.mockImplementation(async () => []);
+    mocks.getBedrockConfigs.mockImplementation(async () => []);
+    mocks.getOpenCodeGoConfigs.mockImplementation(async () => []);
+    mocks.getClineConfigs.mockImplementation(async () => []);
+    mocks.getOpenAIProviders.mockImplementation(async () => []);
+    mocks.saveOpenCodeGoConfigs.mockImplementation(async () => ({}));
+    mocks.saveClineConfigs.mockImplementation(async () => ({}));
+    mocks.getModelDefinitions.mockImplementation(async (channel?: string) =>
+      channel === "cline"
+        ? [
+            { id: "cline-pass/glm-5.2", object: "model", owned_by: "cline" },
+            { id: "cline-pass/minimax-m3", object: "model", owned_by: "cline" },
+            { id: "cline-pass/qwen3.7-max", object: "model", owned_by: "cline" },
+          ]
+        : [
+            { id: "deepseek-v4-flash", object: "model", owned_by: "opencode" },
+            { id: "qwen3.5-plus", object: "model", owned_by: "opencode" },
+          ],
+    );
+    mocks.apiCallRequest.mockImplementation(async () => ({
+      statusCode: 200,
+      header: {},
+      bodyText: "",
+      body: { object: "list", data: [] },
+    }));
+    mocks.getEntityStats.mockImplementation(async () => ({ source: [] }));
+    mocks.apiKeyEntriesList.mockImplementation(async () => []);
+    mocks.channelGroupsList.mockImplementation(async () => []);
+    mocks.proxiesList.mockImplementation(async () => []);
+  });
+
+  test("opens Cline route and saves default Base URL", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter initialEntries={["/ai-providers/cline/new"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("tab", { name: /Cline/ })).toBeInTheDocument();
+    const dialog = await screen.findByRole("dialog", { name: /Add Cline configuration/i });
+
+    await user.click(within(dialog).getByRole("tab", { name: /Request/i }));
+    expect(within(dialog).getByDisplayValue("https://api.cline.bot/api/v1")).toBeInTheDocument();
+    expect(
+      within(dialog).getByText("https://api.cline.bot/api/v1/chat/completions"),
+    ).toBeInTheDocument();
+
+    await user.click(within(dialog).getByRole("tab", { name: /Basic/i }));
+    await user.type(within(dialog).getByPlaceholderText("e.g. Gemini Primary"), "Cline");
+    await user.type(within(dialog).getByPlaceholderText(/Paste API Key/i), "sk-cline");
+    await user.click(within(dialog).getByRole("button", { name: /Save/ }));
+
+    await waitFor(() => {
+      expect(mocks.saveClineConfigs).toHaveBeenCalledWith([
+        expect.objectContaining({
+          name: "Cline",
+          apiKey: "sk-cline",
+          baseUrl: "https://api.cline.bot/api/v1",
+        }),
+      ]);
+    });
+  });
+
+  test("loads Cline model definitions and saves model exclusions", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter initialEntries={["/ai-providers/cline/new"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    const dialog = await screen.findByRole("dialog", { name: /Add Cline configuration/i });
+    await user.click(within(dialog).getByRole("tab", { name: /Models/i }));
+
+    await waitFor(() => {
+      expect(mocks.getModelDefinitions).toHaveBeenCalledWith("cline");
+    });
+    const minimax = await within(dialog).findByRole("checkbox", {
+      name: /cline-pass\/minimax-m3/i,
+    });
+    await waitFor(() => expect(minimax).toBeChecked());
+    await user.click(minimax);
+
+    await user.click(within(dialog).getByRole("tab", { name: /Basic/i }));
+    await user.type(within(dialog).getByPlaceholderText("e.g. Gemini Primary"), "Cline");
+    await user.type(within(dialog).getByPlaceholderText(/Paste API Key/i), "sk-cline");
+    await user.click(within(dialog).getByRole("button", { name: /Save/ }));
+
+    await waitFor(() => {
+      expect(mocks.saveClineConfigs).toHaveBeenCalledWith([
+        expect.objectContaining({
+          name: "Cline",
+          apiKey: "sk-cline",
+          models: [{ name: "cline-pass/glm-5.2" }, { name: "cline-pass/qwen3.7-max" }],
+          excludedModels: ["cline-pass/minimax-m3"],
         }),
       ]);
     });

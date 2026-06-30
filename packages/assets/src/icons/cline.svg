@@ -1,0 +1,14 @@
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="128" height="128" rx="28" fill="url(#cline-bg)"/>
+  <path d="M82.5 36.5C76.9 31.8 69.7 29 61.8 29C43.9 29 29.4 43.5 29.4 61.4C29.4 79.3 43.9 93.8 61.8 93.8C70.4 93.8 78.2 90.5 84 85" stroke="white" stroke-width="13" stroke-linecap="round"/>
+  <path d="M78.5 60.5H103.5" stroke="white" stroke-width="13" stroke-linecap="round"/>
+  <path d="M91 48V73" stroke="white" stroke-width="13" stroke-linecap="round"/>
+  <circle cx="94" cy="32" r="7" fill="#D9FFF7"/>
+  <defs>
+    <linearGradient id="cline-bg" x1="16" y1="112" x2="112" y2="16" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0F766E"/>
+      <stop offset="0.48" stop-color="#0EA5E9"/>
+      <stop offset="1" stop-color="#2563EB"/>
+    </linearGradient>
+  </defs>
+</svg>
