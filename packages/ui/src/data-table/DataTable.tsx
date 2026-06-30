@@ -175,6 +175,8 @@ interface ColumnResizeState {
   maxWidth: number;
   previewTop: number;
   previewBottom: number;
+  previewMinClientX: number;
+  previewMaxClientX: number;
   currentWidth: number;
   lastDebugAtMs: number;
   debugEnabled: boolean;
@@ -186,6 +188,7 @@ interface ColumnResizePreview {
   top: number;
   height: number;
   tooltipTop: number;
+  visible: boolean;
 }
 
 interface ScrollMetrics {
@@ -701,6 +704,7 @@ export function DataTable<T>({
   const [activeResizeColumnKey, setActiveResizeColumnKey] = useState<string | null>(null);
   const resizePreviewLineRef = useRef<HTMLDivElement | null>(null);
   const resizePreviewTooltipRef = useRef<HTMLDivElement | null>(null);
+  const stickyRailWidthsRef = useRef({ start: 0, end: 0 });
   const [headerHeight, setHeaderHeight] = useState(0);
   const [scrollTop, setScrollTop] = useState(0);
   const [viewportHeight, setViewportHeight] = useState(480);
@@ -717,8 +721,6 @@ export function DataTable<T>({
   const metricsRafRef = useRef<number | null>(null);
   const verticalThumbRef = useRef<HTMLDivElement | null>(null);
   const horizontalThumbRef = useRef<HTMLDivElement | null>(null);
-  const stickyStartRailRef = useRef<HTMLDivElement | null>(null);
-  const stickyEndRailRef = useRef<HTMLDivElement | null>(null);
   const columnResizeRafRef = useRef<number | null>(null);
   const pendingColumnResizePointerRef = useRef<{ clientX: number; clientY: number } | null>(null);
   const bottomTimeoutRef = useRef<number | null>(null);
@@ -832,9 +834,6 @@ export function DataTable<T>({
         horizontalThumb.style.width = `${nextHThumb.width}px`;
       }
 
-      const railTransform = `translate(${metrics.scrollLeft}px, ${metrics.scrollTop}px)`;
-      if (stickyStartRailRef.current) stickyStartRailRef.current.style.transform = railTransform;
-      if (stickyEndRailRef.current) stickyEndRailRef.current.style.transform = railTransform;
     },
     [],
   );
@@ -1163,6 +1162,9 @@ export function DataTable<T>({
         minBoundaryClientX,
         Math.min(maxBoundaryClientX, visualLeftClientX + width),
       );
+      const visible =
+        lineCenterClientX >= active.previewMinClientX &&
+        lineCenterClientX <= active.previewMaxClientX;
       const top = active.previewTop;
       const bottomInset = hasHorizontalOverflow(scrollMetricsRef.current) ? 14 : 0;
       const bottom = Math.max(top, active.previewBottom - bottomInset);
@@ -1178,6 +1180,7 @@ export function DataTable<T>({
         top,
         height,
         tooltipTop,
+        visible,
       };
     },
     [],
@@ -1190,12 +1193,14 @@ export function DataTable<T>({
         line.style.left = `${preview.left}px`;
         line.style.top = `${preview.top}px`;
         line.style.height = `${preview.height}px`;
+        line.style.display = preview.visible ? "" : "none";
       }
 
       const tooltip = resizePreviewTooltipRef.current;
       if (tooltip) {
         tooltip.style.left = `${preview.left + 10}px`;
         tooltip.style.top = `${preview.tooltipTop}px`;
+        tooltip.style.display = preview.visible ? "" : "none";
         tooltip.textContent = t("common.column_width_px", { width: preview.width });
       }
     },
@@ -1230,6 +1235,7 @@ export function DataTable<T>({
         top: active.previewTop,
         height: Math.max(0, active.previewBottom - active.previewTop),
         tooltipTop: active.previewTop,
+        visible: true,
       }),
       width: roundedWidth,
     };
@@ -1312,6 +1318,7 @@ export function DataTable<T>({
 
       const rect = headerCell.getBoundingClientRect();
       const containerRect = containerRef.current?.getBoundingClientRect();
+      const railWidths = naturalFlow ? { start: 0, end: 0 } : stickyRailWidthsRef.current;
       const startWidth = rect.width;
       const minWidth = resolveColumnMinWidth(column);
       const maxWidth = resolveColumnMaxWidth(column, minWidth);
@@ -1332,6 +1339,12 @@ export function DataTable<T>({
         maxWidth,
         previewTop: Math.max(0, containerRect?.top ?? rect.top),
         previewBottom: Math.max(0, containerRect?.bottom ?? rect.bottom),
+        previewMinClientX: containerRect && !naturalFlow && railWidths.start > 0
+          ? containerRect.left + railWidths.start
+          : Number.NEGATIVE_INFINITY,
+        previewMaxClientX: containerRect && !naturalFlow && railWidths.end > 0
+          ? containerRect.right - railWidths.end
+          : Number.POSITIVE_INFINITY,
         currentWidth: nextStartWidth,
         lastDebugAtMs: 0,
         debugEnabled: shouldDebugColumnResize(),
@@ -1360,7 +1373,7 @@ export function DataTable<T>({
         });
       }
     },
-    [applyColumnWidthToDom, buildColumnResizePreview, tableId],
+    [applyColumnWidthToDom, buildColumnResizePreview, naturalFlow, tableId],
   );
 
   // ---------------------------------------------------------------------------
@@ -2004,6 +2017,7 @@ export function DataTable<T>({
     () => resolveStickyRailWidth(orderedColumns, columnWidths, "end"),
     [columnWidths, orderedColumns],
   );
+  stickyRailWidthsRef.current = { start: stickyStartRailWidth, end: stickyEndRailWidth };
   const stickyColumnPlacements = useMemo(
     () => resolveStickyColumnPlacements(orderedColumns, columnWidths),
     [columnWidths, orderedColumns],
@@ -2017,8 +2031,6 @@ export function DataTable<T>({
   const stickyBoundaryHeight = Math.max(0, scrollMetrics.clientHeight - stickyRailBottomInset);
   const stickyStartBoundaryLeft = Math.max(0, stickyStartRailWidth - 1);
   const stickyEndBoundaryLeft = Math.max(0, scrollMetrics.clientWidth - stickyEndRailWidth);
-  const latestScrollMetrics = scrollMetricsRef.current;
-  const stickyRailTransform = `translate(${latestScrollMetrics.scrollLeft}px, ${latestScrollMetrics.scrollTop}px)`;
   const stickyEndRailLeft = Math.max(0, scrollMetrics.clientWidth - stickyEndRailWidth);
 
   const resolveColumnStyle = useCallback(
@@ -2061,6 +2073,7 @@ export function DataTable<T>({
                 left: resizePreview.left,
                 top: resizePreview.top,
                 height: resizePreview.height,
+                display: resizePreview.visible ? undefined : "none",
               }}
             />
             <div
@@ -2071,6 +2084,7 @@ export function DataTable<T>({
               style={{
                 left: resizePreview.left + 10,
                 top: resizePreview.tooltipTop,
+                display: resizePreview.visible ? undefined : "none",
               }}
             >
               {t("common.column_width_px", { width: resizePreview.width })}
@@ -2104,6 +2118,32 @@ export function DataTable<T>({
           }}
         />
       )}
+      {!naturalFlow && stickyStartRailWidth > 0 && stickyRailHeight > 0 ? (
+        <div
+          data-vt-sticky-start-rail
+          aria-hidden="true"
+          className="pointer-events-none absolute z-0 hidden bg-white md:block dark:bg-neutral-950"
+          style={{
+            left: 0,
+            top: stickyRailTop,
+            width: stickyStartRailWidth,
+            height: stickyRailHeight,
+          }}
+        />
+      ) : null}
+      {!naturalFlow && stickyEndRailWidth > 0 && stickyRailHeight > 0 ? (
+        <div
+          data-vt-sticky-end-rail
+          aria-hidden="true"
+          className="pointer-events-none absolute z-0 hidden bg-white md:block dark:bg-neutral-950"
+          style={{
+            left: stickyEndRailLeft,
+            top: stickyRailTop,
+            width: stickyEndRailWidth,
+            height: stickyRailHeight,
+          }}
+        />
+      ) : null}
       <div
         ref={containerRef}
         onScroll={naturalFlow ? undefined : onScroll}
@@ -2121,36 +2161,6 @@ export function DataTable<T>({
           data-vt-scroll-content
           className={`relative min-h-full ${scrollContentClassName ?? ""}`}
         >
-          {!naturalFlow && stickyStartRailWidth > 0 && stickyRailHeight > 0 ? (
-            <div
-              ref={stickyStartRailRef}
-              data-vt-sticky-start-rail
-              aria-hidden="true"
-              className="pointer-events-none absolute z-0 hidden bg-white md:block dark:bg-neutral-950"
-              style={{
-                left: 0,
-                top: stickyRailTop,
-                width: stickyStartRailWidth,
-                height: stickyRailHeight,
-                transform: stickyRailTransform,
-              }}
-            />
-          ) : null}
-          {!naturalFlow && stickyEndRailWidth > 0 && stickyRailHeight > 0 ? (
-            <div
-              ref={stickyEndRailRef}
-              data-vt-sticky-end-rail
-              aria-hidden="true"
-              className="pointer-events-none absolute z-0 hidden bg-white md:block dark:bg-neutral-950"
-              style={{
-                left: stickyEndRailLeft,
-                top: stickyRailTop,
-                width: stickyEndRailWidth,
-                height: stickyRailHeight,
-                transform: stickyRailTransform,
-              }}
-            />
-          ) : null}
           {!naturalFlow && rowHoverOverlay ? (
             <div
               data-vt-row-hover-overlay

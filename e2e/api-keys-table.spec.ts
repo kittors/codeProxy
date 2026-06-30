@@ -285,6 +285,73 @@ test("API Keys: restored wider columns keep resize preview at the minimum bounda
     .toBe(168);
 });
 
+test("API Keys: resize preview does not paint over the fixed action column", async ({ page }) => {
+  await page.setViewportSize({ width: 1360, height: 980 });
+  await setAuthed(page);
+  await mockApiKeysApis(page);
+
+  await page.goto("/#/api-keys");
+  await page.locator('td[data-vt-column-key="actions"]').first().waitFor({ state: "visible" });
+
+  await page.evaluate(async () => {
+    const scrollContent = document.querySelector<HTMLElement>("[data-vt-scroll-content]");
+    const container = scrollContent?.parentElement;
+    if (!container) throw new Error("Missing API keys table viewport");
+
+    container.scrollLeft = container.scrollWidth - container.clientWidth;
+    await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)));
+    await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)));
+  });
+
+  const header = page.locator('th[data-vt-column-key="createdAt"]');
+  await header.waitFor({ state: "visible" });
+
+  const dragStart = await header.locator("[data-vt-column-resizer]").evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    const headerRect = element.closest("th")?.getBoundingClientRect();
+    const actionsHeader = document.querySelector<HTMLElement>('th[data-vt-column-key="actions"]');
+    const actionsRect = actionsHeader?.getBoundingClientRect();
+    if (!headerRect || !actionsRect) throw new Error("Missing resize rail geometry");
+
+    return {
+      x: Math.min(rect.left + rect.width / 2, headerRect.right - 2),
+      y: rect.top + rect.height / 2,
+      actionsLeft: actionsRect.left,
+      actionsRight: actionsRect.right,
+    };
+  });
+
+  await page.mouse.move(dragStart.x, dragStart.y);
+  await page.mouse.down();
+  await page.mouse.move(dragStart.actionsLeft + 80, dragStart.y, { steps: 8 });
+
+  const previewLine = page.locator("[data-vt-column-resize-preview-line]");
+  await previewLine.waitFor({ state: "attached" });
+
+  const hiddenState = await page.evaluate(() => {
+    const line = document.querySelector<HTMLElement>("[data-vt-column-resize-preview-line]");
+    const tooltip = document.querySelector<HTMLElement>("[data-vt-column-resize-preview-tooltip]");
+    const actionsHeader = document.querySelector<HTMLElement>('th[data-vt-column-key="actions"]');
+    if (!line || !tooltip || !actionsHeader) throw new Error("Missing resize preview state");
+
+    const actionsRect = actionsHeader.getBoundingClientRect();
+    return {
+      previewCenter: Number.parseFloat(line.style.left) + 1,
+      actionsLeft: actionsRect.left,
+      actionsRight: actionsRect.right,
+      lineDisplay: getComputedStyle(line).display,
+      tooltipDisplay: getComputedStyle(tooltip).display,
+    };
+  });
+
+  expect(hiddenState.previewCenter).toBeGreaterThan(hiddenState.actionsLeft + 1);
+  expect(hiddenState.previewCenter).toBeLessThan(hiddenState.actionsRight - 1);
+  expect(hiddenState.lineDisplay).toBe("none");
+  expect(hiddenState.tooltipDisplay).toBe("none");
+
+  await page.mouse.up();
+});
+
 test("API Keys: fixed columns do not cover the created time at the right edge", async ({
   page,
 }) => {
@@ -593,6 +660,8 @@ test("API Keys: fixed columns stay pinned while dragging the horizontal scrollba
       endBoundaryRight: endBoundaryRect.right,
       startRailZIndex: getComputedStyle(startRail).zIndex,
       endRailZIndex: getComputedStyle(endRail).zIndex,
+      startRailTransform: startRailStyle.transform,
+      endRailTransform: endRailStyle.transform,
       startRailBorderRightWidth: startRailStyle.borderRightWidth,
       endRailBorderLeftWidth: endRailStyle.borderLeftWidth,
       startBoundaryWidth: startBoundaryStyle.width,
@@ -625,6 +694,8 @@ test("API Keys: fixed columns stay pinned while dragging the horizontal scrollba
   expect(state.endBoundaryRight).toBeLessThanOrEqual(state.actionsCellLeft + 2);
   expect(state.startRailZIndex).toBe("0");
   expect(state.endRailZIndex).toBe("0");
+  expect(state.startRailTransform).toBe("none");
+  expect(state.endRailTransform).toBe("none");
   expect(state.startRailBorderRightWidth).toBe("0px");
   expect(state.endRailBorderLeftWidth).toBe("0px");
   expect(state.startBoundaryWidth).toBe("1px");
