@@ -687,6 +687,8 @@ export function DataTable<T>({
   const metricsRafRef = useRef<number | null>(null);
   const verticalThumbRef = useRef<HTMLDivElement | null>(null);
   const horizontalThumbRef = useRef<HTMLDivElement | null>(null);
+  const stickyStartRailRef = useRef<HTMLDivElement | null>(null);
+  const stickyEndRailRef = useRef<HTMLDivElement | null>(null);
   const columnResizeRafRef = useRef<number | null>(null);
   const pendingColumnResizePointerRef = useRef<{ clientX: number; clientY: number } | null>(null);
   const bottomTimeoutRef = useRef<number | null>(null);
@@ -799,6 +801,10 @@ export function DataTable<T>({
         horizontalThumb.style.left = `${nextHThumb.left}px`;
         horizontalThumb.style.width = `${nextHThumb.width}px`;
       }
+
+      const railTransform = `translate(${metrics.scrollLeft}px, ${metrics.scrollTop}px)`;
+      if (stickyStartRailRef.current) stickyStartRailRef.current.style.transform = railTransform;
+      if (stickyEndRailRef.current) stickyEndRailRef.current.style.transform = railTransform;
     },
     [],
   );
@@ -1969,11 +1975,14 @@ export function DataTable<T>({
     [columnWidths, orderedColumns],
   );
   const stickyRailBottomInset = hThumb ? 14 : 0;
-  const stickyRailTop = scrollMetrics.scrollTop + headerHeight;
+  const stickyRailTop = headerHeight;
   const stickyRailHeight = Math.max(
     0,
     scrollMetrics.clientHeight - headerHeight - stickyRailBottomInset,
   );
+  const latestScrollMetrics = scrollMetricsRef.current;
+  const stickyRailTransform = `translate(${latestScrollMetrics.scrollLeft}px, ${latestScrollMetrics.scrollTop}px)`;
+  const stickyEndRailLeft = Math.max(0, scrollMetrics.clientWidth - stickyEndRailWidth);
 
   const resolveColumnStyle = useCallback(
     (column: DataTableColumn<T>): CSSProperties | undefined => {
@@ -2060,27 +2069,31 @@ export function DataTable<T>({
         >
           {!naturalFlow && stickyStartRailWidth > 0 && stickyRailHeight > 0 ? (
             <div
+              ref={stickyStartRailRef}
               data-vt-sticky-start-rail
               aria-hidden="true"
               className="pointer-events-none absolute z-20 hidden border-r border-slate-200 bg-white md:block dark:border-neutral-800 dark:bg-neutral-950"
               style={{
-                left: scrollMetrics.scrollLeft,
+                left: 0,
                 top: stickyRailTop,
                 width: stickyStartRailWidth,
                 height: stickyRailHeight,
+                transform: stickyRailTransform,
               }}
             />
           ) : null}
           {!naturalFlow && stickyEndRailWidth > 0 && stickyRailHeight > 0 ? (
             <div
+              ref={stickyEndRailRef}
               data-vt-sticky-end-rail
               aria-hidden="true"
               className="pointer-events-none absolute z-20 hidden border-l border-slate-200 bg-white md:block dark:border-neutral-800 dark:bg-neutral-950"
               style={{
-                left: scrollMetrics.scrollLeft + scrollMetrics.clientWidth - stickyEndRailWidth,
+                left: stickyEndRailLeft,
                 top: stickyRailTop,
                 width: stickyEndRailWidth,
                 height: stickyRailHeight,
+                transform: stickyRailTransform,
               }}
             />
           ) : null}
