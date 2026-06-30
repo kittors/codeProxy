@@ -25,8 +25,14 @@ const mocks = vi.hoisted(() => ({
     state.entries[index] = { ...state.entries[index], ...value };
     return {};
   }),
-  apiKeyEntriesDelete: vi.fn(async ({ index }: any) => {
-    state.entries.splice(index, 1);
+  apiKeyEntriesDelete: vi.fn(async ({ id, index, key }: any) => {
+    const deleteIndex =
+      typeof index === "number"
+        ? index
+        : state.entries.findIndex((entry) => (id ? entry.id === id : entry.key === key));
+    if (deleteIndex >= 0) {
+      state.entries.splice(deleteIndex, 1);
+    }
     return { logs_deleted: 0 };
   }),
   apiKeysList: vi.fn(async () => [] as string[]),
@@ -493,6 +499,58 @@ describe("ApiKeysPage", () => {
     await userEvent.hover(screen.getByRole("button", { name: /copy key/i }));
 
     expect(screen.getByRole("tooltip")).toHaveTextContent(/copy key/i);
+  });
+
+  test("selects API keys and deletes them in batch", async () => {
+    state.entries = [
+      {
+        id: "key-1",
+        key: "sk-existing-1234567890",
+        name: "Existing Key",
+        "created-at": "2026-04-14T00:00:00.000Z",
+      },
+      {
+        id: "key-2",
+        key: "sk-second-1234567890",
+        name: "Second Key",
+        "created-at": "2026-04-15T00:00:00.000Z",
+      },
+    ];
+
+    render(
+      <MemoryRouter>
+        <ThemeProvider>
+          <ToastProvider>
+            <ApiKeysPage />
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("Existing Key")).toBeInTheDocument();
+    expect(screen.getByText("Second Key")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("checkbox", { name: "Select Existing Key" }));
+    await userEvent.click(screen.getByRole("checkbox", { name: "Select Second Key" }));
+
+    expect(screen.getByText("2 API keys selected")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: /batch delete/i }));
+    await userEvent.click(screen.getByRole("button", { name: /confirm delete/i }));
+
+    await waitFor(() => {
+      expect(mocks.apiKeyEntriesDelete).toHaveBeenCalledTimes(2);
+    });
+    expect(mocks.apiKeyEntriesDelete).toHaveBeenNthCalledWith(1, {
+      id: "key-1",
+      key: undefined,
+    });
+    expect(mocks.apiKeyEntriesDelete).toHaveBeenNthCalledWith(2, {
+      id: "key-2",
+      key: undefined,
+    });
+    expect(screen.queryByText("Existing Key")).not.toBeInTheDocument();
+    expect(screen.queryByText("Second Key")).not.toBeInTheDocument();
   });
 
   test("falls back to execCommand when async clipboard copy is blocked", async () => {
