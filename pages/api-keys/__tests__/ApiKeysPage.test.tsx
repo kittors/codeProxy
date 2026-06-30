@@ -533,7 +533,8 @@ describe("ApiKeysPage", () => {
     await userEvent.click(screen.getByRole("checkbox", { name: "Select Existing Key" }));
     await userEvent.click(screen.getByRole("checkbox", { name: "Select Second Key" }));
 
-    expect(screen.getByText("2 API keys selected")).toBeInTheDocument();
+    expect(screen.queryByText("2 API keys selected")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /clear selection/i })).not.toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: /batch delete/i }));
     await userEvent.click(screen.getByRole("button", { name: /confirm delete/i }));

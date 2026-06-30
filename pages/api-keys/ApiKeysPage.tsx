@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Plus, KeyRound, RefreshCw, Trash2, X } from "lucide-react";
+import { Plus, KeyRound, RefreshCw, Trash2 } from "lucide-react";
 import {
   apiKeyEntriesApi,
   apiKeysApi,
@@ -602,7 +602,22 @@ export function ApiKeysPage() {
         title={t("api_keys_page.title")}
         description={t("api_keys_page.description")}
         actions={
-          <div className="flex gap-2">
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button variant="primary" size="sm" onClick={handleOpenCreate}>
+              <Plus size={14} />
+              {t("api_keys_page.create_key")}
+            </Button>
+            {selectedEntries.length > 0 ? (
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={() => setBatchDeleteOpen(true)}
+                disabled={saving}
+              >
+                <Trash2 size={14} />
+                {t("api_keys_page.batch_delete")}
+              </Button>
+            ) : null}
             <Button
               variant="secondary"
               size="sm"
@@ -611,10 +626,6 @@ export function ApiKeysPage() {
             >
               <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
               {t("api_keys_page.refresh")}
-            </Button>
-            <Button variant="primary" size="sm" onClick={handleOpenCreate}>
-              <Plus size={14} />
-              {t("api_keys_page.create_key")}
             </Button>
           </div>
         }
@@ -628,28 +639,6 @@ export function ApiKeysPage() {
           />
         ) : (
           <div className="space-y-3">
-            {selectedEntries.length > 0 ? (
-              <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm dark:border-neutral-800 dark:bg-neutral-900/70">
-                <span className="text-slate-600 dark:text-white/65">
-                  {t("api_keys_page.selected_keys_count", { count: selectedEntries.length })}
-                </span>
-                <div className="flex items-center gap-2">
-                  <Button variant="secondary" size="sm" onClick={clearSelection}>
-                    <X size={14} />
-                    {t("api_keys_page.clear_selection")}
-                  </Button>
-                  <Button
-                    variant="danger"
-                    size="sm"
-                    onClick={() => setBatchDeleteOpen(true)}
-                    disabled={saving}
-                  >
-                    <Trash2 size={14} />
-                    {t("api_keys_page.batch_delete")}
-                  </Button>
-                </div>
-              </div>
-            ) : null}
             <DataTable<ApiKeyEntry>
               tableId="api-keys"
               rows={entries}
