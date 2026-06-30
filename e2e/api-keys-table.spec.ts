@@ -30,10 +30,11 @@ const setAuthed = async (page: Page, options: SetAuthedOptions = {}) => {
 };
 
 const mockApiKeysApis = async (page: Page) => {
-  const entries = [
-    {
-      key: "sk-e2e-limited-model-summary-1234567890",
-      name: "Limited Models",
+  const entries = Array.from({ length: 9 }, (_, index) => {
+    const suffixes = ["whc", "0zb", "1ll", "soe", "3fv", "7om", "lmk", "cyj", "bex"];
+    return {
+      key: `sk-e2e-${"x".repeat(24)}-${suffixes[index]}`,
+      name: index === 0 ? "Limited Models" : `Fixed Row ${index + 1}`,
       "allowed-models": [
         "deepseek-v4-flash-ultra-long-model-name",
         "deepseek-v4-pro",
@@ -43,8 +44,10 @@ const mockApiKeysApis = async (page: Page) => {
       "allowed-channel-groups": ["all-channel-groups-with-a-long-name"],
       "allowed-channels": ["primary-channel-with-a-long-name"],
       "created-at": "2026-05-13T15:32:00Z",
-    },
-  ];
+      ...(index % 5 === 4 ? { "daily-limit": 800 } : {}),
+      ...(index === 8 ? { "total-quota": 2000 } : {}),
+    };
+  });
 
   await page.route("**/v0/management/**", async (route) => {
     const url = new URL(route.request().url());
@@ -145,7 +148,10 @@ test("API Keys: limited model summary truncates inside the rounded pill", async 
   await mockApiKeysApis(page);
 
   await page.goto("/#/api-keys");
-  await page.locator('td[data-vt-column-key="allowedModels"]').waitFor({ state: "visible" });
+  await page
+    .locator('td[data-vt-column-key="allowedModels"]')
+    .first()
+    .waitFor({ state: "visible" });
 
   const summaryState = await page.evaluate(() => {
     const cell = document.querySelector<HTMLElement>('td[data-vt-column-key="allowedModels"]');
@@ -287,7 +293,10 @@ test("API Keys: fixed columns do not cover the created time at the right edge", 
   await mockApiKeysApis(page);
 
   await page.goto("/#/api-keys");
-  await page.locator('td[data-vt-column-key="createdAt"]').waitFor({ state: "visible" });
+  await page
+    .locator('td[data-vt-column-key="createdAt"]')
+    .first()
+    .waitFor({ state: "visible" });
 
   const states = await page.evaluate(async () => {
     const scrollContent = document.querySelector<HTMLElement>("[data-vt-scroll-content]");
@@ -443,4 +452,120 @@ test("API Keys: fixed columns do not cover the created time at the right edge", 
   expect(maxScrollState?.createdAtRight).toBeLessThanOrEqual(
     (maxScrollState?.actionsLeft ?? 0) + 1,
   );
+});
+
+test("API Keys: fixed columns stay pinned while dragging the horizontal scrollbar", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 2048, height: 1180 });
+  await setAuthed(page);
+  await mockApiKeysApis(page);
+
+  await page.goto("/#/api-keys");
+  await page.locator('td[data-vt-column-key="name"]').first().waitFor({ state: "visible" });
+
+  const thumb = page.locator('[data-vt-scrollbar="x"] [role="presentation"]');
+  const dragStart = await thumb.evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    return {
+      x: rect.left + rect.width / 2,
+      y: rect.top + rect.height / 2,
+    };
+  });
+
+  await page.mouse.move(dragStart.x, dragStart.y);
+  await page.mouse.down();
+  await page.mouse.move(dragStart.x + 120, dragStart.y, { steps: 12 });
+
+  const state = await page.evaluate(() => {
+    const scrollContent = document.querySelector<HTMLElement>("[data-vt-scroll-content]");
+    const container = scrollContent?.parentElement;
+    const selectHeader = document.querySelector<HTMLElement>('th[data-vt-column-key="select"]');
+    const nameHeader = document.querySelector<HTMLElement>('th[data-vt-column-key="name"]');
+    const actionsHeader = document.querySelector<HTMLElement>('th[data-vt-column-key="actions"]');
+    const selectCell = document.querySelector<HTMLElement>('td[data-vt-column-key="select"]');
+    const nameCell = document.querySelector<HTMLElement>('td[data-vt-column-key="name"]');
+    const actionsCell = document.querySelector<HTMLElement>('td[data-vt-column-key="actions"]');
+    const startRail = document.querySelector<HTMLElement>("[data-vt-sticky-start-rail]");
+    const endRail = document.querySelector<HTMLElement>("[data-vt-sticky-end-rail]");
+    if (
+      !container ||
+      !selectHeader ||
+      !nameHeader ||
+      !actionsHeader ||
+      !selectCell ||
+      !nameCell ||
+      !actionsCell ||
+      !startRail ||
+      !endRail
+    ) {
+      throw new Error("Missing fixed-column drag geometry");
+    }
+
+    const containerRect = container.getBoundingClientRect();
+    const selectHeaderRect = selectHeader.getBoundingClientRect();
+    const nameHeaderRect = nameHeader.getBoundingClientRect();
+    const actionsHeaderRect = actionsHeader.getBoundingClientRect();
+    const selectCellRect = selectCell.getBoundingClientRect();
+    const nameCellRect = nameCell.getBoundingClientRect();
+    const actionsCellRect = actionsCell.getBoundingClientRect();
+    const startRailRect = startRail.getBoundingClientRect();
+    const endRailRect = endRail.getBoundingClientRect();
+    const nameCellHit = document.elementFromPoint(
+      nameCellRect.left + Math.min(24, nameCellRect.width / 2),
+      nameCellRect.top + nameCellRect.height / 2,
+    );
+    const actionsCellHit = document.elementFromPoint(
+      actionsCellRect.right - Math.min(24, actionsCellRect.width / 2),
+      actionsCellRect.top + actionsCellRect.height / 2,
+    );
+
+    return {
+      scrollLeft: container.scrollLeft,
+      maxScrollLeft: container.scrollWidth - container.clientWidth,
+      containerLeft: containerRect.left,
+      containerRight: containerRect.right,
+      selectHeaderLeft: selectHeaderRect.left,
+      nameHeaderLeft: nameHeaderRect.left,
+      actionsHeaderRight: actionsHeaderRect.right,
+      selectCellLeft: selectCellRect.left,
+      selectCellWidth: selectCellRect.width,
+      nameCellLeft: nameCellRect.left,
+      actionsCellRight: actionsCellRect.right,
+      startRailLeft: startRailRect.left,
+      endRailRight: endRailRect.right,
+      startRailZIndex: getComputedStyle(startRail).zIndex,
+      endRailZIndex: getComputedStyle(endRail).zIndex,
+      nameCellHitColumn:
+        nameCellHit?.closest<HTMLElement>("[data-vt-column-key]")?.dataset.vtColumnKey ?? null,
+      actionsCellHitColumn:
+        actionsCellHit?.closest<HTMLElement>("[data-vt-column-key]")?.dataset.vtColumnKey ?? null,
+    };
+  });
+
+  await page.mouse.up();
+
+  const expectedNameLeft = state.containerLeft + state.selectCellWidth;
+  expect(state.scrollLeft).toBeGreaterThan(0);
+  expect(state.scrollLeft).toBeLessThan(state.maxScrollLeft);
+  expect(state.startRailLeft).toBeGreaterThanOrEqual(state.containerLeft - 1);
+  expect(state.startRailLeft).toBeLessThanOrEqual(state.containerLeft + 1);
+  expect(state.endRailRight).toBeGreaterThanOrEqual(state.containerRight - 1);
+  expect(state.endRailRight).toBeLessThanOrEqual(state.containerRight + 1);
+  expect(state.startRailZIndex).toBe("0");
+  expect(state.endRailZIndex).toBe("0");
+  expect(state.selectHeaderLeft).toBeGreaterThanOrEqual(state.containerLeft - 1);
+  expect(state.selectHeaderLeft).toBeLessThanOrEqual(state.containerLeft + 1);
+  expect(state.nameHeaderLeft).toBeGreaterThanOrEqual(expectedNameLeft - 1);
+  expect(state.nameHeaderLeft).toBeLessThanOrEqual(expectedNameLeft + 1);
+  expect(state.actionsHeaderRight).toBeGreaterThanOrEqual(state.containerRight - 1);
+  expect(state.actionsHeaderRight).toBeLessThanOrEqual(state.containerRight + 1);
+  expect(state.selectCellLeft).toBeGreaterThanOrEqual(state.containerLeft - 1);
+  expect(state.selectCellLeft).toBeLessThanOrEqual(state.containerLeft + 1);
+  expect(state.nameCellLeft).toBeGreaterThanOrEqual(expectedNameLeft - 1);
+  expect(state.nameCellLeft).toBeLessThanOrEqual(expectedNameLeft + 1);
+  expect(state.actionsCellRight).toBeGreaterThanOrEqual(state.containerRight - 1);
+  expect(state.actionsCellRight).toBeLessThanOrEqual(state.containerRight + 1);
+  expect(state.nameCellHitColumn).toBe("name");
+  expect(state.actionsCellHitColumn).toBe("actions");
 });

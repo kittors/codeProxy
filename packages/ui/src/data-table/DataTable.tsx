@@ -2123,7 +2123,7 @@ export function DataTable<T>({
               ref={stickyStartRailRef}
               data-vt-sticky-start-rail
               aria-hidden="true"
-              className="pointer-events-none absolute z-20 hidden border-r border-slate-200 bg-white md:block dark:border-neutral-800 dark:bg-neutral-950"
+              className="pointer-events-none absolute z-0 hidden border-r border-slate-200 bg-white md:block dark:border-neutral-800 dark:bg-neutral-950"
               style={{
                 left: 0,
                 top: stickyRailTop,
@@ -2138,7 +2138,7 @@ export function DataTable<T>({
               ref={stickyEndRailRef}
               data-vt-sticky-end-rail
               aria-hidden="true"
-              className="pointer-events-none absolute z-20 hidden border-l border-slate-200 bg-white md:block dark:border-neutral-800 dark:bg-neutral-950"
+              className="pointer-events-none absolute z-0 hidden border-l border-slate-200 bg-white md:block dark:border-neutral-800 dark:bg-neutral-950"
               style={{
                 left: stickyEndRailLeft,
                 top: stickyRailTop,
