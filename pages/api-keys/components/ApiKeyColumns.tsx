@@ -19,11 +19,16 @@ import {
   maskApiKey,
   VendorIcon,
 } from "../apiKeyPageUtils";
-import { HoverTooltip, OverflowTooltip } from "@code-proxy/ui";
+import { Checkbox, HoverTooltip, OverflowTooltip } from "@code-proxy/ui";
 import type { DataTableColumn } from "@code-proxy/ui";
 
 type CreateApiKeyColumnsOptions = {
   t: TFunction;
+  selectedKeys: Set<string>;
+  allRowsSelected: boolean;
+  someRowsSelected: boolean;
+  onSelectAll: (checked: boolean) => void;
+  onSelectRow: (key: string, checked: boolean) => void;
   onToggleDisable: (index: number) => void;
   onViewUsage: (entry: ApiKeyEntry) => void;
   onCopy: (key: string) => void;
@@ -47,6 +52,18 @@ const permissionCountToneClasses: Record<PermissionSummaryTone, string> = {
   indigo: "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-200",
   violet: "bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-200",
 };
+
+const stickySelectHeaderClass =
+  "md:sticky md:left-0 md:z-40 md:bg-slate-100 md:dark:bg-neutral-800";
+const stickySelectCellClass = "md:sticky md:left-0 md:z-30 md:bg-white md:dark:bg-neutral-950";
+const stickyNameHeaderClass =
+  "md:sticky md:left-12 md:z-40 md:border-r md:border-slate-200 md:bg-slate-100 md:dark:border-neutral-800 md:dark:bg-neutral-800";
+const stickyNameCellClass =
+  "font-medium md:sticky md:left-12 md:z-30 md:border-r md:border-slate-200 md:bg-white md:dark:border-neutral-800 md:dark:bg-neutral-950";
+const stickyActionsHeaderClass =
+  "text-center md:sticky md:right-0 md:z-40 md:border-l md:border-slate-200 md:bg-slate-100 md:dark:border-neutral-800 md:dark:bg-neutral-800";
+const stickyActionsCellClass =
+  "md:sticky md:right-0 md:z-30 md:border-l md:border-slate-200 md:bg-white md:dark:border-neutral-800 md:dark:bg-neutral-950";
 
 function ApiKeyBadge({ value }: { value: string }) {
   return (
@@ -89,6 +106,11 @@ function ApiKeyPermissionSummary({
 
 export const createApiKeyColumns = ({
   t,
+  selectedKeys,
+  allRowsSelected,
+  someRowsSelected,
+  onSelectAll,
+  onSelectRow,
   onToggleDisable,
   onViewUsage,
   onCopy,
@@ -97,35 +119,37 @@ export const createApiKeyColumns = ({
   onDelete,
 }: CreateApiKeyColumnsOptions): DataTableColumn<ApiKeyEntry>[] => [
   {
-    key: "status",
-    label: t("api_keys_page.col_status"),
-    width: "w-[88px] min-w-[88px]",
-    headerClassName: "text-center",
-    cellClassName: "text-center",
-    render: (row, idx) => (
-      <button
-        type="button"
-        onClick={() => onToggleDisable(idx)}
-        aria-label={
-          row.disabled ? t("api_keys_page.click_enable") : t("api_keys_page.click_disable")
-        }
-        data-tooltip-placement="bottom"
-        title={row.disabled ? t("api_keys_page.click_enable") : t("api_keys_page.click_disable")}
-        className={`inline-flex h-7 w-7 items-center justify-center rounded-lg transition-colors ${
-          row.disabled
-            ? "text-slate-400 hover:bg-red-50 hover:text-red-500 dark:text-white/30 dark:hover:bg-red-900/20 dark:hover:text-red-400"
-            : "text-emerald-500 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-900/20"
-        }`}
-      >
-        <Power size={15} />
-      </button>
+    key: "select",
+    label: t("api_keys_page.select_all_keys"),
+    width: "w-12 min-w-12",
+    lockOrder: "start",
+    headerClassName: stickySelectHeaderClass,
+    cellClassName: stickySelectCellClass,
+    headerRender: () => (
+      <Checkbox
+        checked={allRowsSelected}
+        indeterminate={someRowsSelected}
+        onCheckedChange={onSelectAll}
+        aria-label={t("api_keys_page.select_all_keys")}
+      />
+    ),
+    render: (row) => (
+      <Checkbox
+        checked={selectedKeys.has(row.key)}
+        onCheckedChange={(checked) => onSelectRow(row.key, checked)}
+        aria-label={t("api_keys_page.select_key", {
+          name: row.name || t("api_keys_page.unnamed"),
+        })}
+      />
     ),
   },
   {
     key: "name",
     label: t("api_keys_page.col_name"),
     width: "w-[120px] min-w-[120px]",
-    cellClassName: "font-medium",
+    lockOrder: "start",
+    headerClassName: stickyNameHeaderClass,
+    cellClassName: stickyNameCellClass,
     render: (row) => (
       <OverflowTooltip content={row.name || t("api_keys_page.unnamed")} className="block min-w-0">
         <span className="block min-w-0 truncate">
@@ -350,8 +374,14 @@ export const createApiKeyColumns = ({
   {
     key: "actions",
     label: t("api_keys_page.col_actions"),
-    width: "w-[188px] min-w-[188px]",
+    width: "w-[224px] min-w-[224px]",
+    lockOrder: "end",
+    headerClassName: stickyActionsHeaderClass,
+    cellClassName: stickyActionsCellClass,
     render: (row, idx) => {
+      const toggleLabel = row.disabled
+        ? t("api_keys_page.click_enable")
+        : t("api_keys_page.click_disable");
       const viewUsageLabel = t("api_keys_page.view_usage");
       const copyKeyLabel = t("api_keys_page.copy_key");
       const importLabel = t("ccswitch.import_to_ccswitch");
@@ -359,7 +389,21 @@ export const createApiKeyColumns = ({
       const deleteLabel = t("common.delete");
 
       return (
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center justify-center gap-1.5">
+          <HoverTooltip content={toggleLabel}>
+            <button
+              type="button"
+              onClick={() => onToggleDisable(idx)}
+              className={`rounded-lg p-1.5 transition-colors ${
+                row.disabled
+                  ? "text-slate-400 hover:bg-red-50 hover:text-red-500 dark:text-white/30 dark:hover:bg-red-900/20 dark:hover:text-red-400"
+                  : "text-emerald-500 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-900/20"
+              }`}
+              aria-label={toggleLabel}
+            >
+              <Power size={15} />
+            </button>
+          </HoverTooltip>
           <HoverTooltip content={viewUsageLabel}>
             <button
               type="button"
