@@ -1216,6 +1216,52 @@ export function DataTable<T>({
     col.style.maxWidth = widthPx;
   }, []);
 
+  const applyStickyLayoutToDom = useCallback(
+    (widths: ColumnWidthMap) => {
+      if (naturalFlow) return;
+
+      const columns = orderedColumnsRef.current;
+      const startWidth = resolveStickyRailWidth(columns, widths, "start");
+      const endWidth = resolveStickyRailWidth(columns, widths, "end");
+      stickyRailWidthsRef.current = { start: startWidth, end: endWidth };
+
+      const root = rootRef.current;
+      if (!root) return;
+
+      const clientWidth = scrollMetricsRef.current.clientWidth;
+      const startRail = root.querySelector<HTMLElement>("[data-vt-sticky-start-rail]");
+      if (startRail) startRail.style.width = `${startWidth}px`;
+
+      const endRail = root.querySelector<HTMLElement>("[data-vt-sticky-end-rail]");
+      if (endRail) {
+        endRail.style.left = `${Math.max(0, clientWidth - endWidth)}px`;
+        endRail.style.width = `${endWidth}px`;
+      }
+
+      const startBoundary = root.querySelector<HTMLElement>("[data-vt-sticky-start-boundary]");
+      if (startBoundary) startBoundary.style.left = `${Math.max(0, startWidth - 1)}px`;
+
+      const endBoundary = root.querySelector<HTMLElement>("[data-vt-sticky-end-boundary]");
+      if (endBoundary) endBoundary.style.left = `${Math.max(0, clientWidth - endWidth)}px`;
+
+      const placements = resolveStickyColumnPlacements(columns, widths);
+      root.querySelectorAll<HTMLElement>("[data-vt-column-key]").forEach((element) => {
+        const key = element.dataset.vtColumnKey;
+        const placement = key ? placements[key] : undefined;
+        if (!placement) return;
+
+        if (placement.edge === "start") {
+          element.style.setProperty("--vt-sticky-left", `${placement.offset}px`);
+          element.style.removeProperty("--vt-sticky-right");
+        } else {
+          element.style.setProperty("--vt-sticky-right", `${placement.offset}px`);
+          element.style.removeProperty("--vt-sticky-left");
+        }
+      });
+    },
+    [naturalFlow],
+  );
+
   const applyPendingColumnResize = useCallback(() => {
     columnResizeRafRef.current = null;
     const active = columnResizeRef.current;
@@ -1227,7 +1273,10 @@ export function DataTable<T>({
     const roundedWidth = resolveColumnResizeWidth(active, pointer.clientX);
 
     active.currentWidth = roundedWidth;
+    const nextWidths = { ...columnWidthsRef.current, [active.columnKey]: roundedWidth };
+    columnWidthsRef.current = nextWidths;
     applyColumnWidthToDom(active.columnKey, roundedWidth);
+    applyStickyLayoutToDom(nextWidths);
     const preview = {
       ...(buildColumnResizePreview(active, pointer.clientX, pointer.clientY) ?? {
         width: roundedWidth,
@@ -1267,6 +1316,7 @@ export function DataTable<T>({
   }, [
     applyColumnResizePreview,
     applyColumnWidthToDom,
+    applyStickyLayoutToDom,
     buildColumnResizePreview,
     scheduleScrollMetricsUpdate,
     tableId,
@@ -1339,12 +1389,14 @@ export function DataTable<T>({
         maxWidth,
         previewTop: Math.max(0, containerRect?.top ?? rect.top),
         previewBottom: Math.max(0, containerRect?.bottom ?? rect.bottom),
-        previewMinClientX: containerRect && !naturalFlow && railWidths.start > 0
-          ? containerRect.left + railWidths.start
-          : Number.NEGATIVE_INFINITY,
-        previewMaxClientX: containerRect && !naturalFlow && railWidths.end > 0
-          ? containerRect.right - railWidths.end
-          : Number.POSITIVE_INFINITY,
+        previewMinClientX:
+          containerRect && !naturalFlow && railWidths.start > 0
+            ? containerRect.left + railWidths.start
+            : Number.NEGATIVE_INFINITY,
+        previewMaxClientX:
+          containerRect && !naturalFlow && railWidths.end > 0
+            ? containerRect.right - railWidths.end
+            : Number.POSITIVE_INFINITY,
         currentWidth: nextStartWidth,
         lastDebugAtMs: 0,
         debugEnabled: shouldDebugColumnResize(),
@@ -1355,6 +1407,7 @@ export function DataTable<T>({
       document.body.style.userSelect = "none";
       setActiveResizeColumnKey(column.key);
       applyColumnWidthToDom(column.key, nextStartWidth);
+      applyStickyLayoutToDom({ ...columnWidthsRef.current, [column.key]: nextStartWidth });
       pendingColumnResizePointerRef.current = null;
       const preview = buildColumnResizePreview(resizeState, e.clientX, e.clientY);
       setResizePreview(preview);
@@ -1373,7 +1426,7 @@ export function DataTable<T>({
         });
       }
     },
-    [applyColumnWidthToDom, buildColumnResizePreview, naturalFlow, tableId],
+    [applyColumnWidthToDom, applyStickyLayoutToDom, buildColumnResizePreview, naturalFlow, tableId],
   );
 
   // ---------------------------------------------------------------------------

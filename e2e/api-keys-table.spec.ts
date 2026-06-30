@@ -352,6 +352,73 @@ test("API Keys: resize preview does not paint over the fixed action column", asy
   await page.mouse.up();
 });
 
+test("API Keys: fixed start boundary follows the name column while resizing", async ({ page }) => {
+  await page.setViewportSize({ width: 2048, height: 1180 });
+  await setAuthed(page);
+  await mockApiKeysApis(page);
+
+  await page.goto("/#/api-keys");
+  await page.locator('td[data-vt-column-key="name"]').first().waitFor({ state: "visible" });
+
+  const header = page.locator('th[data-vt-column-key="name"]');
+  const dragStart = await header.locator("[data-vt-column-resizer]").evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    const headerRect = element.closest("th")?.getBoundingClientRect();
+    return {
+      x: headerRect ? Math.min(rect.left + rect.width / 2, headerRect.right - 2) : rect.left,
+      y: rect.top + rect.height / 2,
+    };
+  });
+
+  await page.mouse.move(dragStart.x, dragStart.y);
+  await page.mouse.down();
+  await page.mouse.move(dragStart.x + 238, dragStart.y, { steps: 12 });
+  await page.locator("[data-vt-column-resize-preview-line]").waitFor({ state: "visible" });
+
+  const state = await page.evaluate(() => {
+    const nameHeader = document.querySelector<HTMLElement>('th[data-vt-column-key="name"]');
+    const nameCell = document.querySelector<HTMLElement>('td[data-vt-column-key="name"]');
+    const startRail = document.querySelector<HTMLElement>("[data-vt-sticky-start-rail]");
+    const startBoundary = document.querySelector<HTMLElement>("[data-vt-sticky-start-boundary]");
+    const previewLine = document.querySelector<HTMLElement>("[data-vt-column-resize-preview-line]");
+    if (!nameHeader || !nameCell || !startRail || !startBoundary || !previewLine) {
+      throw new Error("Missing fixed-column resize geometry");
+    }
+
+    const nameHeaderRect = nameHeader.getBoundingClientRect();
+    const nameCellRect = nameCell.getBoundingClientRect();
+    const startRailRect = startRail.getBoundingClientRect();
+    const startBoundaryRect = startBoundary.getBoundingClientRect();
+    const previewRect = previewLine.getBoundingClientRect();
+
+    return {
+      nameHeaderRight: nameHeaderRect.right,
+      nameHeaderWidth: nameHeaderRect.width,
+      nameCellRight: nameCellRect.right,
+      nameCellWidth: nameCellRect.width,
+      startRailRight: startRailRect.right,
+      startBoundaryLeft: startBoundaryRect.left,
+      startBoundaryRight: startBoundaryRect.right,
+      previewCenter: previewRect.left + previewRect.width / 2,
+      previewDisplay: getComputedStyle(previewLine).display,
+    };
+  });
+
+  await page.mouse.up();
+
+  expect(state.previewDisplay).not.toBe("none");
+  expect(state.nameHeaderWidth).toBeGreaterThanOrEqual(356);
+  expect(state.nameCellWidth).toBeGreaterThanOrEqual(356);
+  expect(state.nameHeaderRight).toBeGreaterThanOrEqual(state.previewCenter - 2);
+  expect(state.nameHeaderRight).toBeLessThanOrEqual(state.previewCenter + 2);
+  expect(state.nameCellRight).toBeGreaterThanOrEqual(state.previewCenter - 2);
+  expect(state.nameCellRight).toBeLessThanOrEqual(state.previewCenter + 2);
+  expect(state.startRailRight).toBeGreaterThanOrEqual(state.nameCellRight - 1);
+  expect(state.startRailRight).toBeLessThanOrEqual(state.nameCellRight + 1);
+  expect(state.startBoundaryLeft).toBeGreaterThanOrEqual(state.nameCellRight - 2);
+  expect(state.startBoundaryRight).toBeLessThanOrEqual(state.nameCellRight + 1);
+});
+
 test("API Keys: fixed columns do not cover the created time at the right edge", async ({
   page,
 }) => {
