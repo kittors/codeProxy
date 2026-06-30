@@ -2259,9 +2259,9 @@ export function DataTable<T>({
                   const headerCornerClass = [
                     naturalFlow && colIndex === 0 ? "rounded-l-xl" : "",
                     naturalFlow && colIndex === orderedColumns.length - 1 ? "rounded-r-xl" : "",
-                    !naturalFlow && colIndex === 0 ? "rounded-tl-xl" : "",
+                    !naturalFlow && colIndex === 0 ? "rounded-l-xl" : "",
                     !naturalFlow && !vThumb && colIndex === orderedColumns.length - 1
-                      ? "rounded-tr-xl"
+                      ? "rounded-r-xl"
                       : "",
                   ]
                     .filter(Boolean)
