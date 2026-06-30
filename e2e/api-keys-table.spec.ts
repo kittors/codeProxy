@@ -297,6 +297,7 @@ test("API Keys: fixed columns do not cover the created time at the right edge", 
     .locator('td[data-vt-column-key="createdAt"]')
     .first()
     .waitFor({ state: "visible" });
+  await expect(page.getByText(/All 9 records loaded|已加载全部 9 条记录/)).toHaveCount(0);
 
   const states = await page.evaluate(async () => {
     const scrollContent = document.querySelector<HTMLElement>("[data-vt-scroll-content]");
@@ -330,9 +331,17 @@ test("API Keys: fixed columns do not cover the created time at the right edge", 
       nameCellHitColumn: string | null;
       startRailLeft: number;
       startRailBottom: number;
+      startBoundaryLeft: number;
+      startBoundaryRight: number;
+      startBoundaryBottom: number;
       endRailRight: number;
       endRailBottom: number;
+      endBoundaryLeft: number;
+      endBoundaryRight: number;
+      endBoundaryBottom: number;
       fixedRailBottom: number;
+      selectHeaderTopLeftRadius: number;
+      actionsHeaderTopRightRadius: number;
     }> = [];
     for (const scrollLeft of positions) {
       container.scrollLeft = scrollLeft;
@@ -348,6 +357,10 @@ test("API Keys: fixed columns do not cover the created time at the right edge", 
       const nameCell = document.querySelector<HTMLElement>('td[data-vt-column-key="name"]');
       const startRail = document.querySelector<HTMLElement>("[data-vt-sticky-start-rail]");
       const endRail = document.querySelector<HTMLElement>("[data-vt-sticky-end-rail]");
+      const startBoundary = document.querySelector<HTMLElement>(
+        "[data-vt-sticky-start-boundary]",
+      );
+      const endBoundary = document.querySelector<HTMLElement>("[data-vt-sticky-end-boundary]");
       if (
         !createdAt ||
         !actions ||
@@ -357,7 +370,9 @@ test("API Keys: fixed columns do not cover the created time at the right edge", 
         !selectCell ||
         !nameCell ||
         !startRail ||
-        !endRail
+        !endRail ||
+        !startBoundary ||
+        !endBoundary
       ) {
         throw new Error("Missing fixed-column geometry");
       }
@@ -372,6 +387,10 @@ test("API Keys: fixed columns do not cover the created time at the right edge", 
       const containerRect = container.getBoundingClientRect();
       const startRailRect = startRail.getBoundingClientRect();
       const endRailRect = endRail.getBoundingClientRect();
+      const startBoundaryRect = startBoundary.getBoundingClientRect();
+      const endBoundaryRect = endBoundary.getBoundingClientRect();
+      const selectHeaderStyle = getComputedStyle(selectHeader);
+      const actionsHeaderStyle = getComputedStyle(actionsHeader);
       const nameHeaderHit = document.elementFromPoint(
         nameHeaderRect.right - 8,
         nameHeaderRect.top + nameHeaderRect.height / 2,
@@ -406,9 +425,17 @@ test("API Keys: fixed columns do not cover the created time at the right edge", 
           nameCellHit?.closest<HTMLElement>("[data-vt-column-key]")?.dataset.vtColumnKey ?? null,
         startRailLeft: startRailRect.left,
         startRailBottom: startRailRect.bottom,
+        startBoundaryLeft: startBoundaryRect.left,
+        startBoundaryRight: startBoundaryRect.right,
+        startBoundaryBottom: startBoundaryRect.bottom,
         endRailRight: endRailRect.right,
         endRailBottom: endRailRect.bottom,
+        endBoundaryLeft: endBoundaryRect.left,
+        endBoundaryRight: endBoundaryRect.right,
+        endBoundaryBottom: endBoundaryRect.bottom,
         fixedRailBottom: containerRect.bottom - horizontalScrollbarInset,
+        selectHeaderTopLeftRadius: Number.parseFloat(selectHeaderStyle.borderTopLeftRadius),
+        actionsHeaderTopRightRadius: Number.parseFloat(actionsHeaderStyle.borderTopRightRadius),
       });
     }
 
@@ -425,6 +452,12 @@ test("API Keys: fixed columns do not cover the created time at the right edge", 
     expect(state.startRailLeft).toBeLessThanOrEqual(state.containerLeft + 1);
     expect(state.endRailRight).toBeGreaterThanOrEqual(state.containerRight - 1);
     expect(state.endRailRight).toBeLessThanOrEqual(state.containerRight + 1);
+    expect(state.startBoundaryLeft).toBeGreaterThanOrEqual(expectedHeaderNameRight - 2);
+    expect(state.startBoundaryRight).toBeLessThanOrEqual(expectedHeaderNameRight + 1);
+    expect(state.endBoundaryLeft).toBeGreaterThanOrEqual(state.actionsLeft - 1);
+    expect(state.endBoundaryLeft).toBeLessThanOrEqual(state.actionsLeft + 1);
+    expect(state.endBoundaryRight).toBeGreaterThanOrEqual(state.actionsLeft);
+    expect(state.endBoundaryRight).toBeLessThanOrEqual(state.actionsLeft + 2);
     expect(state.selectHeaderLeft).toBeGreaterThanOrEqual(state.containerLeft - 1);
     expect(state.selectHeaderLeft).toBeLessThanOrEqual(state.containerLeft + 1);
     expect(state.nameHeaderLeft).toBeGreaterThanOrEqual(expectedHeaderNameLeft - 1);
@@ -445,6 +478,10 @@ test("API Keys: fixed columns do not cover the created time at the right edge", 
     expect(state.nameCellHitColumn).toBe("name");
     expect(state.startRailBottom).toBeGreaterThanOrEqual(state.fixedRailBottom - 1);
     expect(state.endRailBottom).toBeGreaterThanOrEqual(state.fixedRailBottom - 1);
+    expect(state.startBoundaryBottom).toBeGreaterThanOrEqual(state.fixedRailBottom - 1);
+    expect(state.endBoundaryBottom).toBeGreaterThanOrEqual(state.fixedRailBottom - 1);
+    expect(state.selectHeaderTopLeftRadius).toBeGreaterThan(0);
+    expect(state.actionsHeaderTopRightRadius).toBeGreaterThan(0);
   }
 
   const maxScrollState = states.at(-1);
@@ -488,6 +525,8 @@ test("API Keys: fixed columns stay pinned while dragging the horizontal scrollba
     const actionsCell = document.querySelector<HTMLElement>('td[data-vt-column-key="actions"]');
     const startRail = document.querySelector<HTMLElement>("[data-vt-sticky-start-rail]");
     const endRail = document.querySelector<HTMLElement>("[data-vt-sticky-end-rail]");
+    const startBoundary = document.querySelector<HTMLElement>("[data-vt-sticky-start-boundary]");
+    const endBoundary = document.querySelector<HTMLElement>("[data-vt-sticky-end-boundary]");
     if (
       !container ||
       !selectHeader ||
@@ -497,7 +536,9 @@ test("API Keys: fixed columns stay pinned while dragging the horizontal scrollba
       !nameCell ||
       !actionsCell ||
       !startRail ||
-      !endRail
+      !endRail ||
+      !startBoundary ||
+      !endBoundary
     ) {
       throw new Error("Missing fixed-column drag geometry");
     }
@@ -511,8 +552,12 @@ test("API Keys: fixed columns stay pinned while dragging the horizontal scrollba
     const actionsCellRect = actionsCell.getBoundingClientRect();
     const startRailRect = startRail.getBoundingClientRect();
     const endRailRect = endRail.getBoundingClientRect();
+    const startBoundaryRect = startBoundary.getBoundingClientRect();
+    const endBoundaryRect = endBoundary.getBoundingClientRect();
     const startRailStyle = getComputedStyle(startRail);
     const endRailStyle = getComputedStyle(endRail);
+    const startBoundaryStyle = getComputedStyle(startBoundary);
+    const endBoundaryStyle = getComputedStyle(endBoundary);
     const nameHeaderStyle = getComputedStyle(nameHeader);
     const actionsHeaderStyle = getComputedStyle(actionsHeader);
     const nameCellStyle = getComputedStyle(nameCell);
@@ -537,13 +582,21 @@ test("API Keys: fixed columns stay pinned while dragging the horizontal scrollba
       selectCellLeft: selectCellRect.left,
       selectCellWidth: selectCellRect.width,
       nameCellLeft: nameCellRect.left,
+      nameCellRight: nameCellRect.right,
+      actionsCellLeft: actionsCellRect.left,
       actionsCellRight: actionsCellRect.right,
       startRailLeft: startRailRect.left,
       endRailRight: endRailRect.right,
+      startBoundaryLeft: startBoundaryRect.left,
+      startBoundaryRight: startBoundaryRect.right,
+      endBoundaryLeft: endBoundaryRect.left,
+      endBoundaryRight: endBoundaryRect.right,
       startRailZIndex: getComputedStyle(startRail).zIndex,
       endRailZIndex: getComputedStyle(endRail).zIndex,
       startRailBorderRightWidth: startRailStyle.borderRightWidth,
       endRailBorderLeftWidth: endRailStyle.borderLeftWidth,
+      startBoundaryWidth: startBoundaryStyle.width,
+      endBoundaryWidth: endBoundaryStyle.width,
       nameHeaderBorderRightWidth: nameHeaderStyle.borderRightWidth,
       actionsHeaderBorderLeftWidth: actionsHeaderStyle.borderLeftWidth,
       nameCellBorderRightWidth: nameCellStyle.borderRightWidth,
@@ -564,10 +617,18 @@ test("API Keys: fixed columns stay pinned while dragging the horizontal scrollba
   expect(state.startRailLeft).toBeLessThanOrEqual(state.containerLeft + 1);
   expect(state.endRailRight).toBeGreaterThanOrEqual(state.containerRight - 1);
   expect(state.endRailRight).toBeLessThanOrEqual(state.containerRight + 1);
+  expect(state.startBoundaryLeft).toBeGreaterThanOrEqual(state.nameCellRight - 2);
+  expect(state.startBoundaryRight).toBeLessThanOrEqual(state.nameCellRight + 1);
+  expect(state.endBoundaryLeft).toBeGreaterThanOrEqual(state.actionsCellLeft - 1);
+  expect(state.endBoundaryLeft).toBeLessThanOrEqual(state.actionsCellLeft + 1);
+  expect(state.endBoundaryRight).toBeGreaterThanOrEqual(state.actionsCellLeft);
+  expect(state.endBoundaryRight).toBeLessThanOrEqual(state.actionsCellLeft + 2);
   expect(state.startRailZIndex).toBe("0");
   expect(state.endRailZIndex).toBe("0");
   expect(state.startRailBorderRightWidth).toBe("0px");
   expect(state.endRailBorderLeftWidth).toBe("0px");
+  expect(state.startBoundaryWidth).toBe("1px");
+  expect(state.endBoundaryWidth).toBe("1px");
   expect(state.nameHeaderBorderRightWidth).toBe("1px");
   expect(state.actionsHeaderBorderLeftWidth).toBe("1px");
   expect(state.nameCellBorderRightWidth).toBe("1px");

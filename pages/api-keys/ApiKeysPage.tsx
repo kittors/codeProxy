@@ -661,6 +661,7 @@ export function ApiKeysPage() {
               minWidth="min-w-[2002px]"
               caption={t("api_keys_page.table_caption")}
               emptyText={t("api_keys_page.no_api_keys")}
+              showAllLoadedMessage={false}
               rowClassName={(row) => (row.disabled ? "opacity-50" : "")}
             />
           </div>

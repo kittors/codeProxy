@@ -2014,6 +2014,9 @@ export function DataTable<T>({
     0,
     scrollMetrics.clientHeight - headerHeight - stickyRailBottomInset,
   );
+  const stickyBoundaryHeight = Math.max(0, scrollMetrics.clientHeight - stickyRailBottomInset);
+  const stickyStartBoundaryLeft = Math.max(0, stickyStartRailWidth - 1);
+  const stickyEndBoundaryLeft = Math.max(0, scrollMetrics.clientWidth - stickyEndRailWidth);
   const latestScrollMetrics = scrollMetricsRef.current;
   const stickyRailTransform = `translate(${latestScrollMetrics.scrollLeft}px, ${latestScrollMetrics.scrollTop}px)`;
   const stickyEndRailLeft = Math.max(0, scrollMetrics.clientWidth - stickyEndRailWidth);
@@ -2193,6 +2196,10 @@ export function DataTable<T>({
                   const headerCornerClass = [
                     naturalFlow && colIndex === 0 ? "rounded-l-xl" : "",
                     naturalFlow && colIndex === orderedColumns.length - 1 ? "rounded-r-xl" : "",
+                    !naturalFlow && colIndex === 0 ? "rounded-tl-xl" : "",
+                    !naturalFlow && !vThumb && colIndex === orderedColumns.length - 1
+                      ? "rounded-tr-xl"
+                      : "",
                   ]
                     .filter(Boolean)
                     .join(" ");
@@ -2448,6 +2455,29 @@ export function DataTable<T>({
           )}
         </div>
       </div>
+
+      {!naturalFlow && stickyStartRailWidth > 0 && stickyBoundaryHeight > 0 ? (
+        <div
+          data-vt-sticky-start-boundary
+          aria-hidden="true"
+          className="pointer-events-none absolute top-0 z-[35] hidden w-px bg-slate-200 md:block dark:bg-neutral-800"
+          style={{
+            left: stickyStartBoundaryLeft,
+            height: stickyBoundaryHeight,
+          }}
+        />
+      ) : null}
+      {!naturalFlow && stickyEndRailWidth > 0 && stickyBoundaryHeight > 0 ? (
+        <div
+          data-vt-sticky-end-boundary
+          aria-hidden="true"
+          className="pointer-events-none absolute top-0 z-[35] hidden w-px bg-slate-200 md:block dark:bg-neutral-800"
+          style={{
+            left: stickyEndBoundaryLeft,
+            height: stickyBoundaryHeight,
+          }}
+        />
+      ) : null}
 
       {!naturalFlow && vThumb ? (
         <div
