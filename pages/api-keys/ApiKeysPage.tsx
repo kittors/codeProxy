@@ -599,6 +599,8 @@ export function ApiKeysPage() {
   return (
     <div className="space-y-6">
       <Card
+        className="md:flex md:h-[calc(100dvh-112px)] md:min-h-0 md:flex-col md:overflow-hidden"
+        bodyClassName="md:flex md:min-h-0 md:flex-1 md:flex-col"
         title={t("api_keys_page.title")}
         description={t("api_keys_page.description")}
         actions={
@@ -638,15 +640,15 @@ export function ApiKeysPage() {
             icon={<KeyRound size={32} className="text-slate-400" />}
           />
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-3 md:flex md:min-h-0 md:flex-1 md:flex-col">
             <DataTable<ApiKeyEntry>
               tableId="api-keys"
               rows={entries}
               columns={apiKeyColumns}
               rowKey={(row) => row.key}
               rowHeight={44}
-              height="h-[calc(100dvh-260px)] max-h-[70vh]"
-              minHeight="min-h-[320px]"
+              height="h-[calc(100dvh-260px)] md:h-auto md:flex-1"
+              minHeight="min-h-[320px] md:min-h-0"
               minWidth="min-w-[2002px]"
               caption={t("api_keys_page.table_caption")}
               emptyText={t("api_keys_page.no_api_keys")}
