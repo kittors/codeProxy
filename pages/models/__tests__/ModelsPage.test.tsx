@@ -307,6 +307,12 @@ describe("ModelsPage", () => {
   test("renders model capability badges from modality metadata", async () => {
     renderPage();
 
+    const imageModelCell = await screen.findByText("gpt-image-2");
+    const imageModelRow = imageModelCell.closest("tr");
+    expect(imageModelRow).not.toBeNull();
+    expect(within(imageModelRow!).getByText("Image output")).toBeInTheDocument();
+    expect(within(imageModelRow!).queryByText("Text")).not.toBeInTheDocument();
+
     expect(await screen.findByText("qwen3.5-plus")).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "Capabilities" })).toBeInTheDocument();
     expect(screen.getByText("Vision")).toBeInTheDocument();
