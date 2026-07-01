@@ -1,11 +1,18 @@
+import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { RefreshCw } from "lucide-react";
 import { Button } from "@code-proxy/ui";
 import { Checkbox } from "@code-proxy/ui";
+import { DataTable, type DataTableColumn } from "@code-proxy/ui";
 import { TextInput } from "@code-proxy/ui";
 import { SearchableSelect } from "@code-proxy/ui";
-import { ModelInputList } from "../ModelInputList";
-import type { ProviderKeyDraft } from "../providers-helpers";
+import { createEmptyModelEntry, ModelInputList } from "../ModelInputList";
+import {
+  excludedModelsFromText,
+  hasDisableAllModelsRule,
+  stripDisableAllModelsRule,
+  type ProviderKeyDraft,
+} from "../providers-helpers";
 import { ExcludedModelsEditor } from "./ExcludedModelsEditor";
 
 const SectionCard = ({ children }: { children: React.ReactNode }) => (
@@ -13,6 +20,13 @@ const SectionCard = ({ children }: { children: React.ReactNode }) => (
     {children}
   </div>
 );
+
+type ClineModelRow = {
+  id: string;
+  ownedBy: string;
+  publicName: string;
+  checked: boolean;
+};
 
 interface ProviderKeyModelsTabProps {
   isOpenCodeGo: boolean;
@@ -71,6 +85,118 @@ export function ProviderKeyModelsTab({
 }: ProviderKeyModelsTabProps) {
   const { t } = useTranslation();
   const isModelAccessProvider = isOpenCodeGo || isCline;
+  const clineRows = useMemo<ClineModelRow[]>(() => {
+    if (!isCline) return [];
+    const entriesByName = new Map(
+      keyDraft.modelEntries.map((entry) => [entry.name.trim().toLowerCase(), entry]),
+    );
+    return filteredOpenCodeModels.map((model) => {
+      const normalized = model.id.toLowerCase();
+      const entry = entriesByName.get(normalized);
+      return {
+        id: model.id,
+        ownedBy: model.owned_by ?? "",
+        publicName: entry ? entry.alias : model.id,
+        checked:
+          !excludeAll && enabledOpenCodeModelIds.has(normalized) && !excludedModelIds.has(normalized),
+      };
+    });
+  }, [
+    isCline,
+    keyDraft.modelEntries,
+    filteredOpenCodeModels,
+    excludeAll,
+    enabledOpenCodeModelIds,
+    excludedModelIds,
+  ]);
+
+  const updateClineModelAlias = useCallback((modelId: string, alias: string) => {
+    const normalized = modelId.trim().toLowerCase();
+    if (!normalized) return;
+    setKeyDraft((prev) => {
+      const excludedModels = excludedModelsFromText(prev.excludedModelsText);
+      const excludeAllModels = hasDisableAllModelsRule(excludedModels);
+      const currentExcluded = stripDisableAllModelsRule(excludedModels);
+      const hadEntry = prev.modelEntries.some(
+        (entry) => entry.name.trim().toLowerCase() === normalized,
+      );
+      const wasExcluded = currentExcluded.some((model) => model.trim().toLowerCase() === normalized);
+      const nextExcluded = currentExcluded.filter(
+        (model) => model.trim().toLowerCase() !== normalized,
+      );
+      const found = prev.modelEntries.some(
+        (entry) => entry.name.trim().toLowerCase() === normalized,
+      );
+      const nextEntries = found
+        ? prev.modelEntries.map((entry) =>
+            entry.name.trim().toLowerCase() === normalized ? { ...entry, alias } : entry,
+          )
+        : [{ ...createEmptyModelEntry(), name: modelId, alias }, ...prev.modelEntries];
+      let nextExcludedModels = currentExcluded;
+      if (excludeAllModels) {
+        nextExcludedModels = excludedModels;
+      } else if (!hadEntry && !wasExcluded) {
+        nextExcludedModels = [...nextExcluded, modelId];
+      }
+      return {
+        ...prev,
+        modelEntries: nextEntries,
+        excludedModelsText: nextExcludedModels.join("\n"),
+      };
+    });
+  }, [setKeyDraft]);
+
+  const clineColumns = useMemo<DataTableColumn<ClineModelRow>[]>(
+    () => [
+      {
+        key: "id",
+        label: t("providers.cline_real_model_id"),
+        width: "w-72",
+        overflowTooltip: (row) => row.id,
+        render: (row) => (
+          <div className="min-w-0">
+            <span className="block truncate font-mono text-xs font-semibold text-slate-800 dark:text-white/85">
+              {row.id}
+            </span>
+            {row.ownedBy ? (
+              <span className="block truncate text-[11px] text-slate-500 dark:text-white/45">
+                {row.ownedBy}
+              </span>
+            ) : null}
+          </div>
+        ),
+      },
+      {
+        key: "publicName",
+        label: t("providers.cline_public_model_name"),
+        width: "w-72",
+        render: (row) => (
+          <TextInput
+            value={row.publicName}
+            onChange={(event) => updateClineModelAlias(row.id, event.currentTarget.value)}
+            className="h-8 font-mono text-xs"
+            aria-label={t("providers.cline_public_model_name")}
+          />
+        ),
+      },
+      {
+        key: "enabled",
+        label: t("providers.model_enabled"),
+        width: "w-24",
+        headerClassName: "text-center",
+        cellClassName: "text-center",
+        lockOrder: "end",
+        render: (row) => (
+          <Checkbox
+            checked={row.checked}
+            onCheckedChange={(next) => setOpenCodeModelAllowed(row.id, next)}
+            aria-label={row.id}
+          />
+        ),
+      },
+    ],
+    [setOpenCodeModelAllowed, t, updateClineModelAlias],
+  );
 
   if (isModelAccessProvider) {
     return (
@@ -137,7 +263,27 @@ export function ProviderKeyModelsTab({
             </p>
           ) : null}
 
-          <div className="mt-3 max-h-80 overflow-y-auto rounded-xl border border-slate-200 bg-white dark:border-neutral-800 dark:bg-neutral-950">
+          {isCline ? (
+            <div className="mt-3 overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-neutral-800 dark:bg-neutral-950">
+              <DataTable<ClineModelRow>
+                tableId="provider-cline-models"
+                rows={clineRows}
+                columns={clineColumns}
+                rowKey={(row) => row.id}
+                loading={openCodeModelsLoading && openCodeModels.length === 0}
+                rowHeight={52}
+                height="h-auto max-h-80"
+                minHeight="min-h-[160px]"
+                minWidth="min-w-[720px]"
+                caption={t("providers.cline_models_title")}
+                emptyText={t("providers.no_discovered_models")}
+                showAllLoadedMessage={false}
+                columnReorderable={false}
+                persistColumnOrder={false}
+              />
+            </div>
+          ) : (
+            <div className="mt-3 max-h-80 overflow-y-auto rounded-xl border border-slate-200 bg-white dark:border-neutral-800 dark:bg-neutral-950">
             {openCodeModelsLoading && openCodeModels.length === 0 ? (
               <div className="px-3 py-6 text-center text-sm text-slate-500 dark:text-white/55">
                 {t("providers.models_loading")}
@@ -188,7 +334,8 @@ export function ProviderKeyModelsTab({
                 {t("providers.no_discovered_models")}
               </div>
             )}
-          </div>
+            </div>
+          )}
         </SectionCard>
       </div>
     );

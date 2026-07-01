@@ -27,6 +27,7 @@ export type RequestLogsRow = {
   channelName: string;
   maskedApiKey: string;
   model: string;
+  upstreamModel: string;
   failed: boolean;
   streaming: boolean;
   latencyText: string;
@@ -235,6 +236,7 @@ export const toRequestLogsRow = (item: UsageLogItem): RequestLogsRow => {
     channelName: item.channel_name || "",
     maskedApiKey: maskRequestLogApiKey(item.api_key),
     model: item.model,
+    upstreamModel: item.upstream_model || "",
     failed: item.failed,
     streaming: item.streaming === true,
     latencyText: formatRequestLogLatencyMs(item.latency_ms),
@@ -548,9 +550,22 @@ export function buildRequestLogsColumns(
       cellClassName: "text-center",
       render: (row) =>
         row.model ? (
-          <OverflowTooltip content={row.model} className="inline-block max-w-full align-middle">
-            <ModelTag id={row.model} size="sm" className="align-middle" />
-          </OverflowTooltip>
+          <span className="inline-flex max-w-full items-center justify-center gap-1 align-middle">
+            <OverflowTooltip content={row.model} className="min-w-0">
+              <ModelTag id={row.model} size="sm" className="align-middle" />
+            </OverflowTooltip>
+            {row.upstreamModel && row.upstreamModel !== row.model ? (
+              <HoverTooltip
+                content={`${t("request_logs.real_model_id")}\n${row.upstreamModel}`}
+                placement="top"
+              >
+                <span
+                  className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500"
+                  aria-label={t("request_logs.real_model_id")}
+                />
+              </HoverTooltip>
+            ) : null}
+          </span>
         ) : (
           <span className="text-xs text-slate-400 dark:text-white/30">--</span>
         ),

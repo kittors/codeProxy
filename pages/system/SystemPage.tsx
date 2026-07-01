@@ -133,11 +133,27 @@ type SystemModelEntry = {
 const formatModelSourcesTooltip = (
   sources: ModelAvailabilitySource[] | undefined,
   title: string,
+  realModelTitle: string,
 ) => {
   if (!sources?.length) return "";
   const labels = Array.from(new Set(sources.map((source) => source.label.trim()).filter(Boolean)));
   if (labels.length === 0) return "";
-  return `${title}\n${labels.join("\n")}`;
+  const upstreamModelIds = Array.from(
+    new Set(
+      sources
+        .map((source) => source.upstreamModelId?.trim() ?? "")
+        .filter((id, index) => {
+          if (!id) return false;
+          const modelId = sources[index]?.modelId?.trim() ?? "";
+          return id !== modelId;
+        }),
+    ),
+  );
+  const parts = [`${title}\n${labels.join("\n")}`];
+  if (upstreamModelIds.length > 0) {
+    parts.push(`${realModelTitle}\n${upstreamModelIds.join("\n")}`);
+  }
+  return parts.join("\n\n");
 };
 
 export function SystemPage({
@@ -367,6 +383,7 @@ export function SystemPage({
                 const tooltip = formatModelSourcesTooltip(
                   model.sources,
                   t("system_page.model_sources"),
+                  t("system_page.real_model_id"),
                 );
                 const tag = (
                   <CopyableModelTag

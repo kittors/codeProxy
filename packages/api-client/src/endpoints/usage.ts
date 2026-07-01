@@ -472,6 +472,7 @@ export interface UsageLogItem {
   api_key: string;
   api_key_name: string;
   model: string;
+  upstream_model?: string;
   source: string;
   channel_name: string;
   auth_index: string;
