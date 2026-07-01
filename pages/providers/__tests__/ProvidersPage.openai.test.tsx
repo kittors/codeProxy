@@ -9,8 +9,8 @@ import { ToastProvider } from "@code-proxy/ui";
 const mocks = vi.hoisted(() => ({
   getGeminiKeys: vi.fn(async () => []),
   getClaudeConfigs: vi.fn(async () => []),
-  getCodexConfigs: vi.fn(async () => []),
-  getOpenCodeGoConfigs: vi.fn(async () => []),
+  getCodexConfigs: vi.fn(async (): Promise<unknown[]> => []),
+  getOpenCodeGoConfigs: vi.fn(async (): Promise<unknown[]> => []),
   getClineConfigs: vi.fn(async () => []),
   getVertexConfigs: vi.fn(async () => []),
   getBedrockConfigs: vi.fn(async () => []),
