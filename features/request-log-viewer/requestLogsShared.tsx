@@ -28,6 +28,7 @@ export type RequestLogsRow = {
   maskedApiKey: string;
   model: string;
   upstreamModel: string;
+  visionFallbackModel: string;
   failed: boolean;
   streaming: boolean;
   latencyText: string;
@@ -237,6 +238,7 @@ export const toRequestLogsRow = (item: UsageLogItem): RequestLogsRow => {
     maskedApiKey: maskRequestLogApiKey(item.api_key),
     model: item.model,
     upstreamModel: item.upstream_model || "",
+    visionFallbackModel: item.vision_fallback_model || "",
     failed: item.failed,
     streaming: item.streaming === true,
     latencyText: formatRequestLogLatencyMs(item.latency_ms),
@@ -562,6 +564,17 @@ export function buildRequestLogsColumns(
                 <span
                   className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500"
                   aria-label={t("request_logs.real_model_id")}
+                />
+              </HoverTooltip>
+            ) : null}
+            {row.visionFallbackModel && row.visionFallbackModel !== row.model ? (
+              <HoverTooltip
+                content={`${t("request_logs.vision_fallback_model_id")}\n${row.visionFallbackModel}`}
+                placement="top"
+              >
+                <span
+                  className="h-1.5 w-1.5 shrink-0 rounded-full bg-sky-500"
+                  aria-label={t("request_logs.vision_fallback_model_id")}
                 />
               </HoverTooltip>
             ) : null}

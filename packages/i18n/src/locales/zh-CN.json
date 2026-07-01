@@ -2783,6 +2783,7 @@
     "col_key_name": "密钥名称",
     "col_model": "模型",
     "real_model_id": "真实模型 ID",
+    "vision_fallback_model_id": "视觉补位模型 ID",
     "col_channel": "渠道",
     "col_status": "状态",
     "col_mode": "类型",

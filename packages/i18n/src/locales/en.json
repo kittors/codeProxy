@@ -2503,6 +2503,7 @@
     "col_key_name": "Key Name",
     "col_model": "Model",
     "real_model_id": "Real model ID",
+    "vision_fallback_model_id": "Vision fallback model ID",
     "col_channel": "Channel",
     "col_status": "Status",
     "col_mode": "Mode",

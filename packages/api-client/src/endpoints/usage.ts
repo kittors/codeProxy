@@ -473,6 +473,7 @@ export interface UsageLogItem {
   api_key_name: string;
   model: string;
   upstream_model?: string;
+  vision_fallback_model?: string;
   source: string;
   channel_name: string;
   auth_index: string;

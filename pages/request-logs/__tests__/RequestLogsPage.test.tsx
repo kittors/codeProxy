@@ -242,6 +242,52 @@ describe("RequestLogsPage", () => {
     expect(screen.queryByLabelText("First Token Latency: --")).not.toBeInTheDocument();
   });
 
+  test("shows vision fallback model separately from real model mapping", async () => {
+    await i18n.changeLanguage("en");
+    const user = userEvent.setup();
+
+    mocks.getUsageLogs.mockResolvedValue(
+      responseWithRows([
+        buildUsageLogItem({
+          id: 1,
+          model: "cline-pass/deepseek-v4-pro",
+          upstream_model: "",
+          vision_fallback_model: "cline-pass/mimo-v2.5-pro",
+        }),
+        buildUsageLogItem({
+          id: 2,
+          model: "alias-model",
+          upstream_model: "real-model",
+          vision_fallback_model: "",
+        }),
+      ]),
+    );
+
+    render(
+      <ThemeProvider>
+        <ToastProvider>
+          <RequestLogsPage />
+        </ToastProvider>
+      </ThemeProvider>,
+    );
+
+    const table = await screen.findByRole("table", { name: "Request Logs Table" });
+    expect(within(table).getByText("cline-pass/deepseek-v4-pro")).toBeInTheDocument();
+    expect(within(table).getByText("alias-model")).toBeInTheDocument();
+
+    const visionMarker = within(table).getByLabelText("Vision fallback model ID");
+    await user.hover(visionMarker);
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(
+      "Vision fallback model ID cline-pass/mimo-v2.5-pro",
+    );
+    await user.unhover(visionMarker);
+    await waitFor(() => expect(screen.queryByRole("tooltip")).not.toBeInTheDocument());
+
+    const realModelMarker = within(table).getByLabelText("Real model ID");
+    await user.hover(realModelMarker);
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("Real model ID real-model");
+  });
+
   test("does not crash when backend returns null filter arrays", async () => {
     await i18n.changeLanguage("en");
 
