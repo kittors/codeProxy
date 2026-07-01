@@ -289,7 +289,7 @@ describe("SystemPage", () => {
               id: "mimo-v2.5-pro",
               sources: [
                 {
-                  label: "cline · Cline",
+                  label: "cline · ClinePass",
                   provider: "cline",
                   model_id: "mimo-v2.5-pro",
                   upstream_model_id: "cline-pass/mimo-v2.5-pro",
@@ -300,7 +300,7 @@ describe("SystemPage", () => {
               id: "cline-pass/deepseek-v4-pro",
               sources: [
                 {
-                  label: "cline · Cline",
+                  label: "cline · ClinePass",
                   provider: "cline",
                   model_id: "cline-pass/deepseek-v4-pro",
                   upstream_model_id: "cline-pass/deepseek-v4-pro",
@@ -335,14 +335,14 @@ describe("SystemPage", () => {
     await userEvent.hover(clineModel);
 
     expect(container.querySelectorAll('[data-model-source-marker="true"]')).toHaveLength(1);
-    expect(await screen.findByText(/Cline · cline/)).toBeInTheDocument();
+    expect(await screen.findByText(/ClinePass · cline/)).toBeInTheDocument();
     expect(screen.getByText("Actual ID")).toBeInTheDocument();
     expect(screen.getByText("cline-pass/mimo-v2.5-pro")).toBeInTheDocument();
 
     await userEvent.unhover(clineModel);
     await userEvent.hover(realClineModel);
 
-    expect(await screen.findByText(/Cline · cline/)).toBeInTheDocument();
+    expect(await screen.findByText(/ClinePass · cline/)).toBeInTheDocument();
     expect(screen.queryByText("Actual ID")).not.toBeInTheDocument();
   });
 

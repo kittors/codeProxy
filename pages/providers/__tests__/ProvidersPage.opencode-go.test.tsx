@@ -361,6 +361,7 @@ describe("ProvidersPage Cline tab", () => {
             { id: "cline-pass/glm-5.2", object: "model", owned_by: "cline" },
             { id: "cline-pass/minimax-m3", object: "model", owned_by: "cline" },
             { id: "cline-pass/qwen3.7-max", object: "model", owned_by: "cline" },
+            { id: "cline-pass/mimo-v2.5-pro", object: "model", owned_by: "cline" },
           ]
         : [
             { id: "deepseek-v4-flash", object: "model", owned_by: "opencode" },
@@ -394,8 +395,8 @@ describe("ProvidersPage Cline tab", () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByRole("tab", { name: /Cline/ })).toBeInTheDocument();
-    const dialog = await screen.findByRole("dialog", { name: /Add Cline configuration/i });
+    expect(await screen.findByRole("tab", { name: /ClinePass/ })).toBeInTheDocument();
+    const dialog = await screen.findByRole("dialog", { name: /Add ClinePass configuration/i });
 
     await user.click(within(dialog).getByRole("tab", { name: /Request/i }));
     expect(within(dialog).getByDisplayValue("https://api.cline.bot/api/v1")).toBeInTheDocument();
@@ -450,7 +451,7 @@ describe("ProvidersPage Cline tab", () => {
       </MemoryRouter>,
     );
 
-    const dialog = await screen.findByRole("dialog", { name: /Add Cline configuration/i });
+    const dialog = await screen.findByRole("dialog", { name: /Add ClinePass configuration/i });
     await user.click(within(dialog).getByRole("tab", { name: /Models/i }));
 
     expect(await within(dialog).findByText("cline-pass/mimo-v2.5-pro")).toBeInTheDocument();
@@ -482,7 +483,7 @@ describe("ProvidersPage Cline tab", () => {
       </MemoryRouter>,
     );
 
-    const dialog = await screen.findByRole("dialog", { name: /Add Cline configuration/i });
+    const dialog = await screen.findByRole("dialog", { name: /Add ClinePass configuration/i });
     await user.click(within(dialog).getByRole("tab", { name: /Models/i }));
 
     await waitFor(() => {
@@ -494,6 +495,13 @@ describe("ProvidersPage Cline tab", () => {
     await waitFor(() => expect(minimax).toBeChecked());
     await user.click(minimax);
 
+    await user.click(within(dialog).getByRole("tab", { name: /Request/i }));
+    const fallback = await within(dialog).findByRole("combobox", {
+      name: /Vision fallback model/i,
+    });
+    await user.click(fallback);
+    await user.click(screen.getByRole("option", { name: /cline-pass\/mimo-v2\.5-pro/i }));
+
     await user.click(within(dialog).getByRole("tab", { name: /Basic/i }));
     await user.type(within(dialog).getByPlaceholderText("e.g. Gemini Primary"), "Cline");
     await user.type(within(dialog).getByPlaceholderText(/Paste API Key/i), "sk-cline");
@@ -504,8 +512,13 @@ describe("ProvidersPage Cline tab", () => {
         expect.objectContaining({
           name: "Cline",
           apiKey: "sk-cline",
-          models: [{ name: "cline-pass/glm-5.2" }, { name: "cline-pass/qwen3.7-max" }],
+          models: [
+            { name: "cline-pass/glm-5.2" },
+            { name: "cline-pass/qwen3.7-max" },
+            { name: "cline-pass/mimo-v2.5-pro" },
+          ],
           excludedModels: ["cline-pass/minimax-m3"],
+          visionFallbackModel: "cline-pass/mimo-v2.5-pro",
         }),
       ]);
     });

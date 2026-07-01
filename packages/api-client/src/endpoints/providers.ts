@@ -188,6 +188,8 @@ export const providersApi = {
         const excludedModels = normalizeExcludedModels(
           item["excluded-models"] ?? item.excludedModels,
         );
+        const visionFallbackModel =
+          normalizeString(item["vision-fallback-model"] ?? item.visionFallbackModel) ?? undefined;
         return {
           apiKey,
           ...(name ? { name } : {}),
@@ -198,6 +200,7 @@ export const providersApi = {
           ...(headers ? { headers } : {}),
           ...(models ? { models } : {}),
           ...(excludedModels ? { excludedModels } : {}),
+          ...(visionFallbackModel ? { visionFallbackModel } : {}),
         };
       })
       .filter(Boolean) as ProviderSimpleConfig[];

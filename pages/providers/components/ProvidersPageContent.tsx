@@ -937,7 +937,7 @@ export function ProvidersPage() {
             { id: "claude", label: "Claude", count: tabCounts.claude },
             { id: "codex", label: "Codex", count: tabCounts.codex },
             { id: "opencode-go", label: "OpenCode Go", count: tabCounts["opencode-go"] },
-            { id: "cline", label: "Cline", count: tabCounts.cline },
+            { id: "cline", label: "ClinePass", count: tabCounts.cline },
             { id: "vertex", label: "Vertex", count: tabCounts.vertex },
             { id: "bedrock", label: "Bedrock", count: tabCounts.bedrock },
             { id: "openai", label: t("providers.openai_compatible"), count: tabCounts.openai },

@@ -143,6 +143,7 @@ export function useProviderKeyEditor({
       : undefined;
     const isOpenCodeGo = editKeyType === "opencode-go";
     const isCline = editKeyType === "cline";
+    const isModelAccessProvider = isOpenCodeGo || isCline;
 
     const requireAlias = editKeyType === "vertex";
     const modelCommit = commitModelEntries(keyDraft.modelEntries, { requireAlias });
@@ -162,7 +163,7 @@ export function useProviderKeyEditor({
       ...(keyDraft.proxyId.trim() ? { proxyId: keyDraft.proxyId.trim() } : {}),
       ...(headers ? { headers } : {}),
       ...(excludedModels ? { excludedModels } : {}),
-      ...(isOpenCodeGo && keyDraft.visionFallbackModel.trim()
+      ...(isModelAccessProvider && keyDraft.visionFallbackModel.trim()
         ? { visionFallbackModel: keyDraft.visionFallbackModel.trim() }
         : {}),
       ...(isOpenCodeGo && keyDraft.workspaceId.trim()
@@ -422,7 +423,7 @@ export function useProviderKeyEditor({
           : editKeyType === "opencode-go"
             ? "OpenCode Go"
             : editKeyType === "cline"
-              ? "Cline"
+              ? "ClinePass"
               : editKeyType === "vertex"
                 ? "Vertex"
                 : "Bedrock";

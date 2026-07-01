@@ -36,6 +36,7 @@ describe("providersApi Cline", () => {
           headers: { "X-Test": "yes" },
           models: [{ name: "cline-pass/glm-5.2" }],
           "excluded-models": ["cline-pass/minimax-m3"],
+          "vision-fallback-model": "cline-pass/mimo-v2.5-pro",
         },
       ],
     });
@@ -58,6 +59,7 @@ describe("providersApi Cline", () => {
         headers: { "X-Test": "yes" },
         models: [{ name: "cline-pass/glm-5.2" }],
         excludedModels: ["cline-pass/minimax-m3"],
+        visionFallbackModel: "cline-pass/mimo-v2.5-pro",
       },
     ]);
   });
@@ -97,6 +99,7 @@ describe("providersApi Cline", () => {
         headers: { "X-Test": "yes" },
         models: [{ name: "cline-pass/glm-5.2" }],
         excludedModels: ["cline-pass/minimax-m3"],
+        visionFallbackModel: "cline-pass/mimo-v2.5-pro",
       },
     ]);
 
@@ -111,6 +114,7 @@ describe("providersApi Cline", () => {
         headers: { "X-Test": "yes" },
         models: [{ name: "cline-pass/glm-5.2" }],
         "excluded-models": ["cline-pass/minimax-m3"],
+        "vision-fallback-model": "cline-pass/mimo-v2.5-pro",
       },
     ]);
 

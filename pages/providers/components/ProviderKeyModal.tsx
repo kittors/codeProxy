@@ -46,6 +46,10 @@ const createModelEntryDraft = (name: string): ModelEntryDraft => ({
 const isOpenCodeGoVisionModel = (modelId: string): boolean => {
   const normalized = modelId.trim().toLowerCase();
   if (!normalized) return false;
+  const baseModel = normalized.includes("/")
+    ? normalized.slice(normalized.lastIndexOf("/") + 1)
+    : normalized;
+  const candidates = [normalized, baseModel];
   const KNOWN = new Set([
     "qwen3.5-plus",
     "qwen3.6-plus",
@@ -53,15 +57,20 @@ const isOpenCodeGoVisionModel = (modelId: string): boolean => {
     "mimo-v2.5",
     "mimo-v2.5-pro",
   ]);
-  if (KNOWN.has(normalized)) return true;
+  if (candidates.some((candidate) => KNOWN.has(candidate))) return true;
   if (
-    normalized.includes("vision") ||
-    normalized.includes("multimodal") ||
-    normalized.includes("omni")
+    candidates.some(
+      (candidate) =>
+        candidate.includes("vision") ||
+        candidate.includes("multimodal") ||
+        candidate.includes("omni"),
+    )
   ) {
     return true;
   }
-  return normalized.split(/[-_./:]+/).some((token) => token === "vl");
+  return candidates.some((candidate) =>
+    candidate.split(/[-_./:]+/).some((token) => token === "vl"),
+  );
 };
 
 interface ProviderKeyModalProps {
@@ -328,7 +337,7 @@ export function ProviderKeyModal({
   ]);
 
   useEffect(() => {
-    if (!open || !isOpenCodeGo || openCodeModels.length === 0) return;
+    if (!open || !isModelAccessProvider || openCodeModels.length === 0) return;
     const fallback = keyDraft.visionFallbackModel.trim();
     if (!fallback) return;
     const fallbackLower = fallback.toLowerCase();
@@ -346,7 +355,7 @@ export function ProviderKeyModal({
     );
   }, [
     isOpenCodeModelAllowed,
-    isOpenCodeGo,
+    isModelAccessProvider,
     keyDraft.visionFallbackModel,
     open,
     openCodeModels,

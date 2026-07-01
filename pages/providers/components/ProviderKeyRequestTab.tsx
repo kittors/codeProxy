@@ -135,7 +135,7 @@ export function ProviderKeyRequestTab({
         </SectionCard>
       ) : null}
 
-      {isOpenCodeGo ? (
+      {isOpenCodeGo || isCline ? (
         <SectionCard>
           <p className="text-sm font-semibold text-slate-900 dark:text-white">
             {t("providers.opencode_go_vision_fallback_title")}

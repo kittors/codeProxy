@@ -178,7 +178,7 @@ const normalizeSimpleItem = (
       ...(sortExcludedModels(value["excluded-models"] ?? value.excludedModels)
         ? { excludedModels: sortExcludedModels(value["excluded-models"] ?? value.excludedModels) }
         : {}),
-      ...(kind === "opencode-go" &&
+      ...((kind === "opencode-go" || kind === "cline") &&
       normalizeString(value["vision-fallback-model"] ?? value.visionFallbackModel)
         ? {
             visionFallbackModel: normalizeString(
