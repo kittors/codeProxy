@@ -313,7 +313,7 @@ describe("SystemPage", () => {
       return Promise.resolve({});
     });
 
-    renderPage();
+    const { container } = renderPage();
 
     expect(await screen.findByText("gpt-root-model")).toBeInTheDocument();
     const clineModel = await screen.findByText("mimo-v2.5-pro");
@@ -321,6 +321,7 @@ describe("SystemPage", () => {
 
     await userEvent.hover(clineModel);
 
+    expect(container.querySelector('[data-model-source-marker="true"]')).toBeInTheDocument();
     expect(await screen.findByText(/cline · Cline/)).toBeInTheDocument();
     expect(screen.getByText(/cline-pass\/mimo-v2\.5-pro/)).toBeInTheDocument();
   });

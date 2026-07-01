@@ -23,7 +23,6 @@ const SectionCard = ({ children }: { children: React.ReactNode }) => (
 
 type ClineModelRow = {
   id: string;
-  ownedBy: string;
   publicName: string;
   checked: boolean;
 };
@@ -95,7 +94,6 @@ export function ProviderKeyModelsTab({
       const entry = entriesByName.get(normalized);
       return {
         id: model.id,
-        ownedBy: model.owned_by ?? "",
         publicName: entry ? entry.alias : model.id,
         checked:
           !excludeAll && enabledOpenCodeModelIds.has(normalized) && !excludedModelIds.has(normalized),
@@ -158,11 +156,6 @@ export function ProviderKeyModelsTab({
             <span className="block truncate font-mono text-xs font-semibold text-slate-800 dark:text-white/85">
               {row.id}
             </span>
-            {row.ownedBy ? (
-              <span className="block truncate text-[11px] text-slate-500 dark:text-white/45">
-                {row.ownedBy}
-              </span>
-            ) : null}
           </div>
         ),
       },
@@ -271,8 +264,8 @@ export function ProviderKeyModelsTab({
                 columns={clineColumns}
                 rowKey={(row) => row.id}
                 loading={openCodeModelsLoading && openCodeModels.length === 0}
-                rowHeight={52}
-                height="h-auto max-h-80"
+                rowHeight={44}
+                height="h-80"
                 minHeight="min-h-[160px]"
                 minWidth="min-w-[720px]"
                 caption={t("providers.cline_models_title")}

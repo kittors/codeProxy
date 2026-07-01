@@ -419,6 +419,54 @@ describe("ProvidersPage Cline tab", () => {
     });
   });
 
+  test("renders Cline models in a scrollable table without owned_by subtitles", async () => {
+    const user = userEvent.setup();
+    mocks.getModelDefinitions.mockImplementation(async (channel?: string) =>
+      channel === "cline"
+        ? [
+            { id: "cline-pass/glm-5.2", object: "model", owned_by: "cline" },
+            { id: "cline-pass/minimax-m3", object: "model", owned_by: "cline" },
+            { id: "cline-pass/qwen3.7-max", object: "model", owned_by: "cline" },
+            { id: "cline-pass/mimo-v2.5-pro", object: "model", owned_by: "cline" },
+            { id: "cline-pass/qwen3-coder", object: "model", owned_by: "cline" },
+            { id: "cline-pass/deepseek-v4", object: "model", owned_by: "cline" },
+            { id: "cline-pass/kimi-k2.6", object: "model", owned_by: "cline" },
+            { id: "cline-pass/claude-sonnet-4.5", object: "model", owned_by: "cline" },
+            { id: "cline-pass/gpt-5.2", object: "model", owned_by: "cline" },
+            { id: "cline-pass/gemini-3-pro", object: "model", owned_by: "cline" },
+          ]
+        : [],
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/ai-providers/cline/new"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    const dialog = await screen.findByRole("dialog", { name: /Add Cline configuration/i });
+    await user.click(within(dialog).getByRole("tab", { name: /Models/i }));
+
+    expect(await within(dialog).findByText("cline-pass/mimo-v2.5-pro")).toBeInTheDocument();
+    expect(within(dialog).queryByText("cline")).not.toBeInTheDocument();
+
+    const table = within(dialog).getByText("cline-pass/mimo-v2.5-pro").closest("table");
+    if (!table) {
+      throw new Error("expected Cline models table");
+    }
+    const scrollContainer = table.parentElement?.parentElement;
+    const tableRoot = scrollContainer?.parentElement;
+
+    expect(scrollContainer).toHaveClass("overflow-auto");
+    expect(tableRoot).toHaveClass("h-80");
+  });
+
   test("loads Cline model definitions and saves model exclusions", async () => {
     const user = userEvent.setup();
 
