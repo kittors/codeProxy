@@ -985,10 +985,15 @@ describe("AuthFilesPage files table", () => {
     expect(await screen.findByText("codex-pro.json")).toBeInTheDocument();
 
     await waitFor(() => {
-      expect(mocks.getEntityStats).toHaveBeenCalledWith(30, "all", {
-        authIndexes: ["auth-codex", "auth-kimi"],
-        sources: ["t:codex-pro.json", "t:codex-pro", "t:kimi-a.json", "t:kimi-a"],
-      });
+      expect(mocks.getEntityStats).toHaveBeenCalledWith(
+        30,
+        "all",
+        {
+          authIndexes: ["auth-codex", "auth-kimi"],
+          sources: ["t:codex-pro.json", "t:codex-pro", "t:kimi-a.json", "t:kimi-a"],
+        },
+        expect.objectContaining({ signal: expect.any(AbortSignal) }),
+      );
     });
   });
 
@@ -2895,7 +2900,7 @@ describe("AuthFilesPage files table", () => {
     );
 
     const cards = await screen.findByTestId("auth-files-cards");
-    expect(within(cards).getByText("10秒")).toBeInTheDocument();
+    expect(within(cards).getByText("10s")).toBeInTheDocument();
     expect(intervalSpy.mock.calls.some(([, delay]) => delay === 10_000)).toBe(false);
   });
 
@@ -2961,8 +2966,8 @@ describe("AuthFilesPage files table", () => {
     const card = title.closest("section");
     expect(card).not.toBeNull();
 
-    expect(within(card as HTMLElement).getByText("5小时0秒")).toBeInTheDocument();
-    expect(within(card as HTMLElement).getByText("6天0秒")).toBeInTheDocument();
+    expect(within(card as HTMLElement).getByText("5h0s")).toBeInTheDocument();
+    expect(within(card as HTMLElement).getByText("6d0s")).toBeInTheDocument();
     expect(within(card as HTMLElement).queryByText(modifiedText)).not.toBeInTheDocument();
   });
 
@@ -3330,7 +3335,7 @@ describe("AuthFilesPage files table", () => {
     expect(within(tooltips[0]).getByText("Claude")).toBeInTheDocument();
     const resetText = Array.from(tooltips[0].querySelectorAll("span")).find(
       (element) =>
-        element.textContent?.includes("秒") && element.className.includes("tabular-nums"),
+        element.textContent?.includes("s") && element.className.includes("tabular-nums"),
     );
     expect(resetText).toBeTruthy();
     expect(resetText).not.toHaveClass("truncate");

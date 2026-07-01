@@ -55,8 +55,10 @@ const normalizeChannelDetail = (value: unknown): ChannelGroupChannelDetail | nul
 };
 
 export const channelGroupsApi = {
-  async list(): Promise<ChannelGroupItem[]> {
-    const data = await apiClient.get<Record<string, unknown>>("/channel-groups");
+  async list(options?: { signal?: AbortSignal }): Promise<ChannelGroupItem[]> {
+    const data = await (options?.signal
+      ? apiClient.get<Record<string, unknown>>("/channel-groups", { signal: options.signal })
+      : apiClient.get<Record<string, unknown>>("/channel-groups"));
     const items = data?.items;
     if (!Array.isArray(items)) return [];
     return items

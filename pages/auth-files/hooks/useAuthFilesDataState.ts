@@ -65,6 +65,9 @@ const buildEntityStatsScopeForFiles = (targetFiles: AuthFileItem[]): EntityStats
   return { authIndexes, sources };
 };
 
+const isRequestCancelled = (err: unknown, signal?: AbortSignal) =>
+  signal?.aborted || (err instanceof Error && err.message === "Request was cancelled");
+
 export function useAuthFilesDataState() {
   const { t } = useTranslation();
   const { notify } = useToast();
@@ -80,40 +83,56 @@ export function useAuthFilesDataState() {
 
   const filesRef = useRef<AuthFileItem[]>(files);
   const usageDataRef = useRef<EntityStatsResponse | null>(usageData);
+  const mountedRef = useRef(true);
+  const loadSeqRef = useRef(0);
   const { index: usageIndex } = useMemo(() => buildUsageIndex(usageData), [usageData]);
 
-  const loadAll = useCallback(async (): Promise<AuthFileItem[]> => {
-    const hasExisting = filesRef.current.length > 0;
-    if (hasExisting) setRefreshingAll(true);
-    else setLoading(true);
-    if (!hasExisting) setUsageLoading(true);
-    try {
-      const filesRes = await authFilesApi.list();
-      const list = Array.isArray(filesRes?.files) ? filesRes.files : [];
-      filesRef.current = list;
-      setFiles(list);
+  const loadAll = useCallback(
+    async (options?: { signal?: AbortSignal }): Promise<AuthFileItem[]> => {
+      const seq = ++loadSeqRef.current;
+      const signal = options?.signal;
+      const isActive = () =>
+        mountedRef.current && loadSeqRef.current === seq && signal?.aborted !== true;
+      const hasExisting = filesRef.current.length > 0;
+      if (hasExisting) setRefreshingAll(true);
+      else setLoading(true);
+      if (!hasExisting) setUsageLoading(true);
+      try {
+        const filesRes = await authFilesApi.list(signal ? { signal } : undefined);
+        if (!isActive()) return filesRef.current;
+        const list = Array.isArray(filesRes?.files) ? filesRes.files : [];
+        filesRef.current = list;
+        setFiles(list);
 
-      const scope = buildEntityStatsScopeForFiles(list);
-      const hasUsageScope =
-        (scope.authIndexes?.length ?? 0) > 0 || (scope.sources?.length ?? 0) > 0;
-      const usageRes = hasUsageScope
-        ? await usageApi.getEntityStats(30, "all", scope).catch(() => null)
-        : ({ source: [], auth_index: [] } satisfies EntityStatsResponse);
+        const scope = buildEntityStatsScopeForFiles(list);
+        const hasUsageScope =
+          (scope.authIndexes?.length ?? 0) > 0 || (scope.sources?.length ?? 0) > 0;
+        const usageRes = hasUsageScope
+          ? await usageApi
+              .getEntityStats(30, "all", scope, signal ? { signal } : undefined)
+              .catch(() => null)
+          : ({ source: [], auth_index: [] } satisfies EntityStatsResponse);
 
-      setUsageData((prev) => usageRes ?? prev);
-      return list;
-    } catch (err: unknown) {
-      notify({
-        type: "error",
-        message: err instanceof Error ? err.message : t("auth_files.load_failed"),
-      });
-      return filesRef.current;
-    } finally {
-      if (hasExisting) setRefreshingAll(false);
-      else setLoading(false);
-      if (!hasExisting) setUsageLoading(false);
-    }
-  }, [notify, t]);
+        if (!isActive()) return filesRef.current;
+        setUsageData((prev) => usageRes ?? prev);
+        return list;
+      } catch (err: unknown) {
+        if (!isActive() || isRequestCancelled(err, signal)) return filesRef.current;
+        notify({
+          type: "error",
+          message: err instanceof Error ? err.message : t("auth_files.load_failed"),
+        });
+        return filesRef.current;
+      } finally {
+        if (isActive()) {
+          if (hasExisting) setRefreshingAll(false);
+          else setLoading(false);
+          if (!hasExisting) setUsageLoading(false);
+        }
+      }
+    },
+    [notify, t],
+  );
 
   const refreshFilesForItems = useCallback(
     async (targetFiles: AuthFileItem[]): Promise<AuthFileItem[]> => {
@@ -124,6 +143,7 @@ export function useAuthFilesDataState() {
 
       try {
         const filesRes = await authFilesApi.list();
+        if (!mountedRef.current) return filesRef.current;
         const list = Array.isArray(filesRes?.files) ? filesRes.files : [];
         const filesByName = new Map(list.map((file) => [file.name, file]));
         let updatedFiles = filesRef.current;
@@ -140,6 +160,7 @@ export function useAuthFilesDataState() {
 
         return updatedFiles;
       } catch (err: unknown) {
+        if (!mountedRef.current) return filesRef.current;
         notify({
           type: "error",
           message: err instanceof Error ? err.message : t("auth_files.load_failed"),
@@ -160,6 +181,7 @@ export function useAuthFilesDataState() {
           "all",
           buildEntityStatsScopeForFiles(targetFiles),
         );
+        if (!mountedRef.current) return usageDataRef.current;
         const mergedUsageData = mergeTargetUsageData(
           usageDataRef.current,
           nextUsageData,
@@ -176,7 +198,14 @@ export function useAuthFilesDataState() {
   );
 
   useEffect(() => {
-    void loadAll();
+    mountedRef.current = true;
+    const controller = new AbortController();
+    void loadAll({ signal: controller.signal });
+    return () => {
+      controller.abort();
+      loadSeqRef.current += 1;
+      mountedRef.current = false;
+    };
   }, [loadAll]);
 
   useEffect(() => {

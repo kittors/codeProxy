@@ -121,11 +121,19 @@ const appendUniqueParams = (
   });
 };
 
+const isStringRecord = (value: unknown): value is Record<string, string> =>
+  value !== null &&
+  typeof value === "object" &&
+  !Array.isArray(value) &&
+  Object.values(value).every((entry) => typeof entry === "string");
+
 export const usageApi = {
   async getUsage(): Promise<UsageData> {
-    const response = await apiClient.get<Record<string, unknown>>("/usage");
+    const response = await apiClient.get<
+      ({ usage?: Partial<UsageData> } & Partial<UsageData>) | null
+    >("/usage");
     const candidate =
-      response.usage && typeof response.usage === "object"
+      response?.usage && typeof response.usage === "object"
         ? response.usage
         : response;
 
@@ -143,7 +151,7 @@ export const usageApi = {
       };
     }
 
-    const payload = candidate as { apis?: UsageData["apis"] };
+    const payload = candidate;
 
     if (!payload.apis || typeof payload.apis !== "object") {
       return {
@@ -161,14 +169,14 @@ export const usageApi = {
 
     return {
       apis: payload.apis,
-      total_requests: (payload as any).total_requests ?? 0,
-      success_count: (payload as any).success_count ?? 0,
-      failure_count: (payload as any).failure_count ?? 0,
-      total_tokens: (payload as any).total_tokens ?? 0,
-      requests_by_day: (payload as any).requests_by_day || {},
-      requests_by_hour: (payload as any).requests_by_hour || {},
-      tokens_by_day: (payload as any).tokens_by_day || {},
-      tokens_by_hour: (payload as any).tokens_by_hour || {},
+      total_requests: payload.total_requests ?? 0,
+      success_count: payload.success_count ?? 0,
+      failure_count: payload.failure_count ?? 0,
+      total_tokens: payload.total_tokens ?? 0,
+      requests_by_day: payload.requests_by_day || {},
+      requests_by_hour: payload.requests_by_hour || {},
+      tokens_by_day: payload.tokens_by_day || {},
+      tokens_by_hour: payload.tokens_by_hour || {},
     };
   },
 
@@ -203,14 +211,16 @@ export const usageApi = {
     days = 7,
     apiKey = "",
     scope?: EntityStatsScope,
+    options?: { signal?: AbortSignal },
   ): Promise<EntityStatsResponse> {
     const qs = new URLSearchParams({ days: String(days) });
     if (apiKey && apiKey !== "all") qs.set("api_key", apiKey);
     appendUniqueParams(qs, "auth_index", scope?.authIndexes);
     appendUniqueParams(qs, "source", scope?.sources);
-    const resp = await apiClient.get<EntityStatsResponse>(
-      `/usage/entity-stats?${qs.toString()}`,
-    );
+    const path = `/usage/entity-stats?${qs.toString()}`;
+    const resp = await (options?.signal
+      ? apiClient.get<EntityStatsResponse>(path, { signal: options.signal })
+      : apiClient.get<EntityStatsResponse>(path));
     return {
       source: Array.isArray(resp?.source) ? resp.source : [],
       auth_index: Array.isArray(resp?.auth_index) ? resp.auth_index : [],
@@ -273,23 +283,26 @@ export const usageApi = {
     await apiClient.post("/usage/auth-file-quota-snapshot", payload);
   },
 
-  async getUsageLogs(params: {
-    page?: number;
-    size?: number;
-    days?: number;
-    api_key?: string;
-    model?: string;
-    channel?: string;
-    status?: string;
-    api_keys?: string[];
-    models?: string[];
-    channels?: string[];
-    statuses?: string[];
-    api_keys_empty?: boolean;
-    models_empty?: boolean;
-    channels_empty?: boolean;
-    statuses_empty?: boolean;
-  }): Promise<UsageLogsResponse> {
+  async getUsageLogs(
+    params: {
+      page?: number;
+      size?: number;
+      days?: number;
+      api_key?: string;
+      model?: string;
+      channel?: string;
+      status?: string;
+      api_keys?: string[];
+      models?: string[];
+      channels?: string[];
+      statuses?: string[];
+      api_keys_empty?: boolean;
+      models_empty?: boolean;
+      channels_empty?: boolean;
+      statuses_empty?: boolean;
+    },
+    options?: { signal?: AbortSignal },
+  ): Promise<UsageLogsResponse> {
     const qs = new URLSearchParams();
     if (params.page) qs.set("page", String(params.page));
     if (params.size) qs.set("size", String(params.size));
@@ -312,23 +325,21 @@ export const usageApi = {
     if (!params.statuses?.length && params.status)
       qs.set("status", params.status);
     const query = qs.toString();
-    const resp = await apiClient.get<UsageLogsResponse>(
-      `/usage/logs${query ? `?${query}` : ""}`,
-    );
+    const path = `/usage/logs${query ? `?${query}` : ""}`;
+    const resp = await (options?.signal
+      ? apiClient.get<UsageLogsPayload | null>(path, { signal: options.signal })
+      : apiClient.get<UsageLogsPayload | null>(path));
+    const filters = resp?.filters;
     return {
       items: Array.isArray(resp?.items) ? resp.items : [],
       total: resp?.total ?? 0,
       page: resp?.page ?? 1,
       size: resp?.size ?? params.size ?? 50,
       filters: {
-        api_keys: Array.isArray(resp?.filters?.api_keys)
-          ? resp.filters.api_keys
-          : [],
-        api_key_names: resp?.filters?.api_key_names ?? {},
-        models: Array.isArray(resp?.filters?.models) ? resp.filters.models : [],
-        channels: Array.isArray(resp?.filters?.channels)
-          ? resp.filters.channels
-          : [],
+        api_keys: Array.isArray(filters?.api_keys) ? filters.api_keys : [],
+        api_key_names: isStringRecord(filters?.api_key_names) ? filters.api_key_names : {},
+        models: Array.isArray(filters?.models) ? filters.models : [],
+        channels: Array.isArray(filters?.channels) ? filters.channels : [],
       },
       stats: {
         total: resp?.stats?.total ?? 0,
@@ -509,6 +520,22 @@ export interface UsageLogsResponse {
     cache_rate: number;
   };
 }
+
+type UsageLogsFilterPayload = {
+  api_keys?: unknown;
+  api_key_names?: unknown;
+  models?: unknown;
+  channels?: unknown;
+};
+
+type UsageLogsPayload = {
+  items?: UsageLogItem[] | null;
+  total?: number | null;
+  page?: number | null;
+  size?: number | null;
+  filters?: UsageLogsFilterPayload | null;
+  stats?: Partial<UsageLogsResponse["stats"]> | null;
+};
 
 export interface LogContentResponse {
   id: number;

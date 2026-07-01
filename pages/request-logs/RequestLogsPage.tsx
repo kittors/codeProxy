@@ -50,6 +50,9 @@ const DEFAULT_CLEAR_OPTIONS: ClearUsageLogsPayload = {
   clear_request_records: false,
 };
 
+const isRequestCancelled = (err: unknown, signal?: AbortSignal) =>
+  signal?.aborted || (err instanceof Error && err.message === "Request was cancelled");
+
 function RequestLogsRecordsCount({ count }: { count: number }) {
   const { t } = useTranslation();
   const compact = isUsageMetricCompact(count);
@@ -179,6 +182,7 @@ export function RequestLogsPage() {
   const [clearOptions, setClearOptions] = useState<ClearUsageLogsPayload>(DEFAULT_CLEAR_OPTIONS);
 
   const requestSeqRef = useRef(0);
+  const requestAbortRef = useRef<AbortController | null>(null);
 
   // Derive display rows from raw items
   const rows = useMemo<LogRow[]>(
@@ -313,52 +317,47 @@ export function RequestLogsPage() {
   // Fetch logs from backend (server-side pagination)
   const fetchLogs = useCallback(
     async (page: number, size: number) => {
+      requestAbortRef.current?.abort();
+      const controller = new AbortController();
+      requestAbortRef.current = controller;
       const seq = ++requestSeqRef.current;
       setLoading(true);
 
       try {
-        const resp: UsageLogsResponse = await usageApi.getUsageLogs({
-          page,
-          size,
-          days: timeRange,
-          api_keys: apiKeyFilterParam.values,
-          models: modelFilterParam.values,
-          channels: channelFilterParam.values,
-          statuses: statusFilterParam.values,
-          api_keys_empty: apiKeyFilterParam.matchesNone,
-          models_empty: modelFilterParam.matchesNone,
-          channels_empty: channelFilterParam.matchesNone,
-          statuses_empty: statusFilterParam.matchesNone,
-        });
+        const resp: UsageLogsResponse = await usageApi.getUsageLogs(
+          {
+            page,
+            size,
+            days: timeRange,
+            api_keys: apiKeyFilterParam.values,
+            models: modelFilterParam.values,
+            channels: channelFilterParam.values,
+            statuses: statusFilterParam.values,
+            api_keys_empty: apiKeyFilterParam.matchesNone,
+            models_empty: modelFilterParam.matchesNone,
+            channels_empty: channelFilterParam.matchesNone,
+            statuses_empty: statusFilterParam.matchesNone,
+          },
+          { signal: controller.signal },
+        );
 
-        if (seq !== requestSeqRef.current) return;
+        if (seq !== requestSeqRef.current || controller.signal.aborted) return;
 
         setRawItems(resp.items ?? []);
         setTotalCount(resp.total ?? 0);
         setCurrentPage(page);
-        const filtersCandidate =
-          resp.filters && typeof resp.filters === "object" ? (resp.filters as any) : null;
-        setFilterOptions({
-          api_keys: Array.isArray(filtersCandidate?.api_keys) ? filtersCandidate.api_keys : [],
-          api_key_names:
-            filtersCandidate?.api_key_names &&
-            typeof filtersCandidate.api_key_names === "object" &&
-            !Array.isArray(filtersCandidate.api_key_names)
-              ? (filtersCandidate.api_key_names as Record<string, string>)
-              : {},
-          models: Array.isArray(filtersCandidate?.models) ? filtersCandidate.models : [],
-          channels: Array.isArray(filtersCandidate?.channels) ? filtersCandidate.channels : [],
-        });
+        setFilterOptions(resp.filters);
         setStats({
           ...DEFAULT_LOG_STATS,
           ...resp.stats,
         });
       } catch (err) {
-        if (seq !== requestSeqRef.current) return;
+        if (seq !== requestSeqRef.current || isRequestCancelled(err, controller.signal)) return;
         const message = err instanceof Error ? err.message : t("request_logs.refresh_failed");
         notify({ type: "error", message });
       } finally {
-        if (seq === requestSeqRef.current) setLoading(false);
+        if (requestAbortRef.current === controller) requestAbortRef.current = null;
+        if (seq === requestSeqRef.current && !controller.signal.aborted) setLoading(false);
       }
     },
     [
@@ -371,6 +370,13 @@ export function RequestLogsPage() {
       timeRange,
     ],
   );
+
+  useEffect(() => {
+    return () => {
+      requestSeqRef.current += 1;
+      requestAbortRef.current?.abort();
+    };
+  }, []);
 
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 

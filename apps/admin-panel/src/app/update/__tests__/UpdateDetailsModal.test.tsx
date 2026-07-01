@@ -159,9 +159,10 @@ describe("UpdateDetailsModal", () => {
       />,
     );
 
-    expect(await screen.findByText("v0.4.0 - Full dev-to-main release")).toBeInTheDocument();
-    expect(screen.getByText("This is the English release note.")).toBeInTheDocument();
-    expect(screen.queryByText("中文")).not.toBeInTheDocument();
-    expect(screen.queryByText("这是中文更新说明。")).not.toBeInTheDocument();
+    const releaseNotes = await screen.findByTestId("update-release-notes");
+    expect(releaseNotes).toHaveTextContent("v0.4.0 - Full dev-to-main release");
+    expect(releaseNotes).toHaveTextContent("This is the English release note.");
+    expect(releaseNotes).not.toHaveTextContent("中文");
+    expect(releaseNotes).not.toHaveTextContent("这是中文更新说明。");
   });
 });

@@ -7,12 +7,12 @@ import type {
   PayloadParamValueType,
   PayloadProtocol,
   PayloadRule,
-} from "./types";
-import { makeClientId } from "./types";
+} from "@features/visual-config-editor";
 import {
+  makeClientId,
   VISUAL_CONFIG_PAYLOAD_VALUE_TYPE_OPTIONS,
   VISUAL_CONFIG_PROTOCOL_OPTIONS,
-} from "./useVisualConfig";
+} from "@features/visual-config-editor";
 import { Button } from "@code-proxy/ui";
 import { Card } from "@code-proxy/ui";
 import { TextInput } from "@code-proxy/ui";

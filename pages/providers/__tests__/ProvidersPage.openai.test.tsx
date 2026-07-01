@@ -7,20 +7,20 @@ import { ThemeProvider } from "@code-proxy/ui";
 import { ToastProvider } from "@code-proxy/ui";
 
 const mocks = vi.hoisted(() => ({
-  getGeminiKeys: vi.fn(async () => []),
-  getClaudeConfigs: vi.fn(async () => []),
+  getGeminiKeys: vi.fn(async (): Promise<unknown[]> => []),
+  getClaudeConfigs: vi.fn(async (): Promise<unknown[]> => []),
   getCodexConfigs: vi.fn(async (): Promise<unknown[]> => []),
   getOpenCodeGoConfigs: vi.fn(async (): Promise<unknown[]> => []),
-  getClineConfigs: vi.fn(async () => []),
-  getVertexConfigs: vi.fn(async () => []),
-  getBedrockConfigs: vi.fn(async () => []),
-  getOpenAIProviders: vi.fn(async () => []),
+  getClineConfigs: vi.fn(async (): Promise<unknown[]> => []),
+  getVertexConfigs: vi.fn(async (): Promise<unknown[]> => []),
+  getBedrockConfigs: vi.fn(async (): Promise<unknown[]> => []),
+  getOpenAIProviders: vi.fn(async (): Promise<unknown[]> => []),
   saveCodexConfigs: vi.fn(async (_configs: unknown[]) => ({})),
   saveOpenAIProviders: vi.fn(async (_configs: unknown[]) => ({})),
   patchOpenAIProviderDisabled: vi.fn(async (_index: number, _disabled: boolean) => ({})),
   getEntityStats: vi.fn(async () => ({ source: [] })),
-  apiKeyEntriesList: vi.fn(async () => []),
-  channelGroupsList: vi.fn(async () => []),
+  apiKeyEntriesList: vi.fn(async (): Promise<unknown[]> => []),
+  channelGroupsList: vi.fn(async (): Promise<unknown[]> => []),
   proxiesList: vi.fn(async (): Promise<any[]> => []),
 }));
 

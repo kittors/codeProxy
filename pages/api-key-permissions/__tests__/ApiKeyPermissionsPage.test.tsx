@@ -31,11 +31,11 @@ const mocks = vi.hoisted(() => ({
     return {};
   }),
   authFilesList: vi.fn(async () => ({ files: [] })),
-  getGeminiKeys: vi.fn(async () => []),
-  getClaudeConfigs: vi.fn(async () => []),
-  getCodexConfigs: vi.fn(async () => []),
-  getVertexConfigs: vi.fn(async () => []),
-  getOpenAIProviders: vi.fn(async () => []),
+  getGeminiKeys: vi.fn(async (): Promise<unknown[]> => []),
+  getClaudeConfigs: vi.fn(async (): Promise<unknown[]> => []),
+  getCodexConfigs: vi.fn(async (): Promise<unknown[]> => []),
+  getVertexConfigs: vi.fn(async (): Promise<unknown[]> => []),
+  getOpenAIProviders: vi.fn(async (): Promise<unknown[]> => []),
   apiClientGet: vi.fn(async (url: string) => {
     if (url === "/api-key-permission-profiles") {
       return { "api-key-permission-profiles": state.permissionProfiles };
@@ -185,14 +185,14 @@ describe("ApiKeyPermissionsPage", () => {
     mocks.saveConfigYaml.mockClear();
     mocks.apiClientPut.mockClear();
     mocks.authFilesList.mockClear();
-    mocks.getGeminiKeys.mockResolvedValue([]);
+    mocks.getGeminiKeys.mockResolvedValue(Array<unknown>());
     mocks.getClaudeConfigs.mockResolvedValue([
       { name: "Claude渠道" },
       { name: "Claude备用" },
     ] as any);
-    mocks.getCodexConfigs.mockResolvedValue([]);
-    mocks.getVertexConfigs.mockResolvedValue([]);
-    mocks.getOpenAIProviders.mockResolvedValue([]);
+    mocks.getCodexConfigs.mockResolvedValue(Array<unknown>());
+    mocks.getVertexConfigs.mockResolvedValue(Array<unknown>());
+    mocks.getOpenAIProviders.mockResolvedValue(Array<unknown>());
     mocks.apiClientGet.mockClear();
   });
 

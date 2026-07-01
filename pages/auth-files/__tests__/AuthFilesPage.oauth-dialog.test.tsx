@@ -16,8 +16,8 @@ const mocks = vi.hoisted(() => ({
   submitCallback: vi.fn(async () => ({})),
   iflowCookieAuth: vi.fn(async () => ({ status: "ok" })),
   importCredential: vi.fn(async () => ({})),
-  getModelConfigs: vi.fn(async () => []),
-  getModelOwnerPresets: vi.fn(async () => []),
+  getModelConfigs: vi.fn(async (): Promise<unknown[]> => []),
+  getModelOwnerPresets: vi.fn(async (): Promise<unknown[]> => []),
   getAuthGroupModelOwnerMappingMap: vi.fn(async () => ({})),
   proxiesList: vi.fn<() => Promise<ProxyPoolEntry[]>>(async () => []),
   proxiesCheck: vi.fn<() => Promise<ProxyCheckResult>>(async () => ({ ok: true, latencyMs: 88 })),
@@ -64,14 +64,14 @@ beforeEach(() => {
   mocks.iflowCookieAuth.mockClear();
   mocks.importCredential.mockClear();
   mocks.getModelConfigs.mockReset();
-  mocks.getModelConfigs.mockResolvedValue([]);
+  mocks.getModelConfigs.mockResolvedValue(Array<unknown>());
   mocks.getModelOwnerPresets.mockReset();
-  mocks.getModelOwnerPresets.mockResolvedValue([]);
+  mocks.getModelOwnerPresets.mockResolvedValue(Array<unknown>());
   mocks.getAuthGroupModelOwnerMappingMap.mockReset();
   mocks.getAuthGroupModelOwnerMappingMap.mockResolvedValue({});
   mocks.proxiesList.mockReset();
   mocks.proxiesCheck.mockReset();
-  mocks.proxiesList.mockResolvedValue([]);
+  mocks.proxiesList.mockResolvedValue(Array<ProxyPoolEntry>());
   mocks.proxiesCheck.mockResolvedValue({ ok: true, latencyMs: 88 });
 });
 

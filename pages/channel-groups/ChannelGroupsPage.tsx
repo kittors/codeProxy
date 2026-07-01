@@ -44,6 +44,9 @@ function parsePriorityText(value: string): number | null {
 const normalizeOwnerValue = (value: string): string =>
   value.trim().replace(/\s+/g, "-").toLowerCase();
 
+const isRequestCancelled = (err: unknown, signal?: AbortSignal) =>
+  signal?.aborted || (err instanceof Error && err.message === "Request was cancelled");
+
 function normalizeRoutingStrategy(value: unknown): RoutingStrategy {
   return value === "fill-first" || value === "session-sticky" ? value : "round-robin";
 }
@@ -239,8 +242,10 @@ export function ChannelGroupsPage() {
     useState<ChannelDetailsByGroup>({});
   const [authGroupOwnerMap, setAuthGroupOwnerMap] = useState<Record<string, string>>({});
 
-  const loadAvailableChannels = useCallback(async () => {
-    const items = await channelGroupsApi.list();
+  const loadAvailableChannels = useCallback(async (options?: { signal?: AbortSignal }) => {
+    const items = await channelGroupsApi.list(
+      options?.signal ? { signal: options.signal } : undefined,
+    );
     const known = new Set<string>();
     const detailsByName: ChannelDetailsByName = {};
     const detailsByGroup: ChannelDetailsByGroup = {};
@@ -356,15 +361,22 @@ export function ChannelGroupsPage() {
     [authGroupOwnerMap, availableChannelDetails, availableChannelDetailsByGroup],
   );
 
-  const loadPage = useCallback(async () => {
+  const loadPage = useCallback(async (signal?: AbortSignal) => {
     setLoading(true);
     setError("");
     try {
       const [routing, channels, ownerMappings] = await Promise.all([
-        routingConfigApi.get(),
-        loadAvailableChannels().catch(() => ({ names: [], detailsByName: {}, detailsByGroup: {} })),
-        modelsApi.getAuthGroupModelOwnerMappingMap().catch(() => ({})),
+        routingConfigApi.get(signal ? { signal } : undefined),
+        loadAvailableChannels(signal ? { signal } : undefined).catch(() => ({
+          names: [],
+          detailsByName: {},
+          detailsByGroup: {},
+        })),
+        modelsApi
+          .getAuthGroupModelOwnerMappingMap(signal ? { signal } : undefined)
+          .catch(() => ({})),
       ]);
+      if (signal?.aborted) return;
       const nextValues = hydrateRoutingValues(routing);
       setVisualValues(nextValues);
       setAvailableChannels(channels.names);
@@ -372,16 +384,19 @@ export function ChannelGroupsPage() {
       setAvailableChannelDetailsByGroup(channels.detailsByGroup);
       setAuthGroupOwnerMap(ownerMappings);
     } catch (err: unknown) {
+      if (isRequestCancelled(err, signal)) return;
       const message = err instanceof Error ? err.message : t("channel_groups_page.load_failed");
       setError(message);
       notify({ type: "error", message });
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) setLoading(false);
     }
   }, [loadAvailableChannels, notify, t]);
 
   useEffect(() => {
-    void loadPage();
+    const controller = new AbortController();
+    void loadPage(controller.signal);
+    return () => controller.abort();
   }, [loadPage]);
 
   const persistValues = useCallback(

@@ -263,15 +263,19 @@ export const modelsApi = {
     return normalizeOwnerPresetResponse(await apiClient.get("/model-owner-presets"));
   },
 
-  async getAuthGroupModelOwnerMappings() {
+  async getAuthGroupModelOwnerMappings(options?: { signal?: AbortSignal }) {
     return normalizeAuthGroupModelOwnerMappings(
-      await apiClient.get("/auth-group-model-owner-mappings"),
+      await (options?.signal
+        ? apiClient.get("/auth-group-model-owner-mappings", { signal: options.signal })
+        : apiClient.get("/auth-group-model-owner-mappings")),
     );
   },
 
-  async getAuthGroupModelOwnerMappingMap() {
+  async getAuthGroupModelOwnerMappingMap(options?: { signal?: AbortSignal }) {
     const items = normalizeAuthGroupModelOwnerMappings(
-      await apiClient.get("/auth-group-model-owner-mappings"),
+      await (options?.signal
+        ? apiClient.get("/auth-group-model-owner-mappings", { signal: options.signal })
+        : apiClient.get("/auth-group-model-owner-mappings")),
     );
     return Object.fromEntries(items.map((item) => [item.auth_group, item.owner]));
   },

@@ -98,6 +98,9 @@ const mocks = vi.hoisted(() => ({
   clearUsageLogs: vi.fn(),
 }));
 
+const expectSignalOptions = () =>
+  expect.objectContaining({ signal: expect.any(AbortSignal) });
+
 function installLocalStorageMock() {
   const store = new Map<string, string>();
   const localStorageMock = {
@@ -288,26 +291,10 @@ describe("RequestLogsPage", () => {
     expect(await screen.findByRole("tooltip")).toHaveTextContent("Real model ID real-model");
   });
 
-  test("does not crash when backend returns null filter arrays", async () => {
+  test("renders empty state with normalized empty filter arrays", async () => {
     await i18n.changeLanguage("en");
 
-    mocks.getUsageLogs.mockResolvedValue({
-      items: [],
-      total: 0,
-      page: 1,
-      size: 50,
-      filters: {
-        api_keys: null,
-        api_key_names: null,
-        models: null,
-        channels: null,
-      },
-      stats: {
-        total: 0,
-        success_rate: 0,
-        total_tokens: 0,
-      },
-    });
+    mocks.getUsageLogs.mockResolvedValue(emptyLogsResponse);
 
     render(
       <ThemeProvider>
@@ -318,6 +305,45 @@ describe("RequestLogsPage", () => {
     );
 
     expect(await screen.findByText("No Data")).toBeInTheDocument();
+  });
+
+  test("aborts stale request-log loads and keeps the latest response", async () => {
+    await i18n.changeLanguage("en");
+    const user = userEvent.setup();
+    const first = deferred<ReturnType<typeof responseWithRows>>();
+    const second = deferred<ReturnType<typeof responseWithRows>>();
+    let firstSignal: AbortSignal | undefined;
+
+    mocks.getUsageLogs
+      .mockImplementationOnce((_params, options?: { signal?: AbortSignal }) => {
+        firstSignal = options?.signal;
+        return first.promise;
+      })
+      .mockImplementationOnce((_params, options?: { signal?: AbortSignal }) => {
+        expect(options?.signal).toBeInstanceOf(AbortSignal);
+        return second.promise;
+      });
+
+    render(
+      <ThemeProvider>
+        <ToastProvider>
+          <RequestLogsPage />
+        </ToastProvider>
+      </ThemeProvider>,
+    );
+
+    await waitFor(() => expect(mocks.getUsageLogs).toHaveBeenCalledTimes(1));
+
+    await user.click(screen.getByRole("tab", { name: "Today" }));
+
+    await waitFor(() => expect(mocks.getUsageLogs).toHaveBeenCalledTimes(2));
+    expect(firstSignal?.aborted).toBe(true);
+
+    second.resolve(responseWithRows([buildUsageLogItem({ id: 2, model: "latest-model" })]));
+    expect(await screen.findByText("latest-model")).toBeInTheDocument();
+
+    first.resolve(responseWithRows([buildUsageLogItem({ id: 1, model: "stale-model" })]));
+    await waitFor(() => expect(screen.queryByText("stale-model")).not.toBeInTheDocument());
   });
 
   test("shows request-log multi-select filters as all-selected by default", async () => {
@@ -382,6 +408,7 @@ describe("RequestLogsPage", () => {
           channels_empty: false,
           statuses_empty: false,
         }),
+        expectSignalOptions(),
       ),
     );
 
@@ -399,6 +426,7 @@ describe("RequestLogsPage", () => {
           api_keys: ["sk-secondary"],
           api_keys_empty: false,
         }),
+        expectSignalOptions(),
       ),
     );
 
@@ -416,6 +444,7 @@ describe("RequestLogsPage", () => {
           api_keys: undefined,
           api_keys_empty: false,
         }),
+        expectSignalOptions(),
       ),
     );
 
@@ -430,6 +459,7 @@ describe("RequestLogsPage", () => {
           api_keys: ["sk-secondary"],
           api_keys_empty: false,
         }),
+        expectSignalOptions(),
       ),
     );
 
@@ -442,6 +472,7 @@ describe("RequestLogsPage", () => {
           api_keys: undefined,
           api_keys_empty: false,
         }),
+        expectSignalOptions(),
       ),
     );
   });
@@ -478,6 +509,7 @@ describe("RequestLogsPage", () => {
           api_keys: undefined,
           api_keys_empty: true,
         }),
+        expectSignalOptions(),
       ),
     );
   });
@@ -517,6 +549,7 @@ describe("RequestLogsPage", () => {
           models: ["gpt-5.4"],
           models_empty: false,
         }),
+        expectSignalOptions(),
       ),
     );
     expect(screen.getByRole("combobox", { name: "Filter by model" })).toHaveTextContent("gpt-5.4");
@@ -530,6 +563,7 @@ describe("RequestLogsPage", () => {
           models: undefined,
           models_empty: false,
         }),
+        expectSignalOptions(),
       ),
     );
     await waitFor(() =>

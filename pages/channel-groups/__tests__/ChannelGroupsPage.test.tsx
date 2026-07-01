@@ -20,6 +20,16 @@ const apiMocks = vi.hoisted(() => ({
   put: vi.fn(),
 }));
 
+function deferred<T>() {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+}
+
 function extractList(payload: unknown, key: string): unknown[] {
   if (Array.isArray(payload)) return payload;
   const record = payload && typeof payload === "object" ? (payload as Record<string, unknown>) : {};
@@ -105,8 +115,8 @@ vi.mock("@code-proxy/api-client", () => ({
     },
   },
   modelsApi: {
-    getAuthGroupModelOwnerMappingMap: async () => {
-      const payload = await apiMocks.get("/auth-group-model-owner-mappings");
+    getAuthGroupModelOwnerMappingMap: async (options?: { signal?: AbortSignal }) => {
+      const payload = await apiMocks.get("/auth-group-model-owner-mappings", options);
       const record =
         payload && typeof payload === "object" ? (payload as Record<string, unknown>) : {};
       const items = Array.isArray(record.items) ? record.items : [];
@@ -131,15 +141,15 @@ vi.mock("@code-proxy/api-client", () => ({
 
 vi.mock("@code-proxy/api-client/endpoints/routing-config", () => ({
   routingConfigApi: {
-    get: () => apiMocks.get("/routing-config"),
+    get: (options?: { signal?: AbortSignal }) => apiMocks.get("/routing-config", options),
     update: (payload: unknown) => apiMocks.put("/routing-config", payload),
   },
 }));
 
 vi.mock("@code-proxy/api-client/endpoints/channel-groups", () => ({
   channelGroupsApi: {
-    list: async () => {
-      const payload = await apiMocks.get("/channel-groups");
+    list: async (options?: { signal?: AbortSignal }) => {
+      const payload = await apiMocks.get("/channel-groups", options);
       const record =
         payload && typeof payload === "object" ? (payload as Record<string, unknown>) : {};
       const items = Array.isArray(record.items) ? record.items : [];
@@ -294,9 +304,47 @@ describe("ChannelGroupsPage", () => {
         path === "/vertex-api-key" ||
         path === "/openai-compatibility"
       ) {
-        return Promise.resolve([]);
+        return Promise.resolve<unknown[]>([]);
       }
       return Promise.resolve({});
+    });
+  });
+
+  test("aborts the initial channel-group load when the page unmounts", async () => {
+    const routing = deferred<{
+      strategy: string;
+      "include-default-group": boolean;
+      "channel-groups": unknown[];
+      "path-routes": unknown[];
+    }>();
+    let routingSignal: AbortSignal | undefined;
+
+    mockedApiGet.mockImplementation((path: string, options?: { signal?: AbortSignal }) => {
+      if (path === "/routing-config") {
+        routingSignal = options?.signal;
+        return routing.promise;
+      }
+      if (path === "/channel-groups") {
+        return Promise.resolve({ items: [] });
+      }
+      if (path === "/auth-group-model-owner-mappings") {
+        return Promise.resolve({ items: [] });
+      }
+      return Promise.resolve({});
+    });
+
+    const { unmount } = renderPage();
+
+    await waitFor(() => expect(routingSignal).toBeInstanceOf(AbortSignal));
+
+    unmount();
+    expect(routingSignal?.aborted).toBe(true);
+
+    routing.resolve({
+      strategy: "round-robin",
+      "include-default-group": true,
+      "channel-groups": [],
+      "path-routes": [],
     });
   });
 
@@ -391,7 +439,7 @@ describe("ChannelGroupsPage", () => {
         path === "/vertex-api-key" ||
         path === "/openai-compatibility"
       ) {
-        return Promise.resolve([]);
+        return Promise.resolve<unknown[]>([]);
       }
       return Promise.resolve({});
     });
@@ -506,7 +554,7 @@ describe("ChannelGroupsPage", () => {
         path === "/vertex-api-key" ||
         path === "/openai-compatibility"
       ) {
-        return Promise.resolve([]);
+        return Promise.resolve<unknown[]>([]);
       }
       return Promise.resolve({});
     });
@@ -609,7 +657,7 @@ describe("ChannelGroupsPage", () => {
         path === "/vertex-api-key" ||
         path === "/openai-compatibility"
       ) {
-        return Promise.resolve([]);
+        return Promise.resolve<unknown[]>([]);
       }
       return Promise.resolve({});
     });
@@ -686,7 +734,7 @@ describe("ChannelGroupsPage", () => {
         path === "/vertex-api-key" ||
         path === "/openai-compatibility"
       ) {
-        return Promise.resolve([]);
+        return Promise.resolve<unknown[]>([]);
       }
       return Promise.resolve({});
     });

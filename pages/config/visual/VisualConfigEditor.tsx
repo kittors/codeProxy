@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import type { VisualConfigValues } from "./types";
+import type { VisualConfigValues } from "@features/visual-config-editor";
 import { Card } from "@code-proxy/ui";
 import { TextInput } from "@code-proxy/ui";
 import { Select } from "@code-proxy/ui";

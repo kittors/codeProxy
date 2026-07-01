@@ -229,7 +229,7 @@ export function useOpenAIProviderEditor({
         : {};
 
       const headers: Record<string, string> = { ...providerHeaders, ...keyHeaders };
-      const hasAuthHeader = Boolean(headers.Authorization || (headers as any).authorization);
+      const hasAuthHeader = Object.keys(headers).some((key) => key.toLowerCase() === "authorization");
       const firstKey = firstEntry?.apiKey.trim();
       if (!hasAuthHeader && firstKey) {
         headers.Authorization = `Bearer ${firstKey}`;

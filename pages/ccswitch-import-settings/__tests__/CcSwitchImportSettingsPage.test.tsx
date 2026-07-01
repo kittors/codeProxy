@@ -100,9 +100,9 @@ describe("CcSwitchImportSettingsPage", () => {
       { name: "team-a", description: "Team A route", "path-routes": ["/team-a"] },
     ]);
     listAvailableModels.mockResolvedValue([{ id: "deepseek-v4-flash" }, { id: "kimi-k2" }]);
-    getModelConfigs.mockResolvedValue([]);
+    getModelConfigs.mockResolvedValue(Array<unknown>());
     getAuthGroupModelOwnerMappingMap.mockResolvedValue({});
-    listConfigs.mockResolvedValue([]);
+    listConfigs.mockResolvedValue(Array<unknown>());
     replaceConfigs.mockResolvedValue(undefined);
   });
 
@@ -1030,7 +1030,7 @@ describe("CcSwitchImportSettingsPage", () => {
       { name: "default", implicit: true },
       { name: "nvidia", implicit: true },
     ]);
-    listAvailableModels.mockResolvedValue([]);
+    listAvailableModels.mockResolvedValue(Array<unknown>());
     listConfigs.mockResolvedValue([
       {
         id: "cfg-nvidia",

@@ -1,5 +1,14 @@
 import { apiClient } from "../client/client";
 
+export interface VertexImportCredentialResponse {
+  status: "ok";
+  project_id?: string;
+  email?: string;
+  location?: string;
+  auth_file?: string;
+  "auth-file"?: string;
+}
+
 export const vertexApi = {
   importCredential: (file: File, location?: string, options?: { proxyId?: string }) => {
     const formData = new FormData();
@@ -11,12 +20,6 @@ export const vertexApi = {
     if (proxyId) {
       formData.append("proxy_id", proxyId);
     }
-    return apiClient.postForm<{
-      status: "ok";
-      project_id?: string;
-      email?: string;
-      location?: string;
-      auth_file?: string;
-    }>("/vertex/import", formData);
+    return apiClient.postForm<VertexImportCredentialResponse>("/vertex/import", formData);
   },
 };

@@ -173,7 +173,7 @@ export const resolveGeminiCliProjectId = (file: AuthFileItem): string | null => 
   const attributes = isRecord(file.attributes)
     ? (file.attributes as Record<string, unknown>)
     : null;
-  const candidates = [file.account, (file as any).account, metadata?.account, attributes?.account];
+  const candidates = [file.account, metadata?.account, attributes?.account];
   for (const candidate of candidates) {
     const projectId = extractProjectId(candidate);
     if (projectId) return projectId;

@@ -123,7 +123,7 @@ describe("SystemPage", () => {
         path === "/vertex-api-key" ||
         path === "/openai-compatibility"
       ) {
-        return Promise.resolve([]);
+        return Promise.resolve<unknown[]>([]);
       }
       if (path === "/system-stats") return Promise.resolve({ uptime: 10 });
       return Promise.resolve({});
@@ -265,7 +265,7 @@ describe("SystemPage", () => {
         path === "/vertex-api-key" ||
         path === "/openai-compatibility"
       ) {
-        return Promise.resolve([]);
+        return Promise.resolve<unknown[]>([]);
       }
       return Promise.resolve({});
     });
@@ -424,7 +424,7 @@ describe("SystemPage", () => {
         path === "/vertex-api-key" ||
         path === "/openai-compatibility"
       ) {
-        return Promise.resolve([]);
+        return Promise.resolve<unknown[]>([]);
       }
       if (path === "/system-stats") return Promise.resolve({ uptime: 10 });
       return Promise.resolve({});
@@ -542,7 +542,7 @@ describe("SystemPage", () => {
         path === "/codex-api-key" ||
         path === "/vertex-api-key"
       ) {
-        return Promise.resolve([]);
+        return Promise.resolve<unknown[]>([]);
       }
       if (path === "/system-stats") return Promise.resolve({ uptime: 10 });
       return Promise.resolve({});

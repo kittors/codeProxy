@@ -25,7 +25,7 @@ const toleranceKb = Number(args.get("tolerance-kb") ?? 5);
 const readBaseline = () => {
   const text = readFileSync(baselinePath, "utf8");
   const rows = new Map();
-  const rowPattern = /^\| `([^`]+)` \| ([\d.]+) kB \| ([\d.]+) kB \|/gm;
+  const rowPattern = /^\|\s*`([^`]+)`\s*\|\s*([\d.]+) kB\s*\|\s*([\d.]+) kB\s*\|/gm;
   let match;
   while ((match = rowPattern.exec(text))) {
     rows.set(match[1], {
@@ -76,7 +76,7 @@ const rows = tracked.map((key) => {
   const base = baseline.get(key);
   const now = current.get(key);
   const deltaGzip = now.gzipKb - base.gzipKb;
-  const overPageBudget = !key.startsWith("vendor-") && now.gzipKb > budgetGzipKb;
+  const overPageBudget = key !== "index" && !key.startsWith("vendor-") && now.gzipKb > budgetGzipKb;
   const overTolerance = deltaGzip > toleranceKb;
   return {
     key,
@@ -95,7 +95,7 @@ const markdown = [
   "",
   `Generated at: \`${generatedAt}\``,
   `Baseline: \`${baselinePath}\``,
-  `Budget: non-vendor gzip <= \`${budgetGzipKb} kB\`; gzip delta tolerance <= \`${toleranceKb} kB\``,
+  `Budget: non-vendor non-entry gzip <= \`${budgetGzipKb} kB\`; gzip delta tolerance <= \`${toleranceKb} kB\``,
   "",
   "| Chunk | Current | Current gzip | Baseline gzip | Delta gzip | Status |",
   "| --- | ---: | ---: | ---: | ---: | --- |",

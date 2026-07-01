@@ -569,6 +569,10 @@
     "subscription_expires_at_title": "{{period}} - начало {{start}} - истекает {{date}}",
     "subscription_remaining_short": "Осталось {{days}} д",
     "subscription_expired_short": "Истекла {{days}} д назад",
+    "restriction_duration_day": "д",
+    "restriction_duration_hour": "ч",
+    "restriction_duration_minute": "м",
+    "restriction_duration_second": "с",
     "quota_preview_5h": "5ч",
     "quota_preview_week": "Неделя",
     "quota_review_week": "Неделя проверки",
@@ -2125,6 +2129,10 @@
     "hours_minutes_later": "in {{hours}} hours {{minutes}} minutes",
     "days_later": "in {{days}}d",
     "days_hours_later": "in {{days}}d {{hours}}h",
+    "duration_day_compact": "{{count}}д",
+    "duration_hour_compact": "{{count}}ч",
+    "duration_minute_compact": "{{count}}м",
+    "duration_second_compact": "{{count}}с",
     "code_5h": "Code: 5h",
     "code_weekly": "Code: Weekly",
     "review_5h": "Review: 5h",
@@ -2193,6 +2201,20 @@
     "query": "Query",
     "querying": "Querying…",
     "no_data": "Enter an API Key to query"
+  },
+  "providers": {
+    "opencode_go_usage_query_failed": "Failed to check OpenCode Go usage",
+    "opencode_go_usage_not_queried": "Not queried",
+    "opencode_go_usage_compact_rolling": "Rolling",
+    "opencode_go_usage_compact_weekly": "Weekly",
+    "opencode_go_usage_compact_monthly": "Monthly",
+    "opencode_go_usage_remaining_unknown": "Left --",
+    "opencode_go_usage_remaining_percent": "Left {{percent}}%"
+  },
+  "log_content": {
+    "detail_label_request": "Request",
+    "detail_label_response": "Response",
+    "detail_group_fingerprint_headers": "Fingerprint / passthrough"
   },
   "system_page": {
     "title": "Информация о системе",

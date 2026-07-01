@@ -77,10 +77,10 @@ const resolveRemainingTone = (
 
 const TYPE_LABELS = ["rolling", "weekly", "monthly"] as const;
 
-const TYPE_COMPACT_LABELS: Record<string, string> = {
-  rolling: "滚动",
-  weekly: "每周",
-  monthly: "每月",
+const TYPE_COMPACT_LABEL_KEYS: Record<(typeof TYPE_LABELS)[number], string> = {
+  rolling: "providers.opencode_go_usage_compact_rolling",
+  weekly: "providers.opencode_go_usage_compact_weekly",
+  monthly: "providers.opencode_go_usage_compact_monthly",
 };
 
 export function OpenCodeGoUsageCardSection({
@@ -93,6 +93,7 @@ export function OpenCodeGoUsageCardSection({
   queryReady: boolean;
 }) {
   const { t } = useTranslation();
+  const remainingUnknownText = t("providers.opencode_go_usage_remaining_unknown");
 
   const usageByType = new Map(
     (usageEntry?.usage ?? []).map((item) => [item.type.toLowerCase(), item]),
@@ -114,10 +115,12 @@ export function OpenCodeGoUsageCardSection({
               className="grid grid-cols-[2rem_minmax(0,1fr)_5.25rem] items-center gap-2"
             >
               <span className="truncate text-[11px] font-semibold">
-                {TYPE_COMPACT_LABELS[type]}
+                {t(TYPE_COMPACT_LABEL_KEYS[type])}
               </span>
               <div className="h-1.5 rounded-full bg-slate-200/70 dark:bg-white/8" />
-              <span className="text-right text-[11px] tabular-nums">剩余 --</span>
+              <span className="text-right text-[11px] tabular-nums">
+                {remainingUnknownText}
+              </span>
             </div>
           ))}
         </div>
@@ -135,13 +138,13 @@ export function OpenCodeGoUsageCardSection({
               className="grid grid-cols-[2rem_minmax(0,1fr)_5.25rem] items-center gap-2"
             >
               <span className="truncate text-[11px] font-semibold text-slate-400 dark:text-white/45">
-                {TYPE_COMPACT_LABELS[type]}
+                {t(TYPE_COMPACT_LABEL_KEYS[type])}
               </span>
               <div className="relative h-1.5 overflow-hidden rounded-full bg-slate-200/70 dark:bg-white/8">
                 <div className="absolute inset-y-0 -left-full w-1/2 animate-pulse rounded-full bg-slate-300/50 dark:bg-white/20" />
               </div>
               <span className="text-right text-[11px] tabular-nums text-slate-400 dark:text-white/45">
-                剩余 --
+                {remainingUnknownText}
               </span>
             </div>
           ))}
@@ -153,7 +156,11 @@ export function OpenCodeGoUsageCardSection({
             const remaining = resolveRemainingPercent(item?.percentage);
             const tone = resolveRemainingTone(remaining);
             const remainingText =
-              remaining === null ? "剩余 --" : `剩余 ${formatPercent(remaining)}%`;
+              remaining === null
+                ? remainingUnknownText
+                : t("providers.opencode_go_usage_remaining_percent", {
+                    percent: formatPercent(remaining),
+                  });
 
             return (
               <div
@@ -161,7 +168,7 @@ export function OpenCodeGoUsageCardSection({
                 className="grid grid-cols-[2rem_minmax(0,1fr)_5.25rem] items-center gap-2"
               >
                 <span className="truncate text-[11px] font-semibold text-slate-600 dark:text-white/65">
-                  {TYPE_COMPACT_LABELS[type]}
+                  {t(TYPE_COMPACT_LABEL_KEYS[type])}
                 </span>
                 <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200/80 dark:bg-white/10">
                   <div

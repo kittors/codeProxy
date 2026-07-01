@@ -5,7 +5,6 @@
   "workspaces": [
     "apps/*",
     "pages",
-    "features/*",
     "packages/*"
   ],
   "type": "module",

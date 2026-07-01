@@ -18,7 +18,7 @@ const mocks = vi.hoisted(() => ({
     model_distribution: [],
     stats: { total: 0, success_rate: 0, total_tokens: 0, total_cost: 0 },
   })),
-  fetchAvailableModels: vi.fn(async () => [] as string[]),
+  fetchAvailableModels: vi.fn(async (): Promise<string[]> => []),
 }));
 
 vi.mock("../api", () => ({

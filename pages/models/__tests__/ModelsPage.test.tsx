@@ -251,7 +251,7 @@ describe("ModelsPage", () => {
         path === "/vertex-api-key" ||
         path === "/openai-compatibility"
       ) {
-        return Promise.resolve([]);
+        return Promise.resolve<unknown[]>([]);
       }
       if (path === "/model-owner-presets") {
         return Promise.resolve({
@@ -400,7 +400,7 @@ describe("ModelsPage", () => {
         path === "/vertex-api-key" ||
         path === "/openai-compatibility"
       ) {
-        return Promise.resolve([]);
+        return Promise.resolve<unknown[]>([]);
       }
       if (path === "/model-owner-presets") {
         return Promise.resolve({ data: ownerPresetItems });
@@ -457,7 +457,7 @@ describe("ModelsPage", () => {
         path === "/vertex-api-key" ||
         path === "/openai-compatibility"
       ) {
-        return Promise.resolve([]);
+        return Promise.resolve<unknown[]>([]);
       }
       if (path === "/model-owner-presets") {
         return Promise.resolve({ data: ownerPresetItems });

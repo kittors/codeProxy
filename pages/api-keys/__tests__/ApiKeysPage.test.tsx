@@ -35,7 +35,7 @@ const mocks = vi.hoisted(() => ({
     }
     return { logs_deleted: 0 };
   }),
-  apiKeysList: vi.fn(async () => [] as string[]),
+  apiKeysList: vi.fn(async (): Promise<string[]> => []),
   fetchConfigYaml: vi.fn(async () => state.configYaml),
   saveConfigYaml: vi.fn(async (content: string) => {
     state.configYaml = content;
@@ -51,11 +51,11 @@ const mocks = vi.hoisted(() => ({
     return {};
   }),
   authFilesList: vi.fn(async () => ({ files: [] })),
-  getGeminiKeys: vi.fn(async () => []),
-  getClaudeConfigs: vi.fn(async () => []),
-  getCodexConfigs: vi.fn(async () => []),
-  getVertexConfigs: vi.fn(async () => []),
-  getOpenAIProviders: vi.fn(async () => []),
+  getGeminiKeys: vi.fn(async (): Promise<unknown[]> => []),
+  getClaudeConfigs: vi.fn(async (): Promise<unknown[]> => []),
+  getCodexConfigs: vi.fn(async (): Promise<unknown[]> => []),
+  getVertexConfigs: vi.fn(async (): Promise<unknown[]> => []),
+  getOpenAIProviders: vi.fn(async (): Promise<unknown[]> => []),
   apiClientGet: vi.fn(async (url: string) => {
     if (url === "/api-key-permission-profiles") {
       return { "api-key-permission-profiles": state.permissionProfiles };

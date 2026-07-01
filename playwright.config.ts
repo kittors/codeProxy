@@ -1,5 +1,25 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const projects = [
+  {
+    name: "chromium",
+    use: { ...devices["Desktop Chrome"] },
+  },
+];
+
+if (process.env.PLAYWRIGHT_BROWSER_MATRIX === "1") {
+  projects.push(
+    {
+      name: "firefox",
+      use: { ...devices["Desktop Firefox"] },
+    },
+    {
+      name: "webkit",
+      use: { ...devices["Desktop Safari"] },
+    },
+  );
+}
+
 export default defineConfig({
   testDir: "./e2e",
   timeout: 30_000,
@@ -17,10 +37,5 @@ export default defineConfig({
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
   },
-  projects: [
-    {
-      name: "chromium",
-      use: { ...devices["Desktop Chrome"] },
-    },
-  ],
+  projects,
 });
