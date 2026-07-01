@@ -77,7 +77,7 @@ export function ProviderTabsWithCounts({ tabs, value }: ProviderTabsWithCountsPr
             <TabsTrigger key={tab.id} value={tab.id}>
               {icon}
               {tab.label}
-              {tab.count !== null ? (
+              {tab.count !== null && tab.count > 0 ? (
                 <span
                   className={
                     value === tab.id

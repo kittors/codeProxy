@@ -10,6 +10,8 @@ const mocks = vi.hoisted(() => ({
   getGeminiKeys: vi.fn(async () => []),
   getClaudeConfigs: vi.fn(async () => []),
   getCodexConfigs: vi.fn(async () => []),
+  getOpenCodeGoConfigs: vi.fn(async () => []),
+  getClineConfigs: vi.fn(async () => []),
   getVertexConfigs: vi.fn(async () => []),
   getBedrockConfigs: vi.fn(async () => []),
   getOpenAIProviders: vi.fn(async () => []),
@@ -29,6 +31,8 @@ vi.mock("@code-proxy/api-client", async (importOriginal) => {
       getGeminiKeys: mocks.getGeminiKeys,
       getClaudeConfigs: mocks.getClaudeConfigs,
       getCodexConfigs: mocks.getCodexConfigs,
+      getOpenCodeGoConfigs: mocks.getOpenCodeGoConfigs,
+      getClineConfigs: mocks.getClineConfigs,
       getVertexConfigs: mocks.getVertexConfigs,
       getBedrockConfigs: mocks.getBedrockConfigs,
       getOpenAIProviders: mocks.getOpenAIProviders,
@@ -65,6 +69,8 @@ describe("ProvidersPage Bedrock tab", () => {
     mocks.getGeminiKeys.mockImplementation(async () => []);
     mocks.getClaudeConfigs.mockImplementation(async () => []);
     mocks.getCodexConfigs.mockImplementation(async () => []);
+    mocks.getOpenCodeGoConfigs.mockImplementation(async () => []);
+    mocks.getClineConfigs.mockImplementation(async () => []);
     mocks.getVertexConfigs.mockImplementation(async () => []);
     mocks.getBedrockConfigs.mockImplementation(async () => []);
     mocks.getOpenAIProviders.mockImplementation(async () => []);

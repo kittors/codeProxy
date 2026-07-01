@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
   getClaudeConfigs: vi.fn(async () => []),
   getCodexConfigs: vi.fn(async (): Promise<any[]> => []),
   getOpenCodeGoConfigs: vi.fn(async () => []),
+  getClineConfigs: vi.fn(async () => []),
   getVertexConfigs: vi.fn(async () => []),
   getBedrockConfigs: vi.fn(async () => []),
   getOpenAIProviders: vi.fn(async () => []),
@@ -31,6 +32,7 @@ vi.mock("@code-proxy/api-client", async (importOriginal) => {
       getClaudeConfigs: mocks.getClaudeConfigs,
       getCodexConfigs: mocks.getCodexConfigs,
       getOpenCodeGoConfigs: mocks.getOpenCodeGoConfigs,
+      getClineConfigs: mocks.getClineConfigs,
       getVertexConfigs: mocks.getVertexConfigs,
       getBedrockConfigs: mocks.getBedrockConfigs,
       getOpenAIProviders: mocks.getOpenAIProviders,
@@ -86,6 +88,7 @@ describe("ProvidersPage import/export", () => {
         ] as any,
     );
     mocks.getOpenCodeGoConfigs.mockImplementation(async () => []);
+    mocks.getClineConfigs.mockImplementation(async () => []);
     mocks.getVertexConfigs.mockImplementation(async () => []);
     mocks.getBedrockConfigs.mockImplementation(async () => []);
     mocks.getOpenAIProviders.mockImplementation(async () => []);
