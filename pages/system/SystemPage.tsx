@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Check,
@@ -130,30 +130,67 @@ type SystemModelEntry = {
   sources?: ModelAvailabilitySource[];
 };
 
-const formatModelSourcesTooltip = (
-  sources: ModelAvailabilitySource[] | undefined,
-  title: string,
-  realModelTitle: string,
-) => {
-  if (!sources?.length) return "";
-  const labels = Array.from(new Set(sources.map((source) => source.label.trim()).filter(Boolean)));
-  if (labels.length === 0) return "";
-  const upstreamModelIds = Array.from(
-    new Set(
-      sources
-        .map((source) => source.upstreamModelId?.trim() ?? "")
-        .filter((id, index) => {
-          if (!id) return false;
-          const modelId = sources[index]?.modelId?.trim() ?? "";
-          return id !== modelId;
-        }),
-    ),
-  );
-  const parts = [`${title}\n${labels.join("\n")}`];
-  if (upstreamModelIds.length > 0) {
-    parts.push(`${realModelTitle}\n${upstreamModelIds.join("\n")}`);
+const formatSourceLabel = (source: ModelAvailabilitySource): string => {
+  const label = source.label.trim();
+  const provider = source.provider?.trim();
+  if (!label || !provider) return label;
+
+  const parts = label.split(" · ").map((part) => part.trim());
+  if (parts.length === 2 && parts[0].toLowerCase() === provider.toLowerCase()) {
+    return `${parts[1]} · ${parts[0]}`;
   }
-  return parts.join("\n\n");
+  return label;
+};
+
+const renderModelSourcesTooltip = (
+  sources: ModelAvailabilitySource[] | undefined,
+  modelId: string,
+  title: string,
+  actualCallLabel: string,
+  sameCallLabel: string,
+): ReactNode => {
+  const entries = (sources ?? [])
+    .map((source) => {
+      const label = formatSourceLabel(source);
+      if (!label) return null;
+      const actualModelId = source.upstreamModelId?.trim() || source.modelId?.trim() || modelId;
+      return {
+        label,
+        actualModelId,
+        mapped: Boolean(actualModelId && actualModelId !== modelId),
+      };
+    })
+    .filter((entry): entry is { label: string; actualModelId: string; mapped: boolean } =>
+      Boolean(entry),
+    );
+
+  if (entries.length === 0) return null;
+
+  return (
+    <span className="-mx-2 -my-1.5 block min-w-64 space-y-2 rounded-xl border border-slate-800 bg-slate-950 p-3 text-left text-white shadow-xl">
+      <span className="block text-[11px] font-semibold tracking-normal text-slate-400">
+        {title}
+      </span>
+      <span className="block space-y-1.5">
+        {entries.map((entry) => (
+          <span
+            key={`${entry.label}\x00${entry.actualModelId}`}
+            className="block rounded-md border border-white/10 bg-white/[0.06] px-2.5 py-2"
+          >
+            <span className="block text-[12px] font-medium text-white">
+              {entry.label}
+            </span>
+            <span className="mt-1 flex min-w-0 items-start gap-1.5 text-[11px] text-slate-400">
+              <span className="shrink-0">{actualCallLabel}</span>
+              <span className="min-w-0 break-all font-mono text-sky-100">
+                {entry.mapped ? entry.actualModelId : sameCallLabel}
+              </span>
+            </span>
+          </span>
+        ))}
+      </span>
+    </span>
+  );
 };
 
 export function SystemPage({
@@ -381,10 +418,12 @@ export function SystemPage({
           ) : filteredModels.length > 0 ? (
             <div className="flex flex-wrap gap-2">
               {filteredModels.map((model) => {
-                const tooltip = formatModelSourcesTooltip(
+                const tooltip = renderModelSourcesTooltip(
                   model.sources,
+                  model.id,
                   t("system_page.model_sources"),
-                  t("system_page.real_model_id"),
+                  t("system_page.model_actual_call"),
+                  t("system_page.model_same_call"),
                 );
                 const hasMappedSource = (model.sources ?? []).some(
                   (source) =>

@@ -335,13 +335,16 @@ describe("SystemPage", () => {
     await userEvent.hover(clineModel);
 
     expect(container.querySelectorAll('[data-model-source-marker="true"]')).toHaveLength(1);
-    expect(await screen.findByText(/cline · Cline/)).toBeInTheDocument();
-    expect(screen.getByText(/cline-pass\/mimo-v2\.5-pro/)).toBeInTheDocument();
+    expect(await screen.findByText("Source and call")).toBeInTheDocument();
+    expect(screen.getByText(/Cline · cline/)).toBeInTheDocument();
+    expect(screen.getByText("Actual ID")).toBeInTheDocument();
+    expect(screen.getByText("cline-pass/mimo-v2.5-pro")).toBeInTheDocument();
 
     await userEvent.unhover(clineModel);
     await userEvent.hover(realClineModel);
 
-    expect(await screen.findByText(/cline-pass\/deepseek-v4-pro/)).toBeInTheDocument();
+    expect(await screen.findByText(/Cline · cline/)).toBeInTheDocument();
+    expect(screen.getByText("Same as shown")).toBeInTheDocument();
   });
 
   test("shows model sources in the model tag tooltip", async () => {
@@ -379,8 +382,10 @@ describe("SystemPage", () => {
 
     await userEvent.hover(await screen.findByText("gpt-root-model"));
 
-    expect(await screen.findByText(/codex · Codex Pro/)).toBeInTheDocument();
-    expect(screen.getByText(/opencode-go · OpenCode Go/)).toBeInTheDocument();
+    expect(await screen.findByText("Source and call")).toBeInTheDocument();
+    expect(screen.getByText(/Codex Pro · codex/)).toBeInTheDocument();
+    expect(screen.getByText(/OpenCode Go · opencode-go/)).toBeInTheDocument();
+    expect(screen.getAllByText("Same as shown")).toHaveLength(2);
   });
 
   test("shows persisted mapped owner models on the system page", async () => {
