@@ -2197,9 +2197,7 @@
   "system_page": {
     "title": "Информация о системе",
     "available_models": "Доступные модели",
-    "model_sources": "Источник и вызов",
     "model_actual_call": "Фактический ID",
-    "model_same_call": "Совпадает с именем",
     "subtitle": "Сервис, версия и модели",
     "api_base": "API Base",
     "api_key_lookup": "Поиск API-ключа",

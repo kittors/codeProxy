@@ -145,9 +145,7 @@ const formatSourceLabel = (source: ModelAvailabilitySource): string => {
 const renderModelSourcesTooltip = (
   sources: ModelAvailabilitySource[] | undefined,
   modelId: string,
-  title: string,
   actualCallLabel: string,
-  sameCallLabel: string,
 ): ReactNode => {
   const entries = (sources ?? [])
     .map((source) => {
@@ -167,28 +165,22 @@ const renderModelSourcesTooltip = (
   if (entries.length === 0) return null;
 
   return (
-    <span className="-mx-2 -my-1.5 block min-w-64 space-y-2 rounded-xl border border-slate-800 bg-slate-950 p-3 text-left text-white shadow-xl">
-      <span className="block text-[11px] font-semibold tracking-normal text-slate-400">
-        {title}
-      </span>
-      <span className="block space-y-1.5">
-        {entries.map((entry) => (
-          <span
-            key={`${entry.label}\x00${entry.actualModelId}`}
-            className="block rounded-md border border-white/10 bg-white/[0.06] px-2.5 py-2"
-          >
-            <span className="block text-[12px] font-medium text-white">
-              {entry.label}
-            </span>
-            <span className="mt-1 flex min-w-0 items-start gap-1.5 text-[11px] text-slate-400">
+    <span className="block min-w-44 max-w-[18rem] space-y-1 text-left">
+      {entries.map((entry) => (
+        <span key={`${entry.label}\x00${entry.actualModelId}`} className="block">
+          <span className="block text-[12px] font-medium text-slate-900 dark:text-white">
+            {entry.label}
+          </span>
+          {entry.mapped ? (
+            <span className="mt-0.5 flex min-w-0 items-start gap-1.5 text-[11px] text-slate-500 dark:text-white/55">
               <span className="shrink-0">{actualCallLabel}</span>
-              <span className="min-w-0 break-all font-mono text-sky-100">
-                {entry.mapped ? entry.actualModelId : sameCallLabel}
+              <span className="min-w-0 break-all font-mono text-slate-700 dark:text-white/75">
+                {entry.actualModelId}
               </span>
             </span>
-          </span>
-        ))}
-      </span>
+          ) : null}
+        </span>
+      ))}
     </span>
   );
 };
@@ -421,9 +413,7 @@ export function SystemPage({
                 const tooltip = renderModelSourcesTooltip(
                   model.sources,
                   model.id,
-                  t("system_page.model_sources"),
                   t("system_page.model_actual_call"),
-                  t("system_page.model_same_call"),
                 );
                 const hasMappedSource = (model.sources ?? []).some(
                   (source) =>
