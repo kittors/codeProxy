@@ -196,9 +196,10 @@ export function SystemPage({
           .map((item) => item.id) ?? [];
       const nextModelIds = useMappedOwnerModels
         ? (configuredAvailability?.items ?? []).map((item) => item.id)
-        : rootV1ModelIds.length > 0
-          ? rootV1ModelIds
-          : (configuredAvailability?.items ?? []).map((item) => item.id);
+        : [
+            ...rootV1ModelIds,
+            ...(configuredAvailability?.items ?? []).map((item) => item.id),
+          ];
 
       setModels(
         Array.from(new Set(nextModelIds))

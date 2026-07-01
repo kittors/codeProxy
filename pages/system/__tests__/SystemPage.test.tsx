@@ -278,6 +278,53 @@ describe("SystemPage", () => {
     expect(mocks.apiGet).toHaveBeenCalledWith("/model-path-availability");
   });
 
+  test("keeps configured Cline models when root v1 discovery has other models", async () => {
+    mocks.apiGet.mockImplementation((path: string) => {
+      if (path === "/auth-group-model-owner-mappings") return Promise.resolve({ items: [] });
+      if (path === "/models/configured-availability") {
+        return Promise.resolve({
+          scoped: true,
+          data: [
+            {
+              id: "mimo-v2.5-pro",
+              sources: [
+                {
+                  label: "cline · Cline",
+                  provider: "cline",
+                  model_id: "mimo-v2.5-pro",
+                  upstream_model_id: "cline-pass/mimo-v2.5-pro",
+                },
+              ],
+            },
+          ],
+        });
+      }
+      if (path === "/model-path-availability") {
+        return Promise.resolve({
+          data: [
+            {
+              id: "gpt-root-model",
+              paths: [{ scope: "root", method: "GET", path: "/v1/models" }],
+            },
+          ],
+        });
+      }
+      if (path === "/system-stats") return Promise.resolve({ uptime: 10 });
+      return Promise.resolve({});
+    });
+
+    renderPage();
+
+    expect(await screen.findByText("gpt-root-model")).toBeInTheDocument();
+    const clineModel = await screen.findByText("mimo-v2.5-pro");
+    expect(clineModel).toBeInTheDocument();
+
+    await userEvent.hover(clineModel);
+
+    expect(await screen.findByText(/cline · Cline/)).toBeInTheDocument();
+    expect(screen.getByText(/cline-pass\/mimo-v2\.5-pro/)).toBeInTheDocument();
+  });
+
   test("shows model sources in the model tag tooltip", async () => {
     mocks.apiGet.mockImplementation((path: string) => {
       if (path === "/auth-group-model-owner-mappings") return Promise.resolve({ items: [] });
