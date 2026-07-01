@@ -296,6 +296,17 @@ describe("SystemPage", () => {
                 },
               ],
             },
+            {
+              id: "cline-pass/deepseek-v4-pro",
+              sources: [
+                {
+                  label: "cline · Cline",
+                  provider: "cline",
+                  model_id: "cline-pass/deepseek-v4-pro",
+                  upstream_model_id: "cline-pass/deepseek-v4-pro",
+                },
+              ],
+            },
           ],
         });
       }
@@ -318,12 +329,19 @@ describe("SystemPage", () => {
     expect(await screen.findByText("gpt-root-model")).toBeInTheDocument();
     const clineModel = await screen.findByText("mimo-v2.5-pro");
     expect(clineModel).toBeInTheDocument();
+    const realClineModel = await screen.findByText("cline-pass/deepseek-v4-pro");
+    expect(realClineModel).toBeInTheDocument();
 
     await userEvent.hover(clineModel);
 
-    expect(container.querySelector('[data-model-source-marker="true"]')).toBeInTheDocument();
+    expect(container.querySelectorAll('[data-model-source-marker="true"]')).toHaveLength(1);
     expect(await screen.findByText(/cline · Cline/)).toBeInTheDocument();
     expect(screen.getByText(/cline-pass\/mimo-v2\.5-pro/)).toBeInTheDocument();
+
+    await userEvent.unhover(clineModel);
+    await userEvent.hover(realClineModel);
+
+    expect(await screen.findByText(/cline-pass\/deepseek-v4-pro/)).toBeInTheDocument();
   });
 
   test("shows model sources in the model tag tooltip", async () => {

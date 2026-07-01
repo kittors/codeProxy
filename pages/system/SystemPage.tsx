@@ -386,6 +386,11 @@ export function SystemPage({
                   t("system_page.model_sources"),
                   t("system_page.real_model_id"),
                 );
+                const hasMappedSource = (model.sources ?? []).some(
+                  (source) =>
+                    source.upstreamModelId &&
+                    source.upstreamModelId !== model.id,
+                );
                 const tag = (
                   <CopyableModelTag
                     id={model.id}
@@ -398,11 +403,13 @@ export function SystemPage({
                   <HoverTooltip key={model.id} content={tooltip} placement="top">
                     <span className="relative inline-flex">
                       {tag}
-                      <span
-                        aria-hidden="true"
-                        data-model-source-marker="true"
-                        className="absolute -right-0.5 -top-0.5 size-1.5 rounded-full bg-sky-500 ring-2 ring-white dark:ring-neutral-950"
-                      />
+                      {hasMappedSource ? (
+                        <span
+                          aria-hidden="true"
+                          data-model-source-marker="true"
+                          className="absolute -right-0.5 -top-0.5 size-1.5 rounded-full bg-sky-500 ring-2 ring-white dark:ring-neutral-950"
+                        />
+                      ) : null}
                     </span>
                   </HoverTooltip>
                 ) : (
