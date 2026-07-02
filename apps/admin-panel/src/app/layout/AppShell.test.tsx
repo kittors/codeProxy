@@ -21,7 +21,7 @@ describe("AppShell route progress", () => {
     vi.useRealTimers();
   });
 
-  test("shows a fixed window-top progress bar during sidebar navigation", () => {
+  test("animates a fixed window-top progress bar during sidebar navigation", () => {
     vi.useFakeTimers();
     renderShell();
 
@@ -32,11 +32,43 @@ describe("AppShell route progress", () => {
 
     const progress = document.querySelector(".rp");
     expect(progress).toBeInTheDocument();
+    expect(progress).not.toHaveClass("rp-done");
+
+    act(() => {
+      vi.advanceTimersByTime(680);
+    });
+
+    expect(document.querySelector(".rp")).toHaveClass("rp-done");
+
+    act(() => {
+      vi.advanceTimersByTime(360);
+    });
+
+    expect(document.querySelector(".rp")).not.toBeInTheDocument();
+  });
+
+  test("restarts the progress animation on rapid sidebar navigation", () => {
+    vi.useFakeTimers();
+    renderShell();
+
+    fireEvent.click(document.querySelector<HTMLAnchorElement>('a[href="/ai-providers"]')!);
 
     act(() => {
       vi.advanceTimersByTime(300);
     });
 
-    expect(document.querySelector(".rp")).not.toBeInTheDocument();
+    fireEvent.click(document.querySelector<HTMLAnchorElement>('a[href="/models"]')!);
+
+    act(() => {
+      vi.advanceTimersByTime(679);
+    });
+
+    expect(document.querySelector(".rp")).not.toHaveClass("rp-done");
+
+    act(() => {
+      vi.advanceTimersByTime(1);
+    });
+
+    expect(document.querySelector(".rp")).toHaveClass("rp-done");
   });
 });

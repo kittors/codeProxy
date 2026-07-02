@@ -5,6 +5,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -42,6 +43,8 @@ interface ShellContextState {
 const ShellContext = createContext<ShellContextState | null>(null);
 const STORAGE_KEY_SIDEBAR_COLLAPSED = "cli-proxy-sidebar-collapsed";
 const SIDEBAR_MOBILE_MEDIA = "(max-width: 767px)";
+const ROUTE_PROGRESS_MIN_MS = 680;
+const ROUTE_PROGRESS_HIDE_MS = 360;
 
 const NAV_ITEMS = [
   { to: "/dashboard", i18nKey: "shell.nav_dashboard", icon: LayoutDashboard },
@@ -122,6 +125,14 @@ function ShellSidebar({
   // Track the clicked nav target so the highlight updates instantly on click,
   // without waiting for lazy chunks to load & location to update.
   const [pendingTo, setPendingTo] = useState("");
+  const [progressDone, setProgressDone] = useState(false);
+  const progressStartedAt = useRef(0);
+  const progressTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  const clearProgressTimers = useCallback(() => {
+    progressTimers.current.forEach(clearTimeout);
+    progressTimers.current = [];
+  }, []);
 
   const resolveActiveTo = useCallback((pathname: string) => {
     const sorted = [...NAV_ITEMS].sort((a, b) => b.to.length - a.to.length);
@@ -142,21 +153,39 @@ function ShellSidebar({
     (to: string) => {
       // Immediately mark as pending so highlight is instant
       if (to !== location.pathname) {
+        clearProgressTimers();
+        progressStartedAt.current = Date.now();
+        setProgressDone(false);
         setPendingTo(to);
       }
       onNavigate?.();
     },
-    [location.pathname, onNavigate],
+    [clearProgressTimers, location.pathname, onNavigate],
   );
 
   useEffect(() => {
-    if (pendingTo === location.pathname) setTimeout(setPendingTo, 260, "");
+    if (pendingTo !== location.pathname) return;
+    const delay = Math.max(0, ROUTE_PROGRESS_MIN_MS - (Date.now() - progressStartedAt.current));
+    const finishTimer = setTimeout(() => {
+      setProgressDone(true);
+      progressTimers.current.push(
+        setTimeout(() => {
+          setPendingTo("");
+          setProgressDone(false);
+          progressTimers.current = [];
+        }, ROUTE_PROGRESS_HIDE_MS),
+      );
+    }, delay);
+    progressTimers.current.push(finishTimer);
+    return () => clearTimeout(finishTimer);
   }, [location.pathname, pendingTo]);
+
+  useEffect(() => clearProgressTimers, [clearProgressTimers]);
 
   return (
     <>
       {pendingTo && (
-        <div className="rp" />
+        <div className={progressDone ? "rp rp-done" : "rp"} />
       )}
       <aside
         className={[

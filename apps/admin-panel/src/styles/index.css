@@ -67,8 +67,84 @@ html.theme-transition-lock *::after {
   inset: 0 0 auto;
   z-index: 50;
   height: 0.25rem;
+  overflow: hidden;
   pointer-events: none;
-  background: linear-gradient(90deg, #2563eb, #3b82f6);
+  opacity: 1;
+}
+
+.rp::before,
+.rp::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+
+.rp::before {
+  transform-origin: left;
+  background: linear-gradient(90deg, #2563eb, #3b82f6 58%, #22c55e);
+  box-shadow: 0 0 14px rgba(59, 130, 246, 0.45);
+  animation: rp-load 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+.rp::after {
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.75), transparent);
+  animation: rp-shine 0.9s linear infinite;
+}
+
+.rp-done {
+  opacity: 0;
+  transition: opacity 220ms ease 120ms;
+}
+
+.rp-done::before {
+  animation: rp-done 180ms ease-out forwards;
+}
+
+@keyframes rp-load {
+  0% {
+    transform: scaleX(0.08);
+  }
+  55% {
+    transform: scaleX(0.62);
+  }
+  100% {
+    transform: scaleX(0.88);
+  }
+}
+
+@keyframes rp-done {
+  from {
+    transform: scaleX(0.88);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes rp-shine {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rp,
+  .rp::before,
+  .rp::after {
+    animation: none;
+    transition: none;
+  }
+
+  .rp::before {
+    transform: scaleX(1);
+  }
+
+  .rp::after {
+    display: none;
+  }
 }
 
 /* DataTable：隐藏原生滚动条，改用 DOM 自定义滚动条 */
