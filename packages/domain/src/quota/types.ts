@@ -20,6 +20,7 @@ export type QuotaState = {
   items: QuotaItem[];
   planType?: string;
   resetCreditCount?: number;
+  resetCreditExpirations?: string[];
   error?: string;
   updatedAt?: number;
   fetchedAt?: number;

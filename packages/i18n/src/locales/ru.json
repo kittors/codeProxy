@@ -581,6 +581,7 @@
     "quota_updated_at": "Обновлено",
     "reset_credits_badge": "Reset {{count}} times",
     "reset_credits_query": "Query reset credits",
+    "reset_credit_expirations": "Reset credit expiration times:\n{{times}}",
     "reset_credit_consume": "Reset quota",
     "reset_credit_no_credits": "No reset credits available",
     "reset_credit_confirm_title": "Reset quota?",

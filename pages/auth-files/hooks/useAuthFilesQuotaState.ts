@@ -280,6 +280,7 @@ export function useAuthFilesQuotaState({
             items: prev[name]?.items ?? [],
             planType: prev[name]?.planType,
             resetCreditCount: prev[name]?.resetCreditCount,
+            resetCreditExpirations: prev[name]?.resetCreditExpirations,
             error: prev[name]?.error,
             updatedAt: prev[name]?.updatedAt,
           },
@@ -291,6 +292,10 @@ export function useAuthFilesQuotaState({
         const items = Array.isArray(result) ? result : result.items;
         const nextPlanType = Array.isArray(result) ? null : (result.planType ?? null);
         const nextResetCreditCount = Array.isArray(result) ? undefined : result.resetCreditCount;
+        const nextResetCreditExpirations =
+          !Array.isArray(result) && Array.isArray(result.resetCreditExpirations)
+            ? result.resetCreditExpirations
+            : undefined;
         const rawAuthIndex = (file as { auth_index?: unknown }).auth_index ?? file.authIndex;
         const authIndex = normalizeAuthIndexValue(rawAuthIndex);
         if (authIndex) {
@@ -346,6 +351,7 @@ export function useAuthFilesQuotaState({
               typeof nextResetCreditCount === "number"
                 ? nextResetCreditCount
                 : prev[name]?.resetCreditCount,
+            resetCreditExpirations: nextResetCreditExpirations,
             updatedAt: Date.now(),
           },
         }));
@@ -361,6 +367,7 @@ export function useAuthFilesQuotaState({
             items: prev[name]?.items ?? [],
             planType: prev[name]?.planType,
             resetCreditCount: prev[name]?.resetCreditCount,
+            resetCreditExpirations: prev[name]?.resetCreditExpirations,
             error: message,
             updatedAt: Date.now(),
           },
@@ -428,6 +435,7 @@ export function useAuthFilesQuotaState({
             items: prev[target.file.name]?.items ?? [],
             planType: prev[target.file.name]?.planType,
             resetCreditCount: prev[target.file.name]?.resetCreditCount,
+            resetCreditExpirations: prev[target.file.name]?.resetCreditExpirations,
             error: prev[target.file.name]?.error,
             updatedAt: prev[target.file.name]?.updatedAt,
           };

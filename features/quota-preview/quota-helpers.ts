@@ -12,6 +12,7 @@ export { type CodexUsagePayload } from "@features/quota-preview/quota-codex";
 export {
   buildCodexItems,
   parseCodexUsagePayload,
+  resolveCodexResetCreditExpirations,
   resolveCodexResetCreditCount,
   resolveCodexChatgptAccountId,
 } from "@features/quota-preview/quota-codex";
@@ -65,6 +66,8 @@ export const GEMINI_CLI_REQUEST_HEADERS = {
 };
 
 export const CODEX_USAGE_URL = "https://chatgpt.com/backend-api/wham/usage";
+export const CODEX_RESET_CREDITS_URL =
+  "https://chatgpt.com/backend-api/wham/rate-limit-reset-credits";
 export const CODEX_RESET_CREDITS_CONSUME_URL =
   "https://chatgpt.com/backend-api/wham/rate-limit-reset-credits/consume";
 export const CODEX_REQUEST_HEADERS = {

@@ -100,6 +100,18 @@ const sanitizeCodexFilenamePart = (value: unknown): string =>
     .slice(0, MAX_FILENAME_PART_LENGTH)
     .replace(/^-+|-+$/g, "");
 
+const formatResetCreditExpiry = (value: string): string => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat(undefined, {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+};
+
 const readStringField = (record: Record<string, unknown>, keys: string[]): string => {
   for (const key of keys) {
     const value = record[key];
@@ -1341,6 +1353,18 @@ export function AuthFilesFilesTab({
                     provider === "codex" && typeof state.resetCreditCount === "number"
                       ? state.resetCreditCount
                       : 0;
+                  const resetCreditExpirations =
+                    provider === "codex" && Array.isArray(state.resetCreditExpirations)
+                      ? state.resetCreditExpirations
+                      : [];
+                  const resetCreditBadgeTitle =
+                    resetCreditCount <= 0
+                      ? t("auth_files.reset_credit_no_credits")
+                      : resetCreditExpirations.length > 0
+                        ? t("auth_files.reset_credit_expirations", {
+                            times: resetCreditExpirations.map(formatResetCreditExpiry).join("\n"),
+                          })
+                        : t("auth_files.reset_credits_query");
                   const resetCreditBusy = resettingCreditFileName === file.name;
                   const clearStatusBusy = clearingStatusFileName === file.name;
                   const clearStatusDisabled = !authIndex || clearStatusBusy;
@@ -1444,7 +1468,7 @@ export function AuthFilesFilesTab({
                               className="inline-flex shrink-0 items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-700 transition-colors hover:bg-blue-50 hover:text-blue-700 disabled:cursor-wait disabled:opacity-70 dark:bg-white/10 dark:text-white/70 dark:hover:bg-blue-500/15 dark:hover:text-blue-200"
                               disabled={quotaRefreshing}
                               onClick={() => void refreshQuota(file, provider)}
-                              title={t("auth_files.reset_credits_query")}
+                              title={resetCreditBadgeTitle}
                               aria-label={t("auth_files.reset_credits_query")}
                             >
                               <RefreshCw

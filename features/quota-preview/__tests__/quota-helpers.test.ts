@@ -7,6 +7,7 @@ import {
   formatRelativeResetLabel,
   parseAntigravityPayload,
   parseKimiUsagePayload,
+  resolveCodexResetCreditExpirations,
   resolveCodexResetCreditCount,
 } from "@features/quota-preview/quota-helpers";
 
@@ -157,6 +158,29 @@ describe("buildCodexItems", () => {
         rate_limit_reset_credits: { available_count: "3" },
       }),
     ).toBe(3);
+  });
+
+  test("reads reset credit expiration times sorted by expiry", () => {
+    expect(
+      resolveCodexResetCreditExpirations({
+        credits: [
+          { expires_at: "2026-07-04T10:00:00Z" },
+          { expiresAt: "2026-07-03T10:00:00Z" },
+          { expires_at: "" },
+          { expires_at: "not-a-date" },
+        ],
+      }),
+    ).toEqual(["2026-07-03T10:00:00Z", "2026-07-04T10:00:00Z", "not-a-date"]);
+  });
+
+  test("reads reset credit expiration times from wrapped detail payloads", () => {
+    expect(
+      resolveCodexResetCreditExpirations({
+        rate_limit_reset_credits: {
+          data: [{ expiresAt: "2026-07-02T10:00:00Z" }],
+        },
+      }),
+    ).toEqual(["2026-07-02T10:00:00Z"]);
   });
 });
 

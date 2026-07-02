@@ -42,6 +42,11 @@ type CodexAdditionalRateLimit = {
 type CodexRateLimitResetCredits = {
   available_count?: number | string;
   availableCount?: number | string;
+  credits?: CodexRateLimitResetCreditDetail[];
+  rate_limit_reset_credits?: CodexRateLimitResetCreditDetail[];
+  rateLimitResetCredits?: CodexRateLimitResetCreditDetail[];
+  items?: CodexRateLimitResetCreditDetail[];
+  data?: CodexRateLimitResetCreditDetail[];
 };
 
 export type CodexUsagePayload = {
@@ -55,6 +60,11 @@ export type CodexUsagePayload = {
   additionalRateLimits?: CodexAdditionalRateLimit[];
   rate_limit_reset_credits?: CodexRateLimitResetCredits | null;
   rateLimitResetCredits?: CodexRateLimitResetCredits | null;
+};
+
+type CodexRateLimitResetCreditDetail = {
+  expires_at?: string;
+  expiresAt?: string;
 };
 
 export const resolveCodexChatgptAccountId = (file: AuthFileItem): string | null => {
@@ -126,6 +136,56 @@ export const resolveCodexResetCreditCount = (payload: CodexUsagePayload): number
   const credits = payload.rate_limit_reset_credits ?? payload.rateLimitResetCredits ?? null;
   const count = normalizeNumberValue(credits?.available_count ?? credits?.availableCount);
   return count === null ? 0 : Math.max(0, Math.floor(count));
+};
+
+const parseCodexResetCreditsPayload = (payload: unknown): unknown => {
+  if (typeof payload !== "string") return payload;
+  const trimmed = payload.trim();
+  if (!trimmed) return null;
+  try {
+    return JSON.parse(trimmed) as unknown;
+  } catch {
+    return null;
+  }
+};
+
+const readCodexResetCreditList = (payload: unknown, depth = 0): unknown[] => {
+  const parsed = parseCodexResetCreditsPayload(payload);
+  if (Array.isArray(parsed)) return parsed;
+  if (!isRecord(parsed)) return [];
+  for (const key of [
+    "credits",
+    "rate_limit_reset_credits",
+    "rateLimitResetCredits",
+    "items",
+    "data",
+  ]) {
+    const value = parsed[key];
+    if (Array.isArray(value) && value.length > 0) return value;
+    if (depth < 1 && isRecord(value)) {
+      const nested = readCodexResetCreditList(value, depth + 1);
+      if (nested.length > 0) return nested;
+    }
+  }
+  return [];
+};
+
+export const resolveCodexResetCreditExpirations = (payload: unknown): string[] => {
+  const sorted = readCodexResetCreditList(payload)
+    .map((credit) => {
+      if (!isRecord(credit)) return null;
+      return normalizeStringValue(credit.expires_at ?? credit.expiresAt);
+    })
+    .filter((value): value is string => Boolean(value))
+    .sort((left, right) => {
+      const leftMs = Date.parse(left);
+      const rightMs = Date.parse(right);
+      const leftSort = Number.isNaN(leftMs) ? Number.POSITIVE_INFINITY : leftMs;
+      const rightSort = Number.isNaN(rightMs) ? Number.POSITIVE_INFINITY : rightMs;
+      if (leftSort === rightSort) return 0;
+      return leftSort < rightSort ? -1 : 1;
+    });
+  return [...new Set(sorted)];
 };
 
 const resolveCodexResetAtMs = (window?: CodexUsageWindow | null): number | undefined => {
