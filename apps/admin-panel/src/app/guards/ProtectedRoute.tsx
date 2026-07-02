@@ -1,5 +1,6 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "@app/providers/AuthProvider";
+import { hasAppLoader } from "@/app/bootstrap/dismissAppLoader";
 import { PageLoader } from "@code-proxy/ui";
 
 export function ProtectedRoute() {
@@ -9,6 +10,7 @@ export function ProtectedRoute() {
   } = useAuth();
 
   if (isRestoring) {
+    if (hasAppLoader()) return null;
     return <PageLoader variant="restoring" />;
   }
 

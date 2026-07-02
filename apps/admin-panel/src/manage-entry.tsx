@@ -21,4 +21,4 @@ createRoot(rootElement).render(
   </StrictMode>,
 );
 
-dismissAppLoader(false);
+dismissAppLoader(true);

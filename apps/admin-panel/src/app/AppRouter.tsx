@@ -1,10 +1,11 @@
-import { Suspense } from "react";
+import { Suspense, useEffect } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
-import { AuthProvider } from "@app/providers/AuthProvider";
+import { AuthProvider, useAuth } from "@app/providers/AuthProvider";
 import { ProtectedRoute } from "@/app/guards/ProtectedRoute";
 import { DashboardLayout } from "@app/layout/DashboardLayout";
 import { PageLoader, ThemeProvider, ToastProvider } from "@code-proxy/ui";
 import { AutoUpdatePrompt } from "@app/update/AutoUpdatePrompt";
+import { dismissAppLoader, hasAppLoader } from "@/app/bootstrap/dismissAppLoader";
 import { pageRoutes } from "@pages/registry";
 
 interface RouteWithMeta {
@@ -17,7 +18,33 @@ interface RouteWithMeta {
   hasWildcard?: boolean;
 }
 
-const RouteFallback = () => <PageLoader variant="inline" />;
+const RouteFallback = () => (hasAppLoader() ? null : <PageLoader variant="initial" />);
+
+function InitialRouteReady({ children }: { children: React.ReactElement }) {
+  useEffect(() => {
+    dismissAppLoader(false);
+  }, []);
+
+  return children;
+}
+
+function LoginRouteReady({ children }: { children: React.ReactElement }) {
+  const {
+    state: { isAuthenticated, isRestoring },
+  } = useAuth();
+
+  useEffect(() => {
+    if (!isRestoring && !isAuthenticated) {
+      dismissAppLoader(false);
+    }
+  }, [isAuthenticated, isRestoring]);
+
+  return children;
+}
+
+const readyRoute = (element: React.ReactElement) => (
+  <InitialRouteReady>{element}</InitialRouteReady>
+);
 
 export function AppRouter() {
   const routes = pageRoutes as RouteWithMeta[];
@@ -34,12 +61,16 @@ export function AppRouter() {
             <Routes>
               {/* Public routes */}
               {standalonePublicRoutes.map((route) => (
-                <Route key={route.path} path={route.path} element={route.element} />
+                <Route key={route.path} path={route.path} element={readyRoute(route.element)} />
               ))}
               {loginRoute ? (
                 <Route
                   path={loginRoute.path}
-                  element={<AuthProvider>{loginRoute.element}</AuthProvider>}
+                  element={
+                    <AuthProvider>
+                      <LoginRouteReady>{loginRoute.element}</LoginRouteReady>
+                    </AuthProvider>
+                  }
                 />
               ) : null}
 
@@ -64,7 +95,11 @@ export function AppRouter() {
                         <Route element={<ProtectedRoute />}>
                           <Route element={<DashboardLayout />}>
                             {authDashboardRoutes.map((route) => (
-                              <Route key={route.path} path={route.path} element={route.element} />
+                              <Route
+                                key={route.path}
+                                path={route.path}
+                                element={readyRoute(route.element)}
+                              />
                             ))}
                             {authDashboardRoutes.flatMap((route) =>
                               (route.redirects ?? []).map((rd) => (
@@ -82,7 +117,7 @@ export function AppRouter() {
                                 <Route
                                   key={`${route.path}-wildcard`}
                                   path={`${route.path}/*`}
-                                  element={route.element}
+                                  element={readyRoute(route.element)}
                                 />
                               ))}
                             <Route path="/" element={<Navigate to="/dashboard" replace />} />

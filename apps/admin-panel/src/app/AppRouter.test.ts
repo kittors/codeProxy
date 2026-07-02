@@ -44,4 +44,17 @@ describe("AppRouter", () => {
       'redirects: [{ from: "/manage/api-key-permissions", to: "/api-key-permissions" }]',
     );
   });
+
+  test("keeps the HTML app loader as the only initial page loader", () => {
+    const routerSource = readAppModule("app/AppRouter.tsx");
+    const protectedRouteSource = readAppModule("app/guards/ProtectedRoute.tsx");
+    const mainSource = readAppModule("main.tsx");
+    const manageEntrySource = readAppModule("manage-entry.tsx");
+
+    expect(mainSource).toContain("dismissAppLoader(true)");
+    expect(manageEntrySource).toContain("dismissAppLoader(true)");
+    expect(routerSource).toContain("hasAppLoader() ? null");
+    expect(routerSource).not.toContain('variant="inline"');
+    expect(protectedRouteSource).toContain("if (hasAppLoader()) return null");
+  });
 });

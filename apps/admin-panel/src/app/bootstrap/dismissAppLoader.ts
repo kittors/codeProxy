@@ -7,6 +7,10 @@ function getAppLoader(): HTMLElement | null {
   return document.getElementById(APP_LOADER_ID);
 }
 
+export function hasAppLoader(): boolean {
+  return getAppLoader() !== null;
+}
+
 /** Removes the HTML pre-hydration loader with a fade-out transition.
  *
  * Call this once after React has mounted. If the caller passes `true` for
