@@ -3,7 +3,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import { AuthProvider } from "@app/providers/AuthProvider";
 import { ProtectedRoute } from "@/app/guards/ProtectedRoute";
 import { DashboardLayout } from "@app/layout/DashboardLayout";
-import { ThemeProvider, ToastProvider } from "@code-proxy/ui";
+import { PageLoader, ThemeProvider, ToastProvider } from "@code-proxy/ui";
 import { AutoUpdatePrompt } from "@app/update/AutoUpdatePrompt";
 import { pageRoutes } from "@pages/registry";
 
@@ -17,20 +17,7 @@ interface RouteWithMeta {
   hasWildcard?: boolean;
 }
 
-function RouteFallback() {
-  return (
-    <div
-      role="status"
-      aria-label="Loading"
-      className="flex min-h-screen items-center justify-center bg-slate-50 text-slate-700 dark:bg-neutral-950 dark:text-white/80"
-    >
-      <span
-        aria-hidden="true"
-        className="h-6 w-6 rounded-full border-2 border-slate-300 border-t-slate-900 motion-reduce:animate-none motion-safe:animate-spin dark:border-white/20 dark:border-t-white"
-      />
-    </div>
-  );
-}
+const RouteFallback = () => <PageLoader variant="inline" />;
 
 export function AppRouter() {
   const routes = pageRoutes as RouteWithMeta[];

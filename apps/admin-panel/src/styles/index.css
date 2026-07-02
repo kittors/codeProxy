@@ -253,3 +253,69 @@ html.theme-transition-lock *::after {
     radial-gradient(circle at 28% 28%, rgba(255, 255, 255, 0.18), transparent 28%),
     radial-gradient(circle at 72% 62%, rgba(148, 163, 184, 0.16), transparent 24%);
 }
+
+/* ── PageLoader full-screen variant ── */
+:root {
+  --pl-bg: #f4f4f5;
+  --pl-ring-outer: rgba(99, 102, 241, 0.6);
+  --pl-ring-inner: rgba(20, 184, 166, 0.75);
+  --pl-text: #64748b;
+  --pl-glow-1: rgba(59, 130, 246, 0.12);
+  --pl-glow-2: rgba(20, 184, 166, 0.1);
+  --pl-glow-3: rgba(168, 85, 247, 0.08);
+}
+
+.dark {
+  --pl-bg: #09090b;
+  --pl-ring-outer: rgba(129, 140, 248, 0.7);
+  --pl-ring-inner: rgba(94, 234, 212, 0.8);
+  --pl-text: rgba(255, 255, 255, 0.5);
+  --pl-glow-1: rgba(99, 102, 241, 0.18);
+  --pl-glow-2: rgba(45, 212, 191, 0.12);
+  --pl-glow-3: rgba(168, 85, 247, 0.1);
+}
+
+.pl-glow {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  pointer-events: none;
+  animation: pl-glow-pulse 4s ease-in-out infinite alternate;
+}
+
+.pl-glow-1 {
+  width: 28rem;
+  height: 28rem;
+  top: -8rem;
+  left: -6rem;
+  background: var(--pl-glow-1);
+}
+
+.pl-glow-2 {
+  width: 24rem;
+  height: 24rem;
+  top: -4rem;
+  right: -6rem;
+  background: var(--pl-glow-2);
+  animation-delay: 1.3s;
+}
+
+.pl-glow-3 {
+  width: 28rem;
+  height: 28rem;
+  bottom: -8rem;
+  left: 25%;
+  background: var(--pl-glow-3);
+  animation-delay: 2.6s;
+}
+
+@keyframes pl-glow-pulse {
+  0% {
+    opacity: 0.5;
+    transform: scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+}

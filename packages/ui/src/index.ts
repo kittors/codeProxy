@@ -1,5 +1,7 @@
 export { AnimatedNumber } from "./feedback/AnimatedNumber";
 export { EmptyState } from "./feedback/EmptyState";
+export { PageLoader } from "./feedback/PageLoader";
+export type { PageLoaderVariant } from "./feedback/PageLoader";
 export { Reveal } from "./feedback/Reveal";
 export { ToastProvider, useToast } from "./feedback/ToastProvider";
 
