@@ -4464,8 +4464,12 @@ describe("AuthFilesPage files table", () => {
     expect(await screen.findByText("Reset 3 times")).toBeInTheDocument();
     const cards = screen.getByTestId("auth-files-cards");
     const resetButton = within(cards).getByRole("button", { name: "Query reset credits" });
-    expect(resetButton.getAttribute("title")).toContain("Reset credit expiration times:");
-    expect(resetButton.getAttribute("title")).toContain("2026");
+    expect(resetButton).not.toHaveAttribute("title");
+    const user = userEvent.setup();
+    await user.hover(resetButton);
+    const resetTooltip = await screen.findByRole("tooltip");
+    expect(resetTooltip).toHaveTextContent("Reset credit expiration times:");
+    expect(resetTooltip).toHaveTextContent("2026");
     const callsBadge = within(cards).getByText("0 calls");
     expect(
       resetButton.compareDocumentPosition(callsBadge) & Node.DOCUMENT_POSITION_FOLLOWING,
@@ -4474,7 +4478,7 @@ describe("AuthFilesPage files table", () => {
 
     expect(await screen.findByText("Reset 4 times")).toBeInTheDocument();
     const updatedResetButton = within(cards).getByRole("button", { name: "Query reset credits" });
-    expect(updatedResetButton).toHaveAttribute("title", "Query reset credits");
+    expect(updatedResetButton).not.toHaveAttribute("title");
     expect(mocks.fetchQuota).toHaveBeenLastCalledWith(
       "codex",
       expect.objectContaining({ name: "codex.json" }),
