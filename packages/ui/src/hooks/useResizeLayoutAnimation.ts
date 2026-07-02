@@ -1,6 +1,8 @@
 import { useLayoutEffect, useRef } from "react";
 
 const layoutEasing = "cubic-bezier(0.16, 1, 0.3, 1)";
+const layoutDurationMs = 180;
+const minMovePx = 12;
 
 export function useResizeLayoutAnimation<T extends HTMLElement>(enabled: boolean) {
   const ref = useRef<T | null>(null);
@@ -21,15 +23,17 @@ export function useResizeLayoutAnimation<T extends HTMLElement>(enabled: boolean
       const deltaY = previous.top - next.top;
       previous = next;
 
-      if (Math.abs(deltaX) < 0.5 && Math.abs(deltaY) < 0.5) return;
+      if (Math.hypot(deltaX, deltaY) < minMovePx) return;
+      if (animation && animation.playState !== "finished" && animation.playState !== "idle") {
+        return;
+      }
 
-      animation?.cancel();
       animation = element.animate(
         [
           { transform: `translate3d(${deltaX}px, ${deltaY}px, 0)` },
           { transform: "translate3d(0, 0, 0)" },
         ],
-        { duration: 260, easing: layoutEasing },
+        { duration: layoutDurationMs, easing: layoutEasing },
       );
     };
 
