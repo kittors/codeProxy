@@ -62,6 +62,15 @@ html.theme-transition-lock *::after {
   height: 0;
 }
 
+.rp {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 50;
+  height: 0.25rem;
+  pointer-events: none;
+  background: linear-gradient(90deg, #2563eb, #3b82f6);
+}
+
 /* DataTable：隐藏原生滚动条，改用 DOM 自定义滚动条 */
 .table-scrollbar {
   scrollbar-width: none;

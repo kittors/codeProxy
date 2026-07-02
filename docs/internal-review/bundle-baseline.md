@@ -1,6 +1,6 @@
 # codeProxy Bundle Baseline
 
-更新时间：2026-07-01 22:29:09 +0800
+更新时间：2026-07-02 14:12:26 +0800
 
 ## 当前构建命令
 
@@ -17,7 +17,7 @@ bun run build
 | `vendor-markdown`    |  761.13 kB | 261.12 kB | Markdown + syntax highlighter 组合                                          |
 | `vendor-animation`   |  126.13 kB |  41.83 kB | 动画依赖独立 vendor chunk                                                   |
 | `vendor-charts`      |    0.07 kB |   0.08 kB | Chart.js 入口当前几乎未进入业务路径                                         |
-| `index`              |  266.38 kB |  83.36 kB | 入口基础包较旧基线明显下降，但仍需持续往下压                                |
+| `index`              |  283.68 kB |  88.17 kB | 入口基础包接受本轮窗口顶部进度条变化，后续仍需持续往下压                    |
 | `ConfigPage`         |  118.44 kB |  32.93 kB | 页面 chunk 低于预算                                                         |
 | `AuthFilesPage`      |  203.20 kB |  54.93 kB | 页面主文件仍低于页面 gzip 预算                                              |
 | `ProvidersPage`      |  113.50 kB |  28.33 kB | 已低于 `< 80 kB gzip` 页面预算                                              |

@@ -121,12 +121,7 @@ function ShellSidebar({
   } = useShell();
   // Track the clicked nav target so the highlight updates instantly on click,
   // without waiting for lazy chunks to load & location to update.
-  const [pendingTo, setPendingTo] = useState<string | null>(null);
-
-  // Clear pendingTo once location catches up (chunk loaded, route rendered).
-  useEffect(() => {
-    setPendingTo(null);
-  }, [location.pathname]);
+  const [pendingTo, setPendingTo] = useState("");
 
   const resolveActiveTo = useCallback((pathname: string) => {
     const sorted = [...NAV_ITEMS].sort((a, b) => b.to.length - a.to.length);
@@ -135,11 +130,10 @@ function ShellSidebar({
     );
   }, []);
 
-  const activeTo = useMemo(() => {
-    // If user just clicked a nav item, use that immediately for highlighting
-    if (pendingTo) return resolveActiveTo(pendingTo);
-    return resolveActiveTo(location.pathname);
-  }, [pendingTo, location.pathname, resolveActiveTo]);
+  const activeTo = useMemo(
+    () => resolveActiveTo(pendingTo || location.pathname),
+    [pendingTo, location.pathname, resolveActiveTo],
+  );
 
   const isMobile = mode === "mobile";
   const accountLogoutLabel = t("shell.logout_button");
@@ -155,23 +149,31 @@ function ShellSidebar({
     [location.pathname, onNavigate],
   );
 
+  useEffect(() => {
+    if (pendingTo === location.pathname) setTimeout(setPendingTo, 260, "");
+  }, [location.pathname, pendingTo]);
+
   return (
-    <aside
-      className={[
-        "shrink-0 overflow-hidden bg-white/94 dark:bg-neutral-950/88",
-        isMobile ? "fixed inset-y-0 left-0 z-40 w-56" : "h-[100dvh]",
-        "border-r border-slate-200 shadow-[12px_0_28px_rgba(15,23,42,0.04)] dark:border-neutral-800",
-        "motion-reduce:transition-none motion-safe:transition-[width,transform,background-color,border-color] motion-safe:duration-300 motion-safe:ease-out",
-        isMobile
-          ? collapsed
-            ? "-translate-x-full"
-            : "translate-x-0"
-          : collapsed
-            ? "w-0 border-r-0"
-            : "w-56",
-      ].join(" ")}
-      aria-hidden={collapsed}
-    >
+    <>
+      {pendingTo && (
+        <div className="rp" />
+      )}
+      <aside
+        className={[
+          "shrink-0 overflow-hidden bg-white/94 dark:bg-neutral-950/88",
+          isMobile ? "fixed inset-y-0 left-0 z-40 w-56" : "h-[100dvh]",
+          "border-r border-slate-200 shadow-[12px_0_28px_rgba(15,23,42,0.04)] dark:border-neutral-800",
+          "motion-reduce:transition-none motion-safe:transition-[width,transform,background-color,border-color] motion-safe:duration-300 motion-safe:ease-out",
+          isMobile
+            ? collapsed
+              ? "-translate-x-full"
+              : "translate-x-0"
+            : collapsed
+              ? "w-0 border-r-0"
+              : "w-56",
+        ].join(" ")}
+        aria-hidden={collapsed}
+      >
       <div
         className={[
           "flex h-full w-56 flex-col",
@@ -201,9 +203,10 @@ function ShellSidebar({
                 viewTransition
                 onClick={() => handleNavClick(item.to)}
                 className={
-                  active
-                    ? "flex min-w-0 items-center gap-3 rounded-[14px] bg-gradient-to-r from-blue-600 to-blue-500 px-3.5 py-2.5 text-[13px] font-semibold text-white shadow-[0_12px_24px_rgba(37,99,235,0.22)] transition-colors duration-200 ease-out whitespace-nowrap"
-                    : "flex min-w-0 items-center gap-3 rounded-[14px] px-3.5 py-2.5 text-[13px] font-medium text-slate-700 transition-colors duration-200 ease-out hover:bg-slate-100 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white whitespace-nowrap"
+                  "flex min-w-0 items-center gap-3 rounded-[14px] px-3.5 py-2.5 text-[13px] transition-colors duration-200 ease-out whitespace-nowrap " +
+                  (active
+                    ? "bg-gradient-to-r from-blue-600 to-blue-500 font-semibold text-white shadow-[0_12px_24px_rgba(37,99,235,0.22)]"
+                    : "font-medium text-slate-700 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white")
                 }
               >
                 <Icon
@@ -243,7 +246,8 @@ function ShellSidebar({
           </div>
         </div>
       </div>
-    </aside>
+      </aside>
+    </>
   );
 }
 
@@ -392,7 +396,6 @@ export function AppShell({ children, onLogout }: PropsWithChildren<{ onLogout?: 
         >
           {t("shell.skip_to_content")}
         </a>
-
         {isMobile ? (
           <>
             {mobileSidebarOpen ? (
