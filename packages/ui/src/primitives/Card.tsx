@@ -1,5 +1,7 @@
-import type { PropsWithChildren, ReactNode } from "react";
+import { type PropsWithChildren, type ReactNode } from "react";
+import { useReducedMotion } from "framer-motion";
 import { useTranslation } from "react-i18next";
+import { useResizeLayoutAnimation } from "../hooks/useResizeLayoutAnimation";
 
 export function Card({
   title,
@@ -20,6 +22,8 @@ export function Card({
   padding?: "default" | "compact" | "none";
 }>) {
   const { t } = useTranslation();
+  const reduceMotion = useReducedMotion();
+  const cardRef = useResizeLayoutAnimation<HTMLElement>(!reduceMotion);
   const hasHeader = Boolean(title || description || actions);
   const paddingClass = {
     default: "p-5",
@@ -29,6 +33,7 @@ export function Card({
 
   return (
     <section
+      ref={cardRef}
       className={[
         "relative min-w-0 rounded-2xl border border-black/[0.06] bg-white shadow-[0_1px_2px_rgb(15_23_42_/_0.035)] dark:border-white/[0.06] dark:bg-neutral-950/70 dark:shadow-[0_1px_2px_rgb(0_0_0_/_0.22)]",
         "motion-reduce:transition-none motion-safe:transition-colors motion-safe:duration-200 motion-safe:ease-out",

@@ -65,6 +65,7 @@ export { LanguageSelector } from "./theme/LanguageSelector";
 
 export { useInterval } from "./hooks/useInterval";
 export { useLocalStorage } from "./hooks/useLocalStorage";
+export { useResizeLayoutAnimation } from "./hooks/useResizeLayoutAnimation";
 
 export { copyTextToClipboard } from "./utils/clipboard";
 export {

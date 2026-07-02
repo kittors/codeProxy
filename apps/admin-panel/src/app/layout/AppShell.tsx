@@ -425,41 +425,27 @@ export function AppShell({ children, onLogout }: PropsWithChildren<{ onLogout?: 
         >
           {t("shell.skip_to_content")}
         </a>
-        {isMobile ? (
-          <>
-            {mobileSidebarOpen ? (
-              <button
-                type="button"
-                className="fixed inset-0 z-30 bg-black/35 backdrop-blur-[1px]"
-                aria-label={t("common.close")}
-                onClick={() => setMobileSidebarOpen(false)}
-              />
-            ) : null}
-            <ShellSidebar
-              collapsed={!mobileSidebarOpen}
-              mode="mobile"
-              onNavigate={() => setMobileSidebarOpen(false)}
-            />
-            <div className="flex h-[100dvh] overflow-hidden">
-              <div className="flex min-w-0 flex-1 flex-col">
-                <ShellHeader sidebarCollapsed={sidebarCollapsed} onToggleSidebar={toggleSidebar} />
-                <div className="flex-1 overflow-y-auto overflow-x-hidden">
-                  <ShellMain>{children}</ShellMain>
-                </div>
-              </div>
-            </div>
-          </>
-        ) : (
-          <div className="flex h-[100dvh] overflow-hidden">
-            <ShellSidebar collapsed={sidebarCollapsed} mode="desktop" />
-            <div className="flex min-w-0 flex-1 flex-col">
-              <ShellHeader sidebarCollapsed={sidebarCollapsed} onToggleSidebar={toggleSidebar} />
-              <div className="flex-1 overflow-y-auto overflow-x-hidden">
-                <ShellMain>{children}</ShellMain>
-              </div>
+        {isMobile && mobileSidebarOpen ? (
+          <button
+            type="button"
+            className="fixed inset-0 z-30 bg-black/35 backdrop-blur-[1px]"
+            aria-label={t("common.close")}
+            onClick={() => setMobileSidebarOpen(false)}
+          />
+        ) : null}
+        <div className="flex h-[100dvh] overflow-hidden">
+          <ShellSidebar
+            collapsed={sidebarCollapsed}
+            mode={isMobile ? "mobile" : "desktop"}
+            onNavigate={isMobile ? () => setMobileSidebarOpen(false) : undefined}
+          />
+          <div className="flex min-w-0 flex-1 flex-col">
+            <ShellHeader sidebarCollapsed={sidebarCollapsed} onToggleSidebar={toggleSidebar} />
+            <div className="flex-1 overflow-y-auto overflow-x-hidden">
+              <ShellMain>{children}</ShellMain>
             </div>
           </div>
-        )}
+        </div>
       </ShellFrame>
     </ShellContext>
   );
