@@ -20,13 +20,10 @@ import {
 } from "@code-proxy/domain/ccswitch/ccswitchImport";
 import {
   appendCcSwitchRoutePath,
-  buildCcSwitchCodexModelCatalogJsonForConfig,
   buildCcSwitchImportUrlForConfig,
-  getCcSwitchCodexModelCatalogFilenameForConfig,
 } from "@code-proxy/domain/ccswitch/ccswitchImportLinks";
 import type { CcSwitchImportConfigListItem } from "@code-proxy/domain/ccswitch/ccswitchImportConfigList";
 import { ccSwitchConfigMatchesApiKeyPermissions } from "@code-proxy/domain/ccswitch/ccswitchImportCompatibility";
-import { downloadTextAsFile } from "@code-proxy/domain";
 import { Button } from "@code-proxy/ui";
 import { Card } from "@code-proxy/ui";
 import { copyTextToClipboard } from "@code-proxy/ui";
@@ -112,16 +109,12 @@ async function fetchQuickImportApiKeyEntry(apiKey: string): Promise<ApiKeyEntry 
 function QuickImportCard({
   config,
   copied,
-  catalogAvailable,
   onCopyLink,
-  onDownloadCatalog,
   onSelect,
 }: {
   config: CcSwitchImportConfigListItem;
   copied: boolean;
-  catalogAvailable: boolean;
   onCopyLink: (config: CcSwitchImportConfigListItem) => void;
-  onDownloadCatalog: (config: CcSwitchImportConfigListItem) => void;
   onSelect: (config: CcSwitchImportConfigListItem) => void;
 }) {
   const { t } = useTranslation();
@@ -164,17 +157,6 @@ function QuickImportCard({
         </span>
       </button>
       <div className="flex items-start gap-1 p-3 pl-0">
-        {catalogAvailable ? (
-          <Button
-            variant="ghost"
-            size="xs"
-            title={t("ccswitch.download_codex_model_catalog")}
-            onClick={() => onDownloadCatalog(config)}
-            className="rounded-lg border border-slate-200/70 bg-white text-slate-500 hover:text-slate-900 dark:border-neutral-800 dark:bg-neutral-950 dark:text-white/55 dark:hover:text-white"
-          >
-            <Download size={14} />
-          </Button>
-        ) : null}
         <Button
           variant="ghost"
           size="xs"
@@ -363,17 +345,6 @@ export function QuickImportTabContent({
     [buildImportUrl, notify, showCopiedImportState, t],
   );
 
-  const handleDownloadCodexCatalog = useCallback(
-    (config: CcSwitchImportConfigListItem) => {
-      const catalogJson = buildCcSwitchCodexModelCatalogJsonForConfig(config);
-      if (!catalogJson) return;
-
-      downloadTextAsFile(catalogJson, getCcSwitchCodexModelCatalogFilenameForConfig(config));
-      notify({ type: "success", message: t("ccswitch.download_codex_model_catalog_success") });
-    },
-    [notify, t],
-  );
-
   return (
     <div className="space-y-4">
       <Card padding="compact" className="border-slate-200/70 bg-white/85 dark:bg-neutral-950/70">
@@ -441,11 +412,7 @@ export function QuickImportTabContent({
                         key={config.id}
                         config={config}
                         copied={copiedImportConfigId === config.id}
-                        catalogAvailable={Boolean(
-                          buildCcSwitchCodexModelCatalogJsonForConfig(config),
-                        )}
                         onCopyLink={(item) => void handleCopyImportLink(item)}
-                        onDownloadCatalog={handleDownloadCodexCatalog}
                         onSelect={handleImport}
                       />
                     ))}

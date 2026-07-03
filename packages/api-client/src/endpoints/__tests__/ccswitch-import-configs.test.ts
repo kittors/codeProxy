@@ -76,7 +76,17 @@ describe("ccSwitchImportConfigsApi", () => {
         codexModelCatalogFilename: "cc-switch-model-catalog.json",
         codexModelCatalog: {
           models: [
-            { slug: "gpt-5.5", display_name: "gpt-5.5" },
+            {
+              slug: "gpt-5.5",
+              display_name: "gpt-5.5",
+              default_reasoning_level: "medium",
+              supported_reasoning_levels: [
+                { effort: "low", description: "Fast" },
+                { effort: "medium", description: "Balanced" },
+                { effort: "high", description: "Deep" },
+                { effort: "xhigh", description: "Extra deep" },
+              ],
+            },
             { slug: "deepseek-v4-flash", display_name: "deepseek-v4-flash" },
           ],
         },
@@ -90,7 +100,16 @@ describe("ccSwitchImportConfigsApi", () => {
         "codex-model-catalog-filename": "cc-switch-model-catalog.json",
         "codex-model-catalog": expect.objectContaining({
           models: expect.arrayContaining([
-            expect.objectContaining({ slug: "gpt-5.5" }),
+            expect.objectContaining({
+              slug: "gpt-5.5",
+              default_reasoning_level: "medium",
+              supported_reasoning_levels: [
+                { effort: "low", description: "Fast" },
+                { effort: "medium", description: "Balanced" },
+                { effort: "high", description: "Deep" },
+                { effort: "xhigh", description: "Extra deep" },
+              ],
+            }),
             expect.objectContaining({ slug: "deepseek-v4-flash" }),
           ]),
         }),
@@ -116,7 +135,12 @@ describe("ccSwitchImportConfigsApi", () => {
         "codex-model-catalog-filename": "cc-switch-model-catalog.json",
         "codex-model-catalog": {
           models: [
-            { slug: "gpt-5.5", display_name: "gpt-5.5" },
+            {
+              model: "gpt-5.5",
+              display_name: "gpt-5.5",
+              default_reasoning_level: "medium",
+              supported_reasoning_levels: ["low", "medium", "high", "xhigh"],
+            },
             { slug: "deepseek-v4-flash", display_name: "deepseek-v4-flash" },
           ],
         },
@@ -127,7 +151,14 @@ describe("ccSwitchImportConfigsApi", () => {
     expect(configs[0]).toMatchObject({
       codexModelCatalogFilename: "cc-switch-model-catalog.json",
       codexModelCatalog: {
-        models: [{ slug: "gpt-5.5" }, { slug: "deepseek-v4-flash" }],
+        models: [
+          {
+            model: "gpt-5.5",
+            default_reasoning_level: "medium",
+            supported_reasoning_levels: ["low", "medium", "high", "xhigh"],
+          },
+          { slug: "deepseek-v4-flash" },
+        ],
       },
     });
   });

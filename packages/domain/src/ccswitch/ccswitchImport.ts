@@ -20,6 +20,14 @@ export interface CcSwitchCodexCatalogModel {
   model: string;
   displayName?: string;
   contextWindow?: number;
+  defaultReasoningLevel?: string;
+  supportedReasoningLevels?: Array<
+    | string
+    | {
+        effort: string;
+        description?: string;
+      }
+  >;
 }
 
 export interface CcSwitchCodexModelCatalog {
@@ -35,9 +43,9 @@ export interface CcSwitchCodexModelCatalogEntry {
   model: string;
   display_name: string;
   description: string;
-  default_reasoning_level: "medium";
+  default_reasoning_level: string;
   supported_reasoning_levels: Array<{
-    effort: "low" | "medium" | "high" | "xhigh";
+    effort: string;
     description: string;
   }>;
   shell_type: "shell_command";
@@ -271,6 +279,35 @@ const normalizeCodexContextWindow = (value: number | undefined): number => {
   return Math.round(value);
 };
 
+const normalizeCodexReasoningLevels = (
+  levels: CcSwitchCodexCatalogModel["supportedReasoningLevels"],
+): CcSwitchCodexModelCatalogEntry["supported_reasoning_levels"] => {
+  if (!Array.isArray(levels) || levels.length === 0) return CODEX_SUPPORTED_REASONING_LEVELS;
+
+  const normalized = levels
+    .map((level) => {
+      if (typeof level === "string") {
+        const effort = level.trim();
+        if (!effort) return null;
+        const builtIn = CODEX_SUPPORTED_REASONING_LEVELS.find((item) => item.effort === effort);
+        return builtIn ?? { effort, description: effort };
+      }
+
+      const effort = String(level.effort ?? "").trim();
+      if (!effort) return null;
+      const builtIn = CODEX_SUPPORTED_REASONING_LEVELS.find((item) => item.effort === effort);
+      return {
+        effort,
+        description: String(level.description ?? builtIn?.description ?? effort),
+      };
+    })
+    .filter((level): level is CcSwitchCodexModelCatalogEntry["supported_reasoning_levels"][number] =>
+      Boolean(level),
+    );
+
+  return normalized.length > 0 ? normalized : CODEX_SUPPORTED_REASONING_LEVELS;
+};
+
 const buildCodexCatalogEntry = (
   model: CcSwitchCodexCatalogModel,
   priority: number,
@@ -278,14 +315,16 @@ const buildCodexCatalogEntry = (
   const slug = model.model.trim();
   const displayName = model.displayName?.trim() || slug;
   const contextWindow = normalizeCodexContextWindow(model.contextWindow);
+  const defaultReasoningLevel = model.defaultReasoningLevel?.trim() || "medium";
+  const supportedReasoningLevels = normalizeCodexReasoningLevels(model.supportedReasoningLevels);
 
   return {
     slug,
     model: slug,
     display_name: displayName,
     description: displayName,
-    default_reasoning_level: "medium",
-    supported_reasoning_levels: CODEX_SUPPORTED_REASONING_LEVELS,
+    default_reasoning_level: defaultReasoningLevel,
+    supported_reasoning_levels: supportedReasoningLevels,
     shell_type: "shell_command",
     visibility: "list",
     supported_in_api: true,
@@ -389,7 +428,11 @@ const buildCodexConfig = (input: {
     const key = normalized.toLowerCase();
     if (!normalized || seen.has(key)) return;
     seen.add(key);
-    catalogModels.push({ model: normalized });
+    catalogModels.push({
+      model: normalized,
+      defaultReasoningLevel: "medium",
+      supportedReasoningLevels: CODEX_SUPPORTED_REASONING_LEVELS,
+    });
   };
 
   for (const entry of input.codexModelCatalog?.models ?? []) {

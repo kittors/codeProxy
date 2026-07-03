@@ -33,13 +33,10 @@ import { CcSwitchImportCardList } from "./components/CcSwitchImportCardList";
 import { openCcSwitchImportUrl } from "@code-proxy/domain/ccswitch/ccswitchImport";
 import {
   appendCcSwitchRoutePath,
-  buildCcSwitchCodexModelCatalogJsonForConfig,
   buildCcSwitchImportUrlForConfig,
-  getCcSwitchCodexModelCatalogFilenameForConfig,
 } from "@code-proxy/domain/ccswitch/ccswitchImportLinks";
 import type { CcSwitchImportConfigListItem } from "@code-proxy/domain/ccswitch/ccswitchImportConfigList";
 import { ccSwitchConfigMatchesApiKeyPermissions } from "@code-proxy/domain/ccswitch/ccswitchImportCompatibility";
-import { downloadTextAsFile } from "@code-proxy/domain";
 import { LogContentModal } from "@features/log-content-viewer";
 import { ErrorDetailModal } from "@features/log-content-viewer";
 import type { ApiKeyFormValues } from "./types";
@@ -549,17 +546,6 @@ export function ApiKeysPage() {
     [buildImportUrlWithConfig, notify, showCopiedCcSwitchImportState, t],
   );
 
-  const handleDownloadCcSwitchCodexCatalog = useCallback(
-    (config: CcSwitchImportConfigListItem) => {
-      const catalogJson = buildCcSwitchCodexModelCatalogJsonForConfig(config);
-      if (!catalogJson) return;
-
-      downloadTextAsFile(catalogJson, getCcSwitchCodexModelCatalogFilenameForConfig(config));
-      notify({ type: "success", message: t("ccswitch.download_codex_model_catalog_success") });
-    },
-    [notify, t],
-  );
-
   /* ─── column definitions ─── */
 
   const apiKeyColumns = useMemo(
@@ -716,7 +702,6 @@ export function ApiKeysPage() {
         configs={compatibleConfigs}
         copiedConfigId={copiedCcSwitchImportConfigId}
         onCopyLink={(config) => void handleCopyCcSwitchImportLink(config)}
-        onDownloadCatalog={handleDownloadCcSwitchCodexCatalog}
         onSelect={handleImportWithConfig}
         onClose={() => {
           setCcSwitchImportEntry(null);
