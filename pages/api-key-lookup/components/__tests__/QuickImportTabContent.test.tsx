@@ -96,6 +96,7 @@ describe("QuickImportTabContent", () => {
   beforeEach(async () => {
     await i18n.changeLanguage("en");
     window.localStorage.clear();
+    window.sessionStorage.clear();
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(JSON.stringify({ "ccswitch-import-configs": quickImportConfigs }), {
         headers: { "Content-Type": "application/json" },
@@ -200,7 +201,7 @@ describe("QuickImportTabContent", () => {
       expect(decodeConfigFromImportUrl(copiedUrl)).toMatchObject({
         modelCatalog: {
           models: [
-              expect.objectContaining({ slug: "gpt-5.3-codex" }),
+            expect.objectContaining({ slug: "gpt-5.3-codex" }),
             expect.objectContaining({ slug: "deepseek-v4-flash" }),
           ],
         },

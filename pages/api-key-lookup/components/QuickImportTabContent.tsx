@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Check, Copy, Download, ExternalLink } from "lucide-react";
 import iconClaude from "@code-proxy/assets/icons/claude.svg";
 import iconCodex from "@code-proxy/assets/icons/codex.svg";
@@ -31,6 +32,7 @@ import { useToast } from "@code-proxy/ui";
 
 const CC_SWITCH_RELEASES_URL = "https://github.com/farion1231/cc-switch/releases";
 const QUICK_IMPORT_CLIENTS: CcSwitchClientType[] = ["codex", "claude"];
+const QUICK_IMPORT_CACHE_STORAGE_KEY = "apiKeyLookup.quickImportCache.v1";
 
 const iconByType: Record<"codex" | "claude", string> = {
   codex: iconCodex,
@@ -47,6 +49,92 @@ function readStoredManagementAuth(): { apiBase: string; managementKey: string } 
   if (!snapshot?.apiBase || !snapshot.managementKey) return null;
   return { apiBase: snapshot.apiBase, managementKey: snapshot.managementKey };
 }
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function serializeQuickImportConfig(config: CcSwitchImportConfigListItem): Record<string, unknown> {
+  return {
+    id: config.id,
+    "client-type": config.clientType,
+    "provider-name": config.providerName,
+    note: config.note,
+    "default-model": config.defaultModel,
+    "model-mappings": config.modelMappings.map((mapping) => ({
+      ...(mapping.role ? { role: mapping.role } : {}),
+      "request-model": mapping.requestModel,
+      "target-model": mapping.targetModel,
+    })),
+    "allowed-channel-groups": [...config.allowedChannelGroups],
+    "route-path": config.routePath,
+    "endpoint-path": config.endpointPath,
+    "usage-auto-interval": config.usageAutoInterval,
+    ...(config.apiKeyField ? { "api-key-field": config.apiKeyField } : {}),
+    ...(config.codexModelCatalog
+      ? {
+          "codex-model-catalog-filename": config.codexModelCatalogFilename,
+          "codex-model-catalog": config.codexModelCatalog,
+        }
+      : {}),
+  };
+}
+
+function getQuickImportCacheKey(apiKey: string): string {
+  const auth = readStoredManagementAuth();
+  return [apiKey.trim(), auth?.apiBase ?? "public", auth?.managementKey ?? ""].join("|");
+}
+
+function readStoredQuickImportCache(
+  cacheKey: string,
+): { configs: CcSwitchImportConfigListItem[]; apiKeyEntry: ApiKeyEntry | null } | null {
+  try {
+    const raw = window.sessionStorage.getItem(QUICK_IMPORT_CACHE_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed: unknown = JSON.parse(raw);
+    if (!isRecord(parsed)) return null;
+    const cached = parsed[cacheKey];
+    if (!isRecord(cached)) return null;
+    const configs = normalizeCcSwitchImportConfigs(cached.configs);
+    const entries = normalizeApiKeyEntries([cached.apiKeyEntry]);
+    return { configs, apiKeyEntry: entries[0] ?? null };
+  } catch {
+    return null;
+  }
+}
+
+function writeStoredQuickImportCache(
+  cacheKey: string,
+  value: { configs: CcSwitchImportConfigListItem[]; apiKeyEntry: ApiKeyEntry | null },
+): void {
+  try {
+    const raw = window.sessionStorage.getItem(QUICK_IMPORT_CACHE_STORAGE_KEY);
+    const parsed: unknown = raw ? JSON.parse(raw) : {};
+    const entries = isRecord(parsed)
+      ? Object.entries(parsed).filter((entry): entry is [string, Record<string, unknown>] =>
+          isRecord(entry[1]),
+        )
+      : [];
+    const next: Record<string, Record<string, unknown>> = {};
+    const keptEntries = entries.filter(([key]) => key !== cacheKey);
+    const cacheEntry: [string, Record<string, unknown>] = [
+      cacheKey,
+      {
+        configs: value.configs.map(serializeQuickImportConfig),
+        apiKeyEntry: value.apiKeyEntry,
+      },
+    ];
+    for (const [key, entry] of [...keptEntries, cacheEntry].slice(-8)) {
+      next[key] = entry;
+    }
+    window.sessionStorage.setItem(QUICK_IMPORT_CACHE_STORAGE_KEY, JSON.stringify(next));
+  } catch {
+    // ignore storage failures
+  }
+}
+
+const sameJsonValue = (left: unknown, right: unknown): boolean =>
+  JSON.stringify(left) === JSON.stringify(right);
 
 async function fetchPublicQuickImportConfigs(
   apiKey: string,
@@ -118,10 +206,18 @@ function QuickImportCard({
   onSelect: (config: CcSwitchImportConfigListItem) => void;
 }) {
   const { t } = useTranslation();
+  const reduceMotion = useReducedMotion();
   const clientType = config.clientType as "codex" | "claude";
 
   return (
-    <div className="grid min-h-[116px] w-full grid-cols-[minmax(0,1fr)_auto] rounded-2xl border border-black/[0.06] bg-white shadow-[0_1px_2px_rgb(15_23_42_/_0.035)] transition hover:border-slate-200 hover:shadow-sm dark:border-white/[0.06] dark:bg-neutral-900 dark:hover:border-neutral-700">
+    <motion.div
+      layout
+      initial={reduceMotion ? false : { opacity: 0, y: 10, scale: 0.98 }}
+      animate={reduceMotion ? undefined : { opacity: 1, y: 0, scale: 1 }}
+      exit={reduceMotion ? undefined : { opacity: 0, y: -6, scale: 0.98 }}
+      transition={reduceMotion ? { duration: 0 } : { type: "spring", stiffness: 420, damping: 36 }}
+      className="group/card grid min-h-[116px] w-full grid-cols-[minmax(0,1fr)_auto] rounded-2xl border border-black/[0.06] bg-white shadow-[0_1px_2px_rgb(15_23_42_/_0.035)] transition hover:border-slate-200 hover:shadow-sm dark:border-white/[0.06] dark:bg-neutral-900 dark:hover:border-neutral-700"
+    >
       <button
         type="button"
         onClick={() => onSelect(config)}
@@ -156,7 +252,7 @@ function QuickImportCard({
           </span>
         </span>
       </button>
-      <div className="flex items-start gap-1 p-3 pl-0">
+      <div className="relative z-10 flex items-start gap-1 p-3 pl-0 opacity-70 transition-opacity group-hover/card:opacity-100 focus-within:opacity-100">
         <Button
           variant="ghost"
           size="xs"
@@ -167,7 +263,7 @@ function QuickImportCard({
           {copied ? <Check size={14} /> : <Copy size={14} />}
         </Button>
       </div>
-    </div>
+    </motion.div>
   );
 }
 
@@ -226,9 +322,16 @@ export function QuickImportTabContent({
 }) {
   const { t, i18n } = useTranslation();
   const { notify } = useToast();
-  const [configs, setConfigs] = useState<CcSwitchImportConfigListItem[]>([]);
-  const [apiKeyEntry, setApiKeyEntry] = useState<ApiKeyEntry | null>(null);
-  const [loading, setLoading] = useState(true);
+  const reduceMotion = useReducedMotion();
+  const cacheKey = useMemo(() => getQuickImportCacheKey(apiKey), [apiKey]);
+  const initialCache = useMemo(() => readStoredQuickImportCache(cacheKey), [cacheKey]);
+  const [configs, setConfigs] = useState<CcSwitchImportConfigListItem[]>(
+    () => initialCache?.configs ?? [],
+  );
+  const [apiKeyEntry, setApiKeyEntry] = useState<ApiKeyEntry | null>(
+    () => initialCache?.apiKeyEntry ?? null,
+  );
+  const [loading, setLoading] = useState(!initialCache);
   const [error, setError] = useState<string | null>(null);
   const [copiedImportConfigId, setCopiedImportConfigId] = useState<string | null>(null);
   const copiedImportTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -255,19 +358,30 @@ export function QuickImportTabContent({
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
+    const cached = readStoredQuickImportCache(cacheKey);
+    if (cached) {
+      setConfigs((prev) => (sameJsonValue(prev, cached.configs) ? prev : cached.configs));
+      setApiKeyEntry((prev) =>
+        sameJsonValue(prev, cached.apiKeyEntry) ? prev : cached.apiKeyEntry,
+      );
+    }
+    setLoading(!cached);
     setError(null);
 
     Promise.all([fetchQuickImportConfigs(apiKey), fetchQuickImportApiKeyEntry(apiKey)])
       .then(([items, entry]) => {
         if (cancelled) return;
-        setConfigs(items.filter((item) => QUICK_IMPORT_CLIENTS.includes(item.clientType)));
-        setApiKeyEntry(entry);
+        const nextConfigs = items.filter((item) => QUICK_IMPORT_CLIENTS.includes(item.clientType));
+        writeStoredQuickImportCache(cacheKey, { configs: nextConfigs, apiKeyEntry: entry });
+        setConfigs((prev) => (sameJsonValue(prev, nextConfigs) ? prev : nextConfigs));
+        setApiKeyEntry((prev) => (sameJsonValue(prev, entry) ? prev : entry));
       })
       .catch((err: unknown) => {
         if (cancelled) return;
-        setConfigs([]);
-        setApiKeyEntry(null);
+        if (!cached) {
+          setConfigs([]);
+          setApiKeyEntry(null);
+        }
         setError(err instanceof Error ? err.message : t("apikey_lookup.quick_import_load_failed"));
       })
       .finally(() => {
@@ -278,7 +392,7 @@ export function QuickImportTabContent({
     return () => {
       cancelled = true;
     };
-  }, [apiKey, reloadToken, t]);
+  }, [apiKey, cacheKey, reloadToken, t]);
 
   const groupedConfigs = useMemo(
     () => ({
@@ -345,6 +459,8 @@ export function QuickImportTabContent({
     [buildImportUrl, notify, showCopiedImportState, t],
   );
 
+  const showSkeleton = loading && configs.length === 0;
+
   return (
     <div className="space-y-4">
       <Card padding="compact" className="border-slate-200/70 bg-white/85 dark:bg-neutral-950/70">
@@ -374,9 +490,9 @@ export function QuickImportTabContent({
         </div>
       </Card>
 
-      {loading ? <QuickImportLoadingSkeleton /> : null}
+      {showSkeleton ? <QuickImportLoadingSkeleton /> : null}
 
-      {!loading ? (
+      {!showSkeleton ? (
         <Card padding="none" className="overflow-hidden">
           {error ? (
             <div className="border-b border-rose-100 bg-rose-50 px-5 py-2.5 text-sm text-rose-700 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-200">
@@ -384,42 +500,63 @@ export function QuickImportTabContent({
             </div>
           ) : null}
           <div className="space-y-5 px-5 py-4">
-            {QUICK_IMPORT_CLIENTS.map((clientType) => {
-              const typedClient = clientType as "codex" | "claude";
-              const items = groupedConfigs[typedClient];
-              const label = t(clientLabelKey[typedClient]);
+            <AnimatePresence initial={false}>
+              {QUICK_IMPORT_CLIENTS.map((clientType) => {
+                const typedClient = clientType as "codex" | "claude";
+                const items = groupedConfigs[typedClient];
+                const label = t(clientLabelKey[typedClient]);
 
-              if (items.length === 0) return null;
+                if (items.length === 0) return null;
 
-              return (
-                <section
-                  key={typedClient}
-                  aria-label={t("apikey_lookup.quick_import_group_aria", { client: label })}
-                  className="space-y-3"
-                >
-                  <div className="flex items-center gap-2">
-                    <img src={iconByType[typedClient]} alt="" className="h-4 w-4" />
-                    <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
-                      {label}
-                    </h3>
-                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-bold tabular-nums text-slate-500 dark:bg-neutral-900 dark:text-white/45">
-                      {items.length}
-                    </span>
-                  </div>
-                  <div className="grid gap-3 md:grid-cols-2">
-                    {items.map((config) => (
-                      <QuickImportCard
-                        key={config.id}
-                        config={config}
-                        copied={copiedImportConfigId === config.id}
-                        onCopyLink={(item) => void handleCopyImportLink(item)}
-                        onSelect={handleImport}
-                      />
-                    ))}
-                  </div>
-                </section>
-              );
-            })}
+                return (
+                  <motion.section
+                    layout
+                    key={typedClient}
+                    aria-label={t("apikey_lookup.quick_import_group_aria", { client: label })}
+                    className="space-y-3"
+                    initial={reduceMotion ? false : { opacity: 0, y: 8 }}
+                    animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
+                    exit={reduceMotion ? undefined : { opacity: 0, y: -6 }}
+                    transition={
+                      reduceMotion
+                        ? { duration: 0 }
+                        : { type: "spring", stiffness: 420, damping: 36 }
+                    }
+                  >
+                    <div className="flex items-center gap-2">
+                      <img src={iconByType[typedClient]} alt="" className="h-4 w-4" />
+                      <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
+                        {label}
+                      </h3>
+                      <AnimatePresence mode="popLayout" initial={false}>
+                        <motion.span
+                          key={`${typedClient}-${items.length}`}
+                          initial={reduceMotion ? false : { opacity: 0, y: 4 }}
+                          animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
+                          exit={reduceMotion ? undefined : { opacity: 0, y: -4 }}
+                          className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-bold tabular-nums text-slate-500 dark:bg-neutral-900 dark:text-white/45"
+                        >
+                          {items.length}
+                        </motion.span>
+                      </AnimatePresence>
+                    </div>
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <AnimatePresence initial={false}>
+                        {items.map((config) => (
+                          <QuickImportCard
+                            key={config.id}
+                            config={config}
+                            copied={copiedImportConfigId === config.id}
+                            onCopyLink={(item) => void handleCopyImportLink(item)}
+                            onSelect={handleImport}
+                          />
+                        ))}
+                      </AnimatePresence>
+                    </div>
+                  </motion.section>
+                );
+              })}
+            </AnimatePresence>
           </div>
         </Card>
       ) : null}

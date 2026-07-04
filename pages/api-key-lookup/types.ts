@@ -1,9 +1,16 @@
 export interface PublicLogItem {
   id: number;
   timestamp: string;
+  api_key?: string;
+  api_key_name?: string;
+  channel_name?: string;
   model: string;
+  upstream_model?: string;
+  vision_fallback_model?: string;
   failed: boolean;
+  streaming?: boolean;
   latency_ms: number;
+  first_token_ms?: number;
   input_tokens: number;
   output_tokens: number;
   cached_tokens: number;
@@ -28,21 +35,6 @@ export interface PublicLogsResponse {
   filters: {
     models: string[];
   };
-}
-
-export interface LogRow {
-  id: string;
-  timestamp: string;
-  timestampMs: number;
-  model: string;
-  failed: boolean;
-  latencyText: string;
-  inputTokens: number;
-  cachedTokens: number;
-  outputTokens: number;
-  totalTokens: number;
-  cost: number;
-  hasContent: boolean;
 }
 
 export interface ChartDataResponse {
