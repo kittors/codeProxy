@@ -538,10 +538,6 @@ export function ApiKeyLookupPage() {
   const keyMenuOptions = useMemo<SelectOption[]>(
     () => [
       {
-        value: queriedKey,
-        label: displayName,
-      },
-      {
         value: LOGOUT_SELECT_VALUE,
         label: (
           <span className="flex items-center gap-2">
@@ -551,7 +547,7 @@ export function ApiKeyLookupPage() {
         ),
       },
     ],
-    [displayName, queriedKey, t],
+    [t],
   );
   const handleKeyMenuChange = useCallback(
     (value: string) => {
@@ -586,6 +582,7 @@ export function ApiKeyLookupPage() {
                 value={queriedKey}
                 onChange={handleKeyMenuChange}
                 options={keyMenuOptions}
+                placeholder={displayName}
                 aria-label={displayName}
                 className="max-w-[34vw] sm:max-w-56"
                 size="sm"
