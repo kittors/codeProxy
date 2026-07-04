@@ -17,6 +17,7 @@ export interface PublicLogsResponse {
   total: number;
   page: number;
   size: number;
+  api_key_name?: string;
   stats: {
     total: number;
     success_rate: number;
@@ -55,6 +56,7 @@ export interface ChartDataResponse {
     requests: number;
     tokens: number;
   }>;
+  api_key_name?: string;
   stats: { total: number; success_rate: number; total_tokens: number; total_cost: number };
 }
 
