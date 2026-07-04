@@ -38,6 +38,7 @@ export function useApiKeyLookupCharts({
   });
 
   const chartStats = chartData?.stats;
+  const heatmapSeries = chartData?.heatmap_series ?? [];
 
   const dailySeries: DailySeriesPoint[] = useMemo(() => {
     if (!chartData?.daily_series) return [];
@@ -139,6 +140,7 @@ export function useApiKeyLookupCharts({
     modelMetric,
     setModelMetric,
     dailyLegendSelected,
+    heatmapSeries,
     dailySeries,
     dailyTrendOption,
     toggleDailyLegend,

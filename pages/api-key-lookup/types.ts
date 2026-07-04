@@ -22,6 +22,7 @@ export interface PublicLogsResponse {
     total: number;
     success_rate: number;
     total_tokens: number;
+    total_sessions?: number;
     total_cost: number;
   };
   filters: {
@@ -51,13 +52,26 @@ export interface ChartDataResponse {
     input_tokens: number;
     output_tokens: number;
   }>;
+  heatmap_series?: Array<{
+    date: string;
+    requests: number;
+    sessions: number;
+    tokens: number;
+    cost: number;
+  }>;
   model_distribution: Array<{
     model: string;
     requests: number;
     tokens: number;
   }>;
   api_key_name?: string;
-  stats: { total: number; success_rate: number; total_tokens: number; total_cost: number };
+  stats: {
+    total: number;
+    success_rate: number;
+    total_tokens: number;
+    total_sessions?: number;
+    total_cost: number;
+  };
 }
 
 export interface TableColumn<T> {

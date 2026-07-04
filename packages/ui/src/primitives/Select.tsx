@@ -44,7 +44,7 @@ export interface SelectProps {
   /** List of options */
   options: SelectOption[];
   /** Optional placeholder shown when value is empty */
-  placeholder?: string;
+  placeholder?: ReactNode;
   /** Optional aria-label */
   "aria-label"?: string;
   /** Optional HTML name attribute */

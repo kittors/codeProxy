@@ -12,14 +12,15 @@ const mocks = vi.hoisted(() => ({
     page: 1,
     size: 50,
     api_key_name: "Primary key",
-    stats: { total: 0, success_rate: 0, total_tokens: 0, total_cost: 0 },
+    stats: { total: 0, success_rate: 0, total_tokens: 0, total_sessions: 0, total_cost: 0 },
     filters: { models: [] },
   })),
   fetchPublicChartData: vi.fn(async () => ({
     daily_series: [],
+    heatmap_series: [],
     model_distribution: [],
     api_key_name: "Primary key",
-    stats: { total: 0, success_rate: 0, total_tokens: 0, total_cost: 0 },
+    stats: { total: 0, success_rate: 0, total_tokens: 0, total_sessions: 0, total_cost: 0 },
   })),
   fetchAvailableModels: vi.fn(async (): Promise<string[]> => []),
 }));
@@ -56,7 +57,10 @@ describe("ApiKeyLookupPage", () => {
 
     expect(screen.getByRole("dialog", { name: /enter api key/i })).toBeInTheDocument();
 
-    await userEvent.type(screen.getByPlaceholderText(/enter api key to lookup usage/i), "sk-new-key");
+    await userEvent.type(
+      screen.getByPlaceholderText(/enter api key to lookup usage/i),
+      "sk-new-key",
+    );
     await userEvent.click(screen.getByRole("button", { name: /login/i }));
 
     await waitFor(() => {

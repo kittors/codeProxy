@@ -503,6 +503,7 @@ export function ApiKeyLookupPage() {
     chartStats,
     modelMetric,
     setModelMetric,
+    heatmapSeries,
     dailyLegendSelected,
     dailySeries,
     dailyTrendOption,
@@ -582,9 +583,14 @@ export function ApiKeyLookupPage() {
                 value={queriedKey}
                 onChange={handleKeyMenuChange}
                 options={keyMenuOptions}
-                placeholder={displayName}
+                placeholder={
+                  <span className="flex min-w-0 items-center gap-1.5">
+                    <Key size={14} className="shrink-0" />
+                    <span className="min-w-0 truncate">{displayName}</span>
+                  </span>
+                }
                 aria-label={displayName}
-                className="max-w-[34vw] sm:max-w-56"
+                className="max-w-[34vw] !border-0 !bg-transparent !px-1 !shadow-none hover:!bg-transparent dark:!bg-transparent dark:!shadow-none dark:hover:!bg-transparent sm:max-w-56"
                 size="sm"
               />
             ) : null}
@@ -625,6 +631,7 @@ export function ApiKeyLookupPage() {
                 chartLoading={chartLoading}
                 modelMetric={modelMetric}
                 setModelMetric={setModelMetric}
+                heatmapSeries={heatmapSeries}
                 modelDistributionData={modelDistributionData}
                 modelDistributionOption={modelDistributionOption as Record<string, unknown>}
                 modelDistributionLegend={modelDistributionLegend}
@@ -748,9 +755,7 @@ export function ApiKeyLookupPage() {
             autoFocus
             startAdornment={<Search size={16} className="text-slate-400 dark:text-white/40" />}
           />
-          {error ? (
-            <p className="text-sm text-rose-600 dark:text-rose-300">{error}</p>
-          ) : null}
+          {error ? <p className="text-sm text-rose-600 dark:text-rose-300">{error}</p> : null}
         </form>
       </Modal>
     </div>
