@@ -153,9 +153,7 @@ export function LanguageSelector({ className }: { className?: string }) {
                     onClick={() => handleLanguageChange(lng)}
                     className={cn(
                       selectOptionBase,
-                      selected
-                        ? `${selectOptionSelected} bg-[#EBEBEC] dark:bg-[#46464C]`
-                        : selectOptionIdle,
+                      selected ? selectOptionSelected : selectOptionIdle,
                     )}
                   >
                     <span className="shrink-0 text-base leading-none" aria-hidden="true">

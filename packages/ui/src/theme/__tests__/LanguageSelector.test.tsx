@@ -20,6 +20,9 @@ describe("LanguageSelector", () => {
     expect(screen.getAllByText("🇨🇳").length).toBeGreaterThan(0);
     expect(screen.getAllByText("🇬🇧").length).toBeGreaterThan(0);
     expect(screen.getAllByText("🇷🇺").length).toBeGreaterThan(0);
+    expect(screen.getByRole("option", { name: /English/ }).className).not.toMatch(
+      /(^|\s)bg-\[#EBEBEC\](\s|$)/,
+    );
     expect(screen.queryByText(/nav\.language/)).not.toBeInTheDocument();
   });
 });

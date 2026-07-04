@@ -89,6 +89,26 @@ describe("ApiKeyLookupPage", () => {
     expect(screen.queryByRole("dialog", { name: /enter api key/i })).not.toBeInTheDocument();
   });
 
+  test("does not duplicate the current key in the header menu", async () => {
+    window.sessionStorage.setItem("apiKeyLookup.lastApiKey.v1", "sk-restored-key");
+
+    render(
+      <ThemeProvider>
+        <ToastProvider>
+          <ApiKeyLookupPage />
+        </ToastProvider>
+      </ThemeProvider>,
+    );
+
+    await userEvent.click(await screen.findByRole("combobox", { name: /primary key/i }));
+
+    expect(screen.queryByRole("option", { name: /primary key/i })).not.toBeInTheDocument();
+    expect(screen.getByRole("option", { name: /logout/i })).toHaveAttribute(
+      "aria-selected",
+      "false",
+    );
+  });
+
   test("logs out from the header menu and asks for the API key again", async () => {
     window.sessionStorage.setItem("apiKeyLookup.lastApiKey.v1", "sk-restored-key");
 

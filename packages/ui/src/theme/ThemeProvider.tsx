@@ -298,9 +298,7 @@ export function ThemeToggleButton({ className, label }: { className?: string; la
                     onClick={() => handleModeChange(value)}
                     className={cn(
                       selectOptionBase,
-                      selected
-                        ? `${selectOptionSelected} bg-[#EBEBEC] dark:bg-[#46464C]`
-                        : selectOptionIdle,
+                      selected ? selectOptionSelected : selectOptionIdle,
                     )}
                   >
                     <Icon size={16} className="shrink-0" aria-hidden="true" />
