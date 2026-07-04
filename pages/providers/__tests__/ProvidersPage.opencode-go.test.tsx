@@ -154,14 +154,26 @@ describe("ProvidersPage OpenCode Go tab", () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByRole("tab", { name: /OpenCode Go/ })).toBeInTheDocument();
-    const dialog = await screen.findByRole("dialog", { name: /Add OpenCode Go configuration/i });
+    expect(
+      await screen.findByRole("tab", { name: /OpenCode Go/ }),
+    ).toBeInTheDocument();
+    const dialog = await screen.findByRole("dialog", {
+      name: /Add OpenCode Go configuration/i,
+    });
 
     expect(within(dialog).queryByText("Base URL")).not.toBeInTheDocument();
-    expect(within(dialog).queryByText("Models (optional)")).not.toBeInTheDocument();
+    expect(
+      within(dialog).queryByText("Models (optional)"),
+    ).not.toBeInTheDocument();
 
-    await user.type(within(dialog).getByPlaceholderText("e.g. Gemini Primary"), "OpenCode Go");
-    await user.type(within(dialog).getByPlaceholderText(/Paste API Key/i), "sk-opencode-go");
+    await user.type(
+      within(dialog).getByPlaceholderText("e.g. Gemini Primary"),
+      "OpenCode Go",
+    );
+    await user.type(
+      within(dialog).getByPlaceholderText(/Paste API Key/i),
+      "sk-opencode-go",
+    );
     await user.click(within(dialog).getByRole("button", { name: /Save/ }));
 
     await waitFor(() => {
@@ -172,7 +184,9 @@ describe("ProvidersPage OpenCode Go tab", () => {
         }),
       ]);
     });
-    expect(mocks.saveOpenCodeGoConfigs.mock.calls[0][0][0]).not.toHaveProperty("baseUrl");
+    expect(mocks.saveOpenCodeGoConfigs.mock.calls[0][0][0]).not.toHaveProperty(
+      "baseUrl",
+    );
   });
 
   test("keeps failed OpenCode Go saves out of the rendered provider list", async () => {
@@ -183,7 +197,9 @@ describe("ProvidersPage OpenCode Go tab", () => {
         apiKey: "sk-existing-opencode-go",
       },
     ]);
-    mocks.saveOpenCodeGoConfigs.mockRejectedValue(new Error("channel name already used"));
+    mocks.saveOpenCodeGoConfigs.mockRejectedValue(
+      new Error("channel name already used"),
+    );
 
     render(
       <MemoryRouter initialEntries={["/ai-providers/opencode-go/new"]}>
@@ -198,10 +214,18 @@ describe("ProvidersPage OpenCode Go tab", () => {
     );
 
     expect(await screen.findByText("Existing OpenCode Go")).toBeInTheDocument();
-    const dialog = await screen.findByRole("dialog", { name: /Add OpenCode Go configuration/i });
+    const dialog = await screen.findByRole("dialog", {
+      name: /Add OpenCode Go configuration/i,
+    });
 
-    await user.type(within(dialog).getByPlaceholderText("e.g. Gemini Primary"), "New OpenCode Go");
-    await user.type(within(dialog).getByPlaceholderText(/Paste API Key/i), "sk-new-opencode-go");
+    await user.type(
+      within(dialog).getByPlaceholderText("e.g. Gemini Primary"),
+      "New OpenCode Go",
+    );
+    await user.type(
+      within(dialog).getByPlaceholderText(/Paste API Key/i),
+      "sk-new-opencode-go",
+    );
     await user.click(within(dialog).getByRole("button", { name: /Save/ }));
 
     await waitFor(() => {
@@ -214,6 +238,57 @@ describe("ProvidersPage OpenCode Go tab", () => {
     expect(
       screen.getByRole("dialog", { name: /Add OpenCode Go configuration/i }),
     ).toBeInTheDocument();
+  });
+
+  test("blocks saving OpenCode Go keys that still contain ClinePass models", async () => {
+    const user = userEvent.setup();
+    mocks.getOpenCodeGoConfigs.mockImplementation(async () => [
+      {
+        name: "Existing OpenCode Go",
+        apiKey: "sk-existing-opencode-go",
+        models: [{ name: "cline-pass/glm-5.2" }],
+      },
+    ]);
+
+    render(
+      <MemoryRouter initialEntries={["/ai-providers/opencode-go/0"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    const dialog = await screen.findByRole("dialog", {
+      name: /Edit OpenCode Go configuration/i,
+    });
+    await user.click(within(dialog).getByRole("button", { name: /Save/ }));
+
+    expect(
+      await within(dialog).findByText(
+        /OpenCode Go models cannot use cline-pass model IDs/i,
+      ),
+    ).toBeInTheDocument();
+    expect(mocks.saveOpenCodeGoConfigs).not.toHaveBeenCalled();
+
+    await user.click(within(dialog).getByRole("tab", { name: /Models/i }));
+    await user.click(within(dialog).getByLabelText(/Delete model/i));
+    await user.click(within(dialog).getByRole("button", { name: /Save/ }));
+
+    await waitFor(() => {
+      expect(mocks.saveOpenCodeGoConfigs).toHaveBeenCalledWith([
+        expect.objectContaining({
+          name: "Existing OpenCode Go",
+          apiKey: "sk-existing-opencode-go",
+        }),
+      ]);
+    });
+    expect(mocks.saveOpenCodeGoConfigs.mock.calls[0][0][0]).not.toHaveProperty(
+      "models",
+    );
   });
 
   test("uses fixed tabs and saves OpenCode Go model exclusions from fetched models", async () => {
@@ -231,10 +306,18 @@ describe("ProvidersPage OpenCode Go tab", () => {
       </MemoryRouter>,
     );
 
-    const dialog = await screen.findByRole("dialog", { name: /Add OpenCode Go configuration/i });
-    expect(within(dialog).getByRole("tab", { name: /Basic/i })).toBeInTheDocument();
-    expect(within(dialog).getByRole("tab", { name: /Request/i })).toBeInTheDocument();
-    expect(within(dialog).getByRole("tab", { name: /Models/i })).toBeInTheDocument();
+    const dialog = await screen.findByRole("dialog", {
+      name: /Add OpenCode Go configuration/i,
+    });
+    expect(
+      within(dialog).getByRole("tab", { name: /Basic/i }),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByRole("tab", { name: /Request/i }),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByRole("tab", { name: /Models/i }),
+    ).toBeInTheDocument();
 
     await user.click(within(dialog).getByRole("tab", { name: /Models/i }));
 
@@ -247,14 +330,24 @@ describe("ProvidersPage OpenCode Go tab", () => {
       );
     });
 
-    const deepseek = await within(dialog).findByRole("checkbox", { name: /deepseek-v4-flash/i });
+    const deepseek = await within(dialog).findByRole("checkbox", {
+      name: /deepseek-v4-flash/i,
+    });
     await waitFor(() => expect(deepseek).toBeChecked());
-    expect(within(dialog).getByRole("checkbox", { name: /qwen3\.7-max/i })).not.toBeChecked();
+    expect(
+      within(dialog).getByRole("checkbox", { name: /qwen3\.7-max/i }),
+    ).not.toBeChecked();
     await user.click(deepseek);
 
     await user.click(within(dialog).getByRole("tab", { name: /Basic/i }));
-    await user.type(within(dialog).getByPlaceholderText("e.g. Gemini Primary"), "OpenCode Go");
-    await user.type(within(dialog).getByPlaceholderText(/Paste API Key/i), "sk-opencode-go");
+    await user.type(
+      within(dialog).getByPlaceholderText("e.g. Gemini Primary"),
+      "OpenCode Go",
+    );
+    await user.type(
+      within(dialog).getByPlaceholderText(/Paste API Key/i),
+      "sk-opencode-go",
+    );
     await user.click(within(dialog).getByRole("button", { name: /Save/ }));
 
     await waitFor(() => {
@@ -299,12 +392,18 @@ describe("ProvidersPage OpenCode Go tab", () => {
       </MemoryRouter>,
     );
 
-    const dialog = await screen.findByRole("dialog", { name: /Add OpenCode Go configuration/i });
+    const dialog = await screen.findByRole("dialog", {
+      name: /Add OpenCode Go configuration/i,
+    });
     await user.click(within(dialog).getByRole("tab", { name: /Models/i }));
     await waitFor(() =>
-      expect(within(dialog).getByRole("checkbox", { name: /qwen3\.5-plus/i })).toBeChecked(),
+      expect(
+        within(dialog).getByRole("checkbox", { name: /qwen3\.5-plus/i }),
+      ).toBeChecked(),
     );
-    await user.click(await within(dialog).findByRole("checkbox", { name: /mimo-v2-omni/i }));
+    await user.click(
+      await within(dialog).findByRole("checkbox", { name: /mimo-v2-omni/i }),
+    );
 
     await user.click(within(dialog).getByRole("tab", { name: /Request/i }));
     const fallback = await within(dialog).findByRole("combobox", {
@@ -312,16 +411,32 @@ describe("ProvidersPage OpenCode Go tab", () => {
     });
     await user.click(fallback);
 
-    expect(await screen.findByRole("option", { name: /qwen3\.5-plus/i })).toBeInTheDocument();
-    expect(screen.queryByRole("option", { name: /qwen3\.6-plus/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole("option", { name: /deepseek-v4-flash/i })).not.toBeInTheDocument();
-    expect(screen.getByRole("option", { name: /mimo-v2-omni/i })).toBeInTheDocument();
-    expect(screen.queryByRole("option", { name: /minimax-m2\.5/i })).not.toBeInTheDocument();
+    expect(
+      await screen.findByRole("option", { name: /qwen3\.5-plus/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("option", { name: /qwen3\.6-plus/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("option", { name: /deepseek-v4-flash/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("option", { name: /mimo-v2-omni/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("option", { name: /minimax-m2\.5/i }),
+    ).not.toBeInTheDocument();
     await user.click(screen.getByRole("option", { name: /mimo-v2-omni/i }));
 
     await user.click(within(dialog).getByRole("tab", { name: /Basic/i }));
-    await user.type(within(dialog).getByPlaceholderText("e.g. Gemini Primary"), "OpenCode Go");
-    await user.type(within(dialog).getByPlaceholderText(/Paste API Key/i), "sk-opencode-go");
+    await user.type(
+      within(dialog).getByPlaceholderText("e.g. Gemini Primary"),
+      "OpenCode Go",
+    );
+    await user.type(
+      within(dialog).getByPlaceholderText(/Paste API Key/i),
+      "sk-opencode-go",
+    );
     await user.click(within(dialog).getByRole("button", { name: /Save/ }));
 
     await waitFor(() => {
@@ -360,8 +475,16 @@ describe("ProvidersPage Cline tab", () => {
         ? [
             { id: "cline-pass/glm-5.2", object: "model", owned_by: "cline" },
             { id: "cline-pass/minimax-m3", object: "model", owned_by: "cline" },
-            { id: "cline-pass/qwen3.7-max", object: "model", owned_by: "cline" },
-            { id: "cline-pass/mimo-v2.5-pro", object: "model", owned_by: "cline" },
+            {
+              id: "cline-pass/qwen3.7-max",
+              object: "model",
+              owned_by: "cline",
+            },
+            {
+              id: "cline-pass/mimo-v2.5-pro",
+              object: "model",
+              owned_by: "cline",
+            },
           ]
         : [
             { id: "deepseek-v4-flash", object: "model", owned_by: "opencode" },
@@ -395,18 +518,30 @@ describe("ProvidersPage Cline tab", () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByRole("tab", { name: /ClinePass/ })).toBeInTheDocument();
-    const dialog = await screen.findByRole("dialog", { name: /Add ClinePass configuration/i });
+    expect(
+      await screen.findByRole("tab", { name: /ClinePass/ }),
+    ).toBeInTheDocument();
+    const dialog = await screen.findByRole("dialog", {
+      name: /Add ClinePass configuration/i,
+    });
 
     await user.click(within(dialog).getByRole("tab", { name: /Request/i }));
-    expect(within(dialog).getByDisplayValue("https://api.cline.bot/api/v1")).toBeInTheDocument();
+    expect(
+      within(dialog).getByDisplayValue("https://api.cline.bot/api/v1"),
+    ).toBeInTheDocument();
     expect(
       within(dialog).getByText("https://api.cline.bot/api/v1/chat/completions"),
     ).toBeInTheDocument();
 
     await user.click(within(dialog).getByRole("tab", { name: /Basic/i }));
-    await user.type(within(dialog).getByPlaceholderText("e.g. Gemini Primary"), "Cline");
-    await user.type(within(dialog).getByPlaceholderText(/Paste API Key/i), "sk-cline");
+    await user.type(
+      within(dialog).getByPlaceholderText("e.g. Gemini Primary"),
+      "Cline",
+    );
+    await user.type(
+      within(dialog).getByPlaceholderText(/Paste API Key/i),
+      "sk-cline",
+    );
     await user.click(within(dialog).getByRole("button", { name: /Save/ }));
 
     await waitFor(() => {
@@ -427,14 +562,38 @@ describe("ProvidersPage Cline tab", () => {
         ? [
             { id: "cline-pass/glm-5.2", object: "model", owned_by: "cline" },
             { id: "cline-pass/minimax-m3", object: "model", owned_by: "cline" },
-            { id: "cline-pass/qwen3.7-max", object: "model", owned_by: "cline" },
-            { id: "cline-pass/mimo-v2.5-pro", object: "model", owned_by: "cline" },
-            { id: "cline-pass/qwen3-coder", object: "model", owned_by: "cline" },
-            { id: "cline-pass/deepseek-v4", object: "model", owned_by: "cline" },
+            {
+              id: "cline-pass/qwen3.7-max",
+              object: "model",
+              owned_by: "cline",
+            },
+            {
+              id: "cline-pass/mimo-v2.5-pro",
+              object: "model",
+              owned_by: "cline",
+            },
+            {
+              id: "cline-pass/qwen3-coder",
+              object: "model",
+              owned_by: "cline",
+            },
+            {
+              id: "cline-pass/deepseek-v4",
+              object: "model",
+              owned_by: "cline",
+            },
             { id: "cline-pass/kimi-k2.6", object: "model", owned_by: "cline" },
-            { id: "cline-pass/claude-sonnet-4.5", object: "model", owned_by: "cline" },
+            {
+              id: "cline-pass/claude-sonnet-4.5",
+              object: "model",
+              owned_by: "cline",
+            },
             { id: "cline-pass/gpt-5.2", object: "model", owned_by: "cline" },
-            { id: "cline-pass/gemini-3-pro", object: "model", owned_by: "cline" },
+            {
+              id: "cline-pass/gemini-3-pro",
+              object: "model",
+              owned_by: "cline",
+            },
           ]
         : [],
     );
@@ -451,13 +610,19 @@ describe("ProvidersPage Cline tab", () => {
       </MemoryRouter>,
     );
 
-    const dialog = await screen.findByRole("dialog", { name: /Add ClinePass configuration/i });
+    const dialog = await screen.findByRole("dialog", {
+      name: /Add ClinePass configuration/i,
+    });
     await user.click(within(dialog).getByRole("tab", { name: /Models/i }));
 
-    expect(await within(dialog).findByText("cline-pass/mimo-v2.5-pro")).toBeInTheDocument();
+    expect(
+      await within(dialog).findByText("cline-pass/mimo-v2.5-pro"),
+    ).toBeInTheDocument();
     expect(within(dialog).queryByText("cline")).not.toBeInTheDocument();
 
-    const table = within(dialog).getByText("cline-pass/mimo-v2.5-pro").closest("table");
+    const table = within(dialog)
+      .getByText("cline-pass/mimo-v2.5-pro")
+      .closest("table");
     if (!table) {
       throw new Error("expected Cline models table");
     }
@@ -483,7 +648,9 @@ describe("ProvidersPage Cline tab", () => {
       </MemoryRouter>,
     );
 
-    const dialog = await screen.findByRole("dialog", { name: /Add ClinePass configuration/i });
+    const dialog = await screen.findByRole("dialog", {
+      name: /Add ClinePass configuration/i,
+    });
     await user.click(within(dialog).getByRole("tab", { name: /Models/i }));
 
     await waitFor(() => {
@@ -500,11 +667,19 @@ describe("ProvidersPage Cline tab", () => {
       name: /Vision fallback model/i,
     });
     await user.click(fallback);
-    await user.click(screen.getByRole("option", { name: /cline-pass\/mimo-v2\.5-pro/i }));
+    await user.click(
+      screen.getByRole("option", { name: /cline-pass\/mimo-v2\.5-pro/i }),
+    );
 
     await user.click(within(dialog).getByRole("tab", { name: /Basic/i }));
-    await user.type(within(dialog).getByPlaceholderText("e.g. Gemini Primary"), "Cline");
-    await user.type(within(dialog).getByPlaceholderText(/Paste API Key/i), "sk-cline");
+    await user.type(
+      within(dialog).getByPlaceholderText("e.g. Gemini Primary"),
+      "Cline",
+    );
+    await user.type(
+      within(dialog).getByPlaceholderText(/Paste API Key/i),
+      "sk-cline",
+    );
     await user.click(within(dialog).getByRole("button", { name: /Save/ }));
 
     await waitFor(() => {
@@ -529,14 +704,18 @@ describe("mergeOpenCodeGoUsage", () => {
   test("returns incoming when existing is empty", async () => {
     const { mergeOpenCodeGoUsage } =
       await import("@pages/providers/components/OpenCodeGoUsageCardSection");
-    const incoming = [{ type: "rolling", label: "Rolling", percentage: 50, resets_in: "30m" }];
+    const incoming = [
+      { type: "rolling", label: "Rolling", percentage: 50, resets_in: "30m" },
+    ];
     expect(mergeOpenCodeGoUsage([], incoming)).toEqual(incoming);
   });
 
   test("returns existing when incoming is empty", async () => {
     const { mergeOpenCodeGoUsage } =
       await import("@pages/providers/components/OpenCodeGoUsageCardSection");
-    const existing = [{ type: "weekly", label: "Weekly", percentage: 30, resets_in: "3d" }];
+    const existing = [
+      { type: "weekly", label: "Weekly", percentage: 30, resets_in: "3d" },
+    ];
     expect(mergeOpenCodeGoUsage(existing, [])).toEqual(existing);
   });
 
@@ -548,7 +727,9 @@ describe("mergeOpenCodeGoUsage", () => {
       { type: "weekly", label: "Weekly", percentage: 30, resets_in: "3d" },
       { type: "monthly", label: "Monthly", percentage: 10, resets_in: "20d" },
     ];
-    const incoming = [{ type: "rolling", label: "Rolling", percentage: 80, resets_in: "25m" }];
+    const incoming = [
+      { type: "rolling", label: "Rolling", percentage: 80, resets_in: "25m" },
+    ];
     const result = mergeOpenCodeGoUsage(existing, incoming);
 
     expect(result).toHaveLength(3);
@@ -560,8 +741,12 @@ describe("mergeOpenCodeGoUsage", () => {
   test("handles case-insensitive type matching", async () => {
     const { mergeOpenCodeGoUsage } =
       await import("@pages/providers/components/OpenCodeGoUsageCardSection");
-    const existing = [{ type: "Rolling", label: "Rolling", percentage: 50, resets_in: "30m" }];
-    const incoming = [{ type: "rolling", label: "Rolling", percentage: 75, resets_in: "25m" }];
+    const existing = [
+      { type: "Rolling", label: "Rolling", percentage: 50, resets_in: "30m" },
+    ];
+    const incoming = [
+      { type: "rolling", label: "Rolling", percentage: 75, resets_in: "25m" },
+    ];
     const result = mergeOpenCodeGoUsage(existing, incoming);
 
     expect(result).toHaveLength(1);
@@ -575,7 +760,9 @@ describe("mergeOpenCodeGoUsage", () => {
       { type: "monthly", label: "Monthly", percentage: 10, resets_in: "20d" },
       { type: "weekly", label: "Weekly", percentage: 30, resets_in: "3d" },
     ];
-    const incoming = [{ type: "rolling", label: "Rolling", percentage: 80, resets_in: "25m" }];
+    const incoming = [
+      { type: "rolling", label: "Rolling", percentage: 80, resets_in: "25m" },
+    ];
     const result = mergeOpenCodeGoUsage(existing, incoming);
 
     expect(result).toHaveLength(3);

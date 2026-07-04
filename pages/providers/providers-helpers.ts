@@ -13,13 +13,16 @@ import type { KeyStatBucket } from "@code-proxy/domain";
 const DISABLE_ALL_MODELS_RULE = "*";
 
 export const hasDisableAllModelsRule = (models?: string[]) =>
-  Array.isArray(models) && models.some((m) => String(m ?? "").trim() === DISABLE_ALL_MODELS_RULE);
+  Array.isArray(models) &&
+  models.some((m) => String(m ?? "").trim() === DISABLE_ALL_MODELS_RULE);
 
-export const isProviderSimpleConfigEnabled = (item: ProviderSimpleConfig): boolean =>
-  !hasDisableAllModelsRule(item.excludedModels);
+export const isProviderSimpleConfigEnabled = (
+  item: ProviderSimpleConfig,
+): boolean => !hasDisableAllModelsRule(item.excludedModels);
 
-export const isBedrockProviderConfigEnabled = (item: BedrockProviderConfig): boolean =>
-  !hasDisableAllModelsRule(item.excludedModels);
+export const isBedrockProviderConfigEnabled = (
+  item: BedrockProviderConfig,
+): boolean => !hasDisableAllModelsRule(item.excludedModels);
 
 export const isOpenAIProviderEnabled = (provider: OpenAIProvider): boolean =>
   provider.disabled !== true;
@@ -34,12 +37,14 @@ export const withDisableAllModelsRule = (models?: string[]) => [
   DISABLE_ALL_MODELS_RULE,
 ];
 
-export const withoutDisableAllModelsRule = (models?: string[]) => stripDisableAllModelsRule(models);
+export const withoutDisableAllModelsRule = (models?: string[]) =>
+  stripDisableAllModelsRule(models);
 
 export const maskApiKey = (value: string): string => {
   const trimmed = value.trim();
   if (!trimmed) return "--";
-  if (trimmed.length <= 10) return `${trimmed.slice(0, 2)}***${trimmed.slice(-2)}`;
+  if (trimmed.length <= 10)
+    return `${trimmed.slice(0, 2)}***${trimmed.slice(-2)}`;
   return `${trimmed.slice(0, 6)}***${trimmed.slice(-4)}`;
 };
 
@@ -97,7 +102,8 @@ export const normalizeDiscoveredModels = (
     const key = id.toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);
-    const owned_by = typeof item.owned_by === "string" ? item.owned_by : undefined;
+    const owned_by =
+      typeof item.owned_by === "string" ? item.owned_by : undefined;
     result.push({ id, ...(owned_by ? { owned_by } : {}) });
   }
   return result;
@@ -125,7 +131,9 @@ export type ProviderKeyDraft = {
   skipAnthropicProcessing: boolean;
 };
 
-export const buildModelEntries = (models?: ProviderModel[]): ModelEntryDraft[] => {
+export const buildModelEntries = (
+  models?: ProviderModel[],
+): ModelEntryDraft[] => {
   if (!Array.isArray(models) || models.length === 0) return [];
   return models.map((model) => ({
     id: `model-${Date.now()}-${Math.random().toString(16).slice(2)}-${model.name ?? ""}`,
@@ -169,6 +177,66 @@ export const commitModelEntries = (
   return { models: models.length ? models : undefined };
 };
 
+const CLINE_PASS_MODEL_PREFIX = "cline-pass/";
+
+const isClinePassModelId = (model: string): boolean =>
+  model.trim().toLowerCase().startsWith(CLINE_PASS_MODEL_PREFIX);
+
+type ProviderModelOwnershipInput = {
+  models?: ProviderModel[];
+  excludedModels?: string[];
+  visionFallbackModel?: string;
+};
+
+export const validateProviderModelOwnership = (
+  provider: string,
+  input: ProviderModelOwnershipInput,
+): string | null => {
+  const modelEntries = input.models ?? [];
+  const modelNames = modelEntries
+    .map((model) => model.name?.trim() ?? "")
+    .filter((model) => model);
+  const excludedModels = input.excludedModels ?? [];
+  const visionFallback = input.visionFallbackModel?.trim() ?? "";
+
+  if (provider === "opencode-go") {
+    const invalidModel = modelNames.find((model) => isClinePassModelId(model));
+    if (invalidModel) {
+      return `OpenCode Go models cannot use cline-pass model IDs: ${invalidModel}`;
+    }
+    const invalidExcluded = excludedModels.find(
+      (model) =>
+        model.trim() !== DISABLE_ALL_MODELS_RULE && isClinePassModelId(model),
+    );
+    if (invalidExcluded) {
+      return `OpenCode Go excluded models cannot use cline-pass model IDs: ${invalidExcluded.trim()}`;
+    }
+    if (visionFallback && isClinePassModelId(visionFallback)) {
+      return `OpenCode Go vision fallback cannot use cline-pass model IDs: ${visionFallback}`;
+    }
+    return null;
+  }
+
+  if (provider === "cline") {
+    const invalidModel = modelNames.find((model) => !isClinePassModelId(model));
+    if (invalidModel) {
+      return `ClinePass models must use cline-pass model IDs: ${invalidModel}`;
+    }
+    const invalidExcluded = excludedModels.find(
+      (model) =>
+        model.trim() !== DISABLE_ALL_MODELS_RULE && !isClinePassModelId(model),
+    );
+    if (invalidExcluded) {
+      return `ClinePass excluded models must use cline-pass model IDs: ${invalidExcluded.trim()}`;
+    }
+    if (visionFallback && !isClinePassModelId(visionFallback)) {
+      return `ClinePass vision fallback must use cline-pass model IDs: ${visionFallback}`;
+    }
+  }
+
+  return null;
+};
+
 const hasBedrockFields = (
   input?: ProviderSimpleConfig | BedrockProviderConfig | null,
 ): input is BedrockProviderConfig =>
@@ -189,7 +257,8 @@ export const buildProviderKeyDraft = (
     name: input?.name ?? "",
     apiKey: input?.apiKey ?? "",
     authMode: bedrockInput?.authMode ?? "api-key",
-    accessKeyId: bedrockInput?.accessKeyId ?? (bedrockInput ? input?.apiKey : "") ?? "",
+    accessKeyId:
+      bedrockInput?.accessKeyId ?? (bedrockInput ? input?.apiKey : "") ?? "",
     secretAccessKey: bedrockInput?.secretAccessKey ?? "",
     sessionToken: bedrockInput?.sessionToken ?? "",
     region: bedrockInput?.region ?? "us-east-1",
@@ -227,7 +296,9 @@ export type OpenAIDraft = {
   modelEntries: ModelEntryDraft[];
 };
 
-export const buildOpenAIDraft = (input?: OpenAIProvider | null): OpenAIDraft => ({
+export const buildOpenAIDraft = (
+  input?: OpenAIProvider | null,
+): OpenAIDraft => ({
   name: input?.name ?? "",
   disabled: input?.disabled === true,
   baseUrl: input?.baseUrl ?? "",
@@ -260,7 +331,10 @@ export const buildOpenAIDraft = (input?: OpenAIProvider | null): OpenAIDraft => 
 
 export type AmpMappingEntry = { id: string; from: string; to: string };
 
-export const readString = (obj: Record<string, unknown> | null, ...keys: string[]): string => {
+export const readString = (
+  obj: Record<string, unknown> | null,
+  ...keys: string[]
+): string => {
   if (!obj) return "";
   for (const key of keys) {
     const value = obj[key];
@@ -269,7 +343,10 @@ export const readString = (obj: Record<string, unknown> | null, ...keys: string[
   return "";
 };
 
-export const readBool = (obj: Record<string, unknown> | null, ...keys: string[]): boolean => {
+export const readBool = (
+  obj: Record<string, unknown> | null,
+  ...keys: string[]
+): boolean => {
   if (!obj) return false;
   for (const key of keys) {
     const value = obj[key];
@@ -292,7 +369,10 @@ export const sumStatsByCandidates = (
   for (const id of candidates) {
     const bucket = statsBySource[id];
     if (!bucket) continue;
-    total = { success: total.success + bucket.success, failure: total.failure + bucket.failure };
+    total = {
+      success: total.success + bucket.success,
+      failure: total.failure + bucket.failure,
+    };
   }
   return total;
 };

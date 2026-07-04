@@ -84,10 +84,40 @@ export function ProviderKeyModelsTab({
 }: ProviderKeyModelsTabProps) {
   const { t } = useTranslation();
   const isModelAccessProvider = isOpenCodeGo || isCline;
+  const knownModelIds = useMemo(
+    () =>
+      new Set(
+        openCodeModels
+          .map((model) => model.id.trim().toLowerCase())
+          .filter(Boolean),
+      ),
+    [openCodeModels],
+  );
+  const manualModelEntries = useMemo(() => {
+    if (!isModelAccessProvider) return [];
+    return keyDraft.modelEntries.filter((entry) => {
+      const name = entry.name.trim().toLowerCase();
+      return name && !knownModelIds.has(name);
+    });
+  }, [isModelAccessProvider, keyDraft.modelEntries, knownModelIds]);
+  const setManualModelEntries = useCallback(
+    (next: typeof keyDraft.modelEntries) => {
+      setKeyDraft((prev) => {
+        const knownEntries = prev.modelEntries.filter((entry) =>
+          knownModelIds.has(entry.name.trim().toLowerCase()),
+        );
+        return { ...prev, modelEntries: [...knownEntries, ...next] };
+      });
+    },
+    [knownModelIds, setKeyDraft],
+  );
   const clineRows = useMemo<ClineModelRow[]>(() => {
     if (!isCline) return [];
     const entriesByName = new Map(
-      keyDraft.modelEntries.map((entry) => [entry.name.trim().toLowerCase(), entry]),
+      keyDraft.modelEntries.map((entry) => [
+        entry.name.trim().toLowerCase(),
+        entry,
+      ]),
     );
     return filteredOpenCodeModels.map((model) => {
       const normalized = model.id.toLowerCase();
@@ -96,7 +126,9 @@ export function ProviderKeyModelsTab({
         id: model.id,
         publicName: entry ? entry.alias : model.id,
         checked:
-          !excludeAll && enabledOpenCodeModelIds.has(normalized) && !excludedModelIds.has(normalized),
+          !excludeAll &&
+          enabledOpenCodeModelIds.has(normalized) &&
+          !excludedModelIds.has(normalized),
       };
     });
   }, [
@@ -108,41 +140,51 @@ export function ProviderKeyModelsTab({
     excludedModelIds,
   ]);
 
-  const updateClineModelAlias = useCallback((modelId: string, alias: string) => {
-    const normalized = modelId.trim().toLowerCase();
-    if (!normalized) return;
-    setKeyDraft((prev) => {
-      const excludedModels = excludedModelsFromText(prev.excludedModelsText);
-      const excludeAllModels = hasDisableAllModelsRule(excludedModels);
-      const currentExcluded = stripDisableAllModelsRule(excludedModels);
-      const hadEntry = prev.modelEntries.some(
-        (entry) => entry.name.trim().toLowerCase() === normalized,
-      );
-      const wasExcluded = currentExcluded.some((model) => model.trim().toLowerCase() === normalized);
-      const nextExcluded = currentExcluded.filter(
-        (model) => model.trim().toLowerCase() !== normalized,
-      );
-      const found = prev.modelEntries.some(
-        (entry) => entry.name.trim().toLowerCase() === normalized,
-      );
-      const nextEntries = found
-        ? prev.modelEntries.map((entry) =>
-            entry.name.trim().toLowerCase() === normalized ? { ...entry, alias } : entry,
-          )
-        : [{ ...createEmptyModelEntry(), name: modelId, alias }, ...prev.modelEntries];
-      let nextExcludedModels = currentExcluded;
-      if (excludeAllModels) {
-        nextExcludedModels = excludedModels;
-      } else if (!hadEntry && !wasExcluded) {
-        nextExcludedModels = [...nextExcluded, modelId];
-      }
-      return {
-        ...prev,
-        modelEntries: nextEntries,
-        excludedModelsText: nextExcludedModels.join("\n"),
-      };
-    });
-  }, [setKeyDraft]);
+  const updateClineModelAlias = useCallback(
+    (modelId: string, alias: string) => {
+      const normalized = modelId.trim().toLowerCase();
+      if (!normalized) return;
+      setKeyDraft((prev) => {
+        const excludedModels = excludedModelsFromText(prev.excludedModelsText);
+        const excludeAllModels = hasDisableAllModelsRule(excludedModels);
+        const currentExcluded = stripDisableAllModelsRule(excludedModels);
+        const hadEntry = prev.modelEntries.some(
+          (entry) => entry.name.trim().toLowerCase() === normalized,
+        );
+        const wasExcluded = currentExcluded.some(
+          (model) => model.trim().toLowerCase() === normalized,
+        );
+        const nextExcluded = currentExcluded.filter(
+          (model) => model.trim().toLowerCase() !== normalized,
+        );
+        const found = prev.modelEntries.some(
+          (entry) => entry.name.trim().toLowerCase() === normalized,
+        );
+        const nextEntries = found
+          ? prev.modelEntries.map((entry) =>
+              entry.name.trim().toLowerCase() === normalized
+                ? { ...entry, alias }
+                : entry,
+            )
+          : [
+              { ...createEmptyModelEntry(), name: modelId, alias },
+              ...prev.modelEntries,
+            ];
+        let nextExcludedModels = currentExcluded;
+        if (excludeAllModels) {
+          nextExcludedModels = excludedModels;
+        } else if (!hadEntry && !wasExcluded) {
+          nextExcludedModels = [...nextExcluded, modelId];
+        }
+        return {
+          ...prev,
+          modelEntries: nextEntries,
+          excludedModelsText: nextExcludedModels.join("\n"),
+        };
+      });
+    },
+    [setKeyDraft],
+  );
 
   const clineColumns = useMemo<DataTableColumn<ClineModelRow>[]>(
     () => [
@@ -166,7 +208,9 @@ export function ProviderKeyModelsTab({
         render: (row) => (
           <TextInput
             value={row.publicName}
-            onChange={(event) => updateClineModelAlias(row.id, event.currentTarget.value)}
+            onChange={(event) =>
+              updateClineModelAlias(row.id, event.currentTarget.value)
+            }
             className="h-8 font-mono text-xs"
             aria-label={t("providers.cline_public_model_name")}
           />
@@ -214,7 +258,10 @@ export function ProviderKeyModelsTab({
               onClick={() => void fetchOpenCodeModels()}
               disabled={openCodeModelsLoading}
             >
-              <RefreshCw size={14} className={openCodeModelsLoading ? "animate-spin" : ""} />
+              <RefreshCw
+                size={14}
+                className={openCodeModelsLoading ? "animate-spin" : ""}
+              />
               {t("providers.refresh")}
             </Button>
           </div>
@@ -277,58 +324,83 @@ export function ProviderKeyModelsTab({
             </div>
           ) : (
             <div className="mt-3 max-h-80 overflow-y-auto rounded-xl border border-slate-200 bg-white dark:border-neutral-800 dark:bg-neutral-950">
-            {openCodeModelsLoading && openCodeModels.length === 0 ? (
-              <div className="px-3 py-6 text-center text-sm text-slate-500 dark:text-white/55">
-                {t("providers.models_loading")}
-              </div>
-            ) : filteredOpenCodeModels.length ? (
-              <div className="divide-y divide-slate-100 dark:divide-neutral-900">
-                {filteredOpenCodeModels.map((model) => {
-                  const normalized = model.id.toLowerCase();
-                  const checked =
-                    !excludeAll &&
-                    enabledOpenCodeModelIds.has(normalized) &&
-                    !excludedModelIds.has(normalized);
-                  return (
-                    <label
-                      key={model.id}
-                      className="flex cursor-pointer items-center gap-3 px-3 py-2.5 transition-colors hover:bg-slate-50 dark:hover:bg-white/5"
-                    >
-                      <Checkbox
-                        checked={checked}
-                        onCheckedChange={(next) => setOpenCodeModelAllowed(model.id, next)}
-                        aria-label={model.id}
-                      />
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate font-mono text-xs font-semibold text-slate-800 dark:text-white/85">
-                          {model.id}
-                        </span>
-                        {model.owned_by ? (
-                          <span className="block truncate text-[11px] text-slate-500 dark:text-white/45">
-                            {model.owned_by}
-                          </span>
-                        ) : null}
-                      </span>
-                      <span
-                        className={
-                          checked
-                            ? "rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:text-emerald-200"
-                            : "rounded-full bg-rose-500/10 px-2 py-0.5 text-[11px] font-semibold text-rose-700 dark:text-rose-200"
-                        }
+              {openCodeModelsLoading && openCodeModels.length === 0 ? (
+                <div className="px-3 py-6 text-center text-sm text-slate-500 dark:text-white/55">
+                  {t("providers.models_loading")}
+                </div>
+              ) : filteredOpenCodeModels.length ? (
+                <div className="divide-y divide-slate-100 dark:divide-neutral-900">
+                  {filteredOpenCodeModels.map((model) => {
+                    const normalized = model.id.toLowerCase();
+                    const checked =
+                      !excludeAll &&
+                      enabledOpenCodeModelIds.has(normalized) &&
+                      !excludedModelIds.has(normalized);
+                    return (
+                      <label
+                        key={model.id}
+                        className="flex cursor-pointer items-center gap-3 px-3 py-2.5 transition-colors hover:bg-slate-50 dark:hover:bg-white/5"
                       >
-                        {checked ? t("providers.model_allowed") : t("providers.model_blocked")}
-                      </span>
-                    </label>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="px-3 py-6 text-center text-sm text-slate-500 dark:text-white/55">
-                {t("providers.no_discovered_models")}
-              </div>
-            )}
+                        <Checkbox
+                          checked={checked}
+                          onCheckedChange={(next) =>
+                            setOpenCodeModelAllowed(model.id, next)
+                          }
+                          aria-label={model.id}
+                        />
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate font-mono text-xs font-semibold text-slate-800 dark:text-white/85">
+                            {model.id}
+                          </span>
+                          {model.owned_by ? (
+                            <span className="block truncate text-[11px] text-slate-500 dark:text-white/45">
+                              {model.owned_by}
+                            </span>
+                          ) : null}
+                        </span>
+                        <span
+                          className={
+                            checked
+                              ? "rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:text-emerald-200"
+                              : "rounded-full bg-rose-500/10 px-2 py-0.5 text-[11px] font-semibold text-rose-700 dark:text-rose-200"
+                          }
+                        >
+                          {checked
+                            ? t("providers.model_allowed")
+                            : t("providers.model_blocked")}
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="px-3 py-6 text-center text-sm text-slate-500 dark:text-white/55">
+                  {t("providers.no_discovered_models")}
+                </div>
+              )}
             </div>
           )}
+        </SectionCard>
+
+        {manualModelEntries.length ? (
+          <SectionCard>
+            <ModelInputList
+              title={t("providers.models_optional_title")}
+              entries={manualModelEntries}
+              onChange={setManualModelEntries}
+              showPriority={false}
+              showTestModel={false}
+            />
+          </SectionCard>
+        ) : null}
+
+        <SectionCard>
+          <ExcludedModelsEditor
+            count={editKeyExcludedCount}
+            editKeyEnabledToggle={editKeyEnabledToggle}
+            keyDraft={keyDraft}
+            setKeyDraft={setKeyDraft}
+          />
         </SectionCard>
       </div>
     );
@@ -348,7 +420,9 @@ export function ProviderKeyModelsTab({
                 onChange={(value) => setSelectedModelGroup(value)}
                 options={modelGroupOptions}
                 placeholder={t("providers.model_group_placeholder")}
-                searchPlaceholder={t("providers.model_group_search_placeholder")}
+                searchPlaceholder={t(
+                  "providers.model_group_search_placeholder",
+                )}
                 aria-label={t("providers.model_group_label")}
               />
             </div>
@@ -375,7 +449,9 @@ export function ProviderKeyModelsTab({
               : t("providers.models_optional_title")
           }
           entries={keyDraft.modelEntries}
-          onChange={(next) => setKeyDraft((prev) => ({ ...prev, modelEntries: next }))}
+          onChange={(next) =>
+            setKeyDraft((prev) => ({ ...prev, modelEntries: next }))
+          }
           showPriority
           showTestModel={false}
         />

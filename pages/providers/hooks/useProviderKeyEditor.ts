@@ -1,7 +1,16 @@
-import { useCallback, useMemo, useState, type Dispatch, type SetStateAction } from "react";
+import {
+  useCallback,
+  useMemo,
+  useState,
+  type Dispatch,
+  type SetStateAction,
+} from "react";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@code-proxy/ui";
-import type { BedrockProviderConfig, ProviderSimpleConfig } from "@code-proxy/api-client";
+import type {
+  BedrockProviderConfig,
+  ProviderSimpleConfig,
+} from "@code-proxy/api-client";
 import { providersApi } from "@code-proxy/api-client";
 import { invalidateConfiguredModelAvailability } from "@features/model-availability";
 import { keyValueEntriesToRecord } from "../KeyValueInputList";
@@ -11,6 +20,7 @@ import {
   excludedModelsFromText,
   hasDisableAllModelsRule,
   stripDisableAllModelsRule,
+  validateProviderModelOwnership,
   withDisableAllModelsRule,
   withoutDisableAllModelsRule,
   type ProviderKeyDraft,
@@ -69,7 +79,9 @@ export function useProviderKeyEditor({
   const [editKeyOpen, setEditKeyOpen] = useState(false);
   const [editKeyType, setEditKeyType] = useState<ProviderKeyType>("gemini");
   const [editKeyIndex, setEditKeyIndex] = useState<number | null>(null);
-  const [keyDraft, setKeyDraft] = useState<ProviderKeyDraft>(() => buildProviderKeyDraft(null));
+  const [keyDraft, setKeyDraft] = useState<ProviderKeyDraft>(() =>
+    buildProviderKeyDraft(null),
+  );
   const [keyDraftError, setKeyDraftError] = useState<string | null>(null);
 
   const getListByType = useCallback(
@@ -87,7 +99,15 @@ export function useProviderKeyEditor({
                 : type === "vertex"
                   ? vertexKeys
                   : bedrockKeys,
-    [bedrockKeys, claudeKeys, clineKeys, codexKeys, geminiKeys, openCodeGoKeys, vertexKeys],
+    [
+      bedrockKeys,
+      claudeKeys,
+      clineKeys,
+      codexKeys,
+      geminiKeys,
+      openCodeGoKeys,
+      vertexKeys,
+    ],
   );
 
   const closeKeyEditor = useCallback(() => {
@@ -128,7 +148,10 @@ export function useProviderKeyEditor({
         setKeyDraftError(t("providers.api_key_error"));
         return null;
       }
-      if (keyDraft.authMode === "sigv4" && (!bedrockAccessKeyId || !bedrockSecretAccessKey)) {
+      if (
+        keyDraft.authMode === "sigv4" &&
+        (!bedrockAccessKeyId || !bedrockSecretAccessKey)
+      ) {
         setKeyDraftError(t("providers.bedrock_sigv4_error"));
         return null;
       }
@@ -146,20 +169,41 @@ export function useProviderKeyEditor({
     const isModelAccessProvider = isOpenCodeGo || isCline;
 
     const requireAlias = editKeyType === "vertex";
-    const modelCommit = commitModelEntries(keyDraft.modelEntries, { requireAlias });
+    const modelCommit = commitModelEntries(keyDraft.modelEntries, {
+      requireAlias,
+    });
     if (modelCommit.error) {
-      setKeyDraftError(requireAlias ? `Vertex: ${modelCommit.error}` : modelCommit.error);
+      setKeyDraftError(
+        requireAlias ? `Vertex: ${modelCommit.error}` : modelCommit.error,
+      );
+      return null;
+    }
+    const modelOwnershipError = validateProviderModelOwnership(editKeyType, {
+      models: modelCommit.models,
+      excludedModels,
+      visionFallbackModel: keyDraft.visionFallbackModel,
+    });
+    if (modelOwnershipError) {
+      setKeyDraftError(modelOwnershipError);
       return null;
     }
 
     const result: ProviderSimpleConfig | BedrockProviderConfig = {
       apiKey:
-        editKeyType === "bedrock" && keyDraft.authMode === "sigv4" ? bedrockAccessKeyId : apiKey,
+        editKeyType === "bedrock" && keyDraft.authMode === "sigv4"
+          ? bedrockAccessKeyId
+          : apiKey,
       name,
       ...(keyDraft.prefix.trim() ? { prefix: keyDraft.prefix.trim() } : {}),
-      ...(!isOpenCodeGo && keyDraft.baseUrl.trim() ? { baseUrl: keyDraft.baseUrl.trim() } : {}),
-      ...(isCline && !keyDraft.baseUrl.trim() ? { baseUrl: "https://api.cline.bot/api/v1" } : {}),
-      ...(keyDraft.proxyUrl.trim() ? { proxyUrl: keyDraft.proxyUrl.trim() } : {}),
+      ...(!isOpenCodeGo && keyDraft.baseUrl.trim()
+        ? { baseUrl: keyDraft.baseUrl.trim() }
+        : {}),
+      ...(isCline && !keyDraft.baseUrl.trim()
+        ? { baseUrl: "https://api.cline.bot/api/v1" }
+        : {}),
+      ...(keyDraft.proxyUrl.trim()
+        ? { proxyUrl: keyDraft.proxyUrl.trim() }
+        : {}),
       ...(keyDraft.proxyId.trim() ? { proxyId: keyDraft.proxyId.trim() } : {}),
       ...(headers ? { headers } : {}),
       ...(excludedModels ? { excludedModels } : {}),
@@ -188,7 +232,9 @@ export function useProviderKeyEditor({
                     : {}),
                 }
               : {}),
-            ...(keyDraft.region.trim() ? { region: keyDraft.region.trim() } : {}),
+            ...(keyDraft.region.trim()
+              ? { region: keyDraft.region.trim() }
+              : {}),
             ...(keyDraft.forceGlobal ? { forceGlobal: true } : {}),
           }
         : {}),
@@ -206,7 +252,9 @@ export function useProviderKeyEditor({
     const index = editKeyIndex;
     const apply = (list: ProviderSimpleConfig[]) => {
       if (index === null) return [...list, value];
-      return list.map((item, itemIndex) => (itemIndex === index ? value : item));
+      return list.map((item, itemIndex) =>
+        itemIndex === index ? value : item,
+      );
     };
 
     try {
@@ -246,7 +294,8 @@ export function useProviderKeyEditor({
     } catch (err: unknown) {
       notify({
         type: "error",
-        message: err instanceof Error ? err.message : t("providers.save_failed"),
+        message:
+          err instanceof Error ? err.message : t("providers.save_failed"),
       });
     }
   }, [
@@ -283,32 +332,47 @@ export function useProviderKeyEditor({
       try {
         if (type === "gemini") {
           await providersApi.deleteGeminiKey(entry.apiKey);
-          setGeminiKeys((prev) => prev.filter((_, itemIndex) => itemIndex !== index));
+          setGeminiKeys((prev) =>
+            prev.filter((_, itemIndex) => itemIndex !== index),
+          );
         } else if (type === "claude") {
           await providersApi.deleteClaudeConfig(entry.apiKey);
-          setClaudeKeys((prev) => prev.filter((_, itemIndex) => itemIndex !== index));
+          setClaudeKeys((prev) =>
+            prev.filter((_, itemIndex) => itemIndex !== index),
+          );
         } else if (type === "codex") {
           await providersApi.deleteCodexConfig(entry.apiKey);
-          setCodexKeys((prev) => prev.filter((_, itemIndex) => itemIndex !== index));
+          setCodexKeys((prev) =>
+            prev.filter((_, itemIndex) => itemIndex !== index),
+          );
         } else if (type === "opencode-go") {
           await providersApi.deleteOpenCodeGoConfig(entry.apiKey);
-          setOpenCodeGoKeys((prev) => prev.filter((_, itemIndex) => itemIndex !== index));
+          setOpenCodeGoKeys((prev) =>
+            prev.filter((_, itemIndex) => itemIndex !== index),
+          );
         } else if (type === "cline") {
           await providersApi.deleteClineConfig(entry.apiKey);
-          setClineKeys((prev) => prev.filter((_, itemIndex) => itemIndex !== index));
+          setClineKeys((prev) =>
+            prev.filter((_, itemIndex) => itemIndex !== index),
+          );
         } else if (type === "vertex") {
           await providersApi.deleteVertexConfig(entry.apiKey);
-          setVertexKeys((prev) => prev.filter((_, itemIndex) => itemIndex !== index));
+          setVertexKeys((prev) =>
+            prev.filter((_, itemIndex) => itemIndex !== index),
+          );
         } else {
           await providersApi.deleteBedrockConfig(index);
-          setBedrockKeys((prev) => prev.filter((_, itemIndex) => itemIndex !== index));
+          setBedrockKeys((prev) =>
+            prev.filter((_, itemIndex) => itemIndex !== index),
+          );
         }
         invalidateConfiguredModelAvailability();
         notify({ type: "success", message: t("providers.deleted") });
       } catch (err: unknown) {
         notify({
           type: "error",
-          message: err instanceof Error ? err.message : t("providers.delete_failed"),
+          message:
+            err instanceof Error ? err.message : t("providers.delete_failed"),
         });
       }
     },
@@ -352,8 +416,13 @@ export function useProviderKeyEditor({
         ? withoutDisableAllModelsRule(current.excludedModels)
         : withDisableAllModelsRule(current.excludedModels);
 
-      const nextItem: ProviderSimpleConfig = { ...current, excludedModels: nextExcluded };
-      const nextList = prev.map((item, itemIndex) => (itemIndex === index ? nextItem : item));
+      const nextItem: ProviderSimpleConfig = {
+        ...current,
+        excludedModels: nextExcluded,
+      };
+      const nextList = prev.map((item, itemIndex) =>
+        itemIndex === index ? nextItem : item,
+      );
 
       try {
         if (type === "gemini") {
@@ -373,11 +442,15 @@ export function useProviderKeyEditor({
           await providersApi.saveClineConfigs(nextList);
         } else {
           setBedrockKeys(nextList as BedrockProviderConfig[]);
-          await providersApi.saveBedrockConfigs(nextList as BedrockProviderConfig[]);
+          await providersApi.saveBedrockConfigs(
+            nextList as BedrockProviderConfig[],
+          );
         }
         notify({
           type: "success",
-          message: enabled ? t("providers.toggle_enabled") : t("providers.toggle_disabled"),
+          message: enabled
+            ? t("providers.toggle_enabled")
+            : t("providers.toggle_disabled"),
         });
         startRefreshTransition(() => void refreshAll());
       } catch (err: unknown) {
@@ -389,7 +462,8 @@ export function useProviderKeyEditor({
         else setBedrockKeys(prev as BedrockProviderConfig[]);
         notify({
           type: "error",
-          message: err instanceof Error ? err.message : t("providers.update_failed"),
+          message:
+            err instanceof Error ? err.message : t("providers.update_failed"),
         });
       }
     },
@@ -450,7 +524,10 @@ export function useProviderKeyEditor({
   }, [keyDraft.excludedModelsText]);
 
   const editKeyHeaderCount = useMemo(
-    () => keyDraft.headersEntries.filter((entry) => entry.key.trim() && entry.value.trim()).length,
+    () =>
+      keyDraft.headersEntries.filter(
+        (entry) => entry.key.trim() && entry.value.trim(),
+      ).length,
     [keyDraft.headersEntries],
   );
 
