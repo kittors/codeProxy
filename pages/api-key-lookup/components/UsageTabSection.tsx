@@ -1,5 +1,11 @@
 import { useMemo, type ReactNode } from "react";
-import { Activity, CalendarDays, Coins, MessagesSquare, ShieldCheck, Sigma } from "lucide-react";
+import {
+  Activity,
+  Coins,
+  MessagesSquare,
+  ShieldCheck,
+  Sigma,
+} from "lucide-react";
 import { AnimatedNumber } from "@code-proxy/ui";
 import { Reveal } from "@code-proxy/ui";
 import { Tabs, TabsList, TabsTrigger } from "@code-proxy/ui";
@@ -34,6 +40,8 @@ const HEATMAP_LEVEL_CLASSES = [
   "bg-blue-700 dark:bg-blue-300",
 ] as const;
 
+const formatInteger = (value: number) => Math.round(value).toLocaleString();
+
 function localDateKey(date: Date): string {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -48,7 +56,11 @@ function buildHeatmapDays() {
   start.setDate(end.getDate() - 364);
 
   const days: string[] = [];
-  for (let current = new Date(start); current <= end; current.setDate(current.getDate() + 1)) {
+  for (
+    let current = new Date(start);
+    current <= end;
+    current.setDate(current.getDate() + 1)
+  ) {
     days.push(localDateKey(current));
   }
   return { days, leadingEmptyCells: start.getDay() };
@@ -77,9 +89,13 @@ function HeatmapTooltip({
           <span>{t("apikey_lookup.requests")}</span>
           <span className="text-right">{requests.toLocaleString()}</span>
           <span>{t("apikey_lookup.total_sessions")}</span>
-          <span className="text-right">{(point?.sessions ?? 0).toLocaleString()}</span>
+          <span className="text-right">
+            {(point?.sessions ?? 0).toLocaleString()}
+          </span>
           <span>{t("apikey_lookup.token")}</span>
-          <span className="text-right">{(point?.tokens ?? 0).toLocaleString()}</span>
+          <span className="text-right">
+            {(point?.tokens ?? 0).toLocaleString()}
+          </span>
           <span>{t("apikey_lookup.total_cost")}</span>
           <span className="text-right">${(point?.cost ?? 0).toFixed(4)}</span>
         </span>
@@ -106,18 +122,22 @@ function CalendarHeatmap({
     return byDate;
   }, [heatmapSeries]);
   const maxRequests = useMemo(
-    () => heatmapSeries.reduce((max, point) => Math.max(max, point.requests), 0),
+    () =>
+      heatmapSeries.reduce((max, point) => Math.max(max, point.requests), 0),
     [heatmapSeries],
   );
-  const emptyCells: ReactNode[] = Array.from({ length: leadingEmptyCells }, (_, index) => (
-    <span key={`empty-${index}`} className="h-3 w-3" aria-hidden="true" />
-  ));
+  const emptyCells: ReactNode[] = Array.from(
+    { length: leadingEmptyCells },
+    (_, index) => (
+      <span key={`empty-${index}`} className="h-3 w-3" aria-hidden="true" />
+    ),
+  );
 
   return (
     <div className="space-y-3">
       <div className="overflow-x-auto pb-1">
         <div
-          className="grid grid-flow-col grid-rows-7 gap-1"
+          className="mx-auto grid w-max grid-flow-col grid-rows-7 gap-1"
           style={{ gridAutoColumns: "0.75rem" }}
           aria-label={t("apikey_lookup.calendar_heatmap")}
         >
@@ -128,11 +148,13 @@ function CalendarHeatmap({
             return (
               <HoverTooltip
                 key={date}
+                className="h-3 w-3"
                 placement="top"
                 content={<HeatmapTooltip t={t} date={date} point={point} />}
               >
                 <span
-                  className={`h-3 w-3 rounded-[3px] ring-1 ring-black/[0.03] transition-colors dark:ring-white/[0.04] ${HEATMAP_LEVEL_CLASSES[level]}`}
+                  tabIndex={0}
+                  className={`block h-3 w-3 cursor-pointer rounded-[3px] ring-1 ring-black/[0.03] transition duration-150 hover:scale-110 hover:ring-blue-400/70 focus:outline-none focus:ring-2 focus:ring-blue-400/70 dark:ring-white/[0.04] ${HEATMAP_LEVEL_CLASSES[level]}`}
                   aria-label={`${date}: ${point?.requests ?? 0} ${t("apikey_lookup.requests")}`}
                 />
               </HoverTooltip>
@@ -140,7 +162,7 @@ function CalendarHeatmap({
           })}
         </div>
       </div>
-      <div className="flex items-center justify-end gap-1 text-xs text-slate-500 dark:text-white/55">
+      <div className="flex items-center justify-center gap-1 text-xs text-slate-500 dark:text-white/55 sm:justify-end">
         <span>{t("apikey_lookup.heatmap_less")}</span>
         {HEATMAP_LEVEL_CLASSES.map((className) => (
           <span
@@ -152,6 +174,45 @@ function CalendarHeatmap({
         <span>{t("apikey_lookup.heatmap_more")}</span>
       </div>
     </div>
+  );
+}
+
+function HeatmapSkeleton() {
+  return (
+    <div className="space-y-3" aria-hidden="true">
+      <div className="overflow-hidden pb-1">
+        <div
+          className="mx-auto grid w-max grid-flow-col grid-rows-7 gap-1"
+          style={{ gridAutoColumns: "0.75rem" }}
+        >
+          {Array.from({ length: 371 }, (_, index) => (
+            <span
+              key={index}
+              className="h-3 w-3 rounded-[3px] bg-slate-100 motion-safe:animate-pulse dark:bg-white/10"
+            />
+          ))}
+        </div>
+      </div>
+      <div className="ml-auto h-3 w-28 rounded bg-slate-100 motion-safe:animate-pulse dark:bg-white/10" />
+    </div>
+  );
+}
+
+function ChartSkeleton() {
+  return (
+    <div
+      className="h-72 rounded-xl bg-slate-100 motion-safe:animate-pulse dark:bg-white/10"
+      aria-hidden="true"
+    />
+  );
+}
+
+function KpiValueSkeleton() {
+  return (
+    <span
+      className="block h-8 w-24 rounded-md bg-slate-100 motion-safe:animate-pulse dark:bg-white/10"
+      aria-hidden="true"
+    />
   );
 }
 
@@ -197,10 +258,18 @@ export function UsageTabSection({
   }>;
   dailySeries: DailySeriesPoint[];
   dailyTrendOption: Record<string, unknown>;
-  dailyLegendAvailability: { hasInput: boolean; hasOutput: boolean; hasRequests: boolean };
+  dailyLegendAvailability: {
+    hasInput: boolean;
+    hasOutput: boolean;
+    hasRequests: boolean;
+  };
   dailyLegendSelected: Record<string, boolean>;
   toggleDailyLegend: (key: string) => void;
 }) {
+  const showInitialLoading = chartLoading && !chartStats;
+  const renderKpiValue = (value: ReactNode) =>
+    showInitialLoading ? <KpiValueSkeleton /> : value;
+
   return (
     <Reveal>
       <div className="space-y-5">
@@ -209,66 +278,69 @@ export function UsageTabSection({
             title={t("apikey_lookup.total_requests")}
             icon={Activity}
             hint={t("apikey_lookup.last_n_days", { days: timeRange })}
-            value={
+            value={renderKpiValue(
               <AnimatedNumber
                 value={chartStats?.total ?? 0}
-                format={(value) => value.toLocaleString()}
-              />
-            }
+                format={formatInteger}
+              />,
+            )}
           />
           <KpiCard
             title={t("common.success_rate")}
             icon={ShieldCheck}
             hint={t("apikey_lookup.last_n_days", { days: timeRange })}
-            value={
+            value={renderKpiValue(
               <AnimatedNumber
                 value={chartStats?.success_rate ?? 0}
                 format={(value) => `${value.toFixed(1)}%`}
-              />
-            }
+              />,
+            )}
           />
           <KpiCard
             title={t("apikey_lookup.total_tokens")}
             icon={Sigma}
             hint={t("apikey_lookup.last_n_days", { days: timeRange })}
-            value={
+            value={renderKpiValue(
               <AnimatedNumber
                 value={chartStats?.total_tokens ?? 0}
-                format={(value) => value.toLocaleString()}
-              />
-            }
+                format={formatInteger}
+              />,
+            )}
           />
           <KpiCard
             title={t("apikey_lookup.total_sessions")}
             icon={MessagesSquare}
             hint={t("apikey_lookup.last_n_days", { days: timeRange })}
-            value={
+            value={renderKpiValue(
               <AnimatedNumber
                 value={chartStats?.total_sessions ?? 0}
-                format={(value) => value.toLocaleString()}
-              />
-            }
+                format={formatInteger}
+              />,
+            )}
           />
           <KpiCard
             title={t("apikey_lookup.total_cost")}
             icon={Coins}
             hint={t("apikey_lookup.last_n_days", { days: timeRange })}
-            value={
+            value={renderKpiValue(
               <AnimatedNumber
                 value={chartStats?.total_cost ?? 0}
                 format={(value) => `$${value.toFixed(4)}`}
-              />
-            }
+              />,
+            )}
           />
         </div>
 
         <Card
           title={t("apikey_lookup.calendar_heatmap")}
           description={t("apikey_lookup.calendar_heatmap_desc")}
-          loading={chartLoading}
-          actions={<CalendarDays size={18} className="text-slate-500 dark:text-white/55" />}
+          loading={false}
         >
-          <CalendarHeatmap t={t} heatmapSeries={heatmapSeries} />
+          {showInitialLoading ? (
+            <HeatmapSkeleton />
+          ) : (
+            <CalendarHeatmap t={t} heatmapSeries={heatmapSeries} />
+          )}
         </Card>
 
         <section className="grid gap-4 lg:grid-cols-[minmax(0,560px)_minmax(0,1fr)]">
@@ -282,19 +354,30 @@ export function UsageTabSection({
             actions={
               <Tabs
                 value={modelMetric}
-                onValueChange={(next) => setModelMetric(next as "requests" | "tokens")}
+                onValueChange={(next) =>
+                  setModelMetric(next as "requests" | "tokens")
+                }
               >
                 <TabsList>
-                  <TabsTrigger value="requests">{t("apikey_lookup.requests")}</TabsTrigger>
-                  <TabsTrigger value="tokens">{t("apikey_lookup.token")}</TabsTrigger>
+                  <TabsTrigger value="requests">
+                    {t("apikey_lookup.requests")}
+                  </TabsTrigger>
+                  <TabsTrigger value="tokens">
+                    {t("apikey_lookup.token")}
+                  </TabsTrigger>
                 </TabsList>
               </Tabs>
             }
-            loading={chartLoading}
+            loading={false}
           >
-            {modelDistributionData.length > 0 ? (
+            {showInitialLoading ? (
+              <ChartSkeleton />
+            ) : modelDistributionData.length > 0 ? (
               <div className="flex flex-col gap-4 sm:grid sm:h-72 sm:grid-cols-[minmax(0,1fr)_220px]">
-                <EChart option={modelDistributionOption} className="h-52 min-w-0 sm:h-72" />
+                <EChart
+                  option={modelDistributionOption}
+                  className="h-52 min-w-0 sm:h-72"
+                />
                 <div className="flex flex-row flex-wrap justify-center gap-2 overflow-y-auto pr-1 sm:h-72 sm:flex-col">
                   {modelDistributionLegend.map((item) => (
                     <div
@@ -328,10 +411,14 @@ export function UsageTabSection({
 
           <Card
             title={t("apikey_lookup.daily_usage")}
-            description={t("apikey_lookup.daily_usage_desc", { days: timeRange })}
-            loading={chartLoading}
+            description={t("apikey_lookup.daily_usage_desc", {
+              days: timeRange,
+            })}
+            loading={false}
           >
-            {dailySeries.length > 0 ? (
+            {showInitialLoading ? (
+              <ChartSkeleton />
+            ) : dailySeries.length > 0 ? (
               <div className="flex h-72 min-w-0 flex-col overflow-hidden">
                 <EChart
                   option={dailyTrendOption}
@@ -347,7 +434,9 @@ export function UsageTabSection({
                             key: DAILY_LEGEND_KEYS.input,
                             label: t("apikey_lookup.input_token"),
                             colorClass: "bg-violet-400",
-                            enabled: dailyLegendSelected[DAILY_LEGEND_KEYS.input] ?? true,
+                            enabled:
+                              dailyLegendSelected[DAILY_LEGEND_KEYS.input] ??
+                              true,
                             onToggle: toggleDailyLegend,
                           },
                         ]
@@ -358,7 +447,9 @@ export function UsageTabSection({
                             key: DAILY_LEGEND_KEYS.output,
                             label: t("apikey_lookup.output_token"),
                             colorClass: "bg-emerald-400",
-                            enabled: dailyLegendSelected[DAILY_LEGEND_KEYS.output] ?? true,
+                            enabled:
+                              dailyLegendSelected[DAILY_LEGEND_KEYS.output] ??
+                              true,
                             onToggle: toggleDailyLegend,
                           },
                         ]
@@ -369,7 +460,9 @@ export function UsageTabSection({
                             key: DAILY_LEGEND_KEYS.requests,
                             label: t("apikey_lookup.requests"),
                             colorClass: "bg-blue-500",
-                            enabled: dailyLegendSelected[DAILY_LEGEND_KEYS.requests] ?? true,
+                            enabled:
+                              dailyLegendSelected[DAILY_LEGEND_KEYS.requests] ??
+                              true,
                             onToggle: toggleDailyLegend,
                           },
                         ]
