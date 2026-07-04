@@ -156,11 +156,13 @@ export function RequestLogsPage() {
     api_key_names: Record<string, string>;
     models: string[];
     channels: string[];
+    statuses: string[];
   }>({
     api_keys: [],
     api_key_names: {},
     models: [],
     channels: [],
+    statuses: ["success", "failed"],
   });
   const [stats, setStats] = useState<{
     total: number;
@@ -220,11 +222,17 @@ export function RequestLogsPage() {
   }, [filterOptions.channels]);
 
   const statusOptions = useMemo<SearchableCheckboxMultiSelectOption[]>(() => {
-    return [
-      { value: "success", label: t("request_logs.status_success"), searchText: "success" },
-      { value: "failed", label: t("request_logs.status_failed"), searchText: "failed" },
-    ];
-  }, [t]);
+    return (filterOptions.statuses ?? ["success", "failed"]).map((status) => ({
+      value: status,
+      label:
+        status === "success"
+          ? t("request_logs.status_success")
+          : status === "failed"
+            ? t("request_logs.status_failed")
+            : status,
+      searchText: status,
+    }));
+  }, [filterOptions.statuses, t]);
 
   const apiKeyFilterValues = useMemo(() => keyOptions.map((option) => option.value), [keyOptions]);
   const modelFilterValues = useMemo(

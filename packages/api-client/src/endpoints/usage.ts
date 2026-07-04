@@ -340,6 +340,7 @@ export const usageApi = {
         api_key_names: isStringRecord(filters?.api_key_names) ? filters.api_key_names : {},
         models: Array.isArray(filters?.models) ? filters.models : [],
         channels: Array.isArray(filters?.channels) ? filters.channels : [],
+        statuses: Array.isArray(filters?.statuses) ? filters.statuses : ["success", "failed"],
       },
       stats: {
         total: resp?.stats?.total ?? 0,
@@ -511,6 +512,7 @@ export interface UsageLogsResponse {
     api_key_names: Record<string, string>;
     models: string[];
     channels: string[];
+    statuses: string[];
   };
   stats: {
     total: number;
@@ -526,6 +528,7 @@ type UsageLogsFilterPayload = {
   api_key_names?: unknown;
   models?: unknown;
   channels?: unknown;
+  statuses?: unknown;
 };
 
 type UsageLogsPayload = {
