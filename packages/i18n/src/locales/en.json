@@ -3035,7 +3035,10 @@
     "quick_import_load_failed": "Failed to load CC Switch import presets",
     "quick_import_group_aria": "{{client}} quick imports",
     "empty_title": "Query your API key usage",
-    "empty_desc": "Enter your API key above to view detailed usage statistics and request logs."
+    "empty_desc": "Enter your API key above to view detailed usage statistics and request logs.",
+    "login_title": "Enter API key",
+    "login_desc": "Sign in to view usage stats, request logs, and available models for this key.",
+    "unnamed_key": "Unnamed key"
   },
   "auth_files_page": {
     "files_tab": "Files",

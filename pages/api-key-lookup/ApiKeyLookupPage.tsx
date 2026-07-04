@@ -1,10 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Key } from "lucide-react";
+import { Key, LogOut, Search } from "lucide-react";
 import { useTheme } from "@code-proxy/ui";
 import { ThemeToggleButton } from "@code-proxy/ui";
 import { LanguageSelector } from "@code-proxy/ui";
 import { Reveal } from "@code-proxy/ui";
+import { Button } from "@code-proxy/ui";
+import { Modal } from "@code-proxy/ui";
+import { Select, type SelectOption } from "@code-proxy/ui";
+import { TextInput } from "@code-proxy/ui";
 import type { TimeRange } from "@features/monitor-widgets/monitor-constants";
 import { LogContentModal } from "@features/log-content-viewer";
 import {
@@ -15,7 +19,6 @@ import {
 } from "./api";
 import { LookupEmptyState } from "./components/LookupEmptyState";
 import { LookupResultsToolbar, type ApiKeyLookupTab } from "./components/LookupResultsToolbar";
-import { LookupSearchSection } from "./components/LookupSearchSection";
 import { ModelsTabContent } from "./components/ModelsTabContent";
 import { buildLogColumns, PublicLogsSection } from "./components/PublicLogsSection";
 import { QuickImportTabContent } from "./components/QuickImportTabContent";
@@ -25,6 +28,7 @@ import type { ChartDataResponse, LogRow, PublicLogItem } from "./types";
 
 const DEFAULT_PAGE_SIZE = 50;
 const LOOKUP_LAST_API_KEY_STORAGE_KEY = "apiKeyLookup.lastApiKey.v1";
+const LOGOUT_SELECT_VALUE = "__api-key-lookup-logout__";
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -154,6 +158,8 @@ export function ApiKeyLookupPage() {
   const initialLookupKey = useMemo(() => readLegacyLookupKeyFromUrl() || readStoredLookupKey(), []);
   const [apiKeyInput, setApiKeyInput] = useState(initialLookupKey);
   const [queriedKey, setQueriedKey] = useState(initialLookupKey);
+  const [apiKeyName, setApiKeyName] = useState("");
+  const [loginModalOpen, setLoginModalOpen] = useState(!initialLookupKey);
 
   // ── Content modal state ──
   const [contentModalOpen, setContentModalOpen] = useState(false);
@@ -258,7 +264,9 @@ export function ApiKeyLookupPage() {
         setModelOptions(resp.filters?.models ?? []);
         setLastUpdatedAt(Date.now());
         setQueriedKey(key.trim());
+        setApiKeyName(resp.api_key_name?.trim() ?? "");
         writeStoredLookupKey(key.trim());
+        setLoginModalOpen(false);
       } catch (err) {
         if (err instanceof DOMException && err.name === "AbortError") return;
         if (myFetchId !== fetchIdRef.current) return;
@@ -292,6 +300,8 @@ export function ApiKeyLookupPage() {
     try {
       const data = await fetchPublicChartData({ apiKey: key.trim(), days });
       chartCacheRef.current[cacheKey] = data;
+      const nextName = data.api_key_name?.trim() ?? "";
+      if (nextName) setApiKeyName(nextName);
       setChartData(data);
     } catch {
       setChartData(null);
@@ -398,17 +408,18 @@ export function ApiKeyLookupPage() {
         setStatusFilter("");
         setRawItems([]);
         setCurrentPage(1);
+        setApiKeyName("");
         chartCacheRef.current = {};
         if (activeTab === "usage") {
           void fetchChartDataFn(val, timeRange);
           fetchLogs(val, 1);
         } else if (activeTab === "models") {
+          fetchLogs(val, 1);
           void fetchModelsFn(val);
         } else {
           fetchLogs(val, 1);
           void fetchChartDataFn(val, timeRange);
         }
-        writeStoredLookupKey(val);
       }
     },
     [apiKeyInput, activeTab, timeRange, fetchLogs, fetchChartDataFn, fetchModelsFn],
@@ -416,6 +427,7 @@ export function ApiKeyLookupPage() {
 
   const handleApiKeyInputChange = useCallback((value: string) => {
     setApiKeyInput(value);
+    setError(null);
     if (value.trim()) return;
 
     abortControllerRef.current?.abort();
@@ -439,8 +451,14 @@ export function ApiKeyLookupPage() {
     setStatusFilter("");
 
     setQueriedKey("");
+    setApiKeyName("");
     writeStoredLookupKey("");
   }, []);
+
+  const handleLogout = useCallback(() => {
+    handleApiKeyInputChange("");
+    setLoginModalOpen(true);
+  }, [handleApiKeyInputChange]);
 
   const handleRefresh = useCallback(() => {
     if (queriedKey) {
@@ -516,6 +534,35 @@ export function ApiKeyLookupPage() {
     return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
   }, [lastUpdatedAt]);
 
+  const displayName = apiKeyName || (queriedKey ? t("apikey_lookup.unnamed_key") : "");
+  const keyMenuOptions = useMemo<SelectOption[]>(
+    () => [
+      {
+        value: queriedKey,
+        label: displayName,
+      },
+      {
+        value: LOGOUT_SELECT_VALUE,
+        label: (
+          <span className="flex items-center gap-2">
+            <LogOut size={15} />
+            {t("common.logout")}
+          </span>
+        ),
+      },
+    ],
+    [displayName, queriedKey, t],
+  );
+  const handleKeyMenuChange = useCallback(
+    (value: string) => {
+      if (value === LOGOUT_SELECT_VALUE) handleLogout();
+    },
+    [handleLogout],
+  );
+  const closeLoginModal = useCallback(() => {
+    if (queriedKey) setLoginModalOpen(false);
+  }, [queriedKey]);
+
   // ================================================================
   //  Render
   // ================================================================
@@ -534,6 +581,16 @@ export function ApiKeyLookupPage() {
             </span>
           </div>
           <div className="flex items-center gap-2">
+            {queriedKey ? (
+              <Select
+                value={queriedKey}
+                onChange={handleKeyMenuChange}
+                options={keyMenuOptions}
+                aria-label={displayName}
+                className="max-w-[34vw] sm:max-w-56"
+                size="sm"
+              />
+            ) : null}
             <LanguageSelector className="inline-flex items-center rounded-xl p-2 text-slate-600 transition hover:bg-slate-100 dark:text-white/70 dark:hover:bg-white/10" />
             <ThemeToggleButton className="rounded-xl p-2 text-slate-600 transition hover:bg-slate-100 dark:text-white/70 dark:hover:bg-white/10" />
           </div>
@@ -541,14 +598,6 @@ export function ApiKeyLookupPage() {
       </header>
 
       <main className="mx-auto max-w-screen-xl space-y-5 px-4 py-6 sm:px-6">
-        <LookupSearchSection
-          t={t}
-          apiKeyInput={apiKeyInput}
-          setApiKeyInput={handleApiKeyInputChange}
-          handleSubmit={handleSubmit}
-          loading={loading}
-        />
-
         {/* Error */}
         {error && (
           <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 dark:border-rose-500/25 dark:bg-rose-500/10 dark:text-rose-300">
@@ -660,6 +709,53 @@ export function ApiKeyLookupPage() {
 
         {!queriedKey && !error ? <LookupEmptyState t={t} /> : null}
       </main>
+
+      <Modal
+        open={loginModalOpen}
+        title={t("apikey_lookup.login_title")}
+        description={t("apikey_lookup.login_desc")}
+        maxWidth="max-w-lg"
+        onClose={closeLoginModal}
+        footer={
+          <Button
+            variant="primary"
+            type="submit"
+            form="apikey-login-form"
+            disabled={!apiKeyInput.trim() || loading}
+          >
+            {loading ? (
+              <span
+                className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white motion-reduce:animate-none motion-safe:animate-spin dark:border-neutral-950/30 dark:border-t-neutral-950"
+                aria-hidden="true"
+              />
+            ) : null}
+            {t("common.login")}
+          </Button>
+        }
+      >
+        <form id="apikey-login-form" onSubmit={handleSubmit} className="space-y-2">
+          <label
+            htmlFor="apikey-login-input"
+            className="block text-sm font-medium text-slate-700 dark:text-white/80"
+          >
+            {t("apikey_lookup.api_key_label")}
+          </label>
+          <TextInput
+            type="password"
+            id="apikey-login-input"
+            value={apiKeyInput}
+            onChange={(e) => handleApiKeyInputChange(e.target.value)}
+            placeholder={t("apikey_lookup.placeholder")}
+            autoComplete="off"
+            spellCheck={false}
+            autoFocus
+            startAdornment={<Search size={16} className="text-slate-400 dark:text-white/40" />}
+          />
+          {error ? (
+            <p className="text-sm text-rose-600 dark:text-rose-300">{error}</p>
+          ) : null}
+        </form>
+      </Modal>
     </div>
   );
 }
