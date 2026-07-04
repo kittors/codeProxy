@@ -490,4 +490,97 @@ describe("ccswitchImport", () => {
     expect(openSpy).toHaveBeenCalledWith("ccswitch://v1/import?resource=provider", "_self");
     expect(onProtocolUnavailable).not.toHaveBeenCalled();
   });
+
+  test("derives model_reasoning_effort from the catalog entry's default_reasoning_level", () => {
+    const url = buildCcSwitchImportUrl({
+      apiKey: "sk-test-key",
+      baseUrl: "https://relay.example.com/",
+      clientType: "codex",
+      providerName: "Relay Provider",
+      model: "deepseek-v4-pro",
+      codexModelCatalog: {
+        models: [
+          {
+            slug: "deepseek-v4-pro",
+            model: "deepseek-v4-pro",
+            default_reasoning_level: "medium",
+            supported_reasoning_levels: [
+              { effort: "low" },
+              { effort: "medium" },
+              { effort: "high" },
+              { effort: "xhigh" },
+            ],
+          },
+          {
+            slug: "gpt-5.5",
+            model: "gpt-5.5",
+            default_reasoning_level: "low",
+          },
+        ],
+      },
+    });
+
+    expect(decodeConfig(url).config).toContain(`model_reasoning_effort = "medium"`);
+    expect(decodeConfig(url).config).toContain(`model = "deepseek-v4-pro"`);
+  });
+
+  test("derives model_reasoning_effort from camelCase defaultReasoningLevel when snake_case is absent", () => {
+    const url = buildCcSwitchImportUrl({
+      apiKey: "sk-test-key",
+      baseUrl: "https://relay.example.com/",
+      clientType: "codex",
+      providerName: "Relay Provider",
+      model: "gpt-5.5",
+      codexModelCatalog: {
+        models: [
+          {
+            model: "gpt-5.5",
+            defaultReasoningLevel: "low",
+            supportedReasoningLevels: ["low", "medium", "high", "xhigh"],
+          },
+        ],
+      },
+    });
+
+    expect(decodeConfig(url).config).toContain(`model_reasoning_effort = "low"`);
+  });
+
+  test("falls back to model_reasoning_effort = high when no matching catalog entry exists", () => {
+    const url = buildCcSwitchImportUrl({
+      apiKey: "sk-test-key",
+      baseUrl: "https://relay.example.com/",
+      clientType: "codex",
+      providerName: "Relay Provider",
+      model: "gpt-5.5",
+      codexModelCatalog: {
+        models: [
+          {
+            model: "deepseek-v4-pro",
+            default_reasoning_level: "medium",
+          },
+        ],
+      },
+    });
+
+    // The selected model is not in the explicit catalog, so the configured
+    // effort falls back to the legacy "high" default even though a separate
+    // entry carries reasoning metadata.
+    expect(decodeConfig(url).config).toContain(`model_reasoning_effort = "high"`);
+  });
+
+  test("falls back to model_reasoning_effort = high when catalog is empty for backward compatibility", () => {
+    const url = buildCcSwitchImportUrl({
+      apiKey: "sk-test-key",
+      baseUrl: "https://relay.example.com/",
+      clientType: "codex",
+      providerName: "Relay Provider",
+      model: "gpt-5.5",
+    });
+
+    // No codexModelCatalog passed: the selected model is auto-synthesized
+    // into the catalog (so the catalog pointer is present) but the effort
+    // falls back to the legacy "high" default to preserve prior behavior.
+    expect(decodeConfig(url).config).toContain(`model_reasoning_effort = "high"`);
+    expect(decodeConfig(url).config).toContain(`model_catalog_json = "${CC_SWITCH_CODEX_MODEL_CATALOG_FILENAME}"`);
+  });
 });

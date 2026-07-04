@@ -940,3 +940,237 @@ test("API Keys: fixed columns stay pinned while dragging the horizontal scrollba
   expect(state.nameCellHitColumn).toBe("name");
   expect(state.actionsCellHitColumn).toBe("actions");
 });
+
+const codexImportPreset = {
+  id: "codex-pro-deepseek",
+  "client-type": "codex",
+  "provider-name": "Pro Pool + DeepSeek",
+  note: "Pro 号池+deepseek",
+  "default-model": "gpt-5.5",
+  "model-mappings": [
+    { "request-model": "gpt-5.5", "target-model": "gpt-5.5" },
+    { "request-model": "deepseek-v4-pro", "target-model": "deepseek-reasoner" },
+    { "request-model": "deepseek-v4-flash", "target-model": "deepseek-chat" },
+  ],
+  "allowed-channel-groups": ["all-channel-groups-with-a-long-name"],
+  "route-path": "/pro/cs_test",
+  "endpoint-path": "/v1",
+  "usage-auto-interval": 30,
+  "codex-model-catalog-filename": "cc-switch-model-catalog.json",
+  "codex-model-catalog": {
+    models: [
+      {
+        slug: "gpt-5.5",
+        model: "gpt-5.5",
+        display_name: "GPT-5.5",
+        default_reasoning_level: "medium",
+        supported_reasoning_levels: [
+          { effort: "low", description: "Fast" },
+          { effort: "medium", description: "Balanced" },
+          { effort: "high", description: "Deep" },
+          { effort: "xhigh", description: "Extra deep" },
+        ],
+      },
+      {
+        slug: "deepseek-v4-pro",
+        model: "deepseek-v4-pro",
+        default_reasoning_level: "high",
+        supported_reasoning_levels: [
+          { effort: "low" },
+          { effort: "medium" },
+          { effort: "high" },
+          { effort: "xhigh" },
+        ],
+      },
+      {
+        slug: "deepseek-v4-flash",
+        model: "deepseek-v4-flash",
+        default_reasoning_level: "medium",
+      },
+    ],
+  },
+};
+
+const decodeCodexConfigBlob = (url: string) => {
+  const encoded = new URL(url).searchParams.get("config");
+  if (!encoded) throw new Error("missing config param");
+  const binary = atob(encoded);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return JSON.parse(new TextDecoder().decode(bytes)) as {
+    auth: { OPENAI_API_KEY?: string };
+    config: string;
+    apiFormat?: string;
+    modelCatalog?: { models: Array<Record<string, unknown>> };
+  };
+};
+
+const mockApiKeysApisForImport = async (page: Page) => {
+  const entry = {
+    key: `sk-e2e-import-${"y".repeat(20)}-imp`,
+    name: "Compat Codex Import",
+    "allowed-models": ["gpt-5.5", "deepseek-reasoner", "deepseek-chat", "deepseek-v4-pro"],
+    "allowed-channel-groups": ["all-channel-groups-with-a-long-name"],
+    "allowed-channels": ["primary-channel-with-a-long-name"],
+    "created-at": "2026-05-13T15:32:00Z",
+  };
+
+  await page.route("**/v0/management/**", async (route) => {
+    const url = new URL(route.request().url());
+    const pathname = url.pathname;
+
+    if (pathname.endsWith("/v0/management/config")) {
+      await route.fulfill({ status: 200, contentType: "application/json", body: "{}" });
+      return;
+    }
+
+    if (pathname.endsWith("/v0/management/api-key-entries")) {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ "api-key-entries": [entry] }),
+      });
+      return;
+    }
+
+    if (pathname.endsWith("/v0/management/api-keys")) {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ "api-keys": [] }),
+      });
+      return;
+    }
+
+    if (pathname.endsWith("/v0/management/api-key-permission-profiles")) {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ "api-key-permission-profiles": [] }),
+      });
+      return;
+    }
+
+    if (pathname.endsWith("/v0/management/ccswitch-import-configs")) {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ "ccswitch-import-configs": [codexImportPreset] }),
+      });
+      return;
+    }
+
+    if (pathname.endsWith("/v0/management/channel-groups")) {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ items: [] }),
+      });
+      return;
+    }
+
+    if (pathname.endsWith("/v0/management/models")) {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ data: [] }),
+      });
+      return;
+    }
+
+    if (pathname.endsWith("/v0/management/auth-files")) {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ files: [] }),
+      });
+      return;
+    }
+
+    const providerListPayloads: Record<string, Record<string, unknown[]>> = {
+      "/v0/management/gemini-api-key": { "gemini-api-key": [] },
+      "/v0/management/claude-api-key": { "claude-api-key": [] },
+      "/v0/management/codex-api-key": { "codex-api-key": [] },
+      "/v0/management/vertex-api-key": { "vertex-api-key": [] },
+      "/v0/management/openai-compatibility": { "openai-compatibility": [] },
+    };
+    const providerPayload = providerListPayloads[pathname];
+    if (providerPayload) {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(providerPayload),
+      });
+      return;
+    }
+
+    await route.fulfill({ status: 200, contentType: "application/json", body: "{}" });
+  });
+};
+
+test("API Keys: import-to-CC-Switch opens a codex deep link with embedded model catalog", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1360, height: 980 });
+  await setAuthed(page);
+  await mockApiKeysApisForImport(page);
+
+  await page.addInitScript(() => {
+    window.open = (url?: string | URL) => {
+      if (typeof url === "string") {
+        (window as unknown as { __ccswitchOpenedUrl?: string[] }).__ccswitchOpenedUrl =
+          (window as unknown as { __ccswitchOpenedUrl?: string }).__ccswitchOpenedUrl ?? [];
+        (window as unknown as { __ccswitchOpenedUrl?: string[] }).__ccswitchOpenedUrl!.push(url);
+      }
+      return null;
+    };
+  });
+
+  await page.goto("/#/api-keys");
+  await page.locator('td[data-vt-column-key="actions"]').first().waitFor({ state: "visible" });
+
+  // The import-to-CC-Switch button is distinguishable by its aria-label, which
+  // carries the i18n label "ccswitch.import_to_ccswitch". Other row actions
+  // (toggle / view usage / copy / edit / delete) use different labels, so we
+  // target the import button specifically inside the actions cell.
+  const importButton = page
+    .locator('td[data-vt-column-key="actions"]')
+    .first()
+    .getByRole("button", { name: /import to CC Switch|导入到 CC Switch/i });
+  await importButton.click({ force: true });
+
+  // The modal renders the codex preset card with the provider name as button text.
+  const cardButton = page.getByRole("button", { name: /Pro Pool \+ DeepSeek/ });
+  await expect(cardButton).toBeVisible();
+
+  // Clicking the card body opens the ccswitch:// deep link.
+  await cardButton.click();
+
+  const openedUrl = await page.evaluate(() => {
+    const list = (window as unknown as { __ccswitchOpenedUrl?: string[] }).__ccswitchOpenedUrl;
+    return list?.[0];
+  });
+  expect(openedUrl).toBeTruthy();
+  expect(openedUrl!.startsWith("ccswitch://v1/import?")).toBe(true);
+
+  const parsed = new URL(openedUrl!);
+  expect(parsed.searchParams.get("app")).toBe("codex");
+  expect(parsed.searchParams.get("apiFormat")).toBe("openai_responses");
+  expect(parsed.searchParams.get("config")).toBeTruthy();
+
+  const decoded = decodeCodexConfigBlob(openedUrl!);
+  expect(decoded.apiFormat).toBe("openai_responses");
+  expect(decoded.auth.OPENAI_API_KEY).toBe("sk-e2e-import-yyyyyyyyyyyyyyyyyyyy-imp");
+  expect(decoded.modelCatalog?.models).toBeTruthy();
+  expect(decoded.modelCatalog!.models.length).toBe(3);
+  expect(decoded.modelCatalog!.models[0]).toMatchObject({
+    slug: "gpt-5.5",
+    model: "gpt-5.5",
+    default_reasoning_level: "medium",
+  });
+  // The default model catalogs's default_reasoning_level for the selected
+  // model (gpt-5.5) should drive model_reasoning_effort (medium) instead of
+  // the old hardcoded "high".
+  expect(decoded.config).toContain(`model_reasoning_effort = "medium"`);
+  expect(decoded.config).toContain(`model_catalog_json = "cc-switch-model-catalog.json"`);
+});
