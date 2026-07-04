@@ -88,10 +88,11 @@ describe("ApiKeyLookupPage", () => {
     await userEvent.click(screen.getByRole("button", { name: /login/i }));
 
     await waitFor(() => {
-      expect(mocks.fetchPublicLogs).toHaveBeenCalledWith(
+      expect(mocks.fetchPublicChartData).toHaveBeenCalledWith(
         expect.objectContaining({ apiKey: "sk-new-key" }),
       );
     });
+    expect(mocks.fetchPublicLogs).not.toHaveBeenCalled();
   });
 
   test("restores the last looked up API key after page refresh and shows its name", async () => {
@@ -109,19 +110,47 @@ describe("ApiKeyLookupPage", () => {
     );
 
     await waitFor(() => {
-      expect(mocks.fetchPublicLogs).toHaveBeenCalledWith(
-        expect.objectContaining({ apiKey: "sk-restored-key" }),
-      );
       expect(mocks.fetchPublicChartData).toHaveBeenCalledWith(
         expect.objectContaining({ apiKey: "sk-restored-key" }),
       );
     });
+    expect(mocks.fetchPublicLogs).not.toHaveBeenCalled();
     expect(
       await screen.findByRole("combobox", { name: /primary key/i }),
     ).toBeInTheDocument();
     expect(
       screen.queryByRole("dialog", { name: /enter api key/i }),
     ).not.toBeInTheDocument();
+  });
+
+  test("loads public logs only after switching to the request logs tab", async () => {
+    window.sessionStorage.setItem(
+      "apiKeyLookup.lastApiKey.v1",
+      "sk-restored-key",
+    );
+
+    render(
+      <ThemeProvider>
+        <ToastProvider>
+          <ApiKeyLookupPage />
+        </ToastProvider>
+      </ThemeProvider>,
+    );
+
+    await waitFor(() => {
+      expect(mocks.fetchPublicChartData).toHaveBeenCalledWith(
+        expect.objectContaining({ apiKey: "sk-restored-key" }),
+      );
+    });
+    expect(mocks.fetchPublicLogs).not.toHaveBeenCalled();
+
+    await userEvent.click(screen.getByRole("tab", { name: /request logs/i }));
+
+    await waitFor(() => {
+      expect(mocks.fetchPublicLogs).toHaveBeenCalledWith(
+        expect.objectContaining({ apiKey: "sk-restored-key", page: 1 }),
+      );
+    });
   });
 
   test("does not duplicate the current key in the header menu", async () => {

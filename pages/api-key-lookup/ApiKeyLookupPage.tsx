@@ -416,9 +416,13 @@ export function ApiKeyLookupPage() {
         const cachedName = cached.api_key_name?.trim() ?? "";
         if (cachedName) setApiKeyName(cachedName);
         setChartData(cached);
+        setQueriedKey(trimmedKey);
+        writeStoredLookupKey(trimmedKey);
+        setLoginModalOpen(false);
       }
 
       setChartLoading(true);
+      setError(null);
       try {
         const data = await fetchPublicChartData({ apiKey: trimmedKey, days });
         chartCacheRef.current[cacheKey] = data;
@@ -426,13 +430,18 @@ export function ApiKeyLookupPage() {
         const nextName = data.api_key_name?.trim() ?? "";
         if (nextName) setApiKeyName(nextName);
         setChartData(data);
-      } catch {
-        // Keep stale chart data visible; logs request owns the user-facing error.
+        setQueriedKey(trimmedKey);
+        writeStoredLookupKey(trimmedKey);
+        setLoginModalOpen(false);
+      } catch (err) {
+        if (!cached) {
+          setError(localizeLookupError(t, err, "apikey_lookup.query_failed"));
+        }
       } finally {
         setChartLoading(false);
       }
     },
-    [],
+    [t],
   );
 
   // ================================================================
@@ -525,8 +534,7 @@ export function ApiKeyLookupPage() {
     restoredLookupFetchedRef.current = true;
     chartCacheRef.current = {};
     void fetchChartDataFn(initialLookupKey, timeRange);
-    fetchLogs(initialLookupKey, 1);
-  }, [fetchChartDataFn, fetchLogs, initialLookupKey, timeRange]);
+  }, [fetchChartDataFn, initialLookupKey, timeRange]);
 
   const handleSubmit = useCallback(
     (event?: React.FormEvent) => {
@@ -542,9 +550,8 @@ export function ApiKeyLookupPage() {
         chartCacheRef.current = {};
         if (activeTab === "usage") {
           void fetchChartDataFn(val, timeRange);
-          fetchLogs(val, 1);
         } else if (activeTab === "models") {
-          fetchLogs(val, 1);
+          void fetchChartDataFn(val, timeRange);
           void fetchModelsFn(val);
         } else {
           fetchLogs(val, 1);
