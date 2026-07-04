@@ -149,7 +149,7 @@ function CalendarHeatmap({
               <HoverTooltip
                 key={date}
                 className="h-3 w-3"
-                placement="top"
+                placement="bottom"
                 content={<HeatmapTooltip t={t} date={date} point={point} />}
               >
                 <span

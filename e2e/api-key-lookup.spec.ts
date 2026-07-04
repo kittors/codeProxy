@@ -103,6 +103,49 @@ const mockLookupApisForQuickImport = async (page: Page) => {
   });
 };
 
+const localDateKey = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const latestSundayDateKey = () => {
+  const date = new Date();
+  date.setDate(date.getDate() - date.getDay());
+  return localDateKey(date);
+};
+
+const mockLookupApisForHeatmap = async (page: Page, date: string) => {
+  await page.route("**/v0/management/public/usage/chart-data", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        daily_series: [],
+        heatmap_series: [
+          {
+            date,
+            requests: 382,
+            sessions: 8,
+            tokens: 26890848,
+            cost: 36.5432,
+          },
+        ],
+        model_distribution: [],
+        api_key_name: "Heatmap key",
+        stats: {
+          total: 382,
+          success_rate: 100,
+          total_tokens: 26890848,
+          total_sessions: 8,
+          total_cost: 36.5432,
+        },
+      }),
+    });
+  });
+};
+
 const decodeCodexConfigBlob = (url: string) => {
   const encoded = new URL(url).searchParams.get("config");
   if (!encoded) throw new Error("missing config param");
@@ -116,6 +159,32 @@ const decodeCodexConfigBlob = (url: string) => {
     modelCatalog?: { models: Array<Record<string, unknown>> };
   };
 };
+
+test("API Key Lookup: Heatmap tooltip stays inside the heatmap card when hovering the top row", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 820 });
+  await setQueriedLookupKey(page);
+  const date = latestSundayDateKey();
+  await mockLookupApisForHeatmap(page, date);
+
+  await page.goto("/#/apikey-lookup");
+
+  const heatmapCard = page
+    .getByRole("heading", { name: /Request Heatmap|请求热力图/i })
+    .locator("xpath=ancestor::section[1]");
+  await expect(heatmapCard).toBeVisible();
+
+  await page.locator(`[aria-label^="${date}: 382 "]`).hover();
+  const tooltip = page.getByRole("tooltip");
+  await expect(tooltip).toBeVisible();
+
+  const positions = await Promise.all([heatmapCard.boundingBox(), tooltip.boundingBox()]);
+  const [cardBox, tooltipBox] = positions;
+  expect(cardBox).not.toBeNull();
+  expect(tooltipBox).not.toBeNull();
+  expect(tooltipBox!.y).toBeGreaterThanOrEqual(cardBox!.y);
+});
 
 test("API Key Lookup: Quick Import codex card opens a ccswitch deep link with embedded catalog", async ({
   page,
