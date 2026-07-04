@@ -27,6 +27,7 @@ const emptyLogsResponse = {
     api_key_names: {},
     models: [],
     channels: [],
+    statuses: [],
   },
   stats: {
     total: 0,
@@ -49,6 +50,7 @@ const responseWithFilterOptions = {
     },
     models: ["gpt-5.4", "gpt-4.1"],
     channels: ["Codex", "Relay"],
+    statuses: ["success", "failed"],
   },
   stats: {
     total: 0,
@@ -377,6 +379,33 @@ describe("RequestLogsPage", () => {
       "aria-selected",
       "true",
     );
+  });
+
+  test("uses backend status filter candidates", async () => {
+    await i18n.changeLanguage("en");
+    const user = userEvent.setup();
+
+    mocks.getUsageLogs.mockResolvedValue({
+      ...responseWithFilterOptions,
+      filters: {
+        ...responseWithFilterOptions.filters,
+        statuses: ["success"],
+      },
+    });
+
+    render(
+      <ThemeProvider>
+        <ToastProvider>
+          <RequestLogsPage />
+        </ToastProvider>
+      </ThemeProvider>,
+    );
+
+    const [, , , statusFilter] = await screen.findAllByRole("combobox");
+    await user.click(statusFilter);
+
+    expect(await screen.findByRole("option", { name: "Success" })).toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: "Failed" })).not.toBeInTheDocument();
   });
 
   test("only applies request-log multi-select changes after confirmation and restores full selection", async () => {
