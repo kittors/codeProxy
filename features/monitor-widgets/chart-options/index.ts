@@ -7,4 +7,8 @@ export type {
 export { createDailyTrendOption } from "./daily-trend";
 export { createHourlyModelOption } from "./hourly-model";
 export { createHourlyTokenOption } from "./hourly-token";
-export { createModelDistributionOption } from "./model-distribution";
+export {
+  buildModelDistributionData,
+  createModelDistributionOption,
+  MODEL_DISTRIBUTION_VISIBLE_LIMIT,
+} from "./model-distribution";
