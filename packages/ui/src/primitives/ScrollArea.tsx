@@ -10,7 +10,7 @@ import {
   type PropsWithChildren,
 } from "react";
 
-type ScrollbarVisibility = "hover" | "always";
+type ScrollbarVisibility = "hover" | "track-hover" | "always";
 
 type ScrollMetrics = {
   clientHeight: number;
@@ -161,6 +161,8 @@ export function ScrollArea({
   const visibilityClasses =
     scrollbarVisibility === "always"
       ? "opacity-100"
+      : scrollbarVisibility === "track-hover"
+        ? "opacity-0 transition-opacity hover:opacity-100 group-focus-within:opacity-100"
       : "opacity-0 transition-opacity hover:opacity-100 group-hover:opacity-100 group-focus-within:opacity-100";
 
   return (
