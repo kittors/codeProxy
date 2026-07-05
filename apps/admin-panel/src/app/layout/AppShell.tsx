@@ -255,7 +255,7 @@ function ShellSidebar({
           </span>
         </div>
         <ScrollArea
-          className="flex-1 [&_[data-scroll-area-scrollbar='y']]:right-1"
+          className="flex-1 [&_[data-scroll-area-scrollbar='y']]:right-1 [&_[data-scroll-area-scrollbar='y']]:w-5"
           scrollbarVisibility="track-hover"
           scrollbarTrackInset={16}
         >

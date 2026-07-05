@@ -51,6 +51,8 @@ export function ScrollArea({
   const viewportRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const dragStateRef = useRef<DragState | null>(null);
+  const scrollHideTimerRef = useRef<number | null>(null);
+  const [scrollbarActive, setScrollbarActive] = useState(false);
   const [metrics, setMetrics] = useState<ScrollMetrics>({
     clientHeight: 0,
     scrollHeight: 0,
@@ -90,6 +92,14 @@ export function ScrollArea({
     measure();
   }, [children, measure]);
 
+  useEffect(() => {
+    return () => {
+      if (scrollHideTimerRef.current !== null) {
+        window.clearTimeout(scrollHideTimerRef.current);
+      }
+    };
+  }, []);
+
   const thumb = useMemo(() => {
     const trackInset = Math.max(0, scrollbarTrackInset);
     const hasVerticalOverflow = metrics.scrollHeight > metrics.clientHeight + 1;
@@ -116,7 +126,16 @@ export function ScrollArea({
 
   const handleScroll = useCallback(() => {
     measure();
-  }, [measure]);
+    if (scrollbarVisibility !== "track-hover") return;
+    setScrollbarActive(true);
+    if (scrollHideTimerRef.current !== null) {
+      window.clearTimeout(scrollHideTimerRef.current);
+    }
+    scrollHideTimerRef.current = window.setTimeout(() => {
+      setScrollbarActive(false);
+      scrollHideTimerRef.current = null;
+    }, 900);
+  }, [measure, scrollbarVisibility]);
 
   const handleThumbPointerDown = useCallback(
     (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -162,7 +181,9 @@ export function ScrollArea({
     scrollbarVisibility === "always"
       ? "opacity-100"
       : scrollbarVisibility === "track-hover"
-        ? "opacity-0 transition-opacity hover:opacity-100 group-focus-within:opacity-100"
+        ? scrollbarActive
+          ? "opacity-100 transition-opacity hover:opacity-100 group-focus-within:opacity-100"
+          : "opacity-0 transition-opacity hover:opacity-100 group-focus-within:opacity-100"
       : "opacity-0 transition-opacity hover:opacity-100 group-hover:opacity-100 group-focus-within:opacity-100";
 
   return (
