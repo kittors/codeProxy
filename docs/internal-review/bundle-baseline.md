@@ -1,6 +1,6 @@
 # codeProxy Bundle Baseline
 
-更新时间：2026-05-01 08:48:36 +0800
+更新时间：2026-07-02 14:12:26 +0800
 
 ## 当前构建命令
 
@@ -13,18 +13,19 @@ bun run build
 
 | Chunk                |       Size |      Gzip | 备注                                                                        |
 | -------------------- | ---------: | --------: | --------------------------------------------------------------------------- |
-| `vendor-echarts`     | 1137.56 kB | 377.94 kB | 图表主依赖，明显过大                                                        |
-| `vendor-markdown`    |  779.40 kB | 270.17 kB | Markdown + syntax highlighter 组合                                          |
-| `index`              |  639.23 kB | 187.31 kB | 入口基础包仍偏大                                                            |
-| `ConfigPage`         |  152.50 kB |  44.45 kB | 页面 chunk 偏大                                                             |
-| `AuthFilesPage`      |  137.13 kB |  37.21 kB | 页面主文件已达行数目标，近期额度趋势与 OAuth 交互补齐后仍低于页面 gzip 预算 |
-| `ProvidersPage`      |   72.07 kB |  18.34 kB | 已低于 `< 80 kB gzip` 页面预算                                              |
-| `MonitorPage`        |   27.11 kB |   6.92 kB | 已拆为 toolbar / state hook / dashboard sections                            |
-| `LogsPage`           |   18.96 kB |   5.77 kB | 已拆为 live logs / error logs / helpers                                     |
-| `EChart`             |    0.80 kB |   0.45 kB | 图表入口已降为懒加载包装层                                                  |
-| `EChartRenderer`     |    2.45 kB |   1.03 kB | 图表实际渲染器按需要加载                                                    |
-| `LogContentModal`    |   31.39 kB |   9.50 kB | 已从主详情弹窗中拆出 Markdown 渲染重依赖                                    |
-| `rendering-markdown` |   14.64 kB |   2.77 kB | 按交互加载的 Markdown / syntax highlighter 子块                             |
+| `vendor-echarts`     | 1110.90 kB | 368.34 kB | 图表主依赖，明显过大                                                        |
+| `vendor-markdown`    |  761.13 kB | 261.12 kB | Markdown + syntax highlighter 组合                                          |
+| `vendor-animation`   |  126.13 kB |  41.83 kB | 动画依赖独立 vendor chunk                                                   |
+| `vendor-charts`      |    0.07 kB |   0.08 kB | Chart.js 入口当前几乎未进入业务路径                                         |
+| `index`              |  283.68 kB |  88.17 kB | 入口基础包接受本轮窗口顶部进度条变化，后续仍需持续往下压                    |
+| `ConfigPage`         |  118.44 kB |  32.93 kB | 页面 chunk 低于预算                                                         |
+| `AuthFilesPage`      |  203.20 kB |  54.93 kB | 页面主文件仍低于页面 gzip 预算                                              |
+| `ProvidersPage`      |  113.50 kB |  28.33 kB | 已低于 `< 80 kB gzip` 页面预算                                              |
+| `MonitorPage`        |   24.48 kB |   6.81 kB | 已拆为 toolbar / state hook / dashboard sections                            |
+| `LogsPage`           |   19.36 kB |   5.80 kB | 已拆为 live logs / error logs / helpers                                     |
+| `EChartRenderer`     |    3.71 kB |   1.39 kB | 图表实际渲染器按需要加载                                                    |
+| `LogContentModal`    |   44.82 kB |  12.96 kB | 已从主详情弹窗中拆出 Markdown 渲染重依赖                                    |
+| `rendering-markdown` |   14.34 kB |   2.73 kB | 按交互加载的 Markdown 入口，重依赖在 `vendor-markdown`                      |
 
 ## 目标预算
 
@@ -36,11 +37,11 @@ bun run build
 
 | 页面/模块         |                  当前体积 | 预算状态       | 最近治理结果                                                                                                    |
 | ----------------- | ------------------------: | -------------- | --------------------------------------------------------------------------------------------------------------- |
-| `AuthFilesPage`   | 137.13 kB / 37.21 kB gzip | 通过           | 主页面已从 4095 行降到 460 行，近期补齐额度趋势与 OAuth 交互测试后仍低于页面 gzip 预算，后续继续关注 chunk 治理 |
-| `ConfigPage`      | 152.50 kB / 44.45 kB gzip | 通过           | 已拆出 runtime panel / visual payload editors，后续继续处理编辑器重依赖                                         |
-| `ProvidersPage`   |  72.07 kB / 18.34 kB gzip | 通过且低于预算 | OpenAI tab、usage summary、provider editor hooks 已完成拆分                                                     |
-| `LogContentModal` |   31.39 kB / 9.50 kB gzip | 通过且低于预算 | Markdown 渲染改为按交互懒加载，保留完整内容查看能力                                                             |
-| `MonitorPage`     |   27.11 kB / 6.92 kB gzip | 通过且低于预算 | 拆出 `MonitorToolbarSection`、`MonitorDashboardSections`、`useMonitorDashboardState`                            |
+| `AuthFilesPage`   | 203.20 kB / 54.93 kB gzip | 通过           | 近期额度趋势与 OAuth 交互补齐后仍低于页面 gzip 预算，后续继续关注 chunk 治理 |
+| `ConfigPage`      | 118.44 kB / 32.93 kB gzip | 通过           | 已拆出 runtime panel / visual payload editors，并复用 feature 侧 visual config hook |
+| `ProvidersPage`   | 113.50 kB / 28.33 kB gzip | 通过且低于预算 | OpenAI tab、usage summary、provider editor hooks 已完成拆分 |
+| `LogContentModal` |  44.82 kB / 12.96 kB gzip | 通过且低于预算 | Markdown 渲染改为按交互懒加载，保留完整内容查看能力 |
+| `MonitorPage`     |  24.48 kB /  6.81 kB gzip | 通过且低于预算 | 拆出 `MonitorToolbarSection`、`MonitorDashboardSections`、`useMonitorDashboardState` |
 
 ## 下一步
 

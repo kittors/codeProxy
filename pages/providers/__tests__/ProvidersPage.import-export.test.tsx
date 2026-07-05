@@ -7,17 +7,18 @@ import { ThemeProvider } from "@code-proxy/ui";
 import { ToastProvider } from "@code-proxy/ui";
 
 const mocks = vi.hoisted(() => ({
-  getGeminiKeys: vi.fn(async () => []),
-  getClaudeConfigs: vi.fn(async () => []),
+  getGeminiKeys: vi.fn(async (): Promise<unknown[]> => []),
+  getClaudeConfigs: vi.fn(async (): Promise<unknown[]> => []),
   getCodexConfigs: vi.fn(async (): Promise<any[]> => []),
-  getOpenCodeGoConfigs: vi.fn(async () => []),
-  getVertexConfigs: vi.fn(async () => []),
-  getBedrockConfigs: vi.fn(async () => []),
-  getOpenAIProviders: vi.fn(async () => []),
+  getOpenCodeGoConfigs: vi.fn(async (): Promise<unknown[]> => []),
+  getClineConfigs: vi.fn(async (): Promise<unknown[]> => []),
+  getVertexConfigs: vi.fn(async (): Promise<unknown[]> => []),
+  getBedrockConfigs: vi.fn(async (): Promise<unknown[]> => []),
+  getOpenAIProviders: vi.fn(async (): Promise<unknown[]> => []),
   saveCodexConfigs: vi.fn(async (_configs: unknown[]) => ({})),
   getEntityStats: vi.fn(async () => ({ source: [] })),
-  apiKeyEntriesList: vi.fn(async () => []),
-  channelGroupsList: vi.fn(async () => []),
+  apiKeyEntriesList: vi.fn(async (): Promise<unknown[]> => []),
+  channelGroupsList: vi.fn(async (): Promise<unknown[]> => []),
   proxiesList: vi.fn(async (): Promise<any[]> => []),
 }));
 
@@ -31,6 +32,7 @@ vi.mock("@code-proxy/api-client", async (importOriginal) => {
       getClaudeConfigs: mocks.getClaudeConfigs,
       getCodexConfigs: mocks.getCodexConfigs,
       getOpenCodeGoConfigs: mocks.getOpenCodeGoConfigs,
+      getClineConfigs: mocks.getClineConfigs,
       getVertexConfigs: mocks.getVertexConfigs,
       getBedrockConfigs: mocks.getBedrockConfigs,
       getOpenAIProviders: mocks.getOpenAIProviders,
@@ -86,6 +88,7 @@ describe("ProvidersPage import/export", () => {
         ] as any,
     );
     mocks.getOpenCodeGoConfigs.mockImplementation(async () => []);
+    mocks.getClineConfigs.mockImplementation(async () => []);
     mocks.getVertexConfigs.mockImplementation(async () => []);
     mocks.getBedrockConfigs.mockImplementation(async () => []);
     mocks.getOpenAIProviders.mockImplementation(async () => []);
@@ -164,14 +167,16 @@ describe("ProvidersPage import/export", () => {
     expect(importButton).toBeEnabled();
     await waitFor(() => expect(refreshButton).toBeDisabled());
     expect(refreshButton.querySelector("svg")).toHaveClass("animate-spin");
-    expect(screen.getByText(/Loading/i)).toBeInTheDocument();
+    expect(screen.getByText("Codex Main")).toBeInTheDocument();
+    expect(screen.queryByTestId("providers-list-skeleton")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Loading/i)).not.toBeInTheDocument();
 
     resolveRefresh?.([]);
     await waitFor(() => expect(mocks.getCodexConfigs).toHaveBeenCalledTimes(2));
-    await waitFor(() => expect(screen.queryByText(/Loading/i)).not.toBeInTheDocument());
+    expect(screen.queryByText(/Loading/i)).not.toBeInTheDocument();
   });
 
-  test("shows page loading when switching to an unloaded provider tab", async () => {
+  test("shows skeleton cards when switching to an unloaded provider tab", async () => {
     const user = userEvent.setup();
     let resolveSwitch: ((configs: any[]) => void) | undefined;
     mocks.getCodexConfigs.mockImplementationOnce(
@@ -195,7 +200,8 @@ describe("ProvidersPage import/export", () => {
 
     await waitFor(() => expect(refreshButton).toBeDisabled());
     expect(refreshButton.querySelector("svg")).toHaveClass("animate-spin");
-    expect(screen.getByText(/Loading/i)).toBeInTheDocument();
+    expect(screen.getByTestId("providers-list-skeleton")).toBeInTheDocument();
+    expect(screen.queryByText(/Loading/i)).not.toBeInTheDocument();
 
     resolveSwitch?.([
       {
@@ -204,7 +210,9 @@ describe("ProvidersPage import/export", () => {
       },
     ]);
     expect(await screen.findByText("Codex Main")).toBeInTheDocument();
-    await waitFor(() => expect(screen.queryByText(/Loading/i)).not.toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.queryByTestId("providers-list-skeleton")).not.toBeInTheDocument(),
+    );
   });
 
   test("does not refresh when clicking the active provider tab again", async () => {

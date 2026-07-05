@@ -30,6 +30,11 @@ export interface RoutingConfigItem {
 }
 
 export const routingConfigApi = {
-  get: () => apiClient.get<RoutingConfigItem>("/routing-config"),
+  get: (options?: { signal?: AbortSignal }) => {
+    if (options?.signal) {
+      return apiClient.get<RoutingConfigItem>("/routing-config", { signal: options.signal });
+    }
+    return apiClient.get<RoutingConfigItem>("/routing-config");
+  },
   update: (payload: RoutingConfigItem) => apiClient.put("/routing-config", payload),
 };

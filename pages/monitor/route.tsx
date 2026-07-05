@@ -1,6 +1,8 @@
-import { lazy } from "react";
+import { preloadablePage } from "../preloadablePage";
 
-const MonitorPage = lazy(() => import("./MonitorPage").then((m) => ({ default: m.MonitorPage })));
+const { Page: MonitorPage, preload: preloadMonitorPage } = preloadablePage(() =>
+  import("./MonitorPage").then((m) => ({ default: m.MonitorPage })),
+);
 
 export const monitorRoute = {
   path: "/monitor",
@@ -9,4 +11,5 @@ export const monitorRoute = {
   layout: "dashboard",
   nav: { labelKey: "nav.monitor" },
   redirects: [{ from: "/usage", to: "/monitor" }],
+  preload: preloadMonitorPage,
 };

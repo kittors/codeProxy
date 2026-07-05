@@ -1,6 +1,6 @@
-import { lazy } from "react";
+import { preloadablePage } from "../preloadablePage";
 
-const ApiKeyPermissionsPage = lazy(() =>
+const { Page: ApiKeyPermissionsPage, preload: preloadApiKeyPermissionsPage } = preloadablePage(() =>
   import("./ApiKeyPermissionsPage").then((m) => ({
     default: m.ApiKeyPermissionsPage,
   })),
@@ -13,4 +13,5 @@ export const apiKeyPermissionsRoute = {
   layout: "dashboard",
   nav: { labelKey: "nav.apiKeyPermissions" },
   redirects: [{ from: "/manage/api-key-permissions", to: "/api-key-permissions" }],
+  preload: preloadApiKeyPermissionsPage,
 };

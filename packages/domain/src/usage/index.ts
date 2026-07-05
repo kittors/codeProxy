@@ -1,4 +1,3 @@
-export * from "./chartConfig";
 export * from "./charts";
 export * from "./details";
 export * from "./formatters";

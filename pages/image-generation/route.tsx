@@ -1,6 +1,6 @@
-import { lazy } from "react";
+import { preloadablePage } from "../preloadablePage";
 
-const ImageGenerationPage = lazy(() =>
+const { Page: ImageGenerationPage, preload: preloadImageGenerationPage } = preloadablePage(() =>
   import("./ImageGenerationPage").then((m) => ({
     default: m.ImageGenerationPage,
   })),
@@ -12,4 +12,5 @@ export const imageGenerationRoute = {
   auth: true,
   layout: "dashboard",
   nav: { labelKey: "nav.imageGeneration" },
+  preload: preloadImageGenerationPage,
 };

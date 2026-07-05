@@ -5,7 +5,7 @@ import { configApi, configFileApi } from "@code-proxy/api-client";
 import { FloatingSaveBar } from "./FloatingSaveBar";
 import { RuntimeConfigPanel } from "./RuntimeConfigPanel";
 import { VisualConfigEditor } from "./visual/VisualConfigEditor";
-import { useVisualConfig } from "./visual/useVisualConfig";
+import { useVisualConfig } from "@features/visual-config-editor";
 import { Card } from "@code-proxy/ui";
 import { ConfirmModal } from "@code-proxy/ui";
 import { EmptyState } from "@code-proxy/ui";

@@ -7,6 +7,7 @@ import { Modal } from "@code-proxy/ui";
 type DeleteApiKeyModalProps = {
   t: TFunction;
   entry: ApiKeyEntry | null;
+  selectedCount?: number;
   open: boolean;
   saving: boolean;
   deleteLogsOnDelete: boolean;
@@ -18,6 +19,7 @@ type DeleteApiKeyModalProps = {
 export function DeleteApiKeyModal({
   t,
   entry,
+  selectedCount = 0,
   open,
   saving,
   deleteLogsOnDelete,
@@ -25,12 +27,20 @@ export function DeleteApiKeyModal({
   onClose,
   onConfirm,
 }: DeleteApiKeyModalProps) {
+  const isBatchDelete = selectedCount > 0;
+
   return (
     <Modal
       open={open}
       onClose={onClose}
-      title={t("api_keys_page.confirm_delete")}
-      description={t("api_keys_page.delete_warning")}
+      title={
+        isBatchDelete
+          ? t("api_keys_page.confirm_batch_delete", { count: selectedCount })
+          : t("api_keys_page.confirm_delete")
+      }
+      description={
+        isBatchDelete ? t("api_keys_page.batch_delete_warning") : t("api_keys_page.delete_warning")
+      }
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>
@@ -42,7 +52,11 @@ export function DeleteApiKeyModal({
         </>
       }
     >
-      {entry ? (
+      {isBatchDelete ? (
+        <div className="rounded-xl bg-red-50 p-3 text-sm font-medium text-red-800 dark:bg-red-900/20 dark:text-red-300">
+          {t("api_keys_page.batch_delete_selected_count", { count: selectedCount })}
+        </div>
+      ) : entry ? (
         <div className="space-y-3">
           <div className="rounded-xl bg-red-50 p-3 dark:bg-red-900/20">
             <div className="text-sm font-medium text-red-800 dark:text-red-300">

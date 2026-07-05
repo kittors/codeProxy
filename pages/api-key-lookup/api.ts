@@ -1,4 +1,7 @@
-import { detectApiBaseFromLocation, publicApiClient } from "@code-proxy/api-client";
+import {
+  detectApiBaseFromLocation,
+  publicApiClient,
+} from "@code-proxy/api-client";
 import type { ChartDataResponse, PublicLogsResponse } from "./types";
 
 type LogContentBodyPart = "input" | "output";
@@ -25,7 +28,9 @@ const extractModelIds = (payload: V1ModelsResponse): string[] => {
     new Set(
       data
         .map((item) =>
-          item && typeof item === "object" ? String((item as { id?: unknown }).id) : "",
+          item && typeof item === "object"
+            ? String((item as { id?: unknown }).id)
+            : "",
         )
         .map((value) => value.trim())
         .filter(Boolean),
@@ -38,8 +43,12 @@ export async function fetchPublicLogs(params: {
   page?: number;
   size?: number;
   days?: number;
-  model?: string;
-  status?: string;
+  models?: string[];
+  channels?: string[];
+  statuses?: string[];
+  modelsEmpty?: boolean;
+  channelsEmpty?: boolean;
+  statusesEmpty?: boolean;
   signal?: AbortSignal;
 }): Promise<PublicLogsResponse> {
   return publicApiClient.post<PublicLogsResponse>(
@@ -49,8 +58,12 @@ export async function fetchPublicLogs(params: {
       page: params.page,
       size: params.size,
       days: params.days,
-      model: params.model,
-      status: params.status,
+      models: params.models,
+      channels: params.channels,
+      statuses: params.statuses,
+      models_empty: params.modelsEmpty,
+      channels_empty: params.channelsEmpty,
+      statuses_empty: params.statusesEmpty,
     },
     { signal: params.signal },
   );
@@ -59,11 +72,16 @@ export async function fetchPublicLogs(params: {
 export async function fetchPublicChartData(params: {
   apiKey: string;
   days?: number;
+  signal?: AbortSignal;
 }): Promise<ChartDataResponse> {
-  return publicApiClient.post<ChartDataResponse>("/usage/chart-data", {
-    api_key: params.apiKey,
-    days: params.days,
-  });
+  return publicApiClient.post<ChartDataResponse>(
+    "/usage/chart-data",
+    {
+      api_key: params.apiKey,
+      days: params.days,
+    },
+    { signal: params.signal },
+  );
 }
 
 export async function fetchPublicLogContent(params: {

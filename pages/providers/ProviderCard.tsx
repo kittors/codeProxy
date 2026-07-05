@@ -171,3 +171,37 @@ export function ProviderCard({
     </div>
   );
 }
+
+export function ProviderCardSkeleton({ naturalHeight = false }: { naturalHeight?: boolean }) {
+  return (
+    <div
+      className={[
+        "flex flex-col rounded-xl border border-slate-200 bg-white/70 px-4 py-3 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60",
+        naturalHeight
+          ? "h-fit min-h-[220px] w-full max-w-[22rem] flex-none self-start"
+          : "h-[220px]",
+      ].join(" ")}
+      aria-hidden="true"
+    >
+      <div className="flex items-center justify-between gap-3">
+        <div className="h-4 w-32 animate-pulse rounded-full bg-slate-200 dark:bg-white/10" />
+        <div className="h-5 w-5 animate-pulse rounded-full bg-slate-200 dark:bg-white/10" />
+      </div>
+      <div className="mt-4 space-y-2">
+        <div className="h-3 w-11/12 animate-pulse rounded-full bg-slate-200 dark:bg-white/10" />
+        <div className="h-3 w-3/4 animate-pulse rounded-full bg-slate-200 dark:bg-white/10" />
+      </div>
+      <div className="mt-4 flex flex-wrap gap-1.5">
+        {Array.from({ length: 4 }, (_, index) => (
+          <div
+            key={index}
+            className="h-5 w-20 animate-pulse rounded-full bg-slate-200 dark:bg-white/10"
+          />
+        ))}
+      </div>
+      <div className="mt-auto pt-3">
+        <div className="h-2 w-full animate-pulse rounded-full bg-slate-200 dark:bg-white/10" />
+      </div>
+    </div>
+  );
+}

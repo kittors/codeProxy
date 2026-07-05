@@ -4,7 +4,7 @@ import type { OpenAIProvider } from "@code-proxy/api-client";
 import { Button } from "@code-proxy/ui";
 import { Card } from "@code-proxy/ui";
 import { EmptyState } from "@code-proxy/ui";
-import { ProviderCard } from "../ProviderCard";
+import { ProviderCard, ProviderCardSkeleton } from "../ProviderCard";
 import { ProviderStatusBar } from "@features/provider-latency";
 import { ProviderMetricChip } from "./ProviderMetricChip";
 import { ProviderModelChips } from "./ProviderModelChips";
@@ -44,6 +44,7 @@ export function OpenAIProvidersTab({
   onToggleSelected,
 }: OpenAIProvidersTabProps) {
   const { t } = useTranslation();
+  const showSkeleton = loading && providers.length === 0;
 
   return (
     <Card
@@ -51,7 +52,6 @@ export function OpenAIProvidersTab({
       description={t("providers.openai_tab_desc")}
       className="flex h-full min-h-0 flex-col"
       bodyClassName="min-h-0 flex flex-1 flex-col"
-      loading={loading}
       actions={
         <Button variant="primary" size="sm" onClick={() => openOpenAIEditor(null)}>
           <Plus size={14} />
@@ -59,7 +59,19 @@ export function OpenAIProvidersTab({
         </Button>
       }
     >
-      {providers.length === 0 ? (
+      {showSkeleton ? (
+        <div
+          role="status"
+          aria-label={t("common.loading")}
+          data-testid="providers-list-skeleton"
+          className="min-h-0 flex-1 overflow-hidden pr-1 grid gap-3 items-start content-start justify-start"
+          style={{ gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 18rem), 22rem))" }}
+        >
+          {Array.from({ length: 6 }, (_, index) => (
+            <ProviderCardSkeleton key={index} />
+          ))}
+        </div>
+      ) : providers.length === 0 ? (
         <EmptyState
           title={t("providers.no_openai_providers")}
           description={t("providers.no_openai_desc")}

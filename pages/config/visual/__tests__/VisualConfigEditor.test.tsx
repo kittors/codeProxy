@@ -3,8 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import i18n from "@code-proxy/i18n";
 import { VisualConfigEditor } from "@pages/config/visual/VisualConfigEditor";
-import { DEFAULT_VISUAL_VALUES } from "@features/visual-config-editor";
-import { useVisualConfig } from "@pages/config/visual/useVisualConfig";
+import { DEFAULT_VISUAL_VALUES, useVisualConfig } from "@features/visual-config-editor";
 import { ThemeProvider } from "@code-proxy/ui";
 
 function renderEditor(onChange = vi.fn()) {

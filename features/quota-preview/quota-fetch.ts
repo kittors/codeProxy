@@ -6,6 +6,7 @@ import {
   CLAUDE_REQUEST_HEADERS,
   CLAUDE_USAGE_URL,
   CODEX_REQUEST_HEADERS,
+  CODEX_RESET_CREDITS_URL,
   CODEX_RESET_CREDITS_CONSUME_URL,
   CODEX_USAGE_URL,
   DEFAULT_ANTIGRAVITY_PROJECT_ID,
@@ -38,6 +39,7 @@ import {
   parseResetTimeToMs,
   resolveAuthProvider,
   resolveCodexChatgptAccountId,
+  resolveCodexResetCreditExpirations,
   resolveCodexResetCreditCount,
   resolveGeminiCliProjectId,
   type QuotaItem,
@@ -48,6 +50,7 @@ export type QuotaFetchResult = {
   items: QuotaItem[];
   planType?: string | null;
   resetCreditCount?: number;
+  resetCreditExpirations?: string[];
 };
 
 const createRedeemRequestId = (): string =>
@@ -167,20 +170,40 @@ export const fetchQuota = async (
   }
 
   if (type === "codex") {
+    const header = buildCodexRequestHeaders(file);
     const result = await apiCallApi.request({
       authIndex,
       method: "GET",
       url: CODEX_USAGE_URL,
-      header: buildCodexRequestHeaders(file),
+      header,
     });
     if (result.statusCode < 200 || result.statusCode >= 300)
       throw new Error(getApiCallErrorMessage(result));
     const payload = parseCodexUsagePayload(result.body ?? result.bodyText);
     if (!payload) throw new Error("parse_codex_failed");
+    const resetCreditCount = resolveCodexResetCreditCount(payload);
+    let resetCreditExpirations: string[] | undefined;
+    if (resetCreditCount > 0) {
+      try {
+        const details = await apiCallApi.request({
+          authIndex,
+          method: "GET",
+          url: CODEX_RESET_CREDITS_URL,
+          header,
+        });
+        if (details.statusCode >= 200 && details.statusCode < 300) {
+          const expirations = resolveCodexResetCreditExpirations(details.body ?? details.bodyText);
+          resetCreditExpirations = expirations.length > 0 ? expirations : undefined;
+        }
+      } catch {
+        resetCreditExpirations = undefined;
+      }
+    }
     return {
       items: buildCodexItems(payload),
       planType: normalizeStringValue(payload.plan_type ?? payload.planType)?.toLowerCase() ?? null,
-      resetCreditCount: resolveCodexResetCreditCount(payload),
+      resetCreditCount,
+      resetCreditExpirations,
     };
   }
 

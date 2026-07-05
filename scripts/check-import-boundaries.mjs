@@ -13,6 +13,15 @@ const FORBIDDEN_IMPORTS = [
   { pattern: /^@\/lib\/http(?:\/|$)/, reason: "HTTP client code lives in @code-proxy/api-client" },
 ];
 
+const FEATURE_IMPORT_ALLOWLIST = new Set([
+  "features/ccswitch-import->features/model-availability",
+  "features/oauth-login->features/proxy-pool",
+  "features/request-log-viewer->features/model-tags",
+  "features/request-log-viewer->features/monitor-widgets",
+  "features/routing-config-editor->features/model-availability",
+  "features/routing-config-editor->features/visual-config-editor",
+]);
+
 function toRelativePath(filePath) {
   return relative(root, resolve(filePath)).replaceAll("\\", "/");
 }
@@ -85,7 +94,10 @@ function canImport(source, target, resolved) {
   }
 
   if (source.layer === "features") {
-    return ["features", "packages"].includes(target.layer);
+    if (target.layer === "features") {
+      return FEATURE_IMPORT_ALLOWLIST.has(`${source.unit}->${target.unit}`);
+    }
+    return target.layer === "packages";
   }
 
   if (source.layer === "packages") {

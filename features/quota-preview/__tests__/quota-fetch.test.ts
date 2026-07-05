@@ -327,6 +327,85 @@ describe("fetchQuota for codex", () => {
       }),
     ]);
   });
+
+  test("requests reset credit details when Codex usage reports available credits", async () => {
+    mocks.request
+      .mockResolvedValueOnce({
+        statusCode: 200,
+        header: {},
+        bodyText: "",
+        body: {
+          plan_type: "plus",
+          rate_limit_reset_credits: { available_count: 2 },
+        },
+      })
+      .mockResolvedValueOnce({
+        statusCode: 200,
+        header: {},
+        bodyText: "",
+        body: {
+          credits: [
+            { expires_at: "2026-07-04T10:00:00Z" },
+            { expiresAt: "2026-07-03T10:00:00Z" },
+          ],
+        },
+      });
+
+    const result = await fetchQuota("codex", {
+      name: "codex.json",
+      provider: "codex",
+      auth_index: "codex-1",
+    } as any);
+
+    expect(mocks.request).toHaveBeenCalledTimes(2);
+    expect(mocks.request.mock.calls[0]?.[0]).toEqual(
+      expect.objectContaining({
+        method: "GET",
+        url: "https://chatgpt.com/backend-api/wham/usage",
+      }),
+    );
+    expect(mocks.request.mock.calls[1]?.[0]).toEqual(
+      expect.objectContaining({
+        method: "GET",
+        url: "https://chatgpt.com/backend-api/wham/rate-limit-reset-credits",
+      }),
+    );
+    expect(result.resetCreditCount).toBe(2);
+    expect(result.resetCreditExpirations).toEqual([
+      "2026-07-03T10:00:00Z",
+      "2026-07-04T10:00:00Z",
+    ]);
+  });
+
+  test("keeps Codex quota result when reset credit details fail", async () => {
+    mocks.request
+      .mockResolvedValueOnce({
+        statusCode: 200,
+        header: {},
+        bodyText: "",
+        body: {
+          plan_type: "plus",
+          rate_limit_reset_credits: { available_count: 1 },
+        },
+      })
+      .mockResolvedValueOnce({
+        statusCode: 500,
+        header: {},
+        bodyText: "upstream failed",
+        body: "",
+      });
+
+    const result = await fetchQuota("codex", {
+      name: "codex.json",
+      provider: "codex",
+      auth_index: "codex-1",
+    } as any);
+
+    expect(mocks.request).toHaveBeenCalledTimes(2);
+    expect(result.planType).toBe("plus");
+    expect(result.resetCreditCount).toBe(1);
+    expect(result.resetCreditExpirations).toBeUndefined();
+  });
 });
 
 describe("fetchQuota for claude", () => {

@@ -1,10 +1,11 @@
-import { lazy } from "react";
+import { preloadablePage } from "../preloadablePage";
 
-const CcSwitchImportSettingsPage = lazy(() =>
-  import("./CcSwitchImportSettingsPage").then((m) => ({
-    default: m.CcSwitchImportSettingsPage,
-  })),
-);
+const { Page: CcSwitchImportSettingsPage, preload: preloadCcSwitchImportSettingsPage } =
+  preloadablePage(() =>
+    import("./CcSwitchImportSettingsPage").then((m) => ({
+      default: m.CcSwitchImportSettingsPage,
+    })),
+  );
 
 export const ccswitchImportSettingsRoute = {
   path: "/ccswitch-import-settings",
@@ -13,4 +14,5 @@ export const ccswitchImportSettingsRoute = {
   layout: "dashboard",
   nav: { labelKey: "nav.ccswitchImportSettings" },
   redirects: [{ from: "/manage/ccswitch-import-settings", to: "/ccswitch-import-settings" }],
+  preload: preloadCcSwitchImportSettingsPage,
 };

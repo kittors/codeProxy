@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Plus, KeyRound, RefreshCw } from "lucide-react";
+import { Plus, KeyRound, RefreshCw, Trash2 } from "lucide-react";
 import {
   apiKeyEntriesApi,
   apiKeysApi,
@@ -33,13 +33,10 @@ import { CcSwitchImportCardList } from "./components/CcSwitchImportCardList";
 import { openCcSwitchImportUrl } from "@code-proxy/domain/ccswitch/ccswitchImport";
 import {
   appendCcSwitchRoutePath,
-  buildCcSwitchCodexModelCatalogJsonForConfig,
   buildCcSwitchImportUrlForConfig,
-  getCcSwitchCodexModelCatalogFilenameForConfig,
 } from "@code-proxy/domain/ccswitch/ccswitchImportLinks";
 import type { CcSwitchImportConfigListItem } from "@code-proxy/domain/ccswitch/ccswitchImportConfigList";
 import { ccSwitchConfigMatchesApiKeyPermissions } from "@code-proxy/domain/ccswitch/ccswitchImportCompatibility";
-import { downloadTextAsFile } from "@code-proxy/domain";
 import { LogContentModal } from "@features/log-content-viewer";
 import { ErrorDetailModal } from "@features/log-content-viewer";
 import type { ApiKeyFormValues } from "./types";
@@ -50,10 +47,12 @@ export function ApiKeysPage() {
   const auth = useOptionalAuth();
 
   const [entries, setEntries] = useState<ApiKeyEntry[]>([]);
+  const [selectedKeys, setSelectedKeys] = useState<Set<string>>(() => new Set());
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [deleteIndex, setDeleteIndex] = useState<number | null>(null);
+  const [batchDeleteOpen, setBatchDeleteOpen] = useState(false);
   const [deleteLogsOnDelete, setDeleteLogsOnDelete] = useState(true);
   const [ccSwitchImportEntry, setCcSwitchImportEntry] = useState<ApiKeyEntry | null>(null);
   const [ccSwitchImportConfigs, setCcSwitchImportConfigs] = useState<
@@ -168,6 +167,14 @@ export function ApiKeysPage() {
     [],
   );
 
+  useEffect(() => {
+    setSelectedKeys((prev) => {
+      const entryKeys = new Set(entries.map((entry) => entry.key));
+      const next = new Set(Array.from(prev).filter((key) => entryKeys.has(key)));
+      return next.size === prev.size ? prev : next;
+    });
+  }, [entries]);
+
   const showCopiedCcSwitchImportState = useCallback((configId: string) => {
     setCopiedCcSwitchImportConfigId(configId);
     if (copiedCcSwitchImportTimerRef.current) {
@@ -209,6 +216,37 @@ export function ApiKeysPage() {
 
   const selectedPermissionProfile = (profileId: string) =>
     profileId ? (permissionProfileById.get(profileId) ?? null) : null;
+
+  const selectedEntries = useMemo(
+    () => entries.filter((entry) => selectedKeys.has(entry.key)),
+    [entries, selectedKeys],
+  );
+  const allRowsSelected =
+    entries.length > 0 && entries.every((entry) => selectedKeys.has(entry.key));
+  const someRowsSelected = selectedEntries.length > 0 && !allRowsSelected;
+
+  const handleSelectAll = useCallback(
+    (checked: boolean) => {
+      setSelectedKeys(checked ? new Set(entries.map((entry) => entry.key)) : new Set());
+    },
+    [entries],
+  );
+
+  const handleSelectRow = useCallback((key: string, checked: boolean) => {
+    setSelectedKeys((prev) => {
+      const next = new Set(prev);
+      if (checked) {
+        next.add(key);
+      } else {
+        next.delete(key);
+      }
+      return next;
+    });
+  }, []);
+
+  const clearSelection = useCallback(() => {
+    setSelectedKeys(new Set());
+  }, []);
 
   /* ─── toggle disable ─── */
 
@@ -392,6 +430,31 @@ export function ApiKeysPage() {
     setDeleteIndex(index);
   };
 
+  const handleBatchDelete = async () => {
+    if (selectedEntries.length === 0) return;
+    setSaving(true);
+    try {
+      for (const entry of selectedEntries) {
+        await apiKeyEntriesApi.delete({ id: entry.id, key: entry.id ? undefined : entry.key });
+      }
+      notify({
+        type: "success",
+        message: t("api_keys_page.batch_deleted_success", { count: selectedEntries.length }),
+      });
+      setBatchDeleteOpen(false);
+      clearSelection();
+      await loadEntries();
+    } catch (err: unknown) {
+      notify({
+        type: "error",
+        message: err instanceof Error ? err.message : t("api_keys_page.delete_failed"),
+      });
+      await loadEntries();
+    } finally {
+      setSaving(false);
+    }
+  };
+
   /* ─── copy ─── */
 
   const handleCopy = async (key: string) => {
@@ -483,23 +546,17 @@ export function ApiKeysPage() {
     [buildImportUrlWithConfig, notify, showCopiedCcSwitchImportState, t],
   );
 
-  const handleDownloadCcSwitchCodexCatalog = useCallback(
-    (config: CcSwitchImportConfigListItem) => {
-      const catalogJson = buildCcSwitchCodexModelCatalogJsonForConfig(config);
-      if (!catalogJson) return;
-
-      downloadTextAsFile(catalogJson, getCcSwitchCodexModelCatalogFilenameForConfig(config));
-      notify({ type: "success", message: t("ccswitch.download_codex_model_catalog_success") });
-    },
-    [notify, t],
-  );
-
   /* ─── column definitions ─── */
 
   const apiKeyColumns = useMemo(
     () =>
       createApiKeyColumns({
         t,
+        selectedKeys,
+        allRowsSelected,
+        someRowsSelected,
+        onSelectAll: handleSelectAll,
+        onSelectRow: handleSelectRow,
         onToggleDisable: (index) => void handleToggleDisable(index),
         onViewUsage: handleViewUsage,
         onCopy: (key) => void handleCopy(key),
@@ -514,7 +571,12 @@ export function ApiKeysPage() {
       handleOpenCcSwitchImport,
       handleOpenEdit,
       handleOpenDelete,
+      handleSelectAll,
+      handleSelectRow,
       t,
+      selectedKeys,
+      allRowsSelected,
+      someRowsSelected,
     ],
   );
 
@@ -523,10 +585,27 @@ export function ApiKeysPage() {
   return (
     <div className="space-y-6">
       <Card
+        className="md:flex md:h-[calc(100dvh-112px)] md:min-h-0 md:flex-col md:overflow-hidden"
+        bodyClassName="md:flex md:min-h-0 md:flex-1 md:flex-col"
         title={t("api_keys_page.title")}
         description={t("api_keys_page.description")}
         actions={
-          <div className="flex gap-2">
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button variant="primary" size="sm" onClick={handleOpenCreate}>
+              <Plus size={14} />
+              {t("api_keys_page.create_key")}
+            </Button>
+            {selectedEntries.length > 0 ? (
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={() => setBatchDeleteOpen(true)}
+                disabled={saving}
+              >
+                <Trash2 size={14} />
+                {t("api_keys_page.batch_delete")}
+              </Button>
+            ) : null}
             <Button
               variant="secondary"
               size="sm"
@@ -535,10 +614,6 @@ export function ApiKeysPage() {
             >
               <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
               {t("api_keys_page.refresh")}
-            </Button>
-            <Button variant="primary" size="sm" onClick={handleOpenCreate}>
-              <Plus size={14} />
-              {t("api_keys_page.create_key")}
             </Button>
           </div>
         }
@@ -551,19 +626,22 @@ export function ApiKeysPage() {
             icon={<KeyRound size={32} className="text-slate-400" />}
           />
         ) : (
-          <DataTable<ApiKeyEntry>
-            tableId="api-keys"
-            rows={entries}
-            columns={apiKeyColumns}
-            rowKey={(row) => row.key}
-            rowHeight={44}
-            height="h-[calc(100dvh-260px)] max-h-[70vh]"
-            minHeight="min-h-[320px]"
-            minWidth="min-w-[1820px]"
-            caption={t("api_keys_page.table_caption")}
-            emptyText={t("api_keys_page.no_api_keys")}
-            rowClassName={(row) => (row.disabled ? "opacity-50" : "")}
-          />
+          <div className="space-y-3 md:flex md:min-h-0 md:flex-1 md:flex-col">
+            <DataTable<ApiKeyEntry>
+              tableId="api-keys"
+              rows={entries}
+              columns={apiKeyColumns}
+              rowKey={(row) => row.key}
+              rowHeight={44}
+              height="h-[calc(100dvh-260px)] md:h-auto md:flex-1"
+              minHeight="min-h-[320px] md:min-h-0"
+              minWidth="min-w-[2002px]"
+              caption={t("api_keys_page.table_caption")}
+              emptyText={t("api_keys_page.no_api_keys")}
+              showAllLoadedMessage={false}
+              rowClassName={(row) => (row.disabled ? "opacity-50" : "")}
+            />
+          </div>
         )}
       </Card>
 
@@ -607,12 +685,23 @@ export function ApiKeysPage() {
         onConfirm={handleDelete}
       />
 
+      <DeleteApiKeyModal
+        t={t}
+        entry={null}
+        selectedCount={selectedEntries.length}
+        open={batchDeleteOpen}
+        saving={saving}
+        deleteLogsOnDelete={false}
+        onDeleteLogsChange={() => undefined}
+        onClose={() => setBatchDeleteOpen(false)}
+        onConfirm={handleBatchDelete}
+      />
+
       <CcSwitchImportCardList
         open={ccSwitchImportEntry !== null}
         configs={compatibleConfigs}
         copiedConfigId={copiedCcSwitchImportConfigId}
         onCopyLink={(config) => void handleCopyCcSwitchImportLink(config)}
-        onDownloadCatalog={handleDownloadCcSwitchCodexCatalog}
         onSelect={handleImportWithConfig}
         onClose={() => {
           setCcSwitchImportEntry(null);

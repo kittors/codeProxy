@@ -345,6 +345,7 @@ function renderChannelTags(tags: string[]) {
 }
 
 export function RoutingConfigEditor({
+  title,
   values,
   disabled,
   availableChannels,
@@ -354,6 +355,7 @@ export function RoutingConfigEditor({
   loadModelsForChannels,
   onChange,
 }: {
+  title?: string;
   values: VisualConfigValues;
   disabled?: boolean;
   availableChannels: string[];
@@ -1491,8 +1493,13 @@ export function RoutingConfigEditor({
 
   return (
     <>
-      <div className="space-y-3">
-        <div className="flex flex-wrap justify-end gap-3">
+      <div className="space-y-3 md:flex md:min-h-0 md:flex-1 md:flex-col">
+        <div className="flex flex-wrap items-center justify-between gap-3 md:shrink-0">
+          {title ? (
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-white">{title}</h3>
+          ) : (
+            <span aria-hidden="true" />
+          )}
           <Button variant="primary" size="sm" onClick={openCreateGroup} disabled={disabled}>
             <Plus size={14} />
             {t("channel_groups_page.add_group")}
@@ -1506,7 +1513,8 @@ export function RoutingConfigEditor({
           rowKey={(group) => group.id}
           virtualize={false}
           rowHeight={44}
-          height="h-[calc(100dvh-200px)]"
+          height="h-[calc(100dvh-200px)] md:h-auto md:flex-1"
+          minHeight="min-h-[320px] md:min-h-0"
           minWidth="min-w-[1360px]"
           caption={t("channel_groups_page.table_group")}
           emptyText={t("channel_groups_page.empty_groups")}

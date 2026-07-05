@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Check, Layers, RefreshCw, Search } from "lucide-react";
 import { Card } from "@code-proxy/ui";
 import { TextInput } from "@code-proxy/ui";
@@ -149,6 +150,7 @@ function VendorIcon({ modelId, size = 14 }: { modelId: string; size?: number }) 
 function ModelTag({ id }: { id: string }) {
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
+  const reduceMotion = useReducedMotion();
   const vc = getVendorColor(id);
 
   const handleClick = () => {
@@ -158,7 +160,12 @@ function ModelTag({ id }: { id: string }) {
   };
 
   return (
-    <button
+    <motion.button
+      layout
+      initial={reduceMotion ? false : { opacity: 0, y: 6, scale: 0.98 }}
+      animate={reduceMotion ? undefined : { opacity: 1, y: 0, scale: 1 }}
+      exit={reduceMotion ? undefined : { opacity: 0, y: -4, scale: 0.98 }}
+      transition={reduceMotion ? { duration: 0 } : { type: "spring", stiffness: 420, damping: 34 }}
       type="button"
       onClick={handleClick}
       title={t("apikey_lookup.copy_model")}
@@ -175,7 +182,7 @@ function ModelTag({ id }: { id: string }) {
           {id}
         </>
       )}
-    </button>
+    </motion.button>
   );
 }
 
@@ -193,6 +200,7 @@ export function ModelsTabContent({
   onSearchChange: (value: string) => void;
 }) {
   const { t } = useTranslation();
+  const reduceMotion = useReducedMotion();
 
   const filteredModels = useMemo(() => {
     const needle = searchFilter.trim().toLowerCase();
@@ -242,22 +250,41 @@ export function ModelsTabContent({
         </div>
       </div>
 
-      {vendorStats.length > 0 && !loading ? (
+      {vendorStats.length > 0 ? (
         <div className="flex flex-wrap items-center gap-2 border-b border-slate-100 px-5 py-2.5 dark:border-neutral-800/60">
-          {vendorStats.map(([vendor, count]) => {
-            const vc = VENDOR_COLORS[vendor] ?? DEFAULT_VENDOR_COLOR;
-            const iconKey = `${vendor}-placeholder`;
-            return (
-              <span
-                key={vendor}
-                className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-[10px] font-semibold ${vc.bg} ${vc.text} ${vc.border}`}
-              >
-                <VendorIcon modelId={iconKey} size={12} />
-                {vendor}
-                <span className="tabular-nums">{count}</span>
-              </span>
-            );
-          })}
+          <AnimatePresence initial={false}>
+            {vendorStats.map(([vendor, count]) => {
+              const vc = VENDOR_COLORS[vendor] ?? DEFAULT_VENDOR_COLOR;
+              const iconKey = `${vendor}-placeholder`;
+              return (
+                <motion.span
+                  layout
+                  key={vendor}
+                  initial={reduceMotion ? false : { opacity: 0, y: 4 }}
+                  animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
+                  exit={reduceMotion ? undefined : { opacity: 0, y: -4 }}
+                  transition={
+                    reduceMotion ? { duration: 0 } : { type: "spring", stiffness: 420, damping: 36 }
+                  }
+                  className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-[10px] font-semibold ${vc.bg} ${vc.text} ${vc.border}`}
+                >
+                  <VendorIcon modelId={iconKey} size={12} />
+                  {vendor}
+                  <AnimatePresence mode="popLayout" initial={false}>
+                    <motion.span
+                      key={`${vendor}-${count}`}
+                      initial={reduceMotion ? false : { opacity: 0, y: 4 }}
+                      animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
+                      exit={reduceMotion ? undefined : { opacity: 0, y: -4 }}
+                      className="tabular-nums"
+                    >
+                      {count}
+                    </motion.span>
+                  </AnimatePresence>
+                </motion.span>
+              );
+            })}
+          </AnimatePresence>
         </div>
       ) : null}
 
@@ -275,9 +302,11 @@ export function ModelsTabContent({
           </div>
         ) : filteredModels.length > 0 ? (
           <div className="flex flex-wrap gap-2">
-            {filteredModels.map((id) => (
-              <ModelTag key={id} id={id} />
-            ))}
+            <AnimatePresence initial={false}>
+              {filteredModels.map((id) => (
+                <ModelTag key={id} id={id} />
+              ))}
+            </AnimatePresence>
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center py-12 text-slate-400 dark:text-white/30">

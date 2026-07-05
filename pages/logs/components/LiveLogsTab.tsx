@@ -85,6 +85,8 @@ export function LiveLogsTab({
 }) {
   return (
     <Card
+      className="md:flex md:min-h-0 md:flex-1 md:flex-col md:overflow-hidden"
+      bodyClassName="md:flex md:min-h-0 md:flex-1 md:flex-col"
       title={t("logs_page.live_logs")}
       description={t("logs_page.latest_label", {
         time: latestLabel,
@@ -120,7 +122,7 @@ export function LiveLogsTab({
       }
       loading={loading}
     >
-      <div className="space-y-3">
+      <div className="space-y-3 md:shrink-0">
         <TextInput
           value={search}
           onChange={(e) => setSearch(e.currentTarget.value)}
@@ -172,7 +174,7 @@ export function LiveLogsTab({
         </div>
       </div>
 
-      <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-white/70 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
+      <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-white/70 shadow-sm md:flex md:min-h-0 md:flex-1 md:flex-col dark:border-neutral-800 dark:bg-neutral-950/60">
         <div className="flex min-h-11 items-center justify-between gap-3 border-b border-slate-200 px-4 py-3 text-xs text-slate-600 dark:border-neutral-800 dark:text-white/65">
           <div className="min-w-0">
             <span className="block whitespace-pre-wrap break-words tabular-nums">
@@ -200,7 +202,7 @@ export function LiveLogsTab({
         <div
           ref={containerRef}
           onScroll={onScroll}
-          className="max-h-[60vh] overflow-y-auto bg-slate-50 px-4 py-3 text-slate-900 dark:bg-neutral-950/60 dark:text-slate-100"
+          className="max-h-[60vh] overflow-y-auto bg-slate-50 px-4 py-3 text-slate-900 md:max-h-none md:min-h-0 md:flex-1 dark:bg-neutral-950/60 dark:text-slate-100"
         >
           {visibleLines.length === 0 ? (
             <div className="px-1 py-4">

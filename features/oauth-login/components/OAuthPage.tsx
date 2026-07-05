@@ -56,13 +56,9 @@ const PROVIDERS: { id: OAuthProvider; titleKey: string; hintKey: string }[] = [
 const getErrorMessage = (err: unknown): string => {
   if (err instanceof Error) return err.message;
   if (typeof err === "string") return err;
-  if (
-    err &&
-    typeof err === "object" &&
-    "message" in err &&
-    typeof (err as any).message === "string"
-  ) {
-    return String((err as any).message);
+  if (err && typeof err === "object" && "message" in err) {
+    const { message } = err;
+    if (typeof message === "string") return message;
   }
   return "";
 };
@@ -299,11 +295,11 @@ export function OAuthPage() {
       setVertexFileName(file.name);
       try {
         const res = await vertexApi.importCredential(file, vertexLocation.trim() || undefined);
-        const authFile = (res as any)["auth-file"] ?? (res as any).auth_file;
+        const authFile = res["auth-file"] ?? res.auth_file;
         setVertexResult({
-          projectId: (res as any).project_id,
-          email: (res as any).email,
-          location: (res as any).location,
+          projectId: res.project_id,
+          email: res.email,
+          location: res.location,
           authFile: typeof authFile === "string" ? authFile : undefined,
         });
         notify({ type: "success", message: t("oauth.vertex_import_success") });

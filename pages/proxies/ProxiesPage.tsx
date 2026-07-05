@@ -379,7 +379,7 @@ export function ProxiesPage() {
   const modalTitle = editingID ? t("proxies.edit_title") : t("proxies.add_title");
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-5">
+    <div className="flex min-h-0 flex-1 flex-col gap-5 md:h-[calc(100dvh-112px)] md:overflow-hidden">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <h2 className="text-2xl font-semibold tracking-tight text-slate-950 dark:text-white">
@@ -401,15 +401,19 @@ export function ProxiesPage() {
         </div>
       </div>
 
-      <Card className="overflow-hidden" loading={loading && entries.length === 0}>
+      <Card
+        className="overflow-hidden md:flex md:min-h-0 md:flex-1 md:flex-col"
+        bodyClassName="md:flex md:min-h-0 md:flex-1 md:flex-col"
+        loading={loading && entries.length === 0}
+      >
         <DataTable<ProxyPoolEntry>
           tableId="proxy-pool"
           rows={sortedEntries}
           columns={columns}
           rowKey={(entry) => entry.id}
           rowHeight={56}
-          height="h-auto max-h-[70vh]"
-          minHeight="min-h-[240px]"
+          height="h-auto max-h-[70vh] md:max-h-none md:flex-1"
+          minHeight="min-h-[240px] md:min-h-0"
           minWidth="min-w-[960px]"
           caption={t("proxies.table_caption")}
           emptyText={t("proxies.empty_title")}

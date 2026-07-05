@@ -49,11 +49,15 @@ const PROVIDER_TAB_VALUES: ProviderTab[] = [
   "claude",
   "codex",
   "opencode-go",
+  "cline",
   "vertex",
   "bedrock",
   "openai",
   "ampcode",
 ];
+const PROVIDER_LIST_TAB_VALUES: Exclude<ProviderTab, "ampcode">[] = PROVIDER_TAB_VALUES.filter(
+  (item) => item !== "ampcode",
+) as Exclude<ProviderTab, "ampcode">[];
 
 function readSavedProviderTab(): ProviderTab {
   try {
@@ -180,6 +184,7 @@ export function ProvidersPage() {
   const [claudeKeys, setClaudeKeys] = useState<ProviderSimpleConfig[]>([]);
   const [codexKeys, setCodexKeys] = useState<ProviderSimpleConfig[]>([]);
   const [openCodeGoKeys, setOpenCodeGoKeys] = useState<ProviderSimpleConfig[]>([]);
+  const [clineKeys, setClineKeys] = useState<ProviderSimpleConfig[]>([]);
   const [vertexKeys, setVertexKeys] = useState<ProviderSimpleConfig[]>([]);
   const [bedrockKeys, setBedrockKeys] = useState<BedrockProviderConfig[]>([]);
   const [openaiProviders, setOpenaiProviders] = useState<OpenAIProvider[]>([]);
@@ -239,7 +244,7 @@ export function ProvidersPage() {
     | null
     | {
         type: "deleteKey";
-        keyType: "gemini" | "claude" | "codex" | "opencode-go" | "vertex" | "bedrock";
+        keyType: "gemini" | "claude" | "codex" | "opencode-go" | "cline" | "vertex" | "bedrock";
         index: number;
       }
     | { type: "deleteOpenAI"; index: number }
@@ -270,97 +275,107 @@ export function ProvidersPage() {
     });
   }, [openCodeGoKeys]);
 
+  const loadProviderTab = useCallback(async (tabId: ProviderTab) => {
+    switch (tabId) {
+      case "gemini": {
+        const cachedG = getCachedData<ProviderSimpleConfig[]>("gemini");
+        if (cachedG) setGeminiKeys(cachedG);
+        const freshG = await providersApi.getGeminiKeys();
+        setGeminiKeys(freshG);
+        setCachedData("gemini", freshG);
+        break;
+      }
+      case "claude": {
+        const cachedC = getCachedData<ProviderSimpleConfig[]>("claude");
+        if (cachedC) setClaudeKeys(cachedC);
+        const freshC = await providersApi.getClaudeConfigs();
+        setClaudeKeys(freshC);
+        setCachedData("claude", freshC);
+        break;
+      }
+      case "codex": {
+        const cachedX = getCachedData<ProviderSimpleConfig[]>("codex");
+        if (cachedX) setCodexKeys(cachedX);
+        const freshX = await providersApi.getCodexConfigs();
+        setCodexKeys(freshX);
+        setCachedData("codex", freshX);
+        break;
+      }
+      case "opencode-go": {
+        const cachedO = getCachedData<ProviderSimpleConfig[]>("opencode-go");
+        if (cachedO) setOpenCodeGoKeys(cachedO);
+        const freshO = await providersApi.getOpenCodeGoConfigs();
+        setOpenCodeGoKeys(freshO);
+        setCachedData("opencode-go", freshO);
+        break;
+      }
+      case "cline": {
+        const cachedCl = getCachedData<ProviderSimpleConfig[]>("cline");
+        if (cachedCl) setClineKeys(cachedCl);
+        const freshCl = await providersApi.getClineConfigs();
+        setClineKeys(freshCl);
+        setCachedData("cline", freshCl);
+        break;
+      }
+      case "vertex": {
+        const cachedV = getCachedData<ProviderSimpleConfig[]>("vertex");
+        if (cachedV) setVertexKeys(cachedV);
+        const freshV = await providersApi.getVertexConfigs();
+        setVertexKeys(freshV);
+        setCachedData("vertex", freshV);
+        break;
+      }
+      case "bedrock": {
+        const cachedB = getCachedData<BedrockProviderConfig[]>("bedrock");
+        if (cachedB) setBedrockKeys(cachedB);
+        const freshB = await providersApi.getBedrockConfigs();
+        setBedrockKeys(freshB);
+        setCachedData("bedrock", freshB);
+        break;
+      }
+      case "openai": {
+        const cachedA = getCachedData<OpenAIProvider[]>("openai");
+        if (cachedA) setOpenaiProviders(cachedA);
+        const freshA = await providersApi.getOpenAIProviders();
+        setOpenaiProviders(freshA);
+        setCachedData("openai", freshA);
+        break;
+      }
+      case "ampcode": {
+        const [amp, ampMap] = await Promise.all([
+          ampcodeApi.getAmpcode(),
+          ampcodeApi.getModelMappings(),
+        ]);
+        const ampObj =
+          amp && typeof amp === "object" && !Array.isArray(amp)
+            ? (amp as Record<string, unknown>)
+            : {};
+        setAmpcode(ampObj);
+        setAmpUpstreamUrl(readString(ampObj, "upstreamUrl", "upstream-url"));
+        setAmpForceMappings(readBool(ampObj, "forceModelMappings", "force-model-mappings"));
+
+        const mappings = Array.isArray(ampMap) ? ampMap : [];
+        const entries: AmpMappingEntry[] = mappings
+          .map((item, idx) => {
+            if (!item || typeof item !== "object") return null;
+            const record = item as Record<string, unknown>;
+            const from = String(record.from ?? "").trim();
+            const to = String(record.to ?? "").trim();
+            if (!from || !to) return null;
+            return { id: `map-${idx}-${from}`, from, to };
+          })
+          .filter(Boolean) as AmpMappingEntry[];
+        setAmpMappings(entries.length ? entries : [{ id: `map-${Date.now()}`, from: "", to: "" }]);
+        break;
+      }
+    }
+  }, []);
+
   const refreshTab = useCallback(
     async (tabId: typeof tab) => {
       setLoading(true);
       try {
-        switch (tabId) {
-          case "gemini": {
-            const cachedG = getCachedData<ProviderSimpleConfig[]>("gemini");
-            if (cachedG) setGeminiKeys(cachedG);
-            const freshG = await providersApi.getGeminiKeys();
-            setGeminiKeys(freshG);
-            setCachedData("gemini", freshG);
-            break;
-          }
-          case "claude": {
-            const cachedC = getCachedData<ProviderSimpleConfig[]>("claude");
-            if (cachedC) setClaudeKeys(cachedC);
-            const freshC = await providersApi.getClaudeConfigs();
-            setClaudeKeys(freshC);
-            setCachedData("claude", freshC);
-            break;
-          }
-          case "codex": {
-            const cachedX = getCachedData<ProviderSimpleConfig[]>("codex");
-            if (cachedX) setCodexKeys(cachedX);
-            const freshX = await providersApi.getCodexConfigs();
-            setCodexKeys(freshX);
-            setCachedData("codex", freshX);
-            break;
-          }
-          case "opencode-go": {
-            const cachedO = getCachedData<ProviderSimpleConfig[]>("opencode-go");
-            if (cachedO) setOpenCodeGoKeys(cachedO);
-            const freshO = await providersApi.getOpenCodeGoConfigs();
-            setOpenCodeGoKeys(freshO);
-            setCachedData("opencode-go", freshO);
-            break;
-          }
-          case "vertex": {
-            const cachedV = getCachedData<ProviderSimpleConfig[]>("vertex");
-            if (cachedV) setVertexKeys(cachedV);
-            const freshV = await providersApi.getVertexConfigs();
-            setVertexKeys(freshV);
-            setCachedData("vertex", freshV);
-            break;
-          }
-          case "bedrock": {
-            const cachedB = getCachedData<BedrockProviderConfig[]>("bedrock");
-            if (cachedB) setBedrockKeys(cachedB);
-            const freshB = await providersApi.getBedrockConfigs();
-            setBedrockKeys(freshB);
-            setCachedData("bedrock", freshB);
-            break;
-          }
-          case "openai": {
-            const cachedA = getCachedData<OpenAIProvider[]>("openai");
-            if (cachedA) setOpenaiProviders(cachedA);
-            const freshA = await providersApi.getOpenAIProviders();
-            setOpenaiProviders(freshA);
-            setCachedData("openai", freshA);
-            break;
-          }
-          case "ampcode": {
-            const [amp, ampMap] = await Promise.all([
-              ampcodeApi.getAmpcode(),
-              ampcodeApi.getModelMappings(),
-            ]);
-            const ampObj =
-              amp && typeof amp === "object" && !Array.isArray(amp)
-                ? (amp as Record<string, unknown>)
-                : {};
-            setAmpcode(ampObj);
-            setAmpUpstreamUrl(readString(ampObj, "upstreamUrl", "upstream-url"));
-            setAmpForceMappings(readBool(ampObj, "forceModelMappings", "force-model-mappings"));
-
-            const mappings = Array.isArray(ampMap) ? ampMap : [];
-            const entries: AmpMappingEntry[] = mappings
-              .map((item, idx) => {
-                if (!item || typeof item !== "object") return null;
-                const record = item as Record<string, unknown>;
-                const from = String(record.from ?? "").trim();
-                const to = String(record.to ?? "").trim();
-                if (!from || !to) return null;
-                return { id: `map-${idx}-${from}`, from, to };
-              })
-              .filter(Boolean) as AmpMappingEntry[];
-            setAmpMappings(
-              entries.length ? entries : [{ id: `map-${Date.now()}`, from: "", to: "" }],
-            );
-            break;
-          }
-        }
+        await loadProviderTab(tabId);
       } catch (err: unknown) {
         notify({
           type: "error",
@@ -370,7 +385,7 @@ export function ProvidersPage() {
         setLoading(false);
       }
     },
-    [notify],
+    [loadProviderTab, notify, t],
   );
 
   const loadUsage = useCallback(async () => {
@@ -415,13 +430,27 @@ export function ProvidersPage() {
   });
 
   const refreshAll = useCallback(async () => {
-    await Promise.all([refreshTab(tab), loadUsage(), loadProxyPool()]);
-  }, [loadProxyPool, loadUsage, refreshTab, tab]);
+    setLoading(true);
+    const tabsToRefresh: ProviderTab[] =
+      tab === "ampcode" ? [...PROVIDER_LIST_TAB_VALUES, "ampcode"] : PROVIDER_LIST_TAB_VALUES;
+    const results = await Promise.allSettled([
+      ...tabsToRefresh.map((tabId) => loadProviderTab(tabId)),
+      loadUsage(),
+      loadProxyPool(),
+    ]);
+    const failed = results.find((result) => result.status === "rejected");
+    if (failed) {
+      notify({
+        type: "error",
+        message:
+          failed.reason instanceof Error ? failed.reason.message : t("providers.load_failed"),
+      });
+    }
+    setLoading(false);
+  }, [loadProviderTab, loadProxyPool, loadUsage, notify, t, tab]);
 
   useEffect(() => {
-    void refreshTab(tab);
-    void loadUsage();
-    void loadProxyPool();
+    void refreshAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -460,12 +489,14 @@ export function ProvidersPage() {
     claudeKeys,
     codexKeys,
     openCodeGoKeys,
+    clineKeys,
     vertexKeys,
     bedrockKeys,
     setGeminiKeys,
     setClaudeKeys,
     setCodexKeys,
     setOpenCodeGoKeys,
+    setClineKeys,
     setVertexKeys,
     setBedrockKeys,
     refreshAll,
@@ -519,6 +550,7 @@ export function ProvidersPage() {
         provider === "claude" ||
         provider === "codex" ||
         provider === "opencode-go" ||
+        provider === "cline" ||
         provider === "vertex" ||
         provider === "bedrock"
       ) {
@@ -627,6 +659,8 @@ export function ProvidersPage() {
           return codexKeys;
         case "opencode-go":
           return openCodeGoKeys;
+        case "cline":
+          return clineKeys;
         case "vertex":
           return vertexKeys;
         case "bedrock":
@@ -635,7 +669,16 @@ export function ProvidersPage() {
           return openaiProviders;
       }
     },
-    [bedrockKeys, claudeKeys, codexKeys, geminiKeys, openCodeGoKeys, openaiProviders, vertexKeys],
+    [
+      bedrockKeys,
+      claudeKeys,
+      clineKeys,
+      codexKeys,
+      geminiKeys,
+      openCodeGoKeys,
+      openaiProviders,
+      vertexKeys,
+    ],
   );
 
   const currentImportKind = getImportKind();
@@ -676,6 +719,7 @@ export function ProvidersPage() {
       claude: claudeKeys.length,
       codex: codexKeys.length,
       "opencode-go": openCodeGoKeys.length,
+      cline: clineKeys.length,
       vertex: vertexKeys.length,
       bedrock: bedrockKeys.length,
       openai: openaiProviders.length,
@@ -684,6 +728,7 @@ export function ProvidersPage() {
   }, [
     geminiKeys,
     claudeKeys,
+    clineKeys,
     codexKeys,
     openCodeGoKeys,
     vertexKeys,
@@ -710,6 +755,9 @@ export function ProvidersPage() {
           return;
         case "opencode-go":
           await providersApi.saveOpenCodeGoConfigs(items as ProviderSimpleConfig[]);
+          return;
+        case "cline":
+          await providersApi.saveClineConfigs(items as ProviderSimpleConfig[]);
           return;
         case "vertex":
           await providersApi.saveVertexConfigs(items as ProviderSimpleConfig[]);
@@ -863,7 +911,7 @@ export function ProvidersPage() {
         onExport={handleExport}
         onExportSelected={handleExportSelected}
         onSelectAll={selectAllCurrentItems}
-        onRefresh={() => void refreshTab(tab)}
+        onRefresh={() => void refreshAll()}
         onAddCurrent={
           tab === "ampcode"
             ? null
@@ -889,6 +937,7 @@ export function ProvidersPage() {
             { id: "claude", label: "Claude", count: tabCounts.claude },
             { id: "codex", label: "Codex", count: tabCounts.codex },
             { id: "opencode-go", label: "OpenCode Go", count: tabCounts["opencode-go"] },
+            { id: "cline", label: "ClinePass", count: tabCounts.cline },
             { id: "vertex", label: "Vertex", count: tabCounts.vertex },
             { id: "bedrock", label: "Bedrock", count: tabCounts.bedrock },
             { id: "openai", label: t("providers.openai_compatible"), count: tabCounts.openai },
@@ -968,11 +1017,16 @@ export function ProvidersPage() {
               renderExtra={(item, idx) => {
                 const queryReady = hasOpenCodeGoUsageQuery(item);
                 const cacheKey = getOpenCodeGoUsageCacheKey(item, idx);
+                const usageEntry = openCodeGoUsageState[cacheKey];
                 return (
                   <OpenCodeGoUsageCardSection
                     queryReady={queryReady}
-                    usageEntry={queryReady ? openCodeGoUsageState[cacheKey] : undefined}
-                    loading={queryReady ? (openCodeGoUsageLoadingState[cacheKey] ?? false) : false}
+                    usageEntry={queryReady ? usageEntry : undefined}
+                    loading={
+                      queryReady
+                        ? (openCodeGoUsageLoadingState[cacheKey] ?? !usageEntry)
+                        : false
+                    }
                   />
                 );
               }}
@@ -1019,6 +1073,23 @@ export function ProvidersPage() {
                   </button>
                 );
               }}
+              selectedKeys={selectedExportKeySet}
+              onToggleSelected={toggleExportSelection}
+            />
+          </TabsContent>
+
+          <TabsContent value="cline" className="min-h-0 flex flex-1 flex-col">
+            <ProviderKeyListCard
+              items={clineKeys}
+              loading={isActiveTabListLoading("cline")}
+              onAdd={() => openKeyEditor("cline", null)}
+              onEdit={(idx) => openKeyEditor("cline", idx)}
+              onDelete={(idx) => setConfirm({ type: "deleteKey", keyType: "cline", index: idx })}
+              onToggleEnabled={(idx, enabled) => void toggleKeyEnabled("cline", idx, enabled)}
+              getStats={getSimpleStats}
+              getStatusBar={getSimpleStatusBar}
+              getLatencyEntry={getLatencyEntry}
+              checkLatency={checkLatency}
               selectedKeys={selectedExportKeySet}
               onToggleSelected={toggleExportSelection}
             />

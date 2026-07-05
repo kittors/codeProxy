@@ -1,6 +1,8 @@
-import { lazy } from "react";
+import { preloadablePage } from "../preloadablePage";
 
-const ApiKeysPage = lazy(() => import("./ApiKeysPage").then((m) => ({ default: m.ApiKeysPage })));
+const { Page: ApiKeysPage, preload: preloadApiKeysPage } = preloadablePage(() =>
+  import("./ApiKeysPage").then((m) => ({ default: m.ApiKeysPage })),
+);
 
 export const apiKeysRoute = {
   path: "/api-keys",
@@ -8,4 +10,5 @@ export const apiKeysRoute = {
   auth: true,
   layout: "dashboard",
   nav: { labelKey: "nav.apiKeys" },
+  preload: preloadApiKeysPage,
 };

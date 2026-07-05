@@ -305,8 +305,8 @@ export function CcSwitchImportSettingsPage() {
   const importBaseUrl = auth?.state.apiBase || detectApiBaseFromLocation();
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <div className="space-y-6 md:flex md:h-[calc(100dvh-112px)] md:min-h-0 md:flex-col">
+      <div className="flex flex-wrap items-start justify-between gap-3 md:shrink-0">
         <div className="space-y-1">
           <h2 className="text-lg font-semibold tracking-normal text-slate-950 dark:text-white">
             {t("ccswitch.settings_title")}
@@ -333,7 +333,8 @@ export function CcSwitchImportSettingsPage() {
         title={t("ccswitch.config_table_title")}
         description={t("ccswitch.config_table_description", { count: configs.length })}
         padding="compact"
-        className="rounded-2xl"
+        className="rounded-2xl md:flex md:min-h-0 md:flex-1 md:flex-col md:overflow-hidden"
+        bodyClassName="md:flex md:min-h-0 md:flex-1 md:flex-col"
       >
         <DataTable<CcSwitchImportConfigListItem>
           tableId="ccswitch-import-configs"
@@ -342,8 +343,8 @@ export function CcSwitchImportSettingsPage() {
           rowKey={(row) => row.id}
           virtualize={false}
           minWidth="min-w-[1100px]"
-          height="h-[420px]"
-          minHeight="min-h-[280px]"
+          height="h-[420px] md:h-auto md:flex-1"
+          minHeight="min-h-[280px] md:min-h-0"
           caption={t("ccswitch.config_table_caption")}
           emptyText={t("ccswitch.config_list_empty")}
           showAllLoadedMessage={false}

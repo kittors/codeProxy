@@ -1,12 +1,13 @@
 import { useTranslation } from "react-i18next";
-import { useCallback, useMemo } from "react";
 import { RotateCcw } from "lucide-react";
 import { SearchableCheckboxMultiSelect } from "@code-proxy/ui";
 import type { SearchableCheckboxMultiSelectOption } from "@code-proxy/ui";
 import { cn } from "@code-proxy/ui";
-
-type StatusFilterValue = "success" | "failed";
-type MultiSelectFilterState<T extends string = string> = T[] | null;
+import {
+  RequestLogFacetFilters,
+  type MultiSelectFilterState,
+  type StatusFilterValue,
+} from "@features/request-log-viewer";
 
 interface RequestLogsFiltersProps {
   keyOptions: SearchableCheckboxMultiSelectOption[];
@@ -51,14 +52,6 @@ export function RequestLogsFilters({
 }: RequestLogsFiltersProps) {
   const { t } = useTranslation();
 
-  const statusChangeAdapter = useMemo(
-    () => (value: string[]) => onStatusesChange(value as StatusFilterValue[]),
-    [onStatusesChange],
-  );
-  const statusClearAdapter = useCallback(() => {
-    onStatusesClear();
-  }, [onStatusesClear]);
-
   return (
     <div className="border-t border-slate-100 px-5 py-3 dark:border-neutral-800/60">
       <div className="flex flex-wrap items-center gap-2">
@@ -71,7 +64,9 @@ export function RequestLogsFilters({
             searchPlaceholder={t("request_logs.search_keys")}
             selectFilteredLabel={t("request_logs.select_filtered")}
             deselectFilteredLabel={t("request_logs.deselect_filtered")}
-            selectedCountLabel={(count: number) => t("request_logs.selected_count", { count })}
+            selectedCountLabel={(count: number) =>
+              t("request_logs.selected_count", { count })
+            }
             noResultsLabel={t("request_logs.no_filter_results")}
             aria-label={t("request_logs.filter_key")}
             clearLabel={t("request_logs.clear_key_filter")}
@@ -89,87 +84,20 @@ export function RequestLogsFilters({
             emptySelectionLabel={t("request_logs.none_selected")}
           />
         </div>
-        <div className="w-full min-[480px]:w-auto sm:w-[200px]">
-          <SearchableCheckboxMultiSelect
-            value={selectedModels ?? []}
-            onChange={onModelsChange}
-            options={modelOptions}
-            placeholder={t("request_logs.all_models_placeholder")}
-            searchPlaceholder={t("request_logs.search_models")}
-            selectFilteredLabel={t("request_logs.select_filtered")}
-            deselectFilteredLabel={t("request_logs.deselect_filtered")}
-            selectedCountLabel={(count: number) => t("request_logs.selected_count", { count })}
-            noResultsLabel={t("request_logs.no_filter_results")}
-            aria-label={t("request_logs.filter_model")}
-            clearLabel={t("request_logs.clear_model_filter")}
-            onClear={onModelsClear}
-            showClearButton
-            size="sm"
-            emptyValueMeansAllSelected
-            emptyValueRepresentsAllSelected={selectedModels === null}
-            showFilteredToggleWithoutQuery={false}
-            applyMode="manual"
-            applyLabel={t("request_logs.apply_filters")}
-            cancelLabel={t("common.cancel")}
-            selectAllLabel={t("request_logs.select_all")}
-            deselectAllLabel={t("request_logs.deselect_all")}
-            emptySelectionLabel={t("request_logs.none_selected")}
-          />
-        </div>
-        <div className="w-full min-[480px]:w-auto sm:w-[180px]">
-          <SearchableCheckboxMultiSelect
-            value={selectedChannels ?? []}
-            onChange={onChannelsChange}
-            options={channelOptions}
-            placeholder={t("request_logs.all_channels_placeholder")}
-            searchPlaceholder={t("request_logs.search_channels")}
-            selectFilteredLabel={t("request_logs.select_filtered")}
-            deselectFilteredLabel={t("request_logs.deselect_filtered")}
-            selectedCountLabel={(count: number) => t("request_logs.selected_count", { count })}
-            noResultsLabel={t("request_logs.no_filter_results")}
-            aria-label={t("request_logs.filter_channel")}
-            clearLabel={t("request_logs.clear_channel_filter")}
-            onClear={onChannelsClear}
-            showClearButton
-            size="sm"
-            emptyValueMeansAllSelected
-            emptyValueRepresentsAllSelected={selectedChannels === null}
-            showFilteredToggleWithoutQuery={false}
-            applyMode="manual"
-            applyLabel={t("request_logs.apply_filters")}
-            cancelLabel={t("common.cancel")}
-            selectAllLabel={t("request_logs.select_all")}
-            deselectAllLabel={t("request_logs.deselect_all")}
-            emptySelectionLabel={t("request_logs.none_selected")}
-          />
-        </div>
-        <div className="w-full min-[480px]:w-auto sm:w-[150px]">
-          <SearchableCheckboxMultiSelect
-            value={selectedStatuses ?? []}
-            onChange={statusChangeAdapter}
-            options={statusOptions}
-            placeholder={t("request_logs.all_status")}
-            searchPlaceholder=""
-            selectFilteredLabel={t("request_logs.select_filtered")}
-            deselectFilteredLabel={t("request_logs.deselect_filtered")}
-            selectedCountLabel={(count: number) => `${count}`}
-            noResultsLabel={t("request_logs.no_filter_results")}
-            aria-label={t("request_logs.filter_status")}
-            clearLabel={t("request_logs.clear_status_filter")}
-            onClear={statusClearAdapter}
-            showClearButton
-            size="sm"
-            emptyValueMeansAllSelected
-            emptyValueRepresentsAllSelected={selectedStatuses === null}
-            showFilteredToggleWithoutQuery={false}
-            applyMode="manual"
-            applyLabel={t("request_logs.apply_filters")}
-            cancelLabel={t("common.cancel")}
-            selectAllLabel={t("request_logs.select_all")}
-            deselectAllLabel={t("request_logs.deselect_all")}
-            emptySelectionLabel={t("request_logs.none_selected")}
-          />
-        </div>
+        <RequestLogFacetFilters
+          modelOptions={modelOptions}
+          channelOptions={channelOptions}
+          statusOptions={statusOptions}
+          selectedModels={selectedModels}
+          selectedChannels={selectedChannels}
+          selectedStatuses={selectedStatuses}
+          onModelsChange={onModelsChange}
+          onChannelsChange={onChannelsChange}
+          onStatusesChange={onStatusesChange}
+          onModelsClear={onModelsClear}
+          onChannelsClear={onChannelsClear}
+          onStatusesClear={onStatusesClear}
+        />
 
         {/* Reset filters button */}
         {hasActiveFilters ? (

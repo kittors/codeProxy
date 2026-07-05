@@ -1,4 +1,5 @@
 import type { ComponentType, ReactNode } from "react";
+import { useReducedMotion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import {
   HOUR_WINDOWS,
@@ -6,7 +7,7 @@ import {
   type HourWindow,
   type TimeRange,
 } from "@features/monitor-widgets/monitor-constants";
-import { Tabs, TabsList, TabsTrigger } from "@code-proxy/ui";
+import { Tabs, TabsList, TabsTrigger, useResizeLayoutAnimation } from "@code-proxy/ui";
 
 export const KpiCard = ({
   title,
@@ -19,8 +20,14 @@ export const KpiCard = ({
   hint: string;
   icon: ComponentType<{ size?: number; className?: string }>;
 }) => {
+  const reduceMotion = useReducedMotion();
+  const cardRef = useResizeLayoutAnimation<HTMLElement>(!reduceMotion);
+
   return (
-    <article className="rounded-2xl border border-black/[0.06] bg-white p-5 shadow-[0_1px_2px_rgb(15_23_42_/_0.035)] dark:border-white/[0.06] dark:bg-neutral-950/70 dark:shadow-[0_1px_2px_rgb(0_0_0_/_0.22)]">
+    <article
+      ref={cardRef}
+      className="rounded-2xl border border-black/[0.06] bg-white p-5 shadow-[0_1px_2px_rgb(15_23_42_/_0.035)] dark:border-white/[0.06] dark:bg-neutral-950/70 dark:shadow-[0_1px_2px_rgb(0_0_0_/_0.22)]"
+    >
       <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-white/55">
         <Icon size={14} className="text-slate-900 dark:text-white" />
         <span>{title}</span>
@@ -92,8 +99,12 @@ export const MonitorCard = ({
   children: ReactNode;
 }) => {
   const { t } = useTranslation();
+  const reduceMotion = useReducedMotion();
+  const cardRef = useResizeLayoutAnimation<HTMLElement>(!reduceMotion);
+
   return (
     <section
+      ref={cardRef}
       className="min-w-0 rounded-2xl border border-black/[0.06] bg-white p-5 shadow-[0_1px_2px_rgb(15_23_42_/_0.035)] dark:border-white/[0.06] dark:bg-neutral-950/70 dark:shadow-[0_1px_2px_rgb(0_0_0_/_0.22)]"
       aria-busy={loading}
     >

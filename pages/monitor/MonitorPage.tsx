@@ -7,6 +7,7 @@ import {
 } from "@features/monitor-widgets/monitor-constants";
 import { formatCompact, formatMonthDay } from "@features/monitor-widgets/monitor-format";
 import {
+  buildModelDistributionData,
   createDailyTrendOption,
   createHourlyModelOption,
   createHourlyTokenOption,
@@ -206,21 +207,12 @@ export function MonitorPage() {
   );
 
   const modelDistributionData = useMemo(() => {
-    const top = sortedModelsByMetric.slice(0, 10);
-    const otherValue = sortedModelsByMetric.slice(10).reduce((acc, item) => {
-      return acc + (modelMetric === "requests" ? item.requests : item.tokens);
-    }, 0);
-
-    const data = top.map((item) => ({
-      name: item.model,
-      value: modelMetric === "requests" ? item.requests : item.tokens,
-    }));
-
-    if (otherValue > 0) {
-      data.push({ name: t("common.other"), value: otherValue });
-    }
-    return data;
-  }, [modelMetric, sortedModelsByMetric, t]);
+    return buildModelDistributionData({
+      items: chartData?.model_distribution ?? [],
+      metric: modelMetric,
+      otherLabel: t("common.other"),
+    });
+  }, [chartData, modelMetric, t]);
 
   useEffect(() => {
     setModelDistributionSelected((prev) => {

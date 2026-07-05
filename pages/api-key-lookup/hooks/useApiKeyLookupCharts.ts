@@ -1,5 +1,8 @@
 import { useCallback, useMemo, useState } from "react";
-import { createModelDistributionOption } from "@features/monitor-widgets/chart-options/model-distribution";
+import {
+  buildModelDistributionData,
+  createModelDistributionOption,
+} from "@features/monitor-widgets/chart-options/model-distribution";
 import { createDailyTrendOption } from "@features/monitor-widgets/chart-options/daily-trend";
 import { CHART_COLOR_CLASSES } from "@features/monitor-widgets/monitor-constants";
 import type {
@@ -38,6 +41,7 @@ export function useApiKeyLookupCharts({
   });
 
   const chartStats = chartData?.stats;
+  const heatmapSeries = chartData?.heatmap_series ?? [];
 
   const dailySeries: DailySeriesPoint[] = useMemo(() => {
     if (!chartData?.daily_series) return [];
@@ -92,22 +96,11 @@ export function useApiKeyLookupCharts({
   }, [dailySeries]);
 
   const modelDistributionData: ModelDistributionDatum[] = useMemo(() => {
-    if (!chartData?.model_distribution) return [];
-    const sorted = [...chartData.model_distribution].sort((a, b) => {
-      const aValue = modelMetric === "requests" ? a.requests : a.tokens;
-      const bValue = modelMetric === "requests" ? b.requests : b.tokens;
-      return bValue - aValue || a.model.localeCompare(b.model);
+    return buildModelDistributionData({
+      items: chartData?.model_distribution ?? [],
+      metric: modelMetric,
+      otherLabel: t("common.other"),
     });
-    const top = sorted.slice(0, 10);
-    const otherValue = sorted
-      .slice(10)
-      .reduce((acc, item) => acc + (modelMetric === "requests" ? item.requests : item.tokens), 0);
-    const data = top.map((item) => ({
-      name: item.model,
-      value: modelMetric === "requests" ? item.requests : item.tokens,
-    }));
-    if (otherValue > 0) data.push({ name: t("common.other"), value: otherValue });
-    return data;
   }, [chartData, modelMetric, t]);
 
   const modelDistributionOption = useMemo(
@@ -139,6 +132,7 @@ export function useApiKeyLookupCharts({
     modelMetric,
     setModelMetric,
     dailyLegendSelected,
+    heatmapSeries,
     dailySeries,
     dailyTrendOption,
     toggleDailyLegend,

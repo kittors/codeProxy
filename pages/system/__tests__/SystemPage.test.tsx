@@ -123,7 +123,7 @@ describe("SystemPage", () => {
         path === "/vertex-api-key" ||
         path === "/openai-compatibility"
       ) {
-        return Promise.resolve([]);
+        return Promise.resolve<unknown[]>([]);
       }
       if (path === "/system-stats") return Promise.resolve({ uptime: 10 });
       return Promise.resolve({});
@@ -265,7 +265,7 @@ describe("SystemPage", () => {
         path === "/vertex-api-key" ||
         path === "/openai-compatibility"
       ) {
-        return Promise.resolve([]);
+        return Promise.resolve<unknown[]>([]);
       }
       return Promise.resolve({});
     });
@@ -276,6 +276,74 @@ describe("SystemPage", () => {
     expect(screen.queryByText("gpt-group-only")).not.toBeInTheDocument();
     expect(screen.queryByText("gemini-v1beta-only")).not.toBeInTheDocument();
     expect(mocks.apiGet).toHaveBeenCalledWith("/model-path-availability");
+  });
+
+  test("keeps configured Cline models when root v1 discovery has other models", async () => {
+    mocks.apiGet.mockImplementation((path: string) => {
+      if (path === "/auth-group-model-owner-mappings") return Promise.resolve({ items: [] });
+      if (path === "/models/configured-availability") {
+        return Promise.resolve({
+          scoped: true,
+          data: [
+            {
+              id: "mimo-v2.5-pro",
+              sources: [
+                {
+                  label: "cline · ClinePass",
+                  provider: "cline",
+                  model_id: "mimo-v2.5-pro",
+                  upstream_model_id: "cline-pass/mimo-v2.5-pro",
+                },
+              ],
+            },
+            {
+              id: "cline-pass/deepseek-v4-pro",
+              sources: [
+                {
+                  label: "cline · ClinePass",
+                  provider: "cline",
+                  model_id: "cline-pass/deepseek-v4-pro",
+                  upstream_model_id: "cline-pass/deepseek-v4-pro",
+                },
+              ],
+            },
+          ],
+        });
+      }
+      if (path === "/model-path-availability") {
+        return Promise.resolve({
+          data: [
+            {
+              id: "gpt-root-model",
+              paths: [{ scope: "root", method: "GET", path: "/v1/models" }],
+            },
+          ],
+        });
+      }
+      if (path === "/system-stats") return Promise.resolve({ uptime: 10 });
+      return Promise.resolve({});
+    });
+
+    const { container } = renderPage();
+
+    expect(await screen.findByText("gpt-root-model")).toBeInTheDocument();
+    const clineModel = await screen.findByText("mimo-v2.5-pro");
+    expect(clineModel).toBeInTheDocument();
+    const realClineModel = await screen.findByText("cline-pass/deepseek-v4-pro");
+    expect(realClineModel).toBeInTheDocument();
+
+    await userEvent.hover(clineModel);
+
+    expect(container.querySelectorAll('[data-model-source-marker="true"]')).toHaveLength(1);
+    expect(await screen.findByText(/ClinePass · cline/)).toBeInTheDocument();
+    expect(screen.getByText("Actual ID")).toBeInTheDocument();
+    expect(screen.getByText("cline-pass/mimo-v2.5-pro")).toBeInTheDocument();
+
+    await userEvent.unhover(clineModel);
+    await userEvent.hover(realClineModel);
+
+    expect(await screen.findByText(/ClinePass · cline/)).toBeInTheDocument();
+    expect(screen.queryByText("Actual ID")).not.toBeInTheDocument();
   });
 
   test("shows model sources in the model tag tooltip", async () => {
@@ -313,8 +381,9 @@ describe("SystemPage", () => {
 
     await userEvent.hover(await screen.findByText("gpt-root-model"));
 
-    expect(await screen.findByText(/codex · Codex Pro/)).toBeInTheDocument();
-    expect(screen.getByText(/opencode-go · OpenCode Go/)).toBeInTheDocument();
+    expect(await screen.findByText(/Codex Pro · codex/)).toBeInTheDocument();
+    expect(screen.getByText(/OpenCode Go · opencode-go/)).toBeInTheDocument();
+    expect(screen.queryByText("Actual ID")).not.toBeInTheDocument();
   });
 
   test("shows persisted mapped owner models on the system page", async () => {
@@ -355,7 +424,7 @@ describe("SystemPage", () => {
         path === "/vertex-api-key" ||
         path === "/openai-compatibility"
       ) {
-        return Promise.resolve([]);
+        return Promise.resolve<unknown[]>([]);
       }
       if (path === "/system-stats") return Promise.resolve({ uptime: 10 });
       return Promise.resolve({});
@@ -473,7 +542,7 @@ describe("SystemPage", () => {
         path === "/codex-api-key" ||
         path === "/vertex-api-key"
       ) {
-        return Promise.resolve([]);
+        return Promise.resolve<unknown[]>([]);
       }
       if (path === "/system-stats") return Promise.resolve({ uptime: 10 });
       return Promise.resolve({});

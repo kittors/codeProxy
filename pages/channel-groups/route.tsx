@@ -1,6 +1,6 @@
-import { lazy } from "react";
+import { preloadablePage } from "../preloadablePage";
 
-const ChannelGroupsPage = lazy(() =>
+const { Page: ChannelGroupsPage, preload: preloadChannelGroupsPage } = preloadablePage(() =>
   import("./ChannelGroupsPage").then((m) => ({
     default: m.ChannelGroupsPage,
   })),
@@ -12,4 +12,5 @@ export const channelGroupsRoute = {
   auth: true,
   layout: "dashboard",
   nav: { labelKey: "nav.channelGroups" },
+  preload: preloadChannelGroupsPage,
 };

@@ -1,6 +1,6 @@
-import { lazy } from "react";
+import { preloadablePage } from "../preloadablePage";
 
-const ProvidersPage = lazy(() =>
+const { Page: ProvidersPage, preload: preloadProvidersPage } = preloadablePage(() =>
   import("./ProvidersPage").then((m) => ({ default: m.ProvidersPage })),
 );
 
@@ -11,4 +11,5 @@ export const providersRoute = {
   layout: "dashboard",
   nav: { labelKey: "nav.providers" },
   hasWildcard: true,
+  preload: preloadProvidersPage,
 };

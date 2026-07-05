@@ -379,9 +379,7 @@ export function MonitorHourlySections({
           <Card
             title={t("monitor.hourly_model.title")}
             description={t("monitor.hourly_model_desc")}
-            actions={
-              <HourWindowSelector value={modelHourWindow as any} onChange={setModelHourWindow} />
-            }
+            actions={<HourWindowSelector value={modelHourWindow} onChange={setModelHourWindow} />}
             loading={isRefreshing}
           >
             <EChart option={hourlyModelOption} className="h-64 sm:h-72" replaceMerge="series" />
@@ -400,9 +398,7 @@ export function MonitorHourlySections({
           <Card
             title={t("monitor.hourly_token.title")}
             description={t("monitor.hourly_token_desc")}
-            actions={
-              <HourWindowSelector value={tokenHourWindow as any} onChange={setTokenHourWindow} />
-            }
+            actions={<HourWindowSelector value={tokenHourWindow} onChange={setTokenHourWindow} />}
             loading={isRefreshing}
           >
             <EChart option={hourlyTokenOption} className="h-64 sm:h-72" replaceMerge="series" />

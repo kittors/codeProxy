@@ -1,23 +1,27 @@
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import type { ProviderSimpleConfig } from "@code-proxy/api-client";
 import { ProvidersPage } from "@pages/providers/ProvidersPage";
 import { ThemeProvider } from "@code-proxy/ui";
 import { ToastProvider } from "@code-proxy/ui";
 
 const mocks = vi.hoisted(() => ({
-  getGeminiKeys: vi.fn(async () => []),
-  getClaudeConfigs: vi.fn(async () => []),
-  getCodexConfigs: vi.fn(async () => []),
-  getVertexConfigs: vi.fn(async () => []),
-  getOpenAIProviders: vi.fn(async () => []),
+  getGeminiKeys: vi.fn(async (): Promise<unknown[]> => []),
+  getClaudeConfigs: vi.fn(async (): Promise<unknown[]> => []),
+  getCodexConfigs: vi.fn(async (): Promise<unknown[]> => []),
+  getOpenCodeGoConfigs: vi.fn(async (): Promise<unknown[]> => []),
+  getClineConfigs: vi.fn(async (): Promise<unknown[]> => []),
+  getVertexConfigs: vi.fn(async (): Promise<unknown[]> => []),
+  getBedrockConfigs: vi.fn(async (): Promise<unknown[]> => []),
+  getOpenAIProviders: vi.fn(async (): Promise<unknown[]> => []),
   saveCodexConfigs: vi.fn(async (_configs: unknown[]) => ({})),
   saveOpenAIProviders: vi.fn(async (_configs: unknown[]) => ({})),
   patchOpenAIProviderDisabled: vi.fn(async (_index: number, _disabled: boolean) => ({})),
   getEntityStats: vi.fn(async () => ({ source: [] })),
-  apiKeyEntriesList: vi.fn(async () => []),
-  channelGroupsList: vi.fn(async () => []),
+  apiKeyEntriesList: vi.fn(async (): Promise<unknown[]> => []),
+  channelGroupsList: vi.fn(async (): Promise<unknown[]> => []),
   proxiesList: vi.fn(async (): Promise<any[]> => []),
 }));
 
@@ -30,7 +34,10 @@ vi.mock("@code-proxy/api-client", async (importOriginal) => {
       getGeminiKeys: mocks.getGeminiKeys,
       getClaudeConfigs: mocks.getClaudeConfigs,
       getCodexConfigs: mocks.getCodexConfigs,
+      getOpenCodeGoConfigs: mocks.getOpenCodeGoConfigs,
+      getClineConfigs: mocks.getClineConfigs,
       getVertexConfigs: mocks.getVertexConfigs,
+      getBedrockConfigs: mocks.getBedrockConfigs,
       getOpenAIProviders: mocks.getOpenAIProviders,
       saveCodexConfigs: mocks.saveCodexConfigs,
       saveOpenAIProviders: mocks.saveOpenAIProviders,
@@ -70,7 +77,10 @@ describe("ProvidersPage openai tab", () => {
     mocks.getGeminiKeys.mockReset();
     mocks.getClaudeConfigs.mockReset();
     mocks.getCodexConfigs.mockReset();
+    mocks.getOpenCodeGoConfigs.mockReset();
+    mocks.getClineConfigs.mockReset();
     mocks.getVertexConfigs.mockReset();
+    mocks.getBedrockConfigs.mockReset();
     mocks.getOpenAIProviders.mockReset();
     mocks.saveCodexConfigs.mockReset();
     mocks.saveOpenAIProviders.mockReset();
@@ -83,7 +93,10 @@ describe("ProvidersPage openai tab", () => {
     mocks.getGeminiKeys.mockImplementation(async () => []);
     mocks.getClaudeConfigs.mockImplementation(async () => []);
     mocks.getCodexConfigs.mockImplementation(async () => []);
+    mocks.getOpenCodeGoConfigs.mockImplementation(async () => []);
+    mocks.getClineConfigs.mockImplementation(async () => []);
     mocks.getVertexConfigs.mockImplementation(async () => []);
+    mocks.getBedrockConfigs.mockImplementation(async () => []);
     mocks.saveCodexConfigs.mockImplementation(async () => ({}));
     mocks.saveOpenAIProviders.mockImplementation(async () => ({}));
     mocks.patchOpenAIProviderDisabled.mockImplementation(async () => ({}));
@@ -130,6 +143,108 @@ describe("ProvidersPage openai tab", () => {
     );
   });
 
+  test("loads provider counts on first render and hides zero badges", async () => {
+    mocks.getCodexConfigs.mockImplementation(async () => [
+      { name: "Codex 1", apiKey: "sk-codex-1" },
+      { name: "Codex 2", apiKey: "sk-codex-2" },
+    ]);
+    mocks.getOpenCodeGoConfigs.mockImplementation(async () => [
+      { name: "OpenCode Go", apiKey: "sk-opencode-go" },
+    ]);
+
+    render(
+      <MemoryRouter initialEntries={["/ai-providers"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    const codexTab = await screen.findByRole("tab", { name: /Codex/ });
+    const openCodeGoTab = screen.getByRole("tab", { name: /OpenCode Go/ });
+    const geminiTab = screen.getByRole("tab", { name: /Gemini/ });
+
+    expect(within(codexTab).getByText("2")).toBeInTheDocument();
+    expect(within(openCodeGoTab).getByText("1")).toBeInTheDocument();
+    expect(within(geminiTab).queryByText("0")).not.toBeInTheDocument();
+  });
+
+  test("shows skeleton cards instead of the card loading overlay before the first empty result", async () => {
+    localStorage.setItem("providers-page:tab", "gemini");
+    let resolveGemini: (value: ProviderSimpleConfig[]) => void = () => {};
+    mocks.getGeminiKeys.mockImplementationOnce(
+      () =>
+        new Promise<ProviderSimpleConfig[]>((resolve) => {
+          resolveGemini = resolve;
+        }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/ai-providers"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByTestId("providers-list-skeleton")).toBeInTheDocument();
+    expect(screen.queryByText("Loading…")).not.toBeInTheDocument();
+
+    resolveGemini([]);
+    expect(await screen.findByText("No configuration")).toBeInTheDocument();
+  });
+
+  test("keeps existing provider cards visible during toolbar refresh", async () => {
+    const user = userEvent.setup();
+    const geminiProvider: ProviderSimpleConfig = {
+      name: "Gemini Main",
+      apiKey: "sk-gemini-main",
+    };
+    localStorage.setItem("providers-page:tab", "gemini");
+    mocks.getGeminiKeys.mockImplementationOnce(async () => [geminiProvider]);
+
+    render(
+      <MemoryRouter initialEntries={["/ai-providers"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("Gemini Main")).toBeInTheDocument();
+
+    let resolveRefresh: (value: ProviderSimpleConfig[]) => void = () => {};
+    mocks.getGeminiKeys.mockImplementationOnce(
+      () =>
+        new Promise<ProviderSimpleConfig[]>((resolve) => {
+          resolveRefresh = resolve;
+        }),
+    );
+
+    await user.click(screen.getByRole("button", { name: /Refresh|刷新/ }));
+
+    expect(screen.getByText("Gemini Main")).toBeInTheDocument();
+    expect(screen.queryByTestId("providers-list-skeleton")).not.toBeInTheDocument();
+    expect(screen.queryByText("Loading…")).not.toBeInTheDocument();
+
+    resolveRefresh([geminiProvider]);
+    await waitFor(() => {
+      expect(mocks.getGeminiKeys).toHaveBeenCalledTimes(2);
+    });
+  });
+
   test("renders openai provider card with masked key and aggregated status", async () => {
     render(
       <MemoryRouter initialEntries={["/ai-providers/openai"]}>
@@ -146,7 +261,7 @@ describe("ProvidersPage openai tab", () => {
     expect(await screen.findByText("OpenAI Main")).toBeInTheDocument();
     expect(screen.getByText("prefix: oa")).toBeInTheDocument();
     expect(screen.getByText("baseUrl: https://example.com/v1")).toBeInTheDocument();
-    expect(screen.getByText(/sk-ope\*\*\*7890/)).toBeInTheDocument();
+    expect(screen.getAllByText(/sk-ope\*\*\*7890/).length).toBeGreaterThan(0);
     expect(screen.getByText("80.0%")).toBeInTheDocument();
     expect(screen.getByText("testModel: gpt-4.1")).toBeInTheDocument();
   });

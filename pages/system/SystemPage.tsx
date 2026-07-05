@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Check,
@@ -130,14 +130,59 @@ type SystemModelEntry = {
   sources?: ModelAvailabilitySource[];
 };
 
-const formatModelSourcesTooltip = (
+const formatSourceLabel = (source: ModelAvailabilitySource): string => {
+  const label = source.label.trim();
+  const provider = source.provider?.trim();
+  if (!label || !provider) return label;
+
+  const parts = label.split(" · ").map((part) => part.trim());
+  if (parts.length === 2 && parts[0].toLowerCase() === provider.toLowerCase()) {
+    return `${parts[1]} · ${parts[0]}`;
+  }
+  return label;
+};
+
+const renderModelSourcesTooltip = (
   sources: ModelAvailabilitySource[] | undefined,
-  title: string,
-) => {
-  if (!sources?.length) return "";
-  const labels = Array.from(new Set(sources.map((source) => source.label.trim()).filter(Boolean)));
-  if (labels.length === 0) return "";
-  return `${title}\n${labels.join("\n")}`;
+  modelId: string,
+  actualCallLabel: string,
+): ReactNode => {
+  const entries = (sources ?? [])
+    .map((source) => {
+      const label = formatSourceLabel(source);
+      if (!label) return null;
+      const actualModelId = source.upstreamModelId?.trim() || source.modelId?.trim() || modelId;
+      return {
+        label,
+        actualModelId,
+        mapped: Boolean(actualModelId && actualModelId !== modelId),
+      };
+    })
+    .filter((entry): entry is { label: string; actualModelId: string; mapped: boolean } =>
+      Boolean(entry),
+    );
+
+  if (entries.length === 0) return null;
+
+  return (
+    <span className="block min-w-44 max-w-[18rem] space-y-1 text-left">
+      {entries.map((entry) => (
+        <span key={`${entry.label}\x00${entry.actualModelId}`} className="block">
+          <span className="block text-[12px] font-medium text-slate-900 dark:text-white">
+            {entry.label}
+          </span>
+          {entry.mapped ? (
+            <span className="mt-0.5 flex min-w-0 items-start gap-1.5 text-[11px] text-slate-500 dark:text-white/55">
+              <span className="shrink-0">{actualCallLabel}</span>
+              <span className="min-w-0 break-all font-mono text-slate-700 dark:text-white/75">
+                {entry.actualModelId}
+              </span>
+            </span>
+          ) : null}
+        </span>
+      ))}
+    </span>
+  );
 };
 
 export function SystemPage({
@@ -180,9 +225,10 @@ export function SystemPage({
           .map((item) => item.id) ?? [];
       const nextModelIds = useMappedOwnerModels
         ? (configuredAvailability?.items ?? []).map((item) => item.id)
-        : rootV1ModelIds.length > 0
-          ? rootV1ModelIds
-          : (configuredAvailability?.items ?? []).map((item) => item.id);
+        : [
+            ...rootV1ModelIds,
+            ...(configuredAvailability?.items ?? []).map((item) => item.id),
+          ];
 
       setModels(
         Array.from(new Set(nextModelIds))
@@ -223,7 +269,7 @@ export function SystemPage({
   const apiKeyLookupUrl = `${window.location.origin}/manage/apikey-lookup`;
 
   return (
-    <div className="min-w-0 space-y-6 overflow-x-hidden">
+    <div className="min-w-0 space-y-6 overflow-x-hidden md:flex md:h-[calc(100dvh-112px)] md:min-h-0 md:flex-col md:space-y-0 md:gap-6">
       {/* ── Header ── */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
@@ -287,7 +333,11 @@ export function SystemPage({
       />
 
       {/* ── Model List ── */}
-      <Card padding="none" className="overflow-hidden" bodyClassName="mt-0">
+      <Card
+        padding="none"
+        className="overflow-hidden md:flex md:min-h-0 md:flex-1 md:flex-col"
+        bodyClassName="mt-0 md:flex md:min-h-0 md:flex-1 md:flex-col"
+      >
         {/* Header */}
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-3.5 dark:border-neutral-800">
           <div className="flex items-center gap-2.5">
@@ -351,7 +401,7 @@ export function SystemPage({
         )}
 
         {/* Model tags */}
-        <div className="max-h-[480px] overflow-y-auto px-5 py-4">
+        <div className="max-h-[480px] overflow-y-auto px-5 py-4 md:max-h-none md:min-h-0 md:flex-1">
           {modelsLoading && models.length === 0 ? (
             <div className="flex items-center justify-center py-12 text-sm text-slate-500 dark:text-white/50">
               <RefreshCw size={14} className="animate-spin mr-2" />
@@ -360,9 +410,15 @@ export function SystemPage({
           ) : filteredModels.length > 0 ? (
             <div className="flex flex-wrap gap-2">
               {filteredModels.map((model) => {
-                const tooltip = formatModelSourcesTooltip(
+                const tooltip = renderModelSourcesTooltip(
                   model.sources,
-                  t("system_page.model_sources"),
+                  model.id,
+                  t("system_page.model_actual_call"),
+                );
+                const hasMappedSource = (model.sources ?? []).some(
+                  (source) =>
+                    source.upstreamModelId &&
+                    source.upstreamModelId !== model.id,
                 );
                 const tag = (
                   <CopyableModelTag
@@ -374,7 +430,16 @@ export function SystemPage({
                 );
                 return tooltip ? (
                   <HoverTooltip key={model.id} content={tooltip} placement="top">
-                    <span className="inline-flex">{tag}</span>
+                    <span className="relative inline-flex">
+                      {tag}
+                      {hasMappedSource ? (
+                        <span
+                          aria-hidden="true"
+                          data-model-source-marker="true"
+                          className="absolute -right-0.5 -top-0.5 size-1.5 rounded-full bg-sky-500 ring-2 ring-white dark:ring-neutral-950"
+                        />
+                      ) : null}
+                    </span>
                   </HoverTooltip>
                 ) : (
                   <CopyableModelTag

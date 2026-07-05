@@ -7,6 +7,7 @@ export type ModelVendorKey =
   | "amp"
   | "antigravity"
   | "claude"
+  | "cline"
   | "codex"
   | "deepseek"
   | "gemini"
@@ -43,6 +44,11 @@ export const MODEL_VENDOR_COLORS: Record<ModelVendorKey, ModelVendorTone> = {
     bg: "bg-orange-50 dark:bg-orange-950/20",
     text: "text-orange-700 dark:text-orange-300",
     border: "border-orange-200/60 dark:border-orange-800/30",
+  },
+  cline: {
+    bg: "bg-teal-50 dark:bg-teal-950/20",
+    text: "text-teal-700 dark:text-teal-300",
+    border: "border-teal-200/60 dark:border-teal-800/30",
   },
   gpt: {
     bg: "bg-emerald-50 dark:bg-emerald-950/20",
@@ -151,6 +157,11 @@ const MODEL_VENDOR_DEFINITIONS: ModelVendorDefinition[] = [
     key: "claude",
     label: "claude",
     matches: (modelId) => startsWithAny(modelId, ["claude", "anthropic"]),
+  },
+  {
+    key: "cline",
+    label: "cline",
+    matches: (modelId) => startsWithAny(modelId, ["cline", "cline-pass"]),
   },
   {
     key: "gpt",

@@ -32,6 +32,9 @@ const isOauthBackedProviderRow = (item: Record<string, unknown>): boolean => {
   );
 };
 
+const normalizeClineBaseUrl = (value: unknown): string | undefined =>
+  normalizeString(value)?.replace(/\/+$/g, "") || undefined;
+
 export const providersApi = {
   async getGeminiKeys(): Promise<ProviderSimpleConfig[]> {
     const data = await apiClient.get("/gemini-api-key");
@@ -164,6 +167,53 @@ export const providersApi = {
 
   deleteOpenCodeGoConfig: (apiKey: string) =>
     apiClient.delete("/opencode-go-api-key", undefined, { params: { "api-key": apiKey } }),
+
+  async getClineConfigs(): Promise<ProviderSimpleConfig[]> {
+    const data = await apiClient.get("/cline-api-key");
+    const list = extractArrayPayload(data, "cline-api-key");
+    return list
+      .map((item) => {
+        if (!isRecord(item)) return null;
+        if (isOauthBackedProviderRow(item)) return null;
+        const apiKey = normalizeString(item["api-key"] ?? item.apiKey) ?? "";
+        if (!apiKey) return null;
+        const name = normalizeString(item.name) ?? undefined;
+        const prefix = normalizeString(item.prefix) ?? undefined;
+        const baseUrl =
+          normalizeClineBaseUrl(item["base-url"] ?? item.baseUrl) ?? "https://api.cline.bot/api/v1";
+        const proxyUrl = normalizeString(item["proxy-url"] ?? item.proxyUrl) ?? undefined;
+        const proxyId = normalizeString(item["proxy-id"] ?? item.proxyId) ?? undefined;
+        const headers = normalizeHeaders(item.headers);
+        const models = normalizeModels(item.models);
+        const excludedModels = normalizeExcludedModels(
+          item["excluded-models"] ?? item.excludedModels,
+        );
+        const visionFallbackModel =
+          normalizeString(item["vision-fallback-model"] ?? item.visionFallbackModel) ?? undefined;
+        return {
+          apiKey,
+          ...(name ? { name } : {}),
+          ...(prefix ? { prefix } : {}),
+          baseUrl,
+          ...(proxyUrl ? { proxyUrl } : {}),
+          ...(proxyId ? { proxyId } : {}),
+          ...(headers ? { headers } : {}),
+          ...(models ? { models } : {}),
+          ...(excludedModels ? { excludedModels } : {}),
+          ...(visionFallbackModel ? { visionFallbackModel } : {}),
+        };
+      })
+      .filter(Boolean) as ProviderSimpleConfig[];
+  },
+
+  saveClineConfigs: (configs: ProviderSimpleConfig[]) =>
+    apiClient.put(
+      "/cline-api-key",
+      configs.map((item) => serializeProviderKey(item)),
+    ),
+
+  deleteClineConfig: (apiKey: string) =>
+    apiClient.delete("/cline-api-key", undefined, { params: { "api-key": apiKey } }),
 
   queryOpenCodeGoUsage: (payload: {
     "workspace-id"?: string;

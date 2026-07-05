@@ -458,6 +458,14 @@ const sanitizeResetCreditCountForCache = (value: unknown): number | undefined =>
   return Math.max(0, Math.floor(count));
 };
 
+const sanitizeResetCreditExpirationsForCache = (value: unknown): string[] | undefined => {
+  if (!Array.isArray(value)) return undefined;
+  const expirations = value
+    .filter((item): item is string => typeof item === "string" && item.trim().length > 0)
+    .map((item) => item.trim());
+  return expirations.length > 0 ? expirations : undefined;
+};
+
 const sanitizeQuotaByFileNameForCache = (
   quotaByFileName: unknown,
   fileNames?: Set<string>,
@@ -481,12 +489,16 @@ const sanitizeQuotaByFileNameForCache = (
         : undefined;
     const planType = normalizePlanType(state.planType ?? state.plan_type);
     const resetCreditCount = sanitizeResetCreditCountForCache(state.resetCreditCount);
+    const resetCreditExpirations = sanitizeResetCreditExpirationsForCache(
+      state.resetCreditExpirations,
+    );
     const error = typeof state.error === "string" ? state.error : undefined;
     output[fileName] = {
       status: status === "loading" ? "success" : (status as QuotaStatus),
       items,
       planType: planType ?? undefined,
       resetCreditCount,
+      resetCreditExpirations,
       updatedAt,
       error: status === "error" ? error : undefined,
     };

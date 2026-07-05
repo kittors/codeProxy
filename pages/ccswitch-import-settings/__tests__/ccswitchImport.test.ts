@@ -231,6 +231,13 @@ describe("ccswitchImport", () => {
               slug: "gpt-5.5",
               display_name: "GPT 5.5",
               context_window: 512000,
+              default_reasoning_level: "medium",
+              supported_reasoning_levels: [
+                { effort: "low", description: "Fast" },
+                { effort: "medium", description: "Balanced" },
+                { effort: "high", description: "Deep" },
+                { effort: "xhigh", description: "Extra deep" },
+              ],
               model_messages: { context_window: 512000 },
             },
             {
@@ -252,6 +259,13 @@ describe("ccswitchImport", () => {
         model: "gpt-5.5",
         display_name: "GPT 5.5",
         context_window: 512000,
+        default_reasoning_level: "medium",
+        supported_reasoning_levels: [
+          { effort: "low", description: "Fast" },
+          { effort: "medium", description: "Balanced" },
+          { effort: "high", description: "Deep" },
+          { effort: "xhigh", description: "Extra deep" },
+        ],
         model_messages: { context_window: 512000 },
       },
       {
@@ -260,7 +274,16 @@ describe("ccswitchImport", () => {
         display_name: "DeepSeek V4 Flash",
         context_window: 256000,
       },
-      { model: "glm-4.6" },
+      {
+        model: "glm-4.6",
+        defaultReasoningLevel: "medium",
+        supportedReasoningLevels: [
+          { effort: "low", description: "Fast responses with lighter reasoning" },
+          { effort: "medium", description: "Balances speed and reasoning depth for everyday tasks" },
+          { effort: "high", description: "Greater reasoning depth for complex problems" },
+          { effort: "xhigh", description: "Extra high reasoning depth for complex problems" },
+        ],
+      },
     ]);
     expect(config.config).toContain(
       `model_catalog_json = "${CC_SWITCH_CODEX_MODEL_CATALOG_FILENAME}"`,
@@ -325,7 +348,19 @@ describe("ccswitchImport", () => {
       auth: { OPENAI_API_KEY: "sk-test-key" },
       apiFormat: CC_SWITCH_CODEX_API_FORMAT,
       modelCatalog: {
-        models: [{ model: "gpt-6-router" }, { model: "kimi-k2" }],
+        models: [
+          expect.objectContaining({
+            model: "gpt-6-router",
+            defaultReasoningLevel: "medium",
+            supportedReasoningLevels: [
+              { effort: "low", description: "Fast responses with lighter reasoning" },
+              { effort: "medium", description: "Balances speed and reasoning depth for everyday tasks" },
+              { effort: "high", description: "Greater reasoning depth for complex problems" },
+              { effort: "xhigh", description: "Extra high reasoning depth for complex problems" },
+            ],
+          }),
+          expect.objectContaining({ model: "kimi-k2" }),
+        ],
       },
     });
     expect(decodeConfig(url).config).toContain(
@@ -355,6 +390,13 @@ describe("ccswitchImport", () => {
       display_name: "DeepSeek V4 Flash",
       context_window: 256000,
       max_context_window: 256000,
+      default_reasoning_level: "medium",
+      supported_reasoning_levels: [
+        { effort: "low", description: "Fast responses with lighter reasoning" },
+        { effort: "medium", description: "Balances speed and reasoning depth for everyday tasks" },
+        { effort: "high", description: "Greater reasoning depth for complex problems" },
+        { effort: "xhigh", description: "Extra high reasoning depth for complex problems" },
+      ],
       visibility: "list",
       supported_in_api: true,
       supports_reasoning_summaries: true,
@@ -383,6 +425,34 @@ describe("ccswitchImport", () => {
     ]);
     expect(catalog.models[0]).toHaveProperty("base_instructions");
     expect(catalog.models[0]).toHaveProperty("model_messages");
+    expect(catalog.models[0]).toMatchObject({
+      default_reasoning_level: "medium",
+      supported_reasoning_levels: [
+        { effort: "low", description: "Fast responses with lighter reasoning" },
+        { effort: "medium", description: "Balances speed and reasoning depth for everyday tasks" },
+        { effort: "high", description: "Greater reasoning depth for complex problems" },
+        { effort: "xhigh", description: "Extra high reasoning depth for complex problems" },
+      ],
+    });
+  });
+
+  test("allows a generated Codex catalog entry to narrow reasoning levels explicitly", () => {
+    const catalog = buildCcSwitchCodexModelCatalog([
+      {
+        model: "thinking-toggle-model",
+        defaultReasoningLevel: "high",
+        supportedReasoningLevels: ["none", "high"],
+      },
+    ]);
+
+    expect(catalog.models[0]).toMatchObject({
+      slug: "thinking-toggle-model",
+      default_reasoning_level: "high",
+      supported_reasoning_levels: [
+        { effort: "none", description: "none" },
+        { effort: "high", description: "Greater reasoning depth for complex problems" },
+      ],
+    });
   });
 
   test("selects a client-specific default model from available models", () => {
@@ -419,5 +489,98 @@ describe("ccswitchImport", () => {
 
     expect(openSpy).toHaveBeenCalledWith("ccswitch://v1/import?resource=provider", "_self");
     expect(onProtocolUnavailable).not.toHaveBeenCalled();
+  });
+
+  test("derives model_reasoning_effort from the catalog entry's default_reasoning_level", () => {
+    const url = buildCcSwitchImportUrl({
+      apiKey: "sk-test-key",
+      baseUrl: "https://relay.example.com/",
+      clientType: "codex",
+      providerName: "Relay Provider",
+      model: "deepseek-v4-pro",
+      codexModelCatalog: {
+        models: [
+          {
+            slug: "deepseek-v4-pro",
+            model: "deepseek-v4-pro",
+            default_reasoning_level: "medium",
+            supported_reasoning_levels: [
+              { effort: "low" },
+              { effort: "medium" },
+              { effort: "high" },
+              { effort: "xhigh" },
+            ],
+          },
+          {
+            slug: "gpt-5.5",
+            model: "gpt-5.5",
+            default_reasoning_level: "low",
+          },
+        ],
+      },
+    });
+
+    expect(decodeConfig(url).config).toContain(`model_reasoning_effort = "medium"`);
+    expect(decodeConfig(url).config).toContain(`model = "deepseek-v4-pro"`);
+  });
+
+  test("derives model_reasoning_effort from camelCase defaultReasoningLevel when snake_case is absent", () => {
+    const url = buildCcSwitchImportUrl({
+      apiKey: "sk-test-key",
+      baseUrl: "https://relay.example.com/",
+      clientType: "codex",
+      providerName: "Relay Provider",
+      model: "gpt-5.5",
+      codexModelCatalog: {
+        models: [
+          {
+            model: "gpt-5.5",
+            defaultReasoningLevel: "low",
+            supportedReasoningLevels: ["low", "medium", "high", "xhigh"],
+          },
+        ],
+      },
+    });
+
+    expect(decodeConfig(url).config).toContain(`model_reasoning_effort = "low"`);
+  });
+
+  test("falls back to model_reasoning_effort = high when no matching catalog entry exists", () => {
+    const url = buildCcSwitchImportUrl({
+      apiKey: "sk-test-key",
+      baseUrl: "https://relay.example.com/",
+      clientType: "codex",
+      providerName: "Relay Provider",
+      model: "gpt-5.5",
+      codexModelCatalog: {
+        models: [
+          {
+            model: "deepseek-v4-pro",
+            default_reasoning_level: "medium",
+          },
+        ],
+      },
+    });
+
+    // The selected model is not in the explicit catalog, so the configured
+    // effort falls back to the legacy "high" default even though a separate
+    // entry carries reasoning metadata.
+    expect(decodeConfig(url).config).toContain(`model_reasoning_effort = "high"`);
+  });
+
+  test("falls back to model_reasoning_effort = high when catalog is empty for backward compatibility", () => {
+    const url = buildCcSwitchImportUrl({
+      apiKey: "sk-test-key",
+      baseUrl: "https://relay.example.com/",
+      clientType: "codex",
+      providerName: "Relay Provider",
+      model: "gpt-5.5",
+    });
+
+    // No codexModelCatalog passed: the selected model is auto-synthesized
+    // into the catalog (so the catalog pointer is present) but the effort
+    // falls back to the legacy "high" default to preserve prior behavior.
+    expect(decodeConfig(url).config).toContain(`model_reasoning_effort = "high"`);
+    expect(decodeConfig(url).config).toContain(`model_catalog_json = "${CC_SWITCH_CODEX_MODEL_CATALOG_FILENAME}"`);
   });
 });

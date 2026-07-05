@@ -1,6 +1,6 @@
-import { lazy } from "react";
+import { preloadablePage } from "../preloadablePage";
 
-const ApiKeyLookupPage = lazy(() =>
+const { Page: ApiKeyLookupPage, preload: preloadApiKeyLookupPage } = preloadablePage(() =>
   import("./ApiKeyLookupPage").then((m) => ({ default: m.ApiKeyLookupPage })),
 );
 
@@ -10,4 +10,5 @@ export const apiKeyLookupRoute = {
   auth: false,
   layout: "none",
   nav: null,
+  preload: preloadApiKeyLookupPage,
 };

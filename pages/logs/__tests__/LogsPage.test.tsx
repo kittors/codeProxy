@@ -78,6 +78,49 @@ describe("LogsPage", () => {
     await waitFor(() => expect(mocks.fetchErrorLogs).toHaveBeenCalledTimes(1));
   });
 
+  test("renders diagnostic summary for request error logs", async () => {
+    await i18n.changeLanguage("zh-CN");
+    const user = userEvent.setup();
+
+    mocks.fetchLogs.mockResolvedValue({
+      lines: [],
+      "latest-timestamp": null,
+    });
+    mocks.fetchErrorLogs.mockResolvedValue({
+      files: [
+        {
+          name: "error-deepseekv4flash-chatgpt-cs_3e13ca9880fc-v1-responses-20260703-d53bf806.log",
+          size: 1234,
+          modified: 1783067896,
+          request_id: "d53bf806",
+          status: 429,
+          error_code: "rpm_limit_exceeded",
+          error_type: "rate_limit_exceeded",
+          original_url: "/deepseekv4flash-chatgpt/cs_3e13ca9880fc/v1/responses",
+          effective_url: "/v1/responses",
+          route_group: "deepseekv4flash-chatgpt",
+          route_path: "/cs_3e13ca9880fc/v1",
+          model: "deepseek-chat",
+          provider: "deepseek",
+          rejected_by: "rpm",
+        },
+      ],
+    });
+
+    renderLogsPage();
+
+    await user.click(await screen.findByRole("tab", { name: "错误日志" }));
+
+    expect(await screen.findByText("响应状态")).toBeInTheDocument();
+    expect(screen.getByText("rpm_limit_exceeded")).toBeInTheDocument();
+    expect(screen.getByText("d53bf806")).toBeInTheDocument();
+    expect(
+      screen.getByText("/deepseekv4flash-chatgpt/cs_3e13ca9880fc/v1/responses"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("/v1/responses")).toBeInTheDocument();
+    expect(screen.getByText("deepseekv4flash-chatgpt · /cs_3e13ca9880fc/v1")).toBeInTheDocument();
+  });
+
   test("renders long request paths without a full-pill badge", async () => {
     await i18n.changeLanguage("zh-CN");
 

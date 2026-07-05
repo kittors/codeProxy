@@ -27,6 +27,8 @@ export type ModelAvailabilityItem = {
 
 export type ModelAvailabilitySource = {
   label: string;
+  modelId?: string;
+  upstreamModelId?: string;
   provider?: string;
   channel?: string;
   clientId?: string;
@@ -671,11 +673,17 @@ const normalizeAvailabilitySources = (value: unknown): ModelAvailabilitySource[]
     const channel = String(item.channel ?? "").trim();
     const clientId = String(item.client_id ?? item.clientId ?? "").trim();
     const source = String(item.source ?? "").trim();
-    const key = [label, provider, channel, clientId, source].join("\x00").toLowerCase();
+    const modelId = String(item.model_id ?? item.modelId ?? "").trim();
+    const upstreamModelId = String(item.upstream_model_id ?? item.upstreamModelId ?? "").trim();
+    const key = [label, provider, channel, clientId, source, modelId, upstreamModelId]
+      .join("\x00")
+      .toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);
     sources.push({
       label,
+      ...(modelId ? { modelId } : {}),
+      ...(upstreamModelId ? { upstreamModelId } : {}),
       ...(provider ? { provider } : {}),
       ...(channel ? { channel } : {}),
       ...(clientId ? { clientId } : {}),

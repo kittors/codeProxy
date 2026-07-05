@@ -1,36 +1,21 @@
-import { lazy, Suspense } from "react";
-import { Outlet, useLocation } from "react-router-dom";
+import { useLocation, useOutlet } from "react-router-dom";
+import { AnimatePresence } from "framer-motion";
 import { Reveal } from "@code-proxy/ui";
 import { useOptionalAuth } from "@app/providers/AuthProvider";
-
-const LazyAppShell = lazy(() => import("./AppShell").then((m) => ({ default: m.AppShell })));
-
-function ShellFallback() {
-  return (
-    <div
-      role="status"
-      aria-label="Loading"
-      className="flex min-h-screen items-center justify-center bg-slate-50 text-slate-700 dark:bg-neutral-950 dark:text-white/80"
-    >
-      <span
-        aria-hidden="true"
-        className="h-6 w-6 rounded-full border-2 border-slate-300 border-t-slate-900 motion-reduce:animate-none motion-safe:animate-spin dark:border-white/20 dark:border-t-white"
-      />
-    </div>
-  );
-}
+import { AppShell } from "./AppShell";
 
 export function DashboardLayout() {
   const location = useLocation();
+  const outlet = useOutlet();
   const auth = useOptionalAuth();
 
   return (
-    <Suspense fallback={<ShellFallback />}>
-      <LazyAppShell onLogout={() => auth?.actions?.logout?.()}>
-        <Reveal key={location.pathname}>
-          <Outlet />
+    <AppShell onLogout={() => auth?.actions?.logout?.()}>
+      <AnimatePresence mode="wait">
+        <Reveal key={location.pathname} className="min-h-full">
+          {outlet}
         </Reveal>
-      </LazyAppShell>
-    </Suspense>
+      </AnimatePresence>
+    </AppShell>
   );
 }

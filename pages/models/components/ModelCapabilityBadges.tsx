@@ -5,8 +5,9 @@ import { modelHasTextCapability } from "../modelsUtils";
 export function ModelCapabilityBadges({ model }: { model: ModelItem }) {
   const { t } = useTranslation();
   const badges: Array<{ key: string; label: string; className: string }> = [];
+  const hasImageOutput = model.outputModalities.includes("image");
 
-  if (modelHasTextCapability(model)) {
+  if (!hasImageOutput && modelHasTextCapability(model)) {
     badges.push({
       key: "text",
       label: t("models_page.capability_text"),
@@ -20,7 +21,7 @@ export function ModelCapabilityBadges({ model }: { model: ModelItem }) {
       className: "bg-sky-50 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300",
     });
   }
-  if (model.outputModalities.includes("image")) {
+  if (hasImageOutput) {
     badges.push({
       key: "image-output",
       label: t("models_page.capability_image_output"),

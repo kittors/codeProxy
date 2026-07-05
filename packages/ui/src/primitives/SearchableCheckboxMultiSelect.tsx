@@ -27,6 +27,7 @@ import {
   selectTriggerDisabled,
 } from "../utils/selectStyles";
 import type { ControlSize } from "../utils/controlStyles";
+import { ScrollArea } from "./ScrollArea";
 
 export interface SearchableCheckboxMultiSelectOption {
   value: string;
@@ -109,6 +110,7 @@ export function SearchableCheckboxMultiSelect({
   const searchRef = useRef<HTMLInputElement | null>(null);
   const [dropdownStyle, setDropdownStyle] = useState<CSSProperties>({});
   const [dropdownPlacement, setDropdownPlacement] = useState<"bottom" | "top">("bottom");
+  const [listMaxHeight, setListMaxHeight] = useState(224);
 
   const manualApply = applyMode === "manual";
   const committedEmptyMeansAllSelected =
@@ -196,6 +198,11 @@ export function SearchableCheckboxMultiSelect({
     const rect = trigger.getBoundingClientRect();
     const gap = 6;
     const maxHeight = 360;
+    const listChromeHeight = manualApply ? 132 : 84;
+    const setPanelMaxHeight = (height: number) => {
+      setListMaxHeight(Math.max(96, height - listChromeHeight));
+      return height;
+    };
 
     const isNarrow = window.innerWidth < mobileBreakpoint;
     if (isNarrow) {
@@ -205,25 +212,27 @@ export function SearchableCheckboxMultiSelect({
       const openAbove = spaceBelow < maxHeightMobile && spaceAbove > spaceBelow;
 
       if (openAbove) {
+        const panelMaxHeight = setPanelMaxHeight(Math.min(maxHeightMobile, spaceAbove));
         setDropdownPlacement("top");
         setDropdownStyle({
           position: "fixed",
           left: 12,
           right: 12,
           width: "auto",
-          maxHeight: Math.min(maxHeightMobile, spaceAbove),
+          maxHeight: panelMaxHeight,
           bottom: window.innerHeight - rect.top + gap,
           zIndex: 99999,
         });
         return;
       }
+      const panelMaxHeight = setPanelMaxHeight(Math.min(maxHeightMobile, spaceBelow));
       setDropdownPlacement("bottom");
       setDropdownStyle({
         position: "fixed",
         left: 12,
         right: 12,
         width: "auto",
-        maxHeight: Math.min(maxHeightMobile, spaceBelow),
+        maxHeight: panelMaxHeight,
         top: Math.min(rect.bottom + gap, window.innerHeight - maxHeightMobile - 12),
         zIndex: 99999,
       });
@@ -235,28 +244,30 @@ export function SearchableCheckboxMultiSelect({
     const openAbove = spaceBelow < maxHeight && spaceAbove > spaceBelow;
 
     if (openAbove) {
+      const panelMaxHeight = setPanelMaxHeight(Math.min(maxHeight, spaceAbove));
       setDropdownPlacement("top");
       setDropdownStyle({
         position: "fixed",
         bottom: window.innerHeight - rect.top + gap,
         left: rect.left,
         width: Math.max(rect.width, 260),
-        maxHeight: Math.min(maxHeight, spaceAbove),
+        maxHeight: panelMaxHeight,
         zIndex: 99999,
       });
       return;
     }
 
+    const panelMaxHeight = setPanelMaxHeight(Math.min(maxHeight, spaceBelow));
     setDropdownPlacement("bottom");
     setDropdownStyle({
       position: "fixed",
       top: rect.bottom + gap,
       left: rect.left,
       width: Math.max(rect.width, 260),
-      maxHeight: Math.min(maxHeight, spaceBelow),
+      maxHeight: panelMaxHeight,
       zIndex: 99999,
     });
-  }, [mobileBreakpoint]);
+  }, [manualApply, mobileBreakpoint]);
 
   useEffect(() => {
     if (!open) return;
@@ -545,10 +556,15 @@ export function SearchableCheckboxMultiSelect({
                   </div>
                 </div>
               ) : null}
-              <div
+              <ScrollArea
                 role="listbox"
                 aria-label={ariaLabel}
-                className="min-h-0 flex-1 overflow-y-auto p-1"
+                className="min-h-0 flex-1 [&_[data-scroll-area-scrollbar='y']]:right-1"
+                viewportClassName="!h-auto"
+                viewportStyle={{ maxHeight: listMaxHeight }}
+                contentClassName="p-1"
+                scrollbarVisibility="always"
+                scrollbarTrackInset={4}
               >
                 {filteredOptions.length === 0 ? (
                   <div className={selectEmptyState}>{noResultsLabel}</div>
@@ -583,7 +599,7 @@ export function SearchableCheckboxMultiSelect({
                     );
                   })
                 )}
-              </div>
+              </ScrollArea>
               {manualApply ? (
                 <div className="flex items-center justify-end gap-2 border-t border-slate-100 px-3 py-2 dark:border-neutral-800">
                   <button

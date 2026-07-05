@@ -894,7 +894,7 @@ describe("Auth Files helper coverage", () => {
       return {};
     });
 
-    const loadAll = vi.fn(async () => [] as AuthFileItem[]);
+    const loadAll = vi.fn(async (): Promise<AuthFileItem[]> => []);
     const { result } = renderHook(() => useAuthFilesDetailEditors(loadAll), { wrapper });
 
     await act(async () => {

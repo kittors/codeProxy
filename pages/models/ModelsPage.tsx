@@ -580,7 +580,7 @@ export function ModelsPage() {
     ) : null;
 
   return (
-    <section className="flex flex-1 flex-col gap-4">
+    <section className="flex flex-1 flex-col gap-4 md:h-[calc(100dvh-112px)] md:min-h-0 md:overflow-hidden">
       <ModelsStatsCards stats={totalStats} totalCost={totalCost} />
 
       <ModelsPageTabs activeTab={activeTab} onTabChange={setActiveTab} />
@@ -588,7 +588,7 @@ export function ModelsPage() {
       {activeTab === "library" ? (
         <div
           data-testid="owner-library-layout"
-          className="grid h-[calc(100dvh-300px)] min-h-[28rem] gap-4 lg:grid-cols-[18rem_minmax(0,1fr)]"
+          className="grid h-[calc(100dvh-300px)] min-h-[28rem] gap-4 md:h-auto md:min-h-0 md:flex-1 lg:grid-cols-[18rem_minmax(0,1fr)]"
         >
           <div data-testid="owner-sidebar-card" className="h-full min-h-0 min-w-0">
             <Card
@@ -714,7 +714,7 @@ export function ModelsPage() {
           <div data-testid="model-library-card" className="h-full min-h-0 min-w-0">
             <Card
               title={t("models_page.model_library")}
-              className="flex h-full flex-col overflow-hidden"
+              className="flex h-full flex-col overflow-hidden md:min-h-0"
               bodyClassName="relative flex min-h-0 flex-1 flex-col"
               actions={
                 <div className="flex flex-wrap items-center justify-end gap-2">
@@ -883,7 +883,7 @@ export function ModelsPage() {
         <Card
           title={t("models_page.model_configs")}
           description={t("models_page.model_configs_desc")}
-          className="flex flex-1 flex-col overflow-hidden"
+          className="flex flex-1 flex-col overflow-hidden md:min-h-0"
           bodyClassName="relative flex min-h-0 flex-1 flex-col"
           actions={
             <div className="flex flex-wrap items-center justify-end gap-2">
@@ -927,7 +927,8 @@ export function ModelsPage() {
             caption={t("models_page.table_caption")}
             emptyText={searchFilter ? t("models_page.no_results") : t("models_page.no_model_data")}
             minWidth="min-w-[1440px]"
-            height="h-[calc(100vh-430px)]"
+            height="h-[calc(100vh-430px)] md:h-auto md:flex-1"
+            minHeight="min-h-[360px] md:min-h-0"
           />
         </Card>
       )}

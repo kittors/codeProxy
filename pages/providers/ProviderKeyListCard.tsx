@@ -3,7 +3,7 @@ import { Loader2, Plus, Zap } from "lucide-react";
 import type { ProviderSimpleConfig } from "@code-proxy/api-client";
 import { Button } from "@code-proxy/ui";
 import { Card } from "@code-proxy/ui";
-import { ProviderCard } from "./ProviderCard";
+import { ProviderCard, ProviderCardSkeleton } from "./ProviderCard";
 import { EmptyState } from "@code-proxy/ui";
 import { ProviderStatusBar } from "@features/provider-latency";
 import type { KeyStatBucket, StatusBarData } from "@code-proxy/domain";
@@ -66,12 +66,12 @@ export function ProviderKeyListCard({
   showExcludedModels?: boolean;
 }) {
   const { t } = useTranslation();
+  const showSkeleton = loading && items.length === 0;
 
   return (
     <Card
       className="flex h-full min-h-0 flex-col"
       bodyClassName="min-h-0 flex flex-1 flex-col"
-      loading={loading}
       actions={
         <Button variant="primary" size="sm" onClick={onAdd}>
           <Plus size={14} />
@@ -79,7 +79,26 @@ export function ProviderKeyListCard({
         </Button>
       }
     >
-      {items.length === 0 ? (
+      {showSkeleton ? (
+        <div
+          role="status"
+          aria-label={t("common.loading")}
+          data-testid="providers-list-skeleton"
+          className={[
+            "min-h-0 flex-1 overflow-hidden pr-1 gap-3 items-start content-start justify-start",
+            naturalHeight ? "flex flex-wrap" : "grid",
+          ].join(" ")}
+          style={
+            naturalHeight
+              ? undefined
+              : { gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 18rem), 22rem))" }
+          }
+        >
+          {Array.from({ length: 6 }, (_, index) => (
+            <ProviderCardSkeleton key={index} naturalHeight={naturalHeight} />
+          ))}
+        </div>
+      ) : items.length === 0 ? (
         <EmptyState title={t("providers.no_config")} description={t("providers.no_config_desc")} />
       ) : (
         <div

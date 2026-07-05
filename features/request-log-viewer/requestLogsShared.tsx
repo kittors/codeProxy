@@ -1,3 +1,4 @@
+import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import type { UsageLogItem } from "@code-proxy/api-client/endpoints/usage";
 import {
@@ -10,12 +11,28 @@ import {
   type UsageMetricVariant,
 } from "@code-proxy/domain";
 import { parseUsageTimestampMs } from "@features/monitor-widgets/monitor-utils";
-import { Tabs, TabsList, TabsTrigger } from "@code-proxy/ui";
+import {
+  SearchableCheckboxMultiSelect,
+  Tabs,
+  TabsList,
+  TabsTrigger,
+} from "@code-proxy/ui";
+import type { SearchableCheckboxMultiSelectOption } from "@code-proxy/ui";
 import { HoverTooltip, OverflowTooltip } from "@code-proxy/ui";
 import { PaginationBar } from "@code-proxy/ui";
 import { ModelTag } from "@features/model-tags";
 
 export type TimeRange = 1 | 7 | 14 | 30;
+export type StatusFilterValue = "success" | "failed";
+export type MultiSelectFilterState<T extends string = string> = T[] | null;
+
+export function isStatusFilterValue(value: string): value is StatusFilterValue {
+  return value === "success" || value === "failed";
+}
+
+export function toStatusFilterValues(values: string[]): StatusFilterValue[] {
+  return values.filter(isStatusFilterValue);
+}
 
 export type RequestLogsRow = {
   id: string;
@@ -27,6 +44,8 @@ export type RequestLogsRow = {
   channelName: string;
   maskedApiKey: string;
   model: string;
+  upstreamModel: string;
+  visionFallbackModel: string;
   failed: boolean;
   streaming: boolean;
   latencyText: string;
@@ -57,7 +76,9 @@ const computeOutputTokensPerSecond = (row: RequestLogsRow): number | null => {
   const totalSeconds = parseLatencyTextToSeconds(row.latencyText);
   if (totalSeconds === null || totalSeconds <= 0) return null;
 
-  const firstSeconds = row.streaming ? (parseLatencyTextToSeconds(row.firstTokenText) ?? 0) : 0;
+  const firstSeconds = row.streaming
+    ? (parseLatencyTextToSeconds(row.firstTokenText) ?? 0)
+    : 0;
   const generationSeconds = Math.max(0, totalSeconds - firstSeconds);
   if (generationSeconds <= 0) return null;
 
@@ -66,7 +87,8 @@ const computeOutputTokensPerSecond = (row: RequestLogsRow): number | null => {
 };
 
 const formatTokensPerSecond = (value: number | null): string => {
-  if (!Number.isFinite(value ?? Number.NaN) || !value || value <= 0) return "--";
+  if (!Number.isFinite(value ?? Number.NaN) || !value || value <= 0)
+    return "--";
   if (value >= 100) return `${Math.round(value)} t/s`;
   if (value >= 10) return `${value.toFixed(1)} t/s`;
   return `${value.toFixed(2)} t/s`;
@@ -114,7 +136,13 @@ function RequestLogMetricChip({
   );
 }
 
-function RequestLogModeChip({ label, streaming }: { label: string; streaming: boolean }) {
+function RequestLogModeChip({
+  label,
+  streaming,
+}: {
+  label: string;
+  streaming: boolean;
+}) {
   return (
     <span
       className={
@@ -165,7 +193,11 @@ export function RequestLogUsageMetricValue({
       placement="top"
       className={useCompact ? "cursor-help" : undefined}
     >
-      <span className={["block min-w-0 truncate", className].filter(Boolean).join(" ")}>
+      <span
+        className={["block min-w-0 truncate", className]
+          .filter(Boolean)
+          .join(" ")}
+      >
         {display}
       </span>
     </HoverTooltip>
@@ -186,8 +218,169 @@ export interface RequestLogsTableColumn<T> {
 
 export const DEFAULT_REQUEST_LOG_PAGE_SIZE = 50;
 export const REQUEST_LOG_PAGE_SIZE_OPTIONS = [20, 50, 100];
-export const REQUEST_LOG_TIME_RANGES: readonly TimeRange[] = [1, 7, 14, 30] as const;
+export const REQUEST_LOG_TIME_RANGES: readonly TimeRange[] = [
+  1, 7, 14, 30,
+] as const;
 export const SYSTEM_REQUEST_LOG_FILTER_VALUE = "__system__";
+
+export function normalizeFilterSelection<T extends string>(
+  selected: MultiSelectFilterState<T>,
+  allowedValues: T[],
+): MultiSelectFilterState<T> {
+  if (selected === null) return null;
+  if (allowedValues.length === 0) return [];
+  const allowed = new Set(allowedValues);
+  const normalized = selected.filter(
+    (item, index) => allowed.has(item) && selected.indexOf(item) === index,
+  );
+  if (normalized.length === allowedValues.length) return null;
+  return normalized;
+}
+
+export function toFilterParam<T extends string>(
+  selected: MultiSelectFilterState<T>,
+  allowedValues: T[],
+): { values?: T[]; matchesNone: boolean } {
+  const normalized = normalizeFilterSelection(selected, allowedValues);
+  if (normalized === null) return { values: undefined, matchesNone: false };
+  if (normalized.length === 0) return { values: undefined, matchesNone: true };
+  return { values: normalized, matchesNone: false };
+}
+
+export function hasActiveFilterSelection<T extends string>(
+  selected: MultiSelectFilterState<T>,
+  allowedValues: T[],
+): boolean {
+  const normalized = normalizeFilterSelection(selected, allowedValues);
+  return normalized !== null;
+}
+
+export function RequestLogFacetFilters({
+  modelOptions,
+  channelOptions,
+  statusOptions,
+  selectedModels,
+  selectedChannels,
+  selectedStatuses,
+  onModelsChange,
+  onChannelsChange,
+  onStatusesChange,
+  onModelsClear,
+  onChannelsClear,
+  onStatusesClear,
+}: {
+  modelOptions: SearchableCheckboxMultiSelectOption[];
+  channelOptions: SearchableCheckboxMultiSelectOption[];
+  statusOptions: SearchableCheckboxMultiSelectOption[];
+  selectedModels: MultiSelectFilterState<string>;
+  selectedChannels: MultiSelectFilterState<string>;
+  selectedStatuses: MultiSelectFilterState<StatusFilterValue>;
+  onModelsChange: (value: string[]) => void;
+  onChannelsChange: (value: string[]) => void;
+  onStatusesChange: (value: StatusFilterValue[]) => void;
+  onModelsClear: () => void;
+  onChannelsClear: () => void;
+  onStatusesClear: () => void;
+}) {
+  const { t } = useTranslation();
+  const statusChangeAdapter = useMemo(
+    () => (value: string[]) => onStatusesChange(toStatusFilterValues(value)),
+    [onStatusesChange],
+  );
+  const statusClearAdapter = useCallback(() => {
+    onStatusesClear();
+  }, [onStatusesClear]);
+
+  return (
+    <>
+      <div className="w-full min-[480px]:w-auto sm:w-[200px]">
+        <SearchableCheckboxMultiSelect
+          value={selectedModels ?? []}
+          onChange={onModelsChange}
+          options={modelOptions}
+          placeholder={t("request_logs.all_models_placeholder")}
+          searchPlaceholder={t("request_logs.search_models")}
+          selectFilteredLabel={t("request_logs.select_filtered")}
+          deselectFilteredLabel={t("request_logs.deselect_filtered")}
+          selectedCountLabel={(count: number) =>
+            t("request_logs.selected_count", { count })
+          }
+          noResultsLabel={t("request_logs.no_filter_results")}
+          aria-label={t("request_logs.filter_model")}
+          clearLabel={t("request_logs.clear_model_filter")}
+          onClear={onModelsClear}
+          showClearButton
+          size="sm"
+          emptyValueMeansAllSelected
+          emptyValueRepresentsAllSelected={selectedModels === null}
+          showFilteredToggleWithoutQuery={false}
+          applyMode="manual"
+          applyLabel={t("request_logs.apply_filters")}
+          cancelLabel={t("common.cancel")}
+          selectAllLabel={t("request_logs.select_all")}
+          deselectAllLabel={t("request_logs.deselect_all")}
+          emptySelectionLabel={t("request_logs.none_selected")}
+        />
+      </div>
+      <div className="w-full min-[480px]:w-auto sm:w-[180px]">
+        <SearchableCheckboxMultiSelect
+          value={selectedChannels ?? []}
+          onChange={onChannelsChange}
+          options={channelOptions}
+          placeholder={t("request_logs.all_channels_placeholder")}
+          searchPlaceholder={t("request_logs.search_channels")}
+          selectFilteredLabel={t("request_logs.select_filtered")}
+          deselectFilteredLabel={t("request_logs.deselect_filtered")}
+          selectedCountLabel={(count: number) =>
+            t("request_logs.selected_count", { count })
+          }
+          noResultsLabel={t("request_logs.no_filter_results")}
+          aria-label={t("request_logs.filter_channel")}
+          clearLabel={t("request_logs.clear_channel_filter")}
+          onClear={onChannelsClear}
+          showClearButton
+          size="sm"
+          emptyValueMeansAllSelected
+          emptyValueRepresentsAllSelected={selectedChannels === null}
+          showFilteredToggleWithoutQuery={false}
+          applyMode="manual"
+          applyLabel={t("request_logs.apply_filters")}
+          cancelLabel={t("common.cancel")}
+          selectAllLabel={t("request_logs.select_all")}
+          deselectAllLabel={t("request_logs.deselect_all")}
+          emptySelectionLabel={t("request_logs.none_selected")}
+        />
+      </div>
+      <div className="w-full min-[480px]:w-auto sm:w-[150px]">
+        <SearchableCheckboxMultiSelect
+          value={selectedStatuses ?? []}
+          onChange={statusChangeAdapter}
+          options={statusOptions}
+          placeholder={t("request_logs.all_status")}
+          searchPlaceholder=""
+          selectFilteredLabel={t("request_logs.select_filtered")}
+          deselectFilteredLabel={t("request_logs.deselect_filtered")}
+          selectedCountLabel={(count: number) => `${count}`}
+          noResultsLabel={t("request_logs.no_filter_results")}
+          aria-label={t("request_logs.filter_status")}
+          clearLabel={t("request_logs.clear_status_filter")}
+          onClear={statusClearAdapter}
+          showClearButton
+          size="sm"
+          emptyValueMeansAllSelected
+          emptyValueRepresentsAllSelected={selectedStatuses === null}
+          showFilteredToggleWithoutQuery={false}
+          applyMode="manual"
+          applyLabel={t("request_logs.apply_filters")}
+          cancelLabel={t("common.cancel")}
+          selectAllLabel={t("request_logs.select_all")}
+          deselectAllLabel={t("request_logs.deselect_all")}
+          emptySelectionLabel={t("request_logs.none_selected")}
+        />
+      </div>
+    </>
+  );
+}
 
 export type RequestLogKeyOption = {
   value: string;
@@ -198,7 +391,8 @@ export type RequestLogKeyOption = {
 export const maskRequestLogApiKey = (value: string): string => {
   const trimmed = value.trim();
   if (!trimmed) return "--";
-  if (trimmed.length <= 10) return `${trimmed.slice(0, 2)}***${trimmed.slice(-2)}`;
+  if (trimmed.length <= 10)
+    return `${trimmed.slice(0, 2)}***${trimmed.slice(-2)}`;
   return `${trimmed.slice(0, 6)}***${trimmed.slice(-4)}`;
 };
 
@@ -235,6 +429,8 @@ export const toRequestLogsRow = (item: UsageLogItem): RequestLogsRow => {
     channelName: item.channel_name || "",
     maskedApiKey: maskRequestLogApiKey(item.api_key),
     model: item.model,
+    upstreamModel: item.upstream_model || "",
+    visionFallbackModel: item.vision_fallback_model || "",
     failed: item.failed,
     streaming: item.streaming === true,
     latencyText: formatRequestLogLatencyMs(item.latency_ms),
@@ -248,11 +444,17 @@ export const toRequestLogsRow = (item: UsageLogItem): RequestLogsRow => {
   };
 };
 
-export const isSystemRequestLogKey = (apiKey: string, apiKeyName?: string): boolean => {
+export const isSystemRequestLogKey = (
+  apiKey: string,
+  apiKeyName?: string,
+): boolean => {
   if (String(apiKeyName || "").trim()) return false;
   const trimmed = String(apiKey || "").trim();
   if (!trimmed) return true;
-  return /^(GET|POST|PUT|PATCH|DELETE|OPTIONS|HEAD)\s+\//i.test(trimmed) || trimmed.startsWith("/");
+  return (
+    /^(GET|POST|PUT|PATCH|DELETE|OPTIONS|HEAD)\s+\//i.test(trimmed) ||
+    trimmed.startsWith("/")
+  );
 };
 
 export const buildRequestLogKeyOptions = (
@@ -297,11 +499,16 @@ export function RequestLogsTimeRangeSelector({
 }) {
   const { t } = useTranslation();
   return (
-    <Tabs value={String(value)} onValueChange={(next) => onChange(Number(next) as TimeRange)}>
+    <Tabs
+      value={String(value)}
+      onValueChange={(next) => onChange(Number(next) as TimeRange)}
+    >
       <TabsList>
         {REQUEST_LOG_TIME_RANGES.map((range) => {
           const label =
-            range === 1 ? t("request_logs.today") : t("request_logs.n_days", { count: range });
+            range === 1
+              ? t("request_logs.today")
+              : t("request_logs.n_days", { count: range });
           return (
             <TabsTrigger key={range} value={String(range)}>
               {label}
@@ -324,7 +531,8 @@ export function buildRequestLogsColumns(
       label: t("request_logs.col_id"),
       width: "w-20",
       headerClassName: "text-left",
-      cellClassName: "text-left font-mono text-xs tabular-nums text-slate-500 dark:text-white/50",
+      cellClassName:
+        "text-left font-mono text-xs tabular-nums text-slate-500 dark:text-white/50",
       render: (row) => (
         <OverflowTooltip content={`#${row.id}`} className="block min-w-0">
           <span className="block min-w-0 truncate">#{row.id}</span>
@@ -343,7 +551,9 @@ export function buildRequestLogsColumns(
           content={formatRequestLogTimestamp(row.timestamp)}
           className="block min-w-0"
         >
-          <span className="block min-w-0 truncate">{formatRequestLogTimestamp(row.timestamp)}</span>
+          <span className="block min-w-0 truncate">
+            {formatRequestLogTimestamp(row.timestamp)}
+          </span>
         </OverflowTooltip>
       ),
     },
@@ -354,7 +564,10 @@ export function buildRequestLogsColumns(
       headerClassName: "text-center",
       cellClassName: "text-center",
       render: (row) => (
-        <OverflowTooltip content={row.channelName || "--"} className="block min-w-0">
+        <OverflowTooltip
+          content={row.channelName || "--"}
+          className="block min-w-0"
+        >
           <span
             className={`block min-w-0 truncate text-xs font-medium ${row.channelName ? "text-violet-600 dark:text-violet-400" : "text-slate-400 dark:text-white/30"}`}
           >
@@ -391,7 +604,8 @@ export function buildRequestLogsColumns(
       width: "w-64",
       minWidthPx: 240,
       headerClassName: "text-center",
-      cellClassName: "text-center text-xs tabular-nums text-slate-700 dark:text-slate-200",
+      cellClassName:
+        "text-center text-xs tabular-nums text-slate-700 dark:text-slate-200",
       render: (row) => {
         const tps = computeOutputTokensPerSecond(row);
         const tpsText = formatTokensPerSecond(tps);
@@ -399,8 +613,12 @@ export function buildRequestLogsColumns(
         const hasFirstToken = hasRequestLogMetricText(row.firstTokenText);
         const hasTps = hasRequestLogMetricText(tpsText);
         const tooltipLines = [
-          hasLatency ? `${t("request_logs.col_duration")}: ${row.latencyText}` : null,
-          hasFirstToken ? `${t("request_logs.col_first_token")}: ${row.firstTokenText}` : null,
+          hasLatency
+            ? `${t("request_logs.col_duration")}: ${row.latencyText}`
+            : null,
+          hasFirstToken
+            ? `${t("request_logs.col_first_token")}: ${row.firstTokenText}`
+            : null,
           hasTps ? `${t("request_logs.tokens_per_second")}: ${tpsText}` : null,
         ].filter((line): line is string => Boolean(line));
 
@@ -509,7 +727,8 @@ export function buildRequestLogsColumns(
       label: t("request_logs.col_total_token"),
       width: "w-28",
       headerClassName: "text-center",
-      cellClassName: "text-center font-mono text-xs tabular-nums text-slate-900 dark:text-white",
+      cellClassName:
+        "text-center font-mono text-xs tabular-nums text-slate-900 dark:text-white",
       render: (row) => <RequestLogUsageMetricValue value={row.totalTokens} />,
     },
     {
@@ -519,7 +738,9 @@ export function buildRequestLogsColumns(
       headerClassName: "text-center",
       cellClassName:
         "text-center font-mono text-xs tabular-nums text-emerald-700 dark:text-emerald-400",
-      render: (row) => <RequestLogUsageMetricValue value={row.cost} variant="currency" />,
+      render: (row) => (
+        <RequestLogUsageMetricValue value={row.cost} variant="currency" />
+      ),
     },
     {
       key: "apiKeyName",
@@ -529,13 +750,19 @@ export function buildRequestLogsColumns(
       cellClassName: "text-center",
       render: (row) => (
         <OverflowTooltip
-          content={row.isSystemCall ? t("request_logs.system_call") : row.apiKeyName || "--"}
+          content={
+            row.isSystemCall
+              ? t("request_logs.system_call")
+              : row.apiKeyName || "--"
+          }
           className="block min-w-0"
         >
           <span
             className={`block min-w-0 truncate text-xs font-medium ${row.apiKeyName || row.isSystemCall ? "text-indigo-600 dark:text-indigo-400" : "text-slate-400 dark:text-white/30"}`}
           >
-            {row.isSystemCall ? t("request_logs.system_call") : row.apiKeyName || "--"}
+            {row.isSystemCall
+              ? t("request_logs.system_call")
+              : row.apiKeyName || "--"}
           </span>
         </OverflowTooltip>
       ),
@@ -548,9 +775,34 @@ export function buildRequestLogsColumns(
       cellClassName: "text-center",
       render: (row) =>
         row.model ? (
-          <OverflowTooltip content={row.model} className="inline-block max-w-full align-middle">
-            <ModelTag id={row.model} size="sm" className="align-middle" />
-          </OverflowTooltip>
+          <span className="inline-flex max-w-full items-center justify-center gap-1 align-middle">
+            <OverflowTooltip content={row.model} className="min-w-0">
+              <ModelTag id={row.model} size="sm" className="align-middle" />
+            </OverflowTooltip>
+            {row.upstreamModel && row.upstreamModel !== row.model ? (
+              <HoverTooltip
+                content={`${t("request_logs.real_model_id")}\n${row.upstreamModel}`}
+                placement="top"
+              >
+                <span
+                  className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500"
+                  aria-label={t("request_logs.real_model_id")}
+                />
+              </HoverTooltip>
+            ) : null}
+            {row.visionFallbackModel &&
+            row.visionFallbackModel !== row.model ? (
+              <HoverTooltip
+                content={`${t("request_logs.vision_fallback_model_id")}\n${row.visionFallbackModel}`}
+                placement="top"
+              >
+                <span
+                  className="h-1.5 w-1.5 shrink-0 rounded-full bg-sky-500"
+                  aria-label={t("request_logs.vision_fallback_model_id")}
+                />
+              </HoverTooltip>
+            ) : null}
+          </span>
         ) : (
           <span className="text-xs text-slate-400 dark:text-white/30">--</span>
         ),
@@ -591,7 +843,8 @@ export function RequestLogsPaginationBar({
         nextPage: t("request_logs.next_page"),
         lastPage: t("request_logs.last_page"),
         rowsPerPage: t("request_logs.rows_per_page"),
-        pageInfo: ({ start, end, total }) => t("request_logs.page_info", { start, end, total }),
+        pageInfo: ({ start, end, total }) =>
+          t("request_logs.page_info", { start, end, total }),
       }}
     />
   );

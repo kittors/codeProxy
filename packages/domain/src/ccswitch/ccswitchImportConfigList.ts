@@ -125,8 +125,12 @@ const normalizeCodexModelCatalog = (
     (entry): entry is Record<string, unknown> =>
       entry !== null && typeof entry === "object" && !Array.isArray(entry),
   );
-  const hasSlug = entries.some((entry) => typeof entry.slug === "string" && entry.slug.trim());
-  return hasSlug ? { models: entries.map((entry) => ({ ...entry })) } : undefined;
+  const hasModelId = entries.some((entry) => {
+    const slug = typeof entry.slug === "string" ? entry.slug.trim() : "";
+    const model = typeof entry.model === "string" ? entry.model.trim() : "";
+    return slug || model;
+  });
+  return hasModelId ? { models: entries.map((entry) => ({ ...entry })) } : undefined;
 };
 
 const createConfigId = () => {

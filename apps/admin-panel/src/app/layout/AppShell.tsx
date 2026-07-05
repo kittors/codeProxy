@@ -1,10 +1,12 @@
 import {
   createContext,
+  type MouseEvent,
   type PropsWithChildren,
   use,
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -28,7 +30,8 @@ import {
   ShieldCheck,
   Sparkles,
 } from "lucide-react";
-import { LanguageSelector, PageBackground, ThemeToggleButton } from "@code-proxy/ui";
+import { LanguageSelector, PageBackground, ScrollArea, ThemeToggleButton } from "@code-proxy/ui";
+import { preloadPageRoute } from "@pages/registry";
 
 interface ShellContextState {
   state: {
@@ -42,6 +45,8 @@ interface ShellContextState {
 const ShellContext = createContext<ShellContextState | null>(null);
 const STORAGE_KEY_SIDEBAR_COLLAPSED = "cli-proxy-sidebar-collapsed";
 const SIDEBAR_MOBILE_MEDIA = "(max-width: 767px)";
+const ROUTE_PROGRESS_MIN_MS = 680;
+const ROUTE_PROGRESS_HIDE_MS = 360;
 
 const NAV_ITEMS = [
   { to: "/dashboard", i18nKey: "shell.nav_dashboard", icon: LayoutDashboard },
@@ -100,6 +105,15 @@ const getPageTitleKey = (pathname: string): string => {
   return "shell.page_home";
 };
 
+const shouldUseNativeNavigation = (event: MouseEvent<HTMLAnchorElement>) =>
+  event.defaultPrevented ||
+  event.button !== 0 ||
+  event.metaKey ||
+  event.altKey ||
+  event.ctrlKey ||
+  event.shiftKey ||
+  Boolean(event.currentTarget.target && event.currentTarget.target !== "_self");
+
 function ShellFrame({ children }: PropsWithChildren) {
   return <PageBackground variant="app">{children}</PageBackground>;
 }
@@ -121,12 +135,16 @@ function ShellSidebar({
   } = useShell();
   // Track the clicked nav target so the highlight updates instantly on click,
   // without waiting for lazy chunks to load & location to update.
-  const [pendingTo, setPendingTo] = useState<string | null>(null);
+  const [pendingTo, setPendingTo] = useState("");
+  const [progressDone, setProgressDone] = useState(false);
+  const progressStartedAt = useRef(0);
+  const progressTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const navigationRequestId = useRef(0);
 
-  // Clear pendingTo once location catches up (chunk loaded, route rendered).
-  useEffect(() => {
-    setPendingTo(null);
-  }, [location.pathname]);
+  const clearProgressTimers = useCallback(() => {
+    progressTimers.current.forEach(clearTimeout);
+    progressTimers.current = [];
+  }, []);
 
   const resolveActiveTo = useCallback((pathname: string) => {
     const sorted = [...NAV_ITEMS].sort((a, b) => b.to.length - a.to.length);
@@ -135,43 +153,89 @@ function ShellSidebar({
     );
   }, []);
 
-  const activeTo = useMemo(() => {
-    // If user just clicked a nav item, use that immediately for highlighting
-    if (pendingTo) return resolveActiveTo(pendingTo);
-    return resolveActiveTo(location.pathname);
-  }, [pendingTo, location.pathname, resolveActiveTo]);
+  const activeTo = useMemo(
+    () => resolveActiveTo(pendingTo || location.pathname),
+    [pendingTo, location.pathname, resolveActiveTo],
+  );
 
   const isMobile = mode === "mobile";
   const accountLogoutLabel = t("shell.logout_button");
 
+  const warmPageRoute = useCallback((to: string) => {
+    void preloadPageRoute(to).catch(() => undefined);
+  }, []);
+
   const handleNavClick = useCallback(
-    (to: string) => {
-      // Immediately mark as pending so highlight is instant
-      if (to !== location.pathname) {
-        setPendingTo(to);
+    (event: MouseEvent<HTMLAnchorElement>, to: string) => {
+      if (shouldUseNativeNavigation(event)) return;
+
+      if (to === location.pathname) {
+        onNavigate?.();
+        return;
       }
+
+      event.preventDefault();
       onNavigate?.();
+
+      const requestId = navigationRequestId.current + 1;
+      navigationRequestId.current = requestId;
+      clearProgressTimers();
+      progressStartedAt.current = Date.now();
+      setProgressDone(false);
+      setPendingTo(to);
+
+      const minimumProgress = new Promise<void>((resolve) => {
+        const delay = Math.max(0, ROUTE_PROGRESS_MIN_MS - (Date.now() - progressStartedAt.current));
+        const timer = setTimeout(resolve, delay);
+        progressTimers.current.push(timer);
+      });
+
+      void Promise.all([preloadPageRoute(to).catch(() => undefined), minimumProgress]).then(() => {
+        if (navigationRequestId.current !== requestId) return;
+        setProgressDone(true);
+
+        const navigateTimer = setTimeout(() => {
+          if (navigationRequestId.current !== requestId) return;
+          navigate(to, { viewTransition: true });
+          setPendingTo("");
+          setProgressDone(false);
+          progressTimers.current = [];
+        }, ROUTE_PROGRESS_HIDE_MS);
+        progressTimers.current.push(navigateTimer);
+      });
     },
-    [location.pathname, onNavigate],
+    [clearProgressTimers, location.pathname, navigate, onNavigate],
+  );
+
+  useEffect(
+    () => () => {
+      navigationRequestId.current += 1;
+      clearProgressTimers();
+    },
+    [clearProgressTimers],
   );
 
   return (
-    <aside
-      className={[
-        "shrink-0 overflow-hidden bg-white/94 dark:bg-neutral-950/88",
-        isMobile ? "fixed inset-y-0 left-0 z-40 w-56" : "h-[100dvh]",
-        "border-r border-slate-200 shadow-[12px_0_28px_rgba(15,23,42,0.04)] dark:border-neutral-800",
-        "motion-reduce:transition-none motion-safe:transition-[width,transform,background-color,border-color] motion-safe:duration-300 motion-safe:ease-out",
-        isMobile
-          ? collapsed
-            ? "-translate-x-full"
-            : "translate-x-0"
-          : collapsed
-            ? "w-0 border-r-0"
-            : "w-56",
-      ].join(" ")}
-      aria-hidden={collapsed}
-    >
+    <>
+      {pendingTo && (
+        <div className={progressDone ? "rp rp-done" : "rp"} />
+      )}
+      <aside
+        className={[
+          "shrink-0 overflow-hidden bg-white/94 dark:bg-neutral-950/88",
+          isMobile ? "fixed inset-y-0 left-0 z-40 w-56" : "h-[100dvh]",
+          "border-r border-slate-200 shadow-[12px_0_28px_rgba(15,23,42,0.04)] dark:border-neutral-800",
+          "motion-reduce:transition-none motion-safe:transition-[width,transform,background-color,border-color] motion-safe:duration-300 motion-safe:ease-out",
+          isMobile
+            ? collapsed
+              ? "-translate-x-full"
+              : "translate-x-0"
+            : collapsed
+              ? "w-0 border-r-0"
+              : "w-56",
+        ].join(" ")}
+        aria-hidden={collapsed}
+      >
       <div
         className={[
           "flex h-full w-56 flex-col",
@@ -190,31 +254,40 @@ function ShellSidebar({
             </span>
           </span>
         </div>
-        <nav className="flex-1 space-y-1 overflow-y-auto px-3 pb-4 pt-4">
-          {NAV_ITEMS.map((item) => {
-            const Icon = item.icon;
-            const active = activeTo === item.to;
-            return (
-              <Link
-                key={item.to}
-                to={item.to}
-                viewTransition
-                onClick={() => handleNavClick(item.to)}
-                className={
-                  active
-                    ? "flex min-w-0 items-center gap-3 rounded-[14px] bg-gradient-to-r from-blue-600 to-blue-500 px-3.5 py-2.5 text-[13px] font-semibold text-white shadow-[0_12px_24px_rgba(37,99,235,0.22)] transition-colors duration-200 ease-out whitespace-nowrap"
-                    : "flex min-w-0 items-center gap-3 rounded-[14px] px-3.5 py-2.5 text-[13px] font-medium text-slate-700 transition-colors duration-200 ease-out hover:bg-slate-100 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white whitespace-nowrap"
-                }
-              >
-                <Icon
-                  size={15}
-                  className="shrink-0 opacity-90 transition-colors duration-200 ease-out"
-                />
-                <span className="min-w-0 truncate">{t(item.i18nKey)}</span>
-              </Link>
-            );
-          })}
-        </nav>
+        <ScrollArea
+          className="flex-1 [&_[data-scroll-area-scrollbar='y']]:right-1 [&_[data-scroll-area-scrollbar='y']]:w-5"
+          scrollbarVisibility="track-hover"
+          scrollbarTrackInset={16}
+        >
+          <nav className="space-y-1 px-3 pb-4 pt-4">
+            {NAV_ITEMS.map((item) => {
+              const Icon = item.icon;
+              const active = activeTo === item.to;
+              return (
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  viewTransition
+                  onClick={(event) => handleNavClick(event, item.to)}
+                  onMouseEnter={() => warmPageRoute(item.to)}
+                  onFocus={() => warmPageRoute(item.to)}
+                  className={
+                    "flex min-w-0 items-center gap-3 rounded-[14px] px-3.5 py-2.5 text-[13px] transition-colors duration-200 ease-out whitespace-nowrap " +
+                    (active
+                      ? "bg-gradient-to-r from-blue-600 to-blue-500 font-semibold text-white shadow-[0_12px_24px_rgba(37,99,235,0.22)]"
+                      : "font-medium text-slate-700 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white")
+                  }
+                >
+                  <Icon
+                    size={15}
+                    className="shrink-0 opacity-90 transition-colors duration-200 ease-out"
+                  />
+                  <span className="min-w-0 truncate">{t(item.i18nKey)}</span>
+                </Link>
+              );
+            })}
+          </nav>
+        </ScrollArea>
         <div className="space-y-3 px-3 pb-4">
           <div className="flex items-center gap-3 rounded-[18px] bg-slate-50/80 p-3 dark:bg-white/[0.04]">
             <div className="grid h-10 w-10 place-items-center rounded-[14px] bg-gradient-to-br from-blue-600 to-sky-500 text-white shadow-[0_10px_22px_rgba(37,99,235,0.2)]">
@@ -243,7 +316,8 @@ function ShellSidebar({
           </div>
         </div>
       </div>
-    </aside>
+      </aside>
+    </>
   );
 }
 
@@ -265,7 +339,7 @@ function ShellHeader({
   return (
     <header className="z-20 shrink-0 border-b border-slate-200 bg-white/75 backdrop-blur-xl motion-reduce:transition-none motion-safe:transition-colors motion-safe:duration-200 motion-safe:ease-out dark:border-neutral-800 dark:bg-neutral-950/60">
       <h1 className="sr-only">{t(titleKey)}</h1>
-      <div className="flex h-16 items-center justify-between gap-3 px-3 sm:px-6">
+      <div className="flex h-14 items-center justify-between gap-3 px-3 sm:px-6">
         <div className="flex min-w-0 items-center gap-2 sm:gap-3">
           <button
             type="button"
@@ -392,42 +466,27 @@ export function AppShell({ children, onLogout }: PropsWithChildren<{ onLogout?: 
         >
           {t("shell.skip_to_content")}
         </a>
-
-        {isMobile ? (
-          <>
-            {mobileSidebarOpen ? (
-              <button
-                type="button"
-                className="fixed inset-0 z-30 bg-black/35 backdrop-blur-[1px]"
-                aria-label={t("common.close")}
-                onClick={() => setMobileSidebarOpen(false)}
-              />
-            ) : null}
-            <ShellSidebar
-              collapsed={!mobileSidebarOpen}
-              mode="mobile"
-              onNavigate={() => setMobileSidebarOpen(false)}
-            />
-            <div className="flex h-[100dvh] overflow-hidden">
-              <div className="flex min-w-0 flex-1 flex-col">
-                <ShellHeader sidebarCollapsed={sidebarCollapsed} onToggleSidebar={toggleSidebar} />
-                <div className="flex-1 overflow-y-auto overflow-x-hidden">
-                  <ShellMain>{children}</ShellMain>
-                </div>
-              </div>
-            </div>
-          </>
-        ) : (
-          <div className="flex h-[100dvh] overflow-hidden">
-            <ShellSidebar collapsed={sidebarCollapsed} mode="desktop" />
-            <div className="flex min-w-0 flex-1 flex-col">
-              <ShellHeader sidebarCollapsed={sidebarCollapsed} onToggleSidebar={toggleSidebar} />
-              <div className="flex-1 overflow-y-auto overflow-x-hidden">
-                <ShellMain>{children}</ShellMain>
-              </div>
+        {isMobile && mobileSidebarOpen ? (
+          <button
+            type="button"
+            className="fixed inset-0 z-30 bg-black/35 backdrop-blur-[1px]"
+            aria-label={t("common.close")}
+            onClick={() => setMobileSidebarOpen(false)}
+          />
+        ) : null}
+        <div className="flex h-[100dvh] overflow-hidden">
+          <ShellSidebar
+            collapsed={sidebarCollapsed}
+            mode={isMobile ? "mobile" : "desktop"}
+            onNavigate={isMobile ? () => setMobileSidebarOpen(false) : undefined}
+          />
+          <div className="flex min-w-0 flex-1 flex-col">
+            <ShellHeader sidebarCollapsed={sidebarCollapsed} onToggleSidebar={toggleSidebar} />
+            <div className="flex-1 overflow-y-auto overflow-x-hidden">
+              <ShellMain>{children}</ShellMain>
             </div>
           </div>
-        )}
+        </div>
       </ShellFrame>
     </ShellContext>
   );

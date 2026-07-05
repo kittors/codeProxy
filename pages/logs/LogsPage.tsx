@@ -293,14 +293,14 @@ export function LogsPage() {
   }, [latestTimestamp]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 md:flex md:h-[calc(100dvh-112px)] md:min-h-0 md:flex-col md:space-y-0 md:gap-4 md:overflow-hidden">
       <Tabs value={tab} onValueChange={(next) => setTab(next as typeof tab)}>
-        <TabsList>
+        <TabsList className="md:shrink-0">
           <TabsTrigger value="content">{t("logs_page.log_content")}</TabsTrigger>
           <TabsTrigger value="errors">{t("logs_page.error_logs")}</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="content">
+        <TabsContent value="content" className="md:flex md:min-h-0 md:flex-1">
           <LiveLogsTab
             t={t}
             loading={loading}
@@ -341,7 +341,7 @@ export function LogsPage() {
           />
         </TabsContent>
 
-        <TabsContent value="errors">
+        <TabsContent value="errors" className="md:flex md:min-h-0 md:flex-1">
           <ErrorLogsTab
             t={t}
             errorLogsLoading={errorLogsLoading}

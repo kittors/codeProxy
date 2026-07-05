@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
 const API_KEYS_COLUMN_WIDTH_STORAGE_KEY = "codeProxy.dataTable.columnWidths.v1.api-keys";
+const STICKY_EDGE_SHADOW_WIDTH = 28;
 
 type SetAuthedOptions = {
   columnWidths?: Record<string, number>;
@@ -30,10 +31,11 @@ const setAuthed = async (page: Page, options: SetAuthedOptions = {}) => {
 };
 
 const mockApiKeysApis = async (page: Page) => {
-  const entries = [
-    {
-      key: "sk-e2e-limited-model-summary-1234567890",
-      name: "Limited Models",
+  const entries = Array.from({ length: 9 }, (_, index) => {
+    const suffixes = ["whc", "0zb", "1ll", "soe", "3fv", "7om", "lmk", "cyj", "bex"];
+    return {
+      key: `sk-e2e-${"x".repeat(24)}-${suffixes[index]}`,
+      name: index === 0 ? "Limited Models" : `Fixed Row ${index + 1}`,
       "allowed-models": [
         "deepseek-v4-flash-ultra-long-model-name",
         "deepseek-v4-pro",
@@ -43,8 +45,10 @@ const mockApiKeysApis = async (page: Page) => {
       "allowed-channel-groups": ["all-channel-groups-with-a-long-name"],
       "allowed-channels": ["primary-channel-with-a-long-name"],
       "created-at": "2026-05-13T15:32:00Z",
-    },
-  ];
+      ...(index % 5 === 4 ? { "daily-limit": 800 } : {}),
+      ...(index === 8 ? { "total-quota": 2000 } : {}),
+    };
+  });
 
   await page.route("**/v0/management/**", async (route) => {
     const url = new URL(route.request().url());
@@ -145,7 +149,10 @@ test("API Keys: limited model summary truncates inside the rounded pill", async 
   await mockApiKeysApis(page);
 
   await page.goto("/#/api-keys");
-  await page.locator('td[data-vt-column-key="allowedModels"]').waitFor({ state: "visible" });
+  await page
+    .locator('td[data-vt-column-key="allowedModels"]')
+    .first()
+    .waitFor({ state: "visible" });
 
   const summaryState = await page.evaluate(() => {
     const cell = document.querySelector<HTMLElement>('td[data-vt-column-key="allowedModels"]');
@@ -210,6 +217,102 @@ test("API Keys: limited model summary truncates inside the rounded pill", async 
   expect(summaryState.textScrollWidth).toBeGreaterThan(summaryState.textClientWidth);
   expect(summaryState.borderRightWidth).toBe("1px");
   expect(Number.parseFloat(summaryState.borderTopRightRadius)).toBeGreaterThan(0);
+});
+
+test("API Keys: dark hover keeps fixed columns opaque above scrolled content", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1360, height: 980 });
+  await setAuthed(page);
+  await page.addInitScript(() => {
+    localStorage.setItem("code-proxy-admin-theme", "dark");
+  });
+  await mockApiKeysApis(page);
+
+  await page.goto("/#/api-keys");
+  const nameCell = page.locator('td[data-vt-column-key="name"]').first();
+  await nameCell.waitFor({ state: "visible" });
+
+  await page.evaluate(async () => {
+    const scrollContent = document.querySelector<HTMLElement>("[data-vt-scroll-content]");
+    const container = scrollContent?.parentElement;
+    if (!container) throw new Error("Missing API keys table viewport");
+
+    container.scrollLeft = Math.round((container.scrollWidth - container.clientWidth) / 2);
+    await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)));
+    await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)));
+  });
+
+  const hoverPoint = await nameCell.evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    return {
+      x: rect.left + Math.min(24, rect.width / 2),
+      y: rect.top + rect.height / 2,
+    };
+  });
+  await page.mouse.move(hoverPoint.x, hoverPoint.y);
+
+  const state = await page.evaluate(() => {
+    const selectCell = document.querySelector<HTMLElement>('td[data-vt-column-key="select"]');
+    const nameCellElement = document.querySelector<HTMLElement>('td[data-vt-column-key="name"]');
+    const keyCell = document.querySelector<HTMLElement>('td[data-vt-column-key="key"]');
+    const actionsCell = document.querySelector<HTMLElement>('td[data-vt-column-key="actions"]');
+    const scrollContent = document.querySelector<HTMLElement>("[data-vt-scroll-content]");
+    const container = scrollContent?.parentElement;
+    if (!selectCell || !nameCellElement || !keyCell || !actionsCell || !container) {
+      throw new Error("Missing dark hover table cells");
+    }
+
+    const alphaOf = (element: HTMLElement) => {
+      const backgroundColor = getComputedStyle(element).backgroundColor;
+      const slashAlpha = backgroundColor.match(/\/\s*([0-9.]+%?)\s*\)?$/)?.[1];
+      const commaAlpha = backgroundColor.startsWith("rgba(")
+        ? backgroundColor.slice(5, -1).split(",").at(3)?.trim()
+        : undefined;
+      const rawAlpha = slashAlpha ?? commaAlpha;
+      const alpha = rawAlpha?.endsWith("%")
+        ? Number(rawAlpha.slice(0, -1)) / 100
+        : Number(rawAlpha ?? 1);
+      return {
+        alpha: Number.isFinite(alpha) ? alpha : 1,
+        backgroundColor,
+      };
+    };
+
+    const nameRect = nameCellElement.getBoundingClientRect();
+    const actionsRect = actionsCell.getBoundingClientRect();
+    const nameHit = document.elementFromPoint(
+      nameRect.left + Math.min(24, nameRect.width / 2),
+      nameRect.top + nameRect.height / 2,
+    );
+    const actionsHit = document.elementFromPoint(
+      actionsRect.right - Math.min(24, actionsRect.width / 2),
+      actionsRect.top + actionsRect.height / 2,
+    );
+
+    return {
+      isDark: document.documentElement.classList.contains("dark"),
+      scrollLeft: container.scrollLeft,
+      selectCell: alphaOf(selectCell),
+      nameCell: alphaOf(nameCellElement),
+      keyCell: alphaOf(keyCell),
+      actionsCell: alphaOf(actionsCell),
+      nameHitColumn:
+        nameHit?.closest<HTMLElement>("[data-vt-column-key]")?.dataset.vtColumnKey ?? null,
+      actionsHitColumn:
+        actionsHit?.closest<HTMLElement>("[data-vt-column-key]")?.dataset.vtColumnKey ?? null,
+    };
+  });
+
+  expect(state.isDark).toBe(true);
+  expect(state.scrollLeft).toBeGreaterThan(0);
+  expect(state.keyCell.alpha).toBeGreaterThan(0);
+  expect(state.keyCell.alpha).toBeLessThan(1);
+  expect(state.selectCell.alpha).toBe(1);
+  expect(state.nameCell.alpha).toBe(1);
+  expect(state.actionsCell.alpha).toBe(1);
+  expect(state.nameHitColumn).toBe("name");
+  expect(state.actionsHitColumn).toBe("actions");
 });
 
 test("API Keys: restored wider columns keep resize preview at the minimum boundary", async ({
@@ -277,4 +380,797 @@ test("API Keys: restored wider columns keep resize preview at the minimum bounda
       }, API_KEYS_COLUMN_WIDTH_STORAGE_KEY),
     )
     .toBe(168);
+});
+
+test("API Keys: resize preview does not paint over the fixed action column", async ({ page }) => {
+  await page.setViewportSize({ width: 1360, height: 980 });
+  await setAuthed(page);
+  await mockApiKeysApis(page);
+
+  await page.goto("/#/api-keys");
+  await page.locator('td[data-vt-column-key="actions"]').first().waitFor({ state: "visible" });
+
+  await page.evaluate(async () => {
+    const scrollContent = document.querySelector<HTMLElement>("[data-vt-scroll-content]");
+    const container = scrollContent?.parentElement;
+    if (!container) throw new Error("Missing API keys table viewport");
+
+    container.scrollLeft = container.scrollWidth - container.clientWidth;
+    await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)));
+    await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)));
+  });
+
+  const header = page.locator('th[data-vt-column-key="createdAt"]');
+  await header.waitFor({ state: "visible" });
+
+  const dragStart = await header.locator("[data-vt-column-resizer]").evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    const headerRect = element.closest("th")?.getBoundingClientRect();
+    const actionsHeader = document.querySelector<HTMLElement>('th[data-vt-column-key="actions"]');
+    const actionsRect = actionsHeader?.getBoundingClientRect();
+    if (!headerRect || !actionsRect) throw new Error("Missing resize rail geometry");
+
+    return {
+      x: Math.min(rect.left + rect.width / 2, headerRect.right - 2),
+      y: rect.top + rect.height / 2,
+      actionsLeft: actionsRect.left,
+      actionsRight: actionsRect.right,
+    };
+  });
+
+  await page.mouse.move(dragStart.x, dragStart.y);
+  await page.mouse.down();
+  await page.mouse.move(dragStart.actionsLeft + 80, dragStart.y, { steps: 8 });
+
+  const previewLine = page.locator("[data-vt-column-resize-preview-line]");
+  await previewLine.waitFor({ state: "attached" });
+
+  const hiddenState = await page.evaluate(() => {
+    const line = document.querySelector<HTMLElement>("[data-vt-column-resize-preview-line]");
+    const tooltip = document.querySelector<HTMLElement>("[data-vt-column-resize-preview-tooltip]");
+    const actionsHeader = document.querySelector<HTMLElement>('th[data-vt-column-key="actions"]');
+    if (!line || !tooltip || !actionsHeader) throw new Error("Missing resize preview state");
+
+    const actionsRect = actionsHeader.getBoundingClientRect();
+    return {
+      previewCenter: Number.parseFloat(line.style.left) + 1,
+      actionsLeft: actionsRect.left,
+      actionsRight: actionsRect.right,
+      lineDisplay: getComputedStyle(line).display,
+      tooltipDisplay: getComputedStyle(tooltip).display,
+    };
+  });
+
+  expect(hiddenState.previewCenter).toBeGreaterThan(hiddenState.actionsLeft + 1);
+  expect(hiddenState.previewCenter).toBeLessThan(hiddenState.actionsRight - 1);
+  expect(hiddenState.lineDisplay).toBe("none");
+  expect(hiddenState.tooltipDisplay).toBe("none");
+
+  await page.mouse.up();
+});
+
+test("API Keys: fixed start boundary follows the name column while resizing", async ({ page }) => {
+  await page.setViewportSize({ width: 2048, height: 1180 });
+  await setAuthed(page);
+  await mockApiKeysApis(page);
+
+  await page.goto("/#/api-keys");
+  await page.locator('td[data-vt-column-key="name"]').first().waitFor({ state: "visible" });
+
+  const header = page.locator('th[data-vt-column-key="name"]');
+  const dragStart = await header.locator("[data-vt-column-resizer]").evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    const headerRect = element.closest("th")?.getBoundingClientRect();
+    return {
+      x: headerRect ? Math.min(rect.left + rect.width / 2, headerRect.right - 2) : rect.left,
+      y: rect.top + rect.height / 2,
+    };
+  });
+
+  await page.mouse.move(dragStart.x, dragStart.y);
+  await page.mouse.down();
+  await page.mouse.move(dragStart.x + 238, dragStart.y, { steps: 12 });
+  await page.locator("[data-vt-column-resize-preview-line]").waitFor({ state: "visible" });
+
+  const state = await page.evaluate(() => {
+    const nameHeader = document.querySelector<HTMLElement>('th[data-vt-column-key="name"]');
+    const nameCell = document.querySelector<HTMLElement>('td[data-vt-column-key="name"]');
+    const startRail = document.querySelector<HTMLElement>("[data-vt-sticky-start-rail]");
+    const startBoundary = document.querySelector<HTMLElement>("[data-vt-sticky-start-boundary]");
+    const previewLine = document.querySelector<HTMLElement>("[data-vt-column-resize-preview-line]");
+    if (!nameHeader || !nameCell || !startRail || !startBoundary || !previewLine) {
+      throw new Error("Missing fixed-column resize geometry");
+    }
+
+    const nameHeaderRect = nameHeader.getBoundingClientRect();
+    const nameCellRect = nameCell.getBoundingClientRect();
+    const startRailRect = startRail.getBoundingClientRect();
+    const startBoundaryRect = startBoundary.getBoundingClientRect();
+    const previewRect = previewLine.getBoundingClientRect();
+
+    return {
+      nameHeaderRight: nameHeaderRect.right,
+      nameHeaderWidth: nameHeaderRect.width,
+      nameCellRight: nameCellRect.right,
+      nameCellWidth: nameCellRect.width,
+      startRailRight: startRailRect.right,
+      startBoundaryLeft: startBoundaryRect.left,
+      startBoundaryRight: startBoundaryRect.right,
+      startBoundaryWidth: startBoundaryRect.width,
+      previewCenter: previewRect.left + previewRect.width / 2,
+      previewDisplay: getComputedStyle(previewLine).display,
+    };
+  });
+
+  await page.mouse.up();
+
+  expect(state.previewDisplay).not.toBe("none");
+  expect(state.nameHeaderWidth).toBeGreaterThanOrEqual(356);
+  expect(state.nameCellWidth).toBeGreaterThanOrEqual(356);
+  expect(state.nameHeaderRight).toBeGreaterThanOrEqual(state.previewCenter - 2);
+  expect(state.nameHeaderRight).toBeLessThanOrEqual(state.previewCenter + 2);
+  expect(state.nameCellRight).toBeGreaterThanOrEqual(state.previewCenter - 2);
+  expect(state.nameCellRight).toBeLessThanOrEqual(state.previewCenter + 2);
+  expect(state.startRailRight).toBeGreaterThanOrEqual(state.nameCellRight - 1);
+  expect(state.startRailRight).toBeLessThanOrEqual(state.nameCellRight + 1);
+  expect(state.startBoundaryLeft).toBeGreaterThanOrEqual(state.nameCellRight - 1);
+  expect(state.startBoundaryLeft).toBeLessThanOrEqual(state.nameCellRight + 1);
+  expect(state.startBoundaryRight).toBeGreaterThanOrEqual(
+    state.nameCellRight + STICKY_EDGE_SHADOW_WIDTH - 1,
+  );
+  expect(state.startBoundaryRight).toBeLessThanOrEqual(
+    state.nameCellRight + STICKY_EDGE_SHADOW_WIDTH + 1,
+  );
+  expect(state.startBoundaryWidth).toBeGreaterThanOrEqual(STICKY_EDGE_SHADOW_WIDTH - 1);
+  expect(state.startBoundaryWidth).toBeLessThanOrEqual(STICKY_EDGE_SHADOW_WIDTH + 1);
+});
+
+test("API Keys: fixed columns do not cover the created time at the right edge", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 2048, height: 1180 });
+  await setAuthed(page);
+  await mockApiKeysApis(page);
+
+  await page.goto("/#/api-keys");
+  await page
+    .locator('td[data-vt-column-key="createdAt"]')
+    .first()
+    .waitFor({ state: "visible" });
+  await expect(page.getByText(/All 9 records loaded|已加载全部 9 条记录/)).toHaveCount(0);
+
+  const states = await page.evaluate(async () => {
+    const scrollContent = document.querySelector<HTMLElement>("[data-vt-scroll-content]");
+    const container = scrollContent?.parentElement;
+    if (!scrollContent || !container) throw new Error("Missing API keys table viewport");
+
+    const maxScrollLeft = container.scrollWidth - container.clientWidth;
+    const positions = [0, Math.round(maxScrollLeft / 2), maxScrollLeft];
+    const horizontalScrollbarInset = 14;
+
+    const states: Array<{
+      scrollLeft: number;
+      maxScrollLeft: number;
+      createdAtRight: number;
+      actionsLeft: number;
+      actionsRight: number;
+      containerLeft: number;
+      containerRight: number;
+      selectHeaderLeft: number;
+      selectHeaderWidth: number;
+      nameHeaderLeft: number;
+      nameHeaderRight: number;
+      nameHeaderWidth: number;
+      actionsHeaderRight: number;
+      selectCellLeft: number;
+      selectCellWidth: number;
+      nameCellLeft: number;
+      nameCellRight: number;
+      nameCellWidth: number;
+      nameHeaderHitColumn: string | null;
+      nameCellHitColumn: string | null;
+      startRailLeft: number;
+      startRailBottom: number;
+      startBoundaryLeft: number;
+      startBoundaryRight: number;
+      startBoundaryBottom: number;
+      startBoundaryWidth: string;
+      startBoundaryOpacity: string;
+      endRailRight: number;
+      endRailBottom: number;
+      endBoundaryLeft: number;
+      endBoundaryRight: number;
+      endBoundaryBottom: number;
+      endBoundaryWidth: string;
+      endBoundaryOpacity: string;
+      fixedRailBottom: number;
+      selectHeaderTopLeftRadius: number;
+      selectHeaderBottomLeftRadius: number;
+      actionsHeaderTopRightRadius: number;
+      actionsHeaderBottomRightRadius: number;
+    }> = [];
+    for (const scrollLeft of positions) {
+      container.scrollLeft = scrollLeft;
+      await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)));
+      await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)));
+
+      const createdAt = document.querySelector<HTMLElement>('td[data-vt-column-key="createdAt"]');
+      const actions = document.querySelector<HTMLElement>('td[data-vt-column-key="actions"]');
+      const selectHeader = document.querySelector<HTMLElement>('th[data-vt-column-key="select"]');
+      const nameHeader = document.querySelector<HTMLElement>('th[data-vt-column-key="name"]');
+      const actionsHeader = document.querySelector<HTMLElement>('th[data-vt-column-key="actions"]');
+      const selectCell = document.querySelector<HTMLElement>('td[data-vt-column-key="select"]');
+      const nameCell = document.querySelector<HTMLElement>('td[data-vt-column-key="name"]');
+      const startRail = document.querySelector<HTMLElement>("[data-vt-sticky-start-rail]");
+      const endRail = document.querySelector<HTMLElement>("[data-vt-sticky-end-rail]");
+      const startBoundary = document.querySelector<HTMLElement>(
+        "[data-vt-sticky-start-boundary]",
+      );
+      const endBoundary = document.querySelector<HTMLElement>("[data-vt-sticky-end-boundary]");
+      if (
+        !createdAt ||
+        !actions ||
+        !selectHeader ||
+        !nameHeader ||
+        !actionsHeader ||
+        !selectCell ||
+        !nameCell ||
+        !startRail ||
+        !endRail ||
+        !startBoundary ||
+        !endBoundary
+      ) {
+        throw new Error("Missing fixed-column geometry");
+      }
+
+      const createdAtRect = createdAt.getBoundingClientRect();
+      const actionsRect = actions.getBoundingClientRect();
+      const selectHeaderRect = selectHeader.getBoundingClientRect();
+      const nameHeaderRect = nameHeader.getBoundingClientRect();
+      const actionsHeaderRect = actionsHeader.getBoundingClientRect();
+      const selectCellRect = selectCell.getBoundingClientRect();
+      const nameCellRect = nameCell.getBoundingClientRect();
+      const containerRect = container.getBoundingClientRect();
+      const startRailRect = startRail.getBoundingClientRect();
+      const endRailRect = endRail.getBoundingClientRect();
+      const startBoundaryRect = startBoundary.getBoundingClientRect();
+      const endBoundaryRect = endBoundary.getBoundingClientRect();
+      const selectHeaderStyle = getComputedStyle(selectHeader);
+      const actionsHeaderStyle = getComputedStyle(actionsHeader);
+      const nameHeaderHit = document.elementFromPoint(
+        nameHeaderRect.right - 8,
+        nameHeaderRect.top + nameHeaderRect.height / 2,
+      );
+      const nameCellHit = document.elementFromPoint(
+        nameCellRect.right - 8,
+        nameCellRect.top + nameCellRect.height / 2,
+      );
+
+      states.push({
+        scrollLeft,
+        maxScrollLeft,
+        createdAtRight: createdAtRect.right,
+        actionsLeft: actionsRect.left,
+        actionsRight: actionsRect.right,
+        containerLeft: containerRect.left,
+        containerRight: containerRect.right,
+        selectHeaderLeft: selectHeaderRect.left,
+        selectHeaderWidth: selectHeaderRect.width,
+        nameHeaderLeft: nameHeaderRect.left,
+        nameHeaderRight: nameHeaderRect.right,
+        nameHeaderWidth: nameHeaderRect.width,
+        actionsHeaderRight: actionsHeaderRect.right,
+        selectCellLeft: selectCellRect.left,
+        selectCellWidth: selectCellRect.width,
+        nameCellLeft: nameCellRect.left,
+        nameCellRight: nameCellRect.right,
+        nameCellWidth: nameCellRect.width,
+        nameHeaderHitColumn:
+          nameHeaderHit?.closest<HTMLElement>("[data-vt-column-key]")?.dataset.vtColumnKey ?? null,
+        nameCellHitColumn:
+          nameCellHit?.closest<HTMLElement>("[data-vt-column-key]")?.dataset.vtColumnKey ?? null,
+        startRailLeft: startRailRect.left,
+        startRailBottom: startRailRect.bottom,
+        startBoundaryLeft: startBoundaryRect.left,
+        startBoundaryRight: startBoundaryRect.right,
+        startBoundaryBottom: startBoundaryRect.bottom,
+        startBoundaryWidth: startBoundary.style.width,
+        startBoundaryOpacity: startBoundary.style.opacity,
+        endRailRight: endRailRect.right,
+        endRailBottom: endRailRect.bottom,
+        endBoundaryLeft: endBoundaryRect.left,
+        endBoundaryRight: endBoundaryRect.right,
+        endBoundaryBottom: endBoundaryRect.bottom,
+        endBoundaryWidth: endBoundary.style.width,
+        endBoundaryOpacity: endBoundary.style.opacity,
+        fixedRailBottom: containerRect.bottom - horizontalScrollbarInset,
+        selectHeaderTopLeftRadius: Number.parseFloat(selectHeaderStyle.borderTopLeftRadius),
+        selectHeaderBottomLeftRadius: Number.parseFloat(selectHeaderStyle.borderBottomLeftRadius),
+        actionsHeaderTopRightRadius: Number.parseFloat(actionsHeaderStyle.borderTopRightRadius),
+        actionsHeaderBottomRightRadius: Number.parseFloat(
+          actionsHeaderStyle.borderBottomRightRadius,
+        ),
+      });
+    }
+
+    return states;
+  });
+
+  for (const state of states) {
+    const expectedHeaderNameLeft = state.containerLeft + state.selectHeaderWidth;
+    const expectedHeaderNameRight = expectedHeaderNameLeft + state.nameHeaderWidth;
+    const expectedCellNameLeft = state.containerLeft + state.selectCellWidth;
+    const expectedCellNameRight = expectedCellNameLeft + state.nameCellWidth;
+
+    expect(state.startRailLeft).toBeGreaterThanOrEqual(state.containerLeft - 1);
+    expect(state.startRailLeft).toBeLessThanOrEqual(state.containerLeft + 1);
+    expect(state.endRailRight).toBeGreaterThanOrEqual(state.containerRight - 1);
+    expect(state.endRailRight).toBeLessThanOrEqual(state.containerRight + 1);
+    expect(state.startBoundaryLeft).toBeGreaterThanOrEqual(expectedHeaderNameRight - 1);
+    expect(state.startBoundaryLeft).toBeLessThanOrEqual(expectedHeaderNameRight + 1);
+    expect(state.startBoundaryRight).toBeGreaterThanOrEqual(
+      expectedHeaderNameRight + STICKY_EDGE_SHADOW_WIDTH - 1,
+    );
+    expect(state.startBoundaryRight).toBeLessThanOrEqual(
+      expectedHeaderNameRight + STICKY_EDGE_SHADOW_WIDTH + 1,
+    );
+    expect(state.startBoundaryWidth).toBe(`${STICKY_EDGE_SHADOW_WIDTH}px`);
+    expect(state.endBoundaryLeft).toBeGreaterThanOrEqual(
+      state.actionsLeft - STICKY_EDGE_SHADOW_WIDTH - 1,
+    );
+    expect(state.endBoundaryLeft).toBeLessThanOrEqual(
+      state.actionsLeft - STICKY_EDGE_SHADOW_WIDTH + 1,
+    );
+    expect(state.endBoundaryRight).toBeGreaterThanOrEqual(state.actionsLeft - 1);
+    expect(state.endBoundaryRight).toBeLessThanOrEqual(state.actionsLeft + 1);
+    expect(state.endBoundaryWidth).toBe(`${STICKY_EDGE_SHADOW_WIDTH}px`);
+    expect(state.selectHeaderLeft).toBeGreaterThanOrEqual(state.containerLeft - 1);
+    expect(state.selectHeaderLeft).toBeLessThanOrEqual(state.containerLeft + 1);
+    expect(state.nameHeaderLeft).toBeGreaterThanOrEqual(expectedHeaderNameLeft - 1);
+    expect(state.nameHeaderLeft).toBeLessThanOrEqual(expectedHeaderNameLeft + 1);
+    expect(state.nameHeaderRight).toBeGreaterThanOrEqual(expectedHeaderNameRight - 1);
+    expect(state.nameHeaderRight).toBeLessThanOrEqual(expectedHeaderNameRight + 1);
+    expect(state.actionsHeaderRight).toBeGreaterThanOrEqual(state.containerRight - 1);
+    expect(state.actionsHeaderRight).toBeLessThanOrEqual(state.containerRight + 1);
+    expect(state.selectCellLeft).toBeGreaterThanOrEqual(state.containerLeft - 1);
+    expect(state.selectCellLeft).toBeLessThanOrEqual(state.containerLeft + 1);
+    expect(state.nameCellLeft).toBeGreaterThanOrEqual(expectedCellNameLeft - 1);
+    expect(state.nameCellLeft).toBeLessThanOrEqual(expectedCellNameLeft + 1);
+    expect(state.nameCellRight).toBeGreaterThanOrEqual(expectedCellNameRight - 1);
+    expect(state.nameCellRight).toBeLessThanOrEqual(expectedCellNameRight + 1);
+    expect(state.actionsRight).toBeGreaterThanOrEqual(state.containerRight - 1);
+    expect(state.actionsRight).toBeLessThanOrEqual(state.containerRight + 1);
+    expect(state.nameHeaderHitColumn).toBe("name");
+    expect(state.nameCellHitColumn).toBe("name");
+    expect(state.startRailBottom).toBeGreaterThanOrEqual(state.fixedRailBottom - 1);
+    expect(state.endRailBottom).toBeGreaterThanOrEqual(state.fixedRailBottom - 1);
+    expect(state.startBoundaryBottom).toBeGreaterThanOrEqual(state.fixedRailBottom - 1);
+    expect(state.endBoundaryBottom).toBeGreaterThanOrEqual(state.fixedRailBottom - 1);
+    expect(state.selectHeaderTopLeftRadius).toBeGreaterThan(0);
+    expect(state.selectHeaderBottomLeftRadius).toBeGreaterThan(0);
+    expect(state.actionsHeaderTopRightRadius).toBeGreaterThan(0);
+    expect(state.actionsHeaderBottomRightRadius).toBeGreaterThan(0);
+  }
+
+  const maxScrollState = states.at(-1);
+  expect(states[0]?.startBoundaryOpacity).toBe("0");
+  expect(states[0]?.endBoundaryOpacity).toBe("1");
+  expect(states[1]?.startBoundaryOpacity).toBe("1");
+  expect(states[1]?.endBoundaryOpacity).toBe("1");
+  expect(maxScrollState?.startBoundaryOpacity).toBe("1");
+  expect(maxScrollState?.endBoundaryOpacity).toBe("0");
+  expect(maxScrollState?.scrollLeft).toBe(maxScrollState?.maxScrollLeft);
+  expect(maxScrollState?.createdAtRight).toBeLessThanOrEqual(
+    (maxScrollState?.actionsLeft ?? 0) + 1,
+  );
+});
+
+test("API Keys: fixed columns stay pinned while dragging the horizontal scrollbar", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 2048, height: 1180 });
+  await setAuthed(page);
+  await mockApiKeysApis(page);
+
+  await page.goto("/#/api-keys");
+  await page.locator('td[data-vt-column-key="name"]').first().waitFor({ state: "visible" });
+
+  const thumb = page.locator('[data-vt-scrollbar="x"] [role="presentation"]');
+  const dragStart = await thumb.evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    return {
+      x: rect.left + rect.width / 2,
+      y: rect.top + rect.height / 2,
+    };
+  });
+
+  await page.mouse.move(dragStart.x, dragStart.y);
+  await page.mouse.down();
+  await page.mouse.move(dragStart.x + 120, dragStart.y, { steps: 12 });
+
+  const state = await page.evaluate(() => {
+    const scrollContent = document.querySelector<HTMLElement>("[data-vt-scroll-content]");
+    const container = scrollContent?.parentElement;
+    const selectHeader = document.querySelector<HTMLElement>('th[data-vt-column-key="select"]');
+    const nameHeader = document.querySelector<HTMLElement>('th[data-vt-column-key="name"]');
+    const actionsHeader = document.querySelector<HTMLElement>('th[data-vt-column-key="actions"]');
+    const selectCell = document.querySelector<HTMLElement>('td[data-vt-column-key="select"]');
+    const nameCell = document.querySelector<HTMLElement>('td[data-vt-column-key="name"]');
+    const actionsCell = document.querySelector<HTMLElement>('td[data-vt-column-key="actions"]');
+    const startRail = document.querySelector<HTMLElement>("[data-vt-sticky-start-rail]");
+    const endRail = document.querySelector<HTMLElement>("[data-vt-sticky-end-rail]");
+    const startBoundary = document.querySelector<HTMLElement>("[data-vt-sticky-start-boundary]");
+    const endBoundary = document.querySelector<HTMLElement>("[data-vt-sticky-end-boundary]");
+    if (
+      !container ||
+      !selectHeader ||
+      !nameHeader ||
+      !actionsHeader ||
+      !selectCell ||
+      !nameCell ||
+      !actionsCell ||
+      !startRail ||
+      !endRail ||
+      !startBoundary ||
+      !endBoundary
+    ) {
+      throw new Error("Missing fixed-column drag geometry");
+    }
+
+    const containerRect = container.getBoundingClientRect();
+    const selectHeaderRect = selectHeader.getBoundingClientRect();
+    const nameHeaderRect = nameHeader.getBoundingClientRect();
+    const actionsHeaderRect = actionsHeader.getBoundingClientRect();
+    const selectCellRect = selectCell.getBoundingClientRect();
+    const nameCellRect = nameCell.getBoundingClientRect();
+    const actionsCellRect = actionsCell.getBoundingClientRect();
+    const startRailRect = startRail.getBoundingClientRect();
+    const endRailRect = endRail.getBoundingClientRect();
+    const startBoundaryRect = startBoundary.getBoundingClientRect();
+    const endBoundaryRect = endBoundary.getBoundingClientRect();
+    const startRailStyle = getComputedStyle(startRail);
+    const endRailStyle = getComputedStyle(endRail);
+    const startBoundaryStyle = getComputedStyle(startBoundary);
+    const endBoundaryStyle = getComputedStyle(endBoundary);
+    const nameHeaderStyle = getComputedStyle(nameHeader);
+    const actionsHeaderStyle = getComputedStyle(actionsHeader);
+    const nameCellStyle = getComputedStyle(nameCell);
+    const actionsCellStyle = getComputedStyle(actionsCell);
+    const nameCellHit = document.elementFromPoint(
+      nameCellRect.left + Math.min(24, nameCellRect.width / 2),
+      nameCellRect.top + nameCellRect.height / 2,
+    );
+    const actionsCellHit = document.elementFromPoint(
+      actionsCellRect.right - Math.min(24, actionsCellRect.width / 2),
+      actionsCellRect.top + actionsCellRect.height / 2,
+    );
+
+    return {
+      scrollLeft: container.scrollLeft,
+      maxScrollLeft: container.scrollWidth - container.clientWidth,
+      containerLeft: containerRect.left,
+      containerRight: containerRect.right,
+      selectHeaderLeft: selectHeaderRect.left,
+      nameHeaderLeft: nameHeaderRect.left,
+      actionsHeaderRight: actionsHeaderRect.right,
+      selectCellLeft: selectCellRect.left,
+      selectCellWidth: selectCellRect.width,
+      nameCellLeft: nameCellRect.left,
+      nameCellRight: nameCellRect.right,
+      actionsCellLeft: actionsCellRect.left,
+      actionsCellRight: actionsCellRect.right,
+      startRailLeft: startRailRect.left,
+      endRailRight: endRailRect.right,
+      startBoundaryLeft: startBoundaryRect.left,
+      startBoundaryRight: startBoundaryRect.right,
+      endBoundaryLeft: endBoundaryRect.left,
+      endBoundaryRight: endBoundaryRect.right,
+      startRailZIndex: getComputedStyle(startRail).zIndex,
+      endRailZIndex: getComputedStyle(endRail).zIndex,
+      startRailTransform: startRailStyle.transform,
+      endRailTransform: endRailStyle.transform,
+      startRailBorderRightWidth: startRailStyle.borderRightWidth,
+      endRailBorderLeftWidth: endRailStyle.borderLeftWidth,
+      startBoundaryWidth: startBoundaryStyle.width,
+      startBoundaryOpacity: startBoundary.style.opacity,
+      endBoundaryWidth: endBoundaryStyle.width,
+      endBoundaryOpacity: endBoundary.style.opacity,
+      nameHeaderBorderRightWidth: nameHeaderStyle.borderRightWidth,
+      actionsHeaderBorderLeftWidth: actionsHeaderStyle.borderLeftWidth,
+      nameCellBorderRightWidth: nameCellStyle.borderRightWidth,
+      actionsCellBorderLeftWidth: actionsCellStyle.borderLeftWidth,
+      nameCellHitColumn:
+        nameCellHit?.closest<HTMLElement>("[data-vt-column-key]")?.dataset.vtColumnKey ?? null,
+      actionsCellHitColumn:
+        actionsCellHit?.closest<HTMLElement>("[data-vt-column-key]")?.dataset.vtColumnKey ?? null,
+    };
+  });
+
+  await page.mouse.up();
+
+  const expectedNameLeft = state.containerLeft + state.selectCellWidth;
+  expect(state.scrollLeft).toBeGreaterThan(0);
+  expect(state.scrollLeft).toBeLessThan(state.maxScrollLeft);
+  expect(state.startRailLeft).toBeGreaterThanOrEqual(state.containerLeft - 1);
+  expect(state.startRailLeft).toBeLessThanOrEqual(state.containerLeft + 1);
+  expect(state.endRailRight).toBeGreaterThanOrEqual(state.containerRight - 1);
+  expect(state.endRailRight).toBeLessThanOrEqual(state.containerRight + 1);
+  expect(state.startBoundaryLeft).toBeGreaterThanOrEqual(state.nameCellRight - 1);
+  expect(state.startBoundaryLeft).toBeLessThanOrEqual(state.nameCellRight + 1);
+  expect(state.startBoundaryRight).toBeGreaterThanOrEqual(
+    state.nameCellRight + STICKY_EDGE_SHADOW_WIDTH - 1,
+  );
+  expect(state.startBoundaryRight).toBeLessThanOrEqual(
+    state.nameCellRight + STICKY_EDGE_SHADOW_WIDTH + 1,
+  );
+  expect(state.endBoundaryLeft).toBeGreaterThanOrEqual(
+    state.actionsCellLeft - STICKY_EDGE_SHADOW_WIDTH - 1,
+  );
+  expect(state.endBoundaryLeft).toBeLessThanOrEqual(
+    state.actionsCellLeft - STICKY_EDGE_SHADOW_WIDTH + 1,
+  );
+  expect(state.endBoundaryRight).toBeGreaterThanOrEqual(state.actionsCellLeft - 1);
+  expect(state.endBoundaryRight).toBeLessThanOrEqual(state.actionsCellLeft + 1);
+  expect(state.startRailZIndex).toBe("0");
+  expect(state.endRailZIndex).toBe("0");
+  expect(state.startRailTransform).toBe("none");
+  expect(state.endRailTransform).toBe("none");
+  expect(state.startRailBorderRightWidth).toBe("0px");
+  expect(state.endRailBorderLeftWidth).toBe("0px");
+  expect(state.startBoundaryWidth).toBe(`${STICKY_EDGE_SHADOW_WIDTH}px`);
+  expect(state.endBoundaryWidth).toBe(`${STICKY_EDGE_SHADOW_WIDTH}px`);
+  expect(state.startBoundaryOpacity).toBe("1");
+  expect(state.endBoundaryOpacity).toBe("1");
+  expect(state.nameHeaderBorderRightWidth).toBe("0px");
+  expect(state.actionsHeaderBorderLeftWidth).toBe("0px");
+  expect(state.nameCellBorderRightWidth).toBe("0px");
+  expect(state.actionsCellBorderLeftWidth).toBe("0px");
+  expect(state.selectHeaderLeft).toBeGreaterThanOrEqual(state.containerLeft - 1);
+  expect(state.selectHeaderLeft).toBeLessThanOrEqual(state.containerLeft + 1);
+  expect(state.nameHeaderLeft).toBeGreaterThanOrEqual(expectedNameLeft - 1);
+  expect(state.nameHeaderLeft).toBeLessThanOrEqual(expectedNameLeft + 1);
+  expect(state.actionsHeaderRight).toBeGreaterThanOrEqual(state.containerRight - 1);
+  expect(state.actionsHeaderRight).toBeLessThanOrEqual(state.containerRight + 1);
+  expect(state.selectCellLeft).toBeGreaterThanOrEqual(state.containerLeft - 1);
+  expect(state.selectCellLeft).toBeLessThanOrEqual(state.containerLeft + 1);
+  expect(state.nameCellLeft).toBeGreaterThanOrEqual(expectedNameLeft - 1);
+  expect(state.nameCellLeft).toBeLessThanOrEqual(expectedNameLeft + 1);
+  expect(state.actionsCellRight).toBeGreaterThanOrEqual(state.containerRight - 1);
+  expect(state.actionsCellRight).toBeLessThanOrEqual(state.containerRight + 1);
+  expect(state.nameCellHitColumn).toBe("name");
+  expect(state.actionsCellHitColumn).toBe("actions");
+});
+
+const codexImportPreset = {
+  id: "codex-pro-deepseek",
+  "client-type": "codex",
+  "provider-name": "Pro Pool + DeepSeek",
+  note: "Pro 号池+deepseek",
+  "default-model": "gpt-5.5",
+  "model-mappings": [
+    { "request-model": "gpt-5.5", "target-model": "gpt-5.5" },
+    { "request-model": "deepseek-v4-pro", "target-model": "deepseek-reasoner" },
+    { "request-model": "deepseek-v4-flash", "target-model": "deepseek-chat" },
+  ],
+  "allowed-channel-groups": ["all-channel-groups-with-a-long-name"],
+  "route-path": "/pro/cs_test",
+  "endpoint-path": "/v1",
+  "usage-auto-interval": 30,
+  "codex-model-catalog-filename": "cc-switch-model-catalog.json",
+  "codex-model-catalog": {
+    models: [
+      {
+        slug: "gpt-5.5",
+        model: "gpt-5.5",
+        display_name: "GPT-5.5",
+        default_reasoning_level: "medium",
+        supported_reasoning_levels: [
+          { effort: "low", description: "Fast" },
+          { effort: "medium", description: "Balanced" },
+          { effort: "high", description: "Deep" },
+          { effort: "xhigh", description: "Extra deep" },
+        ],
+      },
+      {
+        slug: "deepseek-v4-pro",
+        model: "deepseek-v4-pro",
+        default_reasoning_level: "high",
+        supported_reasoning_levels: [
+          { effort: "low" },
+          { effort: "medium" },
+          { effort: "high" },
+          { effort: "xhigh" },
+        ],
+      },
+      {
+        slug: "deepseek-v4-flash",
+        model: "deepseek-v4-flash",
+        default_reasoning_level: "medium",
+      },
+    ],
+  },
+};
+
+const decodeCodexConfigBlob = (url: string) => {
+  const encoded = new URL(url).searchParams.get("config");
+  if (!encoded) throw new Error("missing config param");
+  const binary = atob(encoded);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return JSON.parse(new TextDecoder().decode(bytes)) as {
+    auth: { OPENAI_API_KEY?: string };
+    config: string;
+    apiFormat?: string;
+    modelCatalog?: { models: Array<Record<string, unknown>> };
+  };
+};
+
+const mockApiKeysApisForImport = async (page: Page) => {
+  const entry = {
+    key: `sk-e2e-import-${"y".repeat(20)}-imp`,
+    name: "Compat Codex Import",
+    "allowed-models": ["gpt-5.5", "deepseek-reasoner", "deepseek-chat", "deepseek-v4-pro"],
+    "allowed-channel-groups": ["all-channel-groups-with-a-long-name"],
+    "allowed-channels": ["primary-channel-with-a-long-name"],
+    "created-at": "2026-05-13T15:32:00Z",
+  };
+
+  await page.route("**/v0/management/**", async (route) => {
+    const url = new URL(route.request().url());
+    const pathname = url.pathname;
+
+    if (pathname.endsWith("/v0/management/config")) {
+      await route.fulfill({ status: 200, contentType: "application/json", body: "{}" });
+      return;
+    }
+
+    if (pathname.endsWith("/v0/management/api-key-entries")) {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ "api-key-entries": [entry] }),
+      });
+      return;
+    }
+
+    if (pathname.endsWith("/v0/management/api-keys")) {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ "api-keys": [] }),
+      });
+      return;
+    }
+
+    if (pathname.endsWith("/v0/management/api-key-permission-profiles")) {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ "api-key-permission-profiles": [] }),
+      });
+      return;
+    }
+
+    if (pathname.endsWith("/v0/management/ccswitch-import-configs")) {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ "ccswitch-import-configs": [codexImportPreset] }),
+      });
+      return;
+    }
+
+    if (pathname.endsWith("/v0/management/channel-groups")) {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ items: [] }),
+      });
+      return;
+    }
+
+    if (pathname.endsWith("/v0/management/models")) {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ data: [] }),
+      });
+      return;
+    }
+
+    if (pathname.endsWith("/v0/management/auth-files")) {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ files: [] }),
+      });
+      return;
+    }
+
+    const providerListPayloads: Record<string, Record<string, unknown[]>> = {
+      "/v0/management/gemini-api-key": { "gemini-api-key": [] },
+      "/v0/management/claude-api-key": { "claude-api-key": [] },
+      "/v0/management/codex-api-key": { "codex-api-key": [] },
+      "/v0/management/vertex-api-key": { "vertex-api-key": [] },
+      "/v0/management/openai-compatibility": { "openai-compatibility": [] },
+    };
+    const providerPayload = providerListPayloads[pathname];
+    if (providerPayload) {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(providerPayload),
+      });
+      return;
+    }
+
+    await route.fulfill({ status: 200, contentType: "application/json", body: "{}" });
+  });
+};
+
+test("API Keys: import-to-CC-Switch opens a codex deep link with embedded model catalog", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1360, height: 980 });
+  await setAuthed(page);
+  await mockApiKeysApisForImport(page);
+
+  await page.addInitScript(() => {
+    window.open = (url?: string | URL) => {
+      if (typeof url === "string") {
+        (window as unknown as { __ccswitchOpenedUrl?: string[] }).__ccswitchOpenedUrl =
+          (window as unknown as { __ccswitchOpenedUrl?: string }).__ccswitchOpenedUrl ?? [];
+        (window as unknown as { __ccswitchOpenedUrl?: string[] }).__ccswitchOpenedUrl!.push(url);
+      }
+      return null;
+    };
+  });
+
+  await page.goto("/#/api-keys");
+  await page.locator('td[data-vt-column-key="actions"]').first().waitFor({ state: "visible" });
+
+  // The import-to-CC-Switch button is distinguishable by its aria-label, which
+  // carries the i18n label "ccswitch.import_to_ccswitch". Other row actions
+  // (toggle / view usage / copy / edit / delete) use different labels, so we
+  // target the import button specifically inside the actions cell.
+  const importButton = page
+    .locator('td[data-vt-column-key="actions"]')
+    .first()
+    .getByRole("button", { name: /import to CC Switch|导入到 CC Switch/i });
+  await importButton.click({ force: true });
+
+  // The modal renders the codex preset card with the provider name as button text.
+  const cardButton = page.getByRole("button", { name: /Pro Pool \+ DeepSeek/ });
+  await expect(cardButton).toBeVisible();
+
+  // Clicking the card body opens the ccswitch:// deep link.
+  await cardButton.click();
+
+  const openedUrl = await page.evaluate(() => {
+    const list = (window as unknown as { __ccswitchOpenedUrl?: string[] }).__ccswitchOpenedUrl;
+    return list?.[0];
+  });
+  expect(openedUrl).toBeTruthy();
+  expect(openedUrl!.startsWith("ccswitch://v1/import?")).toBe(true);
+
+  const parsed = new URL(openedUrl!);
+  expect(parsed.searchParams.get("app")).toBe("codex");
+  expect(parsed.searchParams.get("apiFormat")).toBe("openai_responses");
+  expect(parsed.searchParams.get("config")).toBeTruthy();
+
+  const decoded = decodeCodexConfigBlob(openedUrl!);
+  expect(decoded.apiFormat).toBe("openai_responses");
+  expect(decoded.auth.OPENAI_API_KEY).toBe("sk-e2e-import-yyyyyyyyyyyyyyyyyyyy-imp");
+  expect(decoded.modelCatalog?.models).toBeTruthy();
+  expect(decoded.modelCatalog!.models.length).toBe(3);
+  expect(decoded.modelCatalog!.models[0]).toMatchObject({
+    slug: "gpt-5.5",
+    model: "gpt-5.5",
+    default_reasoning_level: "medium",
+  });
+  // The default model catalogs's default_reasoning_level for the selected
+  // model (gpt-5.5) should drive model_reasoning_effort (medium) instead of
+  // the old hardcoded "high".
+  expect(decoded.config).toContain(`model_reasoning_effort = "medium"`);
+  expect(decoded.config).toContain(`model_catalog_json = "cc-switch-model-catalog.json"`);
 });

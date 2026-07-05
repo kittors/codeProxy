@@ -44,6 +44,9 @@ function parsePriorityText(value: string): number | null {
 const normalizeOwnerValue = (value: string): string =>
   value.trim().replace(/\s+/g, "-").toLowerCase();
 
+const isRequestCancelled = (err: unknown, signal?: AbortSignal) =>
+  signal?.aborted || (err instanceof Error && err.message === "Request was cancelled");
+
 function normalizeRoutingStrategy(value: unknown): RoutingStrategy {
   return value === "fill-first" || value === "session-sticky" ? value : "round-robin";
 }
@@ -239,8 +242,10 @@ export function ChannelGroupsPage() {
     useState<ChannelDetailsByGroup>({});
   const [authGroupOwnerMap, setAuthGroupOwnerMap] = useState<Record<string, string>>({});
 
-  const loadAvailableChannels = useCallback(async () => {
-    const items = await channelGroupsApi.list();
+  const loadAvailableChannels = useCallback(async (options?: { signal?: AbortSignal }) => {
+    const items = await channelGroupsApi.list(
+      options?.signal ? { signal: options.signal } : undefined,
+    );
     const known = new Set<string>();
     const detailsByName: ChannelDetailsByName = {};
     const detailsByGroup: ChannelDetailsByGroup = {};
@@ -356,15 +361,22 @@ export function ChannelGroupsPage() {
     [authGroupOwnerMap, availableChannelDetails, availableChannelDetailsByGroup],
   );
 
-  const loadPage = useCallback(async () => {
+  const loadPage = useCallback(async (signal?: AbortSignal) => {
     setLoading(true);
     setError("");
     try {
       const [routing, channels, ownerMappings] = await Promise.all([
-        routingConfigApi.get(),
-        loadAvailableChannels().catch(() => ({ names: [], detailsByName: {}, detailsByGroup: {} })),
-        modelsApi.getAuthGroupModelOwnerMappingMap().catch(() => ({})),
+        routingConfigApi.get(signal ? { signal } : undefined),
+        loadAvailableChannels(signal ? { signal } : undefined).catch(() => ({
+          names: [],
+          detailsByName: {},
+          detailsByGroup: {},
+        })),
+        modelsApi
+          .getAuthGroupModelOwnerMappingMap(signal ? { signal } : undefined)
+          .catch(() => ({})),
       ]);
+      if (signal?.aborted) return;
       const nextValues = hydrateRoutingValues(routing);
       setVisualValues(nextValues);
       setAvailableChannels(channels.names);
@@ -372,16 +384,19 @@ export function ChannelGroupsPage() {
       setAvailableChannelDetailsByGroup(channels.detailsByGroup);
       setAuthGroupOwnerMap(ownerMappings);
     } catch (err: unknown) {
+      if (isRequestCancelled(err, signal)) return;
       const message = err instanceof Error ? err.message : t("channel_groups_page.load_failed");
       setError(message);
       notify({ type: "error", message });
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) setLoading(false);
     }
   }, [loadAvailableChannels, notify, t]);
 
   useEffect(() => {
-    void loadPage();
+    const controller = new AbortController();
+    void loadPage(controller.signal);
+    return () => controller.abort();
   }, [loadPage]);
 
   const persistValues = useCallback(
@@ -437,16 +452,28 @@ export function ChannelGroupsPage() {
   );
 
   return (
-    <div className="space-y-4 overflow-x-hidden">
-      <Card title={t("channel_groups_page.title")} loading={loading}>
+    <div className="space-y-4 overflow-x-hidden md:flex md:h-[calc(100dvh-112px)] md:min-h-0 md:flex-col">
+      <Card
+        className="md:flex md:min-h-0 md:flex-1 md:flex-col md:overflow-hidden"
+        bodyClassName="md:flex md:min-h-0 md:flex-1 md:flex-col"
+        loading={loading}
+      >
         {error ? (
           <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900 dark:border-rose-400/25 dark:bg-rose-500/15 dark:text-white">
             {error}
           </div>
         ) : null}
 
-        <div className={error ? "mt-4 space-y-4" : "space-y-4"}>
+        <div
+          className={[
+            error ? "mt-4" : null,
+            "space-y-4 md:flex md:min-h-0 md:flex-1 md:flex-col",
+          ]
+            .filter(Boolean)
+            .join(" ")}
+        >
           <RoutingConfigEditor
+            title={t("channel_groups_page.title")}
             values={visualValues}
             disabled={loading || saving}
             availableChannels={availableChannels}

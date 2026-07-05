@@ -1,6 +1,7 @@
 import iconAmp from "@code-proxy/assets/icons/amp.svg";
 import iconAntigravity from "@code-proxy/assets/icons/antigravity.svg";
 import iconClaude from "@code-proxy/assets/icons/claude.svg";
+import iconCline from "@code-proxy/assets/icons/cline.svg";
 import iconCodex from "@code-proxy/assets/icons/codex.svg";
 import iconDeepseek from "@code-proxy/assets/icons/deepseek.svg";
 import iconGemini from "@code-proxy/assets/icons/gemini.svg";
@@ -23,6 +24,7 @@ const VENDOR_ICONS: Record<string, { light: string; dark: string }> = {
   amp: { light: iconAmp, dark: iconAmp },
   antigravity: { light: iconAntigravity, dark: iconAntigravity },
   claude: { light: iconClaude, dark: iconClaude },
+  cline: { light: iconCline, dark: iconCline },
   codex: { light: iconCodex, dark: iconCodex },
   deepseek: { light: iconDeepseek, dark: iconDeepseek },
   gemini: { light: iconGemini, dark: iconGemini },

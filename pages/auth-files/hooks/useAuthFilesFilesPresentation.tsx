@@ -409,10 +409,10 @@ export function useAuthFilesFilesPresentation({
       seconds -= minutes * 60;
 
       const parts: string[] = [];
-      if (days) parts.push(`${days}天`);
-      if (hours) parts.push(`${hours}小时`);
-      if (minutes) parts.push(`${minutes}分`);
-      parts.push(`${seconds}秒`);
+      if (days) parts.push(t("m_quota.duration_day_compact", { count: days }));
+      if (hours) parts.push(t("m_quota.duration_hour_compact", { count: hours }));
+      if (minutes) parts.push(t("m_quota.duration_minute_compact", { count: minutes }));
+      parts.push(t("m_quota.duration_second_compact", { count: seconds }));
       return parts.join("");
     },
     [nowMs, t],

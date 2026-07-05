@@ -160,21 +160,7 @@ function reconcileGenericMappings(
 ): CcSwitchModelMapping[] {
   const currentNonRole = currentMappings.filter((mapping) => !mapping.role);
   if (currentNonRole.length > 0) {
-    const seen = new Set<string>();
-    const preserved: CcSwitchModelMapping[] = [];
-
-    for (const mapping of currentNonRole) {
-      const targetKey = mapping.targetModel.trim().toLowerCase();
-      if (targetKey) {
-        if (seen.has(targetKey)) continue;
-        seen.add(targetKey);
-      }
-      preserved.push(mapping);
-    }
-
-    if (preserved.length > 0) {
-      return preserved;
-    }
+    return currentNonRole;
   }
 
   const autoMappings = dedupeModels(models).map((targetModel) => ({

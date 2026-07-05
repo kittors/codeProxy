@@ -5,11 +5,12 @@ import {
   useRef,
   useState,
   type HTMLAttributes,
+  type CSSProperties,
   type PointerEvent as ReactPointerEvent,
   type PropsWithChildren,
 } from "react";
 
-type ScrollbarVisibility = "hover" | "always";
+type ScrollbarVisibility = "hover" | "track-hover" | "always";
 
 type ScrollMetrics = {
   clientHeight: number;
@@ -33,6 +34,7 @@ export function ScrollArea({
   children,
   className,
   viewportClassName,
+  viewportStyle,
   contentClassName,
   scrollbarVisibility = "hover",
   scrollbarTrackInset = 8,
@@ -40,6 +42,7 @@ export function ScrollArea({
 }: PropsWithChildren<
   {
     viewportClassName?: string;
+    viewportStyle?: CSSProperties;
     contentClassName?: string;
     scrollbarVisibility?: ScrollbarVisibility;
     scrollbarTrackInset?: number;
@@ -48,6 +51,8 @@ export function ScrollArea({
   const viewportRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const dragStateRef = useRef<DragState | null>(null);
+  const scrollHideTimerRef = useRef<number | null>(null);
+  const [scrollbarActive, setScrollbarActive] = useState(false);
   const [metrics, setMetrics] = useState<ScrollMetrics>({
     clientHeight: 0,
     scrollHeight: 0,
@@ -87,6 +92,14 @@ export function ScrollArea({
     measure();
   }, [children, measure]);
 
+  useEffect(() => {
+    return () => {
+      if (scrollHideTimerRef.current !== null) {
+        window.clearTimeout(scrollHideTimerRef.current);
+      }
+    };
+  }, []);
+
   const thumb = useMemo(() => {
     const trackInset = Math.max(0, scrollbarTrackInset);
     const hasVerticalOverflow = metrics.scrollHeight > metrics.clientHeight + 1;
@@ -113,7 +126,16 @@ export function ScrollArea({
 
   const handleScroll = useCallback(() => {
     measure();
-  }, [measure]);
+    if (scrollbarVisibility !== "track-hover") return;
+    setScrollbarActive(true);
+    if (scrollHideTimerRef.current !== null) {
+      window.clearTimeout(scrollHideTimerRef.current);
+    }
+    scrollHideTimerRef.current = window.setTimeout(() => {
+      setScrollbarActive(false);
+      scrollHideTimerRef.current = null;
+    }, 900);
+  }, [measure, scrollbarVisibility]);
 
   const handleThumbPointerDown = useCallback(
     (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -158,6 +180,10 @@ export function ScrollArea({
   const visibilityClasses =
     scrollbarVisibility === "always"
       ? "opacity-100"
+      : scrollbarVisibility === "track-hover"
+        ? scrollbarActive
+          ? "opacity-100 transition-opacity hover:opacity-100 group-focus-within:opacity-100"
+          : "opacity-0 transition-opacity hover:opacity-100 group-focus-within:opacity-100"
       : "opacity-0 transition-opacity hover:opacity-100 group-hover:opacity-100 group-focus-within:opacity-100";
 
   return (
@@ -172,6 +198,7 @@ export function ScrollArea({
         data-scroll-area-viewport
         data-scrollbar-visibility={scrollbarVisibility}
         onScroll={handleScroll}
+        style={viewportStyle}
         className={cn(
           "h-full min-h-0 table-scrollbar overflow-auto overscroll-contain",
           viewportClassName,
@@ -186,17 +213,13 @@ export function ScrollArea({
         <div
           data-scroll-area-scrollbar="y"
           className={cn(
-            "pointer-events-auto absolute bottom-0 right-0 top-0 z-30 w-2",
+            "group/scrollbar pointer-events-auto absolute bottom-0 right-0 top-0 z-30 w-2",
             visibilityClasses,
           )}
         >
           <div
-            className="absolute left-0 right-0 rounded-full bg-slate-200/40 dark:bg-white/10"
-            style={{ top: Math.max(0, scrollbarTrackInset), bottom: Math.max(0, scrollbarTrackInset) }}
-          />
-          <div
             role="presentation"
-            className="pointer-events-auto absolute left-0 right-0 cursor-pointer rounded-full bg-slate-500/40 transition-colors hover:bg-slate-500/70 dark:bg-white/25 dark:hover:bg-white/50"
+            className="pointer-events-auto absolute right-0 w-1.5 cursor-pointer rounded-full bg-[#C7C7C7] transition-[width] duration-150 ease-out hover:w-2 active:w-2 group-hover/scrollbar:w-2"
             style={{ top: thumb.top + Math.max(0, scrollbarTrackInset), height: thumb.height }}
             onPointerDown={handleThumbPointerDown}
             onPointerMove={handleThumbPointerMove}

@@ -1,6 +1,8 @@
-import { lazy } from "react";
+import { preloadablePage } from "../preloadablePage";
 
-const ConfigPage = lazy(() => import("./ConfigPage").then((m) => ({ default: m.ConfigPage })));
+const { Page: ConfigPage, preload: preloadConfigPage } = preloadablePage(() =>
+  import("./ConfigPage").then((m) => ({ default: m.ConfigPage })),
+);
 
 export const configRoute = {
   path: "/config",
@@ -9,4 +11,5 @@ export const configRoute = {
   layout: "dashboard",
   nav: { labelKey: "nav.config" },
   redirects: [{ from: "/settings", to: "/config" }],
+  preload: preloadConfigPage,
 };

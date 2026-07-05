@@ -29,6 +29,13 @@ const quickImportConfigs = [
         {
           slug: "gpt-5.3-codex",
           display_name: "gpt-5.3-codex",
+          default_reasoning_level: "medium",
+          supported_reasoning_levels: [
+            { effort: "low", description: "Fast" },
+            { effort: "medium", description: "Balanced" },
+            { effort: "high", description: "Deep" },
+            { effort: "xhigh", description: "Extra deep" },
+          ],
         },
         {
           slug: "deepseek-v4-flash",
@@ -74,10 +81,22 @@ const quickImportConfigs = [
   },
 ];
 
+const decodeConfigFromImportUrl = (url: string) => {
+  const encoded = new URL(url).searchParams.get("config");
+  expect(encoded).toBeTruthy();
+  const binary = atob(encoded!);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return JSON.parse(new TextDecoder().decode(bytes));
+};
+
 describe("QuickImportTabContent", () => {
   beforeEach(async () => {
     await i18n.changeLanguage("en");
     window.localStorage.clear();
+    window.sessionStorage.clear();
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(JSON.stringify({ "ccswitch-import-configs": quickImportConfigs }), {
         headers: { "Content-Type": "application/json" },
@@ -131,6 +150,14 @@ describe("QuickImportTabContent", () => {
     expect(parsed.searchParams.get("name")).toBe("Team Codex");
     expect(parsed.searchParams.get("apiKey")).toBe("sk-lookup-key");
     expect(parsed.searchParams.get("endpoint")).toMatch(/\/pro\/cs_codex\/v1$/);
+    expect(decodeConfigFromImportUrl(openedUrl)).toMatchObject({
+      modelCatalog: {
+        models: [
+          expect.objectContaining({ slug: "gpt-5.3-codex" }),
+          expect.objectContaining({ slug: "deepseek-v4-flash" }),
+        ],
+      },
+    });
   });
 
   test("copies the selected quick import link without launching CC Switch", async () => {
@@ -171,6 +198,14 @@ describe("QuickImportTabContent", () => {
       expect(parsed.searchParams.get("name")).toBe("Team Codex");
       expect(parsed.searchParams.get("apiKey")).toBe("sk-lookup-key");
       expect(parsed.searchParams.get("endpoint")).toMatch(/\/pro\/cs_codex\/v1$/);
+      expect(decodeConfigFromImportUrl(copiedUrl)).toMatchObject({
+        modelCatalog: {
+          models: [
+            expect.objectContaining({ slug: "gpt-5.3-codex" }),
+            expect.objectContaining({ slug: "deepseek-v4-flash" }),
+          ],
+        },
+      });
     } finally {
       Object.defineProperty(navigator, "clipboard", {
         configurable: true,
@@ -179,53 +214,19 @@ describe("QuickImportTabContent", () => {
     }
   });
 
-  test("downloads the Codex model catalog for mapped quick imports", async () => {
-    const originalCreateObjectURL = URL.createObjectURL;
-    const originalRevokeObjectURL = URL.revokeObjectURL;
-    const createObjectURL = vi.fn<(object: Blob | MediaSource) => string>(() => "blob:codex-catalog");
-    const revokeObjectURL = vi.fn();
-    const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
-    Object.defineProperty(URL, "createObjectURL", {
-      configurable: true,
-      value: createObjectURL,
-    });
-    Object.defineProperty(URL, "revokeObjectURL", {
-      configurable: true,
-      value: revokeObjectURL,
-    });
+  test("does not expose a separate Codex model catalog download action", async () => {
+    render(
+      <ThemeProvider>
+        <ToastProvider>
+          <QuickImportTabContent apiKey="sk-lookup-key" />
+        </ToastProvider>
+      </ThemeProvider>,
+    );
 
-    try {
-      render(
-        <ThemeProvider>
-          <ToastProvider>
-            <QuickImportTabContent apiKey="sk-lookup-key" />
-          </ToastProvider>
-        </ThemeProvider>,
-      );
-
-      const codexSection = await screen.findByRole("region", { name: /codex quick imports/i });
-      await userEvent.click(
-        within(codexSection).getByRole("button", { name: /download codex model catalog/i }),
-      );
-
-      await waitFor(() => expect(createObjectURL).toHaveBeenCalled());
-      const blob = createObjectURL.mock.calls[0]?.[0];
-      if (!(blob instanceof Blob)) {
-        throw new Error("Expected Codex model catalog download to create a Blob");
-      }
-      await expect(blob.text()).resolves.toContain("deepseek-v4-flash");
-      expect(click).toHaveBeenCalled();
-    } finally {
-      Object.defineProperty(URL, "createObjectURL", {
-        configurable: true,
-        value: originalCreateObjectURL,
-      });
-      Object.defineProperty(URL, "revokeObjectURL", {
-        configurable: true,
-        value: originalRevokeObjectURL,
-      });
-      click.mockRestore();
-    }
+    const codexSection = await screen.findByRole("region", { name: /codex quick imports/i });
+    expect(
+      within(codexSection).queryByRole("button", { name: /download codex model catalog/i }),
+    ).not.toBeInTheDocument();
   });
 
   test("hides quick import groups that do not have presets", async () => {

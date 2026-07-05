@@ -20,6 +20,14 @@ export interface CcSwitchCodexCatalogModel {
   model: string;
   displayName?: string;
   contextWindow?: number;
+  defaultReasoningLevel?: string;
+  supportedReasoningLevels?: Array<
+    | string
+    | {
+        effort: string;
+        description?: string;
+      }
+  >;
 }
 
 export interface CcSwitchCodexModelCatalog {
@@ -35,9 +43,9 @@ export interface CcSwitchCodexModelCatalogEntry {
   model: string;
   display_name: string;
   description: string;
-  default_reasoning_level: "medium";
+  default_reasoning_level: string;
   supported_reasoning_levels: Array<{
-    effort: "low" | "medium" | "high" | "xhigh";
+    effort: string;
     description: string;
   }>;
   shell_type: "shell_command";
@@ -271,6 +279,35 @@ const normalizeCodexContextWindow = (value: number | undefined): number => {
   return Math.round(value);
 };
 
+const normalizeCodexReasoningLevels = (
+  levels: CcSwitchCodexCatalogModel["supportedReasoningLevels"],
+): CcSwitchCodexModelCatalogEntry["supported_reasoning_levels"] => {
+  if (!Array.isArray(levels) || levels.length === 0) return CODEX_SUPPORTED_REASONING_LEVELS;
+
+  const normalized = levels
+    .map((level) => {
+      if (typeof level === "string") {
+        const effort = level.trim();
+        if (!effort) return null;
+        const builtIn = CODEX_SUPPORTED_REASONING_LEVELS.find((item) => item.effort === effort);
+        return builtIn ?? { effort, description: effort };
+      }
+
+      const effort = String(level.effort ?? "").trim();
+      if (!effort) return null;
+      const builtIn = CODEX_SUPPORTED_REASONING_LEVELS.find((item) => item.effort === effort);
+      return {
+        effort,
+        description: String(level.description ?? builtIn?.description ?? effort),
+      };
+    })
+    .filter((level): level is CcSwitchCodexModelCatalogEntry["supported_reasoning_levels"][number] =>
+      Boolean(level),
+    );
+
+  return normalized.length > 0 ? normalized : CODEX_SUPPORTED_REASONING_LEVELS;
+};
+
 const buildCodexCatalogEntry = (
   model: CcSwitchCodexCatalogModel,
   priority: number,
@@ -278,14 +315,16 @@ const buildCodexCatalogEntry = (
   const slug = model.model.trim();
   const displayName = model.displayName?.trim() || slug;
   const contextWindow = normalizeCodexContextWindow(model.contextWindow);
+  const defaultReasoningLevel = model.defaultReasoningLevel?.trim() || "medium";
+  const supportedReasoningLevels = normalizeCodexReasoningLevels(model.supportedReasoningLevels);
 
   return {
     slug,
     model: slug,
     display_name: displayName,
     description: displayName,
-    default_reasoning_level: "medium",
-    supported_reasoning_levels: CODEX_SUPPORTED_REASONING_LEVELS,
+    default_reasoning_level: defaultReasoningLevel,
+    supported_reasoning_levels: supportedReasoningLevels,
     shell_type: "shell_command",
     visibility: "list",
     supported_in_api: true,
@@ -366,6 +405,12 @@ const buildCodexConfig = (input: {
   const tomlString = (value: string) => JSON.stringify(value);
   const model = input.model.trim() || "gpt-5-codex";
   const catalogModels: Array<Record<string, unknown>> = [];
+  // Entries the caller supplied explicitly via codexModelCatalog (as opposed to
+  // bare strings we synthesize to guarantee the selected model lives in the
+  // catalog). We only derive model_reasoning_effort from explicit entries so
+  // that the prior "high" default is preserved for callers that pass no
+  // per-model reasoning metadata.
+  const explicitCatalogModels: Array<Record<string, unknown>> = [];
   const seen = new Set<string>();
 
   const getCatalogModelId = (entry: Record<string, unknown>): string => {
@@ -383,13 +428,18 @@ const buildCodexConfig = (input: {
       normalizedEntry.model = normalized;
     }
     catalogModels.push(normalizedEntry);
+    explicitCatalogModels.push(normalizedEntry);
   };
   const addCatalogModel = (value: string) => {
     const normalized = value.trim();
     const key = normalized.toLowerCase();
     if (!normalized || seen.has(key)) return;
     seen.add(key);
-    catalogModels.push({ model: normalized });
+    catalogModels.push({
+      model: normalized,
+      defaultReasoningLevel: "medium",
+      supportedReasoningLevels: CODEX_SUPPORTED_REASONING_LEVELS,
+    });
   };
 
   for (const entry of input.codexModelCatalog?.models ?? []) {
@@ -402,13 +452,34 @@ const buildCodexConfig = (input: {
     addCatalogModel(mapping.requestModel);
   }
 
+  // Derive the default reasoning effort from the explicit catalog entry for
+  // the selected model so the generated config.toml stays consistent with
+  // modelCatalog's per-model default_reasoning_level. Falls back to "high"
+  // for backward compatibility when no matching explicit entry exists (e.g.
+  // callers that pass no codexModelCatalog at all).
+  const resolveDefaultReasoningEffort = (): string => {
+    const selected = model.trim().toLowerCase();
+    if (!selected) return "high";
+    for (const entry of explicitCatalogModels) {
+      const id = getCatalogModelId(entry).toLowerCase();
+      if (id !== selected) continue;
+      const camel = String(entry.defaultReasoningLevel ?? "").trim();
+      if (camel) return camel;
+      const snake = String(entry.default_reasoning_level ?? "").trim();
+      if (snake) return snake;
+      return "high";
+    }
+    return "high";
+  };
+  const reasoningEffort = resolveDefaultReasoningEffort();
+
   const catalogPointer =
     catalogModels.length > 0
       ? `model_catalog_json = ${tomlString(CC_SWITCH_CODEX_MODEL_CATALOG_FILENAME)}\n`
       : "";
   const config = `model_provider = "custom"
 model = ${tomlString(model)}
-model_reasoning_effort = "high"
+model_reasoning_effort = ${tomlString(reasoningEffort)}
 disable_response_storage = true
 ${catalogPointer}
 

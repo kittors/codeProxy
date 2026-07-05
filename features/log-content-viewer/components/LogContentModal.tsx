@@ -64,6 +64,11 @@ type RequestDetailAttempt = {
   rows: RequestDetailRow[];
   groups: RequestDetailGroup[];
 };
+type RequestDetailLabels = {
+  request: string;
+  response: string;
+  fingerprintHeaders: string;
+};
 
 function parseJsonObject(raw: string): JsonObject | null {
   if (!raw) return null;
@@ -140,6 +145,7 @@ function normalizeHeaderRows(value: unknown): RequestDetailRow[] {
 function parseExchangeLog(
   raw: unknown,
   kind: "request" | "response",
+  labels: RequestDetailLabels,
 ): RequestDetailAttempt[] {
   const text = formatDetailValue(raw);
   if (!hasDetailValue(text)) return [];
@@ -214,7 +220,7 @@ function parseExchangeLog(
       if (line !== "<missing>")
         pushDetailRow(
           ensureCurrent().rows,
-          kind === "request" ? "请求" : "响应",
+          kind === "request" ? labels.request : labels.response,
           line,
         );
       continue;
@@ -284,7 +290,10 @@ function buildGenericRows(
   );
 }
 
-function buildClientAttempt(client: unknown): RequestDetailAttempt {
+function buildClientAttempt(
+  client: unknown,
+  labels: RequestDetailLabels,
+): RequestDetailAttempt {
   const record = isRecord(client) ? client : {};
   const preferredKeys = [
     "ip",
@@ -306,14 +315,17 @@ function buildClientAttempt(client: unknown): RequestDetailAttempt {
   if (headers.length > 0) groups.push({ title: "Headers", rows: headers });
   const fingerprints = normalizeHeaderRows(record.fingerprint_headers);
   if (fingerprints.length > 0)
-    groups.push({ title: "指纹 / 透传", rows: fingerprints });
+    groups.push({ title: labels.fingerprintHeaders, rows: fingerprints });
 
   return { rows, groups };
 }
 
-function buildUpstreamAttempts(upstream: unknown): RequestDetailAttempt[] {
+function buildUpstreamAttempts(
+  upstream: unknown,
+  labels: RequestDetailLabels,
+): RequestDetailAttempt[] {
   if (!isRecord(upstream)) return [];
-  const parsed = parseExchangeLog(upstream.request_log, "request");
+  const parsed = parseExchangeLog(upstream.request_log, "request", labels);
   if (parsed.length > 0) return parsed;
 
   const rows = buildGenericRows(upstream);
@@ -326,9 +338,12 @@ function buildUpstreamAttempts(upstream: unknown): RequestDetailAttempt[] {
   ];
 }
 
-function buildResponseAttempts(response: unknown): RequestDetailAttempt[] {
+function buildResponseAttempts(
+  response: unknown,
+  labels: RequestDetailLabels,
+): RequestDetailAttempt[] {
   if (!isRecord(response)) return [];
-  const parsed = parseExchangeLog(response.upstream_log, "response");
+  const parsed = parseExchangeLog(response.upstream_log, "response", labels);
   if (parsed.length > 0) return parsed;
 
   const rows = buildGenericRows(response);
@@ -660,6 +675,14 @@ export function LogContentModal({
   fetchEgressFn,
 }: LogContentModalProps) {
   const { t } = useTranslation();
+  const requestDetailLabels = useMemo(
+    () => ({
+      request: t("log_content.detail_label_request"),
+      response: t("log_content.detail_label_response"),
+      fingerprintHeaders: t("log_content.detail_group_fingerprint_headers"),
+    }),
+    [t],
+  );
   const [activeTab, setActiveTab] = useState<LogContentPart>(initialTab);
   const [viewMode, setViewMode] = useState<"rendered" | "raw">("rendered");
   const [inputParsed, setInputParsed] = useState<AsyncParsedState>({
@@ -1259,9 +1282,9 @@ export function LogContentModal({
 
     const details = parseRequestDetails(detailsContent);
     if (!details) return renderRaw(detailsContent);
-    const clientAttempt = buildClientAttempt(details.client);
-    const upstreamAttempts = buildUpstreamAttempts(details.upstream);
-    const responseAttempts = buildResponseAttempts(details.response);
+    const clientAttempt = buildClientAttempt(details.client, requestDetailLabels);
+    const upstreamAttempts = buildUpstreamAttempts(details.upstream, requestDetailLabels);
+    const responseAttempts = buildResponseAttempts(details.response, requestDetailLabels);
     const extraSections = buildExtraDetailSections(details);
     const egressRows: RequestDetailRow[] = [];
     const egressBadges: ReactNode[] = [];

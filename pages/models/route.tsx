@@ -1,6 +1,8 @@
-import { lazy } from "react";
+import { preloadablePage } from "../preloadablePage";
 
-const ModelsPage = lazy(() => import("./ModelsPage").then((m) => ({ default: m.ModelsPage })));
+const { Page: ModelsPage, preload: preloadModelsPage } = preloadablePage(() =>
+  import("./ModelsPage").then((m) => ({ default: m.ModelsPage })),
+);
 
 export const modelsRoute = {
   path: "/models",
@@ -9,4 +11,5 @@ export const modelsRoute = {
   layout: "dashboard",
   nav: { labelKey: "nav.models" },
   redirects: [{ from: "/manage/models", to: "/models" }],
+  preload: preloadModelsPage,
 };

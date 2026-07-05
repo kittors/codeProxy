@@ -1,6 +1,6 @@
-import { lazy } from "react";
+import { preloadablePage } from "../preloadablePage";
 
-const AuthFilesPage = lazy(() =>
+const { Page: AuthFilesPage, preload: preloadAuthFilesPage } = preloadablePage(() =>
   import("../auth-files/AuthFilesPage").then((m) => ({ default: m.AuthFilesPage })),
 );
 
@@ -15,4 +15,5 @@ export const accountSecurityRoute = {
     { from: "/auth-files/oauth-model-alias", to: "/account-security?tab=alias" },
     { from: "/manage/identity-fingerprint", to: "/account-security" },
   ],
+  preload: preloadAuthFilesPage,
 };

@@ -11,8 +11,8 @@ const mocks = vi.hoisted(() => ({
   getOauthExcludedModels: vi.fn(async () => ({})),
   replaceOauthExcludedModels: vi.fn(async () => ({})),
   getOauthModelAlias: vi.fn(async () => ({})),
-  getModelConfigs: vi.fn(async () => []),
-  getModelOwnerPresets: vi.fn(async () => []),
+  getModelConfigs: vi.fn(async (): Promise<unknown[]> => []),
+  getModelOwnerPresets: vi.fn(async (): Promise<unknown[]> => []),
   getAuthGroupModelOwnerMappingMap: vi.fn(async () => ({})),
   getUsage: vi.fn(async () => ({ apis: {} })),
   getEntityStats: vi.fn(async () => ({ source: [], auth_index: [] })),
@@ -72,9 +72,9 @@ describe("AuthFilesPage OAuth excluded models", () => {
     mocks.getOauthModelAlias.mockReset();
     mocks.getOauthModelAlias.mockResolvedValue({});
     mocks.getModelConfigs.mockReset();
-    mocks.getModelConfigs.mockResolvedValue([]);
+    mocks.getModelConfigs.mockResolvedValue(Array<unknown>());
     mocks.getModelOwnerPresets.mockReset();
-    mocks.getModelOwnerPresets.mockResolvedValue([]);
+    mocks.getModelOwnerPresets.mockResolvedValue(Array<unknown>());
     mocks.getAuthGroupModelOwnerMappingMap.mockReset();
     mocks.getAuthGroupModelOwnerMappingMap.mockResolvedValue({});
     mocks.getUsage.mockReset();

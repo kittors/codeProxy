@@ -4,8 +4,12 @@ import {
   buildProviderKeyDraft,
   maskApiKey,
   normalizeDiscoveredModels,
+  validateProviderModelOwnership,
 } from "@pages/providers/providers-helpers";
-import { buildCandidateUsageSourceIds, normalizeUsageSourceId } from "@code-proxy/domain";
+import {
+  buildCandidateUsageSourceIds,
+  normalizeUsageSourceId,
+} from "@code-proxy/domain";
 
 describe("providers helpers", () => {
   test("masks api keys consistently for provider cards", () => {
@@ -24,7 +28,14 @@ describe("providers helpers", () => {
       proxyId: "hk",
       excludedModels: ["claude-3-opus", "claude-3-haiku"],
       headers: { "x-test": "1" },
-      models: [{ name: "claude-3-opus", alias: "opus", priority: 10, testModel: "probe-model" }],
+      models: [
+        {
+          name: "claude-3-opus",
+          alias: "opus",
+          priority: 10,
+          testModel: "probe-model",
+        },
+      ],
       skipAnthropicProcessing: true,
     });
 
@@ -32,7 +43,9 @@ describe("providers helpers", () => {
     expect(draft.apiKey).toBe("sk-ant-123456");
     expect(draft.proxyId).toBe("hk");
     expect(draft.excludedModelsText).toBe("claude-3-opus\nclaude-3-haiku");
-    expect(draft.headersEntries).toEqual([{ id: expect.any(String), key: "x-test", value: "1" }]);
+    expect(draft.headersEntries).toEqual([
+      { id: expect.any(String), key: "x-test", value: "1" },
+    ]);
     expect(draft.modelEntries).toEqual([
       {
         id: expect.any(String),
@@ -79,7 +92,9 @@ describe("providers helpers", () => {
         disabled: false,
         proxyUrl: "https://proxy.example.com",
         proxyId: "hk",
-        headersEntries: [{ id: expect.any(String), key: "x-entry", value: "edge" }],
+        headersEntries: [
+          { id: expect.any(String), key: "x-entry", value: "edge" },
+        ],
       },
     ]);
   });
@@ -115,9 +130,39 @@ describe("providers helpers", () => {
     ]);
   });
 
+  test("validates OpenCode Go and ClinePass model ownership", () => {
+    expect(
+      validateProviderModelOwnership("opencode-go", {
+        models: [{ name: "cline-pass/glm-5.2" }],
+      }),
+    ).toContain("OpenCode Go models cannot use cline-pass model IDs");
+    expect(
+      validateProviderModelOwnership("opencode-go", {
+        models: [{ name: "glm-5.2" }],
+        excludedModels: ["*"],
+        visionFallbackModel: "qwen3.5-plus",
+      }),
+    ).toBeNull();
+    expect(
+      validateProviderModelOwnership("cline", {
+        models: [{ name: "glm-5.2" }],
+      }),
+    ).toContain("ClinePass models must use cline-pass model IDs");
+    expect(
+      validateProviderModelOwnership("cline", {
+        models: [{ name: "cline-pass/glm-5.2" }],
+        excludedModels: ["*", "cline-pass/minimax-m3"],
+        visionFallbackModel: "cline-pass/mimo-v2.5-pro",
+      }),
+    ).toBeNull();
+  });
+
   test("normalizes usage sources and matches raw plus masked api key candidates", () => {
     const masked = maskApiKey("sk-openai-provider-1234567890");
-    const normalized = normalizeUsageSourceId("sk-openai-provider-1234567890", maskApiKey);
+    const normalized = normalizeUsageSourceId(
+      "sk-openai-provider-1234567890",
+      maskApiKey,
+    );
     const candidates = buildCandidateUsageSourceIds({
       apiKey: "sk-openai-provider-1234567890",
       prefix: "oa",

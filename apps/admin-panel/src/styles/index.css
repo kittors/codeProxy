@@ -62,6 +62,91 @@ html.theme-transition-lock *::after {
   height: 0;
 }
 
+.rp {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 50;
+  height: 0.25rem;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 1;
+}
+
+.rp::before,
+.rp::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+
+.rp::before {
+  transform-origin: left;
+  background: linear-gradient(90deg, #2563eb, #3b82f6 58%, #22c55e);
+  box-shadow: 0 0 14px rgba(59, 130, 246, 0.45);
+  animation: rp-load 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+.rp::after {
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.75), transparent);
+  animation: rp-shine 0.9s linear infinite;
+}
+
+.rp-done {
+  opacity: 0;
+  transition: opacity 220ms ease 120ms;
+}
+
+.rp-done::before {
+  animation: rp-done 180ms ease-out forwards;
+}
+
+@keyframes rp-load {
+  0% {
+    transform: scaleX(0.08);
+  }
+  55% {
+    transform: scaleX(0.62);
+  }
+  100% {
+    transform: scaleX(0.88);
+  }
+}
+
+@keyframes rp-done {
+  from {
+    transform: scaleX(0.88);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes rp-shine {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rp,
+  .rp::before,
+  .rp::after {
+    animation: none;
+    transition: none;
+  }
+
+  .rp::before {
+    transform: scaleX(1);
+  }
+
+  .rp::after {
+    display: none;
+  }
+}
+
 /* DataTable：隐藏原生滚动条，改用 DOM 自定义滚动条 */
 .table-scrollbar {
   scrollbar-width: none;
@@ -252,4 +337,70 @@ html.theme-transition-lock *::after {
   background:
     radial-gradient(circle at 28% 28%, rgba(255, 255, 255, 0.18), transparent 28%),
     radial-gradient(circle at 72% 62%, rgba(148, 163, 184, 0.16), transparent 24%);
+}
+
+/* ── PageLoader full-screen variant ── */
+:root {
+  --pl-bg: #f4f4f5;
+  --pl-ring-outer: rgba(99, 102, 241, 0.6);
+  --pl-ring-inner: rgba(20, 184, 166, 0.75);
+  --pl-text: #64748b;
+  --pl-glow-1: rgba(59, 130, 246, 0.12);
+  --pl-glow-2: rgba(20, 184, 166, 0.1);
+  --pl-glow-3: rgba(168, 85, 247, 0.08);
+}
+
+.dark {
+  --pl-bg: #09090b;
+  --pl-ring-outer: rgba(129, 140, 248, 0.7);
+  --pl-ring-inner: rgba(94, 234, 212, 0.8);
+  --pl-text: rgba(255, 255, 255, 0.5);
+  --pl-glow-1: rgba(99, 102, 241, 0.18);
+  --pl-glow-2: rgba(45, 212, 191, 0.12);
+  --pl-glow-3: rgba(168, 85, 247, 0.1);
+}
+
+.pl-glow {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  pointer-events: none;
+  animation: pl-glow-pulse 4s ease-in-out infinite alternate;
+}
+
+.pl-glow-1 {
+  width: 28rem;
+  height: 28rem;
+  top: -8rem;
+  left: -6rem;
+  background: var(--pl-glow-1);
+}
+
+.pl-glow-2 {
+  width: 24rem;
+  height: 24rem;
+  top: -4rem;
+  right: -6rem;
+  background: var(--pl-glow-2);
+  animation-delay: 1.3s;
+}
+
+.pl-glow-3 {
+  width: 28rem;
+  height: 28rem;
+  bottom: -8rem;
+  left: 25%;
+  background: var(--pl-glow-3);
+  animation-delay: 2.6s;
+}
+
+@keyframes pl-glow-pulse {
+  0% {
+    opacity: 0.5;
+    transform: scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
 }

@@ -1,6 +1,6 @@
-import { lazy } from "react";
+import { preloadablePage } from "../preloadablePage";
 
-const RequestLogsPage = lazy(() =>
+const { Page: RequestLogsPage, preload: preloadRequestLogsPage } = preloadablePage(() =>
   import("./RequestLogsPage").then((m) => ({ default: m.RequestLogsPage })),
 );
 
@@ -10,4 +10,5 @@ export const requestLogsRoute = {
   auth: true,
   layout: "dashboard",
   nav: { labelKey: "nav.requestLogs" },
+  preload: preloadRequestLogsPage,
 };

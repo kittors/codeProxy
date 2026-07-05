@@ -100,9 +100,9 @@ describe("CcSwitchImportSettingsPage", () => {
       { name: "team-a", description: "Team A route", "path-routes": ["/team-a"] },
     ]);
     listAvailableModels.mockResolvedValue([{ id: "deepseek-v4-flash" }, { id: "kimi-k2" }]);
-    getModelConfigs.mockResolvedValue([]);
+    getModelConfigs.mockResolvedValue(Array<unknown>());
     getAuthGroupModelOwnerMappingMap.mockResolvedValue({});
-    listConfigs.mockResolvedValue([]);
+    listConfigs.mockResolvedValue(Array<unknown>());
     replaceConfigs.mockResolvedValue(undefined);
   });
 
@@ -717,7 +717,11 @@ describe("CcSwitchImportSettingsPage", () => {
         modelMappings: [
           {
             requestModel: "gpt-5.5",
-            targetModel: "moonshot-v1-128k",
+            targetModel: "gpt-5.5",
+          },
+          {
+            requestModel: "gpt-5.4-mini",
+            targetModel: "gpt-5.5",
           },
         ],
       },
@@ -731,10 +735,16 @@ describe("CcSwitchImportSettingsPage", () => {
     const dialog = await screen.findByRole("dialog", { name: /edit cc switch config/i });
     expect(
       await within(dialog).findByRole("combobox", { name: /actual channel model 1/i }),
-    ).toHaveTextContent("moonshot-v1-128k");
+    ).toHaveTextContent("gpt-5.5");
     expect(within(dialog).getByLabelText(/cc switch request model for mapping 1/i)).toHaveValue(
       "gpt-5.5",
     );
+    expect(within(dialog).getByLabelText(/cc switch request model for mapping 2/i)).toHaveValue(
+      "gpt-5.4-mini",
+    );
+    expect(
+      within(dialog).getByRole("combobox", { name: /actual channel model 2/i }),
+    ).toHaveTextContent("gpt-5.5");
 
     await user.click(within(dialog).getByRole("button", { name: /^save$/i }));
 
@@ -744,12 +754,16 @@ describe("CcSwitchImportSettingsPage", () => {
           id: "cfg-kimi",
           defaultModel: "gpt-5.5",
           allowedChannelGroups: ["kimicode"],
-          modelMappings: expect.arrayContaining([
+          modelMappings: [
             {
               requestModel: "gpt-5.5",
-              targetModel: "moonshot-v1-128k",
+              targetModel: "gpt-5.5",
             },
-          ]),
+            {
+              requestModel: "gpt-5.4-mini",
+              targetModel: "gpt-5.5",
+            },
+          ],
         }),
       ]),
     );
@@ -1030,7 +1044,7 @@ describe("CcSwitchImportSettingsPage", () => {
       { name: "default", implicit: true },
       { name: "nvidia", implicit: true },
     ]);
-    listAvailableModels.mockResolvedValue([]);
+    listAvailableModels.mockResolvedValue(Array<unknown>());
     listConfigs.mockResolvedValue([
       {
         id: "cfg-nvidia",

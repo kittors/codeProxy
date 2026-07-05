@@ -117,6 +117,14 @@ const COLUMN_RESIZE_DEBUG_STORAGE_KEY = "codeProxy.dataTable.debugResize";
 const DEFAULT_MIN_COLUMN_WIDTH = 72;
 const DEFAULT_MAX_COLUMN_WIDTH = 640;
 const COLUMN_RESIZE_PREVIEW_LINE_WIDTH = 2;
+const STICKY_EDGE_SHADOW_WIDTH = 28;
+
+function getStickyEdgeShadowOpacity(metrics: ScrollMetrics, edge: "start" | "end") {
+  const maxScrollLeft = Math.max(0, metrics.scrollWidth - metrics.clientWidth);
+  if (maxScrollLeft <= 1) return 0;
+  if (edge === "start") return metrics.scrollLeft > 1 ? 1 : 0;
+  return metrics.scrollLeft < maxScrollLeft - 1 ? 1 : 0;
+}
 const NON_RESIZABLE_COLUMN_KEYS = new Set(["select", "action", "actions"]);
 const TAILWIND_SPACING_UNIT_PX = 4;
 
@@ -175,6 +183,8 @@ interface ColumnResizeState {
   maxWidth: number;
   previewTop: number;
   previewBottom: number;
+  previewMinClientX: number;
+  previewMaxClientX: number;
   currentWidth: number;
   lastDebugAtMs: number;
   debugEnabled: boolean;
@@ -186,6 +196,7 @@ interface ColumnResizePreview {
   top: number;
   height: number;
   tooltipTop: number;
+  visible: boolean;
 }
 
 interface ScrollMetrics {
@@ -196,6 +207,16 @@ interface ScrollMetrics {
   clientHeight: number;
   clientWidth: number;
 }
+
+type StickyColumnPlacement = {
+  edge: "start" | "end";
+  offset: number;
+};
+
+type DataTableColumnStyle = CSSProperties & {
+  "--vt-sticky-left"?: string;
+  "--vt-sticky-right"?: string;
+};
 
 function hasHorizontalOverflow(metrics: ScrollMetrics) {
   return metrics.scrollWidth > metrics.clientWidth + 1;
@@ -290,6 +311,53 @@ function resolveColumnMaxWidth<T>(
   minWidth = resolveColumnMinWidth(column),
 ) {
   return Math.max(minWidth, column.maxWidthPx ?? DEFAULT_MAX_COLUMN_WIDTH);
+}
+
+function hasStickyColumnClass<T>(column: DataTableColumn<T>) {
+  return `${column.headerClassName ?? ""} ${column.cellClassName ?? ""}`
+    .split(/\s+/)
+    .some((className) => className === "sticky" || className.endsWith(":sticky"));
+}
+
+function resolveColumnLayoutWidth<T>(column: DataTableColumn<T>, widths: ColumnWidthMap) {
+  const resizedWidth = widths[column.key];
+  return resizedWidth ? clampColumnWidth(column, resizedWidth) : resolveColumnMinWidth(column);
+}
+
+function resolveStickyRailWidth<T>(
+  columns: DataTableColumn<T>[],
+  widths: ColumnWidthMap,
+  edge: "start" | "end",
+) {
+  const edgeColumns = edge === "start" ? columns : [...columns].reverse();
+  let width = 0;
+
+  for (const column of edgeColumns) {
+    if (resolveColumnOrderLock(column) !== edge || !hasStickyColumnClass(column)) break;
+    width += resolveColumnLayoutWidth(column, widths);
+  }
+
+  return width;
+}
+
+function resolveStickyColumnPlacements<T>(columns: DataTableColumn<T>[], widths: ColumnWidthMap) {
+  const placements: Record<string, StickyColumnPlacement> = {};
+
+  let startOffset = 0;
+  for (const column of columns) {
+    if (resolveColumnOrderLock(column) !== "start" || !hasStickyColumnClass(column)) break;
+    placements[column.key] = { edge: "start", offset: startOffset };
+    startOffset += resolveColumnLayoutWidth(column, widths);
+  }
+
+  let endOffset = 0;
+  for (const column of [...columns].reverse()) {
+    if (resolveColumnOrderLock(column) !== "end" || !hasStickyColumnClass(column)) break;
+    placements[column.key] = { edge: "end", offset: endOffset };
+    endOffset += resolveColumnLayoutWidth(column, widths);
+  }
+
+  return placements;
 }
 
 function normalizeColumnWidths<T>(columns: DataTableColumn<T>[], widths: ColumnWidthMap) {
@@ -644,6 +712,7 @@ export function DataTable<T>({
   const [activeResizeColumnKey, setActiveResizeColumnKey] = useState<string | null>(null);
   const resizePreviewLineRef = useRef<HTMLDivElement | null>(null);
   const resizePreviewTooltipRef = useRef<HTMLDivElement | null>(null);
+  const stickyRailWidthsRef = useRef({ start: 0, end: 0 });
   const [headerHeight, setHeaderHeight] = useState(0);
   const [scrollTop, setScrollTop] = useState(0);
   const [viewportHeight, setViewportHeight] = useState(480);
@@ -772,8 +841,28 @@ export function DataTable<T>({
         horizontalThumb.style.left = `${nextHThumb.left}px`;
         horizontalThumb.style.width = `${nextHThumb.width}px`;
       }
+
     },
     [],
+  );
+
+  const syncStickyEdgeShadows = useCallback(
+    (metrics: ScrollMetrics) => {
+      if (naturalFlow) return;
+      const root = rootRef.current;
+      if (!root) return;
+
+      const startBoundary = root.querySelector<HTMLElement>("[data-vt-sticky-start-boundary]");
+      if (startBoundary) {
+        startBoundary.style.opacity = String(getStickyEdgeShadowOpacity(metrics, "start"));
+      }
+
+      const endBoundary = root.querySelector<HTMLElement>("[data-vt-sticky-end-boundary]");
+      if (endBoundary) {
+        endBoundary.style.opacity = String(getStickyEdgeShadowOpacity(metrics, "end"));
+      }
+    },
+    [naturalFlow],
   );
 
   const updateScrollMetrics = useCallback(
@@ -796,6 +885,7 @@ export function DataTable<T>({
       };
 
       syncScrollbarThumbs(next);
+      syncStickyEdgeShadows(next);
       scrollMetricsRef.current = next;
 
       setScrollMetrics((prev) => {
@@ -819,7 +909,7 @@ export function DataTable<T>({
         return next;
       });
     },
-    [syncScrollbarThumbs],
+    [syncScrollbarThumbs, syncStickyEdgeShadows],
   );
 
   const scheduleScrollMetricsUpdate = useCallback(() => {
@@ -1100,6 +1190,9 @@ export function DataTable<T>({
         minBoundaryClientX,
         Math.min(maxBoundaryClientX, visualLeftClientX + width),
       );
+      const visible =
+        lineCenterClientX >= active.previewMinClientX &&
+        lineCenterClientX <= active.previewMaxClientX;
       const top = active.previewTop;
       const bottomInset = hasHorizontalOverflow(scrollMetricsRef.current) ? 14 : 0;
       const bottom = Math.max(top, active.previewBottom - bottomInset);
@@ -1115,6 +1208,7 @@ export function DataTable<T>({
         top,
         height,
         tooltipTop,
+        visible,
       };
     },
     [],
@@ -1127,12 +1221,14 @@ export function DataTable<T>({
         line.style.left = `${preview.left}px`;
         line.style.top = `${preview.top}px`;
         line.style.height = `${preview.height}px`;
+        line.style.display = preview.visible ? "" : "none";
       }
 
       const tooltip = resizePreviewTooltipRef.current;
       if (tooltip) {
         tooltip.style.left = `${preview.left + 10}px`;
         tooltip.style.top = `${preview.tooltipTop}px`;
+        tooltip.style.display = preview.visible ? "" : "none";
         tooltip.textContent = t("common.column_width_px", { width: preview.width });
       }
     },
@@ -1148,6 +1244,62 @@ export function DataTable<T>({
     col.style.maxWidth = widthPx;
   }, []);
 
+  const applyStickyLayoutToDom = useCallback(
+    (widths: ColumnWidthMap) => {
+      if (naturalFlow) return;
+
+      const columns = orderedColumnsRef.current;
+      const startWidth = resolveStickyRailWidth(columns, widths, "start");
+      const endWidth = resolveStickyRailWidth(columns, widths, "end");
+      stickyRailWidthsRef.current = { start: startWidth, end: endWidth };
+
+      const root = rootRef.current;
+      if (!root) return;
+
+      const clientWidth = scrollMetricsRef.current.clientWidth;
+      const startRail = root.querySelector<HTMLElement>("[data-vt-sticky-start-rail]");
+      if (startRail) startRail.style.width = `${startWidth}px`;
+
+      const endRail = root.querySelector<HTMLElement>("[data-vt-sticky-end-rail]");
+      if (endRail) {
+        endRail.style.left = `${Math.max(0, clientWidth - endWidth)}px`;
+        endRail.style.width = `${endWidth}px`;
+      }
+
+      const startBoundary = root.querySelector<HTMLElement>("[data-vt-sticky-start-boundary]");
+      if (startBoundary) {
+        startBoundary.style.left = `${Math.max(0, startWidth)}px`;
+        startBoundary.style.width = `${STICKY_EDGE_SHADOW_WIDTH}px`;
+      }
+
+      const endBoundary = root.querySelector<HTMLElement>("[data-vt-sticky-end-boundary]");
+      if (endBoundary) {
+        endBoundary.style.left = `${Math.max(
+          0,
+          clientWidth - endWidth - STICKY_EDGE_SHADOW_WIDTH,
+        )}px`;
+        endBoundary.style.width = `${STICKY_EDGE_SHADOW_WIDTH}px`;
+      }
+      syncStickyEdgeShadows(scrollMetricsRef.current);
+
+      const placements = resolveStickyColumnPlacements(columns, widths);
+      root.querySelectorAll<HTMLElement>("[data-vt-column-key]").forEach((element) => {
+        const key = element.dataset.vtColumnKey;
+        const placement = key ? placements[key] : undefined;
+        if (!placement) return;
+
+        if (placement.edge === "start") {
+          element.style.setProperty("--vt-sticky-left", `${placement.offset}px`);
+          element.style.removeProperty("--vt-sticky-right");
+        } else {
+          element.style.setProperty("--vt-sticky-right", `${placement.offset}px`);
+          element.style.removeProperty("--vt-sticky-left");
+        }
+      });
+    },
+    [naturalFlow, syncStickyEdgeShadows],
+  );
+
   const applyPendingColumnResize = useCallback(() => {
     columnResizeRafRef.current = null;
     const active = columnResizeRef.current;
@@ -1159,7 +1311,10 @@ export function DataTable<T>({
     const roundedWidth = resolveColumnResizeWidth(active, pointer.clientX);
 
     active.currentWidth = roundedWidth;
+    const nextWidths = { ...columnWidthsRef.current, [active.columnKey]: roundedWidth };
+    columnWidthsRef.current = nextWidths;
     applyColumnWidthToDom(active.columnKey, roundedWidth);
+    applyStickyLayoutToDom(nextWidths);
     const preview = {
       ...(buildColumnResizePreview(active, pointer.clientX, pointer.clientY) ?? {
         width: roundedWidth,
@@ -1167,6 +1322,7 @@ export function DataTable<T>({
         top: active.previewTop,
         height: Math.max(0, active.previewBottom - active.previewTop),
         tooltipTop: active.previewTop,
+        visible: true,
       }),
       width: roundedWidth,
     };
@@ -1198,6 +1354,7 @@ export function DataTable<T>({
   }, [
     applyColumnResizePreview,
     applyColumnWidthToDom,
+    applyStickyLayoutToDom,
     buildColumnResizePreview,
     scheduleScrollMetricsUpdate,
     tableId,
@@ -1249,6 +1406,7 @@ export function DataTable<T>({
 
       const rect = headerCell.getBoundingClientRect();
       const containerRect = containerRef.current?.getBoundingClientRect();
+      const railWidths = naturalFlow ? { start: 0, end: 0 } : stickyRailWidthsRef.current;
       const startWidth = rect.width;
       const minWidth = resolveColumnMinWidth(column);
       const maxWidth = resolveColumnMaxWidth(column, minWidth);
@@ -1269,6 +1427,14 @@ export function DataTable<T>({
         maxWidth,
         previewTop: Math.max(0, containerRect?.top ?? rect.top),
         previewBottom: Math.max(0, containerRect?.bottom ?? rect.bottom),
+        previewMinClientX:
+          containerRect && !naturalFlow && railWidths.start > 0
+            ? containerRect.left + railWidths.start
+            : Number.NEGATIVE_INFINITY,
+        previewMaxClientX:
+          containerRect && !naturalFlow && railWidths.end > 0
+            ? containerRect.right - railWidths.end
+            : Number.POSITIVE_INFINITY,
         currentWidth: nextStartWidth,
         lastDebugAtMs: 0,
         debugEnabled: shouldDebugColumnResize(),
@@ -1279,6 +1445,7 @@ export function DataTable<T>({
       document.body.style.userSelect = "none";
       setActiveResizeColumnKey(column.key);
       applyColumnWidthToDom(column.key, nextStartWidth);
+      applyStickyLayoutToDom({ ...columnWidthsRef.current, [column.key]: nextStartWidth });
       pendingColumnResizePointerRef.current = null;
       const preview = buildColumnResizePreview(resizeState, e.clientX, e.clientY);
       setResizePreview(preview);
@@ -1297,7 +1464,7 @@ export function DataTable<T>({
         });
       }
     },
-    [applyColumnWidthToDom, buildColumnResizePreview, tableId],
+    [applyColumnWidthToDom, applyStickyLayoutToDom, buildColumnResizePreview, naturalFlow, tableId],
   );
 
   // ---------------------------------------------------------------------------
@@ -1933,15 +2100,60 @@ export function DataTable<T>({
   const { vThumb, hThumb } = useMemo(() => {
     return calculateScrollbarThumbs(scrollMetrics, headerHeight);
   }, [headerHeight, scrollMetrics]);
+  const stickyStartRailWidth = useMemo(
+    () => resolveStickyRailWidth(orderedColumns, columnWidths, "start"),
+    [columnWidths, orderedColumns],
+  );
+  const stickyEndRailWidth = useMemo(
+    () => resolveStickyRailWidth(orderedColumns, columnWidths, "end"),
+    [columnWidths, orderedColumns],
+  );
+  stickyRailWidthsRef.current = { start: stickyStartRailWidth, end: stickyEndRailWidth };
+  const stickyColumnPlacements = useMemo(
+    () => resolveStickyColumnPlacements(orderedColumns, columnWidths),
+    [columnWidths, orderedColumns],
+  );
+  const stickyRailBottomInset = hThumb ? 14 : 0;
+  const stickyRailTop = headerHeight;
+  const stickyRailHeight = Math.max(
+    0,
+    scrollMetrics.clientHeight - headerHeight - stickyRailBottomInset,
+  );
+  const stickyBoundaryHeight = Math.max(0, scrollMetrics.clientHeight - stickyRailBottomInset);
+  const stickyStartShadowOpacity = getStickyEdgeShadowOpacity(scrollMetrics, "start");
+  const stickyEndShadowOpacity = getStickyEdgeShadowOpacity(scrollMetrics, "end");
+  const stickyStartBoundaryLeft = Math.max(0, stickyStartRailWidth);
+  const stickyEndBoundaryLeft = Math.max(
+    0,
+    scrollMetrics.clientWidth - stickyEndRailWidth - STICKY_EDGE_SHADOW_WIDTH,
+  );
+  const stickyEndRailLeft = Math.max(0, scrollMetrics.clientWidth - stickyEndRailWidth);
 
   const resolveColumnStyle = useCallback(
-    (column: DataTableColumn<T>): CSSProperties | undefined => {
+    (column: DataTableColumn<T>, area: "header" | "cell" = "cell"): DataTableColumnStyle => {
       const width = columnWidths[column.key];
-      if (!width) return undefined;
-      const clampedWidth = clampColumnWidth(column, width);
-      return { width: clampedWidth, minWidth: clampedWidth, maxWidth: clampedWidth };
+      const placement = naturalFlow ? undefined : stickyColumnPlacements[column.key];
+      const style: DataTableColumnStyle = {};
+
+      if (width) {
+        const clampedWidth = clampColumnWidth(column, width);
+        style.width = clampedWidth;
+        style.minWidth = clampedWidth;
+        style.maxWidth = clampedWidth;
+      }
+
+      if (placement) {
+        style.zIndex = area === "header" ? 70 : 30;
+        if (placement.edge === "start") {
+          style["--vt-sticky-left"] = `${placement.offset}px`;
+        } else {
+          style["--vt-sticky-right"] = `${placement.offset}px`;
+        }
+      }
+
+      return style;
     },
-    [columnWidths],
+    [columnWidths, naturalFlow, stickyColumnPlacements],
   );
 
   const resizePreviewOverlay =
@@ -1957,6 +2169,7 @@ export function DataTable<T>({
                 left: resizePreview.left,
                 top: resizePreview.top,
                 height: resizePreview.height,
+                display: resizePreview.visible ? undefined : "none",
               }}
             />
             <div
@@ -1967,6 +2180,7 @@ export function DataTable<T>({
               style={{
                 left: resizePreview.left + 10,
                 top: resizePreview.tooltipTop,
+                display: resizePreview.visible ? undefined : "none",
               }}
             >
               {t("common.column_width_px", { width: resizePreview.width })}
@@ -2000,6 +2214,32 @@ export function DataTable<T>({
           }}
         />
       )}
+      {!naturalFlow && stickyStartRailWidth > 0 && stickyRailHeight > 0 ? (
+        <div
+          data-vt-sticky-start-rail
+          aria-hidden="true"
+          className="pointer-events-none absolute z-0 hidden bg-white md:block dark:bg-neutral-950"
+          style={{
+            left: 0,
+            top: stickyRailTop,
+            width: stickyStartRailWidth,
+            height: stickyRailHeight,
+          }}
+        />
+      ) : null}
+      {!naturalFlow && stickyEndRailWidth > 0 && stickyRailHeight > 0 ? (
+        <div
+          data-vt-sticky-end-rail
+          aria-hidden="true"
+          className="pointer-events-none absolute z-0 hidden bg-white md:block dark:bg-neutral-950"
+          style={{
+            left: stickyEndRailLeft,
+            top: stickyRailTop,
+            width: stickyEndRailWidth,
+            height: stickyRailHeight,
+          }}
+        />
+      ) : null}
       <div
         ref={containerRef}
         onScroll={naturalFlow ? undefined : onScroll}
@@ -2013,7 +2253,10 @@ export function DataTable<T>({
               }`
         }
       >
-        <div data-vt-scroll-content className={`relative ${scrollContentClassName ?? ""}`}>
+        <div
+          data-vt-scroll-content
+          className={`relative min-h-full ${scrollContentClassName ?? ""}`}
+        >
           {!naturalFlow && rowHoverOverlay ? (
             <div
               data-vt-row-hover-overlay
@@ -2054,10 +2297,15 @@ export function DataTable<T>({
                   const canReorder = canUseColumnOrder && shouldAllowColumnReorder(col);
                   const isResizingThisColumn = activeResizeColumnKey === col.key;
                   const isSettledReorderColumn = settledReorderColumnKey === col.key;
+                  const stickyPlacement = naturalFlow ? undefined : stickyColumnPlacements[col.key];
                   const headerChromeClass = naturalFlow ? "bg-slate-100 dark:bg-neutral-800" : "";
                   const headerCornerClass = [
                     naturalFlow && colIndex === 0 ? "rounded-l-xl" : "",
                     naturalFlow && colIndex === orderedColumns.length - 1 ? "rounded-r-xl" : "",
+                    !naturalFlow && colIndex === 0 ? "rounded-l-xl" : "",
+                    !naturalFlow && !vThumb && colIndex === orderedColumns.length - 1
+                      ? "rounded-r-xl"
+                      : "",
                   ]
                     .filter(Boolean)
                     .join(" ");
@@ -2070,8 +2318,12 @@ export function DataTable<T>({
                       ref={(node) => {
                         headerCellsRef.current[col.key] = node;
                       }}
-                      style={resolveColumnStyle(col)}
-                      className={`group/column relative z-50 overflow-hidden px-4 py-3 whitespace-nowrap ${headerChromeClass} ${headerCornerClass} ${col.width ?? ""} ${col.headerClassName ?? ""} ${
+                      style={resolveColumnStyle(col, "header")}
+                      className={`group/column relative overflow-hidden px-4 py-3 whitespace-nowrap ${
+                        stickyPlacement?.edge === "start" ? "md:left-[var(--vt-sticky-left)]" : ""
+                      } ${
+                        stickyPlacement?.edge === "end" ? "md:right-[var(--vt-sticky-right)]" : ""
+                      } ${headerChromeClass} ${headerCornerClass} ${col.width ?? ""} ${col.headerClassName ?? ""} ${
                         activeReorderColumnKey === col.key
                           ? "cursor-grabbing bg-slate-100 text-slate-700 shadow-[inset_2px_0_0_rgba(37,99,235,0.42),inset_-2px_0_0_rgba(14,165,233,0.28)] dark:bg-neutral-800 dark:text-white/80"
                           : ""
@@ -2228,6 +2480,9 @@ export function DataTable<T>({
                           const isFirst = colIdx === 0;
                           const isLast = colIdx === orderedColumns.length - 1;
                           const isSettledReorderColumn = settledReorderColumnKey === col.key;
+                          const stickyPlacement = naturalFlow
+                            ? undefined
+                            : stickyColumnPlacements[col.key];
                           const content = col.render(row, globalIdx);
                           const overflowTooltip = resolveCellOverflowTooltip(col, row, globalIdx);
                           const roundCls = [
@@ -2236,6 +2491,11 @@ export function DataTable<T>({
                           ]
                             .filter(Boolean)
                             .join(" ");
+                          const hoverChromeClass = naturalFlow
+                            ? ""
+                            : stickyPlacement
+                              ? "group-hover/row:bg-slate-50 dark:group-hover/row:bg-neutral-900"
+                              : "group-hover/row:bg-slate-50 dark:group-hover/row:bg-white/[0.04]";
                           return (
                             <td
                               key={col.key}
@@ -2243,11 +2503,17 @@ export function DataTable<T>({
                               data-vt-column-settled-cell={
                                 isSettledReorderColumn ? true : undefined
                               }
-                              style={resolveColumnStyle(col)}
+                              style={resolveColumnStyle(col, "cell")}
                               className={`overflow-hidden px-4 py-2.5 align-middle ${
-                                naturalFlow
-                                  ? ""
-                                  : "group-hover/row:bg-slate-50 dark:group-hover/row:bg-white/[0.04]"
+                                stickyPlacement?.edge === "start"
+                                  ? "md:left-[var(--vt-sticky-left)]"
+                                  : ""
+                              } ${
+                                stickyPlacement?.edge === "end"
+                                  ? "md:right-[var(--vt-sticky-right)]"
+                                  : ""
+                              } ${
+                                hoverChromeClass
                               } ${col.cellClassName ?? ""} ${roundCls}`}
                             >
                               <div
@@ -2299,6 +2565,33 @@ export function DataTable<T>({
         </div>
       </div>
 
+      {!naturalFlow && stickyStartRailWidth > 0 && stickyBoundaryHeight > 0 ? (
+        <div
+          data-vt-sticky-start-boundary
+          aria-hidden="true"
+          className="pointer-events-none absolute top-0 z-[75] hidden bg-gradient-to-r from-slate-950/[0.07] to-transparent transition-opacity duration-150 md:block dark:from-black/35"
+          style={{
+            left: stickyStartBoundaryLeft,
+            width: STICKY_EDGE_SHADOW_WIDTH,
+            height: stickyBoundaryHeight,
+            opacity: stickyStartShadowOpacity,
+          }}
+        />
+      ) : null}
+      {!naturalFlow && stickyEndRailWidth > 0 && stickyBoundaryHeight > 0 ? (
+        <div
+          data-vt-sticky-end-boundary
+          aria-hidden="true"
+          className="pointer-events-none absolute top-0 z-[75] hidden bg-gradient-to-l from-slate-950/[0.07] to-transparent transition-opacity duration-150 md:block dark:from-black/35"
+          style={{
+            left: stickyEndBoundaryLeft,
+            width: STICKY_EDGE_SHADOW_WIDTH,
+            height: stickyBoundaryHeight,
+            opacity: stickyEndShadowOpacity,
+          }}
+        />
+      ) : null}
+
       {!naturalFlow && vThumb ? (
         <div
           data-vt-scrollbar-gutter
@@ -2311,14 +2604,13 @@ export function DataTable<T>({
           />
           <div
             data-vt-scrollbar="y"
-            className="pointer-events-auto absolute right-0 z-30 w-2 opacity-0 transition-opacity hover:opacity-100 group-hover:opacity-100 group-focus-within:opacity-100"
+            className="group/scrollbar pointer-events-auto absolute right-0 z-30 w-2 opacity-0 transition-opacity hover:opacity-100 group-hover:opacity-100 group-focus-within:opacity-100"
             style={{ top: headerHeight + 8, bottom: 8 }}
           >
-            <div className="absolute inset-0 rounded-full bg-slate-200/40 dark:bg-white/10" />
             <div
               ref={verticalThumbRef}
               role="presentation"
-              className="pointer-events-auto absolute left-0 right-0 cursor-pointer rounded-full bg-slate-500/40 transition-colors hover:bg-slate-500/70 dark:bg-white/25 dark:hover:bg-white/50"
+              className="pointer-events-auto absolute right-0 w-1.5 cursor-pointer rounded-full bg-[#C7C7C7] transition-[width] duration-150 ease-out hover:w-2 active:w-2 group-hover/scrollbar:w-2"
               style={{ top: vThumb.top, height: vThumb.height }}
               onPointerDown={(e) => handleThumbPointerDown("y", e)}
               onPointerMove={handleThumbPointerMove}
@@ -2332,13 +2624,12 @@ export function DataTable<T>({
       {!naturalFlow && hThumb ? (
         <div
           data-vt-scrollbar="x"
-          className={`pointer-events-auto absolute bottom-1 left-2 ${vThumb ? "right-5" : "right-2"} z-30 h-2 opacity-0 transition-opacity hover:opacity-100 group-hover:opacity-100 group-focus-within:opacity-100`}
+          className={`group/scrollbar pointer-events-auto absolute bottom-1 left-2 ${vThumb ? "right-5" : "right-2"} z-30 h-2 opacity-0 transition-opacity hover:opacity-100 group-hover:opacity-100 group-focus-within:opacity-100`}
         >
-          <div className="absolute inset-0 rounded-full bg-slate-200/40 dark:bg-white/10" />
           <div
             ref={horizontalThumbRef}
             role="presentation"
-            className="pointer-events-auto absolute top-0 bottom-0 cursor-pointer rounded-full bg-slate-500/40 transition-colors hover:bg-slate-500/70 dark:bg-white/25 dark:hover:bg-white/50"
+            className="pointer-events-auto absolute bottom-0 h-1.5 cursor-pointer rounded-full bg-[#C7C7C7] transition-[height] duration-150 ease-out hover:h-2 active:h-2 group-hover/scrollbar:h-2"
             style={{ left: hThumb.left, width: hThumb.width }}
             onPointerDown={(e) => handleThumbPointerDown("x", e)}
             onPointerMove={handleThumbPointerMove}

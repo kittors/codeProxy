@@ -14,3 +14,6 @@ playwright-report/
 .helloagents/
 output/playwright/
 .playwright-cli/
+
+# Local-only screenshot helper (hardcoded absolute paths, dev preview only)
+packages/ui/src/feedback/screenshot.mjs

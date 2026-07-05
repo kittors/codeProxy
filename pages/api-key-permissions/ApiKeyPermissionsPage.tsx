@@ -378,6 +378,8 @@ export function ApiKeyPermissionsPage() {
   return (
     <div className="space-y-6">
       <Card
+        className="md:flex md:h-[calc(100dvh-112px)] md:min-h-0 md:flex-col md:overflow-hidden"
+        bodyClassName="md:flex md:min-h-0 md:flex-1 md:flex-col"
         title={t("api_key_permissions_page.title")}
         description={t("api_key_permissions_page.description")}
         actions={
@@ -414,7 +416,8 @@ export function ApiKeyPermissionsPage() {
             loading={loading}
             virtualize={false}
             minWidth="min-w-[1120px]"
-            height="h-auto max-h-[calc(100dvh-280px)]"
+            height="h-[calc(100dvh-260px)] md:h-auto md:flex-1"
+            minHeight="min-h-[320px] md:min-h-0"
             emptyText={t("api_key_permissions_page.empty_title")}
             caption={t("api_key_permissions_page.table_caption")}
             showAllLoadedMessage={false}

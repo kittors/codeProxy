@@ -1,4 +1,7 @@
-import { useEffect, useState, type PropsWithChildren } from "react";
+import { type PropsWithChildren } from "react";
+import { motion, useReducedMotion } from "framer-motion";
+
+const revealEase = [0.16, 1, 0.3, 1] as const;
 
 export function Reveal({
   children,
@@ -6,25 +9,22 @@ export function Reveal({
 }: PropsWithChildren<{
   className?: string;
 }>) {
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    const raf = requestAnimationFrame(() => setVisible(true));
-    return () => cancelAnimationFrame(raf);
-  }, []);
+  const reduceMotion = useReducedMotion();
 
   return (
-    <div
-      className={[
-        "motion-reduce:transition-none",
-        "transition-all duration-200 ease-out",
-        visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2",
-        className,
-      ]
-        .filter(Boolean)
-        .join(" ")}
+    <motion.div
+      layout={reduceMotion ? false : "position"}
+      initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 8 }}
+      animate={reduceMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
+      exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -6 }}
+      transition={
+        reduceMotion
+          ? { duration: 0.12 }
+          : { duration: 0.22, ease: revealEase, layout: { duration: 0.26, ease: revealEase } }
+      }
+      className={className}
     >
       {children}
-    </div>
+    </motion.div>
   );
 }

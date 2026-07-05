@@ -344,6 +344,18 @@ export interface ErrorLogFile {
   name: string;
   size?: number;
   modified?: number;
+  request_id?: string;
+  status?: number;
+  error_code?: string;
+  error_type?: string;
+  original_url?: string;
+  effective_url?: string;
+  route_group?: string;
+  route_path?: string;
+  model?: string;
+  provider?: string;
+  upstream_status?: number;
+  rejected_by?: string;
 }
 
 export interface ErrorLogsResponse {
