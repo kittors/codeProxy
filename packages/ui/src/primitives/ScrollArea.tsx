@@ -186,17 +186,13 @@ export function ScrollArea({
         <div
           data-scroll-area-scrollbar="y"
           className={cn(
-            "pointer-events-auto absolute bottom-0 right-0 top-0 z-30 w-2",
+            "group/scrollbar pointer-events-auto absolute bottom-0 right-0 top-0 z-30 w-2",
             visibilityClasses,
           )}
         >
           <div
-            className="absolute left-0 right-0 rounded-full bg-slate-200/40 dark:bg-white/10"
-            style={{ top: Math.max(0, scrollbarTrackInset), bottom: Math.max(0, scrollbarTrackInset) }}
-          />
-          <div
             role="presentation"
-            className="pointer-events-auto absolute left-0 right-0 cursor-pointer rounded-full bg-slate-500/40 transition-colors hover:bg-slate-500/70 dark:bg-white/25 dark:hover:bg-white/50"
+            className="pointer-events-auto absolute right-0 w-[3px] cursor-pointer rounded-full bg-[#F9F9F9] transition-[width] duration-150 ease-out hover:w-1.5 active:w-1.5 group-hover/scrollbar:w-1.5"
             style={{ top: thumb.top + Math.max(0, scrollbarTrackInset), height: thumb.height }}
             onPointerDown={handleThumbPointerDown}
             onPointerMove={handleThumbPointerMove}

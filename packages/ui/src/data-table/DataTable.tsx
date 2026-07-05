@@ -2604,14 +2604,13 @@ export function DataTable<T>({
           />
           <div
             data-vt-scrollbar="y"
-            className="pointer-events-auto absolute right-0 z-30 w-2 opacity-0 transition-opacity hover:opacity-100 group-hover:opacity-100 group-focus-within:opacity-100"
+            className="group/scrollbar pointer-events-auto absolute right-0 z-30 w-2 opacity-0 transition-opacity hover:opacity-100 group-hover:opacity-100 group-focus-within:opacity-100"
             style={{ top: headerHeight + 8, bottom: 8 }}
           >
-            <div className="absolute inset-0 rounded-full bg-slate-200/40 dark:bg-white/10" />
             <div
               ref={verticalThumbRef}
               role="presentation"
-              className="pointer-events-auto absolute left-0 right-0 cursor-pointer rounded-full bg-slate-500/40 transition-colors hover:bg-slate-500/70 dark:bg-white/25 dark:hover:bg-white/50"
+              className="pointer-events-auto absolute right-0 w-[3px] cursor-pointer rounded-full bg-[#F9F9F9] transition-[width] duration-150 ease-out hover:w-1.5 active:w-1.5 group-hover/scrollbar:w-1.5"
               style={{ top: vThumb.top, height: vThumb.height }}
               onPointerDown={(e) => handleThumbPointerDown("y", e)}
               onPointerMove={handleThumbPointerMove}
@@ -2625,13 +2624,12 @@ export function DataTable<T>({
       {!naturalFlow && hThumb ? (
         <div
           data-vt-scrollbar="x"
-          className={`pointer-events-auto absolute bottom-1 left-2 ${vThumb ? "right-5" : "right-2"} z-30 h-2 opacity-0 transition-opacity hover:opacity-100 group-hover:opacity-100 group-focus-within:opacity-100`}
+          className={`group/scrollbar pointer-events-auto absolute bottom-1 left-2 ${vThumb ? "right-5" : "right-2"} z-30 h-2 opacity-0 transition-opacity hover:opacity-100 group-hover:opacity-100 group-focus-within:opacity-100`}
         >
-          <div className="absolute inset-0 rounded-full bg-slate-200/40 dark:bg-white/10" />
           <div
             ref={horizontalThumbRef}
             role="presentation"
-            className="pointer-events-auto absolute top-0 bottom-0 cursor-pointer rounded-full bg-slate-500/40 transition-colors hover:bg-slate-500/70 dark:bg-white/25 dark:hover:bg-white/50"
+            className="pointer-events-auto absolute bottom-0 h-[3px] cursor-pointer rounded-full bg-[#F9F9F9] transition-[height] duration-150 ease-out hover:h-1.5 active:h-1.5 group-hover/scrollbar:h-1.5"
             style={{ left: hThumb.left, width: hThumb.width }}
             onPointerDown={(e) => handleThumbPointerDown("x", e)}
             onPointerMove={handleThumbPointerMove}
