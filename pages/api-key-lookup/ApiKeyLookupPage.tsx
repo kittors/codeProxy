@@ -275,7 +275,10 @@ export function ApiKeyLookupPage() {
   }, []);
 
   const logColumns = useMemo(
-    () => buildRequestLogsColumns((key) => t(key), handleContentClick),
+    () =>
+      buildRequestLogsColumns((key) => t(key), handleContentClick).filter(
+        (column) => column.key !== "apiKeyName",
+      ),
     [t, handleContentClick],
   );
   const statusOptions = useMemo(

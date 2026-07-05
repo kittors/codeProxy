@@ -4,9 +4,10 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import { ApiKeyLookupPage } from "../ApiKeyLookupPage";
 import { ThemeProvider } from "@code-proxy/ui";
 import { ToastProvider } from "@code-proxy/ui";
+import type { PublicLogItem, PublicLogsResponse } from "../types";
 
 const mocks = vi.hoisted(() => ({
-  fetchPublicLogs: vi.fn(async () => ({
+  fetchPublicLogs: vi.fn(async (): Promise<PublicLogsResponse> => ({
     items: [],
     total: 0,
     page: 1,
@@ -134,6 +135,37 @@ describe("ApiKeyLookupPage", () => {
 
   test("loads public logs only after switching to the request logs tab", async () => {
     window.sessionStorage.setItem("apiKeyLookup.lastApiKey.v1", "sk-restored-key");
+    const logItem: PublicLogItem = {
+      id: 1,
+      timestamp: new Date("2026-07-05T03:01:18Z").toISOString(),
+      channel_name: "Codex 主渠道",
+      model: "gpt-5.5",
+      failed: false,
+      streaming: true,
+      latency_ms: 15100,
+      first_token_ms: 1650,
+      input_tokens: 54908,
+      cached_tokens: 50048,
+      output_tokens: 649,
+      total_tokens: 55557,
+      cost: 0.0688,
+      has_content: false,
+    };
+    mocks.fetchPublicLogs.mockResolvedValueOnce({
+      items: [logItem],
+      total: 1,
+      page: 1,
+      size: 50,
+      api_key_name: "Primary key",
+      stats: {
+        total: 1,
+        success_rate: 100,
+        total_tokens: 55557,
+        total_sessions: 1,
+        total_cost: 0.0688,
+      },
+      filters: { models: ["gpt-5.5"] },
+    });
 
     render(
       <ThemeProvider>
@@ -158,6 +190,8 @@ describe("ApiKeyLookupPage", () => {
       );
     });
     expect(screen.getAllByText(/response metrics/i).length).toBeGreaterThan(0);
+    expect(await screen.findByText("Codex 主渠道")).toBeInTheDocument();
+    expect(screen.queryByText(/key name/i)).not.toBeInTheDocument();
     expect(screen.queryByRole("columnheader", { name: /^duration$/i })).not.toBeInTheDocument();
   });
 

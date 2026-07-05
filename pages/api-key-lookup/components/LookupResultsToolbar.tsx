@@ -1,5 +1,5 @@
 import { RefreshCw } from "lucide-react";
-import { Tabs, TabsList, TabsTrigger } from "@code-proxy/ui";
+import { HoverTooltip, Tabs, TabsList, TabsTrigger } from "@code-proxy/ui";
 import { TimeRangeSelector } from "@features/monitor-widgets";
 import type { TimeRange } from "@features/monitor-widgets/monitor-constants";
 
@@ -42,18 +42,20 @@ export function LookupResultsToolbar({
         ) : null}
       </div>
       <div className="flex items-center gap-2">
-        <button
-          type="button"
-          onClick={handleRefresh}
-          disabled={loading || chartLoading || modelsLoading}
-          className="inline-flex h-[34px] items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 text-xs font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:opacity-50 dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-white/80 dark:hover:bg-white/10"
-        >
-          <RefreshCw
-            size={13}
-            className={loading || chartLoading || modelsLoading ? "animate-spin" : ""}
-          />
-          {t("common.refresh")}
-        </button>
+        <HoverTooltip content={t("common.refresh")}>
+          <button
+            type="button"
+            onClick={handleRefresh}
+            disabled={loading || chartLoading || modelsLoading}
+            aria-label={t("common.refresh")}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40 dark:text-white/55 dark:hover:bg-white/10 dark:hover:text-white"
+          >
+            <RefreshCw
+              size={16}
+              className={loading || chartLoading || modelsLoading ? "animate-spin" : ""}
+            />
+          </button>
+        </HoverTooltip>
       </div>
     </div>
   );
