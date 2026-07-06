@@ -43,7 +43,13 @@ describe("UpdateDetailsModal", () => {
           status: "running",
           stage: "pulling",
           message: "pulling target image",
-          logs: [{ timestamp: "2026-04-20T07:30:01Z", stream: "stdout", message: "pull image" }],
+          logs: [
+            {
+              timestamp: "2026-04-20T07:30:01Z",
+              stream: "stdout",
+              message: "pull image",
+            },
+          ],
         }}
         onApply={() => {}}
         onClose={() => {}}
@@ -54,6 +60,64 @@ describe("UpdateDetailsModal", () => {
     expect(screen.getByText(/1[89]%|20%/)).toBeInTheDocument();
     expect(screen.queryByText("pull image")).toBeNull();
     expect(screen.queryByTestId("update-log-stream")).toBeNull();
+  });
+
+  test("shows structured SQLite migration progress details", async () => {
+    render(
+      <UpdateDetailsModal
+        open
+        candidate={candidate}
+        updateTarget={candidate}
+        updating
+        progress={{
+          status: "running",
+          stage: "migrating",
+          message: "migrating legacy SQLite data before restarting service",
+          progress_percent: 86,
+          migration: {
+            phase: "applying",
+            target_database: "PostgreSQL",
+            table: "request_logs",
+            table_index: 16,
+            table_total: 17,
+            inserted_rows: 2,
+            target_rows: 167648,
+          },
+          logs: [
+            {
+              timestamp: "2026-07-06T08:32:01Z",
+              stream: "stderr",
+              message: "sqlite import progress: table 16/17 request_logs",
+            },
+          ],
+        }}
+        onApply={() => {}}
+        onClose={() => {}}
+      />,
+    );
+
+    expect(
+      screen.getByText(
+        "Migrating legacy SQLite data before restarting the service.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Migrating data")).toBeInTheDocument();
+    expect(screen.getByText("86%")).toBeInTheDocument();
+    expect(screen.getByTestId("update-progress-details")).toHaveTextContent(
+      "Target: PostgreSQL",
+    );
+    expect(screen.getByTestId("update-progress-details")).toHaveTextContent(
+      "Phase: importing rows",
+    );
+    expect(screen.getByTestId("update-progress-details")).toHaveTextContent(
+      "Table: 16/17 request_logs",
+    );
+    expect(screen.getByTestId("update-progress-details")).toHaveTextContent(
+      "Rows: 2 / 167,648",
+    );
+    expect(
+      screen.queryByText("sqlite import progress: table 16/17 request_logs"),
+    ).toBeNull();
   });
 
   test("renders localized success styling when already up to date", async () => {
@@ -74,7 +138,9 @@ describe("UpdateDetailsModal", () => {
       />,
     );
 
-    expect(screen.getByRole("heading", { name: /already updated to latest/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: /already updated to latest/i }),
+    ).toBeInTheDocument();
     expect(screen.queryByText("already up to date")).not.toBeInTheDocument();
     expect(
       screen.getByText(/already updated to latest/i, {
@@ -98,7 +164,9 @@ describe("UpdateDetailsModal", () => {
       />,
     );
 
-    expect(screen.getByText(/updater token is not configured/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/updater token is not configured/i),
+    ).toBeInTheDocument();
     expect(screen.getByText(/CLIRELAY_UPDATER_TOKEN/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /update now/i })).toBeDisabled();
   });
@@ -127,13 +195,17 @@ describe("UpdateDetailsModal", () => {
       />,
     );
 
-    expect(screen.getByRole("heading", { name: /update completed/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: /update completed/i }),
+    ).toBeInTheDocument();
     expect(screen.getByText("100%")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /updating/i })).toBeNull();
     expect(screen.queryByText("Close")).toBeNull();
     expect(screen.getByRole("button", { name: /refresh page/i })).toBeEnabled();
     expect(screen.queryByTestId("update-log-stream")).toBeNull();
-    expect(screen.getByTestId("update-details-modal-body")).toHaveClass("max-h-[min(62vh,520px)]");
+    expect(screen.getByTestId("update-details-modal-body")).toHaveClass(
+      "max-h-[min(62vh,520px)]",
+    );
   });
 
   test("shows the release notes section that matches the active language", async () => {
