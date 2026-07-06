@@ -82,6 +82,8 @@ const UPDATE_STAGE_LABEL_KEYS: Record<string, string> = {
 const UPDATE_PROGRESS_MESSAGE_KEYS: Record<string, string> = {
   "preparing update": "auto_update.progress_message_preparing_update",
   "pulling target image": "auto_update.progress_message_pulling_target_image",
+  "starting postgresql/redis before data migration check":
+    "auto_update.progress_message_starting_runtime",
   "starting postgresql/redis before sqlite migration":
     "auto_update.progress_message_starting_runtime",
   "checking legacy sqlite migration before service restart":
@@ -350,7 +352,7 @@ function useAnimatedProgressValue(target: number, snap = false) {
     };
   }, [displayValue, snap, target]);
 
-  return displayValue;
+  return snap ? target : displayValue;
 }
 
 function useVisualProgressTarget(progress?: UpdateProgressResponse | null) {
@@ -428,9 +430,13 @@ function UpdateProgressConsole({
   const isFailed = progressStatus === "failed";
   const isRunning = progressStatus === "running";
   const progressTarget = useVisualProgressTarget(progress);
-  const animatedPercent = useAnimatedProgressValue(progressTarget, isFailed);
-  const progressPercentLabel = `${Math.round(animatedPercent)}%`;
-  const progressMarkerLeft = `clamp(1.5rem, ${animatedPercent}%, calc(100% - 1.5rem))`;
+  const animatedPercent = useAnimatedProgressValue(
+    progressTarget,
+    isCompleted || isFailed,
+  );
+  const displayPercent = Math.round(animatedPercent);
+  const progressPercentLabel = `${displayPercent}%`;
+  const progressMarkerLeft = `clamp(1.5rem, ${displayPercent}%, calc(100% - 1.5rem))`;
   const progressMessage = translateProgressMessage(t, progress, stage);
   const progressDetails = migrationProgressDetails(t, progress);
   const StatusIcon = isCompleted
@@ -543,7 +549,7 @@ function UpdateProgressConsole({
                   "relative h-full rounded-full transition-[width] duration-500 ease-out",
                   progressBarClass,
                 ].join(" ")}
-                style={{ width: `${animatedPercent}%` }}
+                style={{ width: `${displayPercent}%` }}
               >
                 {isRunning ? (
                   <span className="absolute inset-y-0 right-0 w-16 bg-white/30 blur-md dark:bg-white/20" />

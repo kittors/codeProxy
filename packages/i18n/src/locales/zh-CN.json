@@ -3445,7 +3445,7 @@
     "progress_default_message": "正在等待 updater 返回进度…",
     "progress_message_preparing_update": "正在准备更新流程。",
     "progress_message_pulling_target_image": "正在拉取目标镜像。",
-    "progress_message_starting_runtime": "正在启动 PostgreSQL 和 Redis，准备迁移数据。",
+    "progress_message_starting_runtime": "正在启动 PostgreSQL 和 Redis，准备执行数据迁移检查。",
     "progress_message_checking_sqlite": "正在检查是否需要在重启服务前迁移历史 SQLite 数据。",
     "progress_message_migrating_sqlite": "正在重启服务前迁移历史 SQLite 数据。",
     "progress_message_preparing_sqlite_import": "已发现历史 SQLite 数据，正在准备导入 PostgreSQL。",

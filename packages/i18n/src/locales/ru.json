@@ -2269,7 +2269,7 @@
     "progress_default_message": "Waiting for updater progress…",
     "progress_message_preparing_update": "Preparing the update workflow.",
     "progress_message_pulling_target_image": "Pulling the target image.",
-    "progress_message_starting_runtime": "Starting PostgreSQL and Redis before migration.",
+    "progress_message_starting_runtime": "Starting PostgreSQL and Redis before the data migration check.",
     "progress_message_checking_sqlite": "Checking whether legacy SQLite data needs migration before restarting the service.",
     "progress_message_migrating_sqlite": "Migrating legacy SQLite data before restarting the service.",
     "progress_message_preparing_sqlite_import": "Legacy SQLite data was found; preparing the PostgreSQL import.",

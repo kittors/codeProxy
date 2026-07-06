@@ -986,11 +986,12 @@ describe("SystemPage", () => {
     expect(within(dialog).getByText(/The updater finished all steps\./i)).toBeInTheDocument();
     expect(within(dialog).queryByText(/docker compose pull clirelay/i)).toBeNull();
     expect(within(dialog).queryByTestId("update-log-stream")).toBeNull();
-    expect(
-      within(dialog).getByText((_, element) =>
-        Boolean(element?.textContent?.trim().match(/^\d+%$/)),
-      ),
-    ).toBeInTheDocument();
+    expect(within(dialog).getByTestId("update-progress-percent")).toHaveTextContent(
+      "100%",
+    );
+    expect(within(dialog).getByTestId("update-progress-fill")).toHaveStyle({
+      width: "100%",
+    });
     expect(within(dialog).getByText(/main-1111111/i)).toBeInTheDocument();
     expect(within(dialog).getByText(/main-abcdef1/i)).toBeInTheDocument();
     expect(within(dialog).getAllByText("Completed").length).toBeGreaterThan(0);
