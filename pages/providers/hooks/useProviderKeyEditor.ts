@@ -32,6 +32,7 @@ export type ProviderKeyType =
   | "codex"
   | "opencode-go"
   | "cline"
+  | "ollama-cloud"
   | "vertex"
   | "bedrock";
 
@@ -41,6 +42,7 @@ interface UseProviderKeyEditorArgs {
   codexKeys: ProviderSimpleConfig[];
   openCodeGoKeys: ProviderSimpleConfig[];
   clineKeys: ProviderSimpleConfig[];
+  ollamaCloudKeys: ProviderSimpleConfig[];
   vertexKeys: ProviderSimpleConfig[];
   bedrockKeys: BedrockProviderConfig[];
   setGeminiKeys: Dispatch<SetStateAction<ProviderSimpleConfig[]>>;
@@ -48,6 +50,7 @@ interface UseProviderKeyEditorArgs {
   setCodexKeys: Dispatch<SetStateAction<ProviderSimpleConfig[]>>;
   setOpenCodeGoKeys: Dispatch<SetStateAction<ProviderSimpleConfig[]>>;
   setClineKeys: Dispatch<SetStateAction<ProviderSimpleConfig[]>>;
+  setOllamaCloudKeys: Dispatch<SetStateAction<ProviderSimpleConfig[]>>;
   setVertexKeys: Dispatch<SetStateAction<ProviderSimpleConfig[]>>;
   setBedrockKeys: Dispatch<SetStateAction<BedrockProviderConfig[]>>;
   refreshAll: () => Promise<void>;
@@ -61,6 +64,7 @@ export function useProviderKeyEditor({
   codexKeys,
   openCodeGoKeys,
   clineKeys,
+  ollamaCloudKeys,
   vertexKeys,
   bedrockKeys,
   setGeminiKeys,
@@ -68,6 +72,7 @@ export function useProviderKeyEditor({
   setCodexKeys,
   setOpenCodeGoKeys,
   setClineKeys,
+  setOllamaCloudKeys,
   setVertexKeys,
   setBedrockKeys,
   refreshAll,
@@ -96,15 +101,18 @@ export function useProviderKeyEditor({
               ? openCodeGoKeys
               : type === "cline"
                 ? clineKeys
-                : type === "vertex"
-                  ? vertexKeys
-                  : bedrockKeys,
+                : type === "ollama-cloud"
+                  ? ollamaCloudKeys
+                  : type === "vertex"
+                    ? vertexKeys
+                    : bedrockKeys,
     [
       bedrockKeys,
       claudeKeys,
       clineKeys,
       codexKeys,
       geminiKeys,
+      ollamaCloudKeys,
       openCodeGoKeys,
       vertexKeys,
     ],
@@ -125,7 +133,9 @@ export function useProviderKeyEditor({
       setKeyDraft(
         type === "cline" && !draft.baseUrl.trim()
           ? { ...draft, baseUrl: "https://api.cline.bot/api/v1" }
-          : draft,
+          : type === "ollama-cloud" && !draft.baseUrl.trim()
+            ? { ...draft, baseUrl: "https://ollama.com" }
+            : draft,
       );
       setKeyDraftError(null);
       setEditKeyOpen(true);
@@ -200,6 +210,9 @@ export function useProviderKeyEditor({
         : {}),
       ...(isCline && !keyDraft.baseUrl.trim()
         ? { baseUrl: "https://api.cline.bot/api/v1" }
+        : {}),
+      ...(editKeyType === "ollama-cloud" && !keyDraft.baseUrl.trim()
+        ? { baseUrl: "https://ollama.com" }
         : {}),
       ...(keyDraft.proxyUrl.trim()
         ? { proxyUrl: keyDraft.proxyUrl.trim() }
@@ -278,6 +291,10 @@ export function useProviderKeyEditor({
         const next = apply(clineKeys);
         await providersApi.saveClineConfigs(next);
         setClineKeys(next);
+      } else if (type === "ollama-cloud") {
+        const next = apply(ollamaCloudKeys);
+        await providersApi.saveOllamaCloudConfigs(next);
+        setOllamaCloudKeys(next);
       } else if (type === "vertex") {
         const next = apply(vertexKeys);
         await providersApi.saveVertexConfigs(next);
@@ -309,6 +326,7 @@ export function useProviderKeyEditor({
     editKeyType,
     geminiKeys,
     notify,
+    ollamaCloudKeys,
     openCodeGoKeys,
     refreshAll,
     setClaudeKeys,
@@ -316,6 +334,7 @@ export function useProviderKeyEditor({
     setBedrockKeys,
     setClineKeys,
     setGeminiKeys,
+    setOllamaCloudKeys,
     setOpenCodeGoKeys,
     setVertexKeys,
     startRefreshTransition,
@@ -355,6 +374,11 @@ export function useProviderKeyEditor({
           setClineKeys((prev) =>
             prev.filter((_, itemIndex) => itemIndex !== index),
           );
+        } else if (type === "ollama-cloud") {
+          await providersApi.deleteOllamaCloudConfig(entry.apiKey);
+          setOllamaCloudKeys((prev) =>
+            prev.filter((_, itemIndex) => itemIndex !== index),
+          );
         } else if (type === "vertex") {
           await providersApi.deleteVertexConfig(entry.apiKey);
           setVertexKeys((prev) =>
@@ -384,6 +408,7 @@ export function useProviderKeyEditor({
       setClineKeys,
       setCodexKeys,
       setGeminiKeys,
+      setOllamaCloudKeys,
       setOpenCodeGoKeys,
       setVertexKeys,
       t,
@@ -392,7 +417,7 @@ export function useProviderKeyEditor({
 
   const toggleKeyEnabled = useCallback(
     async (
-      type: "gemini" | "claude" | "codex" | "opencode-go" | "cline" | "bedrock",
+      type: "gemini" | "claude" | "codex" | "opencode-go" | "cline" | "ollama-cloud" | "bedrock",
       index: number,
       enabled: boolean,
     ) => {
@@ -407,7 +432,9 @@ export function useProviderKeyEditor({
                 ? openCodeGoKeys
                 : type === "cline"
                   ? clineKeys
-                  : bedrockKeys;
+                  : type === "ollama-cloud"
+                    ? ollamaCloudKeys
+                    : bedrockKeys;
       const current = list[index];
       if (!current) return;
       const prev = list;
@@ -440,6 +467,9 @@ export function useProviderKeyEditor({
         } else if (type === "cline") {
           setClineKeys(nextList);
           await providersApi.saveClineConfigs(nextList);
+        } else if (type === "ollama-cloud") {
+          setOllamaCloudKeys(nextList);
+          await providersApi.saveOllamaCloudConfigs(nextList);
         } else {
           setBedrockKeys(nextList as BedrockProviderConfig[]);
           await providersApi.saveBedrockConfigs(
@@ -459,6 +489,7 @@ export function useProviderKeyEditor({
         else if (type === "codex") setCodexKeys(prev);
         else if (type === "opencode-go") setOpenCodeGoKeys(prev);
         else if (type === "cline") setClineKeys(prev);
+        else if (type === "ollama-cloud") setOllamaCloudKeys(prev);
         else setBedrockKeys(prev as BedrockProviderConfig[]);
         notify({
           type: "error",
@@ -474,6 +505,7 @@ export function useProviderKeyEditor({
       codexKeys,
       geminiKeys,
       notify,
+      ollamaCloudKeys,
       openCodeGoKeys,
       refreshAll,
       setClaudeKeys,
@@ -481,6 +513,7 @@ export function useProviderKeyEditor({
       setBedrockKeys,
       setClineKeys,
       setGeminiKeys,
+      setOllamaCloudKeys,
       setOpenCodeGoKeys,
       startRefreshTransition,
       t,
@@ -498,9 +531,11 @@ export function useProviderKeyEditor({
             ? "OpenCode Go"
             : editKeyType === "cline"
               ? "ClinePass"
-              : editKeyType === "vertex"
-                ? "Vertex"
-                : "Bedrock";
+              : editKeyType === "ollama-cloud"
+                ? "Ollama Cloud"
+                : editKeyType === "vertex"
+                  ? "Vertex"
+                  : "Bedrock";
 
   const editKeyEnabled = useMemo(() => {
     const list = excludedModelsFromText(keyDraft.excludedModelsText);

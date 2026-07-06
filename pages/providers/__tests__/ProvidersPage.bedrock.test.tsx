@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
   getCodexConfigs: vi.fn(async (): Promise<unknown[]> => []),
   getOpenCodeGoConfigs: vi.fn(async (): Promise<unknown[]> => []),
   getClineConfigs: vi.fn(async (): Promise<unknown[]> => []),
+  getOllamaCloudConfigs: vi.fn(async (): Promise<unknown[]> => []),
   getVertexConfigs: vi.fn(async (): Promise<unknown[]> => []),
   getBedrockConfigs: vi.fn(async (): Promise<unknown[]> => []),
   getOpenAIProviders: vi.fn(async (): Promise<unknown[]> => []),
@@ -33,6 +34,7 @@ vi.mock("@code-proxy/api-client", async (importOriginal) => {
       getCodexConfigs: mocks.getCodexConfigs,
       getOpenCodeGoConfigs: mocks.getOpenCodeGoConfigs,
       getClineConfigs: mocks.getClineConfigs,
+      getOllamaCloudConfigs: mocks.getOllamaCloudConfigs,
       getVertexConfigs: mocks.getVertexConfigs,
       getBedrockConfigs: mocks.getBedrockConfigs,
       getOpenAIProviders: mocks.getOpenAIProviders,
@@ -71,6 +73,7 @@ describe("ProvidersPage Bedrock tab", () => {
     mocks.getCodexConfigs.mockImplementation(async () => []);
     mocks.getOpenCodeGoConfigs.mockImplementation(async () => []);
     mocks.getClineConfigs.mockImplementation(async () => []);
+    mocks.getOllamaCloudConfigs.mockImplementation(async () => []);
     mocks.getVertexConfigs.mockImplementation(async () => []);
     mocks.getBedrockConfigs.mockImplementation(async () => []);
     mocks.getOpenAIProviders.mockImplementation(async () => []);

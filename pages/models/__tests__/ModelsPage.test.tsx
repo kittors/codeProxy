@@ -47,6 +47,8 @@ vi.mock("@code-proxy/api-client", () => ({
     getCodexConfigs: () => normalizeProviderConfigs("/codex-api-key", "codex-api-key"),
     getOpenCodeGoConfigs: () =>
       normalizeProviderConfigs("/opencode-go-api-key", "opencode-go-api-key"),
+    getOllamaCloudConfigs: () =>
+      normalizeProviderConfigs("/ollama-cloud-api-key", "ollama-cloud-api-key"),
     getVertexConfigs: () => normalizeProviderConfigs("/vertex-api-key", "vertex-api-key"),
     getOpenAIProviders: async () => {
       const payload = await mocks.apiGet("/openai-compatibility");
