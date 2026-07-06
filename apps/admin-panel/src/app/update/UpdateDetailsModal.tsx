@@ -188,6 +188,15 @@ function translateProgressMessage(
   progress?: UpdateProgressResponse | null,
   fallbackStage?: string,
 ) {
+  const migrationPhase = progress?.migration?.phase?.trim();
+  if (migrationPhase) {
+    const migrationMessageKey =
+      MIGRATION_PROGRESS_MESSAGE_KEYS[migrationPhase] ??
+      (migrationPhase === "skipped"
+        ? sqliteSkipMessageKey(progress?.migration?.skip_reason)
+        : "");
+    if (migrationMessageKey) return t(migrationMessageKey);
+  }
   const raw = progress?.message?.trim() ?? "";
   if (!raw) return t("auto_update.progress_default_message");
   const key = UPDATE_PROGRESS_MESSAGE_KEYS[raw.toLowerCase()];
@@ -216,6 +225,29 @@ const MIGRATION_PHASE_LABEL_KEYS: Record<string, string> = {
   skipped: "auto_update.progress_migration_phase_skipped",
   finalizing: "auto_update.progress_migration_phase_finalizing",
 };
+
+const MIGRATION_PROGRESS_MESSAGE_KEYS: Record<string, string> = {
+  starting_runtime: "auto_update.progress_message_starting_runtime",
+  checking: "auto_update.progress_message_checking_sqlite",
+  preparing: "auto_update.progress_message_preparing_sqlite_import",
+  inventory: "auto_update.progress_message_sqlite_inventory",
+  dry_run: "auto_update.progress_message_postgres_dry_run",
+  applying: "auto_update.progress_message_applying_sqlite",
+  finalizing: "auto_update.progress_message_sqlite_complete",
+};
+
+function sqliteSkipMessageKey(reason?: string) {
+  switch (reason?.trim()) {
+    case "disabled":
+      return "auto_update.progress_message_sqlite_skipped_disabled";
+    case "no_legacy_sqlite":
+      return "auto_update.progress_message_sqlite_skipped_missing";
+    case "import_disabled":
+      return "auto_update.progress_message_sqlite_skipped_import_disabled";
+    default:
+      return "auto_update.progress_message_finishing_migration";
+  }
+}
 
 function formatCount(value?: number) {
   if (typeof value !== "number" || !Number.isFinite(value)) return "";
@@ -436,7 +468,6 @@ function UpdateProgressConsole({
   );
   const displayPercent = Math.round(animatedPercent);
   const progressPercentLabel = `${displayPercent}%`;
-  const progressMarkerLeft = `clamp(1.5rem, ${displayPercent}%, calc(100% - 1.5rem))`;
   const progressMessage = translateProgressMessage(t, progress, stage);
   const progressDetails = migrationProgressDetails(t, progress);
   const StatusIcon = isCompleted
@@ -534,27 +565,26 @@ function UpdateProgressConsole({
         </div>
 
         <div className="mt-4">
-          <div className="relative h-7">
+          <div className="mb-1 flex items-center justify-end">
             <span
               data-testid="update-progress-percent"
-              className="absolute top-0 z-10 -translate-x-1/2 font-mono text-sm font-semibold text-slate-900 dark:text-white"
-              style={{ left: progressMarkerLeft }}
+              className="font-mono text-sm font-semibold text-slate-900 dark:text-white"
             >
               {progressPercentLabel}
             </span>
-            <div className="absolute inset-x-0 bottom-0 h-2 overflow-hidden rounded-full bg-slate-200/80 dark:bg-white/10">
-              <div
-                data-testid="update-progress-fill"
-                className={[
-                  "relative h-full rounded-full transition-[width] duration-500 ease-out",
-                  progressBarClass,
-                ].join(" ")}
-                style={{ width: `${displayPercent}%` }}
-              >
-                {isRunning ? (
-                  <span className="absolute inset-y-0 right-0 w-16 bg-white/30 blur-md dark:bg-white/20" />
-                ) : null}
-              </div>
+          </div>
+          <div className="relative h-2 overflow-hidden rounded-full bg-slate-200/80 dark:bg-white/10">
+            <div
+              data-testid="update-progress-fill"
+              className={[
+                "relative h-full rounded-full transition-[width] duration-500 ease-out",
+                progressBarClass,
+              ].join(" ")}
+              style={{ width: `${displayPercent}%` }}
+            >
+              {isRunning ? (
+                <span className="absolute inset-y-0 right-0 w-16 bg-white/30 blur-md dark:bg-white/20" />
+              ) : null}
             </div>
           </div>
         </div>

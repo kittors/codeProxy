@@ -98,14 +98,11 @@ describe("UpdateDetailsModal", () => {
 
     expect(
       screen.getByText(
-        "Migrating legacy SQLite data before restarting the service.",
+        "Importing legacy SQLite data into PostgreSQL.",
       ),
     ).toBeInTheDocument();
     expect(screen.getByText("Data migration check")).toBeInTheDocument();
     expect(screen.getByText("86%")).toBeInTheDocument();
-    expect(screen.getByTestId("update-progress-percent")).toHaveStyle({
-      left: "clamp(1.5rem, 86%, calc(100% - 1.5rem))",
-    });
     expect(screen.getByTestId("update-progress-fill")).toHaveStyle({
       width: "86%",
     });

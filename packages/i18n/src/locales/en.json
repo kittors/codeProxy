@@ -4018,7 +4018,7 @@
     "progress_message_pulling_target_image": "Pulling the target image.",
     "progress_message_starting_runtime": "Starting PostgreSQL and Redis before the data migration check.",
     "progress_message_checking_sqlite": "Checking whether legacy SQLite data needs migration before restarting the service.",
-    "progress_message_migrating_sqlite": "Migrating legacy SQLite data before restarting the service.",
+    "progress_message_migrating_sqlite": "Checking legacy SQLite data before restart; importing only if needed.",
     "progress_message_preparing_sqlite_import": "Legacy SQLite data was found; preparing the PostgreSQL import.",
     "progress_message_sqlite_inventory": "Scanning the legacy SQLite database before import.",
     "progress_message_postgres_dry_run": "Running a PostgreSQL import dry-run.",
