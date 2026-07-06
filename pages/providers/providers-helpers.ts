@@ -177,66 +177,6 @@ export const commitModelEntries = (
   return { models: models.length ? models : undefined };
 };
 
-const CLINE_PASS_MODEL_PREFIX = "cline-pass/";
-
-const isClinePassModelId = (model: string): boolean =>
-  model.trim().toLowerCase().startsWith(CLINE_PASS_MODEL_PREFIX);
-
-type ProviderModelOwnershipInput = {
-  models?: ProviderModel[];
-  excludedModels?: string[];
-  visionFallbackModel?: string;
-};
-
-export const validateProviderModelOwnership = (
-  provider: string,
-  input: ProviderModelOwnershipInput,
-): string | null => {
-  const modelEntries = input.models ?? [];
-  const modelNames = modelEntries
-    .map((model) => model.name?.trim() ?? "")
-    .filter((model) => model);
-  const excludedModels = input.excludedModels ?? [];
-  const visionFallback = input.visionFallbackModel?.trim() ?? "";
-
-  if (provider === "opencode-go") {
-    const invalidModel = modelNames.find((model) => isClinePassModelId(model));
-    if (invalidModel) {
-      return `OpenCode Go models cannot use cline-pass model IDs: ${invalidModel}`;
-    }
-    const invalidExcluded = excludedModels.find(
-      (model) =>
-        model.trim() !== DISABLE_ALL_MODELS_RULE && isClinePassModelId(model),
-    );
-    if (invalidExcluded) {
-      return `OpenCode Go excluded models cannot use cline-pass model IDs: ${invalidExcluded.trim()}`;
-    }
-    if (visionFallback && isClinePassModelId(visionFallback)) {
-      return `OpenCode Go vision fallback cannot use cline-pass model IDs: ${visionFallback}`;
-    }
-    return null;
-  }
-
-  if (provider === "cline") {
-    const invalidModel = modelNames.find((model) => !isClinePassModelId(model));
-    if (invalidModel) {
-      return `ClinePass models must use cline-pass model IDs: ${invalidModel}`;
-    }
-    const invalidExcluded = excludedModels.find(
-      (model) =>
-        model.trim() !== DISABLE_ALL_MODELS_RULE && !isClinePassModelId(model),
-    );
-    if (invalidExcluded) {
-      return `ClinePass excluded models must use cline-pass model IDs: ${invalidExcluded.trim()}`;
-    }
-    if (visionFallback && !isClinePassModelId(visionFallback)) {
-      return `ClinePass vision fallback must use cline-pass model IDs: ${visionFallback}`;
-    }
-  }
-
-  return null;
-};
-
 const hasBedrockFields = (
   input?: ProviderSimpleConfig | BedrockProviderConfig | null,
 ): input is BedrockProviderConfig =>

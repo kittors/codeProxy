@@ -3314,7 +3314,7 @@
     "vertex_config_desc": "Vertex models must define aliases (name => alias). Use * to disable all models.",
     "bedrock_config_desc": "Use a Bedrock API key or AWS SigV4 credentials. Bedrock requests are sent to the selected runtime region.",
     "opencode_go_config_desc": "OpenCode Go uses the fixed opencode.ai Go endpoint. No Base URL or model list is needed.",
-    "cline_config_desc": "Configure ClinePass Base URL, API key, headers, and per-model access.",
+    "cline_config_desc": "Configure ClinePass Base URL, API key, and headers. The model list is loaded automatically.",
     "generic_config_desc": "Supports excluded models (one per line; * disables all), custom headers, and model settings.",
     "modal_tab_basic": "Basic",
     "modal_tab_request": "Request",

@@ -41,12 +41,13 @@ describe("provider import/export helpers", () => {
     });
   });
 
-  test("preserves OpenCode Go dashboard usage fields during import and export", () => {
+  test("preserves OpenCode Go dashboard usage fields without per-key model fields", () => {
     const text = createProviderExportText("opencode-go", [
       {
         apiKey: " go-key ",
         name: "OpenCode Go",
-        excludedModels: [" deepseek-v4-pro "],
+        models: [{ name: "deepseek-v4-pro" }],
+        excludedModels: [" deepseek-v4-pro ", "*"],
         visionFallbackModel: " qwen3.5-plus ",
         workspaceId: " wrk_123 ",
         authCookie: " auth-token ",
@@ -59,23 +60,38 @@ describe("provider import/export helpers", () => {
       items: [
         {
           "api-key": "go-key",
-          "excluded-models": ["deepseek-v4-pro"],
+          "excluded-models": ["*", "deepseek-v4-pro"],
           "auth-cookie": "auth-token",
           name: "OpenCode Go",
-          "vision-fallback-model": "qwen3.5-plus",
           "workspace-id": "wrk_123",
         },
       ],
     });
 
-    const preview = prepareProviderImport("opencode-go", text, []);
+    const preview = prepareProviderImport(
+      "opencode-go",
+      JSON.stringify({
+        provider: "opencode-go",
+        items: [
+          {
+            "api-key": " go-key ",
+            name: "OpenCode Go",
+            models: [{ name: "deepseek-v4-pro" }],
+            "excluded-models": ["deepseek-v4-pro", "*"],
+            "vision-fallback-model": "qwen3.5-plus",
+            "workspace-id": " wrk_123 ",
+            "auth-cookie": " auth-token ",
+          },
+        ],
+      }),
+      [],
+    );
 
     expect(preview.nextItems).toEqual([
       {
         apiKey: "go-key",
         name: "OpenCode Go",
-        excludedModels: ["deepseek-v4-pro"],
-        visionFallbackModel: "qwen3.5-plus",
+        excludedModels: ["*", "deepseek-v4-pro"],
         workspaceId: "wrk_123",
         authCookie: "auth-token",
       },

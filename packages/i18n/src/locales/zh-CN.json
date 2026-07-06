@@ -2600,7 +2600,7 @@
     "vertex_config_desc": "Vertex 模型必须有别名（name => alias）。使用 * 可禁用全部模型。",
     "bedrock_config_desc": "可使用 Bedrock API Key 或 AWS SigV4 凭证；请求会发送到所选 Bedrock Runtime 区域。",
     "opencode_go_config_desc": "OpenCode Go 使用固定的 opencode.ai Go 套餐端点，无需填写 Base URL 或模型列表。",
-    "cline_config_desc": "配置 ClinePass Base URL、API Key、请求头和模型权限。",
+    "cline_config_desc": "配置 ClinePass Base URL、API Key 和请求头。模型列表由系统自动获取。",
     "generic_config_desc": "支持禁用模型（每行一个；* 禁用全部）、自定义请求头和模型。",
     "modal_tab_basic": "基础信息",
     "modal_tab_request": "请求配置",

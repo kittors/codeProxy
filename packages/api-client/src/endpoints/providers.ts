@@ -16,6 +16,8 @@ import {
   normalizeString,
   serializeGeminiKey,
   serializeBedrockKey,
+  serializeClineKey,
+  serializeOllamaCloudKey,
   serializeOpenCodeGoKey,
   serializeOpenAIProvider,
   serializeProviderKey,
@@ -53,7 +55,6 @@ export const providersApi = {
         const baseUrl = normalizeString(item["base-url"] ?? item.baseUrl) ?? undefined;
         const proxyId = normalizeString(item["proxy-id"] ?? item.proxyId) ?? undefined;
         const headers = normalizeHeaders(item.headers);
-        const models = normalizeModels(item.models);
         const excludedModels = normalizeExcludedModels(
           item["excluded-models"] ?? item.excludedModels,
         );
@@ -64,7 +65,6 @@ export const providersApi = {
           ...(baseUrl ? { baseUrl } : {}),
           ...(proxyId ? { proxyId } : {}),
           ...(headers ? { headers } : {}),
-          ...(models ? { models } : {}),
           ...(excludedModels ? { excludedModels } : {}),
         };
       })
@@ -95,7 +95,6 @@ export const providersApi = {
         const proxyUrl = normalizeString(item["proxy-url"] ?? item.proxyUrl) ?? undefined;
         const proxyId = normalizeString(item["proxy-id"] ?? item.proxyId) ?? undefined;
         const headers = normalizeHeaders(item.headers);
-        const models = normalizeModels(item.models);
         const excludedModels = normalizeExcludedModels(
           item["excluded-models"] ?? item.excludedModels,
         );
@@ -107,7 +106,6 @@ export const providersApi = {
           ...(proxyUrl ? { proxyUrl } : {}),
           ...(proxyId ? { proxyId } : {}),
           ...(headers ? { headers } : {}),
-          ...(models ? { models } : {}),
           ...(excludedModels ? { excludedModels } : {}),
         };
       })
@@ -137,12 +135,9 @@ export const providersApi = {
         const proxyUrl = normalizeString(item["proxy-url"] ?? item.proxyUrl) ?? undefined;
         const proxyId = normalizeString(item["proxy-id"] ?? item.proxyId) ?? undefined;
         const headers = normalizeHeaders(item.headers);
-        const models = normalizeModels(item.models);
         const excludedModels = normalizeExcludedModels(
           item["excluded-models"] ?? item.excludedModels,
         );
-        const visionFallbackModel =
-          normalizeString(item["vision-fallback-model"] ?? item.visionFallbackModel) ?? undefined;
         const workspaceId = normalizeString(item["workspace-id"] ?? item.workspaceId) ?? undefined;
         const authCookie = normalizeString(item["auth-cookie"] ?? item.authCookie) ?? undefined;
         return {
@@ -152,9 +147,7 @@ export const providersApi = {
           ...(proxyUrl ? { proxyUrl } : {}),
           ...(proxyId ? { proxyId } : {}),
           ...(headers ? { headers } : {}),
-          ...(models ? { models } : {}),
           ...(excludedModels ? { excludedModels } : {}),
-          ...(visionFallbackModel ? { visionFallbackModel } : {}),
           ...(workspaceId ? { workspaceId } : {}),
           ...(authCookie ? { authCookie } : {}),
         };
@@ -187,12 +180,9 @@ export const providersApi = {
         const proxyUrl = normalizeString(item["proxy-url"] ?? item.proxyUrl) ?? undefined;
         const proxyId = normalizeString(item["proxy-id"] ?? item.proxyId) ?? undefined;
         const headers = normalizeHeaders(item.headers);
-        const models = normalizeModels(item.models);
         const excludedModels = normalizeExcludedModels(
           item["excluded-models"] ?? item.excludedModels,
         );
-        const visionFallbackModel =
-          normalizeString(item["vision-fallback-model"] ?? item.visionFallbackModel) ?? undefined;
         return {
           apiKey,
           ...(name ? { name } : {}),
@@ -201,9 +191,7 @@ export const providersApi = {
           ...(proxyUrl ? { proxyUrl } : {}),
           ...(proxyId ? { proxyId } : {}),
           ...(headers ? { headers } : {}),
-          ...(models ? { models } : {}),
           ...(excludedModels ? { excludedModels } : {}),
-          ...(visionFallbackModel ? { visionFallbackModel } : {}),
         };
       })
       .filter(Boolean) as ProviderSimpleConfig[];
@@ -212,7 +200,7 @@ export const providersApi = {
   saveClineConfigs: (configs: ProviderSimpleConfig[]) =>
     apiClient.put(
       "/cline-api-key",
-      configs.map((item) => serializeProviderKey(item)),
+      configs.map((item) => serializeClineKey(item)),
     ),
 
   deleteClineConfig: (apiKey: string) =>
@@ -255,7 +243,7 @@ export const providersApi = {
   saveOllamaCloudConfigs: (configs: ProviderSimpleConfig[]) =>
     apiClient.put(
       "/ollama-cloud-api-key",
-      configs.map((item) => serializeProviderKey(item)),
+      configs.map((item) => serializeOllamaCloudKey(item)),
     ),
 
   deleteOllamaCloudConfig: (apiKey: string) =>

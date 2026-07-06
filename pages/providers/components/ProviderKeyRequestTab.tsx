@@ -1,7 +1,6 @@
 import { type Dispatch, type SetStateAction, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { TextInput } from "@code-proxy/ui";
-import { Select } from "@code-proxy/ui";
 import { ToggleSwitch } from "@code-proxy/ui";
 import type { ProxyPoolEntry } from "@code-proxy/api-client/endpoints/proxies";
 import { ProxyPoolSelect } from "@features/proxy-pool";
@@ -40,8 +39,6 @@ interface ProviderKeyRequestTabProps {
   isOpenCodeGo: boolean;
   isCline: boolean;
   isOllamaCloud: boolean;
-  openCodeVisionFallbackOptions: { value: string; label: string }[];
-  openCodeModelsLoading: boolean;
 }
 
 export function ProviderKeyRequestTab({
@@ -52,8 +49,6 @@ export function ProviderKeyRequestTab({
   isOpenCodeGo,
   isCline,
   isOllamaCloud,
-  openCodeVisionFallbackOptions,
-  openCodeModelsLoading,
 }: ProviderKeyRequestTabProps) {
   const { t } = useTranslation();
   const isBedrock = editKeyType === "bedrock";
@@ -150,26 +145,6 @@ export function ProviderKeyRequestTab({
               />
             </div>
           </div>
-        </SectionCard>
-      ) : null}
-
-      {isOpenCodeGo || isCline ? (
-        <SectionCard>
-          <p className="text-sm font-semibold text-slate-900 dark:text-white">
-            {t("providers.opencode_go_vision_fallback_title")}
-          </p>
-          <div className="mt-3">
-            <Select
-              value={keyDraft.visionFallbackModel}
-              onChange={(value) => setKeyDraft((prev) => ({ ...prev, visionFallbackModel: value }))}
-              options={openCodeVisionFallbackOptions}
-              aria-label={t("providers.opencode_go_vision_fallback_title")}
-              disabled={openCodeModelsLoading || openCodeVisionFallbackOptions.length <= 1}
-            />
-          </div>
-          <p className="mt-2 text-xs text-slate-500 dark:text-white/55">
-            {t("providers.opencode_go_vision_fallback_hint")}
-          </p>
         </SectionCard>
       ) : null}
 

@@ -13,7 +13,9 @@ import {
   normalizeModels,
   normalizeString,
   serializeBedrockKey,
+  serializeClineKey,
   serializeGeminiKey,
+  serializeOllamaCloudKey,
   serializeOpenAIProvider,
   serializeOpenCodeGoKey,
   serializeProviderKey,
@@ -161,6 +163,8 @@ const normalizeSimpleItem = (
   if (!apiKey) return { item: null, duplicateCount: 0 };
   const headers = sortRecord(normalizeHeaders(value.headers));
   const { models, duplicateCount } = normalizeModelList(value.models);
+  const usesDynamicModelCatalog = kind === "opencode-go" || kind === "cline";
+  const excludedModels = sortExcludedModels(value["excluded-models"] ?? value.excludedModels);
   const baseUrl =
     normalizeString(value["base-url"] ?? value.baseUrl) ??
     (kind === "ollama-cloud" ? "https://ollama.com" : undefined);
@@ -178,18 +182,8 @@ const normalizeSimpleItem = (
         ? { proxyId: normalizeString(value["proxy-id"] ?? value.proxyId)! }
         : {}),
       ...(headers ? { headers } : {}),
-      ...(models ? { models } : {}),
-      ...(sortExcludedModels(value["excluded-models"] ?? value.excludedModels)
-        ? { excludedModels: sortExcludedModels(value["excluded-models"] ?? value.excludedModels) }
-        : {}),
-      ...((kind === "opencode-go" || kind === "cline") &&
-      normalizeString(value["vision-fallback-model"] ?? value.visionFallbackModel)
-        ? {
-            visionFallbackModel: normalizeString(
-              value["vision-fallback-model"] ?? value.visionFallbackModel,
-            )!,
-          }
-        : {}),
+      ...(!usesDynamicModelCatalog && models ? { models } : {}),
+      ...(excludedModels ? { excludedModels } : {}),
       ...(kind === "opencode-go" && normalizeString(value["workspace-id"] ?? value.workspaceId)
         ? { workspaceId: normalizeString(value["workspace-id"] ?? value.workspaceId)! }
         : {}),
@@ -359,12 +353,14 @@ const serializeItem = (kind: ProviderImportKind, item: CanonicalProviderItem) =>
   switch (kind) {
     case "gemini":
       return serializeGeminiKey(item as ProviderSimpleConfig);
+    case "cline":
+      return serializeClineKey(item as ProviderSimpleConfig);
     case "claude":
     case "codex":
-    case "cline":
-    case "ollama-cloud":
     case "vertex":
       return serializeProviderKey(item as ProviderSimpleConfig);
+    case "ollama-cloud":
+      return serializeOllamaCloudKey(item as ProviderSimpleConfig);
     case "opencode-go":
       return serializeOpenCodeGoKey(item as ProviderSimpleConfig);
     case "bedrock":

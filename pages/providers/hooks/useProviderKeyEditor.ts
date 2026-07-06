@@ -20,7 +20,6 @@ import {
   excludedModelsFromText,
   hasDisableAllModelsRule,
   stripDisableAllModelsRule,
-  validateProviderModelOwnership,
   withDisableAllModelsRule,
   withoutDisableAllModelsRule,
   type ProviderKeyDraft,
@@ -171,33 +170,26 @@ export function useProviderKeyEditor({
     }
 
     const headers = keyValueEntriesToRecord(keyDraft.headersEntries);
-    const excludedModels = keyDraft.excludedModelsText.trim()
+    const rawExcludedModels = keyDraft.excludedModelsText.trim()
       ? excludedModelsFromText(keyDraft.excludedModelsText)
       : undefined;
     const isOpenCodeGo = editKeyType === "opencode-go";
     const isCline = editKeyType === "cline";
-    const isModelAccessProvider = isOpenCodeGo || isCline;
+    const usesDynamicModelCatalog = isOpenCodeGo || isCline;
+    const excludedModels = rawExcludedModels;
 
     const requireAlias = editKeyType === "vertex";
-    const modelCommit = commitModelEntries(keyDraft.modelEntries, {
-      requireAlias,
-    });
+    const modelCommit = usesDynamicModelCatalog
+      ? {}
+      : commitModelEntries(keyDraft.modelEntries, {
+          requireAlias,
+        });
     if (modelCommit.error) {
       setKeyDraftError(
         requireAlias ? `Vertex: ${modelCommit.error}` : modelCommit.error,
       );
       return null;
     }
-    const modelOwnershipError = validateProviderModelOwnership(editKeyType, {
-      models: modelCommit.models,
-      excludedModels,
-      visionFallbackModel: keyDraft.visionFallbackModel,
-    });
-    if (modelOwnershipError) {
-      setKeyDraftError(modelOwnershipError);
-      return null;
-    }
-
     const result: ProviderSimpleConfig | BedrockProviderConfig = {
       apiKey:
         editKeyType === "bedrock" && keyDraft.authMode === "sigv4"
@@ -220,9 +212,6 @@ export function useProviderKeyEditor({
       ...(keyDraft.proxyId.trim() ? { proxyId: keyDraft.proxyId.trim() } : {}),
       ...(headers ? { headers } : {}),
       ...(excludedModels ? { excludedModels } : {}),
-      ...(isModelAccessProvider && keyDraft.visionFallbackModel.trim()
-        ? { visionFallbackModel: keyDraft.visionFallbackModel.trim() }
-        : {}),
       ...(isOpenCodeGo && keyDraft.workspaceId.trim()
         ? { workspaceId: keyDraft.workspaceId.trim() }
         : {}),

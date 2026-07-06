@@ -6,9 +6,7 @@ interface ProviderKeyStatusBadgesProps {
   editKeyModelCount: number;
   editKeyExcludedCount: number;
   editKeyType: string;
-  isModelAccessProvider: boolean;
-  allowedOpenCodeCount: number;
-  totalOpenCodeModels: number;
+  showModelBadges: boolean;
   authMode: string;
 }
 
@@ -18,9 +16,7 @@ export function ProviderKeyStatusBadges({
   editKeyModelCount,
   editKeyExcludedCount,
   editKeyType,
-  isModelAccessProvider,
-  allowedOpenCodeCount,
-  totalOpenCodeModels,
+  showModelBadges,
   authMode,
 }: ProviderKeyStatusBadgesProps) {
   const { t } = useTranslation();
@@ -41,23 +37,18 @@ export function ProviderKeyStatusBadges({
         {t("providers.headers_optional")}:{" "}
         <span className="font-semibold tabular-nums">{editKeyHeaderCount}</span>
       </span>
-      {isModelAccessProvider ? (
-        <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-700 dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-white/75">
-          {t("providers.models_allowed_count", {
-            allowed: allowedOpenCodeCount,
-            total: totalOpenCodeModels,
-          })}
-        </span>
-      ) : (
-        <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-700 dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-white/75">
-          {t("providers.models_label")}:{" "}
-          <span className="font-semibold tabular-nums">{editKeyModelCount}</span>
-        </span>
-      )}
-      <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-700 dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-white/75">
-        {t("providers.excluded_models_label")}:{" "}
-        <span className="font-semibold tabular-nums">{editKeyExcludedCount}</span>
-      </span>
+      {showModelBadges ? (
+        <>
+          <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-700 dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-white/75">
+            {t("providers.models_label")}:{" "}
+            <span className="font-semibold tabular-nums">{editKeyModelCount}</span>
+          </span>
+          <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-700 dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-white/75">
+            {t("providers.excluded_models_label")}:{" "}
+            <span className="font-semibold tabular-nums">{editKeyExcludedCount}</span>
+          </span>
+        </>
+      ) : null}
       {editKeyType === "vertex" ? (
         <span className="rounded-full bg-slate-900 px-2.5 py-1 text-xs font-semibold text-white dark:bg-white dark:text-neutral-950">
           {t("providers.vertex_alias_required")}

@@ -23,7 +23,12 @@ describe("providersApi Ollama Cloud", () => {
     const { providersApi } = await import("@code-proxy/api-client/endpoints/providers");
     getMock.mockResolvedValue({
       "ollama-cloud-api-key": [
-        { name: "Ollama", "api-key": "sk-ollama" },
+        {
+          name: "Ollama",
+          "api-key": "sk-ollama",
+          models: [{ name: "gpt-oss:120b" }],
+          "excluded-models": ["gpt-oss:20b", "*"],
+        },
         { name: "Runtime", "api-key": "runtime-token", runtime_only: true },
       ],
     });
@@ -33,6 +38,8 @@ describe("providersApi Ollama Cloud", () => {
         name: "Ollama",
         apiKey: "sk-ollama",
         baseUrl: "https://ollama.com",
+        models: [{ name: "gpt-oss:120b" }],
+        excludedModels: ["gpt-oss:20b", "*"],
       },
     ]);
     expect(getMock).toHaveBeenCalledWith("/ollama-cloud-api-key");
@@ -47,6 +54,7 @@ describe("providersApi Ollama Cloud", () => {
         apiKey: "sk-ollama",
         baseUrl: "https://ollama.com",
         models: [{ name: "gpt-oss:120b" }],
+        excludedModels: ["gpt-oss:20b", "*"],
       },
     ]);
 
@@ -56,6 +64,7 @@ describe("providersApi Ollama Cloud", () => {
         "api-key": "sk-ollama",
         "base-url": "https://ollama.com",
         models: [{ name: "gpt-oss:120b" }],
+        "excluded-models": ["gpt-oss:20b", "*"],
       },
     ]);
 

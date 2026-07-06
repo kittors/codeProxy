@@ -143,17 +143,55 @@ export const serializeOpenCodeGoKey = (config: ProviderSimpleConfig) => {
   if (proxyId) payload["proxy-id"] = proxyId;
   const headers = serializeHeaders(config.headers);
   if (headers) payload.headers = headers;
+  if (config.excludedModels && config.excludedModels.length) {
+    payload["excluded-models"] = config.excludedModels;
+  }
+  const workspaceId = normalizeString(config.workspaceId);
+  if (workspaceId) payload["workspace-id"] = workspaceId;
+  const authCookie = normalizeString(config.authCookie);
+  if (authCookie) payload["auth-cookie"] = authCookie;
+  return payload;
+};
+
+export const serializeClineKey = (config: ProviderSimpleConfig) => {
+  const payload: Record<string, unknown> = { "api-key": config.apiKey };
+  const name = normalizeString(config.name);
+  if (name) payload.name = name;
+  const prefix = normalizeString(config.prefix);
+  if (prefix) payload.prefix = prefix;
+  const baseUrl = normalizeString(config.baseUrl);
+  if (baseUrl) payload["base-url"] = baseUrl;
+  const proxyUrl = normalizeString(config.proxyUrl);
+  if (proxyUrl) payload["proxy-url"] = proxyUrl;
+  const proxyId = normalizeString(config.proxyId);
+  if (proxyId) payload["proxy-id"] = proxyId;
+  const headers = serializeHeaders(config.headers);
+  if (headers) payload.headers = headers;
+  if (config.excludedModels && config.excludedModels.length) {
+    payload["excluded-models"] = config.excludedModels;
+  }
+  return payload;
+};
+
+export const serializeOllamaCloudKey = (config: ProviderSimpleConfig) => {
+  const payload: Record<string, unknown> = { "api-key": config.apiKey };
+  const name = normalizeString(config.name);
+  if (name) payload.name = name;
+  const prefix = normalizeString(config.prefix);
+  if (prefix) payload.prefix = prefix;
+  const baseUrl = normalizeString(config.baseUrl);
+  if (baseUrl) payload["base-url"] = baseUrl;
+  const proxyUrl = normalizeString(config.proxyUrl);
+  if (proxyUrl) payload["proxy-url"] = proxyUrl;
+  const proxyId = normalizeString(config.proxyId);
+  if (proxyId) payload["proxy-id"] = proxyId;
+  const headers = serializeHeaders(config.headers);
+  if (headers) payload.headers = headers;
   const models = serializeModels(config.models);
   if (models && models.length) payload.models = models;
   if (config.excludedModels && config.excludedModels.length) {
     payload["excluded-models"] = config.excludedModels;
   }
-  const visionFallbackModel = normalizeString(config.visionFallbackModel);
-  if (visionFallbackModel) payload["vision-fallback-model"] = visionFallbackModel;
-  const workspaceId = normalizeString(config.workspaceId);
-  if (workspaceId) payload["workspace-id"] = workspaceId;
-  const authCookie = normalizeString(config.authCookie);
-  if (authCookie) payload["auth-cookie"] = authCookie;
   return payload;
 };
 

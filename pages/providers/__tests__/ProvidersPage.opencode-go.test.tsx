@@ -38,6 +38,7 @@ const mocks = vi.hoisted(() => ({
   })),
   saveOpenCodeGoConfigs: vi.fn(async (_configs: unknown[]) => ({})),
   saveClineConfigs: vi.fn(async (_configs: unknown[]) => ({})),
+  saveOllamaCloudConfigs: vi.fn(async (_configs: unknown[]) => ({})),
   getModelDefinitions: vi.fn(async (_channel?: string) => [
     { id: "deepseek-v4-flash", object: "model", owned_by: "opencode" },
     { id: "qwen3.5-plus", object: "model", owned_by: "opencode" },
@@ -83,6 +84,7 @@ vi.mock("@code-proxy/api-client", async (importOriginal) => {
       queryOpenCodeGoUsage: mocks.queryOpenCodeGoUsage,
       saveOpenCodeGoConfigs: mocks.saveOpenCodeGoConfigs,
       saveClineConfigs: mocks.saveClineConfigs,
+      saveOllamaCloudConfigs: mocks.saveOllamaCloudConfigs,
     },
     usageApi: {
       ...mod.usageApi,
@@ -308,13 +310,15 @@ describe("ProvidersPage OpenCode Go tab", () => {
     ).toBeInTheDocument();
   });
 
-  test("blocks saving OpenCode Go keys that still contain ClinePass models", async () => {
+  test("drops legacy OpenCode Go per-key model fields when saving", async () => {
     const user = userEvent.setup();
     mocks.getOpenCodeGoConfigs.mockImplementation(async () => [
       {
         name: "Existing OpenCode Go",
         apiKey: "sk-existing-opencode-go",
         models: [{ name: "cline-pass/glm-5.2" }],
+        excludedModels: ["cline-pass/minimax-m3", "*"],
+        visionFallbackModel: "cline-pass/mimo-v2.5-pro",
       },
     ]);
 
@@ -333,17 +337,9 @@ describe("ProvidersPage OpenCode Go tab", () => {
     const dialog = await screen.findByRole("dialog", {
       name: /Edit OpenCode Go configuration/i,
     });
-    await user.click(within(dialog).getByRole("button", { name: /Save/ }));
-
-    expect(
-      await within(dialog).findByText(
-        /OpenCode Go models cannot use cline-pass model IDs/i,
-      ),
-    ).toBeInTheDocument();
-    expect(mocks.saveOpenCodeGoConfigs).not.toHaveBeenCalled();
-
-    await user.click(within(dialog).getByRole("tab", { name: /Models/i }));
-    await user.click(within(dialog).getByLabelText(/Delete model/i));
+    expect(within(dialog).getByRole("tab", { name: /Models/i })).toBeInTheDocument();
+    await waitFor(() => expect(mocks.apiCallRequest).toHaveBeenCalled());
+    expect(mocks.getModelDefinitions).not.toHaveBeenCalled();
     await user.click(within(dialog).getByRole("button", { name: /Save/ }));
 
     await waitFor(() => {
@@ -354,12 +350,13 @@ describe("ProvidersPage OpenCode Go tab", () => {
         }),
       ]);
     });
-    expect(mocks.saveOpenCodeGoConfigs.mock.calls[0][0][0]).not.toHaveProperty(
-      "models",
-    );
+    const saved = mocks.saveOpenCodeGoConfigs.mock.calls[0][0][0];
+    expect(saved).not.toHaveProperty("models");
+    expect(saved).not.toHaveProperty("visionFallbackModel");
+    expect(saved).toHaveProperty("excludedModels", ["cline-pass/minimax-m3", "*"]);
   });
 
-  test("uses fixed tabs and saves OpenCode Go model exclusions from fetched models", async () => {
+  test("shows OpenCode Go dynamic model list without manual model inputs", async () => {
     const user = userEvent.setup();
 
     render(
@@ -386,26 +383,10 @@ describe("ProvidersPage OpenCode Go tab", () => {
     expect(
       within(dialog).getByRole("tab", { name: /Models/i }),
     ).toBeInTheDocument();
-
     await user.click(within(dialog).getByRole("tab", { name: /Models/i }));
-
-    await waitFor(() => {
-      expect(mocks.apiCallRequest).toHaveBeenCalledWith(
-        expect.objectContaining({
-          method: "GET",
-          url: "https://opencode.ai/zen/go/v1/models",
-        }),
-      );
-    });
-
-    const deepseek = await within(dialog).findByRole("checkbox", {
-      name: /deepseek-v4-flash/i,
-    });
-    await waitFor(() => expect(deepseek).toBeChecked());
-    expect(
-      within(dialog).getByRole("checkbox", { name: /qwen3\.7-max/i }),
-    ).not.toBeChecked();
-    await user.click(deepseek);
+    expect(within(dialog).queryByText("Models (optional)")).not.toBeInTheDocument();
+    await waitFor(() => expect(mocks.apiCallRequest).toHaveBeenCalled());
+    expect(mocks.getModelDefinitions).not.toHaveBeenCalled();
 
     await user.click(within(dialog).getByRole("tab", { name: /Basic/i }));
     await user.type(
@@ -423,105 +404,12 @@ describe("ProvidersPage OpenCode Go tab", () => {
         expect.objectContaining({
           name: "OpenCode Go",
           apiKey: "sk-opencode-go",
-          models: [{ name: "qwen3.5-plus" }, { name: "kimi-k2.6" }],
-          excludedModels: ["deepseek-v4-flash"],
         }),
       ]);
     });
-  });
-
-  test("offers allowed multimodal OpenCode Go models as vision fallback options from string api-call body", async () => {
-    const user = userEvent.setup();
-    mocks.apiCallRequest.mockImplementation(async () => ({
-      statusCode: 200,
-      header: {},
-      bodyText: "",
-      body: JSON.stringify({
-        object: "list",
-        data: [
-          { id: "deepseek-v4-flash", object: "model", owned_by: "opencode" },
-          { id: "qwen3.5-plus", object: "model", owned_by: "opencode" },
-          { id: "qwen3.6-plus", object: "model", owned_by: "opencode" },
-          { id: "mimo-v2-omni", object: "model", owned_by: "opencode" },
-          { id: "minimax-m2.5", object: "model", owned_by: "opencode" },
-        ],
-      }),
-    }));
-
-    render(
-      <MemoryRouter initialEntries={["/ai-providers/opencode-go/new"]}>
-        <ThemeProvider>
-          <ToastProvider>
-            <Routes>
-              <Route path="/ai-providers/*" element={<ProvidersPage />} />
-            </Routes>
-          </ToastProvider>
-        </ThemeProvider>
-      </MemoryRouter>,
-    );
-
-    const dialog = await screen.findByRole("dialog", {
-      name: /Add OpenCode Go configuration/i,
-    });
-    await user.click(within(dialog).getByRole("tab", { name: /Models/i }));
-    await waitFor(() =>
-      expect(
-        within(dialog).getByRole("checkbox", { name: /qwen3\.5-plus/i }),
-      ).toBeChecked(),
-    );
-    await user.click(
-      await within(dialog).findByRole("checkbox", { name: /mimo-v2-omni/i }),
-    );
-
-    await user.click(within(dialog).getByRole("tab", { name: /Request/i }));
-    const fallback = await within(dialog).findByRole("combobox", {
-      name: /Vision fallback model/i,
-    });
-    await user.click(fallback);
-
-    expect(
-      await screen.findByRole("option", { name: /qwen3\.5-plus/i }),
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByRole("option", { name: /qwen3\.6-plus/i }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole("option", { name: /deepseek-v4-flash/i }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.getByRole("option", { name: /mimo-v2-omni/i }),
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByRole("option", { name: /minimax-m2\.5/i }),
-    ).not.toBeInTheDocument();
-    await user.click(screen.getByRole("option", { name: /mimo-v2-omni/i }));
-
-    await user.click(within(dialog).getByRole("tab", { name: /Basic/i }));
-    await user.type(
-      within(dialog).getByPlaceholderText("e.g. Gemini Primary"),
-      "OpenCode Go",
-    );
-    await user.type(
-      within(dialog).getByPlaceholderText(/Paste API Key/i),
-      "sk-opencode-go",
-    );
-    await user.click(within(dialog).getByRole("button", { name: /Save/ }));
-
-    await waitFor(() => {
-      expect(mocks.saveOpenCodeGoConfigs).toHaveBeenCalledWith([
-        expect.objectContaining({
-          name: "OpenCode Go",
-          apiKey: "sk-opencode-go",
-          models: [
-            { name: "deepseek-v4-flash" },
-            { name: "qwen3.5-plus" },
-            { name: "kimi-k2.6" },
-            { name: "mimo-v2-omni" },
-          ],
-          visionFallbackModel: "mimo-v2-omni",
-        }),
-      ]);
-    });
+    const saved = mocks.saveOpenCodeGoConfigs.mock.calls[0][0][0];
+    expect(saved).not.toHaveProperty("models");
+    expect(saved).not.toHaveProperty("visionFallbackModel");
   });
 });
 
@@ -624,8 +512,7 @@ describe("ProvidersPage Cline tab", () => {
     });
   });
 
-  test("renders Cline models in a scrollable table without owned_by subtitles", async () => {
-    const user = userEvent.setup();
+  test("shows ClinePass dynamic model list without manual model inputs", async () => {
     mocks.getModelDefinitions.mockImplementation(async (channel?: string) =>
       channel === "cline"
         ? [
@@ -682,31 +569,28 @@ describe("ProvidersPage Cline tab", () => {
     const dialog = await screen.findByRole("dialog", {
       name: /Add ClinePass configuration/i,
     });
-    await user.click(within(dialog).getByRole("tab", { name: /Models/i }));
-
-    expect(
-      await within(dialog).findByText("cline-pass/mimo-v2.5-pro"),
-    ).toBeInTheDocument();
-    expect(within(dialog).queryByText("cline")).not.toBeInTheDocument();
-
-    const table = within(dialog)
-      .getByText("cline-pass/mimo-v2.5-pro")
-      .closest("table");
-    if (!table) {
-      throw new Error("expected Cline models table");
-    }
-    const scrollContainer = table.parentElement?.parentElement;
-    const tableRoot = scrollContainer?.parentElement;
-
-    expect(scrollContainer).toHaveClass("overflow-auto");
-    expect(tableRoot).toHaveClass("h-80");
+    expect(within(dialog).getByRole("tab", { name: /Models/i })).toBeInTheDocument();
+    await waitFor(() => expect(mocks.getModelDefinitions).toHaveBeenCalledWith("cline"));
+    await userEvent.setup().click(within(dialog).getByRole("tab", { name: /Models/i }));
+    expect(within(dialog).queryByText("Models (optional)")).not.toBeInTheDocument();
+    expect(within(dialog).getByText("cline-pass/mimo-v2.5-pro")).toBeInTheDocument();
   });
 
-  test("loads Cline model definitions and saves model exclusions", async () => {
+  test("drops legacy ClinePass per-key model fields when saving", async () => {
     const user = userEvent.setup();
+    mocks.getClineConfigs.mockImplementation(async () => [
+      {
+        name: "Existing Cline",
+        apiKey: "sk-cline",
+        baseUrl: "https://api.cline.bot/api/v1",
+        models: [{ name: "cline-pass/glm-5.2" }],
+        excludedModels: ["cline-pass/minimax-m3", "*"],
+        visionFallbackModel: "cline-pass/mimo-v2.5-pro",
+      },
+    ]);
 
     render(
-      <MemoryRouter initialEntries={["/ai-providers/cline/new"]}>
+      <MemoryRouter initialEntries={["/ai-providers/cline/0"]}>
         <ThemeProvider>
           <ToastProvider>
             <Routes>
@@ -718,54 +602,122 @@ describe("ProvidersPage Cline tab", () => {
     );
 
     const dialog = await screen.findByRole("dialog", {
-      name: /Add ClinePass configuration/i,
+      name: /Edit ClinePass configuration/i,
     });
-    await user.click(within(dialog).getByRole("tab", { name: /Models/i }));
-
-    await waitFor(() => {
-      expect(mocks.getModelDefinitions).toHaveBeenCalledWith("cline");
-    });
-    const minimax = await within(dialog).findByRole("checkbox", {
-      name: /cline-pass\/minimax-m3/i,
-    });
-    await waitFor(() => expect(minimax).toBeChecked());
-    await user.click(minimax);
-
-    await user.click(within(dialog).getByRole("tab", { name: /Request/i }));
-    const fallback = await within(dialog).findByRole("combobox", {
-      name: /Vision fallback model/i,
-    });
-    await user.click(fallback);
-    await user.click(
-      screen.getByRole("option", { name: /cline-pass\/mimo-v2\.5-pro/i }),
-    );
-
-    await user.click(within(dialog).getByRole("tab", { name: /Basic/i }));
-    await user.type(
-      within(dialog).getByPlaceholderText("e.g. Gemini Primary"),
-      "Cline",
-    );
-    await user.type(
-      within(dialog).getByPlaceholderText(/Paste API Key/i),
-      "sk-cline",
-    );
+    expect(within(dialog).getByRole("tab", { name: /Models/i })).toBeInTheDocument();
+    await waitFor(() => expect(mocks.getModelDefinitions).toHaveBeenCalledWith("cline"));
     await user.click(within(dialog).getByRole("button", { name: /Save/ }));
 
     await waitFor(() => {
       expect(mocks.saveClineConfigs).toHaveBeenCalledWith([
         expect.objectContaining({
-          name: "Cline",
+          name: "Existing Cline",
           apiKey: "sk-cline",
-          models: [
-            { name: "cline-pass/glm-5.2" },
-            { name: "cline-pass/qwen3.7-max" },
-            { name: "cline-pass/mimo-v2.5-pro" },
-          ],
-          excludedModels: ["cline-pass/minimax-m3"],
-          visionFallbackModel: "cline-pass/mimo-v2.5-pro",
+          excludedModels: ["cline-pass/minimax-m3", "*"],
         }),
       ]);
     });
+    const saved = mocks.saveClineConfigs.mock.calls[0][0][0];
+    expect(saved).not.toHaveProperty("models");
+    expect(saved).not.toHaveProperty("visionFallbackModel");
+  });
+});
+
+describe("ProvidersPage Ollama Cloud tab", () => {
+  beforeEach(() => {
+    Object.values(mocks).forEach((mock) => mock.mockReset());
+    mocks.getGeminiKeys.mockImplementation(async () => []);
+    mocks.getClaudeConfigs.mockImplementation(async () => []);
+    mocks.getCodexConfigs.mockImplementation(async () => []);
+    mocks.getVertexConfigs.mockImplementation(async () => []);
+    mocks.getBedrockConfigs.mockImplementation(async () => []);
+    mocks.getOpenCodeGoConfigs.mockImplementation(async () => []);
+    mocks.getClineConfigs.mockImplementation(async () => []);
+    mocks.getOllamaCloudConfigs.mockImplementation(async () => []);
+    mocks.getOpenAIProviders.mockImplementation(async () => []);
+    mocks.saveOllamaCloudConfigs.mockImplementation(async () => ({}));
+    mocks.getModelDefinitions.mockImplementation(async () => [
+      { id: "gpt-oss:120b", object: "model", owned_by: "ollama" },
+    ]);
+    mocks.apiCallRequest.mockImplementation(async () => ({
+      statusCode: 200,
+      header: {},
+      bodyText: "",
+      body: { object: "list", data: [] },
+    }));
+    mocks.getEntityStats.mockImplementation(async () => ({ source: [] }));
+    mocks.apiKeyEntriesList.mockImplementation(async () => []);
+    mocks.channelGroupsList.mockImplementation(async () => []);
+    mocks.proxiesList.mockImplementation(async () => []);
+  });
+
+  test("shows Ollama Cloud manual model configuration", async () => {
+    render(
+      <MemoryRouter initialEntries={["/ai-providers/ollama-cloud/new"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    const dialog = await screen.findByRole("dialog", {
+      name: /Add Ollama Cloud configuration/i,
+    });
+    expect(within(dialog).getByRole("tab", { name: /Models/i })).toBeInTheDocument();
+    await userEvent.setup().click(within(dialog).getByRole("tab", { name: /Models/i }));
+    expect(within(dialog).getByText("Models (optional)")).toBeInTheDocument();
+    expect(within(dialog).queryByText("gpt-oss:120b")).not.toBeInTheDocument();
+    expect(mocks.apiCallRequest).not.toHaveBeenCalled();
+    expect(mocks.getModelDefinitions).not.toHaveBeenCalled();
+  });
+
+  test("preserves Ollama Cloud per-key model fields when saving", async () => {
+    const user = userEvent.setup();
+    mocks.getOllamaCloudConfigs.mockImplementation(async () => [
+      {
+        name: "Existing Ollama Cloud",
+        apiKey: "sk-ollama",
+        baseUrl: "https://ollama.com",
+        models: [{ name: "gpt-oss:120b" }],
+        excludedModels: ["gpt-oss:20b", "*"],
+      },
+    ]);
+
+    render(
+      <MemoryRouter initialEntries={["/ai-providers/ollama-cloud/0"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    const dialog = await screen.findByRole("dialog", {
+      name: /Edit Ollama Cloud configuration/i,
+    });
+    expect(within(dialog).getByRole("tab", { name: /Models/i })).toBeInTheDocument();
+    expect(mocks.getModelDefinitions).not.toHaveBeenCalled();
+    await user.click(within(dialog).getByRole("button", { name: /Save/ }));
+
+    await waitFor(() => {
+      expect(mocks.saveOllamaCloudConfigs).toHaveBeenCalledWith([
+        expect.objectContaining({
+          name: "Existing Ollama Cloud",
+          apiKey: "sk-ollama",
+          models: [{ name: "gpt-oss:120b" }],
+          excludedModels: ["gpt-oss:20b", "*"],
+        }),
+      ]);
+    });
+    const saved = mocks.saveOllamaCloudConfigs.mock.calls[0][0][0];
+    expect(saved).toHaveProperty("models", [{ name: "gpt-oss:120b" }]);
   });
 });
 

@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from "react";
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { RefreshCw } from "lucide-react";
 import { Button } from "@code-proxy/ui";
@@ -6,13 +6,13 @@ import { Checkbox } from "@code-proxy/ui";
 import { DataTable, type DataTableColumn } from "@code-proxy/ui";
 import { TextInput } from "@code-proxy/ui";
 import { SearchableSelect } from "@code-proxy/ui";
-import { createEmptyModelEntry, ModelInputList } from "../ModelInputList";
 import {
   excludedModelsFromText,
   hasDisableAllModelsRule,
   stripDisableAllModelsRule,
   type ProviderKeyDraft,
 } from "../providers-helpers";
+import { ModelInputList } from "../ModelInputList";
 import { ExcludedModelsEditor } from "./ExcludedModelsEditor";
 
 const SectionCard = ({ children }: { children: React.ReactNode }) => (
@@ -23,7 +23,6 @@ const SectionCard = ({ children }: { children: React.ReactNode }) => (
 
 type ClineModelRow = {
   id: string;
-  publicName: string;
   checked: boolean;
 };
 
@@ -84,47 +83,12 @@ export function ProviderKeyModelsTab({
 }: ProviderKeyModelsTabProps) {
   const { t } = useTranslation();
   const isModelAccessProvider = isOpenCodeGo || isCline;
-  const knownModelIds = useMemo(
-    () =>
-      new Set(
-        openCodeModels
-          .map((model) => model.id.trim().toLowerCase())
-          .filter(Boolean),
-      ),
-    [openCodeModels],
-  );
-  const manualModelEntries = useMemo(() => {
-    if (!isModelAccessProvider) return [];
-    return keyDraft.modelEntries.filter((entry) => {
-      const name = entry.name.trim().toLowerCase();
-      return name && !knownModelIds.has(name);
-    });
-  }, [isModelAccessProvider, keyDraft.modelEntries, knownModelIds]);
-  const setManualModelEntries = useCallback(
-    (next: typeof keyDraft.modelEntries) => {
-      setKeyDraft((prev) => {
-        const knownEntries = prev.modelEntries.filter((entry) =>
-          knownModelIds.has(entry.name.trim().toLowerCase()),
-        );
-        return { ...prev, modelEntries: [...knownEntries, ...next] };
-      });
-    },
-    [knownModelIds, setKeyDraft],
-  );
   const clineRows = useMemo<ClineModelRow[]>(() => {
     if (!isCline) return [];
-    const entriesByName = new Map(
-      keyDraft.modelEntries.map((entry) => [
-        entry.name.trim().toLowerCase(),
-        entry,
-      ]),
-    );
     return filteredOpenCodeModels.map((model) => {
       const normalized = model.id.toLowerCase();
-      const entry = entriesByName.get(normalized);
       return {
         id: model.id,
-        publicName: entry ? entry.alias : model.id,
         checked:
           !excludeAll &&
           enabledOpenCodeModelIds.has(normalized) &&
@@ -133,58 +97,11 @@ export function ProviderKeyModelsTab({
     });
   }, [
     isCline,
-    keyDraft.modelEntries,
     filteredOpenCodeModels,
     excludeAll,
     enabledOpenCodeModelIds,
     excludedModelIds,
   ]);
-
-  const updateClineModelAlias = useCallback(
-    (modelId: string, alias: string) => {
-      const normalized = modelId.trim().toLowerCase();
-      if (!normalized) return;
-      setKeyDraft((prev) => {
-        const excludedModels = excludedModelsFromText(prev.excludedModelsText);
-        const excludeAllModels = hasDisableAllModelsRule(excludedModels);
-        const currentExcluded = stripDisableAllModelsRule(excludedModels);
-        const hadEntry = prev.modelEntries.some(
-          (entry) => entry.name.trim().toLowerCase() === normalized,
-        );
-        const wasExcluded = currentExcluded.some(
-          (model) => model.trim().toLowerCase() === normalized,
-        );
-        const nextExcluded = currentExcluded.filter(
-          (model) => model.trim().toLowerCase() !== normalized,
-        );
-        const found = prev.modelEntries.some(
-          (entry) => entry.name.trim().toLowerCase() === normalized,
-        );
-        const nextEntries = found
-          ? prev.modelEntries.map((entry) =>
-              entry.name.trim().toLowerCase() === normalized
-                ? { ...entry, alias }
-                : entry,
-            )
-          : [
-              { ...createEmptyModelEntry(), name: modelId, alias },
-              ...prev.modelEntries,
-            ];
-        let nextExcludedModels = currentExcluded;
-        if (excludeAllModels) {
-          nextExcludedModels = excludedModels;
-        } else if (!hadEntry && !wasExcluded) {
-          nextExcludedModels = [...nextExcluded, modelId];
-        }
-        return {
-          ...prev,
-          modelEntries: nextEntries,
-          excludedModelsText: nextExcludedModels.join("\n"),
-        };
-      });
-    },
-    [setKeyDraft],
-  );
 
   const clineColumns = useMemo<DataTableColumn<ClineModelRow>[]>(
     () => [
@@ -199,21 +116,6 @@ export function ProviderKeyModelsTab({
               {row.id}
             </span>
           </div>
-        ),
-      },
-      {
-        key: "publicName",
-        label: t("providers.cline_public_model_name"),
-        width: "w-72",
-        render: (row) => (
-          <TextInput
-            value={row.publicName}
-            onChange={(event) =>
-              updateClineModelAlias(row.id, event.currentTarget.value)
-            }
-            className="h-8 font-mono text-xs"
-            aria-label={t("providers.cline_public_model_name")}
-          />
         ),
       },
       {
@@ -232,7 +134,7 @@ export function ProviderKeyModelsTab({
         ),
       },
     ],
-    [setOpenCodeModelAllowed, t, updateClineModelAlias],
+    [setOpenCodeModelAllowed, t],
   );
 
   if (isModelAccessProvider) {
@@ -381,18 +283,6 @@ export function ProviderKeyModelsTab({
             </div>
           )}
         </SectionCard>
-
-        {manualModelEntries.length ? (
-          <SectionCard>
-            <ModelInputList
-              title={t("providers.models_optional_title")}
-              entries={manualModelEntries}
-              onChange={setManualModelEntries}
-              showPriority={false}
-              showTestModel={false}
-            />
-          </SectionCard>
-        ) : null}
 
         <SectionCard>
           <ExcludedModelsEditor
