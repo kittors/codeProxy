@@ -38,6 +38,7 @@ export function ScrollArea({
   contentClassName,
   scrollbarVisibility = "hover",
   scrollbarTrackInset = 8,
+  onPointerLeave,
   ...divProps
 }: PropsWithChildren<
   {
@@ -58,6 +59,13 @@ export function ScrollArea({
     scrollHeight: 0,
     scrollTop: 0,
   });
+
+  const clearScrollHideTimer = useCallback(() => {
+    if (scrollHideTimerRef.current !== null) {
+      window.clearTimeout(scrollHideTimerRef.current);
+      scrollHideTimerRef.current = null;
+    }
+  }, []);
 
   const measure = useCallback(() => {
     const viewport = viewportRef.current;
@@ -93,12 +101,8 @@ export function ScrollArea({
   }, [children, measure]);
 
   useEffect(() => {
-    return () => {
-      if (scrollHideTimerRef.current !== null) {
-        window.clearTimeout(scrollHideTimerRef.current);
-      }
-    };
-  }, []);
+    return clearScrollHideTimer;
+  }, [clearScrollHideTimer]);
 
   const thumb = useMemo(() => {
     const trackInset = Math.max(0, scrollbarTrackInset);
@@ -128,14 +132,19 @@ export function ScrollArea({
     measure();
     if (scrollbarVisibility !== "track-hover") return;
     setScrollbarActive(true);
-    if (scrollHideTimerRef.current !== null) {
-      window.clearTimeout(scrollHideTimerRef.current);
-    }
+    clearScrollHideTimer();
     scrollHideTimerRef.current = window.setTimeout(() => {
       setScrollbarActive(false);
       scrollHideTimerRef.current = null;
     }, 900);
-  }, [measure, scrollbarVisibility]);
+  }, [clearScrollHideTimer, measure, scrollbarVisibility]);
+
+  const handleRootPointerLeave = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
+    onPointerLeave?.(event);
+    if (scrollbarVisibility !== "track-hover" || dragStateRef.current) return;
+    clearScrollHideTimer();
+    setScrollbarActive(false);
+  }, [clearScrollHideTimer, onPointerLeave, scrollbarVisibility]);
 
   const handleThumbPointerDown = useCallback(
     (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -145,6 +154,7 @@ export function ScrollArea({
 
       event.preventDefault();
       event.currentTarget.setPointerCapture?.(event.pointerId);
+      setScrollbarActive(true);
       dragStateRef.current = {
         pointerId: event.pointerId,
         startY: event.clientY,
@@ -175,21 +185,25 @@ export function ScrollArea({
     if (dragStateRef.current?.pointerId !== event.pointerId) return;
     event.currentTarget.releasePointerCapture?.(event.pointerId);
     dragStateRef.current = null;
-  }, []);
+    if (scrollbarVisibility === "track-hover") {
+      setScrollbarActive(false);
+    }
+  }, [scrollbarVisibility]);
 
   const visibilityClasses =
     scrollbarVisibility === "always"
       ? "opacity-100"
       : scrollbarVisibility === "track-hover"
         ? scrollbarActive
-          ? "opacity-100 transition-opacity hover:opacity-100 group-focus-within:opacity-100"
-          : "opacity-0 transition-opacity hover:opacity-100 group-focus-within:opacity-100"
+          ? "opacity-100 transition-opacity group-hover:opacity-100"
+          : "opacity-0 transition-opacity group-hover:opacity-100"
       : "opacity-0 transition-opacity hover:opacity-100 group-hover:opacity-100 group-focus-within:opacity-100";
 
   return (
     <div
       {...divProps}
       data-scroll-area-root
+      onPointerLeave={handleRootPointerLeave}
       className={cn("group relative isolate min-h-0 min-w-0", className)}
     >
       <div

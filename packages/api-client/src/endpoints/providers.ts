@@ -35,6 +35,9 @@ const isOauthBackedProviderRow = (item: Record<string, unknown>): boolean => {
 const normalizeClineBaseUrl = (value: unknown): string | undefined =>
   normalizeString(value)?.replace(/\/+$/g, "") || undefined;
 
+const normalizeOllamaCloudBaseUrl = (value: unknown): string =>
+  normalizeString(value)?.replace(/\/+$/g, "") || "https://ollama.com";
+
 export const providersApi = {
   async getGeminiKeys(): Promise<ProviderSimpleConfig[]> {
     const data = await apiClient.get("/gemini-api-key");
@@ -214,6 +217,49 @@ export const providersApi = {
 
   deleteClineConfig: (apiKey: string) =>
     apiClient.delete("/cline-api-key", undefined, { params: { "api-key": apiKey } }),
+
+  async getOllamaCloudConfigs(): Promise<ProviderSimpleConfig[]> {
+    const data = await apiClient.get("/ollama-cloud-api-key");
+    const list = extractArrayPayload(data, "ollama-cloud-api-key");
+    return list
+      .map((item) => {
+        if (!isRecord(item)) return null;
+        if (isOauthBackedProviderRow(item)) return null;
+        const apiKey = normalizeString(item["api-key"] ?? item.apiKey) ?? "";
+        if (!apiKey) return null;
+        const name = normalizeString(item.name) ?? undefined;
+        const prefix = normalizeString(item.prefix) ?? undefined;
+        const baseUrl = normalizeOllamaCloudBaseUrl(item["base-url"] ?? item.baseUrl);
+        const proxyUrl = normalizeString(item["proxy-url"] ?? item.proxyUrl) ?? undefined;
+        const proxyId = normalizeString(item["proxy-id"] ?? item.proxyId) ?? undefined;
+        const headers = normalizeHeaders(item.headers);
+        const models = normalizeModels(item.models);
+        const excludedModels = normalizeExcludedModels(
+          item["excluded-models"] ?? item.excludedModels,
+        );
+        return {
+          apiKey,
+          ...(name ? { name } : {}),
+          ...(prefix ? { prefix } : {}),
+          baseUrl,
+          ...(proxyUrl ? { proxyUrl } : {}),
+          ...(proxyId ? { proxyId } : {}),
+          ...(headers ? { headers } : {}),
+          ...(models ? { models } : {}),
+          ...(excludedModels ? { excludedModels } : {}),
+        };
+      })
+      .filter(Boolean) as ProviderSimpleConfig[];
+  },
+
+  saveOllamaCloudConfigs: (configs: ProviderSimpleConfig[]) =>
+    apiClient.put(
+      "/ollama-cloud-api-key",
+      configs.map((item) => serializeProviderKey(item)),
+    ),
+
+  deleteOllamaCloudConfig: (apiKey: string) =>
+    apiClient.delete("/ollama-cloud-api-key", undefined, { params: { "api-key": apiKey } }),
 
   queryOpenCodeGoUsage: (payload: {
     "workspace-id"?: string;

@@ -125,15 +125,23 @@ export function useApiKeyPermissionOptions() {
 
   const loadChannels = useCallback(async () => {
     try {
-      const [geminiKeys, claudeKeys, codexKeys, vertexKeys, openaiProviders, authFiles] =
-        await Promise.all([
-          providersApi.getGeminiKeys().catch(() => []),
-          providersApi.getClaudeConfigs().catch(() => []),
-          providersApi.getCodexConfigs().catch(() => []),
-          providersApi.getVertexConfigs().catch(() => []),
-          providersApi.getOpenAIProviders().catch(() => []),
-          authFilesApi.list().catch(() => ({ files: [] })),
-        ]);
+      const [
+        geminiKeys,
+        claudeKeys,
+        codexKeys,
+        ollamaCloudKeys,
+        vertexKeys,
+        openaiProviders,
+        authFiles,
+      ] = await Promise.all([
+        providersApi.getGeminiKeys().catch(() => []),
+        providersApi.getClaudeConfigs().catch(() => []),
+        providersApi.getCodexConfigs().catch(() => []),
+        providersApi.getOllamaCloudConfigs().catch(() => []),
+        providersApi.getVertexConfigs().catch(() => []),
+        providersApi.getOpenAIProviders().catch(() => []),
+        authFilesApi.list().catch(() => ({ files: [] })),
+      ]);
 
       const seen = new Set<string>();
       const options: MultiSelectOption[] = [];
@@ -158,6 +166,7 @@ export function useApiKeyPermissionOptions() {
       geminiKeys.forEach((item) => push(item.name || "", "API", "gemini"));
       claudeKeys.forEach((item) => push(item.name || "", "API", "claude"));
       codexKeys.forEach((item) => push(item.name || "", "API", "codex"));
+      ollamaCloudKeys.forEach((item) => push(item.name || "", "API", "ollama-cloud"));
       vertexKeys.forEach((item) => push(item.name || "", "API", "vertex"));
       openaiProviders.forEach((item) => push(item.name || "", "API", "openai"));
       (authFiles.files || []).forEach((file) => {

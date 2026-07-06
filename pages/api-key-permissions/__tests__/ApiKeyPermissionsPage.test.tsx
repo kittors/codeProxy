@@ -34,6 +34,7 @@ const mocks = vi.hoisted(() => ({
   getGeminiKeys: vi.fn(async (): Promise<unknown[]> => []),
   getClaudeConfigs: vi.fn(async (): Promise<unknown[]> => []),
   getCodexConfigs: vi.fn(async (): Promise<unknown[]> => []),
+  getOllamaCloudConfigs: vi.fn(async (): Promise<unknown[]> => []),
   getVertexConfigs: vi.fn(async (): Promise<unknown[]> => []),
   getOpenAIProviders: vi.fn(async (): Promise<unknown[]> => []),
   apiClientGet: vi.fn(async (url: string) => {
@@ -107,6 +108,7 @@ vi.mock("@code-proxy/api-client", async (importOriginal) => {
       getGeminiKeys: mocks.getGeminiKeys,
       getClaudeConfigs: mocks.getClaudeConfigs,
       getCodexConfigs: mocks.getCodexConfigs,
+      getOllamaCloudConfigs: mocks.getOllamaCloudConfigs,
       getVertexConfigs: mocks.getVertexConfigs,
       getOpenAIProviders: mocks.getOpenAIProviders,
     },

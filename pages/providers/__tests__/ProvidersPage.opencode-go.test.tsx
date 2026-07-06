@@ -30,6 +30,7 @@ const mocks = vi.hoisted(() => ({
   getBedrockConfigs: vi.fn(async (): Promise<unknown[]> => []),
   getOpenCodeGoConfigs: vi.fn(async (): Promise<any[]> => []),
   getClineConfigs: vi.fn(async (): Promise<any[]> => []),
+  getOllamaCloudConfigs: vi.fn(async (): Promise<unknown[]> => []),
   getOpenAIProviders: vi.fn(async (): Promise<unknown[]> => []),
   queryOpenCodeGoUsage: vi.fn(async () => ({
     workspace_id: "workspace-1",
@@ -77,6 +78,7 @@ vi.mock("@code-proxy/api-client", async (importOriginal) => {
       getBedrockConfigs: mocks.getBedrockConfigs,
       getOpenCodeGoConfigs: mocks.getOpenCodeGoConfigs,
       getClineConfigs: mocks.getClineConfigs,
+      getOllamaCloudConfigs: mocks.getOllamaCloudConfigs,
       getOpenAIProviders: mocks.getOpenAIProviders,
       queryOpenCodeGoUsage: mocks.queryOpenCodeGoUsage,
       saveOpenCodeGoConfigs: mocks.saveOpenCodeGoConfigs,
@@ -125,6 +127,7 @@ describe("ProvidersPage OpenCode Go tab", () => {
     mocks.getBedrockConfigs.mockImplementation(async () => []);
     mocks.getOpenCodeGoConfigs.mockImplementation(async () => []);
     mocks.getClineConfigs.mockImplementation(async () => []);
+    mocks.getOllamaCloudConfigs.mockImplementation(async () => []);
     mocks.getOpenAIProviders.mockImplementation(async () => []);
     mocks.queryOpenCodeGoUsage.mockImplementation(async () => ({
       workspace_id: "workspace-1",
@@ -532,6 +535,7 @@ describe("ProvidersPage Cline tab", () => {
     mocks.getBedrockConfigs.mockImplementation(async () => []);
     mocks.getOpenCodeGoConfigs.mockImplementation(async () => []);
     mocks.getClineConfigs.mockImplementation(async () => []);
+    mocks.getOllamaCloudConfigs.mockImplementation(async () => []);
     mocks.getOpenAIProviders.mockImplementation(async () => []);
     mocks.saveOpenCodeGoConfigs.mockImplementation(async () => ({}));
     mocks.saveClineConfigs.mockImplementation(async () => ({}));

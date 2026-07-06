@@ -5,6 +5,7 @@ import iconClaude from "@code-proxy/assets/icons/claude.svg";
 import iconCodex from "@code-proxy/assets/icons/codex.svg";
 import iconCline from "@code-proxy/assets/icons/cline.svg";
 import iconVertex from "@code-proxy/assets/icons/vertex.svg";
+import iconOllama from "@code-proxy/assets/icons/ollama.svg";
 import iconAmp from "@code-proxy/assets/icons/amp.svg";
 import iconOpenai from "@code-proxy/assets/icons/openai.svg";
 import iconOpenCodeDark from "@code-proxy/assets/icons/opencode-dark.svg";
@@ -17,6 +18,7 @@ export type ProviderTabId =
   | "codex"
   | "opencode-go"
   | "cline"
+  | "ollama-cloud"
   | "vertex"
   | "bedrock"
   | "openai"
@@ -49,6 +51,7 @@ const TAB_META: Record<ProviderTabId, { icon: ReactNode }> = {
     ),
   },
   cline: { icon: <img src={iconCline} alt="" className="size-4" /> },
+  "ollama-cloud": { icon: <img src={iconOllama} alt="" className="size-4" /> },
   vertex: { icon: <img src={iconVertex} alt="" className="size-4" /> },
   bedrock: { icon: <Cloud size={16} /> },
   openai: {

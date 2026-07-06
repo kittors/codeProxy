@@ -416,24 +416,47 @@ export function ModelVendorStatBadge({
   vendorKey,
   label,
   count,
+  active = false,
+  onClick,
 }: {
   vendorKey: ModelVendorKey;
   label: string;
   count: number;
+  active?: boolean;
+  onClick?: () => void;
 }) {
   const tone = getModelVendorColor(vendorKey);
-  return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-[10px] font-semibold",
-        tone.bg,
-        tone.text,
-        tone.border,
-      )}
-    >
+  const className = cn(
+    "inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-[10px] font-semibold",
+    tone.bg,
+    active ? "ring-2 ring-indigo-500/35 ring-offset-1 ring-offset-white dark:ring-indigo-300/40 dark:ring-offset-neutral-950" : "",
+    onClick ? "cursor-pointer transition hover:shadow-sm" : "",
+    tone.text,
+    tone.border,
+  );
+  const content = (
+    <>
       <VendorIcon modelId={vendorKey} size={12} />
       {label}
       <span className="tabular-nums">{count}</span>
-    </span>
+    </>
+  );
+
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        aria-label={`${label} ${count}`}
+        aria-pressed={active}
+        onClick={onClick}
+        className={className}
+      >
+        {content}
+      </button>
+    );
+  }
+
+  return (
+    <span className={className}>{content}</span>
   );
 }

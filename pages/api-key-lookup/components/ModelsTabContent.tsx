@@ -1,190 +1,16 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { Check, Layers, RefreshCw, Search } from "lucide-react";
+import { Layers, RefreshCw, Search } from "lucide-react";
 import { Card } from "@code-proxy/ui";
+import { ScrollArea } from "@code-proxy/ui";
 import { TextInput } from "@code-proxy/ui";
-
-// Vendor SVG icons
-import iconClaude from "@code-proxy/assets/icons/claude.svg";
-import iconOpenai from "@code-proxy/assets/icons/openai.svg";
-import iconGemini from "@code-proxy/assets/icons/gemini.svg";
-import iconDeepseek from "@code-proxy/assets/icons/deepseek.svg";
-import iconQwen from "@code-proxy/assets/icons/qwen.svg";
-import iconMinimax from "@code-proxy/assets/icons/minimax.svg";
-import iconGrok from "@code-proxy/assets/icons/grok.svg";
-import iconKimiLight from "@code-proxy/assets/icons/kimi-light.svg";
-import iconKimiDark from "@code-proxy/assets/icons/kimi-dark.svg";
-import iconCodex from "@code-proxy/assets/icons/codex.svg";
-import iconGlm from "@code-proxy/assets/icons/glm.svg";
-import iconKiro from "@code-proxy/assets/icons/kiro.svg";
-import iconVertex from "@code-proxy/assets/icons/vertex.svg";
-import iconIflow from "@code-proxy/assets/icons/iflow.svg";
-
-const VENDOR_COLORS: Record<string, { bg: string; text: string; border: string }> = {
-  claude: {
-    bg: "bg-orange-50 dark:bg-orange-950/20",
-    text: "text-orange-700 dark:text-orange-300",
-    border: "border-orange-200/60 dark:border-orange-800/30",
-  },
-  gpt: {
-    bg: "bg-emerald-50 dark:bg-emerald-950/20",
-    text: "text-emerald-700 dark:text-emerald-300",
-    border: "border-emerald-200/60 dark:border-emerald-800/30",
-  },
-  o1: {
-    bg: "bg-emerald-50 dark:bg-emerald-950/20",
-    text: "text-emerald-700 dark:text-emerald-300",
-    border: "border-emerald-200/60 dark:border-emerald-800/30",
-  },
-  o3: {
-    bg: "bg-emerald-50 dark:bg-emerald-950/20",
-    text: "text-emerald-700 dark:text-emerald-300",
-    border: "border-emerald-200/60 dark:border-emerald-800/30",
-  },
-  o4: {
-    bg: "bg-emerald-50 dark:bg-emerald-950/20",
-    text: "text-emerald-700 dark:text-emerald-300",
-    border: "border-emerald-200/60 dark:border-emerald-800/30",
-  },
-  gemini: {
-    bg: "bg-blue-50 dark:bg-blue-950/20",
-    text: "text-blue-700 dark:text-blue-300",
-    border: "border-blue-200/60 dark:border-blue-800/30",
-  },
-  deepseek: {
-    bg: "bg-cyan-50 dark:bg-cyan-950/20",
-    text: "text-cyan-700 dark:text-cyan-300",
-    border: "border-cyan-200/60 dark:border-cyan-800/30",
-  },
-  qwen: {
-    bg: "bg-violet-50 dark:bg-violet-950/20",
-    text: "text-violet-700 dark:text-violet-300",
-    border: "border-violet-200/60 dark:border-violet-800/30",
-  },
-  minimax: {
-    bg: "bg-sky-50 dark:bg-sky-950/20",
-    text: "text-sky-700 dark:text-sky-300",
-    border: "border-sky-200/60 dark:border-sky-800/30",
-  },
-  grok: {
-    bg: "bg-slate-50 dark:bg-slate-900/30",
-    text: "text-slate-700 dark:text-slate-300",
-    border: "border-slate-200/60 dark:border-slate-700/30",
-  },
-  kimi: {
-    bg: "bg-slate-50 dark:bg-slate-900/30",
-    text: "text-slate-700 dark:text-slate-300",
-    border: "border-slate-200/60 dark:border-slate-700/30",
-  },
-  codex: {
-    bg: "bg-emerald-50 dark:bg-emerald-950/20",
-    text: "text-emerald-700 dark:text-emerald-300",
-    border: "border-emerald-200/60 dark:border-emerald-800/30",
-  },
-  glm: {
-    bg: "bg-blue-50 dark:bg-blue-950/20",
-    text: "text-blue-700 dark:text-blue-300",
-    border: "border-blue-200/60 dark:border-blue-800/30",
-  },
-  kiro: {
-    bg: "bg-amber-50 dark:bg-amber-950/20",
-    text: "text-amber-700 dark:text-amber-300",
-    border: "border-amber-200/60 dark:border-amber-800/30",
-  },
-};
-
-const DEFAULT_VENDOR_COLOR = {
-  bg: "bg-slate-50 dark:bg-neutral-900/40",
-  text: "text-slate-600 dark:text-slate-300",
-  border: "border-slate-200/60 dark:border-neutral-700/40",
-};
-
-const VENDOR_ICONS: Record<string, { light: string; dark: string }> = {
-  claude: { light: iconClaude, dark: iconClaude },
-  gpt: { light: iconOpenai, dark: iconOpenai },
-  o1: { light: iconOpenai, dark: iconOpenai },
-  o3: { light: iconOpenai, dark: iconOpenai },
-  o4: { light: iconOpenai, dark: iconOpenai },
-  gemini: { light: iconGemini, dark: iconGemini },
-  deepseek: { light: iconDeepseek, dark: iconDeepseek },
-  qwen: { light: iconQwen, dark: iconQwen },
-  minimax: { light: iconMinimax, dark: iconMinimax },
-  grok: { light: iconGrok, dark: iconGrok },
-  kimi: { light: iconKimiLight, dark: iconKimiDark },
-  codex: { light: iconCodex, dark: iconCodex },
-  glm: { light: iconGlm, dark: iconGlm },
-  kiro: { light: iconKiro, dark: iconKiro },
-  vertex: { light: iconVertex, dark: iconVertex },
-  iflow: { light: iconIflow, dark: iconIflow },
-};
-
-function getVendorColor(modelId: string) {
-  const lower = modelId.toLowerCase();
-  for (const [prefix, color] of Object.entries(VENDOR_COLORS)) {
-    if (lower.startsWith(prefix)) return color;
-  }
-  return DEFAULT_VENDOR_COLOR;
-}
-
-function getVendorPrefix(modelId: string): string {
-  const lower = modelId.toLowerCase();
-  for (const prefix of Object.keys(VENDOR_ICONS)) {
-    if (lower.startsWith(prefix)) return prefix;
-  }
-  return "";
-}
-
-function VendorIcon({ modelId, size = 14 }: { modelId: string; size?: number }) {
-  const prefix = getVendorPrefix(modelId);
-  const icons = prefix ? VENDOR_ICONS[prefix] : null;
-  if (!icons) return null;
-  return (
-    <>
-      <img src={icons.light} alt="" width={size} height={size} className="dark:hidden" />
-      <img src={icons.dark} alt="" width={size} height={size} className="hidden dark:block" />
-    </>
-  );
-}
-
-function ModelTag({ id }: { id: string }) {
-  const { t } = useTranslation();
-  const [copied, setCopied] = useState(false);
-  const reduceMotion = useReducedMotion();
-  const vc = getVendorColor(id);
-
-  const handleClick = () => {
-    void navigator.clipboard.writeText(id);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
-  };
-
-  return (
-    <motion.button
-      layout
-      initial={reduceMotion ? false : { opacity: 0, y: 6, scale: 0.98 }}
-      animate={reduceMotion ? undefined : { opacity: 1, y: 0, scale: 1 }}
-      exit={reduceMotion ? undefined : { opacity: 0, y: -4, scale: 0.98 }}
-      transition={reduceMotion ? { duration: 0 } : { type: "spring", stiffness: 420, damping: 34 }}
-      type="button"
-      onClick={handleClick}
-      title={t("apikey_lookup.copy_model")}
-      className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 font-mono text-xs transition hover:shadow-sm active:scale-95 ${vc.bg} ${vc.text} ${vc.border}`}
-    >
-      {copied ? (
-        <>
-          <Check size={11} className="text-emerald-500" />
-          {t("common.copied")}
-        </>
-      ) : (
-        <>
-          <VendorIcon modelId={id} size={14} />
-          {id}
-        </>
-      )}
-    </motion.button>
-  );
-}
+import {
+  buildModelVendorStats,
+  CopyableModelTag,
+  getModelVendorKey,
+  ModelVendorStatBadge,
+  type ModelVendorKey,
+} from "@features/model-tags";
 
 export function ModelsTabContent({
   models,
@@ -200,29 +26,22 @@ export function ModelsTabContent({
   onSearchChange: (value: string) => void;
 }) {
   const { t } = useTranslation();
-  const reduceMotion = useReducedMotion();
+  const [selectedModelVendor, setSelectedModelVendor] = useState<"all" | ModelVendorKey>("all");
 
   const filteredModels = useMemo(() => {
     const needle = searchFilter.trim().toLowerCase();
-    if (!needle) return models;
-    return models.filter((id) => id.toLowerCase().includes(needle));
-  }, [models, searchFilter]);
+    return models.filter((id) => {
+      if (selectedModelVendor !== "all" && getModelVendorKey(id) !== selectedModelVendor) {
+        return false;
+      }
+      return !needle || id.toLowerCase().includes(needle);
+    });
+  }, [models, searchFilter, selectedModelVendor]);
 
   const vendorStats = useMemo(() => {
-    const map = new Map<string, number>();
-    for (const id of models) {
-      const lower = id.toLowerCase();
-      let vendor = t("common.other");
-      for (const prefix of Object.keys(VENDOR_COLORS)) {
-        if (lower.startsWith(prefix)) {
-          vendor = prefix;
-          break;
-        }
-      }
-      map.set(vendor, (map.get(vendor) ?? 0) + 1);
-    }
-    return Array.from(map.entries()).sort((a, b) => b[1] - a[1]);
+    return buildModelVendorStats(models, t("common.other"));
   }, [models, t]);
+  const isModelFilterActive = Boolean(searchFilter.trim()) || selectedModelVendor !== "all";
 
   return (
     <Card padding="none" className="overflow-hidden">
@@ -235,7 +54,7 @@ export function ModelsTabContent({
           <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[11px] font-bold tabular-nums text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-300">
             {filteredModels.length}
           </span>
-          {searchFilter && filteredModels.length !== models.length ? (
+          {isModelFilterActive && filteredModels.length !== models.length ? (
             <span className="text-[10px] text-slate-400 dark:text-white/30">/ {models.length}</span>
           ) : null}
         </div>
@@ -251,40 +70,38 @@ export function ModelsTabContent({
       </div>
 
       {vendorStats.length > 0 ? (
-        <div className="flex flex-wrap items-center gap-2 border-b border-slate-100 px-5 py-2.5 dark:border-neutral-800/60">
-          <AnimatePresence initial={false}>
-            {vendorStats.map(([vendor, count]) => {
-              const vc = VENDOR_COLORS[vendor] ?? DEFAULT_VENDOR_COLOR;
-              const iconKey = `${vendor}-placeholder`;
-              return (
-                <motion.span
-                  layout
-                  key={vendor}
-                  initial={reduceMotion ? false : { opacity: 0, y: 4 }}
-                  animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
-                  exit={reduceMotion ? undefined : { opacity: 0, y: -4 }}
-                  transition={
-                    reduceMotion ? { duration: 0 } : { type: "spring", stiffness: 420, damping: 36 }
-                  }
-                  className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-[10px] font-semibold ${vc.bg} ${vc.text} ${vc.border}`}
-                >
-                  <VendorIcon modelId={iconKey} size={12} />
-                  {vendor}
-                  <AnimatePresence mode="popLayout" initial={false}>
-                    <motion.span
-                      key={`${vendor}-${count}`}
-                      initial={reduceMotion ? false : { opacity: 0, y: 4 }}
-                      animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
-                      exit={reduceMotion ? undefined : { opacity: 0, y: -4 }}
-                      className="tabular-nums"
-                    >
-                      {count}
-                    </motion.span>
-                  </AnimatePresence>
-                </motion.span>
-              );
-            })}
-          </AnimatePresence>
+        <div
+          className="flex flex-wrap items-center gap-2 border-b border-slate-100 px-5 py-2.5 dark:border-neutral-800/60"
+          aria-label={t("apikey_lookup.available_models")}
+        >
+          <button
+            type="button"
+            aria-label={`${t("common.all", { defaultValue: "All" })} ${models.length}`}
+            aria-pressed={selectedModelVendor === "all"}
+            onClick={() => setSelectedModelVendor("all")}
+            className={[
+              "inline-flex items-center gap-1.5 rounded-md border border-slate-200/70 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-600 transition hover:shadow-sm dark:border-neutral-700/60 dark:bg-neutral-900 dark:text-white/70",
+              selectedModelVendor === "all"
+                ? "ring-2 ring-indigo-500/35 ring-offset-1 ring-offset-white dark:ring-indigo-300/40 dark:ring-offset-neutral-950"
+                : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
+          >
+            <Layers size={12} aria-hidden="true" />
+            {t("common.all", { defaultValue: "All" })}
+            <span className="tabular-nums">{models.length}</span>
+          </button>
+          {vendorStats.map((stat) => (
+            <ModelVendorStatBadge
+              key={stat.key}
+              vendorKey={stat.key}
+              label={stat.label}
+              count={stat.count}
+              active={selectedModelVendor === stat.key}
+              onClick={() => setSelectedModelVendor(stat.key)}
+            />
+          ))}
         </div>
       ) : null}
 
@@ -294,7 +111,14 @@ export function ModelsTabContent({
         </div>
       ) : null}
 
-      <div className="max-h-[480px] overflow-y-auto px-5 py-4">
+      <ScrollArea
+        className="[&_[data-scroll-area-scrollbar='y']]:right-1"
+        viewportClassName="max-h-[480px]"
+        contentClassName="px-5 py-4 pr-8"
+        scrollbarVisibility="track-hover"
+        scrollbarTrackInset={4}
+        data-testid="apikey-lookup-models-scroll-area"
+      >
         {loading && models.length === 0 ? (
           <div className="flex items-center justify-center py-12 text-sm text-slate-500 dark:text-white/50">
             <RefreshCw size={14} className="mr-2 animate-spin" />
@@ -302,11 +126,14 @@ export function ModelsTabContent({
           </div>
         ) : filteredModels.length > 0 ? (
           <div className="flex flex-wrap gap-2">
-            <AnimatePresence initial={false}>
-              {filteredModels.map((id) => (
-                <ModelTag key={id} id={id} />
-              ))}
-            </AnimatePresence>
+            {filteredModels.map((id) => (
+              <CopyableModelTag
+                key={id}
+                id={id}
+                title={t("apikey_lookup.copy_model")}
+                copiedLabel={t("common.copied")}
+              />
+            ))}
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center py-12 text-slate-400 dark:text-white/30">
@@ -316,7 +143,7 @@ export function ModelsTabContent({
             </p>
           </div>
         )}
-      </div>
+      </ScrollArea>
     </Card>
   );
 }

@@ -284,8 +284,12 @@ test("API Key Lookup: Quick Import copy button surfaces the ccswitch link via cl
   // tooltip/title string. The card body's accessible name is the provider
   // name, so the copy button is uniquely identified by the copy label.
   const copyButton = page.getByRole("button", { name: /Copy import link|复制导入链接/i });
-  await expect(copyButton).toBeVisible();
-  await copyButton.first().click();
+  const firstCopyButton = copyButton.first();
+  const firstCopyAction = firstCopyButton.locator("xpath=..");
+  await expect(firstCopyAction).toHaveCSS("opacity", "0");
+  await cardButton.hover();
+  await expect(firstCopyAction).toHaveCSS("opacity", "1");
+  await firstCopyButton.click();
 
   // The copy button flips to a "copied" state immediately, then resets after
   // ~1.8s. We assert the pressed-state visual: the title becomes

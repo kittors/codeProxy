@@ -35,6 +35,8 @@ export interface UpdateProgressResponse {
   status: "idle" | "running" | "completed" | "failed" | string;
   stage?: string;
   message?: string;
+  progress_percent?: number;
+  migration?: UpdateMigrationProgress;
   service?: string;
   target_image?: string;
   target_tag?: string;
@@ -47,6 +49,18 @@ export interface UpdateProgressResponse {
   updated_at?: string;
   finished_at?: string;
   logs?: UpdateProgressLogEntry[];
+}
+
+export interface UpdateMigrationProgress {
+  phase?: string;
+  target_database?: string;
+  skip_reason?: string;
+  table?: string;
+  table_index?: number;
+  table_total?: number;
+  inserted_rows?: number;
+  target_rows?: number;
+  planned_inserts?: number;
 }
 
 export interface UpdateApplyResponse {

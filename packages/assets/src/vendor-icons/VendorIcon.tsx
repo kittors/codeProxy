@@ -13,6 +13,7 @@ import iconKimiLight from "@code-proxy/assets/icons/kimi-light.svg";
 import iconKiro from "@code-proxy/assets/icons/kiro.svg";
 import iconMimo from "@code-proxy/assets/icons/mimo.svg";
 import iconMinimax from "@code-proxy/assets/icons/minimax.svg";
+import iconOllama from "@code-proxy/assets/icons/ollama.svg";
 import iconOpencodeDark from "@code-proxy/assets/icons/opencode-dark.svg";
 import iconOpencodeLight from "@code-proxy/assets/icons/opencode-light.svg";
 import iconOpenaiDark from "@code-proxy/assets/icons/openai-dark.svg";
@@ -36,6 +37,7 @@ const VENDOR_ICONS: Record<string, { light: string; dark: string }> = {
   kimi: { light: iconKimiLight, dark: iconKimiDark },
   mimo: { light: iconMimo, dark: iconMimo },
   minimax: { light: iconMinimax, dark: iconMinimax },
+  ollama: { light: iconOllama, dark: iconOllama },
   o1: { light: iconOpenaiLight, dark: iconOpenaiDark },
   o3: { light: iconOpenaiLight, dark: iconOpenaiDark },
   o4: { light: iconOpenaiLight, dark: iconOpenaiDark },
