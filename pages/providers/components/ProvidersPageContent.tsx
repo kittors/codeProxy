@@ -50,6 +50,7 @@ const PROVIDER_TAB_VALUES: ProviderTab[] = [
   "codex",
   "opencode-go",
   "cline",
+  "ollama-cloud",
   "vertex",
   "bedrock",
   "openai",
@@ -185,6 +186,7 @@ export function ProvidersPage() {
   const [codexKeys, setCodexKeys] = useState<ProviderSimpleConfig[]>([]);
   const [openCodeGoKeys, setOpenCodeGoKeys] = useState<ProviderSimpleConfig[]>([]);
   const [clineKeys, setClineKeys] = useState<ProviderSimpleConfig[]>([]);
+  const [ollamaCloudKeys, setOllamaCloudKeys] = useState<ProviderSimpleConfig[]>([]);
   const [vertexKeys, setVertexKeys] = useState<ProviderSimpleConfig[]>([]);
   const [bedrockKeys, setBedrockKeys] = useState<BedrockProviderConfig[]>([]);
   const [openaiProviders, setOpenaiProviders] = useState<OpenAIProvider[]>([]);
@@ -244,7 +246,15 @@ export function ProvidersPage() {
     | null
     | {
         type: "deleteKey";
-        keyType: "gemini" | "claude" | "codex" | "opencode-go" | "cline" | "vertex" | "bedrock";
+        keyType:
+          | "gemini"
+          | "claude"
+          | "codex"
+          | "opencode-go"
+          | "cline"
+          | "ollama-cloud"
+          | "vertex"
+          | "bedrock";
         index: number;
       }
     | { type: "deleteOpenAI"; index: number }
@@ -315,6 +325,14 @@ export function ProvidersPage() {
         const freshCl = await providersApi.getClineConfigs();
         setClineKeys(freshCl);
         setCachedData("cline", freshCl);
+        break;
+      }
+      case "ollama-cloud": {
+        const cachedOl = getCachedData<ProviderSimpleConfig[]>("ollama-cloud");
+        if (cachedOl) setOllamaCloudKeys(cachedOl);
+        const freshOl = await providersApi.getOllamaCloudConfigs();
+        setOllamaCloudKeys(freshOl);
+        setCachedData("ollama-cloud", freshOl);
         break;
       }
       case "vertex": {
@@ -490,6 +508,7 @@ export function ProvidersPage() {
     codexKeys,
     openCodeGoKeys,
     clineKeys,
+    ollamaCloudKeys,
     vertexKeys,
     bedrockKeys,
     setGeminiKeys,
@@ -497,6 +516,7 @@ export function ProvidersPage() {
     setCodexKeys,
     setOpenCodeGoKeys,
     setClineKeys,
+    setOllamaCloudKeys,
     setVertexKeys,
     setBedrockKeys,
     refreshAll,
@@ -551,6 +571,7 @@ export function ProvidersPage() {
         provider === "codex" ||
         provider === "opencode-go" ||
         provider === "cline" ||
+        provider === "ollama-cloud" ||
         provider === "vertex" ||
         provider === "bedrock"
       ) {
@@ -661,6 +682,8 @@ export function ProvidersPage() {
           return openCodeGoKeys;
         case "cline":
           return clineKeys;
+        case "ollama-cloud":
+          return ollamaCloudKeys;
         case "vertex":
           return vertexKeys;
         case "bedrock":
@@ -675,6 +698,7 @@ export function ProvidersPage() {
       clineKeys,
       codexKeys,
       geminiKeys,
+      ollamaCloudKeys,
       openCodeGoKeys,
       openaiProviders,
       vertexKeys,
@@ -720,6 +744,7 @@ export function ProvidersPage() {
       codex: codexKeys.length,
       "opencode-go": openCodeGoKeys.length,
       cline: clineKeys.length,
+      "ollama-cloud": ollamaCloudKeys.length,
       vertex: vertexKeys.length,
       bedrock: bedrockKeys.length,
       openai: openaiProviders.length,
@@ -731,6 +756,7 @@ export function ProvidersPage() {
     clineKeys,
     codexKeys,
     openCodeGoKeys,
+    ollamaCloudKeys,
     vertexKeys,
     bedrockKeys,
     openaiProviders,
@@ -758,6 +784,9 @@ export function ProvidersPage() {
           return;
         case "cline":
           await providersApi.saveClineConfigs(items as ProviderSimpleConfig[]);
+          return;
+        case "ollama-cloud":
+          await providersApi.saveOllamaCloudConfigs(items as ProviderSimpleConfig[]);
           return;
         case "vertex":
           await providersApi.saveVertexConfigs(items as ProviderSimpleConfig[]);
@@ -938,6 +967,7 @@ export function ProvidersPage() {
             { id: "codex", label: "Codex", count: tabCounts.codex },
             { id: "opencode-go", label: "OpenCode Go", count: tabCounts["opencode-go"] },
             { id: "cline", label: "ClinePass", count: tabCounts.cline },
+            { id: "ollama-cloud", label: "Ollama Cloud", count: tabCounts["ollama-cloud"] },
             { id: "vertex", label: "Vertex", count: tabCounts.vertex },
             { id: "bedrock", label: "Bedrock", count: tabCounts.bedrock },
             { id: "openai", label: t("providers.openai_compatible"), count: tabCounts.openai },
@@ -1023,9 +1053,7 @@ export function ProvidersPage() {
                     queryReady={queryReady}
                     usageEntry={queryReady ? usageEntry : undefined}
                     loading={
-                      queryReady
-                        ? (openCodeGoUsageLoadingState[cacheKey] ?? !usageEntry)
-                        : false
+                      queryReady ? (openCodeGoUsageLoadingState[cacheKey] ?? !usageEntry) : false
                     }
                   />
                 );
@@ -1086,6 +1114,27 @@ export function ProvidersPage() {
               onEdit={(idx) => openKeyEditor("cline", idx)}
               onDelete={(idx) => setConfirm({ type: "deleteKey", keyType: "cline", index: idx })}
               onToggleEnabled={(idx, enabled) => void toggleKeyEnabled("cline", idx, enabled)}
+              getStats={getSimpleStats}
+              getStatusBar={getSimpleStatusBar}
+              getLatencyEntry={getLatencyEntry}
+              checkLatency={checkLatency}
+              selectedKeys={selectedExportKeySet}
+              onToggleSelected={toggleExportSelection}
+            />
+          </TabsContent>
+
+          <TabsContent value="ollama-cloud" className="min-h-0 flex flex-1 flex-col">
+            <ProviderKeyListCard
+              items={ollamaCloudKeys}
+              loading={isActiveTabListLoading("ollama-cloud")}
+              onAdd={() => openKeyEditor("ollama-cloud", null)}
+              onEdit={(idx) => openKeyEditor("ollama-cloud", idx)}
+              onDelete={(idx) =>
+                setConfirm({ type: "deleteKey", keyType: "ollama-cloud", index: idx })
+              }
+              onToggleEnabled={(idx, enabled) =>
+                void toggleKeyEnabled("ollama-cloud", idx, enabled)
+              }
               getStats={getSimpleStats}
               getStatusBar={getSimpleStatusBar}
               getLatencyEntry={getLatencyEntry}

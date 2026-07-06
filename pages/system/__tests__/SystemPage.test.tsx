@@ -33,6 +33,7 @@ vi.mock("@code-proxy/api-client", () => ({
     getClaudeConfigs: async () => [],
     getCodexConfigs: async () => [],
     getOpenCodeGoConfigs: async () => [],
+    getOllamaCloudConfigs: async () => [],
     getVertexConfigs: async () => [],
     getOpenAIProviders: async () =>
       normalizeOpenAIProviders(await mocks.apiGet("/openai-compatibility")),

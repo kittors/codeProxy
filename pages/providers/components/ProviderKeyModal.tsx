@@ -77,7 +77,15 @@ interface ProviderKeyModalProps {
   open: boolean;
   editKeyIndex: number | null;
   editKeyTitle: string;
-  editKeyType: "gemini" | "claude" | "codex" | "opencode-go" | "cline" | "vertex" | "bedrock";
+  editKeyType:
+    | "gemini"
+    | "claude"
+    | "codex"
+    | "opencode-go"
+    | "cline"
+    | "ollama-cloud"
+    | "vertex"
+    | "bedrock";
   keyDraft: ProviderKeyDraft;
   setKeyDraft: Dispatch<SetStateAction<ProviderKeyDraft>>;
   keyDraftError: string | null;
@@ -126,6 +134,7 @@ export function ProviderKeyModal({
   const isBedrock = editKeyType === "bedrock";
   const isOpenCodeGo = editKeyType === "opencode-go";
   const isCline = editKeyType === "cline";
+  const isOllamaCloud = editKeyType === "ollama-cloud";
   const isModelAccessProvider = isOpenCodeGo || isCline;
   const modelAccessChannel = isCline ? "cline" : "opencode-go";
 
@@ -499,6 +508,7 @@ export function ProviderKeyModal({
               proxyPoolEntries={proxyPoolEntries}
               isOpenCodeGo={isOpenCodeGo}
               isCline={isCline}
+              isOllamaCloud={isOllamaCloud}
               openCodeVisionFallbackOptions={openCodeVisionFallbackOptions}
               openCodeModelsLoading={openCodeModelsLoading}
             />

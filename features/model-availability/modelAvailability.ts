@@ -118,6 +118,7 @@ const PROVIDER_CHANNELS = [
   { key: "claude", load: () => providersApi.getClaudeConfigs() },
   { key: "codex", load: () => providersApi.getCodexConfigs() },
   { key: "opencode-go", load: () => providersApi.getOpenCodeGoConfigs() },
+  { key: "ollama-cloud", load: () => providersApi.getOllamaCloudConfigs() },
   { key: "vertex", load: () => providersApi.getVertexConfigs() },
 ] as const;
 

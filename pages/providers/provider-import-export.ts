@@ -26,6 +26,7 @@ export type ProviderImportKind =
   | "codex"
   | "opencode-go"
   | "cline"
+  | "ollama-cloud"
   | "vertex"
   | "bedrock"
   | "openai";
@@ -36,6 +37,7 @@ type ProviderItemsByKind = {
   codex: ProviderSimpleConfig[];
   "opencode-go": ProviderSimpleConfig[];
   cline: ProviderSimpleConfig[];
+  "ollama-cloud": ProviderSimpleConfig[];
   vertex: ProviderSimpleConfig[];
   bedrock: BedrockProviderConfig[];
   openai: OpenAIProvider[];
@@ -159,7 +161,9 @@ const normalizeSimpleItem = (
   if (!apiKey) return { item: null, duplicateCount: 0 };
   const headers = sortRecord(normalizeHeaders(value.headers));
   const { models, duplicateCount } = normalizeModelList(value.models);
-  const baseUrl = normalizeString(value["base-url"] ?? value.baseUrl) ?? undefined;
+  const baseUrl =
+    normalizeString(value["base-url"] ?? value.baseUrl) ??
+    (kind === "ollama-cloud" ? "https://ollama.com" : undefined);
 
   return {
     item: {
@@ -358,6 +362,7 @@ const serializeItem = (kind: ProviderImportKind, item: CanonicalProviderItem) =>
     case "claude":
     case "codex":
     case "cline":
+    case "ollama-cloud":
     case "vertex":
       return serializeProviderKey(item as ProviderSimpleConfig);
     case "opencode-go":

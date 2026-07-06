@@ -31,6 +31,7 @@ const OPENCODE_GO_MODELS_URL = "https://opencode.ai/zen/go/v1/models";
 const OPENCODE_GO_CHAT_URL = "https://opencode.ai/zen/go/v1/chat/completions";
 const OPENCODE_GO_MESSAGES_URL = "https://opencode.ai/zen/go/v1/messages";
 const CLINE_BASE_URL = "https://api.cline.bot/api/v1";
+const OLLAMA_CLOUD_BASE_URL = "https://ollama.com";
 interface ProviderKeyRequestTabProps {
   keyDraft: ProviderKeyDraft;
   setKeyDraft: Dispatch<SetStateAction<ProviderKeyDraft>>;
@@ -38,6 +39,7 @@ interface ProviderKeyRequestTabProps {
   proxyPoolEntries: ProxyPoolEntry[];
   isOpenCodeGo: boolean;
   isCline: boolean;
+  isOllamaCloud: boolean;
   openCodeVisionFallbackOptions: { value: string; label: string }[];
   openCodeModelsLoading: boolean;
 }
@@ -49,6 +51,7 @@ export function ProviderKeyRequestTab({
   proxyPoolEntries,
   isOpenCodeGo,
   isCline,
+  isOllamaCloud,
   openCodeVisionFallbackOptions,
   openCodeModelsLoading,
 }: ProviderKeyRequestTabProps) {
@@ -57,6 +60,10 @@ export function ProviderKeyRequestTab({
   const clineChatUrl = useMemo(() => {
     const baseUrl = keyDraft.baseUrl.trim().replace(/\/+$/g, "") || CLINE_BASE_URL;
     return `${baseUrl}/chat/completions`;
+  }, [keyDraft.baseUrl]);
+  const ollamaCloudChatUrl = useMemo(() => {
+    const baseUrl = keyDraft.baseUrl.trim().replace(/\/+$/g, "") || OLLAMA_CLOUD_BASE_URL;
+    return `${baseUrl}/api/chat`;
   }, [keyDraft.baseUrl]);
 
   return (
@@ -87,6 +94,17 @@ export function ProviderKeyRequestTab({
           </p>
           <p className="mt-2 text-xs text-slate-500 dark:text-white/55">
             {t("providers.cline_endpoint_hint")}
+          </p>
+        </SectionCard>
+      ) : null}
+
+      {isOllamaCloud ? (
+        <SectionCard className="bg-slate-50/80 dark:bg-neutral-900/50">
+          <p className="text-sm font-semibold text-slate-900 dark:text-white">
+            Ollama Cloud endpoint
+          </p>
+          <p className="mt-3 break-all font-mono text-xs text-slate-600 dark:text-white/65">
+            {ollamaCloudChatUrl}
           </p>
         </SectionCard>
       ) : null}
@@ -203,11 +221,13 @@ export function ProviderKeyRequestTab({
                   setKeyDraft((prev) => ({ ...prev, baseUrl: val }));
                 }}
                 placeholder={
-                  isCline
-                    ? CLINE_BASE_URL
-                    : editKeyType === "claude"
-                      ? t("providers.claude_base_url_placeholder")
-                      : t("providers.base_url_placeholder")
+                  isOllamaCloud
+                    ? OLLAMA_CLOUD_BASE_URL
+                    : isCline
+                      ? CLINE_BASE_URL
+                      : editKeyType === "claude"
+                        ? t("providers.claude_base_url_placeholder")
+                        : t("providers.base_url_placeholder")
                 }
               />
             </div>
