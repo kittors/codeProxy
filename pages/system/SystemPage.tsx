@@ -18,6 +18,7 @@ import {
 import { useAuth } from "@app/providers/AuthProvider";
 import { Button } from "@code-proxy/ui";
 import { Card } from "@code-proxy/ui";
+import { ScrollArea } from "@code-proxy/ui";
 import { TextInput } from "@code-proxy/ui";
 import { useToast } from "@code-proxy/ui";
 import { UpdateDetailsCard } from "@app/update/UpdateDetailsCard";
@@ -29,7 +30,9 @@ import {
 import {
   buildModelVendorStats,
   CopyableModelTag,
+  getModelVendorKey,
   ModelVendorStatBadge,
+  type ModelVendorKey,
 } from "@features/model-tags";
 import { HoverTooltip } from "@code-proxy/ui";
 
@@ -130,6 +133,8 @@ type SystemModelEntry = {
   sources?: ModelAvailabilitySource[];
 };
 
+type ModelVendorFilter = "all" | ModelVendorKey;
+
 const formatSourceLabel = (source: ModelAvailabilitySource): string => {
   const label = source.label.trim();
   const provider = source.provider?.trim();
@@ -200,6 +205,7 @@ export function SystemPage({
   const [modelsError, setModelsError] = useState<string | null>(null);
   const [models, setModels] = useState<SystemModelEntry[]>([]);
   const [modelFilter, setModelFilter] = useState("");
+  const [selectedModelVendor, setSelectedModelVendor] = useState<ModelVendorFilter>("all");
 
   const loadModels = useCallback(async () => {
     setModelsLoading(true);
@@ -251,9 +257,13 @@ export function SystemPage({
 
   const filteredModels = useMemo(() => {
     const needle = modelFilter.trim().toLowerCase();
-    if (!needle) return models;
-    return models.filter((model) => model.id.toLowerCase().includes(needle));
-  }, [modelFilter, models]);
+    return models.filter((model) => {
+      if (selectedModelVendor !== "all" && getModelVendorKey(model.id) !== selectedModelVendor) {
+        return false;
+      }
+      return !needle || model.id.toLowerCase().includes(needle);
+    });
+  }, [modelFilter, models, selectedModelVendor]);
 
   const vendorStats = useMemo(() => {
     return buildModelVendorStats(
@@ -381,13 +391,36 @@ export function SystemPage({
 
         {/* Vendor stats bar */}
         {vendorStats.length > 0 && !modelsLoading && (
-          <div className="flex flex-wrap items-center gap-2 border-b border-slate-100 px-5 py-2.5 dark:border-neutral-800/60">
+          <div
+            className="flex flex-wrap items-center gap-2 border-b border-slate-100 px-5 py-2.5 dark:border-neutral-800/60"
+            aria-label={t("system_page.available_models")}
+          >
+            <button
+              type="button"
+              aria-label={`${t("common.all", { defaultValue: "All" })} ${models.length}`}
+              aria-pressed={selectedModelVendor === "all"}
+              onClick={() => setSelectedModelVendor("all")}
+              className={[
+                "inline-flex items-center gap-1.5 rounded-md border border-slate-200/70 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-600 transition hover:shadow-sm dark:border-neutral-700/60 dark:bg-neutral-900 dark:text-white/70",
+                selectedModelVendor === "all"
+                  ? "ring-2 ring-indigo-500/35 ring-offset-1 ring-offset-white dark:ring-indigo-300/40 dark:ring-offset-neutral-950"
+                  : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
+            >
+              <Layers size={12} aria-hidden="true" />
+              {t("common.all", { defaultValue: "All" })}
+              <span className="tabular-nums">{models.length}</span>
+            </button>
             {vendorStats.map((stat) => (
               <ModelVendorStatBadge
                 key={stat.key}
                 vendorKey={stat.key}
                 label={stat.label}
                 count={stat.count}
+                active={selectedModelVendor === stat.key}
+                onClick={() => setSelectedModelVendor(stat.key)}
               />
             ))}
           </div>
@@ -401,7 +434,14 @@ export function SystemPage({
         )}
 
         {/* Model tags */}
-        <div className="max-h-[480px] overflow-y-auto px-5 py-4 md:max-h-none md:min-h-0 md:flex-1">
+        <ScrollArea
+          className="md:min-h-0 md:flex-1 [&_[data-scroll-area-scrollbar='y']]:right-1"
+          viewportClassName="max-h-[480px] md:max-h-none md:!h-full"
+          contentClassName="px-5 py-4 pr-8"
+          scrollbarVisibility="track-hover"
+          scrollbarTrackInset={4}
+          data-testid="system-models-scroll-area"
+        >
           {modelsLoading && models.length === 0 ? (
             <div className="flex items-center justify-center py-12 text-sm text-slate-500 dark:text-white/50">
               <RefreshCw size={14} className="animate-spin mr-2" />
@@ -460,7 +500,7 @@ export function SystemPage({
               </p>
             </div>
           )}
-        </div>
+        </ScrollArea>
       </Card>
     </div>
   );
