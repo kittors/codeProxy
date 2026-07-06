@@ -75,6 +75,7 @@ test("Sidebar: collapse/expand should keep nav items nowrap and slide out of vie
   page,
 }) => {
   await setAuthed(page);
+  await page.setViewportSize({ width: 1280, height: 520 });
 
   await page.route("**/v0/management/config", async (route) => {
     await route.fulfill({
@@ -100,10 +101,26 @@ test("Sidebar: collapse/expand should keep nav items nowrap and slide out of vie
   const linkWhiteSpace = await dashboardLink.evaluate((el) => getComputedStyle(el).whiteSpace);
   expect(linkWhiteSpace).toBe("nowrap");
 
+  const aside = page.locator("aside");
+  const sidebarScrollbar = aside.locator("[data-scroll-area-scrollbar='y']");
+  await expect(sidebarScrollbar).toHaveCount(1);
+  await expect
+    .poll(async () => Number(await sidebarScrollbar.evaluate((el) => getComputedStyle(el).opacity)))
+    .toBeLessThan(0.05);
+
+  await dashboardLink.hover();
+  await expect
+    .poll(async () => Number(await sidebarScrollbar.evaluate((el) => getComputedStyle(el).opacity)))
+    .toBeGreaterThan(0.95);
+
+  await page.mouse.move(760, 120);
+  await expect
+    .poll(async () => Number(await sidebarScrollbar.evaluate((el) => getComputedStyle(el).opacity)))
+    .toBeLessThan(0.05);
+
   await page.getByRole("button", { name: /Collapse Sidebar|收起侧边栏/i }).click();
   await expect(page.getByRole("button", { name: /Expand Sidebar|展开侧边栏/i })).toBeVisible();
 
-  const aside = page.locator("aside");
   await expect
     .poll(async () => {
       return await aside.evaluate((el) => el.getBoundingClientRect().width);
@@ -194,7 +211,7 @@ test("API Keys: table should scroll vertically when many keys are listed", async
 
   await page.goto("/#/api-keys");
 
-  const tableScroller = page.locator(".table-scrollbar");
+  const tableScroller = page.locator("[data-vt-scroll-content]").locator("xpath=..");
   await expect(tableScroller).toBeVisible();
 
   await expect
