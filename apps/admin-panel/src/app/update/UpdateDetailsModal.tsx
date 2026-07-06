@@ -84,8 +84,28 @@ const UPDATE_PROGRESS_MESSAGE_KEYS: Record<string, string> = {
   "pulling target image": "auto_update.progress_message_pulling_target_image",
   "starting postgresql/redis before sqlite migration":
     "auto_update.progress_message_starting_runtime",
+  "checking legacy sqlite migration before service restart":
+    "auto_update.progress_message_checking_sqlite",
   "migrating legacy sqlite data before restarting service":
     "auto_update.progress_message_migrating_sqlite",
+  "legacy sqlite database found; preparing postgresql import":
+    "auto_update.progress_message_preparing_sqlite_import",
+  "running sqlite inventory before postgresql import":
+    "auto_update.progress_message_sqlite_inventory",
+  "running postgresql import dry-run":
+    "auto_update.progress_message_postgres_dry_run",
+  "applying legacy sqlite data into postgresql":
+    "auto_update.progress_message_applying_sqlite",
+  "legacy sqlite migration skipped because auto-migration is disabled":
+    "auto_update.progress_message_sqlite_skipped_disabled",
+  "no legacy sqlite database found; continuing with postgresql runtime data":
+    "auto_update.progress_message_sqlite_skipped_missing",
+  "sqlite import dry-run complete; apply is disabled":
+    "auto_update.progress_message_sqlite_skipped_import_disabled",
+  "legacy sqlite migration complete; preparing service restart":
+    "auto_update.progress_message_sqlite_complete",
+  "legacy sqlite migration check finished before service restart":
+    "auto_update.progress_message_finishing_migration",
   "finishing sqlite migration before service restart":
     "auto_update.progress_message_finishing_migration",
   "recreating service container without restarting dependencies":
@@ -186,10 +206,12 @@ function explicitProgressPercent(progress?: UpdateProgressResponse | null) {
 
 const MIGRATION_PHASE_LABEL_KEYS: Record<string, string> = {
   starting_runtime: "auto_update.progress_migration_phase_starting_runtime",
+  checking: "auto_update.progress_migration_phase_checking",
   preparing: "auto_update.progress_migration_phase_preparing",
   inventory: "auto_update.progress_migration_phase_inventory",
   dry_run: "auto_update.progress_migration_phase_dry_run",
   applying: "auto_update.progress_migration_phase_applying",
+  skipped: "auto_update.progress_migration_phase_skipped",
   finalizing: "auto_update.progress_migration_phase_finalizing",
 };
 
@@ -407,6 +429,8 @@ function UpdateProgressConsole({
   const isRunning = progressStatus === "running";
   const progressTarget = useVisualProgressTarget(progress);
   const animatedPercent = useAnimatedProgressValue(progressTarget, isFailed);
+  const progressPercentLabel = `${Math.round(animatedPercent)}%`;
+  const progressMarkerLeft = `clamp(1.5rem, ${animatedPercent}%, calc(100% - 1.5rem))`;
   const progressMessage = translateProgressMessage(t, progress, stage);
   const progressDetails = migrationProgressDetails(t, progress);
   const StatusIcon = isCompleted
@@ -500,23 +524,32 @@ function UpdateProgressConsole({
             >
               {stageLabel(t, stage)}
             </span>
-            <span className="font-mono text-lg font-semibold text-slate-900 dark:text-white">
-              {Math.round(animatedPercent)}%
-            </span>
           </div>
         </div>
 
-        <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-200/80 dark:bg-white/10">
-          <div
-            className={[
-              "relative h-full rounded-full transition-[width] duration-500 ease-out",
-              progressBarClass,
-            ].join(" ")}
-            style={{ width: `${animatedPercent}%` }}
-          >
-            {isRunning ? (
-              <span className="absolute inset-y-0 right-0 w-16 bg-white/30 blur-md dark:bg-white/20" />
-            ) : null}
+        <div className="mt-4">
+          <div className="relative h-7">
+            <span
+              data-testid="update-progress-percent"
+              className="absolute top-0 z-10 -translate-x-1/2 font-mono text-sm font-semibold text-slate-900 dark:text-white"
+              style={{ left: progressMarkerLeft }}
+            >
+              {progressPercentLabel}
+            </span>
+            <div className="absolute inset-x-0 bottom-0 h-2 overflow-hidden rounded-full bg-slate-200/80 dark:bg-white/10">
+              <div
+                data-testid="update-progress-fill"
+                className={[
+                  "relative h-full rounded-full transition-[width] duration-500 ease-out",
+                  progressBarClass,
+                ].join(" ")}
+                style={{ width: `${animatedPercent}%` }}
+              >
+                {isRunning ? (
+                  <span className="absolute inset-y-0 right-0 w-16 bg-white/30 blur-md dark:bg-white/20" />
+                ) : null}
+              </div>
+            </div>
           </div>
         </div>
 

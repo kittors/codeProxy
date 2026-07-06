@@ -54,6 +54,7 @@ export interface UpdateProgressResponse {
 export interface UpdateMigrationProgress {
   phase?: string;
   target_database?: string;
+  skip_reason?: string;
   table?: string;
   table_index?: number;
   table_total?: number;

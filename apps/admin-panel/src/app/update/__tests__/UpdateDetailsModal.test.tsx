@@ -101,8 +101,14 @@ describe("UpdateDetailsModal", () => {
         "Migrating legacy SQLite data before restarting the service.",
       ),
     ).toBeInTheDocument();
-    expect(screen.getByText("Migrating data")).toBeInTheDocument();
+    expect(screen.getByText("Data migration check")).toBeInTheDocument();
     expect(screen.getByText("86%")).toBeInTheDocument();
+    expect(screen.getByTestId("update-progress-percent")).toHaveStyle({
+      left: "clamp(1.5rem, 86%, calc(100% - 1.5rem))",
+    });
+    expect(screen.getByTestId("update-progress-fill")).toHaveStyle({
+      width: "86%",
+    });
     expect(screen.getByTestId("update-progress-details")).toHaveTextContent(
       "Target: PostgreSQL",
     );
@@ -118,6 +124,42 @@ describe("UpdateDetailsModal", () => {
     expect(
       screen.queryByText("sqlite import progress: table 16/17 request_logs"),
     ).toBeNull();
+  });
+
+  test("shows skipped SQLite migration as a check instead of active migration", async () => {
+    render(
+      <UpdateDetailsModal
+        open
+        candidate={candidate}
+        updateTarget={candidate}
+        updating
+        progress={{
+          status: "running",
+          stage: "migrating",
+          message:
+            "no legacy SQLite database found; continuing with PostgreSQL runtime data",
+          progress_percent: 88,
+          migration: {
+            phase: "skipped",
+            target_database: "PostgreSQL",
+            skip_reason: "no_legacy_sqlite",
+          },
+        }}
+        onApply={() => {}}
+        onClose={() => {}}
+      />,
+    );
+
+    expect(
+      screen.getByText(
+        "No legacy SQLite database was found; continuing with the PostgreSQL runtime data.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Data migration check")).toBeInTheDocument();
+    expect(screen.getByTestId("update-progress-details")).toHaveTextContent(
+      "Phase: skipped",
+    );
+    expect(screen.queryByText(/Migrating legacy SQLite data/)).toBeNull();
   });
 
   test("renders localized success styling when already up to date", async () => {
