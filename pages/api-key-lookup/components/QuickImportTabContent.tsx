@@ -252,7 +252,7 @@ function QuickImportCard({
           </span>
         </span>
       </button>
-      <div className="relative z-10 flex items-start gap-1 p-3 pl-0 opacity-70 transition-opacity group-hover/card:opacity-100 focus-within:opacity-100">
+      <div className="pointer-events-none relative z-10 flex items-start gap-1 p-3 pl-0 opacity-0 transition-opacity group-hover/card:pointer-events-auto group-hover/card:opacity-100 focus-within:pointer-events-auto focus-within:opacity-100">
         <Button
           variant="ghost"
           size="xs"
