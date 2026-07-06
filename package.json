@@ -14,6 +14,7 @@
     "preview": "bun run --filter @code-proxy/admin-panel preview",
     "lint": "oxlint .",
     "format": "oxfmt .",
+    "ci:pr": "./scripts/ci-pr.sh",
     "check": "bun run lint && bun run boundary:imports && bun run build && bun run bundle:diff",
     "boundary:imports": "node scripts/check-import-boundaries.mjs",
     "bundle:diff": "node scripts/bundle-diff.mjs",
