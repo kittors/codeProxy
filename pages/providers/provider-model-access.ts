@@ -8,7 +8,6 @@ import {
 import {
   hasDisableAllModelsRule,
   normalizeDiscoveredModels,
-  stripDisableAllModelsRule,
 } from "./providers-helpers";
 
 export type ModelAccessProvider = "opencode-go" | "cline" | "ollama-cloud";
@@ -55,22 +54,11 @@ export function getEffectiveProviderModels(
 ): ProviderModel[] {
   if (hasDisableAllModelsRule(item.excludedModels)) return [];
 
-  const excluded = new Set(
-    stripDisableAllModelsRule(item.excludedModels).map((model) =>
-      model.toLowerCase(),
-    ),
-  );
   const configured = (item.models ?? []).filter((model) => {
     const name = model.name?.trim() ?? "";
     return name && isModelAllowedForProvider(provider, name);
   });
-  const base =
-    configured.length > 0
-      ? configured
-      : catalog.map((model) => ({ name: model.id }));
-
-  return base.filter((model) => {
-    const name = model.name?.trim().toLowerCase() ?? "";
-    return name && !excluded.has(name);
-  });
+  return configured.length > 0
+    ? configured
+    : catalog.map((model) => ({ name: model.id }));
 }

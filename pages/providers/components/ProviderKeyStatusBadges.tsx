@@ -21,6 +21,11 @@ export function ProviderKeyStatusBadges({
 }: ProviderKeyStatusBadgesProps) {
   const { t } = useTranslation();
   const isBedrock = editKeyType === "bedrock";
+  const showExcludedBadge =
+    showModelBadges &&
+    editKeyType !== "opencode-go" &&
+    editKeyType !== "cline" &&
+    editKeyType !== "ollama-cloud";
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -41,12 +46,18 @@ export function ProviderKeyStatusBadges({
         <>
           <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-700 dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-white/75">
             {t("providers.models_label")}:{" "}
-            <span className="font-semibold tabular-nums">{editKeyModelCount}</span>
+            <span className="font-semibold tabular-nums">
+              {editKeyModelCount}
+            </span>
           </span>
-          <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-700 dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-white/75">
-            {t("providers.excluded_models_label")}:{" "}
-            <span className="font-semibold tabular-nums">{editKeyExcludedCount}</span>
-          </span>
+          {showExcludedBadge ? (
+            <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-700 dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-white/75">
+              {t("providers.excluded_models_label")}:{" "}
+              <span className="font-semibold tabular-nums">
+                {editKeyExcludedCount}
+              </span>
+            </span>
+          ) : null}
         </>
       ) : null}
       {editKeyType === "vertex" ? (

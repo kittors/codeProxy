@@ -17,7 +17,6 @@ import type { ProviderKeyDraft } from "../providers-helpers";
 import {
   excludedModelsFromText,
   hasDisableAllModelsRule,
-  stripDisableAllModelsRule,
 } from "../providers-helpers";
 import { createEmptyModelEntry, type ModelEntryDraft } from "../ModelInputList";
 import { ProviderKeyStatusBadges } from "./ProviderKeyStatusBadges";
@@ -240,23 +239,15 @@ export function ProviderKeyModal({
     [keyDraft.excludedModelsText],
   );
   const disableAllModels = hasDisableAllModelsRule(excludedModels);
-  const excludedModelIds = useMemo(
-    () =>
-      new Set(
-        stripDisableAllModelsRule(excludedModels).map((model) =>
-          model.toLowerCase(),
-        ),
-      ),
-    [excludedModels],
-  );
+  const excludedModelIds = useMemo(() => new Set<string>(), []);
   const enabledOpenCodeModelIds = useMemo(
     () =>
       new Set(
-        openCodeModels
-          .map((model) => model.id.trim().toLowerCase())
+        keyDraft.modelEntries
+          .map((model) => model.name.trim().toLowerCase())
           .filter(Boolean),
       ),
-    [openCodeModels],
+    [keyDraft.modelEntries],
   );
   const isOpenCodeModelAllowed = useCallback(
     (modelId: string) => {
@@ -264,10 +255,10 @@ export function ProviderKeyModal({
       return (
         normalized !== "" &&
         !disableAllModels &&
-        !excludedModelIds.has(normalized)
+        enabledOpenCodeModelIds.has(normalized)
       );
     },
-    [disableAllModels, excludedModelIds],
+    [disableAllModels, enabledOpenCodeModelIds],
   );
   const filteredOpenCodeModels = useMemo(() => {
     const query = openCodeModelQuery.trim().toLowerCase();
@@ -339,18 +330,27 @@ export function ProviderKeyModal({
       const normalized = modelId.trim().toLowerCase();
       if (!normalized) return;
       setKeyDraft((prev) => {
-        const currentExcluded = stripDisableAllModelsRule(
-          excludedModelsFromText(prev.excludedModelsText),
+        const exists = prev.modelEntries.some(
+          (entry) => entry.name.trim().toLowerCase() === normalized,
         );
-        const nextExcluded = currentExcluded.filter(
-          (model) => model.trim().toLowerCase() !== normalized,
-        );
+        const currentExcluded = excludedModelsFromText(prev.excludedModelsText);
+        const nextExcluded = allowed
+          ? currentExcluded.filter((model) => model.trim() !== "*")
+          : currentExcluded;
+        const nextEntries = allowed
+          ? exists
+            ? prev.modelEntries
+            : [
+                ...prev.modelEntries,
+                { ...createEmptyModelEntry(), name: modelId },
+              ]
+          : prev.modelEntries.filter(
+              (entry) => entry.name.trim().toLowerCase() !== normalized,
+            );
         return {
           ...prev,
-          excludedModelsText: (allowed
-            ? nextExcluded
-            : [...nextExcluded, modelId]
-          ).join("\n"),
+          excludedModelsText: nextExcluded.join("\n"),
+          modelEntries: nextEntries,
         };
       });
     },
@@ -360,21 +360,28 @@ export function ProviderKeyModal({
   const setAllFetchedOpenCodeModelsAllowed = useCallback(
     (allowed: boolean) => {
       const fetchedIds = new Set(
-        openCodeModels.map((model) => model.id.toLowerCase()),
+        openCodeModels.map((model) => model.id.trim().toLowerCase()),
       );
       setKeyDraft((prev) => {
-        const currentExcluded = stripDisableAllModelsRule(
-          excludedModelsFromText(prev.excludedModelsText),
+        const currentExcluded = excludedModelsFromText(prev.excludedModelsText);
+        const existingNames = new Set(
+          prev.modelEntries
+            .map((entry) => entry.name.trim().toLowerCase())
+            .filter(Boolean),
         );
-        const unknownExcluded = currentExcluded.filter(
-          (model) => !fetchedIds.has(model.toLowerCase()),
-        );
+        const addedEntries = openCodeModels
+          .filter((model) => !existingNames.has(model.id.trim().toLowerCase()))
+          .map((model) => ({ ...createEmptyModelEntry(), name: model.id }));
         return {
           ...prev,
-          excludedModelsText: (allowed
-            ? unknownExcluded
-            : [...unknownExcluded, ...openCodeModels.map((model) => model.id)]
-          ).join("\n"),
+          excludedModelsText: allowed
+            ? currentExcluded.filter((model) => model.trim() !== "*").join("\n")
+            : prev.excludedModelsText,
+          modelEntries: allowed
+            ? [...prev.modelEntries, ...addedEntries]
+            : prev.modelEntries.filter(
+                (entry) => !fetchedIds.has(entry.name.trim().toLowerCase()),
+              ),
         };
       });
     },

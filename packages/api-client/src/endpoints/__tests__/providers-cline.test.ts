@@ -23,7 +23,8 @@ describe("providersApi Cline", () => {
   });
 
   test("normalizes Cline configs with default and trimmed Base URL", async () => {
-    const { providersApi } = await import("@code-proxy/api-client/endpoints/providers");
+    const { providersApi } =
+      await import("@code-proxy/api-client/endpoints/providers");
     getMock.mockResolvedValue({
       "cline-api-key": [
         {
@@ -38,7 +39,7 @@ describe("providersApi Cline", () => {
           "proxy-url": "http://127.0.0.1:7890",
           headers: { "X-Test": "yes" },
           models: [{ name: "cline-pass/glm-5.2", alias: "cline-glm" }],
-          "excluded-models": ["cline-pass/minimax-m3", "*"],
+          "excluded-models": ["*"],
           "vision-fallback-model": "cline-pass/mimo-v2.5-pro",
         },
       ],
@@ -61,18 +62,23 @@ describe("providersApi Cline", () => {
         proxyUrl: "http://127.0.0.1:7890",
         headers: { "X-Test": "yes" },
         models: [{ name: "cline-pass/glm-5.2", alias: "cline-glm" }],
-        excludedModels: ["cline-pass/minimax-m3", "*"],
+        excludedModels: ["*"],
         visionFallbackModel: "cline-pass/mimo-v2.5-pro",
       },
     ]);
   });
 
   test("ignores OAuth and runtime rows returned by the Cline config endpoint", async () => {
-    const { providersApi } = await import("@code-proxy/api-client/endpoints/providers");
+    const { providersApi } =
+      await import("@code-proxy/api-client/endpoints/providers");
     getMock.mockResolvedValue({
       "cline-api-key": [
         { name: "Cline API key", "api-key": "sk-cline" },
-        { name: "OAuth backed", "api-key": "oauth-token", account_type: "oauth" },
+        {
+          name: "OAuth backed",
+          "api-key": "oauth-token",
+          account_type: "oauth",
+        },
         { name: "runtime", "api-key": "runtime-token", runtime_only: true },
       ],
     });
@@ -87,7 +93,8 @@ describe("providersApi Cline", () => {
   });
 
   test("serializes and deletes Cline configs", async () => {
-    const { providersApi } = await import("@code-proxy/api-client/endpoints/providers");
+    const { providersApi } =
+      await import("@code-proxy/api-client/endpoints/providers");
     putMock.mockResolvedValue({ status: "ok" });
     deleteMock.mockResolvedValue({ status: "ok" });
 
@@ -101,7 +108,7 @@ describe("providersApi Cline", () => {
         proxyUrl: "http://127.0.0.1:7890",
         headers: { "X-Test": "yes" },
         models: [{ name: "cline-pass/glm-5.2", alias: "cline-glm" }],
-        excludedModels: ["cline-pass/minimax-m3", "*"],
+        excludedModels: ["*"],
         visionFallbackModel: "cline-pass/mimo-v2.5-pro",
       },
     ]);
@@ -116,7 +123,7 @@ describe("providersApi Cline", () => {
         "proxy-url": "http://127.0.0.1:7890",
         headers: { "X-Test": "yes" },
         models: [{ name: "cline-pass/glm-5.2", alias: "cline-glm" }],
-        "excluded-models": ["cline-pass/minimax-m3", "*"],
+        "excluded-models": ["*"],
         "vision-fallback-model": "cline-pass/mimo-v2.5-pro",
       },
     ]);
@@ -129,14 +136,15 @@ describe("providersApi Cline", () => {
   });
 
   test("patches Cline config and excluded models on the Cline endpoint", async () => {
-    const { providersApi } = await import("@code-proxy/api-client/endpoints/providers");
+    const { providersApi } =
+      await import("@code-proxy/api-client/endpoints/providers");
 
     await providersApi.patchClineConfig(0, {
       name: "Cline",
       apiKey: "sk-cline",
       baseUrl: "https://api.cline.bot/api/v1",
       models: [{ name: "cline-pass/glm-5.2", alias: "glm" }],
-      excludedModels: ["cline-pass/minimax-m3", "*"],
+      excludedModels: ["*"],
       visionFallbackModel: "cline-pass/mimo-v2.5-pro",
     });
 
@@ -147,7 +155,7 @@ describe("providersApi Cline", () => {
         "api-key": "sk-cline",
         "base-url": "https://api.cline.bot/api/v1",
         models: [{ name: "cline-pass/glm-5.2", alias: "glm" }],
-        "excluded-models": ["cline-pass/minimax-m3", "*"],
+        "excluded-models": ["*"],
         "vision-fallback-model": "cline-pass/mimo-v2.5-pro",
       },
     });
@@ -161,7 +169,8 @@ describe("providersApi Cline", () => {
   });
 
   test("omits empty api-key when patching an existing Cline config", async () => {
-    const { providersApi } = await import("@code-proxy/api-client/endpoints/providers");
+    const { providersApi } =
+      await import("@code-proxy/api-client/endpoints/providers");
 
     await providersApi.patchClineConfig(0, {
       name: "Cline",
