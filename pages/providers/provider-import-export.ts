@@ -162,7 +162,11 @@ const normalizeSimpleItem = (
   const apiKey = normalizeString(value["api-key"] ?? value.apiKey) ?? "";
   if (!apiKey) return { item: null, duplicateCount: 0 };
   const headers = sortRecord(normalizeHeaders(value.headers));
-  const { models, duplicateCount } = normalizeModelList(value.models);
+  const hasDynamicModelAccess =
+    kind === "opencode-go" || kind === "cline" || kind === "ollama-cloud";
+  const { models, duplicateCount } = hasDynamicModelAccess
+    ? { models: undefined, duplicateCount: 0 }
+    : normalizeModelList(value.models);
   const excludedModels = sortExcludedModels(value["excluded-models"] ?? value.excludedModels);
   const baseUrl =
     normalizeString(value["base-url"] ?? value.baseUrl) ??

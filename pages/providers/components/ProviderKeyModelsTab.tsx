@@ -6,12 +6,7 @@ import { Checkbox } from "@code-proxy/ui";
 import { DataTable, type DataTableColumn } from "@code-proxy/ui";
 import { TextInput } from "@code-proxy/ui";
 import { SearchableSelect } from "@code-proxy/ui";
-import {
-  excludedModelsFromText,
-  hasDisableAllModelsRule,
-  stripDisableAllModelsRule,
-  type ProviderKeyDraft,
-} from "../providers-helpers";
+import { type ProviderKeyDraft } from "../providers-helpers";
 import {
   createEmptyModelEntry,
   ModelInputList,
