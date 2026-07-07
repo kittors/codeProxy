@@ -189,19 +189,13 @@ export function useProviderKeyEditor({
         : isOllamaCloud
           ? "ollama-cloud"
           : null;
-    const excludedModels = rawExcludedModels?.filter((model) => {
-      const trimmed = model.trim();
-      return (
-        trimmed === "*" ||
-        !modelAccessProvider ||
-        isModelAllowedForProvider(modelAccessProvider, trimmed)
-      );
-    });
-    const excludedModelSet = new Set(
-      stripDisableAllModelsRule(excludedModels).map((model) =>
-        model.toLowerCase(),
-      ),
-    );
+    const disableAllModelAccess =
+      modelAccessProvider && hasDisableAllModelsRule(rawExcludedModels);
+    const excludedModels = modelAccessProvider
+      ? disableAllModelAccess
+        ? ["*"]
+        : undefined
+      : rawExcludedModels;
 
     const requireAlias = editKeyType === "vertex";
     const modelCommit = commitModelEntries(keyDraft.modelEntries, {
@@ -217,13 +211,13 @@ export function useProviderKeyEditor({
       modelAccessProvider && modelCommit.models
         ? modelCommit.models.filter((model) => {
             const name = model.name?.trim() ?? "";
-            return (
-              name &&
-              isModelAllowedForProvider(modelAccessProvider, name) &&
-              !excludedModelSet.has(name.toLowerCase())
-            );
+            return name && isModelAllowedForProvider(modelAccessProvider, name);
           })
         : modelCommit.models;
+    const modelAccessExcludedModels =
+      modelAccessProvider && (!models?.length || disableAllModelAccess)
+        ? ["*"]
+        : undefined;
     const result: ProviderSimpleConfig | BedrockProviderConfig = {
       apiKey:
         editKeyType === "bedrock" && keyDraft.authMode === "sigv4"
@@ -245,7 +239,9 @@ export function useProviderKeyEditor({
         : {}),
       ...(keyDraft.proxyId.trim() ? { proxyId: keyDraft.proxyId.trim() } : {}),
       ...(headers ? { headers } : {}),
-      ...(excludedModels?.length ? { excludedModels } : {}),
+      ...((modelAccessExcludedModels ?? excludedModels)?.length
+        ? { excludedModels: modelAccessExcludedModels ?? excludedModels }
+        : {}),
       ...(isOpenCodeGo && keyDraft.workspaceId.trim()
         ? { workspaceId: keyDraft.workspaceId.trim() }
         : {}),
@@ -516,7 +512,10 @@ export function useProviderKeyEditor({
           await providersApi.patchClineExcludedModels(index, nextExcluded);
         } else if (type === "ollama-cloud") {
           setOllamaCloudKeys(nextList);
-          await providersApi.patchOllamaCloudExcludedModels(index, nextExcluded);
+          await providersApi.patchOllamaCloudExcludedModels(
+            index,
+            nextExcluded,
+          );
         } else {
           setBedrockKeys(nextList as BedrockProviderConfig[]);
           await providersApi.saveBedrockConfigs(

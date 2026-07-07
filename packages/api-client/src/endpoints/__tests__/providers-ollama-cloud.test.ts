@@ -23,14 +23,15 @@ describe("providersApi Ollama Cloud", () => {
   });
 
   test("normalizes Ollama Cloud configs with default Base URL and model aliases", async () => {
-    const { providersApi } = await import("@code-proxy/api-client/endpoints/providers");
+    const { providersApi } =
+      await import("@code-proxy/api-client/endpoints/providers");
     getMock.mockResolvedValue({
       "ollama-cloud-api-key": [
         {
           name: "Ollama",
           "api-key": "sk-ollama",
           models: [{ name: "gpt-oss:120b", alias: "oss-large" }],
-          "excluded-models": ["gpt-oss:20b", "*"],
+          "excluded-models": ["*"],
         },
         { name: "Runtime", "api-key": "runtime-token", runtime_only: true },
       ],
@@ -42,14 +43,15 @@ describe("providersApi Ollama Cloud", () => {
         apiKey: "sk-ollama",
         baseUrl: "https://ollama.com",
         models: [{ name: "gpt-oss:120b", alias: "oss-large" }],
-        excludedModels: ["gpt-oss:20b", "*"],
+        excludedModels: ["*"],
       },
     ]);
     expect(getMock).toHaveBeenCalledWith("/ollama-cloud-api-key");
   });
 
   test("serializes Ollama Cloud configs with model aliases and deletes them", async () => {
-    const { providersApi } = await import("@code-proxy/api-client/endpoints/providers");
+    const { providersApi } =
+      await import("@code-proxy/api-client/endpoints/providers");
 
     await providersApi.saveOllamaCloudConfigs([
       {
@@ -57,7 +59,7 @@ describe("providersApi Ollama Cloud", () => {
         apiKey: "sk-ollama",
         baseUrl: "https://ollama.com",
         models: [{ name: "gpt-oss:120b", alias: "oss-large" }],
-        excludedModels: ["gpt-oss:20b", "*"],
+        excludedModels: ["*"],
       },
     ]);
 
@@ -67,25 +69,30 @@ describe("providersApi Ollama Cloud", () => {
         "api-key": "sk-ollama",
         "base-url": "https://ollama.com",
         models: [{ name: "gpt-oss:120b", alias: "oss-large" }],
-        "excluded-models": ["gpt-oss:20b", "*"],
+        "excluded-models": ["*"],
       },
     ]);
 
     await providersApi.deleteOllamaCloudConfig("sk-ollama");
-    expect(deleteMock).toHaveBeenCalledWith("/ollama-cloud-api-key", undefined, {
-      params: { "api-key": "sk-ollama" },
-    });
+    expect(deleteMock).toHaveBeenCalledWith(
+      "/ollama-cloud-api-key",
+      undefined,
+      {
+        params: { "api-key": "sk-ollama" },
+      },
+    );
   });
 
   test("patches Ollama Cloud config and excluded models on the Ollama endpoint", async () => {
-    const { providersApi } = await import("@code-proxy/api-client/endpoints/providers");
+    const { providersApi } =
+      await import("@code-proxy/api-client/endpoints/providers");
 
     await providersApi.patchOllamaCloudConfig(2, {
       name: "Ollama",
       apiKey: "sk-ollama",
       baseUrl: "https://ollama.com",
       models: [{ name: "gpt-oss:120b", alias: "oss-large" }],
-      excludedModels: ["gpt-oss:20b", "*"],
+      excludedModels: ["*"],
       visionFallbackModel: "gpt-oss:120b",
     });
 
@@ -96,7 +103,7 @@ describe("providersApi Ollama Cloud", () => {
         "api-key": "sk-ollama",
         "base-url": "https://ollama.com",
         models: [{ name: "gpt-oss:120b", alias: "oss-large" }],
-        "excluded-models": ["gpt-oss:20b", "*"],
+        "excluded-models": ["*"],
         "vision-fallback-model": "gpt-oss:120b",
       },
     });
@@ -110,7 +117,8 @@ describe("providersApi Ollama Cloud", () => {
   });
 
   test("omits empty api-key when patching an existing Ollama Cloud config", async () => {
-    const { providersApi } = await import("@code-proxy/api-client/endpoints/providers");
+    const { providersApi } =
+      await import("@code-proxy/api-client/endpoints/providers");
 
     await providersApi.patchOllamaCloudConfig(0, {
       name: "Ollama",

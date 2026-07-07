@@ -46,12 +46,22 @@ const mocks = vi.hoisted(() => ({
   saveOpenCodeGoConfigs: vi.fn(async (_configs: unknown[]) => ({})),
   saveClineConfigs: vi.fn(async (_configs: unknown[]) => ({})),
   saveOllamaCloudConfigs: vi.fn(async (_configs: unknown[]) => ({})),
-  patchOpenCodeGoConfig: vi.fn(async (_index: number, _config: unknown) => ({})),
+  patchOpenCodeGoConfig: vi.fn(
+    async (_index: number, _config: unknown) => ({}),
+  ),
   patchClineConfig: vi.fn(async (_index: number, _config: unknown) => ({})),
-  patchOllamaCloudConfig: vi.fn(async (_index: number, _config: unknown) => ({})),
-  patchOpenCodeGoExcludedModels: vi.fn(async (_index: number, _models: string[]) => ({})),
-  patchClineExcludedModels: vi.fn(async (_index: number, _models: string[]) => ({})),
-  patchOllamaCloudExcludedModels: vi.fn(async (_index: number, _models: string[]) => ({})),
+  patchOllamaCloudConfig: vi.fn(
+    async (_index: number, _config: unknown) => ({}),
+  ),
+  patchOpenCodeGoExcludedModels: vi.fn(
+    async (_index: number, _models: string[]) => ({}),
+  ),
+  patchClineExcludedModels: vi.fn(
+    async (_index: number, _models: string[]) => ({}),
+  ),
+  patchOllamaCloudExcludedModels: vi.fn(
+    async (_index: number, _models: string[]) => ({}),
+  ),
   getModelDefinitions: vi.fn(async (_channel?: string) => [
     { id: "deepseek-v4-flash", object: "model", owned_by: "opencode" },
     { id: "qwen3.5-plus", object: "model", owned_by: "opencode" },
@@ -275,7 +285,7 @@ describe("ProvidersPage OpenCode Go tab", () => {
 
     expect(await screen.findByText("deepseek-v4-flash")).toBeInTheDocument();
     expect(screen.queryByText("cline-pass/glm-5.2")).not.toBeInTheDocument();
-    expect(screen.queryByText("qwen3.5-plus")).not.toBeInTheDocument();
+    expect(screen.getByText("qwen3.5-plus")).toBeInTheDocument();
   });
 
   test("opens OpenCode Go route and saves a key without requiring Base URL", async () => {
@@ -386,7 +396,7 @@ describe("ProvidersPage OpenCode Go tab", () => {
         name: "Existing OpenCode Go",
         apiKey: "sk-existing-opencode-go",
         models: [{ name: "cline-pass/glm-5.2" }],
-        excludedModels: ["cline-pass/minimax-m3", "*"],
+        excludedModels: ["*"],
         visionFallbackModel: "qwen3.5-plus",
       },
     ]);
@@ -795,7 +805,7 @@ describe("ProvidersPage Cline tab", () => {
         apiKey: "sk-cline",
         baseUrl: "https://api.cline.bot/api/v1",
         models: [{ name: "cline-pass/glm-5.2" }],
-        excludedModels: ["cline-pass/minimax-m3", "*"],
+        excludedModels: ["*"],
         visionFallbackModel: "cline-pass/mimo-v2.5-pro",
       },
     ]);
@@ -830,7 +840,7 @@ describe("ProvidersPage Cline tab", () => {
         expect.objectContaining({
           name: "Existing Cline",
           apiKey: "",
-          excludedModels: ["cline-pass/minimax-m3", "*"],
+          excludedModels: ["*"],
         }),
       );
     });
@@ -838,6 +848,7 @@ describe("ProvidersPage Cline tab", () => {
     const saved = mocks.patchClineConfig.mock.calls[0][1];
     expect(saved).toHaveProperty("models", [
       { name: "cline-pass/glm-5.2" },
+      { name: "cline-pass/minimax-m3" },
       { name: "cline-pass/qwen3.7-max" },
       { name: "cline-pass/mimo-v2.5-pro" },
     ]);
@@ -926,7 +937,7 @@ describe("ProvidersPage Ollama Cloud tab", () => {
         apiKey: "sk-ollama",
         baseUrl: "https://ollama.com",
         models: [{ name: "gpt-oss:120b" }, { name: "gpt-oss:20b" }],
-        excludedModels: ["gpt-oss:20b"],
+        excludedModels: ["*"],
       },
     ]);
 
@@ -960,13 +971,16 @@ describe("ProvidersPage Ollama Cloud tab", () => {
         expect.objectContaining({
           name: "Existing Ollama Cloud",
           apiKey: "",
-          excludedModels: ["gpt-oss:20b"],
+          excludedModels: ["*"],
         }),
       );
     });
     expect(mocks.saveOllamaCloudConfigs).not.toHaveBeenCalled();
     const saved = mocks.patchOllamaCloudConfig.mock.calls[0][1];
-    expect(saved).toHaveProperty("models", [{ name: "gpt-oss:120b" }]);
+    expect(saved).toHaveProperty("models", [
+      { name: "gpt-oss:120b" },
+      { name: "gpt-oss:20b" },
+    ]);
   });
 
   test("does not show legacy Ollama Cloud excluded models on provider cards", async () => {
@@ -991,9 +1005,7 @@ describe("ProvidersPage Ollama Cloud tab", () => {
       </MemoryRouter>,
     );
 
-    await user.click(
-      await screen.findByRole("tab", { name: /Ollama Cloud/ }),
-    );
+    await user.click(await screen.findByRole("tab", { name: /Ollama Cloud/ }));
     expect(
       await screen.findByText("Ollama Hidden Excluded"),
     ).toBeInTheDocument();

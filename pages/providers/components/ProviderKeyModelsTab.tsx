@@ -287,15 +287,6 @@ export function ProviderKeyModelsTab({
             />
           </div>
         </SectionCard>
-
-        <SectionCard>
-          <ExcludedModelsEditor
-            count={editKeyExcludedCount}
-            editKeyEnabledToggle={editKeyEnabledToggle}
-            keyDraft={keyDraft}
-            setKeyDraft={setKeyDraft}
-          />
-        </SectionCard>
       </div>
     );
   }
