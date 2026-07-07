@@ -58,6 +58,7 @@ describe("providersApi Cline", () => {
         proxyUrl: "http://127.0.0.1:7890",
         headers: { "X-Test": "yes" },
         excludedModels: ["cline-pass/minimax-m3", "*"],
+        visionFallbackModel: "cline-pass/mimo-v2.5-pro",
       },
     ]);
   });
@@ -111,6 +112,7 @@ describe("providersApi Cline", () => {
         "proxy-url": "http://127.0.0.1:7890",
         headers: { "X-Test": "yes" },
         "excluded-models": ["cline-pass/minimax-m3", "*"],
+        "vision-fallback-model": "cline-pass/mimo-v2.5-pro",
       },
     ]);
 

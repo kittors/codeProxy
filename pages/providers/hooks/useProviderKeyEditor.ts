@@ -218,6 +218,9 @@ export function useProviderKeyEditor({
       ...(isOpenCodeGo && keyDraft.authCookie.trim()
         ? { authCookie: keyDraft.authCookie.trim() }
         : {}),
+      ...((isOpenCodeGo || isCline) && keyDraft.visionFallbackModel.trim()
+        ? { visionFallbackModel: keyDraft.visionFallbackModel.trim() }
+        : {}),
       ...(modelCommit.models ? { models: modelCommit.models } : {}),
       ...(editKeyType === "claude" && keyDraft.skipAnthropicProcessing
         ? { skipAnthropicProcessing: true }
