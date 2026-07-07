@@ -34,6 +34,8 @@ const mocks = vi.hoisted(() => ({
   getGeminiKeys: vi.fn(async (): Promise<unknown[]> => []),
   getClaudeConfigs: vi.fn(async (): Promise<unknown[]> => []),
   getCodexConfigs: vi.fn(async (): Promise<unknown[]> => []),
+  getOpenCodeGoConfigs: vi.fn(async (): Promise<unknown[]> => []),
+  getClineConfigs: vi.fn(async (): Promise<unknown[]> => []),
   getOllamaCloudConfigs: vi.fn(async (): Promise<unknown[]> => []),
   getVertexConfigs: vi.fn(async (): Promise<unknown[]> => []),
   getOpenAIProviders: vi.fn(async (): Promise<unknown[]> => []),
@@ -108,6 +110,8 @@ vi.mock("@code-proxy/api-client", async (importOriginal) => {
       getGeminiKeys: mocks.getGeminiKeys,
       getClaudeConfigs: mocks.getClaudeConfigs,
       getCodexConfigs: mocks.getCodexConfigs,
+      getOpenCodeGoConfigs: mocks.getOpenCodeGoConfigs,
+      getClineConfigs: mocks.getClineConfigs,
       getOllamaCloudConfigs: mocks.getOllamaCloudConfigs,
       getVertexConfigs: mocks.getVertexConfigs,
       getOpenAIProviders: mocks.getOpenAIProviders,
@@ -193,6 +197,9 @@ describe("ApiKeyPermissionsPage", () => {
       { name: "Claude备用" },
     ] as any);
     mocks.getCodexConfigs.mockResolvedValue(Array<unknown>());
+    mocks.getOpenCodeGoConfigs.mockResolvedValue(Array<unknown>());
+    mocks.getClineConfigs.mockResolvedValue(Array<unknown>());
+    mocks.getOllamaCloudConfigs.mockResolvedValue(Array<unknown>());
     mocks.getVertexConfigs.mockResolvedValue(Array<unknown>());
     mocks.getOpenAIProviders.mockResolvedValue(Array<unknown>());
     mocks.apiClientGet.mockClear();
@@ -274,6 +281,27 @@ describe("ApiKeyPermissionsPage", () => {
         ]),
       );
     });
+  });
+
+  test("loads provider channels from OpenCode Go, ClinePass and Ollama Cloud configs", async () => {
+    mocks.getOpenCodeGoConfigs.mockResolvedValue([{ name: "OpenCode Go 主渠道" }]);
+    mocks.getClineConfigs.mockResolvedValue([{ name: "ClinePass 主渠道" }]);
+    mocks.getOllamaCloudConfigs.mockResolvedValue([{ name: "Ollama Cloud 主渠道" }]);
+
+    renderPage();
+
+    expect(await screen.findByText("标准配置")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "新增配置" }));
+    const dialog = await screen.findByRole("dialog", { name: "新增权限配置" });
+    await userEvent.click(
+      within(dialog).getByRole("switch", { name: "精确渠道覆盖（高级）" }),
+    );
+    await userEvent.click(within(dialog).getByRole("button", { name: /^全部渠道$/i }));
+
+    expect(await screen.findByRole("button", { name: /OpenCode Go 主渠道/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /ClinePass 主渠道/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Ollama Cloud 主渠道/i })).toBeInTheDocument();
   });
 
   test("refreshes stale API key entries before applying edited profile channels", async () => {

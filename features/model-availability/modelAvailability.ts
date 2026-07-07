@@ -117,6 +117,7 @@ const PROVIDER_CHANNELS = [
   { key: "gemini", load: () => providersApi.getGeminiKeys() },
   { key: "claude", load: () => providersApi.getClaudeConfigs() },
   { key: "codex", load: () => providersApi.getCodexConfigs() },
+  { key: "cline", load: () => providersApi.getClineConfigs() },
   { key: "opencode-go", load: () => providersApi.getOpenCodeGoConfigs() },
   { key: "ollama-cloud", load: () => providersApi.getOllamaCloudConfigs() },
   { key: "vertex", load: () => providersApi.getVertexConfigs() },
