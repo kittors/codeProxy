@@ -178,7 +178,8 @@ export function ProviderKeyModelsTab({
         headerClassName: "text-center",
         cellClassName: "text-center",
         headerRender: () => (
-          <div className="flex items-center justify-center gap-2">
+          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+            <span aria-hidden="true" />
             <Checkbox
               checked={allOpenCodeModelsAllowed}
               indeterminate={someOpenCodeModelsAllowed}
@@ -186,7 +187,9 @@ export function ProviderKeyModelsTab({
               disabled={openCodeModels.length === 0}
               aria-label={t("providers.model_enabled")}
             />
-            <span>{t("providers.model_enabled")}</span>
+            <span className="justify-self-start">
+              {t("providers.model_enabled")}
+            </span>
           </div>
         ),
         render: (model) => {

@@ -52,6 +52,7 @@ export function getEffectiveProviderModels(
   item: ProviderSimpleConfig,
   catalog: DiscoveredProviderModel[],
 ): ProviderModel[] {
+  if (item.disabled === true) return [];
   if (hasDisableAllModelsRule(item.excludedModels)) return [];
 
   const configured = (item.models ?? []).filter((model) => {
