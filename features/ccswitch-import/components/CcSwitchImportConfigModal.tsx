@@ -13,7 +13,10 @@ import { Select } from "@code-proxy/ui";
 import { Tabs, TabsList, TabsTrigger } from "@code-proxy/ui";
 import {
   CC_SWITCH_CLIENTS,
+  CC_SWITCH_CODEX_MODEL_CATALOG_FILENAME,
+  buildCcSwitchCodexModelCatalog,
   getCcSwitchClientConfig,
+  type CcSwitchCodexCatalogModel,
   type CcSwitchClientType,
 } from "@code-proxy/domain/ccswitch/ccswitchImport";
 import {
@@ -28,6 +31,7 @@ import {
 } from "@code-proxy/domain/ccswitch/ccswitchImportSettings";
 import {
   ensureCcSwitchRoutePath,
+  type CcSwitchImportCodexModelCatalog,
   type CcSwitchImportConfigListItem,
   type CcSwitchModelMapping,
 } from "@code-proxy/domain/ccswitch/ccswitchImportConfigList";
@@ -59,6 +63,7 @@ const fieldClassName = "flex flex-col gap-1.5";
 const CLAUDE_ROLE_ORDER: CcSwitchClaudeModelRole[] = ["main", "haiku", "sonnet", "opus"];
 const MODEL_MAPPING_LOADING_ROWS = ["short", "medium", "long"];
 const CONFIG_MODAL_CLIENTS = CC_SWITCH_CLIENTS.filter((client) => client.type !== "gemini");
+const DEFAULT_CODEX_CONTEXT_WINDOW = 128_000;
 
 const rolePriority: Record<CcSwitchClaudeModelRole, string[]> = {
   main: ["sonnet", "opus", "haiku", "claude"],
@@ -264,7 +269,51 @@ function getDuplicateGenericRequestModels(
     .map((item) => item.label);
 }
 
-function prepareDraftForSave(draft: ConfigDraft): ConfigDraft {
+const asRecord = (value: unknown): Record<string, unknown> | null =>
+  value !== null && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+
+const normalizeContextWindow = (value: unknown): number => {
+  const parsed = typeof value === "number" ? value : Number(String(value ?? ""));
+  if (!Number.isFinite(parsed) || parsed <= 0) return DEFAULT_CODEX_CONTEXT_WINDOW;
+  return Math.round(parsed);
+};
+
+function getDraftCodexContextWindow(draft: ConfigDraft): number {
+  for (const model of draft.codexModelCatalog?.models ?? []) {
+    const topLevel = normalizeContextWindow(model.context_window ?? model.contextWindow);
+    if (topLevel !== DEFAULT_CODEX_CONTEXT_WINDOW) return topLevel;
+    const messages = asRecord(model.model_messages);
+    if (messages) {
+      const nested = normalizeContextWindow(messages.context_window ?? messages.contextWindow);
+      if (nested !== DEFAULT_CODEX_CONTEXT_WINDOW) return nested;
+    }
+  }
+  return DEFAULT_CODEX_CONTEXT_WINDOW;
+}
+
+function buildDraftCodexModelCatalog(
+  draft: ConfigDraft,
+  contextWindow: number,
+): CcSwitchImportCodexModelCatalog | undefined {
+  if (draft.clientType !== "codex") return undefined;
+  const models: CcSwitchCodexCatalogModel[] = [];
+  const addModel = (model: string) => {
+    const normalized = model.trim();
+    if (normalized) models.push({ model: normalized, contextWindow });
+  };
+  addModel(draft.defaultModel);
+  for (const mapping of draft.modelMappings) {
+    if (mapping.role) continue;
+    addModel(mapping.requestModel || mapping.targetModel);
+  }
+  if (models.length === 0) return undefined;
+  const catalog = buildCcSwitchCodexModelCatalog(models);
+  return { models: catalog.models.map((model) => ({ ...model })) };
+}
+
+function prepareDraftForSave(draft: ConfigDraft, codexContextWindow: unknown): ConfigDraft {
   const endpointPath = DEFAULT_CC_SWITCH_IMPORT_SETTINGS[draft.clientType].endpointPath;
   const selectedGroup = draft.allowedChannelGroups[0] ?? "";
   const routePath = ensureCcSwitchRoutePath(draft.routePath, selectedGroup, draft.id);
@@ -283,14 +332,26 @@ function prepareDraftForSave(draft: ConfigDraft): ConfigDraft {
     draft.clientType === "claude"
       ? normalizedMappings.find((mapping) => mapping.role === "main")?.targetModel || ""
       : resolveGenericDefaultModel(normalizedMappings, draft.defaultModel);
+  const normalizedDraft = {
+    ...draft,
+    defaultModel,
+    modelMappings: normalizedMappings,
+  };
+  const codexModelCatalog = buildDraftCodexModelCatalog(
+    normalizedDraft,
+    normalizeContextWindow(codexContextWindow),
+  );
 
   return {
-    ...draft,
+    ...normalizedDraft,
     allowedChannelGroups: selectedGroup ? [selectedGroup] : [],
     routePath,
     endpointPath,
-    defaultModel,
-    modelMappings: normalizedMappings,
+    codexModelCatalogFilename:
+      draft.clientType === "codex" && codexModelCatalog
+        ? draft.codexModelCatalogFilename || CC_SWITCH_CODEX_MODEL_CATALOG_FILENAME
+        : undefined,
+    codexModelCatalog,
   };
 }
 
@@ -317,6 +378,9 @@ export function CcSwitchImportConfigModal({
   const [draft, setDraft] = useState<ConfigDraft>(value);
   const [availableModels, setAvailableModels] = useState<string[]>([]);
   const [modelsLoading, setModelsLoading] = useState(false);
+  const [codexContextWindow, setCodexContextWindow] = useState(
+    String(DEFAULT_CODEX_CONTEXT_WINDOW),
+  );
 
   useEffect(() => {
     if (!open) return;
@@ -328,6 +392,7 @@ export function CcSwitchImportConfigModal({
     setAvailableModels(
       dedupeModels(value.modelMappings.map((mapping) => mapping.targetModel).filter(Boolean)),
     );
+    setCodexContextWindow(String(getDraftCodexContextWindow(value)));
   }, [open, value]);
 
   const selectedGroup = draft.allowedChannelGroups[0] ?? "";
@@ -532,7 +597,7 @@ export function CcSwitchImportConfigModal({
       ]),
     [availableModels, draft.modelMappings],
   );
-  const preparedDraft = prepareDraftForSave(draft);
+  const preparedDraft = prepareDraftForSave(draft, codexContextWindow);
   const hasRenderableMappings = draft.modelMappings.length > 0;
   const modelMappingsLoading = Boolean(selectedGroup && modelsLoading && !hasRenderableMappings);
   const duplicateRequestModels = getDuplicateGenericRequestModels(draft.modelMappings);
@@ -666,7 +731,7 @@ export function CcSwitchImportConfigModal({
           </Button>
           <Button
             variant="primary"
-            onClick={() => onSave(prepareDraftForSave(draft))}
+            onClick={() => onSave(prepareDraftForSave(draft, codexContextWindow))}
             disabled={isSaveDisabled}
           >
             {t("common.save")}
@@ -804,6 +869,22 @@ export function CcSwitchImportConfigModal({
               className={controlClassName}
             />
           </label>
+
+          {draft.clientType === "codex" ? (
+            <label className={fieldClassName}>
+              <span className={labelClassName}>{t("ccswitch.config_codex_context_window")}</span>
+              <TextInput
+                type="number"
+                min={1}
+                inputMode="numeric"
+                value={codexContextWindow}
+                onChange={(event) => setCodexContextWindow(event.currentTarget.value)}
+                placeholder={String(DEFAULT_CODEX_CONTEXT_WINDOW)}
+                aria-label={t("ccswitch.config_codex_context_window")}
+                className={controlClassName}
+              />
+            </label>
+          ) : null}
         </section>
 
         <section className="overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-[0_18px_44px_rgb(15_23_42_/_0.05)] dark:border-neutral-800 dark:bg-neutral-950/80">

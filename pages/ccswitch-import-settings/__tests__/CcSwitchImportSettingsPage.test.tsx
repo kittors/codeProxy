@@ -184,6 +184,10 @@ describe("CcSwitchImportSettingsPage", () => {
     );
     await user.clear(requestModelInput);
     await user.type(requestModelInput, "gpt-5.5");
+    const contextWindowInput = within(dialog).getByLabelText(/codex context window/i);
+    expect(contextWindowInput).toHaveValue(128000);
+    await user.clear(contextWindowInput);
+    await user.type(contextWindowInput, "272000");
 
     await user.type(within(dialog).getByLabelText(/provider name/i), "Relay Codex");
     await user.type(within(dialog).getByLabelText(/remark/i), "Pro preset");
@@ -206,6 +210,23 @@ describe("CcSwitchImportSettingsPage", () => {
               targetModel: "deepseek-v4-flash",
             },
           ]),
+          codexModelCatalog: {
+            models: [
+              expect.objectContaining({
+                slug: "gpt-5.5",
+                context_window: 272000,
+                max_context_window: 272000,
+                model_messages: expect.objectContaining({
+                  context_window: 272000,
+                  max_context_window: 272000,
+                }),
+              }),
+              expect.objectContaining({
+                slug: "kimi-k2",
+                context_window: 272000,
+              }),
+            ],
+          },
         }),
       ]),
     );

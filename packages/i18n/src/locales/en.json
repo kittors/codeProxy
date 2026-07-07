@@ -2635,6 +2635,7 @@
     "config_live_preview": "Live preview",
     "config_remark": "Remark",
     "config_remark_placeholder": "Optional note for this preset",
+    "config_codex_context_window": "Codex context window",
     "config_model_search_placeholder": "Search models...",
     "config_select_channel_group": "Select channel group",
     "config_channel_group_route": "Path address",
