@@ -127,6 +127,13 @@ export function ProviderKeyModal({
   const isCline = editKeyType === "cline";
   const isOllamaCloud = editKeyType === "ollama-cloud";
   const isModelAccessProvider = isOpenCodeGo || isCline || isOllamaCloud;
+  const modelAccessProvider: ModelAccessProvider | null = isCline
+    ? "cline"
+    : isOllamaCloud
+      ? "ollama-cloud"
+      : isOpenCodeGo
+        ? "opencode-go"
+        : null;
   const showModelsTab = true;
 
   const [modelConfigs, setModelConfigs] = useState<
@@ -211,15 +218,11 @@ export function ProviderKeyModal({
   }, [open, showModelsTab]);
 
   const fetchOpenCodeModels = useCallback(async () => {
-    if (!isModelAccessProvider) return;
+    if (!modelAccessProvider) return;
     setOpenCodeModelsLoading(true);
     setOpenCodeModelsError(null);
     try {
-      setOpenCodeModels(
-        await fetchModelAccessCatalog(
-          isCline ? "cline" : isOllamaCloud ? "ollama-cloud" : "opencode-go",
-        ),
-      );
+      setOpenCodeModels(await fetchModelAccessCatalog(modelAccessProvider));
     } catch (err: unknown) {
       setOpenCodeModelsError(
         err instanceof Error ? err.message : t("providers.fetch_models_failed"),
@@ -227,7 +230,7 @@ export function ProviderKeyModal({
     } finally {
       setOpenCodeModelsLoading(false);
     }
-  }, [isCline, isModelAccessProvider, isOllamaCloud, t]);
+  }, [modelAccessProvider, t]);
 
   useEffect(() => {
     if (!open || !isModelAccessProvider) return;
@@ -271,6 +274,10 @@ export function ProviderKeyModal({
   const allowedOpenCodeCount = openCodeModels.filter((model) =>
     isOpenCodeModelAllowed(model.id),
   ).length;
+  const allOpenCodeModelsAllowed =
+    openCodeModels.length > 0 && allowedOpenCodeCount === openCodeModels.length;
+  const someOpenCodeModelsAllowed =
+    allowedOpenCodeCount > 0 && allowedOpenCodeCount < openCodeModels.length;
   const openCodeVisionFallbackOptions = useMemo(() => {
     const optionMap = new Map<string, { value: string; label: string }>();
     for (const model of openCodeModels) {
@@ -328,25 +335,43 @@ export function ProviderKeyModal({
   const setOpenCodeModelAllowed = useCallback(
     (modelId: string, allowed: boolean) => {
       const normalized = modelId.trim().toLowerCase();
-      if (!normalized) return;
+      if (!normalized || !modelAccessProvider) return;
       setKeyDraft((prev) => {
         const exists = prev.modelEntries.some(
           (entry) => entry.name.trim().toLowerCase() === normalized,
         );
         const currentExcluded = excludedModelsFromText(prev.excludedModelsText);
-        const nextExcluded = allowed
-          ? currentExcluded.filter((model) => model.trim() !== "*")
-          : currentExcluded;
+        const baseEntries =
+          allowed && hasDisableAllModelsRule(currentExcluded)
+            ? prev.modelEntries.filter(
+                (entry) =>
+                  !isModelAllowedForProvider(modelAccessProvider, entry.name),
+              )
+            : prev.modelEntries;
+        const existingEntry = prev.modelEntries.find(
+          (entry) => entry.name.trim().toLowerCase() === normalized,
+        );
         const nextEntries = allowed
-          ? exists
-            ? prev.modelEntries
+          ? exists &&
+            baseEntries.some(
+              (entry) => entry.name.trim().toLowerCase() === normalized,
+            )
+            ? baseEntries
             : [
-                ...prev.modelEntries,
-                { ...createEmptyModelEntry(), name: modelId },
+                ...baseEntries,
+                existingEntry ?? { ...createEmptyModelEntry(), name: modelId },
               ]
-          : prev.modelEntries.filter(
+          : baseEntries.filter(
               (entry) => entry.name.trim().toLowerCase() !== normalized,
             );
+        const hasAllowedEntry = nextEntries.some((entry) =>
+          isModelAllowedForProvider(modelAccessProvider, entry.name),
+        );
+        const nextExcluded = allowed
+          ? currentExcluded.filter((model) => model.trim() !== "*")
+          : hasAllowedEntry
+            ? currentExcluded
+            : ["*"];
         return {
           ...prev,
           excludedModelsText: nextExcluded.join("\n"),
@@ -354,7 +379,7 @@ export function ProviderKeyModal({
         };
       });
     },
-    [setKeyDraft],
+    [modelAccessProvider, setKeyDraft],
   );
 
   const setAllFetchedOpenCodeModelsAllowed = useCallback(
@@ -372,16 +397,19 @@ export function ProviderKeyModal({
         const addedEntries = openCodeModels
           .filter((model) => !existingNames.has(model.id.trim().toLowerCase()))
           .map((model) => ({ ...createEmptyModelEntry(), name: model.id }));
+        const nextEntries = allowed
+          ? [...prev.modelEntries, ...addedEntries]
+          : prev.modelEntries.filter(
+              (entry) => !fetchedIds.has(entry.name.trim().toLowerCase()),
+            );
         return {
           ...prev,
           excludedModelsText: allowed
             ? currentExcluded.filter((model) => model.trim() !== "*").join("\n")
-            : prev.excludedModelsText,
-          modelEntries: allowed
-            ? [...prev.modelEntries, ...addedEntries]
-            : prev.modelEntries.filter(
-                (entry) => !fetchedIds.has(entry.name.trim().toLowerCase()),
-              ),
+            : nextEntries.length
+              ? prev.excludedModelsText
+              : "*",
+          modelEntries: nextEntries,
         };
       });
     },
@@ -389,13 +417,10 @@ export function ProviderKeyModal({
   );
 
   useEffect(() => {
-    if (!open || !isModelAccessProvider || openCodeModels.length === 0) return;
-    const provider: ModelAccessProvider = isCline
-      ? "cline"
-      : isOllamaCloud
-        ? "ollama-cloud"
-        : "opencode-go";
+    if (!open || !modelAccessProvider || openCodeModels.length === 0) return;
     setKeyDraft((prev) => {
+      if (hasDisableAllModelsRule(excludedModelsFromText(prev.excludedModelsText)))
+        return prev;
       const existingNames = new Set(
         prev.modelEntries
           .map((entry) => entry.name.trim().toLowerCase())
@@ -406,7 +431,7 @@ export function ProviderKeyModal({
         const name = model.id.trim();
         const key = name.toLowerCase();
         if (!key || existingNames.has(key)) continue;
-        if (!isModelAllowedForProvider(provider, name)) continue;
+        if (!isModelAllowedForProvider(modelAccessProvider, name)) continue;
         existingNames.add(key);
         nextEntries.push({ ...createEmptyModelEntry(), name });
       }
@@ -415,9 +440,7 @@ export function ProviderKeyModal({
         : { ...prev, modelEntries: nextEntries };
     });
   }, [
-    isCline,
-    isModelAccessProvider,
-    isOllamaCloud,
+    modelAccessProvider,
     open,
     openCodeModels,
     setKeyDraft,
@@ -534,6 +557,8 @@ export function ProviderKeyModal({
                 setOpenCodeModelQuery={setOpenCodeModelQuery}
                 filteredOpenCodeModels={filteredOpenCodeModels}
                 allowedOpenCodeCount={allowedOpenCodeCount}
+                allOpenCodeModelsAllowed={allOpenCodeModelsAllowed}
+                someOpenCodeModelsAllowed={someOpenCodeModelsAllowed}
                 excludeAll={disableAllModels}
                 excludedModelIds={excludedModelIds}
                 enabledOpenCodeModelIds={enabledOpenCodeModelIds}

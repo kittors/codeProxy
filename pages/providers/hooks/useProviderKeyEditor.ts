@@ -189,8 +189,9 @@ export function useProviderKeyEditor({
         : isOllamaCloud
           ? "ollama-cloud"
           : null;
-    const disableAllModelAccess =
-      modelAccessProvider && hasDisableAllModelsRule(rawExcludedModels);
+    const disableAllModelAccess = Boolean(
+      modelAccessProvider && hasDisableAllModelsRule(rawExcludedModels),
+    );
     const excludedModels = modelAccessProvider
       ? disableAllModelAccess
         ? ["*"]
@@ -214,15 +215,23 @@ export function useProviderKeyEditor({
             return name && isModelAllowedForProvider(modelAccessProvider, name);
           })
         : modelCommit.models;
+    const modelAccessModels = modelAccessProvider
+      ? disableAllModelAccess
+        ? []
+        : (models ?? [])
+      : models;
     const modelAccessExcludedModels =
-      modelAccessProvider && (!models?.length || disableAllModelAccess)
+      modelAccessProvider && (!modelAccessModels?.length || disableAllModelAccess)
         ? ["*"]
-        : undefined;
+        : modelAccessProvider
+          ? []
+          : undefined;
     const result: ProviderSimpleConfig | BedrockProviderConfig = {
       apiKey:
         editKeyType === "bedrock" && keyDraft.authMode === "sigv4"
           ? bedrockAccessKeyId
           : apiKey,
+      ...(modelAccessProvider ? { disabled: keyDraft.disabled } : {}),
       name,
       ...(keyDraft.prefix.trim() ? { prefix: keyDraft.prefix.trim() } : {}),
       ...(!isOpenCodeGo && keyDraft.baseUrl.trim()
@@ -239,9 +248,11 @@ export function useProviderKeyEditor({
         : {}),
       ...(keyDraft.proxyId.trim() ? { proxyId: keyDraft.proxyId.trim() } : {}),
       ...(headers ? { headers } : {}),
-      ...((modelAccessExcludedModels ?? excludedModels)?.length
-        ? { excludedModels: modelAccessExcludedModels ?? excludedModels }
-        : {}),
+      ...(modelAccessExcludedModels !== undefined
+        ? { excludedModels: modelAccessExcludedModels }
+        : excludedModels?.length
+          ? { excludedModels }
+          : {}),
       ...(isOpenCodeGo && keyDraft.workspaceId.trim()
         ? { workspaceId: keyDraft.workspaceId.trim() }
         : {}),
@@ -251,7 +262,11 @@ export function useProviderKeyEditor({
       ...(modelAccessProvider && keyDraft.visionFallbackModel.trim()
         ? { visionFallbackModel: keyDraft.visionFallbackModel.trim() }
         : {}),
-      ...(models?.length ? { models } : {}),
+      ...(modelAccessProvider
+        ? { models: modelAccessModels }
+        : modelAccessModels?.length
+          ? { models: modelAccessModels }
+          : {}),
       ...(editKeyType === "claude" && keyDraft.skipAnthropicProcessing
         ? { skipAnthropicProcessing: true }
         : {}),
@@ -482,13 +497,19 @@ export function useProviderKeyEditor({
       if (!current) return;
       const prev = list;
 
-      const nextExcluded = enabled
-        ? withoutDisableAllModelsRule(current.excludedModels)
-        : withDisableAllModelsRule(current.excludedModels);
+      const usesExplicitDisabled =
+        type === "opencode-go" || type === "cline" || type === "ollama-cloud";
+
+      const nextExcluded = usesExplicitDisabled
+        ? current.excludedModels
+        : enabled
+          ? withoutDisableAllModelsRule(current.excludedModels)
+          : withDisableAllModelsRule(current.excludedModels);
 
       const nextItem: ProviderSimpleConfig = {
         ...current,
-        excludedModels: nextExcluded,
+        ...(usesExplicitDisabled ? { disabled: !enabled } : {}),
+        ...(nextExcluded ? { excludedModels: nextExcluded } : {}),
       };
       const nextList = prev.map((item, itemIndex) =>
         itemIndex === index ? nextItem : item,
@@ -506,16 +527,22 @@ export function useProviderKeyEditor({
           await providersApi.saveCodexConfigs(nextList);
         } else if (type === "opencode-go") {
           setOpenCodeGoKeys(nextList);
-          await providersApi.patchOpenCodeGoExcludedModels(index, nextExcluded);
+          await providersApi.patchOpenCodeGoConfig(index, {
+            apiKey: "",
+            disabled: !enabled,
+          });
         } else if (type === "cline") {
           setClineKeys(nextList);
-          await providersApi.patchClineExcludedModels(index, nextExcluded);
+          await providersApi.patchClineConfig(index, {
+            apiKey: "",
+            disabled: !enabled,
+          });
         } else if (type === "ollama-cloud") {
           setOllamaCloudKeys(nextList);
-          await providersApi.patchOllamaCloudExcludedModels(
-            index,
-            nextExcluded,
-          );
+          await providersApi.patchOllamaCloudConfig(index, {
+            apiKey: "",
+            disabled: !enabled,
+          });
         } else {
           setBedrockKeys(nextList as BedrockProviderConfig[]);
           await providersApi.saveBedrockConfigs(
@@ -584,19 +611,34 @@ export function useProviderKeyEditor({
                   : "Bedrock";
 
   const editKeyEnabled = useMemo(() => {
+    if (
+      editKeyType === "opencode-go" ||
+      editKeyType === "cline" ||
+      editKeyType === "ollama-cloud"
+    ) {
+      return !keyDraft.disabled;
+    }
     const list = excludedModelsFromText(keyDraft.excludedModelsText);
     return !hasDisableAllModelsRule(list);
-  }, [keyDraft.excludedModelsText]);
+  }, [editKeyType, keyDraft.disabled, keyDraft.excludedModelsText]);
 
   const editKeyEnabledToggle = useCallback(
     (enabled: boolean) => {
+      if (
+        editKeyType === "opencode-go" ||
+        editKeyType === "cline" ||
+        editKeyType === "ollama-cloud"
+      ) {
+        setKeyDraft((prev) => ({ ...prev, disabled: !enabled }));
+        return;
+      }
       const current = excludedModelsFromText(keyDraft.excludedModelsText);
       const next = enabled
         ? withoutDisableAllModelsRule(current)
         : withDisableAllModelsRule(current);
       setKeyDraft((prev) => ({ ...prev, excludedModelsText: next.join("\n") }));
     },
-    [keyDraft.excludedModelsText],
+    [editKeyType, keyDraft.excludedModelsText],
   );
 
   const editKeyExcludedCount = useMemo(() => {

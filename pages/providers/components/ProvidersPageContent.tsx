@@ -1215,6 +1215,7 @@ export function ProvidersPage() {
               onToggleEnabled={(idx, enabled) =>
                 void toggleKeyEnabled("opencode-go", idx, enabled)
               }
+              isItemEnabled={(item) => item.disabled !== true}
               getStats={getSimpleStats}
               getStatusBar={getSimpleStatusBar}
               getDisplayModels={(item) =>
@@ -1306,6 +1307,7 @@ export function ProvidersPage() {
               onToggleEnabled={(idx, enabled) =>
                 void toggleKeyEnabled("cline", idx, enabled)
               }
+              isItemEnabled={(item) => item.disabled !== true}
               getStats={getSimpleStats}
               getStatusBar={getSimpleStatusBar}
               getDisplayModels={(item) =>
@@ -1342,6 +1344,7 @@ export function ProvidersPage() {
               onToggleEnabled={(idx, enabled) =>
                 void toggleKeyEnabled("ollama-cloud", idx, enabled)
               }
+              isItemEnabled={(item) => item.disabled !== true}
               getStats={getSimpleStats}
               getStatusBar={getSimpleStatusBar}
               getDisplayModels={(item) =>

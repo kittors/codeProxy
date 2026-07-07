@@ -266,6 +266,7 @@ export interface OpenAIProvider {
 
 export interface ProviderSimpleConfig {
   apiKey: string;
+  disabled?: boolean;
   name?: string;
   prefix?: string;
   baseUrl?: string;

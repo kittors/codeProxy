@@ -29,6 +29,7 @@ export function ProviderKeyListCard({
   onEdit,
   onDelete,
   onToggleEnabled,
+  isItemEnabled,
   renderExtra,
   getDisplayModels,
 
@@ -51,6 +52,7 @@ export function ProviderKeyListCard({
   onEdit: (index: number) => void;
   onDelete: (index: number) => void;
   onToggleEnabled?: (index: number, enabled: boolean) => void;
+  isItemEnabled?: (item: ProviderSimpleConfig) => boolean;
   renderExtra?: (item: ProviderSimpleConfig, index: number) => ReactNode;
   getDisplayModels?: (
     item: ProviderSimpleConfig,
@@ -137,7 +139,9 @@ export function ProviderKeyListCard({
           {items.map((item, idx) => {
             const selectionKey = `${item.apiKey.trim().toLowerCase()}:${idx}`;
             const selected = selectedKeys?.has(selectionKey) ?? false;
-            const disabled = hasDisableAllModelsRule(item.excludedModels);
+            const disabled = !(isItemEnabled
+              ? isItemEnabled(item)
+              : !hasDisableAllModelsRule(item.excludedModels));
             const headerEntries = Object.entries(item.headers || {});
             const excludedModels = stripDisableAllModelsRule(
               item.excludedModels,

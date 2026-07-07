@@ -560,6 +560,7 @@ const loadProviderModelItems = async (): Promise<ModelAvailabilityItem[]> => {
 
       const isModelAccessProvider = MODEL_ACCESS_PROVIDER_KEYS.has(key);
       const needsStaticModels = configs.some((config) => {
+        if (isModelAccessProvider && config.disabled === true) return false;
         if (
           isModelAccessProvider &&
           hasDisableAllModelsRule(config.excludedModels)
@@ -572,9 +573,11 @@ const loadProviderModelItems = async (): Promise<ModelAvailabilityItem[]> => {
         : [];
 
       for (const config of configs) {
-        const disabled = hasDisableAllModelsRule(config.excludedModels);
+        const disabled = isModelAccessProvider
+          ? config.disabled === true
+          : hasDisableAllModelsRule(config.excludedModels);
         const excludedModels = isModelAccessProvider
-          ? disabled
+          ? hasDisableAllModelsRule(config.excludedModels)
             ? ["*"]
             : undefined
           : config.excludedModels;

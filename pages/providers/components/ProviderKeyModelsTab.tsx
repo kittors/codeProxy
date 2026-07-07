@@ -32,6 +32,8 @@ interface ProviderKeyModelsTabProps {
   setOpenCodeModelQuery: (value: string) => void;
   filteredOpenCodeModels: { id: string; owned_by?: string }[];
   allowedOpenCodeCount: number;
+  allOpenCodeModelsAllowed: boolean;
+  someOpenCodeModelsAllowed: boolean;
   excludeAll: boolean;
   excludedModelIds: Set<string>;
   enabledOpenCodeModelIds: Set<string>;
@@ -60,6 +62,8 @@ export function ProviderKeyModelsTab({
   setOpenCodeModelQuery,
   filteredOpenCodeModels,
   allowedOpenCodeCount,
+  allOpenCodeModelsAllowed,
+  someOpenCodeModelsAllowed,
   excludeAll,
   excludedModelIds,
   enabledOpenCodeModelIds,
@@ -173,6 +177,18 @@ export function ProviderKeyModelsTab({
         minWidthPx: 144,
         headerClassName: "text-center",
         cellClassName: "text-center",
+        headerRender: () => (
+          <div className="flex items-center justify-center gap-2">
+            <Checkbox
+              checked={allOpenCodeModelsAllowed}
+              indeterminate={someOpenCodeModelsAllowed}
+              onCheckedChange={setAllFetchedOpenCodeModelsAllowed}
+              disabled={openCodeModels.length === 0}
+              aria-label={t("providers.model_enabled")}
+            />
+            <span>{t("providers.model_enabled")}</span>
+          </div>
+        ),
         render: (model) => {
           const normalized = model.id.toLowerCase();
           const checked =
@@ -197,9 +213,13 @@ export function ProviderKeyModelsTab({
       enabledOpenCodeModelIds,
       excludeAll,
       excludedModelIds,
+      allOpenCodeModelsAllowed,
       modelEntryByName,
+      openCodeModels.length,
+      setAllFetchedOpenCodeModelsAllowed,
       setModelAlias,
       setOpenCodeModelAllowed,
+      someOpenCodeModelsAllowed,
       t,
     ],
   );
@@ -238,22 +258,6 @@ export function ProviderKeyModelsTab({
               placeholder={t("providers.models_search_placeholder")}
               className="max-w-xs"
             />
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => setAllFetchedOpenCodeModelsAllowed(true)}
-              disabled={openCodeModels.length === 0}
-            >
-              {t("providers.models_select_all")}
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => setAllFetchedOpenCodeModelsAllowed(false)}
-              disabled={openCodeModels.length === 0}
-            >
-              {t("providers.models_select_none")}
-            </Button>
             <span className="text-xs tabular-nums text-slate-500 dark:text-white/55">
               {t("providers.models_allowed_count", {
                 allowed: allowedOpenCodeCount,

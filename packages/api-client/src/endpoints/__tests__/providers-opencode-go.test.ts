@@ -33,6 +33,7 @@ describe("providersApi OpenCode Go", () => {
         {
           name: "OpenCode Go",
           "api-key": "sk-go",
+          disabled: true,
           prefix: "go",
           "base-url": "https://should-not-surface.example",
           "proxy-id": "hk",
@@ -54,6 +55,7 @@ describe("providersApi OpenCode Go", () => {
       {
         name: "OpenCode Go",
         apiKey: "sk-go",
+        disabled: true,
         prefix: "go",
         proxyId: "hk",
         proxyUrl: "http://127.0.0.1:7890",
@@ -186,9 +188,10 @@ describe("providersApi OpenCode Go", () => {
     await providersApi.patchOpenCodeGoConfig(1, {
       name: "OpenCode Go",
       apiKey: "sk-go",
+      disabled: true,
       baseUrl: "https://should-not-save.example",
-      models: [{ name: "qwen3.5-plus", alias: "qwen-go" }],
-      excludedModels: ["minimax-m2.5", "*"],
+      models: [],
+      excludedModels: [],
       visionFallbackModel: "qwen3.5-plus",
       workspaceId: "wrk_123",
       authCookie: "auth-token",
@@ -199,8 +202,9 @@ describe("providersApi OpenCode Go", () => {
       value: {
         name: "OpenCode Go",
         "api-key": "sk-go",
-        models: [{ name: "qwen3.5-plus", alias: "qwen-go" }],
-        "excluded-models": ["*"],
+        disabled: true,
+        models: [],
+        "excluded-models": [],
         "vision-fallback-model": "qwen3.5-plus",
         "workspace-id": "wrk_123",
         "auth-cookie": "auth-token",

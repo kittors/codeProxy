@@ -34,6 +34,7 @@ describe("providersApi Cline", () => {
         {
           name: "Cline Custom",
           "api-key": "sk-custom",
+          disabled: true,
           "base-url": " https://api.example.com/v1/ ",
           "proxy-id": "hk",
           "proxy-url": "http://127.0.0.1:7890",
@@ -57,6 +58,7 @@ describe("providersApi Cline", () => {
       {
         name: "Cline Custom",
         apiKey: "sk-custom",
+        disabled: true,
         baseUrl: "https://api.example.com/v1",
         proxyId: "hk",
         proxyUrl: "http://127.0.0.1:7890",
@@ -142,9 +144,10 @@ describe("providersApi Cline", () => {
     await providersApi.patchClineConfig(0, {
       name: "Cline",
       apiKey: "sk-cline",
+      disabled: true,
       baseUrl: "https://api.cline.bot/api/v1",
-      models: [{ name: "cline-pass/glm-5.2", alias: "glm" }],
-      excludedModels: ["*"],
+      models: [],
+      excludedModels: [],
       visionFallbackModel: "cline-pass/mimo-v2.5-pro",
     });
 
@@ -153,9 +156,10 @@ describe("providersApi Cline", () => {
       value: {
         name: "Cline",
         "api-key": "sk-cline",
+        disabled: true,
         "base-url": "https://api.cline.bot/api/v1",
-        models: [{ name: "cline-pass/glm-5.2", alias: "glm" }],
-        "excluded-models": ["*"],
+        models: [],
+        "excluded-models": [],
         "vision-fallback-model": "cline-pass/mimo-v2.5-pro",
       },
     });

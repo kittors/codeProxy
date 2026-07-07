@@ -30,6 +30,7 @@ describe("providersApi Ollama Cloud", () => {
         {
           name: "Ollama",
           "api-key": "sk-ollama",
+          disabled: true,
           models: [{ name: "gpt-oss:120b", alias: "oss-large" }],
           "excluded-models": ["*"],
         },
@@ -41,6 +42,7 @@ describe("providersApi Ollama Cloud", () => {
       {
         name: "Ollama",
         apiKey: "sk-ollama",
+        disabled: true,
         baseUrl: "https://ollama.com",
         models: [{ name: "gpt-oss:120b", alias: "oss-large" }],
         excludedModels: ["*"],
@@ -90,9 +92,10 @@ describe("providersApi Ollama Cloud", () => {
     await providersApi.patchOllamaCloudConfig(2, {
       name: "Ollama",
       apiKey: "sk-ollama",
+      disabled: true,
       baseUrl: "https://ollama.com",
-      models: [{ name: "gpt-oss:120b", alias: "oss-large" }],
-      excludedModels: ["*"],
+      models: [],
+      excludedModels: [],
       visionFallbackModel: "gpt-oss:120b",
     });
 
@@ -101,9 +104,10 @@ describe("providersApi Ollama Cloud", () => {
       value: {
         name: "Ollama",
         "api-key": "sk-ollama",
+        disabled: true,
         "base-url": "https://ollama.com",
-        models: [{ name: "gpt-oss:120b", alias: "oss-large" }],
-        "excluded-models": ["*"],
+        models: [],
+        "excluded-models": [],
         "vision-fallback-model": "gpt-oss:120b",
       },
     });

@@ -121,8 +121,10 @@ type SerializeProviderKeyOptions = {
 };
 
 const modelAccessExcludedModels = (models?: string[]) =>
-  models?.some((model) => String(model ?? "").trim() === "*")
-    ? ["*"]
+  Array.isArray(models)
+    ? models.some((model) => String(model ?? "").trim() === "*")
+      ? ["*"]
+      : []
     : undefined;
 
 export const serializeProviderKey = (config: ProviderSimpleConfig) => {
@@ -159,6 +161,7 @@ export const serializeOpenCodeGoKey = (
 ) => {
   const payload: Record<string, unknown> = {};
   if (options.includeApiKey !== false) payload["api-key"] = config.apiKey;
+  if (config.disabled !== undefined) payload.disabled = config.disabled;
   const name = normalizeString(config.name);
   if (name) payload.name = name;
   const prefix = normalizeString(config.prefix);
@@ -170,9 +173,9 @@ export const serializeOpenCodeGoKey = (
   const headers = serializeHeaders(config.headers);
   if (headers) payload.headers = headers;
   const models = serializeModels(config.models);
-  if (models && models.length) payload.models = models;
+  if (models) payload.models = models;
   const excludedModels = modelAccessExcludedModels(config.excludedModels);
-  if (excludedModels) {
+  if (excludedModels !== undefined) {
     payload["excluded-models"] = excludedModels;
   }
   const visionFallbackModel = normalizeString(config.visionFallbackModel);
@@ -191,6 +194,7 @@ export const serializeClineKey = (
 ) => {
   const payload: Record<string, unknown> = {};
   if (options.includeApiKey !== false) payload["api-key"] = config.apiKey;
+  if (config.disabled !== undefined) payload.disabled = config.disabled;
   const name = normalizeString(config.name);
   if (name) payload.name = name;
   const prefix = normalizeString(config.prefix);
@@ -204,9 +208,9 @@ export const serializeClineKey = (
   const headers = serializeHeaders(config.headers);
   if (headers) payload.headers = headers;
   const models = serializeModels(config.models);
-  if (models && models.length) payload.models = models;
+  if (models) payload.models = models;
   const excludedModels = modelAccessExcludedModels(config.excludedModels);
-  if (excludedModels) {
+  if (excludedModels !== undefined) {
     payload["excluded-models"] = excludedModels;
   }
   const visionFallbackModel = normalizeString(config.visionFallbackModel);
@@ -221,6 +225,7 @@ export const serializeOllamaCloudKey = (
 ) => {
   const payload: Record<string, unknown> = {};
   if (options.includeApiKey !== false) payload["api-key"] = config.apiKey;
+  if (config.disabled !== undefined) payload.disabled = config.disabled;
   const name = normalizeString(config.name);
   if (name) payload.name = name;
   const prefix = normalizeString(config.prefix);
@@ -234,9 +239,9 @@ export const serializeOllamaCloudKey = (
   const headers = serializeHeaders(config.headers);
   if (headers) payload.headers = headers;
   const models = serializeModels(config.models);
-  if (models && models.length) payload.models = models;
+  if (models) payload.models = models;
   const excludedModels = modelAccessExcludedModels(config.excludedModels);
-  if (excludedModels) {
+  if (excludedModels !== undefined) {
     payload["excluded-models"] = excludedModels;
   }
   const visionFallbackModel = normalizeString(config.visionFallbackModel);
