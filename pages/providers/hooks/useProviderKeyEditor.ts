@@ -156,6 +156,11 @@ export function useProviderKeyEditor({
     const apiKey = keyDraft.apiKey.trim();
     const bedrockAccessKeyId = keyDraft.accessKeyId.trim();
     const bedrockSecretAccessKey = keyDraft.secretAccessKey.trim();
+    const isOpenCodeGo = editKeyType === "opencode-go";
+    const isCline = editKeyType === "cline";
+    const isOllamaCloud = editKeyType === "ollama-cloud";
+    const canKeepExistingApiKey =
+      editKeyIndex !== null && (isOpenCodeGo || isCline || isOllamaCloud);
     if (editKeyType === "bedrock") {
       if (keyDraft.authMode === "api-key" && !apiKey) {
         setKeyDraftError(t("providers.api_key_error"));
@@ -168,7 +173,7 @@ export function useProviderKeyEditor({
         setKeyDraftError(t("providers.bedrock_sigv4_error"));
         return null;
       }
-    } else if (!apiKey) {
+    } else if (!apiKey && !canKeepExistingApiKey) {
       setKeyDraftError(t("providers.api_key_error"));
       return null;
     }
@@ -177,9 +182,6 @@ export function useProviderKeyEditor({
     const rawExcludedModels = keyDraft.excludedModelsText.trim()
       ? excludedModelsFromText(keyDraft.excludedModelsText)
       : undefined;
-    const isOpenCodeGo = editKeyType === "opencode-go";
-    const isCline = editKeyType === "cline";
-    const isOllamaCloud = editKeyType === "ollama-cloud";
     const modelAccessProvider: ModelAccessProvider | null = isOpenCodeGo
       ? "opencode-go"
       : isCline
@@ -274,7 +276,9 @@ export function useProviderKeyEditor({
     const apply = (list: ProviderSimpleConfig[]) => {
       if (index === null) return [...list, value];
       return list.map((item, itemIndex) =>
-        itemIndex === index ? value : item,
+        itemIndex === index
+          ? { ...value, apiKey: value.apiKey || item.apiKey }
+          : item,
       );
     };
 
@@ -293,15 +297,27 @@ export function useProviderKeyEditor({
         setCodexKeys(next);
       } else if (type === "opencode-go") {
         const next = apply(openCodeGoKeys);
-        await providersApi.saveOpenCodeGoConfigs(next);
+        if (index === null) {
+          await providersApi.saveOpenCodeGoConfigs(next);
+        } else {
+          await providersApi.patchOpenCodeGoConfig(index, value);
+        }
         setOpenCodeGoKeys(next);
       } else if (type === "cline") {
         const next = apply(clineKeys);
-        await providersApi.saveClineConfigs(next);
+        if (index === null) {
+          await providersApi.saveClineConfigs(next);
+        } else {
+          await providersApi.patchClineConfig(index, value);
+        }
         setClineKeys(next);
       } else if (type === "ollama-cloud") {
         const next = apply(ollamaCloudKeys);
-        await providersApi.saveOllamaCloudConfigs(next);
+        if (index === null) {
+          await providersApi.saveOllamaCloudConfigs(next);
+        } else {
+          await providersApi.patchOllamaCloudConfig(index, value);
+        }
         setOllamaCloudKeys(next);
       } else if (type === "vertex") {
         const next = apply(vertexKeys);
@@ -478,13 +494,13 @@ export function useProviderKeyEditor({
           await providersApi.saveCodexConfigs(nextList);
         } else if (type === "opencode-go") {
           setOpenCodeGoKeys(nextList);
-          await providersApi.saveOpenCodeGoConfigs(nextList);
+          await providersApi.patchOpenCodeGoExcludedModels(index, nextExcluded);
         } else if (type === "cline") {
           setClineKeys(nextList);
-          await providersApi.saveClineConfigs(nextList);
+          await providersApi.patchClineExcludedModels(index, nextExcluded);
         } else if (type === "ollama-cloud") {
           setOllamaCloudKeys(nextList);
-          await providersApi.saveOllamaCloudConfigs(nextList);
+          await providersApi.patchOllamaCloudExcludedModels(index, nextExcluded);
         } else {
           setBedrockKeys(nextList as BedrockProviderConfig[]);
           await providersApi.saveBedrockConfigs(

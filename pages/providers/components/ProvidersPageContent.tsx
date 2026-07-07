@@ -39,7 +39,7 @@ import { useProviderKeyEditor } from "../hooks/useProviderKeyEditor";
 import { useProviderLatency } from "../hooks/useProviderLatency";
 import { useProviderUsageSummary } from "../hooks/useProviderUsageSummary";
 import { normalizeUsageSourceId, type KeyStatBucket } from "@code-proxy/domain";
-import { getCachedData, setCachedData } from "../provider-cache";
+import { getCachedData, removeCachedData, setCachedData } from "../provider-cache";
 import {
   maskApiKey,
   readBool,
@@ -421,27 +421,21 @@ export function ProvidersPage() {
         break;
       }
       case "opencode-go": {
-        const cachedO = getCachedData<ProviderSimpleConfig[]>("opencode-go");
-        if (cachedO) setOpenCodeGoKeys(cachedO);
+        removeCachedData("opencode-go");
         const freshO = await providersApi.getOpenCodeGoConfigs();
         setOpenCodeGoKeys(freshO);
-        setCachedData("opencode-go", freshO);
         break;
       }
       case "cline": {
-        const cachedCl = getCachedData<ProviderSimpleConfig[]>("cline");
-        if (cachedCl) setClineKeys(cachedCl);
+        removeCachedData("cline");
         const freshCl = await providersApi.getClineConfigs();
         setClineKeys(freshCl);
-        setCachedData("cline", freshCl);
         break;
       }
       case "ollama-cloud": {
-        const cachedOl = getCachedData<ProviderSimpleConfig[]>("ollama-cloud");
-        if (cachedOl) setOllamaCloudKeys(cachedOl);
+        removeCachedData("ollama-cloud");
         const freshOl = await providersApi.getOllamaCloudConfigs();
         setOllamaCloudKeys(freshOl);
-        setCachedData("ollama-cloud", freshOl);
         break;
       }
       case "vertex": {
