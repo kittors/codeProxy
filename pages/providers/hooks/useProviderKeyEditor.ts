@@ -203,11 +203,7 @@ export function useProviderKeyEditor({
       modelAccessProvider && modelCommit.models
         ? modelCommit.models.filter((model) => {
             const name = model.name?.trim() ?? "";
-            return (
-              name &&
-              model.alias?.trim() &&
-              isModelAllowedForProvider(modelAccessProvider, name)
-            );
+            return name && isModelAllowedForProvider(modelAccessProvider, name);
           })
         : modelCommit.models;
     const result: ProviderSimpleConfig | BedrockProviderConfig = {

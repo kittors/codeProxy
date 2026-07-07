@@ -19,12 +19,16 @@ import {
   hasDisableAllModelsRule,
   stripDisableAllModelsRule,
 } from "../providers-helpers";
-import type { ModelEntryDraft } from "../ModelInputList";
+import { createEmptyModelEntry, type ModelEntryDraft } from "../ModelInputList";
 import { ProviderKeyStatusBadges } from "./ProviderKeyStatusBadges";
 import { ProviderKeyBasicTab } from "./ProviderKeyBasicTab";
 import { ProviderKeyRequestTab } from "./ProviderKeyRequestTab";
 import { ProviderKeyModelsTab } from "./ProviderKeyModelsTab";
-import { fetchModelAccessCatalog } from "../provider-model-access";
+import {
+  fetchModelAccessCatalog,
+  isModelAllowedForProvider,
+  type ModelAccessProvider,
+} from "../provider-model-access";
 
 type ProviderKeyModalTab = "basic" | "request" | "models";
 
@@ -376,6 +380,41 @@ export function ProviderKeyModal({
     },
     [openCodeModels, setKeyDraft],
   );
+
+  useEffect(() => {
+    if (!open || !isModelAccessProvider || openCodeModels.length === 0) return;
+    const provider: ModelAccessProvider = isCline
+      ? "cline"
+      : isOllamaCloud
+        ? "ollama-cloud"
+        : "opencode-go";
+    setKeyDraft((prev) => {
+      const existingNames = new Set(
+        prev.modelEntries
+          .map((entry) => entry.name.trim().toLowerCase())
+          .filter(Boolean),
+      );
+      const nextEntries = [...prev.modelEntries];
+      for (const model of openCodeModels) {
+        const name = model.id.trim();
+        const key = name.toLowerCase();
+        if (!key || existingNames.has(key)) continue;
+        if (!isModelAllowedForProvider(provider, name)) continue;
+        existingNames.add(key);
+        nextEntries.push({ ...createEmptyModelEntry(), name });
+      }
+      return nextEntries.length === prev.modelEntries.length
+        ? prev
+        : { ...prev, modelEntries: nextEntries };
+    });
+  }, [
+    isCline,
+    isModelAccessProvider,
+    isOllamaCloud,
+    open,
+    openCodeModels,
+    setKeyDraft,
+  ]);
   const statusBadges = (
     <ProviderKeyStatusBadges
       editKeyEnabled={editKeyEnabled}

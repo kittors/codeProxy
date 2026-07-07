@@ -169,8 +169,8 @@ export function ProviderKeyModelsTab({
       {
         key: "enabled",
         label: t("providers.model_enabled"),
-        width: "w-20",
-        minWidthPx: 80,
+        width: "w-28",
+        minWidthPx: 112,
         headerClassName: "text-center",
         cellClassName: "text-center",
         render: (model) => {

@@ -360,7 +360,7 @@ describe("ProvidersPage OpenCode Go tab", () => {
     ).toBeInTheDocument();
   });
 
-  test("drops legacy OpenCode Go per-key model fields when saving", async () => {
+  test("saves OpenCode Go fetched model permissions and drops dirty legacy models", async () => {
     const user = userEvent.setup();
     mocks.getOpenCodeGoConfigs.mockImplementation(async () => [
       {
@@ -403,7 +403,12 @@ describe("ProvidersPage OpenCode Go tab", () => {
       ]);
     });
     const saved = mocks.saveOpenCodeGoConfigs.mock.calls[0][0][0];
-    expect(saved).not.toHaveProperty("models");
+    expect(saved).toHaveProperty("models", [
+      { name: "deepseek-v4-flash" },
+      { name: "qwen3.5-plus" },
+      { name: "kimi-k2.6" },
+      { name: "qwen3.7-max" },
+    ]);
     expect(saved).toHaveProperty("visionFallbackModel", "qwen3.5-plus");
     expect(saved).toHaveProperty("excludedModels", [
       "cline-pass/minimax-m3",
@@ -479,7 +484,12 @@ describe("ProvidersPage OpenCode Go tab", () => {
       ]);
     });
     const saved = mocks.saveOpenCodeGoConfigs.mock.calls[0][0][0];
-    expect(saved).not.toHaveProperty("models");
+    expect(saved).toHaveProperty("models", [
+      { name: "deepseek-v4-flash" },
+      { name: "qwen3.5-plus" },
+      { name: "kimi-k2.6" },
+      { name: "qwen3.7-max" },
+    ]);
     expect(saved).toHaveProperty("visionFallbackModel", "qwen3.5-plus");
   });
 });
@@ -751,7 +761,7 @@ describe("ProvidersPage Cline tab", () => {
     ).not.toBeInTheDocument();
   });
 
-  test("drops legacy ClinePass per-key model fields when saving", async () => {
+  test("saves ClinePass fetched model permissions when saving", async () => {
     const user = userEvent.setup();
     mocks.getClineConfigs.mockImplementation(async () => [
       {
@@ -797,7 +807,12 @@ describe("ProvidersPage Cline tab", () => {
       ]);
     });
     const saved = mocks.saveClineConfigs.mock.calls[0][0][0];
-    expect(saved).not.toHaveProperty("models");
+    expect(saved).toHaveProperty("models", [
+      { name: "cline-pass/glm-5.2" },
+      { name: "cline-pass/minimax-m3" },
+      { name: "cline-pass/qwen3.7-max" },
+      { name: "cline-pass/mimo-v2.5-pro" },
+    ]);
     expect(saved).toHaveProperty(
       "visionFallbackModel",
       "cline-pass/mimo-v2.5-pro",
@@ -865,7 +880,7 @@ describe("ProvidersPage Ollama Cloud tab", () => {
     expect(mocks.apiCallRequest).not.toHaveBeenCalled();
   });
 
-  test("drops legacy Ollama Cloud per-key model fields when saving", async () => {
+  test("saves Ollama Cloud fetched model permissions when saving", async () => {
     const user = userEvent.setup();
     mocks.getOllamaCloudConfigs.mockImplementation(async () => [
       {
@@ -910,7 +925,7 @@ describe("ProvidersPage Ollama Cloud tab", () => {
       ]);
     });
     const saved = mocks.saveOllamaCloudConfigs.mock.calls[0][0][0];
-    expect(saved).not.toHaveProperty("models");
+    expect(saved).toHaveProperty("models", [{ name: "gpt-oss:120b" }]);
   });
 
   test("does not show legacy Ollama Cloud excluded models on provider cards", async () => {
