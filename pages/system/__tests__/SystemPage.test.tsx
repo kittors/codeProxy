@@ -32,6 +32,7 @@ vi.mock("@code-proxy/api-client", () => ({
     getGeminiKeys: async () => [],
     getClaudeConfigs: async () => [],
     getCodexConfigs: async () => [],
+    getClineConfigs: () => normalizeProviderConfigs("/cline-api-key", "cline-api-key"),
     getOpenCodeGoConfigs: async () => [],
     getOllamaCloudConfigs: async () => [],
     getVertexConfigs: async () => [],
@@ -79,6 +80,24 @@ function extractList(payload: unknown, key: string): unknown[] {
   return Array.isArray(value) ? value : [];
 }
 
+async function normalizeProviderConfigs(path: string, key: string) {
+  const payload = await mocks.apiGet(path);
+  return extractList(payload, key).map((entry) => {
+    const item = entry && typeof entry === "object" ? (entry as Record<string, unknown>) : {};
+    return {
+      apiKey: String(item["api-key"] ?? item.apiKey ?? ""),
+      name: typeof item.name === "string" ? item.name : undefined,
+      prefix: typeof item.prefix === "string" ? item.prefix : undefined,
+      models: Array.isArray(item.models) ? item.models : [],
+      excludedModels: Array.isArray(item["excluded-models"])
+        ? item["excluded-models"]
+        : Array.isArray(item.excludedModels)
+          ? item.excludedModels
+          : [],
+    };
+  });
+}
+
 function normalizeOpenAIProviders(payload: unknown) {
   return extractList(payload, "openai-compatibility").map((entry) => {
     const item = entry && typeof entry === "object" ? (entry as Record<string, unknown>) : {};
@@ -121,6 +140,7 @@ describe("SystemPage", () => {
         path === "/gemini-api-key" ||
         path === "/claude-api-key" ||
         path === "/codex-api-key" ||
+        path === "/cline-api-key" ||
         path === "/vertex-api-key" ||
         path === "/openai-compatibility"
       ) {
@@ -403,6 +423,42 @@ describe("SystemPage", () => {
 
     expect(await screen.findByText(/ClinePass · cline/)).toBeInTheDocument();
     expect(screen.queryByText("Actual ID")).not.toBeInTheDocument();
+  });
+
+  test("falls back to ClinePass provider configs when configured availability is unavailable", async () => {
+    mocks.apiGet.mockImplementation((path: string) => {
+      if (path === "/auth-group-model-owner-mappings") return Promise.resolve({ items: [] });
+      if (path === "/models/configured-availability") return Promise.resolve({});
+      if (path === "/model-path-availability") return Promise.resolve({ data: [] });
+      if (path === "/model-configs?scope=library") return Promise.resolve({ data: [] });
+      if (path === "/auth-files") return Promise.resolve({ files: [] });
+      if (path === "/cline-api-key") {
+        return Promise.resolve({
+          "cline-api-key": [
+            {
+              name: "ClinePass",
+              "api-key": "sk-cline",
+              models: [{ name: "cline-pass/mimo-v2.5-pro" }],
+            },
+          ],
+        });
+      }
+      if (
+        path === "/gemini-api-key" ||
+        path === "/claude-api-key" ||
+        path === "/codex-api-key" ||
+        path === "/vertex-api-key" ||
+        path === "/openai-compatibility"
+      ) {
+        return Promise.resolve<unknown[]>([]);
+      }
+      if (path === "/system-stats") return Promise.resolve({ uptime: 10 });
+      return Promise.resolve({});
+    });
+
+    renderPage();
+
+    expect(await screen.findByText("cline-pass/mimo-v2.5-pro")).toBeInTheDocument();
   });
 
   test("shows model sources in the model tag tooltip", async () => {
