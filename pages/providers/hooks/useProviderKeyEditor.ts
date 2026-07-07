@@ -175,15 +175,12 @@ export function useProviderKeyEditor({
       : undefined;
     const isOpenCodeGo = editKeyType === "opencode-go";
     const isCline = editKeyType === "cline";
-    const usesDynamicModelCatalog = isOpenCodeGo || isCline || editKeyType === "ollama-cloud";
     const excludedModels = rawExcludedModels;
 
     const requireAlias = editKeyType === "vertex";
-    const modelCommit = usesDynamicModelCatalog
-      ? {}
-      : commitModelEntries(keyDraft.modelEntries, {
-          requireAlias,
-        });
+    const modelCommit = commitModelEntries(keyDraft.modelEntries, {
+      requireAlias,
+    });
     if (modelCommit.error) {
       setKeyDraftError(
         requireAlias ? `Vertex: ${modelCommit.error}` : modelCommit.error,
@@ -218,7 +215,8 @@ export function useProviderKeyEditor({
       ...(isOpenCodeGo && keyDraft.authCookie.trim()
         ? { authCookie: keyDraft.authCookie.trim() }
         : {}),
-      ...((isOpenCodeGo || isCline) && keyDraft.visionFallbackModel.trim()
+      ...((isOpenCodeGo || isCline || editKeyType === "ollama-cloud") &&
+      keyDraft.visionFallbackModel.trim()
         ? { visionFallbackModel: keyDraft.visionFallbackModel.trim() }
         : {}),
       ...(modelCommit.models ? { models: modelCommit.models } : {}),

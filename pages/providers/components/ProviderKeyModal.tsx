@@ -180,7 +180,7 @@ export function ProviderKeyModal({
   }, [editKeyIndex, editKeyType, open]);
 
   useEffect(() => {
-    if (!open || isModelAccessProvider || !showModelsTab) return;
+    if (!open || !showModelsTab) return;
     let cancelled = false;
     setModelConfigsLoading(true);
     modelsApi
@@ -199,7 +199,7 @@ export function ProviderKeyModal({
     return () => {
       cancelled = true;
     };
-  }, [isModelAccessProvider, open, showModelsTab]);
+  }, [open, showModelsTab]);
 
   const fetchOpenCodeModels = useCallback(async () => {
     if (!isModelAccessProvider) return;
@@ -267,13 +267,25 @@ export function ProviderKeyModal({
     isOpenCodeModelAllowed(model.id),
   ).length;
   const openCodeVisionFallbackOptions = useMemo(() => {
-    const allowedModels = openCodeModels.filter(
-      (model) => isOpenCodeGoVisionModel(model.id) && isOpenCodeModelAllowed(model.id),
+    const optionMap = new Map<string, { value: string; label: string }>();
+    for (const model of openCodeModels) {
+      if (!isOpenCodeGoVisionModel(model.id) || !isOpenCodeModelAllowed(model.id)) continue;
+      optionMap.set(model.id.toLowerCase(), {
+        value: model.id,
+        label: model.owned_by ? `${model.id} · ${model.owned_by}` : model.id,
+      });
+    }
+    for (const model of modelConfigs) {
+      const id = model.id.trim();
+      if (!id) continue;
+      optionMap.set(id.toLowerCase(), {
+        value: id,
+        label: model.owned_by ? `${id} · ${model.owned_by}` : id,
+      });
+    }
+    const modelOptions = Array.from(optionMap.values()).sort((a, b) =>
+      a.value.localeCompare(b.value),
     );
-    const modelOptions = allowedModels.map((model) => ({
-      value: model.id,
-      label: model.owned_by ? `${model.id} · ${model.owned_by}` : model.id,
-    }));
     const currentFallback = keyDraft.visionFallbackModel.trim();
     const hasCurrentFallback =
       currentFallback !== "" &&
@@ -294,7 +306,7 @@ export function ProviderKeyModal({
       ...currentFallbackOption,
       ...modelOptions,
     ];
-  }, [isOpenCodeModelAllowed, keyDraft.visionFallbackModel, openCodeModels, t]);
+  }, [isOpenCodeModelAllowed, keyDraft.visionFallbackModel, modelConfigs, openCodeModels, t]);
 
   const setOpenCodeModelAllowed = useCallback(
     (modelId: string, allowed: boolean) => {

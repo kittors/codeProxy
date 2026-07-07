@@ -3,7 +3,6 @@ import { useTranslation } from "react-i18next";
 import { RefreshCw } from "lucide-react";
 import { Button } from "@code-proxy/ui";
 import { Checkbox } from "@code-proxy/ui";
-import { DataTable, type DataTableColumn } from "@code-proxy/ui";
 import { TextInput } from "@code-proxy/ui";
 import { SearchableSelect } from "@code-proxy/ui";
 import {
@@ -12,7 +11,7 @@ import {
   stripDisableAllModelsRule,
   type ProviderKeyDraft,
 } from "../providers-helpers";
-import { ModelInputList } from "../ModelInputList";
+import { createEmptyModelEntry, ModelInputList, type ModelEntryDraft } from "../ModelInputList";
 import { ExcludedModelsEditor } from "./ExcludedModelsEditor";
 
 const SectionCard = ({ children }: { children: React.ReactNode }) => (
@@ -20,11 +19,6 @@ const SectionCard = ({ children }: { children: React.ReactNode }) => (
     {children}
   </div>
 );
-
-type ClineModelRow = {
-  id: string;
-  checked: boolean;
-};
 
 interface ProviderKeyModelsTabProps {
   isOpenCodeGo: boolean;
@@ -94,59 +88,34 @@ export function ProviderKeyModelsTab({
     : isOllamaCloud
       ? t("providers.ollama_cloud_models_hint")
       : t("providers.opencode_go_models_hint");
-  const clineRows = useMemo<ClineModelRow[]>(() => {
-    if (!isCline) return [];
-    return filteredOpenCodeModels.map((model) => {
-      const normalized = model.id.toLowerCase();
+  const modelEntryByName = useMemo(() => {
+    const out = new Map<string, ModelEntryDraft>();
+    for (const entry of keyDraft.modelEntries) {
+      const key = entry.name.trim().toLowerCase();
+      if (key) out.set(key, entry);
+    }
+    return out;
+  }, [keyDraft.modelEntries]);
+
+  const setModelAlias = (modelId: string, alias: string) => {
+    const key = modelId.trim().toLowerCase();
+    if (!key) return;
+    setKeyDraft((prev) => {
+      const existing = prev.modelEntries.find((entry) => entry.name.trim().toLowerCase() === key);
+      if (existing) {
+        return {
+          ...prev,
+          modelEntries: prev.modelEntries.map((entry) =>
+            entry.id === existing.id ? { ...entry, alias } : entry,
+          ),
+        };
+      }
       return {
-        id: model.id,
-        checked:
-          !excludeAll &&
-          enabledOpenCodeModelIds.has(normalized) &&
-          !excludedModelIds.has(normalized),
+        ...prev,
+        modelEntries: [...prev.modelEntries, { ...createEmptyModelEntry(), name: modelId, alias }],
       };
     });
-  }, [
-    isCline,
-    filteredOpenCodeModels,
-    excludeAll,
-    enabledOpenCodeModelIds,
-    excludedModelIds,
-  ]);
-
-  const clineColumns = useMemo<DataTableColumn<ClineModelRow>[]>(
-    () => [
-      {
-        key: "id",
-        label: t("providers.cline_real_model_id"),
-        width: "w-72",
-        overflowTooltip: (row) => row.id,
-        render: (row) => (
-          <div className="min-w-0">
-            <span className="block truncate font-mono text-xs font-semibold text-slate-800 dark:text-white/85">
-              {row.id}
-            </span>
-          </div>
-        ),
-      },
-      {
-        key: "enabled",
-        label: t("providers.model_enabled"),
-        width: "w-24",
-        headerClassName: "text-center",
-        cellClassName: "text-center",
-        lockOrder: "end",
-        render: (row) => (
-          <Checkbox
-            checked={row.checked}
-            onCheckedChange={(next) => setOpenCodeModelAllowed(row.id, next)}
-            aria-label={row.id}
-          />
-        ),
-      },
-    ],
-    [setOpenCodeModelAllowed, t],
-  );
+  };
 
   if (isModelAccessProvider) {
     return (
@@ -212,83 +181,63 @@ export function ProviderKeyModelsTab({
             </p>
           ) : null}
 
-          {isCline ? (
-            <div className="mt-3 overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-neutral-800 dark:bg-neutral-950">
-              <DataTable<ClineModelRow>
-                tableId="provider-cline-models"
-                rows={clineRows}
-                columns={clineColumns}
-                rowKey={(row) => row.id}
-                loading={openCodeModelsLoading && openCodeModels.length === 0}
-                rowHeight={44}
-                height="h-80"
-                minHeight="min-h-[160px]"
-                minWidth="min-w-[720px]"
-                caption={t("providers.cline_models_title")}
-                emptyText={t("providers.no_discovered_models")}
-                showAllLoadedMessage={false}
-                columnReorderable={false}
-                persistColumnOrder={false}
-              />
+          <div className="mt-3 max-h-80 overflow-y-auto rounded-xl bg-white dark:bg-neutral-950">
+            <div className="grid grid-cols-[minmax(0,1fr)_minmax(180px,260px)_72px] gap-3 px-3 py-2 text-xs font-semibold text-slate-500 dark:text-white/55">
+              <span>{t("providers.real_model_id")}</span>
+              <span>{t("providers.model_alias")}</span>
+              <span className="text-center">{t("providers.model_enabled")}</span>
             </div>
-          ) : (
-            <div className="mt-3 max-h-80 overflow-y-auto rounded-xl border border-slate-200 bg-white dark:border-neutral-800 dark:bg-neutral-950">
-              {openCodeModelsLoading && openCodeModels.length === 0 ? (
-                <div className="px-3 py-6 text-center text-sm text-slate-500 dark:text-white/55">
-                  {t("providers.models_loading")}
-                </div>
-              ) : filteredOpenCodeModels.length ? (
-                <div className="divide-y divide-slate-100 dark:divide-neutral-900">
-                  {filteredOpenCodeModels.map((model) => {
-                    const normalized = model.id.toLowerCase();
-                    const checked =
-                      !excludeAll &&
-                      enabledOpenCodeModelIds.has(normalized) &&
-                      !excludedModelIds.has(normalized);
-                    return (
-                      <label
-                        key={model.id}
-                        className="flex cursor-pointer items-center gap-3 px-3 py-2.5 transition-colors hover:bg-slate-50 dark:hover:bg-white/5"
-                      >
+            {openCodeModelsLoading && openCodeModels.length === 0 ? (
+              <div className="px-3 py-6 text-center text-sm text-slate-500 dark:text-white/55">
+                {t("providers.models_loading")}
+              </div>
+            ) : filteredOpenCodeModels.length ? (
+              <div className="divide-y divide-slate-100 dark:divide-neutral-900">
+                {filteredOpenCodeModels.map((model) => {
+                  const normalized = model.id.toLowerCase();
+                  const checked =
+                    !excludeAll &&
+                    enabledOpenCodeModelIds.has(normalized) &&
+                    !excludedModelIds.has(normalized);
+                  const entry = modelEntryByName.get(normalized);
+                  return (
+                    <div
+                      key={model.id}
+                      className="grid grid-cols-[minmax(0,1fr)_minmax(180px,260px)_72px] items-center gap-3 px-3 py-2.5 transition-colors hover:bg-slate-50 dark:hover:bg-white/5"
+                    >
+                      <span className="min-w-0">
+                        <span className="block truncate font-mono text-xs font-semibold text-slate-800 dark:text-white/85">
+                          {model.id}
+                        </span>
+                        {model.owned_by ? (
+                          <span className="block truncate text-[11px] text-slate-500 dark:text-white/45">
+                            {model.owned_by}
+                          </span>
+                        ) : null}
+                      </span>
+                      <TextInput
+                        value={entry?.alias ?? ""}
+                        onChange={(event) => setModelAlias(model.id, event.currentTarget.value)}
+                        placeholder={t("common.model_alias_placeholder")}
+                        className="h-8"
+                      />
+                      <div className="flex justify-center">
                         <Checkbox
                           checked={checked}
-                          onCheckedChange={(next) =>
-                            setOpenCodeModelAllowed(model.id, next)
-                          }
+                          onCheckedChange={(next) => setOpenCodeModelAllowed(model.id, next)}
                           aria-label={model.id}
                         />
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate font-mono text-xs font-semibold text-slate-800 dark:text-white/85">
-                            {model.id}
-                          </span>
-                          {model.owned_by ? (
-                            <span className="block truncate text-[11px] text-slate-500 dark:text-white/45">
-                              {model.owned_by}
-                            </span>
-                          ) : null}
-                        </span>
-                        <span
-                          className={
-                            checked
-                              ? "rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:text-emerald-200"
-                              : "rounded-full bg-rose-500/10 px-2 py-0.5 text-[11px] font-semibold text-rose-700 dark:text-rose-200"
-                          }
-                        >
-                          {checked
-                            ? t("providers.model_allowed")
-                            : t("providers.model_blocked")}
-                        </span>
-                      </label>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="px-3 py-6 text-center text-sm text-slate-500 dark:text-white/55">
-                  {t("providers.no_discovered_models")}
-                </div>
-              )}
-            </div>
-          )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="px-3 py-6 text-center text-sm text-slate-500 dark:text-white/55">
+                {t("providers.no_discovered_models")}
+              </div>
+            )}
+          </div>
         </SectionCard>
 
         <SectionCard>
