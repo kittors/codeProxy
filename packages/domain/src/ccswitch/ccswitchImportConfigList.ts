@@ -15,6 +15,7 @@ export interface CcSwitchModelMapping {
   requestModel: string;
   targetModel: string;
   role?: CcSwitchClaudeModelRole;
+  contextWindow?: number;
 }
 
 export interface CcSwitchImportCodexModelCatalog {
@@ -71,6 +72,12 @@ const normalizeClaudeRole = (value: unknown): CcSwitchClaudeModelRole | undefine
     : undefined;
 };
 
+const normalizeContextWindow = (value: unknown): number | undefined => {
+  const parsed = typeof value === "number" ? value : Number(String(value ?? ""));
+  if (!Number.isFinite(parsed) || parsed <= 0) return undefined;
+  return Math.round(parsed);
+};
+
 const normalizeModelMappings = (value: unknown): CcSwitchModelMapping[] => {
   if (!Array.isArray(value)) return [];
   const seen = new Set<string>();
@@ -101,6 +108,11 @@ const normalizeModelMappings = (value: unknown): CcSwitchModelMapping[] => {
       ...(role ? { role } : {}),
       requestModel,
       targetModel,
+      ...(normalizeContextWindow(record["context-window"] ?? record.contextWindow) !== undefined
+        ? {
+            contextWindow: normalizeContextWindow(record["context-window"] ?? record.contextWindow),
+          }
+        : {}),
     });
   });
 

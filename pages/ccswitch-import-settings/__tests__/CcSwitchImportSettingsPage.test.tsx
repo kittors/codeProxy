@@ -184,7 +184,7 @@ describe("CcSwitchImportSettingsPage", () => {
     );
     await user.clear(requestModelInput);
     await user.type(requestModelInput, "gpt-5.5");
-    const contextWindowInput = within(dialog).getByLabelText(/codex context window/i);
+    const contextWindowInput = within(dialog).getByLabelText(/context window for mapping 1/i);
     expect(contextWindowInput).toHaveValue(128000);
     await user.clear(contextWindowInput);
     await user.type(contextWindowInput, "272000");
@@ -208,6 +208,7 @@ describe("CcSwitchImportSettingsPage", () => {
             {
               requestModel: "gpt-5.5",
               targetModel: "deepseek-v4-flash",
+              contextWindow: 272000,
             },
           ]),
           codexModelCatalog: {
@@ -223,7 +224,7 @@ describe("CcSwitchImportSettingsPage", () => {
               }),
               expect.objectContaining({
                 slug: "kimi-k2",
-                context_window: 272000,
+                context_window: 128000,
               }),
             ],
           },
@@ -305,6 +306,7 @@ describe("CcSwitchImportSettingsPage", () => {
           defaultModel: "gpt-5.5",
           modelMappings: [
             {
+              contextWindow: 128000,
               requestModel: "gpt-5.5",
               targetModel: "deepseek-v4-flash",
             },
@@ -777,10 +779,12 @@ describe("CcSwitchImportSettingsPage", () => {
           allowedChannelGroups: ["kimicode"],
           modelMappings: [
             {
+              contextWindow: 128000,
               requestModel: "gpt-5.5",
               targetModel: "gpt-5.5",
             },
             {
+              contextWindow: 128000,
               requestModel: "gpt-5.4-mini",
               targetModel: "gpt-5.5",
             },
@@ -912,6 +916,7 @@ describe("CcSwitchImportSettingsPage", () => {
           allowedChannelGroups: ["deepseekv4flash+chatgpt"],
           modelMappings: [
             {
+              contextWindow: 128000,
               requestModel: "gpt-5.4",
               targetModel: "deepseek-v4-flash",
             },

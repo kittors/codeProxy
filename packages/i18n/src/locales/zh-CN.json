@@ -2962,6 +2962,7 @@
     "config_request_model_name": "CC Switch 请求模型",
     "config_request_model_for": "{{model}} 对应的 CC Switch 请求模型",
     "config_request_model_for_mapping": "第 {{index}} 条 CC Switch 请求模型",
+    "config_context_window_for_mapping": "第 {{index}} 条上下文窗口",
     "config_claude_request_model_for": "{{role}} 请求模型",
     "config_claude_model_role": "Claude Code 设置",
     "config_claude_role_main": "主模型",

@@ -2673,6 +2673,7 @@
     "config_request_model_name": "CC Switch request model",
     "config_request_model_for": "CC Switch request model for {{model}}",
     "config_request_model_for_mapping": "CC Switch request model for mapping {{index}}",
+    "config_context_window_for_mapping": "Context window for mapping {{index}}",
     "config_claude_request_model_for": "{{role}} request model",
     "config_claude_model_role": "Claude Code setting",
     "config_claude_role_main": "Main model",

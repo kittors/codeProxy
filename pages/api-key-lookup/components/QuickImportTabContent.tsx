@@ -65,6 +65,7 @@ function serializeQuickImportConfig(config: CcSwitchImportConfigListItem): Recor
       ...(mapping.role ? { role: mapping.role } : {}),
       "request-model": mapping.requestModel,
       "target-model": mapping.targetModel,
+      ...(mapping.contextWindow ? { "context-window": mapping.contextWindow } : {}),
     })),
     "allowed-channel-groups": [...config.allowedChannelGroups],
     "route-path": config.routePath,

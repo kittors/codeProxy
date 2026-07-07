@@ -12,6 +12,7 @@ export interface CcSwitchModelMappingInput {
   requestModel: string;
   targetModel: string;
   role?: CcSwitchClaudeModelRole;
+  contextWindow?: number;
 }
 
 export const CC_SWITCH_CODEX_MODEL_CATALOG_FILENAME = "cc-switch-model-catalog.json";
@@ -223,6 +224,9 @@ const normalizeModelMappings = (
         ...(role ? { role } : {}),
         requestModel: requestModel || targetModel,
         targetModel,
+        ...(normalizeCodexContextWindow(mapping.contextWindow) !== DEFAULT_CODEX_CONTEXT_WINDOW
+          ? { contextWindow: normalizeCodexContextWindow(mapping.contextWindow) }
+          : {}),
       };
     })
     .filter((mapping): mapping is CcSwitchModelMappingInput => Boolean(mapping));
@@ -301,8 +305,9 @@ const normalizeCodexReasoningLevels = (
         description: String(level.description ?? builtIn?.description ?? effort),
       };
     })
-    .filter((level): level is CcSwitchCodexModelCatalogEntry["supported_reasoning_levels"][number] =>
-      Boolean(level),
+    .filter(
+      (level): level is CcSwitchCodexModelCatalogEntry["supported_reasoning_levels"][number] =>
+        Boolean(level),
     );
 
   return normalized.length > 0 ? normalized : CODEX_SUPPORTED_REASONING_LEVELS;
@@ -430,27 +435,31 @@ const buildCodexConfig = (input: {
     catalogModels.push(normalizedEntry);
     explicitCatalogModels.push(normalizedEntry);
   };
-  const addCatalogModel = (value: string) => {
+  const addCatalogModel = (value: string, contextWindow?: number) => {
     const normalized = value.trim();
     const key = normalized.toLowerCase();
     if (!normalized || seen.has(key)) return;
     seen.add(key);
-    catalogModels.push({
+    const modelEntry: Record<string, unknown> = {
       model: normalized,
       defaultReasoningLevel: "medium",
       supportedReasoningLevels: CODEX_SUPPORTED_REASONING_LEVELS,
-    });
+    };
+    if (contextWindow && contextWindow > 0) {
+      modelEntry.contextWindow = contextWindow;
+    }
+    catalogModels.push(modelEntry);
   };
 
   for (const entry of input.codexModelCatalog?.models ?? []) {
     if (!entry || typeof entry !== "object" || Array.isArray(entry)) continue;
     addCatalogEntry(entry);
   }
-  addCatalogModel(model);
   for (const mapping of input.modelMappings) {
     if (mapping.role) continue;
-    addCatalogModel(mapping.requestModel);
+    addCatalogModel(mapping.requestModel, mapping.contextWindow);
   }
+  addCatalogModel(model);
 
   // Derive the default reasoning effort from the explicit catalog entry for
   // the selected model so the generated config.toml stays consistent with
