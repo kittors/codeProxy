@@ -485,6 +485,83 @@ describe("ProvidersPage OpenCode Go tab", () => {
     expect(saved).toHaveProperty("disabled", false);
   });
 
+  test("keeps a partial OpenCode Go allowlist when reopening the editor", async () => {
+    const user = userEvent.setup();
+    mocks.getOpenCodeGoConfigs.mockImplementation(async () => [
+      {
+        name: "Existing OpenCode Go",
+        apiKey: "sk-existing-opencode-go",
+        models: [{ name: "qwen3.5-plus" }],
+      },
+    ]);
+
+    render(
+      <MemoryRouter initialEntries={["/ai-providers/opencode-go/0"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    const dialog = await screen.findByRole("dialog", {
+      name: /Edit OpenCode Go configuration/i,
+    });
+    await waitFor(() => expect(mocks.apiCallRequest).toHaveBeenCalled());
+    await user.click(within(dialog).getByRole("button", { name: /Save/ }));
+
+    await waitFor(() => expect(mocks.patchOpenCodeGoConfig).toHaveBeenCalled());
+    const saved = mocks.patchOpenCodeGoConfig.mock.calls[0][1];
+    expect(saved).toHaveProperty("models", [{ name: "qwen3.5-plus" }]);
+    expect(saved).not.toHaveProperty("excludedModels", ["*"]);
+  });
+
+  test("header uncheck saves no OpenCode Go access even with stale hidden models", async () => {
+    const user = userEvent.setup();
+    mocks.getOpenCodeGoConfigs.mockImplementation(async () => [
+      {
+        name: "Existing OpenCode Go",
+        apiKey: "sk-existing-opencode-go",
+        models: [
+          { name: "deepseek-v4-flash" },
+          { name: "qwen3.5-plus" },
+          { name: "kimi-k2.6" },
+          { name: "qwen3.7-max" },
+          { name: "stale-model-not-in-catalog" },
+        ],
+      },
+    ]);
+
+    render(
+      <MemoryRouter initialEntries={["/ai-providers/opencode-go/0"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    const dialog = await screen.findByRole("dialog", {
+      name: /Edit OpenCode Go configuration/i,
+    });
+    await user.click(within(dialog).getByRole("tab", { name: /Models/i }));
+    await waitFor(() => expect(mocks.apiCallRequest).toHaveBeenCalled());
+    await user.click(within(dialog).getByRole("checkbox", { name: /Enabled/i }));
+    await user.click(within(dialog).getByRole("button", { name: /Save/ }));
+
+    await waitFor(() => expect(mocks.patchOpenCodeGoConfig).toHaveBeenCalled());
+    const saved = mocks.patchOpenCodeGoConfig.mock.calls[0][1];
+    expect(saved).toHaveProperty("models", []);
+    expect(saved).toHaveProperty("excludedModels", ["*"]);
+    expect(saved).toHaveProperty("disabled", false);
+  });
+
   test("shows OpenCode Go dynamic model list without manual model inputs", async () => {
     const user = userEvent.setup();
 

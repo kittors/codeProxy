@@ -252,6 +252,15 @@ export function ProviderKeyModal({
       ),
     [keyDraft.modelEntries],
   );
+  const openCodeModelIds = useMemo(
+    () =>
+      new Set(
+        openCodeModels
+          .map((model) => model.id.trim().toLowerCase())
+          .filter(Boolean),
+      ),
+    [openCodeModels],
+  );
   const isOpenCodeModelAllowed = useCallback(
     (modelId: string) => {
       const normalized = modelId.trim().toLowerCase();
@@ -364,9 +373,14 @@ export function ProviderKeyModal({
           : baseEntries.filter(
               (entry) => entry.name.trim().toLowerCase() !== normalized,
             );
-        const hasAllowedEntry = nextEntries.some((entry) =>
-          isModelAllowedForProvider(modelAccessProvider, entry.name),
-        );
+        const hasAllowedEntry = nextEntries.some((entry) => {
+          const key = entry.name.trim().toLowerCase();
+          return (
+            key !== "" &&
+            openCodeModelIds.has(key) &&
+            isModelAllowedForProvider(modelAccessProvider, entry.name)
+          );
+        });
         const nextExcluded = allowed
           ? currentExcluded.filter((model) => model.trim() !== "*")
           : hasAllowedEntry
@@ -379,41 +393,50 @@ export function ProviderKeyModal({
         };
       });
     },
-    [modelAccessProvider, setKeyDraft],
+    [modelAccessProvider, openCodeModelIds, setKeyDraft],
   );
 
   const setAllFetchedOpenCodeModelsAllowed = useCallback(
     (allowed: boolean) => {
-      const fetchedIds = new Set(
-        openCodeModels.map((model) => model.id.trim().toLowerCase()),
-      );
+      if (!modelAccessProvider) return;
       setKeyDraft((prev) => {
         const currentExcluded = excludedModelsFromText(prev.excludedModelsText);
-        const existingNames = new Set(
+        const existingByName = new Map(
           prev.modelEntries
-            .map((entry) => entry.name.trim().toLowerCase())
-            .filter(Boolean),
+            .map((entry) => [entry.name.trim().toLowerCase(), entry] as const)
+            .filter(([name]) => name !== ""),
         );
-        const addedEntries = openCodeModels
-          .filter((model) => !existingNames.has(model.id.trim().toLowerCase()))
-          .map((model) => ({ ...createEmptyModelEntry(), name: model.id }));
+        const preservedEntries = prev.modelEntries.filter(
+          (entry) => !isModelAllowedForProvider(modelAccessProvider, entry.name),
+        );
         const nextEntries = allowed
-          ? [...prev.modelEntries, ...addedEntries]
-          : prev.modelEntries.filter(
-              (entry) => !fetchedIds.has(entry.name.trim().toLowerCase()),
-            );
+          ? [
+              ...preservedEntries,
+              ...openCodeModels
+                .filter((model) =>
+                  isModelAllowedForProvider(modelAccessProvider, model.id),
+                )
+                .map((model) => {
+                  const key = model.id.trim().toLowerCase();
+                  return (
+                    existingByName.get(key) ?? {
+                      ...createEmptyModelEntry(),
+                      name: model.id,
+                    }
+                  );
+                }),
+            ]
+          : preservedEntries;
         return {
           ...prev,
           excludedModelsText: allowed
             ? currentExcluded.filter((model) => model.trim() !== "*").join("\n")
-            : nextEntries.length
-              ? prev.excludedModelsText
-              : "*",
+            : "*",
           modelEntries: nextEntries,
         };
       });
     },
-    [openCodeModels, setKeyDraft],
+    [modelAccessProvider, openCodeModels, setKeyDraft],
   );
 
   useEffect(() => {
@@ -421,6 +444,13 @@ export function ProviderKeyModal({
     setKeyDraft((prev) => {
       if (hasDisableAllModelsRule(excludedModelsFromText(prev.excludedModelsText)))
         return prev;
+      if (
+        prev.modelEntries.some((entry) =>
+          isModelAllowedForProvider(modelAccessProvider, entry.name),
+        )
+      ) {
+        return prev;
+      }
       const existingNames = new Set(
         prev.modelEntries
           .map((entry) => entry.name.trim().toLowerCase())
