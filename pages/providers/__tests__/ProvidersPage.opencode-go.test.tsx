@@ -720,6 +720,37 @@ describe("ProvidersPage Cline tab", () => {
     expect(tooltip).toHaveTextContent("cline-pass/gpt-5.2");
   });
 
+  test("does not show legacy ClinePass excluded models on provider cards", async () => {
+    const user = userEvent.setup();
+    mocks.getClineConfigs.mockImplementation(async () => [
+      {
+        name: "Cline Hidden Excluded",
+        apiKey: "sk-cline-hidden",
+        excludedModels: ["cline-pass/legacy-disabled-only"],
+      },
+    ]);
+
+    render(
+      <MemoryRouter initialEntries={["/ai-providers"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    await user.click(await screen.findByRole("tab", { name: /ClinePass/ }));
+    expect(
+      await screen.findByText("Cline Hidden Excluded"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("cline-pass/legacy-disabled-only"),
+    ).not.toBeInTheDocument();
+  });
+
   test("drops legacy ClinePass per-key model fields when saving", async () => {
     const user = userEvent.setup();
     mocks.getClineConfigs.mockImplementation(async () => [
@@ -880,6 +911,39 @@ describe("ProvidersPage Ollama Cloud tab", () => {
     });
     const saved = mocks.saveOllamaCloudConfigs.mock.calls[0][0][0];
     expect(saved).not.toHaveProperty("models");
+  });
+
+  test("does not show legacy Ollama Cloud excluded models on provider cards", async () => {
+    const user = userEvent.setup();
+    mocks.getOllamaCloudConfigs.mockImplementation(async () => [
+      {
+        name: "Ollama Hidden Excluded",
+        apiKey: "sk-ollama-hidden",
+        excludedModels: ["gpt-oss:legacy-disabled-only"],
+      },
+    ]);
+
+    render(
+      <MemoryRouter initialEntries={["/ai-providers"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    await user.click(
+      await screen.findByRole("tab", { name: /Ollama Cloud/ }),
+    );
+    expect(
+      await screen.findByText("Ollama Hidden Excluded"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("gpt-oss:legacy-disabled-only"),
+    ).not.toBeInTheDocument();
   });
 });
 

@@ -1323,6 +1323,7 @@ export function ProvidersPage() {
               }
               getLatencyEntry={getLatencyEntry}
               checkLatency={checkLatency}
+              showExcludedModels={false}
               selectedKeys={selectedExportKeySet}
               onToggleSelected={toggleExportSelection}
             />
@@ -1358,6 +1359,7 @@ export function ProvidersPage() {
               }
               getLatencyEntry={getLatencyEntry}
               checkLatency={checkLatency}
+              showExcludedModels={false}
               selectedKeys={selectedExportKeySet}
               onToggleSelected={toggleExportSelection}
             />
