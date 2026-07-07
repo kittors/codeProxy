@@ -19,14 +19,14 @@ describe("providersApi Ollama Cloud", () => {
     deleteMock.mockReset();
   });
 
-  test("normalizes Ollama Cloud configs with default Base URL and ignores legacy models", async () => {
+  test("normalizes Ollama Cloud configs with default Base URL and model aliases", async () => {
     const { providersApi } = await import("@code-proxy/api-client/endpoints/providers");
     getMock.mockResolvedValue({
       "ollama-cloud-api-key": [
         {
           name: "Ollama",
           "api-key": "sk-ollama",
-          models: [{ name: "gpt-oss:120b" }],
+          models: [{ name: "gpt-oss:120b", alias: "oss-large" }],
           "excluded-models": ["gpt-oss:20b", "*"],
         },
         { name: "Runtime", "api-key": "runtime-token", runtime_only: true },
@@ -38,13 +38,14 @@ describe("providersApi Ollama Cloud", () => {
         name: "Ollama",
         apiKey: "sk-ollama",
         baseUrl: "https://ollama.com",
+        models: [{ name: "gpt-oss:120b", alias: "oss-large" }],
         excludedModels: ["gpt-oss:20b", "*"],
       },
     ]);
     expect(getMock).toHaveBeenCalledWith("/ollama-cloud-api-key");
   });
 
-  test("serializes Ollama Cloud configs without legacy models and deletes them", async () => {
+  test("serializes Ollama Cloud configs with model aliases and deletes them", async () => {
     const { providersApi } = await import("@code-proxy/api-client/endpoints/providers");
 
     await providersApi.saveOllamaCloudConfigs([
@@ -52,7 +53,7 @@ describe("providersApi Ollama Cloud", () => {
         name: "Ollama",
         apiKey: "sk-ollama",
         baseUrl: "https://ollama.com",
-        models: [{ name: "gpt-oss:120b" }],
+        models: [{ name: "gpt-oss:120b", alias: "oss-large" }],
         excludedModels: ["gpt-oss:20b", "*"],
       },
     ]);
@@ -62,6 +63,7 @@ describe("providersApi Ollama Cloud", () => {
         name: "Ollama",
         "api-key": "sk-ollama",
         "base-url": "https://ollama.com",
+        models: [{ name: "gpt-oss:120b", alias: "oss-large" }],
         "excluded-models": ["gpt-oss:20b", "*"],
       },
     ]);

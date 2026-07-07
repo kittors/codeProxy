@@ -101,7 +101,7 @@ export function ProviderKeyRequestTab({
       {isOllamaCloud ? (
         <SectionCard className="bg-slate-50/80 dark:bg-neutral-900/50">
           <p className="text-sm font-semibold text-slate-900 dark:text-white">
-            Ollama Cloud endpoint
+            {t("providers.ollama_cloud_endpoint_title")}
           </p>
           <p className="mt-3 break-all font-mono text-xs text-slate-600 dark:text-white/65">
             {ollamaCloudChatUrl}
@@ -153,7 +153,7 @@ export function ProviderKeyRequestTab({
         </SectionCard>
       ) : null}
 
-      {isOpenCodeGo || isCline ? (
+      {isOpenCodeGo || isCline || editKeyType === "ollama-cloud" ? (
         <SectionCard>
           <p className="text-sm font-semibold text-slate-900 dark:text-white">
             {t("providers.opencode_go_vision_fallback_title")}

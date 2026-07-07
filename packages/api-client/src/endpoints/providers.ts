@@ -55,6 +55,7 @@ export const providersApi = {
         const baseUrl = normalizeString(item["base-url"] ?? item.baseUrl) ?? undefined;
         const proxyId = normalizeString(item["proxy-id"] ?? item.proxyId) ?? undefined;
         const headers = normalizeHeaders(item.headers);
+        const models = normalizeModels(item.models);
         const excludedModels = normalizeExcludedModels(
           item["excluded-models"] ?? item.excludedModels,
         );
@@ -65,6 +66,7 @@ export const providersApi = {
           ...(baseUrl ? { baseUrl } : {}),
           ...(proxyId ? { proxyId } : {}),
           ...(headers ? { headers } : {}),
+          ...(models ? { models } : {}),
           ...(excludedModels ? { excludedModels } : {}),
         };
       })
@@ -95,6 +97,7 @@ export const providersApi = {
         const proxyUrl = normalizeString(item["proxy-url"] ?? item.proxyUrl) ?? undefined;
         const proxyId = normalizeString(item["proxy-id"] ?? item.proxyId) ?? undefined;
         const headers = normalizeHeaders(item.headers);
+        const models = normalizeModels(item.models);
         const excludedModels = normalizeExcludedModels(
           item["excluded-models"] ?? item.excludedModels,
         );
@@ -106,6 +109,7 @@ export const providersApi = {
           ...(proxyUrl ? { proxyUrl } : {}),
           ...(proxyId ? { proxyId } : {}),
           ...(headers ? { headers } : {}),
+          ...(models ? { models } : {}),
           ...(excludedModels ? { excludedModels } : {}),
         };
       })
@@ -135,6 +139,7 @@ export const providersApi = {
         const proxyUrl = normalizeString(item["proxy-url"] ?? item.proxyUrl) ?? undefined;
         const proxyId = normalizeString(item["proxy-id"] ?? item.proxyId) ?? undefined;
         const headers = normalizeHeaders(item.headers);
+        const models = normalizeModels(item.models);
         const excludedModels = normalizeExcludedModels(
           item["excluded-models"] ?? item.excludedModels,
         );
@@ -149,6 +154,7 @@ export const providersApi = {
           ...(proxyUrl ? { proxyUrl } : {}),
           ...(proxyId ? { proxyId } : {}),
           ...(headers ? { headers } : {}),
+          ...(models ? { models } : {}),
           ...(excludedModels ? { excludedModels } : {}),
           ...(visionFallbackModel ? { visionFallbackModel } : {}),
           ...(workspaceId ? { workspaceId } : {}),
@@ -183,6 +189,7 @@ export const providersApi = {
         const proxyUrl = normalizeString(item["proxy-url"] ?? item.proxyUrl) ?? undefined;
         const proxyId = normalizeString(item["proxy-id"] ?? item.proxyId) ?? undefined;
         const headers = normalizeHeaders(item.headers);
+        const models = normalizeModels(item.models);
         const excludedModels = normalizeExcludedModels(
           item["excluded-models"] ?? item.excludedModels,
         );
@@ -196,6 +203,7 @@ export const providersApi = {
           ...(proxyUrl ? { proxyUrl } : {}),
           ...(proxyId ? { proxyId } : {}),
           ...(headers ? { headers } : {}),
+          ...(models ? { models } : {}),
           ...(excludedModels ? { excludedModels } : {}),
           ...(visionFallbackModel ? { visionFallbackModel } : {}),
         };
@@ -227,9 +235,12 @@ export const providersApi = {
         const proxyUrl = normalizeString(item["proxy-url"] ?? item.proxyUrl) ?? undefined;
         const proxyId = normalizeString(item["proxy-id"] ?? item.proxyId) ?? undefined;
         const headers = normalizeHeaders(item.headers);
+        const models = normalizeModels(item.models);
         const excludedModels = normalizeExcludedModels(
           item["excluded-models"] ?? item.excludedModels,
         );
+        const visionFallbackModel =
+          normalizeString(item["vision-fallback-model"] ?? item.visionFallbackModel) ?? undefined;
         return {
           apiKey,
           ...(name ? { name } : {}),
@@ -238,7 +249,9 @@ export const providersApi = {
           ...(proxyUrl ? { proxyUrl } : {}),
           ...(proxyId ? { proxyId } : {}),
           ...(headers ? { headers } : {}),
+          ...(models ? { models } : {}),
           ...(excludedModels ? { excludedModels } : {}),
+          ...(visionFallbackModel ? { visionFallbackModel } : {}),
         };
       })
       .filter(Boolean) as ProviderSimpleConfig[];
