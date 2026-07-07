@@ -35,6 +35,38 @@ type ProviderKeyModalTab = "basic" | "request" | "models";
 
 const OPENCODE_GO_MODELS_URL = "https://opencode.ai/zen/go/v1/models";
 
+const isOpenCodeGoVisionModel = (modelId: string): boolean => {
+  const normalized = modelId.trim().toLowerCase();
+  if (!normalized) return false;
+  const baseModel = normalized.includes("/")
+    ? normalized.slice(normalized.lastIndexOf("/") + 1)
+    : normalized;
+  const candidates = [normalized, baseModel];
+  // OpenCode Go and Cline model lists do not expose capability metadata, so keep
+  // the known visual models plus conservative name tokens used by both catalogs.
+  const knownVisionModels = new Set([
+    "qwen3.5-plus",
+    "qwen3.6-plus",
+    "mimo-v2-omni",
+    "mimo-v2.5",
+    "mimo-v2.5-pro",
+  ]);
+  if (candidates.some((candidate) => knownVisionModels.has(candidate))) return true;
+  if (
+    candidates.some(
+      (candidate) =>
+        candidate.includes("vision") ||
+        candidate.includes("multimodal") ||
+        candidate.includes("omni"),
+    )
+  ) {
+    return true;
+  }
+  return candidates.some((candidate) =>
+    candidate.split(/[-_./:]+/).some((token) => token === "vl"),
+  );
+};
+
 interface ProviderKeyModalProps {
   open: boolean;
   editKeyIndex: number | null;
@@ -234,6 +266,35 @@ export function ProviderKeyModal({
   const allowedOpenCodeCount = openCodeModels.filter((model) =>
     isOpenCodeModelAllowed(model.id),
   ).length;
+  const openCodeVisionFallbackOptions = useMemo(() => {
+    const allowedModels = openCodeModels.filter(
+      (model) => isOpenCodeGoVisionModel(model.id) && isOpenCodeModelAllowed(model.id),
+    );
+    const modelOptions = allowedModels.map((model) => ({
+      value: model.id,
+      label: model.owned_by ? `${model.id} · ${model.owned_by}` : model.id,
+    }));
+    const currentFallback = keyDraft.visionFallbackModel.trim();
+    const hasCurrentFallback =
+      currentFallback !== "" &&
+      !modelOptions.some((model) => model.value.toLowerCase() === currentFallback.toLowerCase());
+    // Preserve existing configs even when "*" or a catalog refresh makes the model unavailable.
+    const currentFallbackOption = hasCurrentFallback
+      ? [
+          {
+            value: currentFallback,
+            label: t("providers.opencode_go_vision_fallback_unavailable", {
+              model: currentFallback,
+            }),
+          },
+        ]
+      : [];
+    return [
+      { value: "", label: t("providers.opencode_go_vision_fallback_none") },
+      ...currentFallbackOption,
+      ...modelOptions,
+    ];
+  }, [isOpenCodeModelAllowed, keyDraft.visionFallbackModel, openCodeModels, t]);
 
   const setOpenCodeModelAllowed = useCallback(
     (modelId: string, allowed: boolean) => {
@@ -362,6 +423,8 @@ export function ProviderKeyModal({
               isOpenCodeGo={isOpenCodeGo}
               isCline={isCline}
               isOllamaCloud={isOllamaCloud}
+              openCodeVisionFallbackOptions={openCodeVisionFallbackOptions}
+              openCodeModelsLoading={openCodeModelsLoading}
             />
           </TabsContent>
 

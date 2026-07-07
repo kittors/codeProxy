@@ -318,7 +318,7 @@ describe("ProvidersPage OpenCode Go tab", () => {
         apiKey: "sk-existing-opencode-go",
         models: [{ name: "cline-pass/glm-5.2" }],
         excludedModels: ["cline-pass/minimax-m3", "*"],
-        visionFallbackModel: "cline-pass/mimo-v2.5-pro",
+        visionFallbackModel: "qwen3.5-plus",
       },
     ]);
 
@@ -352,7 +352,7 @@ describe("ProvidersPage OpenCode Go tab", () => {
     });
     const saved = mocks.saveOpenCodeGoConfigs.mock.calls[0][0][0];
     expect(saved).not.toHaveProperty("models");
-    expect(saved).not.toHaveProperty("visionFallbackModel");
+    expect(saved).toHaveProperty("visionFallbackModel", "qwen3.5-plus");
     expect(saved).toHaveProperty("excludedModels", ["cline-pass/minimax-m3", "*"]);
   });
 
@@ -388,6 +388,13 @@ describe("ProvidersPage OpenCode Go tab", () => {
     await waitFor(() => expect(mocks.apiCallRequest).toHaveBeenCalled());
     expect(mocks.getModelDefinitions).not.toHaveBeenCalled();
 
+    await user.click(within(dialog).getByRole("tab", { name: /Request/i }));
+    const fallbackSelect = within(dialog).getByRole("combobox", {
+      name: /Vision fallback model/i,
+    });
+    await user.click(fallbackSelect);
+    await user.click(await screen.findByRole("option", { name: /qwen3\.5-plus/ }));
+
     await user.click(within(dialog).getByRole("tab", { name: /Basic/i }));
     await user.type(
       within(dialog).getByPlaceholderText("e.g. Gemini Primary"),
@@ -409,7 +416,7 @@ describe("ProvidersPage OpenCode Go tab", () => {
     });
     const saved = mocks.saveOpenCodeGoConfigs.mock.calls[0][0][0];
     expect(saved).not.toHaveProperty("models");
-    expect(saved).not.toHaveProperty("visionFallbackModel");
+    expect(saved).toHaveProperty("visionFallbackModel", "qwen3.5-plus");
   });
 });
 
@@ -619,7 +626,7 @@ describe("ProvidersPage Cline tab", () => {
     });
     const saved = mocks.saveClineConfigs.mock.calls[0][0][0];
     expect(saved).not.toHaveProperty("models");
-    expect(saved).not.toHaveProperty("visionFallbackModel");
+    expect(saved).toHaveProperty("visionFallbackModel", "cline-pass/mimo-v2.5-pro");
   });
 });
 

@@ -185,6 +185,14 @@ const normalizeSimpleItem = (
       ...(headers ? { headers } : {}),
       ...(!usesDynamicModelCatalog && models ? { models } : {}),
       ...(excludedModels ? { excludedModels } : {}),
+      ...((kind === "opencode-go" || kind === "cline") &&
+      normalizeString(value["vision-fallback-model"] ?? value.visionFallbackModel)
+        ? {
+            visionFallbackModel: normalizeString(
+              value["vision-fallback-model"] ?? value.visionFallbackModel,
+            )!,
+          }
+        : {}),
       ...(kind === "opencode-go" && normalizeString(value["workspace-id"] ?? value.workspaceId)
         ? { workspaceId: normalizeString(value["workspace-id"] ?? value.workspaceId)! }
         : {}),

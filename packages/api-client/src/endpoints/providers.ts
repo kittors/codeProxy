@@ -138,6 +138,8 @@ export const providersApi = {
         const excludedModels = normalizeExcludedModels(
           item["excluded-models"] ?? item.excludedModels,
         );
+        const visionFallbackModel =
+          normalizeString(item["vision-fallback-model"] ?? item.visionFallbackModel) ?? undefined;
         const workspaceId = normalizeString(item["workspace-id"] ?? item.workspaceId) ?? undefined;
         const authCookie = normalizeString(item["auth-cookie"] ?? item.authCookie) ?? undefined;
         return {
@@ -148,6 +150,7 @@ export const providersApi = {
           ...(proxyId ? { proxyId } : {}),
           ...(headers ? { headers } : {}),
           ...(excludedModels ? { excludedModels } : {}),
+          ...(visionFallbackModel ? { visionFallbackModel } : {}),
           ...(workspaceId ? { workspaceId } : {}),
           ...(authCookie ? { authCookie } : {}),
         };
@@ -183,6 +186,8 @@ export const providersApi = {
         const excludedModels = normalizeExcludedModels(
           item["excluded-models"] ?? item.excludedModels,
         );
+        const visionFallbackModel =
+          normalizeString(item["vision-fallback-model"] ?? item.visionFallbackModel) ?? undefined;
         return {
           apiKey,
           ...(name ? { name } : {}),
@@ -192,6 +197,7 @@ export const providersApi = {
           ...(proxyId ? { proxyId } : {}),
           ...(headers ? { headers } : {}),
           ...(excludedModels ? { excludedModels } : {}),
+          ...(visionFallbackModel ? { visionFallbackModel } : {}),
         };
       })
       .filter(Boolean) as ProviderSimpleConfig[];
