@@ -112,6 +112,7 @@ export const normalizeDiscoveredModels = (
 export type ProviderKeyDraft = {
   name: string;
   apiKey: string;
+  disabled: boolean;
   authMode: BedrockAuthMode;
   accessKeyId: string;
   secretAccessKey: string;
@@ -196,6 +197,7 @@ export const buildProviderKeyDraft = (
   return {
     name: input?.name ?? "",
     apiKey: input?.apiKey ?? "",
+    disabled: input?.disabled === true,
     authMode: bedrockInput?.authMode ?? "api-key",
     accessKeyId:
       bedrockInput?.accessKeyId ?? (bedrockInput ? input?.apiKey : "") ?? "",

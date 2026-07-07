@@ -175,6 +175,7 @@ export const providersApi = {
           normalizeString(item["auth-cookie"] ?? item.authCookie) ?? undefined;
         return {
           apiKey,
+          ...(item.disabled === true ? { disabled: true } : {}),
           ...(name ? { name } : {}),
           ...(prefix ? { prefix } : {}),
           ...(proxyUrl ? { proxyUrl } : {}),
@@ -244,6 +245,7 @@ export const providersApi = {
           ) ?? undefined;
         return {
           apiKey,
+          ...(item.disabled === true ? { disabled: true } : {}),
           ...(name ? { name } : {}),
           ...(prefix ? { prefix } : {}),
           baseUrl,
@@ -312,6 +314,7 @@ export const providersApi = {
           ) ?? undefined;
         return {
           apiKey,
+          ...(item.disabled === true ? { disabled: true } : {}),
           ...(name ? { name } : {}),
           ...(prefix ? { prefix } : {}),
           baseUrl,

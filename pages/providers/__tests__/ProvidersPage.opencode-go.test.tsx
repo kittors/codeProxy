@@ -435,14 +435,54 @@ describe("ProvidersPage OpenCode Go tab", () => {
     });
     expect(mocks.saveOpenCodeGoConfigs).not.toHaveBeenCalled();
     const saved = mocks.patchOpenCodeGoConfig.mock.calls[0][1];
-    expect(saved).toHaveProperty("models", [
-      { name: "deepseek-v4-flash" },
-      { name: "qwen3.5-plus" },
-      { name: "kimi-k2.6" },
-      { name: "qwen3.7-max" },
-    ]);
+    expect(saved).toHaveProperty("models", []);
     expect(saved).toHaveProperty("visionFallbackModel", "qwen3.5-plus");
     expect(saved).toHaveProperty("excludedModels", ["*"]);
+    expect(saved).toHaveProperty("disabled", false);
+  });
+
+  test("selects one OpenCode Go model from wildcard without restoring stale allowlist", async () => {
+    const user = userEvent.setup();
+    mocks.getOpenCodeGoConfigs.mockImplementation(async () => [
+      {
+        name: "Existing OpenCode Go",
+        apiKey: "sk-existing-opencode-go",
+        models: [
+          { name: "deepseek-v4-flash" },
+          { name: "qwen3.5-plus" },
+          { name: "kimi-k2.6" },
+        ],
+        excludedModels: ["*"],
+      },
+    ]);
+
+    render(
+      <MemoryRouter initialEntries={["/ai-providers/opencode-go/0"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    const dialog = await screen.findByRole("dialog", {
+      name: /Edit OpenCode Go configuration/i,
+    });
+    await user.click(within(dialog).getByRole("tab", { name: /Models/i }));
+    await waitFor(() => expect(mocks.apiCallRequest).toHaveBeenCalled());
+    await user.click(
+      within(dialog).getByRole("checkbox", { name: "qwen3.5-plus" }),
+    );
+    await user.click(within(dialog).getByRole("button", { name: /Save/ }));
+
+    await waitFor(() => expect(mocks.patchOpenCodeGoConfig).toHaveBeenCalled());
+    const saved = mocks.patchOpenCodeGoConfig.mock.calls[0][1];
+    expect(saved).toHaveProperty("models", [{ name: "qwen3.5-plus" }]);
+    expect(saved).toHaveProperty("excludedModels", []);
+    expect(saved).toHaveProperty("disabled", false);
   });
 
   test("shows OpenCode Go dynamic model list without manual model inputs", async () => {
@@ -483,6 +523,15 @@ describe("ProvidersPage OpenCode Go tab", () => {
     });
     expect(modelsTable.closest(".table-scrollbar")).toBeInTheDocument();
     expect(modelsTable.closest("[data-vt-scroll-content]")).toBeInTheDocument();
+    expect(
+      within(dialog).getByRole("checkbox", { name: /Enabled/i }),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).queryByRole("button", { name: /Select all/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(dialog).queryByRole("button", { name: /Select none/i }),
+    ).not.toBeInTheDocument();
 
     await user.click(within(dialog).getByRole("tab", { name: /Request/i }));
     const fallbackSelect = within(dialog).getByRole("combobox", {
@@ -846,16 +895,12 @@ describe("ProvidersPage Cline tab", () => {
     });
     expect(mocks.saveClineConfigs).not.toHaveBeenCalled();
     const saved = mocks.patchClineConfig.mock.calls[0][1];
-    expect(saved).toHaveProperty("models", [
-      { name: "cline-pass/glm-5.2" },
-      { name: "cline-pass/minimax-m3" },
-      { name: "cline-pass/qwen3.7-max" },
-      { name: "cline-pass/mimo-v2.5-pro" },
-    ]);
+    expect(saved).toHaveProperty("models", []);
     expect(saved).toHaveProperty(
       "visionFallbackModel",
       "cline-pass/mimo-v2.5-pro",
     );
+    expect(saved).toHaveProperty("disabled", false);
   });
 });
 
@@ -977,10 +1022,52 @@ describe("ProvidersPage Ollama Cloud tab", () => {
     });
     expect(mocks.saveOllamaCloudConfigs).not.toHaveBeenCalled();
     const saved = mocks.patchOllamaCloudConfig.mock.calls[0][1];
-    expect(saved).toHaveProperty("models", [
-      { name: "gpt-oss:120b" },
-      { name: "gpt-oss:20b" },
+    expect(saved).toHaveProperty("models", []);
+    expect(saved).toHaveProperty("disabled", false);
+  });
+
+  test("uses the Ollama Cloud header checkbox to save no model access", async () => {
+    const user = userEvent.setup();
+    mocks.getModelDefinitions.mockImplementation(async () => [
+      { id: "gpt-oss:120b", object: "model", owned_by: "ollama" },
+      { id: "gpt-oss:20b", object: "model", owned_by: "ollama" },
     ]);
+    mocks.getOllamaCloudConfigs.mockImplementation(async () => [
+      {
+        name: "Existing Ollama Cloud",
+        apiKey: "sk-ollama",
+        baseUrl: "https://ollama.com",
+        models: [{ name: "gpt-oss:120b" }, { name: "gpt-oss:20b" }],
+      },
+    ]);
+
+    render(
+      <MemoryRouter initialEntries={["/ai-providers/ollama-cloud/0"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    const dialog = await screen.findByRole("dialog", {
+      name: /Edit Ollama Cloud configuration/i,
+    });
+    await user.click(within(dialog).getByRole("tab", { name: /Models/i }));
+    await waitFor(() =>
+      expect(mocks.getModelDefinitions).toHaveBeenCalledWith("ollama-cloud"),
+    );
+    await user.click(within(dialog).getByRole("checkbox", { name: /Enabled/i }));
+    await user.click(within(dialog).getByRole("button", { name: /Save/ }));
+
+    await waitFor(() => expect(mocks.patchOllamaCloudConfig).toHaveBeenCalled());
+    const saved = mocks.patchOllamaCloudConfig.mock.calls[0][1];
+    expect(saved).toHaveProperty("models", []);
+    expect(saved).toHaveProperty("excludedModels", ["*"]);
+    expect(saved).toHaveProperty("disabled", false);
   });
 
   test("does not show legacy Ollama Cloud excluded models on provider cards", async () => {
