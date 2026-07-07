@@ -432,10 +432,7 @@ describe("ProvidersPage OpenCode Go tab", () => {
       { name: "qwen3.7-max" },
     ]);
     expect(saved).toHaveProperty("visionFallbackModel", "qwen3.5-plus");
-    expect(saved).toHaveProperty("excludedModels", [
-      "cline-pass/minimax-m3",
-      "*",
-    ]);
+    expect(saved).toHaveProperty("excludedModels", ["*"]);
   });
 
   test("shows OpenCode Go dynamic model list without manual model inputs", async () => {
@@ -841,7 +838,6 @@ describe("ProvidersPage Cline tab", () => {
     const saved = mocks.patchClineConfig.mock.calls[0][1];
     expect(saved).toHaveProperty("models", [
       { name: "cline-pass/glm-5.2" },
-      { name: "cline-pass/minimax-m3" },
       { name: "cline-pass/qwen3.7-max" },
       { name: "cline-pass/mimo-v2.5-pro" },
     ]);
@@ -920,13 +916,17 @@ describe("ProvidersPage Ollama Cloud tab", () => {
 
   test("saves Ollama Cloud fetched model permissions when saving", async () => {
     const user = userEvent.setup();
+    mocks.getModelDefinitions.mockImplementation(async () => [
+      { id: "gpt-oss:120b", object: "model", owned_by: "ollama" },
+      { id: "gpt-oss:20b", object: "model", owned_by: "ollama" },
+    ]);
     mocks.getOllamaCloudConfigs.mockImplementation(async () => [
       {
         name: "Existing Ollama Cloud",
         apiKey: "sk-ollama",
         baseUrl: "https://ollama.com",
-        models: [{ name: "gpt-oss:120b" }],
-        excludedModels: ["gpt-oss:20b", "*"],
+        models: [{ name: "gpt-oss:120b" }, { name: "gpt-oss:20b" }],
+        excludedModels: ["gpt-oss:20b"],
       },
     ]);
 
@@ -960,7 +960,7 @@ describe("ProvidersPage Ollama Cloud tab", () => {
         expect.objectContaining({
           name: "Existing Ollama Cloud",
           apiKey: "",
-          excludedModels: ["gpt-oss:20b", "*"],
+          excludedModels: ["gpt-oss:20b"],
         }),
       );
     });

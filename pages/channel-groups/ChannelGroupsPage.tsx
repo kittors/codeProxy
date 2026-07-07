@@ -305,7 +305,12 @@ export function ChannelGroupsPage() {
       const ids = Array.isArray(data?.data)
         ? data.data.map((model) => String(model.id ?? "").trim()).filter(Boolean)
         : [];
-      const availability = await loadConfiguredModelAvailability();
+      // Group editors must use the same scope as the channel group; default
+      // availability can be narrower and would drop owner-mapped catalog models.
+      const availability =
+        normalizedGroup && normalizedGroup !== "default"
+          ? await loadConfiguredModelAvailability({ allowedChannelGroups: [normalizedGroup] })
+          : await loadConfiguredModelAvailability();
       const detailsForGroup =
         (normalizedGroup ? availableChannelDetailsByGroup[normalizedGroup.toLowerCase()] : undefined) ??
         availableChannelDetails;

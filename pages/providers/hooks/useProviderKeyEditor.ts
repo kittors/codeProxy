@@ -189,7 +189,19 @@ export function useProviderKeyEditor({
         : isOllamaCloud
           ? "ollama-cloud"
           : null;
-    const excludedModels = rawExcludedModels;
+    const excludedModels = rawExcludedModels?.filter((model) => {
+      const trimmed = model.trim();
+      return (
+        trimmed === "*" ||
+        !modelAccessProvider ||
+        isModelAllowedForProvider(modelAccessProvider, trimmed)
+      );
+    });
+    const excludedModelSet = new Set(
+      stripDisableAllModelsRule(excludedModels).map((model) =>
+        model.toLowerCase(),
+      ),
+    );
 
     const requireAlias = editKeyType === "vertex";
     const modelCommit = commitModelEntries(keyDraft.modelEntries, {
@@ -205,7 +217,11 @@ export function useProviderKeyEditor({
       modelAccessProvider && modelCommit.models
         ? modelCommit.models.filter((model) => {
             const name = model.name?.trim() ?? "";
-            return name && isModelAllowedForProvider(modelAccessProvider, name);
+            return (
+              name &&
+              isModelAllowedForProvider(modelAccessProvider, name) &&
+              !excludedModelSet.has(name.toLowerCase())
+            );
           })
         : modelCommit.models;
     const result: ProviderSimpleConfig | BedrockProviderConfig = {
@@ -229,7 +245,7 @@ export function useProviderKeyEditor({
         : {}),
       ...(keyDraft.proxyId.trim() ? { proxyId: keyDraft.proxyId.trim() } : {}),
       ...(headers ? { headers } : {}),
-      ...(excludedModels ? { excludedModels } : {}),
+      ...(excludedModels?.length ? { excludedModels } : {}),
       ...(isOpenCodeGo && keyDraft.workspaceId.trim()
         ? { workspaceId: keyDraft.workspaceId.trim() }
         : {}),

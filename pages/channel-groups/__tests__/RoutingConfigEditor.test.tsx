@@ -235,6 +235,41 @@ describe("RoutingConfigEditor", () => {
     expect(screen.getByTestId("allowed-models")).not.toHaveTextContent(/claude/);
   });
 
+  test("loads existing group models with the saved group scope", async () => {
+    await i18n.changeLanguage("zh-CN");
+    const user = userEvent.setup();
+    const loadModelsForChannels = vi.fn(async () => ["gpt-5.6", "gpt-5.6-ultra"]);
+
+    render(
+      <Harness
+        initialValues={{
+          ...DEFAULT_VISUAL_VALUES,
+          routingChannelGroups: [
+            {
+              id: "group-codex",
+              name: "deepseekv4flash+chatgpt",
+              description: "",
+              strategy: "round-robin",
+              allowedModels: [],
+              channels: [{ id: "channel-main-codex", name: "Main Codex", priority: "" }],
+            },
+          ],
+        }}
+        loadModelsForChannels={loadModelsForChannels}
+      />,
+    );
+
+    const row = screen.getByRole("row", { name: /deepseekv4flash\+chatgpt/ });
+    await user.click(within(row).getByRole("button", { name: "编辑分组" }));
+    await user.click(screen.getByRole("tab", { name: "模型列表" }));
+
+    expect(await screen.findByLabelText("gpt-5.6")).toBeInTheDocument();
+    expect(loadModelsForChannels).toHaveBeenCalledWith(
+      ["Main Codex"],
+      "deepseekv4flash+chatgpt",
+    );
+  });
+
   test("renders channel-scoped models as a checkbox table with descriptions and prices", async () => {
     await i18n.changeLanguage("zh-CN");
     const user = userEvent.setup();
