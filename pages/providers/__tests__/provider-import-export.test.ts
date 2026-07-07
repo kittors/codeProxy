@@ -60,7 +60,7 @@ describe("provider import/export helpers", () => {
       items: [
         {
           "api-key": "go-key",
-          "excluded-models": ["*", "deepseek-v4-pro"],
+          "excluded-models": ["*"],
           "auth-cookie": "auth-token",
           name: "OpenCode Go",
           "vision-fallback-model": "qwen3.5-plus",
@@ -92,7 +92,7 @@ describe("provider import/export helpers", () => {
       {
         apiKey: "go-key",
         name: "OpenCode Go",
-        excludedModels: ["*", "deepseek-v4-pro"],
+        excludedModels: ["*"],
         visionFallbackModel: "qwen3.5-plus",
         workspaceId: "wrk_123",
         authCookie: "auth-token",
@@ -118,7 +118,7 @@ describe("provider import/export helpers", () => {
         {
           "api-key": "ollama-key",
           "base-url": "https://ollama.com",
-          "excluded-models": ["*", "gpt-oss:20b"],
+          "excluded-models": ["*"],
           name: "Ollama Cloud",
         },
       ],
@@ -145,7 +145,7 @@ describe("provider import/export helpers", () => {
         apiKey: "ollama-key",
         name: "Ollama Cloud",
         baseUrl: "https://ollama.com",
-        excludedModels: ["*", "gpt-oss:20b"],
+        excludedModels: ["*"],
       },
     ]);
   });

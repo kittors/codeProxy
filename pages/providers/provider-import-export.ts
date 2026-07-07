@@ -75,6 +75,9 @@ const sortExcludedModels = (value: unknown) =>
     ?.slice()
     .sort((left, right) => left.localeCompare(right));
 
+const normalizeModelAccessExcludedModels = (value: unknown) =>
+  normalizeExcludedModels(value)?.some((model) => model === "*") ? ["*"] : undefined;
+
 const normalizeModelList = (
   value: unknown,
 ): { models?: ProviderModel[]; duplicateCount: number } => {
@@ -167,7 +170,9 @@ const normalizeSimpleItem = (
   const { models, duplicateCount } = hasDynamicModelAccess
     ? { models: undefined, duplicateCount: 0 }
     : normalizeModelList(value.models);
-  const excludedModels = sortExcludedModels(value["excluded-models"] ?? value.excludedModels);
+  const excludedModels = hasDynamicModelAccess
+    ? normalizeModelAccessExcludedModels(value["excluded-models"] ?? value.excludedModels)
+    : sortExcludedModels(value["excluded-models"] ?? value.excludedModels);
   const baseUrl =
     normalizeString(value["base-url"] ?? value.baseUrl) ??
     (kind === "ollama-cloud" ? "https://ollama.com" : undefined);
