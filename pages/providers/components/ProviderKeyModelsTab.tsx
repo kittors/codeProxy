@@ -1,8 +1,9 @@
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { RefreshCw } from "lucide-react";
 import { Button } from "@code-proxy/ui";
 import { Checkbox } from "@code-proxy/ui";
+import { DataTable, type DataTableColumn } from "@code-proxy/ui";
 import { TextInput } from "@code-proxy/ui";
 import { SearchableSelect } from "@code-proxy/ui";
 import {
@@ -11,8 +12,14 @@ import {
   stripDisableAllModelsRule,
   type ProviderKeyDraft,
 } from "../providers-helpers";
-import { createEmptyModelEntry, ModelInputList, type ModelEntryDraft } from "../ModelInputList";
+import {
+  createEmptyModelEntry,
+  ModelInputList,
+  type ModelEntryDraft,
+} from "../ModelInputList";
 import { ExcludedModelsEditor } from "./ExcludedModelsEditor";
+
+type ModelAccessRow = { id: string; owned_by?: string };
 
 const SectionCard = ({ children }: { children: React.ReactNode }) => (
   <div className="rounded-xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
@@ -97,25 +104,110 @@ export function ProviderKeyModelsTab({
     return out;
   }, [keyDraft.modelEntries]);
 
-  const setModelAlias = (modelId: string, alias: string) => {
-    const key = modelId.trim().toLowerCase();
-    if (!key) return;
-    setKeyDraft((prev) => {
-      const existing = prev.modelEntries.find((entry) => entry.name.trim().toLowerCase() === key);
-      if (existing) {
+  const setModelAlias = useCallback(
+    (modelId: string, alias: string) => {
+      const key = modelId.trim().toLowerCase();
+      if (!key) return;
+      setKeyDraft((prev) => {
+        const existing = prev.modelEntries.find(
+          (entry) => entry.name.trim().toLowerCase() === key,
+        );
+        if (existing) {
+          return {
+            ...prev,
+            modelEntries: prev.modelEntries.map((entry) =>
+              entry.id === existing.id ? { ...entry, alias } : entry,
+            ),
+          };
+        }
         return {
           ...prev,
-          modelEntries: prev.modelEntries.map((entry) =>
-            entry.id === existing.id ? { ...entry, alias } : entry,
-          ),
+          modelEntries: [
+            ...prev.modelEntries,
+            { ...createEmptyModelEntry(), name: modelId, alias },
+          ],
         };
-      }
-      return {
-        ...prev,
-        modelEntries: [...prev.modelEntries, { ...createEmptyModelEntry(), name: modelId, alias }],
-      };
-    });
-  };
+      });
+    },
+    [setKeyDraft],
+  );
+
+  const modelAccessColumns = useMemo<DataTableColumn<ModelAccessRow>[]>(
+    () => [
+      {
+        key: "model",
+        label: t("providers.real_model_id"),
+        minWidthPx: 280,
+        overflowTooltip: (model) =>
+          model.owned_by ? `${model.id}\n${model.owned_by}` : model.id,
+        render: (model) => (
+          <span className="min-w-0">
+            <span className="block truncate font-mono text-xs font-semibold text-slate-800 dark:text-white/85">
+              {model.id}
+            </span>
+            {model.owned_by ? (
+              <span className="block truncate text-[11px] text-slate-500 dark:text-white/45">
+                {model.owned_by}
+              </span>
+            ) : null}
+          </span>
+        ),
+      },
+      {
+        key: "alias",
+        label: t("providers.model_alias"),
+        minWidthPx: 220,
+        render: (model) => {
+          const entry = modelEntryByName.get(model.id.toLowerCase());
+          return (
+            <TextInput
+              value={entry?.alias ?? ""}
+              onChange={(event) =>
+                setModelAlias(model.id, event.currentTarget.value)
+              }
+              placeholder={t("common.model_alias_placeholder")}
+              className="h-8"
+            />
+          );
+        },
+      },
+      {
+        key: "enabled",
+        label: t("providers.model_enabled"),
+        width: "w-20",
+        minWidthPx: 80,
+        headerClassName: "text-center",
+        cellClassName: "text-center",
+        render: (model) => {
+          const normalized = model.id.toLowerCase();
+          const checked =
+            !excludeAll &&
+            enabledOpenCodeModelIds.has(normalized) &&
+            !excludedModelIds.has(normalized);
+          return (
+            <div className="flex justify-center">
+              <Checkbox
+                checked={checked}
+                onCheckedChange={(next) =>
+                  setOpenCodeModelAllowed(model.id, next)
+                }
+                aria-label={model.id}
+              />
+            </div>
+          );
+        },
+      },
+    ],
+    [
+      enabledOpenCodeModelIds,
+      excludeAll,
+      excludedModelIds,
+      modelEntryByName,
+      setModelAlias,
+      setOpenCodeModelAllowed,
+      t,
+    ],
+  );
 
   if (isModelAccessProvider) {
     return (
@@ -181,62 +273,23 @@ export function ProviderKeyModelsTab({
             </p>
           ) : null}
 
-          <div className="mt-3 max-h-80 overflow-y-auto rounded-xl bg-white dark:bg-neutral-950">
-            <div className="grid grid-cols-[minmax(0,1fr)_minmax(180px,260px)_72px] gap-3 px-3 py-2 text-xs font-semibold text-slate-500 dark:text-white/55">
-              <span>{t("providers.real_model_id")}</span>
-              <span>{t("providers.model_alias")}</span>
-              <span className="text-center">{t("providers.model_enabled")}</span>
-            </div>
-            {openCodeModelsLoading && openCodeModels.length === 0 ? (
-              <div className="px-3 py-6 text-center text-sm text-slate-500 dark:text-white/55">
-                {t("providers.models_loading")}
-              </div>
-            ) : filteredOpenCodeModels.length ? (
-              <div className="divide-y divide-slate-100 dark:divide-neutral-900">
-                {filteredOpenCodeModels.map((model) => {
-                  const normalized = model.id.toLowerCase();
-                  const checked =
-                    !excludeAll &&
-                    enabledOpenCodeModelIds.has(normalized) &&
-                    !excludedModelIds.has(normalized);
-                  const entry = modelEntryByName.get(normalized);
-                  return (
-                    <div
-                      key={model.id}
-                      className="grid grid-cols-[minmax(0,1fr)_minmax(180px,260px)_72px] items-center gap-3 px-3 py-2.5 transition-colors hover:bg-slate-50 dark:hover:bg-white/5"
-                    >
-                      <span className="min-w-0">
-                        <span className="block truncate font-mono text-xs font-semibold text-slate-800 dark:text-white/85">
-                          {model.id}
-                        </span>
-                        {model.owned_by ? (
-                          <span className="block truncate text-[11px] text-slate-500 dark:text-white/45">
-                            {model.owned_by}
-                          </span>
-                        ) : null}
-                      </span>
-                      <TextInput
-                        value={entry?.alias ?? ""}
-                        onChange={(event) => setModelAlias(model.id, event.currentTarget.value)}
-                        placeholder={t("common.model_alias_placeholder")}
-                        className="h-8"
-                      />
-                      <div className="flex justify-center">
-                        <Checkbox
-                          checked={checked}
-                          onCheckedChange={(next) => setOpenCodeModelAllowed(model.id, next)}
-                          aria-label={model.id}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="px-3 py-6 text-center text-sm text-slate-500 dark:text-white/55">
-                {t("providers.no_discovered_models")}
-              </div>
-            )}
+          <div className="mt-3">
+            <DataTable<ModelAccessRow>
+              tableId={`provider-model-access-${editKeyType}`}
+              rows={filteredOpenCodeModels}
+              columns={modelAccessColumns}
+              rowKey={(model) => model.id}
+              loading={openCodeModelsLoading && openCodeModels.length === 0}
+              rowHeight={52}
+              caption={modelAccessTitle}
+              emptyText={t("providers.no_discovered_models")}
+              minWidth="min-w-[720px]"
+              height="h-80"
+              minHeight="min-h-0"
+              showAllLoadedMessage={false}
+              columnReorderable={false}
+              persistColumnOrder={false}
+            />
           </div>
         </SectionCard>
 

@@ -1,6 +1,9 @@
 import type { ReactNode } from "react";
 import { Loader2, Plus, Zap } from "lucide-react";
-import type { ProviderSimpleConfig } from "@code-proxy/api-client";
+import type {
+  ProviderModel,
+  ProviderSimpleConfig,
+} from "@code-proxy/api-client";
 import { Button } from "@code-proxy/ui";
 import { Card } from "@code-proxy/ui";
 import { ProviderCard, ProviderCardSkeleton } from "./ProviderCard";
@@ -27,6 +30,7 @@ export function ProviderKeyListCard({
   onDelete,
   onToggleEnabled,
   renderExtra,
+  getDisplayModels,
 
   getStats,
   getStatusBar,
@@ -48,6 +52,10 @@ export function ProviderKeyListCard({
   onDelete: (index: number) => void;
   onToggleEnabled?: (index: number, enabled: boolean) => void;
   renderExtra?: (item: ProviderSimpleConfig, index: number) => ReactNode;
+  getDisplayModels?: (
+    item: ProviderSimpleConfig,
+    index: number,
+  ) => ProviderModel[];
   renderMetricsExtra?: (
     item: ProviderSimpleConfig,
     index: number,
@@ -55,7 +63,11 @@ export function ProviderKeyListCard({
   ) => ReactNode;
   getStats: (item: ProviderSimpleConfig) => KeyStatBucket;
   getStatusBar: (item: ProviderSimpleConfig) => StatusBarData;
-  getLatencyEntry?: (key: string) => { latencyMs: number | null; loading: boolean; error: boolean };
+  getLatencyEntry?: (key: string) => {
+    latencyMs: number | null;
+    loading: boolean;
+    error: boolean;
+  };
   checkLatency?: (key: string, baseUrl: string) => void;
   showBaseUrl?: boolean;
   selectedKeys?: Set<string>;
@@ -91,7 +103,10 @@ export function ProviderKeyListCard({
           style={
             naturalHeight
               ? undefined
-              : { gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 18rem), 22rem))" }
+              : {
+                  gridTemplateColumns:
+                    "repeat(auto-fill, minmax(min(100%, 18rem), 22rem))",
+                }
           }
         >
           {Array.from({ length: 6 }, (_, index) => (
@@ -99,7 +114,10 @@ export function ProviderKeyListCard({
           ))}
         </div>
       ) : items.length === 0 ? (
-        <EmptyState title={t("providers.no_config")} description={t("providers.no_config_desc")} />
+        <EmptyState
+          title={t("providers.no_config")}
+          description={t("providers.no_config_desc")}
+        />
       ) : (
         <div
           data-testid="providers-tab-scroll"
@@ -110,7 +128,10 @@ export function ProviderKeyListCard({
           style={
             naturalHeight
               ? undefined
-              : { gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 18rem), 22rem))" }
+              : {
+                  gridTemplateColumns:
+                    "repeat(auto-fill, minmax(min(100%, 18rem), 22rem))",
+                }
           }
         >
           {items.map((item, idx) => {
@@ -118,8 +139,12 @@ export function ProviderKeyListCard({
             const selected = selectedKeys?.has(selectionKey) ?? false;
             const disabled = hasDisableAllModelsRule(item.excludedModels);
             const headerEntries = Object.entries(item.headers || {});
-            const excludedModels = stripDisableAllModelsRule(item.excludedModels);
-            const models = item.models || [];
+            const excludedModels = stripDisableAllModelsRule(
+              item.excludedModels,
+            );
+            const models = getDisplayModels
+              ? getDisplayModels(item, idx)
+              : item.models || [];
             const stats = getStats(item);
             const statusData = getStatusBar(item);
 
@@ -131,14 +156,18 @@ export function ProviderKeyListCard({
                 enabled={!disabled}
                 dimmed={disabled}
                 naturalHeight={naturalHeight}
-                className={naturalHeight ? "w-full max-w-[22rem] flex-none" : undefined}
+                className={
+                  naturalHeight ? "w-full max-w-[22rem] flex-none" : undefined
+                }
                 onToggleSelected={
                   onToggleSelected
                     ? (checked) => onToggleSelected(selectionKey, checked)
                     : undefined
                 }
                 onToggleEnabled={
-                  onToggleEnabled ? (enabled) => onToggleEnabled(idx, enabled) : undefined
+                  onToggleEnabled
+                    ? (enabled) => onToggleEnabled(idx, enabled)
+                    : undefined
                 }
                 onEdit={() => onEdit(idx)}
                 onDelete={() => onDelete(idx)}
@@ -167,7 +196,8 @@ export function ProviderKeyListCard({
                             className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] tabular-nums font-medium transition-colors hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/25 dark:hover:bg-white/10 dark:focus-visible:ring-white/20 ${entry.loading ? "text-slate-500" : entry.error ? "text-rose-500" : latencyColor}`}
                             onClick={(e) => {
                               e.stopPropagation();
-                              if (providerBaseUrl) checkLatency(latencyKey, providerBaseUrl);
+                              if (providerBaseUrl)
+                                checkLatency(latencyKey, providerBaseUrl);
                             }}
                             aria-label={
                               providerBaseUrl
@@ -231,14 +261,20 @@ export function ProviderKeyListCard({
                   ) : null}
                   <ProviderMetricChip
                     tone={stats.success > 0 ? "emerald" : "slate"}
-                    label={t("providers.success_stats", { count: stats.success })}
+                    label={t("providers.success_stats", {
+                      count: stats.success,
+                    })}
                   />
                   <ProviderMetricChip
                     tone={stats.failure > 0 ? "rose" : "slate"}
-                    label={t("providers.failed_stats", { count: stats.failure })}
+                    label={t("providers.failed_stats", {
+                      count: stats.failure,
+                    })}
                   />
                   {renderMetricsExtra ? (
-                    <div className="ml-auto">{renderMetricsExtra(item, idx, stats)}</div>
+                    <div className="ml-auto">
+                      {renderMetricsExtra(item, idx, stats)}
+                    </div>
                   ) : null}
                 </div>
 

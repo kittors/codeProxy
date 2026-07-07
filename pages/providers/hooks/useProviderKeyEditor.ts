@@ -24,6 +24,10 @@ import {
   withoutDisableAllModelsRule,
   type ProviderKeyDraft,
 } from "../providers-helpers";
+import {
+  isModelAllowedForProvider,
+  type ModelAccessProvider,
+} from "../provider-model-access";
 
 export type ProviderKeyType =
   | "gemini"
@@ -175,6 +179,14 @@ export function useProviderKeyEditor({
       : undefined;
     const isOpenCodeGo = editKeyType === "opencode-go";
     const isCline = editKeyType === "cline";
+    const isOllamaCloud = editKeyType === "ollama-cloud";
+    const modelAccessProvider: ModelAccessProvider | null = isOpenCodeGo
+      ? "opencode-go"
+      : isCline
+        ? "cline"
+        : isOllamaCloud
+          ? "ollama-cloud"
+          : null;
     const excludedModels = rawExcludedModels;
 
     const requireAlias = editKeyType === "vertex";
@@ -187,6 +199,17 @@ export function useProviderKeyEditor({
       );
       return null;
     }
+    const models =
+      modelAccessProvider && modelCommit.models
+        ? modelCommit.models.filter((model) => {
+            const name = model.name?.trim() ?? "";
+            return (
+              name &&
+              model.alias?.trim() &&
+              isModelAllowedForProvider(modelAccessProvider, name)
+            );
+          })
+        : modelCommit.models;
     const result: ProviderSimpleConfig | BedrockProviderConfig = {
       apiKey:
         editKeyType === "bedrock" && keyDraft.authMode === "sigv4"
@@ -200,7 +223,7 @@ export function useProviderKeyEditor({
       ...(isCline && !keyDraft.baseUrl.trim()
         ? { baseUrl: "https://api.cline.bot/api/v1" }
         : {}),
-      ...(editKeyType === "ollama-cloud" && !keyDraft.baseUrl.trim()
+      ...(isOllamaCloud && !keyDraft.baseUrl.trim()
         ? { baseUrl: "https://ollama.com" }
         : {}),
       ...(keyDraft.proxyUrl.trim()
@@ -215,11 +238,10 @@ export function useProviderKeyEditor({
       ...(isOpenCodeGo && keyDraft.authCookie.trim()
         ? { authCookie: keyDraft.authCookie.trim() }
         : {}),
-      ...((isOpenCodeGo || isCline || editKeyType === "ollama-cloud") &&
-      keyDraft.visionFallbackModel.trim()
+      ...(modelAccessProvider && keyDraft.visionFallbackModel.trim()
         ? { visionFallbackModel: keyDraft.visionFallbackModel.trim() }
         : {}),
-      ...(modelCommit.models ? { models: modelCommit.models } : {}),
+      ...(models?.length ? { models } : {}),
       ...(editKeyType === "claude" && keyDraft.skipAnthropicProcessing
         ? { skipAnthropicProcessing: true }
         : {}),
@@ -407,7 +429,14 @@ export function useProviderKeyEditor({
 
   const toggleKeyEnabled = useCallback(
     async (
-      type: "gemini" | "claude" | "codex" | "opencode-go" | "cline" | "ollama-cloud" | "bedrock",
+      type:
+        | "gemini"
+        | "claude"
+        | "codex"
+        | "opencode-go"
+        | "cline"
+        | "ollama-cloud"
+        | "bedrock",
       index: number,
       enabled: boolean,
     ) => {

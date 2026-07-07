@@ -8,12 +8,7 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 import { Check } from "lucide-react";
-import {
-  apiCallApi,
-  authFilesApi,
-  getApiCallErrorMessage,
-  modelsApi,
-} from "@code-proxy/api-client";
+import { modelsApi } from "@code-proxy/api-client";
 import type { ProxyPoolEntry } from "@code-proxy/api-client/endpoints/proxies";
 import { Button } from "@code-proxy/ui";
 import { Modal } from "@code-proxy/ui";
@@ -22,7 +17,6 @@ import type { ProviderKeyDraft } from "../providers-helpers";
 import {
   excludedModelsFromText,
   hasDisableAllModelsRule,
-  normalizeDiscoveredModels,
   stripDisableAllModelsRule,
 } from "../providers-helpers";
 import type { ModelEntryDraft } from "../ModelInputList";
@@ -30,10 +24,9 @@ import { ProviderKeyStatusBadges } from "./ProviderKeyStatusBadges";
 import { ProviderKeyBasicTab } from "./ProviderKeyBasicTab";
 import { ProviderKeyRequestTab } from "./ProviderKeyRequestTab";
 import { ProviderKeyModelsTab } from "./ProviderKeyModelsTab";
+import { fetchModelAccessCatalog } from "../provider-model-access";
 
 type ProviderKeyModalTab = "basic" | "request" | "models";
-
-const OPENCODE_GO_MODELS_URL = "https://opencode.ai/zen/go/v1/models";
 
 const isOpenCodeGoVisionModel = (modelId: string): boolean => {
   const normalized = modelId.trim().toLowerCase();
@@ -51,7 +44,8 @@ const isOpenCodeGoVisionModel = (modelId: string): boolean => {
     "mimo-v2.5",
     "mimo-v2.5-pro",
   ]);
-  if (candidates.some((candidate) => knownVisionModels.has(candidate))) return true;
+  if (candidates.some((candidate) => knownVisionModels.has(candidate)))
+    return true;
   if (
     candidates.some(
       (candidate) =>
@@ -116,9 +110,13 @@ export function ProviderKeyModal({
 }: ProviderKeyModalProps) {
   const { t } = useTranslation();
   const [modalTab, setModalTab] = useState<ProviderKeyModalTab>("basic");
-  const [openCodeModels, setOpenCodeModels] = useState<{ id: string; owned_by?: string }[]>([]);
+  const [openCodeModels, setOpenCodeModels] = useState<
+    { id: string; owned_by?: string }[]
+  >([]);
   const [openCodeModelsLoading, setOpenCodeModelsLoading] = useState(false);
-  const [openCodeModelsError, setOpenCodeModelsError] = useState<string | null>(null);
+  const [openCodeModelsError, setOpenCodeModelsError] = useState<string | null>(
+    null,
+  );
   const [openCodeModelQuery, setOpenCodeModelQuery] = useState("");
 
   const isBedrock = editKeyType === "bedrock";
@@ -128,7 +126,9 @@ export function ProviderKeyModal({
   const isModelAccessProvider = isOpenCodeGo || isCline || isOllamaCloud;
   const showModelsTab = true;
 
-  const [modelConfigs, setModelConfigs] = useState<{ id: string; owned_by: string }[]>([]);
+  const [modelConfigs, setModelConfigs] = useState<
+    { id: string; owned_by: string }[]
+  >([]);
   const [modelConfigsLoading, setModelConfigsLoading] = useState(false);
   const [selectedModelGroup, setSelectedModelGroup] = useState("");
 
@@ -144,11 +144,15 @@ export function ProviderKeyModal({
 
   const loadModelsFromGroup = useCallback(() => {
     if (!selectedModelGroup) return;
-    const models = modelConfigs.filter((m) => m.owned_by === selectedModelGroup);
+    const models = modelConfigs.filter(
+      (m) => m.owned_by === selectedModelGroup,
+    );
     if (!models.length) return;
 
     const existingNames = new Set(
-      keyDraft.modelEntries.map((e) => e.name.trim().toLowerCase()).filter(Boolean),
+      keyDraft.modelEntries
+        .map((e) => e.name.trim().toLowerCase())
+        .filter(Boolean),
     );
 
     const newEntries: ModelEntryDraft[] = [];
@@ -187,7 +191,9 @@ export function ProviderKeyModal({
       .getModelConfigs("library")
       .then((items) => {
         if (cancelled) return;
-        setModelConfigs(items.map((item) => ({ id: item.id, owned_by: item.owned_by })));
+        setModelConfigs(
+          items.map((item) => ({ id: item.id, owned_by: item.owned_by })),
+        );
       })
       .catch(() => {
         if (cancelled) return;
@@ -206,21 +212,11 @@ export function ProviderKeyModal({
     setOpenCodeModelsLoading(true);
     setOpenCodeModelsError(null);
     try {
-      if (isCline || isOllamaCloud) {
-        const items = await authFilesApi.getModelDefinitions(isCline ? "cline" : "ollama-cloud");
-        setOpenCodeModels(
-          normalizeDiscoveredModels({ data: items.map((item) => ({ ...item, object: "model" })) }),
-        );
-        return;
-      }
-      const result = await apiCallApi.request({
-        method: "GET",
-        url: OPENCODE_GO_MODELS_URL,
-      });
-      if (result.statusCode < 200 || result.statusCode >= 300) {
-        throw new Error(getApiCallErrorMessage(result));
-      }
-      setOpenCodeModels(normalizeDiscoveredModels(result.body ?? result.bodyText));
+      setOpenCodeModels(
+        await fetchModelAccessCatalog(
+          isCline ? "cline" : isOllamaCloud ? "ollama-cloud" : "opencode-go",
+        ),
+      );
     } catch (err: unknown) {
       setOpenCodeModelsError(
         err instanceof Error ? err.message : t("providers.fetch_models_failed"),
@@ -241,17 +237,31 @@ export function ProviderKeyModal({
   );
   const disableAllModels = hasDisableAllModelsRule(excludedModels);
   const excludedModelIds = useMemo(
-    () => new Set(stripDisableAllModelsRule(excludedModels).map((model) => model.toLowerCase())),
+    () =>
+      new Set(
+        stripDisableAllModelsRule(excludedModels).map((model) =>
+          model.toLowerCase(),
+        ),
+      ),
     [excludedModels],
   );
   const enabledOpenCodeModelIds = useMemo(
-    () => new Set(openCodeModels.map((model) => model.id.trim().toLowerCase()).filter(Boolean)),
+    () =>
+      new Set(
+        openCodeModels
+          .map((model) => model.id.trim().toLowerCase())
+          .filter(Boolean),
+      ),
     [openCodeModels],
   );
   const isOpenCodeModelAllowed = useCallback(
     (modelId: string) => {
       const normalized = modelId.trim().toLowerCase();
-      return normalized !== "" && !disableAllModels && !excludedModelIds.has(normalized);
+      return (
+        normalized !== "" &&
+        !disableAllModels &&
+        !excludedModelIds.has(normalized)
+      );
     },
     [disableAllModels, excludedModelIds],
   );
@@ -269,7 +279,11 @@ export function ProviderKeyModal({
   const openCodeVisionFallbackOptions = useMemo(() => {
     const optionMap = new Map<string, { value: string; label: string }>();
     for (const model of openCodeModels) {
-      if (!isOpenCodeGoVisionModel(model.id) || !isOpenCodeModelAllowed(model.id)) continue;
+      if (
+        !isOpenCodeGoVisionModel(model.id) ||
+        !isOpenCodeModelAllowed(model.id)
+      )
+        continue;
       optionMap.set(model.id.toLowerCase(), {
         value: model.id,
         label: model.owned_by ? `${model.id} · ${model.owned_by}` : model.id,
@@ -289,7 +303,9 @@ export function ProviderKeyModal({
     const currentFallback = keyDraft.visionFallbackModel.trim();
     const hasCurrentFallback =
       currentFallback !== "" &&
-      !modelOptions.some((model) => model.value.toLowerCase() === currentFallback.toLowerCase());
+      !modelOptions.some(
+        (model) => model.value.toLowerCase() === currentFallback.toLowerCase(),
+      );
     // Preserve existing configs even when "*" or a catalog refresh makes the model unavailable.
     const currentFallbackOption = hasCurrentFallback
       ? [
@@ -306,7 +322,13 @@ export function ProviderKeyModal({
       ...currentFallbackOption,
       ...modelOptions,
     ];
-  }, [isOpenCodeModelAllowed, keyDraft.visionFallbackModel, modelConfigs, openCodeModels, t]);
+  }, [
+    isOpenCodeModelAllowed,
+    keyDraft.visionFallbackModel,
+    modelConfigs,
+    openCodeModels,
+    t,
+  ]);
 
   const setOpenCodeModelAllowed = useCallback(
     (modelId: string, allowed: boolean) => {
@@ -321,7 +343,10 @@ export function ProviderKeyModal({
         );
         return {
           ...prev,
-          excludedModelsText: (allowed ? nextExcluded : [...nextExcluded, modelId]).join("\n"),
+          excludedModelsText: (allowed
+            ? nextExcluded
+            : [...nextExcluded, modelId]
+          ).join("\n"),
         };
       });
     },
@@ -330,7 +355,9 @@ export function ProviderKeyModal({
 
   const setAllFetchedOpenCodeModelsAllowed = useCallback(
     (allowed: boolean) => {
-      const fetchedIds = new Set(openCodeModels.map((model) => model.id.toLowerCase()));
+      const fetchedIds = new Set(
+        openCodeModels.map((model) => model.id.toLowerCase()),
+      );
       setKeyDraft((prev) => {
         const currentExcluded = stripDisableAllModelsRule(
           excludedModelsFromText(prev.excludedModelsText),
@@ -401,13 +428,22 @@ export function ProviderKeyModal({
         </div>
       }
     >
-      <Tabs value={modalTab} onValueChange={(next) => setModalTab(next as ProviderKeyModalTab)}>
+      <Tabs
+        value={modalTab}
+        onValueChange={(next) => setModalTab(next as ProviderKeyModalTab)}
+      >
         <div className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 px-5 py-3 backdrop-blur dark:border-neutral-800 dark:bg-neutral-950/95">
           <TabsList>
-            <TabsTrigger value="basic">{t("providers.modal_tab_basic")}</TabsTrigger>
-            <TabsTrigger value="request">{t("providers.modal_tab_request")}</TabsTrigger>
+            <TabsTrigger value="basic">
+              {t("providers.modal_tab_basic")}
+            </TabsTrigger>
+            <TabsTrigger value="request">
+              {t("providers.modal_tab_request")}
+            </TabsTrigger>
             {showModelsTab ? (
-              <TabsTrigger value="models">{t("providers.modal_tab_models")}</TabsTrigger>
+              <TabsTrigger value="models">
+                {t("providers.modal_tab_models")}
+              </TabsTrigger>
             ) : null}
           </TabsList>
         </div>
@@ -442,33 +478,35 @@ export function ProviderKeyModal({
 
           {showModelsTab ? (
             <TabsContent value="models">
-            <ProviderKeyModelsTab
-              isOpenCodeGo={isOpenCodeGo}
-              isCline={isCline}
-              openCodeModels={openCodeModels}
-              openCodeModelsLoading={openCodeModelsLoading}
-              openCodeModelsError={openCodeModelsError}
-              openCodeModelQuery={openCodeModelQuery}
-              setOpenCodeModelQuery={setOpenCodeModelQuery}
-              filteredOpenCodeModels={filteredOpenCodeModels}
-              allowedOpenCodeCount={allowedOpenCodeCount}
-              excludeAll={disableAllModels}
-              excludedModelIds={excludedModelIds}
-              enabledOpenCodeModelIds={enabledOpenCodeModelIds}
-              fetchOpenCodeModels={fetchOpenCodeModels}
-              setAllFetchedOpenCodeModelsAllowed={setAllFetchedOpenCodeModelsAllowed}
-              setOpenCodeModelAllowed={setOpenCodeModelAllowed}
-              selectedModelGroup={selectedModelGroup}
-              setSelectedModelGroup={setSelectedModelGroup}
-              modelGroupOptions={modelGroupOptions}
-              modelConfigsLoading={modelConfigsLoading}
-              loadModelsFromGroup={loadModelsFromGroup}
-              editKeyType={editKeyType}
-              keyDraft={keyDraft}
-              setKeyDraft={setKeyDraft}
-              editKeyExcludedCount={editKeyExcludedCount}
-              editKeyEnabledToggle={editKeyEnabledToggle}
-            />
+              <ProviderKeyModelsTab
+                isOpenCodeGo={isOpenCodeGo}
+                isCline={isCline}
+                openCodeModels={openCodeModels}
+                openCodeModelsLoading={openCodeModelsLoading}
+                openCodeModelsError={openCodeModelsError}
+                openCodeModelQuery={openCodeModelQuery}
+                setOpenCodeModelQuery={setOpenCodeModelQuery}
+                filteredOpenCodeModels={filteredOpenCodeModels}
+                allowedOpenCodeCount={allowedOpenCodeCount}
+                excludeAll={disableAllModels}
+                excludedModelIds={excludedModelIds}
+                enabledOpenCodeModelIds={enabledOpenCodeModelIds}
+                fetchOpenCodeModels={fetchOpenCodeModels}
+                setAllFetchedOpenCodeModelsAllowed={
+                  setAllFetchedOpenCodeModelsAllowed
+                }
+                setOpenCodeModelAllowed={setOpenCodeModelAllowed}
+                selectedModelGroup={selectedModelGroup}
+                setSelectedModelGroup={setSelectedModelGroup}
+                modelGroupOptions={modelGroupOptions}
+                modelConfigsLoading={modelConfigsLoading}
+                loadModelsFromGroup={loadModelsFromGroup}
+                editKeyType={editKeyType}
+                keyDraft={keyDraft}
+                setKeyDraft={setKeyDraft}
+                editKeyExcludedCount={editKeyExcludedCount}
+                editKeyEnabledToggle={editKeyEnabledToggle}
+              />
             </TabsContent>
           ) : null}
         </div>
