@@ -170,6 +170,20 @@ export const providersApi = {
       configs.map((item) => serializeOpenCodeGoKey(item)),
     ),
 
+  patchOpenCodeGoConfig: (index: number, config: ProviderSimpleConfig) =>
+    apiClient.patch("/opencode-go-api-key", {
+      index,
+      value: serializeOpenCodeGoKey(config, {
+        includeApiKey: Boolean(config.apiKey.trim()),
+      }),
+    }),
+
+  patchOpenCodeGoExcludedModels: (index: number, excludedModels: string[]) =>
+    apiClient.patch("/opencode-go-api-key", {
+      index,
+      value: { "excluded-models": excludedModels },
+    }),
+
   deleteOpenCodeGoConfig: (apiKey: string) =>
     apiClient.delete("/opencode-go-api-key", undefined, { params: { "api-key": apiKey } }),
 
@@ -217,6 +231,20 @@ export const providersApi = {
       configs.map((item) => serializeClineKey(item)),
     ),
 
+  patchClineConfig: (index: number, config: ProviderSimpleConfig) =>
+    apiClient.patch("/cline-api-key", {
+      index,
+      value: serializeClineKey(config, {
+        includeApiKey: Boolean(config.apiKey.trim()),
+      }),
+    }),
+
+  patchClineExcludedModels: (index: number, excludedModels: string[]) =>
+    apiClient.patch("/cline-api-key", {
+      index,
+      value: { "excluded-models": excludedModels },
+    }),
+
   deleteClineConfig: (apiKey: string) =>
     apiClient.delete("/cline-api-key", undefined, { params: { "api-key": apiKey } }),
 
@@ -262,6 +290,20 @@ export const providersApi = {
       "/ollama-cloud-api-key",
       configs.map((item) => serializeOllamaCloudKey(item)),
     ),
+
+  patchOllamaCloudConfig: (index: number, config: ProviderSimpleConfig) =>
+    apiClient.patch("/ollama-cloud-api-key", {
+      index,
+      value: serializeOllamaCloudKey(config, {
+        includeApiKey: Boolean(config.apiKey.trim()),
+      }),
+    }),
+
+  patchOllamaCloudExcludedModels: (index: number, excludedModels: string[]) =>
+    apiClient.patch("/ollama-cloud-api-key", {
+      index,
+      value: { "excluded-models": excludedModels },
+    }),
 
   deleteOllamaCloudConfig: (apiKey: string) =>
     apiClient.delete("/ollama-cloud-api-key", undefined, { params: { "api-key": apiKey } }),

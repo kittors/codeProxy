@@ -17,7 +17,7 @@ import { ExcludedModelsEditor } from "./ExcludedModelsEditor";
 type ModelAccessRow = { id: string; owned_by?: string };
 
 const SectionCard = ({ children }: { children: React.ReactNode }) => (
-  <div className="rounded-xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
+  <div className="rounded-lg border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
     {children}
   </div>
 );
@@ -169,8 +169,8 @@ export function ProviderKeyModelsTab({
       {
         key: "enabled",
         label: t("providers.model_enabled"),
-        width: "w-28",
-        minWidthPx: 112,
+        width: "w-36",
+        minWidthPx: 144,
         headerClassName: "text-center",
         cellClassName: "text-center",
         render: (model) => {
@@ -263,7 +263,7 @@ export function ProviderKeyModelsTab({
           </div>
 
           {openCodeModelsError ? (
-            <p className="mt-3 rounded-xl bg-rose-500/10 px-3 py-2 text-xs font-medium text-rose-700 dark:text-rose-200">
+            <p className="mt-3 rounded-lg bg-rose-500/10 px-3 py-2 text-xs font-medium text-rose-700 dark:text-rose-200">
               {openCodeModelsError}
             </p>
           ) : null}

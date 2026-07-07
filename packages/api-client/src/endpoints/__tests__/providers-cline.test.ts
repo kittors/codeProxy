@@ -2,12 +2,14 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 
 const getMock = vi.fn();
 const putMock = vi.fn();
+const patchMock = vi.fn();
 const deleteMock = vi.fn();
 
 vi.mock("../../client/client", () => ({
   apiClient: {
     get: getMock,
     put: putMock,
+    patch: patchMock,
     delete: deleteMock,
   },
 }));
@@ -16,6 +18,7 @@ describe("providersApi Cline", () => {
   beforeEach(() => {
     getMock.mockReset();
     putMock.mockReset();
+    patchMock.mockReset();
     deleteMock.mockReset();
   });
 
@@ -122,6 +125,60 @@ describe("providersApi Cline", () => {
 
     expect(deleteMock).toHaveBeenCalledWith("/cline-api-key", undefined, {
       params: { "api-key": "sk-cline" },
+    });
+  });
+
+  test("patches Cline config and excluded models on the Cline endpoint", async () => {
+    const { providersApi } = await import("@code-proxy/api-client/endpoints/providers");
+
+    await providersApi.patchClineConfig(0, {
+      name: "Cline",
+      apiKey: "sk-cline",
+      baseUrl: "https://api.cline.bot/api/v1",
+      models: [{ name: "cline-pass/glm-5.2", alias: "glm" }],
+      excludedModels: ["cline-pass/minimax-m3", "*"],
+      visionFallbackModel: "cline-pass/mimo-v2.5-pro",
+    });
+
+    expect(patchMock).toHaveBeenCalledWith("/cline-api-key", {
+      index: 0,
+      value: {
+        name: "Cline",
+        "api-key": "sk-cline",
+        "base-url": "https://api.cline.bot/api/v1",
+        models: [{ name: "cline-pass/glm-5.2", alias: "glm" }],
+        "excluded-models": ["cline-pass/minimax-m3", "*"],
+        "vision-fallback-model": "cline-pass/mimo-v2.5-pro",
+      },
+    });
+
+    await providersApi.patchClineExcludedModels(0, ["*"]);
+
+    expect(patchMock).toHaveBeenLastCalledWith("/cline-api-key", {
+      index: 0,
+      value: { "excluded-models": ["*"] },
+    });
+  });
+
+  test("omits empty api-key when patching an existing Cline config", async () => {
+    const { providersApi } = await import("@code-proxy/api-client/endpoints/providers");
+
+    await providersApi.patchClineConfig(0, {
+      name: "Cline",
+      apiKey: "",
+      baseUrl: "https://api.cline.bot/api/v1",
+      models: [{ name: "cline-pass/glm-5.2" }],
+      visionFallbackModel: "cline-pass/mimo-v2.5-pro",
+    });
+
+    expect(patchMock).toHaveBeenCalledWith("/cline-api-key", {
+      index: 0,
+      value: {
+        name: "Cline",
+        "base-url": "https://api.cline.bot/api/v1",
+        models: [{ name: "cline-pass/glm-5.2" }],
+        "vision-fallback-model": "cline-pass/mimo-v2.5-pro",
+      },
     });
   });
 });

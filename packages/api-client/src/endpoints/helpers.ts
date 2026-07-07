@@ -104,6 +104,10 @@ export const serializeModels = (models?: ProviderModel[]) =>
         .filter(Boolean)
     : undefined;
 
+type SerializeProviderKeyOptions = {
+  includeApiKey?: boolean;
+};
+
 export const serializeProviderKey = (config: ProviderSimpleConfig) => {
   const payload: Record<string, unknown> = { "api-key": config.apiKey };
   const name = normalizeString(config.name);
@@ -131,8 +135,12 @@ export const serializeProviderKey = (config: ProviderSimpleConfig) => {
   return payload;
 };
 
-export const serializeOpenCodeGoKey = (config: ProviderSimpleConfig) => {
-  const payload: Record<string, unknown> = { "api-key": config.apiKey };
+export const serializeOpenCodeGoKey = (
+  config: ProviderSimpleConfig,
+  options: SerializeProviderKeyOptions = {},
+) => {
+  const payload: Record<string, unknown> = {};
+  if (options.includeApiKey !== false) payload["api-key"] = config.apiKey;
   const name = normalizeString(config.name);
   if (name) payload.name = name;
   const prefix = normalizeString(config.prefix);
@@ -157,8 +165,12 @@ export const serializeOpenCodeGoKey = (config: ProviderSimpleConfig) => {
   return payload;
 };
 
-export const serializeClineKey = (config: ProviderSimpleConfig) => {
-  const payload: Record<string, unknown> = { "api-key": config.apiKey };
+export const serializeClineKey = (
+  config: ProviderSimpleConfig,
+  options: SerializeProviderKeyOptions = {},
+) => {
+  const payload: Record<string, unknown> = {};
+  if (options.includeApiKey !== false) payload["api-key"] = config.apiKey;
   const name = normalizeString(config.name);
   if (name) payload.name = name;
   const prefix = normalizeString(config.prefix);
@@ -181,8 +193,12 @@ export const serializeClineKey = (config: ProviderSimpleConfig) => {
   return payload;
 };
 
-export const serializeOllamaCloudKey = (config: ProviderSimpleConfig) => {
-  const payload: Record<string, unknown> = { "api-key": config.apiKey };
+export const serializeOllamaCloudKey = (
+  config: ProviderSimpleConfig,
+  options: SerializeProviderKeyOptions = {},
+) => {
+  const payload: Record<string, unknown> = {};
+  if (options.includeApiKey !== false) payload["api-key"] = config.apiKey;
   const name = normalizeString(config.name);
   if (name) payload.name = name;
   const prefix = normalizeString(config.prefix);

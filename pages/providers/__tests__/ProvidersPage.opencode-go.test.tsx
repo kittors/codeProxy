@@ -46,6 +46,12 @@ const mocks = vi.hoisted(() => ({
   saveOpenCodeGoConfigs: vi.fn(async (_configs: unknown[]) => ({})),
   saveClineConfigs: vi.fn(async (_configs: unknown[]) => ({})),
   saveOllamaCloudConfigs: vi.fn(async (_configs: unknown[]) => ({})),
+  patchOpenCodeGoConfig: vi.fn(async (_index: number, _config: unknown) => ({})),
+  patchClineConfig: vi.fn(async (_index: number, _config: unknown) => ({})),
+  patchOllamaCloudConfig: vi.fn(async (_index: number, _config: unknown) => ({})),
+  patchOpenCodeGoExcludedModels: vi.fn(async (_index: number, _models: string[]) => ({})),
+  patchClineExcludedModels: vi.fn(async (_index: number, _models: string[]) => ({})),
+  patchOllamaCloudExcludedModels: vi.fn(async (_index: number, _models: string[]) => ({})),
   getModelDefinitions: vi.fn(async (_channel?: string) => [
     { id: "deepseek-v4-flash", object: "model", owned_by: "opencode" },
     { id: "qwen3.5-plus", object: "model", owned_by: "opencode" },
@@ -94,6 +100,12 @@ vi.mock("@code-proxy/api-client", async (importOriginal) => {
       saveOpenCodeGoConfigs: mocks.saveOpenCodeGoConfigs,
       saveClineConfigs: mocks.saveClineConfigs,
       saveOllamaCloudConfigs: mocks.saveOllamaCloudConfigs,
+      patchOpenCodeGoConfig: mocks.patchOpenCodeGoConfig,
+      patchClineConfig: mocks.patchClineConfig,
+      patchOllamaCloudConfig: mocks.patchOllamaCloudConfig,
+      patchOpenCodeGoExcludedModels: mocks.patchOpenCodeGoExcludedModels,
+      patchClineExcludedModels: mocks.patchClineExcludedModels,
+      patchOllamaCloudExcludedModels: mocks.patchOllamaCloudExcludedModels,
     },
     usageApi: {
       ...mod.usageApi,
@@ -148,6 +160,13 @@ describe("ProvidersPage OpenCode Go tab", () => {
     }));
     mocks.saveOpenCodeGoConfigs.mockImplementation(async () => ({}));
     mocks.saveClineConfigs.mockImplementation(async () => ({}));
+    mocks.saveOllamaCloudConfigs.mockImplementation(async () => ({}));
+    mocks.patchOpenCodeGoConfig.mockImplementation(async () => ({}));
+    mocks.patchClineConfig.mockImplementation(async () => ({}));
+    mocks.patchOllamaCloudConfig.mockImplementation(async () => ({}));
+    mocks.patchOpenCodeGoExcludedModels.mockImplementation(async () => ({}));
+    mocks.patchClineExcludedModels.mockImplementation(async () => ({}));
+    mocks.patchOllamaCloudExcludedModels.mockImplementation(async () => ({}));
     mocks.getModelDefinitions.mockImplementation(async () => [
       { id: "deepseek-v4-flash", object: "model", owned_by: "opencode" },
       { id: "qwen3.5-plus", object: "model", owned_by: "opencode" },
@@ -392,17 +411,20 @@ describe("ProvidersPage OpenCode Go tab", () => {
     ).toBeInTheDocument();
     await waitFor(() => expect(mocks.apiCallRequest).toHaveBeenCalled());
     expect(mocks.getModelDefinitions).not.toHaveBeenCalled();
+    await user.clear(within(dialog).getByPlaceholderText(/Paste API Key/i));
     await user.click(within(dialog).getByRole("button", { name: /Save/ }));
 
     await waitFor(() => {
-      expect(mocks.saveOpenCodeGoConfigs).toHaveBeenCalledWith([
+      expect(mocks.patchOpenCodeGoConfig).toHaveBeenCalledWith(
+        0,
         expect.objectContaining({
           name: "Existing OpenCode Go",
-          apiKey: "sk-existing-opencode-go",
+          apiKey: "",
         }),
-      ]);
+      );
     });
-    const saved = mocks.saveOpenCodeGoConfigs.mock.calls[0][0][0];
+    expect(mocks.saveOpenCodeGoConfigs).not.toHaveBeenCalled();
+    const saved = mocks.patchOpenCodeGoConfig.mock.calls[0][1];
     expect(saved).toHaveProperty("models", [
       { name: "deepseek-v4-flash" },
       { name: "qwen3.5-plus" },
@@ -508,6 +530,13 @@ describe("ProvidersPage Cline tab", () => {
     mocks.getOpenAIProviders.mockImplementation(async () => []);
     mocks.saveOpenCodeGoConfigs.mockImplementation(async () => ({}));
     mocks.saveClineConfigs.mockImplementation(async () => ({}));
+    mocks.saveOllamaCloudConfigs.mockImplementation(async () => ({}));
+    mocks.patchOpenCodeGoConfig.mockImplementation(async () => ({}));
+    mocks.patchClineConfig.mockImplementation(async () => ({}));
+    mocks.patchOllamaCloudConfig.mockImplementation(async () => ({}));
+    mocks.patchOpenCodeGoExcludedModels.mockImplementation(async () => ({}));
+    mocks.patchClineExcludedModels.mockImplementation(async () => ({}));
+    mocks.patchOllamaCloudExcludedModels.mockImplementation(async () => ({}));
     mocks.getModelDefinitions.mockImplementation(async (channel?: string) =>
       channel === "cline"
         ? [
@@ -795,18 +824,21 @@ describe("ProvidersPage Cline tab", () => {
     await waitFor(() =>
       expect(mocks.getModelDefinitions).toHaveBeenCalledWith("cline"),
     );
+    await user.clear(within(dialog).getByPlaceholderText(/Paste API Key/i));
     await user.click(within(dialog).getByRole("button", { name: /Save/ }));
 
     await waitFor(() => {
-      expect(mocks.saveClineConfigs).toHaveBeenCalledWith([
+      expect(mocks.patchClineConfig).toHaveBeenCalledWith(
+        0,
         expect.objectContaining({
           name: "Existing Cline",
-          apiKey: "sk-cline",
+          apiKey: "",
           excludedModels: ["cline-pass/minimax-m3", "*"],
         }),
-      ]);
+      );
     });
-    const saved = mocks.saveClineConfigs.mock.calls[0][0][0];
+    expect(mocks.saveClineConfigs).not.toHaveBeenCalled();
+    const saved = mocks.patchClineConfig.mock.calls[0][1];
     expect(saved).toHaveProperty("models", [
       { name: "cline-pass/glm-5.2" },
       { name: "cline-pass/minimax-m3" },
@@ -833,6 +865,12 @@ describe("ProvidersPage Ollama Cloud tab", () => {
     mocks.getOllamaCloudConfigs.mockImplementation(async () => []);
     mocks.getOpenAIProviders.mockImplementation(async () => []);
     mocks.saveOllamaCloudConfigs.mockImplementation(async () => ({}));
+    mocks.patchOpenCodeGoConfig.mockImplementation(async () => ({}));
+    mocks.patchClineConfig.mockImplementation(async () => ({}));
+    mocks.patchOllamaCloudConfig.mockImplementation(async () => ({}));
+    mocks.patchOpenCodeGoExcludedModels.mockImplementation(async () => ({}));
+    mocks.patchClineExcludedModels.mockImplementation(async () => ({}));
+    mocks.patchOllamaCloudExcludedModels.mockImplementation(async () => ({}));
     mocks.getModelDefinitions.mockImplementation(async () => [
       { id: "gpt-oss:120b", object: "model", owned_by: "ollama" },
     ]);
@@ -913,18 +951,21 @@ describe("ProvidersPage Ollama Cloud tab", () => {
     await waitFor(() =>
       expect(mocks.getModelDefinitions).toHaveBeenCalledWith("ollama-cloud"),
     );
+    await user.clear(within(dialog).getByPlaceholderText(/Paste API Key/i));
     await user.click(within(dialog).getByRole("button", { name: /Save/ }));
 
     await waitFor(() => {
-      expect(mocks.saveOllamaCloudConfigs).toHaveBeenCalledWith([
+      expect(mocks.patchOllamaCloudConfig).toHaveBeenCalledWith(
+        0,
         expect.objectContaining({
           name: "Existing Ollama Cloud",
-          apiKey: "sk-ollama",
+          apiKey: "",
           excludedModels: ["gpt-oss:20b", "*"],
         }),
-      ]);
+      );
     });
-    const saved = mocks.saveOllamaCloudConfigs.mock.calls[0][0][0];
+    expect(mocks.saveOllamaCloudConfigs).not.toHaveBeenCalled();
+    const saved = mocks.patchOllamaCloudConfig.mock.calls[0][1];
     expect(saved).toHaveProperty("models", [{ name: "gpt-oss:120b" }]);
   });
 

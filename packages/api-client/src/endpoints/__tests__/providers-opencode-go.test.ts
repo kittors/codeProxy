@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 const getMock = vi.fn();
 const postMock = vi.fn();
 const putMock = vi.fn();
+const patchMock = vi.fn();
 const deleteMock = vi.fn();
 
 vi.mock("../../client/client", () => ({
@@ -10,6 +11,7 @@ vi.mock("../../client/client", () => ({
     get: getMock,
     post: postMock,
     put: putMock,
+    patch: patchMock,
     delete: deleteMock,
   },
 }));
@@ -19,6 +21,7 @@ describe("providersApi OpenCode Go", () => {
     getMock.mockReset();
     postMock.mockReset();
     putMock.mockReset();
+    patchMock.mockReset();
     deleteMock.mockReset();
   });
 
@@ -155,6 +158,61 @@ describe("providersApi OpenCode Go", () => {
       "workspace-id": "wrk_123",
       "auth-cookie": "auth-token",
       "proxy-id": "hk",
+    });
+  });
+
+  test("patches OpenCode Go config and excluded models without Base URL", async () => {
+    const { providersApi } = await import("@code-proxy/api-client/endpoints/providers");
+
+    await providersApi.patchOpenCodeGoConfig(1, {
+      name: "OpenCode Go",
+      apiKey: "sk-go",
+      baseUrl: "https://should-not-save.example",
+      models: [{ name: "qwen3.5-plus", alias: "qwen-go" }],
+      excludedModels: ["minimax-m2.5", "*"],
+      visionFallbackModel: "qwen3.5-plus",
+      workspaceId: "wrk_123",
+      authCookie: "auth-token",
+    });
+
+    expect(patchMock).toHaveBeenCalledWith("/opencode-go-api-key", {
+      index: 1,
+      value: {
+        name: "OpenCode Go",
+        "api-key": "sk-go",
+        models: [{ name: "qwen3.5-plus", alias: "qwen-go" }],
+        "excluded-models": ["minimax-m2.5", "*"],
+        "vision-fallback-model": "qwen3.5-plus",
+        "workspace-id": "wrk_123",
+        "auth-cookie": "auth-token",
+      },
+    });
+
+    await providersApi.patchOpenCodeGoExcludedModels(1, ["*"]);
+
+    expect(patchMock).toHaveBeenLastCalledWith("/opencode-go-api-key", {
+      index: 1,
+      value: { "excluded-models": ["*"] },
+    });
+  });
+
+  test("omits empty api-key when patching an existing OpenCode Go config", async () => {
+    const { providersApi } = await import("@code-proxy/api-client/endpoints/providers");
+
+    await providersApi.patchOpenCodeGoConfig(0, {
+      name: "OpenCode Go",
+      apiKey: " ",
+      models: [{ name: "qwen3.5-plus" }],
+      visionFallbackModel: "qwen3.5-plus",
+    });
+
+    expect(patchMock).toHaveBeenCalledWith("/opencode-go-api-key", {
+      index: 0,
+      value: {
+        name: "OpenCode Go",
+        models: [{ name: "qwen3.5-plus" }],
+        "vision-fallback-model": "qwen3.5-plus",
+      },
     });
   });
 
