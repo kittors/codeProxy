@@ -39,29 +39,17 @@ const mocks = vi.hoisted(() => ({
   getOpenAIProviders: vi.fn(async (): Promise<unknown[]> => []),
   queryOpenCodeGoUsage: vi.fn(async () => ({
     workspace_id: "workspace-1",
-    usage: [
-      { type: "rolling", label: "Rolling", percentage: 25, resets_in: "30m" },
-    ],
+    usage: [{ type: "rolling", label: "Rolling", percentage: 25, resets_in: "30m" }],
   })),
   saveOpenCodeGoConfigs: vi.fn(async (_configs: unknown[]) => ({})),
   saveClineConfigs: vi.fn(async (_configs: unknown[]) => ({})),
   saveOllamaCloudConfigs: vi.fn(async (_configs: unknown[]) => ({})),
-  patchOpenCodeGoConfig: vi.fn(
-    async (_index: number, _config: unknown) => ({}),
-  ),
+  patchOpenCodeGoConfig: vi.fn(async (_index: number, _config: unknown) => ({})),
   patchClineConfig: vi.fn(async (_index: number, _config: unknown) => ({})),
-  patchOllamaCloudConfig: vi.fn(
-    async (_index: number, _config: unknown) => ({}),
-  ),
-  patchOpenCodeGoExcludedModels: vi.fn(
-    async (_index: number, _models: string[]) => ({}),
-  ),
-  patchClineExcludedModels: vi.fn(
-    async (_index: number, _models: string[]) => ({}),
-  ),
-  patchOllamaCloudExcludedModels: vi.fn(
-    async (_index: number, _models: string[]) => ({}),
-  ),
+  patchOllamaCloudConfig: vi.fn(async (_index: number, _config: unknown) => ({})),
+  patchOpenCodeGoExcludedModels: vi.fn(async (_index: number, _models: string[]) => ({})),
+  patchClineExcludedModels: vi.fn(async (_index: number, _models: string[]) => ({})),
+  patchOllamaCloudExcludedModels: vi.fn(async (_index: number, _models: string[]) => ({})),
   getModelDefinitions: vi.fn(async (_channel?: string) => [
     { id: "deepseek-v4-flash", object: "model", owned_by: "opencode" },
     { id: "qwen3.5-plus", object: "model", owned_by: "opencode" },
@@ -83,9 +71,11 @@ const mocks = vi.hoisted(() => ({
       },
     }),
   ),
-  getEntityStats: vi.fn(async (): Promise<MockEntityStatsResponse> => ({
-    source: [],
-  })),
+  getEntityStats: vi.fn(
+    async (): Promise<MockEntityStatsResponse> => ({
+      source: [],
+    }),
+  ),
   apiKeyEntriesList: vi.fn(async (): Promise<unknown[]> => []),
   channelGroupsList: vi.fn(async (): Promise<unknown[]> => []),
   proxiesList: vi.fn(async (): Promise<any[]> => []),
@@ -164,9 +154,7 @@ describe("ProvidersPage OpenCode Go tab", () => {
     mocks.getOpenAIProviders.mockImplementation(async () => []);
     mocks.queryOpenCodeGoUsage.mockImplementation(async () => ({
       workspace_id: "workspace-1",
-      usage: [
-        { type: "rolling", label: "Rolling", percentage: 25, resets_in: "30m" },
-      ],
+      usage: [{ type: "rolling", label: "Rolling", percentage: 25, resets_in: "30m" }],
     }));
     mocks.saveOpenCodeGoConfigs.mockImplementation(async () => ({}));
     mocks.saveClineConfigs.mockImplementation(async () => ({}));
@@ -204,8 +192,7 @@ describe("ProvidersPage OpenCode Go tab", () => {
 
   test("shows usage loading instead of not queried before the first OpenCode Go usage result", async () => {
     localStorage.clear();
-    let resolveUsage:
-      ((value: MockOpenCodeGoUsageResponse) => void) | undefined;
+    let resolveUsage: ((value: MockOpenCodeGoUsageResponse) => void) | undefined;
     mocks.getOpenCodeGoConfigs.mockImplementation(async () => [
       {
         name: "OpenCode Go",
@@ -236,12 +223,8 @@ describe("ProvidersPage OpenCode Go tab", () => {
       </MemoryRouter>,
     );
 
-    await userEvent.click(
-      await screen.findByRole("tab", { name: /OpenCode Go/ }),
-    );
-    await waitFor(() =>
-      expect(screen.getAllByText("OpenCode Go").length).toBeGreaterThan(1),
-    );
+    await userEvent.click(await screen.findByRole("tab", { name: /OpenCode Go/ }));
+    await waitFor(() => expect(screen.getAllByText("OpenCode Go").length).toBeGreaterThan(1));
     expect(screen.getByText(/Success 9/i)).toBeInTheDocument();
     expect(screen.getByText(/Failed 1/i)).toBeInTheDocument();
     expect(screen.queryByText(/Not queried/i)).not.toBeInTheDocument();
@@ -249,11 +232,70 @@ describe("ProvidersPage OpenCode Go tab", () => {
 
     resolveUsage?.({
       workspace_id: "workspace-1",
-      usage: [
-        { type: "rolling", label: "Rolling", percentage: 25, resets_in: "30m" },
-      ],
+      usage: [{ type: "rolling", label: "Rolling", percentage: 25, resets_in: "30m" }],
     });
     expect(await screen.findByText(/Left 75%/i)).toBeInTheDocument();
+  });
+
+  test("refreshes OpenCode Go usage without replacing existing usage values", async () => {
+    localStorage.clear();
+    const user = userEvent.setup();
+    let callCount = 0;
+    let resolveRefresh: ((value: MockOpenCodeGoUsageResponse) => void) | undefined;
+    mocks.getOpenCodeGoConfigs.mockImplementation(async () => [
+      {
+        name: "OpenCode Go",
+        apiKey: "sk-opencode-go",
+        workspaceId: "workspace-1",
+        authCookie: "session=abc",
+      },
+    ]);
+    mocks.queryOpenCodeGoUsage.mockImplementation(async () => {
+      callCount += 1;
+      if (callCount === 1) {
+        return {
+          workspace_id: "workspace-1",
+          usage: [
+            {
+              type: "rolling",
+              label: "Rolling",
+              percentage: 25,
+              resets_in: "30m",
+            },
+          ],
+        };
+      }
+      return new Promise((resolve) => {
+        resolveRefresh = resolve;
+      });
+    });
+
+    render(
+      <MemoryRouter initialEntries={["/ai-providers"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    await user.click(await screen.findByRole("tab", { name: /OpenCode Go/ }));
+    expect(await screen.findByText(/Left 75%/i)).toBeInTheDocument();
+
+    const refreshButton = screen.getByRole("button", { name: /Refresh usage/i });
+    await user.click(refreshButton);
+    await waitFor(() => expect(refreshButton).toBeDisabled());
+    expect(refreshButton.querySelector("svg")).toHaveClass("animate-spin");
+    expect(screen.getByText(/Left 75%/i)).toBeInTheDocument();
+
+    resolveRefresh?.({
+      workspace_id: "workspace-1",
+      usage: [{ type: "rolling", label: "Rolling", percentage: 40, resets_in: "20m" }],
+    });
+    expect(await screen.findByText(/Left 60%/i)).toBeInTheDocument();
   });
 
   test("shows effective OpenCode Go models instead of dirty legacy models", async () => {
@@ -303,26 +345,16 @@ describe("ProvidersPage OpenCode Go tab", () => {
       </MemoryRouter>,
     );
 
-    expect(
-      await screen.findByRole("tab", { name: /OpenCode Go/ }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole("tab", { name: /OpenCode Go/ })).toBeInTheDocument();
     const dialog = await screen.findByRole("dialog", {
       name: /Add OpenCode Go configuration/i,
     });
 
     expect(within(dialog).queryByText("Base URL")).not.toBeInTheDocument();
-    expect(
-      within(dialog).queryByText("Models (optional)"),
-    ).not.toBeInTheDocument();
+    expect(within(dialog).queryByText("Models (optional)")).not.toBeInTheDocument();
 
-    await user.type(
-      within(dialog).getByPlaceholderText("e.g. Gemini Primary"),
-      "OpenCode Go",
-    );
-    await user.type(
-      within(dialog).getByPlaceholderText(/Paste API Key/i),
-      "sk-opencode-go",
-    );
+    await user.type(within(dialog).getByPlaceholderText("e.g. Gemini Primary"), "OpenCode Go");
+    await user.type(within(dialog).getByPlaceholderText(/Paste API Key/i), "sk-opencode-go");
     await user.click(within(dialog).getByRole("button", { name: /Save/ }));
 
     await waitFor(() => {
@@ -333,9 +365,7 @@ describe("ProvidersPage OpenCode Go tab", () => {
         }),
       ]);
     });
-    expect(mocks.saveOpenCodeGoConfigs.mock.calls[0][0][0]).not.toHaveProperty(
-      "baseUrl",
-    );
+    expect(mocks.saveOpenCodeGoConfigs.mock.calls[0][0][0]).not.toHaveProperty("baseUrl");
   });
 
   test("keeps failed OpenCode Go saves out of the rendered provider list", async () => {
@@ -346,9 +376,7 @@ describe("ProvidersPage OpenCode Go tab", () => {
         apiKey: "sk-existing-opencode-go",
       },
     ]);
-    mocks.saveOpenCodeGoConfigs.mockRejectedValue(
-      new Error("channel name already used"),
-    );
+    mocks.saveOpenCodeGoConfigs.mockRejectedValue(new Error("channel name already used"));
 
     render(
       <MemoryRouter initialEntries={["/ai-providers/opencode-go/new"]}>
@@ -367,14 +395,8 @@ describe("ProvidersPage OpenCode Go tab", () => {
       name: /Add OpenCode Go configuration/i,
     });
 
-    await user.type(
-      within(dialog).getByPlaceholderText("e.g. Gemini Primary"),
-      "New OpenCode Go",
-    );
-    await user.type(
-      within(dialog).getByPlaceholderText(/Paste API Key/i),
-      "sk-new-opencode-go",
-    );
+    await user.type(within(dialog).getByPlaceholderText("e.g. Gemini Primary"), "New OpenCode Go");
+    await user.type(within(dialog).getByPlaceholderText(/Paste API Key/i), "sk-new-opencode-go");
     await user.click(within(dialog).getByRole("button", { name: /Save/ }));
 
     await waitFor(() => {
@@ -416,9 +438,7 @@ describe("ProvidersPage OpenCode Go tab", () => {
     const dialog = await screen.findByRole("dialog", {
       name: /Edit OpenCode Go configuration/i,
     });
-    expect(
-      within(dialog).getByRole("tab", { name: /Models/i }),
-    ).toBeInTheDocument();
+    expect(within(dialog).getByRole("tab", { name: /Models/i })).toBeInTheDocument();
     await waitFor(() => expect(mocks.apiCallRequest).toHaveBeenCalled());
     expect(mocks.getModelDefinitions).not.toHaveBeenCalled();
     await user.clear(within(dialog).getByPlaceholderText(/Paste API Key/i));
@@ -447,11 +467,7 @@ describe("ProvidersPage OpenCode Go tab", () => {
       {
         name: "Existing OpenCode Go",
         apiKey: "sk-existing-opencode-go",
-        models: [
-          { name: "deepseek-v4-flash" },
-          { name: "qwen3.5-plus" },
-          { name: "kimi-k2.6" },
-        ],
+        models: [{ name: "deepseek-v4-flash" }, { name: "qwen3.5-plus" }, { name: "kimi-k2.6" }],
         excludedModels: ["*"],
       },
     ]);
@@ -473,9 +489,7 @@ describe("ProvidersPage OpenCode Go tab", () => {
     });
     await user.click(within(dialog).getByRole("tab", { name: /Models/i }));
     await waitFor(() => expect(mocks.apiCallRequest).toHaveBeenCalled());
-    await user.click(
-      within(dialog).getByRole("checkbox", { name: "qwen3.5-plus" }),
-    );
+    await user.click(within(dialog).getByRole("checkbox", { name: "qwen3.5-plus" }));
     await user.click(within(dialog).getByRole("button", { name: /Save/ }));
 
     await waitFor(() => expect(mocks.patchOpenCodeGoConfig).toHaveBeenCalled());
@@ -580,19 +594,11 @@ describe("ProvidersPage OpenCode Go tab", () => {
     const dialog = await screen.findByRole("dialog", {
       name: /Add OpenCode Go configuration/i,
     });
-    expect(
-      within(dialog).getByRole("tab", { name: /Basic/i }),
-    ).toBeInTheDocument();
-    expect(
-      within(dialog).getByRole("tab", { name: /Request/i }),
-    ).toBeInTheDocument();
-    expect(
-      within(dialog).getByRole("tab", { name: /Models/i }),
-    ).toBeInTheDocument();
+    expect(within(dialog).getByRole("tab", { name: /Basic/i })).toBeInTheDocument();
+    expect(within(dialog).getByRole("tab", { name: /Request/i })).toBeInTheDocument();
+    expect(within(dialog).getByRole("tab", { name: /Models/i })).toBeInTheDocument();
     await user.click(within(dialog).getByRole("tab", { name: /Models/i }));
-    expect(
-      within(dialog).queryByText("Models (optional)"),
-    ).not.toBeInTheDocument();
+    expect(within(dialog).queryByText("Models (optional)")).not.toBeInTheDocument();
     await waitFor(() => expect(mocks.apiCallRequest).toHaveBeenCalled());
     expect(mocks.getModelDefinitions).not.toHaveBeenCalled();
     const modelsTable = within(dialog).getByRole("table", {
@@ -600,34 +606,20 @@ describe("ProvidersPage OpenCode Go tab", () => {
     });
     expect(modelsTable.closest(".table-scrollbar")).toBeInTheDocument();
     expect(modelsTable.closest("[data-vt-scroll-content]")).toBeInTheDocument();
-    expect(
-      within(dialog).getByRole("checkbox", { name: /Enabled/i }),
-    ).toBeInTheDocument();
-    expect(
-      within(dialog).queryByRole("button", { name: /Select all/i }),
-    ).not.toBeInTheDocument();
-    expect(
-      within(dialog).queryByRole("button", { name: /Select none/i }),
-    ).not.toBeInTheDocument();
+    expect(within(dialog).getByRole("checkbox", { name: /Enabled/i })).toBeInTheDocument();
+    expect(within(dialog).queryByRole("button", { name: /Select all/i })).not.toBeInTheDocument();
+    expect(within(dialog).queryByRole("button", { name: /Select none/i })).not.toBeInTheDocument();
 
     await user.click(within(dialog).getByRole("tab", { name: /Request/i }));
     const fallbackSelect = within(dialog).getByRole("combobox", {
       name: /Vision fallback model/i,
     });
     await user.click(fallbackSelect);
-    await user.click(
-      await screen.findByRole("option", { name: /qwen3\.5-plus/ }),
-    );
+    await user.click(await screen.findByRole("option", { name: /qwen3\.5-plus/ }));
 
     await user.click(within(dialog).getByRole("tab", { name: /Basic/i }));
-    await user.type(
-      within(dialog).getByPlaceholderText("e.g. Gemini Primary"),
-      "OpenCode Go",
-    );
-    await user.type(
-      within(dialog).getByPlaceholderText(/Paste API Key/i),
-      "sk-opencode-go",
-    );
+    await user.type(within(dialog).getByPlaceholderText("e.g. Gemini Primary"), "OpenCode Go");
+    await user.type(within(dialog).getByPlaceholderText(/Paste API Key/i), "sk-opencode-go");
     await user.click(within(dialog).getByRole("button", { name: /Save/ }));
 
     await waitFor(() => {
@@ -718,30 +710,20 @@ describe("ProvidersPage Cline tab", () => {
       </MemoryRouter>,
     );
 
-    expect(
-      await screen.findByRole("tab", { name: /ClinePass/ }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole("tab", { name: /ClinePass/ })).toBeInTheDocument();
     const dialog = await screen.findByRole("dialog", {
       name: /Add ClinePass configuration/i,
     });
 
     await user.click(within(dialog).getByRole("tab", { name: /Request/i }));
-    expect(
-      within(dialog).getByDisplayValue("https://api.cline.bot/api/v1"),
-    ).toBeInTheDocument();
+    expect(within(dialog).getByDisplayValue("https://api.cline.bot/api/v1")).toBeInTheDocument();
     expect(
       within(dialog).getByText("https://api.cline.bot/api/v1/chat/completions"),
     ).toBeInTheDocument();
 
     await user.click(within(dialog).getByRole("tab", { name: /Basic/i }));
-    await user.type(
-      within(dialog).getByPlaceholderText("e.g. Gemini Primary"),
-      "Cline",
-    );
-    await user.type(
-      within(dialog).getByPlaceholderText(/Paste API Key/i),
-      "sk-cline",
-    );
+    await user.type(within(dialog).getByPlaceholderText("e.g. Gemini Primary"), "Cline");
+    await user.type(within(dialog).getByPlaceholderText(/Paste API Key/i), "sk-cline");
     await user.click(within(dialog).getByRole("button", { name: /Save/ }));
 
     await waitFor(() => {
@@ -812,21 +794,11 @@ describe("ProvidersPage Cline tab", () => {
     const dialog = await screen.findByRole("dialog", {
       name: /Add ClinePass configuration/i,
     });
-    expect(
-      within(dialog).getByRole("tab", { name: /Models/i }),
-    ).toBeInTheDocument();
-    await waitFor(() =>
-      expect(mocks.getModelDefinitions).toHaveBeenCalledWith("cline"),
-    );
-    await userEvent
-      .setup()
-      .click(within(dialog).getByRole("tab", { name: /Models/i }));
-    expect(
-      within(dialog).queryByText("Models (optional)"),
-    ).not.toBeInTheDocument();
-    expect(
-      within(dialog).getByText("cline-pass/mimo-v2.5-pro"),
-    ).toBeInTheDocument();
+    expect(within(dialog).getByRole("tab", { name: /Models/i })).toBeInTheDocument();
+    await waitFor(() => expect(mocks.getModelDefinitions).toHaveBeenCalledWith("cline"));
+    await userEvent.setup().click(within(dialog).getByRole("tab", { name: /Models/i }));
+    expect(within(dialog).queryByText("Models (optional)")).not.toBeInTheDocument();
+    expect(within(dialog).getByText("cline-pass/mimo-v2.5-pro")).toBeInTheDocument();
   });
 
   test("shows all hidden ClinePass card models in the +X tooltip", async () => {
@@ -882,9 +854,7 @@ describe("ProvidersPage Cline tab", () => {
 
     await user.click(await screen.findByRole("tab", { name: /ClinePass/ }));
     expect(await screen.findByText("Cline Tooltip")).toBeInTheDocument();
-    await waitFor(() =>
-      expect(mocks.getModelDefinitions).toHaveBeenCalledWith("cline"),
-    );
+    await waitFor(() => expect(mocks.getModelDefinitions).toHaveBeenCalledWith("cline"));
 
     await user.hover(screen.getByText("+2"));
     const tooltip = await screen.findByRole("tooltip");
@@ -915,12 +885,8 @@ describe("ProvidersPage Cline tab", () => {
     );
 
     await user.click(await screen.findByRole("tab", { name: /ClinePass/ }));
-    expect(
-      await screen.findByText("Cline Hidden Excluded"),
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByText("cline-pass/legacy-disabled-only"),
-    ).not.toBeInTheDocument();
+    expect(await screen.findByText("Cline Hidden Excluded")).toBeInTheDocument();
+    expect(screen.queryByText("cline-pass/legacy-disabled-only")).not.toBeInTheDocument();
   });
 
   test("saves ClinePass fetched model permissions when saving", async () => {
@@ -951,12 +917,8 @@ describe("ProvidersPage Cline tab", () => {
     const dialog = await screen.findByRole("dialog", {
       name: /Edit ClinePass configuration/i,
     });
-    expect(
-      within(dialog).getByRole("tab", { name: /Models/i }),
-    ).toBeInTheDocument();
-    await waitFor(() =>
-      expect(mocks.getModelDefinitions).toHaveBeenCalledWith("cline"),
-    );
+    expect(within(dialog).getByRole("tab", { name: /Models/i })).toBeInTheDocument();
+    await waitFor(() => expect(mocks.getModelDefinitions).toHaveBeenCalledWith("cline"));
     await user.clear(within(dialog).getByPlaceholderText(/Paste API Key/i));
     await user.click(within(dialog).getByRole("button", { name: /Save/ }));
 
@@ -973,10 +935,7 @@ describe("ProvidersPage Cline tab", () => {
     expect(mocks.saveClineConfigs).not.toHaveBeenCalled();
     const saved = mocks.patchClineConfig.mock.calls[0][1];
     expect(saved).toHaveProperty("models", []);
-    expect(saved).toHaveProperty(
-      "visionFallbackModel",
-      "cline-pass/mimo-v2.5-pro",
-    );
+    expect(saved).toHaveProperty("visionFallbackModel", "cline-pass/mimo-v2.5-pro");
     expect(saved).toHaveProperty("disabled", false);
   });
 });
@@ -1031,18 +990,10 @@ describe("ProvidersPage Ollama Cloud tab", () => {
     const dialog = await screen.findByRole("dialog", {
       name: /Add Ollama Cloud configuration/i,
     });
-    expect(
-      within(dialog).getByRole("tab", { name: /Models/i }),
-    ).toBeInTheDocument();
-    await waitFor(() =>
-      expect(mocks.getModelDefinitions).toHaveBeenCalledWith("ollama-cloud"),
-    );
-    await userEvent
-      .setup()
-      .click(within(dialog).getByRole("tab", { name: /Models/i }));
-    expect(
-      within(dialog).queryByText("Models (optional)"),
-    ).not.toBeInTheDocument();
+    expect(within(dialog).getByRole("tab", { name: /Models/i })).toBeInTheDocument();
+    await waitFor(() => expect(mocks.getModelDefinitions).toHaveBeenCalledWith("ollama-cloud"));
+    await userEvent.setup().click(within(dialog).getByRole("tab", { name: /Models/i }));
+    expect(within(dialog).queryByText("Models (optional)")).not.toBeInTheDocument();
     expect(within(dialog).getByText("gpt-oss:120b")).toBeInTheDocument();
     expect(mocks.apiCallRequest).not.toHaveBeenCalled();
   });
@@ -1078,12 +1029,8 @@ describe("ProvidersPage Ollama Cloud tab", () => {
     const dialog = await screen.findByRole("dialog", {
       name: /Edit Ollama Cloud configuration/i,
     });
-    expect(
-      within(dialog).getByRole("tab", { name: /Models/i }),
-    ).toBeInTheDocument();
-    await waitFor(() =>
-      expect(mocks.getModelDefinitions).toHaveBeenCalledWith("ollama-cloud"),
-    );
+    expect(within(dialog).getByRole("tab", { name: /Models/i })).toBeInTheDocument();
+    await waitFor(() => expect(mocks.getModelDefinitions).toHaveBeenCalledWith("ollama-cloud"));
     await user.clear(within(dialog).getByPlaceholderText(/Paste API Key/i));
     await user.click(within(dialog).getByRole("button", { name: /Save/ }));
 
@@ -1134,9 +1081,7 @@ describe("ProvidersPage Ollama Cloud tab", () => {
       name: /Edit Ollama Cloud configuration/i,
     });
     await user.click(within(dialog).getByRole("tab", { name: /Models/i }));
-    await waitFor(() =>
-      expect(mocks.getModelDefinitions).toHaveBeenCalledWith("ollama-cloud"),
-    );
+    await waitFor(() => expect(mocks.getModelDefinitions).toHaveBeenCalledWith("ollama-cloud"));
     await user.click(within(dialog).getByRole("checkbox", { name: /Enabled/i }));
     await user.click(within(dialog).getByRole("button", { name: /Save/ }));
 
@@ -1170,12 +1115,8 @@ describe("ProvidersPage Ollama Cloud tab", () => {
     );
 
     await user.click(await screen.findByRole("tab", { name: /Ollama Cloud/ }));
-    expect(
-      await screen.findByText("Ollama Hidden Excluded"),
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByText("gpt-oss:legacy-disabled-only"),
-    ).not.toBeInTheDocument();
+    expect(await screen.findByText("Ollama Hidden Excluded")).toBeInTheDocument();
+    expect(screen.queryByText("gpt-oss:legacy-disabled-only")).not.toBeInTheDocument();
   });
 });
 
@@ -1183,18 +1124,14 @@ describe("mergeOpenCodeGoUsage", () => {
   test("returns incoming when existing is empty", async () => {
     const { mergeOpenCodeGoUsage } =
       await import("@pages/providers/components/OpenCodeGoUsageCardSection");
-    const incoming = [
-      { type: "rolling", label: "Rolling", percentage: 50, resets_in: "30m" },
-    ];
+    const incoming = [{ type: "rolling", label: "Rolling", percentage: 50, resets_in: "30m" }];
     expect(mergeOpenCodeGoUsage([], incoming)).toEqual(incoming);
   });
 
   test("returns existing when incoming is empty", async () => {
     const { mergeOpenCodeGoUsage } =
       await import("@pages/providers/components/OpenCodeGoUsageCardSection");
-    const existing = [
-      { type: "weekly", label: "Weekly", percentage: 30, resets_in: "3d" },
-    ];
+    const existing = [{ type: "weekly", label: "Weekly", percentage: 30, resets_in: "3d" }];
     expect(mergeOpenCodeGoUsage(existing, [])).toEqual(existing);
   });
 
@@ -1206,9 +1143,7 @@ describe("mergeOpenCodeGoUsage", () => {
       { type: "weekly", label: "Weekly", percentage: 30, resets_in: "3d" },
       { type: "monthly", label: "Monthly", percentage: 10, resets_in: "20d" },
     ];
-    const incoming = [
-      { type: "rolling", label: "Rolling", percentage: 80, resets_in: "25m" },
-    ];
+    const incoming = [{ type: "rolling", label: "Rolling", percentage: 80, resets_in: "25m" }];
     const result = mergeOpenCodeGoUsage(existing, incoming);
 
     expect(result).toHaveLength(3);
@@ -1220,12 +1155,8 @@ describe("mergeOpenCodeGoUsage", () => {
   test("handles case-insensitive type matching", async () => {
     const { mergeOpenCodeGoUsage } =
       await import("@pages/providers/components/OpenCodeGoUsageCardSection");
-    const existing = [
-      { type: "Rolling", label: "Rolling", percentage: 50, resets_in: "30m" },
-    ];
-    const incoming = [
-      { type: "rolling", label: "Rolling", percentage: 75, resets_in: "25m" },
-    ];
+    const existing = [{ type: "Rolling", label: "Rolling", percentage: 50, resets_in: "30m" }];
+    const incoming = [{ type: "rolling", label: "Rolling", percentage: 75, resets_in: "25m" }];
     const result = mergeOpenCodeGoUsage(existing, incoming);
 
     expect(result).toHaveLength(1);
@@ -1239,14 +1170,35 @@ describe("mergeOpenCodeGoUsage", () => {
       { type: "monthly", label: "Monthly", percentage: 10, resets_in: "20d" },
       { type: "weekly", label: "Weekly", percentage: 30, resets_in: "3d" },
     ];
-    const incoming = [
-      { type: "rolling", label: "Rolling", percentage: 80, resets_in: "25m" },
-    ];
+    const incoming = [{ type: "rolling", label: "Rolling", percentage: 80, resets_in: "25m" }];
     const result = mergeOpenCodeGoUsage(existing, incoming);
 
     expect(result).toHaveLength(3);
     expect(result[0].type).toBe("rolling");
     expect(result[1].type).toBe("monthly");
     expect(result[2].type).toBe("weekly");
+  });
+});
+
+describe("createOpenCodeGoUsageStore", () => {
+  test("notifies only the changed usage key", async () => {
+    const { createOpenCodeGoUsageStore } =
+      await import("@pages/providers/components/OpenCodeGoUsageCardSection");
+    const onChange = vi.fn();
+    const store = createOpenCodeGoUsageStore({}, onChange);
+    const first = vi.fn();
+    const second = vi.fn();
+
+    store.subscribe("first", first);
+    store.subscribe("second", second);
+    store.setLoading("first", true);
+    store.updateEntry("first", () => ({
+      usage: [],
+      updatedAt: 1,
+    }));
+
+    expect(first).toHaveBeenCalledTimes(2);
+    expect(second).not.toHaveBeenCalled();
+    expect(onChange).toHaveBeenCalledTimes(1);
   });
 });

@@ -1,3 +1,5 @@
+import { useEffect, useState } from "react";
+import { RefreshCcw } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { OpenCodeGoUsageItem } from "@code-proxy/api-client";
 
@@ -9,6 +11,94 @@ export interface OpenCodeGoUsageCacheEntry {
 }
 
 const clampPercent = (value: number): number => Math.max(0, Math.min(100, value));
+
+type OpenCodeGoUsageState = Record<string, OpenCodeGoUsageCacheEntry>;
+type OpenCodeGoUsageSnapshot = {
+  usageEntry?: OpenCodeGoUsageCacheEntry;
+  loading: boolean;
+};
+type OpenCodeGoUsageListener = () => void;
+
+export interface OpenCodeGoUsageStore {
+  getSnapshot: (cacheKey: string) => OpenCodeGoUsageSnapshot;
+  subscribe: (cacheKey: string, listener: OpenCodeGoUsageListener) => () => void;
+  setLoading: (cacheKey: string, loading: boolean) => void;
+  updateEntry: (
+    cacheKey: string,
+    updater: (existing: OpenCodeGoUsageCacheEntry | undefined) => OpenCodeGoUsageCacheEntry,
+  ) => void;
+  prune: (validKeys: Set<string>) => void;
+}
+
+export function createOpenCodeGoUsageStore(
+  initialEntries: OpenCodeGoUsageState,
+  onChange: (entries: OpenCodeGoUsageState) => void,
+): OpenCodeGoUsageStore {
+  let entries = initialEntries;
+  const loadingState: Record<string, boolean> = {};
+  const listeners = new Map<string, Set<OpenCodeGoUsageListener>>();
+
+  const emit = (cacheKey: string) => {
+    listeners.get(cacheKey)?.forEach((listener) => listener());
+  };
+
+  const setEntries = (next: OpenCodeGoUsageState, changedKeys: string[]) => {
+    entries = next;
+    onChange(entries);
+    changedKeys.forEach(emit);
+  };
+
+  return {
+    getSnapshot: (cacheKey) => ({
+      usageEntry: entries[cacheKey],
+      loading: loadingState[cacheKey] ?? false,
+    }),
+    subscribe: (cacheKey, listener) => {
+      const keyListeners = listeners.get(cacheKey) ?? new Set();
+      keyListeners.add(listener);
+      listeners.set(cacheKey, keyListeners);
+      return () => {
+        keyListeners.delete(listener);
+        if (keyListeners.size === 0) listeners.delete(cacheKey);
+      };
+    },
+    setLoading: (cacheKey, loading) => {
+      if ((loadingState[cacheKey] ?? false) === loading) return;
+      loadingState[cacheKey] = loading;
+      emit(cacheKey);
+    },
+    updateEntry: (cacheKey, updater) => {
+      const nextEntry = updater(entries[cacheKey]);
+      setEntries({ ...entries, [cacheKey]: nextEntry }, [cacheKey]);
+    },
+    prune: (validKeys) => {
+      const staleKeys = Object.keys(entries).filter((key) => !validKeys.has(key));
+      if (staleKeys.length === 0) return;
+      const next = { ...entries };
+      staleKeys.forEach((key) => {
+        delete next[key];
+        delete loadingState[key];
+      });
+      setEntries(next, staleKeys);
+    },
+  };
+}
+
+export function useOpenCodeGoUsageSnapshot(
+  store: OpenCodeGoUsageStore,
+  cacheKey: string,
+): OpenCodeGoUsageSnapshot {
+  const [snapshot, setSnapshot] = useState(() => store.getSnapshot(cacheKey));
+
+  useEffect(() => {
+    setSnapshot(store.getSnapshot(cacheKey));
+    return store.subscribe(cacheKey, () => {
+      setSnapshot(store.getSnapshot(cacheKey));
+    });
+  }, [cacheKey, store]);
+
+  return snapshot;
+}
 
 export function mergeOpenCodeGoUsage(
   existing: OpenCodeGoUsageItem[],
@@ -84,15 +174,20 @@ const TYPE_COMPACT_LABEL_KEYS: Record<(typeof TYPE_LABELS)[number], string> = {
 };
 
 export function OpenCodeGoUsageCardSection({
-  usageEntry,
+  cacheKey,
+  usageStore,
   loading,
   queryReady,
 }: {
-  usageEntry?: OpenCodeGoUsageCacheEntry;
-  loading: boolean;
+  cacheKey: string;
+  usageStore: OpenCodeGoUsageStore;
+  loading?: boolean;
   queryReady: boolean;
 }) {
   const { t } = useTranslation();
+  const snapshot = useOpenCodeGoUsageSnapshot(usageStore, cacheKey);
+  const usageEntry = queryReady ? snapshot.usageEntry : undefined;
+  const isLoading = queryReady ? (loading ?? (snapshot.loading || !snapshot.usageEntry)) : false;
   const remainingUnknownText = t("providers.opencode_go_usage_remaining_unknown");
 
   const usageByType = new Map(
@@ -118,9 +213,7 @@ export function OpenCodeGoUsageCardSection({
                 {t(TYPE_COMPACT_LABEL_KEYS[type])}
               </span>
               <div className="h-1.5 rounded-full bg-slate-200/70 dark:bg-white/8" />
-              <span className="text-right text-[11px] tabular-nums">
-                {remainingUnknownText}
-              </span>
+              <span className="text-right text-[11px] tabular-nums">{remainingUnknownText}</span>
             </div>
           ))}
         </div>
@@ -130,7 +223,7 @@ export function OpenCodeGoUsageCardSection({
 
   return (
     <div className="mt-3">
-      {loading && !hasUsage ? (
+      {isLoading && !hasUsage ? (
         <div className="space-y-2">
           {TYPE_LABELS.map((type) => (
             <div
@@ -189,7 +282,7 @@ export function OpenCodeGoUsageCardSection({
             );
           })}
         </div>
-      ) : !loading ? (
+      ) : !isLoading ? (
         <p className="text-xs text-slate-400 dark:text-white/45">
           {t("providers.opencode_go_usage_not_queried")}
         </p>
@@ -203,5 +296,42 @@ export function OpenCodeGoUsageCardSection({
         </p>
       ) : null}
     </div>
+  );
+}
+
+export function OpenCodeGoUsageRefreshButton({
+  cacheKey,
+  usageStore,
+  onRefresh,
+}: {
+  cacheKey: string;
+  usageStore: OpenCodeGoUsageStore;
+  onRefresh: () => void;
+}) {
+  const snapshot = useOpenCodeGoUsageSnapshot(usageStore, cacheKey);
+  const loading = snapshot.loading;
+  const hasError = Boolean(snapshot.usageEntry?.error);
+
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        onRefresh();
+      }}
+      disabled={loading}
+      className={[
+        "inline-flex h-6 w-6 items-center justify-center rounded-lg transition-all duration-150",
+        "text-slate-400 hover:bg-slate-200/60 hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/25",
+        "dark:text-white/40 dark:hover:bg-white/10 dark:hover:text-white/60 dark:focus-visible:ring-white/20",
+        loading || hasError
+          ? "opacity-100"
+          : "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100",
+      ].join(" ")}
+      aria-label="Refresh usage"
+      title="Refresh usage"
+    >
+      <RefreshCcw size={13} className={loading ? "animate-spin" : ""} />
+    </button>
   );
 }
