@@ -190,6 +190,78 @@ describe("ProvidersPage OpenCode Go tab", () => {
     mocks.proxiesList.mockImplementation(async () => []);
   });
 
+  test("renders cached OpenCode Go usage without falling back to skeleton or placeholders", async () => {
+    localStorage.clear();
+    localStorage.setItem("providers-page:tab", "opencode-go");
+    localStorage.setItem(
+      "providers-page:cache:opencode-go",
+      JSON.stringify({
+        data: [
+          {
+            name: "OpenCode Go Cached",
+            apiKey: "sk-opencode-go",
+            workspaceId: "workspace-1",
+            authCookie: "session=abc",
+          },
+        ],
+        timestamp: Date.now(),
+      }),
+    );
+    localStorage.setItem(
+      "providers-page:cache:opencode-go-usage",
+      JSON.stringify({
+        data: {
+          "workspace-1:OpenCode Go Cached:0": {
+            workspaceId: "workspace-1",
+            usage: [
+              { type: "rolling", label: "Rolling", percentage: 1, resets_in: "30m" },
+              { type: "weekly", label: "Weekly", percentage: 5, resets_in: "5d" },
+              { type: "monthly", label: "Monthly", percentage: 23, resets_in: "20d" },
+            ],
+            updatedAt: Date.now(),
+          },
+        },
+        timestamp: Date.now(),
+      }),
+    );
+    mocks.getOpenCodeGoConfigs.mockImplementation(async () => [
+      {
+        name: "OpenCode Go Cached",
+        apiKey: "sk-opencode-go",
+        workspaceId: "workspace-1",
+        authCookie: "session=abc",
+      },
+      {
+        name: "OpenCode Go Fresh",
+        apiKey: "sk-opencode-go-fresh",
+        workspaceId: "workspace-2",
+        authCookie: "session=def",
+      },
+    ]);
+
+    render(
+      <MemoryRouter initialEntries={["/ai-providers"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByTestId("providers-list-skeleton")).not.toBeInTheDocument();
+    const cachedTitle = await screen.findByText("OpenCode Go Cached");
+    const cachedCard = cachedTitle.closest(".group");
+    expect(cachedCard).toBeInTheDocument();
+    expect(within(cachedCard as HTMLElement).getByText(/Left 99%/i)).toBeInTheDocument();
+    expect(within(cachedCard as HTMLElement).getByText(/Left 95%/i)).toBeInTheDocument();
+    expect(within(cachedCard as HTMLElement).getByText(/Left 77%/i)).toBeInTheDocument();
+    expect(within(cachedCard as HTMLElement).queryByText(/Left --/i)).not.toBeInTheDocument();
+    expect(await screen.findByText("OpenCode Go Fresh")).toBeInTheDocument();
+  });
+
   test("shows usage loading instead of not queried before the first OpenCode Go usage result", async () => {
     localStorage.clear();
     let resolveUsage: ((value: MockOpenCodeGoUsageResponse) => void) | undefined;
