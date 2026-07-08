@@ -82,6 +82,8 @@ const UPDATE_STAGE_LABEL_KEYS: Record<string, string> = {
 const UPDATE_PROGRESS_MESSAGE_KEYS: Record<string, string> = {
   "preparing update": "auto_update.progress_message_preparing_update",
   "pulling target image": "auto_update.progress_message_pulling_target_image",
+  "starting runtime dependencies":
+    "auto_update.progress_message_starting_runtime_dependencies",
   "starting postgresql/redis before data migration check":
     "auto_update.progress_message_starting_runtime",
   "starting postgresql/redis before sqlite migration":
