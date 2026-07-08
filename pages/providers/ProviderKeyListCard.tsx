@@ -160,9 +160,12 @@ export function ProviderKeyListCard({
                 enabled={!disabled}
                 dimmed={disabled}
                 naturalHeight={naturalHeight}
-                className={
-                  naturalHeight ? "w-full max-w-[22rem] flex-none" : undefined
-                }
+                className={[
+                  "motion-safe:animate-[fadeInUp_0.22s_ease-out]",
+                  naturalHeight ? "w-full max-w-[22rem] flex-none" : undefined,
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
                 onToggleSelected={
                   onToggleSelected
                     ? (checked) => onToggleSelected(selectionKey, checked)

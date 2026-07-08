@@ -214,7 +214,9 @@ export function ProvidersPage() {
   const [geminiKeys, setGeminiKeys] = useState<ProviderSimpleConfig[]>([]);
   const [claudeKeys, setClaudeKeys] = useState<ProviderSimpleConfig[]>([]);
   const [codexKeys, setCodexKeys] = useState<ProviderSimpleConfig[]>([]);
-  const [openCodeGoKeys, setOpenCodeGoKeys] = useState<ProviderSimpleConfig[]>([]);
+  const [openCodeGoKeys, setOpenCodeGoKeys] = useState<ProviderSimpleConfig[]>(
+    () => getCachedData<ProviderSimpleConfig[]>("opencode-go") ?? [],
+  );
   const [clineKeys, setClineKeys] = useState<ProviderSimpleConfig[]>([]);
   const [ollamaCloudKeys, setOllamaCloudKeys] = useState<ProviderSimpleConfig[]>([]);
   const [vertexKeys, setVertexKeys] = useState<ProviderSimpleConfig[]>([]);
@@ -268,7 +270,9 @@ export function ProvidersPage() {
 
   const [proxyPoolEntries, setProxyPoolEntries] = useState<ProxyPoolEntry[]>([]);
 
-  const [usageStatsBySource, setUsageStatsBySource] = useState<Record<string, KeyStatBucket>>({});
+  const [usageStatsBySource, setUsageStatsBySource] = useState<Record<string, KeyStatBucket>>(
+    () => getCachedData<Record<string, KeyStatBucket>>("usage-stats") ?? {},
+  );
 
   const [ampcode, setAmpcode] = useState<Record<string, unknown> | null>(null);
   const [ampUpstreamUrl, setAmpUpstreamUrl] = useState("");
@@ -338,9 +342,11 @@ export function ProvidersPage() {
         break;
       }
       case "opencode-go": {
-        removeCachedData("opencode-go");
+        const cachedO = getCachedData<ProviderSimpleConfig[]>("opencode-go");
+        if (cachedO) setOpenCodeGoKeys(cachedO);
         const freshO = await providersApi.getOpenCodeGoConfigs();
         setOpenCodeGoKeys(freshO);
+        setCachedData("opencode-go", freshO);
         break;
       }
       case "cline": {
