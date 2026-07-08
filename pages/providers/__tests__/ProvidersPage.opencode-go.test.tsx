@@ -951,8 +951,9 @@ describe("ProvidersPage Cline tab", () => {
     expect(await screen.findByText("Cline Tooltip")).toBeInTheDocument();
     await waitFor(() => expect(mocks.getModelDefinitions).toHaveBeenCalledWith("cline"));
 
-    await user.hover(screen.getByText("+2"));
+    await user.hover(screen.getByText("+3"));
     const tooltip = await screen.findByRole("tooltip");
+    expect(tooltip).toHaveTextContent("cline-pass/deepseek-v4");
     expect(tooltip).toHaveTextContent("cline-pass/kimi-k2.6");
     expect(tooltip).toHaveTextContent("cline-pass/gpt-5.2");
   });

@@ -181,10 +181,12 @@ const resolveRemainingTone = (
 
 const DEFAULT_TYPE_LABELS = ["rolling", "weekly", "monthly"] as const;
 
-const TYPE_COMPACT_LABEL_KEYS: Record<(typeof DEFAULT_TYPE_LABELS)[number], string> = {
+const TYPE_COMPACT_LABEL_KEYS: Record<string, string> = {
   rolling: "providers.opencode_go_usage_compact_rolling",
   weekly: "providers.opencode_go_usage_compact_weekly",
   monthly: "providers.opencode_go_usage_compact_monthly",
+  five_hour: "providers.opencode_go_usage_compact_five_hour",
+  session: "providers.opencode_go_usage_compact_session",
 };
 
 const getCompactUsageLabel = (
@@ -193,12 +195,30 @@ const getCompactUsageLabel = (
   t: (key: string) => string,
 ): string => {
   const normalized = type.toLowerCase();
-  if (normalized === "rolling" || normalized === "weekly" || normalized === "monthly") {
+  if (
+    normalized === "rolling" ||
+    normalized === "weekly" ||
+    normalized === "monthly" ||
+    normalized === "five_hour" ||
+    normalized === "session"
+  ) {
     return t(TYPE_COMPACT_LABEL_KEYS[normalized]);
   }
-  if (normalized === "five_hour") return "5h";
-  if (normalized === "session") return "Sess";
   return usageByType.get(normalized)?.label || type;
+};
+
+const getUsageItemForType = (
+  type: string,
+  usageByType: Map<string, OpenCodeGoUsageItem>,
+): OpenCodeGoUsageItem | undefined => {
+  const normalized = type.toLowerCase();
+  if (normalized === "rolling") {
+    return usageByType.get("rolling") ?? usageByType.get("session");
+  }
+  if (normalized === "session") {
+    return usageByType.get("session") ?? usageByType.get("rolling");
+  }
+  return usageByType.get(normalized);
 };
 
 export function OpenCodeGoUsageCardSection({
@@ -252,7 +272,7 @@ export function OpenCodeGoUsageCardSection({
   }
 
   return (
-    <div className="mt-3">
+    <div className="mt-3 min-h-[3.375rem]">
       {isLoading && !hasUsage ? (
         <div className="space-y-2">
           {windowTypes.map((type) => (
@@ -275,7 +295,7 @@ export function OpenCodeGoUsageCardSection({
       ) : hasUsage ? (
         <div className="mx-auto w-full max-w-[20rem] space-y-1.5">
           {windowTypes.map((type) => {
-            const item = usageByType.get(type.toLowerCase());
+            const item = getUsageItemForType(type, usageByType);
             const remaining = resolveRemainingPercent(item?.percentage);
             const tone = resolveRemainingTone(remaining);
             const remainingText =

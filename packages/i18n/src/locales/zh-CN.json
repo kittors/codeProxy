@@ -2668,6 +2668,8 @@
     "opencode_go_usage_compact_rolling": "滚动",
     "opencode_go_usage_compact_weekly": "每周",
     "opencode_go_usage_compact_monthly": "每月",
+    "opencode_go_usage_compact_five_hour": "5 小时",
+    "opencode_go_usage_compact_session": "滚动",
     "opencode_go_usage_remaining_unknown": "剩余 --",
     "opencode_go_usage_remaining_percent": "剩余 {{percent}}%",
     "opencode_go_usage_resets_in": "重置于 {{time}} 后",

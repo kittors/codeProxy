@@ -108,7 +108,7 @@ type ProviderUsageProvider = "opencode-go" | "cline" | "ollama-cloud";
 const PROVIDER_USAGE_WINDOWS: Record<ProviderUsageProvider, readonly string[]> = {
   "opencode-go": ["rolling", "weekly", "monthly"],
   cline: ["five_hour", "weekly", "monthly"],
-  "ollama-cloud": ["session", "weekly"],
+  "ollama-cloud": ["rolling", "weekly"],
 };
 
 const getProviderUsageCacheKey = (
@@ -1206,6 +1206,7 @@ export function ProvidersPage() {
               }
               getLatencyEntry={getLatencyEntry}
               checkLatency={checkLatency}
+              naturalHeight
               showExcludedModels={false}
               renderExtra={(item, idx) => {
                 const queryReady = hasProviderUsageQuery("cline", item);
@@ -1263,6 +1264,7 @@ export function ProvidersPage() {
               }
               getLatencyEntry={getLatencyEntry}
               checkLatency={checkLatency}
+              naturalHeight
               showExcludedModels={false}
               renderExtra={(item, idx) => {
                 const queryReady = hasProviderUsageQuery("ollama-cloud", item);

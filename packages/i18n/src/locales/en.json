@@ -3384,6 +3384,8 @@
     "opencode_go_usage_compact_rolling": "Rolling",
     "opencode_go_usage_compact_weekly": "Weekly",
     "opencode_go_usage_compact_monthly": "Monthly",
+    "opencode_go_usage_compact_five_hour": "5 hours",
+    "opencode_go_usage_compact_session": "Rolling",
     "opencode_go_usage_remaining_unknown": "Left --",
     "opencode_go_usage_remaining_percent": "Left {{percent}}%",
     "opencode_go_usage_resets_in": "Resets in {{time}}",
