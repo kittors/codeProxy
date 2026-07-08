@@ -262,6 +262,18 @@ describe("ProvidersPage OpenCode Go tab", () => {
               percentage: 25,
               resets_in: "30m",
             },
+            {
+              type: "weekly",
+              label: "Weekly",
+              percentage: 5,
+              resets_in: "5d",
+            },
+            {
+              type: "monthly",
+              label: "Monthly",
+              percentage: 23,
+              resets_in: "20d",
+            },
           ],
         };
       }
@@ -290,6 +302,9 @@ describe("ProvidersPage OpenCode Go tab", () => {
     await waitFor(() => expect(refreshButton).toBeDisabled());
     expect(refreshButton.querySelector("svg")).toHaveClass("animate-spin");
     expect(screen.getByText(/Left 75%/i)).toBeInTheDocument();
+    expect(screen.getByText(/Left 95%/i)).toBeInTheDocument();
+    expect(screen.getByText(/Left 77%/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Left --/i)).not.toBeInTheDocument();
 
     resolveRefresh?.({
       workspace_id: "workspace-1",
