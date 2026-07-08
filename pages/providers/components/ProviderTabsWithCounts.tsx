@@ -84,8 +84,8 @@ export function ProviderTabsWithCounts({ tabs, value }: ProviderTabsWithCountsPr
                 <span
                   className={
                     value === tab.id
-                      ? "ml-0.5 rounded-full bg-white/90 px-1.5 text-[10px] font-medium text-slate-700 dark:bg-white/15 dark:text-white"
-                      : "ml-0.5 rounded-full bg-slate-200/70 px-1.5 text-[10px] font-medium text-slate-500 dark:bg-white/10 dark:text-white/60"
+                      ? "absolute right-1 top-0.5 min-w-4 rounded-full bg-white/90 px-1 text-center text-[10px] font-medium leading-4 text-slate-700 dark:bg-white/15 dark:text-white"
+                      : "absolute right-1 top-0.5 min-w-4 rounded-full bg-slate-200/70 px-1 text-center text-[10px] font-medium leading-4 text-slate-500 dark:bg-white/10 dark:text-white/60"
                   }
                 >
                   {tab.count}
