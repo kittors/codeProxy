@@ -2206,9 +2206,11 @@
   "providers": {
     "opencode_go_usage_query_failed": "Failed to check OpenCode Go usage",
     "opencode_go_usage_not_queried": "Not queried",
-    "opencode_go_usage_compact_rolling": "Rolling",
-    "opencode_go_usage_compact_weekly": "Weekly",
-    "opencode_go_usage_compact_monthly": "Monthly",
+    "opencode_go_usage_compact_rolling": "Скользящее",
+    "opencode_go_usage_compact_weekly": "Неделя",
+    "opencode_go_usage_compact_monthly": "Месяц",
+    "opencode_go_usage_compact_five_hour": "5 часов",
+    "opencode_go_usage_compact_session": "Скользящее",
     "opencode_go_usage_remaining_unknown": "Left --",
     "opencode_go_usage_remaining_percent": "Left {{percent}}%"
   },
