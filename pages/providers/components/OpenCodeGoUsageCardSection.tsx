@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import type { OpenCodeGoUsageItem } from "@code-proxy/api-client";
 
 export interface OpenCodeGoUsageCacheEntry {
+  sourceId?: string;
   workspaceId?: string;
   usage: OpenCodeGoUsageItem[];
   updatedAt: number;
@@ -178,12 +179,26 @@ const resolveRemainingTone = (
   };
 };
 
-const TYPE_LABELS = ["rolling", "weekly", "monthly"] as const;
+const DEFAULT_TYPE_LABELS = ["rolling", "weekly", "monthly"] as const;
 
-const TYPE_COMPACT_LABEL_KEYS: Record<(typeof TYPE_LABELS)[number], string> = {
+const TYPE_COMPACT_LABEL_KEYS: Record<(typeof DEFAULT_TYPE_LABELS)[number], string> = {
   rolling: "providers.opencode_go_usage_compact_rolling",
   weekly: "providers.opencode_go_usage_compact_weekly",
   monthly: "providers.opencode_go_usage_compact_monthly",
+};
+
+const getCompactUsageLabel = (
+  type: string,
+  usageByType: Map<string, OpenCodeGoUsageItem>,
+  t: (key: string) => string,
+): string => {
+  const normalized = type.toLowerCase();
+  if (normalized === "rolling" || normalized === "weekly" || normalized === "monthly") {
+    return t(TYPE_COMPACT_LABEL_KEYS[normalized]);
+  }
+  if (normalized === "five_hour") return "5h";
+  if (normalized === "session") return "Sess";
+  return usageByType.get(normalized)?.label || type;
 };
 
 export function OpenCodeGoUsageCardSection({
@@ -191,11 +206,13 @@ export function OpenCodeGoUsageCardSection({
   usageStore,
   loading,
   queryReady,
+  windowTypes = DEFAULT_TYPE_LABELS,
 }: {
   cacheKey: string;
   usageStore: OpenCodeGoUsageStore;
   loading?: boolean;
   queryReady: boolean;
+  windowTypes?: readonly string[];
 }) {
   const { t } = useTranslation();
   const snapshot = useOpenCodeGoUsageSnapshot(usageStore, cacheKey, false);
@@ -217,13 +234,13 @@ export function OpenCodeGoUsageCardSection({
         aria-hidden="true"
       >
         <div className="invisible mx-auto w-full max-w-[20rem] space-y-1.5">
-          {TYPE_LABELS.map((type) => (
+          {windowTypes.map((type) => (
             <div
               key={type}
-              className="grid grid-cols-[2rem_minmax(0,1fr)_5.25rem] items-center gap-2"
+              className="grid grid-cols-[2.5rem_minmax(0,1fr)_5.25rem] items-center gap-2"
             >
               <span className="truncate text-[11px] font-semibold">
-                {t(TYPE_COMPACT_LABEL_KEYS[type])}
+                {getCompactUsageLabel(type, usageByType, t)}
               </span>
               <div className="h-1.5 rounded-full bg-slate-200/70 dark:bg-white/8" />
               <span className="text-right text-[11px] tabular-nums">{remainingUnknownText}</span>
@@ -238,13 +255,13 @@ export function OpenCodeGoUsageCardSection({
     <div className="mt-3">
       {isLoading && !hasUsage ? (
         <div className="space-y-2">
-          {TYPE_LABELS.map((type) => (
+          {windowTypes.map((type) => (
             <div
               key={type}
-              className="grid grid-cols-[2rem_minmax(0,1fr)_5.25rem] items-center gap-2"
+              className="grid grid-cols-[2.5rem_minmax(0,1fr)_5.25rem] items-center gap-2"
             >
               <span className="truncate text-[11px] font-semibold text-slate-400 dark:text-white/45">
-                {t(TYPE_COMPACT_LABEL_KEYS[type])}
+                {getCompactUsageLabel(type, usageByType, t)}
               </span>
               <div className="relative h-1.5 overflow-hidden rounded-full bg-slate-200/70 dark:bg-white/8">
                 <div className="absolute inset-y-0 -left-full w-1/2 animate-pulse rounded-full bg-slate-300/50 dark:bg-white/20" />
@@ -257,8 +274,8 @@ export function OpenCodeGoUsageCardSection({
         </div>
       ) : hasUsage ? (
         <div className="mx-auto w-full max-w-[20rem] space-y-1.5">
-          {TYPE_LABELS.map((type) => {
-            const item = usageByType.get(type);
+          {windowTypes.map((type) => {
+            const item = usageByType.get(type.toLowerCase());
             const remaining = resolveRemainingPercent(item?.percentage);
             const tone = resolveRemainingTone(remaining);
             const remainingText =
@@ -271,10 +288,10 @@ export function OpenCodeGoUsageCardSection({
             return (
               <div
                 key={type}
-                className="grid grid-cols-[2rem_minmax(0,1fr)_5.25rem] items-center gap-2"
+                className="grid grid-cols-[2.5rem_minmax(0,1fr)_5.25rem] items-center gap-2"
               >
                 <span className="truncate text-[11px] font-semibold text-slate-600 dark:text-white/65">
-                  {t(TYPE_COMPACT_LABEL_KEYS[type])}
+                  {getCompactUsageLabel(type, usageByType, t)}
                 </span>
                 <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200/80 dark:bg-white/10">
                   <div

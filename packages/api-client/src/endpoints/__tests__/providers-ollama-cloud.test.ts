@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 const getMock = vi.fn();
+const postMock = vi.fn();
 const putMock = vi.fn();
 const patchMock = vi.fn();
 const deleteMock = vi.fn();
@@ -8,6 +9,7 @@ const deleteMock = vi.fn();
 vi.mock("../../client/client", () => ({
   apiClient: {
     get: getMock,
+    post: postMock,
     put: putMock,
     patch: patchMock,
     delete: deleteMock,
@@ -17,6 +19,7 @@ vi.mock("../../client/client", () => ({
 describe("providersApi Ollama Cloud", () => {
   beforeEach(() => {
     getMock.mockReset();
+    postMock.mockReset();
     putMock.mockReset();
     patchMock.mockReset();
     deleteMock.mockReset();
@@ -33,6 +36,7 @@ describe("providersApi Ollama Cloud", () => {
           disabled: true,
           models: [{ name: "gpt-oss:120b", alias: "oss-large" }],
           "excluded-models": ["*"],
+          "auth-cookie": "ollama_session=ok",
         },
         { name: "Runtime", "api-key": "runtime-token", runtime_only: true },
       ],
@@ -46,6 +50,7 @@ describe("providersApi Ollama Cloud", () => {
         baseUrl: "https://ollama.com",
         models: [{ name: "gpt-oss:120b", alias: "oss-large" }],
         excludedModels: ["*"],
+        authCookie: "ollama_session=ok",
       },
     ]);
     expect(getMock).toHaveBeenCalledWith("/ollama-cloud-api-key");
@@ -62,6 +67,7 @@ describe("providersApi Ollama Cloud", () => {
         baseUrl: "https://ollama.com",
         models: [{ name: "gpt-oss:120b", alias: "oss-large" }],
         excludedModels: ["*"],
+        authCookie: "ollama_session=ok",
       },
     ]);
 
@@ -72,6 +78,7 @@ describe("providersApi Ollama Cloud", () => {
         "base-url": "https://ollama.com",
         models: [{ name: "gpt-oss:120b", alias: "oss-large" }],
         "excluded-models": ["*"],
+        "auth-cookie": "ollama_session=ok",
       },
     ]);
 
@@ -97,6 +104,7 @@ describe("providersApi Ollama Cloud", () => {
       models: [],
       excludedModels: [],
       visionFallbackModel: "gpt-oss:120b",
+      authCookie: "ollama_session=ok",
     });
 
     expect(patchMock).toHaveBeenCalledWith("/ollama-cloud-api-key", {
@@ -109,6 +117,7 @@ describe("providersApi Ollama Cloud", () => {
         models: [],
         "excluded-models": [],
         "vision-fallback-model": "gpt-oss:120b",
+        "auth-cookie": "ollama_session=ok",
       },
     });
 
@@ -140,6 +149,42 @@ describe("providersApi Ollama Cloud", () => {
         models: [{ name: "gpt-oss:120b" }],
         "vision-fallback-model": "gpt-oss:120b",
       },
+    });
+  });
+
+  test("queries Ollama Cloud usage with dashboard cookie", async () => {
+    const { providersApi } =
+      await import("@code-proxy/api-client/endpoints/providers");
+    postMock.mockResolvedValue({
+      usage: [
+        {
+          type: "weekly",
+          label: "Weekly",
+          percentage: 1.6,
+          resets_in: "4 days",
+        },
+      ],
+    });
+
+    await expect(
+      providersApi.queryOllamaCloudUsage({
+        "auth-cookie": "ollama_session=ok",
+        "proxy-id": "hk",
+      }),
+    ).resolves.toEqual({
+      usage: [
+        {
+          type: "weekly",
+          label: "Weekly",
+          percentage: 1.6,
+          resets_in: "4 days",
+        },
+      ],
+    });
+
+    expect(postMock).toHaveBeenCalledWith("/ollama-cloud-api-key/usage", {
+      "auth-cookie": "ollama_session=ok",
+      "proxy-id": "hk",
     });
   });
 });

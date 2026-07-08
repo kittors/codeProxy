@@ -243,6 +243,8 @@ export const providersApi = {
           normalizeString(
             item["vision-fallback-model"] ?? item.visionFallbackModel,
           ) ?? undefined;
+        const authCookie =
+          normalizeString(item["auth-cookie"] ?? item.authCookie) ?? undefined;
         return {
           apiKey,
           ...(item.disabled === true ? { disabled: true } : {}),
@@ -255,6 +257,7 @@ export const providersApi = {
           ...(models ? { models } : {}),
           ...(excludedModels ? { excludedModels } : {}),
           ...(visionFallbackModel ? { visionFallbackModel } : {}),
+          ...(authCookie ? { authCookie } : {}),
         };
       })
       .filter(Boolean) as ProviderSimpleConfig[];
@@ -312,6 +315,8 @@ export const providersApi = {
           normalizeString(
             item["vision-fallback-model"] ?? item.visionFallbackModel,
           ) ?? undefined;
+        const authCookie =
+          normalizeString(item["auth-cookie"] ?? item.authCookie) ?? undefined;
         return {
           apiKey,
           ...(item.disabled === true ? { disabled: true } : {}),
@@ -324,6 +329,7 @@ export const providersApi = {
           ...(models ? { models } : {}),
           ...(excludedModels ? { excludedModels } : {}),
           ...(visionFallbackModel ? { visionFallbackModel } : {}),
+          ...(authCookie ? { authCookie } : {}),
         };
       })
       .filter(Boolean) as ProviderSimpleConfig[];
@@ -365,6 +371,28 @@ export const providersApi = {
   }) =>
     apiClient.post<OpenCodeGoUsageResponse>(
       "/opencode-go-api-key/usage",
+      payload,
+    ),
+
+  queryClineUsage: (payload: {
+    "auth-cookie"?: string;
+    "proxy-id"?: string;
+    "proxy-url"?: string;
+    name?: string;
+    "api-key"?: string;
+    index?: number;
+  }) => apiClient.post<OpenCodeGoUsageResponse>("/cline-api-key/usage", payload),
+
+  queryOllamaCloudUsage: (payload: {
+    "auth-cookie"?: string;
+    "proxy-id"?: string;
+    "proxy-url"?: string;
+    name?: string;
+    "api-key"?: string;
+    index?: number;
+  }) =>
+    apiClient.post<OpenCodeGoUsageResponse>(
+      "/ollama-cloud-api-key/usage",
       payload,
     ),
 

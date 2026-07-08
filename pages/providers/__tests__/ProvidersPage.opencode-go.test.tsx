@@ -14,7 +14,7 @@ type MockApiCallResult = {
 };
 
 type MockOpenCodeGoUsageResponse = {
-  workspace_id: string;
+  workspace_id?: string;
   usage: {
     type: string;
     label: string;
@@ -37,9 +37,15 @@ const mocks = vi.hoisted(() => ({
   getClineConfigs: vi.fn(async (): Promise<any[]> => []),
   getOllamaCloudConfigs: vi.fn(async (): Promise<unknown[]> => []),
   getOpenAIProviders: vi.fn(async (): Promise<unknown[]> => []),
-  queryOpenCodeGoUsage: vi.fn(async () => ({
+  queryOpenCodeGoUsage: vi.fn(async (): Promise<MockOpenCodeGoUsageResponse> => ({
     workspace_id: "workspace-1",
     usage: [{ type: "rolling", label: "Rolling", percentage: 25, resets_in: "30m" }],
+  })),
+  queryClineUsage: vi.fn(async (): Promise<MockOpenCodeGoUsageResponse> => ({
+    usage: [{ type: "five_hour", label: "5-Hour", percentage: 25, resets_in: "30m" }],
+  })),
+  queryOllamaCloudUsage: vi.fn(async (): Promise<MockOpenCodeGoUsageResponse> => ({
+    usage: [{ type: "weekly", label: "Weekly", percentage: 25, resets_in: "30m" }],
   })),
   saveOpenCodeGoConfigs: vi.fn(async (_configs: unknown[]) => ({})),
   saveClineConfigs: vi.fn(async (_configs: unknown[]) => ({})),
@@ -97,6 +103,8 @@ vi.mock("@code-proxy/api-client", async (importOriginal) => {
       getOllamaCloudConfigs: mocks.getOllamaCloudConfigs,
       getOpenAIProviders: mocks.getOpenAIProviders,
       queryOpenCodeGoUsage: mocks.queryOpenCodeGoUsage,
+      queryClineUsage: mocks.queryClineUsage,
+      queryOllamaCloudUsage: mocks.queryOllamaCloudUsage,
       saveOpenCodeGoConfigs: mocks.saveOpenCodeGoConfigs,
       saveClineConfigs: mocks.saveClineConfigs,
       saveOllamaCloudConfigs: mocks.saveOllamaCloudConfigs,

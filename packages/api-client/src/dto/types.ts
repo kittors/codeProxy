@@ -289,7 +289,7 @@ export interface OpenCodeGoUsageItem {
 }
 
 export interface OpenCodeGoUsageResponse {
-  workspace_id: string;
+  workspace_id?: string;
   usage: OpenCodeGoUsageItem[];
 }
 

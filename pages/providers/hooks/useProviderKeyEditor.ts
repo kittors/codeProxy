@@ -259,6 +259,9 @@ export function useProviderKeyEditor({
       ...(isOpenCodeGo && keyDraft.authCookie.trim()
         ? { authCookie: keyDraft.authCookie.trim() }
         : {}),
+      ...((isCline || isOllamaCloud) && keyDraft.authCookie.trim()
+        ? { authCookie: keyDraft.authCookie.trim() }
+        : {}),
       ...(modelAccessProvider && keyDraft.visionFallbackModel.trim()
         ? { visionFallbackModel: keyDraft.visionFallbackModel.trim() }
         : {}),

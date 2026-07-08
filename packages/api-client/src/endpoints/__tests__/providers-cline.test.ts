@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 const getMock = vi.fn();
+const postMock = vi.fn();
 const putMock = vi.fn();
 const patchMock = vi.fn();
 const deleteMock = vi.fn();
@@ -8,6 +9,7 @@ const deleteMock = vi.fn();
 vi.mock("../../client/client", () => ({
   apiClient: {
     get: getMock,
+    post: postMock,
     put: putMock,
     patch: patchMock,
     delete: deleteMock,
@@ -17,6 +19,7 @@ vi.mock("../../client/client", () => ({
 describe("providersApi Cline", () => {
   beforeEach(() => {
     getMock.mockReset();
+    postMock.mockReset();
     putMock.mockReset();
     patchMock.mockReset();
     deleteMock.mockReset();
@@ -42,6 +45,7 @@ describe("providersApi Cline", () => {
           models: [{ name: "cline-pass/glm-5.2", alias: "cline-glm" }],
           "excluded-models": ["*"],
           "vision-fallback-model": "cline-pass/mimo-v2.5-pro",
+          "auth-cookie": "session=cline",
         },
       ],
     });
@@ -66,6 +70,7 @@ describe("providersApi Cline", () => {
         models: [{ name: "cline-pass/glm-5.2", alias: "cline-glm" }],
         excludedModels: ["*"],
         visionFallbackModel: "cline-pass/mimo-v2.5-pro",
+        authCookie: "session=cline",
       },
     ]);
   });
@@ -112,6 +117,7 @@ describe("providersApi Cline", () => {
         models: [{ name: "cline-pass/glm-5.2", alias: "cline-glm" }],
         excludedModels: ["*"],
         visionFallbackModel: "cline-pass/mimo-v2.5-pro",
+        authCookie: "session=cline",
       },
     ]);
 
@@ -127,6 +133,7 @@ describe("providersApi Cline", () => {
         models: [{ name: "cline-pass/glm-5.2", alias: "cline-glm" }],
         "excluded-models": ["*"],
         "vision-fallback-model": "cline-pass/mimo-v2.5-pro",
+        "auth-cookie": "session=cline",
       },
     ]);
 
@@ -149,6 +156,7 @@ describe("providersApi Cline", () => {
       models: [],
       excludedModels: [],
       visionFallbackModel: "cline-pass/mimo-v2.5-pro",
+      authCookie: "session=cline",
     });
 
     expect(patchMock).toHaveBeenCalledWith("/cline-api-key", {
@@ -161,6 +169,7 @@ describe("providersApi Cline", () => {
         models: [],
         "excluded-models": [],
         "vision-fallback-model": "cline-pass/mimo-v2.5-pro",
+        "auth-cookie": "session=cline",
       },
     });
 
@@ -192,6 +201,42 @@ describe("providersApi Cline", () => {
         models: [{ name: "cline-pass/glm-5.2" }],
         "vision-fallback-model": "cline-pass/mimo-v2.5-pro",
       },
+    });
+  });
+
+  test("queries Cline usage with dashboard cookie", async () => {
+    const { providersApi } =
+      await import("@code-proxy/api-client/endpoints/providers");
+    postMock.mockResolvedValue({
+      usage: [
+        {
+          type: "five_hour",
+          label: "5-Hour",
+          percentage: 2,
+          resets_in: "1 hour",
+        },
+      ],
+    });
+
+    await expect(
+      providersApi.queryClineUsage({
+        "auth-cookie": "session=cline",
+        "proxy-id": "hk",
+      }),
+    ).resolves.toEqual({
+      usage: [
+        {
+          type: "five_hour",
+          label: "5-Hour",
+          percentage: 2,
+          resets_in: "1 hour",
+        },
+      ],
+    });
+
+    expect(postMock).toHaveBeenCalledWith("/cline-api-key/usage", {
+      "auth-cookie": "session=cline",
+      "proxy-id": "hk",
     });
   });
 });

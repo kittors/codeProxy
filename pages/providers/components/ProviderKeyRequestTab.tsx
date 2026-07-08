@@ -65,6 +65,15 @@ export function ProviderKeyRequestTab({
     const baseUrl = keyDraft.baseUrl.trim().replace(/\/+$/g, "") || OLLAMA_CLOUD_BASE_URL;
     return `${baseUrl}/api/chat`;
   }, [keyDraft.baseUrl]);
+  const hasDashboardUsage = isOpenCodeGo || isCline || isOllamaCloud;
+  const dashboardUsageTitle = isOpenCodeGo
+    ? t("providers.opencode_go_usage_title")
+    : isCline
+      ? t("providers.cline_usage_title")
+      : t("providers.ollama_cloud_usage_title");
+  const dashboardUsageHint = isOpenCodeGo
+    ? t("providers.opencode_go_usage_config_hint")
+    : t("providers.dashboard_usage_config_hint");
 
   return (
     <div className="space-y-4">
@@ -109,32 +118,39 @@ export function ProviderKeyRequestTab({
         </SectionCard>
       ) : null}
 
-      {isOpenCodeGo ? (
+      {hasDashboardUsage ? (
         <SectionCard>
           <p className="text-sm font-semibold text-slate-900 dark:text-white">
-            {t("providers.opencode_go_usage_title")}
+            {dashboardUsageTitle}
           </p>
           <p className="mt-1 text-xs text-slate-500 dark:text-white/55">
-            {t("providers.opencode_go_usage_config_hint")}
+            {dashboardUsageHint}
           </p>
 
-          <div className="mt-3 grid gap-3 md:grid-cols-2">
-            <div className="space-y-2">
-              <p className="text-xs font-semibold text-slate-700 dark:text-white/75">
-                {t("providers.opencode_go_workspace_id")}
-              </p>
-              <TextInput
-                value={keyDraft.workspaceId}
-                onChange={(e) => {
-                  const val = e.currentTarget.value;
-                  setKeyDraft((prev) => ({ ...prev, workspaceId: val }));
-                }}
-                placeholder={t("providers.opencode_go_workspace_id_placeholder")}
-              />
-              <p className="text-xs text-slate-500 dark:text-white/55">
-                {t("providers.opencode_go_workspace_id_hint")}
-              </p>
-            </div>
+          <div
+            className={[
+              "mt-3 grid gap-3",
+              isOpenCodeGo ? "md:grid-cols-2" : "md:grid-cols-1",
+            ].join(" ")}
+          >
+            {isOpenCodeGo ? (
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-slate-700 dark:text-white/75">
+                  {t("providers.opencode_go_workspace_id")}
+                </p>
+                <TextInput
+                  value={keyDraft.workspaceId}
+                  onChange={(e) => {
+                    const val = e.currentTarget.value;
+                    setKeyDraft((prev) => ({ ...prev, workspaceId: val }));
+                  }}
+                  placeholder={t("providers.opencode_go_workspace_id_placeholder")}
+                />
+                <p className="text-xs text-slate-500 dark:text-white/55">
+                  {t("providers.opencode_go_workspace_id_hint")}
+                </p>
+              </div>
+            ) : null}
             <div className="space-y-2">
               <p className="text-xs font-semibold text-slate-700 dark:text-white/75">
                 {t("providers.opencode_go_auth_cookie")}
@@ -146,7 +162,11 @@ export function ProviderKeyRequestTab({
                   const val = e.currentTarget.value;
                   setKeyDraft((prev) => ({ ...prev, authCookie: val }));
                 }}
-                placeholder={t("providers.opencode_go_auth_cookie_placeholder")}
+                placeholder={
+                  isOpenCodeGo
+                    ? t("providers.opencode_go_auth_cookie_placeholder")
+                    : t("providers.dashboard_auth_cookie_placeholder")
+                }
               />
             </div>
           </div>
