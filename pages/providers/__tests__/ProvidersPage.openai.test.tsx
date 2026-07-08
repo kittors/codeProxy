@@ -172,8 +172,8 @@ describe("ProvidersPage openai tab", () => {
     const openCodeGoTab = screen.getByRole("tab", { name: /OpenCode Go/ });
     const geminiTab = screen.getByRole("tab", { name: /Gemini/ });
 
-    expect(within(codexTab).getByText("2")).toBeInTheDocument();
-    expect(within(openCodeGoTab).getByText("1")).toBeInTheDocument();
+    expect(within(codexTab).getByText("2")).toHaveClass("absolute");
+    expect(within(openCodeGoTab).getByText("1")).toHaveClass("absolute");
     expect(within(geminiTab).queryByText("0")).not.toBeInTheDocument();
   });
 
