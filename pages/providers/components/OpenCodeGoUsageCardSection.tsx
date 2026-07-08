@@ -87,15 +87,28 @@ export function createOpenCodeGoUsageStore(
 export function useOpenCodeGoUsageSnapshot(
   store: OpenCodeGoUsageStore,
   cacheKey: string,
+  includeLoading = true,
 ): OpenCodeGoUsageSnapshot {
-  const [snapshot, setSnapshot] = useState(() => store.getSnapshot(cacheKey));
+  const readSnapshot = () => {
+    const snapshot = store.getSnapshot(cacheKey);
+    return includeLoading ? snapshot : { ...snapshot, loading: false };
+  };
+  const [snapshot, setSnapshot] = useState(readSnapshot);
 
   useEffect(() => {
-    setSnapshot(store.getSnapshot(cacheKey));
+    const updateSnapshot = () => {
+      setSnapshot((previous) => {
+        const next = readSnapshot();
+        return previous.usageEntry === next.usageEntry && previous.loading === next.loading
+          ? previous
+          : next;
+      });
+    };
+    updateSnapshot();
     return store.subscribe(cacheKey, () => {
-      setSnapshot(store.getSnapshot(cacheKey));
+      updateSnapshot();
     });
-  }, [cacheKey, store]);
+  }, [cacheKey, includeLoading, store]);
 
   return snapshot;
 }
@@ -185,7 +198,7 @@ export function OpenCodeGoUsageCardSection({
   queryReady: boolean;
 }) {
   const { t } = useTranslation();
-  const snapshot = useOpenCodeGoUsageSnapshot(usageStore, cacheKey);
+  const snapshot = useOpenCodeGoUsageSnapshot(usageStore, cacheKey, false);
   const usageEntry = queryReady ? snapshot.usageEntry : undefined;
   const isLoading = queryReady ? (loading ?? (snapshot.loading || !snapshot.usageEntry)) : false;
   const remainingUnknownText = t("providers.opencode_go_usage_remaining_unknown");
