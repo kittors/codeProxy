@@ -738,6 +738,7 @@ describe("ProvidersPage OpenCode Go tab", () => {
 
 describe("ProvidersPage Cline tab", () => {
   beforeEach(() => {
+    localStorage.clear();
     Object.values(mocks).forEach((mock) => mock.mockReset());
     mocks.getGeminiKeys.mockImplementation(async () => []);
     mocks.getClaudeConfigs.mockImplementation(async () => []);
@@ -788,6 +789,59 @@ describe("ProvidersPage Cline tab", () => {
     mocks.apiKeyEntriesList.mockImplementation(async () => []);
     mocks.channelGroupsList.mockImplementation(async () => []);
     mocks.proxiesList.mockImplementation(async () => []);
+  });
+
+  test("renders cached ClinePass configs while refreshing the fresh list", async () => {
+    let resolveFresh: ((value: unknown[]) => void) | undefined;
+    localStorage.setItem("providers-page:tab", "cline");
+    localStorage.setItem(
+      "providers-page:cache:cline",
+      JSON.stringify({
+        data: [
+          {
+            name: "Cline Cached",
+            apiKey: "sk-cline-cached",
+            baseUrl: "https://api.cline.bot/api/v1",
+          },
+        ],
+        timestamp: Date.now(),
+      }),
+    );
+    mocks.getClineConfigs.mockImplementation(
+      async () =>
+        new Promise((resolve) => {
+          resolveFresh = resolve;
+        }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/ai-providers"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByTestId("providers-list-skeleton")).not.toBeInTheDocument();
+    expect(await screen.findByText("Cline Cached")).toBeInTheDocument();
+    expect(screen.queryByText("Cline Fresh")).not.toBeInTheDocument();
+
+    resolveFresh?.([
+      {
+        name: "Cline Fresh",
+        apiKey: "sk-cline-fresh",
+        baseUrl: "https://api.cline.bot/api/v1",
+      },
+    ]);
+
+    expect(await screen.findByText("Cline Fresh")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(localStorage.getItem("providers-page:cache:cline")).toContain("Cline Fresh"),
+    );
   });
 
   test("opens Cline route and saves default Base URL", async () => {
@@ -1038,6 +1092,7 @@ describe("ProvidersPage Cline tab", () => {
 
 describe("ProvidersPage Ollama Cloud tab", () => {
   beforeEach(() => {
+    localStorage.clear();
     Object.values(mocks).forEach((mock) => mock.mockReset());
     mocks.getGeminiKeys.mockImplementation(async () => []);
     mocks.getClaudeConfigs.mockImplementation(async () => []);
@@ -1068,6 +1123,61 @@ describe("ProvidersPage Ollama Cloud tab", () => {
     mocks.apiKeyEntriesList.mockImplementation(async () => []);
     mocks.channelGroupsList.mockImplementation(async () => []);
     mocks.proxiesList.mockImplementation(async () => []);
+  });
+
+  test("renders cached Ollama Cloud configs while refreshing the fresh list", async () => {
+    let resolveFresh: ((value: unknown[]) => void) | undefined;
+    localStorage.setItem("providers-page:tab", "ollama-cloud");
+    localStorage.setItem(
+      "providers-page:cache:ollama-cloud",
+      JSON.stringify({
+        data: [
+          {
+            name: "Ollama Cached",
+            apiKey: "sk-ollama-cached",
+            baseUrl: "https://ollama.com",
+          },
+        ],
+        timestamp: Date.now(),
+      }),
+    );
+    mocks.getOllamaCloudConfigs.mockImplementation(
+      async () =>
+        new Promise((resolve) => {
+          resolveFresh = resolve;
+        }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/ai-providers"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByTestId("providers-list-skeleton")).not.toBeInTheDocument();
+    expect(await screen.findByText("Ollama Cached")).toBeInTheDocument();
+    expect(screen.queryByText("Ollama Fresh")).not.toBeInTheDocument();
+
+    resolveFresh?.([
+      {
+        name: "Ollama Fresh",
+        apiKey: "sk-ollama-fresh",
+        baseUrl: "https://ollama.com",
+      },
+    ]);
+
+    expect(await screen.findByText("Ollama Fresh")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(localStorage.getItem("providers-page:cache:ollama-cloud")).toContain(
+        "Ollama Fresh",
+      ),
+    );
   });
 
   test("shows Ollama Cloud dynamic model list without manual model inputs", async () => {

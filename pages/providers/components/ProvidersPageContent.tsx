@@ -32,7 +32,7 @@ import { useProviderKeyEditor } from "../hooks/useProviderKeyEditor";
 import { useProviderLatency } from "../hooks/useProviderLatency";
 import { useProviderUsageSummary } from "../hooks/useProviderUsageSummary";
 import { normalizeUsageSourceId, type KeyStatBucket } from "@code-proxy/domain";
-import { getCachedData, removeCachedData, setCachedData } from "../provider-cache";
+import { getCachedData, setCachedData } from "../provider-cache";
 import { maskApiKey, readBool, readString, type AmpMappingEntry } from "../providers-helpers";
 import {
   createProviderExportText,
@@ -265,8 +265,12 @@ export function ProvidersPage() {
   const [openCodeGoKeys, setOpenCodeGoKeys] = useState<ProviderSimpleConfig[]>(
     () => getCachedData<ProviderSimpleConfig[]>("opencode-go") ?? [],
   );
-  const [clineKeys, setClineKeys] = useState<ProviderSimpleConfig[]>([]);
-  const [ollamaCloudKeys, setOllamaCloudKeys] = useState<ProviderSimpleConfig[]>([]);
+  const [clineKeys, setClineKeys] = useState<ProviderSimpleConfig[]>(
+    () => getCachedData<ProviderSimpleConfig[]>("cline") ?? [],
+  );
+  const [ollamaCloudKeys, setOllamaCloudKeys] = useState<ProviderSimpleConfig[]>(
+    () => getCachedData<ProviderSimpleConfig[]>("ollama-cloud") ?? [],
+  );
   const [vertexKeys, setVertexKeys] = useState<ProviderSimpleConfig[]>([]);
   const [bedrockKeys, setBedrockKeys] = useState<BedrockProviderConfig[]>([]);
   const [openaiProviders, setOpenaiProviders] = useState<OpenAIProvider[]>([]);
@@ -420,15 +424,19 @@ export function ProvidersPage() {
         break;
       }
       case "cline": {
-        removeCachedData("cline");
+        const cachedCl = getCachedData<ProviderSimpleConfig[]>("cline");
+        if (cachedCl) setClineKeys(cachedCl);
         const freshCl = await providersApi.getClineConfigs();
         setClineKeys(freshCl);
+        setCachedData("cline", freshCl);
         break;
       }
       case "ollama-cloud": {
-        removeCachedData("ollama-cloud");
+        const cachedOl = getCachedData<ProviderSimpleConfig[]>("ollama-cloud");
+        if (cachedOl) setOllamaCloudKeys(cachedOl);
         const freshOl = await providersApi.getOllamaCloudConfigs();
         setOllamaCloudKeys(freshOl);
+        setCachedData("ollama-cloud", freshOl);
         break;
       }
       case "vertex": {
