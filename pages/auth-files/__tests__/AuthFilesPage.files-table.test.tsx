@@ -6,7 +6,11 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { ToastProvider } from "@code-proxy/ui";
 import { ThemeProvider } from "@code-proxy/ui";
 import { AuthFilesPage } from "@pages/auth-files/AuthFilesPage";
-import type { AuthFileItem, AuthFileTrendResponse, EntityStatsResponse } from "@code-proxy/api-client";
+import type {
+  AuthFileItem,
+  AuthFileTrendResponse,
+  EntityStatsResponse,
+} from "@code-proxy/api-client";
 import {
   AUTH_FILES_DATA_CACHE_KEY,
   AUTH_FILES_QUOTA_AUTO_REFRESH_KEY,
@@ -30,20 +34,22 @@ const mocks = vi.hoisted(() => ({
     source: [],
     auth_index: [],
   })),
-  getAuthFileTrend: vi.fn(async (authIndex: string): Promise<AuthFileTrendResponse> => ({
-    auth_index: authIndex,
-    days: 7,
-    hours: 5,
-    request_total: 3,
-    cycle_request_total: 2,
-    cycle_cost_total: 1.2345,
-    weekly_quota_used_percent: 8,
-    cycle_known: true,
-    cycle_start: "2026-04-27T16:01:21Z",
-    daily_usage: [{ date: "2026-04-30", requests: 2, cost: 0.0123 }],
-    hourly_usage: [{ hour: "2026-04-30 16:00", requests: 1, cost: 0.0045 }],
-    quota_series: [],
-  })),
+  getAuthFileTrend: vi.fn(
+    async (authIndex: string): Promise<AuthFileTrendResponse> => ({
+      auth_index: authIndex,
+      days: 7,
+      hours: 5,
+      request_total: 3,
+      cycle_request_total: 2,
+      cycle_cost_total: 1.2345,
+      weekly_quota_used_percent: 8,
+      cycle_known: true,
+      cycle_start: "2026-04-27T16:01:21Z",
+      daily_usage: [{ date: "2026-04-30", requests: 2, cost: 0.0123 }],
+      hourly_usage: [{ hour: "2026-04-30 16:00", requests: 1, cost: 0.0045 }],
+      quota_series: [],
+    }),
+  ),
   getUsageLogs: vi.fn(async () => ({ items: [], total: 0, page: 1, size: 200 })),
   getAuthFileGroupTrend: vi.fn(async () => ({
     days: 7,
@@ -2948,7 +2954,7 @@ describe("AuthFilesPage files table", () => {
     expect(mocks.getAuthFileTrend).toHaveBeenCalledWith("auth-1", { days: 7, hours: 5 });
   });
 
-  test("sets model owner group from an icon modal after confirmation", async () => {
+  test("sets model owner group from an icon modal after enabling override", async () => {
     mocks.list.mockImplementation(async () => ({
       files: [
         {
@@ -2990,6 +2996,13 @@ describe("AuthFilesPage files table", () => {
 
     fireEvent.click(settingsButton);
     const settingsDialog = await screen.findByRole("dialog", { name: "Model owner group" });
+    const overrideSwitch = within(settingsDialog).getByRole("switch", {
+      name: "Enable owner group override",
+    });
+    expect(overrideSwitch).toHaveAttribute("aria-checked", "false");
+    fireEvent.click(overrideSwitch);
+    expect(overrideSwitch).toHaveAttribute("aria-checked", "true");
+
     const ownerSelect = within(settingsDialog).getByRole("combobox", {
       name: "Model owner group",
     });

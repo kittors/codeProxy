@@ -756,6 +756,8 @@
     "filters": "Фильтры",
     "failed_get_model_owners": "Не удалось получить группы владельцев моделей",
     "model_owner_group": "Группа владельца моделей",
+    "model_owner_group_enabled": "Включить переопределение группы",
+    "model_owner_group_enabled_desc": "Если выключено, OAuth-аккаунты в этой группе используют собственный обнаруженный список моделей. Включите, чтобы использовать выбранную группу владельца.",
     "auth_file_models_option": "Не задано",
     "model_owner_group_search_placeholder": "Поиск групп владельцев…",
     "model_owner_group_source_desc": "{{count}} моделей из {{owner}}.",

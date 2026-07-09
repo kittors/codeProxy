@@ -65,6 +65,7 @@ export interface SearchableSelectProps {
   "aria-label"?: string;
   name?: string;
   className?: string;
+  disabled?: boolean;
   size?: ControlSize;
 }
 
@@ -112,6 +113,7 @@ export function SearchableSelect({
   "aria-label": ariaLabel,
   name,
   className,
+  disabled = false,
   size = "default",
 }: SearchableSelectProps) {
   const [open, setOpen] = useState(false);
@@ -163,6 +165,10 @@ export function SearchableSelect({
       window.removeEventListener("resize", reposition);
     };
   }, [open, reposition]);
+
+  useEffect(() => {
+    if (disabled) setOpen(false);
+  }, [disabled]);
 
   // Focus search input on open
   useEffect(() => {
@@ -267,8 +273,14 @@ export function SearchableSelect({
         aria-expanded={open}
         aria-haspopup="listbox"
         aria-label={ariaLabel}
+        disabled={disabled}
         onClick={() => setOpen((prev) => !prev)}
-        className={cn(getSelectTriggerBase(size), open && selectTriggerOpen, className)}
+        className={cn(
+          getSelectTriggerBase(size),
+          open && selectTriggerOpen,
+          "disabled:cursor-not-allowed disabled:opacity-60",
+          className,
+        )}
       >
         <span className="min-w-0 flex-1 truncate text-left">{selectedLabel ?? placeholder}</span>
         <ChevronDown
@@ -280,7 +292,7 @@ export function SearchableSelect({
 
       {createPortal(
         <AnimatePresence>
-          {open ? (
+          {open && !disabled ? (
             <motion.div
               ref={listRef}
               role="listbox"
