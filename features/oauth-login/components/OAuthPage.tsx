@@ -89,10 +89,12 @@ export function OAuthPage() {
   const { t } = useTranslation();
   const { notify } = useToast();
   const timers = useRef<Record<string, number>>({});
+  const pollRuns = useRef<Record<string, number>>({});
+  const completedStates = useRef<Record<string, string>>({});
 
-  const [states, setStates] = useState<Record<OAuthProvider, ProviderState>>(
-    {} as Record<OAuthProvider, ProviderState>,
-  );
+  const [states, setStates] = useState<
+    Partial<Record<OAuthProvider, ProviderState>>
+  >({});
   const [iflowCookie, setIflowCookie] = useState("");
   const [iflowLoading, setIflowLoading] = useState(false);
   const [iflowResult, setIflowResult] =
@@ -113,6 +115,8 @@ export function OAuthPage() {
       window.clearInterval(timer),
     );
     timers.current = {};
+    pollRuns.current = {};
+    completedStates.current = {};
   }, []);
 
   const getProviderTitle = useCallback(
@@ -155,10 +159,17 @@ export function OAuthPage() {
       if (timers.current[provider]) {
         window.clearInterval(timers.current[provider]);
       }
+      const run = (pollRuns.current[provider] ?? 0) + 1;
+      pollRuns.current[provider] = run;
+      const isCurrentRun = () => pollRuns.current[provider] === run;
+
       const timer = window.setInterval(async () => {
         try {
           const res = await oauthApi.getAuthStatus(state);
+          if (!isCurrentRun()) return;
           if (res.status === "ok") {
+            if (completedStates.current[provider] === state) return;
+            completedStates.current[provider] = state;
             updateProviderState(provider, {
               status: "success",
               polling: false,
@@ -188,6 +199,7 @@ export function OAuthPage() {
             delete timers.current[provider];
           }
         } catch (err: unknown) {
+          if (!isCurrentRun()) return;
           updateProviderState(provider, {
             status: "error",
             error: getErrorMessage(err),
@@ -208,12 +220,20 @@ export function OAuthPage() {
         provider === "gemini-cli"
           ? (states[provider]?.projectId || "").trim()
           : undefined;
+      if (timers.current[provider]) {
+        window.clearInterval(timers.current[provider]);
+        delete timers.current[provider];
+      }
+      pollRuns.current[provider] = (pollRuns.current[provider] ?? 0) + 1;
+      delete completedStates.current[provider];
       updateProviderState(provider, {
         status: "waiting",
         polling: true,
         error: undefined,
         url: "",
         state: "",
+        callbackUrl: "",
+        callbackSubmitting: false,
         callbackStatus: undefined,
         callbackError: undefined,
       });
@@ -304,14 +324,19 @@ export function OAuthPage() {
             ? { code: callbackInput, state: currentState }
             : callbackInput,
         );
+        const callbackState = manualCodeProvider(provider)
+          ? currentState
+          : states[provider]?.state || "";
         updateProviderState(provider, {
           callbackSubmitting: false,
           callbackStatus: "success",
         });
-        notify({
-          type: "success",
-          message: t("oauth.callback_submit_success"),
-        });
+        if (!callbackState) {
+          notify({
+            type: "success",
+            message: t("oauth.callback_submit_success"),
+          });
+        }
       } catch (err: unknown) {
         const message =
           getErrorMessage(err) || t("oauth.callback_submit_failed");

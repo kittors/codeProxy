@@ -31,6 +31,18 @@ const mocks = vi.hoisted(() => ({
   })),
 }));
 
+const toastMocks = vi.hoisted(() => ({
+  success: vi.fn(),
+  error: vi.fn(),
+  info: vi.fn(),
+  warning: vi.fn(),
+}));
+
+vi.mock("goey-toast", () => ({
+  GoeyToaster: () => null,
+  goeyToast: toastMocks,
+}));
+
 vi.mock("@code-proxy/api-client", async (importOriginal) => {
   const mod = await importOriginal<typeof import("@code-proxy/api-client")>();
   return {
@@ -61,16 +73,33 @@ vi.mock("@code-proxy/api-client/endpoints/proxies", () => ({
   },
 }));
 
+const deferred = <T,>() => {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+};
+
 beforeEach(() => {
   window.localStorage.clear();
   window.sessionStorage.clear();
-  mocks.list.mockClear();
-  mocks.getEntityStats.mockClear();
-  mocks.startAuth.mockClear();
-  mocks.getAuthStatus.mockClear();
-  mocks.submitCallback.mockClear();
-  mocks.iflowCookieAuth.mockClear();
-  mocks.importCredential.mockClear();
+  mocks.list.mockReset();
+  mocks.list.mockResolvedValue({ files: [] });
+  mocks.getEntityStats.mockReset();
+  mocks.getEntityStats.mockResolvedValue({ source: [], auth_index: [] });
+  mocks.startAuth.mockReset();
+  mocks.startAuth.mockResolvedValue({ url: "", state: "" });
+  mocks.getAuthStatus.mockReset();
+  mocks.getAuthStatus.mockResolvedValue({ status: "waiting" });
+  mocks.submitCallback.mockReset();
+  mocks.submitCallback.mockResolvedValue({});
+  mocks.iflowCookieAuth.mockReset();
+  mocks.iflowCookieAuth.mockResolvedValue({ status: "ok" });
+  mocks.importCredential.mockReset();
+  mocks.importCredential.mockResolvedValue({});
   mocks.getModelConfigs.mockReset();
   mocks.getModelConfigs.mockResolvedValue(Array<unknown>());
   mocks.getModelOwnerPresets.mockReset();
@@ -81,6 +110,10 @@ beforeEach(() => {
   mocks.proxiesCheck.mockReset();
   mocks.proxiesList.mockResolvedValue(Array<ProxyPoolEntry>());
   mocks.proxiesCheck.mockResolvedValue({ ok: true, latencyMs: 88 });
+  toastMocks.success.mockReset();
+  toastMocks.error.mockReset();
+  toastMocks.info.mockReset();
+  toastMocks.warning.mockReset();
 });
 
 describe("AuthFilesPage OAuth login dialog", () => {
@@ -295,6 +328,135 @@ describe("AuthFilesPage OAuth login dialog", () => {
         {},
       );
     });
+  });
+
+  test("clears OAuth dialog state when reopened", async () => {
+    const user = userEvent.setup();
+    mocks.startAuth.mockResolvedValueOnce({
+      url: "https://example.com/oauth",
+      state: "oauth-state",
+    });
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    await user.click(
+      await screen.findByRole("button", { name: "Add OAuth Login" }),
+    );
+
+    const dialog = await screen.findByRole("dialog");
+    const scoped = within(dialog);
+    await user.click(
+      scoped.getByRole("button", { name: "Start authorization" }),
+    );
+    expect(await scoped.findByText("https://example.com/oauth")).toBeInTheDocument();
+
+    const callbackInput = scoped.getByPlaceholderText(
+      "Paste the full callback URL from browser",
+    );
+    await user.type(
+      callbackInput,
+      "http://localhost:1455/auth/callback?code=test-code&state=oauth-state",
+    );
+    expect(callbackInput).toHaveValue(
+      "http://localhost:1455/auth/callback?code=test-code&state=oauth-state",
+    );
+
+    await user.click(scoped.getByRole("button", { name: "Close" }));
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+    );
+
+    await user.click(screen.getByRole("button", { name: "Add OAuth Login" }));
+    const reopened = within(await screen.findByRole("dialog"));
+
+    expect(reopened.queryByText("https://example.com/oauth")).not.toBeInTheDocument();
+    expect(
+      reopened.getByPlaceholderText("Paste the full callback URL from browser"),
+    ).toHaveValue("");
+  });
+
+  test("shows one OAuth success toast when an old poll resolves after restart", async () => {
+    const user = userEvent.setup();
+    const firstPoll = deferred<{ status: "ok" }>();
+    const secondPoll = deferred<{ status: "ok" }>();
+    mocks.list
+      .mockResolvedValueOnce({ files: [] })
+      .mockResolvedValue({
+        files: [
+          {
+            name: "xai-new.json",
+            type: "xai",
+            size: 2048,
+            modified: Date.now(),
+            disabled: false,
+          },
+        ],
+      });
+    mocks.startAuth.mockResolvedValueOnce({
+      url: "https://accounts.x.ai/oauth2/consent",
+      state: "xai-state",
+    });
+    mocks.getAuthStatus
+      .mockImplementationOnce(() => firstPoll.promise)
+      .mockImplementationOnce(() => secondPoll.promise);
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    await user.click(
+      await screen.findByRole("button", { name: "Add OAuth Login" }),
+    );
+
+    const dialog = await screen.findByRole("dialog");
+    const scoped = within(dialog);
+    await user.click(scoped.getByRole("tab", { name: "xAI / Grok OAuth" }));
+    await user.click(
+      scoped.getByRole("button", { name: "Start authorization" }),
+    );
+    await waitFor(() => expect(mocks.getAuthStatus).toHaveBeenCalledTimes(1));
+
+    await user.type(
+      scoped.getByPlaceholderText("Paste the code shown by xAI / Grok"),
+      "manual-code",
+    );
+    await user.click(scoped.getByRole("button", { name: "Submit callback" }));
+    await waitFor(() => expect(mocks.getAuthStatus).toHaveBeenCalledTimes(2));
+
+    secondPoll.resolve({ status: "ok" });
+    await waitFor(() =>
+      expect(
+        toastMocks.success.mock.calls.filter(
+          ([title]) => title === "xAI / Grok OAuth authorization succeeded",
+        ),
+      ).toHaveLength(1),
+    );
+
+    firstPoll.resolve({ status: "ok" });
+    await new Promise((resolve) => window.setTimeout(resolve, 0));
+    expect(
+      toastMocks.success.mock.calls.filter(
+        ([title]) => title === "xAI / Grok OAuth authorization succeeded",
+      ),
+    ).toHaveLength(1);
   });
 
   test("keeps the dialog open until OAuth completes and the new auth file is listed", async () => {

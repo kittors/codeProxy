@@ -122,14 +122,16 @@ export function OAuthLoginDialog({
   const { t } = useTranslation();
   const { notify } = useToast();
   const timers = useRef<Record<string, number>>({});
+  const pollRuns = useRef<Record<string, number>>({});
+  const completedStates = useRef<Record<string, string>>({});
 
   const [tab, setTab] = useState<TabValue>(defaultTab);
   const [selectedProxyID, setSelectedProxyID] = useState("");
   const proxyCheckState = useProxyPoolChecks(proxyPoolEntries, open);
 
-  const [states, setStates] = useState<Record<OAuthProvider, ProviderState>>(
-    {} as Record<OAuthProvider, ProviderState>,
-  );
+  const [states, setStates] = useState<
+    Partial<Record<OAuthProvider, ProviderState>>
+  >({});
 
   const [iflowCookie, setIflowCookie] = useState("");
   const [iflowLoading, setIflowLoading] = useState(false);
@@ -156,16 +158,25 @@ export function OAuthLoginDialog({
   useEffect(() => {
     if (!open) {
       clearTimers();
+      pollRuns.current = {};
+      completedStates.current = {};
       return;
     }
-    return () => clearTimers();
-  }, [clearTimers, open]);
-
-  useEffect(() => {
-    if (!open) return;
+    clearTimers();
+    pollRuns.current = {};
+    completedStates.current = {};
     setTab(defaultTab);
     setSelectedProxyID("");
-  }, [defaultTab, open]);
+    setStates({});
+    setIflowCookie("");
+    setIflowLoading(false);
+    setIflowResult(null);
+    setVertexFileName("");
+    setVertexLocation("");
+    setVertexLoading(false);
+    setVertexResult(null);
+    return () => clearTimers();
+  }, [clearTimers, defaultTab, open]);
 
   const getProviderTitle = useCallback(
     (provider: OAuthProvider) =>
@@ -206,7 +217,9 @@ export function OAuthLoginDialog({
   );
 
   const completeAuthorization = useCallback(
-    async (provider: OAuthProvider) => {
+    async (provider: OAuthProvider, state: string) => {
+      if (completedStates.current[provider] === state) return;
+      completedStates.current[provider] = state;
       clearProviderTimer(provider);
       updateProviderState(provider, {
         status: "success",
@@ -236,11 +249,16 @@ export function OAuthLoginDialog({
   const startPolling = useCallback(
     (provider: OAuthProvider, state: string) => {
       clearProviderTimer(provider);
+      const run = (pollRuns.current[provider] ?? 0) + 1;
+      pollRuns.current[provider] = run;
+      const isCurrentRun = () => pollRuns.current[provider] === run;
+
       const pollOnce = async () => {
         try {
           const res = await oauthApi.getAuthStatus(state);
+          if (!isCurrentRun()) return;
           if (res.status === "ok") {
-            await completeAuthorization(provider);
+            await completeAuthorization(provider, state);
           } else if (res.status === "error") {
             clearProviderTimer(provider);
             updateProviderState(provider, {
@@ -258,6 +276,7 @@ export function OAuthLoginDialog({
             });
           }
         } catch (err: unknown) {
+          if (!isCurrentRun()) return;
           clearProviderTimer(provider);
           updateProviderState(provider, {
             status: "error",
@@ -291,12 +310,17 @@ export function OAuthLoginDialog({
         provider === "gemini-cli"
           ? (states[provider]?.projectId || "").trim()
           : undefined;
+      pollRuns.current[provider] = (pollRuns.current[provider] ?? 0) + 1;
+      delete completedStates.current[provider];
+      clearProviderTimer(provider);
       updateProviderState(provider, {
         status: "waiting",
         polling: true,
         error: undefined,
         url: "",
         state: "",
+        callbackUrl: "",
+        callbackSubmitting: false,
         callbackStatus: undefined,
         callbackError: undefined,
       });
@@ -338,6 +362,7 @@ export function OAuthLoginDialog({
       startPolling,
       states,
       t,
+      clearProviderTimer,
       updateProviderState,
     ],
   );
@@ -403,13 +428,13 @@ export function OAuthLoginDialog({
           status: callbackState ? "waiting" : "success",
           polling: Boolean(callbackState),
         });
-        notify({
-          type: "success",
-          message: t("oauth.callback_submit_success"),
-        });
         if (callbackState) {
           startPolling(provider, callbackState);
         } else {
+          notify({
+            type: "success",
+            message: t("oauth.callback_submit_success"),
+          });
           await onAuthorized?.();
           updateProviderState(provider, { callbackSubmitting: false });
           onClose();
