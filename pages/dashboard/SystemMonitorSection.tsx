@@ -502,6 +502,14 @@ export function SystemMonitorSection({
     latencyWeight > 0
       ? channelLatency.reduce((acc, item) => acc + item.avg_ms * item.count, 0) / latencyWeight
       : 0;
+  const rawDBEngine = stats.db_engine?.trim();
+  const dbEngine = (rawDBEngine || "sqlite").toLowerCase();
+  const dbSublabel =
+    dbEngine === "postgres"
+      ? t("system_monitor.postgresql")
+      : dbEngine === "sqlite"
+        ? t("system_monitor.sqlite_wal_shm")
+        : rawDBEngine;
 
   return (
     <Card
@@ -541,7 +549,7 @@ export function SystemMonitorSection({
               label={t("system_monitor.database")}
               value={formatBytes(stats.db_size_bytes)}
               icon={Database}
-              sublabel={t("system_monitor.sqlite_wal_shm")}
+              sublabel={dbSublabel}
             />
             <MiniKpi
               label={t("system_monitor.log_storage")}

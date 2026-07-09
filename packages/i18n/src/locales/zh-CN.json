@@ -3812,6 +3812,7 @@
     "idle": "空闲",
     "started": "启动于 {{time}}",
     "heap": "堆内存 {{size}}",
+    "postgresql": "PostgreSQL",
     "sqlite_wal": "SQLite + WAL",
     "sqlite_wal_shm": "SQLite + WAL + SHM",
     "request_log_content": "request_log_content 正文数据",
