@@ -22,6 +22,7 @@ import {
   resolveAuthFileStats,
   sanitizeAuthFilesForCache,
   shouldShowAuthFileDisplayTag,
+  shouldShowAuthFilePlanBadge,
   writeAuthFilesDataCache,
   writeAuthFilesUiState,
 } from "@code-proxy/domain";
@@ -423,6 +424,54 @@ describe("Auth Files helper coverage", () => {
         "codex",
       ),
     ).toBe(true);
+  });
+
+  test("always shows quota-derived plan badges even when display tags omit them", () => {
+    // xAI SuperGrok is resolved from monthly credits, not auth-file default tags.
+    expect(
+      shouldShowAuthFilePlanBadge(
+        {
+          name: "xai.json",
+          type: "xai",
+          default_tags: ["xai"],
+          display_tags: ["xai"],
+        } as AuthFileItem,
+        "supergrok",
+      ),
+    ).toBe(true);
+    expect(
+      shouldShowAuthFilePlanBadge(
+        {
+          name: "xai.json",
+          type: "xai",
+          default_tags: ["xai"],
+          display_tags: [],
+        } as AuthFileItem,
+        "supergrok-heavy",
+      ),
+    ).toBe(true);
+    // Codex plan tags still respect display_tags / hidden defaults.
+    expect(
+      shouldShowAuthFilePlanBadge(
+        {
+          name: "codex.json",
+          default_tags: ["codex", "pro"],
+          display_tags: ["codex"],
+        } as AuthFileItem,
+        "pro",
+      ),
+    ).toBe(false);
+    expect(
+      shouldShowAuthFilePlanBadge(
+        {
+          name: "codex.json",
+          default_tags: ["codex", "pro"],
+          display_tags: ["codex", "pro"],
+        } as AuthFileItem,
+        "pro",
+      ),
+    ).toBe(true);
+    expect(shouldShowAuthFilePlanBadge({ name: "xai.json" } as AuthFileItem, null)).toBe(false);
   });
 
   test("drops stale display tags that no longer match current default or custom tags", () => {

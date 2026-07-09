@@ -54,6 +54,7 @@ import {
   resolveAuthFileSupplementalTags,
   resolveFileType,
   shouldShowAuthFileDisplayTag,
+  shouldShowAuthFilePlanBadge,
 } from "@code-proxy/domain";
 import {
   parseIdTokenPayload,
@@ -1322,9 +1323,7 @@ export function AuthFilesFilesTab({
                   const planType = resolveAuthFilePlanType(file, state);
                   const displayTags = resolveAuthFileSupplementalTags(file, state);
                   const showTypeBadge = shouldShowAuthFileDisplayTag(file, typeKey);
-                  const showPlanBadge = planType
-                    ? shouldShowAuthFileDisplayTag(file, planType)
-                    : false;
+                  const showPlanBadge = shouldShowAuthFilePlanBadge(file, planType);
                   const subscriptionBadge = renderSubscriptionBadge(file);
                   const stats = resolveAuthFileStats(file, usageIndex);
                   const usageTotalCalls = stats.success + stats.failure;

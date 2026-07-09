@@ -41,6 +41,7 @@ import {
   resolveAuthFileSubscriptionStatus,
   resolveFileType,
   shouldShowAuthFileDisplayTag,
+  shouldShowAuthFilePlanBadge,
 } from "@code-proxy/domain";
 import { resolveQuotaProvider, type QuotaProvider } from "@features/quota-preview/quota-fetch";
 import {
@@ -693,7 +694,7 @@ export function useAuthFilesFilesPresentation({
           const planType = resolveAuthFilePlanType(file, quotaByFileName[file.name]);
           const runtimeOnly = isRuntimeOnlyAuthFile(file);
           const showTypeBadge = shouldShowAuthFileDisplayTag(file, typeKey);
-          const showPlanBadge = planType ? shouldShowAuthFileDisplayTag(file, planType) : false;
+          const showPlanBadge = shouldShowAuthFilePlanBadge(file, planType);
 
           return (
             <div className="flex flex-col gap-1">

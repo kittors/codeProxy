@@ -49,6 +49,7 @@ import {
   type CodexOAuthAdmissionEditorState,
   type PrefixProxyEditorState,
 } from "@code-proxy/domain";
+import type { QuotaState } from "@features/quota-preview/quota-helpers";
 
 type DetailTab = "usage" | "identity" | "fields" | "models";
 type DetailTrendWindow = "5h" | "week";
@@ -192,6 +193,7 @@ interface AuthFileDetailModalProps {
   mappedModelOwnerGroup: AuthFileModelOwnerGroup | null;
   mappedModelOwnerValue: string;
   excluded: Record<string, string[]>;
+  quotaState?: QuotaState | null;
   prefixProxyEditor: PrefixProxyEditorState;
   setPrefixProxyEditor: Dispatch<SetStateAction<PrefixProxyEditorState>>;
   prefixProxyDirty: boolean;
@@ -233,6 +235,7 @@ export function AuthFileDetailModal({
   mappedModelOwnerGroup,
   mappedModelOwnerValue,
   excluded,
+  quotaState = null,
   prefixProxyEditor,
   setPrefixProxyEditor,
   prefixProxyDirty,
@@ -268,7 +271,7 @@ export function AuthFileDetailModal({
     ? resolveAuthFileDisplayName(detailFile) || String(detailFile.name || "")
     : t("auth_files.view_auth_file");
   const claudeOAuthHealth = detailFile ? resolveClaudeOAuthHealth(detailFile) : null;
-  const detailPlanType = detailFile ? resolveAuthFilePlanType(detailFile) : null;
+  const detailPlanType = detailFile ? resolveAuthFilePlanType(detailFile, quotaState) : null;
   const detailPlanLabel = useMemo(() => {
     if (!detailPlanType) return "";
     const normalized = detailPlanType.trim().toLowerCase();
@@ -276,7 +279,15 @@ export function AuthFileDetailModal({
     if (normalized === "plus" || normalized === "team" || normalized === "free") {
       return t(`codex_quota.plan_${normalized}`);
     }
-    return normalized;
+    if (normalized === "supergrok") return t("xai_quota.plan_supergrok");
+    if (
+      normalized === "supergrok-heavy" ||
+      normalized === "supergrok_heavy" ||
+      normalized === "supergrokheavy"
+    ) {
+      return t("xai_quota.plan_supergrok_heavy");
+    }
+    return normalized.charAt(0).toUpperCase() + normalized.slice(1);
   }, [detailPlanType, t]);
   const excludedModels = excluded[providerKey] ?? [];
   const canRenameChannel = detailFile ? canRenameAuthFileChannel(detailFile) : false;
@@ -703,6 +714,8 @@ export function AuthFileDetailModal({
 
     const clientLabel =
       [summary.client_product, summary.client_variant].filter(Boolean).join(" / ") || "--";
+    const hasMeaningfulValue = (value: unknown): boolean =>
+      typeof value === "string" ? value.trim().length > 0 : value != null && value !== "";
     const effectiveRows = Object.entries(identityFingerprintDetail?.effective.fields ?? {})
       .map(
         ([key, field]): IdentityFingerprintFieldRow => ({
@@ -713,6 +726,7 @@ export function AuthFileDetailModal({
           source: field.source,
         }),
       )
+      .filter((row) => hasMeaningfulValue(row.value))
       .sort((left, right) => left.field.localeCompare(right.field));
     const learnedRows = Object.entries(identityFingerprintDetail?.learned?.fields ?? {})
       .map(
@@ -724,6 +738,7 @@ export function AuthFileDetailModal({
           source: "learned",
         }),
       )
+      .filter((row) => hasMeaningfulValue(row.value))
       .sort((left, right) => left.field.localeCompare(right.field));
     const observedHeaderRows = Object.entries(
       identityFingerprintDetail?.learned?.observed_headers ?? {},
@@ -737,6 +752,7 @@ export function AuthFileDetailModal({
           source: "learned",
         }),
       )
+      .filter((row) => hasMeaningfulValue(row.value))
       .sort((left, right) => left.field.localeCompare(right.field));
     const identityFieldRows = [...effectiveRows, ...learnedRows, ...observedHeaderRows];
 
@@ -924,10 +940,21 @@ export function AuthFileDetailModal({
 
     const formatCount = (value: number) =>
       Number.isFinite(value) ? Math.round(value).toLocaleString() : "0";
+    // Prefer cycle totals when the backend knows the weekly cycle start; otherwise fall back
+    // so xAI cards do not show a misleading 0 before weekly_limit snapshots exist.
+    const displayCycleRequestTotal =
+      detailTrend.cycle_known === true
+        ? detailTrend.cycle_request_total
+        : detailTrend.cycle_request_total > 0
+          ? detailTrend.cycle_request_total
+          : detailTrend.request_total;
+    const displayCycleCostTotal =
+      detailTrend.cycle_known === true
+        ? detailTrend.cycle_cost_total
+        : detailTrend.cycle_cost_total;
     const cycleStart = detailTrend.cycle_start
       ? new Date(detailTrend.cycle_start).toLocaleString()
       : "--";
-    const weeklyQuotaUsed = formatPercent(detailTrend.weekly_quota_used_percent);
     const fiveHourQuotaUsedPercent = isCodexDetail
       ? latestQuotaUsedPercent(
           detailTrend.quota_series,
@@ -943,13 +970,21 @@ export function AuthFileDetailModal({
             "code_week",
             (windowSeconds) => windowSeconds >= WEEK_WINDOW_SECONDS,
           )
-        : null);
+        : detailProviderKey === "xai"
+          ? latestQuotaUsedPercent(
+              detailTrend.quota_series,
+              "weekly_limit",
+              (windowSeconds) => windowSeconds >= WEEK_WINDOW_SECONDS,
+            )
+          : null);
+    // Prefer the backend weekly used percent; fall back to the latest weekly_limit snapshot for xAI.
+    const weeklyQuotaUsed = formatPercent(weeklyQuotaUsedPercent);
     const estimatedFiveHourQuota = estimateQuotaBudget(
       sumUsageCost(detailTrend.hourly_usage),
       fiveHourQuotaUsedPercent,
     );
     const estimatedWeeklyQuota = estimateQuotaBudget(
-      detailTrend.cycle_cost_total,
+      displayCycleCostTotal,
       weeklyQuotaUsedPercent,
     );
 
@@ -967,13 +1002,13 @@ export function AuthFileDetailModal({
           <div className={SUMMARY_CARD_CLASS_NAME}>
             <p className={SUMMARY_LABEL_CLASS_NAME}>{t("auth_files.trend_current_weekly_cycle")}</p>
             <p className={SUMMARY_VALUE_CLASS_NAME}>
-              {formatCount(detailTrend.cycle_request_total)}
+              {formatCount(displayCycleRequestTotal)}
             </p>
           </div>
           <div className={SUMMARY_CARD_CLASS_NAME}>
             <p className={SUMMARY_LABEL_CLASS_NAME}>{t("auth_files.trend_current_cycle_cost")}</p>
             <p className={SUMMARY_VALUE_CLASS_NAME}>
-              {formatCurrency(detailTrend.cycle_cost_total)}
+              {formatCurrency(displayCycleCostTotal)}
             </p>
           </div>
           {isCodexDetail ? (

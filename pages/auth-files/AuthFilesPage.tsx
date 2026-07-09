@@ -914,6 +914,7 @@ export function AuthFilesPage() {
         mappedModelOwnerGroup={detailModelOwnerGroup}
         mappedModelOwnerValue={detailModelOwnerValue}
         excluded={excluded}
+        quotaState={detailFile ? (quotaByFileName[detailFile.name] ?? null) : null}
         prefixProxyEditor={prefixProxyEditor}
         setPrefixProxyEditor={setPrefixProxyEditor}
         prefixProxyDirty={prefixProxyDirty}

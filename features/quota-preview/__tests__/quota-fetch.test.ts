@@ -612,6 +612,7 @@ describe("fetchQuota for xai", () => {
         percent: 75,
         value: "75%",
         resetAtMs: Date.parse("2026-07-13T00:00:00Z"),
+        windowSeconds: 604800,
         meta: expect.any(String),
       },
       {

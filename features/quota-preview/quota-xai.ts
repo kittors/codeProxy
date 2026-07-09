@@ -70,6 +70,9 @@ export type XaiBillingSummary = {
   usedPercent: number | null;
 };
 
+/** xAI weekly billing window length used for cycle tracking snapshots. */
+export const XAI_WEEKLY_WINDOW_SECONDS = 604_800;
+
 export const parseXaiBillingPayload = (payload: unknown): XaiBillingPayload | null => {
   if (payload === undefined || payload === null) return null;
   if (typeof payload === "string") {
@@ -320,6 +323,8 @@ export const buildXaiItems = (billing: XaiBillingSummary): QuotaItem[] => {
       percent: remainingPercent(weeklyUsed),
       value: formatRemainingPercent(weeklyUsed),
       resetAtMs: parseResetTimeToMs(billing.periodEnd),
+      // Required so backend can record weekly cycle start and power cycle call totals.
+      windowSeconds: XAI_WEEKLY_WINDOW_SECONDS,
       meta: formatPeriodRange(billing.periodStart, billing.periodEnd),
     });
   }

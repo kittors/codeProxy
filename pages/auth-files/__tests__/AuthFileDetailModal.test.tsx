@@ -372,6 +372,132 @@ describe("AuthFileDetailModal", () => {
     expect(screen.queryByText(/resets/)).not.toBeInTheDocument();
   });
 
+  test("shows SuperGrok plan badge and falls back cycle totals for xAI when cycle is unknown", () => {
+    renderDetailModal({
+      detailFile: {
+        name: "xai-user.json",
+        label: "xAI Grok",
+        type: "xai",
+        provider: "xai",
+        size: 256,
+      },
+      modelsFileType: "xai",
+      quotaState: {
+        status: "success",
+        planType: "supergrok",
+        items: [],
+        updatedAt: Date.now(),
+      },
+      detailTrend: {
+        auth_index: "xai-auth",
+        days: 7,
+        hours: 5,
+        request_total: 116,
+        cycle_request_total: 0,
+        cycle_cost_total: 0,
+        weekly_quota_used_percent: null,
+        cycle_known: false,
+        cycle_start: "",
+        daily_usage: [{ date: "2026-07-08", requests: 116, cost: 0.12 }],
+        hourly_usage: [],
+        quota_series: [
+          {
+            quota_key: "weekly_limit",
+            quota_label: "xai_quota.weekly_limit",
+            window_seconds: 604800,
+            points: [{ timestamp: "2026-07-08T12:00:00Z", percent: 75 }],
+          },
+        ],
+      },
+    });
+
+    expect(screen.getByText("SuperGrok")).toBeInTheDocument();
+    expectSummaryCard("Last 7 days requests", "116");
+    // When cycle_known is false, fall back to request_total instead of showing 0.
+    expectSummaryCard("Current weekly cycle", "116");
+    // Remaining snapshot percent 75% => used 25%.
+    expectSummaryCard("Weekly quota used", "25%");
+    expect(screen.queryByText("Predicted 5-hour window quota")).not.toBeInTheDocument();
+  });
+
+  test("hides empty identity fingerprint field rows", () => {
+    renderDetailModal({
+      detailTab: "identity",
+      detailFile: {
+        name: "xai-user.json",
+        label: "xAI Grok",
+        type: "xai",
+        provider: "xai",
+        size: 256,
+        identity_fingerprint_summary: {
+          provider: "xai",
+          account_key: "xai-account",
+          enabled: true,
+          primary_source: "learned",
+          learned: true,
+          learned_fields: 1,
+          effective_fields: 2,
+          source_counts: { learned: 1 },
+          client_product: "grok-cli",
+          version: "0.3.1",
+        },
+      },
+      identityFingerprintDetail: {
+        summary: {
+          provider: "xai",
+          account_key: "xai-account",
+          enabled: true,
+          primary_source: "learned",
+          learned: true,
+          learned_fields: 1,
+          effective_fields: 2,
+          source_counts: { learned: 1 },
+          client_product: "grok-cli",
+          version: "0.3.1",
+        },
+        effective: {
+          provider: "xai",
+          account_key: "xai-account",
+          enabled: true,
+          client_product: "grok-cli",
+          version: "0.3.1",
+          fields: {
+            "user-agent": { value: "grok-cli/0.3.1", source: "learned" },
+            "x-empty-header": { value: "", source: "preset" },
+            "x-blank-header": { value: "   ", source: "builtin_default" },
+          },
+        },
+        learned: {
+          provider: "xai",
+          account_key: "xai-account",
+          client_product: "grok-cli",
+          version: "0.3.1",
+          fields: {
+            "user-agent": "grok-cli/0.3.1",
+            "x-empty-learned": "",
+          },
+          observed_headers: {
+            "user-agent": "grok-cli/0.3.1",
+            "x-empty-observed": "  ",
+          },
+          created_at: "2026-07-01T00:00:00Z",
+          updated_at: "2026-07-08T00:00:00Z",
+          last_seen_at: "2026-07-08T01:00:00Z",
+        },
+        preset: {},
+        builtin_default: {},
+      },
+    });
+
+    const fields = screen.getByTestId("auth-file-identity-fields");
+    expect(within(fields).getAllByText("user-agent").length).toBeGreaterThanOrEqual(1);
+    expect(within(fields).getAllByText("grok-cli/0.3.1").length).toBeGreaterThanOrEqual(1);
+    expect(within(fields).queryByText("x-empty-header")).not.toBeInTheDocument();
+    expect(within(fields).queryByText("x-blank-header")).not.toBeInTheDocument();
+    expect(within(fields).queryByText("x-empty-learned")).not.toBeInTheDocument();
+    expect(within(fields).queryByText("x-empty-observed")).not.toBeInTheDocument();
+  });
+
   test("renders account identity fingerprint sources and learned request headers in mobile flow", () => {
     renderDetailModal({
       detailTab: "identity",

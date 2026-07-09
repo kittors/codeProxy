@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { ToastProvider } from "@code-proxy/ui";
 import { ThemeProvider } from "@code-proxy/ui";
 import { AuthFilesPage } from "@pages/auth-files/AuthFilesPage";
-import type { AuthFileItem, EntityStatsResponse } from "@code-proxy/api-client";
+import type { AuthFileItem, AuthFileTrendResponse, EntityStatsResponse } from "@code-proxy/api-client";
 import {
   AUTH_FILES_DATA_CACHE_KEY,
   AUTH_FILES_QUOTA_AUTO_REFRESH_KEY,
@@ -30,7 +30,7 @@ const mocks = vi.hoisted(() => ({
     source: [],
     auth_index: [],
   })),
-  getAuthFileTrend: vi.fn(async (authIndex: string) => ({
+  getAuthFileTrend: vi.fn(async (authIndex: string): Promise<AuthFileTrendResponse> => ({
     auth_index: authIndex,
     days: 7,
     hours: 5,
@@ -1298,6 +1298,7 @@ describe("AuthFilesPage files table", () => {
           percent: 75,
           value: "75%",
           resetAtMs: now + 7 * 24 * 60 * 60 * 1000,
+          windowSeconds: 604800,
           meta: "07/06/2026 - 07/13/2026",
         },
         {
@@ -1747,6 +1748,80 @@ describe("AuthFilesPage files table", () => {
     expect(await within(card as HTMLElement).findByText("7 calls")).toBeInTheDocument();
     expect(within(card as HTMLElement).queryByText("99 calls")).not.toBeInTheDocument();
     expect(mocks.getAuthFileTrend).toHaveBeenCalledWith("77", { days: 7, hours: 5 });
+  });
+
+  test("cards view falls back to request_total when xAI weekly cycle is unknown", async () => {
+    window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
+    mocks.list.mockImplementation(async () => ({
+      files: [
+        {
+          name: "xai-user.json",
+          type: "xai",
+          provider: "xai",
+          account_type: "oauth",
+          email: "user@example.com",
+          auth_index: "xai-auth",
+          size: 2048,
+          modified: Date.now(),
+          disabled: false,
+        },
+      ],
+    }));
+    mocks.getEntityStats.mockImplementation(
+      async () =>
+        ({
+          source: [],
+          auth_index: [
+            { entity_name: "xai-auth", requests: 116, failed: 0, avg_latency: 0, total_tokens: 0 },
+          ],
+        }) as any,
+    );
+    mocks.getAuthFileTrend.mockImplementation(async (authIndex: string) => ({
+      auth_index: authIndex,
+      days: 7,
+      hours: 5,
+      request_total: 116,
+      cycle_request_total: 0,
+      cycle_cost_total: 0,
+      weekly_quota_used_percent: null,
+      cycle_known: false,
+      cycle_start: "",
+      daily_usage: [{ date: "2026-07-08", requests: 116, cost: 0.12 }],
+      hourly_usage: [],
+      quota_series: [],
+    }));
+    mocks.fetchQuota.mockResolvedValue({
+      items: [
+        {
+          key: "weekly_limit",
+          label: "xai_quota.weekly_limit",
+          percent: 75,
+          value: "75%",
+          windowSeconds: 604800,
+        },
+      ],
+      planType: "supergrok",
+    });
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    const title = await screen.findByText("user@example.com");
+    const card = title.closest("section");
+    expect(card).not.toBeNull();
+    // Prefer request_total over a misleading cycle_request_total of 0 when cycle_known is false.
+    expect(await within(card as HTMLElement).findByText("116 calls")).toBeInTheDocument();
+    expect(within(card as HTMLElement).getByText("Plan SuperGrok")).toBeInTheDocument();
+    expect(mocks.getAuthFileTrend).toHaveBeenCalledWith("xai-auth", { days: 7, hours: 5 });
   });
 
   test("filters auth files by custom tag options", async () => {

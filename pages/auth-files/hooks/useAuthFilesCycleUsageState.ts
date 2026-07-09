@@ -16,6 +16,33 @@ const resolveCycleUsageAuthIndex = (file: AuthFileItem): string | null => {
   return normalizeAuthIndexValue(file.auth_index ?? file.authIndex);
 };
 
+/**
+ * Prefer cycle_request_total when the backend knows the weekly cycle start.
+ * When cycle_known is false, fall back to request_total so cards do not jump
+ * from entity-stats totals (e.g. 116) to a misleading 0.
+ */
+const resolveDisplayCycleCount = (trend: {
+  cycle_known?: boolean;
+  cycle_request_total?: number;
+  request_total?: number;
+}): number | null => {
+  const cycleKnown = trend.cycle_known === true;
+  const cycleTotal = trend.cycle_request_total;
+  if (cycleKnown && typeof cycleTotal === "number" && Number.isFinite(cycleTotal)) {
+    return Math.max(0, Math.round(cycleTotal));
+  }
+
+  const requestTotal = trend.request_total;
+  if (typeof requestTotal === "number" && Number.isFinite(requestTotal)) {
+    return Math.max(0, Math.round(requestTotal));
+  }
+
+  if (typeof cycleTotal === "number" && Number.isFinite(cycleTotal)) {
+    return Math.max(0, Math.round(cycleTotal));
+  }
+  return null;
+};
+
 export function useAuthFilesCycleUsageState() {
   const mountedRef = useRef(true);
   const inFlightRef = useRef<Map<string, Promise<number | null>>>(new Map());
@@ -40,10 +67,9 @@ export function useAuthFilesCycleUsageState() {
     request = usageApi
       .getAuthFileTrend(authIndex, { days: 7, hours: 5 })
       .then((trend) => {
-        const rawCount = trend.cycle_request_total;
-        if (typeof rawCount !== "number" || !Number.isFinite(rawCount)) return null;
+        const nextCount = resolveDisplayCycleCount(trend);
+        if (nextCount === null) return null;
 
-        const nextCount = Math.max(0, Math.round(rawCount));
         if (mountedRef.current) {
           setCallsByAuthIndex((prev) =>
             prev[authIndex] === nextCount ? prev : { ...prev, [authIndex]: nextCount },
