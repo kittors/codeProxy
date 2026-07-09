@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 const getMock = vi.fn();
 const postMock = vi.fn();
 const putMock = vi.fn();
+const patchMock = vi.fn();
 const deleteMock = vi.fn();
 
 vi.mock("../../client/client", () => ({
@@ -10,6 +11,7 @@ vi.mock("../../client/client", () => ({
     get: getMock,
     post: postMock,
     put: putMock,
+    patch: patchMock,
     delete: deleteMock,
   },
 }));
@@ -19,23 +21,26 @@ describe("providersApi OpenCode Go", () => {
     getMock.mockReset();
     postMock.mockReset();
     putMock.mockReset();
+    patchMock.mockReset();
     deleteMock.mockReset();
   });
 
   test("normalizes OpenCode Go configs without exposing Base URL", async () => {
-    const { providersApi } = await import("@code-proxy/api-client/endpoints/providers");
+    const { providersApi } =
+      await import("@code-proxy/api-client/endpoints/providers");
     getMock.mockResolvedValue({
       "opencode-go-api-key": [
         {
           name: "OpenCode Go",
           "api-key": "sk-go",
+          disabled: true,
           prefix: "go",
           "base-url": "https://should-not-surface.example",
           "proxy-id": "hk",
           "proxy-url": "http://127.0.0.1:7890",
           headers: { "X-Test": "yes" },
-          models: [{ name: "should-not-surface" }],
-          "excluded-models": ["disabled-model"],
+          models: [{ name: "upstream-model", alias: "go-alias" }],
+          "excluded-models": ["*"],
           "vision-fallback-model": "qwen3.5-plus",
           "workspace-id": "wrk_123",
           "auth-cookie": "auth-token",
@@ -50,12 +55,13 @@ describe("providersApi OpenCode Go", () => {
       {
         name: "OpenCode Go",
         apiKey: "sk-go",
+        disabled: true,
         prefix: "go",
         proxyId: "hk",
         proxyUrl: "http://127.0.0.1:7890",
         headers: { "X-Test": "yes" },
-        models: [{ name: "should-not-surface" }],
-        excludedModels: ["disabled-model"],
+        models: [{ name: "upstream-model", alias: "go-alias" }],
+        excludedModels: ["*"],
         visionFallbackModel: "qwen3.5-plus",
         workspaceId: "wrk_123",
         authCookie: "auth-token",
@@ -64,7 +70,8 @@ describe("providersApi OpenCode Go", () => {
   });
 
   test("ignores OAuth auth-file rows returned by the OpenCode Go config endpoint", async () => {
-    const { providersApi } = await import("@code-proxy/api-client/endpoints/providers");
+    const { providersApi } =
+      await import("@code-proxy/api-client/endpoints/providers");
     getMock.mockResolvedValue({
       "opencode-go-api-key": [
         {
@@ -89,7 +96,8 @@ describe("providersApi OpenCode Go", () => {
   });
 
   test("serializes and deletes OpenCode Go configs without Base URL", async () => {
-    const { providersApi } = await import("@code-proxy/api-client/endpoints/providers");
+    const { providersApi } =
+      await import("@code-proxy/api-client/endpoints/providers");
     putMock.mockResolvedValue({ status: "ok" });
     deleteMock.mockResolvedValue({ status: "ok" });
 
@@ -102,8 +110,8 @@ describe("providersApi OpenCode Go", () => {
         proxyId: "hk",
         proxyUrl: "http://127.0.0.1:7890",
         headers: { "X-Test": "yes" },
-        models: [{ name: "should-not-save" }],
-        excludedModels: ["disabled-model"],
+        models: [{ name: "upstream-model", alias: "go-alias" }],
+        excludedModels: ["*"],
         visionFallbackModel: "qwen3.5-plus",
         workspaceId: "wrk_123",
         authCookie: "auth-token",
@@ -118,8 +126,8 @@ describe("providersApi OpenCode Go", () => {
         "proxy-id": "hk",
         "proxy-url": "http://127.0.0.1:7890",
         headers: { "X-Test": "yes" },
-        models: [{ name: "should-not-save" }],
-        "excluded-models": ["disabled-model"],
+        models: [{ name: "upstream-model", alias: "go-alias" }],
+        "excluded-models": ["*"],
         "vision-fallback-model": "qwen3.5-plus",
         "workspace-id": "wrk_123",
         "auth-cookie": "auth-token",
@@ -134,10 +142,18 @@ describe("providersApi OpenCode Go", () => {
   });
 
   test("queries OpenCode Go usage with dashboard credentials", async () => {
-    const { providersApi } = await import("@code-proxy/api-client/endpoints/providers");
+    const { providersApi } =
+      await import("@code-proxy/api-client/endpoints/providers");
     postMock.mockResolvedValue({
       workspace_id: "wrk_123",
-      usage: [{ type: "rolling", label: "Rolling", percentage: 3, resets_in: "31 minutes" }],
+      usage: [
+        {
+          type: "rolling",
+          label: "Rolling",
+          percentage: 3,
+          resets_in: "31 minutes",
+        },
+      ],
     });
 
     await expect(
@@ -148,7 +164,14 @@ describe("providersApi OpenCode Go", () => {
       }),
     ).resolves.toEqual({
       workspace_id: "wrk_123",
-      usage: [{ type: "rolling", label: "Rolling", percentage: 3, resets_in: "31 minutes" }],
+      usage: [
+        {
+          type: "rolling",
+          label: "Rolling",
+          percentage: 3,
+          resets_in: "31 minutes",
+        },
+      ],
     });
 
     expect(postMock).toHaveBeenCalledWith("/opencode-go-api-key/usage", {
@@ -158,8 +181,68 @@ describe("providersApi OpenCode Go", () => {
     });
   });
 
+  test("patches OpenCode Go config and excluded models without Base URL", async () => {
+    const { providersApi } =
+      await import("@code-proxy/api-client/endpoints/providers");
+
+    await providersApi.patchOpenCodeGoConfig(1, {
+      name: "OpenCode Go",
+      apiKey: "sk-go",
+      disabled: true,
+      baseUrl: "https://should-not-save.example",
+      models: [],
+      excludedModels: [],
+      visionFallbackModel: "qwen3.5-plus",
+      workspaceId: "wrk_123",
+      authCookie: "auth-token",
+    });
+
+    expect(patchMock).toHaveBeenCalledWith("/opencode-go-api-key", {
+      index: 1,
+      value: {
+        name: "OpenCode Go",
+        "api-key": "sk-go",
+        disabled: true,
+        models: [],
+        "excluded-models": [],
+        "vision-fallback-model": "qwen3.5-plus",
+        "workspace-id": "wrk_123",
+        "auth-cookie": "auth-token",
+      },
+    });
+
+    await providersApi.patchOpenCodeGoExcludedModels(1, ["*"]);
+
+    expect(patchMock).toHaveBeenLastCalledWith("/opencode-go-api-key", {
+      index: 1,
+      value: { "excluded-models": ["*"] },
+    });
+  });
+
+  test("omits empty api-key when patching an existing OpenCode Go config", async () => {
+    const { providersApi } =
+      await import("@code-proxy/api-client/endpoints/providers");
+
+    await providersApi.patchOpenCodeGoConfig(0, {
+      name: "OpenCode Go",
+      apiKey: " ",
+      models: [{ name: "qwen3.5-plus" }],
+      visionFallbackModel: "qwen3.5-plus",
+    });
+
+    expect(patchMock).toHaveBeenCalledWith("/opencode-go-api-key", {
+      index: 0,
+      value: {
+        name: "OpenCode Go",
+        models: [{ name: "qwen3.5-plus" }],
+        "vision-fallback-model": "qwen3.5-plus",
+      },
+    });
+  });
+
   test("ignores OAuth auth-file rows from every provider config endpoint", async () => {
-    const { providersApi } = await import("@code-proxy/api-client/endpoints/providers");
+    const { providersApi } =
+      await import("@code-proxy/api-client/endpoints/providers");
     const oauthRow = {
       name: "yuan364299311@gmail.com",
       "api-key": "oauth-backed-token",
@@ -175,12 +258,18 @@ describe("providersApi OpenCode Go", () => {
     getMock.mockImplementation(async (path: string) => {
       if (path === "/gemini-api-key") {
         return {
-          "gemini-api-key": [{ name: "Gemini API", "api-key": "sk-gemini" }, oauthRow],
+          "gemini-api-key": [
+            { name: "Gemini API", "api-key": "sk-gemini" },
+            oauthRow,
+          ],
         };
       }
       if (path === "/codex-api-key") {
         return {
-          "codex-api-key": [{ name: "Codex API", "api-key": "sk-codex" }, oauthRow],
+          "codex-api-key": [
+            { name: "Codex API", "api-key": "sk-codex" },
+            oauthRow,
+          ],
         };
       }
       if (path === "/claude-api-key") {
@@ -194,13 +283,20 @@ describe("providersApi OpenCode Go", () => {
       }
       if (path === "/vertex-api-key") {
         return {
-          "vertex-api-key": [{ name: "Vertex API", "api-key": "sk-vertex" }, oauthRow],
+          "vertex-api-key": [
+            { name: "Vertex API", "api-key": "sk-vertex" },
+            oauthRow,
+          ],
         };
       }
       if (path === "/bedrock-api-key") {
         return {
           "bedrock-api-key": [
-            { name: "Bedrock API", "api-key": "sk-bedrock", "auth-mode": "api-key" },
+            {
+              name: "Bedrock API",
+              "api-key": "sk-bedrock",
+              "auth-mode": "api-key",
+            },
             oauthRow,
           ],
         };

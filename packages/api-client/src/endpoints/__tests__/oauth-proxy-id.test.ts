@@ -21,7 +21,10 @@ describe("OAuth proxy id serialization", () => {
 
   test("passes proxy_id when starting a web OAuth authorization", async () => {
     const { oauthApi } = await import("@code-proxy/api-client/endpoints/oauth");
-    getMock.mockResolvedValue({ url: "https://auth.example", state: "state-1" });
+    getMock.mockResolvedValue({
+      url: "https://auth.example",
+      state: "state-1",
+    });
 
     await oauthApi.startAuth("codex", { proxyId: "hk" });
 
@@ -34,12 +37,30 @@ describe("OAuth proxy id serialization", () => {
     const { oauthApi } = await import("@code-proxy/api-client/endpoints/oauth");
     postMock.mockResolvedValue({ status: "ok" });
 
-    await oauthApi.submitCallback("codex", "https://callback.example", { proxyId: "hk" });
+    await oauthApi.submitCallback("codex", "https://callback.example", {
+      proxyId: "hk",
+    });
 
     expect(postMock).toHaveBeenCalledWith("/oauth-callback", {
       provider: "codex",
       redirect_url: "https://callback.example",
       proxy_id: "hk",
+    });
+  });
+
+  test("submits OAuth callback code and state directly", async () => {
+    const { oauthApi } = await import("@code-proxy/api-client/endpoints/oauth");
+    postMock.mockResolvedValue({ status: "ok" });
+
+    await oauthApi.submitCallback("xai", {
+      code: "manual-code",
+      state: "state-1",
+    });
+
+    expect(postMock).toHaveBeenCalledWith("/oauth-callback", {
+      provider: "xai",
+      code: "manual-code",
+      state: "state-1",
     });
   });
 
@@ -56,14 +77,18 @@ describe("OAuth proxy id serialization", () => {
   });
 
   test("passes proxy_id when importing Vertex credentials", async () => {
-    const { vertexApi } = await import("@code-proxy/api-client/endpoints/vertex");
+    const { vertexApi } =
+      await import("@code-proxy/api-client/endpoints/vertex");
     const file = new File(["{}"], "vertex.json", { type: "application/json" });
     postFormMock.mockResolvedValue({ status: "ok" });
 
     await vertexApi.importCredential(file, "us-central1", { proxyId: "hk" });
 
     const formData = postFormMock.mock.calls[0]?.[1] as FormData;
-    expect(postFormMock).toHaveBeenCalledWith("/vertex/import", expect.any(FormData));
+    expect(postFormMock).toHaveBeenCalledWith(
+      "/vertex/import",
+      expect.any(FormData),
+    );
     expect(formData.get("location")).toBe("us-central1");
     expect(formData.get("proxy_id")).toBe("hk");
   });

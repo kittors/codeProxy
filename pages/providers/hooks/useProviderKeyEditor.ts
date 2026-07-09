@@ -20,11 +20,14 @@ import {
   excludedModelsFromText,
   hasDisableAllModelsRule,
   stripDisableAllModelsRule,
-  validateProviderModelOwnership,
   withDisableAllModelsRule,
   withoutDisableAllModelsRule,
   type ProviderKeyDraft,
 } from "../providers-helpers";
+import {
+  isModelAllowedForProvider,
+  type ModelAccessProvider,
+} from "../provider-model-access";
 
 export type ProviderKeyType =
   | "gemini"
@@ -153,6 +156,11 @@ export function useProviderKeyEditor({
     const apiKey = keyDraft.apiKey.trim();
     const bedrockAccessKeyId = keyDraft.accessKeyId.trim();
     const bedrockSecretAccessKey = keyDraft.secretAccessKey.trim();
+    const isOpenCodeGo = editKeyType === "opencode-go";
+    const isCline = editKeyType === "cline";
+    const isOllamaCloud = editKeyType === "ollama-cloud";
+    const canKeepExistingApiKey =
+      editKeyIndex !== null && (isOpenCodeGo || isCline || isOllamaCloud);
     if (editKeyType === "bedrock") {
       if (keyDraft.authMode === "api-key" && !apiKey) {
         setKeyDraftError(t("providers.api_key_error"));
@@ -165,18 +173,30 @@ export function useProviderKeyEditor({
         setKeyDraftError(t("providers.bedrock_sigv4_error"));
         return null;
       }
-    } else if (!apiKey) {
+    } else if (!apiKey && !canKeepExistingApiKey) {
       setKeyDraftError(t("providers.api_key_error"));
       return null;
     }
 
     const headers = keyValueEntriesToRecord(keyDraft.headersEntries);
-    const excludedModels = keyDraft.excludedModelsText.trim()
+    const rawExcludedModels = keyDraft.excludedModelsText.trim()
       ? excludedModelsFromText(keyDraft.excludedModelsText)
       : undefined;
-    const isOpenCodeGo = editKeyType === "opencode-go";
-    const isCline = editKeyType === "cline";
-    const isModelAccessProvider = isOpenCodeGo || isCline;
+    const modelAccessProvider: ModelAccessProvider | null = isOpenCodeGo
+      ? "opencode-go"
+      : isCline
+        ? "cline"
+        : isOllamaCloud
+          ? "ollama-cloud"
+          : null;
+    const disableAllModelAccess = Boolean(
+      modelAccessProvider && hasDisableAllModelsRule(rawExcludedModels),
+    );
+    const excludedModels = modelAccessProvider
+      ? disableAllModelAccess
+        ? ["*"]
+        : undefined
+      : rawExcludedModels;
 
     const requireAlias = editKeyType === "vertex";
     const modelCommit = commitModelEntries(keyDraft.modelEntries, {
@@ -188,21 +208,30 @@ export function useProviderKeyEditor({
       );
       return null;
     }
-    const modelOwnershipError = validateProviderModelOwnership(editKeyType, {
-      models: modelCommit.models,
-      excludedModels,
-      visionFallbackModel: keyDraft.visionFallbackModel,
-    });
-    if (modelOwnershipError) {
-      setKeyDraftError(modelOwnershipError);
-      return null;
-    }
-
+    const models =
+      modelAccessProvider && modelCommit.models
+        ? modelCommit.models.filter((model) => {
+            const name = model.name?.trim() ?? "";
+            return name && isModelAllowedForProvider(modelAccessProvider, name);
+          })
+        : modelCommit.models;
+    const modelAccessModels = modelAccessProvider
+      ? disableAllModelAccess
+        ? []
+        : (models ?? [])
+      : models;
+    const modelAccessExcludedModels =
+      modelAccessProvider && (!modelAccessModels?.length || disableAllModelAccess)
+        ? ["*"]
+        : modelAccessProvider
+          ? []
+          : undefined;
     const result: ProviderSimpleConfig | BedrockProviderConfig = {
       apiKey:
         editKeyType === "bedrock" && keyDraft.authMode === "sigv4"
           ? bedrockAccessKeyId
           : apiKey,
+      ...(modelAccessProvider ? { disabled: keyDraft.disabled } : {}),
       name,
       ...(keyDraft.prefix.trim() ? { prefix: keyDraft.prefix.trim() } : {}),
       ...(!isOpenCodeGo && keyDraft.baseUrl.trim()
@@ -211,7 +240,7 @@ export function useProviderKeyEditor({
       ...(isCline && !keyDraft.baseUrl.trim()
         ? { baseUrl: "https://api.cline.bot/api/v1" }
         : {}),
-      ...(editKeyType === "ollama-cloud" && !keyDraft.baseUrl.trim()
+      ...(isOllamaCloud && !keyDraft.baseUrl.trim()
         ? { baseUrl: "https://ollama.com" }
         : {}),
       ...(keyDraft.proxyUrl.trim()
@@ -219,17 +248,28 @@ export function useProviderKeyEditor({
         : {}),
       ...(keyDraft.proxyId.trim() ? { proxyId: keyDraft.proxyId.trim() } : {}),
       ...(headers ? { headers } : {}),
-      ...(excludedModels ? { excludedModels } : {}),
-      ...(isModelAccessProvider && keyDraft.visionFallbackModel.trim()
-        ? { visionFallbackModel: keyDraft.visionFallbackModel.trim() }
-        : {}),
+      ...(modelAccessExcludedModels !== undefined
+        ? { excludedModels: modelAccessExcludedModels }
+        : excludedModels?.length
+          ? { excludedModels }
+          : {}),
       ...(isOpenCodeGo && keyDraft.workspaceId.trim()
         ? { workspaceId: keyDraft.workspaceId.trim() }
         : {}),
       ...(isOpenCodeGo && keyDraft.authCookie.trim()
         ? { authCookie: keyDraft.authCookie.trim() }
         : {}),
-      ...(modelCommit.models ? { models: modelCommit.models } : {}),
+      ...((isCline || isOllamaCloud) && keyDraft.authCookie.trim()
+        ? { authCookie: keyDraft.authCookie.trim() }
+        : {}),
+      ...(modelAccessProvider && keyDraft.visionFallbackModel.trim()
+        ? { visionFallbackModel: keyDraft.visionFallbackModel.trim() }
+        : {}),
+      ...(modelAccessProvider
+        ? { models: modelAccessModels }
+        : modelAccessModels?.length
+          ? { models: modelAccessModels }
+          : {}),
       ...(editKeyType === "claude" && keyDraft.skipAnthropicProcessing
         ? { skipAnthropicProcessing: true }
         : {}),
@@ -266,7 +306,9 @@ export function useProviderKeyEditor({
     const apply = (list: ProviderSimpleConfig[]) => {
       if (index === null) return [...list, value];
       return list.map((item, itemIndex) =>
-        itemIndex === index ? value : item,
+        itemIndex === index
+          ? { ...value, apiKey: value.apiKey || item.apiKey }
+          : item,
       );
     };
 
@@ -285,15 +327,27 @@ export function useProviderKeyEditor({
         setCodexKeys(next);
       } else if (type === "opencode-go") {
         const next = apply(openCodeGoKeys);
-        await providersApi.saveOpenCodeGoConfigs(next);
+        if (index === null) {
+          await providersApi.saveOpenCodeGoConfigs(next);
+        } else {
+          await providersApi.patchOpenCodeGoConfig(index, value);
+        }
         setOpenCodeGoKeys(next);
       } else if (type === "cline") {
         const next = apply(clineKeys);
-        await providersApi.saveClineConfigs(next);
+        if (index === null) {
+          await providersApi.saveClineConfigs(next);
+        } else {
+          await providersApi.patchClineConfig(index, value);
+        }
         setClineKeys(next);
       } else if (type === "ollama-cloud") {
         const next = apply(ollamaCloudKeys);
-        await providersApi.saveOllamaCloudConfigs(next);
+        if (index === null) {
+          await providersApi.saveOllamaCloudConfigs(next);
+        } else {
+          await providersApi.patchOllamaCloudConfig(index, value);
+        }
         setOllamaCloudKeys(next);
       } else if (type === "vertex") {
         const next = apply(vertexKeys);
@@ -417,7 +471,14 @@ export function useProviderKeyEditor({
 
   const toggleKeyEnabled = useCallback(
     async (
-      type: "gemini" | "claude" | "codex" | "opencode-go" | "cline" | "ollama-cloud" | "bedrock",
+      type:
+        | "gemini"
+        | "claude"
+        | "codex"
+        | "opencode-go"
+        | "cline"
+        | "ollama-cloud"
+        | "bedrock",
       index: number,
       enabled: boolean,
     ) => {
@@ -439,13 +500,19 @@ export function useProviderKeyEditor({
       if (!current) return;
       const prev = list;
 
-      const nextExcluded = enabled
-        ? withoutDisableAllModelsRule(current.excludedModels)
-        : withDisableAllModelsRule(current.excludedModels);
+      const usesExplicitDisabled =
+        type === "opencode-go" || type === "cline" || type === "ollama-cloud";
+
+      const nextExcluded = usesExplicitDisabled
+        ? current.excludedModels
+        : enabled
+          ? withoutDisableAllModelsRule(current.excludedModels)
+          : withDisableAllModelsRule(current.excludedModels);
 
       const nextItem: ProviderSimpleConfig = {
         ...current,
-        excludedModels: nextExcluded,
+        ...(usesExplicitDisabled ? { disabled: !enabled } : {}),
+        ...(nextExcluded ? { excludedModels: nextExcluded } : {}),
       };
       const nextList = prev.map((item, itemIndex) =>
         itemIndex === index ? nextItem : item,
@@ -463,13 +530,22 @@ export function useProviderKeyEditor({
           await providersApi.saveCodexConfigs(nextList);
         } else if (type === "opencode-go") {
           setOpenCodeGoKeys(nextList);
-          await providersApi.saveOpenCodeGoConfigs(nextList);
+          await providersApi.patchOpenCodeGoConfig(index, {
+            apiKey: "",
+            disabled: !enabled,
+          });
         } else if (type === "cline") {
           setClineKeys(nextList);
-          await providersApi.saveClineConfigs(nextList);
+          await providersApi.patchClineConfig(index, {
+            apiKey: "",
+            disabled: !enabled,
+          });
         } else if (type === "ollama-cloud") {
           setOllamaCloudKeys(nextList);
-          await providersApi.saveOllamaCloudConfigs(nextList);
+          await providersApi.patchOllamaCloudConfig(index, {
+            apiKey: "",
+            disabled: !enabled,
+          });
         } else {
           setBedrockKeys(nextList as BedrockProviderConfig[]);
           await providersApi.saveBedrockConfigs(
@@ -538,19 +614,34 @@ export function useProviderKeyEditor({
                   : "Bedrock";
 
   const editKeyEnabled = useMemo(() => {
+    if (
+      editKeyType === "opencode-go" ||
+      editKeyType === "cline" ||
+      editKeyType === "ollama-cloud"
+    ) {
+      return !keyDraft.disabled;
+    }
     const list = excludedModelsFromText(keyDraft.excludedModelsText);
     return !hasDisableAllModelsRule(list);
-  }, [keyDraft.excludedModelsText]);
+  }, [editKeyType, keyDraft.disabled, keyDraft.excludedModelsText]);
 
   const editKeyEnabledToggle = useCallback(
     (enabled: boolean) => {
+      if (
+        editKeyType === "opencode-go" ||
+        editKeyType === "cline" ||
+        editKeyType === "ollama-cloud"
+      ) {
+        setKeyDraft((prev) => ({ ...prev, disabled: !enabled }));
+        return;
+      }
       const current = excludedModelsFromText(keyDraft.excludedModelsText);
       const next = enabled
         ? withoutDisableAllModelsRule(current)
         : withDisableAllModelsRule(current);
       setKeyDraft((prev) => ({ ...prev, excludedModelsText: next.join("\n") }));
     },
-    [keyDraft.excludedModelsText],
+    [editKeyType, keyDraft.excludedModelsText],
   );
 
   const editKeyExcludedCount = useMemo(() => {

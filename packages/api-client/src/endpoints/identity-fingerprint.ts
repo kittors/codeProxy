@@ -35,13 +35,23 @@ export interface GeminiIdentityFingerprint {
   "custom-headers"?: Record<string, string>;
 }
 
+export interface XAIIdentityFingerprint {
+  enabled?: boolean;
+  "user-agent"?: string;
+  "x-grok-client-identifier"?: string;
+  "x-grok-client-version"?: string;
+  "x-grok-conv-id"?: string;
+  "custom-headers"?: Record<string, string>;
+}
+
 export interface IdentityFingerprintConfig {
   codex?: CodexIdentityFingerprint;
   claude?: ClaudeIdentityFingerprint;
   gemini?: GeminiIdentityFingerprint;
+  xai?: XAIIdentityFingerprint;
 }
 
-export type IdentityFingerprintProvider = "claude" | "codex" | "gemini";
+export type IdentityFingerprintProvider = "claude" | "codex" | "gemini" | "xai";
 export type IdentityFingerprintFieldSource = "learned" | "preset" | "builtin_default";
 
 export interface IdentityFingerprintFieldValue {

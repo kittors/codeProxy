@@ -70,7 +70,7 @@ describe("ccSwitchImportConfigsApi", () => {
         endpointPath: "/v1",
         usageAutoInterval: 30,
         modelMappings: [
-          { requestModel: "gpt-5.5", targetModel: "gpt-5.5" },
+          { requestModel: "gpt-5.5", targetModel: "gpt-5.5", contextWindow: 272000 },
           { requestModel: "deepseek-v4-flash", targetModel: "deepseek-chat" },
         ],
         codexModelCatalogFilename: "cc-switch-model-catalog.json",
@@ -97,6 +97,14 @@ describe("ccSwitchImportConfigsApi", () => {
       expect.objectContaining({
         id: "codex-deepseek",
         "client-type": "codex",
+        "model-mappings": [
+          {
+            "request-model": "gpt-5.5",
+            "target-model": "gpt-5.5",
+            "context-window": 272000,
+          },
+          { "request-model": "deepseek-v4-flash", "target-model": "deepseek-chat" },
+        ],
         "codex-model-catalog-filename": "cc-switch-model-catalog.json",
         "codex-model-catalog": expect.objectContaining({
           models: expect.arrayContaining([
@@ -125,7 +133,7 @@ describe("ccSwitchImportConfigsApi", () => {
         "provider-name": "Pro pool + DeepSeek",
         "default-model": "gpt-5.5",
         "model-mappings": [
-          { "request-model": "gpt-5.5", "target-model": "gpt-5.5" },
+          { "request-model": "gpt-5.5", "target-model": "gpt-5.5", "context-window": 272000 },
           { "request-model": "deepseek-v4-flash", "target-model": "deepseek-chat" },
         ],
         "allowed-channel-groups": ["pro"],
@@ -150,6 +158,10 @@ describe("ccSwitchImportConfigsApi", () => {
     expect(configs).toHaveLength(1);
     expect(configs[0]).toMatchObject({
       codexModelCatalogFilename: "cc-switch-model-catalog.json",
+      modelMappings: [
+        { requestModel: "gpt-5.5", targetModel: "gpt-5.5", contextWindow: 272000 },
+        { requestModel: "deepseek-v4-flash", targetModel: "deepseek-chat" },
+      ],
       codexModelCatalog: {
         models: [
           {

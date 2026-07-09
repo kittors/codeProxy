@@ -13,6 +13,7 @@ export type AuthFileType =
   | "claude"
   | "codex"
   | "antigravity"
+  | "xai"
   | "iflow"
   | "vertex"
   | "empty"
@@ -91,7 +92,7 @@ export interface AuthFileCodexOAuthAdmission {
   available_allowed_clients?: AuthFileCodexAllowedClientPresetInfo[];
 }
 
-export type AuthFileIdentityFingerprintProvider = "claude" | "codex" | "gemini";
+export type AuthFileIdentityFingerprintProvider = "claude" | "codex" | "gemini" | "xai";
 export type AuthFileIdentityFingerprintSource = "learned" | "preset" | "builtin_default";
 
 export interface AuthFileIdentityFingerprintSummary {
@@ -266,6 +267,7 @@ export interface OpenAIProvider {
 
 export interface ProviderSimpleConfig {
   apiKey: string;
+  disabled?: boolean;
   name?: string;
   prefix?: string;
   baseUrl?: string;
@@ -288,7 +290,7 @@ export interface OpenCodeGoUsageItem {
 }
 
 export interface OpenCodeGoUsageResponse {
-  workspace_id: string;
+  workspace_id?: string;
   usage: OpenCodeGoUsageItem[];
 }
 
@@ -303,7 +305,14 @@ export interface BedrockProviderConfig extends ProviderSimpleConfig {
   forceGlobal?: boolean;
 }
 
-export type OAuthProvider = "codex" | "anthropic" | "antigravity" | "gemini-cli" | "kimi" | "qwen";
+export type OAuthProvider =
+  | "codex"
+  | "anthropic"
+  | "antigravity"
+  | "xai"
+  | "gemini-cli"
+  | "kimi"
+  | "qwen";
 
 export interface OAuthStartResponse {
   url: string;

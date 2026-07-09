@@ -184,6 +184,10 @@ describe("CcSwitchImportSettingsPage", () => {
     );
     await user.clear(requestModelInput);
     await user.type(requestModelInput, "gpt-5.5");
+    const contextWindowInput = within(dialog).getByLabelText(/context window for mapping 1/i);
+    expect(contextWindowInput).toHaveValue(128000);
+    await user.clear(contextWindowInput);
+    await user.type(contextWindowInput, "272000");
 
     await user.type(within(dialog).getByLabelText(/provider name/i), "Relay Codex");
     await user.type(within(dialog).getByLabelText(/remark/i), "Pro preset");
@@ -204,8 +208,26 @@ describe("CcSwitchImportSettingsPage", () => {
             {
               requestModel: "gpt-5.5",
               targetModel: "deepseek-v4-flash",
+              contextWindow: 272000,
             },
           ]),
+          codexModelCatalog: {
+            models: [
+              expect.objectContaining({
+                slug: "gpt-5.5",
+                context_window: 272000,
+                max_context_window: 272000,
+                model_messages: expect.objectContaining({
+                  context_window: 272000,
+                  max_context_window: 272000,
+                }),
+              }),
+              expect.objectContaining({
+                slug: "kimi-k2",
+                context_window: 128000,
+              }),
+            ],
+          },
         }),
       ]),
     );
@@ -284,6 +306,7 @@ describe("CcSwitchImportSettingsPage", () => {
           defaultModel: "gpt-5.5",
           modelMappings: [
             {
+              contextWindow: 128000,
               requestModel: "gpt-5.5",
               targetModel: "deepseek-v4-flash",
             },
@@ -756,10 +779,12 @@ describe("CcSwitchImportSettingsPage", () => {
           allowedChannelGroups: ["kimicode"],
           modelMappings: [
             {
+              contextWindow: 128000,
               requestModel: "gpt-5.5",
               targetModel: "gpt-5.5",
             },
             {
+              contextWindow: 128000,
               requestModel: "gpt-5.4-mini",
               targetModel: "gpt-5.5",
             },
@@ -891,6 +916,7 @@ describe("CcSwitchImportSettingsPage", () => {
           allowedChannelGroups: ["deepseekv4flash+chatgpt"],
           modelMappings: [
             {
+              contextWindow: 128000,
               requestModel: "gpt-5.4",
               targetModel: "deepseek-v4-flash",
             },

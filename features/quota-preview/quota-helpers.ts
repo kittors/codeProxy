@@ -30,6 +30,15 @@ export { type KiroQuotaPayload } from "@features/quota-preview/quota-kiro";
 export { buildKiroItems, parseKiroQuotaPayload } from "@features/quota-preview/quota-kiro";
 export { type KimiUsagePayload } from "@features/quota-preview/quota-kimi";
 export { buildKimiItems, parseKimiUsagePayload } from "@features/quota-preview/quota-kimi";
+export { type XaiBillingPayload, type XaiBillingSummary } from "@features/quota-preview/quota-xai";
+export {
+  buildXaiBillingSummary,
+  buildXaiItems,
+  mergeXaiBillingSummaries,
+  parseXaiBillingPayload,
+  resolveXaiPlanType,
+  resolveXaiUserId,
+} from "@features/quota-preview/quota-xai";
 export {
   clampPercent,
   formatRelativeResetLabel,
@@ -102,9 +111,21 @@ export const KIMI_REQUEST_HEADERS = {
   Authorization: "Bearer $TOKEN$",
 };
 
+export const XAI_BILLING_WEEKLY_URL = "https://cli-chat-proxy.grok.com/v1/billing?format=credits";
+export const XAI_BILLING_MONTHLY_URL = "https://cli-chat-proxy.grok.com/v1/billing";
+export const XAI_REQUEST_HEADERS = {
+  Authorization: "Bearer $TOKEN$",
+  "x-xai-token-auth": "xai-grok-cli",
+  "x-grok-client-version": "0.2.91",
+  accept: "*/*",
+  "user-agent": "grok-pager/0.2.91 grok-shell/0.2.91 (macos; aarch64)",
+};
+
 export const resolveAuthProvider = (file: AuthFileItem): string => {
   const raw = (file.provider ?? file.type ?? "") as unknown;
-  return String(raw).trim().toLowerCase();
+  const key = String(raw).trim().toLowerCase().replace(/_/g, "-");
+  if (key === "x-ai" || key === "grok") return "xai";
+  return key;
 };
 
 export const isDisabledAuthFile = (file: AuthFileItem): boolean => {

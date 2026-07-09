@@ -464,6 +464,104 @@ describe("ChannelGroupsPage", () => {
     expect(screen.queryByLabelText("gpt-should-not-leak")).not.toBeInTheDocument();
   });
 
+  test("loads existing group editor models from group-scoped configured availability", async () => {
+    const groupName = "deepseekv4flash+chatgpt";
+    mockedApiGet.mockImplementation((path: string) => {
+      if (path === "/auth-group-model-owner-mappings") {
+        return Promise.resolve({
+          items: [{ auth_group: "codex", owner: "codex" }],
+        });
+      }
+      if (
+        path ===
+        "/models/configured-availability?allowed_channel_groups=deepseekv4flash%2Bchatgpt"
+      ) {
+        return Promise.resolve({
+          scoped: true,
+          data: [
+            { id: "gpt-5.6", owned_by: "codex", description: "Codex GPT 5.6" },
+            { id: "gpt-5.6-ultra", owned_by: "codex", description: "Codex GPT 5.6 Ultra" },
+          ],
+        });
+      }
+      if (path === "/models/configured-availability") {
+        return Promise.resolve({
+          scoped: true,
+          data: [{ id: "gpt-5.5", owned_by: "codex", description: "Default Codex model" }],
+        });
+      }
+      if (path === "/routing-config") {
+        return Promise.resolve({
+          strategy: "round-robin",
+          "include-default-group": true,
+          "channel-groups": [
+            {
+              name: groupName,
+              strategy: "round-robin",
+              match: { channels: ["Main Codex"] },
+            },
+          ],
+          "path-routes": [],
+        });
+      }
+      if (path === "/channel-groups") {
+        return Promise.resolve({
+          items: [
+            {
+              name: groupName,
+              channels: ["Main Codex"],
+              "channel-details": [{ name: "Main Codex", source: "codex" }],
+            },
+          ],
+        });
+      }
+      if (path.startsWith("/models?")) {
+        return Promise.resolve({
+          data: [{ id: "gpt-5.6" }, { id: "gpt-5.6-ultra" }],
+        });
+      }
+      if (path === "/auth-files") {
+        return Promise.resolve({
+          files: [{ name: "codex.json", type: "codex", disabled: false }],
+        });
+      }
+      if (path === "/model-configs?scope=library") {
+        return Promise.resolve({
+          data: [
+            { id: "gpt-5.6", owned_by: "codex", description: "Codex GPT 5.6" },
+            { id: "gpt-5.6-ultra", owned_by: "codex", description: "Codex GPT 5.6 Ultra" },
+          ],
+        });
+      }
+      if (
+        path === "/gemini-api-key" ||
+        path === "/claude-api-key" ||
+        path === "/codex-api-key" ||
+        path === "/opencode-go-api-key" ||
+        path === "/vertex-api-key" ||
+        path === "/openai-compatibility"
+      ) {
+        return Promise.resolve<unknown[]>([]);
+      }
+      return Promise.resolve({});
+    });
+    const user = userEvent.setup();
+
+    renderPage();
+
+    const row = await screen.findByRole("row", { name: /deepseekv4flash\+chatgpt/ });
+    await user.click(within(row).getByRole("button", { name: "编辑分组" }));
+    await user.click(screen.getByRole("tab", { name: "模型列表" }));
+
+    const table = await screen.findByRole("table", { name: "允许模型" });
+    expect(await within(table).findByLabelText("gpt-5.6")).toBeInTheDocument();
+    expect(within(table).getByLabelText("gpt-5.6-ultra")).toBeInTheDocument();
+    expect(within(table).queryByLabelText("gpt-5.5")).not.toBeInTheDocument();
+    expect(mockedApiGet).toHaveBeenCalledWith(
+      "/models/configured-availability?allowed_channel_groups=deepseekv4flash%2Bchatgpt",
+    );
+  });
+
   test("uses the configured auth-file model owner group as the authoritative model scope", async () => {
     mockedApiGet.mockImplementation((path: string) => {
       if (path === "/auth-group-model-owner-mappings") {

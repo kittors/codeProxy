@@ -23,7 +23,9 @@ export const normalizeString = (value: unknown): string | null => {
   return trimmed ? trimmed : null;
 };
 
-export const normalizeHeaders = (value: unknown): Record<string, string> | undefined => {
+export const normalizeHeaders = (
+  value: unknown,
+): Record<string, string> | undefined => {
   if (!isRecord(value)) return undefined;
   const result: Record<string, string> = {};
   Object.entries(value).forEach(([key, raw]) => {
@@ -39,7 +41,9 @@ export const normalizeHeaders = (value: unknown): Record<string, string> | undef
   return Object.keys(result).length ? result : undefined;
 };
 
-export const normalizeModels = (value: unknown): ProviderModel[] | undefined => {
+export const normalizeModels = (
+  value: unknown,
+): ProviderModel[] | undefined => {
   if (!Array.isArray(value)) return undefined;
   const models = value
     .map((item) => {
@@ -49,8 +53,11 @@ export const normalizeModels = (value: unknown): ProviderModel[] | undefined => 
       const alias = normalizeString(item.alias);
       const priorityRaw = item.priority;
       const priority =
-        typeof priorityRaw === "number" && Number.isFinite(priorityRaw) ? priorityRaw : undefined;
-      const testModel = normalizeString(item["test-model"] ?? item.testModel) ?? undefined;
+        typeof priorityRaw === "number" && Number.isFinite(priorityRaw)
+          ? priorityRaw
+          : undefined;
+      const testModel =
+        normalizeString(item["test-model"] ?? item.testModel) ?? undefined;
       return {
         name,
         ...(alias ? { alias } : {}),
@@ -62,7 +69,9 @@ export const normalizeModels = (value: unknown): ProviderModel[] | undefined => 
   return models.length ? models : undefined;
 };
 
-export const normalizeExcludedModels = (value: unknown): string[] | undefined => {
+export const normalizeExcludedModels = (
+  value: unknown,
+): string[] | undefined => {
   if (!value) return undefined;
   const list = Array.isArray(value)
     ? value
@@ -94,7 +103,10 @@ export const serializeModels = (models?: ProviderModel[]) =>
           const payload: Record<string, unknown> = { name };
           const alias = normalizeString(model?.alias);
           if (alias && alias !== name) payload.alias = alias;
-          if (typeof model?.priority === "number" && Number.isFinite(model.priority)) {
+          if (
+            typeof model?.priority === "number" &&
+            Number.isFinite(model.priority)
+          ) {
             payload.priority = model.priority;
           }
           const testModel = normalizeString(model?.testModel);
@@ -102,6 +114,17 @@ export const serializeModels = (models?: ProviderModel[]) =>
           return payload;
         })
         .filter(Boolean)
+    : undefined;
+
+type SerializeProviderKeyOptions = {
+  includeApiKey?: boolean;
+};
+
+const modelAccessExcludedModels = (models?: string[]) =>
+  Array.isArray(models)
+    ? models.some((model) => String(model ?? "").trim() === "*")
+      ? ["*"]
+      : []
     : undefined;
 
 export const serializeProviderKey = (config: ProviderSimpleConfig) => {
@@ -124,15 +147,21 @@ export const serializeProviderKey = (config: ProviderSimpleConfig) => {
     payload["excluded-models"] = config.excludedModels;
   }
   const visionFallbackModel = normalizeString(config.visionFallbackModel);
-  if (visionFallbackModel) payload["vision-fallback-model"] = visionFallbackModel;
+  if (visionFallbackModel)
+    payload["vision-fallback-model"] = visionFallbackModel;
   if (config.skipAnthropicProcessing) {
     payload["skip-anthropic-processing"] = true;
   }
   return payload;
 };
 
-export const serializeOpenCodeGoKey = (config: ProviderSimpleConfig) => {
-  const payload: Record<string, unknown> = { "api-key": config.apiKey };
+export const serializeOpenCodeGoKey = (
+  config: ProviderSimpleConfig,
+  options: SerializeProviderKeyOptions = {},
+) => {
+  const payload: Record<string, unknown> = {};
+  if (options.includeApiKey !== false) payload["api-key"] = config.apiKey;
+  if (config.disabled !== undefined) payload.disabled = config.disabled;
   const name = normalizeString(config.name);
   if (name) payload.name = name;
   const prefix = normalizeString(config.prefix);
@@ -144,14 +173,82 @@ export const serializeOpenCodeGoKey = (config: ProviderSimpleConfig) => {
   const headers = serializeHeaders(config.headers);
   if (headers) payload.headers = headers;
   const models = serializeModels(config.models);
-  if (models && models.length) payload.models = models;
-  if (config.excludedModels && config.excludedModels.length) {
-    payload["excluded-models"] = config.excludedModels;
+  if (models) payload.models = models;
+  const excludedModels = modelAccessExcludedModels(config.excludedModels);
+  if (excludedModels !== undefined) {
+    payload["excluded-models"] = excludedModels;
   }
   const visionFallbackModel = normalizeString(config.visionFallbackModel);
-  if (visionFallbackModel) payload["vision-fallback-model"] = visionFallbackModel;
+  if (visionFallbackModel)
+    payload["vision-fallback-model"] = visionFallbackModel;
   const workspaceId = normalizeString(config.workspaceId);
   if (workspaceId) payload["workspace-id"] = workspaceId;
+  const authCookie = normalizeString(config.authCookie);
+  if (authCookie) payload["auth-cookie"] = authCookie;
+  return payload;
+};
+
+export const serializeClineKey = (
+  config: ProviderSimpleConfig,
+  options: SerializeProviderKeyOptions = {},
+) => {
+  const payload: Record<string, unknown> = {};
+  if (options.includeApiKey !== false) payload["api-key"] = config.apiKey;
+  if (config.disabled !== undefined) payload.disabled = config.disabled;
+  const name = normalizeString(config.name);
+  if (name) payload.name = name;
+  const prefix = normalizeString(config.prefix);
+  if (prefix) payload.prefix = prefix;
+  const baseUrl = normalizeString(config.baseUrl);
+  if (baseUrl) payload["base-url"] = baseUrl;
+  const proxyUrl = normalizeString(config.proxyUrl);
+  if (proxyUrl) payload["proxy-url"] = proxyUrl;
+  const proxyId = normalizeString(config.proxyId);
+  if (proxyId) payload["proxy-id"] = proxyId;
+  const headers = serializeHeaders(config.headers);
+  if (headers) payload.headers = headers;
+  const models = serializeModels(config.models);
+  if (models) payload.models = models;
+  const excludedModels = modelAccessExcludedModels(config.excludedModels);
+  if (excludedModels !== undefined) {
+    payload["excluded-models"] = excludedModels;
+  }
+  const visionFallbackModel = normalizeString(config.visionFallbackModel);
+  if (visionFallbackModel)
+    payload["vision-fallback-model"] = visionFallbackModel;
+  const authCookie = normalizeString(config.authCookie);
+  if (authCookie) payload["auth-cookie"] = authCookie;
+  return payload;
+};
+
+export const serializeOllamaCloudKey = (
+  config: ProviderSimpleConfig,
+  options: SerializeProviderKeyOptions = {},
+) => {
+  const payload: Record<string, unknown> = {};
+  if (options.includeApiKey !== false) payload["api-key"] = config.apiKey;
+  if (config.disabled !== undefined) payload.disabled = config.disabled;
+  const name = normalizeString(config.name);
+  if (name) payload.name = name;
+  const prefix = normalizeString(config.prefix);
+  if (prefix) payload.prefix = prefix;
+  const baseUrl = normalizeString(config.baseUrl);
+  if (baseUrl) payload["base-url"] = baseUrl;
+  const proxyUrl = normalizeString(config.proxyUrl);
+  if (proxyUrl) payload["proxy-url"] = proxyUrl;
+  const proxyId = normalizeString(config.proxyId);
+  if (proxyId) payload["proxy-id"] = proxyId;
+  const headers = serializeHeaders(config.headers);
+  if (headers) payload.headers = headers;
+  const models = serializeModels(config.models);
+  if (models) payload.models = models;
+  const excludedModels = modelAccessExcludedModels(config.excludedModels);
+  if (excludedModels !== undefined) {
+    payload["excluded-models"] = excludedModels;
+  }
+  const visionFallbackModel = normalizeString(config.visionFallbackModel);
+  if (visionFallbackModel)
+    payload["vision-fallback-model"] = visionFallbackModel;
   const authCookie = normalizeString(config.authCookie);
   if (authCookie) payload["auth-cookie"] = authCookie;
   return payload;
@@ -204,7 +301,8 @@ export const serializeBedrockKey = (config: BedrockProviderConfig) => {
   if (authMode === "api-key") {
     payload["api-key"] = config.apiKey;
   } else {
-    const accessKeyId = normalizeString(config.accessKeyId) ?? normalizeString(config.apiKey);
+    const accessKeyId =
+      normalizeString(config.accessKeyId) ?? normalizeString(config.apiKey);
     if (accessKeyId) payload["access-key-id"] = accessKeyId;
     const secretAccessKey = normalizeString(config.secretAccessKey);
     if (secretAccessKey) payload["secret-access-key"] = secretAccessKey;
@@ -227,7 +325,10 @@ export const serializeOpenAIProvider = (provider: OpenAIProvider) => {
   if (headers) payload.headers = headers;
   const models = serializeModels(provider.models);
   if (models && models.length) payload.models = models;
-  if (typeof provider.priority === "number" && Number.isFinite(provider.priority)) {
+  if (
+    typeof provider.priority === "number" &&
+    Number.isFinite(provider.priority)
+  ) {
     payload.priority = provider.priority;
   }
   const testModel = normalizeString(provider.testModel);
@@ -257,7 +358,9 @@ export const serializeOpenAIProvider = (provider: OpenAIProvider) => {
   return payload;
 };
 
-export const normalizeOauthExcludedModels = (payload: unknown): Record<string, string[]> => {
+export const normalizeOauthExcludedModels = (
+  payload: unknown,
+): Record<string, string[]> => {
   if (!isRecord(payload)) return {};
   const source = payload["oauth-excluded-models"] ?? payload.items ?? payload;
   if (!isRecord(source)) return {};
@@ -318,7 +421,9 @@ export const normalizeOauthModelAlias = (
   return result;
 };
 
-export const normalizeApiKeyEntries = (raw: unknown): ProviderApiKeyEntry[] | undefined => {
+export const normalizeApiKeyEntries = (
+  raw: unknown,
+): ProviderApiKeyEntry[] | undefined => {
   if (!Array.isArray(raw)) return undefined;
   const entries = raw
     .map((entry) => {
@@ -326,8 +431,10 @@ export const normalizeApiKeyEntries = (raw: unknown): ProviderApiKeyEntry[] | un
       const apiKey = normalizeString(entry["api-key"] ?? entry.apiKey) ?? "";
       if (!apiKey) return null;
       const disabled = entry.disabled === true;
-      const proxyUrl = normalizeString(entry["proxy-url"] ?? entry.proxyUrl) ?? undefined;
-      const proxyId = normalizeString(entry["proxy-id"] ?? entry.proxyId) ?? undefined;
+      const proxyUrl =
+        normalizeString(entry["proxy-url"] ?? entry.proxyUrl) ?? undefined;
+      const proxyId =
+        normalizeString(entry["proxy-id"] ?? entry.proxyId) ?? undefined;
       const entryHeaders = normalizeHeaders(entry.headers);
       return {
         apiKey,

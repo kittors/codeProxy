@@ -6,26 +6,21 @@ import { Checkbox } from "@code-proxy/ui";
 import { DataTable, type DataTableColumn } from "@code-proxy/ui";
 import { TextInput } from "@code-proxy/ui";
 import { SearchableSelect } from "@code-proxy/ui";
-import { createEmptyModelEntry, ModelInputList } from "../ModelInputList";
+import { type ProviderKeyDraft } from "../providers-helpers";
 import {
-  excludedModelsFromText,
-  hasDisableAllModelsRule,
-  stripDisableAllModelsRule,
-  type ProviderKeyDraft,
-} from "../providers-helpers";
+  createEmptyModelEntry,
+  ModelInputList,
+  type ModelEntryDraft,
+} from "../ModelInputList";
 import { ExcludedModelsEditor } from "./ExcludedModelsEditor";
 
+type ModelAccessRow = { id: string; owned_by?: string };
+
 const SectionCard = ({ children }: { children: React.ReactNode }) => (
-  <div className="rounded-xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
+  <div className="rounded-lg border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
     {children}
   </div>
 );
-
-type ClineModelRow = {
-  id: string;
-  publicName: string;
-  checked: boolean;
-};
 
 interface ProviderKeyModelsTabProps {
   isOpenCodeGo: boolean;
@@ -37,6 +32,8 @@ interface ProviderKeyModelsTabProps {
   setOpenCodeModelQuery: (value: string) => void;
   filteredOpenCodeModels: { id: string; owned_by?: string }[];
   allowedOpenCodeCount: number;
+  allOpenCodeModelsAllowed: boolean;
+  someOpenCodeModelsAllowed: boolean;
   excludeAll: boolean;
   excludedModelIds: Set<string>;
   enabledOpenCodeModelIds: Set<string>;
@@ -65,6 +62,8 @@ export function ProviderKeyModelsTab({
   setOpenCodeModelQuery,
   filteredOpenCodeModels,
   allowedOpenCodeCount,
+  allOpenCodeModelsAllowed,
+  someOpenCodeModelsAllowed,
   excludeAll,
   excludedModelIds,
   enabledOpenCodeModelIds,
@@ -83,156 +82,145 @@ export function ProviderKeyModelsTab({
   editKeyEnabledToggle,
 }: ProviderKeyModelsTabProps) {
   const { t } = useTranslation();
-  const isModelAccessProvider = isOpenCodeGo || isCline;
-  const knownModelIds = useMemo(
-    () =>
-      new Set(
-        openCodeModels
-          .map((model) => model.id.trim().toLowerCase())
-          .filter(Boolean),
-      ),
-    [openCodeModels],
-  );
-  const manualModelEntries = useMemo(() => {
-    if (!isModelAccessProvider) return [];
-    return keyDraft.modelEntries.filter((entry) => {
-      const name = entry.name.trim().toLowerCase();
-      return name && !knownModelIds.has(name);
-    });
-  }, [isModelAccessProvider, keyDraft.modelEntries, knownModelIds]);
-  const setManualModelEntries = useCallback(
-    (next: typeof keyDraft.modelEntries) => {
-      setKeyDraft((prev) => {
-        const knownEntries = prev.modelEntries.filter((entry) =>
-          knownModelIds.has(entry.name.trim().toLowerCase()),
-        );
-        return { ...prev, modelEntries: [...knownEntries, ...next] };
-      });
-    },
-    [knownModelIds, setKeyDraft],
-  );
-  const clineRows = useMemo<ClineModelRow[]>(() => {
-    if (!isCline) return [];
-    const entriesByName = new Map(
-      keyDraft.modelEntries.map((entry) => [
-        entry.name.trim().toLowerCase(),
-        entry,
-      ]),
-    );
-    return filteredOpenCodeModels.map((model) => {
-      const normalized = model.id.toLowerCase();
-      const entry = entriesByName.get(normalized);
-      return {
-        id: model.id,
-        publicName: entry ? entry.alias : model.id,
-        checked:
-          !excludeAll &&
-          enabledOpenCodeModelIds.has(normalized) &&
-          !excludedModelIds.has(normalized),
-      };
-    });
-  }, [
-    isCline,
-    keyDraft.modelEntries,
-    filteredOpenCodeModels,
-    excludeAll,
-    enabledOpenCodeModelIds,
-    excludedModelIds,
-  ]);
+  const isOllamaCloud = editKeyType === "ollama-cloud";
+  const isModelAccessProvider = isOpenCodeGo || isCline || isOllamaCloud;
+  const modelAccessTitle = isCline
+    ? t("providers.cline_models_title")
+    : isOllamaCloud
+      ? t("providers.ollama_cloud_models_title")
+      : t("providers.opencode_go_models_title");
+  const modelAccessHint = isCline
+    ? t("providers.cline_models_hint")
+    : isOllamaCloud
+      ? t("providers.ollama_cloud_models_hint")
+      : t("providers.opencode_go_models_hint");
+  const modelEntryByName = useMemo(() => {
+    const out = new Map<string, ModelEntryDraft>();
+    for (const entry of keyDraft.modelEntries) {
+      const key = entry.name.trim().toLowerCase();
+      if (key) out.set(key, entry);
+    }
+    return out;
+  }, [keyDraft.modelEntries]);
 
-  const updateClineModelAlias = useCallback(
+  const setModelAlias = useCallback(
     (modelId: string, alias: string) => {
-      const normalized = modelId.trim().toLowerCase();
-      if (!normalized) return;
+      const key = modelId.trim().toLowerCase();
+      if (!key) return;
       setKeyDraft((prev) => {
-        const excludedModels = excludedModelsFromText(prev.excludedModelsText);
-        const excludeAllModels = hasDisableAllModelsRule(excludedModels);
-        const currentExcluded = stripDisableAllModelsRule(excludedModels);
-        const hadEntry = prev.modelEntries.some(
-          (entry) => entry.name.trim().toLowerCase() === normalized,
+        const existing = prev.modelEntries.find(
+          (entry) => entry.name.trim().toLowerCase() === key,
         );
-        const wasExcluded = currentExcluded.some(
-          (model) => model.trim().toLowerCase() === normalized,
-        );
-        const nextExcluded = currentExcluded.filter(
-          (model) => model.trim().toLowerCase() !== normalized,
-        );
-        const found = prev.modelEntries.some(
-          (entry) => entry.name.trim().toLowerCase() === normalized,
-        );
-        const nextEntries = found
-          ? prev.modelEntries.map((entry) =>
-              entry.name.trim().toLowerCase() === normalized
-                ? { ...entry, alias }
-                : entry,
-            )
-          : [
-              { ...createEmptyModelEntry(), name: modelId, alias },
-              ...prev.modelEntries,
-            ];
-        let nextExcludedModels = currentExcluded;
-        if (excludeAllModels) {
-          nextExcludedModels = excludedModels;
-        } else if (!hadEntry && !wasExcluded) {
-          nextExcludedModels = [...nextExcluded, modelId];
+        if (existing) {
+          return {
+            ...prev,
+            modelEntries: prev.modelEntries.map((entry) =>
+              entry.id === existing.id ? { ...entry, alias } : entry,
+            ),
+          };
         }
         return {
           ...prev,
-          modelEntries: nextEntries,
-          excludedModelsText: nextExcludedModels.join("\n"),
+          modelEntries: [
+            ...prev.modelEntries,
+            { ...createEmptyModelEntry(), name: modelId, alias },
+          ],
         };
       });
     },
     [setKeyDraft],
   );
 
-  const clineColumns = useMemo<DataTableColumn<ClineModelRow>[]>(
+  const modelAccessColumns = useMemo<DataTableColumn<ModelAccessRow>[]>(
     () => [
       {
-        key: "id",
-        label: t("providers.cline_real_model_id"),
-        width: "w-72",
-        overflowTooltip: (row) => row.id,
-        render: (row) => (
-          <div className="min-w-0">
+        key: "model",
+        label: t("providers.real_model_id"),
+        minWidthPx: 280,
+        overflowTooltip: (model) =>
+          model.owned_by ? `${model.id}\n${model.owned_by}` : model.id,
+        render: (model) => (
+          <span className="min-w-0">
             <span className="block truncate font-mono text-xs font-semibold text-slate-800 dark:text-white/85">
-              {row.id}
+              {model.id}
             </span>
-          </div>
+            {model.owned_by ? (
+              <span className="block truncate text-[11px] text-slate-500 dark:text-white/45">
+                {model.owned_by}
+              </span>
+            ) : null}
+          </span>
         ),
       },
       {
-        key: "publicName",
-        label: t("providers.cline_public_model_name"),
-        width: "w-72",
-        render: (row) => (
-          <TextInput
-            value={row.publicName}
-            onChange={(event) =>
-              updateClineModelAlias(row.id, event.currentTarget.value)
-            }
-            className="h-8 font-mono text-xs"
-            aria-label={t("providers.cline_public_model_name")}
-          />
-        ),
+        key: "alias",
+        label: t("providers.model_alias"),
+        minWidthPx: 220,
+        render: (model) => {
+          const entry = modelEntryByName.get(model.id.toLowerCase());
+          return (
+            <TextInput
+              value={entry?.alias ?? ""}
+              onChange={(event) =>
+                setModelAlias(model.id, event.currentTarget.value)
+              }
+              placeholder={t("common.model_alias_placeholder")}
+              className="h-8"
+            />
+          );
+        },
       },
       {
         key: "enabled",
         label: t("providers.model_enabled"),
-        width: "w-24",
+        width: "w-36",
+        minWidthPx: 144,
         headerClassName: "text-center",
         cellClassName: "text-center",
-        lockOrder: "end",
-        render: (row) => (
-          <Checkbox
-            checked={row.checked}
-            onCheckedChange={(next) => setOpenCodeModelAllowed(row.id, next)}
-            aria-label={row.id}
-          />
+        headerRender: () => (
+          <div className="flex justify-center">
+            <Checkbox
+              checked={allOpenCodeModelsAllowed}
+              indeterminate={someOpenCodeModelsAllowed}
+              onCheckedChange={setAllFetchedOpenCodeModelsAllowed}
+              disabled={openCodeModels.length === 0}
+              aria-label={t("providers.model_enabled")}
+            />
+          </div>
         ),
+        render: (model) => {
+          const normalized = model.id.toLowerCase();
+          const checked =
+            !excludeAll &&
+            enabledOpenCodeModelIds.has(normalized) &&
+            !excludedModelIds.has(normalized);
+          return (
+            <div className="flex justify-center">
+              <Checkbox
+                checked={checked}
+                onCheckedChange={(next) =>
+                  setOpenCodeModelAllowed(model.id, next)
+                }
+                aria-label={model.id}
+              />
+            </div>
+          );
+        },
       },
     ],
-    [setOpenCodeModelAllowed, t, updateClineModelAlias],
+    [
+      enabledOpenCodeModelIds,
+      excludeAll,
+      excludedModelIds,
+      allOpenCodeModelsAllowed,
+      modelEntryByName,
+      openCodeModels.length,
+      setAllFetchedOpenCodeModelsAllowed,
+      setModelAlias,
+      setOpenCodeModelAllowed,
+      someOpenCodeModelsAllowed,
+      t,
+    ],
   );
 
   if (isModelAccessProvider) {
@@ -242,14 +230,10 @@ export function ProviderKeyModelsTab({
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
               <p className="text-sm font-semibold text-slate-900 dark:text-white">
-                {isCline
-                  ? t("providers.cline_models_title")
-                  : t("providers.opencode_go_models_title")}
+                {modelAccessTitle}
               </p>
               <p className="mt-1 text-xs text-slate-500 dark:text-white/55">
-                {isCline
-                  ? t("providers.cline_models_hint")
-                  : t("providers.opencode_go_models_hint")}
+                {modelAccessHint}
               </p>
             </div>
             <Button
@@ -273,22 +257,6 @@ export function ProviderKeyModelsTab({
               placeholder={t("providers.models_search_placeholder")}
               className="max-w-xs"
             />
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => setAllFetchedOpenCodeModelsAllowed(true)}
-              disabled={openCodeModels.length === 0}
-            >
-              {t("providers.models_select_all")}
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => setAllFetchedOpenCodeModelsAllowed(false)}
-              disabled={openCodeModels.length === 0}
-            >
-              {t("providers.models_select_none")}
-            </Button>
             <span className="text-xs tabular-nums text-slate-500 dark:text-white/55">
               {t("providers.models_allowed_count", {
                 allowed: allowedOpenCodeCount,
@@ -298,109 +266,29 @@ export function ProviderKeyModelsTab({
           </div>
 
           {openCodeModelsError ? (
-            <p className="mt-3 rounded-xl bg-rose-500/10 px-3 py-2 text-xs font-medium text-rose-700 dark:text-rose-200">
+            <p className="mt-3 rounded-lg bg-rose-500/10 px-3 py-2 text-xs font-medium text-rose-700 dark:text-rose-200">
               {openCodeModelsError}
             </p>
           ) : null}
 
-          {isCline ? (
-            <div className="mt-3 overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-neutral-800 dark:bg-neutral-950">
-              <DataTable<ClineModelRow>
-                tableId="provider-cline-models"
-                rows={clineRows}
-                columns={clineColumns}
-                rowKey={(row) => row.id}
-                loading={openCodeModelsLoading && openCodeModels.length === 0}
-                rowHeight={44}
-                height="h-80"
-                minHeight="min-h-[160px]"
-                minWidth="min-w-[720px]"
-                caption={t("providers.cline_models_title")}
-                emptyText={t("providers.no_discovered_models")}
-                showAllLoadedMessage={false}
-                columnReorderable={false}
-                persistColumnOrder={false}
-              />
-            </div>
-          ) : (
-            <div className="mt-3 max-h-80 overflow-y-auto rounded-xl border border-slate-200 bg-white dark:border-neutral-800 dark:bg-neutral-950">
-              {openCodeModelsLoading && openCodeModels.length === 0 ? (
-                <div className="px-3 py-6 text-center text-sm text-slate-500 dark:text-white/55">
-                  {t("providers.models_loading")}
-                </div>
-              ) : filteredOpenCodeModels.length ? (
-                <div className="divide-y divide-slate-100 dark:divide-neutral-900">
-                  {filteredOpenCodeModels.map((model) => {
-                    const normalized = model.id.toLowerCase();
-                    const checked =
-                      !excludeAll &&
-                      enabledOpenCodeModelIds.has(normalized) &&
-                      !excludedModelIds.has(normalized);
-                    return (
-                      <label
-                        key={model.id}
-                        className="flex cursor-pointer items-center gap-3 px-3 py-2.5 transition-colors hover:bg-slate-50 dark:hover:bg-white/5"
-                      >
-                        <Checkbox
-                          checked={checked}
-                          onCheckedChange={(next) =>
-                            setOpenCodeModelAllowed(model.id, next)
-                          }
-                          aria-label={model.id}
-                        />
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate font-mono text-xs font-semibold text-slate-800 dark:text-white/85">
-                            {model.id}
-                          </span>
-                          {model.owned_by ? (
-                            <span className="block truncate text-[11px] text-slate-500 dark:text-white/45">
-                              {model.owned_by}
-                            </span>
-                          ) : null}
-                        </span>
-                        <span
-                          className={
-                            checked
-                              ? "rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:text-emerald-200"
-                              : "rounded-full bg-rose-500/10 px-2 py-0.5 text-[11px] font-semibold text-rose-700 dark:text-rose-200"
-                          }
-                        >
-                          {checked
-                            ? t("providers.model_allowed")
-                            : t("providers.model_blocked")}
-                        </span>
-                      </label>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="px-3 py-6 text-center text-sm text-slate-500 dark:text-white/55">
-                  {t("providers.no_discovered_models")}
-                </div>
-              )}
-            </div>
-          )}
-        </SectionCard>
-
-        {manualModelEntries.length ? (
-          <SectionCard>
-            <ModelInputList
-              title={t("providers.models_optional_title")}
-              entries={manualModelEntries}
-              onChange={setManualModelEntries}
-              showPriority={false}
-              showTestModel={false}
+          <div className="mt-3">
+            <DataTable<ModelAccessRow>
+              tableId={`provider-model-access-${editKeyType}`}
+              rows={filteredOpenCodeModels}
+              columns={modelAccessColumns}
+              rowKey={(model) => model.id}
+              loading={openCodeModelsLoading && openCodeModels.length === 0}
+              rowHeight={52}
+              caption={modelAccessTitle}
+              emptyText={t("providers.no_discovered_models")}
+              minWidth="min-w-[720px]"
+              height="h-80"
+              minHeight="min-h-0"
+              showAllLoadedMessage={false}
+              columnReorderable={false}
+              persistColumnOrder={false}
             />
-          </SectionCard>
-        ) : null}
-
-        <SectionCard>
-          <ExcludedModelsEditor
-            count={editKeyExcludedCount}
-            editKeyEnabledToggle={editKeyEnabledToggle}
-            keyDraft={keyDraft}
-            setKeyDraft={setKeyDraft}
-          />
+          </div>
         </SectionCard>
       </div>
     );

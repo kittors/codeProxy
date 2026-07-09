@@ -13,7 +13,10 @@ import { Select } from "@code-proxy/ui";
 import { Tabs, TabsList, TabsTrigger } from "@code-proxy/ui";
 import {
   CC_SWITCH_CLIENTS,
+  CC_SWITCH_CODEX_MODEL_CATALOG_FILENAME,
+  buildCcSwitchCodexModelCatalog,
   getCcSwitchClientConfig,
+  type CcSwitchCodexCatalogModel,
   type CcSwitchClientType,
 } from "@code-proxy/domain/ccswitch/ccswitchImport";
 import {
@@ -28,6 +31,7 @@ import {
 } from "@code-proxy/domain/ccswitch/ccswitchImportSettings";
 import {
   ensureCcSwitchRoutePath,
+  type CcSwitchImportCodexModelCatalog,
   type CcSwitchImportConfigListItem,
   type CcSwitchModelMapping,
 } from "@code-proxy/domain/ccswitch/ccswitchImportConfigList";
@@ -59,6 +63,7 @@ const fieldClassName = "flex flex-col gap-1.5";
 const CLAUDE_ROLE_ORDER: CcSwitchClaudeModelRole[] = ["main", "haiku", "sonnet", "opus"];
 const MODEL_MAPPING_LOADING_ROWS = ["short", "medium", "long"];
 const CONFIG_MODAL_CLIENTS = CC_SWITCH_CLIENTS.filter((client) => client.type !== "gemini");
+const DEFAULT_CODEX_CONTEXT_WINDOW = 128_000;
 
 const rolePriority: Record<CcSwitchClaudeModelRole, string[]> = {
   main: ["sonnet", "opus", "haiku", "claude"],
@@ -160,18 +165,23 @@ function reconcileGenericMappings(
 ): CcSwitchModelMapping[] {
   const currentNonRole = currentMappings.filter((mapping) => !mapping.role);
   if (currentNonRole.length > 0) {
-    return currentNonRole;
+    return currentNonRole.map((mapping) => ({
+      ...mapping,
+      contextWindow: normalizeContextWindow(mapping.contextWindow),
+    }));
   }
 
   const autoMappings = dedupeModels(models).map((targetModel) => ({
     requestModel: targetModel,
     targetModel,
+    contextWindow: DEFAULT_CODEX_CONTEXT_WINDOW,
   }));
   if (autoMappings.length > 0) return autoMappings;
 
   return dedupeModels([fallbackModel]).map((targetModel) => ({
     requestModel: targetModel,
     targetModel,
+    contextWindow: DEFAULT_CODEX_CONTEXT_WINDOW,
   }));
 }
 
@@ -264,6 +274,77 @@ function getDuplicateGenericRequestModels(
     .map((item) => item.label);
 }
 
+const asRecord = (value: unknown): Record<string, unknown> | null =>
+  value !== null && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+
+const normalizeOptionalContextWindow = (value: unknown): number | undefined => {
+  const parsed = typeof value === "number" ? value : Number(String(value ?? ""));
+  if (!Number.isFinite(parsed) || parsed <= 0) return undefined;
+  return Math.round(parsed);
+};
+
+const normalizeContextWindow = (value: unknown): number =>
+  normalizeOptionalContextWindow(value) ?? DEFAULT_CODEX_CONTEXT_WINDOW;
+
+function getCodexCatalogContextWindow(draft: ConfigDraft, modelId: string): number | undefined {
+  const normalizedModelId = modelId.trim().toLowerCase();
+  if (!normalizedModelId) return undefined;
+  for (const model of draft.codexModelCatalog?.models ?? []) {
+    const id = String(model.slug ?? model.model ?? "")
+      .trim()
+      .toLowerCase();
+    if (id !== normalizedModelId) continue;
+    const topLevel = normalizeOptionalContextWindow(model.context_window ?? model.contextWindow);
+    if (topLevel) return topLevel;
+    const messages = asRecord(model.model_messages);
+    if (messages) {
+      const nested = normalizeOptionalContextWindow(
+        messages.context_window ?? messages.contextWindow,
+      );
+      if (nested) return nested;
+    }
+  }
+  return undefined;
+}
+
+function withCodexMappingContextWindows(draft: ConfigDraft): CcSwitchModelMapping[] {
+  if (draft.clientType !== "codex") return draft.modelMappings;
+  return draft.modelMappings.map((mapping) => {
+    if (mapping.role) return mapping;
+    return {
+      ...mapping,
+      contextWindow: normalizeContextWindow(
+        mapping.contextWindow ??
+          getCodexCatalogContextWindow(draft, mapping.requestModel || mapping.targetModel),
+      ),
+    };
+  });
+}
+
+function buildDraftCodexModelCatalog(
+  draft: ConfigDraft,
+): CcSwitchImportCodexModelCatalog | undefined {
+  if (draft.clientType !== "codex") return undefined;
+  const models: CcSwitchCodexCatalogModel[] = [];
+  const addModel = (model: string, contextWindow?: number) => {
+    const normalized = model.trim();
+    if (normalized) models.push({ model: normalized, contextWindow });
+  };
+  for (const mapping of draft.modelMappings) {
+    if (mapping.role) continue;
+    addModel(
+      mapping.requestModel || mapping.targetModel,
+      normalizeContextWindow(mapping.contextWindow),
+    );
+  }
+  addModel(draft.defaultModel);
+  if (models.length === 0) return undefined;
+  const catalog = buildCcSwitchCodexModelCatalog(models);
+  return { models: catalog.models.map((model) => ({ ...model })) };
+}
+
 function prepareDraftForSave(draft: ConfigDraft): ConfigDraft {
   const endpointPath = DEFAULT_CC_SWITCH_IMPORT_SETTINGS[draft.clientType].endpointPath;
   const selectedGroup = draft.allowedChannelGroups[0] ?? "";
@@ -276,6 +357,7 @@ function prepareDraftForSave(draft: ConfigDraft): ConfigDraft {
         ...(mapping.role ? { role: mapping.role } : {}),
         requestModel,
         targetModel,
+        ...(!mapping.role ? { contextWindow: normalizeContextWindow(mapping.contextWindow) } : {}),
       };
     })
     .filter((mapping) => mapping.targetModel && (mapping.role || mapping.requestModel));
@@ -283,14 +365,23 @@ function prepareDraftForSave(draft: ConfigDraft): ConfigDraft {
     draft.clientType === "claude"
       ? normalizedMappings.find((mapping) => mapping.role === "main")?.targetModel || ""
       : resolveGenericDefaultModel(normalizedMappings, draft.defaultModel);
+  const normalizedDraft = {
+    ...draft,
+    defaultModel,
+    modelMappings: normalizedMappings,
+  };
+  const codexModelCatalog = buildDraftCodexModelCatalog(normalizedDraft);
 
   return {
-    ...draft,
+    ...normalizedDraft,
     allowedChannelGroups: selectedGroup ? [selectedGroup] : [],
     routePath,
     endpointPath,
-    defaultModel,
-    modelMappings: normalizedMappings,
+    codexModelCatalogFilename:
+      draft.clientType === "codex" && codexModelCatalog
+        ? draft.codexModelCatalogFilename || CC_SWITCH_CODEX_MODEL_CATALOG_FILENAME
+        : undefined,
+    codexModelCatalog,
   };
 }
 
@@ -322,6 +413,7 @@ export function CcSwitchImportConfigModal({
     if (!open) return;
     setDraft({
       ...value,
+      modelMappings: withCodexMappingContextWindows(value),
       endpointPath:
         value.endpointPath || DEFAULT_CC_SWITCH_IMPORT_SETTINGS[value.clientType].endpointPath,
     });
@@ -626,6 +718,22 @@ export function CcSwitchImportConfigModal({
             .find((mapping) => !mapping.role && mapping.requestModel.trim())
             ?.requestModel.trim() ?? "",
       };
+    });
+  };
+
+  const updateGenericContextWindow = (index: number, contextWindow: string) => {
+    setDraft((current) => {
+      const parsed = Number(contextWindow);
+      const nextContextWindow =
+        contextWindow.trim() && Number.isFinite(parsed) && parsed > 0
+          ? Math.round(parsed)
+          : undefined;
+      const modelMappings = current.modelMappings.map((mapping, mappingIndex) =>
+        !mapping.role && mappingIndex === index
+          ? { ...mapping, contextWindow: nextContextWindow }
+          : mapping,
+      );
+      return { ...current, modelMappings };
     });
   };
 
@@ -938,7 +1046,7 @@ export function CcSwitchImportConfigModal({
                   </tbody>
                 </table>
               ) : (
-                <table className="min-w-[720px] w-full text-left text-sm">
+                <table className="min-w-[900px] w-full text-left text-sm">
                   <thead className="bg-slate-50 text-[11px] uppercase tracking-wide text-slate-500 dark:bg-neutral-900/60 dark:text-white/45">
                     <tr>
                       <th className="px-4 py-2.5 font-semibold">
@@ -946,6 +1054,9 @@ export function CcSwitchImportConfigModal({
                       </th>
                       <th className="px-4 py-2.5 font-semibold">
                         {t("ccswitch.config_request_model_name")}
+                      </th>
+                      <th className="w-44 px-4 py-2.5 font-semibold">
+                        {t("ccswitch.config_codex_context_window")}
                       </th>
                       <th className="w-16 px-4 py-2.5 text-right font-semibold">
                         {t("ccswitch.config_table_actions")}
@@ -978,6 +1089,26 @@ export function CcSwitchImportConfigModal({
                               updateGenericRequestModel(index, requestModel);
                             }}
                             aria-label={t("ccswitch.config_request_model_for_mapping", {
+                              index: index + 1,
+                            })}
+                            className={controlClassName}
+                          />
+                        </td>
+                        <td className="px-4 py-3">
+                          <TextInput
+                            type="number"
+                            min={1}
+                            inputMode="numeric"
+                            value={
+                              mapping.contextWindow === undefined
+                                ? ""
+                                : String(mapping.contextWindow)
+                            }
+                            onChange={(event) =>
+                              updateGenericContextWindow(index, event.currentTarget.value)
+                            }
+                            placeholder={String(DEFAULT_CODEX_CONTEXT_WINDOW)}
+                            aria-label={t("ccswitch.config_context_window_for_mapping", {
                               index: index + 1,
                             })}
                             className={controlClassName}

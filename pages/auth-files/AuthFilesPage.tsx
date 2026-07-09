@@ -62,27 +62,43 @@ const wait = (ms: number) =>
     window.setTimeout(resolve, ms);
   });
 
+const buildAuthFileSignature = (file: AuthFileItem): string =>
+  [
+    file.name,
+    file.type,
+    file.provider,
+    file.label,
+    file.email,
+    file.account_type,
+    file.size,
+    file.modified,
+    file.modtime,
+    file.authIndex,
+    file.auth_index,
+  ]
+    .map((value) => String(value ?? ""))
+    .join("|");
+
 const buildAuthFilesSignature = (items: AuthFileItem[]): string =>
   items
-    .map((file) =>
-      [
-        file.name,
-        file.type,
-        file.provider,
-        file.label,
-        file.email,
-        file.account_type,
-        file.size,
-        file.modified,
-        file.modtime,
-        file.authIndex,
-        file.auth_index,
-      ]
-        .map((value) => String(value ?? ""))
-        .join("|"),
-    )
+    .map(buildAuthFileSignature)
     .sort()
     .join("\n");
+
+const findChangedAuthFile = (
+  previousFiles: AuthFileItem[],
+  nextFiles: AuthFileItem[],
+): AuthFileItem | null => {
+  const previousSignatures = new Map(
+    previousFiles.map((file) => [String(file.name ?? ""), buildAuthFileSignature(file)]),
+  );
+  return (
+    nextFiles.find((file) => {
+      const name = String(file.name ?? "");
+      return previousSignatures.get(name) !== buildAuthFileSignature(file);
+    }) ?? null
+  );
+};
 
 export function AuthFilesPage() {
   const { t } = useTranslation();
@@ -162,6 +178,7 @@ export function AuthFilesPage() {
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const filesRef = useRef<AuthFileItem[]>(files);
+  const oauthBaselineFilesRef = useRef<AuthFileItem[]>([]);
   const oauthBaselineSignatureRef = useRef("");
   const previousConfigModalTabRef = useRef<AuthFilesConfigModalTab | null>(null);
 
@@ -177,6 +194,7 @@ export function AuthFilesPage() {
 
   const setOAuthDialogOpenWithBaseline = useCallback((open: boolean) => {
     if (open) {
+      oauthBaselineFilesRef.current = filesRef.current;
       oauthBaselineSignatureRef.current = buildAuthFilesSignature(filesRef.current);
     }
     setOauthDialogOpen(open);
@@ -364,6 +382,18 @@ export function AuthFilesPage() {
     setSelectedFileNames,
   });
 
+  useEffect(() => {
+    const normalizedFilter = normalizeProviderKey(filter);
+    if (!normalizedFilter || normalizedFilter === "all" || loading || refreshingAll) return;
+    const filterExists = providerOptions.some(
+      (provider) => normalizeProviderKey(provider) === normalizedFilter,
+    );
+    if (!filterExists) {
+      setFilter("all");
+      setPage(1);
+    }
+  }, [filter, loading, providerOptions, refreshingAll]);
+
   const {
     connectivityState,
     quotaByFileName,
@@ -431,7 +461,17 @@ export function AuthFilesPage() {
   );
 
   const refreshAfterOAuthAuthorized = useCallback(async () => {
-    await waitForAuthFilesChanged();
+    const result = await waitForAuthFilesChanged();
+    const changedFile = findChangedAuthFile(oauthBaselineFilesRef.current, result.files);
+    if (!changedFile) return;
+
+    const provider = normalizeProviderKey(resolveFileType(changedFile));
+    if (!provider || provider === "all" || provider === "unknown") return;
+    setFilter(provider);
+    setTagFilter("");
+    setStatusFilter("all");
+    setSearch("");
+    setPage(1);
   }, [waitForAuthFilesChanged]);
 
   const handleUploadAndRefreshQuota = useCallback(
@@ -874,6 +914,7 @@ export function AuthFilesPage() {
         mappedModelOwnerGroup={detailModelOwnerGroup}
         mappedModelOwnerValue={detailModelOwnerValue}
         excluded={excluded}
+        quotaState={detailFile ? (quotaByFileName[detailFile.name] ?? null) : null}
         prefixProxyEditor={prefixProxyEditor}
         setPrefixProxyEditor={setPrefixProxyEditor}
         prefixProxyDirty={prefixProxyDirty}

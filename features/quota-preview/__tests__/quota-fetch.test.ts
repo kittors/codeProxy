@@ -25,6 +25,7 @@ import {
   fetchQuota,
   resolveQuotaProvider,
 } from "@features/quota-preview/quota-fetch";
+import type { AuthFileItem } from "@code-proxy/api-client";
 
 beforeEach(() => {
   mocks.request.mockReset();
@@ -54,6 +55,14 @@ const buildSyntheticCodexIdToken = (accountId: string): string =>
 describe("resolveQuotaProvider", () => {
   test("supports kimi auth files", () => {
     expect(resolveQuotaProvider({ name: "kimi.json", provider: "kimi" } as any)).toBe("kimi");
+  });
+
+  test("supports xAI and Grok auth files", () => {
+    expect(resolveQuotaProvider({ name: "xai.json", provider: "xai" } as AuthFileItem)).toBe("xai");
+    expect(resolveQuotaProvider({ name: "grok.json", provider: "grok" } as AuthFileItem)).toBe(
+      "xai",
+    );
+    expect(resolveQuotaProvider({ name: "x-ai.json", type: "x-ai" } as AuthFileItem)).toBe("xai");
   });
 
   test("supports Anthropic OAuth auth files as Claude quota files", () => {
@@ -524,6 +533,108 @@ describe("fetchQuota for kimi", () => {
         percent: 0,
         resetAtMs: Date.parse("2026-04-22T01:24:38.060611Z"),
         windowSeconds: 604800,
+      },
+    ]);
+  });
+});
+
+describe("fetchQuota for xai", () => {
+  test("requests weekly and monthly Grok billing and returns quota items", async () => {
+    mocks.request
+      .mockResolvedValueOnce({
+        statusCode: 200,
+        header: {},
+        bodyText: "",
+        body: JSON.stringify({
+          config: {
+            currentPeriod: {
+              type: "weekly",
+              start: "2026-07-06T00:00:00Z",
+              end: "2026-07-13T00:00:00Z",
+            },
+            creditUsagePercent: 25,
+            productUsage: [{ product: "Grok 4", usagePercent: 40 }],
+          },
+        }),
+      })
+      .mockResolvedValueOnce({
+        statusCode: 200,
+        header: {},
+        bodyText: "",
+        body: JSON.stringify({
+          config: {
+            monthlyLimit: { val: 15000 },
+            used: { val: 2000 },
+            onDemandCap: { val: 5000 },
+            onDemandUsed: { val: 1000 },
+            billingPeriodEnd: "2026-08-01T00:00:00Z",
+          },
+        }),
+      });
+
+    const result = await fetchQuota("xai", {
+      name: "xai-user.json",
+      provider: "grok",
+      auth_index: "xai-auth",
+      metadata: { oauth: { sub: "user-123" } },
+    } as AuthFileItem);
+
+    expect(mocks.request).toHaveBeenCalledTimes(2);
+    expect(mocks.request).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        authIndex: "xai-auth",
+        method: "GET",
+        url: "https://cli-chat-proxy.grok.com/v1/billing?format=credits",
+        header: expect.objectContaining({
+          Authorization: "Bearer $TOKEN$",
+          "x-xai-token-auth": "xai-grok-cli",
+          "x-grok-client-version": "0.2.91",
+          accept: "*/*",
+          "user-agent": "grok-pager/0.2.91 grok-shell/0.2.91 (macos; aarch64)",
+          "x-userid": "user-123",
+        }),
+      }),
+    );
+    expect(mocks.request).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        authIndex: "xai-auth",
+        method: "GET",
+        url: "https://cli-chat-proxy.grok.com/v1/billing",
+      }),
+    );
+    expect(result.planType).toBe("supergrok");
+    expect(result.items).toEqual([
+      {
+        key: "weekly_limit",
+        label: "xai_quota.weekly_limit",
+        percent: 75,
+        value: "75%",
+        resetAtMs: Date.parse("2026-07-13T00:00:00Z"),
+        windowSeconds: 604800,
+        meta: expect.any(String),
+      },
+      {
+        key: "product:Grok 4",
+        label: "xai_quota.product_usage_named::Grok 4",
+        percent: 60,
+        value: "60%",
+      },
+      {
+        key: "pay_as_you_go",
+        label: "xai_quota.pay_as_you_go_label",
+        percent: 80,
+        value: "80%",
+        meta: expect.stringMatching(/40\.00.*50\.00/),
+      },
+      {
+        key: "monthly_credits",
+        label: "xai_quota.monthly_credits",
+        percent: 87,
+        value: "87%",
+        resetAtMs: Date.parse("2026-08-01T00:00:00Z"),
+        meta: expect.stringMatching(/130\.00.*150\.00/),
       },
     ]);
   });

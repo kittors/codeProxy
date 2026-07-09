@@ -14,8 +14,13 @@ type MockApiCallResult = {
 };
 
 type MockOpenCodeGoUsageResponse = {
-  workspace_id: string;
-  usage: { type: string; label: string; percentage: number; resets_in: string }[];
+  workspace_id?: string;
+  usage: {
+    type: string;
+    label: string;
+    percentage: number;
+    resets_in: string;
+  }[];
 };
 
 type MockEntityStatsResponse = {
@@ -32,12 +37,25 @@ const mocks = vi.hoisted(() => ({
   getClineConfigs: vi.fn(async (): Promise<any[]> => []),
   getOllamaCloudConfigs: vi.fn(async (): Promise<unknown[]> => []),
   getOpenAIProviders: vi.fn(async (): Promise<unknown[]> => []),
-  queryOpenCodeGoUsage: vi.fn(async () => ({
+  queryOpenCodeGoUsage: vi.fn(async (): Promise<MockOpenCodeGoUsageResponse> => ({
     workspace_id: "workspace-1",
     usage: [{ type: "rolling", label: "Rolling", percentage: 25, resets_in: "30m" }],
   })),
+  queryClineUsage: vi.fn(async (): Promise<MockOpenCodeGoUsageResponse> => ({
+    usage: [{ type: "five_hour", label: "5-Hour", percentage: 25, resets_in: "30m" }],
+  })),
+  queryOllamaCloudUsage: vi.fn(async (): Promise<MockOpenCodeGoUsageResponse> => ({
+    usage: [{ type: "weekly", label: "Weekly", percentage: 25, resets_in: "30m" }],
+  })),
   saveOpenCodeGoConfigs: vi.fn(async (_configs: unknown[]) => ({})),
   saveClineConfigs: vi.fn(async (_configs: unknown[]) => ({})),
+  saveOllamaCloudConfigs: vi.fn(async (_configs: unknown[]) => ({})),
+  patchOpenCodeGoConfig: vi.fn(async (_index: number, _config: unknown) => ({})),
+  patchClineConfig: vi.fn(async (_index: number, _config: unknown) => ({})),
+  patchOllamaCloudConfig: vi.fn(async (_index: number, _config: unknown) => ({})),
+  patchOpenCodeGoExcludedModels: vi.fn(async (_index: number, _models: string[]) => ({})),
+  patchClineExcludedModels: vi.fn(async (_index: number, _models: string[]) => ({})),
+  patchOllamaCloudExcludedModels: vi.fn(async (_index: number, _models: string[]) => ({})),
   getModelDefinitions: vi.fn(async (_channel?: string) => [
     { id: "deepseek-v4-flash", object: "model", owned_by: "opencode" },
     { id: "qwen3.5-plus", object: "model", owned_by: "opencode" },
@@ -59,7 +77,11 @@ const mocks = vi.hoisted(() => ({
       },
     }),
   ),
-  getEntityStats: vi.fn(async (): Promise<MockEntityStatsResponse> => ({ source: [] })),
+  getEntityStats: vi.fn(
+    async (): Promise<MockEntityStatsResponse> => ({
+      source: [],
+    }),
+  ),
   apiKeyEntriesList: vi.fn(async (): Promise<unknown[]> => []),
   channelGroupsList: vi.fn(async (): Promise<unknown[]> => []),
   proxiesList: vi.fn(async (): Promise<any[]> => []),
@@ -81,8 +103,17 @@ vi.mock("@code-proxy/api-client", async (importOriginal) => {
       getOllamaCloudConfigs: mocks.getOllamaCloudConfigs,
       getOpenAIProviders: mocks.getOpenAIProviders,
       queryOpenCodeGoUsage: mocks.queryOpenCodeGoUsage,
+      queryClineUsage: mocks.queryClineUsage,
+      queryOllamaCloudUsage: mocks.queryOllamaCloudUsage,
       saveOpenCodeGoConfigs: mocks.saveOpenCodeGoConfigs,
       saveClineConfigs: mocks.saveClineConfigs,
+      saveOllamaCloudConfigs: mocks.saveOllamaCloudConfigs,
+      patchOpenCodeGoConfig: mocks.patchOpenCodeGoConfig,
+      patchClineConfig: mocks.patchClineConfig,
+      patchOllamaCloudConfig: mocks.patchOllamaCloudConfig,
+      patchOpenCodeGoExcludedModels: mocks.patchOpenCodeGoExcludedModels,
+      patchClineExcludedModels: mocks.patchClineExcludedModels,
+      patchOllamaCloudExcludedModels: mocks.patchOllamaCloudExcludedModels,
     },
     usageApi: {
       ...mod.usageApi,
@@ -135,6 +166,13 @@ describe("ProvidersPage OpenCode Go tab", () => {
     }));
     mocks.saveOpenCodeGoConfigs.mockImplementation(async () => ({}));
     mocks.saveClineConfigs.mockImplementation(async () => ({}));
+    mocks.saveOllamaCloudConfigs.mockImplementation(async () => ({}));
+    mocks.patchOpenCodeGoConfig.mockImplementation(async () => ({}));
+    mocks.patchClineConfig.mockImplementation(async () => ({}));
+    mocks.patchOllamaCloudConfig.mockImplementation(async () => ({}));
+    mocks.patchOpenCodeGoExcludedModels.mockImplementation(async () => ({}));
+    mocks.patchClineExcludedModels.mockImplementation(async () => ({}));
+    mocks.patchOllamaCloudExcludedModels.mockImplementation(async () => ({}));
     mocks.getModelDefinitions.mockImplementation(async () => [
       { id: "deepseek-v4-flash", object: "model", owned_by: "opencode" },
       { id: "qwen3.5-plus", object: "model", owned_by: "opencode" },
@@ -158,6 +196,78 @@ describe("ProvidersPage OpenCode Go tab", () => {
     mocks.apiKeyEntriesList.mockImplementation(async () => []);
     mocks.channelGroupsList.mockImplementation(async () => []);
     mocks.proxiesList.mockImplementation(async () => []);
+  });
+
+  test("renders cached OpenCode Go usage without falling back to skeleton or placeholders", async () => {
+    localStorage.clear();
+    localStorage.setItem("providers-page:tab", "opencode-go");
+    localStorage.setItem(
+      "providers-page:cache:opencode-go",
+      JSON.stringify({
+        data: [
+          {
+            name: "OpenCode Go Cached",
+            apiKey: "sk-opencode-go",
+            workspaceId: "workspace-1",
+            authCookie: "session=abc",
+          },
+        ],
+        timestamp: Date.now(),
+      }),
+    );
+    localStorage.setItem(
+      "providers-page:cache:opencode-go-usage",
+      JSON.stringify({
+        data: {
+          "workspace-1:OpenCode Go Cached:0": {
+            workspaceId: "workspace-1",
+            usage: [
+              { type: "rolling", label: "Rolling", percentage: 1, resets_in: "30m" },
+              { type: "weekly", label: "Weekly", percentage: 5, resets_in: "5d" },
+              { type: "monthly", label: "Monthly", percentage: 23, resets_in: "20d" },
+            ],
+            updatedAt: Date.now(),
+          },
+        },
+        timestamp: Date.now(),
+      }),
+    );
+    mocks.getOpenCodeGoConfigs.mockImplementation(async () => [
+      {
+        name: "OpenCode Go Cached",
+        apiKey: "sk-opencode-go",
+        workspaceId: "workspace-1",
+        authCookie: "session=abc",
+      },
+      {
+        name: "OpenCode Go Fresh",
+        apiKey: "sk-opencode-go-fresh",
+        workspaceId: "workspace-2",
+        authCookie: "session=def",
+      },
+    ]);
+
+    render(
+      <MemoryRouter initialEntries={["/ai-providers"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByTestId("providers-list-skeleton")).not.toBeInTheDocument();
+    const cachedTitle = await screen.findByText("OpenCode Go Cached");
+    const cachedCard = cachedTitle.closest(".group");
+    expect(cachedCard).toBeInTheDocument();
+    expect(within(cachedCard as HTMLElement).getByText(/Left 99%/i)).toBeInTheDocument();
+    expect(within(cachedCard as HTMLElement).getByText(/Left 95%/i)).toBeInTheDocument();
+    expect(within(cachedCard as HTMLElement).getByText(/Left 77%/i)).toBeInTheDocument();
+    expect(within(cachedCard as HTMLElement).queryByText(/Left --/i)).not.toBeInTheDocument();
+    expect(await screen.findByText("OpenCode Go Fresh")).toBeInTheDocument();
   });
 
   test("shows usage loading instead of not queried before the first OpenCode Go usage result", async () => {
@@ -207,6 +317,114 @@ describe("ProvidersPage OpenCode Go tab", () => {
     expect(await screen.findByText(/Left 75%/i)).toBeInTheDocument();
   });
 
+  test("refreshes OpenCode Go usage without replacing existing usage values", async () => {
+    localStorage.clear();
+    const user = userEvent.setup();
+    let callCount = 0;
+    let resolveRefresh: ((value: MockOpenCodeGoUsageResponse) => void) | undefined;
+    mocks.getOpenCodeGoConfigs.mockImplementation(async () => [
+      {
+        name: "OpenCode Go",
+        apiKey: "sk-opencode-go",
+        workspaceId: "workspace-1",
+        authCookie: "session=abc",
+      },
+    ]);
+    mocks.queryOpenCodeGoUsage.mockImplementation(async () => {
+      callCount += 1;
+      if (callCount === 1) {
+        return {
+          workspace_id: "workspace-1",
+          usage: [
+            {
+              type: "rolling",
+              label: "Rolling",
+              percentage: 25,
+              resets_in: "30m",
+            },
+            {
+              type: "weekly",
+              label: "Weekly",
+              percentage: 5,
+              resets_in: "5d",
+            },
+            {
+              type: "monthly",
+              label: "Monthly",
+              percentage: 23,
+              resets_in: "20d",
+            },
+          ],
+        };
+      }
+      return new Promise((resolve) => {
+        resolveRefresh = resolve;
+      });
+    });
+
+    render(
+      <MemoryRouter initialEntries={["/ai-providers"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    await user.click(await screen.findByRole("tab", { name: /OpenCode Go/ }));
+    expect(await screen.findByText(/Left 75%/i)).toBeInTheDocument();
+
+    const refreshButton = screen.getByRole("button", { name: /Refresh usage/i });
+    await user.click(refreshButton);
+    await waitFor(() => expect(refreshButton).toBeDisabled());
+    expect(refreshButton.querySelector("svg")).toHaveClass("animate-spin");
+    expect(screen.getByText(/Left 75%/i)).toBeInTheDocument();
+    expect(screen.getByText(/Left 95%/i)).toBeInTheDocument();
+    expect(screen.getByText(/Left 77%/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Left --/i)).not.toBeInTheDocument();
+
+    resolveRefresh?.({
+      workspace_id: "workspace-1",
+      usage: [{ type: "rolling", label: "Rolling", percentage: 40, resets_in: "20m" }],
+    });
+    expect(await screen.findByText(/Left 60%/i)).toBeInTheDocument();
+  });
+
+  test("shows effective OpenCode Go models instead of dirty legacy models", async () => {
+    const user = userEvent.setup();
+    mocks.getOpenCodeGoConfigs.mockImplementation(async () => [
+      {
+        name: "OpenCode Go Dirty",
+        apiKey: "sk-opencode-go-dirty",
+        models: [{ name: "cline-pass/glm-5.2" }],
+        excludedModels: ["qwen3.5-plus"],
+      },
+    ]);
+
+    render(
+      <MemoryRouter initialEntries={["/ai-providers"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    await user.click(await screen.findByRole("tab", { name: /OpenCode Go/ }));
+    expect(await screen.findByText("OpenCode Go Dirty")).toBeInTheDocument();
+    await waitFor(() => expect(mocks.apiCallRequest).toHaveBeenCalled());
+
+    expect(await screen.findByText("deepseek-v4-flash")).toBeInTheDocument();
+    expect(screen.queryByText("cline-pass/glm-5.2")).not.toBeInTheDocument();
+    expect(screen.getByText("qwen3.5-plus")).toBeInTheDocument();
+  });
+
   test("opens OpenCode Go route and saves a key without requiring Base URL", async () => {
     const user = userEvent.setup();
 
@@ -222,26 +440,16 @@ describe("ProvidersPage OpenCode Go tab", () => {
       </MemoryRouter>,
     );
 
-    expect(
-      await screen.findByRole("tab", { name: /OpenCode Go/ }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole("tab", { name: /OpenCode Go/ })).toBeInTheDocument();
     const dialog = await screen.findByRole("dialog", {
       name: /Add OpenCode Go configuration/i,
     });
 
     expect(within(dialog).queryByText("Base URL")).not.toBeInTheDocument();
-    expect(
-      within(dialog).queryByText("Models (optional)"),
-    ).not.toBeInTheDocument();
+    expect(within(dialog).queryByText("Models (optional)")).not.toBeInTheDocument();
 
-    await user.type(
-      within(dialog).getByPlaceholderText("e.g. Gemini Primary"),
-      "OpenCode Go",
-    );
-    await user.type(
-      within(dialog).getByPlaceholderText(/Paste API Key/i),
-      "sk-opencode-go",
-    );
+    await user.type(within(dialog).getByPlaceholderText("e.g. Gemini Primary"), "OpenCode Go");
+    await user.type(within(dialog).getByPlaceholderText(/Paste API Key/i), "sk-opencode-go");
     await user.click(within(dialog).getByRole("button", { name: /Save/ }));
 
     await waitFor(() => {
@@ -252,9 +460,7 @@ describe("ProvidersPage OpenCode Go tab", () => {
         }),
       ]);
     });
-    expect(mocks.saveOpenCodeGoConfigs.mock.calls[0][0][0]).not.toHaveProperty(
-      "baseUrl",
-    );
+    expect(mocks.saveOpenCodeGoConfigs.mock.calls[0][0][0]).not.toHaveProperty("baseUrl");
   });
 
   test("keeps failed OpenCode Go saves out of the rendered provider list", async () => {
@@ -265,9 +471,7 @@ describe("ProvidersPage OpenCode Go tab", () => {
         apiKey: "sk-existing-opencode-go",
       },
     ]);
-    mocks.saveOpenCodeGoConfigs.mockRejectedValue(
-      new Error("channel name already used"),
-    );
+    mocks.saveOpenCodeGoConfigs.mockRejectedValue(new Error("channel name already used"));
 
     render(
       <MemoryRouter initialEntries={["/ai-providers/opencode-go/new"]}>
@@ -286,14 +490,8 @@ describe("ProvidersPage OpenCode Go tab", () => {
       name: /Add OpenCode Go configuration/i,
     });
 
-    await user.type(
-      within(dialog).getByPlaceholderText("e.g. Gemini Primary"),
-      "New OpenCode Go",
-    );
-    await user.type(
-      within(dialog).getByPlaceholderText(/Paste API Key/i),
-      "sk-new-opencode-go",
-    );
+    await user.type(within(dialog).getByPlaceholderText("e.g. Gemini Primary"), "New OpenCode Go");
+    await user.type(within(dialog).getByPlaceholderText(/Paste API Key/i), "sk-new-opencode-go");
     await user.click(within(dialog).getByRole("button", { name: /Save/ }));
 
     await waitFor(() => {
@@ -308,13 +506,15 @@ describe("ProvidersPage OpenCode Go tab", () => {
     ).toBeInTheDocument();
   });
 
-  test("blocks saving OpenCode Go keys that still contain ClinePass models", async () => {
+  test("saves OpenCode Go fetched model permissions and drops dirty legacy models", async () => {
     const user = userEvent.setup();
     mocks.getOpenCodeGoConfigs.mockImplementation(async () => [
       {
         name: "Existing OpenCode Go",
         apiKey: "sk-existing-opencode-go",
         models: [{ name: "cline-pass/glm-5.2" }],
+        excludedModels: ["*"],
+        visionFallbackModel: "qwen3.5-plus",
       },
     ]);
 
@@ -333,120 +533,146 @@ describe("ProvidersPage OpenCode Go tab", () => {
     const dialog = await screen.findByRole("dialog", {
       name: /Edit OpenCode Go configuration/i,
     });
-    await user.click(within(dialog).getByRole("button", { name: /Save/ }));
-
-    expect(
-      await within(dialog).findByText(
-        /OpenCode Go models cannot use cline-pass model IDs/i,
-      ),
-    ).toBeInTheDocument();
-    expect(mocks.saveOpenCodeGoConfigs).not.toHaveBeenCalled();
-
-    await user.click(within(dialog).getByRole("tab", { name: /Models/i }));
-    await user.click(within(dialog).getByLabelText(/Delete model/i));
+    expect(within(dialog).getByRole("tab", { name: /Models/i })).toBeInTheDocument();
+    await waitFor(() => expect(mocks.apiCallRequest).toHaveBeenCalled());
+    expect(mocks.getModelDefinitions).not.toHaveBeenCalled();
+    await user.clear(within(dialog).getByPlaceholderText(/Paste API Key/i));
     await user.click(within(dialog).getByRole("button", { name: /Save/ }));
 
     await waitFor(() => {
-      expect(mocks.saveOpenCodeGoConfigs).toHaveBeenCalledWith([
+      expect(mocks.patchOpenCodeGoConfig).toHaveBeenCalledWith(
+        0,
         expect.objectContaining({
           name: "Existing OpenCode Go",
-          apiKey: "sk-existing-opencode-go",
-        }),
-      ]);
-    });
-    expect(mocks.saveOpenCodeGoConfigs.mock.calls[0][0][0]).not.toHaveProperty(
-      "models",
-    );
-  });
-
-  test("uses fixed tabs and saves OpenCode Go model exclusions from fetched models", async () => {
-    const user = userEvent.setup();
-
-    render(
-      <MemoryRouter initialEntries={["/ai-providers/opencode-go/new"]}>
-        <ThemeProvider>
-          <ToastProvider>
-            <Routes>
-              <Route path="/ai-providers/*" element={<ProvidersPage />} />
-            </Routes>
-          </ToastProvider>
-        </ThemeProvider>
-      </MemoryRouter>,
-    );
-
-    const dialog = await screen.findByRole("dialog", {
-      name: /Add OpenCode Go configuration/i,
-    });
-    expect(
-      within(dialog).getByRole("tab", { name: /Basic/i }),
-    ).toBeInTheDocument();
-    expect(
-      within(dialog).getByRole("tab", { name: /Request/i }),
-    ).toBeInTheDocument();
-    expect(
-      within(dialog).getByRole("tab", { name: /Models/i }),
-    ).toBeInTheDocument();
-
-    await user.click(within(dialog).getByRole("tab", { name: /Models/i }));
-
-    await waitFor(() => {
-      expect(mocks.apiCallRequest).toHaveBeenCalledWith(
-        expect.objectContaining({
-          method: "GET",
-          url: "https://opencode.ai/zen/go/v1/models",
+          apiKey: "",
         }),
       );
     });
-
-    const deepseek = await within(dialog).findByRole("checkbox", {
-      name: /deepseek-v4-flash/i,
-    });
-    await waitFor(() => expect(deepseek).toBeChecked());
-    expect(
-      within(dialog).getByRole("checkbox", { name: /qwen3\.7-max/i }),
-    ).not.toBeChecked();
-    await user.click(deepseek);
-
-    await user.click(within(dialog).getByRole("tab", { name: /Basic/i }));
-    await user.type(
-      within(dialog).getByPlaceholderText("e.g. Gemini Primary"),
-      "OpenCode Go",
-    );
-    await user.type(
-      within(dialog).getByPlaceholderText(/Paste API Key/i),
-      "sk-opencode-go",
-    );
-    await user.click(within(dialog).getByRole("button", { name: /Save/ }));
-
-    await waitFor(() => {
-      expect(mocks.saveOpenCodeGoConfigs).toHaveBeenCalledWith([
-        expect.objectContaining({
-          name: "OpenCode Go",
-          apiKey: "sk-opencode-go",
-          models: [{ name: "qwen3.5-plus" }, { name: "kimi-k2.6" }],
-          excludedModels: ["deepseek-v4-flash"],
-        }),
-      ]);
-    });
+    expect(mocks.saveOpenCodeGoConfigs).not.toHaveBeenCalled();
+    const saved = mocks.patchOpenCodeGoConfig.mock.calls[0][1];
+    expect(saved).toHaveProperty("models", []);
+    expect(saved).toHaveProperty("visionFallbackModel", "qwen3.5-plus");
+    expect(saved).toHaveProperty("excludedModels", ["*"]);
+    expect(saved).toHaveProperty("disabled", false);
   });
 
-  test("offers allowed multimodal OpenCode Go models as vision fallback options from string api-call body", async () => {
+  test("selects one OpenCode Go model from wildcard without restoring stale allowlist", async () => {
     const user = userEvent.setup();
-    mocks.apiCallRequest.mockImplementation(async () => ({
-      statusCode: 200,
-      header: {},
-      bodyText: "",
-      body: JSON.stringify({
-        object: "list",
-        data: [
-          { id: "deepseek-v4-flash", object: "model", owned_by: "opencode" },
-          { id: "qwen3.5-plus", object: "model", owned_by: "opencode" },
-          { id: "qwen3.6-plus", object: "model", owned_by: "opencode" },
-          { id: "mimo-v2-omni", object: "model", owned_by: "opencode" },
-          { id: "minimax-m2.5", object: "model", owned_by: "opencode" },
+    mocks.getOpenCodeGoConfigs.mockImplementation(async () => [
+      {
+        name: "Existing OpenCode Go",
+        apiKey: "sk-existing-opencode-go",
+        models: [{ name: "deepseek-v4-flash" }, { name: "qwen3.5-plus" }, { name: "kimi-k2.6" }],
+        excludedModels: ["*"],
+      },
+    ]);
+
+    render(
+      <MemoryRouter initialEntries={["/ai-providers/opencode-go/0"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    const dialog = await screen.findByRole("dialog", {
+      name: /Edit OpenCode Go configuration/i,
+    });
+    await user.click(within(dialog).getByRole("tab", { name: /Models/i }));
+    await waitFor(() => expect(mocks.apiCallRequest).toHaveBeenCalled());
+    await user.click(within(dialog).getByRole("checkbox", { name: "qwen3.5-plus" }));
+    await user.click(within(dialog).getByRole("button", { name: /Save/ }));
+
+    await waitFor(() => expect(mocks.patchOpenCodeGoConfig).toHaveBeenCalled());
+    const saved = mocks.patchOpenCodeGoConfig.mock.calls[0][1];
+    expect(saved).toHaveProperty("models", [{ name: "qwen3.5-plus" }]);
+    expect(saved).toHaveProperty("excludedModels", []);
+    expect(saved).toHaveProperty("disabled", false);
+  });
+
+  test("keeps a partial OpenCode Go allowlist when reopening the editor", async () => {
+    const user = userEvent.setup();
+    mocks.getOpenCodeGoConfigs.mockImplementation(async () => [
+      {
+        name: "Existing OpenCode Go",
+        apiKey: "sk-existing-opencode-go",
+        models: [{ name: "qwen3.5-plus" }],
+      },
+    ]);
+
+    render(
+      <MemoryRouter initialEntries={["/ai-providers/opencode-go/0"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    const dialog = await screen.findByRole("dialog", {
+      name: /Edit OpenCode Go configuration/i,
+    });
+    await waitFor(() => expect(mocks.apiCallRequest).toHaveBeenCalled());
+    await user.click(within(dialog).getByRole("button", { name: /Save/ }));
+
+    await waitFor(() => expect(mocks.patchOpenCodeGoConfig).toHaveBeenCalled());
+    const saved = mocks.patchOpenCodeGoConfig.mock.calls[0][1];
+    expect(saved).toHaveProperty("models", [{ name: "qwen3.5-plus" }]);
+    expect(saved).not.toHaveProperty("excludedModels", ["*"]);
+  });
+
+  test("header uncheck saves no OpenCode Go access even with stale hidden models", async () => {
+    const user = userEvent.setup();
+    mocks.getOpenCodeGoConfigs.mockImplementation(async () => [
+      {
+        name: "Existing OpenCode Go",
+        apiKey: "sk-existing-opencode-go",
+        models: [
+          { name: "deepseek-v4-flash" },
+          { name: "qwen3.5-plus" },
+          { name: "kimi-k2.6" },
+          { name: "qwen3.7-max" },
+          { name: "stale-model-not-in-catalog" },
         ],
-      }),
-    }));
+      },
+    ]);
+
+    render(
+      <MemoryRouter initialEntries={["/ai-providers/opencode-go/0"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    const dialog = await screen.findByRole("dialog", {
+      name: /Edit OpenCode Go configuration/i,
+    });
+    await user.click(within(dialog).getByRole("tab", { name: /Models/i }));
+    await waitFor(() => expect(mocks.apiCallRequest).toHaveBeenCalled());
+    await user.click(within(dialog).getByRole("checkbox", { name: /Enabled/i }));
+    await user.click(within(dialog).getByRole("button", { name: /Save/ }));
+
+    await waitFor(() => expect(mocks.patchOpenCodeGoConfig).toHaveBeenCalled());
+    const saved = mocks.patchOpenCodeGoConfig.mock.calls[0][1];
+    expect(saved).toHaveProperty("models", []);
+    expect(saved).toHaveProperty("excludedModels", ["*"]);
+    expect(saved).toHaveProperty("disabled", false);
+  });
+
+  test("shows OpenCode Go dynamic model list without manual model inputs", async () => {
+    const user = userEvent.setup();
 
     render(
       <MemoryRouter initialEntries={["/ai-providers/opencode-go/new"]}>
@@ -463,48 +689,32 @@ describe("ProvidersPage OpenCode Go tab", () => {
     const dialog = await screen.findByRole("dialog", {
       name: /Add OpenCode Go configuration/i,
     });
+    expect(within(dialog).getByRole("tab", { name: /Basic/i })).toBeInTheDocument();
+    expect(within(dialog).getByRole("tab", { name: /Request/i })).toBeInTheDocument();
+    expect(within(dialog).getByRole("tab", { name: /Models/i })).toBeInTheDocument();
     await user.click(within(dialog).getByRole("tab", { name: /Models/i }));
-    await waitFor(() =>
-      expect(
-        within(dialog).getByRole("checkbox", { name: /qwen3\.5-plus/i }),
-      ).toBeChecked(),
-    );
-    await user.click(
-      await within(dialog).findByRole("checkbox", { name: /mimo-v2-omni/i }),
-    );
+    expect(within(dialog).queryByText("Models (optional)")).not.toBeInTheDocument();
+    await waitFor(() => expect(mocks.apiCallRequest).toHaveBeenCalled());
+    expect(mocks.getModelDefinitions).not.toHaveBeenCalled();
+    const modelsTable = within(dialog).getByRole("table", {
+      name: /OpenCode Go model access/i,
+    });
+    expect(modelsTable.closest(".table-scrollbar")).toBeInTheDocument();
+    expect(modelsTable.closest("[data-vt-scroll-content]")).toBeInTheDocument();
+    expect(within(dialog).getByRole("checkbox", { name: /Enabled/i })).toBeInTheDocument();
+    expect(within(dialog).queryByRole("button", { name: /Select all/i })).not.toBeInTheDocument();
+    expect(within(dialog).queryByRole("button", { name: /Select none/i })).not.toBeInTheDocument();
 
     await user.click(within(dialog).getByRole("tab", { name: /Request/i }));
-    const fallback = await within(dialog).findByRole("combobox", {
+    const fallbackSelect = within(dialog).getByRole("combobox", {
       name: /Vision fallback model/i,
     });
-    await user.click(fallback);
-
-    expect(
-      await screen.findByRole("option", { name: /qwen3\.5-plus/i }),
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByRole("option", { name: /qwen3\.6-plus/i }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole("option", { name: /deepseek-v4-flash/i }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.getByRole("option", { name: /mimo-v2-omni/i }),
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByRole("option", { name: /minimax-m2\.5/i }),
-    ).not.toBeInTheDocument();
-    await user.click(screen.getByRole("option", { name: /mimo-v2-omni/i }));
+    await user.click(fallbackSelect);
+    await user.click(await screen.findByRole("option", { name: /qwen3\.5-plus/ }));
 
     await user.click(within(dialog).getByRole("tab", { name: /Basic/i }));
-    await user.type(
-      within(dialog).getByPlaceholderText("e.g. Gemini Primary"),
-      "OpenCode Go",
-    );
-    await user.type(
-      within(dialog).getByPlaceholderText(/Paste API Key/i),
-      "sk-opencode-go",
-    );
+    await user.type(within(dialog).getByPlaceholderText("e.g. Gemini Primary"), "OpenCode Go");
+    await user.type(within(dialog).getByPlaceholderText(/Paste API Key/i), "sk-opencode-go");
     await user.click(within(dialog).getByRole("button", { name: /Save/ }));
 
     await waitFor(() => {
@@ -512,21 +722,23 @@ describe("ProvidersPage OpenCode Go tab", () => {
         expect.objectContaining({
           name: "OpenCode Go",
           apiKey: "sk-opencode-go",
-          models: [
-            { name: "deepseek-v4-flash" },
-            { name: "qwen3.5-plus" },
-            { name: "kimi-k2.6" },
-            { name: "mimo-v2-omni" },
-          ],
-          visionFallbackModel: "mimo-v2-omni",
         }),
       ]);
     });
+    const saved = mocks.saveOpenCodeGoConfigs.mock.calls[0][0][0];
+    expect(saved).toHaveProperty("models", [
+      { name: "deepseek-v4-flash" },
+      { name: "qwen3.5-plus" },
+      { name: "kimi-k2.6" },
+      { name: "qwen3.7-max" },
+    ]);
+    expect(saved).toHaveProperty("visionFallbackModel", "qwen3.5-plus");
   });
 });
 
 describe("ProvidersPage Cline tab", () => {
   beforeEach(() => {
+    localStorage.clear();
     Object.values(mocks).forEach((mock) => mock.mockReset());
     mocks.getGeminiKeys.mockImplementation(async () => []);
     mocks.getClaudeConfigs.mockImplementation(async () => []);
@@ -539,6 +751,13 @@ describe("ProvidersPage Cline tab", () => {
     mocks.getOpenAIProviders.mockImplementation(async () => []);
     mocks.saveOpenCodeGoConfigs.mockImplementation(async () => ({}));
     mocks.saveClineConfigs.mockImplementation(async () => ({}));
+    mocks.saveOllamaCloudConfigs.mockImplementation(async () => ({}));
+    mocks.patchOpenCodeGoConfig.mockImplementation(async () => ({}));
+    mocks.patchClineConfig.mockImplementation(async () => ({}));
+    mocks.patchOllamaCloudConfig.mockImplementation(async () => ({}));
+    mocks.patchOpenCodeGoExcludedModels.mockImplementation(async () => ({}));
+    mocks.patchClineExcludedModels.mockImplementation(async () => ({}));
+    mocks.patchOllamaCloudExcludedModels.mockImplementation(async () => ({}));
     mocks.getModelDefinitions.mockImplementation(async (channel?: string) =>
       channel === "cline"
         ? [
@@ -572,6 +791,59 @@ describe("ProvidersPage Cline tab", () => {
     mocks.proxiesList.mockImplementation(async () => []);
   });
 
+  test("renders cached ClinePass configs while refreshing the fresh list", async () => {
+    let resolveFresh: ((value: unknown[]) => void) | undefined;
+    localStorage.setItem("providers-page:tab", "cline");
+    localStorage.setItem(
+      "providers-page:cache:cline",
+      JSON.stringify({
+        data: [
+          {
+            name: "Cline Cached",
+            apiKey: "sk-cline-cached",
+            baseUrl: "https://api.cline.bot/api/v1",
+          },
+        ],
+        timestamp: Date.now(),
+      }),
+    );
+    mocks.getClineConfigs.mockImplementation(
+      async () =>
+        new Promise((resolve) => {
+          resolveFresh = resolve;
+        }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/ai-providers"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByTestId("providers-list-skeleton")).not.toBeInTheDocument();
+    expect(await screen.findByText("Cline Cached")).toBeInTheDocument();
+    expect(screen.queryByText("Cline Fresh")).not.toBeInTheDocument();
+
+    resolveFresh?.([
+      {
+        name: "Cline Fresh",
+        apiKey: "sk-cline-fresh",
+        baseUrl: "https://api.cline.bot/api/v1",
+      },
+    ]);
+
+    expect(await screen.findByText("Cline Fresh")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(localStorage.getItem("providers-page:cache:cline")).toContain("Cline Fresh"),
+    );
+  });
+
   test("opens Cline route and saves default Base URL", async () => {
     const user = userEvent.setup();
 
@@ -587,30 +859,20 @@ describe("ProvidersPage Cline tab", () => {
       </MemoryRouter>,
     );
 
-    expect(
-      await screen.findByRole("tab", { name: /ClinePass/ }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole("tab", { name: /ClinePass/ })).toBeInTheDocument();
     const dialog = await screen.findByRole("dialog", {
       name: /Add ClinePass configuration/i,
     });
 
     await user.click(within(dialog).getByRole("tab", { name: /Request/i }));
-    expect(
-      within(dialog).getByDisplayValue("https://api.cline.bot/api/v1"),
-    ).toBeInTheDocument();
+    expect(within(dialog).getByDisplayValue("https://api.cline.bot/api/v1")).toBeInTheDocument();
     expect(
       within(dialog).getByText("https://api.cline.bot/api/v1/chat/completions"),
     ).toBeInTheDocument();
 
     await user.click(within(dialog).getByRole("tab", { name: /Basic/i }));
-    await user.type(
-      within(dialog).getByPlaceholderText("e.g. Gemini Primary"),
-      "Cline",
-    );
-    await user.type(
-      within(dialog).getByPlaceholderText(/Paste API Key/i),
-      "sk-cline",
-    );
+    await user.type(within(dialog).getByPlaceholderText("e.g. Gemini Primary"), "Cline");
+    await user.type(within(dialog).getByPlaceholderText(/Paste API Key/i), "sk-cline");
     await user.click(within(dialog).getByRole("button", { name: /Save/ }));
 
     await waitFor(() => {
@@ -624,8 +886,7 @@ describe("ProvidersPage Cline tab", () => {
     });
   });
 
-  test("renders Cline models in a scrollable table without owned_by subtitles", async () => {
-    const user = userEvent.setup();
+  test("shows ClinePass dynamic model list without manual model inputs", async () => {
     mocks.getModelDefinitions.mockImplementation(async (channel?: string) =>
       channel === "cline"
         ? [
@@ -682,31 +943,122 @@ describe("ProvidersPage Cline tab", () => {
     const dialog = await screen.findByRole("dialog", {
       name: /Add ClinePass configuration/i,
     });
-    await user.click(within(dialog).getByRole("tab", { name: /Models/i }));
-
-    expect(
-      await within(dialog).findByText("cline-pass/mimo-v2.5-pro"),
-    ).toBeInTheDocument();
-    expect(within(dialog).queryByText("cline")).not.toBeInTheDocument();
-
-    const table = within(dialog)
-      .getByText("cline-pass/mimo-v2.5-pro")
-      .closest("table");
-    if (!table) {
-      throw new Error("expected Cline models table");
-    }
-    const scrollContainer = table.parentElement?.parentElement;
-    const tableRoot = scrollContainer?.parentElement;
-
-    expect(scrollContainer).toHaveClass("overflow-auto");
-    expect(tableRoot).toHaveClass("h-80");
+    expect(within(dialog).getByRole("tab", { name: /Models/i })).toBeInTheDocument();
+    await waitFor(() => expect(mocks.getModelDefinitions).toHaveBeenCalledWith("cline"));
+    await userEvent.setup().click(within(dialog).getByRole("tab", { name: /Models/i }));
+    expect(within(dialog).queryByText("Models (optional)")).not.toBeInTheDocument();
+    expect(within(dialog).getByText("cline-pass/mimo-v2.5-pro")).toBeInTheDocument();
   });
 
-  test("loads Cline model definitions and saves model exclusions", async () => {
+  test("shows all hidden ClinePass card models in the +X tooltip", async () => {
     const user = userEvent.setup();
+    mocks.getClineConfigs.mockImplementation(async () => [
+      {
+        name: "Cline Tooltip",
+        apiKey: "sk-cline-tooltip",
+      },
+    ]);
+    mocks.getModelDefinitions.mockImplementation(async (channel?: string) =>
+      channel === "cline"
+        ? [
+            { id: "cline-pass/glm-5.2", object: "model", owned_by: "cline" },
+            { id: "cline-pass/minimax-m3", object: "model", owned_by: "cline" },
+            {
+              id: "cline-pass/qwen3.7-max",
+              object: "model",
+              owned_by: "cline",
+            },
+            {
+              id: "cline-pass/mimo-v2.5-pro",
+              object: "model",
+              owned_by: "cline",
+            },
+            {
+              id: "cline-pass/qwen3-coder",
+              object: "model",
+              owned_by: "cline",
+            },
+            {
+              id: "cline-pass/deepseek-v4",
+              object: "model",
+              owned_by: "cline",
+            },
+            { id: "cline-pass/kimi-k2.6", object: "model", owned_by: "cline" },
+            { id: "cline-pass/gpt-5.2", object: "model", owned_by: "cline" },
+          ]
+        : [],
+    );
 
     render(
-      <MemoryRouter initialEntries={["/ai-providers/cline/new"]}>
+      <MemoryRouter initialEntries={["/ai-providers"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    await user.click(await screen.findByRole("tab", { name: /ClinePass/ }));
+    expect(await screen.findByText("Cline Tooltip")).toBeInTheDocument();
+    await waitFor(() => expect(mocks.getModelDefinitions).toHaveBeenCalledWith("cline"));
+
+    await user.hover(screen.getByText("+3"));
+    const tooltip = await screen.findByRole("tooltip");
+    expect(tooltip).toHaveTextContent("cline-pass/deepseek-v4");
+    expect(tooltip).toHaveTextContent("cline-pass/kimi-k2.6");
+    expect(tooltip).toHaveTextContent("cline-pass/gpt-5.2");
+  });
+
+  test("does not show legacy ClinePass excluded models on provider cards", async () => {
+    const user = userEvent.setup();
+    mocks.getClineConfigs.mockImplementation(async () => [
+      {
+        name: "Cline Hidden Excluded",
+        apiKey: "sk-cline-hidden",
+        baseUrl: "https://api.cline.bot/api/v1",
+        excludedModels: ["cline-pass/legacy-disabled-only"],
+      },
+    ]);
+
+    render(
+      <MemoryRouter initialEntries={["/ai-providers"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    await user.click(await screen.findByRole("tab", { name: /ClinePass/ }));
+    expect(await screen.findByText("Cline Hidden Excluded")).toBeInTheDocument();
+    expect(screen.queryByText("sk-cline-hidden")).not.toBeInTheDocument();
+    expect(screen.queryByText("sk-cli***dden")).not.toBeInTheDocument();
+    expect(screen.queryByText("https://api.cline.bot/api/v1")).not.toBeInTheDocument();
+    expect(screen.queryByText("Models")).not.toBeInTheDocument();
+    expect(screen.queryByText("cline-pass/legacy-disabled-only")).not.toBeInTheDocument();
+  });
+
+  test("saves ClinePass fetched model permissions when saving", async () => {
+    const user = userEvent.setup();
+    mocks.getClineConfigs.mockImplementation(async () => [
+      {
+        name: "Existing Cline",
+        apiKey: "sk-cline",
+        baseUrl: "https://api.cline.bot/api/v1",
+        models: [{ name: "cline-pass/glm-5.2" }],
+        excludedModels: ["*"],
+        visionFallbackModel: "cline-pass/mimo-v2.5-pro",
+      },
+    ]);
+
+    render(
+      <MemoryRouter initialEntries={["/ai-providers/cline/0"]}>
         <ThemeProvider>
           <ToastProvider>
             <Routes>
@@ -718,54 +1070,269 @@ describe("ProvidersPage Cline tab", () => {
     );
 
     const dialog = await screen.findByRole("dialog", {
-      name: /Add ClinePass configuration/i,
+      name: /Edit ClinePass configuration/i,
     });
-    await user.click(within(dialog).getByRole("tab", { name: /Models/i }));
-
-    await waitFor(() => {
-      expect(mocks.getModelDefinitions).toHaveBeenCalledWith("cline");
-    });
-    const minimax = await within(dialog).findByRole("checkbox", {
-      name: /cline-pass\/minimax-m3/i,
-    });
-    await waitFor(() => expect(minimax).toBeChecked());
-    await user.click(minimax);
-
-    await user.click(within(dialog).getByRole("tab", { name: /Request/i }));
-    const fallback = await within(dialog).findByRole("combobox", {
-      name: /Vision fallback model/i,
-    });
-    await user.click(fallback);
-    await user.click(
-      screen.getByRole("option", { name: /cline-pass\/mimo-v2\.5-pro/i }),
-    );
-
-    await user.click(within(dialog).getByRole("tab", { name: /Basic/i }));
-    await user.type(
-      within(dialog).getByPlaceholderText("e.g. Gemini Primary"),
-      "Cline",
-    );
-    await user.type(
-      within(dialog).getByPlaceholderText(/Paste API Key/i),
-      "sk-cline",
-    );
+    expect(within(dialog).getByRole("tab", { name: /Models/i })).toBeInTheDocument();
+    await waitFor(() => expect(mocks.getModelDefinitions).toHaveBeenCalledWith("cline"));
+    await user.clear(within(dialog).getByPlaceholderText(/Paste API Key/i));
     await user.click(within(dialog).getByRole("button", { name: /Save/ }));
 
     await waitFor(() => {
-      expect(mocks.saveClineConfigs).toHaveBeenCalledWith([
+      expect(mocks.patchClineConfig).toHaveBeenCalledWith(
+        0,
         expect.objectContaining({
-          name: "Cline",
-          apiKey: "sk-cline",
-          models: [
-            { name: "cline-pass/glm-5.2" },
-            { name: "cline-pass/qwen3.7-max" },
-            { name: "cline-pass/mimo-v2.5-pro" },
-          ],
-          excludedModels: ["cline-pass/minimax-m3"],
-          visionFallbackModel: "cline-pass/mimo-v2.5-pro",
+          name: "Existing Cline",
+          apiKey: "",
+          excludedModels: ["*"],
         }),
-      ]);
+      );
     });
+    expect(mocks.saveClineConfigs).not.toHaveBeenCalled();
+    const saved = mocks.patchClineConfig.mock.calls[0][1];
+    expect(saved).toHaveProperty("models", []);
+    expect(saved).toHaveProperty("visionFallbackModel", "cline-pass/mimo-v2.5-pro");
+    expect(saved).toHaveProperty("disabled", false);
+  });
+});
+
+describe("ProvidersPage Ollama Cloud tab", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    Object.values(mocks).forEach((mock) => mock.mockReset());
+    mocks.getGeminiKeys.mockImplementation(async () => []);
+    mocks.getClaudeConfigs.mockImplementation(async () => []);
+    mocks.getCodexConfigs.mockImplementation(async () => []);
+    mocks.getVertexConfigs.mockImplementation(async () => []);
+    mocks.getBedrockConfigs.mockImplementation(async () => []);
+    mocks.getOpenCodeGoConfigs.mockImplementation(async () => []);
+    mocks.getClineConfigs.mockImplementation(async () => []);
+    mocks.getOllamaCloudConfigs.mockImplementation(async () => []);
+    mocks.getOpenAIProviders.mockImplementation(async () => []);
+    mocks.saveOllamaCloudConfigs.mockImplementation(async () => ({}));
+    mocks.patchOpenCodeGoConfig.mockImplementation(async () => ({}));
+    mocks.patchClineConfig.mockImplementation(async () => ({}));
+    mocks.patchOllamaCloudConfig.mockImplementation(async () => ({}));
+    mocks.patchOpenCodeGoExcludedModels.mockImplementation(async () => ({}));
+    mocks.patchClineExcludedModels.mockImplementation(async () => ({}));
+    mocks.patchOllamaCloudExcludedModels.mockImplementation(async () => ({}));
+    mocks.getModelDefinitions.mockImplementation(async () => [
+      { id: "gpt-oss:120b", object: "model", owned_by: "ollama" },
+    ]);
+    mocks.apiCallRequest.mockImplementation(async () => ({
+      statusCode: 200,
+      header: {},
+      bodyText: "",
+      body: { object: "list", data: [] },
+    }));
+    mocks.getEntityStats.mockImplementation(async () => ({ source: [] }));
+    mocks.apiKeyEntriesList.mockImplementation(async () => []);
+    mocks.channelGroupsList.mockImplementation(async () => []);
+    mocks.proxiesList.mockImplementation(async () => []);
+  });
+
+  test("renders cached Ollama Cloud configs while refreshing the fresh list", async () => {
+    let resolveFresh: ((value: unknown[]) => void) | undefined;
+    localStorage.setItem("providers-page:tab", "ollama-cloud");
+    localStorage.setItem(
+      "providers-page:cache:ollama-cloud",
+      JSON.stringify({
+        data: [
+          {
+            name: "Ollama Cached",
+            apiKey: "sk-ollama-cached",
+            baseUrl: "https://ollama.com",
+          },
+        ],
+        timestamp: Date.now(),
+      }),
+    );
+    mocks.getOllamaCloudConfigs.mockImplementation(
+      async () =>
+        new Promise((resolve) => {
+          resolveFresh = resolve;
+        }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/ai-providers"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByTestId("providers-list-skeleton")).not.toBeInTheDocument();
+    expect(await screen.findByText("Ollama Cached")).toBeInTheDocument();
+    expect(screen.queryByText("Ollama Fresh")).not.toBeInTheDocument();
+
+    resolveFresh?.([
+      {
+        name: "Ollama Fresh",
+        apiKey: "sk-ollama-fresh",
+        baseUrl: "https://ollama.com",
+      },
+    ]);
+
+    expect(await screen.findByText("Ollama Fresh")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(localStorage.getItem("providers-page:cache:ollama-cloud")).toContain(
+        "Ollama Fresh",
+      ),
+    );
+  });
+
+  test("shows Ollama Cloud dynamic model list without manual model inputs", async () => {
+    render(
+      <MemoryRouter initialEntries={["/ai-providers/ollama-cloud/new"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    const dialog = await screen.findByRole("dialog", {
+      name: /Add Ollama Cloud configuration/i,
+    });
+    expect(within(dialog).getByRole("tab", { name: /Models/i })).toBeInTheDocument();
+    await waitFor(() => expect(mocks.getModelDefinitions).toHaveBeenCalledWith("ollama-cloud"));
+    await userEvent.setup().click(within(dialog).getByRole("tab", { name: /Models/i }));
+    expect(within(dialog).queryByText("Models (optional)")).not.toBeInTheDocument();
+    expect(within(dialog).getByText("gpt-oss:120b")).toBeInTheDocument();
+    expect(mocks.apiCallRequest).not.toHaveBeenCalled();
+  });
+
+  test("saves Ollama Cloud fetched model permissions when saving", async () => {
+    const user = userEvent.setup();
+    mocks.getModelDefinitions.mockImplementation(async () => [
+      { id: "gpt-oss:120b", object: "model", owned_by: "ollama" },
+      { id: "gpt-oss:20b", object: "model", owned_by: "ollama" },
+    ]);
+    mocks.getOllamaCloudConfigs.mockImplementation(async () => [
+      {
+        name: "Existing Ollama Cloud",
+        apiKey: "sk-ollama",
+        baseUrl: "https://ollama.com",
+        models: [{ name: "gpt-oss:120b" }, { name: "gpt-oss:20b" }],
+        excludedModels: ["*"],
+      },
+    ]);
+
+    render(
+      <MemoryRouter initialEntries={["/ai-providers/ollama-cloud/0"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    const dialog = await screen.findByRole("dialog", {
+      name: /Edit Ollama Cloud configuration/i,
+    });
+    expect(within(dialog).getByRole("tab", { name: /Models/i })).toBeInTheDocument();
+    await waitFor(() => expect(mocks.getModelDefinitions).toHaveBeenCalledWith("ollama-cloud"));
+    await user.clear(within(dialog).getByPlaceholderText(/Paste API Key/i));
+    await user.click(within(dialog).getByRole("button", { name: /Save/ }));
+
+    await waitFor(() => {
+      expect(mocks.patchOllamaCloudConfig).toHaveBeenCalledWith(
+        0,
+        expect.objectContaining({
+          name: "Existing Ollama Cloud",
+          apiKey: "",
+          excludedModels: ["*"],
+        }),
+      );
+    });
+    expect(mocks.saveOllamaCloudConfigs).not.toHaveBeenCalled();
+    const saved = mocks.patchOllamaCloudConfig.mock.calls[0][1];
+    expect(saved).toHaveProperty("models", []);
+    expect(saved).toHaveProperty("disabled", false);
+  });
+
+  test("uses the Ollama Cloud header checkbox to save no model access", async () => {
+    const user = userEvent.setup();
+    mocks.getModelDefinitions.mockImplementation(async () => [
+      { id: "gpt-oss:120b", object: "model", owned_by: "ollama" },
+      { id: "gpt-oss:20b", object: "model", owned_by: "ollama" },
+    ]);
+    mocks.getOllamaCloudConfigs.mockImplementation(async () => [
+      {
+        name: "Existing Ollama Cloud",
+        apiKey: "sk-ollama",
+        baseUrl: "https://ollama.com",
+        models: [{ name: "gpt-oss:120b" }, { name: "gpt-oss:20b" }],
+      },
+    ]);
+
+    render(
+      <MemoryRouter initialEntries={["/ai-providers/ollama-cloud/0"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    const dialog = await screen.findByRole("dialog", {
+      name: /Edit Ollama Cloud configuration/i,
+    });
+    await user.click(within(dialog).getByRole("tab", { name: /Models/i }));
+    await waitFor(() => expect(mocks.getModelDefinitions).toHaveBeenCalledWith("ollama-cloud"));
+    await user.click(within(dialog).getByRole("checkbox", { name: /Enabled/i }));
+    await user.click(within(dialog).getByRole("button", { name: /Save/ }));
+
+    await waitFor(() => expect(mocks.patchOllamaCloudConfig).toHaveBeenCalled());
+    const saved = mocks.patchOllamaCloudConfig.mock.calls[0][1];
+    expect(saved).toHaveProperty("models", []);
+    expect(saved).toHaveProperty("excludedModels", ["*"]);
+    expect(saved).toHaveProperty("disabled", false);
+  });
+
+  test("does not show legacy Ollama Cloud excluded models on provider cards", async () => {
+    const user = userEvent.setup();
+    mocks.getOllamaCloudConfigs.mockImplementation(async () => [
+      {
+        name: "Ollama Hidden Excluded",
+        apiKey: "sk-ollama-hidden",
+        baseUrl: "https://ollama.com",
+        excludedModels: ["gpt-oss:legacy-disabled-only"],
+      },
+    ]);
+
+    render(
+      <MemoryRouter initialEntries={["/ai-providers"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    await user.click(await screen.findByRole("tab", { name: /Ollama Cloud/ }));
+    expect(await screen.findByText("Ollama Hidden Excluded")).toBeInTheDocument();
+    expect(screen.queryByText("sk-ollama-hidden")).not.toBeInTheDocument();
+    expect(screen.queryByText("sk-oll***dden")).not.toBeInTheDocument();
+    expect(screen.queryByText("https://ollama.com")).not.toBeInTheDocument();
+    expect(screen.queryByText("Models")).not.toBeInTheDocument();
+    expect(screen.queryByText("gpt-oss:legacy-disabled-only")).not.toBeInTheDocument();
   });
 });
 
@@ -773,18 +1340,14 @@ describe("mergeOpenCodeGoUsage", () => {
   test("returns incoming when existing is empty", async () => {
     const { mergeOpenCodeGoUsage } =
       await import("@pages/providers/components/OpenCodeGoUsageCardSection");
-    const incoming = [
-      { type: "rolling", label: "Rolling", percentage: 50, resets_in: "30m" },
-    ];
+    const incoming = [{ type: "rolling", label: "Rolling", percentage: 50, resets_in: "30m" }];
     expect(mergeOpenCodeGoUsage([], incoming)).toEqual(incoming);
   });
 
   test("returns existing when incoming is empty", async () => {
     const { mergeOpenCodeGoUsage } =
       await import("@pages/providers/components/OpenCodeGoUsageCardSection");
-    const existing = [
-      { type: "weekly", label: "Weekly", percentage: 30, resets_in: "3d" },
-    ];
+    const existing = [{ type: "weekly", label: "Weekly", percentage: 30, resets_in: "3d" }];
     expect(mergeOpenCodeGoUsage(existing, [])).toEqual(existing);
   });
 
@@ -796,9 +1359,7 @@ describe("mergeOpenCodeGoUsage", () => {
       { type: "weekly", label: "Weekly", percentage: 30, resets_in: "3d" },
       { type: "monthly", label: "Monthly", percentage: 10, resets_in: "20d" },
     ];
-    const incoming = [
-      { type: "rolling", label: "Rolling", percentage: 80, resets_in: "25m" },
-    ];
+    const incoming = [{ type: "rolling", label: "Rolling", percentage: 80, resets_in: "25m" }];
     const result = mergeOpenCodeGoUsage(existing, incoming);
 
     expect(result).toHaveLength(3);
@@ -810,12 +1371,8 @@ describe("mergeOpenCodeGoUsage", () => {
   test("handles case-insensitive type matching", async () => {
     const { mergeOpenCodeGoUsage } =
       await import("@pages/providers/components/OpenCodeGoUsageCardSection");
-    const existing = [
-      { type: "Rolling", label: "Rolling", percentage: 50, resets_in: "30m" },
-    ];
-    const incoming = [
-      { type: "rolling", label: "Rolling", percentage: 75, resets_in: "25m" },
-    ];
+    const existing = [{ type: "Rolling", label: "Rolling", percentage: 50, resets_in: "30m" }];
+    const incoming = [{ type: "rolling", label: "Rolling", percentage: 75, resets_in: "25m" }];
     const result = mergeOpenCodeGoUsage(existing, incoming);
 
     expect(result).toHaveLength(1);
@@ -829,14 +1386,35 @@ describe("mergeOpenCodeGoUsage", () => {
       { type: "monthly", label: "Monthly", percentage: 10, resets_in: "20d" },
       { type: "weekly", label: "Weekly", percentage: 30, resets_in: "3d" },
     ];
-    const incoming = [
-      { type: "rolling", label: "Rolling", percentage: 80, resets_in: "25m" },
-    ];
+    const incoming = [{ type: "rolling", label: "Rolling", percentage: 80, resets_in: "25m" }];
     const result = mergeOpenCodeGoUsage(existing, incoming);
 
     expect(result).toHaveLength(3);
     expect(result[0].type).toBe("rolling");
     expect(result[1].type).toBe("monthly");
     expect(result[2].type).toBe("weekly");
+  });
+});
+
+describe("createOpenCodeGoUsageStore", () => {
+  test("notifies only the changed usage key", async () => {
+    const { createOpenCodeGoUsageStore } =
+      await import("@pages/providers/components/OpenCodeGoUsageCardSection");
+    const onChange = vi.fn();
+    const store = createOpenCodeGoUsageStore({}, onChange);
+    const first = vi.fn();
+    const second = vi.fn();
+
+    store.subscribe("first", first);
+    store.subscribe("second", second);
+    store.setLoading("first", true);
+    store.updateEntry("first", () => ({
+      usage: [],
+      updatedAt: 1,
+    }));
+
+    expect(first).toHaveBeenCalledTimes(2);
+    expect(second).not.toHaveBeenCalled();
+    expect(onChange).toHaveBeenCalledTimes(1);
   });
 });

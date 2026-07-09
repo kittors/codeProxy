@@ -21,6 +21,11 @@ const normalizeNumber = (value: unknown): number | undefined => {
   return Number.isFinite(parsed) ? parsed : undefined;
 };
 
+const normalizePositiveNumber = (value: unknown): number | undefined => {
+  const parsed = normalizeNumber(value);
+  return parsed !== undefined && parsed > 0 ? Math.round(parsed) : undefined;
+};
+
 const normalizeStringList = (value: unknown): string[] => {
   if (!Array.isArray(value)) return [];
   return value.map((item) => (typeof item === "string" ? item.trim() : "")).filter(Boolean);
@@ -49,6 +54,13 @@ const normalizeModelMappings = (value: unknown): CcSwitchModelMapping[] => {
         ...(normalizedRole ? { role: normalizedRole } : {}),
         requestModel,
         targetModel,
+        ...(normalizePositiveNumber(record["context-window"] ?? record.contextWindow) !== undefined
+          ? {
+              contextWindow: normalizePositiveNumber(
+                record["context-window"] ?? record.contextWindow,
+              ),
+            }
+          : {}),
       };
     })
     .filter((item): item is CcSwitchModelMapping => Boolean(item));
@@ -119,6 +131,7 @@ const serializeCcSwitchImportConfig = (config: CcSwitchImportConfigListItem) => 
     ...(mapping.role ? { role: mapping.role } : {}),
     "request-model": mapping.requestModel,
     "target-model": mapping.targetModel,
+    ...(mapping.contextWindow ? { "context-window": mapping.contextWindow } : {}),
   })),
   "allowed-channel-groups": [...config.allowedChannelGroups],
   "route-path": config.routePath,

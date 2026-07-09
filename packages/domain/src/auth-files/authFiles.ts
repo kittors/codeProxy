@@ -232,7 +232,9 @@ const sanitizeIdentityFingerprintSummaryForCache = (
 ): AuthFileIdentityFingerprintSummary | undefined => {
   if (!isPlainRecord(value)) return undefined;
   const provider = readOptionalString(value.provider);
-  if (provider !== "claude" && provider !== "codex" && provider !== "gemini") return undefined;
+  if (provider !== "claude" && provider !== "codex" && provider !== "gemini" && provider !== "xai") {
+    return undefined;
+  }
   const primarySource =
     sanitizeIdentityFingerprintSourceForCache(value.primary_source) ?? "builtin_default";
   const sourceCounts = sanitizeIdentityFingerprintSourceCountsForCache(value.source_counts) ?? {};
@@ -1349,6 +1351,24 @@ export const resolveAuthFilePlanType = (
   resolveCodexPlanType(file) ??
   readCodexFilenamePlanType(String(file.name || "")) ??
   normalizePlanType(quotaState?.planType);
+
+/**
+ * Plan badges may come from auth-file tags (Codex plus/pro) or quota state (xAI SuperGrok).
+ * Only enforce display_tags visibility when the plan is part of the file's default tags;
+ * quota-derived plans are always shown when resolved.
+ */
+export const shouldShowAuthFilePlanBadge = (
+  file: AuthFileItem,
+  planType: string | null | undefined,
+): boolean => {
+  const normalized = normalizeTagValue(planType);
+  if (!normalized) return false;
+  const defaultTags = readAuthFileDefaultTags(file);
+  if (defaultTags.includes(normalized)) {
+    return shouldShowAuthFileDisplayTag(file, normalized);
+  }
+  return true;
+};
 
 export const resolveAuthFileSupplementalTags = (
   file: AuthFileItem,

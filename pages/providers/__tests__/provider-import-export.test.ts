@@ -41,12 +41,13 @@ describe("provider import/export helpers", () => {
     });
   });
 
-  test("preserves OpenCode Go dashboard usage fields during import and export", () => {
+  test("preserves OpenCode Go dashboard usage fields without per-key model fields", () => {
     const text = createProviderExportText("opencode-go", [
       {
         apiKey: " go-key ",
         name: "OpenCode Go",
-        excludedModels: [" deepseek-v4-pro "],
+        models: [{ name: "deepseek-v4-pro" }],
+        excludedModels: [" deepseek-v4-pro ", "*"],
         visionFallbackModel: " qwen3.5-plus ",
         workspaceId: " wrk_123 ",
         authCookie: " auth-token ",
@@ -59,7 +60,7 @@ describe("provider import/export helpers", () => {
       items: [
         {
           "api-key": "go-key",
-          "excluded-models": ["deepseek-v4-pro"],
+          "excluded-models": ["*"],
           "auth-cookie": "auth-token",
           name: "OpenCode Go",
           "vision-fallback-model": "qwen3.5-plus",
@@ -68,16 +69,83 @@ describe("provider import/export helpers", () => {
       ],
     });
 
-    const preview = prepareProviderImport("opencode-go", text, []);
+    const preview = prepareProviderImport(
+      "opencode-go",
+      JSON.stringify({
+        provider: "opencode-go",
+        items: [
+          {
+            "api-key": " go-key ",
+            name: "OpenCode Go",
+            models: [{ name: "deepseek-v4-pro" }],
+            "excluded-models": ["deepseek-v4-pro", "*"],
+            "vision-fallback-model": "qwen3.5-plus",
+            "workspace-id": " wrk_123 ",
+            "auth-cookie": " auth-token ",
+          },
+        ],
+      }),
+      [],
+    );
 
     expect(preview.nextItems).toEqual([
       {
         apiKey: "go-key",
         name: "OpenCode Go",
-        excludedModels: ["deepseek-v4-pro"],
+        excludedModels: ["*"],
         visionFallbackModel: "qwen3.5-plus",
         workspaceId: "wrk_123",
         authCookie: "auth-token",
+      },
+    ]);
+  });
+
+  test("preserves Ollama Cloud provider fields without per-key model fields", () => {
+    const text = createProviderExportText("ollama-cloud", [
+      {
+        apiKey: " ollama-key ",
+        name: "Ollama Cloud",
+        baseUrl: "https://ollama.com",
+        models: [{ name: "gpt-oss:120b" }],
+        excludedModels: [" gpt-oss:20b ", "*"],
+      },
+    ] satisfies ProviderSimpleConfig[]);
+
+    expect(JSON.parse(text)).toEqual({
+      provider: "ollama-cloud",
+      version: 1,
+      items: [
+        {
+          "api-key": "ollama-key",
+          "base-url": "https://ollama.com",
+          "excluded-models": ["*"],
+          name: "Ollama Cloud",
+        },
+      ],
+    });
+
+    const preview = prepareProviderImport(
+      "ollama-cloud",
+      JSON.stringify({
+        provider: "ollama-cloud",
+        items: [
+          {
+            "api-key": " ollama-key ",
+            name: "Ollama Cloud",
+            models: [{ name: "gpt-oss:120b" }],
+            "excluded-models": ["gpt-oss:20b", "*"],
+          },
+        ],
+      }),
+      [],
+    );
+
+    expect(preview.nextItems).toEqual([
+      {
+        apiKey: "ollama-key",
+        name: "Ollama Cloud",
+        baseUrl: "https://ollama.com",
+        excludedModels: ["*"],
       },
     ]);
   });

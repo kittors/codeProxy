@@ -74,16 +74,14 @@ export function ProviderCard({
     >
       {/* Header */}
       <div className="flex min-w-0 items-center justify-between gap-2">
-        <div className="flex min-w-0 items-center gap-2">
+        <div className="flex min-w-0 items-center">
           {onToggleSelected ? (
             <div
               className={[
-                "flex shrink-0 items-center justify-center overflow-hidden transition-[width,opacity] duration-200 ease-out",
+                "flex shrink-0 items-center justify-center overflow-hidden transition-[width,opacity,margin] duration-200 ease-out",
                 selected
-                  ? "w-7 opacity-100"
-                  : naturalHeight
-                    ? "w-7 opacity-0 group-hover:opacity-100 max-md:opacity-100"
-                    : "w-0 opacity-0 group-hover:w-7 group-hover:opacity-100 max-md:w-7 max-md:opacity-100",
+                  ? "mr-2 w-7 opacity-100"
+                  : "mr-0 w-0 opacity-0 group-hover:mr-2 group-hover:w-7 group-hover:opacity-100 max-md:mr-2 max-md:w-7 max-md:opacity-100",
               ].join(" ")}
             >
               <input
@@ -102,7 +100,7 @@ export function ProviderCard({
             {title}
           </p>
           {hasHeaderExtra ? (
-            <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+            <div className="ml-2 flex shrink-0 items-center gap-1 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
               {headerExtra}
             </div>
           ) : null}

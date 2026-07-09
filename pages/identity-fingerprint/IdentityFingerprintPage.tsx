@@ -14,6 +14,7 @@ import {
   type IdentityFingerprintProvider,
   type IdentityFingerprintProviderStatus,
   type IdentityFingerprintConfig,
+  type XAIIdentityFingerprint,
 } from "@code-proxy/api-client/endpoints/identity-fingerprint";
 import { Button } from "@code-proxy/ui";
 import { Card } from "@code-proxy/ui";
@@ -24,7 +25,7 @@ import { ToggleSwitch } from "@code-proxy/ui";
 import { useToast } from "@code-proxy/ui";
 import { CodexRecommendationsModal } from "./CodexRecommendationsModal";
 
-type ProviderTab = "codex" | "claude" | "gemini" | "kimi";
+type ProviderTab = "codex" | "claude" | "gemini" | "xai" | "kimi";
 type RuntimeProvider = IdentityFingerprintProvider;
 
 type ProviderRuntimeMap<T> = Record<RuntimeProvider, T[]>;
@@ -34,6 +35,7 @@ const PROVIDERS: Array<{ id: ProviderTab; label: string }> = [
   { id: "codex", label: "Codex" },
   { id: "claude", label: "Claude" },
   { id: "gemini", label: "Gemini" },
+  { id: "xai", label: "xAI" },
   { id: "kimi", label: "Kimi" },
 ];
 
@@ -41,18 +43,21 @@ const EMPTY_RUNTIME_RECORDS: ProviderRuntimeMap<IdentityFingerprintLearnedRecord
   claude: [],
   codex: [],
   gemini: [],
+  xai: [],
 };
 
 const EMPTY_EFFECTIVE_RECORDS: ProviderRuntimeMap<IdentityFingerprintEffectiveRecord> = {
   claude: [],
   codex: [],
   gemini: [],
+  xai: [],
 };
 
 const EMPTY_PROVIDER_STATUS: ProviderStatusMap = {
   claude: { enabled: false, learned_count: 0 },
   codex: { enabled: false, learned_count: 0 },
   gemini: { enabled: false, learned_count: 0 },
+  xai: { enabled: false, learned_count: 0 },
 };
 
 const SESSION_MODE_OPTIONS = [
@@ -96,6 +101,15 @@ const EMPTY_GEMINI: Required<GeminiIdentityFingerprint> = {
   "custom-headers": {},
 };
 
+const EMPTY_XAI: Required<XAIIdentityFingerprint> = {
+  enabled: false,
+  "user-agent": "",
+  "x-grok-client-identifier": "",
+  "x-grok-client-version": "",
+  "x-grok-conv-id": "",
+  "custom-headers": {},
+};
+
 const PROVIDER_FIELD_ORDER: Record<RuntimeProvider, string[]> = {
   claude: [
     "user-agent",
@@ -108,6 +122,7 @@ const PROVIDER_FIELD_ORDER: Record<RuntimeProvider, string[]> = {
   ],
   codex: ["user-agent", "version", "originator", "websocket-beta", "x-codex-beta-features"],
   gemini: ["user-agent", "x-goog-api-client", "client-metadata"],
+  xai: ["user-agent", "x-grok-client-identifier", "x-grok-client-version"],
 };
 
 const FIELD_LABEL_KEYS: Record<string, string> = {
@@ -124,6 +139,9 @@ const FIELD_LABEL_KEYS: Record<string, string> = {
   "stainless-timeout": "identity_fingerprint.claude_stainless_timeout",
   "x-goog-api-client": "identity_fingerprint.gemini_api_client",
   "client-metadata": "identity_fingerprint.gemini_client_metadata",
+  "x-grok-client-identifier": "identity_fingerprint.xai_client_identifier",
+  "x-grok-client-version": "identity_fingerprint.xai_client_version",
+  "x-grok-conv-id": "identity_fingerprint.xai_grok_conversation_id",
 };
 
 type KimiHeaderDefaults = {
@@ -173,6 +191,14 @@ function mergeGemini(
   };
 }
 
+function mergeXAI(base: XAIIdentityFingerprint | undefined): Required<XAIIdentityFingerprint> {
+  return {
+    ...EMPTY_XAI,
+    ...base,
+    "custom-headers": base?.["custom-headers"] ?? {},
+  };
+}
+
 function mergeRuntimeRecords<T>(
   input: Partial<Record<RuntimeProvider, T[]>> | undefined,
   empty: ProviderRuntimeMap<T>,
@@ -181,6 +207,7 @@ function mergeRuntimeRecords<T>(
     claude: input?.claude ?? empty.claude,
     codex: input?.codex ?? empty.codex,
     gemini: input?.gemini ?? empty.gemini,
+    xai: input?.xai ?? empty.xai,
   };
 }
 
@@ -191,6 +218,7 @@ function mergeProviderStatus(
     claude: input?.claude ?? EMPTY_PROVIDER_STATUS.claude,
     codex: input?.codex ?? EMPTY_PROVIDER_STATUS.codex,
     gemini: input?.gemini ?? EMPTY_PROVIDER_STATUS.gemini,
+    xai: input?.xai ?? EMPTY_PROVIDER_STATUS.xai,
   };
 }
 
@@ -371,6 +399,8 @@ function providerLabel(provider: RuntimeProvider) {
       return "Codex";
     case "gemini":
       return "Gemini";
+    case "xai":
+      return "xAI";
   }
 }
 
@@ -394,6 +424,8 @@ export function IdentityFingerprintPage() {
     useState<Required<GeminiIdentityFingerprint>>(EMPTY_GEMINI);
   const [geminiDefaults, setGeminiDefaults] =
     useState<Required<GeminiIdentityFingerprint>>(EMPTY_GEMINI);
+  const [xaiFingerprint, setXAIFingerprint] = useState<Required<XAIIdentityFingerprint>>(EMPTY_XAI);
+  const [xaiDefaults, setXAIDefaults] = useState<Required<XAIIdentityFingerprint>>(EMPTY_XAI);
   const [configYaml, setConfigYaml] = useState("");
   const [kimi, setKimi] = useState<KimiHeaderDefaults>(DEFAULT_KIMI_HEADERS);
   const [geminiHeadersText, setGeminiHeadersText] = useState(
@@ -403,6 +435,7 @@ export function IdentityFingerprintPage() {
   const [customHeadersText, setCustomHeadersText] = useState("{}");
   const [claudeCustomHeadersText, setClaudeCustomHeadersText] = useState("{}");
   const [geminiCustomHeadersText, setGeminiCustomHeadersText] = useState("{}");
+  const [xaiCustomHeadersText, setXAICustomHeadersText] = useState("{}");
   const [learnedRecords, setLearnedRecords] =
     useState<ProviderRuntimeMap<IdentityFingerprintLearnedRecord>>(EMPTY_RUNTIME_RECORDS);
   const [effectiveRecords, setEffectiveRecords] =
@@ -427,6 +460,8 @@ export function IdentityFingerprintPage() {
       const nextClaudeDefaults = mergeClaude(payload.defaults?.claude);
       const nextGeminiFingerprint = mergeGemini(payload["identity-fingerprint"]?.gemini);
       const nextGeminiDefaults = mergeGemini(payload.defaults?.gemini);
+      const nextXAI = mergeXAI(payload["identity-fingerprint"]?.xai);
+      const nextXAIDefaults = mergeXAI(payload.defaults?.xai);
       const parsedConfig = parseConfigYaml(yamlText);
       const gemini = firstGeminiHeaders(parsedConfig["gemini-api-key"]);
       setCodex(nextCodex);
@@ -435,6 +470,8 @@ export function IdentityFingerprintPage() {
       setClaudeDefaults(nextClaudeDefaults);
       setGeminiFingerprint(nextGeminiFingerprint);
       setGeminiDefaults(nextGeminiDefaults);
+      setXAIFingerprint(nextXAI);
+      setXAIDefaults(nextXAIDefaults);
       setConfigYaml(yamlText);
       setKimi(normalizeKimiHeaders(parsedConfig["kimi-header-defaults"]));
       setGeminiHeadersText(JSON.stringify(gemini.headers, null, 2));
@@ -442,6 +479,7 @@ export function IdentityFingerprintPage() {
       setCustomHeadersText(JSON.stringify(nextCodex["custom-headers"], null, 2));
       setClaudeCustomHeadersText(JSON.stringify(nextClaude["custom-headers"], null, 2));
       setGeminiCustomHeadersText(JSON.stringify(nextGeminiFingerprint["custom-headers"], null, 2));
+      setXAICustomHeadersText(JSON.stringify(nextXAI["custom-headers"], null, 2));
       setLearnedRecords(mergeRuntimeRecords(payload.learned, EMPTY_RUNTIME_RECORDS));
       setEffectiveRecords(mergeRuntimeRecords(payload.effective, EMPTY_EFFECTIVE_RECORDS));
       setProviderStatus(mergeProviderStatus(payload.status));
@@ -470,6 +508,10 @@ export function IdentityFingerprintPage() {
     setGeminiFingerprint((current) => ({ ...current, ...patch }));
   }, []);
 
+  const updateXAIFingerprint = useCallback((patch: Partial<XAIIdentityFingerprint>) => {
+    setXAIFingerprint((current) => ({ ...current, ...patch }));
+  }, []);
+
   const parsedCodexCustomHeaders = useMemo(() => {
     try {
       return parseCustomHeaders(customHeadersText);
@@ -493,6 +535,11 @@ export function IdentityFingerprintPage() {
     setGeminiCustomHeadersText(JSON.stringify(geminiDefaults["custom-headers"], null, 2));
   }, [geminiDefaults]);
 
+  const restoreXAIDefaults = useCallback(() => {
+    setXAIFingerprint(xaiDefaults);
+    setXAICustomHeadersText(JSON.stringify(xaiDefaults["custom-headers"], null, 2));
+  }, [xaiDefaults]);
+
   const restoreGeminiDefaults = useCallback(() => {
     setGeminiHeadersText(JSON.stringify(DEFAULT_GEMINI_HEADERS, null, 2));
   }, []);
@@ -512,6 +559,7 @@ export function IdentityFingerprintPage() {
           codex: nextCodex,
           claude,
           gemini: geminiFingerprint,
+          xai: xaiFingerprint,
         });
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : t("identity_fingerprint.save_failed");
@@ -527,7 +575,7 @@ export function IdentityFingerprintPage() {
       notify({ type: "success", message: t("identity_fingerprint.recommend_applied") });
       await loadPage();
     },
-    [claude, codex, geminiFingerprint, loadPage, notify, t],
+    [claude, codex, geminiFingerprint, loadPage, notify, t, xaiFingerprint],
   );
 
   const saveConfigYaml = useCallback(
@@ -553,6 +601,7 @@ export function IdentityFingerprintPage() {
         },
         claude,
         gemini: geminiFingerprint,
+        xai: xaiFingerprint,
       };
       await identityFingerprintApi.update(payload);
       notify({ type: "success", message: t("identity_fingerprint.saved") });
@@ -564,7 +613,7 @@ export function IdentityFingerprintPage() {
     } finally {
       setSaving(false);
     }
-  }, [claude, codex, customHeadersText, geminiFingerprint, loadPage, notify, t]);
+  }, [claude, codex, customHeadersText, geminiFingerprint, loadPage, notify, t, xaiFingerprint]);
 
   const saveClaude = useCallback(async () => {
     setSaving(true);
@@ -578,6 +627,7 @@ export function IdentityFingerprintPage() {
           "custom-headers": customHeaders,
         },
         gemini: geminiFingerprint,
+        xai: xaiFingerprint,
       };
       await identityFingerprintApi.update(payload);
       notify({ type: "success", message: t("identity_fingerprint.saved") });
@@ -589,7 +639,16 @@ export function IdentityFingerprintPage() {
     } finally {
       setSaving(false);
     }
-  }, [claude, claudeCustomHeadersText, codex, geminiFingerprint, loadPage, notify, t]);
+  }, [
+    claude,
+    claudeCustomHeadersText,
+    codex,
+    geminiFingerprint,
+    loadPage,
+    notify,
+    t,
+    xaiFingerprint,
+  ]);
 
   const saveGeminiFingerprint = useCallback(async () => {
     setSaving(true);
@@ -603,6 +662,7 @@ export function IdentityFingerprintPage() {
           ...geminiFingerprint,
           "custom-headers": customHeaders,
         },
+        xai: xaiFingerprint,
       };
       await identityFingerprintApi.update(payload);
       notify({ type: "success", message: t("identity_fingerprint.saved") });
@@ -614,7 +674,42 @@ export function IdentityFingerprintPage() {
     } finally {
       setSaving(false);
     }
-  }, [claude, codex, geminiCustomHeadersText, geminiFingerprint, loadPage, notify, t]);
+  }, [
+    claude,
+    codex,
+    geminiCustomHeadersText,
+    geminiFingerprint,
+    loadPage,
+    notify,
+    t,
+    xaiFingerprint,
+  ]);
+
+  const saveXAI = useCallback(async () => {
+    setSaving(true);
+    setError("");
+    try {
+      const customHeaders = parseCustomHeaders(xaiCustomHeadersText);
+      const payload: IdentityFingerprintConfig = {
+        codex,
+        claude,
+        gemini: geminiFingerprint,
+        xai: {
+          ...xaiFingerprint,
+          "custom-headers": customHeaders,
+        },
+      };
+      await identityFingerprintApi.update(payload);
+      notify({ type: "success", message: t("identity_fingerprint.saved") });
+      await loadPage();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : t("identity_fingerprint.save_failed");
+      setError(message);
+      notify({ type: "error", message });
+    } finally {
+      setSaving(false);
+    }
+  }, [claude, codex, geminiFingerprint, loadPage, notify, t, xaiCustomHeadersText, xaiFingerprint]);
 
   const saveGemini = useCallback(async () => {
     setSaving(true);
@@ -727,6 +822,15 @@ export function IdentityFingerprintPage() {
       [t("identity_fingerprint.gemini_client_metadata"), geminiFingerprint["client-metadata"]],
     ],
     [geminiFingerprint, t],
+  );
+
+  const xaiPreviewItems = useMemo(
+    () => [
+      [t("identity_fingerprint.preview_client"), xaiFingerprint["user-agent"]],
+      [t("identity_fingerprint.xai_client_identifier"), xaiFingerprint["x-grok-client-identifier"]],
+      [t("identity_fingerprint.xai_client_version"), xaiFingerprint["x-grok-client-version"]],
+    ],
+    [t, xaiFingerprint],
   );
 
   return (
@@ -1279,6 +1383,123 @@ export function IdentityFingerprintPage() {
                     status={providerStatus.gemini}
                     learned={learnedRecords.gemini}
                     effective={effectiveRecords.gemini}
+                    disabled={saving}
+                    onClear={clearLearnedRecord}
+                  />
+                </div>
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="xai" className="mt-5">
+            <div className="space-y-4">
+              <section className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 dark:border-neutral-800 dark:bg-neutral-900/45">
+                <div className="flex flex-col gap-4 2xl:flex-row 2xl:items-start 2xl:justify-between">
+                  <ToggleSwitch
+                    checked={Boolean(xaiFingerprint.enabled)}
+                    onCheckedChange={(enabled) => updateXAIFingerprint({ enabled })}
+                    label={t("identity_fingerprint.xai_enabled")}
+                    description={t("identity_fingerprint.xai_enabled_desc")}
+                    disabled={saving}
+                  />
+                  <div className="flex w-full flex-wrap gap-2 2xl:w-auto 2xl:justify-end">
+                    <Button
+                      variant="secondary"
+                      onClick={restoreXAIDefaults}
+                      disabled={loading || saving}
+                    >
+                      {t("identity_fingerprint.restore_defaults")}
+                    </Button>
+                    <Button onClick={() => void saveXAI()} disabled={loading || saving}>
+                      {saving
+                        ? t("identity_fingerprint.saving")
+                        : t("identity_fingerprint.save_xai")}
+                    </Button>
+                  </div>
+                </div>
+              </section>
+
+              <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+                <div className="space-y-4">
+                  <SimplePanel
+                    title={t("identity_fingerprint.xai_title")}
+                    description={t("identity_fingerprint.xai_desc")}
+                  >
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <Field
+                        label={t("identity_fingerprint.user_agent")}
+                        hint={t("identity_fingerprint.xai_user_agent_hint")}
+                      >
+                        <TextInput
+                          value={xaiFingerprint["user-agent"]}
+                          onChange={(event) =>
+                            updateXAIFingerprint({ "user-agent": event.target.value })
+                          }
+                          disabled={saving}
+                          placeholder={t("identity_fingerprint.auto_learn_placeholder")}
+                        />
+                      </Field>
+                      <Field
+                        label={t("identity_fingerprint.xai_client_identifier")}
+                        hint={t("identity_fingerprint.xai_client_identifier_hint")}
+                      >
+                        <TextInput
+                          value={xaiFingerprint["x-grok-client-identifier"]}
+                          onChange={(event) =>
+                            updateXAIFingerprint({
+                              "x-grok-client-identifier": event.target.value,
+                            })
+                          }
+                          disabled={saving}
+                          placeholder={t("identity_fingerprint.auto_learn_placeholder")}
+                        />
+                      </Field>
+                      <Field
+                        label={t("identity_fingerprint.xai_client_version")}
+                        hint={t("identity_fingerprint.xai_client_version_hint")}
+                      >
+                        <TextInput
+                          value={xaiFingerprint["x-grok-client-version"]}
+                          onChange={(event) =>
+                            updateXAIFingerprint({ "x-grok-client-version": event.target.value })
+                          }
+                          disabled={saving}
+                          placeholder={t("identity_fingerprint.auto_learn_placeholder")}
+                        />
+                      </Field>
+                    </div>
+                    <Field label={t("identity_fingerprint.custom_headers")}>
+                      <textarea
+                        value={xaiCustomHeadersText}
+                        onChange={(event) => setXAICustomHeadersText(event.target.value)}
+                        disabled={saving}
+                        spellCheck={false}
+                        className="min-h-24 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 font-mono text-sm text-slate-900 shadow-sm outline-none dark:border-neutral-800 dark:bg-neutral-900 dark:text-slate-100"
+                      />
+                      <p className="mt-2 text-xs text-slate-500 dark:text-white/50">
+                        {t("identity_fingerprint.xai_custom_headers_hint")}
+                      </p>
+                    </Field>
+                  </SimplePanel>
+                </div>
+
+                <div className="space-y-4">
+                  <SimplePanel
+                    title={t("identity_fingerprint.preview_title")}
+                    description={t("identity_fingerprint.xai_preview_desc")}
+                  >
+                    <div className="space-y-2">
+                      {xaiPreviewItems.map(([label, value]) => (
+                        <PreviewRow key={label} label={label} value={value} />
+                      ))}
+                    </div>
+                    <ProviderNotice>{t("identity_fingerprint.xai_notice")}</ProviderNotice>
+                  </SimplePanel>
+                  <RuntimeStatePanel
+                    provider="xai"
+                    status={providerStatus.xai}
+                    learned={learnedRecords.xai}
+                    effective={effectiveRecords.xai}
                     disabled={saving}
                     onClear={clearLearnedRecord}
                   />

@@ -1441,8 +1441,17 @@ export function RoutingConfigEditor({
     let cancelled = false;
     setModelsLoading(true);
     setModelsError("");
-    const modelLoader = editingSystemDefaultGroup
-      ? loadModelsForChannels(resolvedDraftChannelValues, SYSTEM_DEFAULT_GROUP_NAME)
+    const savedGroupName =
+      !editingSystemDefaultGroup && groupEditorId
+        ? values.routingChannelGroups.find((group) => group.id === groupEditorId)?.name.trim()
+        : "";
+    // Existing groups need their saved backend scope for model availability; new
+    // drafts do not exist server-side yet, so they stay channel-scoped only.
+    const modelGroupName = editingSystemDefaultGroup
+      ? SYSTEM_DEFAULT_GROUP_NAME
+      : savedGroupName || undefined;
+    const modelLoader = modelGroupName
+      ? loadModelsForChannels(resolvedDraftChannelValues, modelGroupName)
       : loadModelsForChannels(resolvedDraftChannelValues);
     modelLoader
       .then((models) => {
@@ -1486,9 +1495,11 @@ export function RoutingConfigEditor({
     groupEditorTab,
     editingSystemDefaultGroup,
     loadModelsForChannels,
+    groupEditorId,
     modelsSelectionTouched,
     resolvedDraftChannelKey,
     t,
+    values.routingChannelGroups,
   ]);
 
   return (

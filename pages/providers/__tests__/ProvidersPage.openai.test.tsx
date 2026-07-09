@@ -172,8 +172,11 @@ describe("ProvidersPage openai tab", () => {
     const openCodeGoTab = screen.getByRole("tab", { name: /OpenCode Go/ });
     const geminiTab = screen.getByRole("tab", { name: /Gemini/ });
 
-    expect(within(codexTab).getByText("2")).toBeInTheDocument();
-    expect(within(openCodeGoTab).getByText("1")).toBeInTheDocument();
+    const codexBadge = within(codexTab).getByText("2");
+    const openCodeGoBadge = within(openCodeGoTab).getByText("1");
+
+    expect(codexBadge).toHaveClass("inline-flex", "items-center", "justify-center");
+    expect(openCodeGoBadge).toHaveClass("inline-flex", "items-center", "justify-center");
     expect(within(geminiTab).queryByText("0")).not.toBeInTheDocument();
   });
 

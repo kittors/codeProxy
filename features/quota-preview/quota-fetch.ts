@@ -17,14 +17,20 @@ import {
   KIRO_QUOTA_URL,
   KIRO_REQUEST_BODY,
   KIRO_REQUEST_HEADERS,
+  XAI_BILLING_MONTHLY_URL,
+  XAI_BILLING_WEEKLY_URL,
+  XAI_REQUEST_HEADERS,
   buildAntigravityItems,
   buildClaudeItems,
   buildCodexItems,
   buildGeminiCliBuckets,
   buildKimiItems,
   buildKiroItems,
+  buildXaiBillingSummary,
+  buildXaiItems,
   clampPercent,
   isRecord,
+  mergeXaiBillingSummaries,
   normalizeAuthIndexValue,
   normalizeGeminiCliModelId,
   normalizeNumberValue,
@@ -36,16 +42,27 @@ import {
   parseGeminiCliQuotaPayload,
   parseKimiUsagePayload,
   parseKiroQuotaPayload,
+  parseXaiBillingPayload,
   parseResetTimeToMs,
   resolveAuthProvider,
   resolveCodexChatgptAccountId,
   resolveCodexResetCreditExpirations,
   resolveCodexResetCreditCount,
+  resolveXaiPlanType,
   resolveGeminiCliProjectId,
+  resolveXaiUserId,
+  type XaiBillingSummary,
   type QuotaItem,
 } from "@features/quota-preview/quota-helpers";
 
-export type QuotaProvider = "antigravity" | "claude" | "codex" | "gemini-cli" | "kimi" | "kiro";
+export type QuotaProvider =
+  | "antigravity"
+  | "claude"
+  | "codex"
+  | "gemini-cli"
+  | "kimi"
+  | "kiro"
+  | "xai";
 export type QuotaFetchResult = {
   items: QuotaItem[];
   planType?: string | null;
@@ -77,6 +94,13 @@ const buildCodexRequestHeaders = (file: AuthFileItem): Record<string, string> =>
   return requestHeader;
 };
 
+const buildXaiRequestHeaders = (file: AuthFileItem): Record<string, string> => {
+  const headers: Record<string, string> = { ...XAI_REQUEST_HEADERS };
+  const userId = resolveXaiUserId(file);
+  if (userId) headers["x-userid"] = userId;
+  return headers;
+};
+
 export const resolveQuotaProvider = (file: AuthFileItem): QuotaProvider | null => {
   const provider = resolveAuthProvider(file);
   if (provider === "antigravity") return "antigravity";
@@ -86,6 +110,7 @@ export const resolveQuotaProvider = (file: AuthFileItem): QuotaProvider | null =
   if (provider === "gemini-cli") return "gemini-cli";
   if (provider === "kimi") return "kimi";
   if (provider === "kiro") return "kiro";
+  if (provider === "xai") return "xai";
   return null;
 };
 
@@ -135,6 +160,23 @@ const isClaudeOAuthLikeFile = (file: AuthFileItem): boolean => {
     return false;
   }
   return true;
+};
+
+const requestXaiBilling = async (
+  authIndex: string,
+  url: string,
+  header: Record<string, string>,
+): Promise<XaiBillingSummary | null> => {
+  const result = await apiCallApi.request({
+    authIndex,
+    method: "GET",
+    url,
+    header,
+  });
+  if (result.statusCode < 200 || result.statusCode >= 300)
+    throw new Error(getApiCallErrorMessage(result));
+  const payload = parseXaiBillingPayload(result.body ?? result.bodyText);
+  return buildXaiBillingSummary(payload?.config);
 };
 
 export const fetchQuota = async (
@@ -298,6 +340,27 @@ export const fetchQuota = async (
     const payload = parseKimiUsagePayload(result.body ?? result.bodyText);
     if (!payload) throw new Error("parse_kimi_failed");
     return { items: buildKimiItems(payload) };
+  }
+
+  if (type === "xai") {
+    const header = buildXaiRequestHeaders(file);
+    const [weeklyResult, monthlyResult] = await Promise.allSettled([
+      requestXaiBilling(authIndex, XAI_BILLING_WEEKLY_URL, header),
+      requestXaiBilling(authIndex, XAI_BILLING_MONTHLY_URL, header),
+    ]);
+    const weeklySummary = weeklyResult.status === "fulfilled" ? weeklyResult.value : null;
+    const monthlySummary = monthlyResult.status === "fulfilled" ? monthlyResult.value : null;
+    const summary = mergeXaiBillingSummaries(weeklySummary, monthlySummary);
+    if (!summary) {
+      if (weeklyResult.status === "rejected" && monthlyResult.status === "rejected") {
+        throw weeklyResult.reason;
+      }
+      throw new Error("empty_data");
+    }
+    return {
+      items: buildXaiItems(summary),
+      planType: resolveXaiPlanType(summary.monthlyLimitCents),
+    };
   }
 
   const result = await apiCallApi.request({

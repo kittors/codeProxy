@@ -28,3 +28,11 @@ export function setCachedData<T>(key: string, data: T): void {
     // localStorage full or unavailable
   }
 }
+
+export function removeCachedData(key: string): void {
+  try {
+    localStorage.removeItem(`providers-page:cache:${key}`);
+  } catch {
+    // ignore
+  }
+}

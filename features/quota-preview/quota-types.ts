@@ -4,6 +4,7 @@ export type QuotaItem = {
   key?: string;
   label: string;
   percent: number | null;
+  value?: string;
   resetAtMs?: number;
   windowSeconds?: number;
   meta?: string;

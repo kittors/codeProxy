@@ -16,19 +16,24 @@ import {
   normalizeString,
   serializeGeminiKey,
   serializeBedrockKey,
+  serializeClineKey,
+  serializeOllamaCloudKey,
   serializeOpenCodeGoKey,
   serializeOpenAIProvider,
   serializeProviderKey,
 } from "./helpers";
 
 const isOauthBackedProviderRow = (item: Record<string, unknown>): boolean => {
-  const accountType = normalizeString(item.account_type ?? item.accountType)?.toLowerCase();
+  const accountType = normalizeString(
+    item.account_type ?? item.accountType,
+  )?.toLowerCase();
   if (accountType === "oauth") return true;
 
   const runtimeOnly = item.runtime_only ?? item.runtimeOnly;
   return (
     runtimeOnly === true ||
-    (typeof runtimeOnly === "string" && runtimeOnly.trim().toLowerCase() === "true")
+    (typeof runtimeOnly === "string" &&
+      runtimeOnly.trim().toLowerCase() === "true")
   );
 };
 
@@ -37,6 +42,13 @@ const normalizeClineBaseUrl = (value: unknown): string | undefined =>
 
 const normalizeOllamaCloudBaseUrl = (value: unknown): string =>
   normalizeString(value)?.replace(/\/+$/g, "") || "https://ollama.com";
+
+const normalizeModelAccessExcludedModels = (
+  value: unknown,
+): string[] | undefined =>
+  normalizeExcludedModels(value)?.some((model) => model.trim() === "*")
+    ? ["*"]
+    : undefined;
 
 export const providersApi = {
   async getGeminiKeys(): Promise<ProviderSimpleConfig[]> {
@@ -50,8 +62,10 @@ export const providersApi = {
         if (!apiKey) return null;
         const name = normalizeString(item.name) ?? undefined;
         const prefix = normalizeString(item.prefix) ?? undefined;
-        const baseUrl = normalizeString(item["base-url"] ?? item.baseUrl) ?? undefined;
-        const proxyId = normalizeString(item["proxy-id"] ?? item.proxyId) ?? undefined;
+        const baseUrl =
+          normalizeString(item["base-url"] ?? item.baseUrl) ?? undefined;
+        const proxyId =
+          normalizeString(item["proxy-id"] ?? item.proxyId) ?? undefined;
         const headers = normalizeHeaders(item.headers);
         const models = normalizeModels(item.models);
         const excludedModels = normalizeExcludedModels(
@@ -78,7 +92,9 @@ export const providersApi = {
     ),
 
   deleteGeminiKey: (apiKey: string) =>
-    apiClient.delete("/gemini-api-key", undefined, { params: { "api-key": apiKey } }),
+    apiClient.delete("/gemini-api-key", undefined, {
+      params: { "api-key": apiKey },
+    }),
 
   async getCodexConfigs(): Promise<ProviderSimpleConfig[]> {
     const data = await apiClient.get("/codex-api-key");
@@ -91,9 +107,12 @@ export const providersApi = {
         if (!apiKey) return null;
         const name = normalizeString(item.name) ?? undefined;
         const prefix = normalizeString(item.prefix) ?? undefined;
-        const baseUrl = normalizeString(item["base-url"] ?? item.baseUrl) ?? undefined;
-        const proxyUrl = normalizeString(item["proxy-url"] ?? item.proxyUrl) ?? undefined;
-        const proxyId = normalizeString(item["proxy-id"] ?? item.proxyId) ?? undefined;
+        const baseUrl =
+          normalizeString(item["base-url"] ?? item.baseUrl) ?? undefined;
+        const proxyUrl =
+          normalizeString(item["proxy-url"] ?? item.proxyUrl) ?? undefined;
+        const proxyId =
+          normalizeString(item["proxy-id"] ?? item.proxyId) ?? undefined;
         const headers = normalizeHeaders(item.headers);
         const models = normalizeModels(item.models);
         const excludedModels = normalizeExcludedModels(
@@ -121,7 +140,9 @@ export const providersApi = {
     ),
 
   deleteCodexConfig: (apiKey: string) =>
-    apiClient.delete("/codex-api-key", undefined, { params: { "api-key": apiKey } }),
+    apiClient.delete("/codex-api-key", undefined, {
+      params: { "api-key": apiKey },
+    }),
 
   async getOpenCodeGoConfigs(): Promise<ProviderSimpleConfig[]> {
     const data = await apiClient.get("/opencode-go-api-key");
@@ -134,19 +155,27 @@ export const providersApi = {
         if (!apiKey) return null;
         const name = normalizeString(item.name) ?? undefined;
         const prefix = normalizeString(item.prefix) ?? undefined;
-        const proxyUrl = normalizeString(item["proxy-url"] ?? item.proxyUrl) ?? undefined;
-        const proxyId = normalizeString(item["proxy-id"] ?? item.proxyId) ?? undefined;
+        const proxyUrl =
+          normalizeString(item["proxy-url"] ?? item.proxyUrl) ?? undefined;
+        const proxyId =
+          normalizeString(item["proxy-id"] ?? item.proxyId) ?? undefined;
         const headers = normalizeHeaders(item.headers);
         const models = normalizeModels(item.models);
-        const excludedModels = normalizeExcludedModels(
+        const excludedModels = normalizeModelAccessExcludedModels(
           item["excluded-models"] ?? item.excludedModels,
         );
         const visionFallbackModel =
-          normalizeString(item["vision-fallback-model"] ?? item.visionFallbackModel) ?? undefined;
-        const workspaceId = normalizeString(item["workspace-id"] ?? item.workspaceId) ?? undefined;
-        const authCookie = normalizeString(item["auth-cookie"] ?? item.authCookie) ?? undefined;
+          normalizeString(
+            item["vision-fallback-model"] ?? item.visionFallbackModel,
+          ) ?? undefined;
+        const workspaceId =
+          normalizeString(item["workspace-id"] ?? item.workspaceId) ??
+          undefined;
+        const authCookie =
+          normalizeString(item["auth-cookie"] ?? item.authCookie) ?? undefined;
         return {
           apiKey,
+          ...(item.disabled === true ? { disabled: true } : {}),
           ...(name ? { name } : {}),
           ...(prefix ? { prefix } : {}),
           ...(proxyUrl ? { proxyUrl } : {}),
@@ -168,8 +197,24 @@ export const providersApi = {
       configs.map((item) => serializeOpenCodeGoKey(item)),
     ),
 
+  patchOpenCodeGoConfig: (index: number, config: ProviderSimpleConfig) =>
+    apiClient.patch("/opencode-go-api-key", {
+      index,
+      value: serializeOpenCodeGoKey(config, {
+        includeApiKey: Boolean(config.apiKey.trim()),
+      }),
+    }),
+
+  patchOpenCodeGoExcludedModels: (index: number, excludedModels: string[]) =>
+    apiClient.patch("/opencode-go-api-key", {
+      index,
+      value: { "excluded-models": excludedModels },
+    }),
+
   deleteOpenCodeGoConfig: (apiKey: string) =>
-    apiClient.delete("/opencode-go-api-key", undefined, { params: { "api-key": apiKey } }),
+    apiClient.delete("/opencode-go-api-key", undefined, {
+      params: { "api-key": apiKey },
+    }),
 
   async getClineConfigs(): Promise<ProviderSimpleConfig[]> {
     const data = await apiClient.get("/cline-api-key");
@@ -183,18 +228,26 @@ export const providersApi = {
         const name = normalizeString(item.name) ?? undefined;
         const prefix = normalizeString(item.prefix) ?? undefined;
         const baseUrl =
-          normalizeClineBaseUrl(item["base-url"] ?? item.baseUrl) ?? "https://api.cline.bot/api/v1";
-        const proxyUrl = normalizeString(item["proxy-url"] ?? item.proxyUrl) ?? undefined;
-        const proxyId = normalizeString(item["proxy-id"] ?? item.proxyId) ?? undefined;
+          normalizeClineBaseUrl(item["base-url"] ?? item.baseUrl) ??
+          "https://api.cline.bot/api/v1";
+        const proxyUrl =
+          normalizeString(item["proxy-url"] ?? item.proxyUrl) ?? undefined;
+        const proxyId =
+          normalizeString(item["proxy-id"] ?? item.proxyId) ?? undefined;
         const headers = normalizeHeaders(item.headers);
         const models = normalizeModels(item.models);
-        const excludedModels = normalizeExcludedModels(
+        const excludedModels = normalizeModelAccessExcludedModels(
           item["excluded-models"] ?? item.excludedModels,
         );
         const visionFallbackModel =
-          normalizeString(item["vision-fallback-model"] ?? item.visionFallbackModel) ?? undefined;
+          normalizeString(
+            item["vision-fallback-model"] ?? item.visionFallbackModel,
+          ) ?? undefined;
+        const authCookie =
+          normalizeString(item["auth-cookie"] ?? item.authCookie) ?? undefined;
         return {
           apiKey,
+          ...(item.disabled === true ? { disabled: true } : {}),
           ...(name ? { name } : {}),
           ...(prefix ? { prefix } : {}),
           baseUrl,
@@ -204,6 +257,7 @@ export const providersApi = {
           ...(models ? { models } : {}),
           ...(excludedModels ? { excludedModels } : {}),
           ...(visionFallbackModel ? { visionFallbackModel } : {}),
+          ...(authCookie ? { authCookie } : {}),
         };
       })
       .filter(Boolean) as ProviderSimpleConfig[];
@@ -212,11 +266,27 @@ export const providersApi = {
   saveClineConfigs: (configs: ProviderSimpleConfig[]) =>
     apiClient.put(
       "/cline-api-key",
-      configs.map((item) => serializeProviderKey(item)),
+      configs.map((item) => serializeClineKey(item)),
     ),
 
+  patchClineConfig: (index: number, config: ProviderSimpleConfig) =>
+    apiClient.patch("/cline-api-key", {
+      index,
+      value: serializeClineKey(config, {
+        includeApiKey: Boolean(config.apiKey.trim()),
+      }),
+    }),
+
+  patchClineExcludedModels: (index: number, excludedModels: string[]) =>
+    apiClient.patch("/cline-api-key", {
+      index,
+      value: { "excluded-models": excludedModels },
+    }),
+
   deleteClineConfig: (apiKey: string) =>
-    apiClient.delete("/cline-api-key", undefined, { params: { "api-key": apiKey } }),
+    apiClient.delete("/cline-api-key", undefined, {
+      params: { "api-key": apiKey },
+    }),
 
   async getOllamaCloudConfigs(): Promise<ProviderSimpleConfig[]> {
     const data = await apiClient.get("/ollama-cloud-api-key");
@@ -229,16 +299,27 @@ export const providersApi = {
         if (!apiKey) return null;
         const name = normalizeString(item.name) ?? undefined;
         const prefix = normalizeString(item.prefix) ?? undefined;
-        const baseUrl = normalizeOllamaCloudBaseUrl(item["base-url"] ?? item.baseUrl);
-        const proxyUrl = normalizeString(item["proxy-url"] ?? item.proxyUrl) ?? undefined;
-        const proxyId = normalizeString(item["proxy-id"] ?? item.proxyId) ?? undefined;
+        const baseUrl = normalizeOllamaCloudBaseUrl(
+          item["base-url"] ?? item.baseUrl,
+        );
+        const proxyUrl =
+          normalizeString(item["proxy-url"] ?? item.proxyUrl) ?? undefined;
+        const proxyId =
+          normalizeString(item["proxy-id"] ?? item.proxyId) ?? undefined;
         const headers = normalizeHeaders(item.headers);
         const models = normalizeModels(item.models);
-        const excludedModels = normalizeExcludedModels(
+        const excludedModels = normalizeModelAccessExcludedModels(
           item["excluded-models"] ?? item.excludedModels,
         );
+        const visionFallbackModel =
+          normalizeString(
+            item["vision-fallback-model"] ?? item.visionFallbackModel,
+          ) ?? undefined;
+        const authCookie =
+          normalizeString(item["auth-cookie"] ?? item.authCookie) ?? undefined;
         return {
           apiKey,
+          ...(item.disabled === true ? { disabled: true } : {}),
           ...(name ? { name } : {}),
           ...(prefix ? { prefix } : {}),
           baseUrl,
@@ -247,6 +328,8 @@ export const providersApi = {
           ...(headers ? { headers } : {}),
           ...(models ? { models } : {}),
           ...(excludedModels ? { excludedModels } : {}),
+          ...(visionFallbackModel ? { visionFallbackModel } : {}),
+          ...(authCookie ? { authCookie } : {}),
         };
       })
       .filter(Boolean) as ProviderSimpleConfig[];
@@ -255,11 +338,27 @@ export const providersApi = {
   saveOllamaCloudConfigs: (configs: ProviderSimpleConfig[]) =>
     apiClient.put(
       "/ollama-cloud-api-key",
-      configs.map((item) => serializeProviderKey(item)),
+      configs.map((item) => serializeOllamaCloudKey(item)),
     ),
 
+  patchOllamaCloudConfig: (index: number, config: ProviderSimpleConfig) =>
+    apiClient.patch("/ollama-cloud-api-key", {
+      index,
+      value: serializeOllamaCloudKey(config, {
+        includeApiKey: Boolean(config.apiKey.trim()),
+      }),
+    }),
+
+  patchOllamaCloudExcludedModels: (index: number, excludedModels: string[]) =>
+    apiClient.patch("/ollama-cloud-api-key", {
+      index,
+      value: { "excluded-models": excludedModels },
+    }),
+
   deleteOllamaCloudConfig: (apiKey: string) =>
-    apiClient.delete("/ollama-cloud-api-key", undefined, { params: { "api-key": apiKey } }),
+    apiClient.delete("/ollama-cloud-api-key", undefined, {
+      params: { "api-key": apiKey },
+    }),
 
   queryOpenCodeGoUsage: (payload: {
     "workspace-id"?: string;
@@ -269,7 +368,33 @@ export const providersApi = {
     name?: string;
     "api-key"?: string;
     index?: number;
-  }) => apiClient.post<OpenCodeGoUsageResponse>("/opencode-go-api-key/usage", payload),
+  }) =>
+    apiClient.post<OpenCodeGoUsageResponse>(
+      "/opencode-go-api-key/usage",
+      payload,
+    ),
+
+  queryClineUsage: (payload: {
+    "auth-cookie"?: string;
+    "proxy-id"?: string;
+    "proxy-url"?: string;
+    name?: string;
+    "api-key"?: string;
+    index?: number;
+  }) => apiClient.post<OpenCodeGoUsageResponse>("/cline-api-key/usage", payload),
+
+  queryOllamaCloudUsage: (payload: {
+    "auth-cookie"?: string;
+    "proxy-id"?: string;
+    "proxy-url"?: string;
+    name?: string;
+    "api-key"?: string;
+    index?: number;
+  }) =>
+    apiClient.post<OpenCodeGoUsageResponse>(
+      "/ollama-cloud-api-key/usage",
+      payload,
+    ),
 
   async getClaudeConfigs(): Promise<ProviderSimpleConfig[]> {
     const data = await apiClient.get("/claude-api-key");
@@ -282,16 +407,20 @@ export const providersApi = {
         if (!apiKey) return null;
         const name = normalizeString(item.name) ?? undefined;
         const prefix = normalizeString(item.prefix) ?? undefined;
-        const baseUrl = normalizeString(item["base-url"] ?? item.baseUrl) ?? undefined;
-        const proxyUrl = normalizeString(item["proxy-url"] ?? item.proxyUrl) ?? undefined;
-        const proxyId = normalizeString(item["proxy-id"] ?? item.proxyId) ?? undefined;
+        const baseUrl =
+          normalizeString(item["base-url"] ?? item.baseUrl) ?? undefined;
+        const proxyUrl =
+          normalizeString(item["proxy-url"] ?? item.proxyUrl) ?? undefined;
+        const proxyId =
+          normalizeString(item["proxy-id"] ?? item.proxyId) ?? undefined;
         const headers = normalizeHeaders(item.headers);
         const models = normalizeModels(item.models);
         const excludedModels = normalizeExcludedModels(
           item["excluded-models"] ?? item.excludedModels,
         );
         const skipAnthropicProcessing =
-          item["skip-anthropic-processing"] === true || item.skipAnthropicProcessing === true;
+          item["skip-anthropic-processing"] === true ||
+          item.skipAnthropicProcessing === true;
         return {
           apiKey,
           ...(name ? { name } : {}),
@@ -315,7 +444,9 @@ export const providersApi = {
     ),
 
   deleteClaudeConfig: (apiKey: string) =>
-    apiClient.delete("/claude-api-key", undefined, { params: { "api-key": apiKey } }),
+    apiClient.delete("/claude-api-key", undefined, {
+      params: { "api-key": apiKey },
+    }),
 
   async getBedrockConfigs(): Promise<BedrockProviderConfig[]> {
     const data = await apiClient.get("/bedrock-api-key");
@@ -324,26 +455,36 @@ export const providersApi = {
       .map((item) => {
         if (!isRecord(item)) return null;
         if (isOauthBackedProviderRow(item)) return null;
-        const rawMode = normalizeString(item["auth-mode"] ?? item.authMode) ?? "sigv4";
+        const rawMode =
+          normalizeString(item["auth-mode"] ?? item.authMode) ?? "sigv4";
         const authMode: BedrockAuthMode =
           rawMode === "apikey" || rawMode === "api_key" || rawMode === "api-key"
             ? "api-key"
             : "sigv4";
         const apiKey = normalizeString(item["api-key"] ?? item.apiKey) ?? "";
-        const accessKeyId = normalizeString(item["access-key-id"] ?? item.accessKeyId) ?? undefined;
+        const accessKeyId =
+          normalizeString(item["access-key-id"] ?? item.accessKeyId) ??
+          undefined;
         const secretAccessKey =
-          normalizeString(item["secret-access-key"] ?? item.secretAccessKey) ?? undefined;
+          normalizeString(item["secret-access-key"] ?? item.secretAccessKey) ??
+          undefined;
         const sessionToken =
-          normalizeString(item["session-token"] ?? item.sessionToken) ?? undefined;
-        const credential = authMode === "api-key" ? apiKey : (accessKeyId ?? "");
+          normalizeString(item["session-token"] ?? item.sessionToken) ??
+          undefined;
+        const credential =
+          authMode === "api-key" ? apiKey : (accessKeyId ?? "");
         if (!credential) return null;
         const name = normalizeString(item.name) ?? undefined;
         const prefix = normalizeString(item.prefix) ?? undefined;
         const region = normalizeString(item.region) ?? undefined;
-        const forceGlobal = item["force-global"] === true || item.forceGlobal === true;
-        const baseUrl = normalizeString(item["base-url"] ?? item.baseUrl) ?? undefined;
-        const proxyUrl = normalizeString(item["proxy-url"] ?? item.proxyUrl) ?? undefined;
-        const proxyId = normalizeString(item["proxy-id"] ?? item.proxyId) ?? undefined;
+        const forceGlobal =
+          item["force-global"] === true || item.forceGlobal === true;
+        const baseUrl =
+          normalizeString(item["base-url"] ?? item.baseUrl) ?? undefined;
+        const proxyUrl =
+          normalizeString(item["proxy-url"] ?? item.proxyUrl) ?? undefined;
+        const proxyId =
+          normalizeString(item["proxy-id"] ?? item.proxyId) ?? undefined;
         const headers = normalizeHeaders(item.headers);
         const models = normalizeModels(item.models);
         const excludedModels = normalizeExcludedModels(
@@ -355,7 +496,9 @@ export const providersApi = {
           ...(name ? { name } : {}),
           ...(prefix ? { prefix } : {}),
           ...(authMode === "sigv4" && accessKeyId ? { accessKeyId } : {}),
-          ...(authMode === "sigv4" && secretAccessKey ? { secretAccessKey } : {}),
+          ...(authMode === "sigv4" && secretAccessKey
+            ? { secretAccessKey }
+            : {}),
           ...(authMode === "sigv4" && sessionToken ? { sessionToken } : {}),
           ...(region ? { region } : {}),
           ...(forceGlobal ? { forceGlobal } : {}),
@@ -390,9 +533,12 @@ export const providersApi = {
         if (!apiKey) return null;
         const name = normalizeString(item.name) ?? undefined;
         const prefix = normalizeString(item.prefix) ?? undefined;
-        const baseUrl = normalizeString(item["base-url"] ?? item.baseUrl) ?? undefined;
-        const proxyUrl = normalizeString(item["proxy-url"] ?? item.proxyUrl) ?? undefined;
-        const proxyId = normalizeString(item["proxy-id"] ?? item.proxyId) ?? undefined;
+        const baseUrl =
+          normalizeString(item["base-url"] ?? item.baseUrl) ?? undefined;
+        const proxyUrl =
+          normalizeString(item["proxy-url"] ?? item.proxyUrl) ?? undefined;
+        const proxyId =
+          normalizeString(item["proxy-id"] ?? item.proxyId) ?? undefined;
         const headers = normalizeHeaders(item.headers);
         const models = normalizeModels(item.models);
         return {
@@ -416,7 +562,9 @@ export const providersApi = {
     ),
 
   deleteVertexConfig: (apiKey: string) =>
-    apiClient.delete("/vertex-api-key", undefined, { params: { "api-key": apiKey } }),
+    apiClient.delete("/vertex-api-key", undefined, {
+      params: { "api-key": apiKey },
+    }),
 
   async getOpenAIProviders(): Promise<OpenAIProvider[]> {
     const data = await apiClient.get("/openai-compatibility");
@@ -428,15 +576,21 @@ export const providersApi = {
         const name = normalizeString(item.name) ?? "";
         if (!name) return null;
         const disabled = item.disabled === true;
-        const baseUrl = normalizeString(item["base-url"] ?? item.baseUrl) ?? undefined;
+        const baseUrl =
+          normalizeString(item["base-url"] ?? item.baseUrl) ?? undefined;
         const prefix = normalizeString(item.prefix) ?? undefined;
         const headers = normalizeHeaders(item.headers);
         const models = normalizeModels(item.models);
-        const apiKeyEntries = normalizeApiKeyEntries(item["api-key-entries"] ?? item.apiKeyEntries);
+        const apiKeyEntries = normalizeApiKeyEntries(
+          item["api-key-entries"] ?? item.apiKeyEntries,
+        );
         const priorityRaw = item.priority;
         const priority =
-          typeof priorityRaw === "number" && Number.isFinite(priorityRaw) ? priorityRaw : undefined;
-        const testModel = normalizeString(item["test-model"] ?? item.testModel) ?? undefined;
+          typeof priorityRaw === "number" && Number.isFinite(priorityRaw)
+            ? priorityRaw
+            : undefined;
+        const testModel =
+          normalizeString(item["test-model"] ?? item.testModel) ?? undefined;
         return {
           name,
           ...(disabled ? { disabled } : {}),

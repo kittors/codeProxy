@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { ToastProvider } from "@code-proxy/ui";
 import { ThemeProvider } from "@code-proxy/ui";
 import { AuthFilesPage } from "@pages/auth-files/AuthFilesPage";
+import type { AuthFileItem, AuthFileTrendResponse, EntityStatsResponse } from "@code-proxy/api-client";
 import {
   AUTH_FILES_DATA_CACHE_KEY,
   AUTH_FILES_QUOTA_AUTO_REFRESH_KEY,
@@ -14,7 +15,7 @@ import {
 import i18n from "@code-proxy/i18n";
 
 const mocks = vi.hoisted(() => ({
-  list: vi.fn(async () => ({
+  list: vi.fn<() => Promise<{ files: AuthFileItem[] }>>(async () => ({
     files: [
       {
         name: "qwen.json",
@@ -25,8 +26,11 @@ const mocks = vi.hoisted(() => ({
       },
     ],
   })),
-  getEntityStats: vi.fn(async () => ({ source: [], auth_index: [] })),
-  getAuthFileTrend: vi.fn(async (authIndex: string) => ({
+  getEntityStats: vi.fn<() => Promise<EntityStatsResponse>>(async () => ({
+    source: [],
+    auth_index: [],
+  })),
+  getAuthFileTrend: vi.fn(async (authIndex: string): Promise<AuthFileTrendResponse> => ({
     auth_index: authIndex,
     days: 7,
     hours: 5,
@@ -1224,6 +1228,153 @@ describe("AuthFilesPage files table", () => {
     });
   });
 
+  test("resets the file group when deleting the last file for the selected provider", async () => {
+    const now = Date.now();
+    const xaiFile: AuthFileItem = {
+      name: "xai-user.json",
+      type: "xai",
+      provider: "xai",
+      account_type: "oauth",
+      email: "user@example.com",
+      auth_index: "xai-auth",
+      size: 2048,
+      modified: now,
+      disabled: false,
+    };
+
+    window.localStorage.setItem(
+      AUTH_FILES_UI_STATE_KEY,
+      JSON.stringify({ tab: "files", filter: "xai", search: "", page: 1 }),
+    );
+    mocks.list.mockImplementation(async () => ({ files: [xaiFile] }));
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("user@example.com")).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "File group" })).toHaveTextContent(/xai1/);
+
+    fireEvent.click(screen.getByLabelText("Select user@example.com"));
+    fireEvent.click(screen.getByRole("button", { name: "Delete selected (1)" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Delete" }));
+
+    await waitFor(() => {
+      expect(mocks.deleteFile).toHaveBeenCalledWith("xai-user.json");
+      expect(screen.queryByText("user@example.com")).not.toBeInTheDocument();
+      expect(screen.getByRole("combobox", { name: "File group" })).toHaveTextContent(/All0/);
+    });
+  });
+
+  test("cards view shows xAI billing quota instead of local usage", async () => {
+    const now = Date.now();
+    const xaiFile: AuthFileItem = {
+      name: "xai-user.json",
+      type: "xai",
+      provider: "xai",
+      account_type: "oauth",
+      email: "user@example.com",
+      auth_index: "xai-auth",
+      size: 2048,
+      modified: now,
+      disabled: false,
+    };
+
+    window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
+    mocks.list.mockImplementation(async () => ({ files: [xaiFile] }));
+    mocks.fetchQuota.mockResolvedValue({
+      items: [
+        {
+          key: "weekly_limit",
+          label: "xai_quota.weekly_limit",
+          percent: 75,
+          value: "75%",
+          resetAtMs: now + 7 * 24 * 60 * 60 * 1000,
+          windowSeconds: 604800,
+          meta: "07/06/2026 - 07/13/2026",
+        },
+        {
+          key: "product:Grok 4",
+          label: "xai_quota.product_usage_named::Grok 4",
+          percent: 60,
+          value: "60%",
+        },
+        {
+          key: "pay_as_you_go",
+          label: "xai_quota.pay_as_you_go_label",
+          percent: 80,
+          value: "80%",
+          meta: "$40.00 / $50.00",
+        },
+        {
+          key: "monthly_credits",
+          label: "xai_quota.monthly_credits",
+          percent: 87,
+          value: "87%",
+          resetAtMs: now + 23 * 24 * 60 * 60 * 1000,
+          meta: "$130.00 / $150.00",
+        },
+      ],
+      planType: "supergrok",
+    });
+    mocks.getEntityStats.mockImplementation(async () => ({
+      source: [],
+      auth_index: [
+        {
+          entity_name: "xai-auth",
+          requests: 20,
+          failed: 2,
+          avg_latency: 120,
+          total_tokens: 4000,
+        },
+      ],
+    }));
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    const title = await screen.findByText("user@example.com");
+    const card = title.closest("section");
+    expect(card).not.toBeNull();
+    const quota = within(card as HTMLElement).getByTestId("auth-file-card-quota");
+
+    await waitFor(() => {
+      expect(mocks.fetchQuota).toHaveBeenCalledWith(
+        "xai",
+        expect.objectContaining({ name: "xai-user.json" }),
+      );
+      expect(quota).toHaveTextContent("Weekly limit");
+      expect(quota).toHaveTextContent("75%");
+      expect(quota).toHaveTextContent("Grok 4 usage");
+      expect(quota).toHaveTextContent("60%");
+      expect(quota).toHaveTextContent("Pay as you go");
+      expect(quota).toHaveTextContent("$40.00 / $50.00");
+      expect(quota).toHaveTextContent("Monthly credits");
+      expect(quota).toHaveTextContent("$130.00 / $150.00");
+      expect(card as HTMLElement).toHaveTextContent("Plan SuperGrok");
+    });
+    expect(quota).not.toHaveTextContent("Used");
+    expect(quota).not.toHaveTextContent("Requests");
+    expect(quota).not.toHaveTextContent("Failure");
+  });
+
   test("shows a skeleton table while first loading", async () => {
     mocks.list.mockImplementationOnce(() => new Promise(() => {}));
 
@@ -1599,6 +1750,80 @@ describe("AuthFilesPage files table", () => {
     expect(mocks.getAuthFileTrend).toHaveBeenCalledWith("77", { days: 7, hours: 5 });
   });
 
+  test("cards view falls back to request_total when xAI weekly cycle is unknown", async () => {
+    window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
+    mocks.list.mockImplementation(async () => ({
+      files: [
+        {
+          name: "xai-user.json",
+          type: "xai",
+          provider: "xai",
+          account_type: "oauth",
+          email: "user@example.com",
+          auth_index: "xai-auth",
+          size: 2048,
+          modified: Date.now(),
+          disabled: false,
+        },
+      ],
+    }));
+    mocks.getEntityStats.mockImplementation(
+      async () =>
+        ({
+          source: [],
+          auth_index: [
+            { entity_name: "xai-auth", requests: 116, failed: 0, avg_latency: 0, total_tokens: 0 },
+          ],
+        }) as any,
+    );
+    mocks.getAuthFileTrend.mockImplementation(async (authIndex: string) => ({
+      auth_index: authIndex,
+      days: 7,
+      hours: 5,
+      request_total: 116,
+      cycle_request_total: 0,
+      cycle_cost_total: 0,
+      weekly_quota_used_percent: null,
+      cycle_known: false,
+      cycle_start: "",
+      daily_usage: [{ date: "2026-07-08", requests: 116, cost: 0.12 }],
+      hourly_usage: [],
+      quota_series: [],
+    }));
+    mocks.fetchQuota.mockResolvedValue({
+      items: [
+        {
+          key: "weekly_limit",
+          label: "xai_quota.weekly_limit",
+          percent: 75,
+          value: "75%",
+          windowSeconds: 604800,
+        },
+      ],
+      planType: "supergrok",
+    });
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    const title = await screen.findByText("user@example.com");
+    const card = title.closest("section");
+    expect(card).not.toBeNull();
+    // Prefer request_total over a misleading cycle_request_total of 0 when cycle_known is false.
+    expect(await within(card as HTMLElement).findByText("116 calls")).toBeInTheDocument();
+    expect(within(card as HTMLElement).getByText("Plan SuperGrok")).toBeInTheDocument();
+    expect(mocks.getAuthFileTrend).toHaveBeenCalledWith("xai-auth", { days: 7, hours: 5 });
+  });
+
   test("filters auth files by custom tag options", async () => {
     const user = userEvent.setup();
     mocks.list.mockImplementation(async () => ({
@@ -1802,7 +2027,7 @@ describe("AuthFilesPage files table", () => {
 
     expect(await screen.findByText("codex-alpha.json")).toBeInTheDocument();
     const fileGroupSelect = screen.getByRole("combobox", { name: "File group" });
-    expect(fileGroupSelect).toHaveTextContent("All (3)");
+    expect(fileGroupSelect).toHaveTextContent(/All3/);
     await user.click(fileGroupSelect);
     expect(await screen.findByRole("option", { name: /codex\s*2/i })).toBeInTheDocument();
     expect(screen.getByRole("option", { name: /qwen\s*1/i })).toBeInTheDocument();
@@ -1813,7 +2038,7 @@ describe("AuthFilesPage files table", () => {
     expect(screen.getByText("codex-alpha.json")).toBeInTheDocument();
     await waitFor(() => expect(screen.queryByText("codex-beta.json")).not.toBeInTheDocument());
     expect(screen.queryByText("qwen-lab.json")).not.toBeInTheDocument();
-    expect(screen.getByRole("combobox", { name: "File group" })).toHaveTextContent("All (3)");
+    expect(screen.getByRole("combobox", { name: "File group" })).toHaveTextContent(/All3/);
   });
 
   test("refreshes only the clicked auth-file card cycle call count after quota refresh", async () => {
@@ -3334,8 +3559,7 @@ describe("AuthFilesPage files table", () => {
     expect(tooltips).toHaveLength(1);
     expect(within(tooltips[0]).getByText("Claude")).toBeInTheDocument();
     const resetText = Array.from(tooltips[0].querySelectorAll("span")).find(
-      (element) =>
-        element.textContent?.includes("s") && element.className.includes("tabular-nums"),
+      (element) => element.textContent?.includes("s") && element.className.includes("tabular-nums"),
     );
     expect(resetText).toBeTruthy();
     expect(resetText).not.toHaveClass("truncate");

@@ -20,6 +20,7 @@ import {
   Upload,
 } from "lucide-react";
 import type { AuthFileItem } from "@code-proxy/api-client";
+import { VendorIcon } from "@code-proxy/assets";
 import { Button, buttonClassName } from "@code-proxy/ui";
 import { Card } from "@code-proxy/ui";
 import { EmptyState } from "@code-proxy/ui";
@@ -54,6 +55,7 @@ import {
   resolveAuthFileSupplementalTags,
   resolveFileType,
   shouldShowAuthFileDisplayTag,
+  shouldShowAuthFilePlanBadge,
 } from "@code-proxy/domain";
 import {
   parseIdTokenPayload,
@@ -719,17 +721,28 @@ export function AuthFilesFilesTab({
         const count =
           key === "all" ? filterCounts.total : (filterCounts.counts[normalizedKey] ?? 0);
         const label = key === "all" ? t("auth_files.all") : key;
+        const countPill = (
+          <span className="inline-flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-slate-100 px-1 text-[10px] font-semibold tabular-nums text-slate-700 dark:bg-white/10 dark:text-white/70">
+            {count}
+          </span>
+        );
         return {
           value: key,
-          label: (
-            <span className="flex min-w-0 items-center gap-2">
+          label,
+          icon:
+            key === "all" ? undefined : (
+              <VendorIcon modelId={normalizedKey || key} size={14} />
+            ),
+          trailing: countPill,
+          triggerLabel: (
+            <span className="inline-flex min-w-0 items-center gap-2">
+              {key === "all" ? null : (
+                <VendorIcon modelId={normalizedKey || key} size={14} />
+              )}
               <span className="min-w-0 truncate">{label}</span>
-              <span className="ml-auto inline-flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-slate-100 px-1 text-[10px] font-semibold tabular-nums text-slate-700 dark:bg-white/10 dark:text-white/70">
-                {count}
-              </span>
+              {countPill}
             </span>
           ),
-          triggerLabel: `${label} (${count})`,
           searchText: `${key} ${label}`,
         };
       }),
@@ -1322,9 +1335,7 @@ export function AuthFilesFilesTab({
                   const planType = resolveAuthFilePlanType(file, state);
                   const displayTags = resolveAuthFileSupplementalTags(file, state);
                   const showTypeBadge = shouldShowAuthFileDisplayTag(file, typeKey);
-                  const showPlanBadge = planType
-                    ? shouldShowAuthFileDisplayTag(file, planType)
-                    : false;
+                  const showPlanBadge = shouldShowAuthFilePlanBadge(file, planType);
                   const subscriptionBadge = renderSubscriptionBadge(file);
                   const stats = resolveAuthFileStats(file, usageIndex);
                   const usageTotalCalls = stats.success + stats.failure;
@@ -1525,7 +1536,7 @@ export function AuthFilesFilesTab({
                           </p>
                         ) : null}
 
-                        {!provider ? (
+                        {!provider && slots.length === 0 ? (
                           <div className="text-xs text-slate-400 dark:text-white/40">--</div>
                         ) : slots.length > 0 ? (
                           <div className="space-y-2.5">

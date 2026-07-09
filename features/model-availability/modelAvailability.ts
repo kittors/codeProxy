@@ -6,7 +6,11 @@ import type {
   ProviderModel,
   ProviderSimpleConfig,
 } from "@code-proxy/api-client";
-import { matchesModelPattern, normalizeProviderKey, resolveFileType } from "@code-proxy/domain";
+import {
+  matchesModelPattern,
+  normalizeProviderKey,
+  resolveFileType,
+} from "@code-proxy/domain";
 import {
   getConfiguredAvailabilityCacheVersion,
   invalidateConfiguredModelAvailability,
@@ -117,12 +121,21 @@ const PROVIDER_CHANNELS = [
   { key: "gemini", load: () => providersApi.getGeminiKeys() },
   { key: "claude", load: () => providersApi.getClaudeConfigs() },
   { key: "codex", load: () => providersApi.getCodexConfigs() },
+  { key: "cline", load: () => providersApi.getClineConfigs() },
   { key: "opencode-go", load: () => providersApi.getOpenCodeGoConfigs() },
   { key: "ollama-cloud", load: () => providersApi.getOllamaCloudConfigs() },
   { key: "vertex", load: () => providersApi.getVertexConfigs() },
 ] as const;
 
-const emptyAvailability = (usesMappedOwners = false): ConfiguredModelAvailability => ({
+const MODEL_ACCESS_PROVIDER_KEYS = new Set([
+  "cline",
+  "opencode-go",
+  "ollama-cloud",
+]);
+
+const emptyAvailability = (
+  usesMappedOwners = false,
+): ConfiguredModelAvailability => ({
   scoped: false,
   items: [],
   idSet: new Set(),
@@ -142,7 +155,9 @@ export const emptyModelPricing = (): ModelPricing => ({
 const normalizeOwnerValue = (value: string): string =>
   value.trim().replace(/\s+/g, "-").toLowerCase();
 
-const normalizeAuthGroupOwnerMappings = (payload: unknown): AuthGroupOwnerMappingMap => {
+const normalizeAuthGroupOwnerMappings = (
+  payload: unknown,
+): AuthGroupOwnerMappingMap => {
   const record = isRecord(payload) ? payload : {};
   const rawList = Array.isArray(record.items)
     ? record.items
@@ -155,21 +170,28 @@ const normalizeAuthGroupOwnerMappings = (payload: unknown): AuthGroupOwnerMappin
   const output: AuthGroupOwnerMappingMap = {};
   for (const item of rawList) {
     if (!isRecord(item)) continue;
-    const authGroup = normalizeProviderKey(String(item.auth_group ?? item.authGroup ?? ""));
-    const owner = normalizeOwnerValue(String(item.owner ?? item.owner_value ?? ""));
+    const authGroup = normalizeProviderKey(
+      String(item.auth_group ?? item.authGroup ?? ""),
+    );
+    const owner = normalizeOwnerValue(
+      String(item.owner ?? item.owner_value ?? ""),
+    );
     if (!authGroup || authGroup === "all" || !owner) continue;
     output[authGroup] = owner;
   }
   return output;
 };
 
-const loadAuthGroupOwnerMappingMap = async (): Promise<AuthGroupOwnerMappingMap> => {
-  try {
-    return normalizeAuthGroupOwnerMappings(await apiClient.get("/auth-group-model-owner-mappings"));
-  } catch {
-    return {};
-  }
-};
+const loadAuthGroupOwnerMappingMap =
+  async (): Promise<AuthGroupOwnerMappingMap> => {
+    try {
+      return normalizeAuthGroupOwnerMappings(
+        await apiClient.get("/auth-group-model-owner-mappings"),
+      );
+    } catch {
+      return {};
+    }
+  };
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === "object" && !Array.isArray(value);
@@ -179,17 +201,27 @@ const asNumber = (value: unknown): number => {
   return Number.isFinite(num) && num >= 0 ? num : 0;
 };
 
-export const normalizeModelPricing = (raw: Record<string, unknown>): ModelPricing => {
+export const normalizeModelPricing = (
+  raw: Record<string, unknown>,
+): ModelPricing => {
   const pricing = isRecord(raw.pricing) ? raw.pricing : {};
   const mode: ModelPricingMode =
     pricing.mode === "call" || raw.pricing_mode === "call" ? "call" : "token";
 
   return {
     mode,
-    inputPricePerMillion: asNumber(pricing.input_price_per_million ?? pricing.prompt),
-    outputPricePerMillion: asNumber(pricing.output_price_per_million ?? pricing.completion),
-    cachedPricePerMillion: asNumber(pricing.cached_price_per_million ?? pricing.cache),
-    cacheReadPricePerMillion: asNumber(pricing.cache_read_price_per_million ?? pricing.cacheRead),
+    inputPricePerMillion: asNumber(
+      pricing.input_price_per_million ?? pricing.prompt,
+    ),
+    outputPricePerMillion: asNumber(
+      pricing.output_price_per_million ?? pricing.completion,
+    ),
+    cachedPricePerMillion: asNumber(
+      pricing.cached_price_per_million ?? pricing.cache,
+    ),
+    cacheReadPricePerMillion: asNumber(
+      pricing.cache_read_price_per_million ?? pricing.cacheRead,
+    ),
     cacheWritePricePerMillion: asNumber(
       pricing.cache_write_price_per_million ?? pricing.cacheWrite,
     ),
@@ -242,11 +274,15 @@ const normalizeModelSupportsVision = (
   return inputModalities.includes("image");
 };
 
-export const normalizeModelConfigMetadata = (item: unknown): ModelConfigMetadataItem | null => {
+export const normalizeModelConfigMetadata = (
+  item: unknown,
+): ModelConfigMetadataItem | null => {
   if (!isRecord(item)) return null;
   const id = String(item.id ?? item.model_id ?? item.name ?? "").trim();
   if (!id) return null;
-  const inputModalities = normalizeModelModalities(item.input_modalities ?? item.inputModalities);
+  const inputModalities = normalizeModelModalities(
+    item.input_modalities ?? item.inputModalities,
+  );
   const outputModalities = normalizeModelModalities(
     item.output_modalities ?? item.outputModalities,
   );
@@ -263,7 +299,9 @@ export const normalizeModelConfigMetadata = (item: unknown): ModelConfigMetadata
   };
 };
 
-export const normalizeModelConfigMetadataRows = (payload: unknown): ModelConfigMetadataItem[] => {
+export const normalizeModelConfigMetadataRows = (
+  payload: unknown,
+): ModelConfigMetadataItem[] => {
   const record = isRecord(payload) ? payload : {};
   const rawList = Array.isArray(record.data)
     ? record.data
@@ -295,7 +333,9 @@ const normalizeModelPath = (item: unknown): ModelPathItem | null => {
   };
 };
 
-const normalizeModelPathCapability = (item: unknown): ModelPathRouteCapability | null => {
+const normalizeModelPathCapability = (
+  item: unknown,
+): ModelPathRouteCapability | null => {
   const normalized = normalizeModelPath(item);
   if (!normalized) return null;
   return {
@@ -306,7 +346,9 @@ const normalizeModelPathCapability = (item: unknown): ModelPathRouteCapability |
   };
 };
 
-const normalizeModelPathAvailabilityItem = (item: unknown): ModelPathAvailabilityItem | null => {
+const normalizeModelPathAvailabilityItem = (
+  item: unknown,
+): ModelPathAvailabilityItem | null => {
   if (!isRecord(item)) return null;
   const id = String(item.id ?? "").trim();
   if (!id) return null;
@@ -324,14 +366,18 @@ const normalizeModelPathAvailabilityItem = (item: unknown): ModelPathAvailabilit
   };
 };
 
-const normalizeModelPathRouteItem = (route: unknown): ModelPathRouteItem | null => {
+const normalizeModelPathRouteItem = (
+  route: unknown,
+): ModelPathRouteItem | null => {
   if (!isRecord(route)) return null;
   const path = String(route.path ?? "").trim();
   if (!path) return null;
   const capabilities = Array.isArray(route.capabilities)
     ? route.capabilities
         .map((capability) => normalizeModelPathCapability(capability))
-        .filter((capability): capability is ModelPathRouteCapability => Boolean(capability))
+        .filter((capability): capability is ModelPathRouteCapability =>
+          Boolean(capability),
+        )
     : [];
   return {
     label: String(route.label ?? ""),
@@ -343,9 +389,15 @@ const normalizeModelPathRouteItem = (route: unknown): ModelPathRouteItem | null 
   };
 };
 
-export const normalizeModelPathAvailability = (payload: unknown): ModelPathAvailability => {
+export const normalizeModelPathAvailability = (
+  payload: unknown,
+): ModelPathAvailability => {
   const record = isRecord(payload) ? payload : {};
-  const rawItems = Array.isArray(record.data) ? record.data : Array.isArray(payload) ? payload : [];
+  const rawItems = Array.isArray(record.data)
+    ? record.data
+    : Array.isArray(payload)
+      ? payload
+      : [];
   const items = rawItems
     .map((item) => normalizeModelPathAvailabilityItem(item))
     .filter((item): item is ModelPathAvailabilityItem => Boolean(item))
@@ -415,8 +467,11 @@ const providerModelId = (model: ProviderModel): string => {
 };
 
 const isExcluded = (modelId: string, excludedModels?: string[]) => {
-  if (!Array.isArray(excludedModels) || excludedModels.length === 0) return false;
-  return excludedModels.some((pattern) => matchesModelPattern(modelId, pattern));
+  if (!Array.isArray(excludedModels) || excludedModels.length === 0)
+    return false;
+  return excludedModels.some((pattern) =>
+    matchesModelPattern(modelId, pattern),
+  );
 };
 
 const addExplicitProviderModels = (
@@ -466,13 +521,24 @@ const hasCredential = (config: ProviderSimpleConfig): boolean =>
 
 const isOpenAIProviderServiceable = (provider: OpenAIProvider): boolean => {
   if (provider.disabled === true) return false;
-  if (!Array.isArray(provider.apiKeyEntries) || provider.apiKeyEntries.length === 0) return true;
+  if (
+    !Array.isArray(provider.apiKeyEntries) ||
+    provider.apiKeyEntries.length === 0
+  )
+    return true;
   return provider.apiKeyEntries.some(
-    (entry) => entry.disabled !== true && Boolean(String(entry.apiKey ?? "").trim()),
+    (entry) =>
+      entry.disabled !== true && Boolean(String(entry.apiKey ?? "").trim()),
   );
 };
 
-const loadStaticDefinitions = async (provider: string): Promise<ModelDefinition[]> => {
+const hasDisableAllModelsRule = (excludedModels?: string[]) =>
+  Array.isArray(excludedModels) &&
+  excludedModels.some((model) => String(model ?? "").trim() === "*");
+
+const loadStaticDefinitions = async (
+  provider: string,
+): Promise<ModelDefinition[]> => {
   try {
     return await authFilesApi.getModelDefinitions(provider);
   } catch {
@@ -492,30 +558,67 @@ const loadProviderModelItems = async (): Promise<ModelAvailabilityItem[]> => {
         configs = [];
       }
 
-      const needsStaticModels = configs.some(
-        (config) => !Array.isArray(config.models) || config.models.length === 0,
-      );
-      const staticModels = needsStaticModels ? await loadStaticDefinitions(key) : [];
+      const isModelAccessProvider = MODEL_ACCESS_PROVIDER_KEYS.has(key);
+      const needsStaticModels = configs.some((config) => {
+        if (isModelAccessProvider && config.disabled === true) return false;
+        if (
+          isModelAccessProvider &&
+          hasDisableAllModelsRule(config.excludedModels)
+        )
+          return false;
+        return !Array.isArray(config.models) || config.models.length === 0;
+      });
+      const staticModels = needsStaticModels
+        ? await loadStaticDefinitions(key)
+        : [];
 
       for (const config of configs) {
+        const disabled = isModelAccessProvider
+          ? config.disabled === true
+          : hasDisableAllModelsRule(config.excludedModels);
+        const excludedModels = isModelAccessProvider
+          ? hasDisableAllModelsRule(config.excludedModels)
+            ? ["*"]
+            : undefined
+          : config.excludedModels;
+        if (disabled) continue;
         if (Array.isArray(config.models) && config.models.length > 0) {
-          addExplicitProviderModels(map, config.models, key, config.prefix, config.excludedModels);
+          addExplicitProviderModels(
+            map,
+            config.models,
+            key,
+            config.prefix,
+            excludedModels,
+          );
           continue;
         }
-        addStaticProviderModels(map, staticModels, key, config.prefix, config.excludedModels);
+        addStaticProviderModels(
+          map,
+          staticModels,
+          key,
+          config.prefix,
+          excludedModels,
+        );
       }
     }),
   );
 
   let openAIProviders: OpenAIProvider[] = [];
   try {
-    openAIProviders = (await providersApi.getOpenAIProviders()).filter(isOpenAIProviderServiceable);
+    openAIProviders = (await providersApi.getOpenAIProviders()).filter(
+      isOpenAIProviderServiceable,
+    );
   } catch {
     openAIProviders = [];
   }
 
   for (const provider of openAIProviders) {
-    addExplicitProviderModels(map, provider.models, provider.name, provider.prefix);
+    addExplicitProviderModels(
+      map,
+      provider.models,
+      provider.name,
+      provider.prefix,
+    );
   }
 
   return Array.from(map.values());
@@ -561,7 +664,10 @@ const loadAuthFileModelItems = async (
       if (owner) {
         scoped = true;
         for (const model of modelsByOwner.get(owner) ?? []) {
-          addModel(map, { ...model, source: model.source || "auth-file-owner" });
+          addModel(map, {
+            ...model,
+            source: model.source || "auth-file-owner",
+          });
         }
         return;
       }
@@ -631,7 +737,9 @@ const augmentPathAvailabilityWithMappedOwners = async (
     if (existing) {
       if (
         !existing.paths.some(
-          (path) => path.method === rootModelPath.method && path.path === rootModelPath.path,
+          (path) =>
+            path.method === rootModelPath.method &&
+            path.path === rootModelPath.path,
         )
       ) {
         existing.paths = [...existing.paths, rootModelPath];
@@ -650,7 +758,9 @@ const augmentPathAvailabilityWithMappedOwners = async (
     });
   }
 
-  const items = Array.from(itemMap.values()).sort((a, b) => a.id.localeCompare(b.id));
+  const items = Array.from(itemMap.values()).sort((a, b) =>
+    a.id.localeCompare(b.id),
+  );
   return {
     ...availability,
     items,
@@ -660,7 +770,9 @@ const augmentPathAvailabilityWithMappedOwners = async (
 
 /* ── New backend aggregation endpoint support ── */
 
-const normalizeAvailabilitySources = (value: unknown): ModelAvailabilitySource[] | undefined => {
+const normalizeAvailabilitySources = (
+  value: unknown,
+): ModelAvailabilitySource[] | undefined => {
   if (!Array.isArray(value)) return undefined;
   const seen = new Set<string>();
   const sources: ModelAvailabilitySource[] = [];
@@ -675,8 +787,18 @@ const normalizeAvailabilitySources = (value: unknown): ModelAvailabilitySource[]
     const clientId = String(item.client_id ?? item.clientId ?? "").trim();
     const source = String(item.source ?? "").trim();
     const modelId = String(item.model_id ?? item.modelId ?? "").trim();
-    const upstreamModelId = String(item.upstream_model_id ?? item.upstreamModelId ?? "").trim();
-    const key = [label, provider, channel, clientId, source, modelId, upstreamModelId]
+    const upstreamModelId = String(
+      item.upstream_model_id ?? item.upstreamModelId ?? "",
+    ).trim();
+    const key = [
+      label,
+      provider,
+      channel,
+      clientId,
+      source,
+      modelId,
+      upstreamModelId,
+    ]
       .join("\x00")
       .toLowerCase();
     if (seen.has(key)) continue;
@@ -694,7 +816,9 @@ const normalizeAvailabilitySources = (value: unknown): ModelAvailabilitySource[]
   return sources.length ? sources : undefined;
 };
 
-const normalizeAvailabilityItem = (raw: unknown): ModelAvailabilityItem | null => {
+const normalizeAvailabilityItem = (
+  raw: unknown,
+): ModelAvailabilityItem | null => {
   if (!raw || typeof raw !== "object") return null;
   const record = raw as Record<string, unknown>;
   const id = String(record.id ?? "").trim();
@@ -707,21 +831,28 @@ const normalizeAvailabilityItem = (raw: unknown): ModelAvailabilityItem | null =
   const pricing: ModelPricing = {
     mode: String(pricingRecord.mode ?? "token") === "call" ? "call" : "token",
     inputPricePerMillion: asNumber(
-      pricingRecord.input_price_per_million ?? pricingRecord.inputPricePerMillion,
+      pricingRecord.input_price_per_million ??
+        pricingRecord.inputPricePerMillion,
     ),
     outputPricePerMillion: asNumber(
-      pricingRecord.output_price_per_million ?? pricingRecord.outputPricePerMillion,
+      pricingRecord.output_price_per_million ??
+        pricingRecord.outputPricePerMillion,
     ),
     cachedPricePerMillion: asNumber(
-      pricingRecord.cached_price_per_million ?? pricingRecord.cachedPricePerMillion,
+      pricingRecord.cached_price_per_million ??
+        pricingRecord.cachedPricePerMillion,
     ),
     cacheReadPricePerMillion: asNumber(
-      pricingRecord.cache_read_price_per_million ?? pricingRecord.cacheReadPricePerMillion,
+      pricingRecord.cache_read_price_per_million ??
+        pricingRecord.cacheReadPricePerMillion,
     ),
     cacheWritePricePerMillion: asNumber(
-      pricingRecord.cache_write_price_per_million ?? pricingRecord.cacheWritePricePerMillion,
+      pricingRecord.cache_write_price_per_million ??
+        pricingRecord.cacheWritePricePerMillion,
     ),
-    pricePerCall: asNumber(pricingRecord.price_per_call ?? pricingRecord.pricePerCall),
+    pricePerCall: asNumber(
+      pricingRecord.price_per_call ?? pricingRecord.pricePerCall,
+    ),
   };
 
   const inputModalities = Array.isArray(record.input_modalities)
@@ -732,7 +863,9 @@ const normalizeAvailabilityItem = (raw: unknown): ModelAvailabilityItem | null =
     : [];
   const supportsVision =
     record.supports_vision === true ||
-    inputModalities.some((m: string) => ["image", "vision"].includes(m.toLowerCase()));
+    inputModalities.some((m: string) =>
+      ["image", "vision"].includes(m.toLowerCase()),
+    );
 
   return {
     id,
@@ -766,18 +899,22 @@ export const normalizeConfiguredModelAvailability = (
     .filter((item): item is NonNullable<typeof item> => item !== null)
     .sort((a, b) => a!.id.localeCompare(b!.id));
 
-  const rawMetadata = Array.isArray(record.active_metadata) ? record.active_metadata : [];
+  const rawMetadata = Array.isArray(record.active_metadata)
+    ? record.active_metadata
+    : [];
   const metadataItems = rawMetadata
     .map((item) => normalizeAvailabilityItem(item))
     .filter((item): item is NonNullable<typeof item> => item !== null)
     .sort((a, b) => a!.id.localeCompare(b!.id));
 
   return {
-    scoped: typeof record.scoped === "boolean" ? record.scoped : items.length > 0,
+    scoped:
+      typeof record.scoped === "boolean" ? record.scoped : items.length > 0,
     items,
     metadataItems,
     idSet: new Set(items.map((item) => item.id.toLowerCase())),
-    usesMappedOwners: record.uses_mapped_owners === true || record.usesMappedOwners === true,
+    usesMappedOwners:
+      record.uses_mapped_owners === true || record.usesMappedOwners === true,
   };
 };
 
@@ -832,14 +969,20 @@ export const loadConfiguredModelAvailability = async (options?: {
     .map((g) => String(g ?? "").trim())
     .filter(Boolean);
   const loadFallback = async () =>
-    loadConfiguredModelAvailabilityFallback(await loadAuthGroupOwnerMappingMap());
+    loadConfiguredModelAvailabilityFallback(
+      await loadAuthGroupOwnerMappingMap(),
+    );
 
   if (validGroups.length > 0) {
     const cacheKey = validGroups.join(",");
     const now = Date.now();
     const cacheVersion = getConfiguredAvailabilityCacheVersion();
     const cached = groupAvailabilityCache.get(cacheKey);
-    if (cached && cached.cacheVersion === cacheVersion && now < cached.expiresAt) {
+    if (
+      cached &&
+      cached.cacheVersion === cacheVersion &&
+      now < cached.expiresAt
+    ) {
       return cached.promise;
     }
     const promise = (async (): Promise<ConfiguredModelAvailability> => {
@@ -875,13 +1018,18 @@ export const loadConfiguredModelAvailability = async (options?: {
   ) {
     return configuredAvailabilityCache.value;
   }
-  if (configuredAvailabilityInFlight && configuredAvailabilityInFlight.version === cacheVersion) {
+  if (
+    configuredAvailabilityInFlight &&
+    configuredAvailabilityInFlight.version === cacheVersion
+  ) {
     return configuredAvailabilityInFlight.promise;
   }
 
   const promise = (async (): Promise<ConfiguredModelAvailability> => {
     try {
-      const result = await loadConfiguredAvailabilityEndpoint("/models/configured-availability");
+      const result = await loadConfiguredAvailabilityEndpoint(
+        "/models/configured-availability",
+      );
       if (!result) return loadFallback();
       configuredAvailabilityCache = {
         expiresAt: now + CONFIGURED_AVAILABILITY_TTL_MS,
@@ -924,13 +1072,16 @@ const loadConfiguredModelAvailabilityFallback = async (
 
   const map = new Map<string, ModelAvailabilityItem>();
   for (const item of authFileAvailability.items) addModel(map, item);
-  for (const item of providerItems) addModel(map, withLibraryModelMetadata(item, libraryIndex));
+  for (const item of providerItems)
+    addModel(map, withLibraryModelMetadata(item, libraryIndex));
 
   if (!authFileAvailability.scoped && providerItems.length === 0) {
     return emptyAvailability(usesMappedOwners);
   }
 
-  const items = Array.from(map.values()).sort((a, b) => a.id.localeCompare(b.id));
+  const items = Array.from(map.values()).sort((a, b) =>
+    a.id.localeCompare(b.id),
+  );
   return {
     scoped: true,
     items,
@@ -939,17 +1090,22 @@ const loadConfiguredModelAvailabilityFallback = async (
   };
 };
 
-export const loadModelPathAvailability = async (): Promise<ModelPathAvailability> =>
-  augmentPathAvailabilityWithMappedOwners(
-    normalizeModelPathAvailability(await apiClient.get("/model-path-availability")),
-  );
+export const loadModelPathAvailability =
+  async (): Promise<ModelPathAvailability> =>
+    augmentPathAvailabilityWithMappedOwners(
+      normalizeModelPathAvailability(
+        await apiClient.get("/model-path-availability"),
+      ),
+    );
 
 export const filterByConfiguredModelAvailability = <T extends { id: string }>(
   models: T[],
   availability: ConfiguredModelAvailability,
 ): T[] => {
   if (!availability.scoped) return models;
-  return models.filter((model) => availability.idSet.has(model.id.toLowerCase()));
+  return models.filter((model) =>
+    availability.idSet.has(model.id.toLowerCase()),
+  );
 };
 
 export const hasModelPricing = (pricing: ModelPricing): boolean => {
@@ -973,7 +1129,10 @@ export const formatModelPriceAmount = (value: number): string => {
   }).format(rounded);
 };
 
-export const formatModelPrice = (pricing: ModelPricing, notPricedLabel: string): string => {
+export const formatModelPrice = (
+  pricing: ModelPricing,
+  notPricedLabel: string,
+): string => {
   if (pricing.mode === "call") {
     return pricing.pricePerCall > 0
       ? `$${formatModelPriceAmount(pricing.pricePerCall)} / call`
@@ -986,12 +1145,16 @@ export const formatModelPrice = (pricing: ModelPricing, notPricedLabel: string):
     `$${formatModelPriceAmount(pricing.outputPricePerMillion)}`,
   ];
   if (pricing.cacheReadPricePerMillion > 0) {
-    parts.push(`Read $${formatModelPriceAmount(pricing.cacheReadPricePerMillion)}`);
+    parts.push(
+      `Read $${formatModelPriceAmount(pricing.cacheReadPricePerMillion)}`,
+    );
   } else if (pricing.cachedPricePerMillion > 0) {
     parts.push(`$${formatModelPriceAmount(pricing.cachedPricePerMillion)}`);
   }
   if (pricing.cacheWritePricePerMillion > 0) {
-    parts.push(`Write $${formatModelPriceAmount(pricing.cacheWritePricePerMillion)}`);
+    parts.push(
+      `Write $${formatModelPriceAmount(pricing.cacheWritePricePerMillion)}`,
+    );
   }
   return parts.join(" / ");
 };

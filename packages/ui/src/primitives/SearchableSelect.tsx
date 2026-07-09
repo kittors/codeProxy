@@ -37,6 +37,13 @@ export interface SearchableSelectOption {
   triggerLabel?: ReactNode;
   /** searchable text (defaults to value if omitted) */
   searchText?: string;
+  /** Optional leading icon shown before the label in the list and trigger. */
+  icon?: ReactNode;
+  /**
+   * Optional trailing content (e.g. count pill) rendered immediately after the
+   * label text. The selection checkmark always stays at the far right.
+   */
+  trailing?: ReactNode;
   action?: {
     label: string;
     icon: ReactNode;
@@ -64,6 +71,33 @@ export interface SearchableSelectProps {
 /* ------------------------------------------------------------------ */
 /*  Component                                                          */
 /* ------------------------------------------------------------------ */
+
+function OptionContent({
+  icon,
+  label,
+  trailing,
+  selected,
+}: {
+  icon?: ReactNode;
+  label: ReactNode;
+  trailing?: ReactNode;
+  selected: boolean;
+}) {
+  return (
+    <>
+      {icon ? <span className="inline-flex shrink-0 items-center">{icon}</span> : null}
+      <span className="min-w-0 flex-1 truncate text-left">{label}</span>
+      {trailing ? <span className="inline-flex shrink-0 items-center">{trailing}</span> : null}
+      {selected ? (
+        <Check
+          size={14}
+          className="shrink-0 text-[#96969B] dark:text-[#9F9FA8]"
+          aria-hidden="true"
+        />
+      ) : null}
+    </>
+  );
+}
 
 export function SearchableSelect({
   value,
@@ -160,10 +194,26 @@ export function SearchableSelect({
     return () => document.removeEventListener("keydown", handler);
   }, [open]);
 
+  const selectedOption = useMemo(
+    () => options.find((o) => o.value === value) ?? null,
+    [options, value],
+  );
+
   const selectedLabel = useMemo(() => {
-    const match = options.find((o) => o.value === value);
-    return match ? (match.triggerLabel ?? match.label) : null;
-  }, [options, value]);
+    if (!selectedOption) return null;
+    if (selectedOption.triggerLabel != null) return selectedOption.triggerLabel;
+    return (
+      <span className="inline-flex min-w-0 items-center gap-2">
+        {selectedOption.icon ? (
+          <span className="inline-flex shrink-0 items-center">{selectedOption.icon}</span>
+        ) : null}
+        <span className="min-w-0 truncate">{selectedOption.label}</span>
+        {selectedOption.trailing ? (
+          <span className="inline-flex shrink-0 items-center">{selectedOption.trailing}</span>
+        ) : null}
+      </span>
+    );
+  }, [selectedOption]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -290,14 +340,12 @@ export function SearchableSelect({
                               onClick={() => handleSelect(opt.value)}
                               className="flex min-w-0 flex-1 items-center gap-2 text-left outline-none"
                             >
-                              <span className="min-w-0 flex-1">{opt.label}</span>
-                              {selected ? (
-                                <Check
-                                  size={14}
-                                  className="shrink-0 text-[#96969B] dark:text-[#9F9FA8]"
-                                  aria-hidden="true"
-                                />
-                              ) : null}
+                              <OptionContent
+                                icon={opt.icon}
+                                label={opt.label}
+                                trailing={opt.trailing}
+                                selected={selected}
+                              />
                             </button>
                             <button
                               type="button"
@@ -326,14 +374,12 @@ export function SearchableSelect({
                           onClick={() => handleSelect(opt.value)}
                           className={optionClassName}
                         >
-                          <span className="min-w-0 flex-1">{opt.label}</span>
-                          {selected ? (
-                            <Check
-                              size={14}
-                              className="shrink-0 text-[#96969B] dark:text-[#9F9FA8]"
-                              aria-hidden="true"
-                            />
-                          ) : null}
+                          <OptionContent
+                            icon={opt.icon}
+                            label={opt.label}
+                            trailing={opt.trailing}
+                            selected={selected}
+                          />
                         </button>
                       );
                     })}

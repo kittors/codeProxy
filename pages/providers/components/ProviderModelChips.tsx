@@ -1,4 +1,5 @@
 import type { ProviderModel } from "@code-proxy/api-client";
+import { HoverTooltip } from "@code-proxy/ui";
 
 interface ProviderModelChipsProps {
   models: ProviderModel[];
@@ -17,38 +18,44 @@ export function ProviderModelChips({
     ) : null;
   }
 
-  const visible = models.slice(0, maxVisible);
-  const remaining = models.length - maxVisible;
+  const visibleLimit = models.length > maxVisible ? Math.max(1, maxVisible - 1) : maxVisible;
+  const visible = models.slice(0, visibleLimit);
+  const remaining = models.length - visibleLimit;
+  const formatModelLabel = (model: ProviderModel, arrow: string) => {
+    const name = model.name ?? "";
+    return model.alias && model.alias !== name ? `${name} ${arrow} ${model.alias}` : name;
+  };
 
   return (
-    <div className="flex flex-wrap gap-1">
+    <div className="grid max-h-[3.25rem] grid-cols-3 gap-1 overflow-hidden">
       {visible.map((model) => {
-        const modelLabel =
-          model.alias && model.alias !== model.name ? `${model.name} → ${model.alias}` : model.name;
+        const modelLabel = formatModelLabel(model, "→");
         return (
-          <span
+          <HoverTooltip
             key={model.name}
-            className="inline-flex max-w-full min-w-0 rounded-full bg-slate-900 px-2 py-0.5 text-[11px] text-white dark:bg-white dark:text-neutral-950"
-            title={
-              model.alias && model.alias !== model.name
-                ? `${model.name} => ${model.alias}`
-                : model.name
-            }
+            content={formatModelLabel(model, "=>")}
+            placement="top"
+            className="min-w-0"
           >
-            <span className="min-w-0 truncate">{modelLabel}</span>
-          </span>
+            <span className="inline-flex w-full min-w-0 cursor-default rounded-full bg-slate-900 px-2 py-0.5 text-[11px] text-white dark:bg-white dark:text-neutral-950">
+              <span className="min-w-0 truncate">{modelLabel}</span>
+            </span>
+          </HoverTooltip>
         );
       })}
       {remaining > 0 ? (
-        <span
-          className="inline-flex max-w-full min-w-0 cursor-default rounded-full bg-slate-200 px-2 py-0.5 text-[11px] text-slate-500 dark:bg-neutral-800 dark:text-white/55"
-          title={models
-            .slice(maxVisible)
-            .map((m) => m.name)
-            .join(", ")}
+        <HoverTooltip
+          content={models
+            .slice(visibleLimit)
+            .map((model) => formatModelLabel(model, "=>"))
+            .join("\n")}
+          placement="top"
+          className="min-w-0"
         >
-          +{remaining}
-        </span>
+          <span className="inline-flex min-w-0 cursor-default justify-center rounded-full bg-slate-200 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-slate-500 dark:bg-neutral-800 dark:text-white/55">
+            +{remaining}
+          </span>
+        </HoverTooltip>
       ) : null}
     </div>
   );

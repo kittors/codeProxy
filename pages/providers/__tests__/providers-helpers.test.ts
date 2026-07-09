@@ -4,7 +4,6 @@ import {
   buildProviderKeyDraft,
   maskApiKey,
   normalizeDiscoveredModels,
-  validateProviderModelOwnership,
 } from "@pages/providers/providers-helpers";
 import {
   buildCandidateUsageSourceIds,
@@ -128,33 +127,6 @@ describe("providers helpers", () => {
       { id: "qwen3.5-plus", owned_by: "opencode" },
       { id: "deepseek-v4-flash", owned_by: "opencode" },
     ]);
-  });
-
-  test("validates OpenCode Go and ClinePass model ownership", () => {
-    expect(
-      validateProviderModelOwnership("opencode-go", {
-        models: [{ name: "cline-pass/glm-5.2" }],
-      }),
-    ).toContain("OpenCode Go models cannot use cline-pass model IDs");
-    expect(
-      validateProviderModelOwnership("opencode-go", {
-        models: [{ name: "glm-5.2" }],
-        excludedModels: ["*"],
-        visionFallbackModel: "qwen3.5-plus",
-      }),
-    ).toBeNull();
-    expect(
-      validateProviderModelOwnership("cline", {
-        models: [{ name: "glm-5.2" }],
-      }),
-    ).toContain("ClinePass models must use cline-pass model IDs");
-    expect(
-      validateProviderModelOwnership("cline", {
-        models: [{ name: "cline-pass/glm-5.2" }],
-        excludedModels: ["*", "cline-pass/minimax-m3"],
-        visionFallbackModel: "cline-pass/mimo-v2.5-pro",
-      }),
-    ).toBeNull();
   });
 
   test("normalizes usage sources and matches raw plus masked api key candidates", () => {

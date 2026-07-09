@@ -13,7 +13,9 @@ import {
   normalizeModels,
   normalizeString,
   serializeBedrockKey,
+  serializeClineKey,
   serializeGeminiKey,
+  serializeOllamaCloudKey,
   serializeOpenAIProvider,
   serializeOpenCodeGoKey,
   serializeProviderKey,
@@ -72,6 +74,9 @@ const sortExcludedModels = (value: unknown) =>
   normalizeExcludedModels(value)
     ?.slice()
     .sort((left, right) => left.localeCompare(right));
+
+const normalizeModelAccessExcludedModels = (value: unknown) =>
+  normalizeExcludedModels(value)?.some((model) => model === "*") ? ["*"] : undefined;
 
 const normalizeModelList = (
   value: unknown,
@@ -160,7 +165,14 @@ const normalizeSimpleItem = (
   const apiKey = normalizeString(value["api-key"] ?? value.apiKey) ?? "";
   if (!apiKey) return { item: null, duplicateCount: 0 };
   const headers = sortRecord(normalizeHeaders(value.headers));
-  const { models, duplicateCount } = normalizeModelList(value.models);
+  const hasDynamicModelAccess =
+    kind === "opencode-go" || kind === "cline" || kind === "ollama-cloud";
+  const { models, duplicateCount } = hasDynamicModelAccess
+    ? { models: undefined, duplicateCount: 0 }
+    : normalizeModelList(value.models);
+  const excludedModels = hasDynamicModelAccess
+    ? normalizeModelAccessExcludedModels(value["excluded-models"] ?? value.excludedModels)
+    : sortExcludedModels(value["excluded-models"] ?? value.excludedModels);
   const baseUrl =
     normalizeString(value["base-url"] ?? value.baseUrl) ??
     (kind === "ollama-cloud" ? "https://ollama.com" : undefined);
@@ -179,10 +191,8 @@ const normalizeSimpleItem = (
         : {}),
       ...(headers ? { headers } : {}),
       ...(models ? { models } : {}),
-      ...(sortExcludedModels(value["excluded-models"] ?? value.excludedModels)
-        ? { excludedModels: sortExcludedModels(value["excluded-models"] ?? value.excludedModels) }
-        : {}),
-      ...((kind === "opencode-go" || kind === "cline") &&
+      ...(excludedModels ? { excludedModels } : {}),
+      ...((kind === "opencode-go" || kind === "cline" || kind === "ollama-cloud") &&
       normalizeString(value["vision-fallback-model"] ?? value.visionFallbackModel)
         ? {
             visionFallbackModel: normalizeString(
@@ -193,7 +203,8 @@ const normalizeSimpleItem = (
       ...(kind === "opencode-go" && normalizeString(value["workspace-id"] ?? value.workspaceId)
         ? { workspaceId: normalizeString(value["workspace-id"] ?? value.workspaceId)! }
         : {}),
-      ...(kind === "opencode-go" && normalizeString(value["auth-cookie"] ?? value.authCookie)
+      ...((kind === "opencode-go" || kind === "cline" || kind === "ollama-cloud") &&
+      normalizeString(value["auth-cookie"] ?? value.authCookie)
         ? { authCookie: normalizeString(value["auth-cookie"] ?? value.authCookie)! }
         : {}),
       ...((value["skip-anthropic-processing"] === true || value.skipAnthropicProcessing === true) &&
@@ -359,12 +370,14 @@ const serializeItem = (kind: ProviderImportKind, item: CanonicalProviderItem) =>
   switch (kind) {
     case "gemini":
       return serializeGeminiKey(item as ProviderSimpleConfig);
+    case "cline":
+      return serializeClineKey(item as ProviderSimpleConfig);
     case "claude":
     case "codex":
-    case "cline":
-    case "ollama-cloud":
     case "vertex":
       return serializeProviderKey(item as ProviderSimpleConfig);
+    case "ollama-cloud":
+      return serializeOllamaCloudKey(item as ProviderSimpleConfig);
     case "opencode-go":
       return serializeOpenCodeGoKey(item as ProviderSimpleConfig);
     case "bedrock":
