@@ -45,7 +45,9 @@ import {
   AUTH_FILES_PAGE_SIZE,
   AUTH_FILE_STATUS_FILTERS,
   TYPE_BADGE_CLASSES,
+  buildAuthFileLocalUsageQuotaItems,
   isRuntimeOnlyAuthFile,
+  isXAIAuthFile,
   normalizeAuthIndexValue,
   normalizeProviderKey,
   normalizeTagValue,
@@ -1344,7 +1346,17 @@ export function AuthFilesFilesTab({
                           : "text-rose-700 dark:text-rose-200";
 
                   const items = Array.isArray(state.items) ? (state.items as QuotaItem[]) : [];
-                  const slots = provider ? resolveQuotaCardSlots(provider, items) : [];
+                  const localUsageItems =
+                    !provider && isXAIAuthFile(file)
+                      ? buildAuthFileLocalUsageQuotaItems(file, usageIndex)
+                      : [];
+                  const slots = provider
+                    ? resolveQuotaCardSlots(provider, items)
+                    : localUsageItems.map((item) => ({
+                        id: item.key ?? item.label,
+                        label: item.label,
+                        item,
+                      }));
 
                   const quotaRefreshing = provider
                     ? quotaByFileName[file.name]?.status === "loading"
@@ -1525,7 +1537,7 @@ export function AuthFilesFilesTab({
                           </p>
                         ) : null}
 
-                        {!provider ? (
+                        {!provider && slots.length === 0 ? (
                           <div className="text-xs text-slate-400 dark:text-white/40">--</div>
                         ) : slots.length > 0 ? (
                           <div className="space-y-2.5">

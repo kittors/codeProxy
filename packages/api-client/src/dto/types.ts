@@ -92,7 +92,7 @@ export interface AuthFileCodexOAuthAdmission {
   available_allowed_clients?: AuthFileCodexAllowedClientPresetInfo[];
 }
 
-export type AuthFileIdentityFingerprintProvider = "claude" | "codex" | "gemini";
+export type AuthFileIdentityFingerprintProvider = "claude" | "codex" | "gemini" | "xai";
 export type AuthFileIdentityFingerprintSource = "learned" | "preset" | "builtin_default";
 
 export interface AuthFileIdentityFingerprintSummary {

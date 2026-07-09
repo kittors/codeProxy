@@ -8,7 +8,7 @@ type RefreshCycleUsageOptions = {
 
 const supportsCycleUsage = (file: AuthFileItem): boolean => {
   const provider = normalizeProviderKey(resolveFileType(file));
-  return provider === "codex" || provider === "kimi";
+  return provider === "codex" || provider === "kimi" || provider === "xai";
 };
 
 const resolveCycleUsageAuthIndex = (file: AuthFileItem): string | null => {

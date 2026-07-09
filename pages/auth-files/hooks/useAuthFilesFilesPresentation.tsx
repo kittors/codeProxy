@@ -22,6 +22,7 @@ import { ToggleSwitch } from "@code-proxy/ui";
 import type { DataTableColumn } from "@code-proxy/ui";
 import {
   pickQuotaPreviewItem,
+  buildAuthFileLocalUsageQuotaItems,
   type FilesViewMode,
   type QuotaPreviewMode,
   type UsageIndex,
@@ -40,6 +41,7 @@ import {
   resolveAuthFileStatusBar,
   resolveAuthFileSubscriptionStatus,
   resolveFileType,
+  isXAIAuthFile,
   shouldShowAuthFileDisplayTag,
 } from "@code-proxy/domain";
 import { resolveQuotaProvider, type QuotaProvider } from "@features/quota-preview/quota-fetch";
@@ -189,6 +191,8 @@ export function useAuthFilesFilesPresentation({
     (text: string) => {
       if (!text) return text;
       if (text.startsWith("m_quota.")) return t(text);
+      if (text.startsWith("auth_files.")) return t(text);
+      if (text.startsWith("common.")) return t(text);
       if (text.startsWith("claude_quota.")) return t(text);
       if (text.startsWith("antigravity_quota.")) return t(text);
       if (KNOWN_QUOTA_TEXT_KEYS.has(text)) return t(`m_quota.${text}`);
@@ -487,8 +491,9 @@ export function useAuthFilesFilesPresentation({
               {items.map((item) => {
                 const tone = resolveQuotaVisualTone(item.percent);
                 const percentText =
-                  tone.normalized === null ? "--" : `${Math.round(tone.normalized)}%`;
-                const resetText = formatQuotaResetTextCompact(item.resetAtMs);
+                  item.value ??
+                  (tone.normalized === null ? "--" : `${Math.round(tone.normalized)}%`);
+                const resetText = item.meta ?? formatQuotaResetTextCompact(item.resetAtMs);
                 const itemMeta = options?.suppressItemMeta ? undefined : item.meta;
                 return (
                   <div key={item.label} className="contents">
@@ -529,8 +534,9 @@ export function useAuthFilesFilesPresentation({
     (label: string, item: QuotaItem | null): ReactNode => {
       const tone = resolveQuotaVisualTone(item?.percent);
       const normalized = tone.normalized;
-      const percentText = normalized === null ? "--" : `${Math.round(normalized)}%`;
-      const resetText = formatQuotaResetTextCompact(item?.resetAtMs) ?? "--";
+      const percentText =
+        item?.value ?? (normalized === null ? "--" : `${Math.round(normalized)}%`);
+      const resetText = item?.meta ?? formatQuotaResetTextCompact(item?.resetAtMs) ?? "--";
 
       return (
         <div key={label} className="space-y-1">
@@ -801,21 +807,32 @@ export function useAuthFilesFilesPresentation({
         ),
         render: (file) => {
           const provider = resolveQuotaProvider(file);
-          if (!provider) {
+          const localUsageItems =
+            !provider && isXAIAuthFile(file)
+              ? buildAuthFileLocalUsageQuotaItems(file, usageIndex)
+              : [];
+          if (!provider && localUsageItems.length === 0) {
             return <span className="text-xs text-slate-400 dark:text-white/40">--</span>;
           }
 
-          const state = quotaByFileName[file.name] ?? { status: "idle", items: [] };
-          const rawItems = Array.isArray(state.items) ? (state.items as QuotaItem[]) : [];
+          const state = provider
+            ? (quotaByFileName[file.name] ?? { status: "idle", items: [] })
+            : ({ status: "success", items: localUsageItems } satisfies QuotaState);
+          const rawItems = provider
+            ? Array.isArray(state.items)
+              ? (state.items as QuotaItem[])
+              : []
+            : localUsageItems;
           const items =
             provider === "antigravity" ? filterAntigravityQuotaItems(rawItems) : rawItems;
           const displayState = items === rawItems ? state : { ...state, items };
-          const hasError = state.status === "error";
+          const hasError = provider ? state.status === "error" : false;
 
           const renderQuotaLinePreview = (item: QuotaItem) => {
             const tone = resolveQuotaVisualTone(item.percent);
-            const percentText = tone.normalized === null ? "--" : `${Math.round(tone.normalized)}%`;
-            const resetText = formatQuotaResetTextCompact(item.resetAtMs) ?? "--";
+            const percentText =
+              item.value ?? (tone.normalized === null ? "--" : `${Math.round(tone.normalized)}%`);
+            const resetText = item.meta ?? formatQuotaResetTextCompact(item.resetAtMs) ?? "--";
             return (
               <div
                 key={item.label}

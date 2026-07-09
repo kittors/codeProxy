@@ -185,7 +185,7 @@ const mergeSavedCodexOAuthAdmissionFields = (
 
 const supportsAuthFileTrend = (file: AuthFileItem): boolean => {
   const provider = normalizeProviderKey(resolveFileType(file));
-  return provider === "kimi" || provider === "codex";
+  return provider === "kimi" || provider === "codex" || provider === "xai";
 };
 
 const identityFingerprintDetailKey = (file: AuthFileItem): string => {

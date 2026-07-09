@@ -257,7 +257,8 @@ export function AuthFileDetailModal({
   const visibleModelsError = usesMappedModelOwner ? null : modelsError;
   const providerKey = normalizeProviderKey(modelsFileType);
   const detailProviderKey = detailFile ? normalizeProviderKey(resolveFileType(detailFile)) : "";
-  const supportsUsageTrend = detailProviderKey === "kimi" || detailProviderKey === "codex";
+  const supportsUsageTrend =
+    detailProviderKey === "kimi" || detailProviderKey === "codex" || detailProviderKey === "xai";
   const hasIdentityFingerprint = Boolean(detailFile?.identity_fingerprint_summary);
   const openedDetailFileRef = useRef<string | null>(null);
   const detailOpenCounterRef = useRef(0);

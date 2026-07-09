@@ -320,6 +320,39 @@ describe("Auth Files helper coverage", () => {
     });
   });
 
+  test("keeps xAI identity fingerprint summary in sanitized cache", () => {
+    const [file] = sanitizeAuthFilesForCache([
+      {
+        name: "xai.json",
+        type: "xai",
+        provider: "xai",
+        auth_index: "xai-auth",
+        identity_fingerprint_summary: {
+          provider: "xai",
+          account_key: "xai-account",
+          enabled: true,
+          primary_source: "learned",
+          learned: true,
+          learned_fields: 2,
+          effective_fields: 2,
+          source_counts: { learned: 2 },
+          client_product: "grok-cli",
+          version: "0.3.1",
+        },
+      } as AuthFileItem,
+    ]);
+
+    expect(file?.identity_fingerprint_summary).toMatchObject({
+      provider: "xai",
+      account_key: "xai-account",
+      enabled: true,
+      learned_fields: 2,
+      effective_fields: 2,
+      client_product: "grok-cli",
+      version: "0.3.1",
+    });
+  });
+
   test("shows codex channel emails as the display name without requiring oauth account type", () => {
     const file = {
       name: "codex-alpha@example.test-plus.json",
