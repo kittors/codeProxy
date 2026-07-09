@@ -3620,6 +3620,7 @@
     "idle": "Idle",
     "started": "Started {{time}}",
     "heap": "Heap {{size}}",
+    "postgresql": "PostgreSQL",
     "sqlite_wal": "SQLite + WAL",
     "sqlite_wal_shm": "SQLite + WAL + SHM",
     "request_log_content": "request_log_content body data",

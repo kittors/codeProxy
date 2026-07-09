@@ -5,6 +5,7 @@ import { apiClient } from "@code-proxy/api-client";
 
 export interface SystemStats {
   db_size_bytes: number;
+  db_engine?: string;
   log_content_store_bytes: number;
   log_dir_size_bytes: number;
   log_size_bytes: number;
