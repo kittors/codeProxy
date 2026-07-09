@@ -820,6 +820,8 @@
     "failed_get_models": "Failed to get model definitions",
     "failed_get_model_owners": "Failed to get model owner groups",
     "model_owner_group": "Model owner group",
+    "model_owner_group_enabled": "Enable owner group override",
+    "model_owner_group_enabled_desc": "When off, OAuth accounts in this group use their own discovered model list. Turn it on to reuse the selected owner group.",
     "auth_file_models_option": "Not set",
     "model_owner_group_search_placeholder": "Search owner groups…",
     "model_owner_group_source_desc": "{{count}} models from {{owner}}.",

@@ -656,6 +656,9 @@ export function AuthFilesFilesTab({
   const { t } = useTranslation();
   const [modelOwnerDialogOpen, setModelOwnerDialogOpen] = useState(false);
   const [draftModelOwner, setDraftModelOwner] = useState(selectedModelOwner);
+  const [draftModelOwnerEnabled, setDraftModelOwnerEnabled] = useState(
+    selectedModelOwner.trim() !== "",
+  );
   const [jsonImportOpen, setJsonImportOpen] = useState(false);
   const [jsonImportText, setJsonImportText] = useState("");
   const [jsonImportError, setJsonImportError] = useState("");
@@ -665,6 +668,11 @@ export function AuthFilesFilesTab({
   const normalizedFilter = normalizeProviderKey(filter);
   const normalizedTagFilter = normalizeTagValue(tagFilter);
   const canSetModelOwnerGroup = normalizedFilter !== "all";
+  const defaultDraftModelOwner =
+    normalizedFilter === "codex" && modelOwnerGroups.some((group) => group.value === "codex")
+      ? "codex"
+      : "";
+  const currentDraftModelOwner = selectedModelOwner || defaultDraftModelOwner;
   const activeFilterCount = [
     normalizedFilter !== "all",
     normalizedTagFilter !== "",
@@ -673,7 +681,7 @@ export function AuthFilesFilesTab({
     canSetModelOwnerGroup && selectedModelOwner.trim() !== "",
   ].filter(Boolean).length;
   const draftModelOwnerGroup =
-    draftModelOwner === ""
+    !draftModelOwnerEnabled || draftModelOwner === ""
       ? null
       : (modelOwnerGroups.find((group) => group.value === draftModelOwner) ?? null);
   const selectedModelOwnerGroup =
@@ -729,16 +737,11 @@ export function AuthFilesFilesTab({
         return {
           value: key,
           label,
-          icon:
-            key === "all" ? undefined : (
-              <VendorIcon modelId={normalizedKey || key} size={14} />
-            ),
+          icon: key === "all" ? undefined : <VendorIcon modelId={normalizedKey || key} size={14} />,
           trailing: countPill,
           triggerLabel: (
             <span className="inline-flex min-w-0 items-center gap-2">
-              {key === "all" ? null : (
-                <VendorIcon modelId={normalizedKey || key} size={14} />
-              )}
+              {key === "all" ? null : <VendorIcon modelId={normalizedKey || key} size={14} />}
               <span className="min-w-0 truncate">{label}</span>
               {countPill}
             </span>
@@ -810,9 +813,10 @@ export function AuthFilesFilesTab({
 
   useEffect(() => {
     if (!modelOwnerDialogOpen) {
-      setDraftModelOwner(selectedModelOwner);
+      setDraftModelOwner(currentDraftModelOwner);
+      setDraftModelOwnerEnabled(selectedModelOwner.trim() !== "");
     }
-  }, [modelOwnerDialogOpen, selectedModelOwner]);
+  }, [currentDraftModelOwner, modelOwnerDialogOpen, selectedModelOwner]);
 
   useEffect(() => {
     if (!uploading || !jsonImportOpen) return;
@@ -952,7 +956,8 @@ export function AuthFilesFilesTab({
             : "",
         ].join(" ")}
         onClick={() => {
-          setDraftModelOwner(selectedModelOwner);
+          setDraftModelOwner(currentDraftModelOwner);
+          setDraftModelOwnerEnabled(selectedModelOwner.trim() !== "");
           setModelOwnerDialogOpen(true);
         }}
         aria-label={t("auth_files.model_owner_group")}
@@ -1837,7 +1842,7 @@ export function AuthFilesFilesTab({
               onClick={async () => {
                 setModelOwnerDialogSaving(true);
                 try {
-                  await setSelectedModelOwner(draftModelOwner);
+                  await setSelectedModelOwner(draftModelOwnerEnabled ? draftModelOwner : "");
                   setModelOwnerDialogOpen(false);
                 } catch {
                   // Save failures are surfaced via toast by the parent hook.
@@ -1845,7 +1850,7 @@ export function AuthFilesFilesTab({
                   setModelOwnerDialogSaving(false);
                 }
               }}
-              disabled={modelOwnerDialogSaving}
+              disabled={modelOwnerDialogSaving || (draftModelOwnerEnabled && !draftModelOwner)}
             >
               {t("common.save")}
             </Button>
@@ -1853,6 +1858,16 @@ export function AuthFilesFilesTab({
         }
       >
         <div className="space-y-4">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 dark:border-neutral-800 dark:bg-white/[0.04]">
+            <ToggleSwitch
+              checked={draftModelOwnerEnabled}
+              onCheckedChange={setDraftModelOwnerEnabled}
+              label={t("auth_files.model_owner_group_enabled")}
+              description={t("auth_files.model_owner_group_enabled_desc")}
+              disabled={modelOwnerDialogSaving}
+            />
+          </div>
+
           <div className="grid gap-3 sm:grid-cols-[minmax(0,18rem)_minmax(0,1fr)]">
             <div className="min-w-0 space-y-1.5">
               <label className="block text-sm font-medium text-slate-700 dark:text-white/80">
@@ -1865,6 +1880,7 @@ export function AuthFilesFilesTab({
                 placeholder={t("auth_files.auth_file_models_option")}
                 searchPlaceholder={t("auth_files.model_owner_group_search_placeholder")}
                 aria-label={t("auth_files.model_owner_group")}
+                disabled={!draftModelOwnerEnabled || modelOwnerDialogSaving}
               />
             </div>
 
