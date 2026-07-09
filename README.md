@@ -27,139 +27,75 @@
 
 ## ✨ Overview
 
-**Code Proxy** is the official web-based admin panel for [**CliRelay**](https://github.com/kittors/CliRelay) — a proxy server that wraps Gemini CLI, Antigravity, ChatGPT Codex, Claude Code, Qwen Code, Kiro, and iFlow as OpenAI/Gemini/Claude compatible API services.
+**Code Proxy** is the official web-based admin panel for [**CliRelay**](https://github.com/kittors/CliRelay) — a proxy server that wraps Claude Code, Gemini CLI, OpenAI Codex, Qwen, iFlow, Kimi, Antigravity, xAI/Grok, OpenCode Go, ClinePass, Ollama Cloud, Bedrock, Vertex, Amp, and OpenAI-compatible upstreams behind one managed API layer.
 
 This dashboard provides a complete management interface for your AI proxy infrastructure:
 
-- 📊 **Real-time Dashboard** — KPI cards, health score, system monitoring, channel latency
-- 📈 **Advanced Monitoring Center** — Model usage distribution, daily trends, hourly heatmaps with API Key filtering
-- 📋 **Request Logs** — Full request history with token counts, latency, status, and clickable error details
-- 💬 **Message Viewer** — Beautiful Markdown-rendered input/output content with XML tag collapsible sections
-- 🔗 **AI Provider Management** — Multi-tab provider config (Gemini, Claude, Codex, Vertex, OpenAI, Ampcode) with enable/disable toggles
-- 🗂️ **Auth File Workspace** — Saved OAuth/auth files with model inspection, prefix/proxy controls, and download actions
-- 🧪 **OAuth Workbench** — Provider-specific authorization launcher with remote callback submission
-- 🔑 **API Key Management** — Create, edit, delete keys with quota & rate limit controls
-- 🔐 **OAuth Login Management** — Manage OAuth authentication credentials
-- 📦 **Config Panel** — Visual YAML configuration editor with import/export
-- 🎯 **Model Management** — Model alias mapping and routing rules
-- 📊 **Quota Management** — Per-key usage quota tracking and limits
-- 🔍 **API Key Lookup** — Public self-service page for users to check their own usage statistics and request logs
-- 💲 **Model Pricing** — Built-in pricing table for quota cost accounting and per-model cost controls
-- ℹ️ **System Info** — Connection info grid, version/build metadata, model listing with colorful vendor icons and click-to-copy
-- 🪵 **Live Logs** — Streaming log viewer with search, download, clear, and runtime filter controls
-- 🌙 **Dark Mode** — Full dark theme with smooth transitions
-- 🌐 **i18n Ready** — Internationalization support (Chinese, English)
+- 📊 **Dashboard** — KPI cards, health score, live system stats, throughput, storage, and latency ranking
+- 📈 **Monitor Center** — model distribution, daily trends, token/request charts, and API Key filters
+- 📋 **Request Logs** — dense request table, saved filters, body/content viewer, error details, and export helpers
+- 🔗 **Provider Workspace** — Gemini, Claude, Codex, OpenCode Go, ClinePass, Ollama Cloud, Vertex, Bedrock, OpenAI-compatible, and Ampcode tabs
+- 🗂️ **Auth Files** — OAuth/auth inventory with model access, proxy binding, tags, quota snapshots, health states, and download actions
+- 🔑 **API Keys & Permissions** — key CRUD, quotas, RPM/TPM, channel group bindings, model restrictions, and reusable permission profiles
+- 🧭 **Routing & Imports** — channel groups, custom path routing, CC Switch import settings, and public quick-import data
+- 🎨 **Image Generation** — image-capable channel selection, size presets, and test task polling
+- 🎯 **Models** — custom model catalog, owner presets, OpenRouter sync, pricing, and availability
+- 🔍 **API Key Lookup** — public self-service usage, chart, log, model, and quick-import pages
+- ⚙️ **Operations** — visual/YAML config editor, proxy pool, system info, online update prompt, live logs, dark mode, and i18n
 
 ## 📸 Screenshots
 
-The gallery below uses the latest 13 management-panel screenshots and maps each screen to its operational role.
+The gallery below uses the latest 21 supplied management-panel screenshots.
 
-| Screen             | What it shows                                                                             |
-| :----------------- | :---------------------------------------------------------------------------------------- |
-| Dashboard Overview | KPI cards, health score, live system monitor, throughput, resource usage, latency ranking |
-| Monitor Center     | Request KPIs, model distribution, daily token trends, API Key usage share                 |
-| Request Logs       | Multi-filter log table, time range selector, status/channel/model filtering               |
-| Request Details    | Input/output viewer with Markdown rendering and instruction block inspection              |
-| AI Providers       | Multi-provider tabs, per-channel success rate, model tags, enable/edit/delete controls    |
-| Auth Files         | Saved auth file inventory with model inspection, proxy prefix controls, and download      |
-| OAuth Login        | Authorization launcher plus remote callback submission workflow                           |
-| API Keys           | Keys, quotas, RPM/TPM, model permissions, channel bindings, quick actions                 |
-| Models             | Pricing table for input/output/cache cost accounting                                      |
-| Quota              | Remaining refresh time and current usage bars for provider-specific quotas                |
-| Config             | YAML source editor with search and runtime mode switching                                 |
-| System             | API base, management endpoint, version metadata, API Key lookup link, model tags          |
-| Logs               | Live log console with search, download, clear, and toggleable filters                     |
+### Dashboard & Monitoring
 
-### 1. Dashboard Overview
+| Dashboard overview | System health |
+| :----------------- | :------------ |
+| <img src="docs/images/dashboard-overview.png" width="100%" alt="Dashboard overview" /> | <img src="docs/images/dashboard-health.png" width="100%" alt="Health score and system monitor" /> |
 
-<p align="center">
-  <img src="docs/images/dashboard-overview.png" width="100%" />
-</p>
-<p align="center"><em>Dashboard — KPI cards, health score, live system monitor, throughput, storage, and channel latency ranking.</em></p>
+| Traffic trend | Monitor summary |
+| :------------ | :-------------- |
+| <img src="docs/images/dashboard-traffic.png" width="100%" alt="Dashboard traffic trend" /> | <img src="docs/images/monitor-summary.png" width="100%" alt="Monitor center summary" /> |
 
-### 2. Monitor Center
+| Monitor breakdown | Request logs |
+| :---------------- | :----------- |
+| <img src="docs/images/monitor-breakdown.png" width="100%" alt="Monitor model and API key breakdown" /> | <img src="docs/images/request-logs.png" width="100%" alt="Request logs table" /> |
 
-<p align="center">
-  <img src="docs/images/monitor-center-zh.png" width="100%" />
-</p>
-<p align="center"><em>Monitor Center (Chinese locale) — request summary, model distribution, daily token/request trends, and API Key usage share.</em></p>
+| Request details | Public API key lookup |
+| :-------------- | :-------------------- |
+| <img src="docs/images/request-details.png" width="100%" alt="Request details modal" /> | <img src="docs/images/api-key-lookup.png" width="100%" alt="Public API key lookup" /> |
 
-### 3. Request Logs
+### Providers, Auth & Access
 
-<p align="center">
-  <img src="docs/images/request-logs-table.png" width="100%" />
-</p>
-<p align="center"><em>Request Logs — time-range switcher, multi-filter toolbar, high-density table, and success metrics at a glance.</em></p>
+| OpenCode Go auth files | Claude auth files |
+| :--------------------- | :---------------- |
+| <img src="docs/images/auth-files-opencode-go.png" width="100%" alt="OpenCode Go auth files" /> | <img src="docs/images/auth-files-claude.png" width="100%" alt="Claude auth files" /> |
 
-### 4. Request Details Viewer
+| Claude OAuth health | API keys |
+| :------------------ | :------- |
+| <img src="docs/images/auth-files-claude-oauth.png" width="100%" alt="Claude OAuth health" /> | <img src="docs/images/api-keys.png" width="100%" alt="API key management" /> |
 
-<p align="center">
-  <img src="docs/images/request-details-modal.png" width="100%" />
-</p>
-<p align="center"><em>Request Details — input/output tabs, Markdown rendering, collapsible sections, and copy/export helpers.</em></p>
+| API key permissions | Proxy pool |
+| :------------------ | :--------- |
+| <img src="docs/images/api-key-permissions.png" width="100%" alt="API key permission profiles" /> | <img src="docs/images/proxy-pool.png" width="100%" alt="Proxy pool management" /> |
 
-### 5. AI Providers
+### Routing, Models & Configuration
 
-<p align="center">
-  <img src="docs/images/providers-codex.png" width="100%" />
-</p>
-<p align="center"><em>AI Providers — provider tabs, per-channel success/failure stats, model badges, latency bars, and CRUD actions.</em></p>
+| CC Switch import | Image generation |
+| :--------------- | :--------------- |
+| <img src="docs/images/cc-switch-import.png" width="100%" alt="CC Switch import settings" /> | <img src="docs/images/image-generation.png" width="100%" alt="Image generation settings" /> |
 
-### 6. Auth Files
+| Channel groups | Models |
+| :------------- | :----- |
+| <img src="docs/images/channel-groups.png" width="100%" alt="Channel groups and custom paths" /> | <img src="docs/images/models.png" width="100%" alt="Model catalog and pricing" /> |
 
-<p align="center">
-  <img src="docs/images/auth-files-grid.png" width="100%" />
-</p>
-<p align="center"><em>Auth Files — card-based inventory for saved credentials with model inspection, rename, proxy-prefix, download, and delete actions.</em></p>
+| Config | System |
+| :----- | :----- |
+| <img src="docs/images/config.png" width="100%" alt="Runtime config editor" /> | <img src="docs/images/system-info.png" width="100%" alt="System information" /> |
 
-### 7. OAuth Login Workbench
-
-<p align="center">
-  <img src="docs/images/oauth-login-workbench.png" width="100%" />
-</p>
-<p align="center"><em>OAuth Login — provider-specific authorization launcher plus remote callback URL submission workflow.</em></p>
-
-### 8. API Keys Management
-
-<p align="center">
-  <img src="docs/images/api-keys-management.png" width="100%" />
-</p>
-<p align="center"><em>API Keys — quotas, RPM/TPM limits, model permissions, channel bindings, and quick analytics/edit actions.</em></p>
-
-### 9. Model Pricing
-
-<p align="center">
-  <img src="docs/images/model-pricing.png" width="100%" />
-</p>
-<p align="center"><em>Models — built-in pricing catalog for input/output/cache cost calculation and quota accounting.</em></p>
-
-### 10. Quota Management
-
-<p align="center">
-  <img src="docs/images/quota-management.png" width="100%" />
-</p>
-<p align="center"><em>Quota — remaining refresh time and progress bars for Codex, Gemini CLI, Kiro, and other provider-specific quotas.</em></p>
-
-### 11. Config Editor
-
-<p align="center">
-  <img src="docs/images/config-source-editor.png" width="100%" />
-</p>
-<p align="center"><em>Config — source editor mode with YAML search, keyboard-friendly navigation, and runtime config switching.</em></p>
-
-### 12. System Info
-
-<p align="center">
-  <img src="docs/images/system-info-models.png" width="100%" />
-</p>
-<p align="center"><em>System — API base, management endpoint, version/build metadata, API Key lookup entry, and vendor-colored model tags.</em></p>
-
-### 13. Live Logs
-
-<p align="center">
-  <img src="docs/images/live-logs.png" width="100%" />
-</p>
-<p align="center"><em>Logs — live stream viewer with keyword search, hide-management toggle, download, clear, and jump-to-latest controls.</em></p>
+| Live logs |
+| :-------- |
+| <img src="docs/images/live-logs.png" width="100%" alt="Live logs viewer" /> |
 
 ## 🧩 Feature Details
 
@@ -185,45 +121,57 @@ The gallery below uses the latest 13 management-panel screenshots and maps each 
 
 ### 📋 Request Logs
 
-| Module             | Description                                                                                       |
-| :----------------- | :------------------------------------------------------------------------------------------------ |
-| **Virtual Table**  | High-performance virtual scrolling for 10,000+ log entries                                        |
-| **Multi-Filter**   | Filter by Key, model, status (success/fail), with time range selection                            |
-| **Token Details**  | Click on input/output tokens to view full message content                                         |
-| **Error Modal**    | Click on "失败" (Failed) status to view error details in a red-themed modal                       |
-| **Message Viewer** | Markdown rendering with syntax highlighting, XML tag detection, and role-based collapsible blocks |
+| Module             | Description                                                                 |
+| :----------------- | :-------------------------------------------------------------------------- |
+| **Virtual Table**  | High-density log browsing with stored column order and pagination controls  |
+| **Multi-Filter**   | Filter by API Key, model, status, channel, auth subject, and time range     |
+| **Content Viewer** | Fetch request/response bodies from `/usage/logs/:id/content` on demand      |
+| **Error Details**  | Open failed rows directly into provider error details                       |
+| **Public Logs**    | Same log/content workflow is available through the public API Key lookup    |
 
 ### 🔗 AI Providers
 
-| Module            | Description                                                                                            |
-| :---------------- | :----------------------------------------------------------------------------------------------------- |
-| **Multi-Tab**     | Gemini, Claude, Codex, Vertex, OpenAI Compatible, Ampcode tabs                                         |
-| **Channel Cards** | Name, masked API key, base URL, model count, success/fail stats, latency bar                           |
-| **CRUD**          | Add, edit, delete channels with full configuration (proxyUrl, headers, model aliases, excluded models) |
-| **Toggle**        | Enable/disable individual channels with instant visual feedback                                        |
+| Module              | Description                                                                                                     |
+| :------------------ | :-------------------------------------------------------------------------------------------------------------- |
+| **Multi-Tab**       | Gemini, Claude, Codex, OpenCode Go, ClinePass, Ollama Cloud, Vertex, Bedrock, OpenAI Compatible, Ampcode tabs   |
+| **Channel Cards**   | Name, masked key, base URL, model count, success/fail stats, latency, proxy pool binding, and status badges     |
+| **CRUD / Patch**    | Add, edit, patch, delete channels with headers, aliases, excluded models, Bedrock auth mode, and provider extras |
+| **Model Access**    | Per-provider model access controls and availability derived from backend model definitions                       |
+
+### 🗂️ Auth, Keys & Routing
+
+| Module                    | Description                                                                 |
+| :------------------------ | :-------------------------------------------------------------------------- |
+| **Auth Files**            | OAuth/auth inventory, tags, quota snapshots, identity summaries, and health |
+| **API Keys**              | Client key CRUD with quotas, rate limits, model filters, and group bindings |
+| **Permission Profiles**   | Reusable API Key restrictions across providers, groups, and models          |
+| **Channel Groups**        | Group routing plus custom path namespaces for team or workload routing      |
+| **CC Switch Import**      | Public/importable model and group mapping settings for compatible clients   |
+| **Proxy Pool**            | Reusable outbound proxy entries with backend health checks                  |
 
 ### 🔍 API Key Lookup
 
 | Module           | Description                                                                 |
 | :--------------- | :-------------------------------------------------------------------------- |
-| **Self-Service** | Public page (no login required) for end users to check their API Key usage  |
-| **Usage Stats**  | Per-key KPI cards, model distribution chart, daily trend chart              |
-| **Request Logs** | Per-key request history with detailed virtual table and source channel info |
+| **Self-Service** | Public page for end users to check API Key usage without admin login        |
+| **Usage Stats**  | Per-key KPI cards, model distribution, heatmap, and trend charts            |
+| **Request Logs** | Per-key request history and body viewer through public management endpoints |
+| **Quick Import** | Public CC Switch import metadata for compatible clients                     |
 
 ## 🛠️ Tech Stack
 
 | Category             | Technology                                     |
 | :------------------- | :--------------------------------------------- |
-| **Framework**        | React 19.2 + TypeScript 5.9                    |
-| **Build Tool**       | Vite 7.3                                       |
-| **Package Manager**  | Bun 1.2                                        |
-| **Styling**          | Tailwind CSS v4                                |
-| **State Management** | Zustand                                        |
-| **Charts**           | Apache ECharts                                 |
-| **Routing**          | React Router v7                                |
-| **HTTP**             | Axios + WebSocket (real-time monitoring)       |
-| **Icons**            | Lucide React + Custom vendor SVGs (14 vendors) |
-| **Linting**          | oxlint + oxfmt                                 |
+| **Framework**        | React 19.2.4 + TypeScript 5.9.3                                         |
+| **Build Tool**       | Vite 7.3.1 + `@vitejs/plugin-react` 5.1.4                                |
+| **Package Manager**  | Bun 1.2.2                                                                |
+| **Styling**          | Tailwind CSS 4.1.18, Sass, shared `@code-proxy/ui` primitives            |
+| **Routing**          | React Router DOM 7.13 with lazy page preload                             |
+| **Data / HTTP**      | Axios 1.13, typed endpoint wrappers, WebSocket system stats               |
+| **Charts**           | Apache ECharts 6, `echarts-for-react`, Chart.js 4, `react-chartjs-2`      |
+| **Content Rendering** | `react-markdown`, `remark-gfm`, `react-syntax-highlighter`, YAML parser  |
+| **UI Libraries**     | Lucide React 0.563, Radix Dropdown Menu, TanStack Virtual, goey-toast     |
+| **Quality**          | Vitest 4, Playwright 1.58, Testing Library, oxlint 1.46, oxfmt 0.31      |
 
 ## 🚀 Getting Started
 
@@ -265,7 +213,7 @@ Pull requests to `dev` and `main` run lint, low-concurrency Vitest, build, and b
 ## 📁 Project Structure
 
 ```
-apps/admin-panel/       # Vite application shell, routes, guards, stores, global styles
+apps/admin-panel/       # Vite application shell, router, guards, layout, bootstrap, global styles
 pages/                  # Route-level screens and page-private components/hooks
 features/               # Cross-page UI workflows such as log viewer, OAuth, routing editor
 packages/
@@ -286,19 +234,36 @@ This dashboard communicates with the CliRelay backend via the Management API:
 | Endpoint                                  | Method            | Description                         |
 | :---------------------------------------- | :---------------- | :---------------------------------- |
 | `/v0/management/config`                   | `GET`             | Verify login & fetch configuration  |
-| `/v0/management/usage`                    | `GET`             | Retrieve usage statistics           |
-| `/v0/management/usage/logs`               | `GET`             | Paginated request log history       |
-| `/v0/management/usage/log-content`        | `GET`             | Full message content (input/output) |
-| `/v0/management/usage/dashboard-summary`  | `GET`             | Dashboard KPI data                  |
-| `/v0/management/usage/model-distribution` | `GET`             | Model usage distribution            |
-| `/v0/management/usage/daily-trends`       | `GET`             | Daily token/request trends          |
-| `/v0/management/usage/hourly-model`       | `GET`             | Hourly per-model request data       |
-| `/v0/management/openai-compatibility`     | `GET/POST/DELETE` | OpenAI channel CRUD                 |
-| `/v0/management/gemini-api-key`           | `GET/POST/DELETE` | Gemini channel CRUD                 |
-| `/v0/management/claude-api-key`           | `GET/POST/DELETE` | Claude channel CRUD                 |
-| `/v0/management/codex-api-key`            | `GET/POST/DELETE` | Codex channel CRUD                  |
-| `/v0/management/vertex-api-key`           | `GET/POST/DELETE` | Vertex channel CRUD                 |
-| `/v0/management/system-stats`             | `WebSocket`       | Real-time system monitoring         |
+| `/v0/management/config.yaml`              | `GET/PUT`         | Read or save YAML runtime config    |
+| `/v0/management/update/*`                 | `GET/POST`        | Version checks and online update    |
+| `/v0/management/usage`                    | `GET`             | Usage statistics summary            |
+| `/v0/management/usage/export`             | `GET`             | Export usage statistics             |
+| `/v0/management/usage/import`             | `POST`            | Import usage statistics             |
+| `/v0/management/usage/logs`               | `GET/DELETE`      | Request log history and cleanup     |
+| `/v0/management/usage/logs/:id/content`   | `GET`             | Full request/response message body  |
+| `/v0/management/usage/chart-data`         | `GET`             | Monitor and lookup chart data       |
+| `/v0/management/api-keys`                 | `GET/PUT/PATCH/DELETE` | Client API Key CRUD             |
+| `/v0/management/api-key-permission-profiles` | `GET/PUT`      | API Key permission profiles         |
+| `/v0/management/*-api-key`                | `GET/PUT/PATCH/DELETE` | Provider key CRUD for Gemini, Claude, Codex, Vertex, Bedrock, OpenCode Go, ClinePass, and Ollama Cloud |
+| `/v0/management/openai-compatibility`     | `GET/PUT/PATCH/DELETE` | OpenAI-compatible provider CRUD |
+| `/v0/management/auth-files`               | `GET/POST/DELETE` | OAuth/auth file inventory           |
+| `/v0/management/auth-files/status`        | `PATCH`           | Enable/disable auth files           |
+| `/v0/management/auth-files/fields`        | `PATCH`           | Patch auth file metadata            |
+| `/v0/management/*-auth-url`               | `GET/POST`        | Provider OAuth launchers            |
+| `/v0/management/model-configs`            | `GET/POST/PUT/DELETE` | Custom model catalog            |
+| `/v0/management/model-openrouter-sync`    | `GET/PUT`         | OpenRouter model sync settings      |
+| `/v0/management/model-openrouter-sync/run` | `POST`           | Run OpenRouter model sync           |
+| `/v0/management/routing-config`           | `GET/PUT`         | Channel groups and custom paths     |
+| `/v0/management/identity-fingerprint`     | `GET/PUT`         | Provider identity fingerprints      |
+| `/v0/management/identity-fingerprint/learned` | `DELETE`      | Clear learned identity fingerprints |
+| `/v0/management/ccswitch-import-configs`  | `GET/PUT`         | CC Switch import settings           |
+| `/v0/management/proxy-pool`               | `GET/PUT/PATCH`   | Reusable outbound proxy entries     |
+| `/v0/management/proxy-pool/check`         | `POST`            | Probe outbound proxy health         |
+| `/v0/management/image-generation/*`       | `GET/PUT/POST`    | Image generation channels and tests |
+| `/v0/management/logs`                     | `GET/DELETE`      | Runtime log viewer                  |
+| `/v0/management/public/*`                 | `GET/POST`        | API Key lookup and public import data |
+| `/v0/management/system-stats`             | `GET`             | System monitoring snapshot          |
+| `/v0/management/system-stats/ws`          | `WebSocket`       | Real-time system monitoring         |
 
 > **Note:** The API base is automatically normalized to `{apiBase}/v0/management`
 
