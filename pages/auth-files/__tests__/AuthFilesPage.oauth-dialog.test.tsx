@@ -6,10 +6,15 @@ import { ToastProvider } from "@code-proxy/ui";
 import { ThemeProvider } from "@code-proxy/ui";
 import { AuthFilesPage } from "@pages/auth-files/AuthFilesPage";
 import type { AuthFileItem } from "@code-proxy/api-client";
-import type { ProxyCheckResult, ProxyPoolEntry } from "@code-proxy/api-client/endpoints/proxies";
+import type {
+  ProxyCheckResult,
+  ProxyPoolEntry,
+} from "@code-proxy/api-client/endpoints/proxies";
 
 const mocks = vi.hoisted(() => ({
-  list: vi.fn<() => Promise<{ files: AuthFileItem[] }>>(async () => ({ files: [] })),
+  list: vi.fn<() => Promise<{ files: AuthFileItem[] }>>(async () => ({
+    files: [],
+  })),
   getEntityStats: vi.fn(async () => ({ source: [], auth_index: [] })),
   startAuth: vi.fn(async () => ({ url: "", state: "" })),
   getAuthStatus: vi.fn(async () => ({ status: "waiting" })),
@@ -20,7 +25,10 @@ const mocks = vi.hoisted(() => ({
   getModelOwnerPresets: vi.fn(async (): Promise<unknown[]> => []),
   getAuthGroupModelOwnerMappingMap: vi.fn(async () => ({})),
   proxiesList: vi.fn<() => Promise<ProxyPoolEntry[]>>(async () => []),
-  proxiesCheck: vi.fn<() => Promise<ProxyCheckResult>>(async () => ({ ok: true, latencyMs: 88 })),
+  proxiesCheck: vi.fn<() => Promise<ProxyCheckResult>>(async () => ({
+    ok: true,
+    latencyMs: 88,
+  })),
 }));
 
 vi.mock("@code-proxy/api-client", async (importOriginal) => {
@@ -90,17 +98,27 @@ describe("AuthFilesPage OAuth login dialog", () => {
       </MemoryRouter>,
     );
 
-    const openBtn = await screen.findByRole("button", { name: "Add OAuth Login" });
+    const openBtn = await screen.findByRole("button", {
+      name: "Add OAuth Login",
+    });
     await user.click(openBtn);
 
     const dialog = await screen.findByRole("dialog");
     const scoped = within(dialog);
 
     expect(scoped.getByText("Add OAuth Login")).toBeInTheDocument();
-    expect(scoped.getByRole("tab", { name: "Codex OAuth" })).toBeInTheDocument();
-    expect(scoped.getByRole("tab", { name: "Anthropic OAuth" })).toBeInTheDocument();
-    expect(scoped.getByRole("tab", { name: "iFlow Cookie Auth" })).toBeInTheDocument();
-    expect(scoped.getByRole("tab", { name: "Vertex Credential Import" })).toBeInTheDocument();
+    expect(
+      scoped.getByRole("tab", { name: "Codex OAuth" }),
+    ).toBeInTheDocument();
+    expect(
+      scoped.getByRole("tab", { name: "Anthropic OAuth" }),
+    ).toBeInTheDocument();
+    expect(
+      scoped.getByRole("tab", { name: "iFlow Cookie Auth" }),
+    ).toBeInTheDocument();
+    expect(
+      scoped.getByRole("tab", { name: "Vertex Credential Import" }),
+    ).toBeInTheDocument();
   });
 
   test("places the authorization proxy selector below the OAuth provider tabs", async () => {
@@ -117,16 +135,21 @@ describe("AuthFilesPage OAuth login dialog", () => {
       </MemoryRouter>,
     );
 
-    await user.click(await screen.findByRole("button", { name: "Add OAuth Login" }));
+    await user.click(
+      await screen.findByRole("button", { name: "Add OAuth Login" }),
+    );
 
     const dialog = await screen.findByRole("dialog");
     const scoped = within(dialog);
     const tabs = scoped.getByRole("tablist");
-    const proxySelect = await scoped.findByRole("combobox", { name: "Authorization Proxy" });
+    const proxySelect = await scoped.findByRole("combobox", {
+      name: "Authorization Proxy",
+    });
 
-    expect(tabs.compareDocumentPosition(proxySelect) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(
-      0,
-    );
+    expect(
+      tabs.compareDocumentPosition(proxySelect) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).not.toBe(0);
   });
 
   test("selects a proxy with IP, latency, and remark before starting OAuth authorization", async () => {
@@ -153,21 +176,33 @@ describe("AuthFilesPage OAuth login dialog", () => {
       </MemoryRouter>,
     );
 
-    await user.click(await screen.findByRole("button", { name: "Add OAuth Login" }));
+    await user.click(
+      await screen.findByRole("button", { name: "Add OAuth Login" }),
+    );
 
     const dialog = await screen.findByRole("dialog");
     const scoped = within(dialog);
-    const proxySelect = await scoped.findByRole("combobox", { name: "Authorization Proxy" });
+    const proxySelect = await scoped.findByRole("combobox", {
+      name: "Authorization Proxy",
+    });
 
     expect(proxySelect).toHaveTextContent("Server local network");
-    await waitFor(() => expect(mocks.proxiesCheck).toHaveBeenCalledWith({ id: "hk" }));
+    await waitFor(() =>
+      expect(mocks.proxiesCheck).toHaveBeenCalledWith({ id: "hk" }),
+    );
     await user.click(proxySelect);
     expect(await screen.findByText("127.0.0.1:1080")).toBeInTheDocument();
     expect(screen.getByText(/88 ms/)).toBeInTheDocument();
     expect(screen.getByText("Codex egress")).toBeInTheDocument();
 
-    await user.click(await screen.findByRole("option", { name: /HK Proxy.*127\.0\.0\.1:1080/i }));
-    await user.click(scoped.getByRole("button", { name: "Start authorization" }));
+    await user.click(
+      await screen.findByRole("option", {
+        name: /HK Proxy.*127\.0\.0\.1:1080/i,
+      }),
+    );
+    await user.click(
+      scoped.getByRole("button", { name: "Start authorization" }),
+    );
 
     await waitFor(() => {
       expect(mocks.startAuth).toHaveBeenCalledWith("codex", { proxyId: "hk" });
@@ -193,11 +228,15 @@ describe("AuthFilesPage OAuth login dialog", () => {
       </MemoryRouter>,
     );
 
-    await user.click(await screen.findByRole("button", { name: "Add OAuth Login" }));
+    await user.click(
+      await screen.findByRole("button", { name: "Add OAuth Login" }),
+    );
 
     const dialog = await screen.findByRole("dialog");
     const scoped = within(dialog);
-    await user.click(scoped.getByRole("button", { name: "Start authorization" }));
+    await user.click(
+      scoped.getByRole("button", { name: "Start authorization" }),
+    );
 
     expect(await scoped.findByText("Status")).toBeInTheDocument();
     expect(scoped.getByText("Callback URL")).toBeInTheDocument();
@@ -210,9 +249,60 @@ describe("AuthFilesPage OAuth login dialog", () => {
     expect(scoped.queryByText("oauth.callback")).not.toBeInTheDocument();
   });
 
+  test("submits the xAI code with the pending OAuth state", async () => {
+    const user = userEvent.setup();
+    mocks.startAuth.mockResolvedValueOnce({
+      url: "https://accounts.x.ai/oauth2/consent",
+      state: "xai-state",
+    });
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    await user.click(
+      await screen.findByRole("button", { name: "Add OAuth Login" }),
+    );
+
+    const dialog = await screen.findByRole("dialog");
+    const scoped = within(dialog);
+    await user.click(scoped.getByRole("tab", { name: "xAI / Grok OAuth" }));
+    await user.click(
+      scoped.getByRole("button", { name: "Start authorization" }),
+    );
+    await waitFor(() =>
+      expect(mocks.startAuth).toHaveBeenCalledWith("xai", {}),
+    );
+
+    await user.type(
+      scoped.getByPlaceholderText("Paste the code shown by xAI / Grok"),
+      "manual-code",
+    );
+    await user.click(scoped.getByRole("button", { name: "Submit callback" }));
+
+    await waitFor(() => {
+      expect(mocks.submitCallback).toHaveBeenCalledWith(
+        "xai",
+        { code: "manual-code", state: "xai-state" },
+        {},
+      );
+    });
+  });
+
   test("keeps the dialog open until OAuth completes and the new auth file is listed", async () => {
     const user = userEvent.setup();
-    window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
+    window.localStorage.setItem(
+      "authFilesPage.filesViewMode.v1",
+      JSON.stringify("cards"),
+    );
     mocks.startAuth.mockResolvedValueOnce({
       url: "https://example.com/oauth",
       state: "oauth-state",
@@ -245,11 +335,15 @@ describe("AuthFilesPage OAuth login dialog", () => {
       </MemoryRouter>,
     );
 
-    await user.click(await screen.findByRole("button", { name: "Add OAuth Login" }));
+    await user.click(
+      await screen.findByRole("button", { name: "Add OAuth Login" }),
+    );
 
     const dialog = await screen.findByRole("dialog");
     const scoped = within(dialog);
-    await user.click(scoped.getByRole("button", { name: "Start authorization" }));
+    await user.click(
+      scoped.getByRole("button", { name: "Start authorization" }),
+    );
     await waitFor(() => expect(mocks.startAuth).toHaveBeenCalledTimes(1));
 
     await user.type(
@@ -264,9 +358,15 @@ describe("AuthFilesPage OAuth login dialog", () => {
     expect(screen.queryByText("codex-new.json")).not.toBeInTheDocument();
 
     mocks.getAuthStatus.mockResolvedValueOnce({ status: "ok" });
-    await waitFor(() => expect(mocks.list).toHaveBeenCalledTimes(3), { timeout: 5000 });
+    await waitFor(() => expect(mocks.list).toHaveBeenCalledTimes(3), {
+      timeout: 5000,
+    });
 
-    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
-    expect(await screen.findByTestId("auth-files-cards")).toHaveTextContent("codex-new.json");
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+    );
+    expect(await screen.findByTestId("auth-files-cards")).toHaveTextContent(
+      "codex-new.json",
+    );
   }, 12000);
 });
