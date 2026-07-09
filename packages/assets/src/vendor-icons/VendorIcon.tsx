@@ -24,11 +24,13 @@ import iconVertex from "@code-proxy/assets/icons/vertex.svg";
 const VENDOR_ICONS: Record<string, { light: string; dark: string }> = {
   amp: { light: iconAmp, dark: iconAmp },
   antigravity: { light: iconAntigravity, dark: iconAntigravity },
+  anthropic: { light: iconClaude, dark: iconClaude },
   claude: { light: iconClaude, dark: iconClaude },
   cline: { light: iconCline, dark: iconCline },
   codex: { light: iconCodex, dark: iconCodex },
   deepseek: { light: iconDeepseek, dark: iconDeepseek },
   gemini: { light: iconGemini, dark: iconGemini },
+  "gemini-cli": { light: iconGemini, dark: iconGemini },
   glm: { light: iconGlm, dark: iconGlm },
   gpt: { light: iconOpenaiLight, dark: iconOpenaiDark },
   grok: { light: iconGrok, dark: iconGrok },
@@ -45,11 +47,19 @@ const VENDOR_ICONS: Record<string, { light: string; dark: string }> = {
   openai: { light: iconOpenaiLight, dark: iconOpenaiDark },
   qwen: { light: iconQwen, dark: iconQwen },
   vertex: { light: iconVertex, dark: iconVertex },
+  xai: { light: iconGrok, dark: iconGrok },
 };
 
+/** Longer / more specific prefixes first so "gemini-cli" beats "gemini". */
+const VENDOR_PREFIXES = Object.keys(VENDOR_ICONS).sort(
+  (a, b) => b.length - a.length,
+);
+
 function getVendorPrefix(modelId: string): string {
-  const lower = modelId.toLowerCase();
-  for (const prefix of Object.keys(VENDOR_ICONS)) {
+  const lower = modelId.toLowerCase().trim();
+  if (!lower) return "";
+  if (VENDOR_ICONS[lower]) return lower;
+  for (const prefix of VENDOR_PREFIXES) {
     if (lower.startsWith(prefix)) return prefix;
   }
   return "";

@@ -4,9 +4,11 @@ import { LoaderCircle, RefreshCw, ScrollText, Trash2 } from "lucide-react";
 import { usageApi } from "@code-proxy/api-client";
 import type {
   ClearUsageLogsPayload,
+  UsageChannelFilterOption,
   UsageLogItem,
   UsageLogsResponse,
 } from "@code-proxy/api-client/endpoints/usage";
+import { VendorIcon } from "@code-proxy/assets";
 import {
   formatUsageMetricNumber,
   formatUsageMetricRate,
@@ -60,6 +62,52 @@ const DEFAULT_CLEAR_OPTIONS: ClearUsageLogsPayload = {
 const isRequestCancelled = (err: unknown, signal?: AbortSignal) =>
   signal?.aborted ||
   (err instanceof Error && err.message === "Request was cancelled");
+
+function authTypeBadgeClass(authType?: string): string {
+  if (authType === "api") {
+    return "bg-sky-50 text-sky-700 dark:bg-sky-500/15 dark:text-sky-200";
+  }
+  if (authType === "oauth") {
+    return "bg-violet-50 text-violet-700 dark:bg-violet-500/15 dark:text-violet-200";
+  }
+  return "bg-slate-100 text-slate-600 dark:bg-white/10 dark:text-white/65";
+}
+
+function ChannelFilterOptionLabel({
+  option,
+  apiLabel,
+  oauthLabel,
+}: {
+  option: UsageChannelFilterOption;
+  apiLabel: string;
+  oauthLabel: string;
+}) {
+  const authType = String(option.auth_type ?? "").toLowerCase();
+  const badgeLabel =
+    authType === "api" ? apiLabel : authType === "oauth" ? oauthLabel : "";
+  const provider = String(option.provider ?? "").trim();
+
+  return (
+    <span className="flex min-w-0 items-center gap-2">
+      {provider ? (
+        <span className="inline-flex shrink-0 items-center" aria-hidden="true">
+          <VendorIcon modelId={provider} size={14} />
+        </span>
+      ) : null}
+      <span className="min-w-0 truncate">{option.label}</span>
+      {badgeLabel ? (
+        <span
+          className={[
+            "inline-flex shrink-0 items-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold leading-none",
+            authTypeBadgeClass(authType),
+          ].join(" ")}
+        >
+          {badgeLabel}
+        </span>
+      ) : null}
+    </span>
+  );
+}
 
 function RequestLogsRecordsCount({ count }: { count: number }) {
   const { t } = useTranslation();
@@ -139,12 +187,14 @@ export function RequestLogsPage() {
     api_key_names: Record<string, string>;
     models: string[];
     channels: string[];
+    channel_options: UsageChannelFilterOption[];
     statuses: string[];
   }>({
     api_keys: [],
     api_key_names: {},
     models: [],
     channels: [],
+    channel_options: [],
     statuses: ["success", "failed"],
   });
   const [stats, setStats] = useState<{
@@ -202,12 +252,33 @@ export function RequestLogsPage() {
   }, [filterOptions.models]);
 
   const channelOptions = useMemo<SearchableCheckboxMultiSelectOption[]>(() => {
-    return filterOptions.channels.map((ch) => ({
-      value: ch,
-      label: ch,
-      searchText: ch,
-    }));
-  }, [filterOptions.channels]);
+    const source: UsageChannelFilterOption[] =
+      filterOptions.channel_options.length > 0
+        ? filterOptions.channel_options
+        : filterOptions.channels.map((ch) => ({
+            value: ch,
+            label: ch,
+          }));
+    const apiLabel = t("request_logs.auth_type_api");
+    const oauthLabel = t("request_logs.auth_type_oauth");
+    return source.map((option) => {
+      const provider = String(option.provider ?? "").trim();
+      const authType = String(option.auth_type ?? "").trim();
+      return {
+        value: option.value,
+        label: (
+          <ChannelFilterOptionLabel
+            option={option}
+            apiLabel={apiLabel}
+            oauthLabel={oauthLabel}
+          />
+        ),
+        searchText: [option.label, provider, authType, option.value]
+          .filter(Boolean)
+          .join(" "),
+      };
+    });
+  }, [filterOptions.channel_options, filterOptions.channels, t]);
 
   const statusOptions = useMemo<SearchableCheckboxMultiSelectOption[]>(() => {
     return (filterOptions.statuses ?? ["success", "failed"]).map((status) => ({
@@ -345,7 +416,14 @@ export function RequestLogsPage() {
         setRawItems(resp.items ?? []);
         setTotalCount(resp.total ?? 0);
         setCurrentPage(page);
-        setFilterOptions(resp.filters);
+        setFilterOptions({
+          api_keys: resp.filters?.api_keys ?? [],
+          api_key_names: resp.filters?.api_key_names ?? {},
+          models: resp.filters?.models ?? [],
+          channels: resp.filters?.channels ?? [],
+          channel_options: resp.filters?.channel_options ?? [],
+          statuses: resp.filters?.statuses ?? ["success", "failed"],
+        });
         setStats({
           ...DEFAULT_LOG_STATS,
           ...resp.stats,

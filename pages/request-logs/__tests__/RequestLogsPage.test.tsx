@@ -27,6 +27,7 @@ const emptyLogsResponse = {
     api_key_names: {},
     models: [],
     channels: [],
+    channel_options: [],
     statuses: [],
   },
   stats: {
@@ -50,6 +51,22 @@ const responseWithFilterOptions = {
     },
     models: ["gpt-5.4", "gpt-4.1"],
     channels: ["Codex", "Relay"],
+    channel_options: [
+      {
+        value: "auth-codex",
+        label: "Codex",
+        provider: "codex",
+        auth_type: "oauth",
+        auth_index: "auth-codex",
+      },
+      {
+        value: "auth-relay",
+        label: "Relay",
+        provider: "openai",
+        auth_type: "api",
+        auth_index: "auth-relay",
+      },
+    ],
     statuses: ["success", "failed"],
   },
   stats: {

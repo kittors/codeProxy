@@ -2595,7 +2595,9 @@
     "clear_model_filter": "Clear model filter",
     "clear_channel_filter": "Clear channel filter",
     "clear_status_filter": "Clear status filter",
-    "cache_rate": "Cache Token Ratio"
+    "cache_rate": "Cache Token Ratio",
+    "auth_type_api": "API",
+    "auth_type_oauth": "OAuth"
   },
   "ccswitch": {
     "import_to_ccswitch": "Import to CC Switch",
