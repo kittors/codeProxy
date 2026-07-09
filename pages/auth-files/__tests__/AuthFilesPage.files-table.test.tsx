@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { ToastProvider } from "@code-proxy/ui";
 import { ThemeProvider } from "@code-proxy/ui";
 import { AuthFilesPage } from "@pages/auth-files/AuthFilesPage";
-import type { AuthFileItem, EntityStatsResponse } from "@code-proxy/api-client";
+import type { AuthFileItem, AuthFileTrendResponse, EntityStatsResponse } from "@code-proxy/api-client";
 import {
   AUTH_FILES_DATA_CACHE_KEY,
   AUTH_FILES_QUOTA_AUTO_REFRESH_KEY,
@@ -30,7 +30,7 @@ const mocks = vi.hoisted(() => ({
     source: [],
     auth_index: [],
   })),
-  getAuthFileTrend: vi.fn(async (authIndex: string) => ({
+  getAuthFileTrend: vi.fn(async (authIndex: string): Promise<AuthFileTrendResponse> => ({
     auth_index: authIndex,
     days: 7,
     hours: 5,
