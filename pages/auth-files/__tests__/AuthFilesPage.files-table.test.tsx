@@ -1261,7 +1261,7 @@ describe("AuthFilesPage files table", () => {
     );
 
     expect(await screen.findByText("user@example.com")).toBeInTheDocument();
-    expect(screen.getByRole("combobox", { name: "File group" })).toHaveTextContent("xai (1)");
+    expect(screen.getByRole("combobox", { name: "File group" })).toHaveTextContent(/xai1/);
 
     fireEvent.click(screen.getByLabelText("Select user@example.com"));
     fireEvent.click(screen.getByRole("button", { name: "Delete selected (1)" }));
@@ -1270,7 +1270,7 @@ describe("AuthFilesPage files table", () => {
     await waitFor(() => {
       expect(mocks.deleteFile).toHaveBeenCalledWith("xai-user.json");
       expect(screen.queryByText("user@example.com")).not.toBeInTheDocument();
-      expect(screen.getByRole("combobox", { name: "File group" })).toHaveTextContent("All (0)");
+      expect(screen.getByRole("combobox", { name: "File group" })).toHaveTextContent(/All0/);
     });
   });
 
@@ -2027,7 +2027,7 @@ describe("AuthFilesPage files table", () => {
 
     expect(await screen.findByText("codex-alpha.json")).toBeInTheDocument();
     const fileGroupSelect = screen.getByRole("combobox", { name: "File group" });
-    expect(fileGroupSelect).toHaveTextContent("All (3)");
+    expect(fileGroupSelect).toHaveTextContent(/All3/);
     await user.click(fileGroupSelect);
     expect(await screen.findByRole("option", { name: /codex\s*2/i })).toBeInTheDocument();
     expect(screen.getByRole("option", { name: /qwen\s*1/i })).toBeInTheDocument();
@@ -2038,7 +2038,7 @@ describe("AuthFilesPage files table", () => {
     expect(screen.getByText("codex-alpha.json")).toBeInTheDocument();
     await waitFor(() => expect(screen.queryByText("codex-beta.json")).not.toBeInTheDocument());
     expect(screen.queryByText("qwen-lab.json")).not.toBeInTheDocument();
-    expect(screen.getByRole("combobox", { name: "File group" })).toHaveTextContent("All (3)");
+    expect(screen.getByRole("combobox", { name: "File group" })).toHaveTextContent(/All3/);
   });
 
   test("refreshes only the clicked auth-file card cycle call count after quota refresh", async () => {

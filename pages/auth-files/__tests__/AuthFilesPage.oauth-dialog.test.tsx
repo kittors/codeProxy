@@ -528,7 +528,7 @@ describe("AuthFilesPage OAuth login dialog", () => {
     secondPoll.resolve({ status: "ok" });
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
 
-    expect(screen.getByRole("combobox", { name: "File group" })).toHaveTextContent("xai (1)");
+    expect(screen.getByRole("combobox", { name: "File group" })).toHaveTextContent(/xai1/);
     expect(await screen.findByText("user@example.com")).toBeInTheDocument();
     expect(screen.queryByText("qwen.json")).not.toBeInTheDocument();
 
