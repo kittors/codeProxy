@@ -740,7 +740,6 @@
     "valid_mappings": "Valid mappings: {{count}}",
     "fork": "fork",
     "calls_count": "{{count}} calls",
-    "local_usage_requests": "Requests",
     "success_count": "Success {{count}}",
     "failed_count": "Failed {{count}}",
     "total_page": "Total {{total}} · Page {{page}} / {{pages}}",
@@ -969,6 +968,19 @@
     "plan_plus": "Plus",
     "plan_team": "Team",
     "plan_free": "Free"
+  },
+  "xai_quota": {
+    "title": "Grok Quota",
+    "weekly_limit": "Weekly limit",
+    "product_usage": "Product usage",
+    "product_usage_named": "{{product}} usage",
+    "used_percent": "Used {{percent}}",
+    "reset_at": "Resets {{time}}",
+    "pay_as_you_go_label": "Pay as you go",
+    "pay_as_you_go_disabled": "Not enabled",
+    "monthly_credits": "Monthly credits",
+    "plan_supergrok": "SuperGrok",
+    "plan_supergrok_heavy": "SuperGrok Heavy"
   },
   "gemini_cli_quota": {
     "title": "Gemini CLI Quota",
@@ -2404,6 +2416,8 @@
     "request_failed": "Request failed",
     "missing_account_id": "Missing Chatgpt-Account-Id",
     "parse_codex_failed": "Failed to parse Codex quota",
+    "parse_xai_failed": "Failed to parse Grok quota",
+    "empty_data": "No quota data available",
     "missing_project_id": "Missing Gemini CLI Project ID",
     "parse_kiro_failed": "Failed to parse Kiro quota",
     "load_auth_failed": "Failed to load auth files",

@@ -45,9 +45,7 @@ import {
   AUTH_FILES_PAGE_SIZE,
   AUTH_FILE_STATUS_FILTERS,
   TYPE_BADGE_CLASSES,
-  buildAuthFileLocalUsageQuotaItems,
   isRuntimeOnlyAuthFile,
-  isXAIAuthFile,
   normalizeAuthIndexValue,
   normalizeProviderKey,
   normalizeTagValue,
@@ -1346,17 +1344,7 @@ export function AuthFilesFilesTab({
                           : "text-rose-700 dark:text-rose-200";
 
                   const items = Array.isArray(state.items) ? (state.items as QuotaItem[]) : [];
-                  const localUsageItems =
-                    !provider && isXAIAuthFile(file)
-                      ? buildAuthFileLocalUsageQuotaItems(file, usageIndex)
-                      : [];
-                  const slots = provider
-                    ? resolveQuotaCardSlots(provider, items)
-                    : localUsageItems.map((item) => ({
-                        id: item.key ?? item.label,
-                        label: item.label,
-                        item,
-                      }));
+                  const slots = provider ? resolveQuotaCardSlots(provider, items) : [];
 
                   const quotaRefreshing = provider
                     ? quotaByFileName[file.name]?.status === "loading"

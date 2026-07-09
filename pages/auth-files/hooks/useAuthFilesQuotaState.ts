@@ -129,6 +129,22 @@ export function useAuthFilesQuotaState({
 
   const resolveQuotaCardSlots = useCallback(
     (provider: QuotaProvider, items: QuotaItem[]) => {
+      const translateXaiQuotaText = (text: string) => {
+        const separatorIndex = text.indexOf("::");
+        const key = separatorIndex >= 0 ? text.slice(0, separatorIndex) : text;
+        const value = separatorIndex >= 0 ? text.slice(separatorIndex + 2) : "";
+        if (key === "xai_quota.product_usage_named" && value) {
+          return t(key, { product: value });
+        }
+        if (key === "xai_quota.used_percent" && value) {
+          return t(key, { percent: value });
+        }
+        if (key === "xai_quota.reset_at" && value) {
+          return t(key, { time: value });
+        }
+        return t(text);
+      };
+
       const translateQuotaLabel = (text: string) => {
         if (!text) return text;
         if (text.startsWith("m_quota.")) return t(text);
@@ -140,6 +156,7 @@ export function useAuthFilesQuotaState({
         }
         if (text.startsWith("claude_quota.")) return t(text);
         if (text.startsWith("antigravity_quota.")) return t(text);
+        if (text.startsWith("xai_quota.")) return translateXaiQuotaText(text);
         return text;
       };
 
@@ -154,6 +171,14 @@ export function useAuthFilesQuotaState({
       if (provider === "antigravity") {
         return filterAntigravityQuotaItems(items).map((item, index) => ({
           id: item.key ?? item.label ?? `antigravity-${index + 1}`,
+          label: translateQuotaLabel(item.label),
+          item,
+        }));
+      }
+
+      if (provider === "xai") {
+        return items.map((item, index) => ({
+          id: item.key ?? item.label ?? `xai-${index + 1}`,
           label: translateQuotaLabel(item.label),
           item,
         }));

@@ -1274,7 +1274,7 @@ describe("AuthFilesPage files table", () => {
     });
   });
 
-  test("cards view shows xAI local usage in the quota panel", async () => {
+  test("cards view shows xAI billing quota instead of local usage", async () => {
     const now = Date.now();
     const xaiFile: AuthFileItem = {
       name: "xai-user.json",
@@ -1290,6 +1290,40 @@ describe("AuthFilesPage files table", () => {
 
     window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
     mocks.list.mockImplementation(async () => ({ files: [xaiFile] }));
+    mocks.fetchQuota.mockResolvedValue({
+      items: [
+        {
+          key: "weekly_limit",
+          label: "xai_quota.weekly_limit",
+          percent: 75,
+          value: "xai_quota.used_percent::25%",
+          resetAtMs: now + 7 * 24 * 60 * 60 * 1000,
+          meta: "07/06/2026 - 07/13/2026",
+        },
+        {
+          key: "product:Grok 4",
+          label: "xai_quota.product_usage_named::Grok 4",
+          percent: 60,
+          value: "xai_quota.used_percent::40%",
+        },
+        {
+          key: "pay_as_you_go",
+          label: "xai_quota.pay_as_you_go_label",
+          percent: 80,
+          value: "80%",
+          meta: "$40.00 / $50.00",
+        },
+        {
+          key: "monthly_credits",
+          label: "xai_quota.monthly_credits",
+          percent: 87,
+          value: "87%",
+          resetAtMs: now + 23 * 24 * 60 * 60 * 1000,
+          meta: "$130.00 / $150.00",
+        },
+      ],
+      planType: "supergrok",
+    });
     mocks.getEntityStats.mockImplementation(async () => ({
       source: [],
       auth_index: [
@@ -1321,14 +1355,21 @@ describe("AuthFilesPage files table", () => {
     const quota = within(card as HTMLElement).getByTestId("auth-file-card-quota");
 
     await waitFor(() => {
-      expect(quota).toHaveTextContent("Success Rate");
-      expect(quota).toHaveTextContent("90.0%");
-      expect(quota).toHaveTextContent("Requests");
-      expect(quota).toHaveTextContent("20");
-      expect(quota).toHaveTextContent("Failure");
-      expect(quota).toHaveTextContent("2");
+      expect(mocks.fetchQuota).toHaveBeenCalledWith(
+        "xai",
+        expect.objectContaining({ name: "xai-user.json" }),
+      );
+      expect(quota).toHaveTextContent("Weekly limit");
+      expect(quota).toHaveTextContent("Used 25%");
+      expect(quota).toHaveTextContent("Grok 4 usage");
+      expect(quota).toHaveTextContent("Pay as you go");
+      expect(quota).toHaveTextContent("$40.00 / $50.00");
+      expect(quota).toHaveTextContent("Monthly credits");
+      expect(quota).toHaveTextContent("$130.00 / $150.00");
+      expect(card as HTMLElement).toHaveTextContent("Plan SuperGrok");
     });
-    expect(mocks.fetchQuota).not.toHaveBeenCalled();
+    expect(quota).not.toHaveTextContent("Requests");
+    expect(quota).not.toHaveTextContent("Failure");
   });
 
   test("shows a skeleton table while first loading", async () => {

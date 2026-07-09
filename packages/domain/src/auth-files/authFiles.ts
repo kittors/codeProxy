@@ -1504,38 +1504,6 @@ export const resolveAuthFileStats = (file: AuthFileItem, index: UsageIndex): Key
   return bucket;
 };
 
-export const isXAIAuthFile = (file: AuthFileItem): boolean =>
-  normalizeProviderKey(resolveFileType(file)) === "xai";
-
-export const buildAuthFileLocalUsageQuotaItems = (
-  file: AuthFileItem,
-  index: UsageIndex,
-): QuotaItem[] => {
-  const stats = resolveAuthFileStats(file, index);
-  const total = stats.success + stats.failure;
-  const successRate = total > 0 ? (stats.success / total) * 100 : null;
-  return [
-    {
-      key: "local_success_rate",
-      label: "common.success_rate",
-      percent: successRate,
-      value: successRate === null ? "--" : `${successRate.toFixed(1)}%`,
-    },
-    {
-      key: "local_requests",
-      label: "auth_files.local_usage_requests",
-      percent: null,
-      value: String(total),
-    },
-    {
-      key: "local_failures",
-      label: "common.failure",
-      percent: null,
-      value: String(stats.failure),
-    },
-  ];
-};
-
 export const resolveAuthFileStatusBar = (file: AuthFileItem, index: UsageIndex): StatusBarData => {
   const stats = resolveAuthFileStats(file, index);
   if (stats.success === 0 && stats.failure === 0) {

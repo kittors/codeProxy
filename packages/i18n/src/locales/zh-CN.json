@@ -754,7 +754,6 @@
     "valid_mappings": "有效映射：{{count}}",
     "fork": "分叉",
     "calls_count": "已调用 {{count}} 次",
-    "local_usage_requests": "请求数",
     "success_count": "成功 {{count}}",
     "failed_count": "失败 {{count}}",
     "total_page": "共 {{total}} 条 · 第 {{page}} / {{pages}} 页",
@@ -977,6 +976,19 @@
     "plan_plus": "Plus",
     "plan_team": "Team",
     "plan_free": "Free"
+  },
+  "xai_quota": {
+    "title": "Grok 额度",
+    "weekly_limit": "周限额",
+    "product_usage": "产品使用",
+    "product_usage_named": "{{product}} 使用",
+    "used_percent": "已用 {{percent}}",
+    "reset_at": "重置 {{time}}",
+    "pay_as_you_go_label": "按量付费",
+    "pay_as_you_go_disabled": "未启用",
+    "monthly_credits": "月度积分",
+    "plan_supergrok": "SuperGrok",
+    "plan_supergrok_heavy": "SuperGrok Heavy"
   },
   "gemini_cli_quota": {
     "title": "Gemini CLI 额度",
@@ -2421,6 +2433,8 @@
     "request_failed": "请求失败",
     "missing_account_id": "缺少 Chatgpt-Account-Id",
     "parse_codex_failed": "解析 Codex 配额失败",
+    "parse_xai_failed": "解析 Grok 额度失败",
+    "empty_data": "暂无额度数据",
     "missing_project_id": "缺少 Gemini CLI Project ID",
     "parse_kiro_failed": "解析 Kiro 配额失败",
     "load_auth_failed": "加载认证文件失败",
