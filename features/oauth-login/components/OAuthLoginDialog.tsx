@@ -1,8 +1,19 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Copy, ExternalLink, RefreshCw, Send, ShieldCheck, Sparkles, Upload } from "lucide-react";
+import {
+  Copy,
+  ExternalLink,
+  RefreshCw,
+  Send,
+  ShieldCheck,
+  Sparkles,
+  Upload,
+} from "lucide-react";
 import { oauthApi, vertexApi } from "@code-proxy/api-client";
-import type { IFlowCookieAuthResponse, OAuthProvider } from "@code-proxy/api-client";
+import type {
+  IFlowCookieAuthResponse,
+  OAuthProvider,
+} from "@code-proxy/api-client";
 import type { ProxyPoolEntry } from "@code-proxy/api-client";
 import { Button } from "@code-proxy/ui";
 import { Card } from "@code-proxy/ui";
@@ -29,7 +40,11 @@ type ProviderState = {
 };
 
 const PROVIDERS: { id: OAuthProvider; titleKey: string; hintKey: string }[] = [
-  { id: "codex", titleKey: "oauth.providers.codex.title", hintKey: "oauth.providers.codex.hint" },
+  {
+    id: "codex",
+    titleKey: "oauth.providers.codex.title",
+    hintKey: "oauth.providers.codex.hint",
+  },
   {
     id: "anthropic",
     titleKey: "oauth.providers.anthropic.title",
@@ -40,17 +55,30 @@ const PROVIDERS: { id: OAuthProvider; titleKey: string; hintKey: string }[] = [
     titleKey: "oauth.providers.antigravity.title",
     hintKey: "oauth.providers.antigravity.hint",
   },
-  { id: "xai", titleKey: "oauth.providers.xai.title", hintKey: "oauth.providers.xai.hint" },
+  {
+    id: "xai",
+    titleKey: "oauth.providers.xai.title",
+    hintKey: "oauth.providers.xai.hint",
+  },
   {
     id: "gemini-cli",
     titleKey: "oauth.providers.gemini_cli.title",
     hintKey: "oauth.providers.gemini_cli.hint",
   },
-  { id: "kimi", titleKey: "oauth.providers.kimi.title", hintKey: "oauth.providers.kimi.hint" },
-  { id: "qwen", titleKey: "oauth.providers.qwen.title", hintKey: "oauth.providers.qwen.hint" },
+  {
+    id: "kimi",
+    titleKey: "oauth.providers.kimi.title",
+    hintKey: "oauth.providers.kimi.hint",
+  },
+  {
+    id: "qwen",
+    titleKey: "oauth.providers.qwen.title",
+    hintKey: "oauth.providers.qwen.hint",
+  },
 ];
 
 const PROVIDER_TAB_IDS = PROVIDERS.map((p) => p.id);
+const manualCodeProvider = (provider: OAuthProvider) => provider === "xai";
 
 const getErrorMessage = (err: unknown): string => {
   if (err instanceof Error) return err.message;
@@ -105,7 +133,8 @@ export function OAuthLoginDialog({
 
   const [iflowCookie, setIflowCookie] = useState("");
   const [iflowLoading, setIflowLoading] = useState(false);
-  const [iflowResult, setIflowResult] = useState<IFlowCookieAuthResponse | null>(null);
+  const [iflowResult, setIflowResult] =
+    useState<IFlowCookieAuthResponse | null>(null);
 
   const [vertexFileName, setVertexFileName] = useState("");
   const [vertexLocation, setVertexLocation] = useState("");
@@ -118,7 +147,9 @@ export function OAuthLoginDialog({
   } | null>(null);
 
   const clearTimers = useCallback(() => {
-    Object.values(timers.current).forEach((timer) => window.clearInterval(timer));
+    Object.values(timers.current).forEach((timer) =>
+      window.clearInterval(timer),
+    );
     timers.current = {};
   }, []);
 
@@ -138,7 +169,10 @@ export function OAuthLoginDialog({
 
   const getProviderTitle = useCallback(
     (provider: OAuthProvider) =>
-      t(PROVIDERS.find((item) => item.id === provider)?.titleKey ?? "oauth.provider_fallback"),
+      t(
+        PROVIDERS.find((item) => item.id === provider)?.titleKey ??
+          "oauth.provider_fallback",
+      ),
     [t],
   );
 
@@ -181,12 +215,22 @@ export function OAuthLoginDialog({
       });
       notify({
         type: "success",
-        message: t("oauth.authorization_success", { provider: getProviderTitle(provider) }),
+        message: t("oauth.authorization_success", {
+          provider: getProviderTitle(provider),
+        }),
       });
       await onAuthorized?.();
       onClose();
     },
-    [clearProviderTimer, getProviderTitle, notify, onAuthorized, onClose, t, updateProviderState],
+    [
+      clearProviderTimer,
+      getProviderTitle,
+      notify,
+      onAuthorized,
+      onClose,
+      t,
+      updateProviderState,
+    ],
   );
 
   const startPolling = useCallback(
@@ -231,13 +275,22 @@ export function OAuthLoginDialog({
       timers.current[provider] = timer;
       void pollOnce();
     },
-    [clearProviderTimer, completeAuthorization, getProviderTitle, notify, t, updateProviderState],
+    [
+      clearProviderTimer,
+      completeAuthorization,
+      getProviderTitle,
+      notify,
+      t,
+      updateProviderState,
+    ],
   );
 
   const startAuth = useCallback(
     async (provider: OAuthProvider) => {
       const projectId =
-        provider === "gemini-cli" ? (states[provider]?.projectId || "").trim() : undefined;
+        provider === "gemini-cli"
+          ? (states[provider]?.projectId || "").trim()
+          : undefined;
       updateProviderState(provider, {
         status: "waiting",
         polling: true,
@@ -262,8 +315,13 @@ export function OAuthLoginDialog({
           startPolling(provider, res.state);
         }
       } catch (err: unknown) {
-        const message = getErrorMessage(err) || t("oauth.start_auth_failed_short");
-        updateProviderState(provider, { status: "error", error: message, polling: false });
+        const message =
+          getErrorMessage(err) || t("oauth.start_auth_failed_short");
+        updateProviderState(provider, {
+          status: "error",
+          error: message,
+          polling: false,
+        });
         notify({
           type: "error",
           message: t("oauth.start_auth_failed", {
@@ -273,7 +331,15 @@ export function OAuthLoginDialog({
         });
       }
     },
-    [getProviderTitle, notify, proxyOptions, startPolling, states, t, updateProviderState],
+    [
+      getProviderTitle,
+      notify,
+      proxyOptions,
+      startPolling,
+      states,
+      t,
+      updateProviderState,
+    ],
   );
 
   const copyLink = useCallback(
@@ -298,9 +364,21 @@ export function OAuthLoginDialog({
 
   const submitCallback = useCallback(
     async (provider: OAuthProvider) => {
-      const redirectUrl = (states[provider]?.callbackUrl || "").trim();
-      if (!redirectUrl) {
-        notify({ type: "info", message: t("oauth.enter_callback_url") });
+      const callbackInput = (states[provider]?.callbackUrl || "").trim();
+      if (!callbackInput) {
+        notify({
+          type: "info",
+          message: t(
+            manualCodeProvider(provider)
+              ? "oauth.enter_callback_code"
+              : "oauth.enter_callback_url",
+          ),
+        });
+        return;
+      }
+      const currentState = (states[provider]?.state || "").trim();
+      if (manualCodeProvider(provider) && !currentState) {
+        notify({ type: "info", message: t("oauth.start_authorization_first") });
         return;
       }
       updateProviderState(provider, {
@@ -309,15 +387,26 @@ export function OAuthLoginDialog({
         callbackError: undefined,
       });
       try {
-        const callbackState = states[provider]?.state || extractCallbackState(redirectUrl);
-        await oauthApi.submitCallback(provider, redirectUrl, proxyOptions());
+        const callbackState = manualCodeProvider(provider)
+          ? currentState
+          : states[provider]?.state || extractCallbackState(callbackInput);
+        await oauthApi.submitCallback(
+          provider,
+          manualCodeProvider(provider)
+            ? { code: callbackInput, state: callbackState }
+            : callbackInput,
+          proxyOptions(),
+        );
         updateProviderState(provider, {
           callbackStatus: "success",
           state: callbackState || states[provider]?.state,
           status: callbackState ? "waiting" : "success",
           polling: Boolean(callbackState),
         });
-        notify({ type: "success", message: t("oauth.callback_submit_success") });
+        notify({
+          type: "success",
+          message: t("oauth.callback_submit_success"),
+        });
         if (callbackState) {
           startPolling(provider, callbackState);
         } else {
@@ -326,7 +415,8 @@ export function OAuthLoginDialog({
           onClose();
         }
       } catch (err: unknown) {
-        const message = getErrorMessage(err) || t("oauth.callback_submit_failed");
+        const message =
+          getErrorMessage(err) || t("oauth.callback_submit_failed");
         updateProviderState(provider, {
           callbackSubmitting: false,
           callbackStatus: "error",
@@ -335,15 +425,27 @@ export function OAuthLoginDialog({
         notify({ type: "error", message });
       }
     },
-    [notify, onAuthorized, onClose, proxyOptions, states, t, updateProviderState],
+    [
+      notify,
+      onAuthorized,
+      onClose,
+      proxyOptions,
+      states,
+      t,
+      updateProviderState,
+    ],
   );
 
   const iflowHint = useMemo(() => {
     if (!iflowResult) return t("oauth.iflow_hint_default");
     if (iflowResult.status === "ok") {
-      return t("oauth.iflow_hint_success", { path: iflowResult.saved_path || "" }).trim();
+      return t("oauth.iflow_hint_success", {
+        path: iflowResult.saved_path || "",
+      }).trim();
     }
-    return t("oauth.iflow_hint_failed", { error: iflowResult.error || "" }).trim();
+    return t("oauth.iflow_hint_failed", {
+      error: iflowResult.error || "",
+    }).trim();
   }, [iflowResult, t]);
 
   const submitIflow = useCallback(async () => {
@@ -360,11 +462,16 @@ export function OAuthLoginDialog({
       notify({
         type: res.status === "ok" ? "success" : "error",
         message:
-          res.status === "ok" ? t("oauth.import_success") : res.error || t("oauth.import_failed"),
+          res.status === "ok"
+            ? t("oauth.import_success")
+            : res.error || t("oauth.import_failed"),
       });
       if (res.status === "ok") onAuthorized?.();
     } catch (err: unknown) {
-      notify({ type: "error", message: getErrorMessage(err) || t("oauth.import_failed") });
+      notify({
+        type: "error",
+        message: getErrorMessage(err) || t("oauth.import_failed"),
+      });
     } finally {
       setIflowLoading(false);
     }
@@ -392,7 +499,10 @@ export function OAuthLoginDialog({
         notify({ type: "success", message: t("oauth.vertex_import_success") });
         onAuthorized?.();
       } catch (err: unknown) {
-        notify({ type: "error", message: getErrorMessage(err) || t("oauth.vertex_import_failed") });
+        notify({
+          type: "error",
+          message: getErrorMessage(err) || t("oauth.vertex_import_failed"),
+        });
       } finally {
         setVertexLoading(false);
       }
@@ -407,6 +517,7 @@ export function OAuthLoginDialog({
       const disabled = status === "waiting";
       const url = state.url ?? "";
       const polling = Boolean(state.polling);
+      const manualCode = manualCodeProvider(provider);
 
       const statusText = polling
         ? t("oauth.status_waiting")
@@ -418,9 +529,13 @@ export function OAuthLoginDialog({
 
       return (
         <Card
-          title={t(PROVIDERS.find((p) => p.id === provider)?.titleKey ?? "oauth.provider_fallback")}
+          title={t(
+            PROVIDERS.find((p) => p.id === provider)?.titleKey ??
+              "oauth.provider_fallback",
+          )}
           description={t(
-            PROVIDERS.find((p) => p.id === provider)?.hintKey ?? "oauth.hint_fallback",
+            PROVIDERS.find((p) => p.id === provider)?.hintKey ??
+              "oauth.hint_fallback",
           )}
           actions={
             <Button
@@ -429,7 +544,11 @@ export function OAuthLoginDialog({
               onClick={() => void startAuth(provider)}
               disabled={disabled}
             >
-              {disabled ? <RefreshCw size={14} className="animate-spin" /> : <Sparkles size={14} />}
+              {disabled ? (
+                <RefreshCw size={14} className="animate-spin" />
+              ) : (
+                <Sparkles size={14} />
+              )}
               {t("oauth.start_authorization")}
             </Button>
           }
@@ -439,7 +558,9 @@ export function OAuthLoginDialog({
               <TextInput
                 value={state.projectId ?? ""}
                 onChange={(e) =>
-                  updateProviderState(provider, { projectId: e.currentTarget.value })
+                  updateProviderState(provider, {
+                    projectId: e.currentTarget.value,
+                  })
                 }
                 placeholder={t("oauth.project_placeholder")}
               />
@@ -461,7 +582,12 @@ export function OAuthLoginDialog({
                   >
                     <Copy size={14} />
                   </Button>
-                  <Button variant="ghost" size="sm" onClick={() => openLink(url)} disabled={!url}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => openLink(url)}
+                    disabled={!url}
+                  >
                     <ExternalLink size={14} />
                   </Button>
                 </div>
@@ -481,7 +607,11 @@ export function OAuthLoginDialog({
                 </p>
                 {status === "waiting" || polling ? (
                   <p className="mt-1 break-words text-xs text-slate-600 dark:text-white/60">
-                    {t("oauth.callback_browser_address_hint")}
+                    {t(
+                      manualCode
+                        ? "oauth.callback_code_browser_hint"
+                        : "oauth.callback_browser_address_hint",
+                    )}
                   </p>
                 ) : null}
                 {state.error ? (
@@ -495,7 +625,7 @@ export function OAuthLoginDialog({
             <div className="grid gap-2 rounded-2xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-white/55">
-                  {t("oauth.callback")}
+                  {t(manualCode ? "oauth.callback_code" : "oauth.callback")}
                 </p>
                 <Button
                   variant="secondary"
@@ -514,10 +644,21 @@ export function OAuthLoginDialog({
               <TextInput
                 value={state.callbackUrl ?? ""}
                 onChange={(e) =>
-                  updateProviderState(provider, { callbackUrl: e.currentTarget.value })
+                  updateProviderState(provider, {
+                    callbackUrl: e.currentTarget.value,
+                  })
                 }
-                placeholder={t("oauth.callback_placeholder")}
+                placeholder={t(
+                  manualCode
+                    ? "oauth.callback_code_placeholder"
+                    : "oauth.callback_placeholder",
+                )}
               />
+              {manualCode ? (
+                <p className="text-xs text-slate-600 dark:text-white/60">
+                  {t("oauth.callback_code_hint")}
+                </p>
+              ) : null}
               {state.callbackStatus ? (
                 <span
                   className={
@@ -536,7 +677,15 @@ export function OAuthLoginDialog({
         </Card>
       );
     },
-    [copyLink, openLink, startAuth, states, submitCallback, t, updateProviderState],
+    [
+      copyLink,
+      openLink,
+      startAuth,
+      states,
+      submitCallback,
+      t,
+      updateProviderState,
+    ],
   );
 
   return (
@@ -625,12 +774,22 @@ export function OAuthLoginDialog({
                   <input
                     type="file"
                     className="hidden"
-                    onChange={(e) => void onVertexFileChange(e.currentTarget.files?.[0] ?? null)}
+                    onChange={(e) =>
+                      void onVertexFileChange(
+                        e.currentTarget.files?.[0] ?? null,
+                      )
+                    }
                   />
                   <span className="inline-flex">
-                    <Button variant="secondary" size="sm" disabled={vertexLoading}>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      disabled={vertexLoading}
+                    >
                       <Upload size={14} />
-                      {vertexLoading ? t("oauth.importing") : t("oauth.select_file")}
+                      {vertexLoading
+                        ? t("oauth.importing")
+                        : t("oauth.select_file")}
                     </Button>
                   </span>
                 </label>
@@ -652,16 +811,19 @@ export function OAuthLoginDialog({
                   {vertexResult ? (
                     <div className="mt-2 space-y-1 font-mono text-xs text-slate-700 dark:text-slate-200">
                       <div>
-                        {t("oauth.project_id_label")}: {vertexResult.projectId || "--"}
+                        {t("oauth.project_id_label")}:{" "}
+                        {vertexResult.projectId || "--"}
                       </div>
                       <div>
                         {t("oauth.email_label")}: {vertexResult.email || "--"}
                       </div>
                       <div>
-                        {t("oauth.location_label")}: {vertexResult.location || "--"}
+                        {t("oauth.location_label")}:{" "}
+                        {vertexResult.location || "--"}
                       </div>
                       <div>
-                        {t("oauth.auth_file_label")}: {vertexResult.authFile || "--"}
+                        {t("oauth.auth_file_label")}:{" "}
+                        {vertexResult.authFile || "--"}
                       </div>
                     </div>
                   ) : (
