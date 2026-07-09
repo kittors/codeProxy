@@ -38,6 +38,8 @@ export interface GeminiIdentityFingerprint {
 export interface XAIIdentityFingerprint {
   enabled?: boolean;
   "user-agent"?: string;
+  "x-grok-client-identifier"?: string;
+  "x-grok-client-version"?: string;
   "x-grok-conv-id"?: string;
   "custom-headers"?: Record<string, string>;
 }

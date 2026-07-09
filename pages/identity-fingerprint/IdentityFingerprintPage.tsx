@@ -104,6 +104,8 @@ const EMPTY_GEMINI: Required<GeminiIdentityFingerprint> = {
 const EMPTY_XAI: Required<XAIIdentityFingerprint> = {
   enabled: false,
   "user-agent": "",
+  "x-grok-client-identifier": "",
+  "x-grok-client-version": "",
   "x-grok-conv-id": "",
   "custom-headers": {},
 };
@@ -120,7 +122,7 @@ const PROVIDER_FIELD_ORDER: Record<RuntimeProvider, string[]> = {
   ],
   codex: ["user-agent", "version", "originator", "websocket-beta", "x-codex-beta-features"],
   gemini: ["user-agent", "x-goog-api-client", "client-metadata"],
-  xai: ["user-agent", "x-grok-conv-id"],
+  xai: ["user-agent", "x-grok-client-identifier", "x-grok-client-version"],
 };
 
 const FIELD_LABEL_KEYS: Record<string, string> = {
@@ -137,6 +139,8 @@ const FIELD_LABEL_KEYS: Record<string, string> = {
   "stainless-timeout": "identity_fingerprint.claude_stainless_timeout",
   "x-goog-api-client": "identity_fingerprint.gemini_api_client",
   "client-metadata": "identity_fingerprint.gemini_client_metadata",
+  "x-grok-client-identifier": "identity_fingerprint.xai_client_identifier",
+  "x-grok-client-version": "identity_fingerprint.xai_client_version",
   "x-grok-conv-id": "identity_fingerprint.xai_grok_conversation_id",
 };
 
@@ -823,7 +827,8 @@ export function IdentityFingerprintPage() {
   const xaiPreviewItems = useMemo(
     () => [
       [t("identity_fingerprint.preview_client"), xaiFingerprint["user-agent"]],
-      [t("identity_fingerprint.xai_grok_conversation_id"), xaiFingerprint["x-grok-conv-id"]],
+      [t("identity_fingerprint.xai_client_identifier"), xaiFingerprint["x-grok-client-identifier"]],
+      [t("identity_fingerprint.xai_client_version"), xaiFingerprint["x-grok-client-version"]],
     ],
     [t, xaiFingerprint],
   );
@@ -1435,13 +1440,28 @@ export function IdentityFingerprintPage() {
                         />
                       </Field>
                       <Field
-                        label={t("identity_fingerprint.xai_grok_conversation_id")}
-                        hint={t("identity_fingerprint.xai_grok_conversation_id_hint")}
+                        label={t("identity_fingerprint.xai_client_identifier")}
+                        hint={t("identity_fingerprint.xai_client_identifier_hint")}
                       >
                         <TextInput
-                          value={xaiFingerprint["x-grok-conv-id"]}
+                          value={xaiFingerprint["x-grok-client-identifier"]}
                           onChange={(event) =>
-                            updateXAIFingerprint({ "x-grok-conv-id": event.target.value })
+                            updateXAIFingerprint({
+                              "x-grok-client-identifier": event.target.value,
+                            })
+                          }
+                          disabled={saving}
+                          placeholder={t("identity_fingerprint.auto_learn_placeholder")}
+                        />
+                      </Field>
+                      <Field
+                        label={t("identity_fingerprint.xai_client_version")}
+                        hint={t("identity_fingerprint.xai_client_version_hint")}
+                      >
+                        <TextInput
+                          value={xaiFingerprint["x-grok-client-version"]}
+                          onChange={(event) =>
+                            updateXAIFingerprint({ "x-grok-client-version": event.target.value })
                           }
                           disabled={saving}
                           placeholder={t("identity_fingerprint.auto_learn_placeholder")}
