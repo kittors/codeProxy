@@ -79,6 +79,7 @@ export default defineConfig({
           "vendor-animation": ["framer-motion", "gsap"],
           "vendor-charts": ["chart.js", "react-chartjs-2"],
           "vendor-markdown": ["react-markdown", "react-syntax-highlighter", "remark-gfm"],
+          "vendor-radix-dropdown": ["@radix-ui/react-dropdown-menu"],
         },
       },
     },
