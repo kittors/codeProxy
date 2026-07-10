@@ -7,6 +7,8 @@ import {
 
 export const DEFAULT_HEARTBEAT_INTERVAL_MS = 1000;
 export const DEFAULT_HEARTBEAT_TIMEOUT_MS = 180000;
+const PROGRESS_STREAM_RECONNECT_INITIAL_MS = 5000;
+const PROGRESS_STREAM_RECONNECT_MAX_MS = 60000;
 
 const normalizedProgressStatus = (progress?: UpdateProgressResponse | null) =>
   progress?.status?.trim().toLowerCase() ?? "";
@@ -231,20 +233,35 @@ const publishProgress = (progress: UpdateProgressResponse) => {
   progressListeners.forEach((listener) => listener(progress));
 };
 
+const progressStreamReconnectDelay = (attempts: number) =>
+  Math.min(
+    PROGRESS_STREAM_RECONNECT_MAX_MS,
+    PROGRESS_STREAM_RECONNECT_INITIAL_MS * 2 ** Math.max(0, attempts - 1),
+  );
+
 const ensureProgressStream = () => {
   if (progressStreamTask || progressListeners.size === 0) return;
   const controller = new AbortController();
   progressStreamController = controller;
   progressStreamTask = (async () => {
+    let reconnectAttempts = 0;
     while (!controller.signal.aborted && progressListeners.size > 0) {
+      let receivedEvent = false;
       try {
-        await updateApi.events(publishProgress, { signal: controller.signal });
+        await updateApi.events(
+          (progress) => {
+            receivedEvent = true;
+            publishProgress(progress);
+          },
+          { signal: controller.signal },
+        );
       } catch {
         // The API container restarts during an update. Reconnect and let the updater
         // replay its latest persisted snapshot instead of manufacturing UI progress.
       }
       if (!controller.signal.aborted && progressListeners.size > 0) {
-        await delay(DEFAULT_HEARTBEAT_INTERVAL_MS, controller.signal);
+        reconnectAttempts = receivedEvent ? 1 : reconnectAttempts + 1;
+        await delay(progressStreamReconnectDelay(reconnectAttempts), controller.signal);
       }
     }
   })().finally(() => {
