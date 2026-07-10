@@ -1,6 +1,6 @@
 # codeProxy Bundle Baseline
 
-更新时间：2026-07-02 14:12:26 +0800
+更新时间：2026-07-10 17:10:00 +0800
 
 ## 当前构建命令
 
@@ -19,7 +19,7 @@ bun run build
 | `vendor-charts`      |    0.07 kB |   0.08 kB | Chart.js 入口当前几乎未进入业务路径                                         |
 | `index`              |  283.68 kB |  88.17 kB | 入口基础包接受本轮窗口顶部进度条变化，后续仍需持续往下压                    |
 | `ConfigPage`         |  118.44 kB |  32.93 kB | 页面 chunk 低于预算                                                         |
-| `AuthFilesPage`      |  203.20 kB |  54.93 kB | 页面主文件仍低于页面 gzip 预算                                              |
+| `AuthFilesPage`      |  221.86 kB |  59.92 kB | 身份多档案与出站策略交互加入后仍低于页面 gzip 预算                          |
 | `ProvidersPage`      |  113.50 kB |  28.33 kB | 已低于 `< 80 kB gzip` 页面预算                                              |
 | `MonitorPage`        |   24.48 kB |   6.81 kB | 已拆为 toolbar / state hook / dashboard sections                            |
 | `LogsPage`           |   19.36 kB |   5.80 kB | 已拆为 live logs / error logs / helpers                                     |
@@ -37,7 +37,7 @@ bun run build
 
 | 页面/模块         |                  当前体积 | 预算状态       | 最近治理结果                                                                                                    |
 | ----------------- | ------------------------: | -------------- | --------------------------------------------------------------------------------------------------------------- |
-| `AuthFilesPage`   | 203.20 kB / 54.93 kB gzip | 通过           | 近期额度趋势与 OAuth 交互补齐后仍低于页面 gzip 预算，后续继续关注 chunk 治理 |
+| `AuthFilesPage`   | 221.86 kB / 59.92 kB gzip | 通过           | 新增 Codex 身份多档案与出站选择后仍低于页面 gzip 预算，后续继续关注 chunk 治理 |
 | `ConfigPage`      | 118.44 kB / 32.93 kB gzip | 通过           | 已拆出 runtime panel / visual payload editors，并复用 feature 侧 visual config hook |
 | `ProvidersPage`   | 113.50 kB / 28.33 kB gzip | 通过且低于预算 | OpenAI tab、usage summary、provider editor hooks 已完成拆分 |
 | `LogContentModal` |  44.82 kB / 12.96 kB gzip | 通过且低于预算 | Markdown 渲染改为按交互懒加载，保留完整内容查看能力 |
