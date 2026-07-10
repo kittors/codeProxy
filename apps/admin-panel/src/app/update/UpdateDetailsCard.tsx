@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { RefreshCw } from "lucide-react";
 import {
@@ -14,7 +14,10 @@ import {
   DEFAULT_HEARTBEAT_INTERVAL_MS,
   DEFAULT_HEARTBEAT_TIMEOUT_MS,
   applyUpdateFlow,
-  createPendingUpdateProgress,
+  candidateFromProgress,
+  claimUpdateProgressModal,
+  releaseUpdateProgressModal,
+  subscribeUpdateProgress,
   formatUpdateStatusMessage,
   isAlreadyUpToDateMessage,
 } from "@app/update/updateShared";
@@ -36,8 +39,43 @@ export function UpdateDetailsCard({
   const [updating, setUpdating] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const observedRunRef = useRef<number | null>(null);
+  const modalOwnerRef = useRef(Symbol("system-update-card"));
+
+  useEffect(() => {
+    const unsubscribe = subscribeUpdateProgress((nextProgress) => {
+      const status = nextProgress.status.trim().toLowerCase();
+      const runID = nextProgress.run_id ?? null;
+      if (status === "running") {
+        observedRunRef.current = runID;
+        setCandidate((current) => candidateFromProgress(nextProgress, current));
+        setUpdateTarget((current) => candidateFromProgress(nextProgress, current));
+        setProgress(nextProgress);
+        setUpdating(true);
+        if (claimUpdateProgressModal(modalOwnerRef.current)) {
+          setModalOpen(true);
+        }
+        return;
+      }
+      if (
+        runID &&
+        observedRunRef.current === runID &&
+        (status === "completed" || status === "failed")
+      ) {
+        setCandidate((current) => candidateFromProgress(nextProgress, current));
+        setUpdateTarget((current) => candidateFromProgress(nextProgress, current));
+        setProgress(nextProgress);
+        setUpdating(false);
+      }
+    });
+    return () => {
+      unsubscribe();
+      releaseUpdateProgressModal(modalOwnerRef.current);
+    };
+  }, []);
 
   const checkUpdate = useCallback(async () => {
+    if (!claimUpdateProgressModal(modalOwnerRef.current)) return;
     setModalOpen(true);
     setChecking(true);
     setChecked(true);
@@ -70,7 +108,7 @@ export function UpdateDetailsCard({
 
   const applyUpdate = useCallback(async () => {
     setUpdateTarget(candidate);
-    setProgress(createPendingUpdateProgress(candidate));
+    setProgress(null);
     setUpdating(true);
     try {
       await applyUpdateFlow({
@@ -131,6 +169,7 @@ export function UpdateDetailsCard({
         onClose={() => {
           setProgress(null);
           setUpdateTarget(null);
+          releaseUpdateProgressModal(modalOwnerRef.current);
           setModalOpen(false);
         }}
       />
