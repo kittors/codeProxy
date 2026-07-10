@@ -80,10 +80,7 @@ const buildAuthFileSignature = (file: AuthFileItem): string =>
     .join("|");
 
 const buildAuthFilesSignature = (items: AuthFileItem[]): string =>
-  items
-    .map(buildAuthFileSignature)
-    .sort()
-    .join("\n");
+  items.map(buildAuthFileSignature).sort().join("\n");
 
 const findChangedAuthFile = (
   previousFiles: AuthFileItem[],
@@ -239,7 +236,11 @@ export function AuthFilesPage() {
     detailTrendError,
     identityFingerprintDetail,
     identityFingerprintLoading,
+    identityFingerprintSaving,
     identityFingerprintError,
+    selectIdentityFingerprintProfile,
+    useIdentityFingerprintCLIPreferred,
+    deleteIdentityFingerprintProfile,
     refreshDetailTrend,
     modelsLoading,
     modelsFileType,
@@ -902,7 +903,11 @@ export function AuthFilesPage() {
         detailTrendError={detailTrendError}
         identityFingerprintDetail={identityFingerprintDetail}
         identityFingerprintLoading={identityFingerprintLoading}
+        identityFingerprintSaving={identityFingerprintSaving}
         identityFingerprintError={identityFingerprintError}
+        selectIdentityFingerprintProfile={selectIdentityFingerprintProfile}
+        useIdentityFingerprintCLIPreferred={useIdentityFingerprintCLIPreferred}
+        deleteIdentityFingerprintProfile={deleteIdentityFingerprintProfile}
         refreshDetailTrend={refreshDetailTrend}
         loadModelsForDetail={loadModelsForDetail}
         loadModelOwnerGroups={loadModelOwnerGroups}
