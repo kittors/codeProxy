@@ -1,5 +1,6 @@
 import {
   getCcSwitchClientConfig,
+  normalizeCcSwitchCodexInlineModelCatalog,
   type CcSwitchClaudeModelRole,
   type CcSwitchClientType,
 } from "./ccswitchImport";
@@ -125,25 +126,8 @@ const normalizeUsageAutoInterval = (value: unknown, fallback: number) => {
   return Math.round(parsed);
 };
 
-const normalizeCodexModelCatalog = (
-  value: unknown,
-): CcSwitchImportCodexModelCatalog | undefined => {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
-  if (!("models" in value)) return undefined;
-  const { models } = value;
-  if (!Array.isArray(models)) return undefined;
-
-  const entries = models.filter(
-    (entry): entry is Record<string, unknown> =>
-      entry !== null && typeof entry === "object" && !Array.isArray(entry),
-  );
-  const hasModelId = entries.some((entry) => {
-    const slug = typeof entry.slug === "string" ? entry.slug.trim() : "";
-    const model = typeof entry.model === "string" ? entry.model.trim() : "";
-    return slug || model;
-  });
-  return hasModelId ? { models: entries.map((entry) => ({ ...entry })) } : undefined;
-};
+const normalizeCodexModelCatalog = (value: unknown): CcSwitchImportCodexModelCatalog | undefined =>
+  normalizeCcSwitchCodexInlineModelCatalog(value);
 
 const createConfigId = () => {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {

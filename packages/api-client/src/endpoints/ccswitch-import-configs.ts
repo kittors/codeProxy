@@ -1,4 +1,5 @@
 import { apiClient } from "../client/client";
+import { normalizeCcSwitchCodexInlineModelCatalog } from "@code-proxy/domain/ccswitch/ccswitchImport";
 import {
   createCcSwitchImportConfig,
   type CcSwitchImportCodexModelCatalog,
@@ -66,18 +67,8 @@ const normalizeModelMappings = (value: unknown): CcSwitchModelMapping[] => {
     .filter((item): item is CcSwitchModelMapping => Boolean(item));
 };
 
-const normalizeCodexModelCatalog = (
-  value: unknown,
-): CcSwitchImportCodexModelCatalog | undefined => {
-  const record = asRecord(value);
-  if (!record || !Array.isArray(record.models)) return undefined;
-
-  const models = record.models.filter(
-    (entry): entry is Record<string, unknown> => asRecord(entry) !== null,
-  );
-  const hasSlug = models.some((entry) => normalizeString(entry.slug));
-  return hasSlug ? { models: models.map((entry) => ({ ...entry })) } : undefined;
-};
+const normalizeCodexModelCatalog = (value: unknown): CcSwitchImportCodexModelCatalog | undefined =>
+  normalizeCcSwitchCodexInlineModelCatalog(value);
 
 export function normalizeCcSwitchImportConfigs(raw: unknown): CcSwitchImportConfigListItem[] {
   if (!Array.isArray(raw)) return [];

@@ -174,4 +174,43 @@ describe("ccSwitchImportConfigsApi", () => {
       },
     });
   });
+
+  test("normalizes camelCase Codex catalog context and reasoning fields", () => {
+    const configs = normalizeCcSwitchImportConfigs([
+      {
+        id: "codex-gpt56",
+        "client-type": "codex",
+        "provider-name": "GPT-5.6",
+        "default-model": "gpt-5.6-sol",
+        "model-mappings": [{ "request-model": "gpt-5.6-sol", "target-model": "gpt-5.6-sol" }],
+        "codex-model-catalog": {
+          models: [
+            {
+              slug: "gpt-5.6-sol",
+              model: "gpt-5.6-sol",
+              contextWindow: 1050000,
+              maxContextWindow: 1050000,
+              defaultReasoningLevel: "medium",
+              supportedReasoningLevels: [
+                { effort: "max", description: "Maximum" },
+                { effort: "ultra", description: "Delegated" },
+              ],
+              modelMessages: { contextWindow: 1050000, maxContextWindow: 1050000 },
+            },
+          ],
+        },
+      },
+    ]);
+
+    expect(configs[0]?.codexModelCatalog?.models[0]).toMatchObject({
+      context_window: 1050000,
+      max_context_window: 1050000,
+      default_reasoning_level: "medium",
+      supported_reasoning_levels: [
+        { effort: "max", description: "Maximum" },
+        { effort: "ultra", description: "Delegated" },
+      ],
+      model_messages: { context_window: 1050000, max_context_window: 1050000 },
+    });
+  });
 });

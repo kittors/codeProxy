@@ -5,6 +5,7 @@ import {
   buildCcSwitchImportUrl,
   CC_SWITCH_CODEX_API_FORMAT,
   CC_SWITCH_CODEX_MODEL_CATALOG_FILENAME,
+  normalizeCcSwitchCodexInlineModelCatalog,
   openCcSwitchImportUrl,
   pickCcSwitchDefaultModel,
   resolveCcSwitchImportConfig,
@@ -279,7 +280,10 @@ describe("ccswitchImport", () => {
         defaultReasoningLevel: "medium",
         supportedReasoningLevels: [
           { effort: "low", description: "Fast responses with lighter reasoning" },
-          { effort: "medium", description: "Balances speed and reasoning depth for everyday tasks" },
+          {
+            effort: "medium",
+            description: "Balances speed and reasoning depth for everyday tasks",
+          },
           { effort: "high", description: "Greater reasoning depth for complex problems" },
           { effort: "xhigh", description: "Extra high reasoning depth for complex problems" },
         ],
@@ -354,7 +358,10 @@ describe("ccswitchImport", () => {
             defaultReasoningLevel: "medium",
             supportedReasoningLevels: [
               { effort: "low", description: "Fast responses with lighter reasoning" },
-              { effort: "medium", description: "Balances speed and reasoning depth for everyday tasks" },
+              {
+                effort: "medium",
+                description: "Balances speed and reasoning depth for everyday tasks",
+              },
               { effort: "high", description: "Greater reasoning depth for complex problems" },
               { effort: "xhigh", description: "Extra high reasoning depth for complex problems" },
             ],
@@ -407,6 +414,62 @@ describe("ccswitchImport", () => {
         input_modalities: ["text", "image"],
       },
     });
+  });
+
+  test("uses GPT-5.6 capabilities without widening unknown model reasoning", () => {
+    const catalog = buildCcSwitchCodexModelCatalog([
+      { model: "gpt-5.6-sol" },
+      { model: "gpt-5.6-terra", contextWindow: 400000 },
+      { model: "gpt-5.6-luna", contextWindow: 2000000 },
+      { model: "deepseek-v4-flash" },
+    ]);
+
+    for (const model of catalog.models.slice(0, 3)) {
+      expect(model.max_context_window).toBe(1050000);
+      expect(model.supported_reasoning_levels.map((level) => level.effort)).toEqual([
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+        "max",
+        "ultra",
+      ]);
+    }
+    expect(catalog.models[0]?.context_window).toBe(1050000);
+    expect(catalog.models[1]?.context_window).toBe(400000);
+    expect(catalog.models[2]?.context_window).toBe(1050000);
+    expect(catalog.models[3]?.supported_reasoning_levels.map((level) => level.effort)).toEqual([
+      "low",
+      "medium",
+      "high",
+      "xhigh",
+    ]);
+  });
+
+  test("normalizes camelCase explicit catalog fields for deep-link round trips", () => {
+    const catalog = normalizeCcSwitchCodexInlineModelCatalog({
+      models: [
+        {
+          slug: "gpt-5.6-sol",
+          model: "gpt-5.6-sol",
+          contextWindow: 900000,
+          maxContextWindow: 1050000,
+          defaultReasoningLevel: "ultra",
+          supportedReasoningLevels: ["max", "ultra"],
+          modelMessages: { contextWindow: 900000, maxContextWindow: 1050000 },
+        },
+      ],
+    });
+
+    expect(catalog?.models[0]).toMatchObject({
+      context_window: 900000,
+      max_context_window: 1050000,
+      default_reasoning_level: "ultra",
+      supported_reasoning_levels: ["max", "ultra"],
+      model_messages: { context_window: 900000, max_context_window: 1050000 },
+    });
+    expect(catalog?.models[0]).not.toHaveProperty("contextWindow");
+    expect(catalog?.models[0]).not.toHaveProperty("maxContextWindow");
   });
 
   test("serializes a Codex model catalog JSON that preserves all model IDs", () => {
@@ -545,6 +608,44 @@ describe("ccswitchImport", () => {
     expect(decodeConfig(url).config).toContain(`model_reasoning_effort = "low"`);
   });
 
+  test("exports normalized GPT-5.6 catalog metadata through the CC Switch deep link", () => {
+    const url = buildCcSwitchImportUrl({
+      apiKey: "sk-test",
+      baseUrl: "https://relay.example.com",
+      clientType: "codex",
+      enabled: true,
+      providerName: "Relay GPT-5.6",
+      model: "gpt-5.6-sol",
+      codexModelCatalog: {
+        models: [
+          {
+            slug: "gpt-5.6-sol",
+            model: "gpt-5.6-sol",
+            contextWindow: 1050000,
+            maxContextWindow: 1050000,
+            defaultReasoningLevel: "ultra",
+            supportedReasoningLevels: [
+              { effort: "max", description: "Maximum" },
+              { effort: "ultra", description: "Delegated" },
+            ],
+          },
+        ],
+      },
+    });
+
+    const decoded = decodeConfig(url);
+    expect(decoded.config).toContain(`model_reasoning_effort = "ultra"`);
+    expect(decoded.modelCatalog.models[0]).toMatchObject({
+      context_window: 1050000,
+      max_context_window: 1050000,
+      default_reasoning_level: "ultra",
+      supported_reasoning_levels: [
+        { effort: "max", description: "Maximum" },
+        { effort: "ultra", description: "Delegated" },
+      ],
+    });
+  });
+
   test("falls back to model_reasoning_effort = high when no matching catalog entry exists", () => {
     const url = buildCcSwitchImportUrl({
       apiKey: "sk-test-key",
@@ -581,6 +682,8 @@ describe("ccswitchImport", () => {
     // into the catalog (so the catalog pointer is present) but the effort
     // falls back to the legacy "high" default to preserve prior behavior.
     expect(decodeConfig(url).config).toContain(`model_reasoning_effort = "high"`);
-    expect(decodeConfig(url).config).toContain(`model_catalog_json = "${CC_SWITCH_CODEX_MODEL_CATALOG_FILENAME}"`);
+    expect(decodeConfig(url).config).toContain(
+      `model_catalog_json = "${CC_SWITCH_CODEX_MODEL_CATALOG_FILENAME}"`,
+    );
   });
 });

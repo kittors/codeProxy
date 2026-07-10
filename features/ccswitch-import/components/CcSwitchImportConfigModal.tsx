@@ -16,7 +16,6 @@ import {
   CC_SWITCH_CODEX_MODEL_CATALOG_FILENAME,
   buildCcSwitchCodexModelCatalog,
   getCcSwitchClientConfig,
-  type CcSwitchCodexCatalogModel,
   type CcSwitchClientType,
 } from "@code-proxy/domain/ccswitch/ccswitchImport";
 import {
@@ -327,7 +326,16 @@ function buildDraftCodexModelCatalog(
   draft: ConfigDraft,
 ): CcSwitchImportCodexModelCatalog | undefined {
   if (draft.clientType !== "codex") return undefined;
-  const models: CcSwitchCodexCatalogModel[] = [];
+
+  const existingByModel = new Map<string, Record<string, unknown>>();
+  for (const entry of draft.codexModelCatalog?.models ?? []) {
+    const modelId = String(entry.slug ?? entry.model ?? "")
+      .trim()
+      .toLowerCase();
+    if (modelId) existingByModel.set(modelId, entry);
+  }
+
+  const models: Array<{ model: string; contextWindow?: number }> = [];
   const addModel = (model: string, contextWindow?: number) => {
     const normalized = model.trim();
     if (normalized) models.push({ model: normalized, contextWindow });
@@ -341,8 +349,32 @@ function buildDraftCodexModelCatalog(
   }
   addModel(draft.defaultModel);
   if (models.length === 0) return undefined;
-  const catalog = buildCcSwitchCodexModelCatalog(models);
-  return { models: catalog.models.map((model) => ({ ...model })) };
+
+  const seen = new Set<string>();
+  const entries: Array<Record<string, unknown>> = [];
+  for (const model of models) {
+    const key = model.model.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+
+    const existing = existingByModel.get(key);
+    if (!existing) {
+      const generated = buildCcSwitchCodexModelCatalog([model]).models[0];
+      if (generated) entries.push({ ...generated, priority: 1000 + entries.length });
+      continue;
+    }
+
+    const entry = { ...existing };
+    if (model.contextWindow) {
+      entry.context_window = model.contextWindow;
+      const messages = asRecord(entry.model_messages);
+      if (messages) {
+        entry.model_messages = { ...messages, context_window: model.contextWindow };
+      }
+    }
+    entries.push(entry);
+  }
+  return entries.length > 0 ? { models: entries } : undefined;
 }
 
 function prepareDraftForSave(draft: ConfigDraft): ConfigDraft {

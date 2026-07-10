@@ -794,6 +794,78 @@ describe("CcSwitchImportSettingsPage", () => {
     );
   });
 
+  test("preserves explicit Codex reasoning and max context metadata when saving", async () => {
+    listChannelGroups.mockResolvedValue([
+      {
+        name: "pro",
+        description: "Pro route",
+        "path-routes": ["/pro"],
+        "allowed-models": ["gpt-5.6-sol"],
+      },
+    ]);
+    listConfigs.mockResolvedValue([
+      {
+        id: "cfg-gpt56",
+        clientType: "codex",
+        providerName: "Relay GPT-5.6",
+        note: "explicit catalog",
+        defaultModel: "gpt-5.6-sol",
+        allowedChannelGroups: ["pro"],
+        routePath: "/pro/cs_gpt56",
+        endpointPath: "/v1",
+        usageAutoInterval: 30,
+        modelMappings: [{ requestModel: "gpt-5.6-sol", targetModel: "gpt-5.6-sol" }],
+        codexModelCatalogFilename: "cc-switch-model-catalog.json",
+        codexModelCatalog: {
+          models: [
+            {
+              slug: "gpt-5.6-sol",
+              model: "gpt-5.6-sol",
+              context_window: 900000,
+              max_context_window: 1050000,
+              default_reasoning_level: "medium",
+              supported_reasoning_levels: [
+                { effort: "low", description: "Low" },
+                { effort: "max", description: "Maximum" },
+                { effort: "ultra", description: "Delegated" },
+              ],
+              model_messages: {
+                context_window: 900000,
+                max_context_window: 1050000,
+              },
+            },
+          ],
+        },
+      },
+    ]);
+    renderPage();
+    const user = userEvent.setup();
+
+    expect(await screen.findByText("Relay GPT-5.6")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /edit config/i }));
+    const dialog = await screen.findByRole("dialog", { name: /edit cc switch config/i });
+    expect(within(dialog).getByLabelText(/context window for mapping 1/i)).toHaveValue(900000);
+    await user.click(within(dialog).getByRole("button", { name: /^save$/i }));
+
+    await waitFor(() => {
+      const saved = replaceConfigs.mock.calls[0]?.[0]?.[0];
+      expect(saved?.codexModelCatalog?.models[0]).toMatchObject({
+        context_window: 900000,
+        max_context_window: 1050000,
+        default_reasoning_level: "medium",
+        supported_reasoning_levels: [
+          { effort: "low", description: "Low" },
+          { effort: "max", description: "Maximum" },
+          { effort: "ultra", description: "Delegated" },
+        ],
+        model_messages: {
+          context_window: 900000,
+          max_context_window: 1050000,
+        },
+      });
+    });
+  });
+
   test("shows saved model mappings immediately while edited config models refresh", async () => {
     const modelsDeferred = createDeferred<{ id: string }[]>();
     listChannelGroups.mockResolvedValue([
