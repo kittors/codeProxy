@@ -823,7 +823,6 @@ export function CcSwitchImportConfigModal({
     }));
   };
 
-  const mappingCellClassName = "border-b border-slate-200/70 dark:border-neutral-800";
   const modelMappingColumns: DataTableColumn<CcSwitchModelMapping>[] =
     draft.clientType === "claude"
       ? [
@@ -831,7 +830,6 @@ export function CcSwitchImportConfigModal({
             key: "role",
             label: t("ccswitch.config_claude_model_role"),
             width: "w-44",
-            cellClassName: mappingCellClassName,
             cellContentClassName: "font-medium text-slate-800 dark:text-white/80",
             render: (mapping) =>
               mapping.role ? t(`ccswitch.config_claude_role_${mapping.role}`) : "",
@@ -840,8 +838,6 @@ export function CcSwitchImportConfigModal({
             key: "requestModel",
             label: t("ccswitch.config_request_model_name"),
             width: "w-72",
-            cellClassName: mappingCellClassName,
-            cellContentClassName: "",
             sort: { getValue: (mapping) => mapping.requestModel },
             render: (mapping) => {
               const role = mapping.role;
@@ -862,8 +858,6 @@ export function CcSwitchImportConfigModal({
             key: "targetModel",
             label: t("ccswitch.config_actual_channel_model"),
             width: "w-80",
-            cellClassName: mappingCellClassName,
-            cellContentClassName: "",
             sort: { getValue: (mapping) => mapping.targetModel },
             render: (mapping) => {
               const role = mapping.role;
@@ -891,8 +885,6 @@ export function CcSwitchImportConfigModal({
             key: "targetModel",
             label: t("ccswitch.config_actual_channel_model"),
             width: "w-80",
-            cellClassName: mappingCellClassName,
-            cellContentClassName: "",
             sort: { getValue: (mapping) => mapping.targetModel },
             render: (mapping, index) => (
               <SearchableSelect
@@ -914,8 +906,6 @@ export function CcSwitchImportConfigModal({
             key: "requestModel",
             label: t("ccswitch.config_request_model_name"),
             width: "w-72",
-            cellClassName: mappingCellClassName,
-            cellContentClassName: "",
             sort: { getValue: (mapping) => mapping.requestModel },
             render: (mapping, index) => (
               <TextInput
@@ -932,8 +922,6 @@ export function CcSwitchImportConfigModal({
             key: "contextWindow",
             label: t("ccswitch.config_codex_context_window"),
             width: "w-44",
-            cellClassName: mappingCellClassName,
-            cellContentClassName: "",
             render: (mapping, index) => (
               <TextInput
                 type="number"
@@ -957,8 +945,7 @@ export function CcSwitchImportConfigModal({
             resizable: false,
             reorderable: false,
             headerClassName: "text-right",
-            cellClassName: `${mappingCellClassName} text-right`,
-            cellContentClassName: "",
+            cellClassName: "text-right",
             render: (_mapping, index) => (
               <Button
                 size="xs"
@@ -1220,6 +1207,7 @@ export function CcSwitchImportConfigModal({
                 minWidth={draft.clientType === "claude" ? "min-w-[800px]" : "min-w-[980px]"}
                 caption={t("ccswitch.config_model_mapping_title")}
                 showAllLoadedMessage={false}
+                rowDividers
                 allowWheelPropagationAtBoundary
                 columnResizable={false}
                 columnReorderable={false}

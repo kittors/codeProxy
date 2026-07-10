@@ -460,6 +460,27 @@ function findVerticalScrollContainer(element: HTMLElement | null): HTMLElement |
   return scrollingElement instanceof HTMLElement ? scrollingElement : null;
 }
 
+function findVerticalScrollTarget(element: HTMLElement, deltaY: number): HTMLElement | null {
+  let current = element.parentElement;
+  while (current) {
+    const overflowY = window.getComputedStyle(current).overflowY;
+    const maxScrollTop = Math.max(0, current.scrollHeight - current.clientHeight);
+    const canMove =
+      /(auto|scroll)/.test(overflowY) &&
+      ((deltaY < 0 && current.scrollTop > 0) || (deltaY > 0 && current.scrollTop < maxScrollTop));
+    if (canMove) return current;
+    current = current.parentElement;
+  }
+
+  const scrollingElement = document.scrollingElement;
+  if (!(scrollingElement instanceof HTMLElement)) return null;
+  const maxScrollTop = Math.max(0, scrollingElement.scrollHeight - scrollingElement.clientHeight);
+  return (deltaY < 0 && scrollingElement.scrollTop > 0) ||
+    (deltaY > 0 && scrollingElement.scrollTop < maxScrollTop)
+    ? scrollingElement
+    : null;
+}
+
 function syncClonedFormControlState(
   sourceRow: HTMLTableRowElement,
   clonedRow: HTMLTableRowElement,
@@ -838,6 +859,7 @@ export function DataTable<T>({
   caption = "data table",
   emptyText = "",
   showAllLoadedMessage = true,
+  rowDividers = false,
   rowClassName,
   onRowClick,
   rowAriaSelected,
@@ -1536,7 +1558,21 @@ export function DataTable<T>({
       }
 
       if (wantsY || wantsX) {
-        if (allowWheelPropagationAtBoundary) return;
+        if (allowWheelPropagationAtBoundary && wantsY) {
+          const parentScrollTarget = findVerticalScrollTarget(el, e.deltaY);
+          if (parentScrollTarget) {
+            const maxParentScrollTop = Math.max(
+              0,
+              parentScrollTarget.scrollHeight - parentScrollTarget.clientHeight,
+            );
+            parentScrollTarget.scrollTop = Math.max(
+              0,
+              Math.min(maxParentScrollTop, parentScrollTarget.scrollTop + e.deltaY),
+            );
+          }
+        } else if (allowWheelPropagationAtBoundary) {
+          return;
+        }
         if (e.cancelable) e.preventDefault();
         e.stopPropagation();
       }
@@ -2050,7 +2086,9 @@ export function DataTable<T>({
               ? COLUMN_REORDER_SHIFT_TRANSITION
               : "";
           element.style.willChange = isMoved ? "transform" : "";
-          element.style.position = isMoved ? "relative" : "";
+          // Header cells own the vertical sticky position; horizontal reorder transforms must not detach it.
+          const keepsStickyHeaderPosition = !naturalFlow && element.tagName === "TH";
+          element.style.position = isMoved && !keepsStickyHeaderPosition ? "relative" : "";
           element.style.zIndex = isDragged ? "90" : shift || isSettling ? "45" : "";
           element.style.pointerEvents = isDragged ? "none" : "";
           element.style.opacity = "";
@@ -2083,7 +2121,7 @@ export function DataTable<T>({
         });
       });
     },
-    [],
+    [naturalFlow],
   );
 
   const applyColumnReorderFrame = useCallback(() => {
@@ -2694,19 +2732,6 @@ export function DataTable<T>({
           : `${height} ${minHeight} group relative isolate grid min-w-0 overflow-hidden rounded-xl ${vThumb ? "grid-cols-[minmax(0,1fr)_0.75rem]" : "grid-cols-1"}`
       }
     >
-      {naturalFlow ? null : (
-        <div
-          data-vt-header-chrome
-          aria-hidden="true"
-          className={`pointer-events-none absolute left-0 top-0 z-40 ${
-            vThumb ? "rounded-l-xl" : "rounded-xl"
-          } bg-slate-100 dark:bg-neutral-800`}
-          style={{
-            width: scrollMetrics.clientWidth || "100%",
-            height: headerHeight,
-          }}
-        />
-      )}
       {!naturalFlow && stickyStartRailWidth > 0 && stickyRailHeight > 0 ? (
         <div
           data-vt-sticky-start-rail
@@ -2741,9 +2766,7 @@ export function DataTable<T>({
         className={
           naturalFlow
             ? "relative z-10 min-h-0 overflow-visible rounded-xl"
-            : `relative col-start-1 row-start-1 h-full min-h-0 table-scrollbar overflow-auto overscroll-x-none ${
-                allowWheelPropagationAtBoundary ? "overscroll-y-auto" : "overscroll-y-none"
-              }`
+            : "relative col-start-1 row-start-1 h-full min-h-0 table-scrollbar overflow-auto overscroll-x-none overscroll-y-none"
         }
       >
         <div
@@ -2782,7 +2805,7 @@ export function DataTable<T>({
             {/* ── HeroUI-styled header ── */}
             <thead
               ref={headerRef}
-              className={naturalFlow ? "bg-slate-100 dark:bg-neutral-800" : "sticky top-0 z-50"}
+              className={naturalFlow ? "bg-slate-100 dark:bg-neutral-800" : ""}
             >
               <tr className="text-left text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-white/55">
                 {orderedColumns.map((col, colIndex) => {
@@ -2796,7 +2819,8 @@ export function DataTable<T>({
                   const isResizingThisColumn = activeResizeColumnKey === col.key;
                   const isSettledReorderColumn = settledReorderColumnKey === col.key;
                   const stickyPlacement = naturalFlow ? undefined : stickyColumnPlacements[col.key];
-                  const headerChromeClass = naturalFlow ? "bg-slate-100 dark:bg-neutral-800" : "";
+                  const headerPositionClass = naturalFlow ? "relative" : "sticky top-0 z-50";
+                  const headerChromeClass = "bg-slate-100 dark:bg-neutral-800";
                   const headerCornerClass = [
                     naturalFlow && colIndex === 0 ? "rounded-l-xl" : "",
                     naturalFlow && colIndex === orderedColumns.length - 1 ? "rounded-r-xl" : "",
@@ -2817,7 +2841,7 @@ export function DataTable<T>({
                         headerCellsRef.current[col.key] = node;
                       }}
                       style={resolveColumnStyle(col, "header")}
-                      className={`group/column relative overflow-hidden px-4 py-3 whitespace-nowrap ${
+                      className={`group/column ${headerPositionClass} overflow-hidden px-4 py-3 whitespace-nowrap ${
                         stickyPlacement?.edge === "start" ? "md:left-[var(--vt-sticky-left)]" : ""
                       } ${
                         stickyPlacement?.edge === "end" ? "md:right-[var(--vt-sticky-right)]" : ""
@@ -3050,12 +3074,18 @@ export function DataTable<T>({
                             : stickyColumnPlacements[col.key];
                           const content = col.render(row, globalIdx);
                           const overflowTooltip = resolveCellOverflowTooltip(col, row, globalIdx);
-                          const roundCls = [
-                            isFirst ? "first:rounded-l-lg" : "",
-                            isLast ? "last:rounded-r-lg" : "",
-                          ]
-                            .filter(Boolean)
-                            .join(" ");
+                          const roundCls = rowDividers
+                            ? ""
+                            : [
+                                isFirst ? "first:rounded-l-lg" : "",
+                                isLast ? "last:rounded-r-lg" : "",
+                              ]
+                                .filter(Boolean)
+                                .join(" ");
+                          const rowDividerClass =
+                            rowDividers && globalIdx < rows.length - 1
+                              ? "border-b border-slate-200 dark:border-neutral-800"
+                              : "";
                           const hoverChromeClass = naturalFlow
                             ? ""
                             : stickyPlacement
@@ -3079,7 +3109,7 @@ export function DataTable<T>({
                                 stickyPlacement?.edge === "end"
                                   ? "md:right-[var(--vt-sticky-right)]"
                                   : ""
-                              } ${hoverChromeClass} ${col.cellClassName ?? ""} ${roundCls}`}
+                              } ${hoverChromeClass} ${rowDividerClass} ${col.cellClassName ?? ""} ${roundCls}`}
                             >
                               {isRowReorderColumn ? (
                                 <button

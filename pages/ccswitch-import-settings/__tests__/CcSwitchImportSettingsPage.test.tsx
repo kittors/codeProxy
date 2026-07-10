@@ -1128,8 +1128,26 @@ describe("CcSwitchImportSettingsPage", () => {
     expect(mappingTable).toHaveClass("px-4", "pt-3", "pb-4");
     expect(tableViewport).toHaveClass("h-full", "overflow-auto");
     expect(tableViewport?.parentElement).toHaveClass("h-[320px]", "min-h-[320px]");
-    expect(tableViewport?.querySelector("thead")).toHaveClass("sticky", "top-0");
+    expect(tableViewport).toHaveClass("overscroll-y-none");
+    expect(tableViewport).not.toHaveClass("overscroll-y-auto");
+    const headerCells = Array.from(tableViewport?.querySelectorAll("thead th") ?? []);
+    expect(headerCells).not.toHaveLength(0);
+    headerCells.forEach((cell) => expect(cell).toHaveClass("sticky", "top-0", "bg-slate-100"));
+    expect(mappingTable.querySelector("[data-vt-header-chrome]")).toBeNull();
     expect(mappingTable.querySelector("[data-vt-column-resizer]")).toBeNull();
+
+    const mappingRows = Array.from(
+      mappingTable.querySelectorAll<HTMLTableRowElement>("tbody tr[data-vt-row-index]"),
+    );
+    mappingRows.slice(0, -1).forEach((row) => {
+      Array.from(row.cells).forEach((cell) => {
+        expect(cell).toHaveClass("border-b", "border-slate-200");
+        expect(cell).not.toHaveClass("first:rounded-l-lg", "last:rounded-r-lg");
+      });
+    });
+    Array.from(mappingRows.at(-1)?.cells ?? []).forEach((cell) => {
+      expect(cell).not.toHaveClass("border-b", "first:rounded-l-lg", "last:rounded-r-lg");
+    });
 
     const requestSort = within(dialog).getByRole("button", {
       name: /sort cc switch request model/i,

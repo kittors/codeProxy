@@ -100,13 +100,15 @@ export interface DataTableProps<T> {
   emptyText?: string;
   /** Show the "all records loaded" footer when there is no next page. */
   showAllLoadedMessage?: boolean;
+  /** Show a straight divider between data rows. */
+  rowDividers?: boolean;
   /** Extra row className */
   rowClassName?: string | ((row: T, index: number) => string);
   /** Optional row click handler. When set, rows become keyboard-focusable selection targets. */
   onRowClick?: (row: T, index: number) => void;
   /** Optional selected state for row interaction semantics. */
   rowAriaSelected?: (row: T, index: number) => boolean;
-  /** Let parent scroll containers handle wheel/touch scroll chaining when this table is already at an edge. */
+  /** Forward wheel scrolling to a scrollable parent when this table is already at an edge. */
   allowWheelPropagationAtBoundary?: boolean;
   /** Render the table in normal document flow without any internal table scrollbars. */
   naturalFlow?: boolean;

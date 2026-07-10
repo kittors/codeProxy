@@ -27,6 +27,14 @@ const columns: DataTableColumn<TestRow>[] = [
   },
 ];
 
+const plainColumns: DataTableColumn<TestRow>[] = [
+  {
+    key: "name",
+    label: "Name",
+    render: (row) => <span>{row.name}</span>,
+  },
+];
+
 function DataTableHarness() {
   const [rows, setRows] = useState(initialRows);
   const [sortState, setSortState] = useState<DataTableSortState | null>(null);
@@ -142,5 +150,89 @@ describe("DataTable sorting and row reordering", () => {
       expect(row.style.transform).toBe("");
     });
     expect(sortTrigger).toHaveAttribute("data-vt-sort-direction", "none");
+  });
+});
+
+describe("DataTable scroll chrome and row dividers", () => {
+  test("keeps header cells attached and forwards boundary wheel scrolling to the parent", () => {
+    render(
+      <div data-testid="parent-scroll" style={{ height: 160, overflowY: "auto" }}>
+        <DataTable
+          rows={initialRows}
+          columns={plainColumns}
+          rowKey={(row) => row.id}
+          height="h-[120px]"
+          minHeight="min-h-[120px]"
+          minWidth="min-w-[320px]"
+          allowWheelPropagationAtBoundary
+          showAllLoadedMessage={false}
+        />
+      </div>,
+    );
+
+    const parent = screen.getByTestId("parent-scroll");
+    const viewport = document.querySelector<HTMLElement>("[data-scrollbar-visibility='hover']");
+    expect(viewport).not.toBeNull();
+    if (!viewport) return;
+
+    Object.defineProperties(viewport, {
+      clientHeight: { configurable: true, value: 120 },
+      scrollHeight: { configurable: true, value: 360 },
+    });
+    Object.defineProperties(parent, {
+      clientHeight: { configurable: true, value: 160 },
+      scrollHeight: { configurable: true, value: 480 },
+    });
+    viewport.scrollTop = 240;
+    parent.scrollTop = 80;
+
+    fireEvent.wheel(viewport, { deltaY: 40 });
+
+    expect(viewport.scrollTop).toBe(240);
+    expect(parent.scrollTop).toBe(120);
+    expect(viewport).toHaveClass("overscroll-y-none");
+    expect(viewport).not.toHaveClass("overscroll-y-auto");
+    expect(document.querySelector("[data-vt-header-chrome]")).toBeNull();
+
+    const headerCells = Array.from(document.querySelectorAll("thead th"));
+    expect(headerCells).not.toHaveLength(0);
+    headerCells.forEach((cell) => {
+      expect(cell).toHaveClass("sticky", "top-0", "bg-slate-100");
+    });
+  });
+
+  test("renders straight full-width dividers without rounded cell edges", () => {
+    render(
+      <DataTable
+        rows={initialRows}
+        columns={plainColumns}
+        rowKey={(row) => row.id}
+        rowReorderable
+        onRowsChange={() => undefined}
+        rowDividers
+        naturalFlow
+        height="h-auto"
+        minHeight="min-h-0"
+        minWidth="min-w-[320px]"
+        showAllLoadedMessage={false}
+      />,
+    );
+
+    const rows = Array.from(
+      document.querySelectorAll<HTMLTableRowElement>("tr[data-vt-row-index]"),
+    );
+    expect(rows).toHaveLength(3);
+
+    rows.slice(0, -1).forEach((row) => {
+      const cells = Array.from(row.cells);
+      expect(cells).toHaveLength(2);
+      cells.forEach((cell) => {
+        expect(cell).toHaveClass("border-b", "border-slate-200");
+        expect(cell).not.toHaveClass("first:rounded-l-lg", "last:rounded-r-lg");
+      });
+    });
+    Array.from(rows.at(-1)?.cells ?? []).forEach((cell) => {
+      expect(cell).not.toHaveClass("border-b", "first:rounded-l-lg", "last:rounded-r-lg");
+    });
   });
 });
