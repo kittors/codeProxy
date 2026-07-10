@@ -47,8 +47,10 @@ export interface DataTableColumn<T> {
   maxWidthPx?: number;
   /** Extra header class (e.g. "text-right") */
   headerClassName?: string;
-  /** Extra cell class */
+  /** Extra class applied to the table cell. */
   cellClassName?: string;
+  /** Extra class applied to the clipped cell content; defaults to cellClassName for compatibility. */
+  cellContentClassName?: string;
   /** Overflow tooltip text for a truncated cell. Primitive render output is used by default. */
   overflowTooltip?: boolean | ((row: T, index: number) => string | null | undefined);
   /** Built-in sort menu configuration. Omit to keep the column unsortable. */
@@ -110,6 +112,8 @@ export interface DataTableProps<T> {
   naturalFlow?: boolean;
   /** Extra class for the content wrapper inside the scroll viewport (e.g. "pr-5" for right padding). */
   scrollContentClassName?: string;
+  /** Whether users can resize columns by dragging header boundaries (default true). */
+  columnResizable?: boolean;
   /** Whether column reorder by dragging the header handle is allowed (default true when tableId is set). */
   columnReorderable?: boolean;
   /** Whether column order is persisted to localStorage (default true). */

@@ -20,6 +20,8 @@ const columns: DataTableColumn<TestRow>[] = [
   {
     key: "name",
     label: "Name",
+    cellClassName: "border-b data-table-test-cell",
+    cellContentClassName: "data-table-test-content",
     sort: { getValue: (row) => row.name },
     render: (row) => <span data-testid="row-name">{row.name}</span>,
   },
@@ -57,6 +59,18 @@ describe("DataTable sorting and row reordering", () => {
 
     const sortTrigger = screen.getByRole("button", { name: "Sort Name" });
     expect(sortTrigger).toHaveAttribute("data-vt-sort-direction", "none");
+
+    const firstNameCell = document.querySelector<HTMLTableCellElement>(
+      'td[data-vt-column-key="name"]',
+    );
+    expect(firstNameCell).toHaveClass("border-b", "data-table-test-cell");
+    expect(firstNameCell?.querySelector("[data-table-cell-overflow]")).toHaveClass(
+      "data-table-test-content",
+    );
+    expect(firstNameCell?.querySelector("[data-table-cell-overflow]")).not.toHaveClass(
+      "border-b",
+      "data-table-test-cell",
+    );
 
     await user.click(sortTrigger);
     const menu = screen.getByRole("menu");
@@ -102,11 +116,31 @@ describe("DataTable sorting and row reordering", () => {
     });
 
     const firstHandle = screen.getByRole("button", { name: "Drag to reorder row 1" });
+    expect(firstHandle).toHaveAttribute("data-tooltip-managed", "true");
     fireEvent.pointerDown(firstHandle, { button: 0, pointerId: 7, clientY: 20 });
     fireEvent.pointerMove(window, { pointerId: 7, clientY: 115 });
+
+    const dragPreview = document.querySelector<HTMLElement>("[data-vt-row-reorder-preview]");
+    expect(dragPreview).toHaveTextContent("alpha");
+    expect(dragPreview).toHaveClass("border", "border-slate-200/90");
+    expect(
+      Array.from(dragPreview?.querySelectorAll("td") ?? []).every(
+        (cell) => cell.style.borderTopWidth === "0px" && cell.style.borderBottomWidth === "0px",
+      ),
+    ).toBe(true);
+    expect(document.querySelector("[data-vt-row-reorder-drop-indicator]")).toBeNull();
+    expect(tableRows[0]).toHaveStyle({ opacity: "0" });
+    expect(tableRows[1]).toHaveStyle({ transform: "translate3d(0, -40px, 0)" });
+    expect(tableRows[2]).toHaveStyle({ transform: "translate3d(0, -40px, 0)" });
+
     fireEvent.pointerUp(window, { pointerId: 7, clientY: 115 });
 
     await waitFor(() => expect(visibleRowNames()).toEqual(["bravo", "charlie", "alpha"]));
+    expect(document.querySelector("[data-vt-row-reorder-preview]")).toBeNull();
+    tableRows.forEach((row) => {
+      expect(row.style.opacity).toBe("");
+      expect(row.style.transform).toBe("");
+    });
     expect(sortTrigger).toHaveAttribute("data-vt-sort-direction", "none");
   });
 });
