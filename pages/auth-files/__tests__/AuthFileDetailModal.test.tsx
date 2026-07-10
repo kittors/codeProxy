@@ -45,11 +45,7 @@ const basePrefixProxyEditor: DetailModalProps["prefixProxyEditor"] = {
   loading: false,
   saving: false,
   error: null,
-  json: {
-    prefix: "team-a",
-    proxy_id: "primary",
-    proxy_url: "http://127.0.0.1:7890",
-  },
+  json: { prefix: "team-a", proxy_id: "primary", proxy_url: "http://127.0.0.1:7890" },
   prefix: "team-a",
   proxyUrl: "http://127.0.0.1:7890",
   proxyId: "primary",
@@ -207,11 +203,7 @@ const renderDetailModal = (overrides: Partial<DetailModalProps> = {}) => {
     },
     identityFingerprintDetail: null,
     identityFingerprintLoading: false,
-    identityFingerprintSaving: false,
     identityFingerprintError: null,
-    selectIdentityFingerprintProfile: vi.fn(async () => undefined),
-    useIdentityFingerprintCLIPreferred: vi.fn(async () => undefined),
-    deleteIdentityFingerprintProfile: vi.fn(async () => undefined),
     refreshDetailTrend: vi.fn(async () => undefined),
     loadModelsForDetail: vi.fn(async () => undefined),
     loadModelOwnerGroups: vi.fn(async () => undefined),
@@ -565,176 +557,6 @@ describe("AuthFileDetailModal", () => {
     expect(fields.querySelector('[data-scrollbar-visibility="hover"]')).toBeNull();
   });
 
-  test("lists isolated Codex identities and selects exactly one outbound profile", async () => {
-    const selectProfile = vi.fn(async () => undefined);
-    const useCliPreferred = vi.fn(async () => undefined);
-    const cliProfile = {
-      summary: {
-        ...codexIdentityFingerprintDetail.summary,
-        profile_key: "codex_cli_rs",
-        profile_family: "cli",
-        client_product: "codex_cli_rs",
-        client_variant: "codex_cli_rs",
-        effective_fields: 3,
-        source_counts: { learned: 3 },
-      },
-      effective: {
-        ...codexIdentityFingerprintDetail.effective,
-        profile_key: "codex_cli_rs",
-        profile_family: "cli",
-        client_product: "codex_cli_rs",
-        client_variant: "codex_cli_rs",
-        fields: {
-          "user-agent": {
-            value: "codex_cli_rs/0.144.1",
-            source: "learned" as const,
-          },
-          originator: { value: "codex_cli_rs", source: "learned" as const },
-          version: { value: "0.144.1", source: "learned" as const },
-        },
-      },
-      learned: {
-        ...codexIdentityFingerprintDetail.learned!,
-        profile_key: "codex_cli_rs",
-        profile_family: "cli",
-        client_product: "codex_cli_rs",
-        client_variant: "codex_cli_rs",
-        version: "0.144.1",
-        fields: {
-          "user-agent": "codex_cli_rs/0.144.1",
-          originator: "codex_cli_rs",
-          version: "0.144.1",
-        },
-      },
-    };
-    const desktopProfile = {
-      summary: {
-        ...codexIdentityFingerprintDetail.summary,
-        profile_key: "codex_desktop",
-        profile_family: "desktop",
-        client_product: "codex",
-        client_variant: "Codex Desktop",
-        version: "0.144.0",
-        effective_fields: 4,
-        source_counts: { learned: 4 },
-      },
-      effective: {
-        ...codexIdentityFingerprintDetail.effective,
-        profile_key: "codex_desktop",
-        profile_family: "desktop",
-        client_product: "codex",
-        client_variant: "Codex Desktop",
-        version: "0.144.0",
-        fields: {
-          "user-agent": {
-            value: "Codex Desktop/0.144.0-alpha.4",
-            source: "learned" as const,
-          },
-          originator: { value: "Codex Desktop", source: "learned" as const },
-          version: { value: "0.144.0", source: "learned" as const },
-          "x-codex-beta-features": {
-            value: "remote_compaction_v2",
-            source: "learned" as const,
-          },
-        },
-      },
-      learned: {
-        ...codexIdentityFingerprintDetail.learned!,
-        profile_key: "codex_desktop",
-        profile_family: "desktop",
-        client_product: "codex",
-        client_variant: "Codex Desktop",
-        version: "0.144.0",
-        fields: {
-          "user-agent": "Codex Desktop/0.144.0-alpha.4",
-          originator: "Codex Desktop",
-          version: "0.144.0",
-          "x-codex-beta-features": "remote_compaction_v2",
-        },
-      },
-    };
-
-    const mixedProfile = {
-      ...desktopProfile,
-      selectable: false,
-      selection_block_reason: "conflicting_identity_fields",
-      summary: {
-        ...desktopProfile.summary,
-        profile_key: "codex_quarantined",
-        profile_family: "unknown",
-        client_product: "quarantined",
-        client_variant: "conflicting",
-      },
-      effective: {
-        ...desktopProfile.effective,
-        profile_key: "codex_quarantined",
-        profile_family: "unknown",
-      },
-      learned: {
-        ...desktopProfile.learned,
-        profile_key: "codex_quarantined",
-        profile_family: "unknown",
-      },
-    };
-
-    renderDetailModal({
-      detailTab: "identity",
-      detailFile: {
-        name: "codex.json",
-        label: "Codex Primary",
-        type: "codex",
-        size: 256,
-        account_type: "oauth",
-        identity_fingerprint_summary: cliProfile.summary,
-      },
-      identityFingerprintDetail: {
-        ...codexIdentityFingerprintDetail,
-        summary: cliProfile.summary,
-        effective: cliProfile.effective,
-        learned: cliProfile.learned,
-        profiles: [cliProfile, desktopProfile, mixedProfile],
-        policy: {
-          provider: "codex",
-          account_key: "codex-account-1",
-          strategy: "cli_preferred",
-          revision: 0,
-        },
-        selected_profile_key: "codex_cli_rs",
-        selection_reason: "cli_preferred",
-      },
-      selectIdentityFingerprintProfile: selectProfile,
-      useIdentityFingerprintCLIPreferred: useCliPreferred,
-    });
-
-    expect(screen.getByTestId("identity-profile-codex_cli_rs")).toHaveTextContent("In use");
-    expect(screen.getByTestId("auth-file-identity-fields")).toHaveTextContent(
-      "codex_cli_rs/0.144.1",
-    );
-
-    fireEvent.click(screen.getByTestId("identity-profile-codex_desktop"));
-    expect(screen.getByText(/Current outbound identity:/)).toHaveTextContent(
-      "codex_cli_rs / codex_cli_rs",
-    );
-    expect(screen.getByTestId("auth-file-identity-fields")).toHaveTextContent(
-      "Codex Desktop/0.144.0-alpha.4",
-    );
-    expect(screen.getByTestId("auth-file-identity-fields")).not.toHaveTextContent(
-      "codex_cli_rs/0.144.1",
-    );
-
-    fireEvent.click(screen.getByRole("button", { name: "Use for outbound" }));
-    expect(selectProfile).toHaveBeenCalledWith("codex_desktop");
-
-    fireEvent.click(screen.getByTestId("identity-profile-codex_quarantined"));
-    expect(screen.getByTestId("identity-profile-codex_quarantined")).toHaveTextContent(
-      "Observe only",
-    );
-    expect(screen.getByRole("button", { name: "Use for outbound" })).toBeDisabled();
-
-    fireEvent.click(screen.getByRole("button", { name: "Prefer CLI" }));
-    expect(useCliPreferred).toHaveBeenCalledTimes(1);
-  });
-
   test("keeps identity fingerprint table scroll owned by the table on desktop", () => {
     mockMediaQueryMatches(true);
 
@@ -887,9 +709,7 @@ describe("AuthFileDetailModal", () => {
     const panel = screen.getByTestId("codex-oauth-admission-panel");
     expect(within(panel).getByText("Official Codex client admission")).toBeInTheDocument();
     expect(
-      within(panel).getByRole("switch", {
-        name: "Only allow official Codex clients",
-      }),
+      within(panel).getByRole("switch", { name: "Only allow official Codex clients" }),
     ).toHaveAttribute("aria-checked", "true");
     expect(screen.getByTestId("codex-oauth-admission-preset-claude_code")).toBeChecked();
     expect(panel).toHaveTextContent("Claude Code");

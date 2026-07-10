@@ -62,8 +62,6 @@ export interface IdentityFingerprintFieldValue {
 export interface IdentityFingerprintLearnedRecord {
   provider: IdentityFingerprintProvider;
   account_key: string;
-  profile_key?: string;
-  profile_family?: string;
   auth_subject_id?: string;
   client_product?: string;
   client_variant?: string;
@@ -78,9 +76,6 @@ export interface IdentityFingerprintLearnedRecord {
 export interface IdentityFingerprintEffectiveRecord {
   provider: IdentityFingerprintProvider;
   account_key?: string;
-  profile_key?: string;
-  profile_family?: string;
-  client_variant?: string;
   auth_subject_id?: string;
   enabled: boolean;
   client_product?: string;
@@ -112,8 +107,6 @@ export interface IdentityFingerprintAccountSummary {
   learned_fields: number;
   effective_fields: number;
   source_counts: Partial<Record<IdentityFingerprintFieldSource, number>>;
-  profile_key?: string;
-  profile_family?: string;
   client_product?: string;
   client_variant?: string;
   version?: string;
@@ -121,33 +114,10 @@ export interface IdentityFingerprintAccountSummary {
   last_seen_at?: string;
 }
 
-export type IdentityFingerprintAccountStrategy = "cli_preferred" | "active_profile";
-
-export interface IdentityFingerprintAccountPolicy {
-  provider: IdentityFingerprintProvider;
-  account_key: string;
-  strategy: IdentityFingerprintAccountStrategy;
-  active_profile_key?: string;
-  revision: number;
-  updated_at?: string;
-}
-
-export interface IdentityFingerprintProfileDetail {
-  summary: IdentityFingerprintAccountSummary;
-  effective: IdentityFingerprintEffectiveRecord;
-  learned?: IdentityFingerprintLearnedRecord;
-  selectable?: boolean;
-  selection_block_reason?: string;
-}
-
 export interface IdentityFingerprintAccountDetail {
   summary: IdentityFingerprintAccountSummary;
   effective: IdentityFingerprintEffectiveRecord;
   learned?: IdentityFingerprintLearnedRecord;
-  profiles?: IdentityFingerprintProfileDetail[];
-  policy?: IdentityFingerprintAccountPolicy;
-  selected_profile_key?: string;
-  selection_reason?: string;
   preset?: unknown;
   builtin_default?: unknown;
 }
@@ -199,27 +169,6 @@ export const identityFingerprintApi = {
       ...options,
       params,
     }),
-  updateAccountPolicy: (payload: {
-    provider: IdentityFingerprintProvider;
-    account_key: string;
-    strategy: IdentityFingerprintAccountStrategy;
-    active_profile_key?: string;
-    revision: number;
-  }) =>
-    apiClient.put<IdentityFingerprintAccountDetail>(
-      "/identity-fingerprint/account/policy",
-      payload,
-    ),
-  deleteAccountProfile: (
-    provider: IdentityFingerprintProvider,
-    accountKey: string,
-    profileKey: string,
-  ) =>
-    apiClient.delete<{ deleted: number; detail: IdentityFingerprintAccountDetail }>(
-      "/identity-fingerprint/account/profile",
-      undefined,
-      { params: { provider, account_key: accountKey, profile_key: profileKey } },
-    ),
   getCodexRecommendations: (
     params?: { days?: number; limit?: number },
     options?: Omit<RequestOptions, "params">,

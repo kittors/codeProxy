@@ -216,7 +216,6 @@ export function useAuthFilesDetailEditors(
   const [identityFingerprintDetail, setIdentityFingerprintDetail] =
     useState<IdentityFingerprintAccountDetail | null>(null);
   const [identityFingerprintLoading, setIdentityFingerprintLoading] = useState(false);
-  const [identityFingerprintSaving, setIdentityFingerprintSaving] = useState(false);
   const [identityFingerprintError, setIdentityFingerprintError] = useState<string | null>(null);
 
   const [modelsLoading, setModelsLoading] = useState(false);
@@ -271,10 +270,7 @@ export function useAuthFilesDetailEditors(
           setModelsError("unsupported");
           return;
         }
-        notify({
-          type: "error",
-          message: message || t("auth_files.failed_get_models"),
-        });
+        notify({ type: "error", message: message || t("auth_files.failed_get_models") });
       } finally {
         setModelsLoading(false);
       }
@@ -317,10 +313,7 @@ export function useAuthFilesDetailEditors(
       setDetailTrendError(null);
 
       const request = (async () => {
-        const trend = await usageApi.getAuthFileTrend(authIndex, {
-          days: 7,
-          hours: 5,
-        });
+        const trend = await usageApi.getAuthFileTrend(authIndex, { days: 7, hours: 5 });
         if (shouldShowLoading) {
           setDetailTrendLoading(false);
         }
@@ -344,23 +337,6 @@ export function useAuthFilesDetailEditors(
       }
     },
     [detailFile, detailTrend, t],
-  );
-
-  const applyIdentityFingerprintDetail = useCallback(
-    (detail: IdentityFingerprintAccountDetail) => {
-      setIdentityFingerprintDetail(detail);
-      const accountKey = detail.summary.account_key;
-      const provider = detail.summary.provider;
-      if (!accountKey) return;
-      const applySummary = (file: AuthFileItem): AuthFileItem => {
-        const summary = file.identity_fingerprint_summary;
-        if (summary?.provider !== provider || summary.account_key !== accountKey) return file;
-        return { ...file, identity_fingerprint_summary: detail.summary };
-      };
-      setFiles?.((prev) => prev.map(applySummary));
-      setDetailFile((prev) => (prev ? applySummary(prev) : prev));
-    },
-    [setFiles],
   );
 
   const loadIdentityFingerprintForDetail = useCallback(
@@ -399,7 +375,7 @@ export function useAuthFilesDetailEditors(
           auth_subject_id: summary.auth_subject_id,
         });
         if (identityFingerprintDetailKeyRef.current !== key) return;
-        applyIdentityFingerprintDetail(detail);
+        setIdentityFingerprintDetail(detail);
       } catch (err: unknown) {
         if (identityFingerprintDetailKeyRef.current !== key) return;
         setIdentityFingerprintDetail(null);
@@ -412,103 +388,7 @@ export function useAuthFilesDetailEditors(
         }
       }
     },
-    [
-      applyIdentityFingerprintDetail,
-      identityFingerprintDetail,
-      identityFingerprintError,
-      identityFingerprintLoading,
-      t,
-    ],
-  );
-
-  const selectIdentityFingerprintProfile = useCallback(
-    async (profileKey: string) => {
-      const detail = identityFingerprintDetail;
-      const accountKey = detail?.summary.account_key;
-      if (!detail || detail.summary.provider !== "codex" || !accountKey || !profileKey) return;
-      setIdentityFingerprintSaving(true);
-      setIdentityFingerprintError(null);
-      try {
-        const next = await identityFingerprintApi.updateAccountPolicy({
-          provider: "codex",
-          account_key: accountKey,
-          strategy: "active_profile",
-          active_profile_key: profileKey,
-          revision: detail.policy?.revision ?? 0,
-        });
-        applyIdentityFingerprintDetail(next);
-        notify({
-          type: "success",
-          message: t("auth_files.identity_profile_saved"),
-        });
-      } catch (err: unknown) {
-        const message =
-          err instanceof Error ? err.message : t("auth_files.identity_profile_save_failed");
-        setIdentityFingerprintError(message);
-        notify({ type: "error", message });
-      } finally {
-        setIdentityFingerprintSaving(false);
-      }
-    },
-    [applyIdentityFingerprintDetail, identityFingerprintDetail, notify, t],
-  );
-
-  const useIdentityFingerprintCLIPreferred = useCallback(async () => {
-    const detail = identityFingerprintDetail;
-    const accountKey = detail?.summary.account_key;
-    if (!detail || detail.summary.provider !== "codex" || !accountKey) return;
-    setIdentityFingerprintSaving(true);
-    setIdentityFingerprintError(null);
-    try {
-      const next = await identityFingerprintApi.updateAccountPolicy({
-        provider: "codex",
-        account_key: accountKey,
-        strategy: "cli_preferred",
-        revision: detail.policy?.revision ?? 0,
-      });
-      applyIdentityFingerprintDetail(next);
-      notify({
-        type: "success",
-        message: t("auth_files.identity_profile_saved"),
-      });
-    } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : t("auth_files.identity_profile_save_failed");
-      setIdentityFingerprintError(message);
-      notify({ type: "error", message });
-    } finally {
-      setIdentityFingerprintSaving(false);
-    }
-  }, [applyIdentityFingerprintDetail, identityFingerprintDetail, notify, t]);
-
-  const deleteIdentityFingerprintProfile = useCallback(
-    async (profileKey: string) => {
-      const detail = identityFingerprintDetail;
-      const accountKey = detail?.summary.account_key;
-      if (!detail || detail.summary.provider !== "codex" || !accountKey || !profileKey) return;
-      setIdentityFingerprintSaving(true);
-      setIdentityFingerprintError(null);
-      try {
-        const response = await identityFingerprintApi.deleteAccountProfile(
-          "codex",
-          accountKey,
-          profileKey,
-        );
-        applyIdentityFingerprintDetail(response.detail);
-        notify({
-          type: "success",
-          message: t("auth_files.identity_profile_deleted"),
-        });
-      } catch (err: unknown) {
-        const message =
-          err instanceof Error ? err.message : t("auth_files.identity_profile_delete_failed");
-        setIdentityFingerprintError(message);
-        notify({ type: "error", message });
-      } finally {
-        setIdentityFingerprintSaving(false);
-      }
-    },
-    [applyIdentityFingerprintDetail, identityFingerprintDetail, notify, t],
+    [identityFingerprintDetail, identityFingerprintError, identityFingerprintLoading, t],
   );
 
   const openDetail = useCallback(
@@ -644,10 +524,7 @@ export function useAuthFilesDetailEditors(
     const label = channelEditor.label.trim();
     if (!fileName) return false;
     if (!label) {
-      setChannelEditor((prev) => ({
-        ...prev,
-        error: t("auth_files.channel_name_required"),
-      }));
+      setChannelEditor((prev) => ({ ...prev, error: t("auth_files.channel_name_required") }));
       return false;
     }
 
@@ -693,11 +570,7 @@ export function useAuthFilesDetailEditors(
       allowedClients: normalizeCodexAllowedClientIds(codexOAuthAdmissionEditor.allowedClients),
     };
 
-    setCodexOAuthAdmissionEditor((prev) => ({
-      ...prev,
-      saving: true,
-      error: null,
-    }));
+    setCodexOAuthAdmissionEditor((prev) => ({ ...prev, saving: true, error: null }));
     try {
       await authFilesApi.patchFields({
         name: fileName,
@@ -719,11 +592,7 @@ export function useAuthFilesDetailEditors(
       return true;
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : t("auth_files.save_failed");
-      setCodexOAuthAdmissionEditor((prev) => ({
-        ...prev,
-        saving: false,
-        error: message,
-      }));
+      setCodexOAuthAdmissionEditor((prev) => ({ ...prev, saving: false, error: message }));
       notify({ type: "error", message });
       return false;
     }
@@ -847,10 +716,7 @@ export function useAuthFilesDetailEditors(
       prefixProxyEditor.subscriptionStartedAt.trim() &&
       dateTimeLocalInputToIso(prefixProxyEditor.subscriptionStartedAt) === null
     ) {
-      notify({
-        type: "error",
-        message: t("auth_files.subscription_started_at_invalid"),
-      });
+      notify({ type: "error", message: t("auth_files.subscription_started_at_invalid") });
       return;
     }
 
@@ -859,9 +725,7 @@ export function useAuthFilesDetailEditors(
     if (fileSize > MAX_AUTH_FILE_SIZE) {
       notify({
         type: "error",
-        message: t("auth_files.save_too_large", {
-          size: formatFileSize(fileSize),
-        }),
+        message: t("auth_files.save_too_large", { size: formatFileSize(fileSize) }),
       });
       return;
     }
@@ -924,12 +788,8 @@ export function useAuthFilesDetailEditors(
     detailTrendError,
     identityFingerprintDetail,
     identityFingerprintLoading,
-    identityFingerprintSaving,
     identityFingerprintError,
     loadIdentityFingerprintForDetail,
-    selectIdentityFingerprintProfile,
-    useIdentityFingerprintCLIPreferred,
-    deleteIdentityFingerprintProfile,
     refreshDetailTrend,
     modelsLoading,
     modelsFileType,

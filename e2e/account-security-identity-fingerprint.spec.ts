@@ -1,10 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
-const codexCLIUserAgent = "codex_cli_rs/0.125.0 (Mac OS 26.0.1; arm64) Apple_Terminal/464";
-const codexDesktopUserAgent =
-  "Codex Desktop/0.144.0-alpha.4 (Mac OS 26.5.2; arm64) unknown (Codex Desktop; 26.707.31123)";
-const codexCLIBetaFeatures = "terminal_resize_reflow,memories,goals";
-const codexDesktopBetaFeatures = "remote_compaction_v2,desktop_companion";
+const codexTerminalUserAgent = "codex_cli_rs/0.125.0 (Mac OS 26.0.1; arm64) Apple_Terminal/464";
+const codexBetaFeatures = "terminal_resize_reflow,memories,goals";
 const codexExtraLearnedFields = Object.fromEntries(
   Array.from({ length: 18 }, (_, index) => {
     const number = String(index + 1).padStart(2, "0");
@@ -38,17 +35,15 @@ const identitySummaries = {
   codex: {
     provider: "codex",
     account_key: "authsub_codex_terminal",
-    profile_key: "codex_cli_rs",
-    profile_family: "cli",
     auth_subject_id: "authsub_codex_terminal",
     enabled: true,
     primary_source: "learned",
     learned: true,
-    learned_fields: 23,
+    learned_fields: 22,
     effective_fields: 23,
-    source_counts: { learned: 23, preset: 0, builtin_default: 0 },
+    source_counts: { learned: 22, preset: 0, builtin_default: 1 },
     client_product: "codex_cli_rs",
-    client_variant: "CLI",
+    client_variant: "Codex Desktop",
     version: "0.125.0",
     updated_at: "2026-06-23T10:13:50Z",
     last_seen_at: "2026-06-23T10:13:50Z",
@@ -125,171 +120,6 @@ const authFiles = [
   },
 ];
 
-const codexCLIProfile = {
-  selectable: true,
-  summary: identitySummaries.codex,
-  effective: {
-    provider: "codex",
-    account_key: "authsub_codex_terminal",
-    profile_key: "codex_cli_rs",
-    profile_family: "cli",
-    auth_subject_id: "authsub_codex_terminal",
-    enabled: true,
-    client_product: "codex_cli_rs",
-    client_variant: "CLI",
-    version: "0.125.0",
-    fields: {
-      "user-agent": { value: codexCLIUserAgent, source: "learned" },
-      version: { value: "0.125.0", source: "learned" },
-      originator: { value: "codex_cli_rs", source: "learned" },
-      "x-codex-beta-features": {
-        value: codexCLIBetaFeatures,
-        source: "learned",
-      },
-      ...codexExtraEffectiveFields,
-      "websocket-beta": {
-        value: "responses_websockets=2026-02-06",
-        source: "learned",
-      },
-    },
-  },
-  learned: {
-    provider: "codex",
-    account_key: "authsub_codex_terminal",
-    profile_key: "codex_cli_rs",
-    profile_family: "cli",
-    auth_subject_id: "authsub_codex_terminal",
-    client_product: "codex_cli_rs",
-    client_variant: "CLI",
-    version: "0.125.0",
-    fields: {
-      "user-agent": codexCLIUserAgent,
-      version: "0.125.0",
-      originator: "codex_cli_rs",
-      "x-codex-beta-features": codexCLIBetaFeatures,
-      "websocket-beta": "responses_websockets=2026-02-06",
-      ...codexExtraLearnedFields,
-    },
-    observed_headers: {
-      "User-Agent": codexCLIUserAgent,
-      Version: "0.125.0",
-      Originator: "codex_cli_rs",
-      "X-Codex-Beta-Features": codexCLIBetaFeatures,
-      "OpenAI-Beta": "responses_websockets=2026-02-06",
-    },
-    created_at: "2026-06-23T10:13:40Z",
-    updated_at: "2026-06-23T10:13:50Z",
-    last_seen_at: "2026-06-23T10:13:50Z",
-  },
-};
-
-const codexDesktopProfile = {
-  selectable: true,
-  summary: {
-    provider: "codex",
-    account_key: "authsub_codex_terminal",
-    profile_key: "codex_desktop",
-    profile_family: "desktop",
-    auth_subject_id: "authsub_codex_terminal",
-    enabled: true,
-    primary_source: "learned",
-    learned: true,
-    learned_fields: 5,
-    effective_fields: 5,
-    source_counts: { learned: 5, preset: 0, builtin_default: 0 },
-    client_product: "Codex Desktop",
-    client_variant: "Desktop",
-    version: "0.144.0-alpha.4",
-    updated_at: "2026-07-10T08:30:00Z",
-    last_seen_at: "2026-07-10T08:30:00Z",
-  },
-  effective: {
-    provider: "codex",
-    account_key: "authsub_codex_terminal",
-    profile_key: "codex_desktop",
-    profile_family: "desktop",
-    auth_subject_id: "authsub_codex_terminal",
-    enabled: true,
-    client_product: "Codex Desktop",
-    client_variant: "Desktop",
-    version: "0.144.0-alpha.4",
-    fields: {
-      "user-agent": { value: codexDesktopUserAgent, source: "learned" },
-      version: { value: "0.144.0-alpha.4", source: "learned" },
-      originator: { value: "Codex Desktop", source: "learned" },
-      "x-codex-beta-features": {
-        value: codexDesktopBetaFeatures,
-        source: "learned",
-      },
-      "websocket-beta": {
-        value: "responses_websockets=desktop",
-        source: "learned",
-      },
-    },
-  },
-  learned: {
-    provider: "codex",
-    account_key: "authsub_codex_terminal",
-    profile_key: "codex_desktop",
-    profile_family: "desktop",
-    auth_subject_id: "authsub_codex_terminal",
-    client_product: "Codex Desktop",
-    client_variant: "Desktop",
-    version: "0.144.0-alpha.4",
-    fields: {
-      "user-agent": codexDesktopUserAgent,
-      version: "0.144.0-alpha.4",
-      originator: "Codex Desktop",
-      "x-codex-beta-features": codexDesktopBetaFeatures,
-      "websocket-beta": "responses_websockets=desktop",
-    },
-    observed_headers: {
-      "User-Agent": codexDesktopUserAgent,
-      Version: "0.144.0-alpha.4",
-      Originator: "Codex Desktop",
-      "X-Codex-Beta-Features": codexDesktopBetaFeatures,
-      "OpenAI-Beta": "responses_websockets=desktop",
-    },
-    created_at: "2026-07-10T08:29:45Z",
-    updated_at: "2026-07-10T08:30:00Z",
-    last_seen_at: "2026-07-10T08:30:00Z",
-  },
-};
-
-const buildCodexAccountDetail = (
-  strategy: "cli_preferred" | "active_profile",
-  activeProfileKey: string,
-  revision: number,
-) => {
-  const profiles = [codexCLIProfile, codexDesktopProfile];
-  const selectedProfileKey =
-    strategy === "active_profile" &&
-    profiles.some((profile) => profile.summary.profile_key === activeProfileKey)
-      ? activeProfileKey
-      : "codex_cli_rs";
-  const selectedProfile =
-    profiles.find((profile) => profile.summary.profile_key === selectedProfileKey) ??
-    codexCLIProfile;
-  return {
-    summary: selectedProfile.summary,
-    effective: selectedProfile.effective,
-    learned: selectedProfile.learned,
-    profiles,
-    policy: {
-      provider: "codex",
-      account_key: "authsub_codex_terminal",
-      strategy,
-      ...(strategy === "active_profile" ? { active_profile_key: activeProfileKey } : {}),
-      revision,
-      updated_at: "2026-07-10T08:30:00Z",
-    },
-    selected_profile_key: selectedProfileKey,
-    selection_reason: strategy === "active_profile" ? "active_profile" : "cli_preferred",
-    preset: {},
-    builtin_default: {},
-  };
-};
-
 const accountDetails = {
   authsub_claude_primary: {
     summary: identitySummaries.claude,
@@ -344,7 +174,54 @@ const accountDetails = {
     preset: {},
     builtin_default: {},
   },
-  authsub_codex_terminal: buildCodexAccountDetail("cli_preferred", "", 0),
+  authsub_codex_terminal: {
+    summary: identitySummaries.codex,
+    effective: {
+      provider: "codex",
+      account_key: "authsub_codex_terminal",
+      auth_subject_id: "authsub_codex_terminal",
+      enabled: true,
+      client_product: "codex_cli_rs",
+      version: "0.125.0",
+      fields: {
+        "user-agent": { value: codexTerminalUserAgent, source: "learned" },
+        version: { value: "0.125.0", source: "learned" },
+        originator: { value: "Codex Desktop", source: "learned" },
+        "x-codex-beta-features": { value: codexBetaFeatures, source: "learned" },
+        ...codexExtraEffectiveFields,
+        "websocket-beta": {
+          value: "responses_websockets=2026-02-06",
+          source: "builtin_default",
+        },
+      },
+    },
+    learned: {
+      provider: "codex",
+      account_key: "authsub_codex_terminal",
+      auth_subject_id: "authsub_codex_terminal",
+      client_product: "codex_cli_rs",
+      client_variant: "Codex Desktop",
+      version: "0.125.0",
+      fields: {
+        "user-agent": codexTerminalUserAgent,
+        version: "0.125.0",
+        originator: "Codex Desktop",
+        "x-codex-beta-features": codexBetaFeatures,
+        ...codexExtraLearnedFields,
+      },
+      observed_headers: {
+        "User-Agent": codexTerminalUserAgent,
+        Version: "0.125.0",
+        Originator: "Codex Desktop",
+        "X-Codex-Beta-Features": codexBetaFeatures,
+      },
+      created_at: "2026-06-23T10:13:40Z",
+      updated_at: "2026-06-23T10:13:50Z",
+      last_seen_at: "2026-06-23T10:13:50Z",
+    },
+    preset: {},
+    builtin_default: {},
+  },
   authsub_gemini_builtin: {
     summary: identitySummaries.gemini,
     effective: {
@@ -357,10 +234,7 @@ const accountDetails = {
           value: "google-api-nodejs-client/9.16.0",
           source: "builtin_default",
         },
-        "x-goog-api-client": {
-          value: "gl-node/24.3.0",
-          source: "builtin_default",
-        },
+        "x-goog-api-client": { value: "gl-node/24.3.0", source: "builtin_default" },
         "client-metadata": {
           value: "pluginType=GEMINI,ideType=IDE_UNSPECIFIED",
           source: "builtin_default",
@@ -429,53 +303,14 @@ const swipeVerticallyFromPoint = async (page: Page, x: number, y: number, deltaY
 };
 
 const routeManagementMocks = async (page: Page) => {
-  let codexStrategy: "cli_preferred" | "active_profile" = "cli_preferred";
-  let codexActiveProfileKey = "";
-  let codexPolicyRevision = 0;
-
   await page.route("**/v0/management/**", async (route) => {
     const request = route.request();
     const url = new URL(request.url());
     const path = url.pathname;
 
-    if (
-      path.endsWith("/v0/management/identity-fingerprint/account/policy") &&
-      request.method() === "PUT"
-    ) {
-      const payload = request.postDataJSON() as {
-        provider?: string;
-        account_key?: string;
-        strategy?: "cli_preferred" | "active_profile";
-        active_profile_key?: string;
-      };
-      if (payload.provider !== "codex" || payload.account_key !== "authsub_codex_terminal") {
-        await route.fulfill({
-          status: 400,
-          contentType: "application/json",
-          body: JSON.stringify({ error: "invalid account policy target" }),
-        });
-        return;
-      }
-      codexStrategy = payload.strategy ?? "cli_preferred";
-      codexActiveProfileKey =
-        codexStrategy === "active_profile" ? (payload.active_profile_key ?? "") : "";
-      codexPolicyRevision += 1;
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify(
-          buildCodexAccountDetail(codexStrategy, codexActiveProfileKey, codexPolicyRevision),
-        ),
-      });
-      return;
-    }
-
     if (path.endsWith("/v0/management/identity-fingerprint/account")) {
       const accountKey = url.searchParams.get("account_key") ?? "";
-      const detail =
-        accountKey === "authsub_codex_terminal"
-          ? buildCodexAccountDetail(codexStrategy, codexActiveProfileKey, codexPolicyRevision)
-          : accountDetails[accountKey as keyof typeof accountDetails];
+      const detail = accountDetails[accountKey as keyof typeof accountDetails];
       await route.fulfill({
         status: detail ? 200 : 404,
         contentType: "application/json",
@@ -534,47 +369,27 @@ const routeManagementMocks = async (page: Page) => {
     }
 
     if (path.endsWith("/v0/management/config")) {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: "{}",
-      });
+      await route.fulfill({ status: 200, contentType: "application/json", body: "{}" });
       return;
     }
 
     if (path.endsWith("/v0/management/model-configs")) {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: "[]",
-      });
+      await route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
       return;
     }
 
     if (path.endsWith("/v0/management/model-owner-presets")) {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: "[]",
-      });
+      await route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
       return;
     }
 
     if (path.endsWith("/v0/management/auth-group-model-owner-mappings")) {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: '{"items":[]}',
-      });
+      await route.fulfill({ status: 200, contentType: "application/json", body: '{"items":[]}' });
       return;
     }
 
     if (path.endsWith("/v0/management/proxy-pool")) {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: '{"items":[]}',
-      });
+      await route.fulfill({ status: 200, contentType: "application/json", body: '{"items":[]}' });
       return;
     }
 
@@ -633,9 +448,7 @@ test("Account & Security shows auth files and account identity fingerprint detai
   await expect(codexRow).toBeVisible();
   await codexRow.getByRole("button", { name: /Details|详情/i }).click();
 
-  const dialog = page.getByRole("dialog", {
-    name: /Codex Terminal OAuth|查看/i,
-  });
+  const dialog = page.getByRole("dialog", { name: /Codex Terminal OAuth|查看/i });
   await expect(dialog).toBeVisible();
   const topTabs = dialog.getByRole("tab");
   await expect(topTabs.nth(0)).toHaveText(/Usage|用量/i);
@@ -648,21 +461,10 @@ test("Account & Security shows auth files and account identity fingerprint detai
   const identityPanel = dialog.getByTestId("auth-file-identity-fingerprint");
   const identitySummary = identityPanel.getByTestId("auth-file-identity-summary");
   const identityFields = identityPanel.getByTestId("auth-file-identity-fields");
-  const cliProfileCard = identitySummary.getByTestId("identity-profile-codex_cli_rs");
-  const desktopProfileCard = identitySummary.getByTestId("identity-profile-codex_desktop");
-  const currentOutbound = identitySummary.locator("p", {
-    hasText: /Current outbound identity|当前出站身份/i,
-  });
   await expect(identitySummary).toContainText("authsub_codex_terminal");
-  await expect(cliProfileCard).toBeVisible();
-  await expect(desktopProfileCard).toBeVisible();
-  await expect(cliProfileCard).toContainText(/In use|出站中/i);
-  await expect(desktopProfileCard).not.toContainText(/In use|出站中/i);
-  await expect(currentOutbound).toContainText("codex_cli_rs / CLI");
-  await expect(identityFields).toContainText(codexCLIUserAgent);
-  await expect(identityFields).toContainText(codexCLIBetaFeatures);
-  await expect(identityFields).not.toContainText(codexDesktopUserAgent);
-  await expect(identityFields).not.toContainText(codexDesktopBetaFeatures);
+  await expect(identitySummary).toContainText("codex_cli_rs / Codex Desktop");
+  await expect(identityFields).toContainText(codexTerminalUserAgent);
+  await expect(identityFields).toContainText(codexBetaFeatures);
   await expect(identityFields).toContainText(/Section|分组/i);
   await expect(identityFields).toContainText(/Field|字段/i);
   await expect(identityFields).toContainText(/Value|值/i);
@@ -671,7 +473,8 @@ test("Account & Security shows auth files and account identity fingerprint detai
   await expect(identityFields).toContainText(/Learned Fields|自学习字段/i);
   await expect(identityFields).toContainText(/Observed Headers|观测请求头/i);
   await expect(identityPanel.getByText(/Learned|自学习/i).first()).toBeVisible();
-  await expect(identityFields.getByText("websocket-beta").first()).toBeVisible();
+  await expect(identityPanel.getByText(/System default|系统默认/i).first()).toBeVisible();
+  await expect(identityFields.getByText("websocket-beta")).toBeVisible();
   await expect(identityPanel).not.toContainText("Session_id");
   await expect(identityPanel).not.toContainText("Conversation_id");
   const summaryBox = await identitySummary.boundingBox();
@@ -705,29 +508,12 @@ test("Account & Security shows auth files and account identity fingerprint detai
   expect(desktopTableScrollState.scrollLeft).toBeGreaterThan(0);
   expect(desktopTableScrollState.scrollTop).toBeGreaterThan(0);
 
-  await desktopProfileCard.click();
-  await expect(currentOutbound).toContainText("codex_cli_rs / CLI");
-  await expect(identityFields).toContainText(codexDesktopUserAgent);
-  await expect(identityFields).toContainText("Codex Desktop");
-  await expect(identityFields).toContainText(codexDesktopBetaFeatures);
-  await expect(identityFields).not.toContainText(codexCLIUserAgent);
-  await expect(identityFields).not.toContainText(codexCLIBetaFeatures);
-
-  await identitySummary.getByRole("button", { name: /Use for outbound|设为出站身份/i }).click();
-  await expect(desktopProfileCard).toContainText(/In use|出站中/i);
-  await expect(cliProfileCard).not.toContainText(/In use|出站中/i);
-  await expect(currentOutbound).toContainText("Codex Desktop / Desktop");
-  await expect(identityFields).toContainText(codexDesktopUserAgent);
-  await expect(identityFields).not.toContainText(codexCLIUserAgent);
-
   await dialog.getByRole("button", { name: /^(Close|关闭)$/ }).click();
 
   const geminiRow = page.locator("tr", { hasText: "Gemini CLI Primary" });
   await expect(geminiRow).toBeVisible();
   await geminiRow.getByRole("button", { name: /Details|详情/i }).click();
-  const geminiDialog = page.getByRole("dialog", {
-    name: /Gemini CLI Primary|查看/i,
-  });
+  const geminiDialog = page.getByRole("dialog", { name: /Gemini CLI Primary|查看/i });
   await expect(geminiDialog).toBeVisible();
   const geminiPanel = geminiDialog.getByTestId("auth-file-identity-fingerprint");
   await expect(geminiPanel).toContainText(/System default|系统默认/i);
@@ -758,9 +544,7 @@ test("Account & Security keeps card mode usable and redirects old identity route
 
   const cardsRoot = page.getByTestId("auth-files-cards");
   const cardsContent = cardsRoot.locator("[data-scroll-area-content]");
-  const codexCard = page.locator('[class*="group/card"]', {
-    hasText: "Codex Terminal OAuth",
-  });
+  const codexCard = page.locator('[class*="group/card"]', { hasText: "Codex Terminal OAuth" });
   const cardsContentBox = await cardsContent.boundingBox();
   const codexCardBox = await codexCard.boundingBox();
   if (!cardsContentBox || !codexCardBox) {
@@ -932,15 +716,11 @@ test("Account & Security identity detail stacks cleanly on mobile", async ({ pag
 
   await page.goto("/#/account-security");
 
-  const codexCard = page.locator('[class*="group/card"]', {
-    hasText: "Codex Terminal OAuth",
-  });
+  const codexCard = page.locator('[class*="group/card"]', { hasText: "Codex Terminal OAuth" });
   await expect(codexCard).toBeVisible();
   await codexCard.getByRole("button", { name: /Details|详情/i }).click();
 
-  const dialog = page.getByRole("dialog", {
-    name: /Codex Terminal OAuth|查看/i,
-  });
+  const dialog = page.getByRole("dialog", { name: /Codex Terminal OAuth|查看/i });
   await expect(dialog).toBeVisible();
   await dialog.getByRole("tab", { name: /Identity|身份/i }).click();
 
@@ -948,7 +728,7 @@ test("Account & Security identity detail stacks cleanly on mobile", async ({ pag
   const identitySummary = identityPanel.getByTestId("auth-file-identity-summary");
   const identityFields = identityPanel.getByTestId("auth-file-identity-fields");
   await expect(identitySummary).toContainText("authsub_codex_terminal");
-  await expect(identityFields.getByText("websocket-beta").first()).toBeVisible();
+  await expect(identityFields.getByText("websocket-beta")).toBeVisible();
 
   const summaryBox = await identitySummary.boundingBox();
   const fieldsBox = await identityFields.boundingBox();
@@ -991,8 +771,8 @@ test("Account & Security identity detail stacks cleanly on mobile", async ({ pag
   expect(mobileTableScrollState.canScrollX).toBe(true);
   expect(mobileTableScrollState.scrollLeft).toBeGreaterThan(0);
 
-  await mobileTable.evaluate((node: HTMLElement) => {
-    node.scrollIntoView({ block: "center", inline: "nearest" });
+  await detailScroller.evaluate((node: HTMLElement) => {
+    node.scrollTop = 0;
   });
   const mobileTableBox = await mobileTable.boundingBox();
   const viewportSize = page.viewportSize();

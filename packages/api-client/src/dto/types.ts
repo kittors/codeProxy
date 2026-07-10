@@ -105,8 +105,6 @@ export interface AuthFileIdentityFingerprintSummary {
   learned_fields: number;
   effective_fields: number;
   source_counts: Partial<Record<AuthFileIdentityFingerprintSource, number>>;
-  profile_key?: string;
-  profile_family?: string;
   client_product?: string;
   client_variant?: string;
   version?: string;
