@@ -23,6 +23,12 @@ export interface RequestOptions {
   unwrapEnvelope?: boolean;
 }
 
+export interface ServerSentEvent<T> {
+  id?: string;
+  event?: string;
+  data: T;
+}
+
 type ResponseType = "json" | "text" | "blob";
 
 const RESERVED_MANAGEMENT_HEADERS = new Set(["authorization"]);
@@ -320,6 +326,86 @@ export class ApiClient {
       throw error;
     } finally {
       cleanup();
+    }
+  }
+
+  async streamSSE<T>(
+    path: string,
+    onEvent: (event: ServerSentEvent<T>) => void,
+    options?: Omit<RequestOptions, "timeoutMs" | "unwrapEnvelope">,
+  ): Promise<void> {
+    this.assertAuthActive();
+    const controller = new AbortController();
+    const externalSignal = options?.signal;
+    const onExternalAbort = () => controller.abort();
+    if (externalSignal) {
+      if (externalSignal.aborted) controller.abort();
+      else externalSignal.addEventListener("abort", onExternalAbort, { once: true });
+    }
+
+    try {
+      const url = this.buildUrl(path, options?.params);
+      const headers = this.buildHeaders(undefined, options);
+      headers.set("Accept", "text/event-stream");
+      const response = await fetch(url, {
+        method: "GET",
+        headers,
+        signal: controller.signal,
+      });
+      this.applyVersionHeaders(response);
+      if (!response.ok) {
+        const error = await this.buildApiError(response);
+        if (error.isAuthError) this.suspendAuth();
+        throw error;
+      }
+      if (!response.body) {
+        throw new ApiError({
+          message: "Management API returned an empty event stream.",
+          status: response.status,
+          statusText: response.statusText,
+          url: response.url,
+        });
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      const dispatchBlock = (block: string) => {
+        let id: string | undefined;
+        let event: string | undefined;
+        const data: string[] = [];
+        block.split(/\r?\n/).forEach((line) => {
+          if (!line || line.startsWith(":")) return;
+          const separator = line.indexOf(":");
+          const field = separator >= 0 ? line.slice(0, separator) : line;
+          let value = separator >= 0 ? line.slice(separator + 1) : "";
+          if (value.startsWith(" ")) value = value.slice(1);
+          if (field === "id") id = value;
+          else if (field === "event") event = value;
+          else if (field === "data") data.push(value);
+        });
+        if (data.length === 0) return;
+        const text = data.join("\n");
+        onEvent({ id, event, data: JSON.parse(text) as T });
+      };
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const blocks = buffer.split(/\r?\n\r?\n/);
+        buffer = blocks.pop() ?? "";
+        blocks.forEach(dispatchBlock);
+      }
+      buffer += decoder.decode();
+      if (buffer.trim()) dispatchBlock(buffer);
+    } catch (error) {
+      if (isAbortError(error) && externalSignal?.aborted) return;
+      throw error;
+    } finally {
+      if (externalSignal) {
+        externalSignal.removeEventListener("abort", onExternalAbort);
+      }
     }
   }
 

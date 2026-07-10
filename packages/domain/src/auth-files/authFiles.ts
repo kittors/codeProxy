@@ -232,7 +232,12 @@ const sanitizeIdentityFingerprintSummaryForCache = (
 ): AuthFileIdentityFingerprintSummary | undefined => {
   if (!isPlainRecord(value)) return undefined;
   const provider = readOptionalString(value.provider);
-  if (provider !== "claude" && provider !== "codex" && provider !== "gemini" && provider !== "xai") {
+  if (
+    provider !== "claude" &&
+    provider !== "codex" &&
+    provider !== "gemini" &&
+    provider !== "xai"
+  ) {
     return undefined;
   }
   const primarySource =
@@ -249,6 +254,8 @@ const sanitizeIdentityFingerprintSummaryForCache = (
   };
   const accountKey = readOptionalString(value.account_key);
   const authSubjectId = readOptionalString(value.auth_subject_id);
+  const profileKey = readOptionalString(value.profile_key);
+  const profileFamily = readOptionalString(value.profile_family);
   const clientProduct = readOptionalString(value.client_product);
   const clientVariant = readOptionalString(value.client_variant);
   const version = readOptionalString(value.version);
@@ -257,6 +264,8 @@ const sanitizeIdentityFingerprintSummaryForCache = (
 
   if (accountKey) summary.account_key = accountKey;
   if (authSubjectId) summary.auth_subject_id = authSubjectId;
+  if (profileKey) summary.profile_key = profileKey;
+  if (profileFamily) summary.profile_family = profileFamily;
   if (clientProduct) summary.client_product = clientProduct;
   if (clientVariant) summary.client_variant = clientVariant;
   if (version) summary.version = version;

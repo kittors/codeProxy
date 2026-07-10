@@ -3,6 +3,7 @@ import {
   applyUpdateFlow,
   formatUpdateStatusMessage,
   selectLocalizedReleaseNotes,
+  subscribeUpdateProgress,
 } from "@app/update/updateShared";
 
 const mocks = vi.hoisted(() => ({
@@ -10,6 +11,7 @@ const mocks = vi.hoisted(() => ({
   apply: vi.fn(),
   current: vi.fn(),
   progress: vi.fn(),
+  events: vi.fn(),
 }));
 
 vi.mock("@code-proxy/api-client", () => ({
@@ -23,6 +25,7 @@ vi.mock("@code-proxy/api-client/endpoints/update", () => ({
     apply: mocks.apply,
     current: mocks.current,
     progress: mocks.progress,
+    events: mocks.events,
   },
 }));
 
@@ -72,9 +75,7 @@ describe("selectLocalizedReleaseNotes", () => {
 
   test("keeps the Chinese section for Chinese UI", () => {
     expect(selectLocalizedReleaseNotes(bilingualNotes, "zh-CN")).toBe(
-      ["v0.4.0 - dev 全量合并发布", "", "这是中文更新说明。", "", "- 后端架构整理"].join(
-        "\n",
-      ),
+      ["v0.4.0 - dev 全量合并发布", "", "这是中文更新说明。", "", "- 后端架构整理"].join("\n"),
     );
   });
 
@@ -87,93 +88,83 @@ describe("selectLocalizedReleaseNotes", () => {
 
 describe("applyUpdateFlow", () => {
   beforeEach(() => {
-    mocks.apiGet.mockResolvedValue({ uptime: 10 });
-    mocks.apply.mockResolvedValue({ status: "accepted" });
-    mocks.current.mockResolvedValue({
-      enabled: true,
-      update_available: true,
-      current_version: "main-a0ed5c6",
-      current_commit: "a0ed5c63a118412d5b4da8d57ec6d049111b7888",
-      current_ui_version: "panel-main-1111111",
-      current_ui_commit: "1111111",
-      latest_version: "main-a0ed5c6",
-      latest_commit: "a0ed5c63a118412d5b4da8d57ec6d049111b7888",
-      latest_ui_version: "panel-main-9477958",
-      latest_ui_commit: "94779588adb784b1ceff19c662d3ab55155997e1",
-      target_channel: "main",
-      docker_image: "ghcr.io/kittors/clirelay",
-      docker_tag: "latest",
-      updater_available: true,
-    });
-    mocks.progress.mockResolvedValue({
-      status: "completed",
-      stage: "completed",
-      message: "update completed",
-    });
+    mocks.apply.mockReset();
+    mocks.events.mockReset();
+    mocks.apply.mockResolvedValue({ status: "accepted", run_id: 42 });
+    mocks.events.mockImplementation(
+      async (onProgress: (progress: Record<string, unknown>) => void) => {
+        onProgress({
+          run_id: 42,
+          event_id: 5,
+          status: "running",
+          stage: "verifying",
+          message_code: "service_healthy",
+          message: "updated service container is running and healthy",
+          progress_percent: 100,
+          progress_current: 5,
+          progress_total: 5,
+        });
+        onProgress({
+          run_id: 42,
+          event_id: 6,
+          status: "completed",
+          stage: "completed",
+          message_code: "completed",
+          message: "update completed",
+          progress_percent: 100,
+          progress_current: 5,
+          progress_total: 5,
+        });
+      },
+    );
   });
 
-  test("keeps a verifying transition before reporting completed progress", async () => {
+  test("reports only updater SSE progress and completes the accepted run", async () => {
     const notify = vi.fn();
     const onProgress = vi.fn();
-    mocks.current.mockResolvedValue({
-      enabled: true,
-      update_available: false,
-      current_version: "main-a0ed5c6",
-      current_commit: "a0ed5c63a118412d5b4da8d57ec6d049111b7888",
-      current_ui_version: "panel-main-9477958",
-      current_ui_commit: "94779588adb784b1ceff19c662d3ab55155997e1",
-      latest_version: "main-a0ed5c6",
-      latest_commit: "a0ed5c63a118412d5b4da8d57ec6d049111b7888",
-      latest_ui_version: "panel-main-9477958",
-      latest_ui_commit: "94779588adb784b1ceff19c662d3ab55155997e1",
-      target_channel: "main",
-      docker_image: "ghcr.io/kittors/clirelay",
-      docker_tag: "latest",
-      updater_available: true,
-    });
-
     const result = await applyUpdateFlow({
       candidate: {
         enabled: true,
         update_available: true,
-        current_version: "main-a0ed5c6",
-        current_commit: "a0ed5c63a118412d5b4da8d57ec6d049111b7888",
-        current_ui_version: "panel-main-1111111",
-        current_ui_commit: "1111111",
-        latest_version: "main-a0ed5c6",
-        latest_commit: "a0ed5c63a118412d5b4da8d57ec6d049111b7888",
-        latest_ui_version: "panel-main-9477958",
-        latest_ui_commit: "94779588adb784b1ceff19c662d3ab55155997e1",
-        target_channel: "main",
-        docker_image: "ghcr.io/kittors/clirelay",
-        docker_tag: "latest",
         updater_available: true,
       },
       heartbeatIntervalMs: 1,
-      heartbeatTimeoutMs: 20,
+      heartbeatTimeoutMs: 1000,
       notify,
       onProgress,
       t: ((key: string) => key) as never,
     });
 
     expect(result).toBe(true);
-    expect(onProgress).toHaveBeenCalledWith(
-      expect.objectContaining({
-        status: "running",
-        stage: "verifying",
-        message: "waiting for service health",
-      }),
-    );
-    expect(onProgress).toHaveBeenLastCalledWith(
-      expect.objectContaining({
-        status: "completed",
-        stage: "completed",
-        message: "update completed",
-      }),
-    );
-    expect(notify).toHaveBeenCalledWith({
-      type: "success",
-      message: "auto_update.success",
-    });
+    expect(mocks.events).toHaveBeenCalled();
+    expect(onProgress.mock.calls.map(([progress]) => progress.stage)).toEqual([
+      "verifying",
+      "completed",
+    ]);
+    expect(notify).toHaveBeenCalledWith({ type: "success", message: "auto_update.success" });
+  });
+});
+
+describe("subscribeUpdateProgress", () => {
+  beforeEach(() => {
+    vi.useRealTimers();
+    mocks.events.mockReset();
+  });
+
+  test("backs off failed SSE reconnects instead of retrying every second", async () => {
+    vi.useFakeTimers();
+    mocks.events.mockRejectedValue(new Error("updater unavailable"));
+
+    const unsubscribe = subscribeUpdateProgress(vi.fn());
+    await vi.waitFor(() => expect(mocks.events).toHaveBeenCalledTimes(1));
+
+    await vi.advanceTimersByTimeAsync(4999);
+    expect(mocks.events).toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(1);
+    await vi.waitFor(() => expect(mocks.events).toHaveBeenCalledTimes(2));
+
+    unsubscribe();
+    vi.useRealTimers();
   });
 });

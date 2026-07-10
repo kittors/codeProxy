@@ -13,6 +13,8 @@ const mocks = vi.hoisted(() => ({
   current: vi.fn(),
   apply: vi.fn(),
   progress: vi.fn(),
+  events: vi.fn(),
+  eventCallback: null as null | ((progress: Record<string, unknown>) => void),
 }));
 
 vi.mock("@code-proxy/api-client", () => ({
@@ -47,6 +49,7 @@ vi.mock("@code-proxy/api-client/endpoints/update", () => ({
     current: mocks.current,
     apply: mocks.apply,
     progress: mocks.progress,
+    events: mocks.events,
   },
 }));
 
@@ -67,7 +70,7 @@ function renderPage() {
   return render(
     <ThemeProvider>
       <ToastProvider>
-        <SystemPage updateHeartbeatIntervalMs={1} updateHeartbeatTimeoutMs={200} />
+        <SystemPage updateHeartbeatIntervalMs={1} updateHeartbeatTimeoutMs={2000} />
       </ToastProvider>
     </ThemeProvider>,
   );
@@ -173,7 +176,23 @@ describe("SystemPage", () => {
       docker_tag: "latest",
       updater_available: true,
     });
-    mocks.apply.mockResolvedValue({ status: "accepted" });
+    mocks.apply.mockResolvedValue({ status: "accepted", run_id: 1 });
+    mocks.eventCallback = null;
+    mocks.events.mockImplementation(
+      (
+        onProgress: (progress: Record<string, unknown>) => void,
+        options?: { signal?: AbortSignal },
+      ) =>
+        new Promise<void>((resolve) => {
+          mocks.eventCallback = onProgress;
+          const signal = options?.signal;
+          if (signal?.aborted) {
+            resolve();
+            return;
+          }
+          signal?.addEventListener("abort", () => resolve(), { once: true });
+        }),
+    );
     mocks.progress.mockResolvedValue({
       status: "idle",
       stage: "idle",
@@ -208,11 +227,22 @@ describe("SystemPage", () => {
       expect(mocks.apply).toHaveBeenCalledTimes(1);
     });
     await waitFor(() => {
-      expect(mocks.apiGet).toHaveBeenCalledWith("/system-stats", expect.any(Object));
+      expect(mocks.eventCallback).not.toBeNull();
+    });
+    mocks.eventCallback?.({
+      run_id: 1,
+      status: "completed",
+      stage: "completed",
+      message_code: "completed",
+      message: "update completed",
+      progress_percent: 100,
     });
     await waitFor(() => {
-      expect(mocks.current).toHaveBeenCalled();
+      expect(
+        within(dialog).getByRole("heading", { name: /update completed/i }),
+      ).toBeInTheDocument();
     });
+    expect(mocks.current).not.toHaveBeenCalled();
     expect(mocks.check).toHaveBeenCalledTimes(1);
   });
 
@@ -670,42 +700,7 @@ describe("SystemPage", () => {
     expect(screen.queryByText("disabled-key-model")).not.toBeInTheDocument();
   });
 
-  test("rechecks the target version before treating the update as successful", async () => {
-    mocks.check.mockResolvedValueOnce({
-      enabled: true,
-      update_available: true,
-      current_version: "main-1111111",
-      current_commit: "1111111",
-      current_ui_version: "panel-dev-1111111",
-      current_ui_commit: "1111111",
-      latest_version: "dev-abcdef1",
-      latest_commit: "abcdef123456",
-      latest_ui_version: "panel-dev-abcdef1",
-      latest_ui_commit: "abcdef123456",
-      target_channel: "dev",
-      docker_image: "ghcr.io/kittors/clirelay",
-      docker_tag: "dev",
-      release_notes: "Fixes and improvements",
-      updater_available: true,
-    });
-    mocks.current.mockResolvedValue({
-      enabled: true,
-      update_available: true,
-      current_version: "main-1111111",
-      current_commit: "1111111",
-      current_ui_version: "panel-dev-abcdef1",
-      current_ui_commit: "abcdef123456",
-      latest_version: "dev-abcdef1",
-      latest_commit: "abcdef123456",
-      latest_ui_version: "panel-dev-abcdef1",
-      latest_ui_commit: "abcdef123456",
-      target_channel: "dev",
-      docker_image: "ghcr.io/kittors/clirelay",
-      docker_tag: "dev",
-      release_notes: "Fixes and improvements",
-      updater_available: true,
-    });
-
+  test("reports updater failure without a frontend version recheck", async () => {
     renderPage();
 
     await userEvent.click(await screen.findByRole("button", { name: /check docker update/i }));
@@ -714,14 +709,21 @@ describe("SystemPage", () => {
 
     await waitFor(() => {
       expect(mocks.apply).toHaveBeenCalledTimes(1);
+      expect(mocks.eventCallback).not.toBeNull();
     });
-    await waitFor(() => {
-      expect(mocks.current.mock.calls.length).toBeGreaterThan(1);
+    mocks.eventCallback?.({
+      run_id: 1,
+      status: "failed",
+      stage: "failed",
+      message_code: "update_failed",
+      message: "target container failed its health check",
+      progress_percent: 60,
     });
-    expect(mocks.check).toHaveBeenCalledTimes(1);
+
     expect(
-      await screen.findByText(/running version is still not dev-abcdef1/i),
+      await screen.findByText(/target container failed its health check/i),
     ).toBeInTheDocument();
+    expect(mocks.current).not.toHaveBeenCalled();
   });
 
   test("shows backend and management ui versions separately inside update details", async () => {
@@ -957,64 +959,7 @@ describe("SystemPage", () => {
     expect(screen.queryByText("already up to date")).not.toBeInTheDocument();
   });
 
-  test("switches to an update console while updating and hides release notes", async () => {
-    mocks.current.mockResolvedValue({
-      enabled: true,
-      current_version: "main-abcdef1",
-      current_commit: "abcdef123456",
-      current_ui_version: "panel-main-fedcba9",
-      current_ui_commit: "fedcba987654",
-      target_channel: "main",
-      docker_image: "ghcr.io/kittors/clirelay",
-      docker_tag: "latest",
-      updater_available: true,
-    });
-    mocks.progress
-      .mockResolvedValueOnce({
-        status: "running",
-        stage: "pulling",
-        started_at: "2026-04-20T07:30:00Z",
-        target_version: "main-abcdef1",
-        target_commit: "abcdef123456",
-        target_ui_version: "panel-main-fedcba9",
-        target_ui_commit: "fedcba987654",
-        logs: [
-          {
-            timestamp: "2026-04-20T07:30:01Z",
-            stream: "stdout",
-            message: "docker compose pull clirelay",
-          },
-          {
-            timestamp: "2026-04-20T07:30:02Z",
-            stream: "stdout",
-            message: "Pulling clirelay ... done",
-          },
-        ],
-      })
-      .mockResolvedValueOnce({
-        status: "completed",
-        stage: "completed",
-        message: "update completed",
-        started_at: "2026-04-20T07:30:00Z",
-        finished_at: "2026-04-20T07:30:05Z",
-        target_version: "main-abcdef1",
-        target_commit: "abcdef123456",
-        target_ui_version: "panel-main-fedcba9",
-        target_ui_commit: "fedcba987654",
-        logs: [
-          {
-            timestamp: "2026-04-20T07:30:01Z",
-            stream: "stdout",
-            message: "docker compose pull clirelay",
-          },
-          {
-            timestamp: "2026-04-20T07:30:05Z",
-            stream: "stderr",
-            message: "Container clirelay Started",
-          },
-        ],
-      });
-
+  test("switches to updater SSE progress and keeps latest release information visible", async () => {
     renderPage();
 
     await userEvent.click(await screen.findByRole("button", { name: /check docker update/i }));
@@ -1022,40 +967,57 @@ describe("SystemPage", () => {
     expect(within(dialog).getByText(/Fixes and improvements/i)).toBeInTheDocument();
 
     await userEvent.click(within(dialog).getByRole("button", { name: /update now/i }));
-
     await waitFor(() => {
       expect(mocks.apply).toHaveBeenCalledTimes(1);
+      expect(mocks.eventCallback).not.toBeNull();
     });
-    await waitFor(() => {
-      expect(mocks.progress).toHaveBeenCalled();
-    });
-    await waitFor(() => {
-      expect(within(dialog).queryByTestId("update-release-notes")).toBeNull();
+    mocks.eventCallback?.({
+      run_id: 1,
+      status: "running",
+      stage: "pulling",
+      message_code: "pulling_target_image",
+      message: "pulling target image",
+      progress_percent: 40,
+      progress_current: 2,
+      progress_total: 5,
+      current_version: "main-1111111",
+      target_version: "main-abcdef1",
+      release_name: "CliRelay v1.2.3",
+      release_notes: "Fixes and improvements",
     });
 
-    expect(within(dialog).getByTestId("update-progress-console")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(within(dialog).getByTestId("update-progress-console")).toHaveTextContent("40%");
+    });
+    expect(within(dialog).getByTestId("update-progress-details")).toHaveTextContent(
+      "Completed steps: 2 / 5",
+    );
+    expect(within(dialog).getByTestId("update-release-notes")).toHaveTextContent(
+      "Fixes and improvements",
+    );
+    expect(within(dialog).queryByText(/docker compose pull clirelay/i)).toBeNull();
+
+    mocks.eventCallback?.({
+      run_id: 1,
+      status: "completed",
+      stage: "completed",
+      message_code: "completed",
+      message: "update completed",
+      progress_percent: 100,
+      progress_current: 5,
+      progress_total: 5,
+      current_version: "main-1111111",
+      target_version: "main-abcdef1",
+      release_name: "CliRelay v1.2.3",
+      release_notes: "Fixes and improvements",
+    });
+
     await waitFor(() => {
       expect(
         within(dialog).getByRole("heading", { name: /update completed/i }),
       ).toBeInTheDocument();
     });
-    expect(within(dialog).getByText(/The updater finished all steps\./i)).toBeInTheDocument();
-    expect(within(dialog).queryByText(/docker compose pull clirelay/i)).toBeNull();
-    expect(within(dialog).queryByTestId("update-log-stream")).toBeNull();
-    expect(within(dialog).getByTestId("update-progress-percent")).toHaveTextContent(
-      "100%",
-    );
-    expect(within(dialog).getByTestId("update-progress-fill")).toHaveStyle({
-      width: "100%",
-    });
-    expect(within(dialog).getByText(/main-1111111/i)).toBeInTheDocument();
-    expect(within(dialog).getByText(/main-abcdef1/i)).toBeInTheDocument();
-    expect(within(dialog).getAllByText("Completed").length).toBeGreaterThan(0);
-
-    await waitFor(() => {
-      expect(within(dialog).queryByRole("button", { name: /updating/i })).toBeNull();
-    });
-    expect(within(dialog).getAllByRole("button", { name: /close/i }).at(-1)).toBeEnabled();
-    expect(within(dialog).getByTestId("update-progress-console")).toBeInTheDocument();
+    expect(within(dialog).getByTestId("update-progress-percent")).toHaveTextContent("100%");
+    expect(within(dialog).getByRole("button", { name: /refresh page/i })).toBeEnabled();
   });
 });

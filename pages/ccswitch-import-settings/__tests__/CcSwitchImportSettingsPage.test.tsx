@@ -1088,6 +1088,170 @@ describe("CcSwitchImportSettingsPage", () => {
     );
   });
 
+  test("sorts Codex mappings from the shared table menu and saves the visible order", async () => {
+    listChannelGroups.mockResolvedValue([
+      {
+        name: "pro",
+        description: "Pro route",
+        "path-routes": ["/pro"],
+        "allowed-models": ["model-1", "model-2", "model-3"],
+      },
+    ]);
+    listConfigs.mockResolvedValue([
+      {
+        id: "cfg-sort-codex",
+        clientType: "codex",
+        providerName: "Sorted Codex",
+        note: "",
+        defaultModel: "request-c",
+        allowedChannelGroups: ["pro"],
+        endpointPath: "/v1",
+        usageAutoInterval: 30,
+        modelMappings: [
+          { requestModel: "request-c", targetModel: "model-3", contextWindow: 300000 },
+          { requestModel: "request-a", targetModel: "model-1", contextWindow: 100000 },
+          { requestModel: "request-b", targetModel: "model-2", contextWindow: 200000 },
+        ],
+      },
+    ]);
+    renderPage();
+    const user = userEvent.setup();
+
+    expect(await screen.findByText("Sorted Codex")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /edit config/i }));
+    const dialog = await screen.findByRole("dialog", { name: /edit cc switch config/i });
+
+    const mappingTable = within(dialog).getByTestId("ccswitch-model-mapping-table");
+    const tableViewport = mappingTable.querySelector<HTMLElement>(
+      "[data-scrollbar-visibility='hover']",
+    );
+    expect(mappingTable).toHaveClass("px-4", "pt-3", "pb-4");
+    expect(tableViewport).toHaveClass("h-full", "overflow-auto");
+    expect(tableViewport?.parentElement).toHaveClass("h-[320px]", "min-h-[320px]");
+    expect(tableViewport).toHaveClass("overscroll-y-none");
+    expect(tableViewport).not.toHaveClass("overscroll-y-auto");
+    const headerCells = Array.from(tableViewport?.querySelectorAll("thead th") ?? []);
+    expect(headerCells).not.toHaveLength(0);
+    headerCells.forEach((cell) => expect(cell).toHaveClass("sticky", "top-0", "bg-slate-100"));
+    expect(mappingTable.querySelector("[data-vt-header-chrome]")).toBeNull();
+    expect(mappingTable.querySelector("[data-vt-column-resizer]")).toBeNull();
+
+    const mappingRows = Array.from(
+      mappingTable.querySelectorAll<HTMLTableRowElement>("tbody tr[data-vt-row-index]"),
+    );
+    mappingRows.slice(0, -1).forEach((row) => {
+      Array.from(row.cells).forEach((cell) => {
+        expect(cell).toHaveClass("border-b", "border-slate-200");
+        expect(cell).not.toHaveClass("first:rounded-l-lg", "last:rounded-r-lg");
+      });
+    });
+    Array.from(mappingRows.at(-1)?.cells ?? []).forEach((cell) => {
+      expect(cell).not.toHaveClass("border-b", "first:rounded-l-lg", "last:rounded-r-lg");
+    });
+
+    const requestSort = within(dialog).getByRole("button", {
+      name: /sort cc switch request model/i,
+    });
+    const targetSort = within(dialog).getByRole("button", {
+      name: /sort actual channel model/i,
+    });
+    await user.click(requestSort);
+    await user.click(screen.getByRole("menuitem", { name: /ascending/i }));
+
+    expect(
+      within(dialog)
+        .getAllByLabelText(/cc switch request model for mapping/i)
+        .map((input) => (input as HTMLInputElement).value),
+    ).toEqual(["request-a", "request-b", "request-c"]);
+    expect(requestSort).toHaveAttribute("data-vt-sort-direction", "asc");
+    expect(targetSort).toHaveAttribute("data-vt-sort-direction", "none");
+
+    await user.click(targetSort);
+    await user.click(screen.getByRole("menuitem", { name: /descending/i }));
+
+    expect(
+      within(dialog)
+        .getAllByLabelText(/cc switch request model for mapping/i)
+        .map((input) => (input as HTMLInputElement).value),
+    ).toEqual(["request-c", "request-b", "request-a"]);
+    expect(requestSort).toHaveAttribute("data-vt-sort-direction", "none");
+    expect(targetSort).toHaveAttribute("data-vt-sort-direction", "desc");
+
+    await user.click(within(dialog).getByRole("button", { name: /^save$/i }));
+    await waitFor(() =>
+      expect(replaceConfigs).toHaveBeenCalledWith([
+        expect.objectContaining({
+          id: "cfg-sort-codex",
+          modelMappings: [
+            { requestModel: "request-c", targetModel: "model-3", contextWindow: 300000 },
+            { requestModel: "request-b", targetModel: "model-2", contextWindow: 200000 },
+            { requestModel: "request-a", targetModel: "model-1", contextWindow: 100000 },
+          ],
+        }),
+      ]),
+    );
+  });
+
+  test("sorts and persists Claude Code mappings without restoring the fixed role order", async () => {
+    listChannelGroups.mockResolvedValue([
+      {
+        name: "pro",
+        description: "Pro route",
+        "path-routes": ["/pro"],
+        "allowed-models": ["target-main", "target-haiku", "target-sonnet", "target-opus"],
+      },
+    ]);
+    listConfigs.mockResolvedValue([
+      {
+        id: "cfg-sort-claude",
+        clientType: "claude",
+        providerName: "Sorted Claude",
+        note: "",
+        defaultModel: "target-main",
+        allowedChannelGroups: ["pro"],
+        endpointPath: "",
+        usageAutoInterval: 30,
+        apiKeyField: "ANTHROPIC_API_KEY",
+        modelMappings: [
+          { role: "main", requestModel: "z-main", targetModel: "target-main" },
+          { role: "haiku", requestModel: "a-haiku", targetModel: "target-haiku" },
+          { role: "sonnet", requestModel: "m-sonnet", targetModel: "target-sonnet" },
+          { role: "opus", requestModel: "b-opus", targetModel: "target-opus" },
+        ],
+      },
+    ]);
+    renderPage();
+    const user = userEvent.setup();
+
+    expect(await screen.findByText("Sorted Claude")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /edit config/i }));
+    const dialog = await screen.findByRole("dialog", { name: /edit cc switch config/i });
+
+    await user.click(within(dialog).getByRole("button", { name: /sort cc switch request model/i }));
+    await user.click(screen.getByRole("menuitem", { name: /ascending/i }));
+
+    const orderedRequestModels = Array.from(
+      dialog.querySelectorAll<HTMLTableRowElement>("tr[data-vt-row-index]"),
+    ).map((row) => row.querySelector<HTMLInputElement>("input")?.value);
+    expect(orderedRequestModels).toEqual(["a-haiku", "b-opus", "m-sonnet", "z-main"]);
+
+    await user.click(within(dialog).getByRole("button", { name: /^save$/i }));
+    await waitFor(() =>
+      expect(replaceConfigs).toHaveBeenCalledWith([
+        expect.objectContaining({
+          id: "cfg-sort-claude",
+          defaultModel: "target-main",
+          modelMappings: [
+            { role: "haiku", requestModel: "a-haiku", targetModel: "target-haiku" },
+            { role: "opus", requestModel: "b-opus", targetModel: "target-opus" },
+            { role: "sonnet", requestModel: "m-sonnet", targetModel: "target-sonnet" },
+            { role: "main", requestModel: "z-main", targetModel: "target-main" },
+          ],
+        }),
+      ]),
+    );
+  });
+
   test("deletes a saved config row through the API", async () => {
     listConfigs.mockResolvedValue([
       {

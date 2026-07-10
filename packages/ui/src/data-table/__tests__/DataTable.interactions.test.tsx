@@ -1,0 +1,238 @@
+import { useState } from "react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { describe, expect, test } from "vitest";
+import { DataTable } from "../DataTable";
+import type { DataTableColumn, DataTableSortState } from "../DataTable.types";
+
+type TestRow = {
+  id: string;
+  name: string;
+};
+
+const initialRows: TestRow[] = [
+  { id: "charlie", name: "charlie" },
+  { id: "alpha", name: "alpha" },
+  { id: "bravo", name: "bravo" },
+];
+
+const columns: DataTableColumn<TestRow>[] = [
+  {
+    key: "name",
+    label: "Name",
+    cellClassName: "border-b data-table-test-cell",
+    cellContentClassName: "data-table-test-content",
+    sort: { getValue: (row) => row.name },
+    render: (row) => <span data-testid="row-name">{row.name}</span>,
+  },
+];
+
+const plainColumns: DataTableColumn<TestRow>[] = [
+  {
+    key: "name",
+    label: "Name",
+    render: (row) => <span>{row.name}</span>,
+  },
+];
+
+function DataTableHarness() {
+  const [rows, setRows] = useState(initialRows);
+  const [sortState, setSortState] = useState<DataTableSortState | null>(null);
+  return (
+    <DataTable
+      rows={rows}
+      columns={columns}
+      rowKey={(row) => row.id}
+      rowReorderable
+      onRowsChange={(nextRows) => setRows(nextRows)}
+      sortState={sortState}
+      onSortStateChange={setSortState}
+      naturalFlow
+      height="h-auto"
+      minHeight="min-h-0"
+      minWidth="min-w-[320px]"
+      showAllLoadedMessage={false}
+    />
+  );
+}
+
+function visibleRowNames() {
+  return screen.getAllByTestId("row-name").map((element) => element.textContent);
+}
+
+describe("DataTable sorting and row reordering", () => {
+  test("uses the small dropdown menu and updates the sort icon and row order", async () => {
+    const user = userEvent.setup();
+    render(<DataTableHarness />);
+
+    const sortTrigger = screen.getByRole("button", { name: "Sort Name" });
+    expect(sortTrigger).toHaveAttribute("data-vt-sort-direction", "none");
+
+    const firstNameCell = document.querySelector<HTMLTableCellElement>(
+      'td[data-vt-column-key="name"]',
+    );
+    expect(firstNameCell).toHaveClass("border-b", "data-table-test-cell");
+    expect(firstNameCell?.querySelector("[data-table-cell-overflow]")).toHaveClass(
+      "data-table-test-content",
+    );
+    expect(firstNameCell?.querySelector("[data-table-cell-overflow]")).not.toHaveClass(
+      "border-b",
+      "data-table-test-cell",
+    );
+
+    await user.click(sortTrigger);
+    const menu = screen.getByRole("menu");
+    expect(menu).toHaveClass("min-w-28");
+    expect(screen.getByRole("menuitem", { name: "Ascending" })).toHaveClass("text-xs");
+    await user.click(screen.getByRole("menuitem", { name: "Ascending" }));
+
+    expect(visibleRowNames()).toEqual(["alpha", "bravo", "charlie"]);
+    expect(sortTrigger).toHaveAttribute("data-vt-sort-direction", "asc");
+
+    await user.click(sortTrigger);
+    await user.click(screen.getByRole("menuitem", { name: "Descending" }));
+
+    expect(visibleRowNames()).toEqual(["charlie", "bravo", "alpha"]);
+    expect(sortTrigger).toHaveAttribute("data-vt-sort-direction", "desc");
+  });
+
+  test("dragging a row persists the manual order and resets the active sort icon", async () => {
+    const user = userEvent.setup();
+    render(<DataTableHarness />);
+
+    const sortTrigger = screen.getByRole("button", { name: "Sort Name" });
+    await user.click(sortTrigger);
+    await user.click(screen.getByRole("menuitem", { name: "Ascending" }));
+    expect(visibleRowNames()).toEqual(["alpha", "bravo", "charlie"]);
+
+    const tableRows = Array.from(
+      document.querySelectorAll<HTMLTableRowElement>("tr[data-vt-row-index]"),
+    );
+    tableRows.forEach((row, index) => {
+      row.getBoundingClientRect = () =>
+        ({
+          x: 0,
+          y: index * 40,
+          top: index * 40,
+          right: 320,
+          bottom: index * 40 + 40,
+          left: 0,
+          width: 320,
+          height: 40,
+          toJSON: () => ({}),
+        }) as DOMRect;
+    });
+
+    const firstHandle = screen.getByRole("button", { name: "Drag to reorder row 1" });
+    expect(firstHandle).toHaveAttribute("data-tooltip-managed", "true");
+    fireEvent.pointerDown(firstHandle, { button: 0, pointerId: 7, clientY: 20 });
+    fireEvent.pointerMove(window, { pointerId: 7, clientY: 115 });
+
+    const dragPreview = document.querySelector<HTMLElement>("[data-vt-row-reorder-preview]");
+    expect(dragPreview).toHaveTextContent("alpha");
+    expect(dragPreview).toHaveClass("border", "border-slate-200/90");
+    expect(
+      Array.from(dragPreview?.querySelectorAll("td") ?? []).every(
+        (cell) => cell.style.borderTopWidth === "0px" && cell.style.borderBottomWidth === "0px",
+      ),
+    ).toBe(true);
+    expect(document.querySelector("[data-vt-row-reorder-drop-indicator]")).toBeNull();
+    expect(tableRows[0]).toHaveStyle({ opacity: "0" });
+    expect(tableRows[1]).toHaveStyle({ transform: "translate3d(0, -40px, 0)" });
+    expect(tableRows[2]).toHaveStyle({ transform: "translate3d(0, -40px, 0)" });
+
+    fireEvent.pointerUp(window, { pointerId: 7, clientY: 115 });
+
+    await waitFor(() => expect(visibleRowNames()).toEqual(["bravo", "charlie", "alpha"]));
+    expect(document.querySelector("[data-vt-row-reorder-preview]")).toBeNull();
+    tableRows.forEach((row) => {
+      expect(row.style.opacity).toBe("");
+      expect(row.style.transform).toBe("");
+    });
+    expect(sortTrigger).toHaveAttribute("data-vt-sort-direction", "none");
+  });
+});
+
+describe("DataTable scroll chrome and row dividers", () => {
+  test("keeps header cells attached and forwards boundary wheel scrolling to the parent", () => {
+    render(
+      <div data-testid="parent-scroll" style={{ height: 160, overflowY: "auto" }}>
+        <DataTable
+          rows={initialRows}
+          columns={plainColumns}
+          rowKey={(row) => row.id}
+          height="h-[120px]"
+          minHeight="min-h-[120px]"
+          minWidth="min-w-[320px]"
+          allowWheelPropagationAtBoundary
+          showAllLoadedMessage={false}
+        />
+      </div>,
+    );
+
+    const parent = screen.getByTestId("parent-scroll");
+    const viewport = document.querySelector<HTMLElement>("[data-scrollbar-visibility='hover']");
+    expect(viewport).not.toBeNull();
+    if (!viewport) return;
+
+    Object.defineProperties(viewport, {
+      clientHeight: { configurable: true, value: 120 },
+      scrollHeight: { configurable: true, value: 360 },
+    });
+    Object.defineProperties(parent, {
+      clientHeight: { configurable: true, value: 160 },
+      scrollHeight: { configurable: true, value: 480 },
+    });
+    viewport.scrollTop = 240;
+    parent.scrollTop = 80;
+
+    fireEvent.wheel(viewport, { deltaY: 40 });
+
+    expect(viewport.scrollTop).toBe(240);
+    expect(parent.scrollTop).toBe(120);
+    expect(viewport).toHaveClass("overscroll-y-none");
+    expect(viewport).not.toHaveClass("overscroll-y-auto");
+    expect(document.querySelector("[data-vt-header-chrome]")).toBeNull();
+
+    const headerCells = Array.from(document.querySelectorAll("thead th"));
+    expect(headerCells).not.toHaveLength(0);
+    headerCells.forEach((cell) => {
+      expect(cell).toHaveClass("sticky", "top-0", "bg-slate-100");
+    });
+  });
+
+  test("renders straight full-width dividers without rounded cell edges", () => {
+    render(
+      <DataTable
+        rows={initialRows}
+        columns={plainColumns}
+        rowKey={(row) => row.id}
+        rowReorderable
+        onRowsChange={() => undefined}
+        rowDividers
+        naturalFlow
+        height="h-auto"
+        minHeight="min-h-0"
+        minWidth="min-w-[320px]"
+        showAllLoadedMessage={false}
+      />,
+    );
+
+    const rows = Array.from(
+      document.querySelectorAll<HTMLTableRowElement>("tr[data-vt-row-index]"),
+    );
+    expect(rows).toHaveLength(3);
+
+    rows.slice(0, -1).forEach((row) => {
+      const cells = Array.from(row.cells);
+      expect(cells).toHaveLength(2);
+      cells.forEach((cell) => {
+        expect(cell).toHaveClass("border-b", "border-slate-200");
+        expect(cell).not.toHaveClass("first:rounded-l-lg", "last:rounded-r-lg");
+      });
+    });
+    Array.from(rows.at(-1)?.cells ?? []).forEach((cell) => {
+      expect(cell).not.toHaveClass("border-b", "first:rounded-l-lg", "last:rounded-r-lg");
+    });
+  });
+});

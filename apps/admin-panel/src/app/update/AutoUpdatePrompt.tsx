@@ -13,7 +13,10 @@ import {
   DEFAULT_HEARTBEAT_INTERVAL_MS,
   DEFAULT_HEARTBEAT_TIMEOUT_MS,
   applyUpdateFlow,
-  createPendingUpdateProgress,
+  candidateFromProgress,
+  claimUpdateProgressModal,
+  releaseUpdateProgressModal,
+  subscribeUpdateProgress,
   updateDisplayVersion,
   updateIdentity,
 } from "@app/update/updateShared";
@@ -38,6 +41,8 @@ export function AutoUpdatePrompt({
   const auth = useAuth();
   const checkingRef = useRef(false);
   const notifiedRef = useRef(new Set<string>());
+  const observedRunRef = useRef<number | null>(null);
+  const modalOwnerRef = useRef(Symbol("auto-update-prompt"));
   const [candidate, setCandidate] = useState<UpdateCheckResponse | null>(null);
   const [updateTarget, setUpdateTarget] = useState<UpdateCheckResponse | null>(null);
   const [progress, setProgress] = useState<UpdateProgressResponse | null>(null);
@@ -73,7 +78,9 @@ export function AutoUpdatePrompt({
               label: t("common.confirm"),
               onClick: () => {
                 setCandidate(info);
-                setDetailsOpen(true);
+                if (claimUpdateProgressModal(modalOwnerRef.current)) {
+                  setDetailsOpen(true);
+                }
               },
             },
             classNames: {
@@ -102,9 +109,42 @@ export function AutoUpdatePrompt({
     };
   }, [auth.state.isAuthenticated, auth.state.isRestoring, initialDelayMs, notify, t]);
 
+  useEffect(() => {
+    if (auth.state.isRestoring || !auth.state.isAuthenticated) return undefined;
+    const unsubscribe = subscribeUpdateProgress((nextProgress) => {
+      const status = nextProgress.status.trim().toLowerCase();
+      const runID = nextProgress.run_id ?? null;
+      if (status === "running") {
+        observedRunRef.current = runID;
+        setCandidate((current) => candidateFromProgress(nextProgress, current));
+        setUpdateTarget((current) => candidateFromProgress(nextProgress, current));
+        setProgress(nextProgress);
+        setUpdating(true);
+        if (claimUpdateProgressModal(modalOwnerRef.current)) {
+          setDetailsOpen(true);
+        }
+        return;
+      }
+      if (
+        runID &&
+        observedRunRef.current === runID &&
+        (status === "completed" || status === "failed")
+      ) {
+        setCandidate((current) => candidateFromProgress(nextProgress, current));
+        setUpdateTarget((current) => candidateFromProgress(nextProgress, current));
+        setProgress(nextProgress);
+        setUpdating(false);
+      }
+    });
+    return () => {
+      unsubscribe();
+      releaseUpdateProgressModal(modalOwnerRef.current);
+    };
+  }, [auth.state.isAuthenticated, auth.state.isRestoring]);
+
   const applyUpdate = useCallback(async () => {
     setUpdateTarget(candidate);
-    setProgress(createPendingUpdateProgress(candidate));
+    setProgress(null);
     setUpdating(true);
     try {
       await applyUpdateFlow({
@@ -139,6 +179,7 @@ export function AutoUpdatePrompt({
         onClose={() => {
           setProgress(null);
           setUpdateTarget(null);
+          releaseUpdateProgressModal(modalOwnerRef.current);
           setDetailsOpen(false);
         }}
       />

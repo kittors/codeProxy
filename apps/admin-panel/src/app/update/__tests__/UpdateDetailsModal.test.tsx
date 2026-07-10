@@ -32,7 +32,7 @@ describe("UpdateDetailsModal", () => {
     vi.restoreAllMocks();
   });
 
-  test("localizes common updater messages, shows percentage, and hides live docker logs", async () => {
+  test("renders updater-provided stage, exact step progress, and hides raw logs", async () => {
     render(
       <UpdateDetailsModal
         open
@@ -40,9 +40,15 @@ describe("UpdateDetailsModal", () => {
         updateTarget={candidate}
         updating
         progress={{
+          run_id: 12,
+          event_id: 3,
           status: "running",
           stage: "pulling",
+          message_code: "pulling_target_image",
           message: "pulling target image",
+          progress_percent: 20,
+          progress_current: 1,
+          progress_total: 5,
           logs: [
             {
               timestamp: "2026-04-20T07:30:01Z",
@@ -57,12 +63,15 @@ describe("UpdateDetailsModal", () => {
     );
 
     expect(screen.getByText("Pulling the target image.")).toBeInTheDocument();
-    expect(screen.getByText(/1[89]%|20%/)).toBeInTheDocument();
+    expect(screen.getByText("20%")).toBeInTheDocument();
+    expect(screen.getByTestId("update-progress-details")).toHaveTextContent(
+      "Completed steps: 1 / 5",
+    );
     expect(screen.queryByText("pull image")).toBeNull();
     expect(screen.queryByTestId("update-log-stream")).toBeNull();
   });
 
-  test("shows structured SQLite migration progress details", async () => {
+  test("uses an indeterminate state instead of manufacturing a percentage", async () => {
     render(
       <UpdateDetailsModal
         open
@@ -70,60 +79,24 @@ describe("UpdateDetailsModal", () => {
         updateTarget={candidate}
         updating
         progress={{
+          run_id: 12,
+          event_id: 1,
           status: "running",
-          stage: "migrating",
-          message: "migrating legacy SQLite data before restarting service",
-          progress_percent: 86,
-          migration: {
-            phase: "applying",
-            target_database: "PostgreSQL",
-            table: "request_logs",
-            table_index: 16,
-            table_total: 17,
-            inserted_rows: 2,
-            target_rows: 167648,
-          },
-          logs: [
-            {
-              timestamp: "2026-07-06T08:32:01Z",
-              stream: "stderr",
-              message: "sqlite import progress: table 16/17 request_logs",
-            },
-          ],
+          stage: "preparing",
+          message_code: "preparing_deployment",
+          message: "preparing deployment configuration",
         }}
         onApply={() => {}}
         onClose={() => {}}
       />,
     );
 
-    expect(
-      screen.getByText(
-        "Importing legacy SQLite data into PostgreSQL.",
-      ),
-    ).toBeInTheDocument();
-    expect(screen.getByText("Data migration check")).toBeInTheDocument();
-    expect(screen.getByText("86%")).toBeInTheDocument();
-    expect(screen.getByTestId("update-progress-fill")).toHaveStyle({
-      width: "86%",
-    });
-    expect(screen.getByTestId("update-progress-details")).toHaveTextContent(
-      "Target: PostgreSQL",
-    );
-    expect(screen.getByTestId("update-progress-details")).toHaveTextContent(
-      "Phase: importing rows",
-    );
-    expect(screen.getByTestId("update-progress-details")).toHaveTextContent(
-      "Table: 16/17 request_logs",
-    );
-    expect(screen.getByTestId("update-progress-details")).toHaveTextContent(
-      "Rows: 2 / 167,648",
-    );
-    expect(
-      screen.queryByText("sqlite import progress: table 16/17 request_logs"),
-    ).toBeNull();
+    expect(screen.getByText("Preparing the deployment configuration.")).toBeInTheDocument();
+    expect(screen.getByText("In progress")).toBeInTheDocument();
+    expect(screen.queryByText(/\d+%/)).toBeNull();
   });
 
-  test("shows generic runtime data check before SQLite is detected", async () => {
+  test("shows release and version metadata delivered by updater events", async () => {
     render(
       <UpdateDetailsModal
         open
@@ -131,63 +104,35 @@ describe("UpdateDetailsModal", () => {
         updateTarget={candidate}
         updating
         progress={{
+          run_id: 12,
+          event_id: 4,
           status: "running",
-          stage: "migrating",
-          message: "checking runtime data migration before service restart",
-          progress_percent: 40,
-          migration: {
-            phase: "checking",
-            target_database: "PostgreSQL",
-          },
+          stage: "recreating",
+          message_code: "recreating_service",
+          message: "recreating service container and waiting for health",
+          progress_percent: 60,
+          progress_current: 3,
+          progress_total: 5,
+          current_version: "main-1111111",
+          target_version: "main-2222222",
+          current_ui_version: "panel-main-1111111",
+          target_ui_version: "panel-main-3333333",
+          release_name: "CliRelay v0.5.0",
+          release_tag: "v0.5.0",
+          release_notes: "Latest updater-delivered changes",
+          release_published_at: "2026-07-10T07:30:00Z",
         }}
         onApply={() => {}}
         onClose={() => {}}
       />,
     );
 
-    expect(
-      screen.getByText(
-        "Checking runtime data migration before restarting the service.",
-      ),
-    ).toBeInTheDocument();
-    expect(screen.getByText("Data migration check")).toBeInTheDocument();
-    expect(screen.queryByText(/legacy SQLite data/)).toBeNull();
-  });
-
-  test("shows skipped SQLite migration as a check instead of active migration", async () => {
-    render(
-      <UpdateDetailsModal
-        open
-        candidate={candidate}
-        updateTarget={candidate}
-        updating
-        progress={{
-          status: "running",
-          stage: "migrating",
-          message:
-            "no legacy SQLite database found; continuing with PostgreSQL runtime data",
-          progress_percent: 88,
-          migration: {
-            phase: "skipped",
-            target_database: "PostgreSQL",
-            skip_reason: "no_legacy_sqlite",
-          },
-        }}
-        onApply={() => {}}
-        onClose={() => {}}
-      />,
+    expect(screen.getByTestId("update-progress-console")).toHaveTextContent("main-2222222");
+    expect(screen.getByTestId("update-progress-console")).toHaveTextContent("panel-main-3333333");
+    expect(await screen.findByTestId("update-release-notes")).toHaveTextContent(
+      "Latest updater-delivered changes",
     );
-
-    expect(
-      screen.getByText(
-        "No legacy SQLite database was found; continuing with the PostgreSQL runtime data.",
-      ),
-    ).toBeInTheDocument();
-    expect(screen.getByText("Data migration check")).toBeInTheDocument();
-    expect(screen.getByTestId("update-progress-details")).toHaveTextContent(
-      "Phase: skipped",
-    );
-    expect(screen.queryByText(/Migrating legacy SQLite data/)).toBeNull();
+    expect(screen.getByTestId("update-release-meta")).toHaveTextContent("CliRelay v0.5.0");
   });
 
   test("renders localized success styling when already up to date", async () => {
@@ -208,9 +153,7 @@ describe("UpdateDetailsModal", () => {
       />,
     );
 
-    expect(
-      screen.getByRole("heading", { name: /already updated to latest/i }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /already updated to latest/i })).toBeInTheDocument();
     expect(screen.queryByText("already up to date")).not.toBeInTheDocument();
     expect(
       screen.getByText(/already updated to latest/i, {
@@ -234,10 +177,28 @@ describe("UpdateDetailsModal", () => {
       />,
     );
 
-    expect(
-      screen.getByText(/updater token is not configured/i),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/updater token is not configured/i)).toBeInTheDocument();
     expect(screen.getByText(/CLIRELAY_UPDATER_TOKEN/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /update now/i })).toBeDisabled();
+  });
+
+  test("blocks updates until a legacy updater sidecar is recreated", async () => {
+    render(
+      <UpdateDetailsModal
+        open
+        candidate={{
+          ...candidate,
+          updater_available: false,
+          updater_health_status: "upgrade_required",
+          updater_health_message: "legacy updater",
+        }}
+        onApply={() => {}}
+        onClose={() => {}}
+      />,
+    );
+
+    expect(screen.getByText(/does not support the SSE update protocol/i)).toBeInTheDocument();
+    expect(screen.getByText(/force-recreate clirelay-updater/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /update now/i })).toBeDisabled();
   });
 
@@ -251,7 +212,11 @@ describe("UpdateDetailsModal", () => {
         progress={{
           status: "completed",
           stage: "completed",
+          message_code: "completed",
           message: "update completed",
+          progress_percent: 100,
+          progress_current: 5,
+          progress_total: 5,
           logs: [
             {
               timestamp: "2026-04-20T07:30:05Z",
@@ -265,17 +230,13 @@ describe("UpdateDetailsModal", () => {
       />,
     );
 
-    expect(
-      screen.getByRole("heading", { name: /update completed/i }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /update completed/i })).toBeInTheDocument();
     expect(screen.getByText("100%")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /updating/i })).toBeNull();
     expect(screen.queryByText("Close")).toBeNull();
     expect(screen.getByRole("button", { name: /refresh page/i })).toBeEnabled();
     expect(screen.queryByTestId("update-log-stream")).toBeNull();
-    expect(screen.getByTestId("update-details-modal-body")).toHaveClass(
-      "max-h-[min(62vh,520px)]",
-    );
+    expect(screen.getByTestId("update-details-modal-body")).toHaveClass("max-h-[min(62vh,520px)]");
   });
 
   test("shows the release notes section that matches the active language", async () => {
