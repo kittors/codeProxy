@@ -224,6 +224,38 @@ const readResponseMetricsColumnState = async (page: Page) =>
     };
   });
 
+test("Request Logs: centers every header except ID over its column content", async ({ page }) => {
+  await setAuthed(page);
+  await mockRequestLogsApis(page);
+
+  await page.goto("/manage/#/monitor/request-logs");
+  await page.locator('th[data-vt-column-key="id"]').waitFor({ state: "visible" });
+
+  const alignment = await page.locator("th[data-vt-column-key]").evaluateAll((headers) =>
+    headers.map((header) => {
+      const key = header.getAttribute("data-vt-column-key");
+      const content = header.querySelector<HTMLElement>("[data-vt-column-header-content] > span");
+      if (!content) throw new Error(`Missing header content for ${key}`);
+
+      const headerRect = header.getBoundingClientRect();
+      const contentRect = content.getBoundingClientRect();
+      return {
+        key,
+        justifyContent: getComputedStyle(content).justifyContent,
+        centerDelta: Math.abs(
+          contentRect.left + contentRect.width / 2 - (headerRect.left + headerRect.width / 2),
+        ),
+      };
+    }),
+  );
+
+  expect(alignment.find(({ key }) => key === "id")?.justifyContent).toBe("normal");
+  for (const column of alignment.filter(({ key }) => key !== "id")) {
+    expect(column.justifyContent, column.key ?? undefined).toBe("center");
+    expect(column.centerDelta, column.key ?? undefined).toBeLessThanOrEqual(1);
+  }
+});
+
 test("Request Logs: response metrics column resize clamps at its minimum width", async ({
   page,
 }) => {

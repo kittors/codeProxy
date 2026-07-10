@@ -520,6 +520,9 @@ export function RequestLogsTimeRangeSelector({
   );
 }
 
+const CENTERED_REQUEST_LOG_HEADER_CLASS =
+  "text-center [&_[data-vt-column-header-content]>span]:justify-center";
+
 export function buildRequestLogsColumns(
   t: (key: string) => string,
   onContentClick?: (logId: number, tab: "input" | "output") => void,
@@ -543,7 +546,7 @@ export function buildRequestLogsColumns(
       key: "timestamp",
       label: t("request_logs.col_time"),
       width: "w-52",
-      headerClassName: "text-center",
+      headerClassName: CENTERED_REQUEST_LOG_HEADER_CLASS,
       cellClassName:
         "text-center font-mono text-xs tabular-nums text-slate-700 dark:text-slate-200",
       render: (row) => (
@@ -561,7 +564,7 @@ export function buildRequestLogsColumns(
       key: "channelName",
       label: t("request_logs.col_channel"),
       width: "w-32",
-      headerClassName: "text-center",
+      headerClassName: CENTERED_REQUEST_LOG_HEADER_CLASS,
       cellClassName: "text-center",
       render: (row) => (
         <OverflowTooltip
@@ -580,7 +583,7 @@ export function buildRequestLogsColumns(
       key: "status",
       label: t("request_logs.col_status"),
       width: "w-28",
-      headerClassName: "text-center",
+      headerClassName: CENTERED_REQUEST_LOG_HEADER_CLASS,
       cellClassName: "text-center",
       render: (row) =>
         row.failed ? (
@@ -603,7 +606,7 @@ export function buildRequestLogsColumns(
       label: t("request_logs.col_response_metrics"),
       width: "w-64",
       minWidthPx: 240,
-      headerClassName: "text-center",
+      headerClassName: CENTERED_REQUEST_LOG_HEADER_CLASS,
       cellClassName:
         "text-center text-xs tabular-nums text-slate-700 dark:text-slate-200",
       render: (row) => {
@@ -661,7 +664,7 @@ export function buildRequestLogsColumns(
       key: "inputTokens",
       label: t("request_logs.col_input"),
       width: "w-32",
-      headerClassName: "text-center",
+      headerClassName: CENTERED_REQUEST_LOG_HEADER_CLASS,
       cellClassName:
         "text-center font-mono text-xs tabular-nums text-slate-700 dark:text-slate-200 pl-6",
       render: (row) =>
@@ -685,7 +688,7 @@ export function buildRequestLogsColumns(
       key: "cachedTokens",
       label: t("request_logs.col_cache_read"),
       width: "w-24",
-      headerClassName: "text-center",
+      headerClassName: CENTERED_REQUEST_LOG_HEADER_CLASS,
       cellClassName: "text-center font-mono text-xs tabular-nums",
       render: (row) => (
         <RequestLogUsageMetricValue
@@ -702,7 +705,7 @@ export function buildRequestLogsColumns(
       key: "outputTokens",
       label: t("request_logs.col_output"),
       width: "w-24",
-      headerClassName: "text-center",
+      headerClassName: CENTERED_REQUEST_LOG_HEADER_CLASS,
       cellClassName:
         "text-center font-mono text-xs tabular-nums text-slate-700 dark:text-slate-200",
       render: (row) =>
@@ -726,7 +729,7 @@ export function buildRequestLogsColumns(
       key: "totalTokens",
       label: t("request_logs.col_total_token"),
       width: "w-28",
-      headerClassName: "text-center",
+      headerClassName: CENTERED_REQUEST_LOG_HEADER_CLASS,
       cellClassName:
         "text-center font-mono text-xs tabular-nums text-slate-900 dark:text-white",
       render: (row) => <RequestLogUsageMetricValue value={row.totalTokens} />,
@@ -735,7 +738,7 @@ export function buildRequestLogsColumns(
       key: "cost",
       label: t("request_logs.col_cost"),
       width: "w-24",
-      headerClassName: "text-center",
+      headerClassName: CENTERED_REQUEST_LOG_HEADER_CLASS,
       cellClassName:
         "text-center font-mono text-xs tabular-nums text-emerald-700 dark:text-emerald-400",
       render: (row) => (
@@ -746,7 +749,7 @@ export function buildRequestLogsColumns(
       key: "apiKeyName",
       label: t("request_logs.col_key_name"),
       width: "w-28",
-      headerClassName: "text-center",
+      headerClassName: CENTERED_REQUEST_LOG_HEADER_CLASS,
       cellClassName: "text-center",
       render: (row) => (
         <OverflowTooltip
@@ -771,7 +774,7 @@ export function buildRequestLogsColumns(
       key: "model",
       label: t("request_logs.col_model"),
       width: "w-44",
-      headerClassName: "text-center",
+      headerClassName: CENTERED_REQUEST_LOG_HEADER_CLASS,
       cellClassName: "text-center",
       render: (row) =>
         row.model ? (
