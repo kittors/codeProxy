@@ -1,5 +1,4 @@
 import { type TFunction } from "i18next";
-import { apiClient } from "@code-proxy/api-client";
 import {
   updateApi,
   type UpdateCheckResponse,
@@ -8,8 +7,6 @@ import {
 
 export const DEFAULT_HEARTBEAT_INTERVAL_MS = 1000;
 export const DEFAULT_HEARTBEAT_TIMEOUT_MS = 180000;
-
-const sleep = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms));
 
 const normalizedProgressStatus = (progress?: UpdateProgressResponse | null) =>
   progress?.status?.trim().toLowerCase() ?? "";
@@ -99,7 +96,7 @@ const trimBlankReleaseNoteLines = (lines: string[]) => {
 };
 
 const localizeBilingualReleaseNoteLine = (line: string, locale: ReleaseNotesLocale) => {
-  const parts = line.split(/\s+[\/／]\s+/);
+  const parts = line.split(/\s+[/／]\s+/);
   if (parts.length < 2) return line;
   if (locale === "zh-CN") return parts[0];
 
@@ -169,178 +166,147 @@ export const updateIdentity = (info: UpdateCheckResponse) =>
   info.latest_ui_commit ||
   `${info.docker_image ?? ""}:${info.docker_tag ?? ""}`;
 
-export const createPendingUpdateProgress = (
-  target?: UpdateCheckResponse | null,
-): UpdateProgressResponse => ({
-  status: "running",
-  stage: "preparing",
-  message: "preparing update",
-  service: "clirelay",
-  target_image: target?.docker_image,
-  target_tag: target?.docker_tag,
-  target_version: target?.latest_version,
-  target_commit: target?.latest_commit,
-  target_ui_version: target?.latest_ui_version,
-  target_ui_commit: target?.latest_ui_commit,
-  target_channel: target?.target_channel,
-  logs: [],
+export const candidateFromProgress = (
+  progress: UpdateProgressResponse,
+  fallback?: UpdateCheckResponse | null,
+): UpdateCheckResponse => ({
+  enabled: fallback?.enabled ?? true,
+  current_version: progress.current_version ?? fallback?.current_version,
+  current_commit: progress.current_commit ?? fallback?.current_commit,
+  current_ui_version: progress.current_ui_version ?? fallback?.current_ui_version,
+  current_ui_commit: progress.current_ui_commit ?? fallback?.current_ui_commit,
+  target_channel: progress.target_channel ?? fallback?.target_channel,
+  latest_version: progress.target_version ?? fallback?.latest_version,
+  latest_commit: progress.target_commit ?? fallback?.latest_commit,
+  latest_commit_url: progress.target_commit_url ?? fallback?.latest_commit_url,
+  latest_ui_version: progress.target_ui_version ?? fallback?.latest_ui_version,
+  latest_ui_commit: progress.target_ui_commit ?? fallback?.latest_ui_commit,
+  latest_ui_commit_url: progress.target_ui_commit_url ?? fallback?.latest_ui_commit_url,
+  docker_image: progress.target_image ?? fallback?.docker_image,
+  docker_tag: progress.target_tag ?? fallback?.docker_tag,
+  release_name: progress.release_name ?? fallback?.release_name,
+  release_tag: progress.release_tag ?? fallback?.release_tag,
+  release_notes: progress.release_notes ?? fallback?.release_notes,
+  release_url: progress.release_url ?? fallback?.release_url,
+  release_published_at: progress.release_published_at ?? fallback?.release_published_at,
+  update_available: normalizedProgressStatus(progress) === "running",
+  updater_available: true,
 });
 
-const mergeProgressTargetMetadata = (
-  progress: UpdateProgressResponse | null | undefined,
-  target?: UpdateCheckResponse | null,
-) => ({
-  target_image: progress?.target_image ?? target?.docker_image,
-  target_tag: progress?.target_tag ?? target?.docker_tag,
-  target_version: progress?.target_version ?? target?.latest_version,
-  target_commit: progress?.target_commit ?? target?.latest_commit,
-  target_ui_version: progress?.target_ui_version ?? target?.latest_ui_version,
-  target_ui_commit: progress?.target_ui_commit ?? target?.latest_ui_commit,
-  target_channel: progress?.target_channel ?? target?.target_channel,
-});
+type ProgressListener = (progress: UpdateProgressResponse) => void;
 
-const createVerifyingProgress = (
-  progress: UpdateProgressResponse | null | undefined,
-  target?: UpdateCheckResponse | null,
-): UpdateProgressResponse => ({
-  ...(progress ?? createPendingUpdateProgress(target)),
-  ...mergeProgressTargetMetadata(progress, target),
-  status: "running",
-  stage: "verifying",
-  message: "waiting for service health",
-  logs: progress?.logs ?? [],
-});
+const progressListeners = new Set<ProgressListener>();
+let progressStreamController: AbortController | null = null;
+let progressStreamTask: Promise<void> | null = null;
+let latestProgress: UpdateProgressResponse | null = null;
+let updateProgressModalOwner: symbol | null = null;
 
-const createCompletedProgress = (
-  progress: UpdateProgressResponse | null | undefined,
-  target?: UpdateCheckResponse | null,
-): UpdateProgressResponse => {
-  const finishedAt = progress?.finished_at ?? new Date().toISOString();
-  return {
-    ...(progress ?? createPendingUpdateProgress(target)),
-    ...mergeProgressTargetMetadata(progress, target),
-    status: "completed",
-    stage: "completed",
-    message: "update completed",
-    updated_at: progress?.updated_at ?? finishedAt,
-    finished_at: finishedAt,
-    logs: progress?.logs ?? [],
+export const claimUpdateProgressModal = (owner: symbol) => {
+  if (updateProgressModalOwner && updateProgressModalOwner !== owner) return false;
+  updateProgressModalOwner = owner;
+  return true;
+};
+
+export const releaseUpdateProgressModal = (owner: symbol) => {
+  if (updateProgressModalOwner === owner) updateProgressModalOwner = null;
+};
+
+const delay = (ms: number, signal: AbortSignal) =>
+  new Promise<void>((resolve) => {
+    if (signal.aborted) {
+      resolve();
+      return;
+    }
+    const finish = () => {
+      globalThis.clearTimeout(timer);
+      signal.removeEventListener("abort", finish);
+      resolve();
+    };
+    const timer = globalThis.setTimeout(finish, ms);
+    signal.addEventListener("abort", finish, { once: true });
+  });
+
+const publishProgress = (progress: UpdateProgressResponse) => {
+  latestProgress = progress;
+  progressListeners.forEach((listener) => listener(progress));
+};
+
+const ensureProgressStream = () => {
+  if (progressStreamTask || progressListeners.size === 0) return;
+  const controller = new AbortController();
+  progressStreamController = controller;
+  progressStreamTask = (async () => {
+    while (!controller.signal.aborted && progressListeners.size > 0) {
+      try {
+        await updateApi.events(publishProgress, { signal: controller.signal });
+      } catch {
+        // The API container restarts during an update. Reconnect and let the updater
+        // replay its latest persisted snapshot instead of manufacturing UI progress.
+      }
+      if (!controller.signal.aborted && progressListeners.size > 0) {
+        await delay(DEFAULT_HEARTBEAT_INTERVAL_MS, controller.signal);
+      }
+    }
+  })().finally(() => {
+    if (progressStreamController === controller) progressStreamController = null;
+    progressStreamTask = null;
+    if (progressListeners.size > 0) ensureProgressStream();
+  });
+};
+
+export const subscribeUpdateProgress = (listener: ProgressListener) => {
+  progressListeners.add(listener);
+  const snapshot = latestProgress;
+  if (snapshot) queueMicrotask(() => listener(snapshot));
+  ensureProgressStream();
+  return () => {
+    progressListeners.delete(listener);
+    if (progressListeners.size === 0) {
+      progressStreamController?.abort();
+      progressStreamController = null;
+      latestProgress = null;
+    }
   };
 };
 
-const targetNeedsBackendChange = (target?: UpdateCheckResponse | null) =>
-  Boolean(target?.latest_commit?.trim()) &&
-  !sameCommit(target?.current_commit, target?.latest_commit);
-
-const targetNeedsUiChange = (target?: UpdateCheckResponse | null) =>
-  Boolean(target?.latest_ui_commit?.trim()) &&
-  !sameCommit(target?.current_ui_commit, target?.latest_ui_commit);
-
-export const matchesAppliedTarget = (
-  info: UpdateCheckResponse,
-  target?: UpdateCheckResponse | null,
-) => {
-  if (!target) return !info.update_available;
-  const backendNeedsChange = targetNeedsBackendChange(target);
-  const uiNeedsChange = targetNeedsUiChange(target);
-  const currentVersion = info.current_version?.trim() ?? "";
-  const targetVersion = target.latest_version?.trim() ?? "";
-  const currentUIVersion = info.current_ui_version?.trim() ?? "";
-  const targetUIVersion = target.latest_ui_version?.trim() ?? "";
-  const backendApplied =
-    !backendNeedsChange ||
-    sameCommit(info.current_commit, target.latest_commit) ||
-    Boolean(currentVersion && targetVersion && currentVersion === targetVersion);
-  const uiApplied =
-    !uiNeedsChange ||
-    sameCommit(info.current_ui_commit, target.latest_ui_commit) ||
-    Boolean(currentUIVersion && targetUIVersion && currentUIVersion === targetUIVersion);
-  return backendApplied && uiApplied;
-};
-
-const waitForAppliedTarget = async ({
-  target,
-  heartbeatIntervalMs,
-  heartbeatTimeoutMs,
-  onCheck,
+const waitForUpdateRun = ({
+  runID,
+  timeoutMs,
   onProgress,
 }: {
-  target?: UpdateCheckResponse | null;
-  heartbeatIntervalMs: number;
-  heartbeatTimeoutMs: number;
-  onCheck?: (info: UpdateCheckResponse) => void;
+  runID: number;
+  timeoutMs: number;
   onProgress?: (progress: UpdateProgressResponse) => void;
-}) => {
-  const deadline = Date.now() + heartbeatTimeoutMs;
-  let lastCheck: UpdateCheckResponse | null = null;
-  let lastProgress: UpdateProgressResponse | null = null;
-  const reportVerifyingProgress = (progress?: UpdateProgressResponse | null) => {
-    const verifyingProgress = createVerifyingProgress(progress ?? lastProgress, target);
-    lastProgress = verifyingProgress;
-    onProgress?.(verifyingProgress);
-    return verifyingProgress;
-  };
-  const pollProgress = async () => {
-    try {
-      const progress = await updateApi.progress({
-        timeoutMs: Math.min(8000, heartbeatIntervalMs + 5000),
-      });
-      lastProgress = progress;
+}) =>
+  new Promise<{
+    ok: boolean;
+    failed: boolean;
+    progress: UpdateProgressResponse | null;
+  }>((resolve) => {
+    let last: UpdateProgressResponse | null = null;
+    let settled = false;
+    let unsubscribe = () => {};
+    const timer = globalThis.setTimeout(() => finish({ ok: false, failed: false }), timeoutMs);
+    function finish(result: { ok: boolean; failed: boolean }) {
+      if (settled) return;
+      settled = true;
+      globalThis.clearTimeout(timer);
+      unsubscribe();
+      resolve({ ...result, progress: last });
+    }
+    unsubscribe = subscribeUpdateProgress((progress) => {
+      if (progress.run_id !== runID) return;
+      last = progress;
       onProgress?.(progress);
-      return progress;
-    } catch {
-      return lastProgress;
-    }
-  };
-  const initialProgress = await pollProgress();
-  const initialStatus = normalizedProgressStatus(initialProgress);
-  if (initialStatus === "failed") {
-    return {
-      ok: false as const,
-      latest: lastCheck,
-      progress: initialProgress,
-      failed: true as const,
-    };
-  }
-  if (initialStatus === "completed") {
-    reportVerifyingProgress(initialProgress);
-  }
-  await sleep(Math.min(heartbeatIntervalMs, 3000));
-  while (true) {
-    const progress = await pollProgress();
-    const status = normalizedProgressStatus(progress);
-    if (status === "failed") {
-      return { ok: false as const, latest: lastCheck, progress, failed: true as const };
-    }
-    if (status === "completed") {
-      reportVerifyingProgress(progress);
-    }
-    try {
-      await apiClient.get("/system-stats", {
-        timeoutMs: Math.min(5000, heartbeatIntervalMs + 3000),
-      });
-      const current = await updateApi.current({
-        timeoutMs: Math.min(8000, heartbeatIntervalMs + 5000),
-      });
-      const info = { ...target, ...current };
-      lastCheck = info;
-      onCheck?.(info);
-      if (matchesAppliedTarget(info, target)) {
-        return { ok: true as const, latest: info, progress: lastProgress };
-      }
-    } catch {
-      // Keep polling until timeout so restarts and short network blips do not look like failures.
-    }
-    if (Date.now() >= deadline) {
-      return { ok: false as const, latest: lastCheck, progress: lastProgress };
-    }
-    await sleep(heartbeatIntervalMs);
-  }
-};
+      const status = normalizedProgressStatus(progress);
+      if (status === "completed") finish({ ok: true, failed: false });
+      else if (status === "failed") finish({ ok: false, failed: true });
+    });
+    if (settled) unsubscribe();
+  });
 
 export const applyUpdateFlow = async ({
   candidate,
-  heartbeatIntervalMs,
   heartbeatTimeoutMs,
   notify,
   onCheck,
@@ -360,7 +326,6 @@ export const applyUpdateFlow = async ({
     const message = response.message?.trim() || t("auto_update.no_update");
     const nextCandidate = candidate ? { ...candidate, message, update_available: false } : null;
     if (nextCandidate) onCheck?.(nextCandidate);
-    onProgress?.({ status: "idle", stage: "idle", message, logs: [] });
     notify({
       type: isAlreadyUpToDateMessage(message) ? "success" : "warning",
       message: isAlreadyUpToDateMessage(message)
@@ -369,33 +334,26 @@ export const applyUpdateFlow = async ({
     });
     return false;
   }
+
+  const runID = response.run_id;
+  if (typeof runID !== "number" || !Number.isFinite(runID) || runID <= 0) {
+    throw new Error("Updater did not return a valid run ID.");
+  }
   const target = response.target ?? candidate;
-  const result = await waitForAppliedTarget({
-    target,
-    heartbeatIntervalMs,
-    heartbeatTimeoutMs,
-    onCheck,
+  if (target) onCheck?.(target);
+  const result = await waitForUpdateRun({
+    runID,
+    timeoutMs: heartbeatTimeoutMs,
     onProgress,
   });
   if (!result.ok) {
     const progressMessage = result.progress?.message?.trim();
     notify({
       type: result.failed ? "error" : "warning",
-      message: progressMessage
-        ? progressMessage
-        : result.latest || target
-          ? t("auto_update.version_mismatch", {
-              version: versionLabel(
-                target?.latest_version,
-                target?.latest_commit,
-                target?.target_channel,
-              ),
-            })
-          : t("auto_update.timeout"),
+      message: progressMessage || t("auto_update.timeout"),
     });
     return false;
   }
-  onProgress?.(createCompletedProgress(result.progress, target));
   notify({ type: "success", message: t("auto_update.success") });
   return true;
 };

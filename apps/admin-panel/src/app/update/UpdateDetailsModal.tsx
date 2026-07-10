@@ -1,13 +1,7 @@
-import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, lazy, useEffect, useMemo, useState } from "react";
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
-import {
-  CheckCircle2,
-  Circle,
-  LoaderCircle,
-  RefreshCw,
-  XCircle,
-} from "lucide-react";
+import { CheckCircle2, Circle, LoaderCircle, RefreshCw, XCircle } from "lucide-react";
 import type {
   UpdateCheckResponse,
   UpdateProgressResponse,
@@ -15,6 +9,7 @@ import type {
 import { Button } from "@code-proxy/ui";
 import { Modal } from "@code-proxy/ui";
 import {
+  candidateFromProgress,
   formatUpdateStatusMessage,
   isAlreadyUpToDateMessage,
   selectLocalizedReleaseNotes,
@@ -24,11 +19,9 @@ import {
 } from "@app/update/updateShared";
 
 const LazyRichMarkdown = lazy(() =>
-  import("@features/log-content-viewer/log-content/rendering-markdown").then(
-    (mod) => ({
-      default: mod.RichMarkdown,
-    }),
-  ),
+  import("@features/log-content-viewer/log-content/rendering-markdown").then((mod) => ({
+    default: mod.RichMarkdown,
+  })),
 );
 
 const RELEASE_NOTES_PROSE_CLASSES = `prose prose-sm dark:prose-invert max-w-none break-words leading-relaxed
@@ -57,10 +50,7 @@ function ReleaseNotesMarkdown({ text }: { text: string }) {
           </pre>
         }
       >
-        <LazyRichMarkdown
-          proseClasses={RELEASE_NOTES_PROSE_CLASSES}
-          text={text}
-        />
+        <LazyRichMarkdown proseClasses={RELEASE_NOTES_PROSE_CLASSES} text={text} />
       </Suspense>
     </div>
   );
@@ -68,77 +58,16 @@ function ReleaseNotesMarkdown({ text }: { text: string }) {
 
 const MAX_RELEASE_NOTE_ITEMS = 5;
 const LIST_ITEM_PATTERN = /^\s*(?:[-*+]|\d+\.)\s+/;
-const UPDATE_PROGRESS_TICK_MS = 180;
 const UPDATE_STAGE_LABEL_KEYS: Record<string, string> = {
   preparing: "auto_update.progress_stage_preparing",
   pulling: "auto_update.progress_stage_pulling",
-  migrating: "auto_update.progress_stage_migrating",
-  restarting: "auto_update.progress_stage_restarting",
+  starting_dependencies: "auto_update.progress_stage_starting_dependencies",
+  recreating: "auto_update.progress_stage_recreating",
   verifying: "auto_update.progress_stage_verifying",
+  finalizing: "auto_update.progress_stage_finalizing",
   completed: "auto_update.progress_stage_completed",
   failed: "auto_update.progress_stage_failed",
   idle: "auto_update.progress_stage_idle",
-};
-const UPDATE_PROGRESS_MESSAGE_KEYS: Record<string, string> = {
-  "preparing update": "auto_update.progress_message_preparing_update",
-  "pulling target image": "auto_update.progress_message_pulling_target_image",
-  "starting runtime dependencies":
-    "auto_update.progress_message_starting_runtime_dependencies",
-  "starting postgresql/redis before data migration check":
-    "auto_update.progress_message_starting_runtime",
-  "starting postgresql/redis before sqlite migration":
-    "auto_update.progress_message_starting_runtime",
-  "checking runtime data migration before service restart":
-    "auto_update.progress_message_checking_runtime_data",
-  "checking legacy sqlite migration before service restart":
-    "auto_update.progress_message_checking_sqlite",
-  "migrating legacy sqlite data before restarting service":
-    "auto_update.progress_message_migrating_sqlite",
-  "legacy sqlite database found; preparing postgresql import":
-    "auto_update.progress_message_preparing_sqlite_import",
-  "running sqlite inventory before postgresql import":
-    "auto_update.progress_message_sqlite_inventory",
-  "running postgresql import dry-run":
-    "auto_update.progress_message_postgres_dry_run",
-  "applying legacy sqlite data into postgresql":
-    "auto_update.progress_message_applying_sqlite",
-  "legacy sqlite migration skipped because auto-migration is disabled":
-    "auto_update.progress_message_sqlite_skipped_disabled",
-  "no legacy sqlite database found; continuing with postgresql runtime data":
-    "auto_update.progress_message_sqlite_skipped_missing",
-  "sqlite import dry-run complete; apply is disabled":
-    "auto_update.progress_message_sqlite_skipped_import_disabled",
-  "legacy sqlite migration complete; preparing service restart":
-    "auto_update.progress_message_sqlite_complete",
-  "legacy sqlite migration check finished before service restart":
-    "auto_update.progress_message_finishing_migration",
-  "runtime data migration check finished before service restart":
-    "auto_update.progress_message_finishing_migration",
-  "finishing sqlite migration before service restart":
-    "auto_update.progress_message_finishing_migration",
-  "recreating service container without restarting dependencies":
-    "auto_update.progress_message_recreating_container",
-  "restarting container": "auto_update.progress_message_restarting_container",
-  "restarting service": "auto_update.progress_message_restarting_container",
-  "restarting service container":
-    "auto_update.progress_message_restarting_container",
-  "verifying service health": "auto_update.progress_message_verifying_service",
-  "waiting for service health":
-    "auto_update.progress_message_verifying_service",
-  "update completed": "auto_update.progress_message_completed",
-};
-const UPDATE_STAGE_PROGRESS_SEGMENTS: Record<
-  string,
-  { start: number; end: number; durationMs: number }
-> = {
-  idle: { start: 0, end: 0, durationMs: 0 },
-  preparing: { start: 8, end: 18, durationMs: 2200 },
-  pulling: { start: 18, end: 68, durationMs: 16000 },
-  migrating: { start: 35, end: 90, durationMs: 45000 },
-  restarting: { start: 90, end: 96, durationMs: 7000 },
-  verifying: { start: 96, end: 99, durationMs: 9000 },
-  completed: { start: 100, end: 100, durationMs: 0 },
-  failed: { start: 24, end: 90, durationMs: 0 },
 };
 
 function buildReleaseNotesPreview(text: string) {
@@ -169,9 +98,7 @@ function normalizedStage(progress?: UpdateProgressResponse | null) {
 }
 
 function stageLabel(t: TFunction, stage: string) {
-  return t(
-    UPDATE_STAGE_LABEL_KEYS[stage] ?? "auto_update.progress_stage_unknown",
-  );
+  return t(UPDATE_STAGE_LABEL_KEYS[stage] ?? "auto_update.progress_stage_unknown");
 }
 
 function normalizedProgressStatus(progress?: UpdateProgressResponse | null) {
@@ -184,35 +111,22 @@ function updaterUnavailableMessageKey(candidate?: UpdateCheckResponse | null) {
       return "auto_update.updater_token_missing";
     case "auth_failed":
       return "auto_update.updater_auth_failed";
+    case "upgrade_required":
+      return "auto_update.updater_upgrade_required";
     default:
       return "auto_update.updater_unavailable";
   }
 }
 
-function translateProgressMessage(
-  t: TFunction,
-  progress?: UpdateProgressResponse | null,
-  fallbackStage?: string,
-) {
-  const migrationPhase = progress?.migration?.phase?.trim();
-  if (migrationPhase) {
-    const migrationMessageKey =
-      MIGRATION_PROGRESS_MESSAGE_KEYS[migrationPhase] ??
-      (migrationPhase === "skipped"
-        ? sqliteSkipMessageKey(progress?.migration?.skip_reason)
-        : "");
-    if (migrationMessageKey) return t(migrationMessageKey);
-  }
+function translateProgressMessage(t: TFunction, progress?: UpdateProgressResponse | null) {
   const raw = progress?.message?.trim() ?? "";
-  if (!raw) return t("auto_update.progress_default_message");
-  const key = UPDATE_PROGRESS_MESSAGE_KEYS[raw.toLowerCase()];
-  if (key) return t(key);
-  if (fallbackStage && UPDATE_STAGE_LABEL_KEYS[fallbackStage]) {
-    return t("auto_update.progress_message_stage_generic", {
-      stage: stageLabel(t, fallbackStage),
+  const code = progress?.message_code?.trim().toLowerCase() ?? "";
+  if (code && /^[a-z0-9_]+$/.test(code)) {
+    return t(`auto_update.progress_message_${code}`, {
+      defaultValue: raw || t("auto_update.progress_default_message"),
     });
   }
-  return raw;
+  return raw || t("auto_update.progress_default_message");
 }
 
 function explicitProgressPercent(progress?: UpdateProgressResponse | null) {
@@ -221,213 +135,20 @@ function explicitProgressPercent(progress?: UpdateProgressResponse | null) {
   return Math.min(100, Math.max(0, percent));
 }
 
-const MIGRATION_PHASE_LABEL_KEYS: Record<string, string> = {
-  starting_runtime: "auto_update.progress_migration_phase_starting_runtime",
-  checking: "auto_update.progress_migration_phase_checking",
-  preparing: "auto_update.progress_migration_phase_preparing",
-  inventory: "auto_update.progress_migration_phase_inventory",
-  dry_run: "auto_update.progress_migration_phase_dry_run",
-  applying: "auto_update.progress_migration_phase_applying",
-  skipped: "auto_update.progress_migration_phase_skipped",
-  finalizing: "auto_update.progress_migration_phase_finalizing",
-};
-
-const MIGRATION_PROGRESS_MESSAGE_KEYS: Record<string, string> = {
-  starting_runtime: "auto_update.progress_message_starting_runtime",
-  checking: "auto_update.progress_message_checking_runtime_data",
-  preparing: "auto_update.progress_message_preparing_sqlite_import",
-  inventory: "auto_update.progress_message_sqlite_inventory",
-  dry_run: "auto_update.progress_message_postgres_dry_run",
-  applying: "auto_update.progress_message_applying_sqlite",
-  finalizing: "auto_update.progress_message_sqlite_complete",
-};
-
-function sqliteSkipMessageKey(reason?: string) {
-  switch (reason?.trim()) {
-    case "disabled":
-      return "auto_update.progress_message_sqlite_skipped_disabled";
-    case "no_legacy_sqlite":
-      return "auto_update.progress_message_sqlite_skipped_missing";
-    case "import_disabled":
-      return "auto_update.progress_message_sqlite_skipped_import_disabled";
-    default:
-      return "auto_update.progress_message_finishing_migration";
-  }
-}
-
-function formatCount(value?: number) {
-  if (typeof value !== "number" || !Number.isFinite(value)) return "";
-  return new Intl.NumberFormat().format(value);
-}
-
-function migrationProgressDetails(
-  t: TFunction,
-  progress?: UpdateProgressResponse | null,
-) {
-  const migration = progress?.migration;
-  if (!migration) return [];
-  const details: string[] = [];
-  if (migration.target_database?.trim()) {
-    details.push(
-      t("auto_update.progress_detail_target_database", {
-        database: migration.target_database.trim(),
-      }),
-    );
-  }
-  const phase = migration.phase?.trim();
-  if (phase) {
-    details.push(
-      t("auto_update.progress_detail_migration_phase", {
-        phase: t(
-          MIGRATION_PHASE_LABEL_KEYS[phase] ??
-            "auto_update.progress_migration_phase_running",
-        ),
-      }),
-    );
-  }
-  if (migration.table?.trim()) {
-    const hasTablePosition =
-      typeof migration.table_index === "number" &&
-      typeof migration.table_total === "number";
-    details.push(
-      hasTablePosition
-        ? t("auto_update.progress_detail_table_position", {
-            index: migration.table_index,
-            total: migration.table_total,
-            table: migration.table.trim(),
-          })
-        : t("auto_update.progress_detail_table", {
-            table: migration.table.trim(),
-          }),
-    );
-  }
+function progressDetails(t: TFunction, progress?: UpdateProgressResponse | null) {
   if (
-    typeof migration.inserted_rows === "number" &&
-    typeof migration.target_rows === "number"
+    typeof progress?.progress_current !== "number" ||
+    typeof progress.progress_total !== "number" ||
+    progress.progress_total <= 0
   ) {
-    details.push(
-      t("auto_update.progress_detail_rows", {
-        inserted: formatCount(migration.inserted_rows),
-        target: formatCount(migration.target_rows),
-      }),
-    );
-  } else if (typeof migration.planned_inserts === "number") {
-    details.push(
-      t("auto_update.progress_detail_planned_rows", {
-        planned: formatCount(migration.planned_inserts),
-      }),
-    );
+    return [];
   }
-  return details;
-}
-
-function stageProgressSegment(stage: string, status: string) {
-  if (status === "completed") return UPDATE_STAGE_PROGRESS_SEGMENTS.completed;
-  if (status === "failed") {
-    return (
-      UPDATE_STAGE_PROGRESS_SEGMENTS[stage] ??
-      UPDATE_STAGE_PROGRESS_SEGMENTS.failed
-    );
-  }
-  return (
-    UPDATE_STAGE_PROGRESS_SEGMENTS[stage] ?? {
-      start: 22,
-      end: 78,
-      durationMs: 9000,
-    }
-  );
-}
-
-function easeOutCubic(value: number) {
-  return 1 - Math.pow(1 - value, 3);
-}
-
-function visualProgressTarget(
-  status: string,
-  stage: string,
-  stageElapsedMs: number,
-) {
-  if (status === "idle") return 0;
-  if (status === "completed") return 100;
-  const segment = stageProgressSegment(stage, status);
-  if (status === "failed" || segment.durationMs <= 0) {
-    return segment.end;
-  }
-  const phase = Math.min(1, stageElapsedMs / segment.durationMs);
-  const span = Math.max(0, segment.end - segment.start);
-  return segment.start + span * easeOutCubic(phase);
-}
-
-function useAnimatedProgressValue(target: number, snap = false) {
-  const [displayValue, setDisplayValue] = useState(target);
-  const frameRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    if (snap || Math.abs(displayValue - target) < 0.1) {
-      if (frameRef.current !== null) {
-        window.cancelAnimationFrame(frameRef.current);
-        frameRef.current = null;
-      }
-      setDisplayValue(target);
-      return;
-    }
-
-    const tick = () => {
-      setDisplayValue((current) => {
-        const delta = target - current;
-        if (Math.abs(delta) < 0.1) return target;
-        const next = current + delta * 0.18;
-        return delta > 0 ? Math.min(target, next) : Math.max(target, next);
-      });
-      frameRef.current = window.requestAnimationFrame(tick);
-    };
-
-    frameRef.current = window.requestAnimationFrame(tick);
-    return () => {
-      if (frameRef.current !== null) {
-        window.cancelAnimationFrame(frameRef.current);
-      }
-    };
-  }, [displayValue, snap, target]);
-
-  return snap ? target : displayValue;
-}
-
-function useVisualProgressTarget(progress?: UpdateProgressResponse | null) {
-  const stage = normalizedStage(progress);
-  const status = normalizedProgressStatus(progress);
-  const [now, setNow] = useState(() => Date.now());
-  const markerRef = useRef({
-    key: "",
-    enteredAt: Date.now(),
-  });
-  const markerKey = `${status}:${stage}:${progress?.started_at ?? ""}:${progress?.finished_at ?? ""}`;
-
-  useEffect(() => {
-    if (markerRef.current.key === markerKey) return;
-    markerRef.current = {
-      key: markerKey,
-      enteredAt: Date.now(),
-    };
-    setNow(Date.now());
-  }, [markerKey]);
-
-  useEffect(() => {
-    if (status !== "running") return undefined;
-    const timer = window.setInterval(() => {
-      setNow(Date.now());
-    }, UPDATE_PROGRESS_TICK_MS);
-    return () => window.clearInterval(timer);
-  }, [status, stage]);
-
-  if (status === "completed") return 100;
-  const explicitPercent = explicitProgressPercent(progress);
-  if (explicitPercent !== null) return explicitPercent;
-  return visualProgressTarget(
-    status,
-    stage,
-    Math.max(0, now - markerRef.current.enteredAt),
-  );
+  return [
+    t("auto_update.progress_detail_steps", {
+      current: progress.progress_current,
+      total: progress.progress_total,
+    }),
+  ];
 }
 
 function UpdateProgressConsole({
@@ -440,21 +161,17 @@ function UpdateProgressConsole({
   const { t } = useTranslation();
   const stage = normalizedStage(progress);
   const currentVersion = versionLabel(
-    candidate.current_version,
-    candidate.current_commit,
-    candidate.target_channel,
+    progress?.current_version ?? candidate.current_version,
+    progress?.current_commit ?? candidate.current_commit,
+    progress?.target_channel ?? candidate.target_channel,
   );
   const targetVersion =
     progress?.target_version?.trim() ||
-    versionLabel(
-      candidate.latest_version,
-      candidate.latest_commit,
-      candidate.target_channel,
-    );
+    versionLabel(candidate.latest_version, candidate.latest_commit, candidate.target_channel);
   const currentUIVersion = uiVersionLabel(
-    candidate.current_ui_version,
-    candidate.current_ui_commit,
-    candidate.target_channel,
+    progress?.current_ui_version ?? candidate.current_ui_version,
+    progress?.current_ui_commit ?? candidate.current_ui_commit,
+    progress?.target_channel ?? candidate.target_channel,
   );
   const targetUIVersion =
     progress?.target_ui_version?.trim() ||
@@ -467,15 +184,16 @@ function UpdateProgressConsole({
   const isCompleted = progressStatus === "completed";
   const isFailed = progressStatus === "failed";
   const isRunning = progressStatus === "running";
-  const progressTarget = useVisualProgressTarget(progress);
-  const animatedPercent = useAnimatedProgressValue(
-    progressTarget,
-    isCompleted || isFailed,
-  );
-  const displayPercent = Math.round(animatedPercent);
-  const progressPercentLabel = `${displayPercent}%`;
-  const progressMessage = translateProgressMessage(t, progress, stage);
-  const progressDetails = migrationProgressDetails(t, progress);
+  const serverPercent = explicitProgressPercent(progress);
+  const displayPercent = serverPercent === null ? 100 : Math.round(serverPercent);
+  const progressPercentLabel =
+    serverPercent === null
+      ? isFailed
+        ? t("auto_update.progress_unknown")
+        : t("auto_update.progress_indeterminate")
+      : `${displayPercent}%`;
+  const progressMessage = translateProgressMessage(t, progress);
+  const details = progressDetails(t, progress);
   const StatusIcon = isCompleted
     ? CheckCircle2
     : isFailed
@@ -483,13 +201,7 @@ function UpdateProgressConsole({
       : isRunning
         ? LoaderCircle
         : Circle;
-  const statusTone = isCompleted
-    ? "emerald"
-    : isFailed
-      ? "rose"
-      : isRunning
-        ? "sky"
-        : "slate";
+  const statusTone = isCompleted ? "emerald" : isFailed ? "rose" : isRunning ? "sky" : "slate";
   const statusIconClass =
     statusTone === "emerald"
       ? "bg-emerald-50 text-emerald-600 ring-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-200 dark:ring-emerald-500/20"
@@ -529,10 +241,7 @@ function UpdateProgressConsole({
                 statusIconClass,
               ].join(" ")}
             >
-              <StatusIcon
-                size={18}
-                className={isRunning ? "animate-spin" : ""}
-              />
+              <StatusIcon size={18} className={isRunning ? "animate-spin" : ""} />
             </span>
             <div className="min-w-0">
               <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
@@ -541,12 +250,12 @@ function UpdateProgressConsole({
               <p className="mt-1 break-words text-xs leading-5 text-slate-600 dark:text-white/60">
                 {progressMessage}
               </p>
-              {progressDetails.length > 0 ? (
+              {details.length > 0 ? (
                 <div
                   data-testid="update-progress-details"
                   className="mt-2 flex flex-wrap gap-1.5 text-xs text-slate-600 dark:text-white/60"
                 >
-                  {progressDetails.map((detail) => (
+                  {details.map((detail) => (
                     <span
                       key={detail}
                       className="rounded-md bg-slate-100 px-2 py-1 dark:bg-white/10"
@@ -589,7 +298,13 @@ function UpdateProgressConsole({
               style={{ width: `${displayPercent}%` }}
             >
               {isRunning ? (
-                <span className="absolute inset-y-0 right-0 w-16 bg-white/30 blur-md dark:bg-white/20" />
+                <span
+                  className={
+                    serverPercent === null
+                      ? "absolute inset-0 animate-pulse bg-white/35 dark:bg-white/20"
+                      : "absolute inset-y-0 right-0 w-16 bg-white/30 blur-md dark:bg-white/20"
+                  }
+                />
               ) : null}
             </div>
           </div>
@@ -601,8 +316,7 @@ function UpdateProgressConsole({
               {t("auto_update.progress_service_path")}
             </dt>
             <dd className="mt-2 break-words font-mono text-sm text-slate-900 dark:text-white">
-              {currentVersion} <span className="text-slate-400">-&gt;</span>{" "}
-              {targetVersion}
+              {currentVersion} <span className="text-slate-400">-&gt;</span> {targetVersion}
             </dd>
           </div>
           <div className="min-w-0 rounded-2xl border border-white/60 bg-white/80 p-3 backdrop-blur-sm dark:border-white/8 dark:bg-white/5">
@@ -610,8 +324,7 @@ function UpdateProgressConsole({
               {t("auto_update.progress_ui_path")}
             </dt>
             <dd className="mt-2 break-words font-mono text-sm text-slate-900 dark:text-white">
-              {currentUIVersion} <span className="text-slate-400">-&gt;</span>{" "}
-              {targetUIVersion}
+              {currentUIVersion} <span className="text-slate-400">-&gt;</span> {targetUIVersion}
             </dd>
           </div>
         </dl>
@@ -645,21 +358,17 @@ export function UpdateDetailsModal({
   const [releaseNotesExpanded, setReleaseNotesExpanded] = useState(false);
   const progressStatus = normalizedProgressStatus(progress);
   const showProgressConsole = Boolean(progress && progressStatus !== "idle");
-  const progressCompleted =
-    showProgressConsole && progressStatus === "completed";
+  const progressCompleted = showProgressConsole && progressStatus === "completed";
   const progressFailed = showProgressConsole && progressStatus === "failed";
   const activeUpdate =
-    !progressCompleted &&
-    !progressFailed &&
-    (updating || progressStatus === "running");
-  const displayCandidate = showProgressConsole
-    ? (updateTarget ?? candidate)
+    !progressCompleted && !progressFailed && (updating || progressStatus === "running");
+  const displayCandidate = progress
+    ? candidateFromProgress(progress, updateTarget ?? candidate)
     : candidate;
   const alreadyUpToDate = Boolean(
     displayCandidate &&
     !displayCandidate.update_available &&
-    (!displayCandidate.message ||
-      isAlreadyUpToDateMessage(displayCandidate.message)),
+    (!displayCandidate.message || isAlreadyUpToDateMessage(displayCandidate.message)),
   );
 
   const canUpdate = Boolean(
@@ -686,22 +395,32 @@ export function UpdateDetailsModal({
           ? t("auto_update.up_to_date_description")
           : t("auto_update.description");
   const rawReleaseNotes =
-    displayCandidate?.release_notes?.trim() ||
-    t("auto_update.no_release_notes");
+    displayCandidate?.release_notes?.trim() || t("auto_update.no_release_notes");
   const releaseNotes = useMemo(
     () => selectLocalizedReleaseNotes(rawReleaseNotes, i18n.language),
     [i18n.language, rawReleaseNotes],
   );
-  const showReleaseNotes =
-    Boolean(displayCandidate?.update_available) && !showProgressConsole;
-  const releaseNotesPreview = useMemo(
-    () => buildReleaseNotesPreview(releaseNotes),
-    [releaseNotes],
+  const showReleaseNotes = Boolean(
+    displayCandidate?.release_notes?.trim() &&
+    (displayCandidate.update_available || showProgressConsole),
   );
+  const releaseNotesPreview = useMemo(() => buildReleaseNotesPreview(releaseNotes), [releaseNotes]);
   const visibleReleaseNotes =
     releaseNotesExpanded || !releaseNotesPreview.truncated
       ? releaseNotes
       : releaseNotesPreview.text;
+  const releaseLabel =
+    displayCandidate?.release_name?.trim() || displayCandidate?.release_tag?.trim() || "";
+  const releasePublishedAt = useMemo(() => {
+    const raw = displayCandidate?.release_published_at?.trim();
+    if (!raw) return "";
+    const date = new Date(raw);
+    if (Number.isNaN(date.getTime())) return "";
+    return new Intl.DateTimeFormat(i18n.language, {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }).format(date);
+  }, [displayCandidate?.release_published_at, i18n.language]);
   const currentVersion = displayCandidate
     ? versionLabel(
         displayCandidate.current_version,
@@ -731,9 +450,7 @@ export function UpdateDetailsModal({
       )
     : "--";
   const dockerImage = displayCandidate
-    ? [displayCandidate.docker_image, displayCandidate.docker_tag]
-        .filter(Boolean)
-        .join(":")
+    ? [displayCandidate.docker_image, displayCandidate.docker_tag].filter(Boolean).join(":")
     : "--";
   const formattedCandidateMessage =
     alreadyUpToDate && isAlreadyUpToDateMessage(displayCandidate?.message)
@@ -760,12 +477,7 @@ export function UpdateDetailsModal({
 
   useEffect(() => {
     setReleaseNotesExpanded(false);
-  }, [
-    candidate?.latest_commit,
-    candidate?.latest_ui_commit,
-    i18n.language,
-    open,
-  ]);
+  }, [candidate?.latest_commit, candidate?.latest_ui_commit, i18n.language, open]);
 
   return (
     <Modal
@@ -774,9 +486,7 @@ export function UpdateDetailsModal({
       description={modalDescription}
       maxWidth="max-w-[min(92vw,900px)]"
       bodyHeightClassName={
-        progressCompleted
-          ? "max-h-[min(62vh,520px)]"
-          : "max-h-[min(72vh,640px)]"
+        progressCompleted ? "max-h-[min(62vh,520px)]" : "max-h-[min(72vh,640px)]"
       }
       bodyTestId="update-details-modal-body"
       onClose={() => {
@@ -789,11 +499,7 @@ export function UpdateDetailsModal({
           </Button>
         ) : (
           <>
-            <Button
-              variant="secondary"
-              onClick={onClose}
-              disabled={activeUpdate}
-            >
+            <Button variant="secondary" onClick={onClose} disabled={activeUpdate}>
               {t("common.close")}
             </Button>
             {!showProgressConsole || activeUpdate ? (
@@ -802,12 +508,8 @@ export function UpdateDetailsModal({
                 onClick={onApply}
                 disabled={checking || activeUpdate || !canUpdate}
               >
-                {activeUpdate ? (
-                  <RefreshCw size={14} className="animate-spin" />
-                ) : null}
-                {activeUpdate
-                  ? t("auto_update.updating")
-                  : t("auto_update.update_now")}
+                {activeUpdate ? <RefreshCw size={14} className="animate-spin" /> : null}
+                {activeUpdate ? t("auto_update.updating") : t("auto_update.update_now")}
               </Button>
             ) : null}
           </>
@@ -831,10 +533,7 @@ export function UpdateDetailsModal({
         {displayCandidate ? (
           <>
             {showProgressConsole ? (
-              <UpdateProgressConsole
-                candidate={displayCandidate}
-                progress={progress}
-              />
+              <UpdateProgressConsole candidate={displayCandidate} progress={progress} />
             ) : formattedCandidateMessage ? (
               <p className="whitespace-pre-line break-words rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200">
                 {formattedCandidateMessage}
@@ -844,21 +543,16 @@ export function UpdateDetailsModal({
             {!showProgressConsole ? (
               <dl className="grid min-w-0 gap-3 lg:grid-cols-2">
                 <div className={versionCardClass}>
-                  <dt className={versionCardLabelClass}>
-                    {t("auto_update.current_service")}
-                  </dt>
+                  <dt className={versionCardLabelClass}>{t("auto_update.current_service")}</dt>
                   <dd className={versionCardValueClass}>{currentVersion}</dd>
                   {displayCandidate.current_commit ? (
                     <p className={versionCardMetaClass}>
-                      {t("auto_update.commit")}:{" "}
-                      {shortCommit(displayCandidate.current_commit)}
+                      {t("auto_update.commit")}: {shortCommit(displayCandidate.current_commit)}
                     </p>
                   ) : null}
                 </div>
                 <div className={versionCardClass}>
-                  <dt className={versionCardLabelClass}>
-                    {t("auto_update.target_service")}
-                  </dt>
+                  <dt className={versionCardLabelClass}>{t("auto_update.target_service")}</dt>
                   <dd className={versionCardValueClass}>{targetVersion}</dd>
                   {displayCandidate.latest_commit ? (
                     displayCandidate.latest_commit_url ? (
@@ -872,33 +566,26 @@ export function UpdateDetailsModal({
                             : "mt-1 block truncate text-xs text-indigo-600 hover:underline dark:text-indigo-300"
                         }
                       >
-                        {t("auto_update.commit")}:{" "}
-                        {shortCommit(displayCandidate.latest_commit)}
+                        {t("auto_update.commit")}: {shortCommit(displayCandidate.latest_commit)}
                       </a>
                     ) : (
                       <p className={versionCardMetaClass}>
-                        {t("auto_update.commit")}:{" "}
-                        {shortCommit(displayCandidate.latest_commit)}
+                        {t("auto_update.commit")}: {shortCommit(displayCandidate.latest_commit)}
                       </p>
                     )
                   ) : null}
                 </div>
                 <div className={versionCardClass}>
-                  <dt className={versionCardLabelClass}>
-                    {t("auto_update.current_ui")}
-                  </dt>
+                  <dt className={versionCardLabelClass}>{t("auto_update.current_ui")}</dt>
                   <dd className={versionCardValueClass}>{currentUIVersion}</dd>
                   {displayCandidate.current_ui_commit ? (
                     <p className={versionCardMetaClass}>
-                      {t("auto_update.commit")}:{" "}
-                      {shortCommit(displayCandidate.current_ui_commit)}
+                      {t("auto_update.commit")}: {shortCommit(displayCandidate.current_ui_commit)}
                     </p>
                   ) : null}
                 </div>
                 <div className={versionCardClass}>
-                  <dt className={versionCardLabelClass}>
-                    {t("auto_update.target_ui")}
-                  </dt>
+                  <dt className={versionCardLabelClass}>{t("auto_update.target_ui")}</dt>
                   <dd className={versionCardValueClass}>{targetUIVersion}</dd>
                   {displayCandidate.latest_ui_commit ? (
                     displayCandidate.latest_ui_commit_url ? (
@@ -912,25 +599,18 @@ export function UpdateDetailsModal({
                             : "mt-1 block truncate text-xs text-indigo-600 hover:underline dark:text-indigo-300"
                         }
                       >
-                        {t("auto_update.commit")}:{" "}
-                        {shortCommit(displayCandidate.latest_ui_commit)}
+                        {t("auto_update.commit")}: {shortCommit(displayCandidate.latest_ui_commit)}
                       </a>
                     ) : (
                       <p className={versionCardMetaClass}>
-                        {t("auto_update.commit")}:{" "}
-                        {shortCommit(displayCandidate.latest_ui_commit)}
+                        {t("auto_update.commit")}: {shortCommit(displayCandidate.latest_ui_commit)}
                       </p>
                     )
                   ) : null}
                 </div>
                 <div className={`${versionCardClass} lg:col-span-2`}>
-                  <dt className={versionCardLabelClass}>
-                    {t("auto_update.image")}
-                  </dt>
-                  <dd
-                    data-testid="update-image-value"
-                    className={versionCardValueClass}
-                  >
+                  <dt className={versionCardLabelClass}>{t("auto_update.image")}</dt>
+                  <dd data-testid="update-image-value" className={versionCardValueClass}>
                     {dockerImage}
                   </dd>
                 </div>
@@ -967,6 +647,14 @@ export function UpdateDetailsModal({
                     ) : null}
                   </div>
                 </div>
+                {releaseLabel || releasePublishedAt ? (
+                  <p
+                    data-testid="update-release-meta"
+                    className="mb-2 text-xs text-slate-500 dark:text-white/55"
+                  >
+                    {[releaseLabel, releasePublishedAt].filter(Boolean).join(" · ")}
+                  </p>
+                ) : null}
                 {!releaseNotesExpanded && releaseNotesPreview.truncated ? (
                   <p className="mb-2 text-xs text-slate-500 dark:text-white/55">
                     {t("auto_update.release_notes_preview_notice", {
@@ -984,12 +672,9 @@ export function UpdateDetailsModal({
               </p>
             ) : null}
 
-            {!showProgressConsole &&
-            (!displayCandidate.enabled || alreadyUpToDate) ? (
+            {!showProgressConsole && (!displayCandidate.enabled || alreadyUpToDate) ? (
               <p className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-200">
-                {!displayCandidate.enabled
-                  ? t("auto_update.disabled")
-                  : t("auto_update.no_update")}
+                {!displayCandidate.enabled ? t("auto_update.disabled") : t("auto_update.no_update")}
               </p>
             ) : null}
           </>

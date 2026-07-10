@@ -16,8 +16,11 @@ export interface UpdateCheckResponse {
   latest_ui_commit_url?: string;
   docker_image?: string;
   docker_tag?: string;
+  release_name?: string;
+  release_tag?: string;
   release_notes?: string;
   release_url?: string;
+  release_published_at?: string;
   update_available?: boolean;
   updater_available?: boolean;
   updater_health_status?: string;
@@ -32,39 +35,44 @@ export interface UpdateProgressLogEntry {
 }
 
 export interface UpdateProgressResponse {
+  run_id?: number;
+  event_id?: number;
   status: "idle" | "running" | "completed" | "failed" | string;
   stage?: string;
+  message_code?: string;
   message?: string;
   progress_percent?: number;
-  migration?: UpdateMigrationProgress;
+  progress_current?: number;
+  progress_total?: number;
+  progress_unit?: string;
   service?: string;
+  current_version?: string;
+  current_commit?: string;
+  current_ui_version?: string;
+  current_ui_commit?: string;
   target_image?: string;
   target_tag?: string;
   target_version?: string;
   target_commit?: string;
+  target_commit_url?: string;
   target_ui_version?: string;
   target_ui_commit?: string;
+  target_ui_commit_url?: string;
   target_channel?: string;
+  release_name?: string;
+  release_tag?: string;
+  release_notes?: string;
+  release_url?: string;
+  release_published_at?: string;
   started_at?: string;
   updated_at?: string;
   finished_at?: string;
   logs?: UpdateProgressLogEntry[];
 }
 
-export interface UpdateMigrationProgress {
-  phase?: string;
-  target_database?: string;
-  skip_reason?: string;
-  table?: string;
-  table_index?: number;
-  table_total?: number;
-  inserted_rows?: number;
-  target_rows?: number;
-  planned_inserts?: number;
-}
-
 export interface UpdateApplyResponse {
   status: "accepted" | "noop" | string;
+  run_id?: number;
   message?: string;
   target?: UpdateCheckResponse;
 }
@@ -85,6 +93,17 @@ export const updateApi = {
       timeoutMs: 5000,
       ...options,
     }),
+  events: (
+    onProgress: (progress: UpdateProgressResponse) => void,
+    options?: Omit<RequestOptions, "timeoutMs" | "unwrapEnvelope">,
+  ) =>
+    apiClient.streamSSE<UpdateProgressResponse>(
+      "/update/events",
+      (event) => {
+        if (!event.event || event.event === "update") onProgress(event.data);
+      },
+      options,
+    ),
   apply: () =>
     apiClient.post<UpdateApplyResponse>("/update/apply", undefined, {
       timeoutMs: 20000,
