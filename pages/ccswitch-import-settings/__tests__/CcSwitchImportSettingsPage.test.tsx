@@ -1129,6 +1129,7 @@ describe("CcSwitchImportSettingsPage", () => {
     expect(tableViewport).toHaveClass("h-full", "overflow-auto");
     expect(tableViewport?.parentElement).toHaveClass("h-[320px]", "min-h-[320px]");
     expect(tableViewport?.querySelector("thead")).toHaveClass("sticky", "top-0");
+    expect(mappingTable.querySelector("[data-vt-column-resizer]")).toBeNull();
 
     const requestSort = within(dialog).getByRole("button", {
       name: /sort cc switch request model/i,

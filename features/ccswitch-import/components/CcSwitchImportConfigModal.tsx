@@ -831,7 +831,8 @@ export function CcSwitchImportConfigModal({
             key: "role",
             label: t("ccswitch.config_claude_model_role"),
             width: "w-44",
-            cellClassName: `${mappingCellClassName} font-medium text-slate-800 dark:text-white/80`,
+            cellClassName: mappingCellClassName,
+            cellContentClassName: "font-medium text-slate-800 dark:text-white/80",
             render: (mapping) =>
               mapping.role ? t(`ccswitch.config_claude_role_${mapping.role}`) : "",
           },
@@ -840,6 +841,7 @@ export function CcSwitchImportConfigModal({
             label: t("ccswitch.config_request_model_name"),
             width: "w-72",
             cellClassName: mappingCellClassName,
+            cellContentClassName: "",
             sort: { getValue: (mapping) => mapping.requestModel },
             render: (mapping) => {
               const role = mapping.role;
@@ -861,6 +863,7 @@ export function CcSwitchImportConfigModal({
             label: t("ccswitch.config_actual_channel_model"),
             width: "w-80",
             cellClassName: mappingCellClassName,
+            cellContentClassName: "",
             sort: { getValue: (mapping) => mapping.targetModel },
             render: (mapping) => {
               const role = mapping.role;
@@ -889,6 +892,7 @@ export function CcSwitchImportConfigModal({
             label: t("ccswitch.config_actual_channel_model"),
             width: "w-80",
             cellClassName: mappingCellClassName,
+            cellContentClassName: "",
             sort: { getValue: (mapping) => mapping.targetModel },
             render: (mapping, index) => (
               <SearchableSelect
@@ -911,6 +915,7 @@ export function CcSwitchImportConfigModal({
             label: t("ccswitch.config_request_model_name"),
             width: "w-72",
             cellClassName: mappingCellClassName,
+            cellContentClassName: "",
             sort: { getValue: (mapping) => mapping.requestModel },
             render: (mapping, index) => (
               <TextInput
@@ -928,6 +933,7 @@ export function CcSwitchImportConfigModal({
             label: t("ccswitch.config_codex_context_window"),
             width: "w-44",
             cellClassName: mappingCellClassName,
+            cellContentClassName: "",
             render: (mapping, index) => (
               <TextInput
                 type="number"
@@ -952,6 +958,7 @@ export function CcSwitchImportConfigModal({
             reorderable: false,
             headerClassName: "text-right",
             cellClassName: `${mappingCellClassName} text-right`,
+            cellContentClassName: "",
             render: (_mapping, index) => (
               <Button
                 size="xs"
@@ -1214,6 +1221,7 @@ export function CcSwitchImportConfigModal({
                 caption={t("ccswitch.config_model_mapping_title")}
                 showAllLoadedMessage={false}
                 allowWheelPropagationAtBoundary
+                columnResizable={false}
                 columnReorderable={false}
                 persistColumnOrder={false}
               />
