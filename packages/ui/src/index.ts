@@ -6,7 +6,15 @@ export { Reveal } from "./feedback/Reveal";
 export { ToastProvider, useToast } from "./feedback/ToastProvider";
 
 export { DataTable } from "./data-table/DataTable";
-export type { DataTableColumn, DataTableProps } from "./data-table/DataTable.types";
+export type {
+  DataTableColumn,
+  DataTableColumnSort,
+  DataTableProps,
+  DataTableRowsChangeAction,
+  DataTableSortDirection,
+  DataTableSortState,
+  DataTableSortValue,
+} from "./data-table/DataTable.types";
 export {
   TableCellOverflowTooltip,
   extractTableCellTextContent,
@@ -43,6 +51,8 @@ export { Button, buttonClassName } from "./primitives/Button";
 export { Card } from "./primitives/Card";
 export { Checkbox } from "./primitives/Checkbox";
 export { DateTimePicker } from "./primitives/DateTimePicker";
+export { DropdownMenu } from "./primitives/DropdownMenu";
+export type { DropdownMenuRootProps } from "./primitives/DropdownMenu";
 export { Fieldset } from "./primitives/Fieldset";
 export { TextInput } from "./primitives/Input";
 export { MultiSelect } from "./primitives/MultiSelect";

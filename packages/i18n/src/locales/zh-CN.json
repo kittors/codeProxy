@@ -81,7 +81,12 @@
     "resize_column": "拖拽调整 {{column}} 列宽",
     "column_width_px": "宽：{{width}} 像素",
     "reorder_column": "拖拽调整 {{column}} 列位置",
-    "column_reorder_target": "移动到第 {{index}} 列"
+    "column_reorder_target": "移动到第 {{index}} 列",
+    "row_order": "行顺序",
+    "reorder_row": "拖拽调整第 {{index}} 行位置",
+    "sort_column": "排序 {{column}}",
+    "sort_ascending": "升序",
+    "sort_descending": "降序"
   },
   "title": {
     "main": "Code Proxy 管理后台",

@@ -59,7 +59,12 @@
     "resize_column": "Перетащите, чтобы изменить ширину столбца {{column}}",
     "column_width_px": "Ширина: {{width}} px",
     "reorder_column": "Перетащите, чтобы изменить порядок столбца {{column}}",
-    "column_reorder_target": "Переместить в столбец {{index}}"
+    "column_reorder_target": "Переместить в столбец {{index}}",
+    "row_order": "Порядок строк",
+    "reorder_row": "Перетащите, чтобы изменить порядок строки {{index}}",
+    "sort_column": "Сортировать {{column}}",
+    "sort_ascending": "По возрастанию",
+    "sort_descending": "По убыванию"
   },
   "ccswitch": {
     "import_to_ccswitch": "Импорт в CC Switch",

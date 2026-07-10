@@ -7,103 +7,29 @@ import {
   useState,
   type CSSProperties,
   type PointerEvent as ReactPointerEvent,
-  type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { GripVertical } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, Check, GripVertical } from "lucide-react";
+import { DropdownMenu } from "../primitives/DropdownMenu";
 import { TableCellOverflowTooltip } from "./TableCellOverflowTooltip";
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-/** Column definition for DataTable */
-export interface DataTableColumn<T> {
-  /** Unique key for this column */
-  key: string;
-  /** Header label */
-  label: string;
-  /** Fixed width class (Tailwind), e.g. "w-52" */
-  width?: string;
-  /** Whether users can drag this column's right edge to resize it. */
-  resizable?: boolean;
-  /** Whether users can reorder this column by dragging its handle. */
-  reorderable?: boolean;
-  /** Pin this column to the start or end of the table, preventing it from being reordered. */
-  lockOrder?: "start" | "end";
-  /** Minimum drag-resize width in px. */
-  minWidthPx?: number;
-  /** Maximum drag-resize width in px. */
-  maxWidthPx?: number;
-  /** Extra header class (e.g. "text-right") */
-  headerClassName?: string;
-  /** Extra cell class */
-  cellClassName?: string;
-  /** Overflow tooltip text for a truncated cell. Primitive render output is used by default. */
-  overflowTooltip?: boolean | ((row: T, index: number) => string | null | undefined);
-  /** Custom header render function (overrides label) */
-  headerRender?: () => ReactNode;
-  /** Render function for cell content */
-  render: (row: T, index: number) => ReactNode;
-}
-
-export interface DataTableProps<T> {
-  /** Stable id used to keep each table's column widths isolated in localStorage. */
-  tableId?: string;
-  /** Row data array */
-  rows: readonly T[];
-  /** Column definitions */
-  columns: DataTableColumn<T>[];
-  /** Unique key extractor for each row */
-  rowKey: (row: T, index: number) => string;
-  /** Whether the initial data is loading */
-  loading?: boolean;
-  /** Whether more data is available for infinite scroll */
-  hasMore?: boolean;
-  /** Whether a next-page load is in progress */
-  loadingMore?: boolean;
-  /** Callback when scrolled near bottom (triggers next page load) */
-  onScrollBottom?: () => void;
-  /** Legacy row windowing mode. Most management tables keep this disabled for finite row sets. */
-  virtualize?: boolean;
-  /** Row height in px (default 44) */
-  rowHeight?: number;
-  /** Overscan rows above/below viewport (default 12) */
-  overscan?: number;
-  /** Distance from bottom to trigger onScrollBottom (default 100) */
-  scrollThreshold?: number;
-  /** Debounce ms before triggering onScrollBottom (default 120) */
-  bottomDebounceMs?: number;
-  /** Minimum table width class (default "min-w-[1320px]") */
-  minWidth?: string;
-  /** Container height class (default "h-[calc(100dvh-260px)]") */
-  height?: string;
-  /** Container minimum height class (default "min-h-[360px]") */
-  minHeight?: string;
-  /** Screen-reader caption */
-  caption?: string;
-  /** Empty state message */
-  emptyText?: string;
-  /** Show the "all records loaded" footer when there is no next page. */
-  showAllLoadedMessage?: boolean;
-  /** Extra row className */
-  rowClassName?: string | ((row: T, index: number) => string);
-  /** Optional row click handler. When set, rows become keyboard-focusable selection targets. */
-  onRowClick?: (row: T, index: number) => void;
-  /** Optional selected state for row interaction semantics. */
-  rowAriaSelected?: (row: T, index: number) => boolean;
-  /** Let parent scroll containers handle wheel/touch scroll chaining when this table is already at an edge. */
-  allowWheelPropagationAtBoundary?: boolean;
-  /** Render the table in normal document flow without any internal table scrollbars. */
-  naturalFlow?: boolean;
-  /** Extra class for the content wrapper inside the scroll viewport (e.g. "pr-5" for right padding). */
-  scrollContentClassName?: string;
-  /** Whether column reorder by dragging the header handle is allowed (default true when tableId is set). */
-  columnReorderable?: boolean;
-  /** Whether column order is persisted to localStorage (default true). */
-  persistColumnOrder?: boolean;
-}
+export type {
+  DataTableColumn,
+  DataTableColumnSort,
+  DataTableProps,
+  DataTableRowsChangeAction,
+  DataTableSortDirection,
+  DataTableSortState,
+  DataTableSortValue,
+} from "./DataTable.types";
+import type {
+  DataTableColumn,
+  DataTableProps,
+  DataTableSortDirection,
+  DataTableSortState,
+  DataTableSortValue,
+} from "./DataTable.types";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -141,6 +67,11 @@ const COLUMN_REORDER_SETTLE_CLEANUP_MS = 110;
 const COLUMN_REORDER_SETTLE_FEEDBACK_MS = 900;
 const NON_REORDERABLE_COLUMN_KEYS = new Set(["select", "action", "actions"]);
 
+const ROW_REORDER_COLUMN_KEY = "__data-table-row-reorder__";
+const ROW_REORDER_MIN_DRAG_DISTANCE_PX = 4;
+const ROW_REORDER_AUTOSCROLL_EDGE_PX = 56;
+const ROW_REORDER_AUTOSCROLL_MAX_PX_PER_FRAME = 18;
+
 type ColumnOrder = string[];
 
 interface ColumnReorderGeometry {
@@ -170,6 +101,16 @@ interface ColumnReorderState {
   allowedMaxIndex: number;
   columns: ColumnReorderGeometry[];
   draggedWidth: number;
+}
+
+interface RowReorderState {
+  pointerId: number;
+  fromIndex: number;
+  insertionIndex: number;
+  startClientY: number;
+  lastClientY: number;
+  activated: boolean;
+  scrollContainer: HTMLElement | null;
 }
 
 type ColumnWidthMap = Record<string, number>;
@@ -465,6 +406,48 @@ function safeSetPointerCapture(element: Element, pointerId: number) {
   }
 }
 
+function isEmptySortValue(value: DataTableSortValue) {
+  return value === null || value === undefined || (typeof value === "string" && !value.trim());
+}
+
+function compareSortValues(
+  left: DataTableSortValue,
+  right: DataTableSortValue,
+  collator: Intl.Collator,
+) {
+  const leftEmpty = isEmptySortValue(left);
+  const rightEmpty = isEmptySortValue(right);
+  if (leftEmpty || rightEmpty) {
+    if (leftEmpty && rightEmpty) return 0;
+    return leftEmpty ? 1 : -1;
+  }
+  if (typeof left === "number" && typeof right === "number") {
+    return left - right;
+  }
+  return collator.compare(String(left), String(right));
+}
+
+function moveRow<T>(rows: readonly T[], fromIndex: number, toIndex: number): T[] {
+  const next = Array.from(rows);
+  const [moved] = next.splice(fromIndex, 1);
+  if (moved === undefined) return next;
+  next.splice(toIndex, 0, moved);
+  return next;
+}
+
+function findVerticalScrollContainer(element: HTMLElement | null): HTMLElement | null {
+  let current = element?.parentElement ?? null;
+  while (current) {
+    const overflowY = window.getComputedStyle(current).overflowY;
+    if (/(auto|scroll)/.test(overflowY) && current.scrollHeight > current.clientHeight) {
+      return current;
+    }
+    current = current.parentElement;
+  }
+  const scrollingElement = document.scrollingElement;
+  return scrollingElement instanceof HTMLElement ? scrollingElement : null;
+}
+
 // ---------------------------------------------------------------------------
 // Column Order Helpers
 // ---------------------------------------------------------------------------
@@ -670,7 +653,7 @@ function scheduleColumnReorderSettleCleanup(element: HTMLElement) {
 export function DataTable<T>({
   tableId,
   rows,
-  columns,
+  columns: providedColumns,
   rowKey,
   loading = false,
   hasMore = false,
@@ -695,8 +678,34 @@ export function DataTable<T>({
   scrollContentClassName,
   columnReorderable = true,
   persistColumnOrder = true,
+  sortState,
+  defaultSortState = null,
+  onSortStateChange,
+  rowReorderable = false,
+  onRowsChange,
 }: DataTableProps<T>) {
   const { t } = useTranslation();
+  const columns = useMemo<DataTableColumn<T>[]>(() => {
+    if (!rowReorderable) return providedColumns;
+    const stickyClassName = naturalFlow ? "" : "sticky";
+    return [
+      {
+        key: ROW_REORDER_COLUMN_KEY,
+        label: t("common.row_order"),
+        width: "w-12",
+        minWidthPx: 48,
+        maxWidthPx: 48,
+        resizable: false,
+        reorderable: false,
+        lockOrder: "start",
+        headerClassName: stickyClassName,
+        cellClassName: stickyClassName,
+        overflowTooltip: false,
+        render: () => null,
+      },
+      ...providedColumns,
+    ];
+  }, [naturalFlow, providedColumns, rowReorderable, t]);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const tableRef = useRef<HTMLTableElement | null>(null);
@@ -768,6 +777,14 @@ export function DataTable<T>({
   const columnReorderAutoScrollRafRef = useRef<number | null>(null);
   const columnReorderSettleTimeoutRef = useRef<number | null>(null);
   const hoveredRowRef = useRef<HTMLTableRowElement | null>(null);
+  const [internalSortState, setInternalSortState] = useState<DataTableSortState | null>(
+    defaultSortState,
+  );
+  const activeSortState = sortState === undefined ? internalSortState : sortState;
+  const rowReorderRef = useRef<RowReorderState | null>(null);
+  const rowReorderAutoScrollRafRef = useRef<number | null>(null);
+  const [activeRowReorderIndex, setActiveRowReorderIndex] = useState<number | null>(null);
+  const [rowReorderInsertionIndex, setRowReorderInsertionIndex] = useState<number | null>(null);
 
   const orderedColumns = useMemo(() => {
     if (!canUseColumnOrder) return columns;
@@ -823,6 +840,274 @@ export function DataTable<T>({
     });
   }, [columns]);
 
+  const sortCollator = useMemo(
+    () => new Intl.Collator(undefined, { numeric: true, sensitivity: "base" }),
+    [],
+  );
+
+  const updateSortState = useCallback(
+    (nextSortState: DataTableSortState | null) => {
+      if (sortState === undefined) setInternalSortState(nextSortState);
+      onSortStateChange?.(nextSortState);
+    },
+    [onSortStateChange, sortState],
+  );
+
+  const handleColumnSort = useCallback(
+    (column: DataTableColumn<T>, direction: DataTableSortDirection) => {
+      if (!column.sort || !onRowsChange) return;
+      const nextSortState = { columnKey: column.key, direction };
+      const indexedRows = rows.map((row, index) => ({ row, index }));
+      indexedRows.sort((left, right) => {
+        let compared: number;
+        if (column.sort?.compare) {
+          compared = column.sort.compare(left.row, right.row);
+          if (!Number.isFinite(compared)) compared = 0;
+          compared = direction === "asc" ? compared : -compared;
+        } else {
+          const leftValue = column.sort?.getValue(left.row, left.index);
+          const rightValue = column.sort?.getValue(right.row, right.index);
+          const leftEmpty = isEmptySortValue(leftValue);
+          const rightEmpty = isEmptySortValue(rightValue);
+          if (leftEmpty || rightEmpty) {
+            compared = leftEmpty === rightEmpty ? 0 : leftEmpty ? 1 : -1;
+          } else {
+            compared = compareSortValues(leftValue, rightValue, sortCollator);
+            compared = direction === "asc" ? compared : -compared;
+          }
+        }
+        return compared || left.index - right.index;
+      });
+      updateSortState(nextSortState);
+      onRowsChange(
+        indexedRows.map((item) => item.row),
+        { type: "sort", sort: nextSortState },
+      );
+    },
+    [onRowsChange, rows, sortCollator, updateSortState],
+  );
+
+  const resolveRowInsertionIndex = useCallback((clientY: number) => {
+    const rowElements = Array.from(
+      tableRef.current?.querySelectorAll<HTMLTableRowElement>("tbody tr[data-vt-row-index]") ?? [],
+    );
+    if (rowElements.length === 0) return 0;
+
+    for (const rowElement of rowElements) {
+      const rowIndex = Number(rowElement.dataset.vtRowIndex);
+      if (!Number.isInteger(rowIndex)) continue;
+      const rect = rowElement.getBoundingClientRect();
+      if (clientY < rect.top + rect.height / 2) return rowIndex;
+    }
+
+    const lastRowIndex = Number(rowElements.at(-1)?.dataset.vtRowIndex);
+    return Number.isInteger(lastRowIndex) ? lastRowIndex + 1 : 0;
+  }, []);
+
+  const stopRowReorderAutoScroll = useCallback(() => {
+    if (rowReorderAutoScrollRafRef.current !== null) {
+      window.cancelAnimationFrame(rowReorderAutoScrollRafRef.current);
+      rowReorderAutoScrollRafRef.current = null;
+    }
+  }, []);
+
+  const updateRowReorderTarget = useCallback(
+    (clientY: number) => {
+      const active = rowReorderRef.current;
+      if (!active?.activated) return;
+      const insertionIndex = Math.max(0, Math.min(rows.length, resolveRowInsertionIndex(clientY)));
+      if (insertionIndex === active.insertionIndex) return;
+      active.insertionIndex = insertionIndex;
+      setRowReorderInsertionIndex(insertionIndex);
+    },
+    [resolveRowInsertionIndex, rows.length],
+  );
+
+  const runRowReorderAutoScroll = useCallback(() => {
+    rowReorderAutoScrollRafRef.current = null;
+    const active = rowReorderRef.current;
+    const scrollContainer = active?.scrollContainer;
+    if (!active?.activated || !scrollContainer) return;
+
+    const rect = scrollContainer.getBoundingClientRect();
+    const maxScrollTop = Math.max(0, scrollContainer.scrollHeight - scrollContainer.clientHeight);
+    if (maxScrollTop <= 0) return;
+
+    const topIntensity = Math.max(
+      0,
+      Math.min(
+        1,
+        (ROW_REORDER_AUTOSCROLL_EDGE_PX - (active.lastClientY - rect.top)) /
+          ROW_REORDER_AUTOSCROLL_EDGE_PX,
+      ),
+    );
+    const bottomIntensity = Math.max(
+      0,
+      Math.min(
+        1,
+        (ROW_REORDER_AUTOSCROLL_EDGE_PX - (rect.bottom - active.lastClientY)) /
+          ROW_REORDER_AUTOSCROLL_EDGE_PX,
+      ),
+    );
+    const direction =
+      topIntensity > 0 && scrollContainer.scrollTop > 0
+        ? -1
+        : bottomIntensity > 0 && scrollContainer.scrollTop < maxScrollTop
+          ? 1
+          : 0;
+    if (direction === 0) return;
+
+    const intensity = direction < 0 ? topIntensity : bottomIntensity;
+    const delta =
+      direction *
+      Math.max(1, Math.round(ROW_REORDER_AUTOSCROLL_MAX_PX_PER_FRAME * intensity * intensity));
+    const nextScrollTop = Math.max(0, Math.min(maxScrollTop, scrollContainer.scrollTop + delta));
+    if (nextScrollTop !== scrollContainer.scrollTop) {
+      scrollContainer.scrollTop = nextScrollTop;
+      updateRowReorderTarget(active.lastClientY);
+    }
+    rowReorderAutoScrollRafRef.current = window.requestAnimationFrame(runRowReorderAutoScroll);
+  }, [updateRowReorderTarget]);
+
+  const ensureRowReorderAutoScroll = useCallback(() => {
+    if (rowReorderAutoScrollRafRef.current !== null) return;
+    rowReorderAutoScrollRafRef.current = window.requestAnimationFrame(runRowReorderAutoScroll);
+  }, [runRowReorderAutoScroll]);
+
+  const clearRowReorder = useCallback(() => {
+    stopRowReorderAutoScroll();
+    rowReorderRef.current = null;
+    setActiveRowReorderIndex(null);
+    setRowReorderInsertionIndex(null);
+    document.body.style.cursor = "";
+    document.body.style.userSelect = "";
+    document.documentElement.style.cursor = "";
+  }, [stopRowReorderAutoScroll]);
+
+  const cancelRowReorder = useCallback(() => {
+    clearRowReorder();
+  }, [clearRowReorder]);
+
+  const finishRowReorder = useCallback(
+    (event?: PointerEvent) => {
+      const active = rowReorderRef.current;
+      if (!active || (event && event.pointerId !== active.pointerId)) return;
+      const shouldCommit = active.activated;
+      const fromIndex = active.fromIndex;
+      const insertionIndex = active.insertionIndex;
+      clearRowReorder();
+      if (!shouldCommit || !onRowsChange || rows.length < 2) return;
+
+      const toIndex = Math.max(
+        0,
+        Math.min(rows.length - 1, insertionIndex > fromIndex ? insertionIndex - 1 : insertionIndex),
+      );
+      if (toIndex === fromIndex) return;
+      if (activeSortState) updateSortState(null);
+      onRowsChange(moveRow(rows, fromIndex, toIndex), {
+        type: "row-reorder",
+        fromIndex,
+        toIndex,
+      });
+    },
+    [activeSortState, clearRowReorder, onRowsChange, rows, updateSortState],
+  );
+
+  const activateRowReorder = useCallback((active: RowReorderState) => {
+    if (active.activated) return;
+    active.activated = true;
+    setActiveRowReorderIndex(active.fromIndex);
+    setRowReorderInsertionIndex(active.insertionIndex);
+    document.body.style.cursor = "grabbing";
+    document.body.style.userSelect = "none";
+    document.documentElement.style.cursor = "grabbing";
+  }, []);
+
+  const handleRowReorderPointerDown = useCallback(
+    (rowIndex: number, event: ReactPointerEvent<HTMLButtonElement>) => {
+      if (event.button !== 0 || !rowReorderable || !onRowsChange || rows.length < 2 || loading) {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      safeSetPointerCapture(event.currentTarget, event.pointerId);
+      rowReorderRef.current = {
+        pointerId: event.pointerId,
+        fromIndex: rowIndex,
+        insertionIndex: rowIndex,
+        startClientY: event.clientY,
+        lastClientY: event.clientY,
+        activated: false,
+        scrollContainer:
+          !naturalFlow && containerRef.current
+            ? containerRef.current
+            : findVerticalScrollContainer(rootRef.current),
+      };
+    },
+    [loading, naturalFlow, onRowsChange, rowReorderable, rows.length],
+  );
+
+  const handleRowReorderKeyDown = useCallback(
+    (rowIndex: number, event: React.KeyboardEvent<HTMLButtonElement>) => {
+      if (!onRowsChange || rows.length < 2) return;
+      const toIndex =
+        event.key === "ArrowUp"
+          ? Math.max(0, rowIndex - 1)
+          : event.key === "ArrowDown"
+            ? Math.min(rows.length - 1, rowIndex + 1)
+            : rowIndex;
+      if (toIndex === rowIndex) return;
+      event.preventDefault();
+      event.stopPropagation();
+      if (activeSortState) updateSortState(null);
+      onRowsChange(moveRow(rows, rowIndex, toIndex), {
+        type: "row-reorder",
+        fromIndex: rowIndex,
+        toIndex,
+      });
+    },
+    [activeSortState, onRowsChange, rows, updateSortState],
+  );
+
+  useEffect(() => {
+    if (!rowReorderable) return;
+
+    const handlePointerMove = (event: PointerEvent) => {
+      const active = rowReorderRef.current;
+      if (!active || active.pointerId !== event.pointerId) return;
+      event.preventDefault();
+      active.lastClientY = event.clientY;
+      if (
+        !active.activated &&
+        Math.abs(event.clientY - active.startClientY) >= ROW_REORDER_MIN_DRAG_DISTANCE_PX
+      ) {
+        activateRowReorder(active);
+      }
+      if (!active.activated) return;
+      updateRowReorderTarget(event.clientY);
+      ensureRowReorderAutoScroll();
+    };
+    const handleWindowBlur = () => cancelRowReorder();
+
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", finishRowReorder);
+    window.addEventListener("pointercancel", cancelRowReorder);
+    window.addEventListener("blur", handleWindowBlur);
+    return () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", finishRowReorder);
+      window.removeEventListener("pointercancel", cancelRowReorder);
+      window.removeEventListener("blur", handleWindowBlur);
+    };
+  }, [
+    activateRowReorder,
+    cancelRowReorder,
+    ensureRowReorderAutoScroll,
+    finishRowReorder,
+    rowReorderable,
+    updateRowReorderTarget,
+  ]);
+
   const syncScrollbarThumbs = useCallback(
     (metrics: ScrollMetrics, measuredHeaderHeight = headerHeightRef.current) => {
       const { vThumb: nextVThumb, hThumb: nextHThumb } = calculateScrollbarThumbs(
@@ -841,7 +1126,6 @@ export function DataTable<T>({
         horizontalThumb.style.left = `${nextHThumb.left}px`;
         horizontalThumb.style.width = `${nextHThumb.width}px`;
       }
-
     },
     [],
   );
@@ -2054,6 +2338,11 @@ export function DataTable<T>({
         window.clearTimeout(columnReorderSettleTimeoutRef.current);
         columnReorderSettleTimeoutRef.current = null;
       }
+      if (rowReorderAutoScrollRafRef.current) {
+        window.cancelAnimationFrame(rowReorderAutoScrollRafRef.current);
+        rowReorderAutoScrollRafRef.current = null;
+      }
+      rowReorderRef.current = null;
       pendingColumnResizePointerRef.current = null;
     };
   }, []);
@@ -2293,8 +2582,12 @@ export function DataTable<T>({
             >
               <tr className="text-left text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-white/55">
                 {orderedColumns.map((col, colIndex) => {
+                  const isRowReorderColumn = col.key === ROW_REORDER_COLUMN_KEY;
                   const canResize = shouldAllowColumnResize(col, colIndex, orderedColumns);
                   const canReorder = canUseColumnOrder && shouldAllowColumnReorder(col);
+                  const canSort = Boolean(col.sort && onRowsChange);
+                  const sortDirection =
+                    activeSortState?.columnKey === col.key ? activeSortState.direction : null;
                   const isResizingThisColumn = activeResizeColumnKey === col.key;
                   const isSettledReorderColumn = settledReorderColumnKey === col.key;
                   const stickyPlacement = naturalFlow ? undefined : stickyColumnPlacements[col.key];
@@ -2350,7 +2643,7 @@ export function DataTable<T>({
                       ) : null}
                       <div
                         data-vt-column-header-content
-                        className={`min-w-0 max-w-full overflow-hidden truncate ${
+                        className={`min-w-0 max-w-full overflow-hidden ${
                           canReorder
                             ? "group-hover/column:pl-5 group-hover/column:transition-[padding] group-focus-within/column:pl-5 data-[vt-reorder-active=true]:pl-5"
                             : ""
@@ -2359,7 +2652,67 @@ export function DataTable<T>({
                           activeReorderColumnKey === col.key ? "true" : undefined
                         }
                       >
-                        {col.headerRender ? col.headerRender() : col.label}
+                        {isRowReorderColumn ? (
+                          <span className="flex items-center justify-center text-slate-400/70 dark:text-white/35">
+                            <GripVertical size={14} aria-hidden="true" />
+                            <span className="sr-only">{col.label}</span>
+                          </span>
+                        ) : (
+                          <span className="flex min-w-0 items-center gap-1.5">
+                            <span className="min-w-0 truncate">
+                              {col.headerRender ? col.headerRender() : col.label}
+                            </span>
+                            {canSort ? (
+                              <DropdownMenu.Root size="sm">
+                                <DropdownMenu.Trigger asChild>
+                                  <button
+                                    type="button"
+                                    data-vt-sort-trigger={col.key}
+                                    data-vt-sort-direction={sortDirection ?? "none"}
+                                    aria-label={t("common.sort_column", { column: col.label })}
+                                    title={t("common.sort_column", { column: col.label })}
+                                    className={`inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md outline-none transition-colors hover:bg-slate-200/75 focus-visible:ring-2 focus-visible:ring-slate-400/35 dark:hover:bg-white/10 dark:focus-visible:ring-white/15 ${
+                                      sortDirection
+                                        ? "text-slate-900 dark:text-white"
+                                        : "text-slate-400 dark:text-white/35"
+                                    }`}
+                                    onPointerDown={(event) => event.stopPropagation()}
+                                  >
+                                    {sortDirection === "asc" ? (
+                                      <ArrowUp size={14} aria-hidden="true" />
+                                    ) : sortDirection === "desc" ? (
+                                      <ArrowDown size={14} aria-hidden="true" />
+                                    ) : (
+                                      <ArrowUpDown size={14} aria-hidden="true" />
+                                    )}
+                                  </button>
+                                </DropdownMenu.Trigger>
+                                <DropdownMenu.Portal>
+                                  <DropdownMenu.Content align="start">
+                                    <DropdownMenu.Item
+                                      onSelect={() => handleColumnSort(col, "asc")}
+                                    >
+                                      <ArrowUp size={13} aria-hidden="true" />
+                                      <span>{t("common.sort_ascending")}</span>
+                                      {sortDirection === "asc" ? (
+                                        <Check className="ml-auto" size={13} aria-hidden="true" />
+                                      ) : null}
+                                    </DropdownMenu.Item>
+                                    <DropdownMenu.Item
+                                      onSelect={() => handleColumnSort(col, "desc")}
+                                    >
+                                      <ArrowDown size={13} aria-hidden="true" />
+                                      <span>{t("common.sort_descending")}</span>
+                                      {sortDirection === "desc" ? (
+                                        <Check className="ml-auto" size={13} aria-hidden="true" />
+                                      ) : null}
+                                    </DropdownMenu.Item>
+                                  </DropdownMenu.Content>
+                                </DropdownMenu.Portal>
+                              </DropdownMenu.Root>
+                            ) : null}
+                          </span>
+                        )}
                       </div>
                       {canResize ? (
                         <button
@@ -2442,15 +2795,24 @@ export function DataTable<T>({
                         : (rowClassName ?? "");
                     const rowSelected = rowAriaSelected?.(row, globalIdx);
                     const rowInteractive = Boolean(onRowClick);
+                    const isActiveRowReorder = activeRowReorderIndex === globalIdx;
+                    const showDropBefore = rowReorderInsertionIndex === globalIdx;
+                    const showDropAfter =
+                      rowReorderInsertionIndex === rows.length && globalIdx === rows.length - 1;
                     return (
                       <tr
                         key={key}
+                        data-vt-row-index={globalIdx}
+                        data-vt-row-key={key}
+                        data-vt-row-reorder-active={isActiveRowReorder ? true : undefined}
                         tabIndex={rowInteractive ? 0 : undefined}
                         aria-selected={rowSelected}
-                        className={`group/row relative z-0 text-sm transition-colors ${
+                        className={`group/row relative z-0 text-sm transition-[opacity,background-color] ${
                           rowInteractive ? "cursor-pointer outline-none" : ""
-                        } ${
-                          naturalFlow ? "hover:bg-slate-50 dark:hover:bg-white/[0.04]" : ""
+                        } ${naturalFlow ? "hover:bg-slate-50 dark:hover:bg-white/[0.04]" : ""} ${
+                          isActiveRowReorder
+                            ? "z-20 bg-slate-100/90 opacity-75 dark:bg-white/10"
+                            : ""
                         } ${extraCls}`}
                         style={virtualize ? { height: rowHeight } : undefined}
                         onClick={
@@ -2479,6 +2841,7 @@ export function DataTable<T>({
                         {orderedColumns.map((col, colIdx) => {
                           const isFirst = colIdx === 0;
                           const isLast = colIdx === orderedColumns.length - 1;
+                          const isRowReorderColumn = col.key === ROW_REORDER_COLUMN_KEY;
                           const isSettledReorderColumn = settledReorderColumnKey === col.key;
                           const stickyPlacement = naturalFlow
                             ? undefined
@@ -2496,6 +2859,11 @@ export function DataTable<T>({
                             : stickyPlacement
                               ? "group-hover/row:bg-slate-50 dark:group-hover/row:bg-neutral-900"
                               : "group-hover/row:bg-slate-50 dark:group-hover/row:bg-white/[0.04]";
+                          const dropIndicatorClass = showDropBefore
+                            ? "border-t-2 border-t-blue-500"
+                            : showDropAfter
+                              ? "border-b-2 border-b-blue-500"
+                              : "";
                           return (
                             <td
                               key={col.key}
@@ -2504,7 +2872,9 @@ export function DataTable<T>({
                                 isSettledReorderColumn ? true : undefined
                               }
                               style={resolveColumnStyle(col, "cell")}
-                              className={`overflow-hidden px-4 py-2.5 align-middle ${
+                              className={`overflow-hidden align-middle ${
+                                isRowReorderColumn ? "px-1 py-2.5 text-center" : "px-4 py-2.5"
+                              } ${
                                 stickyPlacement?.edge === "start"
                                   ? "md:left-[var(--vt-sticky-left)]"
                                   : ""
@@ -2514,19 +2884,40 @@ export function DataTable<T>({
                                   : ""
                               } ${
                                 hoverChromeClass
-                              } ${col.cellClassName ?? ""} ${roundCls}`}
+                              } ${dropIndicatorClass} ${col.cellClassName ?? ""} ${roundCls}`}
                             >
-                              <div
-                                data-vt-cell-content-clip
-                                className="min-w-0 max-w-full overflow-hidden"
-                              >
-                                <TableCellOverflowTooltip
-                                  tooltipContent={overflowTooltip}
-                                  className={col.cellClassName}
+                              {isRowReorderColumn ? (
+                                <button
+                                  type="button"
+                                  data-vt-row-reorder-handle
+                                  aria-label={t("common.reorder_row", { index: globalIdx + 1 })}
+                                  title={t("common.reorder_row", { index: globalIdx + 1 })}
+                                  disabled={!onRowsChange || rows.length < 2 || loading}
+                                  className={`inline-flex h-7 w-7 touch-none items-center justify-center rounded-lg text-slate-400 outline-none transition-colors hover:bg-slate-200/80 hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-slate-400/35 disabled:cursor-default disabled:opacity-35 dark:text-white/35 dark:hover:bg-white/10 dark:hover:text-white/75 dark:focus-visible:ring-white/15 ${
+                                    isActiveRowReorder
+                                      ? "cursor-grabbing bg-slate-200 text-slate-800 dark:bg-white/15 dark:text-white"
+                                      : "cursor-grab"
+                                  }`}
+                                  onPointerDown={(event) =>
+                                    handleRowReorderPointerDown(globalIdx, event)
+                                  }
+                                  onKeyDown={(event) => handleRowReorderKeyDown(globalIdx, event)}
                                 >
-                                  {content}
-                                </TableCellOverflowTooltip>
-                              </div>
+                                  <GripVertical size={15} aria-hidden="true" />
+                                </button>
+                              ) : (
+                                <div
+                                  data-vt-cell-content-clip
+                                  className="min-w-0 max-w-full overflow-hidden"
+                                >
+                                  <TableCellOverflowTooltip
+                                    tooltipContent={overflowTooltip}
+                                    className={col.cellClassName}
+                                  >
+                                    {content}
+                                  </TableCellOverflowTooltip>
+                                </div>
+                              )}
                             </td>
                           );
                         })}

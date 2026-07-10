@@ -1,8 +1,31 @@
 import { type ReactNode } from "react";
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
+export type DataTableSortDirection = "asc" | "desc";
+
+export interface DataTableSortState {
+  columnKey: string;
+  direction: DataTableSortDirection;
+}
+
+export type DataTableSortValue = string | number | null | undefined;
+
+export interface DataTableColumnSort<T> {
+  /** Value used by the built-in stable sorter. */
+  getValue: (row: T, index: number) => DataTableSortValue;
+  /** Optional row comparator. The table applies the active direction. */
+  compare?: (left: T, right: T) => number;
+}
+
+export type DataTableRowsChangeAction =
+  | {
+      type: "sort";
+      sort: DataTableSortState;
+    }
+  | {
+      type: "row-reorder";
+      fromIndex: number;
+      toIndex: number;
+    };
 
 /** Column definition for DataTable */
 export interface DataTableColumn<T> {
@@ -28,6 +51,8 @@ export interface DataTableColumn<T> {
   cellClassName?: string;
   /** Overflow tooltip text for a truncated cell. Primitive render output is used by default. */
   overflowTooltip?: boolean | ((row: T, index: number) => string | null | undefined);
+  /** Built-in sort menu configuration. Omit to keep the column unsortable. */
+  sort?: DataTableColumnSort<T>;
   /** Custom header render function (overrides label) */
   headerRender?: () => ReactNode;
   /** Render function for cell content */
@@ -75,6 +100,10 @@ export interface DataTableProps<T> {
   showAllLoadedMessage?: boolean;
   /** Extra row className */
   rowClassName?: string | ((row: T, index: number) => string);
+  /** Optional row click handler. When set, rows become keyboard-focusable selection targets. */
+  onRowClick?: (row: T, index: number) => void;
+  /** Optional selected state for row interaction semantics. */
+  rowAriaSelected?: (row: T, index: number) => boolean;
   /** Let parent scroll containers handle wheel/touch scroll chaining when this table is already at an edge. */
   allowWheelPropagationAtBoundary?: boolean;
   /** Render the table in normal document flow without any internal table scrollbars. */
@@ -85,4 +114,14 @@ export interface DataTableProps<T> {
   columnReorderable?: boolean;
   /** Whether column order is persisted to localStorage (default true). */
   persistColumnOrder?: boolean;
+  /** Controlled active sort state. Omit to let DataTable manage the icon state. */
+  sortState?: DataTableSortState | null;
+  /** Initial sort state for an uncontrolled table. */
+  defaultSortState?: DataTableSortState | null;
+  /** Called whenever a column sort is selected or row dragging clears the current sort. */
+  onSortStateChange?: (sort: DataTableSortState | null) => void;
+  /** Enable the built-in row drag handle. Requires onRowsChange to persist the new order. */
+  rowReorderable?: boolean;
+  /** Receives rows in their new order after sorting or row dragging. */
+  onRowsChange?: (rows: T[], action: DataTableRowsChangeAction) => void;
 }
