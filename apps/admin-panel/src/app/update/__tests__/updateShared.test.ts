@@ -3,6 +3,7 @@ import {
   applyUpdateFlow,
   formatUpdateStatusMessage,
   selectLocalizedReleaseNotes,
+  subscribeUpdateProgress,
 } from "@app/update/updateShared";
 
 const mocks = vi.hoisted(() => ({
@@ -141,5 +142,29 @@ describe("applyUpdateFlow", () => {
       "completed",
     ]);
     expect(notify).toHaveBeenCalledWith({ type: "success", message: "auto_update.success" });
+  });
+});
+
+describe("subscribeUpdateProgress", () => {
+  beforeEach(() => {
+    vi.useRealTimers();
+    mocks.events.mockReset();
+  });
+
+  test("backs off failed SSE reconnects instead of retrying every second", async () => {
+    vi.useFakeTimers();
+    mocks.events.mockRejectedValue(new Error("updater unavailable"));
+
+    const unsubscribe = subscribeUpdateProgress(vi.fn());
+    await vi.waitFor(() => expect(mocks.events).toHaveBeenCalledTimes(1));
+
+    await vi.advanceTimersByTimeAsync(4999);
+    expect(mocks.events).toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(1);
+    await vi.waitFor(() => expect(mocks.events).toHaveBeenCalledTimes(2));
+
+    unsubscribe();
+    vi.useRealTimers();
   });
 });
