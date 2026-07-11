@@ -4005,7 +4005,7 @@
     "request_body_storage": "Store request and response bodies",
     "request_body_storage_desc": "Store full inputs and model outputs for log replay. Disabled by default; request details remain available.",
     "request_body_storage_disable_title": "Disable and clear request bodies",
-    "request_body_storage_disable_desc": "Disabling immediately stops storing new request inputs and model outputs, and permanently clears all stored input and output bodies. Request details, request records, token usage, and cost statistics are preserved.",
+    "request_body_storage_disable_desc": "Disabling immediately stops storing new request inputs and model outputs, removes historical inputs, outputs, and bodies embedded in request details, then reclaims PostgreSQL disk space. Request-detail metadata, request records, token usage, and cost statistics are preserved. Large databases may take several minutes; keep this page open.",
     "request_body_storage_disable_confirm": "Disable and clear",
     "request_body_storage_disabling": "Disabling and clearing…",
     "request_body_storage_enabled_toast": "Request and response body storage enabled",
