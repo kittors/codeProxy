@@ -98,7 +98,7 @@ function ChannelFilterOptionLabel({
       {badgeLabel ? (
         <span
           className={[
-            "inline-flex shrink-0 items-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold leading-none",
+            "inline-flex shrink-0 items-center rounded-full px-1.5 py-0.5 text-2xs font-semibold leading-none",
             authTypeBadgeClass(authType),
           ].join(" ")}
         >

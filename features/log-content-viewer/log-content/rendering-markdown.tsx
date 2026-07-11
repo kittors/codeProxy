@@ -69,7 +69,7 @@ function CodeBlock({ language, children }: { language: string; children: string 
         customStyle={{
           margin: 0,
           borderRadius: 0,
-          fontSize: "13px",
+          fontSize: "14px",
           lineHeight: "1.6",
           padding: "10px 16px 16px 16px",
         }}

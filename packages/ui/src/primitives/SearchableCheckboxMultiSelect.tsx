@@ -452,7 +452,7 @@ export function SearchableCheckboxMultiSelect({
           </span>
           <span className="flex shrink-0 items-center gap-2">
             {showSelectionBadge ? (
-              <span className="rounded-md bg-sky-50 px-1.5 py-0.5 text-[11px] font-semibold text-sky-700 dark:bg-sky-900/30 dark:text-sky-300">
+              <span className="rounded-md bg-sky-50 px-1.5 py-0.5 text-xs font-semibold text-sky-700 dark:bg-sky-900/30 dark:text-sky-300">
                 {selectedCountLabel(activeExplicitValue.length)}
               </span>
             ) : null}

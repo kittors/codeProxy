@@ -629,7 +629,7 @@ export function ModelsPage() {
                 <span className="min-w-0 truncate font-medium">{t("models_page.all_owners")}</span>
                 <span
                   className={[
-                    "shrink-0 rounded-full px-2 py-0.5 text-[11px]",
+                    "shrink-0 rounded-full px-2 py-0.5 text-xs",
                     ownerFilter === ""
                       ? "bg-white/15 text-white/80 dark:bg-slate-950/10 dark:text-slate-700"
                       : "bg-white text-slate-500 dark:bg-neutral-950 dark:text-white/45",
@@ -674,11 +674,11 @@ export function ModelsPage() {
                           <span className="block truncate text-sm font-medium text-slate-900 dark:text-white">
                             {owner.label || owner.value}
                           </span>
-                          <span className="block truncate text-[11px] text-slate-500 dark:text-white/45">
+                          <span className="block truncate text-xs text-slate-500 dark:text-white/45">
                             {owner.value}
                           </span>
                         </button>
-                        <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-500 transition-transform duration-200 ease-out group-focus-within/owner:-translate-x-16 group-hover/owner:-translate-x-16 motion-reduce:transition-none dark:bg-white/[0.08] dark:text-white/45">
+                        <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500 transition-transform duration-200 ease-out group-focus-within/owner:-translate-x-16 group-hover/owner:-translate-x-16 motion-reduce:transition-none dark:bg-white/[0.08] dark:text-white/45">
                           {t("models_page.owner_model_count", { count })}
                         </span>
                         <div className="pointer-events-none absolute right-2 top-1/2 flex -translate-y-1/2 translate-x-3 items-center gap-1 opacity-0 transition-all duration-200 ease-out group-focus-within/owner:pointer-events-auto group-focus-within/owner:translate-x-0 group-focus-within/owner:opacity-100 group-hover/owner:pointer-events-auto group-hover/owner:translate-x-0 group-hover/owner:opacity-100 motion-reduce:transition-none">
@@ -760,7 +760,7 @@ export function ModelsPage() {
                       <span>{t("models_page.openrouter_sync_title")}</span>
                       <span
                         className={[
-                          "rounded-full px-2 py-0.5 text-[10px] font-semibold",
+                          "rounded-full px-2 py-0.5 text-2xs font-semibold",
                           openRouterSyncState.enabled
                             ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-300"
                             : "bg-slate-100 text-slate-500 dark:bg-white/[0.08] dark:text-white/45",

@@ -129,7 +129,7 @@ export function LanguageSelector({ className }: { className?: string }) {
           aria-haspopup="listbox"
         >
           <Languages size={16} />
-          <span className="ml-1 text-[11px] font-bold leading-none">{shortLabel}</span>
+          <span className="ml-1 text-xs font-bold leading-none">{shortLabel}</span>
         </button>
       </HoverTooltip>
 

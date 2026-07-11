@@ -123,7 +123,7 @@ export function OpenAIProvidersTab({
                     {headerEntries.map(([key, value]) => (
                       <span
                         key={key}
-                        className="inline-flex max-w-full min-w-0 items-center gap-1 rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[11px] text-slate-700 dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-white/75"
+                        className="inline-flex max-w-full min-w-0 items-center gap-1 rounded-full border border-slate-200 bg-white px-2 py-0.5 text-xs text-slate-700 dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-white/75"
                         title={`${key}: ${String(value)}`}
                       >
                         <span className="shrink-0 font-semibold">{key}:</span>
@@ -161,7 +161,7 @@ export function OpenAIProvidersTab({
                     label={t("providers.failed_stats", { count: stats.failure })}
                   />
                   {provider.testModel ? (
-                    <span className="inline-flex items-center rounded-full bg-slate-600/10 px-2 py-0.5 text-[11px] font-medium text-slate-700 dark:bg-white/10 dark:text-white/65">
+                    <span className="inline-flex items-center rounded-full bg-slate-600/10 px-2 py-0.5 text-xs font-medium text-slate-700 dark:bg-white/10 dark:text-white/65">
                       testModel: {provider.testModel}
                     </span>
                   ) : null}

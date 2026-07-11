@@ -42,7 +42,7 @@ export interface CcSwitchImportConfigOption {
 }
 
 const labelClassName =
-  "text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-white/45";
+  "text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-white/45";
 const controlClassName =
   "h-10 rounded-xl border border-slate-200/80 bg-white px-3 text-sm text-slate-900 shadow-none hover:border-slate-300 hover:bg-white focus-visible:ring-2 focus-visible:ring-slate-900/10 dark:border-neutral-800 dark:bg-neutral-900 dark:text-white dark:hover:border-neutral-700 dark:focus-visible:ring-white/15";
 const fieldClassName = "flex flex-col gap-1.5";
@@ -236,7 +236,7 @@ export function CcSwitchImportModal({
                 <div className="mt-0.5 text-xs leading-5 text-slate-500 dark:text-white/55">
                   {t(client.descriptionKey)}
                 </div>
-                <div className="mt-1 font-mono text-[11px] text-slate-500 dark:text-white/45">
+                <div className="mt-1 font-mono text-xs text-slate-500 dark:text-white/45">
                   {t("ccswitch.import_endpoint_path_hint", { path: endpointHint })}
                 </div>
               </div>

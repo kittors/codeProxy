@@ -202,7 +202,7 @@ export function CcSwitchImportSettingsPage() {
                 <div className="truncate font-medium text-slate-900 dark:text-white">
                   {t(client.labelKey)}
                 </div>
-                <div className="font-mono text-[11px] text-slate-500 dark:text-white/45">
+                <div className="font-mono text-xs text-slate-500 dark:text-white/45">
                   {row.routePath || row.endpointPath || t("ccswitch.import_endpoint_root")}
                 </div>
               </div>
@@ -250,7 +250,7 @@ export function CcSwitchImportSettingsPage() {
               {row.allowedChannelGroups.map((group) => (
                 <span
                   key={group}
-                  className="rounded-full border border-slate-200/75 bg-slate-50 px-2 py-1 text-[11px] font-medium text-slate-600 dark:border-neutral-800 dark:bg-neutral-900 dark:text-white/60"
+                  className="rounded-full border border-slate-200/75 bg-slate-50 px-2 py-1 text-xs font-medium text-slate-600 dark:border-neutral-800 dark:bg-neutral-900 dark:text-white/60"
                 >
                   {group}
                 </span>

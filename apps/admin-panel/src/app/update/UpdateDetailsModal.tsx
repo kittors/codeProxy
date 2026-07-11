@@ -28,7 +28,7 @@ const RELEASE_NOTES_PROSE_CLASSES = `prose prose-sm dark:prose-invert max-w-none
   prose-headings:mt-3 prose-headings:mb-2 prose-headings:font-semibold
   prose-h1:text-base prose-h2:text-sm prose-h3:text-sm
   prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5
-  prose-code:rounded-md prose-code:bg-slate-100 prose-code:px-1.5 prose-code:py-0.5 prose-code:text-[13px] prose-code:font-mono prose-code:text-slate-700 prose-code:before:content-none prose-code:after:content-none
+  prose-code:rounded-md prose-code:bg-slate-100 prose-code:px-1.5 prose-code:py-0.5 prose-code:text-sm prose-code:font-mono prose-code:text-slate-700 prose-code:before:content-none prose-code:after:content-none
   dark:prose-code:bg-neutral-800 dark:prose-code:text-slate-300
   prose-pre:rounded-lg prose-pre:bg-slate-900 prose-pre:text-xs dark:prose-pre:bg-neutral-900
   prose-a:break-all prose-a:text-indigo-600 dark:prose-a:text-indigo-300

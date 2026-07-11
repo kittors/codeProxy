@@ -398,7 +398,7 @@ export function ConfigPage() {
                               </HoverTooltip>
                             }
                           />
-                          <p className="text-[11px] text-slate-500 dark:text-white/55">
+                          <p className="text-xs text-slate-500 dark:text-white/55">
                             Enter: next · Shift+Enter: prev · Results:
                             <span className="ml-1 font-mono tabular-nums">
                               {!lastSearchedQuery.trim()

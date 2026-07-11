@@ -32,7 +32,7 @@ export function ProviderAccessChips({ accessSummary }: ProviderAccessChipsProps)
           : t("providers.access_all", { total: accessSummary.totalKeys });
 
   return (
-    <div className="flex flex-wrap gap-1.5 text-[11px]">
+    <div className="flex flex-wrap gap-1.5 text-xs">
       <span className={`rounded-full border px-2 py-0.5 font-medium ${accessTone}`}>{label}</span>
       {accessSummary.exactOverrideKeys > 0 ? (
         <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100">

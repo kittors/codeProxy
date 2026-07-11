@@ -335,7 +335,7 @@ function renderChannelTags(tags: string[]) {
       {tags.map((tag) => (
         <span
           key={tag}
-          className="inline-flex items-center rounded-full bg-sky-50 px-2 py-0.5 text-[10px] font-semibold text-sky-700 dark:bg-sky-500/15 dark:text-sky-200"
+          className="inline-flex items-center rounded-full bg-sky-50 px-2 py-0.5 text-2xs font-semibold text-sky-700 dark:bg-sky-500/15 dark:text-sky-200"
         >
           {tag}
         </span>
@@ -1111,7 +1111,7 @@ export function RoutingConfigEditor({
                   {channels.map((channel) => (
                     <span
                       key={channel.id}
-                      className="inline-flex items-center rounded-md border border-slate-200/60 bg-slate-50 px-2 py-0.5 text-[11px] text-slate-700 dark:border-neutral-700/40 dark:bg-neutral-800/60 dark:text-white/80"
+                      className="inline-flex items-center rounded-md border border-slate-200/60 bg-slate-50 px-2 py-0.5 text-xs text-slate-700 dark:border-neutral-700/40 dark:bg-neutral-800/60 dark:text-white/80"
                     >
                       {channel.name}
                       {channel.priority.trim()
@@ -1178,7 +1178,7 @@ export function RoutingConfigEditor({
                   {routePaths.map((path) => (
                     <span
                       key={path}
-                      className="inline-flex items-center rounded-md border border-slate-200/60 bg-slate-50 px-2 py-0.5 font-mono text-[11px] text-slate-700 dark:border-neutral-700/40 dark:bg-neutral-800/60 dark:text-white/80"
+                      className="inline-flex items-center rounded-md border border-slate-200/60 bg-slate-50 px-2 py-0.5 font-mono text-xs text-slate-700 dark:border-neutral-700/40 dark:bg-neutral-800/60 dark:text-white/80"
                     >
                       {path}
                     </span>
@@ -1254,12 +1254,12 @@ export function RoutingConfigEditor({
                 >
                   <span className="truncate">{channel.name}</span>
                   {isStale ? (
-                    <span className="inline-flex shrink-0 items-center rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-700 dark:bg-rose-500/15 dark:text-rose-200">
+                    <span className="inline-flex shrink-0 items-center rounded-full bg-rose-50 px-2 py-0.5 text-2xs font-semibold text-rose-700 dark:bg-rose-500/15 dark:text-rose-200">
                       {t("channel_groups_page.deleted_badge")}
                     </span>
                   ) : null}
                   {!isStale && isDisabled ? (
-                    <span className="inline-flex shrink-0 items-center rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600 dark:bg-white/10 dark:text-white/55">
+                    <span className="inline-flex shrink-0 items-center rounded-full bg-slate-100 px-2 py-0.5 text-2xs font-semibold text-slate-600 dark:bg-white/10 dark:text-white/55">
                       {t("channel_groups_page.disabled_badge")}
                     </span>
                   ) : null}
@@ -1269,7 +1269,7 @@ export function RoutingConfigEditor({
                     {displayTags.map((tag) => (
                       <span
                         key={tag}
-                        className="inline-flex items-center rounded-full bg-sky-50 px-2 py-0.5 text-[10px] font-semibold text-sky-700 dark:bg-sky-500/15 dark:text-sky-200"
+                        className="inline-flex items-center rounded-full bg-sky-50 px-2 py-0.5 text-2xs font-semibold text-sky-700 dark:bg-sky-500/15 dark:text-sky-200"
                       >
                         {tag}
                       </span>
@@ -1383,7 +1383,7 @@ export function RoutingConfigEditor({
               </OverflowTooltip>
               {model.description ? (
                 <OverflowTooltip content={model.description} className="block min-w-0">
-                  <span className="block min-w-0 truncate text-[11px] text-slate-500 dark:text-white/45">
+                  <span className="block min-w-0 truncate text-xs text-slate-500 dark:text-white/45">
                     {model.description}
                   </span>
                 </OverflowTooltip>
@@ -1609,7 +1609,7 @@ export function RoutingConfigEditor({
                         {channel.name}
                       </span>
                     </OverflowTooltip>
-                    <span className="inline-flex justify-center rounded-full bg-rose-50 px-2 py-0.5 text-[11px] font-semibold text-rose-700 dark:bg-rose-500/15 dark:text-rose-100">
+                    <span className="inline-flex justify-center rounded-full bg-rose-50 px-2 py-0.5 text-xs font-semibold text-rose-700 dark:bg-rose-500/15 dark:text-rose-100">
                       {t("channel_groups_page.deleted_badge")}
                     </span>
                   </div>
@@ -1682,7 +1682,7 @@ export function RoutingConfigEditor({
                         className="inline-flex items-center gap-1.5 rounded-full border border-rose-200 bg-white/80 px-2.5 py-1 text-xs font-medium text-rose-700 dark:border-rose-400/30 dark:bg-neutral-950/50 dark:text-rose-100"
                       >
                         <span>{channel.name}</span>
-                        <span className="rounded-full bg-rose-100 px-1.5 py-0.5 text-[10px] font-semibold text-rose-700 dark:bg-rose-500/15 dark:text-rose-200">
+                        <span className="rounded-full bg-rose-100 px-1.5 py-0.5 text-2xs font-semibold text-rose-700 dark:bg-rose-500/15 dark:text-rose-200">
                           {t("channel_groups_page.deleted_badge")}
                         </span>
                       </span>

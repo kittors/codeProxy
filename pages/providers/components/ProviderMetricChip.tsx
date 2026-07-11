@@ -21,7 +21,7 @@ const toneClass: Record<MetricTone, string> = {
 export function ProviderMetricChip({ tone, icon, label, value, title }: ProviderMetricChipProps) {
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${toneClass[tone]}`}
+      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${toneClass[tone]}`}
       title={title}
     >
       {icon ? <span className="shrink-0">{icon}</span> : null}

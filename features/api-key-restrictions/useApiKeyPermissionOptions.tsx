@@ -160,7 +160,7 @@ export function useApiKeyPermissionOptions() {
           value: name,
           label: name,
           icon: (
-            <span className="inline-flex rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-600 dark:bg-neutral-800 dark:text-white/60">
+            <span className="inline-flex rounded-md bg-slate-100 px-1.5 py-0.5 text-2xs font-semibold uppercase tracking-wide text-slate-600 dark:bg-neutral-800 dark:text-white/60">
               {source}
             </span>
           ),

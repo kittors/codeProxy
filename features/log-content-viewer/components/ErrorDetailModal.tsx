@@ -167,13 +167,13 @@ export function ErrorDetailModal({ open, logId, model, onClose }: ErrorDetailMod
               {/* Full response */}
               <div className="relative">
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-white/35">
+                  <span className="text-2xs font-semibold uppercase tracking-widest text-slate-400 dark:text-white/35">
                     {t("error_detail.full_response")}
                   </span>
                   <button
                     type="button"
                     onClick={handleCopy}
-                    className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium text-slate-500 transition hover:bg-slate-100 dark:text-white/40 dark:hover:bg-neutral-800"
+                    className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-slate-500 transition hover:bg-slate-100 dark:text-white/40 dark:hover:bg-neutral-800"
                   >
                     {copied ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} />}
                     {copied ? t("common.copied") : t("log_content.copy")}

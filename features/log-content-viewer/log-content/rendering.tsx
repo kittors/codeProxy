@@ -124,7 +124,7 @@ const PROSE_CLASSES = `prose prose-sm dark:prose-invert max-w-none break-words l
   prose-h1:text-lg prose-h2:text-base prose-h3:text-sm
   prose-p:my-2 prose-p:leading-relaxed
   prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5
-  prose-code:rounded-md prose-code:bg-slate-100 prose-code:px-1.5 prose-code:py-0.5 prose-code:text-[13px] prose-code:font-mono prose-code:text-slate-700 prose-code:before:content-none prose-code:after:content-none
+  prose-code:rounded-md prose-code:bg-slate-100 prose-code:px-1.5 prose-code:py-0.5 prose-code:text-sm prose-code:font-mono prose-code:text-slate-700 prose-code:before:content-none prose-code:after:content-none
   dark:prose-code:bg-neutral-800 dark:prose-code:text-slate-300
   prose-pre:rounded-lg prose-pre:bg-slate-900 prose-pre:text-xs dark:prose-pre:bg-neutral-900
   prose-strong:font-semibold
@@ -146,7 +146,7 @@ function MarkdownBlock({ text }: { text: string }) {
 function TagBadge({ name, content }: { name: string; content: string }) {
   return (
     <div className="flex items-baseline gap-2 rounded-lg bg-slate-50 px-3 py-2 dark:bg-neutral-800/50">
-      <code className="shrink-0 rounded bg-slate-200/70 px-1.5 py-0.5 font-mono text-[11px] text-slate-500 dark:bg-neutral-700 dark:text-slate-400">
+      <code className="shrink-0 rounded bg-slate-200/70 px-1.5 py-0.5 font-mono text-xs text-slate-500 dark:bg-neutral-700 dark:text-slate-400">
         {name}
       </code>
       <span className="text-sm text-slate-700 dark:text-slate-200">{content}</span>
@@ -171,7 +171,7 @@ function TagSection({
         onClick={() => setExpanded((prev) => !prev)}
         className="flex w-full items-center gap-2 bg-slate-50 px-3.5 py-2 text-left text-xs font-medium text-slate-500 transition-colors hover:bg-slate-100 dark:bg-neutral-800/50 dark:text-slate-400 dark:hover:bg-neutral-800/80"
       >
-        <code className="shrink-0 rounded bg-slate-200/70 px-1.5 py-0.5 font-mono text-[11px] text-slate-600 dark:bg-neutral-700 dark:text-slate-300">
+        <code className="shrink-0 rounded bg-slate-200/70 px-1.5 py-0.5 font-mono text-xs text-slate-600 dark:bg-neutral-700 dark:text-slate-300">
           {name}
         </code>
         <span className="flex-1" />

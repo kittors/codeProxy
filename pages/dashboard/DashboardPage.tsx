@@ -128,7 +128,7 @@ const formatThroughputValue = (value: number) =>
   throughputNumberFormatter.format(Number.isFinite(value) ? value : 0);
 const formatRate = (rate: number) => `${rate.toFixed(2)}%`;
 const PANEL_SURFACE =
-  "rounded-[18px] border border-slate-200/85 bg-white shadow-[0_10px_26px_rgba(15,23,42,0.05)] dark:border-neutral-800 dark:bg-neutral-950/85 dark:shadow-[0_10px_26px_rgba(0,0,0,0.28)]";
+  "rounded-2xl border border-slate-200/85 bg-white shadow-[0_10px_26px_rgba(15,23,42,0.05)] dark:border-neutral-800 dark:bg-neutral-950/85 dark:shadow-[0_10px_26px_rgba(0,0,0,0.28)]";
 
 const formatThroughputTooltip = (params: any) => {
   const items = Array.isArray(params) ? params : [params];
@@ -152,7 +152,7 @@ function createSparklineOption(points: DashboardTrendPoint[], color: string): EC
       trigger: "axis",
       borderWidth: 0,
       backgroundColor: "rgba(15, 23, 42, 0.9)",
-      textStyle: { color: "#fff", fontSize: 11 },
+      textStyle: { color: "#fff", fontSize: 12 },
       formatter: (params: any) => {
         const first = Array.isArray(params) ? params[0] : params;
         return `${first?.axisValueLabel ?? ""}<br/>${formatDashboardTooltipNumber(Number(first?.data ?? 0))}`;
@@ -325,17 +325,17 @@ function DashboardKpiCard({
     >
       <div className="flex items-start justify-between gap-2">
         <div
-          className={`inline-flex h-9 w-9 items-center justify-center rounded-[14px] ${accent.iconWrap}`}
+          className={`inline-flex h-9 w-9 items-center justify-center rounded-2xl ${accent.iconWrap}`}
         >
           <Icon size={16} className={accent.iconColor} />
         </div>
       </div>
       <div className="mt-3">
         <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">{title}</p>
-        <div className="mt-2 text-[2rem] font-semibold leading-none tracking-tight text-slate-950 dark:text-white">
+        <div className="mt-2 text-3xl font-semibold leading-none tracking-tight text-slate-950 dark:text-white">
           {value}
         </div>
-        <p className="mt-2 text-[11px] text-slate-500 dark:text-white/45">{hint}</p>
+        <p className="mt-2 text-xs text-slate-500 dark:text-white/45">{hint}</p>
       </div>
       <div className="mt-auto pt-3">
         <EChart option={option} className="h-10" overflowVisible />
@@ -376,7 +376,7 @@ function ThroughputTrendChart({
       title={title}
       actions={
         <div
-          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${
             connected
               ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-300"
               : "bg-slate-100 text-slate-400 dark:bg-neutral-800 dark:text-white/45"
@@ -393,16 +393,16 @@ function ThroughputTrendChart({
       padding="compact"
     >
       <div className="mb-3 grid gap-3 sm:grid-cols-2">
-        <div className="rounded-[14px] bg-slate-50 px-3 py-2 dark:bg-neutral-900/70 dark:ring-1 dark:ring-white/8">
-          <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+        <div className="rounded-2xl bg-slate-50 px-3 py-2 dark:bg-neutral-900/70 dark:ring-1 dark:ring-white/8">
+          <div className="text-2xs font-semibold uppercase tracking-[0.18em] text-slate-400">
             RPM
           </div>
           <div className="mt-1 text-xl font-semibold tabular-nums text-blue-600 dark:text-blue-400">
             <DashboardMetricValue value={rpm} />
           </div>
         </div>
-        <div className="rounded-[14px] bg-slate-50 px-3 py-2 dark:bg-neutral-900/70 dark:ring-1 dark:ring-white/8">
-          <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+        <div className="rounded-2xl bg-slate-50 px-3 py-2 dark:bg-neutral-900/70 dark:ring-1 dark:ring-white/8">
+          <div className="text-2xs font-semibold uppercase tracking-[0.18em] text-slate-400">
             TPM
           </div>
           <div className="mt-1 text-xl font-semibold tabular-nums text-violet-600 dark:text-violet-400">
@@ -519,13 +519,13 @@ export function DashboardPage() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h2 className="text-[2rem] font-semibold tracking-tight text-slate-950 text-balance dark:text-white">
+          <h2 className="text-3xl font-semibold tracking-tight text-slate-950 text-balance dark:text-white">
             {t("dashboard.heading")}
           </h2>
           <p className="mt-1 text-sm text-slate-500 dark:text-white/55">
             {t("dashboard.hero_subtitle")}
           </p>
-          <p className="mt-2 text-[11px] text-slate-400 dark:text-white/40">
+          <p className="mt-2 text-xs text-slate-400 dark:text-white/40">
             {t("dashboard.overview_hint", { time: generatedAt })}
           </p>
         </div>

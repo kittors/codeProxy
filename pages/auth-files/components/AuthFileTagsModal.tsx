@@ -181,11 +181,11 @@ export function AuthFileTagsModal({
                       <span className="min-w-0 truncate font-medium">{tag}</span>
                       <span className="flex shrink-0 items-center gap-2">
                         {custom ? (
-                          <span className="rounded-full bg-sky-50 px-2 py-0.5 text-[10px] font-semibold text-sky-700 dark:bg-sky-500/15 dark:text-sky-200">
+                          <span className="rounded-full bg-sky-50 px-2 py-0.5 text-2xs font-semibold text-sky-700 dark:bg-sky-500/15 dark:text-sky-200">
                             {t("auth_files.custom_tag_label")}
                           </span>
                         ) : inherited ? (
-                          <span className="rounded-full bg-[#EBEBEC] px-2 py-0.5 text-[10px] font-semibold text-[#71717A] dark:bg-white/10 dark:text-white/60">
+                          <span className="rounded-full bg-[#EBEBEC] px-2 py-0.5 text-2xs font-semibold text-[#71717A] dark:bg-white/10 dark:text-white/60">
                             {t("auth_files.default_tags_label")}
                           </span>
                         ) : null}

@@ -408,7 +408,7 @@ function EndpointCallDoc({ doc }: { doc: EndpointDoc }) {
 
   return (
     <div className="space-y-4">
-      <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4 dark:border-neutral-800 dark:bg-neutral-900">
+      <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4 dark:border-neutral-800 dark:bg-neutral-900">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="text-sm font-semibold text-slate-900 dark:text-white">
@@ -439,7 +439,7 @@ function EndpointCallDoc({ doc }: { doc: EndpointDoc }) {
         <div className="border-b border-white/10 px-4 py-2 text-xs font-medium text-slate-300">
           curl
         </div>
-        <pre className="overflow-x-auto px-4 py-3 text-[13px] leading-6 text-slate-100">
+        <pre className="overflow-x-auto px-4 py-3 text-sm leading-6 text-slate-100">
           <code>{doc.curl}</code>
         </pre>
       </div>
@@ -1149,7 +1149,7 @@ function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: (
                 <div className="relative z-10 flex h-full w-full items-start">
                   {showGeneratingState ? (
                     <div className="max-w-md">
-                      <p className="text-3xl font-semibold tracking-tight text-slate-700 dark:text-white/92 sm:text-[38px]">
+                      <p className="text-3xl font-semibold tracking-tight text-slate-700 dark:text-white/92 sm:text-4xl">
                         {statusText}
                       </p>
                       <p className="mt-2 text-sm text-slate-500 dark:text-white/45">
@@ -1193,7 +1193,7 @@ function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: (
 
           <div
             data-testid="image-generation-composer"
-            className="relative shrink-0 overflow-hidden rounded-[20px] border border-slate-200 bg-white px-2.5 pt-2.5 pb-11 shadow-sm dark:border-neutral-800 dark:bg-neutral-950"
+            className="relative shrink-0 overflow-hidden rounded-2xl border border-slate-200 bg-white px-2.5 pt-2.5 pb-11 shadow-sm dark:border-neutral-800 dark:bg-neutral-950"
           >
             {IMAGE_EDITS_ENABLED && uploadedImages.length > 0 ? (
               <div

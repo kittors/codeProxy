@@ -95,7 +95,7 @@ export function ProvidersToolbar({
                 ? t("providers.batch_deselect_all")
                 : t("providers.batch_select_all")}
               {hasSelection ? (
-                <span className="absolute -right-1.5 -top-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-blue-600 px-1 text-[10px] font-semibold leading-none text-white">
+                <span className="absolute -right-1.5 -top-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-blue-600 px-1 text-2xs font-semibold leading-none text-white">
                   {selectedExportCount}
                 </span>
               ) : null}

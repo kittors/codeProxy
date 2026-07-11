@@ -1794,7 +1794,7 @@ function SourcePill({
         ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-200"
         : "bg-slate-100 text-slate-600 dark:bg-neutral-800 dark:text-white/60";
   return (
-    <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${className}`}>
+    <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${className}`}>
       {children}
     </span>
   );
