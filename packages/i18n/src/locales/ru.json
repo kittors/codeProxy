@@ -2278,6 +2278,13 @@
     "no_models": "Нет данных о моделях",
     "no_match": "Нет результатов"
   },
+  "oauth": {
+    "xai_endpoint_mode": "Эндпоинт запросов Grok",
+    "xai_endpoint_build": "Grok Build / CLI (лимит подписки)",
+    "xai_endpoint_api": "xAI API (API-лимит)",
+    "xai_endpoint_build_hint": "Использует эндпоинт Grok Build/CLI и лимит подписки. Это режим OAuth по умолчанию.",
+    "xai_endpoint_api_hint": "Использует api.x.ai и расходует лимит xAI API."
+  },
   "auto_update": {
     "title": "Доступно обновление",
     "description": "Проверьте заметки о выпуске перед обновлением Docker-развертывания.",

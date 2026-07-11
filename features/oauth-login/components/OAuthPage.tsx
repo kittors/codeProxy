@@ -18,6 +18,7 @@ import type {
 import { Card } from "@code-proxy/ui";
 import { Button } from "@code-proxy/ui";
 import { TextInput } from "@code-proxy/ui";
+import { Select } from "@code-proxy/ui";
 import { useToast } from "@code-proxy/ui";
 
 type ProviderStatus = "idle" | "waiting" | "success" | "error";
@@ -29,6 +30,7 @@ type ProviderState = {
   error?: string;
   polling?: boolean;
   projectId?: string;
+  usingApi?: boolean;
   callbackUrl?: string;
   callbackSubmitting?: boolean;
   callbackStatus?: "success" | "error";
@@ -220,6 +222,8 @@ export function OAuthPage() {
         provider === "gemini-cli"
           ? (states[provider]?.projectId || "").trim()
           : undefined;
+      const usingApi =
+        provider === "xai" ? states[provider]?.usingApi === true : undefined;
       if (timers.current[provider]) {
         window.clearInterval(timers.current[provider]);
         delete timers.current[provider];
@@ -242,7 +246,9 @@ export function OAuthPage() {
           provider,
           provider === "gemini-cli"
             ? { projectId: projectId || undefined }
-            : undefined,
+            : provider === "xai"
+              ? { usingApi }
+              : undefined,
         );
         updateProviderState(provider, {
           url: res.url,
@@ -432,6 +438,7 @@ export function OAuthPage() {
           const url = state.url ?? "";
           const polling = Boolean(state.polling);
           const manualCode = manualCodeProvider(provider.id);
+          const usingApi = state.usingApi === true;
 
           return (
             <Card
@@ -454,6 +461,38 @@ export function OAuthPage() {
                 </Button>
               }
             >
+              {provider.id === "xai" ? (
+                <div className="mb-3 grid gap-2 rounded-2xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-white/55">
+                    {t("oauth.xai_endpoint_mode")}
+                  </p>
+                  <Select
+                    value={usingApi ? "api" : "build"}
+                    onChange={(value) =>
+                      updateProviderState(provider.id, {
+                        usingApi: value === "api",
+                      })
+                    }
+                    options={[
+                      {
+                        value: "build",
+                        label: t("oauth.xai_endpoint_build"),
+                      },
+                      { value: "api", label: t("oauth.xai_endpoint_api") },
+                    ]}
+                    aria-label={t("oauth.xai_endpoint_mode")}
+                    disabled={disabled}
+                  />
+                  <p className="text-xs text-slate-600 dark:text-white/60">
+                    {t(
+                      usingApi
+                        ? "oauth.xai_endpoint_api_hint"
+                        : "oauth.xai_endpoint_build_hint",
+                    )}
+                  </p>
+                </div>
+              ) : null}
+
               {provider.id === "gemini-cli" ? (
                 <div className="mb-3">
                   <TextInput

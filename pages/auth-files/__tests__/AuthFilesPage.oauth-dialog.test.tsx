@@ -309,12 +309,25 @@ describe("AuthFilesPage OAuth login dialog", () => {
     const dialog = await screen.findByRole("dialog");
     const scoped = within(dialog);
     await user.click(scoped.getByRole("tab", { name: "xAI / Grok OAuth" }));
+    const endpointSelect = scoped.getByRole("combobox", {
+      name: "Grok request endpoint",
+    });
+    expect(endpointSelect).toHaveTextContent(
+      "Grok Build / CLI (subscription quota)",
+    );
+    expect(
+      scoped.getAllByPlaceholderText("Paste the code shown by xAI / Grok"),
+    ).toHaveLength(1);
+
     await user.click(
       scoped.getByRole("button", { name: "Start authorization" }),
     );
     await waitFor(() =>
-      expect(mocks.startAuth).toHaveBeenCalledWith("xai", {}),
+      expect(mocks.startAuth).toHaveBeenCalledWith("xai", {
+        usingApi: false,
+      }),
     );
+    expect(endpointSelect).toBeDisabled();
 
     await user.type(
       scoped.getByPlaceholderText("Paste the code shown by xAI / Grok"),
@@ -329,6 +342,50 @@ describe("AuthFilesPage OAuth login dialog", () => {
         {},
       );
     });
+  });
+
+  test("starts xAI OAuth with the API endpoint when selected", async () => {
+    const user = userEvent.setup();
+    mocks.startAuth.mockResolvedValueOnce({
+      url: "https://accounts.x.ai/oauth2/consent",
+      state: "xai-state",
+    });
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    await user.click(
+      await screen.findByRole("button", { name: "Add OAuth Login" }),
+    );
+    const scoped = within(await screen.findByRole("dialog"));
+    await user.click(scoped.getByRole("tab", { name: "xAI / Grok OAuth" }));
+
+    await user.click(
+      scoped.getByRole("combobox", { name: "Grok request endpoint" }),
+    );
+    await user.click(
+      await screen.findByRole("option", { name: "xAI API (API quota)" }),
+    );
+    expect(
+      scoped.getByText("Uses api.x.ai and consumes xAI API quota."),
+    ).toBeInTheDocument();
+
+    await user.click(
+      scoped.getByRole("button", { name: "Start authorization" }),
+    );
+
+    await waitFor(() =>
+      expect(mocks.startAuth).toHaveBeenCalledWith("xai", { usingApi: true }),
+    );
   });
 
   test("clears OAuth dialog state when reopened", async () => {
