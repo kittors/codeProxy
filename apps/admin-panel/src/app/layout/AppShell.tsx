@@ -239,7 +239,7 @@ function SidebarChildLink({
       onMouseEnter={() => onWarm(item.to)}
       onFocus={() => onWarm(item.to)}
       className={
-        "flex h-9 min-w-0 items-center gap-2.5 rounded-xl px-3 text-sm whitespace-nowrap transition-colors duration-150 " +
+        "flex h-9 min-w-0 items-center gap-3 rounded-xl px-3 text-sm whitespace-nowrap transition-colors duration-150 " +
         (active
           ? "bg-slate-100 font-semibold text-slate-950 dark:bg-white/10 dark:text-white"
           : "font-medium text-slate-600 hover:bg-slate-100/80 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-white/[0.06] dark:hover:text-white")
@@ -287,12 +287,12 @@ function SidebarPrimaryLink({
           : "font-medium text-slate-600 hover:bg-slate-100/80 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-white/[0.06] dark:hover:text-white")
       }
     >
-      <span className="grid h-10 w-12 shrink-0 place-items-center">
+      <span className="ml-1 grid h-10 w-10 shrink-0 place-items-center">
         <Icon size={16} className="opacity-80" />
       </span>
       <span
         className={
-          "min-w-0 truncate pl-2 pr-3 text-sm transition-[opacity,transform] duration-[180ms] ease-[cubic-bezier(0.22,1,0.36,1)] " +
+          "min-w-0 truncate pr-3 text-sm transition-[opacity,transform] duration-[180ms] ease-[cubic-bezier(0.22,1,0.36,1)] " +
           (labelVisible
             ? "translate-x-0 opacity-100 delay-100"
             : "-translate-x-1 opacity-0 delay-0")
@@ -505,12 +505,12 @@ function SidebarMenuGroup({
             : "text-slate-500 hover:bg-slate-100/80 hover:text-slate-800 dark:text-slate-400 dark:hover:bg-white/[0.06] dark:hover:text-slate-200")
         }
       >
-        <span className="grid h-10 w-12 shrink-0 place-items-center">
+        <span className="ml-1 grid h-10 w-10 shrink-0 place-items-center">
           <GroupIcon size={16} className="opacity-80" />
         </span>
         <span
           className={
-            "min-w-0 flex-1 truncate pl-2 text-sm font-semibold transition-[opacity,transform] duration-[180ms] ease-[cubic-bezier(0.22,1,0.36,1)] " +
+            "min-w-0 flex-1 truncate text-sm font-semibold transition-[opacity,transform] duration-[180ms] ease-[cubic-bezier(0.22,1,0.36,1)] " +
             (labelsVisible
               ? "translate-x-0 opacity-100 delay-100"
               : "-translate-x-1 opacity-0 delay-0")

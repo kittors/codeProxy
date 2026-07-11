@@ -118,6 +118,24 @@ test("Sidebar: collapse/expand should keep nav items nowrap and slide out of vie
   await expect(requestLogsLink).toBeVisible();
   await expect(requestLogsLink).toHaveCSS("font-size", "14px");
 
+  const runtimeGroup = page.getByRole("button", { name: /Operations|运行监控/i });
+  const iconLabelGaps = await Promise.all(
+    [dashboardLink, runtimeGroup, requestLogsLink].map((row) =>
+      row.evaluate((element) => {
+        const icon = element.querySelector("svg");
+        const label = element.children.item(1);
+        if (!icon || !(label instanceof HTMLElement)) {
+          throw new Error("Missing sidebar icon or label");
+        }
+        return label.getBoundingClientRect().left - icon.getBoundingClientRect().right;
+      }),
+    ),
+  );
+  for (const gap of iconLabelGaps) {
+    expect(gap).toBeGreaterThanOrEqual(11);
+    expect(gap).toBeLessThanOrEqual(13);
+  }
+
   const configLink = page.getByRole("link", { name: /^Config|配置面板$/i });
   await expect(configLink).toHaveAttribute("aria-current", "page");
   await expect(configLink).toHaveClass(/bg-slate-100/);
