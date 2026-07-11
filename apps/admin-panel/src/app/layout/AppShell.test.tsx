@@ -165,11 +165,36 @@ describe("AppShell route progress", () => {
 
     const requestLogs = screen.getByRole("link", { name: /Request Logs|请求日志/i });
     expect(requestLogs).toHaveAttribute("aria-current", "page");
-    expect(requestLogs).toHaveClass("bg-slate-100", "text-[12px]");
+    expect(requestLogs).toHaveClass("bg-slate-100", "text-[13px]", "h-9");
     expect(requestLogs.className).not.toContain("from-blue-600");
 
     fireEvent.click(runtimeGroup);
     expect(runtimeGroup).toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByRole("link", { name: /Request Logs|请求日志/i })).not.toBeInTheDocument();
+  });
+
+  test("keeps a stable icon rail and the same sidebar toggle icon when collapsed", () => {
+    renderShell("/config");
+
+    const collapseButton = screen.getByRole("button", {
+      name: /Collapse Sidebar|收起侧边栏/i,
+    });
+    const iconClass = collapseButton.querySelector("svg")?.getAttribute("class");
+
+    fireEvent.click(collapseButton);
+
+    const aside = document.querySelector("aside");
+    expect(aside).toHaveAttribute("data-collapsed", "true");
+    expect(aside).toHaveClass("w-16");
+
+    const expandButton = screen.getByRole("button", {
+      name: /Expand Sidebar|展开侧边栏/i,
+    });
+    expect(expandButton.querySelector("svg")?.getAttribute("class")).toBe(iconClass);
+    expect(screen.getByRole("link", { name: /Dashboard|仪表盘/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /Models & Routing|模型与路由/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Admin" })).toBeInTheDocument();
   });
 });

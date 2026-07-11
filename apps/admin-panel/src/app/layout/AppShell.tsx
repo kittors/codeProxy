@@ -24,8 +24,7 @@ import {
   Info,
   LogOut,
   Network,
-  PanelLeftClose,
-  PanelLeftOpen,
+  PanelLeft,
   ScrollText,
   Settings,
   ShieldCheck,
@@ -181,42 +180,133 @@ function SidebarNavLink({
   label,
   onClick,
   onWarm,
+  tabIndex,
+  role,
 }: {
   item: SidebarNavItem;
   active: boolean;
   label: string;
   onClick: (event: MouseEvent<HTMLAnchorElement>, to: string) => void;
   onWarm: (to: string) => void;
+  tabIndex?: number;
+  role?: "menuitem";
 }) {
   const Icon = item.icon;
   return (
     <Link
       to={item.to}
       viewTransition
+      tabIndex={tabIndex}
+      role={role}
       aria-current={active ? "page" : undefined}
       onClick={(event) => onClick(event, item.to)}
       onMouseEnter={() => onWarm(item.to)}
       onFocus={() => onWarm(item.to)}
       className={
-        "flex min-w-0 items-center gap-2.5 rounded-xl px-3 py-2 text-[12px] whitespace-nowrap transition-colors duration-150 " +
+        "flex h-9 min-w-0 items-center gap-2.5 rounded-xl px-3 text-[13px] whitespace-nowrap transition-colors duration-150 " +
         (active
           ? "bg-slate-100 font-semibold text-slate-950 dark:bg-white/10 dark:text-white"
           : "font-medium text-slate-600 hover:bg-slate-100/80 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-white/[0.06] dark:hover:text-white")
       }
     >
-      <Icon size={14} className="shrink-0 opacity-80" />
+      <Icon size={15} className="shrink-0 opacity-80" />
       <span className="min-w-0 truncate">{label}</span>
     </Link>
+  );
+}
+
+function SidebarToggle({
+  label,
+  onToggle,
+  className,
+}: {
+  label: string;
+  onToggle: () => void;
+  className: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-label={label}
+      data-tooltip={label}
+      data-tooltip-placement="right"
+      className={
+        "inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 transition-[background-color,color,opacity] duration-150 hover:bg-slate-100 hover:text-slate-950 focus-visible:bg-slate-100 focus-visible:text-slate-950 focus-visible:outline-none dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-white dark:focus-visible:bg-white/10 dark:focus-visible:text-white " +
+        className
+      }
+    >
+      <PanelLeft size={18} />
+    </button>
+  );
+}
+
+function SidebarRailGroup({
+  group,
+  activeTo,
+  label,
+  onClick,
+  onWarm,
+}: {
+  group: SidebarNavGroup;
+  activeTo: string | null;
+  label: string;
+  onClick: (event: MouseEvent<HTMLAnchorElement>, to: string) => void;
+  onWarm: (to: string) => void;
+}) {
+  const { t } = useTranslation();
+  const GroupIcon = group.icon;
+  const active = group.items.some((item) => item.to === activeTo);
+
+  return (
+    <div className="group/flyout relative" data-tooltip-managed="true">
+      <button
+        type="button"
+        aria-label={label}
+        aria-haspopup="menu"
+        className={
+          "flex h-10 w-10 items-center justify-center rounded-xl transition-colors duration-150 focus-visible:outline-none " +
+          (active
+            ? "bg-slate-100 text-slate-950 dark:bg-white/10 dark:text-white"
+            : "text-slate-500 hover:bg-slate-100 hover:text-slate-950 focus-visible:bg-slate-100 focus-visible:text-slate-950 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-white dark:focus-visible:bg-white/10 dark:focus-visible:text-white")
+        }
+      >
+        <GroupIcon size={17} />
+      </button>
+      <div
+        role="menu"
+        className="invisible absolute left-[60px] top-0 z-50 w-52 translate-x-1 rounded-2xl border border-slate-200 bg-white p-2 opacity-0 shadow-[0_16px_48px_rgba(15,23,42,0.14)] transition-[opacity,transform,visibility] duration-180 ease-out before:absolute before:-left-3 before:top-0 before:h-full before:w-3 group-hover/flyout:visible group-hover/flyout:translate-x-0 group-hover/flyout:opacity-100 group-focus-within/flyout:visible group-focus-within/flyout:translate-x-0 group-focus-within/flyout:opacity-100 dark:border-neutral-800 dark:bg-neutral-950 dark:shadow-black/40"
+      >
+        <div className="px-3 pb-1.5 pt-1 text-[11px] font-semibold tracking-wide text-slate-400">
+          {label}
+        </div>
+        <div className="space-y-0.5">
+          {group.items.map((item) => (
+            <SidebarNavLink
+              key={item.to}
+              item={item}
+              active={activeTo === item.to}
+              label={t(item.i18nKey)}
+              onClick={onClick}
+              onWarm={onWarm}
+              role="menuitem"
+            />
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }
 
 function ShellSidebar({
   collapsed,
   mode,
+  onToggleSidebar,
   onNavigate,
 }: {
   collapsed: boolean;
   mode: "desktop" | "mobile";
+  onToggleSidebar: () => void;
   onNavigate?: () => void;
 }) {
   const location = useLocation();
@@ -274,6 +364,7 @@ function ShellSidebar({
 
   const isMobile = mode === "mobile";
   const accountLogoutLabel = t("shell.logout_button");
+  const sidebarLabel = collapsed ? t("shell.expand_sidebar") : t("shell.collapse_sidebar");
 
   const warmPageRoute = useCallback((to: string) => {
     void preloadPageRoute(to).catch(() => undefined);
@@ -329,53 +420,73 @@ function ShellSidebar({
     [clearProgressTimers],
   );
 
+  const logoutButton = (
+    <button
+      type="button"
+      onClick={() => {
+        navigate("/login", { replace: true, viewTransition: true });
+        logout();
+      }}
+      aria-label={accountLogoutLabel}
+      className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-slate-400 transition-colors duration-150 hover:bg-rose-50 hover:text-rose-600 focus-visible:bg-rose-50 focus-visible:text-rose-600 focus-visible:outline-none dark:text-slate-500 dark:hover:bg-rose-400/10 dark:hover:text-rose-300"
+    >
+      <LogOut size={15} />
+    </button>
+  );
+
   return (
     <>
       {pendingTo && <div className={progressDone ? "rp rp-done" : "rp"} />}
       <aside
+        data-collapsed={!isMobile && collapsed ? "true" : "false"}
         className={[
-          "shrink-0 overflow-hidden bg-white/94 dark:bg-neutral-950/88",
-          isMobile ? "fixed inset-y-0 left-0 z-40 w-56" : "h-[100dvh]",
+          "group/sidebar relative shrink-0 overflow-visible bg-white/94 dark:bg-neutral-950/88",
+          isMobile ? "fixed inset-y-0 left-0 z-40 w-60" : "z-30 h-[100dvh]",
           "border-r border-slate-200 shadow-[12px_0_28px_rgba(15,23,42,0.04)] dark:border-neutral-800",
-          "motion-reduce:transition-none motion-safe:transition-[width,transform,background-color,border-color] motion-safe:duration-300 motion-safe:ease-out",
+          "motion-reduce:transition-none motion-safe:transition-[width,transform,background-color,border-color] motion-safe:duration-300 motion-safe:ease-[cubic-bezier(0.22,1,0.36,1)]",
           isMobile
             ? collapsed
               ? "-translate-x-full"
               : "translate-x-0"
             : collapsed
-              ? "w-0 border-r-0"
-              : "w-56",
+              ? "w-16"
+              : "w-60",
         ].join(" ")}
-        aria-hidden={collapsed}
+        aria-hidden={isMobile && collapsed}
       >
         <div
+          aria-hidden={collapsed}
           className={[
-            "flex h-full w-56 flex-col",
-            "motion-reduce:transition-none motion-safe:transition-[transform,opacity] motion-safe:duration-300 motion-safe:ease-out",
-            collapsed
-              ? "pointer-events-none opacity-0 -translate-x-6"
-              : "opacity-100 translate-x-0",
+            "absolute inset-0 flex w-60 flex-col transition-[opacity,visibility] duration-180",
+            collapsed ? "pointer-events-none invisible opacity-0" : "visible opacity-100 delay-75",
           ].join(" ")}
         >
-          <div className="flex h-[72px] items-center gap-3 px-5 pt-5 text-slate-900 transition-colors duration-200 ease-out dark:text-white whitespace-nowrap">
-            <span className="grid h-9 w-9 place-items-center rounded-[14px] bg-blue-600 text-white shadow-[0_10px_20px_rgba(37,99,235,0.22)]">
-              <LayoutDashboard size={18} />
+          <div className="flex h-14 shrink-0 items-center gap-3 border-b border-slate-200/80 px-4 text-slate-900 whitespace-nowrap dark:border-neutral-800 dark:text-white">
+            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-blue-600 text-white shadow-[0_8px_18px_rgba(37,99,235,0.2)]">
+              <LayoutDashboard size={17} />
             </span>
-            <span className="leading-tight">
-              <span className="block text-lg font-semibold tracking-tight">
+            <span className="min-w-0 flex-1 leading-tight">
+              <span className="block truncate text-[15px] font-semibold tracking-tight">
                 {t("shell.console")}
               </span>
-              <span className="block text-[10px] font-medium tracking-normal text-slate-400">
-                CLI Proxy
-              </span>
+              <span className="block text-[10px] font-medium text-slate-400">CLI Proxy</span>
             </span>
+            <SidebarToggle
+              label={sidebarLabel}
+              onToggle={onToggleSidebar}
+              className={
+                isMobile
+                  ? "opacity-100"
+                  : "opacity-0 group-hover/sidebar:opacity-100 focus-visible:opacity-100"
+              }
+            />
           </div>
           <ScrollArea
-            className="flex-1 [&_[data-scroll-area-scrollbar='y']]:right-1 [&_[data-scroll-area-scrollbar='y']]:w-5"
+            className="min-h-0 flex-1 [&_[data-scroll-area-scrollbar='y']]:right-1 [&_[data-scroll-area-scrollbar='y']]:w-5"
             scrollbarVisibility="track-hover"
             scrollbarTrackInset={16}
           >
-            <nav className="space-y-1 px-3 pb-4 pt-4">
+            <nav className="space-y-1 px-3 pb-4 pt-3">
               <SidebarNavLink
                 item={DASHBOARD_NAV_ITEM}
                 active={activeTo === DASHBOARD_NAV_ITEM.to}
@@ -397,79 +508,166 @@ function ShellSidebar({
                         aria-controls={contentId}
                         onClick={() => toggleGroup(group.id)}
                         className={
-                          "flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-[12px] font-semibold whitespace-nowrap transition-colors duration-150 " +
+                          "flex h-10 w-full items-center gap-2.5 rounded-xl px-3 text-left text-[13px] font-semibold whitespace-nowrap transition-colors duration-150 " +
                           (groupActive
                             ? "text-slate-950 dark:text-white"
                             : "text-slate-500 hover:bg-slate-100/80 hover:text-slate-800 dark:text-slate-400 dark:hover:bg-white/[0.06] dark:hover:text-slate-200")
                         }
                       >
-                        <GroupIcon size={14} className="shrink-0 opacity-80" />
+                        <GroupIcon size={16} className="shrink-0 opacity-80" />
                         <span className="min-w-0 flex-1 truncate">{t(group.i18nKey)}</span>
                         <ChevronDown
-                          size={13}
+                          size={14}
                           className={
-                            "shrink-0 opacity-60 transition-transform duration-200 " +
+                            "shrink-0 opacity-55 transition-transform duration-250 ease-[cubic-bezier(0.22,1,0.36,1)] " +
                             (open ? "rotate-0" : "-rotate-90")
                           }
                         />
                       </button>
-                      {open ? (
-                        <div id={contentId} className="mt-0.5 space-y-0.5 pl-3">
-                          {group.items.map((item) => (
-                            <SidebarNavLink
-                              key={item.to}
-                              item={item}
-                              active={activeTo === item.to}
-                              label={t(item.i18nKey)}
-                              onClick={handleNavClick}
-                              onWarm={warmPageRoute}
-                            />
-                          ))}
+                      <div
+                        id={contentId}
+                        aria-hidden={!open}
+                        className={
+                          "grid transition-[grid-template-rows,opacity] duration-250 ease-[cubic-bezier(0.22,1,0.36,1)] " +
+                          (open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0")
+                        }
+                      >
+                        <div className="min-h-0 overflow-hidden">
+                          <div className="space-y-0.5 pb-1 pl-3 pt-0.5">
+                            {group.items.map((item) => (
+                              <SidebarNavLink
+                                key={item.to}
+                                item={item}
+                                active={activeTo === item.to}
+                                label={t(item.i18nKey)}
+                                onClick={handleNavClick}
+                                onWarm={warmPageRoute}
+                                tabIndex={open ? undefined : -1}
+                              />
+                            ))}
+                          </div>
                         </div>
-                      ) : null}
+                      </div>
                     </div>
                   );
                 })}
               </div>
             </nav>
           </ScrollArea>
-          <div className="space-y-3 px-3 pb-4">
-            <div className="flex items-center gap-3 rounded-[18px] bg-slate-50/80 p-3 dark:bg-white/[0.04]">
-              <div className="grid h-10 w-10 place-items-center rounded-[14px] bg-gradient-to-br from-blue-600 to-sky-500 text-white shadow-[0_10px_22px_rgba(37,99,235,0.2)]">
-                <ShieldCheck size={18} />
+          <div className="shrink-0 border-t border-slate-200/80 px-3 py-3 dark:border-neutral-800">
+            <div className="flex h-11 items-center gap-3 px-1">
+              <div className="relative grid h-8 w-8 shrink-0 place-items-center rounded-full bg-blue-600 text-[11px] font-semibold text-white shadow-[0_7px_16px_rgba(37,99,235,0.18)]">
+                AD
+                <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-white bg-emerald-500 dark:border-neutral-950" />
               </div>
-              <div className="min-w-0 flex-1">
-                <div className="truncate text-sm font-semibold text-slate-950 dark:text-white">
+              <div className="min-w-0 flex-1 leading-tight">
+                <div className="truncate text-[13px] font-semibold text-slate-950 dark:text-white">
                   Admin
                 </div>
-                <div className="truncate text-[11px] text-slate-400">
+                <div className="mt-0.5 truncate text-[10px] text-slate-400">
                   {t("shell.sidebar_account_role")}
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={() => {
-                  navigate("/login", { replace: true, viewTransition: true });
-                  logout();
-                }}
-                aria-label={accountLogoutLabel}
-                title={accountLogoutLabel}
-                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-[14px] bg-transparent text-slate-400 transition-colors duration-200 ease-out hover:text-rose-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400/30 dark:text-slate-500 dark:hover:text-rose-300 dark:focus-visible:ring-rose-300/20"
-              >
-                <LogOut size={15} />
-              </button>
+              {logoutButton}
             </div>
           </div>
         </div>
+
+        {!isMobile ? (
+          <div
+            aria-hidden={!collapsed}
+            className={[
+              "absolute inset-0 flex w-16 flex-col items-center transition-[opacity,visibility] duration-180",
+              collapsed
+                ? "visible opacity-100 delay-75"
+                : "pointer-events-none invisible opacity-0",
+            ].join(" ")}
+          >
+            <div className="relative grid h-14 w-full shrink-0 place-items-center border-b border-slate-200/80 dark:border-neutral-800">
+              <span className="grid h-8 w-8 place-items-center rounded-xl bg-blue-600 text-white shadow-[0_8px_18px_rgba(37,99,235,0.2)] transition-opacity duration-150 group-hover/sidebar:opacity-0">
+                <LayoutDashboard size={17} />
+              </span>
+              <SidebarToggle
+                label={sidebarLabel}
+                onToggle={onToggleSidebar}
+                className="absolute opacity-0 group-hover/sidebar:opacity-100 focus-visible:opacity-100"
+              />
+            </div>
+            <nav className="flex min-h-0 w-full flex-1 flex-col items-center gap-1.5 overflow-visible px-2 py-3">
+              <Link
+                to={DASHBOARD_NAV_ITEM.to}
+                viewTransition
+                aria-label={t(DASHBOARD_NAV_ITEM.i18nKey)}
+                aria-current={activeTo === DASHBOARD_NAV_ITEM.to ? "page" : undefined}
+                data-tooltip={t(DASHBOARD_NAV_ITEM.i18nKey)}
+                data-tooltip-placement="right"
+                onClick={(event) => handleNavClick(event, DASHBOARD_NAV_ITEM.to)}
+                onMouseEnter={() => warmPageRoute(DASHBOARD_NAV_ITEM.to)}
+                onFocus={() => warmPageRoute(DASHBOARD_NAV_ITEM.to)}
+                className={
+                  "flex h-10 w-10 items-center justify-center rounded-xl transition-colors duration-150 " +
+                  (activeTo === DASHBOARD_NAV_ITEM.to
+                    ? "bg-slate-100 text-slate-950 dark:bg-white/10 dark:text-white"
+                    : "text-slate-500 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-white")
+                }
+              >
+                <LayoutDashboard size={17} />
+              </Link>
+              {NAV_GROUPS.map((group) => (
+                <SidebarRailGroup
+                  key={group.id}
+                  group={group}
+                  activeTo={activeTo}
+                  label={t(group.i18nKey)}
+                  onClick={handleNavClick}
+                  onWarm={warmPageRoute}
+                />
+              ))}
+            </nav>
+            <div className="w-full shrink-0 border-t border-slate-200/80 px-2 py-3 dark:border-neutral-800">
+              <div
+                className="group/account relative flex justify-center"
+                data-tooltip-managed="true"
+              >
+                <button
+                  type="button"
+                  aria-label="Admin"
+                  className="relative grid h-10 w-10 place-items-center rounded-full bg-blue-600 text-[11px] font-semibold text-white shadow-[0_7px_16px_rgba(37,99,235,0.18)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/35"
+                >
+                  AD
+                  <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-white bg-emerald-500 dark:border-neutral-950" />
+                </button>
+                <div className="invisible absolute bottom-0 left-[64px] z-50 w-52 translate-x-1 rounded-2xl border border-slate-200 bg-white p-2 opacity-0 shadow-[0_16px_48px_rgba(15,23,42,0.14)] transition-[opacity,transform,visibility] duration-180 ease-out before:absolute before:-left-3 before:top-0 before:h-full before:w-3 group-hover/account:visible group-hover/account:translate-x-0 group-hover/account:opacity-100 group-focus-within/account:visible group-focus-within/account:translate-x-0 group-focus-within/account:opacity-100 dark:border-neutral-800 dark:bg-neutral-950 dark:shadow-black/40">
+                  <div className="flex items-center gap-3 px-2 py-2">
+                    <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-blue-600 text-[11px] font-semibold text-white">
+                      AD
+                    </div>
+                    <div className="min-w-0 flex-1 leading-tight">
+                      <div className="truncate text-[13px] font-semibold text-slate-950 dark:text-white">
+                        Admin
+                      </div>
+                      <div className="mt-0.5 truncate text-[10px] text-slate-400">
+                        {t("shell.sidebar_account_role")}
+                      </div>
+                    </div>
+                    {logoutButton}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : null}
       </aside>
     </>
   );
 }
 
 function ShellHeader({
+  isMobile,
   sidebarCollapsed,
   onToggleSidebar,
 }: {
+  isMobile: boolean;
   sidebarCollapsed: boolean;
   onToggleSidebar: () => void;
 }) {
@@ -477,24 +675,23 @@ function ShellHeader({
   const {
     state: { titleKey },
   } = useShell();
-
-  const SidebarIcon = sidebarCollapsed ? PanelLeftOpen : PanelLeftClose;
   const sidebarLabel = sidebarCollapsed ? t("shell.expand_sidebar") : t("shell.collapse_sidebar");
 
   return (
     <header className="z-20 shrink-0 border-b border-slate-200 bg-white/75 backdrop-blur-xl motion-reduce:transition-none motion-safe:transition-colors motion-safe:duration-200 motion-safe:ease-out dark:border-neutral-800 dark:bg-neutral-950/60">
       <h1 className="sr-only">{t(titleKey)}</h1>
       <div className="flex h-14 items-center justify-between gap-3 px-3 sm:px-6">
-        <div className="flex min-w-0 items-center gap-2 sm:gap-3">
-          <button
-            type="button"
-            onClick={onToggleSidebar}
-            aria-label={sidebarLabel}
-            title={sidebarLabel}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full border-0 bg-transparent text-slate-500 shadow-none transition-[color,transform] duration-150 ease-out hover:-translate-y-0.5 hover:text-slate-900 active:translate-y-0 active:scale-95 dark:text-slate-400 dark:hover:text-white"
-          >
-            <SidebarIcon size={16} />
-          </button>
+        <div className="flex h-9 w-9 items-center">
+          {isMobile ? (
+            <button
+              type="button"
+              onClick={onToggleSidebar}
+              aria-label={sidebarLabel}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 transition-colors duration-150 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-white"
+            >
+              <PanelLeft size={18} />
+            </button>
+          ) : null}
         </div>
         <div className="flex shrink-0 items-center gap-1 sm:gap-2">
           <LanguageSelector className="inline-flex h-9 items-center justify-center gap-0.5 rounded-xl px-1.5 text-slate-500 transition-colors duration-200 ease-out hover:text-slate-900 dark:text-slate-400 dark:hover:text-white" />
@@ -623,10 +820,15 @@ export function AppShell({ children, onLogout }: PropsWithChildren<{ onLogout?: 
           <ShellSidebar
             collapsed={sidebarCollapsed}
             mode={isMobile ? "mobile" : "desktop"}
+            onToggleSidebar={toggleSidebar}
             onNavigate={isMobile ? () => setMobileSidebarOpen(false) : undefined}
           />
           <div className="flex min-w-0 flex-1 flex-col">
-            <ShellHeader sidebarCollapsed={sidebarCollapsed} onToggleSidebar={toggleSidebar} />
+            <ShellHeader
+              isMobile={isMobile}
+              sidebarCollapsed={sidebarCollapsed}
+              onToggleSidebar={toggleSidebar}
+            />
             <div className="flex-1 overflow-y-auto overflow-x-hidden">
               <ShellMain>{children}</ShellMain>
             </div>

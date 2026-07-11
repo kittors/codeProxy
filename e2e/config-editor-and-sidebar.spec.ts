@@ -103,7 +103,7 @@ test("Sidebar: collapse/expand should keep nav items nowrap and slide out of vie
 
   const requestLogsLink = page.getByRole("link", { name: /Request Logs|请求日志/i });
   await expect(requestLogsLink).toBeVisible();
-  await expect(requestLogsLink).toHaveCSS("font-size", "12px");
+  await expect(requestLogsLink).toHaveCSS("font-size", "13px");
 
   const configLink = page.getByRole("link", { name: /^Config|配置面板$/i });
   await expect(configLink).toHaveAttribute("aria-current", "page");
@@ -121,6 +121,7 @@ test("Sidebar: collapse/expand should keep nav items nowrap and slide out of vie
   const aside = page.locator("aside");
   const sidebarScrollbar = aside.locator("[data-scroll-area-scrollbar='y']");
   await expect(sidebarScrollbar).toHaveCount(1);
+  await page.mouse.move(760, 120);
   await expect
     .poll(async () => Number(await sidebarScrollbar.evaluate((el) => getComputedStyle(el).opacity)))
     .toBeLessThan(0.05);
@@ -135,22 +136,49 @@ test("Sidebar: collapse/expand should keep nav items nowrap and slide out of vie
     .poll(async () => Number(await sidebarScrollbar.evaluate((el) => getComputedStyle(el).opacity)))
     .toBeLessThan(0.05);
 
-  await page.getByRole("button", { name: /Collapse Sidebar|收起侧边栏/i }).click();
-  await expect(page.getByRole("button", { name: /Expand Sidebar|展开侧边栏/i })).toBeVisible();
+  await aside.hover();
+  const collapseButton = page.getByRole("button", {
+    name: /Collapse Sidebar|收起侧边栏/i,
+  });
+  const toggleIconClass = await collapseButton.locator("svg").getAttribute("class");
+  await collapseButton.click();
+
+  const expandButton = page.getByRole("button", { name: /Expand Sidebar|展开侧边栏/i });
+  await aside.hover();
+  await expect(expandButton).toBeVisible();
+  await expect(expandButton.locator("svg")).toHaveAttribute("class", toggleIconClass ?? "");
 
   await expect
     .poll(async () => {
       return await aside.evaluate((el) => el.getBoundingClientRect().width);
     })
-    .toBeLessThan(2);
+    .toBeGreaterThan(60);
+  await expect
+    .poll(async () => {
+      return await aside.evaluate((el) => el.getBoundingClientRect().width);
+    })
+    .toBeLessThan(76);
 
-  await page.getByRole("button", { name: /Expand Sidebar|展开侧边栏/i }).click();
+  const collapsedModelsGroup = page.getByRole("button", {
+    name: /Models & Routing|模型与路由/i,
+  });
+  const railPositionBefore = await collapsedModelsGroup.boundingBox();
+  await collapsedModelsGroup.hover();
+  await expect(page.getByRole("menuitem", { name: /^Models$|^模型管理$/i })).toBeVisible();
+  const railPositionAfter = await collapsedModelsGroup.boundingBox();
+  expect(railPositionAfter?.x).toBe(railPositionBefore?.x);
+  expect(railPositionAfter?.y).toBe(railPositionBefore?.y);
+  await expect(page.getByRole("button", { name: "Admin" })).toBeVisible();
+
+  await aside.hover();
+  await expandButton.click();
+  await aside.hover();
   await expect(page.getByRole("button", { name: /Collapse Sidebar|收起侧边栏/i })).toBeVisible();
   await expect
     .poll(async () => {
       return await aside.evaluate((el) => el.getBoundingClientRect().width);
     })
-    .toBeGreaterThan(200);
+    .toBeGreaterThan(220);
 });
 
 test("API Keys: table should scroll vertically when many keys are listed", async ({ page }) => {
