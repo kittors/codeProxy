@@ -469,12 +469,14 @@ export function ContentModal({
   onClose,
   children,
   tabs,
+  description,
 }: {
   open: boolean;
   model: string;
   onClose: () => void;
   children: React.ReactNode;
-  tabs: React.ReactNode;
+  tabs?: React.ReactNode;
+  description?: string;
 }) {
   const { t } = useTranslation();
 
@@ -525,7 +527,7 @@ export function ContentModal({
                   {model ? ` · ${model}` : ""}
                 </h2>
                 <p className="mt-1 text-sm text-slate-500 dark:text-white/50">
-                  {t("log_content.title")}
+                  {description || t("log_content.title")}
                 </p>
               </div>
               <button
@@ -537,9 +539,11 @@ export function ContentModal({
                 <X size={16} />
               </button>
             </div>
-            <div className="shrink-0 border-b border-slate-100 bg-white px-5 py-2 dark:border-neutral-800/60 dark:bg-neutral-950">
-              {tabs}
-            </div>
+            {tabs ? (
+              <div className="shrink-0 border-b border-slate-100 bg-white px-5 py-2 dark:border-neutral-800/60 dark:bg-neutral-950">
+                {tabs}
+              </div>
+            ) : null}
             <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-5 py-4">{children}</div>
           </motion.div>
         </motion.div>

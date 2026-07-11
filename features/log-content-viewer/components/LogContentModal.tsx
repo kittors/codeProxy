@@ -669,6 +669,7 @@ export function LogContentModal({
   initialTab = "input",
   onClose,
   showRequestDetails = false,
+  showBodyContent = true,
   fetchFn,
   fetchPartFn,
   fetchDetailsFn,
@@ -683,7 +684,9 @@ export function LogContentModal({
     }),
     [t],
   );
-  const [activeTab, setActiveTab] = useState<LogContentPart>(initialTab);
+  const detailsOnly = showRequestDetails && !showBodyContent;
+  const resolvedInitialTab: LogContentPart = detailsOnly ? "details" : initialTab;
+  const [activeTab, setActiveTab] = useState<LogContentPart>(resolvedInitialTab);
   const [viewMode, setViewMode] = useState<"rendered" | "raw">("rendered");
   const [inputParsed, setInputParsed] = useState<AsyncParsedState>({
     status: "idle",
@@ -725,7 +728,7 @@ export function LogContentModal({
   } = useLogContentData({
     open: dataOpen,
     logId,
-    initialTab,
+    initialTab: resolvedInitialTab,
     fetchFn,
     fetchPartFn,
     fetchDetailsFn,
@@ -763,8 +766,8 @@ export function LogContentModal({
   );
 
   useEffect(() => {
-    setActiveTab(initialTab);
-  }, [initialTab, logId]);
+    setActiveTab(resolvedInitialTab);
+  }, [resolvedInitialTab, logId]);
 
   useEffect(() => {
     if (!open) {
@@ -792,7 +795,7 @@ export function LogContentModal({
 
   useEffect(() => {
     if (!dataOpen || !logId) return;
-    if (activeTab === initialTab) return;
+    if (activeTab === resolvedInitialTab) return;
     if (activeTab === "details" && !showRequestDetails) return;
     const content =
       activeTab === "input"
@@ -828,6 +831,7 @@ export function LogContentModal({
     outputLoaded,
     detailsLoaded,
     showRequestDetails,
+    resolvedInitialTab,
     fetchPart,
   ]);
 
@@ -1067,7 +1071,7 @@ export function LogContentModal({
     </div>
   );
 
-  const tabBar = (
+  const tabBar = detailsOnly ? null : (
     <div className="flex items-center gap-3">
       <Tabs
         value={activeTab}
@@ -1451,7 +1455,13 @@ export function LogContentModal({
   };
 
   return (
-    <ContentModal open={open} model={model} onClose={onClose} tabs={tabBar}>
+    <ContentModal
+      open={open}
+      model={model}
+      onClose={onClose}
+      tabs={tabBar}
+      description={detailsOnly ? t("log_content.request_details") : undefined}
+    >
       <div className="relative min-h-0 flex-1">
         <AnimatePresence initial={false}>
           {displayPhase === "loading" ? (

@@ -8,6 +8,7 @@ import {
 } from "@code-proxy/api-client";
 import { Button } from "@code-proxy/ui";
 import { Card } from "@code-proxy/ui";
+import { ConfirmModal } from "@code-proxy/ui";
 import { Checkbox } from "@code-proxy/ui";
 import { TextInput } from "@code-proxy/ui";
 import { Select } from "@code-proxy/ui";
@@ -106,6 +107,9 @@ export function RuntimeConfigPanel() {
   const [debugEnabled, setDebugEnabled] = useState(false);
   const [usageStatisticsEnabled, setUsageStatisticsEnabled] = useState(false);
   const [requestLogEnabled, setRequestLogEnabled] = useState(false);
+  const [requestLogBodyStorageEnabled, setRequestLogBodyStorageEnabled] = useState(false);
+  const [requestLogBodyStorageSaving, setRequestLogBodyStorageSaving] = useState(false);
+  const [requestLogBodyStorageConfirmOpen, setRequestLogBodyStorageConfirmOpen] = useState(false);
   const [loggingToFileEnabled, setLoggingToFileEnabled] = useState(false);
   const [wsAuthEnabled, setWsAuthEnabled] = useState(false);
   const [switchProjectEnabled, setSwitchProjectEnabled] = useState(false);
@@ -142,6 +146,7 @@ export function RuntimeConfigPanel() {
         autoUpdate,
         autoUpdateChannelValue,
         codexOAuthAdmission,
+        requestLogBodyStorage,
       ] = await Promise.all([
         configApi.getConfig(),
         configApi.getLogsMaxTotalSizeMb().catch(() => 0),
@@ -152,6 +157,7 @@ export function RuntimeConfigPanel() {
         configApi.getCodexOAuthAdmission().catch((): CodexOAuthAdmissionResponse => {
           return emptyCodexOAuthAdmission;
         }),
+        configApi.getRequestLogBodyStorage().catch(() => false),
       ]);
 
       const record = isRecord(config) ? (config as Record<string, unknown>) : null;
@@ -162,6 +168,7 @@ export function RuntimeConfigPanel() {
         readBool(record, "usage-statistics-enabled", "usageStatisticsEnabled"),
       );
       setRequestLogEnabled(readBool(record, "request-log", "requestLog"));
+      setRequestLogBodyStorageEnabled(requestLogBodyStorage);
       setLoggingToFileEnabled(readBool(record, "logging-to-file", "loggingToFile"));
       setWsAuthEnabled(readBool(record, "ws-auth", "wsAuth"));
       setSwitchProjectEnabled(readBool(record, "quota-exceeded.switch-project", "switchProject"));
@@ -235,6 +242,39 @@ export function RuntimeConfigPanel() {
     },
     [notify, t],
   );
+
+  const enableRequestLogBodyStorage = useCallback(async () => {
+    setRequestLogBodyStorageSaving(true);
+    try {
+      await configApi.updateRequestLogBodyStorage(true);
+      setRequestLogBodyStorageEnabled(true);
+      notify({ type: "success", message: t("config_page.request_body_storage_enabled_toast") });
+    } catch (err: unknown) {
+      notify({
+        type: "error",
+        message: err instanceof Error ? err.message : t("config_page.toast_update_failed"),
+      });
+    } finally {
+      setRequestLogBodyStorageSaving(false);
+    }
+  }, [notify, t]);
+
+  const disableRequestLogBodyStorage = useCallback(async () => {
+    setRequestLogBodyStorageSaving(true);
+    try {
+      await configApi.updateRequestLogBodyStorage(false, true);
+      setRequestLogBodyStorageEnabled(false);
+      setRequestLogBodyStorageConfirmOpen(false);
+      notify({ type: "success", message: t("config_page.request_body_storage_disabled_toast") });
+    } catch (err: unknown) {
+      notify({
+        type: "error",
+        message: err instanceof Error ? err.message : t("config_page.toast_update_failed"),
+      });
+    } finally {
+      setRequestLogBodyStorageSaving(false);
+    }
+  }, [notify, t]);
 
   const updateAutoUpdateChannel = useCallback(
     async (next: string) => {
@@ -409,6 +449,19 @@ export function RuntimeConfigPanel() {
                 void updateToggle("requestLog", next).catch(() =>
                   setRequestLogEnabled((prev) => !prev),
                 );
+              }}
+            />
+            <ToggleSwitch
+              label={t("config_page.request_body_storage")}
+              description={t("config_page.request_body_storage_desc")}
+              checked={requestLogBodyStorageEnabled}
+              disabled={loading || requestLogBodyStorageSaving}
+              onCheckedChange={(next) => {
+                if (next) {
+                  void enableRequestLogBodyStorage();
+                  return;
+                }
+                setRequestLogBodyStorageConfirmOpen(true);
               }}
             />
             <ToggleSwitch
@@ -605,6 +658,23 @@ export function RuntimeConfigPanel() {
           </Card>
         </div>
       </Card>
+
+      <ConfirmModal
+        open={requestLogBodyStorageConfirmOpen}
+        title={t("config_page.request_body_storage_disable_title")}
+        description={t("config_page.request_body_storage_disable_desc")}
+        confirmText={
+          requestLogBodyStorageSaving
+            ? t("config_page.request_body_storage_disabling")
+            : t("config_page.request_body_storage_disable_confirm")
+        }
+        variant="danger"
+        busy={requestLogBodyStorageSaving}
+        onClose={() => {
+          if (!requestLogBodyStorageSaving) setRequestLogBodyStorageConfirmOpen(false);
+        }}
+        onConfirm={() => void disableRequestLogBodyStorage()}
+      />
     </div>
   );
 }

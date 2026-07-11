@@ -1,4 +1,4 @@
-import { Trash2, AlertCircle } from "lucide-react";
+import { Trash2, AlertCircle, Loader2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../primitives/Button";
 import { Modal } from "../overlays/Modal";
@@ -42,6 +42,7 @@ export function ConfirmModal({
             {resolvedCancelText}
           </Button>
           <Button variant={isDanger ? "danger" : "primary"} onClick={onConfirm} disabled={busy}>
+            {busy ? <Loader2 size={16} className="animate-spin" aria-hidden="true" /> : null}
             {confirmText}
           </Button>
         </>
