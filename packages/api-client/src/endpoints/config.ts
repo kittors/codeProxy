@@ -50,10 +50,14 @@ export const configApi = {
     return data.enabled === true;
   },
   updateRequestLogBodyStorage: (enabled: boolean, clearExisting = false) =>
-    apiClient.put<RequestLogBodyStorageResponse>("/request-log-storage/store-content", {
-      value: enabled,
-      clear_existing: clearExisting,
-    }),
+    apiClient.put<RequestLogBodyStorageResponse>(
+      "/request-log-storage/store-content",
+      {
+        value: enabled,
+        clear_existing: clearExisting,
+      },
+      { timeoutMs: 10 * 60_000 },
+    ),
   updateLoggingToFile: (enabled: boolean) => apiClient.put("/logging-to-file", { value: enabled }),
   getLogsMaxTotalSizeMb: async (): Promise<number> => {
     const data = await apiClient.get<Record<string, unknown>>("/logs-max-total-size-mb");

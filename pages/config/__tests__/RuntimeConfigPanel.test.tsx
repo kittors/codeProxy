@@ -130,7 +130,7 @@ describe("RuntimeConfigPanel", () => {
       name: /store request and response bodies/i,
     });
     await userEvent.click(toggle);
-    expect(screen.getByText(/permanently clears all stored input and output bodies/i)).toBeInTheDocument();
+    expect(screen.getByText(/reclaims PostgreSQL disk space/i)).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: /disable and clear/i }));
     expect(screen.getByText(/disabling and clearing/i)).toBeInTheDocument();
@@ -139,7 +139,7 @@ describe("RuntimeConfigPanel", () => {
     pending.resolve();
     await waitFor(() => {
       expect(
-        screen.queryByText(/permanently clears all stored input and output bodies/i),
+        screen.queryByText(/reclaims PostgreSQL disk space/i),
       ).not.toBeInTheDocument();
     });
   });
