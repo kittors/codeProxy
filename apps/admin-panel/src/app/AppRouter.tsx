@@ -48,6 +48,7 @@ export function AppRouter() {
   const publicRoutes = routes.filter((r) => !r.auth);
   const loginRoute = publicRoutes.find((r) => r.path === "/login");
   const standalonePublicRoutes = publicRoutes.filter((r) => r.path !== "/login");
+  const authStandaloneRoutes = routes.filter((r) => r.auth && r.layout === "standalone");
   const authDashboardRoutes = routes.filter((r) => r.auth && r.layout === "dashboard");
 
   return (
@@ -90,6 +91,13 @@ export function AppRouter() {
                         )}
                         <Route path="/login" element={<Navigate to="/dashboard" replace />} />
                         <Route element={<ProtectedRoute />}>
+                          {authStandaloneRoutes.map((route) => (
+                            <Route
+                              key={route.path}
+                              path={route.path}
+                              element={<AuthorizedPage route={route} />}
+                            />
+                          ))}
                           <Route element={<DashboardLayout />}>
                             {authDashboardRoutes.map((route) => (
                               <Route

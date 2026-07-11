@@ -6,7 +6,7 @@ export const changePasswordRoute = {
   path: "/change-password",
   element: <Page />,
   auth: true,
-  layout: "dashboard",
+  layout: "standalone",
   nav: null,
   preload,
 };

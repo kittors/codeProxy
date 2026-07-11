@@ -6,7 +6,7 @@ import { PageLoader } from "@code-proxy/ui";
 export function ProtectedRoute() {
   const location = useLocation();
   const {
-    state: { isAuthenticated, isRestoring },
+    state: { isAuthenticated, isRestoring, principal },
   } = useAuth();
 
   if (isRestoring) {
@@ -16,6 +16,10 @@ export function ProtectedRoute() {
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace state={{ from: location }} />;
+  }
+
+  if (principal?.user.must_change_password && location.pathname !== "/change-password") {
+    return <Navigate to="/change-password" replace />;
   }
 
   return <Outlet />;

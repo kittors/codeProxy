@@ -165,6 +165,24 @@ test("logs in with username and password without selecting a tenant", async ({ p
   await page.getByLabel(/^password$/i).fill("correct-password");
   await page.getByRole("button", { name: /^login$/i }).click();
   await expect(page.getByRole("heading", { name: /change password/i })).toBeVisible();
+  await expect(page.locator("aside")).toHaveCount(0);
+  await expect(page.locator("header")).toHaveCount(0);
+  const passwordCard = await page.locator("main section").boundingBox();
+  const viewport = page.viewportSize();
+  expect(passwordCard).not.toBeNull();
+  expect(viewport).not.toBeNull();
+  expect(
+    Math.abs((passwordCard?.x ?? 0) + (passwordCard?.width ?? 0) / 2 - (viewport?.width ?? 0) / 2),
+  ).toBeLessThan(12);
+  expect(
+    Math.abs(
+      (passwordCard?.y ?? 0) + (passwordCard?.height ?? 0) / 2 - (viewport?.height ?? 0) / 2,
+    ),
+  ).toBeLessThan(12);
+  await page.evaluate(() => {
+    window.location.hash = "/dashboard";
+  });
+  await expect(page).toHaveURL(/#\/change-password$/);
 });
 
 test("shows tenant governance routes from server permissions", async ({ page }) => {
@@ -364,6 +382,8 @@ test("renders role, audit, and password governance pages from server permissions
   await expect(page.getByRole("heading", { name: "Audit logs" })).toBeVisible();
   await page.goto("/#/change-password");
   await expect(page.getByRole("heading", { name: "Change password" })).toBeVisible();
+  await expect(page.locator("aside")).toHaveCount(0);
+  await expect(page.locator("header")).toHaveCount(0);
 });
 
 test("shows an expired tenant message when restoring a rejected session", async ({ page }) => {
