@@ -188,6 +188,7 @@ export function Select({
             <motion.div
               ref={listRef}
               role="listbox"
+              data-side={pos.placement}
               aria-label={ariaLabel}
               className={selectPanel}
               {...getSelectDropdownMotion(pos.placement)}

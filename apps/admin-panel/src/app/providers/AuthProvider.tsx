@@ -44,6 +44,11 @@ interface AuthContextState {
 
 const AuthContext = createContext<AuthContextState | null>(null);
 
+const isLocalPreviewMode = () =>
+  import.meta.env.DEV &&
+  ["127.0.0.1", "localhost", "::1"].includes(window.location.hostname) &&
+  new URLSearchParams(window.location.search).get("preview") === "1";
+
 export function AuthProvider({ children }: PropsWithChildren) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isRestoring, setIsRestoring] = useState(true);
@@ -76,6 +81,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
       return;
     }
 
+    if (isLocalPreviewMode()) {
+      setIsAuthenticated(true);
+      setIsRestoring(false);
+      return;
+    }
+
     try {
       await configApi.getConfig();
       setIsAuthenticated(true);
@@ -93,6 +104,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   useEffect(() => {
     const handleUnauthorized = () => {
+      if (isLocalPreviewMode()) return;
       setIsAuthenticated(false);
       clearPersistedAuthSnapshot();
     };
@@ -125,7 +137,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         managementKey: trimmedKey,
       });
 
-      await configApi.getConfig();
+      if (!isLocalPreviewMode()) await configApi.getConfig();
 
       setApiBase(normalizedBase);
       setManagementKey(trimmedKey);

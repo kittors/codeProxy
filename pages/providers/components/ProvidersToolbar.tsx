@@ -1,8 +1,7 @@
 import { type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { CheckSquare, Download, Plus, RefreshCw, Upload } from "lucide-react";
-import { Button } from "@code-proxy/ui";
-import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
+import { Button, DropdownMenu } from "@code-proxy/ui";
 
 export type ProvidersToolbarProps = {
   currentImportKind: string | null;
@@ -19,11 +18,6 @@ export type ProvidersToolbarProps = {
   addLabel?: string;
   children?: ReactNode;
 };
-
-const DROPDOWN_CONTENT =
-  "z-[220] min-w-36 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl shadow-slate-900/10 dark:border-neutral-800 dark:bg-neutral-950 dark:shadow-black/35";
-const DROPDOWN_ITEM =
-  "flex w-full cursor-default select-none items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-slate-700 outline-none transition-colors focus:bg-slate-100 data-[highlighted]:bg-slate-100 dark:text-white/75 dark:focus:bg-white/10 dark:data-[highlighted]:bg-white/10";
 
 export function ProvidersToolbar({
   currentImportKind,
@@ -74,12 +68,12 @@ export function ProvidersToolbar({
                 </Button>
               </DropdownMenu.Trigger>
               <DropdownMenu.Portal>
-                <DropdownMenu.Content align="start" sideOffset={6} className={DROPDOWN_CONTENT}>
-                  <DropdownMenu.Item className={DROPDOWN_ITEM} onSelect={() => onExport()}>
+                <DropdownMenu.Content align="start" sideOffset={6}>
+                  <DropdownMenu.Item onSelect={() => onExport()}>
                     {t("providers.export_json")}
                   </DropdownMenu.Item>
                   <DropdownMenu.Item
-                    className={DROPDOWN_ITEM}
+
                     onSelect={() => onExportSelected()}
                     disabled={selectedExportCount === 0}
                   >

@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 import {
   Button,
   Modal,
+  floatingPanelSurface,
   SearchableSelect,
   Select,
   TextInput,
@@ -104,7 +105,9 @@ export function ModelFormModal({
                   <div
                     id="model-config-id-reuse-options"
                     role="listbox"
-                    className="absolute left-0 right-0 top-full z-30 mt-2 max-h-64 overflow-y-auto rounded-2xl bg-white p-1 shadow-[0_8px_28px_rgb(0_0_0_/_0.16)] dark:bg-[#27272A] dark:shadow-[0_14px_36px_rgb(0_0_0_/_0.38)]"
+                    data-state="open"
+                    data-side="bottom"
+                    className={`absolute left-0 right-0 top-full z-30 mt-2 max-h-64 overflow-y-auto p-1 ${floatingPanelSurface}`}
                   >
                     {reusableModelCandidates.map((model) => (
                       <button
@@ -114,7 +117,7 @@ export function ModelFormModal({
                         aria-selected={form.id === model.id}
                         onMouseDown={(event) => event.preventDefault()}
                         onClick={() => onApplyReusableModel(model)}
-                        className="flex w-full min-w-0 items-center justify-between gap-3 rounded-xl px-3 py-2 text-left text-sm transition-colors hover:bg-[#F4F4F5] dark:hover:bg-white/[0.06]"
+                        className="flex w-full min-w-0 items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-[#F4F4F5] dark:hover:bg-white/[0.06]"
                       >
                         <span className="min-w-0">
                           <span className="block truncate font-medium text-[#18181B] dark:text-white">

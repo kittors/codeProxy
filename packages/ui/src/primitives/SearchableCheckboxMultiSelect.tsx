@@ -493,6 +493,7 @@ export function SearchableCheckboxMultiSelect({
           {open ? (
             <motion.div
               ref={dropdownRef}
+              data-side={dropdownPlacement}
               style={dropdownStyle}
               className={cn(searchableSelectPanel, "flex flex-col")}
               {...getSelectDropdownMotion(dropdownPlacement)}

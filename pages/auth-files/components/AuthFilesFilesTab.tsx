@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useState, type RefObject, type ReactNode } from "react";
-import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { useTranslation } from "react-i18next";
 import {
   BarChart3,
@@ -21,7 +20,7 @@ import {
 } from "lucide-react";
 import type { AuthFileItem } from "@code-proxy/api-client";
 import { VendorIcon } from "@code-proxy/assets";
-import { Button, buttonClassName } from "@code-proxy/ui";
+import { Button, DropdownMenu, buttonClassName } from "@code-proxy/ui";
 import { Card } from "@code-proxy/ui";
 import { EmptyState } from "@code-proxy/ui";
 import { TextInput } from "@code-proxy/ui";
@@ -65,10 +64,6 @@ import {
 import type { QuotaProvider } from "@features/quota-preview/quota-fetch";
 
 const MAX_FILENAME_PART_LENGTH = 72;
-const ACTION_MENU_CONTENT_CLASS =
-  "z-[220] min-w-44 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-xl shadow-slate-900/10 dark:border-neutral-800 dark:bg-neutral-950 dark:shadow-black/35";
-const ACTION_MENU_ITEM_CLASS =
-  "flex w-full cursor-default select-none items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 outline-none transition-colors focus:bg-slate-100 data-[highlighted]:bg-slate-100 data-[disabled]:pointer-events-none data-[disabled]:opacity-45 dark:text-white/75 dark:focus:bg-white/10 dark:data-[highlighted]:bg-white/10";
 const FILTER_LABEL_CLASS =
   "truncate text-[11px] font-semibold uppercase tracking-[0.02em] text-slate-600 dark:text-white/65";
 const FILTER_FIELD_CLASS = "min-w-0 space-y-2";
@@ -872,9 +867,9 @@ export function AuthFilesFilesTab({
         </button>
       </DropdownMenu.Trigger>
       <DropdownMenu.Portal>
-        <DropdownMenu.Content align="end" sideOffset={8} className={ACTION_MENU_CONTENT_CLASS}>
+        <DropdownMenu.Content align="end" sideOffset={8} className="min-w-44">
           <DropdownMenu.Item
-            className={ACTION_MENU_ITEM_CLASS}
+
             disabled={selectablePageNames.length === 0}
             onSelect={() => selectCurrentPage(!allPageSelected)}
           >
@@ -886,7 +881,7 @@ export function AuthFilesFilesTab({
             </span>
           </DropdownMenu.Item>
           <DropdownMenu.Item
-            className={ACTION_MENU_ITEM_CLASS}
+
             disabled={selectableFilteredFiles.length === 0}
             onSelect={() => selectFilteredFiles(!allFilteredSelected)}
           >
@@ -1622,17 +1617,17 @@ export function AuthFilesFilesTab({
                               <DropdownMenu.Content
                                 align="end"
                                 sideOffset={8}
-                                className={ACTION_MENU_CONTENT_CLASS}
+                                className="min-w-44"
                               >
                                 <DropdownMenu.Item
-                                  className={ACTION_MENU_ITEM_CLASS}
+
                                   onSelect={() => openTagsEditor(file)}
                                 >
                                   <Tags size={15} />
                                   <span>{t("auth_files.edit_tags")}</span>
                                 </DropdownMenu.Item>
                                 <DropdownMenu.Item
-                                  className={ACTION_MENU_ITEM_CLASS}
+
                                   disabled={clearStatusDisabled}
                                   onSelect={() => void clearAuthFileStatus(file)}
                                 >
@@ -1644,7 +1639,7 @@ export function AuthFilesFilesTab({
                                   <span>{t("auth_files.clear_status")}</span>
                                 </DropdownMenu.Item>
                                 <DropdownMenu.Item
-                                  className={ACTION_MENU_ITEM_CLASS}
+
                                   onSelect={() => void downloadAuthFile(file)}
                                 >
                                   <Download size={15} />

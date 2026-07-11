@@ -319,6 +319,7 @@ export function DateTimePicker({
               role="dialog"
               aria-label={labels.picker}
               data-placement={placement}
+              data-side={placement}
               className={cn(selectPanel, "p-3 text-[#18181B] dark:text-white")}
               style={panelStyle}
               {...getSelectDropdownMotion(placement)}

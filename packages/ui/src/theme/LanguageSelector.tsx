@@ -138,6 +138,8 @@ export function LanguageSelector({ className }: { className?: string }) {
             <div
               ref={listRef}
               role="listbox"
+              data-state="open"
+              data-side="bottom"
               aria-label={label}
               className={cn(selectPanel, "w-[170px]")}
               style={{ top: pos.top, left: pos.left }}

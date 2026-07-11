@@ -1,5 +1,7 @@
 import {
   createContext,
+  type FocusEvent,
+  type KeyboardEvent,
   type MouseEvent,
   type PropsWithChildren,
   use,
@@ -31,7 +33,14 @@ import {
   Sparkles,
   type LucideIcon,
 } from "lucide-react";
-import { LanguageSelector, PageBackground, ScrollArea, ThemeToggleButton } from "@code-proxy/ui";
+import {
+  DropdownMenu,
+  LanguageSelector,
+  floatingPanelSurface,
+  PageBackground,
+  ScrollArea,
+  ThemeToggleButton,
+} from "@code-proxy/ui";
 import { preloadPageRoute } from "@pages/registry";
 
 interface ShellContextState {
@@ -75,7 +84,11 @@ const NAV_GROUPS = [
     icon: Activity,
     items: [
       { to: "/monitor", i18nKey: "shell.nav_monitor", icon: Activity },
-      { to: "/monitor/request-logs", i18nKey: "shell.nav_request_logs", icon: ScrollText },
+      {
+        to: "/monitor/request-logs",
+        i18nKey: "shell.nav_request_logs",
+        icon: ScrollText,
+      },
       { to: "/logs", i18nKey: "shell.nav_logs", icon: FileText },
       { to: "/system", i18nKey: "shell.nav_system", icon: Info },
     ],
@@ -100,8 +113,16 @@ const NAV_GROUPS = [
     icon: Layers,
     items: [
       { to: "/models", i18nKey: "shell.nav_models", icon: Cpu },
-      { to: "/image-generation", i18nKey: "shell.nav_image_generation", icon: Image },
-      { to: "/channel-groups", i18nKey: "shell.nav_channel_groups", icon: Layers },
+      {
+        to: "/image-generation",
+        i18nKey: "shell.nav_image_generation",
+        icon: Image,
+      },
+      {
+        to: "/channel-groups",
+        i18nKey: "shell.nav_channel_groups",
+        icon: Layers,
+      },
       { to: "/proxies", i18nKey: "shell.nav_proxies", icon: Network },
     ],
   },
@@ -110,7 +131,11 @@ const NAV_GROUPS = [
     i18nKey: "shell.nav_group_system",
     icon: Settings,
     items: [
-      { to: "/account-security", i18nKey: "shell.nav_account_security", icon: ShieldCheck },
+      {
+        to: "/account-security",
+        i18nKey: "shell.nav_account_security",
+        icon: ShieldCheck,
+      },
       {
         to: "/api-key-permissions",
         i18nKey: "shell.nav_api_key_permissions",
@@ -128,10 +153,14 @@ const NAV_ITEMS: readonly SidebarNavItem[] = [
 
 const getPageTitleKey = (pathname: string): string => {
   if (pathname.startsWith("/dashboard")) return "shell.nav_dashboard";
-  if (pathname.startsWith("/monitor/request-logs")) return "shell.nav_request_logs";
+  if (pathname.startsWith("/monitor/request-logs"))
+    return "shell.nav_request_logs";
   if (pathname.startsWith("/monitor")) return "shell.nav_monitor";
   if (pathname.startsWith("/ai-providers")) return "shell.nav_ai_providers";
-  if (pathname.startsWith("/account-security") || pathname.startsWith("/auth-files"))
+  if (
+    pathname.startsWith("/account-security") ||
+    pathname.startsWith("/auth-files")
+  )
     return "shell.nav_account_security";
   if (pathname.startsWith("/api-keys")) return "shell.page_api_keys";
   if (
@@ -144,8 +173,10 @@ const getPageTitleKey = (pathname: string): string => {
     pathname.startsWith("/manage/ccswitch-import-settings")
   )
     return "shell.nav_ccswitch_import_settings";
-  if (pathname.startsWith("/image-generation")) return "shell.nav_image_generation";
-  if (pathname.startsWith("/channel-groups")) return "shell.page_channel_groups";
+  if (pathname.startsWith("/image-generation"))
+    return "shell.nav_image_generation";
+  if (pathname.startsWith("/channel-groups"))
+    return "shell.page_channel_groups";
   if (
     pathname.startsWith("/identity-fingerprint") ||
     pathname.startsWith("/manage/identity-fingerprint")
@@ -182,6 +213,7 @@ function SidebarChildLink({
   onWarm,
   tabIndex,
   role,
+  onSelect,
 }: {
   item: SidebarNavItem;
   active: boolean;
@@ -190,6 +222,7 @@ function SidebarChildLink({
   onWarm: (to: string) => void;
   tabIndex?: number;
   role?: "menuitem";
+  onSelect?: () => void;
 }) {
   const Icon = item.icon;
   return (
@@ -199,7 +232,10 @@ function SidebarChildLink({
       tabIndex={tabIndex}
       role={role}
       aria-current={active ? "page" : undefined}
-      onClick={(event) => onClick(event, item.to)}
+      onClick={(event) => {
+        onSelect?.();
+        onClick(event, item.to);
+      }}
       onMouseEnter={() => onWarm(item.to)}
       onFocus={() => onWarm(item.to)}
       className={
@@ -245,19 +281,21 @@ function SidebarPrimaryLink({
       onMouseEnter={() => onWarm(item.to)}
       onFocus={() => onWarm(item.to)}
       className={
-        "flex h-10 w-full items-center overflow-hidden rounded-xl whitespace-nowrap transition-colors duration-150 " +
+        "mx-2 flex h-10 w-[calc(100%-1rem)] items-center overflow-hidden rounded-xl whitespace-nowrap transition-colors duration-150 " +
         (active
           ? "bg-slate-100 font-semibold text-slate-950 dark:bg-white/10 dark:text-white"
           : "font-medium text-slate-600 hover:bg-slate-100/80 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-white/[0.06] dark:hover:text-white")
       }
     >
-      <span className="grid h-10 w-16 shrink-0 place-items-center">
+      <span className="grid h-10 w-12 shrink-0 place-items-center">
         <Icon size={16} className="opacity-80" />
       </span>
       <span
         className={
-          "min-w-0 truncate pr-3 text-[13px] transition-opacity duration-150 " +
-          (labelVisible ? "opacity-100" : "opacity-0")
+          "min-w-0 truncate pl-2 pr-3 text-[13px] transition-[opacity,transform] duration-[180ms] ease-[cubic-bezier(0.22,1,0.36,1)] " +
+          (labelVisible
+            ? "translate-x-0 opacity-100 delay-100"
+            : "-translate-x-1 opacity-0 delay-0")
         }
       >
         {label}
@@ -269,11 +307,11 @@ function SidebarPrimaryLink({
 function SidebarToggle({
   label,
   onToggle,
-  visible,
+  alwaysVisible,
 }: {
   label: string;
   onToggle: () => void;
-  visible: boolean;
+  alwaysVisible: boolean;
 }) {
   return (
     <button
@@ -281,9 +319,10 @@ function SidebarToggle({
       onClick={onToggle}
       aria-label={label}
       data-tooltip-managed="true"
+      data-sidebar-toggle="true"
       className={
-        "absolute -right-3.5 top-3.5 z-50 inline-flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 shadow-sm transition-[background-color,color,opacity] duration-150 hover:bg-slate-100 hover:text-slate-950 focus-visible:bg-slate-100 focus-visible:text-slate-950 focus-visible:outline-none dark:border-neutral-700 dark:bg-neutral-900 dark:text-slate-400 dark:hover:bg-neutral-800 dark:hover:text-white " +
-        (visible
+        "absolute right-[15px] top-3 z-50 inline-flex h-8 w-8 items-center justify-center rounded-xl bg-transparent text-slate-500 transition-[background-color,color,opacity] duration-120 hover:bg-slate-100 hover:text-slate-950 focus-visible:bg-slate-100 focus-visible:text-slate-950 focus-visible:outline-none dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-white " +
+        (alwaysVisible
           ? "opacity-100"
           : "opacity-0 group-hover/sidebar:opacity-100 focus-visible:opacity-100")
       }
@@ -297,20 +336,33 @@ function SidebarGroupFlyout({
   group,
   activeTo,
   label,
+  open,
   onClick,
   onWarm,
+  onSelect,
 }: {
   group: SidebarNavGroup;
   activeTo: string | null;
   label: string;
+  open: boolean;
   onClick: (event: MouseEvent<HTMLAnchorElement>, to: string) => void;
   onWarm: (to: string) => void;
+  onSelect: () => void;
 }) {
   const { t } = useTranslation();
   return (
     <div
       role="menu"
-      className="invisible absolute left-[calc(100%+8px)] top-0 z-50 w-52 translate-x-1 rounded-2xl border border-slate-200 bg-white p-2 opacity-0 shadow-[0_16px_48px_rgba(15,23,42,0.14)] transition-[opacity,transform,visibility] duration-180 ease-out before:absolute before:-left-3 before:top-0 before:h-full before:w-3 group-hover/flyout:visible group-hover/flyout:translate-x-0 group-hover/flyout:opacity-100 group-focus-within/flyout:visible group-focus-within/flyout:translate-x-0 group-focus-within/flyout:opacity-100 dark:border-neutral-800 dark:bg-neutral-950 dark:shadow-black/40"
+      aria-hidden={!open}
+      data-sidebar-flyout={group.id}
+      data-open={open ? "true" : "false"}
+      className={
+        floatingPanelSurface +
+        " absolute left-[calc(100%+8px)] top-0 z-50 w-52 origin-top-left p-2 transition-[opacity,transform,visibility] duration-[160ms] ease-[cubic-bezier(0.22,1,0.36,1)] before:absolute before:-left-3 before:top-0 before:h-full before:w-3 " +
+        (open
+          ? "visible pointer-events-auto translate-x-0 scale-100 opacity-100"
+          : "invisible pointer-events-none -translate-x-1 scale-[0.98] opacity-0")
+      }
     >
       <div className="px-3 pb-1.5 pt-1 text-[11px] font-semibold tracking-wide text-slate-400">
         {label}
@@ -324,10 +376,197 @@ function SidebarGroupFlyout({
             label={t(item.i18nKey)}
             onClick={onClick}
             onWarm={onWarm}
+            onSelect={onSelect}
+            tabIndex={open ? undefined : -1}
             role="menuitem"
           />
         ))}
       </div>
+    </div>
+  );
+}
+
+function SidebarMenuGroup({
+  group,
+  activeTo,
+  active,
+  inlineOpen,
+  railCollapsed,
+  visualRailCollapsed,
+  labelsVisible,
+  mode,
+  onToggle,
+  onClick,
+  onWarm,
+}: {
+  group: SidebarNavGroup;
+  activeTo: string | null;
+  active: boolean;
+  inlineOpen: boolean;
+  railCollapsed: boolean;
+  visualRailCollapsed: boolean;
+  labelsVisible: boolean;
+  mode: "desktop" | "mobile";
+  onToggle: () => void;
+  onClick: (event: MouseEvent<HTMLAnchorElement>, to: string) => void;
+  onWarm: (to: string) => void;
+}) {
+  const { t } = useTranslation();
+  const [flyoutOpen, setFlyoutOpen] = useState(false);
+  const suppressUntilPointerLeave = useRef(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const GroupIcon = group.icon;
+  const groupLabel = t(group.i18nKey);
+  const contentId = `sidebar-${mode}-${group.id}`;
+  const showInlineItems = inlineOpen && labelsVisible && !visualRailCollapsed;
+
+  useEffect(() => {
+    if (visualRailCollapsed) return;
+    setFlyoutOpen(false);
+    suppressUntilPointerLeave.current = false;
+  }, [visualRailCollapsed]);
+
+  const closeAndSuppress = useCallback(() => {
+    suppressUntilPointerLeave.current = true;
+    setFlyoutOpen(false);
+  }, []);
+
+  const handlePointerEnter = useCallback(() => {
+    if (visualRailCollapsed && !suppressUntilPointerLeave.current)
+      setFlyoutOpen(true);
+  }, [visualRailCollapsed]);
+
+  const handlePointerLeave = useCallback(() => {
+    setFlyoutOpen(false);
+    suppressUntilPointerLeave.current = false;
+  }, []);
+
+  const handleFocus = useCallback(() => {
+    if (visualRailCollapsed && !suppressUntilPointerLeave.current)
+      setFlyoutOpen(true);
+  }, [visualRailCollapsed]);
+
+  const handleBlur = useCallback((event: FocusEvent<HTMLDivElement>) => {
+    const nextTarget = event.relatedTarget;
+    if (nextTarget instanceof Node && event.currentTarget.contains(nextTarget))
+      return;
+    setFlyoutOpen(false);
+    suppressUntilPointerLeave.current = false;
+  }, []);
+
+  const handleKeyDown = useCallback(
+    (event: KeyboardEvent<HTMLDivElement>) => {
+      if (event.key !== "Escape" || !flyoutOpen) return;
+      event.preventDefault();
+      suppressUntilPointerLeave.current = true;
+      setFlyoutOpen(false);
+      triggerRef.current?.focus({ preventScroll: true });
+      queueMicrotask(() => {
+        suppressUntilPointerLeave.current = false;
+      });
+    },
+    [flyoutOpen],
+  );
+
+  const handleTriggerClick = useCallback(() => {
+    if (!visualRailCollapsed) {
+      onToggle();
+      return;
+    }
+    if (flyoutOpen) closeAndSuppress();
+    else {
+      suppressUntilPointerLeave.current = false;
+      setFlyoutOpen(true);
+    }
+  }, [closeAndSuppress, flyoutOpen, onToggle, visualRailCollapsed]);
+
+  return (
+    <div
+      className="relative"
+      data-tooltip-managed="true"
+      onPointerEnter={handlePointerEnter}
+      onPointerLeave={handlePointerLeave}
+      onFocusCapture={handleFocus}
+      onBlurCapture={handleBlur}
+      onKeyDown={handleKeyDown}
+    >
+      <button
+        ref={triggerRef}
+        type="button"
+        aria-label={railCollapsed ? groupLabel : undefined}
+        aria-expanded={visualRailCollapsed ? flyoutOpen : inlineOpen}
+        aria-controls={visualRailCollapsed ? undefined : contentId}
+        aria-haspopup={visualRailCollapsed ? "menu" : undefined}
+        onClick={handleTriggerClick}
+        className={
+          "mx-2 flex h-10 w-[calc(100%-1rem)] items-center overflow-hidden rounded-xl text-left whitespace-nowrap transition-colors duration-150 " +
+          (active
+            ? "text-slate-950 dark:text-white"
+            : "text-slate-500 hover:bg-slate-100/80 hover:text-slate-800 dark:text-slate-400 dark:hover:bg-white/[0.06] dark:hover:text-slate-200")
+        }
+      >
+        <span className="grid h-10 w-12 shrink-0 place-items-center">
+          <GroupIcon size={16} className="opacity-80" />
+        </span>
+        <span
+          className={
+            "min-w-0 flex-1 truncate pl-2 text-[13px] font-semibold transition-[opacity,transform] duration-[180ms] ease-[cubic-bezier(0.22,1,0.36,1)] " +
+            (labelsVisible
+              ? "translate-x-0 opacity-100 delay-100"
+              : "-translate-x-1 opacity-0 delay-0")
+          }
+        >
+          {groupLabel}
+        </span>
+        <ChevronDown
+          size={14}
+          className={
+            "mr-3 shrink-0 transition-[opacity,transform] duration-[180ms] ease-[cubic-bezier(0.22,1,0.36,1)] " +
+            (labelsVisible ? "opacity-55 delay-100" : "opacity-0 delay-0") +
+            (inlineOpen ? " rotate-0" : " -rotate-90")
+          }
+        />
+      </button>
+      <div
+        id={contentId}
+        aria-hidden={!showInlineItems}
+        className={
+          "grid transition-[grid-template-rows] duration-[220ms] ease-[cubic-bezier(0.22,1,0.36,1)] " +
+          (showInlineItems ? "grid-rows-[1fr]" : "grid-rows-[0fr]")
+        }
+      >
+        <div className="min-h-0 overflow-hidden">
+          <div
+            className={
+              "space-y-0.5 pb-1 pl-8 pr-3 pt-0.5 transition-[opacity,transform] duration-[160ms] ease-[cubic-bezier(0.22,1,0.36,1)] " +
+              (showInlineItems
+                ? "translate-y-0 opacity-100 delay-75"
+                : "-translate-y-1 opacity-0 delay-0")
+            }
+          >
+            {group.items.map((item) => (
+              <SidebarChildLink
+                key={item.to}
+                item={item}
+                active={activeTo === item.to}
+                label={t(item.i18nKey)}
+                onClick={onClick}
+                onWarm={onWarm}
+                tabIndex={showInlineItems ? undefined : -1}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+      <SidebarGroupFlyout
+        group={group}
+        activeTo={activeTo}
+        label={groupLabel}
+        open={visualRailCollapsed && flyoutOpen}
+        onClick={onClick}
+        onWarm={onWarm}
+        onSelect={closeAndSuppress}
+      />
     </div>
   );
 }
@@ -365,7 +604,9 @@ function ShellSidebar({
   const resolveActiveTo = useCallback((pathname: string) => {
     const sorted = [...NAV_ITEMS].sort((a, b) => b.to.length - a.to.length);
     return (
-      sorted.find((item) => pathname === item.to || pathname.startsWith(`${item.to}/`))?.to ?? null
+      sorted.find(
+        (item) => pathname === item.to || pathname.startsWith(`${item.to}/`),
+      )?.to ?? null
     );
   }, []);
 
@@ -374,10 +615,15 @@ function ShellSidebar({
     [pendingTo, location.pathname, resolveActiveTo],
   );
   const activeGroupId = useMemo(
-    () => NAV_GROUPS.find((group) => group.items.some((item) => item.to === activeTo))?.id,
+    () =>
+      NAV_GROUPS.find((group) =>
+        group.items.some((item) => item.to === activeTo),
+      )?.id,
     [activeTo],
   );
-  const [openGroups, setOpenGroups] = useState<Set<string>>(() => new Set(["runtime"]));
+  const [openGroups, setOpenGroups] = useState<Set<string>>(
+    () => new Set(["runtime"]),
+  );
 
   useEffect(() => {
     if (!activeGroupId) return;
@@ -399,13 +645,20 @@ function ShellSidebar({
   const isMobile = mode === "mobile";
   const railCollapsed = !isMobile && collapsed;
   const [visualRailCollapsed, setVisualRailCollapsed] = useState(railCollapsed);
-  const [sidebarLabelsVisible, setSidebarLabelsVisible] = useState(!railCollapsed);
-  const sidebarTransitionTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [sidebarLabelsVisible, setSidebarLabelsVisible] =
+    useState(!railCollapsed);
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+  const sidebarTransitionTimer = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
   const accountLogoutLabel = t("shell.logout_button");
-  const sidebarLabel = collapsed ? t("shell.expand_sidebar") : t("shell.collapse_sidebar");
+  const sidebarLabel = collapsed
+    ? t("shell.expand_sidebar")
+    : t("shell.collapse_sidebar");
 
   useEffect(() => {
-    if (sidebarTransitionTimer.current) clearTimeout(sidebarTransitionTimer.current);
+    if (sidebarTransitionTimer.current)
+      clearTimeout(sidebarTransitionTimer.current);
 
     if (railCollapsed) {
       setSidebarLabelsVisible(false);
@@ -422,7 +675,8 @@ function ShellSidebar({
     }
 
     return () => {
-      if (sidebarTransitionTimer.current) clearTimeout(sidebarTransitionTimer.current);
+      if (sidebarTransitionTimer.current)
+        clearTimeout(sidebarTransitionTimer.current);
     };
   }, [railCollapsed]);
 
@@ -450,12 +704,18 @@ function ShellSidebar({
       setPendingTo(to);
 
       const minimumProgress = new Promise<void>((resolve) => {
-        const delay = Math.max(0, ROUTE_PROGRESS_MIN_MS - (Date.now() - progressStartedAt.current));
+        const delay = Math.max(
+          0,
+          ROUTE_PROGRESS_MIN_MS - (Date.now() - progressStartedAt.current),
+        );
         const timer = setTimeout(resolve, delay);
         progressTimers.current.push(timer);
       });
 
-      void Promise.all([preloadPageRoute(to).catch(() => undefined), minimumProgress]).then(() => {
+      void Promise.all([
+        preloadPageRoute(to).catch(() => undefined),
+        minimumProgress,
+      ]).then(() => {
         if (navigationRequestId.current !== requestId) return;
         setProgressDone(true);
 
@@ -505,28 +765,49 @@ function ShellSidebar({
         ].join(" ")}
         aria-hidden={isMobile && collapsed}
       >
-        <SidebarToggle label={sidebarLabel} onToggle={onToggleSidebar} visible={isMobile} />
+        <SidebarToggle
+          label={sidebarLabel}
+          onToggle={onToggleSidebar}
+          alwaysVisible={isMobile}
+        />
         <div className="flex h-full w-full flex-col">
-          <div className="flex h-14 shrink-0 items-center overflow-hidden border-b border-slate-200/80 text-slate-900 whitespace-nowrap dark:border-neutral-800 dark:text-white">
-            <span className="grid h-14 w-16 shrink-0 place-items-center">
-              <span className="grid h-8 w-8 place-items-center rounded-xl bg-blue-600 text-white shadow-[0_8px_18px_rgba(37,99,235,0.2)]">
+          <div className="flex h-14 shrink-0 items-center overflow-hidden text-slate-900 whitespace-nowrap dark:text-white">
+            <span
+              className={
+                "grid h-14 w-16 shrink-0 place-items-center transition-opacity duration-120 " +
+                (visualRailCollapsed
+                  ? "opacity-100 group-hover/sidebar:opacity-0"
+                  : "opacity-100")
+              }
+            >
+              <span
+                data-sidebar-logo="true"
+                className="grid h-8 w-8 place-items-center rounded-xl bg-blue-600 text-white"
+              >
                 <LayoutDashboard size={17} />
               </span>
             </span>
             <span
               className={
-                "min-w-0 flex-1 overflow-hidden leading-tight transition-opacity duration-150 " +
-                (sidebarLabelsVisible ? "opacity-100" : "opacity-0")
+                "min-w-0 flex-1 overflow-hidden leading-tight transition-[opacity,transform] duration-[180ms] ease-[cubic-bezier(0.22,1,0.36,1)] " +
+                (sidebarLabelsVisible
+                  ? "translate-x-0 opacity-100 delay-100"
+                  : "-translate-x-1 opacity-0 delay-0")
               }
             >
               <span className="block truncate text-[15px] font-semibold tracking-tight">
                 {t("shell.console")}
               </span>
-              <span className="block text-[10px] font-medium text-slate-400">CLI Proxy</span>
+              <span className="block text-[10px] font-medium text-slate-400">
+                CLI Proxy
+              </span>
             </span>
           </div>
           <ScrollArea
             className="min-h-0 flex-1 [&_[data-scroll-area-scrollbar='y']]:right-1 [&_[data-scroll-area-scrollbar='y']]:w-5"
+            viewportClassName={
+              visualRailCollapsed ? "overflow-visible" : undefined
+            }
             scrollbarVisibility="track-hover"
             scrollbarTrackInset={16}
           >
@@ -541,140 +822,130 @@ function ShellSidebar({
                 onWarm={warmPageRoute}
               />
               <div className="space-y-1 pt-1">
-                {NAV_GROUPS.map((group) => {
-                  const GroupIcon = group.icon;
-                  const open = openGroups.has(group.id);
-                  const groupActive = group.id === activeGroupId;
-                  const contentId = `sidebar-${mode}-${group.id}`;
-                  const groupLabel = t(group.i18nKey);
-                  return (
-                    <div
+                {NAV_GROUPS.map((group) => (
+                  <SidebarMenuGroup
                       key={group.id}
-                      className="group/flyout relative"
-                      data-tooltip-managed="true"
-                    >
-                      <button
-                        type="button"
-                        aria-label={railCollapsed ? groupLabel : undefined}
-                        aria-expanded={railCollapsed ? undefined : open}
-                        aria-controls={railCollapsed ? undefined : contentId}
-                        aria-haspopup={railCollapsed ? "menu" : undefined}
-                        onClick={() => {
-                          if (!railCollapsed) toggleGroup(group.id);
-                        }}
-                        className={
-                          "flex h-10 w-full items-center overflow-hidden rounded-xl text-left whitespace-nowrap transition-colors duration-150 " +
-                          (groupActive
-                            ? "text-slate-950 dark:text-white"
-                            : "text-slate-500 hover:bg-slate-100/80 hover:text-slate-800 dark:text-slate-400 dark:hover:bg-white/[0.06] dark:hover:text-slate-200")
-                        }
-                      >
-                        <span className="grid h-10 w-16 shrink-0 place-items-center">
-                          <GroupIcon size={16} className="opacity-80" />
-                        </span>
-                        <span
-                          className={
-                            "min-w-0 flex-1 truncate text-[13px] font-semibold transition-opacity duration-150 " +
-                            (sidebarLabelsVisible ? "opacity-100" : "opacity-0")
-                          }
-                        >
-                          {groupLabel}
-                        </span>
-                        <ChevronDown
-                          size={14}
-                          className={
-                            "mr-3 shrink-0 opacity-55 transition-[opacity,transform] duration-200 ease-out " +
-                            (sidebarLabelsVisible ? "opacity-55" : "opacity-0") +
-                            (open ? " rotate-0" : " -rotate-90")
-                          }
-                        />
-                      </button>
-                      <div
-                        id={contentId}
-                        aria-hidden={!open || railCollapsed}
-                        className={
-                          "grid transition-[grid-template-rows] duration-220 ease-[cubic-bezier(0.22,1,0.36,1)] " +
-                          (open ? "grid-rows-[1fr]" : "grid-rows-[0fr]")
-                        }
-                      >
-                        <div className="min-h-0 overflow-hidden">
-                          <div
-                            className={
-                              "space-y-0.5 pb-1 pl-8 pr-3 pt-0.5 transition-opacity duration-150 " +
-                              (sidebarLabelsVisible ? "opacity-100" : "opacity-0")
-                            }
-                          >
-                            {group.items.map((item) => (
-                              <SidebarChildLink
-                                key={item.to}
-                                item={item}
-                                active={activeTo === item.to}
-                                label={t(item.i18nKey)}
-                                onClick={handleNavClick}
-                                onWarm={warmPageRoute}
-                                tabIndex={open && !railCollapsed ? undefined : -1}
-                              />
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                      {visualRailCollapsed ? (
-                        <SidebarGroupFlyout
                           group={group}
                           activeTo={activeTo}
-                          label={groupLabel}
+                    active={group.id === activeGroupId}
+                    inlineOpen={openGroups.has(group.id)}
+                    railCollapsed={railCollapsed}
+                    visualRailCollapsed={visualRailCollapsed}
+                    labelsVisible={sidebarLabelsVisible}
+                    mode={mode}
+                    onToggle={() => toggleGroup(group.id)}
                           onClick={handleNavClick}
                           onWarm={warmPageRoute}
                         />
-                      ) : null}
-                    </div>
-                  );
-                })}
+                ))}
               </div>
             </nav>
           </ScrollArea>
-          <div className="shrink-0 overflow-visible border-t border-slate-200/80 dark:border-neutral-800">
+          <div className="shrink-0 overflow-visible px-0 pb-2 pt-1">
             <div
-              className="group/account relative flex h-[68px] w-full items-center overflow-visible"
+              className="group/account relative h-[60px] overflow-visible"
               data-tooltip-managed="true"
             >
-              <button
-                type="button"
-                aria-label="Admin"
-                className="grid h-[68px] w-16 shrink-0 place-items-center focus-visible:outline-none"
-              >
-                <span className="relative grid h-9 w-9 place-items-center rounded-full bg-blue-600 text-[11px] font-semibold text-white shadow-[0_7px_16px_rgba(37,99,235,0.18)]">
-                  AD
-                  <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-white bg-emerald-500 dark:border-neutral-950" />
-                </span>
-              </button>
-              <div
-                className={
-                  "min-w-0 flex-1 overflow-hidden leading-tight transition-opacity duration-150 " +
-                  (sidebarLabelsVisible ? "opacity-100" : "opacity-0")
+              <DropdownMenu.Root
+                open={!visualRailCollapsed && accountMenuOpen}
+                onOpenChange={(open) =>
+                  setAccountMenuOpen(visualRailCollapsed ? false : open)
                 }
               >
-                <div className="truncate text-[13px] font-semibold text-slate-950 dark:text-white">
-                  Admin
-                </div>
-                <div className="mt-0.5 truncate text-[10px] text-slate-400">
-                  {t("shell.sidebar_account_role")}
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={handleLogout}
-                aria-label={accountLogoutLabel}
-                tabIndex={visualRailCollapsed ? -1 : undefined}
-                className={
-                  "mr-3 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-slate-400 transition-[background-color,color,opacity] duration-150 hover:bg-rose-50 hover:text-rose-600 focus-visible:bg-rose-50 focus-visible:text-rose-600 focus-visible:outline-none dark:text-slate-500 dark:hover:bg-rose-400/10 dark:hover:text-rose-300 " +
-                  (sidebarLabelsVisible ? "opacity-100" : "opacity-0")
-                }
-              >
-                <LogOut size={15} />
-              </button>
+                <DropdownMenu.Trigger asChild>
+                  <button
+                    type="button"
+                    aria-label="Admin"
+                    className={
+                      "mx-2 flex h-14 w-[calc(100%-1rem)] items-center overflow-hidden rounded-2xl text-left transition-[background-color,box-shadow] duration-[180ms] ease-[cubic-bezier(0.22,1,0.36,1)] focus-visible:outline-none " +
+                      (visualRailCollapsed
+                        ? "hover:bg-slate-100/80 dark:hover:bg-white/[0.06]"
+                        : "hover:bg-slate-100/85 hover:shadow-[0_8px_24px_rgba(15,23,42,0.10)] data-[state=open]:bg-slate-100/85 data-[state=open]:shadow-[0_8px_24px_rgba(15,23,42,0.10)] dark:hover:bg-white/[0.08] dark:hover:shadow-black/30 dark:data-[state=open]:bg-white/[0.08] dark:data-[state=open]:shadow-black/30")
+                    }
+                  >
+                    <span className="grid h-14 w-12 shrink-0 place-items-center">
+                      <span
+                        data-sidebar-account-avatar="true"
+                        className="relative grid h-9 w-9 place-items-center rounded-full bg-blue-600 text-[11px] font-semibold text-white"
+                      >
+                        AD
+                        <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-white bg-emerald-500 dark:border-neutral-950" />
+                      </span>
+                    </span>
+                    <span
+                      className={
+                        "min-w-0 flex-1 overflow-hidden pl-2 pr-3 leading-tight transition-[opacity,transform] duration-[180ms] ease-[cubic-bezier(0.22,1,0.36,1)] " +
+                        (sidebarLabelsVisible
+                          ? "translate-x-0 opacity-100 delay-100"
+                          : "-translate-x-1 opacity-0 delay-0")
+                      }
+                    >
+                      <span className="block truncate text-[13px] font-semibold text-slate-950 dark:text-white">
+                        Admin
+                      </span>
+                      <span className="mt-0.5 block truncate text-[10px] text-slate-400">
+                        {t("shell.sidebar_account_role")}
+                      </span>
+                    </span>
+                  </button>
+                </DropdownMenu.Trigger>
+                <DropdownMenu.Portal>
+                  <DropdownMenu.Content
+                    data-sidebar-account-menu="true"
+                    side="top"
+                    align="start"
+                    sideOffset={8}
+                    collisionPadding={8}
+                    className="w-[var(--radix-dropdown-menu-trigger-width)] p-2"
+                  >
+                    <div className="flex items-center gap-3 px-2 py-2">
+                      <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-blue-600 text-[11px] font-semibold text-white">
+                        AD
+                      </div>
+                      <div className="min-w-0 flex-1 leading-tight">
+                        <div className="truncate text-[13px] font-semibold text-slate-950 dark:text-white">
+                          Admin
+                        </div>
+                        <div className="mt-0.5 truncate text-[10px] text-slate-400">
+                          {t("shell.sidebar_account_role")}
+                        </div>
+                      </div>
+                    </div>
+                    <DropdownMenu.Separator />
+                    <DropdownMenu.Item
+                      onSelect={() =>
+                        navigate("/account-security", { viewTransition: true })
+                      }
+                      className="py-2.5"
+                    >
+                      <ShieldCheck size={16} />
+                      {t("shell.nav_account_security")}
+                    </DropdownMenu.Item>
+                    <DropdownMenu.Item
+                      onSelect={() => navigate("/config", { viewTransition: true })}
+                      className="py-2.5"
+                    >
+                      <Settings size={16} />
+                      {t("shell.nav_config")}
+                    </DropdownMenu.Item>
+                    <DropdownMenu.Separator />
+                    <DropdownMenu.Item
+                      onSelect={handleLogout}
+                      className="py-2.5 text-rose-600 focus:text-rose-700 dark:text-rose-300"
+                    >
+                      <LogOut size={16} />
+                      {accountLogoutLabel}
+                    </DropdownMenu.Item>
+                  </DropdownMenu.Content>
+                </DropdownMenu.Portal>
+              </DropdownMenu.Root>
               {visualRailCollapsed ? (
-                <div className="invisible absolute bottom-2 left-[calc(100%+8px)] z-50 w-52 translate-x-1 rounded-2xl border border-slate-200 bg-white p-2 opacity-0 shadow-[0_16px_48px_rgba(15,23,42,0.14)] transition-[opacity,transform,visibility] duration-180 ease-out before:absolute before:-left-3 before:top-0 before:h-full before:w-3 group-hover/account:visible group-hover/account:translate-x-0 group-hover/account:opacity-100 group-focus-within/account:visible group-focus-within/account:translate-x-0 group-focus-within/account:opacity-100 dark:border-neutral-800 dark:bg-neutral-950 dark:shadow-black/40">
+                <div
+                  className={
+                    floatingPanelSurface +
+                    " invisible absolute bottom-1 left-[calc(100%+8px)] z-50 w-52 translate-x-1 p-2 opacity-0 transition-[opacity,transform,visibility] duration-180 ease-out before:absolute before:-left-3 before:top-0 before:h-full before:w-3 group-hover/account:visible group-hover/account:translate-x-0 group-hover/account:opacity-100 group-focus-within/account:visible group-focus-within/account:translate-x-0 group-focus-within/account:opacity-100"
+                  }
+                >
                   <div className="flex items-center gap-3 px-2 py-2">
                     <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-blue-600 text-[11px] font-semibold text-white">
                       AD
@@ -719,7 +990,9 @@ function ShellHeader({
   const {
     state: { titleKey },
   } = useShell();
-  const sidebarLabel = sidebarCollapsed ? t("shell.expand_sidebar") : t("shell.collapse_sidebar");
+  const sidebarLabel = sidebarCollapsed
+    ? t("shell.expand_sidebar")
+    : t("shell.collapse_sidebar");
 
   return (
     <header className="z-20 shrink-0 border-b border-slate-200 bg-white/75 backdrop-blur-xl motion-reduce:transition-none motion-safe:transition-colors motion-safe:duration-200 motion-safe:ease-out dark:border-neutral-800 dark:bg-neutral-950/60">
@@ -758,14 +1031,18 @@ function ShellMain({ children }: PropsWithChildren) {
   );
 }
 
-export function AppShell({ children, onLogout }: PropsWithChildren<{ onLogout?: () => void }>) {
+export function AppShell({
+  children,
+  onLogout,
+}: PropsWithChildren<{ onLogout?: () => void }>) {
   const location = useLocation();
   const { t } = useTranslation();
   const logout = onLogout ?? (() => {});
 
   const [isMobile, setIsMobile] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] = useState<boolean>(() => {
+  const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] =
+    useState<boolean>(() => {
     try {
       return localStorage.getItem(STORAGE_KEY_SIDEBAR_COLLAPSED) === "1";
     } catch {
@@ -815,7 +1092,10 @@ export function AppShell({ children, onLogout }: PropsWithChildren<{ onLogout?: 
 
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY_SIDEBAR_COLLAPSED, desktopSidebarCollapsed ? "1" : "0");
+      localStorage.setItem(
+        STORAGE_KEY_SIDEBAR_COLLAPSED,
+        desktopSidebarCollapsed ? "1" : "0",
+      );
     } catch {
       // 忽略持久化失败
     }
@@ -841,7 +1121,9 @@ export function AppShell({ children, onLogout }: PropsWithChildren<{ onLogout?: 
     [location.pathname, logout],
   );
 
-  const sidebarCollapsed = isMobile ? !mobileSidebarOpen : desktopSidebarCollapsed;
+  const sidebarCollapsed = isMobile
+    ? !mobileSidebarOpen
+    : desktopSidebarCollapsed;
 
   return (
     <ShellContext value={value}>
@@ -865,7 +1147,9 @@ export function AppShell({ children, onLogout }: PropsWithChildren<{ onLogout?: 
             collapsed={sidebarCollapsed}
             mode={isMobile ? "mobile" : "desktop"}
             onToggleSidebar={toggleSidebar}
-            onNavigate={isMobile ? () => setMobileSidebarOpen(false) : undefined}
+            onNavigate={
+              isMobile ? () => setMobileSidebarOpen(false) : undefined
+            }
           />
           <div className="flex min-w-0 flex-1 flex-col">
             <ShellHeader

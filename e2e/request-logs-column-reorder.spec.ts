@@ -224,6 +224,23 @@ const readResponseMetricsColumnState = async (page: Page) =>
     };
   });
 
+test("Request Logs: filter dropdown uses the shared floating surface", async ({ page }) => {
+  await setAuthed(page);
+  await mockRequestLogsApis(page);
+
+  await page.goto("/manage/#/monitor/request-logs");
+  await page.locator('th[data-vt-column-key="id"]').waitFor({ state: "visible" });
+  await page.getByRole("combobox").first().click();
+
+  const filterPanel = page.locator(".code-proxy-floating-surface").last();
+  await expect(filterPanel).toBeVisible();
+  await expect(filterPanel).toHaveCSS("border-radius", "12px");
+  await expect(filterPanel).toHaveCSS("border-top-width", "1px");
+  await expect
+    .poll(async () => filterPanel.evaluate((el) => getComputedStyle(el).boxShadow))
+    .not.toBe("none");
+});
+
 test("Request Logs: centers every header except ID over its column content", async ({ page }) => {
   await setAuthed(page);
   await mockRequestLogsApis(page);
