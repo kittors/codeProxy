@@ -11,5 +11,6 @@ export const modelsRoute = {
   layout: "dashboard",
   nav: { labelKey: "nav.models" },
   redirects: [{ from: "/manage/models", to: "/models" }],
+  requiredPermission: "models.read",
   preload: preloadModelsPage,
 };

@@ -4,6 +4,7 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { Check, RefreshCw } from "lucide-react";
 import { Button } from "@code-proxy/ui";
 import { TextInput } from "@code-proxy/ui";
+import { useOptionalAuth } from "@app/providers/AuthProvider";
 
 interface OpenAIModelDiscoveryPanelProps {
   discovering: boolean;
@@ -23,13 +24,21 @@ export function OpenAIModelDiscoveryPanel({
   setDiscoverSelected,
 }: OpenAIModelDiscoveryPanelProps) {
   const { t } = useTranslation();
+  const auth = useOptionalAuth();
+  const canDiscover = auth?.state.principal
+    ? auth.can("providers.test") &&
+      auth.state.principal.effective_tenant.type === "system"
+    : true;
   const [discoverQuery, setDiscoverQuery] = useState("");
   const discoveredListRef = useRef<HTMLDivElement | null>(null);
   const discoveredSectionRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (discoveredModels.length > 0 && discoveredSectionRef.current) {
-      discoveredSectionRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+      discoveredSectionRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
     }
   }, [discoveredModels.length]);
 
@@ -71,6 +80,8 @@ export function OpenAIModelDiscoveryPanel({
     });
   };
 
+  if (!canDiscover) return null;
+
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -98,7 +109,9 @@ export function OpenAIModelDiscoveryPanel({
               {t("providers.found_models", { count: discoveredModels.length })}
             </p>
             <p className="text-xs tabular-nums text-slate-500 dark:text-white/50">
-              {t("providers.models_selected_count", { count: discoverSelected.size })}
+              {t("providers.models_selected_count", {
+                count: discoverSelected.size,
+              })}
             </p>
           </div>
 
@@ -112,7 +125,11 @@ export function OpenAIModelDiscoveryPanel({
             <Button variant="secondary" size="sm" onClick={selectAllDiscovered}>
               {t("providers.models_select_all")}
             </Button>
-            <Button variant="secondary" size="sm" onClick={deselectAllDiscovered}>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={deselectAllDiscovered}
+            >
               {t("providers.models_select_none")}
             </Button>
             <Button
@@ -138,7 +155,9 @@ export function OpenAIModelDiscoveryPanel({
             ref={discoveredListRef}
             className="mt-2.5 max-h-52 overflow-y-auto rounded-xl border border-slate-200/80 bg-white dark:border-neutral-800/60 dark:bg-neutral-950/60"
             role="list"
-            aria-label={t("providers.found_models", { count: discoveredModels.length })}
+            aria-label={t("providers.found_models", {
+              count: discoveredModels.length,
+            })}
           >
             <div
               style={{

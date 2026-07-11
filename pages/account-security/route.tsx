@@ -15,5 +15,6 @@ export const accountSecurityRoute = {
     { from: "/auth-files/oauth-model-alias", to: "/account-security?tab=alias" },
     { from: "/manage/identity-fingerprint", to: "/account-security" },
   ],
+  requiredPermission: "auth_files.read",
   preload: preloadAuthFilesPage,
 };

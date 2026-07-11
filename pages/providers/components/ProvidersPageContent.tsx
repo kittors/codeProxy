@@ -1,8 +1,18 @@
-import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
 import { ampcodeApi, providersApi, usageApi } from "@code-proxy/api-client";
-import { proxiesApi, type ProxyPoolEntry } from "@code-proxy/api-client/endpoints/proxies";
+import {
+  proxiesApi,
+  type ProxyPoolEntry,
+} from "@code-proxy/api-client/endpoints/proxies";
 import type {
   BedrockProviderConfig,
   OpenAIProvider,
@@ -33,7 +43,12 @@ import { useProviderLatency } from "../hooks/useProviderLatency";
 import { useProviderUsageSummary } from "../hooks/useProviderUsageSummary";
 import { normalizeUsageSourceId, type KeyStatBucket } from "@code-proxy/domain";
 import { getCachedData, setCachedData } from "../provider-cache";
-import { maskApiKey, readBool, readString, type AmpMappingEntry } from "../providers-helpers";
+import {
+  maskApiKey,
+  readBool,
+  readString,
+  type AmpMappingEntry,
+} from "../providers-helpers";
 import {
   createProviderExportText,
   prepareProviderImport,
@@ -49,6 +64,7 @@ import {
 import { ProvidersToolbar } from "./ProvidersToolbar";
 import { ProviderTabsWithCounts } from "./ProviderTabsWithCounts";
 import type { ProviderTabId } from "./ProviderTabsWithCounts";
+import { useOptionalAuth } from "@app/providers/AuthProvider";
 
 type ProviderTab = ProviderTabId;
 
@@ -65,14 +81,17 @@ const PROVIDER_TAB_VALUES: ProviderTab[] = [
   "openai",
   "ampcode",
 ];
-const PROVIDER_LIST_TAB_VALUES: Exclude<ProviderTab, "ampcode">[] = PROVIDER_TAB_VALUES.filter(
-  (item) => item !== "ampcode",
-) as Exclude<ProviderTab, "ampcode">[];
+const PROVIDER_LIST_TAB_VALUES: Exclude<ProviderTab, "ampcode">[] =
+  PROVIDER_TAB_VALUES.filter((item) => item !== "ampcode") as Exclude<
+    ProviderTab,
+    "ampcode"
+  >[];
 
 function readSavedProviderTab(): ProviderTab {
   try {
     const saved = localStorage.getItem(PROVIDER_TAB_STORAGE_KEY);
-    if (saved && PROVIDER_TAB_VALUES.includes(saved as ProviderTab)) return saved as ProviderTab;
+    if (saved && PROVIDER_TAB_VALUES.includes(saved as ProviderTab))
+      return saved as ProviderTab;
   } catch {
     // ignore
   }
@@ -105,11 +124,12 @@ const hasOpenCodeGoUsageQuery = (item: ProviderSimpleConfig) =>
 
 type ProviderUsageProvider = "opencode-go" | "cline" | "ollama-cloud";
 
-const PROVIDER_USAGE_WINDOWS: Record<ProviderUsageProvider, readonly string[]> = {
-  "opencode-go": ["rolling", "weekly", "monthly"],
-  cline: ["five_hour", "weekly", "monthly"],
-  "ollama-cloud": ["rolling", "weekly"],
-};
+const PROVIDER_USAGE_WINDOWS: Record<ProviderUsageProvider, readonly string[]> =
+  {
+    "opencode-go": ["rolling", "weekly", "monthly"],
+    cline: ["five_hour", "weekly", "monthly"],
+    "ollama-cloud": ["rolling", "weekly"],
+  };
 
 const getProviderUsageCacheKey = (
   provider: ProviderUsageProvider,
@@ -118,15 +138,23 @@ const getProviderUsageCacheKey = (
 ) =>
   [
     provider,
-    provider === "opencode-go" ? item.workspaceId?.trim() || "no-workspace" : "dashboard",
+    provider === "opencode-go"
+      ? item.workspaceId?.trim() || "no-workspace"
+      : "dashboard",
     item.name?.trim() || item.apiKey?.trim() || `item-${index}`,
     index,
   ].join(":");
 
-const migrateProviderUsageCache = (cached: OpenCodeGoUsageState): OpenCodeGoUsageState => {
+const migrateProviderUsageCache = (
+  cached: OpenCodeGoUsageState,
+): OpenCodeGoUsageState => {
   const next = { ...cached };
   Object.entries(cached).forEach(([key, entry]) => {
-    if (key.startsWith("opencode-go:") || key.startsWith("cline:") || key.startsWith("ollama-cloud:")) {
+    if (
+      key.startsWith("opencode-go:") ||
+      key.startsWith("cline:") ||
+      key.startsWith("ollama-cloud:")
+    ) {
       return;
     }
     next[`opencode-go:${key}`] ??= entry;
@@ -134,13 +162,19 @@ const migrateProviderUsageCache = (cached: OpenCodeGoUsageState): OpenCodeGoUsag
   return next;
 };
 
-const hasProviderUsageQuery = (provider: ProviderUsageProvider, item: ProviderSimpleConfig) =>
+const hasProviderUsageQuery = (
+  provider: ProviderUsageProvider,
+  item: ProviderSimpleConfig,
+) =>
   provider === "opencode-go"
     ? hasOpenCodeGoUsageQuery(item)
     : Boolean(item.authCookie?.trim());
 
 type OpenCodeGoUsageState = Record<string, OpenCodeGoUsageCacheEntry>;
-type ModelAccessCatalogState = Record<ModelAccessProvider, DiscoveredProviderModel[]>;
+type ModelAccessCatalogState = Record<
+  ModelAccessProvider,
+  DiscoveredProviderModel[]
+>;
 type ModelAccessCatalogLoadedState = Record<ModelAccessProvider, boolean>;
 
 const EMPTY_MODEL_ACCESS_CATALOGS: ModelAccessCatalogState = {
@@ -155,51 +189,76 @@ const EMPTY_MODEL_ACCESS_CATALOG_LOADED: ModelAccessCatalogLoadedState = {
   "ollama-cloud": false,
 };
 
-const isModelAccessProvider = (tabId: ProviderTab): tabId is ModelAccessProvider =>
+const isModelAccessProvider = (
+  tabId: ProviderTab,
+): tabId is ModelAccessProvider =>
   tabId === "opencode-go" || tabId === "cline" || tabId === "ollama-cloud";
 
 export function ProvidersPage() {
   const { t } = useTranslation();
   const { notify } = useToast();
+  const auth = useOptionalAuth();
+  const canWriteProviders = auth?.can("providers.write") ?? true;
+  const canTestProviders = auth?.can("providers.test") ?? true;
+  const canReadModels = auth?.can("models.read") ?? true;
+  const canReadUsage = auth?.can("monitor.read") ?? true;
+  const canReadProxies = auth?.can("proxies.read") ?? true;
+  const isSystemTenant = auth?.state.principal
+    ? auth.state.principal.effective_tenant.type === "system"
+    : true;
   const [isPending, startTransition] = useTransition();
   const location = useLocation();
   const navigate = useNavigate();
   const { getEntry: getLatencyEntry, checkLatency } = useProviderLatency();
 
-  const [tab, setTabState] = useState<ProviderTab>(readSavedProviderTab);
+  const [tab, setTabState] = useState<ProviderTab>(() => {
+    const saved = readSavedProviderTab();
+    return !isSystemTenant && saved === "ampcode" ? "gemini" : saved;
+  });
   const setTab = useCallback((next: ProviderTab) => {
     setTabState(next);
     saveProviderTab(next);
   }, []);
+  useEffect(() => {
+    if (!isSystemTenant && tab === "ampcode") setTab("gemini");
+  }, [isSystemTenant, setTab, tab]);
   const [loading, setLoading] = useState(true);
 
   const openCodeGoUsageStoreRef = useRef<OpenCodeGoUsageStore | null>(null);
   if (!openCodeGoUsageStoreRef.current) {
     openCodeGoUsageStoreRef.current = createOpenCodeGoUsageStore(
-      migrateProviderUsageCache(getCachedData<OpenCodeGoUsageState>("opencode-go-usage") ?? {}),
+      migrateProviderUsageCache(
+        getCachedData<OpenCodeGoUsageState>("opencode-go-usage") ?? {},
+      ),
       (next) => setCachedData("opencode-go-usage", next),
     );
   }
   const openCodeGoUsageStore = openCodeGoUsageStoreRef.current;
-  const [modelAccessCatalogs, setModelAccessCatalogs] = useState<ModelAccessCatalogState>(
-    EMPTY_MODEL_ACCESS_CATALOGS,
-  );
+  const [modelAccessCatalogs, setModelAccessCatalogs] =
+    useState<ModelAccessCatalogState>(EMPTY_MODEL_ACCESS_CATALOGS);
   const [modelAccessCatalogLoaded, setModelAccessCatalogLoaded] =
     useState<ModelAccessCatalogLoadedState>(EMPTY_MODEL_ACCESS_CATALOG_LOADED);
 
-  const loadModelAccessCatalog = useCallback(async (provider: ModelAccessProvider) => {
-    try {
-      const catalog = await fetchModelAccessCatalog(provider);
-      setModelAccessCatalogs((prev) => ({ ...prev, [provider]: catalog }));
-    } catch {
-      setModelAccessCatalogs((prev) => ({ ...prev, [provider]: [] }));
-    } finally {
-      setModelAccessCatalogLoaded((prev) => ({ ...prev, [provider]: true }));
-    }
-  }, []);
+  const loadModelAccessCatalog = useCallback(
+    async (provider: ModelAccessProvider) => {
+      try {
+        const catalog = await fetchModelAccessCatalog(provider);
+        setModelAccessCatalogs((prev) => ({ ...prev, [provider]: catalog }));
+      } catch {
+        setModelAccessCatalogs((prev) => ({ ...prev, [provider]: [] }));
+      } finally {
+        setModelAccessCatalogLoaded((prev) => ({ ...prev, [provider]: true }));
+      }
+    },
+    [],
+  );
 
   const refreshProviderUsage = useCallback(
-    async (provider: ProviderUsageProvider, item: ProviderSimpleConfig, index: number) => {
+    async (
+      provider: ProviderUsageProvider,
+      item: ProviderSimpleConfig,
+      index: number,
+    ) => {
       if (!hasProviderUsageQuery(provider, item)) return;
 
       const cacheKey = getProviderUsageCacheKey(provider, item, index);
@@ -229,7 +288,10 @@ export function ProvidersPage() {
           updatedAt: Date.now(),
         };
         openCodeGoUsageStore.updateEntry(cacheKey, (existing) => {
-          const merged = mergeOpenCodeGoUsage(existing?.usage ?? [], entry.usage);
+          const merged = mergeOpenCodeGoUsage(
+            existing?.usage ?? [],
+            entry.usage,
+          );
           return {
             ...entry,
             usage: merged,
@@ -244,7 +306,10 @@ export function ProvidersPage() {
           workspaceId: existing?.workspaceId,
           usage: existing?.usage ?? [],
           updatedAt: Date.now(),
-          error: err instanceof Error ? err.message : t("providers.opencode_go_usage_query_failed"),
+          error:
+            err instanceof Error
+              ? err.message
+              : t("providers.opencode_go_usage_query_failed"),
         }));
         openCodeGoUsageStore.setLoading(cacheKey, false);
       }
@@ -268,9 +333,9 @@ export function ProvidersPage() {
   const [clineKeys, setClineKeys] = useState<ProviderSimpleConfig[]>(
     () => getCachedData<ProviderSimpleConfig[]>("cline") ?? [],
   );
-  const [ollamaCloudKeys, setOllamaCloudKeys] = useState<ProviderSimpleConfig[]>(
-    () => getCachedData<ProviderSimpleConfig[]>("ollama-cloud") ?? [],
-  );
+  const [ollamaCloudKeys, setOllamaCloudKeys] = useState<
+    ProviderSimpleConfig[]
+  >(() => getCachedData<ProviderSimpleConfig[]>("ollama-cloud") ?? []);
   const [vertexKeys, setVertexKeys] = useState<ProviderSimpleConfig[]>([]);
   const [bedrockKeys, setBedrockKeys] = useState<BedrockProviderConfig[]>([]);
   const [openaiProviders, setOpenaiProviders] = useState<OpenAIProvider[]>([]);
@@ -280,7 +345,9 @@ export function ProvidersPage() {
   const autoRefreshProviderUsageInFlightRef = useRef(false);
 
   useEffect(() => {
-    if (tab !== "opencode-go" && tab !== "cline" && tab !== "ollama-cloud") return;
+    if (!canTestProviders) return;
+    if (tab !== "opencode-go" && tab !== "cline" && tab !== "ollama-cloud")
+      return;
     if (loading) return;
     if (autoRefreshProviderUsageInFlightRef.current) return;
 
@@ -314,7 +381,11 @@ export function ProvidersPage() {
     const refreshBatch = async () => {
       for (let i = 0; i < staleKeys.length; i += 2) {
         const batch = staleKeys.slice(i, i + 2);
-        await Promise.allSettled(batch.map(({ item, idx }) => refreshProviderUsage(provider, item, idx)));
+        await Promise.allSettled(
+          batch.map(({ item, idx }) =>
+            refreshProviderUsage(provider, item, idx),
+          ),
+        );
       }
       autoRefreshProviderUsageInFlightRef.current = false;
     };
@@ -323,6 +394,7 @@ export function ProvidersPage() {
   }, [
     tab,
     loading,
+    canTestProviders,
     clineKeys,
     ollamaCloudKeys,
     openCodeGoKeys,
@@ -331,16 +403,18 @@ export function ProvidersPage() {
   ]);
 
   useEffect(() => {
-    if (!isModelAccessProvider(tab)) return;
+    if (!canReadModels || !isModelAccessProvider(tab)) return;
     if (modelAccessCatalogLoaded[tab]) return;
     void loadModelAccessCatalog(tab);
-  }, [loadModelAccessCatalog, modelAccessCatalogLoaded, tab]);
+  }, [canReadModels, loadModelAccessCatalog, modelAccessCatalogLoaded, tab]);
 
-  const [proxyPoolEntries, setProxyPoolEntries] = useState<ProxyPoolEntry[]>([]);
-
-  const [usageStatsBySource, setUsageStatsBySource] = useState<Record<string, KeyStatBucket>>(
-    () => getCachedData<Record<string, KeyStatBucket>>("usage-stats") ?? {},
+  const [proxyPoolEntries, setProxyPoolEntries] = useState<ProxyPoolEntry[]>(
+    [],
   );
+
+  const [usageStatsBySource, setUsageStatsBySource] = useState<
+    Record<string, KeyStatBucket>
+  >(() => getCachedData<Record<string, KeyStatBucket>>("usage-stats") ?? {});
 
   const [ampcode, setAmpcode] = useState<Record<string, unknown> | null>(null);
   const [ampUpstreamUrl, setAmpUpstreamUrl] = useState("");
@@ -369,7 +443,8 @@ export function ProvidersPage() {
   const importInputRef = useRef<HTMLInputElement | null>(null);
   const [importPreview, setImportPreview] = useState<{
     kind: ProviderImportKind;
-    nextItems: ProviderSimpleConfig[] | BedrockProviderConfig[] | OpenAIProvider[];
+    nextItems:
+      ProviderSimpleConfig[] | BedrockProviderConfig[] | OpenAIProvider[];
     diff: ProviderImportDiff;
     filename: string;
   } | null>(null);
@@ -380,8 +455,12 @@ export function ProvidersPage() {
   useEffect(() => {
     openCodeGoUsageStore.prune(
       new Set([
-        ...openCodeGoKeys.map((item, idx) => getProviderUsageCacheKey("opencode-go", item, idx)),
-        ...clineKeys.map((item, idx) => getProviderUsageCacheKey("cline", item, idx)),
+        ...openCodeGoKeys.map((item, idx) =>
+          getProviderUsageCacheKey("opencode-go", item, idx),
+        ),
+        ...clineKeys.map((item, idx) =>
+          getProviderUsageCacheKey("cline", item, idx),
+        ),
         ...ollamaCloudKeys.map((item, idx) =>
           getProviderUsageCacheKey("ollama-cloud", item, idx),
         ),
@@ -474,7 +553,9 @@ export function ProvidersPage() {
             : {};
         setAmpcode(ampObj);
         setAmpUpstreamUrl(readString(ampObj, "upstreamUrl", "upstream-url"));
-        setAmpForceMappings(readBool(ampObj, "forceModelMappings", "force-model-mappings"));
+        setAmpForceMappings(
+          readBool(ampObj, "forceModelMappings", "force-model-mappings"),
+        );
 
         const mappings = Array.isArray(ampMap) ? ampMap : [];
         const entries: AmpMappingEntry[] = mappings
@@ -487,7 +568,11 @@ export function ProvidersPage() {
             return { id: `map-${idx}-${from}`, from, to };
           })
           .filter(Boolean) as AmpMappingEntry[];
-        setAmpMappings(entries.length ? entries : [{ id: `map-${Date.now()}`, from: "", to: "" }]);
+        setAmpMappings(
+          entries.length
+            ? entries
+            : [{ id: `map-${Date.now()}`, from: "", to: "" }],
+        );
         break;
       }
     }
@@ -501,7 +586,8 @@ export function ProvidersPage() {
       } catch (err: unknown) {
         notify({
           type: "error",
-          message: err instanceof Error ? err.message : t("providers.load_failed"),
+          message:
+            err instanceof Error ? err.message : t("providers.load_failed"),
         });
       } finally {
         setLoading(false);
@@ -512,7 +598,8 @@ export function ProvidersPage() {
 
   const loadUsage = useCallback(async () => {
     try {
-      const cachedUsage = getCachedData<Record<string, KeyStatBucket>>("usage-stats");
+      const cachedUsage =
+        getCachedData<Record<string, KeyStatBucket>>("usage-stats");
       if (cachedUsage) setUsageStatsBySource(cachedUsage);
       const usage = await usageApi.getEntityStats(30, "all").catch(() => null);
       if (usage?.source) {
@@ -554,22 +641,37 @@ export function ProvidersPage() {
   const refreshAll = useCallback(async () => {
     setLoading(true);
     const tabsToRefresh: ProviderTab[] =
-      tab === "ampcode" ? [...PROVIDER_LIST_TAB_VALUES, "ampcode"] : PROVIDER_LIST_TAB_VALUES;
-    const results = await Promise.allSettled([
-      ...tabsToRefresh.map((tabId) => loadProviderTab(tabId)),
-      loadUsage(),
-      loadProxyPool(),
-    ]);
+      isSystemTenant && tab === "ampcode"
+        ? [...PROVIDER_LIST_TAB_VALUES, "ampcode"]
+        : PROVIDER_LIST_TAB_VALUES;
+    const tasks: Promise<void>[] = tabsToRefresh.map((tabId) =>
+      loadProviderTab(tabId),
+    );
+    if (canReadUsage) tasks.push(loadUsage());
+    if (canReadProxies) tasks.push(loadProxyPool());
+    const results = await Promise.allSettled(tasks);
     const failed = results.find((result) => result.status === "rejected");
     if (failed) {
       notify({
         type: "error",
         message:
-          failed.reason instanceof Error ? failed.reason.message : t("providers.load_failed"),
+          failed.reason instanceof Error
+            ? failed.reason.message
+            : t("providers.load_failed"),
       });
     }
     setLoading(false);
-  }, [loadProviderTab, loadProxyPool, loadUsage, notify, t, tab]);
+  }, [
+    canReadProxies,
+    canReadUsage,
+    isSystemTenant,
+    loadProviderTab,
+    loadProxyPool,
+    loadUsage,
+    notify,
+    t,
+    tab,
+  ]);
 
   useEffect(() => {
     void refreshAll();
@@ -682,6 +784,7 @@ export function ProvidersPage() {
         setSelectedExportKeys([]);
         setTab(provider);
         await refreshTab(provider);
+        if (!canWriteProviders) return;
         if (action === "new") {
           openKeyEditor(provider, null);
           return;
@@ -697,6 +800,7 @@ export function ProvidersPage() {
         setSelectedExportKeys([]);
         setTab("openai");
         await refreshTab("openai");
+        if (!canWriteProviders) return;
         if (action === "new") {
           openOpenAIEditor(null);
           return;
@@ -708,13 +812,21 @@ export function ProvidersPage() {
         return;
       }
 
-      if (provider === "ampcode") {
+      if (provider === "ampcode" && isSystemTenant) {
         setSelectedExportKeys([]);
         setTab("ampcode");
         await refreshTab("ampcode");
       }
     })();
-  }, [loading, location.pathname, openKeyEditor, openOpenAIEditor, refreshTab]);
+  }, [
+    canWriteProviders,
+    isSystemTenant,
+    loading,
+    location.pathname,
+    openKeyEditor,
+    openOpenAIEditor,
+    refreshTab,
+  ]);
 
   const saveAmpcode = useCallback(async () => {
     try {
@@ -743,7 +855,8 @@ export function ProvidersPage() {
     } catch (err: unknown) {
       notify({
         type: "error",
-        message: err instanceof Error ? err.message : t("providers.save_failed"),
+        message:
+          err instanceof Error ? err.message : t("providers.save_failed"),
       });
     }
   }, [
@@ -824,14 +937,18 @@ export function ProvidersPage() {
         ? currentTabItems.map((item, index) =>
             getProviderSelectionKey(
               currentImportKind,
-              item as ProviderSimpleConfig | BedrockProviderConfig | OpenAIProvider,
+              item as
+                ProviderSimpleConfig | BedrockProviderConfig | OpenAIProvider,
               index,
             ),
           )
         : [],
     [currentImportKind, currentTabItems],
   );
-  const selectedExportKeySet = useMemo(() => new Set(selectedExportKeys), [selectedExportKeys]);
+  const selectedExportKeySet = useMemo(
+    () => new Set(selectedExportKeys),
+    [selectedExportKeys],
+  );
   const selectedExportCount = selectedExportKeys.length;
   const allCurrentSelected =
     currentSelectableKeys.length > 0 &&
@@ -871,7 +988,8 @@ export function ProvidersPage() {
   const saveImportedItems = useCallback(
     async (
       kind: ProviderImportKind,
-      items: ProviderSimpleConfig[] | BedrockProviderConfig[] | OpenAIProvider[],
+      items:
+        ProviderSimpleConfig[] | BedrockProviderConfig[] | OpenAIProvider[],
     ) => {
       switch (kind) {
         case "gemini":
@@ -884,19 +1002,25 @@ export function ProvidersPage() {
           await providersApi.saveCodexConfigs(items as ProviderSimpleConfig[]);
           return;
         case "opencode-go":
-          await providersApi.saveOpenCodeGoConfigs(items as ProviderSimpleConfig[]);
+          await providersApi.saveOpenCodeGoConfigs(
+            items as ProviderSimpleConfig[],
+          );
           return;
         case "cline":
           await providersApi.saveClineConfigs(items as ProviderSimpleConfig[]);
           return;
         case "ollama-cloud":
-          await providersApi.saveOllamaCloudConfigs(items as ProviderSimpleConfig[]);
+          await providersApi.saveOllamaCloudConfigs(
+            items as ProviderSimpleConfig[],
+          );
           return;
         case "vertex":
           await providersApi.saveVertexConfigs(items as ProviderSimpleConfig[]);
           return;
         case "bedrock":
-          await providersApi.saveBedrockConfigs(items as BedrockProviderConfig[]);
+          await providersApi.saveBedrockConfigs(
+            items as BedrockProviderConfig[],
+          );
           return;
         case "openai":
           await providersApi.saveOpenAIProviders(items as OpenAIProvider[]);
@@ -960,13 +1084,21 @@ export function ProvidersPage() {
       createProviderExportText(kind, selectedItems as never),
       `${kind}-providers-selected.json`,
     );
-  }, [currentImportKind, currentTabItems, selectedExportCount, selectedExportKeySet]);
+  }, [
+    currentImportKind,
+    currentTabItems,
+    selectedExportCount,
+    selectedExportKeySet,
+  ]);
 
   const handleImportFile = useCallback(
     async (file: File | null) => {
       const kind = currentImportKind;
       if (!kind || !file) return;
-      if (!file.name.toLowerCase().endsWith(".json") && file.type !== "application/json") {
+      if (
+        !file.name.toLowerCase().endsWith(".json") &&
+        file.type !== "application/json"
+      ) {
         notify({ type: "error", message: t("upload_error_json") });
         return;
       }
@@ -1012,30 +1144,40 @@ export function ProvidersPage() {
     } catch (error: unknown) {
       notify({
         type: "error",
-        message: error instanceof Error ? error.message : t("providers.save_failed"),
+        message:
+          error instanceof Error ? error.message : t("providers.save_failed"),
       });
     } finally {
       setImporting(false);
     }
-  }, [importPreview, notify, refreshAll, saveImportedItems, startTransition, t]);
+  }, [
+    importPreview,
+    notify,
+    refreshAll,
+    saveImportedItems,
+    startTransition,
+    t,
+  ]);
 
   return (
     <div
       data-testid="providers-page-shell"
       className="flex h-[calc(100dvh-97px)] min-h-0 flex-col gap-6 overflow-hidden sm:h-[calc(100dvh-113px)]"
     >
-      <input
-        ref={importInputRef}
-        type="file"
-        accept="application/json,.json"
-        aria-label={t("providers.import_json")}
-        className="sr-only"
-        onChange={(event) => {
-          const file = event.currentTarget.files?.[0] ?? null;
-          void handleImportFile(file);
-          event.currentTarget.value = "";
-        }}
-      />
+      {canWriteProviders ? (
+        <input
+          ref={importInputRef}
+          type="file"
+          accept="application/json,.json"
+          aria-label={t("providers.import_json")}
+          className="sr-only"
+          onChange={(event) => {
+            const file = event.currentTarget.files?.[0] ?? null;
+            void handleImportFile(file);
+            event.currentTarget.value = "";
+          }}
+        />
+      ) : null}
       <ProvidersToolbar
         currentImportKind={currentImportKind}
         currentTabItemsCount={currentTabItems.length}
@@ -1089,7 +1231,15 @@ export function ProvidersPage() {
               label: t("providers.openai_compatible"),
               count: tabCounts.openai,
             },
-            { id: "ampcode", label: "Ampcode", count: tabCounts.ampcode },
+            ...(isSystemTenant
+              ? [
+                  {
+                    id: "ampcode" as const,
+                    label: "Ampcode",
+                    count: tabCounts.ampcode,
+                  },
+                ]
+              : []),
           ]}
           value={tab}
         />
@@ -1100,8 +1250,12 @@ export function ProvidersPage() {
               loading={isActiveTabListLoading("gemini")}
               onAdd={() => openKeyEditor("gemini", null)}
               onEdit={(idx) => openKeyEditor("gemini", idx)}
-              onDelete={(idx) => setConfirm({ type: "deleteKey", keyType: "gemini", index: idx })}
-              onToggleEnabled={(idx, enabled) => void toggleKeyEnabled("gemini", idx, enabled)}
+              onDelete={(idx) =>
+                setConfirm({ type: "deleteKey", keyType: "gemini", index: idx })
+              }
+              onToggleEnabled={(idx, enabled) =>
+                void toggleKeyEnabled("gemini", idx, enabled)
+              }
               getStats={getSimpleStats}
               getStatusBar={getSimpleStatusBar}
               getLatencyEntry={getLatencyEntry}
@@ -1117,8 +1271,12 @@ export function ProvidersPage() {
               loading={isActiveTabListLoading("claude")}
               onAdd={() => openKeyEditor("claude", null)}
               onEdit={(idx) => openKeyEditor("claude", idx)}
-              onDelete={(idx) => setConfirm({ type: "deleteKey", keyType: "claude", index: idx })}
-              onToggleEnabled={(idx, enabled) => void toggleKeyEnabled("claude", idx, enabled)}
+              onDelete={(idx) =>
+                setConfirm({ type: "deleteKey", keyType: "claude", index: idx })
+              }
+              onToggleEnabled={(idx, enabled) =>
+                void toggleKeyEnabled("claude", idx, enabled)
+              }
               getStats={getSimpleStats}
               getStatusBar={getSimpleStatusBar}
               getLatencyEntry={getLatencyEntry}
@@ -1134,8 +1292,12 @@ export function ProvidersPage() {
               loading={isActiveTabListLoading("codex")}
               onAdd={() => openKeyEditor("codex", null)}
               onEdit={(idx) => openKeyEditor("codex", idx)}
-              onDelete={(idx) => setConfirm({ type: "deleteKey", keyType: "codex", index: idx })}
-              onToggleEnabled={(idx, enabled) => void toggleKeyEnabled("codex", idx, enabled)}
+              onDelete={(idx) =>
+                setConfirm({ type: "deleteKey", keyType: "codex", index: idx })
+              }
+              onToggleEnabled={(idx, enabled) =>
+                void toggleKeyEnabled("codex", idx, enabled)
+              }
               getStats={getSimpleStats}
               getStatusBar={getSimpleStatusBar}
               getLatencyEntry={getLatencyEntry}
@@ -1145,7 +1307,10 @@ export function ProvidersPage() {
             />
           </TabsContent>
 
-          <TabsContent value="opencode-go" className="min-h-0 flex flex-1 flex-col">
+          <TabsContent
+            value="opencode-go"
+            className="min-h-0 flex flex-1 flex-col"
+          >
             <ProviderKeyListCard
               items={openCodeGoKeys}
               loading={isActiveTabListLoading("opencode-go")}
@@ -1158,12 +1323,18 @@ export function ProvidersPage() {
                   index: idx,
                 })
               }
-              onToggleEnabled={(idx, enabled) => void toggleKeyEnabled("opencode-go", idx, enabled)}
+              onToggleEnabled={(idx, enabled) =>
+                void toggleKeyEnabled("opencode-go", idx, enabled)
+              }
               isItemEnabled={(item) => item.disabled !== true}
               getStats={getSimpleStats}
               getStatusBar={getSimpleStatusBar}
               getDisplayModels={(item) =>
-                getEffectiveProviderModels("opencode-go", item, modelAccessCatalogs["opencode-go"])
+                getEffectiveProviderModels(
+                  "opencode-go",
+                  item,
+                  modelAccessCatalogs["opencode-go"],
+                )
               }
               showBaseUrl={false}
               naturalHeight
@@ -1172,7 +1343,11 @@ export function ProvidersPage() {
               showExcludedModels={false}
               renderExtra={(item, idx) => {
                 const queryReady = hasProviderUsageQuery("opencode-go", item);
-                const cacheKey = getProviderUsageCacheKey("opencode-go", item, idx);
+                const cacheKey = getProviderUsageCacheKey(
+                  "opencode-go",
+                  item,
+                  idx,
+                );
                 return (
                   <OpenCodeGoUsageCardSection
                     cacheKey={cacheKey}
@@ -1184,7 +1359,11 @@ export function ProvidersPage() {
               }}
               renderMetricsExtra={(item, idx) => {
                 if (!hasProviderUsageQuery("opencode-go", item)) return null;
-                const cacheKey = getProviderUsageCacheKey("opencode-go", item, idx);
+                const cacheKey = getProviderUsageCacheKey(
+                  "opencode-go",
+                  item,
+                  idx,
+                );
                 return (
                   <OpenCodeGoUsageRefreshButton
                     cacheKey={cacheKey}
@@ -1204,13 +1383,21 @@ export function ProvidersPage() {
               loading={isActiveTabListLoading("cline")}
               onAdd={() => openKeyEditor("cline", null)}
               onEdit={(idx) => openKeyEditor("cline", idx)}
-              onDelete={(idx) => setConfirm({ type: "deleteKey", keyType: "cline", index: idx })}
-              onToggleEnabled={(idx, enabled) => void toggleKeyEnabled("cline", idx, enabled)}
+              onDelete={(idx) =>
+                setConfirm({ type: "deleteKey", keyType: "cline", index: idx })
+              }
+              onToggleEnabled={(idx, enabled) =>
+                void toggleKeyEnabled("cline", idx, enabled)
+              }
               isItemEnabled={(item) => item.disabled !== true}
               getStats={getSimpleStats}
               getStatusBar={getSimpleStatusBar}
               getDisplayModels={(item) =>
-                getEffectiveProviderModels("cline", item, modelAccessCatalogs.cline)
+                getEffectiveProviderModels(
+                  "cline",
+                  item,
+                  modelAccessCatalogs.cline,
+                )
               }
               naturalHeight
               showConnectionRows={false}
@@ -1235,7 +1422,9 @@ export function ProvidersPage() {
                   <OpenCodeGoUsageRefreshButton
                     cacheKey={cacheKey}
                     usageStore={openCodeGoUsageStore}
-                    onRefresh={() => void refreshProviderUsage("cline", item, idx)}
+                    onRefresh={() =>
+                      void refreshProviderUsage("cline", item, idx)
+                    }
                   />
                 );
               }}
@@ -1244,7 +1433,10 @@ export function ProvidersPage() {
             />
           </TabsContent>
 
-          <TabsContent value="ollama-cloud" className="min-h-0 flex flex-1 flex-col">
+          <TabsContent
+            value="ollama-cloud"
+            className="min-h-0 flex flex-1 flex-col"
+          >
             <ProviderKeyListCard
               items={ollamaCloudKeys}
               loading={isActiveTabListLoading("ollama-cloud")}
@@ -1276,7 +1468,11 @@ export function ProvidersPage() {
               showExcludedModels={false}
               renderExtra={(item, idx) => {
                 const queryReady = hasProviderUsageQuery("ollama-cloud", item);
-                const cacheKey = getProviderUsageCacheKey("ollama-cloud", item, idx);
+                const cacheKey = getProviderUsageCacheKey(
+                  "ollama-cloud",
+                  item,
+                  idx,
+                );
                 return (
                   <OpenCodeGoUsageCardSection
                     cacheKey={cacheKey}
@@ -1288,12 +1484,18 @@ export function ProvidersPage() {
               }}
               renderMetricsExtra={(item, idx) => {
                 if (!hasProviderUsageQuery("ollama-cloud", item)) return null;
-                const cacheKey = getProviderUsageCacheKey("ollama-cloud", item, idx);
+                const cacheKey = getProviderUsageCacheKey(
+                  "ollama-cloud",
+                  item,
+                  idx,
+                );
                 return (
                   <OpenCodeGoUsageRefreshButton
                     cacheKey={cacheKey}
                     usageStore={openCodeGoUsageStore}
-                    onRefresh={() => void refreshProviderUsage("ollama-cloud", item, idx)}
+                    onRefresh={() =>
+                      void refreshProviderUsage("ollama-cloud", item, idx)
+                    }
                   />
                 );
               }}
@@ -1308,7 +1510,9 @@ export function ProvidersPage() {
               loading={isActiveTabListLoading("vertex")}
               onAdd={() => openKeyEditor("vertex", null)}
               onEdit={(idx) => openKeyEditor("vertex", idx)}
-              onDelete={(idx) => setConfirm({ type: "deleteKey", keyType: "vertex", index: idx })}
+              onDelete={(idx) =>
+                setConfirm({ type: "deleteKey", keyType: "vertex", index: idx })
+              }
               getStats={getSimpleStats}
               getStatusBar={getSimpleStatusBar}
               getLatencyEntry={getLatencyEntry}
@@ -1331,7 +1535,9 @@ export function ProvidersPage() {
                   index: idx,
                 })
               }
-              onToggleEnabled={(idx, enabled) => void toggleKeyEnabled("bedrock", idx, enabled)}
+              onToggleEnabled={(idx, enabled) =>
+                void toggleKeyEnabled("bedrock", idx, enabled)
+              }
               getStats={getSimpleStats}
               getStatusBar={getSimpleStatusBar}
               getLatencyEntry={getLatencyEntry}
@@ -1346,7 +1552,9 @@ export function ProvidersPage() {
               providers={openaiProviders}
               loading={isActiveTabListLoading("openai")}
               openOpenAIEditor={openOpenAIEditor}
-              confirmDelete={(index) => setConfirm({ type: "deleteOpenAI", index })}
+              confirmDelete={(index) =>
+                setConfirm({ type: "deleteOpenAI", index })
+              }
               maskApiKey={maskApiKey}
               getKeyEntryStats={getOpenAIKeyEntryStats}
               getProviderStats={getOpenAIProviderStats}
@@ -1355,29 +1563,38 @@ export function ProvidersPage() {
                 void toggleOpenAIProviderEnabled(providerIndex, enabled)
               }
               onToggleKeyEntryEnabled={(providerIndex, entryIndex, enabled) =>
-                void toggleOpenAIKeyEntryEnabled(providerIndex, entryIndex, enabled)
+                void toggleOpenAIKeyEntryEnabled(
+                  providerIndex,
+                  entryIndex,
+                  enabled,
+                )
               }
               selectedKeys={selectedExportKeySet}
               onToggleSelected={toggleExportSelection}
             />
           </TabsContent>
 
-          <TabsContent value="ampcode" className="min-h-0 flex flex-1 flex-col">
-            <AmpcodePanel
-              loading={loading}
-              isPending={isPending}
-              saveAmpcode={saveAmpcode}
-              ampcode={ampcode}
-              ampMappings={ampMappings}
-              ampUpstreamUrl={ampUpstreamUrl}
-              setAmpUpstreamUrl={setAmpUpstreamUrl}
-              ampUpstreamApiKey={ampUpstreamApiKey}
-              setAmpUpstreamApiKey={setAmpUpstreamApiKey}
-              ampForceMappings={ampForceMappings}
-              setAmpForceMappings={setAmpForceMappings}
-              setAmpMappings={setAmpMappings}
-            />
-          </TabsContent>
+          {isSystemTenant ? (
+            <TabsContent
+              value="ampcode"
+              className="min-h-0 flex flex-1 flex-col"
+            >
+              <AmpcodePanel
+                loading={loading}
+                isPending={isPending}
+                saveAmpcode={saveAmpcode}
+                ampcode={ampcode}
+                ampMappings={ampMappings}
+                ampUpstreamUrl={ampUpstreamUrl}
+                setAmpUpstreamUrl={setAmpUpstreamUrl}
+                ampUpstreamApiKey={ampUpstreamApiKey}
+                setAmpUpstreamApiKey={setAmpUpstreamApiKey}
+                ampForceMappings={ampForceMappings}
+                setAmpForceMappings={setAmpForceMappings}
+                setAmpMappings={setAmpMappings}
+              />
+            </TabsContent>
+          ) : null}
         </div>
       </Tabs>
 
@@ -1463,7 +1680,11 @@ export function ProvidersPage() {
         }}
         footer={
           <>
-            <Button variant="secondary" onClick={() => setImportPreview(null)} disabled={importing}>
+            <Button
+              variant="secondary"
+              onClick={() => setImportPreview(null)}
+              disabled={importing}
+            >
               {t("common.cancel")}
             </Button>
             <Button
@@ -1513,7 +1734,9 @@ export function ProvidersPage() {
 
             {importPreview.diff.addedLabels.length ? (
               <div>
-                <p className="font-semibold">{t("providers.diff_added_label")}</p>
+                <p className="font-semibold">
+                  {t("providers.diff_added_label")}
+                </p>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {importPreview.diff.addedLabels.map((label) => (
                     <span
@@ -1529,7 +1752,9 @@ export function ProvidersPage() {
 
             {importPreview.diff.changedLabels.length ? (
               <div>
-                <p className="font-semibold">{t("providers.diff_updated_label")}</p>
+                <p className="font-semibold">
+                  {t("providers.diff_updated_label")}
+                </p>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {importPreview.diff.changedLabels.map((label) => (
                     <span
@@ -1545,7 +1770,9 @@ export function ProvidersPage() {
 
             {importPreview.diff.removedLabels.length ? (
               <div>
-                <p className="font-semibold">{t("providers.diff_removed_label")}</p>
+                <p className="font-semibold">
+                  {t("providers.diff_removed_label")}
+                </p>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {importPreview.diff.removedLabels.map((label) => (
                     <span

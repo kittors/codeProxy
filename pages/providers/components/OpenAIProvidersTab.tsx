@@ -10,6 +10,7 @@ import { ProviderMetricChip } from "./ProviderMetricChip";
 import { ProviderModelChips } from "./ProviderModelChips";
 import { OpenAIKeyEntrySummary } from "./OpenAIKeyEntrySummary";
 import type { StatusBarData } from "@code-proxy/domain/usage";
+import { useOptionalAuth } from "@app/providers/AuthProvider";
 
 interface OpenAIProvidersTabProps {
   providers: OpenAIProvider[];
@@ -17,14 +18,23 @@ interface OpenAIProvidersTabProps {
   openOpenAIEditor: (index: number | null) => void;
   confirmDelete: (index: number) => void;
   maskApiKey: (value: string) => string;
-  getKeyEntryStats: (entry: NonNullable<OpenAIProvider["apiKeyEntries"]>[number]) => {
+  getKeyEntryStats: (
+    entry: NonNullable<OpenAIProvider["apiKeyEntries"]>[number],
+  ) => {
     success: number;
     failure: number;
   };
-  getProviderStats: (provider: OpenAIProvider) => { success: number; failure: number };
+  getProviderStats: (provider: OpenAIProvider) => {
+    success: number;
+    failure: number;
+  };
   getProviderStatusBar: (provider: OpenAIProvider) => StatusBarData;
   onToggleProviderEnabled?: (providerIndex: number, enabled: boolean) => void;
-  onToggleKeyEntryEnabled?: (providerIndex: number, entryIndex: number, enabled: boolean) => void;
+  onToggleKeyEntryEnabled?: (
+    providerIndex: number,
+    entryIndex: number,
+    enabled: boolean,
+  ) => void;
   selectedKeys?: Set<string>;
   onToggleSelected?: (key: string, checked: boolean) => void;
 }
@@ -44,6 +54,8 @@ export function OpenAIProvidersTab({
   onToggleSelected,
 }: OpenAIProvidersTabProps) {
   const { t } = useTranslation();
+  const auth = useOptionalAuth();
+  const canWrite = auth?.can("providers.write") ?? true;
   const showSkeleton = loading && providers.length === 0;
 
   return (
@@ -53,10 +65,16 @@ export function OpenAIProvidersTab({
       className="flex h-full min-h-0 flex-col"
       bodyClassName="min-h-0 flex flex-1 flex-col"
       actions={
-        <Button variant="primary" size="sm" onClick={() => openOpenAIEditor(null)}>
-          <Plus size={14} />
-          {t("providers.add_provider")}
-        </Button>
+        canWrite ? (
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => openOpenAIEditor(null)}
+          >
+            <Plus size={14} />
+            {t("providers.add_provider")}
+          </Button>
+        ) : undefined
       }
     >
       {showSkeleton ? (
@@ -65,7 +83,10 @@ export function OpenAIProvidersTab({
           aria-label={t("common.loading")}
           data-testid="providers-list-skeleton"
           className="min-h-0 flex-1 overflow-hidden pr-1 grid gap-3 items-start content-start justify-start"
-          style={{ gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 18rem), 22rem))" }}
+          style={{
+            gridTemplateColumns:
+              "repeat(auto-fill, minmax(min(100%, 18rem), 22rem))",
+          }}
         >
           {Array.from({ length: 6 }, (_, index) => (
             <ProviderCardSkeleton key={index} />
@@ -80,7 +101,10 @@ export function OpenAIProvidersTab({
         <div
           data-testid="providers-tab-scroll"
           className="min-h-0 flex-1 overflow-y-auto pr-1 grid gap-3 items-start content-start justify-start"
-          style={{ gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 18rem), 22rem))" }}
+          style={{
+            gridTemplateColumns:
+              "repeat(auto-fill, minmax(min(100%, 18rem), 22rem))",
+          }}
         >
           {providers.map((provider, idx) => {
             const selectionKey = `${provider.name.trim().toLowerCase()}:${idx}`;
@@ -102,12 +126,12 @@ export function OpenAIProvidersTab({
                     : undefined
                 }
                 onToggleEnabled={
-                  onToggleProviderEnabled
+                  canWrite && onToggleProviderEnabled
                     ? (enabled) => onToggleProviderEnabled(idx, enabled)
                     : undefined
                 }
-                onEdit={() => openOpenAIEditor(idx)}
-                onDelete={() => confirmDelete(idx)}
+                onEdit={canWrite ? () => openOpenAIEditor(idx) : undefined}
+                onDelete={canWrite ? () => confirmDelete(idx) : undefined}
               >
                 {provider.prefix ? (
                   <p className="mt-1 truncate font-mono text-xs text-slate-700 dark:text-slate-200">
@@ -127,7 +151,9 @@ export function OpenAIProvidersTab({
                         title={`${key}: ${String(value)}`}
                       >
                         <span className="shrink-0 font-semibold">{key}:</span>
-                        <span className="min-w-0 truncate">{String(value)}</span>
+                        <span className="min-w-0 truncate">
+                          {String(value)}
+                        </span>
                       </span>
                     ))}
                   </div>
@@ -139,8 +165,9 @@ export function OpenAIProvidersTab({
                     maskApiKey={maskApiKey}
                     getKeyEntryStats={getKeyEntryStats}
                     onToggleKeyEntryEnabled={
-                      onToggleKeyEntryEnabled
-                        ? (entryIndex, enabled) => onToggleKeyEntryEnabled(idx, entryIndex, enabled)
+                      canWrite && onToggleKeyEntryEnabled
+                        ? (entryIndex, enabled) =>
+                            onToggleKeyEntryEnabled(idx, entryIndex, enabled)
                         : undefined
                     }
                   />
@@ -154,11 +181,15 @@ export function OpenAIProvidersTab({
                   />
                   <ProviderMetricChip
                     tone={stats.success > 0 ? "emerald" : "slate"}
-                    label={t("providers.success_stats", { count: stats.success })}
+                    label={t("providers.success_stats", {
+                      count: stats.success,
+                    })}
                   />
                   <ProviderMetricChip
                     tone={stats.failure > 0 ? "rose" : "slate"}
-                    label={t("providers.failed_stats", { count: stats.failure })}
+                    label={t("providers.failed_stats", {
+                      count: stats.failure,
+                    })}
                   />
                   {provider.testModel ? (
                     <span className="inline-flex items-center rounded-full bg-slate-600/10 px-2 py-0.5 text-xs font-medium text-slate-700 dark:bg-white/10 dark:text-white/65">
@@ -169,7 +200,10 @@ export function OpenAIProvidersTab({
 
                 {provider.models?.length ? (
                   <div className="mt-2">
-                    <ProviderModelChips models={provider.models} maxVisible={6} />
+                    <ProviderModelChips
+                      models={provider.models}
+                      maxVisible={6}
+                    />
                   </div>
                 ) : null}
 

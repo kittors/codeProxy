@@ -5,7 +5,13 @@ import {
   computeManagementApiBase,
 } from "./constants";
 import { extractDownloadFilename, type BrowserFilePickerWindow } from "./download";
-import { ApiError, extractApiErrorMessage, isAbortError, truncateErrorText } from "./errors";
+import {
+  ApiError,
+  extractApiErrorCode,
+  extractApiErrorMessage,
+  isAbortError,
+  truncateErrorText,
+} from "./errors";
 import { unwrapApiEnvelope, type ApiSuccessEnvelope } from "./response";
 
 interface ApiClientConfig {
@@ -75,10 +81,16 @@ export class ApiClient {
 
   private authSuspended = false;
 
+  private defaultHeaders = new Headers();
+
   setConfig(config: ApiClientConfig): void {
     this.apiBase = computeManagementApiBase(config.apiBase);
     this.managementKey = config.managementKey.trim();
     this.authSuspended = false;
+  }
+
+  setDefaultHeaders(headers: HeadersInit): void {
+    this.defaultHeaders = new Headers(headers);
   }
 
   private buildUrl(path: string, params?: RequestOptions["params"]): string {
@@ -121,7 +133,7 @@ export class ApiClient {
     const headersFromInit = new Headers(init?.headers);
     const hasContentType =
       headersFromOptions.has("Content-Type") || headersFromInit.has("Content-Type");
-    const headers = new Headers();
+    const headers = new Headers(this.defaultHeaders);
 
     if (typeof init?.body === "string" && !hasContentType) {
       headers.set("Content-Type", "application/json");
@@ -223,19 +235,30 @@ export class ApiClient {
       statusText: response.statusText,
       url: response.url,
       payload,
-      isAuthError: this.shouldSuspendAuth(response.status, message),
+      isAuthError: this.shouldSuspendAuth(response.status, message, payload),
     });
   }
 
-  private shouldSuspendAuth(status: number, message: string): boolean {
+  private shouldSuspendAuth(status: number, message: string, payload: unknown): boolean {
     if (status === 401) return true;
-    return status === 403 && /IP banned due to too many failed attempts/i.test(message);
+    if (status !== 403) return false;
+    const code = extractApiErrorCode(payload);
+    return (
+      [
+        "account_disabled",
+        "account_locked",
+        "session_expired",
+        "session_revoked",
+        "tenant_expired",
+        "tenant_suspended",
+      ].includes(code) || /IP banned due to too many failed attempts/i.test(message)
+    );
   }
 
-  private suspendAuth(): void {
+  private suspendAuth(code = ""): void {
     if (this.authSuspended) return;
     this.authSuspended = true;
-    dispatchWindowEvent(new Event("unauthorized"));
+    dispatchWindowEvent(new CustomEvent("unauthorized", { detail: { code } }));
   }
 
   private assertAuthActive(): void {
@@ -291,7 +314,7 @@ export class ApiClient {
       if (!response.ok) {
         const error = await this.buildApiError(response);
         if (error.isAuthError) {
-          this.suspendAuth();
+          this.suspendAuth(extractApiErrorCode(error.payload));
         }
         throw error;
       }
@@ -355,7 +378,7 @@ export class ApiClient {
       this.applyVersionHeaders(response);
       if (!response.ok) {
         const error = await this.buildApiError(response);
-        if (error.isAuthError) this.suspendAuth();
+        if (error.isAuthError) this.suspendAuth(extractApiErrorCode(error.payload));
         throw error;
       }
       if (!response.body) {
@@ -524,7 +547,7 @@ export class ApiClient {
       if (!response.ok) {
         const error = await this.buildApiError(response);
         if (error.isAuthError) {
-          this.suspendAuth();
+          this.suspendAuth(extractApiErrorCode(error.payload));
         }
         throw error;
       }

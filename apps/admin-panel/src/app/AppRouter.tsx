@@ -6,7 +6,8 @@ import { DashboardLayout } from "@app/layout/DashboardLayout";
 import { ThemeProvider, ToastProvider } from "@code-proxy/ui";
 import { AutoUpdatePrompt } from "@app/update/AutoUpdatePrompt";
 import { dismissAppLoader } from "@/app/bootstrap/dismissAppLoader";
-import { pageRoutes } from "@pages/registry";
+import { pageRoutes, type PageRoute } from "@pages/registry";
+import { ForbiddenPage } from "@pages/forbidden/ForbiddenPage";
 
 const RouteFallback = () => null;
 
@@ -35,6 +36,12 @@ function LoginRouteReady({ children }: { children: React.ReactElement }) {
 const readyRoute = (element: React.ReactElement) => (
   <InitialRouteReady>{element}</InitialRouteReady>
 );
+
+function AuthorizedPage({ route }: { route: PageRoute }) {
+  const { can } = useAuth();
+  if (route.requiredPermission && !can(route.requiredPermission)) return <ForbiddenPage />;
+  return readyRoute(route.element);
+}
 
 export function AppRouter() {
   const routes = pageRoutes;
@@ -88,7 +95,7 @@ export function AppRouter() {
                               <Route
                                 key={route.path}
                                 path={route.path}
-                                element={readyRoute(route.element)}
+                                element={<AuthorizedPage route={route} />}
                               />
                             ))}
                             {authDashboardRoutes.flatMap((route) =>
@@ -107,7 +114,7 @@ export function AppRouter() {
                                 <Route
                                   key={`${route.path}-wildcard`}
                                   path={`${route.path}/*`}
-                                  element={readyRoute(route.element)}
+                                  element={<AuthorizedPage route={route} />}
                                 />
                               ))}
                             <Route path="/" element={<Navigate to="/dashboard" replace />} />

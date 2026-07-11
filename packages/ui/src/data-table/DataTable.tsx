@@ -10,7 +10,13 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { ArrowDown, ArrowUp, ArrowUpDown, Check, GripVertical } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  Check,
+  GripVertical,
+} from "lucide-react";
 import { DropdownMenu } from "../primitives/DropdownMenu";
 import { TableCellOverflowTooltip } from "./TableCellOverflowTooltip";
 
@@ -45,7 +51,10 @@ const DEFAULT_MAX_COLUMN_WIDTH = 640;
 const COLUMN_RESIZE_PREVIEW_LINE_WIDTH = 2;
 const STICKY_EDGE_SHADOW_WIDTH = 28;
 
-function getStickyEdgeShadowOpacity(metrics: ScrollMetrics, edge: "start" | "end") {
+function getStickyEdgeShadowOpacity(
+  metrics: ScrollMetrics,
+  edge: "start" | "end",
+) {
   const maxScrollLeft = Math.max(0, metrics.scrollWidth - metrics.clientWidth);
   if (maxScrollLeft <= 1) return 0;
   if (edge === "start") return metrics.scrollLeft > 1 ? 1 : 0;
@@ -62,7 +71,8 @@ const COLUMN_REORDER_ACTIVATION_DELAY_MS = 90;
 const COLUMN_REORDER_MIN_DRAG_DISTANCE_PX = 4;
 const COLUMN_REORDER_AUTOSCROLL_EDGE_PX = 72;
 const COLUMN_REORDER_AUTOSCROLL_MAX_PX_PER_FRAME = 22;
-const COLUMN_REORDER_SHIFT_TRANSITION = "transform 72ms cubic-bezier(0.2, 0, 0, 1)";
+const COLUMN_REORDER_SHIFT_TRANSITION =
+  "transform 72ms cubic-bezier(0.2, 0, 0, 1)";
 const COLUMN_REORDER_SETTLE_CLEANUP_MS = 110;
 const COLUMN_REORDER_SETTLE_FEEDBACK_MS = 900;
 const NON_REORDERABLE_COLUMN_KEYS = new Set(["select", "action", "actions"]);
@@ -177,28 +187,52 @@ function hasHorizontalOverflow(metrics: ScrollMetrics) {
 
 function hasVerticalOverflow(metrics: ScrollMetrics, headerHeight: number) {
   const effectiveViewportY = Math.max(0, metrics.clientHeight - headerHeight);
-  const effectiveContentY = Math.max(effectiveViewportY, metrics.scrollHeight - headerHeight);
+  const effectiveContentY = Math.max(
+    effectiveViewportY,
+    metrics.scrollHeight - headerHeight,
+  );
   return effectiveContentY > effectiveViewportY + 1;
 }
 
-function calculateScrollbarThumbs(scrollMetrics: ScrollMetrics, headerHeight: number) {
+function calculateScrollbarThumbs(
+  scrollMetrics: ScrollMetrics,
+  headerHeight: number,
+) {
   const trackInset = 8; // matches `inset-y-2` / `inset-x-2` (8px)
-  const effectiveViewportY = Math.max(0, scrollMetrics.clientHeight - headerHeight);
-  const effectiveContentY = Math.max(effectiveViewportY, scrollMetrics.scrollHeight - headerHeight);
+  const effectiveViewportY = Math.max(
+    0,
+    scrollMetrics.clientHeight - headerHeight,
+  );
+  const effectiveContentY = Math.max(
+    effectiveViewportY,
+    scrollMetrics.scrollHeight - headerHeight,
+  );
   const hasV = hasVerticalOverflow(scrollMetrics, headerHeight);
   const hasH = hasHorizontalOverflow(scrollMetrics);
 
   const v = (() => {
     if (!hasV) return null;
-    const trackLength = Math.max(0, scrollMetrics.clientHeight - headerHeight - trackInset * 2);
+    const trackLength = Math.max(
+      0,
+      scrollMetrics.clientHeight - headerHeight - trackInset * 2,
+    );
     const viewport = Math.max(1, effectiveViewportY);
     const content = Math.max(viewport, effectiveContentY);
-    const thumbLength = Math.max(28, Math.round((viewport / content) * trackLength));
+    const thumbLength = Math.max(
+      28,
+      Math.round((viewport / content) * trackLength),
+    );
     const maxThumbOffset = Math.max(0, trackLength - thumbLength);
-    const scrollRange = Math.max(1, scrollMetrics.scrollHeight - scrollMetrics.clientHeight);
+    const scrollRange = Math.max(
+      1,
+      scrollMetrics.scrollHeight - scrollMetrics.clientHeight,
+    );
     const offset = Math.min(
       maxThumbOffset,
-      Math.max(0, Math.round((scrollMetrics.scrollTop / scrollRange) * maxThumbOffset)),
+      Math.max(
+        0,
+        Math.round((scrollMetrics.scrollTop / scrollRange) * maxThumbOffset),
+      ),
     );
     return { top: offset, height: thumbLength };
   })();
@@ -208,12 +242,18 @@ function calculateScrollbarThumbs(scrollMetrics: ScrollMetrics, headerHeight: nu
     const trackLength = Math.max(0, scrollMetrics.clientWidth - trackInset * 2);
     const viewport = scrollMetrics.clientWidth;
     const content = scrollMetrics.scrollWidth;
-    const thumbLength = Math.max(28, Math.round((viewport / content) * trackLength));
+    const thumbLength = Math.max(
+      28,
+      Math.round((viewport / content) * trackLength),
+    );
     const maxThumbOffset = Math.max(0, trackLength - thumbLength);
     const scrollRange = Math.max(1, content - viewport);
     const offset = Math.min(
       maxThumbOffset,
-      Math.max(0, Math.round((scrollMetrics.scrollLeft / scrollRange) * maxThumbOffset)),
+      Math.max(
+        0,
+        Math.round((scrollMetrics.scrollLeft / scrollRange) * maxThumbOffset),
+      ),
     );
     return { left: offset, width: thumbLength };
   })();
@@ -255,7 +295,9 @@ function resolveWidthClassPx(width: string | undefined, prefix: string) {
 
 function resolveColumnMinWidth<T>(column: DataTableColumn<T>) {
   return (
-    column.minWidthPx ?? resolveWidthClassPx(column.width, "min-w") ?? DEFAULT_MIN_COLUMN_WIDTH
+    column.minWidthPx ??
+    resolveWidthClassPx(column.width, "min-w") ??
+    DEFAULT_MIN_COLUMN_WIDTH
   );
 }
 
@@ -269,12 +311,19 @@ function resolveColumnMaxWidth<T>(
 function hasStickyColumnClass<T>(column: DataTableColumn<T>) {
   return `${column.headerClassName ?? ""} ${column.cellClassName ?? ""}`
     .split(/\s+/)
-    .some((className) => className === "sticky" || className.endsWith(":sticky"));
+    .some(
+      (className) => className === "sticky" || className.endsWith(":sticky"),
+    );
 }
 
-function resolveColumnLayoutWidth<T>(column: DataTableColumn<T>, widths: ColumnWidthMap) {
+function resolveColumnLayoutWidth<T>(
+  column: DataTableColumn<T>,
+  widths: ColumnWidthMap,
+) {
   const resizedWidth = widths[column.key];
-  return resizedWidth ? clampColumnWidth(column, resizedWidth) : resolveColumnMinWidth(column);
+  return resizedWidth
+    ? clampColumnWidth(column, resizedWidth)
+    : resolveColumnMinWidth(column);
 }
 
 function resolveStickyRailWidth<T>(
@@ -286,26 +335,41 @@ function resolveStickyRailWidth<T>(
   let width = 0;
 
   for (const column of edgeColumns) {
-    if (resolveColumnOrderLock(column) !== edge || !hasStickyColumnClass(column)) break;
+    if (
+      resolveColumnOrderLock(column) !== edge ||
+      !hasStickyColumnClass(column)
+    )
+      break;
     width += resolveColumnLayoutWidth(column, widths);
   }
 
   return width;
 }
 
-function resolveStickyColumnPlacements<T>(columns: DataTableColumn<T>[], widths: ColumnWidthMap) {
+function resolveStickyColumnPlacements<T>(
+  columns: DataTableColumn<T>[],
+  widths: ColumnWidthMap,
+) {
   const placements: Record<string, StickyColumnPlacement> = {};
 
   let startOffset = 0;
   for (const column of columns) {
-    if (resolveColumnOrderLock(column) !== "start" || !hasStickyColumnClass(column)) break;
+    if (
+      resolveColumnOrderLock(column) !== "start" ||
+      !hasStickyColumnClass(column)
+    )
+      break;
     placements[column.key] = { edge: "start", offset: startOffset };
     startOffset += resolveColumnLayoutWidth(column, widths);
   }
 
   let endOffset = 0;
   for (const column of [...columns].reverse()) {
-    if (resolveColumnOrderLock(column) !== "end" || !hasStickyColumnClass(column)) break;
+    if (
+      resolveColumnOrderLock(column) !== "end" ||
+      !hasStickyColumnClass(column)
+    )
+      break;
     placements[column.key] = { edge: "end", offset: endOffset };
     endOffset += resolveColumnLayoutWidth(column, widths);
   }
@@ -313,7 +377,10 @@ function resolveStickyColumnPlacements<T>(columns: DataTableColumn<T>[], widths:
   return placements;
 }
 
-function normalizeColumnWidths<T>(columns: DataTableColumn<T>[], widths: ColumnWidthMap) {
+function normalizeColumnWidths<T>(
+  columns: DataTableColumn<T>[],
+  widths: ColumnWidthMap,
+) {
   const next: ColumnWidthMap = {};
   columns.forEach((column) => {
     const width = widths[column.key];
@@ -342,11 +409,14 @@ function readStoredColumnWidths(tableId?: string): ColumnWidthMap {
     const raw = window.localStorage.getItem(key);
     if (!raw) return {};
     const parsed = JSON.parse(raw) as unknown;
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed))
+      return {};
 
     return Object.fromEntries(
       Object.entries(parsed as Record<string, unknown>)
-        .filter(([, value]) => typeof value === "number" && Number.isFinite(value))
+        .filter(
+          ([, value]) => typeof value === "number" && Number.isFinite(value),
+        )
         .map(([columnKey, value]) => [columnKey, Math.round(value as number)]),
     );
   } catch {
@@ -354,13 +424,18 @@ function readStoredColumnWidths(tableId?: string): ColumnWidthMap {
   }
 }
 
-function writeStoredColumnWidths(tableId: string | undefined, widths: ColumnWidthMap) {
+function writeStoredColumnWidths(
+  tableId: string | undefined,
+  widths: ColumnWidthMap,
+) {
   const key = getColumnWidthStorageKey(tableId);
   if (!key || typeof window === "undefined") return;
 
   try {
     const normalized = Object.fromEntries(
-      Object.entries(widths).filter(([, value]) => Number.isFinite(value) && value > 0),
+      Object.entries(widths).filter(
+        ([, value]) => Number.isFinite(value) && value > 0,
+      ),
     );
     window.localStorage.setItem(key, JSON.stringify(normalized));
   } catch {
@@ -379,11 +454,18 @@ function logColumnResizeDebug(event: string, payload: Record<string, unknown>) {
   console.debug("[DataTable resize]", event, payload);
 }
 
-function resolveColumnResizeWidth(active: ColumnResizeState, pointerClientX: number) {
-  const rawBoundaryClientX = pointerClientX + active.pointerBoundaryOffsetClientX;
+function resolveColumnResizeWidth(
+  active: ColumnResizeState,
+  pointerClientX: number,
+) {
+  const rawBoundaryClientX =
+    pointerClientX + active.pointerBoundaryOffsetClientX;
   return Math.max(
     active.minWidth,
-    Math.min(active.maxWidth, Math.round(rawBoundaryClientX - active.startLeftClientX)),
+    Math.min(
+      active.maxWidth,
+      Math.round(rawBoundaryClientX - active.startLeftClientX),
+    ),
   );
 }
 
@@ -397,7 +479,11 @@ function shouldAllowColumnResize<T>(
   return !NON_RESIZABLE_COLUMN_KEYS.has(column.key);
 }
 
-function resolveCellOverflowTooltip<T>(column: DataTableColumn<T>, row: T, index: number) {
+function resolveCellOverflowTooltip<T>(
+  column: DataTableColumn<T>,
+  row: T,
+  index: number,
+) {
   if (column.overflowTooltip === false) return false;
 
   if (typeof column.overflowTooltip === "function") {
@@ -419,7 +505,11 @@ function safeSetPointerCapture(element: Element, pointerId: number) {
 }
 
 function isEmptySortValue(value: DataTableSortValue) {
-  return value === null || value === undefined || (typeof value === "string" && !value.trim());
+  return (
+    value === null ||
+    value === undefined ||
+    (typeof value === "string" && !value.trim())
+  );
 }
 
 function compareSortValues(
@@ -439,7 +529,11 @@ function compareSortValues(
   return collator.compare(String(left), String(right));
 }
 
-function moveRow<T>(rows: readonly T[], fromIndex: number, toIndex: number): T[] {
+function moveRow<T>(
+  rows: readonly T[],
+  fromIndex: number,
+  toIndex: number,
+): T[] {
   const next = Array.from(rows);
   const [moved] = next.splice(fromIndex, 1);
   if (moved === undefined) return next;
@@ -447,11 +541,16 @@ function moveRow<T>(rows: readonly T[], fromIndex: number, toIndex: number): T[]
   return next;
 }
 
-function findVerticalScrollContainer(element: HTMLElement | null): HTMLElement | null {
+function findVerticalScrollContainer(
+  element: HTMLElement | null,
+): HTMLElement | null {
   let current = element?.parentElement ?? null;
   while (current) {
     const overflowY = window.getComputedStyle(current).overflowY;
-    if (/(auto|scroll)/.test(overflowY) && current.scrollHeight > current.clientHeight) {
+    if (
+      /(auto|scroll)/.test(overflowY) &&
+      current.scrollHeight > current.clientHeight
+    ) {
       return current;
     }
     current = current.parentElement;
@@ -460,21 +559,31 @@ function findVerticalScrollContainer(element: HTMLElement | null): HTMLElement |
   return scrollingElement instanceof HTMLElement ? scrollingElement : null;
 }
 
-function findVerticalScrollTarget(element: HTMLElement, deltaY: number): HTMLElement | null {
+function findVerticalScrollTarget(
+  element: HTMLElement,
+  deltaY: number,
+): HTMLElement | null {
   let current = element.parentElement;
   while (current) {
     const overflowY = window.getComputedStyle(current).overflowY;
-    const maxScrollTop = Math.max(0, current.scrollHeight - current.clientHeight);
+    const maxScrollTop = Math.max(
+      0,
+      current.scrollHeight - current.clientHeight,
+    );
     const canMove =
       /(auto|scroll)/.test(overflowY) &&
-      ((deltaY < 0 && current.scrollTop > 0) || (deltaY > 0 && current.scrollTop < maxScrollTop));
+      ((deltaY < 0 && current.scrollTop > 0) ||
+        (deltaY > 0 && current.scrollTop < maxScrollTop));
     if (canMove) return current;
     current = current.parentElement;
   }
 
   const scrollingElement = document.scrollingElement;
   if (!(scrollingElement instanceof HTMLElement)) return null;
-  const maxScrollTop = Math.max(0, scrollingElement.scrollHeight - scrollingElement.clientHeight);
+  const maxScrollTop = Math.max(
+    0,
+    scrollingElement.scrollHeight - scrollingElement.clientHeight,
+  );
   return (deltaY < 0 && scrollingElement.scrollTop > 0) ||
     (deltaY > 0 && scrollingElement.scrollTop < maxScrollTop)
     ? scrollingElement
@@ -496,7 +605,10 @@ function syncClonedFormControlState(
     const sourceControl = sourceControls[index];
     if (sourceControl) {
       clonedControl.value = sourceControl.value;
-      if (sourceControl instanceof HTMLInputElement && clonedControl instanceof HTMLInputElement) {
+      if (
+        sourceControl instanceof HTMLInputElement &&
+        clonedControl instanceof HTMLInputElement
+      ) {
         clonedControl.checked = sourceControl.checked;
       }
     }
@@ -519,11 +631,13 @@ function createRowReorderPreviewElement(sourceRow: HTMLTableRowElement) {
   clonedRow.querySelectorAll<HTMLElement>("[id]").forEach((element) => {
     element.removeAttribute("id");
   });
-  clonedRow.querySelectorAll<HTMLElement>("button, [href], [tabindex]").forEach((element) => {
-    element.removeAttribute("aria-label");
-    element.removeAttribute("title");
-    element.tabIndex = -1;
-  });
+  clonedRow
+    .querySelectorAll<HTMLElement>("button, [href], [tabindex]")
+    .forEach((element) => {
+      element.removeAttribute("aria-label");
+      element.removeAttribute("title");
+      element.tabIndex = -1;
+    });
   syncClonedFormControlState(sourceRow, clonedRow);
 
   const sourceCells = Array.from(sourceRow.cells);
@@ -543,7 +657,8 @@ function createRowReorderPreviewElement(sourceRow: HTMLTableRowElement) {
   });
 
   const table = document.createElement("table");
-  table.className = "w-full table-fixed border-separate border-spacing-0 text-sm";
+  table.className =
+    "w-full table-fixed border-separate border-spacing-0 text-sm";
   const tbody = document.createElement("tbody");
   tbody.appendChild(clonedRow);
   table.appendChild(tbody);
@@ -567,14 +682,21 @@ function positionRowReorderPreview(active: RowReorderState, clientY: number) {
   if (!active.previewElement) return;
   const viewportInset = 8;
   const unclampedTop = clientY - active.grabOffsetY;
-  const maxTop = Math.max(viewportInset, window.innerHeight - active.previewHeight - viewportInset);
+  const maxTop = Math.max(
+    viewportInset,
+    window.innerHeight - active.previewHeight - viewportInset,
+  );
   const top = Math.max(viewportInset, Math.min(maxTop, unclampedTop));
   active.previewElement.style.transform = `translate3d(0, ${Math.round(top)}px, 0)`;
 }
 
-function collectRowReorderGeometry(table: HTMLTableElement | null): RowReorderGeometry[] {
+function collectRowReorderGeometry(
+  table: HTMLTableElement | null,
+): RowReorderGeometry[] {
   return Array.from(
-    table?.querySelectorAll<HTMLTableRowElement>("tbody tr[data-vt-row-index]") ?? [],
+    table?.querySelectorAll<HTMLTableRowElement>(
+      "tbody tr[data-vt-row-index]",
+    ) ?? [],
   )
     .map((element) => ({
       index: Number(element.dataset.vtRowIndex),
@@ -584,17 +706,25 @@ function collectRowReorderGeometry(table: HTMLTableElement | null): RowReorderGe
     .filter((item) => Number.isInteger(item.index));
 }
 
-function resolveRowReorderDestination(active: RowReorderState, rowCount: number) {
+function resolveRowReorderDestination(
+  active: RowReorderState,
+  rowCount: number,
+) {
   return Math.max(
     0,
     Math.min(
       rowCount - 1,
-      active.insertionIndex > active.fromIndex ? active.insertionIndex - 1 : active.insertionIndex,
+      active.insertionIndex > active.fromIndex
+        ? active.insertionIndex - 1
+        : active.insertionIndex,
     ),
   );
 }
 
-function applyRowReorderDisplacement(active: RowReorderState, rowCount: number) {
+function applyRowReorderDisplacement(
+  active: RowReorderState,
+  rowCount: number,
+) {
   const destinationIndex = resolveRowReorderDestination(active, rowCount);
   for (const geometry of active.rows) {
     if (geometry.index === active.fromIndex) {
@@ -616,7 +746,8 @@ function applyRowReorderDisplacement(active: RowReorderState, rowCount: number) 
     if (shift === geometry.appliedShift) continue;
     geometry.appliedShift = shift;
     geometry.element.style.willChange = "transform";
-    geometry.element.style.transition = "transform 140ms cubic-bezier(0.2, 0, 0, 1)";
+    geometry.element.style.transition =
+      "transform 140ms cubic-bezier(0.2, 0, 0, 1)";
     geometry.element.style.transform =
       shift === 0 ? "" : `translate3d(0, ${Math.round(shift)}px, 0)`;
   }
@@ -656,19 +787,25 @@ function readStoredColumnOrder(tableId?: string): ColumnOrder {
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed)) return [];
     return parsed.filter(
-      (value): value is string => typeof value === "string" && value.trim() !== "",
+      (value): value is string =>
+        typeof value === "string" && value.trim() !== "",
     );
   } catch {
     return [];
   }
 }
 
-function writeStoredColumnOrder(tableId: string | undefined, order: ColumnOrder) {
+function writeStoredColumnOrder(
+  tableId: string | undefined,
+  order: ColumnOrder,
+) {
   const key = getColumnOrderStorageKey(tableId);
   if (!key || typeof window === "undefined") return;
 
   try {
-    const normalized = Array.from(new Set(order.filter((value) => value.trim() !== "")));
+    const normalized = Array.from(
+      new Set(order.filter((value) => value.trim() !== "")),
+    );
     window.localStorage.setItem(key, JSON.stringify(normalized));
   } catch {
     // localStorage can be unavailable in private browsing or embedded contexts.
@@ -689,7 +826,10 @@ function shouldAllowColumnReorder<T>(column: DataTableColumn<T>) {
   return true;
 }
 
-function normalizeColumnOrder<T>(columns: DataTableColumn<T>[], storedOrder: ColumnOrder) {
+function normalizeColumnOrder<T>(
+  columns: DataTableColumn<T>[],
+  storedOrder: ColumnOrder,
+) {
   const validKeys = new Set(columns.map((column) => column.key));
   const seen = new Set<string>();
   const storedValid = storedOrder.filter((key) => {
@@ -698,7 +838,9 @@ function normalizeColumnOrder<T>(columns: DataTableColumn<T>[], storedOrder: Col
     return true;
   });
 
-  const missing = columns.map((column) => column.key).filter((key) => !seen.has(key));
+  const missing = columns
+    .map((column) => column.key)
+    .filter((key) => !seen.has(key));
   const merged = [...storedValid, ...missing];
 
   const startLocked = columns
@@ -714,7 +856,8 @@ function normalizeColumnOrder<T>(columns: DataTableColumn<T>[], storedOrder: Col
 }
 
 function moveColumnKey(order: ColumnOrder, fromIndex: number, toIndex: number) {
-  if (fromIndex === toIndex || fromIndex < 0 || fromIndex >= order.length) return order;
+  if (fromIndex === toIndex || fromIndex < 0 || fromIndex >= order.length)
+    return order;
   const next = [...order];
   const [item] = next.splice(fromIndex, 1);
   if (!item) return order;
@@ -740,15 +883,25 @@ function getColumnReorderDragOffset(
   return clientX - active.startClientX + (scrollLeft - active.startScrollLeft);
 }
 
-function findColumnReorderTargetIndex(active: ColumnReorderState, dragOffsetX: number) {
+function findColumnReorderTargetIndex(
+  active: ColumnReorderState,
+  dragOffsetX: number,
+) {
   const origin = active.columns[active.originIndex];
   if (!origin) return active.originIndex;
 
   const draggedCenter = origin.left + origin.width / 2 + dragOffsetX;
   let nextIndex = active.allowedMaxIndex;
-  const maxMeasuredIndex = Math.min(active.allowedMaxIndex, active.columns.length);
+  const maxMeasuredIndex = Math.min(
+    active.allowedMaxIndex,
+    active.columns.length,
+  );
 
-  for (let index = active.allowedMinIndex; index < maxMeasuredIndex; index += 1) {
+  for (
+    let index = active.allowedMinIndex;
+    index < maxMeasuredIndex;
+    index += 1
+  ) {
     const geometry = active.columns[index];
     if (!geometry) continue;
     const midpoint = geometry.left + geometry.width / 2;
@@ -767,16 +920,27 @@ function findColumnReorderTargetIndex(active: ColumnReorderState, dragOffsetX: n
   );
 }
 
-function getColumnReorderShift(active: ColumnReorderState, geometry: ColumnReorderGeometry) {
+function getColumnReorderShift(
+  active: ColumnReorderState,
+  geometry: ColumnReorderGeometry,
+) {
   if (geometry.key === active.columnKey) return null;
   const toIndex = active.currentToIndex;
   const originIndex = active.originIndex;
 
-  if (toIndex < originIndex && geometry.index >= toIndex && geometry.index < originIndex) {
+  if (
+    toIndex < originIndex &&
+    geometry.index >= toIndex &&
+    geometry.index < originIndex
+  ) {
     return active.draggedWidth;
   }
 
-  if (toIndex > originIndex + 1 && geometry.index > originIndex && geometry.index < toIndex) {
+  if (
+    toIndex > originIndex + 1 &&
+    geometry.index > originIndex &&
+    geometry.index < toIndex
+  ) {
     return -active.draggedWidth;
   }
 
@@ -789,7 +953,10 @@ function formatColumnReorderTransform(offsetX: number) {
   return `translate3d(${rounded}px, 0, 0)`;
 }
 
-function getColumnReorderCellBackground(element: HTMLElement, isDragged: boolean) {
+function getColumnReorderCellBackground(
+  element: HTMLElement,
+  isDragged: boolean,
+) {
   const isHeader = element.tagName === "TH";
   const isDark = document.documentElement.classList.contains("dark");
   const base = isHeader
@@ -901,15 +1068,22 @@ export function DataTable<T>({
   const rootRef = useRef<HTMLDivElement | null>(null);
   const tableRef = useRef<HTMLTableElement | null>(null);
   const headerRef = useRef<HTMLTableSectionElement | null>(null);
-  const headerCellsRef = useRef<Record<string, HTMLTableCellElement | null>>({});
-  const columnElementsRef = useRef<Record<string, HTMLTableColElement | null>>({});
+  const headerCellsRef = useRef<Record<string, HTMLTableCellElement | null>>(
+    {},
+  );
+  const columnElementsRef = useRef<Record<string, HTMLTableColElement | null>>(
+    {},
+  );
   const headerHeightRef = useRef(0);
   const [columnWidths, setColumnWidths] = useState<ColumnWidthMap>(() =>
     normalizeColumnWidths(columns, readStoredColumnWidths(tableId)),
   );
   const columnWidthsRef = useRef<ColumnWidthMap>(columnWidths);
-  const [resizePreview, setResizePreview] = useState<ColumnResizePreview | null>(null);
-  const [activeResizeColumnKey, setActiveResizeColumnKey] = useState<string | null>(null);
+  const [resizePreview, setResizePreview] =
+    useState<ColumnResizePreview | null>(null);
+  const [activeResizeColumnKey, setActiveResizeColumnKey] = useState<
+    string | null
+  >(null);
   const resizePreviewLineRef = useRef<HTMLDivElement | null>(null);
   const resizePreviewTooltipRef = useRef<HTMLDivElement | null>(null);
   const stickyRailWidthsRef = useRef({ start: 0, end: 0 });
@@ -930,7 +1104,10 @@ export function DataTable<T>({
   const verticalThumbRef = useRef<HTMLDivElement | null>(null);
   const horizontalThumbRef = useRef<HTMLDivElement | null>(null);
   const columnResizeRafRef = useRef<number | null>(null);
-  const pendingColumnResizePointerRef = useRef<{ clientX: number; clientY: number } | null>(null);
+  const pendingColumnResizePointerRef = useRef<{
+    clientX: number;
+    clientY: number;
+  } | null>(null);
   const bottomTimeoutRef = useRef<number | null>(null);
   const bottomPendingRef = useRef(false);
   const prevLoadingMoreRef = useRef(loadingMore);
@@ -951,12 +1128,19 @@ export function DataTable<T>({
 
   const [columnOrder, setColumnOrder] = useState<ColumnOrder>(() =>
     canUseColumnOrder
-      ? normalizeColumnOrder(columns, canPersistColumnOrder ? readStoredColumnOrder(tableId) : [])
+      ? normalizeColumnOrder(
+          columns,
+          canPersistColumnOrder ? readStoredColumnOrder(tableId) : [],
+        )
       : [],
   );
   const columnOrderRef = useRef<ColumnOrder>(columnOrder);
-  const [activeReorderColumnKey, setActiveReorderColumnKey] = useState<string | null>(null);
-  const [settledReorderColumnKey, setSettledReorderColumnKey] = useState<string | null>(null);
+  const [activeReorderColumnKey, setActiveReorderColumnKey] = useState<
+    string | null
+  >(null);
+  const [settledReorderColumnKey, setSettledReorderColumnKey] = useState<
+    string | null
+  >(null);
   const [rowHoverOverlay, setRowHoverOverlay] = useState<{
     left: number;
     top: number;
@@ -968,13 +1152,15 @@ export function DataTable<T>({
   const columnReorderAutoScrollRafRef = useRef<number | null>(null);
   const columnReorderSettleTimeoutRef = useRef<number | null>(null);
   const hoveredRowRef = useRef<HTMLTableRowElement | null>(null);
-  const [internalSortState, setInternalSortState] = useState<DataTableSortState | null>(
-    defaultSortState,
-  );
-  const activeSortState = sortState === undefined ? internalSortState : sortState;
+  const [internalSortState, setInternalSortState] =
+    useState<DataTableSortState | null>(defaultSortState);
+  const activeSortState =
+    sortState === undefined ? internalSortState : sortState;
   const rowReorderRef = useRef<RowReorderState | null>(null);
   const rowReorderAutoScrollRafRef = useRef<number | null>(null);
-  const [activeRowReorderIndex, setActiveRowReorderIndex] = useState<number | null>(null);
+  const [activeRowReorderIndex, setActiveRowReorderIndex] = useState<
+    number | null
+  >(null);
 
   const orderedColumns = useMemo(() => {
     if (!canUseColumnOrder) return columns;
@@ -987,10 +1173,15 @@ export function DataTable<T>({
   const colCount = orderedColumns.length;
 
   useEffect(() => {
-    setColumnWidths(normalizeColumnWidths(columns, readStoredColumnWidths(tableId)));
+    setColumnWidths(
+      normalizeColumnWidths(columns, readStoredColumnWidths(tableId)),
+    );
     if (canUseColumnOrder) {
       setColumnOrder(
-        normalizeColumnOrder(columns, canPersistColumnOrder ? readStoredColumnOrder(tableId) : []),
+        normalizeColumnOrder(
+          columns,
+          canPersistColumnOrder ? readStoredColumnOrder(tableId) : [],
+        ),
       );
     }
     // Only re-initialize when switching tables; columns identity changes should
@@ -1025,8 +1216,12 @@ export function DataTable<T>({
     const validKeys = new Set(columns.map((column) => column.key));
     setColumnWidths((prev) => {
       const next = normalizeColumnWidths(columns, prev);
-      const removedStaleKey = Object.keys(prev).some((key) => !validKeys.has(key));
-      return removedStaleKey || !areColumnWidthMapsEqual(prev, next) ? next : prev;
+      const removedStaleKey = Object.keys(prev).some(
+        (key) => !validKeys.has(key),
+      );
+      return removedStaleKey || !areColumnWidthMapsEqual(prev, next)
+        ? next
+        : prev;
     });
   }, [columns]);
 
@@ -1079,7 +1274,9 @@ export function DataTable<T>({
 
   const resolveRowInsertionIndex = useCallback((clientY: number) => {
     const rowElements = Array.from(
-      tableRef.current?.querySelectorAll<HTMLTableRowElement>("tbody tr[data-vt-row-index]") ?? [],
+      tableRef.current?.querySelectorAll<HTMLTableRowElement>(
+        "tbody tr[data-vt-row-index]",
+      ) ?? [],
     );
     if (rowElements.length === 0) return 0;
 
@@ -1089,7 +1286,8 @@ export function DataTable<T>({
       if (!Number.isInteger(rowIndex)) continue;
       const rect = rowElement.getBoundingClientRect();
       const appliedShift =
-        activeRows.find((geometry) => geometry.element === rowElement)?.appliedShift ?? 0;
+        activeRows.find((geometry) => geometry.element === rowElement)
+          ?.appliedShift ?? 0;
       if (clientY < rect.top - appliedShift + rect.height / 2) return rowIndex;
     }
 
@@ -1108,7 +1306,10 @@ export function DataTable<T>({
     (clientY: number) => {
       const active = rowReorderRef.current;
       if (!active?.activated) return;
-      active.insertionIndex = Math.max(0, Math.min(rows.length, resolveRowInsertionIndex(clientY)));
+      active.insertionIndex = Math.max(
+        0,
+        Math.min(rows.length, resolveRowInsertionIndex(clientY)),
+      );
       applyRowReorderDisplacement(active, rows.length);
     },
     [resolveRowInsertionIndex, rows.length],
@@ -1121,7 +1322,10 @@ export function DataTable<T>({
     if (!active?.activated || !scrollContainer) return;
 
     const rect = scrollContainer.getBoundingClientRect();
-    const maxScrollTop = Math.max(0, scrollContainer.scrollHeight - scrollContainer.clientHeight);
+    const maxScrollTop = Math.max(
+      0,
+      scrollContainer.scrollHeight - scrollContainer.clientHeight,
+    );
     if (maxScrollTop <= 0) return;
 
     const topIntensity = Math.max(
@@ -1151,18 +1355,30 @@ export function DataTable<T>({
     const intensity = direction < 0 ? topIntensity : bottomIntensity;
     const delta =
       direction *
-      Math.max(1, Math.round(ROW_REORDER_AUTOSCROLL_MAX_PX_PER_FRAME * intensity * intensity));
-    const nextScrollTop = Math.max(0, Math.min(maxScrollTop, scrollContainer.scrollTop + delta));
+      Math.max(
+        1,
+        Math.round(
+          ROW_REORDER_AUTOSCROLL_MAX_PX_PER_FRAME * intensity * intensity,
+        ),
+      );
+    const nextScrollTop = Math.max(
+      0,
+      Math.min(maxScrollTop, scrollContainer.scrollTop + delta),
+    );
     if (nextScrollTop !== scrollContainer.scrollTop) {
       scrollContainer.scrollTop = nextScrollTop;
       updateRowReorderTarget(active.lastClientY);
     }
-    rowReorderAutoScrollRafRef.current = window.requestAnimationFrame(runRowReorderAutoScroll);
+    rowReorderAutoScrollRafRef.current = window.requestAnimationFrame(
+      runRowReorderAutoScroll,
+    );
   }, [updateRowReorderTarget]);
 
   const ensureRowReorderAutoScroll = useCallback(() => {
     if (rowReorderAutoScrollRafRef.current !== null) return;
-    rowReorderAutoScrollRafRef.current = window.requestAnimationFrame(runRowReorderAutoScroll);
+    rowReorderAutoScrollRafRef.current = window.requestAnimationFrame(
+      runRowReorderAutoScroll,
+    );
   }, [runRowReorderAutoScroll]);
 
   const clearRowReorder = useCallback(() => {
@@ -1191,7 +1407,10 @@ export function DataTable<T>({
 
       const toIndex = Math.max(
         0,
-        Math.min(rows.length - 1, insertionIndex > fromIndex ? insertionIndex - 1 : insertionIndex),
+        Math.min(
+          rows.length - 1,
+          insertionIndex > fromIndex ? insertionIndex - 1 : insertionIndex,
+        ),
       );
       if (toIndex === fromIndex) return;
       if (activeSortState) updateSortState(null);
@@ -1210,9 +1429,13 @@ export function DataTable<T>({
       active.activated = true;
 
       active.rows = collectRowReorderGeometry(tableRef.current);
-      active.sourceRow?.querySelector<HTMLButtonElement>("[data-vt-row-reorder-handle]")?.blur();
+      active.sourceRow
+        ?.querySelector<HTMLButtonElement>("[data-vt-row-reorder-handle]")
+        ?.blur();
       if (active.sourceRow) {
-        const { preview, height } = createRowReorderPreviewElement(active.sourceRow);
+        const { preview, height } = createRowReorderPreviewElement(
+          active.sourceRow,
+        );
         active.previewElement = preview;
         active.previewHeight = height;
         active.sourceHeight = height;
@@ -1230,13 +1453,21 @@ export function DataTable<T>({
 
   const handleRowReorderPointerDown = useCallback(
     (rowIndex: number, event: ReactPointerEvent<HTMLButtonElement>) => {
-      if (event.button !== 0 || !rowReorderable || !onRowsChange || rows.length < 2 || loading) {
+      if (
+        event.button !== 0 ||
+        !rowReorderable ||
+        !onRowsChange ||
+        rows.length < 2 ||
+        loading
+      ) {
         return;
       }
       event.preventDefault();
       event.stopPropagation();
       safeSetPointerCapture(event.currentTarget, event.pointerId);
-      const sourceRow = event.currentTarget.closest<HTMLTableRowElement>("tr[data-vt-row-index]");
+      const sourceRow = event.currentTarget.closest<HTMLTableRowElement>(
+        "tr[data-vt-row-index]",
+      );
       const sourceRowRect = sourceRow?.getBoundingClientRect();
       rowReorderRef.current = {
         pointerId: event.pointerId,
@@ -1292,7 +1523,8 @@ export function DataTable<T>({
       active.lastClientY = event.clientY;
       if (
         !active.activated &&
-        Math.abs(event.clientY - active.startClientY) >= ROW_REORDER_MIN_DRAG_DISTANCE_PX
+        Math.abs(event.clientY - active.startClientY) >=
+          ROW_REORDER_MIN_DRAG_DISTANCE_PX
       ) {
         activateRowReorder(active);
       }
@@ -1335,11 +1567,12 @@ export function DataTable<T>({
   );
 
   const syncScrollbarThumbs = useCallback(
-    (metrics: ScrollMetrics, measuredHeaderHeight = headerHeightRef.current) => {
-      const { vThumb: nextVThumb, hThumb: nextHThumb } = calculateScrollbarThumbs(
-        metrics,
-        measuredHeaderHeight,
-      );
+    (
+      metrics: ScrollMetrics,
+      measuredHeaderHeight = headerHeightRef.current,
+    ) => {
+      const { vThumb: nextVThumb, hThumb: nextHThumb } =
+        calculateScrollbarThumbs(metrics, measuredHeaderHeight);
 
       const verticalThumb = verticalThumbRef.current;
       if (verticalThumb && nextVThumb) {
@@ -1362,14 +1595,22 @@ export function DataTable<T>({
       const root = rootRef.current;
       if (!root) return;
 
-      const startBoundary = root.querySelector<HTMLElement>("[data-vt-sticky-start-boundary]");
+      const startBoundary = root.querySelector<HTMLElement>(
+        "[data-vt-sticky-start-boundary]",
+      );
       if (startBoundary) {
-        startBoundary.style.opacity = String(getStickyEdgeShadowOpacity(metrics, "start"));
+        startBoundary.style.opacity = String(
+          getStickyEdgeShadowOpacity(metrics, "start"),
+        );
       }
 
-      const endBoundary = root.querySelector<HTMLElement>("[data-vt-sticky-end-boundary]");
+      const endBoundary = root.querySelector<HTMLElement>(
+        "[data-vt-sticky-end-boundary]",
+      );
       if (endBoundary) {
-        endBoundary.style.opacity = String(getStickyEdgeShadowOpacity(metrics, "end"));
+        endBoundary.style.opacity = String(
+          getStickyEdgeShadowOpacity(metrics, "end"),
+        );
       }
     },
     [naturalFlow],
@@ -1405,7 +1646,8 @@ export function DataTable<T>({
           hasVerticalOverflow(prev, measuredHeaderHeight) !==
             hasVerticalOverflow(next, measuredHeaderHeight);
         const viewportChanged =
-          prev.clientHeight !== next.clientHeight || prev.clientWidth !== next.clientWidth;
+          prev.clientHeight !== next.clientHeight ||
+          prev.clientWidth !== next.clientWidth;
         if (
           !options?.forceState &&
           !overflowChanged &&
@@ -1415,7 +1657,8 @@ export function DataTable<T>({
         ) {
           return prev;
         }
-        if (!options?.forceState && !overflowChanged && !viewportChanged) return prev;
+        if (!options?.forceState && !overflowChanged && !viewportChanged)
+          return prev;
         return next;
       });
     },
@@ -1480,7 +1723,10 @@ export function DataTable<T>({
     const threshold = latestRef.current.scrollThreshold;
 
     const shouldSchedule =
-      scrollBottom <= threshold && latestHasMore && !latestLoadingMore && Boolean(latestCb);
+      scrollBottom <= threshold &&
+      latestHasMore &&
+      !latestLoadingMore &&
+      Boolean(latestCb);
 
     if (!shouldSchedule) {
       if (bottomTimeoutRef.current) {
@@ -1488,7 +1734,8 @@ export function DataTable<T>({
         bottomTimeoutRef.current = null;
       }
     } else if (!bottomPendingRef.current) {
-      if (bottomTimeoutRef.current) window.clearTimeout(bottomTimeoutRef.current);
+      if (bottomTimeoutRef.current)
+        window.clearTimeout(bottomTimeoutRef.current);
       bottomTimeoutRef.current = window.setTimeout(() => {
         bottomTimeoutRef.current = null;
         const node = containerRef.current;
@@ -1497,7 +1744,8 @@ export function DataTable<T>({
         const st = latestRef.current;
         if (!st.hasMore || st.loadingMore || !st.onScrollBottom) return;
 
-        const bottomNow = node.scrollHeight - node.scrollTop - node.clientHeight;
+        const bottomNow =
+          node.scrollHeight - node.scrollTop - node.clientHeight;
         if (bottomNow > st.scrollThreshold) return;
 
         bottomPendingRef.current = true;
@@ -1513,22 +1761,25 @@ export function DataTable<T>({
     }
   }, [updateScrollMetrics, virtualize]);
 
-  const updateRowHoverOverlay = useCallback((row: HTMLTableRowElement | null) => {
-    hoveredRowRef.current = row;
-    const el = containerRef.current;
-    if (!row || !el) {
-      setRowHoverOverlay(null);
-      return;
-    }
-    const rowRect = row.getBoundingClientRect();
-    const containerRect = el.getBoundingClientRect();
-    setRowHoverOverlay({
-      left: el.scrollLeft,
-      top: rowRect.top - containerRect.top + el.scrollTop,
-      width: el.clientWidth,
-      height: rowRect.height,
-    });
-  }, []);
+  const updateRowHoverOverlay = useCallback(
+    (row: HTMLTableRowElement | null) => {
+      hoveredRowRef.current = row;
+      const el = containerRef.current;
+      if (!row || !el) {
+        setRowHoverOverlay(null);
+        return;
+      }
+      const rowRect = row.getBoundingClientRect();
+      const containerRect = el.getBoundingClientRect();
+      setRowHoverOverlay({
+        left: el.scrollLeft,
+        top: rowRect.top - containerRect.top + el.scrollTop,
+        width: el.clientWidth,
+        height: rowRect.height,
+      });
+    },
+    [],
+  );
 
   const handleWheel = useCallback(
     (e: WheelEvent) => {
@@ -1548,9 +1799,13 @@ export function DataTable<T>({
       const atRight = el.scrollLeft >= maxLeft - 1;
 
       const canMoveY =
-        wantsY && canScrollY && ((e.deltaY < 0 && !atTop) || (e.deltaY > 0 && !atBottom));
+        wantsY &&
+        canScrollY &&
+        ((e.deltaY < 0 && !atTop) || (e.deltaY > 0 && !atBottom));
       const canMoveX =
-        wantsX && canScrollX && ((e.deltaX < 0 && !atLeft) || (e.deltaX > 0 && !atRight));
+        wantsX &&
+        canScrollX &&
+        ((e.deltaX < 0 && !atLeft) || (e.deltaX > 0 && !atRight));
 
       if (canMoveY || canMoveX) {
         e.stopPropagation();
@@ -1567,7 +1822,10 @@ export function DataTable<T>({
             );
             parentScrollTarget.scrollTop = Math.max(
               0,
-              Math.min(maxParentScrollTop, parentScrollTarget.scrollTop + e.deltaY),
+              Math.min(
+                maxParentScrollTop,
+                parentScrollTarget.scrollTop + e.deltaY,
+              ),
             );
           }
         } else if (allowWheelPropagationAtBoundary) {
@@ -1586,7 +1844,10 @@ export function DataTable<T>({
     const el = containerRef.current;
     if (!el) return;
 
-    el.addEventListener("wheel", handleWheel, { capture: true, passive: false });
+    el.addEventListener("wheel", handleWheel, {
+      capture: true,
+      passive: false,
+    });
 
     return () => {
       el.removeEventListener("wheel", handleWheel, { capture: true });
@@ -1618,7 +1879,10 @@ export function DataTable<T>({
         const headerH = headerHeightRef.current;
         const trackLength = Math.max(0, el.clientHeight - headerH - 16);
         const viewportLength = Math.max(0, el.clientHeight - headerH);
-        const contentLength = Math.max(viewportLength, el.scrollHeight - headerH);
+        const contentLength = Math.max(
+          viewportLength,
+          el.scrollHeight - headerH,
+        );
         const thumbLength = Math.max(
           28,
           Math.round((viewportLength / contentLength) * trackLength),
@@ -1672,13 +1936,19 @@ export function DataTable<T>({
       e.preventDefault();
 
       if (drag.axis === "y") {
-        const scrollRange = Math.max(0, drag.contentLength - drag.viewportLength);
+        const scrollRange = Math.max(
+          0,
+          drag.contentLength - drag.viewportLength,
+        );
         const thumbRange = Math.max(1, drag.trackLength - drag.thumbLength);
         const dy = e.clientY - drag.startClientY;
         const next = drag.startScrollTop + (dy * scrollRange) / thumbRange;
         el.scrollTop = Math.max(0, Math.min(scrollRange, next));
       } else {
-        const scrollRange = Math.max(0, drag.contentLength - drag.viewportLength);
+        const scrollRange = Math.max(
+          0,
+          drag.contentLength - drag.viewportLength,
+        );
         const thumbRange = Math.max(1, drag.trackLength - drag.thumbLength);
         const dx = e.clientX - drag.startClientX;
         const next = drag.startScrollLeft + (dx * scrollRange) / thumbRange;
@@ -1690,12 +1960,15 @@ export function DataTable<T>({
     [updateScrollMetrics],
   );
 
-  const handleThumbPointerUp = useCallback((e: ReactPointerEvent<HTMLDivElement>) => {
-    const drag = dragRef.current;
-    if (!drag) return;
-    if (drag.pointerId !== e.pointerId) return;
-    dragRef.current = null;
-  }, []);
+  const handleThumbPointerUp = useCallback(
+    (e: ReactPointerEvent<HTMLDivElement>) => {
+      const drag = dragRef.current;
+      if (!drag) return;
+      if (drag.pointerId !== e.pointerId) return;
+      dragRef.current = null;
+    },
+    [],
+  );
 
   const columnResizeRef = useRef<ColumnResizeState | null>(null);
 
@@ -1706,7 +1979,8 @@ export function DataTable<T>({
       pointerClientY: number,
     ): ColumnResizePreview | null => {
       const width = resolveColumnResizeWidth(active, pointerClientX);
-      const headerRect = headerCellsRef.current[active.columnKey]?.getBoundingClientRect();
+      const headerRect =
+        headerCellsRef.current[active.columnKey]?.getBoundingClientRect();
       const visualLeftClientX = headerRect?.left ?? active.startLeftClientX;
       const minBoundaryClientX = visualLeftClientX + active.minWidth;
       const maxBoundaryClientX = visualLeftClientX + active.maxWidth;
@@ -1718,7 +1992,9 @@ export function DataTable<T>({
         lineCenterClientX >= active.previewMinClientX &&
         lineCenterClientX <= active.previewMaxClientX;
       const top = active.previewTop;
-      const bottomInset = hasHorizontalOverflow(scrollMetricsRef.current) ? 14 : 0;
+      const bottomInset = hasHorizontalOverflow(scrollMetricsRef.current)
+        ? 14
+        : 0;
       const bottom = Math.max(top, active.previewBottom - bottomInset);
       const height = Math.max(0, bottom - top);
       const tooltipTop = Math.max(
@@ -1753,20 +2029,25 @@ export function DataTable<T>({
         tooltip.style.left = `${preview.left + 10}px`;
         tooltip.style.top = `${preview.tooltipTop}px`;
         tooltip.style.display = preview.visible ? "" : "none";
-        tooltip.textContent = t("common.column_width_px", { width: preview.width });
+        tooltip.textContent = t("common.column_width_px", {
+          width: preview.width,
+        });
       }
     },
     [t],
   );
 
-  const applyColumnWidthToDom = useCallback((columnKey: string, width: number) => {
-    const col = columnElementsRef.current[columnKey];
-    if (!col) return;
-    const widthPx = `${width}px`;
-    col.style.width = widthPx;
-    col.style.minWidth = widthPx;
-    col.style.maxWidth = widthPx;
-  }, []);
+  const applyColumnWidthToDom = useCallback(
+    (columnKey: string, width: number) => {
+      const col = columnElementsRef.current[columnKey];
+      if (!col) return;
+      const widthPx = `${width}px`;
+      col.style.width = widthPx;
+      col.style.minWidth = widthPx;
+      col.style.maxWidth = widthPx;
+    },
+    [],
+  );
 
   const applyStickyLayoutToDom = useCallback(
     (widths: ColumnWidthMap) => {
@@ -1781,22 +2062,30 @@ export function DataTable<T>({
       if (!root) return;
 
       const clientWidth = scrollMetricsRef.current.clientWidth;
-      const startRail = root.querySelector<HTMLElement>("[data-vt-sticky-start-rail]");
+      const startRail = root.querySelector<HTMLElement>(
+        "[data-vt-sticky-start-rail]",
+      );
       if (startRail) startRail.style.width = `${startWidth}px`;
 
-      const endRail = root.querySelector<HTMLElement>("[data-vt-sticky-end-rail]");
+      const endRail = root.querySelector<HTMLElement>(
+        "[data-vt-sticky-end-rail]",
+      );
       if (endRail) {
         endRail.style.left = `${Math.max(0, clientWidth - endWidth)}px`;
         endRail.style.width = `${endWidth}px`;
       }
 
-      const startBoundary = root.querySelector<HTMLElement>("[data-vt-sticky-start-boundary]");
+      const startBoundary = root.querySelector<HTMLElement>(
+        "[data-vt-sticky-start-boundary]",
+      );
       if (startBoundary) {
         startBoundary.style.left = `${Math.max(0, startWidth)}px`;
         startBoundary.style.width = `${STICKY_EDGE_SHADOW_WIDTH}px`;
       }
 
-      const endBoundary = root.querySelector<HTMLElement>("[data-vt-sticky-end-boundary]");
+      const endBoundary = root.querySelector<HTMLElement>(
+        "[data-vt-sticky-end-boundary]",
+      );
       if (endBoundary) {
         endBoundary.style.left = `${Math.max(
           0,
@@ -1807,19 +2096,27 @@ export function DataTable<T>({
       syncStickyEdgeShadows(scrollMetricsRef.current);
 
       const placements = resolveStickyColumnPlacements(columns, widths);
-      root.querySelectorAll<HTMLElement>("[data-vt-column-key]").forEach((element) => {
-        const key = element.dataset.vtColumnKey;
-        const placement = key ? placements[key] : undefined;
-        if (!placement) return;
+      root
+        .querySelectorAll<HTMLElement>("[data-vt-column-key]")
+        .forEach((element) => {
+          const key = element.dataset.vtColumnKey;
+          const placement = key ? placements[key] : undefined;
+          if (!placement) return;
 
-        if (placement.edge === "start") {
-          element.style.setProperty("--vt-sticky-left", `${placement.offset}px`);
-          element.style.removeProperty("--vt-sticky-right");
-        } else {
-          element.style.setProperty("--vt-sticky-right", `${placement.offset}px`);
-          element.style.removeProperty("--vt-sticky-left");
-        }
-      });
+          if (placement.edge === "start") {
+            element.style.setProperty(
+              "--vt-sticky-left",
+              `${placement.offset}px`,
+            );
+            element.style.removeProperty("--vt-sticky-right");
+          } else {
+            element.style.setProperty(
+              "--vt-sticky-right",
+              `${placement.offset}px`,
+            );
+            element.style.removeProperty("--vt-sticky-left");
+          }
+        });
     },
     [naturalFlow, syncStickyEdgeShadows],
   );
@@ -1835,14 +2132,24 @@ export function DataTable<T>({
     const roundedWidth = resolveColumnResizeWidth(active, pointer.clientX);
 
     active.currentWidth = roundedWidth;
-    const nextWidths = { ...columnWidthsRef.current, [active.columnKey]: roundedWidth };
+    const nextWidths = {
+      ...columnWidthsRef.current,
+      [active.columnKey]: roundedWidth,
+    };
     columnWidthsRef.current = nextWidths;
     applyColumnWidthToDom(active.columnKey, roundedWidth);
     applyStickyLayoutToDom(nextWidths);
     const preview = {
-      ...(buildColumnResizePreview(active, pointer.clientX, pointer.clientY) ?? {
+      ...(buildColumnResizePreview(
+        active,
+        pointer.clientX,
+        pointer.clientY,
+      ) ?? {
         width: roundedWidth,
-        left: active.startLeftClientX + roundedWidth - COLUMN_RESIZE_PREVIEW_LINE_WIDTH / 2,
+        left:
+          active.startLeftClientX +
+          roundedWidth -
+          COLUMN_RESIZE_PREVIEW_LINE_WIDTH / 2,
         top: active.previewTop,
         height: Math.max(0, active.previewBottom - active.previewTop),
         tooltipTop: active.previewTop,
@@ -1862,15 +2169,23 @@ export function DataTable<T>({
           tableId,
           columnKey: active.columnKey,
           pointerX: Math.round(pointer.clientX),
-          previewCenterX: Math.round(preview.left + COLUMN_RESIZE_PREVIEW_LINE_WIDTH / 2),
+          previewCenterX: Math.round(
+            preview.left + COLUMN_RESIZE_PREVIEW_LINE_WIDTH / 2,
+          ),
           renderedHeaderRight: headerRect ? Math.round(headerRect.right) : null,
           renderedHeaderWidth: headerRect ? Math.round(headerRect.width) : null,
           width: roundedWidth,
           deltaPreviewToPointer: Math.round(
-            preview.left + COLUMN_RESIZE_PREVIEW_LINE_WIDTH / 2 - pointer.clientX,
+            preview.left +
+              COLUMN_RESIZE_PREVIEW_LINE_WIDTH / 2 -
+              pointer.clientX,
           ),
           deltaPreviewToRenderedHeader: headerRect
-            ? Math.round(preview.left + COLUMN_RESIZE_PREVIEW_LINE_WIDTH / 2 - headerRect.right)
+            ? Math.round(
+                preview.left +
+                  COLUMN_RESIZE_PREVIEW_LINE_WIDTH / 2 -
+                  headerRect.right,
+              )
             : null,
         });
       }
@@ -1886,7 +2201,9 @@ export function DataTable<T>({
 
   const scheduleColumnResizeFrame = useCallback(() => {
     if (columnResizeRafRef.current !== null) return;
-    columnResizeRafRef.current = window.requestAnimationFrame(applyPendingColumnResize);
+    columnResizeRafRef.current = window.requestAnimationFrame(
+      applyPendingColumnResize,
+    );
   }, [applyPendingColumnResize]);
 
   const flushPendingColumnResize = useCallback(() => {
@@ -1930,7 +2247,9 @@ export function DataTable<T>({
 
       const rect = headerCell.getBoundingClientRect();
       const containerRect = containerRef.current?.getBoundingClientRect();
-      const railWidths = naturalFlow ? { start: 0, end: 0 } : stickyRailWidthsRef.current;
+      const railWidths = naturalFlow
+        ? { start: 0, end: 0 }
+        : stickyRailWidthsRef.current;
       const startWidth = rect.width;
       const minWidth = resolveColumnMinWidth(column);
       const maxWidth = resolveColumnMaxWidth(column, minWidth);
@@ -1969,9 +2288,16 @@ export function DataTable<T>({
       document.body.style.userSelect = "none";
       setActiveResizeColumnKey(column.key);
       applyColumnWidthToDom(column.key, nextStartWidth);
-      applyStickyLayoutToDom({ ...columnWidthsRef.current, [column.key]: nextStartWidth });
+      applyStickyLayoutToDom({
+        ...columnWidthsRef.current,
+        [column.key]: nextStartWidth,
+      });
       pendingColumnResizePointerRef.current = null;
-      const preview = buildColumnResizePreview(resizeState, e.clientX, e.clientY);
+      const preview = buildColumnResizePreview(
+        resizeState,
+        e.clientX,
+        e.clientY,
+      );
       setResizePreview(preview);
       if (resizeState.debugEnabled) {
         logColumnResizeDebug("start", {
@@ -1988,7 +2314,13 @@ export function DataTable<T>({
         });
       }
     },
-    [applyColumnWidthToDom, applyStickyLayoutToDom, buildColumnResizePreview, naturalFlow, tableId],
+    [
+      applyColumnWidthToDom,
+      applyStickyLayoutToDom,
+      buildColumnResizePreview,
+      naturalFlow,
+      tableId,
+    ],
   );
 
   // ---------------------------------------------------------------------------
@@ -2003,16 +2335,18 @@ export function DataTable<T>({
 
       const containerRect = container.getBoundingClientRect();
       const elementsByKey = new Map<string, HTMLElement[]>();
-      table.querySelectorAll<HTMLElement>("[data-vt-column-key]").forEach((element) => {
-        const key = element.dataset.vtColumnKey;
-        if (!key) return;
-        const bucket = elementsByKey.get(key);
-        if (bucket) {
-          bucket.push(element);
-        } else {
-          elementsByKey.set(key, [element]);
-        }
-      });
+      table
+        .querySelectorAll<HTMLElement>("[data-vt-column-key]")
+        .forEach((element) => {
+          const key = element.dataset.vtColumnKey;
+          if (!key) return;
+          const bucket = elementsByKey.get(key);
+          if (bucket) {
+            bucket.push(element);
+          } else {
+            elementsByKey.set(key, [element]);
+          }
+        });
 
       const geometries = currentColumns.map((column, index) => {
         const headerCell = headerCellsRef.current[column.key];
@@ -2020,7 +2354,9 @@ export function DataTable<T>({
         return {
           key: column.key,
           index,
-          left: rect ? rect.left - containerRect.left + container.scrollLeft : 0,
+          left: rect
+            ? rect.left - containerRect.left + container.scrollLeft
+            : 0,
           width: rect?.width ?? 0,
           elements: elementsByKey.get(column.key) ?? [],
           appliedDragging: false,
@@ -2029,42 +2365,50 @@ export function DataTable<T>({
         };
       });
 
-      return geometries.some((geometry) => geometry.width > 0) ? geometries : null;
+      return geometries.some((geometry) => geometry.width > 0)
+        ? geometries
+        : null;
     },
     [],
   );
 
-  const clearColumnReorderStyles = useCallback((active: ColumnReorderState | null) => {
-    active?.columns.forEach((geometry) => {
-      geometry.elements.forEach((element) => {
-        element.style.transform = "";
-        element.style.transition = "";
-        element.style.willChange = "";
-        element.style.position = "";
-        element.style.zIndex = "";
-        element.style.pointerEvents = "";
-        element.style.opacity = "";
-        element.style.filter = "";
-        element.style.background = "";
-        element.style.boxShadow = "";
-        element.style.overflow = "";
-        element.style.contain = "";
-        element.style.isolation = "";
-        element.style.borderRadius = "";
-        element.removeAttribute("data-vt-column-dragging-cell");
-        element.removeAttribute("data-vt-column-shifted-cell");
+  const clearColumnReorderStyles = useCallback(
+    (active: ColumnReorderState | null) => {
+      active?.columns.forEach((geometry) => {
+        geometry.elements.forEach((element) => {
+          element.style.transform = "";
+          element.style.transition = "";
+          element.style.willChange = "";
+          element.style.position = "";
+          element.style.zIndex = "";
+          element.style.pointerEvents = "";
+          element.style.opacity = "";
+          element.style.filter = "";
+          element.style.background = "";
+          element.style.boxShadow = "";
+          element.style.overflow = "";
+          element.style.contain = "";
+          element.style.isolation = "";
+          element.style.borderRadius = "";
+          element.removeAttribute("data-vt-column-dragging-cell");
+          element.removeAttribute("data-vt-column-shifted-cell");
+        });
       });
-    });
-  }, []);
+    },
+    [],
+  );
 
   const applyColumnReorderStyles = useCallback(
     (active: ColumnReorderState, dragOffsetX: number) => {
       active.columns.forEach((geometry) => {
         const isDragged = geometry.key === active.columnKey;
-        const shift = isDragged ? dragOffsetX : (getColumnReorderShift(active, geometry) ?? 0);
+        const shift = isDragged
+          ? dragOffsetX
+          : (getColumnReorderShift(active, geometry) ?? 0);
         const transform = formatColumnReorderTransform(shift);
         const stableShift = isDragged ? null : shift;
-        const wasShifted = !geometry.appliedDragging && (geometry.appliedShift ?? 0) !== 0;
+        const wasShifted =
+          !geometry.appliedDragging && (geometry.appliedShift ?? 0) !== 0;
         if (
           geometry.appliedDragging === isDragged &&
           geometry.appliedShift === stableShift &&
@@ -2087,9 +2431,15 @@ export function DataTable<T>({
               : "";
           element.style.willChange = isMoved ? "transform" : "";
           // Header cells own the vertical sticky position; horizontal reorder transforms must not detach it.
-          const keepsStickyHeaderPosition = !naturalFlow && element.tagName === "TH";
-          element.style.position = isMoved && !keepsStickyHeaderPosition ? "relative" : "";
-          element.style.zIndex = isDragged ? "90" : shift || isSettling ? "45" : "";
+          const keepsStickyHeaderPosition =
+            !naturalFlow && element.tagName === "TH";
+          element.style.position =
+            isMoved && !keepsStickyHeaderPosition ? "relative" : "";
+          element.style.zIndex = isDragged
+            ? "90"
+            : shift || isSettling
+              ? "45"
+              : "";
           element.style.pointerEvents = isDragged ? "none" : "";
           element.style.opacity = "";
           element.style.filter = "";
@@ -2141,7 +2491,9 @@ export function DataTable<T>({
 
   const scheduleColumnReorderFrame = useCallback(() => {
     if (columnReorderRafRef.current !== null) return;
-    columnReorderRafRef.current = window.requestAnimationFrame(applyColumnReorderFrame);
+    columnReorderRafRef.current = window.requestAnimationFrame(
+      applyColumnReorderFrame,
+    );
   }, [applyColumnReorderFrame]);
 
   const stopColumnReorderAutoScroll = useCallback(() => {
@@ -2158,7 +2510,10 @@ export function DataTable<T>({
     if (!active || !active.activated || !container || naturalFlow) return;
 
     const rect = container.getBoundingClientRect();
-    const maxScrollLeft = Math.max(0, container.scrollWidth - container.clientWidth);
+    const maxScrollLeft = Math.max(
+      0,
+      container.scrollWidth - container.clientWidth,
+    );
     if (maxScrollLeft <= 0) return;
 
     const dragOffsetX = getColumnReorderDragOffset(
@@ -2182,14 +2537,17 @@ export function DataTable<T>({
       0,
       Math.min(
         1,
-        (COLUMN_REORDER_AUTOSCROLL_EDGE_PX - (rect.right - active.lastClientX)) /
+        (COLUMN_REORDER_AUTOSCROLL_EDGE_PX -
+          (rect.right - active.lastClientX)) /
           COLUMN_REORDER_AUTOSCROLL_EDGE_PX,
       ),
     );
     const direction =
       canMoveLeft && leftIntensity > 0 && container.scrollLeft > 0
         ? -1
-        : canMoveRight && rightIntensity > 0 && container.scrollLeft < maxScrollLeft
+        : canMoveRight &&
+            rightIntensity > 0 &&
+            container.scrollLeft < maxScrollLeft
           ? 1
           : 0;
 
@@ -2198,8 +2556,16 @@ export function DataTable<T>({
     const intensity = direction < 0 ? leftIntensity : rightIntensity;
     const delta =
       direction *
-      Math.max(1, Math.round(COLUMN_REORDER_AUTOSCROLL_MAX_PX_PER_FRAME * intensity * intensity));
-    const nextScrollLeft = Math.max(0, Math.min(maxScrollLeft, container.scrollLeft + delta));
+      Math.max(
+        1,
+        Math.round(
+          COLUMN_REORDER_AUTOSCROLL_MAX_PX_PER_FRAME * intensity * intensity,
+        ),
+      );
+    const nextScrollLeft = Math.max(
+      0,
+      Math.min(maxScrollLeft, container.scrollLeft + delta),
+    );
 
     if (nextScrollLeft !== container.scrollLeft) {
       container.scrollLeft = nextScrollLeft;
@@ -2236,7 +2602,9 @@ export function DataTable<T>({
     setSettledReorderColumnKey(columnKey);
     columnReorderSettleTimeoutRef.current = window.setTimeout(() => {
       columnReorderSettleTimeoutRef.current = null;
-      setSettledReorderColumnKey((current) => (current === columnKey ? null : current));
+      setSettledReorderColumnKey((current) =>
+        current === columnKey ? null : current,
+      );
     }, COLUMN_REORDER_SETTLE_FEEDBACK_MS);
   }, []);
 
@@ -2264,8 +2632,10 @@ export function DataTable<T>({
     (active: ColumnReorderState, event: PointerEvent) => {
       if (active.activated) return true;
       const movedEnough =
-        Math.abs(event.clientX - active.startClientX) >= COLUMN_REORDER_MIN_DRAG_DISTANCE_PX ||
-        Math.abs(event.clientY - active.startClientY) >= COLUMN_REORDER_MIN_DRAG_DISTANCE_PX;
+        Math.abs(event.clientX - active.startClientX) >=
+          COLUMN_REORDER_MIN_DRAG_DISTANCE_PX ||
+        Math.abs(event.clientY - active.startClientY) >=
+          COLUMN_REORDER_MIN_DRAG_DISTANCE_PX;
       if (!movedEnough) return false;
 
       activateColumnReorder(active);
@@ -2323,7 +2693,10 @@ export function DataTable<T>({
 
       if (!shouldCommit) return;
 
-      const normalizedOrder = normalizeColumnOrder(columnsRef.current, columnOrderRef.current);
+      const normalizedOrder = normalizeColumnOrder(
+        columnsRef.current,
+        columnOrderRef.current,
+      );
       const fromIndex = normalizedOrder.indexOf(active.columnKey);
       if (fromIndex < 0) return;
 
@@ -2369,11 +2742,16 @@ export function DataTable<T>({
       const draggedGeometry = geometries?.[columnIndex];
       if (!geometries || !draggedGeometry || draggedGeometry.width <= 0) return;
 
-      const movableKeys = normalizeColumnOrder(currentColumns, columnOrderRef.current);
+      const movableKeys = normalizeColumnOrder(
+        currentColumns,
+        columnOrderRef.current,
+      );
       const startLocked = currentColumns.filter(
         (c) => resolveColumnOrderLock(c) === "start",
       ).length;
-      const endLocked = currentColumns.filter((c) => resolveColumnOrderLock(c) === "end").length;
+      const endLocked = currentColumns.filter(
+        (c) => resolveColumnOrderLock(c) === "end",
+      ).length;
       const maxMovable = Math.max(0, movableKeys.length - endLocked);
 
       const state: ColumnReorderState = {
@@ -2489,7 +2867,10 @@ export function DataTable<T>({
   const measureHeaderHeight = useCallback(() => {
     const node = headerRef.current;
     if (!node) return 0;
-    const next = Math.max(0, Math.ceil(node.getBoundingClientRect().height || 0));
+    const next = Math.max(
+      0,
+      Math.ceil(node.getBoundingClientRect().height || 0),
+    );
     if (next !== headerHeightRef.current) {
       headerHeightRef.current = next;
       setHeaderHeight(next);
@@ -2509,7 +2890,8 @@ export function DataTable<T>({
     update();
 
     window.addEventListener("resize", update);
-    const observer = typeof ResizeObserver !== "undefined" ? new ResizeObserver(update) : null;
+    const observer =
+      typeof ResizeObserver !== "undefined" ? new ResizeObserver(update) : null;
     observer?.observe(el);
 
     return () => {
@@ -2521,7 +2903,13 @@ export function DataTable<T>({
   useLayoutEffect(() => {
     measureHeaderHeight();
     updateScrollMetrics();
-  }, [columnWidths, measureHeaderHeight, minWidth, orderedColumns, updateScrollMetrics]);
+  }, [
+    columnWidths,
+    measureHeaderHeight,
+    minWidth,
+    orderedColumns,
+    updateScrollMetrics,
+  ]);
 
   // Content size can change without the scroll container's box size changing (e.g. rows loaded after refresh).
   // ResizeObserver won't fire for scrollHeight/scrollWidth changes, so re-measure on data/structure changes.
@@ -2590,38 +2978,46 @@ export function DataTable<T>({
   }, []);
 
   // Virtual window calculation
-  const { startIndex, endIndex, topSpacerHeight, bottomSpacerHeight } = useMemo(() => {
-    if (!virtualize) {
+  const { startIndex, endIndex, topSpacerHeight, bottomSpacerHeight } =
+    useMemo(() => {
+      if (!virtualize) {
+        return {
+          startIndex: 0,
+          endIndex: rows.length,
+          topSpacerHeight: 0,
+          bottomSpacerHeight: 0,
+        };
+      }
+      const total = rows.length;
+      if (!total)
+        return {
+          startIndex: 0,
+          endIndex: 0,
+          topSpacerHeight: 0,
+          bottomSpacerHeight: 0,
+        };
+
+      const visibleStart = Math.floor(scrollTop / rowHeight);
+      const visibleCount = Math.max(1, Math.ceil(viewportHeight / rowHeight));
+      const visibleEnd = visibleStart + visibleCount;
+
+      const start = Math.max(0, visibleStart - overscan);
+      const end = Math.min(total, visibleEnd + overscan);
+
       return {
-        startIndex: 0,
-        endIndex: rows.length,
-        topSpacerHeight: 0,
-        bottomSpacerHeight: 0,
+        startIndex: start,
+        endIndex: end,
+        topSpacerHeight: start * rowHeight,
+        bottomSpacerHeight: (total - end) * rowHeight,
       };
-    }
-    const total = rows.length;
-    if (!total)
-      return {
-        startIndex: 0,
-        endIndex: 0,
-        topSpacerHeight: 0,
-        bottomSpacerHeight: 0,
-      };
-
-    const visibleStart = Math.floor(scrollTop / rowHeight);
-    const visibleCount = Math.max(1, Math.ceil(viewportHeight / rowHeight));
-    const visibleEnd = visibleStart + visibleCount;
-
-    const start = Math.max(0, visibleStart - overscan);
-    const end = Math.min(total, visibleEnd + overscan);
-
-    return {
-      startIndex: start,
-      endIndex: end,
-      topSpacerHeight: start * rowHeight,
-      bottomSpacerHeight: (total - end) * rowHeight,
-    };
-  }, [overscan, rowHeight, rows.length, scrollTop, viewportHeight, virtualize]);
+    }, [
+      overscan,
+      rowHeight,
+      rows.length,
+      scrollTop,
+      viewportHeight,
+      virtualize,
+    ]);
 
   const visibleRows = useMemo(
     () => (virtualize ? rows.slice(startIndex, endIndex) : rows),
@@ -2639,7 +3035,10 @@ export function DataTable<T>({
     () => resolveStickyRailWidth(orderedColumns, columnWidths, "end"),
     [columnWidths, orderedColumns],
   );
-  stickyRailWidthsRef.current = { start: stickyStartRailWidth, end: stickyEndRailWidth };
+  stickyRailWidthsRef.current = {
+    start: stickyStartRailWidth,
+    end: stickyEndRailWidth,
+  };
   const stickyColumnPlacements = useMemo(
     () => resolveStickyColumnPlacements(orderedColumns, columnWidths),
     [columnWidths, orderedColumns],
@@ -2650,20 +3049,37 @@ export function DataTable<T>({
     0,
     scrollMetrics.clientHeight - headerHeight - stickyRailBottomInset,
   );
-  const stickyBoundaryHeight = Math.max(0, scrollMetrics.clientHeight - stickyRailBottomInset);
-  const stickyStartShadowOpacity = getStickyEdgeShadowOpacity(scrollMetrics, "start");
-  const stickyEndShadowOpacity = getStickyEdgeShadowOpacity(scrollMetrics, "end");
+  const stickyBoundaryHeight = Math.max(
+    0,
+    scrollMetrics.clientHeight - stickyRailBottomInset,
+  );
+  const stickyStartShadowOpacity = getStickyEdgeShadowOpacity(
+    scrollMetrics,
+    "start",
+  );
+  const stickyEndShadowOpacity = getStickyEdgeShadowOpacity(
+    scrollMetrics,
+    "end",
+  );
   const stickyStartBoundaryLeft = Math.max(0, stickyStartRailWidth);
   const stickyEndBoundaryLeft = Math.max(
     0,
     scrollMetrics.clientWidth - stickyEndRailWidth - STICKY_EDGE_SHADOW_WIDTH,
   );
-  const stickyEndRailLeft = Math.max(0, scrollMetrics.clientWidth - stickyEndRailWidth);
+  const stickyEndRailLeft = Math.max(
+    0,
+    scrollMetrics.clientWidth - stickyEndRailWidth,
+  );
 
   const resolveColumnStyle = useCallback(
-    (column: DataTableColumn<T>, area: "header" | "cell" = "cell"): DataTableColumnStyle => {
+    (
+      column: DataTableColumn<T>,
+      area: "header" | "cell" = "cell",
+    ): DataTableColumnStyle => {
       const width = columnWidths[column.key];
-      const placement = naturalFlow ? undefined : stickyColumnPlacements[column.key];
+      const placement = naturalFlow
+        ? undefined
+        : stickyColumnPlacements[column.key];
       const style: DataTableColumnStyle = {};
 
       if (width) {
@@ -2766,7 +3182,11 @@ export function DataTable<T>({
         className={
           naturalFlow
             ? "relative z-10 min-h-0 overflow-visible rounded-xl"
-            : "relative col-start-1 row-start-1 h-full min-h-0 table-scrollbar overflow-auto overscroll-x-none overscroll-y-none"
+            : `relative col-start-1 row-start-1 h-full min-h-0 table-scrollbar overflow-auto overscroll-x-none ${
+                allowWheelPropagationAtBoundary
+                  ? "overscroll-y-auto"
+                  : "overscroll-y-none"
+              }`
         }
       >
         <div
@@ -2811,21 +3231,35 @@ export function DataTable<T>({
                 {orderedColumns.map((col, colIndex) => {
                   const isRowReorderColumn = col.key === ROW_REORDER_COLUMN_KEY;
                   const canResize =
-                    columnResizable && shouldAllowColumnResize(col, colIndex, orderedColumns);
-                  const canReorder = canUseColumnOrder && shouldAllowColumnReorder(col);
+                    columnResizable &&
+                    shouldAllowColumnResize(col, colIndex, orderedColumns);
+                  const canReorder =
+                    canUseColumnOrder && shouldAllowColumnReorder(col);
                   const canSort = Boolean(col.sort && onRowsChange);
                   const sortDirection =
-                    activeSortState?.columnKey === col.key ? activeSortState.direction : null;
-                  const isResizingThisColumn = activeResizeColumnKey === col.key;
-                  const isSettledReorderColumn = settledReorderColumnKey === col.key;
-                  const stickyPlacement = naturalFlow ? undefined : stickyColumnPlacements[col.key];
-                  const headerPositionClass = naturalFlow ? "relative" : "sticky top-0 z-50";
+                    activeSortState?.columnKey === col.key
+                      ? activeSortState.direction
+                      : null;
+                  const isResizingThisColumn =
+                    activeResizeColumnKey === col.key;
+                  const isSettledReorderColumn =
+                    settledReorderColumnKey === col.key;
+                  const stickyPlacement = naturalFlow
+                    ? undefined
+                    : stickyColumnPlacements[col.key];
+                  const headerPositionClass = naturalFlow
+                    ? "relative"
+                    : "sticky top-0 z-50";
                   const headerChromeClass = "bg-slate-100 dark:bg-neutral-800";
                   const headerCornerClass = [
                     naturalFlow && colIndex === 0 ? "rounded-l-xl" : "",
-                    naturalFlow && colIndex === orderedColumns.length - 1 ? "rounded-r-xl" : "",
+                    naturalFlow && colIndex === orderedColumns.length - 1
+                      ? "rounded-r-xl"
+                      : "",
                     !naturalFlow && colIndex === 0 ? "rounded-l-xl" : "",
-                    !naturalFlow && !vThumb && colIndex === orderedColumns.length - 1
+                    !naturalFlow &&
+                    !vThumb &&
+                    colIndex === orderedColumns.length - 1
                       ? "rounded-r-xl"
                       : "",
                   ]
@@ -2836,15 +3270,21 @@ export function DataTable<T>({
                       key={col.key}
                       aria-label={col.label}
                       data-vt-column-key={col.key}
-                      data-vt-column-settled-cell={isSettledReorderColumn ? true : undefined}
+                      data-vt-column-settled-cell={
+                        isSettledReorderColumn ? true : undefined
+                      }
                       ref={(node) => {
                         headerCellsRef.current[col.key] = node;
                       }}
                       style={resolveColumnStyle(col, "header")}
                       className={`group/column ${headerPositionClass} overflow-hidden px-4 py-3 whitespace-nowrap ${
-                        stickyPlacement?.edge === "start" ? "md:left-[var(--vt-sticky-left)]" : ""
+                        stickyPlacement?.edge === "start"
+                          ? "md:left-[var(--vt-sticky-left)]"
+                          : ""
                       } ${
-                        stickyPlacement?.edge === "end" ? "md:right-[var(--vt-sticky-right)]" : ""
+                        stickyPlacement?.edge === "end"
+                          ? "md:right-[var(--vt-sticky-right)]"
+                          : ""
                       } ${headerChromeClass} ${headerCornerClass} ${col.width ?? ""} ${col.headerClassName ?? ""} ${
                         activeReorderColumnKey === col.key
                           ? "cursor-grabbing bg-slate-100 text-slate-700 shadow-[inset_2px_0_0_rgba(37,99,235,0.42),inset_-2px_0_0_rgba(14,165,233,0.28)] dark:bg-neutral-800 dark:text-white/80"
@@ -2862,7 +3302,9 @@ export function DataTable<T>({
                                 ? "pointer-events-none"
                                 : "group-hover/column:opacity-100"
                           }`}
-                          onPointerDown={(event) => handleColumnReorderPointerDown(col, event)}
+                          onPointerDown={(event) =>
+                            handleColumnReorderPointerDown(col, event)
+                          }
                         >
                           <GripVertical size={13} aria-hidden="true" />
                           <span className="sr-only">
@@ -2882,7 +3324,9 @@ export function DataTable<T>({
                         ) : (
                           <span className="flex min-w-0 items-center gap-1.5">
                             <span className="min-w-0 truncate">
-                              {col.headerRender ? col.headerRender() : col.label}
+                              {col.headerRender
+                                ? col.headerRender()
+                                : col.label}
                             </span>
                             {canSort ? (
                               <DropdownMenu.Root size="sm">
@@ -2890,43 +3334,66 @@ export function DataTable<T>({
                                   <button
                                     type="button"
                                     data-vt-sort-trigger={col.key}
-                                    data-vt-sort-direction={sortDirection ?? "none"}
-                                    aria-label={t("common.sort_column", { column: col.label })}
-                                    title={t("common.sort_column", { column: col.label })}
+                                    data-vt-sort-direction={
+                                      sortDirection ?? "none"
+                                    }
+                                    aria-label={t("common.sort_column", {
+                                      column: col.label,
+                                    })}
+                                    title={t("common.sort_column", {
+                                      column: col.label,
+                                    })}
                                     className={`inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md outline-none transition-colors hover:bg-slate-200/75 focus-visible:ring-2 focus-visible:ring-slate-400/35 dark:hover:bg-white/10 dark:focus-visible:ring-white/15 ${
                                       sortDirection
                                         ? "text-slate-900 dark:text-white"
                                         : "text-slate-400 dark:text-white/35"
                                     }`}
-                                    onPointerDown={(event) => event.stopPropagation()}
+                                    onPointerDown={(event) =>
+                                      event.stopPropagation()
+                                    }
                                   >
                                     {sortDirection === "asc" ? (
                                       <ArrowUp size={14} aria-hidden="true" />
                                     ) : sortDirection === "desc" ? (
                                       <ArrowDown size={14} aria-hidden="true" />
                                     ) : (
-                                      <ArrowUpDown size={14} aria-hidden="true" />
+                                      <ArrowUpDown
+                                        size={14}
+                                        aria-hidden="true"
+                                      />
                                     )}
                                   </button>
                                 </DropdownMenu.Trigger>
                                 <DropdownMenu.Portal>
                                   <DropdownMenu.Content align="start">
                                     <DropdownMenu.Item
-                                      onSelect={() => handleColumnSort(col, "asc")}
+                                      onSelect={() =>
+                                        handleColumnSort(col, "asc")
+                                      }
                                     >
                                       <ArrowUp size={13} aria-hidden="true" />
                                       <span>{t("common.sort_ascending")}</span>
                                       {sortDirection === "asc" ? (
-                                        <Check className="ml-auto" size={13} aria-hidden="true" />
+                                        <Check
+                                          className="ml-auto"
+                                          size={13}
+                                          aria-hidden="true"
+                                        />
                                       ) : null}
                                     </DropdownMenu.Item>
                                     <DropdownMenu.Item
-                                      onSelect={() => handleColumnSort(col, "desc")}
+                                      onSelect={() =>
+                                        handleColumnSort(col, "desc")
+                                      }
                                     >
                                       <ArrowDown size={13} aria-hidden="true" />
                                       <span>{t("common.sort_descending")}</span>
                                       {sortDirection === "desc" ? (
-                                        <Check className="ml-auto" size={13} aria-hidden="true" />
+                                        <Check
+                                          className="ml-auto"
+                                          size={13}
+                                          aria-hidden="true"
+                                        />
                                       ) : null}
                                     </DropdownMenu.Item>
                                   </DropdownMenu.Content>
@@ -2940,11 +3407,17 @@ export function DataTable<T>({
                         <button
                           type="button"
                           data-vt-column-resizer
-                          aria-label={t("common.resize_column", { column: col.label })}
-                          title={t("common.resize_column", { column: col.label })}
+                          aria-label={t("common.resize_column", {
+                            column: col.label,
+                          })}
+                          title={t("common.resize_column", {
+                            column: col.label,
+                          })}
                           className="group/resize absolute -right-2 top-0 z-30 h-full w-4 cursor-col-resize touch-none bg-transparent outline-none"
                           style={{ cursor: "col-resize" }}
-                          onPointerDown={(event) => handleColumnResizePointerDown(col, event)}
+                          onPointerDown={(event) =>
+                            handleColumnResizePointerDown(col, event)
+                          }
                         >
                           <span
                             aria-hidden="true"
@@ -3005,11 +3478,17 @@ export function DataTable<T>({
                 <>
                   {virtualize ? (
                     <tr aria-hidden="true">
-                      <td colSpan={colCount} height={topSpacerHeight} className="p-0" />
+                      <td
+                        colSpan={colCount}
+                        height={topSpacerHeight}
+                        className="p-0"
+                      />
                     </tr>
                   ) : null}
                   {visibleRows.map((row, localIdx) => {
-                    const globalIdx = virtualize ? startIndex + localIdx : localIdx;
+                    const globalIdx = virtualize
+                      ? startIndex + localIdx
+                      : localIdx;
                     const key = rowKey(row, globalIdx);
                     const extraCls =
                       typeof rowClassName === "function"
@@ -3017,13 +3496,16 @@ export function DataTable<T>({
                         : (rowClassName ?? "");
                     const rowSelected = rowAriaSelected?.(row, globalIdx);
                     const rowInteractive = Boolean(onRowClick);
-                    const isActiveRowReorder = activeRowReorderIndex === globalIdx;
+                    const isActiveRowReorder =
+                      activeRowReorderIndex === globalIdx;
                     return (
                       <tr
                         key={key}
                         data-vt-row-index={globalIdx}
                         data-vt-row-key={key}
-                        data-vt-row-reorder-active={isActiveRowReorder ? true : undefined}
+                        data-vt-row-reorder-active={
+                          isActiveRowReorder ? true : undefined
+                        }
                         tabIndex={rowInteractive ? 0 : undefined}
                         aria-selected={rowSelected}
                         className={`group/row relative z-0 text-sm transition-[opacity,background-color] ${
@@ -3044,7 +3526,8 @@ export function DataTable<T>({
                         onKeyDown={
                           rowInteractive
                             ? (event) => {
-                                if (event.key !== "Enter" && event.key !== " ") return;
+                                if (event.key !== "Enter" && event.key !== " ")
+                                  return;
                                 event.preventDefault();
                                 onRowClick?.(row, globalIdx);
                               }
@@ -3053,20 +3536,31 @@ export function DataTable<T>({
                         onMouseEnter={
                           naturalFlow
                             ? undefined
-                            : (event) => updateRowHoverOverlay(event.currentTarget)
+                            : (event) =>
+                                updateRowHoverOverlay(event.currentTarget)
                         }
-                        onMouseLeave={naturalFlow ? undefined : () => updateRowHoverOverlay(null)}
+                        onMouseLeave={
+                          naturalFlow
+                            ? undefined
+                            : () => updateRowHoverOverlay(null)
+                        }
                       >
                         {orderedColumns.map((col, colIdx) => {
                           const isFirst = colIdx === 0;
                           const isLast = colIdx === orderedColumns.length - 1;
-                          const isRowReorderColumn = col.key === ROW_REORDER_COLUMN_KEY;
-                          const isSettledReorderColumn = settledReorderColumnKey === col.key;
+                          const isRowReorderColumn =
+                            col.key === ROW_REORDER_COLUMN_KEY;
+                          const isSettledReorderColumn =
+                            settledReorderColumnKey === col.key;
                           const stickyPlacement = naturalFlow
                             ? undefined
                             : stickyColumnPlacements[col.key];
                           const content = col.render(row, globalIdx);
-                          const overflowTooltip = resolveCellOverflowTooltip(col, row, globalIdx);
+                          const overflowTooltip = resolveCellOverflowTooltip(
+                            col,
+                            row,
+                            globalIdx,
+                          );
                           const roundCls = rowDividers
                             ? ""
                             : [
@@ -3093,7 +3587,9 @@ export function DataTable<T>({
                               }
                               style={resolveColumnStyle(col, "cell")}
                               className={`overflow-hidden align-middle ${
-                                isRowReorderColumn ? "px-1 py-2.5 text-center" : "px-4 py-2.5"
+                                isRowReorderColumn
+                                  ? "px-1 py-2.5 text-center"
+                                  : "px-4 py-2.5"
                               } ${
                                 stickyPlacement?.edge === "start"
                                   ? "md:left-[var(--vt-sticky-left)]"
@@ -3112,18 +3608,27 @@ export function DataTable<T>({
                                   aria-label={
                                     isActiveRowReorder
                                       ? undefined
-                                      : t("common.reorder_row", { index: globalIdx + 1 })
+                                      : t("common.reorder_row", {
+                                          index: globalIdx + 1,
+                                        })
                                   }
-                                  disabled={!onRowsChange || rows.length < 2 || loading}
+                                  disabled={
+                                    !onRowsChange || rows.length < 2 || loading
+                                  }
                                   className={`inline-flex h-7 w-7 touch-none items-center justify-center rounded-lg text-slate-400 outline-none transition-colors hover:bg-slate-200/80 hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-slate-400/35 disabled:cursor-default disabled:opacity-35 dark:text-white/35 dark:hover:bg-white/10 dark:hover:text-white/75 dark:focus-visible:ring-white/15 ${
                                     isActiveRowReorder
                                       ? "cursor-grabbing bg-slate-200 text-slate-800 dark:bg-white/15 dark:text-white"
                                       : "cursor-grab"
                                   }`}
                                   onPointerDown={(event) =>
-                                    handleRowReorderPointerDown(globalIdx, event)
+                                    handleRowReorderPointerDown(
+                                      globalIdx,
+                                      event,
+                                    )
                                   }
-                                  onKeyDown={(event) => handleRowReorderKeyDown(globalIdx, event)}
+                                  onKeyDown={(event) =>
+                                    handleRowReorderKeyDown(globalIdx, event)
+                                  }
                                 >
                                   <GripVertical size={15} aria-hidden="true" />
                                 </button>
@@ -3134,7 +3639,10 @@ export function DataTable<T>({
                                 >
                                   <TableCellOverflowTooltip
                                     tooltipContent={overflowTooltip}
-                                    className={col.cellContentClassName ?? col.cellClassName}
+                                    className={
+                                      col.cellContentClassName ??
+                                      col.cellClassName
+                                    }
                                   >
                                     {content}
                                   </TableCellOverflowTooltip>
@@ -3148,7 +3656,11 @@ export function DataTable<T>({
                   })}
                   {virtualize ? (
                     <tr aria-hidden="true">
-                      <td colSpan={colCount} height={bottomSpacerHeight} className="p-0" />
+                      <td
+                        colSpan={colCount}
+                        height={bottomSpacerHeight}
+                        className="p-0"
+                      />
                     </tr>
                   ) : null}
                 </>

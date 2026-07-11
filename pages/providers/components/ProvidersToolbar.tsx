@@ -2,6 +2,7 @@ import { type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { CheckSquare, Download, Plus, RefreshCw, Upload } from "lucide-react";
 import { Button, DropdownMenu } from "@code-proxy/ui";
+import { useOptionalAuth } from "@app/providers/AuthProvider";
 
 export type ProvidersToolbarProps = {
   currentImportKind: string | null;
@@ -33,6 +34,8 @@ export function ProvidersToolbar({
   onAddCurrent,
 }: ProvidersToolbarProps) {
   const { t } = useTranslation();
+  const auth = useOptionalAuth();
+  const canWrite = auth?.can("providers.write") ?? true;
   const hasImportExport = currentImportKind !== null;
   const hasSelection = selectedExportCount > 0;
 
@@ -45,15 +48,17 @@ export function ProvidersToolbar({
       <div className="flex flex-wrap items-center gap-1">
         {hasImportExport ? (
           <>
-            <Button
-              variant="secondary"
-              size="sm"
-              className="h-8! px-2 text-xs"
-              onClick={onImportClick}
-            >
-              <Upload size={14} />
-              {t("providers.import_json")}
-            </Button>
+            {canWrite ? (
+              <Button
+                variant="secondary"
+                size="sm"
+                className="h-8! px-2 text-xs"
+                onClick={onImportClick}
+              >
+                <Upload size={14} />
+                {t("providers.import_json")}
+              </Button>
+            ) : null}
 
             <DropdownMenu.Root>
               <DropdownMenu.Trigger asChild>
@@ -73,7 +78,6 @@ export function ProvidersToolbar({
                     {t("providers.export_json")}
                   </DropdownMenu.Item>
                   <DropdownMenu.Item
-
                     onSelect={() => onExportSelected()}
                     disabled={selectedExportCount === 0}
                   >
@@ -103,8 +107,13 @@ export function ProvidersToolbar({
           </>
         ) : null}
 
-        {onAddCurrent ? (
-          <Button variant="primary" size="sm" className="h-8! px-3 text-xs" onClick={onAddCurrent}>
+        {canWrite && onAddCurrent ? (
+          <Button
+            variant="primary"
+            size="sm"
+            className="h-8! px-3 text-xs"
+            onClick={onAddCurrent}
+          >
             <Plus size={14} />
             {t("providers.add_new")}
           </Button>

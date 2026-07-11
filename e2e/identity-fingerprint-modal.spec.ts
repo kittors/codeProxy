@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
-const codexTerminalUserAgent = "codex_cli_rs/0.125.0 (Mac OS 26.0.1; arm64) Apple_Terminal/464";
+const codexTerminalUserAgent =
+  "codex_cli_rs/0.125.0 (Mac OS 26.0.1; arm64) Apple_Terminal/464";
 const codexBetaFeatures = "terminal_resize_reflow,memories,goals";
 
 const identitySummaries = {
@@ -76,7 +77,10 @@ const accountDetails = {
         "user-agent": { value: codexTerminalUserAgent, source: "learned" },
         version: { value: "0.125.0", source: "learned" },
         originator: { value: "Codex Desktop", source: "learned" },
-        "x-codex-beta-features": { value: codexBetaFeatures, source: "learned" },
+        "x-codex-beta-features": {
+          value: codexBetaFeatures,
+          source: "learned",
+        },
         "websocket-beta": {
           value: "responses_websockets=2026-02-06",
           source: "builtin_default",
@@ -121,7 +125,10 @@ const accountDetails = {
           value: "google-api-nodejs-client/9.16.0",
           source: "builtin_default",
         },
-        "x-goog-api-client": { value: "gl-node/24.3.0", source: "builtin_default" },
+        "x-goog-api-client": {
+          value: "gl-node/24.3.0",
+          source: "builtin_default",
+        },
         "client-metadata": {
           value: "pluginType=GEMINI,ideType=IDE_UNSPECIFIED",
           source: "builtin_default",
@@ -144,8 +151,14 @@ const setAuthed = async (page: Page) => {
         expiresAt: Date.now() + 24 * 60 * 60 * 1000,
       }),
     );
-    localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("table"));
-    localStorage.setItem("authFilesPage.quotaAutoRefreshMs.v1", JSON.stringify(0));
+    localStorage.setItem(
+      "authFilesPage.filesViewMode.v1",
+      JSON.stringify("table"),
+    );
+    localStorage.setItem(
+      "authFilesPage.quotaAutoRefreshMs.v1",
+      JSON.stringify(0),
+    );
   });
 };
 
@@ -216,27 +229,47 @@ const routeManagementMocks = async (page: Page) => {
     }
 
     if (path.endsWith("/v0/management/config")) {
-      await route.fulfill({ status: 200, contentType: "application/json", body: "{}" });
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: "{}",
+      });
       return;
     }
 
     if (path.endsWith("/v0/management/model-configs")) {
-      await route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: "[]",
+      });
       return;
     }
 
     if (path.endsWith("/v0/management/model-owner-presets")) {
-      await route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: "[]",
+      });
       return;
     }
 
     if (path.endsWith("/v0/management/auth-group-model-owner-mappings")) {
-      await route.fulfill({ status: 200, contentType: "application/json", body: '{"items":[]}' });
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: '{"items":[]}',
+      });
       return;
     }
 
     if (path.endsWith("/v0/management/proxy-pool")) {
-      await route.fulfill({ status: 200, contentType: "application/json", body: '{"items":[]}' });
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: '{"items":[]}',
+      });
       return;
     }
 
@@ -281,30 +314,41 @@ test.beforeEach(async ({ page }) => {
   await routeManagementMocks(page);
 });
 
-test("legacy identity fingerprint URL redirects to Account & Security", async ({ page }) => {
+test("legacy identity fingerprint URL redirects to Account & Security", async ({
+  page,
+}) => {
   await page.goto("/manage/#/identity-fingerprint");
 
   await expect(page).toHaveURL(/#\/account-security/);
-  await expect(page.getByRole("heading", { name: /Account & Security|账号与安全/i })).toBeVisible();
-  await expect(page.locator('a[href="#/account-security"]')).toHaveCount(1);
+  await expect(
+    page.getByRole("heading", { name: /Account & Security|账号与安全/i }),
+  ).toBeVisible();
+  await expect(
+    page.locator('a[href="#/account-security"]:visible'),
+  ).toHaveCount(1);
   await expect(page.locator('a[href="#/identity-fingerprint"]')).toHaveCount(0);
   await expect(
-    page.getByRole("button", { name: /Generate from recent requests|从近期请求生成/i }),
+    page.getByRole("button", {
+      name: /Generate from recent requests|从近期请求生成/i,
+    }),
   ).toHaveCount(0);
 });
 
-test("learned Codex runtime state is visible from account details", async ({ page }) => {
+test("learned Codex runtime state is visible from account details", async ({
+  page,
+}) => {
   await page.goto("/manage/#/identity-fingerprint");
 
   const codexRow = page.locator("tr", { hasText: "Codex Terminal OAuth" });
   await expect(codexRow).toBeVisible();
   await codexRow.getByRole("button", { name: /Details|详情/i }).click();
 
-  const dialog = page.getByRole("dialog", { name: /Codex Terminal OAuth|查看/i });
-  await expect(dialog.getByRole("tab", { name: /Usage|用量/i })).toHaveAttribute(
-    "aria-selected",
-    "true",
-  );
+  const dialog = page.getByRole("dialog", {
+    name: /Codex Terminal OAuth|查看/i,
+  });
+  await expect(
+    dialog.getByRole("tab", { name: /Usage|用量/i }),
+  ).toHaveAttribute("aria-selected", "true");
   await dialog.getByRole("tab", { name: /Identity|身份/i }).click();
 
   const panel = page.getByTestId("auth-file-identity-fingerprint");
@@ -325,12 +369,16 @@ test("learned Codex runtime state is visible from account details", async ({ pag
   const summaryBox = await summary.boundingBox();
   const fieldsBox = await fields.boundingBox();
   if (!summaryBox || !fieldsBox) {
-    throw new Error("identity fingerprint summary and fields columns must be visible");
+    throw new Error(
+      "identity fingerprint summary and fields columns must be visible",
+    );
   }
   expect(fieldsBox.x).toBeGreaterThan(summaryBox.x + summaryBox.width - 8);
 });
 
-test("Gemini account uses builtin defaults without legacy manual save flow", async ({ page }) => {
+test("Gemini account uses builtin defaults without legacy manual save flow", async ({
+  page,
+}) => {
   await page.goto("/manage/#/identity-fingerprint");
 
   const geminiRow = page.locator("tr", { hasText: "Gemini CLI OAuth" });
@@ -341,5 +389,7 @@ test("Gemini account uses builtin defaults without legacy manual save flow", asy
   await expect(panel).toContainText(/System default|系统默认/i);
   await expect(panel).toContainText("google-api-nodejs-client/9.16.0");
   await expect(panel).toContainText("pluginType=GEMINI");
-  await expect(page.getByRole("button", { name: /^Save$|^保存$/ })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /^Save$|^保存$/ })).toHaveCount(
+    0,
+  );
 });

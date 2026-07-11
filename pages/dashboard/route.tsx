@@ -10,5 +10,6 @@ export const dashboardRoute = {
   auth: true,
   layout: "dashboard",
   nav: { labelKey: "nav.dashboard" },
+  requiredPermission: "dashboard.read",
   preload: preloadDashboardPage,
 };

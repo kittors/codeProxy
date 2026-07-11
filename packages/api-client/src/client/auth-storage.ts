@@ -5,54 +5,54 @@ interface PersistedAuthSnapshot extends AuthSnapshot {
   expiresAt: number;
 }
 
-const getStorage = (): Storage | null => {
+const storages = (): Storage[] => {
+  const items: Storage[] = [];
   try {
-    return typeof window !== "undefined" ? window.localStorage : null;
+    if (typeof window !== "undefined") items.push(window.sessionStorage, window.localStorage);
   } catch {
-    return null;
+    /* unavailable */
   }
+  return items;
 };
 
 export const readPersistedAuthSnapshot = (): AuthSnapshot | null => {
-  const storage = getStorage();
-  if (!storage) return null;
-
-  try {
-    const raw = storage.getItem(AUTH_STORAGE_KEY);
-    if (!raw) return null;
-
-    const parsed = JSON.parse(raw) as Partial<PersistedAuthSnapshot>;
-    if (typeof parsed.expiresAt !== "number" || parsed.expiresAt <= Date.now()) {
+  for (const storage of storages()) {
+    try {
+      const raw = storage.getItem(AUTH_STORAGE_KEY);
+      if (!raw) continue;
+      const parsed = JSON.parse(raw) as Partial<PersistedAuthSnapshot>;
+      if (
+        typeof parsed.expiresAt !== "number" ||
+        parsed.expiresAt <= Date.now() ||
+        !parsed.apiBase ||
+        !parsed.managementKey
+      ) {
+        storage.removeItem(AUTH_STORAGE_KEY);
+        continue;
+      }
+      return {
+        apiBase: normalizeApiBase(parsed.apiBase),
+        managementKey: parsed.managementKey,
+        rememberPassword: Boolean(parsed.rememberPassword),
+      };
+    } catch {
       storage.removeItem(AUTH_STORAGE_KEY);
-      return null;
     }
-    if (!parsed.apiBase || !parsed.managementKey) {
-      storage.removeItem(AUTH_STORAGE_KEY);
-      return null;
-    }
-
-    return {
-      apiBase: normalizeApiBase(parsed.apiBase),
-      managementKey: parsed.managementKey,
-      rememberPassword: Boolean(parsed.rememberPassword),
-    };
-  } catch {
-    storage.removeItem(AUTH_STORAGE_KEY);
-    return null;
   }
+  return null;
 };
 
 export const writePersistedAuthSnapshot = (snapshot: AuthSnapshot): void => {
-  const storage = getStorage();
-  if (!storage) return;
-
-  const payload: PersistedAuthSnapshot = {
-    ...snapshot,
-    expiresAt: Date.now() + AUTH_PERSIST_TTL_MS,
-  };
-  storage.setItem(AUTH_STORAGE_KEY, JSON.stringify(payload));
+  const [session, local] = storages();
+  const target = snapshot.rememberPassword ? local : session;
+  if (!target) return;
+  clearPersistedAuthSnapshot();
+  target.setItem(
+    AUTH_STORAGE_KEY,
+    JSON.stringify({ ...snapshot, expiresAt: Date.now() + AUTH_PERSIST_TTL_MS }),
+  );
 };
 
 export const clearPersistedAuthSnapshot = (): void => {
-  getStorage()?.removeItem(AUTH_STORAGE_KEY);
+  for (const storage of storages()) storage.removeItem(AUTH_STORAGE_KEY);
 };

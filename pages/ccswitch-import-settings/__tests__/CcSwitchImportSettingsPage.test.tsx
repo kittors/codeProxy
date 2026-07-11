@@ -35,7 +35,8 @@ vi.mock("@code-proxy/api-client/endpoints/channel-groups", () => ({
 vi.mock("@code-proxy/api-client/endpoints/ccswitch-import-configs", () => ({
   ccSwitchImportConfigsApi: {
     list: () => listConfigs(),
-    replace: (configs: CcSwitchImportConfigListItem[]) => replaceConfigs(configs),
+    replace: (configs: CcSwitchImportConfigListItem[]) =>
+      replaceConfigs(configs),
   },
 }));
 
@@ -45,14 +46,16 @@ vi.mock("@code-proxy/api-client/endpoints/models", () => ({
       allowedChannelGroups?: string[];
       allowedChannels?: string[];
     }) => listAvailableModels(params),
-    getModelConfigs: (scope: "active" | "library" | "all") => getModelConfigs(scope),
+    getModelConfigs: (scope: "active" | "library" | "all") =>
+      getModelConfigs(scope),
     getAuthGroupModelOwnerMappingMap: () => getAuthGroupModelOwnerMappingMap(),
   },
 }));
 
 vi.mock("@features/model-availability", () => ({
-  loadConfiguredModelAvailability: (options?: { allowedChannelGroups?: string[] }) =>
-    loadConfiguredModelAvailability(options),
+  loadConfiguredModelAvailability: (options?: {
+    allowedChannelGroups?: string[];
+  }) => loadConfiguredModelAvailability(options),
   filterByConfiguredModelAvailability: <T extends { id: string }>(
     models: T[],
     availability: { scoped: boolean; idSet: Set<string> },
@@ -92,14 +95,23 @@ describe("CcSwitchImportSettingsPage", () => {
         availability: { scoped: boolean; idSet: Set<string> },
       ) =>
         availability.scoped
-          ? models.filter((model) => availability.idSet.has(model.id.toLowerCase()))
+          ? models.filter((model) =>
+              availability.idSet.has(model.id.toLowerCase()),
+            )
           : models,
     );
     listChannelGroups.mockResolvedValue([
       { name: "pro", description: "Pro route", "path-routes": ["/pro"] },
-      { name: "team-a", description: "Team A route", "path-routes": ["/team-a"] },
+      {
+        name: "team-a",
+        description: "Team A route",
+        "path-routes": ["/team-a"],
+      },
     ]);
-    listAvailableModels.mockResolvedValue([{ id: "deepseek-v4-flash" }, { id: "kimi-k2" }]);
+    listAvailableModels.mockResolvedValue([
+      { id: "deepseek-v4-flash" },
+      { id: "kimi-k2" },
+    ]);
     getModelConfigs.mockResolvedValue(Array<unknown>());
     getAuthGroupModelOwnerMappingMap.mockResolvedValue({});
     listConfigs.mockResolvedValue(Array<unknown>());
@@ -131,7 +143,9 @@ describe("CcSwitchImportSettingsPage", () => {
 
     renderPage();
 
-    expect(await screen.findByText(/no cc switch configs yet/i)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/no cc switch configs yet/i),
+    ).toBeInTheDocument();
     expect(screen.queryByText("CliProxy Codex")).not.toBeInTheDocument();
     expect(listConfigs).toHaveBeenCalledTimes(1);
   });
@@ -144,7 +158,11 @@ describe("CcSwitchImportSettingsPage", () => {
         "path-routes": ["/pro"],
         "allowed-models": ["deepseek-v4-flash", "kimi-k2"],
       },
-      { name: "team-a", description: "Team A route", "path-routes": ["/team-a"] },
+      {
+        name: "team-a",
+        description: "Team A route",
+        "path-routes": ["/team-a"],
+      },
     ]);
     listAvailableModels.mockResolvedValue([
       { id: "deepseek-v4-flash" },
@@ -156,40 +174,67 @@ describe("CcSwitchImportSettingsPage", () => {
 
     await user.click(screen.getByRole("button", { name: /new config/i }));
 
-    const dialog = await screen.findByRole("dialog", { name: /new cc switch config/i });
+    const dialog = await screen.findByRole("dialog", {
+      name: /new cc switch config/i,
+    });
     const origin = window.location.origin;
 
-    expect(within(dialog).queryByLabelText(/codex endpoint path/i)).not.toBeInTheDocument();
+    expect(
+      within(dialog).queryByLabelText(/codex endpoint path/i),
+    ).not.toBeInTheDocument();
     expect(
       within(dialog).queryByRole("combobox", { name: /default model/i }),
     ).not.toBeInTheDocument();
-    expect(within(dialog).queryByText(/for codex cli/i)).not.toBeInTheDocument();
     expect(
-      within(dialog).getByText(/select a channel group to load available models/i),
+      within(dialog).queryByText(/for codex cli/i),
+    ).not.toBeInTheDocument();
+    expect(
+      within(dialog).getByText(
+        /select a channel group to load available models/i,
+      ),
     ).toBeInTheDocument();
-    expect(within(dialog).queryByDisplayValue("gpt-5.5")).not.toBeInTheDocument();
+    expect(
+      within(dialog).queryByDisplayValue("gpt-5.5"),
+    ).not.toBeInTheDocument();
 
-    await user.click(within(dialog).getByRole("combobox", { name: /select channel group/i }));
-    await user.click(await screen.findByRole("option", { name: /pro.*\/pro/i }));
-
-    expect(within(dialog).getByTestId("ccswitch-config-endpoint-preview")).toHaveTextContent(
-      new RegExp(`^${origin.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}/pro/cs_[a-z0-9]+/v1$`),
+    await user.click(
+      within(dialog).getByRole("combobox", { name: /select channel group/i }),
+    );
+    await user.click(
+      await screen.findByRole("option", { name: /pro.*\/pro/i }),
     );
 
-    expect(await within(dialog).findByDisplayValue("deepseek-v4-flash")).toBeInTheDocument();
-    expect(await within(dialog).findByDisplayValue("kimi-k2")).toBeInTheDocument();
+    expect(
+      within(dialog).getByTestId("ccswitch-config-endpoint-preview"),
+    ).toHaveTextContent(
+      new RegExp(
+        `^${origin.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}/pro/cs_[a-z0-9]+/v1$`,
+      ),
+    );
+
+    expect(
+      await within(dialog).findByDisplayValue("deepseek-v4-flash"),
+    ).toBeInTheDocument();
+    expect(
+      await within(dialog).findByDisplayValue("kimi-k2"),
+    ).toBeInTheDocument();
     expect(listAvailableModels).not.toHaveBeenCalled();
     const requestModelInput = within(dialog).getByLabelText(
       /cc switch request model for mapping 1/i,
     );
     await user.clear(requestModelInput);
     await user.type(requestModelInput, "gpt-5.5");
-    const contextWindowInput = within(dialog).getByLabelText(/context window for mapping 1/i);
+    const contextWindowInput = within(dialog).getByLabelText(
+      /context window for mapping 1/i,
+    );
     expect(contextWindowInput).toHaveValue(128000);
     await user.clear(contextWindowInput);
     await user.type(contextWindowInput, "272000");
 
-    await user.type(within(dialog).getByLabelText(/provider name/i), "Relay Codex");
+    await user.type(
+      within(dialog).getByLabelText(/provider name/i),
+      "Relay Codex",
+    );
     await user.type(within(dialog).getByLabelText(/remark/i), "Pro preset");
 
     await user.click(within(dialog).getByRole("button", { name: /^save$/i }));
@@ -241,10 +286,18 @@ describe("CcSwitchImportSettingsPage", () => {
 
     await user.click(screen.getByRole("button", { name: /new config/i }));
 
-    const dialog = await screen.findByRole("dialog", { name: /new cc switch config/i });
-    expect(within(dialog).getByRole("tab", { name: /codex/i })).toBeInTheDocument();
-    expect(within(dialog).getByRole("tab", { name: /claude code/i })).toBeInTheDocument();
-    expect(within(dialog).queryByRole("tab", { name: /gemini cli/i })).not.toBeInTheDocument();
+    const dialog = await screen.findByRole("dialog", {
+      name: /new cc switch config/i,
+    });
+    expect(
+      within(dialog).getByRole("tab", { name: /codex/i }),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByRole("tab", { name: /claude code/i }),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).queryByRole("tab", { name: /gemini cli/i }),
+    ).not.toBeInTheDocument();
   });
 
   test("manually adds and deletes Codex model mappings while validating duplicate request models", async () => {
@@ -261,41 +314,66 @@ describe("CcSwitchImportSettingsPage", () => {
 
     await user.click(screen.getByRole("button", { name: /new config/i }));
 
-    const dialog = await screen.findByRole("dialog", { name: /new cc switch config/i });
-    await user.click(within(dialog).getByRole("combobox", { name: /select channel group/i }));
-    await user.click(await screen.findByRole("option", { name: /pro.*\/pro/i }));
+    const dialog = await screen.findByRole("dialog", {
+      name: /new cc switch config/i,
+    });
+    await user.click(
+      within(dialog).getByRole("combobox", { name: /select channel group/i }),
+    );
+    await user.click(
+      await screen.findByRole("option", { name: /pro.*\/pro/i }),
+    );
 
     // Auto-populated: row 1 = deepseek-v4-flash, row 2 = kimi-k2
-    expect(await within(dialog).findByDisplayValue("deepseek-v4-flash")).toBeInTheDocument();
-    expect(await within(dialog).findByDisplayValue("kimi-k2")).toBeInTheDocument();
-    expect(within(dialog).getByRole("button", { name: /^save$/i })).toBeDisabled();
+    expect(
+      await within(dialog).findByDisplayValue("deepseek-v4-flash"),
+    ).toBeInTheDocument();
+    expect(
+      await within(dialog).findByDisplayValue("kimi-k2"),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByRole("button", { name: /^save$/i }),
+    ).toBeDisabled();
 
     // Row 1: change request model to gpt-5.5
-    await user.clear(within(dialog).getByLabelText(/cc switch request model for mapping 1/i));
+    await user.clear(
+      within(dialog).getByLabelText(/cc switch request model for mapping 1/i),
+    );
     await user.type(
       within(dialog).getByLabelText(/cc switch request model for mapping 1/i),
       "gpt-5.5",
     );
 
     // Row 2: change request model to gpt-5.5 (duplicate request model)
-    await user.clear(within(dialog).getByLabelText(/cc switch request model for mapping 2/i));
+    await user.clear(
+      within(dialog).getByLabelText(/cc switch request model for mapping 2/i),
+    );
     await user.type(
       within(dialog).getByLabelText(/cc switch request model for mapping 2/i),
       "gpt-5.5",
     );
 
     expect(
-      await within(dialog).findByText(/cc switch request model cannot be repeated/i),
+      await within(dialog).findByText(
+        /cc switch request model cannot be repeated/i,
+      ),
     ).toBeInTheDocument();
-    expect(within(dialog).getByRole("button", { name: /^save$/i })).toBeDisabled();
+    expect(
+      within(dialog).getByRole("button", { name: /^save$/i }),
+    ).toBeDisabled();
 
     // Delete mapping 2 — error should go away
-    await user.click(within(dialog).getByRole("button", { name: /delete model mapping 2/i }));
+    await user.click(
+      within(dialog).getByRole("button", { name: /delete model mapping 2/i }),
+    );
     expect(
       within(dialog).queryByText(/cc switch request model cannot be repeated/i),
     ).not.toBeInTheDocument();
 
-    await user.type(within(dialog).getByLabelText(/provider name/i), "Relay Codex");
+    await user.type(
+      within(dialog).getByLabelText(/provider name/i),
+      "Relay Codex",
+    );
     await user.click(within(dialog).getByRole("button", { name: /^save$/i }));
 
     await waitFor(() =>
@@ -342,23 +420,36 @@ describe("CcSwitchImportSettingsPage", () => {
 
     await user.click(screen.getByRole("button", { name: /new config/i }));
 
-    const dialog = await screen.findByRole("dialog", { name: /new cc switch config/i });
+    const dialog = await screen.findByRole("dialog", {
+      name: /new cc switch config/i,
+    });
     const tabList = within(dialog).getByRole("tablist", { name: /type/i });
     const groupLabel = within(dialog).getByText(/select channel group/i);
 
     expect(
-      groupLabel.compareDocumentPosition(tabList) & Node.DOCUMENT_POSITION_FOLLOWING,
+      groupLabel.compareDocumentPosition(tabList) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
 
-    await user.click(within(dialog).getByRole("combobox", { name: /select channel group/i }));
-    await user.click(await screen.findByRole("option", { name: /chatgpt-pro.*\/openai\/pro/i }));
+    await user.click(
+      within(dialog).getByRole("combobox", { name: /select channel group/i }),
+    );
+    await user.click(
+      await screen.findByRole("option", {
+        name: /chatgpt-pro.*\/openai\/pro/i,
+      }),
+    );
 
-    const groupSelect = within(dialog).getByRole("combobox", { name: /select channel group/i });
+    const groupSelect = within(dialog).getByRole("combobox", {
+      name: /select channel group/i,
+    });
     expect(groupSelect).toHaveTextContent("chatgpt-pro");
     expect(groupSelect).toHaveTextContent("/openai/pro");
     expect(within(dialog).queryByText(/path address/i)).not.toBeInTheDocument();
 
-    expect(await within(dialog).findByDisplayValue("gpt-5.5")).toBeInTheDocument();
+    expect(
+      await within(dialog).findByDisplayValue("gpt-5.5"),
+    ).toBeInTheDocument();
     expect(
       screen.queryByRole("option", { name: "unexpected-extra-model" }),
     ).not.toBeInTheDocument();
@@ -419,11 +510,21 @@ describe("CcSwitchImportSettingsPage", () => {
 
     await user.click(screen.getByRole("button", { name: /new config/i }));
 
-    const dialog = await screen.findByRole("dialog", { name: /new cc switch config/i });
-    await user.click(within(dialog).getByRole("combobox", { name: /select channel group/i }));
-    await user.click(await screen.findByRole("option", { name: /chatgpt-pro.*\/openai\/pro/i }));
+    const dialog = await screen.findByRole("dialog", {
+      name: /new cc switch config/i,
+    });
+    await user.click(
+      within(dialog).getByRole("combobox", { name: /select channel group/i }),
+    );
+    await user.click(
+      await screen.findByRole("option", {
+        name: /chatgpt-pro.*\/openai\/pro/i,
+      }),
+    );
 
-    expect(await within(dialog).findByDisplayValue("gpt-5.5")).toBeInTheDocument();
+    expect(
+      await within(dialog).findByDisplayValue("gpt-5.5"),
+    ).toBeInTheDocument();
     expect(screen.queryByDisplayValue("gpt-5-codex")).not.toBeInTheDocument();
     expect(listAvailableModels).toHaveBeenCalledWith({
       allowedChannels: ["A_GptPro"],
@@ -489,21 +590,37 @@ describe("CcSwitchImportSettingsPage", () => {
 
     await user.click(screen.getByRole("button", { name: /new config/i }));
 
-    const dialog = await screen.findByRole("dialog", { name: /new cc switch config/i });
-    await user.click(within(dialog).getByRole("combobox", { name: /select channel group/i }));
+    const dialog = await screen.findByRole("dialog", {
+      name: /new cc switch config/i,
+    });
     await user.click(
-      await screen.findByRole("option", { name: /kimi\+deepseek v4 flash.*\/deepseekkimi/i }),
+      within(dialog).getByRole("combobox", { name: /select channel group/i }),
+    );
+    await user.click(
+      await screen.findByRole("option", {
+        name: /kimi\+deepseek v4 flash.*\/deepseekkimi/i,
+      }),
     );
 
-    expect(await within(dialog).findByDisplayValue("deepseek-v4-flash")).toBeInTheDocument();
+    expect(
+      await within(dialog).findByDisplayValue("deepseek-v4-flash"),
+    ).toBeInTheDocument();
     expect(within(dialog).getByDisplayValue("kimi-k2.5")).toBeInTheDocument();
     expect(within(dialog).getByDisplayValue("kimi-k2.6")).toBeInTheDocument();
     expect(within(dialog).getByDisplayValue("kimi-k2.7")).toBeInTheDocument();
-    expect(within(dialog).getByDisplayValue("kimi-k2.7-code")).toBeInTheDocument();
-    expect(within(dialog).getByDisplayValue("qwen3.5-plus")).toBeInTheDocument();
-    expect(within(dialog).queryByDisplayValue("unrelated-openai")).not.toBeInTheDocument();
     expect(
-      within(dialog).queryByText(/no models are available for this channel group/i),
+      within(dialog).getByDisplayValue("kimi-k2.7-code"),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByDisplayValue("qwen3.5-plus"),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).queryByDisplayValue("unrelated-openai"),
+    ).not.toBeInTheDocument();
+    expect(
+      within(dialog).queryByText(
+        /no models are available for this channel group/i,
+      ),
     ).not.toBeInTheDocument();
     expect(listAvailableModels).toHaveBeenCalledWith({
       allowedChannels: ["kimi-code", "opencode"],
@@ -562,18 +679,32 @@ describe("CcSwitchImportSettingsPage", () => {
         if (options?.allowedChannelGroups?.includes("group1")) {
           return {
             scoped: true,
-            items: [{ id: "gpt-5.3-codex-spark", owned_by: "codex", source: "seed" }],
+            items: [
+              { id: "gpt-5.3-codex-spark", owned_by: "codex", source: "seed" },
+            ],
             idSet: new Set(["gpt-5.3-codex-spark"]),
           };
         }
         return {
           scoped: true,
           items: [
-            { id: "deepseek-v4-flash", owned_by: "deepseek", source: "openrouter" },
-            { id: "deepseek-v4-pro", owned_by: "deepseek", source: "openrouter" },
+            {
+              id: "deepseek-v4-flash",
+              owned_by: "deepseek",
+              source: "openrouter",
+            },
+            {
+              id: "deepseek-v4-pro",
+              owned_by: "deepseek",
+              source: "openrouter",
+            },
             { id: "gpt-5.3-codex-spark", owned_by: "codex", source: "seed" },
           ],
-          idSet: new Set(["deepseek-v4-flash", "deepseek-v4-pro", "gpt-5.3-codex-spark"]),
+          idSet: new Set([
+            "deepseek-v4-flash",
+            "deepseek-v4-pro",
+            "gpt-5.3-codex-spark",
+          ]),
         };
       },
     );
@@ -582,17 +713,36 @@ describe("CcSwitchImportSettingsPage", () => {
 
     await user.click(screen.getByRole("button", { name: /new config/i }));
 
-    const dialog = await screen.findByRole("dialog", { name: /new cc switch config/i });
-    await user.click(within(dialog).getByRole("combobox", { name: /select channel group/i }));
-    await user.click(await screen.findByRole("option", { name: /group1.*\/group1/i }));
-
-    expect(await within(dialog).findByDisplayValue("deepseek-v4-flash")).toBeInTheDocument();
-    expect(within(dialog).getByDisplayValue("deepseek-v4-pro")).toBeInTheDocument();
-    expect(within(dialog).getByDisplayValue("gpt-5.3-codex-spark")).toBeInTheDocument();
-    expect(listAvailableModels).toHaveBeenCalledWith({
-      allowedChannels: expect.arrayContaining(["haoxinren", "inroi", "opencode go", "便宜的"]),
+    const dialog = await screen.findByRole("dialog", {
+      name: /new cc switch config/i,
     });
-    expect(listAvailableModels.mock.calls.at(-1)?.[0]?.allowedChannels).toHaveLength(4);
+    await user.click(
+      within(dialog).getByRole("combobox", { name: /select channel group/i }),
+    );
+    await user.click(
+      await screen.findByRole("option", { name: /group1.*\/group1/i }),
+    );
+
+    expect(
+      await within(dialog).findByDisplayValue("deepseek-v4-flash"),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByDisplayValue("deepseek-v4-pro"),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByDisplayValue("gpt-5.3-codex-spark"),
+    ).toBeInTheDocument();
+    expect(listAvailableModels).toHaveBeenCalledWith({
+      allowedChannels: expect.arrayContaining([
+        "haoxinren",
+        "inroi",
+        "opencode go",
+        "便宜的",
+      ]),
+    });
+    expect(
+      listAvailableModels.mock.calls.at(-1)?.[0]?.allowedChannels,
+    ).toHaveLength(4);
     expect(loadConfiguredModelAvailability).toHaveBeenCalledWith(undefined);
     expect(loadConfiguredModelAvailability).not.toHaveBeenCalledWith({
       allowedChannelGroups: ["group1"],
@@ -645,13 +795,21 @@ describe("CcSwitchImportSettingsPage", () => {
 
     await user.click(screen.getByRole("button", { name: /new config/i }));
 
-    const dialog = await screen.findByRole("dialog", { name: /new cc switch config/i });
-    await user.click(within(dialog).getByRole("combobox", { name: /select channel group/i }));
+    const dialog = await screen.findByRole("dialog", {
+      name: /new cc switch config/i,
+    });
     await user.click(
-      await screen.findByRole("option", { name: /opencodego\+gpt.*\/codexdeepseek/i }),
+      within(dialog).getByRole("combobox", { name: /select channel group/i }),
+    );
+    await user.click(
+      await screen.findByRole("option", {
+        name: /opencodego\+gpt.*\/codexdeepseek/i,
+      }),
     );
 
-    expect(await within(dialog).findByDisplayValue("gpt-5.5")).toBeInTheDocument();
+    expect(
+      await within(dialog).findByDisplayValue("gpt-5.5"),
+    ).toBeInTheDocument();
     expect(screen.getByDisplayValue("minimax-m2.7")).toBeInTheDocument();
     expect(screen.getByDisplayValue("kimi-k2.6")).toBeInTheDocument();
     expect(listAvailableModels).toHaveBeenCalledWith({
@@ -699,18 +857,36 @@ describe("CcSwitchImportSettingsPage", () => {
 
     await user.click(screen.getByRole("button", { name: /new config/i }));
 
-    const dialog = await screen.findByRole("dialog", { name: /new cc switch config/i });
+    const dialog = await screen.findByRole("dialog", {
+      name: /new cc switch config/i,
+    });
     await user.click(within(dialog).getByRole("tab", { name: /claude code/i }));
-    await user.click(within(dialog).getByRole("combobox", { name: /select channel group/i }));
-    await user.click(await screen.findByRole("option", { name: /kimicode.*\/kimicode/i }));
+    await user.click(
+      within(dialog).getByRole("combobox", { name: /select channel group/i }),
+    );
+    await user.click(
+      await screen.findByRole("option", { name: /kimicode.*\/kimicode/i }),
+    );
 
-    expect(await within(dialog).findAllByDisplayValue("kimi-k2.5")).toHaveLength(4);
-    await user.click(within(dialog).getByRole("combobox", { name: /^main model$/i }));
+    expect(
+      await within(dialog).findAllByDisplayValue("kimi-k2.5"),
+    ).toHaveLength(4);
+    await user.click(
+      within(dialog).getByRole("combobox", { name: /^main model$/i }),
+    );
 
-    expect(await screen.findByRole("option", { name: "kimi-k2.6" })).toBeInTheDocument();
-    expect(screen.getByRole("option", { name: "kimi-k2.7" })).toBeInTheDocument();
-    expect(screen.getByRole("option", { name: "kimi-k2.7-code" })).toBeInTheDocument();
-    expect(screen.queryByRole("option", { name: "kimi-k2" })).not.toBeInTheDocument();
+    expect(
+      await screen.findByRole("option", { name: "kimi-k2.6" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("option", { name: "kimi-k2.7" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("option", { name: "kimi-k2.7-code" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("option", { name: "kimi-k2" }),
+    ).not.toBeInTheDocument();
     expect(listAvailableModels).toHaveBeenCalledWith({
       allowedChannels: ["kimi"],
     });
@@ -755,16 +931,20 @@ describe("CcSwitchImportSettingsPage", () => {
     expect(await screen.findByText("Relay Kimi")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: /edit config/i }));
 
-    const dialog = await screen.findByRole("dialog", { name: /edit cc switch config/i });
+    const dialog = await screen.findByRole("dialog", {
+      name: /edit cc switch config/i,
+    });
     expect(
-      await within(dialog).findByRole("combobox", { name: /actual channel model 1/i }),
+      await within(dialog).findByRole("combobox", {
+        name: /actual channel model 1/i,
+      }),
     ).toHaveTextContent("gpt-5.5");
-    expect(within(dialog).getByLabelText(/cc switch request model for mapping 1/i)).toHaveValue(
-      "gpt-5.5",
-    );
-    expect(within(dialog).getByLabelText(/cc switch request model for mapping 2/i)).toHaveValue(
-      "gpt-5.4-mini",
-    );
+    expect(
+      within(dialog).getByLabelText(/cc switch request model for mapping 1/i),
+    ).toHaveValue("gpt-5.5");
+    expect(
+      within(dialog).getByLabelText(/cc switch request model for mapping 2/i),
+    ).toHaveValue("gpt-5.4-mini");
     expect(
       within(dialog).getByRole("combobox", { name: /actual channel model 2/i }),
     ).toHaveTextContent("gpt-5.5");
@@ -814,7 +994,9 @@ describe("CcSwitchImportSettingsPage", () => {
         routePath: "/pro/cs_gpt56",
         endpointPath: "/v1",
         usageAutoInterval: 30,
-        modelMappings: [{ requestModel: "gpt-5.6-sol", targetModel: "gpt-5.6-sol" }],
+        modelMappings: [
+          { requestModel: "gpt-5.6-sol", targetModel: "gpt-5.6-sol" },
+        ],
         codexModelCatalogFilename: "cc-switch-model-catalog.json",
         codexModelCatalog: {
           models: [
@@ -843,8 +1025,12 @@ describe("CcSwitchImportSettingsPage", () => {
 
     expect(await screen.findByText("Relay GPT-5.6")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: /edit config/i }));
-    const dialog = await screen.findByRole("dialog", { name: /edit cc switch config/i });
-    expect(within(dialog).getByLabelText(/context window for mapping 1/i)).toHaveValue(900000);
+    const dialog = await screen.findByRole("dialog", {
+      name: /edit cc switch config/i,
+    });
+    expect(
+      within(dialog).getByLabelText(/context window for mapping 1/i),
+    ).toHaveValue(900000);
     await user.click(within(dialog).getByRole("button", { name: /^save$/i }));
 
     await waitFor(() => {
@@ -900,28 +1086,38 @@ describe("CcSwitchImportSettingsPage", () => {
     expect(await screen.findByText("Relay Kimi")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: /edit config/i }));
 
-    const dialog = await screen.findByRole("dialog", { name: /edit cc switch config/i });
+    const dialog = await screen.findByRole("dialog", {
+      name: /edit cc switch config/i,
+    });
 
-    expect(within(dialog).queryByTestId("ccswitch-model-mapping-loading")).toBeNull();
     expect(
-      within(dialog).queryByText(/no models are available for this channel group/i),
+      within(dialog).queryByTestId("ccswitch-model-mapping-loading"),
+    ).toBeNull();
+    expect(
+      within(dialog).queryByText(
+        /no models are available for this channel group/i,
+      ),
     ).not.toBeInTheDocument();
-    expect(within(dialog).getByLabelText(/cc switch request model for mapping 1/i)).toHaveValue(
-      "gpt-5.5",
-    );
+    expect(
+      within(dialog).getByLabelText(/cc switch request model for mapping 1/i),
+    ).toHaveValue("gpt-5.5");
     expect(
       within(dialog).getByRole("combobox", { name: /actual channel model 1/i }),
     ).toHaveTextContent("moonshot-v1-128k");
-    expect(within(dialog).getByRole("button", { name: /^save$/i })).not.toBeDisabled();
+    expect(
+      within(dialog).getByRole("button", { name: /^save$/i }),
+    ).not.toBeDisabled();
 
     modelsDeferred.resolve([{ id: "kimi-k2.5" }]);
 
     await waitFor(() =>
-      expect(within(dialog).queryByTestId("ccswitch-model-mapping-loading")).toBeNull(),
+      expect(
+        within(dialog).queryByTestId("ccswitch-model-mapping-loading"),
+      ).toBeNull(),
     );
-    expect(within(dialog).getByLabelText(/cc switch request model for mapping 1/i)).toHaveValue(
-      "gpt-5.5",
-    );
+    expect(
+      within(dialog).getByLabelText(/cc switch request model for mapping 1/i),
+    ).toHaveValue("gpt-5.5");
   });
 
   test("does not auto-expand saved generic mappings into identity rows after model refresh", async () => {
@@ -959,10 +1155,12 @@ describe("CcSwitchImportSettingsPage", () => {
     expect(await screen.findByText("Relay DeepSeek")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: /edit config/i }));
 
-    const dialog = await screen.findByRole("dialog", { name: /edit cc switch config/i });
-    expect(within(dialog).getByLabelText(/cc switch request model for mapping 1/i)).toHaveValue(
-      "gpt-5.4",
-    );
+    const dialog = await screen.findByRole("dialog", {
+      name: /edit cc switch config/i,
+    });
+    expect(
+      within(dialog).getByLabelText(/cc switch request model for mapping 1/i),
+    ).toHaveValue("gpt-5.4");
     expect(
       within(dialog).getByRole("combobox", { name: /actual channel model 1/i }),
     ).toHaveTextContent("deepseek-v4-flash");
@@ -975,7 +1173,9 @@ describe("CcSwitchImportSettingsPage", () => {
     ]);
 
     await waitFor(() =>
-      expect(within(dialog).queryByTestId("ccswitch-model-mapping-loading")).toBeNull(),
+      expect(
+        within(dialog).queryByTestId("ccswitch-model-mapping-loading"),
+      ).toBeNull(),
     );
 
     await user.click(within(dialog).getByRole("button", { name: /^save$/i }));
@@ -1004,17 +1204,27 @@ describe("CcSwitchImportSettingsPage", () => {
 
     await user.click(screen.getByRole("button", { name: /new config/i }));
 
-    const dialog = await screen.findByRole("dialog", { name: /new cc switch config/i });
-    const endpointPreview = within(dialog).getByTestId("ccswitch-config-endpoint-preview");
+    const dialog = await screen.findByRole("dialog", {
+      name: /new cc switch config/i,
+    });
+    const endpointPreview = within(dialog).getByTestId(
+      "ccswitch-config-endpoint-preview",
+    );
     const origin = window.location.origin;
 
     expect(endpointPreview).toHaveTextContent(`${origin}/v1`);
 
-    await user.click(within(dialog).getByRole("combobox", { name: /select channel group/i }));
-    await user.click(await screen.findByRole("option", { name: /team-a.*\/team-a/i }));
+    await user.click(
+      within(dialog).getByRole("combobox", { name: /select channel group/i }),
+    );
+    await user.click(
+      await screen.findByRole("option", { name: /team-a.*\/team-a/i }),
+    );
 
     expect(endpointPreview).toHaveTextContent(
-      new RegExp(`^${origin.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}/team-a/cs_[a-z0-9]+/v1$`),
+      new RegExp(
+        `^${origin.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}/team-a/cs_[a-z0-9]+/v1$`,
+      ),
     );
   });
 
@@ -1024,7 +1234,11 @@ describe("CcSwitchImportSettingsPage", () => {
         name: "pro",
         description: "Pro route",
         "path-routes": ["/pro"],
-        "allowed-models": ["claude-haiku-4-5", "claude-sonnet-4-5", "claude-opus-4-1"],
+        "allowed-models": [
+          "claude-haiku-4-5",
+          "claude-sonnet-4-5",
+          "claude-opus-4-1",
+        ],
       },
     ]);
     renderPage();
@@ -1032,24 +1246,45 @@ describe("CcSwitchImportSettingsPage", () => {
 
     await user.click(screen.getByRole("button", { name: /new config/i }));
 
-    const dialog = await screen.findByRole("dialog", { name: /new cc switch config/i });
+    const dialog = await screen.findByRole("dialog", {
+      name: /new cc switch config/i,
+    });
     await user.click(within(dialog).getByRole("tab", { name: /claude code/i }));
-    await user.click(within(dialog).getByRole("combobox", { name: /select channel group/i }));
-    await user.click(await screen.findByRole("option", { name: /pro.*\/pro/i }));
+    await user.click(
+      within(dialog).getByRole("combobox", { name: /select channel group/i }),
+    );
+    await user.click(
+      await screen.findByRole("option", { name: /pro.*\/pro/i }),
+    );
 
     expect(await within(dialog).findByText(/main model/i)).toBeInTheDocument();
-    expect(within(dialog).getByText(/haiku default model/i)).toBeInTheDocument();
-    expect(within(dialog).getByText(/sonnet default model/i)).toBeInTheDocument();
+    expect(
+      within(dialog).getByText(/haiku default model/i),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByText(/sonnet default model/i),
+    ).toBeInTheDocument();
     expect(within(dialog).getByText(/opus default model/i)).toBeInTheDocument();
-    expect(within(dialog).getByText(/cc switch request model/i)).toBeInTheDocument();
+    expect(
+      within(dialog).getByText(/cc switch request model/i),
+    ).toBeInTheDocument();
 
-    const mainRequestModelInput = within(dialog).getByLabelText(/main model request model/i);
+    const mainRequestModelInput = within(dialog).getByLabelText(
+      /main model request model/i,
+    );
     await user.clear(mainRequestModelInput);
     await user.type(mainRequestModelInput, "claude-main-router");
 
-    await user.type(within(dialog).getByLabelText(/provider name/i), "Relay Claude");
-    await user.click(within(dialog).getByRole("combobox", { name: /claude code auth field/i }));
-    await user.click(await screen.findByRole("option", { name: "ANTHROPIC_AUTH_TOKEN" }));
+    await user.type(
+      within(dialog).getByLabelText(/provider name/i),
+      "Relay Claude",
+    );
+    await user.click(
+      within(dialog).getByRole("combobox", { name: /claude code auth field/i }),
+    );
+    await user.click(
+      await screen.findByRole("option", { name: "ANTHROPIC_AUTH_TOKEN" }),
+    );
     await user.click(within(dialog).getByRole("button", { name: /^save$/i }));
 
     await waitFor(() =>
@@ -1108,9 +1343,21 @@ describe("CcSwitchImportSettingsPage", () => {
         endpointPath: "/v1",
         usageAutoInterval: 30,
         modelMappings: [
-          { requestModel: "request-c", targetModel: "model-3", contextWindow: 300000 },
-          { requestModel: "request-a", targetModel: "model-1", contextWindow: 100000 },
-          { requestModel: "request-b", targetModel: "model-2", contextWindow: 200000 },
+          {
+            requestModel: "request-c",
+            targetModel: "model-3",
+            contextWindow: 300000,
+          },
+          {
+            requestModel: "request-a",
+            targetModel: "model-1",
+            contextWindow: 100000,
+          },
+          {
+            requestModel: "request-b",
+            targetModel: "model-2",
+            contextWindow: 200000,
+          },
         ],
       },
     ]);
@@ -1119,25 +1366,38 @@ describe("CcSwitchImportSettingsPage", () => {
 
     expect(await screen.findByText("Sorted Codex")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: /edit config/i }));
-    const dialog = await screen.findByRole("dialog", { name: /edit cc switch config/i });
+    const dialog = await screen.findByRole("dialog", {
+      name: /edit cc switch config/i,
+    });
 
-    const mappingTable = within(dialog).getByTestId("ccswitch-model-mapping-table");
+    const mappingTable = within(dialog).getByTestId(
+      "ccswitch-model-mapping-table",
+    );
     const tableViewport = mappingTable.querySelector<HTMLElement>(
       "[data-scrollbar-visibility='hover']",
     );
     expect(mappingTable).toHaveClass("px-4", "pt-3", "pb-4");
     expect(tableViewport).toHaveClass("h-full", "overflow-auto");
-    expect(tableViewport?.parentElement).toHaveClass("h-[320px]", "min-h-[320px]");
-    expect(tableViewport).toHaveClass("overscroll-y-none");
-    expect(tableViewport).not.toHaveClass("overscroll-y-auto");
-    const headerCells = Array.from(tableViewport?.querySelectorAll("thead th") ?? []);
+    expect(tableViewport?.parentElement).toHaveClass(
+      "h-[320px]",
+      "min-h-[320px]",
+    );
+    expect(tableViewport).toHaveClass("overscroll-y-auto");
+    expect(tableViewport).not.toHaveClass("overscroll-y-none");
+    const headerCells = Array.from(
+      tableViewport?.querySelectorAll("thead th") ?? [],
+    );
     expect(headerCells).not.toHaveLength(0);
-    headerCells.forEach((cell) => expect(cell).toHaveClass("sticky", "top-0", "bg-slate-100"));
+    headerCells.forEach((cell) =>
+      expect(cell).toHaveClass("sticky", "top-0", "bg-slate-100"),
+    );
     expect(mappingTable.querySelector("[data-vt-header-chrome]")).toBeNull();
     expect(mappingTable.querySelector("[data-vt-column-resizer]")).toBeNull();
 
     const mappingRows = Array.from(
-      mappingTable.querySelectorAll<HTMLTableRowElement>("tbody tr[data-vt-row-index]"),
+      mappingTable.querySelectorAll<HTMLTableRowElement>(
+        "tbody tr[data-vt-row-index]",
+      ),
     );
     mappingRows.slice(0, -1).forEach((row) => {
       Array.from(row.cells).forEach((cell) => {
@@ -1146,7 +1406,11 @@ describe("CcSwitchImportSettingsPage", () => {
       });
     });
     Array.from(mappingRows.at(-1)?.cells ?? []).forEach((cell) => {
-      expect(cell).not.toHaveClass("border-b", "first:rounded-l-lg", "last:rounded-r-lg");
+      expect(cell).not.toHaveClass(
+        "border-b",
+        "first:rounded-l-lg",
+        "last:rounded-r-lg",
+      );
     });
 
     const requestSort = within(dialog).getByRole("button", {
@@ -1183,9 +1447,21 @@ describe("CcSwitchImportSettingsPage", () => {
         expect.objectContaining({
           id: "cfg-sort-codex",
           modelMappings: [
-            { requestModel: "request-c", targetModel: "model-3", contextWindow: 300000 },
-            { requestModel: "request-b", targetModel: "model-2", contextWindow: 200000 },
-            { requestModel: "request-a", targetModel: "model-1", contextWindow: 100000 },
+            {
+              requestModel: "request-c",
+              targetModel: "model-3",
+              contextWindow: 300000,
+            },
+            {
+              requestModel: "request-b",
+              targetModel: "model-2",
+              contextWindow: 200000,
+            },
+            {
+              requestModel: "request-a",
+              targetModel: "model-1",
+              contextWindow: 100000,
+            },
           ],
         }),
       ]),
@@ -1198,7 +1474,12 @@ describe("CcSwitchImportSettingsPage", () => {
         name: "pro",
         description: "Pro route",
         "path-routes": ["/pro"],
-        "allowed-models": ["target-main", "target-haiku", "target-sonnet", "target-opus"],
+        "allowed-models": [
+          "target-main",
+          "target-haiku",
+          "target-sonnet",
+          "target-opus",
+        ],
       },
     ]);
     listConfigs.mockResolvedValue([
@@ -1214,8 +1495,16 @@ describe("CcSwitchImportSettingsPage", () => {
         apiKeyField: "ANTHROPIC_API_KEY",
         modelMappings: [
           { role: "main", requestModel: "z-main", targetModel: "target-main" },
-          { role: "haiku", requestModel: "a-haiku", targetModel: "target-haiku" },
-          { role: "sonnet", requestModel: "m-sonnet", targetModel: "target-sonnet" },
+          {
+            role: "haiku",
+            requestModel: "a-haiku",
+            targetModel: "target-haiku",
+          },
+          {
+            role: "sonnet",
+            requestModel: "m-sonnet",
+            targetModel: "target-sonnet",
+          },
           { role: "opus", requestModel: "b-opus", targetModel: "target-opus" },
         ],
       },
@@ -1225,15 +1514,26 @@ describe("CcSwitchImportSettingsPage", () => {
 
     expect(await screen.findByText("Sorted Claude")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: /edit config/i }));
-    const dialog = await screen.findByRole("dialog", { name: /edit cc switch config/i });
+    const dialog = await screen.findByRole("dialog", {
+      name: /edit cc switch config/i,
+    });
 
-    await user.click(within(dialog).getByRole("button", { name: /sort cc switch request model/i }));
+    await user.click(
+      within(dialog).getByRole("button", {
+        name: /sort cc switch request model/i,
+      }),
+    );
     await user.click(screen.getByRole("menuitem", { name: /ascending/i }));
 
     const orderedRequestModels = Array.from(
       dialog.querySelectorAll<HTMLTableRowElement>("tr[data-vt-row-index]"),
     ).map((row) => row.querySelector<HTMLInputElement>("input")?.value);
-    expect(orderedRequestModels).toEqual(["a-haiku", "b-opus", "m-sonnet", "z-main"]);
+    expect(orderedRequestModels).toEqual([
+      "a-haiku",
+      "b-opus",
+      "m-sonnet",
+      "z-main",
+    ]);
 
     await user.click(within(dialog).getByRole("button", { name: /^save$/i }));
     await waitFor(() =>
@@ -1242,10 +1542,26 @@ describe("CcSwitchImportSettingsPage", () => {
           id: "cfg-sort-claude",
           defaultModel: "target-main",
           modelMappings: [
-            { role: "haiku", requestModel: "a-haiku", targetModel: "target-haiku" },
-            { role: "opus", requestModel: "b-opus", targetModel: "target-opus" },
-            { role: "sonnet", requestModel: "m-sonnet", targetModel: "target-sonnet" },
-            { role: "main", requestModel: "z-main", targetModel: "target-main" },
+            {
+              role: "haiku",
+              requestModel: "a-haiku",
+              targetModel: "target-haiku",
+            },
+            {
+              role: "opus",
+              requestModel: "b-opus",
+              targetModel: "target-opus",
+            },
+            {
+              role: "sonnet",
+              requestModel: "m-sonnet",
+              targetModel: "target-sonnet",
+            },
+            {
+              role: "main",
+              requestModel: "z-main",
+              targetModel: "target-main",
+            },
           ],
         }),
       ]),
@@ -1272,7 +1588,9 @@ describe("CcSwitchImportSettingsPage", () => {
     expect(await screen.findByText("Relay Codex")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: /delete config/i }));
 
-    const dialog = await screen.findByRole("dialog", { name: /delete cc switch config/i });
+    const dialog = await screen.findByRole("dialog", {
+      name: /delete cc switch config/i,
+    });
     await user.click(within(dialog).getByRole("button", { name: /^delete$/i }));
 
     await waitFor(() => expect(replaceConfigs).toHaveBeenCalledWith([]));
@@ -1289,8 +1607,12 @@ describe("CcSwitchImportSettingsPage", () => {
 
     await user.click(screen.getByRole("button", { name: /new config/i }));
 
-    const dialog = await screen.findByRole("dialog", { name: /new cc switch config/i });
-    await user.click(within(dialog).getByRole("combobox", { name: /select channel group/i }));
+    const dialog = await screen.findByRole("dialog", {
+      name: /new cc switch config/i,
+    });
+    await user.click(
+      within(dialog).getByRole("combobox", { name: /select channel group/i }),
+    );
 
     const options = await screen.findAllByRole("option");
     const optionLabels = options.map((el) => el.textContent ?? "");
@@ -1326,9 +1648,13 @@ describe("CcSwitchImportSettingsPage", () => {
     expect(await screen.findByText("Relay NVIDIA")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: /edit config/i }));
 
-    const dialog = await screen.findByRole("dialog", { name: /edit cc switch config/i });
+    const dialog = await screen.findByRole("dialog", {
+      name: /edit cc switch config/i,
+    });
     expect(
-      await within(dialog).findByRole("combobox", { name: /select channel group/i }),
+      await within(dialog).findByRole("combobox", {
+        name: /select channel group/i,
+      }),
     ).toHaveTextContent(/nvidia/i);
 
     await user.click(within(dialog).getByRole("button", { name: /^save$/i }));

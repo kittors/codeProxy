@@ -54,8 +54,10 @@ export function ProviderCard({
   return (
     <div
       className={[
-        "group relative flex flex-col rounded-xl border px-4 py-3 shadow-sm transition-all duration-200 ease-out",
-        naturalHeight ? "h-fit self-start min-h-0" : "min-h-[220px] max-h-[260px]",
+        "group relative flex min-w-0 flex-col rounded-xl border px-4 py-3 shadow-sm transition-all duration-200 ease-out",
+        naturalHeight
+          ? "h-fit self-start min-h-0"
+          : "min-h-[220px] max-h-[260px]",
         selected
           ? "border-blue-400 bg-blue-50/50 ring-1 ring-blue-200 dark:border-blue-500/50 dark:bg-blue-950/20 dark:ring-blue-500/20"
           : "border-slate-200 bg-white/70 hover:border-slate-300 hover:bg-white hover:shadow-md dark:border-neutral-800 dark:bg-neutral-950/60 dark:hover:border-neutral-700 dark:hover:bg-neutral-950/80 dark:hover:shadow-lg dark:hover:shadow-black/20",
@@ -119,12 +121,11 @@ export function ProviderCard({
             <DropdownMenu.Portal>
               <DropdownMenu.Content align="end" sideOffset={8}>
                 {onToggleEnabled ? (
-                  <DropdownMenu.Item
-
-                    onSelect={() => onToggleEnabled(!enabled)}
-                  >
+                  <DropdownMenu.Item onSelect={() => onToggleEnabled(!enabled)}>
                     <Power size={15} />
-                    <span>{enabled ? t("providers.disable") : t("providers.enable")}</span>
+                    <span>
+                      {enabled ? t("providers.disable") : t("providers.enable")}
+                    </span>
                   </DropdownMenu.Item>
                 ) : null}
                 {onEdit ? (
@@ -150,16 +151,27 @@ export function ProviderCard({
 
       {/* Content */}
       {children ? (
-        <div className={["mt-2 min-w-0 flex-1", naturalHeight ? "" : "overflow-y-auto"].join(" ")}>
+        <div
+          className={[
+            "mt-2 min-w-0 flex-1",
+            naturalHeight ? "" : "overflow-y-auto",
+          ].join(" ")}
+        >
           {children}
         </div>
       ) : null}
-      {footer ? <div className={naturalHeight ? "pt-3" : "mt-auto pt-3"}>{footer}</div> : null}
+      {footer ? (
+        <div className={naturalHeight ? "pt-3" : "mt-auto pt-3"}>{footer}</div>
+      ) : null}
     </div>
   );
 }
 
-export function ProviderCardSkeleton({ naturalHeight = false }: { naturalHeight?: boolean }) {
+export function ProviderCardSkeleton({
+  naturalHeight = false,
+}: {
+  naturalHeight?: boolean;
+}) {
   return (
     <div
       className={[

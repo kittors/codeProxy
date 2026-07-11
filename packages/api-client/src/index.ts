@@ -15,6 +15,7 @@ export {
 export {
   ApiError,
   ApiClientError,
+  extractApiErrorCode,
   extractApiErrorMessage,
   isApiClientError,
 } from "./client/errors";
@@ -88,3 +89,6 @@ export {
   normalizeOauthModelAlias,
   normalizeApiKeyEntries,
 } from "./endpoints/helpers";
+
+export { identityApi } from "./endpoints/identity";
+export type * from "./endpoints/identity";

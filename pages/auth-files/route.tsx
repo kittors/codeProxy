@@ -1,10 +1,16 @@
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
+
+function AuthFilesRedirect() {
+  const location = useLocation();
+  return <Navigate to={{ pathname: "/account-security", search: location.search }} replace />;
+}
 
 export const authFilesRoute = {
   path: "/auth-files",
-  element: <Navigate to="/account-security" replace />,
+  element: <AuthFilesRedirect />,
   auth: true,
   layout: "dashboard",
+  requiredPermission: "auth_files.read",
   nav: { labelKey: "nav.authFiles" },
   redirects: [
     { from: "/auth-files/oauth-excluded", to: "/account-security?tab=excluded" },

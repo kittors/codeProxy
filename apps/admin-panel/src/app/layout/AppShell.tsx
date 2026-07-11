@@ -17,6 +17,7 @@ import {
   Activity,
   ArrowDownToLine,
   Bot,
+  Building2,
   ChevronDown,
   Cpu,
   Image,
@@ -30,6 +31,8 @@ import {
   ScrollText,
   Settings,
   ShieldCheck,
+  UserRound,
+  UsersRound,
   Sparkles,
   type LucideIcon,
 } from "lucide-react";
@@ -42,6 +45,8 @@ import {
   ThemeToggleButton,
 } from "@code-proxy/ui";
 import { preloadPageRoute } from "@pages/registry";
+import { identityApi, type TenantIdentity } from "@code-proxy/api-client";
+import { useOptionalAuth } from "@app/providers/AuthProvider";
 
 interface ShellContextState {
   state: {
@@ -62,6 +67,7 @@ interface SidebarNavItem {
   to: string;
   i18nKey: string;
   icon: LucideIcon;
+  permission: string;
 }
 
 interface SidebarNavGroup {
@@ -75,6 +81,7 @@ const DASHBOARD_NAV_ITEM = {
   to: "/dashboard",
   i18nKey: "shell.nav_dashboard",
   icon: LayoutDashboard,
+  permission: "dashboard.read",
 } satisfies SidebarNavItem;
 
 const NAV_GROUPS = [
@@ -83,14 +90,30 @@ const NAV_GROUPS = [
     i18nKey: "shell.nav_group_runtime",
     icon: Activity,
     items: [
-      { to: "/monitor", i18nKey: "shell.nav_monitor", icon: Activity },
+      {
+        to: "/monitor",
+        i18nKey: "shell.nav_monitor",
+        icon: Activity,
+        permission: "monitor.read",
+      },
       {
         to: "/monitor/request-logs",
         i18nKey: "shell.nav_request_logs",
         icon: ScrollText,
+        permission: "request_logs.read",
       },
-      { to: "/logs", i18nKey: "shell.nav_logs", icon: FileText },
-      { to: "/system", i18nKey: "shell.nav_system", icon: Info },
+      {
+        to: "/logs",
+        i18nKey: "shell.nav_logs",
+        icon: FileText,
+        permission: "system.logs.read",
+      },
+      {
+        to: "/system",
+        i18nKey: "shell.nav_system",
+        icon: Info,
+        permission: "system.status.read",
+      },
     ],
   },
   {
@@ -98,12 +121,23 @@ const NAV_GROUPS = [
     i18nKey: "shell.nav_group_access",
     icon: Bot,
     items: [
-      { to: "/ai-providers", i18nKey: "shell.nav_ai_providers", icon: Bot },
-      { to: "/api-keys", i18nKey: "shell.nav_api_keys", icon: Sparkles },
+      {
+        to: "/ai-providers",
+        i18nKey: "shell.nav_ai_providers",
+        icon: Bot,
+        permission: "providers.read",
+      },
+      {
+        to: "/api-keys",
+        i18nKey: "shell.nav_api_keys",
+        icon: Sparkles,
+        permission: "api_keys.read",
+      },
       {
         to: "/ccswitch-import-settings",
         i18nKey: "shell.nav_ccswitch_import_settings",
         icon: ArrowDownToLine,
+        permission: "system.config.read",
       },
     ],
   },
@@ -112,18 +146,61 @@ const NAV_GROUPS = [
     i18nKey: "shell.nav_group_models",
     icon: Layers,
     items: [
-      { to: "/models", i18nKey: "shell.nav_models", icon: Cpu },
+      {
+        to: "/models",
+        i18nKey: "shell.nav_models",
+        icon: Cpu,
+        permission: "models.read",
+      },
       {
         to: "/image-generation",
         i18nKey: "shell.nav_image_generation",
         icon: Image,
+        permission: "system.config.read",
       },
       {
         to: "/channel-groups",
         i18nKey: "shell.nav_channel_groups",
         icon: Layers,
+        permission: "routing.read",
       },
-      { to: "/proxies", i18nKey: "shell.nav_proxies", icon: Network },
+      {
+        to: "/proxies",
+        i18nKey: "shell.nav_proxies",
+        icon: Network,
+        permission: "proxies.read",
+      },
+    ],
+  },
+  {
+    id: "governance",
+    i18nKey: "shell.nav_group_governance",
+    icon: UsersRound,
+    items: [
+      {
+        to: "/tenants",
+        i18nKey: "shell.nav_tenants",
+        icon: Building2,
+        permission: "platform.tenants.read",
+      },
+      {
+        to: "/users",
+        i18nKey: "shell.nav_users",
+        icon: UserRound,
+        permission: "tenant.users.read",
+      },
+      {
+        to: "/roles",
+        i18nKey: "shell.nav_roles",
+        icon: ShieldCheck,
+        permission: "tenant.roles.read",
+      },
+      {
+        to: "/audit-logs",
+        i18nKey: "shell.nav_audit_logs",
+        icon: FileText,
+        permission: "tenant.audit.read",
+      },
     ],
   },
   {
@@ -135,21 +212,23 @@ const NAV_GROUPS = [
         to: "/account-security",
         i18nKey: "shell.nav_account_security",
         icon: ShieldCheck,
+        permission: "auth_files.read",
       },
       {
         to: "/api-key-permissions",
         i18nKey: "shell.nav_api_key_permissions",
         icon: ShieldCheck,
+        permission: "api_key_profiles.read",
       },
-      { to: "/config", i18nKey: "shell.nav_config", icon: Settings },
+      {
+        to: "/config",
+        i18nKey: "shell.nav_config",
+        icon: Settings,
+        permission: "system.config.read",
+      },
     ],
   },
 ] satisfies readonly SidebarNavGroup[];
-
-const NAV_ITEMS: readonly SidebarNavItem[] = [
-  DASHBOARD_NAV_ITEM,
-  ...NAV_GROUPS.flatMap((group) => group.items),
-];
 
 const getPageTitleKey = (pathname: string): string => {
   if (pathname.startsWith("/dashboard")) return "shell.nav_dashboard";
@@ -588,6 +667,36 @@ function ShellSidebar({
   const {
     actions: { logout },
   } = useShell();
+  const auth = useOptionalAuth();
+  const can = auth?.can ?? (() => true);
+  const principal = auth?.state.principal ?? null;
+  const visibleNavGroups = useMemo(
+    () =>
+      NAV_GROUPS.map((group) => ({
+        ...group,
+        items: group.items.filter((item) => can(item.permission)),
+      })).filter((group) => group.items.length > 0),
+    [can],
+  );
+  const visibleNavItems = useMemo(
+    () =>
+      [
+        DASHBOARD_NAV_ITEM,
+        ...visibleNavGroups.flatMap((group) => group.items),
+      ].filter((item) => can(item.permission)),
+    [can, visibleNavGroups],
+  );
+  const accountName =
+    principal?.user.display_name || principal?.user.username || "Admin";
+  const accountTenant =
+    principal?.effective_tenant.name || t("shell.sidebar_account_role");
+  const accountInitials =
+    accountName
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase())
+      .join("") || "AD";
   // Track the clicked nav target so the highlight updates instantly on click,
   // without waiting for lazy chunks to load & location to update.
   const [pendingTo, setPendingTo] = useState("");
@@ -601,14 +710,19 @@ function ShellSidebar({
     progressTimers.current = [];
   }, []);
 
-  const resolveActiveTo = useCallback((pathname: string) => {
-    const sorted = [...NAV_ITEMS].sort((a, b) => b.to.length - a.to.length);
-    return (
-      sorted.find(
-        (item) => pathname === item.to || pathname.startsWith(`${item.to}/`),
-      )?.to ?? null
-    );
-  }, []);
+  const resolveActiveTo = useCallback(
+    (pathname: string) => {
+      const sorted = [...visibleNavItems].sort(
+        (a, b) => b.to.length - a.to.length,
+      );
+      return (
+        sorted.find(
+          (item) => pathname === item.to || pathname.startsWith(`${item.to}/`),
+        )?.to ?? null
+      );
+    },
+    [visibleNavItems],
+  );
 
   const activeTo = useMemo(
     () => resolveActiveTo(pendingTo || location.pathname),
@@ -616,10 +730,10 @@ function ShellSidebar({
   );
   const activeGroupId = useMemo(
     () =>
-      NAV_GROUPS.find((group) =>
+      visibleNavGroups.find((group) =>
         group.items.some((item) => item.to === activeTo),
       )?.id,
-    [activeTo],
+    [activeTo, visibleNavGroups],
   );
   const [openGroups, setOpenGroups] = useState<Set<string>>(
     () => new Set(["runtime"]),
@@ -751,8 +865,10 @@ function ShellSidebar({
       <aside
         data-collapsed={railCollapsed ? "true" : "false"}
         className={[
-          "group/sidebar relative shrink-0 overflow-visible bg-white/94 dark:bg-neutral-950/88",
-          isMobile ? "fixed inset-y-0 left-0 z-40 w-60" : "z-30 h-[100dvh]",
+          "group/sidebar shrink-0 overflow-visible bg-white/94 dark:bg-neutral-950/88",
+          isMobile
+            ? "fixed inset-y-0 left-0 z-40 w-60"
+            : "relative z-30 h-[100dvh]",
           "border-r border-slate-200 shadow-[12px_0_28px_rgba(15,23,42,0.04)] dark:border-neutral-800",
           "motion-reduce:transition-none motion-safe:transition-[width,transform,background-color,border-color] motion-safe:duration-300 motion-safe:ease-[cubic-bezier(0.22,1,0.36,1)]",
           isMobile
@@ -812,21 +928,23 @@ function ShellSidebar({
             scrollbarTrackInset={16}
           >
             <nav className="space-y-1 pb-4 pt-3">
-              <SidebarPrimaryLink
-                item={DASHBOARD_NAV_ITEM}
-                active={activeTo === DASHBOARD_NAV_ITEM.to}
-                collapsed={visualRailCollapsed}
-                labelVisible={sidebarLabelsVisible}
-                label={t(DASHBOARD_NAV_ITEM.i18nKey)}
-                onClick={handleNavClick}
-                onWarm={warmPageRoute}
-              />
+              {can(DASHBOARD_NAV_ITEM.permission) ? (
+                <SidebarPrimaryLink
+                  item={DASHBOARD_NAV_ITEM}
+                  active={activeTo === DASHBOARD_NAV_ITEM.to}
+                  collapsed={visualRailCollapsed}
+                  labelVisible={sidebarLabelsVisible}
+                  label={t(DASHBOARD_NAV_ITEM.i18nKey)}
+                  onClick={handleNavClick}
+                  onWarm={warmPageRoute}
+                />
+              ) : null}
               <div className="space-y-1 pt-1">
-                {NAV_GROUPS.map((group) => (
+                {visibleNavGroups.map((group) => (
                   <SidebarMenuGroup
-                      key={group.id}
-                          group={group}
-                          activeTo={activeTo}
+                    key={group.id}
+                    group={group}
+                    activeTo={activeTo}
                     active={group.id === activeGroupId}
                     inlineOpen={openGroups.has(group.id)}
                     railCollapsed={railCollapsed}
@@ -834,9 +952,9 @@ function ShellSidebar({
                     labelsVisible={sidebarLabelsVisible}
                     mode={mode}
                     onToggle={() => toggleGroup(group.id)}
-                          onClick={handleNavClick}
-                          onWarm={warmPageRoute}
-                        />
+                    onClick={handleNavClick}
+                    onWarm={warmPageRoute}
+                  />
                 ))}
               </div>
             </nav>
@@ -855,7 +973,7 @@ function ShellSidebar({
                 <DropdownMenu.Trigger asChild>
                   <button
                     type="button"
-                    aria-label="Admin"
+                    aria-label={accountName}
                     className={
                       "mx-2 flex h-14 w-[calc(100%-1rem)] items-center overflow-hidden rounded-2xl text-left transition-[background-color,box-shadow] duration-[180ms] ease-[cubic-bezier(0.22,1,0.36,1)] focus-visible:outline-none " +
                       (visualRailCollapsed
@@ -868,7 +986,7 @@ function ShellSidebar({
                         data-sidebar-account-avatar="true"
                         className="relative grid h-9 w-9 place-items-center rounded-full bg-blue-600 text-xs font-semibold text-white"
                       >
-                        AD
+                        {accountInitials}
                         <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-white bg-emerald-500 dark:border-neutral-950" />
                       </span>
                     </span>
@@ -881,10 +999,10 @@ function ShellSidebar({
                       }
                     >
                       <span className="block truncate text-sm font-semibold text-slate-950 dark:text-white">
-                        Admin
+                        {accountName}
                       </span>
                       <span className="mt-0.5 block truncate text-2xs text-slate-400">
-                        {t("shell.sidebar_account_role")}
+                        {accountTenant}
                       </span>
                     </span>
                   </button>
@@ -900,34 +1018,51 @@ function ShellSidebar({
                   >
                     <div className="flex items-center gap-3 px-2 py-2">
                       <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-blue-600 text-xs font-semibold text-white">
-                        AD
+                        {accountInitials}
                       </div>
                       <div className="min-w-0 flex-1 leading-tight">
                         <div className="truncate text-sm font-semibold text-slate-950 dark:text-white">
-                          Admin
+                          {accountName}
                         </div>
                         <div className="mt-0.5 truncate text-2xs text-slate-400">
-                          {t("shell.sidebar_account_role")}
+                          {accountTenant}
                         </div>
                       </div>
                     </div>
                     <DropdownMenu.Separator />
                     <DropdownMenu.Item
                       onSelect={() =>
-                        navigate("/account-security", { viewTransition: true })
+                        navigate("/change-password", { viewTransition: true })
                       }
                       className="py-2.5"
                     >
                       <ShieldCheck size={16} />
-                      {t("shell.nav_account_security")}
+                      {t("identity_admin.change_password")}
                     </DropdownMenu.Item>
-                    <DropdownMenu.Item
-                      onSelect={() => navigate("/config", { viewTransition: true })}
-                      className="py-2.5"
-                    >
-                      <Settings size={16} />
-                      {t("shell.nav_config")}
-                    </DropdownMenu.Item>
+                    {can("auth_files.read") ? (
+                      <DropdownMenu.Item
+                        onSelect={() =>
+                          navigate("/account-security", {
+                            viewTransition: true,
+                          })
+                        }
+                        className="py-2.5"
+                      >
+                        <ShieldCheck size={16} />
+                        {t("shell.nav_account_security")}
+                      </DropdownMenu.Item>
+                    ) : null}
+                    {can("system.config.read") ? (
+                      <DropdownMenu.Item
+                        onSelect={() =>
+                          navigate("/config", { viewTransition: true })
+                        }
+                        className="py-2.5"
+                      >
+                        <Settings size={16} />
+                        {t("shell.nav_config")}
+                      </DropdownMenu.Item>
+                    ) : null}
                     <DropdownMenu.Separator />
                     <DropdownMenu.Item
                       onSelect={handleLogout}
@@ -952,10 +1087,10 @@ function ShellSidebar({
                     </div>
                     <div className="min-w-0 flex-1 leading-tight">
                       <div className="truncate text-sm font-semibold text-slate-950 dark:text-white">
-                        Admin
+                        {accountName}
                       </div>
                       <div className="mt-0.5 truncate text-2xs text-slate-400">
-                        {t("shell.sidebar_account_role")}
+                        {accountTenant}
                       </div>
                     </div>
                     <button
@@ -990,6 +1125,28 @@ function ShellHeader({
   const {
     state: { titleKey },
   } = useShell();
+  const auth = useOptionalAuth();
+  const canSwitchTenants =
+    auth?.state.principal?.platform_admin &&
+    auth.state.principal.kind !== "service_credential";
+  const [tenants, setTenants] = useState<TenantIdentity[]>([]);
+  useEffect(() => {
+    if (!canSwitchTenants) {
+      setTenants([]);
+      return;
+    }
+    void identityApi
+      .tenants()
+      .then((response) =>
+        setTenants(
+          (response.items ?? []).filter(
+            (tenant) =>
+              tenant.type === "system" || tenant.effective_status === "active",
+          ),
+        ),
+      )
+      .catch(() => setTenants([]));
+  }, [canSwitchTenants]);
   const sidebarLabel = sidebarCollapsed
     ? t("shell.expand_sidebar")
     : t("shell.collapse_sidebar");
@@ -1011,6 +1168,22 @@ function ShellHeader({
           ) : null}
         </div>
         <div className="flex shrink-0 items-center gap-1 sm:gap-2">
+          {canSwitchTenants && auth?.state.principal ? (
+            <select
+              aria-label="Effective tenant"
+              value={auth.state.principal.effective_tenant.id}
+              onChange={(event) =>
+                void auth.actions.switchTenant(event.target.value)
+              }
+              className="hidden h-9 max-w-52 rounded-xl border border-slate-200 bg-white px-3 text-xs font-medium text-slate-600 sm:block dark:border-neutral-800 dark:bg-neutral-950 dark:text-slate-300"
+            >
+              {tenants.map((tenant) => (
+                <option key={tenant.id} value={tenant.id}>
+                  {tenant.name}
+                </option>
+              ))}
+            </select>
+          ) : null}
           <LanguageSelector className="inline-flex h-9 items-center justify-center gap-0.5 rounded-xl px-1.5 text-slate-500 transition-colors duration-200 ease-out hover:text-slate-900 dark:text-slate-400 dark:hover:text-white" />
           <ThemeToggleButton className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 transition-colors duration-200 ease-out hover:text-slate-900 dark:text-slate-400 dark:hover:text-white" />
         </div>
@@ -1039,16 +1212,18 @@ export function AppShell({
   const { t } = useTranslation();
   const logout = onLogout ?? (() => {});
 
-  const [isMobile, setIsMobile] = useState(false);
+  const [isMobile, setIsMobile] = useState(
+    () => window.matchMedia?.(SIDEBAR_MOBILE_MEDIA).matches ?? false,
+  );
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] =
     useState<boolean>(() => {
-    try {
-      return localStorage.getItem(STORAGE_KEY_SIDEBAR_COLLAPSED) === "1";
-    } catch {
-      return false;
-    }
-  });
+      try {
+        return localStorage.getItem(STORAGE_KEY_SIDEBAR_COLLAPSED) === "1";
+      } catch {
+        return false;
+      }
+    });
 
   useEffect(() => {
     const mq = window.matchMedia?.(SIDEBAR_MOBILE_MEDIA);
@@ -1057,9 +1232,13 @@ export function AppShell({
     const update = () => setIsMobile(mq.matches);
     update();
 
+    window.addEventListener("resize", update);
     if (typeof mq.addEventListener === "function") {
       mq.addEventListener("change", update);
-      return () => mq.removeEventListener("change", update);
+      return () => {
+        window.removeEventListener("resize", update);
+        mq.removeEventListener("change", update);
+      };
     }
 
     const legacy = mq as unknown as {
@@ -1068,7 +1247,10 @@ export function AppShell({
     };
 
     legacy.addListener?.(update);
-    return () => legacy.removeListener?.(update);
+    return () => {
+      window.removeEventListener("resize", update);
+      legacy.removeListener?.(update);
+    };
   }, []);
 
   useEffect(() => {

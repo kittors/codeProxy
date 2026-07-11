@@ -361,6 +361,7 @@ test("Sidebar: collapse/expand should keep nav items nowrap and slide out of vie
       /Operations|运行监控/i,
       /Access|接入管理/i,
       /Models & Routing|模型与路由/i,
+      /Governance|租户治理/i,
       /System|系统管理/i,
     ].map(async (name) => page.getByRole("button", { name }).boundingBox()),
   );

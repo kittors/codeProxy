@@ -11,5 +11,6 @@ export const monitorRoute = {
   layout: "dashboard",
   nav: { labelKey: "nav.monitor" },
   redirects: [{ from: "/usage", to: "/monitor" }],
+  requiredPermission: "monitor.read",
   preload: preloadMonitorPage,
 };

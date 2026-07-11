@@ -30,15 +30,15 @@ export function ProviderStatusBar({
         : "text-rose-600 dark:text-rose-300";
 
   const containerCls = compact
-    ? "flex items-center gap-2 rounded-lg bg-white dark:bg-neutral-950 px-2 py-1"
-    : "flex items-center gap-2 rounded-lg bg-white dark:bg-neutral-950 px-2.5 py-1.5";
+    ? "flex min-w-0 flex-col items-stretch gap-1 rounded-lg bg-white px-2 py-1 sm:flex-row sm:items-center sm:gap-2 dark:bg-neutral-950"
+    : "flex min-w-0 flex-col items-stretch gap-1 rounded-lg bg-white px-2.5 py-1.5 sm:flex-row sm:items-center sm:gap-2 dark:bg-neutral-950";
 
   const ariaLabel = hasData
     ? `${t("common.success_rate")} ${rateText}, ${t("providers.success_stats", { count: data.totalSuccess })}, ${t("providers.failed_stats", { count: data.totalFailure })}`
     : `${t("common.success_rate")} --`;
 
   const barHeight = compact ? "h-1.5" : "h-2";
-  const rateWidth = compact ? "w-12" : "w-14";
+  const rateWidth = compact ? "sm:w-12" : "sm:w-14";
 
   return (
     <div
@@ -56,7 +56,7 @@ export function ProviderStatusBar({
         ))}
       </div>
       <span
-        className={`${rateWidth} shrink-0 text-right text-xs font-semibold tabular-nums ${rateClass}`}
+        className={`${rateWidth} min-w-0 shrink-0 text-left text-xs font-semibold tabular-nums sm:text-right ${rateClass}`}
       >
         {rateText}
       </span>

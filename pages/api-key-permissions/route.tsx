@@ -13,5 +13,6 @@ export const apiKeyPermissionsRoute = {
   layout: "dashboard",
   nav: { labelKey: "nav.apiKeyPermissions" },
   redirects: [{ from: "/manage/api-key-permissions", to: "/api-key-permissions" }],
+  requiredPermission: "api_key_profiles.read",
   preload: preloadApiKeyPermissionsPage,
 };

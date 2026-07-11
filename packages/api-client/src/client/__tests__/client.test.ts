@@ -222,6 +222,33 @@ describe("ApiClient authentication failure handling", () => {
     }
   });
 
+  test("suspends an expired tenant session and exposes the server error code", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          error: { code: "tenant_expired", message: "tenant expired" },
+        }),
+        { status: 403, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+    const client = new ApiClient();
+    client.setConfig({ apiBase: "http://localhost:8317", managementKey: "cps_test" });
+    let code = "";
+    const onUnauthorized = (event: Event) => {
+      code = (event as CustomEvent<{ code?: string }>).detail?.code ?? "";
+    };
+    window.addEventListener("unauthorized", onUnauthorized);
+    try {
+      await expect(client.get("/dashboard-summary")).rejects.toThrow("tenant expired");
+      expect(code).toBe("tenant_expired");
+      await expect(client.get("/auth-files")).rejects.toThrow(
+        "Management session is no longer valid",
+      );
+    } finally {
+      window.removeEventListener("unauthorized", onUnauthorized);
+    }
+  });
+
   test("setConfig resumes requests after an authentication suspension", async () => {
     const fetchMock = vi
       .fn()

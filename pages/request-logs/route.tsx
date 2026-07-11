@@ -10,5 +10,6 @@ export const requestLogsRoute = {
   auth: true,
   layout: "dashboard",
   nav: { labelKey: "nav.requestLogs" },
+  requiredPermission: "request_logs.read",
   preload: preloadRequestLogsPage,
 };

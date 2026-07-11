@@ -18,6 +18,11 @@ import { identityFingerprintRoute } from "./identity-fingerprint/route";
 import { imageGenerationRoute } from "./image-generation/route";
 import { ccswitchImportSettingsRoute } from "./ccswitch-import-settings/route";
 import { apiKeyLookupRoute } from "./api-key-lookup/route";
+import { tenantsRoute } from "./tenants/route";
+import { usersRoute } from "./users/route";
+import { rolesRoute } from "./roles/route";
+import { changePasswordRoute } from "./change-password/route";
+import { auditLogsRoute } from "./audit-logs/route";
 
 export interface PageRoute {
   path: string;
@@ -28,10 +33,16 @@ export interface PageRoute {
   redirects?: Array<{ from: string; to: string }>;
   hasWildcard?: boolean;
   preload?: () => Promise<unknown>;
+  requiredPermission?: string;
 }
 
 export const pageRoutes: PageRoute[] = [
   loginRoute,
+  changePasswordRoute,
+  tenantsRoute,
+  usersRoute,
+  rolesRoute,
+  auditLogsRoute,
   dashboardRoute,
   monitorRoute,
   requestLogsRoute,
