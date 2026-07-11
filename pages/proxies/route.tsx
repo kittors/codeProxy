@@ -11,5 +11,6 @@ export const proxiesRoute = {
   layout: "dashboard",
   nav: { labelKey: "nav.proxies" },
   redirects: [{ from: "/manage/proxies", to: "/proxies" }],
+  requiredPermission: "proxies.read",
   preload: preloadProxiesPage,
 };

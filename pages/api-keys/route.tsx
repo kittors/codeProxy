@@ -10,5 +10,6 @@ export const apiKeysRoute = {
   auth: true,
   layout: "dashboard",
   nav: { labelKey: "nav.apiKeys" },
+  requiredPermission: "api_keys.read",
   preload: preloadApiKeysPage,
 };

@@ -10,6 +10,7 @@ import { ToggleSwitch } from "@code-proxy/ui";
 import { useToast } from "@code-proxy/ui";
 import { DataTable } from "@code-proxy/ui";
 import { apiClient } from "@code-proxy/api-client";
+import { useOptionalAuth } from "@app/providers/AuthProvider";
 import { ModelFormModal } from "./components/ModelFormModal";
 import { ModelsPageTabs } from "./components/ModelsPageTabs";
 import { ModelsStatsCards } from "./components/ModelsStatsCards";
@@ -53,6 +54,8 @@ import {
 export function ModelsPage() {
   const { t } = useTranslation();
   const { notify } = useToast();
+  const auth = useOptionalAuth();
+  const canManageOpenRouterSync = auth ? auth.can("system.config.read") : true;
 
   const [models, setModels] = useState<ModelItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -144,10 +147,10 @@ export function ModelsPage() {
   }, [t]);
 
   useEffect(() => {
-    if (activeTab === "library") {
+    if (activeTab === "library" && canManageOpenRouterSync) {
       void loadOpenRouterSyncState();
     }
-  }, [activeTab, loadOpenRouterSyncState]);
+  }, [activeTab, canManageOpenRouterSync, loadOpenRouterSyncState]);
 
   const filteredModels = useMemo(() => {
     const needle = searchFilter.trim().toLowerCase();
@@ -750,116 +753,118 @@ export function ModelsPage() {
                 </div>
               }
             >
-              <div
-                data-testid="openrouter-sync-section"
-                className="mb-3 border-b border-slate-200 pb-3 dark:border-neutral-800"
-              >
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-semibold text-slate-900 dark:text-white">
-                      <span>{t("models_page.openrouter_sync_title")}</span>
-                      <span
-                        className={[
-                          "rounded-full px-2 py-0.5 text-2xs font-semibold",
-                          openRouterSyncState.enabled
-                            ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-300"
-                            : "bg-slate-100 text-slate-500 dark:bg-white/[0.08] dark:text-white/45",
-                        ].join(" ")}
-                      >
-                        {openRouterSyncState.enabled
-                          ? t("models_page.openrouter_sync_auto_on")
-                          : t("models_page.openrouter_sync_auto_off")}
-                      </span>
-                    </div>
-                    <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-600 dark:text-white/55">
-                      <span>
-                        {t("models_page.openrouter_sync_last_sync", {
-                          value: formatSyncTimestamp(
-                            openRouterSyncState.lastSyncAt,
-                            t("models_page.openrouter_sync_never"),
-                          ),
-                        })}
-                      </span>
-                      <span>
-                        {t("models_page.openrouter_sync_result", {
-                          seen: openRouterSyncState.lastSeen,
-                          added: openRouterSyncState.lastAdded,
-                          updated: openRouterSyncState.lastUpdated,
-                          skipped: openRouterSyncState.lastSkipped,
-                        })}
-                      </span>
-                      {openRouterSyncLoading ? <span>{t("models_page.loading")}</span> : null}
-                    </div>
-                    {openRouterSyncState.lastError || openRouterSyncError ? (
-                      <div className="mt-2 text-xs text-rose-600 dark:text-rose-300">
-                        {t("models_page.openrouter_sync_error", {
-                          error: openRouterSyncError || openRouterSyncState.lastError,
-                        })}
+              {canManageOpenRouterSync ? (
+                <div
+                  data-testid="openrouter-sync-section"
+                  className="mb-3 border-b border-slate-200 pb-3 dark:border-neutral-800"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-semibold text-slate-900 dark:text-white">
+                        <span>{t("models_page.openrouter_sync_title")}</span>
+                        <span
+                          className={[
+                            "rounded-full px-2 py-0.5 text-2xs font-semibold",
+                            openRouterSyncState.enabled
+                              ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-300"
+                              : "bg-slate-100 text-slate-500 dark:bg-white/[0.08] dark:text-white/45",
+                          ].join(" ")}
+                        >
+                          {openRouterSyncState.enabled
+                            ? t("models_page.openrouter_sync_auto_on")
+                            : t("models_page.openrouter_sync_auto_off")}
+                        </span>
                       </div>
-                    ) : null}
-                  </div>
-
-                  <div className="flex flex-wrap items-end gap-3">
-                    <div className="w-28">
-                      <label
-                        htmlFor="openrouter-sync-interval"
-                        className="mb-1 block text-xs font-medium text-slate-600 dark:text-white/60"
-                      >
-                        {t("models_page.openrouter_sync_interval")}
-                      </label>
-                      <TextInput
-                        id="openrouter-sync-interval"
-                        type="number"
-                        value={syncIntervalHours}
-                        onChange={(e) => setSyncIntervalHours(e.target.value)}
-                        onBlur={() => {
-                          if (skipSyncIntervalBlurRef.current) {
-                            skipSyncIntervalBlurRef.current = false;
-                            return;
-                          }
-                          void saveOpenRouterSyncSettings(openRouterSyncState.enabled);
-                        }}
-                        min={1}
-                        step={1}
-                        size="sm"
-                      />
+                      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-600 dark:text-white/55">
+                        <span>
+                          {t("models_page.openrouter_sync_last_sync", {
+                            value: formatSyncTimestamp(
+                              openRouterSyncState.lastSyncAt,
+                              t("models_page.openrouter_sync_never"),
+                            ),
+                          })}
+                        </span>
+                        <span>
+                          {t("models_page.openrouter_sync_result", {
+                            seen: openRouterSyncState.lastSeen,
+                            added: openRouterSyncState.lastAdded,
+                            updated: openRouterSyncState.lastUpdated,
+                            skipped: openRouterSyncState.lastSkipped,
+                          })}
+                        </span>
+                        {openRouterSyncLoading ? <span>{t("models_page.loading")}</span> : null}
+                      </div>
+                      {openRouterSyncState.lastError || openRouterSyncError ? (
+                        <div className="mt-2 text-xs text-rose-600 dark:text-rose-300">
+                          {t("models_page.openrouter_sync_error", {
+                            error: openRouterSyncError || openRouterSyncState.lastError,
+                          })}
+                        </div>
+                      ) : null}
                     </div>
-                    <div
-                      onMouseDownCapture={() => {
-                        skipSyncIntervalBlurRef.current = true;
-                      }}
-                      className="flex flex-wrap items-end gap-3"
-                    >
-                      <ToggleSwitch
-                        checked={openRouterSyncState.enabled}
-                        onCheckedChange={(enabled) => void saveOpenRouterSyncSettings(enabled)}
-                        label={t("models_page.openrouter_sync_auto")}
-                        disabled={openRouterSyncSaving}
-                      />
-                      <Button
-                        variant="primary"
-                        size="sm"
-                        onClick={() => void runOpenRouterSync()}
-                        disabled={
-                          openRouterSyncRunning ||
-                          openRouterSyncState.running ||
-                          openRouterSyncLoading
-                        }
-                      >
-                        <RefreshCw
-                          size={14}
-                          className={
-                            openRouterSyncRunning || openRouterSyncState.running
-                              ? "animate-spin"
-                              : ""
-                          }
+
+                    <div className="flex flex-wrap items-end gap-3">
+                      <div className="w-28">
+                        <label
+                          htmlFor="openrouter-sync-interval"
+                          className="mb-1 block text-xs font-medium text-slate-600 dark:text-white/60"
+                        >
+                          {t("models_page.openrouter_sync_interval")}
+                        </label>
+                        <TextInput
+                          id="openrouter-sync-interval"
+                          type="number"
+                          value={syncIntervalHours}
+                          onChange={(e) => setSyncIntervalHours(e.target.value)}
+                          onBlur={() => {
+                            if (skipSyncIntervalBlurRef.current) {
+                              skipSyncIntervalBlurRef.current = false;
+                              return;
+                            }
+                            void saveOpenRouterSyncSettings(openRouterSyncState.enabled);
+                          }}
+                          min={1}
+                          step={1}
+                          size="sm"
                         />
-                        {t("models_page.openrouter_sync_now")}
-                      </Button>
+                      </div>
+                      <div
+                        onMouseDownCapture={() => {
+                          skipSyncIntervalBlurRef.current = true;
+                        }}
+                        className="flex flex-wrap items-end gap-3"
+                      >
+                        <ToggleSwitch
+                          checked={openRouterSyncState.enabled}
+                          onCheckedChange={(enabled) => void saveOpenRouterSyncSettings(enabled)}
+                          label={t("models_page.openrouter_sync_auto")}
+                          disabled={openRouterSyncSaving}
+                        />
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={() => void runOpenRouterSync()}
+                          disabled={
+                            openRouterSyncRunning ||
+                            openRouterSyncState.running ||
+                            openRouterSyncLoading
+                          }
+                        >
+                          <RefreshCw
+                            size={14}
+                            className={
+                              openRouterSyncRunning || openRouterSyncState.running
+                                ? "animate-spin"
+                                : ""
+                            }
+                          />
+                          {t("models_page.openrouter_sync_now")}
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
+              ) : null}
 
               <DataTable<ModelItem>
                 tableId="models-library"

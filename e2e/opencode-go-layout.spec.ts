@@ -18,7 +18,8 @@ const opencodeGoKeys = [
     "auth-cookie": "auth=beta",
   },
   {
-    "api-key": "sk-opencode-go-gamma-verylongkey-1234567890abcdef1234567890abcdef",
+    "api-key":
+      "sk-opencode-go-gamma-verylongkey-1234567890abcdef1234567890abcdef",
     name: "opencode-go-very-long-provider-name-that-should-truncate-cleanly",
     prefix: "oc-gamma-long-prefix-value",
     "workspace-id": "wrk_gamma",
@@ -86,7 +87,12 @@ const clineUsage = [
 ];
 
 const ollamaCloudUsage = [
-  { type: "rolling", label: "Rolling", percentage: 11, resets_in: "48 minutes" },
+  {
+    type: "rolling",
+    label: "Rolling",
+    percentage: 11,
+    resets_in: "48 minutes",
+  },
   { type: "weekly", label: "Weekly", percentage: 34, resets_in: "5 days" },
 ];
 
@@ -135,28 +141,44 @@ const mockManagementApi = async (page: Page) => {
     if (managementPath.startsWith("/usage/entity-stats")) {
       return fulfillJson({ source: usageStats, auth_index: [] });
     }
-    if (managementPath === "/opencode-go-api-key" && request.method() === "GET") {
+    if (
+      managementPath === "/opencode-go-api-key" &&
+      request.method() === "GET"
+    ) {
       return fulfillJson({ "opencode-go-api-key": opencodeGoKeys });
     }
     if (managementPath === "/cline-api-key" && request.method() === "GET") {
       return fulfillJson({ "cline-api-key": clineKeys });
     }
-    if (managementPath === "/ollama-cloud-api-key" && request.method() === "GET") {
+    if (
+      managementPath === "/ollama-cloud-api-key" &&
+      request.method() === "GET"
+    ) {
       return fulfillJson({ "ollama-cloud-api-key": ollamaCloudKeys });
     }
-    if (managementPath === "/opencode-go-api-key/usage" && request.method() === "POST") {
+    if (
+      managementPath === "/opencode-go-api-key/usage" &&
+      request.method() === "POST"
+    ) {
       return fulfillJson({ workspace_id: "wrk_test", usage: opencodeGoUsage });
     }
-    if (managementPath === "/cline-api-key/usage" && request.method() === "POST") {
+    if (
+      managementPath === "/cline-api-key/usage" &&
+      request.method() === "POST"
+    ) {
       return fulfillJson({ usage: clineUsage });
     }
-    if (managementPath === "/ollama-cloud-api-key/usage" && request.method() === "POST") {
+    if (
+      managementPath === "/ollama-cloud-api-key/usage" &&
+      request.method() === "POST"
+    ) {
       return fulfillJson({ usage: ollamaCloudUsage });
     }
     if (managementPath.startsWith("/model-definitions/")) {
       const channel = decodeURIComponent(managementPath.split("/").pop() ?? "");
       return fulfillJson({
-        models: modelDefinitions[channel as keyof typeof modelDefinitions] ?? [],
+        models:
+          modelDefinitions[channel as keyof typeof modelDefinitions] ?? [],
       });
     }
     return fulfillJson({});
@@ -179,13 +201,23 @@ test("AI Providers: OpenCode Go cards should not overlap on responsive layouts",
   await mockManagementApi(page);
 
   for (const viewport of testedViewports) {
-    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    await page.setViewportSize({
+      width: viewport.width,
+      height: viewport.height,
+    });
     await page.goto("/#/ai-providers");
 
     const list = page.getByTestId("providers-tab-scroll");
     await expect(list).toBeVisible();
-    await expect.poll(() => list.locator("> *").count()).toBe(opencodeGoKeys.length);
+    await expect
+      .poll(() => list.locator("> *").count())
+      .toBe(opencodeGoKeys.length);
     await expect.poll(() => list.textContent()).toContain("3.2%");
+    if (viewport.width <= 767) {
+      await expect
+        .poll(() => list.evaluate((el) => el.clientWidth))
+        .toBeGreaterThan(200);
+    }
 
     const metrics = await list.evaluate((el) => {
       const cards = Array.from(el.children).map((child, index) => {
@@ -199,7 +231,8 @@ test("AI Providers: OpenCode Go cards should not overlap on responsive layouts",
         };
       });
 
-      const overlaps: Array<{ a: number; b: number; x: number; y: number }> = [];
+      const overlaps: Array<{ a: number; b: number; x: number; y: number }> =
+        [];
       for (let i = 0; i < cards.length; i += 1) {
         for (let j = i + 1; j < cards.length; j += 1) {
           const a = cards[i];
@@ -207,7 +240,8 @@ test("AI Providers: OpenCode Go cards should not overlap on responsive layouts",
           if (!a || !b) continue;
           const x = Math.min(a.right, b.right) - Math.max(a.left, b.left);
           const y = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
-          if (x > 1 && y > 1) overlaps.push({ a: i, b: j, x: Math.round(x), y: Math.round(y) });
+          if (x > 1 && y > 1)
+            overlaps.push({ a: i, b: j, x: Math.round(x), y: Math.round(y) });
         }
       }
 
@@ -215,17 +249,29 @@ test("AI Providers: OpenCode Go cards should not overlap on responsive layouts",
         overlaps,
         listOverflowX: el.scrollWidth > el.clientWidth + 1,
         bodyOverflowX:
-          document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
+          document.documentElement.scrollWidth >
+          document.documentElement.clientWidth + 1,
       };
     });
 
-    expect(metrics.overlaps, `${viewport.name} has overlapping provider cards`).toEqual([]);
-    expect(metrics.listOverflowX, `${viewport.name} list overflows horizontally`).toBe(false);
-    expect(metrics.bodyOverflowX, `${viewport.name} page overflows horizontally`).toBe(false);
+    expect(
+      metrics.overlaps,
+      `${viewport.name} has overlapping provider cards`,
+    ).toEqual([]);
+    expect(
+      metrics.listOverflowX,
+      `${viewport.name} list overflows horizontally`,
+    ).toBe(false);
+    expect(
+      metrics.bodyOverflowX,
+      `${viewport.name} page overflows horizontally`,
+    ).toBe(false);
   }
 });
 
-test("AI Providers: dashboard provider cards stay compact and left aligned", async ({ page }) => {
+test("AI Providers: dashboard provider cards stay compact and left aligned", async ({
+  page,
+}) => {
   await setAuthed(page);
   await mockManagementApi(page);
   await page.setViewportSize({ width: 1280, height: 720 });

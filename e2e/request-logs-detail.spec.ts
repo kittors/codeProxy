@@ -14,8 +14,21 @@ const setAuthed = async (page: import("@playwright/test").Page) => {
   });
 };
 
-test("Request Logs: opens full detail content and switches output raw view", async ({ page }) => {
+test("Request Logs: opens full detail content and switches output raw view", async ({
+  page,
+}) => {
   await setAuthed(page);
+
+  await page.route(
+    "**/v0/management/request-log-storage/store-content",
+    async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ enabled: true }),
+      });
+    },
+  );
 
   await page.route("**/v0/management/config", async (route) => {
     await route.fulfill({
@@ -72,43 +85,30 @@ test("Request Logs: opens full detail content and switches output raw view", asy
   });
 
   await page.route(
-    "**/v0/management/usage/logs/101/content?part=input&format=json",
+    "**/v0/management/usage/logs/101/content?*",
     async (route) => {
+      const part = new URL(route.request().url()).searchParams.get("part");
+      const content =
+        part === "input"
+          ? { messages: [{ role: "user", content: "hello input payload" }] }
+          : { choices: [{ message: { content: "hello output payload" } }] };
       await route.fulfill({
         status: 200,
         contentType: "application/json",
         body: JSON.stringify({
           id: 101,
           model: "gpt-4.1",
-          part: "input",
-          content: JSON.stringify({
-            messages: [{ role: "user", content: "hello input payload" }],
-          }),
-        }),
-      });
-    },
-  );
-
-  await page.route(
-    "**/v0/management/usage/logs/101/content?part=output&format=json",
-    async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          id: 101,
-          model: "gpt-4.1",
-          part: "output",
-          content: JSON.stringify({
-            choices: [{ message: { content: "hello output payload" } }],
-          }),
+          part,
+          content: JSON.stringify(content),
         }),
       });
     },
   );
 
   await page.goto("/#/monitor/request-logs");
-  await expect(page.getByRole("heading", { name: "Request Logs" }).first()).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Request Logs" }).first(),
+  ).toBeVisible();
   await expect(page.getByText("Streaming")).toBeVisible();
   await expect(page.getByText("120ms")).toBeVisible();
 

@@ -10,5 +10,6 @@ export const systemRoute = {
   auth: true,
   layout: "dashboard",
   nav: { labelKey: "nav.system" },
+  requiredPermission: "system.status.read",
   preload: preloadSystemPage,
 };

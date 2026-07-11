@@ -197,6 +197,7 @@ const identityFingerprintDetailKey = (file: AuthFileItem): string => {
 export function useAuthFilesDetailEditors(
   loadAll: () => Promise<AuthFileItem[]>,
   setFiles?: Dispatch<SetStateAction<AuthFileItem[]>>,
+  identityFingerprintEnabled = true,
 ) {
   const { t } = useTranslation();
   const { notify } = useToast();
@@ -365,6 +366,13 @@ export function useAuthFilesDetailEditors(
 
   const loadIdentityFingerprintForDetail = useCallback(
     async (file: AuthFileItem) => {
+      if (!identityFingerprintEnabled) {
+        identityFingerprintDetailKeyRef.current = "";
+        setIdentityFingerprintDetail(null);
+        setIdentityFingerprintLoading(false);
+        setIdentityFingerprintError(null);
+        return;
+      }
       const summary = file.identity_fingerprint_summary;
       const key = identityFingerprintDetailKey(file);
       if (!summary?.account_key || !key) {
@@ -415,6 +423,7 @@ export function useAuthFilesDetailEditors(
     [
       applyIdentityFingerprintDetail,
       identityFingerprintDetail,
+      identityFingerprintEnabled,
       identityFingerprintError,
       identityFingerprintLoading,
       t,
@@ -514,7 +523,8 @@ export function useAuthFilesDetailEditors(
   const openDetail = useCallback(
     async (file: AuthFileItem) => {
       const hasTrend = supportsAuthFileTrend(file);
-      const hasIdentity = Boolean(file.identity_fingerprint_summary?.account_key);
+      const hasIdentity =
+        identityFingerprintEnabled && Boolean(file.identity_fingerprint_summary?.account_key);
       setDetailOpen(true);
       setDetailTab(hasTrend ? "usage" : hasIdentity ? "identity" : "fields");
       setDetailTrendWindow("5h");
@@ -544,7 +554,7 @@ export function useAuthFilesDetailEditors(
         setDetailLoading(false);
       }
     },
-    [loadIdentityFingerprintForDetail, notify, refreshDetailTrend, t],
+    [identityFingerprintEnabled, loadIdentityFingerprintForDetail, notify, refreshDetailTrend, t],
   );
 
   const openPrefixProxyEditor = useCallback(

@@ -57,7 +57,9 @@ function DataTableHarness() {
 }
 
 function visibleRowNames() {
-  return screen.getAllByTestId("row-name").map((element) => element.textContent);
+  return screen
+    .getAllByTestId("row-name")
+    .map((element) => element.textContent);
 }
 
 describe("DataTable sorting and row reordering", () => {
@@ -72,18 +74,19 @@ describe("DataTable sorting and row reordering", () => {
       'td[data-vt-column-key="name"]',
     );
     expect(firstNameCell).toHaveClass("border-b", "data-table-test-cell");
-    expect(firstNameCell?.querySelector("[data-table-cell-overflow]")).toHaveClass(
-      "data-table-test-content",
-    );
-    expect(firstNameCell?.querySelector("[data-table-cell-overflow]")).not.toHaveClass(
-      "border-b",
-      "data-table-test-cell",
-    );
+    expect(
+      firstNameCell?.querySelector("[data-table-cell-overflow]"),
+    ).toHaveClass("data-table-test-content");
+    expect(
+      firstNameCell?.querySelector("[data-table-cell-overflow]"),
+    ).not.toHaveClass("border-b", "data-table-test-cell");
 
     await user.click(sortTrigger);
     const menu = screen.getByRole("menu");
     expect(menu).toHaveClass("min-w-28");
-    expect(screen.getByRole("menuitem", { name: "Ascending" })).toHaveClass("text-xs");
+    expect(screen.getByRole("menuitem", { name: "Ascending" })).toHaveClass(
+      "text-xs",
+    );
     await user.click(screen.getByRole("menuitem", { name: "Ascending" }));
 
     expect(visibleRowNames()).toEqual(["alpha", "bravo", "charlie"]);
@@ -123,27 +126,41 @@ describe("DataTable sorting and row reordering", () => {
         }) as DOMRect;
     });
 
-    const firstHandle = screen.getByRole("button", { name: "Drag to reorder row 1" });
+    const firstHandle = screen.getByRole("button", {
+      name: "Drag to reorder row 1",
+    });
     expect(firstHandle).toHaveAttribute("data-tooltip-managed", "true");
-    fireEvent.pointerDown(firstHandle, { button: 0, pointerId: 7, clientY: 20 });
+    fireEvent.pointerDown(firstHandle, {
+      button: 0,
+      pointerId: 7,
+      clientY: 20,
+    });
     fireEvent.pointerMove(window, { pointerId: 7, clientY: 115 });
 
-    const dragPreview = document.querySelector<HTMLElement>("[data-vt-row-reorder-preview]");
+    const dragPreview = document.querySelector<HTMLElement>(
+      "[data-vt-row-reorder-preview]",
+    );
     expect(dragPreview).toHaveTextContent("alpha");
     expect(dragPreview).toHaveClass("border", "border-slate-200/90");
     expect(
       Array.from(dragPreview?.querySelectorAll("td") ?? []).every(
-        (cell) => cell.style.borderTopWidth === "0px" && cell.style.borderBottomWidth === "0px",
+        (cell) =>
+          cell.style.borderTopWidth === "0px" &&
+          cell.style.borderBottomWidth === "0px",
       ),
     ).toBe(true);
-    expect(document.querySelector("[data-vt-row-reorder-drop-indicator]")).toBeNull();
+    expect(
+      document.querySelector("[data-vt-row-reorder-drop-indicator]"),
+    ).toBeNull();
     expect(tableRows[0]).toHaveStyle({ opacity: "0" });
     expect(tableRows[1]).toHaveStyle({ transform: "translate3d(0, -40px, 0)" });
     expect(tableRows[2]).toHaveStyle({ transform: "translate3d(0, -40px, 0)" });
 
     fireEvent.pointerUp(window, { pointerId: 7, clientY: 115 });
 
-    await waitFor(() => expect(visibleRowNames()).toEqual(["bravo", "charlie", "alpha"]));
+    await waitFor(() =>
+      expect(visibleRowNames()).toEqual(["bravo", "charlie", "alpha"]),
+    );
     expect(document.querySelector("[data-vt-row-reorder-preview]")).toBeNull();
     tableRows.forEach((row) => {
       expect(row.style.opacity).toBe("");
@@ -156,7 +173,10 @@ describe("DataTable sorting and row reordering", () => {
 describe("DataTable scroll chrome and row dividers", () => {
   test("keeps header cells attached and forwards boundary wheel scrolling to the parent", () => {
     render(
-      <div data-testid="parent-scroll" style={{ height: 160, overflowY: "auto" }}>
+      <div
+        data-testid="parent-scroll"
+        style={{ height: 160, overflowY: "auto" }}
+      >
         <DataTable
           rows={initialRows}
           columns={plainColumns}
@@ -171,7 +191,9 @@ describe("DataTable scroll chrome and row dividers", () => {
     );
 
     const parent = screen.getByTestId("parent-scroll");
-    const viewport = document.querySelector<HTMLElement>("[data-scrollbar-visibility='hover']");
+    const viewport = document.querySelector<HTMLElement>(
+      "[data-scrollbar-visibility='hover']",
+    );
     expect(viewport).not.toBeNull();
     if (!viewport) return;
 
@@ -190,8 +212,8 @@ describe("DataTable scroll chrome and row dividers", () => {
 
     expect(viewport.scrollTop).toBe(240);
     expect(parent.scrollTop).toBe(120);
-    expect(viewport).toHaveClass("overscroll-y-none");
-    expect(viewport).not.toHaveClass("overscroll-y-auto");
+    expect(viewport).toHaveClass("overscroll-y-auto");
+    expect(viewport).not.toHaveClass("overscroll-y-none");
     expect(document.querySelector("[data-vt-header-chrome]")).toBeNull();
 
     const headerCells = Array.from(document.querySelectorAll("thead th"));
@@ -232,7 +254,11 @@ describe("DataTable scroll chrome and row dividers", () => {
       });
     });
     Array.from(rows.at(-1)?.cells ?? []).forEach((cell) => {
-      expect(cell).not.toHaveClass("border-b", "first:rounded-l-lg", "last:rounded-r-lg");
+      expect(cell).not.toHaveClass(
+        "border-b",
+        "first:rounded-l-lg",
+        "last:rounded-r-lg",
+      );
     });
   });
 });

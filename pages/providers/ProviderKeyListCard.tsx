@@ -21,6 +21,7 @@ import { ProviderMetricChip } from "./components/ProviderMetricChip";
 import { ProviderModelChips } from "./components/ProviderModelChips";
 
 import { useTranslation } from "react-i18next";
+import { useOptionalAuth } from "@app/providers/AuthProvider";
 
 export function ProviderKeyListCard({
   items,
@@ -80,6 +81,12 @@ export function ProviderKeyListCard({
   showExcludedModels?: boolean;
 }) {
   const { t } = useTranslation();
+  const auth = useOptionalAuth();
+  const canWrite = auth?.can("providers.write") ?? true;
+  const canTest = auth?.can("providers.test") ?? true;
+  const canUseAPITools = auth?.state.principal
+    ? canTest && auth.state.principal.effective_tenant.type === "system"
+    : canTest;
   const showSkeleton = loading && items.length === 0;
 
   return (
@@ -87,10 +94,12 @@ export function ProviderKeyListCard({
       className="flex h-full min-h-0 flex-col"
       bodyClassName="min-h-0 flex flex-1 flex-col"
       actions={
-        <Button variant="primary" size="sm" onClick={onAdd}>
-          <Plus size={14} />
-          {t("providers.add_new")}
-        </Button>
+        canWrite ? (
+          <Button variant="primary" size="sm" onClick={onAdd}>
+            <Plus size={14} />
+            {t("providers.add_new")}
+          </Button>
+        ) : undefined
       }
     >
       {showSkeleton ? (
@@ -172,14 +181,14 @@ export function ProviderKeyListCard({
                     : undefined
                 }
                 onToggleEnabled={
-                  onToggleEnabled
+                  canWrite && onToggleEnabled
                     ? (enabled) => onToggleEnabled(idx, enabled)
                     : undefined
                 }
-                onEdit={() => onEdit(idx)}
-                onDelete={() => onDelete(idx)}
+                onEdit={canWrite ? () => onEdit(idx) : undefined}
+                onDelete={canWrite ? () => onDelete(idx) : undefined}
                 headerExtra={
-                  checkLatency
+                  canUseAPITools && checkLatency
                     ? (() => {
                         const latencyKey = item.apiKey;
                         const entry = getLatencyEntry?.(latencyKey) ?? {
@@ -278,7 +287,7 @@ export function ProviderKeyListCard({
                       count: stats.failure,
                     })}
                   />
-                  {renderMetricsExtra ? (
+                  {canTest && renderMetricsExtra ? (
                     <div className="ml-auto">
                       {renderMetricsExtra(item, idx, stats)}
                     </div>
@@ -318,7 +327,7 @@ export function ProviderKeyListCard({
                   </div>
                 ) : null}
 
-                {renderExtra ? renderExtra(item, idx) : null}
+                {canTest && renderExtra ? renderExtra(item, idx) : null}
               </ProviderCard>
             );
           })}

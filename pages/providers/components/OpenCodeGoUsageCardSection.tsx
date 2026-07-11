@@ -11,7 +11,8 @@ export interface OpenCodeGoUsageCacheEntry {
   error?: string;
 }
 
-const clampPercent = (value: number): number => Math.max(0, Math.min(100, value));
+const clampPercent = (value: number): number =>
+  Math.max(0, Math.min(100, value));
 
 type OpenCodeGoUsageState = Record<string, OpenCodeGoUsageCacheEntry>;
 type OpenCodeGoUsageSnapshot = {
@@ -22,11 +23,16 @@ type OpenCodeGoUsageListener = () => void;
 
 export interface OpenCodeGoUsageStore {
   getSnapshot: (cacheKey: string) => OpenCodeGoUsageSnapshot;
-  subscribe: (cacheKey: string, listener: OpenCodeGoUsageListener) => () => void;
+  subscribe: (
+    cacheKey: string,
+    listener: OpenCodeGoUsageListener,
+  ) => () => void;
   setLoading: (cacheKey: string, loading: boolean) => void;
   updateEntry: (
     cacheKey: string,
-    updater: (existing: OpenCodeGoUsageCacheEntry | undefined) => OpenCodeGoUsageCacheEntry,
+    updater: (
+      existing: OpenCodeGoUsageCacheEntry | undefined,
+    ) => OpenCodeGoUsageCacheEntry,
   ) => void;
   prune: (validKeys: Set<string>) => void;
 }
@@ -73,7 +79,9 @@ export function createOpenCodeGoUsageStore(
       setEntries({ ...entries, [cacheKey]: nextEntry }, [cacheKey]);
     },
     prune: (validKeys) => {
-      const staleKeys = Object.keys(entries).filter((key) => !validKeys.has(key));
+      const staleKeys = Object.keys(entries).filter(
+        (key) => !validKeys.has(key),
+      );
       if (staleKeys.length === 0) return;
       const next = { ...entries };
       staleKeys.forEach((key) => {
@@ -100,7 +108,8 @@ export function useOpenCodeGoUsageSnapshot(
     const updateSnapshot = () => {
       setSnapshot((previous) => {
         const next = readSnapshot();
-        return previous.usageEntry === next.usageEntry && previous.loading === next.loading
+        return previous.usageEntry === next.usageEntry &&
+          previous.loading === next.loading
           ? previous
           : next;
       });
@@ -141,13 +150,18 @@ export function mergeOpenCodeGoUsage(
   return result;
 }
 
-const resolveRemainingPercent = (usagePercentage: number | undefined): number | null => {
-  if (typeof usagePercentage !== "number" || !Number.isFinite(usagePercentage)) return null;
+const resolveRemainingPercent = (
+  usagePercentage: number | undefined,
+): number | null => {
+  if (typeof usagePercentage !== "number" || !Number.isFinite(usagePercentage))
+    return null;
   return clampPercent(100 - clampPercent(usagePercentage));
 };
 
 const formatPercent = (value: number): string =>
-  Number.isInteger(value) ? String(value) : value.toFixed(1).replace(/\.0$/, "");
+  Number.isInteger(value)
+    ? String(value)
+    : value.toFixed(1).replace(/\.0$/, "");
 
 const resolveRemainingTone = (
   remaining: number | null,
@@ -237,8 +251,12 @@ export function OpenCodeGoUsageCardSection({
   const { t } = useTranslation();
   const snapshot = useOpenCodeGoUsageSnapshot(usageStore, cacheKey, false);
   const usageEntry = queryReady ? snapshot.usageEntry : undefined;
-  const isLoading = queryReady ? (loading ?? (snapshot.loading || !snapshot.usageEntry)) : false;
-  const remainingUnknownText = t("providers.opencode_go_usage_remaining_unknown");
+  const isLoading = queryReady
+    ? (loading ?? (snapshot.loading || !snapshot.usageEntry))
+    : false;
+  const remainingUnknownText = t(
+    "providers.opencode_go_usage_remaining_unknown",
+  );
 
   const usageByType = new Map(
     (usageEntry?.usage ?? []).map((item) => [item.type.toLowerCase(), item]),
@@ -257,13 +275,15 @@ export function OpenCodeGoUsageCardSection({
           {windowTypes.map((type) => (
             <div
               key={type}
-              className="grid grid-cols-[2.5rem_minmax(0,1fr)_5.25rem] items-center gap-2"
+              className="grid min-w-0 grid-cols-1 gap-1 sm:grid-cols-[2.5rem_minmax(0,1fr)_5.25rem] sm:items-center sm:gap-2"
             >
               <span className="truncate text-xs font-semibold">
                 {getCompactUsageLabel(type, usageByType, t)}
               </span>
               <div className="h-1.5 rounded-full bg-slate-200/70 dark:bg-white/8" />
-              <span className="text-right text-xs tabular-nums">{remainingUnknownText}</span>
+              <span className="text-right text-xs tabular-nums">
+                {remainingUnknownText}
+              </span>
             </div>
           ))}
         </div>
@@ -278,7 +298,7 @@ export function OpenCodeGoUsageCardSection({
           {windowTypes.map((type) => (
             <div
               key={type}
-              className="grid grid-cols-[2.5rem_minmax(0,1fr)_5.25rem] items-center gap-2"
+              className="grid min-w-0 grid-cols-1 gap-1 sm:grid-cols-[2.5rem_minmax(0,1fr)_5.25rem] sm:items-center sm:gap-2"
             >
               <span className="truncate text-xs font-semibold text-slate-400 dark:text-white/45">
                 {getCompactUsageLabel(type, usageByType, t)}
@@ -308,14 +328,16 @@ export function OpenCodeGoUsageCardSection({
             return (
               <div
                 key={type}
-                className="grid grid-cols-[2.5rem_minmax(0,1fr)_5.25rem] items-center gap-2"
+                className="grid min-w-0 grid-cols-1 gap-1 sm:grid-cols-[2.5rem_minmax(0,1fr)_5.25rem] sm:items-center sm:gap-2"
               >
                 <span className="truncate text-xs font-semibold text-slate-600 dark:text-white/65">
                   {getCompactUsageLabel(type, usageByType, t)}
                 </span>
                 <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200/80 dark:bg-white/10">
                   <div
-                    className={["h-full rounded-full", tone.fillClass].join(" ")}
+                    className={["h-full rounded-full", tone.fillClass].join(
+                      " ",
+                    )}
                     style={{ width: `${remaining ?? 0}%` }}
                     aria-hidden="true"
                   />

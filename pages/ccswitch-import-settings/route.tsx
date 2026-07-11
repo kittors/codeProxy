@@ -14,5 +14,6 @@ export const ccswitchImportSettingsRoute = {
   layout: "dashboard",
   nav: { labelKey: "nav.ccswitchImportSettings" },
   redirects: [{ from: "/manage/ccswitch-import-settings", to: "/ccswitch-import-settings" }],
+  requiredPermission: "system.config.read",
   preload: preloadCcSwitchImportSettingsPage,
 };

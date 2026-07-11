@@ -12,5 +12,6 @@ export const imageGenerationRoute = {
   auth: true,
   layout: "dashboard",
   nav: { labelKey: "nav.imageGeneration" },
+  requiredPermission: "system.config.read",
   preload: preloadImageGenerationPage,
 };

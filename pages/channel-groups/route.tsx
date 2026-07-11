@@ -12,5 +12,6 @@ export const channelGroupsRoute = {
   auth: true,
   layout: "dashboard",
   nav: { labelKey: "nav.channelGroups" },
+  requiredPermission: "routing.read",
   preload: preloadChannelGroupsPage,
 };

@@ -16,6 +16,11 @@ const setAuthed = async (page: Page) => {
   });
 };
 
+const requestLogsScroller = (page: Page) =>
+  page.locator(".table-scrollbar", {
+    has: page.getByRole("table", { name: "Request Logs Table" }),
+  });
+
 const mockRequestLogsApis = async (page: Page) => {
   await page.route("**/v0/management/**", async (route) => {
     const url = route.request().url();
@@ -26,9 +31,15 @@ const mockRequestLogsApis = async (page: Page) => {
         timestamp: `2026-06-14T08:${String(index).padStart(2, "0")}:00Z`,
         api_key: `sk-test-${String(index).padStart(4, "0")}-extra-long-key-for-drag-visual-qa`,
         api_key_name: `QA Key ${index + 1} with deliberately long display name`,
-        model: index % 2 ? "claude-sonnet-4-extra-long-context" : "gpt-4.1-long-output-model",
+        model:
+          index % 2
+            ? "claude-sonnet-4-extra-long-context"
+            : "gpt-4.1-long-output-model",
         source: "openai",
-        channel_name: index % 2 ? "Anthropic long provider channel" : "OpenAI fallback channel",
+        channel_name:
+          index % 2
+            ? "Anthropic long provider channel"
+            : "OpenAI fallback channel",
         auth_index: `auth-${index + 1}`,
         failed: index === 4,
         streaming: true,
@@ -72,36 +83,56 @@ const mockRequestLogsApis = async (page: Page) => {
     }
 
     if (url.endsWith("/v0/management/config")) {
-      await route.fulfill({ status: 200, contentType: "application/json", body: "{}" });
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: "{}",
+      });
       return;
     }
 
-    await route.fulfill({ status: 200, contentType: "application/json", body: "{}" });
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: "{}",
+    });
   });
 };
 
 const readTableState = async (page: Page) =>
   page.evaluate(() => {
-    const scroller = document.querySelector(".table-scrollbar");
+    const scroller = document
+      .querySelector('th[data-vt-column-key="id"]')
+      ?.closest<HTMLElement>(".table-scrollbar");
     return {
-      order: [...document.querySelectorAll("th[data-vt-column-key]")].map((th) =>
-        th.getAttribute("data-vt-column-key"),
+      order: [...document.querySelectorAll("th[data-vt-column-key]")].map(
+        (th) => th.getAttribute("data-vt-column-key"),
       ),
       scrollLeft: scroller?.scrollLeft ?? 0,
       scrollWidth: scroller?.scrollWidth ?? 0,
       clientWidth: scroller?.clientWidth ?? 0,
-      draggingCells: document.querySelectorAll("[data-vt-column-dragging-cell]").length,
-      shiftedCells: document.querySelectorAll("[data-vt-column-shifted-cell]").length,
-      settledCells: document.querySelectorAll("[data-vt-column-settled-cell]").length,
-      storedOrder: localStorage.getItem("codeProxy.dataTable.columnOrder.v1.request-logs"),
+      draggingCells: document.querySelectorAll("[data-vt-column-dragging-cell]")
+        .length,
+      shiftedCells: document.querySelectorAll("[data-vt-column-shifted-cell]")
+        .length,
+      settledCells: document.querySelectorAll("[data-vt-column-settled-cell]")
+        .length,
+      storedOrder: localStorage.getItem(
+        "codeProxy.dataTable.columnOrder.v1.request-logs",
+      ),
     };
   });
 
 const scrollTableNearRightEdge = async (page: Page) =>
   page.evaluate(() => {
-    const scroller = document.querySelector<HTMLElement>(".table-scrollbar");
+    const scroller = document
+      .querySelector('th[data-vt-column-key="id"]')
+      ?.closest<HTMLElement>(".table-scrollbar");
     if (!scroller) throw new Error("Missing table scroller");
-    const maxScrollLeft = Math.max(0, scroller.scrollWidth - scroller.clientWidth);
+    const maxScrollLeft = Math.max(
+      0,
+      scroller.scrollWidth - scroller.clientWidth,
+    );
     scroller.scrollLeft = Math.max(0, maxScrollLeft - 120);
     scroller.dispatchEvent(new Event("scroll", { bubbles: true }));
     return {
@@ -113,7 +144,8 @@ const scrollTableNearRightEdge = async (page: Page) =>
 const readDragVisualState = async (page: Page) =>
   page.evaluate(() => {
     const isOpaque = (style: CSSStyleDeclaration, inlineBackground: string) =>
-      style.backgroundColor !== "rgba(0, 0, 0, 0)" || inlineBackground.includes("rgb(");
+      style.backgroundColor !== "rgba(0, 0, 0, 0)" ||
+      inlineBackground.includes("rgb(");
     const readStyles = (selector: string) =>
       [...document.querySelectorAll<HTMLElement>(selector)].map((element) => {
         const style = getComputedStyle(element);
@@ -172,7 +204,11 @@ const readDragVisualState = async (page: Page) =>
 
 const readSettleVisualState = async (page: Page) =>
   page.evaluate(() => {
-    const cells = [...document.querySelectorAll<HTMLElement>("[data-vt-column-settled-cell]")];
+    const cells = [
+      ...document.querySelectorAll<HTMLElement>(
+        "[data-vt-column-settled-cell]",
+      ),
+    ];
     return {
       count: cells.length,
       columnKeys: cells.map((element) => element.dataset.vtColumnKey),
@@ -193,12 +229,19 @@ const readSettleVisualState = async (page: Page) =>
 
 const readResponseMetricsColumnState = async (page: Page) =>
   page.evaluate(() => {
-    const header = document.querySelector<HTMLElement>('th[data-vt-column-key="latency"]');
-    const firstCell = document.querySelector<HTMLElement>('td[data-vt-column-key="latency"]');
-    if (!header || !firstCell) throw new Error("Missing response metrics column");
+    const header = document.querySelector<HTMLElement>(
+      'th[data-vt-column-key="latency"]',
+    );
+    const firstCell = document.querySelector<HTMLElement>(
+      'td[data-vt-column-key="latency"]',
+    );
+    if (!header || !firstCell)
+      throw new Error("Missing response metrics column");
 
     const cellRect = firstCell.getBoundingClientRect();
-    const chips = [...firstCell.querySelectorAll<HTMLElement>(".rounded-full")].map((element) => {
+    const chips = [
+      ...firstCell.querySelectorAll<HTMLElement>(".rounded-full"),
+    ].map((element) => {
       const rect = element.getBoundingClientRect();
       const style = getComputedStyle(element);
       return {
@@ -209,7 +252,9 @@ const readResponseMetricsColumnState = async (page: Page) =>
       };
     });
     const storedWidths = JSON.parse(
-      localStorage.getItem("codeProxy.dataTable.columnWidths.v1.request-logs") ?? "{}",
+      localStorage.getItem(
+        "codeProxy.dataTable.columnWidths.v1.request-logs",
+      ) ?? "{}",
     ) as Record<string, unknown>;
 
     return {
@@ -217,19 +262,26 @@ const readResponseMetricsColumnState = async (page: Page) =>
       text: firstCell.textContent?.trim() ?? "",
       chips,
       chipsStayInsideCell: chips.every(
-        (chip) => chip.left >= cellRect.left - 1 && chip.right <= cellRect.right + 1,
+        (chip) =>
+          chip.left >= cellRect.left - 1 && chip.right <= cellRect.right + 1,
       ),
       storedLatencyWidth:
-        typeof storedWidths.latency === "number" ? Math.round(storedWidths.latency) : null,
+        typeof storedWidths.latency === "number"
+          ? Math.round(storedWidths.latency)
+          : null,
     };
   });
 
-test("Request Logs: filter dropdown uses the shared floating surface", async ({ page }) => {
+test("Request Logs: filter dropdown uses the shared floating surface", async ({
+  page,
+}) => {
   await setAuthed(page);
   await mockRequestLogsApis(page);
 
   await page.goto("/manage/#/monitor/request-logs");
-  await page.locator('th[data-vt-column-key="id"]').waitFor({ state: "visible" });
+  await page
+    .locator('th[data-vt-column-key="id"]')
+    .waitFor({ state: "visible" });
   await page.getByRole("combobox").first().click();
 
   const filterPanel = page.locator(".code-proxy-floating-surface").last();
@@ -237,64 +289,83 @@ test("Request Logs: filter dropdown uses the shared floating surface", async ({ 
   await expect(filterPanel).toHaveCSS("border-radius", "12px");
   await expect(filterPanel).toHaveCSS("border-top-width", "1px");
   await expect
-    .poll(async () => filterPanel.evaluate((el) => getComputedStyle(el).boxShadow))
+    .poll(async () =>
+      filterPanel.evaluate((el) => getComputedStyle(el).boxShadow),
+    )
     .not.toBe("none");
 });
 
-test("Request Logs: centers every header except ID over its column content", async ({ page }) => {
+test("Request Logs: centers every header except ID over its column content", async ({
+  page,
+}) => {
   await setAuthed(page);
   await mockRequestLogsApis(page);
 
   await page.goto("/manage/#/monitor/request-logs");
-  await page.locator('th[data-vt-column-key="id"]').waitFor({ state: "visible" });
+  await page
+    .locator('th[data-vt-column-key="id"]')
+    .waitFor({ state: "visible" });
 
-  const alignment = await page.locator("th[data-vt-column-key]").evaluateAll((headers) =>
-    headers.map((header) => {
-      const key = header.getAttribute("data-vt-column-key");
-      const content = header.querySelector<HTMLElement>("[data-vt-column-header-content] > span");
-      if (!content) throw new Error(`Missing header content for ${key}`);
+  const alignment = await page
+    .locator("th[data-vt-column-key]")
+    .evaluateAll((headers) =>
+      headers.map((header) => {
+        const key = header.getAttribute("data-vt-column-key");
+        const content = header.querySelector<HTMLElement>(
+          "[data-vt-column-header-content] > span",
+        );
+        if (!content) throw new Error(`Missing header content for ${key}`);
 
-      const headerRect = header.getBoundingClientRect();
-      const contentRect = content.getBoundingClientRect();
-      return {
-        key,
-        justifyContent: getComputedStyle(content).justifyContent,
-        centerDelta: Math.abs(
-          contentRect.left + contentRect.width / 2 - (headerRect.left + headerRect.width / 2),
-        ),
-      };
-    }),
+        const headerRect = header.getBoundingClientRect();
+        const contentRect = content.getBoundingClientRect();
+        return {
+          key,
+          justifyContent: getComputedStyle(content).justifyContent,
+          centerDelta: Math.abs(
+            contentRect.left +
+              contentRect.width / 2 -
+              (headerRect.left + headerRect.width / 2),
+          ),
+        };
+      }),
+    );
+
+  expect(alignment.find(({ key }) => key === "id")?.justifyContent).toBe(
+    "normal",
   );
-
-  expect(alignment.find(({ key }) => key === "id")?.justifyContent).toBe("normal");
   for (const column of alignment.filter(({ key }) => key !== "id")) {
     expect(column.justifyContent, column.key ?? undefined).toBe("center");
     expect(column.centerDelta, column.key ?? undefined).toBeLessThanOrEqual(1);
   }
 
   const channelHeader = page.locator('th[data-vt-column-key="channelName"]');
-  const channelLabel = channelHeader.locator("[data-vt-column-header-content] > span > span");
+  const channelLabel = channelHeader.locator(
+    "[data-vt-column-header-content] > span > span",
+  );
   const centerBeforeHover = await channelLabel.evaluate((element) => {
     const rect = element.getBoundingClientRect();
     return rect.left + rect.width / 2;
   });
 
   await channelHeader.hover();
-  await expect(channelHeader.locator("[data-vt-column-reorder-handle]")).toHaveCSS(
-    "opacity",
-    "1",
-  );
+  await expect(
+    channelHeader.locator("[data-vt-column-reorder-handle]"),
+  ).toHaveCSS("opacity", "1");
 
   const hoverState = await channelLabel.evaluate((element) => {
     const rect = element.getBoundingClientRect();
-    const content = element.closest<HTMLElement>("[data-vt-column-header-content]");
+    const content = element.closest<HTMLElement>(
+      "[data-vt-column-header-content]",
+    );
     return {
       center: rect.left + rect.width / 2,
       paddingLeft: content ? getComputedStyle(content).paddingLeft : null,
     };
   });
   expect(hoverState.paddingLeft).toBe("0px");
-  expect(Math.abs(hoverState.center - centerBeforeHover)).toBeLessThanOrEqual(1);
+  expect(Math.abs(hoverState.center - centerBeforeHover)).toBeLessThanOrEqual(
+    1,
+  );
 });
 
 test("Request Logs: response metrics column resize clamps at its minimum width", async ({
@@ -304,7 +375,9 @@ test("Request Logs: response metrics column resize clamps at its minimum width",
   await mockRequestLogsApis(page);
 
   await page.goto("/manage/#/monitor/request-logs");
-  await page.locator('th[data-vt-column-key="latency"]').waitFor({ state: "visible" });
+  await page
+    .locator('th[data-vt-column-key="latency"]')
+    .waitFor({ state: "visible" });
 
   const dragStart = await page
     .locator('th[data-vt-column-key="latency"] [data-vt-column-resizer]')
@@ -312,7 +385,9 @@ test("Request Logs: response metrics column resize clamps at its minimum width",
       const rect = element.getBoundingClientRect();
       const headerRect = element.closest("th")?.getBoundingClientRect();
       return {
-        x: headerRect ? Math.min(rect.left + rect.width / 2, headerRect.right - 2) : rect.left,
+        x: headerRect
+          ? Math.min(rect.left + rect.width / 2, headerRect.right - 2)
+          : rect.left,
         y: rect.top + rect.height / 2,
       };
     });
@@ -330,7 +405,10 @@ test("Request Logs: response metrics column resize clamps at its minimum width",
   expect(during.text).toMatch(/Streaming|流式/);
   expect(during.text).not.toContain("--");
   expect(during.chipsStayInsideCell).toBe(true);
-  expect(during.chips.find((chip) => /Streaming|流式/.test(chip.text))?.borderTopWidth).toBe("1px");
+  expect(
+    during.chips.find((chip) => /Streaming|流式/.test(chip.text))
+      ?.borderTopWidth,
+  ).toBe("1px");
 
   await page.mouse.up();
 
@@ -345,21 +423,27 @@ test("Request Logs: column reorder follows the pointer and auto-scrolls horizont
   await mockRequestLogsApis(page);
 
   await page.goto("/manage/#/monitor/request-logs");
-  await page.locator('th[data-vt-column-key="timestamp"]').waitFor({ state: "visible" });
+  await page
+    .locator('th[data-vt-column-key="timestamp"]')
+    .waitFor({ state: "visible" });
 
   const before = await readTableState(page);
   expect(before.scrollWidth).toBeGreaterThan(before.clientWidth);
 
   const dragStart = await page
-    .locator('th[data-vt-column-key="timestamp"] [data-vt-column-reorder-handle]')
+    .locator(
+      'th[data-vt-column-key="timestamp"] [data-vt-column-reorder-handle]',
+    )
     .evaluate((element) => {
       if (element.hasAttribute("title") || element.hasAttribute("aria-label")) {
-        throw new Error("Column reorder handle must not expose hover tooltip attributes");
+        throw new Error(
+          "Column reorder handle must not expose hover tooltip attributes",
+        );
       }
       const rect = element.getBoundingClientRect();
       return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
     });
-  const scrollerRect = await page.locator(".table-scrollbar").evaluate((element) => {
+  const scrollerRect = await requestLogsScroller(page).evaluate((element) => {
     const rect = element.getBoundingClientRect();
     return { right: rect.right };
   });
@@ -428,7 +512,9 @@ test("Request Logs: column reorder follows the pointer and auto-scrolls horizont
   const settleVisual = await readSettleVisualState(page);
   expect(settleVisual.count).toBeGreaterThan(0);
   expect(settleVisual.headerKeys).toEqual(["timestamp"]);
-  expect(settleVisual.columnKeys.every((key) => key === "timestamp")).toBe(true);
+  expect(settleVisual.columnKeys.every((key) => key === "timestamp")).toBe(
+    true,
+  );
   expect(
     settleVisual.styles.every(
       (style) =>
@@ -456,7 +542,9 @@ test("Request Logs: last column does not auto-scroll past the right reorder boun
   await mockRequestLogsApis(page);
 
   await page.goto("/manage/#/monitor/request-logs");
-  await page.locator('th[data-vt-column-key="model"]').waitFor({ state: "visible" });
+  await page
+    .locator('th[data-vt-column-key="model"]')
+    .waitFor({ state: "visible" });
 
   const nearRight = await scrollTableNearRightEdge(page);
   expect(nearRight.maxScrollLeft).toBeGreaterThan(160);
@@ -468,7 +556,7 @@ test("Request Logs: last column does not auto-scroll past the right reorder boun
       const rect = element.getBoundingClientRect();
       return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
     });
-  const scrollerRight = await page.locator(".table-scrollbar").evaluate((element) => {
+  const scrollerRight = await requestLogsScroller(page).evaluate((element) => {
     const rect = element.getBoundingClientRect();
     return rect.right;
   });
@@ -490,12 +578,16 @@ test("Request Logs: last column does not auto-scroll past the right reorder boun
   expect(after.order.at(-1)).toBe("model");
 });
 
-test("Request Logs: first column drag keeps a straight left edge", async ({ page }) => {
+test("Request Logs: first column drag keeps a straight left edge", async ({
+  page,
+}) => {
   await setAuthed(page);
   await mockRequestLogsApis(page);
 
   await page.goto("/manage/#/monitor/request-logs");
-  await page.locator('th[data-vt-column-key="id"]').waitFor({ state: "visible" });
+  await page
+    .locator('th[data-vt-column-key="id"]')
+    .waitFor({ state: "visible" });
 
   const dragStart = await page
     .locator('th[data-vt-column-key="id"] [data-vt-column-reorder-handle]')
@@ -514,19 +606,25 @@ test("Request Logs: first column drag keeps a straight left edge", async ({ page
   expect(visualDuringDrag.dragging.length).toBeGreaterThan(0);
   expect(
     visualDuringDrag.dragging.every(
-      (style) => style.borderTopLeftRadius === "0px" && style.borderBottomLeftRadius === "0px",
+      (style) =>
+        style.borderTopLeftRadius === "0px" &&
+        style.borderBottomLeftRadius === "0px",
     ),
   ).toBe(true);
 
   await page.mouse.up();
 });
 
-test("Request Logs: last column drag keeps a straight right edge", async ({ page }) => {
+test("Request Logs: last column drag keeps a straight right edge", async ({
+  page,
+}) => {
   await setAuthed(page);
   await mockRequestLogsApis(page);
 
   await page.goto("/manage/#/monitor/request-logs");
-  await page.locator('th[data-vt-column-key="model"]').waitFor({ state: "visible" });
+  await page
+    .locator('th[data-vt-column-key="model"]')
+    .waitFor({ state: "visible" });
   await scrollTableNearRightEdge(page);
 
   const dragStart = await page
@@ -546,7 +644,9 @@ test("Request Logs: last column drag keeps a straight right edge", async ({ page
   expect(visualDuringDrag.dragging.length).toBeGreaterThan(0);
   expect(
     visualDuringDrag.dragging.every(
-      (style) => style.borderTopRightRadius === "0px" && style.borderBottomRightRadius === "0px",
+      (style) =>
+        style.borderTopRightRadius === "0px" &&
+        style.borderBottomRightRadius === "0px",
     ),
   ).toBe(true);
 

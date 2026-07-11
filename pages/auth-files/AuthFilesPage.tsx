@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
+import { useOptionalAuth } from "@app/providers/AuthProvider";
 import {
   Button,
   ConfirmModal,
@@ -12,7 +13,10 @@ import {
   useToast,
 } from "@code-proxy/ui";
 import { quotaApi, type AuthFileItem } from "@code-proxy/api-client";
-import { proxiesApi, type ProxyPoolEntry } from "@code-proxy/api-client/endpoints/proxies";
+import {
+  proxiesApi,
+  type ProxyPoolEntry,
+} from "@code-proxy/api-client/endpoints/proxies";
 import { OAuthLoginDialog } from "@features/oauth-login";
 import { AuthFileDetailModal } from "./components/AuthFileDetailModal";
 import { AuthFilesExcludedTab } from "./components/AuthFilesExcludedTab";
@@ -34,7 +38,10 @@ import { useAuthFilesModelOwnerGroups } from "./hooks/useAuthFilesModelOwnerGrou
 import { useAuthFilesQuotaState } from "./hooks/useAuthFilesQuotaState";
 import { useAuthFilesGroupOverview } from "./hooks/useAuthFilesGroupOverview";
 import { useAuthFilesOAuthConfig } from "./hooks/useAuthFilesOAuthConfig";
-import { consumeCodexResetCredit, resolveQuotaProvider } from "@features/quota-preview/quota-fetch";
+import {
+  consumeCodexResetCredit,
+  resolveQuotaProvider,
+} from "@features/quota-preview/quota-fetch";
 import {
   AUTH_FILE_STATUS_FILTERS,
   normalizeAuthIndexValue,
@@ -87,7 +94,10 @@ const findChangedAuthFile = (
   nextFiles: AuthFileItem[],
 ): AuthFileItem | null => {
   const previousSignatures = new Map(
-    previousFiles.map((file) => [String(file.name ?? ""), buildAuthFileSignature(file)]),
+    previousFiles.map((file) => [
+      String(file.name ?? ""),
+      buildAuthFileSignature(file),
+    ]),
   );
   return (
     nextFiles.find((file) => {
@@ -100,9 +110,16 @@ const findChangedAuthFile = (
 export function AuthFilesPage() {
   const { t } = useTranslation();
   const { notify } = useToast();
+  const auth = useOptionalAuth();
+  const identityFingerprintEnabled = auth?.can("system.config.read") ?? true;
+  const canReadProxies = auth?.can("proxies.read") ?? true;
+  const oauthExcludedEnabled = auth?.state.principal
+    ? auth.state.principal.effective_tenant.type === "system"
+    : true;
   const [searchParams] = useSearchParams();
 
-  const [configModalTab, setConfigModalTab] = useState<AuthFilesConfigModalTab | null>(null);
+  const [configModalTab, setConfigModalTab] =
+    useState<AuthFilesConfigModalTab | null>(null);
   const [configSaving, setConfigSaving] = useState(false);
   const {
     isPending,
@@ -139,7 +156,11 @@ export function AuthFilesPage() {
     saveAliasAll,
     openImport,
     applyImport,
-  } = useAuthFilesOAuthConfig(configModalTab ?? "files");
+  } = useAuthFilesOAuthConfig(
+    !oauthExcludedEnabled && configModalTab === "excluded"
+      ? "alias"
+      : (configModalTab ?? "files"),
+  );
 
   const {
     files,
@@ -155,11 +176,16 @@ export function AuthFilesPage() {
   } = useAuthFilesDataState();
 
   const [confirm, setConfirm] = useState<AuthFilesConfirmAction | null>(null);
-  const [resettingCreditFileName, setResettingCreditFileName] = useState<string | null>(null);
-  const [clearingStatusFileName, setClearingStatusFileName] = useState<string | null>(null);
+  const [resettingCreditFileName, setResettingCreditFileName] = useState<
+    string | null
+  >(null);
+  const [clearingStatusFileName, setClearingStatusFileName] = useState<
+    string | null
+  >(null);
 
   const [oauthDialogOpen, setOauthDialogOpen] = useState(false);
-  const [oauthDialogDefaultTab, setOauthDialogDefaultTab] = useState<OAuthDialogTab>("codex");
+  const [oauthDialogDefaultTab, setOauthDialogDefaultTab] =
+    useState<OAuthDialogTab>("codex");
 
   const [filter, setFilter] = useState("all");
   const [tagFilter, setTagFilter] = useState("");
@@ -167,8 +193,12 @@ export function AuthFilesPage() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [selectedFileNames, setSelectedFileNames] = useState<string[]>([]);
-  const [proxyPoolEntries, setProxyPoolEntries] = useState<ProxyPoolEntry[]>([]);
-  const [tagsEditorFileName, setTagsEditorFileName] = useState<string | null>(null);
+  const [proxyPoolEntries, setProxyPoolEntries] = useState<ProxyPoolEntry[]>(
+    [],
+  );
+  const [tagsEditorFileName, setTagsEditorFileName] = useState<string | null>(
+    null,
+  );
   const [refreshingCurrentPage, setRefreshingCurrentPage] = useState(false);
   const isMountedRef = useRef(true);
   const refreshingFilesAndQuotaRef = useRef(false);
@@ -177,7 +207,9 @@ export function AuthFilesPage() {
   const filesRef = useRef<AuthFileItem[]>(files);
   const oauthBaselineFilesRef = useRef<AuthFileItem[]>([]);
   const oauthBaselineSignatureRef = useRef("");
-  const previousConfigModalTabRef = useRef<AuthFilesConfigModalTab | null>(null);
+  const previousConfigModalTabRef = useRef<AuthFilesConfigModalTab | null>(
+    null,
+  );
 
   useEffect(() => {
     filesRef.current = files;
@@ -192,7 +224,9 @@ export function AuthFilesPage() {
   const setOAuthDialogOpenWithBaseline = useCallback((open: boolean) => {
     if (open) {
       oauthBaselineFilesRef.current = filesRef.current;
-      oauthBaselineSignatureRef.current = buildAuthFilesSignature(filesRef.current);
+      oauthBaselineSignatureRef.current = buildAuthFilesSignature(
+        filesRef.current,
+      );
     }
     setOauthDialogOpen(open);
   }, []);
@@ -202,7 +236,8 @@ export function AuthFilesPage() {
     changed: boolean;
   }> => {
     const previousSignature =
-      oauthBaselineSignatureRef.current || buildAuthFilesSignature(filesRef.current);
+      oauthBaselineSignatureRef.current ||
+      buildAuthFilesSignature(filesRef.current);
     const deadline = Date.now() + OAUTH_AUTH_FILES_REFRESH_TIMEOUT_MS;
 
     while (true) {
@@ -259,7 +294,7 @@ export function AuthFilesPage() {
     savePrefixProxy,
     saveChannelEditor,
     saveCodexOAuthAdmission,
-  } = useAuthFilesDetailEditors(loadAll, setFiles);
+  } = useAuthFilesDetailEditors(loadAll, setFiles, identityFingerprintEnabled);
 
   const {
     modelOwnerGroupsLoading,
@@ -309,23 +344,38 @@ export function AuthFilesPage() {
   useEffect(() => {
     const requestedTab = searchParams.get("tab");
     if (requestedTab === "excluded" || requestedTab === "alias") {
-      setConfigModalTab(requestedTab);
+      setConfigModalTab(
+        requestedTab === "excluded" && !oauthExcludedEnabled
+          ? "alias"
+          : requestedTab,
+      );
       return;
     }
     if (requestedTab === "files") {
       setConfigModalTab(null);
     }
-  }, [searchParams]);
+  }, [oauthExcludedEnabled, searchParams]);
 
   useEffect(() => {
+    if (!canReadProxies) {
+      setProxyPoolEntries([]);
+      return;
+    }
     void proxiesApi
       .list()
       .then(setProxyPoolEntries)
       .catch(() => setProxyPoolEntries([]));
-  }, []);
+  }, [canReadProxies]);
 
   useEffect(() => {
-    writeAuthFilesUiState({ tab: "files", filter, tagFilter, statusFilter, search, page });
+    writeAuthFilesUiState({
+      tab: "files",
+      filter,
+      tagFilter,
+      statusFilter,
+      search,
+      page,
+    });
   }, [filter, page, search, statusFilter, tagFilter]);
 
   useEffect(() => {
@@ -385,7 +435,13 @@ export function AuthFilesPage() {
 
   useEffect(() => {
     const normalizedFilter = normalizeProviderKey(filter);
-    if (!normalizedFilter || normalizedFilter === "all" || loading || refreshingAll) return;
+    if (
+      !normalizedFilter ||
+      normalizedFilter === "all" ||
+      loading ||
+      refreshingAll
+    )
+      return;
     const filterExists = providerOptions.some(
       (provider) => normalizeProviderKey(provider) === normalizedFilter,
     );
@@ -427,10 +483,14 @@ export function AuthFilesPage() {
     refreshUsageDataForFiles,
   });
 
-  const { callsByAuthIndex, refreshCycleUsageForFiles } = useAuthFilesCycleUsageState();
+  const { callsByAuthIndex, refreshCycleUsageForFiles } =
+    useAuthFilesCycleUsageState();
 
   const refreshQuotaAndCycleUsage = useCallback(
-    async (file: AuthFileItem, provider: NonNullable<ReturnType<typeof resolveQuotaProvider>>) => {
+    async (
+      file: AuthFileItem,
+      provider: NonNullable<ReturnType<typeof resolveQuotaProvider>>,
+    ) => {
       await refreshQuota(file, provider);
       await refreshCycleUsageForFiles([file], { force: true });
     },
@@ -444,13 +504,19 @@ export function AuthFilesPage() {
         return provider ? [{ file, provider }] : [];
       });
       if (!targets.length) return;
-      await runQuotaRefreshBatch(targets, { markAsAutoRefreshing: true, showLoading: true });
+      await runQuotaRefreshBatch(targets, {
+        markAsAutoRefreshing: true,
+        showLoading: true,
+      });
     },
     [runQuotaRefreshBatch],
   );
 
   const refreshQuotaForUploadedFiles = useCallback(
-    async (result: AuthFilesUploadResult | null, previousNames: Set<string>) => {
+    async (
+      result: AuthFilesUploadResult | null,
+      previousNames: Set<string>,
+    ) => {
       if (!result) return;
       const uploadedNames = new Set(result.uploadedNames);
       const targetFiles = result.files.filter(
@@ -463,7 +529,10 @@ export function AuthFilesPage() {
 
   const refreshAfterOAuthAuthorized = useCallback(async () => {
     const result = await waitForAuthFilesChanged();
-    const changedFile = findChangedAuthFile(oauthBaselineFilesRef.current, result.files);
+    const changedFile = findChangedAuthFile(
+      oauthBaselineFilesRef.current,
+      result.files,
+    );
     if (!changedFile) return;
 
     const provider = normalizeProviderKey(resolveFileType(changedFile));
@@ -521,7 +590,8 @@ export function AuthFilesPage() {
           message: t("auth_files.reset_credit_success", { name }),
         });
       } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : t("common.unknown_error");
+        const message =
+          err instanceof Error ? err.message : t("common.unknown_error");
         notify({
           type: "error",
           message: t("auth_files.reset_credit_failed", { name, message }),
@@ -530,14 +600,22 @@ export function AuthFilesPage() {
         setResettingCreditFileName(null);
       }
     },
-    [notify, refreshCycleUsageForFiles, refreshQuota, resettingCreditFileName, t],
+    [
+      notify,
+      refreshCycleUsageForFiles,
+      refreshQuota,
+      resettingCreditFileName,
+      t,
+    ],
   );
 
   const clearAuthFileStatus = useCallback(
     async (file: AuthFileItem) => {
       if (clearingStatusFileName) return;
       const name = resolveAuthFileDisplayName(file) || file.name;
-      const authIndex = normalizeAuthIndexValue(file.auth_index ?? file.authIndex);
+      const authIndex = normalizeAuthIndexValue(
+        file.auth_index ?? file.authIndex,
+      );
       if (!authIndex) {
         notify({
           type: "error",
@@ -558,7 +636,8 @@ export function AuthFilesPage() {
           message: t("auth_files.clear_status_success", { name }),
         });
       } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : t("common.unknown_error");
+        const message =
+          err instanceof Error ? err.message : t("common.unknown_error");
         notify({
           type: "error",
           message: t("auth_files.clear_status_failed", { name, message }),
@@ -571,16 +650,27 @@ export function AuthFilesPage() {
   );
 
   const refreshFilesAndQuota = useCallback(async () => {
-    if (refreshingFilesAndQuotaRef.current || loading || usageLoading || refreshingAll) return;
+    if (
+      refreshingFilesAndQuotaRef.current ||
+      loading ||
+      usageLoading ||
+      refreshingAll
+    )
+      return;
     refreshingFilesAndQuotaRef.current = true;
     setRefreshingCurrentPage(true);
     const currentPageItems = pageItems;
     try {
       const quotaRefreshPromise = forceRefreshPage();
       const filesRefreshPromise = refreshFilesForItems(currentPageItems);
-      const [updatedFiles] = await Promise.all([filesRefreshPromise, quotaRefreshPromise]);
+      const [updatedFiles] = await Promise.all([
+        filesRefreshPromise,
+        quotaRefreshPromise,
+      ]);
       if (filesViewMode === "cards") {
-        const updatedByName = new Map(updatedFiles.map((file) => [file.name, file]));
+        const updatedByName = new Map(
+          updatedFiles.map((file) => [file.name, file]),
+        );
         await refreshCycleUsageForFiles(
           currentPageItems.map((file) => updatedByName.get(file.name) ?? file),
           { force: true },
@@ -611,7 +701,10 @@ export function AuthFilesPage() {
     if (!configModalTab || configSaving) return;
     setConfigSaving(true);
     try {
-      const saved = configModalTab === "alias" ? await saveAliasAll() : await saveExcludedAll();
+      const saved =
+        configModalTab === "alias"
+          ? await saveAliasAll()
+          : await saveExcludedAll();
       if (saved) {
         setConfigModalTab(null);
       }
@@ -666,19 +759,31 @@ export function AuthFilesPage() {
     resolveProviderLabel,
   });
 
-  const filterChips = useMemo(() => ["all", ...providerOptions], [providerOptions]);
+  const filterChips = useMemo(
+    () => ["all", ...providerOptions],
+    [providerOptions],
+  );
   const tagsEditorFile = useMemo(
     () => files.find((file) => file.name === tagsEditorFileName) ?? null,
     [files, tagsEditorFileName],
   );
-  const normalizedFilter = useMemo(() => normalizeProviderKey(filter), [filter]);
+  const normalizedFilter = useMemo(
+    () => normalizeProviderKey(filter),
+    [filter],
+  );
   const selectedModelOwner =
-    normalizedFilter === "all" ? "" : (modelOwnerByAuthGroup[normalizedFilter] ?? "");
+    normalizedFilter === "all"
+      ? ""
+      : (modelOwnerByAuthGroup[normalizedFilter] ?? "");
   const detailModelOwnerValue = detailFile
-    ? (modelOwnerByAuthGroup[normalizeProviderKey(resolveFileType(detailFile))] ?? "")
+    ? (modelOwnerByAuthGroup[
+        normalizeProviderKey(resolveFileType(detailFile))
+      ] ?? "")
     : "";
   const detailModelOwnerGroup = detailModelOwnerValue
-    ? (modelOwnerGroups.find((group) => group.value === detailModelOwnerValue) ?? null)
+    ? (modelOwnerGroups.find(
+        (group) => group.value === detailModelOwnerValue,
+      ) ?? null)
     : null;
   const {
     translateQuotaText,
@@ -733,7 +838,9 @@ export function AuthFilesPage() {
         modelOwnerGroupsLoading={modelOwnerGroupsLoading}
         modelOwnerGroups={modelOwnerGroups}
         selectedModelOwner={selectedModelOwner}
-        setSelectedModelOwner={(owner) => setModelOwnerForAuthGroup(filter, owner)}
+        setSelectedModelOwner={(owner) =>
+          setModelOwnerForAuthGroup(filter, owner)
+        }
         search={search}
         setSearch={updateSearch}
         loading={loading}
@@ -753,7 +860,9 @@ export function AuthFilesPage() {
         uploadProgress={uploadProgress}
         setOauthDialogDefaultTab={setOauthDialogDefaultTab}
         setOauthDialogOpen={setOAuthDialogOpenWithBaseline}
-        openConfigModal={() => setConfigModalTab("excluded")}
+        openConfigModal={() =>
+          setConfigModalTab(oauthExcludedEnabled ? "excluded" : "alias")
+        }
         selectableFilteredFiles={selectableFilteredFiles}
         selectedCount={selectedCount}
         selectCurrentPage={selectCurrentPage}
@@ -828,7 +937,9 @@ export function AuthFilesPage() {
               variant="primary"
               size="sm"
               onClick={() => void saveConfigModal()}
-              disabled={configSaving || excludedLoading || aliasLoading || isPending}
+              disabled={
+                configSaving || excludedLoading || aliasLoading || isPending
+              }
             >
               {configSaving ? t("common.saving") : t("auth_files.save")}
             </Button>
@@ -839,33 +950,43 @@ export function AuthFilesPage() {
         {configModalTab ? (
           <Tabs
             value={configModalTab}
-            onValueChange={(next) => setConfigModalTab(next as AuthFilesConfigModalTab)}
+            onValueChange={(next) =>
+              setConfigModalTab(next as AuthFilesConfigModalTab)
+            }
             size="sm"
           >
             <div className="mb-4 flex shrink-0 justify-start">
               <TabsList>
-                <TabsTrigger value="excluded">{t("auth_files_page.excluded_tab")}</TabsTrigger>
-                <TabsTrigger value="alias">{t("auth_files_page.alias_tab")}</TabsTrigger>
+                {oauthExcludedEnabled ? (
+                  <TabsTrigger value="excluded">
+                    {t("auth_files_page.excluded_tab")}
+                  </TabsTrigger>
+                ) : null}
+                <TabsTrigger value="alias">
+                  {t("auth_files_page.alias_tab")}
+                </TabsTrigger>
               </TabsList>
             </div>
 
             <div className="min-h-0 flex-1 overflow-y-auto pr-1">
-              <TabsContent value="excluded">
-                <AuthFilesExcludedTab
-                  excludedLoading={excludedLoading}
-                  isPending={isPending}
-                  refreshExcluded={refreshExcluded}
-                  excludedUnsupported={excludedUnsupported}
-                  excludedNewProvider={excludedNewProvider}
-                  setExcludedNewProvider={setExcludedNewProvider}
-                  addExcludedProvider={addExcludedProvider}
-                  excluded={excluded}
-                  excludedDraft={excludedDraft}
-                  setExcludedDraft={setExcludedDraft}
-                  deleteExcludedProvider={deleteExcludedProvider}
-                  showHeading={false}
-                />
-              </TabsContent>
+              {oauthExcludedEnabled ? (
+                <TabsContent value="excluded">
+                  <AuthFilesExcludedTab
+                    excludedLoading={excludedLoading}
+                    isPending={isPending}
+                    refreshExcluded={refreshExcluded}
+                    excludedUnsupported={excludedUnsupported}
+                    excludedNewProvider={excludedNewProvider}
+                    setExcludedNewProvider={setExcludedNewProvider}
+                    addExcludedProvider={addExcludedProvider}
+                    excluded={excluded}
+                    excludedDraft={excludedDraft}
+                    setExcludedDraft={setExcludedDraft}
+                    deleteExcludedProvider={deleteExcludedProvider}
+                    showHeading={false}
+                  />
+                </TabsContent>
+              ) : null}
 
               <TabsContent value="alias">
                 <AuthFilesAliasTab
@@ -890,7 +1011,11 @@ export function AuthFilesPage() {
 
       <AuthFileDetailModal
         open={detailOpen}
-        detailFile={detailFile}
+        detailFile={
+          identityFingerprintEnabled || !detailFile
+            ? detailFile
+            : { ...detailFile, identity_fingerprint_summary: undefined }
+        }
         detailLoading={detailLoading}
         detailText={detailText}
         detailTab={detailTab}
@@ -919,7 +1044,9 @@ export function AuthFilesPage() {
         mappedModelOwnerGroup={detailModelOwnerGroup}
         mappedModelOwnerValue={detailModelOwnerValue}
         excluded={excluded}
-        quotaState={detailFile ? (quotaByFileName[detailFile.name] ?? null) : null}
+        quotaState={
+          detailFile ? (quotaByFileName[detailFile.name] ?? null) : null
+        }
         prefixProxyEditor={prefixProxyEditor}
         setPrefixProxyEditor={setPrefixProxyEditor}
         prefixProxyDirty={prefixProxyDirty}
@@ -992,11 +1119,16 @@ export function AuthFilesPage() {
         description={
           confirm?.type === "resetCredit"
             ? t("auth_files.reset_credit_confirm_desc", {
-                name: resolveAuthFileDisplayName(confirm.file) || confirm.file.name,
-                count: quotaByFileName[confirm.file.name]?.resetCreditCount ?? 0,
+                name:
+                  resolveAuthFileDisplayName(confirm.file) || confirm.file.name,
+                count:
+                  quotaByFileName[confirm.file.name]?.resetCreditCount ?? 0,
               })
             : t("auth_files.batch_delete_confirm", {
-                count: confirm?.type === "deleteSelection" ? confirm.names.length : 0,
+                count:
+                  confirm?.type === "deleteSelection"
+                    ? confirm.names.length
+                    : 0,
               })
         }
         confirmText={
@@ -1006,7 +1138,11 @@ export function AuthFilesPage() {
         }
         cancelText={t("common.cancel")}
         variant={confirm?.type === "resetCredit" ? "primary" : "danger"}
-        busy={confirm?.type === "resetCredit" ? Boolean(resettingCreditFileName) : deletingAll}
+        busy={
+          confirm?.type === "resetCredit"
+            ? Boolean(resettingCreditFileName)
+            : deletingAll
+        }
         onClose={() => {
           if (resettingCreditFileName) return;
           setConfirm(null);
@@ -1018,7 +1154,9 @@ export function AuthFilesPage() {
             void handleResetCredit(action.file).finally(() => setConfirm(null));
             return;
           }
-          void handleDeleteSelection(action.names).finally(() => setConfirm(null));
+          void handleDeleteSelection(action.names).finally(() =>
+            setConfirm(null),
+          );
         }}
       />
     </div>

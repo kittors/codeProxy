@@ -44,6 +44,13 @@ export const extractApiErrorMessage = (payload: unknown, fallback: string): stri
   return fallback;
 };
 
+export const extractApiErrorCode = (payload: unknown): string => {
+  if (!isRecord(payload)) return "";
+  if (typeof payload.code === "string") return payload.code.trim();
+  if (!isRecord(payload.error) || typeof payload.error.code !== "string") return "";
+  return payload.error.code.trim();
+};
+
 export class ApiError extends Error {
   readonly name: string = "ApiError";
 

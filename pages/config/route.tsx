@@ -11,5 +11,6 @@ export const configRoute = {
   layout: "dashboard",
   nav: { labelKey: "nav.config" },
   redirects: [{ from: "/settings", to: "/config" }],
+  requiredPermission: "system.config.read",
   preload: preloadConfigPage,
 };
