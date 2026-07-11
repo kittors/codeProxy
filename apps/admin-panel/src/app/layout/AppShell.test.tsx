@@ -174,6 +174,7 @@ describe("AppShell route progress", () => {
   });
 
   test("keeps a stable icon rail and the same sidebar toggle icon when collapsed", () => {
+    vi.useFakeTimers();
     renderShell("/config");
 
     const collapseButton = screen.getByRole("button", {
@@ -182,6 +183,9 @@ describe("AppShell route progress", () => {
     const iconClass = collapseButton.querySelector("svg")?.getAttribute("class");
 
     fireEvent.click(collapseButton);
+    act(() => {
+      vi.advanceTimersByTime(90);
+    });
 
     const aside = document.querySelector("aside");
     expect(aside).toHaveAttribute("data-collapsed", "true");

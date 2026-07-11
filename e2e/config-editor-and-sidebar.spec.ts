@@ -114,6 +114,7 @@ test("Sidebar: collapse/expand should keep nav items nowrap and slide out of vie
   await expect(modelsGroup).toHaveAttribute("aria-expanded", "false");
   await modelsGroup.click();
   await expect(page.getByRole("link", { name: /^Models|模型管理$/i })).toBeVisible();
+  const modelsIconBeforeCollapse = await modelsGroup.locator("svg").first().boundingBox();
 
   const linkWhiteSpace = await dashboardLink.evaluate((el) => getComputedStyle(el).whiteSpace);
   expect(linkWhiteSpace).toBe("nowrap");
@@ -166,8 +167,10 @@ test("Sidebar: collapse/expand should keep nav items nowrap and slide out of vie
   await collapsedModelsGroup.hover();
   await expect(page.getByRole("menuitem", { name: /^Models$|^模型管理$/i })).toBeVisible();
   const railPositionAfter = await collapsedModelsGroup.boundingBox();
+  const modelsIconAfterCollapse = await collapsedModelsGroup.locator("svg").first().boundingBox();
   expect(railPositionAfter?.x).toBe(railPositionBefore?.x);
   expect(railPositionAfter?.y).toBe(railPositionBefore?.y);
+  expect(modelsIconAfterCollapse).toEqual(modelsIconBeforeCollapse);
   await expect(page.getByRole("button", { name: "Admin" })).toBeVisible();
 
   await aside.hover();
