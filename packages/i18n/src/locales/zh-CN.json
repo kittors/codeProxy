@@ -1982,6 +1982,10 @@
   },
   "shell": {
     "console": "控制台",
+    "nav_group_runtime": "运行监控",
+    "nav_group_access": "接入管理",
+    "nav_group_models": "模型与路由",
+    "nav_group_system": "系统管理",
     "nav_dashboard": "仪表盘",
     "nav_monitor": "监控中心",
     "nav_request_logs": "请求日志",

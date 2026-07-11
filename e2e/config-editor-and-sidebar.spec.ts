@@ -98,6 +98,23 @@ test("Sidebar: collapse/expand should keep nav items nowrap and slide out of vie
   const dashboardLink = page.getByRole("link", { name: /Dashboard|仪表盘/i });
   await expect(dashboardLink).toBeVisible();
 
+  const systemGroup = page.getByRole("button", { name: /System|系统管理/i });
+  await expect(systemGroup).toHaveAttribute("aria-expanded", "true");
+
+  const requestLogsLink = page.getByRole("link", { name: /Request Logs|请求日志/i });
+  await expect(requestLogsLink).toBeVisible();
+  await expect(requestLogsLink).toHaveCSS("font-size", "12px");
+
+  const configLink = page.getByRole("link", { name: /^Config|配置面板$/i });
+  await expect(configLink).toHaveAttribute("aria-current", "page");
+  await expect(configLink).toHaveClass(/bg-slate-100/);
+  await expect(configLink).not.toHaveClass(/from-blue-600/);
+
+  const modelsGroup = page.getByRole("button", { name: /Models & Routing|模型与路由/i });
+  await expect(modelsGroup).toHaveAttribute("aria-expanded", "false");
+  await modelsGroup.click();
+  await expect(page.getByRole("link", { name: /^Models|模型管理$/i })).toBeVisible();
+
   const linkWhiteSpace = await dashboardLink.evaluate((el) => getComputedStyle(el).whiteSpace);
   expect(linkWhiteSpace).toBe("nowrap");
 

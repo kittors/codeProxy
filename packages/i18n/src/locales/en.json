@@ -1965,6 +1965,10 @@
   },
   "shell": {
     "console": "Console",
+    "nav_group_runtime": "Operations",
+    "nav_group_access": "Access",
+    "nav_group_models": "Models & Routing",
+    "nav_group_system": "System",
     "nav_dashboard": "Dashboard",
     "nav_monitor": "Monitor",
     "nav_request_logs": "Request Logs",

@@ -15,6 +15,7 @@ import {
   Activity,
   ArrowDownToLine,
   Bot,
+  ChevronDown,
   Cpu,
   Image,
   Layers,
@@ -29,6 +30,7 @@ import {
   Settings,
   ShieldCheck,
   Sparkles,
+  type LucideIcon,
 } from "lucide-react";
 import { LanguageSelector, PageBackground, ScrollArea, ThemeToggleButton } from "@code-proxy/ui";
 import { preloadPageRoute } from "@pages/registry";
@@ -48,27 +50,82 @@ const SIDEBAR_MOBILE_MEDIA = "(max-width: 767px)";
 const ROUTE_PROGRESS_MIN_MS = 680;
 const ROUTE_PROGRESS_HIDE_MS = 360;
 
-const NAV_ITEMS = [
-  { to: "/dashboard", i18nKey: "shell.nav_dashboard", icon: LayoutDashboard },
-  { to: "/monitor", i18nKey: "shell.nav_monitor", icon: Activity },
-  { to: "/monitor/request-logs", i18nKey: "shell.nav_request_logs", icon: ScrollText },
-  { to: "/ai-providers", i18nKey: "shell.nav_ai_providers", icon: Bot },
-  { to: "/account-security", i18nKey: "shell.nav_account_security", icon: ShieldCheck },
-  { to: "/api-keys", i18nKey: "shell.nav_api_keys", icon: Sparkles },
-  { to: "/api-key-permissions", i18nKey: "shell.nav_api_key_permissions", icon: ShieldCheck },
+interface SidebarNavItem {
+  to: string;
+  i18nKey: string;
+  icon: LucideIcon;
+}
+
+interface SidebarNavGroup {
+  id: string;
+  i18nKey: string;
+  icon: LucideIcon;
+  items: readonly SidebarNavItem[];
+}
+
+const DASHBOARD_NAV_ITEM = {
+  to: "/dashboard",
+  i18nKey: "shell.nav_dashboard",
+  icon: LayoutDashboard,
+} satisfies SidebarNavItem;
+
+const NAV_GROUPS = [
   {
-    to: "/ccswitch-import-settings",
-    i18nKey: "shell.nav_ccswitch_import_settings",
-    icon: ArrowDownToLine,
+    id: "runtime",
+    i18nKey: "shell.nav_group_runtime",
+    icon: Activity,
+    items: [
+      { to: "/monitor", i18nKey: "shell.nav_monitor", icon: Activity },
+      { to: "/monitor/request-logs", i18nKey: "shell.nav_request_logs", icon: ScrollText },
+      { to: "/logs", i18nKey: "shell.nav_logs", icon: FileText },
+      { to: "/system", i18nKey: "shell.nav_system", icon: Info },
+    ],
   },
-  { to: "/image-generation", i18nKey: "shell.nav_image_generation", icon: Image },
-  { to: "/channel-groups", i18nKey: "shell.nav_channel_groups", icon: Layers },
-  { to: "/models", i18nKey: "shell.nav_models", icon: Cpu },
-  { to: "/proxies", i18nKey: "shell.nav_proxies", icon: Network },
-  { to: "/config", i18nKey: "shell.nav_config", icon: Settings },
-  { to: "/system", i18nKey: "shell.nav_system", icon: Info },
-  { to: "/logs", i18nKey: "shell.nav_logs", icon: FileText },
-] as const;
+  {
+    id: "access",
+    i18nKey: "shell.nav_group_access",
+    icon: Bot,
+    items: [
+      { to: "/ai-providers", i18nKey: "shell.nav_ai_providers", icon: Bot },
+      { to: "/api-keys", i18nKey: "shell.nav_api_keys", icon: Sparkles },
+      {
+        to: "/ccswitch-import-settings",
+        i18nKey: "shell.nav_ccswitch_import_settings",
+        icon: ArrowDownToLine,
+      },
+    ],
+  },
+  {
+    id: "models",
+    i18nKey: "shell.nav_group_models",
+    icon: Layers,
+    items: [
+      { to: "/models", i18nKey: "shell.nav_models", icon: Cpu },
+      { to: "/image-generation", i18nKey: "shell.nav_image_generation", icon: Image },
+      { to: "/channel-groups", i18nKey: "shell.nav_channel_groups", icon: Layers },
+      { to: "/proxies", i18nKey: "shell.nav_proxies", icon: Network },
+    ],
+  },
+  {
+    id: "system",
+    i18nKey: "shell.nav_group_system",
+    icon: Settings,
+    items: [
+      { to: "/account-security", i18nKey: "shell.nav_account_security", icon: ShieldCheck },
+      {
+        to: "/api-key-permissions",
+        i18nKey: "shell.nav_api_key_permissions",
+        icon: ShieldCheck,
+      },
+      { to: "/config", i18nKey: "shell.nav_config", icon: Settings },
+    ],
+  },
+] satisfies readonly SidebarNavGroup[];
+
+const NAV_ITEMS: readonly SidebarNavItem[] = [
+  DASHBOARD_NAV_ITEM,
+  ...NAV_GROUPS.flatMap((group) => group.items),
+];
 
 const getPageTitleKey = (pathname: string): string => {
   if (pathname.startsWith("/dashboard")) return "shell.nav_dashboard";
@@ -118,6 +175,41 @@ function ShellFrame({ children }: PropsWithChildren) {
   return <PageBackground variant="app">{children}</PageBackground>;
 }
 
+function SidebarNavLink({
+  item,
+  active,
+  label,
+  onClick,
+  onWarm,
+}: {
+  item: SidebarNavItem;
+  active: boolean;
+  label: string;
+  onClick: (event: MouseEvent<HTMLAnchorElement>, to: string) => void;
+  onWarm: (to: string) => void;
+}) {
+  const Icon = item.icon;
+  return (
+    <Link
+      to={item.to}
+      viewTransition
+      aria-current={active ? "page" : undefined}
+      onClick={(event) => onClick(event, item.to)}
+      onMouseEnter={() => onWarm(item.to)}
+      onFocus={() => onWarm(item.to)}
+      className={
+        "flex min-w-0 items-center gap-2.5 rounded-xl px-3 py-2 text-[12px] whitespace-nowrap transition-colors duration-150 " +
+        (active
+          ? "bg-slate-100 font-semibold text-slate-950 dark:bg-white/10 dark:text-white"
+          : "font-medium text-slate-600 hover:bg-slate-100/80 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-white/[0.06] dark:hover:text-white")
+      }
+    >
+      <Icon size={14} className="shrink-0 opacity-80" />
+      <span className="min-w-0 truncate">{label}</span>
+    </Link>
+  );
+}
+
 function ShellSidebar({
   collapsed,
   mode,
@@ -157,6 +249,28 @@ function ShellSidebar({
     () => resolveActiveTo(pendingTo || location.pathname),
     [pendingTo, location.pathname, resolveActiveTo],
   );
+  const activeGroupId = useMemo(
+    () => NAV_GROUPS.find((group) => group.items.some((item) => item.to === activeTo))?.id,
+    [activeTo],
+  );
+  const [openGroups, setOpenGroups] = useState<Set<string>>(() => new Set(["runtime"]));
+
+  useEffect(() => {
+    if (!activeGroupId) return;
+    setOpenGroups((current) => {
+      if (current.has(activeGroupId)) return current;
+      return new Set([...current, activeGroupId]);
+    });
+  }, [activeGroupId]);
+
+  const toggleGroup = useCallback((groupId: string) => {
+    setOpenGroups((current) => {
+      const next = new Set(current);
+      if (next.has(groupId)) next.delete(groupId);
+      else next.add(groupId);
+      return next;
+    });
+  }, []);
 
   const isMobile = mode === "mobile";
   const accountLogoutLabel = t("shell.logout_button");
@@ -217,9 +331,7 @@ function ShellSidebar({
 
   return (
     <>
-      {pendingTo && (
-        <div className={progressDone ? "rp rp-done" : "rp"} />
-      )}
+      {pendingTo && <div className={progressDone ? "rp rp-done" : "rp"} />}
       <aside
         className={[
           "shrink-0 overflow-hidden bg-white/94 dark:bg-neutral-950/88",
@@ -236,86 +348,119 @@ function ShellSidebar({
         ].join(" ")}
         aria-hidden={collapsed}
       >
-      <div
-        className={[
-          "flex h-full w-56 flex-col",
-          "motion-reduce:transition-none motion-safe:transition-[transform,opacity] motion-safe:duration-300 motion-safe:ease-out",
-          collapsed ? "pointer-events-none opacity-0 -translate-x-6" : "opacity-100 translate-x-0",
-        ].join(" ")}
-      >
-        <div className="flex h-[72px] items-center gap-3 px-5 pt-5 text-slate-900 transition-colors duration-200 ease-out dark:text-white whitespace-nowrap">
-          <span className="grid h-9 w-9 place-items-center rounded-[14px] bg-blue-600 text-white shadow-[0_10px_20px_rgba(37,99,235,0.22)]">
-            <LayoutDashboard size={18} />
-          </span>
-          <span className="leading-tight">
-            <span className="block text-lg font-semibold tracking-tight">{t("shell.console")}</span>
-            <span className="block text-[10px] font-medium tracking-normal text-slate-400">
-              CLI Proxy
-            </span>
-          </span>
-        </div>
-        <ScrollArea
-          className="flex-1 [&_[data-scroll-area-scrollbar='y']]:right-1 [&_[data-scroll-area-scrollbar='y']]:w-5"
-          scrollbarVisibility="track-hover"
-          scrollbarTrackInset={16}
+        <div
+          className={[
+            "flex h-full w-56 flex-col",
+            "motion-reduce:transition-none motion-safe:transition-[transform,opacity] motion-safe:duration-300 motion-safe:ease-out",
+            collapsed
+              ? "pointer-events-none opacity-0 -translate-x-6"
+              : "opacity-100 translate-x-0",
+          ].join(" ")}
         >
-          <nav className="space-y-1 px-3 pb-4 pt-4">
-            {NAV_ITEMS.map((item) => {
-              const Icon = item.icon;
-              const active = activeTo === item.to;
-              return (
-                <Link
-                  key={item.to}
-                  to={item.to}
-                  viewTransition
-                  onClick={(event) => handleNavClick(event, item.to)}
-                  onMouseEnter={() => warmPageRoute(item.to)}
-                  onFocus={() => warmPageRoute(item.to)}
-                  className={
-                    "flex min-w-0 items-center gap-3 rounded-[14px] px-3.5 py-2.5 text-[13px] transition-colors duration-200 ease-out whitespace-nowrap " +
-                    (active
-                      ? "bg-gradient-to-r from-blue-600 to-blue-500 font-semibold text-white shadow-[0_12px_24px_rgba(37,99,235,0.22)]"
-                      : "font-medium text-slate-700 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white")
-                  }
-                >
-                  <Icon
-                    size={15}
-                    className="shrink-0 opacity-90 transition-colors duration-200 ease-out"
-                  />
-                  <span className="min-w-0 truncate">{t(item.i18nKey)}</span>
-                </Link>
-              );
-            })}
-          </nav>
-        </ScrollArea>
-        <div className="space-y-3 px-3 pb-4">
-          <div className="flex items-center gap-3 rounded-[18px] bg-slate-50/80 p-3 dark:bg-white/[0.04]">
-            <div className="grid h-10 w-10 place-items-center rounded-[14px] bg-gradient-to-br from-blue-600 to-sky-500 text-white shadow-[0_10px_22px_rgba(37,99,235,0.2)]">
-              <ShieldCheck size={18} />
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="truncate text-sm font-semibold text-slate-950 dark:text-white">
-                Admin
+          <div className="flex h-[72px] items-center gap-3 px-5 pt-5 text-slate-900 transition-colors duration-200 ease-out dark:text-white whitespace-nowrap">
+            <span className="grid h-9 w-9 place-items-center rounded-[14px] bg-blue-600 text-white shadow-[0_10px_20px_rgba(37,99,235,0.22)]">
+              <LayoutDashboard size={18} />
+            </span>
+            <span className="leading-tight">
+              <span className="block text-lg font-semibold tracking-tight">
+                {t("shell.console")}
+              </span>
+              <span className="block text-[10px] font-medium tracking-normal text-slate-400">
+                CLI Proxy
+              </span>
+            </span>
+          </div>
+          <ScrollArea
+            className="flex-1 [&_[data-scroll-area-scrollbar='y']]:right-1 [&_[data-scroll-area-scrollbar='y']]:w-5"
+            scrollbarVisibility="track-hover"
+            scrollbarTrackInset={16}
+          >
+            <nav className="space-y-1 px-3 pb-4 pt-4">
+              <SidebarNavLink
+                item={DASHBOARD_NAV_ITEM}
+                active={activeTo === DASHBOARD_NAV_ITEM.to}
+                label={t(DASHBOARD_NAV_ITEM.i18nKey)}
+                onClick={handleNavClick}
+                onWarm={warmPageRoute}
+              />
+              <div className="space-y-1 pt-1">
+                {NAV_GROUPS.map((group) => {
+                  const GroupIcon = group.icon;
+                  const open = openGroups.has(group.id);
+                  const groupActive = group.id === activeGroupId;
+                  const contentId = `sidebar-${mode}-${group.id}`;
+                  return (
+                    <div key={group.id}>
+                      <button
+                        type="button"
+                        aria-expanded={open}
+                        aria-controls={contentId}
+                        onClick={() => toggleGroup(group.id)}
+                        className={
+                          "flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-[12px] font-semibold whitespace-nowrap transition-colors duration-150 " +
+                          (groupActive
+                            ? "text-slate-950 dark:text-white"
+                            : "text-slate-500 hover:bg-slate-100/80 hover:text-slate-800 dark:text-slate-400 dark:hover:bg-white/[0.06] dark:hover:text-slate-200")
+                        }
+                      >
+                        <GroupIcon size={14} className="shrink-0 opacity-80" />
+                        <span className="min-w-0 flex-1 truncate">{t(group.i18nKey)}</span>
+                        <ChevronDown
+                          size={13}
+                          className={
+                            "shrink-0 opacity-60 transition-transform duration-200 " +
+                            (open ? "rotate-0" : "-rotate-90")
+                          }
+                        />
+                      </button>
+                      {open ? (
+                        <div id={contentId} className="mt-0.5 space-y-0.5 pl-3">
+                          {group.items.map((item) => (
+                            <SidebarNavLink
+                              key={item.to}
+                              item={item}
+                              active={activeTo === item.to}
+                              label={t(item.i18nKey)}
+                              onClick={handleNavClick}
+                              onWarm={warmPageRoute}
+                            />
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
+                  );
+                })}
               </div>
-              <div className="truncate text-[11px] text-slate-400">
-                {t("shell.sidebar_account_role")}
+            </nav>
+          </ScrollArea>
+          <div className="space-y-3 px-3 pb-4">
+            <div className="flex items-center gap-3 rounded-[18px] bg-slate-50/80 p-3 dark:bg-white/[0.04]">
+              <div className="grid h-10 w-10 place-items-center rounded-[14px] bg-gradient-to-br from-blue-600 to-sky-500 text-white shadow-[0_10px_22px_rgba(37,99,235,0.2)]">
+                <ShieldCheck size={18} />
               </div>
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-sm font-semibold text-slate-950 dark:text-white">
+                  Admin
+                </div>
+                <div className="truncate text-[11px] text-slate-400">
+                  {t("shell.sidebar_account_role")}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  navigate("/login", { replace: true, viewTransition: true });
+                  logout();
+                }}
+                aria-label={accountLogoutLabel}
+                title={accountLogoutLabel}
+                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-[14px] bg-transparent text-slate-400 transition-colors duration-200 ease-out hover:text-rose-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400/30 dark:text-slate-500 dark:hover:text-rose-300 dark:focus-visible:ring-rose-300/20"
+              >
+                <LogOut size={15} />
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={() => {
-                navigate("/login", { replace: true, viewTransition: true });
-                logout();
-              }}
-              aria-label={accountLogoutLabel}
-              title={accountLogoutLabel}
-              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-[14px] bg-transparent text-slate-400 transition-colors duration-200 ease-out hover:text-rose-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400/30 dark:text-slate-500 dark:hover:text-rose-300 dark:focus-visible:ring-rose-300/20"
-            >
-              <LogOut size={15} />
-            </button>
           </div>
         </div>
-      </div>
       </aside>
     </>
   );
