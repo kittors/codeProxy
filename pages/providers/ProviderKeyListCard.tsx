@@ -200,7 +200,7 @@ export function ProviderKeyListCard({
                         return (
                           <button
                             type="button"
-                            className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] tabular-nums font-medium transition-colors hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/25 dark:hover:bg-white/10 dark:focus-visible:ring-white/20 ${entry.loading ? "text-slate-500" : entry.error ? "text-rose-500" : latencyColor}`}
+                            className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs tabular-nums font-medium transition-colors hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/25 dark:hover:bg-white/10 dark:focus-visible:ring-white/20 ${entry.loading ? "text-slate-500" : entry.error ? "text-rose-500" : latencyColor}`}
                             onClick={(e) => {
                               e.stopPropagation();
                               if (providerBaseUrl)
@@ -290,7 +290,7 @@ export function ProviderKeyListCard({
                     {headerEntries.map(([k, v]) => (
                       <span
                         key={k}
-                        className="inline-flex max-w-full min-w-0 items-center gap-1 rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[11px] text-slate-700 dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-white/75"
+                        className="inline-flex max-w-full min-w-0 items-center gap-1 rounded-full border border-slate-200 bg-white px-2 py-0.5 text-xs text-slate-700 dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-white/75"
                         title={`${k}: ${String(v)}`}
                       >
                         <span className="shrink-0 font-semibold">{k}:</span>
@@ -309,7 +309,7 @@ export function ProviderKeyListCard({
                     {excludedModels.map((model) => (
                       <span
                         key={model}
-                        className="inline-flex max-w-full min-w-0 rounded-full bg-rose-600/10 px-2 py-0.5 text-[11px] text-rose-700 dark:bg-rose-500/15 dark:text-rose-200"
+                        className="inline-flex max-w-full min-w-0 rounded-full bg-rose-600/10 px-2 py-0.5 text-xs text-rose-700 dark:bg-rose-500/15 dark:text-rose-200"
                         title={model}
                       >
                         <span className="min-w-0 truncate">{model}</span>

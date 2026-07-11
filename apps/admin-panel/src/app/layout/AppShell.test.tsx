@@ -165,7 +165,7 @@ describe("AppShell route progress", () => {
 
     const requestLogs = screen.getByRole("link", { name: /Request Logs|请求日志/i });
     expect(requestLogs).toHaveAttribute("aria-current", "page");
-    expect(requestLogs).toHaveClass("bg-slate-100", "text-[13px]", "h-9");
+    expect(requestLogs).toHaveClass("bg-slate-100", "text-sm", "h-9");
     expect(requestLogs.className).not.toContain("from-blue-600");
 
     fireEvent.click(runtimeGroup);

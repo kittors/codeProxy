@@ -127,7 +127,7 @@ function DiagnosticLine({ label, value }: { label: string; value: string }) {
   return (
     <div className="grid gap-1 text-xs sm:grid-cols-[7rem_minmax(0,1fr)]">
       <span className="text-slate-500 dark:text-white/45">{label}</span>
-      <code className="min-w-0 break-all rounded-md bg-slate-100 px-2 py-1 text-[11px] text-slate-800 dark:bg-white/5 dark:text-white/75">
+      <code className="min-w-0 break-all rounded-md bg-slate-100 px-2 py-1 text-xs text-slate-800 dark:bg-white/5 dark:text-white/75">
         {value}
       </code>
     </div>
@@ -255,7 +255,7 @@ export function ErrorLogsTab({
                             {badges.map((badge) => (
                               <span
                                 key={badge.key}
-                                className={`inline-flex max-w-full items-center gap-1 rounded-md border px-2 py-1 text-[11px] ${badge.className}`}
+                                className={`inline-flex max-w-full items-center gap-1 rounded-md border px-2 py-1 text-xs ${badge.className}`}
                               >
                                 <span className="shrink-0 text-current opacity-65">
                                   {badge.label}

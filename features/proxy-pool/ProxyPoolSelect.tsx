@@ -91,7 +91,7 @@ export function ProxyPoolSelect({
                 <span className="ml-1 text-xs text-slate-500 dark:text-white/50">({id})</span>
               </span>
               {showDetails ? (
-                <span className="mt-0.5 flex min-w-0 flex-wrap items-center gap-1.5 text-[11px] text-slate-500 dark:text-white/50">
+                <span className="mt-0.5 flex min-w-0 flex-wrap items-center gap-1.5 text-xs text-slate-500 dark:text-white/50">
                   <span className="font-semibold">{protocol}</span>
                   <span className="font-mono">{endpoint}</span>
                   {entry.description ? <span className="truncate">{entry.description}</span> : null}
@@ -107,7 +107,7 @@ export function ProxyPoolSelect({
               <span
                 data-latency-tone={tone}
                 className={[
-                  "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold",
+                  "shrink-0 rounded-full px-2 py-0.5 text-2xs font-semibold",
                   latencyToneClasses[tone],
                 ].join(" ")}
                 title={result?.message}
@@ -116,7 +116,7 @@ export function ProxyPoolSelect({
               </span>
             ) : null}
             {!entry.enabled ? (
-              <span className="shrink-0 rounded-md bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:text-amber-200">
+              <span className="shrink-0 rounded-md bg-amber-500/10 px-1.5 py-0.5 text-2xs font-semibold text-amber-700 dark:text-amber-200">
                 {t("proxies.disabled")}
               </span>
             ) : null}

@@ -145,7 +145,7 @@ export function ProviderKeyModelsTab({
               {model.id}
             </span>
             {model.owned_by ? (
-              <span className="block truncate text-[11px] text-slate-500 dark:text-white/45">
+              <span className="block truncate text-xs text-slate-500 dark:text-white/45">
                 {model.owned_by}
               </span>
             ) : null}

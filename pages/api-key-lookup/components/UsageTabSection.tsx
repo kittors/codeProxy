@@ -154,7 +154,7 @@ function CalendarHeatmap({
               >
                 <span
                   tabIndex={0}
-                  className={`block h-3 w-3 cursor-pointer rounded-[3px] ring-1 ring-black/[0.03] transition duration-150 hover:scale-110 hover:ring-blue-400/70 focus:outline-none focus:ring-2 focus:ring-blue-400/70 dark:ring-white/[0.04] ${HEATMAP_LEVEL_CLASSES[level]}`}
+                  className={`block h-3 w-3 cursor-pointer rounded-sm ring-1 ring-black/[0.03] transition duration-150 hover:scale-110 hover:ring-blue-400/70 focus:outline-none focus:ring-2 focus:ring-blue-400/70 dark:ring-white/[0.04] ${HEATMAP_LEVEL_CLASSES[level]}`}
                   aria-label={`${date}: ${point?.requests ?? 0} ${t("apikey_lookup.requests")}`}
                 />
               </HoverTooltip>
@@ -167,7 +167,7 @@ function CalendarHeatmap({
         {HEATMAP_LEVEL_CLASSES.map((className) => (
           <span
             key={className}
-            className={`h-3 w-3 rounded-[3px] ring-1 ring-black/[0.03] dark:ring-white/[0.04] ${className}`}
+            className={`h-3 w-3 rounded-sm ring-1 ring-black/[0.03] dark:ring-white/[0.04] ${className}`}
             aria-hidden="true"
           />
         ))}
@@ -188,7 +188,7 @@ function HeatmapSkeleton() {
           {Array.from({ length: 371 }, (_, index) => (
             <span
               key={index}
-              className="h-3 w-3 rounded-[3px] bg-slate-100 motion-safe:animate-pulse dark:bg-white/10"
+              className="h-3 w-3 rounded-sm bg-slate-100 motion-safe:animate-pulse dark:bg-white/10"
             />
           ))}
         </div>

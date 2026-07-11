@@ -51,11 +51,11 @@ export function ModelsTabContent({
           <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
             {t("apikey_lookup.available_models")}
           </h3>
-          <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[11px] font-bold tabular-nums text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-300">
+          <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-bold tabular-nums text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-300">
             {filteredModels.length}
           </span>
           {isModelFilterActive && filteredModels.length !== models.length ? (
-            <span className="text-[10px] text-slate-400 dark:text-white/30">/ {models.length}</span>
+            <span className="text-2xs text-slate-400 dark:text-white/30">/ {models.length}</span>
           ) : null}
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">
@@ -80,7 +80,7 @@ export function ModelsTabContent({
             aria-pressed={selectedModelVendor === "all"}
             onClick={() => setSelectedModelVendor("all")}
             className={[
-              "inline-flex items-center gap-1.5 rounded-md border border-slate-200/70 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-600 transition hover:shadow-sm dark:border-neutral-700/60 dark:bg-neutral-900 dark:text-white/70",
+              "inline-flex items-center gap-1.5 rounded-md border border-slate-200/70 bg-white px-2 py-0.5 text-2xs font-semibold text-slate-600 transition hover:shadow-sm dark:border-neutral-700/60 dark:bg-neutral-900 dark:text-white/70",
               selectedModelVendor === "all"
                 ? "ring-2 ring-indigo-500/35 ring-offset-1 ring-offset-white dark:ring-indigo-300/40 dark:ring-offset-neutral-950"
                 : "",

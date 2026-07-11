@@ -365,10 +365,10 @@ function RequestDetailRows({ rows }: { rows: RequestDetailRow[] }) {
           key={`${row.label}:${row.value}`}
           className="grid min-w-0 gap-1.5 px-3 py-2.5 sm:grid-cols-[minmax(8rem,13rem)_minmax(0,1fr)] sm:gap-3"
         >
-          <span className="min-w-0 font-mono text-[12px] leading-5 break-all text-slate-500 dark:text-white/40">
+          <span className="min-w-0 font-mono text-xs leading-5 break-all text-slate-500 dark:text-white/40">
             {row.label}
           </span>
-          <span className="min-w-0 font-mono text-[12px] leading-5 break-words whitespace-pre-wrap text-slate-900 dark:text-slate-100">
+          <span className="min-w-0 font-mono text-xs leading-5 break-words whitespace-pre-wrap text-slate-900 dark:text-slate-100">
             {row.value}
           </span>
         </div>
@@ -381,7 +381,7 @@ function RequestDetailGroupView({ group }: { group: RequestDetailGroup }) {
   if (group.rows.length === 0) return null;
   return (
     <div className="border-t border-slate-100 dark:border-neutral-800/80">
-      <div className="px-3 pt-3 pb-1.5 text-[11px] font-medium text-slate-400 dark:text-white/35">
+      <div className="px-3 pt-3 pb-1.5 text-xs font-medium text-slate-400 dark:text-white/35">
         {group.title}
       </div>
       <RequestDetailRows rows={group.rows} />
@@ -399,7 +399,7 @@ function RequestDetailAttemptView({
   return (
     <div className="overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-neutral-800 dark:bg-neutral-950/60">
       {showTitle && attempt.title ? (
-        <div className="border-b border-slate-100 px-3 py-2 font-mono text-[11px] text-slate-400 dark:border-neutral-800/80 dark:text-white/35">
+        <div className="border-b border-slate-100 px-3 py-2 font-mono text-xs text-slate-400 dark:border-neutral-800/80 dark:text-white/35">
           {attempt.title}
         </div>
       ) : null}
@@ -613,7 +613,7 @@ function StructuredRequestCard({
   return (
     <div
       data-testid={testId}
-      className="overflow-hidden rounded-[28px] border border-slate-200 bg-slate-50/90 dark:border-neutral-800 dark:bg-neutral-900/75"
+      className="overflow-hidden rounded-3xl border border-slate-200 bg-slate-50/90 dark:border-neutral-800 dark:bg-neutral-900/75"
     >
       <div className="grid gap-0 divide-y divide-slate-200/90 dark:divide-neutral-800">
         {model ? (
@@ -647,7 +647,7 @@ function StructuredRequestCard({
                   key={item.key}
                   className="rounded-2xl border border-slate-200 bg-white px-3 py-3 dark:border-neutral-800 dark:bg-neutral-950"
                 >
-                  <p className="font-mono text-[11px] text-slate-500 dark:text-white/40">
+                  <p className="font-mono text-xs text-slate-500 dark:text-white/40">
                     {item.key}
                   </p>
                   <pre className="mt-1 whitespace-pre-wrap break-words font-sans text-sm leading-6 text-slate-900 dark:text-white">
@@ -1366,7 +1366,7 @@ export function LogContentModal({
       egressBadges.push(
         <span
           key="loading"
-          className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600 dark:bg-white/10 dark:text-white/60"
+          className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600 dark:bg-white/10 dark:text-white/60"
         >
           {t("log_content.egress_badge_verifying")}
         </span>,
@@ -1375,7 +1375,7 @@ export function LogContentModal({
       egressBadges.push(
         <span
           key="proxy"
-          className="rounded-full bg-sky-100 px-2 py-0.5 text-[11px] font-medium text-sky-700 dark:bg-sky-500/15 dark:text-sky-200"
+          className="rounded-full bg-sky-100 px-2 py-0.5 text-xs font-medium text-sky-700 dark:bg-sky-500/15 dark:text-sky-200"
         >
           {t("log_content.egress_badge_proxy")}
         </span>,
@@ -1384,7 +1384,7 @@ export function LogContentModal({
       egressBadges.push(
         <span
           key="direct"
-          className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-700 dark:bg-white/10 dark:text-white/70"
+          className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700 dark:bg-white/10 dark:text-white/70"
         >
           {t("log_content.egress_badge_server")}
         </span>,
@@ -1395,7 +1395,7 @@ export function LogContentModal({
         <span
           key="compare"
           className={[
-            "rounded-full px-2 py-0.5 text-[11px] font-medium",
+            "rounded-full px-2 py-0.5 text-xs font-medium",
             egressInfo.matches_server_ip
               ? "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-200"
               : "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200",
@@ -1411,7 +1411,7 @@ export function LogContentModal({
       egressBadges.push(
         <span
           key="error"
-          className="rounded-full bg-rose-100 px-2 py-0.5 text-[11px] font-medium text-rose-700 dark:bg-rose-500/15 dark:text-rose-200"
+          className="rounded-full bg-rose-100 px-2 py-0.5 text-xs font-medium text-rose-700 dark:bg-rose-500/15 dark:text-rose-200"
         >
           {t("log_content.egress_badge_failed")}
         </span>,

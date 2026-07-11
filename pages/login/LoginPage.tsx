@@ -141,7 +141,7 @@ export function LoginPage() {
             </aside>
 
             <section className="relative">
-              <div className="rounded-[34px] border border-slate-200 bg-white/90 p-8 text-slate-900 shadow-[0_30px_80px_-60px_rgba(15,23,42,0.6)] backdrop-blur dark:border-neutral-800 dark:bg-neutral-950/70 dark:text-slate-50 dark:shadow-[0_30px_80px_-60px_rgba(0,0,0,0.8)]">
+              <div className="rounded-4xl border border-slate-200 bg-white/90 p-8 text-slate-900 shadow-[0_30px_80px_-60px_rgba(15,23,42,0.6)] backdrop-blur dark:border-neutral-800 dark:bg-neutral-950/70 dark:text-slate-50 dark:shadow-[0_30px_80px_-60px_rgba(0,0,0,0.8)]">
                 <div className="space-y-6">
                   <h2 className="text-center text-3xl font-semibold tracking-tight">
                     {t("login.sign_in")}
@@ -167,7 +167,7 @@ export function LoginPage() {
                         autoComplete="url"
                         className="rounded-full px-5 py-3"
                       />
-                      <p className="text-[11px] leading-5 text-slate-500 dark:text-white/50">
+                      <p className="text-xs leading-5 text-slate-500 dark:text-white/50">
                         {t("login.endpoint_label")}: {managementEndpoint}
                       </p>
                     </label>

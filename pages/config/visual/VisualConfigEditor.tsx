@@ -215,7 +215,7 @@ export function VisualConfigEditor({
           <div className="rounded-2xl border border-emerald-200 bg-emerald-50/70 px-4 py-3 text-xs leading-5 text-emerald-900 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-100">
             <div className="font-semibold">{t("visual_config.cors_default_title")}</div>
             <p className="mt-1">{t("visual_config.cors_default_desc")}</p>
-            <p className="mt-3 rounded-xl bg-white/65 px-3 py-2 font-mono text-[11px] text-emerald-950 dark:bg-black/20 dark:text-emerald-100">
+            <p className="mt-3 rounded-xl bg-white/65 px-3 py-2 font-mono text-xs text-emerald-950 dark:bg-black/20 dark:text-emerald-100">
               chrome-extension://&lt;extension-id&gt;
             </p>
           </div>

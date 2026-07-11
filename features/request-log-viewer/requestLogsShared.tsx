@@ -126,7 +126,7 @@ function RequestLogMetricChip({
   return (
     <span
       className={[
-        "inline-flex shrink-0 items-center gap-1 rounded-full border px-1.5 py-0.5 text-[11px] whitespace-nowrap",
+        "inline-flex shrink-0 items-center gap-1 rounded-full border px-1.5 py-0.5 text-xs whitespace-nowrap",
         className,
       ].join(" ")}
       aria-label={ariaLabel}

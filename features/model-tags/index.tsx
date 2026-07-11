@@ -265,11 +265,11 @@ const MODEL_VENDOR_DEFINITIONS: ModelVendorDefinition[] = [
 
 const MODEL_TAG_SIZE_CLASSES = {
   xs: {
-    wrapper: "gap-1 rounded-md px-1.5 py-0.5 text-[10px]",
+    wrapper: "gap-1 rounded-md px-1.5 py-0.5 text-2xs",
     icon: 11,
   },
   sm: {
-    wrapper: "gap-1.5 rounded-md px-2 py-0.5 text-[11px]",
+    wrapper: "gap-1.5 rounded-md px-2 py-0.5 text-xs",
     icon: 12,
   },
   md: {
@@ -427,7 +427,7 @@ export function ModelVendorStatBadge({
 }) {
   const tone = getModelVendorColor(vendorKey);
   const className = cn(
-    "inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-[10px] font-semibold",
+    "inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-2xs font-semibold",
     tone.bg,
     active ? "ring-2 ring-indigo-500/35 ring-offset-1 ring-offset-white dark:ring-indigo-300/40 dark:ring-offset-neutral-950" : "",
     onClick ? "cursor-pointer transition hover:shadow-sm" : "",

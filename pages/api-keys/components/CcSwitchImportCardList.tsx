@@ -70,7 +70,7 @@ export function CcSwitchImportCardList({
                         {config.providerName}
                       </span>
                       {config.clientType === "claude" && config.apiKeyField ? (
-                        <span className="shrink-0 rounded-md border border-slate-200/70 bg-slate-50 px-1.5 py-0.5 font-mono text-[10px] text-slate-500 dark:border-neutral-800 dark:bg-neutral-950 dark:text-white/45">
+                        <span className="shrink-0 rounded-md border border-slate-200/70 bg-slate-50 px-1.5 py-0.5 font-mono text-2xs text-slate-500 dark:border-neutral-800 dark:bg-neutral-950 dark:text-white/45">
                           {config.apiKeyField}
                         </span>
                       ) : null}
@@ -81,11 +81,11 @@ export function CcSwitchImportCardList({
                       </p>
                     ) : null}
                     <div className="mt-2 flex flex-wrap items-center gap-2">
-                      <span className="inline-flex max-w-full overflow-hidden text-ellipsis whitespace-nowrap rounded-md border border-slate-200/70 bg-white px-1.5 py-0.5 font-mono text-[10px] text-slate-500 dark:border-neutral-800 dark:bg-neutral-950 dark:text-white/45">
+                      <span className="inline-flex max-w-full overflow-hidden text-ellipsis whitespace-nowrap rounded-md border border-slate-200/70 bg-white px-1.5 py-0.5 font-mono text-2xs text-slate-500 dark:border-neutral-800 dark:bg-neutral-950 dark:text-white/45">
                         {config.defaultModel}
                       </span>
                       {config.allowedChannelGroups.length > 0 ? (
-                        <span className="truncate text-[10px] text-slate-400 dark:text-white/35">
+                        <span className="truncate text-2xs text-slate-400 dark:text-white/35">
                           {config.allowedChannelGroups.join(", ")}
                         </span>
                       ) : null}

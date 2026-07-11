@@ -65,7 +65,7 @@ import type { QuotaProvider } from "@features/quota-preview/quota-fetch";
 
 const MAX_FILENAME_PART_LENGTH = 72;
 const FILTER_LABEL_CLASS =
-  "truncate text-[11px] font-semibold uppercase tracking-[0.02em] text-slate-600 dark:text-white/65";
+  "truncate text-xs font-semibold uppercase tracking-[0.02em] text-slate-600 dark:text-white/65";
 const FILTER_FIELD_CLASS = "min-w-0 space-y-2";
 const FILTER_GRID_CLASS =
   "grid min-w-0 grid-cols-1 items-end gap-x-5 gap-y-3 sm:grid-cols-2 xl:grid-cols-[repeat(4,minmax(0,1fr))_minmax(320px,1.8fr)]";
@@ -725,7 +725,7 @@ export function AuthFilesFilesTab({
           key === "all" ? filterCounts.total : (filterCounts.counts[normalizedKey] ?? 0);
         const label = key === "all" ? t("auth_files.all") : key;
         const countPill = (
-          <span className="inline-flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-slate-100 px-1 text-[10px] font-semibold tabular-nums text-slate-700 dark:bg-white/10 dark:text-white/70">
+          <span className="inline-flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-slate-100 px-1 text-2xs font-semibold tabular-nums text-slate-700 dark:bg-white/10 dark:text-white/70">
             {count}
           </span>
         );
@@ -759,7 +759,7 @@ export function AuthFilesFilesTab({
           label: (
             <span className="flex min-w-0 items-center gap-2">
               <span className="min-w-0 truncate">{label}</span>
-              <span className="ml-auto inline-flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-slate-100 px-1 text-[10px] font-semibold tabular-nums text-slate-700 dark:bg-white/10 dark:text-white/70">
+              <span className="ml-auto inline-flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-slate-100 px-1 text-2xs font-semibold tabular-nums text-slate-700 dark:bg-white/10 dark:text-white/70">
                 {count}
               </span>
             </span>
@@ -1026,7 +1026,7 @@ export function AuthFilesFilesTab({
                 <span className="truncate">{t("auth_files.filters")}</span>
               </span>
               {activeFilterCount > 0 ? (
-                <span className="inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-slate-900 px-1.5 text-[10px] font-semibold tabular-nums text-white dark:bg-white dark:text-neutral-950">
+                <span className="inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-slate-900 px-1.5 text-2xs font-semibold tabular-nums text-white dark:bg-white dark:text-neutral-950">
                   {activeFilterCount}
                 </span>
               ) : null}
@@ -1461,7 +1461,7 @@ export function AuthFilesFilesTab({
                           {showTypeBadge ? (
                             <span
                               className={[
-                                "inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[10px] font-semibold",
+                                "inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-2xs font-semibold",
                                 badgeClass,
                               ].join(" ")}
                             >
@@ -1469,7 +1469,7 @@ export function AuthFilesFilesTab({
                             </span>
                           ) : null}
                           {showPlanBadge && planType ? (
-                            <span className="inline-flex shrink-0 items-center rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-800 dark:bg-amber-500/15 dark:text-amber-200">
+                            <span className="inline-flex shrink-0 items-center rounded-full bg-amber-50 px-2 py-0.5 text-2xs font-semibold text-amber-800 dark:bg-amber-500/15 dark:text-amber-200">
                               {t("codex_quota.plan_label")} {formatPlanTypeLabel(planType)}
                             </span>
                           ) : null}
@@ -1477,7 +1477,7 @@ export function AuthFilesFilesTab({
                             <HoverTooltip content={resetCreditBadgeTitle} className="shrink-0">
                               <button
                                 type="button"
-                                className="inline-flex shrink-0 items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-700 transition-colors hover:bg-blue-50 hover:text-blue-700 disabled:cursor-wait disabled:opacity-70 dark:bg-white/10 dark:text-white/70 dark:hover:bg-blue-500/15 dark:hover:text-blue-200"
+                                className="inline-flex shrink-0 items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-2xs font-semibold text-slate-700 transition-colors hover:bg-blue-50 hover:text-blue-700 disabled:cursor-wait disabled:opacity-70 dark:bg-white/10 dark:text-white/70 dark:hover:bg-blue-500/15 dark:hover:text-blue-200"
                                 disabled={quotaRefreshing}
                                 onClick={() => void refreshQuota(file, provider)}
                                 aria-label={t("auth_files.reset_credits_query")}
@@ -1494,10 +1494,10 @@ export function AuthFilesFilesTab({
                               </button>
                             </HoverTooltip>
                           ) : null}
-                          <span className="inline-flex shrink-0 items-center rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-700 dark:bg-white/10 dark:text-white/70">
+                          <span className="inline-flex shrink-0 items-center rounded-full bg-slate-100 px-2 py-0.5 text-2xs font-semibold text-slate-700 dark:bg-white/10 dark:text-white/70">
                             {t("auth_files.calls_count", { count: displayCalls })}
                           </span>
-                          <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-700 dark:bg-white/10 dark:text-white/70">
+                          <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-2xs font-semibold text-slate-700 dark:bg-white/10 dark:text-white/70">
                             <span>{t("common.success_rate")}</span>
                             <span className={`tabular-nums ${successRateClass}`}>
                               {successRate === null ? "--" : `${successRate.toFixed(1)}%`}
@@ -1507,7 +1507,7 @@ export function AuthFilesFilesTab({
                           {renderClaudeOAuthHealthBadges(file)}
                           {subscriptionBadge}
                           {runtimeOnly ? (
-                            <span className="inline-flex shrink-0 items-center rounded-full bg-slate-900 px-2 py-0.5 text-[10px] font-semibold text-white dark:bg-white dark:text-neutral-950">
+                            <span className="inline-flex shrink-0 items-center rounded-full bg-slate-900 px-2 py-0.5 text-2xs font-semibold text-white dark:bg-white dark:text-neutral-950">
                               {t("auth_files.virtual_auth_file")}
                             </span>
                           ) : null}
@@ -1517,7 +1517,7 @@ export function AuthFilesFilesTab({
                             {displayTags.map((tag) => (
                               <span
                                 key={tag}
-                                className="inline-flex items-center rounded-full bg-sky-50 px-2 py-0.5 text-[10px] font-semibold text-sky-700 dark:bg-sky-500/15 dark:text-sky-200"
+                                className="inline-flex items-center rounded-full bg-sky-50 px-2 py-0.5 text-2xs font-semibold text-sky-700 dark:bg-sky-500/15 dark:text-sky-200"
                               >
                                 {tag}
                               </span>
@@ -1531,7 +1531,7 @@ export function AuthFilesFilesTab({
                         data-testid="auth-file-card-quota"
                       >
                         {provider && (state.status === "error" || state.error) ? (
-                          <p className="truncate text-[11px] font-semibold text-rose-700 dark:text-rose-200">
+                          <p className="truncate text-xs font-semibold text-rose-700 dark:text-rose-200">
                             {translateQuotaText(state.error ?? t("common.error"))}
                           </p>
                         ) : null}
@@ -1677,13 +1677,13 @@ export function AuthFilesFilesTab({
         onClose={() => setUploadProgressDismissed(true)}
       >
         <div className="space-y-4" data-testid="auth-files-upload-progress" aria-live="polite">
-          <div className="overflow-hidden rounded-[28px] border border-slate-200/80 bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.95),_rgba(241,245,249,0.95))] p-4 shadow-[0_20px_50px_rgb(15_23_42_/_0.08)] dark:border-white/10 dark:bg-[radial-gradient(circle_at_top_left,_rgba(39,39,42,0.98),_rgba(9,9,11,0.98))] dark:shadow-[0_24px_60px_rgb(0_0_0_/_0.28)]">
+          <div className="overflow-hidden rounded-3xl border border-slate-200/80 bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.95),_rgba(241,245,249,0.95))] p-4 shadow-[0_20px_50px_rgb(15_23_42_/_0.08)] dark:border-white/10 dark:bg-[radial-gradient(circle_at_top_left,_rgba(39,39,42,0.98),_rgba(9,9,11,0.98))] dark:shadow-[0_24px_60px_rgb(0_0_0_/_0.28)]">
             <div className="flex items-start gap-3">
               <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-lg shadow-slate-900/15 dark:bg-white dark:text-neutral-950 dark:shadow-black/25">
                 <Loader2 size={18} className="animate-spin" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-white/35">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-white/35">
                   {uploadProgress.phase === "refreshing"
                     ? t("auth_files.upload_progress_refreshing_short")
                     : t("auth_files.upload")}
@@ -1732,14 +1732,14 @@ export function AuthFilesFilesTab({
 
           {uploadProgress.activeFileNames.length > 0 ? (
             <div className="rounded-2xl border border-dashed border-slate-200 bg-white/80 px-3 py-3 dark:border-white/10 dark:bg-white/[0.02]">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400 dark:text-white/35">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400 dark:text-white/35">
                 {t("auth_files.upload")}
               </p>
               <div className="mt-2 flex flex-wrap gap-2">
                 {uploadProgress.activeFileNames.map((name) => (
                   <span
                     key={name}
-                    className="inline-flex max-w-full items-center rounded-full bg-slate-900 px-2.5 py-1 text-[11px] font-medium text-white dark:bg-white dark:text-neutral-950"
+                    className="inline-flex max-w-full items-center rounded-full bg-slate-900 px-2.5 py-1 text-xs font-medium text-white dark:bg-white dark:text-neutral-950"
                   >
                     <span className="truncate">{name}</span>
                   </span>
@@ -1810,7 +1810,7 @@ export function AuthFilesFilesTab({
                     <Loader2 size={13} className="animate-spin" />
                     <span>{uploadStatusTitle}</span>
                   </div>
-                  <p className="mt-1 text-[11px] text-slate-500 dark:text-white/50">
+                  <p className="mt-1 text-xs text-slate-500 dark:text-white/50">
                     {uploadStatusDescription}
                   </p>
                 </div>
@@ -1881,7 +1881,7 @@ export function AuthFilesFilesTab({
 
             <div className="flex min-w-0 items-center rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-3 dark:border-neutral-800 dark:bg-white/[0.04]">
               <div className="min-w-0">
-                <p className="text-[11px] font-semibold uppercase text-slate-400 dark:text-white/35">
+                <p className="text-xs font-semibold uppercase text-slate-400 dark:text-white/35">
                   {t("auth_files.type_filter")}
                 </p>
                 <p className="mt-1 truncate font-mono text-sm font-semibold text-slate-900 dark:text-white">
@@ -1897,7 +1897,7 @@ export function AuthFilesFilesTab({
                 {t("auth_files.detail_tab_models")}
               </p>
               {draftModelOwnerGroup ? (
-                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600 dark:bg-white/10 dark:text-white/65">
+                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600 dark:bg-white/10 dark:text-white/65">
                   {t("auth_files.count_items", { count: draftModelOwnerGroup.models.length })}
                 </span>
               ) : null}

@@ -116,7 +116,7 @@ test("Sidebar: collapse/expand should keep nav items nowrap and slide out of vie
     name: /Request Logs|请求日志/i,
   });
   await expect(requestLogsLink).toBeVisible();
-  await expect(requestLogsLink).toHaveCSS("font-size", "13px");
+  await expect(requestLogsLink).toHaveCSS("font-size", "14px");
 
   const configLink = page.getByRole("link", { name: /^Config|配置面板$/i });
   await expect(configLink).toHaveAttribute("aria-current", "page");

@@ -261,7 +261,7 @@ export function ProxiesPage() {
         render: (entry) => (
           <div className="min-w-0">
             <p className="truncate font-semibold text-slate-950 dark:text-white">{entry.name}</p>
-            <p className="mt-1 truncate font-mono text-[11px] text-slate-500 dark:text-white/50">
+            <p className="mt-1 truncate font-mono text-xs text-slate-500 dark:text-white/50">
               {entry.id}
             </p>
           </div>
@@ -273,7 +273,7 @@ export function ProxiesPage() {
         width: "w-[180px]",
         render: (entry) => (
           <div className="flex min-w-0 items-center gap-2">
-            <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-semibold text-slate-600 dark:border-neutral-800 dark:bg-neutral-900 dark:text-slate-300">
+            <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs font-semibold text-slate-600 dark:border-neutral-800 dark:bg-neutral-900 dark:text-slate-300">
               {proxyProtocol(entry.url)}
             </span>
             <span className="truncate font-mono text-xs text-slate-700 dark:text-white/70">
@@ -308,7 +308,7 @@ export function ProxiesPage() {
               <span
                 data-latency-tone={tone}
                 className={[
-                  "inline-flex max-w-full rounded-full px-2 py-0.5 text-[11px] font-semibold",
+                  "inline-flex max-w-full rounded-full px-2 py-0.5 text-xs font-semibold",
                   latencyToneClasses[tone],
                 ].join(" ")}
               >

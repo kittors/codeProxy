@@ -87,7 +87,7 @@ function ImportOptionButton({
           </span>
         )}
         {model && !compact ? (
-          <span className="mt-2 inline-flex max-w-full overflow-hidden text-ellipsis whitespace-nowrap rounded-md border border-slate-200/70 bg-white px-1.5 py-0.5 font-mono text-[10px] text-slate-500 dark:border-neutral-800 dark:bg-neutral-950 dark:text-white/45">
+          <span className="mt-2 inline-flex max-w-full overflow-hidden text-ellipsis whitespace-nowrap rounded-md border border-slate-200/70 bg-white px-1.5 py-0.5 font-mono text-2xs text-slate-500 dark:border-neutral-800 dark:bg-neutral-950 dark:text-white/45">
             {t("ccswitch.model_hint", { model })}
           </span>
         ) : null}
@@ -196,7 +196,7 @@ export function CcSwitchImportOptions({
       aria-label={t("ccswitch.import_to_ccswitch")}
       className="inline-flex min-w-0 flex-wrap items-center gap-1 rounded-xl border border-slate-200/70 bg-slate-50/75 p-1 dark:border-neutral-800 dark:bg-neutral-900/45"
     >
-      <span className="px-1.5 text-[11px] font-semibold text-slate-500 dark:text-white/45">
+      <span className="px-1.5 text-xs font-semibold text-slate-500 dark:text-white/45">
         {t("ccswitch.import_to_ccswitch")}
       </span>
       <ClaudeAuthFieldSelect

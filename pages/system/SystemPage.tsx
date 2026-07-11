@@ -93,7 +93,7 @@ function InfoCard({
 
       <div className="flex items-center gap-2 mb-1.5">
         <Icon size={13} className="hidden text-slate-400 dark:text-white/35 sm:block" />
-        <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-white/35">
+        <span className="text-2xs font-semibold uppercase tracking-widest text-slate-400 dark:text-white/35">
           {label}
         </span>
       </div>
@@ -173,11 +173,11 @@ const renderModelSourcesTooltip = (
     <span className="block min-w-44 max-w-[18rem] space-y-1 text-left">
       {entries.map((entry) => (
         <span key={`${entry.label}\x00${entry.actualModelId}`} className="block">
-          <span className="block text-[12px] font-medium text-slate-900 dark:text-white">
+          <span className="block text-xs font-medium text-slate-900 dark:text-white">
             {entry.label}
           </span>
           {entry.mapped ? (
-            <span className="mt-0.5 flex min-w-0 items-start gap-1.5 text-[11px] text-slate-500 dark:text-white/55">
+            <span className="mt-0.5 flex min-w-0 items-start gap-1.5 text-xs text-slate-500 dark:text-white/55">
               <span className="shrink-0">{actualCallLabel}</span>
               <span className="min-w-0 break-all font-mono text-slate-700 dark:text-white/75">
                 {entry.actualModelId}
@@ -360,11 +360,11 @@ export function SystemPage({
                 <CircleAlert size={14} aria-hidden="true" />
               </span>
             </HoverTooltip>
-            <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[11px] font-bold tabular-nums text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-300">
+            <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-bold tabular-nums text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-300">
               {filteredModels.length}
             </span>
             {modelFilter && filteredModels.length !== models.length && (
-              <span className="text-[10px] text-slate-400 dark:text-white/30">
+              <span className="text-2xs text-slate-400 dark:text-white/30">
                 / {models.length}
               </span>
             )}
@@ -401,7 +401,7 @@ export function SystemPage({
               aria-pressed={selectedModelVendor === "all"}
               onClick={() => setSelectedModelVendor("all")}
               className={[
-                "inline-flex items-center gap-1.5 rounded-md border border-slate-200/70 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-600 transition hover:shadow-sm dark:border-neutral-700/60 dark:bg-neutral-900 dark:text-white/70",
+                "inline-flex items-center gap-1.5 rounded-md border border-slate-200/70 bg-white px-2 py-0.5 text-2xs font-semibold text-slate-600 transition hover:shadow-sm dark:border-neutral-700/60 dark:bg-neutral-900 dark:text-white/70",
                 selectedModelVendor === "all"
                   ? "ring-2 ring-indigo-500/35 ring-offset-1 ring-offset-white dark:ring-indigo-300/40 dark:ring-offset-neutral-950"
                   : "",

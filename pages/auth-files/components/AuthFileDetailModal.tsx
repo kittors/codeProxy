@@ -608,7 +608,7 @@ export function AuthFileDetailModal({
 
   const renderHealthValue = (label: string, value: string) => (
     <div className="min-w-0">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.02em] text-slate-500 dark:text-white/45">
+      <p className="text-xs font-semibold uppercase tracking-[0.02em] text-slate-500 dark:text-white/45">
         {label}
       </p>
       <p className="mt-1 min-w-0 break-words font-mono text-xs text-slate-900 dark:text-white/85">
@@ -654,7 +654,7 @@ export function AuthFileDetailModal({
 
     return (
       <span
-        className={`inline-flex max-w-full items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${className}`}
+        className={`inline-flex max-w-full items-center rounded-full px-2 py-0.5 text-xs font-semibold ${className}`}
       >
         {formatIdentitySource(source)}
       </span>
@@ -669,7 +669,7 @@ export function AuthFileDetailModal({
 
   const renderIdentitySummaryItem = (label: string, value: string) => (
     <div className="min-w-0">
-      <dt className="text-[11px] font-semibold uppercase tracking-[0.02em] text-slate-500 dark:text-white/45">
+      <dt className="text-xs font-semibold uppercase tracking-[0.02em] text-slate-500 dark:text-white/45">
         {label}
       </dt>
       <dd className="mt-1 min-w-0 break-words text-sm font-semibold text-slate-950 dark:text-white">
@@ -904,21 +904,21 @@ export function AuthFileDetailModal({
                               <p className="break-words text-sm font-semibold text-slate-950 dark:text-white">
                                 {label}
                               </p>
-                              <p className="mt-1 break-all font-mono text-[11px] text-slate-500 dark:text-white/45">
+                              <p className="mt-1 break-all font-mono text-xs text-slate-500 dark:text-white/45">
                                 {profileKey}
                               </p>
                             </div>
                             {outbound ? (
-                              <span className="shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200">
+                              <span className="shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200">
                                 {t("auth_files.identity_outbound_active")}
                               </span>
                             ) : profile.selectable === false ? (
-                              <span className="shrink-0 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700 dark:bg-amber-500/15 dark:text-amber-200">
+                              <span className="shrink-0 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-700 dark:bg-amber-500/15 dark:text-amber-200">
                                 {t("auth_files.identity_profile_observe_only")}
                               </span>
                             ) : null}
                           </div>
-                          <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-slate-500 dark:text-white/50">
+                          <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-500 dark:text-white/50">
                             <span>{formatOptionalText(profile.summary.version)}</span>
                             <span>{formatOptionalDate(profile.summary.last_seen_at)}</span>
                           </div>
@@ -1277,7 +1277,7 @@ export function AuthFileDetailModal({
       title={detailTitle}
       titleAccessory={
         detailPlanLabel ? (
-          <span className="inline-flex shrink-0 items-center rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-800 dark:bg-amber-500/15 dark:text-amber-200">
+          <span className="inline-flex shrink-0 items-center rounded-full bg-amber-50 px-2 py-0.5 text-2xs font-semibold text-amber-800 dark:bg-amber-500/15 dark:text-amber-200">
             {detailPlanLabel}
           </span>
         ) : undefined
@@ -1826,14 +1826,14 @@ export function AuthFileDetailModal({
                         </div>
                         <div className="flex flex-wrap items-center gap-1.5 sm:justify-end">
                           {model.owned_by ? (
-                            <span className="rounded-full bg-white px-2 py-0.5 text-[11px] font-semibold text-slate-600 dark:bg-white/10 dark:text-white/65">
+                            <span className="rounded-full bg-white px-2 py-0.5 text-xs font-semibold text-slate-600 dark:bg-white/10 dark:text-white/65">
                               {model.owned_by}
                             </span>
                           ) : null}
                           {excludedModels.some((pattern) =>
                             matchesModelPattern(model.id, pattern),
                           ) ? (
-                            <span className="rounded-full bg-rose-600/10 px-2 py-0.5 text-[11px] font-semibold text-rose-700 dark:bg-rose-500/15 dark:text-rose-200">
+                            <span className="rounded-full bg-rose-600/10 px-2 py-0.5 text-xs font-semibold text-rose-700 dark:bg-rose-500/15 dark:text-rose-200">
                               {t("auth_files.oauth_excluded")}
                             </span>
                           ) : null}

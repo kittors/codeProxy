@@ -94,7 +94,7 @@ export function GroupOverviewModal({
 
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <div className="rounded-2xl border border-slate-200 bg-white/70 px-4 py-3 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-white/45">
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-white/45">
               {activeGroupTitle}
             </p>
             <p className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">
@@ -105,7 +105,7 @@ export function GroupOverviewModal({
             </p>
           </div>
           <div className="rounded-2xl border border-slate-200 bg-white/70 px-4 py-3 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-white/45">
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-white/45">
               {t("auth_files.group_overview_total_calls_label")}
             </p>
             <p className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">
@@ -116,7 +116,7 @@ export function GroupOverviewModal({
             </p>
           </div>
           <div className="rounded-2xl border border-slate-200 bg-white/70 px-4 py-3 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-white/45">
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-white/45">
               {t("auth_files.group_overview_avg_week_label")}
             </p>
             <p className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">
@@ -127,7 +127,7 @@ export function GroupOverviewModal({
             </p>
           </div>
           <div className="rounded-2xl border border-slate-200 bg-white/70 px-4 py-3 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-white/45">
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-white/45">
               {t("auth_files.group_overview_sample_count", {
                 count: activeGroupOverview.quotaSampleCount,
               })}

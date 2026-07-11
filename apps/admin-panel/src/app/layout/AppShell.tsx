@@ -239,7 +239,7 @@ function SidebarChildLink({
       onMouseEnter={() => onWarm(item.to)}
       onFocus={() => onWarm(item.to)}
       className={
-        "flex h-9 min-w-0 items-center gap-2.5 rounded-xl px-3 text-[13px] whitespace-nowrap transition-colors duration-150 " +
+        "flex h-9 min-w-0 items-center gap-2.5 rounded-xl px-3 text-sm whitespace-nowrap transition-colors duration-150 " +
         (active
           ? "bg-slate-100 font-semibold text-slate-950 dark:bg-white/10 dark:text-white"
           : "font-medium text-slate-600 hover:bg-slate-100/80 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-white/[0.06] dark:hover:text-white")
@@ -292,7 +292,7 @@ function SidebarPrimaryLink({
       </span>
       <span
         className={
-          "min-w-0 truncate pl-2 pr-3 text-[13px] transition-[opacity,transform] duration-[180ms] ease-[cubic-bezier(0.22,1,0.36,1)] " +
+          "min-w-0 truncate pl-2 pr-3 text-sm transition-[opacity,transform] duration-[180ms] ease-[cubic-bezier(0.22,1,0.36,1)] " +
           (labelVisible
             ? "translate-x-0 opacity-100 delay-100"
             : "-translate-x-1 opacity-0 delay-0")
@@ -364,7 +364,7 @@ function SidebarGroupFlyout({
           : "invisible pointer-events-none -translate-x-1 scale-[0.98] opacity-0")
       }
     >
-      <div className="px-3 pb-1.5 pt-1 text-[11px] font-semibold tracking-wide text-slate-400">
+      <div className="px-3 pb-1.5 pt-1 text-xs font-semibold tracking-wide text-slate-400">
         {label}
       </div>
       <div className="space-y-0.5">
@@ -510,7 +510,7 @@ function SidebarMenuGroup({
         </span>
         <span
           className={
-            "min-w-0 flex-1 truncate pl-2 text-[13px] font-semibold transition-[opacity,transform] duration-[180ms] ease-[cubic-bezier(0.22,1,0.36,1)] " +
+            "min-w-0 flex-1 truncate pl-2 text-sm font-semibold transition-[opacity,transform] duration-[180ms] ease-[cubic-bezier(0.22,1,0.36,1)] " +
             (labelsVisible
               ? "translate-x-0 opacity-100 delay-100"
               : "-translate-x-1 opacity-0 delay-0")
@@ -795,10 +795,10 @@ function ShellSidebar({
                   : "-translate-x-1 opacity-0 delay-0")
               }
             >
-              <span className="block truncate text-[15px] font-semibold tracking-tight">
+              <span className="block truncate text-base font-semibold tracking-tight">
                 {t("shell.console")}
               </span>
-              <span className="block text-[10px] font-medium text-slate-400">
+              <span className="block text-2xs font-medium text-slate-400">
                 CLI Proxy
               </span>
             </span>
@@ -866,7 +866,7 @@ function ShellSidebar({
                     <span className="grid h-14 w-12 shrink-0 place-items-center">
                       <span
                         data-sidebar-account-avatar="true"
-                        className="relative grid h-9 w-9 place-items-center rounded-full bg-blue-600 text-[11px] font-semibold text-white"
+                        className="relative grid h-9 w-9 place-items-center rounded-full bg-blue-600 text-xs font-semibold text-white"
                       >
                         AD
                         <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-white bg-emerald-500 dark:border-neutral-950" />
@@ -880,10 +880,10 @@ function ShellSidebar({
                           : "-translate-x-1 opacity-0 delay-0")
                       }
                     >
-                      <span className="block truncate text-[13px] font-semibold text-slate-950 dark:text-white">
+                      <span className="block truncate text-sm font-semibold text-slate-950 dark:text-white">
                         Admin
                       </span>
-                      <span className="mt-0.5 block truncate text-[10px] text-slate-400">
+                      <span className="mt-0.5 block truncate text-2xs text-slate-400">
                         {t("shell.sidebar_account_role")}
                       </span>
                     </span>
@@ -899,14 +899,14 @@ function ShellSidebar({
                     className="w-[var(--radix-dropdown-menu-trigger-width)] p-2"
                   >
                     <div className="flex items-center gap-3 px-2 py-2">
-                      <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-blue-600 text-[11px] font-semibold text-white">
+                      <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-blue-600 text-xs font-semibold text-white">
                         AD
                       </div>
                       <div className="min-w-0 flex-1 leading-tight">
-                        <div className="truncate text-[13px] font-semibold text-slate-950 dark:text-white">
+                        <div className="truncate text-sm font-semibold text-slate-950 dark:text-white">
                           Admin
                         </div>
-                        <div className="mt-0.5 truncate text-[10px] text-slate-400">
+                        <div className="mt-0.5 truncate text-2xs text-slate-400">
                           {t("shell.sidebar_account_role")}
                         </div>
                       </div>
@@ -947,14 +947,14 @@ function ShellSidebar({
                   }
                 >
                   <div className="flex items-center gap-3 px-2 py-2">
-                    <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-blue-600 text-[11px] font-semibold text-white">
+                    <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-blue-600 text-xs font-semibold text-white">
                       AD
                     </div>
                     <div className="min-w-0 flex-1 leading-tight">
-                      <div className="truncate text-[13px] font-semibold text-slate-950 dark:text-white">
+                      <div className="truncate text-sm font-semibold text-slate-950 dark:text-white">
                         Admin
                       </div>
-                      <div className="mt-0.5 truncate text-[10px] text-slate-400">
+                      <div className="mt-0.5 truncate text-2xs text-slate-400">
                         {t("shell.sidebar_account_role")}
                       </div>
                     </div>
