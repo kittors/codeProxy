@@ -768,7 +768,7 @@ function ShellSidebar({
         <SidebarToggle
           label={sidebarLabel}
           onToggle={onToggleSidebar}
-          alwaysVisible={isMobile}
+          alwaysVisible={isMobile || !visualRailCollapsed}
         />
         <div className="flex h-full w-full flex-col">
           <div className="flex h-14 shrink-0 items-center overflow-hidden text-slate-900 whitespace-nowrap dark:text-white">

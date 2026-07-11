@@ -189,10 +189,15 @@ test("Sidebar: collapse/expand should keep nav items nowrap and slide out of vie
     )
     .toBeLessThan(0.05);
 
-  await aside.hover();
   const collapseButton = page.getByRole("button", {
     name: /Collapse Sidebar|收起侧边栏/i,
   });
+  await expect
+    .poll(async () =>
+      Number(await collapseButton.evaluate((el) => getComputedStyle(el).opacity)),
+    )
+    .toBeGreaterThan(0.95);
+  await aside.hover();
   const toggleIconClass = await collapseButton
     .locator("svg")
     .getAttribute("class");
