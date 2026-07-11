@@ -4301,6 +4301,8 @@
     "no_users": "暂无用户账号。",
     "no_roles": "暂无角色。",
     "no_tenants": "暂无租户。",
-    "no_audit_logs": "暂无审计记录。"
+    "no_audit_logs": "暂无审计记录。",
+    "show_passwords": "显示密码",
+    "hide_passwords": "隐藏密码"
   }
 }

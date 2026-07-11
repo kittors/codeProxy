@@ -4287,6 +4287,8 @@
     "no_users": "No user accounts found.",
     "no_roles": "No roles found.",
     "no_tenants": "No tenants found.",
-    "no_audit_logs": "No audit records found."
+    "no_audit_logs": "No audit records found.",
+    "show_passwords": "Show passwords",
+    "hide_passwords": "Hide passwords"
   }
 }

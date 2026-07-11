@@ -1,12 +1,12 @@
 import { useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
-import { Eye, EyeOff, KeyRound, ShieldCheck } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 import { identityApi } from "@code-proxy/api-client";
 import {
   Button,
+  Checkbox,
   PageBackground,
-  Reveal,
   TextInput,
   ThemeToggleButton,
   useToast,
@@ -23,9 +23,7 @@ export function ChangePasswordPage() {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirm, setConfirm] = useState("");
-  const [showCurrent, setShowCurrent] = useState(false);
-  const [showNew, setShowNew] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
+  const [showPasswords, setShowPasswords] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const submit = async (event: FormEvent) => {
@@ -60,7 +58,7 @@ export function ChangePasswordPage() {
         <ThemeToggleButton className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200 bg-white/70 text-slate-700 shadow-sm backdrop-blur transition hover:bg-white dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-slate-200" />
       </div>
       <main className="relative flex min-h-[100dvh] items-center justify-center px-6 py-12">
-        <Reveal className="w-full max-w-md">
+        <div className="w-full max-w-md">
           <section className="rounded-3xl border border-white/70 bg-white/90 p-7 shadow-xl shadow-slate-300/25 backdrop-blur-xl sm:p-9 dark:border-white/10 dark:bg-neutral-950/85 dark:shadow-black/25">
             <div className="mb-8 text-center">
               <div className="mx-auto mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-sm dark:bg-white dark:text-neutral-950">
@@ -80,49 +78,27 @@ export function ChangePasswordPage() {
                   {t("identity_admin.current_password")}
                 </span>
                 <TextInput
-                  type={showCurrent ? "text" : "password"}
+                  type={showPasswords ? "text" : "password"}
                   value={currentPassword}
                   onChange={(event) => setCurrentPassword(event.target.value)}
                   autoComplete="current-password"
                   required
-                  className="rounded-full px-5"
-                  startAdornment={<KeyRound size={17} />}
-                  endAdornment={
-                    <button
-                      type="button"
-                      onClick={() => setShowCurrent((value) => !value)}
-                      className="rounded-full p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-white/10"
-                      aria-label={showCurrent ? t("login.hide_key") : t("login.show_key")}
-                    >
-                      {showCurrent ? <EyeOff size={16} /> : <Eye size={16} />}
-                    </button>
-                  }
                 />
               </label>
+
+              <div className="h-px bg-black/[0.06] dark:bg-white/10" />
 
               <label className="block space-y-2">
                 <span className="text-xs font-medium text-slate-600 dark:text-white/60">
                   {t("identity_admin.new_password")}
                 </span>
                 <TextInput
-                  type={showNew ? "text" : "password"}
+                  type={showPasswords ? "text" : "password"}
                   value={newPassword}
                   onChange={(event) => setNewPassword(event.target.value)}
                   autoComplete="new-password"
                   required
                   minLength={12}
-                  className="rounded-full px-5"
-                  startAdornment={<KeyRound size={17} />}
-                  endAdornment={
-                    <button
-                      type="button"
-                      onClick={() => setShowNew((value) => !value)}
-                      className="rounded-full p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-white/10"
-                      aria-label={showNew ? t("login.hide_key") : t("login.show_key")}
-                    >
-                      {showNew ? <EyeOff size={16} /> : <Eye size={16} />}
-                    </button>
-                  }
                 />
               </label>
 
@@ -131,25 +107,20 @@ export function ChangePasswordPage() {
                   {t("identity_admin.confirm_new_password")}
                 </span>
                 <TextInput
-                  type={showConfirm ? "text" : "password"}
+                  type={showPasswords ? "text" : "password"}
                   value={confirm}
                   onChange={(event) => setConfirm(event.target.value)}
                   autoComplete="new-password"
                   required
                   minLength={12}
-                  className="rounded-full px-5"
-                  startAdornment={<KeyRound size={17} />}
-                  endAdornment={
-                    <button
-                      type="button"
-                      onClick={() => setShowConfirm((value) => !value)}
-                      className="rounded-full p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-white/10"
-                      aria-label={showConfirm ? t("login.hide_key") : t("login.show_key")}
-                    >
-                      {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
-                    </button>
-                  }
                 />
+              </label>
+
+              <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-600 dark:text-white/70">
+                <Checkbox checked={showPasswords} onCheckedChange={setShowPasswords} />
+                {t(
+                  showPasswords ? "identity_admin.hide_passwords" : "identity_admin.show_passwords",
+                )}
               </label>
 
               <Button type="submit" variant="primary" disabled={loading} className="h-11 w-full">
@@ -157,7 +128,7 @@ export function ChangePasswordPage() {
               </Button>
             </form>
           </section>
-        </Reveal>
+        </div>
       </main>
     </PageBackground>
   );

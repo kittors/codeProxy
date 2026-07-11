@@ -165,20 +165,33 @@ test("logs in with username and password without selecting a tenant", async ({ p
   await page.getByLabel(/^password$/i).fill("correct-password");
   await page.getByRole("button", { name: /^login$/i }).click();
   await expect(page.getByRole("heading", { name: /change password/i })).toBeVisible();
+  await expect(page.locator("main svg.lucide-key-round")).toHaveCount(0);
+  await expect(page.locator("main svg.lucide-eye")).toHaveCount(0);
+  const passwordVisibility = page.getByRole("checkbox", { name: /show passwords/i });
+  await expect(passwordVisibility).toBeVisible();
+  await expect(page.getByLabel(/current password/i)).toHaveAttribute("type", "password");
+  await passwordVisibility.check();
+  await expect(page.getByLabel(/current password/i)).toHaveAttribute("type", "text");
+  await expect(page.getByLabel(/^new password$/i)).toHaveAttribute("type", "text");
+  await expect(page.getByLabel(/confirm new password/i)).toHaveAttribute("type", "text");
   await expect(page.locator("aside")).toHaveCount(0);
   await expect(page.locator("header")).toHaveCount(0);
-  const passwordCard = await page.locator("main section").boundingBox();
-  const viewport = page.viewportSize();
-  expect(passwordCard).not.toBeNull();
-  expect(viewport).not.toBeNull();
-  expect(
-    Math.abs((passwordCard?.x ?? 0) + (passwordCard?.width ?? 0) / 2 - (viewport?.width ?? 0) / 2),
-  ).toBeLessThan(12);
-  expect(
-    Math.abs(
-      (passwordCard?.y ?? 0) + (passwordCard?.height ?? 0) / 2 - (viewport?.height ?? 0) / 2,
-    ),
-  ).toBeLessThan(12);
+  await expect
+    .poll(async () => {
+      const passwordCard = await page.locator("main section").boundingBox();
+      const viewport = page.viewportSize();
+      if (!passwordCard || !viewport) return Number.POSITIVE_INFINITY;
+      return Math.abs(passwordCard.x + passwordCard.width / 2 - viewport.width / 2);
+    })
+    .toBeLessThan(12);
+  await expect
+    .poll(async () => {
+      const passwordCard = await page.locator("main section").boundingBox();
+      const viewport = page.viewportSize();
+      if (!passwordCard || !viewport) return Number.POSITIVE_INFINITY;
+      return Math.abs(passwordCard.y + passwordCard.height / 2 - viewport.height / 2);
+    })
+    .toBeLessThan(12);
   await page.evaluate(() => {
     window.location.hash = "/dashboard";
   });
