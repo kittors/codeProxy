@@ -1,15 +1,45 @@
 import { expect, test, type Page } from "@playwright/test";
 
+const administratorRole = {
+  id: "r-platform-admin",
+  tenant_id: "t-system",
+  code: "platform_super_admin",
+  name: "Administrator",
+  description: "Built-in administrator role with every platform and tenant permission.",
+  scope: "platform",
+  system_protected: true,
+  permissions: [
+    "platform.tenants.read",
+    "platform.tenants.create",
+    "platform.tenants.update",
+    "tenant.users.read",
+    "tenant.users.create",
+    "tenant.users.update",
+    "tenant.users.assign_roles",
+    "tenant.users.reset_password",
+    "tenant.users.delete",
+    "tenant.roles.read",
+    "tenant.roles.create",
+    "tenant.roles.update",
+    "tenant.roles.delete",
+    "tenant.audit.read",
+    "dashboard.read",
+  ],
+  version: 1,
+};
+
 const principal = {
   kind: "user_session",
   user: {
     id: "u-admin",
     tenant_id: "t-system",
     username: "admin",
-    display_name: "Administrator",
+    display_name: "Super Administrator",
     status: "active",
     must_change_password: false,
     last_login_at: null,
+    role_ids: [administratorRole.id],
+    role_codes: [administratorRole.code],
     version: 1,
     created_at: "",
     updated_at: "",
@@ -40,7 +70,7 @@ const principal = {
     created_at: "",
     updated_at: "",
   },
-  roles: [],
+  roles: [administratorRole],
   permissions: [
     "platform.tenants.read",
     "platform.tenants.create",
@@ -76,14 +106,32 @@ async function mockIdentity(page: Page) {
       body: JSON.stringify({ items: [principal.home_tenant] }),
     }),
   );
-  await page.route("**/v0/management/**", (route) =>
-    route.fulfill({ status: 200, contentType: "application/json", body: "{}" }),
-  );
+  await page.route("**/v0/management/**", (route) => {
+    const path = new URL(route.request().url()).pathname.replace("/v0/management", "");
+    const bodies: Record<string, unknown> = {
+      "/users": { items: [principal.user] },
+      "/roles": { items: [administratorRole] },
+      "/permissions": {
+        items: administratorRole.permissions.map((code) => ({
+          code,
+          name: code,
+          scope: code.startsWith("platform.") ? "platform" : "tenant",
+          resource: code.split(".").slice(0, -1).join("."),
+          action: code.split(".").at(-1),
+          sensitive: false,
+        })),
+      },
+      "/audit-logs": { items: [] },
+    };
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(bodies[path] ?? {}),
+    });
+  });
 }
 
-test("logs in with username and password without selecting a tenant", async ({
-  page,
-}) => {
+test("logs in with username and password without selecting a tenant", async ({ page }) => {
   await page.route("**/v0/auth/login", async (route) => {
     const body = route.request().postDataJSON();
     expect(body).toEqual({
@@ -108,17 +156,18 @@ test("logs in with username and password without selecting a tenant", async ({
   await mockIdentity(page);
   await page.goto("/#/login");
   await expect(page.getByLabel(/tenant/i)).toHaveCount(0);
+  await expect(page.locator("svg.lucide-key-round")).toBeVisible();
+  const usernameBox = await page.getByLabel(/username/i).boundingBox();
+  const passwordBox = await page.getByLabel(/^password$/i).boundingBox();
+  expect(usernameBox?.height).toBeGreaterThanOrEqual(44);
+  expect(passwordBox?.height).toBeGreaterThanOrEqual(44);
   await page.getByLabel(/username/i).fill("admin");
   await page.getByLabel(/^password$/i).fill("correct-password");
   await page.getByRole("button", { name: /^login$/i }).click();
-  await expect(
-    page.getByRole("heading", { name: /change password/i }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: /change password/i })).toBeVisible();
 });
 
-test("shows tenant governance routes from server permissions", async ({
-  page,
-}) => {
+test("shows tenant governance routes from server permissions", async ({ page }) => {
   await page.addInitScript(() =>
     sessionStorage.setItem(
       "code-proxy-admin-auth",
@@ -137,9 +186,32 @@ test("shows tenant governance routes from server permissions", async ({
   await expect(page.getByText("System Administration").first()).toBeVisible();
 });
 
-test("creates a tenant without selecting it on the login page", async ({
-  page,
-}) => {
+test("shows the built-in administrator role and super administrator account", async ({ page }) => {
+  await page.addInitScript(() =>
+    sessionStorage.setItem(
+      "code-proxy-admin-auth",
+      JSON.stringify({
+        apiBase: "http://127.0.0.1:8317",
+        managementKey: "cps_test",
+        rememberPassword: false,
+        expiresAt: Date.now() + 60_000,
+      }),
+    ),
+  );
+  await mockIdentity(page);
+
+  await page.goto("/#/users");
+  const adminRow = page.locator('[data-vt-row-key="u-admin"]');
+  await expect(adminRow).toBeVisible();
+  await expect(adminRow.getByText("Super Administrator", { exact: true })).toBeVisible();
+  await expect(adminRow.getByText("Administrator", { exact: true })).toBeVisible();
+
+  await page.goto("/#/roles");
+  await expect(page.getByRole("cell", { name: /Administrator/ }).first()).toBeVisible();
+  await expect(page.getByText("platform_super_admin", { exact: true }).first()).toBeVisible();
+});
+
+test("creates a tenant without selecting it on the login page", async ({ page }) => {
   await page.addInitScript(() =>
     sessionStorage.setItem(
       "code-proxy-admin-auth",
@@ -178,12 +250,8 @@ test("creates a tenant without selecting it on the login page", async ({
   await page.getByLabel("Name", { exact: true }).fill("Tenant A");
   await page.getByLabel("Expires at", { exact: true }).fill("2030-01-01T00:00");
   await page.getByLabel("Admin username", { exact: true }).fill("tenant-admin");
-  await page
-    .getByLabel("Admin display name", { exact: true })
-    .fill("Tenant Admin");
-  await page
-    .getByLabel("Admin password", { exact: true })
-    .fill("tenant-password-123");
+  await page.getByLabel("Admin display name", { exact: true }).fill("Tenant Admin");
+  await page.getByLabel("Admin password", { exact: true }).fill("tenant-password-123");
   await page.getByLabel("Description", { exact: true }).fill("Primary tenant");
   await page.getByRole("button", { name: "Create tenant" }).click();
   await expect.poll(() => createBody).not.toBeNull();
@@ -295,14 +363,10 @@ test("renders role, audit, and password governance pages from server permissions
   await page.goto("/#/audit-logs");
   await expect(page.getByRole("heading", { name: "Audit logs" })).toBeVisible();
   await page.goto("/#/change-password");
-  await expect(
-    page.getByRole("heading", { name: "Change password" }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Change password" })).toBeVisible();
 });
 
-test("shows an expired tenant message when restoring a rejected session", async ({
-  page,
-}) => {
+test("shows an expired tenant message when restoring a rejected session", async ({ page }) => {
   await page.addInitScript(() =>
     sessionStorage.setItem(
       "code-proxy-admin-auth",
@@ -413,20 +477,12 @@ test("provider read permission hides tenant write/test controls and system-only 
   });
 
   await page.goto("/#/ai-providers/opencode-go/new");
-  await expect(
-    page.getByText("Read only provider", { exact: true }),
-  ).toBeVisible();
+  await expect(page.getByText("Read only provider", { exact: true })).toBeVisible();
   await expect(page.getByRole("tab", { name: "Ampcode" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: /add new/i })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: /import json/i })).toHaveCount(
-    0,
-  );
-  await expect(page.getByRole("button", { name: /more actions/i })).toHaveCount(
-    0,
-  );
-  await expect(
-    page.getByRole("button", { name: /refresh usage/i }),
-  ).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /import json/i })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /more actions/i })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /refresh usage/i })).toHaveCount(0);
   await expect(page.getByRole("dialog")).toHaveCount(0);
   expect(forbiddenAuxiliaryRequests).toBe(0);
 });
@@ -475,10 +531,7 @@ test("standard tenant redirects the unavailable OAuth excluded tab to tenant-saf
   );
   let excludedRequests = 0;
   await page.route("**/v0/management/**", (route) => {
-    const path = new URL(route.request().url()).pathname.replace(
-      "/v0/management",
-      "",
-    );
+    const path = new URL(route.request().url()).pathname.replace("/v0/management", "");
     if (path === "/oauth-excluded-models") excludedRequests += 1;
     const body =
       path === "/auth-files"
@@ -496,8 +549,6 @@ test("standard tenant redirects the unavailable OAuth excluded tab to tenant-saf
   await page.goto("/#/auth-files?tab=excluded");
   await expect(page).toHaveURL(/#\/account-security\?tab=excluded$/);
   await expect(page.getByRole("tab", { name: /model aliases/i })).toBeVisible();
-  await expect(page.getByRole("tab", { name: /excluded models/i })).toHaveCount(
-    0,
-  );
+  await expect(page.getByRole("tab", { name: /excluded models/i })).toHaveCount(0);
   expect(excludedRequests).toBe(0);
 });

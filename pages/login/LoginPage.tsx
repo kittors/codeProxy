@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
-import { Eye, EyeOff, Lock, UserRound } from "lucide-react";
+import { Eye, EyeOff, KeyRound, Lock, UserRound } from "lucide-react";
 import { detectApiBaseFromLocation } from "@code-proxy/api-client";
 import { useAuth } from "@app/providers/AuthProvider";
 import { PageBackground, Reveal, TextInput, ThemeToggleButton, useToast } from "@code-proxy/ui";
@@ -121,93 +121,92 @@ export function LoginPage() {
                 ))}
               </div>
             </aside>
-            <section className="rounded-4xl border border-white/70 bg-white/75 p-3 shadow-2xl shadow-slate-300/30 backdrop-blur-xl dark:border-white/10 dark:bg-neutral-950/70 dark:shadow-black/30">
-              <div className="rounded-3xl border border-slate-200/80 bg-white p-7 sm:p-9 dark:border-neutral-800 dark:bg-neutral-950">
-                <div className="mb-8 space-y-2">
-                  <h2 className="text-2xl font-semibold tracking-tight text-slate-950 dark:text-white">
-                    {t("login.sign_in")}
-                  </h2>
-                  <p className="text-sm text-slate-500 dark:text-white/55">
-                    {t(
-                      "login.account_login_hint",
-                      "Use your account credentials. Your tenant is resolved automatically.",
-                    )}
-                  </p>
-                </div>
-                <form className="space-y-5" onSubmit={handleSubmit}>
-                  {accessFailureMessage ? (
-                    <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200">
-                      {accessFailureMessage}
-                    </div>
-                  ) : null}
-                  <label className="block space-y-2">
-                    <span className="text-xs font-medium text-slate-600 dark:text-white/60">
-                      {t("login.username_label", "Username")}
-                    </span>
-                    <TextInput
-                      value={username}
-                      onChange={(event) => setUsername(event.target.value)}
-                      autoComplete="username"
-                      autoFocus
-                      className="rounded-full px-5 py-3"
-                      startAdornment={<UserRound size={16} />}
-                    />
-                  </label>
-                  <label className="block space-y-2">
-                    <span className="text-xs font-medium text-slate-600 dark:text-white/60">
-                      {t("login.password_label", "Password")}
-                    </span>
-                    <TextInput
-                      value={password}
-                      onChange={(event) => setPassword(event.target.value)}
-                      type={showPassword ? "text" : "password"}
-                      autoComplete="current-password"
-                      className="rounded-full px-5 py-3"
-                      endAdornment={
-                        <button
-                          type="button"
-                          onClick={() => setShowPassword((value) => !value)}
-                          className="rounded-full p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-white/10"
-                          aria-label={showPassword ? t("login.hide_key") : t("login.show_key")}
-                        >
-                          {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                        </button>
-                      }
-                    />
-                  </label>
-                  <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-600 dark:text-white/70">
-                    <input
-                      type="checkbox"
-                      checked={rememberPassword}
-                      onChange={(event) => setRememberPassword(event.target.checked)}
-                      className="h-4 w-4 rounded border-slate-300"
-                    />
-                    {t("login.remember_password_label")}
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => setShowAdvanced((value) => !value)}
-                    className="text-xs font-medium text-slate-500 hover:text-slate-900 dark:hover:text-white"
-                  >
-                    {t("login.advanced_connection", "Advanced connection settings")}
-                  </button>
-                  {showAdvanced ? (
-                    <TextInput
-                      value={apiBase}
-                      onChange={(event) => setApiBase(event.target.value)}
-                      type="url"
-                      className="rounded-full px-5 py-3"
-                    />
-                  ) : null}
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full rounded-full bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-70 dark:bg-white/10 dark:hover:bg-white/15"
-                  >
-                    {loading ? t("login.signing_in") : t("login.submit_button")}
-                  </button>
-                </form>
+            <section className="rounded-3xl border border-white/70 bg-white/90 p-7 shadow-xl shadow-slate-300/25 backdrop-blur-xl sm:p-9 dark:border-white/10 dark:bg-neutral-950/85 dark:shadow-black/25">
+              <div className="mb-8 space-y-2">
+                <h2 className="text-2xl font-semibold tracking-tight text-slate-950 dark:text-white">
+                  {t("login.sign_in")}
+                </h2>
+                <p className="text-sm text-slate-500 dark:text-white/55">
+                  {t(
+                    "login.account_login_hint",
+                    "Use your account credentials. Your tenant is resolved automatically.",
+                  )}
+                </p>
               </div>
+              <form className="space-y-5" onSubmit={handleSubmit}>
+                {accessFailureMessage ? (
+                  <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200">
+                    {accessFailureMessage}
+                  </div>
+                ) : null}
+                <label className="block space-y-2">
+                  <span className="text-xs font-medium text-slate-600 dark:text-white/60">
+                    {t("login.username_label", "Username")}
+                  </span>
+                  <TextInput
+                    value={username}
+                    onChange={(event) => setUsername(event.target.value)}
+                    autoComplete="username"
+                    autoFocus
+                    className="rounded-full px-5"
+                    startAdornment={<UserRound size={17} />}
+                  />
+                </label>
+                <label className="block space-y-2">
+                  <span className="text-xs font-medium text-slate-600 dark:text-white/60">
+                    {t("login.password_label", "Password")}
+                  </span>
+                  <TextInput
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    type={showPassword ? "text" : "password"}
+                    autoComplete="current-password"
+                    className="rounded-full px-5"
+                    startAdornment={<KeyRound size={17} />}
+                    endAdornment={
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword((value) => !value)}
+                        className="rounded-full p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-white/10"
+                        aria-label={showPassword ? t("login.hide_key") : t("login.show_key")}
+                      >
+                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    }
+                  />
+                </label>
+                <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-600 dark:text-white/70">
+                  <input
+                    type="checkbox"
+                    checked={rememberPassword}
+                    onChange={(event) => setRememberPassword(event.target.checked)}
+                    className="h-4 w-4 rounded border-slate-300"
+                  />
+                  {t("login.remember_password_label")}
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setShowAdvanced((value) => !value)}
+                  className="text-xs font-medium text-slate-500 hover:text-slate-900 dark:hover:text-white"
+                >
+                  {t("login.advanced_connection", "Advanced connection settings")}
+                </button>
+                {showAdvanced ? (
+                  <TextInput
+                    value={apiBase}
+                    onChange={(event) => setApiBase(event.target.value)}
+                    type="url"
+                    className="rounded-full px-5"
+                  />
+                ) : null}
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full rounded-full bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-70 dark:bg-white/10 dark:hover:bg-white/15"
+                >
+                  {loading ? t("login.signing_in") : t("login.submit_button")}
+                </button>
+              </form>
             </section>
           </div>
         </Reveal>

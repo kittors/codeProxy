@@ -4210,7 +4210,6 @@
   "quota": {
     "no_matching": "暂无匹配的认证文件"
   },
-
   "identity_admin": {
     "operation_failed": "操作失败。",
     "create_failed": "创建失败。",
@@ -4295,6 +4294,13 @@
     "password_changed": "密码已修改。",
     "password_change_failed": "密码修改失败。",
     "saving": "保存中…",
-    "save_password": "保存密码"
+    "save_password": "保存密码",
+    "roles_title": "角色权限",
+    "roles_description": "管理当前生效租户的内置角色和自定义角色。",
+    "scope": "范围",
+    "no_users": "暂无用户账号。",
+    "no_roles": "暂无角色。",
+    "no_tenants": "暂无租户。",
+    "no_audit_logs": "暂无审计记录。"
   }
 }

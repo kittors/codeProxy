@@ -1,9 +1,9 @@
 export type ControlSize = "sm" | "default" | "lg";
 
 export const controlHeightBySize: Record<ControlSize, string> = {
-  sm: "h-8",
-  default: "h-9",
-  lg: "h-10",
+  sm: "h-9",
+  default: "h-11",
+  lg: "h-12",
 };
 
 export const controlTextBySize: Record<ControlSize, string> = {

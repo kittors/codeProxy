@@ -4196,7 +4196,6 @@
   "models": {
     "total_models_count": "{{count}} models"
   },
-
   "identity_admin": {
     "operation_failed": "Operation failed.",
     "create_failed": "Create failed.",
@@ -4281,6 +4280,13 @@
     "password_changed": "Password changed.",
     "password_change_failed": "Password change failed.",
     "saving": "Saving…",
-    "save_password": "Save password"
+    "save_password": "Save password",
+    "roles_title": "Roles and permissions",
+    "roles_description": "Manage built-in and custom roles for the effective tenant.",
+    "scope": "Scope",
+    "no_users": "No user accounts found.",
+    "no_roles": "No roles found.",
+    "no_tenants": "No tenants found.",
+    "no_audit_logs": "No audit records found."
   }
 }
