@@ -3,15 +3,27 @@ name: Deploy Frontend
 on:
   push:
     branches: [dev]
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
   workflow_dispatch:
+
+concurrency:
+  group: deploy-relay-frontend
+  cancel-in-progress: false
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PANEL_RELEASE: ${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
       - uses: actions/checkout@v4
 
       - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.2.2
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
@@ -29,17 +41,7 @@ jobs:
         run: |
           printf '%s\n' "${VITE_APP_VERSION}" > dist/version.txt
 
-      - name: Clean old static files
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          port: ${{ secrets.SERVER_PORT }}
-          username: root
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            rm -rf /home/web/html/relay-panel/*
-
-      - name: Deploy static assets to server
+      - name: Upload static assets to release directory
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.SERVER_HOST }}
@@ -47,25 +49,67 @@ jobs:
           username: root
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           source: "dist/*"
-          target: "/home/web/html/relay-panel/"
+          target: "/home/web/html/relay-panel-releases/${{ env.PANEL_RELEASE }}/"
           strip_components: 1
           overwrite: true
 
-      - name: Verify deployment
+      - name: Activate and verify frontend release
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SERVER_HOST }}
           port: ${{ secrets.SERVER_PORT }}
           username: root
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: PANEL_RELEASE,VITE_APP_VERSION
           script: |
-            ls -la /home/web/html/relay-panel/
-            test -f /home/web/html/relay-panel/manage.html
-            test -f /home/web/html/relay-panel/version.txt
-            echo "UI version:"
-            cat /home/web/html/relay-panel/version.txt
-            if ! grep -R --include='*.js' -q "/channel-groups" /home/web/html/relay-panel/assets; then
-              echo "channel-groups route was not found in deployed frontend assets"
+            set -euo pipefail
+            releases_dir="/home/web/html/relay-panel-releases"
+            release_dir="${releases_dir}/${PANEL_RELEASE}"
+            live_path="/home/web/html/relay-panel"
+            candidate_link="/home/web/html/.relay-panel-${PANEL_RELEASE}"
+
+            test -f "${release_dir}/manage.html"
+            test -f "${release_dir}/version.txt"
+            test "$(cat "${release_dir}/version.txt")" = "${VITE_APP_VERSION}"
+            if ! grep -R --include='*.js' -q "/channel-groups" "${release_dir}/assets"; then
+              echo "channel-groups route was not found in uploaded frontend assets"
               exit 1
             fi
-            echo "Frontend deployed successfully"
+
+            rm -f "${candidate_link}"
+            ln -s "relay-panel-releases/${PANEL_RELEASE}" "${candidate_link}"
+            if [ -L "${live_path}" ]; then
+              mv -Tf "${candidate_link}" "${live_path}"
+            elif [ -d "${live_path}" ]; then
+              legacy_path="${live_path}.legacy-$(date +%s)"
+              mv "${live_path}" "${legacy_path}"
+              if ! mv -T "${candidate_link}" "${live_path}"; then
+                mv "${legacy_path}" "${live_path}"
+                exit 1
+              fi
+              rm -rf "${legacy_path}"
+            elif [ ! -e "${live_path}" ]; then
+              mv -T "${candidate_link}" "${live_path}"
+            else
+              echo "Unsupported frontend live path: ${live_path}"
+              exit 1
+            fi
+
+            test "$(docker exec nginx cat /var/www/html/relay-panel/version.txt)" = "${VITE_APP_VERSION}"
+            docker exec nginx test -f /var/www/html/relay-panel/manage.html
+            find "${releases_dir}" -mindepth 1 -maxdepth 1 -type d ! -path "${release_dir}" -mtime +7 -exec rm -rf -- {} +
+            echo "Frontend ${VITE_APP_VERSION} deployed successfully from ${release_dir}."
+
+      - name: Trigger CliRelay Docker image build
+        env:
+          GH_TOKEN: ${{ secrets.CLIRELAY_WORKFLOW_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${GH_TOKEN}" ]; then
+            echo "CLIRELAY_WORKFLOW_TOKEN secret is required to trigger CliRelay Docker builds." >&2
+            exit 1
+          fi
+          gh workflow run docker-publish.yml \
+            --repo kittors/CliRelay \
+            --ref dev
+          echo "Triggered Docker image build after frontend deployment completed."
