@@ -12,8 +12,8 @@ export function useLogContentData({
   fetchDetailsFn,
 }: Pick<
   LogContentModalProps,
-  "open" | "logId" | "initialTab" | "fetchFn" | "fetchPartFn" | "fetchDetailsFn"
->) {
+  "open" | "logId" | "fetchFn" | "fetchPartFn" | "fetchDetailsFn"
+> & { initialTab?: LogContentPart }) {
   const { t } = useTranslation();
   const resolvedInitialTab = initialTab ?? "input";
   const [inputLoading, setInputLoading] = useState(false);
@@ -127,7 +127,7 @@ export function useLogContentData({
 
     let cancelled = false;
     void fetchPart(logId, resolvedInitialTab).then(() => {
-      if (cancelled) return;
+      if (cancelled || resolvedInitialTab === "details") return;
       const other = resolvedInitialTab === "input" ? "output" : "input";
       window.setTimeout(() => {
         if (!cancelled) void fetchPart(logId, other, { prefetch: true });

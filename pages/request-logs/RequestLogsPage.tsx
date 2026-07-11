@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LoaderCircle, RefreshCw, ScrollText, Trash2 } from "lucide-react";
-import { usageApi } from "@code-proxy/api-client";
+import { configApi, usageApi } from "@code-proxy/api-client";
 import type {
   ClearUsageLogsPayload,
   UsageChannelFilterOption,
@@ -145,6 +145,20 @@ export function RequestLogsPage() {
   const [contentModalTab, setContentModalTab] = useState<"input" | "output">(
     "input",
   );
+  const [requestBodyStorageEnabled, setRequestBodyStorageEnabled] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    void configApi
+      .getRequestLogBodyStorage()
+      .then((enabled) => {
+        if (!cancelled) setRequestBodyStorageEnabled(enabled);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleContentClick = useCallback(
     (logId: number, tab: "input" | "output") => {
@@ -721,6 +735,7 @@ export function RequestLogsPage() {
         initialTab={contentModalTab}
         onClose={() => setContentModalOpen(false)}
         showRequestDetails
+        showBodyContent={requestBodyStorageEnabled}
       />
       <ErrorDetailModal
         open={errorModalOpen}

@@ -10,6 +10,18 @@ export interface CodexOAuthAdmissionConfig {
   allowed_clients?: string[];
 }
 
+
+export interface RequestLogBodyStorageResponse {
+  enabled: boolean;
+  cleanup?: {
+    deleted_logs: number;
+    deleted_contents: number;
+    cleared_body_rows: number;
+    cleared_detail_rows: number;
+    cleared_legacy_rows: number;
+  };
+}
+
 export interface CodexOAuthAdmissionResponse {
   allowed_clients?: string[];
   available_allowed_clients?: CodexOAuthAllowedClientPresetInfo[];
@@ -31,6 +43,17 @@ export const configApi = {
   updateUsageStatistics: (enabled: boolean) =>
     apiClient.put("/usage-statistics-enabled", { value: enabled }),
   updateRequestLog: (enabled: boolean) => apiClient.put("/request-log", { value: enabled }),
+  getRequestLogBodyStorage: async (): Promise<boolean> => {
+    const data = await apiClient.get<RequestLogBodyStorageResponse>(
+      "/request-log-storage/store-content",
+    );
+    return data.enabled === true;
+  },
+  updateRequestLogBodyStorage: (enabled: boolean, clearExisting = false) =>
+    apiClient.put<RequestLogBodyStorageResponse>("/request-log-storage/store-content", {
+      value: enabled,
+      clear_existing: clearExisting,
+    }),
   updateLoggingToFile: (enabled: boolean) => apiClient.put("/logging-to-file", { value: enabled }),
   getLogsMaxTotalSizeMb: async (): Promise<number> => {
     const data = await apiClient.get<Record<string, unknown>>("/logs-max-total-size-mb");
