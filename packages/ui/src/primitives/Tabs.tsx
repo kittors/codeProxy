@@ -41,7 +41,7 @@ const tabsTriggerPaddingBySize: Record<ControlSize, string> = {
 };
 
 const tabsTriggerTextBySize: Record<ControlSize, string> = {
-  sm: "text-[11px]",
+  sm: "text-xs",
   default: "text-xs",
   lg: "text-sm",
 };

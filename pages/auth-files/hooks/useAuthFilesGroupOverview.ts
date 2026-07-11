@@ -209,7 +209,7 @@ export function useAuthFilesGroupOverview({
       legend: {
         top: 0,
         left: 0,
-        textStyle: { color: "#64748b", fontSize: 11 },
+        textStyle: { color: "#64748b", fontSize: 12 },
       },
       xAxis: {
         type: "category",
@@ -218,14 +218,14 @@ export function useAuthFilesGroupOverview({
         axisLabel: {
           interval: 0,
           color: "#64748b",
-          fontSize: 11,
+          fontSize: 12,
         },
         axisLine: { lineStyle: { color: "rgba(148,163,184,0.45)" } },
       },
       yAxis: [
         {
           type: "value",
-          axisLabel: { color: "#64748b", fontSize: 11, margin: 10 },
+          axisLabel: { color: "#64748b", fontSize: 12, margin: 10 },
           splitLine: { lineStyle: { color: "rgba(148,163,184,0.18)" } },
         },
         {
@@ -234,7 +234,7 @@ export function useAuthFilesGroupOverview({
           max: 100,
           axisLabel: {
             color: "#64748b",
-            fontSize: 11,
+            fontSize: 12,
             margin: 10,
             formatter: (value: number) => `${Math.round(value)}%`,
           },

@@ -50,7 +50,7 @@ export function ProviderStatusBar({
         {data.blocks.map((state, idx) => (
           <div
             key={idx}
-            className={barHeight + " w-full rounded-[1px] " + blockClass(state)}
+            className={barHeight + " w-full rounded-xs " + blockClass(state)}
             aria-hidden="true"
           />
         ))}

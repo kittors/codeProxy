@@ -6,6 +6,14 @@ import { RuntimeConfigPanel } from "@pages/config/RuntimeConfigPanel";
 import { ThemeProvider } from "@code-proxy/ui";
 import { ToastProvider } from "@code-proxy/ui";
 
+function deferred<T>() {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  const promise = new Promise<T>((res) => {
+    resolve = res;
+  });
+  return { promise, resolve };
+}
+
 const mocks = vi.hoisted(() => ({
   getConfig: vi.fn(),
   getLogsMaxTotalSizeMb: vi.fn(),
@@ -14,6 +22,7 @@ const mocks = vi.hoisted(() => ({
   getAutoUpdateEnabled: vi.fn(),
   getAutoUpdateChannel: vi.fn(),
   getCodexOAuthAdmission: vi.fn(),
+  getRequestLogBodyStorage: vi.fn(),
   updateProxyUrl: vi.fn(),
   clearProxyUrl: vi.fn(),
   updateRequestRetry: vi.fn(),
@@ -30,6 +39,7 @@ const mocks = vi.hoisted(() => ({
   updateAutoUpdateEnabled: vi.fn(),
   updateAutoUpdateChannel: vi.fn(),
   updateCodexOAuthAdmission: vi.fn(),
+  updateRequestLogBodyStorage: vi.fn(),
 }));
 
 vi.mock("@code-proxy/api-client/endpoints/config", () => ({
@@ -41,6 +51,7 @@ vi.mock("@code-proxy/api-client/endpoints/config", () => ({
     getAutoUpdateEnabled: mocks.getAutoUpdateEnabled,
     getAutoUpdateChannel: mocks.getAutoUpdateChannel,
     getCodexOAuthAdmission: mocks.getCodexOAuthAdmission,
+    getRequestLogBodyStorage: mocks.getRequestLogBodyStorage,
     updateProxyUrl: mocks.updateProxyUrl,
     clearProxyUrl: mocks.clearProxyUrl,
     updateRequestRetry: mocks.updateRequestRetry,
@@ -57,6 +68,7 @@ vi.mock("@code-proxy/api-client/endpoints/config", () => ({
     updateAutoUpdateEnabled: mocks.updateAutoUpdateEnabled,
     updateAutoUpdateChannel: mocks.updateAutoUpdateChannel,
     updateCodexOAuthAdmission: mocks.updateCodexOAuthAdmission,
+    updateRequestLogBodyStorage: mocks.updateRequestLogBodyStorage,
   },
 }));
 
@@ -97,6 +109,7 @@ describe("RuntimeConfigPanel", () => {
         },
       ],
     });
+    mocks.getRequestLogBodyStorage.mockResolvedValue(true);
     mocks.updateProxyUrl.mockResolvedValue({});
     mocks.clearProxyUrl.mockResolvedValue({});
     mocks.updateRequestRetry.mockResolvedValue({});
@@ -105,6 +118,30 @@ describe("RuntimeConfigPanel", () => {
     mocks.updateAutoUpdateEnabled.mockResolvedValue({});
     mocks.updateAutoUpdateChannel.mockResolvedValue({});
     mocks.updateCodexOAuthAdmission.mockResolvedValue({});
+    mocks.updateRequestLogBodyStorage.mockResolvedValue({ enabled: false });
+  });
+
+  test("confirms disabling body storage, clears existing bodies, and shows progress", async () => {
+    const pending = deferred<void>();
+    mocks.updateRequestLogBodyStorage.mockReturnValueOnce(pending.promise);
+    renderPanel();
+
+    const toggle = await screen.findByRole("switch", {
+      name: /store request and response bodies/i,
+    });
+    await userEvent.click(toggle);
+    expect(screen.getByText(/reclaims PostgreSQL disk space/i)).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: /disable and clear/i }));
+    expect(screen.getByText(/disabling and clearing/i)).toBeInTheDocument();
+    expect(mocks.updateRequestLogBodyStorage).toHaveBeenCalledWith(false, true);
+
+    pending.resolve();
+    await waitFor(() => {
+      expect(
+        screen.queryByText(/reclaims PostgreSQL disk space/i),
+      ).not.toBeInTheDocument();
+    });
   });
 
   test("saves modified runtime text fields and reloads config", async () => {

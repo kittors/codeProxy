@@ -87,6 +87,7 @@ export {
 } from "./utils/controlStyles";
 export {
   cn,
+  floatingPanelSurface,
   getSelectTriggerBase,
   selectTriggerBase,
   selectTriggerOpen,

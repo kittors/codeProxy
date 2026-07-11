@@ -62,7 +62,7 @@ export const createModelDistributionOption = (input: {
         label: { show: false },
         labelLine: { show: false },
         itemStyle: {
-          borderRadius: 3,
+          borderRadius: 4,
           borderWidth: 2,
           borderColor: input.isDark ? "rgba(10,10,10,0.75)" : "rgba(255,255,255,0.92)",
         },

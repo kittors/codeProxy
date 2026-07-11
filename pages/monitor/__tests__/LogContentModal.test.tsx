@@ -40,6 +40,44 @@ describe("LogContentModal", () => {
     expect(modalSource).toContain("exit={{ opacity: 0");
   });
 
+  test("shows request details directly without a tabs toolbar when body storage is disabled", async () => {
+    vi.useFakeTimers();
+    const fetchDetailsFn = vi.fn(async () => ({
+      id: 1,
+      model: "gpt-test",
+      part: "details" as const,
+      content: JSON.stringify({ client: { ip: "203.0.113.8" } }),
+    }));
+
+    render(
+      <ThemeProvider>
+        <LogContentModal
+          open
+          logId={1}
+          onClose={() => {}}
+          fetchDetailsFn={fetchDetailsFn}
+          showRequestDetails
+          showBodyContent={false}
+        />
+      </ThemeProvider>,
+    );
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(260);
+    });
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    await act(async () => {
+      await vi.runOnlyPendingTimersAsync();
+    });
+
+    expect(fetchDetailsFn).toHaveBeenCalledWith(1, expect.any(Object));
+    expect(screen.queryByRole("tab")).not.toBeInTheDocument();
+    expect(screen.getByText("203.0.113.8")).toBeInTheDocument();
+  });
+
   test("protects large request detail content from fast-scroll blanking", () => {
     const renderingSource = readModule(
       "features/log-content-viewer/log-content/rendering.tsx",

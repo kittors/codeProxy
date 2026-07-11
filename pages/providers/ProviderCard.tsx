@@ -1,14 +1,7 @@
 import { useState, type ReactNode } from "react";
-import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
+import { DropdownMenu } from "@code-proxy/ui";
 import { EllipsisVertical, Power, Settings2, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-
-const ACTION_MENU_CONTENT_CLASS =
-  "z-[220] min-w-36 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-xl shadow-slate-900/10 dark:border-neutral-800 dark:bg-neutral-950 dark:shadow-black/35";
-const ACTION_MENU_ITEM_CLASS =
-  "flex w-full cursor-default select-none items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 outline-none transition-colors focus:bg-slate-100 data-[highlighted]:bg-slate-100 dark:text-white/75 dark:focus:bg-white/10 dark:data-[highlighted]:bg-white/10";
-const ACTION_MENU_DANGER_ITEM_CLASS =
-  "flex w-full cursor-default select-none items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-rose-600 outline-none transition-colors focus:bg-rose-50 data-[highlighted]:bg-rose-50 dark:text-rose-300 dark:focus:bg-rose-500/10 dark:data-[highlighted]:bg-rose-500/10";
 
 export interface ProviderCardProps {
   /** Card title (provider name) */
@@ -124,14 +117,10 @@ export function ProviderCard({
               </button>
             </DropdownMenu.Trigger>
             <DropdownMenu.Portal>
-              <DropdownMenu.Content
-                align="end"
-                sideOffset={8}
-                className={ACTION_MENU_CONTENT_CLASS}
-              >
+              <DropdownMenu.Content align="end" sideOffset={8}>
                 {onToggleEnabled ? (
                   <DropdownMenu.Item
-                    className={ACTION_MENU_ITEM_CLASS}
+
                     onSelect={() => onToggleEnabled(!enabled)}
                   >
                     <Power size={15} />
@@ -139,14 +128,14 @@ export function ProviderCard({
                   </DropdownMenu.Item>
                 ) : null}
                 {onEdit ? (
-                  <DropdownMenu.Item className={ACTION_MENU_ITEM_CLASS} onSelect={() => onEdit()}>
+                  <DropdownMenu.Item onSelect={() => onEdit()}>
                     <Settings2 size={15} />
                     <span>{t("providers.edit")}</span>
                   </DropdownMenu.Item>
                 ) : null}
                 {onDelete ? (
                   <DropdownMenu.Item
-                    className={ACTION_MENU_DANGER_ITEM_CLASS}
+                    className="text-rose-600 focus:text-rose-700 dark:text-rose-300"
                     onSelect={() => onDelete()}
                   >
                     <Trash2 size={15} />

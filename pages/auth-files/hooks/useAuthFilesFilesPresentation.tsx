@@ -313,7 +313,7 @@ export function useAuthFilesFilesPresentation({
             <HoverTooltip key={badge.key} content={formatRestrictionTooltip(badge)} placement="top">
               <span
                 className={[
-                  "inline-flex max-w-full items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold tabular-nums",
+                  "inline-flex max-w-full items-center gap-1 rounded-full border px-2 py-0.5 text-2xs font-semibold tabular-nums",
                   RESTRICTION_TONE_CLASSES[badge.tone],
                 ].join(" ")}
               >
@@ -369,7 +369,7 @@ export function useAuthFilesFilesPresentation({
             <HoverTooltip key={badge.key} content={formatBadgeTooltip(badge)} placement="top">
               <span
                 className={[
-                  "inline-flex max-w-full items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold tabular-nums",
+                  "inline-flex max-w-full items-center gap-1 rounded-full border px-2 py-0.5 text-2xs font-semibold tabular-nums",
                   CLAUDE_OAUTH_HEALTH_TONE_CLASSES[badge.tone],
                 ].join(" ")}
               >
@@ -392,7 +392,9 @@ export function useAuthFilesFilesPresentation({
       const days = Math.max(0, Math.abs(status.remainingDays));
       const label = status.expired
         ? t("auth_files.subscription_expired_short", { days })
-        : t("auth_files.subscription_remaining_short", { days });
+        : status.expiresAtMs - nowMs < 24 * 60 * 60 * 1000
+          ? t("auth_files.subscription_remaining_less_than_day")
+          : t("auth_files.subscription_remaining_short", { days });
       const title = t("auth_files.subscription_expires_at_title", {
         start: status.startedAtText,
         date: status.expiresAtText,
@@ -403,7 +405,7 @@ export function useAuthFilesFilesPresentation({
         <HoverTooltip content={title}>
           <span
             className={[
-              "inline-flex max-w-full items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold tabular-nums",
+              "inline-flex max-w-full items-center gap-1 rounded-full border px-2 py-0.5 text-2xs font-semibold tabular-nums",
               SUBSCRIPTION_TONE_CLASSES[status.tone],
             ].join(" ")}
           >
@@ -514,7 +516,7 @@ export function useAuthFilesFilesPresentation({
       return (
         <div className="space-y-1">
           {hasError ? (
-            <p className="max-w-80 truncate text-[11px] font-semibold text-rose-700 dark:text-rose-200">
+            <p className="max-w-80 truncate text-xs font-semibold text-rose-700 dark:text-rose-200">
               {translateQuotaText(state.error ?? t("common.error"))}
             </p>
           ) : null}
@@ -531,7 +533,7 @@ export function useAuthFilesFilesPresentation({
                   options?.suppressItemMeta || resetText ? undefined : item.meta;
                 return (
                   <div key={item.label} className="contents">
-                    <span className="min-w-0 truncate text-[10px] font-semibold text-slate-600 dark:text-white/70">
+                    <span className="min-w-0 truncate text-2xs font-semibold text-slate-600 dark:text-white/70">
                       {translateQuotaText(item.label)}
                     </span>
                     <span className="flex items-center justify-center">
@@ -539,17 +541,17 @@ export function useAuthFilesFilesPresentation({
                     </span>
                     <span
                       className={[
-                        "justify-self-end whitespace-nowrap text-[10px] font-semibold tabular-nums",
+                        "justify-self-end whitespace-nowrap text-2xs font-semibold tabular-nums",
                         tone.percentClass,
                       ].join(" ")}
                     >
                       {percentText}
                     </span>
-                    <span className="whitespace-nowrap text-right text-[10px] tabular-nums text-slate-500 dark:text-white/40">
+                    <span className="whitespace-nowrap text-right text-2xs tabular-nums text-slate-500 dark:text-white/40">
                       {resetText ?? "--"}
                     </span>
                     {itemMeta ? (
-                      <span className="col-span-4 truncate text-[10px] text-slate-500 dark:text-white/55">
+                      <span className="col-span-4 truncate text-2xs text-slate-500 dark:text-white/55">
                         {itemMeta}
                       </span>
                     ) : null}
@@ -577,12 +579,12 @@ export function useAuthFilesFilesPresentation({
       return (
         <div key={label} className="space-y-1">
           <div className="flex items-center justify-between gap-2">
-            <span className="min-w-0 truncate text-[11px] font-semibold text-slate-700 dark:text-white/80">
+            <span className="min-w-0 truncate text-xs font-semibold text-slate-700 dark:text-white/80">
               {translateQuotaText(label)}
             </span>
             <span
               className={[
-                "shrink-0 text-[11px] font-semibold tabular-nums",
+                "shrink-0 text-xs font-semibold tabular-nums",
                 tone.percentClass,
               ].join(" ")}
             >
@@ -596,7 +598,7 @@ export function useAuthFilesFilesPresentation({
               aria-hidden="true"
             />
           </div>
-          <div className="min-h-[14px] truncate text-[10px] tabular-nums text-slate-500 dark:text-white/45">
+          <div className="min-h-[14px] truncate text-2xs tabular-nums text-slate-500 dark:text-white/45">
             {detailText ?? "\u00A0"}
           </div>
         </div>
@@ -669,7 +671,7 @@ export function useAuthFilesFilesPresentation({
                   {supplementalTags.map((tag) => (
                     <span
                       key={tag}
-                      className="inline-flex items-center rounded-full bg-sky-50 px-2 py-0.5 text-[10px] font-semibold text-sky-700 dark:bg-sky-500/15 dark:text-sky-200"
+                      className="inline-flex items-center rounded-full bg-sky-50 px-2 py-0.5 text-2xs font-semibold text-sky-700 dark:bg-sky-500/15 dark:text-sky-200"
                     >
                       {tag}
                     </span>
@@ -760,7 +762,7 @@ export function useAuthFilesFilesPresentation({
             <button
               type="button"
               disabled={state?.loading}
-              className="inline-flex cursor-pointer items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] tabular-nums text-slate-600 transition-colors hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-default disabled:opacity-40 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white/60 dark:hover:border-blue-600 dark:hover:bg-blue-950 dark:hover:text-blue-300"
+              className="inline-flex cursor-pointer items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-xs tabular-nums text-slate-600 transition-colors hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-default disabled:opacity-40 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white/60 dark:hover:border-blue-600 dark:hover:bg-blue-950 dark:hover:text-blue-300"
               onClick={() => void checkAuthFileConnectivity(file.name)}
               title={t("auth_files.check_connectivity")}
               aria-label={t("auth_files.check_connectivity")}
@@ -825,7 +827,7 @@ export function useAuthFilesFilesPresentation({
         headerClassName: "text-center",
         headerRender: () => (
           <div className="flex items-center justify-center gap-2 normal-case">
-            <span className="text-[11px] font-semibold text-slate-500 dark:text-white/60">
+            <span className="text-xs font-semibold text-slate-500 dark:text-white/60">
               {t("auth_files.col_quota")}
             </span>
             <Select
@@ -865,19 +867,19 @@ export function useAuthFilesFilesPresentation({
                 key={item.label}
                 className="grid w-full min-w-0 grid-cols-[minmax(0,1fr)_0.875rem_auto_3.25rem] items-center gap-1"
               >
-                <span className="min-w-0 truncate text-[10px] font-semibold text-slate-600 dark:text-white/70">
+                <span className="min-w-0 truncate text-2xs font-semibold text-slate-600 dark:text-white/70">
                   {translateQuotaText(item.label)}
                 </span>
                 {quotaProgressCircle(item.percent)}
                 <span
                   className={[
-                    "justify-self-end text-[10px] font-semibold tabular-nums",
+                    "justify-self-end text-2xs font-semibold tabular-nums",
                     tone.percentClass,
                   ].join(" ")}
                 >
                   {percentText}
                 </span>
-                <span className="min-w-0 truncate whitespace-nowrap text-right text-[10px] tabular-nums text-slate-500 dark:text-white/40">
+                <span className="min-w-0 truncate whitespace-nowrap text-right text-2xs tabular-nums text-slate-500 dark:text-white/40">
                   {detailText}
                 </span>
               </div>

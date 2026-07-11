@@ -290,7 +290,7 @@ function RecommendationDetail({
             })}
           </p>
         </div>
-        <span className="shrink-0 rounded-full bg-white px-2 py-0.5 text-[11px] font-semibold text-slate-600 ring-1 ring-slate-200 dark:bg-neutral-950 dark:text-white/65 dark:ring-neutral-800">
+        <span className="shrink-0 rounded-full bg-white px-2 py-0.5 text-xs font-semibold text-slate-600 ring-1 ring-slate-200 dark:bg-neutral-950 dark:text-white/65 dark:ring-neutral-800">
           {t("identity_fingerprint.recommend_count", { count: item.count })}
         </span>
       </div>
@@ -304,7 +304,7 @@ function RecommendationDetail({
           <div className="space-y-2">
             {diffs.map((diff) => (
               <div key={diff.key} className="rounded-lg bg-white px-3 py-2 dark:bg-neutral-950/70">
-                <div className="text-[11px] font-semibold text-slate-500 dark:text-white/45">
+                <div className="text-xs font-semibold text-slate-500 dark:text-white/45">
                   {diff.label}
                 </div>
                 <div className="mt-1 grid gap-1 text-xs">
@@ -341,7 +341,7 @@ function RecommendationDetail({
                 <span className="font-mono">#{sample.log_id}</span>
                 <span>{formatDateTime(sample.timestamp)}</span>
               </div>
-              <div className="mt-1 truncate font-mono text-[11px] text-slate-500 dark:text-white/45">
+              <div className="mt-1 truncate font-mono text-xs text-slate-500 dark:text-white/45">
                 {sample.method || "POST"} {sample.path || "-"}
               </div>
             </div>
@@ -355,7 +355,7 @@ function RecommendationDetail({
 function DetailSection({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="mt-4">
-      <h4 className="mb-2 text-[11px] font-semibold uppercase text-slate-500 dark:text-white/45">
+      <h4 className="mb-2 text-xs font-semibold uppercase text-slate-500 dark:text-white/45">
         {title}
       </h4>
       {children}
@@ -377,7 +377,7 @@ function HeaderValueList({
     <div className="space-y-2">
       {entries.map(([key, value]) => (
         <div key={key} className="min-w-0 rounded-lg bg-white px-3 py-2 dark:bg-neutral-950/70">
-          <div className="text-[11px] font-semibold text-slate-500 dark:text-white/45">{key}</div>
+          <div className="text-xs font-semibold text-slate-500 dark:text-white/45">{key}</div>
           <div
             className={[
               "mt-1 whitespace-pre-wrap break-words [overflow-wrap:anywhere] font-mono text-xs leading-relaxed",

@@ -573,6 +573,7 @@
     "subscription_period_yearly": "Ежегодно",
     "subscription_expires_at_title": "{{period}} - начало {{start}} - истекает {{date}}",
     "subscription_remaining_short": "Осталось {{days}} д",
+    "subscription_remaining_less_than_day": "Осталось менее дня",
     "subscription_expired_short": "Истекла {{days}} д назад",
     "restriction_duration_day": "д",
     "restriction_duration_hour": "ч",
@@ -1612,6 +1613,10 @@
   },
   "shell": {
     "console": "Console",
+    "nav_group_runtime": "Operations",
+    "nav_group_access": "Access",
+    "nav_group_models": "Models & Routing",
+    "nav_group_system": "System",
     "nav_dashboard": "Dashboard",
     "nav_monitor": "Monitor",
     "nav_request_logs": "Request Logs",
@@ -2272,6 +2277,13 @@
     "loading_models": "Загрузка моделей…",
     "no_models": "Нет данных о моделях",
     "no_match": "Нет результатов"
+  },
+  "oauth": {
+    "xai_endpoint_mode": "Эндпоинт запросов Grok",
+    "xai_endpoint_build": "Grok Build / CLI (лимит подписки)",
+    "xai_endpoint_api": "xAI API (API-лимит)",
+    "xai_endpoint_build_hint": "Использует эндпоинт Grok Build/CLI и лимит подписки. Это режим OAuth по умолчанию.",
+    "xai_endpoint_api_hint": "Использует api.x.ai и расходует лимит xAI API."
   },
   "auto_update": {
     "title": "Доступно обновление",

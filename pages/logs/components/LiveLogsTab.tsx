@@ -11,7 +11,7 @@ function Badge({ children, className }: { children: React.ReactNode; className: 
   return (
     <span
       className={[
-        "inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold",
+        "inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold",
         className,
       ].join(" ")}
     >
@@ -22,7 +22,7 @@ function Badge({ children, className }: { children: React.ReactNode; className: 
 
 function RequestPath({ children }: { children: string }) {
   return (
-    <code className="inline-block max-w-full rounded-md border border-slate-200 bg-slate-50 px-2 py-1 font-mono text-[11px] font-medium leading-relaxed text-slate-700 dark:border-neutral-800 dark:bg-white/5 dark:text-white/70">
+    <code className="inline-block max-w-full rounded-md border border-slate-200 bg-slate-50 px-2 py-1 font-mono text-xs font-medium leading-relaxed text-slate-700 dark:border-neutral-800 dark:bg-white/5 dark:text-white/70">
       <span className="break-all">{children}</span>
     </code>
   );
@@ -237,7 +237,7 @@ export function LiveLogsTab({
                       className={rowClassName}
                     >
                       <div className="flex items-start gap-3">
-                        <div className="w-36 shrink-0 tabular-nums text-[11px] text-slate-500 dark:text-white/55">
+                        <div className="w-36 shrink-0 tabular-nums text-xs text-slate-500 dark:text-white/55">
                           {line.timestamp ?? ""}
                         </div>
                         <div className="min-w-0 flex-1">

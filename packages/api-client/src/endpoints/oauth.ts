@@ -20,6 +20,7 @@ const CALLBACK_PROVIDER_MAP: Partial<Record<OAuthProvider, string>> = {
 export interface OAuthProxyOptions {
   projectId?: string;
   proxyId?: string;
+  usingApi?: boolean;
 }
 
 export type OAuthCallbackSubmission =
@@ -44,6 +45,9 @@ export const oauthApi = {
     const proxyId = normalizeString(options?.proxyId);
     if (provider === "gemini-cli" && projectId) {
       params.project_id = projectId;
+    }
+    if (provider === "xai") {
+      params.using_api = options?.usingApi === true;
     }
     if (proxyId) {
       params.proxy_id = proxyId;

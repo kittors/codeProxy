@@ -33,6 +33,24 @@ describe("OAuth proxy id serialization", () => {
     });
   });
 
+  test("serializes the selected xAI endpoint mode", async () => {
+    const { oauthApi } = await import("@code-proxy/api-client/endpoints/oauth");
+    getMock.mockResolvedValue({
+      url: "https://auth.x.ai",
+      state: "state-1",
+    });
+
+    await oauthApi.startAuth("xai");
+    await oauthApi.startAuth("xai", { usingApi: true });
+
+    expect(getMock).toHaveBeenNthCalledWith(1, "/xai-auth-url", {
+      params: { is_webui: true, using_api: false },
+    });
+    expect(getMock).toHaveBeenNthCalledWith(2, "/xai-auth-url", {
+      params: { is_webui: true, using_api: true },
+    });
+  });
+
   test("passes proxy_id when submitting an OAuth callback", async () => {
     const { oauthApi } = await import("@code-proxy/api-client/endpoints/oauth");
     postMock.mockResolvedValue({ status: "ok" });

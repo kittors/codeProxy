@@ -18,7 +18,7 @@ import { Card } from "@code-proxy/ui";
 import type { SystemStats } from "./useSystemStats";
 
 const PANEL_SURFACE =
-  "rounded-[18px] border border-slate-200/85 bg-white shadow-[0_10px_26px_rgba(15,23,42,0.05)] dark:border-neutral-800 dark:bg-neutral-950/85 dark:shadow-[0_10px_26px_rgba(0,0,0,0.28)]";
+  "rounded-2xl border border-slate-200/85 bg-white shadow-[0_10px_26px_rgba(15,23,42,0.05)] dark:border-neutral-800 dark:bg-neutral-950/85 dark:shadow-[0_10px_26px_rgba(0,0,0,0.28)]";
 
 /* ═══════════════════════════════════════════════════════════
    Helpers
@@ -144,7 +144,7 @@ function HealthGauge({ score }: { score: number }) {
           <span className={`mt-0.5 text-xs font-semibold ${hl.color}`}>{t(hl.key)}</span>
         </div>
       </div>
-      <p className="mt-2 text-[11px] text-slate-400 dark:text-white/40">
+      <p className="mt-2 text-xs text-slate-400 dark:text-white/40">
         {t("system_monitor.health_score")}
       </p>
     </div>
@@ -182,7 +182,7 @@ function DiskUsageRingCard({ stats }: { stats: SystemStats }) {
           <HardDrive size={15} className="text-slate-400" />
           {t("system_monitor.disk")}
         </div>
-        <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${sc.labelBg}`}>
+        <span className={`rounded-full px-2 py-0.5 text-2xs font-semibold ${sc.labelBg}`}>
           {t(sc.labelKey)}
         </span>
       </div>
@@ -214,7 +214,7 @@ function DiskUsageRingCard({ stats }: { stats: SystemStats }) {
             <span className={`text-2xl font-bold tabular-nums ${sc.text}`}>
               {stats.disk_pct.toFixed(1)}%
             </span>
-            <span className="mt-0.5 text-[10px] font-semibold text-slate-400 dark:text-white/45">
+            <span className="mt-0.5 text-2xs font-semibold text-slate-400 dark:text-white/45">
               {t("system_monitor.disk")}
             </span>
           </div>
@@ -222,16 +222,16 @@ function DiskUsageRingCard({ stats }: { stats: SystemStats }) {
       </div>
 
       <div className="grid grid-cols-2 gap-2">
-        <div className="rounded-[14px] bg-white/70 px-3 py-2 shadow-sm ring-1 ring-slate-200/70 dark:bg-neutral-900/70 dark:ring-white/10">
-          <p className="text-[10px] text-slate-400 dark:text-white/45">
+        <div className="rounded-2xl bg-white/70 px-3 py-2 shadow-sm ring-1 ring-slate-200/70 dark:bg-neutral-900/70 dark:ring-white/10">
+          <p className="text-2xs text-slate-400 dark:text-white/45">
             {t("system_monitor.disk_free")}
           </p>
           <p className="mt-1 text-sm font-bold tabular-nums text-emerald-500">
             {formatBytes(stats.disk_free)}
           </p>
         </div>
-        <div className="rounded-[14px] bg-white/70 px-3 py-2 shadow-sm ring-1 ring-slate-200/70 dark:bg-neutral-900/70 dark:ring-white/10">
-          <p className="text-[10px] text-slate-400 dark:text-white/45">
+        <div className="rounded-2xl bg-white/70 px-3 py-2 shadow-sm ring-1 ring-slate-200/70 dark:bg-neutral-900/70 dark:ring-white/10">
+          <p className="text-2xs text-slate-400 dark:text-white/45">
             {t("system_monitor.total_size", { size: formatBytes(stats.disk_total) })}
           </p>
           <p className="mt-1 text-sm font-bold tabular-nums text-slate-700 dark:text-white">
@@ -285,7 +285,7 @@ function ResourceBar({
           style={{ width: `${Math.min(pct, 100)}%` }}
         />
       </div>
-      {detail && <p className="mt-1 text-[10px] text-slate-400 dark:text-white/35">{detail}</p>}
+      {detail && <p className="mt-1 text-2xs text-slate-400 dark:text-white/35">{detail}</p>}
     </Card>
   );
 }
@@ -309,13 +309,13 @@ function MiniKpi({
 }) {
   return (
     <Card padding="compact" bodyClassName="mt-0" className={`${PANEL_SURFACE} h-full`}>
-      <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-white/40">
+      <div className="flex items-center gap-1.5 text-2xs font-semibold uppercase tracking-widest text-slate-400 dark:text-white/40">
         <Icon size={12} />
         {label}
       </div>
       <p className={`mt-1.5 text-lg font-bold tabular-nums ${color}`}>{value}</p>
       {sublabel && (
-        <p className="mt-0.5 text-[10px] text-slate-400 dark:text-white/35">{sublabel}</p>
+        <p className="mt-0.5 text-2xs text-slate-400 dark:text-white/35">{sublabel}</p>
       )}
     </Card>
   );
@@ -329,7 +329,7 @@ function NetworkCard({ stats }: { stats: SystemStats }) {
   const { t } = useTranslation();
   return (
     <Card padding="compact" bodyClassName="mt-0" className={`${PANEL_SURFACE} h-full`}>
-      <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-white/40 mb-2.5">
+      <div className="flex items-center gap-1.5 text-2xs font-semibold uppercase tracking-widest text-slate-400 dark:text-white/40 mb-2.5">
         <Wifi size={12} />
         {t("system_monitor.network_traffic")}
       </div>
@@ -341,7 +341,7 @@ function NetworkCard({ stats }: { stats: SystemStats }) {
               {formatRate(stats.net_send_rate)}
             </span>
           </div>
-          <p className="mt-0.5 text-[10px] text-slate-400 dark:text-white/35">
+          <p className="mt-0.5 text-2xs text-slate-400 dark:text-white/35">
             {t("system_monitor.up_total", { size: formatBytes(stats.net_bytes_sent) })}
           </p>
         </div>
@@ -352,13 +352,13 @@ function NetworkCard({ stats }: { stats: SystemStats }) {
               {formatRate(stats.net_recv_rate)}
             </span>
           </div>
-          <p className="mt-0.5 text-[10px] text-slate-400 dark:text-white/35">
+          <p className="mt-0.5 text-2xs text-slate-400 dark:text-white/35">
             {t("system_monitor.down_total", { size: formatBytes(stats.net_bytes_recv) })}
           </p>
         </div>
       </div>
-      <div className="mt-2 flex items-center justify-between rounded-[12px] bg-slate-50 px-2.5 py-1.5 dark:bg-neutral-800/50">
-        <span className="text-[10px] text-slate-500 dark:text-white/45">
+      <div className="mt-2 flex items-center justify-between rounded-xl bg-slate-50 px-2.5 py-1.5 dark:bg-neutral-800/50">
+        <span className="text-2xs text-slate-500 dark:text-white/45">
           {t("system_monitor.total_traffic")}
         </span>
         <span className="text-xs font-bold tabular-nums text-slate-700 dark:text-white">
@@ -388,21 +388,21 @@ function AverageLatencyCard({
       bodyClassName="mt-0"
       className={`${PANEL_SURFACE} h-full overflow-hidden`}
     >
-      <div className="mb-2.5 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-white/40">
+      <div className="mb-2.5 flex items-center gap-1.5 text-2xs font-semibold uppercase tracking-widest text-slate-400 dark:text-white/40">
         <Network size={12} />
         {t("system_monitor.channel_avg_latency")}
       </div>
       <div className="grid grid-cols-2 gap-3">
-        <div className="rounded-[12px] bg-slate-50 px-3 py-2.5 dark:bg-neutral-900/70 dark:ring-1 dark:ring-white/8">
-          <div className="text-[9px] font-semibold uppercase tracking-wider text-slate-400 dark:text-white/45">
+        <div className="rounded-xl bg-slate-50 px-3 py-2.5 dark:bg-neutral-900/70 dark:ring-1 dark:ring-white/8">
+          <div className="text-2xs font-semibold uppercase tracking-wider text-slate-400 dark:text-white/45">
             {t("system_monitor.latency")}
           </div>
           <div className="mt-1 text-xl font-bold tabular-nums text-slate-900 dark:text-white">
             {formatMs(avgLatency)}
           </div>
         </div>
-        <div className="rounded-[12px] bg-slate-50 px-3 py-2.5 dark:bg-neutral-900/70 dark:ring-1 dark:ring-white/8">
-          <div className="text-[9px] font-semibold uppercase tracking-wider text-slate-400 dark:text-white/45">
+        <div className="rounded-xl bg-slate-50 px-3 py-2.5 dark:bg-neutral-900/70 dark:ring-1 dark:ring-white/8">
+          <div className="text-2xs font-semibold uppercase tracking-wider text-slate-400 dark:text-white/45">
             {t("system_monitor.key_count")}
           </div>
           <div className="mt-1 text-xl font-bold tabular-nums text-slate-900 dark:text-white">

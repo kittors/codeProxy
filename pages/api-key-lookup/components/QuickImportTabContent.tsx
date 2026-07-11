@@ -232,7 +232,7 @@ function QuickImportCard({
             <span className="truncate text-sm font-semibold text-slate-900 dark:text-white">
               {config.providerName}
             </span>
-            <span className="rounded-md border border-slate-200/70 bg-slate-50 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500 dark:border-neutral-800 dark:bg-neutral-950 dark:text-white/45">
+            <span className="rounded-md border border-slate-200/70 bg-slate-50 px-1.5 py-0.5 text-2xs font-semibold text-slate-500 dark:border-neutral-800 dark:bg-neutral-950 dark:text-white/45">
               {t(clientLabelKey[clientType])}
             </span>
           </span>
@@ -242,11 +242,11 @@ function QuickImportCard({
             </span>
           ) : null}
           <span className="mt-3 flex flex-wrap items-center gap-2">
-            <span className="inline-flex max-w-full overflow-hidden text-ellipsis whitespace-nowrap rounded-md border border-slate-200/70 bg-white px-1.5 py-0.5 font-mono text-[10px] text-slate-500 dark:border-neutral-800 dark:bg-neutral-950 dark:text-white/45">
+            <span className="inline-flex max-w-full overflow-hidden text-ellipsis whitespace-nowrap rounded-md border border-slate-200/70 bg-white px-1.5 py-0.5 font-mono text-2xs text-slate-500 dark:border-neutral-800 dark:bg-neutral-950 dark:text-white/45">
               {config.defaultModel || t("common.no_model_data")}
             </span>
             {config.allowedChannelGroups.length > 0 ? (
-              <span className="truncate text-[10px] text-slate-400 dark:text-white/35">
+              <span className="truncate text-2xs text-slate-400 dark:text-white/35">
                 {config.allowedChannelGroups.join(", ")}
               </span>
             ) : null}
@@ -535,7 +535,7 @@ export function QuickImportTabContent({
                           initial={reduceMotion ? false : { opacity: 0, y: 4 }}
                           animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
                           exit={reduceMotion ? undefined : { opacity: 0, y: -4 }}
-                          className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-bold tabular-nums text-slate-500 dark:bg-neutral-900 dark:text-white/45"
+                          className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-bold tabular-nums text-slate-500 dark:bg-neutral-900 dark:text-white/45"
                         >
                           {items.length}
                         </motion.span>

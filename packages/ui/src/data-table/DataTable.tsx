@@ -2872,14 +2872,7 @@ export function DataTable<T>({
                       ) : null}
                       <div
                         data-vt-column-header-content
-                        className={`min-w-0 max-w-full overflow-hidden ${
-                          canReorder
-                            ? "group-hover/column:pl-5 group-hover/column:transition-[padding] group-focus-within/column:pl-5 data-[vt-reorder-active=true]:pl-5"
-                            : ""
-                        }`}
-                        data-vt-reorder-active={
-                          activeReorderColumnKey === col.key ? "true" : undefined
-                        }
+                        className="min-w-0 max-w-full overflow-hidden"
                       >
                         {isRowReorderColumn ? (
                           <span className="flex items-center justify-center text-slate-400/70 dark:text-white/35">

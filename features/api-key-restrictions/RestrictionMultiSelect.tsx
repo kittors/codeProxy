@@ -9,7 +9,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { Check, ChevronDown } from "lucide-react";
-import type { MultiSelectOption } from "@code-proxy/ui";
+import { floatingPanelSurface, type MultiSelectOption } from "@code-proxy/ui";
 
 interface RestrictionMultiSelectProps {
   options: MultiSelectOption[];
@@ -59,6 +59,7 @@ export function RestrictionMultiSelect({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
+  const [dropdownPlacement, setDropdownPlacement] = useState<"bottom" | "top">("bottom");
 
   const selectedValues = useMemo(() => normalizeSelection(options, value), [options, value]);
   const selectedSet = useMemo(() => new Set(selectedValues), [selectedValues]);
@@ -73,6 +74,7 @@ export function RestrictionMultiSelect({
     const openAbove = spaceBelow < dropdownMaxH && spaceAbove > spaceBelow;
 
     if (openAbove) {
+      setDropdownPlacement("top");
       setDropdownStyle({
         position: "fixed",
         bottom: window.innerHeight - rect.top + gap,
@@ -84,6 +86,7 @@ export function RestrictionMultiSelect({
       return;
     }
 
+    setDropdownPlacement("bottom");
     setDropdownStyle({
       position: "fixed",
       top: rect.bottom + gap,
@@ -199,7 +202,9 @@ export function RestrictionMultiSelect({
         <div
           ref={dropdownRef}
           style={dropdownStyle}
-          className="flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl shadow-black/10 dark:border-neutral-700 dark:bg-neutral-900 dark:shadow-black/30"
+          data-state="open"
+          data-side={dropdownPlacement}
+          className={`flex flex-col overflow-hidden ${floatingPanelSurface}`}
         >
           <div className="border-b border-slate-100 px-3 py-2 dark:border-neutral-800">
             <input

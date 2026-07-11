@@ -74,7 +74,7 @@ export function useModelColumns({
               </OverflowTooltip>
               {row.description ? (
                 <OverflowTooltip content={row.description} className="block min-w-0">
-                  <span className="block min-w-0 truncate text-[11px] text-slate-500 dark:text-white/45">
+                  <span className="block min-w-0 truncate text-xs text-slate-500 dark:text-white/45">
                     {row.description}
                   </span>
                 </OverflowTooltip>
@@ -120,7 +120,7 @@ export function useModelColumns({
           return (
             <span
               className={[
-                "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-semibold",
+                "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-2xs font-semibold",
                 row.enabled && priced
                   ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-300"
                   : "bg-slate-100 text-slate-500 dark:bg-neutral-800 dark:text-white/40",

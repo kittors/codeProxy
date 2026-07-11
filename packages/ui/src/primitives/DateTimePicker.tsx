@@ -319,6 +319,7 @@ export function DateTimePicker({
               role="dialog"
               aria-label={labels.picker}
               data-placement={placement}
+              data-side={placement}
               className={cn(selectPanel, "p-3 text-[#18181B] dark:text-white")}
               style={panelStyle}
               {...getSelectDropdownMotion(placement)}
@@ -344,7 +345,7 @@ export function DateTimePicker({
                 </button>
               </div>
 
-              <div className="mt-3 grid grid-cols-7 gap-1 text-center text-[10px] font-semibold uppercase text-[#96969B] dark:text-[#9F9FA8]">
+              <div className="mt-3 grid grid-cols-7 gap-1 text-center text-2xs font-semibold uppercase text-[#96969B] dark:text-[#9F9FA8]">
                 {weekdayLabels.map((day) => (
                   <span key={day}>{day}</span>
                 ))}
@@ -383,7 +384,7 @@ export function DateTimePicker({
 
               <div className="mt-3 grid grid-cols-2 gap-2 border-t border-black/[0.06] pt-3 dark:border-white/10">
                 <label className="space-y-1">
-                  <span className="text-[10px] font-semibold uppercase text-[#96969B] dark:text-[#9F9FA8]">
+                  <span className="text-2xs font-semibold uppercase text-[#96969B] dark:text-[#9F9FA8]">
                     {labels.hour}
                   </span>
                   <input
@@ -397,7 +398,7 @@ export function DateTimePicker({
                   />
                 </label>
                 <label className="space-y-1">
-                  <span className="text-[10px] font-semibold uppercase text-[#96969B] dark:text-[#9F9FA8]">
+                  <span className="text-2xs font-semibold uppercase text-[#96969B] dark:text-[#9F9FA8]">
                     {labels.minute}
                   </span>
                   <input

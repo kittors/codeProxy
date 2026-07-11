@@ -37,7 +37,7 @@ export function ProviderModelChips({
             placement="top"
             className="min-w-0"
           >
-            <span className="inline-flex w-full min-w-0 cursor-default rounded-full bg-slate-900 px-2 py-0.5 text-[11px] text-white dark:bg-white dark:text-neutral-950">
+            <span className="inline-flex w-full min-w-0 cursor-default rounded-full bg-slate-900 px-2 py-0.5 text-xs text-white dark:bg-white dark:text-neutral-950">
               <span className="min-w-0 truncate">{modelLabel}</span>
             </span>
           </HoverTooltip>
@@ -52,7 +52,7 @@ export function ProviderModelChips({
           placement="top"
           className="min-w-0"
         >
-          <span className="inline-flex min-w-0 cursor-default justify-center rounded-full bg-slate-200 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-slate-500 dark:bg-neutral-800 dark:text-white/55">
+          <span className="inline-flex min-w-0 cursor-default justify-center rounded-full bg-slate-200 px-2 py-0.5 text-xs font-semibold tabular-nums text-slate-500 dark:bg-neutral-800 dark:text-white/55">
             +{remaining}
           </span>
         </HoverTooltip>

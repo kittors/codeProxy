@@ -296,6 +296,7 @@ export function SearchableSelect({
             <motion.div
               ref={listRef}
               role="listbox"
+              data-side={pos.placement}
               aria-label={ariaLabel}
               className={searchableSelectPanel}
               {...getSelectDropdownMotion(pos.placement)}

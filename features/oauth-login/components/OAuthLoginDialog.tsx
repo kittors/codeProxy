@@ -19,6 +19,7 @@ import { Button } from "@code-proxy/ui";
 import { Card } from "@code-proxy/ui";
 import { TextInput } from "@code-proxy/ui";
 import { Modal } from "@code-proxy/ui";
+import { Select } from "@code-proxy/ui";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@code-proxy/ui";
 import { useToast } from "@code-proxy/ui";
 import { ProxyPoolSelect } from "@features/proxy-pool";
@@ -33,6 +34,7 @@ type ProviderState = {
   error?: string;
   polling?: boolean;
   projectId?: string;
+  usingApi?: boolean;
   callbackUrl?: string;
   callbackSubmitting?: boolean;
   callbackStatus?: "success" | "error";
@@ -205,11 +207,14 @@ export function OAuthLoginDialog({
   }, []);
 
   const proxyOptions = useCallback(
-    (extra?: { projectId?: string }) => {
+    (extra?: { projectId?: string; usingApi?: boolean }) => {
       const proxyId = selectedProxyID.trim();
       const projectId = extra?.projectId?.trim();
       return {
         ...(projectId ? { projectId } : {}),
+        ...(typeof extra?.usingApi === "boolean"
+          ? { usingApi: extra.usingApi }
+          : {}),
         ...(proxyId ? { proxyId } : {}),
       };
     },
@@ -310,6 +315,8 @@ export function OAuthLoginDialog({
         provider === "gemini-cli"
           ? (states[provider]?.projectId || "").trim()
           : undefined;
+      const usingApi =
+        provider === "xai" ? states[provider]?.usingApi === true : undefined;
       pollRuns.current[provider] = (pollRuns.current[provider] ?? 0) + 1;
       delete completedStates.current[provider];
       clearProviderTimer(provider);
@@ -327,7 +334,13 @@ export function OAuthLoginDialog({
       try {
         const res = await oauthApi.startAuth(
           provider,
-          proxyOptions(provider === "gemini-cli" ? { projectId } : undefined),
+          proxyOptions(
+            provider === "gemini-cli"
+              ? { projectId }
+              : provider === "xai"
+                ? { usingApi }
+                : undefined,
+          ),
         );
         updateProviderState(provider, {
           url: res.url,
@@ -543,6 +556,7 @@ export function OAuthLoginDialog({
       const url = state.url ?? "";
       const polling = Boolean(state.polling);
       const manualCode = manualCodeProvider(provider);
+      const usingApi = state.usingApi === true;
 
       const statusText = polling
         ? t("oauth.status_waiting")
@@ -578,6 +592,36 @@ export function OAuthLoginDialog({
             </Button>
           }
         >
+          {provider === "xai" ? (
+            <div className="mb-3 grid gap-2 rounded-2xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-white/55">
+                {t("oauth.xai_endpoint_mode")}
+              </p>
+              <Select
+                value={usingApi ? "api" : "build"}
+                onChange={(value) =>
+                  updateProviderState(provider, { usingApi: value === "api" })
+                }
+                options={[
+                  {
+                    value: "build",
+                    label: t("oauth.xai_endpoint_build"),
+                  },
+                  { value: "api", label: t("oauth.xai_endpoint_api") },
+                ]}
+                aria-label={t("oauth.xai_endpoint_mode")}
+                disabled={disabled}
+              />
+              <p className="text-xs text-slate-600 dark:text-white/60">
+                {t(
+                  usingApi
+                    ? "oauth.xai_endpoint_api_hint"
+                    : "oauth.xai_endpoint_build_hint",
+                )}
+              </p>
+            </div>
+          ) : null}
+
           {provider === "gemini-cli" ? (
             <div className="mb-3">
               <TextInput

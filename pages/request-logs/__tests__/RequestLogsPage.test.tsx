@@ -1,6 +1,6 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeAll, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 import i18n from "@code-proxy/i18n";
 import { RequestLogsPage } from "@pages/request-logs/RequestLogsPage";
 import { ThemeProvider } from "@code-proxy/ui";
@@ -115,6 +115,7 @@ const mocks = vi.hoisted(() => ({
   getUsageLogs: vi.fn(),
   getLogContent: vi.fn(),
   clearUsageLogs: vi.fn(),
+  getRequestLogBodyStorage: vi.fn(),
 }));
 
 const expectSignalOptions = () =>
@@ -159,6 +160,10 @@ vi.mock("@code-proxy/api-client", async (importOriginal) => {
       getLogContent: mocks.getLogContent,
       clearUsageLogs: mocks.clearUsageLogs,
     },
+    configApi: {
+      ...mod.configApi,
+      getRequestLogBodyStorage: mocks.getRequestLogBodyStorage,
+    },
   };
 });
 
@@ -167,12 +172,17 @@ describe("RequestLogsPage", () => {
     installLocalStorageMock();
   });
 
+  beforeEach(() => {
+    mocks.getRequestLogBodyStorage.mockResolvedValue(false);
+  });
+
   afterEach(async () => {
     await i18n.changeLanguage("zh-CN");
     window.localStorage.clear();
     mocks.getUsageLogs.mockReset();
     mocks.getLogContent.mockReset();
     mocks.clearUsageLogs.mockReset();
+    mocks.getRequestLogBodyStorage.mockReset();
   });
 
   test("renders first token latency value in the response metrics column", async () => {

@@ -9,6 +9,7 @@ export interface LogContentModalProps {
   initialTab?: LogContentBodyPart;
   onClose: () => void;
   showRequestDetails?: boolean;
+  showBodyContent?: boolean;
   fetchFn?: (
     id: number,
   ) => Promise<{

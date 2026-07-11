@@ -259,11 +259,11 @@ export function OpenCodeGoUsageCardSection({
               key={type}
               className="grid grid-cols-[2.5rem_minmax(0,1fr)_5.25rem] items-center gap-2"
             >
-              <span className="truncate text-[11px] font-semibold">
+              <span className="truncate text-xs font-semibold">
                 {getCompactUsageLabel(type, usageByType, t)}
               </span>
               <div className="h-1.5 rounded-full bg-slate-200/70 dark:bg-white/8" />
-              <span className="text-right text-[11px] tabular-nums">{remainingUnknownText}</span>
+              <span className="text-right text-xs tabular-nums">{remainingUnknownText}</span>
             </div>
           ))}
         </div>
@@ -280,13 +280,13 @@ export function OpenCodeGoUsageCardSection({
               key={type}
               className="grid grid-cols-[2.5rem_minmax(0,1fr)_5.25rem] items-center gap-2"
             >
-              <span className="truncate text-[11px] font-semibold text-slate-400 dark:text-white/45">
+              <span className="truncate text-xs font-semibold text-slate-400 dark:text-white/45">
                 {getCompactUsageLabel(type, usageByType, t)}
               </span>
               <div className="relative h-1.5 overflow-hidden rounded-full bg-slate-200/70 dark:bg-white/8">
                 <div className="absolute inset-y-0 -left-full w-1/2 animate-pulse rounded-full bg-slate-300/50 dark:bg-white/20" />
               </div>
-              <span className="text-right text-[11px] tabular-nums text-slate-400 dark:text-white/45">
+              <span className="text-right text-xs tabular-nums text-slate-400 dark:text-white/45">
                 {remainingUnknownText}
               </span>
             </div>
@@ -310,7 +310,7 @@ export function OpenCodeGoUsageCardSection({
                 key={type}
                 className="grid grid-cols-[2.5rem_minmax(0,1fr)_5.25rem] items-center gap-2"
               >
-                <span className="truncate text-[11px] font-semibold text-slate-600 dark:text-white/65">
+                <span className="truncate text-xs font-semibold text-slate-600 dark:text-white/65">
                   {getCompactUsageLabel(type, usageByType, t)}
                 </span>
                 <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200/80 dark:bg-white/10">
@@ -322,7 +322,7 @@ export function OpenCodeGoUsageCardSection({
                 </div>
                 <span
                   className={[
-                    "truncate text-right text-[11px] font-semibold tabular-nums",
+                    "truncate text-right text-xs font-semibold tabular-nums",
                     tone.percentClass,
                   ].join(" ")}
                 >
@@ -339,7 +339,7 @@ export function OpenCodeGoUsageCardSection({
       ) : null}
 
       {usageEntry?.error ? (
-        <p className="mt-1 text-[11px] font-semibold text-rose-700 dark:text-rose-200">
+        <p className="mt-1 text-xs font-semibold text-rose-700 dark:text-rose-200">
           {usageEntry.error?.length > 60
             ? t("providers.opencode_go_usage_query_failed")
             : usageEntry.error}

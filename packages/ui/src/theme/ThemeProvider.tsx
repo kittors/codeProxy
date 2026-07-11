@@ -283,6 +283,8 @@ export function ThemeToggleButton({ className, label }: { className?: string; la
             <div
               ref={menuRef}
               role="menu"
+              data-state="open"
+              data-side="bottom"
               aria-label={buttonLabel}
               className={cn(selectPanel, "w-[220px]")}
               style={{ top: pos.top, left: pos.left }}

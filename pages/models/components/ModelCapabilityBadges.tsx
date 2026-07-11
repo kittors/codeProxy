@@ -42,7 +42,7 @@ export function ModelCapabilityBadges({ model }: { model: ModelItem }) {
       {badges.map((badge) => (
         <span
           key={badge.key}
-          className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${badge.className}`}
+          className={`inline-flex items-center rounded-full px-2 py-0.5 text-2xs font-semibold ${badge.className}`}
         >
           {badge.label}
         </span>

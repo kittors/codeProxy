@@ -55,7 +55,7 @@ const iconByType: Record<CcSwitchClientType, string> = {
 };
 
 const labelClassName =
-  "text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-white/45";
+  "text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-white/45";
 const controlClassName =
   "h-10 rounded-xl border border-slate-200/80 bg-white px-3 text-sm text-slate-900 shadow-none hover:border-slate-300 hover:bg-white focus-visible:ring-2 focus-visible:ring-slate-900/10 dark:border-neutral-800 dark:bg-neutral-900 dark:text-white dark:hover:border-neutral-700 dark:focus-visible:ring-white/15";
 const fieldClassName = "flex flex-col gap-1.5";
@@ -621,7 +621,7 @@ export function CcSwitchImportConfigModal({
         triggerLabel: (
           <span className="flex min-w-0 items-center gap-2">
             <span className="truncate font-semibold">{option.label}</span>
-            <span className="shrink-0 font-mono text-[11px] text-slate-500 dark:text-white/50">
+            <span className="shrink-0 font-mono text-xs text-slate-500 dark:text-white/50">
               {path}
             </span>
           </span>
@@ -632,7 +632,7 @@ export function CcSwitchImportConfigModal({
             <span className="truncate text-sm font-semibold text-slate-900 dark:text-white">
               {option.label}
             </span>
-            <span className="truncate font-mono text-[11px] text-slate-500 dark:text-white/50">
+            <span className="truncate font-mono text-xs text-slate-500 dark:text-white/50">
               {path}
               {option.description ? ` · ${option.description}` : ""}
             </span>
@@ -1016,7 +1016,7 @@ export function CcSwitchImportConfigModal({
           <div className="space-y-2">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <span className={labelClassName}>{t("ccswitch.config_full_base_url")}</span>
-              <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:border-emerald-500/25 dark:bg-emerald-500/10 dark:text-emerald-300">
+              <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700 dark:border-emerald-500/25 dark:bg-emerald-500/10 dark:text-emerald-300">
                 {t("ccswitch.config_live_preview")}
               </span>
             </div>
@@ -1131,7 +1131,7 @@ export function CcSwitchImportConfigModal({
               </p>
             </div>
             {modelMappingsLoading ? (
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-500 dark:bg-neutral-900 dark:text-white/55">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-500 dark:bg-neutral-900 dark:text-white/55">
                 <LoaderCircle size={12} className="animate-spin" />
                 {t("ccswitch.import_model_loading")}
               </span>

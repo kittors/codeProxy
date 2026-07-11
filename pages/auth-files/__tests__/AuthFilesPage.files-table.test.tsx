@@ -2695,6 +2695,9 @@ describe("AuthFilesPage files table", () => {
     const expiresAt = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000);
     const startedAt = new Date(expiresAt);
     startedAt.setFullYear(startedAt.getFullYear() - 1);
+    const expiresSoonAt = new Date(Date.now() + 60 * 60 * 1000);
+    const startedSoonAt = new Date(expiresSoonAt);
+    startedSoonAt.setFullYear(startedSoonAt.getFullYear() - 1);
     mocks.list.mockImplementation(async () => ({
       files: [
         {
@@ -2706,6 +2709,17 @@ describe("AuthFilesPage files table", () => {
           modified: Date.now(),
           disabled: false,
           subscription_started_at: startedAt.toISOString(),
+          subscription_period: "yearly",
+        },
+        {
+          name: "codex-subscription-expiring-soon.json",
+          label: "Codex Subscriber Expiring Soon",
+          account_type: "oauth",
+          type: "codex",
+          size: 1024,
+          modified: Date.now(),
+          disabled: false,
+          subscription_started_at: startedSoonAt.toISOString(),
           subscription_period: "yearly",
         },
       ],
@@ -2726,6 +2740,7 @@ describe("AuthFilesPage files table", () => {
     expect(await screen.findByText("Codex Subscriber")).toBeInTheDocument();
     expect(screen.getByText("Subscription")).toBeInTheDocument();
     expect(screen.getByText(/5d left/)).toBeInTheDocument();
+    expect(screen.getByText("<1d left")).toBeInTheDocument();
 
     cleanup();
     window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
@@ -2743,6 +2758,7 @@ describe("AuthFilesPage files table", () => {
 
     expect(await screen.findByTestId("auth-files-cards")).toBeInTheDocument();
     expect(screen.getByText(/5d left/)).toBeInTheDocument();
+    expect(screen.getByText("<1d left")).toBeInTheDocument();
   });
 
   test("saves subscription start and period from the auth fields editor", async () => {

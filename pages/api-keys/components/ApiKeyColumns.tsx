@@ -95,7 +95,7 @@ function ApiKeyPermissionSummary({
         >
           {count}
         </span>
-        <span className="block min-w-0 flex-1 truncate font-mono text-[11px] leading-5">
+        <span className="block min-w-0 flex-1 truncate font-mono text-xs leading-5">
           {firstValue}
         </span>
       </span>
@@ -288,7 +288,7 @@ export const createApiKeyColumns = ({
               {row["allowed-models"].map((model) => (
                 <span
                   key={model}
-                  className="inline-flex items-center gap-1 rounded-md border border-slate-200/60 bg-slate-50 px-2 py-0.5 font-mono text-[11px] text-slate-700 dark:border-neutral-700/40 dark:bg-neutral-800/60 dark:text-white/80"
+                  className="inline-flex items-center gap-1 rounded-md border border-slate-200/60 bg-slate-50 px-2 py-0.5 font-mono text-xs text-slate-700 dark:border-neutral-700/40 dark:bg-neutral-800/60 dark:text-white/80"
                 >
                   <VendorIcon modelId={model} size={12} />
                   {model}
@@ -319,7 +319,7 @@ export const createApiKeyColumns = ({
               {row["allowed-channel-groups"].map((group) => (
                 <span
                   key={group}
-                  className="inline-flex items-center rounded-md border border-slate-200/60 bg-slate-50 px-2 py-0.5 font-mono text-[11px] text-slate-700 dark:border-neutral-700/40 dark:bg-neutral-800/60 dark:text-white/80"
+                  className="inline-flex items-center rounded-md border border-slate-200/60 bg-slate-50 px-2 py-0.5 font-mono text-xs text-slate-700 dark:border-neutral-700/40 dark:bg-neutral-800/60 dark:text-white/80"
                 >
                   {group}
                 </span>
@@ -349,7 +349,7 @@ export const createApiKeyColumns = ({
               {row["allowed-channels"].map((channel) => (
                 <span
                   key={channel}
-                  className="inline-flex items-center rounded-md border border-slate-200/60 bg-slate-50 px-2 py-0.5 font-mono text-[11px] text-slate-700 dark:border-neutral-700/40 dark:bg-neutral-800/60 dark:text-white/80"
+                  className="inline-flex items-center rounded-md border border-slate-200/60 bg-slate-50 px-2 py-0.5 font-mono text-xs text-slate-700 dark:border-neutral-700/40 dark:bg-neutral-800/60 dark:text-white/80"
                 >
                   {channel}
                 </span>
