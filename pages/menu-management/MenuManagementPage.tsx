@@ -444,217 +444,250 @@ export function MenuManagementPage() {
           </>
         }
       >
-        <form id="menu-form" onSubmit={saveDrawer} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <label className="space-y-1.5 sm:col-span-2">
-            <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
+        <form id="menu-form" onSubmit={saveDrawer} className="space-y-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="w-16 shrink-0 text-sm font-medium text-slate-700 dark:text-slate-200">
               {t("identity_admin.menu_type")}
             </span>
-            <Select
-              value={form.type}
-              onChange={(value) => setForm((current) => ({ ...current, type: value as MenuType }))}
-              options={[
-                { value: "directory", label: t("identity_admin.menu_directory") },
-                { value: "menu", label: t("identity_admin.menu_page") },
-                { value: "button", label: t("identity_admin.menu_button") },
-                { value: "embed", label: t("identity_admin.menu_embed") },
-                { value: "link", label: t("identity_admin.menu_link") },
-              ]}
-              disabled={drawerMode === "edit" && Boolean(editing?.system_protected)}
-            />
-          </label>
-          {drawerMode === "create" ? (
-            <label className="space-y-1.5">
-              <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
-                {t("identity_admin.menu_code")}
-              </span>
-              <TextInput
-                value={form.code ?? ""}
-                onChange={(event) => setForm((current) => ({ ...current, code: event.target.value }))}
-                required
-                placeholder="custom.feature"
-              />
-            </label>
-          ) : (
-            <label className="space-y-1.5">
-              <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
-                {t("identity_admin.menu_code")}
-              </span>
-              <TextInput value={editing?.code ?? ""} disabled />
-            </label>
-          )}
-          <label className="space-y-1.5">
-            <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
-              {t("identity_admin.menu_parent")}
-            </span>
-            <Select
-              value={form.parent_code}
-              onChange={(value) => setForm((current) => ({ ...current, parent_code: value }))}
-              options={parentOptions.filter((option) => option.value !== editing?.code)}
-            />
-          </label>
-          <label className="space-y-1.5">
-            <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
-              {t("identity_admin.menu_label_key")}
-            </span>
-            <TextInput
-              value={form.label_key}
-              onChange={(event) => setForm((current) => ({ ...current, label_key: event.target.value }))}
-              required
-            />
-          </label>
-          <label className="space-y-1.5">
-            <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
-              {t("identity_admin.menu_title")}
-            </span>
-            <TextInput
-              value={form.title}
-              onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))}
-            />
-          </label>
-          <label className="space-y-1.5">
-            <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
-              {t("identity_admin.menu_icon")}
-            </span>
-            <TextInput
-              value={form.icon}
-              onChange={(event) => setForm((current) => ({ ...current, icon: event.target.value }))}
-              placeholder="layout-dashboard"
-            />
-          </label>
-          {showPath ? (
-            <label className="space-y-1.5">
-              <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
-                {t("identity_admin.route_address")}
-              </span>
-              <TextInput
-                value={form.path}
-                onChange={(event) => setForm((current) => ({ ...current, path: event.target.value }))}
-                required
-                placeholder="/feature"
-              />
-            </label>
-          ) : null}
-          {showComponent ? (
-            <label className="space-y-1.5">
-              <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
-                {t("identity_admin.page_component")}
-              </span>
-              <TextInput
-                value={form.component}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, component: event.target.value }))
-                }
-                placeholder="dashboard"
-              />
-            </label>
-          ) : null}
-          {showLink ? (
-            <label className="space-y-1.5 sm:col-span-2">
-              <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
-                {t("identity_admin.link_url")}
-              </span>
-              <TextInput
-                value={form.link_url}
-                onChange={(event) => setForm((current) => ({ ...current, link_url: event.target.value }))}
-                required
-                placeholder="https://"
-              />
-            </label>
-          ) : null}
-          {showPermission ? (
-            <label className="space-y-1.5">
-              <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
-                {t("identity_admin.permission_code")}
-              </span>
-              <TextInput
-                value={form.permission_code}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, permission_code: event.target.value }))
-                }
-                placeholder="feature.read"
-              />
-            </label>
-          ) : null}
-          <label className="space-y-1.5">
-            <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
-              {t("identity_admin.sort_order")}
-            </span>
-            <TextInput
-              type="number"
-              min={0}
-              max={10000}
-              value={String(form.sort_order)}
-              onChange={(event) =>
-                setForm((current) => ({
-                  ...current,
-                  sort_order: Number.parseInt(event.target.value || "0", 10) || 0,
-                }))
-              }
-              required
-            />
-          </label>
-          <label className="space-y-1.5">
-            <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
-              {t("identity_admin.badge_content")}
-            </span>
-            <TextInput
-              value={form.badge_content}
-              onChange={(event) =>
-                setForm((current) => ({ ...current, badge_content: event.target.value }))
-              }
-            />
-          </label>
-          <div className="space-y-1.5 sm:col-span-2">
-            <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
-              {t("identity_admin.status")}
-            </span>
-            <div className="inline-flex rounded-xl border border-slate-200 p-0.5 dark:border-neutral-700">
-              <button
-                type="button"
-                className={
-                  form.enabled
-                    ? "rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white"
-                    : "rounded-lg px-3 py-1.5 text-xs font-medium text-slate-500"
-                }
-                onClick={() => setForm((current) => ({ ...current, enabled: true }))}
-              >
-                {t("identity_admin.menu_status_enabled")}
-              </button>
-              <button
-                type="button"
-                className={
-                  !form.enabled
-                    ? "rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white"
-                    : "rounded-lg px-3 py-1.5 text-xs font-medium text-slate-500"
-                }
-                onClick={() => setForm((current) => ({ ...current, enabled: false }))}
-              >
-                {t("identity_admin.menu_status_disabled")}
-              </button>
+            <div className="inline-flex flex-wrap rounded-xl border border-slate-200 p-0.5 dark:border-neutral-700">
+              {(
+                [
+                  ["directory", t("identity_admin.menu_directory")],
+                  ["menu", t("identity_admin.menu_page")],
+                  ["button", t("identity_admin.menu_button")],
+                  ["embed", t("identity_admin.menu_embed")],
+                  ["link", t("identity_admin.menu_link")],
+                ] as const
+              ).map(([value, label]) => {
+                const active = form.type === value;
+                const disabled = drawerMode === "edit" && Boolean(editing?.system_protected);
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    disabled={disabled}
+                    className={
+                      active
+                        ? "rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white"
+                        : "rounded-lg px-3 py-1.5 text-xs font-medium text-slate-500 hover:text-slate-800 disabled:opacity-50 dark:hover:text-slate-200"
+                    }
+                    onClick={() => setForm((current) => ({ ...current, type: value }))}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
             </div>
           </div>
-          <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200">
-            <input
-              type="checkbox"
-              className="h-4 w-4 rounded border-slate-300"
-              checked={form.hide_menu}
-              onChange={(event) =>
-                setForm((current) => ({ ...current, hide_menu: event.target.checked }))
-              }
-            />
-            {t("identity_admin.hide_menu")}
-          </label>
-          <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200">
-            <input
-              type="checkbox"
-              className="h-4 w-4 rounded border-slate-300"
-              checked={!form.visible}
-              onChange={(event) =>
-                setForm((current) => ({ ...current, visible: !event.target.checked }))
-              }
-            />
-            {t("identity_admin.menu_not_visible", { defaultValue: "不显示" })}
-          </label>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {drawerMode === "create" ? (
+              <label className="space-y-1.5">
+                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                  {t("identity_admin.menu_code")}
+                </span>
+                <TextInput
+                  value={form.code ?? ""}
+                  onChange={(event) =>
+                    setForm((current) => ({ ...current, code: event.target.value }))
+                  }
+                  required
+                  placeholder="custom.feature"
+                />
+              </label>
+            ) : (
+              <label className="space-y-1.5">
+                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                  {t("identity_admin.menu_code")}
+                </span>
+                <TextInput value={editing?.code ?? ""} disabled />
+              </label>
+            )}
+            <label className="space-y-1.5">
+              <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                {t("identity_admin.menu_parent")}
+              </span>
+              <Select
+                value={form.parent_code}
+                onChange={(value) => setForm((current) => ({ ...current, parent_code: value }))}
+                options={parentOptions.filter((option) => option.value !== editing?.code)}
+              />
+            </label>
+            <label className="space-y-1.5">
+              <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                {t("identity_admin.menu_label_key")}
+              </span>
+              <TextInput
+                value={form.label_key}
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, label_key: event.target.value }))
+                }
+                required
+              />
+            </label>
+            <label className="space-y-1.5">
+              <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                {t("identity_admin.menu_title")}
+              </span>
+              <TextInput
+                value={form.title}
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, title: event.target.value }))
+                }
+              />
+            </label>
+            <label className="space-y-1.5">
+              <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                {t("identity_admin.menu_icon")}
+              </span>
+              <TextInput
+                value={form.icon}
+                onChange={(event) => setForm((current) => ({ ...current, icon: event.target.value }))}
+                placeholder="layout-dashboard"
+              />
+            </label>
+            {showPath ? (
+              <label className="space-y-1.5">
+                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                  {t("identity_admin.route_address")}
+                </span>
+                <TextInput
+                  value={form.path}
+                  onChange={(event) =>
+                    setForm((current) => ({ ...current, path: event.target.value }))
+                  }
+                  required
+                  placeholder="/feature"
+                />
+              </label>
+            ) : null}
+            {showComponent ? (
+              <label className="space-y-1.5">
+                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                  {t("identity_admin.page_component")}
+                </span>
+                <TextInput
+                  value={form.component}
+                  onChange={(event) =>
+                    setForm((current) => ({ ...current, component: event.target.value }))
+                  }
+                  placeholder="/dashboard/workspace/index"
+                />
+              </label>
+            ) : null}
+            {showLink ? (
+              <label className="space-y-1.5 sm:col-span-2">
+                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                  {t("identity_admin.link_url")}
+                </span>
+                <TextInput
+                  value={form.link_url}
+                  onChange={(event) =>
+                    setForm((current) => ({ ...current, link_url: event.target.value }))
+                  }
+                  required
+                  placeholder="https://"
+                />
+              </label>
+            ) : null}
+            {showPermission ? (
+              <label className="space-y-1.5">
+                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                  {t("identity_admin.permission_code")}
+                </span>
+                <TextInput
+                  value={form.permission_code}
+                  onChange={(event) =>
+                    setForm((current) => ({ ...current, permission_code: event.target.value }))
+                  }
+                  placeholder="feature.read"
+                />
+              </label>
+            ) : null}
+            <label className="space-y-1.5">
+              <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                {t("identity_admin.sort_order")}
+              </span>
+              <TextInput
+                type="number"
+                min={0}
+                max={10000}
+                value={String(form.sort_order)}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    sort_order: Number.parseInt(event.target.value || "0", 10) || 0,
+                  }))
+                }
+                required
+              />
+            </label>
+            <label className="space-y-1.5">
+              <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                {t("identity_admin.badge_content")}
+              </span>
+              <TextInput
+                value={form.badge_content}
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, badge_content: event.target.value }))
+                }
+              />
+            </label>
+            <div className="space-y-1.5">
+              <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                {t("identity_admin.status")}
+              </span>
+              <div className="inline-flex rounded-xl border border-slate-200 p-0.5 dark:border-neutral-700">
+                <button
+                  type="button"
+                  className={
+                    form.enabled
+                      ? "rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white"
+                      : "rounded-lg px-3 py-1.5 text-xs font-medium text-slate-500"
+                  }
+                  onClick={() => setForm((current) => ({ ...current, enabled: true }))}
+                >
+                  {t("identity_admin.menu_status_enabled")}
+                </button>
+                <button
+                  type="button"
+                  className={
+                    !form.enabled
+                      ? "rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white"
+                      : "rounded-lg px-3 py-1.5 text-xs font-medium text-slate-500"
+                  }
+                  onClick={() => setForm((current) => ({ ...current, enabled: false }))}
+                >
+                  {t("identity_admin.menu_status_disabled")}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-x-6 gap-y-2 border-t border-slate-200 pt-4 dark:border-neutral-800">
+            <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200">
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded border-slate-300"
+                checked={form.hide_menu}
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, hide_menu: event.target.checked }))
+                }
+              />
+              {t("identity_admin.hide_menu")}
+            </label>
+            <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200">
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded border-slate-300"
+                checked={!form.visible}
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, visible: !event.target.checked }))
+                }
+              />
+              {t("identity_admin.menu_not_visible")}
+            </label>
+          </div>
         </form>
       </Drawer>
 
