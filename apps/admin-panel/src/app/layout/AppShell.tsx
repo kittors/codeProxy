@@ -15,7 +15,6 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
   Building2,
-  Check,
   ChevronDown,
   LayoutDashboard,
   LogOut,
@@ -30,6 +29,8 @@ import {
   floatingPanelSurface,
   PageBackground,
   ScrollArea,
+  SearchableSelect,
+  type SearchableSelectOption,
   ThemeToggleButton,
 } from "@code-proxy/ui";
 import { preloadPageRoute } from "@pages/registry";
@@ -1028,6 +1029,7 @@ function ShellHeader({
   const canSwitchTenants =
     auth?.state.principal?.platform_admin && auth.state.principal.kind !== "service_credential";
   const [tenants, setTenants] = useState<TenantIdentity[]>([]);
+  const [tenantSwitching, setTenantSwitching] = useState(false);
   useEffect(() => {
     if (!canSwitchTenants) {
       setTenants([]);
@@ -1044,6 +1046,39 @@ function ShellHeader({
       )
       .catch(() => setTenants([]));
   }, [canSwitchTenants]);
+
+  const systemTenantLabel = t("shell.system_tenant");
+  const effectiveTenant = auth?.state.principal?.effective_tenant;
+  const effectiveTenantId = effectiveTenant?.id ?? "";
+  const tenantOptions = useMemo<SearchableSelectOption[]>(() => {
+    const byId = new Map<string, TenantIdentity>();
+    for (const tenant of tenants) byId.set(tenant.id, tenant);
+    if (effectiveTenant && !byId.has(effectiveTenant.id)) {
+      byId.set(effectiveTenant.id, effectiveTenant);
+    }
+    return Array.from(byId.values()).map((tenant) => {
+      const label = tenantDisplayName(tenant, systemTenantLabel);
+      return {
+        value: tenant.id,
+        label,
+        searchText: `${label} ${tenant.slug ?? ""} ${tenant.name}`,
+        icon: <Building2 size={16} className="shrink-0 opacity-65" />,
+      };
+    });
+  }, [effectiveTenant, systemTenantLabel, tenants]);
+
+  const handleTenantChange = useCallback(
+    (tenantId: string) => {
+      if (!auth || tenantId === effectiveTenantId || tenantSwitching) return;
+      setTenantSwitching(true);
+      void auth.actions
+        .switchTenant(tenantId)
+        .catch(() => undefined)
+        .finally(() => setTenantSwitching(false));
+    },
+    [auth, effectiveTenantId, tenantSwitching],
+  );
+
   const sidebarLabel = sidebarCollapsed ? t("shell.expand_sidebar") : t("shell.collapse_sidebar");
 
   return (
@@ -1064,65 +1099,16 @@ function ShellHeader({
         </div>
         <div className="flex shrink-0 items-center gap-1 sm:gap-2">
           {canSwitchTenants && auth?.state.principal ? (
-            <DropdownMenu.Root>
-              <DropdownMenu.Trigger asChild>
-                <button
-                  type="button"
-                  aria-label={t("shell.switch_tenant")}
-                  className="group/tenant hidden h-9 max-w-64 items-center gap-2 rounded-xl px-2.5 text-sm font-medium text-slate-600 outline-none transition-colors duration-150 hover:bg-slate-100 hover:text-slate-950 focus-visible:ring-2 focus-visible:ring-blue-500/25 data-[state=open]:bg-slate-100 data-[state=open]:text-slate-950 sm:inline-flex dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white dark:data-[state=open]:bg-white/10 dark:data-[state=open]:text-white"
-                >
-                  <Building2 size={16} className="shrink-0 text-slate-400 dark:text-slate-500" />
-                  <span className="truncate">
-                    {tenantDisplayName(
-                      auth.state.principal.effective_tenant,
-                      t("shell.system_tenant"),
-                    )}
-                  </span>
-                  <ChevronDown
-                    size={14}
-                    className="shrink-0 text-slate-400 transition-transform duration-150 group-data-[state=open]/tenant:rotate-180 dark:text-slate-500"
-                    aria-hidden="true"
-                  />
-                </button>
-              </DropdownMenu.Trigger>
-              <DropdownMenu.Portal>
-                <DropdownMenu.Content
-                  align="end"
-                  sideOffset={8}
-                  collisionPadding={8}
-                  className="w-64"
-                >
-                  <div className="px-3 pb-1.5 pt-1 text-2xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                    {t("shell.switch_tenant")}
-                  </div>
-                  {tenants.map((tenant) => {
-                    const selected = tenant.id === auth.state.principal?.effective_tenant.id;
-                    return (
-                      <DropdownMenu.Item
-                        key={tenant.id}
-                        aria-current={selected ? "true" : undefined}
-                        onSelect={() => {
-                          if (!selected) void auth.actions.switchTenant(tenant.id);
-                        }}
-                        className={
-                          selected
-                            ? "bg-blue-50 text-blue-700 focus:bg-blue-50 data-[highlighted]:bg-blue-50 dark:bg-blue-500/10 dark:text-blue-300 dark:focus:bg-blue-500/10 dark:data-[highlighted]:bg-blue-500/10"
-                            : undefined
-                        }
-                      >
-                        <Building2 size={16} className="shrink-0 opacity-65" />
-                        <span className="min-w-0 flex-1 truncate">
-                          {tenantDisplayName(tenant, t("shell.system_tenant"))}
-                        </span>
-                        {selected ? (
-                          <Check size={15} className="shrink-0" aria-hidden="true" />
-                        ) : null}
-                      </DropdownMenu.Item>
-                    );
-                  })}
-                </DropdownMenu.Content>
-              </DropdownMenu.Portal>
-            </DropdownMenu.Root>
+            <SearchableSelect
+              value={effectiveTenantId}
+              onChange={handleTenantChange}
+              options={tenantOptions}
+              disabled={tenantSwitching}
+              aria-label={t("shell.switch_tenant")}
+              searchPlaceholder={t("shell.search_tenant")}
+              placeholder={t("shell.switch_tenant")}
+              className="hidden max-w-64 min-w-36 border-0 bg-transparent text-slate-600 shadow-none hover:border-0 hover:bg-slate-100 hover:text-slate-950 focus-visible:border-0 focus-visible:ring-2 focus-visible:ring-blue-500/25 sm:inline-flex dark:bg-transparent dark:text-slate-300 dark:hover:border-0 dark:hover:bg-white/10 dark:hover:text-white dark:focus-visible:border-0"
+            />
           ) : null}
           <LanguageSelector className="inline-flex h-9 items-center justify-center gap-0.5 rounded-xl px-1.5 text-slate-500 transition-colors duration-200 ease-out hover:text-slate-900 dark:text-slate-400 dark:hover:text-white" />
           <ThemeToggleButton className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 transition-colors duration-200 ease-out hover:text-slate-900 dark:text-slate-400 dark:hover:text-white" />

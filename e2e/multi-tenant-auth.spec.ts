@@ -368,7 +368,7 @@ test("shows tenant governance routes from server permissions", async ({ page }) 
   await expect(page.getByText("System Administration").first()).toBeVisible();
 });
 
-test("uses the localized borderless tenant dropdown menu", async ({ page }) => {
+test("uses the localized searchable tenant select with checkmark selection", async ({ page }) => {
   await page.addInitScript(() => {
     sessionStorage.setItem(
       "code-proxy-admin-auth",
@@ -387,7 +387,7 @@ test("uses the localized borderless tenant dropdown menu", async ({ page }) => {
   await mockIdentity(page, [principal.home_tenant, standardTenant]);
   await page.goto("/#/tenants");
 
-  const trigger = page.getByRole("button", { name: "切换租户" });
+  const trigger = page.getByRole("combobox", { name: "切换租户" });
   await expect(trigger).toContainText("系统管理");
   await expect(trigger).not.toContainText("System Administration");
   await expect
@@ -395,12 +395,128 @@ test("uses the localized borderless tenant dropdown menu", async ({ page }) => {
     .toBe("0px");
 
   await trigger.click();
-  const menu = page.getByRole("menu");
-  await expect(menu.getByRole("menuitem", { name: "系统管理" })).toHaveAttribute(
-    "aria-current",
-    "true",
+  const listbox = page.getByRole("listbox", { name: "切换租户" });
+  await expect(listbox.getByPlaceholder("搜索租户")).toBeVisible();
+  const selected = listbox.getByRole("option", { name: "系统管理" });
+  await expect(selected).toHaveAttribute("aria-selected", "true");
+  // Selected option uses a checkmark only — no solid selected background fill.
+  await expect
+    .poll(() =>
+      selected.evaluate((element) => {
+        const bg = getComputedStyle(element).backgroundColor;
+        return bg === "rgba(0, 0, 0, 0)" || bg === "transparent";
+      }),
+    )
+    .toBe(true);
+  await expect(listbox.getByRole("option", { name: "Acme Team" })).toBeVisible();
+});
+
+test("switching tenant remounts the current page and reloads tenant-scoped data", async ({
+  page,
+}) => {
+  await page.addInitScript(() =>
+    sessionStorage.setItem(
+      "code-proxy-admin-auth",
+      JSON.stringify({
+        apiBase: "http://127.0.0.1:8317",
+        managementKey: "cps_test",
+        rememberPassword: false,
+        expiresAt: Date.now() + 60_000,
+      }),
+    ),
   );
-  await expect(menu.getByRole("menuitem", { name: "Acme Team" })).toBeVisible();
+
+  let currentTenantId = principal.effective_tenant.id;
+  const acmeRoles = [
+    {
+      ...administratorRole,
+      id: "r-acme-admin",
+      tenant_id: standardTenant.id,
+      code: "tenant_admin",
+      name: "Acme Admin Role",
+      scope: "tenant",
+      system_protected: false,
+    },
+  ];
+
+  await page.route("**/v0/auth/me", (route) => {
+    const tenantHeader = route.request().headers()["x-effective-tenant-id"] ?? "";
+    const effective =
+      tenantHeader === standardTenant.id
+        ? standardTenant
+        : tenantHeader
+          ? { ...principal.effective_tenant, id: tenantHeader }
+          : principal.effective_tenant;
+    currentTenantId = effective.id;
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        principal: {
+          ...principal,
+          effective_tenant: effective,
+        },
+      }),
+    });
+  });
+
+  let rolesFetchCount = 0;
+  await page.route("**/v0/management/**", (route) => {
+    const path = new URL(route.request().url()).pathname.replace("/v0/management", "");
+    const tenantHeader = route.request().headers()["x-effective-tenant-id"] ?? "";
+    if (path === "/roles") {
+      rolesFetchCount += 1;
+      const items =
+        tenantHeader === standardTenant.id || currentTenantId === standardTenant.id
+          ? acmeRoles
+          : [administratorRole];
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ items }),
+      });
+    }
+    const bodies: Record<string, unknown> = {
+      "/tenants": { items: [principal.home_tenant, standardTenant] },
+      "/users": { items: [principal.user] },
+      "/menus": { items: menuItems },
+      "/permissions": {
+        items: administratorRole.permissions.map((code) => ({
+          code,
+          name: code,
+          scope: code.startsWith("platform.") ? "platform" : "tenant",
+          resource:
+            code.startsWith("tenant.") || code.startsWith("platform.")
+              ? (code.split(".")[1] ?? "")
+              : code.split(".").slice(0, -1).join("_"),
+          action: code.split(".").at(-1),
+          menu_code: "",
+          sensitive: false,
+        })),
+      },
+      "/audit-logs": { items: [] },
+    };
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(bodies[path] ?? {}),
+    });
+  });
+
+  await page.goto("/#/roles");
+  await expect(page.getByRole("heading", { name: /Roles/i })).toBeVisible();
+  await expect(page.getByText("Administrator")).toBeVisible();
+  const initialRolesFetches = rolesFetchCount;
+  expect(initialRolesFetches).toBeGreaterThan(0);
+
+  const trigger = page.getByRole("combobox", { name: /switch tenant/i });
+  await trigger.click();
+  await page.getByRole("option", { name: "Acme Team" }).click();
+
+  await expect(trigger).toContainText("Acme Team");
+  await expect(page.getByText("Acme Admin Role")).toBeVisible();
+  await expect(page.getByText("Administrator")).toHaveCount(0);
+  expect(rolesFetchCount).toBeGreaterThan(initialRolesFetches);
 });
 
 test("shows tenant row actions including protected system tenant details", async ({ page }) => {

@@ -8,11 +8,14 @@ export function DashboardLayout() {
   const location = useLocation();
   const outlet = useOutlet();
   const auth = useOptionalAuth();
+  // Remount page content when the effective tenant changes so list/detail
+  // data reloads under the new tenant header instead of keeping stale state.
+  const tenantKey = auth?.state.principal?.effective_tenant?.id ?? "default";
 
   return (
     <AppShell onLogout={() => auth?.actions?.logout?.()}>
       <AnimatePresence mode="wait">
-        <Reveal key={location.pathname} className="min-h-full">
+        <Reveal key={`${location.pathname}:${tenantKey}`} className="min-h-full">
           {outlet}
         </Reveal>
       </AnimatePresence>

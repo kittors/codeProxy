@@ -1625,6 +1625,7 @@
     "nav_group_governance": "Governance",
     "nav_tenants": "Tenants",
     "switch_tenant": "Сменить арендатора",
+    "search_tenant": "Поиск арендаторов",
     "system_tenant": "Системное администрирование",
     "nav_users": "Users",
     "nav_roles": "Roles & Permissions",

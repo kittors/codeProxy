@@ -1997,6 +1997,7 @@
     "nav_group_governance": "租户与权限",
     "nav_tenants": "租户管理",
     "switch_tenant": "切换租户",
+    "search_tenant": "搜索租户",
     "system_tenant": "系统管理",
     "nav_users": "用户管理",
     "nav_roles": "角色权限",
