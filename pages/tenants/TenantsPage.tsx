@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { Eye } from "lucide-react";
+import { Ban, CalendarClock, Eye, Pencil } from "lucide-react";
 import { identityApi, type TenantIdentity } from "@code-proxy/api-client";
 import {
   Button,
@@ -167,11 +167,11 @@ export function TenantsPage() {
       {
         key: "actions",
         label: t("identity_admin.actions"),
-        minWidthPx: 280,
-        width: "w-64",
+        minWidthPx: 148,
+        width: "w-36",
         lockOrder: "end",
         render: (item) => (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             <Button
               size="xs"
               variant="ghost"
@@ -185,6 +185,7 @@ export function TenantsPage() {
               <PermissionGate permission="platform.tenants.update">
                 <Button
                   size="xs"
+                  variant="ghost"
                   onClick={() => {
                     setEditTenant(item);
                     setEditForm({
@@ -193,20 +194,32 @@ export function TenantsPage() {
                       status: item.status,
                     });
                   }}
+                  title={t("identity_admin.edit")}
+                  aria-label={t("identity_admin.edit")}
                 >
-                  {t("identity_admin.edit")}
+                  <Pencil size={14} />
                 </Button>
                 <Button
                   size="xs"
+                  variant="ghost"
                   onClick={() => {
                     setRenewTenant(item);
                     setRenewAt(toLocalDateTimeInput(item.expires_at));
                   }}
+                  title={t("identity_admin.renew")}
+                  aria-label={t("identity_admin.renew")}
                 >
-                  {t("identity_admin.renew")}
+                  <CalendarClock size={14} />
                 </Button>
-                <Button size="xs" variant="error" onClick={() => setDisableTenant(item)}>
-                  {t("identity_admin.disable")}
+                <Button
+                  size="xs"
+                  variant="ghost"
+                  className="text-rose-600 hover:bg-rose-50 hover:text-rose-700 dark:text-rose-400 dark:hover:bg-rose-500/10 dark:hover:text-rose-300"
+                  onClick={() => setDisableTenant(item)}
+                  title={t("identity_admin.disable")}
+                  aria-label={t("identity_admin.disable")}
+                >
+                  <Ban size={14} />
                 </Button>
               </PermissionGate>
             ) : null}

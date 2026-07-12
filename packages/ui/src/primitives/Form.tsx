@@ -70,7 +70,7 @@ export type FormFieldProps = PropsWithChildren<
 >;
 
 /** Fixed label column width so multi-field horizontal forms share one left edge. */
-const HORIZONTAL_LABEL_CLASS = "w-16 shrink-0 text-left leading-9";
+const HORIZONTAL_LABEL_CLASS = "w-12 shrink-0 text-left leading-9";
 
 function FormField({
   children,
@@ -110,7 +110,7 @@ function FormField({
         data-orientation={orientation}
         data-invalid={invalid || undefined}
         className={cn(
-          isHorizontal ? "flex items-start gap-x-3" : "flex flex-col gap-1.5",
+          isHorizontal ? "flex items-start gap-x-2" : "flex flex-col gap-1.5",
           className,
         )}
         {...props}

@@ -49,7 +49,7 @@ describe("FormField", () => {
     const content = container.querySelector("[data-slot='form-field-content']");
     expect(field).toHaveAttribute("data-orientation", "horizontal");
     expect(field).toHaveClass("items-start");
-    expect(label).toHaveClass("w-16", "text-left");
+    expect(label).toHaveClass("w-12", "text-left");
     expect(content).not.toBeNull();
     expect(content).toContainElement(screen.getByRole("textbox"));
     expect(content).toContainElement(screen.getByText("租户状态"));
