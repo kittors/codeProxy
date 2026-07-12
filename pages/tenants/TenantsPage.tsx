@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
+import { Eye } from "lucide-react";
 import { identityApi, type TenantIdentity } from "@code-proxy/api-client";
 import {
   Button,
@@ -152,8 +153,14 @@ export function TenantsPage() {
         lockOrder: "end",
         render: (item) => (
           <div className="flex items-center gap-2">
-            <Button size="xs" variant="ghost" onClick={() => setDetailsTenant(item)}>
-              {t("identity_admin.view")}
+            <Button
+              size="xs"
+              variant="ghost"
+              onClick={() => setDetailsTenant(item)}
+              title={t("identity_admin.view")}
+              aria-label={t("identity_admin.view")}
+            >
+              <Eye size={14} />
             </Button>
             {item.type !== "system" ? (
               <PermissionGate permission="platform.tenants.update">
