@@ -33,11 +33,14 @@ const ICON_MAP: Record<string, LucideIcon> = {
   copyright: Copyright,
   cpu: Cpu,
   "external-link": ExternalLink,
+  file: FileText,
   "file-text": FileText,
+  folder: FolderTree,
   "folder-tree": FolderTree,
   image: Image,
   info: Info,
   layers: Layers,
+  dashboard: LayoutDashboard,
   "layout-dashboard": LayoutDashboard,
   link: Link2,
   menu: MenuIcon,
@@ -52,5 +55,6 @@ const ICON_MAP: Record<string, LucideIcon> = {
 
 export function resolveMenuIcon(name: string | undefined | null): LucideIcon {
   if (!name) return Circle;
-  return ICON_MAP[name] ?? ICON_MAP[name.toLowerCase()] ?? Circle;
+  const key = name.trim().toLowerCase().replace(/^lucide:/, "").replace(/^carbon:/, "");
+  return ICON_MAP[key] ?? Circle;
 }

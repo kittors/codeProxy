@@ -394,7 +394,7 @@ export function DateTimePicker({
                     value={parsedValue ? pad2(parsedValue.getHours()) : ""}
                     onChange={(event) => updateTime("hour", event.currentTarget.value)}
                     aria-label={labels.hour}
-                    className="h-9 w-full rounded-2xl border border-black/[0.04] bg-white px-3 text-sm font-semibold tabular-nums text-[#18181B] shadow-[2px_2px_6px_rgb(0_0_0_/_0.055)] outline-none transition-colors focus-visible:ring-2 focus-visible:ring-black/10 dark:border-transparent dark:bg-[#303036] dark:text-white dark:shadow-none dark:focus-visible:ring-white/15"
+                    className="h-9 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold tabular-nums text-[#18181B] shadow-none outline-none transition-colors focus-visible:border-slate-400 focus-visible:ring-0 dark:border-neutral-700 dark:bg-neutral-950 dark:text-white dark:focus-visible:border-neutral-500"
                   />
                 </label>
                 <label className="space-y-1">
@@ -408,7 +408,7 @@ export function DateTimePicker({
                     value={parsedValue ? pad2(parsedValue.getMinutes()) : ""}
                     onChange={(event) => updateTime("minute", event.currentTarget.value)}
                     aria-label={labels.minute}
-                    className="h-9 w-full rounded-2xl border border-black/[0.04] bg-white px-3 text-sm font-semibold tabular-nums text-[#18181B] shadow-[2px_2px_6px_rgb(0_0_0_/_0.055)] outline-none transition-colors focus-visible:ring-2 focus-visible:ring-black/10 dark:border-transparent dark:bg-[#303036] dark:text-white dark:shadow-none dark:focus-visible:ring-white/15"
+                    className="h-9 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold tabular-nums text-[#18181B] shadow-none outline-none transition-colors focus-visible:border-slate-400 focus-visible:ring-0 dark:border-neutral-700 dark:bg-neutral-950 dark:text-white dark:focus-visible:border-neutral-500"
                   />
                 </label>
               </div>

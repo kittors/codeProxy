@@ -1,16 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  ChevronRight,
-  ExternalLink,
-  FileText,
-  FolderTree,
-  Link2,
-  MousePointerClick,
-  Pencil,
-  Plus,
-  Trash2,
-} from "lucide-react";
+import { ChevronRight, Pencil, Plus, Trash2 } from "lucide-react";
 import {
   identityApi,
   type MenuIdentity,
@@ -24,12 +14,11 @@ import {
   Drawer,
   Select,
   TextInput,
-  ToggleSwitch,
   type DataTableColumn,
   useToast,
 } from "@code-proxy/ui";
 import { useAuth } from "@app/providers/AuthProvider";
-import { pageRoutes } from "@pages/registry";
+import { resolveMenuIcon } from "@app/navigation/menuIconMap";
 
 type DrawerMode = "create" | "edit";
 
@@ -103,17 +92,6 @@ export function MenuManagementPage() {
   const [editing, setEditing] = useState<MenuIdentity | null>(null);
   const [form, setForm] = useState<MenuWriteBody>(emptyForm);
   const [deleteTarget, setDeleteTarget] = useState<MenuIdentity | null>(null);
-
-  const componentOptions = useMemo(
-    () =>
-      pageRoutes
-        .filter((route) => route.auth && route.layout === "dashboard" && route.component)
-        .map((route) => ({
-          value: route.component!,
-          label: `${route.component} (${route.path})`,
-        })),
-    [],
-  );
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -190,28 +168,6 @@ export function MenuManagementPage() {
     setDrawerOpen(true);
   };
 
-  const patchMenu = useCallback(
-    async (menu: MenuIdentity, patch: Partial<MenuWriteBody>) => {
-      if (!canUpdate) return false;
-      setBusy(true);
-      try {
-        await identityApi.updateMenu(menu.code, { ...toWriteBody(menu), ...patch, version: menu.version });
-        await load();
-        notify({ type: "success", message: t("identity_admin.menu_updated") });
-        return true;
-      } catch (error) {
-        notify({
-          type: "error",
-          message: error instanceof Error ? error.message : t("identity_admin.operation_failed"),
-        });
-        return false;
-      } finally {
-        setBusy(false);
-      }
-    },
-    [canUpdate, load, notify, t],
-  );
-
   const saveDrawer = async (event: FormEvent) => {
     event.preventDefault();
     if (!canUpdate) return;
@@ -283,16 +239,7 @@ export function MenuManagementPage() {
         render: (menu) => {
           const isExpanded = expanded.has(menu.code);
           const label = t(menu.label_key, { defaultValue: menu.title || menu.code });
-          const Icon =
-            menu.type === "directory"
-              ? FolderTree
-              : menu.type === "button"
-                ? MousePointerClick
-                : menu.type === "link"
-                  ? ExternalLink
-                  : menu.type === "embed"
-                    ? Link2
-                    : FileText;
+          const Icon = resolveMenuIcon(menu.icon);
           return (
             <div className="flex min-w-0 items-center gap-2" style={{ paddingLeft: menu.depth * 22 }}>
               {menu.hasChildren ? (
@@ -384,30 +331,20 @@ export function MenuManagementPage() {
       {
         key: "status",
         label: t("identity_admin.status"),
-        width: "w-36",
-        render: (menu) => {
-          const locked = menu.code === "system.menus" || menu.code === "group.system";
-          return (
-            <div className="flex items-center gap-3">
-              <ToggleSwitch
-                checked={menu.visible}
-                disabled={busy || !canUpdate || locked}
-                ariaLabel={t("identity_admin.change_menu_visible", {
-                  name: t(menu.label_key, { defaultValue: menu.code }),
-                })}
-                onCheckedChange={(visible) => void patchMenu(menu, { visible })}
-              />
-              <ToggleSwitch
-                checked={menu.enabled}
-                disabled={busy || !canUpdate || locked}
-                ariaLabel={t("identity_admin.change_menu_enabled", {
-                  name: t(menu.label_key, { defaultValue: menu.code }),
-                })}
-                onCheckedChange={(enabled) => void patchMenu(menu, { enabled })}
-              />
-            </div>
-          );
-        },
+        width: "w-24",
+        render: (menu) => (
+          <span
+            className={
+              menu.enabled
+                ? "inline-flex rounded-md bg-emerald-500/12 px-2 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-300"
+                : "inline-flex rounded-md bg-rose-500/12 px-2 py-0.5 text-xs font-medium text-rose-600 dark:text-rose-300"
+            }
+          >
+            {menu.enabled
+              ? t("identity_admin.menu_status_enabled")
+              : t("identity_admin.menu_status_disabled")}
+          </span>
+        ),
       },
       {
         key: "actions",
@@ -446,7 +383,7 @@ export function MenuManagementPage() {
         ),
       },
     ],
-    [busy, canUpdate, expanded, patchMenu, t],
+    [canUpdate, expanded, t],
   );
 
   const showPath = form.type === "menu" || form.type === "embed" || form.type === "link";
@@ -602,13 +539,12 @@ export function MenuManagementPage() {
               <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
                 {t("identity_admin.page_component")}
               </span>
-              <Select
+              <TextInput
                 value={form.component}
-                onChange={(value) => setForm((current) => ({ ...current, component: value }))}
-                options={[
-                  { value: "", label: t("identity_admin.please_select") },
-                  ...componentOptions,
-                ]}
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, component: event.target.value }))
+                }
+                placeholder="dashboard"
               />
             </label>
           ) : null}
@@ -668,32 +604,57 @@ export function MenuManagementPage() {
               }
             />
           </label>
-          <div className="flex flex-wrap items-center gap-6 sm:col-span-2">
-            <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200">
-              <ToggleSwitch
-                checked={form.visible}
-                onCheckedChange={(visible) => setForm((current) => ({ ...current, visible }))}
-                ariaLabel={t("identity_admin.menu_visible")}
-              />
-              {t("identity_admin.menu_visible")}
-            </label>
-            <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200">
-              <ToggleSwitch
-                checked={form.enabled}
-                onCheckedChange={(enabled) => setForm((current) => ({ ...current, enabled }))}
-                ariaLabel={t("identity_admin.menu_enabled")}
-              />
-              {t("identity_admin.menu_enabled")}
-            </label>
-            <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200">
-              <ToggleSwitch
-                checked={form.hide_menu}
-                onCheckedChange={(hide_menu) => setForm((current) => ({ ...current, hide_menu }))}
-                ariaLabel={t("identity_admin.hide_menu")}
-              />
-              {t("identity_admin.hide_menu")}
-            </label>
+          <div className="space-y-1.5 sm:col-span-2">
+            <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
+              {t("identity_admin.status")}
+            </span>
+            <div className="inline-flex rounded-xl border border-slate-200 p-0.5 dark:border-neutral-700">
+              <button
+                type="button"
+                className={
+                  form.enabled
+                    ? "rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white"
+                    : "rounded-lg px-3 py-1.5 text-xs font-medium text-slate-500"
+                }
+                onClick={() => setForm((current) => ({ ...current, enabled: true }))}
+              >
+                {t("identity_admin.menu_status_enabled")}
+              </button>
+              <button
+                type="button"
+                className={
+                  !form.enabled
+                    ? "rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white"
+                    : "rounded-lg px-3 py-1.5 text-xs font-medium text-slate-500"
+                }
+                onClick={() => setForm((current) => ({ ...current, enabled: false }))}
+              >
+                {t("identity_admin.menu_status_disabled")}
+              </button>
+            </div>
           </div>
+          <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200">
+            <input
+              type="checkbox"
+              className="h-4 w-4 rounded border-slate-300"
+              checked={form.hide_menu}
+              onChange={(event) =>
+                setForm((current) => ({ ...current, hide_menu: event.target.checked }))
+              }
+            />
+            {t("identity_admin.hide_menu")}
+          </label>
+          <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200">
+            <input
+              type="checkbox"
+              className="h-4 w-4 rounded border-slate-300"
+              checked={!form.visible}
+              onChange={(event) =>
+                setForm((current) => ({ ...current, visible: !event.target.checked }))
+              }
+            />
+            {t("identity_admin.menu_not_visible", { defaultValue: "不显示" })}
+          </label>
         </form>
       </Drawer>
 
