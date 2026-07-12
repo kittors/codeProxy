@@ -22,6 +22,7 @@ import {
   writePersistedAuthSnapshot,
   type ManagementPrincipal,
 } from "@code-proxy/api-client";
+import { invalidateConfiguredModelAvailability } from "@features/model-availability";
 
 interface AuthContextState {
   state: {
@@ -290,12 +291,16 @@ export function AuthProvider({ children }: PropsWithChildren) {
           : principal.effective_tenant.id;
       setEffectiveTenant(tenantId);
       configureClient(apiBase, accessToken, tenantId);
+      // Drop process-global availability cache so the next models page load
+      // cannot reuse the previous tenant's configured-availability response.
+      invalidateConfiguredModelAvailability();
       try {
         const response = await identityApi.me();
         setPrincipal(response.principal);
       } catch {
         setEffectiveTenant(previousTenant);
         configureClient(apiBase, accessToken, previousTenant);
+        invalidateConfiguredModelAvailability();
       }
     },
     [accessToken, apiBase, configureClient, principal?.platform_admin],
