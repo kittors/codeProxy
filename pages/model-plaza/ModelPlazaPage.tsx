@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Check, Copy, Layers, RefreshCw, Search, Store } from "lucide-react";
 import { VendorIcon } from "@code-proxy/assets";
@@ -6,7 +6,6 @@ import {
   Button,
   Card,
   EmptyState,
-  HoverTooltip,
   Tabs,
   TabsList,
   TabsTrigger,
@@ -39,6 +38,12 @@ type PlazaModel = {
 
 type VendorFilter = "all" | ModelVendorKey;
 
+type SourceSummary = {
+  label: string;
+  actualModelId: string;
+  mapped: boolean;
+};
+
 const formatSourceLabel = (source: ModelAvailabilitySource): string => {
   const label = source.label.trim();
   const provider = source.provider?.trim();
@@ -51,47 +56,26 @@ const formatSourceLabel = (source: ModelAvailabilitySource): string => {
   return label;
 };
 
-const renderModelSourcesTooltip = (
+const summarizeSources = (
   sources: ModelAvailabilitySource[] | undefined,
   modelId: string,
-  actualCallLabel: string,
-): ReactNode => {
-  const entries = (sources ?? [])
-    .map((source) => {
-      const label = formatSourceLabel(source);
-      if (!label) return null;
-      const actualModelId = source.upstreamModelId?.trim() || source.modelId?.trim() || modelId;
-      return {
-        label,
-        actualModelId,
-        mapped: Boolean(actualModelId && actualModelId !== modelId),
-      };
-    })
-    .filter((entry): entry is { label: string; actualModelId: string; mapped: boolean } =>
-      Boolean(entry),
-    );
-
-  if (entries.length === 0) return null;
-
-  return (
-    <span className="block min-w-44 max-w-[18rem] space-y-1 text-left">
-      {entries.map((entry) => (
-        <span key={`${entry.label}\x00${entry.actualModelId}`} className="block">
-          <span className="block text-xs font-medium text-slate-900 dark:text-white">
-            {entry.label}
-          </span>
-          {entry.mapped ? (
-            <span className="mt-0.5 flex min-w-0 items-start gap-1.5 text-xs text-slate-500 dark:text-white/55">
-              <span className="shrink-0">{actualCallLabel}</span>
-              <span className="min-w-0 break-all font-mono text-slate-700 dark:text-white/75">
-                {entry.actualModelId}
-              </span>
-            </span>
-          ) : null}
-        </span>
-      ))}
-    </span>
-  );
+): SourceSummary[] => {
+  const seen = new Set<string>();
+  const entries: SourceSummary[] = [];
+  for (const source of sources ?? []) {
+    const label = formatSourceLabel(source);
+    if (!label) continue;
+    const actualModelId = source.upstreamModelId?.trim() || source.modelId?.trim() || modelId;
+    const key = `${label}\x00${actualModelId}`.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    entries.push({
+      label,
+      actualModelId,
+      mapped: Boolean(actualModelId && actualModelId !== modelId),
+    });
+  }
+  return entries;
 };
 
 function PriceChip({
@@ -141,16 +125,17 @@ function ModelPlazaCard({
 }) {
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
-  const sourcesTooltip = renderModelSourcesTooltip(
-    model.sources,
-    model.id,
-    t("model_plaza.model_actual_call"),
-  );
-  const hasMappedSource = (model.sources ?? []).some(
-    (source) => source.upstreamModelId && source.upstreamModelId !== model.id,
+  const sourceEntries = useMemo(
+    () => summarizeSources(model.sources, model.id),
+    [model.id, model.sources],
   );
   const priced = hasModelPricing(model.pricing);
   const notPriced = t("model_plaza.not_priced");
+  const sourceSummary = sourceEntries
+    .map((entry) =>
+      entry.mapped ? `${entry.label} → ${entry.actualModelId}` : entry.label,
+    )
+    .join(" · ");
 
   const handleCopy = () => {
     void navigator.clipboard.writeText(model.id);
@@ -198,11 +183,11 @@ function ModelPlazaCard({
 
   const vendorGlyph = model.id.trim().charAt(0).toUpperCase() || "M";
 
-  const card = (
-    <div data-testid="model-plaza-card" className="h-full">
+  return (
+    <div data-testid="model-plaza-card" className="h-full min-h-[220px]">
       <Card
         padding="compact"
-        bodyClassName="mt-0"
+        bodyClassName="mt-0 flex h-full min-h-[196px] flex-col"
         className="group h-full transition hover:border-indigo-200/70 hover:shadow-[2px_2px_10px_rgb(0_0_0_/_0.06)] dark:hover:border-indigo-500/25 dark:hover:shadow-[2px_2px_10px_rgb(0_0_0_/_0.28)]"
       >
         <div className="flex items-start gap-3">
@@ -224,19 +209,10 @@ function ModelPlazaCard({
                   >
                     {model.id}
                   </h3>
-                  {hasMappedSource ? (
-                    <span
-                      aria-hidden="true"
-                      data-model-source-marker="true"
-                      className="size-1.5 shrink-0 rounded-full bg-sky-500"
-                    />
-                  ) : null}
                 </div>
-                {model.ownedBy ? (
-                  <p className="mt-0.5 truncate text-2xs text-slate-400 dark:text-white/35">
-                    {model.ownedBy}
-                  </p>
-                ) : null}
+                <p className="mt-0.5 truncate text-2xs text-slate-400 dark:text-white/35">
+                  {model.ownedBy || t("model_plaza.no_owner")}
+                </p>
               </div>
               <button
                 type="button"
@@ -251,13 +227,29 @@ function ModelPlazaCard({
           </div>
         </div>
 
-        <p className="mt-3 line-clamp-2 min-h-8 text-xs leading-5 text-slate-500 dark:text-white/55">
+        <p className="mt-3 line-clamp-2 min-h-10 flex-1 text-xs leading-5 text-slate-500 dark:text-white/55">
           {model.description?.trim()
             ? model.description
             : t("model_plaza.no_description")}
         </p>
 
-        <div className="mt-3">
+        <div className="mt-2 min-h-4">
+          {sourceSummary ? (
+            <p
+              className="truncate text-2xs text-slate-400 dark:text-white/40"
+              title={sourceSummary}
+              data-testid="model-plaza-source"
+            >
+              {sourceSummary}
+            </p>
+          ) : (
+            <p className="truncate text-2xs text-transparent" aria-hidden="true">
+              —
+            </p>
+          )}
+        </div>
+
+        <div className="mt-auto pt-2">
           <div className="mb-1.5 flex items-center justify-between gap-2">
             <span className="text-2xs font-semibold uppercase tracking-wide text-slate-400 dark:text-white/35">
               {t("model_plaza.pricing")}
@@ -276,14 +268,6 @@ function ModelPlazaCard({
         </div>
       </Card>
     </div>
-  );
-
-  if (!sourcesTooltip) return card;
-
-  return (
-    <HoverTooltip content={sourcesTooltip} placement="top">
-      <div className="h-full">{card}</div>
-    </HoverTooltip>
   );
 }
 
@@ -376,10 +360,15 @@ export function ModelPlazaPage() {
         return false;
       }
       if (!needle) return true;
+      const sourceText = summarizeSources(model.sources, model.id)
+        .map((entry) => `${entry.label} ${entry.actualModelId}`)
+        .join(" ")
+        .toLowerCase();
       return (
         model.id.toLowerCase().includes(needle) ||
         model.description.toLowerCase().includes(needle) ||
-        model.ownedBy.toLowerCase().includes(needle)
+        model.ownedBy.toLowerCase().includes(needle) ||
+        sourceText.includes(needle)
       );
     });
   }, [filter, models, selectedVendor]);
@@ -391,8 +380,10 @@ export function ModelPlazaPage() {
   const tabValue = selectedVendor;
 
   return (
-    <div className="min-w-0 space-y-5 overflow-x-hidden">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    // 不要在根节点加 overflow-x-hidden：会把 overflow-y 计算成 auto，
+    // 从而切断相对 AppShell 滚动容器的 sticky 吸顶。
+    <div className="flex min-w-0 flex-col">
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-center gap-2.5">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-100 dark:bg-indigo-900/30">
             <Store size={16} className="text-indigo-600 dark:text-indigo-400" />
@@ -433,59 +424,66 @@ export function ModelPlazaPage() {
       </div>
 
       {vendorStats.length > 0 && !loading ? (
-        <Tabs
-          value={tabValue}
-          onValueChange={(next) => setSelectedVendor(next as VendorFilter)}
-          size="sm"
-        >
-          <TabsList aria-label={t("model_plaza.vendor_tabs")} className="max-w-full">
-            <TabsTrigger value="all">
-              <Layers size={12} aria-hidden="true" />
-              {t("common.all", { defaultValue: "All" })}
-              <span className="tabular-nums text-slate-400 dark:text-white/40">{models.length}</span>
-            </TabsTrigger>
-            {vendorStats.map((stat) => (
-              <TabsTrigger key={stat.key} value={stat.key}>
-                <VendorIcon modelId={stat.key} size={12} />
-                {stat.label}
-                <span className="tabular-nums text-slate-400 dark:text-white/40">{stat.count}</span>
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
-      ) : null}
-
-      {error ? (
-        <div className="rounded-xl border border-rose-100 bg-rose-50 px-4 py-2.5 text-sm text-rose-700 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-200">
-          {error}
-        </div>
-      ) : null}
-
-      {loading && models.length === 0 ? (
-        <div className="flex items-center justify-center py-16 text-sm text-slate-500 dark:text-white/50">
-          <RefreshCw size={14} className="mr-2 animate-spin" />
-          {t("model_plaza.loading")}
-        </div>
-      ) : filteredModels.length > 0 ? (
         <div
-          className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4"
-          data-testid="model-plaza-grid"
+          data-testid="model-plaza-tabs-sticky"
+          className="sticky top-0 z-20 -mx-4 border-b border-slate-200/70 bg-white/95 px-4 py-2.5 backdrop-blur-md sm:-mx-6 sm:px-6 dark:border-neutral-800/80 dark:bg-neutral-950/95"
         >
-          {filteredModels.map((model) => (
-            <ModelPlazaCard key={model.id} model={model} onCopied={handleCopied} />
-          ))}
+          <Tabs
+            value={tabValue}
+            onValueChange={(next) => setSelectedVendor(next as VendorFilter)}
+            size="sm"
+          >
+            <TabsList aria-label={t("model_plaza.vendor_tabs")} className="max-w-full">
+              <TabsTrigger value="all">
+                <Layers size={12} aria-hidden="true" />
+                {t("common.all", { defaultValue: "All" })}
+                <span className="tabular-nums text-slate-400 dark:text-white/40">{models.length}</span>
+              </TabsTrigger>
+              {vendorStats.map((stat) => (
+                <TabsTrigger key={stat.key} value={stat.key}>
+                  <VendorIcon modelId={stat.key} size={12} />
+                  {stat.label}
+                  <span className="tabular-nums text-slate-400 dark:text-white/40">{stat.count}</span>
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
         </div>
-      ) : (
-        <EmptyState
-          icon={<Store size={28} className="opacity-50" />}
-          title={models.length === 0 ? t("model_plaza.no_models") : t("model_plaza.no_match")}
-          description={
-            models.length === 0
-              ? t("model_plaza.no_models_desc")
-              : t("model_plaza.no_match_desc")
-          }
-        />
-      )}
+      ) : null}
+
+      <div className="mt-4 flex min-w-0 flex-col gap-4">
+        {error ? (
+          <div className="rounded-xl border border-rose-100 bg-rose-50 px-4 py-2.5 text-sm text-rose-700 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-200">
+            {error}
+          </div>
+        ) : null}
+
+        {loading && models.length === 0 ? (
+          <div className="flex items-center justify-center py-16 text-sm text-slate-500 dark:text-white/50">
+            <RefreshCw size={14} className="mr-2 animate-spin" />
+            {t("model_plaza.loading")}
+          </div>
+        ) : filteredModels.length > 0 ? (
+          <div
+            className="grid auto-rows-fr grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4"
+            data-testid="model-plaza-grid"
+          >
+            {filteredModels.map((model) => (
+              <ModelPlazaCard key={model.id} model={model} onCopied={handleCopied} />
+            ))}
+          </div>
+        ) : (
+          <EmptyState
+            icon={<Store size={28} className="opacity-50" />}
+            title={models.length === 0 ? t("model_plaza.no_models") : t("model_plaza.no_match")}
+            description={
+              models.length === 0
+                ? t("model_plaza.no_models_desc")
+                : t("model_plaza.no_match_desc")
+            }
+          />
+        )}
+      </div>
     </div>
   );
 }

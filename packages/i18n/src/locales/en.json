@@ -3896,6 +3896,7 @@
     "no_match": "No matching models",
     "no_match_desc": "Try another vendor tab or clear the search keywords.",
     "no_description": "No description yet",
+    "no_owner": "No owner",
     "pricing": "Pricing",
     "input_price": "Input",
     "output_price": "Output",

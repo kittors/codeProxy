@@ -195,7 +195,7 @@ describe("ModelPlazaPage", () => {
     });
   });
 
-  test("keeps configured mapped models and source markers", async () => {
+  test("keeps configured mapped models and shows source on the card", async () => {
     mocks.apiGet.mockImplementation((path: string) => {
       if (path === "/auth-group-model-owner-mappings") return Promise.resolve({ items: [] });
       if (path === "/models/configured-availability") {
@@ -231,10 +231,38 @@ describe("ModelPlazaPage", () => {
       return Promise.resolve({});
     });
 
-    const { container } = renderPage();
+    renderPage();
 
     expect(await screen.findByText("mimo-v2.5-pro")).toBeInTheDocument();
     expect(screen.queryByText("gpt-root-model")).not.toBeInTheDocument();
-    expect(container.querySelectorAll('[data-model-source-marker="true"]')).toHaveLength(1);
+    const source = screen.getByTestId("model-plaza-source");
+    expect(source).toHaveTextContent(/cline/i);
+    expect(source).toHaveTextContent(/mimo-v2\.5-pro/i);
+  });
+
+  test("pins vendor tabs with sticky styles and keeps page overflow open", async () => {
+    mocks.apiGet.mockImplementation((path: string) => {
+      if (path === "/auth-group-model-owner-mappings") return Promise.resolve({ items: [] });
+      if (path === "/models/configured-availability") {
+        return Promise.resolve({
+          scoped: true,
+          data: [
+            { id: "gpt-5.4", description: "OpenAI" },
+            { id: "qwen3.5-plus", description: "Qwen" },
+          ],
+        });
+      }
+      if (path === "/model-path-availability") return Promise.resolve({ data: [] });
+      return Promise.resolve({});
+    });
+
+    const { container } = renderPage();
+
+    expect(await screen.findByText("gpt-5.4")).toBeInTheDocument();
+    const sticky = screen.getByTestId("model-plaza-tabs-sticky");
+    expect(sticky.className).toMatch(/(?:^|\s)sticky(?:\s|$)/);
+    expect(sticky.className).toMatch(/(?:^|\s)top-0(?:\s|$)/);
+    // overflow-x-hidden on an ancestor computes overflow-y as auto and breaks sticky
+    expect(container.firstElementChild?.className ?? "").not.toMatch(/overflow-x-hidden/);
   });
 });

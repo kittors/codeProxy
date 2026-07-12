@@ -4078,6 +4078,7 @@
     "no_match": "无匹配模型",
     "no_match_desc": "可切换厂商 Tab 或清空搜索关键词后再试。",
     "no_description": "暂无描述",
+    "no_owner": "未指定归属",
     "pricing": "价格",
     "input_price": "输入",
     "output_price": "输出",
