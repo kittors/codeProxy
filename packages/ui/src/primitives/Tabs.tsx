@@ -111,7 +111,9 @@ export function TabsList({
       {...divProps}
       role="tablist"
       className={[
-        "scrollbar-hidden relative inline-flex max-w-full gap-0.5 overflow-x-auto whitespace-nowrap rounded-full bg-[#EBEBEC] p-0.5 dark:bg-[#27272A]",
+        // w-fit + self-start: stay content-sized even when parent is flex-col
+        // (default align-items:stretch would stretch the pill bar full width)
+        "scrollbar-hidden relative inline-flex w-fit max-w-full shrink-0 self-start gap-0.5 overflow-x-auto whitespace-nowrap rounded-full bg-[#EBEBEC] p-0.5 dark:bg-[#27272A]",
         tabsListHeightBySize[size],
         className,
       ].join(" ")}
