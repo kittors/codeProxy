@@ -18,6 +18,7 @@ export const ccswitchImportSettingsRoute = {
     { from: "/ccswitch-import-settings", to: "/access/ccswitch-import-settings" },
     { from: "/manage/ccswitch-import-settings", to: "/access/ccswitch-import-settings" },
   ],
-  requiredPermission: "system.config.read",
+  // Tenant-scoped: aligns with management API auth for /ccswitch-import-configs (routing.read).
+  requiredPermission: "routing.read",
   preload: preloadCcSwitchImportSettingsPage,
 };

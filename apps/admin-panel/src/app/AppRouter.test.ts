@@ -40,6 +40,8 @@ describe("AppRouter", () => {
     expect(ccSwitchRoute).toContain(
       '{ from: "/manage/ccswitch-import-settings", to: "/access/ccswitch-import-settings" }',
     );
+    // Tenant-scoped: ordinary tenants have routing.read, not platform system.config.read.
+    expect(ccSwitchRoute).toContain('requiredPermission: "routing.read"');
 
     expect(apiKeyPermissionsRoute).toContain("ApiKeyPermissionsPage");
     expect(apiKeyPermissionsRoute).toMatch(/path:\s*"\/access\/api-key-permissions"/);
