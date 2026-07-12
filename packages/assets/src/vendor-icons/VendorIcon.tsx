@@ -7,6 +7,8 @@ import iconDeepseek from "@code-proxy/assets/icons/deepseek.svg";
 import iconGemini from "@code-proxy/assets/icons/gemini.svg";
 import iconGlm from "@code-proxy/assets/icons/glm.svg";
 import iconGrok from "@code-proxy/assets/icons/grok.svg";
+import iconHunyuan from "@code-proxy/assets/icons/hunyuan.svg";
+import iconHunyuanDark from "@code-proxy/assets/icons/hunyuan-dark.svg";
 import iconIflow from "@code-proxy/assets/icons/iflow.svg";
 import iconKimiDark from "@code-proxy/assets/icons/kimi-dark.svg";
 import iconKimiLight from "@code-proxy/assets/icons/kimi-light.svg";
@@ -34,6 +36,8 @@ const VENDOR_ICONS: Record<string, { light: string; dark: string }> = {
   glm: { light: iconGlm, dark: iconGlm },
   gpt: { light: iconOpenaiLight, dark: iconOpenaiDark },
   grok: { light: iconGrok, dark: iconGrok },
+  hunyuan: { light: iconHunyuan, dark: iconHunyuanDark },
+  hy3: { light: iconHunyuan, dark: iconHunyuanDark },
   iflow: { light: iconIflow, dark: iconIflow },
   kiro: { light: iconKiro, dark: iconKiro },
   kimi: { light: iconKimiLight, dark: iconKimiDark },

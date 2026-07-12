@@ -14,6 +14,7 @@ export type ModelVendorKey =
   | "glm"
   | "gpt"
   | "grok"
+  | "hunyuan"
   | "iflow"
   | "kiro"
   | "kimi"
@@ -104,6 +105,11 @@ export const MODEL_VENDOR_COLORS: Record<ModelVendorKey, ModelVendorTone> = {
     bg: "bg-slate-50 dark:bg-slate-900/30",
     text: "text-slate-700 dark:text-slate-300",
     border: "border-slate-200/60 dark:border-slate-700/30",
+  },
+  hunyuan: {
+    bg: "bg-blue-50 dark:bg-blue-950/20",
+    text: "text-blue-700 dark:text-blue-300",
+    border: "border-blue-200/60 dark:border-blue-800/30",
   },
   kimi: {
     bg: "bg-slate-50 dark:bg-slate-900/30",
@@ -225,6 +231,16 @@ const MODEL_VENDOR_DEFINITIONS: ModelVendorDefinition[] = [
     key: "grok",
     label: "grok",
     matches: (modelId) => startsWithAny(modelId, ["grok", "xai"]),
+  },
+  {
+    key: "hunyuan",
+    label: "hunyuan",
+    // Tencent Hunyuan: hunyuan-*, hy3-preview, tencent/hunyuan-*, etc.
+    matches: (modelId) =>
+      startsWithAny(modelId, ["hunyuan", "hy3", "tencent-hunyuan"]) ||
+      modelId.includes("/hunyuan") ||
+      modelId.includes("/hy3") ||
+      /^hy\d/.test(modelId),
   },
   {
     key: "kiro",
