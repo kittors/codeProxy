@@ -47,6 +47,45 @@ describe("identityApi", () => {
     expect(headers.get("Authorization")).toBe("Bearer cps_test");
   });
 
+  test("creates tenants without a caller-provided identifier", async () => {
+    apiClient.setConfig({ apiBase: "http://localhost:8317", managementKey: "cps_test" });
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ tenant: {}, admin: {} }), {
+        status: 201,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    await identityApi.createTenant({
+      name: "Tenant A",
+      description: "Primary tenant",
+      expires_at: "2030-01-01T00:00:00Z",
+      admin_username: "tenant-admin",
+      admin_display_name: "Tenant Admin",
+      admin_password: "tenant-password-123",
+    });
+    expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).not.toHaveProperty("slug");
+  });
+
+  test("creates roles without a caller-provided code", async () => {
+    apiClient.setConfig({ apiBase: "http://localhost:8317", managementKey: "cps_test" });
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ id: "role-a" }), {
+        status: 201,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    await identityApi.createRole({
+      name: "Operator",
+      description: "Operates users",
+      permissions: [],
+    });
+    expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toEqual({
+      name: "Operator",
+      description: "Operates users",
+      permissions: [],
+    });
+  });
+
   test("updates tenant details with optimistic versioning", async () => {
     apiClient.setConfig({ apiBase: "http://localhost:8317", managementKey: "cps_test" });
     const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(

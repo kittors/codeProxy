@@ -4326,6 +4326,8 @@
     "menu_enabled": "Enabled",
     "sort_order": "Order",
     "adjust_order": "Adjust order",
+    "tree_expand": "Expand",
+    "tree_collapse": "Collapse",
     "change_menu_visible": "Change visibility for menu {{name}}",
     "change_menu_enabled": "Change enabled state for menu {{name}}",
     "menu_management_title": "Menu Management",

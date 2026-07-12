@@ -1,12 +1,11 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { KeyRound, MoreHorizontal, Trash2 } from "lucide-react";
+import { KeyRound, Trash2 } from "lucide-react";
 import { identityApi, type RoleIdentity, type UserIdentity } from "@code-proxy/api-client";
 import {
   Button,
   ConfirmModal,
   DataTable,
-  DropdownMenu,
   Modal,
   MultiSelect,
   TextInput,
@@ -215,45 +214,40 @@ export function UsersPage() {
       {
         key: "actions",
         label: t("identity_admin.actions"),
-        minWidthPx: 80,
-        width: "w-20",
+        minWidthPx: 104,
+        width: "w-28",
         lockOrder: "end",
         render: (user) => {
           const protectedUser = isProtected(user);
           return (
-            <DropdownMenu.Root>
-              <DropdownMenu.Trigger asChild>
-                <Button size="xs" aria-label={t("identity_admin.more_actions")}>
-                  <MoreHorizontal size={15} />
+            <div className="flex items-center gap-1.5">
+              <PermissionGate permission="tenant.users.reset_password">
+                <Button
+                  size="xs"
+                  variant="ghost"
+                  disabled={protectedUser || busy}
+                  tooltip={t("identity_admin.reset_password")}
+                  onClick={() => {
+                    setResetUser(user);
+                    setResetPassword("");
+                  }}
+                >
+                  <KeyRound size={15} />
                 </Button>
-              </DropdownMenu.Trigger>
-              <DropdownMenu.Portal>
-                <DropdownMenu.Content align="end">
-                  <PermissionGate permission="tenant.users.reset_password">
-                    <DropdownMenu.Item
-                      disabled={protectedUser}
-                      onSelect={() => {
-                        setResetUser(user);
-                        setResetPassword("");
-                      }}
-                    >
-                      <KeyRound size={15} />
-                      {t("identity_admin.reset_password")}
-                    </DropdownMenu.Item>
-                  </PermissionGate>
-                  <PermissionGate permission="tenant.users.delete">
-                    <DropdownMenu.Item
-                      disabled={protectedUser}
-                      onSelect={() => setDeleteUser(user)}
-                      className="text-rose-600 focus:text-rose-700 dark:text-rose-300"
-                    >
-                      <Trash2 size={15} />
-                      {t("identity_admin.delete")}
-                    </DropdownMenu.Item>
-                  </PermissionGate>
-                </DropdownMenu.Content>
-              </DropdownMenu.Portal>
-            </DropdownMenu.Root>
+              </PermissionGate>
+              <PermissionGate permission="tenant.users.delete">
+                <Button
+                  size="xs"
+                  variant="ghost"
+                  className="text-rose-600 hover:text-rose-700 dark:text-rose-300 dark:hover:text-rose-200"
+                  disabled={protectedUser || busy}
+                  tooltip={t("identity_admin.delete")}
+                  onClick={() => setDeleteUser(user)}
+                >
+                  <Trash2 size={15} />
+                </Button>
+              </PermissionGate>
+            </div>
           );
         },
       },

@@ -14,7 +14,6 @@ import {
 import { PermissionGate } from "@app/guards/PermissionGate";
 
 const emptyCreateForm = {
-  slug: "",
   name: "",
   expires_at: "",
   admin_username: "",
@@ -290,7 +289,6 @@ export function TenantsPage() {
         <form id="create-tenant-form" onSubmit={createTenant} className="grid gap-4 md:grid-cols-2">
           {(
             [
-              ["slug", t("identity_admin.slug")],
               ["name", t("identity_admin.name")],
               ["expires_at", t("identity_admin.expires_at")],
               ["admin_username", t("identity_admin.admin_username")],
