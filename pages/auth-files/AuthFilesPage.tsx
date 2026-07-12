@@ -311,6 +311,7 @@ export function AuthFilesPage() {
     statusUpdating,
     tagSavingByName,
     downloadAuthFile,
+    handleDownloadSelection,
     handleUpload,
     handleDeleteSelection,
     setFileEnabled,
@@ -901,6 +902,7 @@ export function AuthFilesPage() {
         openTagsEditor={(file) => setTagsEditorFileName(file.name)}
         openDetail={openDetailWithQuotaRefresh}
         downloadAuthFile={downloadAuthFile}
+        handleDownloadSelection={handleDownloadSelection}
         safePage={safePage}
         totalPages={totalPages}
         setPage={setPage}

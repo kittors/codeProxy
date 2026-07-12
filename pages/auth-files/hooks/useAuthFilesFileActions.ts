@@ -83,6 +83,46 @@ export function useAuthFilesFileActions({
     [notify, t],
   );
 
+  const handleDownloadSelection = useCallback(
+    async (names: string[]) => {
+      const targets = Array.from(new Set(names.map((name) => name.trim()).filter(Boolean)));
+      if (targets.length === 0) return;
+
+      const confirmed = window.confirm(
+        t("auth_files.batch_download_sensitive_confirm", {
+          count: targets.length,
+          defaultValue:
+            "This downloads {{count}} full auth file(s) and may include sensitive credentials. Continue?",
+        }),
+      );
+      if (!confirmed) return;
+
+      let success = 0;
+      let failed = 0;
+      for (const name of targets) {
+        try {
+          await authFilesApi.downloadFile(name);
+          success += 1;
+        } catch {
+          failed += 1;
+        }
+      }
+
+      if (failed === 0) {
+        notify({
+          type: "success",
+          message: t("auth_files.batch_download_success", { count: success }),
+        });
+      } else {
+        notify({
+          type: "error",
+          message: t("auth_files.batch_download_partial", { success, failed }),
+        });
+      }
+    },
+    [notify, t],
+  );
+
   const handleUpload = useCallback(
     async (input: FileList | File[] | null): Promise<AuthFilesUploadResult | null> => {
       const list = Array.isArray(input) ? input : input ? Array.from(input) : [];
@@ -349,6 +389,7 @@ export function useAuthFilesFileActions({
     statusUpdating,
     tagSavingByName,
     downloadAuthFile,
+    handleDownloadSelection,
     handleUpload,
     handleDeleteSelection,
     setFileEnabled,

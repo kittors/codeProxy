@@ -662,6 +662,7 @@ interface AuthFilesFilesTabProps {
   openTagsEditor: (file: AuthFileItem) => void;
   openDetail: (file: AuthFileItem) => Promise<void>;
   downloadAuthFile: (file: AuthFileItem) => Promise<void>;
+  handleDownloadSelection: (names: string[]) => Promise<void>;
   safePage: number;
   totalPages: number;
   setPage: (value: number | ((prev: number) => number)) => void;
@@ -743,6 +744,7 @@ export function AuthFilesFilesTab({
   openTagsEditor,
   openDetail,
   downloadAuthFile,
+  handleDownloadSelection,
   safePage,
   totalPages,
   setPage,
@@ -1053,6 +1055,16 @@ export function AuthFilesFilesTab({
           disabled={deletingAll}
         >
           {t("auth_files.batch_delete_action", { count: selectedCount })}
+        </Button>
+        <Button
+          variant="secondary"
+          size="xs"
+          className="px-2"
+          onClick={() => void handleDownloadSelection([...selectedFileNames])}
+          disabled={deletingAll || selectedCount === 0}
+        >
+          <Download size={13} className="shrink-0" />
+          <span>{t("auth_files.batch_download_action", { count: selectedCount })}</span>
         </Button>
       </div>
     ) : (
