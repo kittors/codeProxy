@@ -325,7 +325,7 @@ export function MenuManagementPage() {
                 <span className="flex min-w-0 items-center gap-1.5">
                   <span className="truncate font-medium text-slate-900 dark:text-white">{label}</span>
                   {menu.badge_content ? (
-                    <span className="shrink-0 rounded-full bg-blue-500 px-1.5 py-0.5 text-[10px] font-medium text-white">
+                    <span className="shrink-0 rounded-full bg-blue-500 px-1.5 py-0.5 text-2xs font-medium text-white">
                       {menu.badge_content}
                     </span>
                   ) : null}
