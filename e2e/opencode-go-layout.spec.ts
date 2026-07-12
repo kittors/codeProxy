@@ -205,7 +205,7 @@ test("AI Providers: OpenCode Go cards should not overlap on responsive layouts",
       width: viewport.width,
       height: viewport.height,
     });
-    await page.goto("/#/ai-providers");
+    await page.goto("/#/access/ai-providers");
 
     const list = page.getByTestId("providers-tab-scroll");
     await expect(list).toBeVisible();
@@ -275,7 +275,7 @@ test("AI Providers: dashboard provider cards stay compact and left aligned", asy
   await setAuthed(page);
   await mockManagementApi(page);
   await page.setViewportSize({ width: 1280, height: 720 });
-  await page.goto("/#/ai-providers");
+  await page.goto("/#/access/ai-providers");
 
   for (const provider of [
     {

@@ -7,12 +7,13 @@ const { Page: ImageGenerationPage, preload: preloadImageGenerationPage } = prelo
 );
 
 export const imageGenerationRoute = {
-  path: "/image-generation",
+  path: "/models/image-generation",
   component: "image-generation",
   element: <ImageGenerationPage />,
   auth: true,
   layout: "dashboard",
   nav: { labelKey: "nav.imageGeneration" },
+  redirects: [{ from: "/image-generation", to: "/models/image-generation" }],
   requiredPermission: "system.config.read",
   preload: preloadImageGenerationPage,
 };

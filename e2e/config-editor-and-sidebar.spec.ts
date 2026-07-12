@@ -57,7 +57,7 @@ test("Config: page should not horizontally scroll; editor should allow horizonta
     });
   });
 
-  await page.goto("/#/config");
+  await page.goto("/#/system/config");
   await page.getByRole("tab", { name: /Source Editor|源码编辑/i }).click();
 
   const editor = page.getByLabel(/config\.yaml (editor|编辑器)/i);
@@ -104,7 +104,7 @@ test("Sidebar: collapse/expand should keep nav items nowrap and slide out of vie
     });
   });
 
-  await page.goto("/#/config");
+  await page.goto("/#/system/config");
 
   const dashboardLink = page.getByRole("link", { name: /Dashboard|仪表盘/i });
   await expect(dashboardLink).toBeVisible();
@@ -582,7 +582,7 @@ test("Config: source editor save should persist edited yaml through save path", 
     });
   });
 
-  await page.goto("/#/config");
+  await page.goto("/#/system/config");
   await page.getByRole("tab", { name: /源代码编辑|Source Editor/i }).click();
 
   const editor = page.getByLabel(/config\.yaml (editor|编辑器)/i);
@@ -719,7 +719,7 @@ test("Config: global Codex OAuth allowed-client preset should persist through ru
     });
   });
 
-  await page.goto("/#/config");
+  await page.goto("/#/system/config");
 
   const panel = page.getByTestId("codex-oauth-global-admission-panel");
   await expect(panel).toBeVisible();

@@ -98,7 +98,7 @@ const FALLBACK_NAV_GROUPS: readonly SidebarNavGroup[] = [
     items: [
       {
         menuCode: "system.menus",
-        to: "/menu-management",
+        to: "/system/menu-management",
         i18nKey: "shell.nav_menu_management",
         icon: resolveMenuIcon("menu"),
         permission: "platform.menus.read",
@@ -161,7 +161,12 @@ const getPageTitleKey = (pathname: string, menus?: MenuIdentity[] | null): strin
     if (hit) return menuLabelKey(hit);
   }
   if (pathname.startsWith("/dashboard")) return "shell.nav_dashboard";
-  if (pathname.startsWith("/menu-management")) return "shell.nav_menu_management";
+  if (
+    pathname.startsWith("/system/menu-management") ||
+    pathname.startsWith("/menu-management")
+  ) {
+    return "shell.nav_menu_management";
+  }
   return "shell.page_home";
 };
 
@@ -946,7 +951,7 @@ function ShellSidebar({
                     {can("auth_files.read") ? (
                       <DropdownMenu.Item
                         onSelect={() =>
-                          navigate("/account-security", {
+                          navigate("/system/account-security", {
                             viewTransition: true,
                           })
                         }
@@ -958,7 +963,7 @@ function ShellSidebar({
                     ) : null}
                     {can("system.config.read") ? (
                       <DropdownMenu.Item
-                        onSelect={() => navigate("/config", { viewTransition: true })}
+                        onSelect={() => navigate("/system/config", { viewTransition: true })}
                         className="py-2.5"
                       >
                         <Settings size={16} />

@@ -5,12 +5,13 @@ const { Page: ApiKeysPage, preload: preloadApiKeysPage } = preloadablePage(() =>
 );
 
 export const apiKeysRoute = {
-  path: "/api-keys",
+  path: "/access/api-keys",
   component: "api-keys",
   element: <ApiKeysPage />,
   auth: true,
   layout: "dashboard",
   nav: { labelKey: "nav.apiKeys" },
+  redirects: [{ from: "/api-keys", to: "/access/api-keys" }],
   requiredPermission: "api_keys.read",
   preload: preloadApiKeysPage,
 };

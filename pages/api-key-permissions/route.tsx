@@ -7,13 +7,16 @@ const { Page: ApiKeyPermissionsPage, preload: preloadApiKeyPermissionsPage } = p
 );
 
 export const apiKeyPermissionsRoute = {
-  path: "/api-key-permissions",
+  path: "/system/api-key-permissions",
   component: "api-key-permissions",
   element: <ApiKeyPermissionsPage />,
   auth: true,
   layout: "dashboard",
   nav: { labelKey: "nav.apiKeyPermissions" },
-  redirects: [{ from: "/manage/api-key-permissions", to: "/api-key-permissions" }],
+  redirects: [
+    { from: "/api-key-permissions", to: "/system/api-key-permissions" },
+    { from: "/manage/api-key-permissions", to: "/system/api-key-permissions" },
+  ],
   requiredPermission: "api_key_profiles.read",
   preload: preloadApiKeyPermissionsPage,
 };

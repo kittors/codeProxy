@@ -57,6 +57,18 @@ const emptyForm = (): MenuWriteBody => ({
   hide_menu: false,
 });
 
+/** Display helper: never collapse real empty metadata to a blank cell without meaning. */
+const displayCell = (value: string | null | undefined, fallback = "—") => {
+  const text = (value ?? "").trim();
+  return text || fallback;
+};
+
+const parentPathPrefix = (menus: MenuIdentity[], parentCode: string) => {
+  if (!parentCode) return "";
+  const parent = menus.find((item) => item.code === parentCode);
+  return (parent?.path ?? "").replace(/\/$/, "");
+};
+
 const toWriteBody = (menu: MenuIdentity): MenuWriteBody => ({
   parent_code: menu.parent_code ?? "",
   type: menu.type,
@@ -182,7 +194,15 @@ export function MenuManagementPage() {
   const openCreate = (parentCode = "") => {
     setDrawerMode("create");
     setEditing(null);
-    setForm({ ...emptyForm(), parent_code: parentCode });
+    const prefix = parentPathPrefix(menus, parentCode);
+    setForm({
+      ...emptyForm(),
+      parent_code: parentCode,
+      // Nested create under a directory defaults to secondary route under parent path.
+      path: prefix ? `${prefix}/` : "",
+      type: "menu",
+      component: "",
+    });
     setDrawerOpen(true);
   };
 
@@ -326,7 +346,7 @@ export function MenuManagementPage() {
         width: "w-40",
         render: (menu) => (
           <span className="truncate text-xs text-slate-600 dark:text-slate-300">
-            {menu.permission_code || "—"}
+            {displayCell(menu.permission_code)}
           </span>
         ),
       },
@@ -336,7 +356,9 @@ export function MenuManagementPage() {
         width: "w-40",
         render: (menu) => (
           <div className="min-w-0 text-xs">
-            <div className="truncate text-slate-700 dark:text-slate-200">{menu.path || "—"}</div>
+            <div className="truncate text-slate-700 dark:text-slate-200">
+              {displayCell(menu.path)}
+            </div>
             {menu.link_url ? (
               <div className="truncate text-slate-400">{menu.link_url}</div>
             ) : null}
@@ -349,7 +371,9 @@ export function MenuManagementPage() {
         width: "w-36",
         render: (menu) => (
           <span className="truncate text-xs text-slate-600 dark:text-slate-300">
-            {menu.component || "—"}
+            {menu.type === "directory"
+              ? displayCell(menu.component, "Layout")
+              : displayCell(menu.component)}
           </span>
         ),
       },
@@ -411,8 +435,9 @@ export function MenuManagementPage() {
     [canUpdate, expanded, t],
   );
 
-  const showPath = form.type === "menu" || form.type === "embed" || form.type === "link";
-  const showComponent = form.type === "menu";
+  const showPath =
+    form.type === "directory" || form.type === "menu" || form.type === "embed" || form.type === "link";
+  const showComponent = form.type === "directory" || form.type === "menu";
   const showLink = form.type === "embed" || form.type === "link";
   const showPermission = form.type !== "directory";
 
@@ -478,7 +503,16 @@ export function MenuManagementPage() {
               value={form.type}
               onValueChange={(next) => {
                 if (drawerMode === "edit" && editing?.system_protected) return;
-                setForm((current) => ({ ...current, type: next as MenuType }));
+                const type = next as MenuType;
+                setForm((current) => {
+                  const nextForm = { ...current, type };
+                  if (type === "directory") {
+                    nextForm.component = current.component || "Layout";
+                    nextForm.link_url = "";
+                    nextForm.permission_code = "";
+                  }
+                  return nextForm;
+                });
               }}
               size="sm"
             >
@@ -583,7 +617,13 @@ export function MenuManagementPage() {
                     setForm((current) => ({ ...current, path: event.target.value }))
                   }
                   required
-                  placeholder="/feature"
+                  placeholder={
+                    form.type === "directory"
+                      ? "/runtime"
+                      : parentPathPrefix(menus, form.parent_code || "")
+                        ? `${parentPathPrefix(menus, form.parent_code || "")}/feature`
+                        : "/group/feature"
+                  }
                 />
               </label>
             ) : null}
@@ -597,7 +637,7 @@ export function MenuManagementPage() {
                   onChange={(event) =>
                     setForm((current) => ({ ...current, component: event.target.value }))
                   }
-                  placeholder="/dashboard/workspace/index"
+                  placeholder={form.type === "directory" ? "Layout" : "feature-page"}
                 />
               </label>
             ) : null}

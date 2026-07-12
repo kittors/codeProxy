@@ -5,12 +5,13 @@ const { Page: SystemPage, preload: preloadSystemPage } = preloadablePage(() =>
 );
 
 export const systemRoute = {
-  path: "/system",
+  path: "/runtime/system",
   component: "system",
   element: <SystemPage />,
   auth: true,
   layout: "dashboard",
   nav: { labelKey: "nav.system" },
+  redirects: [{ from: "/system", to: "/runtime/system" }],
   requiredPermission: "system.status.read",
   preload: preloadSystemPage,
 };

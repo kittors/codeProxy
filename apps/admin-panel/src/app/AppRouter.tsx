@@ -1,5 +1,5 @@
 import { Suspense, useEffect, useMemo } from "react";
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "@app/providers/AuthProvider";
 import { ProtectedRoute } from "@/app/guards/ProtectedRoute";
 import { DashboardLayout } from "@app/layout/DashboardLayout";
@@ -11,6 +11,38 @@ import { ForbiddenPage } from "@pages/forbidden/ForbiddenPage";
 import { EmbedPage } from "@pages/embed/EmbedPage";
 
 const RouteFallback = () => null;
+
+/** Preserve deep-link suffixes when remapping legacy flat routes to nested secondary routes. */
+function PrefixRedirect({ fromPrefix, toPrefix }: { fromPrefix: string; toPrefix: string }) {
+  const location = useLocation();
+  const rest = location.pathname.startsWith(fromPrefix)
+    ? location.pathname.slice(fromPrefix.length)
+    : "";
+  return <Navigate to={`${toPrefix}${rest}${location.search}${location.hash}`} replace />;
+}
+
+/** Legacy first-level page paths remapped under group prefixes. */
+const LEGACY_PREFIX_REDIRECTS: ReadonlyArray<{ fromPrefix: string; toPrefix: string }> = [
+  { fromPrefix: "/ai-providers", toPrefix: "/access/ai-providers" },
+  { fromPrefix: "/monitor/request-logs", toPrefix: "/runtime/request-logs" },
+  { fromPrefix: "/monitor", toPrefix: "/runtime/monitor" },
+  { fromPrefix: "/logs", toPrefix: "/runtime/logs" },
+  { fromPrefix: "/api-keys", toPrefix: "/access/api-keys" },
+  { fromPrefix: "/ccswitch-import-settings", toPrefix: "/access/ccswitch-import-settings" },
+  { fromPrefix: "/image-generation", toPrefix: "/models/image-generation" },
+  { fromPrefix: "/channel-groups", toPrefix: "/models/channel-groups" },
+  { fromPrefix: "/proxies", toPrefix: "/models/proxies" },
+  { fromPrefix: "/tenants", toPrefix: "/governance/tenants" },
+  { fromPrefix: "/users", toPrefix: "/governance/users" },
+  { fromPrefix: "/roles", toPrefix: "/governance/roles" },
+  { fromPrefix: "/audit-logs", toPrefix: "/governance/audit-logs" },
+  { fromPrefix: "/account-security", toPrefix: "/system/account-security" },
+  { fromPrefix: "/api-key-permissions", toPrefix: "/system/api-key-permissions" },
+  { fromPrefix: "/menu-management", toPrefix: "/system/menu-management" },
+  { fromPrefix: "/config", toPrefix: "/system/config" },
+  // Do not prefix-redirect "/system" or "/models": new secondary routes already live under those bases
+  // (/system/config, /models/catalog). Exact legacy remaps stay on each page route's redirects.
+];
 
 function InitialRouteReady({ children }: { children: React.ReactElement }) {
   useEffect(() => {
@@ -114,6 +146,14 @@ function AuthenticatedRoutes() {
                   <Route key={rd.from} path={rd.from} element={<Navigate to={rd.to} replace />} />
                 )),
               )}
+              {/* Prefix redirects cover deep links under legacy flat paths (e.g. /ai-providers/openai). */}
+              {LEGACY_PREFIX_REDIRECTS.map((rd) => (
+                <Route
+                  key={`legacy:${rd.fromPrefix}`}
+                  path={`${rd.fromPrefix}/*`}
+                  element={<PrefixRedirect fromPrefix={rd.fromPrefix} toPrefix={rd.toPrefix} />}
+                />
+              ))}
               {embedMenus.map((menu) => (
                 <Route
                   key={`embed:${menu.code}`}

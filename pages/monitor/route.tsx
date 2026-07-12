@@ -5,13 +5,16 @@ const { Page: MonitorPage, preload: preloadMonitorPage } = preloadablePage(() =>
 );
 
 export const monitorRoute = {
-  path: "/monitor",
+  path: "/runtime/monitor",
   component: "monitor",
   element: <MonitorPage />,
   auth: true,
   layout: "dashboard",
   nav: { labelKey: "nav.monitor" },
-  redirects: [{ from: "/usage", to: "/monitor" }],
+  redirects: [
+    { from: "/monitor", to: "/runtime/monitor" },
+    { from: "/usage", to: "/runtime/monitor" },
+  ],
   requiredPermission: "monitor.read",
   preload: preloadMonitorPage,
 };
