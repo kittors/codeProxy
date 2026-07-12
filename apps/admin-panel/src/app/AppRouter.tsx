@@ -1,4 +1,4 @@
-import { Suspense, useEffect } from "react";
+import { Suspense, useEffect, useMemo } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { AuthProvider, useAuth } from "@app/providers/AuthProvider";
 import { ProtectedRoute } from "@/app/guards/ProtectedRoute";
@@ -39,9 +39,7 @@ const readyRoute = (element: React.ReactElement) => (
 );
 
 function menuChainEnabled(
-  menus:
-    | Array<{ code: string; parent_code: string; path: string; enabled: boolean }>
-    | undefined,
+  menus: Array<{ code: string; parent_code: string; path: string; enabled: boolean }> | undefined,
   path: string,
 ) {
   if (!menus?.length) return true;
@@ -63,27 +61,81 @@ function AuthorizedPage({ route }: { route: PageRoute }) {
   return readyRoute(route.element);
 }
 
-function DynamicEmbedRoutes() {
+function AuthorizedEmbedPage({ path }: { path: string }) {
   const { state } = useAuth();
-  const embeds =
-    state.principal?.menus?.filter(
-      (menu) => menu.type === "embed" && menu.path && menu.enabled && menu.visible,
-    ) ?? [];
+  if (!menuChainEnabled(state.principal?.menus, path)) return <ForbiddenPage />;
+  return readyRoute(<EmbedPage />);
+}
+
+/** Must render Routes itself so embed <Route>s are direct children of <Routes>. */
+function AuthenticatedRoutes() {
+  const { state } = useAuth();
+  const routes = pageRoutes;
+  const publicRoutes = routes.filter((r) => !r.auth);
+  const authStandaloneRoutes = routes.filter((r) => r.auth && r.layout === "standalone");
+  const authDashboardRoutes = routes.filter((r) => r.auth && r.layout === "dashboard");
+  const embedMenus = useMemo(
+    () =>
+      state.principal?.menus?.filter(
+        (menu) => menu.type === "embed" && menu.path && menu.enabled && menu.visible,
+      ) ?? [],
+    [state.principal?.menus],
+  );
+
   return (
     <>
-      {embeds.map((menu) => (
-        <Route
-          key={`embed:${menu.code}`}
-          path={menu.path}
-          element={
-            menuChainEnabled(state.principal?.menus, menu.path) ? (
-              readyRoute(<EmbedPage />)
-            ) : (
-              <ForbiddenPage />
-            )
-          }
-        />
-      ))}
+      <AutoUpdatePrompt />
+      <Suspense fallback={<RouteFallback />}>
+        <Routes>
+          {publicRoutes.flatMap((route) =>
+            (route.redirects ?? []).map((rd) => (
+              <Route key={rd.from} path={rd.from} element={<Navigate to={rd.to} replace />} />
+            )),
+          )}
+          <Route path="/login" element={<Navigate to="/dashboard" replace />} />
+          <Route element={<ProtectedRoute />}>
+            {authStandaloneRoutes.map((route) => (
+              <Route
+                key={route.path}
+                path={route.path}
+                element={<AuthorizedPage route={route} />}
+              />
+            ))}
+            <Route element={<DashboardLayout />}>
+              {authDashboardRoutes.map((route) => (
+                <Route
+                  key={route.path}
+                  path={route.path}
+                  element={<AuthorizedPage route={route} />}
+                />
+              ))}
+              {authDashboardRoutes.flatMap((route) =>
+                (route.redirects ?? []).map((rd) => (
+                  <Route key={rd.from} path={rd.from} element={<Navigate to={rd.to} replace />} />
+                )),
+              )}
+              {embedMenus.map((menu) => (
+                <Route
+                  key={`embed:${menu.code}`}
+                  path={menu.path}
+                  element={<AuthorizedEmbedPage path={menu.path} />}
+                />
+              ))}
+              {authDashboardRoutes
+                .filter((r) => r.hasWildcard)
+                .map((route) => (
+                  <Route
+                    key={`${route.path}-wildcard`}
+                    path={`${route.path}/*`}
+                    element={<AuthorizedPage route={route} />}
+                  />
+                ))}
+              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            </Route>
+          </Route>
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        </Routes>
+      </Suspense>
     </>
   );
 }
@@ -93,8 +145,6 @@ export function AppRouter() {
   const publicRoutes = routes.filter((r) => !r.auth);
   const loginRoute = publicRoutes.find((r) => r.path === "/login");
   const standalonePublicRoutes = publicRoutes.filter((r) => r.path !== "/login");
-  const authStandaloneRoutes = routes.filter((r) => r.auth && r.layout === "standalone");
-  const authDashboardRoutes = routes.filter((r) => r.auth && r.layout === "dashboard");
 
   return (
     <ThemeProvider>
@@ -102,7 +152,6 @@ export function AppRouter() {
         <div className="font-sans antialiased">
           <Suspense fallback={<RouteFallback />}>
             <Routes>
-              {/* Public routes */}
               {standalonePublicRoutes.map((route) => (
                 <Route key={route.path} path={route.path} element={readyRoute(route.element)} />
               ))}
@@ -117,66 +166,11 @@ export function AppRouter() {
                 />
               ) : null}
 
-              {/* Auth-protected routes */}
               <Route
                 path="*"
                 element={
                   <AuthProvider>
-                    <AutoUpdatePrompt />
-                    <Suspense fallback={<RouteFallback />}>
-                      <Routes>
-                        {publicRoutes.map((route) =>
-                          route.redirects?.map((rd) => (
-                            <Route
-                              key={rd.from}
-                              path={rd.from}
-                              element={<Navigate to={rd.to} replace />}
-                            />
-                          )),
-                        )}
-                        <Route path="/login" element={<Navigate to="/dashboard" replace />} />
-                        <Route element={<ProtectedRoute />}>
-                          {authStandaloneRoutes.map((route) => (
-                            <Route
-                              key={route.path}
-                              path={route.path}
-                              element={<AuthorizedPage route={route} />}
-                            />
-                          ))}
-                          <Route element={<DashboardLayout />}>
-                            {authDashboardRoutes.map((route) => (
-                              <Route
-                                key={route.path}
-                                path={route.path}
-                                element={<AuthorizedPage route={route} />}
-                              />
-                            ))}
-                            {authDashboardRoutes.flatMap((route) =>
-                              (route.redirects ?? []).map((rd) => (
-                                <Route
-                                  key={rd.from}
-                                  path={rd.from}
-                                  element={<Navigate to={rd.to} replace />}
-                                />
-                              )),
-                            )}
-                            {/* Wildcard for /ai-providers/* */}
-                            <DynamicEmbedRoutes />
-                            {authDashboardRoutes
-                              .filter((r) => r.hasWildcard)
-                              .map((route) => (
-                                <Route
-                                  key={`${route.path}-wildcard`}
-                                  path={`${route.path}/*`}
-                                  element={<AuthorizedPage route={route} />}
-                                />
-                              ))}
-                            <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                          </Route>
-                        </Route>
-                        <Route path="*" element={<Navigate to="/dashboard" replace />} />
-                      </Routes>
-                    </Suspense>
+                    <AuthenticatedRoutes />
                   </AuthProvider>
                 }
               />
