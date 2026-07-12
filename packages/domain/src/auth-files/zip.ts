@@ -147,8 +147,9 @@ export const createStoreZipBlob = (
   options?: { modifiedAt?: Date },
 ): Blob => {
   const bytes = createStoreZipBytes(entries, options);
-  // Copy into a fresh ArrayBuffer so BlobPart typing stays compatible across DOM libs.
-  const buffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+  // Copy into a plain ArrayBuffer (not SharedArrayBuffer) for BlobPart compatibility.
+  const buffer = new ArrayBuffer(bytes.byteLength);
+  new Uint8Array(buffer).set(bytes);
   return new Blob([buffer], { type: "application/zip" });
 };
 

@@ -66,9 +66,10 @@ describe("useAuthFilesFileActions handleDownloadSelection", () => {
     mocks.downloadBlobAsFile.mockReset();
     mocks.buildAuthFilesBatchZipName.mockReset();
     mocks.downloadFile.mockResolvedValue(undefined);
-    mocks.downloadBlob.mockImplementation(
-      async (name: string) => new Blob([`content:${name}`], { type: "application/json" }),
-    );
+    mocks.downloadBlob.mockImplementation(async (...args: unknown[]) => {
+      const name = String(args[0] ?? "");
+      return new Blob([`content:${name}`], { type: "application/json" });
+    });
     mocks.createStoreZipBlob.mockReturnValue(new Blob(["zip"], { type: "application/zip" }));
     mocks.buildAuthFilesBatchZipName.mockReturnValue("auth-files-2-test.zip");
     vi.spyOn(window, "confirm").mockReturnValue(true);
@@ -108,7 +109,10 @@ describe("useAuthFilesFileActions handleDownloadSelection", () => {
     expect(mocks.downloadBlob).toHaveBeenCalledWith("a.json");
     expect(mocks.downloadBlob).toHaveBeenCalledWith("b.json");
     expect(mocks.createStoreZipBlob).toHaveBeenCalledTimes(1);
-    const entries = mocks.createStoreZipBlob.mock.calls[0]?.[0] as { name: string; data: Uint8Array }[];
+    const zipCall = mocks.createStoreZipBlob.mock.calls[0] as unknown as [
+      { name: string; data: Uint8Array }[],
+    ];
+    const entries = zipCall[0];
     expect(entries.map((e) => e.name)).toEqual(["a.json", "b.json"]);
     expect(mocks.downloadBlobAsFile).toHaveBeenCalledWith(
       expect.any(Blob),
