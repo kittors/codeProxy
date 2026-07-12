@@ -573,6 +573,8 @@
     "batch_download_sensitive_confirm": "将下载 {{count}} 个完整认证文件，可能包含敏感凭据。确认继续？",
     "batch_download_success": "已下载 {{count}} 个认证文件",
     "batch_download_partial": "批量下载完成，成功 {{success}} 个，失败 {{failed}} 个",
+    "batch_download_zip_success": "已打包下载 {{count}} 个认证文件（zip）",
+    "batch_download_zip_partial": "zip 打包完成，成功 {{success}} 个，失败 {{failed}} 个",
     "selection_actions": "选择批量操作",
     "more_actions": "更多操作",
     "status_filter": "状态",

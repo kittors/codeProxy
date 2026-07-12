@@ -661,6 +661,8 @@
     "batch_download_sensitive_confirm": "Будет скачано {{count}} полных auth-файлов, которые могут содержать чувствительные учётные данные. Продолжить?",
     "batch_download_success": "Скачано {{count}} auth-файл(ов)",
     "batch_download_partial": "Пакетное скачивание завершено: успешно {{success}}, ошибок {{failed}}",
+    "batch_download_zip_success": "Скачано {{count}} auth-файл(ов) в zip-архиве",
+    "batch_download_zip_partial": "Zip-скачивание завершено: упаковано {{success}}, ошибок {{failed}}",
     "selection_actions": "Действия выбора",
     "more_actions": "Ещё действия",
     "status_filter": "Статус",

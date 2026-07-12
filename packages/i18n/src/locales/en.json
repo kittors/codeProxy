@@ -565,6 +565,8 @@
     "batch_download_sensitive_confirm": "This downloads {{count}} full auth file(s) and may include sensitive credentials. Continue?",
     "batch_download_success": "Downloaded {{count}} auth file(s)",
     "batch_download_partial": "Batch download finished: {{success}} succeeded, {{failed}} failed",
+    "batch_download_zip_success": "Downloaded {{count}} auth file(s) as a zip archive",
+    "batch_download_zip_partial": "Zip download finished: {{success}} packed, {{failed}} failed",
     "selection_actions": "Selection actions",
     "more_actions": "More actions",
     "status_filter": "Status",
