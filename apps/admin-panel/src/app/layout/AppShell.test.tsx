@@ -2,11 +2,144 @@ import { act, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter, useLocation } from "react-router-dom";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { ThemeProvider } from "@code-proxy/ui";
+import type { MenuIdentity } from "@code-proxy/api-client";
 import { preloadPageRoute } from "@pages/registry";
 import { AppShell } from "./AppShell";
 
 vi.mock("@pages/registry", () => ({
   preloadPageRoute: vi.fn(() => Promise.resolve()),
+}));
+
+const menu = (partial: Partial<MenuIdentity> & Pick<MenuIdentity, "code" | "type">): MenuIdentity => ({
+  parent_code: "",
+  path: "",
+  component: "",
+  link_url: "",
+  label_key: partial.label_key ?? partial.code,
+  title: "",
+  icon: "",
+  permission_code: "",
+  sort_order: 10,
+  visible: true,
+  enabled: true,
+  badge_type: "",
+  badge_content: "",
+  hide_menu: false,
+  system_protected: true,
+  version: 1,
+  ...partial,
+});
+
+const testMenus: MenuIdentity[] = [
+  menu({
+    code: "dashboard",
+    type: "menu",
+    path: "/dashboard",
+    component: "dashboard",
+    label_key: "shell.nav_dashboard",
+    icon: "layout-dashboard",
+    permission_code: "dashboard.read",
+    sort_order: 10,
+  }),
+  menu({
+    code: "group.runtime",
+    type: "directory",
+    label_key: "shell.nav_group_runtime",
+    icon: "activity",
+    sort_order: 20,
+  }),
+  menu({
+    code: "runtime.monitor",
+    parent_code: "group.runtime",
+    type: "menu",
+    path: "/monitor",
+    component: "monitor",
+    label_key: "shell.nav_monitor",
+    icon: "activity",
+    permission_code: "monitor.read",
+    sort_order: 10,
+  }),
+  menu({
+    code: "runtime.request-logs",
+    parent_code: "group.runtime",
+    type: "menu",
+    path: "/monitor/request-logs",
+    component: "request-logs",
+    label_key: "shell.nav_request_logs",
+    icon: "scroll-text",
+    permission_code: "request_logs.read",
+    sort_order: 20,
+  }),
+  menu({
+    code: "group.access",
+    type: "directory",
+    label_key: "shell.nav_group_access",
+    icon: "bot",
+    sort_order: 30,
+  }),
+  menu({
+    code: "access.providers",
+    parent_code: "group.access",
+    type: "menu",
+    path: "/ai-providers",
+    component: "providers",
+    label_key: "shell.nav_ai_providers",
+    icon: "bot",
+    permission_code: "providers.read",
+    sort_order: 10,
+  }),
+  menu({
+    code: "group.models",
+    type: "directory",
+    label_key: "shell.nav_group_models",
+    icon: "layers",
+    sort_order: 40,
+  }),
+  menu({
+    code: "models.catalog",
+    parent_code: "group.models",
+    type: "menu",
+    path: "/models",
+    component: "models",
+    label_key: "shell.nav_models",
+    icon: "cpu",
+    permission_code: "models.read",
+    sort_order: 10,
+  }),
+  menu({
+    code: "group.system",
+    type: "directory",
+    label_key: "shell.nav_group_system",
+    icon: "settings",
+    sort_order: 60,
+  }),
+  menu({
+    code: "system.config",
+    parent_code: "group.system",
+    type: "menu",
+    path: "/config",
+    component: "config",
+    label_key: "shell.nav_config",
+    icon: "settings",
+    permission_code: "system.config.read",
+    sort_order: 30,
+  }),
+];
+
+vi.mock("@app/providers/AuthProvider", () => ({
+  useOptionalAuth: () => ({
+    can: () => true,
+    state: {
+      principal: {
+        menus: testMenus,
+        user: { display_name: "Admin", username: "admin", role_codes: [] },
+        effective_tenant: { type: "system", name: "System" },
+      },
+    },
+    actions: {
+      switchTenant: vi.fn(),
+    },
+  }),
 }));
 
 function LocationEcho() {
