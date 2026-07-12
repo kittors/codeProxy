@@ -248,11 +248,11 @@ describe("ProvidersPage OpenCode Go tab", () => {
     ]);
 
     render(
-      <MemoryRouter initialEntries={["/ai-providers"]}>
+      <MemoryRouter initialEntries={["/access/ai-providers"]}>
         <ThemeProvider>
           <ToastProvider>
             <Routes>
-              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+              <Route path="/access/ai-providers/*" element={<ProvidersPage />} />
             </Routes>
           </ToastProvider>
         </ThemeProvider>
@@ -292,11 +292,11 @@ describe("ProvidersPage OpenCode Go tab", () => {
     );
 
     render(
-      <MemoryRouter initialEntries={["/ai-providers"]}>
+      <MemoryRouter initialEntries={["/access/ai-providers"]}>
         <ThemeProvider>
           <ToastProvider>
             <Routes>
-              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+              <Route path="/access/ai-providers/*" element={<ProvidersPage />} />
             </Routes>
           </ToastProvider>
         </ThemeProvider>
@@ -363,11 +363,11 @@ describe("ProvidersPage OpenCode Go tab", () => {
     });
 
     render(
-      <MemoryRouter initialEntries={["/ai-providers"]}>
+      <MemoryRouter initialEntries={["/access/ai-providers"]}>
         <ThemeProvider>
           <ToastProvider>
             <Routes>
-              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+              <Route path="/access/ai-providers/*" element={<ProvidersPage />} />
             </Routes>
           </ToastProvider>
         </ThemeProvider>
@@ -405,11 +405,11 @@ describe("ProvidersPage OpenCode Go tab", () => {
     ]);
 
     render(
-      <MemoryRouter initialEntries={["/ai-providers"]}>
+      <MemoryRouter initialEntries={["/access/ai-providers"]}>
         <ThemeProvider>
           <ToastProvider>
             <Routes>
-              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+              <Route path="/access/ai-providers/*" element={<ProvidersPage />} />
             </Routes>
           </ToastProvider>
         </ThemeProvider>
@@ -429,11 +429,11 @@ describe("ProvidersPage OpenCode Go tab", () => {
     const user = userEvent.setup();
 
     render(
-      <MemoryRouter initialEntries={["/ai-providers/opencode-go/new"]}>
+      <MemoryRouter initialEntries={["/access/ai-providers/opencode-go/new"]}>
         <ThemeProvider>
           <ToastProvider>
             <Routes>
-              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+              <Route path="/access/ai-providers/*" element={<ProvidersPage />} />
             </Routes>
           </ToastProvider>
         </ThemeProvider>
@@ -474,11 +474,11 @@ describe("ProvidersPage OpenCode Go tab", () => {
     mocks.saveOpenCodeGoConfigs.mockRejectedValue(new Error("channel name already used"));
 
     render(
-      <MemoryRouter initialEntries={["/ai-providers/opencode-go/new"]}>
+      <MemoryRouter initialEntries={["/access/ai-providers/opencode-go/new"]}>
         <ThemeProvider>
           <ToastProvider>
             <Routes>
-              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+              <Route path="/access/ai-providers/*" element={<ProvidersPage />} />
             </Routes>
           </ToastProvider>
         </ThemeProvider>
@@ -519,11 +519,11 @@ describe("ProvidersPage OpenCode Go tab", () => {
     ]);
 
     render(
-      <MemoryRouter initialEntries={["/ai-providers/opencode-go/0"]}>
+      <MemoryRouter initialEntries={["/access/ai-providers/opencode-go/0"]}>
         <ThemeProvider>
           <ToastProvider>
             <Routes>
-              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+              <Route path="/access/ai-providers/*" element={<ProvidersPage />} />
             </Routes>
           </ToastProvider>
         </ThemeProvider>
@@ -568,11 +568,11 @@ describe("ProvidersPage OpenCode Go tab", () => {
     ]);
 
     render(
-      <MemoryRouter initialEntries={["/ai-providers/opencode-go/0"]}>
+      <MemoryRouter initialEntries={["/access/ai-providers/opencode-go/0"]}>
         <ThemeProvider>
           <ToastProvider>
             <Routes>
-              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+              <Route path="/access/ai-providers/*" element={<ProvidersPage />} />
             </Routes>
           </ToastProvider>
         </ThemeProvider>
@@ -605,11 +605,11 @@ describe("ProvidersPage OpenCode Go tab", () => {
     ]);
 
     render(
-      <MemoryRouter initialEntries={["/ai-providers/opencode-go/0"]}>
+      <MemoryRouter initialEntries={["/access/ai-providers/opencode-go/0"]}>
         <ThemeProvider>
           <ToastProvider>
             <Routes>
-              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+              <Route path="/access/ai-providers/*" element={<ProvidersPage />} />
             </Routes>
           </ToastProvider>
         </ThemeProvider>
@@ -645,11 +645,11 @@ describe("ProvidersPage OpenCode Go tab", () => {
     ]);
 
     render(
-      <MemoryRouter initialEntries={["/ai-providers/opencode-go/0"]}>
+      <MemoryRouter initialEntries={["/access/ai-providers/opencode-go/0"]}>
         <ThemeProvider>
           <ToastProvider>
             <Routes>
-              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+              <Route path="/access/ai-providers/*" element={<ProvidersPage />} />
             </Routes>
           </ToastProvider>
         </ThemeProvider>
@@ -675,11 +675,11 @@ describe("ProvidersPage OpenCode Go tab", () => {
     const user = userEvent.setup();
 
     render(
-      <MemoryRouter initialEntries={["/ai-providers/opencode-go/new"]}>
+      <MemoryRouter initialEntries={["/access/ai-providers/opencode-go/new"]}>
         <ThemeProvider>
           <ToastProvider>
             <Routes>
-              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+              <Route path="/access/ai-providers/*" element={<ProvidersPage />} />
             </Routes>
           </ToastProvider>
         </ThemeProvider>
@@ -815,11 +815,11 @@ describe("ProvidersPage Cline tab", () => {
     );
 
     render(
-      <MemoryRouter initialEntries={["/ai-providers"]}>
+      <MemoryRouter initialEntries={["/access/ai-providers"]}>
         <ThemeProvider>
           <ToastProvider>
             <Routes>
-              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+              <Route path="/access/ai-providers/*" element={<ProvidersPage />} />
             </Routes>
           </ToastProvider>
         </ThemeProvider>
@@ -848,11 +848,11 @@ describe("ProvidersPage Cline tab", () => {
     const user = userEvent.setup();
 
     render(
-      <MemoryRouter initialEntries={["/ai-providers/cline/new"]}>
+      <MemoryRouter initialEntries={["/access/ai-providers/cline/new"]}>
         <ThemeProvider>
           <ToastProvider>
             <Routes>
-              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+              <Route path="/access/ai-providers/*" element={<ProvidersPage />} />
             </Routes>
           </ToastProvider>
         </ThemeProvider>
@@ -929,11 +929,11 @@ describe("ProvidersPage Cline tab", () => {
     );
 
     render(
-      <MemoryRouter initialEntries={["/ai-providers/cline/new"]}>
+      <MemoryRouter initialEntries={["/access/ai-providers/cline/new"]}>
         <ThemeProvider>
           <ToastProvider>
             <Routes>
-              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+              <Route path="/access/ai-providers/*" element={<ProvidersPage />} />
             </Routes>
           </ToastProvider>
         </ThemeProvider>
@@ -990,11 +990,11 @@ describe("ProvidersPage Cline tab", () => {
     );
 
     render(
-      <MemoryRouter initialEntries={["/ai-providers"]}>
+      <MemoryRouter initialEntries={["/access/ai-providers"]}>
         <ThemeProvider>
           <ToastProvider>
             <Routes>
-              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+              <Route path="/access/ai-providers/*" element={<ProvidersPage />} />
             </Routes>
           </ToastProvider>
         </ThemeProvider>
@@ -1024,11 +1024,11 @@ describe("ProvidersPage Cline tab", () => {
     ]);
 
     render(
-      <MemoryRouter initialEntries={["/ai-providers"]}>
+      <MemoryRouter initialEntries={["/access/ai-providers"]}>
         <ThemeProvider>
           <ToastProvider>
             <Routes>
-              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+              <Route path="/access/ai-providers/*" element={<ProvidersPage />} />
             </Routes>
           </ToastProvider>
         </ThemeProvider>
@@ -1058,11 +1058,11 @@ describe("ProvidersPage Cline tab", () => {
     ]);
 
     render(
-      <MemoryRouter initialEntries={["/ai-providers/cline/0"]}>
+      <MemoryRouter initialEntries={["/access/ai-providers/cline/0"]}>
         <ThemeProvider>
           <ToastProvider>
             <Routes>
-              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+              <Route path="/access/ai-providers/*" element={<ProvidersPage />} />
             </Routes>
           </ToastProvider>
         </ThemeProvider>
@@ -1154,11 +1154,11 @@ describe("ProvidersPage Ollama Cloud tab", () => {
     );
 
     render(
-      <MemoryRouter initialEntries={["/ai-providers"]}>
+      <MemoryRouter initialEntries={["/access/ai-providers"]}>
         <ThemeProvider>
           <ToastProvider>
             <Routes>
-              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+              <Route path="/access/ai-providers/*" element={<ProvidersPage />} />
             </Routes>
           </ToastProvider>
         </ThemeProvider>
@@ -1187,11 +1187,11 @@ describe("ProvidersPage Ollama Cloud tab", () => {
 
   test("shows Ollama Cloud dynamic model list without manual model inputs", async () => {
     render(
-      <MemoryRouter initialEntries={["/ai-providers/ollama-cloud/new"]}>
+      <MemoryRouter initialEntries={["/access/ai-providers/ollama-cloud/new"]}>
         <ThemeProvider>
           <ToastProvider>
             <Routes>
-              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+              <Route path="/access/ai-providers/*" element={<ProvidersPage />} />
             </Routes>
           </ToastProvider>
         </ThemeProvider>
@@ -1226,11 +1226,11 @@ describe("ProvidersPage Ollama Cloud tab", () => {
     ]);
 
     render(
-      <MemoryRouter initialEntries={["/ai-providers/ollama-cloud/0"]}>
+      <MemoryRouter initialEntries={["/access/ai-providers/ollama-cloud/0"]}>
         <ThemeProvider>
           <ToastProvider>
             <Routes>
-              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+              <Route path="/access/ai-providers/*" element={<ProvidersPage />} />
             </Routes>
           </ToastProvider>
         </ThemeProvider>
@@ -1277,11 +1277,11 @@ describe("ProvidersPage Ollama Cloud tab", () => {
     ]);
 
     render(
-      <MemoryRouter initialEntries={["/ai-providers/ollama-cloud/0"]}>
+      <MemoryRouter initialEntries={["/access/ai-providers/ollama-cloud/0"]}>
         <ThemeProvider>
           <ToastProvider>
             <Routes>
-              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+              <Route path="/access/ai-providers/*" element={<ProvidersPage />} />
             </Routes>
           </ToastProvider>
         </ThemeProvider>
@@ -1315,11 +1315,11 @@ describe("ProvidersPage Ollama Cloud tab", () => {
     ]);
 
     render(
-      <MemoryRouter initialEntries={["/ai-providers"]}>
+      <MemoryRouter initialEntries={["/access/ai-providers"]}>
         <ThemeProvider>
           <ToastProvider>
             <Routes>
-              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+              <Route path="/access/ai-providers/*" element={<ProvidersPage />} />
             </Routes>
           </ToastProvider>
         </ThemeProvider>

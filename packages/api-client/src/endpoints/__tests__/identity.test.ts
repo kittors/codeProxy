@@ -119,7 +119,7 @@ describe("identityApi", () => {
     await identityApi.updateMenu("system.menus", {
       parent_code: "group.system",
       type: "menu",
-      path: "/menu-management",
+      path: "/system/menu-management",
       component: "menu-management",
       link_url: "",
       label_key: "shell.nav_menu_management",

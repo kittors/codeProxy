@@ -678,17 +678,19 @@ export function ProvidersPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const providersBasePath = "/access/ai-providers";
+
   const handleKeyEditorRouteClose = useCallback(() => {
-    if (location.pathname !== "/ai-providers") {
-      navigate("/ai-providers", { replace: true, viewTransition: true });
+    if (location.pathname !== providersBasePath) {
+      navigate(providersBasePath, { replace: true, viewTransition: true });
     }
-  }, [location.pathname, navigate]);
+  }, [location.pathname, navigate, providersBasePath]);
 
   const handleOpenAIEditorRouteClose = useCallback(() => {
-    if (location.pathname !== "/ai-providers") {
-      navigate("/ai-providers", { replace: true, viewTransition: true });
+    if (location.pathname !== providersBasePath) {
+      navigate(providersBasePath, { replace: true, viewTransition: true });
     }
-  }, [location.pathname, navigate]);
+  }, [location.pathname, navigate, providersBasePath]);
 
   const {
     editKeyOpen,
@@ -759,16 +761,18 @@ export function ProvidersPage() {
   useEffect(() => {
     if (loading) return;
     const pathname = location.pathname;
-    if (!pathname.startsWith("/ai-providers/")) {
+    const providersPrefix = `${providersBasePath}/`;
+    if (!pathname.startsWith(providersPrefix)) {
       handledRouteRef.current = "";
       return;
     }
     if (handledRouteRef.current === pathname) return;
     handledRouteRef.current = pathname;
 
-    const parts = pathname.split("/").filter(Boolean);
-    const provider = parts[1] ?? "";
-    const action = parts[2] ?? "";
+    // /access/ai-providers/:provider/:action
+    const rest = pathname.slice(providersBasePath.length).split("/").filter(Boolean);
+    const provider = rest[0] ?? "";
+    const action = rest[1] ?? "";
 
     void (async () => {
       if (
@@ -825,6 +829,7 @@ export function ProvidersPage() {
     location.pathname,
     openKeyEditor,
     openOpenAIEditor,
+    providersBasePath,
     refreshTab,
   ]);
 

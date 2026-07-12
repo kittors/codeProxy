@@ -62,7 +62,7 @@ test("AI Providers (OpenAI): typing provider name should not crash page", async 
     });
   });
 
-  await page.goto("/#/ai-providers");
+  await page.goto("/#/access/ai-providers");
 
   await page.getByRole("tab", { name: /openai compatible|openai 兼容/i }).click();
 

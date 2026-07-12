@@ -122,8 +122,8 @@ const menuItems = [
     code: "group.system",
     parent_code: "",
     type: "directory",
-    path: "",
-    component: "",
+    path: "/system",
+    component: "Layout",
     link_url: "",
     title: "",
     badge_type: "",
@@ -142,7 +142,7 @@ const menuItems = [
     code: "system.menus",
     parent_code: "group.system",
     type: "menu",
-    path: "/menu-management",
+    path: "/system/menu-management",
     component: "menu-management",
     link_url: "",
     title: "",
@@ -162,7 +162,7 @@ const menuItems = [
     code: "system.config",
     parent_code: "group.system",
     type: "menu",
-    path: "/config",
+    path: "/system/config",
     component: "config",
     link_url: "",
     title: "",
@@ -185,8 +185,8 @@ const roleMenuItems = [
     code: "group.governance",
     parent_code: "",
     type: "directory",
-    path: "",
-    component: "",
+    path: "/governance",
+    component: "Layout",
     link_url: "",
     title: "",
     badge_type: "",
@@ -205,7 +205,7 @@ const roleMenuItems = [
     code: "governance.users",
     parent_code: "group.governance",
     type: "menu",
-    path: "/users",
+    path: "/governance/users",
     component: "users",
     link_url: "",
     title: "",
@@ -564,7 +564,7 @@ test("uses a switch for the two user availability states", async ({ page }) => {
     [administratorRole, operatorRole],
     [principal.user, memberUser],
   );
-  await page.goto("/#/users");
+  await page.goto("/#/governance/users");
 
   const memberRow = page.locator('[data-vt-row-key="u-member"]');
   await expect(memberRow.getByRole("switch")).toHaveAttribute("aria-checked", "true");
@@ -636,7 +636,7 @@ test("manages dynamic menu visibility and ordering", async ({ page }) => {
     ),
   );
   await mockIdentity(page);
-  await page.goto("/#/menu-management");
+  await page.goto("/#/system/menu-management");
 
   await expect(page.getByRole("heading", { name: "Menu Management", level: 2 })).toBeVisible();
   const systemGroupRow = page.locator('[data-vt-row-key="group.system"]');
@@ -684,11 +684,11 @@ test("applies server menu visibility and enabled state to navigation and routes"
     }),
   );
 
-  await page.goto("/#/menu-management");
+  await page.goto("/#/system/menu-management");
   await expect(page.getByText("Menu Management", { exact: true }).last()).toBeVisible();
   await expect(page.getByText("Tenants", { exact: true })).toHaveCount(0);
   await expect(page.getByText("Dashboard", { exact: true })).toHaveCount(0);
-  await page.goto("/#/config");
+  await page.goto("/#/system/config");
   await expect(page.getByRole("heading", { name: "Access denied" })).toBeVisible();
 });
 
@@ -706,7 +706,7 @@ test("shows the built-in administrator role and super administrator account", as
   );
   await mockIdentity(page);
 
-  await page.goto("/#/users");
+  await page.goto("/#/governance/users");
   const adminRow = page.locator('[data-vt-row-key="u-admin"]');
   await expect(adminRow).toBeVisible();
   await expect(adminRow.getByText("Super Administrator", { exact: true })).toBeVisible();
@@ -839,7 +839,7 @@ test("users page does not fetch or expose role assignment without role read perm
     }),
   );
 
-  await page.goto("/#/users");
+  await page.goto("/#/governance/users");
   await expect(page.getByRole("heading", { name: "Users" })).toBeVisible();
   await expect(page.getByText("Limited Manager")).toBeVisible();
   await expect(page.getByText("reader")).toBeVisible();
@@ -984,7 +984,7 @@ test("provider read permission hides tenant write/test controls and system-only 
     });
   });
 
-  await page.goto("/#/ai-providers/opencode-go/new");
+  await page.goto("/#/access/ai-providers/opencode-go/new");
   await expect(page.getByText("Read only provider", { exact: true })).toBeVisible();
   await expect(page.getByRole("tab", { name: "Ampcode" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: /add new/i })).toHaveCount(0);

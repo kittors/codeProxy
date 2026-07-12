@@ -5,13 +5,16 @@ const { Page: ProxiesPage, preload: preloadProxiesPage } = preloadablePage(() =>
 );
 
 export const proxiesRoute = {
-  path: "/proxies",
+  path: "/models/proxies",
   component: "proxies",
   element: <ProxiesPage />,
   auth: true,
   layout: "dashboard",
   nav: { labelKey: "nav.proxies" },
-  redirects: [{ from: "/manage/proxies", to: "/proxies" }],
+  redirects: [
+    { from: "/proxies", to: "/models/proxies" },
+    { from: "/manage/proxies", to: "/models/proxies" },
+  ],
   requiredPermission: "proxies.read",
   preload: preloadProxiesPage,
 };

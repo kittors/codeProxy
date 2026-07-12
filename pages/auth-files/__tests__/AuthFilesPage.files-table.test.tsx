@@ -1409,7 +1409,7 @@ describe("AuthFilesPage files table", () => {
     const router = createMemoryRouter(
       [
         { path: "/auth-files", element: wrap(<AuthFilesPage />) },
-        { path: "/api-keys", element: wrap(<div>api keys</div>) },
+        { path: "/access/api-keys", element: wrap(<div>api keys</div>) },
       ],
       { initialEntries: ["/auth-files"] },
     );
@@ -1419,7 +1419,7 @@ describe("AuthFilesPage files table", () => {
     expect(await screen.findByText("qwen.json")).toBeInTheDocument();
 
     await act(async () => {
-      await router.navigate("/api-keys");
+      await router.navigate("/access/api-keys");
     });
     expect(screen.getByText("api keys")).toBeInTheDocument();
 
@@ -1493,9 +1493,9 @@ describe("AuthFilesPage files table", () => {
     const router = createMemoryRouter(
       [
         { path: "/auth-files", element: wrap(<AuthFilesPage />) },
-        { path: "/api-keys", element: wrap(<div>api keys</div>) },
+        { path: "/access/api-keys", element: wrap(<div>api keys</div>) },
       ],
-      { initialEntries: ["/api-keys"] },
+      { initialEntries: ["/access/api-keys"] },
     );
 
     render(<RouterProvider router={router} />);
@@ -2396,7 +2396,7 @@ describe("AuthFilesPage files table", () => {
 
     const router = createMemoryRouter(
       [
-        { path: "/monitor/request-logs", element: <div>request logs</div> },
+        { path: "/runtime/request-logs", element: <div>request logs</div> },
         {
           path: "/auth-files",
           element: (
@@ -2408,7 +2408,7 @@ describe("AuthFilesPage files table", () => {
           ),
         },
       ],
-      { initialEntries: ["/monitor/request-logs"] },
+      { initialEntries: ["/runtime/request-logs"] },
     );
 
     render(<RouterProvider router={router} />);

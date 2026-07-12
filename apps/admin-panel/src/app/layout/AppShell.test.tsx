@@ -44,6 +44,8 @@ const testMenus: MenuIdentity[] = [
   menu({
     code: "group.runtime",
     type: "directory",
+    path: "/runtime",
+    component: "Layout",
     label_key: "shell.nav_group_runtime",
     icon: "activity",
     sort_order: 20,
@@ -52,7 +54,7 @@ const testMenus: MenuIdentity[] = [
     code: "runtime.monitor",
     parent_code: "group.runtime",
     type: "menu",
-    path: "/monitor",
+    path: "/runtime/monitor",
     component: "monitor",
     label_key: "shell.nav_monitor",
     icon: "activity",
@@ -63,7 +65,7 @@ const testMenus: MenuIdentity[] = [
     code: "runtime.request-logs",
     parent_code: "group.runtime",
     type: "menu",
-    path: "/monitor/request-logs",
+    path: "/runtime/request-logs",
     component: "request-logs",
     label_key: "shell.nav_request_logs",
     icon: "scroll-text",
@@ -73,6 +75,8 @@ const testMenus: MenuIdentity[] = [
   menu({
     code: "group.access",
     type: "directory",
+    path: "/access",
+    component: "Layout",
     label_key: "shell.nav_group_access",
     icon: "bot",
     sort_order: 30,
@@ -81,7 +85,7 @@ const testMenus: MenuIdentity[] = [
     code: "access.providers",
     parent_code: "group.access",
     type: "menu",
-    path: "/ai-providers",
+    path: "/access/ai-providers",
     component: "providers",
     label_key: "shell.nav_ai_providers",
     icon: "bot",
@@ -91,6 +95,8 @@ const testMenus: MenuIdentity[] = [
   menu({
     code: "group.models",
     type: "directory",
+    path: "/models",
+    component: "Layout",
     label_key: "shell.nav_group_models",
     icon: "layers",
     sort_order: 40,
@@ -99,7 +105,7 @@ const testMenus: MenuIdentity[] = [
     code: "models.catalog",
     parent_code: "group.models",
     type: "menu",
-    path: "/models",
+    path: "/models/catalog",
     component: "models",
     label_key: "shell.nav_models",
     icon: "cpu",
@@ -109,6 +115,8 @@ const testMenus: MenuIdentity[] = [
   menu({
     code: "group.system",
     type: "directory",
+    path: "/system",
+    component: "Layout",
     label_key: "shell.nav_group_system",
     icon: "settings",
     sort_order: 60,
@@ -117,7 +125,7 @@ const testMenus: MenuIdentity[] = [
     code: "system.config",
     parent_code: "group.system",
     type: "menu",
-    path: "/config",
+    path: "/system/config",
     component: "config",
     label_key: "shell.nav_config",
     icon: "settings",
@@ -177,12 +185,12 @@ describe("AppShell route progress", () => {
     renderShell();
     fireEvent.click(screen.getByRole("button", { name: /Access|接入管理/i }));
 
-    const link = document.querySelector<HTMLAnchorElement>('a[href="/ai-providers"]');
+    const link = document.querySelector<HTMLAnchorElement>('a[href="/access/ai-providers"]');
     expect(link).toBeInstanceOf(HTMLAnchorElement);
 
     fireEvent.click(link as HTMLAnchorElement);
 
-    expect(preloadPageRoute).toHaveBeenCalledWith("/ai-providers");
+    expect(preloadPageRoute).toHaveBeenCalledWith("/access/ai-providers");
     expect(screen.getByTestId("location")).toHaveTextContent("/dashboard");
 
     const progress = document.querySelector(".rp");
@@ -208,7 +216,7 @@ describe("AppShell route progress", () => {
       vi.advanceTimersByTime(360);
     });
 
-    expect(screen.getByTestId("location")).toHaveTextContent("/ai-providers");
+    expect(screen.getByTestId("location")).toHaveTextContent("/access/ai-providers");
     expect(document.querySelector(".rp")).not.toBeInTheDocument();
   });
 
@@ -217,7 +225,7 @@ describe("AppShell route progress", () => {
     renderShell();
     fireEvent.click(screen.getByRole("button", { name: /Access|接入管理/i }));
 
-    const link = document.querySelector<HTMLAnchorElement>('a[href="/ai-providers"]');
+    const link = document.querySelector<HTMLAnchorElement>('a[href="/access/ai-providers"]');
     expect(link).toBeInstanceOf(HTMLAnchorElement);
 
     fireEvent.click(link as HTMLAnchorElement);
@@ -238,7 +246,7 @@ describe("AppShell route progress", () => {
       vi.advanceTimersByTime(360);
     });
 
-    expect(screen.getByTestId("location")).toHaveTextContent("/ai-providers");
+    expect(screen.getByTestId("location")).toHaveTextContent("/access/ai-providers");
     expect(document.querySelector(".rp")).not.toBeInTheDocument();
   });
 
@@ -247,14 +255,14 @@ describe("AppShell route progress", () => {
     renderShell();
     fireEvent.click(screen.getByRole("button", { name: /Access|接入管理/i }));
 
-    fireEvent.click(document.querySelector<HTMLAnchorElement>('a[href="/ai-providers"]')!);
+    fireEvent.click(document.querySelector<HTMLAnchorElement>('a[href="/access/ai-providers"]')!);
 
     act(() => {
       vi.advanceTimersByTime(300);
     });
 
     fireEvent.click(screen.getByRole("button", { name: /Models & Routing|模型与路由/i }));
-    fireEvent.click(document.querySelector<HTMLAnchorElement>('a[href="/models"]')!);
+    fireEvent.click(document.querySelector<HTMLAnchorElement>('a[href="/models/catalog"]')!);
 
     await act(async () => {
       vi.advanceTimersByTime(679);
@@ -274,7 +282,7 @@ describe("AppShell route progress", () => {
       vi.advanceTimersByTime(360);
     });
 
-    expect(screen.getByTestId("location")).toHaveTextContent("/models");
+    expect(screen.getByTestId("location")).toHaveTextContent("/models/catalog");
   });
 
   test("lets modified clicks keep the browser's native link behavior", () => {
@@ -282,7 +290,7 @@ describe("AppShell route progress", () => {
     renderShell();
     fireEvent.click(screen.getByRole("button", { name: /Access|接入管理/i }));
 
-    fireEvent.click(document.querySelector<HTMLAnchorElement>('a[href="/ai-providers"]')!, {
+    fireEvent.click(document.querySelector<HTMLAnchorElement>('a[href="/access/ai-providers"]')!, {
       ctrlKey: true,
     });
 
@@ -291,7 +299,7 @@ describe("AppShell route progress", () => {
     expect(screen.getByTestId("location")).toHaveTextContent("/dashboard");
   });
   test("groups sidebar routes and uses a compact neutral active state", () => {
-    renderShell("/monitor/request-logs");
+    renderShell("/runtime/request-logs");
 
     const runtimeGroup = screen.getByRole("button", { name: /Operations|运行监控/i });
     expect(runtimeGroup).toHaveAttribute("aria-expanded", "true");
@@ -308,7 +316,7 @@ describe("AppShell route progress", () => {
 
   test("keeps a stable icon rail and the same sidebar toggle icon when collapsed", () => {
     vi.useFakeTimers();
-    renderShell("/config");
+    renderShell("/system/config");
 
     const collapseButton = screen.getByRole("button", {
       name: /Collapse Sidebar|收起侧边栏/i,

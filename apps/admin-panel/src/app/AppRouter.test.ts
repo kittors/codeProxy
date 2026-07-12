@@ -18,30 +18,30 @@ describe("AppRouter", () => {
     const apiKeyPermissionsRoute = readRepoModule("pages/api-key-permissions/route.tsx");
 
     expect(source).toContain("pageRoutes");
-    expect(modelsRoute).toMatch(/path:\s*"\/models"/);
-    expect(modelsRoute).toContain('redirects: [{ from: "/manage/models", to: "/models" }]');
+    expect(modelsRoute).toMatch(/path:\s*"\/models\/catalog"/);
+    expect(modelsRoute).toContain('{ from: "/manage/models", to: "/models/catalog" }');
     expect(source).not.toContain('to="/manage/models" replace');
 
-    expect(accountSecurityRoute).toMatch(/path:\s*"\/account-security"/);
+    expect(accountSecurityRoute).toMatch(/path:\s*"\/system\/account-security"/);
     expect(accountSecurityRoute).toContain(
-      '{ from: "/manage/identity-fingerprint", to: "/account-security" }',
+      '{ from: "/manage/identity-fingerprint", to: "/system/account-security" }',
     );
 
     expect(identityRoute).toMatch(/path:\s*"\/identity-fingerprint"/);
     expect(identityRoute).toContain(
-      'redirects: [{ from: "/manage/identity-fingerprint", to: "/account-security" }]',
+      'redirects: [{ from: "/manage/identity-fingerprint", to: "/system/account-security" }]',
     );
 
     expect(ccSwitchRoute).toContain("CcSwitchImportSettingsPage");
-    expect(ccSwitchRoute).toMatch(/path:\s*"\/ccswitch-import-settings"/);
+    expect(ccSwitchRoute).toMatch(/path:\s*"\/access\/ccswitch-import-settings"/);
     expect(ccSwitchRoute).toContain(
-      'redirects: [{ from: "/manage/ccswitch-import-settings", to: "/ccswitch-import-settings" }]',
+      '{ from: "/manage/ccswitch-import-settings", to: "/access/ccswitch-import-settings" }',
     );
 
     expect(apiKeyPermissionsRoute).toContain("ApiKeyPermissionsPage");
-    expect(apiKeyPermissionsRoute).toMatch(/path:\s*"\/api-key-permissions"/);
+    expect(apiKeyPermissionsRoute).toMatch(/path:\s*"\/system\/api-key-permissions"/);
     expect(apiKeyPermissionsRoute).toContain(
-      'redirects: [{ from: "/manage/api-key-permissions", to: "/api-key-permissions" }]',
+      '{ from: "/manage/api-key-permissions", to: "/system/api-key-permissions" }',
     );
   });
 

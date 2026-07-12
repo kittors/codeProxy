@@ -5,13 +5,16 @@ const { Page: ModelsPage, preload: preloadModelsPage } = preloadablePage(() =>
 );
 
 export const modelsRoute = {
-  path: "/models",
+  path: "/models/catalog",
   component: "models",
   element: <ModelsPage />,
   auth: true,
   layout: "dashboard",
   nav: { labelKey: "nav.models" },
-  redirects: [{ from: "/manage/models", to: "/models" }],
+  redirects: [
+    { from: "/models", to: "/models/catalog" },
+    { from: "/manage/models", to: "/models/catalog" },
+  ],
   requiredPermission: "models.read",
   preload: preloadModelsPage,
 };

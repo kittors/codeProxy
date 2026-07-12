@@ -157,11 +157,11 @@ describe("ProvidersPage openai tab", () => {
     ]);
 
     render(
-      <MemoryRouter initialEntries={["/ai-providers"]}>
+      <MemoryRouter initialEntries={["/access/ai-providers"]}>
         <ThemeProvider>
           <ToastProvider>
             <Routes>
-              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+              <Route path="/access/ai-providers/*" element={<ProvidersPage />} />
             </Routes>
           </ToastProvider>
         </ThemeProvider>
@@ -191,11 +191,11 @@ describe("ProvidersPage openai tab", () => {
     );
 
     render(
-      <MemoryRouter initialEntries={["/ai-providers"]}>
+      <MemoryRouter initialEntries={["/access/ai-providers"]}>
         <ThemeProvider>
           <ToastProvider>
             <Routes>
-              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+              <Route path="/access/ai-providers/*" element={<ProvidersPage />} />
             </Routes>
           </ToastProvider>
         </ThemeProvider>
@@ -219,11 +219,11 @@ describe("ProvidersPage openai tab", () => {
     mocks.getGeminiKeys.mockImplementationOnce(async () => [geminiProvider]);
 
     render(
-      <MemoryRouter initialEntries={["/ai-providers"]}>
+      <MemoryRouter initialEntries={["/access/ai-providers"]}>
         <ThemeProvider>
           <ToastProvider>
             <Routes>
-              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+              <Route path="/access/ai-providers/*" element={<ProvidersPage />} />
             </Routes>
           </ToastProvider>
         </ThemeProvider>
@@ -254,11 +254,11 @@ describe("ProvidersPage openai tab", () => {
 
   test("renders openai provider card with masked key and aggregated status", async () => {
     render(
-      <MemoryRouter initialEntries={["/ai-providers/openai"]}>
+      <MemoryRouter initialEntries={["/access/ai-providers/openai"]}>
         <ThemeProvider>
           <ToastProvider>
             <Routes>
-              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+              <Route path="/access/ai-providers/*" element={<ProvidersPage />} />
             </Routes>
           </ToastProvider>
         </ThemeProvider>
@@ -287,11 +287,11 @@ describe("ProvidersPage openai tab", () => {
     );
 
     render(
-      <MemoryRouter initialEntries={["/ai-providers"]}>
+      <MemoryRouter initialEntries={["/access/ai-providers"]}>
         <ThemeProvider>
           <ToastProvider>
             <Routes>
-              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+              <Route path="/access/ai-providers/*" element={<ProvidersPage />} />
             </Routes>
           </ToastProvider>
         </ThemeProvider>
@@ -335,11 +335,11 @@ describe("ProvidersPage openai tab", () => {
     mocks.getOpenAIProviders.mockImplementation(async () => [provider] as any);
 
     render(
-      <MemoryRouter initialEntries={["/ai-providers/openai"]}>
+      <MemoryRouter initialEntries={["/access/ai-providers/openai"]}>
         <ThemeProvider>
           <ToastProvider>
             <Routes>
-              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+              <Route path="/access/ai-providers/*" element={<ProvidersPage />} />
             </Routes>
           </ToastProvider>
         </ThemeProvider>
@@ -387,11 +387,11 @@ describe("ProvidersPage openai tab", () => {
     mocks.getOpenAIProviders.mockImplementation(async () => [provider] as any);
 
     render(
-      <MemoryRouter initialEntries={["/ai-providers/openai"]}>
+      <MemoryRouter initialEntries={["/access/ai-providers/openai"]}>
         <ThemeProvider>
           <ToastProvider>
             <Routes>
-              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+              <Route path="/access/ai-providers/*" element={<ProvidersPage />} />
             </Routes>
           </ToastProvider>
         </ThemeProvider>
@@ -431,11 +431,11 @@ describe("ProvidersPage openai tab", () => {
     mocks.getOpenAIProviders.mockImplementation(async () => [provider] as any);
 
     render(
-      <MemoryRouter initialEntries={["/ai-providers/openai"]}>
+      <MemoryRouter initialEntries={["/access/ai-providers/openai"]}>
         <ThemeProvider>
           <ToastProvider>
             <Routes>
-              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+              <Route path="/access/ai-providers/*" element={<ProvidersPage />} />
             </Routes>
           </ToastProvider>
         </ThemeProvider>

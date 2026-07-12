@@ -88,11 +88,11 @@ describe("ProvidersPage Bedrock tab", () => {
     const user = userEvent.setup();
 
     render(
-      <MemoryRouter initialEntries={["/ai-providers/bedrock/new"]}>
+      <MemoryRouter initialEntries={["/access/ai-providers/bedrock/new"]}>
         <ThemeProvider>
           <ToastProvider>
             <Routes>
-              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+              <Route path="/access/ai-providers/*" element={<ProvidersPage />} />
             </Routes>
           </ToastProvider>
         </ThemeProvider>

@@ -110,11 +110,11 @@ describe("ProvidersPage import/export", () => {
     const user = userEvent.setup();
 
     render(
-      <MemoryRouter initialEntries={["/ai-providers"]}>
+      <MemoryRouter initialEntries={["/access/ai-providers"]}>
         <ThemeProvider>
           <ToastProvider>
             <Routes>
-              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+              <Route path="/access/ai-providers/*" element={<ProvidersPage />} />
             </Routes>
           </ToastProvider>
         </ThemeProvider>
@@ -147,11 +147,11 @@ describe("ProvidersPage import/export", () => {
       .mockImplementationOnce(() => new Promise<any[]>((resolve) => (resolveRefresh = resolve)));
 
     render(
-      <MemoryRouter initialEntries={["/ai-providers"]}>
+      <MemoryRouter initialEntries={["/access/ai-providers"]}>
         <ThemeProvider>
           <ToastProvider>
             <Routes>
-              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+              <Route path="/access/ai-providers/*" element={<ProvidersPage />} />
             </Routes>
           </ToastProvider>
         </ThemeProvider>
@@ -187,11 +187,11 @@ describe("ProvidersPage import/export", () => {
     );
 
     render(
-      <MemoryRouter initialEntries={["/ai-providers"]}>
+      <MemoryRouter initialEntries={["/access/ai-providers"]}>
         <ThemeProvider>
           <ToastProvider>
             <Routes>
-              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+              <Route path="/access/ai-providers/*" element={<ProvidersPage />} />
             </Routes>
           </ToastProvider>
         </ThemeProvider>
@@ -222,11 +222,11 @@ describe("ProvidersPage import/export", () => {
     const user = userEvent.setup();
 
     render(
-      <MemoryRouter initialEntries={["/ai-providers"]}>
+      <MemoryRouter initialEntries={["/access/ai-providers"]}>
         <ThemeProvider>
           <ToastProvider>
             <Routes>
-              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+              <Route path="/access/ai-providers/*" element={<ProvidersPage />} />
             </Routes>
           </ToastProvider>
         </ThemeProvider>
@@ -246,11 +246,11 @@ describe("ProvidersPage import/export", () => {
     const user = userEvent.setup();
 
     render(
-      <MemoryRouter initialEntries={["/ai-providers"]}>
+      <MemoryRouter initialEntries={["/access/ai-providers"]}>
         <ThemeProvider>
           <ToastProvider>
             <Routes>
-              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+              <Route path="/access/ai-providers/*" element={<ProvidersPage />} />
             </Routes>
           </ToastProvider>
         </ThemeProvider>
@@ -272,11 +272,11 @@ describe("ProvidersPage import/export", () => {
     const user = userEvent.setup();
 
     render(
-      <MemoryRouter initialEntries={["/ai-providers"]}>
+      <MemoryRouter initialEntries={["/access/ai-providers"]}>
         <ThemeProvider>
           <ToastProvider>
             <Routes>
-              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+              <Route path="/access/ai-providers/*" element={<ProvidersPage />} />
             </Routes>
           </ToastProvider>
         </ThemeProvider>
@@ -298,11 +298,11 @@ describe("ProvidersPage import/export", () => {
     const user = userEvent.setup();
 
     render(
-      <MemoryRouter initialEntries={["/ai-providers"]}>
+      <MemoryRouter initialEntries={["/access/ai-providers"]}>
         <ThemeProvider>
           <ToastProvider>
             <Routes>
-              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+              <Route path="/access/ai-providers/*" element={<ProvidersPage />} />
             </Routes>
           </ToastProvider>
         </ThemeProvider>
@@ -326,11 +326,11 @@ describe("ProvidersPage import/export", () => {
     const user = userEvent.setup();
 
     render(
-      <MemoryRouter initialEntries={["/ai-providers"]}>
+      <MemoryRouter initialEntries={["/access/ai-providers"]}>
         <ThemeProvider>
           <ToastProvider>
             <Routes>
-              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+              <Route path="/access/ai-providers/*" element={<ProvidersPage />} />
             </Routes>
           </ToastProvider>
         </ThemeProvider>
@@ -353,11 +353,11 @@ describe("ProvidersPage import/export", () => {
     const user = userEvent.setup();
 
     render(
-      <MemoryRouter initialEntries={["/ai-providers"]}>
+      <MemoryRouter initialEntries={["/access/ai-providers"]}>
         <ThemeProvider>
           <ToastProvider>
             <Routes>
-              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+              <Route path="/access/ai-providers/*" element={<ProvidersPage />} />
             </Routes>
           </ToastProvider>
         </ThemeProvider>
@@ -438,11 +438,11 @@ describe("ProvidersPage import/export", () => {
     );
 
     render(
-      <MemoryRouter initialEntries={["/ai-providers"]}>
+      <MemoryRouter initialEntries={["/access/ai-providers"]}>
         <ThemeProvider>
           <ToastProvider>
             <Routes>
-              <Route path="/ai-providers/*" element={<ProvidersPage />} />
+              <Route path="/access/ai-providers/*" element={<ProvidersPage />} />
             </Routes>
           </ToastProvider>
         </ThemeProvider>
