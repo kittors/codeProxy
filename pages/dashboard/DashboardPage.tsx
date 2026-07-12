@@ -691,7 +691,7 @@ export function DashboardPage() {
         <SystemMonitorSection
           stats={stats}
           connected={connected}
-          apiKeyCount={summary?.counts.api_keys ?? 0}
+          apiKeyCount={summary?.counts?.api_keys ?? 0}
         />
       ) : null}
 

@@ -45,7 +45,7 @@ const principal = {
   platform_admin: true,
 };
 
-test("Login: successful sign in persists auth snapshot and restores dashboard after reload", async ({
+test("Login: successful sign in persists auth snapshot and restores dashboard after reload @critical", async ({
   page,
 }) => {
   await page.route("**/v0/auth/login", async (route) => {

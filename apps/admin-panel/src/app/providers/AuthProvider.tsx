@@ -399,6 +399,34 @@ const LEGACY_SERVICE_MENUS: MenuIdentity[] = [
   }),
 ];
 
+/** Override is only dropped when the server explicitly rejects the tenant scope. */
+const RECOVERABLE_TENANT_OVERRIDE_CODES = new Set([
+  "tenant_scope_forbidden",
+  "tenant_suspended",
+  "tenant_expired",
+  "not_found",
+]);
+
+export function isRecoverableTenantOverrideError(error: unknown): boolean {
+  if (!isApiClientError(error)) return false;
+  // Network/timeout leave status 0; 5xx is transient server failure.
+  if (isTransientRestoreError(error)) return false;
+  const code = extractApiErrorCode(error.payload);
+  if (code && RECOVERABLE_TENANT_OVERRIDE_CODES.has(code)) return true;
+  // 404 without a known code still means the override target is gone.
+  return error.status === 404;
+}
+
+/** Transient failures must keep the persisted override for the next retry/refresh. */
+export function isTransientRestoreError(error: unknown): boolean {
+  if (!isApiClientError(error)) {
+    // Non-API errors (TypeError from fetch, etc.) are treated as transient.
+    return error instanceof Error;
+  }
+  if (error.isTimeout || error.status === 0 || error.status >= 500) return true;
+  return false;
+}
+
 const legacyServicePrincipal = (): ManagementPrincipal => ({
   kind: "service_credential",
   user: {
@@ -522,9 +550,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
       try {
         restoredPrincipal = (await identityApi.me()).principal;
       } catch (overrideError) {
-        // Stale/invalid override can fail Authenticate entirely — retry home tenant
-        // before treating the session as dead (matches previous two-step restore).
-        if (!requestedTenant) throw overrideError;
+        // Only drop a persisted override when the server says it is invalid.
+        // Transient network/timeout/5xx must keep the override and surface as
+        // restore failure instead of silently switching the user home.
+        if (!requestedTenant || !isRecoverableTenantOverrideError(overrideError)) {
+          throw overrideError;
+        }
         configureClient(resolvedBase, resolvedToken, "");
         syncActiveDataCacheTenant(DEFAULT_CACHE_TENANT_ID);
         restoredPrincipal = (await identityApi.me()).principal;
@@ -553,7 +584,11 @@ export function AuthProvider({ children }: PropsWithChildren) {
       setPrincipal(null);
       syncActiveDataCacheTenant(DEFAULT_CACHE_TENANT_ID);
       setAuthFailureCode(isApiClientError(error) ? extractApiErrorCode(error.payload) : "");
-      clearPersistedAuthSnapshot();
+      // Transient restore failures keep the snapshot (including tenant override)
+      // so a refresh can retry the same context instead of wiping it.
+      if (!isTransientRestoreError(error)) {
+        clearPersistedAuthSnapshot();
+      }
     } finally {
       setIsRestoring(false);
     }

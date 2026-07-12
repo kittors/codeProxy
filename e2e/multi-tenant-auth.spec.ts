@@ -282,6 +282,8 @@ async function mockIdentity(
   });
 }
 
+// Layout assertions (touch targets, centering) stay untagged; critical set
+// only needs force-change-password redirect after login.
 test("logs in with username and password without selecting a tenant", async ({ page }) => {
   await page.route("**/v0/auth/login", async (route) => {
     const body = route.request().postDataJSON();
@@ -343,6 +345,34 @@ test("logs in with username and password without selecting a tenant", async ({ p
       return Math.abs(passwordCard.y + passwordCard.height / 2 - viewport.height / 2);
     })
     .toBeLessThan(12);
+  await page.evaluate(() => {
+    window.location.hash = "/dashboard";
+  });
+  await expect(page).toHaveURL(/#\/change-password$/);
+});
+
+test("forces password change after login and blocks dashboard @critical", async ({ page }) => {
+  await page.route("**/v0/auth/login", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        access_token: "cps_test",
+        token_type: "Bearer",
+        expires_at: new Date(Date.now() + 60_000).toISOString(),
+        principal: {
+          ...principal,
+          user: { ...principal.user, must_change_password: true },
+        },
+      }),
+    });
+  });
+  await mockIdentity(page);
+  await page.goto("/#/login");
+  await page.getByLabel(/username/i).fill("admin");
+  await page.getByLabel(/^password$/i).fill("correct-password");
+  await page.getByRole("button", { name: /^login$/i }).click();
+  await expect(page.getByRole("heading", { name: /change password/i })).toBeVisible();
   await page.evaluate(() => {
     window.location.hash = "/dashboard";
   });
@@ -411,7 +441,7 @@ test("uses the localized searchable tenant select with checkmark selection", asy
   await expect(listbox.getByRole("option", { name: "Acme Team" })).toBeVisible();
 });
 
-test("switching tenant remounts the current page and reloads tenant-scoped data", async ({
+test("switching tenant remounts the current page and reloads tenant-scoped data @critical", async ({
   page,
 }) => {
   await page.addInitScript(() =>
@@ -525,7 +555,7 @@ test("switching tenant remounts the current page and reloads tenant-scoped data"
   expect(authSnapshot).toContain(standardTenant.id);
 });
 
-test("restores the selected tenant after full page reload", async ({ page }) => {
+test("restores the selected tenant after full page reload @critical", async ({ page }) => {
   await page.addInitScript(() =>
     sessionStorage.setItem(
       "code-proxy-admin-auth",
@@ -724,7 +754,7 @@ test("manages dynamic menu visibility and ordering", async ({ page }) => {
   await expect(page.getByRole("dialog", { name: "Adjust order" })).toBeVisible();
 });
 
-test("applies server menu visibility and enabled state to navigation and routes", async ({
+test("applies server menu visibility and enabled state to navigation and routes @critical", async ({
   page,
 }) => {
   const dynamicPrincipal = {
@@ -949,7 +979,9 @@ test("renders role, audit, and password governance pages from server permissions
   await expect(page.locator("header")).toHaveCount(0);
 });
 
-test("shows an expired tenant message when restoring a rejected session", async ({ page }) => {
+test("shows an expired tenant message when restoring a rejected session @critical", async ({
+  page,
+}) => {
   await page.addInitScript(() =>
     sessionStorage.setItem(
       "code-proxy-admin-auth",
@@ -1134,4 +1166,133 @@ test("standard tenant redirects the unavailable OAuth excluded tab to tenant-saf
   await expect(page.getByRole("tab", { name: /model aliases/i })).toBeVisible();
   await expect(page.getByRole("tab", { name: /excluded models/i })).toHaveCount(0);
   expect(excludedRequests).toBe(0);
+});
+
+test("keeps tenant override when first /me returns 500 @critical", async ({ page }) => {
+  await page.addInitScript(() =>
+    sessionStorage.setItem(
+      "code-proxy-admin-auth",
+      JSON.stringify({
+        apiBase: "http://127.0.0.1:8317",
+        managementKey: "cps_test",
+        rememberPassword: false,
+        expiresAt: Date.now() + 60_000,
+        effectiveTenantId: "t-acme",
+      }),
+    ),
+  );
+
+  const meTenantHeaders: string[] = [];
+  let meCalls = 0;
+  await page.route("**/v0/auth/me", (route) => {
+    meCalls += 1;
+    const tenantHeader = route.request().headers()["x-effective-tenant-id"] ?? "";
+    meTenantHeaders.push(tenantHeader);
+    // First restore fails with a transient 500; must not fall back to home.
+    return route.fulfill({
+      status: 500,
+      contentType: "application/json",
+      body: JSON.stringify({ error: { code: "internal", message: "temporary" } }),
+    });
+  });
+  await page.route("**/v0/management/**", (route) =>
+    route.fulfill({ status: 200, contentType: "application/json", body: "{}" }),
+  );
+
+  await page.goto("/#/roles");
+  // Auth restore fails → login; override must still be in the snapshot.
+  await expect(page).toHaveURL(/#\/login$/);
+  expect(meCalls).toBeGreaterThan(0);
+  expect(meTenantHeaders[0]).toBe(standardTenant.id);
+  // Must not have retried without the override (that would clear context).
+  expect(meTenantHeaders.every((h) => h === standardTenant.id)).toBe(true);
+
+  const snapshot = await page.evaluate(() => sessionStorage.getItem("code-proxy-admin-auth"));
+  expect(snapshot).toBeTruthy();
+  expect(snapshot).toContain("t-acme");
+  expect(snapshot).toContain("cps_test");
+});
+
+test("falls back to home tenant on tenant_scope_forbidden override @critical", async ({
+  page,
+}) => {
+  await page.addInitScript(() =>
+    sessionStorage.setItem(
+      "code-proxy-admin-auth",
+      JSON.stringify({
+        apiBase: "http://127.0.0.1:8317",
+        managementKey: "cps_test",
+        rememberPassword: false,
+        expiresAt: Date.now() + 60_000,
+        effectiveTenantId: "t-stale",
+      }),
+    ),
+  );
+
+  const meTenantHeaders: string[] = [];
+  await page.route("**/v0/auth/me", (route) => {
+    const tenantHeader = route.request().headers()["x-effective-tenant-id"] ?? "";
+    meTenantHeaders.push(tenantHeader);
+    if (tenantHeader === "t-stale") {
+      return route.fulfill({
+        status: 403,
+        contentType: "application/json",
+        body: JSON.stringify({
+          error: { code: "tenant_scope_forbidden", message: "tenant scope forbidden" },
+        }),
+      });
+    }
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ principal }),
+    });
+  });
+  await page.route("**/v0/management/**", (route) => {
+    const path = new URL(route.request().url()).pathname.replace("/v0/management", "");
+    const bodies: Record<string, unknown> = {
+      "/tenants": { items: [principal.home_tenant, standardTenant] },
+      "/users": { items: [principal.user] },
+      "/roles": { items: [administratorRole] },
+      "/menus": { items: menuItems },
+      "/permissions": { items: [] },
+      "/audit-logs": { items: [] },
+    };
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(bodies[path] ?? {}),
+    });
+  });
+
+  await page.goto("/#/roles");
+  await expect(page.getByRole("heading", { name: /Roles/i })).toBeVisible();
+  expect(meTenantHeaders[0]).toBe("t-stale");
+  expect(meTenantHeaders.some((h) => h === "")).toBe(true);
+
+  const snapshot = await page.evaluate(() => sessionStorage.getItem("code-proxy-admin-auth"));
+  expect(snapshot).toBeTruthy();
+  expect(snapshot).not.toContain("t-stale");
+});
+
+// Dashboard mount under dynamic menus is covered by login-lifecycle @critical.
+// Keep a roles-page shell smoke here so multi-tenant-auth still asserts layout chrome.
+test("renders governance shell from dynamic menus @critical", async ({ page }) => {
+  await page.addInitScript(() =>
+    sessionStorage.setItem(
+      "code-proxy-admin-auth",
+      JSON.stringify({
+        apiBase: "http://127.0.0.1:8317",
+        managementKey: "cps_test",
+        rememberPassword: false,
+        expiresAt: Date.now() + 60_000,
+      }),
+    ),
+  );
+  await mockIdentity(page);
+  await page.goto("/#/roles");
+  await expect(page.getByText(/Something went wrong/i)).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: /Roles/i })).toBeVisible();
+  await expect(page.locator("aside")).toBeVisible();
+  await expect(page.locator("header")).toBeVisible();
 });
