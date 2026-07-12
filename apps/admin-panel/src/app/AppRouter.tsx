@@ -36,8 +36,10 @@ const LEGACY_PREFIX_REDIRECTS: ReadonlyArray<{ fromPrefix: string; toPrefix: str
   { fromPrefix: "/users", toPrefix: "/governance/users" },
   { fromPrefix: "/roles", toPrefix: "/governance/roles" },
   { fromPrefix: "/audit-logs", toPrefix: "/governance/audit-logs" },
-  { fromPrefix: "/account-security", toPrefix: "/system/account-security" },
-  { fromPrefix: "/api-key-permissions", toPrefix: "/system/api-key-permissions" },
+  { fromPrefix: "/account-security", toPrefix: "/access/ai-accounts" },
+  { fromPrefix: "/system/account-security", toPrefix: "/access/ai-accounts" },
+  { fromPrefix: "/api-key-permissions", toPrefix: "/access/api-key-permissions" },
+  { fromPrefix: "/system/api-key-permissions", toPrefix: "/access/api-key-permissions" },
   { fromPrefix: "/menu-management", toPrefix: "/system/menu-management" },
   { fromPrefix: "/config", toPrefix: "/system/config" },
   // Do not prefix-redirect "/system" or "/models": new secondary routes already live under those bases

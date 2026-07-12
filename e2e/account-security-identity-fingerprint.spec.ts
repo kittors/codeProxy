@@ -617,17 +617,17 @@ const routeManagementMocks = async (page: Page) => {
   });
 };
 
-test("Account & Security shows auth files and account identity fingerprint details", async ({
+test("AI Accounts shows auth files and account identity fingerprint details", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await setAuthed(page);
   await routeManagementMocks(page);
 
-  await page.goto("/#/account-security");
+  await page.goto("/#/access/ai-accounts");
 
   await expect(
-    page.getByRole("link", { name: /Account & Security|账号与安全/i }),
+    page.getByRole("link", { name: /AI Accounts|AI 账号|Account & Security|账号与安全/i }),
   ).toBeVisible();
   await expect(
     page.getByRole("link", { name: /Auth Files|认证文件/i }),
@@ -764,7 +764,7 @@ test("Account & Security shows auth files and account identity fingerprint detai
   await expect(geminiPanel).toContainText("pluginType=GEMINI");
 });
 
-test("Account & Security keeps card mode usable and redirects old identity route", async ({
+test("AI Accounts keeps card mode usable and redirects old identity route", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 640 });
@@ -773,12 +773,12 @@ test("Account & Security keeps card mode usable and redirects old identity route
 
   await page.goto("/#/identity-fingerprint");
 
-  await expect(page).toHaveURL(/#\/account-security/);
+  await expect(page).toHaveURL(/#\/access\/ai-accounts/);
   await expect(
-    page.getByRole("heading", { name: /Account & Security|账号与安全/i }),
+    page.getByRole("heading", { name: /AI Accounts|AI 账号|Account & Security|账号与安全/i }),
   ).toBeVisible();
   await expect(
-    page.locator('a[href="#/account-security"]:visible'),
+    page.locator('a[href="#/access/ai-accounts"]:visible'),
   ).toHaveCount(1);
   await expect(page.locator('a[href="#/auth-files"]')).toHaveCount(0);
   await expect(page.locator('a[href="#/identity-fingerprint"]')).toHaveCount(0);
@@ -818,7 +818,7 @@ test("Account & Security keeps card mode usable and redirects old identity route
     };
   });
   if (!shellScrollBefore) {
-    throw new Error("Account & Security shell scroll container must exist");
+    throw new Error("AI Accounts shell scroll container must exist");
   }
   expect(shellScrollBefore.scrollHeight).toBeGreaterThan(
     shellScrollBefore.clientHeight + 20,
@@ -855,14 +855,14 @@ test("Account & Security keeps card mode usable and redirects old identity route
     .toBeGreaterThan(shellScrollStart + 20);
 });
 
-test("Account & Security keeps wide desktop cards stretched in a three-column grid", async ({
+test("AI Accounts keeps wide desktop cards stretched in a three-column grid", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1920, height: 1080 });
   await setAuthed(page, "cards");
   await routeManagementMocks(page);
 
-  await page.goto("/#/account-security");
+  await page.goto("/#/access/ai-accounts");
 
   const cardsRoot = page.getByTestId("auth-files-cards");
   const cardsContent = cardsRoot.locator("[data-scroll-area-content]");
@@ -908,14 +908,14 @@ test("Account & Security keeps wide desktop cards stretched in a three-column gr
   ).toBeGreaterThan(320);
 });
 
-test("Account & Security mobile table scroll chains from the middle of the page", async ({
+test("AI Accounts mobile table scroll chains from the middle of the page", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 640 });
   await setAuthed(page, "table");
   await routeManagementMocks(page);
 
-  await page.goto("/#/account-security");
+  await page.goto("/#/access/ai-accounts");
 
   const filterToggle = page.getByTestId("auth-files-mobile-filter-toggle");
   await filterToggle.click();
@@ -953,7 +953,7 @@ test("Account & Security mobile table scroll chains from the middle of the page"
     };
   });
   if (!shellScrollState) {
-    throw new Error("Account & Security shell scroll container must exist");
+    throw new Error("AI Accounts shell scroll container must exist");
   }
   expect(shellScrollState.scrollHeight).toBeGreaterThan(
     shellScrollState.clientHeight + 20,
@@ -964,11 +964,11 @@ test("Account & Security mobile table scroll chains from the middle of the page"
   const viewportSize = page.viewportSize();
   if (!box) {
     throw new Error(
-      "Account & Security table viewport must be visible on mobile",
+      "AI Accounts table viewport must be visible on mobile",
     );
   }
   if (!viewportSize) {
-    throw new Error("Account & Security mobile viewport must be available");
+    throw new Error("AI Accounts mobile viewport must be available");
   }
   const visibleLeft = Math.max(box.x, 16);
   const visibleRight = Math.min(box.x + box.width, viewportSize.width - 16);
@@ -996,14 +996,14 @@ test("Account & Security mobile table scroll chains from the middle of the page"
     .toBeLessThan(shellScrollState.scrollTop);
 });
 
-test("Account & Security identity detail stacks cleanly on mobile", async ({
+test("AI Accounts identity detail stacks cleanly on mobile", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await setAuthed(page, "cards");
   await routeManagementMocks(page);
 
-  await page.goto("/#/account-security");
+  await page.goto("/#/access/ai-accounts");
 
   const codexCard = page.locator('[class*="group/card"]', {
     hasText: "Codex Terminal OAuth",

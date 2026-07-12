@@ -183,7 +183,7 @@ describe("AppShell route progress", () => {
       }),
     );
     renderShell();
-    fireEvent.click(screen.getByRole("button", { name: /Access|接入管理/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Access(?: & Credentials)?|接入(?:管理|与凭证)/i }));
 
     const link = document.querySelector<HTMLAnchorElement>('a[href="/access/ai-providers"]');
     expect(link).toBeInstanceOf(HTMLAnchorElement);
@@ -223,7 +223,7 @@ describe("AppShell route progress", () => {
   test("animates a fixed window-top progress bar during sidebar navigation", async () => {
     vi.useFakeTimers();
     renderShell();
-    fireEvent.click(screen.getByRole("button", { name: /Access|接入管理/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Access(?: & Credentials)?|接入(?:管理|与凭证)/i }));
 
     const link = document.querySelector<HTMLAnchorElement>('a[href="/access/ai-providers"]');
     expect(link).toBeInstanceOf(HTMLAnchorElement);
@@ -253,7 +253,7 @@ describe("AppShell route progress", () => {
   test("restarts the progress animation on rapid sidebar navigation", async () => {
     vi.useFakeTimers();
     renderShell();
-    fireEvent.click(screen.getByRole("button", { name: /Access|接入管理/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Access(?: & Credentials)?|接入(?:管理|与凭证)/i }));
 
     fireEvent.click(document.querySelector<HTMLAnchorElement>('a[href="/access/ai-providers"]')!);
 
@@ -261,7 +261,7 @@ describe("AppShell route progress", () => {
       vi.advanceTimersByTime(300);
     });
 
-    fireEvent.click(screen.getByRole("button", { name: /Models & Routing|模型与路由/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Models & Routing|模型与(?:路由|调度)/i }));
     fireEvent.click(document.querySelector<HTMLAnchorElement>('a[href="/models/catalog"]')!);
 
     await act(async () => {
@@ -288,7 +288,7 @@ describe("AppShell route progress", () => {
   test("lets modified clicks keep the browser's native link behavior", () => {
     vi.useFakeTimers();
     renderShell();
-    fireEvent.click(screen.getByRole("button", { name: /Access|接入管理/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Access(?: & Credentials)?|接入(?:管理|与凭证)/i }));
 
     fireEvent.click(document.querySelector<HTMLAnchorElement>('a[href="/access/ai-providers"]')!, {
       ctrlKey: true,
@@ -301,7 +301,9 @@ describe("AppShell route progress", () => {
   test("groups sidebar routes and uses a compact neutral active state", () => {
     renderShell("/runtime/request-logs");
 
-    const runtimeGroup = screen.getByRole("button", { name: /Operations|运行监控/i });
+    const runtimeGroup = screen.getByRole("button", {
+      name: /Operations|Observability|运行监控|运行观测/i,
+    });
     expect(runtimeGroup).toHaveAttribute("aria-expanded", "true");
 
     const requestLogs = screen.getByRole("link", { name: /Request Logs|请求日志/i });
@@ -338,7 +340,7 @@ describe("AppShell route progress", () => {
     expect(expandButton.querySelector("svg")?.getAttribute("class")).toBe(iconClass);
     expect(screen.getByRole("link", { name: /Dashboard|仪表盘/i })).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: /Models & Routing|模型与路由/i }),
+      screen.getByRole("button", { name: /Models & Routing|模型与(?:路由|调度)/i }),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Admin" })).toBeInTheDocument();
   });

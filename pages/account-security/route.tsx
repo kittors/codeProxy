@@ -5,17 +5,18 @@ const { Page: AuthFilesPage, preload: preloadAuthFilesPage } = preloadablePage((
 );
 
 export const accountSecurityRoute = {
-  path: "/system/account-security",
+  path: "/access/ai-accounts",
   component: "account-security",
   element: <AuthFilesPage />,
   auth: true,
   layout: "dashboard",
   nav: { labelKey: "nav.accountSecurity" },
   redirects: [
-    { from: "/account-security", to: "/system/account-security" },
-    { from: "/auth-files/oauth-excluded", to: "/system/account-security?tab=excluded" },
-    { from: "/auth-files/oauth-model-alias", to: "/system/account-security?tab=alias" },
-    { from: "/manage/identity-fingerprint", to: "/system/account-security" },
+    { from: "/account-security", to: "/access/ai-accounts" },
+    { from: "/system/account-security", to: "/access/ai-accounts" },
+    { from: "/auth-files/oauth-excluded", to: "/access/ai-accounts?tab=excluded" },
+    { from: "/auth-files/oauth-model-alias", to: "/access/ai-accounts?tab=alias" },
+    { from: "/manage/identity-fingerprint", to: "/access/ai-accounts" },
   ],
   requiredPermission: "auth_files.read",
   preload: preloadAuthFilesPage,

@@ -314,17 +314,17 @@ test.beforeEach(async ({ page }) => {
   await routeManagementMocks(page);
 });
 
-test("legacy identity fingerprint URL redirects to Account & Security", async ({
+test("legacy identity fingerprint URL redirects to AI Accounts", async ({
   page,
 }) => {
   await page.goto("/manage/#/identity-fingerprint");
 
-  await expect(page).toHaveURL(/#\/account-security/);
+  await expect(page).toHaveURL(/#\/access\/ai-accounts/);
   await expect(
-    page.getByRole("heading", { name: /Account & Security|账号与安全/i }),
+    page.getByRole("heading", { name: /AI Accounts|AI 账号|Account & Security|账号与安全/i }),
   ).toBeVisible();
   await expect(
-    page.locator('a[href="#/account-security"]:visible'),
+    page.locator('a[href="#/access/ai-accounts"]:visible'),
   ).toHaveCount(1);
   await expect(page.locator('a[href="#/identity-fingerprint"]')).toHaveCount(0);
   await expect(

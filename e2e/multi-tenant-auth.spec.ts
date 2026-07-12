@@ -1055,7 +1055,7 @@ test("standard tenant redirects the unavailable OAuth excluded tab to tenant-saf
   });
 
   await page.goto("/#/auth-files?tab=excluded");
-  await expect(page).toHaveURL(/#\/account-security\?tab=excluded$/);
+  await expect(page).toHaveURL(/#\/access\/ai-accounts\?tab=excluded$/);
   await expect(page.getByRole("tab", { name: /model aliases/i })).toBeVisible();
   await expect(page.getByRole("tab", { name: /excluded models/i })).toHaveCount(0);
   expect(excludedRequests).toBe(0);

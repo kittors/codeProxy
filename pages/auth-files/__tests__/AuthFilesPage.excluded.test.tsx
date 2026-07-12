@@ -48,7 +48,7 @@ vi.mock("@code-proxy/api-client", async (importOriginal) => {
 });
 
 async function openExcludedConfig(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(screen.getByRole("button", { name: "Auth config" }));
+  await user.click(screen.getByRole("button", { name: /Auth config|Account config|认证配置|账号配置/i }));
   return screen.findByRole("dialog", { name: "OAuth Excluded Models" });
 }
 

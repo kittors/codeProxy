@@ -74,7 +74,7 @@ export const API_ENDPOINTS = {
   LOGIN: "/login",
   API_KEYS: "/api-keys",
   PROVIDERS: "/providers",
-  AUTH_FILES: "/auth-files",
+  AUTH_FILES: "/access/ai-accounts",
   OAUTH: "/oauth",
   USAGE: "/usage",
   LOGS: "/logs",

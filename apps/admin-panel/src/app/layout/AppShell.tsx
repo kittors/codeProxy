@@ -162,10 +162,28 @@ const getPageTitleKey = (pathname: string, menus?: MenuIdentity[] | null): strin
   }
   if (pathname.startsWith("/dashboard")) return "shell.nav_dashboard";
   if (
+    pathname.startsWith("/access/ai-accounts") ||
+    pathname.startsWith("/system/account-security") ||
+    pathname.startsWith("/account-security") ||
+    pathname.startsWith("/auth-files")
+  ) {
+    return "shell.nav_ai_accounts";
+  }
+  if (
+    pathname.startsWith("/access/api-key-permissions") ||
+    pathname.startsWith("/system/api-key-permissions") ||
+    pathname.startsWith("/api-key-permissions")
+  ) {
+    return "shell.nav_api_key_permissions";
+  }
+  if (
     pathname.startsWith("/system/menu-management") ||
     pathname.startsWith("/menu-management")
   ) {
     return "shell.nav_menu_management";
+  }
+  if (pathname.startsWith("/system/config") || pathname.startsWith("/config")) {
+    return "shell.nav_config";
   }
   return "shell.page_home";
 };
@@ -948,19 +966,6 @@ function ShellSidebar({
                       <ShieldCheck size={16} />
                       {t("identity_admin.change_password")}
                     </DropdownMenu.Item>
-                    {can("auth_files.read") ? (
-                      <DropdownMenu.Item
-                        onSelect={() =>
-                          navigate("/system/account-security", {
-                            viewTransition: true,
-                          })
-                        }
-                        className="py-2.5"
-                      >
-                        <ShieldCheck size={16} />
-                        {t("shell.nav_account_security")}
-                      </DropdownMenu.Item>
-                    ) : null}
                     {can("system.config.read") ? (
                       <DropdownMenu.Item
                         onSelect={() => navigate("/system/config", { viewTransition: true })}

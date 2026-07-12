@@ -22,14 +22,17 @@ describe("AppRouter", () => {
     expect(modelsRoute).toContain('{ from: "/manage/models", to: "/models/catalog" }');
     expect(source).not.toContain('to="/manage/models" replace');
 
-    expect(accountSecurityRoute).toMatch(/path:\s*"\/system\/account-security"/);
+    expect(accountSecurityRoute).toMatch(/path:\s*"\/access\/ai-accounts"/);
     expect(accountSecurityRoute).toContain(
-      '{ from: "/manage/identity-fingerprint", to: "/system/account-security" }',
+      '{ from: "/manage/identity-fingerprint", to: "/access/ai-accounts" }',
+    );
+    expect(accountSecurityRoute).toContain(
+      '{ from: "/system/account-security", to: "/access/ai-accounts" }',
     );
 
     expect(identityRoute).toMatch(/path:\s*"\/identity-fingerprint"/);
     expect(identityRoute).toContain(
-      'redirects: [{ from: "/manage/identity-fingerprint", to: "/system/account-security" }]',
+      'redirects: [{ from: "/manage/identity-fingerprint", to: "/access/ai-accounts" }]',
     );
 
     expect(ccSwitchRoute).toContain("CcSwitchImportSettingsPage");
@@ -39,9 +42,12 @@ describe("AppRouter", () => {
     );
 
     expect(apiKeyPermissionsRoute).toContain("ApiKeyPermissionsPage");
-    expect(apiKeyPermissionsRoute).toMatch(/path:\s*"\/system\/api-key-permissions"/);
+    expect(apiKeyPermissionsRoute).toMatch(/path:\s*"\/access\/api-key-permissions"/);
     expect(apiKeyPermissionsRoute).toContain(
-      '{ from: "/manage/api-key-permissions", to: "/system/api-key-permissions" }',
+      '{ from: "/manage/api-key-permissions", to: "/access/api-key-permissions" }',
+    );
+    expect(apiKeyPermissionsRoute).toContain(
+      '{ from: "/system/api-key-permissions", to: "/access/api-key-permissions" }',
     );
   });
 

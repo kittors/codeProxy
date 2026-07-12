@@ -402,8 +402,8 @@ test("Sidebar: collapse/expand should keep nav items nowrap and slide out of vie
   await expect(accountMenu).toHaveClass(/code-proxy-floating-surface/);
   await expect(accountMenu).toHaveCSS("border-radius", "12px");
   await expect(
-    page.getByRole("menuitem", { name: /Account & Security|账号与安全/i }),
-  ).toBeVisible();
+    page.getByRole("menuitem", { name: /Account & Security|账号与安全|AI Accounts|AI 账号/i }),
+  ).toHaveCount(0);
   await expect(
     page.getByRole("menuitem", { name: /^Config|配置面板$/i }),
   ).toBeVisible();
