@@ -17,7 +17,7 @@ bun run build
 | `vendor-markdown`    |  761.13 kB | 261.12 kB | Markdown + syntax highlighter 组合                                          |
 | `vendor-animation`   |  126.13 kB |  41.83 kB | 动画依赖独立 vendor chunk                                                   |
 | `vendor-charts`      |    0.07 kB |   0.08 kB | Chart.js 入口当前几乎未进入业务路径                                         |
-| `index`              |  304.11 kB |  93.99 kB | 接受本轮侧边栏稳定交互与全局浮层规范；后续仍需持续往下压                  |
+| `index`              |  351.73 kB | 109.11 kB | 接受本轮侧边栏稳定交互与全局浮层规范；后续仍需持续往下压                  |
 | `ConfigPage`         |  118.44 kB |  32.93 kB | 页面 chunk 低于预算                                                         |
 | `AuthFilesPage`      |  221.86 kB |  59.92 kB | 身份多档案与出站策略交互加入后仍低于页面 gzip 预算                          |
 | `ProvidersPage`      |  113.50 kB |  28.33 kB | 已低于 `< 80 kB gzip` 页面预算                                              |

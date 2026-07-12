@@ -4,7 +4,6 @@ import {
   Bot,
   Building2,
   Circle,
-  Copyright,
   Cpu,
   ExternalLink,
   FileText,
@@ -25,12 +24,12 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
+/** Sidebar/seed icons only — keep this map small for the main shell chunk. */
 const ICON_MAP: Record<string, LucideIcon> = {
   activity: Activity,
   "arrow-down-to-line": ArrowDownToLine,
   bot: Bot,
   "building-2": Building2,
-  copyright: Copyright,
   cpu: Cpu,
   "external-link": ExternalLink,
   file: FileText,

@@ -1,4 +1,13 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type FormEvent,
+} from "react";
 import { useTranslation } from "react-i18next";
 import { ChevronRight, Pencil, Plus, Trash2 } from "lucide-react";
 import {
@@ -12,13 +21,20 @@ import {
   ConfirmModal,
   DataTable,
   Drawer,
-  Select,
+  SearchableSelect,
+  Tabs,
+  TabsList,
+  TabsTrigger,
   TextInput,
   type DataTableColumn,
   useToast,
 } from "@code-proxy/ui";
 import { useAuth } from "@app/providers/AuthProvider";
 import { resolveMenuIcon } from "@app/navigation/menuIconMap";
+
+const MenuIconPicker = lazy(() =>
+  import("./MenuIconPicker").then((module) => ({ default: module.MenuIconPicker })),
+);
 
 type DrawerMode = "create" | "edit";
 
@@ -143,15 +159,24 @@ export function MenuManagementPage() {
 
   const parentOptions = useMemo(
     () => [
-      { value: "", label: t("identity_admin.menu_parent_none") },
+      {
+        value: "",
+        label: t("identity_admin.menu_parent_none"),
+        searchText: t("identity_admin.menu_parent_none"),
+      },
       ...menus
         .filter((menu) => menu.type === "directory" || menu.type === "menu")
-        .map((menu) => ({
-          value: menu.code,
-          label: `${t(menu.label_key, { defaultValue: menu.title || menu.code })} (${menu.code})`,
-        })),
+        .filter((menu) => menu.code !== editing?.code)
+        .map((menu) => {
+          const label = t(menu.label_key, { defaultValue: menu.title || menu.code });
+          return {
+            value: menu.code,
+            label: `${label} (${menu.code})`,
+            searchText: `${label} ${menu.code}`,
+          };
+        }),
     ],
-    [menus, t],
+    [editing?.code, menus, t],
   );
 
   const openCreate = (parentCode = "") => {
@@ -449,35 +474,22 @@ export function MenuManagementPage() {
             <span className="w-16 shrink-0 text-sm font-medium text-slate-700 dark:text-slate-200">
               {t("identity_admin.menu_type")}
             </span>
-            <div className="inline-flex flex-wrap rounded-xl border border-slate-200 p-0.5 dark:border-neutral-700">
-              {(
-                [
-                  ["directory", t("identity_admin.menu_directory")],
-                  ["menu", t("identity_admin.menu_page")],
-                  ["button", t("identity_admin.menu_button")],
-                  ["embed", t("identity_admin.menu_embed")],
-                  ["link", t("identity_admin.menu_link")],
-                ] as const
-              ).map(([value, label]) => {
-                const active = form.type === value;
-                const disabled = drawerMode === "edit" && Boolean(editing?.system_protected);
-                return (
-                  <button
-                    key={value}
-                    type="button"
-                    disabled={disabled}
-                    className={
-                      active
-                        ? "rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white"
-                        : "rounded-lg px-3 py-1.5 text-xs font-medium text-slate-500 hover:text-slate-800 disabled:opacity-50 dark:hover:text-slate-200"
-                    }
-                    onClick={() => setForm((current) => ({ ...current, type: value }))}
-                  >
-                    {label}
-                  </button>
-                );
-              })}
-            </div>
+            <Tabs
+              value={form.type}
+              onValueChange={(next) => {
+                if (drawerMode === "edit" && editing?.system_protected) return;
+                setForm((current) => ({ ...current, type: next as MenuType }));
+              }}
+              size="sm"
+            >
+              <TabsList>
+                <TabsTrigger value="directory">{t("identity_admin.menu_directory")}</TabsTrigger>
+                <TabsTrigger value="menu">{t("identity_admin.menu_page")}</TabsTrigger>
+                <TabsTrigger value="button">{t("identity_admin.menu_button")}</TabsTrigger>
+                <TabsTrigger value="embed">{t("identity_admin.menu_embed")}</TabsTrigger>
+                <TabsTrigger value="link">{t("identity_admin.menu_link")}</TabsTrigger>
+              </TabsList>
+            </Tabs>
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -507,10 +519,13 @@ export function MenuManagementPage() {
               <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
                 {t("identity_admin.menu_parent")}
               </span>
-              <Select
+              <SearchableSelect
                 value={form.parent_code}
                 onChange={(value) => setForm((current) => ({ ...current, parent_code: value }))}
-                options={parentOptions.filter((option) => option.value !== editing?.code)}
+                options={parentOptions}
+                placeholder={t("identity_admin.menu_parent_none")}
+                searchPlaceholder={t("identity_admin.menu_parent_search")}
+                className="w-full"
               />
             </label>
             <label className="space-y-1.5">
@@ -540,11 +555,22 @@ export function MenuManagementPage() {
               <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
                 {t("identity_admin.menu_icon")}
               </span>
-              <TextInput
-                value={form.icon}
-                onChange={(event) => setForm((current) => ({ ...current, icon: event.target.value }))}
-                placeholder="layout-dashboard"
-              />
+              <Suspense
+                fallback={
+                  <TextInput
+                    value={form.icon}
+                    onChange={(event) =>
+                      setForm((current) => ({ ...current, icon: event.target.value }))
+                    }
+                    placeholder="layout-dashboard"
+                  />
+                }
+              >
+                <MenuIconPicker
+                  value={form.icon}
+                  onChange={(icon) => setForm((current) => ({ ...current, icon }))}
+                />
+              </Suspense>
             </label>
             {showPath ? (
               <label className="space-y-1.5">
@@ -633,34 +659,26 @@ export function MenuManagementPage() {
                 }
               />
             </label>
-            <div className="space-y-1.5">
-              <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
+            <div className="flex flex-wrap items-center gap-3 sm:col-span-2">
+              <span className="w-16 shrink-0 text-sm font-medium text-slate-700 dark:text-slate-200">
                 {t("identity_admin.status")}
               </span>
-              <div className="inline-flex rounded-xl border border-slate-200 p-0.5 dark:border-neutral-700">
-                <button
-                  type="button"
-                  className={
-                    form.enabled
-                      ? "rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white"
-                      : "rounded-lg px-3 py-1.5 text-xs font-medium text-slate-500"
-                  }
-                  onClick={() => setForm((current) => ({ ...current, enabled: true }))}
-                >
-                  {t("identity_admin.menu_status_enabled")}
-                </button>
-                <button
-                  type="button"
-                  className={
-                    !form.enabled
-                      ? "rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white"
-                      : "rounded-lg px-3 py-1.5 text-xs font-medium text-slate-500"
-                  }
-                  onClick={() => setForm((current) => ({ ...current, enabled: false }))}
-                >
-                  {t("identity_admin.menu_status_disabled")}
-                </button>
-              </div>
+              <Tabs
+                value={form.enabled ? "enabled" : "disabled"}
+                onValueChange={(next) =>
+                  setForm((current) => ({ ...current, enabled: next === "enabled" }))
+                }
+                size="sm"
+              >
+                <TabsList>
+                  <TabsTrigger value="enabled">
+                    {t("identity_admin.menu_status_enabled")}
+                  </TabsTrigger>
+                  <TabsTrigger value="disabled">
+                    {t("identity_admin.menu_status_disabled")}
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
             </div>
           </div>
 
