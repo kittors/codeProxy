@@ -162,6 +162,37 @@ const menuItems = [
   },
 ];
 
+const roleMenuItems = [
+  {
+    code: "group.governance",
+    parent_code: "",
+    type: "directory",
+    path: "",
+    label_key: "shell.nav_group_governance",
+    icon: "users-round",
+    permission_code: "",
+    sort_order: 50,
+    visible: true,
+    enabled: true,
+    system_protected: true,
+    version: 1,
+  },
+  {
+    code: "governance.users",
+    parent_code: "group.governance",
+    type: "menu",
+    path: "/users",
+    label_key: "shell.nav_users",
+    icon: "user-round",
+    permission_code: "tenant.users.read",
+    sort_order: 20,
+    visible: true,
+    enabled: true,
+    system_protected: true,
+    version: 1,
+  },
+];
+
 const standardTenant = {
   ...principal.home_tenant,
   id: "t-acme",
@@ -176,12 +207,15 @@ async function mockIdentity(
   roles = [administratorRole],
   users = [principal.user],
   menus = menuItems,
+  principalMenus?: typeof roleMenuItems,
 ) {
   await page.route("**/v0/auth/me", (route) =>
     route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify({ principal }),
+      body: JSON.stringify({
+        principal: principalMenus ? { ...principal, menus: principalMenus } : principal,
+      }),
     }),
   );
   await page.route("**/v0/management/**", (route) => {
@@ -196,8 +230,15 @@ async function mockIdentity(
           code,
           name: code,
           scope: code.startsWith("platform.") ? "platform" : "tenant",
-          resource: code.split(".").slice(0, -1).join("."),
+          resource:
+            code.startsWith("tenant.") || code.startsWith("platform.")
+              ? (code.split(".")[1] ?? "")
+              : code.split(".").slice(0, -1).join("_"),
           action: code.split(".").at(-1),
+          menu_code:
+            code.startsWith("tenant.users.") || code.startsWith("platform.users.")
+              ? "governance.users"
+              : "",
           sensitive: false,
         })),
       },
@@ -382,6 +423,9 @@ test("uses a switch for the two user availability states", async ({ page }) => {
   const memberRow = page.locator('[data-vt-row-key="u-member"]');
   await expect(memberRow.getByRole("switch")).toHaveAttribute("aria-checked", "true");
   await expect(memberRow.getByRole("combobox")).toHaveCount(0);
+  await expect(memberRow.getByRole("button", { name: "Reset password" })).toHaveText("");
+  await expect(memberRow.getByRole("button", { name: "Delete" })).toHaveText("");
+  await expect(memberRow.getByRole("button", { name: "More actions" })).toHaveCount(0);
   await memberRow.getByRole("switch").click();
   await expect(page.getByRole("dialog", { name: "Disable user" })).toBeVisible();
 });
@@ -403,13 +447,28 @@ test("edits role permissions and assigns users from action modals", async ({ pag
     [principal.home_tenant],
     [administratorRole, operatorRole],
     [principal.user, memberUser],
+    menuItems,
+    roleMenuItems,
   );
   await page.goto("/#/roles");
 
+  await page.getByRole("button", { name: "New role" }).click();
+  await expect(page.getByRole("dialog", { name: "New role" }).getByLabel("Role code")).toHaveCount(
+    0,
+  );
+  await page.keyboard.press("Escape");
+
   const roleRow = page.locator('[data-vt-row-key="r-operator"]');
-  await roleRow.getByRole("button", { name: "Edit permissions" }).click();
+  const permissionButton = roleRow.getByRole("button", { name: "Edit permissions" });
+  const assignButton = roleRow.getByRole("button", { name: "Assign users" });
+  await expect(permissionButton).toHaveText("");
+  await expect(assignButton).toHaveText("");
+  await permissionButton.click();
   await expect(page.getByRole("dialog", { name: "Permissions for Operator" })).toBeVisible();
-  await expect(page.getByRole("dialog").getByRole("checkbox").first()).toBeVisible();
+  const permissionDialog = page.getByRole("dialog");
+  await expect(permissionDialog.getByRole("tree")).toBeVisible();
+  await expect(permissionDialog.getByRole("treeitem", { name: /Users/ })).toBeVisible();
+  await expect(permissionDialog.getByRole("checkbox", { name: "Update Users" })).toBeVisible();
   await page.keyboard.press("Escape");
 
   await roleRow.getByRole("button", { name: "Assign users" }).click();
@@ -434,6 +493,10 @@ test("manages dynamic menu visibility and ordering", async ({ page }) => {
   await page.goto("/#/menu-management");
 
   await expect(page.getByRole("heading", { name: "Menu Management", level: 2 })).toBeVisible();
+  const systemGroupRow = page.locator('[data-vt-row-key="group.system"]');
+  await systemGroupRow.getByRole("button", { name: "Collapse" }).click();
+  await expect(page.locator('[data-vt-row-key="system.config"]')).toHaveCount(0);
+  await systemGroupRow.getByRole("button", { name: "Expand", exact: true }).click();
   const menuRow = page.locator('[data-vt-row-key="system.config"]');
   await expect(menuRow.getByRole("switch")).toHaveCount(2);
   await menuRow.getByRole("button", { name: "Adjust order" }).click();
@@ -543,7 +606,7 @@ test("creates a tenant without selecting it on the login page", async ({ page })
   });
   await page.goto("/#/tenants");
   await page.getByRole("button", { name: "New tenant" }).click();
-  await page.getByLabel("Slug", { exact: true }).fill("tenant-a");
+  await expect(page.getByLabel("Slug", { exact: true })).toHaveCount(0);
   await page.getByLabel("Name", { exact: true }).fill("Tenant A");
   await page.getByLabel("Expires at", { exact: true }).fill("2030-01-01T00:00");
   await page.getByLabel("Admin username", { exact: true }).fill("tenant-admin");
@@ -552,8 +615,8 @@ test("creates a tenant without selecting it on the login page", async ({ page })
   await page.getByLabel("Description", { exact: true }).fill("Primary tenant");
   await page.getByRole("button", { name: "Create tenant" }).click();
   await expect.poll(() => createBody).not.toBeNull();
+  expect(createBody).not.toHaveProperty("slug");
   expect(createBody).toMatchObject({
-    slug: "tenant-a",
     name: "Tenant A",
     admin_username: "tenant-admin",
     admin_display_name: "Tenant Admin",

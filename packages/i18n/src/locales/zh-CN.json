@@ -4340,6 +4340,8 @@
     "menu_enabled": "启用",
     "sort_order": "排序",
     "adjust_order": "调整排序",
+    "tree_expand": "展开",
+    "tree_collapse": "收起",
     "change_menu_visible": "切换菜单 {{name}} 的显示状态",
     "change_menu_enabled": "切换菜单 {{name}} 的启用状态",
     "menu_management_title": "菜单管理",

@@ -19,13 +19,17 @@ import {
 } from "@code-proxy/ui";
 import { PermissionGate } from "@app/guards/PermissionGate";
 import { useAuth } from "@app/providers/AuthProvider";
+import { buildPermissionTree, PermissionTree } from "./PermissionTree";
 
-const emptyForm = { code: "", name: "", description: "" };
+const emptyForm = { name: "", description: "" };
 
 export function RolesPage() {
   const { notify } = useToast();
   const { t } = useTranslation();
-  const { can } = useAuth();
+  const {
+    can,
+    state: { principal },
+  } = useAuth();
   const [roles, setRoles] = useState<RoleIdentity[]>([]);
   const [permissions, setPermissions] = useState<PermissionIdentity[]>([]);
   const [users, setUsers] = useState<UserIdentity[]>([]);
@@ -121,13 +125,28 @@ export function RolesPage() {
     );
   }, [can, permissionRole, permissions]);
 
-  const permissionGroups = useMemo(() => {
-    const groups = new Map<string, PermissionIdentity[]>();
-    for (const permission of availablePermissions) {
-      groups.set(permission.resource, [...(groups.get(permission.resource) ?? []), permission]);
-    }
-    return groups;
-  }, [availablePermissions]);
+  const menuLabel = useCallback(
+    (menu: { label_key: string; code: string }) => t(menu.label_key, { defaultValue: menu.code }),
+    [t],
+  );
+
+  const resourceLabel = useCallback(
+    (resource: string) =>
+      t(`identity_admin.permission_resources.${resource}`, { defaultValue: resource }),
+    [t],
+  );
+
+  const permissionTreeNodes = useMemo(
+    () =>
+      buildPermissionTree({
+        menus: principal?.menus ?? [],
+        permissions: availablePermissions,
+        menuLabel,
+        permissionLabel,
+        resourceLabel,
+      }),
+    [availablePermissions, menuLabel, permissionLabel, principal?.menus, resourceLabel],
+  );
 
   const assignedUserCount = useMemo(() => {
     const counts = new Map<string, number>();
@@ -186,26 +205,31 @@ export function RolesPage() {
       {
         key: "actions",
         label: t("identity_admin.actions"),
-        minWidthPx: 300,
-        width: "w-64",
+        minWidthPx: 132,
+        width: "w-36",
         lockOrder: "end",
         render: (role) => (
           <div className="flex items-center gap-2">
             <Button
               size="xs"
+              variant="ghost"
+              tooltip={
+                role.system_protected || !canUpdateRoles
+                  ? t("identity_admin.view_permissions")
+                  : t("identity_admin.edit_permissions")
+              }
               onClick={() => {
                 setPermissionRole(role);
                 setSelectedPermissions(new Set(role.permissions));
               }}
             >
-              <ShieldCheck size={14} />
-              {role.system_protected || !canUpdateRoles
-                ? t("identity_admin.view_permissions")
-                : t("identity_admin.edit_permissions")}
+              <ShieldCheck size={15} />
             </Button>
             {role.scope === "tenant" && canAssignUsers ? (
               <Button
                 size="xs"
+                variant="ghost"
+                tooltip={t("identity_admin.assign_users")}
                 onClick={() => {
                   setUserRole(role);
                   setSelectedUsers(
@@ -217,19 +241,19 @@ export function RolesPage() {
                   );
                 }}
               >
-                <UserRoundCog size={14} />
-                {t("identity_admin.assign_users")}
+                <UserRoundCog size={15} />
               </Button>
             ) : null}
             {!role.system_protected ? (
               <PermissionGate permission="tenant.roles.delete">
                 <Button
                   size="xs"
-                  variant="error"
+                  variant="ghost"
+                  className="text-rose-600 hover:text-rose-700 dark:text-rose-300 dark:hover:text-rose-200"
                   onClick={() => setDeleteRole(role)}
                   tooltip={t("identity_admin.delete")}
                 >
-                  <Trash2 size={14} />
+                  <Trash2 size={15} />
                 </Button>
               </PermissionGate>
             ) : null}
@@ -328,16 +352,6 @@ export function RolesPage() {
         <form id="create-role-form" onSubmit={createRole} className="space-y-4">
           <label className="block space-y-1.5">
             <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
-              {t("identity_admin.role_code")}
-            </span>
-            <TextInput
-              value={form.code}
-              onChange={(event) => setForm({ ...form, code: event.target.value })}
-              required
-            />
-          </label>
-          <label className="block space-y-1.5">
-            <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
               {t("identity_admin.role_name")}
             </span>
             <TextInput
@@ -383,45 +397,14 @@ export function RolesPage() {
           )
         }
       >
-        <div className="space-y-6">
-          {[...permissionGroups].map(([resource, resourcePermissions]) => (
-            <fieldset
-              key={resource}
-              disabled={Boolean(permissionRole?.system_protected) || !canUpdateRoles}
-            >
-              <legend className="mb-2 text-sm font-semibold text-slate-900 dark:text-white">
-                {t(`identity_admin.permission_resources.${resource}`, { defaultValue: resource })}
-              </legend>
-              <div className="grid gap-2 sm:grid-cols-2">
-                {resourcePermissions.map((permission) => (
-                  <label
-                    key={permission.code}
-                    className="flex cursor-pointer items-start gap-3 rounded-xl bg-slate-50 px-3.5 py-3 transition-colors hover:bg-slate-100 dark:bg-white/5 dark:hover:bg-white/8"
-                  >
-                    <Checkbox
-                      checked={selectedPermissions.has(permission.code)}
-                      disabled={Boolean(permissionRole?.system_protected) || !canUpdateRoles}
-                      onCheckedChange={(checked) => {
-                        const next = new Set(selectedPermissions);
-                        if (checked) next.add(permission.code);
-                        else next.delete(permission.code);
-                        setSelectedPermissions(next);
-                      }}
-                    />
-                    <span className="min-w-0">
-                      <span className="block text-sm font-medium text-slate-800 dark:text-slate-200">
-                        {permissionLabel(permission)}
-                      </span>
-                      <span className="mt-0.5 block truncate text-xs text-slate-400">
-                        {permission.code}
-                      </span>
-                    </span>
-                  </label>
-                ))}
-              </div>
-            </fieldset>
-          ))}
-        </div>
+        <PermissionTree
+          nodes={permissionTreeNodes}
+          selected={selectedPermissions}
+          disabled={Boolean(permissionRole?.system_protected) || !canUpdateRoles}
+          onChange={setSelectedPermissions}
+          expandLabel={t("identity_admin.tree_expand")}
+          collapseLabel={t("identity_admin.tree_collapse")}
+        />
       </Modal>
 
       <Modal

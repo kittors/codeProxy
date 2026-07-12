@@ -2500,6 +2500,8 @@
     "menu_enabled": "Включено",
     "sort_order": "Порядок",
     "adjust_order": "Изменить порядок",
+    "tree_expand": "Развернуть",
+    "tree_collapse": "Свернуть",
     "change_menu_visible": "Изменить видимость меню {{name}}",
     "change_menu_enabled": "Изменить состояние меню {{name}}",
     "menu_management_title": "Управление меню",

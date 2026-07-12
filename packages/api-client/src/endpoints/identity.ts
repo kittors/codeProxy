@@ -84,6 +84,7 @@ export interface PermissionIdentity {
   scope: "platform" | "tenant";
   resource: string;
   action: string;
+  menu_code: string;
   sensitive: boolean;
 }
 
@@ -109,7 +110,6 @@ export const identityApi = {
     apiClient.put<void>("/../auth/password", body),
   tenants: () => apiClient.get<{ items: TenantIdentity[] }>("/tenants"),
   createTenant: (body: {
-    slug: string;
     name: string;
     description: string;
     expires_at: string;
@@ -159,7 +159,7 @@ export const identityApi = {
     return menu;
   },
   permissions: () => apiClient.get<{ items: PermissionIdentity[] }>("/permissions"),
-  createRole: (body: { code: string; name: string; description: string; permissions: string[] }) =>
+  createRole: (body: { name: string; description: string; permissions: string[] }) =>
     apiClient.post<RoleIdentity>("/roles", body),
   auditLogs: () => apiClient.get<{ items: AuditLogIdentity[] }>("/audit-logs"),
   deleteRole: (id: string) => apiClient.delete<void>(`/roles/${encodeURIComponent(id)}`),
