@@ -505,7 +505,8 @@ test("switching tenant remounts the current page and reloads tenant-scoped data"
 
   await page.goto("/#/roles");
   await expect(page.getByRole("heading", { name: /Roles/i })).toBeVisible();
-  await expect(page.getByText("Administrator")).toBeVisible();
+  // exact: true — sidebar shows "Super Administrator" which would also match /Administrator/.
+  await expect(page.getByText("Administrator", { exact: true })).toBeVisible();
   const initialRolesFetches = rolesFetchCount;
   expect(initialRolesFetches).toBeGreaterThan(0);
 
@@ -514,9 +515,83 @@ test("switching tenant remounts the current page and reloads tenant-scoped data"
   await page.getByRole("option", { name: "Acme Team" }).click();
 
   await expect(trigger).toContainText("Acme Team");
-  await expect(page.getByText("Acme Admin Role")).toBeVisible();
-  await expect(page.getByText("Administrator")).toHaveCount(0);
+  // tenant_admin is localized via i18n; role.name is only shown for custom codes.
+  await expect(page.getByText("Tenant Administrator")).toBeVisible();
+  await expect(page.getByText("Administrator", { exact: true })).toHaveCount(0);
   expect(rolesFetchCount).toBeGreaterThan(initialRolesFetches);
+
+  const authSnapshot = await page.evaluate(() => sessionStorage.getItem("code-proxy-admin-auth"));
+  expect(authSnapshot).toBeTruthy();
+  expect(authSnapshot).toContain(standardTenant.id);
+});
+
+test("restores the selected tenant after full page reload", async ({ page }) => {
+  await page.addInitScript(() =>
+    sessionStorage.setItem(
+      "code-proxy-admin-auth",
+      JSON.stringify({
+        apiBase: "http://127.0.0.1:8317",
+        managementKey: "cps_test",
+        rememberPassword: false,
+        expiresAt: Date.now() + 60_000,
+        effectiveTenantId: "t-acme",
+      }),
+    ),
+  );
+
+  const meTenantHeaders: string[] = [];
+  await page.route("**/v0/auth/me", (route) => {
+    const tenantHeader = route.request().headers()["x-effective-tenant-id"] ?? "";
+    meTenantHeaders.push(tenantHeader);
+    const effective = tenantHeader === standardTenant.id ? standardTenant : principal.home_tenant;
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        principal: {
+          ...principal,
+          effective_tenant: effective,
+        },
+      }),
+    });
+  });
+
+  // Same management mock shape as the switch-tenant test (path → body map).
+  await page.route("**/v0/management/**", (route) => {
+    const path = new URL(route.request().url()).pathname.replace("/v0/management", "");
+    if (path === "/roles") {
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ items: [administratorRole] }),
+      });
+    }
+    const bodies: Record<string, unknown> = {
+      "/tenants": { items: [principal.home_tenant, standardTenant] },
+      "/users": { items: [principal.user] },
+      "/menus": { items: menuItems },
+      "/permissions": { items: [] },
+      "/audit-logs": { items: [] },
+    };
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(bodies[path] ?? {}),
+    });
+  });
+
+  await page.goto("/#/roles");
+  const trigger = page.getByRole("combobox", { name: /switch tenant/i });
+  // Header must restore the persisted tenant without a home-tenant flash.
+  await expect(trigger).toContainText("Acme Team");
+  // First restore /me must already carry the persisted override.
+  expect(meTenantHeaders.length).toBeGreaterThan(0);
+  expect(meTenantHeaders[0]).toBe(standardTenant.id);
+
+  const snapshotAfterRestore = await page.evaluate(() =>
+    sessionStorage.getItem("code-proxy-admin-auth"),
+  );
+  expect(snapshotAfterRestore).toContain(standardTenant.id);
 });
 
 test("shows tenant row actions including protected system tenant details", async ({ page }) => {

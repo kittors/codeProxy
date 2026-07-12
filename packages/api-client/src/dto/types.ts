@@ -2,6 +2,8 @@ export interface AuthSnapshot {
   apiBase: string;
   managementKey: string;
   rememberPassword: boolean;
+  /** Platform-admin override; empty/omitted means home tenant (no X-Effective-Tenant-ID). */
+  effectiveTenantId?: string;
 }
 
 export type AuthFileType =

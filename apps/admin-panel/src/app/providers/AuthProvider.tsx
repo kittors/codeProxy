@@ -19,6 +19,7 @@ import {
   configApi,
   normalizeApiBase,
   readPersistedAuthSnapshot,
+  updatePersistedEffectiveTenantId,
   writePersistedAuthSnapshot,
   type ManagementPrincipal,
   type MenuIdentity,
@@ -54,28 +55,23 @@ interface AuthContextState {
 }
 
 const AuthContext = createContext<AuthContextState | null>(null);
-const EFFECTIVE_TENANT_KEY = "code-proxy-effective-tenant";
 
 const isLocalPreviewMode = () =>
   import.meta.env.DEV &&
   ["127.0.0.1", "localhost", "::1"].includes(window.location.hostname) &&
   new URLSearchParams(window.location.search).get("preview") === "1";
 
-const readEffectiveTenant = () => {
-  try {
-    return localStorage.getItem(EFFECTIVE_TENANT_KEY) ?? "";
-  } catch {
-    return "";
-  }
-};
+/** Empty string means home tenant (no X-Effective-Tenant-ID header). */
+const normalizeTenantOverride = (tenantId: string | undefined | null): string =>
+  typeof tenantId === "string" ? tenantId.trim() : "";
 
-const setEffectiveTenant = (tenantId: string) => {
-  try {
-    if (tenantId) localStorage.setItem(EFFECTIVE_TENANT_KEY, tenantId);
-    else localStorage.removeItem(EFFECTIVE_TENANT_KEY);
-  } catch {
-    // Storage is optional; server authorization remains authoritative.
-  }
+/**
+ * Persist the platform-admin tenant override alongside the auth snapshot so
+ * refresh / keep-alive restore reuses the same X-Effective-Tenant-ID without a
+ * home-tenant flash. Home tenant is stored as an empty override.
+ */
+const persistEffectiveTenantOverride = (tenantId: string): void => {
+  updatePersistedEffectiveTenantId(normalizeTenantOverride(tenantId));
 };
 
 /** Mirrors CliRelay MenuCatalog so management-key / preview mode has a usable sidebar. */
@@ -434,9 +430,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const [principal, setPrincipal] = useState<ManagementPrincipal | null>(null);
   const [authFailureCode, setAuthFailureCode] = useState("");
 
-  const configureClient = useCallback((base: string, token: string, effectiveTenant?: string) => {
+  const configureClient = useCallback((base: string, token: string, effectiveTenant = "") => {
     apiClient.setConfig({ apiBase: base, managementKey: token });
-    const tenantId = effectiveTenant ?? readEffectiveTenant();
+    const tenantId = normalizeTenantOverride(effectiveTenant);
+    // Always replace headers so a previous tenant override cannot leak into home-tenant mode.
     apiClient.setDefaultHeaders(tenantId ? { "X-Effective-Tenant-ID": tenantId } : {});
   }, []);
 
@@ -446,12 +443,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
     const resolvedBase = snapshot?.apiBase ?? fallbackBase;
     const resolvedToken = snapshot?.managementKey ?? "";
     const resolvedRemember = snapshot?.rememberPassword ?? false;
+    // Restore the last platform-admin tenant override on the first /me call so
+    // refresh does not briefly render home tenant then jump to the override.
+    const requestedTenant = normalizeTenantOverride(snapshot?.effectiveTenantId);
 
     setApiBase(resolvedBase);
     setAccessToken(resolvedToken);
     setRememberPassword(resolvedRemember);
-    const requestedTenant = readEffectiveTenant();
-    configureClient(resolvedBase, resolvedToken, "");
+    configureClient(resolvedBase, resolvedToken, requestedTenant);
 
     if (!resolvedToken) {
       setIsAuthenticated(false);
@@ -473,31 +472,38 @@ export function AuthProvider({ children }: PropsWithChildren) {
         setIsAuthenticated(true);
         return;
       }
-      const response = await identityApi.me();
-      let restoredPrincipal = response.principal;
-      if (
-        restoredPrincipal.platform_admin &&
-        requestedTenant &&
-        requestedTenant !== restoredPrincipal.home_tenant.id
-      ) {
-        setEffectiveTenant(requestedTenant);
-        configureClient(resolvedBase, resolvedToken, requestedTenant);
-        try {
-          restoredPrincipal = (await identityApi.me()).principal;
-        } catch {
-          setEffectiveTenant("");
-          configureClient(resolvedBase, resolvedToken, "");
-        }
-      } else {
-        setEffectiveTenant("");
+      let restoredPrincipal: ManagementPrincipal;
+      try {
+        restoredPrincipal = (await identityApi.me()).principal;
+      } catch (overrideError) {
+        // Stale/invalid override can fail Authenticate entirely — retry home tenant
+        // before treating the session as dead (matches previous two-step restore).
+        if (!requestedTenant) throw overrideError;
+        configureClient(resolvedBase, resolvedToken, "");
+        restoredPrincipal = (await identityApi.me()).principal;
       }
+      // If the server ignored or could not apply the override, drop the stale value.
+      if (requestedTenant && restoredPrincipal.effective_tenant.id !== requestedTenant) {
+        configureClient(resolvedBase, resolvedToken, "");
+        if (restoredPrincipal.effective_tenant.id !== restoredPrincipal.home_tenant.id) {
+          restoredPrincipal = (await identityApi.me()).principal;
+        }
+      }
+      // Sync storage to what the server accepted so refresh keeps the same tenant.
+      const confirmedOverride =
+        restoredPrincipal.effective_tenant.id === restoredPrincipal.home_tenant.id
+          ? ""
+          : restoredPrincipal.effective_tenant.id;
+      if (confirmedOverride !== requestedTenant) {
+        configureClient(resolvedBase, resolvedToken, confirmedOverride);
+      }
+      persistEffectiveTenantOverride(confirmedOverride);
       setPrincipal(restoredPrincipal);
       setIsAuthenticated(true);
     } catch (error) {
       setIsAuthenticated(false);
       setPrincipal(null);
       setAuthFailureCode(isApiClientError(error) ? extractApiErrorCode(error.payload) : "");
-      setEffectiveTenant("");
       clearPersistedAuthSnapshot();
     } finally {
       setIsRestoring(false);
@@ -518,7 +524,6 @@ export function AuthProvider({ children }: PropsWithChildren) {
       setAuthFailureCode((event as CustomEvent<{ code?: string }>).detail?.code?.trim() ?? "");
       setIsAuthenticated(false);
       setPrincipal(null);
-      setEffectiveTenant("");
       clearPersistedAuthSnapshot();
     };
     const handleVersion = (event: Event) => {
@@ -542,14 +547,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
       rememberPassword: boolean;
     }) => {
       const normalizedBase = normalizeApiBase(input.apiBase);
-      setEffectiveTenant("");
+      // Login always starts on the home tenant; do not carry a previous override.
       configureClient(normalizedBase, "", "");
       const response = await identityApi.login({
         username: input.username.trim(),
         password: input.password,
         remember_me: input.rememberPassword,
       });
-      configureClient(normalizedBase, response.access_token);
+      configureClient(normalizedBase, response.access_token, "");
       setApiBase(normalizedBase);
       setAccessToken(response.access_token);
       setRememberPassword(input.rememberPassword);
@@ -560,6 +565,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
         apiBase: normalizedBase,
         managementKey: response.access_token,
         rememberPassword: input.rememberPassword,
+        // Explicit empty override so a leftover legacy key cannot re-apply.
+        effectiveTenantId: undefined,
       });
       return response.principal;
     },
@@ -572,9 +579,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
     setAccessToken("");
     setPrincipal(null);
     setAuthFailureCode("");
-    setEffectiveTenant("");
+    configureClient(apiBase, "", "");
     clearPersistedAuthSnapshot();
-  }, []);
+  }, [apiBase, configureClient]);
 
   const restore = useCallback(async () => {
     setIsRestoring(true);
@@ -584,25 +591,37 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const switchTenant = useCallback(
     async (tenantId: string) => {
       if (!principal?.platform_admin) return;
+      const nextTenant = normalizeTenantOverride(tenantId);
       const previousTenant =
         principal.effective_tenant.id === principal.home_tenant.id
           ? ""
           : principal.effective_tenant.id;
-      setEffectiveTenant(tenantId);
-      configureClient(apiBase, accessToken, tenantId);
+      // Home tenant is represented as no override header.
+      const nextOverride =
+        nextTenant && nextTenant !== principal.home_tenant.id ? nextTenant : "";
+      configureClient(apiBase, accessToken, nextOverride);
+      persistEffectiveTenantOverride(nextOverride);
       // Drop process-global availability cache so the next models page load
       // cannot reuse the previous tenant's configured-availability response.
       invalidateConfiguredModelAvailability();
       try {
         const response = await identityApi.me();
+        const effective = response.principal.effective_tenant;
+        const confirmedOverride =
+          effective.id === response.principal.home_tenant.id ? "" : effective.id;
+        // Align storage with what the server actually accepted.
+        if (confirmedOverride !== nextOverride) {
+          configureClient(apiBase, accessToken, confirmedOverride);
+          persistEffectiveTenantOverride(confirmedOverride);
+        }
         setPrincipal(response.principal);
       } catch {
-        setEffectiveTenant(previousTenant);
         configureClient(apiBase, accessToken, previousTenant);
+        persistEffectiveTenantOverride(previousTenant);
         invalidateConfiguredModelAvailability();
       }
     },
-    [accessToken, apiBase, configureClient, principal?.platform_admin],
+    [accessToken, apiBase, configureClient, principal],
   );
 
   const permissions = useMemo(

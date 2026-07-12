@@ -25,7 +25,9 @@ export type { ApiEnvelope, ApiListPayload, ApiSuccessEnvelope } from "./client/r
 export { publicApiClient, PublicApiClient } from "./client/public-client";
 export {
   clearPersistedAuthSnapshot,
+  LEGACY_EFFECTIVE_TENANT_KEY,
   readPersistedAuthSnapshot,
+  updatePersistedEffectiveTenantId,
   writePersistedAuthSnapshot,
 } from "./client/auth-storage";
 export type * from "./dto/types";
