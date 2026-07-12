@@ -275,13 +275,13 @@ export function useAuthFilesFilesPresentation({
   const formatRestrictionTooltip = useCallback(
     (badge: ReturnType<typeof resolveAuthFileRestrictionBadges>[number]) => {
       const quotaWindow = formatRestrictionQuotaWindowLabel(badge);
+      // Always surface the upstream reason (parsed status_message / quota reason).
+      // Hiding it for quota-limited badges left 429 chips without any error detail.
       const parts = [
         badge.quotaLimited ? t("auth_files.restriction_limited") : "",
         quotaWindow ? t("auth_files.restriction_window", { window: quotaWindow }) : "",
         badge.model ? t("auth_files.restriction_model", { model: badge.model }) : "",
-        badge.reason && !badge.quotaLimited
-          ? t("auth_files.restriction_reason", { reason: badge.reason })
-          : "",
+        badge.reason ? t("auth_files.restriction_reason", { reason: badge.reason }) : "",
       ].filter(Boolean);
       if (badge.recoverAtMs) {
         const remaining = formatAuthFileRestrictionRemaining(

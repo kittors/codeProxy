@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { createPortal } from "react-dom";
 import { AlertTriangle, X, Loader2, Copy, Check } from "lucide-react";
 import { usageApi } from "@code-proxy/api-client";
+import { extractErrorFromLogContent } from "../error-detail/extractErrorFromLogContent";
 
 interface ErrorDetailModalProps {
   open: boolean;
@@ -17,6 +18,8 @@ export function ErrorDetailModal({ open, logId, model, onClose }: ErrorDetailMod
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [errorContent, setErrorContent] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
+  const [reconstructed, setReconstructed] = useState(false);
   const [copied, setCopied] = useState(false);
 
   // Animation
@@ -28,21 +31,54 @@ export function ErrorDetailModal({ open, logId, model, onClose }: ErrorDetailMod
     }
   }, [open]);
 
-  // Fetch
+  // Fetch output first; when empty, fall back to request details so historical
+  // failed logs (store-content off) can still surface status / diagnostic info.
   useEffect(() => {
     if (!open || !logId) return;
+    let cancelled = false;
     setLoading(true);
     setError(null);
     setErrorContent("");
-    usageApi
-      .getLogContent(logId)
-      .then((res) => {
-        setErrorContent(res.output_content || "");
-      })
-      .catch((err) => {
-        setError(err instanceof Error ? err.message : t("error_detail.load_failed"));
-      })
-      .finally(() => setLoading(false));
+    setErrorMessage("");
+    setReconstructed(false);
+
+    void (async () => {
+      try {
+        const outputRes = await usageApi.getLogContent(logId);
+        if (cancelled) return;
+        const extracted = extractErrorFromLogContent(outputRes.output_content || "");
+        if (extracted) {
+          setErrorContent(extracted.content);
+          setErrorMessage(extracted.message);
+          setReconstructed(extracted.reconstructed);
+          return;
+        }
+
+        try {
+          const detailsRes = await usageApi.getLogContentPart(logId, "details");
+          if (cancelled) return;
+          const fromDetails = extractErrorFromLogContent("", detailsRes.content || "");
+          if (fromDetails) {
+            setErrorContent(fromDetails.content);
+            setErrorMessage(fromDetails.message);
+            setReconstructed(fromDetails.reconstructed);
+            return;
+          }
+        } catch {
+          // Details may be unauthorized or missing; keep empty-state UX.
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : t("error_detail.load_failed"));
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [logId, open, t]);
 
   // Escape key
@@ -65,20 +101,14 @@ export function ErrorDetailModal({ open, logId, model, onClose }: ErrorDetailMod
 
   const hasErrorContent = errorContent.trim().length > 0;
 
-  /** Try to format JSON nicely, extract error message */
+  /** Try to format JSON nicely */
   let formattedContent = errorContent;
-  let errorMessage = "";
   if (hasErrorContent) {
     try {
       const parsed = JSON.parse(errorContent);
       formattedContent = JSON.stringify(parsed, null, 2);
-      // Extract common error message patterns
-      if (parsed?.error?.message) errorMessage = parsed.error.message;
-      else if (parsed?.error && typeof parsed.error === "string") errorMessage = parsed.error;
-      else if (parsed?.message) errorMessage = parsed.message;
     } catch {
-      // Not JSON, use raw text
-      errorMessage = errorContent.slice(0, 200);
+      // keep raw text
     }
   }
 
@@ -119,7 +149,9 @@ export function ErrorDetailModal({ open, logId, model, onClose }: ErrorDetailMod
               </h2>
               <p className="mt-0.5 text-xs text-red-600/70 dark:text-red-400/60">
                 {hasErrorContent
-                  ? t("error_detail.upstream_error")
+                  ? reconstructed
+                    ? t("error_detail.reconstructed_from_details")
+                    : t("error_detail.upstream_error")
                   : t("error_detail.historical_missing")}
               </p>
             </div>

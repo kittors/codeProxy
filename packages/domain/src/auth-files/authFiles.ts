@@ -899,12 +899,24 @@ const resolveRestrictionReason = (restriction: AuthFileRestriction): string => {
           const type = String(errorRecord.type ?? "").trim();
           if (type && type !== "usage_limit_reached") return type;
         }
+        const topMessage = String(record.message ?? "").trim();
+        if (topMessage) return topMessage;
       }
     } catch {
+      // Keep raw non-JSON upstream bodies (often the full 429 text).
       return rawMessage;
     }
   }
-  return String(restriction.reason || restriction.code || "").trim();
+  const reason = String(restriction.reason || restriction.code || "").trim();
+  if (reason && reason !== "quota") return reason;
+  const status = Number(restriction.http_status);
+  if (status === 429) {
+    // quota reason alone is not user-facing; surface a clear rate-limit label.
+    return "rate limited (HTTP 429)";
+  }
+  if (reason) return reason;
+  if (Number.isFinite(status) && status > 0) return `HTTP ${Math.round(status)}`;
+  return "";
 };
 
 export const resolveAuthFileRestrictionBadges = (
