@@ -18,6 +18,7 @@ import {
   ArrowDownToLine,
   Bot,
   Building2,
+  Check,
   ChevronDown,
   Cpu,
   Image,
@@ -26,6 +27,7 @@ import {
   FileText,
   Info,
   LogOut,
+  Menu as MenuIcon,
   Network,
   PanelLeft,
   ScrollText,
@@ -63,7 +65,11 @@ const SIDEBAR_MOBILE_MEDIA = "(max-width: 767px)";
 const ROUTE_PROGRESS_MIN_MS = 680;
 const ROUTE_PROGRESS_HIDE_MS = 360;
 
+const tenantDisplayName = (tenant: TenantIdentity, systemTenantLabel: string) =>
+  tenant.type === "system" ? systemTenantLabel : tenant.name;
+
 interface SidebarNavItem {
+  menuCode: string;
   to: string;
   i18nKey: string;
   icon: LucideIcon;
@@ -72,12 +78,14 @@ interface SidebarNavItem {
 
 interface SidebarNavGroup {
   id: string;
+  menuCode: string;
   i18nKey: string;
   icon: LucideIcon;
   items: readonly SidebarNavItem[];
 }
 
 const DASHBOARD_NAV_ITEM = {
+  menuCode: "dashboard",
   to: "/dashboard",
   i18nKey: "shell.nav_dashboard",
   icon: LayoutDashboard,
@@ -87,28 +95,33 @@ const DASHBOARD_NAV_ITEM = {
 const NAV_GROUPS = [
   {
     id: "runtime",
+    menuCode: "group.runtime",
     i18nKey: "shell.nav_group_runtime",
     icon: Activity,
     items: [
       {
+        menuCode: "runtime.monitor",
         to: "/monitor",
         i18nKey: "shell.nav_monitor",
         icon: Activity,
         permission: "monitor.read",
       },
       {
+        menuCode: "runtime.request-logs",
         to: "/monitor/request-logs",
         i18nKey: "shell.nav_request_logs",
         icon: ScrollText,
         permission: "request_logs.read",
       },
       {
+        menuCode: "runtime.logs",
         to: "/logs",
         i18nKey: "shell.nav_logs",
         icon: FileText,
         permission: "system.logs.read",
       },
       {
+        menuCode: "runtime.system",
         to: "/system",
         i18nKey: "shell.nav_system",
         icon: Info,
@@ -118,22 +131,26 @@ const NAV_GROUPS = [
   },
   {
     id: "access",
+    menuCode: "group.access",
     i18nKey: "shell.nav_group_access",
     icon: Bot,
     items: [
       {
+        menuCode: "access.providers",
         to: "/ai-providers",
         i18nKey: "shell.nav_ai_providers",
         icon: Bot,
         permission: "providers.read",
       },
       {
+        menuCode: "access.api-keys",
         to: "/api-keys",
         i18nKey: "shell.nav_api_keys",
         icon: Sparkles,
         permission: "api_keys.read",
       },
       {
+        menuCode: "access.ccswitch",
         to: "/ccswitch-import-settings",
         i18nKey: "shell.nav_ccswitch_import_settings",
         icon: ArrowDownToLine,
@@ -143,28 +160,33 @@ const NAV_GROUPS = [
   },
   {
     id: "models",
+    menuCode: "group.models",
     i18nKey: "shell.nav_group_models",
     icon: Layers,
     items: [
       {
+        menuCode: "models.catalog",
         to: "/models",
         i18nKey: "shell.nav_models",
         icon: Cpu,
         permission: "models.read",
       },
       {
+        menuCode: "models.image-generation",
         to: "/image-generation",
         i18nKey: "shell.nav_image_generation",
         icon: Image,
         permission: "system.config.read",
       },
       {
+        menuCode: "models.channel-groups",
         to: "/channel-groups",
         i18nKey: "shell.nav_channel_groups",
         icon: Layers,
         permission: "routing.read",
       },
       {
+        menuCode: "models.proxies",
         to: "/proxies",
         i18nKey: "shell.nav_proxies",
         icon: Network,
@@ -174,28 +196,33 @@ const NAV_GROUPS = [
   },
   {
     id: "governance",
+    menuCode: "group.governance",
     i18nKey: "shell.nav_group_governance",
     icon: UsersRound,
     items: [
       {
+        menuCode: "governance.tenants",
         to: "/tenants",
         i18nKey: "shell.nav_tenants",
         icon: Building2,
         permission: "platform.tenants.read",
       },
       {
+        menuCode: "governance.users",
         to: "/users",
         i18nKey: "shell.nav_users",
         icon: UserRound,
         permission: "tenant.users.read",
       },
       {
+        menuCode: "governance.roles",
         to: "/roles",
         i18nKey: "shell.nav_roles",
         icon: ShieldCheck,
         permission: "tenant.roles.read",
       },
       {
+        menuCode: "governance.audit",
         to: "/audit-logs",
         i18nKey: "shell.nav_audit_logs",
         icon: FileText,
@@ -205,26 +232,37 @@ const NAV_GROUPS = [
   },
   {
     id: "system",
+    menuCode: "group.system",
     i18nKey: "shell.nav_group_system",
     icon: Settings,
     items: [
       {
+        menuCode: "system.account-security",
         to: "/account-security",
         i18nKey: "shell.nav_account_security",
         icon: ShieldCheck,
         permission: "auth_files.read",
       },
       {
+        menuCode: "system.api-key-permissions",
         to: "/api-key-permissions",
         i18nKey: "shell.nav_api_key_permissions",
         icon: ShieldCheck,
         permission: "api_key_profiles.read",
       },
       {
+        menuCode: "system.config",
         to: "/config",
         i18nKey: "shell.nav_config",
         icon: Settings,
         permission: "system.config.read",
+      },
+      {
+        menuCode: "system.menus",
+        to: "/menu-management",
+        i18nKey: "shell.nav_menu_management",
+        icon: MenuIcon,
+        permission: "platform.menus.read",
       },
     ],
   },
@@ -232,14 +270,10 @@ const NAV_GROUPS = [
 
 const getPageTitleKey = (pathname: string): string => {
   if (pathname.startsWith("/dashboard")) return "shell.nav_dashboard";
-  if (pathname.startsWith("/monitor/request-logs"))
-    return "shell.nav_request_logs";
+  if (pathname.startsWith("/monitor/request-logs")) return "shell.nav_request_logs";
   if (pathname.startsWith("/monitor")) return "shell.nav_monitor";
   if (pathname.startsWith("/ai-providers")) return "shell.nav_ai_providers";
-  if (
-    pathname.startsWith("/account-security") ||
-    pathname.startsWith("/auth-files")
-  )
+  if (pathname.startsWith("/account-security") || pathname.startsWith("/auth-files"))
     return "shell.nav_account_security";
   if (pathname.startsWith("/api-keys")) return "shell.page_api_keys";
   if (
@@ -252,10 +286,8 @@ const getPageTitleKey = (pathname: string): string => {
     pathname.startsWith("/manage/ccswitch-import-settings")
   )
     return "shell.nav_ccswitch_import_settings";
-  if (pathname.startsWith("/image-generation"))
-    return "shell.nav_image_generation";
-  if (pathname.startsWith("/channel-groups"))
-    return "shell.page_channel_groups";
+  if (pathname.startsWith("/image-generation")) return "shell.nav_image_generation";
+  if (pathname.startsWith("/channel-groups")) return "shell.page_channel_groups";
   if (
     pathname.startsWith("/identity-fingerprint") ||
     pathname.startsWith("/manage/identity-fingerprint")
@@ -265,6 +297,7 @@ const getPageTitleKey = (pathname: string): string => {
     return "shell.nav_models";
   if (pathname.startsWith("/proxies") || pathname.startsWith("/manage/proxies"))
     return "shell.nav_proxies";
+  if (pathname.startsWith("/menu-management")) return "shell.nav_menu_management";
   if (pathname.startsWith("/config")) return "shell.nav_config";
   if (pathname.startsWith("/system")) return "shell.nav_system";
   if (pathname.startsWith("/logs")) return "shell.nav_logs";
@@ -511,8 +544,7 @@ function SidebarMenuGroup({
   }, []);
 
   const handlePointerEnter = useCallback(() => {
-    if (visualRailCollapsed && !suppressUntilPointerLeave.current)
-      setFlyoutOpen(true);
+    if (visualRailCollapsed && !suppressUntilPointerLeave.current) setFlyoutOpen(true);
   }, [visualRailCollapsed]);
 
   const handlePointerLeave = useCallback(() => {
@@ -521,14 +553,12 @@ function SidebarMenuGroup({
   }, []);
 
   const handleFocus = useCallback(() => {
-    if (visualRailCollapsed && !suppressUntilPointerLeave.current)
-      setFlyoutOpen(true);
+    if (visualRailCollapsed && !suppressUntilPointerLeave.current) setFlyoutOpen(true);
   }, [visualRailCollapsed]);
 
   const handleBlur = useCallback((event: FocusEvent<HTMLDivElement>) => {
     const nextTarget = event.relatedTarget;
-    if (nextTarget instanceof Node && event.currentTarget.contains(nextTarget))
-      return;
+    if (nextTarget instanceof Node && event.currentTarget.contains(nextTarget)) return;
     setFlyoutOpen(false);
     suppressUntilPointerLeave.current = false;
   }, []);
@@ -670,26 +700,49 @@ function ShellSidebar({
   const auth = useOptionalAuth();
   const can = auth?.can ?? (() => true);
   const principal = auth?.state.principal ?? null;
+  const menuByCode = useMemo(
+    () => (principal?.menus ? new Map(principal.menus.map((menu) => [menu.code, menu])) : null),
+    [principal?.menus],
+  );
+  const menuIsVisible = useCallback(
+    (code: string) => {
+      if (!menuByCode) return true;
+      const menu = menuByCode.get(code);
+      if (!menu?.enabled || !menu.visible) return false;
+      const parent = menu.parent_code ? menuByCode.get(menu.parent_code) : null;
+      return !parent || (parent.enabled && parent.visible);
+    },
+    [menuByCode],
+  );
+  const menuOrder = useCallback(
+    (code: string) => menuByCode?.get(code)?.sort_order ?? 0,
+    [menuByCode],
+  );
   const visibleNavGroups = useMemo(
     () =>
       NAV_GROUPS.map((group) => ({
         ...group,
-        items: group.items.filter((item) => can(item.permission)),
-      })).filter((group) => group.items.length > 0),
-    [can],
+        items: group.items
+          .filter((item) => can(item.permission) && menuIsVisible(item.menuCode))
+          .sort((a, b) => menuOrder(a.menuCode) - menuOrder(b.menuCode)),
+      }))
+        .filter((group) => menuIsVisible(group.menuCode) && group.items.length > 0)
+        .sort((a, b) => menuOrder(a.menuCode) - menuOrder(b.menuCode)),
+    [can, menuIsVisible, menuOrder],
   );
   const visibleNavItems = useMemo(
     () =>
-      [
-        DASHBOARD_NAV_ITEM,
-        ...visibleNavGroups.flatMap((group) => group.items),
-      ].filter((item) => can(item.permission)),
-    [can, visibleNavGroups],
+      [DASHBOARD_NAV_ITEM, ...visibleNavGroups.flatMap((group) => group.items)].filter(
+        (item) => can(item.permission) && menuIsVisible(item.menuCode),
+      ),
+    [can, menuIsVisible, visibleNavGroups],
   );
-  const accountName =
-    principal?.user.display_name || principal?.user.username || "Admin";
-  const accountTenant =
-    principal?.effective_tenant.name || t("shell.sidebar_account_role");
+  const accountName = principal?.user.role_codes?.includes("platform_super_admin")
+    ? t("identity_admin.super_administrator")
+    : principal?.user.display_name || principal?.user.username || "Admin";
+  const accountTenant = principal
+    ? tenantDisplayName(principal.effective_tenant, t("shell.system_tenant"))
+    : t("shell.sidebar_account_role");
   const accountInitials =
     accountName
       .split(/\s+/)
@@ -712,13 +765,10 @@ function ShellSidebar({
 
   const resolveActiveTo = useCallback(
     (pathname: string) => {
-      const sorted = [...visibleNavItems].sort(
-        (a, b) => b.to.length - a.to.length,
-      );
+      const sorted = [...visibleNavItems].sort((a, b) => b.to.length - a.to.length);
       return (
-        sorted.find(
-          (item) => pathname === item.to || pathname.startsWith(`${item.to}/`),
-        )?.to ?? null
+        sorted.find((item) => pathname === item.to || pathname.startsWith(`${item.to}/`))?.to ??
+        null
       );
     },
     [visibleNavItems],
@@ -729,15 +779,10 @@ function ShellSidebar({
     [pendingTo, location.pathname, resolveActiveTo],
   );
   const activeGroupId = useMemo(
-    () =>
-      visibleNavGroups.find((group) =>
-        group.items.some((item) => item.to === activeTo),
-      )?.id,
+    () => visibleNavGroups.find((group) => group.items.some((item) => item.to === activeTo))?.id,
     [activeTo, visibleNavGroups],
   );
-  const [openGroups, setOpenGroups] = useState<Set<string>>(
-    () => new Set(["runtime"]),
-  );
+  const [openGroups, setOpenGroups] = useState<Set<string>>(() => new Set(["runtime"]));
 
   useEffect(() => {
     if (!activeGroupId) return;
@@ -759,20 +804,14 @@ function ShellSidebar({
   const isMobile = mode === "mobile";
   const railCollapsed = !isMobile && collapsed;
   const [visualRailCollapsed, setVisualRailCollapsed] = useState(railCollapsed);
-  const [sidebarLabelsVisible, setSidebarLabelsVisible] =
-    useState(!railCollapsed);
+  const [sidebarLabelsVisible, setSidebarLabelsVisible] = useState(!railCollapsed);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
-  const sidebarTransitionTimer = useRef<ReturnType<typeof setTimeout> | null>(
-    null,
-  );
+  const sidebarTransitionTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const accountLogoutLabel = t("shell.logout_button");
-  const sidebarLabel = collapsed
-    ? t("shell.expand_sidebar")
-    : t("shell.collapse_sidebar");
+  const sidebarLabel = collapsed ? t("shell.expand_sidebar") : t("shell.collapse_sidebar");
 
   useEffect(() => {
-    if (sidebarTransitionTimer.current)
-      clearTimeout(sidebarTransitionTimer.current);
+    if (sidebarTransitionTimer.current) clearTimeout(sidebarTransitionTimer.current);
 
     if (railCollapsed) {
       setSidebarLabelsVisible(false);
@@ -789,8 +828,7 @@ function ShellSidebar({
     }
 
     return () => {
-      if (sidebarTransitionTimer.current)
-        clearTimeout(sidebarTransitionTimer.current);
+      if (sidebarTransitionTimer.current) clearTimeout(sidebarTransitionTimer.current);
     };
   }, [railCollapsed]);
 
@@ -818,18 +856,12 @@ function ShellSidebar({
       setPendingTo(to);
 
       const minimumProgress = new Promise<void>((resolve) => {
-        const delay = Math.max(
-          0,
-          ROUTE_PROGRESS_MIN_MS - (Date.now() - progressStartedAt.current),
-        );
+        const delay = Math.max(0, ROUTE_PROGRESS_MIN_MS - (Date.now() - progressStartedAt.current));
         const timer = setTimeout(resolve, delay);
         progressTimers.current.push(timer);
       });
 
-      void Promise.all([
-        preloadPageRoute(to).catch(() => undefined),
-        minimumProgress,
-      ]).then(() => {
+      void Promise.all([preloadPageRoute(to).catch(() => undefined), minimumProgress]).then(() => {
         if (navigationRequestId.current !== requestId) return;
         setProgressDone(true);
 
@@ -866,9 +898,7 @@ function ShellSidebar({
         data-collapsed={railCollapsed ? "true" : "false"}
         className={[
           "group/sidebar shrink-0 overflow-visible bg-white/94 dark:bg-neutral-950/88",
-          isMobile
-            ? "fixed inset-y-0 left-0 z-40 w-60"
-            : "relative z-30 h-[100dvh]",
+          isMobile ? "fixed inset-y-0 left-0 z-40 w-60" : "relative z-30 h-[100dvh]",
           "border-r border-slate-200 shadow-[12px_0_28px_rgba(15,23,42,0.04)] dark:border-neutral-800",
           "motion-reduce:transition-none motion-safe:transition-[width,transform,background-color,border-color] motion-safe:duration-300 motion-safe:ease-[cubic-bezier(0.22,1,0.36,1)]",
           isMobile
@@ -891,9 +921,7 @@ function ShellSidebar({
             <span
               className={
                 "grid h-14 w-16 shrink-0 place-items-center transition-opacity duration-120 " +
-                (visualRailCollapsed
-                  ? "opacity-100 group-hover/sidebar:opacity-0"
-                  : "opacity-100")
+                (visualRailCollapsed ? "opacity-100 group-hover/sidebar:opacity-0" : "opacity-100")
               }
             >
               <span
@@ -914,21 +942,17 @@ function ShellSidebar({
               <span className="block truncate text-base font-semibold tracking-tight">
                 {t("shell.console")}
               </span>
-              <span className="block text-2xs font-medium text-slate-400">
-                CLI Proxy
-              </span>
+              <span className="block text-2xs font-medium text-slate-400">CLI Proxy</span>
             </span>
           </div>
           <ScrollArea
             className="min-h-0 flex-1 [&_[data-scroll-area-scrollbar='y']]:right-1 [&_[data-scroll-area-scrollbar='y']]:w-5"
-            viewportClassName={
-              visualRailCollapsed ? "overflow-visible" : undefined
-            }
+            viewportClassName={visualRailCollapsed ? "overflow-visible" : undefined}
             scrollbarVisibility="track-hover"
             scrollbarTrackInset={16}
           >
             <nav className="space-y-1 pb-4 pt-3">
-              {can(DASHBOARD_NAV_ITEM.permission) ? (
+              {can(DASHBOARD_NAV_ITEM.permission) && menuIsVisible(DASHBOARD_NAV_ITEM.menuCode) ? (
                 <SidebarPrimaryLink
                   item={DASHBOARD_NAV_ITEM}
                   active={activeTo === DASHBOARD_NAV_ITEM.to}
@@ -966,9 +990,7 @@ function ShellSidebar({
             >
               <DropdownMenu.Root
                 open={!visualRailCollapsed && accountMenuOpen}
-                onOpenChange={(open) =>
-                  setAccountMenuOpen(visualRailCollapsed ? false : open)
-                }
+                onOpenChange={(open) => setAccountMenuOpen(visualRailCollapsed ? false : open)}
               >
                 <DropdownMenu.Trigger asChild>
                   <button
@@ -1031,9 +1053,7 @@ function ShellSidebar({
                     </div>
                     <DropdownMenu.Separator />
                     <DropdownMenu.Item
-                      onSelect={() =>
-                        navigate("/change-password", { viewTransition: true })
-                      }
+                      onSelect={() => navigate("/change-password", { viewTransition: true })}
                       className="py-2.5"
                     >
                       <ShieldCheck size={16} />
@@ -1054,9 +1074,7 @@ function ShellSidebar({
                     ) : null}
                     {can("system.config.read") ? (
                       <DropdownMenu.Item
-                        onSelect={() =>
-                          navigate("/config", { viewTransition: true })
-                        }
+                        onSelect={() => navigate("/config", { viewTransition: true })}
                         className="py-2.5"
                       >
                         <Settings size={16} />
@@ -1089,9 +1107,7 @@ function ShellSidebar({
                       <div className="truncate text-sm font-semibold text-slate-950 dark:text-white">
                         {accountName}
                       </div>
-                      <div className="mt-0.5 truncate text-2xs text-slate-400">
-                        {accountTenant}
-                      </div>
+                      <div className="mt-0.5 truncate text-2xs text-slate-400">{accountTenant}</div>
                     </div>
                     <button
                       type="button"
@@ -1127,8 +1143,7 @@ function ShellHeader({
   } = useShell();
   const auth = useOptionalAuth();
   const canSwitchTenants =
-    auth?.state.principal?.platform_admin &&
-    auth.state.principal.kind !== "service_credential";
+    auth?.state.principal?.platform_admin && auth.state.principal.kind !== "service_credential";
   const [tenants, setTenants] = useState<TenantIdentity[]>([]);
   useEffect(() => {
     if (!canSwitchTenants) {
@@ -1140,16 +1155,13 @@ function ShellHeader({
       .then((response) =>
         setTenants(
           (response.items ?? []).filter(
-            (tenant) =>
-              tenant.type === "system" || tenant.effective_status === "active",
+            (tenant) => tenant.type === "system" || tenant.effective_status === "active",
           ),
         ),
       )
       .catch(() => setTenants([]));
   }, [canSwitchTenants]);
-  const sidebarLabel = sidebarCollapsed
-    ? t("shell.expand_sidebar")
-    : t("shell.collapse_sidebar");
+  const sidebarLabel = sidebarCollapsed ? t("shell.expand_sidebar") : t("shell.collapse_sidebar");
 
   return (
     <header className="z-20 shrink-0 border-b border-slate-200 bg-white/75 backdrop-blur-xl motion-reduce:transition-none motion-safe:transition-colors motion-safe:duration-200 motion-safe:ease-out dark:border-neutral-800 dark:bg-neutral-950/60">
@@ -1169,20 +1181,65 @@ function ShellHeader({
         </div>
         <div className="flex shrink-0 items-center gap-1 sm:gap-2">
           {canSwitchTenants && auth?.state.principal ? (
-            <select
-              aria-label="Effective tenant"
-              value={auth.state.principal.effective_tenant.id}
-              onChange={(event) =>
-                void auth.actions.switchTenant(event.target.value)
-              }
-              className="hidden h-9 max-w-52 rounded-xl border border-slate-200 bg-white px-3 text-xs font-medium text-slate-600 sm:block dark:border-neutral-800 dark:bg-neutral-950 dark:text-slate-300"
-            >
-              {tenants.map((tenant) => (
-                <option key={tenant.id} value={tenant.id}>
-                  {tenant.name}
-                </option>
-              ))}
-            </select>
+            <DropdownMenu.Root>
+              <DropdownMenu.Trigger asChild>
+                <button
+                  type="button"
+                  aria-label={t("shell.switch_tenant")}
+                  className="group/tenant hidden h-9 max-w-64 items-center gap-2 rounded-xl px-2.5 text-sm font-medium text-slate-600 outline-none transition-colors duration-150 hover:bg-slate-100 hover:text-slate-950 focus-visible:ring-2 focus-visible:ring-blue-500/25 data-[state=open]:bg-slate-100 data-[state=open]:text-slate-950 sm:inline-flex dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white dark:data-[state=open]:bg-white/10 dark:data-[state=open]:text-white"
+                >
+                  <Building2 size={16} className="shrink-0 text-slate-400 dark:text-slate-500" />
+                  <span className="truncate">
+                    {tenantDisplayName(
+                      auth.state.principal.effective_tenant,
+                      t("shell.system_tenant"),
+                    )}
+                  </span>
+                  <ChevronDown
+                    size={14}
+                    className="shrink-0 text-slate-400 transition-transform duration-150 group-data-[state=open]/tenant:rotate-180 dark:text-slate-500"
+                    aria-hidden="true"
+                  />
+                </button>
+              </DropdownMenu.Trigger>
+              <DropdownMenu.Portal>
+                <DropdownMenu.Content
+                  align="end"
+                  sideOffset={8}
+                  collisionPadding={8}
+                  className="w-64"
+                >
+                  <div className="px-3 pb-1.5 pt-1 text-2xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                    {t("shell.switch_tenant")}
+                  </div>
+                  {tenants.map((tenant) => {
+                    const selected = tenant.id === auth.state.principal?.effective_tenant.id;
+                    return (
+                      <DropdownMenu.Item
+                        key={tenant.id}
+                        aria-current={selected ? "true" : undefined}
+                        onSelect={() => {
+                          if (!selected) void auth.actions.switchTenant(tenant.id);
+                        }}
+                        className={
+                          selected
+                            ? "bg-blue-50 text-blue-700 focus:bg-blue-50 data-[highlighted]:bg-blue-50 dark:bg-blue-500/10 dark:text-blue-300 dark:focus:bg-blue-500/10 dark:data-[highlighted]:bg-blue-500/10"
+                            : undefined
+                        }
+                      >
+                        <Building2 size={16} className="shrink-0 opacity-65" />
+                        <span className="min-w-0 flex-1 truncate">
+                          {tenantDisplayName(tenant, t("shell.system_tenant"))}
+                        </span>
+                        {selected ? (
+                          <Check size={15} className="shrink-0" aria-hidden="true" />
+                        ) : null}
+                      </DropdownMenu.Item>
+                    );
+                  })}
+                </DropdownMenu.Content>
+              </DropdownMenu.Portal>
+            </DropdownMenu.Root>
           ) : null}
           <LanguageSelector className="inline-flex h-9 items-center justify-center gap-0.5 rounded-xl px-1.5 text-slate-500 transition-colors duration-200 ease-out hover:text-slate-900 dark:text-slate-400 dark:hover:text-white" />
           <ThemeToggleButton className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 transition-colors duration-200 ease-out hover:text-slate-900 dark:text-slate-400 dark:hover:text-white" />
@@ -1204,10 +1261,7 @@ function ShellMain({ children }: PropsWithChildren) {
   );
 }
 
-export function AppShell({
-  children,
-  onLogout,
-}: PropsWithChildren<{ onLogout?: () => void }>) {
+export function AppShell({ children, onLogout }: PropsWithChildren<{ onLogout?: () => void }>) {
   const location = useLocation();
   const { t } = useTranslation();
   const logout = onLogout ?? (() => {});
@@ -1216,14 +1270,13 @@ export function AppShell({
     () => window.matchMedia?.(SIDEBAR_MOBILE_MEDIA).matches ?? false,
   );
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] =
-    useState<boolean>(() => {
-      try {
-        return localStorage.getItem(STORAGE_KEY_SIDEBAR_COLLAPSED) === "1";
-      } catch {
-        return false;
-      }
-    });
+  const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(STORAGE_KEY_SIDEBAR_COLLAPSED) === "1";
+    } catch {
+      return false;
+    }
+  });
 
   useEffect(() => {
     const mq = window.matchMedia?.(SIDEBAR_MOBILE_MEDIA);
@@ -1274,10 +1327,7 @@ export function AppShell({
 
   useEffect(() => {
     try {
-      localStorage.setItem(
-        STORAGE_KEY_SIDEBAR_COLLAPSED,
-        desktopSidebarCollapsed ? "1" : "0",
-      );
+      localStorage.setItem(STORAGE_KEY_SIDEBAR_COLLAPSED, desktopSidebarCollapsed ? "1" : "0");
     } catch {
       // 忽略持久化失败
     }
@@ -1303,9 +1353,7 @@ export function AppShell({
     [location.pathname, logout],
   );
 
-  const sidebarCollapsed = isMobile
-    ? !mobileSidebarOpen
-    : desktopSidebarCollapsed;
+  const sidebarCollapsed = isMobile ? !mobileSidebarOpen : desktopSidebarCollapsed;
 
   return (
     <ShellContext value={value}>
@@ -1329,9 +1377,7 @@ export function AppShell({
             collapsed={sidebarCollapsed}
             mode={isMobile ? "mobile" : "desktop"}
             onToggleSidebar={toggleSidebar}
-            onNavigate={
-              isMobile ? () => setMobileSidebarOpen(false) : undefined
-            }
+            onNavigate={isMobile ? () => setMobileSidebarOpen(false) : undefined}
           />
           <div className="flex min-w-0 flex-1 flex-col">
             <ShellHeader

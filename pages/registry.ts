@@ -23,6 +23,7 @@ import { usersRoute } from "./users/route";
 import { rolesRoute } from "./roles/route";
 import { changePasswordRoute } from "./change-password/route";
 import { auditLogsRoute } from "./audit-logs/route";
+import { menuManagementRoute } from "./menu-management/route";
 
 export interface PageRoute {
   path: string;
@@ -43,6 +44,7 @@ export const pageRoutes: PageRoute[] = [
   usersRoute,
   rolesRoute,
   auditLogsRoute,
+  menuManagementRoute,
   dashboardRoute,
   monitorRoute,
   requestLogsRoute,

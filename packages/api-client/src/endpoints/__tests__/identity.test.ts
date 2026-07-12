@@ -69,4 +69,43 @@ describe("identityApi", () => {
       version: 3,
     });
   });
+  test("updates menu configuration with optimistic versioning", async () => {
+    apiClient.setConfig({ apiBase: "http://localhost:8317", managementKey: "cps_test" });
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ code: "system.menus" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    await identityApi.updateMenu("system.menus", {
+      visible: true,
+      enabled: true,
+      sort_order: 40,
+      version: 2,
+    });
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(new URL(String(url)).pathname).toBe("/v0/management/menus/system.menus");
+    expect(init?.method).toBe("PATCH");
+    expect(JSON.parse(String(init?.body))).toEqual({
+      visible: true,
+      enabled: true,
+      sort_order: 40,
+      version: 2,
+    });
+  });
+
+  test("replaces users assigned to a role", async () => {
+    apiClient.setConfig({ apiBase: "http://localhost:8317", managementKey: "cps_test" });
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(new Response(null, { status: 204 }));
+    await identityApi.replaceRoleUsers("role-a", ["user-a", "user-b"], 4);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(new URL(String(url)).pathname).toBe("/v0/management/roles/role-a/users");
+    expect(init?.method).toBe("PUT");
+    expect(JSON.parse(String(init?.body))).toEqual({
+      user_ids: ["user-a", "user-b"],
+      version: 4,
+    });
+  });
 });

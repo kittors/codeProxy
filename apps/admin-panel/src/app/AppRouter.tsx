@@ -38,8 +38,12 @@ const readyRoute = (element: React.ReactElement) => (
 );
 
 function AuthorizedPage({ route }: { route: PageRoute }) {
-  const { can } = useAuth();
+  const { can, state } = useAuth();
   if (route.requiredPermission && !can(route.requiredPermission)) return <ForbiddenPage />;
+  const menus = state.principal?.menus;
+  const menu = menus?.find((item) => item.path === route.path);
+  const parent = menu?.parent_code ? menus?.find((item) => item.code === menu.parent_code) : null;
+  if (menu && (!menu.enabled || (parent && !parent.enabled))) return <ForbiddenPage />;
   return readyRoute(route.element);
 }
 

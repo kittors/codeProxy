@@ -13,6 +13,7 @@ import {
   computeManagementApiBase,
   detectApiBaseFromLocation,
   identityApi,
+  IDENTITY_MENUS_UPDATED_EVENT,
   extractApiErrorCode,
   isApiClientError,
   configApi,
@@ -204,6 +205,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
   }, [configureClient]);
 
   useEffect(() => void bootstrap(), [bootstrap]);
+
+  useEffect(() => {
+    const refreshMenus = () => void bootstrap();
+    window.addEventListener(IDENTITY_MENUS_UPDATED_EVENT, refreshMenus);
+    return () => window.removeEventListener(IDENTITY_MENUS_UPDATED_EVENT, refreshMenus);
+  }, [bootstrap]);
 
   useEffect(() => {
     const handleUnauthorized = (event: Event) => {

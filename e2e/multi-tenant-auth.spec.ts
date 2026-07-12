@@ -12,6 +12,8 @@ const administratorRole = {
     "platform.tenants.read",
     "platform.tenants.create",
     "platform.tenants.update",
+    "platform.menus.read",
+    "platform.menus.update",
     "tenant.users.read",
     "tenant.users.create",
     "tenant.users.update",
@@ -75,6 +77,8 @@ const principal = {
     "platform.tenants.read",
     "platform.tenants.create",
     "platform.tenants.update",
+    "platform.menus.read",
+    "platform.menus.update",
     "tenant.users.read",
     "tenant.users.create",
     "tenant.users.update",
@@ -91,7 +95,88 @@ const principal = {
   platform_admin: true,
 };
 
-async function mockIdentity(page: Page) {
+const operatorRole = {
+  id: "r-operator",
+  tenant_id: "t-system",
+  code: "operator",
+  name: "Operator",
+  description: "Operates tenant users.",
+  scope: "tenant",
+  system_protected: false,
+  permissions: ["tenant.users.read", "tenant.users.update"],
+  version: 2,
+};
+
+const memberUser = {
+  ...principal.user,
+  id: "u-member",
+  username: "member",
+  display_name: "Member User",
+  role_ids: [operatorRole.id],
+  role_codes: [operatorRole.code],
+  version: 3,
+};
+
+const menuItems = [
+  {
+    code: "group.system",
+    parent_code: "",
+    type: "directory",
+    path: "",
+    label_key: "shell.nav_group_system",
+    icon: "settings",
+    permission_code: "",
+    sort_order: 60,
+    visible: true,
+    enabled: true,
+    system_protected: true,
+    version: 1,
+  },
+  {
+    code: "system.menus",
+    parent_code: "group.system",
+    type: "menu",
+    path: "/menu-management",
+    label_key: "shell.nav_menu_management",
+    icon: "menu",
+    permission_code: "platform.menus.read",
+    sort_order: 40,
+    visible: true,
+    enabled: true,
+    system_protected: true,
+    version: 1,
+  },
+  {
+    code: "system.config",
+    parent_code: "group.system",
+    type: "menu",
+    path: "/config",
+    label_key: "shell.nav_config",
+    icon: "settings",
+    permission_code: "system.config.read",
+    sort_order: 30,
+    visible: true,
+    enabled: true,
+    system_protected: true,
+    version: 1,
+  },
+];
+
+const standardTenant = {
+  ...principal.home_tenant,
+  id: "t-acme",
+  slug: "acme",
+  name: "Acme Team",
+  type: "standard",
+};
+
+async function mockIdentity(
+  page: Page,
+  tenants = [principal.home_tenant],
+  roles = [administratorRole],
+  users = [principal.user],
+  menus = menuItems,
+) {
   await page.route("**/v0/auth/me", (route) =>
     route.fulfill({
       status: 200,
@@ -99,18 +184,13 @@ async function mockIdentity(page: Page) {
       body: JSON.stringify({ principal }),
     }),
   );
-  await page.route("**/v0/management/tenants", (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({ items: [principal.home_tenant] }),
-    }),
-  );
   await page.route("**/v0/management/**", (route) => {
     const path = new URL(route.request().url()).pathname.replace("/v0/management", "");
     const bodies: Record<string, unknown> = {
-      "/users": { items: [principal.user] },
-      "/roles": { items: [administratorRole] },
+      "/tenants": { items: tenants },
+      "/users": { items: users },
+      "/roles": { items: roles },
+      "/menus": { items: menus },
       "/permissions": {
         items: administratorRole.permissions.map((code) => ({
           code,
@@ -215,6 +295,192 @@ test("shows tenant governance routes from server permissions", async ({ page }) 
   await expect(page.getByRole("heading", { name: "Tenants" })).toBeVisible();
   await expect(page.getByRole("button", { name: "New tenant" })).toBeVisible();
   await expect(page.getByText("System Administration").first()).toBeVisible();
+});
+
+test("uses the localized borderless tenant dropdown menu", async ({ page }) => {
+  await page.addInitScript(() => {
+    sessionStorage.setItem(
+      "code-proxy-admin-auth",
+      JSON.stringify({
+        apiBase: "http://127.0.0.1:8317",
+        managementKey: "cps_test",
+        rememberPassword: false,
+        expiresAt: Date.now() + 60_000,
+      }),
+    );
+    localStorage.setItem(
+      "cli-proxy-language",
+      JSON.stringify({ language: "zh-CN", state: { language: "zh-CN" } }),
+    );
+  });
+  await mockIdentity(page, [principal.home_tenant, standardTenant]);
+  await page.goto("/#/tenants");
+
+  const trigger = page.getByRole("button", { name: "切换租户" });
+  await expect(trigger).toContainText("系统管理");
+  await expect(trigger).not.toContainText("System Administration");
+  await expect
+    .poll(() => trigger.evaluate((element) => getComputedStyle(element).borderTopWidth))
+    .toBe("0px");
+
+  await trigger.click();
+  const menu = page.getByRole("menu");
+  await expect(menu.getByRole("menuitem", { name: "系统管理" })).toHaveAttribute(
+    "aria-current",
+    "true",
+  );
+  await expect(menu.getByRole("menuitem", { name: "Acme Team" })).toBeVisible();
+});
+
+test("shows tenant row actions including protected system tenant details", async ({ page }) => {
+  await page.addInitScript(() =>
+    sessionStorage.setItem(
+      "code-proxy-admin-auth",
+      JSON.stringify({
+        apiBase: "http://127.0.0.1:8317",
+        managementKey: "cps_test",
+        rememberPassword: false,
+        expiresAt: Date.now() + 60_000,
+      }),
+    ),
+  );
+  await mockIdentity(page, [principal.home_tenant, standardTenant]);
+  await page.goto("/#/tenants");
+
+  const systemRow = page.locator('[data-vt-row-key="t-system"]');
+  await expect(systemRow.getByRole("button", { name: "View" })).toBeVisible();
+  await systemRow.getByRole("button", { name: "View" }).click();
+  await expect(page.getByRole("dialog", { name: "System Administration" })).toBeVisible();
+  await page.keyboard.press("Escape");
+
+  const tenantRow = page.locator('[data-vt-row-key="t-acme"]');
+  await expect(tenantRow.getByRole("button", { name: "Edit" })).toBeVisible();
+  await expect(tenantRow.getByRole("button", { name: "Renew" })).toBeVisible();
+  await expect(tenantRow.getByRole("button", { name: "Disable" })).toBeVisible();
+});
+
+test("uses a switch for the two user availability states", async ({ page }) => {
+  await page.addInitScript(() =>
+    sessionStorage.setItem(
+      "code-proxy-admin-auth",
+      JSON.stringify({
+        apiBase: "http://127.0.0.1:8317",
+        managementKey: "cps_test",
+        rememberPassword: false,
+        expiresAt: Date.now() + 60_000,
+      }),
+    ),
+  );
+  await mockIdentity(
+    page,
+    [principal.home_tenant],
+    [administratorRole, operatorRole],
+    [principal.user, memberUser],
+  );
+  await page.goto("/#/users");
+
+  const memberRow = page.locator('[data-vt-row-key="u-member"]');
+  await expect(memberRow.getByRole("switch")).toHaveAttribute("aria-checked", "true");
+  await expect(memberRow.getByRole("combobox")).toHaveCount(0);
+  await memberRow.getByRole("switch").click();
+  await expect(page.getByRole("dialog", { name: "Disable user" })).toBeVisible();
+});
+
+test("edits role permissions and assigns users from action modals", async ({ page }) => {
+  await page.addInitScript(() =>
+    sessionStorage.setItem(
+      "code-proxy-admin-auth",
+      JSON.stringify({
+        apiBase: "http://127.0.0.1:8317",
+        managementKey: "cps_test",
+        rememberPassword: false,
+        expiresAt: Date.now() + 60_000,
+      }),
+    ),
+  );
+  await mockIdentity(
+    page,
+    [principal.home_tenant],
+    [administratorRole, operatorRole],
+    [principal.user, memberUser],
+  );
+  await page.goto("/#/roles");
+
+  const roleRow = page.locator('[data-vt-row-key="r-operator"]');
+  await roleRow.getByRole("button", { name: "Edit permissions" }).click();
+  await expect(page.getByRole("dialog", { name: "Permissions for Operator" })).toBeVisible();
+  await expect(page.getByRole("dialog").getByRole("checkbox").first()).toBeVisible();
+  await page.keyboard.press("Escape");
+
+  await roleRow.getByRole("button", { name: "Assign users" }).click();
+  const dialog = page.getByRole("dialog", { name: "Assign users to Operator" });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByText("Member User", { exact: true })).toBeVisible();
+});
+
+test("manages dynamic menu visibility and ordering", async ({ page }) => {
+  await page.addInitScript(() =>
+    sessionStorage.setItem(
+      "code-proxy-admin-auth",
+      JSON.stringify({
+        apiBase: "http://127.0.0.1:8317",
+        managementKey: "cps_test",
+        rememberPassword: false,
+        expiresAt: Date.now() + 60_000,
+      }),
+    ),
+  );
+  await mockIdentity(page);
+  await page.goto("/#/menu-management");
+
+  await expect(page.getByRole("heading", { name: "Menu Management", level: 2 })).toBeVisible();
+  const menuRow = page.locator('[data-vt-row-key="system.config"]');
+  await expect(menuRow.getByRole("switch")).toHaveCount(2);
+  await menuRow.getByRole("button", { name: "Adjust order" }).click();
+  await expect(page.getByRole("dialog", { name: "Adjust order" })).toBeVisible();
+});
+
+test("applies server menu visibility and enabled state to navigation and routes", async ({
+  page,
+}) => {
+  const dynamicPrincipal = {
+    ...principal,
+    menus: menuItems.map((menu) =>
+      menu.code === "system.config" ? { ...menu, enabled: false } : menu,
+    ),
+  };
+  await page.addInitScript(() =>
+    sessionStorage.setItem(
+      "code-proxy-admin-auth",
+      JSON.stringify({
+        apiBase: "http://127.0.0.1:8317",
+        managementKey: "cps_test",
+        rememberPassword: false,
+        expiresAt: Date.now() + 60_000,
+      }),
+    ),
+  );
+  await page.route("**/v0/auth/me", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ principal: dynamicPrincipal }),
+    }),
+  );
+  await page.route("**/v0/management/**", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ items: menuItems }),
+    }),
+  );
+
+  await page.goto("/#/menu-management");
+  await expect(page.getByText("Menu Management", { exact: true }).last()).toBeVisible();
+  await expect(page.getByText("Tenants", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("Dashboard", { exact: true })).toHaveCount(0);
+  await page.goto("/#/config");
+  await expect(page.getByRole("heading", { name: "Access denied" })).toBeVisible();
 });
 
 test("shows the built-in administrator role and super administrator account", async ({ page }) => {

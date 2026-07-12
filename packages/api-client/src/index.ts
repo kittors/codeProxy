@@ -90,5 +90,5 @@ export {
   normalizeApiKeyEntries,
 } from "./endpoints/helpers";
 
-export { identityApi } from "./endpoints/identity";
+export { identityApi, IDENTITY_MENUS_UPDATED_EVENT } from "./endpoints/identity";
 export type * from "./endpoints/identity";

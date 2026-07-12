@@ -1,9 +1,26 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { identityApi, type PermissionIdentity, type RoleIdentity } from "@code-proxy/api-client";
-import { Button, DataTable, TextInput, type DataTableColumn, useToast } from "@code-proxy/ui";
+import { ShieldCheck, Trash2, UserRoundCog } from "lucide-react";
+import {
+  identityApi,
+  type PermissionIdentity,
+  type RoleIdentity,
+  type UserIdentity,
+} from "@code-proxy/api-client";
+import {
+  Button,
+  Checkbox,
+  ConfirmModal,
+  DataTable,
+  Modal,
+  TextInput,
+  type DataTableColumn,
+  useToast,
+} from "@code-proxy/ui";
 import { PermissionGate } from "@app/guards/PermissionGate";
 import { useAuth } from "@app/providers/AuthProvider";
+
+const emptyForm = { code: "", name: "", description: "" };
 
 export function RolesPage() {
   const { notify } = useToast();
@@ -11,97 +28,251 @@ export function RolesPage() {
   const { can } = useAuth();
   const [roles, setRoles] = useState<RoleIdentity[]>([]);
   const [permissions, setPermissions] = useState<PermissionIdentity[]>([]);
-  const [selectedId, setSelectedId] = useState("");
-  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [users, setUsers] = useState<UserIdentity[]>([]);
   const [loading, setLoading] = useState(true);
-  const [creating, setCreating] = useState(false);
-  const [form, setForm] = useState({ code: "", name: "", description: "" });
+  const [createOpen, setCreateOpen] = useState(false);
+  const [form, setForm] = useState(emptyForm);
+  const [permissionRole, setPermissionRole] = useState<RoleIdentity | null>(null);
+  const [selectedPermissions, setSelectedPermissions] = useState<Set<string>>(new Set());
+  const [userRole, setUserRole] = useState<RoleIdentity | null>(null);
+  const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
+  const [deleteRole, setDeleteRole] = useState<RoleIdentity | null>(null);
+  const [busy, setBusy] = useState(false);
+  const canUpdateRoles = can("tenant.roles.update");
+  const canReadUsers = can("tenant.users.read");
+  const canAssignUsers = can("tenant.users.assign_roles") && canReadUsers && canUpdateRoles;
 
-  const load = useCallback(async (preferredId = "") => {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [rolesResponse, permissionsResponse] = await Promise.all([
+      const [rolesResponse, permissionsResponse, usersResponse] = await Promise.all([
         identityApi.roles(),
         identityApi.permissions(),
+        canReadUsers ? identityApi.users() : Promise.resolve({ items: [] as UserIdentity[] }),
       ]);
-      const nextRoles = rolesResponse.items ?? [];
-      setRoles(nextRoles);
+      setRoles(rolesResponse.items ?? []);
       setPermissions(permissionsResponse.items ?? []);
-      const nextRole = nextRoles.find((item) => item.id === preferredId) ?? nextRoles[0];
-      setSelectedId(nextRole?.id ?? "");
-      setSelected(new Set(nextRole?.permissions ?? []));
+      setUsers(usersResponse.items ?? []);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [canReadUsers]);
 
   useEffect(() => void load(), [load]);
 
-  const role = roles.find((item) => item.id === selectedId);
-  const groups = useMemo(() => {
-    const grouped = new Map<string, PermissionIdentity[]>();
-    for (const item of permissions.filter(
-      (permission) =>
-        can(permission.code) && (role?.scope === "platform" || permission.scope === "tenant"),
-    )) {
-      grouped.set(item.resource, [...(grouped.get(item.resource) ?? []), item]);
-    }
-    return grouped;
-  }, [can, permissions, role?.scope]);
+  const run = useCallback(
+    async (action: () => Promise<unknown>, success: string) => {
+      setBusy(true);
+      try {
+        await action();
+        await load();
+        notify({ type: "success", message: success });
+        return true;
+      } catch (error) {
+        notify({
+          type: "error",
+          message: error instanceof Error ? error.message : t("identity_admin.operation_failed"),
+        });
+        return false;
+      } finally {
+        setBusy(false);
+      }
+    },
+    [load, notify, t],
+  );
 
-  const run = async (action: () => Promise<unknown>, success: string, preferredId = selectedId) => {
-    try {
-      await action();
-      await load(preferredId);
-      notify({ type: "success", message: success });
-    } catch (error) {
-      notify({
-        type: "error",
-        message: error instanceof Error ? error.message : t("identity_admin.operation_failed"),
-      });
+  const roleName = useCallback(
+    (role: RoleIdentity) =>
+      role.code === "platform_super_admin"
+        ? t("identity_admin.administrator_role")
+        : role.code === "tenant_admin"
+          ? t("identity_admin.tenant_administrator_role")
+          : role.name,
+    [t],
+  );
+
+  const userName = useCallback(
+    (user: UserIdentity) =>
+      user.role_codes?.includes("platform_super_admin")
+        ? t("identity_admin.super_administrator")
+        : user.display_name,
+    [t],
+  );
+
+  const permissionLabel = useCallback(
+    (permission: PermissionIdentity) =>
+      t("identity_admin.permission_label", {
+        action: t(`identity_admin.permission_actions.${permission.action}`, {
+          defaultValue: permission.action,
+        }),
+        resource: t(`identity_admin.permission_resources.${permission.resource}`, {
+          defaultValue: permission.resource,
+        }),
+      }),
+    [t],
+  );
+
+  const availablePermissions = useMemo(() => {
+    if (!permissionRole) return [];
+    return permissions.filter(
+      (permission) =>
+        can(permission.code) &&
+        (permissionRole.scope === "platform" || permission.scope === "tenant"),
+    );
+  }, [can, permissionRole, permissions]);
+
+  const permissionGroups = useMemo(() => {
+    const groups = new Map<string, PermissionIdentity[]>();
+    for (const permission of availablePermissions) {
+      groups.set(permission.resource, [...(groups.get(permission.resource) ?? []), permission]);
     }
-  };
+    return groups;
+  }, [availablePermissions]);
+
+  const assignedUserCount = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const user of users) {
+      for (const roleId of user.role_ids ?? []) {
+        counts.set(roleId, (counts.get(roleId) ?? 0) + 1);
+      }
+    }
+    return counts;
+  }, [users]);
 
   const columns = useMemo<DataTableColumn<RoleIdentity>[]>(
     () => [
       {
         key: "role",
         label: t("identity_admin.roles"),
-        render: (item) => (
+        width: "w-64",
+        render: (role) => (
           <div className="min-w-0">
-            <div className="truncate font-medium text-slate-900 dark:text-white">{item.name}</div>
-            <div className="truncate text-xs text-slate-400">{item.code}</div>
+            <div className="flex items-center gap-2">
+              <span className="truncate font-medium text-slate-900 dark:text-white">
+                {roleName(role)}
+              </span>
+              {role.system_protected ? (
+                <span className="rounded-full bg-blue-50 px-2 py-0.5 text-2xs font-semibold text-blue-700 dark:bg-blue-500/10 dark:text-blue-300">
+                  {t("identity_admin.protected_role")}
+                </span>
+              ) : null}
+            </div>
+            <div className="truncate text-xs text-slate-400">{role.code}</div>
           </div>
         ),
       },
       {
         key: "scope",
         label: t("identity_admin.scope"),
-        width: "w-28",
-        render: (item) => (
-          <span className="text-xs text-slate-500">
-            {item.system_protected ? t("identity_admin.protected_role") : item.scope}
-          </span>
+        width: "w-32",
+        render: (role) =>
+          role.scope === "platform"
+            ? t("identity_admin.scope_platform")
+            : t("identity_admin.scope_tenant"),
+      },
+      {
+        key: "permissions",
+        label: t("identity_admin.permissions"),
+        width: "w-32",
+        render: (role) => t("identity_admin.permission_count", { count: role.permissions.length }),
+      },
+      {
+        key: "users",
+        label: t("identity_admin.assigned_users"),
+        width: "w-32",
+        render: (role) =>
+          t("identity_admin.user_count", { count: assignedUserCount.get(role.id) ?? 0 }),
+      },
+      {
+        key: "actions",
+        label: t("identity_admin.actions"),
+        minWidthPx: 300,
+        width: "w-64",
+        lockOrder: "end",
+        render: (role) => (
+          <div className="flex items-center gap-2">
+            <Button
+              size="xs"
+              onClick={() => {
+                setPermissionRole(role);
+                setSelectedPermissions(new Set(role.permissions));
+              }}
+            >
+              <ShieldCheck size={14} />
+              {role.system_protected || !canUpdateRoles
+                ? t("identity_admin.view_permissions")
+                : t("identity_admin.edit_permissions")}
+            </Button>
+            {role.scope === "tenant" && canAssignUsers ? (
+              <Button
+                size="xs"
+                onClick={() => {
+                  setUserRole(role);
+                  setSelectedUsers(
+                    new Set(
+                      users
+                        .filter((user) => user.role_ids?.includes(role.id))
+                        .map((user) => user.id),
+                    ),
+                  );
+                }}
+              >
+                <UserRoundCog size={14} />
+                {t("identity_admin.assign_users")}
+              </Button>
+            ) : null}
+            {!role.system_protected ? (
+              <PermissionGate permission="tenant.roles.delete">
+                <Button
+                  size="xs"
+                  variant="error"
+                  onClick={() => setDeleteRole(role)}
+                  tooltip={t("identity_admin.delete")}
+                >
+                  <Trash2 size={14} />
+                </Button>
+              </PermissionGate>
+            ) : null}
+          </div>
         ),
       },
     ],
-    [t],
+    [assignedUserCount, canAssignUsers, canUpdateRoles, roleName, t, users],
   );
 
   const createRole = async (event: FormEvent) => {
     event.preventDefault();
-    try {
-      const created = await identityApi.createRole({ ...form, permissions: [] });
-      setCreating(false);
-      setForm({ code: "", name: "", description: "" });
-      await load(created.id);
-      notify({ type: "success", message: t("identity_admin.role_created") });
-    } catch (error) {
-      notify({
-        type: "error",
-        message: error instanceof Error ? error.message : t("identity_admin.create_failed"),
-      });
+    const success = await run(
+      () => identityApi.createRole({ ...form, permissions: [] }),
+      t("identity_admin.role_created"),
+    );
+    if (success) {
+      setCreateOpen(false);
+      setForm(emptyForm);
     }
+  };
+
+  const savePermissions = async () => {
+    if (!permissionRole || permissionRole.system_protected || !canUpdateRoles) return;
+    const success = await run(
+      () =>
+        identityApi.replaceRolePermissions(
+          permissionRole.id,
+          [...selectedPermissions],
+          permissionRole.version,
+        ),
+      t("identity_admin.role_permissions_saved"),
+    );
+    if (success) setPermissionRole(null);
+  };
+
+  const saveUsers = async () => {
+    if (!userRole) return;
+    const success = await run(
+      () => identityApi.replaceRoleUsers(userRole.id, [...selectedUsers], userRole.version),
+      t("identity_admin.role_users_saved"),
+    );
+    if (success) setUserRole(null);
   };
 
   return (
@@ -115,158 +286,219 @@ export function RolesPage() {
             <p className="text-sm text-slate-500">{t("identity_admin.roles_description")}</p>
           </div>
           <PermissionGate permission="tenant.roles.create">
-            <Button variant="primary" onClick={() => setCreating((value) => !value)}>
+            <Button variant="primary" onClick={() => setCreateOpen(true)}>
               {t("identity_admin.new_role")}
             </Button>
           </PermissionGate>
         </div>
 
-        {creating ? (
-          <form
-            onSubmit={createRole}
-            className="mx-5 mb-4 grid gap-3 rounded-2xl bg-slate-50 p-4 md:grid-cols-3 dark:bg-white/5"
-          >
-            <TextInput
-              required
-              value={form.code}
-              onChange={(event) => setForm({ ...form, code: event.target.value })}
-              placeholder={t("identity_admin.role_code")}
-            />
-            <TextInput
-              required
-              value={form.name}
-              onChange={(event) => setForm({ ...form, name: event.target.value })}
-              placeholder={t("identity_admin.role_name")}
-            />
-            <TextInput
-              value={form.description}
-              onChange={(event) => setForm({ ...form, description: event.target.value })}
-              placeholder={t("identity_admin.description")}
-            />
-            <Button type="submit" variant="primary" className="md:col-span-3">
-              {t("identity_admin.create_role")}
-            </Button>
-          </form>
-        ) : null}
-
-        <div className="grid h-[calc(100dvh-250px)] min-h-[420px] gap-5 overflow-hidden px-5 pb-5 lg:grid-cols-[360px_minmax(0,1fr)]">
+        <div className="relative h-[calc(100dvh-250px)] min-h-[360px] overflow-hidden px-5 pb-5">
           <DataTable<RoleIdentity>
             tableId="identity-roles"
             rows={roles}
             columns={columns}
-            rowKey={(item) => item.id}
+            rowKey={(role) => role.id}
             loading={loading}
             virtualize={false}
+            rowHeight={64}
             height="h-full"
             minHeight="min-h-full"
-            minWidth="min-w-full"
+            minWidth="min-w-[920px]"
             emptyText={t("identity_admin.no_roles")}
             showAllLoadedMessage={false}
-            columnResizable={false}
-            columnReorderable={false}
-            onRowClick={(item) => {
-              setSelectedId(item.id);
-              setSelected(new Set(item.permissions));
-            }}
-            rowAriaSelected={(item) => item.id === selectedId}
-            rowClassName={(item) =>
-              item.id === selectedId
-                ? "bg-blue-50/70 dark:bg-blue-500/10"
-                : "cursor-pointer hover:bg-slate-50 dark:hover:bg-white/5"
-            }
           />
-
-          <div className="min-h-0 overflow-y-auto rounded-xl bg-slate-50/70 p-5 dark:bg-white/[0.035]">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h3 className="text-xl font-semibold text-slate-950 dark:text-white">
-                  {role?.name ?? t("identity_admin.select_role")}
-                </h3>
-                <p className="text-sm text-slate-500">{role?.description}</p>
-              </div>
-              {role && !role.system_protected ? (
-                <div className="flex gap-2">
-                  <PermissionGate permission="tenant.roles.delete">
-                    <Button
-                      variant="error"
-                      onClick={() => {
-                        if (
-                          window.confirm(
-                            t("identity_admin.delete_role_confirm", { name: role.name }),
-                          )
-                        ) {
-                          void run(
-                            () => identityApi.deleteRole(role.id),
-                            t("identity_admin.role_deleted"),
-                            "",
-                          );
-                        }
-                      }}
-                    >
-                      {t("identity_admin.delete")}
-                    </Button>
-                  </PermissionGate>
-                  <PermissionGate permission="tenant.roles.update">
-                    <Button
-                      variant="primary"
-                      onClick={() =>
-                        void run(
-                          () =>
-                            identityApi.replaceRolePermissions(
-                              role.id,
-                              [...selected],
-                              role.version,
-                            ),
-                          t("identity_admin.role_permissions_saved"),
-                        )
-                      }
-                    >
-                      {t("identity_admin.save")}
-                    </Button>
-                  </PermissionGate>
-                </div>
-              ) : null}
-            </div>
-
-            <div className="mt-6 space-y-5">
-              {[...groups].map(([resource, items]) => (
-                <fieldset
-                  key={resource}
-                  disabled={!role || role.system_protected}
-                  className="space-y-2"
-                >
-                  <legend className="mb-2 text-sm font-semibold text-slate-800 dark:text-slate-200">
-                    {resource}
-                  </legend>
-                  {items.map((permission) => (
-                    <label
-                      key={permission.code}
-                      className="flex items-start gap-3 rounded-xl border border-slate-200/70 bg-white p-3 text-sm dark:border-white/[0.06] dark:bg-neutral-950/55"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selected.has(permission.code)}
-                        onChange={(event) => {
-                          const next = new Set(selected);
-                          if (event.target.checked) next.add(permission.code);
-                          else next.delete(permission.code);
-                          setSelected(next);
-                        }}
-                      />
-                      <span>
-                        <span className="font-medium text-slate-800 dark:text-slate-200">
-                          {permission.name}
-                        </span>
-                        <span className="ml-2 text-xs text-slate-400">{permission.code}</span>
-                      </span>
-                    </label>
-                  ))}
-                </fieldset>
-              ))}
-            </div>
-          </div>
         </div>
       </div>
+
+      <Modal
+        open={createOpen}
+        title={t("identity_admin.new_role")}
+        description={t("identity_admin.roles_description")}
+        onClose={() => setCreateOpen(false)}
+        maxWidth="max-w-xl"
+        footer={
+          <>
+            <Button onClick={() => setCreateOpen(false)}>{t("common.cancel")}</Button>
+            <Button type="submit" form="create-role-form" variant="primary" disabled={busy}>
+              {t("identity_admin.create_role")}
+            </Button>
+          </>
+        }
+      >
+        <form id="create-role-form" onSubmit={createRole} className="space-y-4">
+          <label className="block space-y-1.5">
+            <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
+              {t("identity_admin.role_code")}
+            </span>
+            <TextInput
+              value={form.code}
+              onChange={(event) => setForm({ ...form, code: event.target.value })}
+              required
+            />
+          </label>
+          <label className="block space-y-1.5">
+            <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
+              {t("identity_admin.role_name")}
+            </span>
+            <TextInput
+              value={form.name}
+              onChange={(event) => setForm({ ...form, name: event.target.value })}
+              required
+            />
+          </label>
+          <label className="block space-y-1.5">
+            <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
+              {t("identity_admin.description")}
+            </span>
+            <textarea
+              value={form.description}
+              onChange={(event) => setForm({ ...form, description: event.target.value })}
+              className="min-h-28 w-full rounded-2xl border border-black/[0.04] bg-white px-3.5 py-3 text-sm text-slate-700 outline-none shadow-[2px_2px_6px_rgb(0_0_0_/_0.055)] focus:ring-2 focus:ring-slate-300/50 dark:border-transparent dark:bg-[#27272A] dark:text-slate-200"
+            />
+          </label>
+        </form>
+      </Modal>
+
+      <Modal
+        open={Boolean(permissionRole)}
+        title={
+          permissionRole
+            ? t("identity_admin.role_permissions_title", { name: roleName(permissionRole) })
+            : ""
+        }
+        description={t("identity_admin.role_permissions_description")}
+        onClose={() => setPermissionRole(null)}
+        maxWidth="max-w-4xl"
+        bodyHeightClassName="max-h-[66vh]"
+        footer={
+          permissionRole?.system_protected || !canUpdateRoles ? (
+            <Button onClick={() => setPermissionRole(null)}>{t("common.close")}</Button>
+          ) : (
+            <>
+              <Button onClick={() => setPermissionRole(null)}>{t("common.cancel")}</Button>
+              <Button variant="primary" disabled={busy} onClick={() => void savePermissions()}>
+                {t("identity_admin.save")}
+              </Button>
+            </>
+          )
+        }
+      >
+        <div className="space-y-6">
+          {[...permissionGroups].map(([resource, resourcePermissions]) => (
+            <fieldset
+              key={resource}
+              disabled={Boolean(permissionRole?.system_protected) || !canUpdateRoles}
+            >
+              <legend className="mb-2 text-sm font-semibold text-slate-900 dark:text-white">
+                {t(`identity_admin.permission_resources.${resource}`, { defaultValue: resource })}
+              </legend>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {resourcePermissions.map((permission) => (
+                  <label
+                    key={permission.code}
+                    className="flex cursor-pointer items-start gap-3 rounded-xl bg-slate-50 px-3.5 py-3 transition-colors hover:bg-slate-100 dark:bg-white/5 dark:hover:bg-white/8"
+                  >
+                    <Checkbox
+                      checked={selectedPermissions.has(permission.code)}
+                      disabled={Boolean(permissionRole?.system_protected) || !canUpdateRoles}
+                      onCheckedChange={(checked) => {
+                        const next = new Set(selectedPermissions);
+                        if (checked) next.add(permission.code);
+                        else next.delete(permission.code);
+                        setSelectedPermissions(next);
+                      }}
+                    />
+                    <span className="min-w-0">
+                      <span className="block text-sm font-medium text-slate-800 dark:text-slate-200">
+                        {permissionLabel(permission)}
+                      </span>
+                      <span className="mt-0.5 block truncate text-xs text-slate-400">
+                        {permission.code}
+                      </span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+          ))}
+        </div>
+      </Modal>
+
+      <Modal
+        open={Boolean(userRole)}
+        title={
+          userRole ? t("identity_admin.assign_role_users_title", { name: roleName(userRole) }) : ""
+        }
+        description={t("identity_admin.assign_role_users_description")}
+        onClose={() => setUserRole(null)}
+        maxWidth="max-w-2xl"
+        bodyHeightClassName="max-h-[60vh]"
+        footer={
+          <>
+            <Button onClick={() => setUserRole(null)}>{t("common.cancel")}</Button>
+            <Button variant="primary" disabled={busy} onClick={() => void saveUsers()}>
+              {t("identity_admin.save")}
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-2">
+          {users.map((user) => {
+            const checked = selectedUsers.has(user.id);
+            const disabled = user.role_codes?.includes("platform_super_admin");
+            return (
+              <label
+                key={user.id}
+                className="flex cursor-pointer items-center gap-3 rounded-xl bg-slate-50 px-4 py-3 transition-colors hover:bg-slate-100 dark:bg-white/5 dark:hover:bg-white/8"
+              >
+                <Checkbox
+                  checked={checked}
+                  disabled={disabled}
+                  onCheckedChange={(nextChecked) => {
+                    const next = new Set(selectedUsers);
+                    if (nextChecked) next.add(user.id);
+                    else next.delete(user.id);
+                    setSelectedUsers(next);
+                  }}
+                />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-medium text-slate-800 dark:text-slate-200">
+                    {userName(user)}
+                  </span>
+                  <span className="block truncate text-xs text-slate-400">{user.username}</span>
+                </span>
+                <span className="text-xs text-slate-400">
+                  {user.status === "active"
+                    ? t("identity_admin.status_active")
+                    : user.status === "locked"
+                      ? t("identity_admin.status_locked")
+                      : t("identity_admin.status_disabled")}
+                </span>
+              </label>
+            );
+          })}
+        </div>
+      </Modal>
+
+      <ConfirmModal
+        open={Boolean(deleteRole)}
+        title={t("identity_admin.delete")}
+        description={
+          deleteRole ? t("identity_admin.delete_role_confirm", { name: deleteRole.name }) : ""
+        }
+        confirmText={t("identity_admin.delete")}
+        busy={busy}
+        onClose={() => setDeleteRole(null)}
+        onConfirm={() => {
+          if (!deleteRole) return;
+          void run(
+            () => identityApi.deleteRole(deleteRole.id),
+            t("identity_admin.role_deleted"),
+          ).then((success) => {
+            if (success) setDeleteRole(null);
+          });
+        }}
+      />
     </section>
   );
 }

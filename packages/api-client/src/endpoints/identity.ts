@@ -1,5 +1,7 @@
 import { apiClient } from "../client/client";
 
+export const IDENTITY_MENUS_UPDATED_EVENT = "identity-menus-updated";
+
 export interface TenantIdentity {
   id: string;
   slug: string;
@@ -12,6 +14,21 @@ export interface TenantIdentity {
   version: number;
   created_at: string;
   updated_at: string;
+}
+
+export interface MenuIdentity {
+  code: string;
+  parent_code: string;
+  type: "directory" | "menu";
+  path: string;
+  label_key: string;
+  icon: string;
+  permission_code: string;
+  sort_order: number;
+  visible: boolean;
+  enabled: boolean;
+  system_protected: boolean;
+  version: number;
 }
 
 export interface UserIdentity {
@@ -47,6 +64,7 @@ export interface ManagementPrincipal {
   home_tenant: TenantIdentity;
   effective_tenant: TenantIdentity;
   roles: RoleIdentity[];
+  menus?: MenuIdentity[];
   permissions: string[];
   platform_admin: boolean;
   session_id?: string;
@@ -130,6 +148,16 @@ export const identityApi = {
     apiClient.put<void>(`/users/${encodeURIComponent(id)}/roles`, { role_ids }),
   deleteUser: (id: string) => apiClient.delete<void>(`/users/${encodeURIComponent(id)}`),
   roles: () => apiClient.get<{ items: RoleIdentity[] }>("/roles"),
+  menus: () => apiClient.get<{ items: MenuIdentity[] }>("/menus"),
+  updateMenu: async (
+    code: string,
+    body: { visible: boolean; enabled: boolean; sort_order: number; version: number },
+  ) => {
+    const menu = await apiClient.patch<MenuIdentity>(`/menus/${encodeURIComponent(code)}`, body);
+    if (typeof window !== "undefined")
+      window.dispatchEvent(new Event(IDENTITY_MENUS_UPDATED_EVENT));
+    return menu;
+  },
   permissions: () => apiClient.get<{ items: PermissionIdentity[] }>("/permissions"),
   createRole: (body: { code: string; name: string; description: string; permissions: string[] }) =>
     apiClient.post<RoleIdentity>("/roles", body),
@@ -140,4 +168,6 @@ export const identityApi = {
       permissions,
       version,
     }),
+  replaceRoleUsers: (id: string, user_ids: string[], version: number) =>
+    apiClient.put<void>(`/roles/${encodeURIComponent(id)}/users`, { user_ids, version }),
 };
