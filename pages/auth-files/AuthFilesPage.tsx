@@ -111,7 +111,10 @@ export function AuthFilesPage() {
   const { t } = useTranslation();
   const { notify } = useToast();
   const auth = useOptionalAuth();
-  const identityFingerprintEnabled = auth?.can("system.config.read") ?? true;
+  // Account identity fingerprint is auth-file scoped (same as /identity-fingerprint/account
+  // RBAC: auth_files.read/write). Must not use platform system.config.read, or ordinary
+  // tenants never see the Identity tab even though the API allows them.
+  const identityFingerprintEnabled = auth?.can("auth_files.read") ?? true;
   const canReadProxies = auth?.can("proxies.read") ?? true;
   const oauthExcludedEnabled = auth?.state.principal
     ? auth.state.principal.effective_tenant.type === "system"
