@@ -433,7 +433,10 @@ export function ModelPlazaPage() {
             onValueChange={(next) => setSelectedVendor(next as VendorFilter)}
             size="sm"
           >
-            <TabsList aria-label={t("model_plaza.vendor_tabs")} className="max-w-full">
+            <TabsList
+              aria-label={t("model_plaza.vendor_tabs")}
+              className="max-w-full !bg-transparent dark:!bg-transparent"
+            >
               <TabsTrigger value="all">
                 <Layers size={12} aria-hidden="true" />
                 {t("common.all", { defaultValue: "All" })}

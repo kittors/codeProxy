@@ -265,6 +265,8 @@ describe("ModelPlazaPage", () => {
     expect(sticky.className).toMatch(/bg-\[var\(--pl-bg\)\]/);
     expect(sticky.className).not.toMatch(/border-b/);
     expect(sticky.className).not.toMatch(/backdrop-blur/);
+    const tabList = screen.getByRole("tablist", { name: /filter by vendor/i });
+    expect(tabList.className).toMatch(/!bg-transparent/);
     // overflow-x-hidden on an ancestor computes overflow-y as auto and breaks sticky
     expect(container.firstElementChild?.className ?? "").not.toMatch(/overflow-x-hidden/);
   });
