@@ -17,6 +17,7 @@ import {
   useToast,
 } from "@code-proxy/ui";
 import { PermissionGate } from "@app/guards/PermissionGate";
+import { toIsoDateTime, toLocalDateTimeInput } from "./tenantForm";
 
 const emptyCreateForm = {
   name: "",
@@ -27,12 +28,8 @@ const emptyCreateForm = {
   description: "",
 };
 
-const toLocalDateTimeInput = (value: string | null) => {
-  if (!value) return "";
-  const date = new Date(value);
-  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
-  return local.toISOString().slice(0, 16);
-};
+type CreateFormKey = keyof typeof emptyCreateForm;
+type CreateFormErrors = Partial<Record<CreateFormKey, string>>;
 
 export function TenantsPage() {
   const { notify } = useToast();
@@ -41,11 +38,13 @@ export function TenantsPage() {
   const [loading, setLoading] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
   const [createForm, setCreateForm] = useState(emptyCreateForm);
+  const [createErrors, setCreateErrors] = useState<CreateFormErrors>({});
   const [detailsTenant, setDetailsTenant] = useState<TenantIdentity | null>(null);
   const [editTenant, setEditTenant] = useState<TenantIdentity | null>(null);
   const [editForm, setEditForm] = useState({ name: "", description: "", status: "active" });
   const [renewTenant, setRenewTenant] = useState<TenantIdentity | null>(null);
   const [renewAt, setRenewAt] = useState("");
+  const [renewError, setRenewError] = useState("");
   const [disableTenant, setDisableTenant] = useState<TenantIdentity | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -230,19 +229,71 @@ export function TenantsPage() {
     [i18n.language, statusLabel, t, tenantName],
   );
 
+  const updateCreateField = useCallback(<K extends CreateFormKey>(key: K, value: (typeof emptyCreateForm)[K]) => {
+    setCreateForm((prev) => ({ ...prev, [key]: value }));
+    setCreateErrors((prev) => {
+      if (!prev[key]) return prev;
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  }, []);
+
+  const validateCreateForm = useCallback((): CreateFormErrors => {
+    const errors: CreateFormErrors = {};
+    const requiredMsg = t("identity_admin.field_required");
+
+    if (!createForm.name.trim()) errors.name = requiredMsg;
+    if (!createForm.admin_username.trim()) errors.admin_username = requiredMsg;
+    if (!createForm.admin_display_name.trim()) errors.admin_display_name = requiredMsg;
+
+    if (!createForm.admin_password) {
+      errors.admin_password = requiredMsg;
+    } else if (createForm.admin_password.length < 12) {
+      errors.admin_password = t("identity_admin.password_requirement");
+    }
+
+    if (!createForm.expires_at.trim()) {
+      errors.expires_at = t("identity_admin.expires_at_required");
+    } else if (!toIsoDateTime(createForm.expires_at)) {
+      errors.expires_at = t("identity_admin.expires_at_invalid");
+    }
+
+    return errors;
+  }, [createForm, t]);
+
   const createTenant = async (event: FormEvent) => {
     event.preventDefault();
+    const errors = validateCreateForm();
+    setCreateErrors(errors);
+    if (Object.keys(errors).length > 0) {
+      // Surface expiry issues as localized toast as well (DateTimePicker is easy to miss).
+      if (errors.expires_at) {
+        notify({ type: "error", message: errors.expires_at });
+      }
+      return;
+    }
+
+    const expiresAtIso = toIsoDateTime(createForm.expires_at);
+    if (!expiresAtIso) {
+      const message = t("identity_admin.expires_at_invalid");
+      setCreateErrors({ expires_at: message });
+      notify({ type: "error", message });
+      return;
+    }
+
     const success = await run(
       () =>
         identityApi.createTenant({
           ...createForm,
-          expires_at: new Date(createForm.expires_at).toISOString(),
+          expires_at: expiresAtIso,
         }),
       t("identity_admin.tenant_created"),
     );
     if (success) {
       setCreateOpen(false);
       setCreateForm(emptyCreateForm);
+      setCreateErrors({});
     }
   };
 
@@ -264,16 +315,44 @@ export function TenantsPage() {
 
   const renew = async (event: FormEvent) => {
     event.preventDefault();
-    if (!renewTenant || !renewAt) return;
+    if (!renewTenant) return;
+
+    if (!renewAt.trim()) {
+      const message = t("identity_admin.expires_at_required");
+      setRenewError(message);
+      notify({ type: "error", message });
+      return;
+    }
+    const expiresAtIso = toIsoDateTime(renewAt);
+    if (!expiresAtIso) {
+      const message = t("identity_admin.expires_at_invalid");
+      setRenewError(message);
+      notify({ type: "error", message });
+      return;
+    }
+
     const success = await run(
       () =>
         identityApi.updateTenant(renewTenant.id, {
-          expires_at: new Date(renewAt).toISOString(),
+          expires_at: expiresAtIso,
           version: renewTenant.version,
         }),
       t("identity_admin.tenant_expiry_updated"),
     );
-    if (success) setRenewTenant(null);
+    if (success) {
+      setRenewTenant(null);
+      setRenewError("");
+    }
+  };
+
+  const closeCreateModal = () => {
+    setCreateOpen(false);
+    setCreateErrors({});
+  };
+
+  const closeRenewModal = () => {
+    setRenewTenant(null);
+    setRenewError("");
   };
 
   return (
@@ -315,66 +394,91 @@ export function TenantsPage() {
         open={createOpen}
         title={t("identity_admin.new_tenant")}
         description={t("identity_admin.tenants_description")}
-        onClose={() => setCreateOpen(false)}
+        onClose={closeCreateModal}
         footer={
           <>
-            <Button onClick={() => setCreateOpen(false)}>{t("common.cancel")}</Button>
+            <Button onClick={closeCreateModal}>{t("common.cancel")}</Button>
             <Button type="submit" form="create-tenant-form" variant="primary" disabled={busy}>
               {t("identity_admin.create_tenant")}
             </Button>
           </>
         }
       >
-        <form id="create-tenant-form" onSubmit={createTenant} className="grid gap-4 md:grid-cols-2">
-          <label className="space-y-1.5">
-            <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
-              {t("identity_admin.name")}
-            </span>
-            <TextInput
-              aria-label={t("identity_admin.name")}
-              value={createForm.name}
-              onChange={(event) => setCreateForm({ ...createForm, name: event.target.value })}
+        <Form id="create-tenant-form" onSubmit={createTenant} noValidate>
+          <div className="grid gap-4 md:grid-cols-2">
+            <FormField
+              label={t("identity_admin.name")}
               required
-            />
-          </label>
-          <label className="space-y-1.5">
-            <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
-              {t("identity_admin.expires_at")}
-            </span>
-            <DateTimePicker
-              value={createForm.expires_at}
-              onChange={(value) => setCreateForm({ ...createForm, expires_at: value })}
-              aria-label={t("identity_admin.expires_at")}
-              locale={i18n.language}
-              labels={dateTimePickerLabels}
-            />
-          </label>
-          {(
-            [
-              ["admin_username", t("identity_admin.admin_username")],
-              ["admin_display_name", t("identity_admin.admin_display_name")],
-              ["admin_password", t("identity_admin.admin_password")],
-              ["description", t("identity_admin.description")],
-            ] as const
-          ).map(([key, label]) => (
-            <label
-              key={key}
-              className={key === "description" ? "space-y-1.5 md:col-span-2" : "space-y-1.5"}
+              error={createErrors.name}
             >
-              <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
-                {label}
-              </span>
               <TextInput
-                aria-label={label}
-                type={key === "admin_password" ? "password" : "text"}
-                value={createForm[key]}
-                onChange={(event) => setCreateForm({ ...createForm, [key]: event.target.value })}
-                required={key !== "description"}
-                minLength={key === "admin_password" ? 12 : undefined}
+                aria-label={t("identity_admin.name")}
+                value={createForm.name}
+                onChange={(event) => updateCreateField("name", event.target.value)}
               />
-            </label>
-          ))}
-        </form>
+            </FormField>
+            <FormField
+              label={t("identity_admin.expires_at")}
+              required
+              error={createErrors.expires_at}
+            >
+              <DateTimePicker
+                value={createForm.expires_at}
+                onChange={(value) => updateCreateField("expires_at", value)}
+                aria-label={t("identity_admin.expires_at")}
+                locale={i18n.language}
+                labels={dateTimePickerLabels}
+              />
+            </FormField>
+            <FormField
+              label={t("identity_admin.admin_username")}
+              required
+              error={createErrors.admin_username}
+            >
+              <TextInput
+                aria-label={t("identity_admin.admin_username")}
+                value={createForm.admin_username}
+                onChange={(event) => updateCreateField("admin_username", event.target.value)}
+              />
+            </FormField>
+            <FormField
+              label={t("identity_admin.admin_display_name")}
+              required
+              error={createErrors.admin_display_name}
+            >
+              <TextInput
+                aria-label={t("identity_admin.admin_display_name")}
+                value={createForm.admin_display_name}
+                onChange={(event) => updateCreateField("admin_display_name", event.target.value)}
+              />
+            </FormField>
+            <FormField
+              label={t("identity_admin.admin_password")}
+              required
+              error={createErrors.admin_password}
+              description={t("identity_admin.password_requirement")}
+            >
+              <TextInput
+                aria-label={t("identity_admin.admin_password")}
+                type="password"
+                value={createForm.admin_password}
+                onChange={(event) => updateCreateField("admin_password", event.target.value)}
+                autoComplete="new-password"
+              />
+            </FormField>
+            <FormField
+              label={t("identity_admin.description")}
+              error={createErrors.description}
+              className="md:col-span-2"
+            >
+              <TextInput
+                aria-label={t("identity_admin.description")}
+                value={createForm.description}
+                onChange={(event) => updateCreateField("description", event.target.value)}
+              />
+            </FormField>
+          </div>
+        </Form>
       </Modal>
 
       <Modal
@@ -454,31 +558,35 @@ export function TenantsPage() {
       <Modal
         open={Boolean(renewTenant)}
         title={t("identity_admin.renew_tenant")}
-        onClose={() => setRenewTenant(null)}
+        onClose={closeRenewModal}
         maxWidth="max-w-md"
         footer={
           <>
-            <Button onClick={() => setRenewTenant(null)}>{t("common.cancel")}</Button>
+            <Button onClick={closeRenewModal}>{t("common.cancel")}</Button>
             <Button type="submit" form="renew-tenant-form" variant="primary" disabled={busy}>
               {t("identity_admin.renew")}
             </Button>
           </>
         }
       >
-        <form id="renew-tenant-form" onSubmit={renew} className="space-y-2">
-          <label className="block space-y-1.5">
-            <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
-              {t("identity_admin.expires_at")}
-            </span>
+        <Form id="renew-tenant-form" onSubmit={renew} noValidate>
+          <FormField
+            label={t("identity_admin.expires_at")}
+            required
+            error={renewError}
+          >
             <DateTimePicker
               value={renewAt}
-              onChange={setRenewAt}
+              onChange={(value) => {
+                setRenewAt(value);
+                if (renewError) setRenewError("");
+              }}
               aria-label={t("identity_admin.expires_at")}
               locale={i18n.language}
               labels={dateTimePickerLabels}
             />
-          </label>
-        </form>
+          </FormField>
+        </Form>
       </Modal>
 
       <ConfirmModal
