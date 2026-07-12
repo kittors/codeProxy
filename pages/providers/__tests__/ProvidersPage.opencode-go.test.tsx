@@ -840,7 +840,7 @@ describe("ProvidersPage Cline tab", () => {
 
     expect(await screen.findByText("Cline Fresh")).toBeInTheDocument();
     await waitFor(() =>
-      expect(localStorage.getItem("providers-page:cache:cline")).toContain("Cline Fresh"),
+      expect(localStorage.getItem("providers-page:cache.v2")).toContain("Cline Fresh"),
     );
   });
 
@@ -1179,9 +1179,7 @@ describe("ProvidersPage Ollama Cloud tab", () => {
 
     expect(await screen.findByText("Ollama Fresh")).toBeInTheDocument();
     await waitFor(() =>
-      expect(localStorage.getItem("providers-page:cache:ollama-cloud")).toContain(
-        "Ollama Fresh",
-      ),
+      expect(localStorage.getItem("providers-page:cache.v2")).toContain("Ollama Fresh"),
     );
   });
 

@@ -15,6 +15,12 @@ import { resolveCodexPlanType } from "../quota/resolvers";
 import { normalizePlanType } from "../quota/parsers";
 import type { QuotaItem, QuotaState, QuotaStatus } from "../quota/types";
 import type { StatusBarData, StatusBlockDetail, StatusBlockState } from "../usage";
+import {
+  getActiveCacheTenantId,
+  normalizeCacheTenantId,
+  readTenantBucket,
+  writeTenantBucket,
+} from "../tenant-cache";
 
 export type AuthFileModelItem = {
   id: string;
@@ -44,7 +50,9 @@ export const AUTH_FILES_PAGE_SIZE = 9;
 export const MAX_AUTH_FILE_SIZE = 50 * 1024;
 
 export const AUTH_FILES_UI_STATE_KEY = "authFilesPage.uiState.v3";
-export const AUTH_FILES_DATA_CACHE_KEY = "authFilesPage.dataCache.v2";
+/** Tenant-scoped auth-files list/quota cache (v3). Legacy v2 is read only for migration. */
+export const AUTH_FILES_DATA_CACHE_KEY = "authFilesPage.dataCache.v3";
+export const AUTH_FILES_DATA_CACHE_KEY_V2 = "authFilesPage.dataCache.v2";
 export const AUTH_FILES_QUOTA_PREVIEW_KEY = "authFilesPage.quotaPreview.v1";
 export const AUTH_FILES_QUOTA_AUTO_REFRESH_KEY = "authFilesPage.quotaAutoRefreshMs.v1";
 export const AUTH_FILES_FILES_VIEW_MODE_KEY = "authFilesPage.filesViewMode.v1";
@@ -81,11 +89,15 @@ export type AuthFilesUiState = {
 };
 
 export type AuthFilesDataCache = {
+  /** Effective tenant id that owns this cache bucket. Required to prevent cross-tenant reuse. */
+  tenantId: string;
   savedAtMs: number;
   files: AuthFileItem[];
   usageData?: EntityStatsResponse | null;
   quotaByFileName?: Record<string, QuotaState>;
 };
+
+type AuthFilesDataCacheBucket = Omit<AuthFilesDataCache, "tenantId">;
 
 const sanitizeDecodedIdToken = (value: unknown): unknown => {
   if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
@@ -518,55 +530,76 @@ const sanitizeQuotaByFileNameForCache = (
   return Object.keys(output).length > 0 ? output : undefined;
 };
 
-export const readAuthFilesDataCache = (): AuthFilesDataCache | null => {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = window.localStorage.getItem(AUTH_FILES_DATA_CACHE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as Partial<AuthFilesDataCache>;
-    const files = Array.isArray(parsed?.files) ? (parsed.files as AuthFileItem[]) : null;
-    if (!files) return null;
-    const savedAtMs =
-      typeof parsed?.savedAtMs === "number" && Number.isFinite(parsed.savedAtMs)
-        ? parsed.savedAtMs
-        : Date.now();
+const parseAuthFilesDataCacheBucket = (
+  value: unknown,
+): AuthFilesDataCacheBucket | null => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const parsed = value as Partial<AuthFilesDataCacheBucket> & { tenantId?: string };
+  const files = Array.isArray(parsed.files) ? (parsed.files as AuthFileItem[]) : null;
+  if (!files) return null;
+  const savedAtMs =
+    typeof parsed.savedAtMs === "number" && Number.isFinite(parsed.savedAtMs)
+      ? parsed.savedAtMs
+      : Date.now();
+  return {
+    savedAtMs,
+    files,
+    usageData:
+      parsed.usageData && typeof parsed.usageData === "object"
+        ? (parsed.usageData as EntityStatsResponse)
+        : undefined,
+    quotaByFileName: sanitizeQuotaByFileNameForCache(parsed.quotaByFileName),
+  };
+};
 
-    return {
-      savedAtMs,
-      files,
-      usageData:
-        parsed?.usageData && typeof parsed.usageData === "object"
-          ? (parsed.usageData as EntityStatsResponse)
-          : undefined,
-      quotaByFileName: sanitizeQuotaByFileNameForCache(parsed?.quotaByFileName),
-    };
-  } catch {
-    return null;
-  }
+/**
+ * Read auth-files list/quota cache for a tenant.
+ * Prefer explicit tenantId; fall back to the active cache tenant from AuthProvider.
+ */
+export const readAuthFilesDataCache = (
+  tenantId?: string | null,
+): AuthFilesDataCache | null => {
+  const tenantKey = normalizeCacheTenantId(tenantId ?? getActiveCacheTenantId());
+  const bucket = readTenantBucket({
+    key: AUTH_FILES_DATA_CACHE_KEY,
+    tenantId: tenantKey,
+    legacyKey: AUTH_FILES_DATA_CACHE_KEY_V2,
+    parseBucket: parseAuthFilesDataCacheBucket,
+    // v3 may still hold a single unscoped bucket mid-migration.
+    acceptUnscopedCurrent: true,
+  });
+  if (!bucket) return null;
+  return { tenantId: tenantKey, ...bucket };
 };
 
 export const writeAuthFilesDataCache = (cache: AuthFilesDataCache) => {
-  if (typeof window === "undefined") return;
-  try {
-    const raw = window.localStorage.getItem(AUTH_FILES_DATA_CACHE_KEY);
-    const previous = raw ? (JSON.parse(raw) as Partial<AuthFilesDataCache>) : null;
-    const fileNames = new Set(cache.files.map((file) => file.name).filter(Boolean));
-    const quotaByFileName = sanitizeQuotaByFileNameForCache(
-      cache.quotaByFileName ?? previous?.quotaByFileName,
-      fileNames,
-    );
-    window.localStorage.setItem(
-      AUTH_FILES_DATA_CACHE_KEY,
-      JSON.stringify({
-        savedAtMs: cache.savedAtMs,
-        files: cache.files,
-        usageData: cache.usageData ?? previous?.usageData,
-        quotaByFileName,
-      }),
-    );
-  } catch {
-    // ignore
-  }
+  const tenantKey = normalizeCacheTenantId(cache.tenantId || getActiveCacheTenantId());
+  writeTenantBucket({
+    key: AUTH_FILES_DATA_CACHE_KEY,
+    tenantId: tenantKey,
+    legacyKey: AUTH_FILES_DATA_CACHE_KEY_V2,
+    parseBucket: parseAuthFilesDataCacheBucket,
+    acceptUnscopedCurrent: true,
+    legacyKeysToRemove: [AUTH_FILES_DATA_CACHE_KEY_V2],
+    bucket: {
+      savedAtMs: cache.savedAtMs,
+      files: cache.files,
+      usageData: cache.usageData,
+      quotaByFileName: cache.quotaByFileName,
+    },
+    merge: (previous, next) => {
+      const fileNames = new Set(next.files.map((file) => file.name).filter(Boolean));
+      return {
+        savedAtMs: next.savedAtMs,
+        files: next.files,
+        usageData: next.usageData ?? previous?.usageData,
+        quotaByFileName: sanitizeQuotaByFileNameForCache(
+          next.quotaByFileName ?? previous?.quotaByFileName,
+          fileNames,
+        ),
+      };
+    },
+  });
 };
 
 export const formatFileSize = (bytes?: number): string => {

@@ -13,7 +13,8 @@ const mocks = vi.hoisted(() => ({
   apiPost: vi.fn(),
 }));
 
-const proxyCheckCacheKey = "proxiesPage.checkState.v1";
+const proxyCheckCacheKey = "proxiesPage.checkState.v2";
+const proxyCheckCacheKeyV1 = "proxiesPage.checkState.v1";
 
 vi.mock("@code-proxy/api-client", () => ({
   apiClient: {
@@ -199,8 +200,9 @@ describe("ProxiesPage", () => {
 
   test("renders cached check results on page entry while refreshing them in the background", async () => {
     let resolveNextCheck: ((value: unknown) => void) | undefined;
+    // Legacy v1 unscoped shape migrates into the default tenant bucket only.
     window.sessionStorage.setItem(
-      proxyCheckCacheKey,
+      proxyCheckCacheKeyV1,
       JSON.stringify({
         hk: { ok: true, statusCode: 204, latencyMs: 31 },
       }),

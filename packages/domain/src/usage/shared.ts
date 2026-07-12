@@ -63,7 +63,9 @@ export interface ApiStats {
 export type UsageTimeRange = "7h" | "24h" | "7d" | "all";
 
 export const TOKENS_PER_PRICE_UNIT = 1_000_000;
-export const MODEL_PRICE_STORAGE_KEY = "cli-proxy-model-prices-v2";
+/** Tenant-scoped model price cache (v3). Legacy v2 is migrated into the default tenant only. */
+export const MODEL_PRICE_STORAGE_KEY = "cli-proxy-model-prices-v3";
+export const MODEL_PRICE_STORAGE_KEY_V2 = "cli-proxy-model-prices-v2";
 export const USAGE_TIME_RANGE_MS: Record<Exclude<UsageTimeRange, "all">, number> = {
   "7h": 7 * 60 * 60 * 1000,
   "24h": 24 * 60 * 60 * 1000,

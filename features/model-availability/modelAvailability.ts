@@ -7,6 +7,7 @@ import type {
   ProviderSimpleConfig,
 } from "@code-proxy/api-client";
 import {
+  getActiveCacheTenantId,
   matchesModelPattern,
   normalizeProviderKey,
   resolveFileType,
@@ -938,18 +939,20 @@ const loadConfiguredAvailabilityEndpoint = async (
   return normalizeConfiguredModelAvailability(payload);
 };
 
-/* ── In-flight/TTL cache ── */
+/* ── In-flight/TTL cache (tenant-scoped) ── */
 
 const CONFIGURED_AVAILABILITY_TTL_MS = 15_000;
-let configuredAvailabilityCache: {
+
+type TenantConfiguredAvailabilityCache = {
   expiresAt: number;
   version: number;
   value: ConfiguredModelAvailability;
-} | null = null;
-let configuredAvailabilityInFlight: {
+};
+
+type TenantConfiguredAvailabilityInFlight = {
   version: number;
   promise: Promise<ConfiguredModelAvailability>;
-} | null = null;
+};
 
 interface GroupAvailabilityCacheEntry {
   expiresAt: number;
@@ -958,7 +961,21 @@ interface GroupAvailabilityCacheEntry {
 }
 
 const GROUP_AVAILABILITY_TTL_MS = 15_000;
-const groupAvailabilityCache = new Map<string, GroupAvailabilityCacheEntry>();
+
+/** Per-tenant full-catalog cache (no channel-group filter). */
+const configuredAvailabilityByTenant = new Map<string, TenantConfiguredAvailabilityCache>();
+/** Per-tenant in-flight full-catalog request. */
+const configuredAvailabilityInFlightByTenant = new Map<
+  string,
+  TenantConfiguredAvailabilityInFlight
+>();
+/**
+ * Per-tenant channel-group availability cache.
+ * Outer key = tenant id; inner key = sorted allowed groups.
+ */
+const groupAvailabilityByTenant = new Map<string, Map<string, GroupAvailabilityCacheEntry>>();
+
+const tenantCacheKey = () => getActiveCacheTenantId();
 
 export { invalidateConfiguredModelAvailability };
 
@@ -972,12 +989,18 @@ export const loadConfiguredModelAvailability = async (options?: {
     loadConfiguredModelAvailabilityFallback(
       await loadAuthGroupOwnerMappingMap(),
     );
+  const tenantId = tenantCacheKey();
 
   if (validGroups.length > 0) {
     const cacheKey = validGroups.join(",");
     const now = Date.now();
     const cacheVersion = getConfiguredAvailabilityCacheVersion();
-    const cached = groupAvailabilityCache.get(cacheKey);
+    let tenantGroupCache = groupAvailabilityByTenant.get(tenantId);
+    if (!tenantGroupCache) {
+      tenantGroupCache = new Map();
+      groupAvailabilityByTenant.set(tenantId, tenantGroupCache);
+    }
+    const cached = tenantGroupCache.get(cacheKey);
     if (
       cached &&
       cached.cacheVersion === cacheVersion &&
@@ -991,17 +1014,19 @@ export const loadConfiguredModelAvailability = async (options?: {
           `/models/configured-availability?allowed_channel_groups=${encodeURIComponent(cacheKey)}`,
         );
         if (!result) return loadFallback();
-        groupAvailabilityCache.set(cacheKey, {
-          expiresAt: now + GROUP_AVAILABILITY_TTL_MS,
+        const current = groupAvailabilityByTenant.get(tenantId) ?? new Map();
+        current.set(cacheKey, {
+          expiresAt: Date.now() + GROUP_AVAILABILITY_TTL_MS,
           cacheVersion,
           promise: Promise.resolve(result),
         });
+        groupAvailabilityByTenant.set(tenantId, current);
         return result;
       } catch {
         return loadFallback();
       }
     })();
-    groupAvailabilityCache.set(cacheKey, {
+    tenantGroupCache.set(cacheKey, {
       expiresAt: now + GROUP_AVAILABILITY_TTL_MS,
       cacheVersion,
       promise,
@@ -1011,6 +1036,7 @@ export const loadConfiguredModelAvailability = async (options?: {
 
   const now = Date.now();
   const cacheVersion = getConfiguredAvailabilityCacheVersion();
+  const configuredAvailabilityCache = configuredAvailabilityByTenant.get(tenantId);
   if (
     configuredAvailabilityCache &&
     configuredAvailabilityCache.version === cacheVersion &&
@@ -1018,6 +1044,8 @@ export const loadConfiguredModelAvailability = async (options?: {
   ) {
     return configuredAvailabilityCache.value;
   }
+  const configuredAvailabilityInFlight =
+    configuredAvailabilityInFlightByTenant.get(tenantId);
   if (
     configuredAvailabilityInFlight &&
     configuredAvailabilityInFlight.version === cacheVersion
@@ -1031,24 +1059,28 @@ export const loadConfiguredModelAvailability = async (options?: {
         "/models/configured-availability",
       );
       if (!result) return loadFallback();
-      configuredAvailabilityCache = {
-        expiresAt: now + CONFIGURED_AVAILABILITY_TTL_MS,
+      configuredAvailabilityByTenant.set(tenantId, {
+        expiresAt: Date.now() + CONFIGURED_AVAILABILITY_TTL_MS,
         version: cacheVersion,
         value: result,
-      };
+      });
       return result;
     } catch {
       // Fallback to old multi-API aggregation for backward compatibility.
       return loadFallback();
     }
   })();
-  configuredAvailabilityInFlight = { version: cacheVersion, promise };
+  configuredAvailabilityInFlightByTenant.set(tenantId, {
+    version: cacheVersion,
+    promise,
+  });
 
   try {
     return await promise;
   } finally {
-    if (configuredAvailabilityInFlight?.promise === promise) {
-      configuredAvailabilityInFlight = null;
+    const current = configuredAvailabilityInFlightByTenant.get(tenantId);
+    if (current?.promise === promise) {
+      configuredAvailabilityInFlightByTenant.delete(tenantId);
     }
   }
 };

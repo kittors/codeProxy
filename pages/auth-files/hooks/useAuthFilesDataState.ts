@@ -7,6 +7,7 @@ import { useToast } from "@code-proxy/ui";
 import {
   buildAuthFileSourceCandidates,
   buildUsageIndex,
+  getActiveCacheTenantId,
   normalizeAuthIndexValue,
   readAuthFilesDataCache,
   sanitizeAuthFilesForCache,
@@ -71,7 +72,14 @@ const isRequestCancelled = (err: unknown, signal?: AbortSignal) =>
 export function useAuthFilesDataState() {
   const { t } = useTranslation();
   const { notify } = useToast();
-  const initialDataCache = useMemo(() => readAuthFilesDataCache(), []);
+  // Seed from the active effective-tenant bucket only. DashboardLayout remounts on
+  // tenant switch, so a one-shot read at mount is enough to avoid cross-tenant paint.
+  const cacheTenantId = getActiveCacheTenantId();
+  const initialDataCache = useMemo(
+    () => readAuthFilesDataCache(cacheTenantId),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-seed only
+    [],
+  );
 
   const [files, setFiles] = useState<AuthFileItem[]>(() => initialDataCache?.files ?? []);
   const [loading, setLoading] = useState(() => !((initialDataCache?.files?.length ?? 0) > 0));
@@ -83,8 +91,13 @@ export function useAuthFilesDataState() {
 
   const filesRef = useRef<AuthFileItem[]>(files);
   const usageDataRef = useRef<EntityStatsResponse | null>(usageData);
+  const cacheTenantIdRef = useRef(cacheTenantId);
   const mountedRef = useRef(true);
   const loadSeqRef = useRef(0);
+
+  useEffect(() => {
+    cacheTenantIdRef.current = cacheTenantId;
+  }, [cacheTenantId]);
   const { index: usageIndex } = useMemo(() => buildUsageIndex(usageData), [usageData]);
 
   const loadAll = useCallback(
@@ -220,6 +233,7 @@ export function useAuthFilesDataState() {
     if (typeof window === "undefined") return undefined;
     const timer = window.setTimeout(() => {
       writeAuthFilesDataCache({
+        tenantId: cacheTenantIdRef.current,
         savedAtMs: Date.now(),
         files: sanitizeAuthFilesForCache(files),
         usageData,
@@ -231,6 +245,7 @@ export function useAuthFilesDataState() {
   useEffect(() => {
     return () => {
       writeAuthFilesDataCache({
+        tenantId: cacheTenantIdRef.current,
         savedAtMs: Date.now(),
         files: sanitizeAuthFilesForCache(filesRef.current),
         usageData: usageDataRef.current,

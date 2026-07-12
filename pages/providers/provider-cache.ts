@@ -1,38 +1,41 @@
-const CACHE_TTL = 7 * 24 * 60 * 60 * 1000; // 7 days
+import {
+  getActiveCacheTenantId,
+  readTenantTtlSlot,
+  removeTenantTtlSlot,
+  writeTenantTtlSlot,
+} from "@code-proxy/domain";
 
-interface CacheEntry<T> {
-  data: T;
-  timestamp: number;
-}
+const CACHE_TTL = 7 * 24 * 60 * 60 * 1000; // 7 days
+/** Tenant-bucketed store. Legacy unscoped keys used `providers-page:cache:${slot}`. */
+export const PROVIDERS_PAGE_CACHE_KEY = "providers-page:cache.v2";
+const LEGACY_PREFIX = "providers-page:cache:";
 
 export function getCachedData<T>(key: string): T | null {
-  try {
-    const raw = localStorage.getItem(`providers-page:cache:${key}`);
-    if (!raw) return null;
-    const entry: CacheEntry<T> = JSON.parse(raw);
-    if (Date.now() - entry.timestamp > CACHE_TTL) {
-      localStorage.removeItem(`providers-page:cache:${key}`);
-      return null;
-    }
-    return entry.data;
-  } catch {
-    return null;
-  }
+  return readTenantTtlSlot<T>({
+    key: PROVIDERS_PAGE_CACHE_KEY,
+    tenantId: getActiveCacheTenantId(),
+    slot: key,
+    ttlMs: CACHE_TTL,
+    legacyPrefix: LEGACY_PREFIX,
+  });
 }
 
 export function setCachedData<T>(key: string, data: T): void {
-  try {
-    const entry: CacheEntry<T> = { data, timestamp: Date.now() };
-    localStorage.setItem(`providers-page:cache:${key}`, JSON.stringify(entry));
-  } catch {
-    // localStorage full or unavailable
-  }
+  writeTenantTtlSlot({
+    key: PROVIDERS_PAGE_CACHE_KEY,
+    tenantId: getActiveCacheTenantId(),
+    slot: key,
+    data,
+    ttlMs: CACHE_TTL,
+    legacyPrefix: LEGACY_PREFIX,
+  });
 }
 
 export function removeCachedData(key: string): void {
-  try {
-    localStorage.removeItem(`providers-page:cache:${key}`);
-  } catch {
-    // ignore
-  }
+  removeTenantTtlSlot({
+    key: PROVIDERS_PAGE_CACHE_KEY,
+    tenantId: getActiveCacheTenantId(),
+    slot: key,
+    legacyPrefix: LEGACY_PREFIX,
+  });
 }

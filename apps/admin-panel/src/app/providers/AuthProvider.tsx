@@ -24,6 +24,11 @@ import {
   type ManagementPrincipal,
   type MenuIdentity,
 } from "@code-proxy/api-client";
+import {
+  DEFAULT_CACHE_TENANT_ID,
+  setActiveCacheTenantId,
+  setCacheTenantResolver,
+} from "@code-proxy/domain";
 import { invalidateConfiguredModelAvailability } from "@features/model-availability";
 
 interface AuthContextState {
@@ -72,6 +77,17 @@ const normalizeTenantOverride = (tenantId: string | undefined | null): string =>
  */
 const persistEffectiveTenantOverride = (tenantId: string): void => {
   updatePersistedEffectiveTenantId(normalizeTenantOverride(tenantId));
+};
+
+/**
+ * Pin the browser data-cache tenant to the effective management tenant.
+ * Data caches (providers, auth-files, pricing, proxy checks, lookup charts)
+ * all read getActiveCacheTenantId() so they never reuse another tenant's payload.
+ */
+const syncActiveDataCacheTenant = (tenantId?: string | null): void => {
+  setActiveCacheTenantId(tenantId ?? DEFAULT_CACHE_TENANT_ID);
+  // Hard-invalidate process-global availability so in-flight promises cannot leak.
+  invalidateConfiguredModelAvailability();
 };
 
 /** Mirrors CliRelay MenuCatalog so management-key / preview mode has a usable sidebar. */
@@ -437,6 +453,17 @@ export function AuthProvider({ children }: PropsWithChildren) {
     apiClient.setDefaultHeaders(tenantId ? { "X-Effective-Tenant-ID": tenantId } : {});
   }, []);
 
+  // Prefer live principal.effective_tenant for cache keys; fall back to last explicit pin.
+  useEffect(() => {
+    setCacheTenantResolver(() => principal?.effective_tenant?.id ?? null);
+    if (principal?.effective_tenant?.id) {
+      setActiveCacheTenantId(principal.effective_tenant.id);
+    }
+    return () => {
+      setCacheTenantResolver(null);
+    };
+  }, [principal?.effective_tenant?.id]);
+
   const bootstrap = useCallback(async () => {
     const fallbackBase = detectApiBaseFromLocation();
     const snapshot = readPersistedAuthSnapshot();
@@ -451,15 +478,20 @@ export function AuthProvider({ children }: PropsWithChildren) {
     setAccessToken(resolvedToken);
     setRememberPassword(resolvedRemember);
     configureClient(resolvedBase, resolvedToken, requestedTenant);
+    // Pin cache tenant before any page paints from localStorage/sessionStorage.
+    syncActiveDataCacheTenant(requestedTenant || DEFAULT_CACHE_TENANT_ID);
 
     if (!resolvedToken) {
       setIsAuthenticated(false);
       setPrincipal(null);
+      syncActiveDataCacheTenant(DEFAULT_CACHE_TENANT_ID);
       setIsRestoring(false);
       return;
     }
     if (isLocalPreviewMode()) {
-      setPrincipal(legacyServicePrincipal());
+      const preview = legacyServicePrincipal();
+      setPrincipal(preview);
+      syncActiveDataCacheTenant(preview.effective_tenant.id);
       setIsAuthenticated(true);
       setIsRestoring(false);
       return;
@@ -468,7 +500,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
     try {
       if (!resolvedToken.startsWith("cps_")) {
         await configApi.getConfig();
-        setPrincipal(legacyServicePrincipal());
+        const legacy = legacyServicePrincipal();
+        setPrincipal(legacy);
+        syncActiveDataCacheTenant(legacy.effective_tenant.id);
         setIsAuthenticated(true);
         return;
       }
@@ -480,6 +514,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         // before treating the session as dead (matches previous two-step restore).
         if (!requestedTenant) throw overrideError;
         configureClient(resolvedBase, resolvedToken, "");
+        syncActiveDataCacheTenant(DEFAULT_CACHE_TENANT_ID);
         restoredPrincipal = (await identityApi.me()).principal;
       }
       // If the server ignored or could not apply the override, drop the stale value.
@@ -499,10 +534,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
       }
       persistEffectiveTenantOverride(confirmedOverride);
       setPrincipal(restoredPrincipal);
+      syncActiveDataCacheTenant(restoredPrincipal.effective_tenant.id);
       setIsAuthenticated(true);
     } catch (error) {
       setIsAuthenticated(false);
       setPrincipal(null);
+      syncActiveDataCacheTenant(DEFAULT_CACHE_TENANT_ID);
       setAuthFailureCode(isApiClientError(error) ? extractApiErrorCode(error.payload) : "");
       clearPersistedAuthSnapshot();
     } finally {
@@ -524,6 +561,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       setAuthFailureCode((event as CustomEvent<{ code?: string }>).detail?.code?.trim() ?? "");
       setIsAuthenticated(false);
       setPrincipal(null);
+      syncActiveDataCacheTenant(DEFAULT_CACHE_TENANT_ID);
       clearPersistedAuthSnapshot();
     };
     const handleVersion = (event: Event) => {
@@ -559,6 +597,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       setAccessToken(response.access_token);
       setRememberPassword(input.rememberPassword);
       setPrincipal(response.principal);
+      syncActiveDataCacheTenant(response.principal.effective_tenant.id);
       setAuthFailureCode("");
       setIsAuthenticated(true);
       writePersistedAuthSnapshot({
@@ -580,6 +619,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     setPrincipal(null);
     setAuthFailureCode("");
     configureClient(apiBase, "", "");
+    syncActiveDataCacheTenant(DEFAULT_CACHE_TENANT_ID);
     clearPersistedAuthSnapshot();
   }, [apiBase, configureClient]);
 
@@ -601,9 +641,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
         nextTenant && nextTenant !== principal.home_tenant.id ? nextTenant : "";
       configureClient(apiBase, accessToken, nextOverride);
       persistEffectiveTenantOverride(nextOverride);
-      // Drop process-global availability cache so the next models page load
-      // cannot reuse the previous tenant's configured-availability response.
-      invalidateConfiguredModelAvailability();
+      // Switch cache bucket immediately so remounted pages never paint prior tenant data.
+      syncActiveDataCacheTenant(nextTenant || principal.home_tenant.id);
       try {
         const response = await identityApi.me();
         const effective = response.principal.effective_tenant;
@@ -615,10 +654,11 @@ export function AuthProvider({ children }: PropsWithChildren) {
           persistEffectiveTenantOverride(confirmedOverride);
         }
         setPrincipal(response.principal);
+        syncActiveDataCacheTenant(effective.id);
       } catch {
         configureClient(apiBase, accessToken, previousTenant);
         persistEffectiveTenantOverride(previousTenant);
-        invalidateConfiguredModelAvailability();
+        syncActiveDataCacheTenant(previousTenant || principal.home_tenant.id);
       }
     },
     [accessToken, apiBase, configureClient, principal],

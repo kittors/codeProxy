@@ -403,6 +403,7 @@ describe("ApiKeyLookupPage", () => {
       "apiKeyLookup.lastApiKey.v1",
       "sk-restored-key",
     );
+    // Legacy v1 unscoped chart cache migrates into the default tenant bucket.
     window.sessionStorage.setItem(
       "apiKeyLookup.chartCache.v1",
       JSON.stringify({
@@ -460,9 +461,11 @@ describe("ApiKeyLookupPage", () => {
     await waitFor(() =>
       expect(screen.getByTestId("usage-tab")).toHaveTextContent("24"),
     );
+    // After refresh, data is written under the tenant-scoped v2 key.
     expect(
-      window.sessionStorage.getItem("apiKeyLookup.chartCache.v1"),
+      window.sessionStorage.getItem("apiKeyLookup.chartCache.v2"),
     ).toContain('"total":24');
+    expect(window.sessionStorage.getItem("apiKeyLookup.chartCache.v1")).toBeNull();
   });
 
   test("ignores stale chart responses after rapid time range changes", async () => {

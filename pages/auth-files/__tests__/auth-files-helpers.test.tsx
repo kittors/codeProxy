@@ -295,6 +295,7 @@ describe("Auth Files helper coverage", () => {
     expect(JSON.stringify(sanitized)).not.toContain("should-not-persist");
 
     writeAuthFilesDataCache({
+      tenantId: "tenant-a",
       savedAtMs: 123,
       files: sanitized,
       quotaByFileName: {
@@ -307,7 +308,9 @@ describe("Auth Files helper coverage", () => {
       },
     });
     expect(window.localStorage.getItem(AUTH_FILES_DATA_CACHE_KEY)).toContain('"savedAtMs":123');
-    expect(readAuthFilesDataCache()).toEqual({
+    expect(window.localStorage.getItem(AUTH_FILES_DATA_CACHE_KEY)).toContain("byTenant");
+    expect(readAuthFilesDataCache("tenant-a")).toEqual({
+      tenantId: "tenant-a",
       savedAtMs: 123,
       files: sanitized,
       quotaByFileName: {
@@ -319,6 +322,8 @@ describe("Auth Files helper coverage", () => {
         },
       },
     });
+    // Different tenant must not see tenant-a's list/quota payload.
+    expect(readAuthFilesDataCache("tenant-b")).toBeNull();
   });
 
   test("keeps xAI identity fingerprint summary in sanitized cache", () => {

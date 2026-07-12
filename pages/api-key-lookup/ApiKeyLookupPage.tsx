@@ -42,11 +42,20 @@ import {
   type RequestLogsRow,
   type StatusFilterValue,
 } from "@features/request-log-viewer";
+import {
+  clearTenantBucketMap,
+  getActiveCacheTenantId,
+  readTenantBucketMapEntry,
+  updateTenantBucketMapEntry,
+} from "@code-proxy/domain";
 
 const DEFAULT_PAGE_SIZE = 50;
 const LOOKUP_LAST_API_KEY_STORAGE_KEY = "apiKeyLookup.lastApiKey.v1";
-const LOOKUP_CHART_CACHE_STORAGE_KEY = "apiKeyLookup.chartCache.v1";
-const LOOKUP_MODELS_CACHE_STORAGE_KEY = "apiKeyLookup.modelsCache.v1";
+/** Tenant-scoped chart cache (v2). Legacy v1 migrates into the default tenant only. */
+const LOOKUP_CHART_CACHE_STORAGE_KEY = "apiKeyLookup.chartCache.v2";
+const LOOKUP_CHART_CACHE_STORAGE_KEY_V1 = "apiKeyLookup.chartCache.v1";
+const LOOKUP_MODELS_CACHE_STORAGE_KEY = "apiKeyLookup.modelsCache.v2";
+const LOOKUP_MODELS_CACHE_STORAGE_KEY_V1 = "apiKeyLookup.modelsCache.v1";
 const LOGOUT_SELECT_VALUE = "__api-key-lookup-logout__";
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
@@ -88,49 +97,40 @@ function isChartDataResponse(value: unknown): value is ChartDataResponse {
 }
 
 const readStoredChartCache = (cacheKey: string): ChartDataResponse | null => {
-  try {
-    const raw = window.sessionStorage.getItem(LOOKUP_CHART_CACHE_STORAGE_KEY);
-    if (!raw) return null;
-    const parsed: unknown = JSON.parse(raw);
-    if (!isRecord(parsed)) return null;
-    const cached = parsed[cacheKey];
-    return isChartDataResponse(cached) ? cached : null;
-  } catch {
-    return null;
-  }
+  return readTenantBucketMapEntry({
+    key: LOOKUP_CHART_CACHE_STORAGE_KEY,
+    kind: "session",
+    tenantId: getActiveCacheTenantId(),
+    entryKey: cacheKey,
+    legacyKey: LOOKUP_CHART_CACHE_STORAGE_KEY_V1,
+    isEntry: isChartDataResponse,
+  });
 };
 
 const writeStoredChartCache = (
   cacheKey: string,
   data: ChartDataResponse,
 ): void => {
-  try {
-    const raw = window.sessionStorage.getItem(LOOKUP_CHART_CACHE_STORAGE_KEY);
-    const parsed: unknown = raw ? JSON.parse(raw) : {};
-    const entries = isRecord(parsed)
-      ? Object.entries(parsed).filter(
-          (entry): entry is [string, ChartDataResponse] =>
-            isChartDataResponse(entry[1]),
-        )
-      : [];
-    const next: Record<string, ChartDataResponse> = {};
-    const keptEntries = entries.filter(([key]) => key !== cacheKey);
-    const cacheEntry: [string, ChartDataResponse] = [cacheKey, data];
-    for (const [key, value] of [...keptEntries, cacheEntry].slice(-8)) {
-      next[key] = value;
-    }
-    window.sessionStorage.setItem(
-      LOOKUP_CHART_CACHE_STORAGE_KEY,
-      JSON.stringify(next),
-    );
-  } catch {
-    // ignore storage failures
-  }
+  updateTenantBucketMapEntry({
+    key: LOOKUP_CHART_CACHE_STORAGE_KEY,
+    kind: "session",
+    tenantId: getActiveCacheTenantId(),
+    entryKey: cacheKey,
+    entryValue: data,
+    maxEntries: 8,
+    legacyKey: LOOKUP_CHART_CACHE_STORAGE_KEY_V1,
+    legacyKeysToRemove: [LOOKUP_CHART_CACHE_STORAGE_KEY_V1],
+  });
 };
 
 const clearStoredChartCache = (): void => {
+  clearTenantBucketMap({
+    key: LOOKUP_CHART_CACHE_STORAGE_KEY,
+    kind: "session",
+    tenantId: getActiveCacheTenantId(),
+  });
   try {
-    window.sessionStorage.removeItem(LOOKUP_CHART_CACHE_STORAGE_KEY);
+    window.sessionStorage.removeItem(LOOKUP_CHART_CACHE_STORAGE_KEY_V1);
   } catch {
     // ignore storage failures
   }
@@ -144,42 +144,27 @@ const sameStringArray = (left: string[], right: string[]): boolean =>
   left.every((value, index) => value === right[index]);
 
 const readStoredModelsCache = (cacheKey: string): string[] | null => {
-  try {
-    const raw = window.sessionStorage.getItem(LOOKUP_MODELS_CACHE_STORAGE_KEY);
-    if (!raw) return null;
-    const parsed: unknown = JSON.parse(raw);
-    if (!isRecord(parsed)) return null;
-    const cached = parsed[cacheKey];
-    return isStringArray(cached) ? cached : null;
-  } catch {
-    return null;
-  }
+  return readTenantBucketMapEntry({
+    key: LOOKUP_MODELS_CACHE_STORAGE_KEY,
+    kind: "session",
+    tenantId: getActiveCacheTenantId(),
+    entryKey: cacheKey,
+    legacyKey: LOOKUP_MODELS_CACHE_STORAGE_KEY_V1,
+    isEntry: isStringArray,
+  });
 };
 
 const writeStoredModelsCache = (cacheKey: string, models: string[]): void => {
-  try {
-    const raw = window.sessionStorage.getItem(LOOKUP_MODELS_CACHE_STORAGE_KEY);
-    const parsed: unknown = raw ? JSON.parse(raw) : {};
-    const entries = isRecord(parsed)
-      ? Object.entries(parsed).filter((entry): entry is [string, string[]] =>
-          isStringArray(entry[1]),
-        )
-      : [];
-    const next: Record<string, string[]> = {};
-    const keptEntries = entries.filter(([key]) => key !== cacheKey);
-    for (const [key, value] of [
-      ...keptEntries,
-      [cacheKey, models] as const,
-    ].slice(-8)) {
-      next[key] = value;
-    }
-    window.sessionStorage.setItem(
-      LOOKUP_MODELS_CACHE_STORAGE_KEY,
-      JSON.stringify(next),
-    );
-  } catch {
-    // ignore storage failures
-  }
+  updateTenantBucketMapEntry({
+    key: LOOKUP_MODELS_CACHE_STORAGE_KEY,
+    kind: "session",
+    tenantId: getActiveCacheTenantId(),
+    entryKey: cacheKey,
+    entryValue: models,
+    maxEntries: 8,
+    legacyKey: LOOKUP_MODELS_CACHE_STORAGE_KEY_V1,
+    legacyKeysToRemove: [LOOKUP_MODELS_CACHE_STORAGE_KEY_V1],
+  });
 };
 
 const extractServerErrorMessage = (raw: unknown): string => {

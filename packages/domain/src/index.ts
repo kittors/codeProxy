@@ -8,4 +8,5 @@ export * from "./auth-files/types";
 export * from "./auth-files/zip";
 export * from "./quota";
 export * from "./usage";
+export * from "./tenant-cache";
 export { isRuntimeOnlyAuthFile, normalizeAuthIndexValue } from "./auth-files/authFiles";

@@ -25,6 +25,11 @@ import {
 } from "@code-proxy/domain/ccswitch/ccswitchImportLinks";
 import type { CcSwitchImportConfigListItem } from "@code-proxy/domain/ccswitch/ccswitchImportConfigList";
 import { ccSwitchConfigMatchesApiKeyPermissions } from "@code-proxy/domain/ccswitch/ccswitchImportCompatibility";
+import {
+  getActiveCacheTenantId,
+  readTenantBucketMapEntry,
+  updateTenantBucketMapEntry,
+} from "@code-proxy/domain";
 import { Button } from "@code-proxy/ui";
 import { Card } from "@code-proxy/ui";
 import { copyTextToClipboard } from "@code-proxy/ui";
@@ -32,7 +37,9 @@ import { useToast } from "@code-proxy/ui";
 
 const CC_SWITCH_RELEASES_URL = "https://github.com/farion1231/cc-switch/releases";
 const QUICK_IMPORT_CLIENTS: CcSwitchClientType[] = ["codex", "claude"];
-const QUICK_IMPORT_CACHE_STORAGE_KEY = "apiKeyLookup.quickImportCache.v1";
+/** Tenant-scoped quick-import cache (v2). Legacy v1 migrates into the default tenant only. */
+const QUICK_IMPORT_CACHE_STORAGE_KEY = "apiKeyLookup.quickImportCache.v2";
+const QUICK_IMPORT_CACHE_STORAGE_KEY_V1 = "apiKeyLookup.quickImportCache.v1";
 
 const iconByType: Record<"codex" | "claude", string> = {
   codex: iconCodex,
@@ -86,52 +93,46 @@ function getQuickImportCacheKey(apiKey: string): string {
   return [apiKey.trim(), auth?.apiBase ?? "public", auth?.managementKey ?? ""].join("|");
 }
 
-function readStoredQuickImportCache(
-  cacheKey: string,
-): { configs: CcSwitchImportConfigListItem[]; apiKeyEntry: ApiKeyEntry | null } | null {
-  try {
-    const raw = window.sessionStorage.getItem(QUICK_IMPORT_CACHE_STORAGE_KEY);
-    if (!raw) return null;
-    const parsed: unknown = JSON.parse(raw);
-    if (!isRecord(parsed)) return null;
-    const cached = parsed[cacheKey];
-    if (!isRecord(cached)) return null;
-    const configs = normalizeCcSwitchImportConfigs(cached.configs);
-    const entries = normalizeApiKeyEntries([cached.apiKeyEntry]);
-    return { configs, apiKeyEntry: entries[0] ?? null };
-  } catch {
-    return null;
-  }
+type QuickImportCacheEntry = {
+  configs: CcSwitchImportConfigListItem[];
+  apiKeyEntry: ApiKeyEntry | null;
+};
+
+function parseQuickImportCacheEntry(value: unknown): QuickImportCacheEntry | null {
+  if (!isRecord(value)) return null;
+  const configs = normalizeCcSwitchImportConfigs(value.configs);
+  const entries = normalizeApiKeyEntries([value.apiKeyEntry]);
+  return { configs, apiKeyEntry: entries[0] ?? null };
+}
+
+function readStoredQuickImportCache(cacheKey: string): QuickImportCacheEntry | null {
+  const raw = readTenantBucketMapEntry({
+    key: QUICK_IMPORT_CACHE_STORAGE_KEY,
+    kind: "session",
+    tenantId: getActiveCacheTenantId(),
+    entryKey: cacheKey,
+    legacyKey: QUICK_IMPORT_CACHE_STORAGE_KEY_V1,
+  });
+  return parseQuickImportCacheEntry(raw);
 }
 
 function writeStoredQuickImportCache(
   cacheKey: string,
-  value: { configs: CcSwitchImportConfigListItem[]; apiKeyEntry: ApiKeyEntry | null },
+  value: QuickImportCacheEntry,
 ): void {
-  try {
-    const raw = window.sessionStorage.getItem(QUICK_IMPORT_CACHE_STORAGE_KEY);
-    const parsed: unknown = raw ? JSON.parse(raw) : {};
-    const entries = isRecord(parsed)
-      ? Object.entries(parsed).filter((entry): entry is [string, Record<string, unknown>] =>
-          isRecord(entry[1]),
-        )
-      : [];
-    const next: Record<string, Record<string, unknown>> = {};
-    const keptEntries = entries.filter(([key]) => key !== cacheKey);
-    const cacheEntry: [string, Record<string, unknown>] = [
-      cacheKey,
-      {
-        configs: value.configs.map(serializeQuickImportConfig),
-        apiKeyEntry: value.apiKeyEntry,
-      },
-    ];
-    for (const [key, entry] of [...keptEntries, cacheEntry].slice(-8)) {
-      next[key] = entry;
-    }
-    window.sessionStorage.setItem(QUICK_IMPORT_CACHE_STORAGE_KEY, JSON.stringify(next));
-  } catch {
-    // ignore storage failures
-  }
+  updateTenantBucketMapEntry({
+    key: QUICK_IMPORT_CACHE_STORAGE_KEY,
+    kind: "session",
+    tenantId: getActiveCacheTenantId(),
+    entryKey: cacheKey,
+    entryValue: {
+      configs: value.configs.map(serializeQuickImportConfig),
+      apiKeyEntry: value.apiKeyEntry,
+    },
+    maxEntries: 8,
+    legacyKey: QUICK_IMPORT_CACHE_STORAGE_KEY_V1,
+    legacyKeysToRemove: [QUICK_IMPORT_CACHE_STORAGE_KEY_V1],
+  });
 }
 
 const sameJsonValue = (left: unknown, right: unknown): boolean =>

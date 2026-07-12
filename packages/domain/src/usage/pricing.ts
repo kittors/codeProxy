@@ -2,6 +2,7 @@ import {
   getApisRecord,
   isRecord,
   MODEL_PRICE_STORAGE_KEY,
+  MODEL_PRICE_STORAGE_KEY_V2,
   TOKENS_PER_PRICE_UNIT,
   type ApiStats,
   type ModelPrice,
@@ -9,6 +10,11 @@ import {
 } from "./shared";
 import { collectUsageDetails } from "./details";
 import { maskUsageSensitiveValue } from "./sanitize";
+import {
+  getActiveCacheTenantId,
+  readTenantBucket,
+  writeTenantBucket,
+} from "../tenant-cache";
 
 export function calculateCost(
   detail: UsageDetail,
@@ -56,55 +62,71 @@ export function calculateTotalCost(
   return details.reduce((sum, detail) => sum + calculateCost(detail, modelPrices), 0);
 }
 
-export function loadModelPrices(): Record<string, ModelPrice> {
-  try {
-    if (typeof localStorage === "undefined") return {};
-    const raw = localStorage.getItem(MODEL_PRICE_STORAGE_KEY);
-    if (!raw) return {};
-    const parsed: unknown = JSON.parse(raw);
-    if (!isRecord(parsed)) return {};
+const parseModelPricesBucket = (value: unknown): Record<string, ModelPrice> | null => {
+  if (!isRecord(value)) return null;
+  // Tenant store may wrap as { prices: ... } or be the prices map itself.
+  const source = isRecord(value.prices) ? value.prices : value;
+  if (!isRecord(source)) return null;
 
-    const normalized: Record<string, ModelPrice> = {};
-    Object.entries(parsed).forEach(([model, price]: [string, unknown]) => {
-      if (!model) return;
-      const priceRecord = isRecord(price) ? price : null;
-      const promptRaw = Number(priceRecord?.prompt);
-      const completionRaw = Number(priceRecord?.completion);
-      const cacheRaw = Number(priceRecord?.cache);
-      const perCallRaw = Number(priceRecord?.perCall);
-      const mode = priceRecord?.mode === "call" ? "call" : "token";
+  const normalized: Record<string, ModelPrice> = {};
+  Object.entries(source).forEach(([model, price]: [string, unknown]) => {
+    if (!model) return;
+    const priceRecord = isRecord(price) ? price : null;
+    const promptRaw = Number(priceRecord?.prompt);
+    const completionRaw = Number(priceRecord?.completion);
+    const cacheRaw = Number(priceRecord?.cache);
+    const perCallRaw = Number(priceRecord?.perCall);
+    const mode = priceRecord?.mode === "call" ? "call" : "token";
 
-      if (
-        !Number.isFinite(promptRaw) &&
-        !Number.isFinite(completionRaw) &&
-        !Number.isFinite(cacheRaw) &&
-        !Number.isFinite(perCallRaw)
-      ) {
-        return;
-      }
+    if (
+      !Number.isFinite(promptRaw) &&
+      !Number.isFinite(completionRaw) &&
+      !Number.isFinite(cacheRaw) &&
+      !Number.isFinite(perCallRaw)
+    ) {
+      return;
+    }
 
-      const prompt = Number.isFinite(promptRaw) && promptRaw >= 0 ? promptRaw : 0;
-      const completion = Number.isFinite(completionRaw) && completionRaw >= 0 ? completionRaw : 0;
-      const cache =
-        Number.isFinite(cacheRaw) && cacheRaw >= 0
-          ? cacheRaw
-          : Number.isFinite(promptRaw) && promptRaw >= 0
-            ? promptRaw
-            : prompt;
-      const perCall = Number.isFinite(perCallRaw) && perCallRaw >= 0 ? perCallRaw : 0;
+    const prompt = Number.isFinite(promptRaw) && promptRaw >= 0 ? promptRaw : 0;
+    const completion = Number.isFinite(completionRaw) && completionRaw >= 0 ? completionRaw : 0;
+    const cache =
+      Number.isFinite(cacheRaw) && cacheRaw >= 0
+        ? cacheRaw
+        : Number.isFinite(promptRaw) && promptRaw >= 0
+          ? promptRaw
+          : prompt;
+    const perCall = Number.isFinite(perCallRaw) && perCallRaw >= 0 ? perCallRaw : 0;
 
-      normalized[model] = { mode, prompt, completion, cache, perCall };
-    });
-    return normalized;
-  } catch {
-    return {};
-  }
+    normalized[model] = { mode, prompt, completion, cache, perCall };
+  });
+  return normalized;
+};
+
+export function loadModelPrices(tenantId?: string | null): Record<string, ModelPrice> {
+  const bucket = readTenantBucket({
+    key: MODEL_PRICE_STORAGE_KEY,
+    tenantId: tenantId ?? getActiveCacheTenantId(),
+    legacyKey: MODEL_PRICE_STORAGE_KEY_V2,
+    parseBucket: parseModelPricesBucket,
+    acceptUnscopedCurrent: true,
+  });
+  return bucket ?? {};
 }
 
-export function saveModelPrices(prices: Record<string, ModelPrice>): void {
+export function saveModelPrices(
+  prices: Record<string, ModelPrice>,
+  tenantId?: string | null,
+): void {
   try {
-    if (typeof localStorage === "undefined") return;
-    localStorage.setItem(MODEL_PRICE_STORAGE_KEY, JSON.stringify(prices));
+    writeTenantBucket({
+      key: MODEL_PRICE_STORAGE_KEY,
+      tenantId: tenantId ?? getActiveCacheTenantId(),
+      legacyKey: MODEL_PRICE_STORAGE_KEY_V2,
+      parseBucket: parseModelPricesBucket,
+      acceptUnscopedCurrent: true,
+      legacyKeysToRemove: [MODEL_PRICE_STORAGE_KEY_V2],
+      bucket: prices,
+    });
   } catch {
     console.warn("Failed to save model pricing");
   }

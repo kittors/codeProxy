@@ -31,6 +31,7 @@ import {
   AUTH_FILES_FILES_VIEW_MODE_KEY,
   AUTH_FILES_QUOTA_AUTO_REFRESH_KEY,
   AUTH_FILES_QUOTA_PREVIEW_KEY,
+  getActiveCacheTenantId,
   normalizeAuthIndexValue,
   normalizeQuotaAutoRefreshMs,
   parseAdditionalQuotaWindowLabel,
@@ -75,7 +76,12 @@ export function useAuthFilesQuotaState({
   refreshUsageDataForFiles,
 }: UseAuthFilesQuotaStateOptions) {
   const { t } = useTranslation();
-  const initialDataCache = useMemo(() => readAuthFilesDataCache(), []);
+  const cacheTenantId = getActiveCacheTenantId();
+  const initialDataCache = useMemo(
+    () => readAuthFilesDataCache(cacheTenantId),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-seed only
+    [],
+  );
 
   const [connectivityState, setConnectivityState] = useState<
     Map<string, { loading: boolean; latencyMs: number | null; error: boolean }>
@@ -135,10 +141,12 @@ export function useAuthFilesQuotaState({
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
     const timer = window.setTimeout(() => {
-      const current = readAuthFilesDataCache();
+      const tenantId = getActiveCacheTenantId();
+      const current = readAuthFilesDataCache(tenantId);
       if (!current?.files?.length) return;
       writeAuthFilesDataCache({
         ...current,
+        tenantId,
         savedAtMs: Date.now(),
         quotaByFileName,
       });

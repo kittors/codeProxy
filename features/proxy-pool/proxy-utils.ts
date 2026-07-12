@@ -1,11 +1,18 @@
 import type { ProxyCheckResult, ProxyPoolEntry } from "@code-proxy/api-client/endpoints/proxies";
+import {
+  getActiveCacheTenantId,
+  readTenantBucket,
+  writeTenantBucket,
+} from "@code-proxy/domain";
 
 export type ProxyCheckStateEntry = Partial<ProxyCheckResult> & { checking?: boolean };
 export type ProxyCheckState = Record<string, ProxyCheckStateEntry>;
 
 export type ProxyLatencyTone = "none" | "fast" | "medium" | "slow" | "failed";
 
-export const PROXIES_CHECK_STATE_CACHE_KEY = "proxiesPage.checkState.v1";
+/** Tenant-scoped proxy check results (v2). Legacy v1 migrates into the default tenant only. */
+export const PROXIES_CHECK_STATE_CACHE_KEY = "proxiesPage.checkState.v2";
+export const PROXIES_CHECK_STATE_CACHE_KEY_V1 = "proxiesPage.checkState.v1";
 
 const readCachedNumber = (value: unknown): number | undefined =>
   typeof value === "number" && Number.isFinite(value) ? Math.round(value) : undefined;
@@ -51,52 +58,64 @@ export const proxyLatencyTone = (result?: ProxyCheckStateEntry): ProxyLatencyTon
   return "slow";
 };
 
-export const readCachedProxyCheckState = (): ProxyCheckState => {
-  if (typeof window === "undefined") return {};
-  try {
-    const raw = window.sessionStorage.getItem(PROXIES_CHECK_STATE_CACHE_KEY);
-    if (!raw) return {};
-    const parsed = JSON.parse(raw) as unknown;
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
-
-    const next: ProxyCheckState = {};
-    for (const [id, value] of Object.entries(parsed)) {
-      if (!id || !value || typeof value !== "object" || Array.isArray(value)) continue;
-      const item = value as Record<string, unknown>;
-      if (typeof item.ok !== "boolean") continue;
-      const statusCode = readCachedNumber(item.statusCode);
-      const latencyMs = readCachedNumber(item.latencyMs);
-      const message = typeof item.message === "string" ? item.message : "";
-      next[id] = {
-        ok: item.ok,
-        ...(typeof statusCode === "number" ? { statusCode } : {}),
-        ...(typeof latencyMs === "number" ? { latencyMs } : {}),
-        ...(message ? { message } : {}),
-      };
-    }
-    return next;
-  } catch {
-    return {};
+const parseProxyCheckState = (value: unknown): ProxyCheckState | null => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const next: ProxyCheckState = {};
+  for (const [id, itemValue] of Object.entries(value as Record<string, unknown>)) {
+    if (!id || !itemValue || typeof itemValue !== "object" || Array.isArray(itemValue)) continue;
+    const item = itemValue as Record<string, unknown>;
+    if (typeof item.ok !== "boolean") continue;
+    const statusCode = readCachedNumber(item.statusCode);
+    const latencyMs = readCachedNumber(item.latencyMs);
+    const message = typeof item.message === "string" ? item.message : "";
+    next[id] = {
+      ok: item.ok,
+      ...(typeof statusCode === "number" ? { statusCode } : {}),
+      ...(typeof latencyMs === "number" ? { latencyMs } : {}),
+      ...(message ? { message } : {}),
+    };
   }
+  return next;
 };
 
-export const writeCachedProxyCheckState = (state: ProxyCheckState) => {
-  if (typeof window === "undefined") return;
-  try {
-    const cache: Record<string, ProxyCheckResult> = {};
-    for (const [id, result] of Object.entries(state)) {
-      if (typeof result.ok !== "boolean") continue;
-      cache[id] = {
-        ok: result.ok,
-        ...(typeof result.statusCode === "number" ? { statusCode: result.statusCode } : {}),
-        ...(typeof result.latencyMs === "number" ? { latencyMs: result.latencyMs } : {}),
-        ...(result.message ? { message: result.message } : {}),
-      };
-    }
-    window.sessionStorage.setItem(PROXIES_CHECK_STATE_CACHE_KEY, JSON.stringify(cache));
-  } catch {
-    // 忽略缓存写入失败。
+export const readCachedProxyCheckState = (tenantId?: string | null): ProxyCheckState => {
+  return (
+    readTenantBucket({
+      key: PROXIES_CHECK_STATE_CACHE_KEY,
+      kind: "session",
+      tenantId: tenantId ?? getActiveCacheTenantId(),
+      legacyKey: PROXIES_CHECK_STATE_CACHE_KEY_V1,
+      parseBucket: parseProxyCheckState,
+      acceptUnscopedCurrent: true,
+    }) ?? {}
+  );
+};
+
+export const writeCachedProxyCheckState = (
+  state: ProxyCheckState,
+  tenantId?: string | null,
+): void => {
+  // Persist only completed checks (ok is required); drop in-flight "checking" rows.
+  const cache: ProxyCheckState = {};
+  for (const [id, result] of Object.entries(state)) {
+    if (typeof result.ok !== "boolean") continue;
+    cache[id] = {
+      ok: result.ok,
+      ...(typeof result.statusCode === "number" ? { statusCode: result.statusCode } : {}),
+      ...(typeof result.latencyMs === "number" ? { latencyMs: result.latencyMs } : {}),
+      ...(result.message ? { message: result.message } : {}),
+    };
   }
+  writeTenantBucket({
+    key: PROXIES_CHECK_STATE_CACHE_KEY,
+    kind: "session",
+    tenantId: tenantId ?? getActiveCacheTenantId(),
+    legacyKey: PROXIES_CHECK_STATE_CACHE_KEY_V1,
+    parseBucket: parseProxyCheckState,
+    acceptUnscopedCurrent: true,
+    legacyKeysToRemove: [PROXIES_CHECK_STATE_CACHE_KEY_V1],
+    bucket: cache,
+  });
 };
 
 export const slugifyProxyID = (name: string, fallback: string): string => {
