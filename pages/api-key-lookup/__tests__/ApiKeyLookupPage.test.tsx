@@ -92,22 +92,6 @@ describe("ApiKeyLookupPage", () => {
     window.sessionStorage.clear();
     window.history.replaceState({}, "", "/manage/apikey-lookup");
     vi.clearAllMocks();
-    // jsdom 无 IntersectionObserver；默认 stub，避免 toolbar sticky 监听挂载崩溃。
-    if (typeof window.IntersectionObserver === "undefined") {
-      window.IntersectionObserver = class MockIntersectionObserver
-        implements IntersectionObserver
-      {
-        readonly root: Element | Document | null = null;
-        readonly rootMargin = "";
-        readonly thresholds: ReadonlyArray<number> = [];
-        observe(): void {}
-        unobserve(): void {}
-        disconnect(): void {}
-        takeRecords(): IntersectionObserverEntry[] {
-          return [];
-        }
-      };
-    }
   });
 
   test("opens the API key login modal when no key is stored", async () => {
@@ -543,41 +527,25 @@ describe("ApiKeyLookupPage", () => {
   });
 
   test("pins results toolbar with sticky top offset and collapses header on scroll", async () => {
-    const io = {
-      callback: null as IntersectionObserverCallback | null,
-    };
-    const OriginalIO = window.IntersectionObserver;
-    window.IntersectionObserver = class MockIntersectionObserver
-      implements IntersectionObserver
-    {
-      readonly root: Element | Document | null = null;
-      readonly rootMargin = "";
-      readonly thresholds: ReadonlyArray<number> = [];
-      constructor(callback: IntersectionObserverCallback) {
-        io.callback = callback;
+    let toolbarTop = 120;
+    const originalGetBoundingClientRect =
+      Element.prototype.getBoundingClientRect;
+    Element.prototype.getBoundingClientRect = function getBoundingClientRect() {
+      const el = this as HTMLElement;
+      if (el.dataset?.testid === "apikey-lookup-toolbar-sticky") {
+        return {
+          x: 0,
+          y: toolbarTop,
+          top: toolbarTop,
+          left: 0,
+          right: 800,
+          bottom: toolbarTop + 48,
+          width: 800,
+          height: 48,
+          toJSON: () => ({}),
+        } as DOMRect;
       }
-      observe(): void {}
-      unobserve(): void {}
-      disconnect(): void {}
-      takeRecords(): IntersectionObserverEntry[] {
-        return [];
-      }
-    };
-
-    const emitIo = (isIntersecting: boolean) => {
-      const callback = io.callback;
-      if (!callback) {
-        throw new Error("IntersectionObserver callback was not registered");
-      }
-      callback(
-        [
-          {
-            isIntersecting,
-            intersectionRatio: isIntersecting ? 1 : 0,
-          } as IntersectionObserverEntry,
-        ],
-        {} as IntersectionObserver,
-      );
+      return originalGetBoundingClientRect.call(this);
     };
 
     window.sessionStorage.setItem(
@@ -597,6 +565,8 @@ describe("ApiKeyLookupPage", () => {
       const toolbar = await screen.findByTestId("apikey-lookup-toolbar-sticky");
       expect(toolbar.className).toMatch(/(?:^|\s)sticky(?:\s|$)/);
       expect(toolbar.className).toMatch(/(?:^|\s)top-3(?:\s|$)/);
+      // sticky 必须是自身节点，不能再包一层短 relative 切断包含块。
+      expect(toolbar.parentElement?.tagName.toLowerCase()).toBe("main");
       expect(toolbar).toHaveAttribute("data-stuck", "false");
       expect(toolbar.className).toMatch(/border-transparent/);
 
@@ -607,20 +577,15 @@ describe("ApiKeyLookupPage", () => {
         configurable: true,
         value: 80,
       });
+      toolbarTop = 12;
       window.dispatchEvent(new Event("scroll"));
 
       await waitFor(() => {
         expect(header).toHaveAttribute("data-collapsed", "true");
+        expect(toolbar).toHaveAttribute("data-stuck", "true");
       });
       expect(header.className).toMatch(/-translate-y-full/);
       expect(header.className).toMatch(/opacity-0/);
-
-      // sentinel 离开视口 = 吸顶，toolbar 应出现 border 描边
-      emitIo(false);
-
-      await waitFor(() => {
-        expect(toolbar).toHaveAttribute("data-stuck", "true");
-      });
       expect(toolbar.className).toMatch(/border-slate-200/);
       expect(toolbar.className).not.toMatch(/border-transparent/);
 
@@ -628,8 +593,8 @@ describe("ApiKeyLookupPage", () => {
         configurable: true,
         value: 0,
       });
+      toolbarTop = 120;
       window.dispatchEvent(new Event("scroll"));
-      emitIo(true);
 
       await waitFor(() => {
         expect(header).toHaveAttribute("data-collapsed", "false");
@@ -637,7 +602,7 @@ describe("ApiKeyLookupPage", () => {
       });
       expect(toolbar.className).toMatch(/border-transparent/);
     } finally {
-      window.IntersectionObserver = OriginalIO;
+      Element.prototype.getBoundingClientRect = originalGetBoundingClientRect;
     }
   });
 });
