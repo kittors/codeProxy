@@ -276,6 +276,33 @@ export function ApiKeyLookupPage() {
     return () => mq.removeEventListener("change", handler);
   }, []);
 
+  // 向上滚动内容时顶栏自然收起，给 sticky tabs 让出视口；回到顶部附近再展开。
+  const [headerCollapsed, setHeaderCollapsed] = useState(false);
+  useEffect(() => {
+    const HIDE_AFTER = 28;
+    const SHOW_BELOW = 12;
+    let frame = 0;
+    const syncHeader = () => {
+      frame = 0;
+      const y = window.scrollY || document.documentElement.scrollTop || 0;
+      setHeaderCollapsed((prev) => {
+        if (y > HIDE_AFTER) return true;
+        if (y < SHOW_BELOW) return false;
+        return prev;
+      });
+    };
+    const onScroll = () => {
+      if (frame) return;
+      frame = window.requestAnimationFrame(syncHeader);
+    };
+    syncHeader();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      if (frame) window.cancelAnimationFrame(frame);
+    };
+  }, []);
+
   const initialLookupKey = useMemo(
     () => readLegacyLookupKeyFromUrl() || readStoredLookupKey(),
     [],
@@ -902,8 +929,19 @@ export function ApiKeyLookupPage() {
 
   return (
     <div className="relative min-h-dvh bg-gradient-to-br from-slate-50 via-white to-slate-100 pt-14 dark:from-neutral-950 dark:via-neutral-900 dark:to-neutral-950">
-      {/* Header */}
-      <header className="fixed inset-x-0 top-0 z-30 border-b border-slate-200/60 bg-white/70 backdrop-blur-xl dark:border-neutral-800/60 dark:bg-neutral-950/70">
+      {/* Header：滚动后上滑淡出，给 sticky tabs 让位 */}
+      <header
+        data-testid="apikey-lookup-header"
+        data-collapsed={headerCollapsed ? "true" : "false"}
+        aria-hidden={headerCollapsed || undefined}
+        className={[
+          "fixed inset-x-0 top-0 z-30 border-b border-slate-200/60 bg-white/70 backdrop-blur-xl dark:border-neutral-800/60 dark:bg-neutral-950/70",
+          "motion-safe:transition-[transform,opacity,border-color] motion-safe:duration-300 motion-safe:ease-[cubic-bezier(0.22,1,0.36,1)]",
+          headerCollapsed
+            ? "pointer-events-none -translate-y-full border-transparent opacity-0"
+            : "translate-y-0 opacity-100",
+        ].join(" ")}
+      >
         <div className="mx-auto flex h-14 max-w-screen-xl items-center justify-between px-4 sm:px-6">
           <div className="flex items-center gap-2.5">
             <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-900 shadow-sm dark:bg-white">

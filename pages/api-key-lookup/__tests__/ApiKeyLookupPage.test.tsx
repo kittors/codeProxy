@@ -525,4 +525,48 @@ describe("ApiKeyLookupPage", () => {
       pending.some((request) => request.days === 30 && request.signal?.aborted),
     ).toBe(true);
   });
+
+  test("pins results toolbar with sticky top offset and collapses header on scroll", async () => {
+    window.sessionStorage.setItem(
+      "apiKeyLookup.lastApiKey.v1",
+      "sk-restored-key",
+    );
+
+    render(
+      <ThemeProvider>
+        <ToastProvider>
+          <ApiKeyLookupPage />
+        </ToastProvider>
+      </ThemeProvider>,
+    );
+
+    const toolbar = await screen.findByTestId("apikey-lookup-toolbar-sticky");
+    expect(toolbar.className).toMatch(/(?:^|\s)sticky(?:\s|$)/);
+    expect(toolbar.className).toMatch(/(?:^|\s)top-3(?:\s|$)/);
+
+    const header = screen.getByTestId("apikey-lookup-header");
+    expect(header).toHaveAttribute("data-collapsed", "false");
+
+    Object.defineProperty(window, "scrollY", {
+      configurable: true,
+      value: 80,
+    });
+    window.dispatchEvent(new Event("scroll"));
+
+    await waitFor(() => {
+      expect(header).toHaveAttribute("data-collapsed", "true");
+    });
+    expect(header.className).toMatch(/-translate-y-full/);
+    expect(header.className).toMatch(/opacity-0/);
+
+    Object.defineProperty(window, "scrollY", {
+      configurable: true,
+      value: 0,
+    });
+    window.dispatchEvent(new Event("scroll"));
+
+    await waitFor(() => {
+      expect(header).toHaveAttribute("data-collapsed", "false");
+    });
+  });
 });
