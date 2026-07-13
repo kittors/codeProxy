@@ -574,6 +574,9 @@ describe("RoutingConfigEditor", () => {
     expect(saveButton).toHaveAttribute("aria-busy", "true");
     expect(saveButton).toHaveTextContent("保存中...");
     expect(saveButton.querySelector("svg")).toHaveClass("animate-spin");
+    // Spinner+label are Fragment-wrapped; Button must keep text sizing (not icon-only square).
+    expect(saveButton.className).toMatch(/\bpx-4\b/);
+    expect(saveButton.className).not.toMatch(/\bw-9\b/);
     expect(screen.getByTestId("group-editor-modal-body")).toBeInTheDocument();
 
     pending.resolve();
