@@ -588,6 +588,9 @@ test("API Keys: fixed columns do not cover the created time at the right edge", 
       selectHeaderBottomLeftRadius: number;
       actionsHeaderTopRightRadius: number;
       actionsHeaderBottomRightRadius: number;
+      scrollportTopLeftRadius: number;
+      scrollportTopRightRadius: number;
+      headerGutterTopRightRadius: number | null;
     }> = [];
     for (const scrollLeft of positions) {
       container.scrollLeft = scrollLeft;
@@ -637,6 +640,9 @@ test("API Keys: fixed columns do not cover the created time at the right edge", 
       const endBoundaryRect = endBoundary.getBoundingClientRect();
       const selectHeaderStyle = getComputedStyle(selectHeader);
       const actionsHeaderStyle = getComputedStyle(actionsHeader);
+      const scrollportStyle = getComputedStyle(container);
+      const headerGutter = document.querySelector<HTMLElement>("[data-vt-header-gutter]");
+      const headerGutterStyle = headerGutter ? getComputedStyle(headerGutter) : null;
       const nameHeaderHit = document.elementFromPoint(
         nameHeaderRect.right - 8,
         nameHeaderRect.top + nameHeaderRect.height / 2,
@@ -690,6 +696,11 @@ test("API Keys: fixed columns do not cover the created time at the right edge", 
         actionsHeaderBottomRightRadius: Number.parseFloat(
           actionsHeaderStyle.borderBottomRightRadius,
         ),
+        scrollportTopLeftRadius: Number.parseFloat(scrollportStyle.borderTopLeftRadius),
+        scrollportTopRightRadius: Number.parseFloat(scrollportStyle.borderTopRightRadius),
+        headerGutterTopRightRadius: headerGutterStyle
+          ? Number.parseFloat(headerGutterStyle.borderTopRightRadius)
+          : null,
       });
     }
 
@@ -746,10 +757,18 @@ test("API Keys: fixed columns do not cover the created time at the right edge", 
     expect(state.endRailBottom).toBeGreaterThanOrEqual(state.fixedRailBottom - 1);
     expect(state.startBoundaryBottom).toBeGreaterThanOrEqual(state.fixedRailBottom - 1);
     expect(state.endBoundaryBottom).toBeGreaterThanOrEqual(state.fixedRailBottom - 1);
-    expect(state.selectHeaderTopLeftRadius).toBeGreaterThan(0);
-    expect(state.selectHeaderBottomLeftRadius).toBeGreaterThan(0);
-    expect(state.actionsHeaderTopRightRadius).toBeGreaterThan(0);
-    expect(state.actionsHeaderBottomRightRadius).toBeGreaterThan(0);
+    // Sticky header cells stay square so mid-scroll under-paint cannot square
+    // the corners; the scrollport (and optional header gutter) owns the radius.
+    expect(state.selectHeaderTopLeftRadius).toBe(0);
+    expect(state.selectHeaderBottomLeftRadius).toBe(0);
+    expect(state.actionsHeaderTopRightRadius).toBe(0);
+    expect(state.actionsHeaderBottomRightRadius).toBe(0);
+    expect(state.scrollportTopLeftRadius).toBeGreaterThan(0);
+    if (state.headerGutterTopRightRadius === null) {
+      expect(state.scrollportTopRightRadius).toBeGreaterThan(0);
+    } else {
+      expect(state.headerGutterTopRightRadius).toBeGreaterThan(0);
+    }
   }
 
   const maxScrollState = states.at(-1);

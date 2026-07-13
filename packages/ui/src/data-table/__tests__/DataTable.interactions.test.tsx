@@ -412,4 +412,61 @@ describe("DataTable scroll chrome and row dividers", () => {
       );
     });
   });
+
+  test("clips sticky header corners on the scrollport instead of sticky header cells", () => {
+    const stickyColumns: DataTableColumn<TestRow>[] = [
+      {
+        key: "select",
+        label: "Select",
+        lockOrder: "start",
+        headerClassName: "md:sticky",
+        cellClassName: "md:sticky",
+        render: () => null,
+      },
+      {
+        key: "name",
+        label: "Name",
+        render: (row) => <span>{row.name}</span>,
+      },
+      {
+        key: "actions",
+        label: "Actions",
+        lockOrder: "end",
+        headerClassName: "md:sticky",
+        cellClassName: "md:sticky",
+        render: () => null,
+      },
+    ];
+
+    render(
+      <DataTable
+        rows={initialRows}
+        columns={stickyColumns}
+        rowKey={(row) => row.id}
+        height="h-[240px]"
+        minHeight="min-h-[240px]"
+        minWidth="min-w-[960px]"
+        showAllLoadedMessage={false}
+      />,
+    );
+
+    const viewport = document.querySelector<HTMLElement>(
+      "[data-scrollbar-visibility='hover']",
+    );
+    expect(viewport).not.toBeNull();
+    expect(viewport).toHaveClass("rounded-l-xl");
+
+    const selectHeader = document.querySelector('th[data-vt-column-key="select"]');
+    const actionsHeader = document.querySelector(
+      'th[data-vt-column-key="actions"]',
+    );
+    const headerGutter = document.querySelector("[data-vt-header-gutter]");
+    expect(selectHeader).not.toHaveClass("rounded-l-xl");
+    expect(actionsHeader).not.toHaveClass("rounded-r-xl");
+    if (headerGutter) {
+      expect(headerGutter).toHaveClass("rounded-r-xl");
+    } else {
+      expect(viewport).toHaveClass("rounded-r-xl");
+    }
+  });
 });

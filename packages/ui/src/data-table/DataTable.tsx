@@ -3230,7 +3230,12 @@ export function DataTable<T>({
         className={
           naturalFlow
             ? "relative z-10 min-h-0 overflow-visible rounded-xl"
-            : `relative col-start-1 row-start-1 h-full min-h-0 table-scrollbar overscroll-x-none ${
+            : // Clip sticky headers to the scrollport radius so middle columns
+              // cannot square off the visible left/right header corners while
+              // scrolling. Keep left always rounded; right only when no v-gutter.
+              `relative col-start-1 row-start-1 h-full min-h-0 table-scrollbar overscroll-x-none rounded-l-xl ${
+                vThumb ? "" : "rounded-r-xl"
+              } ${
                 isEmpty
                   ? "overflow-x-hidden overflow-y-auto"
                   : "overflow-auto"
@@ -3306,15 +3311,12 @@ export function DataTable<T>({
                       ? "relative"
                       : "sticky top-0 z-50";
                   const headerChromeClass = "bg-slate-100 dark:bg-neutral-800";
+                  // Only naturalFlow paints radius on th cells. Sticky tables keep
+                  // square header cells so mid-scroll columns cannot fill the
+                  // transparent corner wedges; the scrollport radius clips instead.
                   const headerCornerClass = [
                     naturalFlow && colIndex === 0 ? "rounded-l-xl" : "",
                     naturalFlow && colIndex === orderedColumns.length - 1
-                      ? "rounded-r-xl"
-                      : "",
-                    !naturalFlow && colIndex === 0 ? "rounded-l-xl" : "",
-                    !naturalFlow &&
-                    !vThumb &&
-                    colIndex === orderedColumns.length - 1
                       ? "rounded-r-xl"
                       : "",
                   ]
