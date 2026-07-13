@@ -1,6 +1,7 @@
 import type {
   ConfiguredModelAvailability,
   ModelAvailabilityItem,
+  ModelAvailabilitySource,
   ModelConfigMetadataItem,
   ModelPathAvailabilityItem,
   ModelPricing,
@@ -9,6 +10,7 @@ import type {
 export type {
   ConfiguredModelAvailability,
   ModelAvailabilityItem,
+  ModelAvailabilitySource,
   ModelConfigMetadataItem,
   ModelPathAvailabilityItem,
   ModelPricing,
@@ -24,6 +26,8 @@ export interface ModelItem {
   description: string;
   enabled: boolean;
   source: string;
+  /** Runtime channels/providers that can serve this model (from configured-availability). */
+  sources?: ModelAvailabilitySource[];
   pricing: ModelPricing;
   inputModalities: string[];
   outputModalities: string[];
