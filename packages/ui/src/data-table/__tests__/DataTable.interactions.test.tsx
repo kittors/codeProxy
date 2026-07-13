@@ -207,6 +207,55 @@ describe("DataTable column reorder handle layout", () => {
   });
 });
 
+describe("DataTable header text alignment", () => {
+  test("maps headerClassName text-align utilities onto the flex label row", () => {
+    const alignedColumns: DataTableColumn<TestRow>[] = [
+      {
+        key: "left",
+        label: "Left",
+        headerClassName: "text-left",
+        render: (row) => row.name,
+      },
+      {
+        key: "center",
+        label: "Center",
+        headerClassName: "text-center md:sticky",
+        render: (row) => row.name,
+      },
+      {
+        key: "right",
+        label: "Right",
+        headerClassName: "text-right",
+        render: (row) => row.name,
+      },
+    ];
+
+    render(
+      <DataTable
+        tableId="header-align-table"
+        rows={initialRows}
+        columns={alignedColumns}
+        rowKey={(row) => row.id}
+        naturalFlow
+        height="h-auto"
+        minHeight="min-h-0"
+        minWidth="min-w-[320px]"
+        showAllLoadedMessage={false}
+      />,
+    );
+
+    const labelRow = (key: string) =>
+      document
+        .querySelector<HTMLElement>(`th[data-vt-column-key="${key}"]`)
+        ?.querySelector<HTMLElement>("[data-vt-column-header-content] > span");
+
+    expect(labelRow("left")).toHaveClass("justify-start");
+    expect(labelRow("center")).toHaveClass("justify-center");
+    expect(labelRow("center")).not.toHaveClass("justify-start");
+    expect(labelRow("right")).toHaveClass("justify-end");
+  });
+});
+
 describe("DataTable empty state", () => {
   test("renders EmptyState and collapses min-width so empty tables do not scroll sideways", () => {
     const wideColumns: DataTableColumn<TestRow>[] = [

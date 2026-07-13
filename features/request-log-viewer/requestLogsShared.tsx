@@ -623,8 +623,8 @@ export function RequestLogsTimeRangeSelector({
   );
 }
 
-const CENTERED_REQUEST_LOG_HEADER_CLASS =
-  "text-center [&_[data-vt-column-header-content]>span]:justify-center";
+// DataTable maps header text-center to flex justify-center on the label row.
+const CENTERED_REQUEST_LOG_HEADER_CLASS = "text-center";
 
 export function buildRequestLogsColumns(
   t: (key: string) => string,

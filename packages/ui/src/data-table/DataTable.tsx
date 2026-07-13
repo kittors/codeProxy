@@ -317,6 +317,29 @@ function hasStickyColumnClass<T>(column: DataTableColumn<T>) {
     );
 }
 
+/**
+ * Map Tailwind text-align utilities on the header cell to flex justify on the
+ * header content row. `th` may carry `text-center` / `text-right`, but the label
+ * wrapper is `display: flex`, so text-align alone never centers/right-aligns it.
+ */
+function resolveHeaderContentJustifyClass(headerClassName?: string) {
+  let justifyClass = "";
+  for (const className of (headerClassName ?? "").split(/\s+/).filter(Boolean)) {
+    if (/(?:^|:)text-center$/.test(className)) {
+      justifyClass = "justify-center";
+      continue;
+    }
+    if (/(?:^|:)text-right$/.test(className)) {
+      justifyClass = "justify-end";
+      continue;
+    }
+    if (/(?:^|:)text-left$/.test(className)) {
+      justifyClass = "justify-start";
+    }
+  }
+  return justifyClass;
+}
+
 function resolveColumnLayoutWidth<T>(
   column: DataTableColumn<T>,
   widths: ColumnWidthMap,
@@ -3359,7 +3382,9 @@ export function DataTable<T>({
                             <span className="sr-only">{col.label}</span>
                           </span>
                         ) : (
-                          <span className="flex min-w-0 items-center gap-1.5">
+                          <span
+                            className={`flex min-w-0 items-center gap-1.5 ${resolveHeaderContentJustifyClass(col.headerClassName)}`}
+                          >
                             <span className="min-w-0 truncate">
                               {col.headerRender
                                 ? col.headerRender()
