@@ -15,6 +15,10 @@ import {
   AUTH_FILES_DATA_CACHE_KEY,
   AUTH_FILES_QUOTA_AUTO_REFRESH_KEY,
   AUTH_FILES_UI_STATE_KEY,
+  DEFAULT_CACHE_TENANT_ID,
+  setActiveCacheTenantId,
+  setCacheTenantResolver,
+  writeAuthFilesDataCache,
 } from "@code-proxy/domain";
 import i18n from "@code-proxy/i18n";
 
@@ -193,6 +197,8 @@ describe("AuthFilesPage files table", () => {
     await i18n.changeLanguage("en");
     window.localStorage.clear();
     window.sessionStorage.clear();
+    setCacheTenantResolver(null);
+    setActiveCacheTenantId(DEFAULT_CACHE_TENANT_ID);
     mocks.list.mockReset();
     mocks.list.mockImplementation(async () => ({
       files: [
@@ -1397,6 +1403,143 @@ describe("AuthFilesPage files table", () => {
     );
 
     expect(await screen.findByTestId("auth-files-table-skeleton")).toBeInTheDocument();
+  });
+
+  test("paints tenant-cached auth files immediately without skeleton (warm remount SWR)", async () => {
+    const now = Date.now();
+    setActiveCacheTenantId("tenant-warm");
+    writeAuthFilesDataCache({
+      tenantId: "tenant-warm",
+      savedAtMs: now,
+      files: [
+        {
+          name: "cached-codex.json",
+          type: "codex",
+          size: 1024,
+          modified: now,
+          disabled: false,
+        } as AuthFileItem,
+      ],
+    });
+
+    let resolveList: (value: { files: AuthFileItem[] }) => void = () => {};
+    mocks.list.mockImplementationOnce(
+      () =>
+        new Promise<{ files: AuthFileItem[] }>((resolve) => {
+          resolveList = resolve;
+        }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText("cached-codex.json")).toBeInTheDocument();
+    expect(screen.queryByTestId("auth-files-table-skeleton")).not.toBeInTheDocument();
+
+    resolveList({
+      files: [
+        {
+          name: "fresh-codex.json",
+          type: "codex",
+          size: 1024,
+          modified: now,
+          disabled: false,
+        } as AuthFileItem,
+      ],
+    });
+    expect(await screen.findByText("fresh-codex.json")).toBeInTheDocument();
+    expect(screen.queryByText("cached-codex.json")).not.toBeInTheDocument();
+  });
+
+  test("keeps empty-list warm remount free of skeleton", async () => {
+    setActiveCacheTenantId("tenant-empty");
+    writeAuthFilesDataCache({
+      tenantId: "tenant-empty",
+      savedAtMs: Date.now(),
+      files: [],
+    });
+
+    mocks.list.mockImplementationOnce(() => new Promise(() => {}));
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByTestId("auth-files-table-skeleton")).not.toBeInTheDocument();
+    expect(await screen.findByText(/No auth files|No files/i)).toBeInTheDocument();
+  });
+
+  test("does not paint another tenant's cached auth files on remount", async () => {
+    const now = Date.now();
+    setActiveCacheTenantId("tenant-a");
+    writeAuthFilesDataCache({
+      tenantId: "tenant-a",
+      savedAtMs: now,
+      files: [
+        {
+          name: "tenant-a.json",
+          type: "codex",
+          size: 1024,
+          modified: now,
+          disabled: false,
+        } as AuthFileItem,
+      ],
+    });
+    setActiveCacheTenantId("tenant-b");
+
+    let resolveList: (value: { files: AuthFileItem[] }) => void = () => {};
+    mocks.list.mockImplementationOnce(
+      () =>
+        new Promise<{ files: AuthFileItem[] }>((resolve) => {
+          resolveList = resolve;
+        }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByText("tenant-a.json")).not.toBeInTheDocument();
+    expect(await screen.findByTestId("auth-files-table-skeleton")).toBeInTheDocument();
+
+    resolveList({
+      files: [
+        {
+          name: "tenant-b.json",
+          type: "codex",
+          size: 1024,
+          modified: now,
+          disabled: false,
+        } as AuthFileItem,
+      ],
+    });
+    expect(await screen.findByText("tenant-b.json")).toBeInTheDocument();
+    expect(screen.queryByText("tenant-a.json")).not.toBeInTheDocument();
   });
 
   test("restores last data on route switch and refreshes quietly", async () => {

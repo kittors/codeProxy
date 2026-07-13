@@ -143,7 +143,9 @@ export function useAuthFilesQuotaState({
     const timer = window.setTimeout(() => {
       const tenantId = getActiveCacheTenantId();
       const current = readAuthFilesDataCache(tenantId);
-      if (!current?.files?.length) return;
+      // Persist quota for this tenant even when the list is empty (warm empty remount).
+      // Still require a list bucket so we never invent a cross-tenant files snapshot.
+      if (!current || !Array.isArray(current.files)) return;
       writeAuthFilesDataCache({
         ...current,
         tenantId,
