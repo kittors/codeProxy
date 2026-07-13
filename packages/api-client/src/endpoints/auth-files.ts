@@ -92,9 +92,9 @@ export const authFilesApi = {
   }> => {
     const params: Record<string, string> = { name };
     // refresh=1 forces a re-fetch from upstream.
-    // claude/codex: backend keeps a provider-level discovery cache (shared by
-    // same-type accounts); open auto-warms once, force refreshes the cache.
-    // xai/antigravity may also update the runtime registry.
+    // claude/codex/xai: backend keeps a provider-level discovery cache (shared
+    // by same-type accounts); open auto-warms once, force refreshes the cache.
+    // antigravity may still update the runtime registry on force refresh.
     if (options?.force) {
       params.refresh = "1";
     }
