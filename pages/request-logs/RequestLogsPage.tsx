@@ -659,6 +659,8 @@ export function RequestLogsPage() {
             minHeight="min-h-full"
             caption={t("request_logs.table_caption")}
             emptyText={t("request_logs.no_data")}
+            emptyDescription={t("request_logs.no_data_desc")}
+            emptyIcon={<ScrollText size={28} strokeWidth={1.6} aria-hidden />}
             showAllLoadedMessage={false}
           />
 

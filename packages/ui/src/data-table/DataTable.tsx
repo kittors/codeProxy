@@ -3513,7 +3513,8 @@ export function DataTable<T>({
                       middle of the blank body, not stuck under the header.
                     */}
                     <div className="flex min-h-[min(22rem,calc(100dvh-26rem))] w-full items-center justify-center">
-                      <div className="mx-auto w-full max-w-2xl">
+                      {/* Keep empty card compact so it reads as a centerpiece, not a stretched dashed bar. */}
+                      <div className="mx-auto w-full max-w-sm sm:max-w-md">
                         <EmptyState
                           title={emptyText || t("common.no_data")}
                           description={emptyDescription}

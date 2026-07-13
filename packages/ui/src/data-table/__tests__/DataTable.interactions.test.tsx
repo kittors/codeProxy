@@ -260,6 +260,8 @@ describe("DataTable empty state", () => {
     expect(emptyRow).not.toBeNull();
     expect(screen.getByText("No request logs")).toBeInTheDocument();
     expect(screen.getByText("Try a different filter range")).toBeInTheDocument();
+    // Default EmptyState icon well (Inbox) when emptyIcon is omitted.
+    expect(document.querySelector("[data-empty-icon]")).not.toBeNull();
 
     const firstHeader = document.querySelector<HTMLElement>(
       'th[data-vt-column-key="id"]',
