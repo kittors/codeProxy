@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CircleAlert, Pencil, Plus, Trash2, TriangleAlert, X } from "lucide-react";
+import { CircleAlert, Loader2, Pencil, Plus, Trash2, TriangleAlert, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { ChannelGroupChannelDetail } from "@code-proxy/api-client/endpoints/channel-groups";
 import type {
@@ -366,7 +366,9 @@ export function RoutingConfigEditor({
     channels: string[],
     groupName?: string,
   ) => Promise<RoutingModelLoadResult[]>;
-  onChange: (values: Partial<VisualConfigValues>) => void;
+  onChange: (
+    values: Partial<VisualConfigValues>,
+  ) => void | boolean | Promise<void | boolean>;
 }) {
   const { t } = useTranslation();
   const { notify } = useToast();
@@ -376,15 +378,14 @@ export function RoutingConfigEditor({
   const [issueGroup, setIssueGroup] = useState<RoutingChannelGroupEntry | null>(null);
   const [groupDraft, setGroupDraft] = useState<GroupDraft>(() => createEmptyGroupDraft());
   const [groupEditorTab, setGroupEditorTab] = useState<"basic" | "models">("basic");
+  const [groupSaving, setGroupSaving] = useState(false);
   const [modelOptions, setModelOptions] = useState<RoutingModelOption[]>([]);
   const [modelsLoading, setModelsLoading] = useState(false);
   const [modelsError, setModelsError] = useState("");
   const [modelsSelectionTouched, setModelsSelectionTouched] = useState(false);
 
   const update = useCallback(
-    (patch: Partial<VisualConfigValues>) => {
-      onChange(patch);
-    },
+    (patch: Partial<VisualConfigValues>) => onChange(patch),
     [onChange],
   );
 
@@ -711,15 +712,23 @@ export function RoutingConfigEditor({
     ],
   );
 
-  const closeGroupEditor = useCallback(() => {
+  const resetGroupEditor = useCallback(() => {
     setGroupEditorOpen(false);
     setGroupEditorId(null);
     setGroupDraft(createEmptyGroupDraft());
     setGroupEditorTab("basic");
+    setGroupSaving(false);
     setModelOptions([]);
     setModelsError("");
     setModelsSelectionTouched(false);
   }, []);
+
+  const closeGroupEditor = useCallback(() => {
+    // Keep the modal open while the save request is in flight so the user can
+    // see the button loading state and is not left unsure whether it wrote.
+    if (groupSaving) return;
+    resetGroupEditor();
+  }, [groupSaving, resetGroupEditor]);
 
   const updateDraftChannels = useCallback((selectedValues: string[]) => {
     setGroupDraft((current) => ({
@@ -839,8 +848,10 @@ export function RoutingConfigEditor({
     });
   }, []);
 
-  const saveGroupDraft = useCallback(() => {
-    if (groupDraftError) return;
+  const saveGroupDraft = useCallback(async () => {
+    if (groupDraftError || groupSaving) return;
+
+    let patch: Partial<VisualConfigValues>;
     if (editingSystemDefaultGroup) {
       const allowedModels = Array.from(
         new Set(groupDraft.allowedModels.map((model) => model.trim()).filter(Boolean)),
@@ -862,7 +873,7 @@ export function RoutingConfigEditor({
       const defaultRoutes = values.routingPathRoutes.filter(
         (route) => route.group.trim().toLowerCase() === SYSTEM_DEFAULT_GROUP_NAME,
       );
-      update({
+      patch = {
         routingChannelGroups: existingDefault
           ? values.routingChannelGroups.map((group) =>
               group.id === existingDefault.id ? defaultGroup : group,
@@ -874,73 +885,92 @@ export function RoutingConfigEditor({
           ),
           ...defaultRoutes,
         ],
-      });
-      closeGroupEditor();
-      return;
-    }
-    const groupName = groupDraft.name.trim();
-    const normalizedDraft: RoutingChannelGroupEntry = {
-      id: groupEditorId ?? makeClientId(),
-      name: groupName,
-      description: groupDraft.description.trim(),
-      strategy: normalizeRoutingStrategy(groupDraft.strategy),
-      excludeFromDefault:
-        groupDraft.excludeFromDefault && groupName.toLowerCase() !== SYSTEM_DEFAULT_GROUP_NAME,
-      matchMode: groupDraft.matchMode,
-      tags: groupDraft.matchMode === "tags" ? syncDraftTags(groupDraft.tags) : [],
-      allowedModels: Array.from(
-        new Set(groupDraft.allowedModels.map((model) => model.trim()).filter(Boolean)),
-      ),
-      channels: (groupDraft.matchMode === "tags" ? resolvedDraftChannels : groupDraft.channels)
-        .map((channel) => ({
-          id: channel.id || makeClientId(),
-          name: channel.name.trim(),
-          priority: channel.priority.trim(),
-        }))
-        .filter((channel) => channel.name && (groupDraft.matchMode !== "tags" || channel.priority)),
-    };
-    const normalizedRoute = {
-      ...primaryRoute,
-      id: primaryRoute.id || makeClientId(),
-      path: normalizedPrimaryRoutePath,
-      group: groupName,
-    };
-    const normalizedRoutes = normalizedRoute.path
-      ? [
-          {
-            ...normalizedRoute,
-            group: groupName,
-          },
-        ]
-      : [];
-
-    if (groupEditorId) {
-      const previousGroup = values.routingChannelGroups.find((group) => group.id === groupEditorId);
-      const previousGroupName = previousGroup?.name.trim().toLowerCase() ?? "";
-      const otherRoutes = values.routingPathRoutes.filter(
-        (route) => route.group.trim().toLowerCase() !== previousGroupName,
-      );
-      update({
-        routingChannelGroups: values.routingChannelGroups.map((group) =>
-          group.id === groupEditorId ? normalizedDraft : group,
-        ),
-        routingPathRoutes: [...otherRoutes, ...normalizedRoutes],
-      });
+      };
     } else {
-      update({
-        routingChannelGroups: [...values.routingChannelGroups, normalizedDraft],
-        routingPathRoutes: [...values.routingPathRoutes, ...normalizedRoutes],
-      });
+      const groupName = groupDraft.name.trim();
+      const normalizedDraft: RoutingChannelGroupEntry = {
+        id: groupEditorId ?? makeClientId(),
+        name: groupName,
+        description: groupDraft.description.trim(),
+        strategy: normalizeRoutingStrategy(groupDraft.strategy),
+        excludeFromDefault:
+          groupDraft.excludeFromDefault && groupName.toLowerCase() !== SYSTEM_DEFAULT_GROUP_NAME,
+        matchMode: groupDraft.matchMode,
+        tags: groupDraft.matchMode === "tags" ? syncDraftTags(groupDraft.tags) : [],
+        allowedModels: Array.from(
+          new Set(groupDraft.allowedModels.map((model) => model.trim()).filter(Boolean)),
+        ),
+        channels: (groupDraft.matchMode === "tags" ? resolvedDraftChannels : groupDraft.channels)
+          .map((channel) => ({
+            id: channel.id || makeClientId(),
+            name: channel.name.trim(),
+            priority: channel.priority.trim(),
+          }))
+          .filter(
+            (channel) => channel.name && (groupDraft.matchMode !== "tags" || channel.priority),
+          ),
+      };
+      const normalizedRoute = {
+        ...primaryRoute,
+        id: primaryRoute.id || makeClientId(),
+        path: normalizedPrimaryRoutePath,
+        group: groupName,
+      };
+      const normalizedRoutes = normalizedRoute.path
+        ? [
+            {
+              ...normalizedRoute,
+              group: groupName,
+            },
+          ]
+        : [];
+
+      if (groupEditorId) {
+        const previousGroup = values.routingChannelGroups.find(
+          (group) => group.id === groupEditorId,
+        );
+        const previousGroupName = previousGroup?.name.trim().toLowerCase() ?? "";
+        const otherRoutes = values.routingPathRoutes.filter(
+          (route) => route.group.trim().toLowerCase() !== previousGroupName,
+        );
+        patch = {
+          routingChannelGroups: values.routingChannelGroups.map((group) =>
+            group.id === groupEditorId ? normalizedDraft : group,
+          ),
+          routingPathRoutes: [...otherRoutes, ...normalizedRoutes],
+        };
+      } else {
+        patch = {
+          routingChannelGroups: [...values.routingChannelGroups, normalizedDraft],
+          routingPathRoutes: [...values.routingPathRoutes, ...normalizedRoutes],
+        };
+      }
     }
-    closeGroupEditor();
+
+    setGroupSaving(true);
+    try {
+      // Await parent persistence when provided so the save button can show
+      // loading until the API finishes. Sync onChange (void) still resolves;
+      // async parents may return false to keep the modal open after a failed write.
+      const result = await Promise.resolve(update(patch));
+      if (result === false) {
+        setGroupSaving(false);
+        return;
+      }
+      resetGroupEditor();
+    } catch {
+      // Unexpected throw from onChange: keep modal open and clear loading.
+      setGroupSaving(false);
+    }
   }, [
-    closeGroupEditor,
     editingSystemDefaultGroup,
     groupDraft,
     groupDraftError,
     groupEditorId,
+    groupSaving,
     normalizedPrimaryRoutePath,
     primaryRoute,
+    resetGroupEditor,
     resolvedDraftChannels,
     update,
     values.routingChannelGroups,
@@ -1647,15 +1677,30 @@ export function RoutingConfigEditor({
                 {groupDraftError}
               </span>
             ) : null}
-            <Button variant="secondary" onClick={closeGroupEditor} disabled={disabled}>
+            <Button
+              variant="secondary"
+              onClick={closeGroupEditor}
+              disabled={disabled || groupSaving}
+            >
               {t("common.cancel")}
             </Button>
             <Button
               variant="primary"
-              onClick={saveGroupDraft}
-              disabled={disabled || Boolean(groupDraftError)}
+              onClick={() => void saveGroupDraft()}
+              disabled={disabled || Boolean(groupDraftError) || groupSaving}
+              aria-busy={groupSaving || undefined}
+              data-testid="group-editor-save-button"
             >
-              {groupEditorId ? t("common.save") : t("common.add")}
+              {groupSaving ? (
+                <>
+                  <Loader2 size={16} className="animate-spin" aria-hidden="true" />
+                  {t("common.saving")}
+                </>
+              ) : groupEditorId ? (
+                t("common.save")
+              ) : (
+                t("common.add")
+              )}
             </Button>
           </div>
         }

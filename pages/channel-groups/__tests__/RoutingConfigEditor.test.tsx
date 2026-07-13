@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import i18n from "@code-proxy/i18n";
@@ -26,12 +26,23 @@ vi.mock("goey-toast", () => ({
   },
 }));
 
+function deferred<T>() {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+}
+
 function Harness({
   initialValues,
   loadModelsForChannels,
   availableChannels = ["Team A Claude", "Main Codex", "Backup Claude"],
   availableChannelDetails,
   availableChannelDetailsByGroup,
+  onChange,
 }: {
   initialValues?: VisualConfigValues;
   loadModelsForChannels?: (
@@ -41,6 +52,10 @@ function Harness({
   availableChannels?: string[];
   availableChannelDetails?: Record<string, ChannelGroupChannelDetail>;
   availableChannelDetailsByGroup?: Record<string, Record<string, ChannelGroupChannelDetail>>;
+  onChange?: (
+    patch: Partial<VisualConfigValues>,
+    apply: (patch: Partial<VisualConfigValues>) => void,
+  ) => void | boolean | Promise<void | boolean>;
 }) {
   const [values, setValues] = useState<VisualConfigValues>({
     ...DEFAULT_VISUAL_VALUES,
@@ -58,7 +73,13 @@ function Harness({
           availableChannelDetails={availableChannelDetails}
           availableChannelDetailsByGroup={availableChannelDetailsByGroup}
           loadModelsForChannels={loadModelsForChannels}
-          onChange={(patch) => setValues((prev) => ({ ...prev, ...patch }))}
+          onChange={(patch) => {
+            const apply = (nextPatch: Partial<VisualConfigValues>) => {
+              setValues((prev) => ({ ...prev, ...nextPatch }));
+            };
+            if (onChange) return onChange(patch, apply);
+            apply(patch);
+          }}
         />
       </ToastProvider>
       <div data-testid="group-count">{values.routingChannelGroups.length}</div>
@@ -526,6 +547,70 @@ describe("RoutingConfigEditor", () => {
     expect(screen.getByTestId("group-name")).toHaveTextContent("default");
     expect(screen.getByTestId("group-strategy")).toHaveTextContent("session-sticky");
     expect(screen.getByRole("row", { name: /系统默认/ })).toHaveTextContent("会话粘性");
+  });
+
+  test("shows save button loading until async onChange resolves, then closes", async () => {
+    await i18n.changeLanguage("zh-CN");
+    const user = userEvent.setup();
+    const pending = deferred<void>();
+
+    render(
+      <Harness
+        onChange={async (patch, apply) => {
+          apply(patch);
+          await pending.promise;
+        }}
+      />,
+    );
+
+    const row = screen.getByRole("row", { name: /系统默认/ });
+    await user.click(within(row).getByRole("button", { name: "编辑分组" }));
+    await user.click(screen.getByRole("combobox", { name: "分组内调度策略" }));
+    await user.click(screen.getByRole("option", { name: "会话粘性" }));
+    await user.click(screen.getByTestId("group-editor-save-button"));
+
+    const saveButton = screen.getByTestId("group-editor-save-button");
+    expect(saveButton).toBeDisabled();
+    expect(saveButton).toHaveAttribute("aria-busy", "true");
+    expect(saveButton).toHaveTextContent("保存中...");
+    expect(saveButton.querySelector("svg")).toHaveClass("animate-spin");
+    expect(screen.getByTestId("group-editor-modal-body")).toBeInTheDocument();
+
+    pending.resolve();
+    await waitFor(() => {
+      expect(screen.queryByTestId("group-editor-modal-body")).not.toBeInTheDocument();
+    });
+    expect(screen.getByTestId("group-strategy")).toHaveTextContent("session-sticky");
+  });
+
+  test("keeps the group editor open when async onChange reports failure", async () => {
+    await i18n.changeLanguage("zh-CN");
+    const user = userEvent.setup();
+
+    render(
+      <Harness
+        onChange={async () => {
+          await Promise.resolve();
+          return false;
+        }}
+      />,
+    );
+
+    const row = screen.getByRole("row", { name: /系统默认/ });
+    await user.click(within(row).getByRole("button", { name: "编辑分组" }));
+    await user.click(screen.getByRole("combobox", { name: "分组内调度策略" }));
+    await user.click(screen.getByRole("option", { name: "会话粘性" }));
+    await user.click(screen.getByTestId("group-editor-save-button"));
+
+    await waitFor(() => {
+      const saveButton = screen.getByTestId("group-editor-save-button");
+      expect(saveButton).not.toBeDisabled();
+      expect(saveButton).toHaveTextContent("保存");
+    });
+    // Failure path must not close the modal or clear the save button loading forever.
+    expect(screen.getByTestId("group-editor-modal-body")).toBeInTheDocument();
+    // Parent rejected without applying the patch, so external state stays unchanged.
+    expect(screen.getByTestId("group-strategy")).toHaveTextContent("");
   });
 
   test("explains default pool scope and isolation behavior with tooltips", async () => {

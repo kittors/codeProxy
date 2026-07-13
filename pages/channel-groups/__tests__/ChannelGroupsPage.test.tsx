@@ -1000,6 +1000,32 @@ describe("ChannelGroupsPage", () => {
     );
   });
 
+  test("shows save button loading while routing-config update is in flight", async () => {
+    const user = userEvent.setup();
+    const putDeferred = deferred<Record<string, unknown>>();
+    mockedApiPut.mockImplementationOnce(() => putDeferred.promise);
+
+    renderPage();
+
+    const row = await screen.findByRole("row", { name: /系统默认/ });
+    await user.click(within(row).getByRole("button", { name: "编辑分组" }));
+    await user.click(screen.getByRole("combobox", { name: "分组内调度策略" }));
+    await user.click(await screen.findByRole("option", { name: "会话粘性" }));
+    await user.click(screen.getByTestId("group-editor-save-button"));
+
+    const saveButton = screen.getByTestId("group-editor-save-button");
+    expect(saveButton).toBeDisabled();
+    expect(saveButton).toHaveAttribute("aria-busy", "true");
+    expect(saveButton).toHaveTextContent("保存中...");
+    expect(screen.getByTestId("group-editor-modal-body")).toBeInTheDocument();
+
+    putDeferred.resolve({});
+    await waitFor(() => {
+      expect(screen.queryByTestId("group-editor-modal-body")).not.toBeInTheDocument();
+    });
+    expect(mockedApiPut).toHaveBeenCalled();
+  });
+
   test("refreshes channel options when opening the new group editor", async () => {
     let channelGroupsCalls = 0;
     mockedApiGet.mockImplementation((path: string) => {
