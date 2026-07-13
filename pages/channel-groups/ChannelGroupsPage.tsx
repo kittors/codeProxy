@@ -21,6 +21,7 @@ import {
 } from "@features/visual-config-editor";
 import {
   filterByConfiguredModelAvailability,
+  invalidateConfiguredModelAvailability,
   loadConfiguredModelAvailability,
 } from "@features/model-availability";
 import { Card } from "@code-proxy/ui";
@@ -417,6 +418,9 @@ export function ChannelGroupsPage() {
       setError("");
       try {
         await routingConfigApi.update(serializeRoutingValues(nextValues));
+        // AllowedModels / path routes change plaza + catalog; drop TTL so the
+        // next page load does not keep the previous channel-group allow-list.
+        invalidateConfiguredModelAvailability();
         const [latest, channels] = await Promise.all([
           routingConfigApi.get(),
           loadAvailableChannels().catch(() => ({
